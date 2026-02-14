@@ -1,22 +1,53 @@
-<<<<<<< HEAD
-# march-madness-forecaster
-=======
+
 # March Madness Forecaster
 
-A mathematically robust prediction system for NCAA March Madness basketball tournaments. This tool uses multiple statistical models to automatically fill out tournament brackets based on team data and historical performance.
+**State-of-the-Art NCAA Tournament Prediction System**
 
-## Features
+A professional-grade prediction system using Graph Neural Networks (GNN), Transformers, Monte Carlo simulation, and game-theoretic bracket optimization. Designed to compete with the top 5% of sophisticated bracket pools.
 
-- **Multiple Prediction Models**:
-  - **Elo Rating System**: Dynamic ratings that update based on game outcomes
-  - **Seed-Based Baseline**: Historical win probabilities by tournament seed matchup
-  - **Statistical Model**: Predictions based on team efficiency metrics and performance
-  - **Ensemble Method**: Combines all models with weighted averaging for improved accuracy
+## Architecture Overview
 
-- **Intelligent Upset Detection**: Probability-based predictions that don't always pick favorites
-- **Configurable Parameters**: Tune model weights and upset thresholds
-- **JSON Input/Output**: Easy integration with external data sources
-- **Command-Line Interface**: Simple CLI for quick predictions
+This system implements cutting-edge ML techniques:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    PREDICTION PIPELINE                          │
+├─────────────────────────────────────────────────────────────────┤
+│  Data Layer          │  ML Models           │  Optimization     │
+│  ─────────────       │  ─────────           │  ────────────     │
+│  • KenPom Scraper    │  • GNN (Schedule)    │  • Monte Carlo    │
+│  • Torvik Scraper    │  • Transformer       │  • Calibration    │
+│  • ESPN Picks        │  • LightGBM          │  • Leverage Calc  │
+│  • Player RAPM/WARP  │  • CFA Ensemble      │  • Pareto Optim   │
+│  • xP Shot Quality   │  • Elo/Seed Base     │  • Pool Analysis  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Key Features
+
+### Phase 1: High-Resolution Data Engineering
+- **Possession-level xP** (Expected Points) calculation
+- **Player-level RAPM/WARP** tracking with transfer portal impact
+- **Lead volatility & entropy** metrics for upset detection
+- **Four Factors** analysis (eFG%, TO%, ORB%, FTR)
+
+### Phase 2: GNN-Transformer Hybrid Architecture
+- **Graph Convolutional Network (GCN)** for schedule-based strength propagation
+- **Multi-hop SOS analysis** (opponent's opponent quality)
+- **Temporal Transformer** for detecting "breakout windows"
+- **Attention mechanisms** for game importance weighting
+
+### Phase 3: Uncertainty Quantification
+- **50,000+ Monte Carlo simulations** with injury noise injection
+- **Brier Score optimization** for probability calibration
+- **Isotonic regression** post-processing
+- **Reliability diagrams** for model validation
+
+### Phase 4: Game Theory Optimization
+- **Public consensus scraping** from ESPN/Yahoo/CBS
+- **Leverage ratio calculation** (Win Prob / Pick %)
+- **Pareto-optimal bracket generation** (chalk to contrarian)
+- **Pool size-specific strategy** recommendations
 
 ## Installation
 
@@ -68,6 +99,34 @@ The system will:
 ## Usage
 
 ### Command-Line Interface
+
+#### Run Full SOTA Pipeline (2026 Rubric)
+
+```bash
+python -m src.main sota --output sota_report.json --simulations 50000 --pool-size 150
+```
+
+With real data and custom scoring:
+
+```bash
+python -m src.main sota \
+  --input teams_2026.json \
+  --kenpom kenpom_2026.json \
+  --torvik torvik_2026.json \
+  --shotquality-teams shotquality_teams_2026.json \
+  --public-picks public_picks_2026.json \
+  --scoring-rules pool_scoring.json \
+  --simulations 50000 \
+  --output selection_sunday_report.json
+```
+
+This command executes the full rubric pipeline:
+- Possession-level xP + player-level RAPM feature engineering
+- Schedule adjacency + GCN SOS refinement
+- Temporal transformer embeddings
+- CFA model fusion + isotonic calibration
+- Injury-noise Monte Carlo bracket simulation
+- EV-max bracket selection with leverage and Pareto risk profiles
 
 #### Generate Predictions
 
@@ -316,4 +375,3 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 - Historical seed matchup data based on NCAA tournament history (1985-present)
 - Elo rating system adapted from chess ratings
 - Statistical methodology inspired by KenPom and other advanced basketball metrics
-

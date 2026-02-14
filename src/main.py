@@ -10,6 +10,7 @@ from .predictors.elo import EloPredictor
 from .predictors.seed_baseline import SeedBaselinePredictor
 from .predictors.statistical import StatisticalPredictor
 from .predictors.ensemble import EnsemblePredictor
+from .pipeline.sota import SOTAPipelineConfig, run_sota_pipeline_to_file
 
 
 def create_predictor(model_type: str, ensemble_weights: dict = None):
@@ -107,6 +108,33 @@ def create_sample(args):
     return 0
 
 
+def run_sota(args):
+    """Run the full SOTA rubric pipeline."""
+    print("Running SOTA pipeline...")
+    config = SOTAPipelineConfig(
+        year=args.year,
+        num_simulations=args.simulations,
+        pool_size=args.pool_size,
+        teams_json=args.input,
+        kenpom_json=args.kenpom,
+        torvik_json=args.torvik,
+        shotquality_teams_json=args.shotquality_teams,
+        public_picks_json=args.public_picks,
+        scoring_rules_json=args.scoring_rules,
+        calibration_method=args.calibration,
+        random_seed=args.seed,
+    )
+
+    report = run_sota_pipeline_to_file(config, args.output)
+
+    print(f"✓ SOTA pipeline complete. Results written to {args.output}")
+    strategy = report["artifacts"]["pool_recommendation"]
+    sims = report["artifacts"]["simulation"]["num_simulations"]
+    print(f"Recommended strategy: {strategy}")
+    print(f"Monte Carlo simulations: {sims}")
+    return 0
+
+
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -147,6 +175,21 @@ def main():
         default="sample_tournament.json",
         help="Output file for sample data (default: sample_tournament.json)"
     )
+
+    # SOTA command
+    sota_parser = subparsers.add_parser("sota", help="Run full SOTA rubric pipeline")
+    sota_parser.add_argument("--input", "-i", default=None, help="Teams JSON (optional)")
+    sota_parser.add_argument("--output", "-o", default="sota_report.json", help="Output report JSON")
+    sota_parser.add_argument("--year", type=int, default=2026, help="Season year (default: 2026)")
+    sota_parser.add_argument("--simulations", type=int, default=50000, help="Monte Carlo simulations")
+    sota_parser.add_argument("--pool-size", type=int, default=100, help="Bracket pool size")
+    sota_parser.add_argument("--seed", type=int, default=2026, help="Random seed")
+    sota_parser.add_argument("--calibration", choices=["isotonic", "platt", "none"], default="isotonic")
+    sota_parser.add_argument("--kenpom", default=None, help="Optional KenPom JSON")
+    sota_parser.add_argument("--torvik", default=None, help="Optional Torvik JSON")
+    sota_parser.add_argument("--shotquality-teams", default=None, help="Optional ShotQuality team JSON")
+    sota_parser.add_argument("--public-picks", default=None, help="Optional public pick percentages JSON")
+    sota_parser.add_argument("--scoring-rules", default=None, help="Optional scoring rules JSON (R64/R32/S16/E8/F4/CHAMP)")
     
     args = parser.parse_args()
     
@@ -154,6 +197,8 @@ def main():
         return predict_bracket(args)
     elif args.command == "sample":
         return create_sample(args)
+    elif args.command == "sota":
+        return run_sota(args)
     else:
         parser.print_help()
         return 1

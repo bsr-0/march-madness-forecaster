@@ -1,5 +1,28 @@
+# Core Scientific Computing
 numpy>=1.24.0
 pandas>=2.0.0
 scipy>=1.10.0
 scikit-learn>=1.3.0
+
+# Deep Learning - PyTorch
+torch>=2.0.0
+torch-geometric>=2.4.0
+
+# Gradient Boosting
+lightgbm>=4.0.0
+
+# Web Scraping
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+lxml>=4.9.0
+
+# Data Processing
+joblib>=1.3.0
+tqdm>=4.66.0
+
+# Visualization (for reliability diagrams)
+matplotlib>=3.7.0
+
+# Testing
 pytest>=7.4.0
+pytest-cov>=4.1.0
