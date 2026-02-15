@@ -7,6 +7,7 @@ for temporal modeling.
 
 import json
 import logging
+import math
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
@@ -240,15 +241,15 @@ class BartTorvikScraper:
                     adj_offensive_efficiency=self._safe_float(cells[4].get_text(strip=True)),
                     adj_defensive_efficiency=self._safe_float(cells[5].get_text(strip=True)),
                     adj_tempo=self._safe_float(cells[7].get_text(strip=True)) if len(cells) > 7 else 68.0,
-                    # Four Factors would need additional page scraping
-                    effective_fg_pct=0.5,
-                    turnover_rate=0.18,
-                    offensive_reb_rate=0.30,
-                    free_throw_rate=0.30,
-                    opp_effective_fg_pct=0.5,
-                    opp_turnover_rate=0.18,
-                    defensive_reb_rate=0.70,
-                    opp_free_throw_rate=0.30,
+                    # Leave Four Factors as NaN when rankings page does not provide them.
+                    effective_fg_pct=math.nan,
+                    turnover_rate=math.nan,
+                    offensive_reb_rate=math.nan,
+                    free_throw_rate=math.nan,
+                    opp_effective_fg_pct=math.nan,
+                    opp_turnover_rate=math.nan,
+                    defensive_reb_rate=math.nan,
+                    opp_free_throw_rate=math.nan,
                 )
                 teams.append(team)
             except Exception as e:

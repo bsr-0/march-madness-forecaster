@@ -26,6 +26,7 @@ class MaterializationConfig:
     historical_manifest_path: Optional[str] = None
     strict_validation: bool = True
     require_all_seasons: bool = True
+    min_tournament_matchups: int = 1
 
 
 class HistoricalFeatureMaterializer:
@@ -61,6 +62,12 @@ class HistoricalFeatureMaterializer:
         team_game_features = self._build_team_game_features(team_games, team_metrics, optional_priors)
         matchup_features = self._build_matchup_features(team_game_features)
         tournament_matchup_features = self._build_tournament_matchup_features(matchup_features, tournament_seeds)
+        if self.config.strict_validation and len(tournament_matchup_features) < max(self.config.min_tournament_matchups, 0):
+            raise ValueError(
+                "Tournament matchup feature table is undersized: "
+                f"{len(tournament_matchup_features)} rows < required minimum {self.config.min_tournament_matchups}. "
+                "Ensure tournament seed artifacts and tournament-window games are available."
+            )
 
         leakage = self._leakage_checks(team_game_features)
         quality = self._quality_report(team_game_features, matchup_features, tournament_matchup_features, season_coverage)
@@ -212,9 +219,19 @@ class HistoricalFeatureMaterializer:
                         "source_team_id": team_id,
                         "team_name": row.get("team_name") or row.get("name") or team_id,
                         "conference": row.get("conference") or row.get("conf") or row.get("conference_name") or "",
-                        "off_rtg": self._to_float(row.get("off_rtg")),
-                        "def_rtg": self._to_float(row.get("def_rtg")),
-                        "pace": self._to_float(row.get("pace")),
+                        "off_rtg": self._coalesce_numeric(
+                            row,
+                            "off_rtg",
+                            "adj_offensive_efficiency",
+                            "adj_off",
+                        ),
+                        "def_rtg": self._coalesce_numeric(
+                            row,
+                            "def_rtg",
+                            "adj_defensive_efficiency",
+                            "adj_def",
+                        ),
+                        "pace": self._coalesce_numeric(row, "pace", "adj_tempo", "tempo"),
                         "srs": self._to_float(row.get("srs")),
                         "sos": self._to_float(row.get("sos")),
                         "wins": self._to_float(row.get("wins")),
@@ -236,6 +253,11 @@ class HistoricalFeatureMaterializer:
                 self._load_roster_season,
                 self._load_transfer_season,
                 self._load_market_season,
+                self._load_polls_season,
+                self._load_torvik_splits_season,
+                self._load_ncaa_team_stats_season,
+                self._load_weather_context_season,
+                self._load_travel_context_season,
             ):
                 block = loader(season)
                 if block is not None and not block.empty:
@@ -1029,10 +1051,12 @@ class HistoricalFeatureMaterializer:
             transfer_count = 0
             healthy_count = 0
             for player in players:
-                total_rapm += self._to_float(player.get("rapm_total"))
-                if player.get("rapm_total") is None:
-                    total_rapm += self._to_float(player.get("rapm_offensive")) + self._to_float(player.get("rapm_defensive"))
-                total_warp += self._to_float(player.get("warp"))
+                rapm_total = self._to_float(player.get("rapm_total"))
+                if np.isnan(rapm_total):
+                    rapm_total = self._to_float(player.get("rapm_offensive")) + self._to_float(player.get("rapm_defensive"))
+                total_rapm += 0.0 if np.isnan(rapm_total) else rapm_total
+                warp_val = self._to_float(player.get("warp"))
+                total_warp += 0.0 if np.isnan(warp_val) else warp_val
                 transfer_count += int(bool(player.get("is_transfer")))
                 healthy_count += int(str(player.get("injury_status", "healthy")).lower() == "healthy")
             rows.append(
@@ -1063,6 +1087,8 @@ class HistoricalFeatureMaterializer:
                     or player.get("mpg")
                     or player.get("minutes_share")
                 )
+                if np.isnan(minutes):
+                    minutes = 0.0
                 is_transfer = bool(player.get("is_transfer", False))
                 is_returning = bool(player.get("is_returning", not is_transfer))
                 class_year = str(
@@ -1075,6 +1101,8 @@ class HistoricalFeatureMaterializer:
                 rapm_val = self._to_float(player.get("rapm_total"))
                 if player.get("rapm_total") is None:
                     rapm_val = self._to_float(player.get("rapm_offensive")) + self._to_float(player.get("rapm_defensive"))
+                if np.isnan(rapm_val):
+                    rapm_val = 0.0
 
                 minutes_total += max(minutes, 0.0)
                 if is_returning:
@@ -1153,6 +1181,176 @@ class HistoricalFeatureMaterializer:
                     "team_name": team_name or team_id,
                     "market_implied_win": self._to_float(row.get("implied_win_probability")),
                     "market_title_odds": self._to_float(row.get("title_odds")),
+                }
+            )
+        return pd.DataFrame(rows) if rows else None
+
+    def _load_polls_season(self, season: int) -> Optional[pd.DataFrame]:
+        path = self.raw_dir / f"polls_{season}.json"
+        if not path.exists():
+            return None
+        with open(path, "r") as f:
+            payload = json.load(f)
+        rows = payload.get("records", payload.get("polls", payload if isinstance(payload, list) else []))
+        if not isinstance(rows, list):
+            return None
+        out = []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            team_name = row.get("team_name") or row.get("name") or ""
+            team_id = row.get("team_id") or self._normalize_team_id(team_name)
+            if not team_id:
+                continue
+            out.append(
+                {
+                    "season": season,
+                    "team_id": team_id,
+                    "source_team_id": team_id,
+                    "team_name": team_name or team_id,
+                    "polls_ap_preseason": self._to_float(row.get("ap_preseason_rank")),
+                    "polls_coaches_preseason": self._to_float(row.get("coaches_preseason_rank")),
+                    "polls_ap_weekly_mean": self._to_float(row.get("ap_weekly_mean")),
+                    "polls_coaches_weekly_mean": self._to_float(row.get("coaches_weekly_mean")),
+                    "polls_ap_weekly_std": self._to_float(row.get("ap_weekly_std")),
+                    "polls_coaches_weekly_std": self._to_float(row.get("coaches_weekly_std")),
+                }
+            )
+        return pd.DataFrame(out) if out else None
+
+    def _load_torvik_splits_season(self, season: int) -> Optional[pd.DataFrame]:
+        path = self.raw_dir / f"torvik_splits_{season}.json"
+        if not path.exists():
+            return None
+        with open(path, "r") as f:
+            payload = json.load(f)
+        teams = payload.get("records", payload.get("teams", payload if isinstance(payload, list) else []))
+        if not isinstance(teams, list):
+            return None
+        rows = []
+        for row in teams:
+            if not isinstance(row, dict):
+                continue
+            team_name = row.get("team_name") or row.get("name") or ""
+            team_id = row.get("team_id") or self._normalize_team_id(team_name)
+            if not team_id:
+                continue
+            rows.append(
+                {
+                    "season": season,
+                    "team_id": team_id,
+                    "source_team_id": team_id,
+                    "team_name": team_name or team_id,
+                    "torvik_split_wab": self._to_float(row.get("wab")),
+                    "torvik_split_sos": self._to_float(row.get("sos")),
+                    "torvik_split_ncsos": self._to_float(row.get("ncsos")),
+                    "torvik_split_vs_top50": self._to_float(row.get("vs_top50_win_pct")),
+                }
+            )
+        return pd.DataFrame(rows) if rows else None
+
+    def _load_ncaa_team_stats_season(self, season: int) -> Optional[pd.DataFrame]:
+        path = self.raw_dir / f"ncaa_team_stats_{season}.json"
+        if not path.exists():
+            return None
+        with open(path, "r") as f:
+            payload = json.load(f)
+        teams = payload.get("records", payload.get("teams", payload if isinstance(payload, list) else []))
+        if not isinstance(teams, list):
+            return None
+        rows = []
+        for row in teams:
+            if not isinstance(row, dict):
+                continue
+            team_name = row.get("team_name") or row.get("name") or ""
+            team_id = row.get("team_id") or self._normalize_team_id(team_name)
+            if not team_id:
+                continue
+            rows.append(
+                {
+                    "season": season,
+                    "team_id": team_id,
+                    "source_team_id": team_id,
+                    "team_name": team_name or team_id,
+                    "ncaa_ast_to_ratio": self._to_float(row.get("assist_turnover_ratio")),
+                    "ncaa_rebound_margin": self._to_float(row.get("rebound_margin")),
+                    "ncaa_foul_rate": self._to_float(row.get("foul_rate")),
+                }
+            )
+        return pd.DataFrame(rows) if rows else None
+
+    def _load_weather_context_season(self, season: int) -> Optional[pd.DataFrame]:
+        path = self.raw_dir / f"weather_context_{season}.json"
+        if not path.exists():
+            return None
+        with open(path, "r") as f:
+            payload = json.load(f)
+        records = payload.get("records", payload if isinstance(payload, list) else [])
+        if not isinstance(records, list):
+            return None
+        by_team: Dict[str, Dict[str, float]] = {}
+        for row in records:
+            if not isinstance(row, dict):
+                continue
+            team_name = row.get("team_name") or row.get("name") or ""
+            team_id = row.get("team_id") or self._normalize_team_id(team_name)
+            if not team_id:
+                continue
+            bucket = by_team.setdefault(team_id, {"count": 0.0, "temp": 0.0, "wind": 0.0, "alerts": 0.0})
+            bucket["count"] += 1.0
+            bucket["temp"] += max(self._to_float(row.get("temperature_f")) or 0.0, 0.0)
+            bucket["wind"] += max(self._to_float(row.get("wind_mph")) or 0.0, 0.0)
+            bucket["alerts"] += max(self._to_float(row.get("severe_alert")) or 0.0, 0.0)
+        rows = []
+        for team_id, agg in by_team.items():
+            count = max(agg["count"], 1.0)
+            rows.append(
+                {
+                    "season": season,
+                    "team_id": team_id,
+                    "source_team_id": team_id,
+                    "team_name": team_id,
+                    "weather_avg_temp_f": agg["temp"] / count,
+                    "weather_avg_wind_mph": agg["wind"] / count,
+                    "weather_severe_alert_rate": agg["alerts"] / count,
+                }
+            )
+        return pd.DataFrame(rows) if rows else None
+
+    def _load_travel_context_season(self, season: int) -> Optional[pd.DataFrame]:
+        path = self.raw_dir / f"travel_context_{season}.json"
+        if not path.exists():
+            return None
+        with open(path, "r") as f:
+            payload = json.load(f)
+        records = payload.get("records", payload if isinstance(payload, list) else [])
+        if not isinstance(records, list):
+            return None
+        by_team: Dict[str, Dict[str, float]] = {}
+        for row in records:
+            if not isinstance(row, dict):
+                continue
+            team_name = row.get("team_name") or row.get("name") or ""
+            team_id = row.get("team_id") or self._normalize_team_id(team_name)
+            if not team_id:
+                continue
+            bucket = by_team.setdefault(team_id, {"count": 0.0, "miles": 0.0, "tz": 0.0, "days": 0.0})
+            bucket["count"] += 1.0
+            bucket["miles"] += max(self._to_float(row.get("travel_miles")) or 0.0, 0.0)
+            bucket["tz"] += max(self._to_float(row.get("timezone_change_hours")) or 0.0, 0.0)
+            bucket["days"] += max(self._to_float(row.get("trip_days")) or 0.0, 0.0)
+        rows = []
+        for team_id, agg in by_team.items():
+            count = max(agg["count"], 1.0)
+            rows.append(
+                {
+                    "season": season,
+                    "team_id": team_id,
+                    "source_team_id": team_id,
+                    "team_name": team_id,
+                    "travel_avg_miles": agg["miles"] / count,
+                    "travel_avg_timezone_change": agg["tz"] / count,
+                    "travel_avg_trip_days": agg["days"] / count,
                 }
             )
         return pd.DataFrame(rows) if rows else None
@@ -1325,3 +1523,14 @@ class HistoricalFeatureMaterializer:
             return float(value)
         except (TypeError, ValueError):
             return np.nan
+
+    @staticmethod
+    def _coalesce_numeric(row: Dict, *keys: str) -> float:
+        for key in keys:
+            if key not in row:
+                continue
+            try:
+                return float(row.get(key))
+            except (TypeError, ValueError):
+                continue
+        return np.nan

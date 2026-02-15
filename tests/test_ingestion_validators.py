@@ -2,6 +2,7 @@
 
 from src.data.ingestion.validators import (
     validate_games_payload,
+    validate_odds_payload,
     validate_public_picks_payload,
     validate_ratings_payload,
     validate_rosters_payload,
@@ -26,6 +27,13 @@ def test_validate_teams_payload_missing_field():
 def test_validate_ratings_payload_ok():
     payload = {"teams": [{"team_id": "duke", "name": "Duke"}]}
     assert validate_ratings_payload(payload) == []
+
+
+def test_validate_ratings_payload_rejects_missing_required_numeric():
+    payload = {"teams": [{"team_id": "duke", "name": "Duke"}]}
+    errors = validate_ratings_payload(payload, required_numeric_fields=["adj_offensive_efficiency"])
+    assert errors
+    assert "missing/invalid numeric field" in errors[0]
 
 
 def test_validate_games_payload_ok():
@@ -73,6 +81,23 @@ def test_validate_rosters_payload_accepts_rapm_inputs():
     assert validate_rosters_payload(payload) == []
 
 
+def test_validate_rosters_payload_rejects_all_zero_rapm():
+    payload = {
+        "teams": [
+            {
+                "team_id": "duke",
+                "players": [
+                    {"player_id": "p1", "name": "A", "rapm_offensive": 0.0, "rapm_defensive": 0.0},
+                    {"player_id": "p2", "name": "B", "rapm_offensive": 0.0, "rapm_defensive": 0.0},
+                ],
+            }
+        ]
+    }
+    errors = validate_rosters_payload(payload)
+    assert errors
+    assert "all RAPM values are zero" in errors[0]
+
+
 def test_validate_shotquality_games_payload_checks_xp_coverage():
     payload = {
         "games": [
@@ -90,3 +115,10 @@ def test_validate_shotquality_games_payload_checks_xp_coverage():
     errors = validate_shotquality_games_payload(payload, min_xp_coverage=0.8)
     assert errors
     assert "coverage too low" in errors[-1]
+
+
+def test_validate_odds_payload_requires_probability_or_odds():
+    payload = {"teams": [{"team_name": "Duke"}]}
+    errors = validate_odds_payload(payload)
+    assert errors
+    assert "implied_win_probability/title_odds" in errors[0]

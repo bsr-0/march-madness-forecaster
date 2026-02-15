@@ -215,6 +215,7 @@ def test_materializer_is_leakage_safe_and_uses_prior_season_metrics(tmp_path):
         raw_dir=str(raw_dir),
         output_dir=str(output_dir),
         strict_validation=True,
+        min_tournament_matchups=0,
     )
     manifest = HistoricalFeatureMaterializer(config).run()
 
@@ -251,6 +252,7 @@ def test_materializer_creates_matchup_rows(tmp_path):
             raw_dir=str(raw_dir),
             output_dir=str(output_dir),
             strict_validation=True,
+            min_tournament_matchups=0,
         )
     ).run()
 
@@ -295,6 +297,7 @@ def test_materializer_requires_all_requested_seasons_by_default(tmp_path):
                 raw_dir=str(raw_dir),
                 output_dir=str(output_dir),
                 strict_validation=True,
+                min_tournament_matchups=0,
             )
         ).run()
 
@@ -307,7 +310,106 @@ def test_materializer_requires_all_requested_seasons_by_default(tmp_path):
             output_dir=str(output_dir),
             strict_validation=True,
             require_all_seasons=False,
+            min_tournament_matchups=0,
         )
     ).run()
 
     assert manifest["quality_report"]["season_coverage"]["missing_seasons"] == [2024]
+
+
+def test_materializer_enforces_tournament_minimum_rows(tmp_path):
+    historical_dir, raw_dir = _build_historical_fixture(tmp_path)
+    output_dir = tmp_path / "processed"
+
+    with pytest.raises(ValueError, match="Tournament matchup feature table is undersized"):
+        HistoricalFeatureMaterializer(
+            MaterializationConfig(
+                start_season=2022,
+                end_season=2023,
+                historical_dir=str(historical_dir),
+                raw_dir=str(raw_dir),
+                output_dir=str(output_dir),
+                strict_validation=True,
+                min_tournament_matchups=1,
+            )
+        ).run()
+
+
+def test_materializer_reads_adj_metric_aliases(tmp_path):
+    historical_dir = tmp_path / "historical"
+    raw_dir = tmp_path / "raw"
+    output_dir = tmp_path / "processed"
+    _write_json(
+        historical_dir / "historical_games_2022.json",
+        {
+            "season": 2022,
+            "games": [],
+            "team_games": [
+                {
+                    "game_id": "g1",
+                    "season": 2022,
+                    "date": "2021-11-10",
+                    "team_id": "a",
+                    "team_name": "A",
+                    "opponent_id": "b",
+                    "opponent_name": "B",
+                    "team_score": 80,
+                    "opponent_score": 70,
+                    "possessions": 70,
+                    "fgm": 28,
+                    "fga": 58,
+                    "fg3m": 8,
+                    "fg3a": 22,
+                    "fta": 16,
+                    "turnovers": 9,
+                    "orb": 10,
+                    "drb": 22,
+                },
+                {
+                    "game_id": "g1",
+                    "season": 2022,
+                    "date": "2021-11-10",
+                    "team_id": "b",
+                    "team_name": "B",
+                    "opponent_id": "a",
+                    "opponent_name": "A",
+                    "team_score": 70,
+                    "opponent_score": 80,
+                    "possessions": 70,
+                    "fgm": 25,
+                    "fga": 57,
+                    "fg3m": 6,
+                    "fg3a": 20,
+                    "fta": 14,
+                    "turnovers": 12,
+                    "orb": 8,
+                    "drb": 19,
+                },
+            ],
+        },
+    )
+    _write_json(
+        historical_dir / "team_metrics_2022.json",
+        {
+            "season": 2022,
+            "teams": [
+                {"team_id": "a", "team_name": "A", "adj_offensive_efficiency": 110.0, "adj_defensive_efficiency": 95.0, "adj_tempo": 69.0},
+                {"team_id": "b", "team_name": "B", "adj_offensive_efficiency": 105.0, "adj_defensive_efficiency": 98.0, "adj_tempo": 68.0},
+            ],
+        },
+    )
+
+    manifest = HistoricalFeatureMaterializer(
+        MaterializationConfig(
+            start_season=2022,
+            end_season=2022,
+            historical_dir=str(historical_dir),
+            raw_dir=str(raw_dir),
+            output_dir=str(output_dir),
+            strict_validation=True,
+            min_tournament_matchups=0,
+        )
+    ).run()
+
+    team_df = _read_table(manifest["artifacts"]["team_game_features_path"])
+    assert "prior_season_off_rtg" in team_df.columns

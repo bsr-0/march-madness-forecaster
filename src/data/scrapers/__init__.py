@@ -4,6 +4,7 @@ from .espn_picks import CBSPicksScraper, ESPNPicksScraper, YahooPicksScraper, ag
 from .cbbpy_rosters import CBBpyRosterScraper
 from .kenpom import KenPomScraper
 from .ncaa_stats import NCAAStatsScraper
+from .open_data_feed import OpenDataFeedScraper
 from .player_metrics import PlayerMetricsScraper
 from .shotquality import ShotQualityScraper
 from .shotquality_proxy import OpenShotQualityProxyBuilder
@@ -19,6 +20,7 @@ __all__ = [
     "ShotQualityScraper",
     "OpenShotQualityProxyBuilder",
     "NCAAStatsScraper",
+    "OpenDataFeedScraper",
     "PlayerMetricsScraper",
     "SportsReferenceScraper",
     "TournamentSeedScraper",

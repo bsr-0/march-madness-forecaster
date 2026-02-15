@@ -36480,3 +36480,75 @@ Traceback (most recent call last):
     is_conference = more_info["isConferenceGame"]
 KeyError: 'isConferenceGame'
 
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 14:55:49 2026": 401715625 - Game Info: 'isConferenceGame'
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 499, in _get_game_info
+    df = _get_game_info_helper(info, more_info, game_id, game_type)
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 1128, in _get_game_info_helper
+    is_conference = more_info["isConferenceGame"]
+KeyError: 'isConferenceGame'
+
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 14:55:49 2026": 401718453 - Game Info: 'isConferenceGame'
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 499, in _get_game_info
+    df = _get_game_info_helper(info, more_info, game_id, game_type)
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 1128, in _get_game_info_helper
+    is_conference = more_info["isConferenceGame"]
+KeyError: 'isConferenceGame'
+
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 14:55:49 2026": 401711710 - Game Info: 'isConferenceGame'
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 499, in _get_game_info
+    df = _get_game_info_helper(info, more_info, game_id, game_type)
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 1128, in _get_game_info_helper
+    is_conference = more_info["isConferenceGame"]
+KeyError: 'isConferenceGame'
+
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 14:55:49 2026": 401706994 - Game Info: 'isConferenceGame'
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 499, in _get_game_info
+    df = _get_game_info_helper(info, more_info, game_id, game_type)
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 1128, in _get_game_info_helper
+    is_conference = more_info["isConferenceGame"]
+KeyError: 'isConferenceGame'
+
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 14:55:49 2026": 401700403 - Game Info: 'isConferenceGame'
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 499, in _get_game_info
+    df = _get_game_info_helper(info, more_info, game_id, game_type)
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 1128, in _get_game_info_helper
+    is_conference = more_info["isConferenceGame"]
+KeyError: 'isConferenceGame'
+
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 14:55:50 2026": 401706897 - Game Info: 'isConferenceGame'
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 499, in _get_game_info
+    df = _get_game_info_helper(info, more_info, game_id, game_type)
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 1128, in _get_game_info_helper
+    is_conference = more_info["isConferenceGame"]
+KeyError: 'isConferenceGame'
+
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 14:55:50 2026": 401727341 - Game Info: 'isConferenceGame'
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 499, in _get_game_info
+    df = _get_game_info_helper(info, more_info, game_id, game_type)
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 1128, in _get_game_info_helper
+    is_conference = more_info["isConferenceGame"]
+KeyError: 'isConferenceGame'
+
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 14:55:50 2026": 401727320 - Game Info: 'isConferenceGame'
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 499, in _get_game_info
+    df = _get_game_info_helper(info, more_info, game_id, game_type)
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 1128, in _get_game_info_helper
+    is_conference = more_info["isConferenceGame"]
+KeyError: 'isConferenceGame'
+
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 14:55:50 2026": 401726445 - Game Info: 'isConferenceGame'
+Traceback (most recent call last):
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 499, in _get_game_info
+    df = _get_game_info_helper(info, more_info, game_id, game_type)
+  File "/opt/anaconda3/lib/python3.9/site-packages/cbbpy/cbbpy_utils.py", line 1128, in _get_game_info_helper
+    is_conference = more_info["isConferenceGame"]
+KeyError: 'isConferenceGame'
+
