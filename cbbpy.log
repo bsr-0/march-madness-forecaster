@@ -36552,3 +36552,47 @@ Traceback (most recent call last):
     is_conference = more_info["isConferenceGame"]
 KeyError: 'isConferenceGame'
 
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:40:25 2026": 400585900 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:42:20 2026": 400586351 - Postponed
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 15:43:57 2026": 400606908 - Boxscore: Page not found error
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 15:43:57 2026": 400606908 - PBP: Page not found error
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:44:44 2026": 400595627 - Postponed
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 15:45:38 2026": None - Boxscore: Game JSON not found on page.
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:47:22 2026": 400595487 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:47:22 2026": 400588433 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:47:27 2026": 400587164 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:47:51 2026": 400586268 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:49:09 2026": 400587982 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:49:12 2026": 400591077 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:49:15 2026": 400597745 - Canceled
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:49:15 2026": 400596434 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:49:25 2026": 400764234 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:49:39 2026": 400597850 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:49:47 2026": 400587575 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:49:53 2026": 400764936 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:50:28 2026": 400590837 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:50:46 2026": 400598825 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:54:22 2026": 400840059 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 15:59:11 2026": 400499070 - Postponed
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 16:00:23 2026": 400504620 - Boxscore: Page not found error
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 16:00:23 2026": 400504620 - PBP: Page not found error
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 16:00:25 2026": 400520395 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 16:00:35 2026": 400498067 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 16:00:35 2026": 400496905 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 16:00:35 2026": 400499319 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 16:00:37 2026": 400504621 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 16:00:38 2026": 400514657 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 16:00:46 2026": 400503120 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 16:01:00 2026": 400513114 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 16:02:37 2026": 400502564 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 16:02:39 2026": 400501620 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 16:02:51 2026": 400498584 - Postponed
+WARNING:cbbpy.cbbpy_utils:"Sun Feb 15 16:02:51 2026": 400498812 - Canceled
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 16:03:15 2026": 400507729 - Boxscore: Page not found error
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 16:03:15 2026": 400507729 - PBP: Page not found error
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 16:03:50 2026": 400508100 - Boxscore: Page not found error
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 16:03:50 2026": 400508100 - PBP: Page not found error
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 16:04:23 2026": 400507251 - Boxscore: Page not found error
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 16:04:23 2026": 400507251 - PBP: Page not found error
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 16:05:18 2026": 400504634 - Boxscore: Page not found error
+ERROR:cbbpy.cbbpy_utils:"Sun Feb 15 16:05:18 2026": 400504634 - PBP: Page not found error
