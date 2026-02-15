@@ -1,0 +1,20 @@
+Metadata-Version: 2.4
+Name: march-madness-forecaster
+Version: 0.1.0
+Summary: Mathematically robust prediction system for NCAA March Madness tournament
+Author: Ben Rosen
+Requires-Python: >=3.8
+Requires-Dist: numpy<1.27.0,>=1.24.4
+Requires-Dist: pandas<2.2.0,>=1.5.3
+Requires-Dist: pytz<2024.0,>=2022.7
+Requires-Dist: scipy<1.12.0,>=1.10.1
+Requires-Dist: scikit-learn<1.5.0,>=1.3.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: beautifulsoup4>=4.12.0
+Requires-Dist: lxml>=4.9.0
+Requires-Dist: cbbpy==2.0.2
+Requires-Dist: sportsipy>=0.6.0
+Dynamic: author
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
