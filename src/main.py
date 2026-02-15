@@ -135,6 +135,12 @@ def run_sota(args):
         scrape_live=args.scrape_live,
         data_cache_dir=args.cache_dir,
         injury_noise_samples=args.injury_noise_samples,
+        enforce_feed_freshness=not args.allow_stale_feeds,
+        max_feed_age_hours=args.max_feed_age_hours,
+        min_public_sources=args.min_public_sources,
+        min_shotquality_xp_coverage=args.min_shotquality_xp_coverage,
+        min_shotquality_possessions_per_game=args.min_shotquality_possessions_per_game,
+        min_rapm_players_per_team=args.min_rapm_players_per_team,
     )
 
     try:
@@ -204,6 +210,12 @@ def run_sota_from_manifest(args):
         scrape_live=args.scrape_live,
         data_cache_dir=args.cache_dir,
         injury_noise_samples=args.injury_noise_samples,
+        enforce_feed_freshness=not args.allow_stale_feeds,
+        max_feed_age_hours=args.max_feed_age_hours,
+        min_public_sources=args.min_public_sources,
+        min_shotquality_xp_coverage=args.min_shotquality_xp_coverage,
+        min_shotquality_possessions_per_game=args.min_shotquality_possessions_per_game,
+        min_rapm_players_per_team=args.min_rapm_players_per_team,
     )
 
     try:
@@ -236,11 +248,14 @@ def ingest_data(args):
         ncaa_games_url=args.ncaa_games_url,
         transfer_portal_url=args.transfer_portal_url,
         transfer_portal_format=args.transfer_portal_format,
+        roster_url=args.roster_url,
+        roster_format=args.roster_format,
         scrape_torvik=not args.skip_torvik,
         scrape_kenpom=not args.skip_kenpom,
         scrape_shotquality=not args.skip_shotquality,
         scrape_public_picks=not args.skip_public_picks,
         scrape_sports_reference=not args.skip_sports_reference,
+        scrape_rosters=not args.skip_rosters,
         historical_games_provider_priority=parse_priority(args.historical_games_provider_priority),
         team_metrics_provider_priority=parse_priority(args.team_metrics_provider_priority),
         kenpom_provider_priority=parse_priority(args.kenpom_provider_priority),
@@ -356,6 +371,27 @@ def main():
     sota_parser.add_argument("--scoring-rules", default=None, help="Optional scoring rules JSON (R64/R32/S16/E8/F4/CHAMP)")
     sota_parser.add_argument("--scrape-live", action="store_true", help="Allow live scraping when JSON paths are missing")
     sota_parser.add_argument("--cache-dir", default="data/raw/cache", help="Cache directory for scraper responses")
+    sota_parser.add_argument("--allow-stale-feeds", action="store_true", help="Disable freshness checks for feed timestamps")
+    sota_parser.add_argument("--max-feed-age-hours", type=int, default=168, help="Maximum allowed feed age in hours")
+    sota_parser.add_argument("--min-public-sources", type=int, default=2, help="Minimum independent public pick sources")
+    sota_parser.add_argument(
+        "--min-shotquality-xp-coverage",
+        type=float,
+        default=0.8,
+        help="Minimum possession-level xP coverage ratio for ShotQuality games",
+    )
+    sota_parser.add_argument(
+        "--min-shotquality-possessions-per-game",
+        type=int,
+        default=50,
+        help="Minimum possession count per game for ShotQuality quality gate",
+    )
+    sota_parser.add_argument(
+        "--min-rapm-players-per-team",
+        type=int,
+        default=5,
+        help="Minimum number of non-zero RAPM players required per team",
+    )
 
     ingest_parser = subparsers.add_parser("ingest", help="Collect real-world data sources and write a manifest")
     ingest_parser.add_argument("--year", type=int, required=True, help="Season year to ingest")
@@ -365,11 +401,14 @@ def main():
     ingest_parser.add_argument("--ncaa-games-url", default=None, help="JSON endpoint for historical games")
     ingest_parser.add_argument("--transfer-portal-url", default=None, help="Transfer portal JSON/CSV endpoint")
     ingest_parser.add_argument("--transfer-portal-format", choices=["json", "csv"], default="json")
+    ingest_parser.add_argument("--roster-url", default=None, help="Player roster metrics JSON/CSV endpoint")
+    ingest_parser.add_argument("--roster-format", choices=["json", "csv"], default="json")
     ingest_parser.add_argument("--skip-torvik", action="store_true", help="Skip Torvik scrape")
     ingest_parser.add_argument("--skip-kenpom", action="store_true", help="Skip KenPom scrape")
     ingest_parser.add_argument("--skip-shotquality", action="store_true", help="Skip ShotQuality scrape")
     ingest_parser.add_argument("--skip-public-picks", action="store_true", help="Skip public picks scrape")
     ingest_parser.add_argument("--skip-sports-reference", action="store_true", help="Skip Sports Reference scrape")
+    ingest_parser.add_argument("--skip-rosters", action="store_true", help="Skip player roster ingestion")
     ingest_parser.add_argument(
         "--historical-games-provider-priority",
         default=None,
@@ -513,6 +552,27 @@ def main():
     manifest_sota_parser.add_argument("--scoring-rules", default=None, help="Override scoring rules JSON")
     manifest_sota_parser.add_argument("--scrape-live", action="store_true", help="Allow live scraping for missing inputs")
     manifest_sota_parser.add_argument("--cache-dir", default="data/raw/cache", help="Cache directory for scraper responses")
+    manifest_sota_parser.add_argument("--allow-stale-feeds", action="store_true", help="Disable freshness checks for feed timestamps")
+    manifest_sota_parser.add_argument("--max-feed-age-hours", type=int, default=168, help="Maximum allowed feed age in hours")
+    manifest_sota_parser.add_argument("--min-public-sources", type=int, default=2, help="Minimum independent public pick sources")
+    manifest_sota_parser.add_argument(
+        "--min-shotquality-xp-coverage",
+        type=float,
+        default=0.8,
+        help="Minimum possession-level xP coverage ratio for ShotQuality games",
+    )
+    manifest_sota_parser.add_argument(
+        "--min-shotquality-possessions-per-game",
+        type=int,
+        default=50,
+        help="Minimum possession count per game for ShotQuality quality gate",
+    )
+    manifest_sota_parser.add_argument(
+        "--min-rapm-players-per-team",
+        type=int,
+        default=5,
+        help="Minimum number of non-zero RAPM players required per team",
+    )
     
     args = parser.parse_args()
     

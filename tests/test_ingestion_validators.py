@@ -4,6 +4,8 @@ from src.data.ingestion.validators import (
     validate_games_payload,
     validate_public_picks_payload,
     validate_ratings_payload,
+    validate_rosters_payload,
+    validate_shotquality_games_payload,
     validate_teams_payload,
     validate_transfer_payload,
 )
@@ -55,3 +57,36 @@ def test_validate_transfer_payload_requires_player_identity():
     errors = validate_transfer_payload(payload)
     assert errors
     assert "player id/name" in errors[0]
+
+
+def test_validate_rosters_payload_accepts_rapm_inputs():
+    payload = {
+        "teams": [
+            {
+                "team_id": "duke",
+                "players": [
+                    {"player_id": "p1", "name": "A", "rapm_offensive": 1.1, "rapm_defensive": 0.5}
+                ],
+            }
+        ]
+    }
+    assert validate_rosters_payload(payload) == []
+
+
+def test_validate_shotquality_games_payload_checks_xp_coverage():
+    payload = {
+        "games": [
+            {
+                "game_id": "g1",
+                "team_id": "duke",
+                "opponent_id": "unc",
+                "possessions": [
+                    {"team_id": "duke", "xp": 1.1},
+                    {"team_id": "unc"},
+                ],
+            }
+        ]
+    }
+    errors = validate_shotquality_games_payload(payload, min_xp_coverage=0.8)
+    assert errors
+    assert "coverage too low" in errors[-1]

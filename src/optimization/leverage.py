@@ -6,7 +6,7 @@ high-leverage picks with favorable Win Probability / Pick Percentage ratios.
 """
 
 from typing import Dict, List, Optional, Tuple
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import numpy as np
 
 
@@ -293,23 +293,155 @@ class ParetoOptimizer:
         Returns:
             BracketConfiguration
         """
-        # Get leverage picks
-        leverage_picks = self.calculator.find_leverage_picks(min_leverage=1.0 + risk_level)
-        
-        picks = {}
-        champion = ""
-        final_four = []
-        
+        if self._can_build_full_bracket():
+            picks, champion, final_four, expected_points, variance = self._generate_full_bracket(risk_level)
+        else:
+            picks, champion, final_four, expected_points, variance = self._generate_summary_bracket(risk_level)
+
+        return BracketConfiguration(
+            picks=picks,
+            champion=champion,
+            final_four=final_four,
+            strategy=strategy,
+            expected_points=expected_points,
+            variance=variance,
+        )
+
+    def _expected_value_contribution(self, team_id: str, round_name: str) -> Tuple[float, float]:
+        p = float(self.calculator.model_probs.get(team_id, {}).get(round_name, 0.0))
+        pts = float(self.calculator.scoring_system.get(round_name, 0))
+        ev = p * pts
+        var = p * (1.0 - p) * (pts ** 2)
+        return ev, var
+
+    def _risk_adjusted_score(self, team_id: str, round_name: str, risk_level: float) -> float:
+        model_prob = float(self.calculator.model_probs.get(team_id, {}).get(round_name, 0.0))
+        public_prob = float(self.calculator.public_picks.get(team_id, {}).get(round_name, 0.01))
+        leverage = model_prob / max(public_prob, 0.001)
+        seed = max(1, self.calculator._team_meta(team_id).seed or 16)
+
+        # Low-risk brackets favor strong seeds; high-risk brackets reward leverage.
+        seed_strength = (17 - seed) / 16.0
+        return model_prob * (leverage ** risk_level) + (1.0 - risk_level) * 0.02 * seed_strength
+
+    def _pick_winner(self, team1_id: str, team2_id: str, round_name: str, risk_level: float) -> str:
+        score1 = self._risk_adjusted_score(team1_id, round_name, risk_level)
+        score2 = self._risk_adjusted_score(team2_id, round_name, risk_level)
+        if abs(score1 - score2) > 1e-9:
+            return team1_id if score1 > score2 else team2_id
+
+        # Deterministic tie-break: better seed, then lexical order for stability.
+        seed1 = max(1, self.calculator._team_meta(team1_id).seed or 16)
+        seed2 = max(1, self.calculator._team_meta(team2_id).seed or 16)
+        if seed1 != seed2:
+            return team1_id if seed1 < seed2 else team2_id
+        return team1_id if team1_id < team2_id else team2_id
+
+    def _build_seed_map(self) -> Dict[str, Dict[int, str]]:
+        by_region: Dict[str, Dict[int, str]] = {r: {} for r in ("East", "West", "South", "Midwest")}
+        for team_id in self.calculator.model_probs.keys():
+            meta = self.calculator._team_meta(team_id)
+            if meta.region not in by_region:
+                continue
+            if meta.seed <= 0:
+                continue
+            by_region[meta.region][meta.seed] = team_id
+        return by_region
+
+    def _can_build_full_bracket(self) -> bool:
+        by_region = self._build_seed_map()
+        for region in ("East", "West", "South", "Midwest"):
+            seeds = by_region.get(region, {})
+            if len(seeds) < 16:
+                return False
+            if any(seed not in seeds for seed in range(1, 17)):
+                return False
+        return True
+
+    def _generate_full_bracket(self, risk_level: float) -> Tuple[Dict[str, str], str, List[str], float, float]:
+        by_region = self._build_seed_map()
+        seed_order = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
+
+        picks: Dict[str, str] = {}
+        region_champs: Dict[str, str] = {}
+        expected_points = 0.0
+        variance = 0.0
+
+        for region in ("East", "West", "South", "Midwest"):
+            region_teams = by_region[region]
+
+            r64_winners: List[str] = []
+            for high_seed, low_seed in seed_order:
+                team1 = region_teams[high_seed]
+                team2 = region_teams[low_seed]
+                winner = self._pick_winner(team1, team2, "R64", risk_level)
+                picks[f"R64_{region}_{high_seed}v{low_seed}"] = winner
+                ev, var = self._expected_value_contribution(winner, "R64")
+                expected_points += ev
+                variance += var
+                r64_winners.append(winner)
+
+            r32_winners: List[str] = []
+            for idx in range(0, len(r64_winners), 2):
+                winner = self._pick_winner(r64_winners[idx], r64_winners[idx + 1], "R32", risk_level)
+                picks[f"R32_{region}_{idx // 2 + 1}"] = winner
+                ev, var = self._expected_value_contribution(winner, "R32")
+                expected_points += ev
+                variance += var
+                r32_winners.append(winner)
+
+            s16_winners: List[str] = []
+            for idx in range(0, len(r32_winners), 2):
+                winner = self._pick_winner(r32_winners[idx], r32_winners[idx + 1], "S16", risk_level)
+                picks[f"S16_{region}_{idx // 2 + 1}"] = winner
+                ev, var = self._expected_value_contribution(winner, "S16")
+                expected_points += ev
+                variance += var
+                s16_winners.append(winner)
+
+            e8_winner = self._pick_winner(s16_winners[0], s16_winners[1], "E8", risk_level)
+            picks[f"E8_{region}"] = e8_winner
+            ev, var = self._expected_value_contribution(e8_winner, "E8")
+            expected_points += ev
+            variance += var
+            region_champs[region] = e8_winner
+
+        final_four = [
+            region_champs["East"],
+            region_champs["West"],
+            region_champs["South"],
+            region_champs["Midwest"],
+        ]
+
+        semi1 = self._pick_winner(region_champs["East"], region_champs["West"], "F4", risk_level)
+        semi2 = self._pick_winner(region_champs["South"], region_champs["Midwest"], "F4", risk_level)
+        picks["F4_East_West"] = semi1
+        picks["F4_South_Midwest"] = semi2
+        ev, var = self._expected_value_contribution(semi1, "F4")
+        expected_points += ev
+        variance += var
+        ev, var = self._expected_value_contribution(semi2, "F4")
+        expected_points += ev
+        variance += var
+
+        champion = self._pick_winner(semi1, semi2, "CHAMP", risk_level)
+        picks["CHAMP"] = champion
+        ev, var = self._expected_value_contribution(champion, "CHAMP")
+        expected_points += ev
+        variance += var
+
+        return picks, champion, final_four, expected_points, variance
+
+    def _generate_summary_bracket(self, risk_level: float) -> Tuple[Dict[str, str], str, List[str], float, float]:
         champion_scores: Dict[str, float] = {}
         for team_id, probs in self.calculator.model_probs.items():
             champ_prob = probs.get("CHAMP", 0.0)
             public_prob = self.calculator.public_picks.get(team_id, {}).get("CHAMP", 0.01)
             leverage = champ_prob / max(public_prob, 0.001)
             champion_scores[team_id] = champ_prob * (leverage ** risk_level)
-        if champion_scores:
-            champion = max(champion_scores, key=champion_scores.get)
 
-        # Build Final Four set from risk-adjusted F4 value and diversify by region when available.
+        champion = max(champion_scores, key=champion_scores.get) if champion_scores else ""
+
         f4_candidates = []
         for team_id, probs in self.calculator.model_probs.items():
             f4_prob = probs.get("F4", 0.0)
@@ -318,6 +450,7 @@ class ParetoOptimizer:
             f4_candidates.append((team_id, f4_prob * (leverage ** risk_level), f4_prob))
         f4_candidates.sort(key=lambda x: x[1], reverse=True)
 
+        final_four: List[str] = []
         used_regions = set()
         for team_id, _score, _f4_prob in f4_candidates:
             if len(final_four) == 4:
@@ -340,23 +473,17 @@ class ParetoOptimizer:
         for idx, team_id in enumerate(final_four, start=1):
             picks[f"F4_{idx}"] = team_id
 
-        champ_prob = self.calculator.model_probs.get(champion, {}).get("CHAMP", 0.0) if champion else 0.0
-        expected_points = champ_prob * self.calculator.scoring_system.get("CHAMP", 0)
-        variance = champ_prob * (1.0 - champ_prob) * (self.calculator.scoring_system.get("CHAMP", 0) ** 2)
+        expected_points = 0.0
+        variance = 0.0
+        if champion:
+            ev, var = self._expected_value_contribution(champion, "CHAMP")
+            expected_points += ev
+            variance += var
         for team_id in final_four:
-            p = self.calculator.model_probs.get(team_id, {}).get("F4", 0.0)
-            pts = self.calculator.scoring_system.get("F4", 0)
-            expected_points += p * pts
-            variance += p * (1.0 - p) * (pts ** 2)
-        
-        return BracketConfiguration(
-            picks=picks,
-            champion=champion,
-            final_four=final_four,
-            strategy=strategy,
-            expected_points=expected_points,
-            variance=variance,
-        )
+            ev, var = self._expected_value_contribution(team_id, "F4")
+            expected_points += ev
+            variance += var
+        return picks, champion, final_four, expected_points, variance
     
     def recommend_for_pool_size(self) -> str:
         """
