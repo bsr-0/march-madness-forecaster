@@ -8,7 +8,6 @@ high-leverage picks with favorable Win Probability / Pick Percentage ratios.
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 import numpy as np
-from copy import deepcopy
 
 
 @dataclass
@@ -81,6 +80,15 @@ class BracketConfiguration:
         }
 
 
+@dataclass
+class TeamMetadata:
+    """Metadata used for richer game-theory recommendations."""
+
+    team_name: str
+    seed: int
+    region: str
+
+
 class LeverageCalculator:
     """
     Calculates leverage ratios for bracket optimization.
@@ -96,7 +104,8 @@ class LeverageCalculator:
         self,
         model_probs: Dict[str, Dict[str, float]],
         public_picks: Dict[str, Dict[str, float]],
-        scoring_system: Dict[str, int] = None
+        scoring_system: Dict[str, int] = None,
+        team_metadata: Optional[Dict[str, TeamMetadata]] = None,
     ):
         """
         Initialize calculator.
@@ -108,6 +117,7 @@ class LeverageCalculator:
         """
         self.model_probs = model_probs
         self.public_picks = public_picks
+        self.team_metadata = team_metadata or {}
         
         # Standard NCAA bracket scoring
         self.scoring_system = scoring_system or {
@@ -118,6 +128,12 @@ class LeverageCalculator:
             "F4": 160,
             "CHAMP": 320,
         }
+
+    def _team_meta(self, team_id: str) -> TeamMetadata:
+        return self.team_metadata.get(
+            team_id,
+            TeamMetadata(team_name=team_id, seed=0, region=""),
+        )
     
     def find_leverage_picks(
         self,
@@ -147,11 +163,12 @@ class LeverageCalculator:
                 leverage = model_prob / public_pct
                 
                 if leverage >= min_leverage:
+                    meta = self._team_meta(team_id)
                     leverage_picks.append(LeveragePick(
                         team_id=team_id,
-                        team_name=team_id,  # Would be resolved from data
-                        seed=0,  # Would be resolved from data
-                        region="",  # Would be resolved from data
+                        team_name=meta.team_name,
+                        seed=meta.seed,
+                        region=meta.region,
                         model_probability=model_prob,
                         public_pick_percentage=public_pct,
                         round_name=round_name,
@@ -188,11 +205,12 @@ class LeverageCalculator:
                 leverage = model_prob / public_pct
                 
                 if leverage <= max_leverage and public_pct > 0.1:
+                    meta = self._team_meta(team_id)
                     fade_picks.append(LeveragePick(
                         team_id=team_id,
-                        team_name=team_id,
-                        seed=0,
-                        region="",
+                        team_name=meta.team_name,
+                        seed=meta.seed,
+                        region=meta.region,
                         model_probability=model_prob,
                         public_pick_percentage=public_pct,
                         round_name=round_name,
@@ -276,33 +294,60 @@ class ParetoOptimizer:
             BracketConfiguration
         """
         # Get leverage picks
-        leverage_picks = self.calculator.find_leverage_picks(
-            min_leverage=1.0 + risk_level  # Higher risk = higher leverage threshold
-        )
+        leverage_picks = self.calculator.find_leverage_picks(min_leverage=1.0 + risk_level)
         
         picks = {}
-        champion = None
+        champion = ""
         final_four = []
         
-        # Select champion based on risk level
-        champion_picks = [p for p in leverage_picks if p.round_name == "CHAMP"]
-        
-        if champion_picks and risk_level > 0.3:
-            # Pick contrarian champion
-            champion = champion_picks[0].team_id
-        else:
-            # Pick by model probability
-            champion_probs = {
-                tid: probs.get("CHAMP", 0) 
-                for tid, probs in self.calculator.model_probs.items()
-            }
-            champion = max(champion_probs, key=champion_probs.get)
-        
-        # Expected points calculation would be more sophisticated
-        expected_points = sum(
-            p.expected_value 
-            for p in leverage_picks[:10]  # Top 10 leverage picks
-        )
+        champion_scores: Dict[str, float] = {}
+        for team_id, probs in self.calculator.model_probs.items():
+            champ_prob = probs.get("CHAMP", 0.0)
+            public_prob = self.calculator.public_picks.get(team_id, {}).get("CHAMP", 0.01)
+            leverage = champ_prob / max(public_prob, 0.001)
+            champion_scores[team_id] = champ_prob * (leverage ** risk_level)
+        if champion_scores:
+            champion = max(champion_scores, key=champion_scores.get)
+
+        # Build Final Four set from risk-adjusted F4 value and diversify by region when available.
+        f4_candidates = []
+        for team_id, probs in self.calculator.model_probs.items():
+            f4_prob = probs.get("F4", 0.0)
+            public_prob = self.calculator.public_picks.get(team_id, {}).get("F4", 0.01)
+            leverage = f4_prob / max(public_prob, 0.001)
+            f4_candidates.append((team_id, f4_prob * (leverage ** risk_level), f4_prob))
+        f4_candidates.sort(key=lambda x: x[1], reverse=True)
+
+        used_regions = set()
+        for team_id, _score, _f4_prob in f4_candidates:
+            if len(final_four) == 4:
+                break
+            region = self.calculator._team_meta(team_id).region
+            if region and region in used_regions:
+                continue
+            final_four.append(team_id)
+            if region:
+                used_regions.add(region)
+        if len(final_four) < 4:
+            for team_id, _score, _f4_prob in f4_candidates:
+                if team_id in final_four:
+                    continue
+                final_four.append(team_id)
+                if len(final_four) == 4:
+                    break
+
+        picks = {"CHAMP": champion}
+        for idx, team_id in enumerate(final_four, start=1):
+            picks[f"F4_{idx}"] = team_id
+
+        champ_prob = self.calculator.model_probs.get(champion, {}).get("CHAMP", 0.0) if champion else 0.0
+        expected_points = champ_prob * self.calculator.scoring_system.get("CHAMP", 0)
+        variance = champ_prob * (1.0 - champ_prob) * (self.calculator.scoring_system.get("CHAMP", 0) ** 2)
+        for team_id in final_four:
+            p = self.calculator.model_probs.get(team_id, {}).get("F4", 0.0)
+            pts = self.calculator.scoring_system.get("F4", 0)
+            expected_points += p * pts
+            variance += p * (1.0 - p) * (pts ** 2)
         
         return BracketConfiguration(
             picks=picks,
@@ -310,6 +355,7 @@ class ParetoOptimizer:
             final_four=final_four,
             strategy=strategy,
             expected_points=expected_points,
+            variance=variance,
         )
     
     def recommend_for_pool_size(self) -> str:
@@ -433,6 +479,7 @@ def analyze_pool(
     model_probs: Dict[str, Dict[str, float]],
     public_picks: Dict[str, Dict[str, float]],
     scoring_system: Optional[Dict[str, int]] = None,
+    team_metadata: Optional[Dict[str, TeamMetadata]] = None,
 ) -> PoolAnalysis:
     """
     Complete pool analysis.
@@ -445,7 +492,12 @@ def analyze_pool(
     Returns:
         PoolAnalysis with recommendations
     """
-    calculator = LeverageCalculator(model_probs, public_picks, scoring_system=scoring_system)
+    calculator = LeverageCalculator(
+        model_probs,
+        public_picks,
+        scoring_system=scoring_system,
+        team_metadata=team_metadata,
+    )
     optimizer = ParetoOptimizer(calculator, pool_size)
     
     leverage_picks = calculator.find_leverage_picks()

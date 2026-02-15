@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-02-15T06:43:52.626125+00:00",
+  "start_season": 2022,
+  "end_season": 2022,
+  "artifacts": {
+    "2022": {
+      "historical_games_json": "data/raw/historical/historical_games_2022.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2022.json"
+    }
+  },
+  "providers": {
+    "2022": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper"
+    }
+  },
+  "validation_errors": {
+    "2022": {
+      "historical_games_json": [],
+      "team_metrics_json": []
+    }
+  },
+  "season_counts": {
+    "2022": {
+      "games": 2,
+      "team_games": 4,
+      "teams": 358
+    }
+  }
+}

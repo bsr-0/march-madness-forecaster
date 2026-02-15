@@ -1,0 +1,34 @@
+{
+  "generated_at": "2026-02-15T16:01:53.732852+00:00",
+  "start_season": 2025,
+  "end_season": 2025,
+  "artifacts": {
+    "2025": {
+      "historical_games_json": "data/raw/historical_full/historical_games_2025.json",
+      "team_metrics_json": "data/raw/historical_full/team_metrics_2025.json",
+      "tournament_seeds_json": "data/raw/historical_full/tournament_seeds_2025.json"
+    }
+  },
+  "providers": {
+    "2025": {
+      "historical_games_json": "cbbpy_cache",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    }
+  },
+  "validation_errors": {
+    "2025": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    }
+  },
+  "season_counts": {
+    "2025": {
+      "games": 6291,
+      "team_games": 12582,
+      "teams": 364,
+      "tournament_seed_teams": 68
+    }
+  }
+}

@@ -48,6 +48,16 @@ class ScheduleEdge:
         home_adjustment = (self.location_weight - 0.5) * 7.0
         return self.actual_margin - home_adjustment
 
+    @property
+    def quality_adjusted_margin(self) -> float:
+        """
+        Margin that blends scoreboard result with possession-quality margin.
+
+        xP margin is less noisy than final score and should carry more weight
+        for schedule propagation.
+        """
+        return 0.35 * self.adjusted_margin + 0.65 * self.xp_margin
+
 
 class ScheduleGraph:
     """
@@ -121,9 +131,9 @@ class ScheduleGraph:
                 continue
             
             if weighted:
-                # Use adjusted margin as edge weight
+                # Use quality-adjusted margin as edge weight.
                 # Sigmoid to bound between 0 and 1
-                margin = edge.adjusted_margin
+                margin = edge.quality_adjusted_margin
                 weight = 1.0 / (1.0 + np.exp(-margin / 10.0))
             else:
                 weight = 1.0
@@ -152,7 +162,7 @@ class ScheduleGraph:
                 continue
             
             # Bidirectional edges
-            margin = edge.adjusted_margin
+            margin = edge.quality_adjusted_margin
             weight = 1.0 / (1.0 + np.exp(-margin / 10.0))
             
             edge_list.append([i, j])

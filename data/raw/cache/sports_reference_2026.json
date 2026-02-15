@@ -1,0 +1,2194 @@
+{
+  "teams": [
+    {
+      "team_name": "Abilene Christian",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Air Force",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Akron",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Alabama",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Alabama A&M",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Alabama State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Albany (NY)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Alcorn State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "American",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Appalachian State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Arizona",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Arizona State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Arkansas",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Arkansas State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Arkansas-Pine Bluff",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Army",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Auburn",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Austin Peay",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Ball State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Baylor",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Bellarmine",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Belmont",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Bethune-Cookman",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Binghamton",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Boise State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Boston College",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Boston University",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Bowling Green",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Bradley",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Brigham Young",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Brown",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Bryant",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Bucknell",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Buffalo",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Butler",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Cal Poly",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Cal State Bakersfield",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Cal State Fullerton",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Cal State Northridge",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "California",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "California Baptist",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Campbell",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Canisius",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Central Arkansas",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Central Connecticut State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Central Michigan",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Charleston Southern",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Charlotte",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Chattanooga",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Chicago State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Cincinnati",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Clemson",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Cleveland State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Coastal Carolina",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Colgate",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "College of Charleston",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Colorado",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Colorado State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Columbia",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Connecticut",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Coppin State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Cornell",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Creighton",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Dartmouth",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Davidson",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Dayton",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Delaware",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Delaware State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Denver",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "DePaul",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Detroit Mercy",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Drake",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Drexel",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Duke",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Duquesne",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "East Carolina",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "East Tennessee State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "East Texas A&M",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Eastern Illinois",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Eastern Kentucky",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Eastern Michigan",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Eastern Washington",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Elon",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Evansville",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Fairfield",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "FDU",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Florida",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Florida A&M",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Florida Atlantic",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Florida Gulf Coast",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Florida International",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Florida State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Fordham",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Fresno State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Furman",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Gardner-Webb",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "George Mason",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "George Washington",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Georgetown",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Georgia",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Georgia Southern",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Georgia State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Georgia Tech",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Gonzaga",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Grambling",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Grand Canyon",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Green Bay",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Hampton",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Harvard",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Hawaii",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "High Point",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Hofstra",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Holy Cross",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Houston",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Houston Christian",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Howard",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Idaho",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Idaho State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Illinois",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Illinois State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Illinois-Chicago",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Incarnate Word",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Indiana",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Indiana State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Iona",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Iowa",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Iowa State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "IU Indy",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Jackson State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Jacksonville",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Jacksonville State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "James Madison",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Kansas",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Kansas City",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Kansas State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Kennesaw State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Kent State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Kentucky",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "La Salle",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Lafayette",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Lamar",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Le Moyne",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Lehigh",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Liberty",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Lindenwood",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Lipscomb",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Little Rock",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Long Beach State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Long Island University",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Longwood",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Louisiana",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Louisiana State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Louisiana Tech",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Louisiana-Monroe",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Louisville",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Loyola (IL)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Loyola (MD)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Loyola Marymount",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Maine",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Manhattan",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Marist",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Marquette",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Marshall",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Maryland",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Maryland-Baltimore County",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Maryland-Eastern Shore",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Massachusetts",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Massachusetts-Lowell",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "McNeese State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Memphis",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Mercer",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Mercyhurst",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Merrimack",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Miami (FL)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Miami (OH)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Michigan",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Michigan State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Middle Tennessee",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Milwaukee",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Minnesota",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Mississippi",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Mississippi State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Mississippi Valley State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Missouri",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Missouri State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Monmouth",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Montana",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Montana State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Morehead State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Morgan State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Mount St. Mary's",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Murray State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Navy",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "NC State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Nebraska",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Nevada",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Nevada-Las Vegas",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "New Hampshire",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "New Haven",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "New Mexico",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "New Mexico State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "New Orleans",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Niagara",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Nicholls State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "NJIT",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Norfolk State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "North Alabama",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "North Carolina",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "North Carolina A&T",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "North Carolina Central",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "North Dakota",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "North Dakota State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "North Florida",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "North Texas",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Northeastern",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Northern Arizona",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Northern Colorado",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Northern Illinois",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Northern Iowa",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Northern Kentucky",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Northwestern",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Northwestern State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Notre Dame",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Oakland",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Ohio",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Ohio State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Oklahoma",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Oklahoma State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Old Dominion",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Omaha",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Oral Roberts",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Oregon",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Oregon State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Pacific",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Penn State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Pennsylvania",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Pepperdine",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Pittsburgh",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Portland",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Portland State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Prairie View",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Presbyterian",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Princeton",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Providence",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Purdue",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Purdue Fort Wayne",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Queens (NC)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Quinnipiac",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Radford",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Rhode Island",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Rice",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Richmond",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Rider",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Robert Morris",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Rutgers",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Sacramento State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Sacred Heart",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Saint Francis (PA)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Saint Joseph's",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Saint Louis",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Saint Mary's (CA)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Saint Peter's",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Sam Houston",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Samford",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "San Diego",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "San Diego State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "San Francisco",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "San Jose State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Santa Clara",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Seattle",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Seton Hall",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Siena",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "South Alabama",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "South Carolina",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "South Carolina State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "South Carolina Upstate",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "South Dakota",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "South Dakota State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "South Florida",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Southeast Missouri State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Southeastern Louisiana",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Southern",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Southern California",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Southern Illinois",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "SIU Edwardsville",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Southern Indiana",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Southern Methodist",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Southern Mississippi",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Southern Utah",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "St. Bonaventure",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "St. John's (NY)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "St. Thomas",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Stanford",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Stephen F. Austin",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Stetson",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Stonehill",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Stony Brook",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Syracuse",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Tarleton State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "TCU",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Temple",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Tennessee",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Tennessee State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Tennessee Tech",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Tennessee-Martin",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Texas",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Texas A&M",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Texas A&M-Corpus Christi",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Texas Southern",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Texas State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Texas Tech",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Texas-Rio Grande Valley",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "The Citadel",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Toledo",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Towson",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Troy",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Tulane",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Tulsa",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "UAB",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "UC Davis",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "UC Irvine",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "UC Riverside",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "UC San Diego",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "UC Santa Barbara",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "UCF",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "UCLA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "UNC Asheville",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "UNC Greensboro",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "UNC Wilmington",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "UT Arlington",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Utah",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Utah State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Utah Tech",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Utah Valley",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "UTEP",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "UTSA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Valparaiso",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Vanderbilt",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Vermont",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Villanova",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Virginia",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Virginia Commonwealth",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "VMI",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Virginia Tech",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Wagner",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Wake Forest",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Washington",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Washington State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Weber State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "West Georgia",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "West Virginia",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Western Carolina",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Western Illinois",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Western Kentucky",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Western Michigan",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Wichita State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "William & Mary",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Winthrop",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Wisconsin",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Wofford",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Wright State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Wyoming",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Xavier",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Yale",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    },
+    {
+      "team_name": "Youngstown State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0
+    }
+  ]
+}

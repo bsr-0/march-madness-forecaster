@@ -15,7 +15,7 @@ This system implements cutting-edge ML techniques:
 ├─────────────────────────────────────────────────────────────────┤
 │  Data Layer          │  ML Models           │  Optimization     │
 │  ─────────────       │  ─────────           │  ────────────     │
-│  • KenPom Scraper    │  • GNN (Schedule)    │  • Monte Carlo    │
+│  • Public advanced metrics (sportsdataverse/CBBpy) │  • GNN (Schedule)    │  • Monte Carlo    │
 │  • Torvik Scraper    │  • Transformer       │  • Calibration    │
 │  • ESPN Picks        │  • LightGBM          │  • Leverage Calc  │
 │  • Player RAPM/WARP  │  • CFA Ensemble      │  • Pareto Optim   │
@@ -100,13 +100,119 @@ The system will:
 
 ### Command-Line Interface
 
+#### Ingest Real Data (Required for SOTA)
+
+```bash
+python -m src.main ingest \
+  --year 2026 \
+  --output-dir data/raw \
+  --ncaa-teams-url \"https://<your-teams-endpoint>.json\" \
+  --ncaa-games-url \"https://<your-games-endpoint>.json\" \
+  --transfer-portal-url \"https://<your-transfer-endpoint>.json\"
+```
+
+This writes a manifest and canonical files under `data/raw/`.
+The manifest includes metadata about which provider produced each artifact, plus credential requirements.
+ShotQuality artifacts are written only from real ShotQuality sources (cache or live endpoints). Synthetic possession generation is not used.
+
+Optional provider env vars for library-first ingestion:
+
+```bash
+export KENPOM_EMAIL=...
+export KENPOM_PASSWORD=...
+export CBBDATA_API_KEY=...
+export CBBDATA_KENPOM_URL=\"https://.../{year}/kenpom\"
+export CBBDATA_TORVIK_URL=\"https://.../{year}/torvik\"
+export CBBDATA_GAMES_URL=\"https://.../{year}/games\"
+export CBBDATA_TEAM_METRICS_URL=\"https://.../{year}/teams\"
+export SHOTQUALITY_TEAMS_URL=\"https://.../{year}/shotquality/teams\"
+export SHOTQUALITY_GAMES_URL=\"https://.../{year}/shotquality/games\"
+export SHOTQUALITY_GAME_URL_TEMPLATE=\"https://.../{year}/shotquality/games/{game_id}\"
+export ESPN_PUBLIC_PICKS_URL=\"https://.../{year}/public-picks\"
+```
+
+### Historical Training Data Pipeline (2022-2025)
+
+Use this command to build game-level and team-level datasets for model training:
+
+```bash
+python -m src.main ingest-historical \
+  --start-season 2022 \
+  --end-season 2025 \
+  --output-dir data/raw/historical
+```
+
+Pipeline behavior:
+- Pulls season game data from `cbbpy` and writes canonical `historical_games_<season>.json`.
+- Pulls team metrics from `sportsipy`; if `sportsipy` is empty, falls back to Sports Reference.
+- Pulls NCAA tournament seed/region context from Sports Reference (`tournament_seeds_<season>.json`).
+- Adds strict schema validation and writes a multi-season manifest with provider lineage.
+
+### Leakage-Safe Feature Materialization
+
+Build model-ready training tables where every pregame feature is computed from prior games only:
+
+```bash
+python -m src.main materialize-features \
+  --start-season 2022 \
+  --end-season 2025 \
+  --historical-dir data/raw/historical \
+  --raw-dir data/raw \
+  --output-dir data/processed
+```
+
+By default this command fails if any requested season is missing from `historical_games_<season>.json`.  
+Use `--allow-missing-seasons` only for debugging/incremental backfills.
+
+Artifacts:
+- `team_game_features_<start>_<end>.parquet|csv`: one row per team-game with leakage-safe rolling/expanding features.
+- `matchup_features_<start>_<end>.parquet|csv`: one row per game with team-vs-team differential features.
+- `tournament_matchup_features_<start>_<end>.parquet|csv`: tournament-window matchup table with seed features.
+- `materialization_manifest_<start>_<end>.json`: leakage checks, row counts, missingness report, variable coverage audit, and study-alignment scorecard.
+
+Feature families in materialization include:
+- Complete Four Factors priors (`eFG`, `TO%`, `FT rate`, `ORB%`/`DRB%`) and pace/efficiency trend windows.
+- Rest/fatigue, venue context, and matchup style differentials.
+- Prior-season conference-strength priors (`SRS`/`SOS` and conference mean ratings).
+- Optional prior-season external priors (KenPom, Torvik, ShotQuality, roster RAPM/WARP, transfer and continuity proxies, market priors).
+
+Methodology and variable-source mapping: `docs/historical_feature_research.md`
+
+Provider priority and validation controls:
+
+```bash
+python -m src.main ingest \
+  --year 2026 \
+  --historical-games-provider-priority sportsdataverse,cbbpy,cbbdata \
+  --team-metrics-provider-priority sportsdataverse,cbbdata \
+  --kenpom-provider-priority cbbdata \
+  --torvik-provider-priority cbbdata
+```
+
+By default ingestion is strict and fails on schema problems. To keep artifacts even with schema errors:
+
+```bash
+python -m src.main ingest --year 2026 --allow-invalid-payloads
+```
+
 #### Run Full SOTA Pipeline (2026 Rubric)
 
 ```bash
-python -m src.main sota --output sota_report.json --simulations 50000 --pool-size 150
+python -m src.main sota \
+  --input data/raw/teams_2026.json \
+  --kenpom data/raw/kenpom_2026.json \
+  --torvik data/raw/torvik_2026.json \
+  --shotquality-teams data/raw/shotquality_teams_2026.json \
+  --shotquality-games data/raw/shotquality_games_2026.json \
+  --rosters data/raw/rosters_2026.json \
+  --public-picks data/raw/public_picks_2026.json \
+  --transfer-portal data/raw/transfer_portal_2026.json \
+  --output sota_report.json \
+  --simulations 50000 \
+  --pool-size 150
 ```
 
-With real data and custom scoring:
+With live scraping fallback enabled:
 
 ```bash
 python -m src.main sota \
@@ -114,8 +220,11 @@ python -m src.main sota \
   --kenpom kenpom_2026.json \
   --torvik torvik_2026.json \
   --shotquality-teams shotquality_teams_2026.json \
+  --shotquality-games shotquality_games_2026.json \
+  --rosters rosters_2026.json \
   --public-picks public_picks_2026.json \
   --scoring-rules pool_scoring.json \
+  --scrape-live \
   --simulations 50000 \
   --output selection_sunday_report.json
 ```
@@ -374,4 +483,4 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 
 - Historical seed matchup data based on NCAA tournament history (1985-present)
 - Elo rating system adapted from chess ratings
-- Statistical methodology inspired by KenPom and other advanced basketball metrics
+- Statistical methodology inspired by KenPom-style advanced metrics derived from public data (sportsdataverse/CBBpy/Sportsipy)

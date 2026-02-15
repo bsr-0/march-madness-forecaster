@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-02-15T06:41:38.353928+00:00",
+  "start_season": 2025,
+  "end_season": 2025,
+  "artifacts": {
+    "2025": {
+      "historical_games_json": "data/raw/historical/historical_games_2025.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2025.json"
+    }
+  },
+  "providers": {
+    "2025": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper"
+    }
+  },
+  "validation_errors": {
+    "2025": {
+      "historical_games_json": [],
+      "team_metrics_json": []
+    }
+  },
+  "season_counts": {
+    "2025": {
+      "games": 4,
+      "team_games": 8,
+      "teams": 364
+    }
+  }
+}

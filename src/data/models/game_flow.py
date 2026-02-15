@@ -104,6 +104,8 @@ class GameFlow:
     game_id: str
     team1_id: str
     team2_id: str
+    game_date: str = ""
+    location_weight: float = 0.5  # 1.0 home team1, 0.5 neutral, 0.0 away
     
     # Possessions
     possessions: List[Possession] = field(default_factory=list)

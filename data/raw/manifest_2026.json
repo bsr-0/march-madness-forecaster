@@ -1,0 +1,22 @@
+{
+  "year": 2026,
+  "generated_at": "2026-02-15T00:25:51.215894+00:00",
+  "artifacts": {
+    "sports_reference_json": "data/raw/sports_reference_2026.json"
+  },
+  "providers": {
+    "sports_reference_json": "sports_reference_scraper"
+  },
+  "credential_requirements": {
+    "cbbdata_api": [
+      "CBBDATA_API_KEY",
+      "CBBDATA_BASE_URL"
+    ],
+    "sportsdataverse_py": [],
+    "cbbpy": [],
+    "sportsipy": []
+  },
+  "validation_errors": {
+    "sports_reference_json": []
+  }
+}

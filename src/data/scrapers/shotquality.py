@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -36,6 +37,8 @@ class ShotQualityGame:
     game_id: str
     team_id: str
     opponent_id: str
+    game_date: str = ""
+    location_weight: float = 0.5
     possessions: List[Possession] = field(default_factory=list)
 
 
@@ -61,10 +64,24 @@ class ShotQualityScraper:
         if cached:
             return [self._dict_to_team(item) for item in cached.get("teams", [])]
 
-        logger.warning(
-            "Live ShotQuality ingestion is not configured. Provide local JSON via load_teams_from_json()."
-        )
-        return []
+        teams_url = os.getenv("SHOTQUALITY_TEAMS_URL")
+        if not teams_url:
+            logger.warning(
+                "Live ShotQuality ingestion needs SHOTQUALITY_TEAMS_URL or local JSON."
+            )
+            return []
+        try:
+            response = self.session.get(teams_url, timeout=30)
+            response.raise_for_status()
+            payload = response.json()
+            teams = payload.get("teams", payload)
+            if not isinstance(teams, list):
+                return []
+            self._save_to_cache(f"shotquality_teams_{year}.json", {"teams": teams})
+            return [self._dict_to_team(item) for item in teams]
+        except Exception as exc:
+            logger.warning("Failed ShotQuality team fetch: %s", exc)
+            return []
 
     def fetch_game_possessions(self, game_id: str, year: int = 2026) -> List[Possession]:
         """Fetch possession-level data for a game from cache/live source."""
@@ -72,8 +89,51 @@ class ShotQualityScraper:
         if cached:
             return [self._dict_to_possession(p) for p in cached.get("possessions", [])]
 
+        template = os.getenv("SHOTQUALITY_GAME_URL_TEMPLATE")
+        if template:
+            try:
+                url = template.format(game_id=game_id, year=year)
+                response = self.session.get(url, timeout=30)
+                response.raise_for_status()
+                payload = response.json()
+                possessions = payload.get("possessions", payload)
+                if isinstance(possessions, list):
+                    self._save_to_cache(
+                        f"shotquality_game_{game_id}_{year}.json",
+                        {"possessions": possessions},
+                    )
+                    return [self._dict_to_possession(p) for p in possessions]
+            except Exception as exc:
+                logger.warning("ShotQuality game fetch failed for %s: %s", game_id, exc)
+
         logger.warning("ShotQuality possession data unavailable for game_id=%s", game_id)
         return []
+
+    def fetch_games(self, year: int = 2026) -> List[Dict]:
+        """Fetch game-level ShotQuality rows from cache/live source."""
+        cached = self._load_from_cache(f"shotquality_games_{year}.json")
+        if cached:
+            games = cached.get("games", [])
+            if isinstance(games, list):
+                return [g for g in games if isinstance(g, dict)]
+
+        games_url = os.getenv("SHOTQUALITY_GAMES_URL")
+        if not games_url:
+            return []
+
+        try:
+            response = self.session.get(games_url, timeout=30)
+            response.raise_for_status()
+            payload = response.json()
+            games = payload.get("games", payload)
+            if not isinstance(games, list):
+                return []
+            clean_games = [g for g in games if isinstance(g, dict)]
+            self._save_to_cache(f"shotquality_games_{year}.json", {"games": clean_games})
+            return clean_games
+        except Exception as exc:
+            logger.warning("Failed ShotQuality games fetch: %s", exc)
+            return []
 
     def load_teams_from_json(self, filepath: str) -> List[ShotQualityTeam]:
         with open(filepath, "r") as f:
@@ -91,6 +151,8 @@ class ShotQualityScraper:
                     game_id=item["game_id"],
                     team_id=item["team_id"],
                     opponent_id=item["opponent_id"],
+                    game_date=str(item.get("game_date", item.get("date", ""))),
+                    location_weight=float(item.get("location_weight", 0.5)),
                     possessions=[self._dict_to_possession(p) for p in item.get("possessions", [])],
                 )
             )
