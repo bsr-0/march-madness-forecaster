@@ -250,6 +250,13 @@ def ingest_data(args):
         transfer_portal_format=args.transfer_portal_format,
         roster_url=args.roster_url,
         roster_format=args.roster_format,
+        odds_url=args.odds_url,
+        odds_format=args.odds_format,
+        polls_url=args.polls_url,
+        torvik_splits_url=args.torvik_splits_url,
+        ncaa_team_stats_url=args.ncaa_team_stats_url,
+        weather_context_url=args.weather_context_url,
+        travel_context_url=args.travel_context_url,
         scrape_torvik=not args.skip_torvik,
         scrape_kenpom=not args.skip_kenpom,
         scrape_shotquality=not args.skip_shotquality,
@@ -261,6 +268,8 @@ def ingest_data(args):
         kenpom_provider_priority=parse_priority(args.kenpom_provider_priority),
         torvik_provider_priority=parse_priority(args.torvik_provider_priority),
         strict_validation=not args.allow_invalid_payloads,
+        allow_synthetic_shotquality_fallback=args.allow_synthetic_shotquality_fallback,
+        min_nonzero_rapm_players_per_team=args.min_nonzero_rapm_players_per_team,
     )
     manifest = RealDataCollector(config).run()
     print(f"✓ Ingestion complete. Manifest: {manifest['manifest_path']}")
@@ -269,6 +278,12 @@ def ingest_data(args):
 
 def ingest_historical(args):
     """Run robust historical ingestion for 2022-2025 game/team data."""
+    def parse_priority(value):
+        if value is None:
+            return None
+        parts = [p.strip() for p in value.split(",") if p.strip()]
+        return parts or None
+
     config = HistoricalIngestionConfig(
         start_season=args.start_season,
         end_season=args.end_season,
@@ -280,6 +295,7 @@ def ingest_historical(args):
         retry_attempts=args.retry_attempts,
         per_game_timeout_seconds=args.per_game_timeout_seconds,
         max_games_per_season=args.max_games_per_season,
+        team_metrics_provider_priority=parse_priority(args.team_metrics_provider_priority),
     )
     manifest = HistoricalDataPipeline(config).run()
     print(f"✓ Historical ingestion complete. Manifest: {manifest['manifest_path']}")
@@ -297,6 +313,7 @@ def materialize_features(args):
         historical_manifest_path=args.historical_manifest,
         strict_validation=not args.allow_leakage_warnings,
         require_all_seasons=not args.allow_missing_seasons,
+        min_tournament_matchups=args.min_tournament_matchups,
     )
     manifest = HistoricalFeatureMaterializer(config).run()
     print(f"✓ Feature materialization complete. Manifest: {manifest['manifest_path']}")
@@ -403,6 +420,13 @@ def main():
     ingest_parser.add_argument("--transfer-portal-format", choices=["json", "csv"], default="json")
     ingest_parser.add_argument("--roster-url", default=None, help="Player roster metrics JSON/CSV endpoint")
     ingest_parser.add_argument("--roster-format", choices=["json", "csv"], default="json")
+    ingest_parser.add_argument("--odds-url", default=None, help="Market odds JSON/CSV endpoint")
+    ingest_parser.add_argument("--odds-format", choices=["json", "csv"], default="json")
+    ingest_parser.add_argument("--polls-url", default=None, help="Weekly AP/Coaches poll trajectory JSON endpoint")
+    ingest_parser.add_argument("--torvik-splits-url", default=None, help="Torvik split metrics JSON endpoint")
+    ingest_parser.add_argument("--ncaa-team-stats-url", default=None, help="NCAA leaderboard stats JSON endpoint")
+    ingest_parser.add_argument("--weather-context-url", default=None, help="Weather context JSON endpoint")
+    ingest_parser.add_argument("--travel-context-url", default=None, help="Travel burden JSON endpoint")
     ingest_parser.add_argument("--skip-torvik", action="store_true", help="Skip Torvik scrape")
     ingest_parser.add_argument("--skip-kenpom", action="store_true", help="Skip KenPom scrape")
     ingest_parser.add_argument("--skip-shotquality", action="store_true", help="Skip ShotQuality scrape")
@@ -433,6 +457,17 @@ def main():
         "--allow-invalid-payloads",
         action="store_true",
         help="Do not fail ingestion when schema checks fail",
+    )
+    ingest_parser.add_argument(
+        "--allow-synthetic-shotquality-fallback",
+        action="store_true",
+        help="Allow synthetic ShotQuality proxy when real possession feeds are unavailable",
+    )
+    ingest_parser.add_argument(
+        "--min-nonzero-rapm-players-per-team",
+        type=int,
+        default=3,
+        help="Minimum non-zero RAPM players required per team in roster payloads",
     )
 
     historical_parser = subparsers.add_parser(
@@ -480,6 +515,11 @@ def main():
         help="Optional cap for debugging/smoke tests",
     )
     historical_parser.add_argument(
+        "--team-metrics-provider-priority",
+        default=None,
+        help="Comma-separated provider order: sportsdataverse,sportsipy,cbbdata",
+    )
+    historical_parser.add_argument(
         "--allow-invalid-payloads",
         action="store_true",
         help="Do not fail ingestion when schema checks fail",
@@ -520,6 +560,12 @@ def main():
         "--allow-missing-seasons",
         action="store_true",
         help="Allow materialization when some requested seasons are missing from historical artifacts",
+    )
+    materialize_parser.add_argument(
+        "--min-tournament-matchups",
+        type=int,
+        default=1,
+        help="Minimum tournament matchup rows required when strict validation is enabled",
     )
 
     manifest_sota_parser = subparsers.add_parser(

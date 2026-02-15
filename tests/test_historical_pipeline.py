@@ -215,3 +215,43 @@ def test_historical_pipeline_fast_path_uses_get_games_season(tmp_path):
         payload = json.load(f)
     assert payload["games"]
     assert payload["games"][0]["game_id"] == "g1"
+
+
+def test_historical_pipeline_uses_configured_team_metric_priority(tmp_path):
+    class DummyCBBpy:
+        @staticmethod
+        def get_games_season(season, info=False, box=True, pbp=False):
+            box_df = pd.DataFrame(
+                [
+                    {"game_id": "g1", "team": "A", "player": "P1", "pts": 10, "fgm": 4, "fga": 8, "3pm": 1, "3pa": 3, "fta": 2, "to": 1, "oreb": 1, "dreb": 2},
+                    {"game_id": "g1", "team": "B", "player": "P2", "pts": 8, "fgm": 3, "fga": 7, "3pm": 1, "3pa": 4, "fta": 1, "to": 2, "oreb": 0, "dreb": 2},
+                ]
+            )
+            return (pd.DataFrame(), box_df, pd.DataFrame())
+
+    captured = {}
+
+    pipeline = HistoricalDataPipeline(
+        HistoricalIngestionConfig(
+            start_season=2022,
+            end_season=2022,
+            output_dir=str(tmp_path),
+            cache_dir=str(tmp_path / "cache"),
+            include_tournament_context=False,
+            strict_validation=True,
+            team_metrics_provider_priority=["sportsdataverse", "sportsipy"],
+        )
+    )
+    pipeline.providers._import_module = lambda module: DummyCBBpy if module == "cbbpy.mens_scraper" else None
+
+    def _provider(season, priority=None):
+        captured["priority"] = priority
+        return ProviderResult(
+            "sportsipy",
+            [{"team_id": "a", "team_name": "A", "off_rtg": 101.0, "def_rtg": 99.0, "pace": 68.0}],
+        )
+
+    pipeline.providers.fetch_team_box_metrics = _provider
+    pipeline.run()
+
+    assert captured["priority"] == ["sportsdataverse", "sportsipy"]

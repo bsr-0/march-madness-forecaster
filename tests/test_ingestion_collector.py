@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 import src.data.ingestion.collector as collector_mod
 from src.data.ingestion.collector import IngestionConfig, RealDataCollector
 from src.data.ingestion.providers import ProviderResult
@@ -85,6 +87,28 @@ def test_collector_skips_shotquality_when_real_source_missing(tmp_path):
 
     assert "historical_games_json" in artifacts
     assert "kenpom_json" in artifacts
+    assert "shotquality_teams_json" not in artifacts
+    assert "shotquality_games_json" not in artifacts
+
+
+def test_collector_allows_opt_in_synthetic_shotquality_fallback(tmp_path):
+    config = IngestionConfig(
+        year=2025,
+        output_dir=str(tmp_path),
+        cache_dir=str(tmp_path / "cache"),
+        scrape_torvik=False,
+        scrape_kenpom=False,
+        scrape_public_picks=False,
+        scrape_sports_reference=False,
+        scrape_shotquality=True,
+        scrape_rosters=False,
+        allow_synthetic_shotquality_fallback=True,
+    )
+    collector = RealDataCollector(config)
+    collector.providers = _StubProviders()
+
+    manifest = collector.run()
+    artifacts = manifest["artifacts"]
     assert "shotquality_teams_json" in artifacts
     assert "shotquality_games_json" in artifacts
     assert manifest["providers"]["shotquality_games_json"] == "open_boxscore_proxy"
@@ -177,6 +201,7 @@ def test_collector_writes_roster_artifact_when_player_feed_available(tmp_path, m
         scrape_shotquality=False,
         scrape_rosters=True,
         roster_url="https://example.com/rosters.json",
+        min_nonzero_rapm_players_per_team=1,
     )
     collector = RealDataCollector(config)
     collector.providers = _StubProviders()
@@ -251,6 +276,7 @@ def test_collector_merges_cbbpy_rosters_with_external_metrics(tmp_path, monkeypa
         scrape_shotquality=False,
         scrape_rosters=True,
         roster_url="https://example.com/rosters.json",
+        min_nonzero_rapm_players_per_team=1,
     )
     collector = RealDataCollector(config)
     collector.providers = _StubProviders()
@@ -266,3 +292,72 @@ def test_collector_merges_cbbpy_rosters_with_external_metrics(tmp_path, monkeypa
     assert player1["injury_status"] == "questionable"
     assert any(p["player_id"] == "duke_2" for p in duke["players"])
     assert isinstance(duke.get("stints"), list) and duke["stints"]
+
+
+def test_collector_writes_odds_artifact_when_feed_provided(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        collector_mod.OpenDataFeedScraper,
+        "fetch_records",
+        lambda self, cache_name, source_url, fmt="json", records_key=None: [
+            {
+                "team_name": "Duke",
+                "implied_win_probability": 0.16,
+                "title_odds": 700,
+            }
+        ],
+    )
+
+    config = IngestionConfig(
+        year=2025,
+        output_dir=str(tmp_path),
+        cache_dir=str(tmp_path / "cache"),
+        scrape_torvik=False,
+        scrape_kenpom=False,
+        scrape_public_picks=False,
+        scrape_sports_reference=False,
+        scrape_shotquality=False,
+        scrape_rosters=False,
+        odds_url="https://example.com/odds.json",
+    )
+    collector = RealDataCollector(config)
+    collector.providers = _StubProviders()
+    manifest = collector.run()
+
+    assert "odds_json" in manifest["artifacts"]
+
+
+def test_collector_rejects_all_zero_rapm_payload(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        collector_mod.CBBpyRosterScraper,
+        "fetch_rosters",
+        lambda self, year: {
+            "source": "cbbpy_schedule_boxscore",
+            "teams": [
+                {
+                    "team_id": "duke",
+                    "team_name": "Duke",
+                    "players": [
+                        {"player_id": "p1", "name": "A", "rapm_offensive": 0.0, "rapm_defensive": 0.0},
+                        {"player_id": "p2", "name": "B", "rapm_offensive": 0.0, "rapm_defensive": 0.0},
+                    ],
+                }
+            ],
+        },
+    )
+    config = IngestionConfig(
+        year=2025,
+        output_dir=str(tmp_path),
+        cache_dir=str(tmp_path / "cache"),
+        scrape_torvik=False,
+        scrape_kenpom=False,
+        scrape_public_picks=False,
+        scrape_sports_reference=False,
+        scrape_shotquality=False,
+        scrape_rosters=True,
+        min_nonzero_rapm_players_per_team=1,
+    )
+    collector = RealDataCollector(config)
+    collector.providers = _StubProviders()
+
+    with pytest.raises(ValueError, match="RAPM"):
+        collector.run()

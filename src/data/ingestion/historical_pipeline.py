@@ -30,6 +30,7 @@ class HistoricalIngestionConfig:
     per_game_timeout_seconds: int = 25
     max_games_per_season: Optional[int] = None
     include_tournament_context: bool = True
+    team_metrics_provider_priority: Optional[List[str]] = None
 
 
 class HistoricalDataPipeline:
@@ -446,7 +447,10 @@ class HistoricalDataPipeline:
         return games
 
     def _collect_team_metrics(self, season: int) -> Tuple[Dict, str]:
-        provider_result = self.providers.fetch_team_box_metrics(season, priority=["sportsipy"])
+        provider_result = self.providers.fetch_team_box_metrics(
+            season,
+            priority=self.config.team_metrics_provider_priority,
+        )
         provider = provider_result.provider
         rows = self._ensure_team_ids(provider_result.records)
 

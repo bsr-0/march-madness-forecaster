@@ -16,6 +16,7 @@ from ..scrapers import (
     ESPNPicksScraper,
     KenPomScraper,
     NCAAStatsScraper,
+    OpenDataFeedScraper,
     OpenShotQualityProxyBuilder,
     PlayerMetricsScraper,
     ShotQualityScraper,
@@ -30,6 +31,7 @@ from .validators import (
     validate_games_payload,
     validate_public_picks_payload,
     validate_ratings_payload,
+    validate_odds_payload,
     validate_rosters_payload,
     validate_shotquality_games_payload,
     validate_teams_payload,
@@ -49,6 +51,13 @@ class IngestionConfig:
     transfer_portal_format: str = "json"
     roster_url: Optional[str] = None
     roster_format: str = "json"
+    odds_url: Optional[str] = None
+    odds_format: str = "json"
+    polls_url: Optional[str] = None
+    torvik_splits_url: Optional[str] = None
+    ncaa_team_stats_url: Optional[str] = None
+    weather_context_url: Optional[str] = None
+    travel_context_url: Optional[str] = None
 
     scrape_torvik: bool = True
     scrape_kenpom: bool = True
@@ -62,6 +71,8 @@ class IngestionConfig:
     kenpom_provider_priority: Optional[List[str]] = None
     torvik_provider_priority: Optional[List[str]] = None
     strict_validation: bool = True
+    allow_synthetic_shotquality_fallback: bool = False
+    min_nonzero_rapm_players_per_team: int = 3
 
 
 class RealDataCollector:
@@ -94,7 +105,20 @@ class RealDataCollector:
             tv_provider = self.providers.fetch_torvik_ratings(year, priority=self.config.torvik_provider_priority)
             if tv_provider.records:
                 payload = {"teams": tv_provider.records}
-                validation_errors["torvik_json"] = validate_ratings_payload(payload)
+                validation_errors["torvik_json"] = validate_ratings_payload(
+                    payload,
+                    required_numeric_fields=[
+                        "barthag",
+                        "adj_offensive_efficiency",
+                        "adj_defensive_efficiency",
+                        "adj_tempo",
+                        "effective_fg_pct",
+                        "turnover_rate",
+                        "offensive_reb_rate",
+                        "free_throw_rate",
+                    ],
+                    variance_fields=["barthag", "adj_offensive_efficiency", "adj_defensive_efficiency"],
+                )
                 self._assert_valid("torvik_json", validation_errors["torvik_json"])
                 out["torvik_json"] = self._write(f"torvik_{year}.json", payload)
                 provider_lineage["torvik_json"] = tv_provider.provider
@@ -106,7 +130,16 @@ class RealDataCollector:
             )
             if kp_provider.records:
                 payload = {"teams": kp_provider.records}
-                validation_errors["kenpom_json"] = validate_ratings_payload(payload)
+                validation_errors["kenpom_json"] = validate_ratings_payload(
+                    payload,
+                    required_numeric_fields=[
+                        "adj_efficiency_margin",
+                        "adj_offensive_efficiency",
+                        "adj_defensive_efficiency",
+                        "adj_tempo",
+                    ],
+                    variance_fields=["adj_offensive_efficiency", "adj_defensive_efficiency", "adj_efficiency_margin"],
+                )
                 self._assert_valid("kenpom_json", validation_errors["kenpom_json"])
                 out["kenpom_json"] = self._write(f"kenpom_{year}.json", payload)
                 provider_lineage["kenpom_json"] = kp_provider.provider
@@ -114,7 +147,16 @@ class RealDataCollector:
                 kp_rows = KenPomScraper(str(self.cache_dir)).fetch_ratings(year)
                 if kp_rows:
                     payload = {"teams": [row.to_dict() for row in kp_rows]}
-                    validation_errors["kenpom_json"] = validate_ratings_payload(payload)
+                    validation_errors["kenpom_json"] = validate_ratings_payload(
+                        payload,
+                        required_numeric_fields=[
+                            "adj_efficiency_margin",
+                            "adj_offensive_efficiency",
+                            "adj_defensive_efficiency",
+                            "adj_tempo",
+                        ],
+                        variance_fields=["adj_offensive_efficiency", "adj_defensive_efficiency", "adj_efficiency_margin"],
+                    )
                     self._assert_valid("kenpom_json", validation_errors["kenpom_json"])
                     out["kenpom_json"] = self._write(f"kenpom_{year}.json", payload)
                     provider_lineage["kenpom_json"] = "kenpom_scraper"
@@ -222,7 +264,7 @@ class RealDataCollector:
                     "games": sq_games,
                 }
 
-            if not sq_teams_payload or not sq_games_payload:
+            if self.config.allow_synthetic_shotquality_fallback and (not sq_teams_payload or not sq_games_payload):
                 proxy_payload = OpenShotQualityProxyBuilder().build(historical_team_rows)
                 if proxy_payload:
                     proxy_timestamp = datetime.now(timezone.utc).isoformat()
@@ -242,7 +284,15 @@ class RealDataCollector:
 
             if sq_teams_payload:
                 validation_errors["shotquality_teams_json"] = validate_ratings_payload(
-                    sq_teams_payload, name_field="team_name"
+                    sq_teams_payload,
+                    name_field="team_name",
+                    required_numeric_fields=[
+                        "offensive_xp_per_possession",
+                        "defensive_xp_per_possession",
+                        "rim_rate",
+                        "three_rate",
+                        "midrange_rate",
+                    ],
                 )
                 self._assert_valid("shotquality_teams_json", validation_errors["shotquality_teams_json"])
                 out["shotquality_teams_json"] = self._write(f"shotquality_teams_{year}.json", sq_teams_payload)
@@ -269,6 +319,12 @@ class RealDataCollector:
                 roster_payload = external_roster_payload
             if roster_payload:
                 validation_errors["rosters_json"] = validate_rosters_payload(roster_payload)
+                validation_errors["rosters_json"].extend(
+                    self._validate_roster_rapm_quality(
+                        roster_payload,
+                        min_players=self.config.min_nonzero_rapm_players_per_team,
+                    )
+                )
                 self._assert_valid("rosters_json", validation_errors["rosters_json"])
                 out["rosters_json"] = self._write(f"rosters_{year}.json", roster_payload)
                 provider_lineage["rosters_json"] = str(roster_payload.get("source", "cbbpy_schedule_boxscore"))
@@ -280,7 +336,12 @@ class RealDataCollector:
             )
             if sr_provider.records:
                 payload = {"teams": self._ensure_ids(sr_provider.records)}
-                validation_errors["sports_reference_json"] = validate_ratings_payload(payload, name_field="team_name")
+                validation_errors["sports_reference_json"] = validate_ratings_payload(
+                    payload,
+                    name_field="team_name",
+                    required_numeric_fields=["off_rtg", "def_rtg", "pace"],
+                    variance_fields=["off_rtg", "def_rtg", "pace"],
+                )
                 self._assert_valid("sports_reference_json", validation_errors["sports_reference_json"])
                 out["sports_reference_json"] = self._write(f"sports_reference_{year}.json", payload)
                 provider_lineage["sports_reference_json"] = sr_provider.provider
@@ -289,7 +350,12 @@ class RealDataCollector:
                 sr = SportsReferenceScraper(str(self.cache_dir)).fetch_team_season_stats(year)
             if sr:
                 payload = {"teams": self._ensure_ids(sr)}
-                validation_errors["sports_reference_json"] = validate_ratings_payload(payload, name_field="team_name")
+                validation_errors["sports_reference_json"] = validate_ratings_payload(
+                    payload,
+                    name_field="team_name",
+                    required_numeric_fields=["off_rtg", "def_rtg", "pace"],
+                    variance_fields=["off_rtg", "def_rtg", "pace"],
+                )
                 self._assert_valid("sports_reference_json", validation_errors["sports_reference_json"])
                 out["sports_reference_json"] = self._write(f"sports_reference_{year}.json", payload)
                 provider_lineage["sports_reference_json"] = "sports_reference_scraper"
@@ -305,11 +371,48 @@ class RealDataCollector:
             self._assert_valid("transfer_portal_json", validation_errors["transfer_portal_json"])
             out["transfer_portal_json"] = self._write(f"transfer_portal_{year}.json", payload)
 
+        if self.config.odds_url:
+            odds_rows = OpenDataFeedScraper(str(self.cache_dir)).fetch_records(
+                cache_name=f"odds_{year}.json",
+                source_url=self.config.odds_url,
+                fmt=self.config.odds_format,
+                records_key="teams",
+            )
+            odds_payload = {"teams": odds_rows}
+            validation_errors["odds_json"] = validate_odds_payload(odds_payload)
+            self._assert_valid("odds_json", validation_errors["odds_json"])
+            out["odds_json"] = self._write(f"odds_{year}.json", odds_payload)
+            provider_lineage["odds_json"] = "open_feed"
+
+        supplemental_feeds = [
+            ("polls_json", self.config.polls_url, f"polls_{year}.json", "polls"),
+            ("torvik_splits_json", self.config.torvik_splits_url, f"torvik_splits_{year}.json", "teams"),
+            ("ncaa_team_stats_json", self.config.ncaa_team_stats_url, f"ncaa_team_stats_{year}.json", "teams"),
+            ("weather_context_json", self.config.weather_context_url, f"weather_context_{year}.json", "records"),
+            ("travel_context_json", self.config.travel_context_url, f"travel_context_{year}.json", "records"),
+        ]
+        feed_scraper = OpenDataFeedScraper(str(self.cache_dir))
+        for artifact_key, source_url, filename, records_key in supplemental_feeds:
+            if not source_url:
+                continue
+            records = feed_scraper.fetch_records(
+                cache_name=filename,
+                source_url=source_url,
+                fmt="json",
+                records_key=records_key,
+            )
+            payload = {"records": records}
+            out[artifact_key] = self._write(filename, payload)
+            provider_lineage[artifact_key] = "open_feed"
+
         manifest = {
             "year": year,
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "artifacts": out,
             "providers": provider_lineage,
+            "provenance": {
+                "shotquality_synthetic_fallback_enabled": self.config.allow_synthetic_shotquality_fallback,
+            },
             "credential_requirements": self.providers.credential_requirements(),
             "validation_errors": validation_errors,
         }
@@ -435,3 +538,32 @@ class RealDataCollector:
             return f"id:{raw_id.lower()}"
         name = str(player.get("name") or "").strip().lower()
         return f"name:{name}" if name else ""
+
+    def _validate_roster_rapm_quality(self, payload: Dict, min_players: int) -> List[str]:
+        if min_players <= 0:
+            return []
+        errors: List[str] = []
+        for idx, team in enumerate(payload.get("teams", [])):
+            if not isinstance(team, dict):
+                continue
+            players = [p for p in team.get("players", []) if isinstance(p, dict)]
+            nonzero = 0
+            for p in players:
+                rapm_total = p.get("rapm_total")
+                rapm_off = p.get("rapm_offensive")
+                rapm_def = p.get("rapm_defensive")
+                value = None
+                try:
+                    if rapm_total is not None:
+                        value = float(rapm_total)
+                    elif rapm_off is not None or rapm_def is not None:
+                        value = float(rapm_off or 0.0) + float(rapm_def or 0.0)
+                except (TypeError, ValueError):
+                    value = None
+                if value is not None and abs(value) > 1e-6:
+                    nonzero += 1
+            if players and nonzero < min_players:
+                errors.append(
+                    f"teams[{idx}] has only {nonzero} non-zero RAPM players; expected >= {min_players}"
+                )
+        return errors

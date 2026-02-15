@@ -225,9 +225,15 @@ class LibraryProviderHub:
                     "team_name": team.name,
                     "name": team.name,
                     "conference": getattr(team, "conference", ""),
-                    "adj_offensive_efficiency": getattr(team, "points_per_game", 0.0),
-                    "adj_defensive_efficiency": getattr(team, "points_against", 0.0),
-                    "adj_tempo": getattr(team, "possessions_per_game", 70.0),
+                    # Expose both canonical materialization fields and adj_* aliases.
+                    "off_rtg": getattr(team, "offensive_rating", None) or getattr(team, "points_per_game", 0.0),
+                    "def_rtg": getattr(team, "defensive_rating", None) or getattr(team, "points_against", 0.0),
+                    "pace": getattr(team, "pace", None) or getattr(team, "possessions_per_game", 70.0),
+                    "adj_offensive_efficiency": getattr(team, "offensive_rating", None)
+                    or getattr(team, "points_per_game", 0.0),
+                    "adj_defensive_efficiency": getattr(team, "defensive_rating", None)
+                    or getattr(team, "points_against", 0.0),
+                    "adj_tempo": getattr(team, "pace", None) or getattr(team, "possessions_per_game", 70.0),
                 }
             )
         return ProviderResult("sportsipy", records)

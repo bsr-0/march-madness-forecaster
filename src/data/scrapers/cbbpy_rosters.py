@@ -286,8 +286,9 @@ class CBBpyRosterScraper:
                         "minutes_per_game": round(minutes_per_game, 3),
                         "games_played": games_played,
                         "games_started": int(p["games_started"]),
-                        "rapm_offensive": 0.0,
-                        "rapm_defensive": 0.0,
+                        # cbbpy boxscore-derived payload does not include possession RAPM estimates.
+                        "rapm_offensive": None,
+                        "rapm_defensive": None,
                         "warp": round(warp, 4),
                         "box_plus_minus": round(bpm, 4),
                         "usage_rate": round(usage_rate, 4),
