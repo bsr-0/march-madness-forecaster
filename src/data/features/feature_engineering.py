@@ -8,7 +8,7 @@ Extracts and transforms raw data into ML-ready features:
 - Schedule-based features from GNN embeddings
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass, field
 import numpy as np
 
@@ -49,6 +49,7 @@ class TeamFeatures:
     bench_rapm: float = 0.0
     total_warp: float = 0.0
     roster_continuity: float = 0.0  # % of minutes returning
+    continuity_learning_rate: float = 1.0  # Low continuity rosters update faster
     transfer_impact: float = 0.0
     
     # Experience/depth
@@ -59,6 +60,7 @@ class TeamFeatures:
     # Volatility/entropy metrics
     avg_lead_volatility: float = 0.0
     avg_entropy: float = 0.0
+    lead_sustainability: float = 0.5
     comeback_factor: float = 0.0
     close_game_record: float = 0.5  # Win % in games within 5 points
     
@@ -116,6 +118,7 @@ class TeamFeatures:
             self.bench_rapm / 5.0,
             self.total_warp / 5.0,
             self.roster_continuity,
+            self.continuity_learning_rate,
             self.transfer_impact / 5.0,
             
             # Experience (3)
@@ -126,6 +129,7 @@ class TeamFeatures:
             # Volatility (4)
             self.avg_lead_volatility / 10.0,
             self.avg_entropy / 3.0,
+            self.lead_sustainability,
             self.comeback_factor,
             self.close_game_record,
             
@@ -170,11 +174,11 @@ class TeamFeatures:
             'opp_efg_pct', 'opp_to_rate', 'drb_rate', 'opp_ft_rate',
             # Player metrics
             'total_rapm', 'top5_rapm', 'bench_rapm', 'total_warp',
-            'roster_continuity', 'transfer_impact',
+            'roster_continuity', 'continuity_learning_rate', 'transfer_impact',
             # Experience
             'avg_experience', 'bench_depth', 'injury_risk',
             # Volatility
-            'lead_volatility', 'entropy', 'comeback_factor', 'close_game_record',
+            'lead_volatility', 'entropy', 'lead_sustainability', 'comeback_factor', 'close_game_record',
             # Shot quality
             'xp_per_poss', 'shot_distribution',
             # Schedule
@@ -247,6 +251,7 @@ class FeatureEngineer:
         region: str,
         kenpom_data: Optional[Dict] = None,
         torvik_data: Optional[Dict] = None,
+        shotquality_data: Optional[Union[Dict, object]] = None,
         roster: Optional[Roster] = None,
         games: Optional[List[GameFlow]] = None,
     ) -> TeamFeatures:
@@ -303,6 +308,9 @@ class FeatureEngineer:
         # Extract from game flows
         if games:
             features = self._extract_game_flow_features(features, games)
+
+        if shotquality_data:
+            features = self._extract_shotquality_priors(features, shotquality_data)
         
         # Store for later use
         self.team_features[team_id] = features
@@ -346,6 +354,8 @@ class FeatureEngineer:
             if not p.is_transfer
         )
         features.roster_continuity = returning_minutes / max(total_minutes, 1)
+        # Transfer-heavy teams should adapt faster in early season (up to +15%).
+        features.continuity_learning_rate = 1.0 + 0.15 * (1.0 - features.roster_continuity)
         
         # Injury risk
         injured_impact = sum(
@@ -407,7 +417,46 @@ class FeatureEngineer:
                     shot_counts[ShotType.ABOVE_BREAK_THREE]
                 )
                 features.shot_distribution_score = good_shots / total_shots
+
+        # Sustainable leads depend on ball security, free throws, and low entropy game flow.
+        entropy_penalty = np.clip(features.avg_entropy / 3.0, 0.0, 1.0)
+        ball_security = np.clip(1.0 - features.turnover_rate, 0.0, 1.0)
+        ft_reliability = np.clip(features.free_throw_rate / 0.45, 0.0, 1.0)
+        features.lead_sustainability = float(
+            np.clip(0.45 * ball_security + 0.35 * ft_reliability + 0.20 * (1.0 - entropy_penalty), 0.0, 1.0)
+        )
         
+        return features
+
+    def _extract_shotquality_priors(
+        self,
+        features: TeamFeatures,
+        shotquality_data: Union[Dict, object],
+    ) -> TeamFeatures:
+        """Blend possession-level xP priors into team features."""
+        sq = shotquality_data if isinstance(shotquality_data, dict) else shotquality_data.__dict__
+        off_xp = float(sq.get("offensive_xp_per_possession", features.avg_xp_per_possession or 1.0))
+        def_xp = float(sq.get("defensive_xp_per_possession", off_xp))
+
+        if features.avg_xp_per_possession > 0:
+            features.avg_xp_per_possession = 0.7 * features.avg_xp_per_possession + 0.3 * off_xp
+        else:
+            features.avg_xp_per_possession = off_xp
+
+        rim_rate = float(sq.get("rim_rate", 0.3))
+        three_rate = float(sq.get("three_rate", 0.35))
+        midrange_rate = float(sq.get("midrange_rate", 0.35))
+        if rim_rate + three_rate + midrange_rate > 0:
+            # Positive if shot mix favors rim + 3s over midrange.
+            sq_shot_mix = (rim_rate + three_rate) - 0.75 * midrange_rate
+            if features.shot_distribution_score > 0:
+                features.shot_distribution_score = 0.6 * features.shot_distribution_score + 0.4 * sq_shot_mix
+            else:
+                features.shot_distribution_score = sq_shot_mix
+
+        # xP differential provides a low-noise possession-level performance signal.
+        xp_diff = off_xp - def_xp
+        features.adj_efficiency_margin += 12.0 * xp_diff
         return features
     
     def create_matchup_features(

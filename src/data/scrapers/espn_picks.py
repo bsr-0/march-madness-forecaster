@@ -6,6 +6,7 @@ Scrapes public pick percentages for game-theory bracket optimization.
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from pathlib import Path
@@ -138,11 +139,22 @@ class ESPNPicksScraper:
         cached = self._load_from_cache(f"espn_picks_{year}.json")
         if cached:
             return self._dict_to_consensus(cached)
-        
-        # ESPN pick data only available during tournament
+
+        source_url = os.getenv("ESPN_PUBLIC_PICKS_URL")
+        if source_url:
+            try:
+                response = self.session.get(source_url, timeout=30)
+                response.raise_for_status()
+                payload = response.json()
+                if isinstance(payload, dict):
+                    if self.cache_dir:
+                        self._save_to_cache(f"espn_picks_{year}.json", payload)
+                    return self._dict_to_consensus(payload)
+            except Exception as exc:
+                logger.warning("ESPN picks fetch failed: %s", exc)
+
         logger.warning(
-            "ESPN pick data not available. Data becomes available "
-            "after Selection Sunday when brackets are submitted."
+            "ESPN pick data unavailable. Set ESPN_PUBLIC_PICKS_URL or provide --public-picks JSON."
         )
         return ConsensusData(sources=["espn"])
     
@@ -207,27 +219,126 @@ class ESPNPicksScraper:
         
         return None
 
+    def _save_to_cache(self, filename: str, data: dict) -> None:
+        if not self.cache_dir:
+            return
+        cache_path = self.cache_dir / filename
+        with open(cache_path, "w") as f:
+            json.dump(data, f, indent=2)
+
 
 class YahooPicksScraper:
     """Scraper for Yahoo bracket game picks."""
     
     BASE_URL = "https://tournament.fantasysports.yahoo.com"
+
+    def __init__(self, cache_dir: Optional[str] = None):
+        self.session = requests.Session()
+        self.session.headers.update(
+            {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+            }
+        )
+        self.cache_dir = Path(cache_dir) if cache_dir else None
+        if self.cache_dir:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
     
     def fetch_picks(self, year: int = 2026) -> ConsensusData:
         """Fetch picks from Yahoo."""
-        logger.warning("Yahoo pick data not available.")
+        cache_name = f"yahoo_picks_{year}.json"
+        if self.cache_dir:
+            cached = self._load_cache(cache_name)
+            if cached:
+                return ESPNPicksScraper()._dict_to_consensus(cached)
+
+        source_url = os.getenv("YAHOO_PUBLIC_PICKS_URL")
+        if source_url:
+            try:
+                response = self.session.get(source_url, timeout=30)
+                response.raise_for_status()
+                payload = response.json()
+                if self.cache_dir and isinstance(payload, dict):
+                    self._save_cache(cache_name, payload)
+                if isinstance(payload, dict):
+                    return ESPNPicksScraper()._dict_to_consensus(payload)
+            except Exception as exc:
+                logger.warning("Yahoo picks fetch failed: %s", exc)
+
+        logger.warning("Yahoo pick data unavailable. Set YAHOO_PUBLIC_PICKS_URL.")
         return ConsensusData(sources=["yahoo"])
+
+    def _load_cache(self, filename: str) -> Optional[dict]:
+        if not self.cache_dir:
+            return None
+        p = self.cache_dir / filename
+        if not p.exists():
+            return None
+        with open(p, "r") as f:
+            return json.load(f)
+
+    def _save_cache(self, filename: str, data: dict) -> None:
+        if not self.cache_dir:
+            return
+        p = self.cache_dir / filename
+        with open(p, "w") as f:
+            json.dump(data, f, indent=2)
 
 
 class CBSPicksScraper:
     """Scraper for CBS bracket game picks."""
     
     BASE_URL = "https://www.cbssports.com/college-basketball/bracketology"
+
+    def __init__(self, cache_dir: Optional[str] = None):
+        self.session = requests.Session()
+        self.session.headers.update(
+            {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+            }
+        )
+        self.cache_dir = Path(cache_dir) if cache_dir else None
+        if self.cache_dir:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
     
     def fetch_picks(self, year: int = 2026) -> ConsensusData:
         """Fetch picks from CBS."""
-        logger.warning("CBS pick data not available.")
+        cache_name = f"cbs_picks_{year}.json"
+        if self.cache_dir:
+            cached = self._load_cache(cache_name)
+            if cached:
+                return ESPNPicksScraper()._dict_to_consensus(cached)
+
+        source_url = os.getenv("CBS_PUBLIC_PICKS_URL")
+        if source_url:
+            try:
+                response = self.session.get(source_url, timeout=30)
+                response.raise_for_status()
+                payload = response.json()
+                if self.cache_dir and isinstance(payload, dict):
+                    self._save_cache(cache_name, payload)
+                if isinstance(payload, dict):
+                    return ESPNPicksScraper()._dict_to_consensus(payload)
+            except Exception as exc:
+                logger.warning("CBS picks fetch failed: %s", exc)
+
+        logger.warning("CBS pick data unavailable. Set CBS_PUBLIC_PICKS_URL.")
         return ConsensusData(sources=["cbs"])
+
+    def _load_cache(self, filename: str) -> Optional[dict]:
+        if not self.cache_dir:
+            return None
+        p = self.cache_dir / filename
+        if not p.exists():
+            return None
+        with open(p, "r") as f:
+            return json.load(f)
+
+    def _save_cache(self, filename: str, data: dict) -> None:
+        if not self.cache_dir:
+            return
+        p = self.cache_dir / filename
+        with open(p, "w") as f:
+            json.dump(data, f, indent=2)
 
 
 def aggregate_consensus(
@@ -303,58 +414,3 @@ def aggregate_consensus(
         teams=aggregated,
         sources=["espn", "yahoo", "cbs"],
     )
-
-
-def create_synthetic_picks(seeds_by_region: Dict[str, List[str]]) -> ConsensusData:
-    """
-    Create synthetic public pick data based on seed.
-    
-    Uses historical averages for pick percentages by seed.
-    
-    Args:
-        seeds_by_region: Dict mapping region -> list of team_ids by seed (1-16)
-        
-    Returns:
-        Synthetic ConsensusData
-    """
-    # Historical average pick percentages by seed
-    # Based on typical ESPN Tournament Challenge distributions
-    historical_picks = {
-        1: {"R64": 99.0, "R32": 92.0, "S16": 75.0, "E8": 55.0, "F4": 35.0, "CHAMP": 18.0},
-        2: {"R64": 94.0, "R32": 80.0, "S16": 55.0, "E8": 32.0, "F4": 18.0, "CHAMP": 8.0},
-        3: {"R64": 85.0, "R32": 60.0, "S16": 35.0, "E8": 18.0, "F4": 8.0, "CHAMP": 3.0},
-        4: {"R64": 79.0, "R32": 48.0, "S16": 25.0, "E8": 12.0, "F4": 5.0, "CHAMP": 1.5},
-        5: {"R64": 65.0, "R32": 35.0, "S16": 15.0, "E8": 6.0, "F4": 2.0, "CHAMP": 0.5},
-        6: {"R64": 63.0, "R32": 30.0, "S16": 12.0, "E8": 5.0, "F4": 1.5, "CHAMP": 0.4},
-        7: {"R64": 60.0, "R32": 25.0, "S16": 10.0, "E8": 4.0, "F4": 1.2, "CHAMP": 0.3},
-        8: {"R64": 49.0, "R32": 18.0, "S16": 6.0, "E8": 2.0, "F4": 0.6, "CHAMP": 0.1},
-        9: {"R64": 51.0, "R32": 15.0, "S16": 5.0, "E8": 1.5, "F4": 0.4, "CHAMP": 0.1},
-        10: {"R64": 40.0, "R32": 12.0, "S16": 4.0, "E8": 1.2, "F4": 0.3, "CHAMP": 0.05},
-        11: {"R64": 37.0, "R32": 10.0, "S16": 3.0, "E8": 1.0, "F4": 0.2, "CHAMP": 0.03},
-        12: {"R64": 35.0, "R32": 8.0, "S16": 2.5, "E8": 0.8, "F4": 0.15, "CHAMP": 0.02},
-        13: {"R64": 21.0, "R32": 4.0, "S16": 1.0, "E8": 0.3, "F4": 0.05, "CHAMP": 0.01},
-        14: {"R64": 15.0, "R32": 2.5, "S16": 0.5, "E8": 0.1, "F4": 0.02, "CHAMP": 0.005},
-        15: {"R64": 6.0, "R32": 1.0, "S16": 0.2, "E8": 0.05, "F4": 0.01, "CHAMP": 0.001},
-        16: {"R64": 1.0, "R32": 0.2, "S16": 0.05, "E8": 0.01, "F4": 0.002, "CHAMP": 0.0001},
-    }
-    
-    teams = {}
-    
-    for region, team_ids in seeds_by_region.items():
-        for seed_idx, team_id in enumerate(team_ids, start=1):
-            picks = historical_picks.get(seed_idx, historical_picks[16])
-            
-            teams[team_id] = PublicPicks(
-                team_id=team_id,
-                team_name=team_id.replace("_", " ").title(),
-                seed=seed_idx,
-                region=region,
-                round_of_64_pct=picks["R64"],
-                round_of_32_pct=picks["R32"],
-                sweet_16_pct=picks["S16"],
-                elite_8_pct=picks["E8"],
-                final_four_pct=picks["F4"],
-                champion_pct=picks["CHAMP"],
-            )
-    
-    return ConsensusData(teams=teams, sources=["synthetic"])
