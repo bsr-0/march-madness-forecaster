@@ -1,0 +1,97 @@
+{
+  "generated_at": "2026-02-15T16:23:45.420389+00:00",
+  "start_season": 2022,
+  "end_season": 2025,
+  "artifacts": {
+    "2022": {
+      "historical_games_json": "data/raw/historical/historical_games_2022.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2022.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2022.json"
+    },
+    "2023": {
+      "historical_games_json": "data/raw/historical/historical_games_2023.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2023.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2023.json"
+    },
+    "2024": {
+      "historical_games_json": "data/raw/historical/historical_games_2024.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2024.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2024.json"
+    },
+    "2025": {
+      "historical_games_json": "data/raw/historical/historical_games_2025.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2025.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2025.json"
+    }
+  },
+  "providers": {
+    "2022": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    },
+    "2023": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    },
+    "2024": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    },
+    "2025": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    }
+  },
+  "validation_errors": {
+    "2022": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2023": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2024": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2025": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    }
+  },
+  "season_counts": {
+    "2022": {
+      "games": 5964,
+      "team_games": 11928,
+      "teams": 358,
+      "tournament_seed_teams": 68
+    },
+    "2023": {
+      "games": 6222,
+      "team_games": 12444,
+      "teams": 363,
+      "tournament_seed_teams": 68
+    },
+    "2024": {
+      "games": 6242,
+      "team_games": 12484,
+      "teams": 362,
+      "tournament_seed_teams": 68
+    },
+    "2025": {
+      "games": 6291,
+      "team_games": 12582,
+      "teams": 364,
+      "tournament_seed_teams": 68
+    }
+  }
+}

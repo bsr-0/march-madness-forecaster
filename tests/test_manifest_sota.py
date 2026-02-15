@@ -66,6 +66,12 @@ def test_run_sota_from_manifest_resolves_paths_and_runs(tmp_path, monkeypatch):
         scoring_rules=None,
         scrape_live=False,
         cache_dir="data/raw/cache",
+        allow_stale_feeds=False,
+        max_feed_age_hours=168,
+        min_public_sources=2,
+        min_shotquality_xp_coverage=0.8,
+        min_shotquality_possessions_per_game=50,
+        min_rapm_players_per_team=5,
     )
 
     code = main_mod.run_sota_from_manifest(args)
@@ -125,6 +131,12 @@ def test_run_sota_from_manifest_allows_overrides(tmp_path, monkeypatch):
         scoring_rules=None,
         scrape_live=True,
         cache_dir="cache-dir",
+        allow_stale_feeds=True,
+        max_feed_age_hours=720,
+        min_public_sources=1,
+        min_shotquality_xp_coverage=0.7,
+        min_shotquality_possessions_per_game=40,
+        min_rapm_players_per_team=3,
     )
 
     code = main_mod.run_sota_from_manifest(args)

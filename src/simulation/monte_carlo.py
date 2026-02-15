@@ -5,10 +5,9 @@ Runs 50,000+ simulations of the full tournament with noise injection
 to model uncertainty (injuries, variance, etc.).
 """
 
-from typing import Dict, List, Optional, Tuple, Callable
+from typing import Callable, Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 import numpy as np
-from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 from tqdm import tqdm
 
@@ -211,8 +210,7 @@ class MonteCarloEngine:
         round_results = []
         current_teams = bracket.first_round_matchups.copy()
         
-        # Simulate each round
-        round_num = 0
+        # Simulate each round from 64 -> 1.
         while len(current_teams) > 1:
             round_winners = []
             
@@ -231,15 +229,15 @@ class MonteCarloEngine:
             
             round_results.append(round_winners)
             current_teams = round_winners
-            round_num += 1
         
         champion = current_teams[0] if current_teams else None
         
-        # Extract milestone teams
-        final_four = round_results[-2] if len(round_results) >= 2 else []
-        elite_eight = round_results[-3] if len(round_results) >= 3 else []
-        sweet_sixteen = round_results[-4] if len(round_results) >= 4 else []
-        round_of_32 = round_results[-5] if len(round_results) >= 5 else []
+        # Extract milestone teams by canonical round index.
+        # round_results[0] = winners of R64 (teams in R32), round_results[3] = Final Four teams.
+        round_of_32 = round_results[0] if len(round_results) >= 1 else []
+        sweet_sixteen = round_results[1] if len(round_results) >= 2 else []
+        elite_eight = round_results[2] if len(round_results) >= 3 else []
+        final_four = round_results[3] if len(round_results) >= 4 else []
         
         return SimulationResult(
             champion=champion,

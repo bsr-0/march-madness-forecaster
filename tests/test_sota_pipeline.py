@@ -2,6 +2,7 @@
 
 import json
 
+from src.models.team import Team
 from src.pipeline.sota import DataRequirementError, SOTAPipeline, SOTAPipelineConfig
 
 
@@ -31,6 +32,7 @@ def _build_fixture_payloads():
             )
 
     kenpom = {
+        "timestamp": "2026-03-17T12:00:00Z",
         "teams": [
             {
                 "team_id": t["name"].lower().replace(" ", "_"),
@@ -56,6 +58,7 @@ def _build_fixture_payloads():
     }
 
     torvik = {
+        "timestamp": "2026-03-17T12:00:00Z",
         "teams": [
             {
                 "team_id": t["name"].lower().replace(" ", "_"),
@@ -83,6 +86,7 @@ def _build_fixture_payloads():
     }
 
     shotquality_teams = {
+        "timestamp": "2026-03-17T12:00:00Z",
         "teams": [
             {
                 "team_id": t["name"].lower().replace(" ", "_"),
@@ -97,7 +101,7 @@ def _build_fixture_payloads():
         ]
     }
 
-    roster_payload = {"teams": []}
+    roster_payload = {"timestamp": "2026-03-17T12:00:00Z", "teams": []}
     for t in teams:
         team_id = t["name"].lower().replace(" ", "_")
         roster_payload["teams"].append(
@@ -156,7 +160,7 @@ def _build_fixture_payloads():
             }
         )
 
-    shotquality_games = {"games": games}
+    shotquality_games = {"timestamp": "2026-03-17T12:00:00Z", "games": games}
 
     public_picks = {
         "teams": {
@@ -173,7 +177,7 @@ def _build_fixture_payloads():
             }
             for t in teams
         },
-        "sources": ["espn"],
+        "sources": ["espn", "yahoo", "cbs"],
         "timestamp": "2026-03-17T12:00:00Z",
     }
 
@@ -232,11 +236,12 @@ def test_sota_pipeline_produces_rubric_artifacts(tmp_path):
     ev_bracket = report["artifacts"]["ev_max_bracket"]
     assert "champion" in ev_bracket
     assert len(ev_bracket["final_four"]) <= 4
+    assert len(ev_bracket["picks"]) >= 63
 
     baseline = report["artifacts"]["baseline_training"]
     assert baseline["model"] in {"lightgbm", "logistic_regression", "none"}
     assert "model_uncertainty" in report["artifacts"]
-    assert report["artifacts"]["public_pick_sources"] == ["espn"]
+    assert sorted(report["artifacts"]["public_pick_sources"]) == ["cbs", "espn", "yahoo"]
     for pick in report["artifacts"]["top_leverage_picks"][:10]:
         assert 0.0 <= pick["public_pick_percentage"] <= 1.0
 
@@ -268,6 +273,67 @@ def test_sota_pipeline_output_file(tmp_path):
     assert restored["artifacts"]["simulation"]["num_simulations"] == 80
 
 
+def test_public_pick_loader_supports_explicit_multi_source_payload(tmp_path):
+    payload = {
+        "timestamp": "2026-03-17T12:00:00Z",
+        "espn": {
+            "teams": {
+                "duke": {
+                    "team_name": "Duke",
+                    "seed": 1,
+                    "region": "East",
+                    "round_of_64_pct": 98.0,
+                    "round_of_32_pct": 90.0,
+                    "sweet_16_pct": 70.0,
+                    "elite_8_pct": 50.0,
+                    "final_four_pct": 30.0,
+                    "champion_pct": 20.0,
+                }
+            }
+        },
+        "yahoo": {
+            "teams": {
+                "duke": {
+                    "team_name": "Duke",
+                    "seed": 1,
+                    "region": "East",
+                    "round_of_64_pct": 97.0,
+                    "round_of_32_pct": 88.0,
+                    "sweet_16_pct": 68.0,
+                    "elite_8_pct": 48.0,
+                    "final_four_pct": 28.0,
+                    "champion_pct": 10.0,
+                }
+            }
+        },
+        "cbs": {
+            "teams": {
+                "duke": {
+                    "team_name": "Duke",
+                    "seed": 1,
+                    "region": "East",
+                    "round_of_64_pct": 96.0,
+                    "round_of_32_pct": 87.0,
+                    "sweet_16_pct": 66.0,
+                    "elite_8_pct": 46.0,
+                    "final_four_pct": 26.0,
+                    "champion_pct": 5.0,
+                }
+            }
+        },
+    }
+    picks_path = tmp_path / "picks.json"
+    with open(picks_path, "w") as f:
+        json.dump(payload, f)
+
+    pipeline = SOTAPipeline(SOTAPipelineConfig(public_picks_json=str(picks_path)))
+    pipeline.team_struct["duke"] = Team(name="Duke", seed=1, region="East")
+
+    public = pipeline._load_public_picks({"duke": {"CHAMP": 0.1}})
+    assert sorted(pipeline.public_pick_sources) == ["cbs", "espn", "yahoo"]
+    assert abs(public["duke"]["CHAMP"] - 0.14) < 1e-9
+
+
 def test_sota_pipeline_requires_real_data():
     config = SOTAPipelineConfig(num_simulations=20, pool_size=10)
     pipeline = SOTAPipeline(config)
@@ -277,3 +343,143 @@ def test_sota_pipeline_requires_real_data():
         assert False, "Expected DataRequirementError"
     except DataRequirementError:
         assert True
+
+
+def test_sota_pipeline_rejects_stale_public_feed(tmp_path):
+    payload = {
+        "timestamp": "2020-01-01T00:00:00Z",
+        "teams": {
+            "duke": {
+                "team_name": "Duke",
+                "seed": 1,
+                "region": "East",
+                "round_of_64_pct": 98.0,
+                "round_of_32_pct": 90.0,
+                "sweet_16_pct": 70.0,
+                "elite_8_pct": 50.0,
+                "final_four_pct": 30.0,
+                "champion_pct": 20.0,
+            }
+        },
+        "sources": ["espn", "yahoo"],
+    }
+    picks_path = tmp_path / "stale_picks.json"
+    with open(picks_path, "w") as f:
+        json.dump(payload, f)
+
+    pipeline = SOTAPipeline(
+        SOTAPipelineConfig(
+            public_picks_json=str(picks_path),
+            max_feed_age_hours=1,
+            min_public_sources=2,
+        )
+    )
+    pipeline.team_struct["duke"] = Team(name="Duke", seed=1, region="East")
+
+    try:
+        pipeline._load_public_picks({"duke": {"CHAMP": 0.1}})
+        assert False, "Expected stale feed rejection"
+    except DataRequirementError:
+        assert True
+
+
+def test_sota_pipeline_builds_shotquality_proxy_from_historical_rows(tmp_path):
+    paths = _write_payloads(tmp_path)
+    with open(paths["teams"], "r") as f:
+        teams_payload = json.load(f)
+    teams = teams_payload["teams"]
+
+    historical_rows = []
+    for idx in range(0, len(teams), 2):
+        t1 = teams[idx]["name"].lower().replace(" ", "_")
+        t2 = teams[idx + 1]["name"].lower().replace(" ", "_")
+        historical_rows.append(
+            {
+                "game_id": f"hist_{idx:03d}",
+                "team_id": t1,
+                "team_name": teams[idx]["name"],
+                "opponent_id": t2,
+                "opponent_name": teams[idx + 1]["name"],
+                "team_score": 74,
+                "opponent_score": 68,
+                "possessions": 69,
+                "fga": 56,
+                "fg3a": 19,
+                "fta": 17,
+                "turnovers": 10,
+                "orb": 9,
+                "date": "2026-01-15",
+            }
+        )
+        historical_rows.append(
+            {
+                "game_id": f"hist_{idx:03d}",
+                "team_id": t2,
+                "team_name": teams[idx + 1]["name"],
+                "opponent_id": t1,
+                "opponent_name": teams[idx]["name"],
+                "team_score": 68,
+                "opponent_score": 74,
+                "possessions": 69,
+                "fga": 55,
+                "fg3a": 21,
+                "fta": 13,
+                "turnovers": 11,
+                "orb": 8,
+                "date": "2026-01-15",
+            }
+        )
+    historical_path = tmp_path / "historical_proxy_source.json"
+    with open(historical_path, "w") as f:
+        json.dump({"games": historical_rows}, f)
+
+    config = SOTAPipelineConfig(
+        num_simulations=50,
+        pool_size=40,
+        teams_json=paths["teams"],
+        kenpom_json=paths["kenpom"],
+        torvik_json=paths["torvik"],
+        historical_games_json=str(historical_path),
+        roster_json=paths["rosters"],
+        public_picks_json=paths["public_picks"],
+        enforce_feed_freshness=False,
+    )
+    report = SOTAPipeline(config).run()
+    quality = report["artifacts"]["shotquality_data_quality"]
+    assert quality["xp_coverage"] > 0.95
+    assert quality["games"] > 0
+
+
+def test_rapm_enrichment_from_stints_backfills_missing_player_rapm():
+    pipeline = SOTAPipeline(
+        SOTAPipelineConfig(
+            enforce_feed_freshness=False,
+            min_rapm_players_per_team=3,
+        )
+    )
+    players = [
+        pipeline._player_from_dict(
+            "duke",
+            {
+                "player_id": f"duke_p{i}",
+                "name": f"P{i}",
+                "position": "PG",
+                "minutes_per_game": 30 - i,
+                "games_played": 30,
+                "usage_rate": 20,
+            },
+        )
+        for i in range(5)
+    ]
+    team_block = {
+        "stints": [
+            {"players": ["duke_p0", "duke_p1", "duke_p2"], "plus_minus": 4, "possessions": 10},
+            {"players": ["duke_p1", "duke_p2", "duke_p3"], "plus_minus": -2, "possessions": 8},
+            {"players": ["duke_p0", "duke_p3", "duke_p4"], "plus_minus": 3, "possessions": 9},
+            {"players": ["duke_p2", "duke_p3", "duke_p4"], "plus_minus": -1, "possessions": 7},
+        ]
+    }
+
+    pipeline._enrich_roster_rapm(players, team_block)
+    non_zero = sum(1 for p in players if abs(p.rapm_total) > 1e-8)
+    assert non_zero >= 3

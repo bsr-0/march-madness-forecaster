@@ -1,0 +1,549 @@
+{
+  "season": 2023,
+  "teams": [
+    {
+      "season": 2023,
+      "team_name": "Purdue",
+      "school_slug": "purdue",
+      "team_id": "purdue",
+      "seed": 1,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Marquette",
+      "school_slug": "marquette",
+      "team_id": "marquette",
+      "seed": 2,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Kansas State",
+      "school_slug": "kansas-state",
+      "team_id": "kansas_state",
+      "seed": 3,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Tennessee",
+      "school_slug": "tennessee",
+      "team_id": "tennessee",
+      "seed": 4,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Duke",
+      "school_slug": "duke",
+      "team_id": "duke",
+      "seed": 5,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Kentucky",
+      "school_slug": "kentucky",
+      "team_id": "kentucky",
+      "seed": 6,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Michigan State",
+      "school_slug": "michigan-state",
+      "team_id": "michigan_state",
+      "seed": 7,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Memphis",
+      "school_slug": "memphis",
+      "team_id": "memphis",
+      "seed": 8,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Florida Atlantic",
+      "school_slug": "florida-atlantic",
+      "team_id": "florida_atlantic",
+      "seed": 9,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "USC",
+      "school_slug": "southern-california",
+      "team_id": "usc",
+      "seed": 10,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Providence",
+      "school_slug": "providence",
+      "team_id": "providence",
+      "seed": 11,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Oral Roberts",
+      "school_slug": "oral-roberts",
+      "team_id": "oral_roberts",
+      "seed": 12,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Louisiana",
+      "school_slug": "louisiana-lafayette",
+      "team_id": "louisiana",
+      "seed": 13,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Montana State",
+      "school_slug": "montana-state",
+      "team_id": "montana_state",
+      "seed": 14,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Vermont",
+      "school_slug": "vermont",
+      "team_id": "vermont",
+      "seed": 15,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "FDU",
+      "school_slug": "fairleigh-dickinson",
+      "team_id": "fdu",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Texas Southern",
+      "school_slug": "texas-southern",
+      "team_id": "texas_southern",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2023,
+      "team_name": "Houston",
+      "school_slug": "houston",
+      "team_id": "houston",
+      "seed": 1,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Texas",
+      "school_slug": "texas",
+      "team_id": "texas",
+      "seed": 2,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Xavier",
+      "school_slug": "xavier",
+      "team_id": "xavier",
+      "seed": 3,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Indiana",
+      "school_slug": "indiana",
+      "team_id": "indiana",
+      "seed": 4,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Miami (FL)",
+      "school_slug": "miami-fl",
+      "team_id": "miami__fl",
+      "seed": 5,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Iowa State",
+      "school_slug": "iowa-state",
+      "team_id": "iowa_state",
+      "seed": 6,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Texas A&amp;M",
+      "school_slug": "texas-am",
+      "team_id": "texas_a_amp_m",
+      "seed": 7,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Iowa",
+      "school_slug": "iowa",
+      "team_id": "iowa",
+      "seed": 8,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Auburn",
+      "school_slug": "auburn",
+      "team_id": "auburn",
+      "seed": 9,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Penn State",
+      "school_slug": "penn-state",
+      "team_id": "penn_state",
+      "seed": 10,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Mississippi State",
+      "school_slug": "mississippi-state",
+      "team_id": "mississippi_state",
+      "seed": 11,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Pitt",
+      "school_slug": "pittsburgh",
+      "team_id": "pitt",
+      "seed": 11,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Drake",
+      "school_slug": "drake",
+      "team_id": "drake",
+      "seed": 12,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Kent State",
+      "school_slug": "kent-state",
+      "team_id": "kent_state",
+      "seed": 13,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Kennesaw State",
+      "school_slug": "kennesaw-state",
+      "team_id": "kennesaw_state",
+      "seed": 14,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Colgate",
+      "school_slug": "colgate",
+      "team_id": "colgate",
+      "seed": 15,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Northern Kentucky",
+      "school_slug": "northern-kentucky",
+      "team_id": "northern_kentucky",
+      "seed": 16,
+      "region": "Midwest"
+    },
+    {
+      "season": 2023,
+      "team_name": "Alabama",
+      "school_slug": "alabama",
+      "team_id": "alabama",
+      "seed": 1,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "Arizona",
+      "school_slug": "arizona",
+      "team_id": "arizona",
+      "seed": 2,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "Baylor",
+      "school_slug": "baylor",
+      "team_id": "baylor",
+      "seed": 3,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "Virginia",
+      "school_slug": "virginia",
+      "team_id": "virginia",
+      "seed": 4,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "San Diego State",
+      "school_slug": "san-diego-state",
+      "team_id": "san_diego_state",
+      "seed": 5,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "Creighton",
+      "school_slug": "creighton",
+      "team_id": "creighton",
+      "seed": 6,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "Missouri",
+      "school_slug": "missouri",
+      "team_id": "missouri",
+      "seed": 7,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "Maryland",
+      "school_slug": "maryland",
+      "team_id": "maryland",
+      "seed": 8,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "West Virginia",
+      "school_slug": "west-virginia",
+      "team_id": "west_virginia",
+      "seed": 9,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "Utah State",
+      "school_slug": "utah-state",
+      "team_id": "utah_state",
+      "seed": 10,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "NC State",
+      "school_slug": "north-carolina-state",
+      "team_id": "nc_state",
+      "seed": 11,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "College of Charleston",
+      "school_slug": "college-of-charleston",
+      "team_id": "college_of_charleston",
+      "seed": 12,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "Furman",
+      "school_slug": "furman",
+      "team_id": "furman",
+      "seed": 13,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "UCSB",
+      "school_slug": "california-santa-barbara",
+      "team_id": "ucsb",
+      "seed": 14,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "Princeton",
+      "school_slug": "princeton",
+      "team_id": "princeton",
+      "seed": 15,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "Southeast Missouri State",
+      "school_slug": "southeast-missouri-state",
+      "team_id": "southeast_missouri_state",
+      "seed": 16,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "Texas A&amp;M-Corpus Christi",
+      "school_slug": "texas-am-corpus-christi",
+      "team_id": "texas_a_amp_m_corpus_christi",
+      "seed": 16,
+      "region": "South"
+    },
+    {
+      "season": 2023,
+      "team_name": "Kansas",
+      "school_slug": "kansas",
+      "team_id": "kansas",
+      "seed": 1,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "UCLA",
+      "school_slug": "ucla",
+      "team_id": "ucla",
+      "seed": 2,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "Gonzaga",
+      "school_slug": "gonzaga",
+      "team_id": "gonzaga",
+      "seed": 3,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "UConn",
+      "school_slug": "connecticut",
+      "team_id": "uconn",
+      "seed": 4,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "Saint Mary's",
+      "school_slug": "saint-marys-ca",
+      "team_id": "saint_mary_s",
+      "seed": 5,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "TCU",
+      "school_slug": "texas-christian",
+      "team_id": "tcu",
+      "seed": 6,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "Northwestern",
+      "school_slug": "northwestern",
+      "team_id": "northwestern",
+      "seed": 7,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "Arkansas",
+      "school_slug": "arkansas",
+      "team_id": "arkansas",
+      "seed": 8,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "Illinois",
+      "school_slug": "illinois",
+      "team_id": "illinois",
+      "seed": 9,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "Boise State",
+      "school_slug": "boise-state",
+      "team_id": "boise_state",
+      "seed": 10,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "Arizona State",
+      "school_slug": "arizona-state",
+      "team_id": "arizona_state",
+      "seed": 11,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "Nevada",
+      "school_slug": "nevada",
+      "team_id": "nevada",
+      "seed": 11,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "VCU",
+      "school_slug": "virginia-commonwealth",
+      "team_id": "vcu",
+      "seed": 12,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "Iona",
+      "school_slug": "iona",
+      "team_id": "iona",
+      "seed": 13,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "Grand Canyon",
+      "school_slug": "grand-canyon",
+      "team_id": "grand_canyon",
+      "seed": 14,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "UNC Asheville",
+      "school_slug": "north-carolina-asheville",
+      "team_id": "unc_asheville",
+      "seed": 15,
+      "region": "West"
+    },
+    {
+      "season": 2023,
+      "team_name": "Howard",
+      "school_slug": "howard",
+      "team_id": "howard",
+      "seed": 16,
+      "region": "West"
+    }
+  ]
+}

@@ -1,0 +1,548 @@
+{
+  "teams": [
+    {
+      "season": 2024,
+      "team_name": "UConn",
+      "school_slug": "connecticut",
+      "team_id": "uconn",
+      "seed": 1,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "Iowa State",
+      "school_slug": "iowa-state",
+      "team_id": "iowa_state",
+      "seed": 2,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "Illinois",
+      "school_slug": "illinois",
+      "team_id": "illinois",
+      "seed": 3,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "Auburn",
+      "school_slug": "auburn",
+      "team_id": "auburn",
+      "seed": 4,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "San Diego State",
+      "school_slug": "san-diego-state",
+      "team_id": "san_diego_state",
+      "seed": 5,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "BYU",
+      "school_slug": "brigham-young",
+      "team_id": "byu",
+      "seed": 6,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "Washington State",
+      "school_slug": "washington-state",
+      "team_id": "washington_state",
+      "seed": 7,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "Florida Atlantic",
+      "school_slug": "florida-atlantic",
+      "team_id": "florida_atlantic",
+      "seed": 8,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "Northwestern",
+      "school_slug": "northwestern",
+      "team_id": "northwestern",
+      "seed": 9,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "Drake",
+      "school_slug": "drake",
+      "team_id": "drake",
+      "seed": 10,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "Duquesne",
+      "school_slug": "duquesne",
+      "team_id": "duquesne",
+      "seed": 11,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "UAB",
+      "school_slug": "alabama-birmingham",
+      "team_id": "uab",
+      "seed": 12,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "Yale",
+      "school_slug": "yale",
+      "team_id": "yale",
+      "seed": 13,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "Morehead State",
+      "school_slug": "morehead-state",
+      "team_id": "morehead_state",
+      "seed": 14,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "South Dakota State",
+      "school_slug": "south-dakota-state",
+      "team_id": "south_dakota_state",
+      "seed": 15,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "Stetson",
+      "school_slug": "stetson",
+      "team_id": "stetson",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2024,
+      "team_name": "Purdue",
+      "school_slug": "purdue",
+      "team_id": "purdue",
+      "seed": 1,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "Tennessee",
+      "school_slug": "tennessee",
+      "team_id": "tennessee",
+      "seed": 2,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "Creighton",
+      "school_slug": "creighton",
+      "team_id": "creighton",
+      "seed": 3,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "Kansas",
+      "school_slug": "kansas",
+      "team_id": "kansas",
+      "seed": 4,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "Gonzaga",
+      "school_slug": "gonzaga",
+      "team_id": "gonzaga",
+      "seed": 5,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "South Carolina",
+      "school_slug": "south-carolina",
+      "team_id": "south_carolina",
+      "seed": 6,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "Texas",
+      "school_slug": "texas",
+      "team_id": "texas",
+      "seed": 7,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "Utah State",
+      "school_slug": "utah-state",
+      "team_id": "utah_state",
+      "seed": 8,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "TCU",
+      "school_slug": "texas-christian",
+      "team_id": "tcu",
+      "seed": 9,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "Colorado State",
+      "school_slug": "colorado-state",
+      "team_id": "colorado_state",
+      "seed": 10,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "Virginia",
+      "school_slug": "virginia",
+      "team_id": "virginia",
+      "seed": 10,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "Oregon",
+      "school_slug": "oregon",
+      "team_id": "oregon",
+      "seed": 11,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "McNeese State",
+      "school_slug": "mcneese-state",
+      "team_id": "mcneese_state",
+      "seed": 12,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "Samford",
+      "school_slug": "samford",
+      "team_id": "samford",
+      "seed": 13,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "Akron",
+      "school_slug": "akron",
+      "team_id": "akron",
+      "seed": 14,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "St. Peter's",
+      "school_slug": "saint-peters",
+      "team_id": "st__peter_s",
+      "seed": 15,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "Grambling",
+      "school_slug": "grambling",
+      "team_id": "grambling",
+      "seed": 16,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "Montana State",
+      "school_slug": "montana-state",
+      "team_id": "montana_state",
+      "seed": 16,
+      "region": "Midwest"
+    },
+    {
+      "season": 2024,
+      "team_name": "Houston",
+      "school_slug": "houston",
+      "team_id": "houston",
+      "seed": 1,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "Marquette",
+      "school_slug": "marquette",
+      "team_id": "marquette",
+      "seed": 2,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "Kentucky",
+      "school_slug": "kentucky",
+      "team_id": "kentucky",
+      "seed": 3,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "Duke",
+      "school_slug": "duke",
+      "team_id": "duke",
+      "seed": 4,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "Wisconsin",
+      "school_slug": "wisconsin",
+      "team_id": "wisconsin",
+      "seed": 5,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "Texas Tech",
+      "school_slug": "texas-tech",
+      "team_id": "texas_tech",
+      "seed": 6,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "Florida",
+      "school_slug": "florida",
+      "team_id": "florida",
+      "seed": 7,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "Nebraska",
+      "school_slug": "nebraska",
+      "team_id": "nebraska",
+      "seed": 8,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "Texas A&amp;M",
+      "school_slug": "texas-am",
+      "team_id": "texas_a_amp_m",
+      "seed": 9,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "Boise State",
+      "school_slug": "boise-state",
+      "team_id": "boise_state",
+      "seed": 10,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "Colorado",
+      "school_slug": "colorado",
+      "team_id": "colorado",
+      "seed": 10,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "NC State",
+      "school_slug": "north-carolina-state",
+      "team_id": "nc_state",
+      "seed": 11,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "James Madison",
+      "school_slug": "james-madison",
+      "team_id": "james_madison",
+      "seed": 12,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "Vermont",
+      "school_slug": "vermont",
+      "team_id": "vermont",
+      "seed": 13,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "Oakland",
+      "school_slug": "oakland",
+      "team_id": "oakland",
+      "seed": 14,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "Western Kentucky",
+      "school_slug": "western-kentucky",
+      "team_id": "western_kentucky",
+      "seed": 15,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "Longwood",
+      "school_slug": "longwood",
+      "team_id": "longwood",
+      "seed": 16,
+      "region": "South"
+    },
+    {
+      "season": 2024,
+      "team_name": "UNC",
+      "school_slug": "north-carolina",
+      "team_id": "unc",
+      "seed": 1,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "Arizona",
+      "school_slug": "arizona",
+      "team_id": "arizona",
+      "seed": 2,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "Baylor",
+      "school_slug": "baylor",
+      "team_id": "baylor",
+      "seed": 3,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "Alabama",
+      "school_slug": "alabama",
+      "team_id": "alabama",
+      "seed": 4,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "Saint Mary's",
+      "school_slug": "saint-marys-ca",
+      "team_id": "saint_mary_s",
+      "seed": 5,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "Clemson",
+      "school_slug": "clemson",
+      "team_id": "clemson",
+      "seed": 6,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "Dayton",
+      "school_slug": "dayton",
+      "team_id": "dayton",
+      "seed": 7,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "Mississippi State",
+      "school_slug": "mississippi-state",
+      "team_id": "mississippi_state",
+      "seed": 8,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "Michigan State",
+      "school_slug": "michigan-state",
+      "team_id": "michigan_state",
+      "seed": 9,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "Nevada",
+      "school_slug": "nevada",
+      "team_id": "nevada",
+      "seed": 10,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "New Mexico",
+      "school_slug": "new-mexico",
+      "team_id": "new_mexico",
+      "seed": 11,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "Grand Canyon",
+      "school_slug": "grand-canyon",
+      "team_id": "grand_canyon",
+      "seed": 12,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "College of Charleston",
+      "school_slug": "college-of-charleston",
+      "team_id": "college_of_charleston",
+      "seed": 13,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "Colgate",
+      "school_slug": "colgate",
+      "team_id": "colgate",
+      "seed": 14,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "Long Beach State",
+      "school_slug": "long-beach-state",
+      "team_id": "long_beach_state",
+      "seed": 15,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "Howard",
+      "school_slug": "howard",
+      "team_id": "howard",
+      "seed": 16,
+      "region": "West"
+    },
+    {
+      "season": 2024,
+      "team_name": "Wagner",
+      "school_slug": "wagner",
+      "team_id": "wagner",
+      "seed": 16,
+      "region": "West"
+    }
+  ]
+}

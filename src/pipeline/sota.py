@@ -6,7 +6,7 @@ import json
 import math
 import random
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, timezone
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -24,7 +24,7 @@ try:
 except ImportError:
     SKLEARN_AVAILABLE = False
 
-from ..data.features.feature_engineering import FeatureEngineer
+from ..data.features.feature_engineering import FeatureEngineer, compute_rapm
 from ..data.loader import DataLoader
 from ..data.models.game_flow import GameFlow
 from ..data.models.player import InjuryStatus, Player, Position, Roster
@@ -36,7 +36,8 @@ from ..data.scrapers.espn_picks import (
     aggregate_consensus,
 )
 from ..data.scrapers.shotquality import ShotQualityGame, ShotQualityScraper, ShotQualityTeam
-from ..data.scrapers.torvik import BartTorvikScraper, TorVikTeam
+from ..data.scrapers.shotquality_proxy import OpenShotQualityProxyBuilder
+from ..data.scrapers.torvik import BartTorvikScraper
 from ..ml.calibration.calibration import CalibrationPipeline, calculate_calibration_metrics
 from ..ml.ensemble.cfa import CombinatorialFusionAnalysis, LightGBMRanker, ModelPrediction, LIGHTGBM_AVAILABLE
 from ..ml.gnn.schedule_graph import ScheduleEdge, ScheduleGraph, TORCH_AVAILABLE as GNN_TORCH_AVAILABLE, compute_multi_hop_sos
@@ -81,6 +82,12 @@ class SOTAPipelineConfig:
     scrape_live: bool = False
     data_cache_dir: str = "data/raw"
     injury_noise_samples: int = 10000
+    enforce_feed_freshness: bool = True
+    max_feed_age_hours: int = 168
+    min_public_sources: int = 2
+    min_shotquality_xp_coverage: float = 0.80
+    min_shotquality_possessions_per_game: int = 50
+    min_rapm_players_per_team: int = 5
 
 
 class DataRequirementError(ValueError):
@@ -131,6 +138,8 @@ class SOTAPipeline:
         self.model_uncertainty: Dict[str, Dict[str, float]] = {}
         self.all_game_flows: List[GameFlow] = []
         self.public_pick_sources: List[str] = []
+        self.shotquality_quality: Dict[str, float] = {}
+        self.roster_rapm_quality: Dict[str, float] = {}
 
     def run(self) -> Dict:
         """Run the complete pipeline and return report artifacts."""
@@ -166,8 +175,8 @@ class SOTAPipeline:
         schedule_graph = self._construct_schedule_graph(teams)
         adjacency = schedule_graph.get_adjacency_matrix(weighted=True)
 
-        baseline_stats = self._train_baseline_model(game_flows)
         gnn_stats = self._run_gnn(schedule_graph)
+        baseline_stats = self._train_baseline_model(game_flows)
         transformer_stats = self._run_transformer(game_flows)
         uncertainty_stats = self._estimate_model_confidence_intervals(game_flows)
 
@@ -211,6 +220,9 @@ class SOTAPipeline:
                 "phase_1_data_engineering": {
                     "shot_quality_xp": bool(sq_map),
                     "player_rapm_and_live_talent": bool(rosters),
+                    "shotquality_possession_coverage": self.shotquality_quality.get("xp_coverage", 0.0)
+                    >= self.config.min_shotquality_xp_coverage,
+                    "rapm_team_coverage": self.roster_rapm_quality.get("team_coverage_ratio", 0.0) >= 0.8,
                     "lead_volatility_entropy": float(
                         np.mean([f.avg_entropy for f in self.feature_engineer.team_features.values()] or [0.0])
                     )
@@ -218,6 +230,7 @@ class SOTAPipeline:
                 },
                 "phase_2_architecture": {
                     "schedule_graph_constructed": int(adjacency.shape[0]) >= 64 and len(schedule_graph.edges) > 0,
+                    "d1_scale_graph": int(adjacency.shape[0]) >= 362,
                     "gcn_sos_refinement": gnn_stats["enabled"],
                     "transformer_temporal_model": transformer_stats["enabled"] or transformer_stats["teams"] > 0,
                     "cfa_fusion": True,
@@ -228,7 +241,7 @@ class SOTAPipeline:
                     "injury_noise_monte_carlo": self.config.injury_noise_samples >= 10000,
                 },
                 "phase_4_game_theory": {
-                    "public_consensus": len(self.public_pick_sources) >= 2,
+                    "public_consensus": len(self.public_pick_sources) >= self.config.min_public_sources,
                     "leverage_ratio": len(leverage_preview) > 0,
                     "pareto_front": len(pool_analysis.pareto_brackets) > 0,
                 },
@@ -254,10 +267,15 @@ class SOTAPipeline:
                 "calibration": calibration_stats,
                 "simulation": {
                     "num_simulations": bracket_sim.num_simulations,
+                    "round_of_32_odds": bracket_sim.round_of_32_odds,
+                    "sweet_sixteen_odds": bracket_sim.sweet_sixteen_odds,
+                    "elite_eight_odds": bracket_sim.elite_eight_odds,
                     "championship_odds": bracket_sim.championship_odds,
                     "final_four_odds": bracket_sim.final_four_odds,
                     "injury_noise_samples_per_matchup": self.config.injury_noise_samples,
                 },
+                "shotquality_data_quality": self.shotquality_quality,
+                "roster_rapm_quality": self.roster_rapm_quality,
                 "ev_max_bracket": ev_max_bracket.to_dict(),
                 "pool_recommendation": pool_analysis.recommended_strategy,
                 "public_pick_sources": self.public_pick_sources,
@@ -290,6 +308,7 @@ class SOTAPipeline:
         if self.config.kenpom_json:
             with open(self.config.kenpom_json, "r") as f:
                 kp_payload = json.load(f)
+            self._validate_feed_freshness("KenPom", kp_payload)
             kp_teams = kp_payload.get("teams", [])
         elif self.config.scrape_live:
             kp_teams = [row.to_dict() for row in KenPomScraper(cache_dir=self.config.data_cache_dir).fetch_ratings(self.config.year)]
@@ -299,6 +318,9 @@ class SOTAPipeline:
             )
 
         if self.config.torvik_json:
+            with open(self.config.torvik_json, "r") as f:
+                torvik_payload = json.load(f)
+            self._validate_feed_freshness("Torvik", torvik_payload)
             torvik_teams = BartTorvikScraper().load_from_json(self.config.torvik_json)
         elif self.config.scrape_live:
             torvik_teams = BartTorvikScraper(cache_dir=self.config.data_cache_dir).fetch_current_rankings(self.config.year)
@@ -309,13 +331,19 @@ class SOTAPipeline:
 
         sq_scraper = ShotQualityScraper(cache_dir=self.config.data_cache_dir)
         if self.config.shotquality_teams_json:
+            with open(self.config.shotquality_teams_json, "r") as f:
+                sq_payload = json.load(f)
+            self._validate_feed_freshness("ShotQuality teams", sq_payload)
             sq_teams = sq_scraper.load_teams_from_json(self.config.shotquality_teams_json)
         elif self.config.scrape_live:
             sq_teams = sq_scraper.fetch_team_metrics(self.config.year)
         else:
-            raise DataRequirementError(
-                "Missing ShotQuality team metrics. Provide --shotquality-teams JSON or run with --scrape-live."
-            )
+            sq_teams = self._build_proxy_shotquality_teams()
+            if not sq_teams:
+                raise DataRequirementError(
+                    "Missing ShotQuality team metrics. Provide --shotquality-teams JSON, "
+                    "--historical-games JSON with team box rows, or run with --scrape-live."
+                )
 
         if not kp_teams or not torvik_teams or not sq_teams:
             raise DataRequirementError(
@@ -449,6 +477,7 @@ class SOTAPipeline:
 
         with open(self.config.roster_json, "r") as f:
             payload = json.load(f)
+        self._validate_feed_freshness("Rosters", payload)
 
         teams_payload = payload.get("teams", [])
         if not isinstance(teams_payload, list):
@@ -464,14 +493,52 @@ class SOTAPipeline:
             players: List[Player] = []
             for player_data in players_raw:
                 players.append(self._player_from_dict(team_id, player_data))
+            self._enrich_roster_rapm(players, team_block)
             if players:
                 rosters[team_id] = Roster(team_id=team_id, players=players)
 
         if self.config.transfer_portal_json:
             self._apply_transfer_portal_updates(rosters, self.config.transfer_portal_json)
 
+        self.roster_rapm_quality = self._assess_roster_rapm_quality(rosters)
+        if self.roster_rapm_quality.get("team_coverage_ratio", 0.0) < 0.8:
+            raise DataRequirementError(
+                "Roster RAPM quality is too low. Provide richer player RAPM/stint inputs "
+                f"(coverage={self.roster_rapm_quality.get('team_coverage_ratio', 0.0):.1%})."
+            )
         self._validate_source_coverage("Roster", rosters, teams, min_ratio=0.8)
         return rosters
+
+    def _build_proxy_shotquality_payload_from_historical(self) -> Optional[Dict]:
+        if not self.config.historical_games_json:
+            return None
+        with open(self.config.historical_games_json, "r") as f:
+            payload = json.load(f)
+        games = payload.get("games", [])
+        if not isinstance(games, list) or not games:
+            return None
+        return OpenShotQualityProxyBuilder().build(games)
+
+    def _build_proxy_shotquality_teams(self) -> List[ShotQualityTeam]:
+        proxy_payload = self._build_proxy_shotquality_payload_from_historical()
+        if not proxy_payload:
+            return []
+        out: List[ShotQualityTeam] = []
+        for row in proxy_payload.get("teams", []):
+            if not isinstance(row, dict):
+                continue
+            out.append(
+                ShotQualityTeam(
+                    team_id=str(row.get("team_id", "")),
+                    team_name=str(row.get("team_name", row.get("team_id", ""))),
+                    offensive_xp_per_possession=float(row.get("offensive_xp_per_possession", 1.0)),
+                    defensive_xp_per_possession=float(row.get("defensive_xp_per_possession", 1.0)),
+                    rim_rate=float(row.get("rim_rate", 0.3)),
+                    three_rate=float(row.get("three_rate", 0.35)),
+                    midrange_rate=float(row.get("midrange_rate", 0.35)),
+                )
+            )
+        return out
 
     def _build_or_load_game_flows(
         self,
@@ -482,6 +549,9 @@ class SOTAPipeline:
         all_flows: Dict[str, GameFlow] = {}
 
         if self.config.shotquality_games_json:
+            with open(self.config.shotquality_games_json, "r") as f:
+                sq_payload = json.load(f)
+            self._validate_feed_freshness("ShotQuality games", sq_payload)
             sq_scraper = ShotQualityScraper(cache_dir=self.config.data_cache_dir)
             sq_games = sq_scraper.load_games_from_json(self.config.shotquality_games_json)
             if not sq_games:
@@ -492,25 +562,60 @@ class SOTAPipeline:
                     continue
                 all_flows[flow.game_id] = flow
         elif self.config.historical_games_json:
-            with open(self.config.historical_games_json, "r") as f:
-                payload = json.load(f)
-            games = payload.get("games", [])
-            for game in games:
-                flow = self._historical_game_to_flow(game)
-                if not flow:
-                    continue
-                all_flows[flow.game_id] = flow
+            proxy_payload = self._build_proxy_shotquality_payload_from_historical()
+            if proxy_payload and proxy_payload.get("games"):
+                sq_scraper = ShotQualityScraper(cache_dir=self.config.data_cache_dir)
+                for game_dict in proxy_payload.get("games", []):
+                    sq_game = ShotQualityGame(
+                        game_id=str(game_dict.get("game_id", "")),
+                        team_id=str(game_dict.get("team_id", "")),
+                        opponent_id=str(game_dict.get("opponent_id", "")),
+                        game_date=str(game_dict.get("game_date", game_dict.get("date", ""))),
+                        location_weight=float(game_dict.get("location_weight", 0.5)),
+                        possessions=[sq_scraper._dict_to_possession(p) for p in game_dict.get("possessions", [])],
+                    )
+                    flow = self._shotquality_game_to_flow(sq_game)
+                    if not flow:
+                        continue
+                    all_flows[flow.game_id] = flow
+            else:
+                with open(self.config.historical_games_json, "r") as f:
+                    payload = json.load(f)
+                games = payload.get("games", [])
+                for game in games:
+                    flow = self._historical_game_to_flow(game)
+                    if not flow:
+                        continue
+                    all_flows[flow.game_id] = flow
         else:
             raise DataRequirementError(
                 "Missing game-level data. Provide --shotquality-games or --historical-games JSON."
             )
 
-        for flow in all_flows.values():
+        in_season_flows = {
+            game_id: flow
+            for game_id, flow in all_flows.items()
+            if self._is_target_season_game(str(getattr(flow, "game_date", "")))
+        }
+        if not in_season_flows:
+            raise DataRequirementError(
+                f"No game-level rows found for target season {self.config.year}. "
+                "Expected games from the 2025-26 window for a 2026 run."
+            )
+
+        for flow in in_season_flows.values():
             if flow.team1_id in team_to_games:
                 team_to_games[flow.team1_id].append(flow)
             if flow.team2_id in team_to_games:
                 team_to_games[flow.team2_id].append(flow)
-        self.all_game_flows = list(all_flows.values())
+        self.all_game_flows = list(in_season_flows.values())
+        self.shotquality_quality = self._assess_shotquality_quality(self.all_game_flows)
+        if self.shotquality_quality.get("xp_coverage", 0.0) < self.config.min_shotquality_xp_coverage:
+            raise DataRequirementError(
+                "ShotQuality xP possession coverage too low "
+                f"({self.shotquality_quality.get('xp_coverage', 0.0):.1%}); "
+                f"expected >= {self.config.min_shotquality_xp_coverage:.0%}."
+            )
 
         self._validate_source_coverage(
             "ShotQuality games",
@@ -613,8 +718,7 @@ class SOTAPipeline:
         return graph
 
     def _train_baseline_model(self, game_flows: Dict[str, List[GameFlow]]) -> Dict:
-        x_rows: List[np.ndarray] = []
-        y_rows: List[int] = []
+        samples: List[Tuple[int, np.ndarray, int]] = []
 
         for game in self._unique_games(game_flows):
             if game.team1_id not in self.feature_engineer.team_features:
@@ -622,41 +726,70 @@ class SOTAPipeline:
             if game.team2_id not in self.feature_engineer.team_features:
                 continue
 
+            game_key = self._game_sort_key(getattr(game, "game_date", "2026-01-01"))
             matchup = self.feature_engineer.create_matchup_features(game.team1_id, game.team2_id)
-            x_rows.append(matchup.to_vector())
-            y_rows.append(1 if (game.lead_history and game.lead_history[-1] > 0) else 0)
+            samples.append((game_key, matchup.to_vector(), 1 if (game.lead_history and game.lead_history[-1] > 0) else 0))
 
             # Symmetric sample improves stability.
             matchup_rev = self.feature_engineer.create_matchup_features(game.team2_id, game.team1_id)
-            x_rows.append(matchup_rev.to_vector())
-            y_rows.append(1 if (game.lead_history and game.lead_history[-1] < 0) else 0)
+            samples.append((game_key, matchup_rev.to_vector(), 1 if (game.lead_history and game.lead_history[-1] < 0) else 0))
 
-        if not x_rows:
+        if not samples:
             return {"model": "none", "samples": 0}
 
-        X = np.stack(x_rows)
-        y = np.array(y_rows)
+        samples.sort(key=lambda x: x[0])
+        X = np.stack([s[1] for s in samples])
+        y = np.array([s[2] for s in samples], dtype=int)
+
+        n = len(y)
+        valid_set = None
+        train_X = X
+        train_y = y
+        eval_X = X
+        eval_y = y
+        train_samples = n
+        valid_samples = 0
+        if n >= 50:
+            valid_samples = max(10, int(0.2 * n))
+            train_samples = n - valid_samples
+            if train_samples >= 20:
+                train_X = X[:train_samples]
+                train_y = y[:train_samples]
+                eval_X = X[train_samples:]
+                eval_y = y[train_samples:]
+                valid_set = (eval_X, eval_y)
+            else:
+                train_samples = n
+                valid_samples = 0
 
         if LIGHTGBM_AVAILABLE:
             ranker = LightGBMRanker()
-            ranker.train(X, y, num_rounds=120, early_stopping_rounds=20)
+            ranker.train(
+                train_X,
+                train_y,
+                num_rounds=200,
+                early_stopping_rounds=30 if valid_set is not None else None,
+                valid_set=valid_set,
+            )
             self.baseline_model.lgb_model = ranker
             baseline_name = "lightgbm"
         elif SKLEARN_AVAILABLE:
             logit = LogisticRegression(max_iter=1000)
-            logit.fit(X, y)
+            logit.fit(train_X, train_y)
             self.baseline_model.logit_model = logit
             baseline_name = "logistic_regression"
         else:
             baseline_name = "none"
 
-        y_pred = np.array([self.baseline_model.predict_proba(row) for row in X])
-        brier = float(np.mean((y_pred - y) ** 2))
+        y_pred = np.array([self.baseline_model.predict_proba(row) for row in eval_X])
+        brier = float(np.mean((y_pred - eval_y) ** 2))
         self.model_confidence["baseline"] = float(np.clip(1.0 - brier, 0.05, 0.95))
 
         return {
             "model": baseline_name,
             "samples": int(X.shape[0]),
+            "train_samples": int(train_samples),
+            "validation_samples": int(valid_samples),
             "features": int(X.shape[1]),
             "brier": brier,
         }
@@ -694,6 +827,7 @@ class SOTAPipeline:
                 emb = gcn(data.x, data.edge_index).numpy()
 
             self.gnn_embeddings = {graph.idx_to_team[i]: emb[i] for i in range(graph.n_teams)}
+            self._apply_sos_refinement(multi_hop, pagerank)
             self.model_confidence["gnn"] = float(np.clip(1.0 / (1.0 + final_loss), 0.1, 0.95))
 
             return {
@@ -712,6 +846,7 @@ class SOTAPipeline:
                 pagerank.get(team_id, 0.0),
             ])
 
+        self._apply_sos_refinement(multi_hop, pagerank)
         self.model_confidence["gnn"] = 0.35
         return {
             "enabled": False,
@@ -719,6 +854,19 @@ class SOTAPipeline:
             "nodes": graph.n_teams,
             "edges": len(graph.edges),
         }
+
+    def _apply_sos_refinement(self, multi_hop: Dict[str, float], pagerank: Dict[str, float]) -> None:
+        if not self.feature_engineer.team_features:
+            return
+        pr_values = np.array(list(pagerank.values()) or [0.0], dtype=float)
+        pr_mean = float(np.mean(pr_values))
+
+        for team_id, feats in self.feature_engineer.team_features.items():
+            mh = float(multi_hop.get(team_id, 0.0))
+            pr = float(pagerank.get(team_id, pr_mean))
+            refined_sos = 0.5 * feats.sos_adj_em + 3.0 * mh + 12.0 * (pr - pr_mean)
+            feats.sos_adj_em = float(refined_sos)
+            self.team_features[team_id] = feats.to_vector(include_embeddings=False)
 
     def _run_transformer(self, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         sequences: Dict[str, SeasonSequence] = {}
@@ -880,21 +1028,20 @@ class SOTAPipeline:
                 "ece_after": float(metrics.expected_calibration_error),
             }
 
-        indices = np.arange(len(probs))
-        self.rng.shuffle(indices)
-        split = max(10, int(0.8 * len(indices)))
-        train_idx = indices[:split]
-        test_idx = indices[split:]
-        if len(test_idx) < 10:
-            test_idx = train_idx[-10:]
-            train_idx = train_idx[:-10]
-
         p_arr = np.array(probs)
         y_arr = np.array(outcomes)
-        train_p = p_arr[train_idx]
-        train_y = y_arr[train_idx]
-        test_p = p_arr[test_idx]
-        test_y = y_arr[test_idx]
+
+        # Chronological split prevents look-ahead leakage in calibration.
+        split = max(10, int(0.8 * len(p_arr)))
+        train_p = p_arr[:split]
+        train_y = y_arr[:split]
+        test_p = p_arr[split:]
+        test_y = y_arr[split:]
+        if len(test_p) < 10:
+            train_p = p_arr[:-10]
+            train_y = y_arr[:-10]
+            test_p = p_arr[-10:]
+            test_y = y_arr[-10:]
 
         self.calibration_pipeline = CalibrationPipeline(method=self.config.calibration_method)
         self.calibration_pipeline.fit(train_p, train_y)
@@ -914,6 +1061,8 @@ class SOTAPipeline:
         base_strengths: Dict[str, float] = {}
 
         for team in teams:
+            if team.region not in teams_by_region:
+                raise DataRequirementError(f"Unknown region '{team.region}' for team '{team.name}'.")
             team_id = self._team_id(team.name)
             feats = self.feature_engineer.team_features[team_id]
             sustainability_bonus = 2.0 * (feats.lead_sustainability - 0.5)
@@ -932,6 +1081,16 @@ class SOTAPipeline:
 
         for region in teams_by_region:
             teams_by_region[region] = sorted(teams_by_region[region], key=lambda t: t.seed)
+            if len(teams_by_region[region]) != 16:
+                raise DataRequirementError(
+                    f"Region {region} has {len(teams_by_region[region])} teams. "
+                    "Full-bracket simulation requires 16 seeded teams per region."
+                )
+            seeds = {team.seed for team in teams_by_region[region]}
+            if seeds != set(range(1, 17)):
+                raise DataRequirementError(
+                    f"Region {region} must contain seeds 1-16 for a valid 63-game bracket."
+                )
 
         cfg = SimulationConfig(
             num_simulations=self.config.num_simulations,
@@ -968,7 +1127,8 @@ class SOTAPipeline:
 
     def _to_round_probabilities(self, sim_results) -> Dict[str, Dict[str, float]]:
         model_probs: Dict[str, Dict[str, float]] = {}
-        team_ids = set(sim_results.round_of_32_odds.keys())
+        team_ids = set(self.team_struct.keys())
+        team_ids.update(sim_results.round_of_32_odds.keys())
         team_ids.update(sim_results.sweet_sixteen_odds.keys())
         team_ids.update(sim_results.elite_eight_odds.keys())
         team_ids.update(sim_results.final_four_odds.keys())
@@ -990,25 +1150,55 @@ class SOTAPipeline:
         if self.config.public_picks_json:
             with open(self.config.public_picks_json, "r") as f:
                 payload = json.load(f)
-            sources = payload.get("sources")
-            self.public_pick_sources = [str(s).lower() for s in sources] if isinstance(sources, list) else ["espn"]
+            self._validate_feed_freshness("Public picks", payload)
+            public: Dict[str, Dict[str, float]] = {}
+            self.public_pick_sources = []
 
-            espn = ESPNPicksScraper().load_from_json(self.config.public_picks_json)
-            public = {self._team_id(team_id): self._normalize_public_pick_row(picks.as_dict) for team_id, picks in espn.teams.items()}
-            # Optional multi-source payload support (if teams object is already aggregated).
-            if not public and isinstance(payload.get("teams"), dict):
-                for raw_team_id, row in payload["teams"].items():
-                    team_id = self._team_id(str(raw_team_id))
-                    public[team_id] = self._normalize_public_pick_row(
+            # Format A: explicit per-source payload object {"espn": {...}, "yahoo": {...}, "cbs": {...}}
+            source_weights = {"espn": 0.5, "yahoo": 0.3, "cbs": 0.2}
+            source_rows: Dict[str, Dict[str, Dict[str, float]]] = {}
+            for source in ("espn", "yahoo", "cbs"):
+                block = payload.get(source)
+                rows = self._extract_public_pick_rows(block) if isinstance(block, dict) else {}
+                if rows:
+                    source_rows[source] = rows
+                    self.public_pick_sources.append(source)
+
+            if source_rows:
+                aggregate_rows: Dict[str, Dict[str, float]] = {}
+                aggregate_weights: Dict[str, float] = {}
+                for source, rows in source_rows.items():
+                    w = source_weights[source]
+                    for team_id, row in rows.items():
+                        if team_id not in aggregate_rows:
+                            aggregate_rows[team_id] = {"R64": 0.0, "R32": 0.0, "S16": 0.0, "E8": 0.0, "F4": 0.0, "CHAMP": 0.0}
+                            aggregate_weights[team_id] = 0.0
+                        aggregate_weights[team_id] += w
+                        for round_name in ("R64", "R32", "S16", "E8", "F4", "CHAMP"):
+                            aggregate_rows[team_id][round_name] += w * float(row.get(round_name, 0.0))
+                public = {
+                    team_id: self._normalize_public_pick_row(
                         {
-                            "R64": row.get("round_of_64_pct", 0.0),
-                            "R32": row.get("round_of_32_pct", 0.0),
-                            "S16": row.get("sweet_16_pct", 0.0),
-                            "E8": row.get("elite_8_pct", 0.0),
-                            "F4": row.get("final_four_pct", 0.0),
-                            "CHAMP": row.get("champion_pct", 0.0),
+                            round_name: aggregate_rows[team_id][round_name] / max(aggregate_weights[team_id], 1e-9)
+                            for round_name in ("R64", "R32", "S16", "E8", "F4", "CHAMP")
                         }
                     )
+                    for team_id in aggregate_rows
+                }
+            else:
+                # Format B: pre-aggregated payload {"teams": {...}, "sources": [...]}
+                rows = self._extract_public_pick_rows(payload)
+                public = {team_id: self._normalize_public_pick_row(row) for team_id, row in rows.items()}
+                if isinstance(payload.get("sources"), list):
+                    self.public_pick_sources = [str(s).lower() for s in payload["sources"]]
+                elif public:
+                    self.public_pick_sources = ["espn"]
+
+            if len(set(self.public_pick_sources)) < self.config.min_public_sources:
+                raise DataRequirementError(
+                    f"Public pick source coverage too low ({len(set(self.public_pick_sources))}). "
+                    f"Need at least {self.config.min_public_sources} independent sources."
+                )
             self._validate_source_coverage(
                 "Public picks",
                 public,
@@ -1032,10 +1222,38 @@ class SOTAPipeline:
             self.public_pick_sources.append("yahoo")
         if cbs.teams:
             self.public_pick_sources.append("cbs")
+        if len(set(self.public_pick_sources)) < self.config.min_public_sources:
+            raise DataRequirementError(
+                f"Public pick source coverage too low ({len(set(self.public_pick_sources))}). "
+                f"Need at least {self.config.min_public_sources} independent sources."
+            )
         consensus = aggregate_consensus(espn, yahoo, cbs)
         public = {self._team_id(team_id): self._normalize_public_pick_row(picks.as_dict) for team_id, picks in consensus.teams.items()}
         self._validate_source_coverage("Public picks", public, list(self.team_struct.values()), min_ratio=0.75)
         return public
+
+    def _extract_public_pick_rows(self, payload: Dict) -> Dict[str, Dict[str, float]]:
+        if not isinstance(payload, dict):
+            return {}
+        teams = payload.get("teams")
+        if not isinstance(teams, dict):
+            return {}
+
+        rows: Dict[str, Dict[str, float]] = {}
+        for raw_team_id, row in teams.items():
+            if not isinstance(row, dict):
+                continue
+            row_team_id = row.get("team_id") or raw_team_id
+            team_id = self._team_id(str(row_team_id))
+            rows[team_id] = {
+                "R64": float(row.get("R64", row.get("round_of_64_pct", 0.0))),
+                "R32": float(row.get("R32", row.get("round_of_32_pct", 0.0))),
+                "S16": float(row.get("S16", row.get("sweet_16_pct", 0.0))),
+                "E8": float(row.get("E8", row.get("elite_8_pct", 0.0))),
+                "F4": float(row.get("F4", row.get("final_four_pct", 0.0))),
+                "CHAMP": float(row.get("CHAMP", row.get("champion_pct", 0.0))),
+            }
+        return rows
 
     def _normalize_public_pick_row(self, row: Dict[str, float]) -> Dict[str, float]:
         return {
@@ -1177,6 +1395,138 @@ class SOTAPipeline:
         probs = 1.0 / (1.0 + np.exp(-(base_logit + delta)))
         return float(np.clip(float(np.mean(probs)), 0.01, 0.99))
 
+    def _validate_feed_freshness(self, source_name: str, payload: Dict) -> None:
+        if not self.config.enforce_feed_freshness:
+            return
+        if not isinstance(payload, dict):
+            return
+
+        ts = (
+            payload.get("timestamp")
+            or payload.get("generated_at")
+            or payload.get("updated_at")
+            or payload.get("last_updated")
+        )
+        if not ts:
+            raise DataRequirementError(f"{source_name} payload missing required timestamp for freshness checks.")
+
+        ts_dt = self._parse_timestamp(ts)
+        if ts_dt is None:
+            raise DataRequirementError(f"{source_name} timestamp is invalid: {ts}")
+
+        now = datetime.now(ts_dt.tzinfo)
+        age_hours = max(0.0, (now - ts_dt).total_seconds() / 3600.0)
+        if age_hours > float(self.config.max_feed_age_hours):
+            raise DataRequirementError(
+                f"{source_name} feed is stale ({age_hours:.1f}h old, max {self.config.max_feed_age_hours}h)."
+            )
+
+    def _assess_shotquality_quality(self, flows: List[GameFlow]) -> Dict[str, float]:
+        if not flows:
+            return {"games": 0, "avg_possessions": 0.0, "xp_coverage": 0.0, "games_meeting_possession_floor_ratio": 0.0}
+
+        total_possessions = 0
+        xp_possessions = 0
+        games_meeting_floor = 0
+
+        for game in flows:
+            possessions = game.possessions or []
+            p_count = len(possessions)
+            total_possessions += p_count
+            if p_count >= self.config.min_shotquality_possessions_per_game:
+                games_meeting_floor += 1
+            for poss in possessions:
+                if poss.xp is not None and float(poss.xp) > 0.0:
+                    xp_possessions += 1
+
+        games = len(flows)
+        avg_possessions = float(total_possessions / max(games, 1))
+        xp_coverage = float(xp_possessions / max(total_possessions, 1))
+        floor_ratio = float(games_meeting_floor / max(games, 1))
+        if floor_ratio < 0.8:
+            raise DataRequirementError(
+                "ShotQuality possession depth is too low: "
+                f"{games_meeting_floor}/{games} games meet the minimum possession floor "
+                f"({self.config.min_shotquality_possessions_per_game})."
+            )
+        return {
+            "games": float(games),
+            "avg_possessions": avg_possessions,
+            "xp_coverage": xp_coverage,
+            "games_meeting_possession_floor_ratio": floor_ratio,
+        }
+
+    def _enrich_roster_rapm(self, players: List[Player], team_block: Dict) -> None:
+        if not players:
+            return
+
+        non_zero = sum(1 for p in players if abs(p.rapm_total) > 1e-8)
+        if non_zero >= self.config.min_rapm_players_per_team:
+            return
+
+        stints = team_block.get("stints", [])
+        if isinstance(stints, list) and stints:
+            rapm_map = compute_rapm(players, stints, regularization=0.05)
+            for player in players:
+                rapm_pair = rapm_map.get(player.player_id)
+                if rapm_pair is None:
+                    continue
+                if abs(player.rapm_total) <= 1e-8:
+                    player.rapm_offensive = float(rapm_pair[0])
+                    player.rapm_defensive = float(rapm_pair[1])
+
+        # Backfill any remaining missing RAPM from BPM/WARP/usage priors.
+        for player in players:
+            if abs(player.rapm_total) > 1e-8:
+                continue
+            bpm = float(player.box_plus_minus or 0.0)
+            warp_signal = 4.0 * float(player.warp or 0.0)
+            usage_signal = (float(player.usage_rate or 0.0) - 20.0) / 25.0
+            proxy = 0.6 * bpm + 0.3 * warp_signal + 0.1 * usage_signal
+            off_share = 0.6 if float(player.usage_rate or 0.0) >= 20.0 else 0.45
+            player.rapm_offensive = proxy * off_share
+            player.rapm_defensive = proxy * (1.0 - off_share)
+
+    def _assess_roster_rapm_quality(self, rosters: Dict[str, Roster]) -> Dict[str, float]:
+        if not rosters:
+            return {"teams": 0.0, "team_coverage_ratio": 0.0, "avg_nonzero_rapm_share": 0.0}
+
+        qualified = 0
+        shares: List[float] = []
+        for roster in rosters.values():
+            player_count = max(len(roster.players), 1)
+            non_zero = sum(1 for p in roster.players if abs(p.rapm_total) > 1e-8)
+            share = non_zero / player_count
+            shares.append(share)
+            threshold = min(self.config.min_rapm_players_per_team, player_count)
+            if non_zero >= threshold:
+                qualified += 1
+
+        teams = len(rosters)
+        return {
+            "teams": float(teams),
+            "team_coverage_ratio": float(qualified / teams),
+            "avg_nonzero_rapm_share": float(np.mean(shares)),
+        }
+
+    @staticmethod
+    def _parse_timestamp(value: str) -> Optional[datetime]:
+        raw = str(value or "").strip()
+        if not raw:
+            return None
+        if raw.endswith("Z"):
+            raw = raw[:-1] + "+00:00"
+        try:
+            return datetime.fromisoformat(raw)
+        except ValueError:
+            pass
+        for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(raw, fmt).replace(tzinfo=timezone.utc)
+            except ValueError:
+                continue
+        return None
+
     @staticmethod
     def _coerce_game_date(value: str) -> str:
         raw = str(value or "").strip()
@@ -1195,6 +1545,17 @@ class SOTAPipeline:
             return int(date_norm.replace("-", ""))
         except ValueError:
             return 20260101
+
+    def _is_target_season_game(self, date_str: str) -> bool:
+        date_norm = self._coerce_game_date(date_str)
+        try:
+            game_day = datetime.strptime(date_norm, "%Y-%m-%d").date()
+        except ValueError:
+            return True
+
+        start = date(self.config.year - 1, 8, 1)
+        end = date(self.config.year, 4, 30)
+        return start <= game_day <= end
 
     @staticmethod
     def _normalize_key(value: str) -> str:

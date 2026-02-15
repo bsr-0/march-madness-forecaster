@@ -2,19 +2,27 @@
 
 from __future__ import annotations
 
+import copy
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from ..scrapers import (
+    CBSPicksScraper,
+    CBBpyRosterScraper,
     ESPNPicksScraper,
     KenPomScraper,
     NCAAStatsScraper,
+    OpenShotQualityProxyBuilder,
+    PlayerMetricsScraper,
     ShotQualityScraper,
     SportsReferenceScraper,
     TransferPortalScraper,
+    YahooPicksScraper,
+    aggregate_consensus,
 )
 from ..features.public_advanced_metrics import PublicAdvancedMetricsBuilder
 from .providers import LibraryProviderHub
@@ -22,6 +30,8 @@ from .validators import (
     validate_games_payload,
     validate_public_picks_payload,
     validate_ratings_payload,
+    validate_rosters_payload,
+    validate_shotquality_games_payload,
     validate_teams_payload,
     validate_transfer_payload,
 )
@@ -37,12 +47,15 @@ class IngestionConfig:
     ncaa_games_url: Optional[str] = None
     transfer_portal_url: Optional[str] = None
     transfer_portal_format: str = "json"
+    roster_url: Optional[str] = None
+    roster_format: str = "json"
 
     scrape_torvik: bool = True
     scrape_kenpom: bool = True
     scrape_shotquality: bool = True
     scrape_public_picks: bool = True
     scrape_sports_reference: bool = True
+    scrape_rosters: bool = True
 
     historical_games_provider_priority: Optional[List[str]] = None
     team_metrics_provider_priority: Optional[List[str]] = None
@@ -68,6 +81,7 @@ class RealDataCollector:
         out: Dict[str, str] = {}
         provider_lineage: Dict[str, str] = {}
         validation_errors: Dict[str, List[str]] = {}
+        historical_team_rows: List[Dict] = []
 
         if self.config.ncaa_teams_url:
             teams = NCAAStatsScraper(str(self.cache_dir)).fetch_tournament_teams(year, self.config.ncaa_teams_url)
@@ -106,7 +120,25 @@ class RealDataCollector:
                     provider_lineage["kenpom_json"] = "kenpom_scraper"
 
         if self.config.scrape_public_picks:
-            picks = ESPNPicksScraper(str(self.cache_dir)).fetch_picks(year)
+            espn = ESPNPicksScraper(str(self.cache_dir)).fetch_picks(year)
+            yahoo = YahooPicksScraper(str(self.cache_dir)).fetch_picks(year)
+            cbs = CBSPicksScraper(str(self.cache_dir)).fetch_picks(year)
+
+            picks = aggregate_consensus(espn, yahoo, cbs)
+            source_order = [
+                ("espn", espn),
+                ("yahoo", yahoo),
+                ("cbs", cbs),
+            ]
+            populated_sources = [name for name, data in source_order if data.teams]
+            if not picks.teams:
+                # Fallback to whichever source returned data first.
+                for name, data in source_order:
+                    if data.teams:
+                        picks = data
+                        populated_sources = [name]
+                        break
+
             if picks.teams:
                 payload = {
                     "teams": {
@@ -123,12 +155,13 @@ class RealDataCollector:
                         }
                         for team_id, p in picks.teams.items()
                     },
-                    "sources": picks.sources,
-                    "timestamp": picks.timestamp,
+                    "sources": populated_sources or picks.sources,
+                    "timestamp": picks.timestamp or datetime.now(timezone.utc).isoformat(),
                 }
                 validation_errors["public_picks_json"] = validate_public_picks_payload(payload)
                 self._assert_valid("public_picks_json", validation_errors["public_picks_json"])
                 out["public_picks_json"] = self._write(f"public_picks_{year}.json", payload)
+                provider_lineage["public_picks_json"] = ",".join(populated_sources or picks.sources or ["unknown"])
 
         if self.config.ncaa_games_url:
             games = NCAAStatsScraper(str(self.cache_dir)).fetch_historical_games(year, self.config.ncaa_games_url)
@@ -137,12 +170,14 @@ class RealDataCollector:
             self._assert_valid("historical_games_json", validation_errors["historical_games_json"])
             out["historical_games_json"] = self._write(f"historical_games_{year}.json", payload)
             provider_lineage["historical_games_json"] = "ncaa_stats_scraper"
+            historical_team_rows = [g for g in games if isinstance(g, dict)]
         else:
             game_provider = self.providers.fetch_historical_games(
                 year,
                 priority=self.config.historical_games_provider_priority,
             )
             if game_provider.records:
+                historical_team_rows = [g for g in game_provider.records if isinstance(g, dict)]
                 payload = {"games": game_provider.records}
                 validation_errors["historical_games_json"] = validate_games_payload(payload)
                 self._assert_valid("historical_games_json", validation_errors["historical_games_json"])
@@ -157,10 +192,16 @@ class RealDataCollector:
                     provider_lineage["kenpom_json"] = game_provider.provider
 
         if self.config.scrape_shotquality:
+            sq_provider = "shotquality"
             sq_scraper = ShotQualityScraper(str(self.cache_dir))
             sq_teams = sq_scraper.fetch_team_metrics(year)
+            sq_games = sq_scraper.fetch_games(year)
+            sq_teams_payload = None
+            sq_games_payload = None
+
             if sq_teams:
                 sq_teams_payload = {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                     "teams": [
                         {
                             "team_id": row.team_id,
@@ -172,22 +213,65 @@ class RealDataCollector:
                             "midrange_rate": row.midrange_rate,
                         }
                         for row in sq_teams
-                    ]
+                    ],
                 }
+
+            if sq_games:
+                sq_games_payload = {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "games": sq_games,
+                }
+
+            if not sq_teams_payload or not sq_games_payload:
+                proxy_payload = OpenShotQualityProxyBuilder().build(historical_team_rows)
+                if proxy_payload:
+                    proxy_timestamp = datetime.now(timezone.utc).isoformat()
+                    if not sq_teams_payload:
+                        sq_teams_payload = {
+                            "timestamp": proxy_timestamp,
+                            "teams": proxy_payload["teams"],
+                            "source": "open_boxscore_proxy",
+                        }
+                    if not sq_games_payload:
+                        sq_games_payload = {
+                            "timestamp": proxy_timestamp,
+                            "games": proxy_payload["games"],
+                            "source": "open_boxscore_proxy",
+                        }
+                    sq_provider = "open_boxscore_proxy"
+
+            if sq_teams_payload:
                 validation_errors["shotquality_teams_json"] = validate_ratings_payload(
                     sq_teams_payload, name_field="team_name"
                 )
                 self._assert_valid("shotquality_teams_json", validation_errors["shotquality_teams_json"])
                 out["shotquality_teams_json"] = self._write(f"shotquality_teams_{year}.json", sq_teams_payload)
-                provider_lineage["shotquality_teams_json"] = "shotquality"
+                provider_lineage["shotquality_teams_json"] = sq_provider
 
-            sq_games = sq_scraper.fetch_games(year)
-            if sq_games:
-                sq_games_payload = {"games": sq_games}
-                validation_errors["shotquality_games_json"] = validate_games_payload(sq_games_payload)
+            if sq_games_payload:
+                validation_errors["shotquality_games_json"] = validate_shotquality_games_payload(sq_games_payload)
                 self._assert_valid("shotquality_games_json", validation_errors["shotquality_games_json"])
                 out["shotquality_games_json"] = self._write(f"shotquality_games_{year}.json", sq_games_payload)
-                provider_lineage["shotquality_games_json"] = "shotquality"
+                provider_lineage["shotquality_games_json"] = sq_provider
+
+        if self.config.scrape_rosters:
+            roster_payload = CBBpyRosterScraper(str(self.cache_dir)).fetch_rosters(year)
+            external_roster_payload = {}
+            if self.config.roster_url or os.getenv("PLAYER_METRICS_URL"):
+                external_roster_payload = PlayerMetricsScraper(str(self.cache_dir)).fetch_rosters(
+                    year,
+                    source_url=self.config.roster_url,
+                    fmt=self.config.roster_format,
+                )
+            if roster_payload and external_roster_payload:
+                roster_payload = self._merge_roster_payloads(roster_payload, external_roster_payload)
+            elif external_roster_payload:
+                roster_payload = external_roster_payload
+            if roster_payload:
+                validation_errors["rosters_json"] = validate_rosters_payload(roster_payload)
+                self._assert_valid("rosters_json", validation_errors["rosters_json"])
+                out["rosters_json"] = self._write(f"rosters_{year}.json", roster_payload)
+                provider_lineage["rosters_json"] = str(roster_payload.get("source", "cbbpy_schedule_boxscore"))
 
         if self.config.scrape_sports_reference:
             sr_provider = self.providers.fetch_team_box_metrics(
@@ -262,3 +346,92 @@ class RealDataCollector:
                 row["team_id"] = team_id
             result.append(row)
         return result
+
+    def _merge_roster_payloads(self, base_payload: Dict, overlay_payload: Dict) -> Dict:
+        merged = copy.deepcopy(base_payload)
+        merged_teams = merged.get("teams", [])
+        overlay_teams = overlay_payload.get("teams", [])
+        if not isinstance(merged_teams, list) or not isinstance(overlay_teams, list):
+            return merged
+
+        team_index = {}
+        for idx, team in enumerate(merged_teams):
+            if not isinstance(team, dict):
+                continue
+            key = self._team_key(team)
+            if key:
+                team_index[key] = idx
+
+        for overlay_team in overlay_teams:
+            if not isinstance(overlay_team, dict):
+                continue
+            key = self._team_key(overlay_team)
+            if not key:
+                continue
+
+            if key in team_index:
+                base_team = merged_teams[team_index[key]]
+                self._merge_team_players(base_team, overlay_team)
+            else:
+                merged_teams.append(copy.deepcopy(overlay_team))
+                team_index[key] = len(merged_teams) - 1
+
+        base_source = str(base_payload.get("source", "cbbpy_schedule_boxscore"))
+        overlay_source = str(overlay_payload.get("source", "player_metrics"))
+        merged["source"] = f"{base_source}+{overlay_source}"
+        merged["timestamp"] = datetime.now(timezone.utc).isoformat()
+        return merged
+
+    def _merge_team_players(self, base_team: Dict, overlay_team: Dict) -> None:
+        if not base_team.get("team_name"):
+            base_team["team_name"] = overlay_team.get("team_name")
+        if not base_team.get("team_id"):
+            base_team["team_id"] = overlay_team.get("team_id")
+
+        base_players = base_team.get("players")
+        overlay_players = overlay_team.get("players")
+        if not isinstance(base_players, list):
+            base_players = []
+            base_team["players"] = base_players
+        if not isinstance(overlay_players, list):
+            return
+
+        base_index = {}
+        for idx, player in enumerate(base_players):
+            if not isinstance(player, dict):
+                continue
+            key = self._player_key(player)
+            if key:
+                base_index[key] = idx
+
+        for overlay_player in overlay_players:
+            if not isinstance(overlay_player, dict):
+                continue
+            key = self._player_key(overlay_player)
+            if key and key in base_index:
+                base_player = base_players[base_index[key]]
+                for field, value in overlay_player.items():
+                    if value is None:
+                        continue
+                    if isinstance(value, str) and not value.strip():
+                        continue
+                    base_player[field] = value
+            else:
+                base_players.append(copy.deepcopy(overlay_player))
+                if key:
+                    base_index[key] = len(base_players) - 1
+
+        if not isinstance(base_team.get("stints"), list) and isinstance(overlay_team.get("stints"), list):
+            base_team["stints"] = copy.deepcopy(overlay_team["stints"])
+
+    def _team_key(self, team: Dict) -> str:
+        return self._normalize_team_id(
+            str(team.get("team_id") or team.get("team_name") or team.get("name") or "")
+        )
+
+    def _player_key(self, player: Dict) -> str:
+        raw_id = str(player.get("player_id") or "").strip()
+        if raw_id:
+            return f"id:{raw_id.lower()}"
+        name = str(player.get("name") or "").strip().lower()
+        return f"name:{name}" if name else ""
