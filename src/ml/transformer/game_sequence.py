@@ -211,32 +211,55 @@ if TORCH_AVAILABLE:
             return efficiency, breakout, trend
         
         def get_attention_weights(
-            self, 
+            self,
             x: torch.Tensor
         ) -> List[torch.Tensor]:
             """
             Get attention weights for interpretability.
-            
-            Identifies which games the model attends to most.
-            
+
+            Identifies which games the model attends to most by hooking
+            into multi-head attention layers.
+
             Args:
                 x: Game sequence [B, T, input_dim]
-                
+
             Returns:
-                List of attention weight matrices
+                List of attention weight matrices [B, nhead, T, T]
             """
+            self.eval()
             x = self.input_proj(x) * math.sqrt(self.d_model)
             x = self.pos_encoder(x)
-            
-            attention_weights = []
-            
-            # Register hooks to capture attention
-            def hook_fn(module, input, output):
-                # output[1] contains attention weights in some implementations
-                attention_weights.append(output)
-            
-            # This is a simplified version - actual implementation
-            # would need to modify the transformer to expose attention
+
+            attention_weights: List[torch.Tensor] = []
+
+            hooks = []
+            for layer in self.transformer.layers:
+                def hook_fn(module, args, kwargs, output, _storage=attention_weights):
+                    # nn.MultiheadAttention returns (attn_output, attn_weights)
+                    # when called with need_weights=True
+                    pass
+
+                # Use forward pre-hook to force need_weights=True
+                def pre_hook(module, args, kwargs, _storage=attention_weights):
+                    kwargs = dict(kwargs) if kwargs else {}
+                    kwargs["need_weights"] = True
+                    kwargs["average_attn_weights"] = False
+                    return args, kwargs
+
+                def post_hook(module, args, kwargs, output, _storage=attention_weights):
+                    if isinstance(output, tuple) and len(output) >= 2:
+                        _storage.append(output[1].detach())
+
+                h1 = layer.self_attn.register_forward_pre_hook(pre_hook, with_kwargs=True)
+                h2 = layer.self_attn.register_forward_hook(post_hook, with_kwargs=True)
+                hooks.extend([h1, h2])
+
+            with torch.no_grad():
+                self.transformer(x)
+
+            for h in hooks:
+                h.remove()
+
             return attention_weights
         
         def detect_breakout_window(

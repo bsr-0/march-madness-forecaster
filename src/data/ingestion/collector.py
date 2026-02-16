@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -14,26 +15,25 @@ from ..scrapers import (
     CBSPicksScraper,
     CBBpyRosterScraper,
     ESPNPicksScraper,
-    KenPomScraper,
     NCAAStatsScraper,
     OpenDataFeedScraper,
-    OpenShotQualityProxyBuilder,
     PlayerMetricsScraper,
-    ShotQualityScraper,
     SportsReferenceScraper,
+    TournamentContextScraper,
     TransferPortalScraper,
     YahooPicksScraper,
     aggregate_consensus,
 )
 from ..features.public_advanced_metrics import PublicAdvancedMetricsBuilder
 from .providers import LibraryProviderHub
+logger = logging.getLogger(__name__)
+
 from .validators import (
     validate_games_payload,
     validate_public_picks_payload,
     validate_ratings_payload,
     validate_odds_payload,
     validate_rosters_payload,
-    validate_shotquality_games_payload,
     validate_teams_payload,
     validate_transfer_payload,
 )
@@ -59,19 +59,21 @@ class IngestionConfig:
     weather_context_url: Optional[str] = None
     travel_context_url: Optional[str] = None
 
+    # Tournament context enrichment (AP polls, coach history, conf tourney)
+    scrape_tournament_context: bool = True
+    preseason_ap_json: Optional[str] = None  # Pre-built JSON path override
+    coach_tournament_json: Optional[str] = None  # Pre-built JSON path override
+    conf_champions_json: Optional[str] = None  # Pre-built JSON path override
+
     scrape_torvik: bool = True
-    scrape_kenpom: bool = True
-    scrape_shotquality: bool = True
     scrape_public_picks: bool = True
     scrape_sports_reference: bool = True
     scrape_rosters: bool = True
 
     historical_games_provider_priority: Optional[List[str]] = None
     team_metrics_provider_priority: Optional[List[str]] = None
-    kenpom_provider_priority: Optional[List[str]] = None
     torvik_provider_priority: Optional[List[str]] = None
     strict_validation: bool = True
-    allow_synthetic_shotquality_fallback: bool = False
     min_nonzero_rapm_players_per_team: int = 3
 
 
@@ -122,44 +124,6 @@ class RealDataCollector:
                 self._assert_valid("torvik_json", validation_errors["torvik_json"])
                 out["torvik_json"] = self._write(f"torvik_{year}.json", payload)
                 provider_lineage["torvik_json"] = tv_provider.provider
-
-        if self.config.scrape_kenpom:
-            kp_provider = self.providers.fetch_kenpom_ratings(
-                year,
-                priority=self.config.kenpom_provider_priority,
-            )
-            if kp_provider.records:
-                payload = {"teams": kp_provider.records}
-                validation_errors["kenpom_json"] = validate_ratings_payload(
-                    payload,
-                    required_numeric_fields=[
-                        "adj_efficiency_margin",
-                        "adj_offensive_efficiency",
-                        "adj_defensive_efficiency",
-                        "adj_tempo",
-                    ],
-                    variance_fields=["adj_offensive_efficiency", "adj_defensive_efficiency", "adj_efficiency_margin"],
-                )
-                self._assert_valid("kenpom_json", validation_errors["kenpom_json"])
-                out["kenpom_json"] = self._write(f"kenpom_{year}.json", payload)
-                provider_lineage["kenpom_json"] = kp_provider.provider
-            else:
-                kp_rows = KenPomScraper(str(self.cache_dir)).fetch_ratings(year)
-                if kp_rows:
-                    payload = {"teams": [row.to_dict() for row in kp_rows]}
-                    validation_errors["kenpom_json"] = validate_ratings_payload(
-                        payload,
-                        required_numeric_fields=[
-                            "adj_efficiency_margin",
-                            "adj_offensive_efficiency",
-                            "adj_defensive_efficiency",
-                            "adj_tempo",
-                        ],
-                        variance_fields=["adj_offensive_efficiency", "adj_defensive_efficiency", "adj_efficiency_margin"],
-                    )
-                    self._assert_valid("kenpom_json", validation_errors["kenpom_json"])
-                    out["kenpom_json"] = self._write(f"kenpom_{year}.json", payload)
-                    provider_lineage["kenpom_json"] = "kenpom_scraper"
 
         if self.config.scrape_public_picks:
             espn = ESPNPicksScraper(str(self.cache_dir)).fetch_picks(year)
@@ -227,82 +191,11 @@ class RealDataCollector:
                 provider_lineage["historical_games_json"] = game_provider.provider
 
                 advanced_metrics = self.adv_builder.build(game_provider.records)
-                if "kenpom_json" not in out:
-                    validation_errors["kenpom_json"] = validate_ratings_payload(advanced_metrics)
-                    self._assert_valid("kenpom_json", validation_errors["kenpom_json"])
-                    out["kenpom_json"] = self._write(f"kenpom_{year}.json", advanced_metrics)
-                    provider_lineage["kenpom_json"] = game_provider.provider
-
-        if self.config.scrape_shotquality:
-            sq_provider = "shotquality"
-            sq_scraper = ShotQualityScraper(str(self.cache_dir))
-            sq_teams = sq_scraper.fetch_team_metrics(year)
-            sq_games = sq_scraper.fetch_games(year)
-            sq_teams_payload = None
-            sq_games_payload = None
-
-            if sq_teams:
-                sq_teams_payload = {
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "teams": [
-                        {
-                            "team_id": row.team_id,
-                            "team_name": row.team_name,
-                            "offensive_xp_per_possession": row.offensive_xp_per_possession,
-                            "defensive_xp_per_possession": row.defensive_xp_per_possession,
-                            "rim_rate": row.rim_rate,
-                            "three_rate": row.three_rate,
-                            "midrange_rate": row.midrange_rate,
-                        }
-                        for row in sq_teams
-                    ],
-                }
-
-            if sq_games:
-                sq_games_payload = {
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "games": sq_games,
-                }
-
-            if self.config.allow_synthetic_shotquality_fallback and (not sq_teams_payload or not sq_games_payload):
-                proxy_payload = OpenShotQualityProxyBuilder().build(historical_team_rows)
-                if proxy_payload:
-                    proxy_timestamp = datetime.now(timezone.utc).isoformat()
-                    if not sq_teams_payload:
-                        sq_teams_payload = {
-                            "timestamp": proxy_timestamp,
-                            "teams": proxy_payload["teams"],
-                            "source": "open_boxscore_proxy",
-                        }
-                    if not sq_games_payload:
-                        sq_games_payload = {
-                            "timestamp": proxy_timestamp,
-                            "games": proxy_payload["games"],
-                            "source": "open_boxscore_proxy",
-                        }
-                    sq_provider = "open_boxscore_proxy"
-
-            if sq_teams_payload:
-                validation_errors["shotquality_teams_json"] = validate_ratings_payload(
-                    sq_teams_payload,
-                    name_field="team_name",
-                    required_numeric_fields=[
-                        "offensive_xp_per_possession",
-                        "defensive_xp_per_possession",
-                        "rim_rate",
-                        "three_rate",
-                        "midrange_rate",
-                    ],
-                )
-                self._assert_valid("shotquality_teams_json", validation_errors["shotquality_teams_json"])
-                out["shotquality_teams_json"] = self._write(f"shotquality_teams_{year}.json", sq_teams_payload)
-                provider_lineage["shotquality_teams_json"] = sq_provider
-
-            if sq_games_payload:
-                validation_errors["shotquality_games_json"] = validate_shotquality_games_payload(sq_games_payload)
-                self._assert_valid("shotquality_games_json", validation_errors["shotquality_games_json"])
-                out["shotquality_games_json"] = self._write(f"shotquality_games_{year}.json", sq_games_payload)
-                provider_lineage["shotquality_games_json"] = sq_provider
+                if "advanced_metrics_json" not in out:
+                    validation_errors["advanced_metrics_json"] = validate_ratings_payload(advanced_metrics)
+                    self._assert_valid("advanced_metrics_json", validation_errors["advanced_metrics_json"])
+                    out["advanced_metrics_json"] = self._write(f"advanced_metrics_{year}.json", advanced_metrics)
+                    provider_lineage["advanced_metrics_json"] = game_provider.provider
 
         if self.config.scrape_rosters:
             roster_payload = CBBpyRosterScraper(str(self.cache_dir)).fetch_rosters(year)
@@ -384,6 +277,45 @@ class RealDataCollector:
             out["odds_json"] = self._write(f"odds_{year}.json", odds_payload)
             provider_lineage["odds_json"] = "open_feed"
 
+        # --- Tournament context enrichment ---
+        if self.config.scrape_tournament_context:
+            ctx_scraper = TournamentContextScraper(str(self.cache_dir))
+            try:
+                ap_rankings = ctx_scraper.fetch_preseason_ap_rankings(year)
+                if ap_rankings:
+                    ap_payload = {"rankings": ap_rankings, "year": year}
+                    out["preseason_ap_json"] = self._write(f"preseason_ap_{year}.json", ap_payload)
+                    provider_lineage["preseason_ap_json"] = "sports_reference"
+            except Exception as e:
+                logger.warning(f"Preseason AP scrape failed: {e}")
+
+            try:
+                coach_data = ctx_scraper.fetch_coach_tournament_experience(year)
+                if coach_data:
+                    coach_payload = {"coaches": coach_data, "year": year}
+                    out["coach_tournament_json"] = self._write(f"coach_tournament_{year}.json", coach_payload)
+                    provider_lineage["coach_tournament_json"] = "barttorvik"
+            except Exception as e:
+                logger.warning(f"Coach tournament scrape failed: {e}")
+
+            try:
+                conf_champs = ctx_scraper.fetch_conference_tournament_champions(year)
+                if conf_champs:
+                    champs_payload = {"champions": conf_champs, "year": year}
+                    out["conf_champions_json"] = self._write(f"conf_champions_{year}.json", champs_payload)
+                    provider_lineage["conf_champions_json"] = "sports_reference"
+            except Exception as e:
+                logger.warning(f"Conference champions scrape failed: {e}")
+        else:
+            # Load from pre-built JSON files if provided
+            for key, path in [
+                ("preseason_ap_json", self.config.preseason_ap_json),
+                ("coach_tournament_json", self.config.coach_tournament_json),
+                ("conf_champions_json", self.config.conf_champions_json),
+            ]:
+                if path:
+                    out[key] = path
+
         supplemental_feeds = [
             ("polls_json", self.config.polls_url, f"polls_{year}.json", "polls"),
             ("torvik_splits_json", self.config.torvik_splits_url, f"torvik_splits_{year}.json", "teams"),
@@ -410,9 +342,7 @@ class RealDataCollector:
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "artifacts": out,
             "providers": provider_lineage,
-            "provenance": {
-                "shotquality_synthetic_fallback_enabled": self.config.allow_synthetic_shotquality_fallback,
-            },
+            "provenance": {},
             "credential_requirements": self.providers.credential_requirements(),
             "validation_errors": validation_errors,
         }

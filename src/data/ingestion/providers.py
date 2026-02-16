@@ -25,7 +25,6 @@ class LibraryProviderHub:
     DEFAULT_PRIORITIES = {
         "historical_games": ["sportsdataverse", "cbbpy", "sportsipy", "cbbdata"],
         "team_metrics": ["sportsdataverse", "sportsipy", "cbbdata"],
-        "kenpom": ["cbbdata"],
         "torvik": ["cbbdata"],
     }
 
@@ -57,14 +56,6 @@ class LibraryProviderHub:
     def fetch_torvik_ratings(self, year: int, priority: Optional[List[str]] = None) -> ProviderResult:
         methods = {"cbbdata": self._from_cbbdata_torvik_api}
         for method in self._ordered_methods("torvik", methods, priority):
-            result = method(year)
-            if result.records:
-                return result
-        return ProviderResult(provider="none", records=[])
-
-    def fetch_kenpom_ratings(self, year: int, priority: Optional[List[str]] = None) -> ProviderResult:
-        methods = {"cbbdata": self._from_cbbdata_kenpom_api}
-        for method in self._ordered_methods("kenpom", methods, priority):
             result = method(year)
             if result.records:
                 return result
@@ -240,11 +231,6 @@ class LibraryProviderHub:
 
     def _from_cbbdata_torvik_api(self, year: int) -> ProviderResult:
         payload = self._fetch_cbbdata_endpoint("CBBDATA_TORVIK_URL", year)
-        records = payload.get("teams") or payload.get("records") or []
-        return ProviderResult("cbbdata", records if isinstance(records, list) else [])
-
-    def _from_cbbdata_kenpom_api(self, year: int) -> ProviderResult:
-        payload = self._fetch_cbbdata_endpoint("CBBDATA_KENPOM_URL", year)
         records = payload.get("teams") or payload.get("records") or []
         return ProviderResult("cbbdata", records if isinstance(records, list) else [])
 

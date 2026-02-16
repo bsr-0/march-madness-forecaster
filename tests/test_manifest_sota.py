@@ -54,10 +54,7 @@ def test_run_sota_from_manifest_resolves_paths_and_runs(tmp_path, monkeypatch):
         seed=7,
         calibration="isotonic",
         input=None,
-        kenpom=None,
         torvik=None,
-        shotquality_teams=None,
-        shotquality_games=None,
         historical_games=None,
         sports_reference=None,
         public_picks=None,
@@ -69,8 +66,6 @@ def test_run_sota_from_manifest_resolves_paths_and_runs(tmp_path, monkeypatch):
         allow_stale_feeds=False,
         max_feed_age_hours=168,
         min_public_sources=2,
-        min_shotquality_xp_coverage=0.8,
-        min_shotquality_possessions_per_game=50,
         min_rapm_players_per_team=5,
     )
 
@@ -119,10 +114,7 @@ def test_run_sota_from_manifest_allows_overrides(tmp_path, monkeypatch):
         seed=3,
         calibration="platt",
         input=str(override_teams),
-        kenpom=None,
         torvik=None,
-        shotquality_teams=None,
-        shotquality_games=None,
         historical_games=None,
         sports_reference=None,
         public_picks=None,
@@ -134,8 +126,6 @@ def test_run_sota_from_manifest_allows_overrides(tmp_path, monkeypatch):
         allow_stale_feeds=True,
         max_feed_age_hours=720,
         min_public_sources=1,
-        min_shotquality_xp_coverage=0.7,
-        min_shotquality_possessions_per_game=40,
         min_rapm_players_per_team=3,
     )
 

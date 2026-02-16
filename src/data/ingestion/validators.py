@@ -101,42 +101,6 @@ def validate_games_payload(payload: Dict) -> List[str]:
     return errors
 
 
-def validate_shotquality_games_payload(payload: Dict, min_xp_coverage: float = 0.8) -> List[str]:
-    errors = validate_games_payload(payload)
-    games = payload.get("games")
-    if not isinstance(games, list) or not games:
-        return errors
-
-    total_possessions = 0
-    xp_possessions = 0
-    for idx, game in enumerate(games):
-        if not isinstance(game, dict):
-            continue
-        possessions = game.get("possessions")
-        if not isinstance(possessions, list) or not possessions:
-            errors.append(f"games[{idx}] missing possession-level records")
-            continue
-        for p_idx, poss in enumerate(possessions):
-            if not isinstance(poss, dict):
-                errors.append(f"games[{idx}].possessions[{p_idx}] must be an object")
-                continue
-            total_possessions += 1
-            if poss.get("xp") is not None:
-                xp_possessions += 1
-            if not poss.get("team_id"):
-                errors.append(f"games[{idx}].possessions[{p_idx}] missing team_id")
-
-    if total_possessions == 0:
-        errors.append("shotquality games contain zero possessions")
-    else:
-        coverage = xp_possessions / total_possessions
-        if coverage < min_xp_coverage:
-            errors.append(
-                f"shotquality possession xP coverage too low ({coverage:.1%}); expected >= {min_xp_coverage:.0%}"
-            )
-    return errors
-
-
 def validate_public_picks_payload(payload: Dict) -> List[str]:
     teams = payload.get("teams")
     if not isinstance(teams, dict) or not teams:

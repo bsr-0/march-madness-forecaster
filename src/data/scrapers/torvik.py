@@ -71,7 +71,7 @@ class TorVikTeam:
     conf_losses: int = 0
     
     def to_dict(self) -> dict:
-        """Convert to dictionary."""
+        """Convert to dictionary — includes ALL scraped fields."""
         return {
             'team_id': self.team_id,
             'name': self.name,
@@ -89,9 +89,22 @@ class TorVikTeam:
             'opp_turnover_rate': self.opp_turnover_rate,
             'defensive_reb_rate': self.defensive_reb_rate,
             'opp_free_throw_rate': self.opp_free_throw_rate,
+            # Shooting splits & extended metrics
+            'two_pt_pct': self.two_pt_pct,
+            'three_pt_pct': self.three_pt_pct,
+            'three_pt_rate': self.three_pt_rate,
+            'ft_pct': self.ft_pct,
+            'block_pct': self.block_pct,
+            'steal_pct': self.steal_pct,
+            'opp_two_pt_pct': self.opp_two_pt_pct,
+            'opp_three_pt_pct': self.opp_three_pt_pct,
+            'opp_three_pt_rate': self.opp_three_pt_rate,
+            # WAB + Record
             'wab': self.wab,
             'wins': self.wins,
             'losses': self.losses,
+            'conf_wins': self.conf_wins,
+            'conf_losses': self.conf_losses,
         }
 
 
@@ -463,9 +476,20 @@ class BartTorvikScraper:
             opp_turnover_rate=data.get('opp_turnover_rate', 0.18),
             defensive_reb_rate=data.get('defensive_reb_rate', 0.70),
             opp_free_throw_rate=data.get('opp_free_throw_rate', 0.30),
+            two_pt_pct=data.get('two_pt_pct', 0.0),
+            three_pt_pct=data.get('three_pt_pct', 0.0),
+            three_pt_rate=data.get('three_pt_rate', 0.0),
+            ft_pct=data.get('ft_pct', 0.0),
+            block_pct=data.get('block_pct', 0.0),
+            steal_pct=data.get('steal_pct', 0.0),
+            opp_two_pt_pct=data.get('opp_two_pt_pct', 0.0),
+            opp_three_pt_pct=data.get('opp_three_pt_pct', 0.0),
+            opp_three_pt_rate=data.get('opp_three_pt_rate', 0.0),
             wab=data.get('wab', 0.0),
             wins=data.get('wins', 0),
             losses=data.get('losses', 0),
+            conf_wins=data.get('conf_wins', 0),
+            conf_losses=data.get('conf_losses', 0),
         )
     
     def _dict_to_game(self, data: dict) -> TorVikGame:

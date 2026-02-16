@@ -60,23 +60,18 @@ class _StubProviders:
     def fetch_torvik_ratings(self, year, priority=None):
         return ProviderResult("none", [])
 
-    def fetch_kenpom_ratings(self, year, priority=None):
-        return ProviderResult("none", [])
-
     def credential_requirements(self):
         return {}
 
 
-def test_collector_skips_shotquality_when_real_source_missing(tmp_path):
+def test_collector_runs_without_kenpom_or_shotquality(tmp_path):
     config = IngestionConfig(
         year=2025,
         output_dir=str(tmp_path),
         cache_dir=str(tmp_path / "cache"),
         scrape_torvik=False,
-        scrape_kenpom=False,
         scrape_public_picks=False,
         scrape_sports_reference=False,
-        scrape_shotquality=True,
         scrape_rosters=False,
     )
     collector = RealDataCollector(config)
@@ -86,32 +81,11 @@ def test_collector_skips_shotquality_when_real_source_missing(tmp_path):
     artifacts = manifest["artifacts"]
 
     assert "historical_games_json" in artifacts
-    assert "kenpom_json" in artifacts
+    # Advanced metrics are derived from public box-score data
+    assert "advanced_metrics_json" in artifacts
+    # KenPom and ShotQuality pipelines are removed — no paid API dependencies
     assert "shotquality_teams_json" not in artifacts
     assert "shotquality_games_json" not in artifacts
-
-
-def test_collector_allows_opt_in_synthetic_shotquality_fallback(tmp_path):
-    config = IngestionConfig(
-        year=2025,
-        output_dir=str(tmp_path),
-        cache_dir=str(tmp_path / "cache"),
-        scrape_torvik=False,
-        scrape_kenpom=False,
-        scrape_public_picks=False,
-        scrape_sports_reference=False,
-        scrape_shotquality=True,
-        scrape_rosters=False,
-        allow_synthetic_shotquality_fallback=True,
-    )
-    collector = RealDataCollector(config)
-    collector.providers = _StubProviders()
-
-    manifest = collector.run()
-    artifacts = manifest["artifacts"]
-    assert "shotquality_teams_json" in artifacts
-    assert "shotquality_games_json" in artifacts
-    assert manifest["providers"]["shotquality_games_json"] == "open_boxscore_proxy"
 
 
 def test_collector_aggregates_public_pick_sources(tmp_path, monkeypatch):
@@ -142,10 +116,8 @@ def test_collector_aggregates_public_pick_sources(tmp_path, monkeypatch):
         output_dir=str(tmp_path),
         cache_dir=str(tmp_path / "cache"),
         scrape_torvik=False,
-        scrape_kenpom=False,
         scrape_public_picks=True,
         scrape_sports_reference=False,
-        scrape_shotquality=False,
         scrape_rosters=False,
     )
     collector = RealDataCollector(config)
@@ -195,10 +167,8 @@ def test_collector_writes_roster_artifact_when_player_feed_available(tmp_path, m
         output_dir=str(tmp_path),
         cache_dir=str(tmp_path / "cache"),
         scrape_torvik=False,
-        scrape_kenpom=False,
         scrape_public_picks=False,
         scrape_sports_reference=False,
-        scrape_shotquality=False,
         scrape_rosters=True,
         roster_url="https://example.com/rosters.json",
         min_nonzero_rapm_players_per_team=1,
@@ -270,10 +240,8 @@ def test_collector_merges_cbbpy_rosters_with_external_metrics(tmp_path, monkeypa
         output_dir=str(tmp_path),
         cache_dir=str(tmp_path / "cache"),
         scrape_torvik=False,
-        scrape_kenpom=False,
         scrape_public_picks=False,
         scrape_sports_reference=False,
-        scrape_shotquality=False,
         scrape_rosters=True,
         roster_url="https://example.com/rosters.json",
         min_nonzero_rapm_players_per_team=1,
@@ -312,10 +280,8 @@ def test_collector_writes_odds_artifact_when_feed_provided(tmp_path, monkeypatch
         output_dir=str(tmp_path),
         cache_dir=str(tmp_path / "cache"),
         scrape_torvik=False,
-        scrape_kenpom=False,
         scrape_public_picks=False,
         scrape_sports_reference=False,
-        scrape_shotquality=False,
         scrape_rosters=False,
         odds_url="https://example.com/odds.json",
     )
@@ -349,10 +315,8 @@ def test_collector_rejects_all_zero_rapm_payload(tmp_path, monkeypatch):
         output_dir=str(tmp_path),
         cache_dir=str(tmp_path / "cache"),
         scrape_torvik=False,
-        scrape_kenpom=False,
         scrape_public_picks=False,
         scrape_sports_reference=False,
-        scrape_shotquality=False,
         scrape_rosters=True,
         min_nonzero_rapm_players_per_team=1,
     )

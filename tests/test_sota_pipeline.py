@@ -31,32 +31,6 @@ def _build_fixture_payloads():
                 }
             )
 
-    kenpom = {
-        "timestamp": "2026-03-17T12:00:00Z",
-        "teams": [
-            {
-                "team_id": t["name"].lower().replace(" ", "_"),
-                "name": t["name"],
-                "conference": "TestConf",
-                "adj_efficiency_margin": (17 - t["seed"]) * 1.5,
-                "adj_offensive_efficiency": 105 + (17 - t["seed"]),
-                "adj_defensive_efficiency": 95 + t["seed"] * 0.7,
-                "adj_tempo": 67.5,
-                "overall_rank": t["seed"],
-                "offensive_rank": t["seed"] + 5,
-                "defensive_rank": t["seed"] + 6,
-                "luck": 0.01,
-                "sos_adj_em": 5.0,
-                "sos_opp_o": 103.0,
-                "sos_opp_d": 100.0,
-                "ncsos_adj_em": 1.0,
-                "wins": 24,
-                "losses": 8,
-            }
-            for t in teams
-        ]
-    }
-
     torvik = {
         "timestamp": "2026-03-17T12:00:00Z",
         "teams": [
@@ -80,22 +54,6 @@ def _build_fixture_payloads():
                 "wab": 4.5,
                 "wins": 24,
                 "losses": 8,
-            }
-            for t in teams
-        ]
-    }
-
-    shotquality_teams = {
-        "timestamp": "2026-03-17T12:00:00Z",
-        "teams": [
-            {
-                "team_id": t["name"].lower().replace(" ", "_"),
-                "team_name": t["name"],
-                "offensive_xp_per_possession": 1.05,
-                "defensive_xp_per_possession": 0.97,
-                "rim_rate": 0.33,
-                "three_rate": 0.38,
-                "midrange_rate": 0.29,
             }
             for t in teams
         ]
@@ -129,39 +87,6 @@ def _build_fixture_payloads():
             }
         )
 
-    games = []
-    for idx in range(0, len(teams), 2):
-        t1 = teams[idx]["name"].lower().replace(" ", "_")
-        t2 = teams[idx + 1]["name"].lower().replace(" ", "_")
-        possessions = []
-        for p in range(50):
-            offense = t1 if p % 2 == 0 else t2
-            points = 2 if p % 3 == 0 else 0
-            possessions.append(
-                {
-                    "possession_id": f"g{idx:03d}_p{p}",
-                    "game_id": f"g{idx:03d}",
-                    "team_id": offense,
-                    "period": 1 if p < 25 else 2,
-                    "game_clock": float(1200 - (p % 25) * 40),
-                    "shot_type": "above_break_three" if p % 4 == 0 else "rim",
-                    "is_contested": False,
-                    "xp": 1.1,
-                    "actual_points": points,
-                    "outcome": "made" if points > 0 else "missed",
-                }
-            )
-        games.append(
-            {
-                "game_id": f"g{idx:03d}",
-                "team_id": t1,
-                "opponent_id": t2,
-                "possessions": possessions,
-            }
-        )
-
-    shotquality_games = {"timestamp": "2026-03-17T12:00:00Z", "games": games}
-
     public_picks = {
         "teams": {
             t["name"].lower().replace(" ", "_"): {
@@ -183,11 +108,8 @@ def _build_fixture_payloads():
 
     return {
         "teams": {"teams": teams},
-        "kenpom": kenpom,
         "torvik": torvik,
-        "shotquality_teams": shotquality_teams,
         "rosters": roster_payload,
-        "shotquality_games": shotquality_games,
         "public_picks": public_picks,
     }
 
@@ -211,10 +133,7 @@ def test_sota_pipeline_produces_rubric_artifacts(tmp_path):
         pool_size=64,
         calibration_method="isotonic",
         teams_json=paths["teams"],
-        kenpom_json=paths["kenpom"],
         torvik_json=paths["torvik"],
-        shotquality_teams_json=paths["shotquality_teams"],
-        shotquality_games_json=paths["shotquality_games"],
         roster_json=paths["rosters"],
         public_picks_json=paths["public_picks"],
     )
@@ -254,10 +173,7 @@ def test_sota_pipeline_output_file(tmp_path):
         num_simulations=80,
         pool_size=20,
         teams_json=paths["teams"],
-        kenpom_json=paths["kenpom"],
         torvik_json=paths["torvik"],
-        shotquality_teams_json=paths["shotquality_teams"],
-        shotquality_games_json=paths["shotquality_games"],
         roster_json=paths["rosters"],
         public_picks_json=paths["public_picks"],
     )
@@ -381,73 +297,6 @@ def test_sota_pipeline_rejects_stale_public_feed(tmp_path):
         assert False, "Expected stale feed rejection"
     except DataRequirementError:
         assert True
-
-
-def test_sota_pipeline_builds_shotquality_proxy_from_historical_rows(tmp_path):
-    paths = _write_payloads(tmp_path)
-    with open(paths["teams"], "r") as f:
-        teams_payload = json.load(f)
-    teams = teams_payload["teams"]
-
-    historical_rows = []
-    for idx in range(0, len(teams), 2):
-        t1 = teams[idx]["name"].lower().replace(" ", "_")
-        t2 = teams[idx + 1]["name"].lower().replace(" ", "_")
-        historical_rows.append(
-            {
-                "game_id": f"hist_{idx:03d}",
-                "team_id": t1,
-                "team_name": teams[idx]["name"],
-                "opponent_id": t2,
-                "opponent_name": teams[idx + 1]["name"],
-                "team_score": 74,
-                "opponent_score": 68,
-                "possessions": 69,
-                "fga": 56,
-                "fg3a": 19,
-                "fta": 17,
-                "turnovers": 10,
-                "orb": 9,
-                "date": "2026-01-15",
-            }
-        )
-        historical_rows.append(
-            {
-                "game_id": f"hist_{idx:03d}",
-                "team_id": t2,
-                "team_name": teams[idx + 1]["name"],
-                "opponent_id": t1,
-                "opponent_name": teams[idx]["name"],
-                "team_score": 68,
-                "opponent_score": 74,
-                "possessions": 69,
-                "fga": 55,
-                "fg3a": 21,
-                "fta": 13,
-                "turnovers": 11,
-                "orb": 8,
-                "date": "2026-01-15",
-            }
-        )
-    historical_path = tmp_path / "historical_proxy_source.json"
-    with open(historical_path, "w") as f:
-        json.dump({"games": historical_rows}, f)
-
-    config = SOTAPipelineConfig(
-        num_simulations=50,
-        pool_size=40,
-        teams_json=paths["teams"],
-        kenpom_json=paths["kenpom"],
-        torvik_json=paths["torvik"],
-        historical_games_json=str(historical_path),
-        roster_json=paths["rosters"],
-        public_picks_json=paths["public_picks"],
-        enforce_feed_freshness=False,
-    )
-    report = SOTAPipeline(config).run()
-    quality = report["artifacts"]["shotquality_data_quality"]
-    assert quality["xp_coverage"] > 0.95
-    assert quality["games"] > 0
 
 
 def test_rapm_enrichment_from_stints_backfills_missing_player_rapm():
