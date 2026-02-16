@@ -1,0 +1,135 @@
+{
+  "generated_at": "2026-02-15T23:49:38.384589+00:00",
+  "start_season": 2016,
+  "end_season": 2021,
+  "artifacts": {
+    "2016": {
+      "historical_games_json": "data/raw/historical/historical_games_2016.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2016.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2016.json"
+    },
+    "2017": {
+      "historical_games_json": "data/raw/historical/historical_games_2017.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2017.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2017.json"
+    },
+    "2018": {
+      "historical_games_json": "data/raw/historical/historical_games_2018.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2018.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2018.json"
+    },
+    "2019": {
+      "historical_games_json": "data/raw/historical/historical_games_2019.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2019.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2019.json"
+    },
+    "2020": {
+      "historical_games_json": "data/raw/historical/historical_games_2020.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2020.json"
+    },
+    "2021": {
+      "historical_games_json": "data/raw/historical/historical_games_2021.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2021.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2021.json"
+    }
+  },
+  "providers": {
+    "2016": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    },
+    "2017": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    },
+    "2018": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    },
+    "2019": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    },
+    "2020": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper"
+    },
+    "2021": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    }
+  },
+  "validation_errors": {
+    "2016": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2017": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2018": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2019": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2020": {
+      "historical_games_json": [],
+      "team_metrics_json": []
+    },
+    "2021": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    }
+  },
+  "season_counts": {
+    "2016": {
+      "games": 5942,
+      "team_games": 11884,
+      "teams": 351,
+      "tournament_seed_teams": 68
+    },
+    "2017": {
+      "games": 5916,
+      "team_games": 11832,
+      "teams": 351,
+      "tournament_seed_teams": 68
+    },
+    "2018": {
+      "games": 5995,
+      "team_games": 11990,
+      "teams": 351,
+      "tournament_seed_teams": 68
+    },
+    "2019": {
+      "games": 6039,
+      "team_games": 12078,
+      "teams": 353,
+      "tournament_seed_teams": 68
+    },
+    "2020": {
+      "games": 5766,
+      "team_games": 11532,
+      "teams": 353
+    },
+    "2021": {
+      "games": 4282,
+      "team_games": 8564,
+      "teams": 347,
+      "tournament_seed_teams": 68
+    }
+  }
+}

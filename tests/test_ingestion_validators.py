@@ -6,7 +6,6 @@ from src.data.ingestion.validators import (
     validate_public_picks_payload,
     validate_ratings_payload,
     validate_rosters_payload,
-    validate_shotquality_games_payload,
     validate_teams_payload,
     validate_transfer_payload,
 )
@@ -96,25 +95,6 @@ def test_validate_rosters_payload_rejects_all_zero_rapm():
     errors = validate_rosters_payload(payload)
     assert errors
     assert "all RAPM values are zero" in errors[0]
-
-
-def test_validate_shotquality_games_payload_checks_xp_coverage():
-    payload = {
-        "games": [
-            {
-                "game_id": "g1",
-                "team_id": "duke",
-                "opponent_id": "unc",
-                "possessions": [
-                    {"team_id": "duke", "xp": 1.1},
-                    {"team_id": "unc"},
-                ],
-            }
-        ]
-    }
-    errors = validate_shotquality_games_payload(payload, min_xp_coverage=0.8)
-    assert errors
-    assert "coverage too low" in errors[-1]
 
 
 def test_validate_odds_payload_requires_probability_or_odds():

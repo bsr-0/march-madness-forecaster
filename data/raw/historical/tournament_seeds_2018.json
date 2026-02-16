@@ -1,0 +1,549 @@
+{
+  "season": 2018,
+  "teams": [
+    {
+      "season": 2018,
+      "team_name": "Villanova",
+      "school_slug": "villanova",
+      "team_id": "villanova",
+      "seed": 1,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "Purdue",
+      "school_slug": "purdue",
+      "team_id": "purdue",
+      "seed": 2,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "Texas Tech",
+      "school_slug": "texas-tech",
+      "team_id": "texas_tech",
+      "seed": 3,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "Wichita State",
+      "school_slug": "wichita-state",
+      "team_id": "wichita_state",
+      "seed": 4,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "West Virginia",
+      "school_slug": "west-virginia",
+      "team_id": "west_virginia",
+      "seed": 5,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "Florida",
+      "school_slug": "florida",
+      "team_id": "florida",
+      "seed": 6,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "Arkansas",
+      "school_slug": "arkansas",
+      "team_id": "arkansas",
+      "seed": 7,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "Virginia Tech",
+      "school_slug": "virginia-tech",
+      "team_id": "virginia_tech",
+      "seed": 8,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "Alabama",
+      "school_slug": "alabama",
+      "team_id": "alabama",
+      "seed": 9,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "Butler",
+      "school_slug": "butler",
+      "team_id": "butler",
+      "seed": 10,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "St. Bonaventure",
+      "school_slug": "st-bonaventure",
+      "team_id": "st__bonaventure",
+      "seed": 11,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "UCLA",
+      "school_slug": "ucla",
+      "team_id": "ucla",
+      "seed": 11,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "Murray State",
+      "school_slug": "murray-state",
+      "team_id": "murray_state",
+      "seed": 12,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "Marshall",
+      "school_slug": "marshall",
+      "team_id": "marshall",
+      "seed": 13,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "Stephen F. Austin",
+      "school_slug": "stephen-f-austin",
+      "team_id": "stephen_f__austin",
+      "seed": 14,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "Cal State Fullerton",
+      "school_slug": "cal-state-fullerton",
+      "team_id": "cal_state_fullerton",
+      "seed": 15,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "LIU",
+      "school_slug": "long-island-university",
+      "team_id": "liu",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "Radford",
+      "school_slug": "radford",
+      "team_id": "radford",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2018,
+      "team_name": "Kansas",
+      "school_slug": "kansas",
+      "team_id": "kansas",
+      "seed": 1,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "Duke",
+      "school_slug": "duke",
+      "team_id": "duke",
+      "seed": 2,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "Michigan State",
+      "school_slug": "michigan-state",
+      "team_id": "michigan_state",
+      "seed": 3,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "Auburn",
+      "school_slug": "auburn",
+      "team_id": "auburn",
+      "seed": 4,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "Clemson",
+      "school_slug": "clemson",
+      "team_id": "clemson",
+      "seed": 5,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "TCU",
+      "school_slug": "texas-christian",
+      "team_id": "tcu",
+      "seed": 6,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "Rhode Island",
+      "school_slug": "rhode-island",
+      "team_id": "rhode_island",
+      "seed": 7,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "Seton Hall",
+      "school_slug": "seton-hall",
+      "team_id": "seton_hall",
+      "seed": 8,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "NC State",
+      "school_slug": "north-carolina-state",
+      "team_id": "nc_state",
+      "seed": 9,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "Oklahoma",
+      "school_slug": "oklahoma",
+      "team_id": "oklahoma",
+      "seed": 10,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "Arizona State",
+      "school_slug": "arizona-state",
+      "team_id": "arizona_state",
+      "seed": 11,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "Syracuse",
+      "school_slug": "syracuse",
+      "team_id": "syracuse",
+      "seed": 11,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "New Mexico State",
+      "school_slug": "new-mexico-state",
+      "team_id": "new_mexico_state",
+      "seed": 12,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "College of Charleston",
+      "school_slug": "college-of-charleston",
+      "team_id": "college_of_charleston",
+      "seed": 13,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "Bucknell",
+      "school_slug": "bucknell",
+      "team_id": "bucknell",
+      "seed": 14,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "Iona",
+      "school_slug": "iona",
+      "team_id": "iona",
+      "seed": 15,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "Penn",
+      "school_slug": "pennsylvania",
+      "team_id": "penn",
+      "seed": 16,
+      "region": "Midwest"
+    },
+    {
+      "season": 2018,
+      "team_name": "Virginia",
+      "school_slug": "virginia",
+      "team_id": "virginia",
+      "seed": 1,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Cincinnati",
+      "school_slug": "cincinnati",
+      "team_id": "cincinnati",
+      "seed": 2,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Tennessee",
+      "school_slug": "tennessee",
+      "team_id": "tennessee",
+      "seed": 3,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Arizona",
+      "school_slug": "arizona",
+      "team_id": "arizona",
+      "seed": 4,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Kentucky",
+      "school_slug": "kentucky",
+      "team_id": "kentucky",
+      "seed": 5,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Miami (FL)",
+      "school_slug": "miami-fl",
+      "team_id": "miami__fl",
+      "seed": 6,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Nevada",
+      "school_slug": "nevada",
+      "team_id": "nevada",
+      "seed": 7,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Creighton",
+      "school_slug": "creighton",
+      "team_id": "creighton",
+      "seed": 8,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Kansas State",
+      "school_slug": "kansas-state",
+      "team_id": "kansas_state",
+      "seed": 9,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Texas",
+      "school_slug": "texas",
+      "team_id": "texas",
+      "seed": 10,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Loyola (IL)",
+      "school_slug": "loyola-il",
+      "team_id": "loyola__il",
+      "seed": 11,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Davidson",
+      "school_slug": "davidson",
+      "team_id": "davidson",
+      "seed": 12,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Buffalo",
+      "school_slug": "buffalo",
+      "team_id": "buffalo",
+      "seed": 13,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Wright State",
+      "school_slug": "wright-state",
+      "team_id": "wright_state",
+      "seed": 14,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Georgia State",
+      "school_slug": "georgia-state",
+      "team_id": "georgia_state",
+      "seed": 15,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "UMBC",
+      "school_slug": "maryland-baltimore-county",
+      "team_id": "umbc",
+      "seed": 16,
+      "region": "South"
+    },
+    {
+      "season": 2018,
+      "team_name": "Xavier",
+      "school_slug": "xavier",
+      "team_id": "xavier",
+      "seed": 1,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "UNC",
+      "school_slug": "north-carolina",
+      "team_id": "unc",
+      "seed": 2,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "Michigan",
+      "school_slug": "michigan",
+      "team_id": "michigan",
+      "seed": 3,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "Gonzaga",
+      "school_slug": "gonzaga",
+      "team_id": "gonzaga",
+      "seed": 4,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "Ohio State",
+      "school_slug": "ohio-state",
+      "team_id": "ohio_state",
+      "seed": 5,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "Houston",
+      "school_slug": "houston",
+      "team_id": "houston",
+      "seed": 6,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "Texas A&amp;M",
+      "school_slug": "texas-am",
+      "team_id": "texas_a_amp_m",
+      "seed": 7,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "Missouri",
+      "school_slug": "missouri",
+      "team_id": "missouri",
+      "seed": 8,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "Florida State",
+      "school_slug": "florida-state",
+      "team_id": "florida_state",
+      "seed": 9,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "Providence",
+      "school_slug": "providence",
+      "team_id": "providence",
+      "seed": 10,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "San Diego State",
+      "school_slug": "san-diego-state",
+      "team_id": "san_diego_state",
+      "seed": 11,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "South Dakota State",
+      "school_slug": "south-dakota-state",
+      "team_id": "south_dakota_state",
+      "seed": 12,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "UNC Greensboro",
+      "school_slug": "north-carolina-greensboro",
+      "team_id": "unc_greensboro",
+      "seed": 13,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "Montana",
+      "school_slug": "montana",
+      "team_id": "montana",
+      "seed": 14,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "Lipscomb",
+      "school_slug": "lipscomb",
+      "team_id": "lipscomb",
+      "seed": 15,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "North Carolina Central",
+      "school_slug": "north-carolina-central",
+      "team_id": "north_carolina_central",
+      "seed": 16,
+      "region": "West"
+    },
+    {
+      "season": 2018,
+      "team_name": "Texas Southern",
+      "school_slug": "texas-southern",
+      "team_id": "texas_southern",
+      "seed": 16,
+      "region": "West"
+    }
+  ]
+}

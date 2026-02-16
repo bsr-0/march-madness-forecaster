@@ -1,0 +1,22 @@
+{
+  "generated_at": "2026-02-15T23:52:43.890518+00:00",
+  "start_season": 2015,
+  "end_season": 2015,
+  "seasons_completed": [
+    2015
+  ],
+  "seasons_failed": [],
+  "config": {
+    "start_season": 2015,
+    "end_season": 2015,
+    "output_dir": "data/raw/historical",
+    "cache_dir": "data/raw/cache",
+    "include_pbp": false,
+    "strict_validation": true,
+    "retry_attempts": 2,
+    "per_game_timeout_seconds": 25,
+    "max_games_per_season": null,
+    "include_tournament_context": true,
+    "team_metrics_provider_priority": null
+  }
+}

@@ -86,33 +86,48 @@ class CombinatorialFusionAnalysis:
         predictions: Dict[str, ModelPrediction]
     ) -> Dict[str, float]:
         """
-        Calculate dynamic weights based on confidence.
-        
+        Calculate dynamic weights based on confidence and diversity strength.
+
+        Diversity Strength: models that disagree more with the ensemble mean
+        are either wrong (low confidence) or uniquely informative (high
+        confidence).  We upweight high-confidence outliers.
+
         Args:
             predictions: Model predictions
-            
+
         Returns:
             Weight dictionary
         """
-        weights = {}
-        total_weight = 0.0
-        
+        if not predictions:
+            return {}
+
+        # Stage 1: base weights adjusted by confidence
+        raw_weights: Dict[str, float] = {}
         for model_name, pred in predictions.items():
             base_weight = self.base_weights.get(model_name, 0.0)
-            
-            # Adjust by confidence
             confidence_adjustment = (pred.confidence - 0.5) * self.confidence_scaling
-            adjusted_weight = base_weight * (1.0 + confidence_adjustment)
-            adjusted_weight = max(0.0, adjusted_weight)
-            
-            weights[model_name] = adjusted_weight
-            total_weight += adjusted_weight
-        
+            raw_weights[model_name] = max(0.0, base_weight * (1.0 + confidence_adjustment))
+
+        # Stage 2: diversity strength bonus
+        # Compute ensemble mean from raw weights to measure each model's diversity
+        total_raw = sum(raw_weights.values())
+        if total_raw > 0:
+            norm_raw = {k: v / total_raw for k, v in raw_weights.items()}
+            ensemble_mean = sum(
+                norm_raw[m] * predictions[m].win_probability for m in predictions
+            )
+
+            for model_name, pred in predictions.items():
+                deviation = abs(pred.win_probability - ensemble_mean)
+                # High confidence + high deviation = uniquely informative
+                diversity_bonus = deviation * pred.confidence * self.confidence_scaling
+                raw_weights[model_name] += diversity_bonus
+
         # Normalize
+        total_weight = sum(raw_weights.values())
         if total_weight > 0:
-            weights = {k: v / total_weight for k, v in weights.items()}
-        
-        return weights
+            return {k: v / total_weight for k, v in raw_weights.items()}
+        return {k: 1.0 / len(raw_weights) for k in raw_weights}
     
     def update_accuracy(
         self,

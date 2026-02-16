@@ -1,0 +1,548 @@
+{
+  "teams": [
+    {
+      "season": 2016,
+      "team_name": "UNC",
+      "school_slug": "north-carolina",
+      "team_id": "unc",
+      "seed": 1,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Xavier",
+      "school_slug": "xavier",
+      "team_id": "xavier",
+      "seed": 2,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "West Virginia",
+      "school_slug": "west-virginia",
+      "team_id": "west_virginia",
+      "seed": 3,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Kentucky",
+      "school_slug": "kentucky",
+      "team_id": "kentucky",
+      "seed": 4,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Indiana",
+      "school_slug": "indiana",
+      "team_id": "indiana",
+      "seed": 5,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Notre Dame",
+      "school_slug": "notre-dame",
+      "team_id": "notre_dame",
+      "seed": 6,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Wisconsin",
+      "school_slug": "wisconsin",
+      "team_id": "wisconsin",
+      "seed": 7,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "USC",
+      "school_slug": "southern-california",
+      "team_id": "usc",
+      "seed": 8,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Providence",
+      "school_slug": "providence",
+      "team_id": "providence",
+      "seed": 9,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Pitt",
+      "school_slug": "pittsburgh",
+      "team_id": "pitt",
+      "seed": 10,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Michigan",
+      "school_slug": "michigan",
+      "team_id": "michigan",
+      "seed": 11,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Tulsa",
+      "school_slug": "tulsa",
+      "team_id": "tulsa",
+      "seed": 11,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Chattanooga",
+      "school_slug": "chattanooga",
+      "team_id": "chattanooga",
+      "seed": 12,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Stony Brook",
+      "school_slug": "stony-brook",
+      "team_id": "stony_brook",
+      "seed": 13,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Stephen F. Austin",
+      "school_slug": "stephen-f-austin",
+      "team_id": "stephen_f__austin",
+      "seed": 14,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Weber State",
+      "school_slug": "weber-state",
+      "team_id": "weber_state",
+      "seed": 15,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "FDU",
+      "school_slug": "fairleigh-dickinson",
+      "team_id": "fdu",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Florida Gulf Coast",
+      "school_slug": "florida-gulf-coast",
+      "team_id": "florida_gulf_coast",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2016,
+      "team_name": "Virginia",
+      "school_slug": "virginia",
+      "team_id": "virginia",
+      "seed": 1,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Michigan State",
+      "school_slug": "michigan-state",
+      "team_id": "michigan_state",
+      "seed": 2,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Utah",
+      "school_slug": "utah",
+      "team_id": "utah",
+      "seed": 3,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Iowa State",
+      "school_slug": "iowa-state",
+      "team_id": "iowa_state",
+      "seed": 4,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Purdue",
+      "school_slug": "purdue",
+      "team_id": "purdue",
+      "seed": 5,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Seton Hall",
+      "school_slug": "seton-hall",
+      "team_id": "seton_hall",
+      "seed": 6,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Dayton",
+      "school_slug": "dayton",
+      "team_id": "dayton",
+      "seed": 7,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Texas Tech",
+      "school_slug": "texas-tech",
+      "team_id": "texas_tech",
+      "seed": 8,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Butler",
+      "school_slug": "butler",
+      "team_id": "butler",
+      "seed": 9,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Syracuse",
+      "school_slug": "syracuse",
+      "team_id": "syracuse",
+      "seed": 10,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Gonzaga",
+      "school_slug": "gonzaga",
+      "team_id": "gonzaga",
+      "seed": 11,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Little Rock",
+      "school_slug": "arkansas-little-rock",
+      "team_id": "little_rock",
+      "seed": 12,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Iona",
+      "school_slug": "iona",
+      "team_id": "iona",
+      "seed": 13,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Fresno State",
+      "school_slug": "fresno-state",
+      "team_id": "fresno_state",
+      "seed": 14,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Middle Tennessee",
+      "school_slug": "middle-tennessee",
+      "team_id": "middle_tennessee",
+      "seed": 15,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Hampton",
+      "school_slug": "hampton",
+      "team_id": "hampton",
+      "seed": 16,
+      "region": "Midwest"
+    },
+    {
+      "season": 2016,
+      "team_name": "Kansas",
+      "school_slug": "kansas",
+      "team_id": "kansas",
+      "seed": 1,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "Villanova",
+      "school_slug": "villanova",
+      "team_id": "villanova",
+      "seed": 2,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "Miami (FL)",
+      "school_slug": "miami-fl",
+      "team_id": "miami__fl",
+      "seed": 3,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "California",
+      "school_slug": "california",
+      "team_id": "california",
+      "seed": 4,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "Maryland",
+      "school_slug": "maryland",
+      "team_id": "maryland",
+      "seed": 5,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "Arizona",
+      "school_slug": "arizona",
+      "team_id": "arizona",
+      "seed": 6,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "Iowa",
+      "school_slug": "iowa",
+      "team_id": "iowa",
+      "seed": 7,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "Colorado",
+      "school_slug": "colorado",
+      "team_id": "colorado",
+      "seed": 8,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "UConn",
+      "school_slug": "connecticut",
+      "team_id": "uconn",
+      "seed": 9,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "Temple",
+      "school_slug": "temple",
+      "team_id": "temple",
+      "seed": 10,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "Vanderbilt",
+      "school_slug": "vanderbilt",
+      "team_id": "vanderbilt",
+      "seed": 11,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "Wichita State",
+      "school_slug": "wichita-state",
+      "team_id": "wichita_state",
+      "seed": 11,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "South Dakota State",
+      "school_slug": "south-dakota-state",
+      "team_id": "south_dakota_state",
+      "seed": 12,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "Hawaii",
+      "school_slug": "hawaii",
+      "team_id": "hawaii",
+      "seed": 13,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "Buffalo",
+      "school_slug": "buffalo",
+      "team_id": "buffalo",
+      "seed": 14,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "UNC Asheville",
+      "school_slug": "north-carolina-asheville",
+      "team_id": "unc_asheville",
+      "seed": 15,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "Austin Peay",
+      "school_slug": "austin-peay",
+      "team_id": "austin_peay",
+      "seed": 16,
+      "region": "South"
+    },
+    {
+      "season": 2016,
+      "team_name": "Oregon",
+      "school_slug": "oregon",
+      "team_id": "oregon",
+      "seed": 1,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "Oklahoma",
+      "school_slug": "oklahoma",
+      "team_id": "oklahoma",
+      "seed": 2,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "Texas A&amp;M",
+      "school_slug": "texas-am",
+      "team_id": "texas_a_amp_m",
+      "seed": 3,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "Duke",
+      "school_slug": "duke",
+      "team_id": "duke",
+      "seed": 4,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "Baylor",
+      "school_slug": "baylor",
+      "team_id": "baylor",
+      "seed": 5,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "Texas",
+      "school_slug": "texas",
+      "team_id": "texas",
+      "seed": 6,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "Oregon State",
+      "school_slug": "oregon-state",
+      "team_id": "oregon_state",
+      "seed": 7,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "St. Joseph's",
+      "school_slug": "saint-josephs",
+      "team_id": "st__joseph_s",
+      "seed": 8,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "Cincinnati",
+      "school_slug": "cincinnati",
+      "team_id": "cincinnati",
+      "seed": 9,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "VCU",
+      "school_slug": "virginia-commonwealth",
+      "team_id": "vcu",
+      "seed": 10,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "Northern Iowa",
+      "school_slug": "northern-iowa",
+      "team_id": "northern_iowa",
+      "seed": 11,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "Yale",
+      "school_slug": "yale",
+      "team_id": "yale",
+      "seed": 12,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "UNC Wilmington",
+      "school_slug": "north-carolina-wilmington",
+      "team_id": "unc_wilmington",
+      "seed": 13,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "Green Bay",
+      "school_slug": "green-bay",
+      "team_id": "green_bay",
+      "seed": 14,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "Cal State Bakersfield",
+      "school_slug": "cal-state-bakersfield",
+      "team_id": "cal_state_bakersfield",
+      "seed": 15,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "Holy Cross",
+      "school_slug": "holy-cross",
+      "team_id": "holy_cross",
+      "seed": 16,
+      "region": "West"
+    },
+    {
+      "season": 2016,
+      "team_name": "Southern",
+      "school_slug": "southern",
+      "team_id": "southern",
+      "seed": 16,
+      "region": "West"
+    }
+  ]
+}

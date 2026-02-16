@@ -120,10 +120,7 @@ def run_sota(args):
         num_simulations=args.simulations,
         pool_size=args.pool_size,
         teams_json=args.input,
-        kenpom_json=args.kenpom,
         torvik_json=args.torvik,
-        shotquality_teams_json=args.shotquality_teams,
-        shotquality_games_json=args.shotquality_games,
         historical_games_json=args.historical_games,
         sports_reference_json=args.sports_reference,
         public_picks_json=args.public_picks,
@@ -138,8 +135,6 @@ def run_sota(args):
         enforce_feed_freshness=not args.allow_stale_feeds,
         max_feed_age_hours=args.max_feed_age_hours,
         min_public_sources=args.min_public_sources,
-        min_shotquality_xp_coverage=args.min_shotquality_xp_coverage,
-        min_shotquality_possessions_per_game=args.min_shotquality_possessions_per_game,
         min_rapm_players_per_team=args.min_rapm_players_per_team,
     )
 
@@ -195,10 +190,7 @@ def run_sota_from_manifest(args):
         num_simulations=args.simulations,
         pool_size=args.pool_size,
         teams_json=teams_path,
-        kenpom_json=resolve_path(args.kenpom or artifacts.get("kenpom_json")),
         torvik_json=resolve_path(args.torvik or artifacts.get("torvik_json")),
-        shotquality_teams_json=resolve_path(args.shotquality_teams or artifacts.get("shotquality_teams_json")),
-        shotquality_games_json=resolve_path(args.shotquality_games or artifacts.get("shotquality_games_json")),
         historical_games_json=resolve_path(args.historical_games or artifacts.get("historical_games_json")),
         sports_reference_json=resolve_path(args.sports_reference or artifacts.get("sports_reference_json")),
         public_picks_json=resolve_path(args.public_picks or artifacts.get("public_picks_json")),
@@ -213,8 +205,6 @@ def run_sota_from_manifest(args):
         enforce_feed_freshness=not args.allow_stale_feeds,
         max_feed_age_hours=args.max_feed_age_hours,
         min_public_sources=args.min_public_sources,
-        min_shotquality_xp_coverage=args.min_shotquality_xp_coverage,
-        min_shotquality_possessions_per_game=args.min_shotquality_possessions_per_game,
         min_rapm_players_per_team=args.min_rapm_players_per_team,
     )
 
@@ -258,17 +248,13 @@ def ingest_data(args):
         weather_context_url=args.weather_context_url,
         travel_context_url=args.travel_context_url,
         scrape_torvik=not args.skip_torvik,
-        scrape_kenpom=not args.skip_kenpom,
-        scrape_shotquality=not args.skip_shotquality,
         scrape_public_picks=not args.skip_public_picks,
         scrape_sports_reference=not args.skip_sports_reference,
         scrape_rosters=not args.skip_rosters,
         historical_games_provider_priority=parse_priority(args.historical_games_provider_priority),
         team_metrics_provider_priority=parse_priority(args.team_metrics_provider_priority),
-        kenpom_provider_priority=parse_priority(args.kenpom_provider_priority),
         torvik_provider_priority=parse_priority(args.torvik_provider_priority),
         strict_validation=not args.allow_invalid_payloads,
-        allow_synthetic_shotquality_fallback=args.allow_synthetic_shotquality_fallback,
         min_nonzero_rapm_players_per_team=args.min_nonzero_rapm_players_per_team,
     )
     manifest = RealDataCollector(config).run()
@@ -376,10 +362,7 @@ def main():
     )
     sota_parser.add_argument("--seed", type=int, default=2026, help="Random seed")
     sota_parser.add_argument("--calibration", choices=["isotonic", "platt", "none"], default="isotonic")
-    sota_parser.add_argument("--kenpom", default=None, help="Optional KenPom JSON")
     sota_parser.add_argument("--torvik", default=None, help="Optional Torvik JSON")
-    sota_parser.add_argument("--shotquality-teams", default=None, help="Optional ShotQuality team JSON")
-    sota_parser.add_argument("--shotquality-games", default=None, help="ShotQuality possession/game JSON (required)")
     sota_parser.add_argument("--historical-games", default=None, help="Historical NCAA game JSON fallback for game flows")
     sota_parser.add_argument("--sports-reference", default=None, help="Sports Reference team stats JSON (backfill)")
     sota_parser.add_argument("--public-picks", default=None, help="Optional public pick percentages JSON")
@@ -391,18 +374,6 @@ def main():
     sota_parser.add_argument("--allow-stale-feeds", action="store_true", help="Disable freshness checks for feed timestamps")
     sota_parser.add_argument("--max-feed-age-hours", type=int, default=168, help="Maximum allowed feed age in hours")
     sota_parser.add_argument("--min-public-sources", type=int, default=2, help="Minimum independent public pick sources")
-    sota_parser.add_argument(
-        "--min-shotquality-xp-coverage",
-        type=float,
-        default=0.8,
-        help="Minimum possession-level xP coverage ratio for ShotQuality games",
-    )
-    sota_parser.add_argument(
-        "--min-shotquality-possessions-per-game",
-        type=int,
-        default=50,
-        help="Minimum possession count per game for ShotQuality quality gate",
-    )
     sota_parser.add_argument(
         "--min-rapm-players-per-team",
         type=int,
@@ -428,8 +399,6 @@ def main():
     ingest_parser.add_argument("--weather-context-url", default=None, help="Weather context JSON endpoint")
     ingest_parser.add_argument("--travel-context-url", default=None, help="Travel burden JSON endpoint")
     ingest_parser.add_argument("--skip-torvik", action="store_true", help="Skip Torvik scrape")
-    ingest_parser.add_argument("--skip-kenpom", action="store_true", help="Skip KenPom scrape")
-    ingest_parser.add_argument("--skip-shotquality", action="store_true", help="Skip ShotQuality scrape")
     ingest_parser.add_argument("--skip-public-picks", action="store_true", help="Skip public picks scrape")
     ingest_parser.add_argument("--skip-sports-reference", action="store_true", help="Skip Sports Reference scrape")
     ingest_parser.add_argument("--skip-rosters", action="store_true", help="Skip player roster ingestion")
@@ -449,19 +418,9 @@ def main():
         help="Comma-separated provider order: cbbdata",
     )
     ingest_parser.add_argument(
-        "--kenpom-provider-priority",
-        default=None,
-        help="Comma-separated provider order: cbbdata",
-    )
-    ingest_parser.add_argument(
         "--allow-invalid-payloads",
         action="store_true",
         help="Do not fail ingestion when schema checks fail",
-    )
-    ingest_parser.add_argument(
-        "--allow-synthetic-shotquality-fallback",
-        action="store_true",
-        help="Allow synthetic ShotQuality proxy when real possession feeds are unavailable",
     )
     ingest_parser.add_argument(
         "--min-nonzero-rapm-players-per-team",
@@ -544,7 +503,7 @@ def main():
     materialize_parser.add_argument(
         "--raw-dir",
         default="data/raw",
-        help="Directory for optional prior-season sources (kenpom/torvik/shotquality/rosters/transfers)",
+        help="Directory for optional prior-season sources (torvik/rosters/transfers)",
     )
     materialize_parser.add_argument(
         "--output-dir",
@@ -586,10 +545,7 @@ def main():
     manifest_sota_parser.add_argument("--seed", type=int, default=2026, help="Random seed")
     manifest_sota_parser.add_argument("--calibration", choices=["isotonic", "platt", "none"], default="isotonic")
     manifest_sota_parser.add_argument("--input", default=None, help="Override teams JSON path")
-    manifest_sota_parser.add_argument("--kenpom", default=None, help="Override KenPom JSON path")
     manifest_sota_parser.add_argument("--torvik", default=None, help="Override Torvik JSON path")
-    manifest_sota_parser.add_argument("--shotquality-teams", default=None, help="Override ShotQuality team JSON")
-    manifest_sota_parser.add_argument("--shotquality-games", default=None, help="Override ShotQuality games JSON")
     manifest_sota_parser.add_argument("--historical-games", default=None, help="Override historical games JSON")
     manifest_sota_parser.add_argument("--sports-reference", default=None, help="Override Sports Reference JSON")
     manifest_sota_parser.add_argument("--public-picks", default=None, help="Override public picks JSON")
@@ -601,18 +557,6 @@ def main():
     manifest_sota_parser.add_argument("--allow-stale-feeds", action="store_true", help="Disable freshness checks for feed timestamps")
     manifest_sota_parser.add_argument("--max-feed-age-hours", type=int, default=168, help="Maximum allowed feed age in hours")
     manifest_sota_parser.add_argument("--min-public-sources", type=int, default=2, help="Minimum independent public pick sources")
-    manifest_sota_parser.add_argument(
-        "--min-shotquality-xp-coverage",
-        type=float,
-        default=0.8,
-        help="Minimum possession-level xP coverage ratio for ShotQuality games",
-    )
-    manifest_sota_parser.add_argument(
-        "--min-shotquality-possessions-per-game",
-        type=int,
-        default=50,
-        help="Minimum possession count per game for ShotQuality quality gate",
-    )
     manifest_sota_parser.add_argument(
         "--min-rapm-players-per-team",
         type=int,

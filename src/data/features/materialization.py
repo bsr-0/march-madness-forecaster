@@ -247,9 +247,8 @@ class HistoricalFeatureMaterializer:
         for season in range(self.config.start_season, self.config.end_season + 1):
             blocks: List[pd.DataFrame] = []
             for loader in (
-                self._load_kenpom_season,
+                self._load_advanced_metrics_season,
                 self._load_torvik_season,
-                self._load_shotquality_season,
                 self._load_roster_season,
                 self._load_transfer_season,
                 self._load_market_season,
@@ -609,9 +608,8 @@ class HistoricalFeatureMaterializer:
             "offense_vs_opp_def",
             "defense_vs_opp_off",
         ]
-        candidate_cols.extend([c for c in team_features.columns if c.startswith("prior_kenpom_")])
+        candidate_cols.extend([c for c in team_features.columns if c.startswith("prior_prop_")])
         candidate_cols.extend([c for c in team_features.columns if c.startswith("prior_torvik_")])
-        candidate_cols.extend([c for c in team_features.columns if c.startswith("prior_shotquality_")])
         candidate_cols.extend([c for c in team_features.columns if c.startswith("prior_roster_")])
         candidate_cols.extend([c for c in team_features.columns if c.startswith("prior_transfer_")])
         feature_cols = [c for c in dict.fromkeys(candidate_cols) if c in team_features.columns]
@@ -836,9 +834,9 @@ class HistoricalFeatureMaterializer:
                 "table": "team",
             },
             {
-                "name": "shot_quality",
+                "name": "proprietary_xp",
                 "critical": False,
-                "columns": ["prior_shotquality_off_xp", "prior_shotquality_three_rate"],
+                "columns": ["prior_prop_off_xp", "prior_prop_def_xp", "prior_prop_shot_dist"],
                 "table": "team",
             },
             {
@@ -883,13 +881,13 @@ class HistoricalFeatureMaterializer:
     def _study_alignment_report(self, coverage_report: Dict) -> Dict:
         category_status = {c["name"]: c["status"] for c in coverage_report.get("categories", [])}
         studies = {
-            "kenpom_ratings_glossary": {
-                "reference": "https://kenpom.com/blog/ratings-glossary/",
+            "proprietary_efficiency_model": {
+                "reference": "proprietary: iterative SOS-adjusted efficiency (KenPom method)",
                 "expects": ["efficiency_four_factors", "schedule_strength", "recent_form_and_variance"],
             },
             "fivethirtyeight_march_methodology": {
                 "reference": "https://fivethirtyeight.com/methodology/how-our-march-madness-predictions-work-2/",
-                "expects": ["efficiency_four_factors", "schedule_strength", "tournament_seed_context", "market_priors", "shot_quality"],
+                "expects": ["efficiency_four_factors", "schedule_strength", "tournament_seed_context", "market_priors", "proprietary_xp"],
             },
             "arxiv_1701_07316": {
                 "reference": "https://arxiv.org/abs/1701.07316",
@@ -947,34 +945,41 @@ class HistoricalFeatureMaterializer:
             },
         }
 
-    def _load_kenpom_season(self, season: int) -> Optional[pd.DataFrame]:
-        path = self.raw_dir / f"kenpom_{season}.json"
-        if not path.exists():
-            return None
-        with open(path, "r") as f:
-            payload = json.load(f)
-        rows = []
-        for row in payload.get("teams", []):
-            if not isinstance(row, dict):
+    def _load_advanced_metrics_season(self, season: int) -> Optional[pd.DataFrame]:
+        # Try proprietary metrics first, then fall back to legacy advanced_metrics artifact
+        for filename in (f"advanced_metrics_{season}.json", f"kenpom_{season}.json"):
+            path = self.raw_dir / filename
+            if not path.exists():
                 continue
-            team_id = row.get("team_id") or self._normalize_team_id(row.get("name"))
-            if not team_id:
-                continue
-            rows.append(
-                {
-                    "season": season,
-                    "team_id": team_id,
-                    "source_team_id": team_id,
-                    "team_name": row.get("name") or row.get("team_name") or team_id,
-                    "kenpom_adj_off": self._to_float(row.get("adj_offensive_efficiency")),
-                    "kenpom_adj_def": self._to_float(row.get("adj_defensive_efficiency")),
-                    "kenpom_adj_em": self._to_float(row.get("adj_efficiency_margin")),
-                    "kenpom_adj_tempo": self._to_float(row.get("adj_tempo")),
-                    "kenpom_luck": self._to_float(row.get("luck")),
-                    "kenpom_sos_adj_em": self._to_float(row.get("sos_adj_em")),
-                }
-            )
-        return pd.DataFrame(rows) if rows else None
+            with open(path, "r") as f:
+                payload = json.load(f)
+            rows = []
+            for row in payload.get("teams", []):
+                if not isinstance(row, dict):
+                    continue
+                team_id = row.get("team_id") or self._normalize_team_id(row.get("name"))
+                if not team_id:
+                    continue
+                rows.append(
+                    {
+                        "season": season,
+                        "team_id": team_id,
+                        "source_team_id": team_id,
+                        "team_name": row.get("name") or row.get("team_name") or team_id,
+                        "prop_adj_off": self._to_float(row.get("adj_offensive_efficiency")),
+                        "prop_adj_def": self._to_float(row.get("adj_defensive_efficiency")),
+                        "prop_adj_em": self._to_float(row.get("adj_efficiency_margin")),
+                        "prop_adj_tempo": self._to_float(row.get("adj_tempo")),
+                        "prop_luck": self._to_float(row.get("luck")),
+                        "prop_sos_adj_em": self._to_float(row.get("sos_adj_em")),
+                        "prop_off_xp": self._to_float(row.get("offensive_xp_per_possession")),
+                        "prop_def_xp": self._to_float(row.get("defensive_xp_per_possession")),
+                        "prop_shot_dist": self._to_float(row.get("shot_distribution_score")),
+                    }
+                )
+            if rows:
+                return pd.DataFrame(rows)
+        return None
 
     def _load_torvik_season(self, season: int) -> Optional[pd.DataFrame]:
         path = self.raw_dir / f"torvik_{season}.json"
@@ -1000,34 +1005,6 @@ class HistoricalFeatureMaterializer:
                     "torvik_to_rate": self._to_float(row.get("turnover_rate")),
                     "torvik_orb_rate": self._to_float(row.get("offensive_reb_rate")),
                     "torvik_ft_rate": self._to_float(row.get("free_throw_rate")),
-                }
-            )
-        return pd.DataFrame(rows) if rows else None
-
-    def _load_shotquality_season(self, season: int) -> Optional[pd.DataFrame]:
-        path = self.raw_dir / f"shotquality_teams_{season}.json"
-        if not path.exists():
-            return None
-        with open(path, "r") as f:
-            payload = json.load(f)
-        rows = []
-        for row in payload.get("teams", []):
-            if not isinstance(row, dict):
-                continue
-            team_id = row.get("team_id") or self._normalize_team_id(row.get("team_name") or row.get("name"))
-            if not team_id:
-                continue
-            rows.append(
-                {
-                    "season": season,
-                    "team_id": team_id,
-                    "source_team_id": team_id,
-                    "team_name": row.get("team_name") or row.get("name") or team_id,
-                    "shotquality_off_xp": self._to_float(row.get("offensive_xp_per_possession")),
-                    "shotquality_def_xp": self._to_float(row.get("defensive_xp_per_possession")),
-                    "shotquality_rim_rate": self._to_float(row.get("rim_rate")),
-                    "shotquality_three_rate": self._to_float(row.get("three_rate")),
-                    "shotquality_midrange_rate": self._to_float(row.get("midrange_rate")),
                 }
             )
         return pd.DataFrame(rows) if rows else None
