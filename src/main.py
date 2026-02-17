@@ -136,6 +136,9 @@ def run_sota(args):
         max_feed_age_hours=args.max_feed_age_hours,
         min_public_sources=args.min_public_sources,
         min_rapm_players_per_team=args.min_rapm_players_per_team,
+        bracket_source=getattr(args, "bracket_source", "auto"),
+        bracket_json=getattr(args, "bracket_json", None),
+        multi_year_games_dir=getattr(args, "multi_year_games_dir", None),
     )
 
     try:
@@ -206,6 +209,9 @@ def run_sota_from_manifest(args):
         max_feed_age_hours=args.max_feed_age_hours,
         min_public_sources=args.min_public_sources,
         min_rapm_players_per_team=args.min_rapm_players_per_team,
+        bracket_source=getattr(args, "bracket_source", "auto"),
+        bracket_json=getattr(args, "bracket_json", None),
+        multi_year_games_dir=getattr(args, "multi_year_games_dir", None),
     )
 
     try:
@@ -379,6 +385,21 @@ def main():
         type=int,
         default=5,
         help="Minimum number of non-zero RAPM players required per team",
+    )
+    sota_parser.add_argument(
+        "--bracket-source",
+        default="auto",
+        help="Bracket source: auto, bigdance, sports_reference, or path to JSON file",
+    )
+    sota_parser.add_argument(
+        "--bracket-json",
+        default=None,
+        help="Pre-fetched bracket JSON path (skips live ingestion)",
+    )
+    sota_parser.add_argument(
+        "--multi-year-games-dir",
+        default=None,
+        help="Directory with per-year historical game/metric JSONs for LOYO CV (e.g. data/raw/historical)",
     )
 
     ingest_parser = subparsers.add_parser("ingest", help="Collect real-world data sources and write a manifest")

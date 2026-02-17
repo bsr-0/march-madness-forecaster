@@ -25,6 +25,7 @@ except ImportError:
     SKLEARN_AVAILABLE = False
 
 from ..data.features.feature_engineering import FeatureEngineer, compute_rapm
+from ..data.features.feature_selection import FeatureSelector, FeatureSelectionResult
 from ..data.loader import DataLoader
 from ..data.models.game_flow import GameFlow
 from ..data.models.player import InjuryStatus, Player, Position, Roster
@@ -35,15 +36,50 @@ from ..data.scrapers.espn_picks import (
     YahooPicksScraper,
     aggregate_consensus,
 )
+from ..data.scrapers.injury_report import (
+    InjuryReportScraper,
+    InjurySeverityModel,
+    PositionalDepthChart,
+    apply_injury_reports_to_roster,
+)
+from ..data.scrapers.bracket_ingestion import BracketIngestionPipeline, BIGDANCE_AVAILABLE
+from ..data.team_name_resolver import TeamNameResolver
 from ..data.scrapers.torvik import BartTorvikScraper
 from ..data.scrapers.tournament_context import TournamentContextScraper
 from ..ml.calibration.calibration import CalibrationPipeline, calculate_calibration_metrics
-from ..ml.ensemble.cfa import CombinatorialFusionAnalysis, LightGBMRanker, ModelPrediction, LIGHTGBM_AVAILABLE
+from ..ml.ensemble.cfa import CombinatorialFusionAnalysis, LightGBMRanker, XGBoostRanker, ModelPrediction, LIGHTGBM_AVAILABLE, XGBOOST_AVAILABLE
 from ..ml.gnn.schedule_graph import ScheduleEdge, ScheduleGraph, TORCH_AVAILABLE as GNN_TORCH_AVAILABLE, compute_multi_hop_sos
 from ..ml.transformer.game_sequence import GameEmbedding, SeasonSequence, TORCH_AVAILABLE as TRANSFORMER_TORCH_AVAILABLE
 from ..models.team import Team
 from ..optimization.leverage import TeamMetadata, analyze_pool
 from ..simulation.monte_carlo import SimulationConfig, TournamentBracket, TournamentTeam
+
+try:
+    from ..ml.optimization.hyperparameter_tuning import (
+        LightGBMTuner,
+        XGBoostTuner,
+        LogisticTuner,
+        EnsembleWeightOptimizer,
+        TemporalCrossValidator,
+        LeaveOneYearOutCV,
+        OPTUNA_AVAILABLE,
+        XGBOOST_AVAILABLE as TUNER_XGBOOST_AVAILABLE,
+    )
+except ImportError:
+    OPTUNA_AVAILABLE = False
+    LightGBMTuner = None
+    XGBoostTuner = None
+    LogisticTuner = None
+    EnsembleWeightOptimizer = None
+    TemporalCrossValidator = None
+    LeaveOneYearOutCV = None
+    TUNER_XGBOOST_AVAILABLE = False
+
+try:
+    from sklearn.preprocessing import StandardScaler
+    SCALER_AVAILABLE = True
+except ImportError:
+    SCALER_AVAILABLE = False
 
 try:
     from ..ml.gnn.schedule_graph import ScheduleGCN  # type: ignore
@@ -79,7 +115,7 @@ class SOTAPipelineConfig:
     coach_tournament_json: Optional[str] = None
     conf_champions_json: Optional[str] = None
 
-    calibration_method: str = "isotonic"
+    calibration_method: str = "temperature"  # "temperature" (default, robust for small data), "isotonic", "platt", "none"
     scrape_live: bool = False
     data_cache_dir: str = "data/raw"
     injury_noise_samples: int = 10000
@@ -88,24 +124,123 @@ class SOTAPipelineConfig:
     min_public_sources: int = 2
     min_rapm_players_per_team: int = 5
 
+    # --- ML optimization ---
+    enable_hyperparameter_tuning: bool = True
+    optuna_n_trials: int = 50
+    optuna_timeout: int = 300
+    temporal_cv_splits: int = 5
+    optimize_ensemble_weights: bool = True
+
+    # --- Feature standardization ---
+    enable_feature_scaling: bool = True  # StandardScaler before model training
+
+    # --- Stacking meta-learner ---
+    enable_stacking: bool = True  # Train LGB+XGB+logistic, stack with meta-learner
+
+    # --- Multi-year LOYO ---
+    enable_loyo_cv: bool = True  # Leave-One-Year-Out cross-validation
+    loyo_years: Optional[List[int]] = None  # e.g. [2017,2018,...,2025]; None = use available data
+    multi_year_games_dir: Optional[str] = None  # Directory with per-year game JSON files
+
+    # --- Probability clipping ---
+    pre_calibration_clip_lo: float = 0.03  # Min probability before calibration
+    pre_calibration_clip_hi: float = 0.97  # Max probability before calibration
+
+    # --- Feature selection ---
+    enable_feature_selection: bool = True
+    correlation_threshold: float = 0.85
+    max_features: int = 50
+    min_features: int = 20
+    feature_importance_threshold: float = 0.05
+
+    # --- Injury integration ---
+    injury_report_json: Optional[str] = None
+    enable_injury_severity_model: bool = True
+    enable_positional_depth: bool = True
+
+    # --- Travel distance ---
+    venue_locations_json: Optional[str] = None  # JSON with venue geocoordinates
+    team_locations_json: Optional[str] = None  # JSON with team campus geocoordinates
+
+    # --- Bracket ingestion ---
+    bracket_source: str = "auto"  # "auto", "bigdance", "sports_reference", or file path
+    bracket_json: Optional[str] = None  # Pre-fetched bracket JSON path
+
 
 class DataRequirementError(ValueError):
     """Raised when required real-world data is unavailable."""
 
 
 class _TrainedBaselineModel:
-    """Wrapper for LightGBM or logistic fallback."""
+    """Wrapper for LightGBM, XGBoost, stacking meta-learner, or logistic fallback."""
 
     def __init__(self):
         self.lgb_model: Optional[LightGBMRanker] = None
+        self.xgb_model: Optional[XGBoostRanker] = None
         self.logit_model: Optional[LogisticRegression] = None
+        self.scaler: Optional[object] = None  # StandardScaler
+        # Stacking meta-learner: uses base model outputs as features
+        self.stacking_meta: Optional[LogisticRegression] = None
+        self.stacking_models: List = []  # List of (name, model) for base learners
 
     def predict_proba(self, x: np.ndarray) -> float:
+        x_scaled = self._scale(x)
+        if self.stacking_meta is not None:
+            return self._stacking_predict(x_scaled)
         if self.lgb_model is not None:
-            return float(self.lgb_model.predict(x.reshape(1, -1))[0])
+            return float(self.lgb_model.predict(x_scaled.reshape(1, -1))[0])
+        if self.xgb_model is not None:
+            return float(self.xgb_model.predict(x_scaled.reshape(1, -1))[0])
         if self.logit_model is None:
             return 0.5
-        return float(self.logit_model.predict_proba(x.reshape(1, -1))[0][1])
+        return float(self.logit_model.predict_proba(x_scaled.reshape(1, -1))[0][1])
+
+    def predict_proba_batch(self, X: np.ndarray) -> np.ndarray:
+        """Batch prediction for efficiency."""
+        X_scaled = self._scale_batch(X)
+        if self.stacking_meta is not None:
+            return self._stacking_predict_batch(X_scaled)
+        if self.lgb_model is not None:
+            return self.lgb_model.predict(X_scaled)
+        if self.xgb_model is not None:
+            return self.xgb_model.predict(X_scaled)
+        if self.logit_model is not None:
+            return self.logit_model.predict_proba(X_scaled)[:, 1]
+        return np.full(len(X_scaled), 0.5)
+
+    def _scale(self, x: np.ndarray) -> np.ndarray:
+        if self.scaler is not None:
+            return self.scaler.transform(x.reshape(1, -1))[0]
+        return x
+
+    def _scale_batch(self, X: np.ndarray) -> np.ndarray:
+        if self.scaler is not None:
+            return self.scaler.transform(X)
+        return X
+
+    def _stacking_predict(self, x: np.ndarray) -> float:
+        """Generate stacking prediction from base model outputs."""
+        meta_features = self._get_meta_features(x.reshape(1, -1))
+        return float(self.stacking_meta.predict_proba(meta_features)[0][1])
+
+    def _stacking_predict_batch(self, X: np.ndarray) -> np.ndarray:
+        """Batch stacking prediction."""
+        meta_features = self._get_meta_features(X)
+        return self.stacking_meta.predict_proba(meta_features)[:, 1]
+
+    def _get_meta_features(self, X: np.ndarray) -> np.ndarray:
+        """Collect base model outputs as meta-features."""
+        meta_cols = []
+        for name, model in self.stacking_models:
+            if name == "lgb" and isinstance(model, LightGBMRanker):
+                meta_cols.append(model.predict(X))
+            elif name == "xgb" and isinstance(model, XGBoostRanker):
+                meta_cols.append(model.predict(X))
+            elif name == "logit" and hasattr(model, "predict_proba"):
+                meta_cols.append(model.predict_proba(X)[:, 1])
+        if not meta_cols:
+            return X
+        return np.column_stack(meta_cols)
 
 
 class SOTAPipeline:
@@ -141,11 +276,36 @@ class SOTAPipeline:
         self.proprietary_metrics: Dict[str, ProprietaryTeamMetrics] = {}
         self.roster_rapm_quality: Dict[str, float] = {}
 
+        # Feature selection state
+        self.feature_selector: Optional[FeatureSelector] = None
+        self.feature_selection_result: Optional[FeatureSelectionResult] = None
+
+        # Injury integration state
+        self.injury_severity_model = InjurySeverityModel(random_seed=self.config.random_seed)
+        self.positional_depth_chart = PositionalDepthChart()
+        self.injury_reports: Dict[str, dict] = {}
+        self.positional_impacts: Dict[str, Dict[str, float]] = {}
+
+        # Hyperparameter tuning state
+        self.tuning_result: Optional[Dict] = None
+
+        # Bracket ingestion state
+        self.team_name_resolver = TeamNameResolver()
+        self.bracket_pipeline = BracketIngestionPipeline(
+            season=self.config.year,
+            cache_dir=self.config.data_cache_dir,
+            resolver=self.team_name_resolver,
+        )
+
     def run(self) -> Dict:
         """Run the complete pipeline and return report artifacts."""
         teams = self._load_teams()
         torvik_map, proprietary_map = self._load_team_stat_sources(teams)
         rosters = self._build_rosters(teams)
+
+        # --- Injury report integration ---
+        injury_stats = self._apply_injury_reports(rosters)
+
         game_flows = self._build_or_load_game_flows(teams)
 
         for team in teams:
@@ -249,7 +409,10 @@ class SOTAPipeline:
                         and (self.config.historical_games_json or self.config.scrape_live)
                     ),
                     "step_2_adjacency_matrix": len(schedule_graph.edges) > 0,
-                    "step_3_lightgbm_ranker": baseline_stats["model"] == "lightgbm",
+                    "step_3_lightgbm_ranker": baseline_stats["model"] in ("lightgbm", "lightgbm_tuned", "stacking_ensemble"),
+                    "step_3_xgboost_ranker": baseline_stats["model"] in ("xgboost", "xgboost_tuned", "stacking_ensemble"),
+                    "step_3_stacking_meta": baseline_stats["model"] == "stacking_ensemble",
+                    "step_3_loyo_cv": bool(baseline_stats.get("loyo_cv", {}).get("enabled")),
                     "step_4_pyg_gcn": gnn_stats["framework"] == "pytorch_geometric",
                     "step_5_50k_monte_carlo": self.config.num_simulations >= 50000,
                     "step_6_ev_max_output": True,
@@ -276,6 +439,22 @@ class SOTAPipeline:
                     "avg_adj_em": float(np.mean([m.adj_efficiency_margin for m in self.proprietary_metrics.values()] or [0.0])),
                 },
                 "roster_rapm_quality": self.roster_rapm_quality,
+                "injury_integration": injury_stats,
+                "hyperparameter_tuning": self.tuning_result or {},
+                "feature_selection": (
+                    {
+                        "original_dim": self.feature_selection_result.original_dim,
+                        "reduced_dim": self.feature_selection_result.reduced_dim,
+                        "correlation_dropped": len(self.feature_selection_result.correlation_dropped),
+                        "importance_dropped": len(self.feature_selection_result.low_importance_dropped),
+                        "top_features": [
+                            {"name": f.name, "importance": round(f.importance, 4)}
+                            for f in self.feature_selection_result.importance_scores[:15]
+                        ],
+                    }
+                    if self.feature_selection_result
+                    else {}
+                ),
                 "ev_max_bracket": ev_max_bracket.to_dict(),
                 "pool_recommendation": pool_analysis.recommended_strategy,
                 "public_pick_sources": self.public_pick_sources,
@@ -292,14 +471,112 @@ class SOTAPipeline:
         }
         return report
 
+    def _apply_injury_reports(self, rosters: Dict[str, Roster]) -> Dict:
+        """Load injury reports and apply severity modeling + positional depth."""
+        stats: Dict = {
+            "injury_report_loaded": False,
+            "players_updated": 0,
+            "teams_with_injuries": 0,
+            "severity_model_enabled": self.config.enable_injury_severity_model,
+            "positional_depth_enabled": self.config.enable_positional_depth,
+        }
+
+        if self.config.injury_report_json:
+            scraper = InjuryReportScraper(cache_dir=self.config.data_cache_dir)
+            team_reports = scraper.load_from_json(self.config.injury_report_json)
+
+            total_updated = 0
+            teams_injured = 0
+            for team_id, roster in rosters.items():
+                norm_id = self._normalize_key(team_id)
+                report = team_reports.get(team_id) or team_reports.get(norm_id)
+                if report is None:
+                    # Try matching by partial key
+                    for rk, rv in team_reports.items():
+                        if self._normalize_key(rk) == norm_id:
+                            report = rv
+                            break
+
+                if report is not None:
+                    updated = apply_injury_reports_to_roster(roster, report)
+                    total_updated += updated
+                    if report.has_injuries:
+                        teams_injured += 1
+
+            stats["injury_report_loaded"] = True
+            stats["players_updated"] = total_updated
+            stats["teams_with_injuries"] = teams_injured
+
+        # Positional depth analysis
+        if self.config.enable_positional_depth:
+            for team_id, roster in rosters.items():
+                impacts = self.positional_depth_chart.compute_injury_impact(
+                    roster,
+                    severity_model=self.injury_severity_model if self.config.enable_injury_severity_model else None,
+                )
+                self.positional_impacts[team_id] = impacts
+
+            if self.positional_impacts:
+                avg_vulnerability = float(np.mean([
+                    v.get("positional_vulnerability", 0.0)
+                    for v in self.positional_impacts.values()
+                ]))
+                stats["avg_positional_vulnerability"] = round(avg_vulnerability, 4)
+
+        return stats
+
     def _load_teams(self) -> List[Team]:
+        # Priority 1: Explicit teams JSON (existing behavior)
         if self.config.teams_json:
             teams = DataLoader.load_teams_from_json(self.config.teams_json)
             if teams:
                 return teams
+
+        # Priority 2: Bracket ingestion (auto-fetch from bigdance, SR, or file)
+        if self.config.bracket_json:
+            return self._load_teams_from_bracket(self.config.bracket_json)
+
+        # Priority 3: Auto bracket fetch (Selection Sunday live ingestion)
+        if self.config.bracket_source != "auto" or BIGDANCE_AVAILABLE:
+            try:
+                bracket = self.bracket_pipeline.fetch(source=self.config.bracket_source)
+                if bracket.resolution_warnings:
+                    for w in bracket.resolution_warnings:
+                        import logging
+                        logging.getLogger(__name__).warning("Bracket name resolution: %s", w)
+
+                # Cache the fetched bracket for reproducibility
+                saved_path = self.bracket_pipeline.save(bracket)
+                import logging
+                logging.getLogger(__name__).info("Bracket saved to %s", saved_path)
+
+                return self._bracket_data_to_teams(bracket)
+            except Exception:
+                pass  # Fall through to error
+
         raise DataRequirementError(
-            "Missing teams dataset. Provide --input teams JSON generated from a real source."
+            "Missing teams dataset. Provide --input teams JSON, --bracket-json, "
+            "or install bigdance for live bracket ingestion."
         )
+
+    def _load_teams_from_bracket(self, path: str) -> List[Team]:
+        """Load teams from a previously saved bracket JSON."""
+        bracket = self.bracket_pipeline.fetch(source=path)
+        return self._bracket_data_to_teams(bracket)
+
+    def _bracket_data_to_teams(self, bracket) -> List[Team]:
+        """Convert TournamentBracketData to List[Team]."""
+        teams = []
+        for bt in bracket.teams:
+            team = Team(
+                name=bt.display_name,
+                seed=bt.seed,
+                region=bt.region,
+            )
+            if bt.rating:
+                team.stats["bracket_rating"] = bt.rating
+            teams.append(team)
+        return teams
 
     def _load_team_stat_sources(
         self,
@@ -761,61 +1038,665 @@ class SOTAPipeline:
             return {"model": "none", "samples": 0}
 
         samples.sort(key=lambda x: x[0])
-        X = np.stack([s[1] for s in samples])
-        y = np.array([s[2] for s in samples], dtype=int)
+        X_full = np.stack([s[1] for s in samples])
+        y_full = np.array([s[2] for s in samples], dtype=int)
+        sort_keys_full = np.array([s[0] for s in samples])
 
-        n = len(y)
-        valid_set = None
-        train_X = X
-        train_y = y
-        eval_X = X
-        eval_y = y
+        # ====================================================================
+        # LEAKAGE-SAFE ORDERING: split into train/val FIRST, then fit feature
+        # selection and hyperparameter tuning on TRAINING data only.  This
+        # prevents the validation set from influencing feature selection,
+        # importance ranking, correlation pruning, or Optuna search.
+        # ====================================================================
+        n = len(y_full)
         train_samples = n
         valid_samples = 0
         if n >= 50:
             valid_samples = max(10, int(0.2 * n))
             train_samples = n - valid_samples
-            if train_samples >= 20:
-                train_X = X[:train_samples]
-                train_y = y[:train_samples]
-                eval_X = X[train_samples:]
-                eval_y = y[train_samples:]
-                valid_set = (eval_X, eval_y)
-            else:
+            if train_samples < 20:
                 train_samples = n
                 valid_samples = 0
 
-        if LIGHTGBM_AVAILABLE:
-            ranker = LightGBMRanker()
-            ranker.train(
-                train_X,
-                train_y,
-                num_rounds=200,
-                early_stopping_rounds=30 if valid_set is not None else None,
-                valid_set=valid_set,
+        train_X = X_full[:train_samples]
+        train_y = y_full[:train_samples]
+        train_sort_keys = sort_keys_full[:train_samples]
+        if valid_samples > 0:
+            eval_X = X_full[train_samples:]
+            eval_y = y_full[train_samples:]
+        else:
+            eval_X = train_X
+            eval_y = train_y
+
+        # --- Feature selection (fit on TRAINING data only) ---
+        feature_names = None
+        fs_stats = {}
+        if self.config.enable_feature_selection and train_samples >= 40:
+            sample_matchup = self.feature_engineer.create_matchup_features(
+                list(self.feature_engineer.team_features.keys())[0],
+                list(self.feature_engineer.team_features.keys())[1],
             )
-            self.baseline_model.lgb_model = ranker
-            baseline_name = "lightgbm"
-        elif SKLEARN_AVAILABLE:
-            logit = LogisticRegression(max_iter=1000)
-            logit.fit(train_X, train_y)
-            self.baseline_model.logit_model = logit
-            baseline_name = "logistic_regression"
+            from ..data.features.feature_engineering import TeamFeatures
+            base_names = TeamFeatures.get_feature_names(include_embeddings=False)
+            diff_names = [f"diff_{n}" for n in base_names]
+            interaction_names = ["tempo_interaction", "style_mismatch", "h2h_record", "common_opp_margin", "travel_advantage"]
+            feature_names = diff_names + interaction_names
+            if len(feature_names) != train_X.shape[1]:
+                feature_names = [f"f_{i}" for i in range(train_X.shape[1])]
+
+            self.feature_selector = FeatureSelector(
+                correlation_threshold=self.config.correlation_threshold,
+                min_features=self.config.min_features,
+                max_features=self.config.max_features,
+                importance_threshold=self.config.feature_importance_threshold,
+                random_seed=self.config.random_seed,
+            )
+            # Fit on training data only, then transform both splits
+            self.feature_selection_result = self.feature_selector.fit(train_X, train_y, feature_names)
+            train_X = self.feature_selector.transform(train_X)
+            eval_X = self.feature_selector.transform(eval_X)
+            feature_names = self.feature_selector.get_selected_names()
+            fs_stats = {
+                "original_dim": self.feature_selection_result.original_dim,
+                "reduced_dim": self.feature_selection_result.reduced_dim,
+            }
+
+        # ====================================================================
+        # P0: STANDARDSCALER — fit on training data, transform both splits.
+        # Critical for logistic regression and stacking meta-learner where
+        # features on different scales cause L2 penalty to be unevenly applied.
+        # Tree-based models (LGB/XGB) are scale-invariant but we still apply
+        # scaling for consistency in the stacking pipeline.
+        # ====================================================================
+        if self.config.enable_feature_scaling and SCALER_AVAILABLE:
+            scaler = StandardScaler()
+            train_X = scaler.fit_transform(train_X)
+            eval_X = scaler.transform(eval_X)
+            self.baseline_model.scaler = scaler
+
+        valid_set = (eval_X, eval_y) if valid_samples > 0 else None
+
+        tuning_stats = {}
+        stacking_stats = {}
+
+        # ====================================================================
+        # MODEL TRAINING: Try LightGBM + XGBoost + Logistic, then optionally
+        # stack them with a meta-learner for superior ensemble performance.
+        # ====================================================================
+        trained_models = []  # List of (name, model, predictions_on_eval)
+
+        # --- LightGBM training ---
+        lgb_trained = False
+        if LIGHTGBM_AVAILABLE:
+            try:
+                if (
+                    self.config.enable_hyperparameter_tuning
+                    and OPTUNA_AVAILABLE
+                    and LightGBMTuner is not None
+                    and train_samples >= 60
+                ):
+                    tuner = LightGBMTuner(
+                        n_trials=self.config.optuna_n_trials,
+                        n_cv_splits=self.config.temporal_cv_splits,
+                        timeout=self.config.optuna_timeout,
+                        random_seed=self.config.random_seed,
+                    )
+                    tuning_result = tuner.tune(train_X, train_y, train_sort_keys, feature_names=feature_names)
+
+                    best_params = {k: v for k, v in tuning_result.best_params.items() if k != "num_rounds"}
+                    best_num_rounds = tuning_result.best_params.get("num_rounds", 200)
+
+                    lgb_ranker = LightGBMRanker(params=best_params)
+                    lgb_ranker.train(
+                        train_X, train_y,
+                        feature_names=feature_names,
+                        num_rounds=best_num_rounds,
+                        early_stopping_rounds=30 if valid_set is not None else None,
+                        valid_set=valid_set,
+                    )
+                    lgb_eval_preds = lgb_ranker.predict(eval_X)
+                    trained_models.append(("lgb", lgb_ranker, lgb_eval_preds))
+                    lgb_trained = True
+
+                    tuning_stats["lightgbm"] = {
+                        "method": "optuna",
+                        "n_trials": tuning_result.n_trials,
+                        "best_brier": round(tuning_result.best_score, 5),
+                        "best_params": {k: round(v, 5) if isinstance(v, float) else v for k, v in tuning_result.best_params.items()},
+                        "cv_folds": len(tuning_result.cv_results),
+                        "cv_brier_scores": [round(r.brier_score, 5) for r in tuning_result.cv_results],
+                    }
+                else:
+                    lgb_ranker = LightGBMRanker()
+                    lgb_ranker.train(
+                        train_X, train_y,
+                        feature_names=feature_names,
+                        num_rounds=200,
+                        early_stopping_rounds=30 if valid_set is not None else None,
+                        valid_set=valid_set,
+                    )
+                    lgb_eval_preds = lgb_ranker.predict(eval_X)
+                    trained_models.append(("lgb", lgb_ranker, lgb_eval_preds))
+                    lgb_trained = True
+            except Exception as e:
+                tuning_stats["lightgbm_error"] = str(e)
+
+        # --- XGBoost training ---
+        xgb_trained = False
+        if XGBOOST_AVAILABLE:
+            try:
+                if (
+                    self.config.enable_hyperparameter_tuning
+                    and OPTUNA_AVAILABLE
+                    and XGBoostTuner is not None
+                    and train_samples >= 60
+                ):
+                    xgb_tuner = XGBoostTuner(
+                        n_trials=self.config.optuna_n_trials,
+                        n_cv_splits=self.config.temporal_cv_splits,
+                        timeout=self.config.optuna_timeout,
+                        random_seed=self.config.random_seed,
+                    )
+                    xgb_tuning_result = xgb_tuner.tune(train_X, train_y, train_sort_keys, feature_names=feature_names)
+
+                    xgb_best_params = {k: v for k, v in xgb_tuning_result.best_params.items() if k != "num_rounds"}
+                    xgb_best_rounds = xgb_tuning_result.best_params.get("num_rounds", 200)
+
+                    xgb_ranker = XGBoostRanker(params=xgb_best_params)
+                    xgb_ranker.train(
+                        train_X, train_y,
+                        feature_names=feature_names,
+                        num_rounds=xgb_best_rounds,
+                        early_stopping_rounds=30 if valid_set is not None else None,
+                        valid_set=valid_set,
+                    )
+                    xgb_eval_preds = xgb_ranker.predict(eval_X)
+                    trained_models.append(("xgb", xgb_ranker, xgb_eval_preds))
+                    xgb_trained = True
+
+                    tuning_stats["xgboost"] = {
+                        "method": "optuna",
+                        "n_trials": xgb_tuning_result.n_trials,
+                        "best_brier": round(xgb_tuning_result.best_score, 5),
+                        "best_params": {k: round(v, 5) if isinstance(v, float) else v for k, v in xgb_tuning_result.best_params.items()},
+                    }
+                else:
+                    xgb_ranker = XGBoostRanker()
+                    xgb_ranker.train(
+                        train_X, train_y,
+                        feature_names=feature_names,
+                        num_rounds=200,
+                        early_stopping_rounds=30 if valid_set is not None else None,
+                        valid_set=valid_set,
+                    )
+                    xgb_eval_preds = xgb_ranker.predict(eval_X)
+                    trained_models.append(("xgb", xgb_ranker, xgb_eval_preds))
+                    xgb_trained = True
+            except Exception as e:
+                tuning_stats["xgboost_error"] = str(e)
+
+        # --- Logistic regression training (always train as a base learner for stacking) ---
+        logit_trained = False
+        if SKLEARN_AVAILABLE:
+            try:
+                if (
+                    self.config.enable_hyperparameter_tuning
+                    and OPTUNA_AVAILABLE
+                    and LogisticTuner is not None
+                    and train_samples >= 60
+                ):
+                    logit_tuner = LogisticTuner(
+                        n_trials=min(self.config.optuna_n_trials, 30),
+                        n_cv_splits=self.config.temporal_cv_splits,
+                        timeout=min(self.config.optuna_timeout, 120),
+                        random_seed=self.config.random_seed,
+                    )
+                    logit_tuning_result = logit_tuner.tune(train_X, train_y, train_sort_keys)
+                    best_logit = logit_tuning_result.best_params
+                    logit = LogisticRegression(
+                        C=best_logit["C"],
+                        penalty=best_logit["penalty"],
+                        solver="saga" if best_logit["penalty"] == "l1" else "lbfgs",
+                        max_iter=2000,
+                        random_state=self.config.random_seed,
+                    )
+                    tuning_stats["logistic"] = {
+                        "method": "optuna",
+                        "best_brier": round(logit_tuning_result.best_score, 5),
+                        "best_params": best_logit,
+                    }
+                else:
+                    logit = LogisticRegression(
+                        C=1.0, penalty="l2", max_iter=2000,
+                        random_state=self.config.random_seed,
+                    )
+                logit.fit(train_X, train_y)
+                logit_eval_preds = logit.predict_proba(eval_X)[:, 1]
+                trained_models.append(("logit", logit, logit_eval_preds))
+                logit_trained = True
+            except Exception as e:
+                tuning_stats["logistic_error"] = str(e)
+
+        # ====================================================================
+        # P1: STACKING META-LEARNER — trains a logistic regression on the
+        # out-of-fold predictions of the base learners. This captures
+        # non-linear complementarity between models that simple weighted
+        # averaging misses.
+        # ====================================================================
+        if (
+            self.config.enable_stacking
+            and SKLEARN_AVAILABLE
+            and len(trained_models) >= 2
+            and valid_samples >= 20
+        ):
+            # Build stacking meta-features from OUT-OF-FOLD predictions
+            # Use temporal CV on training data to generate unbiased base-learner predictions
+            stacking_cv = TemporalCrossValidator(n_splits=min(3, self.config.temporal_cv_splits))
+            oof_preds = {name: np.full(train_samples, 0.5) for name, _, _ in trained_models}
+            oof_counts = np.zeros(train_samples)
+
+            for split in stacking_cv.split(train_samples, train_sort_keys):
+                X_tr_fold = train_X[split.train_indices]
+                y_tr_fold = train_y[split.train_indices]
+                X_val_fold = train_X[split.val_indices]
+
+                for name, model_template, _ in trained_models:
+                    if name == "lgb":
+                        fold_model = LightGBMRanker(params=model_template.params if hasattr(model_template, 'params') else None)
+                        fold_model.train(X_tr_fold, y_tr_fold, feature_names=feature_names, num_rounds=200)
+                        fold_preds = fold_model.predict(X_val_fold)
+                    elif name == "xgb":
+                        fold_model = XGBoostRanker(params=model_template.params if hasattr(model_template, 'params') else None)
+                        fold_model.train(X_tr_fold, y_tr_fold, feature_names=feature_names, num_rounds=200)
+                        fold_preds = fold_model.predict(X_val_fold)
+                    elif name == "logit":
+                        fold_model = LogisticRegression(
+                            C=1.0, penalty="l2", max_iter=2000,
+                            random_state=self.config.random_seed,
+                        )
+                        fold_model.fit(X_tr_fold, y_tr_fold)
+                        fold_preds = fold_model.predict_proba(X_val_fold)[:, 1]
+                    else:
+                        continue
+                    oof_preds[name][split.val_indices] = fold_preds
+                    oof_counts[split.val_indices] += 1
+
+            # Only use samples that have OOF predictions
+            oof_mask = oof_counts > 0
+            if np.sum(oof_mask) >= 20:
+                meta_X = np.column_stack([oof_preds[name][oof_mask] for name, _, _ in trained_models])
+                meta_y = train_y[oof_mask]
+
+                meta_learner = LogisticRegression(
+                    C=1.0, penalty="l2", max_iter=2000,
+                    random_state=self.config.random_seed,
+                )
+                meta_learner.fit(meta_X, meta_y)
+
+                # Store stacking configuration
+                self.baseline_model.stacking_meta = meta_learner
+                self.baseline_model.stacking_models = [(name, model) for name, model, _ in trained_models]
+
+                # Evaluate stacking on held-out validation data
+                eval_meta_X = np.column_stack([preds for _, _, preds in trained_models])
+                stacking_eval_preds = meta_learner.predict_proba(eval_meta_X)[:, 1]
+                stacking_brier = float(np.mean((stacking_eval_preds - eval_y) ** 2))
+
+                stacking_stats = {
+                    "enabled": True,
+                    "base_models": [name for name, _, _ in trained_models],
+                    "meta_learner": "logistic_regression",
+                    "stacking_brier": round(stacking_brier, 5),
+                    "meta_learner_coefs": meta_learner.coef_[0].tolist(),
+                }
+                baseline_name = "stacking_ensemble"
+            else:
+                stacking_stats = {"enabled": False, "reason": "insufficient_oof_samples"}
+                # Fall back to best single model
+                baseline_name = self._select_best_single_model(trained_models, eval_y)
+        elif trained_models:
+            baseline_name = self._select_best_single_model(trained_models, eval_y)
         else:
             baseline_name = "none"
 
-        y_pred = np.array([self.baseline_model.predict_proba(row) for row in eval_X])
+        self.tuning_result = tuning_stats if tuning_stats else None
+
+        y_pred = self.baseline_model.predict_proba_batch(eval_X)
         brier = float(np.mean((y_pred - eval_y) ** 2))
         self.model_confidence["baseline"] = float(np.clip(1.0 - brier, 0.05, 0.95))
 
-        return {
+        # --- Ensemble weight optimization (on HELD-OUT validation data only) ---
+        ensemble_weight_stats = {}
+        if self.config.optimize_ensemble_weights and EnsembleWeightOptimizer is not None and valid_samples > 0:
+            ensemble_weight_stats = self._optimize_ensemble_weights_on_validation(eval_X, eval_y, game_flows)
+
+        # ====================================================================
+        # P0: LEAVE-ONE-YEAR-OUT CROSS-VALIDATION — validates that the trained
+        # model generalizes across different tournament years' "chaos" patterns.
+        # Uses multi-year historical data (2015-2025) to run LOYO CV and report
+        # per-year Brier scores.  This does NOT retrain the primary model — it
+        # is a validation diagnostic only.
+        # ====================================================================
+        loyo_stats = {}
+        if (
+            self.config.enable_loyo_cv
+            and self.config.multi_year_games_dir
+            and LeaveOneYearOutCV is not None
+        ):
+            loyo_stats = self._run_loyo_validation(
+                feature_dim=train_X.shape[1],
+                feature_names=feature_names,
+            )
+
+        result = {
             "model": baseline_name,
-            "samples": int(X.shape[0]),
+            "samples": int(n),
             "train_samples": int(train_samples),
             "validation_samples": int(valid_samples),
-            "features": int(X.shape[1]),
+            "features": int(train_X.shape[1]),
             "brier": brier,
         }
+        if tuning_stats:
+            result["hyperparameter_tuning"] = tuning_stats
+        if fs_stats:
+            result["feature_selection"] = fs_stats
+        if stacking_stats:
+            result["stacking"] = stacking_stats
+        if ensemble_weight_stats:
+            result["ensemble_weight_optimization"] = ensemble_weight_stats
+        if loyo_stats:
+            result["loyo_cv"] = loyo_stats
+        return result
+
+    def _select_best_single_model(
+        self,
+        trained_models: List[Tuple],
+        eval_y: np.ndarray,
+    ) -> str:
+        """Select the best single model by validation Brier score and set it as primary."""
+        best_name = "none"
+        best_brier = float("inf")
+
+        for name, model, eval_preds in trained_models:
+            brier = float(np.mean((eval_preds - eval_y) ** 2))
+            if brier < best_brier:
+                best_brier = brier
+                best_name = name
+
+                if name == "lgb":
+                    self.baseline_model.lgb_model = model
+                    self.baseline_model.xgb_model = None
+                    self.baseline_model.logit_model = None
+                elif name == "xgb":
+                    self.baseline_model.xgb_model = model
+                    self.baseline_model.lgb_model = None
+                    self.baseline_model.logit_model = None
+                elif name == "logit":
+                    self.baseline_model.logit_model = model
+                    self.baseline_model.lgb_model = None
+                    self.baseline_model.xgb_model = None
+
+        name_map = {"lgb": "lightgbm", "xgb": "xgboost", "logit": "logistic_regression"}
+        return name_map.get(best_name, best_name)
+
+    # ------------------------------------------------------------------
+    # P0: Leave-One-Year-Out Cross-Validation (multi-year validation)
+    # ------------------------------------------------------------------
+
+    def _run_loyo_validation(
+        self,
+        feature_dim: int,
+        feature_names: Optional[List[str]] = None,
+    ) -> Dict:
+        """
+        Run Leave-One-Year-Out CV on multi-year historical data.
+
+        Loads historical game results and team metrics for each year,
+        constructs simplified differential feature vectors, and evaluates
+        model generalization across different tournament years.
+
+        This is a VALIDATION diagnostic — it does not modify the primary
+        trained model. It answers: "Would our modeling approach have
+        generalised to past tournaments?"
+
+        Returns:
+            Dict with per-year Brier scores, mean Brier, and sample counts.
+        """
+        import os
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        games_dir = self.config.multi_year_games_dir
+        if not os.path.isdir(games_dir):
+            return {"enabled": False, "reason": f"directory_not_found: {games_dir}"}
+
+        years = self.config.loyo_years or [y for y in range(2015, 2026) if y != 2020]
+
+        # ----------------------------------------------------------
+        # Step 1: Load multi-year samples
+        # ----------------------------------------------------------
+        all_X = []
+        all_y = []
+        all_years = []
+
+        for year in years:
+            games_path = os.path.join(games_dir, f"historical_games_{year}.json")
+            metrics_path = os.path.join(games_dir, f"team_metrics_{year}.json")
+
+            if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
+                logger.info("LOYO: skipping year %d (missing data files)", year)
+                continue
+
+            year_X, year_y = self._load_year_samples(
+                games_path, metrics_path, feature_dim, year
+            )
+            if len(year_y) < 10:
+                logger.info("LOYO: skipping year %d (only %d samples)", year, len(year_y))
+                continue
+
+            all_X.append(year_X)
+            all_y.append(year_y)
+            all_years.append(np.full(len(year_y), year))
+
+        if not all_X:
+            return {"enabled": False, "reason": "no_valid_year_data"}
+
+        X = np.vstack(all_X)
+        y = np.concatenate(all_y)
+        game_years = np.concatenate(all_years)
+
+        # Apply feature selection if fitted (transform to same space as primary model)
+        if self.feature_selector is not None and self.feature_selector.is_fitted:
+            try:
+                X = self.feature_selector.transform(X)
+            except Exception:
+                pass  # Dimension mismatch — use raw features
+
+        # Apply scaling if fitted
+        if self.baseline_model.scaler is not None:
+            try:
+                X = self.baseline_model.scaler.transform(X)
+            except Exception:
+                pass  # Dimension mismatch — use unscaled features
+
+        # ----------------------------------------------------------
+        # Step 2: Run LeaveOneYearOutCV
+        # ----------------------------------------------------------
+        loyo_cv = LeaveOneYearOutCV(years=[y for y in years if y in set(game_years)])
+
+        def train_fn(X_tr, y_tr, X_v, y_v):
+            if LIGHTGBM_AVAILABLE:
+                ranker = LightGBMRanker()
+                vs = (X_v, y_v) if len(y_v) >= 10 else None
+                ranker.train(X_tr, y_tr, num_rounds=200, early_stopping_rounds=30 if vs else None, valid_set=vs)
+                return ranker
+            elif SKLEARN_AVAILABLE:
+                logit = LogisticRegression(C=1.0, max_iter=2000, random_state=self.config.random_seed)
+                logit.fit(X_tr, y_tr)
+                return logit
+            return None
+
+        def predict_fn(model, X_pred):
+            if model is None:
+                return np.full(len(X_pred), 0.5)
+            if isinstance(model, LightGBMRanker):
+                return model.predict(X_pred)
+            return model.predict_proba(X_pred)[:, 1]
+
+        cv_results = loyo_cv.cross_validate(X, y, game_years, train_fn, predict_fn)
+
+        if not cv_results:
+            return {"enabled": False, "reason": "no_cv_folds_completed"}
+
+        per_year_brier = {}
+        for i, result in enumerate(cv_results):
+            held_out_year = loyo_cv.years[i] if i < len(loyo_cv.years) else i
+            per_year_brier[str(held_out_year)] = {
+                "brier": round(result.brier_score, 5),
+                "log_loss": round(result.log_loss, 5),
+                "accuracy": round(result.accuracy, 4),
+                "train_size": result.train_size,
+                "val_size": result.val_size,
+            }
+
+        mean_brier = float(np.mean([r.brier_score for r in cv_results]))
+        mean_accuracy = float(np.mean([r.accuracy for r in cv_results]))
+
+        return {
+            "enabled": True,
+            "years_evaluated": len(cv_results),
+            "total_samples": int(len(y)),
+            "mean_brier": round(mean_brier, 5),
+            "mean_accuracy": round(mean_accuracy, 4),
+            "per_year": per_year_brier,
+        }
+
+    def _load_year_samples(
+        self,
+        games_path: str,
+        metrics_path: str,
+        feature_dim: int,
+        year: int,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Load games and team metrics for a single historical year and
+        construct differential feature vectors.
+
+        The vectors are zero-padded to ``feature_dim`` to match the
+        dimensionality of the current-year matchup features.  Core
+        efficiency metrics (off/def rating, tempo, SOS, etc.) are placed
+        in the same positions as the live feature engineer output.
+
+        Returns:
+            (X, y) arrays — X is [N, feature_dim], y is binary labels.
+        """
+        with open(games_path, "r") as f:
+            games_payload = json.load(f)
+        with open(metrics_path, "r") as f:
+            metrics_payload = json.load(f)
+
+        # Build team lookup from metrics
+        team_metrics: Dict[str, Dict[str, float]] = {}
+        teams_list = metrics_payload.get("teams", [])
+        if isinstance(teams_list, list):
+            for tm in teams_list:
+                tid = self._team_id(str(tm.get("team_id") or tm.get("name", "")))
+                if tid:
+                    team_metrics[tid] = {
+                        "off_rtg": float(tm.get("off_rtg", 100.0)),
+                        "def_rtg": float(tm.get("def_rtg", 100.0)),
+                        "pace": float(tm.get("pace", 68.0)),
+                        "srs": float(tm.get("srs", 0.0)),
+                        "sos": float(tm.get("sos", 0.0)),
+                        "wins": float(tm.get("wins", 15)),
+                        "losses": float(tm.get("losses", 15)),
+                    }
+
+        # Build prefix lookup for game IDs that include mascot suffixes
+        # e.g. "kansas_jayhawks" -> "kansas" metric key
+        metric_keys = sorted(team_metrics.keys(), key=len, reverse=True)
+        _prefix_cache: Dict[str, str] = {}
+
+        def _resolve_team(game_id: str) -> Optional[str]:
+            if game_id in team_metrics:
+                return game_id
+            if game_id in _prefix_cache:
+                return _prefix_cache[game_id]
+            for mk in metric_keys:
+                if game_id.startswith(mk + "_") or game_id.startswith(mk):
+                    _prefix_cache[game_id] = mk
+                    return mk
+            return None
+
+        games = games_payload.get("games", [])
+
+        X_list = []
+        y_list = []
+
+        for game in games:
+            raw_t1 = self._team_id(str(game.get("team1_id") or game.get("team1") or ""))
+            raw_t2 = self._team_id(str(game.get("team2_id") or game.get("team2") or ""))
+            s1 = int(game.get("team1_score", 0))
+            s2 = int(game.get("team2_score", 0))
+
+            t1 = _resolve_team(raw_t1) if raw_t1 else None
+            t2 = _resolve_team(raw_t2) if raw_t2 else None
+
+            if not t1 or not t2 or t1 not in team_metrics or t2 not in team_metrics:
+                continue
+            if s1 == 0 and s2 == 0:
+                continue
+
+            m1 = team_metrics[t1]
+            m2 = team_metrics[t2]
+
+            # Build a simplified differential feature vector that aligns with
+            # the first several positions of the full 66-dim team vector:
+            #   [0] adj_off_eff, [1] adj_def_eff, [2] adj_tempo, [3] adj_em
+            #   (remaining positions zero-filled)
+            # The interaction features (positions 66-70) are set to zero.
+            diff = np.zeros(feature_dim, dtype=float)
+
+            off1, off2 = m1["off_rtg"] / 100.0, m2["off_rtg"] / 100.0
+            def1, def2 = m1["def_rtg"] / 100.0, m2["def_rtg"] / 100.0
+            pace1, pace2 = m1["pace"] / 70.0, m2["pace"] / 70.0
+            em1 = (m1["off_rtg"] - m1["def_rtg"]) / 30.0
+            em2 = (m2["off_rtg"] - m2["def_rtg"]) / 30.0
+
+            # Place in standard positions (diff_features part of matchup vector)
+            if feature_dim >= 4:
+                diff[0] = off1 - off2    # diff adj_off_eff
+                diff[1] = def1 - def2    # diff adj_def_eff
+                diff[2] = pace1 - pace2  # diff adj_tempo
+                diff[3] = em1 - em2      # diff adj_em
+
+            # SOS features (positions ~30-33 in the 66-dim diff vector)
+            if feature_dim >= 31:
+                sos1 = m1.get("sos", 0.0) / 10.0
+                sos2 = m2.get("sos", 0.0) / 10.0
+                diff[30] = sos1 - sos2
+
+            # Win percentage (position ~43 if available)
+            if feature_dim >= 44:
+                wp1 = m1["wins"] / max(m1["wins"] + m1["losses"], 1)
+                wp2 = m2["wins"] / max(m2["wins"] + m2["losses"], 1)
+                diff[43] = wp1 - wp2
+
+            outcome = 1 if s1 > s2 else 0
+
+            X_list.append(diff)
+            y_list.append(outcome)
+
+            # Symmetric sample for stability
+            diff_rev = -diff.copy()
+            X_list.append(diff_rev)
+            y_list.append(1 - outcome)
+
+        if not X_list:
+            return np.empty((0, feature_dim)), np.array([])
+
+        return np.stack(X_list), np.array(y_list, dtype=int)
 
     def _run_gnn(self, graph: ScheduleGraph) -> Dict:
         multi_hop = compute_multi_hop_sos(graph, hops=3)
@@ -1038,8 +1919,21 @@ class SOTAPipeline:
             key=lambda g: (self._game_sort_key(getattr(g, "game_date", "2026-01-01")), g.game_id),
         )
 
-        for g in unique_games:
+        # P2: Filter out tournament games (after Selection Sunday ~mid-March)
+        # to prevent calibrating on the very outcomes we're trying to predict.
+        regular_season_games = [
+            g for g in unique_games
+            if not self._is_tournament_game(getattr(g, "game_date", "2026-01-01"))
+        ]
+        if len(regular_season_games) < 20:
+            # Fall back to all games if filtering removes too many
+            regular_season_games = unique_games
+
+        for g in regular_season_games:
+            # P1: Apply tighter pre-calibration clipping to prevent catastrophic
+            # log loss from overconfident predictions (e.g., 1-seed vs 16-seed upsets).
             p = self._raw_fusion_probability(g.team1_id, g.team2_id)
+            p = float(np.clip(p, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
             o = 1 if (g.lead_history and g.lead_history[-1] > 0) else 0
             probs.append(p)
             outcomes.append(o)
@@ -1081,18 +1975,30 @@ class SOTAPipeline:
             test_p = p_arr[-10:]
             test_y = y_arr[-10:]
 
+        # P1: Use temperature scaling as default for small-data robustness.
+        # Temperature scaling has only 1 parameter (vs 2 for Platt, N for isotonic)
+        # and specifically targets the overconfidence problem.
         self.calibration_pipeline = CalibrationPipeline(method=self.config.calibration_method)
         self.calibration_pipeline.fit(train_p, train_y)
 
         pre, post = self.calibration_pipeline.evaluate(test_p, test_y)
-        return {
+
+        calibration_info = {
             "method": self.config.calibration_method,
             "samples": len(probs),
+            "tournament_games_filtered": len(unique_games) - len(regular_season_games),
             "brier_before": float(pre.brier_score),
             "brier_after": float(post.brier_score),
             "ece_before": float(pre.expected_calibration_error),
             "ece_after": float(post.expected_calibration_error),
+            "pre_calibration_clip": [self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi],
         }
+
+        # Add temperature value if using temperature scaling
+        if self.config.calibration_method == "temperature" and hasattr(self.calibration_pipeline.calibrator, "temperature"):
+            calibration_info["temperature"] = round(self.calibration_pipeline.calibrator.temperature, 4)
+
+        return calibration_info
 
     def _run_monte_carlo(self, teams: List[Team], rosters: Dict[str, Roster]):
         teams_by_region: Dict[str, List[TournamentTeam]] = {"East": [], "West": [], "South": [], "Midwest": []}
@@ -1333,7 +2239,10 @@ class SOTAPipeline:
             outcomes.append(outcome)
 
             matchup = self.feature_engineer.create_matchup_features(g.team1_id, g.team2_id)
-            model_preds["baseline"].append(self.baseline_model.predict_proba(matchup.to_vector()))
+            feat_vec = matchup.to_vector()
+            if self.feature_selector is not None and self.feature_selector.is_fitted:
+                feat_vec = self.feature_selector.transform(feat_vec.reshape(1, -1))[0]
+            model_preds["baseline"].append(self.baseline_model.predict_proba(feat_vec))
             model_preds["gnn"].append(self._embedding_probability(self.gnn_embeddings.get(g.team1_id), self.gnn_embeddings.get(g.team2_id)))
             model_preds["transformer"].append(
                 self._embedding_probability(self.transformer_embeddings.get(g.team1_id), self.transformer_embeddings.get(g.team2_id))
@@ -1560,6 +2469,27 @@ class SOTAPipeline:
         end = date(self.config.year, 4, 30)
         return start <= game_day <= end
 
+    def _is_tournament_game(self, date_str: str) -> bool:
+        """
+        P2: Detect NCAA Tournament games (mid-March through April).
+
+        Tournament games should be excluded from calibration training to prevent
+        data leakage — we can't calibrate on outcomes we're trying to predict.
+        Conference tournaments (early March) are included as they happen before
+        Selection Sunday.
+        """
+        date_norm = self._coerce_game_date(date_str)
+        try:
+            game_day = datetime.strptime(date_norm, "%Y-%m-%d").date()
+        except ValueError:
+            return False
+
+        # NCAA Tournament typically starts around March 15 (First Four)
+        # and ends in early April. Selection Sunday is usually mid-March.
+        tournament_start = date(self.config.year, 3, 14)
+        tournament_end = date(self.config.year, 4, 15)
+        return tournament_start <= game_day <= tournament_end
+
     @staticmethod
     def _normalize_key(value: str) -> str:
         return value.lower().replace("&", "and").replace("-", "_").replace(" ", "_").strip("_")
@@ -1669,9 +2599,78 @@ class SOTAPipeline:
             return pareto[-1]
         return pareto[len(pareto) // 2]
 
+    def _optimize_ensemble_weights_on_validation(
+        self,
+        eval_X: np.ndarray,
+        eval_y: np.ndarray,
+        game_flows: Dict[str, List[GameFlow]],
+    ) -> Dict:
+        """
+        Optimize CFA ensemble weights on held-out validation data only.
+
+        This prevents the ensemble weights from overfitting to the training set.
+        We generate predictions from all three models on validation samples and
+        find the weight combination that minimizes Brier score on those
+        held-out outcomes.
+        """
+        # Use the held-out validation data to generate model predictions
+        model_preds: Dict[str, List[float]] = {"baseline": [], "gnn": [], "transformer": []}
+        outcomes: List[int] = []
+
+        # Get validation games (chronologically last 20% of all games)
+        all_games = sorted(
+            self._unique_games(game_flows),
+            key=lambda g: self._game_sort_key(getattr(g, "game_date", "2026-01-01")),
+        )
+        valid_games = [
+            g for g in all_games
+            if g.team1_id in self.feature_engineer.team_features
+            and g.team2_id in self.feature_engineer.team_features
+        ]
+        n_games = len(valid_games)
+        # Take last 20% of games (matching the pipeline's chronological val split)
+        val_start = max(0, n_games - max(10, int(0.2 * n_games)))
+        val_games = valid_games[val_start:]
+
+        for g in val_games:
+            outcome = 1 if (g.lead_history and g.lead_history[-1] > 0) else 0
+            outcomes.append(outcome)
+
+            matchup = self.feature_engineer.create_matchup_features(g.team1_id, g.team2_id)
+            feat_vec = matchup.to_vector()
+            if self.feature_selector is not None and self.feature_selector.is_fitted:
+                feat_vec = self.feature_selector.transform(feat_vec.reshape(1, -1))[0]
+            model_preds["baseline"].append(self.baseline_model.predict_proba(feat_vec))
+            model_preds["gnn"].append(
+                self._embedding_probability(self.gnn_embeddings.get(g.team1_id), self.gnn_embeddings.get(g.team2_id))
+            )
+            model_preds["transformer"].append(
+                self._embedding_probability(self.transformer_embeddings.get(g.team1_id), self.transformer_embeddings.get(g.team2_id))
+            )
+
+        if len(outcomes) < 10:
+            return {}
+
+        optimizer = EnsembleWeightOptimizer(step=0.05, min_weight=0.05)
+        pred_arrays = {name: np.array(preds) for name, preds in model_preds.items()}
+        best_weights, best_brier = optimizer.optimize(pred_arrays, np.array(outcomes))
+
+        # Apply optimized weights to CFA
+        self.cfa.base_weights = best_weights
+
+        return {
+            "optimized_weights": {k: round(v, 3) for k, v in best_weights.items()},
+            "optimized_brier": round(best_brier, 5),
+            "validation_samples": len(outcomes),
+        }
+
     def _raw_fusion_probability(self, team1_id: str, team2_id: str) -> float:
         matchup = self.feature_engineer.create_matchup_features(team1_id, team2_id)
-        baseline_prob = self.baseline_model.predict_proba(matchup.to_vector())
+        feat_vec = matchup.to_vector()
+        # Apply feature selection if fitted
+        if self.feature_selector is not None and self.feature_selector.is_fitted:
+            feat_vec = self.feature_selector.transform(feat_vec.reshape(1, -1))[0]
+        baseline_prob = self.baseline_model.predict_proba(feat_vec)
 
         gnn_prob = self._embedding_probability(self.gnn_embeddings.get(team1_id), self.gnn_embeddings.get(team2_id))
         transformer_prob = self._embedding_probability(
@@ -1685,13 +2684,15 @@ class SOTAPipeline:
         }
 
         combined, _weights = self.cfa.predict(predictions)
-        return float(np.clip(combined, 0.01, 0.99))
+        # P1: Tighter pre-calibration clip bounds based on empirical upset rates.
+        # Historical: 1-seed vs 16-seed upsets occur ~1.5% of the time.
+        return float(np.clip(combined, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
 
     def predict_probability(self, team1_id: str, team2_id: str) -> float:
         raw = self._raw_fusion_probability(team1_id, team2_id)
         if self.calibration_pipeline:
             calibrated = float(self.calibration_pipeline.calibrate(np.array([raw]))[0])
-            return float(np.clip(calibrated, 0.01, 0.99))
+            return float(np.clip(calibrated, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
         return raw
 
     @staticmethod
