@@ -1,7 +1,9 @@
 """Scraper exports."""
 
+from .bracket_ingestion import BracketIngestionPipeline, BracketTeam, TournamentBracketData
 from .espn_picks import CBSPicksScraper, ESPNPicksScraper, YahooPicksScraper, aggregate_consensus
 from .cbbpy_rosters import CBBpyRosterScraper
+from .injury_report import InjuryReportScraper, InjurySeverityModel, PositionalDepthChart
 from .ncaa_stats import NCAAStatsScraper
 from .open_data_feed import OpenDataFeedScraper
 from .player_metrics import PlayerMetricsScraper
@@ -13,11 +15,17 @@ from .transfer_portal import TransferPortalScraper
 
 __all__ = [
     "BartTorvikScraper",
+    "BracketIngestionPipeline",
+    "BracketTeam",
     "CBBpyRosterScraper",
+    "InjuryReportScraper",
+    "InjurySeverityModel",
     "NCAAStatsScraper",
     "OpenDataFeedScraper",
     "PlayerMetricsScraper",
+    "PositionalDepthChart",
     "SportsReferenceScraper",
+    "TournamentBracketData",
     "TournamentContextScraper",
     "TournamentSeedScraper",
     "TransferPortalScraper",

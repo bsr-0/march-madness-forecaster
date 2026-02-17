@@ -416,21 +416,24 @@ class TeamFeatures:
 @dataclass
 class MatchupFeatures:
     """Features for a head-to-head matchup."""
-    
+
     team1_id: str
     team2_id: str
-    
+
     # Differential features (team1 - team2)
     diff_features: np.ndarray = field(default_factory=lambda: np.array([]))
-    
+
     # Interaction features
     tempo_interaction: float = 0.0  # How pace matchup affects game
     style_mismatch: float = 0.0  # Offense vs defense matchup
-    
+
     # Historical (if available)
     h2h_record: float = 0.5  # Team1 win % in head-to-head
     common_opponent_margin: float = 0.0
-    
+
+    # Travel distance advantage (positive = team1 closer to venue)
+    travel_advantage: float = 0.0
+
     def to_vector(self) -> np.ndarray:
         """Convert to feature vector."""
         interaction = np.array([
@@ -438,6 +441,7 @@ class MatchupFeatures:
             self.style_mismatch,
             self.h2h_record,
             self.common_opponent_margin,
+            self.travel_advantage,
         ])
         return np.concatenate([self.diff_features, interaction])
 
@@ -710,43 +714,52 @@ class FeatureEngineer:
         self,
         team1_id: str,
         team2_id: str,
+        venue_key: Optional[str] = None,
     ) -> MatchupFeatures:
         """
         Create differential features for a matchup.
-        
+
         Args:
             team1_id: First team
             team2_id: Second team
-            
+            venue_key: Optional tournament venue key for travel distance computation
+
         Returns:
             MatchupFeatures for the matchup
         """
         t1 = self.team_features.get(team1_id)
         t2 = self.team_features.get(team2_id)
-        
+
         if not t1 or not t2:
             raise ValueError(f"Features not found for {team1_id} or {team2_id}")
-        
+
         # Compute differential
         v1 = t1.to_vector(include_embeddings=False)
         v2 = t2.to_vector(include_embeddings=False)
         diff = v1 - v2
-        
+
         # Interaction features
         tempo_interaction = (t1.adj_tempo * t2.adj_tempo) / 4624.0  # Normalize
-        
+
         # Style mismatch: team1 offense vs team2 defense
         style_mismatch = (
             (t1.adj_offensive_efficiency - t2.adj_defensive_efficiency) -
             (t2.adj_offensive_efficiency - t1.adj_defensive_efficiency)
         ) / 20.0
-        
+
+        # P2: Travel distance advantage (team1 proximity vs team2 to venue)
+        travel_advantage = 0.0
+        if venue_key:
+            from .travel_distance import compute_travel_advantage
+            travel_advantage = compute_travel_advantage(team1_id, team2_id, venue_key)
+
         return MatchupFeatures(
             team1_id=team1_id,
             team2_id=team2_id,
             diff_features=diff,
             tempo_interaction=tempo_interaction,
             style_mismatch=style_mismatch,
+            travel_advantage=travel_advantage,
         )
     
     def attach_gnn_embeddings(

@@ -15,6 +15,12 @@ try:
 except ImportError:
     LIGHTGBM_AVAILABLE = False
 
+try:
+    import xgboost as xgb
+    XGBOOST_AVAILABLE = True
+except ImportError:
+    XGBOOST_AVAILABLE = False
+
 
 @dataclass
 class ModelPrediction:
@@ -327,6 +333,114 @@ class LightGBMRanker:
     def load(self, filepath: str) -> None:
         """Load model from file."""
         self.model = lgb.Booster(model_file=filepath)
+
+
+class XGBoostRanker:
+    """
+    XGBoost-based ranking model for matchup prediction.
+
+    Uses gradient boosting on matchup differential features to predict
+    game outcomes. XGBoost is a robust alternative/complement to LightGBM
+    and often the top performer in Kaggle March Madness competitions.
+    """
+
+    def __init__(self, params: Dict = None):
+        """
+        Initialize XGBoost ranker.
+
+        Args:
+            params: XGBoost parameters
+        """
+        if not XGBOOST_AVAILABLE:
+            raise ImportError("XGBoost not installed")
+
+        self.params = params or {
+            "objective": "binary:logistic",
+            "eval_metric": "logloss",
+            "max_depth": 6,
+            "learning_rate": 0.05,
+            "subsample": 0.8,
+            "colsample_bytree": 0.8,
+            "min_child_weight": 5,
+            "gamma": 0.1,
+            "reg_alpha": 0.1,
+            "reg_lambda": 1.0,
+            "verbosity": 0,
+        }
+
+        self.model = None
+        self.feature_names = None
+
+    def train(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: List[str] = None,
+        num_rounds: int = 500,
+        early_stopping_rounds: int = 50,
+        valid_set: Tuple[np.ndarray, np.ndarray] = None,
+    ) -> None:
+        """
+        Train XGBoost model.
+
+        Args:
+            X: Feature matrix [N, D]
+            y: Labels [N] (1 = team1 win)
+            feature_names: Names of features
+            num_rounds: Number of boosting rounds
+            early_stopping_rounds: Early stopping patience
+            valid_set: Validation set (X_val, y_val)
+        """
+        self.feature_names = feature_names
+
+        dtrain = xgb.DMatrix(X, label=y, feature_names=feature_names)
+
+        evals = [(dtrain, "train")]
+        if valid_set is not None:
+            dval = xgb.DMatrix(valid_set[0], label=valid_set[1], feature_names=feature_names)
+            evals.append((dval, "valid"))
+
+        self.model = xgb.train(
+            self.params,
+            dtrain,
+            num_boost_round=num_rounds,
+            evals=evals,
+            early_stopping_rounds=early_stopping_rounds if valid_set is not None else None,
+            verbose_eval=False,
+        )
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """
+        Predict win probabilities.
+
+        Args:
+            X: Feature matrix [N, D]
+
+        Returns:
+            Predicted probabilities [N]
+        """
+        if self.model is None:
+            raise ValueError("Model not trained")
+
+        dmat = xgb.DMatrix(X, feature_names=self.feature_names)
+        return self.model.predict(dmat)
+
+    def get_feature_importance(self) -> Dict[str, float]:
+        """Get feature importance scores."""
+        if self.model is None:
+            return {}
+
+        importance = self.model.get_score(importance_type="gain")
+        return importance
+
+    def save(self, filepath: str) -> None:
+        """Save model to file."""
+        if self.model is not None:
+            self.model.save_model(filepath)
+
+    def load(self, filepath: str) -> None:
+        """Load model from file."""
+        self.model = xgb.Booster(model_file=filepath)
 
 
 def create_matchup_features(

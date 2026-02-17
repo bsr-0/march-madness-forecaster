@@ -1,0 +1,549 @@
+{
+  "season": 2012,
+  "teams": [
+    {
+      "season": 2012,
+      "team_name": "Syracuse",
+      "school_slug": "syracuse",
+      "team_id": "syracuse",
+      "seed": 1,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "Ohio State",
+      "school_slug": "ohio-state",
+      "team_id": "ohio_state",
+      "seed": 2,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "Florida State",
+      "school_slug": "florida-state",
+      "team_id": "florida_state",
+      "seed": 3,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "Wisconsin",
+      "school_slug": "wisconsin",
+      "team_id": "wisconsin",
+      "seed": 4,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "Vanderbilt",
+      "school_slug": "vanderbilt",
+      "team_id": "vanderbilt",
+      "seed": 5,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "Cincinnati",
+      "school_slug": "cincinnati",
+      "team_id": "cincinnati",
+      "seed": 6,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "Gonzaga",
+      "school_slug": "gonzaga",
+      "team_id": "gonzaga",
+      "seed": 7,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "Kansas State",
+      "school_slug": "kansas-state",
+      "team_id": "kansas_state",
+      "seed": 8,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "Southern Miss",
+      "school_slug": "southern-mississippi",
+      "team_id": "southern_miss",
+      "seed": 9,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "West Virginia",
+      "school_slug": "west-virginia",
+      "team_id": "west_virginia",
+      "seed": 10,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "Texas",
+      "school_slug": "texas",
+      "team_id": "texas",
+      "seed": 11,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "Harvard",
+      "school_slug": "harvard",
+      "team_id": "harvard",
+      "seed": 12,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "Montana",
+      "school_slug": "montana",
+      "team_id": "montana",
+      "seed": 13,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "St. Bonaventure",
+      "school_slug": "st-bonaventure",
+      "team_id": "st__bonaventure",
+      "seed": 14,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "Loyola (MD)",
+      "school_slug": "loyola-md",
+      "team_id": "loyola__md",
+      "seed": 15,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "UNC Asheville",
+      "school_slug": "north-carolina-asheville",
+      "team_id": "unc_asheville",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2012,
+      "team_name": "UNC",
+      "school_slug": "north-carolina",
+      "team_id": "unc",
+      "seed": 1,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "Kansas",
+      "school_slug": "kansas",
+      "team_id": "kansas",
+      "seed": 2,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "Georgetown",
+      "school_slug": "georgetown",
+      "team_id": "georgetown",
+      "seed": 3,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "Michigan",
+      "school_slug": "michigan",
+      "team_id": "michigan",
+      "seed": 4,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "Temple",
+      "school_slug": "temple",
+      "team_id": "temple",
+      "seed": 5,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "San Diego State",
+      "school_slug": "san-diego-state",
+      "team_id": "san_diego_state",
+      "seed": 6,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "Saint Mary's",
+      "school_slug": "saint-marys-ca",
+      "team_id": "saint_mary_s",
+      "seed": 7,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "Creighton",
+      "school_slug": "creighton",
+      "team_id": "creighton",
+      "seed": 8,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "Alabama",
+      "school_slug": "alabama",
+      "team_id": "alabama",
+      "seed": 9,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "Purdue",
+      "school_slug": "purdue",
+      "team_id": "purdue",
+      "seed": 10,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "NC State",
+      "school_slug": "north-carolina-state",
+      "team_id": "nc_state",
+      "seed": 11,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "California",
+      "school_slug": "california",
+      "team_id": "california",
+      "seed": 12,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "South Florida",
+      "school_slug": "south-florida",
+      "team_id": "south_florida",
+      "seed": 12,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "Ohio",
+      "school_slug": "ohio",
+      "team_id": "ohio",
+      "seed": 13,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "Belmont",
+      "school_slug": "belmont",
+      "team_id": "belmont",
+      "seed": 14,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "Detroit Mercy",
+      "school_slug": "detroit-mercy",
+      "team_id": "detroit_mercy",
+      "seed": 15,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "Lamar",
+      "school_slug": "lamar",
+      "team_id": "lamar",
+      "seed": 16,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "Vermont",
+      "school_slug": "vermont",
+      "team_id": "vermont",
+      "seed": 16,
+      "region": "Midwest"
+    },
+    {
+      "season": 2012,
+      "team_name": "Kentucky",
+      "school_slug": "kentucky",
+      "team_id": "kentucky",
+      "seed": 1,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "Duke",
+      "school_slug": "duke",
+      "team_id": "duke",
+      "seed": 2,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "Baylor",
+      "school_slug": "baylor",
+      "team_id": "baylor",
+      "seed": 3,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "Indiana",
+      "school_slug": "indiana",
+      "team_id": "indiana",
+      "seed": 4,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "Wichita State",
+      "school_slug": "wichita-state",
+      "team_id": "wichita_state",
+      "seed": 5,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "UNLV",
+      "school_slug": "nevada-las-vegas",
+      "team_id": "unlv",
+      "seed": 6,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "Notre Dame",
+      "school_slug": "notre-dame",
+      "team_id": "notre_dame",
+      "seed": 7,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "Iowa State",
+      "school_slug": "iowa-state",
+      "team_id": "iowa_state",
+      "seed": 8,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "UConn",
+      "school_slug": "connecticut",
+      "team_id": "uconn",
+      "seed": 9,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "Xavier",
+      "school_slug": "xavier",
+      "team_id": "xavier",
+      "seed": 10,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "Colorado",
+      "school_slug": "colorado",
+      "team_id": "colorado",
+      "seed": 11,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "VCU",
+      "school_slug": "virginia-commonwealth",
+      "team_id": "vcu",
+      "seed": 12,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "New Mexico State",
+      "school_slug": "new-mexico-state",
+      "team_id": "new_mexico_state",
+      "seed": 13,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "South Dakota State",
+      "school_slug": "south-dakota-state",
+      "team_id": "south_dakota_state",
+      "seed": 14,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "Lehigh",
+      "school_slug": "lehigh",
+      "team_id": "lehigh",
+      "seed": 15,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "Mississippi Valley State",
+      "school_slug": "mississippi-valley-state",
+      "team_id": "mississippi_valley_state",
+      "seed": 16,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "Western Kentucky",
+      "school_slug": "western-kentucky",
+      "team_id": "western_kentucky",
+      "seed": 16,
+      "region": "South"
+    },
+    {
+      "season": 2012,
+      "team_name": "Michigan State",
+      "school_slug": "michigan-state",
+      "team_id": "michigan_state",
+      "seed": 1,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "Missouri",
+      "school_slug": "missouri",
+      "team_id": "missouri",
+      "seed": 2,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "Marquette",
+      "school_slug": "marquette",
+      "team_id": "marquette",
+      "seed": 3,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "Louisville",
+      "school_slug": "louisville",
+      "team_id": "louisville",
+      "seed": 4,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "New Mexico",
+      "school_slug": "new-mexico",
+      "team_id": "new_mexico",
+      "seed": 5,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "Murray State",
+      "school_slug": "murray-state",
+      "team_id": "murray_state",
+      "seed": 6,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "Florida",
+      "school_slug": "florida",
+      "team_id": "florida",
+      "seed": 7,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "Memphis",
+      "school_slug": "memphis",
+      "team_id": "memphis",
+      "seed": 8,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "Saint Louis",
+      "school_slug": "saint-louis",
+      "team_id": "saint_louis",
+      "seed": 9,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "Virginia",
+      "school_slug": "virginia",
+      "team_id": "virginia",
+      "seed": 10,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "Colorado State",
+      "school_slug": "colorado-state",
+      "team_id": "colorado_state",
+      "seed": 11,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "Long Beach State",
+      "school_slug": "long-beach-state",
+      "team_id": "long_beach_state",
+      "seed": 12,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "Davidson",
+      "school_slug": "davidson",
+      "team_id": "davidson",
+      "seed": 13,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "BYU",
+      "school_slug": "brigham-young",
+      "team_id": "byu",
+      "seed": 14,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "Iona",
+      "school_slug": "iona",
+      "team_id": "iona",
+      "seed": 14,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "Norfolk State",
+      "school_slug": "norfolk-state",
+      "team_id": "norfolk_state",
+      "seed": 15,
+      "region": "West"
+    },
+    {
+      "season": 2012,
+      "team_name": "LIU",
+      "school_slug": "long-island-university",
+      "team_id": "liu",
+      "seed": 16,
+      "region": "West"
+    }
+  ]
+}

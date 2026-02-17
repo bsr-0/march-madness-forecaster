@@ -287,6 +287,86 @@ class PlattScaling:
         return 1.0 / (1.0 + np.exp(-(self.a * scores + self.b)))
 
 
+class TemperatureScaling:
+    """
+    Temperature scaling calibration (Guo et al., 2017).
+
+    Uses a single scalar parameter T to rescale log-odds:
+        p_calibrated = sigmoid(logit(p_raw) / T)
+
+    Advantages over Platt/Isotonic:
+    - Only 1 parameter → far less overfitting risk with small datasets
+    - Specifically targets the overconfidence problem
+    - Preserves ranking (monotonic transformation)
+    - Well-suited for March Madness where we have <1000 calibration samples
+
+    Reference: "On Calibration of Modern Neural Networks" (Guo et al., 2017)
+    """
+
+    def __init__(self):
+        self.temperature = 1.0
+        self.fitted = False
+
+    def fit(
+        self,
+        predictions: np.ndarray,
+        outcomes: np.ndarray,
+        max_iter: int = 200,
+        lr: float = 0.01,
+    ) -> None:
+        """
+        Fit temperature parameter by minimizing negative log-likelihood (NLL).
+
+        Uses gradient descent on a single parameter T to find optimal scaling.
+
+        Args:
+            predictions: Raw predicted probabilities
+            outcomes: Actual outcomes (0 or 1)
+            max_iter: Maximum gradient descent iterations
+            lr: Learning rate
+        """
+        predictions = np.clip(predictions, 1e-7, 1 - 1e-7)
+        logits = np.log(predictions / (1 - predictions))
+        outcomes = outcomes.astype(float)
+
+        T = 1.0
+        best_T = 1.0
+        best_nll = float("inf")
+
+        for _ in range(max_iter):
+            scaled_logits = logits / T
+            probs = 1.0 / (1.0 + np.exp(-scaled_logits))
+            probs = np.clip(probs, 1e-7, 1 - 1e-7)
+
+            # NLL (negative log-likelihood)
+            nll = -np.mean(
+                outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)
+            )
+
+            if nll < best_nll:
+                best_nll = nll
+                best_T = T
+
+            # Gradient of NLL w.r.t. T
+            # d(NLL)/dT = mean((probs - outcomes) * logits * (-1/T^2))
+            grad = np.mean((probs - outcomes) * (-logits / (T ** 2)))
+            T -= lr * grad
+            T = max(0.1, min(T, 10.0))  # Bound T to reasonable range
+
+        self.temperature = best_T
+        self.fitted = True
+
+    def calibrate(self, predictions: np.ndarray) -> np.ndarray:
+        """Apply temperature scaling to predictions."""
+        if not self.fitted:
+            raise ValueError("Not fitted")
+
+        predictions = np.clip(predictions, 1e-7, 1 - 1e-7)
+        logits = np.log(predictions / (1 - predictions))
+        scaled_logits = logits / self.temperature
+        return 1.0 / (1.0 + np.exp(-scaled_logits))
+
+
 def calculate_calibration_metrics(
     predictions: np.ndarray,
     outcomes: np.ndarray,
@@ -446,16 +526,18 @@ class CalibrationPipeline:
     def __init__(self, method: str = "isotonic"):
         """
         Initialize pipeline.
-        
+
         Args:
-            method: Calibration method ("isotonic", "platt", or "none")
+            method: Calibration method ("isotonic", "platt", "temperature", or "none")
         """
         self.method = method
-        
+
         if method == "isotonic":
             self.calibrator = IsotonicCalibrator()
         elif method == "platt":
             self.calibrator = PlattScaling()
+        elif method == "temperature":
+            self.calibrator = TemperatureScaling()
         else:
             self.calibrator = None
     

@@ -1,0 +1,524 @@
+{
+  "teams": [
+    {
+      "season": 2008,
+      "team_name": "UNC",
+      "school_slug": "north-carolina",
+      "team_id": "unc",
+      "seed": 1,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "Tennessee",
+      "school_slug": "tennessee",
+      "team_id": "tennessee",
+      "seed": 2,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "Louisville",
+      "school_slug": "louisville",
+      "team_id": "louisville",
+      "seed": 3,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "Washington State",
+      "school_slug": "washington-state",
+      "team_id": "washington_state",
+      "seed": 4,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "Notre Dame",
+      "school_slug": "notre-dame",
+      "team_id": "notre_dame",
+      "seed": 5,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "Oklahoma",
+      "school_slug": "oklahoma",
+      "team_id": "oklahoma",
+      "seed": 6,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "Butler",
+      "school_slug": "butler",
+      "team_id": "butler",
+      "seed": 7,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "Indiana",
+      "school_slug": "indiana",
+      "team_id": "indiana",
+      "seed": 8,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "Arkansas",
+      "school_slug": "arkansas",
+      "team_id": "arkansas",
+      "seed": 9,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "South Alabama",
+      "school_slug": "south-alabama",
+      "team_id": "south_alabama",
+      "seed": 10,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "St. Joseph's",
+      "school_slug": "saint-josephs",
+      "team_id": "st__joseph_s",
+      "seed": 11,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "George Mason",
+      "school_slug": "george-mason",
+      "team_id": "george_mason",
+      "seed": 12,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "Winthrop",
+      "school_slug": "winthrop",
+      "team_id": "winthrop",
+      "seed": 13,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "Boise State",
+      "school_slug": "boise-state",
+      "team_id": "boise_state",
+      "seed": 14,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "American",
+      "school_slug": "american",
+      "team_id": "american",
+      "seed": 15,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "Coppin State",
+      "school_slug": "coppin-state",
+      "team_id": "coppin_state",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "Mount St. Mary's",
+      "school_slug": "mount-st-marys",
+      "team_id": "mount_st__mary_s",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2008,
+      "team_name": "Kansas",
+      "school_slug": "kansas",
+      "team_id": "kansas",
+      "seed": 1,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "Georgetown",
+      "school_slug": "georgetown",
+      "team_id": "georgetown",
+      "seed": 2,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "Wisconsin",
+      "school_slug": "wisconsin",
+      "team_id": "wisconsin",
+      "seed": 3,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "Vanderbilt",
+      "school_slug": "vanderbilt",
+      "team_id": "vanderbilt",
+      "seed": 4,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "Clemson",
+      "school_slug": "clemson",
+      "team_id": "clemson",
+      "seed": 5,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "USC",
+      "school_slug": "southern-california",
+      "team_id": "usc",
+      "seed": 6,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "Gonzaga",
+      "school_slug": "gonzaga",
+      "team_id": "gonzaga",
+      "seed": 7,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "UNLV",
+      "school_slug": "nevada-las-vegas",
+      "team_id": "unlv",
+      "seed": 8,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "Kent State",
+      "school_slug": "kent-state",
+      "team_id": "kent_state",
+      "seed": 9,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "Davidson",
+      "school_slug": "davidson",
+      "team_id": "davidson",
+      "seed": 10,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "Kansas State",
+      "school_slug": "kansas-state",
+      "team_id": "kansas_state",
+      "seed": 11,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "Villanova",
+      "school_slug": "villanova",
+      "team_id": "villanova",
+      "seed": 12,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "Siena",
+      "school_slug": "siena",
+      "team_id": "siena",
+      "seed": 13,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "Cal State Fullerton",
+      "school_slug": "cal-state-fullerton",
+      "team_id": "cal_state_fullerton",
+      "seed": 14,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "UMBC",
+      "school_slug": "maryland-baltimore-county",
+      "team_id": "umbc",
+      "seed": 15,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "Portland State",
+      "school_slug": "portland-state",
+      "team_id": "portland_state",
+      "seed": 16,
+      "region": "Midwest"
+    },
+    {
+      "season": 2008,
+      "team_name": "Memphis",
+      "school_slug": "memphis",
+      "team_id": "memphis",
+      "seed": 1,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "Texas",
+      "school_slug": "texas",
+      "team_id": "texas",
+      "seed": 2,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "Stanford",
+      "school_slug": "stanford",
+      "team_id": "stanford",
+      "seed": 3,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "Pitt",
+      "school_slug": "pittsburgh",
+      "team_id": "pitt",
+      "seed": 4,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "Michigan State",
+      "school_slug": "michigan-state",
+      "team_id": "michigan_state",
+      "seed": 5,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "Marquette",
+      "school_slug": "marquette",
+      "team_id": "marquette",
+      "seed": 6,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "Miami (FL)",
+      "school_slug": "miami-fl",
+      "team_id": "miami__fl",
+      "seed": 7,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "Mississippi State",
+      "school_slug": "mississippi-state",
+      "team_id": "mississippi_state",
+      "seed": 8,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "Oregon",
+      "school_slug": "oregon",
+      "team_id": "oregon",
+      "seed": 9,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "Saint Mary's",
+      "school_slug": "saint-marys-ca",
+      "team_id": "saint_mary_s",
+      "seed": 10,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "Kentucky",
+      "school_slug": "kentucky",
+      "team_id": "kentucky",
+      "seed": 11,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "Temple",
+      "school_slug": "temple",
+      "team_id": "temple",
+      "seed": 12,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "Oral Roberts",
+      "school_slug": "oral-roberts",
+      "team_id": "oral_roberts",
+      "seed": 13,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "Cornell",
+      "school_slug": "cornell",
+      "team_id": "cornell",
+      "seed": 14,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "Austin Peay",
+      "school_slug": "austin-peay",
+      "team_id": "austin_peay",
+      "seed": 15,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "UT Arlington",
+      "school_slug": "texas-arlington",
+      "team_id": "ut_arlington",
+      "seed": 16,
+      "region": "South"
+    },
+    {
+      "season": 2008,
+      "team_name": "UCLA",
+      "school_slug": "ucla",
+      "team_id": "ucla",
+      "seed": 1,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "Duke",
+      "school_slug": "duke",
+      "team_id": "duke",
+      "seed": 2,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "Xavier",
+      "school_slug": "xavier",
+      "team_id": "xavier",
+      "seed": 3,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "UConn",
+      "school_slug": "connecticut",
+      "team_id": "uconn",
+      "seed": 4,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "Drake",
+      "school_slug": "drake",
+      "team_id": "drake",
+      "seed": 5,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "Purdue",
+      "school_slug": "purdue",
+      "team_id": "purdue",
+      "seed": 6,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "West Virginia",
+      "school_slug": "west-virginia",
+      "team_id": "west_virginia",
+      "seed": 7,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "BYU",
+      "school_slug": "brigham-young",
+      "team_id": "byu",
+      "seed": 8,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "Texas A&amp;M",
+      "school_slug": "texas-am",
+      "team_id": "texas_a_amp_m",
+      "seed": 9,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "Arizona",
+      "school_slug": "arizona",
+      "team_id": "arizona",
+      "seed": 10,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "Baylor",
+      "school_slug": "baylor",
+      "team_id": "baylor",
+      "seed": 11,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "Western Kentucky",
+      "school_slug": "western-kentucky",
+      "team_id": "western_kentucky",
+      "seed": 12,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "San Diego",
+      "school_slug": "san-diego",
+      "team_id": "san_diego",
+      "seed": 13,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "Georgia",
+      "school_slug": "georgia",
+      "team_id": "georgia",
+      "seed": 14,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "Belmont",
+      "school_slug": "belmont",
+      "team_id": "belmont",
+      "seed": 15,
+      "region": "West"
+    },
+    {
+      "season": 2008,
+      "team_name": "Mississippi Valley State",
+      "school_slug": "mississippi-valley-state",
+      "team_id": "mississippi_valley_state",
+      "seed": 16,
+      "region": "West"
+    }
+  ]
+}

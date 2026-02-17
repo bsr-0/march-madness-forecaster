@@ -1,0 +1,548 @@
+{
+  "teams": [
+    {
+      "season": 2013,
+      "team_name": "Indiana",
+      "school_slug": "indiana",
+      "team_id": "indiana",
+      "seed": 1,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "Miami (FL)",
+      "school_slug": "miami-fl",
+      "team_id": "miami__fl",
+      "seed": 2,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "Marquette",
+      "school_slug": "marquette",
+      "team_id": "marquette",
+      "seed": 3,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "Syracuse",
+      "school_slug": "syracuse",
+      "team_id": "syracuse",
+      "seed": 4,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "UNLV",
+      "school_slug": "nevada-las-vegas",
+      "team_id": "unlv",
+      "seed": 5,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "Butler",
+      "school_slug": "butler",
+      "team_id": "butler",
+      "seed": 6,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "Illinois",
+      "school_slug": "illinois",
+      "team_id": "illinois",
+      "seed": 7,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "NC State",
+      "school_slug": "north-carolina-state",
+      "team_id": "nc_state",
+      "seed": 8,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "Temple",
+      "school_slug": "temple",
+      "team_id": "temple",
+      "seed": 9,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "Colorado",
+      "school_slug": "colorado",
+      "team_id": "colorado",
+      "seed": 10,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "Bucknell",
+      "school_slug": "bucknell",
+      "team_id": "bucknell",
+      "seed": 11,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "California",
+      "school_slug": "california",
+      "team_id": "california",
+      "seed": 12,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "Montana",
+      "school_slug": "montana",
+      "team_id": "montana",
+      "seed": 13,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "Davidson",
+      "school_slug": "davidson",
+      "team_id": "davidson",
+      "seed": 14,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "Pacific",
+      "school_slug": "pacific",
+      "team_id": "pacific",
+      "seed": 15,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "James Madison",
+      "school_slug": "james-madison",
+      "team_id": "james_madison",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "LIU",
+      "school_slug": "long-island-university",
+      "team_id": "liu",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2013,
+      "team_name": "Louisville",
+      "school_slug": "louisville",
+      "team_id": "louisville",
+      "seed": 1,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Duke",
+      "school_slug": "duke",
+      "team_id": "duke",
+      "seed": 2,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Michigan State",
+      "school_slug": "michigan-state",
+      "team_id": "michigan_state",
+      "seed": 3,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Saint Louis",
+      "school_slug": "saint-louis",
+      "team_id": "saint_louis",
+      "seed": 4,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Oklahoma State",
+      "school_slug": "oklahoma-state",
+      "team_id": "oklahoma_state",
+      "seed": 5,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Memphis",
+      "school_slug": "memphis",
+      "team_id": "memphis",
+      "seed": 6,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Creighton",
+      "school_slug": "creighton",
+      "team_id": "creighton",
+      "seed": 7,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Colorado State",
+      "school_slug": "colorado-state",
+      "team_id": "colorado_state",
+      "seed": 8,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Missouri",
+      "school_slug": "missouri",
+      "team_id": "missouri",
+      "seed": 9,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Cincinnati",
+      "school_slug": "cincinnati",
+      "team_id": "cincinnati",
+      "seed": 10,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Middle Tennessee",
+      "school_slug": "middle-tennessee",
+      "team_id": "middle_tennessee",
+      "seed": 11,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Saint Mary's",
+      "school_slug": "saint-marys-ca",
+      "team_id": "saint_mary_s",
+      "seed": 11,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Oregon",
+      "school_slug": "oregon",
+      "team_id": "oregon",
+      "seed": 12,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "New Mexico State",
+      "school_slug": "new-mexico-state",
+      "team_id": "new_mexico_state",
+      "seed": 13,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Valparaiso",
+      "school_slug": "valparaiso",
+      "team_id": "valparaiso",
+      "seed": 14,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Albany (NY)",
+      "school_slug": "albany-ny",
+      "team_id": "albany__ny",
+      "seed": 15,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Liberty",
+      "school_slug": "liberty",
+      "team_id": "liberty",
+      "seed": 16,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "North Carolina A&amp;T",
+      "school_slug": "north-carolina-at",
+      "team_id": "north_carolina_a_amp_t",
+      "seed": 16,
+      "region": "Midwest"
+    },
+    {
+      "season": 2013,
+      "team_name": "Kansas",
+      "school_slug": "kansas",
+      "team_id": "kansas",
+      "seed": 1,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "Georgetown",
+      "school_slug": "georgetown",
+      "team_id": "georgetown",
+      "seed": 2,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "Florida",
+      "school_slug": "florida",
+      "team_id": "florida",
+      "seed": 3,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "Michigan",
+      "school_slug": "michigan",
+      "team_id": "michigan",
+      "seed": 4,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "VCU",
+      "school_slug": "virginia-commonwealth",
+      "team_id": "vcu",
+      "seed": 5,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "UCLA",
+      "school_slug": "ucla",
+      "team_id": "ucla",
+      "seed": 6,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "San Diego State",
+      "school_slug": "san-diego-state",
+      "team_id": "san_diego_state",
+      "seed": 7,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "UNC",
+      "school_slug": "north-carolina",
+      "team_id": "unc",
+      "seed": 8,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "Villanova",
+      "school_slug": "villanova",
+      "team_id": "villanova",
+      "seed": 9,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "Oklahoma",
+      "school_slug": "oklahoma",
+      "team_id": "oklahoma",
+      "seed": 10,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "Minnesota",
+      "school_slug": "minnesota",
+      "team_id": "minnesota",
+      "seed": 11,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "Akron",
+      "school_slug": "akron",
+      "team_id": "akron",
+      "seed": 12,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "South Dakota State",
+      "school_slug": "south-dakota-state",
+      "team_id": "south_dakota_state",
+      "seed": 13,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "Northwestern State",
+      "school_slug": "northwestern-state",
+      "team_id": "northwestern_state",
+      "seed": 14,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "Florida Gulf Coast",
+      "school_slug": "florida-gulf-coast",
+      "team_id": "florida_gulf_coast",
+      "seed": 15,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "Western Kentucky",
+      "school_slug": "western-kentucky",
+      "team_id": "western_kentucky",
+      "seed": 16,
+      "region": "South"
+    },
+    {
+      "season": 2013,
+      "team_name": "Gonzaga",
+      "school_slug": "gonzaga",
+      "team_id": "gonzaga",
+      "seed": 1,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "Ohio State",
+      "school_slug": "ohio-state",
+      "team_id": "ohio_state",
+      "seed": 2,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "New Mexico",
+      "school_slug": "new-mexico",
+      "team_id": "new_mexico",
+      "seed": 3,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "Kansas State",
+      "school_slug": "kansas-state",
+      "team_id": "kansas_state",
+      "seed": 4,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "Wisconsin",
+      "school_slug": "wisconsin",
+      "team_id": "wisconsin",
+      "seed": 5,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "Arizona",
+      "school_slug": "arizona",
+      "team_id": "arizona",
+      "seed": 6,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "Notre Dame",
+      "school_slug": "notre-dame",
+      "team_id": "notre_dame",
+      "seed": 7,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "Pitt",
+      "school_slug": "pittsburgh",
+      "team_id": "pitt",
+      "seed": 8,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "Wichita State",
+      "school_slug": "wichita-state",
+      "team_id": "wichita_state",
+      "seed": 9,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "Iowa State",
+      "school_slug": "iowa-state",
+      "team_id": "iowa_state",
+      "seed": 10,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "Belmont",
+      "school_slug": "belmont",
+      "team_id": "belmont",
+      "seed": 11,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "Ole Miss",
+      "school_slug": "mississippi",
+      "team_id": "ole_miss",
+      "seed": 12,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "Boise State",
+      "school_slug": "boise-state",
+      "team_id": "boise_state",
+      "seed": 13,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "La Salle",
+      "school_slug": "la-salle",
+      "team_id": "la_salle",
+      "seed": 13,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "Harvard",
+      "school_slug": "harvard",
+      "team_id": "harvard",
+      "seed": 14,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "Iona",
+      "school_slug": "iona",
+      "team_id": "iona",
+      "seed": 15,
+      "region": "West"
+    },
+    {
+      "season": 2013,
+      "team_name": "Southern",
+      "school_slug": "southern",
+      "team_id": "southern",
+      "seed": 16,
+      "region": "West"
+    }
+  ]
+}

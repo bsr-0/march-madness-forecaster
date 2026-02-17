@@ -1,0 +1,276 @@
+{
+  "teams": [
+    {
+      "season": 2011,
+      "team_name": "Ohio State",
+      "school_slug": "ohio-state",
+      "team_id": "ohio_state",
+      "seed": 1,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "UNC",
+      "school_slug": "north-carolina",
+      "team_id": "unc",
+      "seed": 2,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "Syracuse",
+      "school_slug": "syracuse",
+      "team_id": "syracuse",
+      "seed": 3,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "Kentucky",
+      "school_slug": "kentucky",
+      "team_id": "kentucky",
+      "seed": 4,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "West Virginia",
+      "school_slug": "west-virginia",
+      "team_id": "west_virginia",
+      "seed": 5,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "Xavier",
+      "school_slug": "xavier",
+      "team_id": "xavier",
+      "seed": 6,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "Washington",
+      "school_slug": "washington",
+      "team_id": "washington",
+      "seed": 7,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "George Mason",
+      "school_slug": "george-mason",
+      "team_id": "george_mason",
+      "seed": 8,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "Villanova",
+      "school_slug": "villanova",
+      "team_id": "villanova",
+      "seed": 9,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "Georgia",
+      "school_slug": "georgia",
+      "team_id": "georgia",
+      "seed": 10,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "Marquette",
+      "school_slug": "marquette",
+      "team_id": "marquette",
+      "seed": 11,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "Clemson",
+      "school_slug": "clemson",
+      "team_id": "clemson",
+      "seed": 12,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "UAB",
+      "school_slug": "alabama-birmingham",
+      "team_id": "uab",
+      "seed": 12,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "Princeton",
+      "school_slug": "princeton",
+      "team_id": "princeton",
+      "seed": 13,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "Indiana State",
+      "school_slug": "indiana-state",
+      "team_id": "indiana_state",
+      "seed": 14,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "LIU",
+      "school_slug": "long-island-university",
+      "team_id": "liu",
+      "seed": 15,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "Alabama State",
+      "school_slug": "alabama-state",
+      "team_id": "alabama_state",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "UTSA",
+      "school_slug": "texas-san-antonio",
+      "team_id": "utsa",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2011,
+      "team_name": "Duke",
+      "school_slug": "duke",
+      "team_id": "duke",
+      "seed": 1,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "San Diego State",
+      "school_slug": "san-diego-state",
+      "team_id": "san_diego_state",
+      "seed": 2,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "UConn",
+      "school_slug": "connecticut",
+      "team_id": "uconn",
+      "seed": 3,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "Texas",
+      "school_slug": "texas",
+      "team_id": "texas",
+      "seed": 4,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "Arizona",
+      "school_slug": "arizona",
+      "team_id": "arizona",
+      "seed": 5,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "Cincinnati",
+      "school_slug": "cincinnati",
+      "team_id": "cincinnati",
+      "seed": 6,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "Temple",
+      "school_slug": "temple",
+      "team_id": "temple",
+      "seed": 7,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "Michigan",
+      "school_slug": "michigan",
+      "team_id": "michigan",
+      "seed": 8,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "Tennessee",
+      "school_slug": "tennessee",
+      "team_id": "tennessee",
+      "seed": 9,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "Penn State",
+      "school_slug": "penn-state",
+      "team_id": "penn_state",
+      "seed": 10,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "Missouri",
+      "school_slug": "missouri",
+      "team_id": "missouri",
+      "seed": 11,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "Memphis",
+      "school_slug": "memphis",
+      "team_id": "memphis",
+      "seed": 12,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "Oakland",
+      "school_slug": "oakland",
+      "team_id": "oakland",
+      "seed": 13,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "Bucknell",
+      "school_slug": "bucknell",
+      "team_id": "bucknell",
+      "seed": 14,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "Northern Colorado",
+      "school_slug": "northern-colorado",
+      "team_id": "northern_colorado",
+      "seed": 15,
+      "region": "West"
+    },
+    {
+      "season": 2011,
+      "team_name": "Hampton",
+      "school_slug": "hampton",
+      "team_id": "hampton",
+      "seed": 16,
+      "region": "West"
+    }
+  ]
+}

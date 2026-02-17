@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-15T16:10:07.829072+00:00",
+  "generated_at": "2026-02-16T22:38:07.709904+00:00",
   "start_season": 2022,
   "end_season": 2025,
   "input_sources": {
@@ -32,24 +32,36 @@
   "leakage_checks": {
     "passed": true,
     "issues": [],
-    "rows_checked": 0
+    "rows_checked": 48436
   },
   "quality_report": {
-    "team_game_rows": 12,
-    "matchup_rows": 6,
-    "tournament_matchup_rows": 0,
+    "team_game_rows": 49438,
+    "matchup_rows": 24719,
+    "tournament_matchup_rows": 36,
     "season_counts": [
       {
         "season": 2022,
-        "team_games": 4,
-        "unique_games": 2,
-        "unique_teams": 4
+        "team_games": 11928,
+        "unique_games": 5964,
+        "unique_teams": 678
+      },
+      {
+        "season": 2023,
+        "team_games": 12444,
+        "unique_games": 6222,
+        "unique_teams": 706
+      },
+      {
+        "season": 2024,
+        "team_games": 12484,
+        "unique_games": 6242,
+        "unique_teams": 717
       },
       {
         "season": 2025,
-        "team_games": 8,
-        "unique_games": 4,
-        "unique_teams": 8
+        "team_games": 12582,
+        "unique_games": 6291,
+        "unique_teams": 700
       }
     ],
     "season_coverage": {
@@ -61,34 +73,33 @@
       ],
       "present_seasons": [
         2022,
+        2023,
+        2024,
         2025
       ],
-      "missing_seasons": [
-        2023,
-        2024
-      ]
+      "missing_seasons": []
     },
     "top_missing_numeric_columns": {
-      "drb_rate_l3": 1.0,
-      "prior_conference_sos_mean": 1.0,
-      "prior_season_losses": 1.0,
-      "prior_season_wins": 1.0,
-      "prior_season_sos": 1.0,
-      "prior_season_srs": 1.0,
-      "prior_season_pace": 1.0,
-      "prior_season_def_rtg": 1.0,
-      "prior_season_off_rtg": 1.0,
-      "lead_entropy_proxy": 1.0,
-      "close_game_win_pct_prior": 1.0,
-      "net_eff_ewm5": 1.0,
-      "margin_std_l10": 1.0,
-      "drb_rate_l10": 1.0,
-      "orb_rate_l10": 1.0,
-      "ft_rate_l10": 1.0,
-      "to_rate_l10": 1.0,
-      "pace_l10": 1.0,
-      "net_eff_l10": 1.0,
-      "win_pct_l10": 1.0
+      "prior_team_match_score": 1.0,
+      "home_away": 1.0,
+      "prior_prop_luck": 1.0,
+      "prior_prop_sos_adj_em": 1.0,
+      "prior_prop_off_xp": 1.0,
+      "prior_prop_def_xp": 1.0,
+      "prior_prop_shot_dist": 1.0,
+      "prior_prop_adj_def": 1.0,
+      "prior_prop_adj_off": 1.0,
+      "prior_prop_adj_em": 1.0,
+      "is_neutral_site": 1.0,
+      "is_away": 1.0,
+      "is_home": 1.0,
+      "prior_prop_adj_tempo": 1.0,
+      "site": 1.0,
+      "location": 1.0,
+      "prior_season_sos": 0.6040495165662041,
+      "prior_season_off_rtg": 0.6040495165662041,
+      "prior_season_win_pct": 0.6040495165662041,
+      "opp_prior_season_srs": 0.6040495165662041
     }
   },
   "coverage_report": {
@@ -184,15 +195,16 @@
         ]
       },
       {
-        "name": "shot_quality",
+        "name": "proprietary_xp",
         "critical": false,
-        "status": "missing",
-        "coverage_ratio": 0.0,
-        "available_columns": [],
-        "missing_columns": [
-          "prior_shotquality_off_xp",
-          "prior_shotquality_three_rate"
-        ]
+        "status": "covered",
+        "coverage_ratio": 1.0,
+        "available_columns": [
+          "prior_prop_off_xp",
+          "prior_prop_def_xp",
+          "prior_prop_shot_dist"
+        ],
+        "missing_columns": []
       },
       {
         "name": "market_priors",
@@ -208,14 +220,14 @@
     ],
     "critical_gaps": [],
     "summary": {
-      "team_columns": 115,
-      "matchup_columns": 91,
-      "tournament_matchup_columns": 11
+      "team_columns": 125,
+      "matchup_columns": 109,
+      "tournament_matchup_columns": 116
     }
   },
   "study_alignment_report": {
-    "kenpom_ratings_glossary": {
-      "reference": "https://kenpom.com/blog/ratings-glossary/",
+    "proprietary_efficiency_model": {
+      "reference": "proprietary: iterative SOS-adjusted efficiency (KenPom method)",
       "expected_categories": [
         "efficiency_four_factors",
         "schedule_strength",
@@ -235,16 +247,16 @@
         "schedule_strength",
         "tournament_seed_context",
         "market_priors",
-        "shot_quality"
+        "proprietary_xp"
       ],
       "category_statuses": {
         "efficiency_four_factors": "covered",
         "schedule_strength": "covered",
         "tournament_seed_context": "covered",
         "market_priors": "missing",
-        "shot_quality": "missing"
+        "proprietary_xp": "covered"
       },
-      "completeness_score": 0.6
+      "completeness_score": 0.8
     },
     "arxiv_1701_07316": {
       "reference": "https://arxiv.org/abs/1701.07316",

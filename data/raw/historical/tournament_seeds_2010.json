@@ -1,0 +1,525 @@
+{
+  "season": 2010,
+  "teams": [
+    {
+      "season": 2010,
+      "team_name": "Kentucky",
+      "school_slug": "kentucky",
+      "team_id": "kentucky",
+      "seed": 1,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "West Virginia",
+      "school_slug": "west-virginia",
+      "team_id": "west_virginia",
+      "seed": 2,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "New Mexico",
+      "school_slug": "new-mexico",
+      "team_id": "new_mexico",
+      "seed": 3,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "Wisconsin",
+      "school_slug": "wisconsin",
+      "team_id": "wisconsin",
+      "seed": 4,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "Temple",
+      "school_slug": "temple",
+      "team_id": "temple",
+      "seed": 5,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "Marquette",
+      "school_slug": "marquette",
+      "team_id": "marquette",
+      "seed": 6,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "Clemson",
+      "school_slug": "clemson",
+      "team_id": "clemson",
+      "seed": 7,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "Texas",
+      "school_slug": "texas",
+      "team_id": "texas",
+      "seed": 8,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "Wake Forest",
+      "school_slug": "wake-forest",
+      "team_id": "wake_forest",
+      "seed": 9,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "Missouri",
+      "school_slug": "missouri",
+      "team_id": "missouri",
+      "seed": 10,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "Washington",
+      "school_slug": "washington",
+      "team_id": "washington",
+      "seed": 11,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "Cornell",
+      "school_slug": "cornell",
+      "team_id": "cornell",
+      "seed": 12,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "Wofford",
+      "school_slug": "wofford",
+      "team_id": "wofford",
+      "seed": 13,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "Montana",
+      "school_slug": "montana",
+      "team_id": "montana",
+      "seed": 14,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "Morgan State",
+      "school_slug": "morgan-state",
+      "team_id": "morgan_state",
+      "seed": 15,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "ETSU",
+      "school_slug": "east-tennessee-state",
+      "team_id": "etsu",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2010,
+      "team_name": "Kansas",
+      "school_slug": "kansas",
+      "team_id": "kansas",
+      "seed": 1,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "Ohio State",
+      "school_slug": "ohio-state",
+      "team_id": "ohio_state",
+      "seed": 2,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "Georgetown",
+      "school_slug": "georgetown",
+      "team_id": "georgetown",
+      "seed": 3,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "Maryland",
+      "school_slug": "maryland",
+      "team_id": "maryland",
+      "seed": 4,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "Michigan State",
+      "school_slug": "michigan-state",
+      "team_id": "michigan_state",
+      "seed": 5,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "Tennessee",
+      "school_slug": "tennessee",
+      "team_id": "tennessee",
+      "seed": 6,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "Oklahoma State",
+      "school_slug": "oklahoma-state",
+      "team_id": "oklahoma_state",
+      "seed": 7,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "UNLV",
+      "school_slug": "nevada-las-vegas",
+      "team_id": "unlv",
+      "seed": 8,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "Northern Iowa",
+      "school_slug": "northern-iowa",
+      "team_id": "northern_iowa",
+      "seed": 9,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "Georgia Tech",
+      "school_slug": "georgia-tech",
+      "team_id": "georgia_tech",
+      "seed": 10,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "San Diego State",
+      "school_slug": "san-diego-state",
+      "team_id": "san_diego_state",
+      "seed": 11,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "New Mexico State",
+      "school_slug": "new-mexico-state",
+      "team_id": "new_mexico_state",
+      "seed": 12,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "Houston",
+      "school_slug": "houston",
+      "team_id": "houston",
+      "seed": 13,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "Ohio",
+      "school_slug": "ohio",
+      "team_id": "ohio",
+      "seed": 14,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "UCSB",
+      "school_slug": "california-santa-barbara",
+      "team_id": "ucsb",
+      "seed": 15,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "Lehigh",
+      "school_slug": "lehigh",
+      "team_id": "lehigh",
+      "seed": 16,
+      "region": "Midwest"
+    },
+    {
+      "season": 2010,
+      "team_name": "Duke",
+      "school_slug": "duke",
+      "team_id": "duke",
+      "seed": 1,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Villanova",
+      "school_slug": "villanova",
+      "team_id": "villanova",
+      "seed": 2,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Baylor",
+      "school_slug": "baylor",
+      "team_id": "baylor",
+      "seed": 3,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Purdue",
+      "school_slug": "purdue",
+      "team_id": "purdue",
+      "seed": 4,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Texas A&amp;M",
+      "school_slug": "texas-am",
+      "team_id": "texas_a_amp_m",
+      "seed": 5,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Notre Dame",
+      "school_slug": "notre-dame",
+      "team_id": "notre_dame",
+      "seed": 6,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Richmond",
+      "school_slug": "richmond",
+      "team_id": "richmond",
+      "seed": 7,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "California",
+      "school_slug": "california",
+      "team_id": "california",
+      "seed": 8,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Louisville",
+      "school_slug": "louisville",
+      "team_id": "louisville",
+      "seed": 9,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Saint Mary's",
+      "school_slug": "saint-marys-ca",
+      "team_id": "saint_mary_s",
+      "seed": 10,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Old Dominion",
+      "school_slug": "old-dominion",
+      "team_id": "old_dominion",
+      "seed": 11,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Utah State",
+      "school_slug": "utah-state",
+      "team_id": "utah_state",
+      "seed": 12,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Siena",
+      "school_slug": "siena",
+      "team_id": "siena",
+      "seed": 13,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Sam Houston",
+      "school_slug": "sam-houston-state",
+      "team_id": "sam_houston",
+      "seed": 14,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Robert Morris",
+      "school_slug": "robert-morris",
+      "team_id": "robert_morris",
+      "seed": 15,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Arkansas-Pine Bluff",
+      "school_slug": "arkansas-pine-bluff",
+      "team_id": "arkansas_pine_bluff",
+      "seed": 16,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Winthrop",
+      "school_slug": "winthrop",
+      "team_id": "winthrop",
+      "seed": 16,
+      "region": "South"
+    },
+    {
+      "season": 2010,
+      "team_name": "Syracuse",
+      "school_slug": "syracuse",
+      "team_id": "syracuse",
+      "seed": 1,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "Kansas State",
+      "school_slug": "kansas-state",
+      "team_id": "kansas_state",
+      "seed": 2,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "Pitt",
+      "school_slug": "pittsburgh",
+      "team_id": "pitt",
+      "seed": 3,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "Vanderbilt",
+      "school_slug": "vanderbilt",
+      "team_id": "vanderbilt",
+      "seed": 4,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "Butler",
+      "school_slug": "butler",
+      "team_id": "butler",
+      "seed": 5,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "Xavier",
+      "school_slug": "xavier",
+      "team_id": "xavier",
+      "seed": 6,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "BYU",
+      "school_slug": "brigham-young",
+      "team_id": "byu",
+      "seed": 7,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "Gonzaga",
+      "school_slug": "gonzaga",
+      "team_id": "gonzaga",
+      "seed": 8,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "Florida State",
+      "school_slug": "florida-state",
+      "team_id": "florida_state",
+      "seed": 9,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "Florida",
+      "school_slug": "florida",
+      "team_id": "florida",
+      "seed": 10,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "Minnesota",
+      "school_slug": "minnesota",
+      "team_id": "minnesota",
+      "seed": 11,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "UTEP",
+      "school_slug": "texas-el-paso",
+      "team_id": "utep",
+      "seed": 12,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "Murray State",
+      "school_slug": "murray-state",
+      "team_id": "murray_state",
+      "seed": 13,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "Oakland",
+      "school_slug": "oakland",
+      "team_id": "oakland",
+      "seed": 14,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "North Texas",
+      "school_slug": "north-texas",
+      "team_id": "north_texas",
+      "seed": 15,
+      "region": "West"
+    },
+    {
+      "season": 2010,
+      "team_name": "Vermont",
+      "school_slug": "vermont",
+      "team_id": "vermont",
+      "seed": 16,
+      "region": "West"
+    }
+  ]
+}
