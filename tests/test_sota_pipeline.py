@@ -1,141 +1,40 @@
-"""Integration tests for the SOTA 2026 pipeline with real-data inputs."""
+"""Integration tests for the SOTA pipeline with real historical data."""
 
 import json
+import os
+
+import pytest
 
 from src.models.team import Team
 from src.pipeline.sota import DataRequirementError, SOTAPipeline, SOTAPipelineConfig
 
+_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "raw")
+_GENERATED = os.path.join(_DATA_DIR, "generated_strict_2025")
 
-def _build_fixture_payloads():
-    regions = ["East", "West", "South", "Midwest"]
-    teams = []
+REAL_DATA_PATHS = {
+    "teams": os.path.join(_GENERATED, "teams_2025.json"),
+    "torvik": os.path.join(_GENERATED, "torvik_2025.json"),
+    "rosters": os.path.join(_GENERATED, "rosters_2025.json"),
+    "public_picks": os.path.join(_GENERATED, "public_picks_2025.json"),
+    "historical_games": os.path.join(_DATA_DIR, "historical", "historical_games_2025.json"),
+}
 
-    for region in regions:
-        for seed in range(1, 17):
-            team_name = f"{region} Seed {seed}"
-            team_id = team_name.lower().replace(" ", "_")
-            teams.append(
-                {
-                    "name": team_name,
-                    "seed": seed,
-                    "region": region,
-                    "elo_rating": 1820 - seed * 24,
-                    "stats": {
-                        "offensive_efficiency": 102 - seed,
-                        "defensive_efficiency": 96 + seed,
-                        "strength_of_schedule": 80 - seed * 1.2,
-                        "recent_performance": 70 + (17 - seed),
-                        "tempo": 68,
-                        "experience": 2.4,
-                    },
-                }
-            )
-
-    torvik = {
-        "timestamp": "2026-03-17T12:00:00Z",
-        "teams": [
-            {
-                "team_id": t["name"].lower().replace(" ", "_"),
-                "name": t["name"],
-                "conference": "TestConf",
-                "t_rank": t["seed"],
-                "barthag": 0.5 + (17 - t["seed"]) / 100,
-                "adj_offensive_efficiency": 105 + (17 - t["seed"]),
-                "adj_defensive_efficiency": 95 + t["seed"] * 0.7,
-                "adj_tempo": 67.5,
-                "effective_fg_pct": 0.50,
-                "turnover_rate": 0.17,
-                "offensive_reb_rate": 0.30,
-                "free_throw_rate": 0.31,
-                "opp_effective_fg_pct": 0.48,
-                "opp_turnover_rate": 0.19,
-                "defensive_reb_rate": 0.71,
-                "opp_free_throw_rate": 0.29,
-                "wab": 4.5,
-                "wins": 24,
-                "losses": 8,
-            }
-            for t in teams
-        ]
-    }
-
-    roster_payload = {"timestamp": "2026-03-17T12:00:00Z", "teams": []}
-    for t in teams:
-        team_id = t["name"].lower().replace(" ", "_")
-        roster_payload["teams"].append(
-            {
-                "team_id": team_id,
-                "players": [
-                    {
-                        "player_id": f"{team_id}_p{i}",
-                        "name": f"{t['name']} P{i}",
-                        "position": ["PG", "SG", "SF", "PF", "C"][i % 5],
-                        "minutes_per_game": 32 - i,
-                        "games_played": 30,
-                        "games_started": max(0, 30 - i),
-                        "rapm_offensive": 0.8 - i * 0.03,
-                        "rapm_defensive": 0.6 - i * 0.02,
-                        "warp": 0.12 - i * 0.005,
-                        "box_plus_minus": 3.0 - i * 0.2,
-                        "usage_rate": 22 - i,
-                        "injury_status": "healthy",
-                        "is_transfer": i < 2,
-                        "eligibility_year": 3,
-                    }
-                    for i in range(10)
-                ],
-            }
-        )
-
-    public_picks = {
-        "teams": {
-            t["name"].lower().replace(" ", "_"): {
-                "team_name": t["name"],
-                "seed": t["seed"],
-                "region": t["region"],
-                "round_of_64_pct": 90 - t["seed"],
-                "round_of_32_pct": 70 - t["seed"],
-                "sweet_16_pct": 45 - t["seed"],
-                "elite_8_pct": 25 - t["seed"] * 0.8,
-                "final_four_pct": 12 - t["seed"] * 0.5,
-                "champion_pct": max(0.1, 6 - t["seed"] * 0.25),
-            }
-            for t in teams
-        },
-        "sources": ["espn", "yahoo", "cbs"],
-        "timestamp": "2026-03-17T12:00:00Z",
-    }
-
-    return {
-        "teams": {"teams": teams},
-        "torvik": torvik,
-        "rosters": roster_payload,
-        "public_picks": public_picks,
-    }
+_REAL_DATA_AVAILABLE = all(os.path.exists(p) for p in REAL_DATA_PATHS.values())
 
 
-def _write_payloads(tmp_path):
-    payloads = _build_fixture_payloads()
-    paths = {}
-    for key, payload in payloads.items():
-        p = tmp_path / f"{key}.json"
-        with open(p, "w") as f:
-            json.dump(payload, f)
-        paths[key] = str(p)
-    return paths
-
-
-def test_sota_pipeline_produces_rubric_artifacts(tmp_path):
-    paths = _write_payloads(tmp_path)
-
+@pytest.mark.skipif(not _REAL_DATA_AVAILABLE, reason="Real data files not present")
+def test_sota_pipeline_produces_rubric_artifacts():
     config = SOTAPipelineConfig(
+        year=2025,
         num_simulations=120,
         pool_size=64,
         calibration_method="isotonic",
-        teams_json=paths["teams"],
-        torvik_json=paths["torvik"],
-        roster_json=paths["rosters"],
-        public_picks_json=paths["public_picks"],
+        enforce_feed_freshness=False,
+        teams_json=REAL_DATA_PATHS["teams"],
+        torvik_json=REAL_DATA_PATHS["torvik"],
+        roster_json=REAL_DATA_PATHS["rosters"],
+        public_picks_json=REAL_DATA_PATHS["public_picks"],
+        historical_games_json=REAL_DATA_PATHS["historical_games"],
     )
     pipeline = SOTAPipeline(config)
 
@@ -165,17 +64,20 @@ def test_sota_pipeline_produces_rubric_artifacts(tmp_path):
         assert 0.0 <= pick["public_pick_percentage"] <= 1.0
 
 
+@pytest.mark.skipif(not _REAL_DATA_AVAILABLE, reason="Real data files not present")
 def test_sota_pipeline_output_file(tmp_path):
-    paths = _write_payloads(tmp_path)
     output_path = tmp_path / "sota_report.json"
 
     config = SOTAPipelineConfig(
+        year=2025,
         num_simulations=80,
         pool_size=20,
-        teams_json=paths["teams"],
-        torvik_json=paths["torvik"],
-        roster_json=paths["rosters"],
-        public_picks_json=paths["public_picks"],
+        enforce_feed_freshness=False,
+        teams_json=REAL_DATA_PATHS["teams"],
+        torvik_json=REAL_DATA_PATHS["torvik"],
+        roster_json=REAL_DATA_PATHS["rosters"],
+        public_picks_json=REAL_DATA_PATHS["public_picks"],
+        historical_games_json=REAL_DATA_PATHS["historical_games"],
     )
     pipeline = SOTAPipeline(config)
     report = pipeline.run()

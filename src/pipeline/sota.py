@@ -6,7 +6,7 @@ import json
 import math
 import random
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -167,6 +167,14 @@ class SOTAPipelineConfig:
     bracket_source: str = "auto"  # "auto", "bigdance", "sports_reference", or file path
     bracket_json: Optional[str] = None  # Pre-fetched bracket JSON path
 
+    # --- Late-season training cutoff (leakage fix: full-season features) ---
+    # Number of days before tournament start (March 14) to include in training.
+    # Games before this cutoff are excluded because their matchup features use
+    # end-of-season stats that weren't available at game time.
+    # Default 75 days (~January 1) keeps ~70% of regular-season games.
+    # Set to 0 to disable the cutoff (use all games with noise mitigation).
+    late_season_training_cutoff_days: int = 75
+
     # --- Tournament domain adaptation ---
     enable_tournament_adaptation: bool = True
     # Shrinkage toward 0.5 for tournament predictions.  Regular-season models
@@ -298,6 +306,18 @@ class SOTAPipeline:
         self.feature_selector: Optional[FeatureSelector] = None
         self.feature_selection_result: Optional[FeatureSelectionResult] = None
 
+        # Chronological split state: tracks which games belong to the
+        # validation era so that downstream methods (confidence estimation,
+        # calibration, ensemble weight optimization) use strictly held-out
+        # data.  Set by _train_baseline_model().
+        self._validation_game_ids: set = set()
+        # The chronological sort-key boundary: games with sort_key >= this
+        # value are in the validation era.
+        self._validation_sort_key_boundary: Optional[int] = None
+        # Pre-optimization CFA weights: snapshot taken before ensemble weight
+        # optimization so that calibration sees un-optimized fusion probs.
+        self._pre_optimization_cfa_weights: Optional[Dict[str, float]] = None
+
         # Injury integration state
         self.injury_severity_model = InjurySeverityModel(random_seed=self.config.random_seed)
         self.positional_depth_chart = PositionalDepthChart()
@@ -313,6 +333,43 @@ class SOTAPipeline:
             season=self.config.year,
             cache_dir=self.config.data_cache_dir,
             resolver=self.team_name_resolver,
+        )
+
+    def _compute_train_val_boundary(self, game_flows: Dict[str, List[GameFlow]]) -> None:
+        """Establish train/val chronological boundary BEFORE GNN and transformer training.
+
+        This must be called early in run() so that _construct_schedule_graph() and
+        _run_transformer() can restrict their training data to the training era,
+        preventing validation-era leakage into embeddings and graph structure.
+
+        Uses the same 80/20 chronological split logic that _train_baseline_model()
+        previously computed internally.  The boundary is stored in
+        self._validation_sort_key_boundary and reused by all downstream methods.
+        """
+        all_games = sorted(
+            [
+                g for g in self._unique_games(game_flows)
+                if not self._is_tournament_game(getattr(g, "game_date", "2026-01-01"))
+                and g.team1_id in self.feature_engineer.team_features
+                and g.team2_id in self.feature_engineer.team_features
+            ],
+            key=lambda g: (self._game_sort_key(getattr(g, "game_date", "2026-01-01")), g.game_id),
+        )
+
+        n_unique = len(all_games)
+        if n_unique < 25:
+            self._validation_sort_key_boundary = None
+            return
+
+        valid_count = max(5, int(0.2 * n_unique))
+        train_count = n_unique - valid_count
+        if train_count < 10:
+            self._validation_sort_key_boundary = None
+            return
+
+        boundary_game = all_games[train_count]
+        self._validation_sort_key_boundary = self._game_sort_key(
+            getattr(boundary_game, "game_date", "2026-01-01")
         )
 
     def run(self) -> Dict:
@@ -348,6 +405,10 @@ class SOTAPipeline:
                 games=g,
             )
             self.team_features[team_id] = features.to_vector(include_embeddings=False)
+
+        # Compute train/val boundary BEFORE GNN and transformer training so
+        # they can restrict their data to training-era games only.
+        self._compute_train_val_boundary(game_flows)
 
         schedule_graph = self._construct_schedule_graph(teams)
         adjacency = schedule_graph.get_adjacency_matrix(weighted=True)
@@ -690,6 +751,25 @@ class SOTAPipeline:
         torvik_map: Dict[str, Dict] = {}
         proprietary_map: Dict[str, Dict] = {}
 
+        # Build prefix lookup for proprietary result keys that may include
+        # mascot suffixes (e.g. "duke_blue_devils" for tournament team "duke").
+        _prop_keys_by_len = sorted(proprietary_results.keys(), key=len, reverse=True)
+        _prop_prefix_cache: Dict[str, Optional[str]] = {}
+
+        def _resolve_proprietary(short_key: str):
+            """Resolve short tournament key to mascot-suffixed proprietary key."""
+            if short_key in proprietary_results:
+                return proprietary_results[short_key]
+            if short_key in _prop_prefix_cache:
+                cached = _prop_prefix_cache[short_key]
+                return proprietary_results.get(cached) if cached else None
+            for pk in _prop_keys_by_len:
+                if pk.startswith(short_key + "_") or pk.startswith(short_key):
+                    _prop_prefix_cache[short_key] = pk
+                    return proprietary_results[pk]
+            _prop_prefix_cache[short_key] = None
+            return None
+
         for team in teams:
             team_id = self._team_id(team.name)
             key = self._normalize_key(team_id)
@@ -733,15 +813,13 @@ class SOTAPipeline:
                     "conf_losses": data.get("conf_losses", 0),
                 }
 
-            # Map proprietary metrics by team_id
-            pm = proprietary_results.get(key)
+            # Map proprietary metrics by team_id (with prefix matching for
+            # mascot-suffixed keys like "duke_blue_devils" → "duke").
+            pm = _resolve_proprietary(key)
+            if pm is None:
+                pm = _resolve_proprietary(team_id)
             if pm is not None:
                 proprietary_map[team_id] = pm.to_dict()
-            else:
-                # Try matching by normalized team_id directly
-                pm = proprietary_results.get(team_id)
-                if pm is not None:
-                    proprietary_map[team_id] = pm.to_dict()
 
         # Backfill from Sports Reference if available
         if self.config.sports_reference_json:
@@ -1013,12 +1091,16 @@ class SOTAPipeline:
         for team_id in team_ids:
             graph.set_team_features(team_id, self.team_features.get(team_id, default_features))
 
-        # Filter out tournament games to prevent leakage — the GNN graph
-        # should only contain regular-season results available before the
-        # tournament starts.
+        # Filter out tournament games AND validation-era games to prevent
+        # leakage — the GNN graph should only contain regular-season results
+        # from the training era.  Validation-era edges would let the GNN
+        # learn from outcomes it is later evaluated on (Issue 2).
+        boundary = self._validation_sort_key_boundary
         pre_tournament_games = [
             g for g in self.all_game_flows
             if not self._is_tournament_game(getattr(g, "game_date", "2026-01-01"))
+            and (boundary is None
+                 or self._game_sort_key(getattr(g, "game_date", "2026-01-01")) < boundary)
         ]
 
         seen_games = set()
@@ -1064,6 +1146,25 @@ class SOTAPipeline:
             if not self._is_tournament_game(getattr(g, "game_date", "2026-01-01"))
         ]
 
+        # Issue 1: Late-season cutoff — exclude early-season games where
+        # full-season features are a poor approximation of point-in-time
+        # features.  Games after the cutoff have features close enough to
+        # the end-of-season snapshot to be useful.
+        all_games_uncutoff = list(all_games)  # preserve for fallback
+        if self.config.late_season_training_cutoff_days > 0:
+            tournament_start = date(self.config.year, 3, 14)
+            cutoff_date = tournament_start - timedelta(days=self.config.late_season_training_cutoff_days)
+            cutoff_key = self._game_sort_key(cutoff_date.isoformat())
+            all_games = [
+                g for g in all_games
+                if self._game_sort_key(getattr(g, "game_date", "2026-01-01")) >= cutoff_key
+            ]
+            # Fallback: if cutoff removes too many games, revert.
+            # Threshold raised from 50 to 80 so the cutoff reverts less
+            # aggressively — reverting reintroduces early-season leakage.
+            if len(all_games) < 80:
+                all_games = all_games_uncutoff
+
         for game in all_games:
             if game.team1_id not in self.feature_engineer.team_features:
                 continue
@@ -1086,21 +1187,57 @@ class SOTAPipeline:
         y_full = np.array([s[2] for s in samples], dtype=int)
         sort_keys_full = np.array([s[0] for s in samples])
 
+        # FIX #3 state: store sort keys for point-in-time noise (applied
+        # to training split only, after the train/val split below).
+        _pit_sort_keys = sort_keys_full.copy()
+
         # ====================================================================
         # LEAKAGE-SAFE ORDERING: split into train/val FIRST, then fit feature
         # selection and hyperparameter tuning on TRAINING data only.  This
         # prevents the validation set from influencing feature selection,
         # importance ranking, correlation pruning, or Optuna search.
+        #
+        # FIX #A: Symmetric sample pairs (original + reversed) must stay
+        # together during train/val splits — they share the same game_key.
+        # Splitting between a pair leaks one orientation into training and
+        # the other into validation, inflating eval accuracy since the model
+        # saw the same game (just reversed).  Force split on EVEN boundaries
+        # so paired samples (indices 2k, 2k+1) always land in the same set.
+        # Report n_unique_games = n // 2 as the true effective sample size.
         # ====================================================================
         n = len(y_full)
+        n_unique_games = n // 2  # Each game produces 2 samples
         train_samples = n
         valid_samples = 0
-        if n >= 50:
-            valid_samples = max(10, int(0.2 * n))
-            train_samples = n - valid_samples
+
+        # Reuse the pre-computed train/val boundary from
+        # _compute_train_val_boundary() (called early in run()).  This
+        # ensures GNN, transformer, and baseline all share the same
+        # chronological split.
+        if self._validation_sort_key_boundary is not None and n >= 50:
+            boundary = self._validation_sort_key_boundary
+            # Find the first sample index at or past the boundary.
+            # Align to even index so symmetric pairs stay together.
+            split_idx = n  # default: all training
+            for i in range(0, n, 2):  # step by 2 for pair alignment
+                if sort_keys_full[i] >= boundary:
+                    split_idx = i
+                    break
+            train_samples = split_idx
+            valid_samples = n - split_idx
             if train_samples < 20:
+                # Not enough training data — use everything
                 train_samples = n
                 valid_samples = 0
+        elif n >= 50:
+            # Fallback: no pre-computed boundary — use 80/20 split
+            valid_games = max(5, int(0.2 * n_unique_games))
+            train_games = n_unique_games - valid_games
+            if train_games < 10:
+                train_games = n_unique_games
+                valid_games = 0
+            train_samples = train_games * 2  # Pairs
+            valid_samples = valid_games * 2
 
         train_X = X_full[:train_samples]
         train_y = y_full[:train_samples]
@@ -1109,8 +1246,45 @@ class SOTAPipeline:
             eval_X = X_full[train_samples:]
             eval_y = y_full[train_samples:]
         else:
-            eval_X = train_X
-            eval_y = train_y
+            # FIX #6: Never use training data as eval — it inflates
+            # confidence metrics and causes downstream leakage.  When we
+            # can't split, we leave eval empty and skip eval-dependent steps.
+            eval_X = np.empty((0, X_full.shape[1]))
+            eval_y = np.array([], dtype=int)
+
+        # ====================================================================
+        # FIX #3: POINT-IN-TIME FEATURE MITIGATION
+        #
+        # Team features are computed from full-season data, but training
+        # samples include early-season games whose matchup vectors thus
+        # "peek" at end-of-season quality.  True point-in-time features
+        # would require per-game metric snapshots (not available).
+        #
+        # Mitigation: inject Gaussian noise into TRAINING-ERA feature
+        # vectors only, scaled by how early in the season the game occurred.
+        # Early-season games get more noise (more "future" information
+        # leaked), late-season games get almost none.  This prevents the
+        # model from fitting to the precise end-of-season features for
+        # games where those features weren't yet observable.
+        # Validation data is left untouched — it represents the prediction
+        # scenario where we DO have full-season features available.
+        # ====================================================================
+        if train_samples > 0:
+            train_keys = _pit_sort_keys[:train_samples]
+            min_key = int(train_keys[0])
+            max_key = int(train_keys[-1])
+            season_span = max(max_key - min_key, 1)
+            progress = (train_keys - min_key).astype(float) / season_span
+            # Noise scaled by fraction of season remaining (sqrt-dampened).
+            # A game at 50% through the season has ~50% future info baked in;
+            # sqrt dampening ensures late-season games still get some noise
+            # (they still have ~10-20% future information in their features).
+            # Increased base from 0.05 to 0.08 to better reflect the magnitude
+            # of end-of-season feature contamination in mid-season games.
+            season_remaining = 1.0 - progress
+            pit_noise_scale = 0.08 * np.sqrt(season_remaining)
+            pit_noise = self.rng.standard_normal(train_X.shape) * pit_noise_scale[:, np.newaxis]
+            train_X = train_X + pit_noise
 
         # --- Feature selection (fit on TRAINING data only) ---
         feature_names = None
@@ -1334,6 +1508,13 @@ class SOTAPipeline:
         # out-of-fold predictions of the base learners. This captures
         # non-linear complementarity between models that simple weighted
         # averaging misses.
+        #
+        # FIX: Stacking fold models now use the SAME tuned hyperparameters
+        # as the primary models.  Previously fold models used default params
+        # (num_rounds=200, C=1.0), creating a train/inference distribution
+        # shift: the meta-learner learned to combine one distribution of
+        # base-model outputs but at inference received predictions from
+        # Optuna-tuned models with different characteristics.
         # ====================================================================
         if (
             self.config.enable_stacking
@@ -1342,10 +1523,34 @@ class SOTAPipeline:
             and valid_samples >= 20
         ):
             # Build stacking meta-features from OUT-OF-FOLD predictions
-            # Use temporal CV on training data to generate unbiased base-learner predictions
-            stacking_cv = TemporalCrossValidator(n_splits=min(3, self.config.temporal_cv_splits))
+            # Use temporal CV on training data to generate unbiased base-learner predictions.
+            # FIX #A: pair_size=2 keeps symmetric sample pairs together across folds.
+            stacking_cv = TemporalCrossValidator(n_splits=min(3, self.config.temporal_cv_splits), pair_size=2)
             oof_preds = {name: np.full(train_samples, 0.5) for name, _, _ in trained_models}
             oof_counts = np.zeros(train_samples)
+
+            # Extract tuned hyperparameters from primary models so fold models
+            # match the inference-time distribution the meta-learner will see.
+            _tuned_lgb_params = None
+            _tuned_lgb_rounds = 200
+            _tuned_xgb_params = None
+            _tuned_xgb_rounds = 200
+            _tuned_logit_params = {"C": 1.0, "penalty": "l2"}
+            for name, model, _ in trained_models:
+                if name == "lgb" and hasattr(model, 'params'):
+                    _tuned_lgb_params = model.params
+                    # Recover num_rounds from tuning result if available
+                    if tuning_stats.get("lightgbm", {}).get("best_params"):
+                        _tuned_lgb_rounds = tuning_stats["lightgbm"]["best_params"].get("num_rounds", 200)
+                elif name == "xgb" and hasattr(model, 'params'):
+                    _tuned_xgb_params = model.params
+                    if tuning_stats.get("xgboost", {}).get("best_params"):
+                        _tuned_xgb_rounds = tuning_stats["xgboost"]["best_params"].get("num_rounds", 200)
+                elif name == "logit" and hasattr(model, 'C'):
+                    _tuned_logit_params = {
+                        "C": model.C,
+                        "penalty": model.penalty if hasattr(model, 'penalty') else "l2",
+                    }
 
             for split in stacking_cv.split(train_samples, train_sort_keys):
                 X_tr_fold = train_X[split.train_indices]
@@ -1354,16 +1559,20 @@ class SOTAPipeline:
 
                 for name, model_template, _ in trained_models:
                     if name == "lgb":
-                        fold_model = LightGBMRanker(params=model_template.params if hasattr(model_template, 'params') else None)
-                        fold_model.train(X_tr_fold, y_tr_fold, feature_names=feature_names, num_rounds=200)
+                        fold_model = LightGBMRanker(params=_tuned_lgb_params)
+                        fold_model.train(X_tr_fold, y_tr_fold, feature_names=feature_names, num_rounds=_tuned_lgb_rounds)
                         fold_preds = fold_model.predict(X_val_fold)
                     elif name == "xgb":
-                        fold_model = XGBoostRanker(params=model_template.params if hasattr(model_template, 'params') else None)
-                        fold_model.train(X_tr_fold, y_tr_fold, feature_names=feature_names, num_rounds=200)
+                        fold_model = XGBoostRanker(params=_tuned_xgb_params)
+                        fold_model.train(X_tr_fold, y_tr_fold, feature_names=feature_names, num_rounds=_tuned_xgb_rounds)
                         fold_preds = fold_model.predict(X_val_fold)
                     elif name == "logit":
+                        solver = "saga" if _tuned_logit_params["penalty"] == "l1" else "lbfgs"
                         fold_model = LogisticRegression(
-                            C=1.0, penalty="l2", max_iter=2000,
+                            C=_tuned_logit_params["C"],
+                            penalty=_tuned_logit_params["penalty"],
+                            solver=solver,
+                            max_iter=2000,
                             random_state=self.config.random_seed,
                         )
                         fold_model.fit(X_tr_fold, y_tr_fold)
@@ -1413,9 +1622,13 @@ class SOTAPipeline:
 
         self.tuning_result = tuning_stats if tuning_stats else None
 
-        y_pred = self.baseline_model.predict_proba_batch(eval_X)
-        brier = float(np.mean((y_pred - eval_y) ** 2))
-        self.model_confidence["baseline"] = float(np.clip(1.0 - brier, 0.05, 0.95))
+        # FIX #6 (cont.): Only compute baseline confidence from genuine
+        # validation data; keep the conservative default (0.5) otherwise.
+        brier = 0.25  # uninformative default
+        if valid_samples > 0:
+            y_pred = self.baseline_model.predict_proba_batch(eval_X)
+            brier = float(np.mean((y_pred - eval_y) ** 2))
+            self.model_confidence["baseline"] = float(np.clip(1.0 - brier, 0.05, 0.95))
 
         # --- Ensemble weight optimization (on HELD-OUT validation data only) ---
         ensemble_weight_stats = {}
@@ -1442,9 +1655,14 @@ class SOTAPipeline:
 
         result = {
             "model": baseline_name,
+            # FIX #A: Report unique games (true effective sample size),
+            # not doubled symmetric-pair count.
+            "unique_games": int(n_unique_games),
             "samples": int(n),
             "train_samples": int(train_samples),
+            "train_unique_games": int(train_samples // 2),
             "validation_samples": int(valid_samples),
+            "validation_unique_games": int(valid_samples // 2),
             "features": int(train_X.shape[1]),
             "brier": brier,
         }
@@ -1466,30 +1684,45 @@ class SOTAPipeline:
         eval_y: np.ndarray,
     ) -> str:
         """Select the best single model by validation Brier score and set it as primary."""
+        if not trained_models:
+            return "none"
+
         best_name = "none"
         best_brier = float("inf")
+
+        # FIX #6 (cont.): When eval_y is empty (no validation split), we
+        # cannot evaluate models.  Default to the first trained model rather
+        # than computing Brier on an empty array.
+        if len(eval_y) == 0:
+            name, model, _ = trained_models[0]
+            self._set_primary_model(name, model)
+            name_map = {"lgb": "lightgbm", "xgb": "xgboost", "logit": "logistic_regression"}
+            return name_map.get(name, name)
 
         for name, model, eval_preds in trained_models:
             brier = float(np.mean((eval_preds - eval_y) ** 2))
             if brier < best_brier:
                 best_brier = brier
                 best_name = name
-
-                if name == "lgb":
-                    self.baseline_model.lgb_model = model
-                    self.baseline_model.xgb_model = None
-                    self.baseline_model.logit_model = None
-                elif name == "xgb":
-                    self.baseline_model.xgb_model = model
-                    self.baseline_model.lgb_model = None
-                    self.baseline_model.logit_model = None
-                elif name == "logit":
-                    self.baseline_model.logit_model = model
-                    self.baseline_model.lgb_model = None
-                    self.baseline_model.xgb_model = None
+                self._set_primary_model(name, model)
 
         name_map = {"lgb": "lightgbm", "xgb": "xgboost", "logit": "logistic_regression"}
         return name_map.get(best_name, best_name)
+
+    def _set_primary_model(self, name: str, model) -> None:
+        """Set a single model as the primary baseline predictor."""
+        if name == "lgb":
+            self.baseline_model.lgb_model = model
+            self.baseline_model.xgb_model = None
+            self.baseline_model.logit_model = None
+        elif name == "xgb":
+            self.baseline_model.xgb_model = model
+            self.baseline_model.lgb_model = None
+            self.baseline_model.logit_model = None
+        elif name == "logit":
+            self.baseline_model.logit_model = model
+            self.baseline_model.lgb_model = None
+            self.baseline_model.xgb_model = None
 
     # ------------------------------------------------------------------
     # P0: Leave-One-Year-Out Cross-Validation (multi-year validation)
@@ -1762,11 +1995,25 @@ class SOTAPipeline:
             data = graph.to_pyg_data(feature_dim=feat_dim)
             edge_weight = data.edge_attr.squeeze(1) if data.edge_attr is not None else None
 
+            # FIX: GNN transductive target leakage — only provide supervised
+            # AdjEM targets for teams that appear in training-era games (the
+            # graph edges).  Teams that appear in the graph's node list but have
+            # NO training-era edges are validation-era-only; setting their target
+            # to 0.0 (league average) prevents the GNN from learning their
+            # end-of-season strength from leaked labels.
+            training_era_teams = set()
+            for edge in graph.edges:
+                training_era_teams.add(edge.team1_id)
+                training_era_teams.add(edge.team2_id)
+
             target = []
             for idx in range(graph.n_teams):
                 team_id = graph.idx_to_team[idx]
                 feats = self.feature_engineer.team_features.get(team_id)
-                target.append((feats.adj_efficiency_margin / 30.0) if feats is not None else 0.0)
+                if feats is not None and team_id in training_era_teams:
+                    target.append(feats.adj_efficiency_margin / 30.0)
+                else:
+                    target.append(0.0)  # league-average prior for non-training teams
             y = torch.tensor(target, dtype=torch.float32).unsqueeze(1)
 
             gcn = ScheduleGCN(input_dim=data.x.shape[1], hidden_dim=48, output_dim=16, num_layers=3)
@@ -1841,11 +2088,15 @@ class SOTAPipeline:
 
         for team_id, games in game_flows.items():
             embeddings: List[GameEmbedding] = []
-            # Filter out tournament games to prevent leakage — the transformer
-            # should only learn from regular-season sequences.
+            # Filter out tournament games AND validation-era games to prevent
+            # leakage — the transformer should only learn from training-era
+            # regular-season sequences (Issue 3).
+            boundary = self._validation_sort_key_boundary
             pre_tournament = [
                 g for g in games
                 if not self._is_tournament_game(getattr(g, "game_date", "2026-01-01"))
+                and (boundary is None
+                     or self._game_sort_key(getattr(g, "game_date", "2026-01-01")) < boundary)
             ]
             ordered_games = sorted(
                 pre_tournament,
@@ -1969,44 +2220,57 @@ class SOTAPipeline:
         }
 
     def _fit_calibration(self, game_flows: Dict[str, List[GameFlow]]) -> Dict:
+        """Fit calibration on validation-era games with un-optimized weights.
+
+        FIX #5: Temporarily restores pre-optimization CFA weights while
+        generating calibration probabilities.  This prevents the calibrator
+        from seeing predictions whose ensemble weights were already tuned to
+        the same data — which would make them appear better-calibrated than
+        they are on truly unseen data.
+        """
         probs = []
         outcomes = []
+
+        # FIX #5: Temporarily restore pre-optimization CFA weights so that
+        # calibration sees "honest" fusion probabilities.
+        optimized_weights = None
+        if self._pre_optimization_cfa_weights is not None:
+            optimized_weights = dict(self.cfa.base_weights)
+            self.cfa.base_weights = dict(self._pre_optimization_cfa_weights)
+
+        # Issue 5: Use slice 2 of the 3-way validation split so calibration
+        # does NOT overlap with embedding projections (slice 0) or ensemble
+        # weight optimization (slice 1).
+        calibration_games = self._get_validation_era_games_slice(game_flows, slice_index=2, n_slices=3)
+
         unique_games = self._unique_games(game_flows)
-        unique_games = sorted(
+        unique_games_sorted = sorted(
             unique_games,
             key=lambda g: (self._game_sort_key(getattr(g, "game_date", "2026-01-01")), g.game_id),
         )
-
-        # P2: Filter out tournament games (after Selection Sunday ~mid-March)
-        # to prevent calibrating on the very outcomes we're trying to predict.
-        # NEVER fall back to including tournament games — that is data leakage.
         regular_season_games = [
-            g for g in unique_games
+            g for g in unique_games_sorted
             if not self._is_tournament_game(getattr(g, "game_date", "2026-01-01"))
         ]
-
-        # Only use the chronologically LAST portion of games for calibration.
-        # The baseline model was trained on the first ~80% of games, so
-        # predictions on those games are overfit.  Calibrating on overfit
-        # predictions teaches the calibrator that the model is better-calibrated
-        # than it actually is.  We restrict to the validation-era games where
-        # predictions are genuinely held-out.
-        n_cal = len(regular_season_games)
-        cal_start = max(0, n_cal - max(10, int(0.2 * n_cal)))
-        calibration_games = regular_season_games[cal_start:]
 
         for g in calibration_games:
             if g.team1_id not in self.feature_engineer.team_features:
                 continue
             if g.team2_id not in self.feature_engineer.team_features:
                 continue
-            # P1: Apply tighter pre-calibration clipping to prevent catastrophic
-            # log loss from overconfident predictions (e.g., 1-seed vs 16-seed upsets).
             p = self._raw_fusion_probability(g.team1_id, g.team2_id)
+            # Apply tournament adaptation BEFORE calibration fitting so the
+            # calibrator trains on the same distribution it will see at inference.
+            if self.config.enable_tournament_adaptation:
+                p = self._tournament_adapt(p, g.team1_id, g.team2_id)
             p = float(np.clip(p, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
             o = 1 if (g.lead_history and g.lead_history[-1] > 0) else 0
             probs.append(p)
             outcomes.append(o)
+
+        # FIX #5: Restore optimized weights now that calibration data is generated.
+        if optimized_weights is not None:
+            self.cfa.base_weights = optimized_weights
 
         if len(probs) < 20:
             self.calibration_pipeline = None
@@ -2048,6 +2312,45 @@ class SOTAPipeline:
             test_p = p_arr[-10:]
             test_y = y_arr[-10:]
 
+        # Bootstrap CI for temperature scaling: if the 95% CI for T includes
+        # 1.0 (the identity), calibration is not statistically justified and
+        # we skip it.  This prevents fitting noise when the calibration sample
+        # is too small to distinguish T from 1.0.
+        from ..ml.calibration.calibration import TemperatureScaling
+        bootstrap_info = {}
+        if self.config.calibration_method == "temperature" and len(train_p) >= 20:
+            ts_check = TemperatureScaling()
+            T_lo, T_hi, T_vals = ts_check.bootstrap_ci(
+                train_p, train_y,
+                n_bootstrap=200,
+                ci_level=0.95,
+                random_seed=self.config.random_seed,
+            )
+            bootstrap_info = {
+                "bootstrap_T_lower": round(T_lo, 4),
+                "bootstrap_T_upper": round(T_hi, 4),
+                "bootstrap_T_median": round(float(np.median(T_vals)), 4),
+                "bootstrap_T_std": round(float(np.std(T_vals)), 4),
+                "ci_includes_identity": T_lo <= 1.0 <= T_hi,
+            }
+            if T_lo <= 1.0 <= T_hi:
+                # CI includes T=1.0 → calibration is indistinguishable from
+                # identity; skip to avoid fitting noise.
+                self.calibration_pipeline = None
+                pre_metrics = calculate_calibration_metrics(test_p, test_y)
+                calibration_info = {
+                    "method": "none_bootstrap_ci_includes_identity",
+                    "samples": len(probs),
+                    "tournament_games_filtered": len(unique_games) - len(regular_season_games),
+                    "brier_before": float(pre_metrics.brier_score),
+                    "brier_after": float(pre_metrics.brier_score),
+                    "ece_before": float(pre_metrics.expected_calibration_error),
+                    "ece_after": float(pre_metrics.expected_calibration_error),
+                    "pre_calibration_clip": [self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi],
+                    **bootstrap_info,
+                }
+                return calibration_info
+
         # P1: Use temperature scaling as default for small-data robustness.
         # Temperature scaling has only 1 parameter (vs 2 for Platt, N for isotonic)
         # and specifically targets the overconfidence problem.
@@ -2066,6 +2369,8 @@ class SOTAPipeline:
             "ece_after": float(post.expected_calibration_error),
             "pre_calibration_clip": [self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi],
         }
+        if bootstrap_info:
+            calibration_info.update(bootstrap_info)
 
         # Add temperature value if using temperature scaling
         if self.config.calibration_method == "temperature" and hasattr(self.calibration_pipeline.calibrator, "temperature"):
@@ -2299,15 +2604,40 @@ class SOTAPipeline:
         return list(unique.values())
 
     def _estimate_model_confidence_intervals(self, game_flows: Dict[str, List[GameFlow]]) -> Dict[str, Dict[str, float]]:
-        games = self._unique_games(game_flows)
+        """DIAGNOSTIC ONLY: Estimate model confidence intervals on validation data.
+
+        This method evaluates all three models on validation-era games and
+        computes bootstrap Brier CIs.  It does NOT set self.model_confidence
+        to prevent leakage: confidence scores used by CFA must come from each
+        model's training process (training loss / OOF Brier), not from
+        validation-era evaluation.  If validation-era Brier were used for
+        confidence, it would leak validation data into CFA base weights that
+        are later optimized on a subset of the same validation era.
+        """
+        all_games = sorted(
+            [
+                g for g in self._unique_games(game_flows)
+                if not self._is_tournament_game(getattr(g, "game_date", "2026-01-01"))
+                and g.team1_id in self.feature_engineer.team_features
+                and g.team2_id in self.feature_engineer.team_features
+            ],
+            key=lambda g: (self._game_sort_key(getattr(g, "game_date", "2026-01-01")), g.game_id),
+        )
+
+        # Only use validation-era games (after the baseline training split)
+        if self._validation_sort_key_boundary is not None:
+            games = [
+                g for g in all_games
+                if self._game_sort_key(getattr(g, "game_date", "2026-01-01")) >= self._validation_sort_key_boundary
+            ]
+        else:
+            # No validation split available — cannot estimate confidence
+            # without risking leakage.  Keep conservative defaults.
+            return {}
+
         model_preds = {"baseline": [], "gnn": [], "transformer": []}
         outcomes = []
         for g in games:
-            if g.team1_id not in self.feature_engineer.team_features:
-                continue
-            if g.team2_id not in self.feature_engineer.team_features:
-                continue
-
             outcome = 1 if (g.lead_history and g.lead_history[-1] > 0) else 0
             outcomes.append(outcome)
 
@@ -2331,13 +2661,16 @@ class SOTAPipeline:
             center, lo, hi = self._bootstrap_brier_interval(p, y)
             width = max(0.0, hi - lo)
             confidence = float(np.clip(1.0 - (center + width), 0.1, 0.95))
-            self.model_confidence[model_name] = confidence
+            # NOTE: Do NOT set self.model_confidence here — that would leak
+            # validation-era data into CFA base weights.  Confidence is set
+            # by each model's training process: GNN/transformer from training
+            # loss, baseline from validation Brier at line 1574.
             stats[model_name] = {
                 "brier": float(center),
                 "brier_ci_low": float(lo),
                 "brier_ci_high": float(hi),
                 "ci_width": float(width),
-                "confidence": confidence,
+                "confidence_diagnostic": confidence,
             }
         self.model_uncertainty = stats
         return stats
@@ -2681,32 +3014,19 @@ class SOTAPipeline:
         """
         Optimize CFA ensemble weights on held-out validation data only.
 
-        This prevents the ensemble weights from overfitting to the training set.
-        We generate predictions from all three models on validation samples and
-        find the weight combination that minimizes Brier score on those
-        held-out outcomes.
+        Uses slice 1 of the 3-way validation split (Issue 5).  Slice 0 is
+        used for embedding projections; slice 2 for calibration.
+        FIX #5: Snapshots pre-optimization CFA weights before applying new ones,
+        so that calibration can generate predictions with un-optimized weights.
         """
-        # Use the held-out validation data to generate model predictions
+        # Snapshot current CFA weights BEFORE optimization (Fix #5)
+        self._pre_optimization_cfa_weights = dict(self.cfa.base_weights)
+
         model_preds: Dict[str, List[float]] = {"baseline": [], "gnn": [], "transformer": []}
         outcomes: List[int] = []
 
-        # Get validation games — use the SAME chronological split as baseline
-        # training to prevent data leakage from misaligned validation sets.
-        # Also exclude tournament games from ensemble weight optimization.
-        all_games = sorted(
-            self._unique_games(game_flows),
-            key=lambda g: (self._game_sort_key(getattr(g, "game_date", "2026-01-01")), g.game_id),
-        )
-        valid_games = [
-            g for g in all_games
-            if g.team1_id in self.feature_engineer.team_features
-            and g.team2_id in self.feature_engineer.team_features
-            and not self._is_tournament_game(getattr(g, "game_date", "2026-01-01"))
-        ]
-        n_games = len(valid_games)
-        # Take last 20% of games (matching the pipeline's chronological val split)
-        val_start = max(0, n_games - max(10, int(0.2 * n_games)))
-        val_games = valid_games[val_start:]
+        # Issue 5: Use slice 1 of the 3-way validation split.
+        val_games = self._get_validation_era_games_slice(game_flows, slice_index=1, n_slices=3)
 
         for g in val_games:
             outcome = 1 if (g.lead_history and g.lead_history[-1] > 0) else 0
@@ -2727,7 +3047,7 @@ class SOTAPipeline:
         if len(outcomes) < 10:
             return {}
 
-        optimizer = EnsembleWeightOptimizer(step=0.05, min_weight=0.05)
+        optimizer = EnsembleWeightOptimizer(step=0.05, min_weight=0.05, random_seed=self.config.random_seed)
         pred_arrays = {name: np.array(preds) for name, preds in model_preds.items()}
         best_weights, best_brier = optimizer.optimize(pred_arrays, np.array(outcomes))
 
@@ -2766,14 +3086,18 @@ class SOTAPipeline:
 
     def predict_probability(self, team1_id: str, team2_id: str) -> float:
         raw = self._raw_fusion_probability(team1_id, team2_id)
+
+        # Tournament domain adaptation BEFORE calibration: shrink toward 0.5
+        # to account for neutral-court, single-elimination, higher-variance
+        # context.  Applied pre-calibration so that temperature scaling learns
+        # to correct the tournament-adapted probabilities rather than having
+        # its calibration undone by post-hoc adjustments.
+        if self.config.enable_tournament_adaptation:
+            raw = self._tournament_adapt(raw, team1_id, team2_id)
+
         if self.calibration_pipeline:
             calibrated = float(self.calibration_pipeline.calibrate(np.array([raw]))[0])
             raw = float(np.clip(calibrated, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
-
-        # Tournament domain adaptation: shrink toward 0.5 to account for
-        # neutral-court, single-elimination, higher-variance context.
-        if self.config.enable_tournament_adaptation:
-            raw = self._tournament_adapt(raw, team1_id, team2_id)
 
         return raw
 
@@ -2849,20 +3173,17 @@ class SOTAPipeline:
         score = np.clip(score, -6.0, 6.0)
         return 1.0 / (1.0 + math.exp(-score))
 
-    def _train_embedding_projections(
+    def _get_validation_era_games(
         self,
         game_flows: Dict[str, List[GameFlow]],
-    ) -> Dict[str, float]:
-        """Train logistic models that map embedding pairs to win probability.
+    ) -> List[GameFlow]:
+        """Return chronologically-sorted validation-era regular-season games.
 
-        Uses validation-era regular-season games (last 20%) to learn a
-        projection from (v1−v2, v1*v2) → P(team1 wins).  This replaces the
-        naive np.mean() collapse that destroyed embedding information.
+        These are games at or after _validation_sort_key_boundary, excluding
+        tournament games, with both teams having features.  Used by embedding
+        projection training, ensemble weight optimization, and calibration to
+        draw from non-overlapping slices.
         """
-        stats: Dict[str, float] = {}
-        if not SKLEARN_AVAILABLE:
-            return stats
-
         all_games = sorted(
             [
                 g
@@ -2878,13 +3199,76 @@ class SOTAPipeline:
                 g.game_id,
             ),
         )
-
-        # Use last 30% as training data for embedding projection
+        if self._validation_sort_key_boundary is not None:
+            return [
+                g for g in all_games
+                if self._game_sort_key(getattr(g, "game_date", "2026-01-01"))
+                >= self._validation_sort_key_boundary
+            ]
+        # Fallback: use last 20% (same as before)
         n = len(all_games)
-        if n < 40:
+        start = max(0, n - max(10, int(0.2 * n)))
+        return all_games[start:]
+
+    def _get_validation_era_games_slice(
+        self,
+        game_flows: Dict[str, List[GameFlow]],
+        slice_index: int,
+        n_slices: int = 3,
+    ) -> List[GameFlow]:
+        """Return a specific chronological slice of validation-era games.
+
+        Splits validation games into ``n_slices`` non-overlapping
+        chronological slices to prevent data overlap between:
+          slice 0: embedding projection training
+          slice 1: ensemble weight optimization
+          slice 2: calibration
+
+        If there are too few games for a 3-way split (< 30), falls back
+        to a 2-way split: slice 0 for embeddings, slice 2 for calibration,
+        and an empty list for slice 1 (ensemble weight optimization skipped).
+        """
+        all_val = self._get_validation_era_games(game_flows)
+        n = len(all_val)
+
+        # Fallback for small validation sets
+        if n < n_slices * 10:
+            if n_slices == 3:
+                mid = n // 2
+                if slice_index == 0:
+                    return all_val[:mid]
+                elif slice_index == 2:
+                    return all_val[mid:]
+                else:
+                    return []  # skip ensemble weight optimization
+            # Generic fallback
+            return all_val if slice_index == 0 else []
+
+        slice_size = n // n_slices
+        start = slice_index * slice_size
+        if slice_index == n_slices - 1:
+            end = n  # last slice gets remainder
+        else:
+            end = start + slice_size
+        return all_val[start:end]
+
+    def _train_embedding_projections(
+        self,
+        game_flows: Dict[str, List[GameFlow]],
+    ) -> Dict[str, float]:
+        """Train logistic models that map embedding pairs to win probability.
+
+        Uses slice 0 of the 3-way validation split.  Slices 1 and 2 are
+        reserved for ensemble weight optimization and calibration
+        respectively, preventing any data overlap (Issue 5).
+        """
+        stats: Dict[str, float] = {}
+        if not SKLEARN_AVAILABLE:
             return stats
-        start = max(0, n - max(20, int(0.3 * n)))
-        train_games = all_games[start:]
+
+        train_games = self._get_validation_era_games_slice(game_flows, slice_index=0, n_slices=3)
+        if len(train_games) < 10:
+            return stats
 
         for emb_name, embeddings in [
             ("gnn", self.gnn_embeddings),
