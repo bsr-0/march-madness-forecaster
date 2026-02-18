@@ -17,11 +17,15 @@ class SimulationConfig:
     """Configuration for Monte Carlo simulation."""
 
     num_simulations: int = 50000
-    noise_std: float = 0.05  # Standard deviation of probability noise
+    noise_std: float = 0.04  # Logit-space noise std (calibrated to ~3-4% prob shift)
     injury_probability: float = 0.02  # Per-game injury probability
     random_seed: Optional[int] = None
     parallel_workers: int = None  # None = use all CPUs
     batch_size: int = 1000  # Simulations per batch
+    # Regional correlation: games within a region share a latent factor
+    # that models "upset-friendly" regions (e.g., if a Cinderella emerges,
+    # more upsets become likely in the same region).
+    regional_correlation: float = 0.25  # Intra-regional correlation strength
 
     def __post_init__(self):
         if self.parallel_workers is None:
@@ -116,12 +120,19 @@ def _run_batch(
     matchup_probs: Dict[Tuple[str, str], float],
     noise_std: float,
     injury_probability: float,
+    regional_correlation: float = 0.25,
 ) -> List[Dict]:
     """
-    Run a batch of simulations in a subprocess.
+    Run a batch of correlated tournament simulations in a subprocess.
 
-    This is a module-level function so it can be pickled for
-    ProcessPoolExecutor.
+    Key improvements over naive independent simulation:
+    1. Correlated regional factors — games within a region share a latent
+       "upset-friendliness" factor drawn from N(0, regional_correlation).
+    2. Noise applied in logit space (not probability space) — preserves
+       proper probability behavior near 0 and 1.
+    3. No double strength adjustment — pre-computed matchup probabilities
+       already incorporate all strength information.
+    4. Injury modeled as per-team logit shift (severity-aware).
 
     Args:
         batch_size: Number of simulations to run
@@ -129,8 +140,9 @@ def _run_batch(
         first_round_matchups: Ordered team IDs for first round
         team_data: team_id -> (seed, region, base_strength)
         matchup_probs: Pre-computed base matchup probabilities
-        noise_std: Noise standard deviation
+        noise_std: Logit-space noise standard deviation
         injury_probability: Per-game injury probability
+        regional_correlation: Strength of intra-regional upset correlation
 
     Returns:
         List of result dictionaries
@@ -138,14 +150,26 @@ def _run_batch(
     rng = np.random.RandomState(seed)
     results = []
 
+    # Map teams to regions for correlated sampling
+    team_regions = {tid: data[1] for tid, data in team_data.items()}
+    unique_regions = list(set(team_regions.values()))
+
     for _ in range(batch_size):
-        # Initialize team states with noise
-        team_strengths = {}
-        for team_id, (tseed, region, strength) in team_data.items():
-            noise = rng.normal(0, noise_std)
-            injury = rng.random() < injury_probability
-            injury_impact = 0.15 if injury else 0.0
-            team_strengths[team_id] = strength + noise - (strength * injury_impact)
+        # Draw per-region latent factors (shared upset-friendliness).
+        # A positive factor makes upsets more likely in that region.
+        region_factors = {
+            r: rng.normal(0, regional_correlation) for r in unique_regions
+        }
+
+        # Per-team injury shift (drawn once per simulation, persistent)
+        team_injury_shift = {}
+        for team_id in team_data:
+            if rng.random() < injury_probability:
+                # Severity varies: bench player loss (0.05) vs star (0.25)
+                severity = rng.uniform(0.05, 0.25)
+                team_injury_shift[team_id] = -severity
+            else:
+                team_injury_shift[team_id] = 0.0
 
         current_teams = list(first_round_matchups)
         round_results = []
@@ -160,14 +184,35 @@ def _run_batch(
                     key = (team1, team2)
                     base_prob = matchup_probs.get(key, 0.5)
 
-                    # Adjust for noise-modified strengths
-                    s1 = team_strengths.get(team1, 0.5)
-                    s2 = team_strengths.get(team2, 0.5)
-                    strength_ratio = s1 / max(abs(s2), 0.01)
-                    injury_adj = (strength_ratio - 1.0) * 0.1
+                    # Convert to logit space for principled noise addition
+                    base_prob_clipped = np.clip(base_prob, 0.01, 0.99)
+                    logit = np.log(base_prob_clipped / (1.0 - base_prob_clipped))
 
+                    # Regional correlation: both teams share same region
+                    # in early rounds; cross-region in Final Four+.
+                    r1 = team_regions.get(team1, "")
+                    r2 = team_regions.get(team2, "")
+                    if r1 == r2 and r1:
+                        # Shared region: factor shifts underdog's chances
+                        region_shift = region_factors[r1]
+                        # Negative logit shift → favors team2 (underdog)
+                        logit += region_shift
+                    else:
+                        # Cross-region (Final Four): draw independent noise
+                        logit += rng.normal(0, regional_correlation * 0.5)
+
+                    # Injury differential: shift logit based on injury impact
+                    inj1 = team_injury_shift.get(team1, 0.0)
+                    inj2 = team_injury_shift.get(team2, 0.0)
+                    logit += (inj1 - inj2)
+
+                    # Per-game noise in logit space
                     game_noise = rng.normal(0, noise_std)
-                    final_prob = np.clip(base_prob + injury_adj + game_noise, 0.01, 0.99)
+                    logit += game_noise
+
+                    # Convert back to probability
+                    final_prob = 1.0 / (1.0 + np.exp(-logit))
+                    final_prob = np.clip(final_prob, 0.01, 0.99)
 
                     if rng.random() < final_prob:
                         round_winners.append(team1)
@@ -276,6 +321,8 @@ class MonteCarloEngine:
 
         all_raw_results: List[Dict] = []
 
+        rc = self.config.regional_correlation
+
         if n_workers > 1 and len(batches) > 1:
             try:
                 with ProcessPoolExecutor(max_workers=n_workers) as executor:
@@ -288,6 +335,7 @@ class MonteCarloEngine:
                             team_data, matchup_probs,
                             self.config.noise_std,
                             self.config.injury_probability,
+                            rc,
                         )
                         futures.append(future)
 
@@ -300,6 +348,7 @@ class MonteCarloEngine:
                         bs, seed, bracket.first_round_matchups,
                         team_data, matchup_probs,
                         self.config.noise_std, self.config.injury_probability,
+                        rc,
                     )
                     all_raw_results.extend(batch_results)
         else:
@@ -308,6 +357,7 @@ class MonteCarloEngine:
                     bs, seed, bracket.first_round_matchups,
                     team_data, matchup_probs,
                     self.config.noise_std, self.config.injury_probability,
+                    rc,
                 )
                 all_raw_results.extend(batch_results)
 
