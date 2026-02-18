@@ -1,0 +1,215 @@
+{
+  "generated_at": "2026-02-16T18:57:27.283237+00:00",
+  "start_season": 2005,
+  "end_season": 2014,
+  "artifacts": {
+    "2005": {
+      "historical_games_json": "data/raw/historical/historical_games_2005.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2005.json"
+    },
+    "2006": {
+      "historical_games_json": "data/raw/historical/historical_games_2006.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2006.json"
+    },
+    "2007": {
+      "historical_games_json": "data/raw/historical/historical_games_2007.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2007.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2007.json"
+    },
+    "2008": {
+      "historical_games_json": "data/raw/historical/historical_games_2008.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2008.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2008.json"
+    },
+    "2009": {
+      "historical_games_json": "data/raw/historical/historical_games_2009.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2009.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2009.json"
+    },
+    "2010": {
+      "historical_games_json": "data/raw/historical/historical_games_2010.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2010.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2010.json"
+    },
+    "2011": {
+      "historical_games_json": "data/raw/historical/historical_games_2011.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2011.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2011.json"
+    },
+    "2012": {
+      "historical_games_json": "data/raw/historical/historical_games_2012.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2012.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2012.json"
+    },
+    "2013": {
+      "historical_games_json": "data/raw/historical/historical_games_2013.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2013.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2013.json"
+    },
+    "2014": {
+      "historical_games_json": "data/raw/historical/historical_games_2014.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2014.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2014.json"
+    }
+  },
+  "providers": {
+    "2005": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper"
+    },
+    "2006": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper"
+    },
+    "2007": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    },
+    "2008": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    },
+    "2009": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    },
+    "2010": {
+      "historical_games_json": "cbbpy_cache",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    },
+    "2011": {
+      "historical_games_json": "cbbpy_cache",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    },
+    "2012": {
+      "historical_games_json": "cbbpy_cache",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    },
+    "2013": {
+      "historical_games_json": "cbbpy_cache",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    },
+    "2014": {
+      "historical_games_json": "cbbpy_cache",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper"
+    }
+  },
+  "validation_errors": {
+    "2005": {
+      "historical_games_json": [],
+      "team_metrics_json": []
+    },
+    "2006": {
+      "historical_games_json": [],
+      "team_metrics_json": []
+    },
+    "2007": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2008": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2009": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2010": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2011": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2012": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2013": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2014": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    }
+  },
+  "season_counts": {
+    "2005": {
+      "games": 4221,
+      "team_games": 8442,
+      "teams": 330
+    },
+    "2006": {
+      "games": 4585,
+      "team_games": 9170,
+      "teams": 334
+    },
+    "2007": {
+      "games": 5193,
+      "team_games": 10386,
+      "teams": 337,
+      "tournament_seed_teams": 65
+    },
+    "2008": {
+      "games": 5540,
+      "team_games": 11080,
+      "teams": 341,
+      "tournament_seed_teams": 65
+    },
+    "2009": {
+      "games": 5501,
+      "team_games": 11002,
+      "teams": 344,
+      "tournament_seed_teams": 65
+    },
+    "2010": {
+      "games": 5573,
+      "team_games": 11146,
+      "teams": 347,
+      "tournament_seed_teams": 65
+    },
+    "2011": {
+      "games": 5560,
+      "team_games": 11120,
+      "teams": 345,
+      "tournament_seed_teams": 34
+    },
+    "2012": {
+      "games": 4891,
+      "team_games": 9782,
+      "teams": 344,
+      "tournament_seed_teams": 68
+    },
+    "2013": {
+      "games": 4958,
+      "team_games": 9916,
+      "teams": 347,
+      "tournament_seed_teams": 68
+    },
+    "2014": {
+      "games": 5930,
+      "team_games": 11860,
+      "teams": 351,
+      "tournament_seed_teams": 68
+    }
+  }
+}

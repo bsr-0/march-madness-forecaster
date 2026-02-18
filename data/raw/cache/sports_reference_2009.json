@@ -1,0 +1,3444 @@
+{
+  "teams": [
+    {
+      "team_name": "Air Force",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 21,
+      "srs": -2.99,
+      "sos": 2.37
+    },
+    {
+      "team_name": "AkronNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 13,
+      "srs": 3.37,
+      "sos": -2.01
+    },
+    {
+      "team_name": "Alabama",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 18,
+      "losses": 14,
+      "srs": 5.49,
+      "sos": 3.99
+    },
+    {
+      "team_name": "Alabama A&M",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 8,
+      "losses": 19,
+      "srs": -19.72,
+      "sos": -11.63
+    },
+    {
+      "team_name": "Alabama StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 22,
+      "losses": 10,
+      "srs": -6.13,
+      "sos": -11.2
+    },
+    {
+      "team_name": "Albany (NY)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 16,
+      "srs": -6.63,
+      "sos": -4.11
+    },
+    {
+      "team_name": "Alcorn State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 6,
+      "losses": 25,
+      "srs": -25.55,
+      "sos": -10.26
+    },
+    {
+      "team_name": "AmericanNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 24,
+      "losses": 8,
+      "srs": -0.05,
+      "sos": -5.49
+    },
+    {
+      "team_name": "Appalachian State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 18,
+      "srs": -8.44,
+      "sos": -5.44
+    },
+    {
+      "team_name": "ArizonaNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 14,
+      "srs": 11.88,
+      "sos": 8.8
+    },
+    {
+      "team_name": "Arizona StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 25,
+      "losses": 10,
+      "srs": 16.7,
+      "sos": 7.82
+    },
+    {
+      "team_name": "Arkansas",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 14,
+      "losses": 16,
+      "srs": 3.79,
+      "sos": 3.89
+    },
+    {
+      "team_name": "Arkansas State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 17,
+      "srs": -5.42,
+      "sos": -4.31
+    },
+    {
+      "team_name": "Arkansas-Pine Bluff",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 18,
+      "srs": -15.45,
+      "sos": -7.48
+    },
+    {
+      "team_name": "Army",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 19,
+      "srs": -10.11,
+      "sos": -7.59
+    },
+    {
+      "team_name": "Auburn",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 24,
+      "losses": 12,
+      "srs": 9.93,
+      "sos": 3.56
+    },
+    {
+      "team_name": "Austin Peay",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 14,
+      "srs": -4.2,
+      "sos": -3.69
+    },
+    {
+      "team_name": "Ball State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 14,
+      "losses": 17,
+      "srs": -5.5,
+      "sos": -3.02
+    },
+    {
+      "team_name": "Baylor",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 24,
+      "losses": 15,
+      "srs": 12.54,
+      "sos": 7.93
+    },
+    {
+      "team_name": "Belmont",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 20,
+      "losses": 13,
+      "srs": 0.39,
+      "sos": -1.37
+    },
+    {
+      "team_name": "Bethune-Cookman",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 16,
+      "srs": -12.41,
+      "sos": -9.76
+    },
+    {
+      "team_name": "BinghamtonNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 9,
+      "srs": -3.27,
+      "sos": -5.62
+    },
+    {
+      "team_name": "Boise State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 13,
+      "srs": -0.95,
+      "sos": 0.54
+    },
+    {
+      "team_name": "Boston CollegeNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 22,
+      "losses": 12,
+      "srs": 10.36,
+      "sos": 7.23
+    },
+    {
+      "team_name": "Boston University",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 13,
+      "srs": -2.61,
+      "sos": -4.91
+    },
+    {
+      "team_name": "Bowling Green",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 14,
+      "srs": 0.09,
+      "sos": -1.75
+    },
+    {
+      "team_name": "Bradley",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 15,
+      "srs": 2.48,
+      "sos": 1.95
+    },
+    {
+      "team_name": "Brigham YoungNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 25,
+      "losses": 8,
+      "srs": 15.12,
+      "sos": 4.15
+    },
+    {
+      "team_name": "Brown",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 9,
+      "losses": 19,
+      "srs": -12.39,
+      "sos": -5.02
+    },
+    {
+      "team_name": "Bryant",
+      "pace": 62.5,
+      "off_rtg": 92.1,
+      "def_rtg": 108.63448275862069,
+      "wins": 8,
+      "losses": 21,
+      "srs": 0.0,
+      "sos": 0.0
+    },
+    {
+      "team_name": "Bucknell",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 7,
+      "losses": 23,
+      "srs": -11.59,
+      "sos": -4.12
+    },
+    {
+      "team_name": "Buffalo",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 12,
+      "srs": 1.44,
+      "sos": -0.9
+    },
+    {
+      "team_name": "ButlerNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 26,
+      "losses": 6,
+      "srs": 10.07,
+      "sos": 2.07
+    },
+    {
+      "team_name": "Cal Poly",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 7,
+      "losses": 21,
+      "srs": -8.32,
+      "sos": -1.32
+    },
+    {
+      "team_name": "Cal State Bakersfield",
+      "pace": 65.6,
+      "off_rtg": 97.3,
+      "def_rtg": 110.07148864592095,
+      "wins": 8,
+      "losses": 21,
+      "srs": 0.0,
+      "sos": 0.0
+    },
+    {
+      "team_name": "Cal State Fullerton",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 17,
+      "srs": -4.2,
+      "sos": -1.26
+    },
+    {
+      "team_name": "Cal State NorthridgeNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 14,
+      "srs": 2.65,
+      "sos": -0.14
+    },
+    {
+      "team_name": "CaliforniaNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 22,
+      "losses": 11,
+      "srs": 13.3,
+      "sos": 7.21
+    },
+    {
+      "team_name": "Campbell",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 14,
+      "losses": 16,
+      "srs": -7.97,
+      "sos": -3.42
+    },
+    {
+      "team_name": "Canisius",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 20,
+      "srs": -6.46,
+      "sos": -1.68
+    },
+    {
+      "team_name": "Centenary (LA)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 8,
+      "losses": 23,
+      "srs": -8.46,
+      "sos": -1.56
+    },
+    {
+      "team_name": "Central Arkansas",
+      "pace": 66.5,
+      "off_rtg": 95.5,
+      "def_rtg": 104.12237490277418,
+      "wins": 10,
+      "losses": 19,
+      "srs": 0.0,
+      "sos": 0.0
+    },
+    {
+      "team_name": "Central Connecticut State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 17,
+      "srs": -10.35,
+      "sos": -6.76
+    },
+    {
+      "team_name": "Central Michigan",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 12,
+      "losses": 19,
+      "srs": -7.06,
+      "sos": -4.15
+    },
+    {
+      "team_name": "Charleston Southern",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 9,
+      "losses": 20,
+      "srs": -14.07,
+      "sos": -5.46
+    },
+    {
+      "team_name": "Charlotte",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 20,
+      "srs": 0.79,
+      "sos": 2.47
+    },
+    {
+      "team_name": "ChattanoogaNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 18,
+      "losses": 17,
+      "srs": -6.25,
+      "sos": -3.13
+    },
+    {
+      "team_name": "Chicago State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 13,
+      "srs": -5.97,
+      "sos": -4.51
+    },
+    {
+      "team_name": "Cincinnati",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 18,
+      "losses": 14,
+      "srs": 7.83,
+      "sos": 6.77
+    },
+    {
+      "team_name": "ClemsonNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 9,
+      "srs": 15.56,
+      "sos": 6.59
+    },
+    {
+      "team_name": "Cleveland StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 26,
+      "losses": 11,
+      "srs": 6.97,
+      "sos": 2.12
+    },
+    {
+      "team_name": "Coastal Carolina",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 20,
+      "srs": -11.74,
+      "sos": -6.98
+    },
+    {
+      "team_name": "Colgate",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 20,
+      "srs": -13.26,
+      "sos": -6.12
+    },
+    {
+      "team_name": "College of Charleston",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 27,
+      "losses": 9,
+      "srs": -1.33,
+      "sos": -5.87
+    },
+    {
+      "team_name": "Colorado",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 9,
+      "losses": 22,
+      "srs": -0.06,
+      "sos": 5.04
+    },
+    {
+      "team_name": "Colorado State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 9,
+      "losses": 22,
+      "srs": -1.16,
+      "sos": 3.88
+    },
+    {
+      "team_name": "Columbia",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 12,
+      "losses": 16,
+      "srs": -9.92,
+      "sos": -6.46
+    },
+    {
+      "team_name": "ConnecticutNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 31,
+      "losses": 5,
+      "srs": 22.17,
+      "sos": 8.57
+    },
+    {
+      "team_name": "Coppin State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 19,
+      "srs": -9.56,
+      "sos": -4.59
+    },
+    {
+      "team_name": "CornellNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 10,
+      "srs": 2.71,
+      "sos": -4.01
+    },
+    {
+      "team_name": "Creighton",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 27,
+      "losses": 8,
+      "srs": 8.69,
+      "sos": 0.92
+    },
+    {
+      "team_name": "Dartmouth",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 9,
+      "losses": 19,
+      "srs": -13.28,
+      "sos": -6.03
+    },
+    {
+      "team_name": "Davidson",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 27,
+      "losses": 8,
+      "srs": 8.26,
+      "sos": -3.33
+    },
+    {
+      "team_name": "DaytonNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 27,
+      "losses": 8,
+      "srs": 7.16,
+      "sos": 1.76
+    },
+    {
+      "team_name": "Delaware",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 19,
+      "srs": -4.83,
+      "sos": -2.64
+    },
+    {
+      "team_name": "Delaware State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 8,
+      "losses": 24,
+      "srs": -14.53,
+      "sos": -4.78
+    },
+    {
+      "team_name": "Denver",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 16,
+      "srs": -4.58,
+      "sos": -4.97
+    },
+    {
+      "team_name": "DePaul",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 9,
+      "losses": 24,
+      "srs": -1.21,
+      "sos": 6.88
+    },
+    {
+      "team_name": "Detroit Mercy",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 7,
+      "losses": 23,
+      "srs": -8.08,
+      "sos": 0.65
+    },
+    {
+      "team_name": "Drake",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 16,
+      "srs": 1.32,
+      "sos": 1.41
+    },
+    {
+      "team_name": "Drexel",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 14,
+      "srs": -0.8,
+      "sos": -1.28
+    },
+    {
+      "team_name": "DukeNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 30,
+      "losses": 7,
+      "srs": 20.1,
+      "sos": 9.07
+    },
+    {
+      "team_name": "Duquesne",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 13,
+      "srs": 6.04,
+      "sos": 2.48
+    },
+    {
+      "team_name": "East Carolina",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 17,
+      "srs": -3.0,
+      "sos": 1.26
+    },
+    {
+      "team_name": "East Tennessee StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 11,
+      "srs": 3.21,
+      "sos": -1.87
+    },
+    {
+      "team_name": "Eastern Illinois",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 12,
+      "losses": 18,
+      "srs": -9.18,
+      "sos": -5.47
+    },
+    {
+      "team_name": "Eastern Kentucky",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 18,
+      "losses": 13,
+      "srs": -2.82,
+      "sos": -5.45
+    },
+    {
+      "team_name": "Eastern Michigan",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 8,
+      "losses": 24,
+      "srs": -11.69,
+      "sos": -1.79
+    },
+    {
+      "team_name": "Eastern Washington",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 12,
+      "losses": 18,
+      "srs": -7.13,
+      "sos": -1.81
+    },
+    {
+      "team_name": "Elon",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 20,
+      "srs": -11.97,
+      "sos": -4.62
+    },
+    {
+      "team_name": "Evansville",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 14,
+      "srs": 1.87,
+      "sos": 2.29
+    },
+    {
+      "team_name": "Fairfield",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 15,
+      "srs": -2.29,
+      "sos": -0.44
+    },
+    {
+      "team_name": "FDU",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 7,
+      "losses": 23,
+      "srs": -17.59,
+      "sos": -5.18
+    },
+    {
+      "team_name": "Florida",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 25,
+      "losses": 11,
+      "srs": 12.83,
+      "sos": 3.88
+    },
+    {
+      "team_name": "Florida A&M",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 21,
+      "srs": -17.22,
+      "sos": -5.72
+    },
+    {
+      "team_name": "Florida Atlantic",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 6,
+      "losses": 26,
+      "srs": -9.68,
+      "sos": -2.1
+    },
+    {
+      "team_name": "Florida Gulf Coast",
+      "pace": 71.1,
+      "off_rtg": 91.7,
+      "def_rtg": 100.63064289279072,
+      "wins": 11,
+      "losses": 20,
+      "srs": 0.0,
+      "sos": 0.0
+    },
+    {
+      "team_name": "Florida International",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 20,
+      "srs": -7.71,
+      "sos": -1.52
+    },
+    {
+      "team_name": "Florida StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 25,
+      "losses": 10,
+      "srs": 11.37,
+      "sos": 7.91
+    },
+    {
+      "team_name": "Fordham",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 3,
+      "losses": 25,
+      "srs": -14.14,
+      "sos": 1.08
+    },
+    {
+      "team_name": "Fresno State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 21,
+      "srs": -4.11,
+      "sos": 0.96
+    },
+    {
+      "team_name": "Furman",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 6,
+      "losses": 24,
+      "srs": -16.07,
+      "sos": -4.62
+    },
+    {
+      "team_name": "Gardner-Webb",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 17,
+      "srs": -8.32,
+      "sos": -5.04
+    },
+    {
+      "team_name": "George Mason",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 22,
+      "losses": 11,
+      "srs": 3.78,
+      "sos": -1.98
+    },
+    {
+      "team_name": "George Washington",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 18,
+      "srs": -2.08,
+      "sos": 0.31
+    },
+    {
+      "team_name": "Georgetown",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 15,
+      "srs": 14.39,
+      "sos": 8.97
+    },
+    {
+      "team_name": "Georgia",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 12,
+      "losses": 20,
+      "srs": -1.81,
+      "sos": 5.5
+    },
+    {
+      "team_name": "Georgia Southern",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 8,
+      "losses": 22,
+      "srs": -13.5,
+      "sos": -3.7
+    },
+    {
+      "team_name": "Georgia State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 12,
+      "losses": 20,
+      "srs": -6.13,
+      "sos": -1.83
+    },
+    {
+      "team_name": "Georgia Tech",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 12,
+      "losses": 19,
+      "srs": 5.56,
+      "sos": 7.32
+    },
+    {
+      "team_name": "GonzagaNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 28,
+      "losses": 6,
+      "srs": 17.95,
+      "sos": 3.55
+    },
+    {
+      "team_name": "Grambling",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 6,
+      "losses": 23,
+      "srs": -23.07,
+      "sos": -10.1
+    },
+    {
+      "team_name": "Green Bay",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 22,
+      "losses": 11,
+      "srs": 5.63,
+      "sos": 0.73
+    },
+    {
+      "team_name": "Hampton",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 16,
+      "srs": -10.79,
+      "sos": -7.58
+    },
+    {
+      "team_name": "Hartford",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 7,
+      "losses": 26,
+      "srs": -13.24,
+      "sos": -2.93
+    },
+    {
+      "team_name": "Harvard",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 14,
+      "losses": 14,
+      "srs": -7.57,
+      "sos": -6.05
+    },
+    {
+      "team_name": "Hawaii",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 17,
+      "srs": -2.51,
+      "sos": -1.34
+    },
+    {
+      "team_name": "High Point",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 9,
+      "losses": 21,
+      "srs": -13.1,
+      "sos": -5.89
+    },
+    {
+      "team_name": "Hofstra",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 11,
+      "srs": -3.42,
+      "sos": -2.9
+    },
+    {
+      "team_name": "Holy Cross",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 18,
+      "losses": 14,
+      "srs": -3.56,
+      "sos": -5.91
+    },
+    {
+      "team_name": "Houston",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 12,
+      "srs": 8.26,
+      "sos": 1.29
+    },
+    {
+      "team_name": "Houston Christian",
+      "pace": 72.3,
+      "off_rtg": 94.1,
+      "def_rtg": 113.83125864453665,
+      "wins": 5,
+      "losses": 25,
+      "srs": 0.0,
+      "sos": 0.0
+    },
+    {
+      "team_name": "Howard",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 8,
+      "losses": 23,
+      "srs": -16.62,
+      "sos": -6.58
+    },
+    {
+      "team_name": "Idaho",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 16,
+      "srs": -0.56,
+      "sos": -0.15
+    },
+    {
+      "team_name": "Idaho State",
+      "pace": 63.1,
+      "off_rtg": 100.8,
+      "def_rtg": 108.40927099841521,
+      "wins": 13,
+      "losses": 19,
+      "srs": -3.22,
+      "sos": 0.17
+    },
+    {
+      "team_name": "IllinoisNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 24,
+      "losses": 10,
+      "srs": 14.38,
+      "sos": 6.73
+    },
+    {
+      "team_name": "Illinois State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 24,
+      "losses": 10,
+      "srs": 7.83,
+      "sos": 1.52
+    },
+    {
+      "team_name": "Illinois-Chicago",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 15,
+      "srs": 0.98,
+      "sos": 0.02
+    },
+    {
+      "team_name": "Indiana",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 6,
+      "losses": 25,
+      "srs": -2.03,
+      "sos": 8.98
+    },
+    {
+      "team_name": "Indiana State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 21,
+      "srs": -3.38,
+      "sos": 2.04
+    },
+    {
+      "team_name": "Iona",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 12,
+      "losses": 19,
+      "srs": -3.24,
+      "sos": -2.37
+    },
+    {
+      "team_name": "Iowa",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 17,
+      "srs": 6.65,
+      "sos": 6.84
+    },
+    {
+      "team_name": "Iowa State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 17,
+      "srs": 3.48,
+      "sos": 5.68
+    },
+    {
+      "team_name": "IU Indy",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 14,
+      "srs": -2.92,
+      "sos": -2.51
+    },
+    {
+      "team_name": "Jackson State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 18,
+      "losses": 15,
+      "srs": -9.5,
+      "sos": -8.22
+    },
+    {
+      "team_name": "Jacksonville",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 18,
+      "losses": 14,
+      "srs": 1.62,
+      "sos": -0.05
+    },
+    {
+      "team_name": "Jacksonville State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 17,
+      "srs": -8.2,
+      "sos": -4.78
+    },
+    {
+      "team_name": "James Madison",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 15,
+      "srs": -1.14,
+      "sos": -2.91
+    },
+    {
+      "team_name": "KansasNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 27,
+      "losses": 8,
+      "srs": 18.02,
+      "sos": 7.9
+    },
+    {
+      "team_name": "Kansas City",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 7,
+      "losses": 24,
+      "srs": -10.11,
+      "sos": -1.25
+    },
+    {
+      "team_name": "Kansas State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 22,
+      "losses": 12,
+      "srs": 12.18,
+      "sos": 5.24
+    },
+    {
+      "team_name": "Kennesaw State",
+      "pace": 64.1,
+      "off_rtg": 90.5,
+      "def_rtg": 107.05255796438755,
+      "wins": 7,
+      "losses": 22,
+      "srs": 0.0,
+      "sos": 0.0
+    },
+    {
+      "team_name": "Kent State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 15,
+      "srs": 0.66,
+      "sos": -0.97
+    },
+    {
+      "team_name": "Kentucky",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 22,
+      "losses": 14,
+      "srs": 12.69,
+      "sos": 4.82
+    },
+    {
+      "team_name": "La Salle",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 18,
+      "losses": 13,
+      "srs": 3.45,
+      "sos": 1.12
+    },
+    {
+      "team_name": "Lafayette",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 8,
+      "losses": 22,
+      "srs": -14.08,
+      "sos": -6.14
+    },
+    {
+      "team_name": "Lamar",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 15,
+      "srs": -5.0,
+      "sos": -1.04
+    },
+    {
+      "team_name": "Lehigh",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 14,
+      "srs": -8.31,
+      "sos": -8.28
+    },
+    {
+      "team_name": "Liberty",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 12,
+      "srs": -5.39,
+      "sos": -5.49
+    },
+    {
+      "team_name": "Lipscomb",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 14,
+      "srs": -2.58,
+      "sos": -3.49
+    },
+    {
+      "team_name": "Little Rock",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 8,
+      "srs": -0.66,
+      "sos": -3.72
+    },
+    {
+      "team_name": "Long Beach State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 15,
+      "srs": -1.57,
+      "sos": -0.27
+    },
+    {
+      "team_name": "Long Island University",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 14,
+      "srs": -6.92,
+      "sos": -8.63
+    },
+    {
+      "team_name": "Longwood",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 14,
+      "srs": -12.38,
+      "sos": -6.51
+    },
+    {
+      "team_name": "Louisiana",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 20,
+      "srs": -6.3,
+      "sos": -2.23
+    },
+    {
+      "team_name": "Louisiana StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 27,
+      "losses": 8,
+      "srs": 11.87,
+      "sos": 3.27
+    },
+    {
+      "team_name": "Louisiana Tech",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 18,
+      "srs": -2.38,
+      "sos": -1.98
+    },
+    {
+      "team_name": "Louisiana-Monroe",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 20,
+      "srs": -11.75,
+      "sos": -3.2
+    },
+    {
+      "team_name": "LouisvilleNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 31,
+      "losses": 6,
+      "srs": 20.87,
+      "sos": 8.41
+    },
+    {
+      "team_name": "Loyola (IL)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 14,
+      "losses": 18,
+      "srs": -5.51,
+      "sos": -0.67
+    },
+    {
+      "team_name": "Loyola (MD)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 12,
+      "losses": 20,
+      "srs": -5.65,
+      "sos": -0.65
+    },
+    {
+      "team_name": "Loyola Marymount",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 3,
+      "losses": 28,
+      "srs": -14.79,
+      "sos": 1.8
+    },
+    {
+      "team_name": "Maine",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 9,
+      "losses": 21,
+      "srs": -11.33,
+      "sos": -4.4
+    },
+    {
+      "team_name": "Manhattan",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 14,
+      "srs": -4.09,
+      "sos": -3.4
+    },
+    {
+      "team_name": "Marist",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 23,
+      "srs": -7.24,
+      "sos": -1.85
+    },
+    {
+      "team_name": "MarquetteNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 25,
+      "losses": 10,
+      "srs": 15.06,
+      "sos": 7.87
+    },
+    {
+      "team_name": "Marshall",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 17,
+      "srs": 0.14,
+      "sos": 2.73
+    },
+    {
+      "team_name": "MarylandNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 14,
+      "srs": 11.1,
+      "sos": 8.99
+    },
+    {
+      "team_name": "Maryland-Baltimore County",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 17,
+      "srs": -8.74,
+      "sos": -4.16
+    },
+    {
+      "team_name": "Maryland-Eastern Shore",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 7,
+      "losses": 23,
+      "srs": -22.6,
+      "sos": -8.8
+    },
+    {
+      "team_name": "Massachusetts",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 12,
+      "losses": 18,
+      "srs": 0.64,
+      "sos": 3.54
+    },
+    {
+      "team_name": "McNeese State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 18,
+      "srs": -5.47,
+      "sos": -3.99
+    },
+    {
+      "team_name": "MemphisNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 33,
+      "losses": 4,
+      "srs": 20.92,
+      "sos": 4.63
+    },
+    {
+      "team_name": "Mercer",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 15,
+      "srs": -7.1,
+      "sos": 0.12
+    },
+    {
+      "team_name": "Miami (FL)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 13,
+      "srs": 11.76,
+      "sos": 9.04
+    },
+    {
+      "team_name": "Miami (OH)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 13,
+      "srs": 3.16,
+      "sos": 0.46
+    },
+    {
+      "team_name": "MichiganNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 14,
+      "srs": 11.9,
+      "sos": 9.74
+    },
+    {
+      "team_name": "Michigan StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 31,
+      "losses": 7,
+      "srs": 17.71,
+      "sos": 9.37
+    },
+    {
+      "team_name": "Middle Tennessee",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 18,
+      "losses": 14,
+      "srs": -1.32,
+      "sos": -2.78
+    },
+    {
+      "team_name": "Milwaukee",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 14,
+      "srs": -0.54,
+      "sos": 0.8
+    },
+    {
+      "team_name": "MinnesotaNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 22,
+      "losses": 11,
+      "srs": 11.32,
+      "sos": 7.19
+    },
+    {
+      "team_name": "Mississippi",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 15,
+      "srs": 5.82,
+      "sos": 5.41
+    },
+    {
+      "team_name": "Mississippi StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 13,
+      "srs": 9.1,
+      "sos": 4.62
+    },
+    {
+      "team_name": "Mississippi Valley State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 7,
+      "losses": 25,
+      "srs": -18.44,
+      "sos": -7.22
+    },
+    {
+      "team_name": "MissouriNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 31,
+      "losses": 7,
+      "srs": 19.56,
+      "sos": 6.72
+    },
+    {
+      "team_name": "Missouri State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 20,
+      "srs": -1.9,
+      "sos": 1.9
+    },
+    {
+      "team_name": "Monmouth",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 8,
+      "losses": 23,
+      "srs": -14.84,
+      "sos": -5.91
+    },
+    {
+      "team_name": "Montana",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 12,
+      "srs": -2.92,
+      "sos": -3.53
+    },
+    {
+      "team_name": "Montana State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 14,
+      "losses": 17,
+      "srs": -6.38,
+      "sos": -2.45
+    },
+    {
+      "team_name": "Morehead StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 20,
+      "losses": 16,
+      "srs": -3.14,
+      "sos": -3.61
+    },
+    {
+      "team_name": "Morgan StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 12,
+      "srs": -2.29,
+      "sos": -6.53
+    },
+    {
+      "team_name": "Mount St. Mary's",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 14,
+      "srs": -1.47,
+      "sos": -5.78
+    },
+    {
+      "team_name": "Murray State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 12,
+      "srs": -0.09,
+      "sos": -3.95
+    },
+    {
+      "team_name": "Navy",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 11,
+      "srs": -5.35,
+      "sos": -7.68
+    },
+    {
+      "team_name": "NC State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 14,
+      "srs": 8.38,
+      "sos": 6.74
+    },
+    {
+      "team_name": "Nebraska",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 18,
+      "losses": 13,
+      "srs": 8.92,
+      "sos": 4.82
+    },
+    {
+      "team_name": "Nevada",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 13,
+      "srs": 4.28,
+      "sos": 1.4
+    },
+    {
+      "team_name": "Nevada-Las Vegas",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 11,
+      "srs": 8.68,
+      "sos": 4.34
+    },
+    {
+      "team_name": "New Hampshire",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 14,
+      "losses": 16,
+      "srs": -9.4,
+      "sos": -5.57
+    },
+    {
+      "team_name": "New Mexico",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 22,
+      "losses": 12,
+      "srs": 11.37,
+      "sos": 3.6
+    },
+    {
+      "team_name": "New Mexico State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 15,
+      "srs": 2.25,
+      "sos": 0.28
+    },
+    {
+      "team_name": "New Orleans",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 19,
+      "srs": -9.79,
+      "sos": -4.08
+    },
+    {
+      "team_name": "Niagara",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 26,
+      "losses": 9,
+      "srs": 6.21,
+      "sos": -2.25
+    },
+    {
+      "team_name": "Nicholls State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 20,
+      "losses": 11,
+      "srs": -3.08,
+      "sos": -4.08
+    },
+    {
+      "team_name": "NJIT",
+      "pace": 66.6,
+      "off_rtg": 74.8,
+      "def_rtg": 100.89121379443961,
+      "wins": 1,
+      "losses": 30,
+      "srs": 0.0,
+      "sos": 0.0
+    },
+    {
+      "team_name": "Norfolk State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 18,
+      "srs": -13.31,
+      "sos": -9.49
+    },
+    {
+      "team_name": "North CarolinaNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 34,
+      "losses": 4,
+      "srs": 25.46,
+      "sos": 8.35
+    },
+    {
+      "team_name": "North Carolina A&T",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 16,
+      "srs": -13.0,
+      "sos": -8.37
+    },
+    {
+      "team_name": "North Carolina Central",
+      "pace": 72.4,
+      "off_rtg": 84.1,
+      "def_rtg": 109.96257351630724,
+      "wins": 4,
+      "losses": 27,
+      "srs": 0.0,
+      "sos": 0.0
+    },
+    {
+      "team_name": "North Dakota StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 26,
+      "losses": 7,
+      "srs": 6.18,
+      "sos": -2.72
+    },
+    {
+      "team_name": "North Florida",
+      "pace": 65.0,
+      "off_rtg": 86.3,
+      "def_rtg": 107.43589743589743,
+      "wins": 8,
+      "losses": 22,
+      "srs": 0.0,
+      "sos": 0.0
+    },
+    {
+      "team_name": "North Texas",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 20,
+      "losses": 12,
+      "srs": -1.14,
+      "sos": -2.77
+    },
+    {
+      "team_name": "Northeastern",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 13,
+      "srs": 1.91,
+      "sos": -0.24
+    },
+    {
+      "team_name": "Northern Arizona",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 8,
+      "losses": 19,
+      "srs": -6.14,
+      "sos": -1.7
+    },
+    {
+      "team_name": "Northern Colorado",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 14,
+      "losses": 18,
+      "srs": -4.57,
+      "sos": -3.64
+    },
+    {
+      "team_name": "Northern Illinois",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 20,
+      "srs": -10.0,
+      "sos": -5.13
+    },
+    {
+      "team_name": "Northern IowaNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 11,
+      "srs": 5.63,
+      "sos": 2.24
+    },
+    {
+      "team_name": "Northwestern",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 14,
+      "srs": 8.56,
+      "sos": 6.93
+    },
+    {
+      "team_name": "Northwestern State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 20,
+      "srs": -18.7,
+      "sos": -3.34
+    },
+    {
+      "team_name": "Notre Dame",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 15,
+      "srs": 12.26,
+      "sos": 8.7
+    },
+    {
+      "team_name": "Oakland",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 13,
+      "srs": 1.8,
+      "sos": -1.6
+    },
+    {
+      "team_name": "Ohio",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 17,
+      "srs": -1.56,
+      "sos": -1.4
+    },
+    {
+      "team_name": "Ohio StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 22,
+      "losses": 11,
+      "srs": 12.48,
+      "sos": 8.23
+    },
+    {
+      "team_name": "OklahomaNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 30,
+      "losses": 6,
+      "srs": 18.07,
+      "sos": 6.88
+    },
+    {
+      "team_name": "Oklahoma StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 12,
+      "srs": 13.78,
+      "sos": 7.44
+    },
+    {
+      "team_name": "Old Dominion",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 25,
+      "losses": 10,
+      "srs": 2.86,
+      "sos": -2.23
+    },
+    {
+      "team_name": "Oral Roberts",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 15,
+      "srs": 3.68,
+      "sos": -0.05
+    },
+    {
+      "team_name": "Oregon",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 8,
+      "losses": 23,
+      "srs": 1.51,
+      "sos": 10.28
+    },
+    {
+      "team_name": "Oregon State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 18,
+      "losses": 18,
+      "srs": 4.25,
+      "sos": 7.55
+    },
+    {
+      "team_name": "Pacific",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 13,
+      "srs": 2.22,
+      "sos": -1.59
+    },
+    {
+      "team_name": "Penn State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 27,
+      "losses": 11,
+      "srs": 9.49,
+      "sos": 5.71
+    },
+    {
+      "team_name": "Pennsylvania",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 18,
+      "srs": -7.78,
+      "sos": -3.33
+    },
+    {
+      "team_name": "Pepperdine",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 9,
+      "losses": 23,
+      "srs": -11.23,
+      "sos": 1.88
+    },
+    {
+      "team_name": "PittsburghNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 31,
+      "losses": 5,
+      "srs": 21.21,
+      "sos": 8.61
+    },
+    {
+      "team_name": "Portland",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 13,
+      "srs": 2.89,
+      "sos": -0.05
+    },
+    {
+      "team_name": "Portland StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 10,
+      "srs": 1.14,
+      "sos": -3.16
+    },
+    {
+      "team_name": "Prairie View",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 16,
+      "srs": -12.47,
+      "sos": -9.81
+    },
+    {
+      "team_name": "Presbyterian",
+      "pace": 64.1,
+      "off_rtg": 91.4,
+      "def_rtg": 100.43574156759375,
+      "wins": 12,
+      "losses": 17,
+      "srs": 0.0,
+      "sos": 0.0
+    },
+    {
+      "team_name": "Princeton",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 14,
+      "srs": -7.82,
+      "sos": -7.66
+    },
+    {
+      "team_name": "Providence",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 14,
+      "srs": 7.82,
+      "sos": 7.23
+    },
+    {
+      "team_name": "PurdueNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 27,
+      "losses": 10,
+      "srs": 16.44,
+      "sos": 7.17
+    },
+    {
+      "team_name": "Purdue Fort Wayne",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 17,
+      "srs": -5.42,
+      "sos": -0.64
+    },
+    {
+      "team_name": "Quinnipiac",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 16,
+      "srs": -9.16,
+      "sos": -8.57
+    },
+    {
+      "team_name": "RadfordNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 12,
+      "srs": -4.55,
+      "sos": -4.37
+    },
+    {
+      "team_name": "Rhode Island",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 11,
+      "srs": 7.89,
+      "sos": 1.21
+    },
+    {
+      "team_name": "Rice",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 22,
+      "srs": -5.05,
+      "sos": 3.18
+    },
+    {
+      "team_name": "Richmond",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 20,
+      "losses": 16,
+      "srs": 2.61,
+      "sos": 1.08
+    },
+    {
+      "team_name": "Rider",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 13,
+      "srs": -2.63,
+      "sos": -2.98
+    },
+    {
+      "team_name": "Robert MorrisNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 24,
+      "losses": 11,
+      "srs": -0.7,
+      "sos": -5.23
+    },
+    {
+      "team_name": "Rutgers",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 21,
+      "srs": 1.07,
+      "sos": 6.6
+    },
+    {
+      "team_name": "Sacramento State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 2,
+      "losses": 27,
+      "srs": -17.77,
+      "sos": -2.29
+    },
+    {
+      "team_name": "Sacred Heart",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 14,
+      "srs": -4.4,
+      "sos": -6.85
+    },
+    {
+      "team_name": "Saint Francis (PA)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 6,
+      "losses": 23,
+      "srs": -15.7,
+      "sos": -6.24
+    },
+    {
+      "team_name": "Saint Joseph's",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 15,
+      "srs": 4.21,
+      "sos": 2.21
+    },
+    {
+      "team_name": "Saint Louis",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 18,
+      "losses": 14,
+      "srs": 1.02,
+      "sos": 0.99
+    },
+    {
+      "team_name": "Saint Mary's (CA)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 28,
+      "losses": 7,
+      "srs": 9.52,
+      "sos": 1.49
+    },
+    {
+      "team_name": "Saint Peter's",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 19,
+      "srs": -8.39,
+      "sos": -3.43
+    },
+    {
+      "team_name": "Sam Houston",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 18,
+      "losses": 12,
+      "srs": -0.39,
+      "sos": -2.59
+    },
+    {
+      "team_name": "Samford",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 16,
+      "srs": -8.28,
+      "sos": -6.38
+    },
+    {
+      "team_name": "San Diego",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 16,
+      "srs": -0.37,
+      "sos": 1.57
+    },
+    {
+      "team_name": "San Diego State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 26,
+      "losses": 10,
+      "srs": 11.54,
+      "sos": 4.74
+    },
+    {
+      "team_name": "San Francisco",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 19,
+      "srs": -5.91,
+      "sos": 0.3
+    },
+    {
+      "team_name": "San Jose State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 17,
+      "srs": -2.64,
+      "sos": 0.44
+    },
+    {
+      "team_name": "Santa Clara",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 17,
+      "srs": -0.55,
+      "sos": 0.41
+    },
+    {
+      "team_name": "Savannah State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 14,
+      "srs": -12.95,
+      "sos": -1.16
+    },
+    {
+      "team_name": "Seton Hall",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 15,
+      "srs": 7.53,
+      "sos": 6.47
+    },
+    {
+      "team_name": "SienaNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 27,
+      "losses": 8,
+      "srs": 8.05,
+      "sos": 0.99
+    },
+    {
+      "team_name": "South Alabama",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 20,
+      "losses": 13,
+      "srs": -2.62,
+      "sos": -3.75
+    },
+    {
+      "team_name": "South Carolina",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 10,
+      "srs": 8.78,
+      "sos": 4.2
+    },
+    {
+      "team_name": "South Carolina State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 14,
+      "srs": -10.31,
+      "sos": -9.47
+    },
+    {
+      "team_name": "South Carolina Upstate",
+      "pace": 65.6,
+      "off_rtg": 91.3,
+      "def_rtg": 104.42073170731709,
+      "wins": 9,
+      "losses": 21,
+      "srs": 0.0,
+      "sos": 0.0
+    },
+    {
+      "team_name": "South Dakota State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 20,
+      "srs": -5.83,
+      "sos": -1.45
+    },
+    {
+      "team_name": "South Florida",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 9,
+      "losses": 22,
+      "srs": 2.63,
+      "sos": 8.18
+    },
+    {
+      "team_name": "Southeast Missouri State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 3,
+      "losses": 27,
+      "srs": -18.72,
+      "sos": -3.75
+    },
+    {
+      "team_name": "Southeastern Louisiana",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 17,
+      "srs": -6.22,
+      "sos": -2.89
+    },
+    {
+      "team_name": "Southern",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 8,
+      "losses": 23,
+      "srs": -17.64,
+      "sos": -11.5
+    },
+    {
+      "team_name": "Southern CaliforniaNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 22,
+      "losses": 13,
+      "srs": 14.09,
+      "sos": 9.15
+    },
+    {
+      "team_name": "Southern Illinois",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 18,
+      "srs": 0.35,
+      "sos": 3.19
+    },
+    {
+      "team_name": "SIU Edwardsville",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 20,
+      "srs": 0.0,
+      "sos": 0.0
+    },
+    {
+      "team_name": "Southern Methodist",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 9,
+      "losses": 21,
+      "srs": -3.27,
+      "sos": 3.62
+    },
+    {
+      "team_name": "Southern Mississippi",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 17,
+      "srs": 1.54,
+      "sos": 3.81
+    },
+    {
+      "team_name": "Southern Utah",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 20,
+      "srs": -5.44,
+      "sos": -2.12
+    },
+    {
+      "team_name": "St. Bonaventure",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 15,
+      "srs": -2.57,
+      "sos": -1.12
+    },
+    {
+      "team_name": "St. Francis (NY)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 20,
+      "srs": -12.66,
+      "sos": -6.66
+    },
+    {
+      "team_name": "St. John's (NY)",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 18,
+      "srs": 4.28,
+      "sos": 6.83
+    },
+    {
+      "team_name": "Stanford",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 20,
+      "losses": 14,
+      "srs": 10.58,
+      "sos": 6.91
+    },
+    {
+      "team_name": "Stephen F. AustinNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 24,
+      "losses": 8,
+      "srs": 1.1,
+      "sos": -3.21
+    },
+    {
+      "team_name": "Stetson",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 17,
+      "srs": -6.88,
+      "sos": 1.17
+    },
+    {
+      "team_name": "Stony Brook",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 14,
+      "srs": -4.82,
+      "sos": -6.49
+    },
+    {
+      "team_name": "SyracuseNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 28,
+      "losses": 10,
+      "srs": 17.24,
+      "sos": 9.48
+    },
+    {
+      "team_name": "TCU",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 14,
+      "losses": 17,
+      "srs": 2.23,
+      "sos": 3.96
+    },
+    {
+      "team_name": "TempleNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 22,
+      "losses": 12,
+      "srs": 9.05,
+      "sos": 3.9
+    },
+    {
+      "team_name": "TennesseeNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 13,
+      "srs": 13.6,
+      "sos": 7.71
+    },
+    {
+      "team_name": "Tennessee State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 12,
+      "losses": 18,
+      "srs": -10.79,
+      "sos": -4.47
+    },
+    {
+      "team_name": "Tennessee Tech",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 12,
+      "losses": 18,
+      "srs": -6.64,
+      "sos": -4.68
+    },
+    {
+      "team_name": "Tennessee-Martin",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 22,
+      "losses": 10,
+      "srs": 0.06,
+      "sos": -4.9
+    },
+    {
+      "team_name": "TexasNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 12,
+      "srs": 14.83,
+      "sos": 8.09
+    },
+    {
+      "team_name": "Texas A&MNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 24,
+      "losses": 10,
+      "srs": 10.52,
+      "sos": 6.13
+    },
+    {
+      "team_name": "Texas A&M-Corpus Christi",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 18,
+      "losses": 15,
+      "srs": -3.49,
+      "sos": -1.46
+    },
+    {
+      "team_name": "Texas Southern",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 7,
+      "losses": 25,
+      "srs": -16.56,
+      "sos": -7.46
+    },
+    {
+      "team_name": "Texas State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 14,
+      "losses": 16,
+      "srs": -4.73,
+      "sos": -3.93
+    },
+    {
+      "team_name": "Texas Tech",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 14,
+      "losses": 19,
+      "srs": 5.04,
+      "sos": 8.04
+    },
+    {
+      "team_name": "Texas-Rio Grande Valley",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 17,
+      "srs": -13.68,
+      "sos": -3.01
+    },
+    {
+      "team_name": "The Citadel",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 20,
+      "losses": 13,
+      "srs": -4.48,
+      "sos": -5.98
+    },
+    {
+      "team_name": "Toledo",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 7,
+      "losses": 25,
+      "srs": -10.48,
+      "sos": -0.96
+    },
+    {
+      "team_name": "Towson",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 12,
+      "losses": 22,
+      "srs": -7.3,
+      "sos": -1.27
+    },
+    {
+      "team_name": "Troy",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 13,
+      "srs": -3.64,
+      "sos": -4.22
+    },
+    {
+      "team_name": "Tulane",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 14,
+      "losses": 17,
+      "srs": -1.3,
+      "sos": 0.9
+    },
+    {
+      "team_name": "Tulsa",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 25,
+      "losses": 11,
+      "srs": 8.41,
+      "sos": 4.84
+    },
+    {
+      "team_name": "UAB",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 22,
+      "losses": 12,
+      "srs": 10.05,
+      "sos": 3.67
+    },
+    {
+      "team_name": "UC Davis",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 19,
+      "srs": -4.13,
+      "sos": -3.4
+    },
+    {
+      "team_name": "UC Irvine",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 12,
+      "losses": 19,
+      "srs": -5.8,
+      "sos": -1.8
+    },
+    {
+      "team_name": "UC Riverside",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 13,
+      "srs": -5.22,
+      "sos": -3.76
+    },
+    {
+      "team_name": "UC Santa Barbara",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 15,
+      "srs": -1.74,
+      "sos": -1.1
+    },
+    {
+      "team_name": "UCF",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 14,
+      "srs": 1.73,
+      "sos": 1.26
+    },
+    {
+      "team_name": "UCLANCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 26,
+      "losses": 9,
+      "srs": 18.64,
+      "sos": 7.19
+    },
+    {
+      "team_name": "UNC Asheville",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 15,
+      "losses": 16,
+      "srs": -11.34,
+      "sos": -4.19
+    },
+    {
+      "team_name": "UNC Greensboro",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 5,
+      "losses": 25,
+      "srs": -16.01,
+      "sos": -4.33
+    },
+    {
+      "team_name": "UNC Wilmington",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 7,
+      "losses": 25,
+      "srs": -13.82,
+      "sos": -0.66
+    },
+    {
+      "team_name": "UT Arlington",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 14,
+      "srs": -2.37,
+      "sos": -3.37
+    },
+    {
+      "team_name": "UtahNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 24,
+      "losses": 10,
+      "srs": 12.59,
+      "sos": 5.72
+    },
+    {
+      "team_name": "Utah StateNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 30,
+      "losses": 5,
+      "srs": 9.33,
+      "sos": 0.07
+    },
+    {
+      "team_name": "Utah Valley",
+      "pace": 62.7,
+      "off_rtg": 110.4,
+      "def_rtg": 101.78856231487809,
+      "wins": 17,
+      "losses": 11,
+      "srs": 0.0,
+      "sos": 0.0
+    },
+    {
+      "team_name": "UTEP",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 14,
+      "srs": 6.67,
+      "sos": 3.21
+    },
+    {
+      "team_name": "UTSA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 13,
+      "srs": -4.67,
+      "sos": -4.17
+    },
+    {
+      "team_name": "Valparaiso",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 9,
+      "losses": 22,
+      "srs": -4.43,
+      "sos": 2.22
+    },
+    {
+      "team_name": "Vanderbilt",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 12,
+      "srs": 8.18,
+      "sos": 3.81
+    },
+    {
+      "team_name": "Vermont",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 24,
+      "losses": 9,
+      "srs": 4.64,
+      "sos": -4.27
+    },
+    {
+      "team_name": "VillanovaNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 30,
+      "losses": 8,
+      "srs": 17.45,
+      "sos": 8.72
+    },
+    {
+      "team_name": "Virginia",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 18,
+      "srs": 5.87,
+      "sos": 8.34
+    },
+    {
+      "team_name": "Virginia CommonwealthNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 24,
+      "losses": 10,
+      "srs": 7.7,
+      "sos": -0.65
+    },
+    {
+      "team_name": "VMI",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 24,
+      "losses": 8,
+      "srs": -3.3,
+      "sos": -7.49
+    },
+    {
+      "team_name": "Virginia Tech",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 15,
+      "srs": 8.79,
+      "sos": 6.88
+    },
+    {
+      "team_name": "Wagner",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 14,
+      "srs": -10.39,
+      "sos": -8.6
+    },
+    {
+      "team_name": "Wake ForestNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 24,
+      "losses": 7,
+      "srs": 15.63,
+      "sos": 7.36
+    },
+    {
+      "team_name": "WashingtonNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 26,
+      "losses": 9,
+      "srs": 16.78,
+      "sos": 8.19
+    },
+    {
+      "team_name": "Washington State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 16,
+      "srs": 11.29,
+      "sos": 7.5
+    },
+    {
+      "team_name": "Weber State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 21,
+      "losses": 10,
+      "srs": 1.11,
+      "sos": -2.39
+    },
+    {
+      "team_name": "West VirginiaNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 23,
+      "losses": 12,
+      "srs": 18.57,
+      "sos": 8.34
+    },
+    {
+      "team_name": "Western Carolina",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 15,
+      "srs": -7.17,
+      "sos": -5.13
+    },
+    {
+      "team_name": "Western Illinois",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 9,
+      "losses": 20,
+      "srs": -10.86,
+      "sos": -4.04
+    },
+    {
+      "team_name": "Western KentuckyNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 25,
+      "losses": 9,
+      "srs": 3.68,
+      "sos": -1.23
+    },
+    {
+      "team_name": "Western Michigan",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 21,
+      "srs": -5.69,
+      "sos": -3.19
+    },
+    {
+      "team_name": "Wichita State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 17,
+      "losses": 17,
+      "srs": 2.05,
+      "sos": 2.08
+    },
+    {
+      "team_name": "William & Mary",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 10,
+      "losses": 20,
+      "srs": -5.97,
+      "sos": -2.79
+    },
+    {
+      "team_name": "Winston-Salem",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 8,
+      "losses": 22,
+      "srs": 0.0,
+      "sos": 0.0
+    },
+    {
+      "team_name": "Winthrop",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 19,
+      "srs": -11.46,
+      "sos": -4.54
+    },
+    {
+      "team_name": "WisconsinNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 20,
+      "losses": 13,
+      "srs": 12.43,
+      "sos": 8.43
+    },
+    {
+      "team_name": "Wofford",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 16,
+      "losses": 14,
+      "srs": -7.04,
+      "sos": -5.45
+    },
+    {
+      "team_name": "Wright State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 20,
+      "losses": 13,
+      "srs": 3.2,
+      "sos": 0.23
+    },
+    {
+      "team_name": "Wyoming",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 19,
+      "losses": 14,
+      "srs": 0.67,
+      "sos": 3.53
+    },
+    {
+      "team_name": "XavierNCAA",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 27,
+      "losses": 8,
+      "srs": 14.45,
+      "sos": 4.65
+    },
+    {
+      "team_name": "Yale",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 13,
+      "losses": 15,
+      "srs": -7.29,
+      "sos": -5.17
+    },
+    {
+      "team_name": "Youngstown State",
+      "pace": 0.0,
+      "off_rtg": 0.0,
+      "def_rtg": 0.0,
+      "wins": 11,
+      "losses": 19,
+      "srs": -5.25,
+      "sos": -0.11
+    }
+  ]
+}

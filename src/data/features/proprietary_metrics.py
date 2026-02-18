@@ -263,6 +263,7 @@ class ProprietaryMetricsEngine:
         self,
         game_records: List[GameRecord],
         conference_map: Optional[Dict[str, str]] = None,
+        cutoff_date: Optional[str] = None,
     ) -> Dict[str, ProprietaryTeamMetrics]:
         """
         Run the full engine.  Returns team_id → ProprietaryTeamMetrics.
@@ -270,9 +271,18 @@ class ProprietaryMetricsEngine:
         Args:
             game_records: list of per-team-game rows (one row per team per game)
             conference_map: optional team_id → conference name
+            cutoff_date: YYYY-MM-DD — only use games on or before this date.
+                         Prevents leakage from tournament games when computing
+                         pre-tournament metrics.  If None, use all games.
         """
         if not game_records:
             return {}
+
+        # Filter games to prevent temporal leakage
+        if cutoff_date:
+            game_records = [g for g in game_records if g.game_date <= cutoff_date]
+            if not game_records:
+                return {}
 
         by_team: Dict[str, List[GameRecord]] = defaultdict(list)
         for rec in game_records:
