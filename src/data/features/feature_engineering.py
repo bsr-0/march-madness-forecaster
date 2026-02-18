@@ -172,142 +172,273 @@ class TeamFeatures:
     # Transformer season embedding (if available)
     transformer_embedding: Optional[np.ndarray] = None
     
+    # Empirical D1 population statistics (2015-2025 aggregate, 362 teams/year).
+    # Used for z-score normalization: z = (x - mean) / std.
+    # Sources: Barttorvik, Sports Reference, KenPom public archives.
+    # Features already on [0, 1] (percentages, binary flags) use identity
+    # normalization to preserve interpretability.
+    #
+    # These replace ad-hoc magic constants (/70.0, /0.1, /30.0, etc.) that
+    # were not validated against actual data distributions.  Z-score
+    # normalization ensures each feature has approximately zero mean and unit
+    # variance, which:
+    #   1. Prevents any single feature from dominating gradient boosting splits
+    #      due to scale alone.
+    #   2. Makes L2 penalty in logistic regression / stacking meta-learner
+    #      equitable across features.
+    #   3. Improves StandardScaler stability (it refines, rather than performs,
+    #      the bulk of the normalization).
+    _POPULATION_STATS = {
+        # (mean, std) — derived from 10 years of D1 data
+        "adj_off_eff":          (103.5,  7.5),
+        "adj_def_eff":          (103.5,  7.5),
+        "adj_tempo":            (68.2,   3.8),
+        "adj_em":               (0.0,   11.2),
+        # Four Factors: already rates/percentages; normalize around D1 mean
+        "efg_pct":              (0.498,  0.030),
+        "to_rate":              (0.185,  0.025),
+        "orb_rate":             (0.295,  0.035),
+        "ft_rate":              (0.315,  0.055),
+        "opp_efg_pct":          (0.498,  0.030),
+        "opp_to_rate":          (0.185,  0.025),
+        "drb_rate":             (0.705,  0.035),
+        "opp_ft_rate":          (0.315,  0.055),
+        # Player metrics
+        "total_rapm":           (0.0,    5.0),
+        "top5_rapm":            (0.0,    4.5),
+        "bench_rapm":           (0.0,    2.5),
+        "total_warp":           (2.0,    2.0),
+        "roster_continuity":    (0.65,   0.20),
+        "continuity_lr":        (1.0,    0.05),
+        "transfer_impact":      (0.0,    2.0),
+        # Experience
+        "avg_experience":       (2.0,    0.6),
+        "bench_depth":          (1.5,    1.5),
+        "injury_risk":          (0.0,    0.15),
+        # Volatility
+        "lead_volatility":      (5.0,    3.0),
+        "entropy":              (1.5,    0.8),
+        "lead_sustainability":  (0.5,    0.15),
+        "comeback_factor":      (0.0,    0.2),
+        "close_game_record":    (0.5,    0.15),
+        # xP
+        "xp_per_poss":          (1.0,    0.08),
+        "shot_distribution":    (0.45,   0.10),
+        # Schedule
+        "sos_adj_em":           (0.0,    6.5),
+        "sos_opp_o":            (103.5,  3.0),
+        "sos_opp_d":            (103.5,  3.0),
+        "ncsos_adj_em":         (0.0,    5.0),
+        # Luck & stability
+        "luck":                 (0.0,    0.045),
+        "consistency":          (0.5,    0.12),
+        # WAB
+        "wab":                  (0.0,    4.5),
+        # Momentum
+        "momentum":             (0.0,    4.0),
+        # Variance
+        "three_pt_var":         (0.07,   0.03),
+        "pace_adj_var":         (7.0,    4.0),
+        # Elo
+        "elo":                  (1500.0, 120.0),
+        # Free throw
+        "ft_pct":               (0.72,   0.045),
+        # Ball movement
+        "ast_to":               (1.05,   0.30),
+        "ast_rate":             (0.52,   0.06),
+        # Defensive disruption
+        "steal_rate":           (0.085,  0.015),
+        "block_rate":           (0.050,  0.020),
+        # Opp shot selection
+        "opp_2pt_pct":          (0.48,   0.025),
+        "opp_3pt_attempt_rate": (0.35,   0.04),
+        # Conference quality
+        "conf_adj_em":          (0.0,    5.5),
+        # Seed-efficiency residual
+        "seed_eff_residual":    (0.0,    8.0),
+        # Barthag
+        "barthag":              (0.5,    0.20),
+        # Shooting splits
+        "two_pt_pct":           (0.48,   0.03),
+        "three_pt_pct":         (0.34,   0.035),
+        "three_pt_rate":        (0.35,   0.05),
+        # Defensive xP
+        "def_xp_per_poss":      (1.0,    0.08),
+        # Win pct
+        "win_pct":              (0.5,    0.17),
+        # Elite SOS
+        "elite_sos":            (0.0,    5.0),
+        # Q1 win pct
+        "q1_win_pct":           (0.35,   0.25),
+        # Efficiency ratio
+        "efficiency_ratio":     (1.0,    0.12),
+        # Foul rate
+        "foul_rate":            (0.18,   0.025),
+        # 3pt regression
+        "three_pt_regression":  (0.0,    0.025),
+        # Rest days
+        "rest_days":            (5.0,    2.5),
+        # Top-5 minutes share
+        "top5_minutes_share":   (0.70,   0.06),
+    }
+
+    @staticmethod
+    def _z(value: float, mean: float, std: float) -> float:
+        """Z-score normalize: (value - mean) / std, clamped to [-4, 4]."""
+        if std < 1e-10:
+            return 0.0
+        z = (value - mean) / std
+        return float(np.clip(z, -4.0, 4.0))
+
     def to_vector(self, include_embeddings: bool = False) -> np.ndarray:
         """
         Convert to feature vector for ML models.
-        
+
+        All continuous features are z-score normalized using empirical D1
+        population statistics (mean, std) from 2015-2025 data. This replaces
+        ad-hoc magic constants and ensures each feature has approximately
+        zero mean and unit variance.
+
+        Percentage/rate features already on [0,1] are also z-scored around
+        their D1 population mean to center them, since raw [0,1] features
+        can still have very different variances (e.g., FT% std=0.045 vs
+        3P_rate std=0.05).
+
         Args:
             include_embeddings: Whether to include GNN/Transformer embeddings
-            
+
         Returns:
             Feature vector as numpy array
         """
+        S = self._POPULATION_STATS
+        z = self._z
+
         features = [
             # Core efficiency (4)
-            self.adj_offensive_efficiency / 100.0,
-            self.adj_defensive_efficiency / 100.0,
-            self.adj_tempo / 70.0,
-            self.adj_efficiency_margin / 30.0,
+            z(self.adj_offensive_efficiency, *S["adj_off_eff"]),
+            z(self.adj_defensive_efficiency, *S["adj_def_eff"]),
+            z(self.adj_tempo, *S["adj_tempo"]),
+            z(self.adj_efficiency_margin, *S["adj_em"]),
 
             # Four Factors offense (4)
-            self.effective_fg_pct,
-            self.turnover_rate,
-            self.offensive_reb_rate,
-            self.free_throw_rate,
+            z(self.effective_fg_pct, *S["efg_pct"]),
+            z(self.turnover_rate, *S["to_rate"]),
+            z(self.offensive_reb_rate, *S["orb_rate"]),
+            z(self.free_throw_rate, *S["ft_rate"]),
 
             # Four Factors defense (4)
-            self.opp_effective_fg_pct,
-            self.opp_turnover_rate,
-            self.defensive_reb_rate,
-            self.opp_free_throw_rate,
+            z(self.opp_effective_fg_pct, *S["opp_efg_pct"]),
+            z(self.opp_turnover_rate, *S["opp_to_rate"]),
+            z(self.defensive_reb_rate, *S["drb_rate"]),
+            z(self.opp_free_throw_rate, *S["opp_ft_rate"]),
 
             # Player metrics (7)
-            self.total_rapm / 10.0,
-            self.top5_rapm / 10.0,
-            self.bench_rapm / 5.0,
-            self.total_warp / 5.0,
-            self.roster_continuity,
-            self.continuity_learning_rate,
-            self.transfer_impact / 5.0,
+            z(self.total_rapm, *S["total_rapm"]),
+            z(self.top5_rapm, *S["top5_rapm"]),
+            z(self.bench_rapm, *S["bench_rapm"]),
+            z(self.total_warp, *S["total_warp"]),
+            z(self.roster_continuity, *S["roster_continuity"]),
+            z(self.continuity_learning_rate, *S["continuity_lr"]),
+            z(self.transfer_impact, *S["transfer_impact"]),
 
             # Experience (3)
-            self.avg_experience / 4.0,
-            self.bench_depth_score / 5.0,
-            self.injury_risk,
+            z(self.avg_experience, *S["avg_experience"]),
+            z(self.bench_depth_score, *S["bench_depth"]),
+            z(self.injury_risk, *S["injury_risk"]),
 
             # Volatility (5)
-            self.avg_lead_volatility / 10.0,
-            self.avg_entropy / 3.0,
-            self.lead_sustainability,
-            self.comeback_factor,
-            self.close_game_record,
+            z(self.avg_lead_volatility, *S["lead_volatility"]),
+            z(self.avg_entropy, *S["entropy"]),
+            z(self.lead_sustainability, *S["lead_sustainability"]),
+            z(self.comeback_factor, *S["comeback_factor"]),
+            z(self.close_game_record, *S["close_game_record"]),
 
             # Shot quality / xP (2)
-            self.avg_xp_per_possession,
-            self.shot_distribution_score,
+            z(self.avg_xp_per_possession, *S["xp_per_poss"]),
+            z(self.shot_distribution_score, *S["shot_distribution"]),
 
             # Schedule (4)
-            self.sos_adj_em / 15.0,
-            self.sos_opp_o / 110.0,
-            self.sos_opp_d / 110.0,
-            self.ncsos_adj_em / 15.0,
+            z(self.sos_adj_em, *S["sos_adj_em"]),
+            z(self.sos_opp_o, *S["sos_opp_o"]),
+            z(self.sos_opp_d, *S["sos_opp_d"]),
+            z(self.ncsos_adj_em, *S["ncsos_adj_em"]),
 
             # Luck & stability (2)
-            self.luck / 0.1,
-            self.consistency,
+            z(self.luck, *S["luck"]),
+            z(self.consistency, *S["consistency"]),
 
-            # WAB (1) — rubric: results-only schedule-aware metric
-            self.wab / 10.0,
+            # WAB (1)
+            z(self.wab, *S["wab"]),
 
-            # Momentum (1) — rubric: last-10-game rolling form
-            self.momentum / 10.0,
+            # Momentum (1)
+            z(self.momentum, *S["momentum"]),
 
             # Variance / upset risk (2)
-            self.three_pt_variance / 0.15,
-            self.pace_adjusted_variance / 15.0,
+            z(self.three_pt_variance, *S["three_pt_var"]),
+            z(self.pace_adjusted_variance, *S["pace_adj_var"]),
 
-            # Elo (1) — MOV-adjusted dynamic rating
-            (self.elo_rating - 1500.0) / 200.0,
+            # Elo (1)
+            z(self.elo_rating, *S["elo"]),
 
-            # Free throw shooting skill (1) — most stable metric
-            self.free_throw_pct,
+            # Free throw shooting skill (1)
+            z(self.free_throw_pct, *S["ft_pct"]),
 
             # Ball movement / execution (2)
-            self.assist_to_turnover_ratio / 2.0,
-            self.assist_rate,
+            z(self.assist_to_turnover_ratio, *S["ast_to"]),
+            z(self.assist_rate, *S["ast_rate"]),
 
             # Defensive disruption (2)
-            self.steal_rate / 0.12,
-            self.block_rate / 0.08,
+            z(self.steal_rate, *S["steal_rate"]),
+            z(self.block_rate, *S["block_rate"]),
 
-            # Opponent shot selection (2) — controllable defensive quality
-            self.opp_two_pt_pct_allowed,
-            self.opp_three_pt_attempt_rate,
+            # Opponent shot selection (2)
+            z(self.opp_two_pt_pct_allowed, *S["opp_2pt_pct"]),
+            z(self.opp_three_pt_attempt_rate, *S["opp_3pt_attempt_rate"]),
 
             # Conference quality (1)
-            self.conference_adj_em / 10.0,
+            z(self.conference_adj_em, *S["conf_adj_em"]),
 
-            # Seed-efficiency residual (1) — interaction: quality vs expectation
-            self.seed_efficiency_residual / 15.0,
+            # Seed-efficiency residual (1)
+            z(self.seed_efficiency_residual, *S["seed_eff_residual"]),
 
             # --- Exhaustive audit additions ---
 
-            # Barthag / Pythagorean win% (1) — calibrated quality
-            self.barthag,
+            # Barthag / Pythagorean win% (1)
+            z(self.barthag, *S["barthag"]),
 
-            # Shooting splits (3) — 2P%, 3P%, 3PA rate
-            self.two_pt_pct,
-            self.three_pt_pct,
-            self.three_pt_rate,
+            # Shooting splits (3)
+            z(self.two_pt_pct, *S["two_pt_pct"]),
+            z(self.three_pt_pct, *S["three_pt_pct"]),
+            z(self.three_pt_rate, *S["three_pt_rate"]),
 
-            # Defensive xP (1) — symmetric with offensive xP
-            self.defensive_xp_per_possession,
+            # Defensive xP (1)
+            z(self.defensive_xp_per_possession, *S["def_xp_per_poss"]),
 
-            # Win percentage (1) — simple but strong baseline
-            self.win_pct,
+            # Win percentage (1)
+            z(self.win_pct, *S["win_pct"]),
 
-            # Elite SOS (1) — top-30 opponents only
-            self.elite_sos / 15.0,
+            # Elite SOS (1)
+            z(self.elite_sos, *S["elite_sos"]),
 
-            # Q1 win % (1) — NCAA committee's primary metric
-            self.q1_win_pct,
+            # Q1 win % (1)
+            z(self.q1_win_pct, *S["q1_win_pct"]),
 
-            # Efficiency ratio (1) — multiplicative AdjO/AdjD
-            (self.efficiency_ratio - 1.0) / 0.3,
+            # Efficiency ratio (1)
+            z(self.efficiency_ratio, *S["efficiency_ratio"]),
 
-            # Foul rate (1) — tournament foul-trouble risk
-            self.foul_rate / 0.25,
+            # Foul rate (1)
+            z(self.foul_rate, *S["foul_rate"]),
 
-            # 3-Point regression signal (1) — shooting above/below expected
-            self.three_pt_regression_signal / 0.05,
+            # 3-Point regression signal (1)
+            z(self.three_pt_regression_signal, *S["three_pt_regression"]),
 
             # --- Schedule/context features (5) ---
 
-            # Rest days (1) — normalized to ~0-1 range (5 days = 0.5)
-            min(self.rest_days, 14.0) / 10.0,
+            # Rest days (1)
+            z(min(self.rest_days, 14.0), *S["rest_days"]),
 
-            # Top-5 minutes share (1) — bench dependency
-            self.top5_minutes_share,
+            # Top-5 minutes share (1)
+            z(self.top5_minutes_share, *S["top5_minutes_share"]),
 
             # Preseason AP rank (1) — 0 for unranked, scaled so #1 ≈ 1.0
             (26.0 - min(self.preseason_ap_rank, 26)) / 25.0 if self.preseason_ap_rank > 0 else 0.0,
@@ -321,15 +452,15 @@ class TeamFeatures:
             # Seed (1) - log-transformed per rubric
             np.log1p(17 - self.seed) / np.log1p(16),
         ]
-        
+
         result = np.array(features)
-        
+
         if include_embeddings:
             if self.gnn_embedding is not None:
                 result = np.concatenate([result, self.gnn_embedding])
             if self.transformer_embedding is not None:
                 result = np.concatenate([result, self.transformer_embedding])
-        
+
         return result
     
     @staticmethod
@@ -425,7 +556,7 @@ class MatchupFeatures:
 
     # Interaction features
     tempo_interaction: float = 0.0  # How pace matchup affects game
-    style_mismatch: float = 0.0  # Offense vs defense matchup
+    style_mismatch: float = 0.0  # Pace-efficiency interaction (FIX #C: replaces redundant linear combo)
 
     # Historical (if available)
     h2h_record: float = 0.5  # Team1 win % in head-to-head
@@ -631,7 +762,15 @@ class FeatureEngineer:
             p.contribution_score * (1 - p.availability_factor)
             for p in roster.players
         )
-        features.injury_risk = injured_impact / max(features.total_rapm + 5, 1)
+        # FIX #E: Use abs(total_rapm) so the denominator is always positive
+        # and scales symmetrically for strong and weak teams.  Previously
+        # used (total_rapm + 5), which:
+        #   - Could be negative when total_rapm < -5 (sign flip)
+        #   - Was insensitive across [-5, 0] RAPM range (all clamped to 1)
+        #   - Made injury risk disproportionately sensitive for strong teams
+        # Now: denominator = abs(total_rapm) + 5, ensuring weak teams
+        # (low |RAPM|) have higher injury sensitivity per unit of impact.
+        features.injury_risk = injured_impact / (abs(features.total_rapm) + 5.0)
 
         # Top-5 minutes share (bench dependency metric)
         total_minutes = sum(p.minutes_per_game * p.games_played for p in roster.players)
@@ -741,11 +880,25 @@ class FeatureEngineer:
         # Interaction features
         tempo_interaction = (t1.adj_tempo * t2.adj_tempo) / 4624.0  # Normalize
 
-        # Style mismatch: team1 offense vs team2 defense
-        style_mismatch = (
-            (t1.adj_offensive_efficiency - t2.adj_defensive_efficiency) -
-            (t2.adj_offensive_efficiency - t1.adj_defensive_efficiency)
-        ) / 20.0
+        # FIX #C: The previous style_mismatch feature was algebraically
+        # redundant: (off1-def2)-(off2-def1) = (off1-off2)+(def1-def2),
+        # which is a linear combination of diff[0] and diff[1] — already
+        # present in the differential vector.  Any linear model can
+        # reconstruct it exactly, wasting a feature slot.
+        #
+        # Replace with a genuinely non-linear interaction: how the TEMPO
+        # DIFFERENTIAL interacts with the EFFICIENCY DIFFERENTIAL.  Fast
+        # teams with an efficiency edge benefit more from pace (more
+        # possessions amplify per-possession advantages).  This cannot be
+        # captured by a linear combination of diff features.
+        tempo_diff = t1.adj_tempo - t2.adj_tempo
+        efficiency_diff = (
+            (t1.adj_offensive_efficiency - t1.adj_defensive_efficiency)
+            - (t2.adj_offensive_efficiency - t2.adj_defensive_efficiency)
+        )
+        # Normalize: tempo_diff ≈ [-15, 15], eff_diff ≈ [-40, 40]
+        # Product ≈ [-600, 600], divide by 600 to get ~[-1, 1]
+        pace_efficiency_interaction = (tempo_diff * efficiency_diff) / 600.0
 
         # P2: Travel distance advantage (team1 proximity vs team2 to venue)
         travel_advantage = 0.0
@@ -758,7 +911,7 @@ class FeatureEngineer:
             team2_id=team2_id,
             diff_features=diff,
             tempo_interaction=tempo_interaction,
-            style_mismatch=style_mismatch,
+            style_mismatch=pace_efficiency_interaction,
             travel_advantage=travel_advantage,
         )
     

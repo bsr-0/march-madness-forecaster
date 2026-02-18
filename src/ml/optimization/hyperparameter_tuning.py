@@ -95,9 +95,20 @@ class TemporalCrossValidator:
       Fold 4: train=[0:880],   val=[880:1000]
     """
 
-    def __init__(self, n_splits: int = 5, min_train_size: int = 30):
+    def __init__(self, n_splits: int = 5, min_train_size: int = 30, pair_size: int = 1):
         self.n_splits = n_splits
         self.min_train_size = min_train_size
+        # FIX #A: pair_size > 1 snaps split boundaries to multiples of
+        # pair_size so that symmetric sample pairs (e.g., game + reversed
+        # game) always land in the same fold.  Set pair_size=2 for the
+        # standard symmetric-augmented game data.
+        self.pair_size = max(1, pair_size)
+
+    def _snap_to_pair(self, idx: int) -> int:
+        """Round index down to nearest pair boundary."""
+        if self.pair_size <= 1:
+            return idx
+        return (idx // self.pair_size) * self.pair_size
 
     def split(
         self, n_samples: int, sort_keys: Optional[np.ndarray] = None
@@ -120,11 +131,13 @@ class TemporalCrossValidator:
 
         # Reserve at least 40% for initial training
         initial_train = max(self.min_train_size, int(0.4 * n_samples))
+        initial_train = self._snap_to_pair(initial_train)
         remaining = n_samples - initial_train
 
         if remaining < self.n_splits:
             # Not enough data for requested splits; return single split
             split_point = max(self.min_train_size, int(0.8 * n_samples))
+            split_point = self._snap_to_pair(split_point)
             return [
                 TemporalSplit(
                     train_indices=indices[:split_point],
@@ -134,10 +147,12 @@ class TemporalCrossValidator:
             ]
 
         val_size = remaining // self.n_splits
+        val_size = max(self._snap_to_pair(val_size), self.pair_size)
         splits = []
 
         for fold in range(self.n_splits):
             val_start = initial_train + fold * val_size
+            val_start = self._snap_to_pair(val_start)
             val_end = val_start + val_size if fold < self.n_splits - 1 else n_samples
 
             if val_start >= n_samples:
@@ -664,15 +679,27 @@ class LeaveOneYearOutCV:
 
 class EnsembleWeightOptimizer:
     """
-    Grid search over CFA base weights to minimize Brier score.
+    Bootstrap-aggregated grid search over CFA base weights.
 
     Tests weight combinations for (gnn, transformer, baseline) in increments
-    of 0.05 that sum to 1.0, then returns the best combination.
+    of 0.05 that sum to 1.0.  To prevent overfitting on small validation sets,
+    the grid search is run on multiple bootstrap resamples and the selected
+    weights are averaged across resamples (bootstrap aggregation / bagging).
+    This stabilizes weight selection when the validation set has <100 samples,
+    where a single grid search would overfit to noise in the specific holdout.
     """
 
-    def __init__(self, step: float = 0.05, min_weight: float = 0.05):
+    def __init__(
+        self,
+        step: float = 0.05,
+        min_weight: float = 0.05,
+        n_bootstrap: int = 100,
+        random_seed: int = 42,
+    ):
         self.step = step
         self.min_weight = min_weight
+        self.n_bootstrap = n_bootstrap
+        self.random_seed = random_seed
 
     def optimize(
         self,
@@ -681,12 +708,17 @@ class EnsembleWeightOptimizer:
         model_confidences: Optional[Dict[str, float]] = None,
     ) -> Tuple[Dict[str, float], float]:
         """
-        Find optimal weights by grid search over Brier score.
+        Find optimal weights by bootstrap-aggregated grid search over Brier score.
+
+        Runs the grid search on ``n_bootstrap`` resamples (with replacement)
+        of the validation data.  The final weights are the average of the
+        per-resample best weights.  This is equivalent to bagging the weight
+        selector, preventing it from latching onto noise in a small holdout.
 
         Args:
             model_predictions: Dict of model_name -> predicted probabilities [N]
             outcomes: Actual outcomes [N]
-            model_confidences: Per-model confidence scores (for CFA diversity bonus)
+            model_confidences: Per-model confidence scores (unused, kept for API compat)
 
         Returns:
             Tuple of (best_weights, best_brier_score)
@@ -697,28 +729,52 @@ class EnsembleWeightOptimizer:
 
         preds = {name: np.clip(model_predictions[name], 0.01, 0.99) for name in model_names}
         y = np.array(outcomes, dtype=float)
+        n = len(y)
 
-        best_weights = {name: 1.0 / len(model_names) for name in model_names}
-        best_brier = float("inf")
-
-        # Generate weight grid
+        # Generate weight grid once (shared across bootstrap resamples)
         steps = int(round(1.0 / self.step))
         weight_grid = self._generate_weight_grid(len(model_names), steps)
+        # Pre-filter: each weight must be >= min_weight
+        weight_grid = [combo for combo in weight_grid if all(w >= self.min_weight for w in combo)]
 
-        for combo in weight_grid:
-            # Filter: each weight must be >= min_weight
-            if any(w < self.min_weight for w in combo):
-                continue
+        if not weight_grid:
+            uniform = {name: 1.0 / len(model_names) for name in model_names}
+            return uniform, 0.25
 
-            weights = {name: w for name, w in zip(model_names, combo)}
-            combined = np.zeros(len(y))
-            for name in model_names:
-                combined += weights[name] * preds[name]
+        rng = np.random.default_rng(self.random_seed)
 
-            brier = float(np.mean((combined - y) ** 2))
-            if brier < best_brier:
-                best_brier = brier
-                best_weights = weights
+        # Accumulate weights across bootstrap resamples
+        weight_accum = {name: 0.0 for name in model_names}
+
+        for _ in range(self.n_bootstrap):
+            # Bootstrap resample (with replacement)
+            idx = rng.choice(n, size=n, replace=True)
+            y_boot = y[idx]
+            preds_boot = {name: preds[name][idx] for name in model_names}
+
+            best_brier_boot = float("inf")
+            best_combo_boot = weight_grid[0]
+
+            for combo in weight_grid:
+                combined = np.zeros(n)
+                for name, w in zip(model_names, combo):
+                    combined += w * preds_boot[name]
+                brier = float(np.mean((combined - y_boot) ** 2))
+                if brier < best_brier_boot:
+                    best_brier_boot = brier
+                    best_combo_boot = combo
+
+            for name, w in zip(model_names, best_combo_boot):
+                weight_accum[name] += w
+
+        # Average across bootstrap resamples
+        best_weights = {name: weight_accum[name] / self.n_bootstrap for name in model_names}
+
+        # Compute Brier score of the averaged weights on full data
+        combined = np.zeros(n)
+        for name in model_names:
+            combined += best_weights[name] * preds[name]
+        best_brier = float(np.mean((combined - y) ** 2))
 
         return best_weights, best_brier
 

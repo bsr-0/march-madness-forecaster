@@ -13,6 +13,12 @@ from dataclasses import dataclass
 import numpy as np
 
 try:
+    from scipy.optimize import minimize_scalar
+    SCIPY_AVAILABLE = True
+except ImportError:
+    SCIPY_AVAILABLE = False
+
+try:
     from sklearn.isotonic import IsotonicRegression
     from sklearn.calibration import calibration_curve
     SKLEARN_AVAILABLE = True
@@ -317,43 +323,75 @@ class TemperatureScaling:
         """
         Fit temperature parameter by minimizing negative log-likelihood (NLL).
 
-        Uses gradient descent on a single parameter T to find optimal scaling.
+        Uses scipy bounded scalar minimization (Brent's method) when available,
+        falling back to gradient descent with best-tracking otherwise. Brent's
+        method is superlinearly convergent on unimodal functions and respects
+        bounds without gradient clipping artifacts.
+
+        The NLL as a function of T is convex (it's a composition of the convex
+        cross-entropy with the monotone logit rescaling), so Brent's method
+        finds the global optimum within the bounded interval.
 
         Args:
             predictions: Raw predicted probabilities
             outcomes: Actual outcomes (0 or 1)
-            max_iter: Maximum gradient descent iterations
-            lr: Learning rate
+            max_iter: Maximum iterations (used for fallback GD only)
+            lr: Learning rate (used for fallback GD only)
         """
         predictions = np.clip(predictions, 1e-7, 1 - 1e-7)
         logits = np.log(predictions / (1 - predictions))
         outcomes = outcomes.astype(float)
 
-        T = 1.0
-        best_T = 1.0
-        best_nll = float("inf")
-
-        for _ in range(max_iter):
-            scaled_logits = logits / T
-            probs = 1.0 / (1.0 + np.exp(-scaled_logits))
+        def nll_at_T(T: float) -> float:
+            """Negative log-likelihood at temperature T."""
+            scaled = logits / T
+            # Numerically stable sigmoid: use np.clip on scaled logits to
+            # prevent overflow in exp() for extreme logit / small T values.
+            scaled = np.clip(scaled, -30.0, 30.0)
+            probs = 1.0 / (1.0 + np.exp(-scaled))
             probs = np.clip(probs, 1e-7, 1 - 1e-7)
-
-            # NLL (negative log-likelihood)
-            nll = -np.mean(
+            return float(-np.mean(
                 outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)
+            ))
+
+        if SCIPY_AVAILABLE:
+            # Brent's method: superlinearly convergent, respects bounds natively.
+            # Bounds [0.1, 10.0] cover the practical range — T < 0.1 sharpens
+            # probabilities toward 0/1 (extreme overconfidence), T > 10.0
+            # flattens everything toward 0.5 (no discrimination).
+            result = minimize_scalar(
+                nll_at_T,
+                bounds=(0.1, 10.0),
+                method="bounded",
+                options={"xatol": 1e-6, "maxiter": 500},
             )
+            self.temperature = float(result.x)
+        else:
+            # Fallback: gradient descent with best-tracking (no clipping artifacts).
+            T = 1.0
+            best_T = 1.0
+            best_nll = nll_at_T(1.0)
 
-            if nll < best_nll:
-                best_nll = nll
-                best_T = T
+            for _ in range(max_iter):
+                scaled_logits = np.clip(logits / T, -30.0, 30.0)
+                probs = 1.0 / (1.0 + np.exp(-scaled_logits))
+                probs = np.clip(probs, 1e-7, 1 - 1e-7)
 
-            # Gradient of NLL w.r.t. T
-            # d(NLL)/dT = mean((probs - outcomes) * logits * (-1/T^2))
-            grad = np.mean((probs - outcomes) * (-logits / (T ** 2)))
-            T -= lr * grad
-            T = max(0.1, min(T, 10.0))  # Bound T to reasonable range
+                nll = float(-np.mean(
+                    outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)
+                ))
 
-        self.temperature = best_T
+                if nll < best_nll:
+                    best_nll = nll
+                    best_T = T
+
+                # Gradient of NLL w.r.t. T
+                grad = np.mean((probs - outcomes) * (-logits / (T ** 2)))
+                T -= lr * grad
+                T = max(0.1, min(T, 10.0))
+
+            self.temperature = best_T
+
         self.fitted = True
 
     def calibrate(self, predictions: np.ndarray) -> np.ndarray:
@@ -365,6 +403,53 @@ class TemperatureScaling:
         logits = np.log(predictions / (1 - predictions))
         scaled_logits = logits / self.temperature
         return 1.0 / (1.0 + np.exp(-scaled_logits))
+
+    def bootstrap_ci(
+        self,
+        predictions: np.ndarray,
+        outcomes: np.ndarray,
+        n_bootstrap: int = 200,
+        ci_level: float = 0.95,
+        random_seed: int = 42,
+    ) -> tuple:
+        """Compute bootstrap confidence interval for the temperature parameter.
+
+        Fits temperature scaling on ``n_bootstrap`` resamples (with replacement)
+        and returns the (lower, upper) CI bounds for T.  If the CI includes 1.0,
+        the calibration is not statistically justified (T=1 is the identity).
+
+        Args:
+            predictions: Raw predicted probabilities
+            outcomes: Actual outcomes (0 or 1)
+            n_bootstrap: Number of bootstrap resamples
+            ci_level: Confidence level (default 0.95 for 95% CI)
+            random_seed: Random seed for reproducibility
+
+        Returns:
+            Tuple of (T_lower, T_upper, T_values) where T_values is the array
+            of fitted temperatures across bootstrap resamples.
+        """
+        predictions = np.clip(predictions, 1e-7, 1 - 1e-7)
+        outcomes = outcomes.astype(float)
+        n = len(predictions)
+        rng = np.random.default_rng(random_seed)
+
+        T_values = []
+        for _ in range(n_bootstrap):
+            idx = rng.choice(n, size=n, replace=True)
+            boot_pred = predictions[idx]
+            boot_out = outcomes[idx]
+
+            ts = TemperatureScaling()
+            ts.fit(boot_pred, boot_out)
+            T_values.append(ts.temperature)
+
+        T_values = np.array(T_values)
+        alpha = (1.0 - ci_level) / 2.0
+        T_lower = float(np.percentile(T_values, 100 * alpha))
+        T_upper = float(np.percentile(T_values, 100 * (1.0 - alpha)))
+
+        return T_lower, T_upper, T_values
 
 
 def calculate_calibration_metrics(

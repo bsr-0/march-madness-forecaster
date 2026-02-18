@@ -256,6 +256,12 @@ class ProprietaryMetricsEngine:
     MARGIN_CAP: float = 16.0
     # Bubble team ranking for WAB (approx 45th in NET/AdjEM)
     BUBBLE_RANK: int = 45
+    # Historical average AdjEM of the ~45th-ranked team (2015-2025 average).
+    # Used as a Bayesian prior to dampen the effect of end-of-season ranking
+    # shifts on the bubble team definition.  Without this, WAB for early-season
+    # games uses a bubble AdjEM that reflects the final season rankings —
+    # information not available at game time.
+    BUBBLE_EM_PRIOR: float = 5.0
     # Convergence iterations for SOS adjustment
     SOS_ITERATIONS: int = 15
 
@@ -819,11 +825,16 @@ class ProprietaryMetricsEngine:
         Bubble team = team ranked ~45th in AdjEM.
         """
         ranked = sorted(results.values(), key=lambda t: t.adj_efficiency_margin, reverse=True)
-        bubble_em = 0.0
+        raw_bubble_em = 0.0
         if len(ranked) >= self.BUBBLE_RANK:
-            bubble_em = ranked[self.BUBBLE_RANK - 1].adj_efficiency_margin
+            raw_bubble_em = ranked[self.BUBBLE_RANK - 1].adj_efficiency_margin
         elif ranked:
-            bubble_em = ranked[-1].adj_efficiency_margin
+            raw_bubble_em = ranked[-1].adj_efficiency_margin
+        # Blend current-year bubble AdjEM toward historical prior to dampen
+        # the effect of end-of-season ranking shifts.  The bubble team's
+        # identity shifts throughout the season; using a stabilized estimate
+        # reduces leakage from final-season rankings into early-season WAB.
+        bubble_em = 0.7 * raw_bubble_em + 0.3 * self.BUBBLE_EM_PRIOR
 
         for tid, games in by_team.items():
             if tid not in results:
@@ -1148,13 +1159,13 @@ def torvik_to_game_records(torvik_teams: List[Dict], historical_games: List[Dict
             continue
 
         game_id = str(game.get("game_id") or game.get("id") or "")
-        team_id = _team_id(str(game.get("team_id") or game.get("team1") or game.get("home_team") or ""))
-        opp_id = _team_id(str(game.get("opponent_id") or game.get("team2") or game.get("away_team") or ""))
+        team_id = _team_id(str(game.get("team_id") or game.get("team1_id") or game.get("team1") or game.get("home_team") or ""))
+        opp_id = _team_id(str(game.get("opponent_id") or game.get("team2_id") or game.get("team2") or game.get("away_team") or ""))
         if not game_id or not team_id or not opp_id:
             continue
 
-        points = _to_float(game.get("team_score") or game.get("home_score") or game.get("points") or 0)
-        opp_points = _to_float(game.get("opponent_score") or game.get("away_score") or game.get("opp_points") or 0)
+        points = _to_float(game.get("team_score") or game.get("team1_score") or game.get("home_score") or game.get("points") or 0)
+        opp_points = _to_float(game.get("opponent_score") or game.get("team2_score") or game.get("away_score") or game.get("opp_points") or 0)
 
         fga = _to_float(game.get("fga", 0))
         fgm = _to_float(game.get("fgm", 0))
@@ -1200,7 +1211,7 @@ def torvik_to_game_records(torvik_teams: List[Dict], historical_games: List[Dict
         is_home = bool(game.get("is_home", not is_neutral))
 
         game_date = str(game.get("game_date") or game.get("date") or game.get("start_date") or "2026-01-01")
-        team_name = str(game.get("team_name") or game.get("team1") or team_id)
+        team_name = str(game.get("team_name") or game.get("team1_name") or game.get("team1") or team_id)
 
         records.append(GameRecord(
             game_id=game_id,

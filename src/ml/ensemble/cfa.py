@@ -5,9 +5,12 @@ Combines predictions from multiple models (GNN, Transformer, Baseline)
 using dynamic weights based on model confidence.
 """
 
+import logging
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 try:
     import lightgbm as lgb
@@ -92,11 +95,23 @@ class CombinatorialFusionAnalysis:
         predictions: Dict[str, ModelPrediction]
     ) -> Dict[str, float]:
         """
-        Calculate dynamic weights based on confidence and diversity strength.
+        Calculate dynamic weights via confidence-scaled base weights with a
+        bounded diversity bonus.
 
-        Diversity Strength: models that disagree more with the ensemble mean
-        are either wrong (low confidence) or uniquely informative (high
-        confidence).  We upweight high-confidence outliers.
+        Weight calculation:
+        1. Start from base weights (learned from historical Brier scores
+           when available, else from config).
+        2. Scale each weight by model confidence: w_i *= (0.5 + confidence_i).
+           This maps confidence [0,1] → multiplier [0.5, 1.5], keeping the
+           adjustment symmetric and bounded.
+        3. Apply a *bounded* diversity bonus.  For each model, compute its
+           deviation from the initial weighted mean.  The bonus is capped at
+           ``max_diversity_ratio`` times the base weight, preventing any single
+           outlier model from dominating.
+
+        The key mathematical fix: the diversity bonus can never exceed
+        ``max_diversity_ratio * base_weight``, ensuring convergent weights
+        regardless of how extreme a model's prediction is.
 
         Args:
             predictions: Model predictions
@@ -107,15 +122,18 @@ class CombinatorialFusionAnalysis:
         if not predictions:
             return {}
 
-        # Stage 1: base weights adjusted by confidence
+        # Stage 1: confidence-scaled base weights.
+        # Multiplier maps confidence ∈ [0,1] → [0.5, 1.5] (symmetric, bounded).
         raw_weights: Dict[str, float] = {}
         for model_name, pred in predictions.items():
             base_weight = self.base_weights.get(model_name, 0.0)
-            confidence_adjustment = (pred.confidence - 0.5) * self.confidence_scaling
-            raw_weights[model_name] = max(0.0, base_weight * (1.0 + confidence_adjustment))
+            confidence_multiplier = 0.5 + pred.confidence
+            raw_weights[model_name] = base_weight * confidence_multiplier
 
-        # Stage 2: diversity strength bonus
-        # Compute ensemble mean from raw weights to measure each model's diversity
+        # Stage 2: bounded diversity bonus.
+        # Cap bonus at max_diversity_ratio * base_weight to prevent unbounded
+        # upweighting of extreme-but-confident models.
+        max_diversity_ratio = 0.20  # Max 20% bonus from diversity
         total_raw = sum(raw_weights.values())
         if total_raw > 0:
             norm_raw = {k: v / total_raw for k, v in raw_weights.items()}
@@ -125,11 +143,14 @@ class CombinatorialFusionAnalysis:
 
             for model_name, pred in predictions.items():
                 deviation = abs(pred.win_probability - ensemble_mean)
-                # High confidence + high deviation = uniquely informative
-                diversity_bonus = deviation * pred.confidence * self.confidence_scaling
-                raw_weights[model_name] += diversity_bonus
+                base_w = self.base_weights.get(model_name, 0.0)
+                # Diversity bonus = deviation * confidence * scaling,
+                # but hard-capped at max_diversity_ratio * base_weight.
+                uncapped_bonus = deviation * pred.confidence * self.confidence_scaling
+                max_bonus = max_diversity_ratio * base_w
+                raw_weights[model_name] += min(uncapped_bonus, max_bonus)
 
-        # Normalize
+        # Normalize to sum to 1
         total_weight = sum(raw_weights.values())
         if total_weight > 0:
             return {k: v / total_weight for k, v in raw_weights.items()}
@@ -156,37 +177,89 @@ class CombinatorialFusionAnalysis:
     
     def optimize_weights(self) -> Dict[str, float]:
         """
-        Optimize base weights using historical accuracy.
-        
+        Optimize base weights using historical Brier scores.
+
+        Uses inverse-Brier softmax weighting: each model's weight is
+        proportional to exp(-beta * brier_i), where beta is a sharpness
+        parameter. This is more principled than the naive ``1 - brier``
+        because:
+
+        1. It's always positive (no risk of negative weights).
+        2. The exponential form corresponds to the Bayesian posterior over
+           model weights under a Gaussian likelihood approximation.
+        3. The beta parameter controls how aggressively we concentrate weight
+           on the best model vs. spreading weight evenly.
+
+        A minimum weight floor prevents any model from being zeroed out,
+        which maintains ensemble diversity.
+
         Returns:
             Optimized weights
         """
         if not self.model_accuracy:
             return self.base_weights
-        
-        # Calculate Brier score for each model
-        model_scores = {}
-        
+
+        model_brier: Dict[str, float] = {}
         for model_name, history in self.model_accuracy.items():
             if not history:
                 continue
-            
-            # Brier score (lower is better)
-            brier = np.mean([
-                (pred - float(actual)) ** 2 
+            brier = float(np.mean([
+                (pred - float(actual)) ** 2
                 for pred, actual in history
-            ])
-            
-            # Convert to accuracy weight (higher is better)
-            model_scores[model_name] = 1.0 - brier
-        
-        # Normalize to weights
-        total = sum(model_scores.values())
-        if total > 0:
-            self.base_weights = {
-                k: v / total for k, v in model_scores.items()
-            }
-        
+            ]))
+            model_brier[model_name] = brier
+
+        if not model_brier:
+            return self.base_weights
+
+        # FIX #D: STATISTICAL SIGNIFICANCE GUARD
+        #
+        # Before applying inverse-Brier softmax, check whether the Brier
+        # score differences across models are statistically meaningful.
+        # The standard error of a Brier score is approximately:
+        #   SE(brier) ≈ sqrt(brier * (1 - brier) / n) for binary outcomes.
+        # If the RANGE of model Brier scores is smaller than the SE of the
+        # best model's Brier, the differences are noise — concentrating
+        # weight on one model is pure overfitting.  In that case, keep
+        # existing weights (or uniform if not set).
+        brier_vals = np.array([model_brier[m] for m in model_brier])
+        brier_range = float(np.max(brier_vals) - np.min(brier_vals))
+        best_brier = float(np.min(brier_vals))
+        # Approximate sample size from first model's history
+        sample_sizes = [len(h) for h in self.model_accuracy.values() if h]
+        n_eval = min(sample_sizes) if sample_sizes else 0
+        if n_eval > 0:
+            se_brier = float(np.sqrt(best_brier * (1.0 - best_brier) / n_eval))
+        else:
+            se_brier = 1.0  # Huge SE → fall through to uniform
+
+        if brier_range < se_brier:
+            # Differences not significant — keep current weights unchanged.
+            logger.debug(
+                "Brier range (%.4f) < SE (%.4f); keeping existing weights.",
+                brier_range, se_brier,
+            )
+            return self.base_weights
+
+        # Inverse-Brier softmax: w_i ∝ exp(-beta * brier_i).
+        # FIX #D (cont.): Reduce beta from 10→5 to avoid over-concentrating
+        # weight based on small Brier differences that pass the significance
+        # test but are still noisy.  beta=5 gives a model with Brier 0.20
+        # about 1.65x the weight of one with Brier 0.30.
+        beta = 5.0
+        min_weight = 0.05  # Floor: no model drops below 5%
+        # Shift for numerical stability (subtract min so max exponent ≈ 0)
+        shifted = -beta * (brier_vals - np.min(brier_vals))
+        exp_vals = np.exp(shifted)
+        softmax_weights = exp_vals / np.sum(exp_vals)
+
+        # Apply minimum weight floor, then renormalize
+        names = list(model_brier.keys())
+        raw = {name: max(min_weight, float(w))
+               for name, w in zip(names, softmax_weights)}
+        total = sum(raw.values())
+        self.base_weights = {k: v / total for k, v in raw.items()}
+
         return self.base_weights
 
 

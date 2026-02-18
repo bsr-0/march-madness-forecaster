@@ -101,7 +101,8 @@ class CorrelationPruner:
         stds = np.std(X, axis=0)
         constant_mask = stds < 1e-10
         X_safe = X.copy()
-        X_safe[:, constant_mask] = np.random.randn(X.shape[0], int(np.sum(constant_mask))) * 1e-6
+        rng = np.random.default_rng(42)
+        X_safe[:, constant_mask] = rng.standard_normal((X.shape[0], int(np.sum(constant_mask)))) * 1e-6
 
         corr = np.corrcoef(X_safe.T)
         # Replace NaN from degenerate columns
@@ -225,7 +226,14 @@ class ImportanceCalculator:
     def _shap_importance(
         self, X: np.ndarray, y: np.ndarray, feature_names: List[str]
     ) -> Optional[np.ndarray]:
-        """SHAP TreeExplainer importance via LightGBM."""
+        """Out-of-fold SHAP TreeExplainer importance via LightGBM.
+
+        Uses TEMPORAL expanding-window folds (train on earlier data, evaluate
+        SHAP on later data) to prevent importance inflation from temporal
+        leakage.  Random folds would let the model train on future data and
+        evaluate on past data, overstating importance of features that carry
+        temporal information.
+        """
         params = {
             "objective": "binary",
             "metric": "binary_logloss",
@@ -235,26 +243,89 @@ class ImportanceCalculator:
             "feature_fraction": 0.8,
             "verbose": -1,
         }
-        train_data = lgb.Dataset(X, label=y, feature_name=feature_names)
-        model = lgb.train(
-            params, train_data, num_boost_round=100,
-            callbacks=[lgb.log_evaluation(period=0)],
-        )
-        explainer = shap.TreeExplainer(model)
-        shap_values = explainer.shap_values(X)
-        # For binary classification LightGBM, shap_values may be a list [neg, pos]
-        if isinstance(shap_values, list):
-            shap_values = shap_values[1]  # positive class
-        return np.mean(np.abs(shap_values), axis=0)
+        n = len(y)
+        n_folds = 3
+        # Accumulate absolute SHAP values across folds
+        shap_accum = np.zeros(X.shape[1])
+        total_samples = 0
+
+        # Temporal expanding-window folds: data is assumed to be in
+        # chronological order (sorted by game date before feature selection).
+        # Reserve first 40% for initial training, then split remainder into
+        # n_folds validation windows.
+        initial_train = max(20, int(0.4 * n))
+        remaining = n - initial_train
+        fold_size = max(5, remaining // n_folds)
+
+        for fold in range(n_folds):
+            val_start = initial_train + fold * fold_size
+            val_end = val_start + fold_size if fold < n_folds - 1 else n
+            if val_start >= n:
+                break
+            train_idx = np.arange(val_start)
+            val_idx = np.arange(val_start, min(val_end, n))
+
+            if len(train_idx) < 20 or len(val_idx) < 5:
+                continue
+
+            train_data = lgb.Dataset(
+                X[train_idx], label=y[train_idx], feature_name=feature_names
+            )
+            model = lgb.train(
+                params, train_data, num_boost_round=100,
+                callbacks=[lgb.log_evaluation(period=0)],
+            )
+            explainer = shap.TreeExplainer(model)
+            fold_shap = explainer.shap_values(X[val_idx])
+            if isinstance(fold_shap, list):
+                fold_shap = fold_shap[1]
+            shap_accum += np.sum(np.abs(fold_shap), axis=0)
+            total_samples += len(val_idx)
+
+        if total_samples == 0:
+            return None
+        return shap_accum / total_samples
 
     def _permutation_importance(self, X: np.ndarray, y: np.ndarray) -> Optional[np.ndarray]:
-        """Permutation importance using logistic regression."""
-        model = LogisticRegression(max_iter=1000, random_state=self.random_seed)
-        model.fit(X, y)
-        result = permutation_importance(
-            model, X, y, n_repeats=10, random_state=self.random_seed, scoring="neg_brier_score"
-        )
-        return result.importances_mean
+        """Out-of-fold permutation importance using logistic regression.
+
+        Uses TEMPORAL expanding-window folds (matching _shap_importance) to
+        prevent importance inflation from temporal leakage.
+        """
+        n = len(y)
+        n_folds = 3
+        perm_accum = np.zeros(X.shape[1])
+        total_folds = 0
+
+        # Temporal expanding-window folds (same structure as SHAP)
+        initial_train = max(20, int(0.4 * n))
+        remaining = n - initial_train
+        fold_size = max(5, remaining // n_folds)
+
+        for fold in range(n_folds):
+            val_start = initial_train + fold * fold_size
+            val_end = val_start + fold_size if fold < n_folds - 1 else n
+            if val_start >= n:
+                break
+            train_idx = np.arange(val_start)
+            val_idx = np.arange(val_start, min(val_end, n))
+
+            if len(train_idx) < 20 or len(val_idx) < 5:
+                continue
+
+            model = LogisticRegression(max_iter=1000, random_state=self.random_seed)
+            model.fit(X[train_idx], y[train_idx])
+            result = permutation_importance(
+                model, X[val_idx], y[val_idx],
+                n_repeats=10, random_state=self.random_seed,
+                scoring="neg_brier_score",
+            )
+            perm_accum += result.importances_mean
+            total_folds += 1
+
+        if total_folds == 0:
+            return None
+        return perm_accum / total_folds
 
     def _correlation_importance(self, X: np.ndarray, y: np.ndarray) -> np.ndarray:
         """Absolute Pearson correlation with target."""
@@ -317,9 +388,19 @@ class FeatureSelector:
         """
         Fit the feature selector: prune correlations, rank importance, select top-k.
 
+        LEAKAGE NOTE: This method must be called with TRAINING data only.
+        Correlation pruning (CorrelationPruner.prune) computes pairwise
+        correlations and variance on the X matrix passed here.  Importance
+        calculation (ImportanceCalculator) uses LightGBM gain, permutation
+        importance, and target-correlation — all on the same X, y.  The
+        caller (_train_baseline_model in sota.py) is responsible for
+        passing only the training split, never the full dataset.
+        transform() then applies the pre-fitted index selection to any
+        new data without recomputing statistics.
+
         Args:
-            X: Feature matrix [N, D]
-            y: Labels [N]
+            X: Feature matrix [N, D] — TRAINING DATA ONLY
+            y: Labels [N] — TRAINING LABELS ONLY
             feature_names: Feature names
 
         Returns:
