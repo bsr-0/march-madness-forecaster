@@ -625,9 +625,16 @@ class SOTAPipeline:
                 conference_map[tid] = conf
 
         # --- Compute proprietary metrics from historical box scores ---
+        # Use a pre-tournament cutoff to prevent leakage from tournament games
+        # into team metrics.  Selection Sunday is ~mid-March; First Four starts
+        # March 14.  Conference tournaments (early March) are intentionally
+        # included as they occur before the bracket is set.
+        pre_tournament_cutoff = f"{self.config.year}-03-14"
         game_records = torvik_to_game_records(torvik_teams_dicts, historical_games)
         proprietary_results = self.proprietary_engine.compute(
-            game_records, conference_map=conference_map if conference_map else None
+            game_records,
+            conference_map=conference_map if conference_map else None,
+            cutoff_date=pre_tournament_cutoff,
         )
         self.proprietary_metrics = proprietary_results
 
@@ -984,8 +991,16 @@ class SOTAPipeline:
         for team_id in team_ids:
             graph.set_team_features(team_id, self.team_features.get(team_id, default_features))
 
+        # Filter out tournament games to prevent leakage — the GNN graph
+        # should only contain regular-season results available before the
+        # tournament starts.
+        pre_tournament_games = [
+            g for g in self.all_game_flows
+            if not self._is_tournament_game(getattr(g, "game_date", "2026-01-01"))
+        ]
+
         seen_games = set()
-        for game in self.all_game_flows:
+        for game in pre_tournament_games:
             if game.game_id in seen_games:
                 continue
             seen_games.add(game.game_id)
@@ -1020,7 +1035,14 @@ class SOTAPipeline:
     def _train_baseline_model(self, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         samples: List[Tuple[int, np.ndarray, int]] = []
 
-        for game in self._unique_games(game_flows):
+        # Exclude tournament games from baseline training to prevent leakage.
+        # The model should only learn from regular-season game outcomes.
+        all_games = [
+            g for g in self._unique_games(game_flows)
+            if not self._is_tournament_game(getattr(g, "game_date", "2026-01-01"))
+        ]
+
+        for game in all_games:
             if game.team1_id not in self.feature_engineer.team_features:
                 continue
             if game.team2_id not in self.feature_engineer.team_features:
@@ -1789,8 +1811,14 @@ class SOTAPipeline:
 
         for team_id, games in game_flows.items():
             embeddings: List[GameEmbedding] = []
+            # Filter out tournament games to prevent leakage — the transformer
+            # should only learn from regular-season sequences.
+            pre_tournament = [
+                g for g in games
+                if not self._is_tournament_game(getattr(g, "game_date", "2026-01-01"))
+            ]
             ordered_games = sorted(
-                games,
+                pre_tournament,
                 key=lambda g: (self._game_sort_key(getattr(g, "game_date", "2026-01-01")), g.game_id),
             )
 
@@ -1921,15 +1949,27 @@ class SOTAPipeline:
 
         # P2: Filter out tournament games (after Selection Sunday ~mid-March)
         # to prevent calibrating on the very outcomes we're trying to predict.
+        # NEVER fall back to including tournament games — that is data leakage.
         regular_season_games = [
             g for g in unique_games
             if not self._is_tournament_game(getattr(g, "game_date", "2026-01-01"))
         ]
-        if len(regular_season_games) < 20:
-            # Fall back to all games if filtering removes too many
-            regular_season_games = unique_games
 
-        for g in regular_season_games:
+        # Only use the chronologically LAST portion of games for calibration.
+        # The baseline model was trained on the first ~80% of games, so
+        # predictions on those games are overfit.  Calibrating on overfit
+        # predictions teaches the calibrator that the model is better-calibrated
+        # than it actually is.  We restrict to the validation-era games where
+        # predictions are genuinely held-out.
+        n_cal = len(regular_season_games)
+        cal_start = max(0, n_cal - max(10, int(0.2 * n_cal)))
+        calibration_games = regular_season_games[cal_start:]
+
+        for g in calibration_games:
+            if g.team1_id not in self.feature_engineer.team_features:
+                continue
+            if g.team2_id not in self.feature_engineer.team_features:
+                continue
             # P1: Apply tighter pre-calibration clipping to prevent catastrophic
             # log loss from overconfident predictions (e.g., 1-seed vs 16-seed upsets).
             p = self._raw_fusion_probability(g.team1_id, g.team2_id)
@@ -1963,7 +2003,10 @@ class SOTAPipeline:
         p_arr = np.array(probs)
         y_arr = np.array(outcomes)
 
-        # Chronological split prevents look-ahead leakage in calibration.
+        # Chronological split for calibration train/test within the held-out
+        # validation-era games.  Both halves are from games the baseline model
+        # did NOT train on, preventing overfit predictions from inflating
+        # calibration quality.
         split = max(10, int(0.8 * len(p_arr)))
         train_p = p_arr[:split]
         train_y = y_arr[:split]
@@ -2617,15 +2660,18 @@ class SOTAPipeline:
         model_preds: Dict[str, List[float]] = {"baseline": [], "gnn": [], "transformer": []}
         outcomes: List[int] = []
 
-        # Get validation games (chronologically last 20% of all games)
+        # Get validation games — use the SAME chronological split as baseline
+        # training to prevent data leakage from misaligned validation sets.
+        # Also exclude tournament games from ensemble weight optimization.
         all_games = sorted(
             self._unique_games(game_flows),
-            key=lambda g: self._game_sort_key(getattr(g, "game_date", "2026-01-01")),
+            key=lambda g: (self._game_sort_key(getattr(g, "game_date", "2026-01-01")), g.game_id),
         )
         valid_games = [
             g for g in all_games
             if g.team1_id in self.feature_engineer.team_features
             and g.team2_id in self.feature_engineer.team_features
+            and not self._is_tournament_game(getattr(g, "game_date", "2026-01-01"))
         ]
         n_games = len(valid_games)
         # Take last 20% of games (matching the pipeline's chronological val split)
