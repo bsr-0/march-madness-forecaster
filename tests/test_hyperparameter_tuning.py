@@ -200,8 +200,9 @@ class TestOptunaTuning:
 
 
 class TestLeaveOneYearOutCV:
-    def test_basic_splits(self):
-        loyo = LeaveOneYearOutCV(years=[2021, 2022, 2023])
+    def test_basic_splits_leave_one_out(self):
+        """Original leave-one-out mode: all years get a fold."""
+        loyo = LeaveOneYearOutCV(years=[2021, 2022, 2023], temporal_mode="leave_one_out")
         game_years = np.array([2021]*30 + [2022]*30 + [2023]*30)
         splits = loyo.split(game_years)
         assert len(splits) == 3
@@ -213,6 +214,19 @@ class TestLeaveOneYearOutCV:
             # No test samples in training set
             assert all(game_years[i] != year for i in train_idx)
 
+    def test_basic_splits_rolling_window(self):
+        """Rolling window mode: first year skipped (no prior training data)."""
+        loyo = LeaveOneYearOutCV(years=[2021, 2022, 2023], temporal_mode="rolling_window")
+        game_years = np.array([2021]*30 + [2022]*30 + [2023]*30)
+        splits = loyo.split(game_years)
+        # 2021 has no prior years → skipped; 2022 and 2023 get folds
+        assert len(splits) == 2
+        held_years = [year for _, _, year in splits]
+        assert 2021 not in held_years
+        # For 2023: training data should be 2021+2022 only (not future)
+        for train_idx, test_idx, year in splits:
+            assert all(game_years[i] < year for i in train_idx)
+
     def test_excludes_2020_by_default(self):
         loyo = LeaveOneYearOutCV()
         assert 2020 not in loyo.years
@@ -220,7 +234,7 @@ class TestLeaveOneYearOutCV:
         assert 2021 in loyo.years
 
     def test_skips_year_with_few_samples(self):
-        loyo = LeaveOneYearOutCV(years=[2021, 2022, 2023])
+        loyo = LeaveOneYearOutCV(years=[2021, 2022, 2023], temporal_mode="leave_one_out")
         # 2023 has only 3 samples (< 5 threshold)
         game_years = np.array([2021]*30 + [2022]*30 + [2023]*3)
         splits = loyo.split(game_years)
@@ -236,7 +250,8 @@ class TestLeaveOneYearOutCV:
         y = (X[:, 0] > 0).astype(int)
         game_years = np.array([yr for yr in years for _ in range(n_per_year)])
 
-        loyo = LeaveOneYearOutCV(years=years)
+        # Use leave_one_out for backward compat with original test expectations
+        loyo = LeaveOneYearOutCV(years=years, temporal_mode="leave_one_out")
 
         def train_fn(X_tr, y_tr, X_v, y_v):
             return float(np.mean(y_tr))
@@ -249,13 +264,34 @@ class TestLeaveOneYearOutCV:
         for r in results:
             assert isinstance(r, CVResult)
             assert 0.0 <= r.brier_score <= 1.0
-            assert r.train_size == n_per_year * 2
+            # LOYO now holds out 15% of training data for early stopping,
+            # so train_size is smaller than the full non-test pool.
+            full_train_pool = n_per_year * 2
+            es_size = max(10, int(0.15 * full_train_pool))
+            assert r.train_size == full_train_pool - es_size
             assert r.val_size == n_per_year
 
     def test_train_test_no_overlap(self):
-        loyo = LeaveOneYearOutCV(years=[2021, 2022, 2023, 2024])
+        loyo = LeaveOneYearOutCV(years=[2021, 2022, 2023, 2024], temporal_mode="leave_one_out")
         game_years = np.array([2021]*20 + [2022]*20 + [2023]*20 + [2024]*20)
         splits = loyo.split(game_years)
         for train_idx, test_idx, year in splits:
             overlap = set(train_idx) & set(test_idx)
             assert len(overlap) == 0, f"Year {year}: train/test overlap"
+
+    def test_rolling_window_no_future_leakage(self):
+        """Rolling window mode must not include future years in training."""
+        loyo = LeaveOneYearOutCV(years=[2019, 2021, 2022, 2023], temporal_mode="rolling_window")
+        game_years = np.array([2019]*20 + [2021]*20 + [2022]*20 + [2023]*20)
+        splits = loyo.split(game_years)
+        for train_idx, test_idx, year in splits:
+            # All training samples must come from years strictly before held-out
+            for idx in train_idx:
+                assert game_years[idx] < year, (
+                    f"Year {year}: training sample from year {game_years[idx]} "
+                    f"(future leakage)"
+                )
+
+    def test_invalid_temporal_mode_raises(self):
+        with pytest.raises(ValueError, match="temporal_mode"):
+            LeaveOneYearOutCV(temporal_mode="invalid")

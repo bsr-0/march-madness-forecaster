@@ -8,9 +8,12 @@ Ensures predicted probabilities are well-calibrated:
 Reference: "Obtaining Calibrated Probabilities from Boosting" (Niculescu-Mizil & Caruana)
 """
 
+import logging
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 try:
     from scipy.optimize import minimize_scalar
@@ -239,18 +242,27 @@ class PlattScaling:
         self.fitted = False
     
     def fit(
-        self, 
-        predictions: np.ndarray, 
+        self,
+        predictions: np.ndarray,
         outcomes: np.ndarray,
-        max_iter: int = 100
+        max_iter: int = 200,
+        lr: float = 0.1,
+        tol: float = 1e-6,
+        patience: int = 5,
     ) -> None:
         """
-        Fit Platt scaling parameters using gradient descent.
-        
+        Fit Platt scaling parameters using gradient descent with convergence checks.
+
+        Uses best-tracking, adaptive learning rate (halves on NLL increase),
+        early stopping (tolerance + patience), and gradient norm convergence.
+
         Args:
             predictions: Raw predictions (log-odds or probabilities)
             outcomes: Actual outcomes
             max_iter: Maximum iterations
+            lr: Initial learning rate
+            tol: Convergence tolerance on NLL change
+            patience: Early-stop after this many non-improving iterations
         """
         # Convert to log-odds if predictions are probabilities
         if np.all(predictions >= 0) and np.all(predictions <= 1):
@@ -258,24 +270,60 @@ class PlattScaling:
             scores = np.log(predictions / (1 - predictions))
         else:
             scores = predictions
-        
-        # Fit using gradient descent
+
+        outcomes = np.asarray(outcomes, dtype=float)
+
         a, b = 1.0, 0.0
-        learning_rate = 0.1
-        
+        best_a, best_b = 1.0, 0.0
+        best_nll = float("inf")
+        no_improve_count = 0
+        prev_nll = float("inf")
+
+        import math
+
         for _ in range(max_iter):
-            probs = 1.0 / (1.0 + np.exp(-(a * scores + b)))
+            # Forward pass
+            scaled = np.clip(a * scores + b, -30.0, 30.0)
+            probs = 1.0 / (1.0 + np.exp(-scaled))
             probs = np.clip(probs, 1e-7, 1 - 1e-7)
-            
+
+            # Negative log-likelihood
+            nll = float(-np.mean(
+                outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)
+            ))
+
+            # Best-tracking
+            if nll < best_nll:
+                best_nll = nll
+                best_a, best_b = a, b
+                no_improve_count = 0
+            else:
+                no_improve_count += 1
+
+            # Early stopping: converged if NLL change < tol for patience iters
+            if abs(prev_nll - nll) < tol and no_improve_count >= patience:
+                break
+
             # Gradients
-            grad_a = np.mean((probs - outcomes) * scores)
-            grad_b = np.mean(probs - outcomes)
-            
-            a -= learning_rate * grad_a
-            b -= learning_rate * grad_b
-        
-        self.a = a
-        self.b = b
+            grad_a = float(np.mean((probs - outcomes) * scores))
+            grad_b = float(np.mean(probs - outcomes))
+
+            # Gradient norm convergence check
+            grad_norm = math.sqrt(grad_a ** 2 + grad_b ** 2)
+            if grad_norm < 1e-8:
+                break
+
+            # Adaptive LR: halve if NLL increased
+            if nll > prev_nll:
+                lr *= 0.5
+
+            prev_nll = nll
+
+            a -= lr * grad_a
+            b -= lr * grad_b
+
+        self.a = best_a
+        self.b = best_b
         self.fitted = True
     
     def calibrate(self, predictions: np.ndarray) -> np.ndarray:
@@ -319,6 +367,7 @@ class TemperatureScaling:
         outcomes: np.ndarray,
         max_iter: int = 200,
         lr: float = 0.01,
+        _skip_guard: bool = False,
     ) -> None:
         """
         Fit temperature parameter by minimizing negative log-likelihood (NLL).
@@ -341,6 +390,14 @@ class TemperatureScaling:
         predictions = np.clip(predictions, 1e-7, 1 - 1e-7)
         logits = np.log(predictions / (1 - predictions))
         outcomes = outcomes.astype(float)
+
+        # Small-sample guard: with fewer than 30 calibration samples, the NLL
+        # landscape is noisy and Brent's method may converge to an extreme
+        # boundary value (T=0.1 or T=10.0).  In this regime, verify via
+        # bootstrap CI that T is statistically distinguishable from 1.0.
+        # If not, keep T=1.0 (identity calibration) to avoid harmful distortion.
+        # _skip_guard is True for bootstrap resamples to avoid infinite recursion.
+        self._small_sample_guard = len(predictions) < 30 and not _skip_guard
 
         def nll_at_T(T: float) -> float:
             """Negative log-likelihood at temperature T."""
@@ -392,6 +449,23 @@ class TemperatureScaling:
 
             self.temperature = best_T
 
+        # Small-sample guard: verify T is statistically justified.
+        if self._small_sample_guard:
+            try:
+                ci_lo, ci_hi = self.bootstrap_ci(
+                    predictions, outcomes,
+                    n_bootstrap=200, ci_level=0.90,
+                )
+                if ci_lo <= 1.0 <= ci_hi:
+                    # CI includes identity — not enough evidence to calibrate
+                    self.temperature = 1.0
+            except Exception as e:
+                logger.warning(
+                    "Temperature scaling bootstrap CI failed (%s); "
+                    "falling back to T=1.0", e,
+                )
+                self.temperature = 1.0
+
         self.fitted = True
 
     def calibrate(self, predictions: np.ndarray) -> np.ndarray:
@@ -441,7 +515,7 @@ class TemperatureScaling:
             boot_out = outcomes[idx]
 
             ts = TemperatureScaling()
-            ts.fit(boot_pred, boot_out)
+            ts.fit(boot_pred, boot_out, _skip_guard=True)
             T_values.append(ts.temperature)
 
         T_values = np.array(T_values)

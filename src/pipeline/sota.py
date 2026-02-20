@@ -2,9 +2,17 @@
 
 from __future__ import annotations
 
+import os as _os
+
+# Prevent OpenMP deadlocks when LightGBM/XGBoost run after PyTorch GNN
+# training on macOS.  Must be set before any OpenMP library is loaded.
+_os.environ.setdefault("OMP_NUM_THREADS", "1")
+_os.environ.setdefault("MKL_NUM_THREADS", "1")
+
 import json
 import math
 import random
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
@@ -24,12 +32,18 @@ try:
 except ImportError:
     SKLEARN_AVAILABLE = False
 
-from ..data.features.feature_engineering import FeatureEngineer, compute_rapm
+from ..data.features.feature_engineering import (
+    FeatureEngineer,
+    compute_rapm,
+    TEAM_FEATURE_DIM,
+    ABSOLUTE_LEVEL_FEATURE_NAMES,
+    validate_population_stats,
+)
 from ..data.features.feature_selection import FeatureSelector, FeatureSelectionResult
 from ..data.loader import DataLoader
 from ..data.models.game_flow import GameFlow
 from ..data.models.player import InjuryStatus, Player, Position, Roster
-from ..data.features.proprietary_metrics import ProprietaryMetricsEngine, ProprietaryTeamMetrics, torvik_to_game_records
+from ..data.features.proprietary_metrics import ProprietaryMetricsEngine, ProprietaryTeamMetrics, torvik_to_game_records, _load_cbbpy_team_map
 from ..data.scrapers.espn_picks import (
     CBSPicksScraper,
     ESPNPicksScraper,
@@ -38,7 +52,7 @@ from ..data.scrapers.espn_picks import (
 )
 from ..data.scrapers.injury_report import (
     InjuryReportScraper,
-    InjurySeverityModel,
+    InjurySeverityEstimator,
     PositionalDepthChart,
     apply_injury_reports_to_roster,
 )
@@ -90,6 +104,148 @@ try:
     from ..ml.transformer.game_sequence import GameFlowTransformer  # type: ignore
 except ImportError:
     GameFlowTransformer = None
+
+try:
+    from ..ml.evaluation.statistical_tests import model_significance_report
+    SIGNIFICANCE_TESTING_AVAILABLE = True
+except ImportError:
+    model_significance_report = None
+    SIGNIFICANCE_TESTING_AVAILABLE = False
+
+try:
+    from ..ml.evaluation.ablation import AblationStudy
+    ABLATION_AVAILABLE = True
+except ImportError:
+    AblationStudy = None
+    ABLATION_AVAILABLE = False
+
+
+# ---------------------------------------------------------------------------
+# Fix 4: Feature stability scores for structured point-in-time degradation.
+# 1.0 = very stable across season (e.g. tempo, FT%);
+# 0.0 = very volatile early season (e.g. luck, close game record).
+# Features not listed default to 0.5.
+# ---------------------------------------------------------------------------
+_FEATURE_STABILITY: Dict[str, float] = {
+    # Core efficiency — evolves moderately
+    # FIX #1: adj_efficiency_margin REMOVED (exact linear of off-def)
+    "adj_off_eff": 0.6,
+    "adj_def_eff": 0.6,
+    "adj_tempo": 0.9,
+    # Four Factors — shooting is relatively stable
+    "efg_pct": 0.8,
+    "to_rate": 0.7,
+    "orb_rate": 0.6,
+    "ft_rate": 0.7,
+    "opp_efg_pct": 0.7,
+    "opp_to_rate": 0.6,
+    "drb_rate": 0.6,
+    "opp_ft_rate": 0.6,
+    # Player metrics — stable once rotation settles
+    "total_rapm": 0.7,
+    "top5_rapm": 0.7,
+    "bench_rapm": 0.5,
+    "total_warp": 0.6,
+    "roster_continuity": 0.95,
+    "transfer_impact": 0.5,
+    # Experience
+    "avg_experience": 0.8,
+    "bench_depth": 0.6,
+    "injury_risk": 0.3,
+    # Record-based — very volatile early season
+    "win_pct": 0.2,
+    "wab": 0.2,
+    "close_game_record": 0.1,
+    # Schedule strength — volatile until full schedule
+    "sos_adj_em": 0.3,
+    "sos_opp_o": 0.3,
+    "sos_opp_d": 0.3,
+    "ncsos_adj_em": 0.3,
+    # Identity-like — very stable
+    "free_throw_pct": 0.9,
+    # Luck — inherently noisy
+    "luck": 0.1,
+    # Volatility metrics
+    # FIX #1: consistency REMOVED (near-inverse of pace_adj_variance)
+    "lead_volatility": 0.4,
+    "entropy": 0.4,
+    "lead_sustainability": 0.5,
+    "comeback_factor": 0.3,
+    # Momentum
+    # FIX #1: momentum_5g REMOVED (~r=0.85 with momentum)
+    "momentum": 0.2,
+    # Variance / upset risk
+    "three_pt_variance": 0.4,
+    "pace_adj_variance": 0.3,
+    # Elo — moderately stable
+    "elo_rating": 0.5,
+    # Ball movement / execution
+    "assist_to_turnover": 0.7,
+    "assist_rate": 0.7,
+    # Defensive disruption
+    "steal_rate": 0.7,
+    "block_rate": 0.7,
+    # Opponent shot selection
+    "opp_two_pt_pct": 0.6,
+    "opp_three_pt_attempt_rate": 0.5,
+    # Conference
+    "conference_adj_em": 0.5,
+    # Shooting splits
+    # FIX #1: two_pt_pct REMOVED, true_shooting_pct REMOVED, opp_true_shooting_pct REMOVED
+    "three_pt_pct": 0.7,
+    "three_pt_rate": 0.8,
+    # Defensive xP
+    "def_xp_per_poss": 0.6,
+    # Shot quality / xP
+    "xp_per_poss": 0.6,
+    "shot_distribution": 0.5,
+    # Elite SOS / Q1
+    "elite_sos": 0.3,
+    "q1_win_pct": 0.2,
+    # Foul rate
+    "foul_rate": 0.7,
+    # 3PT regression
+    "three_pt_regression": 0.4,
+    # Schedule/context features
+    "rest_days": 0.5,
+    "top5_minutes_share": 0.7,
+    "preseason_ap_rank": 0.95,
+    "coach_tournament_exp": 0.95,
+    "coach_tournament_win_rate": 0.95,
+    "pace_variance": 0.4,
+    "conf_tourney_champ": 0.5,
+    # KenPom / ShotQuality replacements
+    "neutral_site_win_pct": 0.2,
+    "home_court_dependence": 0.4,
+    "transition_efficiency": 0.5,
+    "defensive_transition_vulnerability": 0.5,
+    "backcourt_rapm": 0.7,
+    "frontcourt_rapm": 0.7,
+    # Seed strength
+    "seed_strength": 0.95,
+}
+
+# Build index map from feature names to vector positions.
+# This is lazily populated on first use by matching against TeamFeatures names.
+_FEATURE_STABILITY_INDICES: Dict[str, int] = {}
+
+
+def _init_feature_stability_indices() -> None:
+    """Populate _FEATURE_STABILITY_INDICES from TeamFeatures.get_feature_names."""
+    global _FEATURE_STABILITY_INDICES
+    if _FEATURE_STABILITY_INDICES:
+        return
+    try:
+        from ..data.features.feature_engineering import TeamFeatures
+        names = TeamFeatures.get_feature_names(include_embeddings=False)
+        # Matchup differential has 2*len(names) features (team1-team2 diff,
+        # then interactions), but the stability applies to the diff features.
+        # Diff feature i corresponds to team_feature i.
+        for i, name in enumerate(names):
+            if name in _FEATURE_STABILITY:
+                _FEATURE_STABILITY_INDICES[name] = i
+    except Exception:
+        pass
 
 
 @dataclass
@@ -167,13 +323,25 @@ class SOTAPipelineConfig:
     bracket_source: str = "auto"  # "auto", "bigdance", "sports_reference", or file path
     bracket_json: Optional[str] = None  # Pre-fetched bracket JSON path
 
+    # --- Recency weighting ---
+    # Weight training samples by recency: late-season games are more
+    # predictive of tournament performance (settled rosters, features closer
+    # to end-of-season values, higher opponent quality).  Uses exponential
+    # decay: w(t) = decay_floor + (1 - decay_floor) * exp(-half_life_decay * (1-t))
+    # where t is season progress [0,1].
+    enable_recency_weighting: bool = True
+    recency_decay_floor: float = 0.3  # Minimum weight for earliest games (prevents discarding data)
+    recency_half_life: float = 0.3  # Controls decay steepness (lower = more aggressive)
+
     # --- Late-season training cutoff (leakage fix: full-season features) ---
     # Number of days before tournament start (March 14) to include in training.
     # Games before this cutoff are excluded because their matchup features use
     # end-of-season stats that weren't available at game time.
-    # Default 75 days (~January 1) keeps ~70% of regular-season games.
+    # Default 45 days (~January 28) balances sample size against leakage.
+    # Point-in-time metric snapshots (enabled separately) provide more accurate
+    # temporal feature degradation, making the wider window safe.
     # Set to 0 to disable the cutoff (use all games with noise mitigation).
-    late_season_training_cutoff_days: int = 75
+    late_season_training_cutoff_days: int = 45
 
     # --- Tournament domain adaptation ---
     enable_tournament_adaptation: bool = True
@@ -185,6 +353,39 @@ class SOTAPipelineConfig:
     # The shrinkage factor blends the raw prediction toward 0.5:
     #   p_adj = shrinkage * 0.5 + (1 - shrinkage) * p_raw
     tournament_shrinkage: float = 0.08  # 8% shrinkage (calibrated from LOYO)
+
+    # --- Multi-year calibration (Fix 1: expand calibration sample pool) ---
+    enable_multi_year_calibration: bool = True  # Augment calibration with historical years
+    min_calibration_samples: int = 100  # Warn and skip calibration below this threshold
+
+    # --- LOYO temporal mode (Fix 2: purely temporal CV) ---
+    loyo_temporal_mode: str = "rolling_window"  # "rolling_window" (honest) or "leave_one_out" (original)
+
+    # --- Ablation study (Fix 5: measure component contributions) ---
+    enable_ablation_study: bool = False  # Expensive; run as post-training diagnostic
+
+    # --- Stacking meta-learner (Fix 6: more expressive) ---
+    stacking_meta_learner: str = "lightgbm"  # "lightgbm" (expressive) or "logistic" (original)
+    stacking_min_samples_for_lgb: int = 80  # Fallback to logistic below this
+
+    # --- Ensemble weight regularization (Fix 8: small-sample guard) ---
+    min_ensemble_samples: int = 50  # Skip optimization below this
+    ensemble_weight_regularization: float = 0.1  # L2 penalty toward uniform weights
+
+    # --- GNN temporal edge weighting ---
+    # Controls recency bias in schedule graph edges.  0.0 = all games equal
+    # (backward compatible), 0.5 = moderate recency bias (recommended),
+    # 1.0 = strong recency (earliest game gets ~30% weight).
+    gnn_temporal_decay: float = 0.5
+
+    # --- VIF multicollinearity pruning (Fix 11) ---
+    enable_vif_pruning: bool = True
+    vif_threshold: float = 10.0  # Standard VIF threshold for collinearity
+
+    # --- Feature selection stability filter (Fix #6) ---
+    enable_stability_filter: bool = True  # Bootstrap stability filtering
+    stability_threshold: float = 0.80  # Feature must be selected in ≥80% of bootstrap runs
+    n_bootstrap: int = 10  # Number of bootstrap iterations for stability analysis
 
 
 class DataRequirementError(ValueError):
@@ -199,8 +400,11 @@ class _TrainedBaselineModel:
         self.xgb_model: Optional[XGBoostRanker] = None
         self.logit_model: Optional[LogisticRegression] = None
         self.scaler: Optional[object] = None  # StandardScaler
+        self.feature_dim: int = 83  # Dimensionality of input feature vector (pre-selection)
         # Stacking meta-learner: uses base model outputs as features
-        self.stacking_meta: Optional[LogisticRegression] = None
+        # Can be LogisticRegression (predict_proba) or LightGBM Booster (predict)
+        self.stacking_meta: Optional[object] = None
+        self.stacking_meta_type: str = "logistic"  # "logistic" or "lightgbm"
         self.stacking_models: List = []  # List of (name, model) for base learners
 
     def predict_proba(self, x: np.ndarray) -> float:
@@ -241,26 +445,53 @@ class _TrainedBaselineModel:
     def _stacking_predict(self, x: np.ndarray) -> float:
         """Generate stacking prediction from base model outputs."""
         meta_features = self._get_meta_features(x.reshape(1, -1))
+        if self.stacking_meta_type == "lightgbm":
+            raw = float(self.stacking_meta.predict(meta_features)[0])
+            return float(np.clip(raw, 0.01, 0.99))
         return float(self.stacking_meta.predict_proba(meta_features)[0][1])
 
     def _stacking_predict_batch(self, X: np.ndarray) -> np.ndarray:
         """Batch stacking prediction."""
         meta_features = self._get_meta_features(X)
+        if self.stacking_meta_type == "lightgbm":
+            raw = self.stacking_meta.predict(meta_features)
+            return np.clip(raw, 0.01, 0.99)
         return self.stacking_meta.predict_proba(meta_features)[:, 1]
 
     def _get_meta_features(self, X: np.ndarray) -> np.ndarray:
-        """Collect base model outputs as meta-features."""
-        meta_cols = []
+        """Collect base model outputs and build enriched meta-features.
+
+        Returns 9 features when 3 base models are present:
+          - 3 base predictions (lgb, xgb, logit)
+          - 3 pairwise interactions (lgb*xgb, lgb*logit, xgb*logit)
+          - 3 aggregates (max, min, std of base preds)
+        """
+        base_cols = []
         for name, model in self.stacking_models:
             if name == "lgb" and isinstance(model, LightGBMRanker):
-                meta_cols.append(model.predict(X))
+                base_cols.append(model.predict(X))
             elif name == "xgb" and isinstance(model, XGBoostRanker):
-                meta_cols.append(model.predict(X))
+                base_cols.append(model.predict(X))
             elif name == "logit" and hasattr(model, "predict_proba"):
-                meta_cols.append(model.predict_proba(X)[:, 1])
-        if not meta_cols:
+                base_cols.append(model.predict_proba(X)[:, 1])
+        if not base_cols:
             return X
-        return np.column_stack(meta_cols)
+
+        base_arr = np.column_stack(base_cols)  # (N, k)
+        enriched = [base_arr]
+
+        # Pairwise interactions
+        k = base_arr.shape[1]
+        for i in range(k):
+            for j in range(i + 1, k):
+                enriched.append((base_arr[:, i] * base_arr[:, j]).reshape(-1, 1))
+
+        # Aggregates: max, min, std across base models
+        enriched.append(np.max(base_arr, axis=1).reshape(-1, 1))
+        enriched.append(np.min(base_arr, axis=1).reshape(-1, 1))
+        enriched.append(np.std(base_arr, axis=1).reshape(-1, 1))
+
+        return np.hstack(enriched)
 
 
 class SOTAPipeline:
@@ -319,13 +550,18 @@ class SOTAPipeline:
         self._pre_optimization_cfa_weights: Optional[Dict[str, float]] = None
 
         # Injury integration state
-        self.injury_severity_model = InjurySeverityModel(random_seed=self.config.random_seed)
+        self.injury_severity_model = InjurySeverityEstimator(random_seed=self.config.random_seed)
         self.positional_depth_chart = PositionalDepthChart()
         self.injury_reports: Dict[str, dict] = {}
         self.positional_impacts: Dict[str, Dict[str, float]] = {}
 
         # Hyperparameter tuning state
         self.tuning_result: Optional[Dict] = None
+
+        # Deferred GNN SOS refinement (FIX M5): stored during _run_gnn(),
+        # applied after _train_baseline_model() to avoid contaminating
+        # training features.
+        self._sos_refinement_pending: Optional[tuple] = None
 
         # Bracket ingestion state
         self.team_name_resolver = TeamNameResolver()
@@ -406,6 +642,17 @@ class SOTAPipeline:
             )
             self.team_features[team_id] = features.to_vector(include_embeddings=False)
 
+        # FIX #9: Validate population statistics against current training data.
+        # Logs warnings when feature distributions diverge from historical norms,
+        # catching rule changes, COVID effects, or data pipeline regressions.
+        pop_warnings = validate_population_stats(self.feature_engineer.team_features)
+        if pop_warnings:
+            logger.warning(
+                "FIX#9: %d features diverged from population stats — "
+                "review warnings above for potential data quality issues.",
+                len(pop_warnings),
+            )
+
         # Compute train/val boundary BEFORE GNN and transformer training so
         # they can restrict their data to training-era games only.
         self._compute_train_val_boundary(game_flows)
@@ -416,6 +663,14 @@ class SOTAPipeline:
         gnn_stats = self._run_gnn(schedule_graph)
         baseline_stats = self._train_baseline_model(game_flows)
         transformer_stats = self._run_transformer(game_flows)
+
+        # FIX M5: Apply deferred SOS refinement AFTER baseline training so
+        # that training features are uncontaminated by GNN-derived SOS.
+        # The refinement is only applied for inference-time features.
+        if self._sos_refinement_pending is not None:
+            mh, pr = self._sos_refinement_pending
+            self._apply_sos_refinement(mh, pr)
+            self._sos_refinement_pending = None
 
         # Train learned embedding projections BEFORE confidence estimation,
         # so the logistic models map (v1-v2, v1*v2) → P(win) properly.
@@ -456,6 +711,30 @@ class SOTAPipeline:
             }
             for p in pool_analysis.leverage_picks[:15]
         ]
+
+        # Fix 5: Run ablation study if enabled (post-training diagnostic)
+        ablation_stats: Dict = {}
+        if self.config.enable_ablation_study and ABLATION_AVAILABLE:
+            try:
+                # Build validation games list from game_flows
+                val_games = []
+                for g in self._unique_games(game_flows):
+                    if (
+                        g.team1_id in self.feature_engineer.team_features
+                        and g.team2_id in self.feature_engineer.team_features
+                    ):
+                        team1_won = bool(g.lead_history and g.lead_history[-1] > 0)
+                        val_games.append({
+                            "team1": g.team1_id,
+                            "team2": g.team2_id,
+                            "team1_won": team1_won,
+                        })
+                if len(val_games) >= 20:
+                    ablation = AblationStudy(self, val_games)
+                    ablation_report = ablation.run_full_ablation()
+                    ablation_stats = ablation_report.to_dict()
+            except Exception:
+                ablation_stats = {"error": "ablation study failed"}
 
         report = {
             "rubric_evaluation": {
@@ -534,6 +813,17 @@ class SOTAPipeline:
                             {"name": f.name, "importance": round(f.importance, 4)}
                             for f in self.feature_selection_result.importance_scores[:15]
                         ],
+                        # FIX #6: Bootstrap stability scores
+                        **(
+                            {"stability_scores": {
+                                k: round(v, 3) for k, v in sorted(
+                                    self.feature_selection_result.stability_scores.items(),
+                                    key=lambda x: x[1], reverse=True,
+                                )[:10]
+                            }}
+                            if self.feature_selection_result.stability_scores
+                            else {}
+                        ),
                     }
                     if self.feature_selection_result
                     else {}
@@ -550,6 +840,7 @@ class SOTAPipeline:
                     "CHAMP": 320,
                 },
                 "top_leverage_picks": leverage_preview,
+                "ablation_study": ablation_stats,
             },
         }
         return report
@@ -751,24 +1042,90 @@ class SOTAPipeline:
         torvik_map: Dict[str, Dict] = {}
         proprietary_map: Dict[str, Dict] = {}
 
-        # Build prefix lookup for proprietary result keys that may include
-        # mascot suffixes (e.g. "duke_blue_devils" for tournament team "duke").
-        _prop_keys_by_len = sorted(proprietary_results.keys(), key=len, reverse=True)
-        _prop_prefix_cache: Dict[str, Optional[str]] = {}
+        # Store Torvik canonical ID mapping on self for reuse in
+        # _historical_game_to_flow() which also needs to resolve
+        # mascot-suffixed game IDs to canonical tournament IDs.
+        #
+        # Uses the CBBpy team-map CSV (display_name → school location)
+        # plus Torvik team names to build an exact resolver.  This avoids
+        # false prefix matches like "new_mexico_state_aggies" → "new_mexico"
+        # because the CSV correctly distinguishes "New Mexico State" from
+        # "New Mexico" via its location column.
+        #
+        # The resolver is populated lazily: when _build_or_load_game_flows()
+        # pre-scans games, it calls _resolve_to_canonical() with display
+        # names extracted from game data, and the CSV lookup handles
+        # disambiguation.
 
-        def _resolve_proprietary(short_key: str):
-            """Resolve short tournament key to mascot-suffixed proprietary key."""
-            if short_key in proprietary_results:
-                return proprietary_results[short_key]
-            if short_key in _prop_prefix_cache:
-                cached = _prop_prefix_cache[short_key]
-                return proprietary_results.get(cached) if cached else None
-            for pk in _prop_keys_by_len:
-                if pk.startswith(short_key + "_") or pk.startswith(short_key):
-                    _prop_prefix_cache[short_key] = pk
-                    return proprietary_results[pk]
-            _prop_prefix_cache[short_key] = None
-            return None
+        # Build Torvik name→canonical_id lookup with multiple normalized
+        # forms to handle HTML entities, parentheticals, suffix variations.
+        _torvik_name_to_id: Dict[str, str] = {}
+        for t in torvik_teams:
+            if isinstance(t, dict):
+                tid = t.get("team_id", "")
+                tname = t.get("name", "")
+            else:
+                tid = getattr(t, "team_id", "")
+                tname = getattr(t, "name", "")
+            if tid and tname:
+                nk = self._normalize_key
+                ti = self._team_id
+                canon = nk(tid)
+                _torvik_name_to_id[nk(ti(tname))] = canon
+                _torvik_name_to_id[canon] = canon
+                cleaned = tname.replace("&amp;", "&")
+                if cleaned != tname:
+                    _torvik_name_to_id[nk(ti(cleaned))] = canon
+                stripped = re.sub(r"\s*\([^)]*\)\s*", "", tname).strip()
+                if stripped != tname:
+                    _torvik_name_to_id[nk(ti(stripped))] = canon
+                    stripped_clean = re.sub(r"\s*\([^)]*\)\s*", "", cleaned).strip()
+                    if stripped_clean != stripped:
+                        _torvik_name_to_id[nk(ti(stripped_clean))] = canon
+
+        # CBBpy→Torvik alias overrides for known naming mismatches.
+        _cbbpy_torvik_aliases = {
+            "mcneese": "mcneese_state",
+            "american_university": "american",
+        }
+        for alias, target in _cbbpy_torvik_aliases.items():
+            if target in _torvik_name_to_id:
+                _torvik_name_to_id[alias] = _torvik_name_to_id[target]
+
+        # Set of Torvik canonical IDs for exact-match fallback.
+        _torvik_id_set = set(_torvik_name_to_id.values())
+
+        # Load CBBpy team map
+        _cbbpy_map = _load_cbbpy_team_map()
+
+        _mascot_cache: Dict[str, str] = {}
+
+        def _resolve_to_canonical(raw_id: str, display_name: str = "") -> str:
+            if raw_id in _mascot_cache:
+                return _mascot_cache[raw_id]
+            # Primary: use CBBpy CSV display_name → location → Torvik name
+            if display_name:
+                location = _cbbpy_map.get(display_name)
+                if location:
+                    norm_loc = self._normalize_key(self._team_id(location))
+                    canon = _torvik_name_to_id.get(norm_loc)
+                    if canon:
+                        _mascot_cache[raw_id] = canon
+                        return canon
+            # Fallback: exact match on Torvik canonical ID (no prefix
+            # matching to avoid false positives like
+            # new_mexico_highlands → new_mexico).
+            if raw_id in _torvik_id_set:
+                _mascot_cache[raw_id] = raw_id
+                return raw_id
+            # No match — keep raw ID (non-tournament team).
+            _mascot_cache[raw_id] = raw_id
+            return raw_id
+
+        self._torvik_name_to_id = _torvik_name_to_id
+        self._cbbpy_map = _cbbpy_map
+        self._mascot_cache = _mascot_cache
+        self._resolve_to_canonical = _resolve_to_canonical
 
         for team in teams:
             team_id = self._team_id(team.name)
@@ -813,19 +1170,34 @@ class SOTAPipeline:
                     "conf_losses": data.get("conf_losses", 0),
                 }
 
-            # Map proprietary metrics by team_id (with prefix matching for
-            # mascot-suffixed keys like "duke_blue_devils" → "duke").
-            pm = _resolve_proprietary(key)
-            if pm is None:
-                pm = _resolve_proprietary(team_id)
+            # Map proprietary metrics by team_id — with canonical ID
+            # resolution in torvik_to_game_records(), proprietary_results
+            # is already keyed by canonical IDs (e.g. "duke" not
+            # "duke_blue_devils").
+            pm = proprietary_results.get(key)
             if pm is not None:
                 proprietary_map[team_id] = pm.to_dict()
+            else:
+                pm = proprietary_results.get(team_id)
+                if pm is not None:
+                    proprietary_map[team_id] = pm.to_dict()
 
         # Backfill from Sports Reference if available
         if self.config.sports_reference_json:
             with open(self.config.sports_reference_json, "r") as f:
                 sr_payload = json.load(f)
             sr_rows = sr_payload.get("teams", [])
+
+            # Reject the entire SR payload if critical fields are all-zero
+            # (indicates a corrupted scrape — e.g. 2026 off_rtg bug).
+            _sr_off = [float(r.get("off_rtg", 0)) for r in sr_rows if isinstance(r, dict)]
+            if _sr_off and all(abs(v) < 1e-6 for v in _sr_off):
+                logger.warning(
+                    "Sports Reference JSON has all-zero off_rtg — skipping "
+                    "entire SR backfill (corrupted scrape)."
+                )
+                sr_rows = []
+
             sr_index = {}
             for row in sr_rows:
                 team_name = row.get("team_name") or row.get("name")
@@ -840,12 +1212,17 @@ class SOTAPipeline:
                     continue
 
                 if team_id not in proprietary_map:
-                    off = float(sr.get("off_rtg", 100.0))
-                    deff = float(sr.get("def_rtg", 100.0))
+                    off = float(sr.get("off_rtg", 0))
+                    deff = float(sr.get("def_rtg", 0))
+                    pace = float(sr.get("pace", 0))
+                    # Skip teams with zero/missing critical metrics —
+                    # indicates a corrupted scrape, not real data.
+                    if off < 1e-6 or deff < 1e-6:
+                        continue
                     proprietary_map[team_id] = {
                         "adj_offensive_efficiency": off,
                         "adj_defensive_efficiency": deff,
-                        "adj_tempo": float(sr.get("pace", 68.0)),
+                        "adj_tempo": pace if pace > 1e-6 else 68.0,
                         "adj_efficiency_margin": off - deff,
                         "sos_adj_em": 0.0,
                         "sos_opp_o": 100.0,
@@ -913,11 +1290,15 @@ class SOTAPipeline:
             except Exception:
                 pass
 
-        # Use TournamentContextScraper helper to map teams to coach appearances
+        # Use TournamentContextScraper helper to map teams to coach appearances + win rate
         coach_appearances_by_team: Dict[str, int] = {}
+        coach_win_rate_by_team: Dict[str, float] = {}
         if coach_data and team_to_coach_map:
             ctx = TournamentContextScraper()
             coach_appearances_by_team = ctx.build_team_to_coach_appearances(
+                coach_data, team_to_coach_map
+            )
+            coach_win_rate_by_team = ctx.build_team_to_coach_win_rate(
                 coach_data, team_to_coach_map
             )
 
@@ -937,8 +1318,9 @@ class SOTAPipeline:
                             ap_rank = rank_val
                             break
 
-            # --- Coach tournament appearances ---
+            # --- Coach tournament appearances + win rate ---
             coach_apps = coach_appearances_by_team.get(team_id, 0)
+            coach_win_rate = coach_win_rate_by_team.get(team_id, 0.0)
 
             # --- Conference tournament champion ---
             is_conf_champ = 0.0
@@ -955,12 +1337,14 @@ class SOTAPipeline:
             if team_id in torvik_map:
                 torvik_map[team_id]["preseason_ap_rank"] = ap_rank
                 torvik_map[team_id]["coach_tournament_appearances"] = coach_apps
+                torvik_map[team_id]["coach_tournament_win_rate"] = coach_win_rate
                 torvik_map[team_id]["conf_tourney_champion"] = is_conf_champ
 
             # Write into proprietary_map
             if team_id in proprietary_map:
                 proprietary_map[team_id]["preseason_ap_rank"] = ap_rank
                 proprietary_map[team_id]["coach_tournament_appearances"] = coach_apps
+                proprietary_map[team_id]["coach_tournament_win_rate"] = coach_win_rate
                 proprietary_map[team_id]["conf_tourney_champion"] = is_conf_champ
 
     def _build_rosters(self, teams: List[Team]) -> Dict[str, Roster]:
@@ -1014,6 +1398,32 @@ class SOTAPipeline:
             with open(self.config.historical_games_json, "r") as f:
                 payload = json.load(f)
             games = payload.get("games", [])
+
+            # Pre-scan games to populate the canonical ID cache using CBBpy
+            # team-map CSV.  The CSV ``location`` column gives the school
+            # name without mascot (e.g. "New Mexico State" vs "New Mexico")
+            # which is then matched against Torvik canonical names.
+            if hasattr(self, '_resolve_to_canonical') and hasattr(self, '_mascot_cache'):
+                for game in games:
+                    if not isinstance(game, dict):
+                        continue
+                    for id_keys, name_keys in [
+                        (["team_id", "team1_id"], ["team_name", "team1_name"]),
+                        (["opponent_id", "team2_id"], ["opponent_name", "team2_name"]),
+                    ]:
+                        raw = ""
+                        for k in id_keys:
+                            if game.get(k):
+                                raw = self._team_id(str(game[k]))
+                                break
+                        disp = ""
+                        for k in name_keys:
+                            if game.get(k):
+                                disp = str(game[k])  # Keep original case for CSV lookup
+                                break
+                        if raw and disp and raw not in self._mascot_cache:
+                            self._resolve_to_canonical(raw, display_name=disp)
+
             for game in games:
                 flow = self._historical_game_to_flow(game)
                 if not flow:
@@ -1052,13 +1462,24 @@ class SOTAPipeline:
 
     def _historical_game_to_flow(self, game: Dict) -> Optional[GameFlow]:
         game_id = str(game.get("game_id") or game.get("id") or "")
-        t1 = game.get("team1_id") or game.get("team1") or game.get("home_team")
-        t2 = game.get("team2_id") or game.get("team2") or game.get("away_team")
+        t1 = game.get("team_id") or game.get("team1_id") or game.get("team1") or game.get("home_team")
+        t2 = game.get("opponent_id") or game.get("team2_id") or game.get("team2") or game.get("away_team")
         if not game_id or not t1 or not t2:
             return None
 
-        team1_id = self._team_id(str(t1))
-        team2_id = self._team_id(str(t2))
+        raw1 = self._team_id(str(t1))
+        raw2 = self._team_id(str(t2))
+        # Resolve mascot-suffixed IDs to canonical IDs if the Torvik
+        # canonical mapping has been loaded (set by _load_team_stat_sources).
+        # Display names are passed for CSV-based disambiguation.
+        if hasattr(self, '_resolve_to_canonical'):
+            disp1 = str(game.get("team_name") or game.get("team1_name") or "")
+            disp2 = str(game.get("opponent_name") or game.get("team2_name") or "")
+            team1_id = self._resolve_to_canonical(raw1, display_name=disp1)
+            team2_id = self._resolve_to_canonical(raw2, display_name=disp2)
+        else:
+            team1_id = raw1
+            team2_id = raw2
         flow = GameFlow(game_id=game_id, team1_id=team1_id, team2_id=team2_id)
 
         lead_history = game.get("lead_history")
@@ -1081,7 +1502,7 @@ class SOTAPipeline:
             team_ids.add(flow.team1_id)
             team_ids.add(flow.team2_id)
         team_ids = sorted(team_ids)
-        graph = ScheduleGraph(team_ids)
+        graph = ScheduleGraph(team_ids, temporal_decay=self.config.gnn_temporal_decay)
 
         if self.team_features:
             default_dim = len(next(iter(self.team_features.values())))
@@ -1160,24 +1581,27 @@ class SOTAPipeline:
                 if self._game_sort_key(getattr(g, "game_date", "2026-01-01")) >= cutoff_key
             ]
             # Fallback: if cutoff removes too many games, revert.
-            # Threshold raised from 50 to 80 so the cutoff reverts less
-            # aggressively — reverting reintroduces early-season leakage.
-            if len(all_games) < 80:
+            # Threshold 60 balances the wider 45-day window against the
+            # need for adequate training data (30 unique games minimum).
+            if len(all_games) < 60:
                 all_games = all_games_uncutoff
 
+        # Track game metadata for point-in-time feature adjustment.
+        # Each sample is (game_key, vector, label, game_date, team1_id, team2_id).
         for game in all_games:
             if game.team1_id not in self.feature_engineer.team_features:
                 continue
             if game.team2_id not in self.feature_engineer.team_features:
                 continue
 
-            game_key = self._game_sort_key(getattr(game, "game_date", "2026-01-01"))
-            matchup = self.feature_engineer.create_matchup_features(game.team1_id, game.team2_id)
-            samples.append((game_key, matchup.to_vector(), 1 if (game.lead_history and game.lead_history[-1] > 0) else 0))
+            game_date = self._coerce_game_date(getattr(game, "game_date", "2026-01-01"))
+            game_key = self._game_sort_key(game_date)
+            matchup = self.feature_engineer.create_matchup_features(game.team1_id, game.team2_id, proprietary_engine=self.proprietary_engine)
+            samples.append((game_key, matchup.to_vector(), 1 if (game.lead_history and game.lead_history[-1] > 0) else 0, game_date, game.team1_id, game.team2_id))
 
             # Symmetric sample improves stability.
-            matchup_rev = self.feature_engineer.create_matchup_features(game.team2_id, game.team1_id)
-            samples.append((game_key, matchup_rev.to_vector(), 1 if (game.lead_history and game.lead_history[-1] < 0) else 0))
+            matchup_rev = self.feature_engineer.create_matchup_features(game.team2_id, game.team1_id, proprietary_engine=self.proprietary_engine)
+            samples.append((game_key, matchup_rev.to_vector(), 1 if (game.lead_history and game.lead_history[-1] < 0) else 0, game_date, game.team2_id, game.team1_id))
 
         if not samples:
             return {"model": "none", "samples": 0}
@@ -1186,8 +1610,12 @@ class SOTAPipeline:
         X_full = np.stack([s[1] for s in samples])
         y_full = np.array([s[2] for s in samples], dtype=int)
         sort_keys_full = np.array([s[0] for s in samples])
+        # Store game metadata for PIT feature adjustment
+        _sample_dates = [s[3] for s in samples]
+        _sample_t1_ids = [s[4] for s in samples]
+        _sample_t2_ids = [s[5] for s in samples]
 
-        # FIX #3 state: store sort keys for point-in-time noise (applied
+        # FIX #3 state: store sort keys for point-in-time adjustment (applied
         # to training split only, after the train/val split below).
         _pit_sort_keys = sort_keys_full.copy()
 
@@ -1253,21 +1681,18 @@ class SOTAPipeline:
             eval_y = np.array([], dtype=int)
 
         # ====================================================================
-        # FIX #3: POINT-IN-TIME FEATURE MITIGATION
+        # FIX #3 (v2): POINT-IN-TIME FEATURE ADJUSTMENT
         #
         # Team features are computed from full-season data, but training
-        # samples include early-season games whose matchup vectors thus
-        # "peek" at end-of-season quality.  True point-in-time features
-        # would require per-game metric snapshots (not available).
+        # samples include games whose matchup vectors "peek" at end-of-season
+        # quality.  V2 replaces pure noise injection with actual point-in-time
+        # metric snapshots where available, falling back to structured noise
+        # + mean regression for remaining features.
         #
-        # Mitigation: inject Gaussian noise into TRAINING-ERA feature
-        # vectors only, scaled by how early in the season the game occurred.
-        # Early-season games get more noise (more "future" information
-        # leaked), late-season games get almost none.  This prevents the
-        # model from fitting to the precise end-of-season features for
-        # games where those features weren't yet observable.
-        # Validation data is left untouched — it represents the prediction
-        # scenario where we DO have full-season features available.
+        # For each training game, compute PIT metrics (using only games before
+        # that date) and blend them with end-of-season features.  The blend
+        # weight is proportional to how much of the season remains — early
+        # games use more PIT data, late games use mostly end-of-season.
         # ====================================================================
         if train_samples > 0:
             train_keys = _pit_sort_keys[:train_samples]
@@ -1275,15 +1700,122 @@ class SOTAPipeline:
             max_key = int(train_keys[-1])
             season_span = max(max_key - min_key, 1)
             progress = (train_keys - min_key).astype(float) / season_span
-            # Noise scaled by fraction of season remaining (sqrt-dampened).
-            # A game at 50% through the season has ~50% future info baked in;
-            # sqrt dampening ensures late-season games still get some noise
-            # (they still have ~10-20% future information in their features).
-            # Increased base from 0.05 to 0.08 to better reflect the magnitude
-            # of end-of-season feature contamination in mid-season games.
             season_remaining = 1.0 - progress
-            pit_noise_scale = 0.08 * np.sqrt(season_remaining)
-            pit_noise = self.rng.standard_normal(train_X.shape) * pit_noise_scale[:, np.newaxis]
+
+            # --- Phase 1: Point-in-time metric snapshots ---
+            # Compute PIT metrics for the core efficiency features (positions
+            # 0-3 and 4-11 in the diff vector) which are most affected by
+            # temporal leakage.  PIT values replace end-of-season values
+            # proportionally based on season progress.
+            pit_adjusted = 0
+            from ..data.features.feature_engineering import TeamFeatures
+            n_feats = train_X.shape[1]
+            pit_feature_names = TeamFeatures.get_feature_names(include_embeddings=False)
+
+            # Map feature name to index in the diff vector for PIT-adjustable features
+            # FIX #1: adj_em REMOVED (exact linear of off-def).
+            # Feature names now match get_feature_names() after redundancy removal.
+            _PIT_METRIC_MAP = {
+                "adj_off_eff": "adj_offensive_efficiency",
+                "adj_def_eff": "adj_defensive_efficiency",
+                "adj_tempo": "adj_tempo",
+                "efg_pct": "effective_fg_pct",
+                "to_rate": "turnover_rate",
+                "orb_rate": "offensive_reb_rate",
+                "ft_rate": "free_throw_rate",
+                "opp_efg_pct": "opp_effective_fg_pct",
+                "opp_to_rate": "opp_turnover_rate",
+                "drb_rate": "defensive_reb_rate",
+                "opp_ft_rate": "opp_free_throw_rate",
+                "win_pct": "win_pct",
+            }
+            pit_indices = {}
+            for feat_name, metric_key in _PIT_METRIC_MAP.items():
+                try:
+                    idx = pit_feature_names.index(feat_name)
+                    if idx < n_feats:
+                        pit_indices[metric_key] = idx
+                except ValueError:
+                    pass
+
+            # Cache PIT metrics to avoid redundant computation
+            _pit_cache: Dict[Tuple[str, str], Optional[Dict]] = {}
+
+            for i in range(train_samples):
+                game_date = _sample_dates[i]
+                t1_id = _sample_t1_ids[i]
+                t2_id = _sample_t2_ids[i]
+
+                # Compute PIT blend weight: how much to trust PIT vs end-of-season.
+                # Late-season games (progress ≈ 1.0) use almost all end-of-season.
+                # Early games (progress ≈ 0.0) use mostly PIT.
+                pit_weight = max(0.0, min(0.6, 0.6 * season_remaining[i]))
+
+                if pit_weight < 0.05:
+                    continue  # Late-season game — end-of-season features are fine
+
+                # Get PIT metrics for both teams
+                cache_key_1 = (t1_id, game_date)
+                if cache_key_1 not in _pit_cache:
+                    _pit_cache[cache_key_1] = self.proprietary_engine.compute_point_in_time_metrics(t1_id, game_date)
+                pit1 = _pit_cache[cache_key_1]
+
+                cache_key_2 = (t2_id, game_date)
+                if cache_key_2 not in _pit_cache:
+                    _pit_cache[cache_key_2] = self.proprietary_engine.compute_point_in_time_metrics(t2_id, game_date)
+                pit2 = _pit_cache[cache_key_2]
+
+                if pit1 is None or pit2 is None:
+                    continue  # Insufficient games for PIT computation
+
+                # Adjust the diff features using PIT values
+                # FIX #2 integration: Features are now RAW (no z-scoring),
+                # so PIT diffs are also raw.  Blend directly in raw space.
+                for metric_key, feat_idx in pit_indices.items():
+                    if metric_key in pit1 and metric_key in pit2:
+                        pit_diff = pit1[metric_key] - pit2[metric_key]
+                        eos_diff = train_X[i, feat_idx]
+                        # Blend: pit_weight * PIT_value + (1-pit_weight) * EOS_value
+                        # Both are in raw scale — StandardScaler normalizes later.
+                        train_X[i, feat_idx] = (1.0 - pit_weight) * eos_diff + pit_weight * pit_diff
+                pit_adjusted += 1
+
+            if pit_adjusted > 0:
+                logger.info(
+                    "Point-in-time adjustment: %d/%d training samples adjusted using PIT snapshots.",
+                    pit_adjusted, train_samples,
+                )
+
+            # --- Phase 2: Residual noise + mean regression for non-PIT features ---
+            # Features not covered by PIT snapshots still get structured noise.
+            _init_feature_stability_indices()
+            base_noise = 0.05 * np.sqrt(season_remaining)  # Reduced from 0.08 (PIT handles core)
+
+            stability = np.full(n_feats, 0.5)
+            for feat_name, score in _FEATURE_STABILITY.items():
+                if feat_name == "_default":
+                    continue
+                idx = _FEATURE_STABILITY_INDICES.get(feat_name)
+                if idx is not None and idx < n_feats:
+                    stability[idx] = score
+
+            feature_noise_weight = 1.0 - stability * 0.7
+            # Reduce noise for PIT-adjusted features (they already have accurate values)
+            for _metric_key, feat_idx in pit_indices.items():
+                if feat_idx < n_feats:
+                    feature_noise_weight[feat_idx] *= 0.3
+
+            pit_noise_scale = base_noise[:, np.newaxis] * feature_noise_weight[np.newaxis, :]
+            pit_noise = self.rng.standard_normal(train_X.shape) * pit_noise_scale
+
+            # Mean regression for non-PIT features
+            shrinkage = 0.10  # Reduced from 0.15 (PIT handles most temporal leakage)
+            league_mean = np.mean(train_X, axis=0)
+            regression_factor = shrinkage * season_remaining
+            train_X = (
+                train_X * (1.0 - regression_factor[:, np.newaxis])
+                + league_mean[np.newaxis, :] * regression_factor[:, np.newaxis]
+            )
             train_X = train_X + pit_noise
 
         # --- Feature selection (fit on TRAINING data only) ---
@@ -1297,9 +1829,18 @@ class SOTAPipeline:
             from ..data.features.feature_engineering import TeamFeatures
             base_names = TeamFeatures.get_feature_names(include_embeddings=False)
             diff_names = [f"diff_{n}" for n in base_names]
-            interaction_names = ["tempo_interaction", "style_mismatch", "h2h_record", "common_opp_margin", "travel_advantage"]
-            feature_names = diff_names + interaction_names
+            # FIX #4: Absolute-level feature names
+            absolute_names = [f"abs_{n}" for n in ABSOLUTE_LEVEL_FEATURE_NAMES]
+            interaction_names = ["tempo_interaction", "style_mismatch", "h2h_record", "common_opp_margin", "travel_advantage", "seed_interaction"]
+            # FIX #8: Missing-data indicator names
+            missing_indicator_names = ["has_h2h_data", "has_common_opp_data", "has_preseason_ap_t1", "has_preseason_ap_t2", "has_coach_data_t1", "has_coach_data_t2"]
+            feature_names = diff_names + absolute_names + interaction_names + missing_indicator_names
             if len(feature_names) != train_X.shape[1]:
+                logger.warning(
+                    "Feature name count mismatch: %d names vs %d columns. "
+                    "Falling back to generic names.",
+                    len(feature_names), train_X.shape[1],
+                )
                 feature_names = [f"f_{i}" for i in range(train_X.shape[1])]
 
             # Adaptive max features: cap at train_samples / 8 to maintain
@@ -1316,6 +1857,12 @@ class SOTAPipeline:
                 max_features=effective_max_features,
                 importance_threshold=self.config.feature_importance_threshold,
                 random_seed=self.config.random_seed,
+                enable_vif_pruning=self.config.enable_vif_pruning,
+                vif_threshold=self.config.vif_threshold,
+                # FIX #6: Bootstrap stability filter parameters
+                enable_stability_filter=self.config.enable_stability_filter,
+                stability_threshold=self.config.stability_threshold,
+                n_bootstrap=self.config.n_bootstrap,
             )
             # Fit on training data only, then transform both splits
             self.feature_selection_result = self.feature_selector.fit(train_X, train_y, feature_names)
@@ -1326,6 +1873,15 @@ class SOTAPipeline:
                 "original_dim": self.feature_selection_result.original_dim,
                 "reduced_dim": self.feature_selection_result.reduced_dim,
             }
+            # FIX #6: Include stability scores in report if available
+            if self.feature_selection_result.stability_scores:
+                fs_stats["stability_scores"] = {
+                    k: round(v, 3)
+                    for k, v in sorted(
+                        self.feature_selection_result.stability_scores.items(),
+                        key=lambda x: x[1], reverse=True,
+                    )[:15]
+                }
 
         # ====================================================================
         # P0: STANDARDSCALER — fit on training data, transform both splits.
@@ -1340,7 +1896,60 @@ class SOTAPipeline:
             eval_X = scaler.transform(eval_X)
             self.baseline_model.scaler = scaler
 
-        valid_set = (eval_X, eval_y) if valid_samples > 0 else None
+        # Store the pre-selection feature dimensionality for historical
+        # year loading (multi-year calibration needs to reconstruct vectors
+        # of the same width as the original matchup features).
+        self.baseline_model.feature_dim = X_full.shape[1]
+
+        # FIX M1: Split eval into dev (early stopping) and eval (final
+        # evaluation).  Using the same data for both inflates eval metrics.
+        # We use the first 40% of eval for early stopping and the rest for
+        # final model selection / evaluation.  Align to even indices for
+        # pair integrity.
+        # Require >= 50 samples (25 games) so both dev and eval are large
+        # enough: dev gets ~20 samples for early stopping, eval keeps ~30
+        # for meaningful evaluation.
+        if valid_samples >= 50:
+            dev_count = (int(valid_samples * 0.4) // 2) * 2  # even boundary
+            dev_count = max(dev_count, 10)  # min 5 games for early stopping
+            dev_X = eval_X[:dev_count]
+            dev_y = eval_y[:dev_count]
+            eval_X = eval_X[dev_count:]
+            eval_y = eval_y[dev_count:]
+            valid_samples = len(eval_y)
+            valid_set = (dev_X, dev_y)
+            logger.info(
+                "Eval split: %d dev samples (early stopping), %d eval samples (evaluation).",
+                len(dev_y), valid_samples,
+            )
+        else:
+            # Not enough eval data to split — use Optuna's tuned round
+            # count without early stopping to avoid leakage.
+            valid_set = None
+            if valid_samples > 0:
+                logger.info(
+                    "Eval set too small to split (%d samples); "
+                    "using fixed num_rounds (no early stopping).", valid_samples,
+                )
+
+        # ====================================================================
+        # RECENCY WEIGHTING: late-season games receive higher sample weight.
+        # Rationale: late-season games are played with settled rosters, against
+        # tournament-caliber opponents, and their features more closely match
+        # the end-of-season snapshot used at inference time.
+        # ====================================================================
+        train_sample_weight = None
+        if self.config.enable_recency_weighting and train_samples > 0:
+            tk = train_sort_keys
+            t_min, t_max = float(tk[0]), float(tk[-1])
+            t_span = max(t_max - t_min, 1.0)
+            progress = (tk - t_min) / t_span  # 0 = earliest, 1 = latest
+            floor = self.config.recency_decay_floor
+            hl = max(self.config.recency_half_life, 0.01)
+            # Exponential ramp: earliest game → floor, latest game → 1.0
+            raw_weight = floor + (1.0 - floor) * (1.0 - np.exp(-progress / hl))
+            # Normalize so mean weight = 1.0 (preserves effective sample size)
+            train_sample_weight = raw_weight / raw_weight.mean()
 
         tuning_stats = {}
         stacking_stats = {}
@@ -1379,6 +1988,7 @@ class SOTAPipeline:
                         num_rounds=best_num_rounds,
                         early_stopping_rounds=30 if valid_set is not None else None,
                         valid_set=valid_set,
+                        sample_weight=train_sample_weight,
                     )
                     lgb_eval_preds = lgb_ranker.predict(eval_X)
                     trained_models.append(("lgb", lgb_ranker, lgb_eval_preds))
@@ -1400,6 +2010,7 @@ class SOTAPipeline:
                         num_rounds=200,
                         early_stopping_rounds=30 if valid_set is not None else None,
                         valid_set=valid_set,
+                        sample_weight=train_sample_weight,
                     )
                     lgb_eval_preds = lgb_ranker.predict(eval_X)
                     trained_models.append(("lgb", lgb_ranker, lgb_eval_preds))
@@ -1435,6 +2046,7 @@ class SOTAPipeline:
                         num_rounds=xgb_best_rounds,
                         early_stopping_rounds=30 if valid_set is not None else None,
                         valid_set=valid_set,
+                        sample_weight=train_sample_weight,
                     )
                     xgb_eval_preds = xgb_ranker.predict(eval_X)
                     trained_models.append(("xgb", xgb_ranker, xgb_eval_preds))
@@ -1454,6 +2066,7 @@ class SOTAPipeline:
                         num_rounds=200,
                         early_stopping_rounds=30 if valid_set is not None else None,
                         valid_set=valid_set,
+                        sample_weight=train_sample_weight,
                     )
                     xgb_eval_preds = xgb_ranker.predict(eval_X)
                     trained_models.append(("xgb", xgb_ranker, xgb_eval_preds))
@@ -1496,7 +2109,7 @@ class SOTAPipeline:
                         C=1.0, penalty="l2", max_iter=2000,
                         random_state=self.config.random_seed,
                     )
-                logit.fit(train_X, train_y)
+                logit.fit(train_X, train_y, sample_weight=train_sample_weight)
                 logit_eval_preds = logit.predict_proba(eval_X)[:, 1]
                 trained_models.append(("logit", logit, logit_eval_preds))
                 logit_trained = True
@@ -1556,15 +2169,16 @@ class SOTAPipeline:
                 X_tr_fold = train_X[split.train_indices]
                 y_tr_fold = train_y[split.train_indices]
                 X_val_fold = train_X[split.val_indices]
+                w_tr_fold = train_sample_weight[split.train_indices] if train_sample_weight is not None else None
 
                 for name, model_template, _ in trained_models:
                     if name == "lgb":
                         fold_model = LightGBMRanker(params=_tuned_lgb_params)
-                        fold_model.train(X_tr_fold, y_tr_fold, feature_names=feature_names, num_rounds=_tuned_lgb_rounds)
+                        fold_model.train(X_tr_fold, y_tr_fold, feature_names=feature_names, num_rounds=_tuned_lgb_rounds, early_stopping_rounds=None, sample_weight=w_tr_fold)
                         fold_preds = fold_model.predict(X_val_fold)
                     elif name == "xgb":
                         fold_model = XGBoostRanker(params=_tuned_xgb_params)
-                        fold_model.train(X_tr_fold, y_tr_fold, feature_names=feature_names, num_rounds=_tuned_xgb_rounds)
+                        fold_model.train(X_tr_fold, y_tr_fold, feature_names=feature_names, num_rounds=_tuned_xgb_rounds, early_stopping_rounds=None, sample_weight=w_tr_fold)
                         fold_preds = fold_model.predict(X_val_fold)
                     elif name == "logit":
                         solver = "saga" if _tuned_logit_params["penalty"] == "l1" else "lbfgs"
@@ -1575,7 +2189,7 @@ class SOTAPipeline:
                             max_iter=2000,
                             random_state=self.config.random_seed,
                         )
-                        fold_model.fit(X_tr_fold, y_tr_fold)
+                        fold_model.fit(X_tr_fold, y_tr_fold, sample_weight=w_tr_fold)
                         fold_preds = fold_model.predict_proba(X_val_fold)[:, 1]
                     else:
                         continue
@@ -1585,31 +2199,67 @@ class SOTAPipeline:
             # Only use samples that have OOF predictions
             oof_mask = oof_counts > 0
             if np.sum(oof_mask) >= 20:
-                meta_X = np.column_stack([oof_preds[name][oof_mask] for name, _, _ in trained_models])
+                # Build enriched meta-features: base preds + interactions + aggregates
+                base_meta_X = np.column_stack([oof_preds[name][oof_mask] for name, _, _ in trained_models])
                 meta_y = train_y[oof_mask]
 
-                meta_learner = LogisticRegression(
-                    C=1.0, penalty="l2", max_iter=2000,
-                    random_state=self.config.random_seed,
+                # Enrich: interactions + aggregates (mirrors _get_meta_features)
+                meta_X = self._build_enriched_meta(base_meta_X)
+
+                n_meta_train = len(meta_y)
+                use_lgb_meta = (
+                    self.config.stacking_meta_learner == "lightgbm"
+                    and LIGHTGBM_AVAILABLE
+                    and n_meta_train >= self.config.stacking_min_samples_for_lgb
                 )
-                meta_learner.fit(meta_X, meta_y)
+
+                if use_lgb_meta:
+                    import lightgbm as lgb
+                    meta_params = {
+                        "objective": "binary",
+                        "metric": "binary_logloss",
+                        "max_depth": 2,
+                        "num_leaves": 4,
+                        "min_data_in_leaf": max(10, n_meta_train // 8),
+                        "learning_rate": 0.05,
+                        "num_threads": 1,
+                        "verbose": -1,
+                        "lambda_l2": 1.0,
+                    }
+                    meta_dataset = lgb.Dataset(meta_X, label=meta_y)
+                    meta_learner = lgb.train(meta_params, meta_dataset, num_boost_round=50)
+                    meta_learner_type = "lightgbm"
+                else:
+                    meta_learner = LogisticRegression(
+                        C=1.0, penalty="l2", max_iter=2000,
+                        random_state=self.config.random_seed,
+                    )
+                    meta_learner.fit(meta_X, meta_y)
+                    meta_learner_type = "logistic"
 
                 # Store stacking configuration
                 self.baseline_model.stacking_meta = meta_learner
+                self.baseline_model.stacking_meta_type = meta_learner_type
                 self.baseline_model.stacking_models = [(name, model) for name, model, _ in trained_models]
 
                 # Evaluate stacking on held-out validation data
-                eval_meta_X = np.column_stack([preds for _, _, preds in trained_models])
-                stacking_eval_preds = meta_learner.predict_proba(eval_meta_X)[:, 1]
+                eval_base_meta_X = np.column_stack([preds for _, _, preds in trained_models])
+                eval_meta_X = self._build_enriched_meta(eval_base_meta_X)
+                if meta_learner_type == "lightgbm":
+                    stacking_eval_preds = np.clip(meta_learner.predict(eval_meta_X), 0.01, 0.99)
+                else:
+                    stacking_eval_preds = meta_learner.predict_proba(eval_meta_X)[:, 1]
                 stacking_brier = float(np.mean((stacking_eval_preds - eval_y) ** 2))
 
                 stacking_stats = {
                     "enabled": True,
                     "base_models": [name for name, _, _ in trained_models],
-                    "meta_learner": "logistic_regression",
+                    "meta_learner": meta_learner_type,
+                    "n_meta_features": meta_X.shape[1],
                     "stacking_brier": round(stacking_brier, 5),
-                    "meta_learner_coefs": meta_learner.coef_[0].tolist(),
                 }
+                if meta_learner_type == "logistic":
+                    stacking_stats["meta_learner_coefs"] = meta_learner.coef_[0].tolist()
                 baseline_name = "stacking_ensemble"
             else:
                 stacking_stats = {"enabled": False, "reason": "insufficient_oof_samples"}
@@ -1677,6 +2327,25 @@ class SOTAPipeline:
         if loyo_stats:
             result["loyo_cv"] = loyo_stats
         return result
+
+    @staticmethod
+    def _build_enriched_meta(base_X: np.ndarray) -> np.ndarray:
+        """Build enriched meta-features from base model predictions.
+
+        Given k base model columns, returns k + C(k,2) + 3 columns:
+          - k base predictions
+          - C(k,2) pairwise interactions
+          - 3 aggregates: max, min, std
+        """
+        parts = [base_X]
+        k = base_X.shape[1]
+        for i in range(k):
+            for j in range(i + 1, k):
+                parts.append((base_X[:, i] * base_X[:, j]).reshape(-1, 1))
+        parts.append(np.max(base_X, axis=1).reshape(-1, 1))
+        parts.append(np.min(base_X, axis=1).reshape(-1, 1))
+        parts.append(np.std(base_X, axis=1).reshape(-1, 1))
+        return np.hstack(parts)
 
     def _select_best_single_model(
         self,
@@ -1808,7 +2477,10 @@ class SOTAPipeline:
         # ----------------------------------------------------------
         # Step 2: Run LeaveOneYearOutCV
         # ----------------------------------------------------------
-        loyo_cv = LeaveOneYearOutCV(years=[y for y in years if y in set(game_years)])
+        loyo_cv = LeaveOneYearOutCV(
+            years=[y for y in years if y in set(game_years)],
+            temporal_mode=self.config.loyo_temporal_mode,
+        )
 
         def train_fn(X_tr, y_tr, X_v, y_v):
             if LIGHTGBM_AVAILABLE:
@@ -1884,13 +2556,39 @@ class SOTAPipeline:
         # Build team lookup from metrics
         team_metrics: Dict[str, Dict[str, float]] = {}
         teams_list = metrics_payload.get("teams", [])
+
+        # Payload-level guard: reject if all off_rtg values are zero/identical
+        # (indicates placeholder or corrupted data for this year).
+        if isinstance(teams_list, list) and teams_list:
+            _off_vals = [float(tm.get("off_rtg", 0)) for tm in teams_list if isinstance(tm, dict)]
+            if _off_vals and all(abs(v) < 1e-6 for v in _off_vals):
+                logger.warning(
+                    "Year %d metrics have all-zero off_rtg — skipping "
+                    "(corrupted or placeholder data).", year,
+                )
+                return np.zeros((0, feature_dim)), np.zeros(0)
+            _unique_off = set(round(v, 4) for v in _off_vals)
+            if len(_unique_off) <= 1:
+                logger.warning(
+                    "Year %d metrics have identical off_rtg=%.1f for all %d "
+                    "teams — skipping (placeholder data).",
+                    year, _off_vals[0] if _off_vals else 0, len(_off_vals),
+                )
+                return np.zeros((0, feature_dim)), np.zeros(0)
+
         if isinstance(teams_list, list):
             for tm in teams_list:
                 tid = self._team_id(str(tm.get("team_id") or tm.get("name", "")))
                 if tid:
+                    off = float(tm.get("off_rtg", 0))
+                    drt = float(tm.get("def_rtg", 0))
+                    # Skip teams with zero/missing critical metrics —
+                    # indicates corrupted or placeholder data.
+                    if off < 1e-6 or drt < 1e-6:
+                        continue
                     team_metrics[tid] = {
-                        "off_rtg": float(tm.get("off_rtg", 100.0)),
-                        "def_rtg": float(tm.get("def_rtg", 100.0)),
+                        "off_rtg": off,
+                        "def_rtg": drt,
                         "pace": float(tm.get("pace", 68.0)),
                         "srs": float(tm.get("srs", 0.0)),
                         "sos": float(tm.get("sos", 0.0)),
@@ -1916,10 +2614,46 @@ class SOTAPipeline:
 
         games = games_payload.get("games", [])
 
+        # Detect single-date fallback (all games stamped with same date,
+        # e.g. "2022-11-01" from the fast-path ingestion).  When detected,
+        # infer approximate chronological dates from game_id ordering.
+        # ESPN game IDs are approximately monotonic within a season.
+        raw_dates = [str(g.get("date", g.get("game_date", ""))) for g in games]
+        unique_dates = set(d for d in raw_dates if d)
+        if len(unique_dates) <= 1 and len(games) > 50:
+            logger.info(
+                "Year %d: all %d games have identical date '%s' — "
+                "inferring chronological dates from game_id ordering.",
+                year, len(games), next(iter(unique_dates), "?"),
+            )
+            # Sort by game_id (numeric IDs are approximately chronological)
+            id_ordered = sorted(
+                range(len(games)),
+                key=lambda i: int(games[i].get("game_id", "0")) if str(games[i].get("game_id", "0")).isdigit() else 0,
+            )
+            # Distribute dates evenly across the season (Nov 1 to Mar 13)
+            season_start = date(year - 1, 11, 1)
+            season_end = date(year, 3, 13)
+            total_days = (season_end - season_start).days
+            for rank, orig_idx in enumerate(id_ordered):
+                frac = rank / max(len(id_ordered) - 1, 1)
+                inferred = season_start + timedelta(days=int(frac * total_days))
+                games[orig_idx]["date"] = inferred.isoformat()
+
         X_list = []
         y_list = []
+        tourney_filtered = 0
 
         for game in games:
+            # FIX S3: Filter out tournament games from LOYO training data.
+            # historical_games_{year}.json includes games through May 1
+            # (including NCAA tournament).  Training on tournament outcomes
+            # leaks the very data we're trying to predict.
+            game_date_str = str(game.get("game_date", game.get("date", "")))
+            if game_date_str and self._is_tournament_game(game_date_str):
+                tourney_filtered += 1
+                continue
+
             raw_t1 = self._team_id(str(game.get("team1_id") or game.get("team1") or ""))
             raw_t2 = self._team_id(str(game.get("team2_id") or game.get("team2") or ""))
             s1 = int(game.get("team1_score", 0))
@@ -1937,36 +2671,51 @@ class SOTAPipeline:
             m2 = team_metrics[t2]
 
             # Build a simplified differential feature vector that aligns with
-            # the first several positions of the full 66-dim team vector:
-            #   [0] adj_off_eff, [1] adj_def_eff, [2] adj_tempo, [3] adj_em
-            #   (remaining positions zero-filled)
-            # The interaction features (positions 66-70) are set to zero.
+            # the current matchup vector layout.
+            #
+            # FIX #1: adj_em REMOVED — vector starts with:
+            #   [0] adj_off_eff, [1] adj_def_eff, [2] adj_tempo
+            #   (remaining diff positions zero-filled)
+            #
+            # FIX #2: Features are in RAW scale (no z-scoring).
+            #   StandardScaler handles normalization.
+            #
+            # FIX #4/#8: After diff features, the vector has absolute-level
+            # features and missing-data indicators, but these are zero-filled
+            # for historical data since we lack the granularity.
+            #
+            # Layout: [diff(58) | absolute(5) | interaction(6) | missing_ind(6)]
             diff = np.zeros(feature_dim, dtype=float)
 
-            off1, off2 = m1["off_rtg"] / 100.0, m2["off_rtg"] / 100.0
-            def1, def2 = m1["def_rtg"] / 100.0, m2["def_rtg"] / 100.0
-            pace1, pace2 = m1["pace"] / 70.0, m2["pace"] / 70.0
-            em1 = (m1["off_rtg"] - m1["def_rtg"]) / 30.0
-            em2 = (m2["off_rtg"] - m2["def_rtg"]) / 30.0
+            # Raw values — no scaling (StandardScaler handles it)
+            off1, off2 = m1["off_rtg"], m2["off_rtg"]
+            def1, def2 = m1["def_rtg"], m2["def_rtg"]
+            pace1, pace2 = m1["pace"], m2["pace"]
 
-            # Place in standard positions (diff_features part of matchup vector)
-            if feature_dim >= 4:
-                diff[0] = off1 - off2    # diff adj_off_eff
-                diff[1] = def1 - def2    # diff adj_def_eff
-                diff[2] = pace1 - pace2  # diff adj_tempo
-                diff[3] = em1 - em2      # diff adj_em
+            # Place in standard positions (diff_features part of matchup vector).
+            # Indices match TeamFeatures.get_feature_names() after FIX #1
+            # redundancy removal (58 team features).
+            if feature_dim >= 3:
+                diff[0] = off1 - off2    # diff adj_off_eff (index 0)
+                diff[1] = def1 - def2    # diff adj_def_eff (index 1)
+                diff[2] = pace1 - pace2  # diff adj_tempo (index 2)
 
-            # SOS features (positions ~30-33 in the 66-dim diff vector)
-            if feature_dim >= 31:
-                sos1 = m1.get("sos", 0.0) / 10.0
-                sos2 = m2.get("sos", 0.0) / 10.0
-                diff[30] = sos1 - sos2
+            # SOS features: sos_adj_em is at index 27 in the 58-dim diff
+            # vector (3 core + 4 FF_off + 4 FF_def + 6 player + 3 exp +
+            # 5 volatility + 2 shot_quality = 27)
+            if feature_dim >= 28:
+                sos1 = m1.get("sos", 0.0)
+                sos2 = m2.get("sos", 0.0)
+                diff[27] = sos1 - sos2
 
-            # Win percentage (position ~43 if available)
-            if feature_dim >= 44:
+            # Win percentage at index 48 in the 58-dim diff vector
+            # (27 + 4 schedule + 1 luck + 1 wab + 1 momentum + 2 variance +
+            # 1 elo + 1 ft_pct + 2 ball_movement + 2 def_disruption +
+            # 2 opp_shot + 1 conf + 2 shooting + 1 def_xp = 48)
+            if feature_dim >= 49:
                 wp1 = m1["wins"] / max(m1["wins"] + m1["losses"], 1)
                 wp2 = m2["wins"] / max(m2["wins"] + m2["losses"], 1)
-                diff[43] = wp1 - wp2
+                diff[48] = wp1 - wp2
 
             outcome = 1 if s1 > s2 else 0
 
@@ -1977,6 +2726,12 @@ class SOTAPipeline:
             diff_rev = -diff.copy()
             X_list.append(diff_rev)
             y_list.append(1 - outcome)
+
+        if tourney_filtered > 0:
+            logger.info(
+                "Year %d: filtered %d tournament games from LOYO training data.",
+                year, tourney_filtered,
+            )
 
         if not X_list:
             return np.empty((0, feature_dim)), np.array([])
@@ -2040,10 +2795,38 @@ class SOTAPipeline:
             gcn.eval()
             with torch.no_grad():
                 emb = gcn(data.x, data.edge_index, edge_weight=edge_weight).numpy()
+                pred_all = head(gcn(data.x, data.edge_index, edge_weight=edge_weight))
 
             self.gnn_embeddings = {graph.idx_to_team[i]: emb[i] for i in range(graph.n_teams)}
-            self._apply_sos_refinement(multi_hop, pagerank)
-            self.model_confidence["gnn"] = float(np.clip(1.0 / (1.0 + final_loss), 0.1, 0.95))
+            # FIX M5: Store SOS refinement values but DO NOT apply them to
+            # team features yet.  Applying before baseline training leaks
+            # GNN-derived information into both train and val feature vectors.
+            # The refinement is deferred to prediction time via
+            # _apply_deferred_sos_refinement().
+            self._sos_refinement_pending = (multi_hop, pagerank)
+
+            # Fix 12: Use VALIDATION loss (not training loss) for GNN confidence.
+            # Validation teams = those NOT in training-era edges.
+            # FIX minor: Use actual AdjEM from feature_engineer for val teams
+            # instead of the 0.0 training placeholder (which would make a
+            # model that predicts 0.0 for all unseen teams look perfect).
+            val_indices = []
+            val_actual_targets = []
+            for idx in range(graph.n_teams):
+                team_id = graph.idx_to_team[idx]
+                if team_id not in training_era_teams:
+                    feats = self.feature_engineer.team_features.get(team_id)
+                    if feats is not None:
+                        val_indices.append(idx)
+                        val_actual_targets.append(feats.adj_efficiency_margin / 30.0)
+            if len(val_indices) >= 5:
+                val_pred = pred_all[val_indices]
+                val_target_tensor = torch.tensor(val_actual_targets, dtype=torch.float32).unsqueeze(1)
+                val_loss = float(torch.mean((val_pred - val_target_tensor) ** 2).item())
+                self.model_confidence["gnn"] = float(np.clip(1.0 / (1.0 + val_loss), 0.1, 0.95))
+            else:
+                # Not enough validation teams — penalize training loss
+                self.model_confidence["gnn"] = float(np.clip(1.0 / (1.0 + final_loss) * 0.8, 0.1, 0.95))
 
             return {
                 "enabled": True,
@@ -2051,6 +2834,7 @@ class SOTAPipeline:
                 "nodes": graph.n_teams,
                 "edges": len(graph.edges),
                 "training_loss": final_loss,
+                "validation_teams": len(val_indices),
             }
 
         # Fallback embedding from graph statistics.
@@ -2061,8 +2845,22 @@ class SOTAPipeline:
                 pagerank.get(team_id, 0.0),
             ])
 
-        self._apply_sos_refinement(multi_hop, pagerank)
-        self.model_confidence["gnn"] = 0.35
+        # FIX M5: Defer SOS refinement (same as PyG path above).
+        self._sos_refinement_pending = (multi_hop, pagerank)
+
+        # Fix 12: Validation-based confidence for fallback path.
+        val_teams = [t for t in graph.team_ids if t not in training_era_teams]
+        if val_teams and self.feature_engineer.team_features:
+            mh_preds = np.array([multi_hop.get(t, 0.0) for t in val_teams])
+            actual_ems = np.array([
+                getattr(self.feature_engineer.team_features.get(t), "adj_efficiency_margin", 0.0) / 30.0
+                for t in val_teams
+            ])
+            fallback_mse = float(np.mean((mh_preds - actual_ems) ** 2))
+            self.model_confidence["gnn"] = float(np.clip(1.0 / (1.0 + fallback_mse) * 0.7, 0.1, 0.6))
+        else:
+            self.model_confidence["gnn"] = 0.35
+
         return {
             "enabled": False,
             "framework": "statistical_fallback",
@@ -2187,7 +2985,11 @@ class SOTAPipeline:
             }
             breakout_count = int(sum(len(w) for w in breakout_windows.values()))
 
-            self.model_confidence["transformer"] = float(np.clip(1.0 / (1.0 + final_loss), 0.1, 0.95))
+            # FIX minor: Penalize training loss by 0.6x to discount overfit.
+            # A model with low training loss gets high raw confidence, which
+            # over-weights it in the CFA ensemble.  The penalty accounts for
+            # the gap between training and generalization loss.
+            self.model_confidence["transformer"] = float(np.clip(1.0 / (1.0 + final_loss) * 0.6, 0.1, 0.7))
             return {
                 "enabled": True,
                 "framework": "pytorch_transformer",
@@ -2271,6 +3073,68 @@ class SOTAPipeline:
         # FIX #5: Restore optimized weights now that calibration data is generated.
         if optimized_weights is not None:
             self.cfa.base_weights = optimized_weights
+
+        # Fix 1: Augment calibration pool with historical year data.
+        # Historical predictions are genuinely out-of-sample since those
+        # team-year combinations never appeared during model training.
+        historical_cal_count = 0
+        if (self.config.enable_multi_year_calibration
+                and self.config.multi_year_games_dir
+                and hasattr(self, "baseline_model")
+                and self.baseline_model is not None):
+            import os
+            years = self.config.loyo_years or [
+                y for y in range(2015, self.config.year) if y != 2020
+            ]
+            # Determine feature dimensionality from current model
+            feature_dim = self.baseline_model.feature_dim
+            for yr in years:
+                try:
+                    games_dir = self.config.multi_year_games_dir
+                    games_path = os.path.join(games_dir, f"historical_games_{yr}.json")
+                    metrics_path = os.path.join(games_dir, f"team_metrics_{yr}.json")
+                    if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
+                        continue
+                    yr_X, yr_y = self._load_year_samples(
+                        games_path, metrics_path, feature_dim, yr
+                    )
+                    if len(yr_y) < 10:
+                        continue
+                    # Apply feature selection if fitted
+                    if self.feature_selector is not None and self.feature_selector.is_fitted:
+                        try:
+                            yr_X = self.feature_selector.transform(yr_X)
+                        except (IndexError, ValueError):
+                            continue
+                    # Apply scaler if available
+                    if self.baseline_model.scaler is not None:
+                        try:
+                            yr_X = self.baseline_model.scaler.transform(yr_X)
+                        except (ValueError, Exception):
+                            continue
+                    # Predict using baseline model in batch
+                    try:
+                        yr_preds = self.baseline_model.predict_proba_batch(yr_X)
+                        yr_preds = np.clip(
+                            yr_preds,
+                            self.config.pre_calibration_clip_lo,
+                            self.config.pre_calibration_clip_hi,
+                        )
+                        probs.extend(yr_preds.tolist())
+                        outcomes.extend(yr_y.tolist())
+                        historical_cal_count += len(yr_y)
+                    except Exception:
+                        continue
+                except Exception:
+                    continue
+
+        if len(probs) < self.config.min_calibration_samples:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Calibration sample size (%d) below minimum (%d); "
+                "consider enabling multi-year calibration or providing more data.",
+                len(probs), self.config.min_calibration_samples,
+            )
 
         if len(probs) < 20:
             self.calibration_pipeline = None
@@ -2641,7 +3505,7 @@ class SOTAPipeline:
             outcome = 1 if (g.lead_history and g.lead_history[-1] > 0) else 0
             outcomes.append(outcome)
 
-            matchup = self.feature_engineer.create_matchup_features(g.team1_id, g.team2_id)
+            matchup = self.feature_engineer.create_matchup_features(g.team1_id, g.team2_id, proprietary_engine=self.proprietary_engine)
             feat_vec = matchup.to_vector()
             if self.feature_selector is not None and self.feature_selector.is_fitted:
                 feat_vec = self.feature_selector.transform(feat_vec.reshape(1, -1))[0]
@@ -2672,6 +3536,17 @@ class SOTAPipeline:
                 "ci_width": float(width),
                 "confidence_diagnostic": confidence,
             }
+        # Fix 3: Pairwise significance tests between models
+        if SIGNIFICANCE_TESTING_AVAILABLE and len(y) >= 20:
+            try:
+                sig_report = model_significance_report(
+                    {name: np.clip(np.array(preds, dtype=float), 0.01, 0.99) for name, preds in model_preds.items()},
+                    y,
+                )
+                stats["pairwise_tests"] = sig_report
+            except Exception:
+                pass  # Non-critical diagnostic — don't break pipeline
+
         self.model_uncertainty = stats
         return stats
 
@@ -2877,12 +3752,15 @@ class SOTAPipeline:
 
     def _is_tournament_game(self, date_str: str) -> bool:
         """
-        P2: Detect NCAA Tournament games (mid-March through April).
+        Detect NCAA Tournament games (mid-March through April).
 
         Tournament games should be excluded from calibration training to prevent
         data leakage — we can't calibrate on outcomes we're trying to predict.
         Conference tournaments (early March) are included as they happen before
         Selection Sunday.
+
+        Uses the GAME's year (not config.year) so this works correctly for
+        historical games from different seasons.
         """
         date_norm = self._coerce_game_date(date_str)
         try:
@@ -2892,8 +3770,10 @@ class SOTAPipeline:
 
         # NCAA Tournament typically starts around March 15 (First Four)
         # and ends in early April. Selection Sunday is usually mid-March.
-        tournament_start = date(self.config.year, 3, 14)
-        tournament_end = date(self.config.year, 4, 15)
+        # Use the game's calendar year for the tournament window.
+        game_year = game_day.year
+        tournament_start = date(game_year, 3, 14)
+        tournament_end = date(game_year, 4, 15)
         return tournament_start <= game_day <= tournament_end
 
     @staticmethod
@@ -3032,7 +3912,7 @@ class SOTAPipeline:
             outcome = 1 if (g.lead_history and g.lead_history[-1] > 0) else 0
             outcomes.append(outcome)
 
-            matchup = self.feature_engineer.create_matchup_features(g.team1_id, g.team2_id)
+            matchup = self.feature_engineer.create_matchup_features(g.team1_id, g.team2_id, proprietary_engine=self.proprietary_engine)
             feat_vec = matchup.to_vector()
             if self.feature_selector is not None and self.feature_selector.is_fitted:
                 feat_vec = self.feature_selector.transform(feat_vec.reshape(1, -1))[0]
@@ -3049,7 +3929,12 @@ class SOTAPipeline:
 
         optimizer = EnsembleWeightOptimizer(step=0.05, min_weight=0.05, random_seed=self.config.random_seed)
         pred_arrays = {name: np.array(preds) for name, preds in model_preds.items()}
-        best_weights, best_brier = optimizer.optimize(pred_arrays, np.array(outcomes))
+        best_weights, best_brier = optimizer.optimize(
+            pred_arrays,
+            np.array(outcomes),
+            min_samples=self.config.min_ensemble_samples,
+            regularization_lambda=self.config.ensemble_weight_regularization,
+        )
 
         # Apply optimized weights to CFA
         self.cfa.base_weights = best_weights
@@ -3061,7 +3946,7 @@ class SOTAPipeline:
         }
 
     def _raw_fusion_probability(self, team1_id: str, team2_id: str) -> float:
-        matchup = self.feature_engineer.create_matchup_features(team1_id, team2_id)
+        matchup = self.feature_engineer.create_matchup_features(team1_id, team2_id, proprietary_engine=self.proprietary_engine)
         feat_vec = matchup.to_vector()
         # Apply feature selection if fitted
         if self.feature_selector is not None and self.feature_selector.is_fitted:

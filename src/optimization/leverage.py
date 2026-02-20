@@ -7,7 +7,11 @@ high-leverage picks with favorable Win Probability / Pick Percentage ratios.
 
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
+from collections import namedtuple
 import numpy as np
+
+
+_BranchPick = namedtuple('_BranchPick', ['p_win', 'survival', 'pts'])
 
 
 @dataclass
@@ -308,10 +312,28 @@ class ParetoOptimizer:
         )
 
     def _expected_value_contribution(self, team_id: str, round_name: str) -> Tuple[float, float]:
+        """EV and variance for a single pick (legacy, round-independent)."""
         p = float(self.calculator.model_probs.get(team_id, {}).get(round_name, 0.0))
         pts = float(self.calculator.scoring_system.get(round_name, 0))
         ev = p * pts
         var = p * (1.0 - p) * (pts ** 2)
+        return ev, var
+
+    def _path_ev_var(self, team_id: str, round_name: str, survival_prob: float) -> Tuple[float, float]:
+        """EV and variance conditional on team surviving to this round.
+
+        The team must have survived all prior rounds (probability = survival_prob)
+        AND win this round.  This properly models the path dependence in bracket
+        scoring where later-round points require earlier-round wins.
+        """
+        p_win = float(self.calculator.model_probs.get(team_id, {}).get(round_name, 0.0))
+        pts = float(self.calculator.scoring_system.get(round_name, 0))
+        # Joint probability of surviving AND winning
+        joint = survival_prob * p_win
+        ev = joint * pts
+        # Var(X) = E[X^2] - E[X]^2 where X = pts if joint event, else 0
+        ex2 = joint * pts ** 2
+        var = ex2 - ev ** 2
         return ev, var
 
     def _risk_adjusted_score(self, team_id: str, round_name: str, risk_level: float) -> float:
@@ -367,45 +389,106 @@ class ParetoOptimizer:
         expected_points = 0.0
         variance = 0.0
 
+        # Track survival probability for each picked team and branch picks
+        # for covariance computation.
+        team_survival: Dict[str, float] = {}
+        # all_branch_picks maps a branch key to a list of _BranchPick entries.
+        # A branch key is the tuple of game indices along one path through the
+        # bracket tree.  For simplicity, we key by (region, branch_idx) where
+        # branch_idx groups the 8 R64 games into increasingly merged branches.
+        all_branch_picks: List[List[_BranchPick]] = []
+
         for region in ("East", "West", "South", "Midwest"):
             region_teams = by_region[region]
 
+            # --- R64 ----------------------------------------------------------
             r64_winners: List[str] = []
-            for high_seed, low_seed in seed_order:
+            # Each R64 game starts a branch; 8 branches per region.
+            region_branches: List[List[_BranchPick]] = [[] for _ in range(8)]
+
+            for game_idx, (high_seed, low_seed) in enumerate(seed_order):
                 team1 = region_teams[high_seed]
                 team2 = region_teams[low_seed]
                 winner = self._pick_winner(team1, team2, "R64", risk_level)
                 picks[f"R64_{region}_{high_seed}v{low_seed}"] = winner
-                ev, var = self._expected_value_contribution(winner, "R64")
+
+                survival = 1.0  # First round: no prior survival requirement
+                p_win = float(self.calculator.model_probs.get(winner, {}).get("R64", 0.0))
+                pts = float(self.calculator.scoring_system.get("R64", 0))
+
+                ev, var = self._path_ev_var(winner, "R64", survival)
                 expected_points += ev
                 variance += var
+
+                team_survival[winner] = p_win  # After R64, survival = p_win_R64
+                region_branches[game_idx].append(_BranchPick(p_win=p_win, survival=survival, pts=pts))
                 r64_winners.append(winner)
 
+            # --- R32 ----------------------------------------------------------
             r32_winners: List[str] = []
+            # Merge adjacent branches pairwise: 8 -> 4
+            r32_branches: List[List[_BranchPick]] = []
+
             for idx in range(0, len(r64_winners), 2):
                 winner = self._pick_winner(r64_winners[idx], r64_winners[idx + 1], "R32", risk_level)
                 picks[f"R32_{region}_{idx // 2 + 1}"] = winner
-                ev, var = self._expected_value_contribution(winner, "R32")
+
+                survival = team_survival.get(winner, 1.0)
+                p_win = float(self.calculator.model_probs.get(winner, {}).get("R32", 0.0))
+                pts = float(self.calculator.scoring_system.get("R32", 0))
+
+                ev, var = self._path_ev_var(winner, "R32", survival)
                 expected_points += ev
                 variance += var
+
+                team_survival[winner] = survival * p_win
+                # Merge the two R64 branches + this R32 pick
+                merged = region_branches[idx] + region_branches[idx + 1]
+                merged.append(_BranchPick(p_win=p_win, survival=survival, pts=pts))
+                r32_branches.append(merged)
                 r32_winners.append(winner)
 
+            # --- S16 ----------------------------------------------------------
             s16_winners: List[str] = []
+            s16_branches: List[List[_BranchPick]] = []
+
             for idx in range(0, len(r32_winners), 2):
                 winner = self._pick_winner(r32_winners[idx], r32_winners[idx + 1], "S16", risk_level)
                 picks[f"S16_{region}_{idx // 2 + 1}"] = winner
-                ev, var = self._expected_value_contribution(winner, "S16")
+
+                survival = team_survival.get(winner, 1.0)
+                p_win = float(self.calculator.model_probs.get(winner, {}).get("S16", 0.0))
+                pts = float(self.calculator.scoring_system.get("S16", 0))
+
+                ev, var = self._path_ev_var(winner, "S16", survival)
                 expected_points += ev
                 variance += var
+
+                team_survival[winner] = survival * p_win
+                merged = r32_branches[idx] + r32_branches[idx + 1]
+                merged.append(_BranchPick(p_win=p_win, survival=survival, pts=pts))
+                s16_branches.append(merged)
                 s16_winners.append(winner)
 
+            # --- E8 -----------------------------------------------------------
             e8_winner = self._pick_winner(s16_winners[0], s16_winners[1], "E8", risk_level)
             picks[f"E8_{region}"] = e8_winner
-            ev, var = self._expected_value_contribution(e8_winner, "E8")
+
+            survival = team_survival.get(e8_winner, 1.0)
+            p_win = float(self.calculator.model_probs.get(e8_winner, {}).get("E8", 0.0))
+            pts = float(self.calculator.scoring_system.get("E8", 0))
+
+            ev, var = self._path_ev_var(e8_winner, "E8", survival)
             expected_points += ev
             variance += var
+
+            team_survival[e8_winner] = survival * p_win
+            region_branch = s16_branches[0] + s16_branches[1]
+            region_branch.append(_BranchPick(p_win=p_win, survival=survival, pts=pts))
+            all_branch_picks.append(region_branch)
             region_champs[region] = e8_winner
 
+        # --- Final Four -------------------------------------------------------
         final_four = [
             region_champs["East"],
             region_champs["West"],
@@ -417,18 +500,44 @@ class ParetoOptimizer:
         semi2 = self._pick_winner(region_champs["South"], region_champs["Midwest"], "F4", risk_level)
         picks["F4_East_West"] = semi1
         picks["F4_South_Midwest"] = semi2
-        ev, var = self._expected_value_contribution(semi1, "F4")
-        expected_points += ev
-        variance += var
-        ev, var = self._expected_value_contribution(semi2, "F4")
+
+        for semi_winner, branch_indices in [(semi1, (0, 1)), (semi2, (2, 3))]:
+            survival = team_survival.get(semi_winner, 1.0)
+            p_win = float(self.calculator.model_probs.get(semi_winner, {}).get("F4", 0.0))
+            pts = float(self.calculator.scoring_system.get("F4", 0))
+
+            ev, var = self._path_ev_var(semi_winner, "F4", survival)
+            expected_points += ev
+            variance += var
+
+            team_survival[semi_winner] = survival * p_win
+
+        # --- Championship -----------------------------------------------------
+        champion = self._pick_winner(semi1, semi2, "CHAMP", risk_level)
+        picks["CHAMP"] = champion
+
+        survival = team_survival.get(champion, 1.0)
+        p_win_champ = float(self.calculator.model_probs.get(champion, {}).get("CHAMP", 0.0))
+        pts_champ = float(self.calculator.scoring_system.get("CHAMP", 0))
+
+        ev, var = self._path_ev_var(champion, "CHAMP", survival)
         expected_points += ev
         variance += var
 
-        champion = self._pick_winner(semi1, semi2, "CHAMP", risk_level)
-        picks["CHAMP"] = champion
-        ev, var = self._expected_value_contribution(champion, "CHAMP")
-        expected_points += ev
-        variance += var
+        # --- Covariance from path dependence ----------------------------------
+        # For each branch, picks i (earlier) and j (later) are correlated
+        # because j cannot score unless i also won.  For pick i at index a and
+        # pick j at index b > a in the same branch:
+        #   cov(X_i, X_j) = survival_j * p_win_i * (1 - p_win_i) * pts_i * pts_j
+        # We add 2 * cov to the total variance for each pair.
+        for branch in all_branch_picks:
+            n = len(branch)
+            for i in range(n):
+                for j in range(i + 1, n):
+                    bp_i = branch[i]
+                    bp_j = branch[j]
+                    cov = bp_j.survival * bp_i.p_win * (1.0 - bp_i.p_win) * bp_i.pts * bp_j.pts
+                    variance += 2.0 * cov
 
         return picks, champion, final_four, expected_points, variance
 

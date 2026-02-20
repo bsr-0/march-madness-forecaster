@@ -6,6 +6,7 @@ import copy
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -240,7 +241,9 @@ class RealDataCollector:
                 provider_lineage["sports_reference_json"] = sr_provider.provider
                 sr = []
             else:
-                sr = SportsReferenceScraper(str(self.cache_dir)).fetch_team_season_stats(year)
+                sr = SportsReferenceScraper(str(self.cache_dir)).fetch_team_season_stats(
+                    year, game_records=historical_team_rows,
+                )
             if sr:
                 payload = {"teams": self._ensure_ids(sr)}
                 validation_errors["sports_reference_json"] = validate_ratings_payload(
@@ -364,6 +367,8 @@ class RealDataCollector:
     def _normalize_team_id(name: str) -> str:
         return "".join(ch.lower() if ch.isalnum() else "_" for ch in (name or "")).strip("_")
 
+    _NCAA_SUFFIX_RE = re.compile(r"NCAA$", re.IGNORECASE)
+
     def _ensure_ids(self, records: List[Dict]) -> List[Dict]:
         result = []
         for row in records:
@@ -373,10 +378,18 @@ class RealDataCollector:
                 row["team_name"] = row["name"]
             if not row.get("name") and row.get("team_name"):
                 row["name"] = row["team_name"]
+            # Strip "NCAA" suffix from team names (Sports Reference appends it
+            # for tournament qualifiers, producing IDs like "akronncaa").
+            for key in ("team_name", "name"):
+                val = row.get(key)
+                if val and self._NCAA_SUFFIX_RE.search(val):
+                    row[key] = self._NCAA_SUFFIX_RE.sub("", val).rstrip()
             team_id = row.get("team_id")
             if not team_id:
                 team_id = self._normalize_team_id(row.get("team_name") or row.get("name"))
                 row["team_id"] = team_id
+            elif team_id.endswith("ncaa"):
+                row["team_id"] = team_id[:-4].rstrip("_")
             result.append(row)
         return result
 

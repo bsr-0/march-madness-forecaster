@@ -309,6 +309,43 @@ class TournamentContextScraper:
 
         return result
 
+    def build_team_to_coach_win_rate(
+        self,
+        coach_data: Dict[str, Dict[str, object]],
+        team_to_coach_map: Dict[str, str],
+    ) -> Dict[str, float]:
+        """
+        Map team IDs to their coach's tournament win rate (wins / games).
+
+        Uses coach_data fields: "wins", "losses", "appearances".
+        Falls back to 0.0 if no tournament games found.
+
+        Returns:
+            Dict of team_id -> coach tournament win rate [0, 1].
+        """
+        result: Dict[str, float] = {}
+        for team_id, coach_name in team_to_coach_map.items():
+            normalized = self._normalize_name(coach_name)
+            info = coach_data.get(normalized, {})
+
+            # Fuzzy match: try last name only
+            if not info and " " in coach_name:
+                last_name = coach_name.split()[-1].lower()
+                for k, v in coach_data.items():
+                    if k.endswith(last_name) or last_name in k:
+                        info = v
+                        break
+
+            wins = int(info.get("wins", 0))
+            losses = int(info.get("losses", 0))
+            total = wins + losses
+            if total > 0:
+                result[team_id] = wins / total
+            else:
+                result[team_id] = 0.0
+
+        return result
+
     # ------------------------------------------------------------------
     # 3. Conference Tournament Champions
     # ------------------------------------------------------------------

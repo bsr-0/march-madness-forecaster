@@ -275,7 +275,10 @@ class LightGBMTuner:
         Returns:
             TuningResult with best params and CV scores
         """
-        cv = TemporalCrossValidator(n_splits=self.n_cv_splits)
+        # FIX S1: pair_size=2 keeps symmetric game pairs together in CV
+        # folds.  Without this, one orientation of a game can leak into the
+        # validation fold while the reversed version is in training.
+        cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=2)
 
         def objective(trial: optuna.Trial) -> float:
             params = {
@@ -291,19 +294,22 @@ class LightGBMTuner:
                 "lambda_l1": trial.suggest_float("lambda_l1", 1e-8, 10.0, log=True),
                 "lambda_l2": trial.suggest_float("lambda_l2", 1e-8, 10.0, log=True),
                 "verbose": -1,
+                "num_threads": 1,
             }
+            # FIX M2: Use a fixed number of rounds during Optuna search
+            # instead of early stopping on the val fold.  Using the same val
+            # fold for both early stopping AND objective evaluation inflates
+            # the Optuna objective, causing selection of overfit hyperparams.
+            # Optuna tunes num_rounds explicitly instead.
             num_rounds = trial.suggest_int("num_rounds", 50, 500)
 
             def train_fn(X_tr, y_tr, X_v, y_v):
                 train_data = lgb.Dataset(X_tr, label=y_tr, feature_name=feature_names)
-                val_data = lgb.Dataset(X_v, label=y_v, feature_name=feature_names, reference=train_data)
-                callbacks = [lgb.early_stopping(30), lgb.log_evaluation(period=0)]
+                callbacks = [lgb.log_evaluation(period=0)]
                 return lgb.train(
                     params,
                     train_data,
                     num_boost_round=num_rounds,
-                    valid_sets=[val_data],
-                    valid_names=["valid"],
                     callbacks=callbacks,
                 )
 
@@ -322,6 +328,8 @@ class LightGBMTuner:
         study.optimize(objective, n_trials=self.n_trials, timeout=self.timeout)
 
         best = study.best_params
+        # FIX: Extract Optuna-tuned num_rounds (was hardcoded to 500).
+        best_num_rounds = best.get("num_rounds", 200)
         best_params = {
             "objective": "binary",
             "metric": "binary_logloss",
@@ -335,18 +343,17 @@ class LightGBMTuner:
             "lambda_l1": best["lambda_l1"],
             "lambda_l2": best["lambda_l2"],
             "verbose": -1,
+            "num_threads": 1,
         }
-        best_num_rounds = best.get("num_rounds", 200)
 
-        # Final CV with best params to get detailed results
+        # Final CV with best params — use fixed num_rounds (no early
+        # stopping) to keep val fold uncontaminated for evaluation.
         def final_train(X_tr, y_tr, X_v, y_v):
             td = lgb.Dataset(X_tr, label=y_tr, feature_name=feature_names)
-            vd = lgb.Dataset(X_v, label=y_v, feature_name=feature_names, reference=td)
-            callbacks = [lgb.early_stopping(30), lgb.log_evaluation(period=0)]
+            callbacks = [lgb.log_evaluation(period=0)]
             return lgb.train(
                 best_params, td,
                 num_boost_round=best_num_rounds,
-                valid_sets=[vd], valid_names=["valid"],
                 callbacks=callbacks,
             )
 
@@ -417,7 +424,8 @@ class XGBoostTuner:
         Returns:
             TuningResult with best params and CV scores
         """
-        cv = TemporalCrossValidator(n_splits=self.n_cv_splits)
+        # FIX S1: pair_size=2 keeps symmetric game pairs together in CV folds.
+        cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=2)
 
         def objective(trial: optuna.Trial) -> float:
             params = {
@@ -432,18 +440,18 @@ class XGBoostTuner:
                 "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 10.0, log=True),
                 "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 10.0, log=True),
                 "verbosity": 0,
+                "nthread": 1,
             }
+            # FIX M2: Fixed rounds during Optuna search — no early stopping
+            # on the val fold used for objective evaluation.
             num_rounds = trial.suggest_int("num_rounds", 50, 500)
 
             def train_fn(X_tr, y_tr, X_v, y_v):
                 dtrain = xgb.DMatrix(X_tr, label=y_tr, feature_names=feature_names)
-                dval = xgb.DMatrix(X_v, label=y_v, feature_names=feature_names)
                 return xgb.train(
                     params,
                     dtrain,
                     num_boost_round=num_rounds,
-                    evals=[(dval, "valid")],
-                    early_stopping_rounds=30,
                     verbose_eval=False,
                 )
 
@@ -463,6 +471,8 @@ class XGBoostTuner:
         study.optimize(objective, n_trials=self.n_trials, timeout=self.timeout)
 
         best = study.best_params
+        # FIX: Extract Optuna-tuned num_rounds (was hardcoded to 500).
+        best_num_rounds = best.get("num_rounds", 200)
         best_params = {
             "objective": "binary:logistic",
             "eval_metric": "logloss",
@@ -475,18 +485,15 @@ class XGBoostTuner:
             "reg_alpha": best["reg_alpha"],
             "reg_lambda": best["reg_lambda"],
             "verbosity": 0,
+            "nthread": 1,
         }
-        best_num_rounds = best.get("num_rounds", 200)
 
-        # Final CV with best params
+        # Final CV with best params — fixed rounds, no early stopping.
         def final_train(X_tr, y_tr, X_v, y_v):
             dtrain = xgb.DMatrix(X_tr, label=y_tr, feature_names=feature_names)
-            dval = xgb.DMatrix(X_v, label=y_v, feature_names=feature_names)
             return xgb.train(
                 best_params, dtrain,
                 num_boost_round=best_num_rounds,
-                evals=[(dval, "valid")],
-                early_stopping_rounds=30,
                 verbose_eval=False,
             )
 
@@ -536,7 +543,8 @@ class LogisticTuner:
         y: np.ndarray,
         sort_keys: np.ndarray,
     ) -> TuningResult:
-        cv = TemporalCrossValidator(n_splits=self.n_cv_splits)
+        # FIX S1: pair_size=2 keeps symmetric game pairs together in CV folds.
+        cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=2)
 
         def objective(trial: optuna.Trial) -> float:
             C = trial.suggest_float("C", 0.001, 100.0, log=True)
@@ -576,24 +584,39 @@ class LeaveOneYearOutCV:
     """
     Leave-One-Year-Out cross-validation for tournament prediction.
 
-    The gold standard for March Madness modeling. Standard K-fold CV
-    doesn't work because each tournament year has unique "chaos" patterns.
-    LOYO tests whether the model generalizes across different years' dynamics.
+    Supports two temporal modes:
 
-    For years [2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]:
-      Fold 0: train=[2017-2024], test=[2025]
-      Fold 1: train=[2017-2023, 2025], test=[2024]
-      ... etc
+    ``rolling_window`` (default, recommended):
+      Trains on all years **before** the held-out year only.  This is the
+      honest causal evaluation — no future-year data leaks into training.
+      Fold for 2023: train=[2017-2022], test=[2023].
+
+    ``leave_one_out`` (original):
+      Trains on all years **except** the held-out year (including future years).
+      Fold for 2023: train=[2017-2022, 2024-2025], test=[2023].
+      Overstates generalization because future information is available.
 
     Note: 2020 is excluded (tournament cancelled due to COVID).
     """
 
-    def __init__(self, years: Optional[List[int]] = None):
+    def __init__(
+        self,
+        years: Optional[List[int]] = None,
+        temporal_mode: str = "rolling_window",
+    ):
         """
         Args:
             years: Years to use for CV. Defaults to 2017-2025 (excluding 2020).
+            temporal_mode: ``"rolling_window"`` (train on past only) or
+                ``"leave_one_out"`` (train on all other years).
         """
         self.years = years or [y for y in range(2017, 2026) if y != 2020]
+        if temporal_mode not in ("rolling_window", "leave_one_out"):
+            raise ValueError(
+                f"temporal_mode must be 'rolling_window' or 'leave_one_out', "
+                f"got '{temporal_mode}'"
+            )
+        self.temporal_mode = temporal_mode
 
     def split(
         self,
@@ -611,10 +634,18 @@ class LeaveOneYearOutCV:
         splits = []
         for hold_out_year in self.years:
             test_mask = game_years == hold_out_year
-            train_mask = ~test_mask
+
+            if self.temporal_mode == "rolling_window":
+                # Train on strictly earlier years only — honest causal split
+                train_mask = game_years < hold_out_year
+            else:
+                # Original: train on all years except held-out
+                train_mask = ~test_mask
 
             if np.sum(test_mask) < 5:
                 continue  # Skip years with too few games
+            if np.sum(train_mask) < 5:
+                continue  # Skip if not enough training data (early years in rolling mode)
 
             train_idx = np.where(train_mask)[0]
             test_idx = np.where(test_mask)[0]
@@ -647,12 +678,22 @@ class LeaveOneYearOutCV:
         results = []
 
         for fold_id, (train_idx, test_idx, year) in enumerate(splits):
-            X_train = X[train_idx]
-            y_train = y[train_idx]
             X_test = X[test_idx]
             y_test = y[test_idx]
 
-            model = train_fn(X_train, y_train, X_test, y_test)
+            # Hold out 15% of training data for early stopping to prevent
+            # leaking test-year labels into the training process.
+            n_tr = len(train_idx)
+            es_size = max(10, int(0.15 * n_tr))
+            es_idx = train_idx[-es_size:]   # chronologically last portion
+            tr_idx = train_idx[:-es_size]
+
+            X_train = X[tr_idx]
+            y_train = y[tr_idx]
+            X_es = X[es_idx]
+            y_es = y[es_idx]
+
+            model = train_fn(X_train, y_train, X_es, y_es)
             preds = predict_fn(model, X_test)
             preds = np.clip(preds, 1e-7, 1 - 1e-7)
 
@@ -706,6 +747,8 @@ class EnsembleWeightOptimizer:
         model_predictions: Dict[str, np.ndarray],
         outcomes: np.ndarray,
         model_confidences: Optional[Dict[str, float]] = None,
+        min_samples: int = 50,
+        regularization_lambda: float = 0.1,
     ) -> Tuple[Dict[str, float], float]:
         """
         Find optimal weights by bootstrap-aggregated grid search over Brier score.
@@ -715,10 +758,19 @@ class EnsembleWeightOptimizer:
         per-resample best weights.  This is equivalent to bagging the weight
         selector, preventing it from latching onto noise in a small holdout.
 
+        If ``n < min_samples``, optimization is skipped and uniform weights
+        are returned to avoid fitting noise on tiny samples.
+
+        When ``regularization_lambda > 0``, the objective includes an L2
+        penalty toward uniform weights:
+          penalized_brier = brier + lambda * ||w - w_uniform||^2
+
         Args:
             model_predictions: Dict of model_name -> predicted probabilities [N]
             outcomes: Actual outcomes [N]
             model_confidences: Per-model confidence scores (unused, kept for API compat)
+            min_samples: Minimum samples required; returns uniform below this.
+            regularization_lambda: L2 regularization toward uniform weights.
 
         Returns:
             Tuple of (best_weights, best_brier_score)
@@ -730,6 +782,22 @@ class EnsembleWeightOptimizer:
         preds = {name: np.clip(model_predictions[name], 0.01, 0.99) for name in model_names}
         y = np.array(outcomes, dtype=float)
         n = len(y)
+
+        # Fix 8: Minimum sample guard — skip optimization when data is too sparse
+        n_models = len(model_names)
+        uniform_weights = {name: 1.0 / n_models for name in model_names}
+        if n < min_samples:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Ensemble weight optimization: only %d samples (minimum %d); "
+                "returning uniform weights.",
+                n, min_samples,
+            )
+            combined = np.zeros(n)
+            for name in model_names:
+                combined += uniform_weights[name] * preds[name]
+            uniform_brier = float(np.mean((combined - y) ** 2))
+            return uniform_weights, uniform_brier
 
         # Generate weight grid once (shared across bootstrap resamples)
         steps = int(round(1.0 / self.step))
@@ -755,11 +823,16 @@ class EnsembleWeightOptimizer:
             best_brier_boot = float("inf")
             best_combo_boot = weight_grid[0]
 
+            uniform_arr = np.array([1.0 / n_models] * n_models)
             for combo in weight_grid:
                 combined = np.zeros(n)
                 for name, w in zip(model_names, combo):
                     combined += w * preds_boot[name]
                 brier = float(np.mean((combined - y_boot) ** 2))
+                # Fix 8: L2 regularization toward uniform weights
+                if regularization_lambda > 0:
+                    combo_arr = np.array(combo)
+                    brier += regularization_lambda * float(np.sum((combo_arr - uniform_arr) ** 2))
                 if brier < best_brier_boot:
                     best_brier_boot = brier
                     best_combo_boot = combo

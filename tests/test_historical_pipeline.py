@@ -79,7 +79,7 @@ def test_historical_pipeline_falls_back_to_sports_reference(tmp_path):
     pipeline = HistoricalDataPipeline(config)
     pipeline.providers._import_module = lambda module: DummyCBBpy if module == "cbbpy.mens_scraper" else None
     pipeline.providers.fetch_team_box_metrics = lambda season, priority=None: ProviderResult("sportsipy", [])
-    pipeline.sports_reference.fetch_team_season_stats = lambda season: [
+    pipeline.sports_reference.fetch_team_season_stats = lambda season, **kwargs: [
         {"team_name": "A", "pace": 68.0, "off_rtg": 102.0, "def_rtg": 99.0, "wins": 20, "losses": 10}
     ]
 
