@@ -291,6 +291,7 @@ class LightGBMRanker:
             'bagging_fraction': 0.8,
             'bagging_freq': 5,
             'verbose': -1,
+            'num_threads': 1,
         }
         
         self.model = None
@@ -302,39 +303,44 @@ class LightGBMRanker:
         y: np.ndarray,
         feature_names: List[str] = None,
         num_rounds: int = 500,
-        early_stopping_rounds: int = 50,
-        valid_set: Tuple[np.ndarray, np.ndarray] = None
+        early_stopping_rounds: Optional[int] = 50,
+        valid_set: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+        sample_weight: np.ndarray = None,
     ) -> None:
         """
         Train LightGBM model.
-        
+
         Args:
             X: Feature matrix [N, D]
             y: Labels [N] (1 = team1 win)
             feature_names: Names of features
             num_rounds: Number of boosting rounds
-            early_stopping_rounds: Early stopping patience
+            early_stopping_rounds: Early stopping patience (None to disable)
             valid_set: Validation set (X_val, y_val)
+            sample_weight: Per-sample weights [N] for recency weighting
         """
         self.feature_names = feature_names
-        
-        train_data = lgb.Dataset(X, label=y, feature_name=feature_names)
-        
+
+        train_data = lgb.Dataset(X, label=y, feature_name=feature_names,
+                                 weight=sample_weight)
+
         valid_sets = [train_data]
         valid_names = ['train']
-        
+
         if valid_set is not None:
             valid_data = lgb.Dataset(
-                valid_set[0], 
+                valid_set[0],
                 label=valid_set[1],
                 feature_name=feature_names,
                 reference=train_data
             )
             valid_sets.append(valid_data)
             valid_names.append('valid')
-        
+
         callbacks = []
-        if early_stopping_rounds:
+        # Only add early stopping when a real validation set is provided.
+        # Monitoring training loss alone is meaningless for early stopping.
+        if early_stopping_rounds and valid_set is not None:
             callbacks.append(lgb.early_stopping(early_stopping_rounds))
         callbacks.append(lgb.log_evaluation(period=100))
         
@@ -439,6 +445,7 @@ class XGBoostRanker:
             "reg_alpha": 0.1,
             "reg_lambda": 1.0,
             "verbosity": 0,
+            "nthread": 1,
         }
 
         self.model = None
@@ -450,8 +457,9 @@ class XGBoostRanker:
         y: np.ndarray,
         feature_names: List[str] = None,
         num_rounds: int = 500,
-        early_stopping_rounds: int = 50,
-        valid_set: Tuple[np.ndarray, np.ndarray] = None,
+        early_stopping_rounds: Optional[int] = 50,
+        valid_set: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+        sample_weight: np.ndarray = None,
     ) -> None:
         """
         Train XGBoost model.
@@ -463,10 +471,12 @@ class XGBoostRanker:
             num_rounds: Number of boosting rounds
             early_stopping_rounds: Early stopping patience
             valid_set: Validation set (X_val, y_val)
+            sample_weight: Per-sample weights [N] for recency weighting
         """
         self.feature_names = feature_names
 
-        dtrain = xgb.DMatrix(X, label=y, feature_names=feature_names)
+        dtrain = xgb.DMatrix(X, label=y, feature_names=feature_names,
+                             weight=sample_weight)
 
         evals = [(dtrain, "train")]
         if valid_set is not None:

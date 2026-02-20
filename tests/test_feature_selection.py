@@ -152,7 +152,12 @@ class TestFeatureSelector:
         assert result.reduced_dim < result.original_dim
         assert X_reduced.shape[1] == result.reduced_dim
         assert X_reduced.shape[0] == n
-        assert len(result.correlation_dropped) >= 2  # At least the duplicates
+        # VIF or correlation pruning should catch the collinear features.
+        # With VIF enabled by default (Fix #3), the collinear features may be
+        # removed by VIF before correlation pruning runs, so we check the total
+        # reduction rather than a specific stage.
+        total_dropped = result.original_dim - result.reduced_dim
+        assert total_dropped >= 2  # At least the duplicates removed by VIF or correlation
 
     def test_transform_after_fit(self):
         rng = np.random.RandomState(42)
@@ -209,3 +214,76 @@ class TestFeatureSelector:
 
         assert len(result.importance_scores) == 8  # All features scored
         assert result.importance_scores[0].rank == 1
+
+
+# ---------------------------------------------------------------------------
+# VIF Pruner Tests (Fix 11)
+# ---------------------------------------------------------------------------
+
+
+class TestVIFPruner:
+    """Tests for VIF-based multicollinearity pruning."""
+
+    def test_perfect_collinear_dropped(self):
+        """A perfectly collinear feature should be dropped."""
+        from src.data.features.feature_selection import VIFPruner
+
+        rng = np.random.default_rng(42)
+        n = 100
+        X = rng.standard_normal((n, 4))
+        # col4 = col0 + col1 (exact linear combination)
+        X_collinear = np.column_stack([X, X[:, 0] + X[:, 1]])
+        names = ["a", "b", "c", "d", "ab_sum"]
+
+        pruner = VIFPruner(threshold=10.0)
+        X_pruned, kept_names, dropped_names = pruner.prune(X_collinear, names)
+
+        assert len(dropped_names) >= 1
+        assert X_pruned.shape[1] < 5
+
+    def test_independent_features_kept(self):
+        """Independent features should all be kept."""
+        from src.data.features.feature_selection import VIFPruner
+
+        rng = np.random.default_rng(42)
+        X = rng.standard_normal((200, 5))
+        names = ["a", "b", "c", "d", "e"]
+
+        pruner = VIFPruner(threshold=10.0)
+        X_pruned, kept_names, dropped_names = pruner.prune(X, names)
+
+        assert len(dropped_names) == 0
+        assert X_pruned.shape[1] == 5
+
+    def test_threshold_respected(self):
+        """A very high threshold should keep everything."""
+        from src.data.features.feature_selection import VIFPruner
+
+        rng = np.random.default_rng(42)
+        n = 100
+        X = rng.standard_normal((n, 3))
+        # Moderately correlated
+        X[:, 2] = X[:, 0] * 0.8 + rng.standard_normal(n) * 0.2
+        names = ["a", "b", "c"]
+
+        pruner_loose = VIFPruner(threshold=1000.0)
+        X_pruned, kept, dropped = pruner_loose.prune(X, names)
+        assert len(dropped) == 0  # Very high threshold keeps all
+
+    def test_max_drops_limit(self):
+        """Should not drop more features than max_drops."""
+        from src.data.features.feature_selection import VIFPruner
+
+        rng = np.random.default_rng(42)
+        n = 100
+        base = rng.standard_normal((n, 2))
+        # Create many collinear features
+        cols = [base]
+        for i in range(5):
+            cols.append((base[:, 0] * (1 + 0.01 * i) + rng.standard_normal(n) * 0.01).reshape(-1, 1))
+        X = np.column_stack(cols)
+        names = [f"f{i}" for i in range(X.shape[1])]
+
+        pruner = VIFPruner(threshold=5.0, max_drops=2)
+        X_pruned, kept, dropped = pruner.prune(X, names)
+        assert len(dropped) <= 2

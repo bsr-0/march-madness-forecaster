@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
 import multiprocessing
+import math
 
 
 @dataclass
@@ -85,6 +86,11 @@ class AggregatedResults:
 
     num_simulations: int = 0
 
+    # Standard errors and confidence intervals (Wilson score)
+    simulation_se: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    ci_lower: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    ci_upper: Dict[str, Dict[str, float]] = field(default_factory=dict)
+
     def get_leverage_picks(
         self,
         public_odds: Dict[str, float],
@@ -151,7 +157,7 @@ def _run_batch(
     Returns:
         List of result dictionaries
     """
-    rng = np.random.RandomState(seed)
+    rng = np.random.default_rng(seed)
     results = []
 
     # Map teams to regions for correlated sampling
@@ -169,20 +175,27 @@ def _run_batch(
     round_correlation_decay = [1.0, 0.6, 0.3, 0.15, 0.0, 0.0]
 
     for _ in range(batch_size):
-        # Draw per-region, per-round latent factors.
+        # Draw per-region, per-round latent variance multipliers.
         # Each round gets a fresh regional factor with decayed variance.
         # This models the observation that early-round upsets cluster
         # within regions, but the effect diminishes as rounds progress.
-        region_factors_by_round = {}
+        #
+        # The factor modulates game noise VARIANCE (not logit direction),
+        # so it is symmetric: a positive factor means more chaos (more
+        # upsets possible), negative means less (favorites hold).  This
+        # avoids the old asymmetry where a signed logit shift always
+        # favored whichever team happened to be listed as team1.
+        region_noise_mult_by_round = {}
         for round_idx in range(6):
             decay = round_correlation_decay[min(round_idx, len(round_correlation_decay) - 1)]
             round_regional_std = regional_correlation * decay
             if round_regional_std > 1e-6:
-                region_factors_by_round[round_idx] = {
-                    r: rng.normal(0, round_regional_std) for r in unique_regions
+                region_noise_mult_by_round[round_idx] = {
+                    r: max(0.2, 1.0 + rng.normal(0, round_regional_std))
+                    for r in unique_regions
                 }
             else:
-                region_factors_by_round[round_idx] = {r: 0.0 for r in unique_regions}
+                region_noise_mult_by_round[round_idx] = {r: 1.0 for r in unique_regions}
 
         # Per-team injury shift (drawn once per simulation, persistent)
         team_injury_shift = {}
@@ -226,24 +239,27 @@ def _run_batch(
                     safe_prob = np.clip(base_prob, 0.001, 0.999)
                     logit = np.log(safe_prob / (1.0 - safe_prob))
 
-                    # Regional correlation (round-dependent)
+                    # Regional correlation (round-dependent): modulates noise variance.
+                    # Higher mult → more variance → more upsets possible.
                     r1 = team_regions.get(team1, "")
                     r2 = team_regions.get(team2, "")
                     if r1 == r2 and r1 and round_regional_std > 1e-6:
-                        region_shift = region_factors_by_round[round_idx].get(r1, 0.0)
-                        logit += region_shift
+                        noise_mult = region_noise_mult_by_round[round_idx].get(r1, 1.0)
                     elif r1 != r2 and round_idx >= 4:
-                        # Cross-region (Final Four+): small independent noise
-                        # representing neutral-site variance only.
-                        logit += rng.normal(0, noise_std * 0.5)
+                        # Cross-region (Final Four+): extra variance drawn
+                        # symmetrically around 1.0.  Use lognormal so the
+                        # multiplier is always positive with E[mult]=1.0.
+                        noise_mult = float(rng.lognormal(mean=0.0, sigma=0.15))
+                    else:
+                        noise_mult = 1.0
 
                     # Injury differential
                     inj1 = team_injury_shift.get(team1, 0.0)
                     inj2 = team_injury_shift.get(team2, 0.0)
                     logit += (inj1 - inj2)
 
-                    # Per-game idiosyncratic noise
-                    game_noise = rng.normal(0, idiosyncratic_std)
+                    # Per-game idiosyncratic noise (scaled by regional factor)
+                    game_noise = rng.normal(0, idiosyncratic_std * noise_mult)
                     logit += game_noise
 
                     # Convert back to probability
@@ -305,8 +321,6 @@ class MonteCarloEngine:
         self.predict_fn = predict_fn
         self.config = config or SimulationConfig()
 
-        if self.config.random_seed:
-            np.random.seed(self.config.random_seed)
 
     def simulate_tournament(
         self,
@@ -430,7 +444,7 @@ class MonteCarloEngine:
             for team in result.get("round_of_32", []):
                 round_of_32_counts[team] = round_of_32_counts.get(team, 0) + 1
 
-        return AggregatedResults(
+        results = AggregatedResults(
             championship_odds={k: v / n for k, v in championship_counts.items()},
             final_four_odds={k: v / n for k, v in final_four_counts.items()},
             elite_eight_odds={k: v / n for k, v in elite_eight_counts.items()},
@@ -438,6 +452,33 @@ class MonteCarloEngine:
             round_of_32_odds={k: v / n for k, v in round_of_32_counts.items()},
             num_simulations=n,
         )
+
+        # Compute standard errors and Wilson score confidence intervals
+        N = n
+        z = 1.96  # 95% CI
+
+        for odds_dict, round_name in [
+            (results.championship_odds, "CHAMP"),
+            (results.final_four_odds, "F4"),
+            (results.elite_eight_odds, "E8"),
+            (results.sweet_sixteen_odds, "S16"),
+            (results.round_of_32_odds, "R32"),
+        ]:
+            for team, p in odds_dict.items():
+                se = math.sqrt(p * (1 - p) / max(N, 1))
+                # Wilson score interval for better small-p coverage
+                denom = 1 + z**2 / N
+                center = (p + z**2 / (2 * N)) / denom
+                margin = z * math.sqrt(p * (1 - p) / N + z**2 / (4 * N**2)) / denom
+                if team not in results.simulation_se:
+                    results.simulation_se[team] = {}
+                    results.ci_lower[team] = {}
+                    results.ci_upper[team] = {}
+                results.simulation_se[team][round_name] = se
+                results.ci_lower[team][round_name] = max(0.0, center - margin)
+                results.ci_upper[team][round_name] = min(1.0, center + margin)
+
+        return results
 
 
 @dataclass

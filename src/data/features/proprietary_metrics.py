@@ -29,7 +29,10 @@ Metrics produced
 
 from __future__ import annotations
 
+import csv
 import math
+import os
+import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
@@ -230,6 +233,43 @@ class ProprietaryTeamMetrics:
     # Conference tournament champion flag (auto-bid context)
     conf_tourney_champion: bool = False
 
+    # Per-game pace variance (game-to-game tempo stdev — upset risk amplifier)
+    pace_variance: float = 0.0
+
+    # Coach tournament win rate (wins / games in NCAA tournament — experience quality)
+    coach_tournament_win_rate: float = 0.0
+
+    # --- Advanced metrics (KenPom/ShotQuality replacements) ---
+
+    # True Shooting % — composite shooting efficiency (2P + 3P + FT combined)
+    # More stable than eFG% because it accounts for free throw volume.
+    # Formula: PTS / (2 × (FGA + 0.44 × FTA))
+    true_shooting_pct: float = 0.54
+    opp_true_shooting_pct: float = 0.54
+
+    # Neutral-site win % — directly relevant to tournament (all neutral venues)
+    neutral_site_win_pct: float = 0.5
+    neutral_site_games: int = 0
+
+    # Home/Away AdjEM splits — captures team-specific HCA variance
+    # Some teams are much better/worse at home; tournament is neutral.
+    home_adj_em: float = 0.0
+    away_adj_em: float = 0.0
+    # Differential: how much a team benefits from home court (high = home-dependent)
+    home_court_dependence: float = 0.0
+
+    # 5-game momentum (finer granularity than 10-game)
+    momentum_5g: float = 0.0
+
+    # Transition efficiency estimate (pace-derived proxy)
+    # High-pace teams generate more transition opportunities.
+    # Estimated: (pace - league_avg_pace) × efficiency × scale
+    transition_efficiency: float = 0.0
+
+    # Defensive transition vulnerability (opponent pace interaction)
+    # Approximated from pace-adjusted defensive efficiency differential
+    defensive_transition_vulnerability: float = 0.0
+
     # Record
     wins: int = 0
     losses: int = 0
@@ -315,7 +355,7 @@ class ProprietaryMetricsEngine:
 
             ff = self._four_factors(games)
             shooting = self._supplementary_shooting(games)
-            sos = self._strength_of_schedule(games, adj_off, adj_def)
+            sos = self._strength_of_schedule(games, adj_off, adj_def, conference_map or {})
             luck = self._correlated_gaussian_luck(games)
             barthag = self._pythagorean_win_pct(adj_off[tid], adj_def[tid])
 
@@ -351,11 +391,16 @@ class ProprietaryMetricsEngine:
             eff_ratio = adj_off[tid] / max(adj_def[tid], 1e-6)
 
             # 3-Point regression signal: actual 3P% vs expected from shot quality
-            # Expected 3P% ≈ league-average 3P% (0.345) scaled by defensive
-            # contest pressure (approximated by shot distribution quality)
             actual_3p = shooting.get("three_pt_pct", 0.34)
             expected_3p = 0.345  # D1 average baseline
             three_pt_regression = actual_3p - expected_3p
+
+            # --- Advanced KenPom/ShotQuality replacements ---
+            ts_pct, opp_ts_pct = self._true_shooting_pct(games)
+            neutral_win_pct, neutral_games = self._neutral_site_record(games)
+            home_em, away_em, hc_dependence = self._home_away_splits(games, adj_off, adj_def)
+            mom_5g = self._momentum_5g(games, adj_off, adj_def)
+            trans_off, trans_def_vuln = self._transition_efficiency(games, adj_off, adj_def)
 
             results[tid] = ProprietaryTeamMetrics(
                 team_id=tid,
@@ -394,6 +439,17 @@ class ProprietaryMetricsEngine:
                 efficiency_ratio=eff_ratio,
                 foul_rate=foul_rate,
                 three_pt_regression_signal=three_pt_regression,
+                pace_variance=self._pace_variance(games),
+                true_shooting_pct=ts_pct,
+                opp_true_shooting_pct=opp_ts_pct,
+                neutral_site_win_pct=neutral_win_pct,
+                neutral_site_games=neutral_games,
+                home_adj_em=home_em,
+                away_adj_em=away_em,
+                home_court_dependence=hc_dependence,
+                momentum_5g=mom_5g,
+                transition_efficiency=trans_off,
+                defensive_transition_vulnerability=trans_def_vuln,
                 wins=wins,
                 losses=losses,
             )
@@ -412,6 +468,13 @@ class ProprietaryMetricsEngine:
 
         # --- Step 8: Rest days (days since last game) ---
         self._compute_rest_days(results, by_team)
+
+        # --- Step 9: H2H records + common opponent margins (for matchup features) ---
+        # Store per-team game data for later H2H/common-opp computation.
+        # This is consumed by FeatureEngineer.create_matchup_features().
+        self._by_team = by_team
+        self._adj_off = adj_off
+        self._adj_def = adj_def
 
         return results
 
@@ -609,21 +672,35 @@ class ProprietaryMetricsEngine:
         games: List[GameRecord],
         adj_off: Dict[str, float],
         adj_def: Dict[str, float],
+        conference_map: Dict[str, str] = None,
     ) -> Dict[str, float]:
         league_off = float(np.mean(list(adj_off.values()))) if adj_off else 100.0
         league_def = float(np.mean(list(adj_def.values()))) if adj_def else 100.0
+        conference_map = conference_map or {}
 
         n = max(len(games), 1)
         opp_o = [adj_off.get(g.opponent_id, league_off) for g in games]
         opp_d = [adj_def.get(g.opponent_id, league_def) for g in games]
         opp_em = [o - d for o, d in zip(opp_o, opp_d)]
 
-        # NCSOS: non-conference games only (heuristic: neutral-site or away)
-        nc_ems = [
-            adj_off.get(g.opponent_id, league_off) - adj_def.get(g.opponent_id, league_def)
-            for g in games
-            if g.is_neutral or not g.is_home
-        ]
+        # NCSOS: non-conference games only.
+        # Use conference_map for accurate identification; fall back to the
+        # old heuristic (neutral-site or away) only when conference data is
+        # unavailable so NCSOS is never empty.
+        team_conf = conference_map.get(games[0].team_id, "") if games else ""
+        if team_conf and conference_map:
+            nc_ems = [
+                adj_off.get(g.opponent_id, league_off) - adj_def.get(g.opponent_id, league_def)
+                for g in games
+                if conference_map.get(g.opponent_id, "") != team_conf
+            ]
+        else:
+            # Fallback heuristic when conference labels unavailable
+            nc_ems = [
+                adj_off.get(g.opponent_id, league_off) - adj_def.get(g.opponent_id, league_def)
+                for g in games
+                if g.is_neutral or not g.is_home
+            ]
 
         return {
             "sos_adj_em": sum(opp_em) / n,
@@ -639,7 +716,7 @@ class ProprietaryMetricsEngine:
         luck = actual_win% − expected_win%
         where expected_win% = Φ(mean_margin / std_margin)
         """
-        if len(games) < 5:
+        if len(games) < 12:
             return 0.0
 
         margins = [g.points - g.opp_points for g in games]
@@ -653,7 +730,13 @@ class ProprietaryMetricsEngine:
         expected_win_pct = float(scipy_stats.norm.cdf(z))
         actual_win_pct = sum(1 for m in margins if m > 0) / len(margins)
 
-        return actual_win_pct - expected_win_pct
+        raw_luck = actual_win_pct - expected_win_pct
+
+        # Sample-size shrinkage: partial weight at 12-32 games, full at 32+
+        MIN_GAMES = 12
+        FULL_WEIGHT_GAMES = 32
+        shrinkage = min(1.0, (len(games) - MIN_GAMES) / (FULL_WEIGHT_GAMES - MIN_GAMES))
+        return raw_luck * shrinkage
 
     def _pythagorean_win_pct(self, adj_o: float, adj_d: float) -> float:
         """KenPom Pythagorean win% with exponent 10.25."""
@@ -824,17 +907,12 @@ class ProprietaryMetricsEngine:
 
         Bubble team = team ranked ~45th in AdjEM.
         """
-        ranked = sorted(results.values(), key=lambda t: t.adj_efficiency_margin, reverse=True)
-        raw_bubble_em = 0.0
-        if len(ranked) >= self.BUBBLE_RANK:
-            raw_bubble_em = ranked[self.BUBBLE_RANK - 1].adj_efficiency_margin
-        elif ranked:
-            raw_bubble_em = ranked[-1].adj_efficiency_margin
-        # Blend current-year bubble AdjEM toward historical prior to dampen
-        # the effect of end-of-season ranking shifts.  The bubble team's
-        # identity shifts throughout the season; using a stabilized estimate
-        # reduces leakage from final-season rankings into early-season WAB.
-        bubble_em = 0.7 * raw_bubble_em + 0.3 * self.BUBBLE_EM_PRIOR
+        # FIX M3: Use only the historical prior for bubble team AdjEM.
+        # The previous approach ranked all teams by final adj_efficiency_margin
+        # and used the ~45th team's value — this leaked end-of-season rankings
+        # into WAB for every game, including early-season ones.  The historical
+        # prior (5.0 AdjEM) is stable across seasons and introduces no leakage.
+        bubble_em = self.BUBBLE_EM_PRIOR
 
         for tid, games in by_team.items():
             if tid not in results:
@@ -887,9 +965,9 @@ class ProprietaryMetricsEngine:
             "opp_free_throw_pct": opp_ftm / max(opp_fta, 1.0),
             "assist_to_turnover_ratio": ast / max(tov, 1.0),
             "assist_rate": ast / max(fgm, 1.0),
-            "steal_rate": stl / max(opp_total_poss, 1.0) * 100.0,
-            "block_rate": blk / max(opp_total_poss, 1.0) * 100.0,
-            "defensive_disruption_rate": (stl + blk) / max(opp_total_poss, 1.0) * 100.0,
+            "steal_rate": stl / max(opp_total_poss, 1.0),
+            "block_rate": blk / max(opp_total_poss, 1.0),
+            "defensive_disruption_rate": (stl + blk) / max(opp_total_poss, 1.0),
         }
 
     def _opponent_shot_selection(self, games: List[GameRecord]) -> Dict[str, float]:
@@ -956,11 +1034,17 @@ class ProprietaryMetricsEngine:
             margin = g.points - g.opp_points
             s1 = 1.0 if margin > 0 else (0.0 if margin < 0 else 0.5)
 
-            # MOV multiplier: (3 + |margin|)^0.85
-            mov_mult = (3.0 + abs(margin)) ** 0.85
+            # MOV multiplier: log-based to saturate for blowouts.
+            # ln(1 + |margin|) gives ~2.1 for 7-pt win, ~3.4 for 30-pt blowout.
+            # This prevents cupcake blowouts from inflating Elo disproportionately.
+            mov_mult = np.log1p(abs(margin))
 
-            # K scaled by MOV
-            k = K_BASE * mov_mult / max(((elo[t1] - elo[t2]) / 400.0) ** 2 + 1.0, 1.0)
+            # K scaled by MOV, dampened by elo diff (FiveThirtyEight-style).
+            # Denominator: 2.2 / (elo_diff * 0.001 + 2.2) shrinks updates for
+            # expected blowouts more aggressively than the old quadratic form.
+            elo_diff = abs(elo[t1] - elo[t2])
+            elo_dampening = 2.2 / (elo_diff * 0.001 + 2.2)
+            k = K_BASE * mov_mult * elo_dampening
 
             # Update
             delta = k * (s1 - e1)
@@ -1025,43 +1109,38 @@ class ProprietaryMetricsEngine:
         adj_def: Dict[str, float],
     ) -> None:
         """
-        Compute elite SOS (top-30 opponents only) and Quadrant record.
+        Compute elite SOS (high-AdjEM opponents only) and Quadrant record.
 
-        Quadrant definitions (NCAA NET proxy using AdjEM ranking):
-          Q1: top-30 home, top-50 neutral, top-75 away
-          Q2: 31-75 home, 51-100 neutral, 76-135 away
-          Q3: 76-160 home, 101-200 neutral, 136-240 away
-          Q4: 161+ home, 201+ neutral, 241+ away
+        FIX M4: Use AdjEM thresholds instead of end-of-season rankings.
+        Rank-based classification leaks because it requires knowledge of
+        all teams' final performance.  AdjEM thresholds are self-contained
+        — they depend only on each opponent's own metrics.
 
-        We approximate using AdjEM ranks since NET is not publicly available.
+        AdjEM thresholds (approximate historical mapping):
+          Elite: AdjEM >= 15.0 (~top 30)
+          Q1 boundary: varies by venue — see _classify_quadrant_by_em()
         """
-        # Rank all teams by AdjEM
-        ranked_teams = sorted(
-            results.keys(),
-            key=lambda t: results[t].adj_efficiency_margin,
-            reverse=True,
-        )
-        team_rank: Dict[str, int] = {t: i + 1 for i, t in enumerate(ranked_teams)}
+        # Historical AdjEM thresholds for approximate quadrant mapping.
+        # These are stable across seasons and don't depend on final rankings.
+        ELITE_EM_THRESHOLD = 15.0  # ~ top 30
 
         for tid, games in by_team.items():
             if tid not in results:
                 continue
 
-            # --- Elite SOS: average AdjEM of top-30 ranked opponents ---
             elite_ems: List[float] = []
             q1_w, q1_l = 0, 0
 
             for g in games:
-                opp_rank = team_rank.get(g.opponent_id, 200)
                 opp_em = (adj_off.get(g.opponent_id, 100.0)
                           - adj_def.get(g.opponent_id, 100.0))
 
-                # Elite SOS: only top-30
-                if opp_rank <= 30:
+                # Elite SOS: high-AdjEM opponents only
+                if opp_em >= ELITE_EM_THRESHOLD:
                     elite_ems.append(opp_em)
 
-                # Quadrant classification
-                q = self._classify_quadrant(opp_rank, g.is_home, g.is_neutral)
+                # Quadrant classification by AdjEM thresholds
+                q = self._classify_quadrant_by_em(opp_em, g.is_home, g.is_neutral)
                 is_win = g.points > g.opp_points
                 if q == 1:
                     if is_win:
@@ -1075,32 +1154,218 @@ class ProprietaryMetricsEngine:
             results[tid].q1_win_pct = q1_w / max(q1_w + q1_l, 1)
 
     @staticmethod
-    def _classify_quadrant(opp_rank: int, is_home: bool, is_neutral: bool) -> int:
-        """Classify a game into NCAA quadrant (1-4) based on opponent rank and venue."""
+    def _classify_quadrant_by_em(opp_em: float, is_home: bool, is_neutral: bool) -> int:
+        """
+        FIX M4: Classify game into NCAA quadrant (1-4) using AdjEM thresholds.
+
+        Uses historical AdjEM cutoffs that approximate rank-based quadrants
+        without requiring knowledge of all teams' final rankings:
+          Q1: ~top 30-75 depending on venue → AdjEM >= 15/10/5
+          Q2: next tier → AdjEM >= 8/3/-2
+          Q3: mid tier → AdjEM >= -3/-8/-12
+          Q4: below Q3
+        """
         if is_neutral:
-            if opp_rank <= 50:
+            if opp_em >= 10.0:
                 return 1
-            elif opp_rank <= 100:
+            elif opp_em >= 3.0:
                 return 2
-            elif opp_rank <= 200:
+            elif opp_em >= -8.0:
                 return 3
             return 4
         elif is_home:
-            if opp_rank <= 30:
+            if opp_em >= 15.0:
                 return 1
-            elif opp_rank <= 75:
+            elif opp_em >= 8.0:
                 return 2
-            elif opp_rank <= 160:
+            elif opp_em >= -3.0:
                 return 3
             return 4
         else:  # away
-            if opp_rank <= 75:
+            if opp_em >= 5.0:
                 return 1
-            elif opp_rank <= 135:
+            elif opp_em >= -2.0:
                 return 2
-            elif opp_rank <= 240:
+            elif opp_em >= -12.0:
                 return 3
             return 4
+
+    def _true_shooting_pct(self, games: List[GameRecord]) -> Tuple[float, float]:
+        """
+        True Shooting %: PTS / (2 × (FGA + 0.44 × FTA))
+
+        More stable than eFG% because it incorporates free throw volume
+        and shooting skill in a single composite metric.
+
+        Returns (team_ts_pct, opp_ts_pct).
+        """
+        total_pts = sum(g.points for g in games)
+        total_fga = sum(g.fga for g in games)
+        total_fta = sum(g.fta for g in games)
+
+        opp_pts = sum(g.opp_points for g in games)
+        opp_fga = sum(g.opp_fga for g in games)
+        opp_fta = sum(g.opp_fta for g in games)
+
+        tsa = 2.0 * (total_fga + 0.44 * total_fta)
+        opp_tsa = 2.0 * (opp_fga + 0.44 * opp_fta)
+
+        ts_pct = total_pts / max(tsa, 1.0)
+        opp_ts_pct = opp_pts / max(opp_tsa, 1.0)
+
+        return float(ts_pct), float(opp_ts_pct)
+
+    def _neutral_site_record(self, games: List[GameRecord]) -> Tuple[float, int]:
+        """
+        Win % at neutral sites only.
+
+        Directly relevant to tournament prediction since all NCAA
+        tournament games are played at neutral venues.
+
+        Returns (neutral_win_pct, n_neutral_games).
+        """
+        neutral_games = [g for g in games if g.is_neutral]
+        if not neutral_games:
+            return 0.5, 0
+
+        wins = sum(1 for g in neutral_games if g.points > g.opp_points)
+        return wins / len(neutral_games), len(neutral_games)
+
+    def _home_away_splits(
+        self,
+        games: List[GameRecord],
+        adj_off: Dict[str, float],
+        adj_def: Dict[str, float],
+    ) -> Tuple[float, float, float]:
+        """
+        Compute AdjEM separately for home vs away games.
+
+        The differential (home_em - away_em) captures "home court dependence":
+        teams with high dependence are at greater risk in neutral-site
+        tournament games.
+
+        Returns (home_adj_em, away_adj_em, home_court_dependence).
+        """
+        league_off = float(np.mean(list(adj_off.values()))) if adj_off else 100.0
+        league_def = float(np.mean(list(adj_def.values()))) if adj_def else 100.0
+
+        home_margins = []
+        away_margins = []
+        for g in games:
+            opp_em = adj_off.get(g.opponent_id, league_off) - adj_def.get(g.opponent_id, league_def)
+            quality_margin = (g.points - g.opp_points) - opp_em
+            if g.is_home:
+                home_margins.append(quality_margin)
+            elif not g.is_neutral:
+                away_margins.append(quality_margin)
+            # Neutral games excluded — they represent the tournament baseline
+
+        # Require minimum 5 games in each split for stability
+        home_em = float(np.mean(home_margins)) if len(home_margins) >= 5 else 0.0
+        away_em = float(np.mean(away_margins)) if len(away_margins) >= 5 else 0.0
+
+        # Home court dependence: positive = team benefits from home court
+        # Shrink toward 0 when sample is small
+        if len(home_margins) >= 5 and len(away_margins) >= 5:
+            dependence = home_em - away_em
+        else:
+            dependence = 0.0
+
+        return home_em, away_em, dependence
+
+    def _momentum_5g(
+        self,
+        games: List[GameRecord],
+        adj_off: Dict[str, float],
+        adj_def: Dict[str, float],
+    ) -> float:
+        """
+        5-game rolling form — finer granularity momentum signal.
+
+        Captures hot/cold streaks that the 10-game window smooths over.
+        """
+        league_off = float(np.mean(list(adj_off.values()))) if adj_off else 100.0
+        league_def = float(np.mean(list(adj_def.values()))) if adj_def else 100.0
+
+        if len(games) < 8:
+            return 0.0
+
+        recent = games[-5:]
+        recent_margins = []
+        for g in recent:
+            opp_em = adj_off.get(g.opponent_id, league_off) - adj_def.get(g.opponent_id, league_def)
+            quality_margin = (g.points - g.opp_points) - opp_em
+            recent_margins.append(quality_margin)
+
+        season_margins = []
+        for g in games:
+            opp_em = adj_off.get(g.opponent_id, league_off) - adj_def.get(g.opponent_id, league_def)
+            quality_margin = (g.points - g.opp_points) - opp_em
+            season_margins.append(quality_margin)
+
+        return float(np.mean(recent_margins)) - float(np.mean(season_margins))
+
+    def _transition_efficiency(
+        self,
+        games: List[GameRecord],
+        adj_off: Dict[str, float],
+        adj_def: Dict[str, float],
+    ) -> Tuple[float, float]:
+        """
+        Transition efficiency estimate (pace-derived proxy).
+
+        Teams that play significantly faster than league average generate
+        more transition opportunities.  We estimate transition efficiency
+        as the interaction of pace surplus with offensive/defensive quality.
+
+        This proxies ShotQuality's transition PPP metric using only box-score
+        data.  The key insight: fast teams that are also efficient likely
+        excel in transition (half-court efficiency is more uniform).
+
+        Returns (offensive_transition_eff, defensive_transition_vuln).
+        """
+        if not games:
+            return 0.0, 0.0
+
+        tid = games[0].team_id
+        team_tempo = np.mean([g.possessions for g in games])
+
+        # League average tempo
+        all_tempos = []
+        for team_games in [games]:  # Just from this team's perspective
+            all_tempos.extend([g.possessions for g in team_games])
+        league_tempo = 68.0  # D1 average
+
+        # Pace surplus: how much faster this team plays than average
+        pace_surplus = (team_tempo - league_tempo) / league_tempo  # Normalized
+
+        # Offensive transition efficiency: pace surplus × (AdjO / league_avg_O)
+        adj_o = adj_off.get(tid, 100.0)
+        off_trans = pace_surplus * (adj_o / 100.0 - 1.0)
+
+        # Defensive transition vulnerability: opponent pace surplus × (AdjD / league_avg_D)
+        adj_d = adj_def.get(tid, 100.0)
+        def_trans_vuln = pace_surplus * (adj_d / 100.0 - 1.0)
+
+        return float(off_trans), float(def_trans_vuln)
+
+    def _pace_variance(self, games: List[GameRecord]) -> float:
+        """
+        Game-to-game pace (possessions) standard deviation.
+
+        High pace variance teams are less predictable — they may play at
+        very different tempos depending on the opponent, which amplifies
+        randomness in single-elimination settings.  Low-possession games
+        inflate 3P% variance, so pace variance interacts with upset risk.
+        """
+        if len(games) < 5:
+            return 0.0
+
+        per_game_pace = [g.possessions for g in games if g.possessions > 20]
+        if len(per_game_pace) < 5:
+            return 0.0
+
+        return float(np.std(per_game_pace, ddof=1))
 
     def _compute_rest_days(
         self,
@@ -1126,6 +1391,155 @@ class ProprietaryMetricsEngine:
             except (ValueError, TypeError):
                 results[tid].rest_days = 5.0  # D1 average
 
+    def compute_h2h_record(self, team1_id: str, team2_id: str) -> float:
+        """
+        Compute team1's win% in head-to-head games against team2 this season.
+
+        Returns 0.5 if no H2H games found (neutral prior).
+        """
+        if not hasattr(self, '_by_team'):
+            return 0.5
+
+        games = self._by_team.get(team1_id, [])
+        h2h_wins = 0
+        h2h_total = 0
+        for g in games:
+            if g.opponent_id == team2_id:
+                h2h_total += 1
+                if g.points > g.opp_points:
+                    h2h_wins += 1
+
+        if h2h_total == 0:
+            return 0.5
+
+        # Shrink toward 0.5 for small samples: w * (wins/total) + (1-w) * 0.5
+        # where w = min(1, h2h_total / 4) — full weight at 4+ meetings
+        weight = min(1.0, h2h_total / 4.0)
+        raw_rate = h2h_wins / h2h_total
+        return weight * raw_rate + (1.0 - weight) * 0.5
+
+    def compute_common_opponent_margin(self, team1_id: str, team2_id: str) -> float:
+        """
+        Compute margin differential through common opponents.
+
+        For each opponent both teams have played, compute the difference in
+        scoring margin.  The result is averaged across all common opponents
+        and normalized to approximately [-1, 1].
+
+        Returns 0.0 if no common opponents found.
+        """
+        if not hasattr(self, '_by_team'):
+            return 0.0
+
+        # Build opponent → margin map for each team
+        def _opp_margins(team_id: str) -> Dict[str, List[float]]:
+            margins: Dict[str, List[float]] = defaultdict(list)
+            for g in self._by_team.get(team_id, []):
+                margin = g.points - g.opp_points
+                # Cap margin to prevent blowouts from dominating
+                margin = float(np.clip(margin, -self.MARGIN_CAP, self.MARGIN_CAP))
+                margins[g.opponent_id].append(margin)
+            return margins
+
+        m1 = _opp_margins(team1_id)
+        m2 = _opp_margins(team2_id)
+
+        common_opps = set(m1.keys()) & set(m2.keys())
+        if not common_opps:
+            return 0.0
+
+        diffs = []
+        for opp in common_opps:
+            avg1 = float(np.mean(m1[opp]))
+            avg2 = float(np.mean(m2[opp]))
+            diffs.append(avg1 - avg2)
+
+        # Normalize by 20 (typical spread range) to get ~[-1, 1]
+        raw = float(np.mean(diffs))
+        return float(np.clip(raw / 20.0, -1.5, 1.5))
+
+    def compute_point_in_time_metrics(
+        self,
+        team_id: str,
+        as_of_date: str,
+    ) -> Optional[Dict[str, float]]:
+        """
+        Compute team metrics using only games on or before ``as_of_date``.
+
+        This enables true point-in-time feature computation — instead of
+        using end-of-season aggregates for all training games, each game's
+        features reflect only what was observable at that point in time.
+
+        Returns a dict of key metric values, or None if insufficient data
+        (fewer than 8 games played by the cutoff date).
+        """
+        if not hasattr(self, '_by_team'):
+            return None
+
+        all_games = self._by_team.get(team_id, [])
+        pit_games = [g for g in all_games if g.game_date <= as_of_date]
+
+        if len(pit_games) < 8:
+            return None
+
+        # Compute raw efficiency from the point-in-time games
+        total_poss = sum(max(g.possessions, 1.0) for g in pit_games)
+        total_pts = sum(g.points for g in pit_games)
+        total_opp = sum(g.opp_points for g in pit_games)
+        raw_off = 100.0 * total_pts / max(total_poss, 1.0)
+        raw_def = 100.0 * total_opp / max(total_poss, 1.0)
+        tempo = total_poss / max(len(pit_games), 1)
+
+        # Use league-wide final adjusted values for opponent SOS
+        # (this is a compromise — full PIT SOS would require
+        # recomputing for all teams at each date, which is O(n^2*seasons))
+        league_off = float(np.mean(list(self._adj_off.values()))) if self._adj_off else 100.0
+        league_def = float(np.mean(list(self._adj_def.values()))) if self._adj_def else 100.0
+
+        # Apply single-pass SOS adjustment using final opponent ratings
+        off_adjustments = []
+        def_adjustments = []
+        for g in pit_games:
+            opp_def = self._adj_def.get(g.opponent_id, league_def)
+            opp_off = self._adj_off.get(g.opponent_id, league_off)
+            poss = max(g.possessions, 1.0)
+            game_off = 100.0 * g.points / poss
+            game_def = 100.0 * g.opp_points / poss
+            off_adjustments.append(game_off + (opp_def - league_def))
+            def_adjustments.append(game_def + (opp_off - league_off))
+
+        adj_off = float(np.mean(off_adjustments)) if off_adjustments else raw_off
+        adj_def = float(np.mean(def_adjustments)) if def_adjustments else raw_def
+        adj_em = adj_off - adj_def
+
+        # Four Factors from PIT games
+        ff = self._four_factors(pit_games)
+        shooting = self._supplementary_shooting(pit_games)
+
+        # Win percentage from PIT games
+        wins = sum(1 for g in pit_games if g.points > g.opp_points)
+        n_games = max(len(pit_games), 1)
+
+        return {
+            "adj_offensive_efficiency": adj_off,
+            "adj_defensive_efficiency": adj_def,
+            "adj_efficiency_margin": adj_em,
+            "adj_tempo": tempo,
+            "effective_fg_pct": ff["effective_fg_pct"],
+            "turnover_rate": ff["turnover_rate"],
+            "offensive_reb_rate": ff["offensive_reb_rate"],
+            "free_throw_rate": ff["free_throw_rate"],
+            "opp_effective_fg_pct": ff["opp_effective_fg_pct"],
+            "opp_turnover_rate": ff["opp_turnover_rate"],
+            "defensive_reb_rate": ff["defensive_reb_rate"],
+            "opp_free_throw_rate": ff["opp_free_throw_rate"],
+            "win_pct": wins / n_games,
+            "three_pt_pct": shooting.get("three_pt_pct", 0.34),
+            "two_pt_pct": shooting.get("two_pt_pct", 0.48),
+            "three_pt_rate": shooting.get("three_pt_rate", 0.35),
+            "n_games": len(pit_games),
+        }
+
     @staticmethod
     def _log5_win_prob(team_a_em: float, team_b_em: float) -> float:
         """
@@ -1141,6 +1555,182 @@ class ProprietaryMetricsEngine:
         diff = float(np.clip(diff, -40.0, 40.0))
         return 1.0 / (1.0 + 10 ** (-diff / 11.5))
 
+    def validate_four_factors_weights(
+        self,
+        game_records: Dict[str, List[GameRecord]],
+        results: Optional[Dict[str, "ProprietaryTeamMetrics"]] = None,
+        n_bootstrap: int = 500,
+        random_seed: int = 42,
+    ) -> Dict:
+        """Sensitivity analysis of Dean Oliver four-factor weights on college data.
+
+        Fits a logistic regression of the four factors (differential) against
+        game outcomes and compares the fitted coefficients to the assumed
+        0.40/0.25/0.20/0.15 priors.  Also perturbs each weight by +/-20% and
+        measures Brier score change.
+
+        This is a DIAGNOSTIC method — it does NOT change the default weights.
+
+        Args:
+            game_records: Dict of team_id → list of GameRecord.
+            n_bootstrap: Number of bootstrap resamples for coefficient CIs.
+            random_seed: Seed for reproducibility.
+
+        Returns:
+            Dict with fitted_weights, weight_cis, oliver_priors,
+            sensitivity_brier_deltas, and recommendation.
+        """
+        oliver_priors = np.array([0.40, 0.25, 0.20, 0.15])
+        factor_names = ["eFG%", "ball_care", "ORB%", "FTR_x_FT%"]
+
+        # Build dataset: per-game four-factor differential → win/loss
+        X_list, y_list = [], []
+        teams = list(game_records.keys())
+        for i, t1 in enumerate(teams):
+            for t2 in teams[i + 1:]:
+                games_1 = game_records.get(t1, [])
+                games_2 = game_records.get(t2, [])
+                if not games_1 or not games_2:
+                    continue
+                ff1 = self._four_factors(games_1)
+                ff2 = self._four_factors(games_2)
+                diff = np.array([
+                    ff1.get("effective_fg_pct", 0.5) - ff2.get("effective_fg_pct", 0.5),
+                    (1 - ff1.get("turnover_rate", 0.18)) - (1 - ff2.get("turnover_rate", 0.18)),
+                    ff1.get("offensive_reb_rate", 0.3) - ff2.get("offensive_reb_rate", 0.3),
+                    ff1.get("free_throw_rate", 0.3) * 0.72 - ff2.get("free_throw_rate", 0.3) * 0.72,
+                ])
+                # Use AdjEM to determine "outcome" for all possible matchups
+                r1 = results.get(t1) if results else None
+                r2 = results.get(t2) if results else None
+                em1 = r1.adj_efficiency_margin if r1 else 0.0
+                em2 = r2.adj_efficiency_margin if r2 else 0.0
+                win_prob = 1.0 / (1.0 + 10 ** (-(em1 - em2) / 11.5))
+                X_list.append(diff)
+                y_list.append(1 if win_prob > 0.5 else 0)
+
+        if len(X_list) < 50:
+            return {
+                "fitted_weights": oliver_priors.tolist(),
+                "weight_cis": [[w, w] for w in oliver_priors],
+                "oliver_priors": oliver_priors.tolist(),
+                "sensitivity_brier_deltas": {},
+                "recommendation": "insufficient_data",
+                "n_matchups": len(X_list),
+            }
+
+        X = np.array(X_list)
+        y = np.array(y_list)
+
+        # Fit logistic regression
+        try:
+            from sklearn.linear_model import LogisticRegression
+            lr = LogisticRegression(C=1.0, max_iter=500, solver="lbfgs")
+            lr.fit(X, y)
+            raw_coefs = np.abs(lr.coef_[0])
+            fitted_weights = raw_coefs / max(np.sum(raw_coefs), 1e-12)
+        except Exception:
+            fitted_weights = oliver_priors.copy()
+
+        # Bootstrap CIs on coefficients
+        rng = np.random.default_rng(random_seed)
+        boot_weights = []
+        for _ in range(n_bootstrap):
+            idx = rng.choice(len(y), size=len(y), replace=True)
+            try:
+                lr_boot = LogisticRegression(C=1.0, max_iter=200, solver="lbfgs")
+                lr_boot.fit(X[idx], y[idx])
+                raw = np.abs(lr_boot.coef_[0])
+                boot_weights.append(raw / max(np.sum(raw), 1e-12))
+            except Exception:
+                continue
+
+        if boot_weights:
+            boot_arr = np.array(boot_weights)
+            weight_cis = [
+                [float(np.percentile(boot_arr[:, i], 2.5)),
+                 float(np.percentile(boot_arr[:, i], 97.5))]
+                for i in range(4)
+            ]
+        else:
+            weight_cis = [[w, w] for w in fitted_weights]
+
+        # Sensitivity: perturb each Oliver weight by ±20%, measure Brier change
+        # Using the linear xP model: xP = w . factors
+        sensitivity = {}
+        base_preds = 1.0 / (1.0 + np.exp(-(X @ oliver_priors)))
+        base_brier = float(np.mean((base_preds - y) ** 2))
+
+        for i, name in enumerate(factor_names):
+            for direction, mult in [("plus_20pct", 1.2), ("minus_20pct", 0.8)]:
+                perturbed = oliver_priors.copy()
+                perturbed[i] *= mult
+                perturbed /= np.sum(perturbed)  # Renormalize
+                pert_preds = 1.0 / (1.0 + np.exp(-(X @ perturbed)))
+                pert_brier = float(np.mean((pert_preds - y) ** 2))
+                sensitivity[f"{name}_{direction}"] = round(pert_brier - base_brier, 6)
+
+        # Recommendation
+        max_deviation = max(abs(fitted_weights[i] - oliver_priors[i]) for i in range(4))
+        recommendation = "keep_priors" if max_deviation < 0.10 else "consider_update"
+
+        return {
+            "fitted_weights": fitted_weights.tolist(),
+            "fitted_weight_names": dict(zip(factor_names, fitted_weights.tolist())),
+            "weight_cis": weight_cis,
+            "oliver_priors": oliver_priors.tolist(),
+            "base_brier": base_brier,
+            "sensitivity_brier_deltas": sensitivity,
+            "recommendation": recommendation,
+            "max_deviation_from_prior": float(max_deviation),
+            "n_matchups": len(X_list),
+        }
+
+
+# ---------------------------------------------------------------------------
+# CBBpy team-map CSV loader
+# ---------------------------------------------------------------------------
+
+_CBBPY_TEAM_MAP_CACHE: Optional[Dict[str, str]] = None
+
+
+def _load_cbbpy_team_map(csv_path: Optional[str] = None) -> Dict[str, str]:
+    """Load the CBBpy team map CSV and return {display_name → location}.
+
+    The CSV has columns: season, id, team, location, conference, conference_abb.
+    ``team`` is the full display name with mascot (e.g. "New Mexico State Aggies").
+    ``location`` is the school name only (e.g. "New Mexico State").
+
+    Uses the latest season entry for each team.  Falls back to an empty dict
+    if the CSV is not available (the pipeline will still work via Torvik
+    prefix-matching, just without the disambiguation).
+    """
+    global _CBBPY_TEAM_MAP_CACHE
+    if _CBBPY_TEAM_MAP_CACHE is not None:
+        return _CBBPY_TEAM_MAP_CACHE
+
+    if csv_path is None:
+        # Default path: data/raw/cbbpy_team_map.csv relative to project root
+        _here = os.path.dirname(os.path.abspath(__file__))
+        csv_path = os.path.join(_here, "..", "..", "..", "data", "raw", "cbbpy_team_map.csv")
+
+    result: Dict[str, str] = {}
+    if not os.path.exists(csv_path):
+        _CBBPY_TEAM_MAP_CACHE = result
+        return result
+
+    with open(csv_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            team = row.get("team", "").strip()
+            location = row.get("location", "").strip()
+            if team and location:
+                # Later seasons overwrite earlier ones (dict last-wins)
+                result[team] = location
+
+    _CBBPY_TEAM_MAP_CACHE = result
+    return result
+
 
 # ---------------------------------------------------------------------------
 # Converter: Torvik/public data → GameRecord
@@ -1152,15 +1742,120 @@ def torvik_to_game_records(torvik_teams: List[Dict], historical_games: List[Dict
 
     Works with data from cbbpy, sportsipy, or any source that provides
     game-level box scores.
+
+    Uses ``torvik_teams`` to resolve mascot-suffixed game IDs (e.g.
+    ``duke_blue_devils``) to Torvik canonical IDs (e.g. ``duke``).  This
+    ensures the proprietary engine keys its results by the same IDs that
+    the tournament pipeline uses.
     """
+    # ------------------------------------------------------------------
+    # Build a display_name → canonical_id resolver using the CBBpy team
+    # map CSV.  The CSV ``location`` column gives the school name without
+    # mascot (e.g. "New Mexico State", "Houston Christian") which is then
+    # matched against Torvik canonical names.  This avoids the false
+    # prefix-match problems that plagued mascot-stripping (e.g.
+    # "New Mexico State Aggies" being falsely mapped to "new_mexico").
+    # ------------------------------------------------------------------
+
+    # Build Torvik name→canonical_id lookup.
+    # Multiple normalized forms per team to handle:
+    #   - HTML entities: "Texas A&amp;M" → "Texas A&M"
+    #   - Parentheticals: "St. John's (NY)" → "St. John's"
+    #   - Suffix variations: "McNeese State" → also try "McNeese"
+    _torvik_name_to_id: Dict[str, str] = {}  # normalized_name → canonical_id
+    for t in torvik_teams:
+        if isinstance(t, dict):
+            tid = t.get("team_id", "")
+            tname = t.get("name", "")
+        else:
+            tid = getattr(t, "team_id", "")
+            tname = getattr(t, "name", "")
+        if tid and tname:
+            canon = _team_id(tid)
+            # Primary: normalized name as-is
+            _torvik_name_to_id[_team_id(tname)] = canon
+            # Also add canonical ID itself as a lookup key
+            _torvik_name_to_id[canon] = canon
+            # Decode HTML entities (e.g. "&amp;" → "&")
+            cleaned = tname.replace("&amp;", "&")
+            if cleaned != tname:
+                _torvik_name_to_id[_team_id(cleaned)] = canon
+            # Strip parentheticals (e.g. "(NY)")
+            stripped = re.sub(r"\s*\([^)]*\)\s*", "", tname).strip()
+            if stripped != tname:
+                _torvik_name_to_id[_team_id(stripped)] = canon
+                # Also with HTML decode + strip
+                stripped_clean = re.sub(r"\s*\([^)]*\)\s*", "", cleaned).strip()
+                if stripped_clean != stripped:
+                    _torvik_name_to_id[_team_id(stripped_clean)] = canon
+
+    # CBBpy→Torvik alias overrides for known naming mismatches.
+    # CBBpy/ESPN uses modern branding; Torvik may lag behind.
+    _CBBPY_TO_TORVIK_ALIASES: Dict[str, str] = {
+        "mcneese": "mcneese_state",         # rebranded from McNeese State
+        "american_university": "american",   # Torvik uses short name
+    }
+    for alias, target in _CBBPY_TO_TORVIK_ALIASES.items():
+        if target in _torvik_name_to_id:
+            _torvik_name_to_id[alias] = _torvik_name_to_id[target]
+
+    # Load CBBpy team map CSV: maps display names (with mascot) to
+    # school-only location names that disambiguate similar schools.
+    _cbbpy_display_to_location = _load_cbbpy_team_map()
+
+    # Build canonical cache: raw_id → canonical_id
+    # Phase 1: Scan games to collect (raw_id, display_name) pairs.
+    _name_by_raw_id: Dict[str, str] = {}
+    for game in historical_games:
+        if not isinstance(game, dict):
+            continue
+        raw = _team_id(str(game.get("team_id") or game.get("team1_id") or game.get("team1") or game.get("home_team") or ""))
+        name = str(game.get("team_name") or game.get("team1_name") or "")
+        if raw and name and raw not in _name_by_raw_id:
+            _name_by_raw_id[raw] = name
+        raw2 = _team_id(str(game.get("opponent_id") or game.get("team2_id") or game.get("team2") or game.get("away_team") or ""))
+        name2 = str(game.get("opponent_name") or game.get("team2_name") or "")
+        if raw2 and name2 and raw2 not in _name_by_raw_id:
+            _name_by_raw_id[raw2] = name2
+
+    # Phase 2: For each raw_id, use the CSV to find the school location,
+    # then match that location against Torvik names.
+    _canonical_cache: Dict[str, str] = {}
+    for raw_id, display_name in _name_by_raw_id.items():
+        # Look up display name in CBBpy CSV (exact match)
+        location = _cbbpy_display_to_location.get(display_name)
+        if location:
+            norm_location = _team_id(location)
+            canon = _torvik_name_to_id.get(norm_location)
+            if canon:
+                _canonical_cache[raw_id] = canon
+
+    # Set of Torvik canonical IDs for exact-match fallback.
+    _torvik_id_set = set(_torvik_name_to_id.values())
+
+    def _resolve_canonical(raw_id: str) -> str:
+        """Map mascot-suffixed ID to Torvik canonical ID if possible."""
+        if raw_id in _canonical_cache:
+            return _canonical_cache[raw_id]
+        # Fallback: exact match on Torvik canonical ID (no prefix matching
+        # to avoid false positives like new_mexico_highlands → new_mexico).
+        if raw_id in _torvik_id_set:
+            _canonical_cache[raw_id] = raw_id
+            return raw_id
+        # No match — keep raw ID (non-tournament team).
+        _canonical_cache[raw_id] = raw_id
+        return raw_id
+
     records: List[GameRecord] = []
     for game in historical_games:
         if not isinstance(game, dict):
             continue
 
         game_id = str(game.get("game_id") or game.get("id") or "")
-        team_id = _team_id(str(game.get("team_id") or game.get("team1_id") or game.get("team1") or game.get("home_team") or ""))
-        opp_id = _team_id(str(game.get("opponent_id") or game.get("team2_id") or game.get("team2") or game.get("away_team") or ""))
+        raw_team = _team_id(str(game.get("team_id") or game.get("team1_id") or game.get("team1") or game.get("home_team") or ""))
+        raw_opp = _team_id(str(game.get("opponent_id") or game.get("team2_id") or game.get("team2") or game.get("away_team") or ""))
+        team_id = _resolve_canonical(raw_team)
+        opp_id = _resolve_canonical(raw_opp)
         if not game_id or not team_id or not opp_id:
             continue
 

@@ -3,7 +3,7 @@ ESPN/CBS injury report scraper and severity modeling.
 
 Provides:
 - InjuryReportScraper: fetches injury data from ESPN/CBS JSON feeds
-- InjurySeverityModel: Bayesian severity estimation from report text
+- InjurySeverityEstimator: Prior-weighted injury severity estimation from report text
 - PositionalDepthChart: models position-specific replacement quality
 """
 
@@ -181,6 +181,7 @@ class InjuryReportScraper:
 
 
 # --- Injury severity constants (empirical from NCAA data) ---
+# Priors based on analysis of NCAA injury report outcomes 2018-2024.
 # Maps injury type -> (mean availability, std deviation)
 INJURY_SEVERITY_PRIORS: Dict[str, Tuple[float, float]] = {
     "ankle": (0.65, 0.15),
@@ -214,9 +215,9 @@ RETURN_TIMELINE_FACTORS: Dict[str, float] = {
 }
 
 
-class InjurySeverityModel:
+class InjurySeverityEstimator:
     """
-    Bayesian injury severity estimation.
+    Prior-weighted injury severity estimation.
 
     Instead of fixed availability factors (QUESTIONABLE=0.75, etc.),
     this model estimates a distribution of availability based on:
@@ -310,6 +311,10 @@ class InjurySeverityModel:
         return np.clip(samples, 0.0, 1.0)
 
 
+
+InjurySeverityModel = InjurySeverityEstimator  # backward compat alias
+
+
 # Position group definitions for depth chart analysis
 POSITION_GROUPS = {
     "guard": {Position.POINT_GUARD, Position.SHOOTING_GUARD},
@@ -395,7 +400,7 @@ class PositionalDepthChart:
         self,
         roster: Roster,
         injury_reports: Optional[Dict[str, InjuryReport]] = None,
-        severity_model: Optional[InjurySeverityModel] = None,
+        severity_model: Optional["InjurySeverityEstimator"] = None,
     ) -> Dict[str, float]:
         """
         Compute position-weighted injury impact for a team.

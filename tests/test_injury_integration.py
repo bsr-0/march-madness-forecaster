@@ -8,7 +8,7 @@ from src.data.models.player import InjuryStatus, Player, Position, Roster
 from src.data.scrapers.injury_report import (
     InjuryReport,
     InjuryReportScraper,
-    InjurySeverityModel,
+    InjurySeverityEstimator,
     PositionalDepthChart,
     TeamInjuryReport,
     apply_injury_reports_to_roster,
@@ -157,13 +157,13 @@ class TestInjuryReportScraper:
 
 
 # ---------------------------------------------------------------------------
-# InjurySeverityModel
+# InjurySeverityEstimator
 # ---------------------------------------------------------------------------
 
 
-class TestInjurySeverityModel:
+class TestInjurySeverityEstimator:
     def test_healthy_returns_full_availability(self):
-        model = InjurySeverityModel(random_seed=42)
+        model = InjurySeverityEstimator(random_seed=42)
         report = InjuryReport(
             player_name="Healthy Player",
             team_id="test",
@@ -174,7 +174,7 @@ class TestInjurySeverityModel:
         assert std == 0.0
 
     def test_season_ending_returns_zero(self):
-        model = InjurySeverityModel(random_seed=42)
+        model = InjurySeverityEstimator(random_seed=42)
         report = InjuryReport(
             player_name="ACL Player",
             team_id="test",
@@ -185,7 +185,7 @@ class TestInjurySeverityModel:
         assert std == 0.0
 
     def test_ankle_questionable_reasonable(self):
-        model = InjurySeverityModel(random_seed=42)
+        model = InjurySeverityEstimator(random_seed=42)
         report = InjuryReport(
             player_name="Ankle Sprain",
             team_id="test",
@@ -199,7 +199,7 @@ class TestInjurySeverityModel:
         assert std > 0
 
     def test_knee_doubtful_lower_than_ankle_questionable(self):
-        model = InjurySeverityModel(random_seed=42)
+        model = InjurySeverityEstimator(random_seed=42)
 
         ankle_q = InjuryReport(
             player_name="A", team_id="t", status=InjuryStatus.QUESTIONABLE,
@@ -215,7 +215,7 @@ class TestInjurySeverityModel:
         assert knee_mean < ankle_mean
 
     def test_more_recovery_time_improves_availability(self):
-        model = InjurySeverityModel(random_seed=42)
+        model = InjurySeverityEstimator(random_seed=42)
         report = InjuryReport(
             player_name="Test", team_id="t",
             status=InjuryStatus.QUESTIONABLE, injury_type="ankle",
@@ -225,7 +225,7 @@ class TestInjurySeverityModel:
         assert mean_7day >= mean_1day
 
     def test_sample_availability_shape(self):
-        model = InjurySeverityModel(random_seed=42)
+        model = InjurySeverityEstimator(random_seed=42)
         report = InjuryReport(
             player_name="Test", team_id="t",
             status=InjuryStatus.QUESTIONABLE, injury_type="ankle",
@@ -313,7 +313,7 @@ class TestPositionalDepthChart:
         roster.players[0].injury_status = InjuryStatus.QUESTIONABLE
 
         chart = PositionalDepthChart()
-        model = InjurySeverityModel(random_seed=42)
+        model = InjurySeverityEstimator(random_seed=42)
 
         reports = {
             roster.players[0].name.lower(): InjuryReport(

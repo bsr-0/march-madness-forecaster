@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import re
 import signal
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -13,6 +15,8 @@ from typing import Dict, Iterable, List, Optional, Tuple
 from ..scrapers import SportsReferenceScraper, TournamentSeedScraper
 from .providers import LibraryProviderHub
 from .validators import validate_games_payload, validate_ratings_payload
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -66,7 +70,12 @@ class HistoricalDataPipeline:
             self._assert_valid(f"historical_games_{season}", game_errors)
             games_path = self._write_json(f"historical_games_{season}.json", game_payload)
 
-            team_payload, team_provider = self._collect_team_metrics(season)
+            # Pass game records so the SR scraper can compute def_rtg when the
+            # HTML page omits the column.
+            all_game_rows = game_payload.get("games", []) + game_payload.get("team_games", [])
+            team_payload, team_provider = self._collect_team_metrics(
+                season, game_records=all_game_rows,
+            )
             team_errors = validate_ratings_payload(team_payload, name_field="team_name")
             self._assert_valid(f"team_metrics_{season}", team_errors)
             teams_path = self._write_json(f"team_metrics_{season}.json", team_payload)
@@ -234,7 +243,12 @@ class HistoricalDataPipeline:
             return None
         for row in team_games:
             row["season"] = season
-            row["date"] = row.get("date") or f"{season-1}-11-01"
+            # Preserve actual game dates from cbbpy when available.
+            # The 'date' field may be populated by cbbpy's bulk API;
+            # only fall back to season-start if truly missing.
+            existing_date = row.get("date") or row.get("game_date") or ""
+            if not existing_date or existing_date == f"{season-1}-11-01":
+                row["date"] = row.get("date") or f"{season-1}-11-01"
 
         games = self._team_games_to_games(team_games, season)
         return {
@@ -446,7 +460,11 @@ class HistoricalDataPipeline:
             )
         return games
 
-    def _collect_team_metrics(self, season: int) -> Tuple[Dict, str]:
+    def _collect_team_metrics(
+        self,
+        season: int,
+        game_records: Optional[List[Dict]] = None,
+    ) -> Tuple[Dict, str]:
         provider_result = self.providers.fetch_team_box_metrics(
             season,
             priority=self.config.team_metrics_provider_priority,
@@ -455,8 +473,27 @@ class HistoricalDataPipeline:
         rows = self._ensure_team_ids(provider_result.records)
 
         if not rows:
-            rows = self._ensure_team_ids(self.sports_reference.fetch_team_season_stats(season))
+            rows = self._ensure_team_ids(
+                self.sports_reference.fetch_team_season_stats(
+                    season, game_records=game_records,
+                )
+            )
             provider = "sports_reference_scraper"
+
+        # If rows came from a non-SR provider, still check for zero def_rtg
+        # and patch from game records.
+        if rows and game_records:
+            zero_count = sum(1 for r in rows if (r.get("def_rtg") or 0) <= 0)
+            if zero_count > len(rows) * 0.5:
+                from ..scrapers.sports_reference import SportsReferenceScraper
+                game_def_rtg = SportsReferenceScraper._compute_def_rtg_from_games(
+                    game_records,
+                )
+                for row in rows:
+                    if (row.get("def_rtg") or 0) <= 0:
+                        tid = self._normalize_team_name(row.get("team_name") or "")
+                        if tid in game_def_rtg:
+                            row["def_rtg"] = game_def_rtg[tid]
 
         if not rows:
             raise ValueError(f"No team metrics available for season {season}")
@@ -469,6 +506,8 @@ class HistoricalDataPipeline:
         except Exception:
             return {"season": season, "teams": []}, "none"
 
+    _NCAA_SUFFIX_RE = re.compile(r"NCAA$", re.IGNORECASE)
+
     def _ensure_team_ids(self, rows: List[Dict]) -> List[Dict]:
         out = []
         for row in rows:
@@ -478,8 +517,19 @@ class HistoricalDataPipeline:
                 row["team_name"] = row["name"]
             if not row.get("name") and row.get("team_name"):
                 row["name"] = row["team_name"]
+            # Strip "NCAA" suffix from team names (Sports Reference appends it
+            # for tournament qualifiers, producing IDs like "akronncaa").
+            for key in ("team_name", "name"):
+                val = row.get(key)
+                if val and self._NCAA_SUFFIX_RE.search(val):
+                    row[key] = self._NCAA_SUFFIX_RE.sub("", val).rstrip()
             if not row.get("team_id"):
                 row["team_id"] = self._normalize_team_name(str(row.get("team_name") or row.get("name") or ""))
+            else:
+                # Also strip NCAA suffix from pre-existing team_id.
+                tid = row["team_id"]
+                if tid.endswith("ncaa"):
+                    row["team_id"] = tid[:-4].rstrip("_")
             if row.get("team_id") and row.get("team_name"):
                 out.append(row)
         return out

@@ -71,17 +71,22 @@ class ScheduleGraph:
     3. Identifying "Paper Tigers" with inflated records
     """
 
-    def __init__(self, team_ids: List[str]):
+    def __init__(self, team_ids: List[str], temporal_decay: float = 0.0):
         """
         Initialize schedule graph.
 
         Args:
             team_ids: List of all team identifiers
+            temporal_decay: Recency weighting strength [0,1].
+                0.0 = all games weighted equally (default, backward compat).
+                1.0 = earliest game gets ~30% weight, latest gets 100%.
+                Recommended: 0.5 for moderate recency bias.
         """
         self.team_ids = team_ids
         self.team_to_idx = {tid: i for i, tid in enumerate(team_ids)}
         self.idx_to_team = {i: tid for i, tid in enumerate(team_ids)}
         self.n_teams = len(team_ids)
+        self.temporal_decay = temporal_decay
 
         # Edges storage
         self.edges: List[ScheduleEdge] = []
@@ -96,6 +101,38 @@ class ScheduleGraph:
     def add_games(self, edges: List[ScheduleEdge]) -> None:
         """Add multiple games to the schedule graph."""
         self.edges.extend(edges)
+
+    def _compute_recency_multipliers(self) -> Dict[str, float]:
+        """
+        Compute recency multipliers for all edges by game_id.
+
+        Returns dict mapping game_id → multiplier in [floor, 1.0] where
+        floor = 1 - temporal_decay * 0.7.
+        Latest game → 1.0, earliest game → floor.
+        If temporal_decay == 0, all multipliers are 1.0.
+        """
+        if self.temporal_decay <= 0 or not self.edges:
+            return {}
+
+        # Sort dates to find range; dates are YYYY-MM-DD strings
+        # which sort lexicographically as chronological order.
+        dates = [(e.game_id, e.game_date or "2026-01-01") for e in self.edges]
+        all_dates = sorted(set(d for _, d in dates))
+        if len(all_dates) < 2:
+            return {gid: 1.0 for gid, _ in dates}
+
+        d_min, d_max = all_dates[0], all_dates[-1]
+        # Use lexicographic position in sorted date list as progress proxy
+        # This avoids date parsing while maintaining correct ordering.
+        date_to_rank = {d: i for i, d in enumerate(all_dates)}
+        max_rank = max(len(all_dates) - 1, 1)
+
+        floor = 1.0 - self.temporal_decay * 0.7
+        result = {}
+        for gid, d in dates:
+            progress = date_to_rank.get(d, 0) / max_rank
+            result[gid] = floor + (1.0 - floor) * progress
+        return result
 
     def set_team_features(self, team_id: str, features: np.ndarray) -> None:
         """
@@ -121,6 +158,7 @@ class ScheduleGraph:
             NxN adjacency matrix
         """
         adj = np.zeros((self.n_teams, self.n_teams))
+        recency = self._compute_recency_multipliers()
 
         for edge in self.edges:
             i = self.team_to_idx.get(edge.team1_id)
@@ -129,17 +167,26 @@ class ScheduleGraph:
             if i is None or j is None:
                 continue
 
+            r = recency.get(edge.game_id, 1.0)
             if weighted:
                 # Use quality-adjusted margin as edge weight.
-                # Sigmoid to bound between 0 and 1
+                # Sigmoid to bound between 0 and 1.
+                # The winner's edge (team1→team2 when margin > 0) gets
+                # the HIGH weight so that in GCN message-passing the
+                # winner receives a strong signal FROM the opponent it
+                # beat (reflecting schedule-strength benefit of that win).
                 margin = edge.quality_adjusted_margin
                 weight = 1.0 / (1.0 + np.exp(-margin / 10.0))
             else:
                 weight = 1.0
 
-            # Undirected graph
-            adj[i, j] = weight
-            adj[j, i] = 1.0 - weight  # Opponent gets inverse
+            # Undirected graph — both directions carry the same recency
+            # scale.  The WINNER (team1 when margin > 0) should aggregate
+            # a strong signal from the opponent it beat, so team1's
+            # incoming edge j→i gets the high weight, and team2's
+            # incoming edge i→j gets the complementary low weight.
+            adj[i, j] = (1.0 - weight) * r  # signal arriving at j
+            adj[j, i] = weight * r           # signal arriving at i (winner)
 
         return adj
 
@@ -152,6 +199,7 @@ class ScheduleGraph:
         """
         edge_list = []
         weights = []
+        recency = self._compute_recency_multipliers()
 
         for edge in self.edges:
             i = self.team_to_idx.get(edge.team1_id)
@@ -160,15 +208,18 @@ class ScheduleGraph:
             if i is None or j is None:
                 continue
 
-            # Bidirectional edges
+            # Bidirectional edges with recency weighting
             margin = edge.quality_adjusted_margin
             weight = 1.0 / (1.0 + np.exp(-margin / 10.0))
+            r = recency.get(edge.game_id, 1.0)
 
+            # Match adjacency matrix convention: the winner's incoming
+            # edge gets the high weight.
             edge_list.append([i, j])
-            weights.append(weight)
+            weights.append((1.0 - weight) * r)  # signal arriving at j
 
             edge_list.append([j, i])
-            weights.append(1.0 - weight)
+            weights.append(weight * r)           # signal arriving at i (winner)
 
         if not edge_list:
             return np.zeros((2, 0), dtype=int), np.zeros(0)
@@ -481,13 +532,20 @@ def compute_multi_hop_sos(
     """
     adj = graph.get_adjacency_matrix(weighted=True)
 
-    # Start with direct opponents
+    # Row-normalize so each hop has bounded spectral radius (<=1).
+    # Without this, matrix powers explode (row sums ~15 → adj^3 ~ 3375)
+    # and the highest hop dominates all lower hops.
+    row_sums = adj.sum(axis=1, keepdims=True)
+    row_sums = np.where(row_sums < 1e-8, 1.0, row_sums)
+    adj_norm = adj / row_sums
+
+    # Start with direct opponents (unnormalized for raw schedule volume)
     sos = adj.copy()
 
-    # Add multi-hop contributions with decay
+    # Add multi-hop contributions with decay on the NORMALIZED matrix
     for hop in range(2, hops + 1):
         decay = 0.5 ** (hop - 1)
-        sos += decay * np.linalg.matrix_power(adj, hop)
+        sos += decay * np.linalg.matrix_power(adj_norm, hop)
 
     # Normalize
     sos_scores = sos.sum(axis=1)

@@ -76,6 +76,21 @@ def validate_ratings_payload(
         uniques = {round(v, 6) for v in values}
         if len(uniques) <= 1:
             errors.append(f"ratings field '{field}' has insufficient variance")
+
+    # Reject payloads where critical numeric fields are all-zero/default.
+    # This catches silent upstream failures where the HTML column is absent
+    # and the scraper falls through to 0.0 for every team.
+    critical_zero_fields = required_numeric_fields or []
+    if teams and critical_zero_fields:
+        for field in critical_zero_fields:
+            vals = [_to_float(row.get(field)) for row in teams if isinstance(row, dict)]
+            nonzero = [v for v in vals if v is not None and abs(v) > 1e-6]
+            if vals and not nonzero:
+                errors.append(
+                    f"ratings field '{field}' is zero/missing for ALL {len(vals)} teams "
+                    f"— likely a data source failure"
+                )
+
     return errors
 
 
