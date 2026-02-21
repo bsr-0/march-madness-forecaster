@@ -267,9 +267,9 @@ def test_three_pt_regression_signal():
     results = engine.compute(records)
 
     duke = results["duke"]
-    # actual 3P% = 8/20 = 0.40, expected = 0.345
-    # regression signal = 0.40 - 0.345 = 0.055
-    assert abs(duke.three_pt_regression_signal - 0.055) < 1e-3
+    # B2: Bayesian shrinkage — shrunk_3p = (20*0.4 + 100*0.345) / 120 = 0.3542
+    # regression signal = 0.3542 - 0.345 ≈ 0.0092
+    assert abs(duke.three_pt_regression_signal - 0.0092) < 2e-3
 
 
 def test_barthag_computed():

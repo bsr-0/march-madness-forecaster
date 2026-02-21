@@ -61,13 +61,18 @@ REMOVED_REDUNDANCIES = [
     ("opp_true_shooting_pct", "opp version", "~r=0.92 with opp_efg + opp_ft_rate"),
     ("two_pt_pct", "FG2M/FG2A", "~r=0.88 with efg_pct"),
     ("continuity_learning_rate", "1 + 0.15*(1-continuity)", "deterministic function of roster_continuity"),
+    ("close_game_record", "wins/games within 5pts", "pure noise — binomial 5-10 game draw, stability=0.1"),
 ]
 
 
 # FIX #10: Canonical team feature dimension.  This MUST match the length of
 # to_vector() output (without embeddings) and get_feature_names().  An
 # assertion is checked at module load time and at runtime.
-TEAM_FEATURE_DIM = 67
+# FIX 2.4: close_game_record REMOVED (pure noise — binomial draw on 5-10
+# games with stability=0.1, near-zero predictive power per academic lit).
+# FIX 2.3: preseason_ap_rank encoding smoothed (was cliff at #25→unranked).
+# Down from 67 → 66 team features.
+TEAM_FEATURE_DIM = 66
 
 # FIX #4: Indices (into the team feature vector) of the top features used
 # for absolute-level matchup context.  These are the features where the
@@ -317,7 +322,7 @@ class TeamFeatures:
         "entropy":              (1.5,    0.8),
         "lead_sustainability":  (0.5,    0.15),
         "comeback_factor":      (0.0,    0.2),
-        "close_game_record":    (0.5,    0.15),
+        # close_game_record: REMOVED (FIX 2.4 — pure noise)
         "xp_per_poss":          (1.0,    0.08),
         "shot_distribution":    (0.45,   0.10),
         "sos_adj_em":           (0.0,    6.5),
@@ -411,12 +416,11 @@ class TeamFeatures:
             self.bench_depth_score,
             self.injury_risk,
 
-            # Volatility (5)
+            # Volatility (4) — close_game_record REMOVED (FIX 2.4: pure noise)
             self.avg_lead_volatility,
             self.avg_entropy,
             self.lead_sustainability,
             self.comeback_factor,
-            self.close_game_record,
 
             # Shot quality / xP (2)
             self.avg_xp_per_possession,
@@ -496,8 +500,11 @@ class TeamFeatures:
             # Top-5 minutes share (1)
             self.top5_minutes_share,
 
-            # Preseason AP rank (1) — 0 for unranked, scaled so #1 ≈ 1.0
-            (26.0 - min(self.preseason_ap_rank, 26)) / 25.0 if self.preseason_ap_rank > 0 else 0.0,
+            # Preseason AP rank (1) — smooth decay so unranked teams get a
+            # non-zero value instead of a cliff at #25→0.0.
+            # FIX 2.3: 1/(1 + rank/10) for ranked; 1/(1 + 30/10) = 0.25 for
+            # unranked.  Preserves ordinal information without discontinuity.
+            1.0 / (1.0 + self.preseason_ap_rank / 10.0) if self.preseason_ap_rank > 0 else 0.25,
 
             # Coach tournament experience (1) — log-scaled appearances
             float(np.log1p(self.coach_tournament_appearances) / np.log1p(30)),
@@ -541,6 +548,24 @@ class TeamFeatures:
             f"Update TEAM_FEATURE_DIM or fix to_vector()."
         )
 
+        # Feature validation: detect NaN/inf values that indicate upstream
+        # data construction failures (e.g. missing team stats, division by
+        # zero in metric computation).  Replace with safe defaults and log.
+        nan_mask = np.isnan(result)
+        inf_mask = np.isinf(result)
+        if nan_mask.any() or inf_mask.any():
+            n_bad = int(nan_mask.sum() + inf_mask.sum())
+            feature_names_list = TeamFeatures.get_feature_names(include_embeddings=False)
+            bad_names = [
+                feature_names_list[i] for i in range(len(result))
+                if nan_mask[i] or inf_mask[i]
+            ]
+            logger.warning(
+                "Team '%s' has %d NaN/inf features: %s. Replacing with 0.0.",
+                self.team_id, n_bad, bad_names,
+            )
+            result = np.where(nan_mask | inf_mask, 0.0, result)
+
         # FIX #2: Soft clip at [-6σ, 6σ] equivalent.  This is a safety net
         # against truly extreme outliers (data errors), not a normalization
         # step.  StandardScaler handles normalization.  The clip uses ±1000
@@ -577,8 +602,8 @@ class TeamFeatures:
             'roster_continuity', 'transfer_impact',
             # Experience (3)
             'avg_experience', 'bench_depth', 'injury_risk',
-            # Volatility (5)
-            'lead_volatility', 'entropy', 'lead_sustainability', 'comeback_factor', 'close_game_record',
+            # Volatility (4) — close_game_record REMOVED (FIX 2.4)
+            'lead_volatility', 'entropy', 'lead_sustainability', 'comeback_factor',
             # Shot quality / xP (2)
             'xp_per_poss', 'shot_distribution',
             # Schedule (4)
@@ -710,7 +735,13 @@ class MatchupFeatures:
     def to_vector(self) -> np.ndarray:
         """Convert to feature vector.
 
-        Layout: [diff_features | absolute_features | interactions | missing_indicators]
+        Layout: [diff_features | absolute_features | interactions]
+
+        OOS-FIX: Missing-data indicator features REMOVED.  These 6 binary
+        flags encoded scraper availability artifacts, not basketball signal.
+        With ~400 training samples, the model learned to exploit the specific
+        pattern of which teams had H2H/AP/coach data in the training set,
+        which doesn't generalize out-of-sample.
         """
         interaction = np.array([
             self.tempo_interaction,
@@ -720,20 +751,10 @@ class MatchupFeatures:
             self.travel_advantage,
             self.seed_interaction,
         ])
-        # FIX #8: Missing-data indicators
-        missing_indicators = np.array([
-            self.has_h2h_data,
-            self.has_common_opp_data,
-            self.has_preseason_ap_t1,
-            self.has_preseason_ap_t2,
-            self.has_coach_data_t1,
-            self.has_coach_data_t2,
-        ])
         parts = [self.diff_features]
         if len(self.absolute_features) > 0:
             parts.append(self.absolute_features)
         parts.append(interaction)
-        parts.append(missing_indicators)
         return np.concatenate(parts)
 
 

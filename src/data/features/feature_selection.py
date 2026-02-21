@@ -75,6 +75,12 @@ class FeatureSelectionResult:
     method: str
     # FIX #6: Bootstrap stability scores (feature_name -> fraction of bootstrap runs selected)
     stability_scores: Optional[Dict[str, float]] = None
+    # Variance-pruned features (near-zero variance)
+    variance_dropped: List[str] = field(default_factory=list)
+    # Post-selection multicollinearity diagnostics
+    post_selection_condition_number: Optional[float] = None
+    post_selection_max_vif: Optional[float] = None
+    multicollinearity_warning: Optional[str] = None
 
 
 class VIFPruner:
@@ -153,6 +159,277 @@ class VIFPruner:
                 vifs[j] = 1.0 / max(1.0 - r_squared, 1e-12)
 
         return vifs
+
+
+class NearZeroVariancePruner:
+    """
+    Drops features with variance below a threshold.
+
+    Near-zero variance features are effectively constant across the training
+    set and provide no discriminative signal.  They also cause numerical
+    issues in VIF computation (division by near-zero SS_tot) and inflate
+    logistic regression coefficient estimates.
+
+    Should run BEFORE VIF pruning to avoid VIF=inf on constant features.
+    """
+
+    def __init__(self, threshold: float = 1e-7):
+        self.threshold = threshold
+        self.dropped_features: List[str] = []
+
+    def prune(
+        self,
+        X: np.ndarray,
+        feature_names: List[str],
+    ) -> Tuple[np.ndarray, List[str], List[str]]:
+        """Remove features with variance below threshold."""
+        variances = np.var(X, axis=0)
+        keep_mask = variances > self.threshold
+        dropped_names = [
+            feature_names[i] for i in range(len(feature_names)) if not keep_mask[i]
+        ]
+        kept_names = [
+            feature_names[i] for i in range(len(feature_names)) if keep_mask[i]
+        ]
+        self.dropped_features = dropped_names
+        if dropped_names:
+            logger.info(
+                "Near-zero variance pruning removed %d features: %s",
+                len(dropped_names), dropped_names,
+            )
+        return X[:, keep_mask], kept_names, dropped_names
+
+
+def compute_condition_number(X: np.ndarray) -> float:
+    """
+    Compute the condition number of the feature matrix.
+
+    The condition number measures the overall numerical stability of the
+    feature matrix.  High values indicate that the features are nearly
+    linearly dependent and that linear model coefficients will be unstable.
+
+    Thresholds (rule of thumb):
+      - < 30: acceptable
+      - 30-100: moderate collinearity, monitor coefficients
+      - > 100: severe collinearity, feature reduction needed
+
+    Uses SVD-based computation (ratio of largest to smallest singular value).
+    """
+    try:
+        return float(np.linalg.cond(X))
+    except np.linalg.LinAlgError:
+        return float("inf")
+
+
+def validate_post_selection_collinearity(
+    X: np.ndarray,
+    feature_names: List[str],
+    vif_threshold: float = 10.0,
+    condition_threshold: float = 100.0,
+) -> Tuple[Optional[float], Optional[float], Optional[str]]:
+    """
+    Post-selection multicollinearity validation.
+
+    After all pruning stages, verify that the final feature set is
+    free of residual collinearity.  This catches cases where:
+    - VIF pruning hit max_drops before resolving all issues
+    - Correlation pruning missed 3+ feature linear dependencies
+    - Feature interactions reintroduced collinearity
+
+    Returns:
+        Tuple of (condition_number, max_vif, warning_message_or_None)
+    """
+    n_samples, n_features = X.shape
+    warning_parts = []
+
+    # Condition number
+    cond_num = compute_condition_number(X)
+    if cond_num > condition_threshold:
+        warning_parts.append(
+            f"condition number {cond_num:.0f} exceeds threshold {condition_threshold:.0f}"
+        )
+
+    # Max VIF (only if enough samples relative to features)
+    max_vif = None
+    if n_samples > n_features + 2 and n_features >= 2:
+        vifs = VIFPruner._compute_vifs(X)
+        max_vif = float(np.max(vifs))
+        if max_vif > vif_threshold:
+            worst_idx = int(np.argmax(vifs))
+            warning_parts.append(
+                f"residual VIF={max_vif:.1f} on feature '{feature_names[worst_idx]}' "
+                f"exceeds threshold {vif_threshold:.1f}"
+            )
+
+    warning = None
+    if warning_parts:
+        warning = (
+            "Post-selection multicollinearity warning: "
+            + "; ".join(warning_parts)
+            + ". LogisticRegression coefficients may be unstable."
+        )
+        logger.warning(warning)
+
+    return cond_num, max_vif, warning
+
+
+@dataclass
+class DistributionShiftResult:
+    """Per-feature distribution shift diagnostics between train and validation."""
+
+    feature_name: str
+    psi: float  # Population Stability Index
+    ks_statistic: float  # Kolmogorov-Smirnov statistic
+    ks_pvalue: float  # KS test p-value
+    train_mean: float
+    val_mean: float
+    mean_shift_std: float  # Mean difference in units of train std
+    flagged: bool  # True if shift exceeds thresholds
+
+
+def compute_psi(
+    train: np.ndarray,
+    val: np.ndarray,
+    n_bins: int = 10,
+) -> float:
+    """
+    Compute Population Stability Index (PSI) between two distributions.
+
+    PSI measures how much a distribution has shifted.  Originally from
+    credit scoring, it's the standard metric for feature drift in
+    production ML systems.
+
+    Thresholds (industry standard):
+      - < 0.10: no significant shift
+      - 0.10-0.25: moderate shift, investigate
+      - > 0.25: significant shift, feature may be unreliable
+
+    Uses equal-frequency (quantile) binning on the training distribution
+    for robustness with skewed features.
+
+    Args:
+        train: Training feature values [N_train]
+        val: Validation feature values [N_val]
+        n_bins: Number of bins
+
+    Returns:
+        PSI value (non-negative float)
+    """
+    eps = 1e-6
+
+    # Quantile-based bin edges from training distribution
+    bin_edges = np.percentile(train, np.linspace(0, 100, n_bins + 1))
+    bin_edges[0] = -np.inf
+    bin_edges[-1] = np.inf
+    # Ensure monotonically increasing (can fail if many identical values)
+    bin_edges = np.unique(bin_edges)
+    if len(bin_edges) < 3:
+        return 0.0  # Feature has too little variation to compute PSI
+
+    train_counts = np.histogram(train, bins=bin_edges)[0].astype(float)
+    val_counts = np.histogram(val, bins=bin_edges)[0].astype(float)
+
+    # Normalize to proportions
+    train_pct = train_counts / max(train_counts.sum(), 1) + eps
+    val_pct = val_counts / max(val_counts.sum(), 1) + eps
+
+    # PSI = Σ (val_pct - train_pct) * ln(val_pct / train_pct)
+    psi = float(np.sum((val_pct - train_pct) * np.log(val_pct / train_pct)))
+    return max(psi, 0.0)
+
+
+def detect_distribution_shift(
+    train_X: np.ndarray,
+    val_X: np.ndarray,
+    feature_names: List[str],
+    psi_threshold: float = 0.25,
+    ks_alpha: float = 0.05,
+    mean_shift_threshold: float = 1.0,
+) -> List[DistributionShiftResult]:
+    """
+    Detect distribution shift between training and validation features.
+
+    Applies three complementary tests per feature:
+    1. PSI (Population Stability Index) — distribution shape change
+    2. KS test — maximum CDF divergence (non-parametric)
+    3. Standardized mean shift — location change in units of train std
+
+    A feature is flagged if ANY of:
+      - PSI > psi_threshold (default 0.25)
+      - KS p-value < ks_alpha (default 0.05)
+      - |mean_shift| > mean_shift_threshold standard deviations (default 1.0)
+
+    Args:
+        train_X: Training feature matrix [N_train, D]
+        val_X: Validation feature matrix [N_val, D]
+        feature_names: Feature names
+        psi_threshold: PSI flagging threshold
+        ks_alpha: KS test significance level
+        mean_shift_threshold: Flagging threshold for standardized mean shift
+
+    Returns:
+        List of DistributionShiftResult, one per feature, sorted by PSI descending
+    """
+    try:
+        from scipy.stats import ks_2samp
+        scipy_available = True
+    except ImportError:
+        scipy_available = False
+
+    n_features = min(train_X.shape[1], len(feature_names))
+    results = []
+
+    for j in range(n_features):
+        train_col = train_X[:, j]
+        val_col = val_X[:, j]
+
+        # PSI
+        psi = compute_psi(train_col, val_col)
+
+        # KS test
+        if scipy_available:
+            ks_stat, ks_pval = ks_2samp(train_col, val_col)
+        else:
+            ks_stat, ks_pval = 0.0, 1.0
+
+        # Standardized mean shift
+        train_mean = float(np.mean(train_col))
+        val_mean = float(np.mean(val_col))
+        train_std = float(np.std(train_col))
+        if train_std > 1e-10:
+            mean_shift_std = abs(val_mean - train_mean) / train_std
+        else:
+            mean_shift_std = 0.0
+
+        flagged = (
+            psi > psi_threshold
+            or ks_pval < ks_alpha
+            or mean_shift_std > mean_shift_threshold
+        )
+
+        results.append(DistributionShiftResult(
+            feature_name=feature_names[j],
+            psi=psi,
+            ks_statistic=float(ks_stat),
+            ks_pvalue=float(ks_pval),
+            train_mean=train_mean,
+            val_mean=val_mean,
+            mean_shift_std=mean_shift_std,
+            flagged=flagged,
+        ))
+
+    results.sort(key=lambda r: r.psi, reverse=True)
+
+    n_flagged = sum(1 for r in results if r.flagged)
+    if n_flagged > 0:
+        flagged_names = [r.feature_name for r in results if r.flagged][:10]
+        logger.warning(
+            "Distribution shift detected in %d/%d features: %s%s",
+            n_flagged, n_features, flagged_names,
+            "..." if n_flagged > 10 else "",
+        )
+
+    return results
 
 
 class CorrelationPruner:
@@ -382,7 +659,7 @@ class ImportanceCalculator:
                 X[train_idx], label=y[train_idx], feature_name=feature_names
             )
             model = lgb.train(
-                params, train_data, num_boost_round=100,
+                params, train_data, num_boost_round=200,
                 callbacks=[lgb.log_evaluation(period=0)],
             )
             explainer = shap.TreeExplainer(model)
@@ -439,7 +716,7 @@ class ImportanceCalculator:
             # Train LightGBM model for this fold
             train_data = lgb.Dataset(X[train_idx], label=y[train_idx])
             model = lgb.train(
-                params, train_data, num_boost_round=100,
+                params, train_data, num_boost_round=200,
                 callbacks=[lgb.log_evaluation(period=0)],
             )
 
@@ -531,6 +808,59 @@ class ImportanceCalculator:
         return (scores - mn) / (mx - mn)
 
 
+# FIX 2.2: Known feature clusters where multiple features measure the
+# same underlying construct.  For each cluster, only the representatives
+# (first list entry) survive pre-selection; the rest are dropped before
+# VIF/correlation pruning.  This reduces dimensionality by ~8 features
+# and prevents the VIF pruner from hitting its max_drops limit.
+_FEATURE_CLUSTERS = {
+    # SOS cluster: keep general SOS + elite SOS (tournament-specific)
+    "sos": {
+        "keep": ["sos_adj_em", "elite_sos"],
+        "drop": ["sos_opp_o", "sos_opp_d", "ncsos_adj_em"],
+    },
+    # RAPM cluster: keep top5+bench decomposition (what matters),
+    # drop total (≈ top5+bench) and positional (≈ top5+bench reweighted)
+    "rapm": {
+        "keep": ["top5_rapm", "bench_rapm"],
+        "drop": ["total_rapm", "backcourt_rapm", "frontcourt_rapm"],
+    },
+}
+
+
+def _cluster_preselect(
+    X: np.ndarray,
+    feature_names: List[str],
+) -> tuple:
+    """Drop known-redundant features from correlated clusters.
+
+    FIX 2.2: Pre-selects one representative from each known cluster
+    to reduce dimensionality before automated selection.
+
+    Returns:
+        (X_reduced, names_reduced) with cluster members dropped.
+    """
+    names_list = list(feature_names)
+    to_drop_names = set()
+    for cluster_name, spec in _FEATURE_CLUSTERS.items():
+        for drop_name in spec["drop"]:
+            if drop_name in names_list:
+                to_drop_names.add(drop_name)
+
+    if not to_drop_names:
+        return X, names_list
+
+    keep_mask = [name not in to_drop_names for name in names_list]
+    kept_names = [name for name in names_list if name not in to_drop_names]
+    X_kept = X[:, keep_mask]
+
+    logger.info(
+        "FIX 2.2: Cluster pre-selection dropped %d redundant features: %s",
+        len(to_drop_names), sorted(to_drop_names),
+    )
+    return X_kept, kept_names
+
+
 class FeatureSelector:
     """
     Orchestrates the full feature selection pipeline:
@@ -586,11 +916,25 @@ class FeatureSelector:
         FIX #5: Correlation pruner uses target correlation for tie-breaking.
         FIX #6: Bootstrap stability filter removes unstable features.
         FIX #7: Correlation importance suppressed when SHAP available.
+        FIX 2.2: Cluster pre-selection collapses known correlated groups.
 
         LEAKAGE NOTE: This method must be called with TRAINING data only.
         """
         original_dim = X.shape[1]
         original_name_to_idx = {name: i for i, name in enumerate(feature_names)}
+
+        # Step -2 (FIX 2.2): Cluster pre-selection.
+        # Known feature clusters that are highly correlated within the
+        # tournament-eligible population.  Keep one representative from
+        # each cluster to reduce dimensionality before automated selection.
+        # This prevents VIF/correlation pruner from hitting max_drops
+        # limits before resolving all multicollinearity chains.
+        X, feature_names = _cluster_preselect(X, feature_names)
+
+        # Step -1: Near-zero variance pruning (runs before VIF to avoid
+        # numerical issues with constant/near-constant features)
+        variance_pruner = NearZeroVariancePruner()
+        X, feature_names, variance_dropped = variance_pruner.prune(X, feature_names)
 
         # Step 0: VIF pruning (FIX #3: now enabled by default)
         vif_dropped: List[str] = []
@@ -654,10 +998,19 @@ class FeatureSelector:
 
         # Map selected names back to ORIGINAL indices
         selected_indices = [original_name_to_idx[name] for name in selected if name in original_name_to_idx]
-        all_dropped = vif_dropped + corr_dropped + low_importance_dropped
+        all_dropped = variance_dropped + vif_dropped + corr_dropped + low_importance_dropped
 
         self._selected_indices = selected_indices
         self._selected_names = selected
+
+        # Post-selection multicollinearity validation: verify the final
+        # feature set is clean.  This is especially important for
+        # LogisticRegression where collinearity inflates coefficients.
+        X_final = X_pruned[:, [kept_names.index(n) for n in selected if n in kept_names]]
+        cond_num, max_vif, mc_warning = validate_post_selection_collinearity(
+            X_final, selected,
+            vif_threshold=self.vif_threshold,
+        )
 
         return FeatureSelectionResult(
             selected_features=selected,
@@ -668,8 +1021,12 @@ class FeatureSelector:
             low_importance_dropped=low_importance_dropped,
             original_dim=original_dim,
             reduced_dim=len(selected),
-            method="vif+correlation_pruning+importance_ranking+stability_filter",
+            method="variance+vif+correlation_pruning+importance_ranking+stability_filter",
             stability_scores=stability_scores,
+            variance_dropped=variance_dropped,
+            post_selection_condition_number=cond_num,
+            post_selection_max_vif=max_vif,
+            multicollinearity_warning=mc_warning,
         )
 
     def _bootstrap_stability(

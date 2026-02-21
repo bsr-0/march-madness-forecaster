@@ -339,8 +339,8 @@ def test_feature_engineering_receives_context_from_torvik_data():
 
     # Find the index of preseason_ap_rank in the vector
     ap_idx = names.index("preseason_ap_rank")
-    # AP rank 5 → (26 - 5) / 25 = 0.84
-    assert abs(vec[ap_idx] - (26.0 - 5) / 25.0) < 1e-6
+    # FIX 2.3: AP rank 5 → 1/(1 + 5/10) = 1/1.5 = 0.6667 (smooth decay)
+    assert abs(vec[ap_idx] - 1.0 / (1.0 + 5 / 10.0)) < 1e-6
 
     # Coach tournament exp (12 apps)
     coach_idx = names.index("coach_tournament_exp")

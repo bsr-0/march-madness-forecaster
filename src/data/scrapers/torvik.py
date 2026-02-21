@@ -336,6 +336,85 @@ class BartTorvikScraper:
         
         return result
     
+    def fetch_shooting_stats(self, year: int = 2026) -> Dict[str, Dict]:
+        """
+        Fetch per-team shooting percentages (FT%, 3PT%) for all teams.
+
+        Scrapes barttorvik.com/trank.php with the extended-stats view which
+        exposes 3P% and FT% columns not present on fourfactors.php.
+
+        Returns:
+            Dict of team_id -> {'three_pt_pct': float, 'ft_pct': float}
+        """
+        cached = self._load_from_cache(f"torvik_shooting_{year}.json")
+        if cached:
+            return cached
+
+        try:
+            # Extended trank page with shooting splits
+            url = f"{self.BASE_URL}/trank.php?year={year}&sort=&hteam=&t=2&q=&dual=show&top=0"
+            response = self.session.get(url, timeout=30)
+            response.raise_for_status()
+            shooting = self._parse_shooting_page(response.text)
+            if shooting:
+                self._save_to_cache(f"torvik_shooting_{year}.json", shooting)
+            return shooting
+        except Exception as e:
+            logger.warning(f"Could not fetch shooting stats for {year}: {e}")
+            return {}
+
+    def _parse_shooting_page(self, html: str) -> Dict[str, Dict]:
+        """
+        Parse 3PT% and FT% from the extended BartTorvik trank page.
+
+        The extended trank table has columns (0-indexed):
+          0: Rank  1: Team  2: Conf  3: Record  4: AdjOE  5: AdjDE  6: Barthag
+          7: Tempo  8: eFG%  9: TO%  10: ORB%  11: FTR  12: 3P%  13: 2P%
+          14: FT%  ...  (defensive columns follow)
+
+        Column positions may shift; we fall back to scanning for known headers.
+        """
+        soup = BeautifulSoup(html, 'lxml')
+        result: Dict[str, Dict] = {}
+
+        table = soup.find('table')
+        if not table:
+            return result
+
+        # Detect column positions from header row
+        header_row = table.find('tr')
+        col_3pt: Optional[int] = None
+        col_ft: Optional[int] = None
+        if header_row:
+            headers = [th.get_text(strip=True).lower() for th in header_row.find_all(['th', 'td'])]
+            for i, h in enumerate(headers):
+                if '3p%' in h or '3pt%' in h or 'three' in h:
+                    col_3pt = i
+                if 'ft%' in h and col_ft is None:
+                    col_ft = i
+
+        # Default column positions if header detection fails
+        if col_3pt is None:
+            col_3pt = 12
+        if col_ft is None:
+            col_ft = 14
+
+        rows = table.find_all('tr')[1:]
+        for row in rows:
+            cells = row.find_all('td')
+            if len(cells) < max(col_3pt, col_ft) + 1:
+                continue
+            try:
+                team_id = self._extract_team_id(cells[1])
+                three_pt = self._safe_float(cells[col_3pt].get_text(strip=True)) / 100
+                ft_pct   = self._safe_float(cells[col_ft].get_text(strip=True)) / 100
+                if three_pt > 0 or ft_pct > 0:
+                    result[team_id] = {'three_pt_pct': three_pt, 'ft_pct': ft_pct}
+            except Exception as e:
+                logger.debug(f"Error parsing shooting row: {e}")
+                continue
+        return result
+
     def fetch_team_games(self, team_id: str, year: int = 2026) -> List[TorVikGame]:
         """
         Fetch game-by-game data for a team.

@@ -95,8 +95,7 @@ class CombinatorialFusionAnalysis:
         predictions: Dict[str, ModelPrediction]
     ) -> Dict[str, float]:
         """
-        Calculate dynamic weights via confidence-scaled base weights with a
-        bounded diversity bonus.
+        Calculate dynamic weights via confidence-scaled base weights.
 
         Weight calculation:
         1. Start from base weights (learned from historical Brier scores
@@ -104,14 +103,13 @@ class CombinatorialFusionAnalysis:
         2. Scale each weight by model confidence: w_i *= (0.5 + confidence_i).
            This maps confidence [0,1] → multiplier [0.5, 1.5], keeping the
            adjustment symmetric and bounded.
-        3. Apply a *bounded* diversity bonus.  For each model, compute its
-           deviation from the initial weighted mean.  The bonus is capped at
-           ``max_diversity_ratio`` times the base weight, preventing any single
-           outlier model from dominating.
+        3. Normalize to sum to 1.
 
-        The key mathematical fix: the diversity bonus can never exceed
-        ``max_diversity_ratio * base_weight``, ensuring convergent weights
-        regardless of how extreme a model's prediction is.
+        FIX 1.1: Per-prediction diversity bonus REMOVED.  With only 3 models,
+        the diversity bonus effectively upweighted whichever model disagreed
+        most on a specific matchup — rewarding noise rather than signal.
+        Dataset-level weight optimization via EnsembleWeightOptimizer already
+        captures optimal static weights based on Brier performance.
 
         Args:
             predictions: Model predictions
@@ -122,7 +120,7 @@ class CombinatorialFusionAnalysis:
         if not predictions:
             return {}
 
-        # Stage 1: confidence-scaled base weights.
+        # Confidence-scaled base weights.
         # Multiplier maps confidence ∈ [0,1] → [0.5, 1.5] (symmetric, bounded).
         raw_weights: Dict[str, float] = {}
         for model_name, pred in predictions.items():
@@ -130,32 +128,91 @@ class CombinatorialFusionAnalysis:
             confidence_multiplier = 0.5 + pred.confidence
             raw_weights[model_name] = base_weight * confidence_multiplier
 
-        # Stage 2: bounded diversity bonus.
-        # Cap bonus at max_diversity_ratio * base_weight to prevent unbounded
-        # upweighting of extreme-but-confident models.
-        max_diversity_ratio = 0.20  # Max 20% bonus from diversity
-        total_raw = sum(raw_weights.values())
-        if total_raw > 0:
-            norm_raw = {k: v / total_raw for k, v in raw_weights.items()}
-            ensemble_mean = sum(
-                norm_raw[m] * predictions[m].win_probability for m in predictions
-            )
-
-            for model_name, pred in predictions.items():
-                deviation = abs(pred.win_probability - ensemble_mean)
-                base_w = self.base_weights.get(model_name, 0.0)
-                # Diversity bonus = deviation * confidence * scaling,
-                # but hard-capped at max_diversity_ratio * base_weight.
-                uncapped_bonus = deviation * pred.confidence * self.confidence_scaling
-                max_bonus = max_diversity_ratio * base_w
-                raw_weights[model_name] += min(uncapped_bonus, max_bonus)
-
         # Normalize to sum to 1
         total_weight = sum(raw_weights.values())
         if total_weight > 0:
             return {k: v / total_weight for k, v in raw_weights.items()}
         return {k: 1.0 / len(raw_weights) for k in raw_weights}
     
+    def compute_diversity_metrics(
+        self,
+        predictions: Dict[str, ModelPrediction],
+    ) -> Dict[str, float]:
+        """
+        Compute ensemble diversity metrics for a single matchup.
+
+        Diversity measures how much base learners disagree.  Higher diversity
+        → more potential for ensemble benefit (reducing variance), but only
+        if the models are individually competent.
+
+        Returns a dict with:
+        - 'prediction_spread': max - min predicted probability
+        - 'prediction_std': standard deviation across models
+        - 'ensemble_mean': weighted mean prediction
+        - Per-model 'deviation_<name>': |pred - ensemble_mean|
+        """
+        if len(predictions) < 2:
+            return {"prediction_spread": 0.0, "prediction_std": 0.0}
+
+        probs = [pred.win_probability for pred in predictions.values()]
+        weights = self._calculate_weights(predictions)
+        ensemble_mean = sum(
+            weights.get(name, 0) * pred.win_probability
+            for name, pred in predictions.items()
+        )
+
+        metrics = {
+            "prediction_spread": float(max(probs) - min(probs)),
+            "prediction_std": float(np.std(probs)),
+            "ensemble_mean": float(ensemble_mean),
+        }
+        for name, pred in predictions.items():
+            metrics[f"deviation_{name}"] = float(abs(pred.win_probability - ensemble_mean))
+
+        return metrics
+
+    @staticmethod
+    def compute_pairwise_correlation(
+        model_predictions: Dict[str, np.ndarray],
+    ) -> Dict[str, float]:
+        """
+        Compute pairwise Spearman rank correlations between base learner
+        prediction vectors across all matchups.
+
+        Useful for diagnosing ensemble diversity at the dataset level:
+        - r ≈ 1.0: models are redundant (ensemble provides little benefit)
+        - r ≈ 0.5-0.8: healthy diversity (ensemble reduces variance)
+        - r < 0.3: models may be learning different signals (investigate)
+
+        Args:
+            model_predictions: Dict of model_name -> prediction_array [N]
+
+        Returns:
+            Dict of "model_a_vs_model_b" -> spearman_r
+        """
+        try:
+            from scipy.stats import spearmanr
+            scipy_available = True
+        except ImportError:
+            scipy_available = False
+
+        names = sorted(model_predictions.keys())
+        result = {}
+
+        for i in range(len(names)):
+            for j in range(i + 1, len(names)):
+                a = model_predictions[names[i]]
+                b = model_predictions[names[j]]
+                if len(a) != len(b) or len(a) < 5:
+                    continue
+                if scipy_available:
+                    corr, _ = spearmanr(a, b)
+                else:
+                    corr = float(np.corrcoef(a, b)[0, 1])
+                result[f"{names[i]}_vs_{names[j]}"] = round(float(corr), 4)
+
+        return result
+
     def update_accuracy(
         self,
         model_name: str,
@@ -281,15 +338,21 @@ class LightGBMRanker:
         if not LIGHTGBM_AVAILABLE:
             raise ImportError("LightGBM not installed")
         
+        # OOS-FIX: Conservative defaults — num_leaves=8 and
+        # min_child_samples=50 force shallow, well-regularized trees
+        # appropriate for ~400 training samples.
         self.params = params or {
             'objective': 'binary',
             'metric': 'binary_logloss',
             'boosting_type': 'gbdt',
-            'num_leaves': 31,
+            'num_leaves': 8,
             'learning_rate': 0.05,
-            'feature_fraction': 0.8,
-            'bagging_fraction': 0.8,
+            'feature_fraction': 0.7,
+            'bagging_fraction': 0.7,
             'bagging_freq': 5,
+            'min_child_samples': 50,
+            'lambda_l1': 1.0,
+            'lambda_l2': 1.0,
             'verbose': -1,
             'num_threads': 1,
         }
@@ -433,16 +496,18 @@ class XGBoostRanker:
         if not XGBOOST_AVAILABLE:
             raise ImportError("XGBoost not installed")
 
+        # OOS-FIX: Conservative defaults — max_depth=3 and
+        # min_child_weight=10 prevent overfitting on small samples.
         self.params = params or {
             "objective": "binary:logistic",
             "eval_metric": "logloss",
-            "max_depth": 6,
+            "max_depth": 3,
             "learning_rate": 0.05,
-            "subsample": 0.8,
-            "colsample_bytree": 0.8,
-            "min_child_weight": 5,
-            "gamma": 0.1,
-            "reg_alpha": 0.1,
+            "subsample": 0.7,
+            "colsample_bytree": 0.7,
+            "min_child_weight": 10,
+            "gamma": 0.5,
+            "reg_alpha": 1.0,
             "reg_lambda": 1.0,
             "verbosity": 0,
             "nthread": 1,
@@ -590,74 +655,9 @@ def create_matchup_features(
     return np.array(features), names
 
 
-class SOTAEnsemble:
-    """
-    State-of-the-art ensemble combining all prediction methods.
-    
-    Integrates:
-    - GNN-based schedule analysis
-    - Transformer-based temporal modeling
-    - LightGBM ranking
-    - Seed baseline
-    - Elo ratings
-    """
-    
-    def __init__(self):
-        """Initialize SOTA ensemble."""
-        self.cfa = CombinatorialFusionAnalysis()
-        self.lgb_ranker = None
-        
-        # Sub-model weights
-        self.model_weights = {
-            "gnn": 0.25,
-            "transformer": 0.20,
-            "lightgbm": 0.25,
-            "elo": 0.15,
-            "seed_baseline": 0.15,
-        }
-    
-    def predict(
-        self,
-        team1_id: str,
-        team2_id: str,
-        gnn_prob: float,
-        transformer_prob: float,
-        lgb_prob: float,
-        elo_prob: float,
-        seed_prob: float,
-        confidence_scores: Dict[str, float] = None
-    ) -> Tuple[float, Dict[str, float]]:
-        """
-        Generate ensemble prediction.
-        
-        Args:
-            team1_id: Team 1 identifier
-            team2_id: Team 2 identifier
-            gnn_prob: GNN model probability (team1 wins)
-            transformer_prob: Transformer model probability
-            lgb_prob: LightGBM probability
-            elo_prob: Elo-based probability
-            seed_prob: Seed-based probability
-            confidence_scores: Model confidence scores
-            
-        Returns:
-            Tuple of (ensemble_probability, model_contributions)
-        """
-        confidence_scores = confidence_scores or {
-            "gnn": 0.5, "transformer": 0.5, "lightgbm": 0.5,
-            "elo": 0.5, "seed_baseline": 0.5
-        }
-        
-        predictions = {
-            "gnn": ModelPrediction("gnn", gnn_prob, confidence_scores.get("gnn", 0.5)),
-            "transformer": ModelPrediction("transformer", transformer_prob, confidence_scores.get("transformer", 0.5)),
-            "lightgbm": ModelPrediction("lightgbm", lgb_prob, confidence_scores.get("lightgbm", 0.5)),
-            "elo": ModelPrediction("elo", elo_prob, confidence_scores.get("elo", 0.5)),
-            "seed_baseline": ModelPrediction("seed_baseline", seed_prob, confidence_scores.get("seed_baseline", 0.5)),
-        }
-        
-        # Use CFA with all models
-        self.cfa.base_weights = self.model_weights
-        combined_prob, weights = self.cfa.predict(predictions)
-        
-        return combined_prob, weights
+
+# FIX 1.2: SOTAEnsemble class REMOVED — was unused dead code with
+# hardcoded weights for 5 models that diverged from the actual 3-model
+# ensemble (baseline, gnn, transformer) used in the pipeline.  All
+# ensemble logic now lives in CombinatorialFusionAnalysis + the
+# EnsembleWeightOptimizer in hyperparameter_tuning.py.
