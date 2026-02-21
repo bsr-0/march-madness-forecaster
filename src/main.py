@@ -8,6 +8,8 @@ from pathlib import Path
 from .data.ingestion.collector import IngestionConfig, RealDataCollector
 from .data.ingestion.historical_pipeline import HistoricalDataPipeline, HistoricalIngestionConfig
 from .data.features.materialization import HistoricalFeatureMaterializer, MaterializationConfig
+from .data.scrapers.cbbpy_rosters import CBBpyRosterScraper
+from .ml.evaluation.rdof_audit import run_rdof_audit
 from .pipeline.sota import DataRequirementError, SOTAPipelineConfig, run_sota_pipeline_to_file
 
 
@@ -194,6 +196,29 @@ def ingest_historical(args):
     return 0
 
 
+def audit_rdof(args):
+    """Run researcher degrees of freedom audit."""
+    import logging
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
+    holdout_years = [int(y) for y in args.holdout_years.split(",")]
+    config = SOTAPipelineConfig()
+
+    result = run_rdof_audit(
+        historical_dir=args.historical_dir,
+        holdout_years=holdout_years,
+        run_holdout=not args.no_holdout,
+        run_sensitivity=args.sensitivity,
+        sensitivity_grid=args.sensitivity_grid,
+        output_path=args.output,
+        config=config,
+    )
+
+    if args.output:
+        print(f"Report written to {args.output}")
+    return 0
+
+
 def materialize_features(args):
     """Build leakage-safe team-game and matchup training tables."""
     config = MaterializationConfig(
@@ -210,6 +235,51 @@ def materialize_features(args):
     manifest = HistoricalFeatureMaterializer(config).run()
     print(f"✓ Feature materialization complete. Manifest: {manifest['manifest_path']}")
     return 0
+
+
+def scrape_rosters(args):
+    """Scrape cbbpy box scores to build roster payloads for historical seasons."""
+    import time
+
+    start = args.start_year
+    end = args.end_year
+    cache_dir = args.cache_dir
+    scraper = CBBpyRosterScraper(cache_dir=cache_dir)
+    delay = args.delay
+
+    succeeded = []
+    failed = []
+
+    for year in range(start, end + 1):
+        cache_path = Path(cache_dir) / f"cbbpy_rosters_{year}.json"
+        if not args.force and cache_path.exists():
+            print(f"[{year}] cached — skipping (use --force to re-scrape)")
+            succeeded.append(year)
+            continue
+
+        print(f"[{year}] scraping season box scores via cbbpy ...")
+        try:
+            payload = scraper.fetch_rosters(year)
+            n_teams = len(payload.get("teams", []))
+            n_players = sum(len(t.get("players", [])) for t in payload.get("teams", []))
+            if n_teams == 0:
+                print(f"[{year}] WARNING: got 0 teams — ESPN may not have data this far back")
+                failed.append(year)
+            else:
+                print(f"[{year}] OK — {n_teams} teams, {n_players} players")
+                succeeded.append(year)
+        except Exception as exc:
+            print(f"[{year}] FAILED — {exc}")
+            failed.append(year)
+
+        if year < end and delay > 0:
+            time.sleep(delay)
+
+    print(f"\nDone. Succeeded: {len(succeeded)}, Failed: {len(failed)}")
+    if failed:
+        print(f"Failed years: {failed}")
+    print(f"Cache dir: {cache_dir}")
+    return 0 if not failed else 1
 
 
 def main():
@@ -415,6 +485,66 @@ def main():
         help="Minimum tournament matchup rows required when strict validation is enabled",
     )
 
+    # audit-rdof command
+    rdof_parser = subparsers.add_parser(
+        "audit-rdof",
+        help="Run researcher degrees of freedom audit on historical data",
+    )
+    rdof_parser.add_argument(
+        "--historical-dir",
+        default="data/raw/historical",
+        help="Directory with per-year historical game/metric JSONs",
+    )
+    rdof_parser.add_argument(
+        "--holdout-years",
+        default="2024,2025",
+        help="Comma-separated years to hold out from all decisions",
+    )
+    rdof_parser.add_argument(
+        "--output", "-o",
+        default=None,
+        help="Path to write JSON audit report",
+    )
+    rdof_parser.add_argument(
+        "--sensitivity",
+        action="store_true",
+        help="Run sensitivity analysis on Tier 3 constants (slower)",
+    )
+    rdof_parser.add_argument(
+        "--no-holdout",
+        action="store_true",
+        help="Skip holdout evaluation (sensitivity only)",
+    )
+    rdof_parser.add_argument(
+        "--sensitivity-grid",
+        type=int,
+        default=11,
+        help="Grid points per constant for sensitivity analysis",
+    )
+
+    # scrape-rosters command
+    roster_parser = subparsers.add_parser(
+        "scrape-rosters",
+        help="Scrape cbbpy box scores to build per-season roster payloads (resumable, cached)",
+    )
+    roster_parser.add_argument(
+        "--start-year", type=int, default=2005, help="First season to scrape (inclusive, default: 2005)"
+    )
+    roster_parser.add_argument(
+        "--end-year", type=int, default=2026, help="Last season to scrape (inclusive, default: 2026)"
+    )
+    roster_parser.add_argument(
+        "--cache-dir",
+        default="data/raw/historical",
+        help="Directory to cache roster JSONs (default: data/raw/historical)",
+    )
+    roster_parser.add_argument(
+        "--delay", type=float, default=2.0, help="Seconds to wait between seasons (default: 2.0)"
+    )
+    roster_parser.add_argument(
+        "--force", action="store_true", help="Re-scrape even if cached file exists"
+    )
+
     manifest_sota_parser = subparsers.add_parser(
         "sota-from-manifest",
         help="Run SOTA using artifact paths defined in an ingestion manifest",
@@ -464,6 +594,10 @@ def main():
         return materialize_features(args)
     elif args.command == "sota-from-manifest":
         return run_sota_from_manifest(args)
+    elif args.command == "audit-rdof":
+        return audit_rdof(args)
+    elif args.command == "scrape-rosters":
+        return scrape_rosters(args)
     else:
         parser.print_help()
         return 1

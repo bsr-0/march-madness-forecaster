@@ -38,26 +38,41 @@ except ImportError:
 @dataclass
 class CalibrationMetrics:
     """Metrics for evaluating probability calibration."""
-    
+
     brier_score: float  # Mean squared error of probabilities
     log_loss: float  # Log loss (cross-entropy)
     expected_calibration_error: float  # ECE
     max_calibration_error: float  # MCE
     accuracy: float  # Classification accuracy
-    
+
     # Calibration curve data
     prob_true: np.ndarray  # True positive rate per bin
     prob_pred: np.ndarray  # Mean predicted probability per bin
-    
+
+    # ROC-AUC (probability ranking quality)
+    roc_auc: Optional[float] = None
+
+    # Bootstrap confidence intervals
+    brier_ci_lower: Optional[float] = None
+    brier_ci_upper: Optional[float] = None
+
+    # Per-bin calibration analysis (decile breakdown)
+    per_bin_analysis: Optional[List[Dict]] = None
+
     def __str__(self) -> str:
-        return (
-            f"Calibration Metrics:\n"
-            f"  Brier Score: {self.brier_score:.4f}\n"
-            f"  Log Loss: {self.log_loss:.4f}\n"
-            f"  ECE: {self.expected_calibration_error:.4f}\n"
-            f"  MCE: {self.max_calibration_error:.4f}\n"
-            f"  Accuracy: {self.accuracy:.4f}"
-        )
+        parts = [
+            f"Calibration Metrics:",
+            f"  Brier Score: {self.brier_score:.4f}",
+            f"  Log Loss: {self.log_loss:.4f}",
+            f"  ECE: {self.expected_calibration_error:.4f}",
+            f"  MCE: {self.max_calibration_error:.4f}",
+            f"  Accuracy: {self.accuracy:.4f}",
+        ]
+        if self.roc_auc is not None:
+            parts.append(f"  ROC-AUC: {self.roc_auc:.4f}")
+        if self.brier_ci_lower is not None and self.brier_ci_upper is not None:
+            parts.append(f"  Brier 95% CI: [{self.brier_ci_lower:.4f}, {self.brier_ci_upper:.4f}]")
+        return "\n".join(parts)
 
 
 class BrierScoreOptimizer:
@@ -602,7 +617,58 @@ def calculate_calibration_metrics(
     # Accuracy
     predicted_class = (predictions >= 0.5).astype(int)
     accuracy = np.mean(predicted_class == outcomes)
-    
+
+    # ROC-AUC — probability ranking quality metric.  Measures how well
+    # predictions discriminate between positive and negative outcomes,
+    # independent of calibration.
+    roc_auc = None
+    if len(np.unique(outcomes)) == 2:
+        try:
+            from sklearn.metrics import roc_auc_score
+            roc_auc = float(roc_auc_score(outcomes, predictions))
+        except Exception:
+            # Can fail if only one class present in a small sample
+            pass
+
+    # Bootstrap CI on Brier score — quantifies estimation uncertainty.
+    # Uses 2000 bootstrap resamples for stable 95% CI.
+    brier_ci_lower = None
+    brier_ci_upper = None
+    if len(predictions) >= 20:
+        rng = np.random.default_rng(42)
+        n_boot = min(2000, max(500, len(predictions) * 5))
+        boot_briers = np.empty(n_boot)
+        for b in range(n_boot):
+            idx = rng.choice(len(predictions), size=len(predictions), replace=True)
+            boot_briers[b] = float(np.mean((predictions[idx] - outcomes[idx]) ** 2))
+        brier_ci_lower = float(np.percentile(boot_briers, 2.5))
+        brier_ci_upper = float(np.percentile(boot_briers, 97.5))
+
+    # Per-bin calibration analysis (decile breakdown).  For each
+    # probability bin, reports: predicted vs actual rates, count, and gap.
+    # Reveals WHERE miscalibration is concentrated (e.g., overconfident
+    # in high-confidence predictions).
+    per_bin_analysis = []
+    for i in range(n_bins):
+        mask = bin_indices == i
+        n_k = int(np.sum(mask))
+        if n_k > 0:
+            mean_pred_i = float(np.mean(predictions[mask]))
+            mean_outcome_i = float(np.mean(outcomes[mask]))
+            gap_i = mean_pred_i - mean_outcome_i  # positive = overconfident
+            bin_lo = float(bins[i])
+            bin_hi = float(bins[i + 1])
+            per_bin_analysis.append({
+                "bin": f"{bin_lo:.1f}-{bin_hi:.1f}",
+                "count": n_k,
+                "mean_predicted": round(mean_pred_i, 4),
+                "mean_actual": round(mean_outcome_i, 4),
+                "gap": round(gap_i, 4),
+                "direction": "overconfident" if gap_i > 0.02 else (
+                    "underconfident" if gap_i < -0.02 else "calibrated"
+                ),
+            })
+
     return CalibrationMetrics(
         brier_score=brier,
         log_loss=log_loss,
@@ -611,6 +677,10 @@ def calculate_calibration_metrics(
         accuracy=accuracy,
         prob_true=prob_true,
         prob_pred=prob_pred,
+        roc_auc=roc_auc,
+        brier_ci_lower=brier_ci_lower,
+        brier_ci_upper=brier_ci_upper,
+        per_bin_analysis=per_bin_analysis,
     )
 
 

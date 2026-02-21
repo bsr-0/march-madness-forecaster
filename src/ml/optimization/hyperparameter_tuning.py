@@ -241,7 +241,7 @@ class LightGBMTuner:
 
     def __init__(
         self,
-        n_trials: int = 50,
+        n_trials: int = 15,
         n_cv_splits: int = 5,
         timeout: Optional[int] = 300,
         random_seed: int = 42,
@@ -275,33 +275,34 @@ class LightGBMTuner:
         Returns:
             TuningResult with best params and CV scores
         """
-        # FIX S1: pair_size=2 keeps symmetric game pairs together in CV
-        # folds.  Without this, one orientation of a game can leak into the
-        # validation fold while the reversed version is in training.
-        cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=2)
+        # B3: pair_size=1 — symmetric augmentation was removed, so each game
+        # is a single sample. pair_size=2 was vestigial.
+        cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=1)
 
         def objective(trial: optuna.Trial) -> float:
+            # OOS-FIX: Heavily constrained search space to prevent overfitting
+            # with ~400 training samples.  num_leaves<=16 and min_child_samples
+            # >=30 force shallow, well-regularized trees.  15 trials with this
+            # narrow space is sufficient — most configurations will generalize
+            # similarly.
             params = {
                 "objective": "binary",
                 "metric": "binary_logloss",
                 "boosting_type": "gbdt",
-                "num_leaves": trial.suggest_int("num_leaves", 15, 127),
-                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
-                "feature_fraction": trial.suggest_float("feature_fraction", 0.4, 1.0),
-                "bagging_fraction": trial.suggest_float("bagging_fraction", 0.4, 1.0),
+                "num_leaves": trial.suggest_int("num_leaves", 4, 16),
+                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.15, log=True),
+                "feature_fraction": trial.suggest_float("feature_fraction", 0.5, 0.9),
+                "bagging_fraction": trial.suggest_float("bagging_fraction", 0.5, 0.9),
                 "bagging_freq": 5,
-                "min_child_samples": trial.suggest_int("min_child_samples", 5, 100),
-                "lambda_l1": trial.suggest_float("lambda_l1", 1e-8, 10.0, log=True),
-                "lambda_l2": trial.suggest_float("lambda_l2", 1e-8, 10.0, log=True),
+                "min_child_samples": trial.suggest_int("min_child_samples", 30, 100),
+                "lambda_l1": trial.suggest_float("lambda_l1", 0.1, 10.0, log=True),
+                "lambda_l2": trial.suggest_float("lambda_l2", 0.1, 10.0, log=True),
                 "verbose": -1,
                 "num_threads": 1,
             }
             # FIX M2: Use a fixed number of rounds during Optuna search
-            # instead of early stopping on the val fold.  Using the same val
-            # fold for both early stopping AND objective evaluation inflates
-            # the Optuna objective, causing selection of overfit hyperparams.
-            # Optuna tunes num_rounds explicitly instead.
-            num_rounds = trial.suggest_int("num_rounds", 50, 500)
+            # instead of early stopping on the val fold.
+            num_rounds = trial.suggest_int("num_rounds", 50, 200)
 
             def train_fn(X_tr, y_tr, X_v, y_v):
                 train_data = lgb.Dataset(X_tr, label=y_tr, feature_name=feature_names)
@@ -390,7 +391,7 @@ class XGBoostTuner:
 
     def __init__(
         self,
-        n_trials: int = 50,
+        n_trials: int = 15,
         n_cv_splits: int = 5,
         timeout: Optional[int] = 300,
         random_seed: int = 42,
@@ -424,27 +425,28 @@ class XGBoostTuner:
         Returns:
             TuningResult with best params and CV scores
         """
-        # FIX S1: pair_size=2 keeps symmetric game pairs together in CV folds.
-        cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=2)
+        # B3: pair_size=1 — symmetric augmentation was removed.
+        cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=1)
 
         def objective(trial: optuna.Trial) -> float:
+            # OOS-FIX: Constrained search space — max_depth<=4 and
+            # min_child_weight>=5 prevent overfitting on ~400 samples.
             params = {
                 "objective": "binary:logistic",
                 "eval_metric": "logloss",
-                "max_depth": trial.suggest_int("max_depth", 3, 10),
-                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
-                "subsample": trial.suggest_float("subsample", 0.5, 1.0),
-                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.4, 1.0),
-                "min_child_weight": trial.suggest_int("min_child_weight", 1, 20),
-                "gamma": trial.suggest_float("gamma", 0.0, 5.0),
-                "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 10.0, log=True),
-                "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 10.0, log=True),
+                "max_depth": trial.suggest_int("max_depth", 2, 4),
+                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.15, log=True),
+                "subsample": trial.suggest_float("subsample", 0.5, 0.9),
+                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 0.9),
+                "min_child_weight": trial.suggest_int("min_child_weight", 5, 30),
+                "gamma": trial.suggest_float("gamma", 0.1, 5.0),
+                "reg_alpha": trial.suggest_float("reg_alpha", 0.1, 10.0, log=True),
+                "reg_lambda": trial.suggest_float("reg_lambda", 0.1, 10.0, log=True),
                 "verbosity": 0,
                 "nthread": 1,
             }
-            # FIX M2: Fixed rounds during Optuna search — no early stopping
-            # on the val fold used for objective evaluation.
-            num_rounds = trial.suggest_int("num_rounds", 50, 500)
+            # FIX M2: Fixed rounds during Optuna search.
+            num_rounds = trial.suggest_int("num_rounds", 50, 200)
 
             def train_fn(X_tr, y_tr, X_v, y_v):
                 dtrain = xgb.DMatrix(X_tr, label=y_tr, feature_names=feature_names)
@@ -517,8 +519,9 @@ class LogisticTuner:
     Optuna-based tuning for LogisticRegression (fallback when LightGBM unavailable).
 
     Searches over:
-    - C (regularization): [0.001, 100]
-    - penalty: l1, l2
+    - C (regularization): [0.01, 10.0]
+    - penalty: l1, l2, elasticnet
+    - l1_ratio (for elasticnet): [0.1, 0.9]
     """
 
     def __init__(
@@ -543,18 +546,29 @@ class LogisticTuner:
         y: np.ndarray,
         sort_keys: np.ndarray,
     ) -> TuningResult:
-        # FIX S1: pair_size=2 keeps symmetric game pairs together in CV folds.
-        cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=2)
+        # B3: pair_size=1 — symmetric augmentation was removed.
+        cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=1)
 
         def objective(trial: optuna.Trial) -> float:
-            C = trial.suggest_float("C", 0.001, 100.0, log=True)
-            penalty = trial.suggest_categorical("penalty", ["l1", "l2"])
-            solver = "saga" if penalty == "l1" else "lbfgs"
+            # FIX 7.2: Tightened C range [0.01, 10.0] (was [0.001, 100]).
+            # High C values effectively disable regularization.
+            # Added elasticnet with tunable l1_ratio for correlated features.
+            C = trial.suggest_float("C", 0.01, 10.0, log=True)
+            penalty = trial.suggest_categorical("penalty", ["l1", "l2", "elasticnet"])
+            # saga solver required for l1 and elasticnet
+            solver = "saga"
+            l1_ratio = None
+            if penalty == "elasticnet":
+                l1_ratio = trial.suggest_float("l1_ratio", 0.1, 0.9)
 
             def train_fn(X_tr, y_tr, X_v, y_v):
-                model = LogisticRegression(
-                    C=C, penalty=penalty, solver=solver, max_iter=2000, random_state=self.random_seed
+                kwargs = dict(
+                    C=C, penalty=penalty, solver=solver, max_iter=2000,
+                    random_state=self.random_seed,
                 )
+                if l1_ratio is not None:
+                    kwargs["l1_ratio"] = l1_ratio
+                model = LogisticRegression(**kwargs)
                 model.fit(X_tr, y_tr)
                 return model
 
