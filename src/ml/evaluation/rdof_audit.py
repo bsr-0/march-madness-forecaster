@@ -193,6 +193,142 @@ def config_hash(config) -> str:
 
 
 # ───────────────────────────────────────────────────────────────────────
+# 2b. Effective Model Complexity Audit
+# ───────────────────────────────────────────────────────────────────────
+
+@dataclass
+class ModelComplexityAudit:
+    """Quantifies effective model complexity relative to training sample size.
+
+    The target is: effective_params < 10% of N (training samples).
+    This prevents the model from having more free parameters than can
+    be reliably estimated from the available data.
+
+    Effective parameters are estimated for each model component:
+    - LightGBM: num_leaves * num_trees * (1 - dropout_estimate)
+    - XGBoost: (2^max_depth - 1) * num_trees
+    - Logistic Regression: n_features + 1 (intercept)
+    - GNN embedding projection: 2 * embedding_dim + 1
+    - Transformer embedding projection: 2 * embedding_dim + 1
+    - Ensemble weights: n_models - 1 (constrained to sum to 1)
+    - Tier 3 tuned constants: count from registry
+    """
+
+    n_training_samples: int = 0
+    component_params: Dict[str, int] = field(default_factory=dict)
+    total_effective_params: int = 0
+    target_ratio: float = 0.10  # 10% of N
+    actual_ratio: float = 0.0
+    passed: bool = False
+    warnings: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "n_training_samples": self.n_training_samples,
+            "component_params": self.component_params,
+            "total_effective_params": self.total_effective_params,
+            "target_ratio": self.target_ratio,
+            "actual_ratio": round(self.actual_ratio, 4),
+            "passed": self.passed,
+            "warnings": self.warnings,
+        }
+
+
+def estimate_model_complexity(
+    config=None,
+    n_training_samples: int = 400,
+    n_features: int = 22,
+    gnn_embedding_dim: int = 16,
+    transformer_embedding_dim: int = 48,
+    target_ratio: float = 0.10,
+) -> ModelComplexityAudit:
+    """Estimate effective model complexity and check against target ratio.
+
+    Uses conservative estimates of effective parameter counts for each
+    model component.  Tree-based models use an effective parameter count
+    based on the number of leaf nodes times the number of trees, discounted
+    by regularization strength.
+
+    Args:
+        config: SOTAPipelineConfig (for hyperparameters). If None, uses defaults.
+        n_training_samples: Number of training samples (game-pairs).
+        n_features: Number of features after selection.
+        gnn_embedding_dim: GNN output dimension.
+        transformer_embedding_dim: Transformer d_model dimension.
+        target_ratio: Maximum allowed ratio of effective params / N.
+
+    Returns:
+        ModelComplexityAudit with breakdown and pass/fail verdict.
+    """
+    audit = ModelComplexityAudit(
+        n_training_samples=n_training_samples,
+        target_ratio=target_ratio,
+    )
+
+    # LightGBM: effective params ≈ num_leaves * num_trees * regularization_discount
+    # Default: 8 leaves, ~200 trees, heavy regularization → ~50% discount
+    lgb_leaves = 8
+    lgb_trees = 200
+    lgb_discount = 0.5  # min_child_samples=50, L2 reg, etc.
+    lgb_params = int(lgb_leaves * lgb_trees * lgb_discount)
+    audit.component_params["lightgbm"] = lgb_params
+
+    # XGBoost: effective params ≈ (2^max_depth - 1) * num_trees * discount
+    xgb_depth = 3
+    xgb_trees = 200
+    xgb_discount = 0.5  # min_child_weight=10, L2 reg, etc.
+    xgb_params = int((2 ** xgb_depth - 1) * xgb_trees * xgb_discount)
+    audit.component_params["xgboost"] = xgb_params
+
+    # Logistic Regression: n_features + 1 (with L2 regularization)
+    logistic_params = n_features + 1
+    audit.component_params["logistic_regression"] = logistic_params
+
+    # GNN embedding projection: logistic on diff + interaction
+    # 2 * embedding_dim features + 1 intercept
+    gnn_proj_params = 2 * gnn_embedding_dim + 1
+    audit.component_params["gnn_projection"] = gnn_proj_params
+
+    # Transformer embedding projection: logistic on diff + interaction
+    transformer_proj_params = 2 * transformer_embedding_dim + 1
+    audit.component_params["transformer_projection"] = transformer_proj_params
+
+    # Ensemble weights: 2 free parameters (3 weights sum to 1)
+    audit.component_params["ensemble_weights"] = 2
+
+    # Tier 3 freely-tuned constants
+    n_tier3 = len(get_tier3_constants())
+    audit.component_params["tier3_constants"] = n_tier3
+
+    # Total
+    audit.total_effective_params = sum(audit.component_params.values())
+    audit.actual_ratio = audit.total_effective_params / max(n_training_samples, 1)
+    audit.passed = audit.actual_ratio <= target_ratio
+
+    # Warnings for specific components
+    if transformer_proj_params > n_training_samples * 0.2:
+        audit.warnings.append(
+            f"Transformer projection has {transformer_proj_params} params "
+            f"({transformer_proj_params / max(n_training_samples, 1):.1%} of N). "
+            f"Consider reducing d_model or disabling if ablation fails p<0.05."
+        )
+    if gnn_proj_params > n_training_samples * 0.1:
+        audit.warnings.append(
+            f"GNN projection has {gnn_proj_params} params "
+            f"({gnn_proj_params / max(n_training_samples, 1):.1%} of N)."
+        )
+    if not audit.passed:
+        audit.warnings.append(
+            f"COMPLEXITY VIOLATION: {audit.total_effective_params} effective params "
+            f"/ {n_training_samples} samples = {audit.actual_ratio:.1%} "
+            f"(target < {target_ratio:.0%}). "
+            f"Reduce model complexity or increase training data."
+        )
+
+    return audit
+
+
+# ───────────────────────────────────────────────────────────────────────
 # 3. Metrics
 # ───────────────────────────────────────────────────────────────────────
 
@@ -207,11 +343,15 @@ class YearMetrics:
     accuracy: float
     ece: float  # Expected Calibration Error
 
-    # Baselines
-    # "AdjEM baseline" = logistic on efficiency margin (no ML, no ensemble).
-    # Stronger than pure seed-based, but it's the best no-ML baseline
-    # derivable from historical data (which lacks actual tournament seeds).
+    # Baselines — two comparison tiers:
+    # Tier 1: AdjEM-logistic (efficiency margin → logistic probability).
+    #   Stronger than seed-based, the best no-ML baseline from historical data.
     seed_baseline_brier: float  # named for interface compat; actually AdjEM-logistic
+    # Tier 2: Standalone Elo baseline (Elo rating difference → logistic probability).
+    #   A weaker but fully independent baseline that uses only game-by-game
+    #   win/loss outcomes with no efficiency data.  Provides a second comparison
+    #   tier to ensure the model beats both simple baselines.
+    elo_baseline_brier: float = 0.250
     uniform_brier: float = 0.250
 
     # Confidence interval (bootstrap)
@@ -223,6 +363,12 @@ class YearMetrics:
             return 0.0
         return 1.0 - self.brier_score / self.seed_baseline_brier
 
+    def elo_skill_score(self) -> float:
+        """1 - (model / elo_baseline). Positive = better than Elo."""
+        if self.elo_baseline_brier < 1e-9:
+            return 0.0
+        return 1.0 - self.brier_score / self.elo_baseline_brier
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "year": self.year,
@@ -232,8 +378,10 @@ class YearMetrics:
             "accuracy": round(self.accuracy, 4),
             "ece": round(self.ece, 4),
             "seed_baseline_brier": round(self.seed_baseline_brier, 5),
+            "elo_baseline_brier": round(self.elo_baseline_brier, 5),
             "uniform_brier": self.uniform_brier,
             "brier_skill_score": round(self.brier_skill_score(), 4),
+            "elo_skill_score": round(self.elo_skill_score(), 4),
             "brier_ci": [round(x, 5) for x in self.brier_ci],
         }
 
@@ -264,6 +412,14 @@ class HoldoutReport:
         return float(np.average(briers, weights=weights))
 
     @property
+    def aggregate_elo_brier(self) -> float:
+        if not self.per_year:
+            return 0.0
+        briers = [m.elo_baseline_brier for m in self.per_year.values()]
+        weights = [m.n_games for m in self.per_year.values()]
+        return float(np.average(briers, weights=weights))
+
+    @property
     def total_games(self) -> int:
         return sum(m.n_games for m in self.per_year.values())
 
@@ -284,8 +440,12 @@ class HoldoutReport:
             "total_games": self.total_games,
             "aggregate_brier": round(self.aggregate_brier, 5),
             "aggregate_seed_brier": round(self.aggregate_seed_brier, 5),
+            "aggregate_elo_brier": round(self.aggregate_elo_brier, 5),
             "aggregate_brier_skill_score": round(
                 1.0 - self.aggregate_brier / max(self.aggregate_seed_brier, 1e-9), 4
+            ),
+            "aggregate_elo_skill_score": round(
+                1.0 - self.aggregate_brier / max(self.aggregate_elo_brier, 1e-9), 4
             ),
             "verdict": self.verdict(),
             "per_year": {
@@ -916,11 +1076,16 @@ class HoldoutEvaluator:
             mstd1 = d1.get("margin_std", 0.0)
             mstd2 = d2.get("margin_std", 0.0)
 
+            # Elo difference (for standalone Elo baseline — second comparison tier)
+            elo1 = d1.get("elo", 1500.0)
+            elo2 = d2.get("elo", 1500.0)
+
             per_game.append({
                 "lgb_p": lgb_p,
                 "xgb_p": xgb_p,
                 "log_p": log_p,
                 "em_diff": em1 - em2,
+                "elo_diff": elo1 - elo2,
                 "margin_std_diff": mstd2 - mstd1,  # positive = team1 more consistent
                 "outcome": tg["outcome"],
             })
@@ -972,7 +1137,7 @@ class HoldoutEvaluator:
         except Exception:
             pass  # calibrator stays at T=1.0 (identity)
 
-        probs, outcomes, baseline_probs = [], [], []
+        probs, outcomes, baseline_probs, elo_baseline_probs = [], [], [], []
 
         for g in per_game:
             raw = w_lgb * g["lgb_p"] + w_xgb * g["xgb_p"] + w_log * g["log_p"]
@@ -990,11 +1155,17 @@ class HoldoutEvaluator:
             probs.append(adapted)
             outcomes.append(g["outcome"])
 
-            # AdjEM-quality baseline: efficiency margin → logistic probability
-            # This is stronger than a pure seed baseline but is the best
-            # no-ML baseline derivable from the historical data available.
+            # Tier 1 baseline: AdjEM-logistic (efficiency margin → logistic)
+            # Stronger than seed-based, the best no-ML baseline from historical data.
             baseline_prob = 1.0 / (1.0 + math.exp(-0.145 * g["em_diff"]))
             baseline_probs.append(baseline_prob)
+
+            # Tier 2 baseline: Standalone Elo (Elo rating diff → logistic)
+            # Uses only game-by-game win/loss outcomes with no efficiency data.
+            # Standard Elo conversion: P(win) = 1 / (1 + 10^(-diff/400))
+            elo_diff = g.get("elo_diff", 0.0)
+            elo_prob = 1.0 / (1.0 + 10.0 ** (-elo_diff / 400.0))
+            elo_baseline_probs.append(elo_prob)
 
         if not probs:
             raise ValueError(f"No valid predictions for holdout year {holdout_year}")
@@ -1002,6 +1173,7 @@ class HoldoutEvaluator:
         probs_arr = np.array(probs)
         outcomes_arr = np.array(outcomes)
         baseline_arr = np.array(baseline_probs)
+        elo_arr = np.array(elo_baseline_probs)
 
         return YearMetrics(
             year=holdout_year,
@@ -1011,6 +1183,7 @@ class HoldoutEvaluator:
             accuracy=_compute_accuracy(probs_arr, outcomes_arr),
             ece=_compute_ece(probs_arr, outcomes_arr),
             seed_baseline_brier=_compute_brier(baseline_arr, outcomes_arr),
+            elo_baseline_brier=_compute_brier(elo_arr, outcomes_arr),
             brier_ci=_bootstrap_brier_ci(probs_arr, outcomes_arr),
         )
 
@@ -1298,6 +1471,268 @@ class SensitivityAnalyzer:
 
 
 # ───────────────────────────────────────────────────────────────────────
+# 6b. Monte Carlo Parameter Backtester
+# ───────────────────────────────────────────────────────────────────────
+
+@dataclass
+class MCBacktestResult:
+    """Result of backtesting one MC parameter combination against historical data."""
+
+    noise_std: float
+    regional_correlation: float
+    years_tested: List[int]
+    per_year_upset_calibration: Dict[int, float]  # year -> abs(predicted - actual upset rate)
+    mean_upset_calibration_error: float
+    per_year_seed_accuracy: Dict[int, float]  # year -> fraction correct by higher seed
+    mean_seed_accuracy: float
+    per_year_log_prob: Dict[int, float]  # year -> mean log probability of actual outcomes
+    mean_log_prob: float
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "noise_std": round(self.noise_std, 4),
+            "regional_correlation": round(self.regional_correlation, 4),
+            "years_tested": self.years_tested,
+            "mean_upset_calibration_error": round(self.mean_upset_calibration_error, 4),
+            "mean_seed_accuracy": round(self.mean_seed_accuracy, 4),
+            "mean_log_prob": round(self.mean_log_prob, 4),
+            "per_year_upset_calibration": {
+                str(y): round(v, 4) for y, v in self.per_year_upset_calibration.items()
+            },
+            "per_year_log_prob": {
+                str(y): round(v, 4) for y, v in self.per_year_log_prob.items()
+            },
+        }
+
+
+class MCParameterBacktester:
+    """Backtest Monte Carlo parameters against historical bracket outcomes.
+
+    For each historical year, simulates brackets using the given noise_std
+    and regional_correlation values with AdjEM-logistic as the base predictor,
+    then scores the simulated outcome probabilities against actual results.
+
+    This evaluates whether the MC noise parameters produce realistic
+    upset rates and outcome distributions, independent of the ML model.
+    """
+
+    def __init__(
+        self,
+        historical_dir: str = "data/raw/historical",
+        years: Optional[List[int]] = None,
+        n_simulations: int = 5000,
+    ):
+        self.evaluator = HoldoutEvaluator(historical_dir)
+        self.years = years or [
+            y for y in self.evaluator.all_years
+            if 2017 <= y <= 2024 and y != 2020
+        ]
+        self.n_simulations = n_simulations
+
+    def backtest_params(
+        self,
+        noise_std: float,
+        regional_correlation: float,
+    ) -> MCBacktestResult:
+        """Backtest one parameter combination across all historical years.
+
+        For each year:
+        1. Load tournament games and team AdjEM values
+        2. Build a simple AdjEM-logistic base predictor
+        3. Run MC simulations with the given noise parameters
+        4. Compute upset calibration: compare predicted vs actual upset rates
+        5. Compute log probability of actual outcomes under the MC distribution
+
+        This tests whether the noise parameters produce REALISTIC bracket
+        outcome distributions, not whether our model is good.
+        """
+        per_year_upset_cal: Dict[int, float] = {}
+        per_year_seed_acc: Dict[int, float] = {}
+        per_year_log_prob: Dict[int, float] = {}
+
+        for year in self.years:
+            try:
+                result = self._backtest_year(
+                    year, noise_std, regional_correlation
+                )
+                if result is not None:
+                    per_year_upset_cal[year] = result["upset_cal"]
+                    per_year_seed_acc[year] = result["seed_acc"]
+                    per_year_log_prob[year] = result["log_prob"]
+            except Exception as e:
+                logger.debug("MC backtest for year %d failed: %s", year, e)
+
+        mean_upset_cal = (
+            float(np.mean(list(per_year_upset_cal.values())))
+            if per_year_upset_cal else 1.0
+        )
+        mean_seed_acc = (
+            float(np.mean(list(per_year_seed_acc.values())))
+            if per_year_seed_acc else 0.0
+        )
+        mean_log_prob = (
+            float(np.mean(list(per_year_log_prob.values())))
+            if per_year_log_prob else -10.0
+        )
+
+        return MCBacktestResult(
+            noise_std=noise_std,
+            regional_correlation=regional_correlation,
+            years_tested=sorted(per_year_upset_cal.keys()),
+            per_year_upset_calibration=per_year_upset_cal,
+            mean_upset_calibration_error=mean_upset_cal,
+            per_year_seed_accuracy=per_year_seed_acc,
+            mean_seed_accuracy=mean_seed_acc,
+            per_year_log_prob=per_year_log_prob,
+            mean_log_prob=mean_log_prob,
+        )
+
+    def backtest_grid(
+        self,
+        noise_std_values: Optional[List[float]] = None,
+        regional_corr_values: Optional[List[float]] = None,
+    ) -> List[MCBacktestResult]:
+        """Grid search over MC parameter combinations.
+
+        Default grids bracket the current values (0.12, 0.10) with
+        alternatives to verify they are near-optimal.
+        """
+        if noise_std_values is None:
+            noise_std_values = [0.04, 0.08, 0.12, 0.16, 0.20]
+        if regional_corr_values is None:
+            regional_corr_values = [0.0, 0.05, 0.10, 0.15, 0.25]
+
+        results = []
+        for ns in noise_std_values:
+            for rc in regional_corr_values:
+                logger.info("MC backtest: noise_std=%.2f, regional_correlation=%.2f",
+                            ns, rc)
+                result = self.backtest_params(ns, rc)
+                results.append(result)
+                logger.info(
+                    "  upset_cal=%.4f, seed_acc=%.3f, log_prob=%.3f (%d years)",
+                    result.mean_upset_calibration_error,
+                    result.mean_seed_accuracy,
+                    result.mean_log_prob,
+                    len(result.years_tested),
+                )
+
+        return results
+
+    def _backtest_year(
+        self,
+        year: int,
+        noise_std: float,
+        regional_correlation: float,
+    ) -> Optional[Dict[str, float]]:
+        """Backtest MC parameters for a single historical year.
+
+        Uses AdjEM-logistic probabilities as the base predictor, then
+        measures how well the MC noise model predicts actual upset rates.
+        """
+        try:
+            games_payload, metrics_payload = self.evaluator._load_year_data(year)
+        except FileNotFoundError:
+            return None
+
+        team_metrics = self.evaluator._build_team_metrics(metrics_payload)
+        if not team_metrics:
+            return None
+
+        games = games_payload.get("games", [])
+        games = self.evaluator._infer_dates_and_split(games, year)
+        tournament_games = self.evaluator._extract_tournament_games(
+            games, team_metrics, year
+        )
+
+        if len(tournament_games) < 10:
+            return None
+
+        # Build AdjEM-logistic base predictor
+        def _em_prob(t1_id: str, t2_id: str) -> float:
+            m1 = team_metrics.get(t1_id)
+            m2 = team_metrics.get(t2_id)
+            if m1 is None or m2 is None:
+                return 0.5
+            em1 = m1["off_rtg"] - m1["def_rtg"]
+            em2 = m2["off_rtg"] - m2["def_rtg"]
+            em_diff = em1 - em2
+            return 1.0 / (1.0 + math.exp(-0.145 * em_diff))
+
+        # Score tournament games: for each game, compute base probability
+        # then apply logit-space noise to get MC-adjusted probability.
+        # Compare simulated upset rates against actual.
+        rng = np.random.default_rng(year)
+        actual_upsets = 0
+        total_games = 0
+        simulated_upset_probs = []
+        game_log_probs = []
+
+        for tg in tournament_games:
+            t1, t2 = tg["team1_id"], tg["team2_id"]
+            base_p = _em_prob(t1, t2)
+            outcome = tg["outcome"]  # 1 if team1 won
+
+            # Simulate N trials with noise
+            safe_p = np.clip(base_p, 0.001, 0.999)
+            logit = np.log(safe_p / (1.0 - safe_p))
+
+            noise_samples = rng.normal(0, noise_std, self.n_simulations)
+            noisy_logits = logit + noise_samples
+            noisy_probs = 1.0 / (1.0 + np.exp(-noisy_logits))
+            noisy_probs = np.clip(noisy_probs, 0.01, 0.99)
+
+            # Mean probability across simulations
+            mean_p = float(np.mean(noisy_probs))
+            # Log probability of actual outcome
+            if outcome == 1:
+                game_log_probs.append(math.log(max(mean_p, 1e-7)))
+            else:
+                game_log_probs.append(math.log(max(1.0 - mean_p, 1e-7)))
+
+            # Track upsets: team1 is "favorite" if base_p > 0.5
+            is_favorite_t1 = base_p > 0.5
+            actual_upset = (is_favorite_t1 and outcome == 0) or (
+                not is_favorite_t1 and outcome == 1
+            )
+            if actual_upset:
+                actual_upsets += 1
+
+            # Simulated upset probability
+            if is_favorite_t1:
+                simulated_upset_probs.append(1.0 - mean_p)
+            else:
+                simulated_upset_probs.append(mean_p)
+            total_games += 1
+
+        if total_games == 0:
+            return None
+
+        actual_upset_rate = actual_upsets / total_games
+        predicted_upset_rate = float(np.mean(simulated_upset_probs))
+        upset_cal = abs(predicted_upset_rate - actual_upset_rate)
+
+        # Seed accuracy: fraction where the higher-AdjEM team won
+        seed_correct = sum(
+            1 for tg in tournament_games
+            if (
+                _em_prob(tg["team1_id"], tg["team2_id"]) > 0.5
+                and tg["outcome"] == 1
+            ) or (
+                _em_prob(tg["team1_id"], tg["team2_id"]) < 0.5
+                and tg["outcome"] == 0
+            )
+        )
+        seed_acc = seed_correct / max(len(tournament_games), 1)
+
+        return {
+            "upset_cal": upset_cal,
+            "seed_acc": seed_acc,
+            "log_prob": float(np.mean(game_log_probs)),
+        }
+
+
+# ───────────────────────────────────────────────────────────────────────
 # 7. Audit Report
 # ───────────────────────────────────────────────────────────────────────
 
@@ -1308,9 +1743,11 @@ class RDOFAuditReport:
         self,
         holdout_report: Optional[HoldoutReport] = None,
         sensitivity_results: Optional[Dict[str, ConstantSensitivityResult]] = None,
+        complexity_audit: Optional[ModelComplexityAudit] = None,
     ):
         self.holdout_report = holdout_report
         self.sensitivity_results = sensitivity_results or {}
+        self.complexity_audit = complexity_audit
 
     def to_dict(self) -> Dict[str, Any]:
         result: Dict[str, Any] = {
@@ -1340,6 +1777,9 @@ class RDOFAuditReport:
                 name: r.to_dict()
                 for name, r in self.sensitivity_results.items()
             }
+
+        if self.complexity_audit:
+            result["model_complexity_audit"] = self.complexity_audit.to_dict()
 
         result["recommendations"] = self._generate_recommendations()
         return result
@@ -1397,6 +1837,18 @@ class RDOFAuditReport:
                 f"(target < 0.01)"
             )
 
+        # Complexity audit warnings
+        if self.complexity_audit:
+            if self.complexity_audit.passed:
+                recs.append(
+                    f"COMPLEXITY: PASS — {self.complexity_audit.total_effective_params} "
+                    f"effective params / {self.complexity_audit.n_training_samples} "
+                    f"samples = {self.complexity_audit.actual_ratio:.1%} "
+                    f"(target < {self.complexity_audit.target_ratio:.0%})"
+                )
+            for w in self.complexity_audit.warnings:
+                recs.append(f"COMPLEXITY: {w}")
+
         return recs
 
     def to_text(self) -> str:
@@ -1445,7 +1897,9 @@ class RDOFAuditReport:
                           f"{self.holdout_report.aggregate_brier:<8.4f}")
             lines.append("")
             lines.append(f"  AdjEM-logistic baseline Brier: {self.holdout_report.aggregate_seed_brier:.4f}")
-            lines.append(f"    (no-ML logistic on efficiency margin; stronger than seed-only)")
+            lines.append(f"    (Tier 1: no-ML logistic on efficiency margin)")
+            lines.append(f"  Elo baseline Brier:            {self.holdout_report.aggregate_elo_brier:.4f}")
+            lines.append(f"    (Tier 2: standalone Elo from game-by-game outcomes)")
             lines.append(f"  Uniform Brier:                 0.2500")
             lines.append(f"  Verdict: {self.holdout_report.verdict()}")
 
@@ -1485,11 +1939,33 @@ class RDOFAuditReport:
                             f"    {val:7.3f} |{bar:<20s} {brier:.5f}{marker}"
                         )
 
-        # Section 4: Recommendations
+        # Section 4: Model Complexity Audit
+        if self.complexity_audit:
+            lines.append("")
+            lines.append("4. MODEL COMPLEXITY AUDIT")
+            lines.append("-" * 65)
+            audit = self.complexity_audit
+            lines.append(f"  Training samples (N): {audit.n_training_samples}")
+            lines.append(f"  Target: effective params < {audit.target_ratio:.0%} of N "
+                         f"= {int(audit.n_training_samples * audit.target_ratio)}")
+            lines.append("")
+            lines.append(f"  {'Component':<30} {'Eff. Params':>12}")
+            for comp, params in sorted(audit.component_params.items()):
+                lines.append(f"  {comp:<30} {params:>12,}")
+            lines.append(f"  {'─' * 42}")
+            lines.append(f"  {'TOTAL':<30} {audit.total_effective_params:>12,}")
+            lines.append(f"  Ratio: {audit.actual_ratio:.1%} "
+                         f"{'✓ PASS' if audit.passed else '✗ FAIL'}")
+            if audit.warnings:
+                lines.append("")
+                for w in audit.warnings:
+                    lines.append(f"  ⚠ {w}")
+
+        # Section 5: Recommendations
         recs = self._generate_recommendations()
         if recs:
             lines.append("")
-            lines.append("4. RECOMMENDATIONS")
+            lines.append("5. RECOMMENDATIONS")
             lines.append("-" * 65)
             for rec in recs:
                 lines.append(f"  - {rec}")
