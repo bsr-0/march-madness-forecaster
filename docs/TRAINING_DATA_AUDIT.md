@@ -8,11 +8,11 @@
 
 ## Executive Summary
 
-The pipeline is more sophisticated than most March Madness projects, with genuine leakage controls and temporal safeguards. However, I identified **13 issues** ranging from silent data corruption risks to structural train/test distribution mismatches that could meaningfully degrade out-of-sample prediction quality.
+The pipeline is more sophisticated than most March Madness projects, with genuine leakage controls and temporal safeguards. However, I identified **17 issues** ranging from silent data corruption risks to structural train/test distribution mismatches that could meaningfully degrade out-of-sample prediction quality.
 
-**Critical (3)**: Issues that likely cause measurable accuracy degradation
-**Serious (5)**: Issues that introduce noise or silent failures
-**Moderate (5)**: Design concerns that create maintenance/correctness risk
+**Critical (4)**: Issues that likely cause measurable accuracy degradation
+**Serious (6)**: Issues that introduce noise or silent failures
+**Moderate (7)**: Design concerns that create maintenance/correctness risk
 
 ---
 
@@ -98,7 +98,24 @@ if len(unique_dates) <= 1 and len(games) > 50:
 
 **Impact**: Rolling metrics (Elo, momentum, luck) are computed on a shuffled game sequence for 2022-2024. This introduces systematic noise in features that are presented to the model as if they were computed on the real chronological order.
 
+**Note**: This problem extends beyond 2022-2024. Inspection of the cbbpy cache reveals that seasons **2010 through 2024** (15 of 16 historical backfill years) all have collapsed single-date data. Only 2005-2009 and 2025 have real per-game dates. All time-dependent features (rest_days, back_to_back, games_in_last_7_days, recency-weighted rolling stats) in the materialized parquet files are therefore meaningless for 2010-2024.
+
 **Recommendation**: Use the actual game dates from the `team_games` box-score data (which should have them from cbbpy), or scrape game dates separately and merge. Alternatively, acknowledge this limitation and reduce the weight on Elo/momentum features for years without real dates.
+
+---
+
+### C4. `sports_reference_2026.json` Cache Is All-Zeros Skeleton
+
+**Location**: `data/raw/cache/sports_reference_2026.json`
+**Severity**: CRITICAL
+
+This cache file exists with 365 teams but every field is zero (`pace: 0.0`, `off_rtg: 0.0`, `def_rtg: 0.0`). The schema is also degraded — only 4 fields (`team_name`, `pace`, `off_rtg`, `def_rtg`) vs the standard 8 fields (`team_name`, `pace`, `off_rtg`, `def_rtg`, `wins`, `losses`, `srs`, `sos`).
+
+The `_has_critical_zeros()` check in the SR scraper should reject the all-zero `def_rtg`, forcing a re-fetch. However, if the re-fetch fails (network error, rate limit), the missing `wins`, `losses`, `srs`, and `sos` fields will silently produce zeros downstream, poisoning current-season team metrics.
+
+**Impact**: If this cached file is ever loaded without re-validation, every team's efficiency metrics become zero, making all predictions meaningless.
+
+**Recommendation**: Delete the corrupted cache file. Add a schema-completeness check that rejects files missing required fields (not just zero-value checks).
 
 ---
 
@@ -260,6 +277,53 @@ Both `_get_ff` (line 3621) and `_get_sh` (line 3645) use the same dangerous bidi
 
 ---
 
+### S6. Duplicate Normalization Functions With Divergent Behavior
+
+**Location**: `src/data/scrapers/sports_reference.py` (`_normalize_id`) vs `src/data/normalize.py` (`normalize_team_id`)
+
+The Sports Reference scraper has its own `_normalize_id` that diverges from the shared `normalize_team_id`:
+
+| Input | SR `_normalize_id` | Shared `normalize_team_id` |
+|-------|--------------------|-----------------------------|
+| `"AkronNCAA"` | `"akron"` (strips NCAA first) | `"akronncaa"` (NCAA not stripped) |
+| `"Loyola (IL)NCAA"` | `"loyola__il"` (double underscore) | `"loyola_il_ncaa"` (single underscore) |
+| `"Saint Mary's (CA)NCAA"` | `"saint_mary_s__ca"` | `"saint_mary_s_ca_ncaa"` |
+
+The SR scraper strips the NCAA suffix *before* ID normalization, while the shared function does not. The SR scraper also preserves double underscores, while the shared function collapses them. This causes silent join failures when downstream code expects one format but receives the other.
+
+**Impact**: Teams with punctuation in their names (Saint Mary's, Loyola IL, St. Peter's) may fail to join between data sources that use different normalizers.
+
+**Recommendation**: Consolidate to a single normalization function. The SR scraper's NCAA-stripping behavior should be moved to the shared normalize module.
+
+---
+
+### M6. 100% Null Columns in Processed Feature Tables
+
+**Location**: `data/processed/matchup_features_2022_2025.parquet`
+
+24 columns are 100% null across all 24,719 rows:
+- All `is_home`/`is_away`/`is_neutral_site` columns (6)
+- All `prior_prop_*` columns (18 — proprietary metrics not available historically)
+- `prior_season_*` columns are ~79% null, `prior_conference_*` ~78% null
+
+The materialization manifest declares these as "covered" in the coverage report, which is misleading.
+
+**Impact**: These empty features add dimensionality without signal. While the model should learn to ignore them, they waste computation and inflate feature counts.
+
+---
+
+### M7. Tournament Matchup Features Only Contain 2025 Data (36 rows)
+
+**Location**: `data/processed/tournament_matchup_features_2022_2025.parquet`
+
+Despite the filename spanning 2022-2025, this file contains only 36 rows, all from season 2025. No tournament matchups from 2022, 2023, or 2024 are materialized.
+
+**Impact**: The tournament matchup feature table is not usable for multi-year tournament outcome training. Tournament-specific features (seed interactions, region context) can only be learned from 36 games — too few for reliable learning.
+
+**Recommendation**: Investigate why the materializer fails to produce tournament matchups for 2022-2024. The most likely cause is that tournament games in those years are filtered by the collapsed-date issue (C3) — if all games are dated before the tournament window, none pass the `_is_tournament_game` filter.
+
+---
+
 ## ADDITIONAL OBSERVATIONS
 
 ### O1. Feature Coverage Is Honest and Well-Documented
@@ -291,26 +355,32 @@ Using historical tournament games (FIX 8.1) to augment the calibration pool is a
 |----|----------|-------|---------------|---------|
 | C1 | CRITICAL | 57/77 features zero in historical training data | Distribution mismatch between train/inference | Yes — derive more features from box scores |
 | C2 | CRITICAL | drb_rate and opp_ft_rate missing from historical Four Factors | 2 predictive features always zero in training | Yes — extend scraper or compute from team_games |
-| C3 | CRITICAL | 2022-2024 games all share single date; synthetic chronology | Elo, momentum, luck computed on wrong game order | Partially — scrape real dates or weight features down |
+| C3 | CRITICAL | 2010-2024 games all share single date; synthetic chronology | Elo, momentum, luck computed on wrong game order | Partially — scrape real dates or weight features down |
+| C4 | CRITICAL | sports_reference_2026.json cache is all-zeros skeleton | Could poison current-season predictions | Yes — delete corrupted cache, add schema check |
 | S1 | SERIOUS | Zero direct team ID matches between games and metrics | Relies entirely on fuzzy resolution | Yes — build explicit mapping file |
 | S2 | SERIOUS | def_rtg precision varies across years (different sources) | Possible semantic inconsistency | Audit — verify def_rtg meaning per source |
 | S3 | SERIOUS | PIT adjustment only for current year, not historical | Train/inference distribution mismatch | Hard — requires per-game metrics snapshots |
 | S4 | SERIOUS | Bidirectional prefix matching in Four Factors lookup | Wrong team's stats silently used | Yes — use resolver instead of prefix matching |
 | S5 | SERIOUS | Label from lead_history[-1] fragile for incomplete games | Mislabeled training samples | Yes — use score-based labels as fallback |
+| S6 | SERIOUS | Duplicate normalization functions with divergent behavior | Silent join failures for punctuated names | Yes — consolidate normalizers |
 | M1 | MODERATE | 2025 data includes non-D1 games | Inflated game count, resolution rate noise | Filter by known D1 team list |
 | M2 | MODERATE | Tournament seed IDs inconsistent with metric IDs | Seed features may be missing for some teams | Yes — add to alias table |
 | M3 | MODERATE | Coarse sort keys for historical years | Minor ordering artifact | Low priority |
 | M4 | MODERATE | 2020 exclusion is all-or-nothing | Wastes regular-season games | Could include non-tournament 2020 games |
 | M5 | MODERATE | Duplicated fragile prefix matching pattern | Code maintenance risk | Refactor to shared resolver |
+| M6 | MODERATE | 24 columns 100% null in processed matchup features | Wasted dimensionality | Remove or document as unavailable |
+| M7 | MODERATE | Tournament matchup features only contain 2025 (36 rows) | No multi-year tournament training data | Fix date handling (C3) likely resolves this |
 
 ---
 
 ## RECOMMENDED PRIORITY ORDER
 
-1. **C3**: Fix date handling for 2022-2024 (highest leverage — Elo is used heavily)
-2. **C1**: Derive more features from box-score data for historical years
-3. **C2**: Add drb_rate and opp_ft_rate to historical Four Factors
-4. **S4**: Replace prefix matching with proper team resolver
-5. **S1**: Build comprehensive team ID mapping file
-6. **S5**: Add score-based label fallback
-7. **S2**: Audit def_rtg provenance across years
+1. **C3**: Fix date handling for 2010-2024 (highest leverage — Elo is used heavily, also unblocks M7)
+2. **C4**: Delete corrupted 2026 SR cache file and add schema validation
+3. **C1**: Derive more features from box-score data for historical years
+4. **C2**: Add drb_rate and opp_ft_rate to historical Four Factors
+5. **S4**: Replace prefix matching with proper team resolver
+6. **S6**: Consolidate normalization functions
+7. **S1**: Build comprehensive team ID mapping file
+8. **S5**: Add score-based label fallback
+9. **S2**: Audit def_rtg provenance across years
