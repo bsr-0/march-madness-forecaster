@@ -147,6 +147,278 @@
     },
     {
       "season": 2011,
+      "team_name": "Kansas",
+      "school_slug": "kansas",
+      "team_id": "kansas",
+      "seed": 1,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "Notre Dame",
+      "school_slug": "notre-dame",
+      "team_id": "notre_dame",
+      "seed": 2,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "Purdue",
+      "school_slug": "purdue",
+      "team_id": "purdue",
+      "seed": 3,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "Louisville",
+      "school_slug": "louisville",
+      "team_id": "louisville",
+      "seed": 4,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "Vanderbilt",
+      "school_slug": "vanderbilt",
+      "team_id": "vanderbilt",
+      "seed": 5,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "Georgetown",
+      "school_slug": "georgetown",
+      "team_id": "georgetown",
+      "seed": 6,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "Texas A&M",
+      "school_slug": "texas-am",
+      "team_id": "texas_a_m",
+      "seed": 7,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "UNLV",
+      "school_slug": "nevada-las-vegas",
+      "team_id": "unlv",
+      "seed": 8,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "Illinois",
+      "school_slug": "illinois",
+      "team_id": "illinois",
+      "seed": 9,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "Florida State",
+      "school_slug": "florida-state",
+      "team_id": "florida_state",
+      "seed": 10,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "USC",
+      "school_slug": "southern-california",
+      "team_id": "usc",
+      "seed": 11,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "VCU",
+      "school_slug": "virginia-commonwealth",
+      "team_id": "vcu",
+      "seed": 11,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "Richmond",
+      "school_slug": "richmond",
+      "team_id": "richmond",
+      "seed": 12,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "Morehead State",
+      "school_slug": "morehead-state",
+      "team_id": "morehead_state",
+      "seed": 13,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "Saint Peter's",
+      "school_slug": "saint-peters",
+      "team_id": "saint_peter_s",
+      "seed": 14,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "Akron",
+      "school_slug": "akron",
+      "team_id": "akron",
+      "seed": 15,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "Boston University",
+      "school_slug": "boston-university",
+      "team_id": "boston_university",
+      "seed": 16,
+      "region": "Southeast"
+    },
+    {
+      "season": 2011,
+      "team_name": "Pittsburgh",
+      "school_slug": "pittsburgh",
+      "team_id": "pittsburgh",
+      "seed": 1,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "Florida",
+      "school_slug": "florida",
+      "team_id": "florida",
+      "seed": 2,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "BYU",
+      "school_slug": "brigham-young",
+      "team_id": "byu",
+      "seed": 3,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "Wisconsin",
+      "school_slug": "wisconsin",
+      "team_id": "wisconsin",
+      "seed": 4,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "Kansas State",
+      "school_slug": "kansas-state",
+      "team_id": "kansas_state",
+      "seed": 5,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "St. Mary's",
+      "school_slug": "saint-marys-ca",
+      "team_id": "st_mary_s",
+      "seed": 6,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "UCLA",
+      "school_slug": "ucla",
+      "team_id": "ucla",
+      "seed": 7,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "Butler",
+      "school_slug": "butler",
+      "team_id": "butler",
+      "seed": 8,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "Old Dominion",
+      "school_slug": "old-dominion",
+      "team_id": "old_dominion",
+      "seed": 9,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "Michigan State",
+      "school_slug": "michigan-state",
+      "team_id": "michigan_state",
+      "seed": 10,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "Gonzaga",
+      "school_slug": "gonzaga",
+      "team_id": "gonzaga",
+      "seed": 11,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "Utah State",
+      "school_slug": "utah-state",
+      "team_id": "utah_state",
+      "seed": 12,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "Belmont",
+      "school_slug": "belmont",
+      "team_id": "belmont",
+      "seed": 13,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "Wofford",
+      "school_slug": "wofford",
+      "team_id": "wofford",
+      "seed": 14,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "UC Santa Barbara",
+      "school_slug": "uc-santa-barbara",
+      "team_id": "uc_santa_barbara",
+      "seed": 15,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "Arkansas-Little Rock",
+      "school_slug": "arkansas-little-rock",
+      "team_id": "arkansas_little_rock",
+      "seed": 16,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
+      "team_name": "UNC Asheville",
+      "school_slug": "north-carolina-asheville",
+      "team_id": "unc_asheville",
+      "seed": 16,
+      "region": "Southwest"
+    },
+    {
+      "season": 2011,
       "team_name": "Duke",
       "school_slug": "duke",
       "team_id": "duke",

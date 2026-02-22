@@ -4,14 +4,20 @@ from __future__ import annotations
 
 import difflib
 import json
+import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+
+from ..normalize import normalize_team_id, normalize_team_name, strip_ncaa_suffix, strip_ncaa_suffix_name
+from ..team_name_resolver import TeamNameResolver
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -40,6 +46,7 @@ class HistoricalFeatureMaterializer:
         self.raw_dir = Path(self.config.raw_dir)
         self.output_dir = Path(self.config.output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self._resolver = TeamNameResolver()
 
     def run(self) -> Dict:
         artifacts = self._discover_artifacts()
@@ -150,6 +157,13 @@ class HistoricalFeatureMaterializer:
         rows: List[Dict] = []
         for season_key, paths in artifacts.items():
             season = int(season_key)
+
+            # L1: Skip 2020 (COVID-cancelled tournament) — games exist but
+            # tournament context is missing and season dynamics are atypical.
+            if season == 2020:
+                logger.info("Skipping season 2020 (COVID — no tournament).")
+                continue
+
             path = paths.get("historical_games_json")
             if not path:
                 continue
@@ -159,17 +173,45 @@ class HistoricalFeatureMaterializer:
             with open(p, "r") as f:
                 payload = json.load(f)
             team_games = payload.get("team_games", [])
+            season_rows: List[Dict] = []
             if isinstance(team_games, list) and team_games:
                 for row in team_games:
                     if isinstance(row, dict):
                         row["season"] = int(row.get("season", season))
-                        rows.append(row)
-                continue
-            games = payload.get("games", [])
-            for game in games:
-                if not isinstance(game, dict):
-                    continue
-                rows.extend(self._fallback_team_game_rows(game, season))
+                        season_rows.append(row)
+            else:
+                games = payload.get("games", [])
+                for game in games:
+                    if not isinstance(game, dict):
+                        continue
+                    season_rows.extend(self._fallback_team_game_rows(game, season))
+
+            # C3: Detect single-date placeholder payloads and infer
+            # chronological dates from game_id ordering (same approach as
+            # sota.py _load_year_samples).
+            if season_rows:
+                raw_dates = {str(r.get("date", "")) for r in season_rows}
+                if len(raw_dates) <= 1 and len(season_rows) > 50:
+                    logger.info(
+                        "Season %d: all %d team-game rows share date '%s' — "
+                        "inferring chronological dates from game_id ordering.",
+                        season, len(season_rows), next(iter(raw_dates), "?"),
+                    )
+                    self._infer_dates_from_game_ids(season_rows, season)
+                    # Tag rows so downstream features know dates are synthetic
+                    for r in season_rows:
+                        r["_dates_inferred"] = True
+
+            # H4: Warn about sparse data years
+            if len(season_rows) < 8000 and season_rows:
+                n_games = len({r.get("game_id") for r in season_rows})
+                logger.info(
+                    "Season %d: %d team-game rows (%d games) — below typical "
+                    "~12000 rows. Training signal may be sparse.",
+                    season, len(season_rows), n_games,
+                )
+
+            rows.extend(season_rows)
 
         if not rows:
             raise ValueError("No team-game rows found. Run ingest-historical first.")
@@ -191,12 +233,29 @@ class HistoricalFeatureMaterializer:
         missing = [c for c in required if c not in df.columns]
         if missing:
             raise ValueError(f"Team-game dataset missing required columns: {missing}")
+
+        # Filter outlier / forfeit games: remove rows where either team scored
+        # 0 (forfeits produce extreme efficiency metrics) or where the margin
+        # exceeds 80 points (data entry errors or exhibition-style mismatches).
+        pre_filter = len(df)
+        score_mask = (df["team_score"] > 0) & (df["opponent_score"] > 0)
+        margin_mask = (df["team_score"] - df["opponent_score"]).abs() <= 80
+        df = df[score_mask & margin_mask].reset_index(drop=True)
+        dropped = pre_filter - len(df)
+        if dropped > 0:
+            logger.info(
+                "Filtered %d forfeit/outlier game rows (zero scores or margin > 80).",
+                dropped,
+            )
+
         return df
 
     def _load_team_metrics(self, artifacts: Dict[str, Dict[str, str]]) -> pd.DataFrame:
         rows: List[Dict] = []
         for season_key, paths in artifacts.items():
             season = int(season_key)
+            if season == 2020:
+                continue  # L1: skip COVID year
             path = paths.get("team_metrics_json")
             if not path:
                 continue
@@ -206,18 +265,26 @@ class HistoricalFeatureMaterializer:
             with open(p, "r") as f:
                 payload = json.load(f)
             teams = payload.get("teams", [])
+
+            season_rows: List[Dict] = []
             for row in teams:
                 if not isinstance(row, dict):
                     continue
-                team_id = row.get("team_id") or self._normalize_team_id(row.get("team_name") or row.get("name"))
+                # H1: Strip NCAA suffix from names/IDs before normalizing
+                raw_name = row.get("team_name") or row.get("name") or ""
+                raw_name = strip_ncaa_suffix_name(raw_name)
+                raw_id = row.get("team_id") or ""
+                if raw_id:
+                    raw_id = strip_ncaa_suffix(raw_id)
+                team_id = raw_id or normalize_team_id(raw_name)
                 if not team_id:
                     continue
-                rows.append(
+                season_rows.append(
                     {
                         "season": season,
                         "team_id": team_id,
                         "source_team_id": team_id,
-                        "team_name": row.get("team_name") or row.get("name") or team_id,
+                        "team_name": raw_name or team_id,
                         "conference": row.get("conference") or row.get("conf") or row.get("conference_name") or "",
                         "off_rtg": self._coalesce_numeric(
                             row,
@@ -238,9 +305,73 @@ class HistoricalFeatureMaterializer:
                         "losses": self._to_float(row.get("losses")),
                     }
                 )
+
+            # C1: Detect and warn about mostly-zeroed metric years.
+            # Attempt to backfill off_rtg/def_rtg from game data when >50%
+            # of teams have zero values.
+            if season_rows:
+                zero_count = sum(
+                    1 for r in season_rows
+                    if abs(r.get("off_rtg", 0)) < 1e-6 and abs(r.get("def_rtg", 0)) < 1e-6
+                )
+                total = len(season_rows)
+                if zero_count > total * 0.5:
+                    logger.warning(
+                        "Season %d: %d/%d teams have zeroed off_rtg/def_rtg. "
+                        "Attempting to backfill from game data.",
+                        season, zero_count, total,
+                    )
+                    games_path = paths.get("historical_games_json")
+                    if games_path:
+                        backfill = self._compute_metrics_from_games(games_path)
+                        backfilled = 0
+                        for r in season_rows:
+                            tid = r["team_id"]
+                            if abs(r.get("off_rtg", 0)) < 1e-6 and tid in backfill:
+                                bf = backfill[tid]
+                                r["off_rtg"] = bf.get("off_rtg", r["off_rtg"])
+                                r["def_rtg"] = bf.get("def_rtg", r["def_rtg"])
+                                r["pace"] = bf.get("pace", r["pace"])
+                                backfilled += 1
+                        logger.info(
+                            "Season %d: backfilled metrics for %d/%d zero-metric teams.",
+                            season, backfilled, zero_count,
+                        )
+
+            # Range validation: clamp backfilled/raw metrics to reasonable
+            # D1 basketball ranges.  Values outside these bounds indicate
+            # data errors (e.g. division-by-tiny-possessions artifacts).
+            for r in season_rows:
+                off = r.get("off_rtg", 0)
+                drt = r.get("def_rtg", 0)
+                if off > 0 and (off < 60 or off > 140):
+                    logger.debug(
+                        "Season %d team %s: off_rtg=%.1f outside [60,140], clamping.",
+                        season, r.get("team_id", "?"), off,
+                    )
+                    r["off_rtg"] = max(60.0, min(140.0, off))
+                if drt > 0 and (drt < 60 or drt > 140):
+                    logger.debug(
+                        "Season %d team %s: def_rtg=%.1f outside [60,140], clamping.",
+                        season, r.get("team_id", "?"), drt,
+                    )
+                    r["def_rtg"] = max(60.0, min(140.0, drt))
+                pace = r.get("pace", 0)
+                if pace > 0 and (pace < 40 or pace > 100):
+                    r["pace"] = max(40.0, min(100.0, pace))
+
+            # De-duplicate: if both NCAA-suffixed and base entries exist, keep
+            # the one with non-zero metrics.
+            rows.extend(season_rows)
+
         if not rows:
             return pd.DataFrame(columns=["season", "team_id", "conference"] + self.BASE_PRIOR_METRIC_COLUMNS)
-        return pd.DataFrame(rows).drop_duplicates(subset=["season", "team_id"])
+        df = pd.DataFrame(rows)
+        # Prefer rows with non-zero metrics when duplicates exist
+        df["_has_metrics"] = (df["off_rtg"].abs() > 1e-6).astype(int)
+        df = df.sort_values(["season", "team_id", "_has_metrics"], ascending=[True, True, False])
+        df = df.drop_duplicates(subset=["season", "team_id"]).drop(columns=["_has_metrics"])
+        return df
 
     def _load_optional_prior_sources(self) -> pd.DataFrame:
         season_rows: List[pd.DataFrame] = []
@@ -273,9 +404,12 @@ class HistoricalFeatureMaterializer:
         return out
 
     def _load_tournament_seeds(self, artifacts: Dict[str, Dict[str, str]]) -> pd.DataFrame:
+        import html as _html
         rows: List[Dict] = []
         for season_key, paths in artifacts.items():
             season = int(season_key)
+            if season == 2020:
+                continue  # L1: skip COVID year
             seed_path = paths.get("tournament_seeds_json")
             if not seed_path:
                 default_seed_path = self.historical_dir / f"tournament_seeds_{season}.json"
@@ -288,20 +422,31 @@ class HistoricalFeatureMaterializer:
                 continue
             with open(p, "r") as f:
                 payload = json.load(f)
-            for row in payload.get("teams", []):
+            season_teams = payload.get("teams", [])
+            for row in season_teams:
                 if not isinstance(row, dict):
                     continue
-                team_id = row.get("team_id") or self._normalize_team_id(row.get("team_name"))
+                # C4: Decode HTML entities in team names before normalization
+                raw_name = _html.unescape(row.get("team_name", "") or "")
+                team_id = normalize_team_id(raw_name) if raw_name else (row.get("team_id") or "")
                 rows.append(
                     {
                         "season": season,
                         "team_id": team_id,
                         "source_team_id": team_id,
-                        "team_name": row.get("team_name") or team_id,
+                        "team_name": raw_name or team_id,
                         "seed": self._to_float(row.get("seed")),
                         "region": row.get("region", ""),
                         "school_slug": row.get("school_slug", ""),
                     }
+                )
+            # H2: Warn if a year has fewer than expected teams
+            expected_min = 64 if season < 2011 else 68
+            if 0 < len(season_teams) < expected_min and season != 2020:
+                logger.warning(
+                    "Season %d tournament seeds: only %d teams (expected %d). "
+                    "Some regions may be missing.",
+                    season, len(season_teams), expected_min,
                 )
         if not rows:
             return pd.DataFrame(columns=["season", "team_id", "team_name", "seed", "region", "school_slug"])
@@ -321,6 +466,12 @@ class HistoricalFeatureMaterializer:
         canonical_teams: pd.DataFrame,
         source_name_col: str = "team_name",
     ) -> pd.DataFrame:
+        """Align source team IDs to canonical game-data IDs.
+
+        Uses the shared ``TeamNameResolver`` (C2/C5/M2 fix) instead of
+        bespoke fuzzy matching, with a per-season canonical ID index
+        as the target namespace.
+        """
         if source_df.empty:
             return source_df
 
@@ -335,9 +486,11 @@ class HistoricalFeatureMaterializer:
         if "source_team_id" not in out.columns:
             out["source_team_id"] = out["team_id"]
 
+        # Build per-season canonical ID index from game data
         canonical = canonical_teams.copy()
-        canonical["name_norm"] = canonical["team_name"].map(self._normalize_name)
-        canonical["name_key"] = canonical["team_name"].map(self._team_key)
+        season_team_ids: Dict[int, set] = {}
+        for row in canonical.itertuples(index=False):
+            season_team_ids.setdefault(int(row.season), set()).add(str(row.team_id))
 
         resolved_ids: List[str] = []
         match_quality: List[float] = []
@@ -345,14 +498,37 @@ class HistoricalFeatureMaterializer:
             season = int(getattr(row, "season"))
             src_id = str(getattr(row, "team_id"))
             src_name = str(getattr(row, effective_name_col, src_id))
-            season_base = canonical[canonical["season"] == season]
-            matched_id, score = self._resolve_team_id(src_id, src_name, season_base)
+            base_ids = season_team_ids.get(season, set())
+            matched_id, score = self._resolve_team_id(src_id, src_name, base_ids)
             resolved_ids.append(matched_id)
             match_quality.append(score)
 
         out["resolved_team_id"] = resolved_ids
         out["team_match_score"] = match_quality
         out["team_id"] = out["resolved_team_id"]
+
+        # Audit logging: report resolution quality per season
+        if match_quality:
+            scores = np.array(match_quality)
+            perfect = (scores >= 0.99).sum()
+            good = ((scores >= 0.85) & (scores < 0.99)).sum()
+            low = ((scores > 0) & (scores < 0.85)).sum()
+            unresolved = (scores < 1e-6).sum()
+            total = len(scores)
+            logger.info(
+                "Team alignment: %d/%d perfect (≥0.99), %d good (≥0.85), "
+                "%d low-confidence (<0.85), %d unresolved.",
+                perfect, total, good, low, unresolved,
+            )
+            if low + unresolved > 0:
+                # Log specific low-confidence or unresolved entries
+                for idx, (rid, score) in enumerate(zip(resolved_ids, match_quality)):
+                    if score < 0.85 and score > 1e-6:
+                        src = str(out.iloc[idx].get("source_team_id", "?"))
+                        logger.warning(
+                            "Low-confidence match: '%s' → '%s' (score=%.2f)",
+                            src, rid, score,
+                        )
         return out
 
     def _build_team_game_features(
@@ -418,6 +594,23 @@ class HistoricalFeatureMaterializer:
             df.groupby("team_id")["date"].transform(lambda s: pd.Series(self._rolling_day_counts(s, 7), index=s.index))
         )
 
+        # NaN-out date-dependent features for seasons with inferred dates.
+        # Evenly-spread synthetic dates make rest_days, back_to_back, and
+        # games_in_last_7_days degenerate (nearly constant), so setting them
+        # to NaN lets the model learn to ignore them rather than fitting noise.
+        # season_progress remains useful because it preserves rank ordering.
+        if "_dates_inferred" in df.columns:
+            inferred_mask = df["_dates_inferred"].fillna(False).astype(bool)
+            if inferred_mask.any():
+                for col in ("rest_days", "back_to_back", "games_in_last_7_days"):
+                    df.loc[inferred_mask, col] = np.nan
+                logger.info(
+                    "NaN-ed rest_days/back_to_back/games_in_last_7_days for %d rows "
+                    "with inferred dates (degenerate with synthetic dates).",
+                    inferred_mask.sum(),
+                )
+            df = df.drop(columns=["_dates_inferred"])
+
         season_start = pd.to_datetime((df["season"] - 1).astype(str) + "-11-01", errors="coerce")
         df["season_day"] = (df["date"] - season_start).dt.days.clip(lower=0)
         df["season_progress"] = self._safe_div(df["season_day"], 180.0)
@@ -477,33 +670,62 @@ class HistoricalFeatureMaterializer:
 
         prior_metrics = self._shift_prior_season_table(team_metrics, self.BASE_PRIOR_METRIC_COLUMNS, prefix="prior_season_")
         df = df.merge(prior_metrics, on=["season", "team_id"], how="left")
-        if "conference" in team_metrics.columns:
-            conference_lookup = team_metrics[["season", "team_id", "conference"]].copy()
-            conference_lookup["conference"] = conference_lookup["conference"].astype(str)
-            conference_lookup = conference_lookup.drop_duplicates(subset=["season", "team_id"])
-            df = df.merge(conference_lookup, on=["season", "team_id"], how="left")
 
-            conf_prior = team_metrics[["season", "conference", "srs", "sos", "off_rtg", "def_rtg"]].copy()
-            conf_prior["conference"] = conf_prior["conference"].astype(str)
-            conf_prior = (
-                conf_prior.groupby(["season", "conference"], as_index=False)
-                .agg(
-                    conference_srs_mean=("srs", "mean"),
-                    conference_sos_mean=("sos", "mean"),
-                    conference_off_rtg_mean=("off_rtg", "mean"),
-                    conference_def_rtg_mean=("def_rtg", "mean"),
+        # M3: For the first season in the window, prior-season features are
+        # all NaN.  Fall back to current-season pre-tournament metrics so
+        # the model has *some* baseline rather than pure NaN.
+        prior_cols = [f"prior_season_{c}" for c in self.BASE_PRIOR_METRIC_COLUMNS if f"prior_season_{c}" in df.columns]
+        if prior_cols:
+            first_season = df["season"].min()
+            mask = (df["season"] == first_season) & df[prior_cols[0]].isna()
+            if mask.any():
+                current_metrics = team_metrics[team_metrics["season"] == first_season][["team_id"] + self.BASE_PRIOR_METRIC_COLUMNS].copy()
+                current_metrics = current_metrics.drop_duplicates(subset=["team_id"])
+                rename = {c: f"prior_season_{c}" for c in self.BASE_PRIOR_METRIC_COLUMNS if c in current_metrics.columns}
+                fallback = current_metrics.rename(columns=rename)
+                for col in prior_cols:
+                    base = col.replace("prior_season_", "")
+                    if base in fallback.columns or col in fallback.columns:
+                        fb_col = col if col in fallback.columns else base
+                        fb_map = fallback.set_index("team_id")[fb_col] if fb_col in fallback.columns else None
+                        if fb_map is not None:
+                            fill = df.loc[mask, "team_id"].map(fb_map)
+                            df.loc[mask, col] = df.loc[mask, col].fillna(fill)
+
+        # L2: Only compute conference features if conference data is actually
+        # present and non-empty.  Conference field is absent from all years
+        # in the current dataset, so guard against NaN-floods.
+        if "conference" in team_metrics.columns:
+            non_empty_conf = team_metrics["conference"].astype(str).str.strip().ne("") & team_metrics["conference"].notna()
+            if non_empty_conf.sum() > len(team_metrics) * 0.1:
+                conference_lookup = team_metrics[["season", "team_id", "conference"]].copy()
+                conference_lookup["conference"] = conference_lookup["conference"].astype(str)
+                conference_lookup = conference_lookup.drop_duplicates(subset=["season", "team_id"])
+                df = df.merge(conference_lookup, on=["season", "team_id"], how="left")
+
+                conf_prior = team_metrics[["season", "conference", "srs", "sos", "off_rtg", "def_rtg"]].copy()
+                conf_prior["conference"] = conf_prior["conference"].astype(str)
+                conf_prior = (
+                    conf_prior.groupby(["season", "conference"], as_index=False)
+                    .agg(
+                        conference_srs_mean=("srs", "mean"),
+                        conference_sos_mean=("sos", "mean"),
+                        conference_off_rtg_mean=("off_rtg", "mean"),
+                        conference_def_rtg_mean=("def_rtg", "mean"),
+                    )
                 )
-            )
-            conf_prior["season"] = pd.to_numeric(conf_prior["season"], errors="coerce") + 1
-            conf_prior = conf_prior.rename(
-                columns={
-                    "conference_srs_mean": "prior_conference_srs_mean",
-                    "conference_sos_mean": "prior_conference_sos_mean",
-                    "conference_off_rtg_mean": "prior_conference_off_rtg_mean",
-                    "conference_def_rtg_mean": "prior_conference_def_rtg_mean",
-                }
-            )
-            df = df.merge(conf_prior, on=["season", "conference"], how="left")
+                conf_prior["season"] = pd.to_numeric(conf_prior["season"], errors="coerce") + 1
+                conf_prior = conf_prior.rename(
+                    columns={
+                        "conference_srs_mean": "prior_conference_srs_mean",
+                        "conference_sos_mean": "prior_conference_sos_mean",
+                        "conference_off_rtg_mean": "prior_conference_off_rtg_mean",
+                        "conference_def_rtg_mean": "prior_conference_def_rtg_mean",
+                    }
+                )
+                df = df.merge(conf_prior, on=["season", "conference"], how="left")
+            else:
+                logger.info("Conference data is empty or sparse; skipping conference features.")
         if not optional_priors.empty:
             optional_columns = [
                 c
@@ -1352,52 +1574,166 @@ class HistoricalFeatureMaterializer:
         self,
         source_team_id: str,
         source_name: str,
-        season_canonical: pd.DataFrame,
+        base_ids: set,
     ) -> Tuple[str, float]:
-        if season_canonical.empty:
+        """Resolve a source team ID/name to a canonical game-data ID.
+
+        Uses multi-pass strategy:
+        1. Direct match against canonical game-data IDs
+        2. TeamNameResolver (curated alias table with 360+ D1 programs)
+        3. Prefix matching for mascot-suffixed IDs (e.g. duke_blue_devils → duke)
+        """
+        if not base_ids:
             return source_team_id, 0.0
 
-        base_ids = set(season_canonical["team_id"].astype(str))
+        # Pass 1: Direct match
         if source_team_id in base_ids:
             return source_team_id, 1.0
 
-        normalized_to_id = {}
-        key_to_ids: Dict[str, List[str]] = {}
-        for row in season_canonical.itertuples(index=False):
-            norm = self._normalize_name(row.team_name)
-            if norm and norm not in normalized_to_id:
-                normalized_to_id[norm] = row.team_id
-            key = self._team_key(row.team_name)
-            if key:
-                key_to_ids.setdefault(key, []).append(row.team_id)
+        # Pass 1b: Stripped NCAA-suffix match
+        stripped = strip_ncaa_suffix(source_team_id)
+        if stripped != source_team_id and stripped in base_ids:
+            return stripped, 0.99
 
-        src_norm = self._normalize_name(source_name)
-        src_key = self._team_key(source_name)
-        if src_norm in normalized_to_id:
-            return normalized_to_id[src_norm], 0.99
-        if src_key in key_to_ids and len(key_to_ids[src_key]) == 1:
-            return key_to_ids[src_key][0], 0.95
+        # Pass 2: TeamNameResolver — try both the name and the ID form
+        for candidate in [source_name, source_team_id.replace("_", " ")]:
+            if not candidate:
+                continue
+            result = self._resolver.resolve(candidate)
+            if result.method != "unresolved" and result.confidence >= 0.80:
+                cid = result.canonical_id
+                # Check if this canonical ID is present in game data
+                if cid in base_ids:
+                    return cid, result.confidence
+                # Check for mascot-suffixed form in game data
+                for gid in base_ids:
+                    if gid.startswith(cid + "_") and len(gid) > len(cid) + 1:
+                        return gid, result.confidence * 0.95
 
-        # heuristic: key containment
-        if src_key:
-            for key, ids in key_to_ids.items():
-                if len(ids) != 1:
-                    continue
-                if src_key in key or key in src_key:
-                    return ids[0], 0.9
+        # Pass 3: Prefix matching — handles cbbpy mascot-suffixed IDs
+        # (e.g. "duke" from metrics should match "duke_blue_devils" in games)
+        sorted_base = sorted(base_ids, key=len, reverse=True)
+        src_norm = normalize_team_id(source_name) if source_name else source_team_id
+        for bid in sorted_base:
+            if bid.startswith(src_norm + "_") or src_norm.startswith(bid + "_"):
+                return bid, 0.88
+            if bid.startswith(source_team_id + "_") or source_team_id.startswith(bid + "_"):
+                return bid, 0.88
 
-        # fallback fuzzy matching
-        candidates = season_canonical[["team_id", "team_name"]].drop_duplicates()
+        # Pass 4: Fuzzy fallback — tightened threshold from 0.84 to 0.90
+        # to prevent michigan↔michigan_state style mismatches (M2 fix).
         best_id = source_team_id
         best_score = 0.0
-        for row in candidates.itertuples(index=False):
-            score = difflib.SequenceMatcher(None, src_norm, self._normalize_name(row.team_name)).ratio()
+        src_norm_name = normalize_team_name(source_name) if source_name else ""
+        for bid in base_ids:
+            bid_norm = normalize_team_name(bid.replace("_", " "))
+            score = difflib.SequenceMatcher(None, src_norm_name, bid_norm).ratio()
+            # M2: Additional guard — require shorter string to be ≥60% of
+            # longer string's length to prevent short-name collisions
+            # like unc→unc_asheville.
+            min_len = min(len(src_norm_name), len(bid_norm))
+            max_len = max(len(src_norm_name), len(bid_norm))
+            if max_len > 0 and min_len / max_len < 0.6:
+                score *= 0.8  # penalize length-mismatched fuzzy hits
             if score > best_score:
                 best_score = score
-                best_id = row.team_id
-        if best_score >= 0.84:
+                best_id = bid
+        if best_score >= 0.90:
             return str(best_id), float(best_score)
         return source_team_id, float(best_score)
+
+    @staticmethod
+    def _infer_dates_from_game_ids(rows: List[Dict], season: int) -> None:
+        """Infer chronological dates from game_id ordering (C3 fix).
+
+        When all games share a single placeholder date, sort by game_id
+        (numeric ESPN IDs correlate with chronological order) and spread
+        dates evenly across the season window.
+        """
+        # Build game_id → list of row indices
+        game_id_rows: Dict[str, List[int]] = {}
+        for idx, row in enumerate(rows):
+            gid = str(row.get("game_id", "0"))
+            game_id_rows.setdefault(gid, []).append(idx)
+
+        # Sort unique game IDs numerically
+        game_ids = sorted(
+            game_id_rows.keys(),
+            key=lambda g: int(g) if g.isdigit() else 0,
+        )
+
+        season_start = date(season - 1, 11, 1)
+        season_end = date(season, 3, 13)
+        total_days = (season_end - season_start).days
+
+        for rank, gid in enumerate(game_ids):
+            frac = rank / max(len(game_ids) - 1, 1)
+            inferred = season_start + timedelta(days=int(frac * total_days))
+            inferred_str = inferred.isoformat()
+            for idx in game_id_rows[gid]:
+                rows[idx]["date"] = inferred_str
+
+    def _compute_metrics_from_games(self, games_path: str) -> Dict[str, Dict[str, float]]:
+        """Compute basic team efficiency metrics from game box-score data (C1 fix).
+
+        Returns dict of team_id → {off_rtg, def_rtg, pace} computed from
+        season-aggregate box-score totals.
+        """
+        p = Path(games_path)
+        if not p.exists():
+            return {}
+        try:
+            with open(p, "r") as f:
+                payload = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return {}
+
+        team_games = payload.get("team_games", [])
+        if not team_games:
+            return {}
+
+        # Aggregate per-team totals
+        agg: Dict[str, Dict[str, float]] = {}
+        for row in team_games:
+            if not isinstance(row, dict):
+                continue
+            tid = str(row.get("team_id", ""))
+            if not tid:
+                continue
+            # Normalize the ID to match the metrics namespace
+            tid_norm = normalize_team_id(tid)
+            acc = agg.setdefault(tid_norm, {
+                "total_score": 0.0, "total_opp_score": 0.0,
+                "total_poss": 0.0, "games": 0,
+            })
+            score = float(row.get("team_score", 0) or 0)
+            opp_score = float(row.get("opponent_score", 0) or 0)
+            poss = float(row.get("possessions", 0) or 0)
+            if poss < 1:
+                # Estimate possessions from box score
+                fga = float(row.get("fga", 0) or 0)
+                orb = float(row.get("orb", 0) or 0)
+                tov = float(row.get("turnovers", 0) or 0)
+                fta = float(row.get("fta", 0) or 0)
+                poss = max(fga - orb + tov + 0.475 * fta, 1.0)
+            acc["total_score"] += score
+            acc["total_opp_score"] += opp_score
+            acc["total_poss"] += poss
+            acc["games"] += 1
+
+        result: Dict[str, Dict[str, float]] = {}
+        for tid, acc in agg.items():
+            if acc["games"] < 5 or acc["total_poss"] < 100:
+                continue
+            avg_poss = acc["total_poss"] / acc["games"]
+            off_rtg = 100.0 * acc["total_score"] / acc["total_poss"]
+            def_rtg = 100.0 * acc["total_opp_score"] / acc["total_poss"]
+            result[tid] = {
+                "off_rtg": round(off_rtg, 1),
+                "def_rtg": round(def_rtg, 1),
+                "pace": round(avg_poss, 1),
+            }
+        return result
 
     def _fallback_team_game_rows(self, game: Dict, season: int) -> List[Dict]:
         game_id = game.get("game_id") or game.get("id")
@@ -1471,26 +1807,13 @@ class HistoricalFeatureMaterializer:
 
     @staticmethod
     def _normalize_team_id(name) -> str:
-        return "".join(ch.lower() if ch.isalnum() else "_" for ch in str(name or "")).strip("_")
+        # Delegate to shared utility (kept for backwards compat)
+        return normalize_team_id(str(name or ""))
 
     @staticmethod
     def _normalize_name(name: str) -> str:
-        clean = re.sub(r"[^a-z0-9 ]+", " ", str(name or "").lower().replace("&", " and "))
-        tokens = [t for t in clean.split() if t not in {"the", "university", "college", "at", "of"}]
-        return " ".join(tokens)
-
-    @classmethod
-    def _team_key(cls, name: str) -> str:
-        norm = cls._normalize_name(name)
-        tokens = norm.split()
-        if len(tokens) <= 2:
-            return norm
-        # remove likely mascot suffix (1-2 trailing tokens) for ESPN-style names.
-        base1 = " ".join(tokens[:-1]).strip()
-        base2 = " ".join(tokens[:-2]).strip()
-        if base2 and len(base2) >= 4:
-            return base2
-        return base1 or norm
+        # Delegate to shared utility
+        return normalize_team_name(name)
 
     @staticmethod
     def _to_float(value) -> float:

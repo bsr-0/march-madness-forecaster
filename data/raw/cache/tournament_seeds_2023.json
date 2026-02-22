@@ -186,9 +186,9 @@
     },
     {
       "season": 2023,
-      "team_name": "Texas A&amp;M",
+      "team_name": "Texas A&M",
       "school_slug": "texas-am",
-      "team_id": "texas_a_amp_m",
+      "team_id": "texas_a_m",
       "seed": 7,
       "region": "Midwest"
     },
@@ -402,9 +402,9 @@
     },
     {
       "season": 2023,
-      "team_name": "Texas A&amp;M-Corpus Christi",
+      "team_name": "Texas A&M-Corpus Christi",
       "school_slug": "texas-am-corpus-christi",
-      "team_id": "texas_a_amp_m_corpus_christi",
+      "team_id": "texas_a_m_corpus_christi",
       "seed": 16,
       "region": "South"
     },
