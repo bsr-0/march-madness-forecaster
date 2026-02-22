@@ -9,9 +9,22 @@ from .data.ingestion.collector import IngestionConfig, RealDataCollector
 from .data.ingestion.historical_pipeline import HistoricalDataPipeline, HistoricalIngestionConfig
 from .data.features.materialization import HistoricalFeatureMaterializer, MaterializationConfig
 from .data.scrapers.cbbpy_rosters import CBBpyRosterScraper
-from .ml.evaluation.rdof_audit import run_rdof_audit
+from .data.scrapers.roster_enrichment import RosterEnrichment
+from .ml.evaluation.rdof_audit import freeze_pipeline, run_rdof_audit, run_prospective_evaluation, verify_freeze
 from .pipeline.sota import DataRequirementError, SOTAPipelineConfig, run_sota_pipeline_to_file
 
+
+
+def _resolve_multi_year_dir(raw_value):
+    """Resolve the --multi-year-games-dir CLI value.
+
+    'auto' → pass through to SOTAPipelineConfig (resolved at pipeline init).
+    'none' or None → None (disabled).
+    Anything else → literal path.
+    """
+    if raw_value is None or (isinstance(raw_value, str) and raw_value.lower() == "none"):
+        return None
+    return raw_value
 
 
 def run_sota(args):
@@ -40,7 +53,7 @@ def run_sota(args):
         min_rapm_players_per_team=args.min_rapm_players_per_team,
         bracket_source=getattr(args, "bracket_source", "auto"),
         bracket_json=getattr(args, "bracket_json", None),
-        multi_year_games_dir=getattr(args, "multi_year_games_dir", None),
+        multi_year_games_dir=_resolve_multi_year_dir(getattr(args, "multi_year_games_dir", "auto")),
     )
 
     try:
@@ -113,7 +126,7 @@ def run_sota_from_manifest(args):
         min_rapm_players_per_team=args.min_rapm_players_per_team,
         bracket_source=getattr(args, "bracket_source", "auto"),
         bracket_json=getattr(args, "bracket_json", None),
-        multi_year_games_dir=getattr(args, "multi_year_games_dir", None),
+        multi_year_games_dir=_resolve_multi_year_dir(getattr(args, "multi_year_games_dir", "auto")),
     )
 
     try:
@@ -185,11 +198,13 @@ def ingest_historical(args):
         cache_dir=args.cache_dir,
         include_pbp=args.include_pbp,
         include_tournament_context=not args.skip_tournament_context,
+        include_torvik=not getattr(args, "skip_torvik", False),
         strict_validation=not args.allow_invalid_payloads,
         retry_attempts=args.retry_attempts,
         per_game_timeout_seconds=args.per_game_timeout_seconds,
         max_games_per_season=args.max_games_per_season,
         team_metrics_provider_priority=parse_priority(args.team_metrics_provider_priority),
+        torvik_provider_priority=parse_priority(args.torvik_provider_priority),
     )
     manifest = HistoricalDataPipeline(config).run()
     print(f"✓ Historical ingestion complete. Manifest: {manifest['manifest_path']}")
@@ -210,12 +225,67 @@ def audit_rdof(args):
         run_holdout=not args.no_holdout,
         run_sensitivity=args.sensitivity,
         sensitivity_grid=args.sensitivity_grid,
-        output_path=args.output,
+        output_path=args.output,  # None triggers auto-generation in run_rdof_audit
         config=config,
+        include_mc=getattr(args, "include_mc", False),
+        mc_trials=getattr(args, "mc_trials", 200),
     )
 
-    if args.output:
-        print(f"Report written to {args.output}")
+    return 0
+
+
+def freeze_pipeline_cmd(args):
+    """Create a pre-registration freeze artifact."""
+    config = SOTAPipelineConfig()
+    result = freeze_pipeline(config, output_path=args.output)
+    print(f"Pipeline frozen.  Hash: {result['config_hash']}")
+    print(f"Artifact: {args.output}")
+    if result.get("git_tag"):
+        print(f"Git tag: {result['git_tag']}")
+    if result.get("git_dirty"):
+        print("WARNING: Uncommitted changes detected.  Commit before "
+              "tournament for clean provenance.")
+    return 0
+
+
+def verify_freeze_cmd(args):
+    """Verify current config against a freeze artifact."""
+    config = SOTAPipelineConfig()
+    result = verify_freeze(config, freeze_path=args.freeze_file)
+    if result["matches"]:
+        print(f"VERIFIED: Current config matches freeze from "
+              f"{result['frozen_timestamp']}")
+        print(f"Hash: {result['current_hash']}")
+    else:
+        print(f"MISMATCH: Config has changed since freeze at "
+              f"{result['frozen_timestamp']}")
+        for m in result["mismatches"]:
+            print(f"  {m}")
+    return 0 if result["matches"] else 1
+
+
+def prospective_eval(args):
+    """Run quasi-prospective evaluation against a frozen pipeline."""
+    import logging
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
+    config = SOTAPipelineConfig()
+    try:
+        result = run_prospective_evaluation(
+            freeze_path=args.freeze_file,
+            evaluation_year=args.year,
+            historical_dir=args.historical_dir,
+            output_path=args.output,
+            config=config,
+        )
+    except ValueError as exc:
+        print(f"Error: {exc}")
+        return 1
+
+    level = result.get("holdout_evaluation", {}).get("integrity_level", "?")
+    verdict = result.get("holdout_evaluation", {}).get("verdict", "?")
+    print(f"Integrity Level: {level}")
+    print(f"Verdict: {verdict}")
     return 0
 
 
@@ -282,6 +352,22 @@ def scrape_rosters(args):
     return 0 if not failed else 1
 
 
+def enrich_rosters(args):
+    """Cross-reference cbbpy rosters across years to populate eligibility_year and is_transfer."""
+    enricher = RosterEnrichment(
+        roster_dir=args.roster_dir,
+        output_dir=args.output_dir,
+    )
+    summary = enricher.enrich_all(
+        start_year=args.start_year,
+        end_year=args.end_year,
+    )
+    print(f"\nEnriched {summary['total_players_enriched']} players across {summary['years_processed']} years")
+    print(f"Transfers detected: {summary['total_transfers']}")
+    print(f"Eligibility distribution: {summary['eligibility_distribution']}")
+    return 0
+
+
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -335,8 +421,9 @@ def main():
     )
     sota_parser.add_argument(
         "--multi-year-games-dir",
-        default=None,
-        help="Directory with per-year historical game/metric JSONs for LOYO CV (e.g. data/raw/historical)",
+        default="auto",
+        help="Directory with per-year historical game/metric JSONs. "
+             "'auto' detects data/raw/historical. 'none' disables.",
     )
 
     ingest_parser = subparsers.add_parser("ingest", help="Collect real-world data sources and write a manifest")
@@ -373,7 +460,7 @@ def main():
     ingest_parser.add_argument(
         "--torvik-provider-priority",
         default=None,
-        help="Comma-separated provider order: cbbdata",
+        help="Comma-separated provider order: barttorvik,cbbdata",
     )
     ingest_parser.add_argument(
         "--allow-invalid-payloads",
@@ -435,6 +522,16 @@ def main():
         "--team-metrics-provider-priority",
         default=None,
         help="Comma-separated provider order: sportsdataverse,sportsipy,cbbdata",
+    )
+    historical_parser.add_argument(
+        "--torvik-provider-priority",
+        default=None,
+        help="Comma-separated provider order: barttorvik,cbbdata",
+    )
+    historical_parser.add_argument(
+        "--skip-torvik",
+        action="store_true",
+        help="Skip Torvik historical backfill",
     )
     historical_parser.add_argument(
         "--allow-invalid-payloads",
@@ -521,6 +618,66 @@ def main():
         default=11,
         help="Grid points per constant for sensitivity analysis",
     )
+    rdof_parser.add_argument(
+        "--include-mc",
+        action="store_true",
+        help="Include Monte Carlo constants in sensitivity analysis (slower, ~5x runtime)",
+    )
+    rdof_parser.add_argument(
+        "--mc-trials",
+        type=int,
+        default=200,
+        help="Noise trials per game for MC sensitivity (default: 200)",
+    )
+
+    # freeze-pipeline command
+    freeze_parser = subparsers.add_parser(
+        "freeze-pipeline",
+        help="Create a pre-registration freeze artifact with config hash and git tag",
+    )
+    freeze_parser.add_argument(
+        "--output", "-o",
+        default="pipeline_freeze.json",
+        help="Path to write freeze artifact JSON",
+    )
+
+    # verify-freeze command
+    verify_parser = subparsers.add_parser(
+        "verify-freeze",
+        help="Verify current pipeline config against a freeze artifact",
+    )
+    verify_parser.add_argument(
+        "--freeze-file",
+        default="pipeline_freeze.json",
+        help="Path to freeze artifact to verify against",
+    )
+
+    # prospective-eval command
+    prospective_parser = subparsers.add_parser(
+        "prospective-eval",
+        help="Run quasi-prospective (Level 2) evaluation against a frozen pipeline",
+    )
+    prospective_parser.add_argument(
+        "--freeze-file",
+        required=True,
+        help="Path to the pipeline freeze artifact JSON",
+    )
+    prospective_parser.add_argument(
+        "--year",
+        type=int,
+        required=True,
+        help="Tournament year to evaluate (must have historical data ingested)",
+    )
+    prospective_parser.add_argument(
+        "--historical-dir",
+        default="data/raw/historical",
+        help="Directory with per-year historical game/metric JSONs",
+    )
+    prospective_parser.add_argument(
+        "--output", "-o",
+        default=None,
+        help="Path to write evaluation report JSON (auto-generated if omitted)",
+    )
 
     # scrape-rosters command
     roster_parser = subparsers.add_parser(
@@ -543,6 +700,50 @@ def main():
     )
     roster_parser.add_argument(
         "--force", action="store_true", help="Re-scrape even if cached file exists"
+    )
+
+    # enrich-rosters command
+    enrich_parser = subparsers.add_parser(
+        "enrich-rosters",
+        help="Cross-reference cbbpy rosters across years to populate eligibility_year and is_transfer",
+    )
+    enrich_parser.add_argument(
+        "--roster-dir",
+        default="data/raw/historical",
+        help="Directory containing cbbpy_rosters_{year}.json files (default: data/raw/historical)",
+    )
+    enrich_parser.add_argument(
+        "--output-dir",
+        default=None,
+        help="Output directory for enriched files (default: same as roster-dir, in-place update)",
+    )
+    enrich_parser.add_argument(
+        "--start-year", type=int, default=2005,
+        help="First season to process (inclusive, default: 2005)",
+    )
+    enrich_parser.add_argument(
+        "--end-year", type=int, default=2026,
+        help="Last season to process (inclusive, default: 2026)",
+    )
+
+    coverage_parser = subparsers.add_parser(
+        "audit-metrics-coverage",
+        help="Audit coverage gaps where teams appear in games but are missing metrics",
+    )
+    coverage_parser.add_argument(
+        "--historical-dir",
+        default="data/raw/historical",
+        help="Directory with per-year historical game/metric JSONs",
+    )
+    coverage_parser.add_argument(
+        "--out-json",
+        default="data/processed/metrics_coverage_audit.json",
+        help="Path to write JSON audit report",
+    )
+    coverage_parser.add_argument(
+        "--out-csv",
+        default="data/processed/metrics_coverage_audit.csv",
+        help="Path to write CSV audit report",
     )
 
     manifest_sota_parser = subparsers.add_parser(
@@ -596,8 +797,24 @@ def main():
         return run_sota_from_manifest(args)
     elif args.command == "audit-rdof":
         return audit_rdof(args)
+    elif args.command == "freeze-pipeline":
+        return freeze_pipeline_cmd(args)
+    elif args.command == "verify-freeze":
+        return verify_freeze_cmd(args)
+    elif args.command == "prospective-eval":
+        return prospective_eval(args)
     elif args.command == "scrape-rosters":
         return scrape_rosters(args)
+    elif args.command == "enrich-rosters":
+        return enrich_rosters(args)
+    elif args.command == "audit-metrics-coverage":
+        from .data.coverage_audit import run_coverage_audit
+        run_coverage_audit(
+            historical_dir=args.historical_dir,
+            out_json=args.out_json,
+            out_csv=args.out_csv,
+        )
+        return 0
     else:
         parser.print_help()
         return 1

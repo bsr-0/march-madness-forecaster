@@ -47,7 +47,7 @@
       "srs": 12.34,
       "sos": 10.64,
       "name": "AlabamaNCAA",
-      "team_id": "alabamancaa"
+      "team_id": "alabama"
     },
     {
       "team_name": "Alabama A&M",
@@ -131,7 +131,7 @@
       "srs": 15.67,
       "sos": 6.84,
       "name": "ArizonaNCAA",
-      "team_id": "arizonancaa"
+      "team_id": "arizona"
     },
     {
       "team_name": "Arizona StateNCAA",
@@ -143,7 +143,7 @@
       "srs": 14.37,
       "sos": 6.55,
       "name": "Arizona StateNCAA",
-      "team_id": "arizona_statencaa"
+      "team_id": "arizona_state"
     },
     {
       "team_name": "ArkansasNCAA",
@@ -155,7 +155,7 @@
       "srs": 14.76,
       "sos": 9.85,
       "name": "ArkansasNCAA",
-      "team_id": "arkansasncaa"
+      "team_id": "arkansas"
     },
     {
       "team_name": "Arkansas State",
@@ -203,7 +203,7 @@
       "srs": 15.97,
       "sos": 7.29,
       "name": "AuburnNCAA",
-      "team_id": "auburnncaa"
+      "team_id": "auburn"
     },
     {
       "team_name": "Austin Peay",
@@ -383,7 +383,7 @@
       "srs": 4.49,
       "sos": -3.46,
       "name": "BucknellNCAA",
-      "team_id": "bucknellncaa"
+      "team_id": "bucknell"
     },
     {
       "team_name": "BuffaloNCAA",
@@ -395,7 +395,7 @@
       "srs": 7.99,
       "sos": 0.25,
       "name": "BuffaloNCAA",
-      "team_id": "buffaloncaa"
+      "team_id": "buffalo"
     },
     {
       "team_name": "ButlerNCAA",
@@ -407,7 +407,7 @@
       "srs": 16.92,
       "sos": 10.55,
       "name": "ButlerNCAA",
-      "team_id": "butlerncaa"
+      "team_id": "butler"
     },
     {
       "team_name": "Cal Poly",
@@ -443,7 +443,7 @@
       "srs": -0.93,
       "sos": -1.03,
       "name": "Cal State FullertonNCAA",
-      "team_id": "cal_state_fullertonncaa"
+      "team_id": "cal_state_fullerton"
     },
     {
       "team_name": "Cal State Northridge",
@@ -587,7 +587,7 @@
       "srs": 20.25,
       "sos": 3.53,
       "name": "CincinnatiNCAA",
-      "team_id": "cincinnatincaa"
+      "team_id": "cincinnati"
     },
     {
       "team_name": "ClemsonNCAA",
@@ -599,7 +599,7 @@
       "srs": 17.16,
       "sos": 9.25,
       "name": "ClemsonNCAA",
-      "team_id": "clemsonncaa"
+      "team_id": "clemson"
     },
     {
       "team_name": "Cleveland State",
@@ -647,7 +647,7 @@
       "srs": 1.83,
       "sos": -3.29,
       "name": "College of CharlestonNCAA",
-      "team_id": "college_of_charlestonncaa"
+      "team_id": "college_of_charleston"
     },
     {
       "team_name": "Colorado",
@@ -731,7 +731,7 @@
       "srs": 16.35,
       "sos": 8.1,
       "name": "CreightonNCAA",
-      "team_id": "creightonncaa"
+      "team_id": "creighton"
     },
     {
       "team_name": "Dartmouth",
@@ -755,7 +755,7 @@
       "srs": 11.02,
       "sos": 2.57,
       "name": "DavidsonNCAA",
-      "team_id": "davidsonncaa"
+      "team_id": "davidson"
     },
     {
       "team_name": "Dayton",
@@ -863,7 +863,7 @@
       "srs": 24.43,
       "sos": 9.7,
       "name": "DukeNCAA",
-      "team_id": "dukencaa"
+      "team_id": "duke"
     },
     {
       "team_name": "Duquesne",
@@ -1007,7 +1007,7 @@
       "srs": 16.66,
       "sos": 10.08,
       "name": "FloridaNCAA",
-      "team_id": "floridancaa"
+      "team_id": "florida"
     },
     {
       "team_name": "Florida A&M",
@@ -1067,7 +1067,7 @@
       "srs": 15.78,
       "sos": 8.5,
       "name": "Florida StateNCAA",
-      "team_id": "florida_statencaa"
+      "team_id": "florida_state"
     },
     {
       "team_name": "Fordham",
@@ -1187,7 +1187,7 @@
       "srs": 3.22,
       "sos": -2.78,
       "name": "Georgia StateNCAA",
-      "team_id": "georgia_statencaa"
+      "team_id": "georgia_state"
     },
     {
       "team_name": "Georgia Tech",
@@ -1211,7 +1211,7 @@
       "srs": 18.44,
       "sos": 2.6,
       "name": "GonzagaNCAA",
-      "team_id": "gonzagancaa"
+      "team_id": "gonzaga"
     },
     {
       "team_name": "Grambling",
@@ -1343,7 +1343,7 @@
       "srs": 15.99,
       "sos": 4.16,
       "name": "HoustonNCAA",
-      "team_id": "houstonncaa"
+      "team_id": "houston"
     },
     {
       "team_name": "Houston Christian",
@@ -1475,7 +1475,7 @@
       "srs": 0.75,
       "sos": -2.19,
       "name": "IonaNCAA",
-      "team_id": "ionancaa"
+      "team_id": "iona"
     },
     {
       "team_name": "Iowa",
@@ -1571,7 +1571,7 @@
       "srs": 21.39,
       "sos": 11.88,
       "name": "KansasNCAA",
-      "team_id": "kansasncaa"
+      "team_id": "kansas"
     },
     {
       "team_name": "Kansas City",
@@ -1595,7 +1595,7 @@
       "srs": 12.85,
       "sos": 8.74,
       "name": "Kansas StateNCAA",
-      "team_id": "kansas_statencaa"
+      "team_id": "kansas_state"
     },
     {
       "team_name": "Kennesaw State",
@@ -1631,7 +1631,7 @@
       "srs": 17.24,
       "sos": 10.73,
       "name": "KentuckyNCAA",
-      "team_id": "kentuckyncaa"
+      "team_id": "kentucky"
     },
     {
       "team_name": "La Salle",
@@ -1703,7 +1703,7 @@
       "srs": -2.1,
       "sos": -3.8,
       "name": "LipscombNCAA",
-      "team_id": "lipscombncaa"
+      "team_id": "lipscomb"
     },
     {
       "team_name": "Little Rock",
@@ -1739,7 +1739,7 @@
       "srs": -8.6,
       "sos": -8.19,
       "name": "Long Island UniversityNCAA",
-      "team_id": "long_island_universityncaa"
+      "team_id": "long_island_university"
     },
     {
       "team_name": "Longwood",
@@ -1823,7 +1823,7 @@
       "srs": 10.37,
       "sos": 1.8,
       "name": "Loyola (IL)NCAA",
-      "team_id": "loyola__il_ncaa"
+      "team_id": "loyola__il"
     },
     {
       "team_name": "Loyola (MD)",
@@ -1907,7 +1907,7 @@
       "srs": 4.21,
       "sos": 0.44,
       "name": "MarshallNCAA",
-      "team_id": "marshallncaa"
+      "team_id": "marshall"
     },
     {
       "team_name": "Maryland",
@@ -1931,7 +1931,7 @@
       "srs": -2.02,
       "sos": -3.84,
       "name": "Maryland-Baltimore CountyNCAA",
-      "team_id": "maryland_baltimore_countyncaa"
+      "team_id": "maryland_baltimore_county"
     },
     {
       "team_name": "Maryland-Eastern Shore",
@@ -2015,7 +2015,7 @@
       "srs": 12.83,
       "sos": 6.96,
       "name": "Miami (FL)NCAA",
-      "team_id": "miami__fl_ncaa"
+      "team_id": "miami__fl"
     },
     {
       "team_name": "Miami (OH)",
@@ -2039,7 +2039,7 @@
       "srs": 19.03,
       "sos": 9.41,
       "name": "MichiganNCAA",
-      "team_id": "michiganncaa"
+      "team_id": "michigan"
     },
     {
       "team_name": "Michigan StateNCAA",
@@ -2051,7 +2051,7 @@
       "srs": 22.41,
       "sos": 7.1,
       "name": "Michigan StateNCAA",
-      "team_id": "michigan_statencaa"
+      "team_id": "michigan_state"
     },
     {
       "team_name": "Middle Tennessee",
@@ -2135,7 +2135,7 @@
       "srs": 13.81,
       "sos": 9.19,
       "name": "MissouriNCAA",
-      "team_id": "missourincaa"
+      "team_id": "missouri"
     },
     {
       "team_name": "Missouri State",
@@ -2171,7 +2171,7 @@
       "srs": 6.29,
       "sos": -2.24,
       "name": "MontanaNCAA",
-      "team_id": "montanancaa"
+      "team_id": "montana"
     },
     {
       "team_name": "Montana State",
@@ -2231,7 +2231,7 @@
       "srs": 6.87,
       "sos": -3.53,
       "name": "Murray StateNCAA",
-      "team_id": "murray_statencaa"
+      "team_id": "murray_state"
     },
     {
       "team_name": "Navy",
@@ -2255,7 +2255,7 @@
       "srs": 12.91,
       "sos": 6.7,
       "name": "NC StateNCAA",
-      "team_id": "nc_statencaa"
+      "team_id": "nc_state"
     },
     {
       "team_name": "Nebraska",
@@ -2279,7 +2279,7 @@
       "srs": 14.44,
       "sos": 4.93,
       "name": "NevadaNCAA",
-      "team_id": "nevadancaa"
+      "team_id": "nevada"
     },
     {
       "team_name": "Nevada-Las Vegas",
@@ -2327,7 +2327,7 @@
       "srs": 9.06,
       "sos": -1.1,
       "name": "New Mexico StateNCAA",
-      "team_id": "new_mexico_statencaa"
+      "team_id": "new_mexico_state"
     },
     {
       "team_name": "New Orleans",
@@ -2399,7 +2399,7 @@
       "srs": 20.07,
       "sos": 11.78,
       "name": "North CarolinaNCAA",
-      "team_id": "north_carolinancaa"
+      "team_id": "north_carolina"
     },
     {
       "team_name": "North Carolina A&T",
@@ -2423,7 +2423,7 @@
       "srs": -13.18,
       "sos": -12.31,
       "name": "North Carolina CentralNCAA",
-      "team_id": "north_carolina_centralncaa"
+      "team_id": "north_carolina_central"
     },
     {
       "team_name": "North Dakota",
@@ -2615,7 +2615,7 @@
       "srs": 17.67,
       "sos": 9.02,
       "name": "Ohio StateNCAA",
-      "team_id": "ohio_statencaa"
+      "team_id": "ohio_state"
     },
     {
       "team_name": "OklahomaNCAA",
@@ -2627,7 +2627,7 @@
       "srs": 13.81,
       "sos": 10.56,
       "name": "OklahomaNCAA",
-      "team_id": "oklahomancaa"
+      "team_id": "oklahoma"
     },
     {
       "team_name": "Oklahoma State",
@@ -2735,7 +2735,7 @@
       "srs": 2.24,
       "sos": -3.16,
       "name": "PennsylvaniaNCAA",
-      "team_id": "pennsylvaniancaa"
+      "team_id": "pennsylvania"
     },
     {
       "team_name": "Pepperdine",
@@ -2831,7 +2831,7 @@
       "srs": 11.12,
       "sos": 10.23,
       "name": "ProvidenceNCAA",
-      "team_id": "providencencaa"
+      "team_id": "providence"
     },
     {
       "team_name": "PurdueNCAA",
@@ -2843,7 +2843,7 @@
       "srs": 23.41,
       "sos": 8.74,
       "name": "PurdueNCAA",
-      "team_id": "purduencaa"
+      "team_id": "purdue"
     },
     {
       "team_name": "Purdue Fort Wayne",
@@ -2879,7 +2879,7 @@
       "srs": -2.62,
       "sos": -4.09,
       "name": "RadfordNCAA",
-      "team_id": "radfordncaa"
+      "team_id": "radford"
     },
     {
       "team_name": "Rhode IslandNCAA",
@@ -2891,7 +2891,7 @@
       "srs": 11.81,
       "sos": 4.61,
       "name": "Rhode IslandNCAA",
-      "team_id": "rhode_islandncaa"
+      "team_id": "rhode_island"
     },
     {
       "team_name": "Rice",
@@ -3083,7 +3083,7 @@
       "srs": 12.23,
       "sos": 3.91,
       "name": "San Diego StateNCAA",
-      "team_id": "san_diego_statencaa"
+      "team_id": "san_diego_state"
     },
     {
       "team_name": "San Francisco",
@@ -3155,7 +3155,7 @@
       "srs": 15.67,
       "sos": 10.11,
       "name": "Seton HallNCAA",
-      "team_id": "seton_hallncaa"
+      "team_id": "seton_hall"
     },
     {
       "team_name": "Siena",
@@ -3239,7 +3239,7 @@
       "srs": 6.84,
       "sos": -0.38,
       "name": "South Dakota StateNCAA",
-      "team_id": "south_dakota_statencaa"
+      "team_id": "south_dakota_state"
     },
     {
       "team_name": "South Florida",
@@ -3371,7 +3371,7 @@
       "srs": 8.87,
       "sos": 2.61,
       "name": "St. BonaventureNCAA",
-      "team_id": "st__bonaventurencaa"
+      "team_id": "st__bonaventure"
     },
     {
       "team_name": "St. Francis (NY)",
@@ -3419,7 +3419,7 @@
       "srs": 2.66,
       "sos": -6.47,
       "name": "Stephen F. AustinNCAA",
-      "team_id": "stephen_f__austinncaa"
+      "team_id": "stephen_f__austin"
     },
     {
       "team_name": "Stetson",
@@ -3455,7 +3455,7 @@
       "srs": 12.89,
       "sos": 10.02,
       "name": "SyracuseNCAA",
-      "team_id": "syracusencaa"
+      "team_id": "syracuse"
     },
     {
       "team_name": "TCUNCAA",
@@ -3467,7 +3467,7 @@
       "srs": 16.38,
       "sos": 9.68,
       "name": "TCUNCAA",
-      "team_id": "tcuncaa"
+      "team_id": "tcu"
     },
     {
       "team_name": "Temple",
@@ -3491,7 +3491,7 @@
       "srs": 18.2,
       "sos": 10.12,
       "name": "TennesseeNCAA",
-      "team_id": "tennesseencaa"
+      "team_id": "tennessee"
     },
     {
       "team_name": "Tennessee State",
@@ -3539,7 +3539,7 @@
       "srs": 13.96,
       "sos": 10.67,
       "name": "TexasNCAA",
-      "team_id": "texasncaa"
+      "team_id": "texas"
     },
     {
       "team_name": "Texas A&MNCAA",
@@ -3551,7 +3551,7 @@
       "srs": 15.3,
       "sos": 10.62,
       "name": "Texas A&MNCAA",
-      "team_id": "texas_a_mncaa"
+      "team_id": "texas_a_m"
     },
     {
       "team_name": "Texas A&M-Corpus Christi",
@@ -3575,7 +3575,7 @@
       "srs": -7.53,
       "sos": -5.53,
       "name": "Texas SouthernNCAA",
-      "team_id": "texas_southernncaa"
+      "team_id": "texas_southern"
     },
     {
       "team_name": "Texas State",
@@ -3599,7 +3599,7 @@
       "srs": 19.38,
       "sos": 9.6,
       "name": "Texas TechNCAA",
-      "team_id": "texas_techncaa"
+      "team_id": "texas_tech"
     },
     {
       "team_name": "Texas-Rio Grande Valley",
@@ -3767,7 +3767,7 @@
       "srs": 12.07,
       "sos": 6.86,
       "name": "UCLANCAA",
-      "team_id": "uclancaa"
+      "team_id": "ucla"
     },
     {
       "team_name": "UNC Asheville",
@@ -3791,7 +3791,7 @@
       "srs": 4.54,
       "sos": -3.87,
       "name": "UNC GreensboroNCAA",
-      "team_id": "unc_greensboroncaa"
+      "team_id": "unc_greensboro"
     },
     {
       "team_name": "UNC Wilmington",
@@ -3923,7 +3923,7 @@
       "srs": 26.64,
       "sos": 10.24,
       "name": "VillanovaNCAA",
-      "team_id": "villanovancaa"
+      "team_id": "villanova"
     },
     {
       "team_name": "VirginiaNCAA",
@@ -3935,7 +3935,7 @@
       "srs": 22.2,
       "sos": 9.05,
       "name": "VirginiaNCAA",
-      "team_id": "virginiancaa"
+      "team_id": "virginia"
     },
     {
       "team_name": "Virginia Commonwealth",
@@ -3971,7 +3971,7 @@
       "srs": 14.35,
       "sos": 6.71,
       "name": "Virginia TechNCAA",
-      "team_id": "virginia_techncaa"
+      "team_id": "virginia_tech"
     },
     {
       "team_name": "Wagner",
@@ -4043,7 +4043,7 @@
       "srs": 19.89,
       "sos": 9.38,
       "name": "West VirginiaNCAA",
-      "team_id": "west_virginiancaa"
+      "team_id": "west_virginia"
     },
     {
       "team_name": "Western Carolina",
@@ -4103,7 +4103,7 @@
       "srs": 16.58,
       "sos": 5.46,
       "name": "Wichita StateNCAA",
-      "team_id": "wichita_statencaa"
+      "team_id": "wichita_state"
     },
     {
       "team_name": "William & Mary",
@@ -4163,7 +4163,7 @@
       "srs": 0.58,
       "sos": -3.64,
       "name": "Wright StateNCAA",
-      "team_id": "wright_statencaa"
+      "team_id": "wright_state"
     },
     {
       "team_name": "Wyoming",
@@ -4187,7 +4187,7 @@
       "srs": 19.06,
       "sos": 9.43,
       "name": "XavierNCAA",
-      "team_id": "xavierncaa"
+      "team_id": "xavier"
     },
     {
       "team_name": "Yale",

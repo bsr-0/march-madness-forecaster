@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-03-17T12:00:00Z",
+  "sources": ["espn", "yahoo", "cbs"],
+  "teams": {
+    "duke": {
+      "team_name": "Duke",
+      "seed": 1,
+      "region": "East",
+      "round_of_64_pct": 98.0,
+      "round_of_32_pct": 92.0,
+      "sweet_16_pct": 75.0,
+      "elite_8_pct": 55.0,
+      "final_four_pct": 35.0,
+      "champion_pct": 22.0
+    },
+    "unc": {
+      "team_name": "UNC",
+      "seed": 2,
+      "region": "East",
+      "round_of_64_pct": 95.0,
+      "round_of_32_pct": 85.0,
+      "sweet_16_pct": 60.0,
+      "elite_8_pct": 40.0,
+      "final_four_pct": 25.0,
+      "champion_pct": 12.0
+    },
+    "gonzaga": {
+      "team_name": "Gonzaga",
+      "seed": 3,
+      "region": "West",
+      "round_of_64_pct": 90.0,
+      "round_of_32_pct": 70.0,
+      "sweet_16_pct": 45.0,
+      "elite_8_pct": 28.0,
+      "final_four_pct": 16.0,
+      "champion_pct": 8.0
+    },
+    "midmajor": {
+      "team_name": "Midmajor",
+      "seed": 12,
+      "region": "South",
+      "round_of_64_pct": 45.0,
+      "round_of_32_pct": 18.0,
+      "sweet_16_pct": 7.0,
+      "elite_8_pct": 3.0,
+      "final_four_pct": 1.5,
+      "champion_pct": 0.8
+    }
+  }
+}
