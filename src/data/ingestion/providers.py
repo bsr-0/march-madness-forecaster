@@ -10,6 +10,8 @@ from typing import Callable, Dict, List, Optional
 
 import requests
 
+from ..normalize import normalize_team_id as _shared_normalize_team_id
+
 logger = logging.getLogger(__name__)
 
 
@@ -375,9 +377,8 @@ class LibraryProviderHub:
 
     @staticmethod
     def _normalize_team_name(name: str) -> str:
-        if not name:
-            return ""
-        return "".join(c.lower() if c.isalnum() else "_" for c in name).strip("_")
+        # Delegate to shared utility (kept for backwards compat)
+        return _shared_normalize_team_id(name)
 
     @staticmethod
     def _to_float(value) -> float:
