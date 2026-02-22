@@ -5,8 +5,10 @@ import pytest
 
 from src.ml.evaluation.ablation import (
     ABLATABLE_COMPONENTS,
+    EMBEDDING_COMPONENTS,
     AblationResult,
     AblationStudy,
+    EmbeddingGateResult,
     FullAblationReport,
 )
 
@@ -185,3 +187,87 @@ class TestAblationStudy:
         expected = {"gnn", "transformer", "travel_distance",
                     "injury_model", "tournament_adaptation", "stacking"}
         assert set(ABLATABLE_COMPONENTS) == expected
+
+    def test_embedding_components_subset_of_ablatable(self):
+        """Embedding components are a subset of ablatable components."""
+        assert set(EMBEDDING_COMPONENTS).issubset(set(ABLATABLE_COMPONENTS))
+
+    def test_full_ablation_with_embedding_gate(self):
+        """Full ablation with embedding gate produces gate results."""
+        pipeline = self._make_mock_pipeline()
+        # Add mock embeddings so the gate can detect dimensions
+        pipeline.gnn_embeddings = {"team_a": np.array([0.1] * 16)}
+        pipeline.transformer_embeddings = {"team_a": np.array([0.1] * 48)}
+        games = self._make_games(50)
+        study = AblationStudy(pipeline, games)
+
+        report = study.run_full_ablation(
+            components=["gnn", "transformer"],
+            enforce_embedding_gate=True,
+        )
+
+        assert len(report.embedding_gate_results) == 2
+        assert "gnn" in report.embedding_gate_results
+        assert "transformer" in report.embedding_gate_results
+
+        # GNN gate: 16*2 = 32 dim
+        gnn_gate = report.embedding_gate_results["gnn"]
+        assert gnn_gate.embedding_dim == 32
+        assert gnn_gate.n_samples == 50
+
+        # Transformer gate: 48*2 = 96 dim
+        xfr_gate = report.embedding_gate_results["transformer"]
+        assert xfr_gate.embedding_dim == 96
+        assert xfr_gate.n_samples == 50
+        assert xfr_gate.dim_to_sample_ratio == pytest.approx(96 / 50, abs=0.01)
+
+    def test_embedding_gate_no_embeddings(self):
+        """Embedding gate handles missing embeddings gracefully."""
+        pipeline = self._make_mock_pipeline()
+        pipeline.gnn_embeddings = {}
+        pipeline.transformer_embeddings = {}
+        games = self._make_games(30)
+        study = AblationStudy(pipeline, games)
+
+        report = study.run_full_ablation(
+            components=["gnn", "transformer"],
+            enforce_embedding_gate=True,
+        )
+
+        for comp in EMBEDDING_COMPONENTS:
+            gate = report.embedding_gate_results[comp]
+            assert gate.action == "skip"
+            assert gate.embedding_dim == 0
+
+    def test_gated_out_components_property(self):
+        """gated_out_components returns components that failed the gate."""
+        report = FullAblationReport(baseline_brier=0.20, n_games=100)
+        report.embedding_gate_results["gnn"] = EmbeddingGateResult(
+            component="gnn", embedding_dim=32, n_samples=100,
+            dim_to_sample_ratio=0.32, p_value=0.80, passed=False,
+            action="disable",
+        )
+        report.embedding_gate_results["transformer"] = EmbeddingGateResult(
+            component="transformer", embedding_dim=96, n_samples=100,
+            dim_to_sample_ratio=0.96, p_value=0.01, passed=True,
+            action="keep",
+        )
+
+        assert "gnn" in report.gated_out_components
+        assert "transformer" not in report.gated_out_components
+
+    def test_to_dict_includes_embedding_gate(self):
+        """to_dict includes embedding gate results when present."""
+        report = FullAblationReport(baseline_brier=0.20, n_games=100)
+        report.embedding_gate_results["gnn"] = EmbeddingGateResult(
+            component="gnn", embedding_dim=32, n_samples=100,
+            dim_to_sample_ratio=0.32, p_value=0.50, passed=False,
+            action="disable",
+        )
+
+        d = report.to_dict()
+        assert "embedding_gate" in d
+        assert "gnn" in d["embedding_gate"]
+        assert d["embedding_gate"]["gnn"]["action"] == "disable"
+        assert "gated_out_components" in d
+        assert "gnn" in d["gated_out_components"]

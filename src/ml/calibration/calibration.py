@@ -747,19 +747,54 @@ def plot_reliability_diagram(
     plt.close()
 
 
+# Minimum samples required for each calibration method to avoid overfitting.
+# Temperature scaling has 1 parameter → safe with small samples.
+# Platt scaling has 2 parameters → needs more data.
+# Isotonic regression is nonparametric → needs substantially more data
+# and will overfit without nested CV on small datasets.
+CALIBRATION_MIN_SAMPLES = {
+    "temperature": 30,
+    "platt": 100,
+    "isotonic": 200,
+}
+
+# Methods that require nested CV to avoid overfitting on small datasets.
+# Without nested CV, Platt and Isotonic calibrate on the same data used
+# to train the model, producing over-optimistic in-sample calibration
+# that degrades out-of-sample.
+REQUIRES_NESTED_CV = {"platt", "isotonic"}
+
+
 class CalibrationPipeline:
     """
     Complete calibration pipeline for tournament predictions.
+
+    Guardrails for calibration method selection:
+    - Temperature scaling (1 parameter) is the default and recommended
+      method for small datasets (<1000 samples, typical for March Madness).
+    - Isotonic regression and Platt scaling risk overfitting without
+      nested cross-validation.  If selected with insufficient samples
+      and no nested CV, the pipeline will emit a warning and fall back
+      to temperature scaling.
     """
-    
-    def __init__(self, method: str = "isotonic"):
+
+    def __init__(
+        self,
+        method: str = "isotonic",
+        nested_cv: bool = False,
+    ):
         """
         Initialize pipeline.
 
         Args:
             method: Calibration method ("isotonic", "platt", "temperature", or "none")
+            nested_cv: Whether nested CV is being used for calibration.
+                If False and method is isotonic/platt, a sample-size guard
+                will auto-downgrade to temperature scaling when N is small.
         """
         self.method = method
+        self.nested_cv = nested_cv
+        self._downgraded_from: Optional[str] = None
 
         if method == "isotonic":
             self.calibrator = IsotonicCalibrator()
@@ -769,7 +804,7 @@ class CalibrationPipeline:
             self.calibrator = TemperatureScaling()
         else:
             self.calibrator = None
-    
+
     def fit(
         self,
         predictions: np.ndarray,
@@ -777,19 +812,49 @@ class CalibrationPipeline:
     ) -> CalibrationMetrics:
         """
         Fit calibrator and return metrics on training data.
-        
+
+        Enforces sample-size guardrails: if the selected method is
+        isotonic or Platt, and nested CV is not in use, the pipeline
+        checks whether N meets the minimum sample threshold.  If not,
+        it downgrades to temperature scaling with a warning.
+
         Args:
             predictions: Historical predictions
             outcomes: Historical outcomes
-            
+
         Returns:
             Pre-calibration metrics
         """
         pre_metrics = calculate_calibration_metrics(predictions, outcomes)
-        
+        n_samples = len(predictions)
+
+        # Guardrail: Isotonic/Platt without nested CV on small datasets
+        if (
+            self.method in REQUIRES_NESTED_CV
+            and not self.nested_cv
+        ):
+            min_required = CALIBRATION_MIN_SAMPLES.get(self.method, 100)
+            if n_samples < min_required:
+                logger.warning(
+                    "Calibration method '%s' requires %d+ samples without "
+                    "nested CV (got %d). Downgrading to temperature scaling "
+                    "to prevent overfitting.",
+                    self.method, min_required, n_samples,
+                )
+                self._downgraded_from = self.method
+                self.method = "temperature"
+                self.calibrator = TemperatureScaling()
+            else:
+                logger.warning(
+                    "Calibration method '%s' is being used without nested "
+                    "CV on %d samples. Consider switching to temperature "
+                    "scaling (1 parameter) to reduce overfitting risk.",
+                    self.method, n_samples,
+                )
+
         if self.calibrator:
             self.calibrator.fit(predictions, outcomes)
-        
+
         return pre_metrics
     
     def calibrate(self, predictions: np.ndarray) -> np.ndarray:
