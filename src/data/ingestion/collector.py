@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from ..normalize import normalize_team_id
 from ..scrapers import (
     CBSPicksScraper,
     CBBpyRosterScraper,
@@ -365,7 +366,8 @@ class RealDataCollector:
 
     @staticmethod
     def _normalize_team_id(name: str) -> str:
-        return "".join(ch.lower() if ch.isalnum() else "_" for ch in (name or "")).strip("_")
+        # Delegate to shared utility (kept for backwards compat)
+        return normalize_team_id(name)
 
     _NCAA_SUFFIX_RE = re.compile(r"NCAA$", re.IGNORECASE)
 

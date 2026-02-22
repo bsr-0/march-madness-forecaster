@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html as _html
 import json
 import re
 from pathlib import Path
@@ -9,6 +10,8 @@ from typing import Dict, List, Optional
 
 import requests
 from bs4 import BeautifulSoup
+
+from ..normalize import normalize_team_id
 
 
 class TournamentSeedScraper:
@@ -51,7 +54,11 @@ class TournamentSeedScraper:
         if not brackets:
             return []
 
-        regions = ("east", "west", "south", "midwest")
+        # Sports Reference uses varying region names across years (e.g.
+        # "southeast"/"southwest" in 2011 instead of "south"/"midwest").
+        # Scan for all region divs dynamically to avoid missing any.
+        regions = ("east", "west", "south", "midwest",
+                   "southeast", "southwest", "mideast", "northwest")
         by_slug: Dict[str, Dict] = {}
         for region in regions:
             region_div = brackets.find("div", {"id": region})
@@ -64,13 +71,15 @@ class TournamentSeedScraper:
             for seed_text, school_slug, team_name in pattern.findall(region_html):
                 if not seed_text.isdigit():
                     continue
+                # Decode HTML entities (e.g. &amp; → &) before storing
+                clean_name = _html.unescape(team_name.strip())
                 by_slug.setdefault(
                     school_slug,
                     {
                         "season": season,
-                        "team_name": team_name.strip(),
+                        "team_name": clean_name,
                         "school_slug": school_slug,
-                        "team_id": self._normalize_team_id(team_name.strip()),
+                        "team_id": normalize_team_id(clean_name),
                         "seed": int(seed_text),
                         "region": region.title(),
                     },
@@ -83,13 +92,14 @@ class TournamentSeedScraper:
             for seed_text, school_slug, team_name in first_four_pattern.findall(region_html):
                 if not seed_text.isdigit():
                     continue
+                clean_name = _html.unescape(team_name.strip())
                 by_slug.setdefault(
                     school_slug,
                     {
                         "season": season,
-                        "team_name": team_name.strip(),
+                        "team_name": clean_name,
                         "school_slug": school_slug,
-                        "team_id": self._normalize_team_id(team_name.strip()),
+                        "team_id": normalize_team_id(clean_name),
                         "seed": int(seed_text),
                         "region": region.title(),
                     },
@@ -111,7 +121,8 @@ class TournamentSeedScraper:
 
     @staticmethod
     def _normalize_team_id(name: str) -> str:
-        return "".join(ch.lower() if ch.isalnum() else "_" for ch in (name or "")).strip("_")
+        # Delegate to shared utility (kept for backwards compat)
+        return normalize_team_id(name)
 
     def _load_cache(self, filename: str) -> Optional[Dict]:
         if not self.cache_dir:

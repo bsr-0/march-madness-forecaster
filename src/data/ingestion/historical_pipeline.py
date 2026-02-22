@@ -12,6 +12,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from ..normalize import normalize_team_id, strip_ncaa_suffix, strip_ncaa_suffix_name
 from ..scrapers import SportsReferenceScraper, TournamentSeedScraper
 from .providers import LibraryProviderHub
 from .validators import validate_games_payload, validate_ratings_payload
@@ -556,7 +557,8 @@ class HistoricalDataPipeline:
 
     @staticmethod
     def _normalize_team_name(name: str) -> str:
-        return "".join(ch.lower() if ch.isalnum() else "_" for ch in (name or "")).strip("_")
+        # Delegate to shared utility (kept for backwards compat)
+        return normalize_team_id(name)
 
     @staticmethod
     def _to_float(value) -> float:
