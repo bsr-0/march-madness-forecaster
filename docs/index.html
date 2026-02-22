@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>March Madness Forecaster</title>
+  <meta name="description" content="State-of-the-art NCAA Tournament prediction system using Graph Neural Networks, Transformers, Monte Carlo simulation, and game-theoretic bracket optimization.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="container">
+      <h1>March Madness Forecaster</h1>
+      <p class="tagline">State-of-the-Art NCAA Tournament Prediction System</p>
+      <p class="subtitle">Graph Neural Networks &middot; Transformers &middot; Monte Carlo Simulation &middot; Game-Theoretic Optimization</p>
+      <div class="hero-actions">
+        <a href="https://github.com/bsr-0/march-madness-forecaster" class="btn btn-primary">View on GitHub</a>
+        <a href="#quickstart" class="btn btn-secondary">Get Started</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="overview" class="section">
+      <div class="container">
+        <h2>Architecture Overview</h2>
+        <div class="pipeline">
+          <div class="pipeline-stage">
+            <div class="stage-icon">1</div>
+            <h3>Data Layer</h3>
+            <ul>
+              <li>Public advanced metrics (sportsdataverse / CBBpy)</li>
+              <li>Torvik &amp; KenPom scraping</li>
+              <li>ESPN public picks</li>
+              <li>Player RAPM / WARP</li>
+              <li>ShotQuality xP</li>
+            </ul>
+          </div>
+          <div class="pipeline-stage">
+            <div class="stage-icon">2</div>
+            <h3>ML Models</h3>
+            <ul>
+              <li>GNN (schedule graph)</li>
+              <li>Temporal Transformer</li>
+              <li>LightGBM</li>
+              <li>CFA Ensemble</li>
+              <li>Elo / Seed Baseline</li>
+            </ul>
+          </div>
+          <div class="pipeline-stage">
+            <div class="stage-icon">3</div>
+            <h3>Optimization</h3>
+            <ul>
+              <li>Monte Carlo (50k+ sims)</li>
+              <li>Isotonic Calibration</li>
+              <li>Leverage Calculation</li>
+              <li>Pareto-Optimal Brackets</li>
+              <li>Pool-Size Strategy</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="section section-alt">
+      <div class="container">
+        <h2>Key Features</h2>
+        <div class="features-grid">
+          <div class="feature-card">
+            <h3>High-Resolution Data Engineering</h3>
+            <p>Possession-level expected points, player-level RAPM/WARP tracking with transfer portal impact, lead volatility &amp; entropy metrics for upset detection, and Four Factors analysis.</p>
+          </div>
+          <div class="feature-card">
+            <h3>GNN-Transformer Hybrid</h3>
+            <p>Graph Convolutional Network for schedule-based strength propagation, multi-hop SOS analysis, temporal transformer for breakout window detection, and attention-based game weighting.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Uncertainty Quantification</h3>
+            <p>50,000+ Monte Carlo simulations with injury noise injection, Brier Score optimization, isotonic regression post-processing, and reliability diagram validation.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Game Theory Optimization</h3>
+            <p>Public consensus scraping, leverage ratio calculation (Win Prob / Pick %), Pareto-optimal bracket generation from chalk to contrarian, and pool size-specific strategy.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="models" class="section">
+      <div class="container">
+        <h2>Mathematical Approach</h2>
+        <div class="models-grid">
+          <div class="model-card">
+            <h3>Elo Rating System</h3>
+            <p>Dynamic team ratings based on game outcomes.</p>
+            <pre><code>P = 1 / (1 + 10^((R_opp - R_team) / 400))
+R_new = R_old + K * (actual - expected)</code></pre>
+          </div>
+          <div class="model-card">
+            <h3>Seed-Based Baseline</h3>
+            <p>Historical NCAA tournament data mapped to win probabilities by seed matchup.</p>
+            <table>
+              <thead>
+                <tr><th>Matchup</th><th>Favored Win %</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>1 vs 16</td><td>99.5%</td></tr>
+                <tr><td>5 vs 12</td><td>64.7%</td></tr>
+                <tr><td>8 vs 9</td><td>48.8%</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="model-card">
+            <h3>Statistical Model</h3>
+            <p>Weighted feature scoring converted to probabilities via logistic function.</p>
+            <table>
+              <thead>
+                <tr><th>Feature</th><th>Weight</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Off. Efficiency</td><td>30%</td></tr>
+                <tr><td>Def. Efficiency</td><td>30%</td></tr>
+                <tr><td>Strength of Schedule</td><td>15%</td></tr>
+                <tr><td>Recent Performance</td><td>15%</td></tr>
+                <tr><td>Tempo</td><td>5%</td></tr>
+                <tr><td>Experience</td><td>5%</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="model-card">
+            <h3>Ensemble Method</h3>
+            <p>Combines predictions from all models using weighted averaging. Each model contributes a win probability, and the final prediction is the weighted sum.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="quickstart" class="section section-alt">
+      <div class="container">
+        <h2>Quick Start</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h3>Install</h3>
+              <pre><code>git clone https://github.com/bsr-0/march-madness-forecaster.git
+cd march-madness-forecaster
+pip install -r requirements.txt</code></pre>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h3>Generate Sample Data</h3>
+              <pre><code>python -m src.main sample --output sample_tournament.json</code></pre>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h3>Run Predictions</h3>
+              <pre><code>python -m src.main predict \
+  --input sample_tournament.json \
+  --output predictions.json</code></pre>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+              <h3>Full SOTA Pipeline</h3>
+              <pre><code>python -m src.main sota \
+  --input data/raw/teams_2026.json \
+  --kenpom data/raw/kenpom_2026.json \
+  --torvik data/raw/torvik_2026.json \
+  --simulations 50000 \
+  --output selection_sunday_report.json</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="cli" class="section">
+      <div class="container">
+        <h2>Command-Line Interface</h2>
+        <div class="cli-grid">
+          <div class="cli-card">
+            <h3><code>predict</code></h3>
+            <p>Generate bracket predictions using ensemble or individual models.</p>
+            <pre><code>python -m src.main predict \
+  -i teams.json -o bracket.json \
+  --model ensemble \
+  --upset-threshold 0.4</code></pre>
+          </div>
+          <div class="cli-card">
+            <h3><code>ingest</code></h3>
+            <p>Pull real data from multiple providers for a given season.</p>
+            <pre><code>python -m src.main ingest \
+  --year 2026 \
+  --output-dir data/raw</code></pre>
+          </div>
+          <div class="cli-card">
+            <h3><code>materialize-features</code></h3>
+            <p>Build leakage-safe training tables from historical data.</p>
+            <pre><code>python -m src.main materialize-features \
+  --start-season 2022 \
+  --end-season 2025 \
+  --output-dir data/processed</code></pre>
+          </div>
+          <div class="cli-card">
+            <h3><code>sota</code></h3>
+            <p>Run the full rubric pipeline end-to-end.</p>
+            <pre><code>python -m src.main sota \
+  --input teams_2026.json \
+  --simulations 50000 \
+  --output report.json</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="structure" class="section section-alt">
+      <div class="container">
+        <h2>Project Structure</h2>
+        <pre class="tree"><code>march-madness-forecaster/
+├── src/
+│   ├── models/          # Team, Game, Bracket data models
+│   ├── predictors/      # Elo, Statistical, Seed, Ensemble
+│   ├── ml/              # GNN, Transformer, LightGBM
+│   ├── simulation/      # Monte Carlo bracket simulation
+│   ├── optimization/    # Pareto, leverage, pool strategy
+│   ├── pipeline/        # Feature materialization
+│   ├── data/            # Data loading and ingestion
+│   └── main.py          # CLI entry point
+├── tests/               # Test suite
+├── data/                # Raw and processed data
+├── docs/                # Documentation &amp; site
+├── requirements.txt
+└── setup.py</code></pre>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>March Madness Forecaster &middot; MIT License &middot; <a href="https://github.com/bsr-0/march-madness-forecaster">GitHub</a></p>
+    </div>
+  </footer>
+</body>
+</html>
