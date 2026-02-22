@@ -9,7 +9,7 @@ training pipeline.
 
 ## Executive Summary
 
-This audit identified **17 issues** across the training data pipeline, ranging
+This audit identified **19 issues** across the training data pipeline, ranging
 from silent data corruption that affects model training to team resolution
 mismatches that drop tournament teams from evaluation. The most severe issues
 are the complete zeroing of team metrics for 2005-2009, the systematic team ID
@@ -366,12 +366,46 @@ NaN or empty for all training samples.
 
 ---
 
-### L3. Sports Reference Cache Missing for 2025
+### L3. Sports Reference Cache Missing for 2025; 2026 Has Truncated Schema
 
 The cache directory has `sports_reference_2026.json` but no
-`sports_reference_2025.json`. This means 2025 team metrics come from a
-different source or were cached under a different name, potentially using
-a different schema or field set than other years.
+`sports_reference_2025.json`. The 2025 file exists only at the root level
+(`data/raw/sports_reference_2025.json`) with a different schema (adds `name`
+and `team_id` fields not present in the cache versions).
+
+Additionally, `sports_reference_2026.json` has only 4 of the 8 fields
+present in all other years -- `wins`, `losses`, `sos`, and `srs` are
+completely absent. This means the current season data cannot contribute
+win/loss record or SRS-based features.
+
+---
+
+### L4. High Game Data Failure Rates for 2005-2009
+
+The CBBpy scraper had significant failure rates for early years:
+
+| Year | Failed game IDs | Failure rate |
+|------|-----------------|--------------|
+| 2005 | 890             | 17.4%        |
+| 2006 | 468             | 9.3%         |
+| 2007 | 303             | 5.5%         |
+| 2009 | 238             | 4.1%         |
+| 2010+| 0               | 0%           |
+
+The 2005 failure rate of 17.4% means nearly 1 in 5 games is missing box
+score data. Combined with the zeroed-out team metrics (C1), early years
+have substantially degraded data quality.
+
+---
+
+### L5. Duplicate `historical_games_2025.json` with Incompatible Schema
+
+A root-level file at `data/raw/historical_games_2025.json` (5.5 MB) exists
+alongside `data/raw/historical/historical_games_2025.json` (8.0 MB). The
+root-level version has a completely different schema: a flat list of 12,582
+team-game records without the standard `games`/`team_games`/`complete`/
+`failed_game_ids` wrapper. It also lacks `date` and `season` fields. If
+the wrong file is loaded by path resolution, features will be missing.
 
 ---
 
