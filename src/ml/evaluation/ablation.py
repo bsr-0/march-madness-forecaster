@@ -3,6 +3,11 @@
 Systematically disables individual pipeline components and measures
 the impact on predictive performance (Brier score), using formal
 significance tests to determine whether each component genuinely helps.
+
+Embedding-heavy components (GNN, Transformer) have a stricter gate:
+they must pass p<0.05 or be automatically disabled, because the high
+embedding dimensionality (~96 features from diff+interaction) relative
+to training sample size (~400 games) creates severe overfitting risk.
 """
 
 from __future__ import annotations
@@ -28,6 +33,13 @@ ABLATABLE_COMPONENTS = (
     "stacking",
 )
 
+# Components that use high-dimensional embeddings and require p<0.05
+# significance to justify their inclusion.  The GNN embedding projection
+# uses 2*16=32 features and the Transformer uses 2*48=96 features
+# (diff + interaction), both trained on ~400 samples — dangerously
+# close to overfitting territory.
+EMBEDDING_COMPONENTS = ("gnn", "transformer")
+
 TRAVEL_ADVANTAGE_FEATURE_IDX = 70  # 5th interaction feature (index in 71-dim matchup)
 
 
@@ -52,12 +64,39 @@ class AblationResult:
 
 
 @dataclass
+class EmbeddingGateResult:
+    """Result of the embedding significance gate for one component."""
+
+    component: str
+    embedding_dim: int  # Total features in projection (diff + interaction)
+    n_samples: int  # Training samples available
+    dim_to_sample_ratio: float  # embedding_dim / n_samples
+    p_value: float
+    passed: bool  # True if p<0.05 AND component helps
+    action: str  # "keep", "disable", or "skip" (if ablation failed)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "component": self.component,
+            "embedding_dim": self.embedding_dim,
+            "n_samples": self.n_samples,
+            "dim_to_sample_ratio": round(self.dim_to_sample_ratio, 4),
+            "p_value": round(self.p_value, 4),
+            "passed": self.passed,
+            "action": self.action,
+        }
+
+
+@dataclass
 class FullAblationReport:
     """Results from ablating all components."""
 
     results: Dict[str, AblationResult] = field(default_factory=dict)
     baseline_brier: float = 0.0
     n_games: int = 0
+    embedding_gate_results: Dict[str, EmbeddingGateResult] = field(
+        default_factory=dict
+    )
 
     @property
     def helpful_components(self) -> List[str]:
@@ -69,13 +108,22 @@ class FullAblationReport:
         """Components whose removal does NOT significantly hurt performance."""
         return [name for name, r in self.results.items() if not r.helps]
 
+    @property
+    def gated_out_components(self) -> List[str]:
+        """Embedding components that failed the p<0.05 significance gate."""
+        return [
+            name for name, g in self.embedding_gate_results.items()
+            if not g.passed
+        ]
+
     def to_dict(self) -> Dict[str, Any]:
         """Serialize to dict for JSON output."""
-        return {
+        result = {
             "baseline_brier": self.baseline_brier,
             "n_games": self.n_games,
             "helpful_components": self.helpful_components,
             "unhelpful_components": self.unhelpful_components,
+            "gated_out_components": self.gated_out_components,
             "per_component": {
                 name: {
                     "ablated_brier": r.ablated_brier,
@@ -87,6 +135,12 @@ class FullAblationReport:
                 for name, r in self.results.items()
             },
         }
+        if self.embedding_gate_results:
+            result["embedding_gate"] = {
+                name: g.to_dict()
+                for name, g in self.embedding_gate_results.items()
+            }
+        return result
 
 
 class AblationStudy:
@@ -201,11 +255,16 @@ class AblationStudy:
     def run_full_ablation(
         self,
         components: Optional[List[str]] = None,
+        enforce_embedding_gate: bool = True,
     ) -> FullAblationReport:
         """Run ablation for all components (or a subset).
 
         Args:
             components: List of components to ablate. Defaults to all.
+            enforce_embedding_gate: If True, embedding-heavy components
+                (GNN, Transformer) must pass p<0.05 or be flagged for
+                removal.  This guards against overfitting when embedding
+                dimensionality is high relative to sample size.
 
         Returns:
             FullAblationReport with per-component results.
@@ -234,7 +293,99 @@ class AblationStudy:
             except Exception as exc:
                 logger.warning("Ablation of %s failed: %s", component, exc)
 
+        # Embedding significance gate: require p<0.05 for GNN/Transformer
+        if enforce_embedding_gate:
+            report.embedding_gate_results = self._run_embedding_gates(report)
+
         return report
+
+    def _run_embedding_gates(
+        self,
+        report: FullAblationReport,
+    ) -> Dict[str, EmbeddingGateResult]:
+        """Check embedding components against the p<0.05 significance gate.
+
+        For each embedding component (GNN, Transformer), computes the
+        effective feature dimensionality of the embedding projection
+        (diff + interaction vectors) and requires a statistically
+        significant ablation result to justify inclusion.
+
+        Components that fail the gate should be disabled to prevent
+        the embedding projection from overfitting on small samples.
+        """
+        gate_results: Dict[str, EmbeddingGateResult] = {}
+
+        # Infer embedding dimensions from pipeline state
+        embedding_dims = {}
+        if hasattr(self.pipeline, "gnn_embeddings") and self.pipeline.gnn_embeddings:
+            sample_emb = next(iter(self.pipeline.gnn_embeddings.values()))
+            # Projection uses diff + interaction → 2x embedding dim
+            embedding_dims["gnn"] = len(sample_emb) * 2
+        if hasattr(self.pipeline, "transformer_embeddings") and self.pipeline.transformer_embeddings:
+            sample_emb = next(iter(self.pipeline.transformer_embeddings.values()))
+            embedding_dims["transformer"] = len(sample_emb) * 2
+
+        n_samples = report.n_games
+
+        for component in EMBEDDING_COMPONENTS:
+            emb_dim = embedding_dims.get(component, 0)
+            if emb_dim == 0:
+                gate_results[component] = EmbeddingGateResult(
+                    component=component,
+                    embedding_dim=0,
+                    n_samples=n_samples,
+                    dim_to_sample_ratio=0.0,
+                    p_value=1.0,
+                    passed=False,
+                    action="skip",
+                )
+                continue
+
+            ratio = emb_dim / max(n_samples, 1)
+            ablation_result = report.results.get(component)
+
+            if ablation_result is None:
+                gate_results[component] = EmbeddingGateResult(
+                    component=component,
+                    embedding_dim=emb_dim,
+                    n_samples=n_samples,
+                    dim_to_sample_ratio=ratio,
+                    p_value=1.0,
+                    passed=False,
+                    action="skip",
+                )
+                continue
+
+            passed = ablation_result.p_value < 0.05 and ablation_result.brier_delta > 0
+            action = "keep" if passed else "disable"
+
+            gate_results[component] = EmbeddingGateResult(
+                component=component,
+                embedding_dim=emb_dim,
+                n_samples=n_samples,
+                dim_to_sample_ratio=ratio,
+                p_value=ablation_result.p_value,
+                passed=passed,
+                action=action,
+            )
+
+            if not passed:
+                logger.warning(
+                    "EMBEDDING GATE: %s FAILED (dim=%d, N=%d, ratio=%.3f, "
+                    "p=%.4f). Component should be disabled to prevent "
+                    "overfitting.",
+                    component, emb_dim, n_samples, ratio,
+                    ablation_result.p_value,
+                )
+            else:
+                logger.info(
+                    "EMBEDDING GATE: %s PASSED (dim=%d, N=%d, ratio=%.3f, "
+                    "p=%.4f).",
+                    component, emb_dim, n_samples, ratio,
+                    ablation_result.p_value,
+                )
+
+        return gate_results
 
     # ------------------------------------------------------------------
     # Private: per-component ablation strategies
