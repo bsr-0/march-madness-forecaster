@@ -1,0 +1,757 @@
+{
+  "metadata": {
+    "report_type": "researcher_degrees_of_freedom_audit",
+    "timestamp": "2026-02-21 21:59:55"
+  },
+  "constant_inventory": {
+    "tier1_externally_derived": [
+      {
+        "name": "four_factors_weights",
+        "tier": 1,
+        "current_value": [
+          0.4,
+          0.25,
+          0.2,
+          0.15
+        ],
+        "config_path": "ProprietaryMetrics._four_factors",
+        "valid_range": [
+          0.0,
+          1.0
+        ],
+        "derivation": "Oliver 2004, Kubatko 2007 \u2014 published D1 regression coefficients",
+        "notes": ""
+      },
+      {
+        "name": "vif_threshold",
+        "tier": 1,
+        "current_value": 10.0,
+        "config_path": "SOTAPipelineConfig.vif_threshold",
+        "valid_range": [
+          5.0,
+          20.0
+        ],
+        "derivation": "Belsley 1980 \u2014 standard multicollinearity cutoff",
+        "notes": ""
+      },
+      {
+        "name": "hca_points",
+        "tier": 1,
+        "current_value": 3.75,
+        "config_path": "ProprietaryMetrics.HCA_POINTS",
+        "valid_range": [
+          2.5,
+          5.0
+        ],
+        "derivation": "Meta-analysis consensus: college basketball HCA is 3.5-4.0 points",
+        "notes": ""
+      },
+      {
+        "name": "elo_hca_multiplier",
+        "tier": 1,
+        "current_value": 13.3,
+        "config_path": "ProprietaryMetrics (derived: HCA_POINTS * 13.3)",
+        "valid_range": [
+          10.0,
+          16.0
+        ],
+        "derivation": "FiveThirtyEight Elo methodology \u2014 published conversion factor",
+        "notes": ""
+      },
+      {
+        "name": "seed_prior_slope",
+        "tier": 1,
+        "current_value": 0.175,
+        "config_path": "SOTAPipelineConfig.seed_prior_slope",
+        "valid_range": [
+          0.1,
+          0.25
+        ],
+        "derivation": "Logistic fit on 40 years of public tournament data (1985-2024, N>2500)",
+        "notes": ""
+      },
+      {
+        "name": "pre_calibration_clips",
+        "tier": 1,
+        "current_value": [
+          0.03,
+          0.97
+        ],
+        "config_path": "SOTAPipelineConfig.pre_calibration_clip_lo/hi",
+        "valid_range": [
+          0.01,
+          0.1
+        ],
+        "derivation": "Historical 1-vs-16 upset rate ~1.5%; 3% provides safety margin",
+        "notes": ""
+      },
+      {
+        "name": "log5_scale",
+        "tier": 1,
+        "current_value": 0.1735,
+        "config_path": "ProprietaryMetrics._pythagorean_win_pct + rdof_audit baselines",
+        "valid_range": [
+          0.1,
+          0.25
+        ],
+        "derivation": "D1 fix: analytically derived k=ln(17/3)/10=0.1735 so AdjEM=+10 maps to exactly 0.850 win%. Prior value 0.145 gave 0.810, not 0.85 as documented.",
+        "notes": ""
+      },
+      {
+        "name": "elo_dampening_numerator",
+        "tier": 1,
+        "current_value": 2.2,
+        "config_path": "ProprietaryMetrics._compute_elo (hardcoded)",
+        "valid_range": [
+          1.5,
+          3.0
+        ],
+        "derivation": "FiveThirtyEight published Elo methodology dampening constant",
+        "notes": ""
+      },
+      {
+        "name": "elo_dampening_denom_scale",
+        "tier": 1,
+        "current_value": 0.001,
+        "config_path": "ProprietaryMetrics._compute_elo (hardcoded)",
+        "valid_range": [
+          0.0005,
+          0.005
+        ],
+        "derivation": "FiveThirtyEight published Elo methodology elo_diff scaling",
+        "notes": ""
+      },
+      {
+        "name": "ts_pct_fta_weight",
+        "tier": 1,
+        "current_value": 0.44,
+        "config_path": "ProprietaryMetrics (0.44 * FTA in True Shooting denominator)",
+        "valid_range": [
+          0.4,
+          0.48
+        ],
+        "derivation": "Hollinger's True Shooting %: 2*(FGA + 0.44*FTA); published formula",
+        "notes": ""
+      }
+    ],
+    "tier2_structurally_constrained": [
+      {
+        "name": "training_year_decay",
+        "tier": 2,
+        "current_value": 0.85,
+        "config_path": "SOTAPipelineConfig.training_year_decay",
+        "valid_range": [
+          0.7,
+          0.95
+        ],
+        "derivation": "Bounded (0,1), monotonically decreasing importance of older data",
+        "notes": ""
+      },
+      {
+        "name": "training_year_min_weight",
+        "tier": 2,
+        "current_value": 0.15,
+        "config_path": "SOTAPipelineConfig.training_year_min_weight",
+        "valid_range": [
+          0.05,
+          0.3
+        ],
+        "derivation": "Floor > 0 prevents discarding old data entirely",
+        "notes": ""
+      },
+      {
+        "name": "recency_half_life",
+        "tier": 2,
+        "current_value": 0.3,
+        "config_path": "SOTAPipelineConfig.recency_half_life",
+        "valid_range": [
+          0.1,
+          0.8
+        ],
+        "derivation": "Within-season temporal weighting; bounded, monotone effect",
+        "notes": ""
+      },
+      {
+        "name": "recency_decay_floor",
+        "tier": 2,
+        "current_value": 0.3,
+        "config_path": "SOTAPipelineConfig.recency_decay_floor",
+        "valid_range": [
+          0.1,
+          0.6
+        ],
+        "derivation": "Floor prevents discarding early-season games",
+        "notes": ""
+      },
+      {
+        "name": "late_season_cutoff_days",
+        "tier": 2,
+        "current_value": 45,
+        "config_path": "SOTAPipelineConfig.late_season_training_cutoff_days",
+        "valid_range": [
+          20,
+          90
+        ],
+        "derivation": "Bounded, monotone effect on sample size vs feature quality",
+        "notes": ""
+      },
+      {
+        "name": "round_correlation_decay",
+        "tier": 2,
+        "current_value": [
+          1.0,
+          0.6,
+          0.3,
+          0.15,
+          0.0,
+          0.0
+        ],
+        "config_path": "monte_carlo._run_batch (hardcoded)",
+        "valid_range": [
+          0.0,
+          1.0
+        ],
+        "derivation": "Must be monotonically decreasing R64\u2192Championship; tournament structure",
+        "notes": ""
+      },
+      {
+        "name": "lgb_num_leaves",
+        "tier": 2,
+        "current_value": 8,
+        "config_path": "LightGBMRanker default params",
+        "valid_range": [
+          4,
+          32
+        ],
+        "derivation": "Lower = more regularized; conservative for small N (~400 samples)",
+        "notes": ""
+      },
+      {
+        "name": "lgb_min_child_samples",
+        "tier": 2,
+        "current_value": 50,
+        "config_path": "LightGBMRanker default params",
+        "valid_range": [
+          10,
+          100
+        ],
+        "derivation": "Higher = more regularized; ~12% of training data",
+        "notes": ""
+      },
+      {
+        "name": "xgb_max_depth",
+        "tier": 2,
+        "current_value": 3,
+        "config_path": "XGBoostRanker default params",
+        "valid_range": [
+          2,
+          6
+        ],
+        "derivation": "Lower = more regularized; standard shallow-tree choice",
+        "notes": ""
+      },
+      {
+        "name": "xgb_min_child_weight",
+        "tier": 2,
+        "current_value": 10,
+        "config_path": "XGBoostRanker default params",
+        "valid_range": [
+          3,
+          30
+        ],
+        "derivation": "Higher = more regularized",
+        "notes": ""
+      },
+      {
+        "name": "elo_season_regression",
+        "tier": 2,
+        "current_value": 0.25,
+        "config_path": "ProprietaryMetrics._compute_elo_ratings + sota._load_year_samples",
+        "valid_range": [
+          0.1,
+          0.5
+        ],
+        "derivation": "D2 fix: 25% regression toward mean (1500) at each season boundary. Matches FiveThirtyEight NFL Elo methodology (Silver, 2014). Reduces cold-start noise in early-season ratings.",
+        "notes": ""
+      },
+      {
+        "name": "elo_k_base",
+        "tier": 2,
+        "current_value": 38.0,
+        "config_path": "ProprietaryMetrics._compute_elo K_BASE",
+        "valid_range": [
+          20.0,
+          60.0
+        ],
+        "derivation": "MOV-adjusted Elo K-factor; bounded, monotone effect on update magnitude",
+        "notes": ""
+      },
+      {
+        "name": "wab_k",
+        "tier": 2,
+        "current_value": 11.5,
+        "config_path": "sota.py _load_year_samples _WAB_K",
+        "valid_range": [
+          5.0,
+          20.0
+        ],
+        "derivation": "log5 scaling denominator for WAB; bounded, controls sensitivity to AdjEM gap",
+        "notes": ""
+      },
+      {
+        "name": "bubble_em_prior",
+        "tier": 2,
+        "current_value": 5.0,
+        "config_path": "ProprietaryMetrics.BUBBLE_EM_PRIOR",
+        "valid_range": [
+          2.0,
+          10.0
+        ],
+        "derivation": "Historical average AdjEM of ~45th-ranked team; Bayesian prior for WAB",
+        "notes": ""
+      },
+      {
+        "name": "margin_cap",
+        "tier": 2,
+        "current_value": 16.0,
+        "config_path": "ProprietaryMetrics.MARGIN_CAP",
+        "valid_range": [
+          10.0,
+          25.0
+        ],
+        "derivation": "Blowout cap; bounded, prevents extreme margins from distorting efficiency",
+        "notes": ""
+      },
+      {
+        "name": "sos_damping",
+        "tier": 2,
+        "current_value": 0.7,
+        "config_path": "ProprietaryMetrics._iterative_sos_adjust DAMPING",
+        "valid_range": [
+          0.4,
+          0.9
+        ],
+        "derivation": "SOS convergence blend factor; bounded (0,1), higher = faster convergence",
+        "notes": ""
+      },
+      {
+        "name": "three_pt_prior_weight",
+        "tier": 2,
+        "current_value": 100.0,
+        "config_path": "ProprietaryMetrics (hardcoded prior_weight=100)",
+        "valid_range": [
+          30.0,
+          300.0
+        ],
+        "derivation": "Bayesian 3PT shrinkage prior strength; ~3 games of 3PA volume",
+        "notes": ""
+      },
+      {
+        "name": "three_pt_league_avg",
+        "tier": 2,
+        "current_value": 0.345,
+        "config_path": "ProprietaryMetrics (hardcoded 0.345)",
+        "valid_range": [
+          0.33,
+          0.36
+        ],
+        "derivation": "D1 average 3PT%; slowly drifts year-to-year but structurally bounded",
+        "notes": ""
+      },
+      {
+        "name": "pit_noise_base",
+        "tier": 2,
+        "current_value": 0.05,
+        "config_path": "sota.py _train_baseline_model base_noise",
+        "valid_range": [
+          0.02,
+          0.1
+        ],
+        "derivation": "PIT residual noise scale; bounded, proportional to season_remaining",
+        "notes": ""
+      },
+      {
+        "name": "pit_stability_scaling",
+        "tier": 2,
+        "current_value": 0.7,
+        "config_path": "sota.py (feature_noise_weight = 1.0 - stability * 0.7)",
+        "valid_range": [
+          0.4,
+          0.9
+        ],
+        "derivation": "How much feature stability reduces PIT noise; bounded [0,1]",
+        "notes": ""
+      },
+      {
+        "name": "pit_feature_noise_reduction",
+        "tier": 2,
+        "current_value": 0.3,
+        "config_path": "sota.py (feature_noise_weight *= 0.3 for PIT features)",
+        "valid_range": [
+          0.1,
+          0.6
+        ],
+        "derivation": "Noise reduction multiplier for PIT-adjusted features; bounded (0,1)",
+        "notes": ""
+      },
+      {
+        "name": "mean_regression_shrinkage",
+        "tier": 2,
+        "current_value": 0.1,
+        "config_path": "sota.py (shrinkage = 0.10 toward league mean)",
+        "valid_range": [
+          0.0,
+          0.25
+        ],
+        "derivation": "Regression toward league mean; bounded, monotone effect",
+        "notes": ""
+      },
+      {
+        "name": "pit_weight_cap",
+        "tier": 2,
+        "current_value": 0.9,
+        "config_path": "sota.py (min(0.9, 0.9 * season_remaining))",
+        "valid_range": [
+          0.5,
+          1.0
+        ],
+        "derivation": "Maximum PIT blend weight; bounded, caps PIT override of end-of-season",
+        "notes": ""
+      },
+      {
+        "name": "sos_iterations",
+        "tier": 2,
+        "current_value": 15,
+        "config_path": "ProprietaryMetrics._iterative_sos_adjust N_ITERS",
+        "valid_range": [
+          5,
+          30
+        ],
+        "derivation": "Convergence iterations for additive SOS; bounded, monotone convergence",
+        "notes": ""
+      },
+      {
+        "name": "luck_min_games",
+        "tier": 2,
+        "current_value": 12,
+        "config_path": "ProprietaryMetrics MIN_GAMES_LUCK",
+        "valid_range": [
+          5,
+          20
+        ],
+        "derivation": "Minimum games for luck metric; data quality threshold",
+        "notes": ""
+      },
+      {
+        "name": "luck_full_weight_games",
+        "tier": 2,
+        "current_value": 32,
+        "config_path": "ProprietaryMetrics (shrinkage reaches 1.0 at 32 games)",
+        "valid_range": [
+          20,
+          50
+        ],
+        "derivation": "Games at which luck shrinkage = 100%; structural ramp",
+        "notes": ""
+      },
+      {
+        "name": "momentum_window",
+        "tier": 2,
+        "current_value": 8,
+        "config_path": "rdof_audit._compute_derived_stats last_n; sota.py _load_year_samples",
+        "valid_range": [
+          4,
+          15
+        ],
+        "derivation": "Rolling game window for momentum calculation; bounded",
+        "notes": ""
+      },
+      {
+        "name": "four_factors_composite_scale",
+        "tier": 2,
+        "current_value": 2.0,
+        "config_path": "ProprietaryMetrics (2.0 * composite to PPP scale)",
+        "valid_range": [
+          1.0,
+          4.0
+        ],
+        "derivation": "Converts Four Factors composite to PPP-like units; structural scaling",
+        "notes": ""
+      },
+      {
+        "name": "mc_final_clip_lo",
+        "tier": 2,
+        "current_value": 0.01,
+        "config_path": "monte_carlo._run_batch np.clip(noisy, 0.01, 0.99)",
+        "valid_range": [
+          0.005,
+          0.05
+        ],
+        "derivation": "Post-noise probability floor in MC simulation; prevents log(0)",
+        "notes": ""
+      },
+      {
+        "name": "mc_final_clip_hi",
+        "tier": 2,
+        "current_value": 0.99,
+        "config_path": "monte_carlo._run_batch np.clip(noisy, 0.01, 0.99)",
+        "valid_range": [
+          0.95,
+          0.999
+        ],
+        "derivation": "Post-noise probability ceiling in MC simulation; structural bound",
+        "notes": ""
+      },
+      {
+        "name": "seed_interaction_scale",
+        "tier": 2,
+        "current_value": 128.0,
+        "config_path": "sota.py seed_interaction = (seed1*seed2)/128 - 1",
+        "valid_range": [
+          64.0,
+          256.0
+        ],
+        "derivation": "Normalization denominator for seed interaction feature; structural",
+        "notes": ""
+      },
+      {
+        "name": "gnn_target_scale",
+        "tier": 2,
+        "current_value": 30.0,
+        "config_path": "sota.py adj_em / 30.0 for GNN targets",
+        "valid_range": [
+          15.0,
+          50.0
+        ],
+        "derivation": "AdjEM normalization for GNN training targets; scale parameter",
+        "notes": ""
+      },
+      {
+        "name": "early_stopping_rounds",
+        "tier": 2,
+        "current_value": 30,
+        "config_path": "sota.py LGB/XGB early stopping patience",
+        "valid_range": [
+          10,
+          50
+        ],
+        "derivation": "Early stopping rounds; structural regularization, bounded",
+        "notes": ""
+      },
+      {
+        "name": "optuna_n_trials",
+        "tier": 2,
+        "current_value": 15,
+        "config_path": "SOTAPipelineConfig.optuna_n_trials",
+        "valid_range": [
+          5,
+          50
+        ],
+        "derivation": "Max Optuna tuning trials; bounded, more trials = more selection bias",
+        "notes": ""
+      }
+    ],
+    "tier3_freely_tuned": [
+      {
+        "name": "ensemble_lgb_weight",
+        "tier": 3,
+        "current_value": 0.45,
+        "config_path": "ensemble weights in _train_baseline_model",
+        "valid_range": [
+          0.2,
+          0.7
+        ],
+        "derivation": "Calibrated from LOYO; 2 free DoF (3 weights sum to 1)",
+        "notes": "Paired with xgb=0.35, logistic=0.20"
+      },
+      {
+        "name": "ensemble_xgb_weight",
+        "tier": 3,
+        "current_value": 0.35,
+        "config_path": "ensemble weights in _train_baseline_model",
+        "valid_range": [
+          0.1,
+          0.6
+        ],
+        "derivation": "Calibrated from LOYO; coupled with lgb weight",
+        "notes": ""
+      },
+      {
+        "name": "tournament_shrinkage",
+        "tier": 3,
+        "current_value": 0.08,
+        "config_path": "SOTAPipelineConfig.tournament_shrinkage",
+        "valid_range": [
+          0.0,
+          0.25
+        ],
+        "derivation": "Calibrated from LOYO \u2014 comment says so explicitly",
+        "notes": ""
+      },
+      {
+        "name": "seed_prior_weight",
+        "tier": 3,
+        "current_value": 0.05,
+        "config_path": "SOTAPipelineConfig.seed_prior_weight",
+        "valid_range": [
+          0.0,
+          0.15
+        ],
+        "derivation": "Iteratively adjusted alongside tournament_shrinkage",
+        "notes": ""
+      },
+      {
+        "name": "consistency_bonus_max",
+        "tier": 3,
+        "current_value": 0.02,
+        "config_path": "SOTAPipelineConfig.consistency_bonus_max",
+        "valid_range": [
+          0.0,
+          0.06
+        ],
+        "derivation": "Iteratively adjusted; small effect",
+        "notes": ""
+      },
+      {
+        "name": "consistency_normalizer",
+        "tier": 3,
+        "current_value": 15.0,
+        "config_path": "SOTAPipelineConfig.consistency_normalizer",
+        "valid_range": [
+          5.0,
+          30.0
+        ],
+        "derivation": "Paired with consistency_bonus_max; normalizes variance range",
+        "notes": ""
+      },
+      {
+        "name": "mc_noise_std",
+        "tier": 3,
+        "current_value": 0.12,
+        "config_path": "SimulationConfig.noise_std",
+        "valid_range": [
+          0.02,
+          0.25
+        ],
+        "derivation": "Changed 0.04\u21920.035\u21920.02\u21920.12 across fix rounds",
+        "notes": ""
+      },
+      {
+        "name": "mc_regional_correlation",
+        "tier": 3,
+        "current_value": 0.1,
+        "config_path": "SimulationConfig.regional_correlation",
+        "valid_range": [
+          0.0,
+          0.3
+        ],
+        "derivation": "Reduced from 0.25 during OOS fix round",
+        "notes": ""
+      },
+      {
+        "name": "mc_injury_probability",
+        "tier": 3,
+        "current_value": 0.02,
+        "config_path": "SimulationConfig.injury_probability",
+        "valid_range": [
+          0.0,
+          0.1
+        ],
+        "derivation": "Per-game injury probability; iteratively adjusted",
+        "notes": ""
+      },
+      {
+        "name": "mc_injury_severity_lo",
+        "tier": 3,
+        "current_value": 0.05,
+        "config_path": "monte_carlo._run_batch rng.uniform(0.05, 0.25)",
+        "valid_range": [
+          0.01,
+          0.15
+        ],
+        "derivation": "Lower bound of injury severity logit shift; iteratively set",
+        "notes": ""
+      },
+      {
+        "name": "mc_injury_severity_hi",
+        "tier": 3,
+        "current_value": 0.25,
+        "config_path": "monte_carlo._run_batch rng.uniform(0.05, 0.25)",
+        "valid_range": [
+          0.1,
+          0.5
+        ],
+        "derivation": "Upper bound of injury severity logit shift; iteratively set",
+        "notes": ""
+      },
+      {
+        "name": "mc_lognormal_sigma",
+        "tier": 3,
+        "current_value": 0.15,
+        "config_path": "monte_carlo._run_batch sigma=0.15 for cross-region",
+        "valid_range": [
+          0.05,
+          0.3
+        ],
+        "derivation": "Cross-region (Final Four) noise lognormal sigma; iteratively set",
+        "notes": ""
+      },
+      {
+        "name": "mc_region_noise_floor",
+        "tier": 3,
+        "current_value": 0.2,
+        "config_path": "monte_carlo._run_batch max(0.2, ...)",
+        "valid_range": [
+          0.05,
+          0.5
+        ],
+        "derivation": "Floor for regional noise multiplier; prevents zero-variance regions",
+        "notes": ""
+      }
+    ],
+    "tier3_count": 13
+  },
+  "holdout_evaluation": {
+    "holdout_years": [
+      2024
+    ],
+    "config_hash": "05c33a05eb85fd7f",
+    "timestamp": "2026-02-21 21:59:41",
+    "integrity_level": 2,
+    "integrity_note": "QUASI-PROSPECTIVE: Pipeline frozen at 2026-02-21T21:59:39 (verified against /var/folders/k6/xgcms1js0pd99_gvsqs84rlh0000gn/T/tmp7r_llzcs.json). Evaluation year 2024 was not available when the pipeline was frozen. Pipeline architecture was informed by prior years' data.",
+    "total_games": 803,
+    "aggregate_brier": 0.19576,
+    "aggregate_seed_brier": 0.23553,
+    "aggregate_brier_skill_score": 0.1689,
+    "verdict": "PASS",
+    "per_year": {
+      "2024": {
+        "year": 2024,
+        "n_games": 803,
+        "brier_score": 0.19576,
+        "log_loss": 0.57357,
+        "accuracy": 0.6862,
+        "ece": 0.0464,
+        "seed_baseline_brier": 0.23553,
+        "uniform_brier": 0.25,
+        "brier_skill_score": 0.1689,
+        "brier_ci": [
+          0.18444,
+          0.20872
+        ]
+      }
+    }
+  },
+  "recommendations": [
+    "INTEGRITY: Level 2 (QUASI-PROSPECTIVE). QUASI-PROSPECTIVE: Pipeline frozen at 2026-02-21T21:59:39 (verified against /var/folders/k6/xgcms1js0pd99_gvsqs84rlh0000gn/T/tmp7r_llzcs.json). Evaluation year 2024 was not available when the pipeline was frozen. Pipeline architecture was informed by prior years' data.",
+    "HOLDOUT: Pipeline beats AdjEM-logistic baseline by 0.0398 Brier on 803 held-out tournament games.",
+    "DoF RATIO: 13 freely-tuned constants / 803 holdout games = 0.016 (target < 0.01)"
+  ],
+  "provenance": {
+    "freeze_path": "/var/folders/k6/xgcms1js0pd99_gvsqs84rlh0000gn/T/tmp7r_llzcs.json",
+    "frozen_timestamp": "2026-02-21T21:59:39",
+    "frozen_config_hash": "05c33a05eb85fd7f",
+    "evaluation_year": 2024,
+    "evaluation_timestamp": "2026-02-21T21:59:55"
+  }
+}

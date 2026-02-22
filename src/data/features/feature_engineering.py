@@ -72,7 +72,7 @@ REMOVED_REDUNDANCIES = [
 # games with stability=0.1, near-zero predictive power per academic lit).
 # FIX 2.3: preseason_ap_rank encoding smoothed (was cliff at #25→unranked).
 # Down from 67 → 66 team features.
-TEAM_FEATURE_DIM = 66
+TEAM_FEATURE_DIM = 64  # C4: removed transition_efficiency + defensive_transition_vulnerability
 
 # FIX #4: Indices (into the team feature vector) of the top features used
 # for absolute-level matchup context.  These are the features where the
@@ -167,11 +167,17 @@ class TeamFeatures:
     momentum: float = 0.0
 
     # 3-Point Variance (upset risk proxy)
-    three_pt_variance: float = 0.0
+    # C1: Default is D1 population prior (0.095), consistent with
+    # Bayesian shrinkage in proprietary_metrics._three_point_variance().
+    three_pt_variance: float = 0.095
 
     # NOTE: consistency kept as attribute but REMOVED from to_vector()
     # (FIX #1: near-inverse of pace_adjusted_variance)
     consistency: float = 0.5
+
+    # C3: SOS-adjusted consistency — attribute only, not in to_vector() pending evaluation
+    # of whether it offers unique signal over pace_adjusted_variance.
+    sos_adjusted_consistency: float = 0.5
 
     # Pace-adjusted variance
     pace_adjusted_variance: float = 0.0
@@ -528,9 +534,8 @@ class TeamFeatures:
             # Home-court dependence (1)
             self.home_court_dependence,
 
-            # Transition efficiency (2)
-            self.transition_efficiency,
-            self.defensive_transition_vulnerability,
+            # C4: transition_efficiency + defensive_transition_vulnerability REMOVED
+            # (speculative formula — pace_surplus * (AdjO/100-1) has no empirical basis)
 
             # Position-specific depth (2)
             self.backcourt_rapm,
@@ -653,7 +658,7 @@ class TeamFeatures:
             # KenPom / ShotQuality replacements (reduced)
             'neutral_site_win_pct',
             'home_court_dependence',
-            'transition_efficiency', 'defensive_transition_vulnerability',
+            # C4: 'transition_efficiency', 'defensive_transition_vulnerability' REMOVED
             'backcourt_rapm', 'frontcourt_rapm',
             # Seed (1)
             'seed_strength',
@@ -824,8 +829,9 @@ class FeatureEngineer:
             features.luck = pm.get('luck', 0.0)
             features.wab = pm.get('wab', 0.0)
             features.momentum = pm.get('momentum', 0.0)
-            features.three_pt_variance = pm.get('three_pt_variance', 0.0)
+            features.three_pt_variance = pm.get('three_pt_variance', 0.095)
             features.consistency = pm.get('consistency', 0.5)
+            features.sos_adjusted_consistency = pm.get('sos_adjusted_consistency', 0.5)
             features.pace_adjusted_variance = pm.get('pace_adjusted_variance', 0.0)
             features.avg_xp_per_possession = pm.get('offensive_xp_per_possession', 1.0)
             features.shot_distribution_score = pm.get('shot_distribution_score', 0.0)
@@ -873,8 +879,8 @@ class FeatureEngineer:
             features.neutral_site_win_pct = pm.get('neutral_site_win_pct', 0.5)
             features.home_court_dependence = pm.get('home_court_dependence', 0.0)
             features.momentum_5g = pm.get('momentum_5g', 0.0)
-            features.transition_efficiency = pm.get('transition_efficiency', 0.0)
-            features.defensive_transition_vulnerability = pm.get('defensive_transition_vulnerability', 0.0)
+            # C4: transition_efficiency and defensive_transition_vulnerability no longer set
+            # (fields remain on dataclass at default 0.0)
             features.backcourt_rapm = pm.get('backcourt_rapm', 0.0)
             features.frontcourt_rapm = pm.get('frontcourt_rapm', 0.0)
 

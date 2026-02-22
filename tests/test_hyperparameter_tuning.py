@@ -67,7 +67,7 @@ class TestTemporalCrossValidator:
 
         cv = TemporalCrossValidator(n_splits=3, min_train_size=20)
 
-        def train_fn(X_tr, y_tr, X_v, y_v):
+        def train_fn(X_tr, y_tr, X_v, y_v, w_tr=None):
             # Simple mean classifier
             return float(np.mean(y_tr))
 
@@ -179,7 +179,7 @@ class TestOptunaTuning:
 
         from sklearn.linear_model import LogisticRegression
 
-        def train_fn(X_tr, y_tr, X_v, y_v):
+        def train_fn(X_tr, y_tr, X_v, y_v, w_tr=None):
             model = LogisticRegression(max_iter=500)
             model.fit(X_tr, y_tr)
             return model
@@ -253,7 +253,7 @@ class TestLeaveOneYearOutCV:
         # Use leave_one_out for backward compat with original test expectations
         loyo = LeaveOneYearOutCV(years=years, temporal_mode="leave_one_out")
 
-        def train_fn(X_tr, y_tr, X_v, y_v):
+        def train_fn(X_tr, y_tr, X_v, y_v, w_tr=None):
             return float(np.mean(y_tr))
 
         def predict_fn(model, X_pred):

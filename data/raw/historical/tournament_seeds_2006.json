@@ -1,0 +1,525 @@
+{
+  "season": 2006,
+  "teams": [
+    {
+      "season": 2006,
+      "team_name": "UConn",
+      "school_slug": "connecticut",
+      "team_id": "uconn",
+      "seed": 1,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "Albany (NY)",
+      "school_slug": "albany-ny",
+      "team_id": "albany__ny",
+      "seed": 16,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "Kentucky",
+      "school_slug": "kentucky",
+      "team_id": "kentucky",
+      "seed": 8,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "UAB",
+      "school_slug": "alabama-birmingham",
+      "team_id": "uab",
+      "seed": 9,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "Washington",
+      "school_slug": "washington",
+      "team_id": "washington",
+      "seed": 5,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "Utah State",
+      "school_slug": "utah-state",
+      "team_id": "utah_state",
+      "seed": 12,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "Illinois",
+      "school_slug": "illinois",
+      "team_id": "illinois",
+      "seed": 4,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "Air Force",
+      "school_slug": "air-force",
+      "team_id": "air_force",
+      "seed": 13,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "Michigan State",
+      "school_slug": "michigan-state",
+      "team_id": "michigan_state",
+      "seed": 6,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "George Mason",
+      "school_slug": "george-mason",
+      "team_id": "george_mason",
+      "seed": 11,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "UNC",
+      "school_slug": "north-carolina",
+      "team_id": "unc",
+      "seed": 3,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "Murray State",
+      "school_slug": "murray-state",
+      "team_id": "murray_state",
+      "seed": 14,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "Wichita State",
+      "school_slug": "wichita-state",
+      "team_id": "wichita_state",
+      "seed": 7,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "Seton Hall",
+      "school_slug": "seton-hall",
+      "team_id": "seton_hall",
+      "seed": 10,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "Tennessee",
+      "school_slug": "tennessee",
+      "team_id": "tennessee",
+      "seed": 2,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "Winthrop",
+      "school_slug": "winthrop",
+      "team_id": "winthrop",
+      "seed": 15,
+      "region": "East"
+    },
+    {
+      "season": 2006,
+      "team_name": "Duke",
+      "school_slug": "duke",
+      "team_id": "duke",
+      "seed": 1,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "Southern",
+      "school_slug": "southern-university",
+      "team_id": "southern",
+      "seed": 16,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "George Washington",
+      "school_slug": "george-washington",
+      "team_id": "george_washington",
+      "seed": 8,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "UNC Wilmington",
+      "school_slug": "unc-wilmington",
+      "team_id": "unc_wilmington",
+      "seed": 9,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "Syracuse",
+      "school_slug": "syracuse",
+      "team_id": "syracuse",
+      "seed": 5,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "Texas A&M",
+      "school_slug": "texas-am",
+      "team_id": "texas_a_m",
+      "seed": 12,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "LSU",
+      "school_slug": "louisiana-state",
+      "team_id": "lsu",
+      "seed": 4,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "Iona",
+      "school_slug": "iona",
+      "team_id": "iona",
+      "seed": 13,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "West Virginia",
+      "school_slug": "west-virginia",
+      "team_id": "west_virginia",
+      "seed": 6,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "Southern Illinois",
+      "school_slug": "southern-illinois",
+      "team_id": "southern_illinois",
+      "seed": 11,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "Iowa",
+      "school_slug": "iowa",
+      "team_id": "iowa",
+      "seed": 3,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "Northwestern State",
+      "school_slug": "northwestern-state",
+      "team_id": "northwestern_state",
+      "seed": 14,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "California",
+      "school_slug": "california",
+      "team_id": "california",
+      "seed": 7,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "NC State",
+      "school_slug": "north-carolina-state",
+      "team_id": "nc_state",
+      "seed": 10,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "Texas",
+      "school_slug": "texas",
+      "team_id": "texas",
+      "seed": 2,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "Penn",
+      "school_slug": "pennsylvania",
+      "team_id": "penn",
+      "seed": 15,
+      "region": "South"
+    },
+    {
+      "season": 2006,
+      "team_name": "Villanova",
+      "school_slug": "villanova",
+      "team_id": "villanova",
+      "seed": 1,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Monmouth",
+      "school_slug": "monmouth",
+      "team_id": "monmouth",
+      "seed": 16,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Hampton",
+      "school_slug": "hampton",
+      "team_id": "hampton",
+      "seed": 16,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Arizona",
+      "school_slug": "arizona",
+      "team_id": "arizona",
+      "seed": 8,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Wisconsin",
+      "school_slug": "wisconsin",
+      "team_id": "wisconsin",
+      "seed": 9,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Nevada",
+      "school_slug": "nevada",
+      "team_id": "nevada",
+      "seed": 5,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Montana",
+      "school_slug": "montana",
+      "team_id": "montana",
+      "seed": 12,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Boston College",
+      "school_slug": "boston-college",
+      "team_id": "boston_college",
+      "seed": 4,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Pacific",
+      "school_slug": "pacific",
+      "team_id": "pacific",
+      "seed": 13,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Oklahoma",
+      "school_slug": "oklahoma",
+      "team_id": "oklahoma",
+      "seed": 6,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Wisconsin-Milwaukee",
+      "school_slug": "wisconsin-milwaukee",
+      "team_id": "wisconsin_milwaukee",
+      "seed": 11,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Florida",
+      "school_slug": "florida",
+      "team_id": "florida",
+      "seed": 3,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "South Alabama",
+      "school_slug": "south-alabama",
+      "team_id": "south_alabama",
+      "seed": 14,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Georgetown",
+      "school_slug": "georgetown",
+      "team_id": "georgetown",
+      "seed": 7,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Northern Iowa",
+      "school_slug": "northern-iowa",
+      "team_id": "northern_iowa",
+      "seed": 10,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Ohio State",
+      "school_slug": "ohio-state",
+      "team_id": "ohio_state",
+      "seed": 2,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Davidson",
+      "school_slug": "davidson",
+      "team_id": "davidson",
+      "seed": 15,
+      "region": "Midwest"
+    },
+    {
+      "season": 2006,
+      "team_name": "Memphis",
+      "school_slug": "memphis",
+      "team_id": "memphis",
+      "seed": 1,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "Oral Roberts",
+      "school_slug": "oral-roberts",
+      "team_id": "oral_roberts",
+      "seed": 16,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "Arkansas",
+      "school_slug": "arkansas",
+      "team_id": "arkansas",
+      "seed": 8,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "Bucknell",
+      "school_slug": "bucknell",
+      "team_id": "bucknell",
+      "seed": 9,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "Pitt",
+      "school_slug": "pittsburgh",
+      "team_id": "pitt",
+      "seed": 5,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "Kent State",
+      "school_slug": "kent-state",
+      "team_id": "kent_state",
+      "seed": 12,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "Kansas",
+      "school_slug": "kansas",
+      "team_id": "kansas",
+      "seed": 4,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "Bradley",
+      "school_slug": "bradley",
+      "team_id": "bradley",
+      "seed": 13,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "Indiana",
+      "school_slug": "indiana",
+      "team_id": "indiana",
+      "seed": 6,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "San Diego State",
+      "school_slug": "san-diego-state",
+      "team_id": "san_diego_state",
+      "seed": 11,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "Gonzaga",
+      "school_slug": "gonzaga",
+      "team_id": "gonzaga",
+      "seed": 3,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "Xavier",
+      "school_slug": "xavier",
+      "team_id": "xavier",
+      "seed": 14,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "Marquette",
+      "school_slug": "marquette",
+      "team_id": "marquette",
+      "seed": 7,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "Alabama",
+      "school_slug": "alabama",
+      "team_id": "alabama",
+      "seed": 10,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "UCLA",
+      "school_slug": "ucla",
+      "team_id": "ucla",
+      "seed": 2,
+      "region": "West"
+    },
+    {
+      "season": 2006,
+      "team_name": "Belmont",
+      "school_slug": "belmont",
+      "team_id": "belmont",
+      "seed": 15,
+      "region": "West"
+    }
+  ]
+}

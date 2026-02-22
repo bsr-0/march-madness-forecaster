@@ -123,6 +123,7 @@ export KENPOM_PASSWORD=...
 export CBBDATA_API_KEY=...
 export CBBDATA_KENPOM_URL=\"https://.../{year}/kenpom\"
 export CBBDATA_TORVIK_URL=\"https://.../{year}/torvik\"
+export BARTTORVIK_TORVIK_URL=\"https://barttorvik.com/{year}_team_results.csv\"
 export CBBDATA_GAMES_URL=\"https://.../{year}/games\"
 export CBBDATA_TEAM_METRICS_URL=\"https://.../{year}/teams\"
 export SHOTQUALITY_TEAMS_URL=\"https://.../{year}/shotquality/teams\"
@@ -186,7 +187,7 @@ python -m src.main ingest \
   --historical-games-provider-priority sportsdataverse,cbbpy,cbbdata \
   --team-metrics-provider-priority sportsdataverse,cbbdata \
   --kenpom-provider-priority cbbdata \
-  --torvik-provider-priority cbbdata
+  --torvik-provider-priority barttorvik,cbbdata
 ```
 
 By default ingestion is strict and fails on schema problems. To keep artifacts even with schema errors:

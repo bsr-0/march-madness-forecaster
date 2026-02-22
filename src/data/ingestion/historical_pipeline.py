@@ -34,7 +34,9 @@ class HistoricalIngestionConfig:
     per_game_timeout_seconds: int = 25
     max_games_per_season: Optional[int] = None
     include_tournament_context: bool = True
+    include_torvik: bool = True
     team_metrics_provider_priority: Optional[List[str]] = None
+    torvik_provider_priority: Optional[List[str]] = None
 
 
 class HistoricalDataPipeline:
@@ -98,6 +100,17 @@ class HistoricalDataPipeline:
                 "teams": len(team_payload.get("teams", [])),
             }
 
+            if self.config.include_torvik:
+                torvik_payload, torvik_provider = self._collect_torvik(season)
+                if torvik_payload.get("teams"):
+                    torvik_errors = validate_ratings_payload(torvik_payload)
+                    self._assert_valid(f"torvik_{season}", torvik_errors)
+                    torvik_path = self._write_json(f"torvik_{season}.json", torvik_payload)
+                    manifest["artifacts"][str(season)]["torvik_json"] = torvik_path
+                    manifest["providers"][str(season)]["torvik_json"] = torvik_provider
+                    manifest["validation_errors"][str(season)]["torvik_json"] = torvik_errors
+                    manifest["season_counts"][str(season)]["torvik_teams"] = len(torvik_payload["teams"])
+
             if self.config.include_tournament_context:
                 tournament_payload, tournament_provider = self._collect_tournament_context(season)
                 if tournament_payload.get("teams"):
@@ -113,6 +126,14 @@ class HistoricalDataPipeline:
         )
         manifest["manifest_path"] = manifest_path
         return manifest
+
+    def _collect_torvik(self, season: int) -> Tuple[Dict, str]:
+        provider = self.providers.fetch_torvik_ratings(
+            season,
+            priority=self.config.torvik_provider_priority,
+        )
+        teams = [t for t in provider.records if isinstance(t, dict)]
+        return {"teams": teams}, provider.provider
 
     def _collect_season_games(self, season: int) -> Tuple[Dict, str]:
         season_cache = self.cache_dir / f"cbbpy_historical_games_{season}.json"
