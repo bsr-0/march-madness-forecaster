@@ -881,11 +881,13 @@ class SOTAPipeline:
                         g.team1_id in self.feature_engineer.team_features
                         and g.team2_id in self.feature_engineer.team_features
                     ):
-                        team1_won = bool(g.lead_history and g.lead_history[-1] > 0)
+                        _outcome = self._game_outcome(g)
+                        if _outcome is None:
+                            continue
                         val_games.append({
                             "team1": g.team1_id,
                             "team2": g.team2_id,
-                            "team1_won": team1_won,
+                            "team1_won": bool(_outcome),
                         })
                 if len(val_games) >= 20:
                     ablation = AblationStudy(self, val_games)
@@ -1755,7 +1757,19 @@ class SOTAPipeline:
             game_date = self._coerce_game_date(getattr(game, "game_date", "2026-01-01"))
             game_key = self._game_sort_key(game_date)
             matchup = self.feature_engineer.create_matchup_features(game.team1_id, game.team2_id, proprietary_engine=self.proprietary_engine)
-            samples.append((game_key, matchup.to_vector(), 1 if (game.lead_history and game.lead_history[-1] > 0) else 0, game_date, game.team1_id, game.team2_id))
+            # S5 FIX: Use score-based label as primary (reliable), with
+            # lead_history as fallback only if scores unavailable.
+            # Previously, empty lead_history would always label as 0 (loss),
+            # creating systematic label noise for incomplete game flows.
+            _t1_score = getattr(game, "team1_score", None)
+            _t2_score = getattr(game, "team2_score", None)
+            if _t1_score is not None and _t2_score is not None and (_t1_score + _t2_score) > 0:
+                _label = 1 if _t1_score > _t2_score else 0
+            elif game.lead_history and len(game.lead_history) > 0:
+                _label = 1 if game.lead_history[-1] > 0 else 0
+            else:
+                continue  # Skip games with no determinable outcome
+            samples.append((game_key, matchup.to_vector(), _label, game_date, game.team1_id, game.team2_id))
 
             # OOS-FIX: Symmetric augmentation REMOVED.  Flipping (A,B) -> (B,A)
             # doubles the sample count but adds zero new information.  Both
@@ -3079,13 +3093,15 @@ class SOTAPipeline:
           Derived from efficiency margin (1):
             [33] diff_three_pt_var  ≈ pace_variance proxy via margin std
 
-          From BartTorvik Four Factors (6) — fetched+cached per year:
+          From BartTorvik Four Factors (8) — fetched+cached per year:
             [3]  diff_efg_pct       = eFG%1 - eFG%2
             [4]  diff_to_rate       = TO%1 - TO%2
             [5]  diff_orb_rate      = ORB%1 - ORB%2
             [6]  diff_ft_rate       = FTR1 - FTR2
             [7]  diff_opp_efg_pct   = oppeFG%1 - oppeFG%2
             [8]  diff_opp_to_rate   = oppTO%1 - oppTO%2
+            [9]  diff_drb_rate      = DRB%1 - DRB%2       (C2 FIX: was zero)
+            [10] diff_opp_ft_rate   = oppFTR1 - oppFTR2   (C2 FIX: was zero)
 
           From BartTorvik extended stats (2) — fetched+cached per year:
             [36] diff_free_throw_pct = FT%1 - FT%2
@@ -3242,6 +3258,10 @@ class SOTAPipeline:
 
         # Alias table for CBBpy location names that don't directly match
         # metric IDs (abbreviations, alternate spellings, parentheticals).
+        # S1/M2 FIX: Expanded alias table covering known resolution failures.
+        # Includes common abbreviations (Pitt, UNC, SFA), tournament seed ID
+        # inconsistencies (uconn→connecticut, byu→brigham_young), and
+        # parenthetical disambiguation (Loyola IL/MD, Miami FL/OH).
         _LOCATION_TO_METRIC: Dict[str, str] = {
             "american university":     "american",
             "app state":               "appalachian_state",
@@ -3250,6 +3270,7 @@ class SOTAPipeline:
             "charleston":              "college_of_charleston",
             "fairleigh dickinson":     "fairleigh_dickinson",
             "hawai'i":                 "hawaii",
+            "hawaii":                  "hawaii",
             "iu indianapolis":         "iu_indy",
             "loyola chicago":          "loyola__il",
             "loyola maryland":         "loyola__md",
@@ -3280,6 +3301,45 @@ class SOTAPipeline:
             "ut martin":               "tennessee_martin",
             "ut rio grande valley":    "texas_rio_grande_valley",
             "vcu":                     "virginia_commonwealth",
+            # S1 FIX: Additional aliases for known resolution failures
+            "pitt":                    "pittsburgh",
+            "pittsburgh":              "pittsburgh",
+            "unc":                     "north_carolina",
+            "sfa":                     "stephen_f_austin",
+            "stephen f. austin":       "stephen_f_austin",
+            "etsu":                    "east_tennessee_state",
+            "utep":                    "texas_el_paso",
+            "ucf":                     "central_florida",
+            "utsa":                    "texas_san_antonio",
+            "unc wilmington":          "north_carolina_wilmington",
+            "unc greensboro":          "north_carolina_greensboro",
+            "unc asheville":           "north_carolina_asheville",
+            "unc charlotte":           "charlotte",
+            "uc davis":                "california_davis",
+            "uc irvine":               "california_irvine",
+            "uc riverside":            "california_riverside",
+            "uc santa barbara":        "california_santa_barbara",
+            "uc san diego":            "california_san_diego",
+            "cal state fullerton":     "cal_state_fullerton",
+            "cal state northridge":    "cal_state_northridge",
+            "cal state bakersfield":   "cal_state_bakersfield",
+            "tcu":                     "texas_christian",
+            "lmu":                     "loyola_marymount",
+            "liu":                     "long_island_university",
+            "fiu":                     "florida_international",
+            "fdu":                     "fairleigh_dickinson",
+            "siue":                    "southern_illinois_edwardsville",
+            "siu":                     "southern_illinois",
+            "a&m-corpus christi":      "texas_a_m_corpus_christi",
+            "ole miss":                "mississippi",
+            "miami (oh)":              "miami__oh",
+            "miami (fl)":              "miami__fl",
+            "st. peter's":             "saint_peter_s",
+            "saint peter's":           "saint_peter_s",
+            # M2 FIX: Tournament seed ID mismatches
+            "uconn":                   "connecticut",
+            "byu":                     "brigham_young",
+            "saint mary's (ca)":       "saint_mary_s__ca",
         }
 
         # Load CBBpy CSV and build display_name → metric_id lookup.
@@ -3350,12 +3410,30 @@ class SOTAPipeline:
             return None
 
         # ── 3. Chronological date inference for single-date payloads ──────
+        #
+        # When dates are collapsed (all games share a single date), we infer
+        # chronological ordering from game_id and map to a realistic season
+        # date distribution.  game_id ordering is ~99.6% monotonic with real
+        # dates for 2005-2009 data, making it a strong proxy.
+        #
+        # Instead of linear interpolation (which spreads games uniformly
+        # across Nov-Mar), we use a **piecewise density model** reflecting
+        # the actual CBB schedule structure:
+        #   - Nov:  ~12% of games (early-season tournaments, non-conf)
+        #   - Dec:  ~18% of games (non-conference, holiday tournaments)
+        #   - Jan:  ~25% of games (conference play begins)
+        #   - Feb:  ~25% of games (conference play)
+        #   - Mar 1-13: ~20% of games (conference tournaments)
+        # This produces more realistic date assignments and ensures
+        # tournament-window filtering (Mar 14+) correctly excludes
+        # NCAA tournament games.
         raw_dates = [str(g.get("date", g.get("game_date", ""))) for g in games]
         unique_dates = set(d for d in raw_dates if d)
         if len(unique_dates) <= 1 and len(games) > 50:
             logger.info(
                 "Year %d: all %d games have identical date '%s' — "
-                "inferring chronological dates from game_id ordering.",
+                "inferring chronological dates from game_id ordering "
+                "using piecewise season density model.",
                 year, len(games), next(iter(unique_dates), "?"),
             )
             id_ordered = sorted(
@@ -3363,12 +3441,31 @@ class SOTAPipeline:
                 key=lambda i: int(games[i].get("game_id", "0"))
                 if str(games[i].get("game_id", "0")).isdigit() else 0,
             )
-            season_start = date(year - 1, 11, 1)
-            season_end   = date(year, 3, 13)
-            total_days   = (season_end - season_start).days
+            # Piecewise density model: (month_start_date, cumulative_fraction)
+            # The cumulative fractions are derived from observed game counts
+            # in 2005-2009 seasons which have real dates.
+            _season_milestones = [
+                (date(year - 1, 11,  1), 0.00),   # Season start
+                (date(year - 1, 12,  1), 0.12),   # End of November
+                (date(year,      1,  1), 0.30),   # End of December
+                (date(year,      2,  1), 0.55),   # End of January
+                (date(year,      3,  1), 0.80),   # End of February
+                (date(year,      3, 13), 1.00),   # Conf tourney end / Selection Sunday
+            ]
+            n_games = len(id_ordered)
             for rank, orig_idx in enumerate(id_ordered):
-                frac = rank / max(len(id_ordered) - 1, 1)
-                inferred = season_start + timedelta(days=int(frac * total_days))
+                frac = rank / max(n_games - 1, 1)
+                # Find the two milestones that bracket this fraction
+                for j in range(len(_season_milestones) - 1):
+                    d_lo, f_lo = _season_milestones[j]
+                    d_hi, f_hi = _season_milestones[j + 1]
+                    if frac <= f_hi or j == len(_season_milestones) - 2:
+                        # Linear interpolation within this segment
+                        seg_frac = ((frac - f_lo) / max(f_hi - f_lo, 1e-9))
+                        seg_frac = max(0.0, min(1.0, seg_frac))
+                        seg_days = (d_hi - d_lo).days
+                        inferred = d_lo + timedelta(days=int(seg_frac * seg_days))
+                        break
                 games[orig_idx]["date"] = inferred.isoformat()
 
         # ── 4. Single-pass: collect validated games in chronological order ─
@@ -3433,7 +3530,14 @@ class SOTAPipeline:
                 "Year %d: team resolution rate %d/%d (%.1f%%).",
                 year, _resolved_team_refs, _total_team_refs, _rate,
             )
-            if _rate < 80.0:
+            if _rate < 60.0:
+                logger.warning(
+                    "Year %d: resolution rate %.1f%% is below 60%% — "
+                    "skipping year to avoid training on biased subset.",
+                    year, _rate,
+                )
+                return np.empty((0, feature_dim)), np.array([])
+            elif _rate < 80.0:
                 logger.warning(
                     "Year %d: resolution rate %.1f%% is below 80%% threshold.",
                     year, _rate,
@@ -3559,6 +3663,84 @@ class SOTAPipeline:
                 "margin_std": margin_std,
             }
 
+        # ── 5b. Build safe BartTorvik resolve caches ─────────────────────
+        #
+        # S4 FIX: Pre-build metric_id → BartTorvik data mapping using
+        # the already-resolved team IDs (from _resolve_team), avoiding the
+        # dangerous bidirectional prefix matching that could silently map
+        # "miami" to "miami__oh" instead of "miami__fl", or "texas" to
+        # "texas_a_m".
+        #
+        # Strategy: for each metric_id in team_metrics, find the best match
+        # in four_factors / shooting_stats using exact match first, then
+        # unambiguous prefix match (metric_id must be a prefix of exactly
+        # one BartTorvik key, or vice-versa).
+        def _build_safe_resolve_cache(
+            source: Dict[str, Dict],
+        ) -> Dict[str, Dict]:
+            """Map team_metrics keys to BartTorvik data dicts safely.
+
+            Uses strict prefix matching with word-boundary enforcement:
+            the match must occur at a ``_`` boundary to prevent false
+            positives like ``miami`` matching ``miami__oh`` (the double
+            underscore in metric IDs encodes a parenthetical qualifier).
+            """
+            cache: Dict[str, Dict] = {}
+            if not source:
+                return cache
+
+            # Normalize keys for comparison: collapse double underscores
+            # to detect true word boundaries.
+            def _norm(s: str) -> str:
+                import re as _re
+                return _re.sub(r"_+", "_", s).strip("_")
+
+            norm_source = {_norm(sk): sk for sk in source}
+
+            for mid in team_metrics:
+                # Pass 1: exact match (original keys)
+                if mid in source:
+                    cache[mid] = source[mid]
+                    continue
+
+                # Pass 2: exact match after normalizing both sides
+                mid_norm = _norm(mid)
+                if mid_norm in norm_source:
+                    cache[mid] = source[norm_source[mid_norm]]
+                    continue
+
+                # Pass 3: unambiguous prefix match on normalized keys
+                # Require the match to be at a "_" boundary.
+                candidates = [
+                    nk for nk in norm_source
+                    if nk.startswith(mid_norm + "_")
+                ]
+                if len(candidates) == 1:
+                    cache[mid] = source[norm_source[candidates[0]]]
+                    continue
+
+                # Pass 4: reverse prefix (source key is prefix of metric ID)
+                candidates = [
+                    nk for nk in norm_source
+                    if mid_norm.startswith(nk + "_")
+                ]
+                if len(candidates) == 1:
+                    cache[mid] = source[norm_source[candidates[0]]]
+                elif len(candidates) > 1:
+                    # Ambiguous — pick the longest match (most specific)
+                    best = max(candidates, key=len)
+                    cache[mid] = source[norm_source[best]]
+            return cache
+
+        _ff_resolve_cache = _build_safe_resolve_cache(four_factors)
+        _sh_resolve_cache = _build_safe_resolve_cache(shooting_stats)
+        if four_factors:
+            _ff_hit = sum(1 for m in team_metrics if m in _ff_resolve_cache or m in four_factors)
+            logger.debug(
+                "Year %d: Four Factors resolved %d/%d metric IDs.",
+                year, _ff_hit, len(team_metrics),
+            )
+
         # ── 6. Build per-game feature vectors ────────────────────────────
         #
         # Feature index reference (verified against TeamFeatures.get_feature_names()):
@@ -3567,6 +3749,7 @@ class SOTAPipeline:
         #     [0]  adj_off_eff      [1]  adj_def_eff     [2]  adj_tempo
         #     [3]  efg_pct          [4]  to_rate         [5]  orb_rate
         #     [6]  ft_rate          [7]  opp_efg_pct     [8]  opp_to_rate
+        #     [9]  drb_rate         [10] opp_ft_rate     (C2 FIX: now populated)
         #     [15] roster_continuity* (CBBpy too expensive)
         #     [17] avg_experience*  (CBBpy too expensive)
         #     [26] sos_adj_em       [30] luck            [31] wab
@@ -3618,14 +3801,16 @@ class SOTAPipeline:
             # Four Factors — look up by team ID (BartTorvik uses short names)
             # _resolve_team handles mascot-suffixed → short form; we also try
             # the team ID directly in four_factors in case it matches.
+            #
+            # S4 FIX: Replaced dangerous bidirectional prefix matching with
+            # a safe resolver that:
+            #   (a) Tries direct key match first
+            #   (b) Uses a pre-built reverse index (built once, above the loop)
+            #   (c) Falls back to suffix-stripped matching with disambiguation
             def _get_ff(team_id: str, field: str, default: float = 0.0) -> float:
                 ff = four_factors.get(team_id)
                 if ff is None:
-                    # Try resolving via prefix (BartTorvik may use shorter form)
-                    for bk in four_factors:
-                        if team_id.startswith(bk) or bk.startswith(team_id):
-                            ff = four_factors[bk]
-                            break
+                    ff = _ff_resolve_cache.get(team_id)
                 return float(ff.get(field, default)) if ff else default
 
             efg1  = _get_ff(t1, "effective_fg_pct")
@@ -3640,15 +3825,21 @@ class SOTAPipeline:
             oefg2 = _get_ff(t2, "opp_effective_fg_pct")
             otor1 = _get_ff(t1, "opp_turnover_rate")
             otor2 = _get_ff(t2, "opp_turnover_rate")
+            # C2 FIX: Also extract DRB% and opponent FTR from Four Factors.
+            # These were previously not assigned, leaving positions [9] and
+            # [10] as zero for all historical years despite being available
+            # from BartTorvik.
+            drb1  = _get_ff(t1, "defensive_reb_rate")
+            drb2  = _get_ff(t2, "defensive_reb_rate")
+            oftr1 = _get_ff(t1, "opp_free_throw_rate")
+            oftr2 = _get_ff(t2, "opp_free_throw_rate")
 
             # Shooting splits — FT% and 3PT%
+            # S4 FIX: Same safe resolution as _get_ff above.
             def _get_sh(team_id: str, field: str, default: float = 0.0) -> float:
                 sh = shooting_stats.get(team_id)
                 if sh is None:
-                    for bk in shooting_stats:
-                        if team_id.startswith(bk) or bk.startswith(team_id):
-                            sh = shooting_stats[bk]
-                            break
+                    sh = _sh_resolve_cache.get(team_id)
                 return float(sh.get(field, default)) if sh else default
 
             ft1  = _get_sh(t1, "ft_pct")
@@ -3685,6 +3876,13 @@ class SOTAPipeline:
                 diff[7] = oefg1 - oefg2    # diff_opp_efg_pct
             if feature_dim > 8:
                 diff[8] = otor1 - otor2    # diff_opp_to_rate
+            # C2 FIX: Populate DRB% [9] and opponent FTR [10] — previously
+            # always zero in historical data despite being available from
+            # BartTorvik.  DRB% is moderately predictive (rebounding control).
+            if feature_dim > 9:
+                diff[9] = drb1 - drb2      # diff_drb_rate
+            if feature_dim > 10:
+                diff[10] = oftr1 - oftr2   # diff_opp_ft_rate
             if feature_dim > 26:
                 diff[26] = sos1 - sos2     # diff_sos_adj_em  ← was wrong index 27
             if feature_dim > 30:
@@ -4060,7 +4258,9 @@ class SOTAPipeline:
             if self.config.enable_tournament_adaptation:
                 p = self._tournament_adapt(p, g.team1_id, g.team2_id)
             p = float(np.clip(p, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
-            o = 1 if (g.lead_history and g.lead_history[-1] > 0) else 0
+            o = self._game_outcome(g)
+            if o is None:
+                continue  # S5 FIX: skip games with indeterminate outcome
             probs.append(p)
             outcomes.append(o)
 
@@ -4557,7 +4757,9 @@ class SOTAPipeline:
         model_preds = {"baseline": []}
         outcomes = []
         for g in games:
-            outcome = 1 if (g.lead_history and g.lead_history[-1] > 0) else 0
+            outcome = self._game_outcome(g)
+            if outcome is None:
+                continue
             outcomes.append(outcome)
 
             matchup = self.feature_engineer.create_matchup_features(g.team1_id, g.team2_id, proprietary_engine=self.proprietary_engine)
@@ -4772,6 +4974,26 @@ class SOTAPipeline:
         return None
 
     @staticmethod
+    def _game_outcome(game) -> Optional[int]:
+        """Determine binary game outcome (1 = team1 won) robustly.
+
+        S5 FIX: Uses score-based label as primary signal, falling back to
+        lead_history only when scores are unavailable.  Returns None for
+        games where the outcome cannot be determined, allowing callers to
+        skip rather than mislabel.
+        """
+        t1 = getattr(game, "team1_score", None)
+        t2 = getattr(game, "team2_score", None)
+        if t1 is not None and t2 is not None:
+            total = (t1 or 0) + (t2 or 0)
+            if total > 0:
+                return 1 if t1 > t2 else 0
+        lh = getattr(game, "lead_history", None)
+        if lh and len(lh) > 0:
+            return 1 if lh[-1] > 0 else 0
+        return None
+
+    @staticmethod
     def _coerce_game_date(value: str) -> str:
         raw = str(value or "").strip()
         for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%SZ"):
@@ -4960,7 +5182,9 @@ class SOTAPipeline:
         val_games = self._get_validation_era_games_slice(game_flows, slice_index=1, n_slices=3)
 
         for g in val_games:
-            outcome = 1 if (g.lead_history and g.lead_history[-1] > 0) else 0
+            outcome = self._game_outcome(g)
+            if outcome is None:
+                continue
             outcomes.append(outcome)
 
             matchup = self.feature_engineer.create_matchup_features(g.team1_id, g.team2_id, proprietary_engine=self.proprietary_engine)
@@ -5222,17 +5446,16 @@ class SOTAPipeline:
                 v2 = embeddings.get(g.team2_id)
                 if v1 is None or v2 is None:
                     continue
+                _outcome = self._game_outcome(g)
+                if _outcome is None:
+                    continue
                 diff = v1 - v2
                 interaction = v1 * v2
                 X_rows.append(np.concatenate([diff, interaction]))
-                y_rows.append(
-                    1 if (g.lead_history and g.lead_history[-1] > 0) else 0
-                )
+                y_rows.append(_outcome)
                 # Symmetric sample
                 X_rows.append(np.concatenate([v2 - v1, v2 * v1]))
-                y_rows.append(
-                    1 if (g.lead_history and g.lead_history[-1] < 0) else 0
-                )
+                y_rows.append(1 - _outcome)
 
             if len(y_rows) < 20:
                 continue

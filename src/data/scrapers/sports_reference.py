@@ -51,8 +51,15 @@ class SportsReferenceScraper:
         cached = self._load_cache(cache_name)
         if cached:
             teams = cached.get("teams", [])
-            if teams and not self._has_critical_zeros(teams):
+            if teams and not self._has_critical_zeros(teams) and not self._has_degraded_schema(teams):
                 return teams
+            elif teams and self._has_degraded_schema(teams):
+                logger.info(
+                    "SR cache for %d has degraded schema (%d fields vs %d required) "
+                    "— forcing re-fetch.",
+                    year, len(set(teams[0].keys())) if teams else 0,
+                    len(self._REQUIRED_FIELDS),
+                )
 
         # Advanced table contains pace/off/def ratings and is stable across seasons.
         url = f"{self.BASE_URL}/{year}-advanced-school-stats.html"
@@ -239,6 +246,10 @@ class SportsReferenceScraper:
                     result[tid] = 100.0 * opp_pts / (70.0 * games)
         return result
 
+    # Required fields for a valid team metrics record.  If any are missing
+    # the cache is treated as degraded and a re-fetch is attempted.
+    _REQUIRED_FIELDS = {"team_name", "pace", "off_rtg", "def_rtg", "wins", "losses", "srs", "sos"}
+
     @staticmethod
     def _has_critical_zeros(teams: List[Dict]) -> bool:
         """Return True if >50% of teams have def_rtg = 0."""
@@ -247,11 +258,39 @@ class SportsReferenceScraper:
         zero_count = sum(1 for t in teams if t.get("def_rtg", 0) <= 0)
         return zero_count > len(teams) * 0.5
 
+    @classmethod
+    def _has_degraded_schema(cls, teams: List[Dict]) -> bool:
+        """Return True if team records are missing required fields.
+
+        Catches corrupted cache files (e.g. a skeleton with only 4 fields
+        instead of the expected 8) that would silently produce zero-valued
+        features downstream.
+        """
+        if not teams:
+            return True
+        # Check a sample of up to 5 teams for missing fields
+        sample = teams[:5]
+        for t in sample:
+            present = set(t.keys())
+            if not cls._REQUIRED_FIELDS.issubset(present):
+                missing = cls._REQUIRED_FIELDS - present
+                logger.warning(
+                    "SR cache schema degraded: team '%s' missing fields %s",
+                    t.get("team_name", "?"), missing,
+                )
+                return True
+        return False
+
     @staticmethod
     def _normalize_id(name: str) -> str:
-        """Normalise team name to a canonical lowercase slug."""
-        cleaned = SportsReferenceScraper._NCAA_SUFFIX_RE.sub("", name).rstrip()
-        return "".join(ch.lower() if ch.isalnum() else "_" for ch in cleaned).strip("_")
+        """Normalise team name to a canonical lowercase slug.
+
+        Delegates to the shared ``normalize_team_id`` after stripping the
+        NCAA suffix, ensuring consistent ID generation across all modules.
+        """
+        from ..normalize import normalize_team_id, strip_ncaa_suffix_name
+        cleaned = strip_ncaa_suffix_name(name)
+        return normalize_team_id(cleaned)
 
     @staticmethod
     def _to_float(value: str) -> float:
