@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Methodology - March Madness Forecaster</title>
+  <meta name="description" content="Deep dive into the methodology: GNN, Transformer, Monte Carlo, and game-theoretic optimization for NCAA Tournament prediction.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-brand">MM Forecaster</a>
+      <div class="nav-links">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="methodology.html" class="nav-link active">Methodology</a>
+        <a href="results.html" class="nav-link">Results</a>
+        <a href="https://github.com/bsr-0/march-madness-forecaster" class="nav-link nav-link-ext">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <header class="page-header">
+    <div class="container">
+      <h1>Methodology Deep Dive</h1>
+      <p class="subtitle">From raw box scores to Pareto-optimal brackets: every layer explained</p>
+    </div>
+  </header>
+
+  <div class="toc-bar">
+    <div class="container">
+      <nav class="toc">
+        <a href="#features">Features</a>
+        <a href="#gnn">GNN</a>
+        <a href="#transformer">Transformer</a>
+        <a href="#boosting">Boosting</a>
+        <a href="#elo">Elo</a>
+        <a href="#cfa">CFA Ensemble</a>
+        <a href="#montecarlo">Monte Carlo</a>
+        <a href="#calibration">Calibration</a>
+        <a href="#gametheory">Game Theory</a>
+        <a href="#training">Training</a>
+      </nav>
+    </div>
+  </div>
+
+  <main>
+    <!-- Feature Engineering -->
+    <section id="features" class="section">
+      <div class="container content-narrow">
+        <h2>Phase 1: Feature Engineering</h2>
+        <p class="lead">66 curated features extracted from raw box scores, play-by-play data, and external metrics. Each feature undergoes leakage-safety checks to ensure only pre-game information is used for prediction.</p>
+
+        <h3>The Four Factors Framework</h3>
+        <p>Dean Oliver's Four Factors form the backbone of basketball analytics, capturing the fundamental dimensions of basketball performance. We compute both offensive and defensive versions:</p>
+
+        <div class="formula-grid">
+          <div class="formula-card">
+            <h4>Effective FG%</h4>
+            <code class="formula-display">eFG% = (FGM + 0.5 &times; 3PM) / FGA</code>
+            <p>Adjusts field goal percentage to account for the extra value of three-pointers. A team shooting 40% from three is more efficient than one shooting 45% from two.</p>
+          </div>
+          <div class="formula-card">
+            <h4>Turnover Rate</h4>
+            <code class="formula-display">TO% = Turnovers / Possessions</code>
+            <p>Fraction of possessions ending in turnovers. Each turnover eliminates a scoring opportunity and often gives the opponent transition chances.</p>
+          </div>
+          <div class="formula-card">
+            <h4>Offensive Rebounding %</h4>
+            <code class="formula-display">ORB% = ORB / (ORB + Opp_DRB)</code>
+            <p>Second-chance opportunity rate. Teams that offensive rebound well create extra possessions and demoralize opponents.</p>
+          </div>
+          <div class="formula-card">
+            <h4>Free Throw Rate</h4>
+            <code class="formula-display">FTR = FTA / FGA</code>
+            <p>Ability to get to the free throw line. Drives and post play generate fouls; free throws are the most efficient shot in basketball.</p>
+          </div>
+        </div>
+
+        <h3>Possession-Level Expected Points (xP)</h3>
+        <p>Beyond simple box scores, we model the quality of each possession using shot location, shot type, and contest status. Expected Points (xP) separates shooting luck from shot creation quality:</p>
+        <div class="code-block">
+          <pre><code>xP_per_possession = sum(shot_value * P(make | type, distance, contested))
+xP_margin = team_xP - opponent_xP
+
+# Edge weight in the GNN blends actual and xP margins:
+quality_adjusted_margin = 0.35 * adjusted_margin + 0.65 * xP_margin</code></pre>
+        </div>
+        <p>The 65/35 weighting toward xP reflects that shot quality is less noisy than final score, making it more informative for schedule propagation.</p>
+
+        <h3>Player-Level RAPM &amp; WARP</h3>
+        <p>Regularized Adjusted Plus-Minus (RAPM) isolates each player's impact by solving a ridge regression on lineup stints. We aggregate to three levels:</p>
+        <ul class="detail-list">
+          <li><strong>Total team RAPM:</strong> Sum of all rotation players' RAPM values</li>
+          <li><strong>Top-5 RAPM:</strong> Best five players -- measures star power concentration</li>
+          <li><strong>Bench RAPM:</strong> Non-starters -- measures depth resilience</li>
+          <li><strong>Transfer impact:</strong> Net RAPM change from portal activity, weighted by minutes-share</li>
+        </ul>
+
+        <h3>Volatility &amp; Entropy Metrics</h3>
+        <p>Tournament upsets often come from high-variance teams. We capture this with five volatility features:</p>
+        <ul class="detail-list">
+          <li><strong>Lead volatility:</strong> Standard deviation of in-game lead size across all possessions</li>
+          <li><strong>Game entropy:</strong> Shannon entropy of scoring run distribution -- high entropy = unpredictable game flow</li>
+          <li><strong>Sustainability:</strong> Correlation between 1st and 2nd half performance</li>
+          <li><strong>Comeback factor:</strong> Frequency and magnitude of trailing-to-winning transitions</li>
+          <li><strong>Margin variance:</strong> Pace-adjusted standard deviation of game margins</li>
+        </ul>
+
+        <h3>Feature Stability Across the Season</h3>
+        <p>Early-season predictions use fewer games, so feature reliability varies. We assign stability scores that determine early-season feature weighting:</p>
+        <div class="stability-chart">
+          <div class="stability-row">
+            <span class="stability-label">Tempo, FT%, Preseason Rank</span>
+            <div class="stability-bar-container">
+              <div class="stability-bar stability-high" style="width: 90%"><span>0.9 Very Stable</span></div>
+            </div>
+          </div>
+          <div class="stability-row">
+            <span class="stability-label">Four Factors, Assist Rate</span>
+            <div class="stability-bar-container">
+              <div class="stability-bar stability-mid" style="width: 70%"><span>0.7 Moderately Stable</span></div>
+            </div>
+          </div>
+          <div class="stability-row">
+            <span class="stability-label">Win%, Momentum, Elo</span>
+            <div class="stability-bar-container">
+              <div class="stability-bar stability-low" style="width: 40%"><span>0.4 Volatile</span></div>
+            </div>
+          </div>
+          <div class="stability-row">
+            <span class="stability-label">Upset Risk, Close Game Record</span>
+            <div class="stability-bar-container">
+              <div class="stability-bar stability-vlow" style="width: 20%"><span>0.2 Very Volatile</span></div>
+            </div>
+          </div>
+        </div>
+
+        <h3>Redundancy Audit</h3>
+        <p>We removed 11 features that were algebraically or near-perfectly redundant with other features, reducing the original 77 candidate features to 66:</p>
+        <div class="audit-table">
+          <table>
+            <thead>
+              <tr><th>Removed Feature</th><th>Redundancy Reason</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>adj_efficiency_margin</code></td><td>Exact linear: adj_off - adj_def</td></tr>
+              <tr><td><code>barthag</code></td><td>Monotonic transform of adj_off/adj_def ratio</td></tr>
+              <tr><td><code>true_shooting_pct</code></td><td>r=0.92 with eFG% + FT rate combination</td></tr>
+              <tr><td><code>consistency</code></td><td>Near-inverse of pace_adj_variance</td></tr>
+              <tr><td><code>momentum_5g</code></td><td>r=0.85 with momentum (10-game window)</td></tr>
+              <tr><td><code>close_game_record</code></td><td>Pure noise: binomial draw on 5-10 games</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- GNN Architecture -->
+    <section id="gnn" class="section section-alt">
+      <div class="container content-narrow">
+        <h2>Graph Neural Network (GCN)</h2>
+        <p class="lead">The schedule graph treats each team as a node and each game as an edge, enabling multi-hop strength propagation that captures transitive relationships.</p>
+
+        <h3>Graph Construction</h3>
+        <div class="arch-diagram">
+          <div class="arch-box">
+            <h4>Schedule Graph</h4>
+            <div class="graph-visual">
+              <svg viewBox="0 0 400 200" class="graph-svg">
+                <!-- Nodes -->
+                <circle cx="50" cy="100" r="20" fill="var(--color-accent-subtle)" stroke="var(--color-accent)" stroke-width="2"/>
+                <text x="50" y="105" text-anchor="middle" fill="var(--color-text)" font-size="10">Team A</text>
+
+                <circle cx="200" cy="40" r="20" fill="var(--color-accent-subtle)" stroke="var(--color-accent)" stroke-width="2"/>
+                <text x="200" y="45" text-anchor="middle" fill="var(--color-text)" font-size="10">Team B</text>
+
+                <circle cx="200" cy="160" r="20" fill="var(--color-accent-subtle)" stroke="var(--color-accent)" stroke-width="2"/>
+                <text x="200" y="165" text-anchor="middle" fill="var(--color-text)" font-size="10">Team C</text>
+
+                <circle cx="350" cy="100" r="20" fill="var(--color-accent-subtle)" stroke="var(--color-accent)" stroke-width="2"/>
+                <text x="350" y="105" text-anchor="middle" fill="var(--color-text)" font-size="10">Team D</text>
+
+                <!-- Edges with weights -->
+                <line x1="70" y1="90" x2="180" y2="50" stroke="var(--color-accent)" stroke-width="2" opacity="0.6"/>
+                <text x="115" y="60" fill="var(--color-text-muted)" font-size="9">+8.5</text>
+
+                <line x1="70" y1="110" x2="180" y2="150" stroke="var(--color-accent)" stroke-width="1.5" opacity="0.4"/>
+                <text x="115" y="145" fill="var(--color-text-muted)" font-size="9">-3.2</text>
+
+                <line x1="220" y1="45" x2="330" y2="95" stroke="var(--color-accent)" stroke-width="2.5" opacity="0.8"/>
+                <text x="280" y="60" fill="var(--color-text-muted)" font-size="9">+12.1</text>
+
+                <line x1="220" y1="155" x2="330" y2="105" stroke="var(--color-accent)" stroke-width="1" opacity="0.3"/>
+                <text x="280" y="145" fill="var(--color-text-muted)" font-size="9">-1.5</text>
+
+                <line x1="200" y1="60" x2="200" y2="140" stroke="var(--color-accent)" stroke-width="1.5" opacity="0.5"/>
+                <text x="210" y="105" fill="var(--color-text-muted)" font-size="9">+5.0</text>
+              </svg>
+            </div>
+            <p class="arch-caption">Edge weights = quality-adjusted margin (0.35 &times; adjusted score margin + 0.65 &times; xP margin). Thicker edges indicate larger margins.</p>
+          </div>
+        </div>
+
+        <h3>Message Passing</h3>
+        <p>The GCN propagates strength information through the schedule using message passing. After each layer, a team's embedding incorporates information from its opponents:</p>
+        <div class="code-block">
+          <pre><code># Layer 1: Direct opponents (1-hop SOS)
+h_i^(1) = ReLU(W_1 * AGG(h_j * w_ij for j in N(i)))
+
+# Layer 2: Opponents' opponents (2-hop SOS)
+h_i^(2) = ReLU(W_2 * AGG(h_j^(1) * w_ij for j in N(i)))
+
+# Final embedding combines both hops
+z_i = h_i^(2) || h_i^(1)  # concatenation</code></pre>
+        </div>
+
+        <h3>Why GCN for Basketball?</h3>
+        <ul class="detail-list">
+          <li><strong>Transitive comparison:</strong> If A beat B by 15 and B beat C by 10, the GCN naturally propagates that A is likely stronger than C -- even if they never played.</li>
+          <li><strong>Schedule debiasing:</strong> A 20-win team in a weak conference gets lower GCN embeddings than a 18-win team in a power conference, because the opponent nodes carry lower strength signals.</li>
+          <li><strong>"Paper tiger" detection:</strong> Teams with inflated records against weak opponents show high raw stats but low GCN-propagated strength.</li>
+        </ul>
+
+        <h3>Temporal Decay</h3>
+        <p>Recent games are weighted more heavily than early-season games. The decay parameter controls this:</p>
+        <div class="code-block">
+          <pre><code># temporal_decay = 0.5 (moderate recency bias)
+# Earliest game gets ~30% weight, latest gets 100%
+game_weight = (1 - decay) + decay * (game_num / total_games)</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Transformer Architecture -->
+    <section id="transformer" class="section">
+      <div class="container content-narrow">
+        <h2>Temporal Transformer</h2>
+        <p class="lead">Self-attention over the season game sequence identifies "breakout windows" -- critical periods where a team's performance fundamentally shifted.</p>
+
+        <h3>Architecture</h3>
+        <div class="arch-diagram">
+          <div class="arch-box">
+            <h4>Season Sequence Model</h4>
+            <div class="transformer-visual">
+              <div class="transformer-layer">
+                <div class="transformer-block">
+                  <span class="block-label">Output Heads</span>
+                  <div class="block-items">
+                    <span>Efficiency</span>
+                    <span>Breakout Prob</span>
+                    <span>Trend</span>
+                  </div>
+                </div>
+              </div>
+              <div class="transformer-arrow">&uarr;</div>
+              <div class="transformer-layer">
+                <div class="transformer-block">
+                  <span class="block-label">Multi-Head Self-Attention</span>
+                  <div class="block-items">
+                    <span>4 heads</span>
+                    <span>d_model = 64</span>
+                  </div>
+                </div>
+              </div>
+              <div class="transformer-arrow">&uarr;</div>
+              <div class="transformer-layer">
+                <div class="transformer-block">
+                  <span class="block-label">Positional Encoding</span>
+                  <div class="block-items">
+                    <span>sin/cos encoding</span>
+                    <span>max_len = 40 games</span>
+                  </div>
+                </div>
+              </div>
+              <div class="transformer-arrow">&uarr;</div>
+              <div class="transformer-layer">
+                <div class="transformer-block">
+                  <span class="block-label">Game Embeddings</span>
+                  <div class="block-items">
+                    <span>Off. Eff</span>
+                    <span>Def. Eff</span>
+                    <span>Tempo</span>
+                    <span>Margin</span>
+                    <span>Win</span>
+                    <span>Conf?</span>
+                    <span>Neutral?</span>
+                    <span>Opp Rank</span>
+                  </div>
+                </div>
+              </div>
+              <div class="transformer-arrow">&uarr;</div>
+              <div class="transformer-layer">
+                <div class="transformer-block input-block">
+                  <span class="block-label">Season Game Sequence</span>
+                  <div class="game-sequence">
+                    <span>G1</span><span>G2</span><span>G3</span><span>...</span><span>G28</span><span>G29</span><span>G30</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3>What Self-Attention Captures</h3>
+        <p>The attention mechanism learns which games in a team's season are most predictive of tournament performance:</p>
+        <ul class="detail-list">
+          <li><strong>Breakout detection:</strong> A team that went 8-8 in non-conference then 14-4 in conference play gets high "breakout probability" from the attention pattern shifting at the transition point.</li>
+          <li><strong>Quality-win emphasis:</strong> Games against ranked opponents receive higher attention weights, similar to how the selection committee evaluates Quad-1 wins.</li>
+          <li><strong>Late-season form:</strong> The positional encoding naturally allows the model to learn that February performance is more predictive than November performance.</li>
+          <li><strong>Injury recovery:</strong> A mid-season dip followed by recovery appears as a V-shaped attention pattern, distinguishing it from a permanent decline.</li>
+        </ul>
+
+        <h3>Game Embedding Vector</h3>
+        <p>Each game in the sequence is represented by an 8-dimensional vector:</p>
+        <div class="code-block">
+          <pre><code>game_vector = [
+    offensive_efficiency / 100.0,   # Normalize to [0, ~1.2]
+    defensive_efficiency / 100.0,   # Lower is better
+    tempo / 70.0,                   # Possessions per game
+    margin / 20.0,                  # Scale point differential
+    float(win),                     # Binary outcome
+    float(is_conference_game),      # Conference vs non-conf
+    float(is_neutral_site),         # Venue context
+    1.0 / (opponent_rank or 200),   # Inverse rank (higher = better opp)
+]</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Gradient Boosting -->
+    <section id="boosting" class="section section-alt">
+      <div class="container content-narrow">
+        <h2>Gradient Boosting (LightGBM + XGBoost)</h2>
+        <p class="lead">Heavily regularized tree ensembles that excel at tabular feature interactions. Configured for the small-sample regime of tournament prediction (~400 games/year).</p>
+
+        <h3>Model Configuration</h3>
+        <div class="config-grid">
+          <div class="config-card">
+            <h4>LightGBM</h4>
+            <div class="config-params">
+              <div class="param-row">
+                <span class="param-name">num_leaves</span>
+                <span class="param-value">8</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">min_child_samples</span>
+                <span class="param-value">50 (~12% of training)</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">learning_rate</span>
+                <span class="param-value">0.05</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">feature_fraction</span>
+                <span class="param-value">0.7</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">bagging_fraction</span>
+                <span class="param-value">0.8</span>
+              </div>
+            </div>
+          </div>
+          <div class="config-card">
+            <h4>XGBoost</h4>
+            <div class="config-params">
+              <div class="param-row">
+                <span class="param-name">max_depth</span>
+                <span class="param-value">3 (shallow trees)</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">min_child_weight</span>
+                <span class="param-value">10</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">learning_rate</span>
+                <span class="param-value">0.05</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">subsample</span>
+                <span class="param-value">0.8</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">reg_lambda</span>
+                <span class="param-value">1.0 (L2)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3>Why Heavy Regularization?</h3>
+        <p>With only ~300-400 regular-season games per year and 63 tournament games to validate against, overfitting is the primary risk. Our regularization strategy:</p>
+        <ul class="detail-list">
+          <li><strong>Shallow trees (depth 3, 8 leaves):</strong> Each tree can only capture simple interactions, preventing memorization of individual games.</li>
+          <li><strong>High min_child_samples (50):</strong> Each leaf must represent ~12% of training data, preventing splits on noise.</li>
+          <li><strong>Feature/bagging subsampling (70-80%):</strong> Decorrelates trees and prevents any single feature from dominating.</li>
+          <li><strong>Leave-One-Year-Out CV:</strong> Validates on entirely unseen tournament years, simulating real prediction conditions.</li>
+        </ul>
+
+        <h3>Matchup Feature Vector</h3>
+        <p>Each matchup is represented as the <strong>differential</strong> of both teams' 66-feature vectors, plus absolute-level context features for the top features. This captures both relative strength and overall game quality.</p>
+      </div>
+    </section>
+
+    <!-- Elo Rating System -->
+    <section id="elo" class="section">
+      <div class="container content-narrow">
+        <h2>Elo Rating System</h2>
+        <p class="lead">A simple, interpretable baseline that provides a strong floor for prediction quality.</p>
+
+        <div class="formula-grid">
+          <div class="formula-card">
+            <h4>Win Probability</h4>
+            <code class="formula-display">P(win) = 1 / (1 + 10<sup>(R<sub>opp</sub> - R<sub>team</sub>) / 400</sup>)</code>
+            <p>The classic logistic curve mapping rating difference to win probability. A 200-point Elo advantage corresponds to ~76% win probability.</p>
+          </div>
+          <div class="formula-card">
+            <h4>Rating Update</h4>
+            <code class="formula-display">R<sub>new</sub> = R<sub>old</sub> + K &times; (actual - expected)</code>
+            <p>K-factor of 32 balances responsiveness to new results against stability. Home court adjustment shifts expected probability by ~3.5 points equivalent.</p>
+          </div>
+        </div>
+
+        <h3>Elo Rating Interpretation</h3>
+        <div class="elo-scale">
+          <div class="elo-tier">
+            <span class="elo-range">1800+</span>
+            <span class="elo-desc">Elite (top 5-10 teams nationally)</span>
+          </div>
+          <div class="elo-tier">
+            <span class="elo-range">1700-1800</span>
+            <span class="elo-desc">Strong tournament team (top 20)</span>
+          </div>
+          <div class="elo-tier">
+            <span class="elo-range">1600-1700</span>
+            <span class="elo-desc">Bubble / low seed</span>
+          </div>
+          <div class="elo-tier">
+            <span class="elo-range">1500</span>
+            <span class="elo-desc">Average D1 team (baseline)</span>
+          </div>
+          <div class="elo-tier">
+            <span class="elo-range">&lt;1400</span>
+            <span class="elo-desc">Below-average / non-competitive</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CFA Ensemble -->
+    <section id="cfa" class="section section-alt">
+      <div class="container content-narrow">
+        <h2>Combinatorial Fusion Analysis (CFA)</h2>
+        <p class="lead">Dynamically combines predictions from all models, weighting each by its confidence in the specific matchup being predicted.</p>
+
+        <h3>Base Weights</h3>
+        <div class="weight-visual">
+          <div class="weight-bar-row">
+            <span class="weight-label">GNN</span>
+            <div class="weight-bar" style="width: 35%"><span>35%</span></div>
+          </div>
+          <div class="weight-bar-row">
+            <span class="weight-label">Transformer</span>
+            <div class="weight-bar" style="width: 35%"><span>35%</span></div>
+          </div>
+          <div class="weight-bar-row">
+            <span class="weight-label">Baseline (Elo + Seed)</span>
+            <div class="weight-bar" style="width: 30%"><span>30%</span></div>
+          </div>
+        </div>
+
+        <h3>Dynamic Confidence Scaling</h3>
+        <p>Base weights are adjusted per-prediction based on each model's confidence:</p>
+        <div class="code-block">
+          <pre><code># Scale factor clamped to [0.5, 1.5]
+scale = 1.0 + confidence_scaling * (model_confidence - 0.5)
+adjusted_weight = base_weight * clamp(scale, 0.5, 1.5)
+
+# Normalize to sum to 1.0
+final_weight = adjusted_weight / sum(all_adjusted_weights)</code></pre>
+        </div>
+
+        <h3>Diversity Metrics</h3>
+        <p>The ensemble tracks several diversity metrics to ensure models contribute complementary information:</p>
+        <ul class="detail-list">
+          <li><strong>Prediction spread:</strong> Max - min probability across models. Higher spread = more disagreement = more value from ensembling.</li>
+          <li><strong>Standard deviation:</strong> Variability of model predictions for each matchup.</li>
+          <li><strong>Spearman correlation:</strong> Rank correlation between model predictions across all matchups. Lower correlation = more diverse models.</li>
+          <li><strong>Per-model deviation:</strong> How much each model deviates from the ensemble mean, identifying when a single model is an outlier.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Monte Carlo -->
+    <section id="montecarlo" class="section">
+      <div class="container content-narrow">
+        <h2>Monte Carlo Simulation</h2>
+        <p class="lead">50,000+ full tournament simulations with stochastic noise injection to produce honest probability distributions over all outcomes.</p>
+
+        <h3>Simulation Process</h3>
+        <div class="process-steps">
+          <div class="process-step">
+            <div class="process-num">1</div>
+            <div class="process-content">
+              <h4>Initialize Team States</h4>
+              <p>Each team starts with base strength from the ensemble model. Per-team injury state is initialized with zero impact.</p>
+            </div>
+          </div>
+          <div class="process-step">
+            <div class="process-num">2</div>
+            <div class="process-content">
+              <h4>Draw Regional Noise</h4>
+              <p>A shared latent factor is drawn for each region. This creates correlated upsets within regions (e.g., "the South region is chaos this year").</p>
+            </div>
+          </div>
+          <div class="process-step">
+            <div class="process-num">3</div>
+            <div class="process-content">
+              <h4>Simulate Each Game</h4>
+              <p>For each matchup: inject logit-space Gaussian noise (&sigma;=0.12), apply regional correlation, roll for injury events (2% per game), and determine winner.</p>
+            </div>
+          </div>
+          <div class="process-step">
+            <div class="process-num">4</div>
+            <div class="process-content">
+              <h4>Aggregate Results</h4>
+              <p>After 50,000 simulations, count how often each team reaches each round. Wilson score intervals provide confidence bounds on the probability estimates.</p>
+            </div>
+          </div>
+        </div>
+
+        <h3>Why Logit-Space Noise?</h3>
+        <p>Additive noise in probability space is problematic: adding &epsilon; to p=0.95 can push it above 1.0, and equal noise has unequal effect at different base probabilities. Logit-space noise solves both issues:</p>
+        <div class="code-block">
+          <pre><code># Additive noise (bad): p' = p + epsilon  (can exceed [0,1])
+# Logit-space noise (good):
+logit_p = log(p / (1 - p))         # Map to (-inf, +inf)
+logit_p' = logit_p + N(0, 0.12^2)  # Add noise in logit space
+p' = sigmoid(logit_p')             # Map back to [0,1]
+
+# Result: ~5-8% shift near p=0.5, ~1-2% shift near p=0.95
+# Naturally respects [0,1] bounds</code></pre>
+        </div>
+
+        <h3>Parallelization</h3>
+        <p>Simulations are batched (1,000 per batch) and distributed across CPU cores using <code>ProcessPoolExecutor</code>. 50,000 simulations complete in seconds on modern hardware.</p>
+      </div>
+    </section>
+
+    <!-- Calibration -->
+    <section id="calibration" class="section section-alt">
+      <div class="container content-narrow">
+        <h2>Probability Calibration</h2>
+        <p class="lead">Raw model outputs are rarely well-calibrated. Post-processing ensures that a 70% prediction wins approximately 70% of the time.</p>
+
+        <h3>Brier Score Decomposition</h3>
+        <div class="formula-card full-width">
+          <code class="formula-display">Brier = Reliability - Resolution + Uncertainty</code>
+          <div class="brier-components">
+            <div class="brier-component">
+              <strong>Reliability</strong>
+              <p>How close calibration curve is to diagonal. Lower = better.</p>
+            </div>
+            <div class="brier-component">
+              <strong>Resolution</strong>
+              <p>How much predictions deviate from base rate. Higher = better (model is informative).</p>
+            </div>
+            <div class="brier-component">
+              <strong>Uncertainty</strong>
+              <p>Irreducible variance from base rate. Fixed for a given dataset.</p>
+            </div>
+          </div>
+        </div>
+
+        <h3>Calibration Methods</h3>
+        <div class="config-grid">
+          <div class="config-card">
+            <h4>Temperature Scaling (Default)</h4>
+            <code class="formula-display">p' = &sigma;(logit(p) / T)</code>
+            <p>Learns a single temperature parameter T. T &gt; 1 softens predictions (moves toward 0.5), T &lt; 1 sharpens. Robust with small calibration sets because it has only 1 free parameter.</p>
+          </div>
+          <div class="config-card">
+            <h4>Isotonic Regression</h4>
+            <code class="formula-display">p' = f(p), f monotone</code>
+            <p>Non-parametric monotonic mapping. More flexible than temperature scaling but needs more data. Used for post-processing when calibration data is sufficient.</p>
+          </div>
+        </div>
+
+        <h3>Evaluation</h3>
+        <ul class="detail-list">
+          <li><strong>Expected Calibration Error (ECE):</strong> Average absolute gap between predicted probability and observed frequency across decile bins. Target: &lt; 0.05.</li>
+          <li><strong>ROC-AUC:</strong> Measures ranking quality independent of calibration. A model that correctly orders teams by strength gets high AUC even if raw probabilities are miscalibrated.</li>
+          <li><strong>Bootstrap CI:</strong> 95% confidence intervals on Brier score using 1,000 bootstrap resamples.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Game Theory -->
+    <section id="gametheory" class="section">
+      <div class="container content-narrow">
+        <h2>Game-Theoretic Optimization</h2>
+        <p class="lead">The final phase transforms win probabilities into pool-optimal bracket picks by exploiting public consensus biases.</p>
+
+        <h3>Public Consensus Data</h3>
+        <p>We scrape pick percentages from ESPN, Yahoo, and CBS bracket challenges. These represent the "market" -- what the average pool competitor is picking. Our edge comes from finding where our model disagrees with this market.</p>
+
+        <h3>Leverage Calculation</h3>
+        <div class="code-block">
+          <pre><code>class LeveragePick:
+    leverage_ratio = model_probability / public_pick_percentage
+    expected_value = model_probability * points_value
+    ev_differential = expected_value - (public_pick_pct * points_value)
+
+# High leverage = undervalued by public
+# Leverage > 1.5x = strong contrarian pick
+# Leverage < 0.7x = overvalued by public (avoid)</code></pre>
+        </div>
+
+        <h3>Pareto Frontier</h3>
+        <p>The optimizer generates brackets along the Pareto frontier of expected value vs. variance. Each point on the frontier represents a different risk/reward trade-off:</p>
+        <ul class="detail-list">
+          <li><strong>High EV, High Variance (contrarian):</strong> Picks multiple upset-prone teams with high leverage. Best for large pools where you need to differentiate.</li>
+          <li><strong>Moderate EV, Moderate Variance (balanced):</strong> Mixes chalk with select high-leverage picks. Recommended default strategy.</li>
+          <li><strong>Lower EV, Low Variance (chalk):</strong> Mostly favorites. Floor is high but ceiling is limited. Best for small pools or side bets.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Training Strategy -->
+    <section id="training" class="section section-alt">
+      <div class="container content-narrow">
+        <h2>Multi-Year Training Strategy</h2>
+        <p class="lead">Leveraging 21 years of historical data (2005-2025) to overcome the fundamental small-sample challenge of single-season prediction.</p>
+
+        <h3>The Sample Size Problem</h3>
+        <p>A single college basketball season provides ~300 regular-season games for training, but only 63 tournament games for validation. This is insufficient for reliable ML model training. Our solution: use all 21 years of cached historical data.</p>
+
+        <div class="training-stats">
+          <div class="train-stat">
+            <span class="train-stat-value">~300</span>
+            <span class="train-stat-label">Games per season</span>
+          </div>
+          <div class="train-stat train-stat-arrow">&rarr;</div>
+          <div class="train-stat">
+            <span class="train-stat-value">30,000+</span>
+            <span class="train-stat-label">Total training samples</span>
+          </div>
+          <div class="train-stat train-stat-arrow">&rarr;</div>
+          <div class="train-stat">
+            <span class="train-stat-value">100x</span>
+            <span class="train-stat-label">Sample increase</span>
+          </div>
+        </div>
+
+        <h3>Year-Based Decay Weighting</h3>
+        <p>Not all historical data is equally relevant. A game from 2024 is more predictive of 2026 outcomes than a game from 2010. We apply exponential decay:</p>
+        <div class="code-block">
+          <pre><code>weight = decay_factor ^ years_ago
+# decay_factor = 0.85
+# 1 year ago:  0.85  (85% weight)
+# 3 years ago: 0.61  (61% weight)
+# 5 years ago: 0.44  (44% weight)
+# 10 years ago: 0.20 (20% weight)</code></pre>
+        </div>
+
+        <h3>Feature Availability by Era</h3>
+        <div class="era-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Feature Category</th>
+                <th>Current Season</th>
+                <th>Historical (2005-2025)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Four Factors</td>
+                <td class="available">Available</td>
+                <td class="available">Available (from box scores)</td>
+              </tr>
+              <tr>
+                <td>Elo / Win%</td>
+                <td class="available">Available</td>
+                <td class="available">Available (computed)</td>
+              </tr>
+              <tr>
+                <td>Shooting splits</td>
+                <td class="available">Available</td>
+                <td class="available">Available (from box scores)</td>
+              </tr>
+              <tr>
+                <td>Off/Def ratings</td>
+                <td class="available">Available</td>
+                <td class="available">Available (team_metrics)</td>
+              </tr>
+              <tr>
+                <td>Player RAPM/WARP</td>
+                <td class="available">Available</td>
+                <td class="unavailable">Not available</td>
+              </tr>
+              <tr>
+                <td>Lead volatility</td>
+                <td class="available">Available</td>
+                <td class="unavailable">Not available</td>
+              </tr>
+              <tr>
+                <td>Coach data</td>
+                <td class="available">Available</td>
+                <td class="unavailable">Not available</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>18 of 22 core features are computable from historical box scores. The 4 unavailable features (player metrics, experience, continuity, coach data) receive zero values in historical samples -- gradient boosting naturally ignores zero-variance features for those rows.</p>
+
+        <h3>Validation Protocol</h3>
+        <p><strong>Leave-One-Year-Out Cross-Validation (LOYO-CV):</strong> For each year Y, train on all years except Y, predict Y's tournament, and measure Brier score. This provides 21 independent validation folds and directly simulates real-world prediction conditions.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <p>March Madness Forecaster &middot; MIT License &middot; <a href="https://github.com/bsr-0/march-madness-forecaster">GitHub</a></p>
+        <p class="footer-sub">Built with PyTorch, Graph Neural Networks, and Combinatorial Fusion Analysis</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.querySelector('.nav-toggle').addEventListener('click', function() {
+      document.querySelector('.nav-links').classList.toggle('open');
+    });
+  </script>
+</body>
+</html>
