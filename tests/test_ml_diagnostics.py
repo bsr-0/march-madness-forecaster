@@ -608,7 +608,7 @@ class TestMultiYearTrainingConfig:
             assert X[0, 1]  == pytest.approx(-3.0)           # diff_adj_def_eff
             assert X[0, 2]  == pytest.approx(2.0)            # diff_adj_tempo
             assert X[0, 26] == pytest.approx(1.0)            # diff_sos_adj_em (idx 26, not 27)
-            assert X[0, 35] > 0                              # diff_elo_rating: Duke won → positive
+            assert X[0, 35] == pytest.approx(0.0)             # diff_elo_rating: first game → both at 1500 (PIT snapshot before game)
             assert X[0, 47] == pytest.approx(25/30 - 22/30, abs=0.01)  # diff_win_pct (idx 47, not 48)
 
             # Absolute-level features
@@ -657,21 +657,41 @@ class TestMultiYearTrainingConfig:
         )
 
     def test_derived_features_elo_monotone_with_wins(self):
-        """Elo difference should increase as team1's winning margin grows."""
+        """After several games, Elo difference should reflect cumulative wins.
+
+        PIT snapshots Elo BEFORE each game, so the first game in a season
+        always has both teams at 1500.  After several games where alpha
+        consistently wins, its Elo should rise above beta's, producing a
+        positive diff in later games.
+        """
         import json
         import os
         import tempfile
         from src.pipeline.sota import SOTAPipeline, SOTAPipelineConfig
 
-        def _make_dataset(team1_score, team2_score):
-            return {
-                "season": 2022,
-                "games": [
-                    {"game_id": "1", "date": "2022-01-10", "team1_id": "alpha",
-                     "team2_id": "beta", "team1_score": team1_score, "team2_score": team2_score},
-                ],
-            }
-
+        # Two extra "filler" teams so alpha/beta have opponents to build Elo
+        games = {
+            "season": 2022,
+            "games": [
+                # alpha wins first 3 games
+                {"game_id": "1", "date": "2022-01-05", "team1_id": "alpha",
+                 "team2_id": "gamma", "team1_score": 85, "team2_score": 65},
+                {"game_id": "2", "date": "2022-01-10", "team1_id": "alpha",
+                 "team2_id": "delta", "team1_score": 80, "team2_score": 60},
+                {"game_id": "3", "date": "2022-01-15", "team1_id": "alpha",
+                 "team2_id": "gamma", "team1_score": 90, "team2_score": 70},
+                # beta loses first 3 games
+                {"game_id": "4", "date": "2022-01-05", "team1_id": "gamma",
+                 "team2_id": "beta", "team1_score": 75, "team2_score": 60},
+                {"game_id": "5", "date": "2022-01-10", "team1_id": "delta",
+                 "team2_id": "beta", "team1_score": 70, "team2_score": 55},
+                {"game_id": "6", "date": "2022-01-15", "team1_id": "gamma",
+                 "team2_id": "beta", "team1_score": 80, "team2_score": 65},
+                # Now alpha plays beta — alpha's Elo should be higher
+                {"game_id": "7", "date": "2022-02-01", "team1_id": "alpha",
+                 "team2_id": "beta", "team1_score": 80, "team2_score": 60},
+            ],
+        }
         metrics = {
             "season": 2022,
             "teams": [
@@ -679,27 +699,31 @@ class TestMultiYearTrainingConfig:
                  "srs": 5.0, "sos": 2.0, "wins": 15, "losses": 10},
                 {"team_id": "beta",  "off_rtg": 105.0, "def_rtg": 102.0, "pace": 69.0,
                  "srs": 3.0, "sos": 1.5, "wins": 12, "losses": 13},
+                {"team_id": "gamma", "off_rtg": 100.0, "def_rtg": 105.0, "pace": 68.0,
+                 "srs": 0.0, "sos": 0.0, "wins": 10, "losses": 15},
+                {"team_id": "delta", "off_rtg": 98.0,  "def_rtg": 107.0, "pace": 67.0,
+                 "srs": -2.0, "sos": -1.0, "wins": 8, "losses": 17},
             ],
         }
 
-        pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            gp = os.path.join(tmpdir, "g.json")
+            mp = os.path.join(tmpdir, "m.json")
+            with open(gp, "w") as f:
+                json.dump(games, f)
+            with open(mp, "w") as f:
+                json.dump(metrics, f)
 
-        elo_diffs = []
-        for margin in [5, 15, 30]:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                gp = os.path.join(tmpdir, "g.json")
-                mp = os.path.join(tmpdir, "m.json")
-                with open(gp, "w") as f:
-                    json.dump(_make_dataset(70 + margin, 70), f)
-                with open(mp, "w") as f:
-                    json.dump(metrics, f)
-                X, y, _ = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2022)
-                elo_diffs.append(X[0, 35])
+            pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
+            X, y, _ = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2022)
 
-        # Larger winning margin → larger Elo gain → larger diff
-        assert elo_diffs[0] < elo_diffs[1] < elo_diffs[2], (
-            f"Elo diff should increase with margin: {elo_diffs}"
-        )
+            # Find the alpha-vs-beta game (last game, game_id=7)
+            # It should be the last training game since games are date-sorted
+            last_elo_diff = X[-1, 35]
+            assert last_elo_diff > 0, (
+                f"After alpha wins 3 and beta loses 3, alpha should have higher "
+                f"Elo at game time: got diff={last_elo_diff}"
+            )
 
     def test_derived_features_wab_positive_for_strong_team(self):
         """A team beating strong opponents should have positive WAB."""
