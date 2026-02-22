@@ -39,6 +39,7 @@ TEAM_COORDINATES: Dict[str, Tuple[float, float]] = {
     "notre_dame": (41.7056, -86.2353),
     "boston_college": (42.3355, -71.1685),
     "georgia_tech": (33.7756, -84.3963),
+    "miami__fl": (25.7210, -80.2791),
     "miami_fl": (25.7210, -80.2791),
     "pittsburgh": (40.4443, -79.9608),
     "pitt": (40.4443, -79.9608),
