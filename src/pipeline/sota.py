@@ -745,6 +745,25 @@ class SOTAPipeline:
 
     def run(self) -> Dict:
         """Run the complete pipeline and return report artifacts."""
+        # ── Holdout contamination check ──────────────────────────────
+        # If a previous RDoF audit evaluated holdout years with a frozen
+        # config, warn if the current config has drifted.  This catches
+        # the scenario where a developer views holdout results, tweaks
+        # a Tier 3 constant, and re-runs the pipeline — which constitutes
+        # implicit overfitting to the holdout set.
+        try:
+            from ..ml.evaluation.rdof_audit import check_holdout_contamination
+            import logging as _logging
+            _rdof_logger = _logging.getLogger(__name__)
+            hist_dir = self.config.multi_year_games_dir or "data/raw/historical"
+            contamination = check_holdout_contamination(hist_dir, self.config)
+            if contamination:
+                _rdof_logger.warning(
+                    "HOLDOUT CONTAMINATION: %s", contamination["message"]
+                )
+        except Exception:
+            pass  # Non-critical check — don't block pipeline on import/IO errors
+
         teams = self._load_teams()
         torvik_map, proprietary_map = self._load_team_stat_sources(teams)
         rosters = self._build_rosters(teams)
@@ -2710,6 +2729,71 @@ class SOTAPipeline:
                 feature_names=feature_names,
             )
 
+        # ====================================================================
+        # MODEL COMPLEXITY AUDIT — verify effective parameter count stays
+        # below 10% of training sample size.  This is the production-side
+        # enforcement of the complexity guard defined in rdof_audit.py.
+        # The audit runs at training time rather than only during offline
+        # RDoF audits, ensuring every pipeline run catches violations.
+        # ====================================================================
+        complexity_stats = {}
+        try:
+            from ..ml.evaluation.rdof_audit import estimate_model_complexity
+            complexity_audit = estimate_model_complexity(
+                config=self.config,
+                n_training_samples=int(train_samples),
+                n_features=int(train_X.shape[1]),
+                gnn_embedding_dim=0,  # A1: GNN embeddings removed from ensemble
+                transformer_embedding_dim=0,  # A1: Transformer removed from ensemble
+            )
+            complexity_stats = complexity_audit.to_dict()
+            if not complexity_audit.passed:
+                logger.warning(
+                    "COMPLEXITY GUARD: %d effective params / %d training samples "
+                    "= %.1f%% (target < %.0f%%). %s",
+                    complexity_audit.total_effective_params,
+                    train_samples,
+                    complexity_audit.actual_ratio * 100,
+                    complexity_audit.target_ratio * 100,
+                    "; ".join(complexity_audit.warnings),
+                )
+            else:
+                logger.info(
+                    "Complexity guard PASSED: %d effective params / %d samples "
+                    "= %.1f%% (target < %.0f%%).",
+                    complexity_audit.total_effective_params,
+                    train_samples,
+                    complexity_audit.actual_ratio * 100,
+                    complexity_audit.target_ratio * 100,
+                )
+        except Exception as e:
+            logger.debug("Model complexity audit skipped: %s", e)
+
+        # ====================================================================
+        # SAMPLE SIZE vs PARAMETER RATIO — explicit logging of the
+        # fundamental sample-size concern (Concern A).  Reports the ratio
+        # of active features + hyperparameters to training samples.
+        # A healthy ratio should be well below 0.10.
+        # ====================================================================
+        n_active_features = int(train_X.shape[1])
+        n_tier3_constants = 8  # From CONSTANT_REGISTRY Tier 3 count
+        effective_dof = n_active_features + n_tier3_constants
+        dof_ratio = effective_dof / max(train_samples, 1)
+        logger.info(
+            "Sample size audit: %d active features + %d Tier-3 constants "
+            "= %d effective DoF / %d training samples = %.3f "
+            "(target < 0.10).",
+            n_active_features, n_tier3_constants, effective_dof,
+            train_samples, dof_ratio,
+        )
+        if dof_ratio > 0.10:
+            logger.warning(
+                "SAMPLE SIZE WARNING: effective DoF / training samples = %.3f "
+                "> 0.10. Consider enabling multi-year training pool or "
+                "reducing features.",
+                dof_ratio,
+            )
+
         result = {
             "model": baseline_name,
             "unique_games": int(n_unique_games),
@@ -2737,6 +2821,16 @@ class SOTAPipeline:
             result["distribution_shift"] = dist_shift_stats
         if historical_training_stats:
             result["multi_year_training"] = historical_training_stats
+        if complexity_stats:
+            result["model_complexity_audit"] = complexity_stats
+        result["sample_size_audit"] = {
+            "active_features": n_active_features,
+            "tier3_constants": n_tier3_constants,
+            "effective_dof": effective_dof,
+            "train_samples": int(train_samples),
+            "dof_ratio": round(dof_ratio, 4),
+            "passed": dof_ratio <= 0.10,
+        }
         return result
 
     @staticmethod
