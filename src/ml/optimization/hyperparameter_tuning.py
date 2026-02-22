@@ -175,6 +175,7 @@ class TemporalCrossValidator:
         sort_keys: np.ndarray,
         train_fn,
         predict_fn,
+        sample_weight: np.ndarray = None,
     ) -> List[CVResult]:
         """
         Run temporal cross-validation with arbitrary train/predict functions.
@@ -183,8 +184,10 @@ class TemporalCrossValidator:
             X: Feature matrix [N, D]
             y: Labels [N]
             sort_keys: Chronological sort keys
-            train_fn: Callable(X_train, y_train, X_val, y_val) -> model
+            train_fn: Callable(X_train, y_train, X_val, y_val, w_train) -> model
             predict_fn: Callable(model, X) -> probabilities
+            sample_weight: Optional per-sample weights [N]. Sliced per fold
+                and passed as the 5th argument to train_fn. None = uniform.
 
         Returns:
             List of CVResult per fold
@@ -197,8 +200,9 @@ class TemporalCrossValidator:
             y_train = y[split.train_indices]
             X_val = X[split.val_indices]
             y_val = y[split.val_indices]
+            w_train = sample_weight[split.train_indices] if sample_weight is not None else None
 
-            model = train_fn(X_train, y_train, X_val, y_val)
+            model = train_fn(X_train, y_train, X_val, y_val, w_train)
             preds = predict_fn(model, X_val)
             preds = np.clip(preds, 1e-7, 1 - 1e-7)
 
@@ -262,6 +266,7 @@ class LightGBMTuner:
         y: np.ndarray,
         sort_keys: np.ndarray,
         feature_names: Optional[List[str]] = None,
+        sample_weight: np.ndarray = None,
     ) -> TuningResult:
         """
         Run Optuna hyperparameter search with temporal CV.
@@ -271,6 +276,9 @@ class LightGBMTuner:
             y: Labels [N]
             sort_keys: Chronological sort keys for temporal splitting
             feature_names: Optional feature names
+            sample_weight: Optional per-sample weights for weighted training.
+                Propagated through CV folds so hyperparameters are selected
+                under the same weighting scheme used for final model training.
 
         Returns:
             TuningResult with best params and CV scores
@@ -304,8 +312,11 @@ class LightGBMTuner:
             # instead of early stopping on the val fold.
             num_rounds = trial.suggest_int("num_rounds", 50, 200)
 
-            def train_fn(X_tr, y_tr, X_v, y_v):
-                train_data = lgb.Dataset(X_tr, label=y_tr, feature_name=feature_names)
+            def train_fn(X_tr, y_tr, X_v, y_v, w_tr):
+                train_data = lgb.Dataset(
+                    X_tr, label=y_tr, feature_name=feature_names,
+                    weight=w_tr,
+                )
                 callbacks = [lgb.log_evaluation(period=0)]
                 return lgb.train(
                     params,
@@ -317,14 +328,17 @@ class LightGBMTuner:
             def predict_fn(model, X_pred):
                 return model.predict(X_pred)
 
-            cv_results = cv.cross_validate(X, y, sort_keys, train_fn, predict_fn)
+            cv_results = cv.cross_validate(
+                X, y, sort_keys, train_fn, predict_fn,
+                sample_weight=sample_weight,
+            )
             mean_brier = float(np.mean([r.brier_score for r in cv_results]))
             return mean_brier
 
         study = optuna.create_study(
             direction="minimize",
             study_name="lgbm_tuning",
-            sampler=optuna.samplers.TPESampler(seed=self.random_seed),
+            sampler=optuna.samplers.TPESampler(seed=42),
         )
         study.optimize(objective, n_trials=self.n_trials, timeout=self.timeout)
 
@@ -349,8 +363,11 @@ class LightGBMTuner:
 
         # Final CV with best params — use fixed num_rounds (no early
         # stopping) to keep val fold uncontaminated for evaluation.
-        def final_train(X_tr, y_tr, X_v, y_v):
-            td = lgb.Dataset(X_tr, label=y_tr, feature_name=feature_names)
+        def final_train(X_tr, y_tr, X_v, y_v, w_tr):
+            td = lgb.Dataset(
+                X_tr, label=y_tr, feature_name=feature_names,
+                weight=w_tr,
+            )
             callbacks = [lgb.log_evaluation(period=0)]
             return lgb.train(
                 best_params, td,
@@ -361,7 +378,10 @@ class LightGBMTuner:
         def final_predict(model, X_pred):
             return model.predict(X_pred)
 
-        final_cv = cv.cross_validate(X, y, sort_keys, final_train, final_predict)
+        final_cv = cv.cross_validate(
+            X, y, sort_keys, final_train, final_predict,
+            sample_weight=sample_weight,
+        )
 
         return TuningResult(
             best_params={**best_params, "num_rounds": best_num_rounds},
@@ -412,6 +432,7 @@ class XGBoostTuner:
         y: np.ndarray,
         sort_keys: np.ndarray,
         feature_names: Optional[List[str]] = None,
+        sample_weight: np.ndarray = None,
     ) -> TuningResult:
         """
         Run Optuna hyperparameter search with temporal CV.
@@ -421,6 +442,7 @@ class XGBoostTuner:
             y: Labels [N]
             sort_keys: Chronological sort keys for temporal splitting
             feature_names: Optional feature names
+            sample_weight: Optional per-sample weights for weighted training.
 
         Returns:
             TuningResult with best params and CV scores
@@ -448,8 +470,11 @@ class XGBoostTuner:
             # FIX M2: Fixed rounds during Optuna search.
             num_rounds = trial.suggest_int("num_rounds", 50, 200)
 
-            def train_fn(X_tr, y_tr, X_v, y_v):
-                dtrain = xgb.DMatrix(X_tr, label=y_tr, feature_names=feature_names)
+            def train_fn(X_tr, y_tr, X_v, y_v, w_tr):
+                dtrain = xgb.DMatrix(
+                    X_tr, label=y_tr, feature_names=feature_names,
+                    weight=w_tr,
+                )
                 return xgb.train(
                     params,
                     dtrain,
@@ -461,14 +486,17 @@ class XGBoostTuner:
                 dmat = xgb.DMatrix(X_pred, feature_names=feature_names)
                 return model.predict(dmat)
 
-            cv_results = cv.cross_validate(X, y, sort_keys, train_fn, predict_fn)
+            cv_results = cv.cross_validate(
+                X, y, sort_keys, train_fn, predict_fn,
+                sample_weight=sample_weight,
+            )
             mean_brier = float(np.mean([r.brier_score for r in cv_results]))
             return mean_brier
 
         study = optuna.create_study(
             direction="minimize",
             study_name="xgb_tuning",
-            sampler=optuna.samplers.TPESampler(seed=self.random_seed),
+            sampler=optuna.samplers.TPESampler(seed=42),
         )
         study.optimize(objective, n_trials=self.n_trials, timeout=self.timeout)
 
@@ -491,8 +519,11 @@ class XGBoostTuner:
         }
 
         # Final CV with best params — fixed rounds, no early stopping.
-        def final_train(X_tr, y_tr, X_v, y_v):
-            dtrain = xgb.DMatrix(X_tr, label=y_tr, feature_names=feature_names)
+        def final_train(X_tr, y_tr, X_v, y_v, w_tr):
+            dtrain = xgb.DMatrix(
+                X_tr, label=y_tr, feature_names=feature_names,
+                weight=w_tr,
+            )
             return xgb.train(
                 best_params, dtrain,
                 num_boost_round=best_num_rounds,
@@ -503,7 +534,10 @@ class XGBoostTuner:
             dmat = xgb.DMatrix(X_pred, feature_names=feature_names)
             return model.predict(dmat)
 
-        final_cv = cv.cross_validate(X, y, sort_keys, final_train, final_predict)
+        final_cv = cv.cross_validate(
+            X, y, sort_keys, final_train, final_predict,
+            sample_weight=sample_weight,
+        )
 
         return TuningResult(
             best_params={**best_params, "num_rounds": best_num_rounds},
@@ -545,6 +579,7 @@ class LogisticTuner:
         X: np.ndarray,
         y: np.ndarray,
         sort_keys: np.ndarray,
+        sample_weight: np.ndarray = None,
     ) -> TuningResult:
         # B3: pair_size=1 — symmetric augmentation was removed.
         cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=1)
@@ -561,7 +596,7 @@ class LogisticTuner:
             if penalty == "elasticnet":
                 l1_ratio = trial.suggest_float("l1_ratio", 0.1, 0.9)
 
-            def train_fn(X_tr, y_tr, X_v, y_v):
+            def train_fn(X_tr, y_tr, X_v, y_v, w_tr):
                 kwargs = dict(
                     C=C, penalty=penalty, solver=solver, max_iter=2000,
                     random_state=self.random_seed,
@@ -569,19 +604,22 @@ class LogisticTuner:
                 if l1_ratio is not None:
                     kwargs["l1_ratio"] = l1_ratio
                 model = LogisticRegression(**kwargs)
-                model.fit(X_tr, y_tr)
+                model.fit(X_tr, y_tr, sample_weight=w_tr)
                 return model
 
             def predict_fn(model, X_pred):
                 return model.predict_proba(X_pred)[:, 1]
 
-            results = cv.cross_validate(X, y, sort_keys, train_fn, predict_fn)
+            results = cv.cross_validate(
+                X, y, sort_keys, train_fn, predict_fn,
+                sample_weight=sample_weight,
+            )
             return float(np.mean([r.brier_score for r in results]))
 
         study = optuna.create_study(
             direction="minimize",
             study_name="logistic_tuning",
-            sampler=optuna.samplers.TPESampler(seed=self.random_seed),
+            sampler=optuna.samplers.TPESampler(seed=42),
         )
         study.optimize(objective, n_trials=self.n_trials, timeout=self.timeout)
 
@@ -674,6 +712,7 @@ class LeaveOneYearOutCV:
         game_years: np.ndarray,
         train_fn,
         predict_fn,
+        sample_weight: np.ndarray = None,
     ) -> List[CVResult]:
         """
         Run LOYO cross-validation with arbitrary train/predict functions.
@@ -682,8 +721,9 @@ class LeaveOneYearOutCV:
             X: Feature matrix [N, D]
             y: Labels [N]
             game_years: Year label for each sample
-            train_fn: Callable(X_train, y_train, X_val, y_val) -> model
+            train_fn: Callable(X_train, y_train, X_val, y_val, w_train) -> model
             predict_fn: Callable(model, X) -> probabilities
+            sample_weight: Optional per-sample weights [N]. Sliced per fold.
 
         Returns:
             List of CVResult per fold
@@ -706,8 +746,9 @@ class LeaveOneYearOutCV:
             y_train = y[tr_idx]
             X_es = X[es_idx]
             y_es = y[es_idx]
+            w_train = sample_weight[tr_idx] if sample_weight is not None else None
 
-            model = train_fn(X_train, y_train, X_es, y_es)
+            model = train_fn(X_train, y_train, X_es, y_es, w_train)
             preds = predict_fn(model, X_test)
             preds = np.clip(preds, 1e-7, 1 - 1e-7)
 

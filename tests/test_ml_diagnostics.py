@@ -552,7 +552,7 @@ class TestMultiYearTrainingConfig:
                 json.dump(metrics, f)
 
             pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
-            X, y = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2024)
+            X, y, _ = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2024)
 
             # Should have exactly 2 samples (one per game), NOT 4 (no symmetric augmentation)
             assert X.shape[0] == 2
@@ -599,7 +599,7 @@ class TestMultiYearTrainingConfig:
                 json.dump(metrics, f)
 
             pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
-            X, y = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2024)
+            X, y, _ = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2024)
 
             assert X.shape == (1, 77)
 
@@ -693,7 +693,7 @@ class TestMultiYearTrainingConfig:
                     json.dump(_make_dataset(70 + margin, 70), f)
                 with open(mp, "w") as f:
                     json.dump(metrics, f)
-                X, y = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2022)
+                X, y, _ = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2022)
                 elo_diffs.append(X[0, 35])
 
         # Larger winning margin → larger Elo gain → larger diff
@@ -744,7 +744,7 @@ class TestMultiYearTrainingConfig:
                 json.dump(metrics, f)
 
             pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
-            X, y = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2022)
+            X, y, _ = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2022)
 
         # All 3 games should be in training set; find alpha-vs-weak-team game (game 3)
         # alpha (idx 31 = wab) should be positive relative to beta
@@ -791,7 +791,7 @@ class TestMultiYearTrainingConfig:
                 json.dump(metrics, f)
 
             pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
-            X, y = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2023)
+            X, y, _ = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2023)
 
         assert X.shape[0] == 20
 

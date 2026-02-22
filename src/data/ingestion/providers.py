@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import csv
 import importlib
+import io
 import logging
 import os
 from dataclasses import dataclass
@@ -25,7 +27,7 @@ class LibraryProviderHub:
     DEFAULT_PRIORITIES = {
         "historical_games": ["sportsdataverse", "cbbpy", "sportsipy", "cbbdata"],
         "team_metrics": ["sportsdataverse", "sportsipy", "cbbdata"],
-        "torvik": ["cbbdata"],
+        "torvik": ["barttorvik", "cbbdata"],
     }
 
     def fetch_historical_games(self, year: int, priority: Optional[List[str]] = None) -> ProviderResult:
@@ -54,7 +56,10 @@ class LibraryProviderHub:
         return ProviderResult(provider="none", records=[])
 
     def fetch_torvik_ratings(self, year: int, priority: Optional[List[str]] = None) -> ProviderResult:
-        methods = {"cbbdata": self._from_cbbdata_torvik_api}
+        methods = {
+            "barttorvik": self._from_barttorvik_csv,
+            "cbbdata": self._from_cbbdata_torvik_api,
+        }
         for method in self._ordered_methods("torvik", methods, priority):
             result = method(year)
             if result.records:
@@ -67,6 +72,7 @@ class LibraryProviderHub:
             "sportsdataverse_py": [],
             "cbbpy": [],
             "sportsipy": [],
+            "barttorvik": [],
         }
 
     def _ordered_methods(
@@ -233,6 +239,113 @@ class LibraryProviderHub:
         payload = self._fetch_cbbdata_endpoint("CBBDATA_TORVIK_URL", year)
         records = payload.get("teams") or payload.get("records") or []
         return ProviderResult("cbbdata", records if isinstance(records, list) else [])
+
+    def _from_barttorvik_csv(self, year: int) -> ProviderResult:
+        url_template = os.getenv("BARTTORVIK_TORVIK_URL")
+        if url_template:
+            url = url_template.format(year=year)
+        else:
+            url = f"https://barttorvik.com/{year}_team_results.csv"
+
+        try:
+            response = requests.get(url, timeout=45)
+            response.raise_for_status()
+        except Exception as exc:
+            logger.warning("barttorvik request failed for %s: %s", url, exc)
+            return ProviderResult("barttorvik", [])
+
+        text = response.text.strip()
+        if not text:
+            return ProviderResult("barttorvik", [])
+
+        try:
+            sample = text[:4096]
+            dialect = csv.Sniffer().sniff(sample)
+        except Exception:
+            dialect = csv.excel
+
+        reader = csv.reader(io.StringIO(text), dialect)
+        rows = list(reader)
+        if not rows:
+            return ProviderResult("barttorvik", [])
+
+        header = [c.strip() for c in rows[0]]
+        has_header = any(h and not h.replace(".", "", 1).isdigit() for h in header)
+        if not has_header:
+            logger.warning("barttorvik CSV appears to lack headers; skipping (set BARTTORVIK_TORVIK_URL to a headered feed).")
+            return ProviderResult("barttorvik", [])
+
+        records: List[Dict] = []
+        dict_reader = csv.DictReader(io.StringIO(text), dialect=dialect)
+        for row in dict_reader:
+            record = self._map_barttorvik_row(row)
+            if record:
+                records.append(record)
+        return ProviderResult("barttorvik", records)
+
+    @staticmethod
+    def _map_barttorvik_row(row: Dict[str, str]) -> Optional[Dict]:
+        if not isinstance(row, dict):
+            return None
+
+        def pick(keys: List[str]) -> str:
+            for key in keys:
+                for k, v in row.items():
+                    if k is None:
+                        continue
+                    if k.strip().lower() == key:
+                        return str(v).strip()
+            return ""
+
+        def to_float(value: str) -> float:
+            if value is None:
+                return 0.0
+            text = str(value).replace("%", "").strip()
+            try:
+                return float(text)
+            except (TypeError, ValueError):
+                return 0.0
+
+        def normalize_rate(value: float) -> float:
+            if value > 1.5:
+                return value / 100.0
+            return value
+
+        name = pick(["team", "team_name", "team name", "school"])
+        conf = pick(["conf", "conference"])
+        if not name:
+            return None
+
+        team_id = "".join(c.lower() if c.isalnum() else "_" for c in name).strip("_")
+
+        t_rank = int(to_float(pick(["rank", "rk", "t_rank"]))) if pick(["rank", "rk", "t_rank"]) else 999
+
+        barthag = to_float(pick(["barthag", "bar_thag"]))
+        adj_oe = to_float(pick(["adjoe", "adjo", "adj_o", "adj_oe", "adj_off", "adj_offense", "adj_offensive_efficiency"]))
+        adj_de = to_float(pick(["adjde", "adjd", "adj_d", "adj_de", "adj_def", "adj_defense", "adj_defensive_efficiency"]))
+        adj_t = to_float(pick(["adjt", "adj_t", "tempo", "adj_tempo"]))
+
+        efg = normalize_rate(to_float(pick(["efg", "efg%", "effective_fg_pct", "efg_pct"])))
+        to_rate = normalize_rate(to_float(pick(["to%", "to_rate", "turnover_rate", "to_pct"])))
+        orb = normalize_rate(to_float(pick(["orb%", "orb", "offensive_reb_rate", "orb_pct"])))
+        ftr = normalize_rate(to_float(pick(["ftr", "ft_rate", "free_throw_rate", "ft_rate_pct"])))
+
+        record = {
+            "team_id": team_id,
+            "team_name": name,
+            "name": name,
+            "conference": conf,
+            "t_rank": t_rank,
+            "barthag": barthag,
+            "adj_offensive_efficiency": adj_oe,
+            "adj_defensive_efficiency": adj_de,
+            "adj_tempo": adj_t,
+            "effective_fg_pct": efg,
+            "turnover_rate": to_rate,
+            "offensive_reb_rate": orb,
+            "free_throw_rate": ftr,
+        }
+        return record
 
     def _fetch_cbbdata_endpoint(self, url_env: str, year: int) -> Dict:
         url_template = os.getenv(url_env)

@@ -2,13 +2,58 @@
 
 Addresses cumulative researcher degrees of freedom by:
 1. Cataloging every hand-tuned constant with its derivation tier
-2. Running a true holdout evaluation on years excluded from ALL decisions
+2. Running holdout evaluation on designated years
 3. Sensitivity analysis: grid search each Tier 3 constant via LOYO on dev years
 4. Producing a structured audit report with honest OOS metrics
+5. Pipeline freeze/verify for pre-registration discipline
+
+HOLDOUT INTEGRITY LEVELS
+=========================
+This framework distinguishes three levels of holdout integrity, each with
+different evidential strength.  All audit reports explicitly tag which level
+applies.
+
+Level 3 — RETROSPECTIVE DIAGNOSTIC (current 2005-2025 data):
+    The pipeline was iteratively refined using data from all 2005-2025 seasons.
+    "Holdout" years (default: 2024, 2025) were observed during development for
+    debugging, feature engineering, and sanity checks.  Results at this level
+    are useful diagnostics but OVERSTATE true out-of-sample performance because
+    the pipeline was shaped by knowledge of these years' outcomes.  Analogous to
+    in-sample model selection — the test set has been "seen" even if not directly
+    fitted.
+
+Level 2 — QUASI-PROSPECTIVE (future years WITH frozen pipeline):
+    A pipeline frozen via ``freeze-pipeline`` BEFORE a tournament starts, then
+    evaluated on that tournament's outcomes AFTER they're known.  This is
+    stronger than Level 3 because no pipeline modifications can occur between
+    prediction and evaluation, but the pipeline's architecture and feature
+    set were still informed by all prior years' data, including any structural
+    similarities to the evaluation year.
+
+Level 1 — TRUE PROSPECTIVE (pre-registered, independently verified):
+    Pipeline frozen, predictions deposited in a public/immutable store (e.g.
+    git tag + hash) BEFORE the tournament, verified by a third party or
+    cryptographic timestamp.  This is the gold standard; the 2026 tournament
+    is the first candidate.
+
+TUNING-EVALUATION CIRCULARITY DISCLOSURE
+==========================================
+Many Tier 3 constants were originally calibrated using LOYO cross-validation
+on the same historical data that the sensitivity analyzer now re-evaluates.
+The sensitivity analysis can confirm that the Brier surface is FLAT near the
+current value (indicating low overfitting risk), but it cannot prove the values
+weren't overfit to begin with — the optimization and validation share the same
+data distribution.
+
+The ``circularity_warning`` field in sensitivity results flags constants whose
+derivation notes mention "LOYO" or "calibrated", indicating this circularity.
 
 Usage:
     python -m src.main audit-rdof --historical-dir data/raw/historical \\
-        --holdout-years 2024,2025 --sensitivity
+        --holdout-years 2024,2025 --sensitivity --output rdof_report.json
+
+    python -m src.main freeze-pipeline --output pipeline_freeze.json
+    python -m src.main verify-freeze --freeze-file pipeline_freeze.json
 """
 
 from __future__ import annotations
@@ -140,6 +185,123 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
     PipelineConstant("mc_regional_correlation", 3, 0.10,
         "SimulationConfig.regional_correlation", (0.0, 0.30),
         "Reduced from 0.25 during OOS fix round"),
+
+    # ── Additional Tier 1: Published/External ─────────────────────────
+    PipelineConstant("log5_scale", 1, 0.1735,
+        "ProprietaryMetrics._pythagorean_win_pct + rdof_audit baselines", (0.10, 0.25),
+        "D1 fix: analytically derived k=ln(17/3)/10=0.1735 so AdjEM=+10 maps to "
+        "exactly 0.850 win%. Prior value 0.145 gave 0.810, not 0.85 as documented."),
+    PipelineConstant("elo_dampening_numerator", 1, 2.2,
+        "ProprietaryMetrics._compute_elo (hardcoded)", (1.5, 3.0),
+        "FiveThirtyEight published Elo methodology dampening constant"),
+    PipelineConstant("elo_dampening_denom_scale", 1, 0.001,
+        "ProprietaryMetrics._compute_elo (hardcoded)", (0.0005, 0.005),
+        "FiveThirtyEight published Elo methodology elo_diff scaling"),
+
+    # ── Additional Tier 2: Structurally Constrained ───────────────────
+    PipelineConstant("elo_season_regression", 2, 0.25,
+        "ProprietaryMetrics._compute_elo_ratings + sota._load_year_samples",
+        (0.10, 0.50),
+        "D2 fix: 25% regression toward mean (1500) at each season boundary. "
+        "Matches FiveThirtyEight NFL Elo methodology (Silver, 2014). "
+        "Reduces cold-start noise in early-season ratings."),
+    PipelineConstant("elo_k_base", 2, 38.0,
+        "ProprietaryMetrics._compute_elo K_BASE", (20.0, 60.0),
+        "MOV-adjusted Elo K-factor; bounded, monotone effect on update magnitude"),
+    PipelineConstant("wab_k", 2, 11.5,
+        "sota.py _load_year_samples _WAB_K", (5.0, 20.0),
+        "log5 scaling denominator for WAB; bounded, controls sensitivity to AdjEM gap"),
+    PipelineConstant("bubble_em_prior", 2, 5.0,
+        "ProprietaryMetrics.BUBBLE_EM_PRIOR", (2.0, 10.0),
+        "Historical average AdjEM of ~45th-ranked team; Bayesian prior for WAB"),
+    PipelineConstant("margin_cap", 2, 16.0,
+        "ProprietaryMetrics.MARGIN_CAP", (10.0, 25.0),
+        "Blowout cap; bounded, prevents extreme margins from distorting efficiency"),
+    PipelineConstant("sos_damping", 2, 0.7,
+        "ProprietaryMetrics._iterative_sos_adjust DAMPING", (0.4, 0.9),
+        "SOS convergence blend factor; bounded (0,1), higher = faster convergence"),
+    PipelineConstant("three_pt_prior_weight", 2, 100.0,
+        "ProprietaryMetrics (hardcoded prior_weight=100)", (30.0, 300.0),
+        "Bayesian 3PT shrinkage prior strength; ~3 games of 3PA volume"),
+    PipelineConstant("three_pt_league_avg", 2, 0.345,
+        "ProprietaryMetrics (hardcoded 0.345)", (0.330, 0.360),
+        "D1 average 3PT%; slowly drifts year-to-year but structurally bounded"),
+    PipelineConstant("pit_noise_base", 2, 0.05,
+        "sota.py _train_baseline_model base_noise", (0.02, 0.10),
+        "PIT residual noise scale; bounded, proportional to season_remaining"),
+    PipelineConstant("pit_stability_scaling", 2, 0.7,
+        "sota.py (feature_noise_weight = 1.0 - stability * 0.7)", (0.4, 0.9),
+        "How much feature stability reduces PIT noise; bounded [0,1]"),
+    PipelineConstant("pit_feature_noise_reduction", 2, 0.3,
+        "sota.py (feature_noise_weight *= 0.3 for PIT features)", (0.1, 0.6),
+        "Noise reduction multiplier for PIT-adjusted features; bounded (0,1)"),
+    PipelineConstant("mean_regression_shrinkage", 2, 0.10,
+        "sota.py (shrinkage = 0.10 toward league mean)", (0.0, 0.25),
+        "Regression toward league mean; bounded, monotone effect"),
+    PipelineConstant("pit_weight_cap", 2, 0.9,
+        "sota.py (min(0.9, 0.9 * season_remaining))", (0.5, 1.0),
+        "Maximum PIT blend weight; bounded, caps PIT override of end-of-season"),
+
+    # ── Additional Tier 3: MC Simulation Constants ────────────────────
+    PipelineConstant("mc_injury_probability", 3, 0.02,
+        "SimulationConfig.injury_probability", (0.0, 0.10),
+        "Per-game injury probability; iteratively adjusted"),
+    PipelineConstant("mc_injury_severity_lo", 3, 0.05,
+        "monte_carlo._run_batch rng.uniform(0.05, 0.25)", (0.01, 0.15),
+        "Lower bound of injury severity logit shift; iteratively set"),
+    PipelineConstant("mc_injury_severity_hi", 3, 0.25,
+        "monte_carlo._run_batch rng.uniform(0.05, 0.25)", (0.10, 0.50),
+        "Upper bound of injury severity logit shift; iteratively set"),
+    PipelineConstant("mc_lognormal_sigma", 3, 0.15,
+        "monte_carlo._run_batch sigma=0.15 for cross-region", (0.05, 0.30),
+        "Cross-region (Final Four) noise lognormal sigma; iteratively set"),
+    PipelineConstant("mc_region_noise_floor", 3, 0.2,
+        "monte_carlo._run_batch max(0.2, ...)", (0.05, 0.5),
+        "Floor for regional noise multiplier; prevents zero-variance regions"),
+
+    # ── Previously Unregistered Constants ─────────────────────────────
+    # The following constants were identified as hardcoded in the codebase
+    # but not tracked in the registry.  Added to close the audit gap.
+
+    # Tier 1: Published formulas
+    PipelineConstant("ts_pct_fta_weight", 1, 0.44,
+        "ProprietaryMetrics (0.44 * FTA in True Shooting denominator)", (0.40, 0.48),
+        "Hollinger's True Shooting %: 2*(FGA + 0.44*FTA); published formula"),
+
+    # Tier 2: Structurally constrained (bounded, monotone, or threshold)
+    PipelineConstant("sos_iterations", 2, 15,
+        "ProprietaryMetrics._iterative_sos_adjust N_ITERS", (5, 30),
+        "Convergence iterations for additive SOS; bounded, monotone convergence"),
+    PipelineConstant("luck_min_games", 2, 12,
+        "ProprietaryMetrics MIN_GAMES_LUCK", (5, 20),
+        "Minimum games for luck metric; data quality threshold"),
+    PipelineConstant("luck_full_weight_games", 2, 32,
+        "ProprietaryMetrics (shrinkage reaches 1.0 at 32 games)", (20, 50),
+        "Games at which luck shrinkage = 100%; structural ramp"),
+    PipelineConstant("momentum_window", 2, 8,
+        "rdof_audit._compute_derived_stats last_n; sota.py _load_year_samples", (4, 15),
+        "Rolling game window for momentum calculation; bounded"),
+    PipelineConstant("four_factors_composite_scale", 2, 2.0,
+        "ProprietaryMetrics (2.0 * composite to PPP scale)", (1.0, 4.0),
+        "Converts Four Factors composite to PPP-like units; structural scaling"),
+    PipelineConstant("mc_final_clip_lo", 2, 0.01,
+        "monte_carlo._run_batch np.clip(noisy, 0.01, 0.99)", (0.005, 0.05),
+        "Post-noise probability floor in MC simulation; prevents log(0)"),
+    PipelineConstant("mc_final_clip_hi", 2, 0.99,
+        "monte_carlo._run_batch np.clip(noisy, 0.01, 0.99)", (0.95, 0.999),
+        "Post-noise probability ceiling in MC simulation; structural bound"),
+    PipelineConstant("seed_interaction_scale", 2, 128.0,
+        "sota.py seed_interaction = (seed1*seed2)/128 - 1", (64.0, 256.0),
+        "Normalization denominator for seed interaction feature; structural"),
+    PipelineConstant("gnn_target_scale", 2, 30.0,
+        "sota.py adj_em / 30.0 for GNN targets", (15.0, 50.0),
+        "AdjEM normalization for GNN training targets; scale parameter"),
+    PipelineConstant("early_stopping_rounds", 2, 30,
+        "sota.py LGB/XGB early stopping patience", (10, 50),
+        "Early stopping rounds; structural regularization, bounded"),
+    PipelineConstant("optuna_n_trials", 2, 15,
+        "SOTAPipelineConfig.optuna_n_trials", (5, 50),
+        "Max Optuna tuning trials; bounded, more trials = more selection bias"),
 ]
 # fmt: on
 
@@ -155,6 +317,11 @@ TIER3_GAME_LEVEL_CONSTANTS = [
 TIER3_MC_CONSTANTS = [
     "mc_noise_std",
     "mc_regional_correlation",
+    "mc_injury_probability",
+    "mc_injury_severity_lo",
+    "mc_injury_severity_hi",
+    "mc_lognormal_sigma",
+    "mc_region_noise_floor",
 ]
 
 
@@ -190,6 +357,168 @@ def config_hash(config) -> str:
         d[f] = val
     canonical = json.dumps(d, sort_keys=True, default=str)
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+
+
+def freeze_pipeline(
+    config,
+    output_path: str = "pipeline_freeze.json",
+) -> Dict[str, Any]:
+    """Create a tamper-evident pipeline freeze artifact.
+
+    Captures the full pipeline state so that post-tournament analysis can
+    verify the pipeline was locked before seeing results.  Also creates a
+    git tag ``pre-registered/{date}/{hash}`` for an immutable reference.
+
+    Returns:
+        Dict with freeze artifact contents.
+    """
+    import subprocess
+
+    cfg_hash = config_hash(config)
+    timestamp = time.strftime("%Y-%m-%dT%H:%M:%S")
+    date_str = time.strftime("%Y-%m-%d")
+
+    # Get git commit SHA
+    git_sha = "unknown"
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0:
+            git_sha = result.stdout.strip()
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+    # Check for uncommitted changes
+    git_dirty = True
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            capture_output=True, text=True, timeout=5,
+        )
+        git_dirty = bool(result.stdout.strip())
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+    # Constant registry snapshot
+    registry_snapshot = [c.to_dict() for c in CONSTANT_REGISTRY]
+
+    # Serialize config fields
+    config_fields: Dict[str, Any] = {}
+    for f in config.__dataclass_fields__:
+        val = getattr(config, f)
+        if isinstance(val, (list, tuple)):
+            val = list(val)
+        elif val is None or isinstance(val, (int, float, str, bool)):
+            pass
+        else:
+            val = str(val)
+        config_fields[f] = val
+
+    freeze_artifact: Dict[str, Any] = {
+        "freeze_type": "pre-registration",
+        "config_hash": cfg_hash,
+        "git_commit": git_sha,
+        "git_dirty": git_dirty,
+        "timestamp": timestamp,
+        "n_constants": len(CONSTANT_REGISTRY),
+        "constant_registry": registry_snapshot,
+        "config_fields": config_fields,
+    }
+
+    # Write lockfile
+    with open(output_path, "w") as f:
+        json.dump(freeze_artifact, f, indent=2, sort_keys=True)
+    logger.info("Pipeline freeze written to %s", output_path)
+
+    if git_dirty:
+        logger.warning(
+            "Working tree has uncommitted changes.  The git tag will "
+            "reference the LAST COMMITTED state.  Commit first for a "
+            "clean freeze."
+        )
+
+    # Create git tag
+    tag_name = f"pre-registered/{date_str}/{cfg_hash}"
+    try:
+        subprocess.run(
+            ["git", "tag", "-a", tag_name, "-m",
+             f"Pre-registered pipeline freeze\n\n"
+             f"Config hash: {cfg_hash}\n"
+             f"Timestamp: {timestamp}\n"
+             f"Constants: {len(CONSTANT_REGISTRY)} registered"],
+            capture_output=True, text=True, timeout=10,
+        )
+        freeze_artifact["git_tag"] = tag_name
+        logger.info("Git tag created: %s", tag_name)
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        logger.warning("Could not create git tag (git not available?)")
+
+    return freeze_artifact
+
+
+def verify_freeze(
+    config,
+    freeze_path: str = "pipeline_freeze.json",
+) -> Dict[str, Any]:
+    """Verify current pipeline config against a freeze artifact.
+
+    Returns:
+        Dict with ``matches`` (bool) and ``mismatches`` (list of strings).
+    """
+    with open(freeze_path, "r") as f:
+        freeze = json.load(f)
+
+    current_hash = config_hash(config)
+    frozen_hash = freeze.get("config_hash", "")
+
+    mismatches: List[str] = []
+
+    if current_hash != frozen_hash:
+        mismatches.append(
+            f"Config hash mismatch: current={current_hash}, frozen={frozen_hash}"
+        )
+        # Detail which fields changed
+        frozen_fields = freeze.get("config_fields", {})
+        for field_name in config.__dataclass_fields__:
+            current_val = getattr(config, field_name)
+            frozen_val = frozen_fields.get(field_name)
+            if isinstance(current_val, (list, tuple)):
+                current_val = list(current_val)
+            if str(current_val) != str(frozen_val):
+                mismatches.append(
+                    f"  Field '{field_name}': "
+                    f"frozen={frozen_val}, current={current_val}"
+                )
+
+    # Check constant registry — distinguish behavioral changes (value
+    # changed) from documentary additions (new constant registered).
+    # Only value changes are mismatches; new registry entries are warnings
+    # since they don't change pipeline behavior.
+    frozen_constants = {
+        c["name"]: c for c in freeze.get("constant_registry", [])
+    }
+    warnings: List[str] = []
+    for c in CONSTANT_REGISTRY:
+        frozen_c = frozen_constants.get(c.name)
+        if frozen_c is None:
+            warnings.append(f"New constant registered since freeze: {c.name}")
+        elif str(c.current_value) != str(frozen_c.get("current_value")):
+            mismatches.append(
+                f"Constant '{c.name}' changed: "
+                f"frozen={frozen_c['current_value']}, current={c.current_value}"
+            )
+
+    return {
+        "matches": len(mismatches) == 0,
+        "current_hash": current_hash,
+        "frozen_hash": frozen_hash,
+        "frozen_timestamp": freeze.get("timestamp"),
+        "frozen_git_commit": freeze.get("git_commit"),
+        "mismatches": mismatches,
+        "warnings": warnings,
+    }
 
 
 # ───────────────────────────────────────────────────────────────────────
@@ -388,12 +717,21 @@ class YearMetrics:
 
 @dataclass
 class HoldoutReport:
-    """Results from the full holdout evaluation."""
+    """Results from the full holdout evaluation.
+
+    The ``integrity_level`` field explicitly communicates the evidential
+    strength of these results (see module docstring for definitions).
+    """
 
     holdout_years: List[int]
     per_year: Dict[int, YearMetrics] = field(default_factory=dict)
     config_hash_value: str = ""
     timestamp: str = ""
+    integrity_level: int = 3  # 1=true prospective, 2=quasi-prospective, 3=retrospective
+    integrity_note: str = (
+        "RETROSPECTIVE DIAGNOSTIC: These holdout years were observed during "
+        "pipeline development. Results overstate true OOS performance."
+    )
 
     @property
     def aggregate_brier(self) -> float:
@@ -437,6 +775,8 @@ class HoldoutReport:
             "holdout_years": self.holdout_years,
             "config_hash": self.config_hash_value,
             "timestamp": self.timestamp,
+            "integrity_level": self.integrity_level,
+            "integrity_note": self.integrity_note,
             "total_games": self.total_games,
             "aggregate_brier": round(self.aggregate_brier, 5),
             "aggregate_seed_brier": round(self.aggregate_seed_brier, 5),
@@ -467,6 +807,7 @@ class ConstantSensitivityResult:
     current_brier: float
     brier_range: float  # max - min across grid
     is_flat: bool  # brier_range < 0.005
+    circularity_warning: bool = False  # True if constant was originally tuned via LOYO
 
     @property
     def brier_gap(self) -> float:
@@ -481,6 +822,41 @@ class ConstantSensitivityResult:
                 return rank + 1
         return len(self.grid_values)
 
+    @property
+    def rdof_risk_category(self) -> str:
+        """Categorize this constant's RDoF risk.
+
+        - 'flat_plateau': Brier range < 0.005 -- constant has negligible
+          effect on OOS performance.  Consumes ~0 effective DoF.
+        - 'mild_slope': Range 0.005-0.015, current near optimal -- constant
+          has modest effect but is well-chosen.  Consumes ~0.5 effective DoF.
+        - 'sharp_peak': Range > 0.015 or current far from optimal -- constant
+          materially affects performance AND the specific value matters.
+          Consumes ~1.0 effective DoF (a true free parameter).
+        """
+        if self.is_flat:
+            return "flat_plateau"
+        if self.brier_range < 0.015 and self.brier_gap < 0.003:
+            return "mild_slope"
+        return "sharp_peak"
+
+    @property
+    def effective_dof(self) -> float:
+        """Approximate effective degrees of freedom consumed by this constant.
+
+        Flat plateaus consume ~0 DoF (any value works equally well).
+        Mild slopes consume ~0.5 DoF (some sensitivity, but current is close).
+        Sharp peaks consume ~1.0 DoF (a genuine free parameter).
+
+        This is a heuristic, not a formal statistical quantity.
+        """
+        cat = self.rdof_risk_category
+        if cat == "flat_plateau":
+            return 0.0
+        elif cat == "mild_slope":
+            return 0.5
+        return 1.0
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "constant_name": self.constant_name,
@@ -494,6 +870,9 @@ class ConstantSensitivityResult:
             "brier_range": round(self.brier_range, 5),
             "is_flat": self.is_flat,
             "rank_of_current": self.rank_of_current,
+            "rdof_risk_category": self.rdof_risk_category,
+            "effective_dof": self.effective_dof,
+            "circularity_warning": self.circularity_warning,
         }
 
 
@@ -562,7 +941,13 @@ def _bootstrap_brier_ci(
 # ───────────────────────────────────────────────────────────────────────
 
 class HoldoutEvaluator:
-    """Runs the full pipeline on held-out tournament years.
+    """Runs the pipeline on designated holdout tournament years.
+
+    CAVEAT: These years were observed during pipeline development.  This is a
+    retrospective holdout (useful diagnostic), not a prospective pre-registered
+    holdout.  The pipeline's feature set, architecture, and hyperparameter
+    bounds were iteratively refined with knowledge of all 2005-2025 data.
+    See module docstring for full disclosure.
 
     For each holdout year:
     1. Load training data from all other years (via _load_year_samples)
@@ -1155,9 +1540,16 @@ class HoldoutEvaluator:
             probs.append(adapted)
             outcomes.append(g["outcome"])
 
+<<<<<<< HEAD
             # Tier 1 baseline: AdjEM-logistic (efficiency margin → logistic)
             # Stronger than seed-based, the best no-ML baseline from historical data.
             baseline_prob = 1.0 / (1.0 + math.exp(-0.145 * g["em_diff"]))
+=======
+            # AdjEM-quality baseline: efficiency margin → logistic probability
+            # This is stronger than a pure seed baseline but is the best
+            # no-ML baseline derivable from the historical data available.
+            baseline_prob = 1.0 / (1.0 + math.exp(-0.1735 *g["em_diff"]))
+>>>>>>> 5404aad (updated files)
             baseline_probs.append(baseline_prob)
 
             # Tier 2 baseline: Standalone Elo (Elo rating diff → logistic)
@@ -1421,6 +1813,13 @@ class SensitivityAnalyzer:
 
         brier_range = max(grid_briers) - min(grid_briers)
 
+        # Detect tuning-evaluation circularity: if this constant was originally
+        # tuned via LOYO and we're now re-evaluating it via LOYO, the sensitivity
+        # surface may be biased toward confirming the current value.
+        derivation_lower = constant.derivation.lower()
+        has_circularity = any(kw in derivation_lower for kw in
+                              ["loyo", "calibrated", "iteratively"])
+
         return ConstantSensitivityResult(
             constant_name=constant.name,
             grid_values=grid,
@@ -1431,17 +1830,203 @@ class SensitivityAnalyzer:
             current_brier=current_brier,
             brier_range=brier_range,
             is_flat=brier_range < 0.005,
+            circularity_warning=has_circularity,
         )
+
+    def analyze_mc_constant(
+        self,
+        constant: PipelineConstant,
+        base_config,
+        n_mc_trials: int = 200,
+    ) -> ConstantSensitivityResult:
+        """Evaluate an MC constant by simulating logit-noise on tournament games.
+
+        For each grid point, for each dev year: loads historical tournament
+        games, computes baseline matchup probabilities from AdjEM, applies
+        MC-style logit noise at the constant's value, and measures how often
+        the noisy prediction still matches the actual outcome.
+
+        This is computationally cheaper than full bracket simulation but
+        captures how MC noise parameters affect game-level accuracy.
+
+        WARNING: The ``loyo_brier_scores`` field in the result contains a
+        negated accuracy metric (lower = better, for consistency with Brier
+        convention), NOT actual Brier scores.
+        """
+        grid = self._make_grid(constant)
+        logger.info("MC Sensitivity: %s -- %d grid points, %d trials/game",
+                     constant.name, len(grid), n_mc_trials)
+
+        # Map constant name to which noise parameter it controls
+        noise_param = constant.name  # e.g. "mc_noise_std"
+
+        grid_scores: List[float] = []
+
+        for val in grid:
+            year_scores: List[float] = []
+
+            for dev_year in self.dev_years:
+                try:
+                    score = self._eval_mc_for_year(
+                        dev_year, noise_param, val,
+                        n_mc_trials, base_config,
+                    )
+                    year_scores.append(score)
+                except Exception as e:
+                    logger.debug("MC eval year %d failed: %s", dev_year, e)
+                    continue
+
+            mean_score = float(np.mean(year_scores)) if year_scores else 0.0
+            grid_scores.append(mean_score)
+            logger.info("  %s=%.4f -> mean score=%.5f (%d years)",
+                        constant.name, val, mean_score, len(year_scores))
+
+        curr = float(constant.current_value)
+        best_idx = int(np.argmin(grid_scores))
+        optimal_val = grid[best_idx]
+        optimal_score = grid_scores[best_idx]
+
+        curr_idx = min(range(len(grid)), key=lambda i: abs(grid[i] - curr))
+        current_score = grid_scores[curr_idx]
+
+        score_range = max(grid_scores) - min(grid_scores) if grid_scores else 0.0
+
+        derivation_lower = constant.derivation.lower()
+        has_circularity = any(kw in derivation_lower for kw in
+                              ["loyo", "calibrated", "iteratively"])
+
+        return ConstantSensitivityResult(
+            constant_name=constant.name,
+            grid_values=grid,
+            loyo_brier_scores=grid_scores,
+            current_value=curr,
+            optimal_value=optimal_val,
+            optimal_brier=optimal_score,
+            current_brier=current_score,
+            brier_range=score_range,
+            is_flat=score_range < 0.01,  # Wider threshold for MC metrics
+            circularity_warning=has_circularity,
+        )
+
+    def _eval_mc_for_year(
+        self,
+        year: int,
+        noise_param: str,
+        value: float,
+        n_trials: int,
+        base_config,
+    ) -> float:
+        """Run MC noise evaluation for one year's tournament games.
+
+        Returns negated mean accuracy (lower = better for consistency with
+        Brier convention where lower = better).
+        """
+        games_path = os.path.join(self.evaluator.historical_dir,
+                                  f"historical_games_{year}.json")
+        metrics_path = os.path.join(self.evaluator.historical_dir,
+                                    f"team_metrics_{year}.json")
+
+        if not os.path.exists(games_path) or not os.path.exists(metrics_path):
+            raise ValueError(f"Missing data for year {year}")
+
+        with open(games_path) as f:
+            games_payload = json.load(f)
+        with open(metrics_path) as f:
+            metrics_payload = json.load(f)
+
+        # Build team metrics lookup
+        team_metrics = {}
+        for entry in metrics_payload.get("teams", []):
+            tid = entry.get("team_id", "")
+            off_rtg = entry.get("adj_o", entry.get("off_rtg", 0.0))
+            def_rtg = entry.get("adj_d", entry.get("def_rtg", 0.0))
+            if off_rtg and def_rtg:
+                team_metrics[tid] = {"off_rtg": off_rtg, "def_rtg": def_rtg}
+
+        if not team_metrics:
+            raise ValueError(f"No metrics for year {year}")
+
+        # Extract tournament games (March 14 - April 15)
+        tourney_games = []
+        for game in games_payload.get("games", []):
+            game_date = game.get("date", "")
+            if not game_date:
+                continue
+            try:
+                month = int(game_date.split("-")[1])
+                day = int(game_date.split("-")[2])
+            except (IndexError, ValueError):
+                continue
+            if not ((month == 3 and day >= 14) or (month == 4 and day <= 15)):
+                continue
+
+            t1 = game.get("team1_id", "")
+            t2 = game.get("team2_id", "")
+            if t1 not in team_metrics or t2 not in team_metrics:
+                continue
+
+            outcome = 1 if game.get("team1_score", 0) > game.get("team2_score", 0) else 0
+            tourney_games.append((t1, t2, outcome))
+
+        if len(tourney_games) < 10:
+            raise ValueError(f"Too few tournament games for year {year}")
+
+        # Determine the noise_std to use for this evaluation
+        base_noise = 0.12  # Default mc_noise_std
+        if noise_param == "mc_noise_std":
+            noise_std = value
+        elif noise_param == "mc_regional_correlation":
+            # Regional correlation scales the noise variance.
+            # Model as: effective_noise = base * (1 + correlation)
+            noise_std = base_noise * (1.0 + value)
+        elif noise_param == "mc_injury_probability":
+            # Injury adds extra variance proportional to probability
+            noise_std = base_noise + value * 0.5
+        elif noise_param in ("mc_injury_severity_lo", "mc_injury_severity_hi"):
+            noise_std = base_noise + value * 0.2
+        elif noise_param == "mc_lognormal_sigma":
+            noise_std = base_noise * math.exp(value * 0.5)
+        elif noise_param == "mc_region_noise_floor":
+            noise_std = base_noise * max(value, 0.1)
+        else:
+            noise_std = base_noise
+
+        rng = np.random.RandomState(42 + year)
+        correct_total = 0.0
+        n_games = len(tourney_games)
+
+        for t1, t2, outcome in tourney_games:
+            em1 = team_metrics[t1]["off_rtg"] - team_metrics[t1]["def_rtg"]
+            em2 = team_metrics[t2]["off_rtg"] - team_metrics[t2]["def_rtg"]
+            base_prob = 1.0 / (1.0 + math.exp(-0.1735 *(em1 - em2)))
+
+            # Simulate n_trials noisy predictions
+            safe_p = max(0.001, min(0.999, base_prob))
+            logit_p = math.log(safe_p / (1.0 - safe_p))
+            noisy_logits = logit_p + rng.normal(0, noise_std, size=n_trials)
+            noisy_probs = 1.0 / (1.0 + np.exp(-noisy_logits))
+            predicted_winners = (noisy_probs > 0.5).astype(int)
+            correct_total += np.mean(predicted_winners == outcome)
+
+        # Negate so lower = better (consistency with Brier)
+        return -(correct_total / n_games)
 
     def analyze_all_tier3(
         self,
         base_config,
+        include_mc: bool = False,
+        mc_trials: int = 200,
     ) -> Dict[str, ConstantSensitivityResult]:
-        """Run sensitivity for all Tier 3 game-level constants.
+        """Run sensitivity for all Tier 3 constants.
 
         Trains once per dev year and reuses across all posthoc constants,
         reducing total trainings from O(constants * grid * years) to
         O(years) + O(constants * grid) cheap scoring passes.
+
+        Args:
+            base_config: SOTAPipelineConfig to use as baseline.
+            include_mc: If True, also evaluate MC constants (slower).
+            mc_trials: Noise trials per game for MC evaluation.
         """
         # Pre-train for all dev years (shared across posthoc constants)
         logger.info("Pre-training models for %d dev years...", len(self.dev_years))
@@ -1457,7 +2042,18 @@ class SensitivityAnalyzer:
         results = {}
         for constant in get_tier3_constants():
             if constant.name in TIER3_MC_CONSTANTS:
-                logger.info("Skipping MC constant: %s", constant.name)
+                if include_mc:
+                    try:
+                        result = self.analyze_mc_constant(
+                            constant, base_config, n_mc_trials=mc_trials,
+                        )
+                        results[constant.name] = result
+                    except Exception as e:
+                        logger.error("MC sensitivity for %s failed: %s",
+                                     constant.name, e)
+                else:
+                    logger.info("Skipping MC constant: %s (use --include-mc)",
+                                constant.name)
                 continue
             try:
                 result = self.analyze_constant(
@@ -1787,43 +2383,66 @@ class RDOFAuditReport:
     def _generate_recommendations(self) -> List[str]:
         recs = []
 
+        # Integrity level caveat (always first)
+        if self.holdout_report:
+            level = self.holdout_report.integrity_level
+            level_names = {1: "TRUE PROSPECTIVE", 2: "QUASI-PROSPECTIVE",
+                           3: "RETROSPECTIVE DIAGNOSTIC"}
+            recs.append(
+                f"INTEGRITY: Level {level} ({level_names.get(level, 'UNKNOWN')}). "
+                f"{self.holdout_report.integrity_note}"
+            )
+
         # Holdout recommendations
         if self.holdout_report:
             v = self.holdout_report.verdict()
             if v == "PASS":
                 recs.append(
-                    f"HOLDOUT: Pipeline beats seed baseline by "
+                    f"HOLDOUT: Pipeline beats AdjEM-logistic baseline by "
                     f"{(self.holdout_report.aggregate_seed_brier - self.holdout_report.aggregate_brier):.4f} "
                     f"Brier on {self.holdout_report.total_games} held-out tournament games."
                 )
             elif v == "WARN":
                 recs.append(
-                    "HOLDOUT: Pipeline marginally better than seed baseline (<0.005 Brier). "
+                    "HOLDOUT: Pipeline marginally better than AdjEM-logistic baseline (<0.005 Brier). "
                     "Improvement may not be statistically significant."
                 )
             else:
                 recs.append(
-                    "HOLDOUT: Pipeline does NOT beat seed baseline on held-out years. "
+                    "HOLDOUT: Pipeline does NOT beat AdjEM-logistic baseline on held-out years. "
                     "Pipeline complexity may not be justified."
+                )
+
+        # Circularity summary
+        if self.sensitivity_results:
+            circular = [name for name, sr in self.sensitivity_results.items()
+                        if sr.circularity_warning]
+            if circular:
+                recs.append(
+                    f"CIRCULARITY: {len(circular)}/{len(self.sensitivity_results)} "
+                    f"constants were originally tuned via LOYO and are now being "
+                    f"re-evaluated via LOYO: {', '.join(circular)}. "
+                    f"Sensitivity confirms flatness but cannot prove non-overfitting."
                 )
 
         # Sensitivity recommendations
         for name, sr in self.sensitivity_results.items():
+            circ_tag = " [CIRCULAR]" if sr.circularity_warning else ""
             if sr.is_flat:
                 recs.append(
-                    f"SENSITIVITY: {name} is INSENSITIVE (Brier range={sr.brier_range:.4f}). "
+                    f"SENSITIVITY: {name} is INSENSITIVE (Brier range={sr.brier_range:.4f}).{circ_tag} "
                     f"Current value {sr.current_value} is defensible."
                 )
             elif sr.brier_gap > 0.003:
                 recs.append(
                     f"SENSITIVITY: {name} may be OVERFIT. Current={sr.current_value}, "
-                    f"optimal={sr.optimal_value} (Brier gap={sr.brier_gap:.4f})."
+                    f"optimal={sr.optimal_value} (Brier gap={sr.brier_gap:.4f}).{circ_tag}"
                 )
             else:
                 recs.append(
                     f"SENSITIVITY: {name} is near-optimal. "
                     f"Current={sr.current_value}, optimal={sr.optimal_value}, "
-                    f"gap={sr.brier_gap:.4f}."
+                    f"gap={sr.brier_gap:.4f}.{circ_tag}"
                 )
 
         # DoF ratio warning
@@ -1837,6 +2456,7 @@ class RDOFAuditReport:
                 f"(target < 0.01)"
             )
 
+<<<<<<< HEAD
         # Complexity audit warnings
         if self.complexity_audit:
             if self.complexity_audit.passed:
@@ -1848,6 +2468,24 @@ class RDOFAuditReport:
                 )
             for w in self.complexity_audit.warnings:
                 recs.append(f"COMPLEXITY: {w}")
+=======
+        # Effective DoF summary (from sensitivity analysis)
+        if self.sensitivity_results:
+            flat_count = sum(1 for sr in self.sensitivity_results.values()
+                             if sr.rdof_risk_category == "flat_plateau")
+            mild_count = sum(1 for sr in self.sensitivity_results.values()
+                             if sr.rdof_risk_category == "mild_slope")
+            sharp_count = sum(1 for sr in self.sensitivity_results.values()
+                              if sr.rdof_risk_category == "sharp_peak")
+            total_eff_dof = sum(sr.effective_dof
+                                for sr in self.sensitivity_results.values())
+            recs.append(
+                f"EFFECTIVE DoF: {total_eff_dof:.1f} of "
+                f"{len(self.sensitivity_results)} analyzed constants "
+                f"({flat_count} flat, {mild_count} mild, {sharp_count} sharp). "
+                f"Only sharp-peaked constants consume meaningful researcher freedom."
+            )
+>>>>>>> 5404aad (updated files)
 
         return recs
 
@@ -1860,6 +2498,10 @@ class RDOFAuditReport:
         ]
         if self.holdout_report:
             lines.append(f"Config hash: {self.holdout_report.config_hash_value}")
+            level_names = {1: "TRUE PROSPECTIVE", 2: "QUASI-PROSPECTIVE",
+                           3: "RETROSPECTIVE DIAGNOSTIC"}
+            lines.append(f"Integrity: Level {self.holdout_report.integrity_level} "
+                         f"({level_names.get(self.holdout_report.integrity_level, '?')})")
         lines.append("=" * 65)
 
         # Section 1: Inventory
@@ -1910,15 +2552,23 @@ class RDOFAuditReport:
             lines.append("-" * 65)
             lines.append(
                 f"  {'Constant':<28} {'Current':<10} {'Optimal':<10} "
-                f"{'Gap':<8} {'Flat?':<6}"
+                f"{'Gap':<8} {'Risk':<14} {'EffDoF':<6} {'Circ':<4}"
             )
 
             for name, sr in sorted(self.sensitivity_results.items()):
+                circ = "Y" if sr.circularity_warning else ""
                 lines.append(
                     f"  {name:<28} {sr.current_value:<10.4f} "
                     f"{sr.optimal_value:<10.4f} {sr.brier_gap:<8.4f} "
-                    f"{'YES' if sr.is_flat else 'NO':<6}"
+                    f"{sr.rdof_risk_category:<14} {sr.effective_dof:<6.1f} {circ:<4}"
                 )
+
+            total_eff = sum(sr.effective_dof
+                            for sr in self.sensitivity_results.values())
+            lines.append(
+                f"\n  TOTAL EFFECTIVE DoF: {total_eff:.1f} / "
+                f"{len(self.sensitivity_results)} constants"
+            )
 
             # Mini ASCII plots for non-flat constants
             for name, sr in sorted(self.sensitivity_results.items()):
@@ -1970,11 +2620,14 @@ class RDOFAuditReport:
             for rec in recs:
                 lines.append(f"  - {rec}")
 
-        # Warning
+        # Disclosure
         lines.append("")
         lines.append("=" * 65)
-        lines.append("WARNING: Once holdout years have been evaluated, any subsequent")
-        lines.append("changes to pipeline constants invalidate these results.")
+        lines.append("DISCLOSURE: All constants were iteratively refined on 2005-2025")
+        lines.append("data.  Holdout years (above) were observed during development.")
+        lines.append("These results are retrospective diagnostics, NOT pre-registered")
+        lines.append("predictions.  The first truly held-out evaluation will be 2026")
+        lines.append("(if pipeline is frozen via `freeze-pipeline` before results).")
         lines.append("=" * 65)
 
         return "\n".join(lines)
@@ -2188,6 +2841,8 @@ def run_rdof_audit(
     sensitivity_grid: int = 11,
     output_path: Optional[str] = None,
     config=None,
+    include_mc: bool = False,
+    mc_trials: int = 200,
 ) -> Dict[str, Any]:
     """Run the full RDoF audit.
 
@@ -2197,8 +2852,10 @@ def run_rdof_audit(
         run_holdout: Whether to run holdout evaluation
         run_sensitivity: Whether to run sensitivity analysis
         sensitivity_grid: Grid points per constant for sensitivity
-        output_path: Path to write JSON report
+        output_path: Path to write JSON report (auto-generated if None)
         config: Pipeline config (default: SOTAPipelineConfig())
+        include_mc: Include Monte Carlo constants in sensitivity analysis
+        mc_trials: Noise trials per game for MC sensitivity (default: 200)
 
     Returns:
         Audit report dict
@@ -2241,7 +2898,9 @@ def run_rdof_audit(
             holdout_years=holdout_years,
             n_grid_points=sensitivity_grid,
         )
-        sensitivity_results = analyzer.analyze_all_tier3(config)
+        sensitivity_results = analyzer.analyze_all_tier3(
+            config, include_mc=include_mc, mc_trials=mc_trials,
+        )
 
     # ── Model complexity audit ──
     complexity_audit = estimate_model_complexity()
@@ -2255,6 +2914,7 @@ def run_rdof_audit(
     # Print text report
     print(report.to_text())
 
+<<<<<<< HEAD
     # Include contamination warning in output
     report_dict = report.to_dict()
     if contamination:
@@ -2271,3 +2931,98 @@ def run_rdof_audit(
         report.to_file(output_path)
 
     return report_dict
+=======
+    # Always write output — auto-generate path if not provided
+    if output_path is None:
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        output_dir = Path(historical_dir).parent
+        output_path = str(output_dir / f"rdof_audit_{ts}.json")
+    report.to_file(output_path)
+
+    return report.to_dict()
+
+
+def run_prospective_evaluation(
+    freeze_path: str,
+    evaluation_year: int,
+    historical_dir: str = "data/raw/historical",
+    output_path: Optional[str] = None,
+    config=None,
+) -> Dict[str, Any]:
+    """Run a Level 2 (quasi-prospective) evaluation against a freeze artifact.
+
+    This function enforces the freeze-then-evaluate discipline:
+    1. Verifies the current config matches the freeze artifact
+    2. Runs holdout evaluation on the evaluation year
+    3. Tags the result with integrity_level=2 and freeze provenance
+
+    The evaluation year must have historical data available (i.e., the
+    tournament is over and results have been ingested).
+
+    Args:
+        freeze_path: Path to the pipeline freeze artifact JSON.
+        evaluation_year: The tournament year to evaluate (e.g. 2026).
+        historical_dir: Directory with historical game/metric JSONs.
+        output_path: Path to write the evaluation report.
+        config: Pipeline config (must match the freeze).
+
+    Returns:
+        Evaluation report dict.
+
+    Raises:
+        ValueError: If config doesn't match freeze or data is missing.
+    """
+    if config is None:
+        from ...pipeline.sota import SOTAPipelineConfig
+        config = SOTAPipelineConfig()
+
+    # Step 1: Verify freeze
+    verification = verify_freeze(config, freeze_path)
+    if not verification["matches"]:
+        raise ValueError(
+            f"Pipeline config does not match freeze artifact at {freeze_path}. "
+            f"Mismatches: {verification['mismatches']}. "
+            f"A prospective evaluation requires an unmodified pipeline."
+        )
+
+    frozen_timestamp = verification.get("frozen_timestamp", "unknown")
+    logger.info("Freeze verified: config matches artifact from %s", frozen_timestamp)
+
+    # Step 2: Run holdout evaluation on the new year
+    evaluator = HoldoutEvaluator(historical_dir)
+    holdout_report = evaluator.run_holdout_protocol([evaluation_year], config)
+
+    # Step 3: Tag with quasi-prospective integrity
+    holdout_report.integrity_level = 2
+    holdout_report.integrity_note = (
+        f"QUASI-PROSPECTIVE: Pipeline frozen at {frozen_timestamp} "
+        f"(verified against {freeze_path}). Evaluation year {evaluation_year} "
+        f"was not available when the pipeline was frozen. "
+        f"Pipeline architecture was informed by prior years' data."
+    )
+
+    report = RDOFAuditReport(holdout_report=holdout_report)
+
+    print(report.to_text())
+
+    if output_path is None:
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        output_dir = Path(historical_dir).parent
+        output_path = str(output_dir / f"prospective_eval_{evaluation_year}_{ts}.json")
+
+    # Write result with freeze provenance
+    result = report.to_dict()
+    result["provenance"] = {
+        "freeze_path": freeze_path,
+        "frozen_timestamp": frozen_timestamp,
+        "frozen_config_hash": verification["frozen_hash"],
+        "evaluation_year": evaluation_year,
+        "evaluation_timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+    }
+
+    with open(output_path, "w") as f:
+        json.dump(result, f, indent=2)
+    logger.info("Prospective evaluation written to %s", output_path)
+
+    return result
+>>>>>>> 5404aad (updated files)

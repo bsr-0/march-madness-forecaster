@@ -984,7 +984,11 @@ class HistoricalFeatureMaterializer:
     def _load_torvik_season(self, season: int) -> Optional[pd.DataFrame]:
         path = self.raw_dir / f"torvik_{season}.json"
         if not path.exists():
-            return None
+            alt = self.historical_dir / f"torvik_{season}.json"
+            if alt.exists():
+                path = alt
+            else:
+                return None
         with open(path, "r") as f:
             payload = json.load(f)
         rows = []
