@@ -9,12 +9,14 @@ training pipeline.
 
 ## Executive Summary
 
-This audit identified **13 issues** across the training data pipeline, ranging
+This audit identified **17 issues** across the training data pipeline, ranging
 from silent data corruption that affects model training to team resolution
 mismatches that drop tournament teams from evaluation. The most severe issues
 are the complete zeroing of team metrics for 2005-2009, the systematic team ID
-namespace mismatch between game data and metrics data, and fake dates in
-2005-2024 historical games that break recency weighting and temporal features.
+namespace mismatch between game data and metrics data (zero direct matches
+across all years), fake dates in 2005-2024 historical games that break
+recency weighting and temporal features, and the fact that the well-designed
+`TeamNameResolver` alias table is bypassed by all core pipeline modules.
 
 ---
 
@@ -373,6 +375,72 @@ a different schema or field set than other years.
 
 ---
 
+## Additional Team Resolution Issues (from deep alias audit)
+
+### T1. TeamNameResolver Bypassed by Core Pipeline
+
+The `TeamNameResolver` class (`team_name_resolver.py`) is a well-designed
+alias system covering ~360 D1 programs with multi-pass fuzzy matching.
+However, **the core data pipeline does not use it**. The four critical
+ingestion modules (`providers.py`, `historical_pipeline.py`, `collector.py`,
+`materialization.py`) each implement their own independent `_normalize_team_id`
+/ `_normalize_team_name` that does a simple lowercasing + underscore
+substitution. This means the curated alias table (which correctly maps
+"USC" -> `southern_california`, "UConn" -> `connecticut`, etc.) is entirely
+bypassed for game data, team metrics, and tournament seeds.
+
+Only `sota.py` (the live bracket pipeline) and `bracket_ingestion.py`
+actually use `TeamNameResolver`. This creates a split: historical training
+data goes through dumb normalization, while live inference goes through
+smart resolution.
+
+### T2. Ambiguous Alias Collisions
+
+Several abbreviations in the alias table map to multiple canonical teams:
+
+| Abbreviation | Maps to (last wins)    | Also claimed by     | Risk |
+|-------------|------------------------|---------------------|------|
+| `USD`       | `south_dakota`         | `san_diego`         | Wrong team selected |
+| `USF`       | `san_francisco`        | `south_florida` (via "USF Bulls") | Fragile |
+| `SHU`       | `sacred_heart`         | `seton_hall` (missing alias) | Seton Hall unresolvable |
+| `UNO`       | `omaha`                | `new_orleans` (via "UNO New Orleans") | Fragile |
+
+The `USD` collision is the most dangerous: both San Diego and South Dakota
+claim it, and whichever dict entry is processed last wins silently.
+
+### T3. `_team_key` Mascot-Stripping Heuristic Breaks Multi-Word Names
+
+The `_team_key()` method in `materialization.py:1482-1493` strips the last
+1-2 tokens from team names to remove mascots. This fails for names where
+meaningful parts appear in the last two tokens:
+
+| Input                             | Key produced        | Correct key             |
+|-----------------------------------|---------------------|-------------------------|
+| "South Dakota State Jackrabbits"  | "south dakota"      | "south dakota state"    |
+| "East Tennessee State Buccaneers" | "east tennessee"    | "east tennessee state"  |
+| "Florida Gulf Coast Eagles"       | "florida gulf"      | "florida gulf coast"    |
+| "Stephen F. Austin Lumberjacks"   | "stephen f"         | "stephen f austin"      |
+
+This is used in the alignment fallback path and would produce incorrect
+matches when hit.
+
+### T4. Three Different IDs for the Same Team Across Sources
+
+Example of how a single team gets three different IDs depending on source:
+
+| Team | CBBpy games            | SR metrics               | Tournament seeds |
+|------|------------------------|--------------------------|------------------|
+| USC  | `usc_trojans`          | `southern_california`    | `usc`           |
+| UConn| `uconn_huskies`        | `connecticut`            | `uconn`         |
+| BYU  | `byu_cougars`          | `brigham_young`          | `byu`           |
+| LSU  | `lsu_tigers`           | `louisiana_state`        | n/a             |
+| VCU  | `vcu_rams`             | `virginia_commonwealth`  | `vcu`           |
+
+This three-way mismatch means any join operation requires multi-pass
+resolution, and each pairwise join can fail independently.
+
+---
+
 ## Recommendations (Priority Order)
 
 1. **Re-scrape 2005-2009 team metrics** with the current pipeline that
@@ -407,3 +475,17 @@ a different schema or field set than other years.
 8. **Consolidate `_normalize_team_id`** into a single shared utility
    with explicit Unicode handling (e.g., `unicodedata.normalize("NFKD")`
    to convert `é` -> `e`).
+
+9. **Route all team ID normalization through `TeamNameResolver`** instead
+   of the bespoke `_normalize_team_id` in each module. The resolver already
+   has the curated alias table that correctly maps "USC" -> `southern_california`,
+   "UConn" -> `connecticut`, etc. The core pipeline bypasses it entirely.
+
+10. **Fix the `USD` alias collision** in `team_name_resolver.py`. Only one
+    team should have the bare "USD" alias; the other should require a longer
+    form. San Diego is the more common basketball "USD".
+
+11. **Replace the `_team_key` mascot-stripping heuristic** in
+    `materialization.py` with proper `TeamNameResolver` lookups. The
+    current token-stripping approach breaks on multi-word names like
+    "South Dakota State" (stripped to "south dakota").
