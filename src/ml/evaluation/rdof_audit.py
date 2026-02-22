@@ -1540,16 +1540,11 @@ class HoldoutEvaluator:
             probs.append(adapted)
             outcomes.append(g["outcome"])
 
-<<<<<<< HEAD
-            # Tier 1 baseline: AdjEM-logistic (efficiency margin → logistic)
-            # Stronger than seed-based, the best no-ML baseline from historical data.
-            baseline_prob = 1.0 / (1.0 + math.exp(-0.145 * g["em_diff"]))
-=======
             # AdjEM-quality baseline: efficiency margin → logistic probability
             # This is stronger than a pure seed baseline but is the best
             # no-ML baseline derivable from the historical data available.
-            baseline_prob = 1.0 / (1.0 + math.exp(-0.1735 *g["em_diff"]))
->>>>>>> 5404aad (updated files)
+            # Scale factor 0.1735 = ln(17/3)/10 (D1 fix: AdjEM=+10 → P=0.850)
+            baseline_prob = 1.0 / (1.0 + math.exp(-0.1735 * g["em_diff"]))
             baseline_probs.append(baseline_prob)
 
             # Tier 2 baseline: Standalone Elo (Elo rating diff → logistic)
@@ -2456,7 +2451,6 @@ class RDOFAuditReport:
                 f"(target < 0.01)"
             )
 
-<<<<<<< HEAD
         # Complexity audit warnings
         if self.complexity_audit:
             if self.complexity_audit.passed:
@@ -2468,7 +2462,7 @@ class RDOFAuditReport:
                 )
             for w in self.complexity_audit.warnings:
                 recs.append(f"COMPLEXITY: {w}")
-=======
+
         # Effective DoF summary (from sensitivity analysis)
         if self.sensitivity_results:
             flat_count = sum(1 for sr in self.sensitivity_results.values()
@@ -2485,7 +2479,6 @@ class RDOFAuditReport:
                 f"({flat_count} flat, {mild_count} mild, {sharp_count} sharp). "
                 f"Only sharp-peaked constants consume meaningful researcher freedom."
             )
->>>>>>> 5404aad (updated files)
 
         return recs
 
@@ -2914,7 +2907,6 @@ def run_rdof_audit(
     # Print text report
     print(report.to_text())
 
-<<<<<<< HEAD
     # Include contamination warning in output
     report_dict = report.to_dict()
     if contamination:
@@ -2927,11 +2919,6 @@ def run_rdof_audit(
         )
         report_dict["sensitivity_auto_adoption"] = adoption_log
 
-    if output_path:
-        report.to_file(output_path)
-
-    return report_dict
-=======
     # Always write output — auto-generate path if not provided
     if output_path is None:
         ts = time.strftime("%Y%m%d_%H%M%S")
@@ -2939,7 +2926,7 @@ def run_rdof_audit(
         output_path = str(output_dir / f"rdof_audit_{ts}.json")
     report.to_file(output_path)
 
-    return report.to_dict()
+    return report_dict
 
 
 def run_prospective_evaluation(
@@ -3025,4 +3012,3 @@ def run_prospective_evaluation(
     logger.info("Prospective evaluation written to %s", output_path)
 
     return result
->>>>>>> 5404aad (updated files)

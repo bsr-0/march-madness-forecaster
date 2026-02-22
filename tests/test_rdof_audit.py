@@ -31,18 +31,13 @@ from src.ml.evaluation.rdof_audit import (
     adopt_sensitivity_optima,
     check_holdout_contamination,
     config_hash,
-<<<<<<< HEAD
     estimate_model_complexity,
-    get_constants_by_tier,
-    get_tier3_constants,
-    record_holdout_evaluation,
-=======
     freeze_pipeline,
     get_constants_by_tier,
     get_tier3_constants,
+    record_holdout_evaluation,
     run_prospective_evaluation,
     verify_freeze,
->>>>>>> 5404aad (updated files)
 )
 from src.pipeline.sota import SOTAPipelineConfig
 
@@ -550,7 +545,11 @@ class TestConfigNewFields:
         assert config.consistency_bonus_max == 0.03
         assert config.ensemble_lgb_weight == 0.50
 
-<<<<<<< HEAD
+    def test_multi_year_games_dir_default_auto(self):
+        """Default multi_year_games_dir is 'auto'."""
+        config = SOTAPipelineConfig()
+        assert config.multi_year_games_dir == "auto"
+
 
 # ───────────────────────────────────────────────────────────────────────
 # Model Complexity Audit Tests
@@ -653,11 +652,6 @@ class TestYearMetricsEloBaseline:
 
     def test_holdout_report_elo_aggregate(self):
         """HoldoutReport aggregates Elo baseline Brier."""
-=======
-    def test_multi_year_games_dir_default_auto(self):
-        """Default multi_year_games_dir is 'auto'."""
-        config = SOTAPipelineConfig()
-        assert config.multi_year_games_dir == "auto"
 
 
 # ───────────────────────────────────────────────────────────────────────
@@ -767,13 +761,11 @@ class TestIntegrityLevels:
 
     def test_integrity_in_serialization(self):
         """Integrity level appears in serialized output."""
->>>>>>> 5404aad (updated files)
         report = HoldoutReport(holdout_years=[2024])
         report.per_year[2024] = YearMetrics(
             year=2024, n_games=63, brier_score=0.190,
             log_loss=0.55, accuracy=0.70, ece=0.04,
             seed_baseline_brier=0.200,
-<<<<<<< HEAD
             elo_baseline_brier=0.225,
         )
         assert report.aggregate_elo_brier == pytest.approx(0.225, abs=1e-6)
@@ -781,303 +773,6 @@ class TestIntegrityLevels:
         d = report.to_dict()
         assert "aggregate_elo_brier" in d
         assert "aggregate_elo_skill_score" in d
-
-
-# ───────────────────────────────────────────────────────────────────────
-# MC Backtest Tests
-# ───────────────────────────────────────────────────────────────────────
-
-class TestMCBacktestResult:
-    """Tests for MCBacktestResult dataclass."""
-
-    def test_serialization(self):
-        """to_dict produces valid structure."""
-        result = MCBacktestResult(
-            noise_std=0.12,
-            regional_correlation=0.10,
-            years_tested=[2019, 2021, 2022],
-            per_year_upset_calibration={2019: 0.05, 2021: 0.03, 2022: 0.08},
-            mean_upset_calibration_error=0.053,
-            per_year_seed_accuracy={2019: 0.72, 2021: 0.68, 2022: 0.70},
-            mean_seed_accuracy=0.70,
-            per_year_log_prob={2019: -0.5, 2021: -0.6, 2022: -0.55},
-            mean_log_prob=-0.55,
-        )
-        d = result.to_dict()
-        assert d["noise_std"] == 0.12
-        assert d["regional_correlation"] == 0.10
-        assert len(d["years_tested"]) == 3
-        assert "mean_upset_calibration_error" in d
-        assert "mean_log_prob" in d
-
-
-# ───────────────────────────────────────────────────────────────────────
-# RDOFAuditReport Complexity Audit Integration
-# ───────────────────────────────────────────────────────────────────────
-
-class TestRDOFReportComplexity:
-    """Tests for complexity audit in the RDoF report."""
-
-    def test_report_with_complexity_audit(self):
-        """Report includes complexity audit when provided."""
-        audit = estimate_model_complexity(n_training_samples=400)
-        report = RDOFAuditReport(complexity_audit=audit)
-
-        d = report.to_dict()
-        assert "model_complexity_audit" in d
-        assert d["model_complexity_audit"]["n_training_samples"] == 400
-
-    def test_text_report_complexity_section(self):
-        """Text report includes complexity section."""
-        audit = estimate_model_complexity(n_training_samples=400)
-        report = RDOFAuditReport(complexity_audit=audit)
-        text = report.to_text()
-        assert "MODEL COMPLEXITY AUDIT" in text
-        assert "lightgbm" in text
-
-    def test_recommendations_include_complexity(self):
-        """Recommendations include complexity warnings."""
-        audit = estimate_model_complexity(n_training_samples=50)
-        report = RDOFAuditReport(complexity_audit=audit)
-        recs = report._generate_recommendations()
-        assert any("COMPLEXITY" in r for r in recs)
-
-
-# ───────────────────────────────────────────────────────────────────────
-# Calibration Guardrail Tests
-# ───────────────────────────────────────────────────────────────────────
-
-class TestCalibrationGuardrails:
-    """Tests for calibration method guardrails (isotonic/Platt overfitting protection)."""
-
-    def test_temperature_scaling_no_downgrade(self):
-        """Temperature scaling is never downgraded."""
-        from src.ml.calibration.calibration import CalibrationPipeline, TemperatureScaling
-        rng = np.random.RandomState(42)
-        preds = rng.uniform(0.3, 0.7, 30)
-        outcomes = (rng.uniform(0, 1, 30) < 0.5).astype(float)
-
-        pipeline = CalibrationPipeline(method="temperature", nested_cv=False)
-        pipeline.fit(preds, outcomes)
-        assert pipeline.method == "temperature"
-        assert pipeline._downgraded_from is None
-
-    def test_isotonic_downgraded_without_nested_cv(self):
-        """Isotonic is downgraded to temperature on small N without nested CV."""
-        from src.ml.calibration.calibration import CalibrationPipeline, CALIBRATION_MIN_SAMPLES
-        rng = np.random.RandomState(42)
-        # Use N < isotonic minimum (200)
-        n = min(CALIBRATION_MIN_SAMPLES["isotonic"] - 1, 100)
-        preds = rng.uniform(0.3, 0.7, n)
-        outcomes = (rng.uniform(0, 1, n) < 0.5).astype(float)
-
-        pipeline = CalibrationPipeline(method="isotonic", nested_cv=False)
-        pipeline.fit(preds, outcomes)
-        assert pipeline.method == "temperature"
-        assert pipeline._downgraded_from == "isotonic"
-
-    def test_platt_downgraded_without_nested_cv(self):
-        """Platt is downgraded to temperature on small N without nested CV."""
-        from src.ml.calibration.calibration import CalibrationPipeline, CALIBRATION_MIN_SAMPLES
-        rng = np.random.RandomState(42)
-        # Use N < platt minimum (100)
-        n = min(CALIBRATION_MIN_SAMPLES["platt"] - 1, 50)
-        preds = rng.uniform(0.3, 0.7, n)
-        outcomes = (rng.uniform(0, 1, n) < 0.5).astype(float)
-
-        pipeline = CalibrationPipeline(method="platt", nested_cv=False)
-        pipeline.fit(preds, outcomes)
-        assert pipeline.method == "temperature"
-        assert pipeline._downgraded_from == "platt"
-
-    def test_isotonic_kept_with_nested_cv(self):
-        """Isotonic is kept when nested CV is declared."""
-        from src.ml.calibration.calibration import CalibrationPipeline
-        rng = np.random.RandomState(42)
-        preds = rng.uniform(0.3, 0.7, 50)
-        outcomes = (rng.uniform(0, 1, 50) < 0.5).astype(float)
-
-        pipeline = CalibrationPipeline(method="isotonic", nested_cv=True)
-        pipeline.fit(preds, outcomes)
-        assert pipeline.method == "isotonic"
-        assert pipeline._downgraded_from is None
-
-    def test_isotonic_kept_with_large_n(self):
-        """Isotonic is kept on large N even without nested CV."""
-        from src.ml.calibration.calibration import CalibrationPipeline, CALIBRATION_MIN_SAMPLES
-        rng = np.random.RandomState(42)
-        n = CALIBRATION_MIN_SAMPLES["isotonic"] + 50
-        preds = rng.uniform(0.3, 0.7, n)
-        outcomes = (rng.uniform(0, 1, n) < 0.5).astype(float)
-
-        pipeline = CalibrationPipeline(method="isotonic", nested_cv=False)
-        pipeline.fit(preds, outcomes)
-        # Should still be isotonic (large enough N), just with a warning
-        assert pipeline.method == "isotonic"
-        assert pipeline._downgraded_from is None
-
-
-# ───────────────────────────────────────────────────────────────────────
-# Holdout Contamination Tracking Tests
-# ───────────────────────────────────────────────────────────────────────
-
-class TestHoldoutContaminationTracking:
-    """Tests for the holdout contamination lockfile mechanism."""
-
-    def test_record_and_check_no_contamination(self):
-        """Recording and checking with same config shows no contamination."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config = SOTAPipelineConfig()
-            record_holdout_evaluation(
-                tmpdir,
-                holdout_years=[2024, 2025],
-                config_hash_value=config_hash(config),
-                report_summary={"aggregate_brier": 0.190, "verdict": "PASS"},
-            )
-            result = check_holdout_contamination(tmpdir, config)
-            assert result is None  # No contamination
-
-    def test_detect_contamination_after_config_change(self):
-        """Changing config after recording triggers contamination warning."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config1 = SOTAPipelineConfig()
-            record_holdout_evaluation(
-                tmpdir,
-                holdout_years=[2024, 2025],
-                config_hash_value=config_hash(config1),
-                report_summary={"aggregate_brier": 0.190, "verdict": "PASS"},
-            )
-            # Modify a Tier 3 constant
-            config2 = SOTAPipelineConfig(tournament_shrinkage=0.12)
-            result = check_holdout_contamination(tmpdir, config2)
-            assert result is not None
-            assert result["contamination_detected"] is True
-            assert "config has changed" in result["message"]
-
-    def test_no_lockfile_no_contamination(self):
-        """No lockfile → no contamination (holdout never evaluated)."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config = SOTAPipelineConfig()
-            result = check_holdout_contamination(tmpdir, config)
-            assert result is None
-
-    def test_lockfile_contents(self):
-        """Lockfile contains expected fields."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config = SOTAPipelineConfig()
-            record_holdout_evaluation(
-                tmpdir,
-                holdout_years=[2024, 2025],
-                config_hash_value=config_hash(config),
-                report_summary={"aggregate_brier": 0.190, "verdict": "PASS"},
-            )
-            lockfile = os.path.join(tmpdir, "holdout_evaluation.lock.json")
-            assert os.path.exists(lockfile)
-            with open(lockfile) as f:
-                data = json.load(f)
-            assert data["holdout_years"] == [2024, 2025]
-            assert "config_hash" in data
-            assert "warning" in data
-            assert "Do NOT modify" in data["warning"]
-
-
-# ───────────────────────────────────────────────────────────────────────
-# Sensitivity Auto-Adoption Tests
-# ───────────────────────────────────────────────────────────────────────
-
-class TestSensitivityAutoAdoption:
-    """Tests for the sensitivity-based auto-adoption of Tier 3 constants."""
-
-    def _make_sensitivity_result(
-        self, name, current, optimal, brier_gap, is_flat=False
-    ):
-        return ConstantSensitivityResult(
-            constant_name=name,
-            grid_values=[current - 0.05, current, optimal],
-            loyo_brier_scores=[0.200, 0.200 - brier_gap, 0.200 - brier_gap],
-            current_value=current,
-            optimal_value=optimal,
-            optimal_brier=0.200 - brier_gap,
-            current_brier=0.200,
-            brier_range=brier_gap if not is_flat else 0.001,
-            is_flat=is_flat,
-        )
-
-    def test_adopt_significant_improvement(self):
-        """Adopts optimal value when improvement exceeds threshold."""
-        sr = self._make_sensitivity_result(
-            "tournament_shrinkage", 0.08, 0.12, 0.005
-        )
-        config = SOTAPipelineConfig()
-        new_config, log = adopt_sensitivity_optima(
-            {"tournament_shrinkage": sr}, config
-        )
-        assert new_config.tournament_shrinkage == 0.12
-        assert log["tournament_shrinkage"]["action"] == "adopted"
-
-    def test_skip_flat_constant(self):
-        """Skips flat constants (insensitive)."""
-        sr = self._make_sensitivity_result(
-            "tournament_shrinkage", 0.08, 0.12, 0.005, is_flat=True
-        )
-        config = SOTAPipelineConfig()
-        new_config, log = adopt_sensitivity_optima(
-            {"tournament_shrinkage": sr}, config
-        )
-        assert new_config.tournament_shrinkage == 0.08  # Unchanged
-        assert log["tournament_shrinkage"]["action"] == "skipped"
-        assert "flat" in log["tournament_shrinkage"]["reason"]
-
-    def test_skip_below_threshold(self):
-        """Skips when improvement is below threshold."""
-        sr = self._make_sensitivity_result(
-            "tournament_shrinkage", 0.08, 0.12, 0.001  # Below default 0.002
-        )
-        config = SOTAPipelineConfig()
-        new_config, log = adopt_sensitivity_optima(
-            {"tournament_shrinkage": sr}, config
-        )
-        assert new_config.tournament_shrinkage == 0.08  # Unchanged
-        assert log["tournament_shrinkage"]["action"] == "skipped"
-        assert "threshold" in log["tournament_shrinkage"]["reason"]
-
-    def test_multiple_constants(self):
-        """Can adopt/skip multiple constants independently."""
-        results = {
-            "tournament_shrinkage": self._make_sensitivity_result(
-                "tournament_shrinkage", 0.08, 0.12, 0.005
-            ),
-            "seed_prior_weight": self._make_sensitivity_result(
-                "seed_prior_weight", 0.05, 0.05, 0.0  # Already optimal
-            ),
-            "ensemble_lgb_weight": self._make_sensitivity_result(
-                "ensemble_lgb_weight", 0.45, 0.50, 0.003
-            ),
-        }
-        config = SOTAPipelineConfig()
-        new_config, log = adopt_sensitivity_optima(results, config)
-
-        assert new_config.tournament_shrinkage == 0.12  # Adopted
-        assert new_config.seed_prior_weight == 0.05  # Unchanged (already optimal)
-        assert new_config.ensemble_lgb_weight == 0.50  # Adopted
-        assert log["tournament_shrinkage"]["action"] == "adopted"
-        assert log["seed_prior_weight"]["action"] == "skipped"
-        assert log["ensemble_lgb_weight"]["action"] == "adopted"
-
-    def test_does_not_modify_original_config(self):
-        """Adoption returns a new config, not modifying the original."""
-        sr = self._make_sensitivity_result(
-            "tournament_shrinkage", 0.08, 0.12, 0.005
-        )
-        config = SOTAPipelineConfig()
-        new_config, _ = adopt_sensitivity_optima(
-            {"tournament_shrinkage": sr}, config
-        )
-        assert config.tournament_shrinkage == 0.08  # Original unchanged
-        assert new_config.tournament_shrinkage == 0.12  # New has update
-=======
-        )
-        d = report.to_dict()
         assert d["integrity_level"] == 3
         assert "integrity_note" in d
 
@@ -1311,4 +1006,3 @@ class TestReportOutput:
         report = RDOFAuditReport(sensitivity_results={"tournament_shrinkage": sr})
         text = report.to_text()
         assert "Circ" in text
->>>>>>> 5404aad (updated files)
