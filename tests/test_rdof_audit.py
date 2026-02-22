@@ -28,10 +28,13 @@ from src.ml.evaluation.rdof_audit import (
     _compute_ece,
     _compute_log_loss,
     _seed_baseline_prob,
+    adopt_sensitivity_optima,
+    check_holdout_contamination,
     config_hash,
     estimate_model_complexity,
     get_constants_by_tier,
     get_tier3_constants,
+    record_holdout_evaluation,
 )
 from src.pipeline.sota import SOTAPipelineConfig
 
@@ -787,3 +790,163 @@ class TestCalibrationGuardrails:
         # Should still be isotonic (large enough N), just with a warning
         assert pipeline.method == "isotonic"
         assert pipeline._downgraded_from is None
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Holdout Contamination Tracking Tests
+# ───────────────────────────────────────────────────────────────────────
+
+class TestHoldoutContaminationTracking:
+    """Tests for the holdout contamination lockfile mechanism."""
+
+    def test_record_and_check_no_contamination(self):
+        """Recording and checking with same config shows no contamination."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config = SOTAPipelineConfig()
+            record_holdout_evaluation(
+                tmpdir,
+                holdout_years=[2024, 2025],
+                config_hash_value=config_hash(config),
+                report_summary={"aggregate_brier": 0.190, "verdict": "PASS"},
+            )
+            result = check_holdout_contamination(tmpdir, config)
+            assert result is None  # No contamination
+
+    def test_detect_contamination_after_config_change(self):
+        """Changing config after recording triggers contamination warning."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config1 = SOTAPipelineConfig()
+            record_holdout_evaluation(
+                tmpdir,
+                holdout_years=[2024, 2025],
+                config_hash_value=config_hash(config1),
+                report_summary={"aggregate_brier": 0.190, "verdict": "PASS"},
+            )
+            # Modify a Tier 3 constant
+            config2 = SOTAPipelineConfig(tournament_shrinkage=0.12)
+            result = check_holdout_contamination(tmpdir, config2)
+            assert result is not None
+            assert result["contamination_detected"] is True
+            assert "config has changed" in result["message"]
+
+    def test_no_lockfile_no_contamination(self):
+        """No lockfile → no contamination (holdout never evaluated)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config = SOTAPipelineConfig()
+            result = check_holdout_contamination(tmpdir, config)
+            assert result is None
+
+    def test_lockfile_contents(self):
+        """Lockfile contains expected fields."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config = SOTAPipelineConfig()
+            record_holdout_evaluation(
+                tmpdir,
+                holdout_years=[2024, 2025],
+                config_hash_value=config_hash(config),
+                report_summary={"aggregate_brier": 0.190, "verdict": "PASS"},
+            )
+            lockfile = os.path.join(tmpdir, "holdout_evaluation.lock.json")
+            assert os.path.exists(lockfile)
+            with open(lockfile) as f:
+                data = json.load(f)
+            assert data["holdout_years"] == [2024, 2025]
+            assert "config_hash" in data
+            assert "warning" in data
+            assert "Do NOT modify" in data["warning"]
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Sensitivity Auto-Adoption Tests
+# ───────────────────────────────────────────────────────────────────────
+
+class TestSensitivityAutoAdoption:
+    """Tests for the sensitivity-based auto-adoption of Tier 3 constants."""
+
+    def _make_sensitivity_result(
+        self, name, current, optimal, brier_gap, is_flat=False
+    ):
+        return ConstantSensitivityResult(
+            constant_name=name,
+            grid_values=[current - 0.05, current, optimal],
+            loyo_brier_scores=[0.200, 0.200 - brier_gap, 0.200 - brier_gap],
+            current_value=current,
+            optimal_value=optimal,
+            optimal_brier=0.200 - brier_gap,
+            current_brier=0.200,
+            brier_range=brier_gap if not is_flat else 0.001,
+            is_flat=is_flat,
+        )
+
+    def test_adopt_significant_improvement(self):
+        """Adopts optimal value when improvement exceeds threshold."""
+        sr = self._make_sensitivity_result(
+            "tournament_shrinkage", 0.08, 0.12, 0.005
+        )
+        config = SOTAPipelineConfig()
+        new_config, log = adopt_sensitivity_optima(
+            {"tournament_shrinkage": sr}, config
+        )
+        assert new_config.tournament_shrinkage == 0.12
+        assert log["tournament_shrinkage"]["action"] == "adopted"
+
+    def test_skip_flat_constant(self):
+        """Skips flat constants (insensitive)."""
+        sr = self._make_sensitivity_result(
+            "tournament_shrinkage", 0.08, 0.12, 0.005, is_flat=True
+        )
+        config = SOTAPipelineConfig()
+        new_config, log = adopt_sensitivity_optima(
+            {"tournament_shrinkage": sr}, config
+        )
+        assert new_config.tournament_shrinkage == 0.08  # Unchanged
+        assert log["tournament_shrinkage"]["action"] == "skipped"
+        assert "flat" in log["tournament_shrinkage"]["reason"]
+
+    def test_skip_below_threshold(self):
+        """Skips when improvement is below threshold."""
+        sr = self._make_sensitivity_result(
+            "tournament_shrinkage", 0.08, 0.12, 0.001  # Below default 0.002
+        )
+        config = SOTAPipelineConfig()
+        new_config, log = adopt_sensitivity_optima(
+            {"tournament_shrinkage": sr}, config
+        )
+        assert new_config.tournament_shrinkage == 0.08  # Unchanged
+        assert log["tournament_shrinkage"]["action"] == "skipped"
+        assert "threshold" in log["tournament_shrinkage"]["reason"]
+
+    def test_multiple_constants(self):
+        """Can adopt/skip multiple constants independently."""
+        results = {
+            "tournament_shrinkage": self._make_sensitivity_result(
+                "tournament_shrinkage", 0.08, 0.12, 0.005
+            ),
+            "seed_prior_weight": self._make_sensitivity_result(
+                "seed_prior_weight", 0.05, 0.05, 0.0  # Already optimal
+            ),
+            "ensemble_lgb_weight": self._make_sensitivity_result(
+                "ensemble_lgb_weight", 0.45, 0.50, 0.003
+            ),
+        }
+        config = SOTAPipelineConfig()
+        new_config, log = adopt_sensitivity_optima(results, config)
+
+        assert new_config.tournament_shrinkage == 0.12  # Adopted
+        assert new_config.seed_prior_weight == 0.05  # Unchanged (already optimal)
+        assert new_config.ensemble_lgb_weight == 0.50  # Adopted
+        assert log["tournament_shrinkage"]["action"] == "adopted"
+        assert log["seed_prior_weight"]["action"] == "skipped"
+        assert log["ensemble_lgb_weight"]["action"] == "adopted"
+
+    def test_does_not_modify_original_config(self):
+        """Adoption returns a new config, not modifying the original."""
+        sr = self._make_sensitivity_result(
+            "tournament_shrinkage", 0.08, 0.12, 0.005
+        )
+        config = SOTAPipelineConfig()
+        new_config, _ = adopt_sensitivity_optima(
+            {"tournament_shrinkage": sr}, config
+        )
+        assert config.tournament_shrinkage == 0.08  # Original unchanged
+        assert new_config.tournament_shrinkage == 0.12  # New has update

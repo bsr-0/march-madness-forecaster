@@ -1990,6 +1990,196 @@ class RDOFAuditReport:
 # 8. Top-level runner
 # ───────────────────────────────────────────────────────────────────────
 
+# ───────────────────────────────────────────────────────────────────────
+# 7b. Holdout Contamination Tracker
+# ───────────────────────────────────────────────────────────────────────
+
+_HOLDOUT_LOCKFILE = "holdout_evaluation.lock.json"
+
+
+def _lockfile_path(historical_dir: str) -> str:
+    """Path for the holdout contamination lockfile."""
+    return os.path.join(historical_dir, _HOLDOUT_LOCKFILE)
+
+
+def record_holdout_evaluation(
+    historical_dir: str,
+    holdout_years: List[int],
+    config_hash_value: str,
+    report_summary: Dict[str, Any],
+) -> None:
+    """Record that holdout years have been evaluated with a specific config.
+
+    Creates a lockfile that subsequent pipeline runs can check to detect
+    whether any Tier 3 constants have been modified after holdout evaluation.
+    Once a holdout year has been evaluated, any changes to the pipeline
+    config that produced those results constitute researcher degrees of
+    freedom contamination — the developer has implicitly used holdout
+    performance to guide parameter choices.
+
+    The lockfile is intentionally stored inside the historical data directory
+    (not in /tmp or .git) so it persists across sessions and is committed
+    alongside the data it protects.
+    """
+    lock_path = _lockfile_path(historical_dir)
+    lock_data = {
+        "holdout_years": sorted(holdout_years),
+        "config_hash": config_hash_value,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "aggregate_brier": report_summary.get("aggregate_brier"),
+        "verdict": report_summary.get("verdict"),
+        "warning": (
+            "Do NOT modify Tier 3 pipeline constants after this evaluation. "
+            "Any changes informed by these results constitute overfitting to "
+            "the holdout set. To re-evaluate with new parameters, you must "
+            "designate a FRESH holdout year that was excluded from all "
+            "prior decision-making."
+        ),
+    }
+    with open(lock_path, "w") as f:
+        json.dump(lock_data, f, indent=2)
+    logger.info("Holdout lockfile written to %s", lock_path)
+
+
+def check_holdout_contamination(
+    historical_dir: str,
+    current_config,
+) -> Optional[Dict[str, Any]]:
+    """Check whether current config differs from the config used for holdout evaluation.
+
+    Returns None if no lockfile exists (holdout never evaluated) or if the
+    config hash matches.  Returns a warning dict if the config has changed
+    since holdout evaluation — indicating potential contamination.
+    """
+    lock_path = _lockfile_path(historical_dir)
+    if not os.path.exists(lock_path):
+        return None
+
+    try:
+        with open(lock_path, "r") as f:
+            lock_data = json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return None
+
+    locked_hash = lock_data.get("config_hash", "")
+    current_hash = config_hash(current_config)
+
+    if locked_hash == current_hash:
+        return None
+
+    return {
+        "contamination_detected": True,
+        "locked_config_hash": locked_hash,
+        "current_config_hash": current_hash,
+        "holdout_years": lock_data.get("holdout_years", []),
+        "locked_timestamp": lock_data.get("timestamp", "unknown"),
+        "message": (
+            f"Pipeline config has changed since holdout evaluation on "
+            f"{lock_data.get('timestamp', 'unknown')} "
+            f"(hash {locked_hash[:8]}... → {current_hash[:8]}...). "
+            f"Holdout years {lock_data.get('holdout_years', [])} may be "
+            f"contaminated by post-hoc parameter tuning. Designate fresh "
+            f"holdout years or revert config to the locked version."
+        ),
+    }
+
+
+# ───────────────────────────────────────────────────────────────────────
+# 7c. Sensitivity-Based Auto-Adoption
+# ───────────────────────────────────────────────────────────────────────
+
+def adopt_sensitivity_optima(
+    sensitivity_results: Dict[str, ConstantSensitivityResult],
+    base_config,
+    min_brier_improvement: float = 0.002,
+    require_not_flat: bool = True,
+) -> Tuple[Any, Dict[str, Any]]:
+    """Update config with sensitivity-optimal Tier 3 values.
+
+    Only adopts a new value if:
+    1. The constant is NOT flat (Brier range >= 0.005) — unless require_not_flat=False
+    2. The optimal value improves Brier by at least min_brier_improvement
+       over the current value (default 0.002)
+    3. The optimal value differs from the current value
+
+    This prevents adopting noise-level changes that don't represent genuine
+    improvement.  The min_brier_improvement threshold is set at 0.002 because
+    with ~60 tournament games per year, the standard error of the mean Brier
+    score is approximately sqrt(0.25^2 / 60) ≈ 0.032 — so 0.002 represents
+    roughly 6% of one SE, deliberately conservative to avoid chasing noise.
+
+    Args:
+        sensitivity_results: Output from SensitivityAnalyzer.analyze_all_tier3()
+        base_config: SOTAPipelineConfig to modify
+        min_brier_improvement: Minimum Brier improvement to adopt a change
+        require_not_flat: Only adopt non-flat constants
+
+    Returns:
+        (updated_config, adoption_log) where adoption_log documents each
+        constant's decision (adopted/skipped and reason).
+    """
+    cfg = copy.deepcopy(base_config)
+    log: Dict[str, Any] = {}
+
+    for name, sr in sensitivity_results.items():
+        entry: Dict[str, Any] = {
+            "current": sr.current_value,
+            "optimal": sr.optimal_value,
+            "brier_gap": round(sr.brier_gap, 5),
+            "is_flat": sr.is_flat,
+        }
+
+        if require_not_flat and sr.is_flat:
+            entry["action"] = "skipped"
+            entry["reason"] = "constant is insensitive (flat)"
+            log[name] = entry
+            continue
+
+        if sr.brier_gap < min_brier_improvement:
+            entry["action"] = "skipped"
+            entry["reason"] = (
+                f"improvement {sr.brier_gap:.5f} below threshold "
+                f"{min_brier_improvement:.5f}"
+            )
+            log[name] = entry
+            continue
+
+        if abs(sr.optimal_value - sr.current_value) < 1e-9:
+            entry["action"] = "skipped"
+            entry["reason"] = "already at optimal value"
+            log[name] = entry
+            continue
+
+        # Apply the optimal value
+        if name == "tournament_shrinkage":
+            cfg.tournament_shrinkage = sr.optimal_value
+        elif name == "seed_prior_weight":
+            cfg.seed_prior_weight = sr.optimal_value
+        elif name == "consistency_bonus_max":
+            cfg.consistency_bonus_max = sr.optimal_value
+        elif name == "consistency_normalizer":
+            cfg.consistency_normalizer = sr.optimal_value
+        elif name == "ensemble_lgb_weight":
+            cfg.ensemble_lgb_weight = sr.optimal_value
+        elif name == "ensemble_xgb_weight":
+            cfg.ensemble_xgb_weight = sr.optimal_value
+        else:
+            entry["action"] = "skipped"
+            entry["reason"] = f"no config mapping for {name}"
+            log[name] = entry
+            continue
+
+        entry["action"] = "adopted"
+        entry["new_value"] = sr.optimal_value
+        log[name] = entry
+        logger.info(
+            "Auto-adopt: %s = %.4f -> %.4f (Brier improvement: %.5f)",
+            name, sr.current_value, sr.optimal_value, sr.brier_gap,
+        )
+
+    return cfg, log
+
+
 def run_rdof_audit(
     historical_dir: str = "data/raw/historical",
     holdout_years: Optional[List[int]] = None,
@@ -2020,6 +2210,13 @@ def run_rdof_audit(
         from ...pipeline.sota import SOTAPipelineConfig
         config = SOTAPipelineConfig()
 
+    # ── Contamination check: warn if config changed since last holdout ──
+    contamination = check_holdout_contamination(historical_dir, config)
+    if contamination:
+        logger.warning(
+            "HOLDOUT CONTAMINATION: %s", contamination["message"]
+        )
+
     holdout_report = None
     sensitivity_results = None
 
@@ -2027,6 +2224,15 @@ def run_rdof_audit(
         logger.info("Running holdout evaluation for years: %s", holdout_years)
         evaluator = HoldoutEvaluator(historical_dir)
         holdout_report = evaluator.run_holdout_protocol(holdout_years, config)
+
+        # Record the evaluation to detect future contamination
+        if holdout_report and holdout_report.per_year:
+            record_holdout_evaluation(
+                historical_dir,
+                holdout_years,
+                config_hash(config),
+                holdout_report.to_dict(),
+            )
 
     if run_sensitivity:
         logger.info("Running sensitivity analysis...")
@@ -2037,15 +2243,31 @@ def run_rdof_audit(
         )
         sensitivity_results = analyzer.analyze_all_tier3(config)
 
+    # ── Model complexity audit ──
+    complexity_audit = estimate_model_complexity()
+
     report = RDOFAuditReport(
         holdout_report=holdout_report,
         sensitivity_results=sensitivity_results,
+        complexity_audit=complexity_audit,
     )
 
     # Print text report
     print(report.to_text())
 
+    # Include contamination warning in output
+    report_dict = report.to_dict()
+    if contamination:
+        report_dict["holdout_contamination_warning"] = contamination
+
+    # Include auto-adoption recommendations if sensitivity was run
+    if sensitivity_results:
+        _, adoption_log = adopt_sensitivity_optima(
+            sensitivity_results, config,
+        )
+        report_dict["sensitivity_auto_adoption"] = adoption_log
+
     if output_path:
         report.to_file(output_path)
 
-    return report.to_dict()
+    return report_dict
