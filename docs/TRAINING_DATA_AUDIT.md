@@ -351,36 +351,34 @@ Using historical tournament games (FIX 8.1) to augment the calibration pool is a
 
 ## SUMMARY TABLE
 
-| ID | Severity | Issue | Feature Impact | Fixable |
-|----|----------|-------|---------------|---------|
-| C1 | CRITICAL | 57/77 features zero in historical training data | Distribution mismatch between train/inference | Yes — derive more features from box scores |
-| C2 | CRITICAL | drb_rate and opp_ft_rate missing from historical Four Factors | 2 predictive features always zero in training | Yes — extend scraper or compute from team_games |
-| C3 | CRITICAL | 2010-2024 games all share single date; synthetic chronology | Elo, momentum, luck computed on wrong game order | Partially — scrape real dates or weight features down |
-| C4 | CRITICAL | sports_reference_2026.json cache is all-zeros skeleton | Could poison current-season predictions | Yes — delete corrupted cache, add schema check |
-| S1 | SERIOUS | Zero direct team ID matches between games and metrics | Relies entirely on fuzzy resolution | Yes — build explicit mapping file |
-| S2 | SERIOUS | def_rtg precision varies across years (different sources) | Possible semantic inconsistency | Audit — verify def_rtg meaning per source |
-| S3 | SERIOUS | PIT adjustment only for current year, not historical | Train/inference distribution mismatch | Hard — requires per-game metrics snapshots |
-| S4 | SERIOUS | Bidirectional prefix matching in Four Factors lookup | Wrong team's stats silently used | Yes — use resolver instead of prefix matching |
-| S5 | SERIOUS | Label from lead_history[-1] fragile for incomplete games | Mislabeled training samples | Yes — use score-based labels as fallback |
-| S6 | SERIOUS | Duplicate normalization functions with divergent behavior | Silent join failures for punctuated names | Yes — consolidate normalizers |
-| M1 | MODERATE | 2025 data includes non-D1 games | Inflated game count, resolution rate noise | Filter by known D1 team list |
-| M2 | MODERATE | Tournament seed IDs inconsistent with metric IDs | Seed features may be missing for some teams | Yes — add to alias table |
-| M3 | MODERATE | Coarse sort keys for historical years | Minor ordering artifact | Low priority |
-| M4 | MODERATE | 2020 exclusion is all-or-nothing | Wastes regular-season games | Could include non-tournament 2020 games |
-| M5 | MODERATE | Duplicated fragile prefix matching pattern | Code maintenance risk | Refactor to shared resolver |
-| M6 | MODERATE | 24 columns 100% null in processed matchup features | Wasted dimensionality | Remove or document as unavailable |
-| M7 | MODERATE | Tournament matchup features only contain 2025 (36 rows) | No multi-year tournament training data | Fix date handling (C3) likely resolves this |
+| ID | Severity | Issue | Status | Feature Impact |
+|----|----------|-------|--------|---------------|
+| C1 | CRITICAL | 57/77 features zero in historical training data | Open | Distribution mismatch between train/inference |
+| C2 | CRITICAL | drb_rate and opp_ft_rate missing from historical Four Factors | **FIXED** | 2 predictive features now populated from BartTorvik |
+| C3 | CRITICAL | 2010-2024 games all share single date; synthetic chronology | **FIXED** | Piecewise density model replaces linear interpolation |
+| C4 | CRITICAL | sports_reference_2026.json cache is all-zeros skeleton | **FIXED** | Schema validation + corrupted cache deleted |
+| S1 | SERIOUS | Zero direct team ID matches between games and metrics | **MITIGATED** | Alias table expanded from 33→65+ entries; 60% gate added |
+| S2 | SERIOUS | def_rtg precision varies across years (different sources) | Open | Possible semantic inconsistency |
+| S3 | SERIOUS | PIT adjustment only for current year, not historical | Open | Train/inference distribution mismatch |
+| S4 | SERIOUS | Bidirectional prefix matching in Four Factors lookup | **FIXED** | Safe resolve cache with boundary-aware matching |
+| S5 | SERIOUS | Label from lead_history[-1] fragile for incomplete games | **FIXED** | Score-based labels as primary; all 6 call sites updated |
+| S6 | SERIOUS | Duplicate normalization functions with divergent behavior | **FIXED** | SR scraper delegates to shared normalize module |
+| M1 | MODERATE | 2025 data includes non-D1 games | Open | Inflated game count, resolution rate noise |
+| M2 | MODERATE | Tournament seed IDs inconsistent with metric IDs | **MITIGATED** | Covered by expanded alias table (S1) |
+| M3 | MODERATE | Coarse sort keys for historical years | Open | Minor ordering artifact |
+| M4 | MODERATE | 2020 exclusion is all-or-nothing | Open | Wastes regular-season games |
+| M5 | MODERATE | Duplicated fragile prefix matching pattern | **FIXED** | Shared safe resolve cache (S4) |
+| M6 | MODERATE | 24 columns 100% null in processed matchup features | Open | Wasted dimensionality |
+| M7 | MODERATE | Tournament matchup features only contain 2025 (36 rows) | **Likely fixed** | C3 fix should unblock tournament date filtering |
 
 ---
 
-## RECOMMENDED PRIORITY ORDER
+## REMAINING WORK
 
-1. **C3**: Fix date handling for 2010-2024 (highest leverage — Elo is used heavily, also unblocks M7)
-2. **C4**: Delete corrupted 2026 SR cache file and add schema validation
-3. **C1**: Derive more features from box-score data for historical years
-4. **C2**: Add drb_rate and opp_ft_rate to historical Four Factors
-5. **S4**: Replace prefix matching with proper team resolver
-6. **S6**: Consolidate normalization functions
-7. **S1**: Build comprehensive team ID mapping file
-8. **S5**: Add score-based label fallback
-9. **S2**: Audit def_rtg provenance across years
+Issues still open (lower priority or requiring architectural changes):
+
+1. **C1**: Derive remaining ~55 features from box-score data for historical years (large effort — requires computing RAPM, roster metrics, shot quality from play-by-play data that may not be available)
+2. **S2**: Audit def_rtg provenance across years (investigation task)
+3. **S3**: PIT adjustment for historical years (requires per-game metrics snapshots — significant data collection effort)
+4. **M1**: Filter non-D1 games from 2025 data
+5. **M3/M4/M6**: Low-priority cleanup items
