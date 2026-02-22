@@ -198,6 +198,9 @@ class HistoricalFeatureMaterializer:
                         season, len(season_rows), next(iter(raw_dates), "?"),
                     )
                     self._infer_dates_from_game_ids(season_rows, season)
+                    # Tag rows so downstream features know dates are synthetic
+                    for r in season_rows:
+                        r["_dates_inferred"] = True
 
             # H4: Warn about sparse data years
             if len(season_rows) < 8000 and season_rows:
@@ -230,6 +233,21 @@ class HistoricalFeatureMaterializer:
         missing = [c for c in required if c not in df.columns]
         if missing:
             raise ValueError(f"Team-game dataset missing required columns: {missing}")
+
+        # Filter outlier / forfeit games: remove rows where either team scored
+        # 0 (forfeits produce extreme efficiency metrics) or where the margin
+        # exceeds 80 points (data entry errors or exhibition-style mismatches).
+        pre_filter = len(df)
+        score_mask = (df["team_score"] > 0) & (df["opponent_score"] > 0)
+        margin_mask = (df["team_score"] - df["opponent_score"]).abs() <= 80
+        df = df[score_mask & margin_mask].reset_index(drop=True)
+        dropped = pre_filter - len(df)
+        if dropped > 0:
+            logger.info(
+                "Filtered %d forfeit/outlier game rows (zero scores or margin > 80).",
+                dropped,
+            )
+
         return df
 
     def _load_team_metrics(self, artifacts: Dict[str, Dict[str, str]]) -> pd.DataFrame:
@@ -319,6 +337,28 @@ class HistoricalFeatureMaterializer:
                             "Season %d: backfilled metrics for %d/%d zero-metric teams.",
                             season, backfilled, zero_count,
                         )
+
+            # Range validation: clamp backfilled/raw metrics to reasonable
+            # D1 basketball ranges.  Values outside these bounds indicate
+            # data errors (e.g. division-by-tiny-possessions artifacts).
+            for r in season_rows:
+                off = r.get("off_rtg", 0)
+                drt = r.get("def_rtg", 0)
+                if off > 0 and (off < 60 or off > 140):
+                    logger.debug(
+                        "Season %d team %s: off_rtg=%.1f outside [60,140], clamping.",
+                        season, r.get("team_id", "?"), off,
+                    )
+                    r["off_rtg"] = max(60.0, min(140.0, off))
+                if drt > 0 and (drt < 60 or drt > 140):
+                    logger.debug(
+                        "Season %d team %s: def_rtg=%.1f outside [60,140], clamping.",
+                        season, r.get("team_id", "?"), drt,
+                    )
+                    r["def_rtg"] = max(60.0, min(140.0, drt))
+                pace = r.get("pace", 0)
+                if pace > 0 and (pace < 40 or pace > 100):
+                    r["pace"] = max(40.0, min(100.0, pace))
 
             # De-duplicate: if both NCAA-suffixed and base entries exist, keep
             # the one with non-zero metrics.
@@ -466,6 +506,29 @@ class HistoricalFeatureMaterializer:
         out["resolved_team_id"] = resolved_ids
         out["team_match_score"] = match_quality
         out["team_id"] = out["resolved_team_id"]
+
+        # Audit logging: report resolution quality per season
+        if match_quality:
+            scores = np.array(match_quality)
+            perfect = (scores >= 0.99).sum()
+            good = ((scores >= 0.85) & (scores < 0.99)).sum()
+            low = ((scores > 0) & (scores < 0.85)).sum()
+            unresolved = (scores < 1e-6).sum()
+            total = len(scores)
+            logger.info(
+                "Team alignment: %d/%d perfect (≥0.99), %d good (≥0.85), "
+                "%d low-confidence (<0.85), %d unresolved.",
+                perfect, total, good, low, unresolved,
+            )
+            if low + unresolved > 0:
+                # Log specific low-confidence or unresolved entries
+                for idx, (rid, score) in enumerate(zip(resolved_ids, match_quality)):
+                    if score < 0.85 and score > 1e-6:
+                        src = str(out.iloc[idx].get("source_team_id", "?"))
+                        logger.warning(
+                            "Low-confidence match: '%s' → '%s' (score=%.2f)",
+                            src, rid, score,
+                        )
         return out
 
     def _build_team_game_features(
@@ -530,6 +593,23 @@ class HistoricalFeatureMaterializer:
         df["games_in_last_7_days"] = (
             df.groupby("team_id")["date"].transform(lambda s: pd.Series(self._rolling_day_counts(s, 7), index=s.index))
         )
+
+        # NaN-out date-dependent features for seasons with inferred dates.
+        # Evenly-spread synthetic dates make rest_days, back_to_back, and
+        # games_in_last_7_days degenerate (nearly constant), so setting them
+        # to NaN lets the model learn to ignore them rather than fitting noise.
+        # season_progress remains useful because it preserves rank ordering.
+        if "_dates_inferred" in df.columns:
+            inferred_mask = df["_dates_inferred"].fillna(False).astype(bool)
+            if inferred_mask.any():
+                for col in ("rest_days", "back_to_back", "games_in_last_7_days"):
+                    df.loc[inferred_mask, col] = np.nan
+                logger.info(
+                    "NaN-ed rest_days/back_to_back/games_in_last_7_days for %d rows "
+                    "with inferred dates (degenerate with synthetic dates).",
+                    inferred_mask.sum(),
+                )
+            df = df.drop(columns=["_dates_inferred"])
 
         season_start = pd.to_datetime((df["season"] - 1).astype(str) + "-11-01", errors="coerce")
         df["season_day"] = (df["date"] - season_start).dt.days.clip(lower=0)
