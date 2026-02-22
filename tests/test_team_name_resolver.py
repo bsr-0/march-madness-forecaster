@@ -142,7 +142,37 @@ class TestTeamNameResolverAlias:
     def test_tcu(self):
         resolver = TeamNameResolver()
         result = resolver.resolve("TCU")
-        assert result.canonical_id == "texas_christian"
+        assert result.canonical_id == "tcu"
+
+    def test_smU(self):
+        resolver = TeamNameResolver()
+        result = resolver.resolve("SMU")
+        assert result.canonical_id == "southern_methodist"
+
+    def test_vcu(self):
+        resolver = TeamNameResolver()
+        result = resolver.resolve("VCU")
+        assert result.canonical_id == "virginia_commonwealth"
+
+    def test_unlv(self):
+        resolver = TeamNameResolver()
+        result = resolver.resolve("UNLV")
+        assert result.canonical_id == "nevada_las_vegas"
+
+    def test_umbc(self):
+        resolver = TeamNameResolver()
+        result = resolver.resolve("UMBC")
+        assert result.canonical_id == "maryland_baltimore_county"
+
+    def test_utep(self):
+        resolver = TeamNameResolver()
+        result = resolver.resolve("UTEP")
+        assert result.canonical_id == "utep"
+
+    def test_uab(self):
+        resolver = TeamNameResolver()
+        result = resolver.resolve("UAB")
+        assert result.canonical_id == "uab"
 
 
 class TestTeamNameResolverSlug:
@@ -214,16 +244,16 @@ class TestTeamNameResolverEdgeCases:
         """Miami is ambiguous — should resolve to one consistently."""
         resolver = TeamNameResolver()
         result = resolver.resolve("Miami (FL)")
-        assert result.canonical_id == "miami_fl"
+        assert result.canonical_id == "miami__fl"
         result_oh = resolver.resolve("Miami (OH)")
-        assert result_oh.canonical_id == "miami_oh"
+        assert result_oh.canonical_id == "miami__oh"
 
     def test_saint_vs_st(self):
         """St. and Saint should match the same team."""
         resolver = TeamNameResolver()
         r1 = resolver.resolve("Saint Mary's")
         r2 = resolver.resolve("St. Mary's")
-        assert r1.canonical_id == r2.canonical_id == "saint_marys"
+        assert r1.canonical_id == r2.canonical_id == "saint_mary_s__ca"
 
 
 # ---------------------------------------------------------------------------
@@ -266,12 +296,14 @@ class TestTeamNameResolverBatch:
         assert result.canonical_id == "brand_new_team"
         assert "brand_new_team" in resolver.known_teams
 
-    def test_known_teams_nonempty(self):
+    def test_known_teams_comprehensive(self):
         resolver = TeamNameResolver()
         teams = resolver.known_teams
-        assert len(teams) > 100  # We have ~150 teams in the alias table
+        assert len(teams) > 300  # We have ~360 teams in the alias table
         assert "alabama" in teams
         assert "duke" in teams
+        assert "connecticut" in teams
+        assert "gonzaga" in teams
 
     def test_extra_aliases_in_constructor(self):
         extra = {"duke": ["Dookies", "Blue Devilz"]}
@@ -280,7 +312,7 @@ class TestTeamNameResolverBatch:
         assert result.canonical_id == "duke"
 
     def test_extra_aliases_new_team(self):
-        extra = {"middle_tennessee": ["Middle Tennessee", "MTSU", "Blue Raiders"]}
+        extra = {"middle_tennessee": ["MTSU", "Blue Raiders"]}
         resolver = TeamNameResolver(extra_aliases=extra)
         result = resolver.resolve("MTSU")
         assert result.canonical_id == "middle_tennessee"
@@ -304,10 +336,19 @@ class TestCrossSourceConsistency:
             (["Connecticut", "UConn", "Conn"], "connecticut"),
             (["North Carolina", "UNC", "N Carolina"], "north_carolina"),
             (["Michigan State", "Michigan St", "MSU"], "michigan_state"),
-            (["Texas A&M", "Texas A and M", "TAMU"], "texas_am"),
-            (["St. John's", "Saint John's"], "saint_johns"),
+            (["Texas A&M", "Texas A and M", "TAMU"], "texas_a_m"),
+            (["St. John's", "Saint John's"], "st__john_s__ny"),
             (["Virginia Tech", "Va Tech", "VT"], "virginia_tech"),
             (["Florida Atlantic", "FAU", "Fla Atlantic"], "florida_atlantic"),
+            (["LSU", "Louisiana State"], "louisiana_state"),
+            (["USC", "Southern California", "Southern Cal"], "southern_california"),
+            (["VCU", "Virginia Commonwealth"], "virginia_commonwealth"),
+            (["UNLV", "Nevada-Las Vegas"], "nevada_las_vegas"),
+            (["UMBC", "Maryland-Baltimore County"], "maryland_baltimore_county"),
+            (["SMU", "Southern Methodist"], "southern_methodist"),
+            (["TCU", "Texas Christian"], "tcu"),
+            (["UTEP", "Texas-El Paso"], "utep"),
+            (["UAB", "Alabama-Birmingham"], "uab"),
         ],
     )
     def test_variants_resolve_same(self, resolver, variants, expected_id):
@@ -317,3 +358,40 @@ class TestCrossSourceConsistency:
                 f"'{variant}' resolved to '{result.canonical_id}' "
                 f"(expected '{expected_id}', method={result.method})"
             )
+
+
+# ---------------------------------------------------------------------------
+# Comprehensive coverage tests — game_id → metric_id resolution
+# ---------------------------------------------------------------------------
+
+
+class TestGameIdToMetricIdResolution:
+    """Test that mascot-suffixed game IDs can be resolved via display names."""
+
+    @pytest.fixture
+    def resolver(self):
+        return TeamNameResolver()
+
+    @pytest.mark.parametrize(
+        "display_name,expected_id",
+        [
+            ("Duke Blue Devils", "duke"),
+            ("North Carolina Tar Heels", "north_carolina"),
+            ("Kentucky Wildcats", "kentucky"),
+            ("Kansas Jayhawks", "kansas"),
+            ("UConn Huskies", "connecticut"),
+            ("Gonzaga Bulldogs", "gonzaga"),
+            ("Michigan State Spartans", "michigan_state"),
+            ("Florida Atlantic Owls", "florida_atlantic"),
+            ("Alabama Crimson Tide", "alabama"),
+            ("Houston Cougars", "houston"),
+        ],
+    )
+    def test_display_name_with_mascot(self, resolver, display_name, expected_id):
+        """Display names from game data (with mascots) should resolve correctly."""
+        result = resolver.resolve(display_name)
+        assert result.canonical_id == expected_id, (
+            f"'{display_name}' resolved to '{result.canonical_id}' "
+            f"(expected '{expected_id}', method={result.method})"
+        )
+        assert result.confidence >= 0.80
