@@ -314,7 +314,7 @@ _ALIAS_TABLE: Dict[str, List[str]] = {
     "rutgers": ["Rutgers"],
     # --- S ---
     "sacramento_state": ["Sacramento State", "Cal State Sacramento", "Sac State"],
-    "sacred_heart": ["Sacred Heart", "SHU"],
+    "sacred_heart": ["Sacred Heart"],
     "saint_francis__pa": ["Saint Francis (PA)", "St. Francis (PA)"],
     "saint_joseph_s": ["Saint Joseph's", "St. Joseph's", "St. Joe's"],
     "saint_louis": ["Saint Louis", "St. Louis", "SLU"],
