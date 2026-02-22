@@ -3112,7 +3112,13 @@ class SOTAPipeline:
                     drt = float(tm.get("def_rtg", 0))
                     if off < 1e-6 or drt < 1e-6:
                         continue
-                    team_metrics[tid] = {
+                    # Strip NCAA suffix (e.g. "arizonancaa" → "arizona").
+                    # Historical metrics (2010-2021) duplicate tournament teams
+                    # with an "ncaa" suffix; the base form is what game IDs use.
+                    base_tid = tid
+                    if tid.endswith("ncaa"):
+                        base_tid = tid[:-4].rstrip("_")
+                    metrics_entry = {
                         "off_rtg": off,
                         "def_rtg": drt,
                         "pace":    float(tm.get("pace", 68.0)),
@@ -3121,23 +3127,133 @@ class SOTAPipeline:
                         "wins":    float(tm.get("wins", 15)),
                         "losses":  float(tm.get("losses", 15)),
                     }
+                    team_metrics[tid] = metrics_entry
+                    # Also store under the base key (without NCAA suffix)
+                    # so game IDs can match the canonical form.
+                    if base_tid != tid and base_tid not in team_metrics:
+                        team_metrics[base_tid] = metrics_entry
 
-        # ── 2. Build prefix resolver (handles mascot-suffixed IDs) ────────
+        # ── 2. Build comprehensive game_id → metric_id resolver ─────────
+        #
+        # Multi-pass resolution to handle the mismatch between mascot-
+        # suffixed game IDs (e.g. "duke_blue_devils") and canonical metric
+        # IDs (e.g. "duke").  Uses four passes:
+        #   (a) Direct match against team_metrics keys
+        #   (b) CBBpy CSV display_name → location → metric_id mapping
+        #   (c) Prefix matching (handles simple mascot suffixes)
+        #   (d) TeamNameResolver fuzzy fallback
+
         metric_keys = sorted(team_metrics.keys(), key=len, reverse=True)
-        _prefix_cache: Dict[str, str] = {}
+        _resolve_cache: Dict[str, Optional[str]] = {}
+
+        # Alias table for CBBpy location names that don't directly match
+        # metric IDs (abbreviations, alternate spellings, parentheticals).
+        _LOCATION_TO_METRIC: Dict[str, str] = {
+            "american university":     "american",
+            "app state":               "appalachian_state",
+            "byu":                     "brigham_young",
+            "central connecticut":     "central_connecticut_state",
+            "charleston":              "college_of_charleston",
+            "fairleigh dickinson":     "fairleigh_dickinson",
+            "hawai'i":                 "hawaii",
+            "iu indianapolis":         "iu_indy",
+            "loyola chicago":          "loyola__il",
+            "loyola maryland":         "loyola__md",
+            "lsu":                     "louisiana_state",
+            "mcneese":                 "mcneese_state",
+            "miami":                   "miami__fl",
+            "nicholls":                "nicholls_state",
+            "ole miss":                "mississippi",
+            "prairie view a&m":        "prairie_view",
+            "queens university":       "queens__nc",
+            "saint mary's":            "saint_mary_s__ca",
+            "san jose state":          "san_jose_state",
+            "san josé state":          "san_jose_state",
+            "se louisiana":            "southeastern_louisiana",
+            "seattle u":               "seattle",
+            "smu":                     "southern_methodist",
+            "southern miss":           "southern_mississippi",
+            "st. francis brooklyn":    "st__francis__ny",
+            "st. john's":              "st__john_s__ny",
+            "ualbany":                 "albany__ny",
+            "uconn":                   "connecticut",
+            "uic":                     "illinois_chicago",
+            "ul monroe":               "louisiana_monroe",
+            "umass lowell":            "massachusetts_lowell",
+            "umbc":                    "maryland_baltimore_county",
+            "unlv":                    "nevada_las_vegas",
+            "usc":                     "southern_california",
+            "ut martin":               "tennessee_martin",
+            "ut rio grande valley":    "texas_rio_grande_valley",
+            "vcu":                     "virginia_commonwealth",
+        }
+
+        # Load CBBpy CSV and build display_name → metric_id lookup.
+        _cbbpy_map = _load_cbbpy_team_map()  # display_name → location
+        _display_to_metric: Dict[str, str] = {}
+        for display_name, location in _cbbpy_map.items():
+            loc_lower = location.lower().strip()
+            # Check alias table first (handles abbreviations)
+            metric_id = _LOCATION_TO_METRIC.get(loc_lower)
+            if metric_id and metric_id in team_metrics:
+                _display_to_metric[display_name] = metric_id
+                continue
+            # Direct location → metric_id (normalize to _team_id form)
+            loc_id = self._team_id(location)
+            if loc_id in team_metrics:
+                _display_to_metric[display_name] = loc_id
+
+        # Pre-scan games to collect game_id → display_name pairs, then
+        # resolve via CBBpy CSV in a single pass.
+        games = games_payload.get("games", [])
+        _gameid_to_display: Dict[str, str] = {}
+        for game in games:
+            for sfx, name_sfx in [("1", "1"), ("2", "2")]:
+                raw = self._team_id(str(
+                    game.get(f"team{sfx}_id") or game.get(f"team{sfx}") or ""
+                ))
+                name = str(
+                    game.get(f"team{sfx}_name") or ""
+                )
+                if raw and name and raw not in _gameid_to_display:
+                    _gameid_to_display[raw] = name
+
+        # Pre-populate cache from CBBpy display name mappings.
+        for gid, display_name in _gameid_to_display.items():
+            if gid in team_metrics:
+                _resolve_cache[gid] = gid
+            elif display_name in _display_to_metric:
+                _resolve_cache[gid] = _display_to_metric[display_name]
 
         def _resolve_team(game_id: str) -> Optional[str]:
+            if game_id in _resolve_cache:
+                return _resolve_cache[game_id]
+
+            # Pass 1: Direct match
             if game_id in team_metrics:
+                _resolve_cache[game_id] = game_id
                 return game_id
-            if game_id in _prefix_cache:
-                return _prefix_cache[game_id]
+
+            # Pass 2: Prefix matching (handles simple mascot suffixes)
             for mk in metric_keys:
                 if game_id.startswith(mk + "_") or game_id.startswith(mk):
-                    _prefix_cache[game_id] = mk
+                    _resolve_cache[game_id] = mk
                     return mk
-            return None
 
-        games = games_payload.get("games", [])
+            # Pass 3: TeamNameResolver fuzzy fallback
+            display_name = _gameid_to_display.get(game_id, "")
+            for candidate in [display_name, game_id.replace("_", " ")]:
+                if not candidate:
+                    continue
+                result = self.team_name_resolver.resolve(candidate)
+                if result.method != "unresolved" and result.confidence >= 0.80:
+                    cid = result.canonical_id
+                    if cid in team_metrics:
+                        _resolve_cache[game_id] = cid
+                        return cid
+
+            _resolve_cache[game_id] = None
+            return None
 
         # ── 3. Chronological date inference for single-date payloads ──────
         raw_dates = [str(g.get("date", g.get("game_date", ""))) for g in games]
@@ -3174,6 +3290,8 @@ class SOTAPipeline:
         training_games   = []   # subset after tournament filter
 
         tourney_filtered = 0
+        _total_team_refs = 0
+        _resolved_team_refs = 0
         for game in games:
             game_date_str = str(game.get("game_date", game.get("date", "")))
             is_tourney = bool(game_date_str and self._is_tournament_game(game_date_str))
@@ -3185,6 +3303,16 @@ class SOTAPipeline:
 
             t1 = _resolve_team(raw_t1) if raw_t1 else None
             t2 = _resolve_team(raw_t2) if raw_t2 else None
+
+            # Track resolution rate
+            if raw_t1:
+                _total_team_refs += 1
+                if t1 and t1 in team_metrics:
+                    _resolved_team_refs += 1
+            if raw_t2:
+                _total_team_refs += 1
+                if t2 and t2 in team_metrics:
+                    _resolved_team_refs += 1
 
             if not t1 or not t2 or t1 not in team_metrics or t2 not in team_metrics:
                 continue
@@ -3203,6 +3331,19 @@ class SOTAPipeline:
                     tourney_filtered += 1
                 else:
                     training_games.append((game_date_str, t1, t2, s1, s2))
+
+        # ── Resolution rate logging ────────────────────────────────────────
+        if _total_team_refs > 0:
+            _rate = _resolved_team_refs / _total_team_refs * 100
+            logger.info(
+                "Year %d: team resolution rate %d/%d (%.1f%%).",
+                year, _resolved_team_refs, _total_team_refs, _rate,
+            )
+            if _rate < 80.0:
+                logger.warning(
+                    "Year %d: resolution rate %.1f%% is below 80%% threshold.",
+                    year, _rate,
+                )
 
         if tourney_filtered > 0:
             logger.info(
