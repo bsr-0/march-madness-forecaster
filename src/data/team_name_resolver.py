@@ -322,21 +322,21 @@ _ALIAS_TABLE: Dict[str, List[str]] = {
     "saint_peter_s": ["Saint Peter's", "St. Peter's"],
     "sam_houston": ["Sam Houston", "Sam Houston State", "SHSU"],
     "samford": ["Samford"],
-    "san_diego": ["San Diego", "USD"],
+    "san_diego": ["San Diego"],
     "san_diego_state": ["San Diego State", "San Diego St", "SDSU"],
     "san_francisco": ["San Francisco", "USF"],
     "san_jose_state": ["San Jose State", "SJSU", "San Jose St"],
     "santa_clara": ["Santa Clara"],
     "savannah_state": ["Savannah State"],
     "seattle": ["Seattle", "Seattle U", "Seattle University"],
-    "seton_hall": ["Seton Hall"],
+    "seton_hall": ["Seton Hall", "SHU"],
     "siena": ["Siena"],
     "siu_edwardsville": ["SIU Edwardsville", "Southern Illinois-Edwardsville", "SIUE"],
     "south_alabama": ["South Alabama", "USA"],
     "south_carolina": ["South Carolina", "S Carolina"],
     "south_carolina_state": ["South Carolina State", "SC State"],
     "south_carolina_upstate": ["South Carolina Upstate", "USC Upstate"],
-    "south_dakota": ["South Dakota", "USD"],
+    "south_dakota": ["South Dakota"],
     "south_dakota_state": ["South Dakota State", "South Dakota St", "SDSU Jackrabbits"],
     "south_florida": ["South Florida", "USF Bulls"],
     "southeast_missouri_state": ["Southeast Missouri State", "SEMO", "SE Missouri St"],
@@ -551,6 +551,17 @@ class TeamNameResolver:
         if slug in self._slug_to_id:
             cid = self._slug_to_id[slug]
             return MatchResult(cid, self._id_to_display[cid], 0.97, "slug")
+
+        # Pass 3b: Prefix matching for CBBpy mascot-suffixed IDs
+        # (e.g. "duke_blue_devils" → try "duke blue devils" → match "duke")
+        # Progressively strip trailing tokens to find a match.
+        norm_tokens = norm.split()
+        if len(norm_tokens) >= 2:
+            for trim in range(1, min(len(norm_tokens), 3)):
+                prefix = " ".join(norm_tokens[:-trim])
+                if len(prefix) >= 4 and prefix in self._normalized_to_id:
+                    cid = self._normalized_to_id[prefix]
+                    return MatchResult(cid, self._id_to_display[cid], 0.92, "prefix_strip")
 
         # Pass 4: Token containment — if the normalized input contains a known
         # team name or vice versa, and the match is unambiguous
