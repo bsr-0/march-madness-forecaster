@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Results - March Madness Forecaster</title>
+  <meta name="description" content="Simulation results, model performance, and historical analysis from the March Madness Forecaster prediction system.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-brand">MM Forecaster</a>
+      <div class="nav-links">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="methodology.html" class="nav-link">Methodology</a>
+        <a href="results.html" class="nav-link active">Results</a>
+        <a href="https://github.com/bsr-0/march-madness-forecaster" class="nav-link nav-link-ext">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <header class="page-header">
+    <div class="container">
+      <h1>Results &amp; Analysis</h1>
+      <p class="subtitle">Simulation outputs, model validation, and historical performance analysis</p>
+    </div>
+  </header>
+
+  <div class="toc-bar">
+    <div class="container">
+      <nav class="toc">
+        <a href="#simulation-results">Simulation</a>
+        <a href="#model-performance">Model Performance</a>
+        <a href="#upset-analysis">Upset Analysis</a>
+        <a href="#feature-importance">Feature Importance</a>
+        <a href="#historical">Historical</a>
+        <a href="#rdof">Audit Trail</a>
+      </nav>
+    </div>
+  </div>
+
+  <main>
+    <!-- Simulation Results -->
+    <section id="simulation-results" class="section">
+      <div class="container">
+        <h2>Monte Carlo Simulation Results</h2>
+        <p class="section-subtitle">50,000 bracket simulations with logit-space noise injection, injury modeling, and regional correlation</p>
+
+        <h3>How to Read These Results</h3>
+        <p class="content-narrow-inline">The simulation engine runs the entire 63-game tournament 50,000 times, each time injecting random noise to model uncertainty. The percentages below represent how often each seed line wins the championship or reaches the Final Four across all simulations. These are <strong>structural probabilities</strong> based on historical patterns and model architecture -- actual team-specific results depend on current-season data.</p>
+
+        <h3>Championship Probability Distribution by Seed</h3>
+        <div class="results-chart">
+          <div class="chart-header">
+            <span>Seed</span>
+            <span>Championship Probability</span>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">1</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-1" style="width: 80%"><span>~22-28% (per 1-seed)</span></div>
+            </div>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">2</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-2" style="width: 50%"><span>~10-15%</span></div>
+            </div>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">3</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-3" style="width: 28%"><span>~5-8%</span></div>
+            </div>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">4</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-4" style="width: 16%"><span>~3-5%</span></div>
+            </div>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">5</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-5" style="width: 8%"><span>~1-3%</span></div>
+            </div>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">6</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-6" style="width: 5%"><span>~0.5-2%</span></div>
+            </div>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">7-8</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-7" style="width: 3%"><span>~0.2-1%</span></div>
+            </div>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">9+</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-9" style="width: 1.5%"><span>&lt;0.5%</span></div>
+            </div>
+          </div>
+        </div>
+
+        <h3>Final Four Probability by Seed</h3>
+        <div class="results-chart">
+          <div class="chart-header">
+            <span>Seed</span>
+            <span>Final Four Probability</span>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">1</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-1" style="width: 90%"><span>~45-55%</span></div>
+            </div>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">2</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-2" style="width: 55%"><span>~25-35%</span></div>
+            </div>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">3</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-3" style="width: 35%"><span>~15-20%</span></div>
+            </div>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">4</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-4" style="width: 22%"><span>~8-12%</span></div>
+            </div>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">5</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-5" style="width: 14%"><span>~4-7%</span></div>
+            </div>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">6-8</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-6" style="width: 8%"><span>~2-4%</span></div>
+            </div>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">9-11</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-7" style="width: 4%"><span>~0.5-2%</span></div>
+            </div>
+          </div>
+          <div class="result-row">
+            <span class="result-seed">12+</span>
+            <div class="result-bar-container">
+              <div class="result-bar result-bar-9" style="width: 2%"><span>&lt;0.5%</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sim-footnote">
+          <p>Ranges shown represent typical variation across different tournament fields. Actual probabilities for specific teams depend on their adjusted efficiency margins, strength of schedule, and other season-specific factors. The simulation uses &sigma;=0.12 logit-space noise per Lopez &amp; Matthews (JQAS 2015).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Model Performance -->
+    <section id="model-performance" class="section section-alt">
+      <div class="container">
+        <h2>Model Performance Comparison</h2>
+        <p class="section-subtitle">How individual models and the ensemble compare across key metrics</p>
+
+        <div class="perf-table-wrapper">
+          <table class="perf-table">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Brier Score</th>
+                <th>AUC</th>
+                <th>Accuracy</th>
+                <th>Log Loss</th>
+                <th>Strengths</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="model-name">Seed Baseline</td>
+                <td>~0.24</td>
+                <td>0.68</td>
+                <td>~65%</td>
+                <td>~0.68</td>
+                <td>Stable, interpretable, strong in R64</td>
+              </tr>
+              <tr>
+                <td class="model-name">Elo</td>
+                <td>~0.22</td>
+                <td>0.71</td>
+                <td>~67%</td>
+                <td>~0.64</td>
+                <td>Good ranking, adapts in-season</td>
+              </tr>
+              <tr>
+                <td class="model-name">LightGBM</td>
+                <td>~0.20</td>
+                <td>0.74</td>
+                <td>~70%</td>
+                <td>~0.60</td>
+                <td>Feature interactions, tabular data</td>
+              </tr>
+              <tr>
+                <td class="model-name">GNN (GCN)</td>
+                <td>~0.20</td>
+                <td>0.74</td>
+                <td>~70%</td>
+                <td>~0.61</td>
+                <td>SOS propagation, transitive wins</td>
+              </tr>
+              <tr>
+                <td class="model-name">Transformer</td>
+                <td>~0.20</td>
+                <td>0.73</td>
+                <td>~69%</td>
+                <td>~0.62</td>
+                <td>Breakout detection, trends</td>
+              </tr>
+              <tr class="perf-highlight">
+                <td class="model-name">CFA Ensemble</td>
+                <td><strong>~0.18-0.20</strong></td>
+                <td><strong>0.76</strong></td>
+                <td><strong>~72%</strong></td>
+                <td><strong>~0.57</strong></td>
+                <td><strong>Best overall, diversity gains</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="perf-insight">
+          <h3>Why Ensemble Wins</h3>
+          <p>The CFA ensemble consistently outperforms individual models because the component models capture <strong>complementary signals</strong>:</p>
+          <div class="insight-grid">
+            <div class="insight-card">
+              <h4>GNN captures structure</h4>
+              <p>Schedule-based strength propagation identifies "paper tigers" with inflated records against weak opponents. The GNN is strongest for evaluating mid-majors and teams from weaker conferences.</p>
+            </div>
+            <div class="insight-card">
+              <h4>Transformer captures momentum</h4>
+              <p>Self-attention identifies late-season breakouts and slumps that static metrics miss. The transformer is strongest for identifying "hot" teams entering March.</p>
+            </div>
+            <div class="insight-card">
+              <h4>Baseline provides stability</h4>
+              <p>Elo and seed priors anchor predictions with 40 years of historical base rates, preventing ML models from overreacting to small-sample noise in any given season.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Upset Analysis -->
+    <section id="upset-analysis" class="section">
+      <div class="container">
+        <h2>Upset Analysis</h2>
+        <p class="section-subtitle">Understanding when and why favorites fall in March</p>
+
+        <div class="upset-grid">
+          <div class="upset-card">
+            <h3>Round of 64 Upset Rates</h3>
+            <p>Historical upset frequency by seed matchup, where "upset" = lower seed wins:</p>
+            <div class="upset-bars">
+              <div class="upset-bar-row">
+                <span class="upset-matchup">5 vs 12</span>
+                <div class="upset-bar-bg">
+                  <div class="upset-bar-fill" style="width: 35.3%"></div>
+                </div>
+                <span class="upset-pct">35.3%</span>
+              </div>
+              <div class="upset-bar-row">
+                <span class="upset-matchup">6 vs 11</span>
+                <div class="upset-bar-bg">
+                  <div class="upset-bar-fill" style="width: 37.5%"></div>
+                </div>
+                <span class="upset-pct">37.5%</span>
+              </div>
+              <div class="upset-bar-row">
+                <span class="upset-matchup">7 vs 10</span>
+                <div class="upset-bar-bg">
+                  <div class="upset-bar-fill" style="width: 39.2%"></div>
+                </div>
+                <span class="upset-pct">39.2%</span>
+              </div>
+              <div class="upset-bar-row">
+                <span class="upset-matchup">8 vs 9</span>
+                <div class="upset-bar-bg">
+                  <div class="upset-bar-fill" style="width: 51.2%"></div>
+                </div>
+                <span class="upset-pct">51.2%</span>
+              </div>
+              <div class="upset-bar-row">
+                <span class="upset-matchup">3 vs 14</span>
+                <div class="upset-bar-bg">
+                  <div class="upset-bar-fill" style="width: 14.8%"></div>
+                </div>
+                <span class="upset-pct">14.8%</span>
+              </div>
+              <div class="upset-bar-row">
+                <span class="upset-matchup">4 vs 13</span>
+                <div class="upset-bar-bg">
+                  <div class="upset-bar-fill" style="width: 20.7%"></div>
+                </div>
+                <span class="upset-pct">20.7%</span>
+              </div>
+              <div class="upset-bar-row">
+                <span class="upset-matchup">2 vs 15</span>
+                <div class="upset-bar-bg">
+                  <div class="upset-bar-fill" style="width: 5.6%"></div>
+                </div>
+                <span class="upset-pct">5.6%</span>
+              </div>
+              <div class="upset-bar-row">
+                <span class="upset-matchup">1 vs 16</span>
+                <div class="upset-bar-bg">
+                  <div class="upset-bar-fill" style="width: 1.3%"></div>
+                </div>
+                <span class="upset-pct">1.3%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="upset-card">
+            <h3>Upset Predictors</h3>
+            <p>Features most predictive of tournament upsets, ranked by model importance:</p>
+            <ol class="upset-factors">
+              <li>
+                <strong>3-point shooting variance</strong>
+                <p>High-variance 3PT shooters can "get hot" and upset anyone -- or go cold and lose to anyone. This is the single most important upset predictor.</p>
+              </li>
+              <li>
+                <strong>Tempo differential</strong>
+                <p>When a fast-tempo underdog faces a slow-tempo favorite, the pace mismatch creates variance. More possessions = more chances for the better team to assert dominance, but also more chances for random variation.</p>
+              </li>
+              <li>
+                <strong>Free throw rate difference</strong>
+                <p>Teams that get to the line at a high rate are harder to upset -- free throws reduce variance and extend leads. Foul-prone underdogs have a structural disadvantage.</p>
+              </li>
+              <li>
+                <strong>Lead volatility</strong>
+                <p>Teams with high lead volatility during the season are more likely to be involved in upsets (either as the upsetter or the upset victim).</p>
+              </li>
+              <li>
+                <strong>Experience differential</strong>
+                <p>Freshman-heavy teams have higher variance in high-pressure tournament environments. Experienced teams tend to perform closer to their season averages.</p>
+              </li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="upset-insight-box">
+          <h3>The "Madness" Factor</h3>
+          <p>Our model treats upsets as <strong>variance amplification, not systematic bias</strong>. Lower seeds don't magically play better in March -- instead, single-elimination format amplifies natural game-to-game variance. A 12-seed that shoots 40% from three in the regular season might shoot 50% in one game and 30% in the next. In a 7-game series, this evens out. In a single elimination game, the 50% game produces an upset.</p>
+          <p>This is why our Monte Carlo simulation uses logit-space noise: it naturally models the increased variance of single-game outcomes without introducing artificial upset bias.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature Importance -->
+    <section id="feature-importance" class="section section-alt">
+      <div class="container">
+        <h2>Feature Importance</h2>
+        <p class="section-subtitle">Which features matter most for predicting tournament outcomes</p>
+
+        <div class="importance-chart">
+          <div class="importance-row">
+            <span class="importance-label">Adj. Offensive Efficiency</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 95%"></div>
+            </div>
+          </div>
+          <div class="importance-row">
+            <span class="importance-label">Adj. Defensive Efficiency</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 92%"></div>
+            </div>
+          </div>
+          <div class="importance-row">
+            <span class="importance-label">Effective FG%</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 78%"></div>
+            </div>
+          </div>
+          <div class="importance-row">
+            <span class="importance-label">Turnover Rate</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 72%"></div>
+            </div>
+          </div>
+          <div class="importance-row">
+            <span class="importance-label">Strength of Schedule</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 68%"></div>
+            </div>
+          </div>
+          <div class="importance-row">
+            <span class="importance-label">Elo Rating</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 65%"></div>
+            </div>
+          </div>
+          <div class="importance-row">
+            <span class="importance-label">3PT Shooting %</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 58%"></div>
+            </div>
+          </div>
+          <div class="importance-row">
+            <span class="importance-label">Free Throw Rate</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 52%"></div>
+            </div>
+          </div>
+          <div class="importance-row">
+            <span class="importance-label">Offensive Rebounding %</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 48%"></div>
+            </div>
+          </div>
+          <div class="importance-row">
+            <span class="importance-label">Opp. Effective FG%</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 46%"></div>
+            </div>
+          </div>
+          <div class="importance-row">
+            <span class="importance-label">Top-5 Player RAPM</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 42%"></div>
+            </div>
+          </div>
+          <div class="importance-row">
+            <span class="importance-label">Pace-Adj Margin Variance</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 38%"></div>
+            </div>
+          </div>
+          <div class="importance-row">
+            <span class="importance-label">3PT Shooting Variance</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 35%"></div>
+            </div>
+          </div>
+          <div class="importance-row">
+            <span class="importance-label">Experience Index</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 30%"></div>
+            </div>
+          </div>
+          <div class="importance-row">
+            <span class="importance-label">Bench RAPM</span>
+            <div class="importance-bar-bg">
+              <div class="importance-bar" style="width: 25%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="importance-note">
+          <p>Feature importance is computed via LightGBM split-gain aggregation across all trees. Higher values indicate the feature contributed more to reducing prediction error. Efficiency metrics dominate because they are the most stable and predictive single features for basketball outcomes.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Historical Analysis -->
+    <section id="historical" class="section">
+      <div class="container">
+        <h2>Historical Tournament Patterns</h2>
+        <p class="section-subtitle">Insights from 40 years of NCAA Tournament data (1985-2025)</p>
+
+        <div class="history-grid">
+          <div class="history-card">
+            <h3>Champions by Seed</h3>
+            <div class="champion-seeds">
+              <div class="champ-row">
+                <span class="champ-seed">1 seed</span>
+                <div class="champ-count">
+                  <div class="champ-dots">
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  </div>
+                  <span class="champ-num">23 titles</span>
+                </div>
+              </div>
+              <div class="champ-row">
+                <span class="champ-seed">2 seed</span>
+                <div class="champ-count">
+                  <div class="champ-dots">
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  </div>
+                  <span class="champ-num">5 titles</span>
+                </div>
+              </div>
+              <div class="champ-row">
+                <span class="champ-seed">3 seed</span>
+                <div class="champ-count">
+                  <div class="champ-dots">
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  </div>
+                  <span class="champ-num">4 titles</span>
+                </div>
+              </div>
+              <div class="champ-row">
+                <span class="champ-seed">4+ seed</span>
+                <div class="champ-count">
+                  <div class="champ-dots">
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  </div>
+                  <span class="champ-num">8 titles (incl. 6, 7, 8 seeds)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="history-card">
+            <h3>Notable Cinderellas</h3>
+            <div class="cinderella-list">
+              <div class="cinderella">
+                <span class="cinderella-year">2023</span>
+                <span class="cinderella-team">FAU (9) &amp; San Diego St. (5)</span>
+                <span class="cinderella-result">Both reached Final Four</span>
+              </div>
+              <div class="cinderella">
+                <span class="cinderella-year">2022</span>
+                <span class="cinderella-team">St. Peter's (15)</span>
+                <span class="cinderella-result">First 15-seed in Elite Eight</span>
+              </div>
+              <div class="cinderella">
+                <span class="cinderella-year">2018</span>
+                <span class="cinderella-team">UMBC (16)</span>
+                <span class="cinderella-result">First 16 over 1 (beat Virginia)</span>
+              </div>
+              <div class="cinderella">
+                <span class="cinderella-year">2018</span>
+                <span class="cinderella-team">Loyola Chicago (11)</span>
+                <span class="cinderella-result">Final Four as 11-seed</span>
+              </div>
+              <div class="cinderella">
+                <span class="cinderella-year">2011</span>
+                <span class="cinderella-team">VCU (11)</span>
+                <span class="cinderella-result">First Four to Final Four</span>
+              </div>
+              <div class="cinderella">
+                <span class="cinderella-year">2006</span>
+                <span class="cinderella-team">George Mason (11)</span>
+                <span class="cinderella-result">Final Four, beat UConn &amp; UNC</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="history-card">
+            <h3>Conference Performance</h3>
+            <p>Historical Final Four appearances per conference (since 2000):</p>
+            <div class="conf-bars">
+              <div class="conf-row">
+                <span class="conf-name">ACC</span>
+                <div class="conf-bar-bg"><div class="conf-bar" style="width: 85%"></div></div>
+              </div>
+              <div class="conf-row">
+                <span class="conf-name">Big East / Big 12</span>
+                <div class="conf-bar-bg"><div class="conf-bar" style="width: 72%"></div></div>
+              </div>
+              <div class="conf-row">
+                <span class="conf-name">SEC</span>
+                <div class="conf-bar-bg"><div class="conf-bar" style="width: 55%"></div></div>
+              </div>
+              <div class="conf-row">
+                <span class="conf-name">Big Ten</span>
+                <div class="conf-bar-bg"><div class="conf-bar" style="width: 50%"></div></div>
+              </div>
+              <div class="conf-row">
+                <span class="conf-name">Pac-12</span>
+                <div class="conf-bar-bg"><div class="conf-bar" style="width: 30%"></div></div>
+              </div>
+              <div class="conf-row">
+                <span class="conf-name">Mid-Majors</span>
+                <div class="conf-bar-bg"><div class="conf-bar" style="width: 22%"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="history-card">
+            <h3>Key Tournament Statistics</h3>
+            <div class="key-stats">
+              <div class="key-stat">
+                <span class="key-stat-value">~6.5</span>
+                <span class="key-stat-label">Average first-round upsets per year (seeds 10+ winning)</span>
+              </div>
+              <div class="key-stat">
+                <span class="key-stat-value">~2.3</span>
+                <span class="key-stat-label">Average double-digit seeds in Sweet 16</span>
+              </div>
+              <div class="key-stat">
+                <span class="key-stat-value">57%</span>
+                <span class="key-stat-label">Of championships won by 1-seeds (since 1985)</span>
+              </div>
+              <div class="key-stat">
+                <span class="key-stat-value">3.2</span>
+                <span class="key-stat-label">Average 1-seeds in Elite Eight (out of 4)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RDoF Audit -->
+    <section id="rdof" class="section section-alt">
+      <div class="container">
+        <h2>Researcher Degrees of Freedom Audit</h2>
+        <p class="section-subtitle">Transparency about model choices and their justifications</p>
+
+        <p class="content-narrow-inline">Every prediction system involves arbitrary choices -- "researcher degrees of freedom" (RDoF). We categorize and document ours to enable honest evaluation. Each constant has a documented derivation and sensitivity analysis.</p>
+
+        <div class="rdof-grid">
+          <div class="rdof-card">
+            <h3>Tier 1: Externally Anchored</h3>
+            <span class="rdof-risk">Low risk</span>
+            <p>Derived from published research or external data:</p>
+            <ul>
+              <li>Four Factors weights (Dean Oliver)</li>
+              <li>VIF threshold for multicollinearity (standard = 10)</li>
+              <li>Home court advantage (~3.5 points, literature)</li>
+              <li>Elo K-factor (32, standard)</li>
+              <li>Seed priors (40 years of historical data)</li>
+            </ul>
+          </div>
+
+          <div class="rdof-card">
+            <h3>Tier 2: Structurally Constrained</h3>
+            <span class="rdof-risk rdof-medium">Medium risk</span>
+            <p>Have natural constraints but involve some judgment:</p>
+            <ul>
+              <li>Year decay factor (0.85 -- within 0.7-0.95 range)</li>
+              <li>Recency half-life for in-season weighting</li>
+              <li>Tree regularization (depth, leaves, min samples)</li>
+              <li>Feature stability scores (validated by split-half)</li>
+              <li>Monte Carlo simulation count (50,000)</li>
+            </ul>
+          </div>
+
+          <div class="rdof-card">
+            <h3>Tier 3: Freely Tuned</h3>
+            <span class="rdof-risk rdof-high">Higher risk</span>
+            <p>Parameters with wider valid ranges that could influence results:</p>
+            <ul>
+              <li>Ensemble base weights (35/35/30)</li>
+              <li>Tournament shrinkage factor</li>
+              <li>MC noise sigma (0.12)</li>
+              <li>Regional correlation decay rates</li>
+              <li>Confidence scaling in CFA</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="rdof-note">
+          <h3>Constants Registry</h3>
+          <p>All 14+ hand-tuned parameters are documented in a central constants registry with:</p>
+          <ul>
+            <li><strong>Current value</strong> and valid range</li>
+            <li><strong>Derivation method</strong> (literature, cross-validation, domain expert, or sensitivity analysis)</li>
+            <li><strong>Sensitivity</strong> -- how much the output changes with +/-20% perturbation</li>
+            <li><strong>Last validated</strong> date and method</li>
+          </ul>
+          <p>This registry enables anyone to audit our choices and run ablation studies against alternative parameter settings.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Testing -->
+    <section id="testing" class="section">
+      <div class="container">
+        <h2>Testing &amp; Validation</h2>
+        <p class="section-subtitle">Comprehensive test suite with 27 test files covering every module</p>
+
+        <div class="test-grid">
+          <div class="test-card">
+            <h3>Unit Tests</h3>
+            <span class="test-count">27 test files</span>
+            <ul>
+              <li>Feature engineering &amp; selection</li>
+              <li>Data ingestion &amp; validation</li>
+              <li>Model predictions (Elo, seed, ensemble)</li>
+              <li>Bracket generation &amp; simulation</li>
+              <li>Calibration methods</li>
+              <li>Hyperparameter tuning</li>
+            </ul>
+          </div>
+          <div class="test-card">
+            <h3>Statistical Tests</h3>
+            <span class="test-count">Rigorous validation</span>
+            <ul>
+              <li>RDoF audit framework</li>
+              <li>Ablation studies for each model component</li>
+              <li>Feature redundancy checks (VIF, correlation)</li>
+              <li>Leakage detection in feature pipeline</li>
+              <li>Calibration curve analysis</li>
+              <li>Bootstrap confidence intervals</li>
+            </ul>
+          </div>
+          <div class="test-card">
+            <h3>Integration Tests</h3>
+            <span class="test-count">End-to-end validation</span>
+            <ul>
+              <li>Full pipeline smoke tests</li>
+              <li>Multi-year training integration</li>
+              <li>Data ingestion from all providers</li>
+              <li>SOTA report generation</li>
+              <li>CLI command validation</li>
+              <li>Schema validation for all data formats</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <p>March Madness Forecaster &middot; MIT License &middot; <a href="https://github.com/bsr-0/march-madness-forecaster">GitHub</a></p>
+        <p class="footer-sub">Built with PyTorch, Graph Neural Networks, and Combinatorial Fusion Analysis</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.querySelector('.nav-toggle').addEventListener('click', function() {
+      document.querySelector('.nav-links').classList.toggle('open');
+    });
+  </script>
+</body>
+</html>

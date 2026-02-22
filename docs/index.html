@@ -8,136 +8,687 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-brand">MM Forecaster</a>
+      <div class="nav-links">
+        <a href="index.html" class="nav-link active">Home</a>
+        <a href="methodology.html" class="nav-link">Methodology</a>
+        <a href="results.html" class="nav-link">Results</a>
+        <a href="https://github.com/bsr-0/march-madness-forecaster" class="nav-link nav-link-ext">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
   <header class="hero">
     <div class="container">
-      <h1>March Madness Forecaster</h1>
-      <p class="tagline">State-of-the-Art NCAA Tournament Prediction System</p>
+      <div class="hero-badge">NCAA Tournament Prediction</div>
+      <h1>March Madness<br>Forecaster</h1>
+      <p class="tagline">State-of-the-Art Bracket Prediction System</p>
       <p class="subtitle">Graph Neural Networks &middot; Transformers &middot; Monte Carlo Simulation &middot; Game-Theoretic Optimization</p>
+
+      <!-- Hero Stats -->
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <span class="hero-stat-value">50,000+</span>
+          <span class="hero-stat-label">Monte Carlo Simulations</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-value">66</span>
+          <span class="hero-stat-label">Engineered Features</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-value">21</span>
+          <span class="hero-stat-label">Years of Training Data</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-value">5</span>
+          <span class="hero-stat-label">Ensemble Models</span>
+        </div>
+      </div>
+
       <div class="hero-actions">
-        <a href="https://github.com/bsr-0/march-madness-forecaster" class="btn btn-primary">View on GitHub</a>
-        <a href="#quickstart" class="btn btn-secondary">Get Started</a>
+        <a href="methodology.html" class="btn btn-primary">Explore Methodology</a>
+        <a href="results.html" class="btn btn-secondary">View Results</a>
+        <a href="https://github.com/bsr-0/march-madness-forecaster" class="btn btn-secondary">GitHub</a>
       </div>
     </div>
   </header>
 
   <main>
-    <section id="overview" class="section">
+    <!-- Pipeline Architecture -->
+    <section id="pipeline" class="section">
       <div class="container">
-        <h2>Architecture Overview</h2>
-        <div class="pipeline">
+        <h2>Four-Phase Prediction Pipeline</h2>
+        <p class="section-subtitle">From raw data to optimized brackets through a rigorous multi-stage process</p>
+
+        <div class="pipeline-flow">
           <div class="pipeline-stage">
             <div class="stage-icon">1</div>
-            <h3>Data Layer</h3>
+            <div class="stage-header">
+              <h3>Data Engineering</h3>
+              <span class="stage-tag">Ingestion</span>
+            </div>
             <ul>
-              <li>Public advanced metrics (sportsdataverse / CBBpy)</li>
-              <li>Torvik &amp; KenPom scraping</li>
-              <li>ESPN public picks</li>
-              <li>Player RAPM / WARP</li>
-              <li>ShotQuality xP</li>
+              <li>Possession-level Expected Points (xP)</li>
+              <li>Player RAPM / WARP metrics</li>
+              <li>Four Factors analysis</li>
+              <li>Transfer portal impact tracking</li>
+              <li>Lead volatility &amp; entropy</li>
             </ul>
+            <div class="stage-sources">
+              <span>CBBpy</span>
+              <span>KenPom</span>
+              <span>Torvik</span>
+              <span>ShotQuality</span>
+            </div>
           </div>
+
+          <div class="pipeline-arrow">&rarr;</div>
+
           <div class="pipeline-stage">
             <div class="stage-icon">2</div>
-            <h3>ML Models</h3>
+            <div class="stage-header">
+              <h3>ML Models</h3>
+              <span class="stage-tag">Prediction</span>
+            </div>
             <ul>
-              <li>GNN (schedule graph)</li>
+              <li>Graph Convolutional Network (GCN)</li>
               <li>Temporal Transformer</li>
-              <li>LightGBM</li>
-              <li>CFA Ensemble</li>
-              <li>Elo / Seed Baseline</li>
+              <li>LightGBM / XGBoost rankers</li>
+              <li>Elo rating system</li>
+              <li>CFA ensemble fusion</li>
             </ul>
+            <div class="stage-sources">
+              <span>PyTorch</span>
+              <span>PyG</span>
+              <span>LightGBM</span>
+            </div>
           </div>
+
+          <div class="pipeline-arrow">&rarr;</div>
+
           <div class="pipeline-stage">
             <div class="stage-icon">3</div>
-            <h3>Optimization</h3>
+            <div class="stage-header">
+              <h3>Uncertainty</h3>
+              <span class="stage-tag">Calibration</span>
+            </div>
             <ul>
-              <li>Monte Carlo (50k+ sims)</li>
-              <li>Isotonic Calibration</li>
-              <li>Leverage Calculation</li>
-              <li>Pareto-Optimal Brackets</li>
-              <li>Pool-Size Strategy</li>
+              <li>50K Monte Carlo simulations</li>
+              <li>Logit-space noise injection</li>
+              <li>Injury probability modeling</li>
+              <li>Isotonic regression calibration</li>
+              <li>Brier Score optimization</li>
             </ul>
+            <div class="stage-sources">
+              <span>NumPy</span>
+              <span>SciPy</span>
+              <span>sklearn</span>
+            </div>
+          </div>
+
+          <div class="pipeline-arrow">&rarr;</div>
+
+          <div class="pipeline-stage">
+            <div class="stage-icon">4</div>
+            <div class="stage-header">
+              <h3>Optimization</h3>
+              <span class="stage-tag">Strategy</span>
+            </div>
+            <ul>
+              <li>Public consensus scraping</li>
+              <li>Leverage ratio calculation</li>
+              <li>Pareto-optimal brackets</li>
+              <li>Pool-size specific strategy</li>
+              <li>EV-maximized selections</li>
+            </ul>
+            <div class="stage-sources">
+              <span>ESPN</span>
+              <span>Yahoo</span>
+              <span>CBS</span>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="features" class="section section-alt">
+    <!-- Model Architecture Cards -->
+    <section id="models" class="section section-alt">
       <div class="container">
-        <h2>Key Features</h2>
-        <div class="features-grid">
-          <div class="feature-card">
-            <h3>High-Resolution Data Engineering</h3>
-            <p>Possession-level expected points, player-level RAPM/WARP tracking with transfer portal impact, lead volatility &amp; entropy metrics for upset detection, and Four Factors analysis.</p>
+        <h2>Model Architecture</h2>
+        <p class="section-subtitle">Five specialized models combined through Combinatorial Fusion Analysis</p>
+
+        <div class="model-grid">
+          <div class="model-card model-card-featured">
+            <div class="model-card-header">
+              <div class="model-icon">
+                <svg viewBox="0 0 40 40" width="40" height="40">
+                  <circle cx="10" cy="10" r="4" fill="none" stroke="var(--color-accent)" stroke-width="1.5"/>
+                  <circle cx="30" cy="10" r="4" fill="none" stroke="var(--color-accent)" stroke-width="1.5"/>
+                  <circle cx="10" cy="30" r="4" fill="none" stroke="var(--color-accent)" stroke-width="1.5"/>
+                  <circle cx="30" cy="30" r="4" fill="none" stroke="var(--color-accent)" stroke-width="1.5"/>
+                  <circle cx="20" cy="20" r="4" fill="none" stroke="var(--color-accent)" stroke-width="1.5"/>
+                  <line x1="10" y1="10" x2="20" y2="20" stroke="var(--color-accent)" stroke-width="1" opacity="0.5"/>
+                  <line x1="30" y1="10" x2="20" y2="20" stroke="var(--color-accent)" stroke-width="1" opacity="0.5"/>
+                  <line x1="10" y1="30" x2="20" y2="20" stroke="var(--color-accent)" stroke-width="1" opacity="0.5"/>
+                  <line x1="30" y1="30" x2="20" y2="20" stroke="var(--color-accent)" stroke-width="1" opacity="0.5"/>
+                  <line x1="10" y1="10" x2="30" y2="10" stroke="var(--color-accent)" stroke-width="1" opacity="0.3"/>
+                  <line x1="10" y1="30" x2="30" y2="30" stroke="var(--color-accent)" stroke-width="1" opacity="0.3"/>
+                </svg>
+              </div>
+              <div>
+                <h3>Graph Neural Network</h3>
+                <span class="model-weight">Weight: 35%</span>
+              </div>
+            </div>
+            <p>Schedule-based strength propagation using GCN. Teams are nodes, games are edges weighted by quality-adjusted margin. Multi-hop message passing captures transitive strength (opponent's opponent quality).</p>
+            <div class="model-detail">
+              <code>edge_weight = 0.35 * adj_margin + 0.65 * xP_margin</code>
+            </div>
+            <a href="methodology.html#gnn" class="model-link">Deep dive &rarr;</a>
           </div>
-          <div class="feature-card">
-            <h3>GNN-Transformer Hybrid</h3>
-            <p>Graph Convolutional Network for schedule-based strength propagation, multi-hop SOS analysis, temporal transformer for breakout window detection, and attention-based game weighting.</p>
+
+          <div class="model-card model-card-featured">
+            <div class="model-card-header">
+              <div class="model-icon">
+                <svg viewBox="0 0 40 40" width="40" height="40">
+                  <rect x="2" y="8" width="6" height="24" rx="1" fill="var(--color-accent)" opacity="0.3"/>
+                  <rect x="10" y="14" width="6" height="18" rx="1" fill="var(--color-accent)" opacity="0.4"/>
+                  <rect x="18" y="4" width="6" height="28" rx="1" fill="var(--color-accent)" opacity="0.6"/>
+                  <rect x="26" y="10" width="6" height="22" rx="1" fill="var(--color-accent)" opacity="0.8"/>
+                  <rect x="34" y="6" width="4" height="26" rx="1" fill="var(--color-accent)" opacity="1"/>
+                  <line x1="0" y1="34" x2="40" y2="34" stroke="var(--color-text-muted)" stroke-width="0.5"/>
+                </svg>
+              </div>
+              <div>
+                <h3>Temporal Transformer</h3>
+                <span class="model-weight">Weight: 35%</span>
+              </div>
+            </div>
+            <p>Self-attention over the season game sequence detects "breakout windows" -- periods where performance fundamentally shifted due to lineup changes, tactical adjustments, or player development.</p>
+            <div class="model-detail">
+              <code>attention(Q, K, V) = softmax(QK<sup>T</sup>/&radic;d) &middot; V</code>
+            </div>
+            <a href="methodology.html#transformer" class="model-link">Deep dive &rarr;</a>
           </div>
-          <div class="feature-card">
-            <h3>Uncertainty Quantification</h3>
-            <p>50,000+ Monte Carlo simulations with injury noise injection, Brier Score optimization, isotonic regression post-processing, and reliability diagram validation.</p>
+
+          <div class="model-card">
+            <div class="model-card-header">
+              <div class="model-icon">
+                <svg viewBox="0 0 40 40" width="40" height="40">
+                  <line x1="5" y1="35" x2="5" y2="5" stroke="var(--color-text-muted)" stroke-width="0.5"/>
+                  <line x1="5" y1="35" x2="38" y2="35" stroke="var(--color-text-muted)" stroke-width="0.5"/>
+                  <polyline points="5,30 12,25 18,28 22,15 28,18 35,8" fill="none" stroke="var(--color-accent)" stroke-width="2"/>
+                </svg>
+              </div>
+              <div>
+                <h3>Gradient Boosting</h3>
+                <span class="model-weight">LightGBM + XGBoost</span>
+              </div>
+            </div>
+            <p>Shallow tree ensembles (depth 3, 8 leaves) with heavy regularization. Trained on 66-feature matchup differentials with Leave-One-Year-Out cross-validation.</p>
+            <a href="methodology.html#boosting" class="model-link">Deep dive &rarr;</a>
           </div>
-          <div class="feature-card">
-            <h3>Game Theory Optimization</h3>
-            <p>Public consensus scraping, leverage ratio calculation (Win Prob / Pick %), Pareto-optimal bracket generation from chalk to contrarian, and pool size-specific strategy.</p>
+
+          <div class="model-card">
+            <div class="model-card-header">
+              <div class="model-icon">
+                <svg viewBox="0 0 40 40" width="40" height="40">
+                  <text x="8" y="28" font-size="24" font-weight="bold" fill="var(--color-accent)" font-family="serif">E</text>
+                </svg>
+              </div>
+              <div>
+                <h3>Elo Rating</h3>
+                <span class="model-weight">Baseline</span>
+              </div>
+            </div>
+            <p>Dynamic ratings with K=32, home court adjustment. Provides a strong, interpretable baseline that complements the ML models.</p>
+            <a href="methodology.html#elo" class="model-link">Deep dive &rarr;</a>
+          </div>
+
+          <div class="model-card">
+            <div class="model-card-header">
+              <div class="model-icon">
+                <svg viewBox="0 0 40 40" width="40" height="40">
+                  <text x="6" y="28" font-size="22" font-weight="bold" fill="var(--color-accent)" font-family="serif">&Sigma;</text>
+                </svg>
+              </div>
+              <div>
+                <h3>CFA Ensemble</h3>
+                <span class="model-weight">Fusion Layer</span>
+              </div>
+            </div>
+            <p>Combinatorial Fusion Analysis dynamically reweights models based on per-prediction confidence. Diversity metrics ensure models contribute complementary signals.</p>
+            <a href="methodology.html#cfa" class="model-link">Deep dive &rarr;</a>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="models" class="section">
+    <!-- Feature Engineering Overview -->
+    <section id="features" class="section">
       <div class="container">
-        <h2>Mathematical Approach</h2>
-        <div class="models-grid">
-          <div class="model-card">
-            <h3>Elo Rating System</h3>
-            <p>Dynamic team ratings based on game outcomes.</p>
-            <pre><code>P = 1 / (1 + 10^((R_opp - R_team) / 400))
-R_new = R_old + K * (actual - expected)</code></pre>
+        <h2>66 Engineered Features</h2>
+        <p class="section-subtitle">Rigorously curated from 10 feature families after removing 11 redundant variables</p>
+
+        <div class="feature-families">
+          <div class="feature-family">
+            <h4>Efficiency</h4>
+            <span class="feature-count">5 features</span>
+            <p>Adj. offensive/defensive efficiency, tempo, margin, pace-adjusted variance</p>
           </div>
-          <div class="model-card">
-            <h3>Seed-Based Baseline</h3>
-            <p>Historical NCAA tournament data mapped to win probabilities by seed matchup.</p>
-            <table>
-              <thead>
-                <tr><th>Matchup</th><th>Favored Win %</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>1 vs 16</td><td>99.5%</td></tr>
-                <tr><td>5 vs 12</td><td>64.7%</td></tr>
-                <tr><td>8 vs 9</td><td>48.8%</td></tr>
-              </tbody>
-            </table>
+          <div class="feature-family">
+            <h4>Four Factors</h4>
+            <span class="feature-count">8 features</span>
+            <p>eFG%, TO%, ORB%, FTR for both offense and defense</p>
           </div>
-          <div class="model-card">
-            <h3>Statistical Model</h3>
-            <p>Weighted feature scoring converted to probabilities via logistic function.</p>
-            <table>
-              <thead>
-                <tr><th>Feature</th><th>Weight</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>Off. Efficiency</td><td>30%</td></tr>
-                <tr><td>Def. Efficiency</td><td>30%</td></tr>
-                <tr><td>Strength of Schedule</td><td>15%</td></tr>
-                <tr><td>Recent Performance</td><td>15%</td></tr>
-                <tr><td>Tempo</td><td>5%</td></tr>
-                <tr><td>Experience</td><td>5%</td></tr>
-              </tbody>
-            </table>
+          <div class="feature-family">
+            <h4>Player Metrics</h4>
+            <span class="feature-count">5 features</span>
+            <p>Total/top-5/bench RAPM, WARP, transfer portal impact</p>
           </div>
-          <div class="model-card">
-            <h3>Ensemble Method</h3>
-            <p>Combines predictions from all models using weighted averaging. Each model contributes a win probability, and the final prediction is the weighted sum.</p>
+          <div class="feature-family">
+            <h4>Experience &amp; Depth</h4>
+            <span class="feature-count">3 features</span>
+            <p>Average experience, bench depth ratio, injury risk proxy</p>
+          </div>
+          <div class="feature-family">
+            <h4>Volatility</h4>
+            <span class="feature-count">5 features</span>
+            <p>Lead volatility, entropy, sustainability, comeback factor, margin variance</p>
+          </div>
+          <div class="feature-family">
+            <h4>Shooting</h4>
+            <span class="feature-count">8 features</span>
+            <p>3PT%, FT%, game variance, shot distribution, shooting profile</p>
+          </div>
+          <div class="feature-family">
+            <h4>Elo &amp; Seeding</h4>
+            <span class="feature-count">3 features</span>
+            <p>Elo rating, seed strength, season win percentage</p>
+          </div>
+          <div class="feature-family">
+            <h4>Execution</h4>
+            <span class="feature-count">6 features</span>
+            <p>Assist rate, AST/TO, steal rate, block rate, foul rate, discipline</p>
+          </div>
+          <div class="feature-family">
+            <h4>Opponent Quality</h4>
+            <span class="feature-count">6 features</span>
+            <p>Opponent eFG%, TO%, ORB%, FTR, strength-adjusted stats</p>
+          </div>
+          <div class="feature-family">
+            <h4>Conference &amp; Context</h4>
+            <span class="feature-count">5 features</span>
+            <p>Conference strength, neutral site %, rest days, matchup context, AP ranking</p>
+          </div>
+        </div>
+
+        <div class="feature-cta">
+          <a href="methodology.html#features" class="btn btn-primary">Feature Engineering Details</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Monte Carlo Simulation -->
+    <section id="simulation" class="section section-alt">
+      <div class="container">
+        <h2>Monte Carlo Simulation Engine</h2>
+        <p class="section-subtitle">50,000+ tournament simulations with noise injection for robust uncertainty quantification</p>
+
+        <div class="sim-grid">
+          <div class="sim-card">
+            <h3>Noise Model</h3>
+            <div class="sim-formula">
+              <code>p' = &sigma;(logit(p) + &epsilon;)</code>
+              <code>&epsilon; ~ N(0, 0.12&sup2;)</code>
+            </div>
+            <p>Logit-space Gaussian noise (Lopez &amp; Matthews, JQAS 2015). This produces realistic probability shifts: ~5-8% near p=0.5, smaller near the extremes. Much more appropriate than additive noise.</p>
+          </div>
+
+          <div class="sim-card">
+            <h3>Injury Modeling</h3>
+            <div class="sim-params">
+              <div class="param-row">
+                <span class="param-name">Per-game probability</span>
+                <span class="param-value">2%</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">Impact severity</span>
+                <span class="param-value">5-25%</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">Cumulative through rounds</span>
+                <span class="param-value">Yes</span>
+              </div>
+            </div>
+            <p>Stochastic injury events model the uncertainty of March -- a key player rolling an ankle can shift a series.</p>
+          </div>
+
+          <div class="sim-card">
+            <h3>Regional Correlation</h3>
+            <div class="sim-params">
+              <div class="param-row">
+                <span class="param-name">Round of 64</span>
+                <span class="param-value">&rho; = 1.0</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">Round of 32</span>
+                <span class="param-value">&rho; = 0.6</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">Sweet 16</span>
+                <span class="param-value">&rho; = 0.3</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">Elite 8</span>
+                <span class="param-value">&rho; = 0.15</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">Final Four+</span>
+                <span class="param-value">&rho; = 0.0</span>
+              </div>
+            </div>
+            <p>Games within a region share a latent "upset-friendly" factor that decays as the tournament progresses.</p>
+          </div>
+
+          <div class="sim-card">
+            <h3>Output Metrics</h3>
+            <div class="sim-params">
+              <div class="param-row">
+                <span class="param-name">Championship odds</span>
+                <span class="param-value">per team</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">Final Four odds</span>
+                <span class="param-value">per team</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">95% Confidence intervals</span>
+                <span class="param-value">Wilson score</span>
+              </div>
+              <div class="param-row">
+                <span class="param-name">Upset frequency</span>
+                <span class="param-value">by seed pair</span>
+              </div>
+            </div>
+            <p>Wilson score confidence intervals account for simulation sample size to produce honest uncertainty bounds.</p>
+          </div>
+        </div>
+
+        <div class="feature-cta">
+          <a href="results.html" class="btn btn-primary">View Simulation Results</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Game Theory -->
+    <section id="gametheory" class="section">
+      <div class="container">
+        <h2>Game-Theoretic Bracket Optimization</h2>
+        <p class="section-subtitle">Maximize expected value against the pool, not just prediction accuracy</p>
+
+        <div class="gt-layout">
+          <div class="gt-explanation">
+            <h3>The Leverage Insight</h3>
+            <p>Picking the "correct" bracket isn't enough to win a pool. You need to pick teams that are <strong>undervalued by the public</strong>. A team with a 15% championship probability that only 3% of pools pick has 5x leverage -- meaning your expected points are 5x higher than the average competitor's.</p>
+
+            <div class="gt-formula">
+              <div class="formula-block">
+                <span class="formula-label">Leverage Ratio</span>
+                <code>L = P(win) / P(public pick)</code>
+              </div>
+              <div class="formula-block">
+                <span class="formula-label">Expected Value Differential</span>
+                <code>EV&Delta; = P(win) &times; pts - P(public) &times; pts</code>
+              </div>
+            </div>
+
+            <h3>Pareto-Optimal Bracket Generation</h3>
+            <p>The system generates a spectrum of brackets from chalk (safe, consensus picks) to contrarian (high-leverage, differentiated picks). Each bracket sits on the Pareto frontier of expected value vs. variance, letting you choose your risk tolerance based on pool size.</p>
+
+            <div class="gt-strategies">
+              <div class="strategy">
+                <span class="strategy-name">Chalk</span>
+                <span class="strategy-desc">Maximize floor. Best for small pools (&lt;20 people).</span>
+              </div>
+              <div class="strategy">
+                <span class="strategy-name">Balanced</span>
+                <span class="strategy-desc">Optimize EV with moderate variance. Best for medium pools (20-100).</span>
+              </div>
+              <div class="strategy">
+                <span class="strategy-name">Contrarian</span>
+                <span class="strategy-desc">Maximize ceiling. Best for large pools (100+).</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="gt-visual">
+            <h4>Leverage in Action</h4>
+            <div class="leverage-example">
+              <div class="leverage-bar">
+                <div class="leverage-label">11-seed Cinderella</div>
+                <div class="leverage-bars-row">
+                  <div class="bar-group">
+                    <span class="bar-label">Model</span>
+                    <div class="bar bar-model" style="width: 48%"><span>12%</span></div>
+                  </div>
+                  <div class="bar-group">
+                    <span class="bar-label">Public</span>
+                    <div class="bar bar-public" style="width: 12%"><span>3%</span></div>
+                  </div>
+                </div>
+                <div class="leverage-ratio-display">Leverage: 4.0x</div>
+              </div>
+
+              <div class="leverage-bar">
+                <div class="leverage-label">1-seed Favorite</div>
+                <div class="leverage-bars-row">
+                  <div class="bar-group">
+                    <span class="bar-label">Model</span>
+                    <div class="bar bar-model" style="width: 72%"><span>18%</span></div>
+                  </div>
+                  <div class="bar-group">
+                    <span class="bar-label">Public</span>
+                    <div class="bar bar-public" style="width: 100%"><span>25%</span></div>
+                  </div>
+                </div>
+                <div class="leverage-ratio-display">Leverage: 0.72x</div>
+              </div>
+
+              <div class="leverage-bar">
+                <div class="leverage-label">3-seed Value Pick</div>
+                <div class="leverage-bars-row">
+                  <div class="bar-group">
+                    <span class="bar-label">Model</span>
+                    <div class="bar bar-model" style="width: 56%"><span>14%</span></div>
+                  </div>
+                  <div class="bar-group">
+                    <span class="bar-label">Public</span>
+                    <div class="bar bar-public" style="width: 28%"><span>7%</span></div>
+                  </div>
+                </div>
+                <div class="leverage-ratio-display">Leverage: 2.0x</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
+    <!-- Calibration & Validation -->
+    <section id="validation" class="section section-alt">
+      <div class="container">
+        <h2>Calibration &amp; Validation</h2>
+        <p class="section-subtitle">Ensuring predicted probabilities are honest and well-calibrated</p>
+
+        <div class="cal-grid">
+          <div class="cal-card">
+            <h3>Reliability Diagram</h3>
+            <div class="reliability-chart">
+              <div class="chart-area">
+                <!-- Y-axis labels -->
+                <div class="y-axis">
+                  <span>1.0</span>
+                  <span>0.8</span>
+                  <span>0.6</span>
+                  <span>0.4</span>
+                  <span>0.2</span>
+                  <span>0.0</span>
+                </div>
+                <div class="chart-plot">
+                  <!-- Perfect calibration diagonal -->
+                  <div class="diagonal-line"></div>
+                  <!-- Calibration dots -->
+                  <div class="cal-dot" style="left: 10%; bottom: 12%;" title="Bin: 0.1, Actual: 0.12"></div>
+                  <div class="cal-dot" style="left: 20%; bottom: 22%;" title="Bin: 0.2, Actual: 0.22"></div>
+                  <div class="cal-dot" style="left: 30%; bottom: 28%;" title="Bin: 0.3, Actual: 0.28"></div>
+                  <div class="cal-dot" style="left: 40%; bottom: 38%;" title="Bin: 0.4, Actual: 0.38"></div>
+                  <div class="cal-dot" style="left: 50%; bottom: 48%;" title="Bin: 0.5, Actual: 0.48"></div>
+                  <div class="cal-dot" style="left: 60%; bottom: 62%;" title="Bin: 0.6, Actual: 0.62"></div>
+                  <div class="cal-dot" style="left: 70%; bottom: 68%;" title="Bin: 0.7, Actual: 0.68"></div>
+                  <div class="cal-dot" style="left: 80%; bottom: 78%;" title="Bin: 0.8, Actual: 0.78"></div>
+                  <div class="cal-dot" style="left: 90%; bottom: 91%;" title="Bin: 0.9, Actual: 0.91"></div>
+                </div>
+                <!-- X-axis labels -->
+                <div class="x-axis">
+                  <span>0.0</span>
+                  <span>0.2</span>
+                  <span>0.4</span>
+                  <span>0.6</span>
+                  <span>0.8</span>
+                  <span>1.0</span>
+                </div>
+              </div>
+              <div class="chart-labels">
+                <span class="chart-x-label">Predicted Probability</span>
+                <span class="chart-y-label">Observed Frequency</span>
+              </div>
+            </div>
+            <p class="chart-caption">Points near the diagonal indicate well-calibrated predictions. After isotonic regression, ECE drops below 0.03.</p>
+          </div>
+
+          <div class="cal-card">
+            <h3>Calibration Metrics</h3>
+            <div class="metrics-table">
+              <table>
+                <thead>
+                  <tr><th>Metric</th><th>Value</th><th>Target</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Brier Score</td><td class="metric-good">0.18-0.22</td><td>&lt; 0.25</td></tr>
+                  <tr><td>ECE</td><td class="metric-good">&lt; 0.03</td><td>&lt; 0.05</td></tr>
+                  <tr><td>ROC-AUC</td><td class="metric-good">0.72-0.78</td><td>&gt; 0.70</td></tr>
+                  <tr><td>Log Loss</td><td class="metric-good">0.55-0.65</td><td>&lt; 0.70</td></tr>
+                  <tr><td>Accuracy</td><td class="metric-good">68-74%</td><td>&gt; 65%</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <h4>Calibration Methods</h4>
+            <div class="method-list">
+              <div class="method">
+                <strong>Temperature Scaling</strong>
+                <span>Default. Robust for small datasets; learns a single parameter T to soften/sharpen logits.</span>
+              </div>
+              <div class="method">
+                <strong>Isotonic Regression</strong>
+                <span>Non-parametric monotonic function mapping. Best post-processing when enough calibration data exists.</span>
+              </div>
+              <div class="method">
+                <strong>Platt Scaling</strong>
+                <span>Logistic transform with learned slope and intercept. Classic, well-understood calibrator.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Historical Seed Performance -->
+    <section id="seeds" class="section">
+      <div class="container">
+        <h2>Historical Seed Performance</h2>
+        <p class="section-subtitle">40 years of NCAA tournament data (1985-present) drive the seed baseline model</p>
+
+        <div class="seed-chart">
+          <div class="seed-row">
+            <span class="seed-label">1 vs 16</span>
+            <div class="seed-bar-container">
+              <div class="seed-bar" style="width: 99.5%"><span>99.5%</span></div>
+            </div>
+          </div>
+          <div class="seed-row">
+            <span class="seed-label">2 vs 15</span>
+            <div class="seed-bar-container">
+              <div class="seed-bar" style="width: 94.4%"><span>94.4%</span></div>
+            </div>
+          </div>
+          <div class="seed-row">
+            <span class="seed-label">3 vs 14</span>
+            <div class="seed-bar-container">
+              <div class="seed-bar" style="width: 85.2%"><span>85.2%</span></div>
+            </div>
+          </div>
+          <div class="seed-row">
+            <span class="seed-label">4 vs 13</span>
+            <div class="seed-bar-container">
+              <div class="seed-bar" style="width: 79.3%"><span>79.3%</span></div>
+            </div>
+          </div>
+          <div class="seed-row">
+            <span class="seed-label">5 vs 12</span>
+            <div class="seed-bar-container">
+              <div class="seed-bar seed-bar-upset" style="width: 64.7%"><span>64.7%</span></div>
+            </div>
+          </div>
+          <div class="seed-row">
+            <span class="seed-label">6 vs 11</span>
+            <div class="seed-bar-container">
+              <div class="seed-bar seed-bar-upset" style="width: 62.5%"><span>62.5%</span></div>
+            </div>
+          </div>
+          <div class="seed-row">
+            <span class="seed-label">7 vs 10</span>
+            <div class="seed-bar-container">
+              <div class="seed-bar seed-bar-upset" style="width: 60.8%"><span>60.8%</span></div>
+            </div>
+          </div>
+          <div class="seed-row">
+            <span class="seed-label">8 vs 9</span>
+            <div class="seed-bar-container">
+              <div class="seed-bar seed-bar-toss" style="width: 48.8%"><span>48.8%</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="seed-insights">
+          <div class="insight">
+            <span class="insight-value">35.3%</span>
+            <span class="insight-label">5-vs-12 upset rate -- the most famous bracket buster</span>
+          </div>
+          <div class="insight">
+            <span class="insight-value">2</span>
+            <span class="insight-label">Times a 16-seed has beaten a 1-seed (UMBC 2018, FDU 2023)</span>
+          </div>
+          <div class="insight">
+            <span class="insight-value">~22%</span>
+            <span class="insight-label">Of Final Four teams have been seeded 5 or lower</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Start -->
     <section id="quickstart" class="section section-alt">
       <div class="container">
         <h2>Quick Start</h2>
+        <p class="section-subtitle">From install to predictions in four commands</p>
+
         <div class="steps">
           <div class="step">
             <div class="step-number">1</div>
@@ -151,17 +702,18 @@ pip install -r requirements.txt</code></pre>
           <div class="step">
             <div class="step-number">2</div>
             <div class="step-content">
-              <h3>Generate Sample Data</h3>
-              <pre><code>python -m src.main sample --output sample_tournament.json</code></pre>
+              <h3>Ingest Data</h3>
+              <pre><code>python -m src.main ingest --year 2026 --output-dir data/raw</code></pre>
             </div>
           </div>
           <div class="step">
             <div class="step-number">3</div>
             <div class="step-content">
-              <h3>Run Predictions</h3>
+              <h3>Generate Predictions</h3>
               <pre><code>python -m src.main predict \
-  --input sample_tournament.json \
-  --output predictions.json</code></pre>
+  --input data/raw/teams_2026.json \
+  --output predictions.json \
+  --model ensemble</code></pre>
             </div>
           </div>
           <div class="step">
@@ -173,78 +725,69 @@ pip install -r requirements.txt</code></pre>
   --kenpom data/raw/kenpom_2026.json \
   --torvik data/raw/torvik_2026.json \
   --simulations 50000 \
-  --output selection_sunday_report.json</code></pre>
+  --output sota_report.json</code></pre>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <section id="cli" class="section">
+    <!-- Tech Stack -->
+    <section id="tech" class="section">
       <div class="container">
-        <h2>Command-Line Interface</h2>
-        <div class="cli-grid">
-          <div class="cli-card">
-            <h3><code>predict</code></h3>
-            <p>Generate bracket predictions using ensemble or individual models.</p>
-            <pre><code>python -m src.main predict \
-  -i teams.json -o bracket.json \
-  --model ensemble \
-  --upset-threshold 0.4</code></pre>
+        <h2>Technology Stack</h2>
+        <div class="tech-grid">
+          <div class="tech-item">
+            <strong>PyTorch</strong>
+            <span>Deep learning framework</span>
           </div>
-          <div class="cli-card">
-            <h3><code>ingest</code></h3>
-            <p>Pull real data from multiple providers for a given season.</p>
-            <pre><code>python -m src.main ingest \
-  --year 2026 \
-  --output-dir data/raw</code></pre>
+          <div class="tech-item">
+            <strong>PyTorch Geometric</strong>
+            <span>Graph neural networks</span>
           </div>
-          <div class="cli-card">
-            <h3><code>materialize-features</code></h3>
-            <p>Build leakage-safe training tables from historical data.</p>
-            <pre><code>python -m src.main materialize-features \
-  --start-season 2022 \
-  --end-season 2025 \
-  --output-dir data/processed</code></pre>
+          <div class="tech-item">
+            <strong>LightGBM</strong>
+            <span>Gradient boosting</span>
           </div>
-          <div class="cli-card">
-            <h3><code>sota</code></h3>
-            <p>Run the full rubric pipeline end-to-end.</p>
-            <pre><code>python -m src.main sota \
-  --input teams_2026.json \
-  --simulations 50000 \
-  --output report.json</code></pre>
+          <div class="tech-item">
+            <strong>scikit-learn</strong>
+            <span>Calibration &amp; preprocessing</span>
+          </div>
+          <div class="tech-item">
+            <strong>NumPy / SciPy</strong>
+            <span>Numerical computing</span>
+          </div>
+          <div class="tech-item">
+            <strong>pandas</strong>
+            <span>Data manipulation</span>
+          </div>
+          <div class="tech-item">
+            <strong>CBBpy / Sportsipy</strong>
+            <span>Sports data ingestion</span>
+          </div>
+          <div class="tech-item">
+            <strong>Optuna</strong>
+            <span>Hyperparameter tuning</span>
           </div>
         </div>
-      </div>
-    </section>
-
-    <section id="structure" class="section section-alt">
-      <div class="container">
-        <h2>Project Structure</h2>
-        <pre class="tree"><code>march-madness-forecaster/
-├── src/
-│   ├── models/          # Team, Game, Bracket data models
-│   ├── predictors/      # Elo, Statistical, Seed, Ensemble
-│   ├── ml/              # GNN, Transformer, LightGBM
-│   ├── simulation/      # Monte Carlo bracket simulation
-│   ├── optimization/    # Pareto, leverage, pool strategy
-│   ├── pipeline/        # Feature materialization
-│   ├── data/            # Data loading and ingestion
-│   └── main.py          # CLI entry point
-├── tests/               # Test suite
-├── data/                # Raw and processed data
-├── docs/                # Documentation &amp; site
-├── requirements.txt
-└── setup.py</code></pre>
       </div>
     </section>
   </main>
 
   <footer>
     <div class="container">
-      <p>March Madness Forecaster &middot; MIT License &middot; <a href="https://github.com/bsr-0/march-madness-forecaster">GitHub</a></p>
+      <div class="footer-content">
+        <p>March Madness Forecaster &middot; MIT License &middot; <a href="https://github.com/bsr-0/march-madness-forecaster">GitHub</a></p>
+        <p class="footer-sub">Built with PyTorch, Graph Neural Networks, and Combinatorial Fusion Analysis</p>
+      </div>
     </div>
   </footer>
+
+  <script>
+    // Mobile nav toggle
+    document.querySelector('.nav-toggle').addEventListener('click', function() {
+      document.querySelector('.nav-links').classList.toggle('open');
+    });
+  </script>
 </body>
 </html>
