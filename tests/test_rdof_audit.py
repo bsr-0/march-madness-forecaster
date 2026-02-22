@@ -15,6 +15,9 @@ from src.ml.evaluation.rdof_audit import (
     ConstantSensitivityResult,
     HoldoutEvaluator,
     HoldoutReport,
+    MCBacktestResult,
+    MCParameterBacktester,
+    ModelComplexityAudit,
     PipelineConstant,
     RDOFAuditReport,
     SensitivityAnalyzer,
@@ -26,6 +29,7 @@ from src.ml.evaluation.rdof_audit import (
     _compute_log_loss,
     _seed_baseline_prob,
     config_hash,
+    estimate_model_complexity,
     get_constants_by_tier,
     get_tier3_constants,
 )
@@ -534,3 +538,252 @@ class TestConfigNewFields:
         assert config.seed_prior_weight == 0.08
         assert config.consistency_bonus_max == 0.03
         assert config.ensemble_lgb_weight == 0.50
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Model Complexity Audit Tests
+# ───────────────────────────────────────────────────────────────────────
+
+class TestModelComplexityAudit:
+    """Tests for the effective model complexity auditor."""
+
+    def test_default_audit_structure(self):
+        """Default audit returns all expected fields."""
+        audit = estimate_model_complexity()
+        assert audit.n_training_samples == 400
+        assert audit.total_effective_params > 0
+        assert "lightgbm" in audit.component_params
+        assert "xgboost" in audit.component_params
+        assert "logistic_regression" in audit.component_params
+        assert "gnn_projection" in audit.component_params
+        assert "transformer_projection" in audit.component_params
+        assert "ensemble_weights" in audit.component_params
+        assert "tier3_constants" in audit.component_params
+
+    def test_gnn_projection_dimension(self):
+        """GNN projection params = 2 * embedding_dim + 1."""
+        audit = estimate_model_complexity(gnn_embedding_dim=16)
+        assert audit.component_params["gnn_projection"] == 33
+
+    def test_transformer_projection_dimension(self):
+        """Transformer projection params = 2 * embedding_dim + 1."""
+        audit = estimate_model_complexity(transformer_embedding_dim=48)
+        assert audit.component_params["transformer_projection"] == 97
+
+    def test_pass_with_large_n(self):
+        """Large N makes ratio < 10%."""
+        audit = estimate_model_complexity(n_training_samples=50000)
+        assert audit.passed
+        assert audit.actual_ratio < 0.10
+
+    def test_fail_with_tiny_n(self):
+        """Tiny N causes complexity violation."""
+        audit = estimate_model_complexity(n_training_samples=50)
+        assert not audit.passed
+        assert audit.actual_ratio > 0.10
+        assert any("COMPLEXITY VIOLATION" in w for w in audit.warnings)
+
+    def test_transformer_warning_on_small_n(self):
+        """Transformer projection warned when >20% of N."""
+        audit = estimate_model_complexity(
+            n_training_samples=200, transformer_embedding_dim=48
+        )
+        assert any("Transformer projection" in w for w in audit.warnings)
+
+    def test_serialization(self):
+        """to_dict produces valid dict."""
+        audit = estimate_model_complexity()
+        d = audit.to_dict()
+        assert "n_training_samples" in d
+        assert "total_effective_params" in d
+        assert "passed" in d
+        assert "actual_ratio" in d
+
+
+# ───────────────────────────────────────────────────────────────────────
+# YearMetrics Elo Baseline Tests
+# ───────────────────────────────────────────────────────────────────────
+
+class TestYearMetricsEloBaseline:
+    """Tests for the Elo baseline addition to YearMetrics."""
+
+    def test_elo_skill_score_positive(self):
+        """Model better than Elo → positive skill score."""
+        m = YearMetrics(
+            year=2024, n_games=63, brier_score=0.180,
+            log_loss=0.5, accuracy=0.72, ece=0.03,
+            seed_baseline_brier=0.200,
+            elo_baseline_brier=0.220,
+        )
+        assert m.elo_skill_score() > 0
+
+    def test_elo_skill_score_negative(self):
+        """Model worse than Elo → negative skill score."""
+        m = YearMetrics(
+            year=2024, n_games=63, brier_score=0.230,
+            log_loss=0.6, accuracy=0.65, ece=0.05,
+            seed_baseline_brier=0.200,
+            elo_baseline_brier=0.220,
+        )
+        assert m.elo_skill_score() < 0
+
+    def test_elo_in_to_dict(self):
+        """to_dict includes Elo baseline fields."""
+        m = YearMetrics(
+            year=2024, n_games=63, brier_score=0.190,
+            log_loss=0.55, accuracy=0.70, ece=0.04,
+            seed_baseline_brier=0.200,
+            elo_baseline_brier=0.225,
+        )
+        d = m.to_dict()
+        assert "elo_baseline_brier" in d
+        assert "elo_skill_score" in d
+
+    def test_holdout_report_elo_aggregate(self):
+        """HoldoutReport aggregates Elo baseline Brier."""
+        report = HoldoutReport(holdout_years=[2024])
+        report.per_year[2024] = YearMetrics(
+            year=2024, n_games=63, brier_score=0.190,
+            log_loss=0.55, accuracy=0.70, ece=0.04,
+            seed_baseline_brier=0.200,
+            elo_baseline_brier=0.225,
+        )
+        assert report.aggregate_elo_brier == pytest.approx(0.225, abs=1e-6)
+
+        d = report.to_dict()
+        assert "aggregate_elo_brier" in d
+        assert "aggregate_elo_skill_score" in d
+
+
+# ───────────────────────────────────────────────────────────────────────
+# MC Backtest Tests
+# ───────────────────────────────────────────────────────────────────────
+
+class TestMCBacktestResult:
+    """Tests for MCBacktestResult dataclass."""
+
+    def test_serialization(self):
+        """to_dict produces valid structure."""
+        result = MCBacktestResult(
+            noise_std=0.12,
+            regional_correlation=0.10,
+            years_tested=[2019, 2021, 2022],
+            per_year_upset_calibration={2019: 0.05, 2021: 0.03, 2022: 0.08},
+            mean_upset_calibration_error=0.053,
+            per_year_seed_accuracy={2019: 0.72, 2021: 0.68, 2022: 0.70},
+            mean_seed_accuracy=0.70,
+            per_year_log_prob={2019: -0.5, 2021: -0.6, 2022: -0.55},
+            mean_log_prob=-0.55,
+        )
+        d = result.to_dict()
+        assert d["noise_std"] == 0.12
+        assert d["regional_correlation"] == 0.10
+        assert len(d["years_tested"]) == 3
+        assert "mean_upset_calibration_error" in d
+        assert "mean_log_prob" in d
+
+
+# ───────────────────────────────────────────────────────────────────────
+# RDOFAuditReport Complexity Audit Integration
+# ───────────────────────────────────────────────────────────────────────
+
+class TestRDOFReportComplexity:
+    """Tests for complexity audit in the RDoF report."""
+
+    def test_report_with_complexity_audit(self):
+        """Report includes complexity audit when provided."""
+        audit = estimate_model_complexity(n_training_samples=400)
+        report = RDOFAuditReport(complexity_audit=audit)
+
+        d = report.to_dict()
+        assert "model_complexity_audit" in d
+        assert d["model_complexity_audit"]["n_training_samples"] == 400
+
+    def test_text_report_complexity_section(self):
+        """Text report includes complexity section."""
+        audit = estimate_model_complexity(n_training_samples=400)
+        report = RDOFAuditReport(complexity_audit=audit)
+        text = report.to_text()
+        assert "MODEL COMPLEXITY AUDIT" in text
+        assert "lightgbm" in text
+
+    def test_recommendations_include_complexity(self):
+        """Recommendations include complexity warnings."""
+        audit = estimate_model_complexity(n_training_samples=50)
+        report = RDOFAuditReport(complexity_audit=audit)
+        recs = report._generate_recommendations()
+        assert any("COMPLEXITY" in r for r in recs)
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Calibration Guardrail Tests
+# ───────────────────────────────────────────────────────────────────────
+
+class TestCalibrationGuardrails:
+    """Tests for calibration method guardrails (isotonic/Platt overfitting protection)."""
+
+    def test_temperature_scaling_no_downgrade(self):
+        """Temperature scaling is never downgraded."""
+        from src.ml.calibration.calibration import CalibrationPipeline, TemperatureScaling
+        rng = np.random.RandomState(42)
+        preds = rng.uniform(0.3, 0.7, 30)
+        outcomes = (rng.uniform(0, 1, 30) < 0.5).astype(float)
+
+        pipeline = CalibrationPipeline(method="temperature", nested_cv=False)
+        pipeline.fit(preds, outcomes)
+        assert pipeline.method == "temperature"
+        assert pipeline._downgraded_from is None
+
+    def test_isotonic_downgraded_without_nested_cv(self):
+        """Isotonic is downgraded to temperature on small N without nested CV."""
+        from src.ml.calibration.calibration import CalibrationPipeline, CALIBRATION_MIN_SAMPLES
+        rng = np.random.RandomState(42)
+        # Use N < isotonic minimum (200)
+        n = min(CALIBRATION_MIN_SAMPLES["isotonic"] - 1, 100)
+        preds = rng.uniform(0.3, 0.7, n)
+        outcomes = (rng.uniform(0, 1, n) < 0.5).astype(float)
+
+        pipeline = CalibrationPipeline(method="isotonic", nested_cv=False)
+        pipeline.fit(preds, outcomes)
+        assert pipeline.method == "temperature"
+        assert pipeline._downgraded_from == "isotonic"
+
+    def test_platt_downgraded_without_nested_cv(self):
+        """Platt is downgraded to temperature on small N without nested CV."""
+        from src.ml.calibration.calibration import CalibrationPipeline, CALIBRATION_MIN_SAMPLES
+        rng = np.random.RandomState(42)
+        # Use N < platt minimum (100)
+        n = min(CALIBRATION_MIN_SAMPLES["platt"] - 1, 50)
+        preds = rng.uniform(0.3, 0.7, n)
+        outcomes = (rng.uniform(0, 1, n) < 0.5).astype(float)
+
+        pipeline = CalibrationPipeline(method="platt", nested_cv=False)
+        pipeline.fit(preds, outcomes)
+        assert pipeline.method == "temperature"
+        assert pipeline._downgraded_from == "platt"
+
+    def test_isotonic_kept_with_nested_cv(self):
+        """Isotonic is kept when nested CV is declared."""
+        from src.ml.calibration.calibration import CalibrationPipeline
+        rng = np.random.RandomState(42)
+        preds = rng.uniform(0.3, 0.7, 50)
+        outcomes = (rng.uniform(0, 1, 50) < 0.5).astype(float)
+
+        pipeline = CalibrationPipeline(method="isotonic", nested_cv=True)
+        pipeline.fit(preds, outcomes)
+        assert pipeline.method == "isotonic"
+        assert pipeline._downgraded_from is None
+
+    def test_isotonic_kept_with_large_n(self):
+        """Isotonic is kept on large N even without nested CV."""
+        from src.ml.calibration.calibration import CalibrationPipeline, CALIBRATION_MIN_SAMPLES
+        rng = np.random.RandomState(42)
+        n = CALIBRATION_MIN_SAMPLES["isotonic"] + 50
+        preds = rng.uniform(0.3, 0.7, n)
+        outcomes = (rng.uniform(0, 1, n) < 0.5).astype(float)
+
+        pipeline = CalibrationPipeline(method="isotonic", nested_cv=False)
+        pipeline.fit(preds, outcomes)
+        # Should still be isotonic (large enough N), just with a warning
+        assert pipeline.method == "isotonic"
+        assert pipeline._downgraded_from is None
