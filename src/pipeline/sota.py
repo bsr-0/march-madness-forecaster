@@ -57,6 +57,7 @@ from ..data.scrapers.injury_report import (
     apply_injury_reports_to_roster,
 )
 from ..data.scrapers.bracket_ingestion import BracketIngestionPipeline, BIGDANCE_AVAILABLE
+from ..data.normalize import normalize_team_id as _shared_normalize_team_id, strip_ncaa_suffix
 from ..data.team_name_resolver import TeamNameResolver
 from ..data.scrapers.torvik import BartTorvikScraper
 from ..data.scrapers.tournament_context import TournamentContextScraper
@@ -3209,9 +3210,8 @@ class SOTAPipeline:
                     # Strip NCAA suffix (e.g. "arizonancaa" → "arizona").
                     # Historical metrics (2010-2021) duplicate tournament teams
                     # with an "ncaa" suffix; the base form is what game IDs use.
-                    base_tid = tid
-                    if tid.endswith("ncaa"):
-                        base_tid = tid[:-4].rstrip("_")
+                    # Uses shared utility for cross-pipeline consistency.
+                    base_tid = strip_ncaa_suffix(tid)
                     metrics_entry = {
                         "off_rtg": off,
                         "def_rtg": drt,
@@ -3328,6 +3328,12 @@ class SOTAPipeline:
                 _resolve_cache[game_id] = game_id
                 return game_id
 
+            # Pass 1b: NCAA suffix stripping (cross-pipeline consistency)
+            stripped = strip_ncaa_suffix(game_id)
+            if stripped != game_id and stripped in team_metrics:
+                _resolve_cache[game_id] = stripped
+                return stripped
+
             # Pass 2: Prefix matching (handles simple mascot suffixes)
             for mk in metric_keys:
                 if game_id.startswith(mk + "_") or game_id.startswith(mk):
@@ -3370,6 +3376,12 @@ class SOTAPipeline:
                 frac = rank / max(len(id_ordered) - 1, 1)
                 inferred = season_start + timedelta(days=int(frac * total_days))
                 games[orig_idx]["date"] = inferred.isoformat()
+                games[orig_idx]["_dates_inferred"] = True
+            logger.warning(
+                "Year %d: tournament filtering uses synthetic dates — "
+                "some games may be mis-classified as tournament/non-tournament.",
+                year,
+            )
 
         # ── 4. Single-pass: collect validated games in chronological order ─
         # We need two things from this pass:
@@ -3410,7 +3422,13 @@ class SOTAPipeline:
 
             if not t1 or not t2 or t1 not in team_metrics or t2 not in team_metrics:
                 continue
-            if s1 == 0 and s2 == 0:
+            # Filter forfeit / outlier games: skip if either team scored 0
+            # (forfeits produce extreme efficiency metrics) or if margin
+            # exceeds 80 points (data entry errors / exhibition mismatches).
+            # Matches materialization.py filtering for cross-pipeline consistency.
+            if s1 == 0 or s2 == 0:
+                continue
+            if abs(s1 - s2) > 80:
                 continue
 
             # Always include in full-season list (for Elo / luck inputs)
@@ -5256,7 +5274,10 @@ class SOTAPipeline:
 
     @staticmethod
     def _team_id(name: str) -> str:
-        return "".join(c.lower() if c.isalnum() else "_" for c in name).strip("_")
+        # Delegate to shared normalizer for cross-pipeline consistency.
+        # Handles Unicode NFKD decomposition and HTML entity decoding
+        # that the previous inline implementation missed.
+        return _shared_normalize_team_id(name)
 
 
 def run_sota_pipeline_to_file(config: SOTAPipelineConfig, output_path: str) -> Dict:
