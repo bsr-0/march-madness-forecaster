@@ -243,9 +243,9 @@
     },
     {
       "season": 2007,
-      "team_name": "Texas A&amp;M-Corpus Christi",
+      "team_name": "Texas A&M-Corpus Christi",
       "school_slug": "texas-am-corpus-christi",
-      "team_id": "texas_a_amp_m_corpus_christi",
+      "team_id": "texas_a_m_corpus_christi",
       "seed": 15,
       "region": "Midwest"
     },
@@ -275,9 +275,9 @@
     },
     {
       "season": 2007,
-      "team_name": "Texas A&amp;M",
+      "team_name": "Texas A&M",
       "school_slug": "texas-am",
-      "team_id": "texas_a_amp_m",
+      "team_id": "texas_a_m",
       "seed": 3,
       "region": "South"
     },
@@ -507,9 +507,9 @@
     },
     {
       "season": 2007,
-      "team_name": "Florida A&amp;M",
+      "team_name": "Florida A&M",
       "school_slug": "florida-am",
-      "team_id": "florida_a_amp_m",
+      "team_id": "florida_a_m",
       "seed": 16,
       "region": "West"
     },

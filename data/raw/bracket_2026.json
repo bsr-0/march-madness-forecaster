@@ -1,7 +1,7 @@
 {
   "season": 2026,
   "source": "bigdance",
-  "fetched_at": "2026-02-22T18:18:27.712256+00:00",
+  "fetched_at": "2026-02-23T16:54:48.478152+00:00",
   "teams": [
     {
       "season": 2026,
@@ -135,10 +135,20 @@
     },
     {
       "season": 2026,
+      "team_name": "Michigan State",
+      "team_id": "michigan_state",
+      "seed": 4,
+      "region": "West",
+      "rating": 1706.15,
+      "conference": "Big Ten",
+      "school_slug": "michigan-state"
+    },
+    {
+      "season": 2026,
       "team_name": "Kansas",
       "team_id": "kansas",
       "seed": 4,
-      "region": "West",
+      "region": "South",
       "rating": 1704.99,
       "conference": "Big 12",
       "school_slug": "kansas"
@@ -148,7 +158,7 @@
       "team_name": "Illinois",
       "team_id": "illinois",
       "seed": 4,
-      "region": "South",
+      "region": "Midwest",
       "rating": 1699.51,
       "conference": "Big Ten",
       "school_slug": "illinois"
@@ -157,21 +167,11 @@
       "season": 2026,
       "team_name": "Tennessee",
       "team_id": "tennessee",
-      "seed": 4,
-      "region": "Midwest",
+      "seed": 5,
+      "region": "East",
       "rating": 1691.9,
       "conference": "SEC",
       "school_slug": "tennessee"
-    },
-    {
-      "season": 2026,
-      "team_name": "Michigan State",
-      "team_id": "michigan_state",
-      "seed": 5,
-      "region": "East",
-      "rating": 1687.48,
-      "conference": "Big Ten",
-      "school_slug": "michigan-state"
     },
     {
       "season": 2026,
@@ -215,10 +215,20 @@
     },
     {
       "season": 2026,
+      "team_name": "Wisconsin",
+      "team_id": "wisconsin",
+      "seed": 6,
+      "region": "West",
+      "rating": 1659.1,
+      "conference": "Big Ten",
+      "school_slug": "wisconsin"
+    },
+    {
+      "season": 2026,
       "team_name": "Saint Mary's (CA)",
       "team_id": "saint_mary_s__ca",
       "seed": 6,
-      "region": "West",
+      "region": "South",
       "rating": 1656.66,
       "conference": "West Coast",
       "school_slug": "saint-mary-s--ca"
@@ -228,7 +238,7 @@
       "team_name": "Saint Louis",
       "team_id": "saint_louis",
       "seed": 6,
-      "region": "South",
+      "region": "Midwest",
       "rating": 1646.83,
       "conference": "Atlantic 10",
       "school_slug": "saint-louis"
@@ -237,8 +247,8 @@
       "season": 2026,
       "team_name": "Villanova",
       "team_id": "villanova",
-      "seed": 6,
-      "region": "Midwest",
+      "seed": 7,
+      "region": "East",
       "rating": 1636.67,
       "conference": "Big East",
       "school_slug": "villanova"
@@ -248,7 +258,7 @@
       "team_name": "Miami (OH)",
       "team_id": "miami__oh",
       "seed": 7,
-      "region": "East",
+      "region": "West",
       "rating": 1636.55,
       "conference": "Mid-American",
       "school_slug": "miami--oh"
@@ -258,20 +268,10 @@
       "team_name": "Utah State",
       "team_id": "utah_state",
       "seed": 7,
-      "region": "West",
+      "region": "South",
       "rating": 1634.59,
       "conference": "Mountain West",
       "school_slug": "utah-state"
-    },
-    {
-      "season": 2026,
-      "team_name": "Wisconsin",
-      "team_id": "wisconsin",
-      "seed": 7,
-      "region": "South",
-      "rating": 1634.53,
-      "conference": "Big Ten",
-      "school_slug": "wisconsin"
     },
     {
       "season": 2026,
@@ -285,20 +285,10 @@
     },
     {
       "season": 2026,
-      "team_name": "Iowa",
-      "team_id": "iowa",
-      "seed": 8,
-      "region": "East",
-      "rating": 1628.48,
-      "conference": "Big Ten",
-      "school_slug": "iowa"
-    },
-    {
-      "season": 2026,
       "team_name": "UCLA",
       "team_id": "ucla",
       "seed": 8,
-      "region": "West",
+      "region": "East",
       "rating": 1620.11,
       "conference": "Big Ten",
       "school_slug": "ucla"
@@ -308,7 +298,7 @@
       "team_name": "Vanderbilt",
       "team_id": "vanderbilt",
       "seed": 8,
-      "region": "South",
+      "region": "West",
       "rating": 1618.32,
       "conference": "SEC",
       "school_slug": "vanderbilt"
@@ -318,7 +308,7 @@
       "team_name": "NC State",
       "team_id": "nc_state",
       "seed": 8,
-      "region": "Midwest",
+      "region": "South",
       "rating": 1617.24,
       "conference": "ACC",
       "school_slug": "nc-state"
@@ -327,11 +317,21 @@
       "season": 2026,
       "team_name": "Belmont",
       "team_id": "belmont",
-      "seed": 9,
-      "region": "East",
+      "seed": 8,
+      "region": "Midwest",
       "rating": 1613.58,
       "conference": "Missouri Valley",
       "school_slug": "belmont"
+    },
+    {
+      "season": 2026,
+      "team_name": "Iowa",
+      "team_id": "iowa",
+      "seed": 9,
+      "region": "East",
+      "rating": 1603.92,
+      "conference": "Big Ten",
+      "school_slug": "iowa"
     },
     {
       "season": 2026,
@@ -355,20 +355,10 @@
     },
     {
       "season": 2026,
-      "team_name": "Ohio State",
-      "team_id": "ohio_state",
-      "seed": 9,
-      "region": "Midwest",
-      "rating": 1597.57,
-      "conference": "Big Ten",
-      "school_slug": "ohio-state"
-    },
-    {
-      "season": 2026,
       "team_name": "UCF",
       "team_id": "ucf",
-      "seed": 10,
-      "region": "East",
+      "seed": 9,
+      "region": "Midwest",
       "rating": 1596.67,
       "conference": "Big 12",
       "school_slug": "ucf"
@@ -378,7 +368,7 @@
       "team_name": "New Mexico",
       "team_id": "new_mexico",
       "seed": 10,
-      "region": "West",
+      "region": "East",
       "rating": 1591.65,
       "conference": "Mountain West",
       "school_slug": "new-mexico"
@@ -388,7 +378,7 @@
       "team_name": "Virginia Commonwealth",
       "team_id": "virginia_commonwealth",
       "seed": 10,
-      "region": "South",
+      "region": "West",
       "rating": 1588.08,
       "conference": "Atlantic 10",
       "school_slug": "virginia-commonwealth"
@@ -398,7 +388,7 @@
       "team_name": "Miami (FL)",
       "team_id": "miami__fl",
       "seed": 10,
-      "region": "Midwest",
+      "region": "South",
       "rating": 1584.55,
       "conference": "ACC",
       "school_slug": "miami--fl"
@@ -407,11 +397,21 @@
       "season": 2026,
       "team_name": "Texas A&M",
       "team_id": "texas_a_m",
-      "seed": 11,
-      "region": "East",
+      "seed": 10,
+      "region": "Midwest",
       "rating": 1581.9,
       "conference": "SEC",
       "school_slug": "texas-a-m"
+    },
+    {
+      "season": 2026,
+      "team_name": "Ohio State",
+      "team_id": "ohio_state",
+      "seed": 11,
+      "region": "East",
+      "rating": 1578.9,
+      "conference": "Big Ten",
+      "school_slug": "ohio-state"
     },
     {
       "season": 2026,
@@ -499,7 +499,7 @@
       "team_id": "merrimack",
       "seed": 13,
       "region": "West",
-      "rating": 1481.4,
+      "rating": 1492.82,
       "conference": "MAAC",
       "school_slug": "merrimack"
     },
@@ -535,10 +535,20 @@
     },
     {
       "season": 2026,
+      "team_name": "Robert Morris",
+      "team_id": "robert_morris",
+      "seed": 14,
+      "region": "West",
+      "rating": 1432.18,
+      "conference": "Horizon League",
+      "school_slug": "robert-morris"
+    },
+    {
+      "season": 2026,
       "team_name": "Austin Peay",
       "team_id": "austin_peay",
       "seed": 14,
-      "region": "West",
+      "region": "South",
       "rating": 1426.53,
       "conference": "ASUN",
       "school_slug": "austin-peay"
@@ -548,7 +558,7 @@
       "team_name": "East Tennessee State",
       "team_id": "east_tennessee_state",
       "seed": 14,
-      "region": "South",
+      "region": "Midwest",
       "rating": 1425.95,
       "conference": "Southern",
       "school_slug": "east-tennessee-state"
@@ -557,21 +567,11 @@
       "season": 2026,
       "team_name": "Navy",
       "team_id": "navy",
-      "seed": 14,
-      "region": "Midwest",
+      "seed": 15,
+      "region": "East",
       "rating": 1424.02,
       "conference": "Patriot League",
       "school_slug": "navy"
-    },
-    {
-      "season": 2026,
-      "team_name": "Robert Morris",
-      "team_id": "robert_morris",
-      "seed": 15,
-      "region": "East",
-      "rating": 1409.85,
-      "conference": "Horizon League",
-      "school_slug": "robert-morris"
     },
     {
       "season": 2026,
