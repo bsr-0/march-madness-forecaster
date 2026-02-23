@@ -338,6 +338,85 @@ def test_torvik_to_dict_includes_all_fields():
     assert d["conference"] == "ACC"
 
 
+def test_three_pt_variance_bayesian_shrinkage():
+    """C1 fix: 3PT variance should be shrunk toward D1 prior (0.095)."""
+    import numpy as np
+
+    engine = ProprietaryMetricsEngine()
+
+    # Build 6 games with known per-game 3P%: 0.20, 0.40, 0.20, 0.40, 0.20, 0.40
+    # Raw sample stdev = 0.1095 (ddof=1), variance = 0.012
+    # Shrunk variance = (6 * 0.012 + 8 * 0.095^2) / (6 + 8)
+    #                 = (0.072 + 0.0722) / 14 = 0.01031
+    # Shrunk stdev = sqrt(0.01031) ≈ 0.1015
+    games = []
+    three_pt_pcts = [0.20, 0.40, 0.20, 0.40, 0.20, 0.40]
+    for i, pct in enumerate(three_pt_pcts):
+        fg3a = 20
+        fg3m = int(pct * fg3a)
+        games.append(GameRecord(
+            game_id=f"g{i}", game_date=f"2026-01-{10+i:02d}",
+            team_id="duke", team_name="Duke",
+            opponent_id="opp", points=75, opp_points=70, possessions=69,
+            fg3a=fg3a, fg3m=fg3m,
+        ))
+
+    result = engine._three_point_variance(games)
+
+    # Should be pulled toward 0.095 (below raw 0.1095)
+    raw_std = float(np.std([0.20, 0.40, 0.20, 0.40, 0.20, 0.40], ddof=1))
+    assert result < raw_std, "Shrinkage should pull stdev toward prior"
+    assert result > 0.095, "With high observed variance, result should stay above prior"
+    assert abs(result - 0.1015) < 0.005, f"Expected ~0.1015, got {result}"
+
+
+def test_three_pt_variance_small_sample_returns_prior():
+    """C1 fix: With < 5 qualifying games, return population prior stdev."""
+    engine = ProprietaryMetricsEngine()
+
+    # Only 3 games with fg3a >= 5 — should return prior (0.095)
+    games = []
+    for i in range(3):
+        games.append(GameRecord(
+            game_id=f"g{i}", game_date=f"2026-01-{10+i:02d}",
+            team_id="duke", team_name="Duke",
+            opponent_id="opp", points=75, opp_points=70, possessions=69,
+            fg3a=20, fg3m=8,
+        ))
+
+    result = engine._three_point_variance(games)
+    assert abs(result - 0.095) < 1e-6, f"Expected prior 0.095, got {result}"
+
+
+def test_three_pt_variance_large_sample_minimal_shrinkage():
+    """C1 fix: With 30+ games, shrinkage should be minimal."""
+    import numpy as np
+
+    engine = ProprietaryMetricsEngine()
+
+    # 30 games alternating 0.30 and 0.40 → raw stdev ≈ 0.0523
+    games = []
+    for i in range(30):
+        pct = 0.30 if i % 2 == 0 else 0.40
+        fg3a = 20
+        fg3m = int(pct * fg3a)
+        games.append(GameRecord(
+            game_id=f"g{i}", game_date=f"2026-01-{10+i:02d}",
+            team_id="duke", team_name="Duke",
+            opponent_id="opp", points=75, opp_points=70, possessions=69,
+            fg3a=fg3a, fg3m=fg3m,
+        ))
+
+    result = engine._three_point_variance(games)
+    raw_std = float(np.std([0.30 if i % 2 == 0 else 0.40 for i in range(30)], ddof=1))
+
+    # With n=30, prior weight=8: data dominates. Shrunk should be close to raw.
+    # shrunk_var = (30 * raw_var + 8 * 0.095^2) / 38
+    assert abs(result - raw_std) < 0.015, (
+        f"With 30 games, shrinkage should be small: raw={raw_std:.4f}, shrunk={result:.4f}"
+    )
+
+
 def test_feature_vector_dimension_matches_names():
     """to_vector() length must equal get_feature_names() length."""
     from src.data.features.feature_engineering import TeamFeatures
@@ -350,3 +429,151 @@ def test_feature_vector_dimension_matches_names():
         f"Vector length {len(vec)} != names length {len(names)}. "
         f"Names: {names}"
     )
+
+
+# ── D1: Pythagorean scale factor correction ───────────────────────────────────
+
+# ── C3: SOS-adjusted consistency ─────────────────────────────────────────────
+
+def test_sos_adjusted_consistency_small_sample():
+    """C3: returns 0.5 prior for fewer than 5 games."""
+    engine = ProprietaryMetricsEngine()
+    assert engine._sos_adjusted_consistency([], {}, {}) == 0.5
+    # 4 games — also below threshold
+    records = _make_game_pair("g1", "2026-01-10", "ta", "A", "tb", "B", 75, 65)
+    four_games = records[:1] * 4  # 4 copies of single record
+    assert engine._sos_adjusted_consistency(four_games, {}, {}) == 0.5
+
+
+def test_sos_adjusted_consistency_perfect():
+    """C3: team that outperforms opp_em by exactly +5 every game → sos_c == 1.0."""
+    engine = ProprietaryMetricsEngine()
+    # Build 5 games against opponents with varying quality.
+    # Team always wins by exactly (opp_em + 5), so residuals are all +5 → stdev=0.
+    opp_ems = [-15.0, -5.0, 0.0, 10.0, 15.0]
+    games = []
+    adj_off: dict = {"ta": 105.0}
+    adj_def: dict = {"ta": 100.0}
+    for i, em in enumerate(opp_ems):
+        opp_id = f"opp_{i}"
+        # opp team: adj_off = 100 + em/2, adj_def = 100 - em/2 → opp_em = em
+        adj_off[opp_id] = 100.0 + em / 2
+        adj_def[opp_id] = 100.0 - em / 2
+        actual_margin = em + 5.0  # exactly 5 above expected
+        pts = 70.0 + actual_margin / 2
+        opp_pts = 70.0 - actual_margin / 2
+        games.append(
+            GameRecord(
+                game_id=f"g{i}", game_date="2026-01-10",
+                team_id="ta", team_name="A",
+                opponent_id=opp_id,
+                points=pts, opp_points=opp_pts,
+                possessions=70.0,
+                is_neutral=True,
+            )
+        )
+
+    sos_c = engine._sos_adjusted_consistency(games, adj_off, adj_def)
+    # All residuals == +5 → stdev = 0 → 1/(1+0) = 1.0
+    assert abs(sos_c - 1.0) < 1e-6, f"Expected 1.0, got {sos_c}"
+
+    # Raw consistency should be < 1.0 (raw margins vary with schedule)
+    raw_c = engine._consistency(games)
+    assert raw_c < 1.0
+
+
+def test_sos_adjusted_consistency_in_results():
+    """C3: engine.compute() populates sos_adjusted_consistency."""
+    records = []
+    for i in range(6):
+        records.extend(
+            _make_game_pair(f"g{i}", "2026-01-10", "ta", "A", "tb", "B", 70, 65)
+        )
+    engine = ProprietaryMetricsEngine()
+    results = engine.compute(records)
+    assert hasattr(results["ta"], "sos_adjusted_consistency")
+    assert 0.0 <= results["ta"].sos_adjusted_consistency <= 1.0
+
+
+# ── C4: Transition efficiency removed ────────────────────────────────────────
+
+def test_transition_efficiency_removed():
+    """C4: transition_efficiency fields default to 0.0 and are not computed."""
+    from src.data.features.feature_engineering import TeamFeatures, TEAM_FEATURE_DIM
+
+    # TEAM_FEATURE_DIM should now be 64 (was 66)
+    assert TEAM_FEATURE_DIM == 64, f"Expected 64, got {TEAM_FEATURE_DIM}"
+
+    names = TeamFeatures.get_feature_names(include_embeddings=False)
+    assert "transition_efficiency" not in names
+    assert "defensive_transition_vulnerability" not in names
+    assert len(names) == TEAM_FEATURE_DIM
+
+
+# ── D1: Pythagorean scale factor correction ───────────────────────────────────
+
+# ── D2: Elo cross-season carryover ───────────────────────────────────────────
+
+def test_elo_prior_regression_formula():
+    """D2: regressed_start = 0.75*prior + 0.25*1500."""
+    prior = 1700.0
+    expected = 0.75 * prior + 0.25 * 1500.0
+    # 0.75*1700 + 0.25*1500 = 1275 + 375 = 1650
+    assert abs(expected - 1650.0) < 1e-9
+
+
+def test_elo_prior_initialization():
+    """D2: teams with prior Elo above 1500 start with regressed advantage."""
+    engine = ProprietaryMetricsEngine()
+    engine._elo_prior = {"ta": 1700.0, "tb": 1300.0}
+    # ta regressed start: 0.75*1700 + 0.25*1500 = 1650
+    # tb regressed start: 0.75*1300 + 0.25*1500 = 1350
+    records = _make_game_pair("g1", "2026-01-15", "ta", "A", "tb", "B", 75, 65)
+    results = engine.compute(records)
+
+    # After one game, ta (prior 1650) beat tb (prior 1350):
+    assert results["ta"].elo_rating > results["tb"].elo_rating
+    # ta should remain above 1500 (strong prior)
+    assert results["ta"].elo_rating > 1500.0
+    # D2: end-of-season Elo should be saved
+    assert engine._end_of_season_elo is not None
+    assert "ta" in engine._end_of_season_elo
+
+
+def test_elo_prior_missing_team_defaults_to_mean():
+    """D2: teams absent from prior_elo start at 1500 without crashing."""
+    engine = ProprietaryMetricsEngine()
+    engine._elo_prior = {"some_other_team": 1600.0}
+    records = _make_game_pair("g1", "2026-01-15", "ta", "A", "tb", "B", 70, 65)
+    results = engine.compute(records)
+    # Should not raise; ta not in prior → starts at 1500
+    assert "ta" in results
+
+
+def test_elo_cold_start_baseline():
+    """D2: without prior, engine still works (flat 1500 start, backward compat)."""
+    engine = ProprietaryMetricsEngine()
+    assert engine._elo_prior is None
+    records = _make_game_pair("g1", "2026-01-15", "ta", "A", "tb", "B", 70, 65)
+    results = engine.compute(records)
+    assert "ta" in results
+    assert engine._end_of_season_elo is not None
+
+
+# ── D1: Pythagorean scale factor correction ───────────────────────────────────
+
+def test_pythagorean_win_pct_calibration():
+    """D1: scale 0.1735 gives AdjEM=+10 → 0.850, not the erroneous 0.810."""
+    engine = ProprietaryMetricsEngine()
+    p10 = engine._pythagorean_win_pct(110.0, 100.0)
+    assert abs(p10 - 0.850) < 0.001, f"Expected ~0.850 at AdjEM=+10, got {p10:.4f}"
+
+    p0 = engine._pythagorean_win_pct(105.0, 105.0)
+    assert abs(p0 - 0.500) < 1e-9, f"Expected 0.500 at AdjEM=0, got {p0:.4f}"
+
+    p20 = engine._pythagorean_win_pct(120.0, 100.0)
+    assert 0.96 < p20 < 0.98, f"Expected ~0.970 at AdjEM=+20, got {p20:.4f}"
+
+    # Symmetry: P(A>B) + P(B>A) == 1
+    p_rev = engine._pythagorean_win_pct(100.0, 110.0)
+    assert abs(p10 + p_rev - 1.0) < 1e-9

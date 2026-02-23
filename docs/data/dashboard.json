@@ -1,0 +1,812 @@
+{
+  "metadata": {
+    "model_name": "SOTA Ensemble (dashboard export)",
+    "generated_at": "2026-02-22 04:32 UTC",
+    "training_seasons": [
+      2005,
+      2006,
+      2007,
+      2008,
+      2009,
+      2010,
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023
+    ],
+    "holdout_season": 2024,
+    "notes": "Exported for GitHub Pages dashboard."
+  },
+  "training_summary": {
+    "seasons": [
+      2005,
+      2006,
+      2007,
+      2008,
+      2009,
+      2010,
+      2011,
+      2012,
+      2013,
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023
+    ],
+    "total_games": 104003,
+    "unique_teams": 1258,
+    "feature_count": 0,
+    "games_per_season": {
+      "2005": 4221,
+      "2006": 4585,
+      "2007": 5193,
+      "2008": 5540,
+      "2009": 5501,
+      "2010": 5573,
+      "2011": 5560,
+      "2012": 4891,
+      "2013": 4958,
+      "2014": 5930,
+      "2015": 5925,
+      "2016": 5942,
+      "2017": 5916,
+      "2018": 5995,
+      "2019": 6039,
+      "2020": 5766,
+      "2021": 4282,
+      "2022": 5964,
+      "2023": 6222
+    },
+    "sources": [
+      "cbbpy",
+      "sportsipy",
+      "barttorvik"
+    ],
+    "notes": "Training window spans 2004-11-12 to 2022-11-01. Holdout season 2024 excluded from training."
+  },
+  "feature_importance": {
+    "method": "domain_prior",
+    "features": [],
+    "notes": "Weights reflect pre-registered feature priors unless model gain importances are supplied."
+  },
+  "predictions": {
+    "season": 2026,
+    "method": "seed_prior_baseline",
+    "matchups": [
+      {
+        "round": "R64",
+        "region": "East",
+        "team1": {
+          "name": null,
+          "seed": 1
+        },
+        "team2": {
+          "name": null,
+          "seed": 16
+        },
+        "team1_win_prob": 0.9324533088603709,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "East",
+        "team1": {
+          "name": null,
+          "seed": 8
+        },
+        "team2": {
+          "name": null,
+          "seed": 9
+        },
+        "team1_win_prob": 0.5436386872370789,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "East",
+        "team1": {
+          "name": null,
+          "seed": 5
+        },
+        "team2": {
+          "name": null,
+          "seed": 12
+        },
+        "team1_win_prob": 0.7729422593967386,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "East",
+        "team1": {
+          "name": null,
+          "seed": 4
+        },
+        "team2": {
+          "name": null,
+          "seed": 13
+        },
+        "team1_win_prob": 0.8284952300245991,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "East",
+        "team1": {
+          "name": null,
+          "seed": 6
+        },
+        "team2": {
+          "name": null,
+          "seed": 11
+        },
+        "team1_win_prob": 0.7057850278370112,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "East",
+        "team1": {
+          "name": null,
+          "seed": 3
+        },
+        "team2": {
+          "name": null,
+          "seed": 14
+        },
+        "team1_win_prob": 0.8726949619246283,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "East",
+        "team1": {
+          "name": null,
+          "seed": 7
+        },
+        "team2": {
+          "name": null,
+          "seed": 10
+        },
+        "team1_win_prob": 0.6283161882953663,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "East",
+        "team1": {
+          "name": null,
+          "seed": 2
+        },
+        "team2": {
+          "name": null,
+          "seed": 15
+        },
+        "team1_win_prob": 0.9067852769181763,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "West",
+        "team1": {
+          "name": null,
+          "seed": 1
+        },
+        "team2": {
+          "name": null,
+          "seed": 16
+        },
+        "team1_win_prob": 0.9324533088603709,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "West",
+        "team1": {
+          "name": null,
+          "seed": 8
+        },
+        "team2": {
+          "name": null,
+          "seed": 9
+        },
+        "team1_win_prob": 0.5436386872370789,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "West",
+        "team1": {
+          "name": null,
+          "seed": 5
+        },
+        "team2": {
+          "name": null,
+          "seed": 12
+        },
+        "team1_win_prob": 0.7729422593967386,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "West",
+        "team1": {
+          "name": null,
+          "seed": 4
+        },
+        "team2": {
+          "name": null,
+          "seed": 13
+        },
+        "team1_win_prob": 0.8284952300245991,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "West",
+        "team1": {
+          "name": null,
+          "seed": 6
+        },
+        "team2": {
+          "name": null,
+          "seed": 11
+        },
+        "team1_win_prob": 0.7057850278370112,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "West",
+        "team1": {
+          "name": null,
+          "seed": 3
+        },
+        "team2": {
+          "name": null,
+          "seed": 14
+        },
+        "team1_win_prob": 0.8726949619246283,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "West",
+        "team1": {
+          "name": null,
+          "seed": 7
+        },
+        "team2": {
+          "name": null,
+          "seed": 10
+        },
+        "team1_win_prob": 0.6283161882953663,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "West",
+        "team1": {
+          "name": null,
+          "seed": 2
+        },
+        "team2": {
+          "name": null,
+          "seed": 15
+        },
+        "team1_win_prob": 0.9067852769181763,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "South",
+        "team1": {
+          "name": null,
+          "seed": 1
+        },
+        "team2": {
+          "name": null,
+          "seed": 16
+        },
+        "team1_win_prob": 0.9324533088603709,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "South",
+        "team1": {
+          "name": null,
+          "seed": 8
+        },
+        "team2": {
+          "name": null,
+          "seed": 9
+        },
+        "team1_win_prob": 0.5436386872370789,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "South",
+        "team1": {
+          "name": null,
+          "seed": 5
+        },
+        "team2": {
+          "name": null,
+          "seed": 12
+        },
+        "team1_win_prob": 0.7729422593967386,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "South",
+        "team1": {
+          "name": null,
+          "seed": 4
+        },
+        "team2": {
+          "name": null,
+          "seed": 13
+        },
+        "team1_win_prob": 0.8284952300245991,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "South",
+        "team1": {
+          "name": null,
+          "seed": 6
+        },
+        "team2": {
+          "name": null,
+          "seed": 11
+        },
+        "team1_win_prob": 0.7057850278370112,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "South",
+        "team1": {
+          "name": null,
+          "seed": 3
+        },
+        "team2": {
+          "name": null,
+          "seed": 14
+        },
+        "team1_win_prob": 0.8726949619246283,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "South",
+        "team1": {
+          "name": null,
+          "seed": 7
+        },
+        "team2": {
+          "name": null,
+          "seed": 10
+        },
+        "team1_win_prob": 0.6283161882953663,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "South",
+        "team1": {
+          "name": null,
+          "seed": 2
+        },
+        "team2": {
+          "name": null,
+          "seed": 15
+        },
+        "team1_win_prob": 0.9067852769181763,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "Midwest",
+        "team1": {
+          "name": null,
+          "seed": 1
+        },
+        "team2": {
+          "name": null,
+          "seed": 16
+        },
+        "team1_win_prob": 0.9324533088603709,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "Midwest",
+        "team1": {
+          "name": null,
+          "seed": 8
+        },
+        "team2": {
+          "name": null,
+          "seed": 9
+        },
+        "team1_win_prob": 0.5436386872370789,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "Midwest",
+        "team1": {
+          "name": null,
+          "seed": 5
+        },
+        "team2": {
+          "name": null,
+          "seed": 12
+        },
+        "team1_win_prob": 0.7729422593967386,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "Midwest",
+        "team1": {
+          "name": null,
+          "seed": 4
+        },
+        "team2": {
+          "name": null,
+          "seed": 13
+        },
+        "team1_win_prob": 0.8284952300245991,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "Midwest",
+        "team1": {
+          "name": null,
+          "seed": 6
+        },
+        "team2": {
+          "name": null,
+          "seed": 11
+        },
+        "team1_win_prob": 0.7057850278370112,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "Midwest",
+        "team1": {
+          "name": null,
+          "seed": 3
+        },
+        "team2": {
+          "name": null,
+          "seed": 14
+        },
+        "team1_win_prob": 0.8726949619246283,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "Midwest",
+        "team1": {
+          "name": null,
+          "seed": 7
+        },
+        "team2": {
+          "name": null,
+          "seed": 10
+        },
+        "team1_win_prob": 0.6283161882953663,
+        "predicted_winner": null
+      },
+      {
+        "round": "R64",
+        "region": "Midwest",
+        "team1": {
+          "name": null,
+          "seed": 2
+        },
+        "team2": {
+          "name": null,
+          "seed": 15
+        },
+        "team1_win_prob": 0.9067852769181763,
+        "predicted_winner": null
+      }
+    ],
+    "champion_probs": [
+      {
+        "team": null,
+        "prob": 0.038297254432451446
+      },
+      {
+        "team": null,
+        "prob": 0.038297254432451446
+      },
+      {
+        "team": null,
+        "prob": 0.038297254432451446
+      },
+      {
+        "team": null,
+        "prob": 0.038297254432451446
+      },
+      {
+        "team": null,
+        "prob": 0.03296275236519086
+      },
+      {
+        "team": null,
+        "prob": 0.03296275236519086
+      },
+      {
+        "team": null,
+        "prob": 0.03296275236519086
+      },
+      {
+        "team": null,
+        "prob": 0.03296275236519086
+      },
+      {
+        "team": null,
+        "prob": 0.028371303885643715
+      },
+      {
+        "team": null,
+        "prob": 0.028371303885643715
+      },
+      {
+        "team": null,
+        "prob": 0.028371303885643715
+      },
+      {
+        "team": null,
+        "prob": 0.028371303885643715
+      },
+      {
+        "team": null,
+        "prob": 0.024419407555952784
+      },
+      {
+        "team": null,
+        "prob": 0.024419407555952784
+      },
+      {
+        "team": null,
+        "prob": 0.024419407555952784
+      },
+      {
+        "team": null,
+        "prob": 0.024419407555952784
+      },
+      {
+        "team": null,
+        "prob": 0.021017978862982883
+      },
+      {
+        "team": null,
+        "prob": 0.021017978862982883
+      },
+      {
+        "team": null,
+        "prob": 0.021017978862982883
+      },
+      {
+        "team": null,
+        "prob": 0.021017978862982883
+      },
+      {
+        "team": null,
+        "prob": 0.01809034205570264
+      },
+      {
+        "team": null,
+        "prob": 0.01809034205570264
+      },
+      {
+        "team": null,
+        "prob": 0.01809034205570264
+      },
+      {
+        "team": null,
+        "prob": 0.01809034205570264
+      },
+      {
+        "team": null,
+        "prob": 0.015570501703600935
+      },
+      {
+        "team": null,
+        "prob": 0.015570501703600935
+      },
+      {
+        "team": null,
+        "prob": 0.015570501703600935
+      },
+      {
+        "team": null,
+        "prob": 0.015570501703600935
+      },
+      {
+        "team": null,
+        "prob": 0.013401655013229279
+      },
+      {
+        "team": null,
+        "prob": 0.013401655013229279
+      },
+      {
+        "team": null,
+        "prob": 0.013401655013229279
+      },
+      {
+        "team": null,
+        "prob": 0.013401655013229279
+      },
+      {
+        "team": null,
+        "prob": 0.011534911367183305
+      },
+      {
+        "team": null,
+        "prob": 0.011534911367183305
+      },
+      {
+        "team": null,
+        "prob": 0.011534911367183305
+      },
+      {
+        "team": null,
+        "prob": 0.011534911367183305
+      },
+      {
+        "team": null,
+        "prob": 0.009928190221090736
+      },
+      {
+        "team": null,
+        "prob": 0.009928190221090736
+      },
+      {
+        "team": null,
+        "prob": 0.009928190221090736
+      },
+      {
+        "team": null,
+        "prob": 0.009928190221090736
+      },
+      {
+        "team": null,
+        "prob": 0.008545272514758057
+      },
+      {
+        "team": null,
+        "prob": 0.008545272514758057
+      },
+      {
+        "team": null,
+        "prob": 0.008545272514758057
+      },
+      {
+        "team": null,
+        "prob": 0.008545272514758057
+      },
+      {
+        "team": null,
+        "prob": 0.007354984214178072
+      },
+      {
+        "team": null,
+        "prob": 0.007354984214178072
+      },
+      {
+        "team": null,
+        "prob": 0.007354984214178072
+      },
+      {
+        "team": null,
+        "prob": 0.007354984214178072
+      },
+      {
+        "team": null,
+        "prob": 0.006330493579623452
+      },
+      {
+        "team": null,
+        "prob": 0.006330493579623452
+      },
+      {
+        "team": null,
+        "prob": 0.006330493579623452
+      },
+      {
+        "team": null,
+        "prob": 0.006330493579623452
+      },
+      {
+        "team": null,
+        "prob": 0.005448706318689521
+      },
+      {
+        "team": null,
+        "prob": 0.005448706318689521
+      },
+      {
+        "team": null,
+        "prob": 0.005448706318689521
+      },
+      {
+        "team": null,
+        "prob": 0.005448706318689521
+      },
+      {
+        "team": null,
+        "prob": 0.004689744989693684
+      },
+      {
+        "team": null,
+        "prob": 0.004689744989693684
+      },
+      {
+        "team": null,
+        "prob": 0.004689744989693684
+      },
+      {
+        "team": null,
+        "prob": 0.004689744989693684
+      },
+      {
+        "team": null,
+        "prob": 0.004036500920028805
+      },
+      {
+        "team": null,
+        "prob": 0.004036500920028805
+      },
+      {
+        "team": null,
+        "prob": 0.004036500920028805
+      },
+      {
+        "team": null,
+        "prob": 0.004036500920028805
+      }
+    ],
+    "notes": "Seed-based baseline probabilities derived from bracket seeds."
+  },
+  "backtest": {
+    "season": 2024,
+    "status": "PASS",
+    "metrics": {
+      "games": 803,
+      "brier": 0.19576,
+      "log_loss": 0.57357,
+      "accuracy": 0.6862,
+      "brier_skill": 0.1689
+    },
+    "notes": "Holdout evaluation summary (most recent available)."
+  }
+}
