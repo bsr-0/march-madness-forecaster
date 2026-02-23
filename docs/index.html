@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -790,4 +791,87 @@ pip install -r requirements.txt</code></pre>
     });
   </script>
 </body>
+=======
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>March Madness Forecaster Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg"></div>
+    <header class="hero">
+      <div class="hero__content">
+        <div class="badge">March Madness Forecaster</div>
+        <h1>Model Transparency + Tournament Intel</h1>
+        <p class="lede">
+          Explore the training data, feature importance, upcoming tournament predictions,
+          and backtesting performance for the most recent holdout season.
+        </p>
+        <div class="hero__meta" id="meta"></div>
+        <div class="hero__actions">
+          <label class="file-input">
+            Load JSON
+            <input type="file" id="file-input" accept="application/json" />
+          </label>
+          <button id="reload" class="ghost">Reload default</button>
+        </div>
+      </div>
+      <div class="hero__panel" id="headline-metrics"></div>
+    </header>
+
+    <main>
+      <section id="training" class="section">
+        <div class="section__header">
+          <h2>Training Data</h2>
+          <p>Coverage, scale, and source inventory for the training set.</p>
+        </div>
+        <div class="grid" id="training-cards"></div>
+        <div class="chart" id="games-chart"></div>
+        <div class="section__note" id="training-note"></div>
+      </section>
+
+      <section id="features" class="section">
+        <div class="section__header">
+          <h2>Feature Importance</h2>
+          <p>Ranked drivers of model output. If a trained model is unavailable, weights fall back to domain priors.</p>
+        </div>
+        <div class="split">
+          <div class="chart" id="feature-chart"></div>
+          <div class="table" id="feature-table"></div>
+        </div>
+        <div class="section__note" id="feature-note"></div>
+      </section>
+
+      <section id="predictions" class="section">
+        <div class="section__header">
+          <h2>Upcoming Tournament Predictions</h2>
+          <p>Round-of-64 matchup probabilities and championship odds.</p>
+        </div>
+        <div class="split">
+          <div class="table" id="matchup-table"></div>
+          <div class="table" id="champion-table"></div>
+        </div>
+        <div class="section__note" id="prediction-note"></div>
+      </section>
+
+      <section id="backtest" class="section">
+        <div class="section__header">
+          <h2>Holdout Backtest</h2>
+          <p>Performance on the most recent season excluded from training.</p>
+        </div>
+        <div class="grid" id="backtest-cards"></div>
+        <div class="section__note" id="backtest-note"></div>
+      </section>
+    </main>
+
+    <footer>
+      <div>Generated for GitHub Pages. Replace <code>docs/data/dashboard.json</code> to update.</div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+>>>>>>> 5404aad (updated files)
 </html>

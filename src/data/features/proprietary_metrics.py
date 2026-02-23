@@ -30,6 +30,7 @@ Metrics produced
 from __future__ import annotations
 
 import csv
+import logging
 import math
 import os
 import re
@@ -148,7 +149,9 @@ class ProprietaryTeamMetrics:
     shot_distribution_score: float = 0.0
 
     # 3-Point Variance  (game-to-game 3P% stdev — high = volatile)
-    three_pt_variance: float = 0.0
+    # C1: Default is D1 population prior (0.095), consistent with
+    # Bayesian shrinkage in _three_point_variance().
+    three_pt_variance: float = 0.095
 
     # Momentum  (last-10-game rolling AdjEM delta)
     momentum: float = 0.0
@@ -159,6 +162,12 @@ class ProprietaryTeamMetrics:
 
     # Consistency  (1 / (1 + stdev_margin))
     consistency: float = 0.5
+
+    # C3: SOS-adjusted consistency — uses opponent-quality-adjusted residuals,
+    # eliminating the schedule-variance confound in raw consistency.
+    # Formula: 1 / (1 + stdev(actual_margin - opp_em))
+    # Default 0.5 = neutral prior (same as raw consistency).
+    sos_adjusted_consistency: float = 0.5
 
     # Barthag / Pythagorean win%
     barthag: float = 0.5
@@ -305,6 +314,15 @@ class ProprietaryMetricsEngine:
     # Convergence iterations for SOS adjustment
     SOS_ITERATIONS: int = 15
 
+    def __init__(self) -> None:
+        # D2: Cross-season Elo state.
+        # Set _elo_prior before calling compute() to initialize teams from
+        # prior-season end-of-season ratings.  After compute(), _end_of_season_elo
+        # contains this season's final ratings for passing to the next season.
+        # Standard regression: start_elo = 0.75 * prior + 0.25 * 1500.
+        self._elo_prior: Optional[Dict[str, float]] = None
+        self._end_of_season_elo: Optional[Dict[str, float]] = None
+
     def compute(
         self,
         game_records: List[GameRecord],
@@ -379,6 +397,7 @@ class ProprietaryMetricsEngine:
             momentum, recent_em = self._momentum(games, adj_off, adj_def)
             pace_var = self._pace_adjusted_variance(games)
             consistency = self._consistency(games)
+            sos_consistency = self._sos_adjusted_consistency(games, adj_off, adj_def)
 
             opp_shot_selection = self._opponent_shot_selection(games)
             foul_rate = self._foul_rate(games)
@@ -404,7 +423,10 @@ class ProprietaryMetricsEngine:
             neutral_win_pct, neutral_games = self._neutral_site_record(games)
             home_em, away_em, hc_dependence = self._home_away_splits(games, adj_off, adj_def)
             mom_5g = self._momentum_5g(games, adj_off, adj_def)
-            trans_off, trans_def_vuln = self._transition_efficiency(games, adj_off, adj_def)
+            # C4: transition_efficiency REMOVED — speculative formula with no empirical
+            # basis. pace_surplus * (AdjO/100 - 1) assumes fast teams generate extra
+            # efficiency from transition without any play-by-play evidence. Fields
+            # remain in dataclass at default 0.0 for backward compatibility.
 
             results[tid] = ProprietaryTeamMetrics(
                 team_id=tid,
@@ -430,6 +452,7 @@ class ProprietaryMetricsEngine:
                 recent_adj_em=recent_em,
                 pace_adjusted_variance=pace_var,
                 consistency=consistency,
+                sos_adjusted_consistency=sos_consistency,
                 free_throw_pct=extended["free_throw_pct"],
                 opp_free_throw_pct=extended["opp_free_throw_pct"],
                 assist_to_turnover_ratio=extended["assist_to_turnover_ratio"],
@@ -452,8 +475,6 @@ class ProprietaryMetricsEngine:
                 away_adj_em=away_em,
                 home_court_dependence=hc_dependence,
                 momentum_5g=mom_5g,
-                transition_efficiency=trans_off,
-                defensive_transition_vulnerability=trans_def_vuln,
                 wins=wins,
                 losses=losses,
             )
@@ -462,7 +483,9 @@ class ProprietaryMetricsEngine:
         self._compute_wab(results, by_team)
 
         # --- Step 5: Elo ratings (needs all games chronologically) ---
-        self._compute_elo_ratings(results, by_team)
+        # D2: Pass prior_elo if set (cross-season carryover); save end-of-season result.
+        prior = getattr(self, '_elo_prior', None)
+        self._end_of_season_elo = self._compute_elo_ratings(results, by_team, prior_elo=prior)
 
         # --- Step 6: Conference strength (needs league-wide AdjEM) ---
         self._compute_conference_strength(results, by_team, conference_map or {})
@@ -752,11 +775,12 @@ class ProprietaryMetricsEngine:
         margin instead, which is well-calibrated for per-possession data.
         """
         margin = adj_o - adj_d
-        # log5-equivalent: sigmoid of margin scaled by empirical constant.
-        # Scale factor 0.145 calibrated so AdjEM=+10 → ~0.85 win%,
-        # AdjEM=+20 → ~0.95, AdjEM=0 → 0.50 (consistent with KenPom).
-        import math
-        return 1.0 / (1.0 + math.exp(-0.145 * margin))
+        # log5-equivalent: sigmoid of margin scaled by analytically derived constant.
+        # D1 fix: 0.145 was documented as giving AdjEM=+10 → ~0.85 but actually
+        # gives 0.810. Corrected to 0.1735 (= ln(17/3)/10), derived by solving
+        # 0.85 = 1/(1+exp(-k*10)). Verified: AdjEM=+10 → 0.850, AdjEM=+20 → 0.970,
+        # AdjEM=0 → 0.500 (consistent with KenPom calibration).
+        return 1.0 / (1.0 + math.exp(-0.1735 * margin))
 
     def _box_score_xp(self, ff: Dict[str, float], side: str = "offense", ft_pct: float = 0.72) -> float:
         """
@@ -820,19 +844,39 @@ class ProprietaryMetricsEngine:
 
     def _three_point_variance(self, games: List[GameRecord]) -> float:
         """
-        Game-to-game 3P% standard deviation.
+        Game-to-game 3P% standard deviation with Bayesian shrinkage.
 
         High variance teams are upset-prone on cold-shooting nights.
+
+        C1 fix: Raw sample stdev from n=5 games has a chi-squared 95% CI
+        spanning 0.6x–2.9x the true value.  We shrink toward the D1
+        population stdev (~0.095) using a conjugate-prior approach on
+        variance, then take sqrt.  This mirrors the 3PT% shrinkage
+        (Pattern A) but is appropriate for a variance estimator.
+
+        Formula (on variance):  shrunk_var = (n*s² + k*σ₀²) / (n + k)
+        where σ₀ = 0.095 (D1 population stdev → σ₀² ≈ 0.009025),
+        k = 8 (prior pseudo-observations, ~1/3 of a season).
         """
+        THREE_PT_VAR_PRIOR_STD = 0.095   # D1 population game-to-game 3P% stdev
+        THREE_PT_VAR_PRIOR_WEIGHT = 8.0  # pseudo-observations (~1/3 season)
+
         per_game_3p = []
         for g in games:
             if g.fg3a >= 5:  # only games with meaningful 3PA
                 per_game_3p.append(g.fg3m / g.fg3a)
 
         if len(per_game_3p) < 5:
-            return 0.0
+            return THREE_PT_VAR_PRIOR_STD
 
-        return float(np.std(per_game_3p, ddof=1))
+        sample_var = float(np.var(per_game_3p, ddof=1))
+        prior_var = THREE_PT_VAR_PRIOR_STD ** 2
+        n = len(per_game_3p)
+
+        shrunk_var = (n * sample_var + THREE_PT_VAR_PRIOR_WEIGHT * prior_var) / (
+            n + THREE_PT_VAR_PRIOR_WEIGHT
+        )
+        return float(np.sqrt(shrunk_var))
 
     def _momentum(
         self,
@@ -841,10 +885,35 @@ class ProprietaryMetricsEngine:
         adj_def: Dict[str, float],
     ) -> Tuple[float, float]:
         """
-        Rolling form over last 10 games vs season average.
+        Rolling form over last 10 games vs season average, with Normal-Normal
+        Bayesian shrinkage on the momentum delta.
 
-        Returns (momentum_delta, recent_adj_em).
+        Returns (shrunk_momentum_delta, recent_adj_em).
+
+        C1 fix: With n=10 recent games, SE(mean quality-adjusted margin) ≈
+        11/√10 ≈ 3.5 pts.  True momentum signals are ~2-3 pts (SNR ≈ 0.7).
+        Without shrinkage, estimated momentum is still substantially noisy.
+
+        We apply Normal-Normal shrinkage to the momentum delta toward 0
+        (prior: no momentum effect):
+          λ = (σ²_margin / n_recent) / (σ²_margin / n_recent + σ²_signal)
+          shrunk_momentum = raw_delta * (1 - λ)
+
+        The recent_adj_em (absolute level) is returned unshrunk — it is used
+        downstream to compare teams' current form levels, not deltas, and
+        benefits from the implicit regularization of opponent-quality adjustment.
+
+        Constants:
+          MARGIN_SIGMA = 11.0 pts  (D1 game-to-game margin stdev)
+          MOMENTUM_SIGNAL_SIGMA = 3.0 pts  (population SD of true momentum)
+
+        At n=10: λ ≈ 12.1 / 21.1 ≈ 0.57 → retains 43% of raw delta
+        At n=15: λ ≈ 8.1 / 17.1 ≈ 0.47 → retains 53% of raw delta
+        At n=25: λ ≈ 4.8 / 13.8 ≈ 0.35 → retains 65% of raw delta
         """
+        MARGIN_SIGMA_SQ = 11.0 ** 2         # D1 game margin variance
+        MOMENTUM_SIGNAL_SIGMA_SQ = 3.0 ** 2  # Population SD of true momentum
+
         league_off = float(np.mean(list(adj_off.values()))) if adj_off else 100.0
         league_def = float(np.mean(list(adj_def.values()))) if adj_def else 100.0
 
@@ -869,18 +938,35 @@ class ProprietaryMetricsEngine:
 
         recent_em = float(np.mean(recent_margins))
         season_em = float(np.mean(season_margins))
-        momentum = recent_em - season_em
+        raw_delta = recent_em - season_em
 
-        return float(momentum), float(recent_em)
+        # Normal-Normal shrinkage: λ is noise fraction of total variance
+        n_recent = len(recent_margins)
+        lam = (MARGIN_SIGMA_SQ / n_recent) / (MARGIN_SIGMA_SQ / n_recent + MOMENTUM_SIGNAL_SIGMA_SQ)
+        shrunk_momentum = raw_delta * (1.0 - lam)
+
+        return float(shrunk_momentum), float(recent_em)
 
     def _pace_adjusted_variance(self, games: List[GameRecord]) -> float:
         """
-        Scoring-margin variance adjusted for pace.
+        Scoring-margin variance adjusted for pace, with Bayesian shrinkage
+        toward the D1 population margin stdev.
 
         Low-possession games inflate the influence of randomness.
+
+        C1 fix: Raw sample stdev from n=5 games has a chi-squared 95% CI
+        spanning 0.6x–2.9x the true value.  We shrink toward the D1
+        population margin stdev using a conjugate-prior approach on variance,
+        identical to _three_point_variance().
+
+        Formula (on variance):  shrunk_var = (n*s² + k*σ₀²) / (n + k)
+        where σ₀ = 11.0 pts (D1 population margin stdev → σ₀² = 121),
+        k = 8 (pseudo-observations, ~1/3 season, matching 3PT variance fix).
+
+        Returns prior σ₀ when n < 2 (can't estimate variance from 0–1 games).
         """
-        if len(games) < 5:
-            return 0.0
+        PACE_VAR_PRIOR_STD = 11.0    # D1 population game margin stdev (points)
+        PACE_VAR_PRIOR_WEIGHT = 8.0  # pseudo-observations (~1/3 season)
 
         adjusted_margins = []
         for g in games:
@@ -889,7 +975,16 @@ class ProprietaryMetricsEngine:
             pace_factor = max(g.possessions, 40.0) / 70.0
             adjusted_margins.append(margin / pace_factor)
 
-        return float(np.std(adjusted_margins, ddof=1))
+        n = len(adjusted_margins)
+        if n < 2:
+            return PACE_VAR_PRIOR_STD
+
+        sample_var = float(np.var(adjusted_margins, ddof=1))
+        prior_var = PACE_VAR_PRIOR_STD ** 2
+        shrunk_var = (n * sample_var + PACE_VAR_PRIOR_WEIGHT * prior_var) / (
+            n + PACE_VAR_PRIOR_WEIGHT
+        )
+        return float(np.sqrt(shrunk_var))
 
     def _consistency(self, games: List[GameRecord]) -> float:
         """
@@ -903,6 +998,40 @@ class ProprietaryMetricsEngine:
         margins = [g.points - g.opp_points for g in games]
         std_m = float(np.std(margins, ddof=1))
         return 1.0 / (1.0 + std_m)
+
+    def _sos_adjusted_consistency(
+        self,
+        games: List[GameRecord],
+        adj_off: Dict[str, float],
+        adj_def: Dict[str, float],
+    ) -> float:
+        """
+        Consistency on SOS-adjusted residuals.  C3 fix.
+
+        Raw margin stdev conflates true inconsistency with schedule variance:
+        a team playing both cupcakes and elite opponents shows high raw stdev
+        even when performing exactly as expected in each game.
+
+        Fix: compute residual_i = actual_margin_i - opp_em_i for each game,
+        where opp_em = adj_off[opp] - adj_def[opp].  The stdev of these
+        residuals isolates genuine game-to-game inconsistency from schedule
+        heterogeneity.
+
+        Infrastructure: identical to _momentum_5g() quality_margin pattern.
+        Returns 0.5 (neutral prior) for n < 5.
+        """
+        if len(games) < 5:
+            return 0.5
+
+        league_off = float(np.mean(list(adj_off.values()))) if adj_off else 100.0
+        league_def = float(np.mean(list(adj_def.values()))) if adj_def else 100.0
+
+        residuals = []
+        for g in games:
+            opp_em = adj_off.get(g.opponent_id, league_off) - adj_def.get(g.opponent_id, league_def)
+            residuals.append((g.points - g.opp_points) - opp_em)
+
+        return 1.0 / (1.0 + float(np.std(residuals, ddof=1)))
 
     def _compute_wab(
         self,
@@ -1005,15 +1134,28 @@ class ProprietaryMetricsEngine:
         self,
         results: Dict[str, ProprietaryTeamMetrics],
         by_team: Dict[str, List[GameRecord]],
-    ) -> None:
+        prior_elo: Optional[Dict[str, float]] = None,
+    ) -> Dict[str, float]:
         """
         MOV-adjusted Elo ratings per SBCB methodology.
 
         - Base K-factor: 38
-        - MOV multiplier: (3 + |margin|)^0.85
-        - HCA: +50 Elo for home team
-        - Autocorrection: shrink towards 1500 each game by 1%
+        - MOV multiplier: ln(1 + |margin|) — saturating, ~2.1x at 7pt, ~3.4x at 30pt
+        - HCA: +50 Elo for home team (B5: derived from HCA_POINTS * 13.3)
+        - No intra-season autocorrection (A2: regress at season boundaries only)
+
+        D2: Accept optional prior_elo for cross-season carryover.
+        Standard regression: start_elo = 0.75 * prior + 0.25 * 1500.
+        Matches FiveThirtyEight NFL Elo methodology (Silver, 2014).
+        Teams absent from prior_elo start at mean (1500.0).
+
+        Returns:
+            Dict of {team_id: end_of_season_elo} for cross-season carryover.
         """
+        # D2: Regression constants (Tier 2 — structurally constrained by 538 methodology)
+        _ELO_REGRESSION = 0.25   # 25% toward mean per season boundary
+        _ELO_MEAN = 1500.0
+
         # Collect all games in chronological order (deduplicated)
         all_games: List[GameRecord] = []
         seen_game_ids: Dict[str, set] = defaultdict(set)
@@ -1026,7 +1168,18 @@ class ProprietaryMetricsEngine:
                     seen_game_ids.setdefault(pair_key, set()).add(g.game_id)
         all_games.sort(key=lambda g: g.game_date)
 
-        elo: Dict[str, float] = defaultdict(lambda: 1500.0)
+        # D2: Initialize from regressed prior if provided; else flat start at mean.
+        if prior_elo:
+            elo: Dict[str, float] = {
+                t: (1.0 - _ELO_REGRESSION) * prior_elo.get(t, _ELO_MEAN) + _ELO_REGRESSION * _ELO_MEAN
+                for t in by_team
+            }
+            # Teams not in prior (new programs, transfers) start at mean
+            for t in by_team:
+                if t not in elo:
+                    elo[t] = _ELO_MEAN
+        else:
+            elo = defaultdict(lambda: _ELO_MEAN)
         K_BASE = 38.0
 
         for g in all_games:
@@ -1073,6 +1226,9 @@ class ProprietaryMetricsEngine:
         # Assign final Elo to results
         for tid in results:
             results[tid].elo_rating = round(elo.get(tid, 1500.0), 1)
+
+        # D2: Return end-of-season ratings for cross-season carryover
+        return dict(elo)
 
     def _compute_conference_strength(
         self,
@@ -1232,19 +1388,31 @@ class ProprietaryMetricsEngine:
 
     def _neutral_site_record(self, games: List[GameRecord]) -> Tuple[float, int]:
         """
-        Win % at neutral sites only.
+        Win % at neutral sites only, with Beta-Binomial shrinkage.
 
         Directly relevant to tournament prediction since all NCAA
         tournament games are played at neutral venues.
 
-        Returns (neutral_win_pct, n_neutral_games).
-        """
-        neutral_games = [g for g in games if g.is_neutral]
-        if not neutral_games:
-            return 0.5, 0
+        C1 fix: Raw wins/n gives 0.0 or 1.0 with n=1 — no signal.
+        We use a Beta(α₀, α₀) conjugate prior centered at 0.5.
+        Posterior mean = (wins + α₀) / (n + 2*α₀).
 
+        α₀ = 2.0 → 4 pseudo-games (2W+2L prior) at 0.5.
+        At n=0: returns 0.5 (full prior).
+        At n=4: ~40% shrinkage toward 0.5.
+        At n=10: ~29% shrinkage — elite teams escape the prior.
+
+        Returns (shrunk_neutral_win_pct, n_neutral_games).
+        """
+        NEUTRAL_PRIOR_ALPHA = 2.0  # Beta(2, 2) → weak prior at 0.5
+
+        neutral_games = [g for g in games if g.is_neutral]
+        n = len(neutral_games)
         wins = sum(1 for g in neutral_games if g.points > g.opp_points)
-        return wins / len(neutral_games), len(neutral_games)
+
+        # Beta-Binomial posterior mean — handles n=0 cleanly
+        shrunk_pct = (wins + NEUTRAL_PRIOR_ALPHA) / (n + 2 * NEUTRAL_PRIOR_ALPHA)
+        return float(shrunk_pct), n
 
     def _home_away_splits(
         self,
@@ -1253,14 +1421,40 @@ class ProprietaryMetricsEngine:
         adj_def: Dict[str, float],
     ) -> Tuple[float, float, float]:
         """
-        Compute AdjEM separately for home vs away games.
+        Compute AdjEM separately for home vs away games, with Normal-Normal
+        Bayesian shrinkage on each split.
 
         The differential (home_em - away_em) captures "home court dependence":
         teams with high dependence are at greater risk in neutral-site
         tournament games.
 
-        Returns (home_adj_em, away_adj_em, home_court_dependence).
+        C1 fix: The hard n<5 gate (returning 0.0) is a step function that
+        creates discontinuities and ignores evidence from 1-4 games entirely.
+        With n=5 home games, SE(mean_margin) ≈ 11/√5 ≈ 4.9 pts while the
+        home-court signal is ~3-5 pts (SNR ≈ 1.0).
+
+        We use Normal-Normal shrinkage independently per split:
+          shrunk_mean = observed_mean * (1 - λ)
+          λ = σ²_likelihood / (σ²_likelihood + σ²_signal)
+          σ²_likelihood = MARGIN_SIGMA² / n   (sampling uncertainty)
+          σ²_signal = HCA_SIGNAL_SIGMA²        (population SD of true split EM)
+
+        This is equivalent to a Bayesian update with prior N(0, σ²_signal)
+        — i.e., prior belief that a team has zero venue-specific advantage.
+
+        Constants:
+          MARGIN_SIGMA = 11.0 pts  (D1 game-to-game margin stdev)
+          HCA_SIGNAL_SIGMA = 4.0 pts  (population SD of true home-EM across D1)
+
+        At n=5 home games:  λ ≈ (121/5)/(121/5+16) ≈ 0.60 → 40% of raw kept
+        At n=10:            λ ≈ (121/10)/(121/10+16) ≈ 0.43 → 57% kept
+        At n=16:            λ ≈ (121/16)/(121/16+16) ≈ 0.32 → 68% kept
+
+        Returns (shrunk_home_adj_em, shrunk_away_adj_em, shrunk_dependence).
         """
+        MARGIN_SIGMA_SQ = 11.0 ** 2       # D1 game margin variance
+        HCA_SIGNAL_SIGMA_SQ = 4.0 ** 2   # Population SD of true split EM
+
         league_off = float(np.mean(list(adj_off.values()))) if adj_off else 100.0
         league_def = float(np.mean(list(adj_def.values()))) if adj_def else 100.0
 
@@ -1275,16 +1469,20 @@ class ProprietaryMetricsEngine:
                 away_margins.append(quality_margin)
             # Neutral games excluded — they represent the tournament baseline
 
-        # Require minimum 5 games in each split for stability
-        home_em = float(np.mean(home_margins)) if len(home_margins) >= 5 else 0.0
-        away_em = float(np.mean(away_margins)) if len(away_margins) >= 5 else 0.0
+        def _shrink_split(margins: list) -> float:
+            """Normal-Normal posterior mean; prior is N(0, σ²_signal)."""
+            n = len(margins)
+            if n == 0:
+                return 0.0
+            observed = float(np.mean(margins))
+            lam = (MARGIN_SIGMA_SQ / n) / (MARGIN_SIGMA_SQ / n + HCA_SIGNAL_SIGMA_SQ)
+            return observed * (1.0 - lam)
 
-        # Home court dependence: positive = team benefits from home court
-        # Shrink toward 0 when sample is small
-        if len(home_margins) >= 5 and len(away_margins) >= 5:
-            dependence = home_em - away_em
-        else:
-            dependence = 0.0
+        home_em = _shrink_split(home_margins)
+        away_em = _shrink_split(away_margins)
+
+        # Home court dependence: shrunk difference — positive = benefits from home
+        dependence = home_em - away_em
 
         return home_em, away_em, dependence
 
@@ -1295,10 +1493,31 @@ class ProprietaryMetricsEngine:
         adj_def: Dict[str, float],
     ) -> float:
         """
-        5-game rolling form — finer granularity momentum signal.
+        5-game rolling form — finer granularity momentum signal, with
+        Normal-Normal Bayesian shrinkage on the momentum delta.
 
         Captures hot/cold streaks that the 10-game window smooths over.
+
+        C1 fix: With n=5 recent games, SE(mean quality-adjusted margin) ≈
+        11/√5 ≈ 4.9 pts.  Typical real momentum signals are 2-3 pts above
+        season baseline (SNR ≈ 0.5).  Without shrinkage the feature is
+        more noise than signal.
+
+        We apply Normal-Normal shrinkage to the momentum delta toward 0
+        (prior belief: no momentum effect):
+          λ = (σ²_margin / n_recent) / (σ²_margin / n_recent + σ²_signal)
+          shrunk_momentum = raw_delta * (1 - λ)
+
+        Constants:
+          MARGIN_SIGMA = 11.0 pts  (D1 game-to-game margin stdev)
+          MOMENTUM_SIGNAL_SIGMA = 3.0 pts  (population SD of true momentum)
+
+        At n=5:  λ ≈ 24.2 / 33.2 ≈ 0.73 → retains 27% of raw delta
+        At n=8:  λ ≈ 15.1 / 24.1 ≈ 0.63 → retains 37% of raw delta
         """
+        MARGIN_SIGMA_SQ = 11.0 ** 2         # D1 game margin variance
+        MOMENTUM_SIGNAL_SIGMA_SQ = 3.0 ** 2  # Population SD of true momentum
+
         league_off = float(np.mean(list(adj_off.values()))) if adj_off else 100.0
         league_def = float(np.mean(list(adj_def.values()))) if adj_def else 100.0
 
@@ -1318,51 +1537,20 @@ class ProprietaryMetricsEngine:
             quality_margin = (g.points - g.opp_points) - opp_em
             season_margins.append(quality_margin)
 
-        return float(np.mean(recent_margins)) - float(np.mean(season_margins))
+        raw_delta = float(np.mean(recent_margins)) - float(np.mean(season_margins))
 
-    def _transition_efficiency(
-        self,
-        games: List[GameRecord],
-        adj_off: Dict[str, float],
-        adj_def: Dict[str, float],
-    ) -> Tuple[float, float]:
-        """
-        Transition efficiency estimate (pace-derived proxy).
+        # Normal-Normal shrinkage: λ is the fraction of variance explained by noise
+        n_recent = len(recent_margins)
+        lam = (MARGIN_SIGMA_SQ / n_recent) / (MARGIN_SIGMA_SQ / n_recent + MOMENTUM_SIGNAL_SIGMA_SQ)
+        return raw_delta * (1.0 - lam)
 
-        Teams that play significantly faster than league average generate
-        more transition opportunities.  We estimate transition efficiency
-        as the interaction of pace surplus with offensive/defensive quality.
-
-        This proxies ShotQuality's transition PPP metric using only box-score
-        data.  The key insight: fast teams that are also efficient likely
-        excel in transition (half-court efficiency is more uniform).
-
-        Returns (offensive_transition_eff, defensive_transition_vuln).
-        """
-        if not games:
-            return 0.0, 0.0
-
-        tid = games[0].team_id
-        team_tempo = np.mean([g.possessions for g in games])
-
-        # League average tempo
-        all_tempos = []
-        for team_games in [games]:  # Just from this team's perspective
-            all_tempos.extend([g.possessions for g in team_games])
-        league_tempo = 68.0  # D1 average
-
-        # Pace surplus: how much faster this team plays than average
-        pace_surplus = (team_tempo - league_tempo) / league_tempo  # Normalized
-
-        # Offensive transition efficiency: pace surplus × (AdjO / league_avg_O)
-        adj_o = adj_off.get(tid, 100.0)
-        off_trans = pace_surplus * (adj_o / 100.0 - 1.0)
-
-        # Defensive transition vulnerability: opponent pace surplus × (AdjD / league_avg_D)
-        adj_d = adj_def.get(tid, 100.0)
-        def_trans_vuln = pace_surplus * (adj_d / 100.0 - 1.0)
-
-        return float(off_trans), float(def_trans_vuln)
+    # C4: _transition_efficiency() REMOVED.
+    # The formula `pace_surplus * (AdjO/100 - 1)` assumed fast teams generate
+    # extra offensive efficiency from transition opportunities.  Without play-by-play
+    # data (ShotQuality transition PPP), this interaction term is unmotivated
+    # correlation speculation.  Fields transition_efficiency and
+    # defensive_transition_vulnerability remain in ProprietaryTeamMetrics at
+    # default 0.0 for backward compatibility.
 
     def _pace_variance(self, games: List[GameRecord]) -> float:
         """
@@ -1751,7 +1939,11 @@ def _load_cbbpy_team_map(csv_path: Optional[str] = None) -> Dict[str, str]:
 # Converter: Torvik/public data → GameRecord
 # ---------------------------------------------------------------------------
 
-def torvik_to_game_records(torvik_teams: List[Dict], historical_games: List[Dict]) -> List[GameRecord]:
+def torvik_to_game_records(
+    torvik_teams: List[Dict],
+    historical_games: List[Dict],
+    season_year: int,
+) -> List[GameRecord]:
     """
     Convert Torvik team stats + historical game rows into GameRecord objects.
 
@@ -1763,6 +1955,7 @@ def torvik_to_game_records(torvik_teams: List[Dict], historical_games: List[Dict
     ensures the proprietary engine keys its results by the same IDs that
     the tournament pipeline uses.
     """
+    logger = logging.getLogger(__name__)
     # ------------------------------------------------------------------
     # Build a display_name → canonical_id resolver using the CBBpy team
     # map CSV.  The CSV ``location`` column gives the school name without
@@ -1920,7 +2113,14 @@ def torvik_to_game_records(torvik_teams: List[Dict], historical_games: List[Dict
         is_neutral = bool(game.get("neutral_site", game.get("is_neutral", False)))
         is_home = bool(game.get("is_home", not is_neutral))
 
-        game_date = str(game.get("game_date") or game.get("date") or game.get("start_date") or "2026-01-01")
+        raw_date = game.get("game_date") or game.get("date") or game.get("start_date")
+        if not raw_date:
+            logger.warning(
+                "Game %s missing date; using %d-01-01 fallback.",
+                game_id or "unknown",
+                season_year,
+            )
+        game_date = str(raw_date or f"{season_year}-01-01")
         team_name = str(game.get("team_name") or game.get("team1_name") or game.get("team1") or team_id)
 
         records.append(GameRecord(

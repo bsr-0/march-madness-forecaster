@@ -116,7 +116,10 @@ class ScheduleGraph:
 
         # Sort dates to find range; dates are YYYY-MM-DD strings
         # which sort lexicographically as chronological order.
-        dates = [(e.game_id, e.game_date or "2026-01-01") for e in self.edges]
+        # Derive fallback from earliest known date so it works for any season.
+        known_dates = [e.game_date for e in self.edges if e.game_date]
+        fallback_date = min(known_dates) if known_dates else "2000-01-01"
+        dates = [(e.game_id, e.game_date or fallback_date) for e in self.edges]
         all_dates = sorted(set(d for _, d in dates))
         if len(all_dates) < 2:
             return {gid: 1.0 for gid, _ in dates}

@@ -135,3 +135,16 @@ def test_run_sota_from_manifest_allows_overrides(tmp_path, monkeypatch):
     assert captured["config"].teams_json == str(override_teams.resolve())
     assert captured["config"].roster_json == str(override_rosters.resolve())
     assert captured["config"].scrape_live is True
+
+
+def test_fixed_feature_set_citation_markers():
+    """C2: Key citation markers must appear in sota.py source (RDoF methodology)."""
+    import inspect
+    from src.pipeline import sota
+
+    src = inspect.getsource(sota)
+    for marker in ["[KP]", "[OL]", "[KUB]", "[KAG]", "[VAR]"]:
+        assert marker in src, (
+            f"Missing citation marker {marker} in sota.py FIXED_FEATURE_SET docs. "
+            "Each feature must have a published empirical source."
+        )

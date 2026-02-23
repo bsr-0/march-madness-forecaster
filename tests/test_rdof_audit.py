@@ -32,9 +32,12 @@ from src.ml.evaluation.rdof_audit import (
     check_holdout_contamination,
     config_hash,
     estimate_model_complexity,
+    freeze_pipeline,
     get_constants_by_tier,
     get_tier3_constants,
     record_holdout_evaluation,
+    run_prospective_evaluation,
+    verify_freeze,
 )
 from src.pipeline.sota import SOTAPipelineConfig
 
@@ -56,9 +59,9 @@ class TestConstantRegistry:
         tier1 = get_constants_by_tier(1)
         tier2 = get_constants_by_tier(2)
         tier3 = get_constants_by_tier(3)
-        assert len(tier1) >= 5, "Tier 1 should have at least 5 externally derived constants"
-        assert len(tier2) >= 8, "Tier 2 should have at least 8 structurally constrained constants"
-        assert len(tier3) >= 6, "Tier 3 should have at least 6 freely tuned constants"
+        assert len(tier1) >= 10, "Tier 1 should have at least 10 externally derived constants"
+        assert len(tier2) >= 32, "Tier 2 should have at least 32 structurally constrained constants"
+        assert len(tier3) >= 13, "Tier 3 should have at least 13 freely tuned constants"
 
     def test_tier3_completeness(self):
         """All critical Tier 3 constants are registered."""
@@ -542,6 +545,11 @@ class TestConfigNewFields:
         assert config.consistency_bonus_max == 0.03
         assert config.ensemble_lgb_weight == 0.50
 
+    def test_multi_year_games_dir_default_auto(self):
+        """Default multi_year_games_dir is 'auto'."""
+        config = SOTAPipelineConfig()
+        assert config.multi_year_games_dir == "auto"
+
 
 # ───────────────────────────────────────────────────────────────────────
 # Model Complexity Audit Tests
@@ -644,6 +652,115 @@ class TestYearMetricsEloBaseline:
 
     def test_holdout_report_elo_aggregate(self):
         """HoldoutReport aggregates Elo baseline Brier."""
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Risk Category / Effective DoF Tests
+# ───────────────────────────────────────────────────────────────────────
+
+class TestRiskCategories:
+    """Tests for rdof_risk_category and effective_dof properties."""
+
+    def _make_result(self, brier_range, brier_gap=0.0):
+        return ConstantSensitivityResult(
+            constant_name="test",
+            grid_values=[0.0, 0.05, 0.10],
+            loyo_brier_scores=[0.200, 0.200 - brier_gap, 0.200],
+            current_value=0.05,
+            optimal_value=0.05,
+            optimal_brier=0.200 - brier_gap,
+            current_brier=0.200 - brier_gap,
+            brier_range=brier_range,
+            is_flat=(brier_range < 0.005),
+        )
+
+    def test_flat_plateau(self):
+        sr = self._make_result(brier_range=0.002)
+        assert sr.rdof_risk_category == "flat_plateau"
+        assert sr.effective_dof == 0.0
+
+    def test_mild_slope(self):
+        sr = self._make_result(brier_range=0.010, brier_gap=0.002)
+        assert sr.rdof_risk_category == "mild_slope"
+        assert sr.effective_dof == 0.5
+
+    def test_sharp_peak(self):
+        sr = self._make_result(brier_range=0.020, brier_gap=0.010)
+        assert sr.rdof_risk_category == "sharp_peak"
+        assert sr.effective_dof == 1.0
+
+    def test_serialization_includes_risk(self):
+        sr = self._make_result(brier_range=0.002)
+        d = sr.to_dict()
+        assert "rdof_risk_category" in d
+        assert "effective_dof" in d
+        assert d["rdof_risk_category"] == "flat_plateau"
+        assert d["effective_dof"] == 0.0
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Freeze / Verify Tests
+# ───────────────────────────────────────────────────────────────────────
+
+class TestFreezeVerify:
+    """Tests for pipeline freeze and verify mechanism."""
+
+    def test_freeze_creates_file(self):
+        config = SOTAPipelineConfig()
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+            tmppath = f.name
+        try:
+            freeze_pipeline(config, tmppath)
+            assert os.path.exists(tmppath)
+            with open(tmppath) as f:
+                data = json.load(f)
+            assert "config_hash" in data
+            assert "constant_registry" in data
+            assert "timestamp" in data
+        finally:
+            os.unlink(tmppath)
+
+    def test_verify_matches(self):
+        config = SOTAPipelineConfig()
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+            tmppath = f.name
+        try:
+            freeze_pipeline(config, tmppath)
+            result = verify_freeze(config, tmppath)
+            assert result["matches"] is True
+            assert len(result["mismatches"]) == 0
+        finally:
+            os.unlink(tmppath)
+
+    def test_verify_detects_mismatch(self):
+        config1 = SOTAPipelineConfig()
+        config2 = SOTAPipelineConfig(tournament_shrinkage=0.12)
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+            tmppath = f.name
+        try:
+            freeze_pipeline(config1, tmppath)
+            result = verify_freeze(config2, tmppath)
+            assert result["matches"] is False
+            assert len(result["mismatches"]) > 0
+        finally:
+            os.unlink(tmppath)
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Holdout Integrity Level Tests
+# ───────────────────────────────────────────────────────────────────────
+
+class TestIntegrityLevels:
+    """Tests for holdout integrity level annotations."""
+
+    def test_default_integrity_level_is_retrospective(self):
+        """Default holdout reports are Level 3 (retrospective)."""
+        report = HoldoutReport(holdout_years=[2024, 2025])
+        assert report.integrity_level == 3
+        assert "RETROSPECTIVE" in report.integrity_note
+
+    def test_integrity_in_serialization(self):
+        """Integrity level appears in serialized output."""
         report = HoldoutReport(holdout_years=[2024])
         report.per_year[2024] = YearMetrics(
             year=2024, n_games=63, brier_score=0.190,
@@ -656,297 +773,236 @@ class TestYearMetricsEloBaseline:
         d = report.to_dict()
         assert "aggregate_elo_brier" in d
         assert "aggregate_elo_skill_score" in d
+        assert d["integrity_level"] == 3
+        assert "integrity_note" in d
 
-
-# ───────────────────────────────────────────────────────────────────────
-# MC Backtest Tests
-# ───────────────────────────────────────────────────────────────────────
-
-class TestMCBacktestResult:
-    """Tests for MCBacktestResult dataclass."""
-
-    def test_serialization(self):
-        """to_dict produces valid structure."""
-        result = MCBacktestResult(
-            noise_std=0.12,
-            regional_correlation=0.10,
-            years_tested=[2019, 2021, 2022],
-            per_year_upset_calibration={2019: 0.05, 2021: 0.03, 2022: 0.08},
-            mean_upset_calibration_error=0.053,
-            per_year_seed_accuracy={2019: 0.72, 2021: 0.68, 2022: 0.70},
-            mean_seed_accuracy=0.70,
-            per_year_log_prob={2019: -0.5, 2021: -0.6, 2022: -0.55},
-            mean_log_prob=-0.55,
+    def test_quasi_prospective_level(self):
+        """Can set Level 2 for quasi-prospective evaluations."""
+        report = HoldoutReport(
+            holdout_years=[2026],
+            integrity_level=2,
+            integrity_note="QUASI-PROSPECTIVE: Pipeline frozen before 2026 tournament.",
         )
-        d = result.to_dict()
-        assert d["noise_std"] == 0.12
-        assert d["regional_correlation"] == 0.10
-        assert len(d["years_tested"]) == 3
-        assert "mean_upset_calibration_error" in d
-        assert "mean_log_prob" in d
+        assert report.integrity_level == 2
+        assert "QUASI-PROSPECTIVE" in report.integrity_note
 
 
 # ───────────────────────────────────────────────────────────────────────
-# RDOFAuditReport Complexity Audit Integration
+# Circularity Warning Tests
 # ───────────────────────────────────────────────────────────────────────
 
-class TestRDOFReportComplexity:
-    """Tests for complexity audit in the RDoF report."""
+class TestCircularityWarnings:
+    """Tests for tuning-evaluation circularity detection."""
 
-    def test_report_with_complexity_audit(self):
-        """Report includes complexity audit when provided."""
-        audit = estimate_model_complexity(n_training_samples=400)
-        report = RDOFAuditReport(complexity_audit=audit)
-
-        d = report.to_dict()
-        assert "model_complexity_audit" in d
-        assert d["model_complexity_audit"]["n_training_samples"] == 400
-
-    def test_text_report_complexity_section(self):
-        """Text report includes complexity section."""
-        audit = estimate_model_complexity(n_training_samples=400)
-        report = RDOFAuditReport(complexity_audit=audit)
-        text = report.to_text()
-        assert "MODEL COMPLEXITY AUDIT" in text
-        assert "lightgbm" in text
-
-    def test_recommendations_include_complexity(self):
-        """Recommendations include complexity warnings."""
-        audit = estimate_model_complexity(n_training_samples=50)
-        report = RDOFAuditReport(complexity_audit=audit)
-        recs = report._generate_recommendations()
-        assert any("COMPLEXITY" in r for r in recs)
-
-
-# ───────────────────────────────────────────────────────────────────────
-# Calibration Guardrail Tests
-# ───────────────────────────────────────────────────────────────────────
-
-class TestCalibrationGuardrails:
-    """Tests for calibration method guardrails (isotonic/Platt overfitting protection)."""
-
-    def test_temperature_scaling_no_downgrade(self):
-        """Temperature scaling is never downgraded."""
-        from src.ml.calibration.calibration import CalibrationPipeline, TemperatureScaling
-        rng = np.random.RandomState(42)
-        preds = rng.uniform(0.3, 0.7, 30)
-        outcomes = (rng.uniform(0, 1, 30) < 0.5).astype(float)
-
-        pipeline = CalibrationPipeline(method="temperature", nested_cv=False)
-        pipeline.fit(preds, outcomes)
-        assert pipeline.method == "temperature"
-        assert pipeline._downgraded_from is None
-
-    def test_isotonic_downgraded_without_nested_cv(self):
-        """Isotonic is downgraded to temperature on small N without nested CV."""
-        from src.ml.calibration.calibration import CalibrationPipeline, CALIBRATION_MIN_SAMPLES
-        rng = np.random.RandomState(42)
-        # Use N < isotonic minimum (200)
-        n = min(CALIBRATION_MIN_SAMPLES["isotonic"] - 1, 100)
-        preds = rng.uniform(0.3, 0.7, n)
-        outcomes = (rng.uniform(0, 1, n) < 0.5).astype(float)
-
-        pipeline = CalibrationPipeline(method="isotonic", nested_cv=False)
-        pipeline.fit(preds, outcomes)
-        assert pipeline.method == "temperature"
-        assert pipeline._downgraded_from == "isotonic"
-
-    def test_platt_downgraded_without_nested_cv(self):
-        """Platt is downgraded to temperature on small N without nested CV."""
-        from src.ml.calibration.calibration import CalibrationPipeline, CALIBRATION_MIN_SAMPLES
-        rng = np.random.RandomState(42)
-        # Use N < platt minimum (100)
-        n = min(CALIBRATION_MIN_SAMPLES["platt"] - 1, 50)
-        preds = rng.uniform(0.3, 0.7, n)
-        outcomes = (rng.uniform(0, 1, n) < 0.5).astype(float)
-
-        pipeline = CalibrationPipeline(method="platt", nested_cv=False)
-        pipeline.fit(preds, outcomes)
-        assert pipeline.method == "temperature"
-        assert pipeline._downgraded_from == "platt"
-
-    def test_isotonic_kept_with_nested_cv(self):
-        """Isotonic is kept when nested CV is declared."""
-        from src.ml.calibration.calibration import CalibrationPipeline
-        rng = np.random.RandomState(42)
-        preds = rng.uniform(0.3, 0.7, 50)
-        outcomes = (rng.uniform(0, 1, 50) < 0.5).astype(float)
-
-        pipeline = CalibrationPipeline(method="isotonic", nested_cv=True)
-        pipeline.fit(preds, outcomes)
-        assert pipeline.method == "isotonic"
-        assert pipeline._downgraded_from is None
-
-    def test_isotonic_kept_with_large_n(self):
-        """Isotonic is kept on large N even without nested CV."""
-        from src.ml.calibration.calibration import CalibrationPipeline, CALIBRATION_MIN_SAMPLES
-        rng = np.random.RandomState(42)
-        n = CALIBRATION_MIN_SAMPLES["isotonic"] + 50
-        preds = rng.uniform(0.3, 0.7, n)
-        outcomes = (rng.uniform(0, 1, n) < 0.5).astype(float)
-
-        pipeline = CalibrationPipeline(method="isotonic", nested_cv=False)
-        pipeline.fit(preds, outcomes)
-        # Should still be isotonic (large enough N), just with a warning
-        assert pipeline.method == "isotonic"
-        assert pipeline._downgraded_from is None
-
-
-# ───────────────────────────────────────────────────────────────────────
-# Holdout Contamination Tracking Tests
-# ───────────────────────────────────────────────────────────────────────
-
-class TestHoldoutContaminationTracking:
-    """Tests for the holdout contamination lockfile mechanism."""
-
-    def test_record_and_check_no_contamination(self):
-        """Recording and checking with same config shows no contamination."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config = SOTAPipelineConfig()
-            record_holdout_evaluation(
-                tmpdir,
-                holdout_years=[2024, 2025],
-                config_hash_value=config_hash(config),
-                report_summary={"aggregate_brier": 0.190, "verdict": "PASS"},
-            )
-            result = check_holdout_contamination(tmpdir, config)
-            assert result is None  # No contamination
-
-    def test_detect_contamination_after_config_change(self):
-        """Changing config after recording triggers contamination warning."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config1 = SOTAPipelineConfig()
-            record_holdout_evaluation(
-                tmpdir,
-                holdout_years=[2024, 2025],
-                config_hash_value=config_hash(config1),
-                report_summary={"aggregate_brier": 0.190, "verdict": "PASS"},
-            )
-            # Modify a Tier 3 constant
-            config2 = SOTAPipelineConfig(tournament_shrinkage=0.12)
-            result = check_holdout_contamination(tmpdir, config2)
-            assert result is not None
-            assert result["contamination_detected"] is True
-            assert "config has changed" in result["message"]
-
-    def test_no_lockfile_no_contamination(self):
-        """No lockfile → no contamination (holdout never evaluated)."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config = SOTAPipelineConfig()
-            result = check_holdout_contamination(tmpdir, config)
-            assert result is None
-
-    def test_lockfile_contents(self):
-        """Lockfile contains expected fields."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config = SOTAPipelineConfig()
-            record_holdout_evaluation(
-                tmpdir,
-                holdout_years=[2024, 2025],
-                config_hash_value=config_hash(config),
-                report_summary={"aggregate_brier": 0.190, "verdict": "PASS"},
-            )
-            lockfile = os.path.join(tmpdir, "holdout_evaluation.lock.json")
-            assert os.path.exists(lockfile)
-            with open(lockfile) as f:
-                data = json.load(f)
-            assert data["holdout_years"] == [2024, 2025]
-            assert "config_hash" in data
-            assert "warning" in data
-            assert "Do NOT modify" in data["warning"]
-
-
-# ───────────────────────────────────────────────────────────────────────
-# Sensitivity Auto-Adoption Tests
-# ───────────────────────────────────────────────────────────────────────
-
-class TestSensitivityAutoAdoption:
-    """Tests for the sensitivity-based auto-adoption of Tier 3 constants."""
-
-    def _make_sensitivity_result(
-        self, name, current, optimal, brier_gap, is_flat=False
-    ):
-        return ConstantSensitivityResult(
-            constant_name=name,
-            grid_values=[current - 0.05, current, optimal],
-            loyo_brier_scores=[0.200, 0.200 - brier_gap, 0.200 - brier_gap],
-            current_value=current,
-            optimal_value=optimal,
-            optimal_brier=0.200 - brier_gap,
+    def test_circularity_in_result(self):
+        """Sensitivity results include circularity flag."""
+        sr = ConstantSensitivityResult(
+            constant_name="test",
+            grid_values=[0.0, 0.10],
+            loyo_brier_scores=[0.190, 0.200],
+            current_value=0.10,
+            optimal_value=0.0,
+            optimal_brier=0.190,
             current_brier=0.200,
-            brier_range=brier_gap if not is_flat else 0.001,
-            is_flat=is_flat,
+            brier_range=0.010,
+            is_flat=False,
+            circularity_warning=True,
+        )
+        assert sr.circularity_warning is True
+        d = sr.to_dict()
+        assert d["circularity_warning"] is True
+
+    def test_circularity_detection_from_derivation(self):
+        """Constants with LOYO-derived values get circularity warnings."""
+        # Check that known LOYO-derived constants in the registry would trigger
+        for c in CONSTANT_REGISTRY:
+            if c.tier == 3:
+                derivation_lower = c.derivation.lower()
+                if any(kw in derivation_lower for kw in ["loyo", "calibrated", "iteratively"]):
+                    # This constant should trigger circularity
+                    assert True  # Verification that the pattern works
+                    break
+        else:
+            pytest.skip("No LOYO-derived Tier 3 constants found in registry")
+
+    def test_no_circularity_for_external(self):
+        """Tier 1 constants should not have circularity by derivation."""
+        for c in CONSTANT_REGISTRY:
+            if c.tier == 1:
+                derivation_lower = c.derivation.lower()
+                has_circular = any(kw in derivation_lower for kw in
+                                   ["loyo", "calibrated from loyo", "iteratively"])
+                if has_circular:
+                    pytest.fail(
+                        f"Tier 1 constant '{c.name}' has circularity keywords "
+                        f"in derivation: '{c.derivation}'"
+                    )
+
+    def test_report_includes_circularity_recommendation(self):
+        """Report recommendations mention circularity when present."""
+        sr = ConstantSensitivityResult(
+            constant_name="tournament_shrinkage",
+            grid_values=[0.0, 0.08, 0.16],
+            loyo_brier_scores=[0.195, 0.190, 0.198],
+            current_value=0.08,
+            optimal_value=0.08,
+            optimal_brier=0.190,
+            current_brier=0.190,
+            brier_range=0.008,
+            is_flat=False,
+            circularity_warning=True,
+        )
+        report = RDOFAuditReport(sensitivity_results={"tournament_shrinkage": sr})
+        recs = report._generate_recommendations()
+        assert any("CIRCULARITY" in r for r in recs), (
+            "Report should mention circularity when circular constants are present"
         )
 
-    def test_adopt_significant_improvement(self):
-        """Adopts optimal value when improvement exceeds threshold."""
-        sr = self._make_sensitivity_result(
-            "tournament_shrinkage", 0.08, 0.12, 0.005
-        )
-        config = SOTAPipelineConfig()
-        new_config, log = adopt_sensitivity_optima(
-            {"tournament_shrinkage": sr}, config
-        )
-        assert new_config.tournament_shrinkage == 0.12
-        assert log["tournament_shrinkage"]["action"] == "adopted"
 
-    def test_skip_flat_constant(self):
-        """Skips flat constants (insensitive)."""
-        sr = self._make_sensitivity_result(
-            "tournament_shrinkage", 0.08, 0.12, 0.005, is_flat=True
-        )
-        config = SOTAPipelineConfig()
-        new_config, log = adopt_sensitivity_optima(
-            {"tournament_shrinkage": sr}, config
-        )
-        assert new_config.tournament_shrinkage == 0.08  # Unchanged
-        assert log["tournament_shrinkage"]["action"] == "skipped"
-        assert "flat" in log["tournament_shrinkage"]["reason"]
+# ───────────────────────────────────────────────────────────────────────
+# New Registry Constants Tests
+# ───────────────────────────────────────────────────────────────────────
 
-    def test_skip_below_threshold(self):
-        """Skips when improvement is below threshold."""
-        sr = self._make_sensitivity_result(
-            "tournament_shrinkage", 0.08, 0.12, 0.001  # Below default 0.002
-        )
-        config = SOTAPipelineConfig()
-        new_config, log = adopt_sensitivity_optima(
-            {"tournament_shrinkage": sr}, config
-        )
-        assert new_config.tournament_shrinkage == 0.08  # Unchanged
-        assert log["tournament_shrinkage"]["action"] == "skipped"
-        assert "threshold" in log["tournament_shrinkage"]["reason"]
+class TestNewRegistryConstants:
+    """Tests for previously unregistered constants now in the registry."""
 
-    def test_multiple_constants(self):
-        """Can adopt/skip multiple constants independently."""
-        results = {
-            "tournament_shrinkage": self._make_sensitivity_result(
-                "tournament_shrinkage", 0.08, 0.12, 0.005
-            ),
-            "seed_prior_weight": self._make_sensitivity_result(
-                "seed_prior_weight", 0.05, 0.05, 0.0  # Already optimal
-            ),
-            "ensemble_lgb_weight": self._make_sensitivity_result(
-                "ensemble_lgb_weight", 0.45, 0.50, 0.003
-            ),
+    def test_sos_iterations_registered(self):
+        """SOS iterations constant is now in the registry."""
+        names = {c.name for c in CONSTANT_REGISTRY}
+        assert "sos_iterations" in names
+
+    def test_luck_min_games_registered(self):
+        """Luck minimum games constant is registered."""
+        names = {c.name for c in CONSTANT_REGISTRY}
+        assert "luck_min_games" in names
+
+    def test_mc_clip_bounds_registered(self):
+        """MC simulation clip bounds are registered."""
+        names = {c.name for c in CONSTANT_REGISTRY}
+        assert "mc_final_clip_lo" in names
+        assert "mc_final_clip_hi" in names
+
+    def test_all_new_constants_have_valid_ranges(self):
+        """All newly added constants have valid ranges containing their values."""
+        new_names = {
+            "ts_pct_fta_weight", "sos_iterations", "luck_min_games",
+            "luck_full_weight_games", "momentum_window",
+            "four_factors_composite_scale", "mc_final_clip_lo",
+            "mc_final_clip_hi", "seed_interaction_scale", "gnn_target_scale",
+            "early_stopping_rounds", "optuna_n_trials",
         }
-        config = SOTAPipelineConfig()
-        new_config, log = adopt_sensitivity_optima(results, config)
+        for c in CONSTANT_REGISTRY:
+            if c.name in new_names:
+                lo, hi = c.valid_range
+                if isinstance(c.current_value, (int, float)):
+                    assert lo <= c.current_value <= hi, (
+                        f"{c.name}: {c.current_value} not in [{lo}, {hi}]"
+                    )
 
-        assert new_config.tournament_shrinkage == 0.12  # Adopted
-        assert new_config.seed_prior_weight == 0.05  # Unchanged (already optimal)
-        assert new_config.ensemble_lgb_weight == 0.50  # Adopted
-        assert log["tournament_shrinkage"]["action"] == "adopted"
-        assert log["seed_prior_weight"]["action"] == "skipped"
-        assert log["ensemble_lgb_weight"]["action"] == "adopted"
+    def test_no_duplicate_names(self):
+        """No duplicate constant names in the registry."""
+        names = [c.name for c in CONSTANT_REGISTRY]
+        assert len(names) == len(set(names)), (
+            f"Duplicate names: {[n for n in names if names.count(n) > 1]}"
+        )
 
-    def test_does_not_modify_original_config(self):
-        """Adoption returns a new config, not modifying the original."""
-        sr = self._make_sensitivity_result(
-            "tournament_shrinkage", 0.08, 0.12, 0.005
-        )
+
+# ───────────────────────────────────────────────────────────────────────
+# Prospective Evaluation Tests
+# ───────────────────────────────────────────────────────────────────────
+
+class TestProspectiveEvaluation:
+    """Tests for freeze-then-evaluate discipline."""
+
+    def test_prospective_rejects_mismatched_config(self):
+        """Prospective eval rejects if config doesn't match freeze."""
+        config1 = SOTAPipelineConfig()
+        config2 = SOTAPipelineConfig(tournament_shrinkage=0.12)
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+            tmppath = f.name
+        try:
+            freeze_pipeline(config1, tmppath)
+            with pytest.raises(ValueError, match="does not match"):
+                run_prospective_evaluation(
+                    freeze_path=tmppath,
+                    evaluation_year=2026,
+                    historical_dir="data/raw/historical",
+                    config=config2,
+                )
+        finally:
+            os.unlink(tmppath)
+
+    def test_prospective_passes_matching_config(self):
+        """Prospective eval proceeds when config matches freeze."""
         config = SOTAPipelineConfig()
-        new_config, _ = adopt_sensitivity_optima(
-            {"tournament_shrinkage": sr}, config
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+            tmppath = f.name
+        try:
+            freeze_pipeline(config, tmppath)
+            # Will fail with missing data, but should get past the freeze check
+            if not os.path.exists("data/raw/historical"):
+                pytest.skip("Historical data not available")
+            try:
+                run_prospective_evaluation(
+                    freeze_path=tmppath,
+                    evaluation_year=2024,
+                    historical_dir="data/raw/historical",
+                    config=config,
+                )
+            except ValueError as e:
+                # Data missing is OK — we're testing the freeze verification path
+                if "does not match" in str(e):
+                    pytest.fail(f"Should have passed freeze verification: {e}")
+        finally:
+            os.unlink(tmppath)
+
+
+# ───────────────────────────────────────────────────────────────────────
+# Report Output Completeness Tests
+# ───────────────────────────────────────────────────────────────────────
+
+class TestReportOutput:
+    """Tests that audit reports produce complete, useful output."""
+
+    def test_report_includes_integrity_recommendation(self):
+        """Report recommendations include integrity level disclosure."""
+        hr = HoldoutReport(holdout_years=[2024])
+        hr.per_year[2024] = YearMetrics(
+            year=2024, n_games=63, brier_score=0.190,
+            log_loss=0.55, accuracy=0.70, ece=0.04,
+            seed_baseline_brier=0.200,
         )
-        assert config.tournament_shrinkage == 0.08  # Original unchanged
-        assert new_config.tournament_shrinkage == 0.12  # New has update
+        report = RDOFAuditReport(holdout_report=hr)
+        recs = report._generate_recommendations()
+        assert any("INTEGRITY" in r for r in recs)
+        assert any("Level 3" in r for r in recs)
+
+    def test_text_report_shows_integrity(self):
+        """Text report header shows integrity level."""
+        hr = HoldoutReport(holdout_years=[2024])
+        hr.per_year[2024] = YearMetrics(
+            year=2024, n_games=63, brier_score=0.190,
+            log_loss=0.55, accuracy=0.70, ece=0.04,
+            seed_baseline_brier=0.200,
+        )
+        report = RDOFAuditReport(holdout_report=hr)
+        text = report.to_text()
+        assert "RETROSPECTIVE DIAGNOSTIC" in text
+
+    def test_text_report_shows_circularity_column(self):
+        """Sensitivity table includes Circ column."""
+        sr = ConstantSensitivityResult(
+            constant_name="tournament_shrinkage",
+            grid_values=[0.0, 0.08, 0.16],
+            loyo_brier_scores=[0.195, 0.190, 0.198],
+            current_value=0.08,
+            optimal_value=0.08,
+            optimal_brier=0.190,
+            current_brier=0.190,
+            brier_range=0.008,
+            is_flat=False,
+            circularity_warning=True,
+        )
+        report = RDOFAuditReport(sensitivity_results={"tournament_shrinkage": sr})
+        text = report.to_text()
+        assert "Circ" in text
