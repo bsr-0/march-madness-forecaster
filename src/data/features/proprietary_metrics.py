@@ -534,6 +534,9 @@ class ProprietaryMetricsEngine:
         by_team: Dict[str, List[GameRecord]],
         raw_off: Dict[str, float],
         raw_def: Dict[str, float],
+        initial_adj_off: Optional[Dict[str, float]] = None,
+        initial_adj_def: Optional[Dict[str, float]] = None,
+        n_iterations: Optional[int] = None,
     ) -> Tuple[Dict[str, float], Dict[str, float]]:
         """
         Additive iterative SOS adjustment (convergent KenPom-style method).
@@ -551,16 +554,35 @@ class ProprietaryMetricsEngine:
         - Home-court advantage adjustment  (±3.75 pts)
         - Margin cap  (±16 pts) applied BEFORE HCA to prevent asymmetry
         - Recency weighting  (exponential decay, half-life ≈ 30 games)
+
+        Args:
+            initial_adj_off/def: warm-start from a previous computation's
+                converged values (e.g., prior date's result in incremental
+                mode).  Reduces iterations needed for convergence.
+            n_iterations: override SOS_ITERATIONS (default 15).  Use ~5
+                when warm-starting from a nearby prior.
         """
         league_off = float(np.mean(list(raw_off.values()))) if raw_off else 100.0
         league_def = float(np.mean(list(raw_def.values()))) if raw_def else 100.0
 
-        adj_off = dict(raw_off)
-        adj_def = dict(raw_def)
+        # Warm-start: use provided initial values if available (for
+        # incremental computation where prior date's converged values are close).
+        adj_off = dict(initial_adj_off) if initial_adj_off is not None else dict(raw_off)
+        adj_def = dict(initial_adj_def) if initial_adj_def is not None else dict(raw_def)
+        # Ensure all teams in raw_off/raw_def are represented (new teams
+        # since the warm-start snapshot get initialized from raw values).
+        if initial_adj_off is not None:
+            for tid in raw_off:
+                if tid not in adj_off:
+                    adj_off[tid] = raw_off[tid]
+            for tid in raw_def:
+                if tid not in adj_def:
+                    adj_def[tid] = raw_def[tid]
 
+        iters = n_iterations if n_iterations is not None else self.SOS_ITERATIONS
         DAMPING = 0.7  # Blend factor: new = damp * computed + (1-damp) * old
 
-        for _iteration in range(self.SOS_ITERATIONS):
+        for _iteration in range(iters):
             next_off: Dict[str, float] = {}
             next_def: Dict[str, float] = {}
 
@@ -1944,6 +1966,624 @@ class ProprietaryMetricsEngine:
             "max_deviation_from_prior": float(max_deviation),
             "n_matchups": len(X_list),
         }
+
+
+# ---------------------------------------------------------------------------
+# Converter: team_games JSON → GameRecord  (for incremental engine)
+# ---------------------------------------------------------------------------
+
+
+def team_games_to_game_records(
+    team_games: List[Dict],
+    season_year: int,
+) -> List[GameRecord]:
+    """Convert ``team_games`` arrays from historical JSON to GameRecord objects.
+
+    The ``team_games`` format has one row per team per game.  Each game
+    appears twice (one row for each team).  We use the mirror row to
+    populate opponent box-score fields.
+
+    Fields available: game_id, team_id, opponent_id, team_score,
+    opponent_score, possessions, fgm, fga, fg3m, fg3a, fta, turnovers,
+    orb, drb, date.
+
+    FTM is derived: ``ftm = points - 2*fgm - fg3m``.
+    All games are treated as neutral (historical data lacks venue info).
+    """
+    logger = logging.getLogger(__name__)
+
+    # Build (game_id, team_id) → row index for opponent stat lookup.
+    row_index: Dict[Tuple[str, str], Dict] = {}
+    for row in team_games:
+        gid = str(row.get("game_id", ""))
+        tid = _team_id(str(row.get("team_id", "")))
+        if gid and tid:
+            row_index[(gid, tid)] = row
+
+    records: List[GameRecord] = []
+    seen: set = set()  # avoid duplicates when same game_id appears twice
+
+    for row in team_games:
+        gid = str(row.get("game_id", ""))
+        raw_tid = _team_id(str(row.get("team_id", "")))
+        raw_oid = _team_id(str(row.get("opponent_id", "")))
+        if not gid or not raw_tid or not raw_oid:
+            continue
+
+        # Deduplicate: only process each (game_id, team_id) once.
+        dedup_key = (gid, raw_tid)
+        if dedup_key in seen:
+            continue
+        seen.add(dedup_key)
+
+        points = _to_float(row.get("team_score", 0))
+        opp_points = _to_float(row.get("opponent_score", 0))
+        if points == 0 and opp_points == 0:
+            continue  # skip forfeits
+
+        fgm = _to_float(row.get("fgm", 0))
+        fga = _to_float(row.get("fga", 0))
+        fg3m = _to_float(row.get("fg3m", 0))
+        fg3a = _to_float(row.get("fg3a", 0))
+        fta = _to_float(row.get("fta", 0))
+        tov = _to_float(row.get("turnovers") or row.get("tov", 0))
+        orb = _to_float(row.get("orb", 0))
+        drb = _to_float(row.get("drb", 0))
+
+        # Derive FTM: points = 2*(fgm - fg3m) + 3*fg3m + ftm
+        #           → ftm = points - 2*fgm - fg3m
+        ftm = max(points - 2.0 * fgm - fg3m, 0.0) if fgm > 0 else 0.0
+
+        poss = _to_float(row.get("possessions", 0))
+        if poss <= 0 and fga > 0:
+            poss = fga - orb + tov + 0.475 * fta
+        if poss <= 0:
+            poss = max((points + opp_points) / 2.0, 30.0)
+
+        # Opponent box scores from the mirror row.
+        mirror = row_index.get((gid, raw_oid))
+        if mirror:
+            opp_fgm = _to_float(mirror.get("fgm", 0))
+            opp_fga = _to_float(mirror.get("fga", 0))
+            opp_fg3m = _to_float(mirror.get("fg3m", 0))
+            opp_fg3a = _to_float(mirror.get("fg3a", 0))
+            opp_fta = _to_float(mirror.get("fta", 0))
+            opp_tov = _to_float(mirror.get("turnovers") or mirror.get("tov", 0))
+            opp_orb = _to_float(mirror.get("orb", 0))
+            opp_drb = _to_float(mirror.get("drb", 0))
+            opp_ftm = max(opp_points - 2.0 * opp_fgm - opp_fg3m, 0.0) if opp_fgm > 0 else 0.0
+        else:
+            opp_fgm = opp_fga = opp_fg3m = opp_fg3a = 0.0
+            opp_fta = opp_ftm = opp_tov = opp_orb = opp_drb = 0.0
+
+        raw_date = row.get("date") or row.get("game_date")
+        game_date = str(raw_date or f"{season_year}-01-01")
+        team_name = str(row.get("team_name", raw_tid))
+
+        records.append(GameRecord(
+            game_id=gid,
+            game_date=game_date,
+            team_id=raw_tid,
+            team_name=team_name,
+            opponent_id=raw_oid,
+            points=points,
+            opp_points=opp_points,
+            possessions=poss,
+            fga=fga, fgm=fgm, fg3a=fg3a, fg3m=fg3m, fta=fta, ftm=ftm,
+            tov=tov, orb=orb, drb=drb,
+            opp_fga=opp_fga, opp_fgm=opp_fgm, opp_fg3a=opp_fg3a, opp_fg3m=opp_fg3m,
+            opp_fta=opp_fta, opp_ftm=opp_ftm, opp_tov=opp_tov, opp_orb=opp_orb, opp_drb=opp_drb,
+            is_home=False, is_neutral=True,
+        ))
+
+    logger.info(
+        "Year %d: converted %d team_games rows → %d GameRecords.",
+        season_year, len(team_games), len(records),
+    )
+    return records
+
+
+# ---------------------------------------------------------------------------
+# IncrementalMetricsEngine — temporal-leakage-free feature computation
+# ---------------------------------------------------------------------------
+
+
+class IncrementalMetricsEngine:
+    """Compute team metrics incrementally from box-score data.
+
+    For a given date, produces ProprietaryTeamMetrics for each team using
+    ONLY games played strictly before that date.  Designed for training
+    sample construction where each sample must use only data available
+    at the time of the game.
+
+    Key design:
+    - SOS is recomputed per unique date via ProprietaryMetricsEngine.compute()
+      on the game prefix, warm-started from the previous date's converged values.
+    - Elo is maintained as running state (inherently incremental), snapshotted
+      at each date boundary and used to override the batch engine's Elo.
+    - Results are cached per date.
+
+    Usage::
+
+        engine = IncrementalMetricsEngine(records, conf_map, prior_elo)
+        metrics = engine.compute_as_of("2025-01-15")
+        # metrics[team_id] → ProprietaryTeamMetrics using only pre-Jan-15 games
+    """
+
+    def __init__(
+        self,
+        game_records: List[GameRecord],
+        conference_map: Optional[Dict[str, str]] = None,
+        prior_elo: Optional[Dict[str, float]] = None,
+    ):
+        self._conference_map = conference_map
+        self._prior_elo = prior_elo
+
+        # Sort all records chronologically.
+        self._all_records = sorted(game_records, key=lambda g: g.game_date)
+
+        # Extract unique dates (sorted).
+        date_set: set = set()
+        for g in self._all_records:
+            date_set.add(g.game_date)
+        self._unique_dates = sorted(date_set)
+
+        # Pre-compute Elo snapshots for all date boundaries.
+        self._elo_snapshots: Dict[str, Dict[str, float]] = {}
+        self._compute_all_elo_snapshots()
+
+        # Cache: date → Dict[team_id, ProprietaryTeamMetrics]
+        self._cache: Dict[str, Dict[str, ProprietaryTeamMetrics]] = {}
+
+        # SOS warm-start state from previous computation.
+        self._prev_adj_off: Optional[Dict[str, float]] = None
+        self._prev_adj_def: Optional[Dict[str, float]] = None
+        self._prev_date: Optional[str] = None
+
+    def _compute_all_elo_snapshots(self) -> None:
+        """Process all games chronologically and snapshot Elo at each date."""
+        _ELO_REGRESSION = 0.25
+        _ELO_MEAN = 1500.0
+        K_BASE = 38.0
+        HCA_POINTS = 3.75
+        ELO_HCA = HCA_POINTS * 13.3
+
+        # Initialize Elo from prior.
+        elo: Dict[str, float] = defaultdict(lambda: _ELO_MEAN)
+        if self._prior_elo:
+            for tid, val in self._prior_elo.items():
+                elo[tid] = (1.0 - _ELO_REGRESSION) * val + _ELO_REGRESSION * _ELO_MEAN
+
+        # Deduplicate games (each game has two rows).
+        seen_ids: set = set()
+        deduped: List[GameRecord] = []
+        for g in self._all_records:
+            pair = (g.game_id, min(g.team_id, g.opponent_id))
+            if pair not in seen_ids:
+                seen_ids.add(pair)
+                deduped.append(g)
+
+        # Group deduped games by date.
+        games_by_date: Dict[str, List[GameRecord]] = defaultdict(list)
+        for g in deduped:
+            games_by_date[g.game_date].append(g)
+
+        # Snapshot Elo BEFORE each date's games, then process.
+        for date in self._unique_dates:
+            # Snapshot current Elo state (before today's games).
+            self._elo_snapshots[date] = dict(elo)
+
+            # Process today's games.
+            for g in games_by_date.get(date, []):
+                t1, t2 = g.team_id, g.opponent_id
+                # Ensure both teams exist.
+                _ = elo[t1]
+                _ = elo[t2]
+
+                hca = 0.0
+                if not g.is_neutral:
+                    hca = ELO_HCA if g.is_home else -ELO_HCA
+
+                e1 = 1.0 / (1.0 + 10 ** (-(elo[t1] + hca - elo[t2]) / 400.0))
+                margin = g.points - g.opp_points
+                s1 = 1.0 if margin > 0 else (0.0 if margin < 0 else 0.5)
+                mov_mult = np.log1p(abs(margin))
+                elo_diff = abs(elo[t1] - elo[t2])
+                elo_dampening = 2.2 / (elo_diff * 0.001 + 2.2)
+                k = K_BASE * mov_mult * elo_dampening
+                delta = k * (s1 - e1)
+                elo[t1] += delta
+                elo[t2] -= delta
+
+        # Store final Elo for cross-season carryover.
+        self._end_of_season_elo = dict(elo)
+
+    def get_end_of_season_elo(self) -> Dict[str, float]:
+        """Return end-of-season Elo for cross-season carryover."""
+        return dict(self._end_of_season_elo)
+
+    def compute_as_of(self, as_of_date: str) -> Dict[str, ProprietaryTeamMetrics]:
+        """Compute metrics for all teams using only games before *as_of_date*.
+
+        Returns empty dict if fewer than 50 game records exist before that date
+        (insufficient data for meaningful metrics).
+        """
+        if as_of_date in self._cache:
+            return self._cache[as_of_date]
+
+        # Filter to games strictly before as_of_date.
+        prefix = [g for g in self._all_records if g.game_date < as_of_date]
+        if len(prefix) < 50:
+            self._cache[as_of_date] = {}
+            return {}
+
+        # Create a temporary engine for this prefix.
+        engine = ProprietaryMetricsEngine()
+        engine._elo_prior = self._prior_elo
+
+        # Determine warm-start vs cold-start.
+        if self._prev_adj_off is not None and self._prev_date is not None:
+            n_iters = 5  # warm-start: fewer iterations needed
+            init_off = self._prev_adj_off
+            init_def = self._prev_adj_def
+        else:
+            n_iters = None  # cold-start: use default (15)
+            init_off = None
+            init_def = None
+
+        # We need to call the engine's internal methods to use warm-start.
+        # Build by_team dict from prefix games.
+        by_team: Dict[str, List[GameRecord]] = defaultdict(list)
+        for rec in prefix:
+            by_team[rec.team_id].append(rec)
+        for tid in by_team:
+            by_team[tid].sort(key=lambda g: g.game_date)
+
+        # Step 1: Raw efficiency.
+        raw_off, raw_def, tempo, names = engine._raw_efficiency(by_team)
+
+        # Step 2: SOS with warm-start.
+        adj_off, adj_def = engine._iterative_sos_adjust(
+            by_team, raw_off, raw_def,
+            initial_adj_off=init_off,
+            initial_adj_def=init_def,
+            n_iterations=n_iters,
+        )
+
+        # Save for next warm-start.
+        self._prev_adj_off = dict(adj_off)
+        self._prev_adj_def = dict(adj_def)
+        self._prev_date = as_of_date
+
+        # Step 3: Compute all derived metrics (reuse engine internals).
+        # Store adj values on the engine so its methods can access them.
+        engine._by_team = dict(by_team)
+        engine._adj_off = adj_off
+        engine._adj_def = adj_def
+
+        all_team_ids = sorted(by_team.keys())
+        league_avg_em = float(np.mean([adj_off[t] - adj_def[t] for t in all_team_ids]))
+
+        results: Dict[str, ProprietaryTeamMetrics] = {}
+        for tid in all_team_ids:
+            games = by_team[tid]
+            adj_o = adj_off[tid]
+            adj_d = adj_def[tid]
+            em = adj_o - adj_d
+            tmpo = tempo.get(tid, 67.0)
+            n_games = len(games)
+
+            # Four Factors
+            ff = engine._four_factors(games)
+
+            # Shooting
+            shooting = engine._compute_shooting_metrics(games)
+
+            # SOS
+            sos = engine._strength_of_schedule(games, adj_off, adj_def, self._conference_map)
+
+            # Luck
+            luck = engine._correlated_gaussian_luck(games)
+
+            # Pythagorean (barthag)
+            barthag = engine._pythagorean_win_pct(adj_o, adj_d)
+
+            # xP / shot distribution
+            xp_o = engine._expected_points_per_poss(ff)
+            xp_d = engine._defensive_xp_per_poss(ff)
+            shot_dist = engine._shot_distribution_score(games)
+
+            # Variance metrics
+            tpv = engine._three_point_variance(games)
+            pav = engine._pace_adjusted_variance(games)
+
+            # Consistency
+            consistency = engine._consistency(games)
+            sos_consistency = engine._sos_adjusted_consistency(games, adj_off, adj_def)
+
+            # Momentum
+            mom_delta, recent_em = engine._momentum(games, adj_off, adj_def)
+            mom5_delta, _ = engine._momentum_5g(games, adj_off, adj_def)
+
+            # Extended box score
+            ext = engine._extended_box_score_metrics(games)
+
+            # Opponent shot selection
+            opp_shots = engine._opponent_shot_selection(games)
+
+            # True shooting
+            ts = engine._true_shooting_pct(games)
+
+            # Home/away splits
+            home_em, away_em, hc_dep = engine._home_away_splits(games, adj_off, adj_def)
+
+            # Neutral site
+            nsw, nsg = engine._neutral_site_record(games)
+
+            wins = sum(1 for g in games if g.points > g.opp_points)
+            losses = n_games - wins
+            adj_em = adj_o - adj_d
+
+            results[tid] = ProprietaryTeamMetrics(
+                team_id=tid,
+                team_name=names.get(tid, tid),
+                adj_offensive_efficiency=adj_o,
+                adj_defensive_efficiency=adj_d,
+                adj_efficiency_margin=adj_em,
+                adj_tempo=tmpo,
+                effective_fg_pct=ff.get("effective_fg_pct", 0.0),
+                turnover_rate=ff.get("turnover_rate", 0.0),
+                offensive_reb_rate=ff.get("offensive_reb_rate", 0.0),
+                free_throw_rate=ff.get("free_throw_rate", 0.0),
+                opp_effective_fg_pct=ff.get("opp_effective_fg_pct", 0.0),
+                opp_turnover_rate=ff.get("opp_turnover_rate", 0.0),
+                defensive_reb_rate=ff.get("defensive_reb_rate", 0.0),
+                opp_free_throw_rate=ff.get("opp_free_throw_rate", 0.0),
+                sos_adj_em=sos.get("sos_adj_em", 0.0),
+                sos_opp_o=sos.get("sos_opp_o", 0.0),
+                sos_opp_d=sos.get("sos_opp_d", 0.0),
+                ncsos_adj_em=sos.get("ncsos_adj_em", 0.0),
+                luck=luck,
+                barthag=barthag,
+                offensive_xp_per_possession=xp_o,
+                defensive_xp_per_possession=xp_d,
+                shot_distribution_score=shot_dist,
+                three_pt_variance=tpv,
+                pace_adjusted_variance=pav,
+                consistency=consistency,
+                sos_adjusted_consistency=sos_consistency,
+                momentum=mom_delta,
+                recent_adj_em=recent_em,
+                momentum_5g=mom5_delta,
+                wab=0.0,  # computed below after all teams processed
+                wins=wins,
+                losses=losses,
+                win_pct=wins / max(n_games, 1),
+                two_pt_pct=shooting.get("two_pt_pct", 0.0),
+                three_pt_pct=shooting.get("three_pt_pct", 0.0),
+                three_pt_rate=shooting.get("three_pt_rate", 0.0),
+                free_throw_pct=shooting.get("free_throw_pct", 0.0),
+                opp_free_throw_pct=shooting.get("opp_free_throw_pct", 0.0),
+                opp_true_shooting_pct=ts.get("opp_true_shooting_pct", 0.0),
+                true_shooting_pct=ts.get("true_shooting_pct", 0.0),
+                efficiency_ratio=adj_o / max(adj_d, 1.0),
+                elo_rating=0.0,  # overridden below
+                assist_to_turnover_ratio=ext.get("assist_to_turnover_ratio", 0.0),
+                assist_rate=ext.get("assist_rate", 0.0),
+                steal_rate=ext.get("steal_rate", 0.0),
+                block_rate=ext.get("block_rate", 0.0),
+                defensive_disruption_rate=ext.get("defensive_disruption_rate", 0.0),
+                opp_two_pt_pct_allowed=opp_shots.get("opp_two_pt_pct_allowed", 0.0),
+                opp_three_pt_attempt_rate=opp_shots.get("opp_three_pt_attempt_rate", 0.0),
+                neutral_site_win_pct=nsw,
+                neutral_site_games=nsg,
+                home_adj_em=home_em,
+                away_adj_em=away_em,
+                home_court_dependence=hc_dep,
+            )
+
+        # WAB: needs all teams' results to assess opponent quality.
+        for tid in all_team_ids:
+            games = by_team[tid]
+            results[tid].wab = engine._compute_wab(
+                games, results, adj_off, adj_def,
+            )
+
+        # Elite SOS & Quadrants.
+        engine._compute_elite_sos_and_quadrants(results, by_team, adj_off, adj_def)
+
+        # Conference strength.
+        engine._compute_conference_strength(results, self._conference_map)
+
+        # Rest days (from most recent game to as_of_date).
+        engine._compute_rest_days(results, by_team)
+
+        # Foul rate.
+        for tid in all_team_ids:
+            games = by_team[tid]
+            total_pf = sum(g.pf for g in games)
+            total_poss = sum(max(g.possessions, 1.0) for g in games)
+            results[tid].foul_rate = total_pf / max(total_poss, 1.0)
+
+        # Three-point regression signal.
+        for tid in all_team_ids:
+            raw_3p = results[tid].three_pt_pct
+            n = len(by_team[tid])
+            # Bayesian shrinkage toward D1 mean (0.345).
+            league_mean_3p = 0.345
+            k_prior = 50.0  # ~50 game pseudo-observations
+            shrunk_3p = (n * raw_3p + k_prior * league_mean_3p) / (n + k_prior)
+            results[tid].three_pt_regression_signal = shrunk_3p - league_mean_3p
+
+        # Pace variance.
+        for tid in all_team_ids:
+            games = by_team[tid]
+            if len(games) >= 5:
+                poss_list = [g.possessions for g in games]
+                results[tid].pace_variance = float(np.std(poss_list, ddof=1))
+            else:
+                results[tid].pace_variance = 5.0  # D1 prior
+
+        # Override Elo with incremental snapshots.
+        elo_snap = self._elo_snapshots.get(as_of_date, {})
+        for tid in all_team_ids:
+            if tid in elo_snap:
+                results[tid].elo_rating = elo_snap[tid]
+
+        self._cache[as_of_date] = results
+        return results
+
+    @staticmethod
+    def metrics_to_team_vector(
+        m: ProprietaryTeamMetrics,
+        seed: int = 0,
+    ) -> np.ndarray:
+        """Convert ProprietaryTeamMetrics to a 64-dim team feature vector.
+
+        Matches the exact ordering in TeamFeatures.to_vector() so that
+        matchup vectors built from incremental metrics are compatible with
+        models trained on FeatureEngineer-produced vectors.
+
+        Features requiring roster/PBP data (RAPM, volatility, etc.) are
+        set to zero.  Features requiring external data (AP rank, coach
+        data) use neutral defaults.
+        """
+        v = np.zeros(64, dtype=np.float64)
+        # Core efficiency (3)
+        v[0] = m.adj_offensive_efficiency
+        v[1] = m.adj_defensive_efficiency
+        v[2] = m.adj_tempo
+        # Four Factors offense (4)
+        v[3] = m.effective_fg_pct
+        v[4] = m.turnover_rate
+        v[5] = m.offensive_reb_rate
+        v[6] = m.free_throw_rate
+        # Four Factors defense (4)
+        v[7] = m.opp_effective_fg_pct
+        v[8] = m.opp_turnover_rate
+        v[9] = m.defensive_reb_rate
+        v[10] = m.opp_free_throw_rate
+        # Player metrics (6): indices 11-16 → zero (no roster data)
+        # Experience (3): indices 17-19 → zero (no roster data)
+        # Volatility (4): indices 20-23 → zero (no PBP data)
+        # Shot quality (2)
+        v[24] = m.offensive_xp_per_possession
+        v[25] = m.shot_distribution_score
+        # Schedule (4)
+        v[26] = m.sos_adj_em
+        v[27] = m.sos_opp_o
+        v[28] = m.sos_opp_d
+        v[29] = m.ncsos_adj_em
+        # Luck (1)
+        v[30] = m.luck
+        # WAB (1)
+        v[31] = m.wab
+        # Momentum (1)
+        v[32] = m.momentum
+        # Variance (2)
+        v[33] = m.three_pt_variance
+        v[34] = m.pace_adjusted_variance
+        # Elo (1)
+        v[35] = m.elo_rating
+        # Free throw % (1)
+        v[36] = m.free_throw_pct
+        # Ball movement (2)
+        v[37] = m.assist_to_turnover_ratio
+        v[38] = m.assist_rate
+        # Defensive disruption (2)
+        v[39] = m.steal_rate
+        v[40] = m.block_rate
+        # Opponent shot selection (2)
+        v[41] = m.opp_two_pt_pct_allowed
+        v[42] = m.opp_three_pt_attempt_rate
+        # Conference quality (1)
+        v[43] = m.conference_adj_em
+        # Shooting splits (2)
+        v[44] = m.three_pt_pct
+        v[45] = m.three_pt_rate
+        # Defensive xP (1)
+        v[46] = m.defensive_xp_per_possession
+        # Win % (1)
+        v[47] = m.win_pct
+        # Elite SOS (1)
+        v[48] = m.elite_sos
+        # Q1 win % (1)
+        v[49] = m.q1_win_pct
+        # Foul rate (1)
+        v[50] = m.foul_rate
+        # 3PT regression (1)
+        v[51] = m.three_pt_regression_signal
+        # Rest days (1) — capped at 14
+        v[52] = min(m.rest_days, 14.0)
+        # Top5 minutes share (1) — zero (no roster)
+        v[53] = 0.0
+        # Preseason AP rank (1) — default unranked: 0.25
+        v[54] = 0.25
+        # Coach tournament exp (1) — default 0
+        v[55] = 0.0
+        # Coach tournament win rate (1) — default 0
+        v[56] = 0.0
+        # Pace variance (1)
+        v[57] = m.pace_variance
+        # Conf tourney champion (1) — 0 (not known incrementally)
+        v[58] = 0.0
+        # Neutral-site win % (1)
+        v[59] = m.neutral_site_win_pct
+        # Home court dependence (1)
+        v[60] = m.home_court_dependence
+        # Position RAPM (2) — zero (no roster)
+        v[61] = 0.0
+        v[62] = 0.0
+        # Seed strength (1)
+        if seed > 0:
+            v[63] = float(np.log1p(17 - seed) / np.log1p(16))
+        else:
+            v[63] = 0.0
+
+        # NaN/inf guard
+        bad = np.isnan(v) | np.isinf(v)
+        if bad.any():
+            v[bad] = 0.0
+        return v
+
+    @staticmethod
+    def build_matchup_vector(
+        v1: np.ndarray,
+        v2: np.ndarray,
+        seed1: int = 0,
+        seed2: int = 0,
+    ) -> np.ndarray:
+        """Build a 75-dim matchup vector from two 64-dim team vectors.
+
+        Layout: [0:64] diff, [64:69] absolute, [69:75] interactions.
+        Matches MatchupFeatures.to_vector() from feature_engineering.py.
+        """
+        # Differential (64)
+        diff = v1 - v2
+
+        # Absolute-level features (5) at indices [0, 1, 26, 35, 47]
+        _ABS_IDX = [0, 1, 26, 35, 47]
+        absolute = np.array([(v1[i] + v2[i]) / 2.0 for i in _ABS_IDX])
+
+        # Interaction features (6)
+        tempo_interaction = (v1[2] * v2[2]) / 4624.0
+        tempo_diff = v1[2] - v2[2]
+        eff_diff = (v1[0] - v1[1]) - (v2[0] - v2[1])
+        style_mismatch = (tempo_diff * eff_diff) / 600.0
+        h2h_record = 0.5  # no head-to-head data in training
+        common_opp_margin = 0.0  # not available incrementally
+        travel_advantage = 0.0  # no venue data
+        if seed1 > 0 and seed2 > 0:
+            seed_interaction = (seed1 * seed2) / 128.0 - 1.0
+        else:
+            seed_interaction = 0.0
+
+        interactions = np.array([
+            tempo_interaction, style_mismatch, h2h_record,
+            common_opp_margin, travel_advantage, seed_interaction,
+        ])
+
+        return np.concatenate([diff, absolute, interactions])
 
 
 # ---------------------------------------------------------------------------

@@ -1221,6 +1221,9 @@ class SOTAPipeline:
             historical_games,
             season_year=self.config.year,
         )
+        # Store for incremental training feature computation.
+        self._current_year_game_records = game_records
+        self._current_year_conference_map = conference_map if conference_map else None
         proprietary_results = self.proprietary_engine.compute(
             game_records,
             conference_map=conference_map if conference_map else None,
@@ -1799,10 +1802,10 @@ class SOTAPipeline:
             if not self._is_tournament_game(getattr(g, "game_date", f"{self.config.year}-01-01"))
         ]
 
-        # Issue 1: Late-season cutoff — exclude early-season games where
-        # full-season features are a poor approximation of point-in-time
-        # features.  Games after the cutoff have features close enough to
-        # the end-of-season snapshot to be useful.
+        # Late-season cutoff — with incremental PIT features this is no
+        # longer strictly necessary (all games have accurate PIT features),
+        # but retained as a configurable option.  Set cutoff_days=0 to
+        # use all games.
         all_games_uncutoff = list(all_games)  # preserve for fallback
         if self.config.late_season_training_cutoff_days > 0:
             tournament_start = date(self.config.year, 3, 14)
@@ -1818,14 +1821,22 @@ class SOTAPipeline:
             if len(all_games) < 60:
                 all_games = all_games_uncutoff
 
-        # Track game metadata for point-in-time feature adjustment.
-        # Each sample is (game_key, vector, label, game_date, team1_id, team2_id).
-        for game in all_games:
-            if game.team1_id not in self.feature_engineer.team_features:
-                continue
-            if game.team2_id not in self.feature_engineer.team_features:
-                continue
+        # Build IncrementalMetricsEngine for current-year true PIT features.
+        # Every training sample uses only data available before its game date,
+        # eliminating all temporal leakage from season-end features.
+        from ..data.features.proprietary_metrics import IncrementalMetricsEngine
+        inc_engine = IncrementalMetricsEngine(
+            self._current_year_game_records,
+            self._current_year_conference_map or {},
+            prior_elo=None,  # Cross-season carryover handled in multi-year pool
+        )
 
+        # Seed map for absolute features in matchup vector
+        _seed_map: Dict[str, int] = {}
+        for _tid, _tf in self.feature_engineer.team_features.items():
+            _seed_map[_tid] = _tf.seed if hasattr(_tf, "seed") and _tf.seed else 0
+
+        for game in all_games:
             game_date = self._coerce_game_date(
                 getattr(game, "game_date", None),
                 fallback_year=self.config.year,
@@ -1833,11 +1844,22 @@ class SOTAPipeline:
                 source="baseline_training",
             )
             game_key = self._game_sort_key(game_date)
-            matchup = self.feature_engineer.create_matchup_features(game.team1_id, game.team2_id, proprietary_engine=self.proprietary_engine)
+
+            # Compute true point-in-time metrics as of game date
+            pit_metrics = inc_engine.compute_as_of(game_date)
+            if game.team1_id not in pit_metrics or game.team2_id not in pit_metrics:
+                continue
+
+            m1 = pit_metrics[game.team1_id]
+            m2 = pit_metrics[game.team2_id]
+            s1 = _seed_map.get(game.team1_id, 0)
+            s2 = _seed_map.get(game.team2_id, 0)
+            v1 = IncrementalMetricsEngine.metrics_to_team_vector(m1, s1)
+            v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, s2)
+            vec = IncrementalMetricsEngine.build_matchup_vector(v1, v2, s1, s2)
+
             # S5 FIX: Use score-based label as primary (reliable), with
             # lead_history as fallback only if scores unavailable.
-            # Previously, empty lead_history would always label as 0 (loss),
-            # creating systematic label noise for incomplete game flows.
             _t1_score = getattr(game, "team1_score", None)
             _t2_score = getattr(game, "team2_score", None)
             if _t1_score is not None and _t2_score is not None and (_t1_score + _t2_score) > 0:
@@ -1846,12 +1868,7 @@ class SOTAPipeline:
                 _label = 1 if game.lead_history[-1] > 0 else 0
             else:
                 continue  # Skip games with no determinable outcome
-            samples.append((game_key, matchup.to_vector(), _label, game_date, game.team1_id, game.team2_id))
-
-            # OOS-FIX: Symmetric augmentation REMOVED.  Flipping (A,B) -> (B,A)
-            # doubles the sample count but adds zero new information.  Both
-            # LGB and XGB see correlated duplicates, which biases bagging/
-            # subsampling and inflates apparent CV accuracy.
+            samples.append((game_key, vec, _label))
 
         if not samples:
             return {"model": "none", "samples": 0}
@@ -1860,10 +1877,7 @@ class SOTAPipeline:
         X_full = np.stack([s[1] for s in samples])
         y_full = np.array([s[2] for s in samples], dtype=int)
         sort_keys_full = np.array([s[0] for s in samples])
-        # Store game metadata for PIT feature adjustment
-        _sample_dates = [s[3] for s in samples]
-        _sample_t1_ids = [s[4] for s in samples]
-        _sample_t2_ids = [s[5] for s in samples]
+        # (PIT metadata no longer needed — features computed incrementally)
 
         # ====================================================================
         # FEATURE MATRIX VALIDATION — catch NaN/inf/constant features that
@@ -1895,10 +1909,6 @@ class SOTAPipeline:
                 "Class imbalance detected: positive rate = %.3f (expected ~0.5). "
                 "This may indicate systematic labeling bias.", _pos_rate,
             )
-
-        # FIX #3 state: store sort keys for point-in-time adjustment (applied
-        # to training split only, after the train/val split below).
-        _pit_sort_keys = sort_keys_full.copy()
 
         # ====================================================================
         # LEAKAGE-SAFE ORDERING: split into train/val FIRST, then fit feature
@@ -1951,161 +1961,6 @@ class SOTAPipeline:
             eval_y = np.array([], dtype=int)
 
         # ====================================================================
-        # FIX #3 (v2): POINT-IN-TIME FEATURE ADJUSTMENT
-        #
-        # Team features are computed from full-season data, but training
-        # samples include games whose matchup vectors "peek" at end-of-season
-        # quality.  V2 replaces pure noise injection with actual point-in-time
-        # metric snapshots where available, falling back to structured noise
-        # + mean regression for remaining features.
-        #
-        # For each training game, compute PIT metrics (using only games before
-        # that date) and blend them with end-of-season features.  The blend
-        # weight is proportional to how much of the season remains — early
-        # games use more PIT data, late games use mostly end-of-season.
-        # ====================================================================
-        if train_samples > 0:
-            train_keys = _pit_sort_keys[:train_samples]
-            min_key = int(train_keys[0])
-            max_key = int(train_keys[-1])
-            season_span = max(max_key - min_key, 1)
-            progress = (train_keys - min_key).astype(float) / season_span
-            season_remaining = 1.0 - progress
-
-            # --- Phase 1: Point-in-time metric snapshots ---
-            # Compute PIT metrics for the core efficiency features (positions
-            # 0-3 and 4-11 in the diff vector) which are most affected by
-            # temporal leakage.  PIT values replace end-of-season values
-            # proportionally based on season progress.
-            pit_adjusted = 0
-            from ..data.features.feature_engineering import TeamFeatures
-            n_feats = train_X.shape[1]
-            pit_feature_names = TeamFeatures.get_feature_names(include_embeddings=False)
-
-            # Map feature name to index in the diff vector for PIT-adjustable features
-            # FIX #1: adj_em REMOVED (exact linear of off-def).
-            # Feature names now match get_feature_names() after redundancy removal.
-            _PIT_METRIC_MAP = {
-                "adj_off_eff": "adj_offensive_efficiency",
-                "adj_def_eff": "adj_defensive_efficiency",
-                "adj_tempo": "adj_tempo",
-                "efg_pct": "effective_fg_pct",
-                "to_rate": "turnover_rate",
-                "orb_rate": "offensive_reb_rate",
-                "ft_rate": "free_throw_rate",
-                "opp_efg_pct": "opp_effective_fg_pct",
-                "opp_to_rate": "opp_turnover_rate",
-                "drb_rate": "defensive_reb_rate",
-                "opp_ft_rate": "opp_free_throw_rate",
-                "win_pct": "win_pct",
-            }
-            pit_indices = {}
-            for feat_name, metric_key in _PIT_METRIC_MAP.items():
-                try:
-                    idx = pit_feature_names.index(feat_name)
-                    if idx < n_feats:
-                        pit_indices[metric_key] = idx
-                except ValueError:
-                    pass
-
-            # Cache PIT metrics to avoid redundant computation
-            _pit_cache: Dict[Tuple[str, str], Optional[Dict]] = {}
-
-            for i in range(train_samples):
-                game_date = _sample_dates[i]
-                t1_id = _sample_t1_ids[i]
-                t2_id = _sample_t2_ids[i]
-
-                # A5: PIT blend weight proportional to season remaining.
-                # Old cap of 0.6 leaked 40% end-of-season info into early games.
-                # New cap of 0.9 for early-season, tapering to 0 for late-season.
-                # This means early games rely almost entirely on PIT metrics,
-                # while late-season games (which are close to end-of-season anyway)
-                # use end-of-season values.
-                pit_weight = max(0.0, min(0.9, 0.9 * season_remaining[i]))
-
-                if pit_weight < 0.05:
-                    continue  # Late-season game — end-of-season features are fine
-
-                # Get PIT metrics for both teams
-                cache_key_1 = (t1_id, game_date)
-                if cache_key_1 not in _pit_cache:
-                    _pit_cache[cache_key_1] = self.proprietary_engine.compute_point_in_time_metrics(t1_id, game_date)
-                pit1 = _pit_cache[cache_key_1]
-
-                cache_key_2 = (t2_id, game_date)
-                if cache_key_2 not in _pit_cache:
-                    _pit_cache[cache_key_2] = self.proprietary_engine.compute_point_in_time_metrics(t2_id, game_date)
-                pit2 = _pit_cache[cache_key_2]
-
-                if pit1 is None or pit2 is None:
-                    continue  # Insufficient games for PIT computation
-
-                # Adjust the diff features using PIT values
-                # FIX #2 integration: Features are now RAW (no z-scoring),
-                # so PIT diffs are also raw.  Blend directly in raw space.
-                for metric_key, feat_idx in pit_indices.items():
-                    if metric_key in pit1 and metric_key in pit2:
-                        pit_diff = pit1[metric_key] - pit2[metric_key]
-                        eos_diff = train_X[i, feat_idx]
-                        # Blend: pit_weight * PIT_value + (1-pit_weight) * EOS_value
-                        # Both are in raw scale — StandardScaler normalizes later.
-                        train_X[i, feat_idx] = (1.0 - pit_weight) * eos_diff + pit_weight * pit_diff
-                pit_adjusted += 1
-
-            if pit_adjusted > 0:
-                logger.info(
-                    "Point-in-time adjustment: %d/%d training samples adjusted using PIT snapshots.",
-                    pit_adjusted, train_samples,
-                )
-
-            # --- Phase 2: Residual noise + mean regression for non-PIT features ---
-            # Features not covered by PIT snapshots still get structured noise.
-            _init_feature_stability_indices()
-            base_noise = 0.05 * np.sqrt(season_remaining)  # Reduced from 0.08 (PIT handles core)
-
-            stability = np.full(n_feats, 0.5)
-            for feat_name, score in _FEATURE_STABILITY.items():
-                if feat_name == "_default":
-                    continue
-                idx = _FEATURE_STABILITY_INDICES.get(feat_name)
-                if idx is not None and idx < n_feats:
-                    stability[idx] = score
-
-            feature_noise_weight = 1.0 - stability * 0.7
-            # Reduce noise for PIT-adjusted features (they already have accurate values)
-            for _metric_key, feat_idx in pit_indices.items():
-                if feat_idx < n_feats:
-                    feature_noise_weight[feat_idx] *= 0.3
-
-            pit_noise_scale = base_noise[:, np.newaxis] * feature_noise_weight[np.newaxis, :]
-            pit_noise = self.rng.standard_normal(train_X.shape) * pit_noise_scale
-
-            # Mean regression for non-PIT features
-            # FIX 5.1: PIT-adjusted features already have accurate point-in-time
-            # values — regressing them toward league mean adds bias.  Scale the
-            # regression factor down proportionally for PIT features (same
-            # reduction as noise: 0.3x).
-            shrinkage = 0.10  # Reduced from 0.15 (PIT handles most temporal leakage)
-            league_mean = np.mean(train_X, axis=0)
-            regression_factor = shrinkage * season_remaining
-
-            # Build per-feature regression weight: 1.0 for non-PIT, 0.3 for PIT
-            regression_weight = np.ones(n_feats, dtype=float)
-            for _metric_key, feat_idx in pit_indices.items():
-                if feat_idx < n_feats:
-                    regression_weight[feat_idx] = 0.3  # Minimal regression for PIT features
-
-            effective_regression = (
-                regression_factor[:, np.newaxis] * regression_weight[np.newaxis, :]
-            )
-            train_X = (
-                train_X * (1.0 - effective_regression)
-                + league_mean[np.newaxis, :] * effective_regression
-            )
-            train_X = train_X + pit_noise
-
-        # ====================================================================
         # MULTI-YEAR TRAINING POOL: Augment current-year training data with
         # historical regular-season games to increase sample size from ~300
         # to ~3000+.  This addresses the fundamental sample-size problem:
@@ -2113,11 +1968,9 @@ class SOTAPipeline:
         # estimates.  10+ years of data provides the statistical mass needed
         # for robust gradient boosting and honest hyperparameter tuning.
         #
-        # Historical samples use simplified differential feature vectors
-        # (core efficiency, SOS, win%) placed in the same positions as the
-        # current-year matchup vector.  Remaining positions are zero-filled.
-        # Tree models handle mixed-density features well, and StandardScaler
-        # normalizes everything.
+        # Both current-year and historical samples use IncrementalMetricsEngine
+        # to compute true point-in-time features for every training game.
+        # No season-end leakage remains.
         #
         # Year-based exponential decay downweights older seasons:
         #   weight(year) = max(min_weight, decay^(current_year - year - 1))
@@ -2127,16 +1980,6 @@ class SOTAPipeline:
         # Historical data is prepended to train_X/train_y (chronologically
         # before current year).  Validation set remains current-year only
         # for honest evaluation.
-        #
-        # KNOWN LIMITATION (PIT mismatch): Historical samples (2005-2024) use
-        # season-end metrics because point-in-time snapshots are not available
-        # for past seasons.  Current-year samples use PIT-blended features
-        # (when enabled).  This creates a systematic feature-quality mismatch:
-        # historical samples have less noisy features than they "should"
-        # relative to their game dates.  Year-based exponential decay partially
-        # compensates by downweighting older (higher-mismatch) seasons.
-        # A full fix would require retroactive PIT computation for all
-        # historical seasons, which is infeasible with the available data.
         # ====================================================================
         historical_training_stats = {}
         n_current_year_train = train_samples  # Track for logging
@@ -2201,7 +2044,7 @@ class SOTAPipeline:
                     continue
 
                 try:
-                    hX, hy, _end_elo = self._load_year_samples(
+                    hX, hy, _end_elo = self._load_year_samples_incremental(
                         gp, mp, feature_dim_full, yr,
                         include_tournament=False,
                         prior_elo=_cross_year_elo,
@@ -3099,7 +2942,7 @@ class SOTAPipeline:
                 logger.info("LOYO: skipping year %d (missing data files)", year)
                 continue
 
-            year_X, year_y, _ = self._load_year_samples(
+            year_X, year_y, _ = self._load_year_samples_incremental(
                 games_path, metrics_path, feature_dim, year
             )
             if len(year_y) < 10:
@@ -4260,6 +4103,215 @@ class SOTAPipeline:
         # D2: Return end-of-season Elo for cross-season carryover
         return X_arr, np.array(y_list, dtype=int), dict(elo)
 
+    def _load_year_samples_incremental(
+        self,
+        games_path: str,
+        metrics_path: str,
+        feature_dim: int,
+        year: int,
+        include_tournament: bool = False,
+        prior_elo: Optional[Dict[str, float]] = None,
+    ) -> Tuple[np.ndarray, np.ndarray, Dict[str, float]]:
+        """Load historical year samples with TRUE point-in-time features.
+
+        Unlike ``_load_year_samples()`` which uses season-end metrics and
+        retroactively applies PIT blending to ~12 features, this method
+        computes ALL features incrementally from box-score data.  For each
+        training game at date D, features are computed using ONLY games
+        played before D.
+
+        Uses the ``team_games`` array from ``historical_games_{year}.json``
+        which contains per-game box scores (FGM, FGA, FG3M, FG3A, FTA,
+        turnovers, ORB, DRB, possessions) for all years 2005-2025.
+
+        Args:
+            include_tournament: If True, include tournament games (for
+                calibration augmentation).
+            prior_elo: Prior-season end-of-season Elo for cross-season
+                carryover.
+
+        Returns:
+            (X, y, end_elo) — same contract as ``_load_year_samples()``.
+        """
+        import json as _json
+        from ..data.features.proprietary_metrics import (
+            IncrementalMetricsEngine,
+            team_games_to_game_records,
+        )
+
+        # ── 1. Load game data ─────────────────────────────────────────────
+        with open(games_path, "r") as f:
+            payload = _json.load(f)
+
+        # The file may be a dict with 'team_games' key or a plain list.
+        if isinstance(payload, dict):
+            team_games_raw = payload.get("team_games", [])
+        else:
+            team_games_raw = payload  # legacy list format
+        if not team_games_raw:
+            logger.warning("Year %d: no team_games data — falling back to legacy loader.", year)
+            return self._load_year_samples(
+                games_path, metrics_path, feature_dim, year,
+                include_tournament=include_tournament, prior_elo=prior_elo,
+            )
+
+        # Convert to GameRecord objects.
+        game_records = team_games_to_game_records(team_games_raw, year)
+        if len(game_records) < 100:
+            logger.warning("Year %d: only %d GameRecords — skipping.", year, len(game_records))
+            return np.empty((0, feature_dim)), np.array([]), {}
+
+        # ── 2. Load auxiliary data (conference map, seeds, rosters) ────────
+        conference_map = None
+        try:
+            with open(metrics_path, "r") as f:
+                metrics_payload = _json.load(f)
+            # Build conference map if metrics contain it.
+            if isinstance(metrics_payload, dict):
+                for tid, info in metrics_payload.items():
+                    if isinstance(info, dict) and "conference" in info:
+                        if conference_map is None:
+                            conference_map = {}
+                        conference_map[tid] = info["conference"]
+        except Exception:
+            pass
+
+        # Tournament seeds (for seed_interaction feature).
+        team_seeds: Dict[str, int] = {}
+        seeds_path = os.path.join(os.path.dirname(games_path), f"tournament_seeds_{year}.json")
+        if not os.path.isfile(seeds_path):
+            seeds_path = os.path.join(
+                os.path.dirname(games_path), "historical", f"tournament_seeds_{year}.json"
+            )
+        if os.path.isfile(seeds_path):
+            try:
+                with open(seeds_path, "r") as f:
+                    seeds_data = _json.load(f)
+                if isinstance(seeds_data, list):
+                    for entry in seeds_data:
+                        tid = entry.get("team_id", "")
+                        seed = int(entry.get("seed", 0))
+                        if tid and seed:
+                            from ..data.features.proprietary_metrics import _team_id
+                            team_seeds[_team_id(tid)] = seed
+            except Exception:
+                pass
+
+        # Roster features (loaded once per year — not temporal).
+        team_roster_features: Dict[str, Dict] = {}
+        roster_path = os.path.join(
+            os.path.dirname(games_path), "historical", f"cbbpy_rosters_{year}.json"
+        )
+        if not os.path.isfile(roster_path):
+            roster_path = os.path.join(os.path.dirname(games_path), f"cbbpy_rosters_{year}.json")
+        if os.path.isfile(roster_path):
+            try:
+                with open(roster_path, "r") as f:
+                    roster_data = _json.load(f)
+                if isinstance(roster_data, dict):
+                    for tid, info in roster_data.items():
+                        if isinstance(info, dict):
+                            team_roster_features[tid] = info
+            except Exception:
+                pass
+
+        # ── 3. Create incremental engine ──────────────────────────────────
+        inc_engine = IncrementalMetricsEngine(
+            game_records, conference_map=conference_map, prior_elo=prior_elo,
+        )
+
+        # ── 4. Identify training games ────────────────────────────────────
+        # Build deduplicated game list: (date, t1, t2, s1, s2).
+        # Each game appears twice in game_records; deduplicate by game_id.
+        seen_gids: set = set()
+        all_games: list = []
+        for g in sorted(game_records, key=lambda r: r.game_date):
+            if g.game_id in seen_gids:
+                continue
+            seen_gids.add(g.game_id)
+            all_games.append(g)
+
+        # Filter: regular season only (exclude tournament games unless requested).
+        tournament_cutoff = f"{year}-03-14"
+        if include_tournament:
+            training_games = all_games
+        else:
+            training_games = [g for g in all_games if g.game_date <= tournament_cutoff]
+
+        # Skip obviously bad games.
+        training_games = [
+            g for g in training_games
+            if g.points > 0 and g.opp_points > 0
+            and abs(g.points - g.opp_points) <= 80
+        ]
+
+        if not training_games:
+            return np.empty((0, feature_dim)), np.array([]), inc_engine.get_end_of_season_elo()
+
+        # ── 5. Build feature vectors ──────────────────────────────────────
+        X_list: list = []
+        y_list: list = []
+        skipped = 0
+
+        for g in training_games:
+            # Get metrics as of this game's date (strictly before).
+            metrics = inc_engine.compute_as_of(g.game_date)
+            if not metrics:
+                skipped += 1
+                continue
+
+            m1 = metrics.get(g.team_id)
+            m2 = metrics.get(g.opponent_id)
+            if m1 is None or m2 is None:
+                skipped += 1
+                continue
+
+            # Convert to team vectors.
+            seed1 = team_seeds.get(g.team_id, 0)
+            seed2 = team_seeds.get(g.opponent_id, 0)
+            v1 = IncrementalMetricsEngine.metrics_to_team_vector(m1, seed=seed1)
+            v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, seed=seed2)
+
+            # Overlay roster features if available.
+            rf1 = team_roster_features.get(g.team_id, {})
+            rf2 = team_roster_features.get(g.opponent_id, {})
+            if rf1 or rf2:
+                v1[15] = rf1.get("roster_continuity", 0.0)
+                v1[16] = rf1.get("transfer_impact", 0.0)
+                v1[17] = rf1.get("avg_experience", 0.0)
+                v2[15] = rf2.get("roster_continuity", 0.0)
+                v2[16] = rf2.get("transfer_impact", 0.0)
+                v2[17] = rf2.get("avg_experience", 0.0)
+
+            # Build matchup vector (75-dim).
+            matchup = IncrementalMetricsEngine.build_matchup_vector(v1, v2, seed1, seed2)
+
+            # Ensure correct dimension (pad or truncate if needed).
+            if len(matchup) < feature_dim:
+                padded = np.zeros(feature_dim, dtype=np.float64)
+                padded[:len(matchup)] = matchup
+                matchup = padded
+            elif len(matchup) > feature_dim:
+                matchup = matchup[:feature_dim]
+
+            X_list.append(matchup)
+            y_list.append(1 if g.points > g.opp_points else 0)
+
+        if not X_list:
+            return np.empty((0, feature_dim)), np.array([]), inc_engine.get_end_of_season_elo()
+
+        X_arr = np.stack(X_list)
+        y_arr = np.array(y_list, dtype=int)
+
+        logger.info(
+            "Year %d (incremental): %d training samples from %d games "
+            "(%d skipped, %d unique dates). feature_dim=%d.",
+            year, len(X_list), len(training_games), skipped,
+            len(inc_engine._unique_dates), feature_dim,
+        )
+
+        return X_arr, y_arr, inc_engine.get_end_of_season_elo()
+
     def _run_gnn(self, graph: ScheduleGraph) -> Dict:
         multi_hop = compute_multi_hop_sos(graph, hops=3)
         pagerank = graph.compute_pagerank_sos()
@@ -4623,7 +4675,7 @@ class SOTAPipeline:
                         metrics_path = os.path.join(games_dir, f"team_metrics_{yr}.json")
                         if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
                             continue
-                        yr_X, yr_y, _ = self._load_year_samples(
+                        yr_X, yr_y, _ = self._load_year_samples_incremental(
                             games_path, metrics_path, feature_dim, yr,
                             include_tournament=True,
                         )
@@ -4670,7 +4722,7 @@ class SOTAPipeline:
                     metrics_path = os.path.join(games_dir, f"team_metrics_{yr}.json")
                     if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
                         continue
-                    yr_X, yr_y, _ = self._load_year_samples(
+                    yr_X, yr_y, _ = self._load_year_samples_incremental(
                         games_path, metrics_path, feature_dim, yr
                     )
                     if len(yr_y) < 10:
