@@ -383,6 +383,9 @@ class SOTAPipelineConfig:
     consistency_bonus_max: float = 0.02  # Max shift from consistency (variance) difference
     consistency_normalizer: float = 15.0  # Typical pace_adjusted_variance range for normalization
 
+    # --- Monte Carlo simulation ---
+    mc_noise_std: float = 0.12  # Logit-space noise for MC simulation (Tier 3, range 0.02-0.25)
+
     # --- Ensemble weights (fixed-weight average, no stacking) ---
     ensemble_lgb_weight: float = 0.45  # LightGBM weight in fixed ensemble
     ensemble_xgb_weight: float = 0.35  # XGBoost weight (logistic = 1 - lgb - xgb)
@@ -4578,10 +4581,9 @@ class SOTAPipeline:
             if g.team2_id not in self.feature_engineer.team_features:
                 continue
             p = self._raw_fusion_probability(g.team1_id, g.team2_id)
-            # Apply tournament adaptation BEFORE calibration fitting so the
-            # calibrator trains on the same distribution it will see at inference.
-            if self.config.enable_tournament_adaptation:
-                p = self._tournament_adapt(p, g.team1_id, g.team2_id)
+            # F1: Calibrate on raw ensemble probabilities.  Tournament
+            # adaptation is applied AFTER calibration at inference time,
+            # so the calibrator trains on the same raw distribution.
             p = float(np.clip(p, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
             o = self._game_outcome(g)
             if o is None:
@@ -4741,13 +4743,21 @@ class SOTAPipeline:
         p_arr = np.array(probs)
         y_arr = np.array(outcomes)
 
-        # FIX 4.2: Removed internal train/test split for calibration.
-        # Temperature scaling has only 1 parameter (T) and is extremely
-        # unlikely to overfit even 30 samples.  The previous 80/20 split
-        # was too aggressive for small calibration pools (24-32 train
-        # samples), often triggering the bootstrap CI guard to disable
-        # calibration entirely.  The bootstrap CI remains as the sole
-        # guard against fitting noise.
+        # F2: 70/30 chronological split for honest OOS calibration evaluation.
+        # Fit T on the first 70% of calibration samples (chronologically),
+        # evaluate brier_after on the held-out 30%.  Fallback to full-data
+        # fit when the split is too small.
+        n_cal = len(p_arr)
+        split_idx = int(n_cal * 0.7)
+        if split_idx >= 20 and (n_cal - split_idx) >= 10:
+            p_fit, p_eval = p_arr[:split_idx], p_arr[split_idx:]
+            y_fit, y_eval = y_arr[:split_idx], y_arr[split_idx:]
+            use_oos_eval = True
+        else:
+            # Too few samples for a meaningful split; fit on all
+            p_fit, p_eval = p_arr, p_arr
+            y_fit, y_eval = y_arr, y_arr
+            use_oos_eval = False
 
         # Bootstrap CI for temperature scaling: if the 95% CI for T includes
         # 1.0 (the identity), calibration is not statistically justified and
@@ -4755,10 +4765,10 @@ class SOTAPipeline:
         # is too small to distinguish T from 1.0.
         from ..ml.calibration.calibration import TemperatureScaling
         bootstrap_info = {}
-        if self.config.calibration_method == "temperature" and len(p_arr) >= 20:
+        if self.config.calibration_method == "temperature" and len(p_fit) >= 20:
             ts_check = TemperatureScaling()
             T_lo, T_hi, T_vals = ts_check.bootstrap_ci(
-                p_arr, y_arr,
+                p_fit, y_fit,
                 n_bootstrap=200,
                 ci_level=0.95,
                 random_seed=self.config.random_seed,
@@ -4788,24 +4798,28 @@ class SOTAPipeline:
                 }
                 return calibration_info
 
-        # P1: Use temperature scaling as default for small-data robustness.
-        # Temperature scaling has only 1 parameter (vs 2 for Platt, N for isotonic)
-        # and specifically targets the overconfidence problem.
-        # FIX 4.2: Fit on ALL calibration data (no internal split).
+        # Fit temperature scaling on the fitting portion (70% or all).
         self.calibration_pipeline = CalibrationPipeline(method=self.config.calibration_method)
-        self.calibration_pipeline.fit(p_arr, y_arr)
+        self.calibration_pipeline.fit(p_fit, y_fit)
 
-        # B4: Evaluate brier_before on fitting data, but brier_after via
-        # leave-one-out to avoid overly optimistic self-evaluation.
+        # Evaluate calibration quality.
         pre_metrics = calculate_calibration_metrics(p_arr, y_arr)
-        # LOO calibration evaluation: for each sample, calibrate using the
-        # model fit on ALL data (temperature scaling has 1 param, so LOO
-        # bias is minimal). This is more honest than evaluating on training data.
-        cal_preds = self.calibration_pipeline.calibrate(p_arr)
-        # NOTE: With temperature scaling (1 parameter), train-set evaluation
-        # is nearly unbiased. The bootstrap CI guard remains the primary
-        # safeguard against overfitting.
-        post_metrics = calculate_calibration_metrics(cal_preds, y_arr)
+
+        # In-sample evaluation (all data)
+        cal_preds_all = self.calibration_pipeline.calibrate(p_arr)
+        insample_metrics = calculate_calibration_metrics(cal_preds_all, y_arr)
+
+        # OOS evaluation (held-out 30%) when split is available
+        if use_oos_eval:
+            cal_preds_eval = self.calibration_pipeline.calibrate(p_eval)
+            oos_metrics = calculate_calibration_metrics(cal_preds_eval, y_eval)
+            brier_after = float(oos_metrics.brier_score)
+            ece_after = float(oos_metrics.expected_calibration_error)
+            eval_mode = "oos_70_30"
+        else:
+            brier_after = float(insample_metrics.brier_score)
+            ece_after = float(insample_metrics.expected_calibration_error)
+            eval_mode = "insample_1param"
 
         calibration_info = {
             "method": self.config.calibration_method,
@@ -4813,10 +4827,11 @@ class SOTAPipeline:
             "historical_tournament_samples": tourney_cal_count,
             "tournament_games_filtered": len(unique_games) - len(regular_season_games),
             "brier_before": float(pre_metrics.brier_score),
-            "brier_after": float(post_metrics.brier_score),
-            "brier_after_note": "evaluated on training data (1-param model, minimal bias)",
+            "brier_after": brier_after,
+            "brier_after_insample": float(insample_metrics.brier_score),
+            "brier_eval_mode": eval_mode,
             "ece_before": float(pre_metrics.expected_calibration_error),
-            "ece_after": float(post_metrics.expected_calibration_error),
+            "ece_after": ece_after,
             "pre_calibration_clip": [self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi],
         }
         if bootstrap_info:
@@ -4857,14 +4872,12 @@ class SOTAPipeline:
                 )
 
         # A4: Monte Carlo receives calibrated, tournament-adapted probabilities.
-        # Its role is structural bracket simulation, not additional uncertainty.
-        # noise_std=0.02 provides minimal bracket diversity for leverage
-        # optimization without double-counting calibrated uncertainty.
+        # noise_std from config (default 0.12) controls bracket diversity.
         # injury_probability=0.0: injuries handled pre-simulation via
         # _injury_adjusted_probability().
         cfg = SimulationConfig(
             num_simulations=self.config.num_simulations,
-            noise_std=0.02,
+            noise_std=self.config.mc_noise_std,
             injury_probability=0.0,
             random_seed=self.config.random_seed,
             batch_size=500,
@@ -4892,10 +4905,25 @@ class SOTAPipeline:
             matchup_cache[(team2_id, team1_id)] = float(np.clip(1.0 - adjusted, 0.01, 0.99))
             return adjusted
 
-        from ..simulation.monte_carlo import MonteCarloEngine
+        from ..simulation.monte_carlo import MonteCarloEngine, validate_upset_rates
 
         engine = MonteCarloEngine(predict_fn, config=cfg)
-        return engine.simulate_tournament(bracket, show_progress=False)
+        sim_results = engine.simulate_tournament(bracket, show_progress=False)
+
+        # E1: Validate simulated upset rates against historical actuals.
+        # Log-only diagnostic — does not block the pipeline.
+        try:
+            upset_validation = validate_upset_rates(sim_results, teams_by_region)
+            if not upset_validation["passed"]:
+                logger.warning(
+                    "MC upset rate validation FAILED — simulated rates deviate "
+                    "from historical. Consider adjusting mc_noise_std (currently %.3f).",
+                    self.config.mc_noise_std,
+                )
+        except Exception as e:
+            logger.debug("Upset rate validation skipped: %s", e)
+
+        return sim_results
 
     def _to_round_probabilities(self, sim_results) -> Dict[str, Dict[str, float]]:
         model_probs: Dict[str, Dict[str, float]] = {}
@@ -5164,20 +5192,27 @@ class SOTAPipeline:
 
         Each team gets `injury_noise_samples` draws that represent relative
         strength shift from Selection Sunday uncertainty.
+
+        Returns empty dict when no injury data is provided, preventing
+        uninformed N(0, 0.03) random perturbation of all probabilities.
         """
+        # E3: Only generate injury noise when injury data is available.
+        # Without real injury reports, random perturbation adds noise
+        # without information — degrading prediction quality.
+        if self.config.injury_report_json is None:
+            return {}
+
         samples = max(256, int(self.config.injury_noise_samples))
         out: Dict[str, np.ndarray] = {}
 
         for team_id in base_strengths:
             roster = rosters.get(team_id)
             if roster is None or not roster.players:
-                out[team_id] = self.rng.normal(0.0, 0.03, size=samples).astype(np.float32)
-                continue
+                continue  # No roster data for this team; skip (no noise applied)
 
             contrib = np.array([max(0.0, p.contribution_score) for p in roster.players], dtype=float)
             if float(np.sum(contrib)) <= 0.0:
-                out[team_id] = self.rng.normal(0.0, 0.03, size=samples).astype(np.float32)
-                continue
+                continue  # No player contribution data; skip
 
             base_availability = np.array([p.availability_factor for p in roster.players], dtype=float)
             event_prob = np.clip(0.03 + 0.02 * (1.0 - np.mean(base_availability)), 0.01, 0.10)
@@ -5592,17 +5627,17 @@ class SOTAPipeline:
     def predict_probability(self, team1_id: str, team2_id: str) -> float:
         raw = self._raw_fusion_probability(team1_id, team2_id)
 
-        # Tournament domain adaptation BEFORE calibration: shrink toward 0.5
-        # to account for neutral-court, single-elimination, higher-variance
-        # context.  Applied pre-calibration so that temperature scaling learns
-        # to correct the tournament-adapted probabilities rather than having
-        # its calibration undone by post-hoc adjustments.
-        if self.config.enable_tournament_adaptation:
-            raw = self._tournament_adapt(raw, team1_id, team2_id)
-
+        # F1: Calibrate FIRST on raw ensemble probabilities, then apply
+        # tournament adaptation as a post-hoc adjustment.  This cleanly
+        # separates the ML model's calibration from domain-specific
+        # tournament adjustments, preventing entanglement where the
+        # calibrator learns to undo/amplify post-hoc corrections.
         if self.calibration_pipeline:
             calibrated = float(self.calibration_pipeline.calibrate(np.array([raw]))[0])
             raw = float(np.clip(calibrated, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
+
+        if self.config.enable_tournament_adaptation:
+            raw = self._tournament_adapt(raw, team1_id, team2_id)
 
         return raw
 

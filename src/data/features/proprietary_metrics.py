@@ -986,18 +986,30 @@ class ProprietaryMetricsEngine:
         )
         return float(np.sqrt(shrunk_var))
 
+    # C8: Bayesian shrinkage constants for consistency metrics.
+    # Same conjugate-prior pattern as _pace_adjusted_variance / _three_point_variance.
+    CONSISTENCY_PRIOR_STD = 8.0    # D1 population scoring-margin stdev (Tier 2)
+    CONSISTENCY_PRIOR_WEIGHT = 8.0  # pseudo-observations (~1/3 season, Tier 2)
+
     def _consistency(self, games: List[GameRecord]) -> float:
         """
-        Inverse of scoring-margin stdev.  1 / (1 + std_margin).
+        Inverse of scoring-margin stdev with Bayesian shrinkage.
+        1 / (1 + shrunk_std).
 
         Consistent teams outperform in single-elimination.
+        Shrinkage prevents extreme values from small samples (n=5-10).
         """
         if len(games) < 5:
             return 0.5
 
         margins = [g.points - g.opp_points for g in games]
-        std_m = float(np.std(margins, ddof=1))
-        return 1.0 / (1.0 + std_m)
+        n = len(margins)
+        sample_var = float(np.var(margins, ddof=1))
+        prior_var = self.CONSISTENCY_PRIOR_STD ** 2
+        shrunk_var = (n * sample_var + self.CONSISTENCY_PRIOR_WEIGHT * prior_var) / (
+            n + self.CONSISTENCY_PRIOR_WEIGHT
+        )
+        return 1.0 / (1.0 + float(np.sqrt(shrunk_var)))
 
     def _sos_adjusted_consistency(
         self,
@@ -1006,7 +1018,7 @@ class ProprietaryMetricsEngine:
         adj_def: Dict[str, float],
     ) -> float:
         """
-        Consistency on SOS-adjusted residuals.  C3 fix.
+        Consistency on SOS-adjusted residuals with Bayesian shrinkage.  C3 + C8 fix.
 
         Raw margin stdev conflates true inconsistency with schedule variance:
         a team playing both cupcakes and elite opponents shows high raw stdev
@@ -1015,9 +1027,9 @@ class ProprietaryMetricsEngine:
         Fix: compute residual_i = actual_margin_i - opp_em_i for each game,
         where opp_em = adj_off[opp] - adj_def[opp].  The stdev of these
         residuals isolates genuine game-to-game inconsistency from schedule
-        heterogeneity.
+        heterogeneity.  Bayesian shrinkage toward population stdev prevents
+        extreme values from small samples.
 
-        Infrastructure: identical to _momentum_5g() quality_margin pattern.
         Returns 0.5 (neutral prior) for n < 5.
         """
         if len(games) < 5:
@@ -1031,7 +1043,13 @@ class ProprietaryMetricsEngine:
             opp_em = adj_off.get(g.opponent_id, league_off) - adj_def.get(g.opponent_id, league_def)
             residuals.append((g.points - g.opp_points) - opp_em)
 
-        return 1.0 / (1.0 + float(np.std(residuals, ddof=1)))
+        n = len(residuals)
+        sample_var = float(np.var(residuals, ddof=1))
+        prior_var = self.CONSISTENCY_PRIOR_STD ** 2
+        shrunk_var = (n * sample_var + self.CONSISTENCY_PRIOR_WEIGHT * prior_var) / (
+            n + self.CONSISTENCY_PRIOR_WEIGHT
+        )
+        return 1.0 / (1.0 + float(np.sqrt(shrunk_var)))
 
     def _compute_wab(
         self,
@@ -1066,12 +1084,18 @@ class ProprietaryMetricsEngine:
                 # P(bubble beats opponent) via log5
                 bubble_wp = self._log5_win_prob(bubble_em, opp_em)
 
-                # Home-court adjustment
+                # D4: Home-court adjustment via analytical log5 recomputation.
+                # The old ±0.035 flat offset was ~3-7x too small.  HCA of
+                # 3.75 points shifts win probability by ~0.10-0.25 at
+                # competitive margins.  Recompute using the log5 formula
+                # with HCA-adjusted efficiency margins.
                 if not g.is_neutral:
                     if g.is_home:
-                        bubble_wp -= 0.035  # bubble playing away
+                        # Team is home → bubble is away → opponent gets HCA
+                        bubble_wp = self._log5_win_prob(bubble_em, opp_em + self.HCA_POINTS)
                     else:
-                        bubble_wp += 0.035  # bubble playing at home
+                        # Team is away → bubble is home → bubble gets HCA
+                        bubble_wp = self._log5_win_prob(bubble_em + self.HCA_POINTS, opp_em)
 
                 bubble_wp = float(np.clip(bubble_wp, 0.01, 0.99))
 
@@ -1693,9 +1717,26 @@ class ProprietaryMetricsEngine:
         raw_def = 100.0 * total_opp / max(total_poss, 1.0)
         tempo = total_poss / max(len(pit_games), 1)
 
-        # Use league-wide final adjusted values for opponent SOS
-        # (this is a compromise — full PIT SOS would require
-        # recomputing for all teams at each date, which is O(n^2*seasons))
+        # KNOWN LIMITATION: PIT TEMPORAL LEAKAGE (D3)
+        # ─────────────────────────────────────────────
+        # The SOS adjustment below uses FINAL (end-of-season) opponent ratings
+        # (self._adj_off, self._adj_def) rather than point-in-time opponent
+        # ratings.  This means that when computing a team's January metrics,
+        # opponent quality reflects full-season data including games that
+        # haven't happened yet at that point in the season.
+        #
+        # Impact: Early-season PIT features carry slight temporal leakage from
+        # future opponent performance.  The PIT blend weight (0.9 * season_remaining)
+        # partially mitigates this by downweighting early-season PIT contributions.
+        #
+        # Alternatives considered:
+        #   - Full PIT SOS: recompute all teams' ratings at each date → O(n²*seasons)
+        #   - Prior-season SOS: use prior year's final ratings → no leakage but
+        #     stale estimates (~0.7 correlation with current season)
+        #
+        # Current choice: use current-season finals as a pragmatic compromise.
+        # The leakage magnitude is small (SOS adjustment is ~2-5 AdjEM points)
+        # and heavily blended with end-of-season features for late-season games.
         league_off = float(np.mean(list(self._adj_off.values()))) if self._adj_off else 100.0
         league_def = float(np.mean(list(self._adj_def.values()))) if self._adj_def else 100.0
 
@@ -1786,31 +1827,46 @@ class ProprietaryMetricsEngine:
         oliver_priors = np.array([0.40, 0.25, 0.20, 0.15])
         factor_names = ["eFG%", "ball_care", "ORB%", "FTR_x_FT%"]
 
-        # Build dataset: per-game four-factor differential → win/loss
+        # D5: Build dataset from actual per-game four-factor differentials
+        # and real game outcomes (not AdjEM-inferred).  This eliminates the
+        # circular validation where AdjEM was used to determine outcomes
+        # despite being derived from the same box-score data.
         X_list, y_list = [], []
-        teams = list(game_records.keys())
-        for i, t1 in enumerate(teams):
-            for t2 in teams[i + 1:]:
-                games_1 = game_records.get(t1, [])
-                games_2 = game_records.get(t2, [])
-                if not games_1 or not games_2:
+        seen_game_ids: set = set()
+
+        for team_id, games in game_records.items():
+            for g in games:
+                # Deduplicate: each game appears in both teams' records
+                if g.game_id in seen_game_ids:
                     continue
-                ff1 = self._four_factors(games_1)
-                ff2 = self._four_factors(games_2)
+                seen_game_ids.add(g.game_id)
+
+                opp_games = game_records.get(g.opponent_id, [])
+                if not opp_games:
+                    continue
+
+                # Find opponent's record for this same game
+                opp_game = None
+                for og in opp_games:
+                    if og.game_id == g.game_id:
+                        opp_game = og
+                        break
+                if opp_game is None:
+                    continue
+
+                # Per-game four-factor differentials
+                ff_team = self._four_factors([g])
+                ff_opp = self._four_factors([opp_game])
                 diff = np.array([
-                    ff1.get("effective_fg_pct", 0.5) - ff2.get("effective_fg_pct", 0.5),
-                    (1 - ff1.get("turnover_rate", 0.18)) - (1 - ff2.get("turnover_rate", 0.18)),
-                    ff1.get("offensive_reb_rate", 0.3) - ff2.get("offensive_reb_rate", 0.3),
-                    ff1.get("free_throw_rate", 0.3) * 0.72 - ff2.get("free_throw_rate", 0.3) * 0.72,
+                    ff_team.get("effective_fg_pct", 0.5) - ff_opp.get("effective_fg_pct", 0.5),
+                    (1 - ff_team.get("turnover_rate", 0.18)) - (1 - ff_opp.get("turnover_rate", 0.18)),
+                    ff_team.get("offensive_reb_rate", 0.3) - ff_opp.get("offensive_reb_rate", 0.3),
+                    ff_team.get("free_throw_rate", 0.3) * 0.72 - ff_opp.get("free_throw_rate", 0.3) * 0.72,
                 ])
-                # Use AdjEM to determine "outcome" for all possible matchups
-                r1 = results.get(t1) if results else None
-                r2 = results.get(t2) if results else None
-                em1 = r1.adj_efficiency_margin if r1 else 0.0
-                em2 = r2.adj_efficiency_margin if r2 else 0.0
-                win_prob = 1.0 / (1.0 + 10 ** (-(em1 - em2) / 11.5))
+                # Actual game outcome (not AdjEM-inferred)
+                y = 1 if g.points > g.opp_points else 0
                 X_list.append(diff)
-                y_list.append(1 if win_prob > 0.5 else 0)
+                y_list.append(y)
 
         if len(X_list) < 50:
             return {
