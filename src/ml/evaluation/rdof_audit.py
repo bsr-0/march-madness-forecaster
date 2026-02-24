@@ -143,9 +143,11 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
     PipelineConstant("late_season_cutoff_days", 2, 45,
         "SOTAPipelineConfig.late_season_training_cutoff_days", (20, 90),
         "Bounded, monotone effect on sample size vs feature quality"),
-    PipelineConstant("round_correlation_decay", 2, [1.0, 0.6, 0.3, 0.15, 0.0, 0.0],
+    PipelineConstant("round_correlation_decay", 3, [1.0, 0.6, 0.3, 0.15, 0.0, 0.0],
         "monte_carlo._run_batch (hardcoded)", (0.0, 1.0),
-        "Must be monotonically decreasing R64→Championship; tournament structure"),
+        "E2: Reclassified Tier 2→3. Monotonic structure is constrained but "
+        "specific values (0.6, 0.3, 0.15) derived from ~160 region-years — "
+        "insufficient to distinguish between alternatives. Requires sensitivity analysis"),
     PipelineConstant("lgb_num_leaves", 2, 8,
         "LightGBMRanker default params", (4, 32),
         "Lower = more regularized; conservative for small N (~400 samples)"),
@@ -259,6 +261,26 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
         "monte_carlo._run_batch max(0.2, ...)", (0.05, 0.5),
         "Floor for regional noise multiplier; prevents zero-variance regions"),
 
+    # ── Audit Round 2 Additions ──────────────────────────────────────
+
+    # Tier 1: Historical upset rates (published NCAA tournament data 1985-2025)
+    PipelineConstant("historical_upset_rates", 1,
+        {"1v16": 0.015, "2v15": 0.06, "3v14": 0.15, "4v13": 0.21,
+         "5v12": 0.36, "6v11": 0.38, "7v10": 0.39, "8v9": 0.49},
+        "monte_carlo.HISTORICAL_UPSET_RATES", (0.0, 1.0),
+        "E1: Published first-round upset rates from ~2500+ tournament games. "
+        "Used by validate_upset_rates() to calibrate MC simulation noise_std."),
+
+    # Tier 2: Consistency shrinkage priors (Bayesian conjugate-prior)
+    PipelineConstant("consistency_prior_std", 2, 8.0,
+        "ProprietaryMetrics.CONSISTENCY_PRIOR_STD", (5.0, 12.0),
+        "C8: D1 population scoring-margin stdev for consistency shrinkage. "
+        "Bounded by D1 data distribution; analogous to pace_adj_variance prior."),
+    PipelineConstant("consistency_prior_weight", 2, 8.0,
+        "ProprietaryMetrics.CONSISTENCY_PRIOR_WEIGHT", (4.0, 16.0),
+        "C8: Pseudo-observations (~1/3 season) for consistency shrinkage. "
+        "Matches pattern of three_pt_variance and pace_adj_variance priors."),
+
     # ── Previously Unregistered Constants ─────────────────────────────
     # The following constants were identified as hardcoded in the codebase
     # but not tracked in the registry.  Added to close the audit gap.
@@ -322,6 +344,7 @@ TIER3_MC_CONSTANTS = [
     "mc_injury_severity_hi",
     "mc_lognormal_sigma",
     "mc_region_noise_floor",
+    "round_correlation_decay",  # E2: reclassified from Tier 2
 ]
 
 

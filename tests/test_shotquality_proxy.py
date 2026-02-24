@@ -474,12 +474,19 @@ def test_sos_adjusted_consistency_perfect():
         )
 
     sos_c = engine._sos_adjusted_consistency(games, adj_off, adj_def)
-    # All residuals == +5 → stdev = 0 → 1/(1+0) = 1.0
-    assert abs(sos_c - 1.0) < 1e-6, f"Expected 1.0, got {sos_c}"
-
-    # Raw consistency should be < 1.0 (raw margins vary with schedule)
+    # All residuals == +5 → sample stdev = 0, but Bayesian shrinkage toward
+    # prior_std=8.0 means the shrunk stdev > 0.  With n=10, k=8:
+    # shrunk_var = (10*0 + 8*64)/18 ≈ 28.4, shrunk_std ≈ 5.33
+    # consistency = 1/(1+5.33) ≈ 0.158
+    # Key assertion: SOS-adjusted consistency should be HIGHER than raw
+    # (because raw margins vary with schedule while residuals are constant).
     raw_c = engine._consistency(games)
-    assert raw_c < 1.0
+    assert sos_c > raw_c, (
+        f"SOS-adjusted ({sos_c:.4f}) should be higher than raw ({raw_c:.4f}) "
+        "when all residuals are identical"
+    )
+    # Shrinkage prevents 1.0 (which would be overconfident for 10 games)
+    assert 0.05 < sos_c < 0.30, f"Expected shrunk value near 0.16, got {sos_c}"
 
 
 def test_sos_adjusted_consistency_in_results():

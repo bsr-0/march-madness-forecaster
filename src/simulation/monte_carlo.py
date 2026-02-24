@@ -171,14 +171,16 @@ def _run_batch(
     team_regions = {tid: data[1] for tid, data in team_data.items()}
     unique_regions = list(set(team_regions.values()))
 
-    # Round-dependent correlation decay factors.
+    # Round-dependent correlation decay factors (Tier 3 — requires sensitivity analysis).
     # Round 0 (R64): full correlation — upset clustering is strongest.
     # Round 1 (R32): 60% of base — still intra-region, some decay.
     # Round 2 (S16): 30% — teams are more proven, less chaos clustering.
     # Round 3 (E8):  15% — region nearly resolved.
     # Round 4+ (F4, Championship): 0% intra-region (cross-region games).
-    # These decay rates are derived from empirical analysis of upset
-    # auto-correlation in NCAA tournament data 1985-2024.
+    # CAVEAT (E2): These specific values are derived from ~160 region-years
+    # of tournament data, which produces wide CIs that cannot distinguish
+    # between e.g. 0.6 and 0.3.  The monotonic decay STRUCTURE is
+    # well-justified, but the individual coefficients are not.
     round_correlation_decay = [1.0, 0.6, 0.3, 0.15, 0.0, 0.0]
 
     for _ in range(batch_size):
@@ -560,3 +562,93 @@ def run_simulation(
     engine = MonteCarloEngine(predict_fn, config)
 
     return engine.simulate_tournament(bracket, show_progress)
+
+
+# ── Historical upset rates by seed matchup (1985-2025, NCAA tournament) ──
+# Tier 1 constant: published data, ~2500+ first-round games.
+# "Upset" = higher-numbered seed wins.
+HISTORICAL_UPSET_RATES: Dict[Tuple[int, int], float] = {
+    (1, 16): 0.015,
+    (2, 15): 0.060,
+    (3, 14): 0.150,
+    (4, 13): 0.210,
+    (5, 12): 0.360,
+    (6, 11): 0.380,
+    (7, 10): 0.390,
+    (8, 9):  0.490,
+}
+
+
+import logging as _logging
+_mc_logger = _logging.getLogger(__name__)
+
+
+def validate_upset_rates(
+    sim_results: AggregatedResults,
+    teams_by_region: Dict[str, List[TournamentTeam]],
+    tolerance: float = 0.15,
+) -> Dict:
+    """Validate simulated first-round upset rates against historical actuals.
+
+    Compares the fraction of simulations where the higher seed won each
+    first-round matchup against the well-documented historical base rates
+    (NCAA tournament 1985-2025).
+
+    Args:
+        sim_results: Output of MonteCarloEngine.simulate_tournament().
+        teams_by_region: Region -> list of TournamentTeam (need seed + team_id).
+        tolerance: Maximum acceptable absolute deviation per matchup.
+
+    Returns:
+        Dict with per-matchup comparison and overall ``passed`` boolean.
+    """
+    # Build seed -> team_id mapping per region
+    seed_matchup_order = [(1, 16), (8, 9), (5, 12), (4, 13),
+                          (6, 11), (3, 14), (7, 10), (2, 15)]
+
+    # Aggregate simulated upset rate for each canonical seed matchup
+    simulated_rates: Dict[Tuple[int, int], List[float]] = {m: [] for m in seed_matchup_order}
+
+    for region_teams in teams_by_region.values():
+        seed_to_team = {t.seed: t for t in region_teams}
+        for high_seed, low_seed in seed_matchup_order:
+            high_team = seed_to_team.get(high_seed)
+            low_team = seed_to_team.get(low_seed)
+            if high_team is None or low_team is None:
+                continue
+            # P(lower seed wins) = P(lower seed advances to R32)
+            upset_rate = sim_results.round_of_32_odds.get(low_team.team_id, 0.0)
+            simulated_rates[(high_seed, low_seed)].append(upset_rate)
+
+    # Compare against historical
+    comparisons = {}
+    all_pass = True
+    for matchup in seed_matchup_order:
+        rates = simulated_rates.get(matchup, [])
+        if not rates:
+            continue
+        sim_rate = float(np.mean(rates))
+        hist_rate = HISTORICAL_UPSET_RATES.get(matchup, 0.5)
+        delta = abs(sim_rate - hist_rate)
+        passed = delta <= tolerance
+
+        comparisons[f"{matchup[0]}v{matchup[1]}"] = {
+            "simulated": round(sim_rate, 4),
+            "historical": hist_rate,
+            "delta": round(delta, 4),
+            "passed": passed,
+        }
+
+        if not passed:
+            all_pass = False
+            _mc_logger.warning(
+                "Upset rate mismatch %dv%d: simulated=%.3f, historical=%.3f (delta=%.3f > %.3f)",
+                matchup[0], matchup[1], sim_rate, hist_rate, delta, tolerance,
+            )
+        elif delta > 0.10:
+            _mc_logger.info(
+                "Upset rate near threshold %dv%d: simulated=%.3f, historical=%.3f (delta=%.3f)",
+                matchup[0], matchup[1], sim_rate, hist_rate, delta,
+            )
+
+    return {"per_matchup": comparisons, "passed": all_pass}
