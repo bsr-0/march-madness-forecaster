@@ -1167,6 +1167,7 @@ class HoldoutEvaluator:
             team_games_to_game_records,
             _team_id,
         )
+        from datetime import date as _dtdate, timedelta as _dttd
 
         training_years = [y for y in self.all_years
                           if y != holdout_year and y != 2020]
@@ -1175,6 +1176,29 @@ class HoldoutEvaluator:
 
         logger.info("Holdout %d: training on %d years: %s",
                      holdout_year, len(training_years), training_years)
+
+        # Monthly-bucketing helper for compute_as_of() cache efficiency.
+        # Years with real per-game dates (2005-2009) have 136+ unique dates
+        # that each trigger a full cold-start SOS recomputation; bucketing
+        # to 30-day intervals reduces this to ~6 unique compute_as_of() calls
+        # per year.  Placeholder-date years (2010-2024) are already bucketed
+        # by team_games_to_game_records(), so this is idempotent for them.
+        #
+        # The bucket date is the START of the 30-day window, so features for
+        # a given game are from BEFORE the bucket boundary — conservatively
+        # PIT-safe (at most 30 days conservative).  First-bucket games
+        # (roughly November) will produce an empty compute_as_of() prefix
+        # and are silently skipped; this is expected and mirrors the
+        # behaviour of the original per-game unique-date approach (where the
+        # first ~50 games are skipped due to the 50-record minimum prefix).
+        def _bucketed_date(date_str: str, season_start: _dtdate) -> str:
+            try:
+                d = _dtdate.fromisoformat(date_str)
+            except (ValueError, TypeError):
+                return date_str
+            days = (d - season_start).days
+            bucketed = max(0, (days // 30) * 30)
+            return (season_start + _dttd(days=bucketed)).isoformat()
 
         # ── 1. Collect training data with true PIT features ──────────
         all_train_X, all_train_y, all_train_w = [], [], []
@@ -1224,21 +1248,11 @@ class HoldoutEvaluator:
                 except Exception:
                     pass
 
-            # Tournament seeds.
-            team_seeds: Dict[str, int] = {}
-            seeds_path = self.historical_dir / f"tournament_seeds_{train_year}.json"
-            if seeds_path.is_file():
-                try:
-                    with open(seeds_path, "r") as f:
-                        sd = json.load(f)
-                    if isinstance(sd, list):
-                        for entry in sd:
-                            tid = entry.get("team_id", "")
-                            seed = int(entry.get("seed", 0))
-                            if tid and seed:
-                                team_seeds[_team_id(tid)] = seed
-                except Exception:
-                    pass
+            # Tournament seeds are NOT loaded for training games.
+            # All training samples in this loop are regular-season games
+            # (the inner loop skips game_date > tournament_cutoff), so seeds
+            # are never known at the time of those games.  Loading and using
+            # them would leak end-of-season standing into early-season features.
 
             # Create incremental engine with cross-year Elo carryover.
             inc_engine = IncrementalMetricsEngine(
@@ -1254,24 +1268,7 @@ class HoldoutEvaluator:
                 config.training_year_decay ** (years_ago - 1),
             )
 
-            # Monthly-bucketing helper for compute_as_of() cache efficiency.
-            # Years with real per-game dates (e.g. 2005-2009) have 136+
-            # unique dates that each trigger a full SOS recomputation.
-            # Bucketing to 30-day intervals reduces this to ~6 unique dates
-            # per year (~6 SOS computations vs. 136).  The bucket date is
-            # the START of the interval, so features used for a given game
-            # are from BEFORE the bucket boundary — conservatively PIT-safe.
-            from datetime import date as _dtdate, timedelta as _dttd
             _season_start = _dtdate(train_year - 1, 11, 1)
-
-            def _bucketed_date(date_str: str) -> str:
-                try:
-                    d = _dtdate.fromisoformat(date_str)
-                except (ValueError, TypeError):
-                    return date_str
-                days = (d - _season_start).days
-                bucketed = max(0, (days // 30) * 30)
-                return (_season_start + _dttd(days=bucketed)).isoformat()
 
             # Build training samples with true PIT features.
             seen_gids: set = set()
@@ -1287,14 +1284,15 @@ class HoldoutEvaluator:
                 if g.points <= 0 or g.opp_points <= 0:
                     continue
 
-                metrics = inc_engine.compute_as_of(_bucketed_date(g.game_date))
+                metrics = inc_engine.compute_as_of(_bucketed_date(g.game_date, _season_start))
                 m1 = metrics.get(g.team_id)
                 m2 = metrics.get(g.opponent_id)
                 if m1 is None or m2 is None:
                     continue
 
-                s1 = team_seeds.get(g.team_id, 0)
-                s2 = team_seeds.get(g.opponent_id, 0)
+                # Seeds are not known until Selection Sunday; always zero for
+                # regular-season training games to prevent temporal leakage.
+                s1, s2 = 0, 0
                 v1 = IncrementalMetricsEngine.metrics_to_team_vector(m1, s1)
                 v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, s2)
                 vec = IncrementalMetricsEngine.build_matchup_vector(v1, v2, s1, s2)

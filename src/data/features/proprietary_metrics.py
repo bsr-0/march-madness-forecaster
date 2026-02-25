@@ -2031,7 +2031,7 @@ def team_games_to_game_records(
             r.game_date = inferred.isoformat()
         n_inferred_dates = len(set(r.game_date for r in records))
         logger.info(
-            "Year %d: inferred dates for %d games → %d weekly buckets from game_id ordering.",
+            "Year %d: inferred dates for %d games → %d monthly buckets from game_id ordering.",
             season_year, n_unique_games, n_inferred_dates,
         )
 
