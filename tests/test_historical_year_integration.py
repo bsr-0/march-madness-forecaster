@@ -7,59 +7,12 @@ import pytest
 from src.pipeline.sota import SOTAPipeline, SOTAPipelineConfig
 
 
-@pytest.mark.slow
-def test_load_year_samples_2015_real_data():
-    base_dir = os.path.join(os.path.dirname(__file__), "..", "data", "raw", "historical")
-    games_path = os.path.abspath(os.path.join(base_dir, "historical_games_2015.json"))
-    metrics_path = os.path.abspath(os.path.join(base_dir, "team_metrics_2015.json"))
-
-    if not (os.path.isfile(games_path) and os.path.isfile(metrics_path)):
-        pytest.skip("Historical 2015 data files not available")
-
-    with open(games_path, "r") as f:
-        games_payload = json.load(f)
-
-    games = games_payload.get("games", [])
-    if not games:
-        pytest.skip("Historical 2015 games payload is empty")
-
+def test_load_year_samples_is_tombstoned():
+    """_load_year_samples() must raise NotImplementedError (tombstoned to prevent
+    accidental use of season-end data in training, which causes temporal leakage)."""
     pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026, data_cache_dir="data/raw"))
-    X, y, _ = pipeline._load_year_samples(games_path, metrics_path, feature_dim=77, year=2015)
-
-    assert X.shape[1] == 77
-    assert len(y) > 200
-
-    eligible_games = 0
-    for g in games:
-        date_str = g.get("date") or g.get("game_date") or ""
-        if not pipeline._is_tournament_game(date_str):
-            eligible_games += 1
-
-    assert eligible_games > 0
-    assert (len(y) / eligible_games) > 0.80
-
-    for idx in [0, 1, 2, 3, 4, 5, 6, 7, 8, 26, 35, 47]:
-        nonzero_ratio = np.mean(np.abs(X[:, idx]) > 1e-9)
-        assert nonzero_ratio > 0.90, f"Feature index {idx} coverage too low ({nonzero_ratio:.2%})"
-
-    roster_path = os.path.join(os.path.dirname(games_path), "cbbpy_rosters_2015.json")
-    enriched = False
-    if os.path.isfile(roster_path):
-        with open(roster_path, "r") as f:
-            roster_payload = json.load(f)
-        meta = roster_payload.get("enrichment_metadata", {})
-        elig = meta.get("eligibility_distribution", {})
-        transfers = int(meta.get("transfers_detected", 0))
-        if transfers > 0:
-            enriched = any(int(k) > 1 for k in elig.keys())
-
-    if enriched:
-        for idx in [15, 16, 17]:
-            nonzero_ratio = np.mean(np.abs(X[:, idx]) > 1e-9)
-            assert nonzero_ratio > 0.50, f"Roster feature index {idx} too sparse ({nonzero_ratio:.2%})"
-    else:
-        for idx in [15, 16, 17]:
-            assert np.allclose(X[:, idx], 0.0, atol=1e-6)
+    with pytest.raises(NotImplementedError, match="season-end"):
+        pipeline._load_year_samples("games.json", "metrics.json", feature_dim=75, year=2015)
 
 
 # ── Backfilled data validation tests ──────────────────────────────────

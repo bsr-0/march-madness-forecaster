@@ -514,118 +514,29 @@ class TestMultiYearTrainingConfig:
         # Oldest years should hit the floor
         assert weights[2010] == 0.15  # 0.85^15 ≈ 0.087, floored to 0.15
 
-    def test_load_year_samples_no_symmetric_augmentation(self):
-        """_load_year_samples should NOT produce symmetric augmented samples."""
-        import json
-        import os
-        import tempfile
-        from src.pipeline.sota import SOTAPipeline, SOTAPipelineConfig
+    def test_load_year_samples_is_tombstoned(self):
+        """_load_year_samples() must raise NotImplementedError.
 
-        # Create minimal test data
-        games = {
-            "season": 2024,
-            "games": [
-                {"game_id": "1", "date": "2024-01-15", "team1_id": "duke",
-                 "team2_id": "unc", "team1_score": 80, "team2_score": 70},
-                {"game_id": "2", "date": "2024-01-20", "team1_id": "unc",
-                 "team2_id": "kentucky", "team1_score": 75, "team2_score": 65},
-            ],
-        }
-        metrics = {
-            "season": 2024,
-            "teams": [
-                {"team_id": "duke", "off_rtg": 115.0, "def_rtg": 95.0, "pace": 70.0,
-                 "srs": 10.0, "sos": 5.0, "wins": 25, "losses": 5},
-                {"team_id": "unc", "off_rtg": 110.0, "def_rtg": 98.0, "pace": 68.0,
-                 "srs": 8.0, "sos": 4.0, "wins": 22, "losses": 8},
-                {"team_id": "kentucky", "off_rtg": 108.0, "def_rtg": 100.0, "pace": 72.0,
-                 "srs": 6.0, "sos": 3.0, "wins": 20, "losses": 10},
-            ],
-        }
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            gp = os.path.join(tmpdir, "historical_games_2024.json")
-            mp = os.path.join(tmpdir, "team_metrics_2024.json")
-            with open(gp, "w") as f:
-                json.dump(games, f)
-            with open(mp, "w") as f:
-                json.dump(metrics, f)
-
-            pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
-            X, y, _ = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2024)
-
-            # Should have exactly 2 samples (one per game), NOT 4 (no symmetric augmentation)
-            assert X.shape[0] == 2
-            assert len(y) == 2
-            assert X.shape[1] == 77
-
-    def test_load_year_samples_feature_positions(self):
-        """Historical feature vectors place metrics in correct indices.
-
-        All positions verified against TeamFeatures.get_feature_names():
-          [0]  adj_off_eff   [1]  adj_def_eff   [2]  adj_tempo
-          [26] sos_adj_em    [35] elo_rating     [47] win_pct
-          [66] abs_adj_off_eff  [67] abs_adj_def_eff  [68] abs_sos_adj_em
-          [69] abs_elo_rating   [70] abs_win_pct
+        The method used season-end team_metrics aggregates as training features,
+        causing temporal leakage.  It has been replaced by
+        _load_year_samples_incremental() which computes features from box scores
+        using IncrementalMetricsEngine.compute_as_of(game_date).
         """
-        import json
-        import os
-        import tempfile
+        import pytest
         from src.pipeline.sota import SOTAPipeline, SOTAPipelineConfig
 
-        games = {
-            "season": 2024,
-            "games": [
-                {"game_id": "1", "date": "2024-01-15", "team1_id": "duke",
-                 "team2_id": "unc", "team1_score": 80, "team2_score": 70},
-            ],
-        }
-        metrics = {
-            "season": 2024,
-            "teams": [
-                {"team_id": "duke", "off_rtg": 115.0, "def_rtg": 95.0, "pace": 70.0,
-                 "srs": 10.0, "sos": 5.0, "wins": 25, "losses": 5},
-                {"team_id": "unc",  "off_rtg": 110.0, "def_rtg": 98.0, "pace": 68.0,
-                 "srs": 8.0,  "sos": 4.0, "wins": 22, "losses": 8},
-            ],
-        }
+        pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
+        with pytest.raises(NotImplementedError, match="season-end"):
+            pipeline._load_year_samples("g.json", "m.json", feature_dim=75, year=2024)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            gp = os.path.join(tmpdir, "games.json")
-            mp = os.path.join(tmpdir, "metrics.json")
-            with open(gp, "w") as f:
-                json.dump(games, f)
-            with open(mp, "w") as f:
-                json.dump(metrics, f)
+    def test_load_year_samples_feature_positions_tombstoned(self):
+        """_load_year_samples() is tombstoned; confirm it raises immediately."""
+        import pytest
+        from src.pipeline.sota import SOTAPipeline, SOTAPipelineConfig
 
-            pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
-            X, y, _ = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2024)
-
-            assert X.shape == (1, 77)
-
-            # Diff features at verified indices
-            assert X[0, 0]  == pytest.approx(5.0)            # diff_adj_off_eff
-            assert X[0, 1]  == pytest.approx(-3.0)           # diff_adj_def_eff
-            assert X[0, 2]  == pytest.approx(2.0)            # diff_adj_tempo
-            assert X[0, 26] == pytest.approx(1.0)            # diff_sos_adj_em (idx 26, not 27)
-            assert X[0, 35] == pytest.approx(0.0)             # diff_elo_rating: first game → both at 1500 (PIT snapshot before game)
-            assert X[0, 47] == pytest.approx(25/30 - 22/30, abs=0.01)  # diff_win_pct (idx 47, not 48)
-
-            # Absolute-level features
-            assert X[0, 66] == pytest.approx(112.5)          # abs_adj_off_eff
-            assert X[0, 67] == pytest.approx(96.5)           # abs_adj_def_eff
-            assert X[0, 68] == pytest.approx(4.5)            # abs_sos_adj_em
-            assert 1490 < X[0, 69] < 1510                   # abs_elo_rating ≈ 1500
-            assert X[0, 70] == pytest.approx((25/30 + 22/30) / 2, abs=0.01)  # abs_win_pct
-
-            # Outcome: Duke won 80-70
-            assert y[0] == 1
-
-            # Roster features must remain zero (CBBpy fetch prohibitively expensive)
-            assert X[0, 15] == pytest.approx(0.0), "roster_continuity must be zero"
-            assert X[0, 17] == pytest.approx(0.0), "avg_experience must be zero"
-            # travel_advantage stays zero for historical regular-season games
-            assert X[0, 75] == pytest.approx(0.0), "travel_advantage must be zero"
+        pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
+        with pytest.raises(NotImplementedError, match="season-end"):
+            pipeline._load_year_samples("g.json", "m.json", feature_dim=75, year=2024)
 
     def test_historical_year_weights_combined_with_recency(self):
         """Year-based weights should combine multiplicatively with recency weights."""
@@ -656,176 +567,29 @@ class TestMultiYearTrainingConfig:
             f"historical mean weight ({hist_mean:.3f})"
         )
 
-    def test_derived_features_elo_monotone_with_wins(self):
-        """After several games, Elo difference should reflect cumulative wins.
-
-        PIT snapshots Elo BEFORE each game, so the first game in a season
-        always has both teams at 1500.  After several games where alpha
-        consistently wins, its Elo should rise above beta's, producing a
-        positive diff in later games.
-        """
-        import json
-        import os
-        import tempfile
+    def test_derived_features_elo_monotone_with_wins_tombstoned(self):
+        """_load_year_samples() is tombstoned; this test confirms it raises."""
+        import pytest
         from src.pipeline.sota import SOTAPipeline, SOTAPipelineConfig
 
-        # Two extra "filler" teams so alpha/beta have opponents to build Elo
-        games = {
-            "season": 2022,
-            "games": [
-                # alpha wins first 3 games
-                {"game_id": "1", "date": "2022-01-05", "team1_id": "alpha",
-                 "team2_id": "gamma", "team1_score": 85, "team2_score": 65},
-                {"game_id": "2", "date": "2022-01-10", "team1_id": "alpha",
-                 "team2_id": "delta", "team1_score": 80, "team2_score": 60},
-                {"game_id": "3", "date": "2022-01-15", "team1_id": "alpha",
-                 "team2_id": "gamma", "team1_score": 90, "team2_score": 70},
-                # beta loses first 3 games
-                {"game_id": "4", "date": "2022-01-05", "team1_id": "gamma",
-                 "team2_id": "beta", "team1_score": 75, "team2_score": 60},
-                {"game_id": "5", "date": "2022-01-10", "team1_id": "delta",
-                 "team2_id": "beta", "team1_score": 70, "team2_score": 55},
-                {"game_id": "6", "date": "2022-01-15", "team1_id": "gamma",
-                 "team2_id": "beta", "team1_score": 80, "team2_score": 65},
-                # Now alpha plays beta — alpha's Elo should be higher
-                {"game_id": "7", "date": "2022-02-01", "team1_id": "alpha",
-                 "team2_id": "beta", "team1_score": 80, "team2_score": 60},
-            ],
-        }
-        metrics = {
-            "season": 2022,
-            "teams": [
-                {"team_id": "alpha", "off_rtg": 110.0, "def_rtg": 100.0, "pace": 70.0,
-                 "srs": 5.0, "sos": 2.0, "wins": 15, "losses": 10},
-                {"team_id": "beta",  "off_rtg": 105.0, "def_rtg": 102.0, "pace": 69.0,
-                 "srs": 3.0, "sos": 1.5, "wins": 12, "losses": 13},
-                {"team_id": "gamma", "off_rtg": 100.0, "def_rtg": 105.0, "pace": 68.0,
-                 "srs": 0.0, "sos": 0.0, "wins": 10, "losses": 15},
-                {"team_id": "delta", "off_rtg": 98.0,  "def_rtg": 107.0, "pace": 67.0,
-                 "srs": -2.0, "sos": -1.0, "wins": 8, "losses": 17},
-            ],
-        }
+        pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
+        with pytest.raises(NotImplementedError, match="season-end"):
+            pipeline._load_year_samples("g.json", "m.json", feature_dim=75, year=2022)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            gp = os.path.join(tmpdir, "g.json")
-            mp = os.path.join(tmpdir, "m.json")
-            with open(gp, "w") as f:
-                json.dump(games, f)
-            with open(mp, "w") as f:
-                json.dump(metrics, f)
-
-            pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
-            X, y, _ = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2022)
-
-            # Find the alpha-vs-beta game (last game, game_id=7)
-            # It should be the last training game since games are date-sorted
-            last_elo_diff = X[-1, 35]
-            assert last_elo_diff > 0, (
-                f"After alpha wins 3 and beta loses 3, alpha should have higher "
-                f"Elo at game time: got diff={last_elo_diff}"
-            )
-
-    def test_derived_features_wab_positive_for_strong_team(self):
-        """A team beating strong opponents should have positive WAB."""
-        import json
-        import os
-        import tempfile
+    def test_derived_features_wab_tombstoned(self):
+        """_load_year_samples() is tombstoned; this test confirms it raises."""
+        import pytest
         from src.pipeline.sota import SOTAPipeline, SOTAPipelineConfig
 
-        # alpha (AdjEM=+10) beats two above-bubble opponents
-        games = {
-            "season": 2022,
-            "games": [
-                {"game_id": "1", "date": "2022-01-10", "team1_id": "alpha",
-                 "team2_id": "gamma", "team1_score": 75, "team2_score": 65},
-                {"game_id": "2", "date": "2022-01-17", "team1_id": "alpha",
-                 "team2_id": "delta", "team1_score": 80, "team2_score": 70},
-                {"game_id": "3", "date": "2022-01-24", "team1_id": "beta",
-                 "team2_id": "alpha", "team1_score": 60, "team2_score": 72},
-            ],
-        }
-        # gamma/delta both have AdjEM ≈ +10 (above bubble = 5.0) → beating them adds WAB
-        metrics = {
-            "season": 2022,
-            "teams": [
-                {"team_id": "alpha", "off_rtg": 115.0, "def_rtg": 105.0, "pace": 70.0,
-                 "srs": 8.0, "sos": 5.0, "wins": 20, "losses": 5},
-                {"team_id": "beta",  "off_rtg": 100.0, "def_rtg": 110.0, "pace": 68.0,
-                 "srs": -2.0, "sos": 0.0, "wins": 8, "losses": 17},
-                {"team_id": "gamma", "off_rtg": 112.0, "def_rtg": 102.0, "pace": 71.0,
-                 "srs": 6.0, "sos": 4.0, "wins": 18, "losses": 7},
-                {"team_id": "delta", "off_rtg": 111.0, "def_rtg": 103.0, "pace": 69.0,
-                 "srs": 5.5, "sos": 3.5, "wins": 17, "losses": 8},
-            ],
-        }
+        pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
+        with pytest.raises(NotImplementedError, match="season-end"):
+            pipeline._load_year_samples("g.json", "m.json", feature_dim=75, year=2022)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            gp = os.path.join(tmpdir, "g.json")
-            mp = os.path.join(tmpdir, "m.json")
-            with open(gp, "w") as f:
-                json.dump(games, f)
-            with open(mp, "w") as f:
-                json.dump(metrics, f)
-
-            pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
-            X, y, _ = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2022)
-
-        # All 3 games should be in training set; find alpha-vs-weak-team game (game 3)
-        # alpha (idx 31 = wab) should be positive relative to beta
-        # Simply verify WAB column is non-zero across the dataset
-        assert X[:, 31].std() > 0, "WAB column should have variation across games"
-
-    def test_derived_features_feature_coverage(self):
-        """Verify that Option A populates significantly more features than the old 3."""
-        import json
-        import os
-        import tempfile
+    def test_derived_features_feature_coverage_tombstoned(self):
+        """_load_year_samples() is tombstoned; this test confirms it raises."""
+        import pytest
         from src.pipeline.sota import SOTAPipeline, SOTAPipelineConfig
 
-        # Build a season with enough games to trigger luck computation (≥12)
-        games_list = []
-        for i in range(20):
-            margin = 5 if i % 3 != 0 else -3  # mostly wins
-            games_list.append({
-                "game_id": str(i + 100),
-                "date": f"2023-{11 + i//10:02d}-{(i % 28) + 1:02d}",
-                "team1_id": "alpha",
-                "team2_id": "beta",
-                "team1_score": 70 + margin,
-                "team2_score": 70,
-            })
-
-        games = {"season": 2023, "games": games_list}
-        metrics = {
-            "season": 2023,
-            "teams": [
-                {"team_id": "alpha", "off_rtg": 112.0, "def_rtg": 98.0, "pace": 71.0,
-                 "srs": 7.0, "sos": 4.0, "wins": 20, "losses": 5},
-                {"team_id": "beta",  "off_rtg": 104.0, "def_rtg": 106.0, "pace": 68.0,
-                 "srs": 1.0, "sos": 1.0, "wins": 12, "losses": 13},
-            ],
-        }
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            gp = os.path.join(tmpdir, "g.json")
-            mp = os.path.join(tmpdir, "m.json")
-            with open(gp, "w") as f:
-                json.dump(games, f)
-            with open(mp, "w") as f:
-                json.dump(metrics, f)
-
-            pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
-            X, y, _ = pipeline._load_year_samples(gp, mp, feature_dim=77, year=2023)
-
-        assert X.shape[0] == 20
-
-        # Check FIXED_FEATURE_SET positions are populated (non-zero in at least one row).
-        # alpha vs beta have identical metrics each game, so some diffs are constant
-        # non-zero (positions 0,1,2,26,47) while derived features vary (30,31,32,35).
-        fixed_positions = [0, 1, 2, 26, 30, 31, 32, 33, 35, 47, 66, 67, 68, 69, 70]
-        populated = [i for i in fixed_positions if np.abs(X[:, i]).max() > 1e-8]
-
-        assert len(populated) >= 10, (
-            f"Option A should populate ≥10 feature positions from FIXED_FEATURE_SET "
-            f"(got {len(populated)} non-zero: {populated})"
-        )
+        pipeline = SOTAPipeline(SOTAPipelineConfig(year=2026))
+        with pytest.raises(NotImplementedError, match="season-end"):
+            pipeline._load_year_samples("g.json", "m.json", feature_dim=75, year=2023)

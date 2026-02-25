@@ -301,7 +301,7 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
         "ProprietaryMetrics (shrinkage reaches 1.0 at 32 games)", (20, 50),
         "Games at which luck shrinkage = 100%; structural ramp"),
     PipelineConstant("momentum_window", 2, 8,
-        "rdof_audit._compute_derived_stats last_n; sota.py _load_year_samples", (4, 15),
+        "ProprietaryMetrics._momentum(); IncrementalMetricsEngine", (4, 15),
         "Rolling game window for momentum calculation; bounded"),
     PipelineConstant("four_factors_composite_scale", 2, 2.0,
         "ProprietaryMetrics (2.0 * composite to PPP scale)", (1.0, 4.0),
@@ -1094,169 +1094,6 @@ class HoldoutEvaluator:
         except (ValueError, IndexError):
             return False
 
-    def _build_feature_vector(
-        self,
-        t1_metrics: Dict[str, float],
-        t2_metrics: Dict[str, float],
-        t1_derived: Dict[str, float],
-        t2_derived: Dict[str, float],
-        feature_dim: int = 77,
-    ) -> np.ndarray:
-        """Build differential feature vector from team metrics.
-
-        Uses the same feature positions as _load_year_samples in sota.py.
-        """
-        vec = np.zeros(feature_dim, dtype=np.float64)
-
-        # Differential features
-        vec[0] = t1_metrics["off_rtg"] - t2_metrics["off_rtg"]
-        vec[1] = t1_metrics["def_rtg"] - t2_metrics["def_rtg"]
-        vec[2] = t1_metrics["pace"] - t2_metrics["pace"]
-        vec[26] = t1_metrics["sos"] - t2_metrics["sos"]
-        vec[47] = (
-            t1_metrics["wins"] / max(t1_metrics["wins"] + t1_metrics["losses"], 1)
-            - t2_metrics["wins"] / max(t2_metrics["wins"] + t2_metrics["losses"], 1)
-        )
-        vec[30] = t1_derived.get("luck", 0) - t2_derived.get("luck", 0)
-        vec[31] = t1_derived.get("wab", 0) - t2_derived.get("wab", 0)
-        vec[32] = t1_derived.get("momentum", 0) - t2_derived.get("momentum", 0)
-        vec[33] = t1_derived.get("margin_std", 0) - t2_derived.get("margin_std", 0)
-        vec[35] = t1_derived.get("elo", 1500) - t2_derived.get("elo", 1500)
-
-        # Absolute features
-        vec[66] = (t1_metrics["off_rtg"] + t2_metrics["off_rtg"]) / 2.0
-        vec[67] = (t1_metrics["def_rtg"] + t2_metrics["def_rtg"]) / 2.0
-        vec[68] = (t1_metrics["sos"] + t2_metrics["sos"]) / 2.0
-        vec[69] = (t1_derived.get("elo", 1500) + t2_derived.get("elo", 1500)) / 2.0
-        wp1 = t1_metrics["wins"] / max(t1_metrics["wins"] + t1_metrics["losses"], 1)
-        wp2 = t2_metrics["wins"] / max(t2_metrics["wins"] + t2_metrics["losses"], 1)
-        vec[70] = (wp1 + wp2) / 2.0
-
-        return vec
-
-    def _compute_derived_stats(
-        self,
-        games: list,
-        team_metrics: Dict[str, Dict[str, float]],
-        year: int,
-    ) -> Dict[str, Dict[str, float]]:
-        """Compute Elo, luck, WAB, momentum from game-by-game results.
-
-        Mirrors the logic in sota.py _load_year_samples.
-        """
-        from scipy import stats as scipy_stats
-
-        _K_BASE = 38.0
-        _BUBBLE_EM = 5.0
-        _WAB_K = 11.5
-
-        # Build prefix resolver
-        metric_keys = sorted(team_metrics.keys(), key=len, reverse=True)
-        _prefix_cache: Dict[str, str] = {}
-
-        def _resolve(game_id: str) -> Optional[str]:
-            if game_id in team_metrics:
-                return game_id
-            if game_id in _prefix_cache:
-                return _prefix_cache[game_id]
-            for mk in metric_keys:
-                if game_id.startswith(mk + "_") or game_id.startswith(mk):
-                    _prefix_cache[game_id] = mk
-                    return mk
-            return None
-
-        elo: Dict[str, float] = {t: 1500.0 for t in team_metrics}
-        margins_by_team: Dict[str, list] = {t: [] for t in team_metrics}
-        results_by_team: Dict[str, list] = {t: [] for t in team_metrics}
-
-        # Sort games chronologically
-        sorted_games = sorted(games, key=lambda g: g.get("date", g.get("game_date", "")))
-
-        for game in sorted_games:
-            raw_t1 = str(game.get("team1_id") or game.get("team1") or "").lower().strip()
-            raw_t2 = str(game.get("team2_id") or game.get("team2") or "").lower().strip()
-            raw_t1 = raw_t1.replace(" ", "_").replace("'", "").replace(".", "")
-            raw_t2 = raw_t2.replace(" ", "_").replace("'", "").replace(".", "")
-            s1 = int(game.get("team1_score", 0))
-            s2 = int(game.get("team2_score", 0))
-
-            t1 = _resolve(raw_t1) if raw_t1 else None
-            t2 = _resolve(raw_t2) if raw_t2 else None
-            if not t1 or not t2 or s1 == 0 or s2 == 0:
-                continue
-            if t1 not in team_metrics or t2 not in team_metrics:
-                continue
-
-            margin = s1 - s2
-            t1_won = margin > 0
-
-            # Elo update
-            e1 = 1.0 / (1.0 + 10.0 ** (-(elo.get(t1, 1500) - elo.get(t2, 1500)) / 400.0))
-            s1_elo = 1.0 if t1_won else (0.0 if margin < 0 else 0.5)
-            mov_mult = math.log1p(abs(margin))
-            elo_diff = abs(elo.get(t1, 1500) - elo.get(t2, 1500))
-            elo_dampening = 2.2 / (elo_diff * 0.001 + 2.2)
-            k = _K_BASE * mov_mult * elo_dampening
-            delta = k * (s1_elo - e1)
-            elo[t1] = elo.get(t1, 1500) + delta
-            elo[t2] = elo.get(t2, 1500) - delta
-
-            margins_by_team.setdefault(t1, []).append(margin)
-            margins_by_team.setdefault(t2, []).append(-margin)
-
-            # WAB accumulators
-            em2 = team_metrics[t2]["off_rtg"] - team_metrics[t2]["def_rtg"]
-            em1 = team_metrics[t1]["off_rtg"] - team_metrics[t1]["def_rtg"]
-
-            def _log5(a_em, b_em):
-                diff = float(max(-40.0, min(40.0, a_em - b_em)))
-                return 1.0 / (1.0 + 10.0 ** (-diff / _WAB_K))
-
-            results_by_team.setdefault(t1, []).append((_log5(_BUBBLE_EM, em2), t1_won))
-            results_by_team.setdefault(t2, []).append((_log5(_BUBBLE_EM, em1), not t1_won))
-
-        # Compute final derived stats
-        team_derived: Dict[str, Dict[str, float]] = {}
-        for t in team_metrics:
-            margins = margins_by_team.get(t, [])
-            res = results_by_team.get(t, [])
-            n_games = len(margins)
-
-            luck = 0.0
-            if n_games >= 12:
-                mean_m = float(np.mean(margins))
-                std_m = float(np.std(margins, ddof=1)) if n_games > 1 else 1.0
-                if std_m > 0.1:
-                    z = mean_m / std_m
-                    expected_wp = float(scipy_stats.norm.cdf(z))
-                    actual_wp = sum(1 for m in margins if m > 0) / n_games
-                    raw_luck = actual_wp - expected_wp
-                    shrinkage = min(1.0, (n_games - 12) / 20.0)
-                    luck = raw_luck * shrinkage
-
-            wab = sum(
-                (1.0 - bwp) if won else (0.0 - bwp)
-                for bwp, won in res
-            )
-
-            momentum = 0.0
-            if n_games >= 4:
-                last_n = min(8, n_games)
-                last_margins = margins[-last_n:]
-                momentum = sum(1.0 for m in last_margins if m > 0) / last_n - 0.5
-
-            margin_std = float(np.std(margins, ddof=1)) if n_games > 1 else 0.0
-
-            team_derived[t] = {
-                "elo": elo.get(t, 1500.0),
-                "luck": luck,
-                "wab": wab,
-                "momentum": momentum,
-                "margin_std": margin_std,
-            }
-
-        return team_derived
-
     def _extract_tournament_games(
         self,
         games: list,
@@ -1310,18 +1147,27 @@ class HoldoutEvaluator:
         self,
         holdout_year: int,
         config,
-        feature_dim: int = 77,
+        feature_dim: int = 75,
     ) -> dict:
         """Train models for one holdout year; return cached artifacts.
 
-        Returns a dict with keys: lgb_model, xgb_model, logistic, scaler,
-        lgb_trained, xgb_trained, holdout_team_metrics, holdout_derived,
-        tournament_games, per_game_raw_preds (per-model probs before ensemble).
+        Returns a dict with keys: per_game, train_ensemble_preds,
+        train_y, holdout_year.
+
+        Uses IncrementalMetricsEngine to compute true point-in-time features
+        for every training game, eliminating temporal leakage from season-end
+        metric usage.
 
         Separating training from post-hoc parameter application lets the
         sensitivity analyzer train ONCE per holdout year, then sweep
         post-training constants (shrinkage, weights, etc.) cheaply.
         """
+        from ...data.features.proprietary_metrics import (
+            IncrementalMetricsEngine,
+            team_games_to_game_records,
+            _team_id,
+        )
+
         training_years = [y for y in self.all_years
                           if y != holdout_year and y != 2020]
         if not training_years:
@@ -1330,70 +1176,138 @@ class HoldoutEvaluator:
         logger.info("Holdout %d: training on %d years: %s",
                      holdout_year, len(training_years), training_years)
 
-        # ── 1. Collect training data ─────────────────────────────────
+        # ── 1. Collect training data with true PIT features ──────────
         all_train_X, all_train_y, all_train_w = [], [], []
+        _cross_year_elo: Dict[str, float] = {}
 
-        for train_year in training_years:
+        for train_year in sorted(training_years):
+            games_path = self.historical_dir / f"historical_games_{train_year}.json"
+            if not games_path.exists():
+                logger.warning("Missing games data for year %d, skipping", train_year)
+                continue
+
             try:
-                games_payload, metrics_payload = self._load_year_data(train_year)
-            except FileNotFoundError:
-                logger.warning("Missing data for year %d, skipping", train_year)
+                with open(games_path, "r") as f:
+                    payload = json.load(f)
+            except Exception:
+                logger.warning("Failed to load games for year %d, skipping", train_year)
                 continue
 
-            team_metrics = self._build_team_metrics(metrics_payload)
-            if not team_metrics:
+            team_games_raw = payload.get("team_games", []) if isinstance(payload, dict) else []
+            if not team_games_raw:
+                logger.warning("Year %d: no team_games data, skipping", train_year)
                 continue
 
-            games = games_payload.get("games", [])
-            games = self._infer_dates_and_split(games, train_year)
-            team_derived = self._compute_derived_stats(games, team_metrics, train_year)
+            game_records = team_games_to_game_records(team_games_raw, train_year)
+            if len(game_records) < 100:
+                logger.warning("Year %d: only %d GameRecords, skipping", train_year, len(game_records))
+                continue
 
-            metric_keys = sorted(team_metrics.keys(), key=len, reverse=True)
-            _cache: Dict[str, str] = {}
+            # Conference map from metrics file.
+            conference_map = None
+            metrics_path = self.historical_dir / f"team_metrics_{train_year}.json"
+            if metrics_path.exists():
+                try:
+                    with open(metrics_path, "r") as f:
+                        mp = json.load(f)
+                    if isinstance(mp, dict):
+                        teams_list = mp.get("teams", [])
+                        if isinstance(teams_list, list):
+                            for tm in teams_list:
+                                conf = tm.get("conference")
+                                tid = str(tm.get("team_id", "")).lower().strip()
+                                tid = tid.replace(" ", "_").replace("'", "").replace(".", "")
+                                if tid and conf:
+                                    if conference_map is None:
+                                        conference_map = {}
+                                    conference_map[tid] = conf
+                except Exception:
+                    pass
 
-            def _resolve(gid, mk_list=metric_keys, c=_cache, tm=team_metrics):
-                if gid in tm:
-                    return gid
-                if gid in c:
-                    return c[gid]
-                for mk in mk_list:
-                    if gid.startswith(mk + "_") or gid.startswith(mk):
-                        c[gid] = mk
-                        return mk
-                return None
+            # Tournament seeds.
+            team_seeds: Dict[str, int] = {}
+            seeds_path = self.historical_dir / f"tournament_seeds_{train_year}.json"
+            if seeds_path.is_file():
+                try:
+                    with open(seeds_path, "r") as f:
+                        sd = json.load(f)
+                    if isinstance(sd, list):
+                        for entry in sd:
+                            tid = entry.get("team_id", "")
+                            seed = int(entry.get("seed", 0))
+                            if tid and seed:
+                                team_seeds[_team_id(tid)] = seed
+                except Exception:
+                    pass
 
+            # Create incremental engine with cross-year Elo carryover.
+            inc_engine = IncrementalMetricsEngine(
+                game_records, conference_map=conference_map or {},
+                prior_elo=_cross_year_elo,
+            )
+            _cross_year_elo = inc_engine.get_end_of_season_elo()
+
+            # Year-based decay weight.
             years_ago = max(1, holdout_year - train_year)
             year_weight = max(
                 config.training_year_min_weight,
                 config.training_year_decay ** (years_ago - 1),
             )
 
-            for game in games:
-                date_str = str(game.get("date", game.get("game_date", "")))
-                if self._is_tournament_game(date_str, train_year):
+            # Monthly-bucketing helper for compute_as_of() cache efficiency.
+            # Years with real per-game dates (e.g. 2005-2009) have 136+
+            # unique dates that each trigger a full SOS recomputation.
+            # Bucketing to 30-day intervals reduces this to ~6 unique dates
+            # per year (~6 SOS computations vs. 136).  The bucket date is
+            # the START of the interval, so features used for a given game
+            # are from BEFORE the bucket boundary — conservatively PIT-safe.
+            from datetime import date as _dtdate, timedelta as _dttd
+            _season_start = _dtdate(train_year - 1, 11, 1)
+
+            def _bucketed_date(date_str: str) -> str:
+                try:
+                    d = _dtdate.fromisoformat(date_str)
+                except (ValueError, TypeError):
+                    return date_str
+                days = (d - _season_start).days
+                bucketed = max(0, (days // 30) * 30)
+                return (_season_start + _dttd(days=bucketed)).isoformat()
+
+            # Build training samples with true PIT features.
+            seen_gids: set = set()
+            tournament_cutoff = f"{train_year}-03-14"
+            for g in sorted(game_records, key=lambda r: r.game_date):
+                if g.game_id in seen_gids:
+                    continue
+                seen_gids.add(g.game_id)
+
+                # Skip tournament games.
+                if g.game_date > tournament_cutoff:
+                    continue
+                if g.points <= 0 or g.opp_points <= 0:
                     continue
 
-                raw_t1 = str(game.get("team1_id", "")).lower().strip()
-                raw_t2 = str(game.get("team2_id", "")).lower().strip()
-                raw_t1 = raw_t1.replace(" ", "_").replace("'", "").replace(".", "")
-                raw_t2 = raw_t2.replace(" ", "_").replace("'", "").replace(".", "")
-                t1 = _resolve(raw_t1)
-                t2 = _resolve(raw_t2)
-                s1 = int(game.get("team1_score", 0))
-                s2 = int(game.get("team2_score", 0))
-
-                if not t1 or not t2 or s1 == 0 or s2 == 0:
-                    continue
-                if t1 not in team_metrics or t2 not in team_metrics:
+                metrics = inc_engine.compute_as_of(_bucketed_date(g.game_date))
+                m1 = metrics.get(g.team_id)
+                m2 = metrics.get(g.opponent_id)
+                if m1 is None or m2 is None:
                     continue
 
-                d1 = team_derived.get(t1, {})
-                d2 = team_derived.get(t2, {})
-                vec = self._build_feature_vector(
-                    team_metrics[t1], team_metrics[t2], d1, d2, feature_dim
-                )
+                s1 = team_seeds.get(g.team_id, 0)
+                s2 = team_seeds.get(g.opponent_id, 0)
+                v1 = IncrementalMetricsEngine.metrics_to_team_vector(m1, s1)
+                v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, s2)
+                vec = IncrementalMetricsEngine.build_matchup_vector(v1, v2, s1, s2)
+
+                if len(vec) < feature_dim:
+                    padded = np.zeros(feature_dim, dtype=np.float64)
+                    padded[:len(vec)] = vec
+                    vec = padded
+                elif len(vec) > feature_dim:
+                    vec = vec[:feature_dim]
+
                 all_train_X.append(vec)
-                all_train_y.append(1 if s1 > s2 else 0)
+                all_train_y.append(1 if g.points > g.opp_points else 0)
                 all_train_w.append(year_weight)
 
         if not all_train_X:
@@ -1436,57 +1350,124 @@ class HoldoutEvaluator:
         logistic = LogisticRegression(C=1.0, max_iter=1000, solver="lbfgs")
         logistic.fit(train_X_scaled, train_y, sample_weight=train_w)
 
-        # ── 3. Load holdout tournament games and get per-model preds ─
-        try:
-            ho_games_payload, ho_metrics_payload = self._load_year_data(holdout_year)
-        except FileNotFoundError:
+        # ── 3. Load holdout year, compute tournament predictions ─────
+        ho_games_path = self.historical_dir / f"historical_games_{holdout_year}.json"
+        if not ho_games_path.exists():
             raise ValueError(f"Missing data for holdout year {holdout_year}")
 
-        ho_team_metrics = self._build_team_metrics(ho_metrics_payload)
-        if not ho_team_metrics:
-            raise ValueError(f"No valid team metrics for holdout year {holdout_year}")
+        with open(ho_games_path, "r") as f:
+            ho_payload = json.load(f)
 
-        ho_games = ho_games_payload.get("games", [])
-        ho_games = self._infer_dates_and_split(ho_games, holdout_year)
-        ho_derived = self._compute_derived_stats(ho_games, ho_team_metrics, holdout_year)
+        ho_team_games_raw = ho_payload.get("team_games", []) if isinstance(ho_payload, dict) else []
+        if not ho_team_games_raw:
+            raise ValueError(f"No team_games data for holdout year {holdout_year}")
 
-        tournament_games = self._extract_tournament_games(
-            ho_games, ho_team_metrics, holdout_year
+        ho_game_records = team_games_to_game_records(ho_team_games_raw, holdout_year)
+        if len(ho_game_records) < 100:
+            raise ValueError(f"Insufficient game records for holdout year {holdout_year}")
+
+        # Conference map for holdout year.
+        ho_conf_map = None
+        ho_metrics_path = self.historical_dir / f"team_metrics_{holdout_year}.json"
+        if ho_metrics_path.exists():
+            try:
+                with open(ho_metrics_path, "r") as f:
+                    ho_mp = json.load(f)
+                if isinstance(ho_mp, dict):
+                    teams_list = ho_mp.get("teams", [])
+                    if isinstance(teams_list, list):
+                        for tm in teams_list:
+                            conf = tm.get("conference")
+                            tid = str(tm.get("team_id", "")).lower().strip()
+                            tid = tid.replace(" ", "_").replace("'", "").replace(".", "")
+                            if tid and conf:
+                                if ho_conf_map is None:
+                                    ho_conf_map = {}
+                                ho_conf_map[tid] = conf
+            except Exception:
+                pass
+
+        # Seeds for holdout year.
+        ho_seeds: Dict[str, int] = {}
+        ho_seeds_path = self.historical_dir / f"tournament_seeds_{holdout_year}.json"
+        if ho_seeds_path.is_file():
+            try:
+                with open(ho_seeds_path, "r") as f:
+                    sd = json.load(f)
+                if isinstance(sd, list):
+                    for entry in sd:
+                        tid = entry.get("team_id", "")
+                        seed = int(entry.get("seed", 0))
+                        if tid and seed:
+                            ho_seeds[_team_id(tid)] = seed
+            except Exception:
+                pass
+
+        ho_engine = IncrementalMetricsEngine(
+            ho_game_records, conference_map=ho_conf_map or {},
+            prior_elo=_cross_year_elo,
         )
+
+        # Compute end-of-regular-season metrics for tournament predictions.
+        tournament_cutoff = f"{holdout_year}-03-14"
+        ho_metrics = ho_engine.compute_as_of(tournament_cutoff)
+        if not ho_metrics:
+            raise ValueError(f"No metrics computed for holdout year {holdout_year}")
+
+        # Identify tournament games (post-March 14).
+        seen_gids: set = set()
+        tournament_games = []
+        for g in sorted(ho_game_records, key=lambda r: r.game_date):
+            if g.game_id in seen_gids:
+                continue
+            seen_gids.add(g.game_id)
+            if not self._is_tournament_game(g.game_date, holdout_year):
+                continue
+            if g.points <= 0 or g.opp_points <= 0:
+                continue
+            tournament_games.append(g)
+
         if not tournament_games:
             raise ValueError(f"No tournament games for holdout year {holdout_year}")
 
         logger.info("Holdout %d: %d tournament games", holdout_year, len(tournament_games))
 
-        # Get per-model raw predictions for each tournament game
-        per_game: list = []  # list of dicts with lgb_p, xgb_p, log_p, em_diff, margin_std_diff, outcome
+        # Get per-model raw predictions for each tournament game.
+        per_game: list = []
         for tg in tournament_games:
-            t1, t2 = tg["team1_id"], tg["team2_id"]
-            if t1 not in ho_team_metrics or t2 not in ho_team_metrics:
+            t1, t2 = tg.team_id, tg.opponent_id
+            m1 = ho_metrics.get(t1)
+            m2 = ho_metrics.get(t2)
+            if m1 is None or m2 is None:
                 continue
 
-            d1 = ho_derived.get(t1, {})
-            d2 = ho_derived.get(t2, {})
-            vec = self._build_feature_vector(
-                ho_team_metrics[t1], ho_team_metrics[t2], d1, d2, feature_dim
-            )
+            s1 = ho_seeds.get(t1, 0)
+            s2 = ho_seeds.get(t2, 0)
+            v1 = IncrementalMetricsEngine.metrics_to_team_vector(m1, s1)
+            v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, s2)
+            vec = IncrementalMetricsEngine.build_matchup_vector(v1, v2, s1, s2)
+
+            if len(vec) < feature_dim:
+                padded = np.zeros(feature_dim, dtype=np.float64)
+                padded[:len(vec)] = vec
+                vec = padded
+            elif len(vec) > feature_dim:
+                vec = vec[:feature_dim]
+
             vec_scaled = scaler.transform(vec.reshape(1, -1))
 
             lgb_p = float(lgb_model.predict(vec.reshape(1, -1))[0]) if lgb_trained else 0.5
             xgb_p = float(xgb_model.predict(vec.reshape(1, -1))[0]) if xgb_trained else 0.5
             log_p = float(logistic.predict_proba(vec_scaled)[0, 1])
 
-            # AdjEM difference (for efficiency-based baseline & seed proxy)
-            em1 = ho_team_metrics[t1]["off_rtg"] - ho_team_metrics[t1]["def_rtg"]
-            em2 = ho_team_metrics[t2]["off_rtg"] - ho_team_metrics[t2]["def_rtg"]
-
-            # Margin std difference (for consistency bonus)
-            mstd1 = d1.get("margin_std", 0.0)
-            mstd2 = d2.get("margin_std", 0.0)
-
-            # Elo difference (for standalone Elo baseline — second comparison tier)
-            elo1 = d1.get("elo", 1500.0)
-            elo2 = d2.get("elo", 1500.0)
+            # Post-hoc data for tournament adaptation.
+            em1 = m1.adj_offensive_efficiency - m1.adj_defensive_efficiency
+            em2 = m2.adj_offensive_efficiency - m2.adj_defensive_efficiency
+            elo1 = m1.elo_rating
+            elo2 = m2.elo_rating
+            # Use SOS-adjusted consistency as margin_std proxy.
+            mstd1 = m1.sos_adjusted_consistency if m1.sos_adjusted_consistency else (m1.consistency or 0.0)
+            mstd2 = m2.sos_adjusted_consistency if m2.sos_adjusted_consistency else (m2.consistency or 0.0)
 
             per_game.append({
                 "lgb_p": lgb_p,
@@ -1495,12 +1476,11 @@ class HoldoutEvaluator:
                 "em_diff": em1 - em2,
                 "elo_diff": elo1 - elo2,
                 "margin_std_diff": mstd2 - mstd1,  # positive = team1 more consistent
-                "outcome": tg["outcome"],
+                "outcome": 1 if tg.points > tg.opp_points else 0,
             })
 
         # ── 4. Calibration: fit temperature scaling on training preds ─
-        # Use out-of-bag training predictions for calibration fitting
-        # (mirrors production pipeline's approach).
+        # In-sample training predictions for calibration fitting.
         train_preds_lgb = lgb_model.predict(train_X) if lgb_trained else np.full(len(train_X), 0.5)
         train_preds_xgb = xgb_model.predict(train_X) if xgb_trained else np.full(len(train_X), 0.5)
         train_preds_log = logistic.predict_proba(train_X_scaled)[:, 1]
@@ -1601,7 +1581,7 @@ class HoldoutEvaluator:
         self,
         holdout_year: int,
         config,
-        feature_dim: int = 77,
+        feature_dim: int = 75,
     ) -> YearMetrics:
         """Full holdout evaluation: train + score with all post-hoc params."""
         cached = self._train_for_year(holdout_year, config, feature_dim)
