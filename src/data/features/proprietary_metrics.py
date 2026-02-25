@@ -29,6 +29,7 @@ Metrics produced
 
 from __future__ import annotations
 
+import bisect
 import csv
 import logging
 import math
@@ -494,7 +495,7 @@ class ProprietaryMetricsEngine:
         self._compute_elite_sos_and_quadrants(results, by_team, adj_off, adj_def)
 
         # --- Step 8: Rest days (days since last game) ---
-        self._compute_rest_days(results, by_team)
+        self._compute_rest_days(results, by_team, reference_date=cutoff_date)
 
         # --- Step 9: H2H records + common opponent margins (for matchup features) ---
         # Store per-team game data for later H2H/common-opp computation.
@@ -1620,23 +1621,41 @@ class ProprietaryMetricsEngine:
         self,
         results: Dict[str, ProprietaryTeamMetrics],
         by_team: Dict[str, List[GameRecord]],
+        reference_date: Optional[str] = None,
     ) -> None:
-        """Compute days since last game for each team (rest advantage)."""
+        """Compute days since last game for each team (rest advantage).
+
+        Args:
+            reference_date: YYYY-MM-DD date to measure rest from (e.g.,
+                as_of_date or tournament cutoff).  If None, computes the
+                gap between the team's last two games as a proxy.
+        """
         from datetime import datetime as _dt
+
+        ref_dt = None
+        if reference_date:
+            try:
+                ref_dt = _dt.strptime(reference_date, "%Y-%m-%d")
+            except (ValueError, TypeError):
+                pass
 
         for tid, games in by_team.items():
             if tid not in results or not games:
                 continue
-            # Games are sorted chronologically; take last game date
-            last_date_str = games[-1].game_date
             try:
-                last_date = _dt.strptime(last_date_str, "%Y-%m-%d")
-                # Assume tournament starts ~March 20 of the season year
-                # (real date comes from config, but this is a reasonable proxy)
-                year = last_date.year if last_date.month <= 6 else last_date.year + 1
-                tourney_start = _dt(year, 3, 20)
-                delta = (tourney_start - last_date).days
-                results[tid].rest_days = float(max(delta, 0))
+                if ref_dt is not None:
+                    # Days between reference date and team's last game.
+                    last_date = _dt.strptime(games[-1].game_date, "%Y-%m-%d")
+                    delta = (ref_dt - last_date).days
+                    results[tid].rest_days = float(max(delta, 0))
+                elif len(games) >= 2:
+                    # No reference date: gap between last two games.
+                    last = _dt.strptime(games[-1].game_date, "%Y-%m-%d")
+                    prev = _dt.strptime(games[-2].game_date, "%Y-%m-%d")
+                    delta = (last - prev).days
+                    results[tid].rest_days = float(max(delta, 0))
+                else:
+                    results[tid].rest_days = 5.0  # D1 average
             except (ValueError, TypeError):
                 results[tid].rest_days = 5.0  # D1 average
 
@@ -1706,105 +1725,6 @@ class ProprietaryMetricsEngine:
         # Normalize by 20 (typical spread range) to get ~[-1, 1]
         raw = float(np.mean(diffs))
         return float(np.clip(raw / 20.0, -1.5, 1.5))
-
-    def compute_point_in_time_metrics(
-        self,
-        team_id: str,
-        as_of_date: str,
-    ) -> Optional[Dict[str, float]]:
-        """
-        Compute team metrics using only games on or before ``as_of_date``.
-
-        This enables true point-in-time feature computation — instead of
-        using end-of-season aggregates for all training games, each game's
-        features reflect only what was observable at that point in time.
-
-        Returns a dict of key metric values, or None if insufficient data
-        (fewer than 8 games played by the cutoff date).
-        """
-        if not hasattr(self, '_by_team'):
-            return None
-
-        all_games = self._by_team.get(team_id, [])
-        pit_games = [g for g in all_games if g.game_date <= as_of_date]
-
-        if len(pit_games) < 8:
-            return None
-
-        # Compute raw efficiency from the point-in-time games
-        total_poss = sum(max(g.possessions, 1.0) for g in pit_games)
-        total_pts = sum(g.points for g in pit_games)
-        total_opp = sum(g.opp_points for g in pit_games)
-        raw_off = 100.0 * total_pts / max(total_poss, 1.0)
-        raw_def = 100.0 * total_opp / max(total_poss, 1.0)
-        tempo = total_poss / max(len(pit_games), 1)
-
-        # KNOWN LIMITATION: PIT TEMPORAL LEAKAGE (D3)
-        # ─────────────────────────────────────────────
-        # The SOS adjustment below uses FINAL (end-of-season) opponent ratings
-        # (self._adj_off, self._adj_def) rather than point-in-time opponent
-        # ratings.  This means that when computing a team's January metrics,
-        # opponent quality reflects full-season data including games that
-        # haven't happened yet at that point in the season.
-        #
-        # Impact: Early-season PIT features carry slight temporal leakage from
-        # future opponent performance.  The PIT blend weight (0.9 * season_remaining)
-        # partially mitigates this by downweighting early-season PIT contributions.
-        #
-        # Alternatives considered:
-        #   - Full PIT SOS: recompute all teams' ratings at each date → O(n²*seasons)
-        #   - Prior-season SOS: use prior year's final ratings → no leakage but
-        #     stale estimates (~0.7 correlation with current season)
-        #
-        # Current choice: use current-season finals as a pragmatic compromise.
-        # The leakage magnitude is small (SOS adjustment is ~2-5 AdjEM points)
-        # and heavily blended with end-of-season features for late-season games.
-        league_off = float(np.mean(list(self._adj_off.values()))) if self._adj_off else 100.0
-        league_def = float(np.mean(list(self._adj_def.values()))) if self._adj_def else 100.0
-
-        # Apply single-pass SOS adjustment using final opponent ratings
-        off_adjustments = []
-        def_adjustments = []
-        for g in pit_games:
-            opp_def = self._adj_def.get(g.opponent_id, league_def)
-            opp_off = self._adj_off.get(g.opponent_id, league_off)
-            poss = max(g.possessions, 1.0)
-            game_off = 100.0 * g.points / poss
-            game_def = 100.0 * g.opp_points / poss
-            off_adjustments.append(game_off + (opp_def - league_def))
-            def_adjustments.append(game_def + (opp_off - league_off))
-
-        adj_off = float(np.mean(off_adjustments)) if off_adjustments else raw_off
-        adj_def = float(np.mean(def_adjustments)) if def_adjustments else raw_def
-        adj_em = adj_off - adj_def
-
-        # Four Factors from PIT games
-        ff = self._four_factors(pit_games)
-        shooting = self._supplementary_shooting(pit_games)
-
-        # Win percentage from PIT games
-        wins = sum(1 for g in pit_games if g.points > g.opp_points)
-        n_games = max(len(pit_games), 1)
-
-        return {
-            "adj_offensive_efficiency": adj_off,
-            "adj_defensive_efficiency": adj_def,
-            "adj_efficiency_margin": adj_em,
-            "adj_tempo": tempo,
-            "effective_fg_pct": ff["effective_fg_pct"],
-            "turnover_rate": ff["turnover_rate"],
-            "offensive_reb_rate": ff["offensive_reb_rate"],
-            "free_throw_rate": ff["free_throw_rate"],
-            "opp_effective_fg_pct": ff["opp_effective_fg_pct"],
-            "opp_turnover_rate": ff["opp_turnover_rate"],
-            "defensive_reb_rate": ff["defensive_reb_rate"],
-            "opp_free_throw_rate": ff["opp_free_throw_rate"],
-            "win_pct": wins / n_games,
-            "three_pt_pct": shooting.get("three_pt_pct", 0.34),
-            "two_pt_pct": shooting.get("two_pt_pct", 0.48),
-            "three_pt_rate": shooting.get("three_pt_rate", 0.35),
-            "n_games": len(pit_games),
-        }
 
     @staticmethod
     def _log5_win_prob(team_a_em: float, team_b_em: float) -> float:
@@ -2076,6 +1996,45 @@ def team_games_to_game_records(
             is_home=False, is_neutral=True,
         ))
 
+    # ── Date inference ──────────────────────────────────────────────────
+    # Many historical years have a single placeholder date for all games.
+    # When this happens, infer chronological dates from game_id ordering
+    # (game_ids are monotonically increasing within a season).
+    unique_dates = set(r.game_date for r in records)
+    if len(unique_dates) <= 1 and len(records) > 50:
+        # Sort records by game_id to establish chronological order.
+        records.sort(key=lambda r: (r.game_id, r.team_id))
+        # Assign dates spread from season start (Nov 1) to season end (Apr 10).
+        from datetime import date as _date, timedelta as _td
+        season_start = _date(season_year - 1, 11, 1)
+        season_end = _date(season_year, 4, 10)
+        total_days = (season_end - season_start).days
+        # Group by game_id to assign same date to both sides of a game.
+        gid_order: Dict[str, int] = {}
+        idx = 0
+        for r in records:
+            if r.game_id not in gid_order:
+                gid_order[r.game_id] = idx
+                idx += 1
+        n_unique_games = max(idx, 1)
+        for r in records:
+            rank = gid_order[r.game_id]
+            frac = rank / max(n_unique_games - 1, 1)
+            # Bucket to monthly granularity (~30-day intervals): reduces
+            # unique dates to ~5 per season, making
+            # IncrementalMetricsEngine.compute_as_of() cache-effective
+            # (each unique date is computed once via SOS).  Weekly (7-day)
+            # buckets would still produce 23 unique dates × 639 teams ×
+            # 15 SOS iterations = too slow for holdout evaluation loops.
+            day_offset = (int(frac * total_days) // 30) * 30
+            inferred = season_start + _td(days=day_offset)
+            r.game_date = inferred.isoformat()
+        n_inferred_dates = len(set(r.game_date for r in records))
+        logger.info(
+            "Year %d: inferred dates for %d games → %d weekly buckets from game_id ordering.",
+            season_year, n_unique_games, n_inferred_dates,
+        )
+
     logger.info(
         "Year %d: converted %d team_games rows → %d GameRecords.",
         season_year, len(team_games), len(records),
@@ -2135,10 +2094,14 @@ class IncrementalMetricsEngine:
         # Cache: date → Dict[team_id, ProprietaryTeamMetrics]
         self._cache: Dict[str, Dict[str, ProprietaryTeamMetrics]] = {}
 
-        # SOS warm-start state from previous computation.
-        self._prev_adj_off: Optional[Dict[str, float]] = None
-        self._prev_adj_def: Optional[Dict[str, float]] = None
-        self._prev_date: Optional[str] = None
+        # SOS warm-start state REMOVED.  Warm-starting from the previous
+        # date's converged SOS values created a train/test distribution shift:
+        # training samples used 5-iteration warm-start convergence while
+        # prediction used 15-iteration cold-start.  Even though the per-call
+        # error was small (~0.3%), it was systematically biased.  Cold-starting
+        # every date ensures identical convergence behavior in training and
+        # prediction.  The extra computation (10 iterations × ~160 dates ×
+        # 350 teams) is negligible.
 
     def _compute_all_elo_snapshots(self) -> None:
         """Process all games chronologically and snapshot Elo at each date."""
@@ -2221,17 +2184,10 @@ class IncrementalMetricsEngine:
         engine = ProprietaryMetricsEngine()
         engine._elo_prior = self._prior_elo
 
-        # Determine warm-start vs cold-start.
-        if self._prev_adj_off is not None and self._prev_date is not None:
-            n_iters = 5  # warm-start: fewer iterations needed
-            init_off = self._prev_adj_off
-            init_def = self._prev_adj_def
-        else:
-            n_iters = None  # cold-start: use default (15)
-            init_off = None
-            init_def = None
+        # Always cold-start SOS with full iterations to match the batch
+        # engine's convergence behavior (used at prediction time).  See
+        # warm-start removal note in __init__.
 
-        # We need to call the engine's internal methods to use warm-start.
         # Build by_team dict from prefix games.
         by_team: Dict[str, List[GameRecord]] = defaultdict(list)
         for rec in prefix:
@@ -2242,18 +2198,10 @@ class IncrementalMetricsEngine:
         # Step 1: Raw efficiency.
         raw_off, raw_def, tempo, names = engine._raw_efficiency(by_team)
 
-        # Step 2: SOS with warm-start.
+        # Step 2: SOS adjustment (cold-start, full iterations).
         adj_off, adj_def = engine._iterative_sos_adjust(
             by_team, raw_off, raw_def,
-            initial_adj_off=init_off,
-            initial_adj_def=init_def,
-            n_iterations=n_iters,
         )
-
-        # Save for next warm-start.
-        self._prev_adj_off = dict(adj_off)
-        self._prev_adj_def = dict(adj_def)
-        self._prev_date = as_of_date
 
         # Step 3: Compute all derived metrics (reuse engine internals).
         # Store adj values on the engine so its methods can access them.
@@ -2277,7 +2225,7 @@ class IncrementalMetricsEngine:
             ff = engine._four_factors(games)
 
             # Shooting
-            shooting = engine._compute_shooting_metrics(games)
+            shooting = engine._supplementary_shooting(games)
 
             # SOS
             sos = engine._strength_of_schedule(games, adj_off, adj_def, self._conference_map)
@@ -2289,8 +2237,8 @@ class IncrementalMetricsEngine:
             barthag = engine._pythagorean_win_pct(adj_o, adj_d)
 
             # xP / shot distribution
-            xp_o = engine._expected_points_per_poss(ff)
-            xp_d = engine._defensive_xp_per_poss(ff)
+            xp_o = engine._box_score_xp(ff, side="offense", ft_pct=shooting.get("free_throw_pct", 0.72))
+            xp_d = engine._box_score_xp(ff, side="defense", ft_pct=shooting.get("opp_free_throw_pct", 0.72))
             shot_dist = engine._shot_distribution_score(games)
 
             # Variance metrics
@@ -2303,7 +2251,7 @@ class IncrementalMetricsEngine:
 
             # Momentum
             mom_delta, recent_em = engine._momentum(games, adj_off, adj_def)
-            mom5_delta, _ = engine._momentum_5g(games, adj_off, adj_def)
+            mom5_delta = engine._momentum_5g(games, adj_off, adj_def)
 
             # Extended box score
             ext = engine._extended_box_score_metrics(games)
@@ -2311,8 +2259,8 @@ class IncrementalMetricsEngine:
             # Opponent shot selection
             opp_shots = engine._opponent_shot_selection(games)
 
-            # True shooting
-            ts = engine._true_shooting_pct(games)
+            # True shooting (returns tuple: team_ts, opp_ts)
+            ts_pct, opp_ts_pct = engine._true_shooting_pct(games)
 
             # Home/away splits
             home_em, away_em, hc_dep = engine._home_away_splits(games, adj_off, adj_def)
@@ -2364,8 +2312,8 @@ class IncrementalMetricsEngine:
                 three_pt_rate=shooting.get("three_pt_rate", 0.0),
                 free_throw_pct=shooting.get("free_throw_pct", 0.0),
                 opp_free_throw_pct=shooting.get("opp_free_throw_pct", 0.0),
-                opp_true_shooting_pct=ts.get("opp_true_shooting_pct", 0.0),
-                true_shooting_pct=ts.get("true_shooting_pct", 0.0),
+                opp_true_shooting_pct=opp_ts_pct,
+                true_shooting_pct=ts_pct,
                 efficiency_ratio=adj_o / max(adj_d, 1.0),
                 elo_rating=0.0,  # overridden below
                 assist_to_turnover_ratio=ext.get("assist_to_turnover_ratio", 0.0),
@@ -2383,20 +2331,16 @@ class IncrementalMetricsEngine:
             )
 
         # WAB: needs all teams' results to assess opponent quality.
-        for tid in all_team_ids:
-            games = by_team[tid]
-            results[tid].wab = engine._compute_wab(
-                games, results, adj_off, adj_def,
-            )
+        engine._compute_wab(results, by_team)
 
         # Elite SOS & Quadrants.
         engine._compute_elite_sos_and_quadrants(results, by_team, adj_off, adj_def)
 
         # Conference strength.
-        engine._compute_conference_strength(results, self._conference_map)
+        engine._compute_conference_strength(results, by_team, self._conference_map or {})
 
         # Rest days (from most recent game to as_of_date).
-        engine._compute_rest_days(results, by_team)
+        engine._compute_rest_days(results, by_team, reference_date=as_of_date)
 
         # Foul rate.
         for tid in all_team_ids:
@@ -2425,7 +2369,20 @@ class IncrementalMetricsEngine:
                 results[tid].pace_variance = 5.0  # D1 prior
 
         # Override Elo with incremental snapshots.
-        elo_snap = self._elo_snapshots.get(as_of_date, {})
+        # _elo_snapshots[D] stores the Elo state *before* D's games are
+        # processed — i.e., Elo after all games strictly before D.  Use
+        # bisect to handle as_of_date values that fall on non-game days
+        # (e.g., "YYYY-03-14" for tournament prediction), which have no
+        # exact key in the snapshots dict.  bisect_left finds the first
+        # unique_date >= as_of_date, whose snapshot equals "Elo after all
+        # games before as_of_date" because there are no games between
+        # as_of_date and that first game day.
+        _idx = bisect.bisect_left(self._unique_dates, as_of_date)
+        if _idx < len(self._unique_dates):
+            elo_snap = self._elo_snapshots[self._unique_dates[_idx]]
+        else:
+            # as_of_date is after all game dates — use final season Elo.
+            elo_snap = self.get_end_of_season_elo()
         for tid in all_team_ids:
             if tid in elo_snap:
                 results[tid].elo_rating = elo_snap[tid]

@@ -128,128 +128,6 @@ except ImportError:
 # 0.0 = very volatile early season (e.g. luck, close game record).
 # Features not listed default to 0.5.
 # ---------------------------------------------------------------------------
-_FEATURE_STABILITY: Dict[str, float] = {
-    # Core efficiency — evolves moderately
-    # FIX #1: adj_efficiency_margin REMOVED (exact linear of off-def)
-    "adj_off_eff": 0.6,
-    "adj_def_eff": 0.6,
-    "adj_tempo": 0.9,
-    # Four Factors — shooting is relatively stable
-    "efg_pct": 0.8,
-    "to_rate": 0.7,
-    "orb_rate": 0.6,
-    "ft_rate": 0.7,
-    "opp_efg_pct": 0.7,
-    "opp_to_rate": 0.6,
-    "drb_rate": 0.6,
-    "opp_ft_rate": 0.6,
-    # Player metrics — stable once rotation settles
-    "total_rapm": 0.7,
-    "top5_rapm": 0.7,
-    "bench_rapm": 0.5,
-    "total_warp": 0.6,
-    "roster_continuity": 0.95,
-    "transfer_impact": 0.5,
-    # Experience
-    "avg_experience": 0.8,
-    "bench_depth": 0.6,
-    "injury_risk": 0.3,
-    # Record-based — very volatile early season
-    "win_pct": 0.2,
-    "wab": 0.2,
-    # close_game_record: REMOVED (FIX 2.4 — pure noise feature)
-    # Schedule strength — volatile until full schedule
-    "sos_adj_em": 0.3,
-    "sos_opp_o": 0.3,
-    "sos_opp_d": 0.3,
-    "ncsos_adj_em": 0.3,
-    # Identity-like — very stable
-    "free_throw_pct": 0.9,
-    # Luck — inherently noisy
-    "luck": 0.1,
-    # Volatility metrics
-    # FIX #1: consistency REMOVED (near-inverse of pace_adj_variance)
-    "lead_volatility": 0.4,
-    "entropy": 0.4,
-    "lead_sustainability": 0.5,
-    "comeback_factor": 0.3,
-    # Momentum
-    # FIX #1: momentum_5g REMOVED (~r=0.85 with momentum)
-    "momentum": 0.2,
-    # Variance / upset risk
-    "three_pt_variance": 0.4,
-    "pace_adj_variance": 0.3,
-    # Elo — moderately stable
-    "elo_rating": 0.5,
-    # Ball movement / execution
-    "assist_to_turnover": 0.7,
-    "assist_rate": 0.7,
-    # Defensive disruption
-    "steal_rate": 0.7,
-    "block_rate": 0.7,
-    # Opponent shot selection
-    "opp_two_pt_pct": 0.6,
-    "opp_three_pt_attempt_rate": 0.5,
-    # Conference
-    "conference_adj_em": 0.5,
-    # Shooting splits
-    # FIX #1: two_pt_pct REMOVED, true_shooting_pct REMOVED, opp_true_shooting_pct REMOVED
-    "three_pt_pct": 0.7,
-    "three_pt_rate": 0.8,
-    # Defensive xP
-    "def_xp_per_poss": 0.6,
-    # Shot quality / xP
-    "xp_per_poss": 0.6,
-    "shot_distribution": 0.5,
-    # Elite SOS / Q1
-    "elite_sos": 0.3,
-    "q1_win_pct": 0.2,
-    # Foul rate
-    "foul_rate": 0.7,
-    # 3PT regression
-    "three_pt_regression": 0.4,
-    # Schedule/context features
-    "rest_days": 0.5,
-    "top5_minutes_share": 0.7,
-    "preseason_ap_rank": 0.95,
-    "coach_tournament_exp": 0.95,
-    "coach_tournament_win_rate": 0.95,
-    "pace_variance": 0.4,
-    "conf_tourney_champ": 0.5,
-    # KenPom / ShotQuality replacements
-    "neutral_site_win_pct": 0.2,
-    "home_court_dependence": 0.4,
-    "transition_efficiency": 0.5,
-    "defensive_transition_vulnerability": 0.5,
-    "backcourt_rapm": 0.7,
-    "frontcourt_rapm": 0.7,
-    # Seed strength
-    "seed_strength": 0.95,
-}
-
-# Build index map from feature names to vector positions.
-# This is lazily populated on first use by matching against TeamFeatures names.
-_FEATURE_STABILITY_INDICES: Dict[str, int] = {}
-
-
-def _init_feature_stability_indices() -> None:
-    """Populate _FEATURE_STABILITY_INDICES from TeamFeatures.get_feature_names."""
-    global _FEATURE_STABILITY_INDICES
-    if _FEATURE_STABILITY_INDICES:
-        return
-    try:
-        from ..data.features.feature_engineering import TeamFeatures
-        names = TeamFeatures.get_feature_names(include_embeddings=False)
-        # Matchup differential has 2*len(names) features (team1-team2 diff,
-        # then interactions), but the stability applies to the diff features.
-        # Diff feature i corresponds to team_feature i.
-        for i, name in enumerate(names):
-            if name in _FEATURE_STABILITY:
-                _FEATURE_STABILITY_INDICES[name] = i
-    except Exception:
-        pass
-
-
 @dataclass
 class SOTAPipelineConfig:
     """Pipeline configuration knobs."""
@@ -1164,6 +1042,80 @@ class SOTAPipeline:
             teams.append(team)
         return teams
 
+    def _compute_prior_year_elo(self) -> Optional[Dict[str, float]]:
+        """Compute end-of-season Elo for the year immediately before the
+        current year using the IncrementalMetricsEngine.
+
+        This ensures the current year's Elo starts from an informative prior
+        (matching what historical training years get via cross-season
+        carryover), eliminating the train/test distribution shift where
+        historical Elo features are rich and current-year Elo features are
+        flat.
+
+        Returns None if prior-year data is unavailable — the pipeline
+        degrades gracefully to the flat-1500 baseline in that case.
+        """
+        prior_year = self.config.year - 1
+        if prior_year == 2020:
+            prior_year = 2019  # Skip COVID-cancelled season
+
+        # Try to find the prior year's historical games file.
+        import os as _os
+        candidates = []
+        if self.config.multi_year_games_dir and self.config.multi_year_games_dir != "auto":
+            candidates.append(_os.path.join(self.config.multi_year_games_dir, f"historical_games_{prior_year}.json"))
+        # Auto-detect
+        auto_dir = _os.path.join(_os.getcwd(), "data", "raw", "historical")
+        candidates.append(_os.path.join(auto_dir, f"historical_games_{prior_year}.json"))
+
+        games_path = None
+        for c in candidates:
+            if _os.path.isfile(c):
+                games_path = c
+                break
+
+        if games_path is None:
+            logger.info(
+                "Prior-year Elo: no historical data for %d — using flat 1500 baseline.",
+                prior_year,
+            )
+            return None
+
+        try:
+            import json as _json
+            from ..data.features.proprietary_metrics import (
+                IncrementalMetricsEngine,
+                team_games_to_game_records,
+            )
+
+            with open(games_path, "r") as f:
+                payload = _json.load(f)
+
+            team_games_raw = payload.get("team_games", []) if isinstance(payload, dict) else []
+            if not team_games_raw:
+                logger.info("Prior-year Elo: year %d has no box-score data.", prior_year)
+                return None
+
+            game_records = team_games_to_game_records(team_games_raw, prior_year)
+            if len(game_records) < 100:
+                logger.info("Prior-year Elo: year %d has too few games (%d).", prior_year, len(game_records))
+                return None
+
+            # We only need Elo — the full metrics computation is not required.
+            # IncrementalMetricsEngine computes all Elo snapshots at init time.
+            engine = IncrementalMetricsEngine(game_records, conference_map={}, prior_elo=None)
+            end_elo = engine.get_end_of_season_elo()
+
+            if not end_elo:
+                logger.info("Prior-year Elo: year %d produced no Elo data.", prior_year)
+                return None
+
+            return end_elo
+
+        except Exception as e:
+            logger.warning("Prior-year Elo: failed to compute for %d: %s", prior_year, e)
+            return None
+
     def _load_team_stat_sources(
         self,
         teams: List[Team],
@@ -1209,6 +1161,19 @@ class SOTAPipeline:
             conf = d.get("conference", "")
             if tid and conf:
                 conference_map[tid] = conf
+
+        # --- Compute prior-year Elo for cross-season carryover ---
+        # Historical training years carry Elo forward (year N-1 → year N),
+        # giving early-season samples informative Elo priors.  The current
+        # year must use the same mechanism so that training and prediction
+        # Elo features have the same distributional characteristics.
+        self._prior_year_elo = self._compute_prior_year_elo()
+        if self._prior_year_elo:
+            self.proprietary_engine._elo_prior = self._prior_year_elo
+            logger.info(
+                "Cross-season Elo: loaded %d team priors from year %d.",
+                len(self._prior_year_elo), self.config.year - 1,
+            )
 
         # --- Compute proprietary metrics from historical box scores ---
         # Use a pre-tournament cutoff to prevent leakage from tournament games
@@ -1825,10 +1790,15 @@ class SOTAPipeline:
         # Every training sample uses only data available before its game date,
         # eliminating all temporal leakage from season-end features.
         from ..data.features.proprietary_metrics import IncrementalMetricsEngine
+        # Use prior-year Elo for cross-season carryover, matching what
+        # historical training years get.  This eliminates the distribution
+        # shift where historical Elo features are informative early-season
+        # while current-year Elo starts at flat 1500.
+        _prior_elo = getattr(self, '_prior_year_elo', None)
         inc_engine = IncrementalMetricsEngine(
             self._current_year_game_records,
             self._current_year_conference_map or {},
-            prior_elo=None,  # Cross-season carryover handled in multi-year pool
+            prior_elo=_prior_elo,
         )
 
         # Seed map for absolute features in matchup vector
@@ -3119,6 +3089,12 @@ class SOTAPipeline:
             (X, y, end_elo) — X is [N, feature_dim], y is binary labels,
             end_elo is {team_id: final_elo} for D2 cross-season carryover.
         """
+        raise NotImplementedError(
+            "_load_year_samples() is deprecated and must not be called. "
+            "It uses season-end team_metrics aggregates as training features, "
+            "violating point-in-time constraints and causing temporal leakage. "
+            "Use _load_year_samples_incremental() instead."
+        )
         import math as _math
         import logging as _logging
         logger = _logging.getLogger(__name__)
@@ -3571,8 +3547,7 @@ class SOTAPipeline:
             pit_wins[t] = 0
             pit_opp_ems[t] = []
 
-        # League-mean metrics for PIT SOS adjustment (same approach as
-        # current-year PIT in compute_point_in_time_metrics).
+        # League-mean metrics for PIT SOS adjustment (legacy fallback path).
         _league_off = float(np.mean([m["off_rtg"] for m in team_metrics.values()]))
         _league_def = float(np.mean([m["def_rtg"] for m in team_metrics.values()]))
 
@@ -4149,11 +4124,13 @@ class SOTAPipeline:
         else:
             team_games_raw = payload  # legacy list format
         if not team_games_raw:
-            logger.warning("Year %d: no team_games data — falling back to legacy loader.", year)
-            return self._load_year_samples(
-                games_path, metrics_path, feature_dim, year,
-                include_tournament=include_tournament, prior_elo=prior_elo,
+            logger.warning(
+                "Year %d: no team_games (box-score) data — skipping to avoid "
+                "season-end data leakage. The legacy _load_year_samples() "
+                "loader uses season-end metrics which violate PIT constraints.",
+                year,
             )
+            return np.empty((0, feature_dim)), np.array([]), {}
 
         # Convert to GameRecord objects.
         game_records = team_games_to_game_records(team_games_raw, year)
@@ -4273,14 +4250,18 @@ class SOTAPipeline:
             v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, seed=seed2)
 
             # Overlay roster features if available.
+            # transfer_impact (v[16]) is omitted: it represents BPM
+            # contribution from transfers, a season-long performance metric
+            # only available at season end — using it for early-season
+            # training games would leak future data.  roster_continuity
+            # (pre-season roster composition) and avg_experience
+            # (eligibility year) are genuinely available before game 1.
             rf1 = team_roster_features.get(g.team_id, {})
             rf2 = team_roster_features.get(g.opponent_id, {})
             if rf1 or rf2:
                 v1[15] = rf1.get("roster_continuity", 0.0)
-                v1[16] = rf1.get("transfer_impact", 0.0)
                 v1[17] = rf1.get("avg_experience", 0.0)
                 v2[15] = rf2.get("roster_continuity", 0.0)
-                v2[16] = rf2.get("transfer_impact", 0.0)
                 v2[17] = rf2.get("avg_experience", 0.0)
 
             # Build matchup vector (75-dim).
