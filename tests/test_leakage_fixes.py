@@ -640,3 +640,83 @@ class TestSeedLeakageFix:
         assert seed_interaction == 0.0, (
             f"seed_interaction must be 0.0 when seeds are zeroed out, got {seed_interaction}"
         )
+
+
+# ---------------------------------------------------------------------------
+# 12. Current-year seed leakage guard
+# ---------------------------------------------------------------------------
+
+
+class TestCurrentYearSeedLeakage:
+    """Verify that _train_baseline_model() guards seeds behind tournament_cutoff.
+
+    The historical training path (_load_year_samples_incremental) was fixed
+    to zero seeds for regular-season games.  The current-year training path
+    in _train_baseline_model() must have the same guard.
+    """
+
+    def test_current_year_seed_guard_in_source(self):
+        """_train_baseline_model must define tournament_cutoff and gate seeds."""
+        import inspect
+
+        source = inspect.getsource(SOTAPipeline._train_baseline_model)
+
+        # Must contain the tournament_cutoff definition
+        assert "tournament_cutoff" in source, (
+            "_train_baseline_model must define tournament_cutoff for seed guard"
+        )
+
+        # Must NOT have unconditional seed lookup from _seed_map
+        # The old pattern was: s1 = _seed_map.get(game.team1_id, 0)
+        # without a tournament_cutoff guard.
+        lines = source.split("\n")
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if "_seed_map.get(" in stripped and "=" in stripped:
+                # This line assigns from _seed_map — it must be inside a
+                # tournament_cutoff conditional, i.e. preceded (within 3
+                # lines) by a line containing "tournament_cutoff".
+                context = "\n".join(lines[max(0, i - 3) : i + 1])
+                assert "tournament_cutoff" in context, (
+                    f"Found _seed_map.get() at source line {i} without "
+                    f"tournament_cutoff guard: {stripped}"
+                )
+
+
+# ---------------------------------------------------------------------------
+# 13. Calibration excludes in-sample regular-season data
+# ---------------------------------------------------------------------------
+
+
+class TestCalibrationInSampleFix:
+    """Verify calibration does not use in-sample regular-season predictions.
+
+    With multi-year training enabled, historical regular-season games are in
+    the training pool.  Predictions on those games are in-sample and must not
+    be used for calibration temperature fitting.
+    """
+
+    def test_no_regular_season_calibration_pass(self):
+        """_fit_calibration must not load regular-season historical games."""
+        import inspect
+
+        source = inspect.getsource(SOTAPipeline._fit_calibration)
+
+        # The removed block contained this distinctive comment/pattern.
+        # If it reappears, the in-sample contamination is back.
+        assert "REGULAR-SEASON games (original behavior)" not in source, (
+            "_fit_calibration still contains the in-sample regular-season "
+            "calibration pass.  Historical regular-season predictions are "
+            "in-sample when multi-year training is enabled."
+        )
+
+    def test_stale_oos_comment_removed(self):
+        """The stale comment claiming all historical predictions are OOS must be gone."""
+        import inspect
+
+        source = inspect.getsource(SOTAPipeline._fit_calibration)
+
+        assert "genuinely out-of-sample since those" not in source, (
+            "Stale comment claims historical regular-season predictions are "
+            "OOS, but with multi-year training they are in-sample."
+        )

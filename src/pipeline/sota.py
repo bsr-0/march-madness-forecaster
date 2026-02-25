@@ -1806,6 +1806,12 @@ class SOTAPipeline:
         for _tid, _tf in self.feature_engineer.team_features.items():
             _seed_map[_tid] = _tf.seed if hasattr(_tf, "seed") and _tf.seed else 0
 
+        # SEED LEAKAGE FIX: Seeds are assigned on Selection Sunday (~March
+        # 14-17) and must not appear in feature vectors for regular-season
+        # training games.  This matches the guard in
+        # _load_year_samples_incremental() at lines 3270-3274.
+        tournament_cutoff = f"{self.config.year}-03-14"
+
         for game in all_games:
             game_date = self._coerce_game_date(
                 getattr(game, "game_date", None),
@@ -1822,8 +1828,11 @@ class SOTAPipeline:
 
             m1 = pit_metrics[game.team1_id]
             m2 = pit_metrics[game.team2_id]
-            s1 = _seed_map.get(game.team1_id, 0)
-            s2 = _seed_map.get(game.team2_id, 0)
+            if game_date > tournament_cutoff:
+                s1 = _seed_map.get(game.team1_id, 0)
+                s2 = _seed_map.get(game.team2_id, 0)
+            else:
+                s1, s2 = 0, 0
             v1 = IncrementalMetricsEngine.metrics_to_team_vector(m1, s1)
             v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, s2)
             vec = IncrementalMetricsEngine.build_matchup_vector(v1, v2, s1, s2)
@@ -3652,14 +3661,15 @@ class SOTAPipeline:
 
         # A1: CFA weight optimization removed — baseline-only prediction.
 
-        # Fix 1: Augment calibration pool with historical year data.
-        # Historical predictions are genuinely out-of-sample since those
-        # team-year combinations never appeared during model training.
-        # FIX 8.1: When include_tournament_games_in_calibration is True,
-        # load TOURNAMENT games from historical years — these are the true
-        # target domain for calibration.  Regular-season historical games
-        # are also loaded (as before) for additional calibration mass.
-        historical_cal_count = 0
+        # Augment calibration pool with historical TOURNAMENT game data.
+        # Tournament games are genuinely out-of-sample: the baseline model
+        # trains only on regular-season games (include_tournament=False),
+        # so tournament predictions are unseen during training.
+        # NOTE: Historical regular-season games are NOT included here
+        # because they overlap with the multi-year training pool (2005-2025),
+        # making those predictions in-sample.  Using in-sample predictions
+        # for calibration would bias the temperature T toward in-sample
+        # performance.
         tourney_cal_count = 0
         if (self.config.enable_multi_year_calibration
                 and self.config.multi_year_games_dir
@@ -3672,8 +3682,8 @@ class SOTAPipeline:
             # Determine feature dimensionality from current model
             feature_dim = self.baseline_model.feature_dim
 
-            # FIX 8.1: First pass — load historical TOURNAMENT games for
-            # calibration.  These match the inference domain exactly.
+            # Load historical TOURNAMENT games for calibration.
+            # These match the inference domain exactly.
             if self.config.include_tournament_games_in_calibration:
                 for yr in years:
                     try:
@@ -3720,47 +3730,6 @@ class SOTAPipeline:
                         "Calibration augmented with %d historical tournament game samples.",
                         tourney_cal_count,
                     )
-
-            # Second pass — load historical REGULAR-SEASON games (original behavior)
-            for yr in years:
-                try:
-                    games_dir = self.config.multi_year_games_dir
-                    games_path = os.path.join(games_dir, f"historical_games_{yr}.json")
-                    metrics_path = os.path.join(games_dir, f"team_metrics_{yr}.json")
-                    if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
-                        continue
-                    yr_X, yr_y, _ = self._load_year_samples_incremental(
-                        games_path, metrics_path, feature_dim, yr
-                    )
-                    if len(yr_y) < 10:
-                        continue
-                    # Apply feature selection if fitted
-                    if self.feature_selector is not None and self.feature_selector.is_fitted:
-                        try:
-                            yr_X = self.feature_selector.transform(yr_X)
-                        except (IndexError, ValueError):
-                            continue
-                    # Apply scaler if available
-                    if self.baseline_model.scaler is not None:
-                        try:
-                            yr_X = self.baseline_model.scaler.transform(yr_X)
-                        except (ValueError, Exception):
-                            continue
-                    # Predict using baseline model in batch
-                    try:
-                        yr_preds = self.baseline_model.predict_proba_batch(yr_X)
-                        yr_preds = np.clip(
-                            yr_preds,
-                            self.config.pre_calibration_clip_lo,
-                            self.config.pre_calibration_clip_hi,
-                        )
-                        probs.extend(yr_preds.tolist())
-                        outcomes.extend(yr_y.tolist())
-                        historical_cal_count += len(yr_y)
-                    except Exception:
-                        continue
-                except Exception:
-                    continue
 
         if len(probs) < self.config.min_calibration_samples_hard:
             raise DataRequirementError(
