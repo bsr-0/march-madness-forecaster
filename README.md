@@ -238,6 +238,52 @@ This command executes the full rubric pipeline:
 - Injury-noise Monte Carlo bracket simulation
 - EV-max bracket selection with leverage and Pareto risk profiles
 
+#### 2026 ESPN Runbook
+
+```bash
+python -m src.main ingest \
+  --year 2026 \
+  --output-dir data/raw \
+  --cache-dir data/raw/cache \
+  --historical-games-provider-priority cbbpy,sportsipy \
+  --team-metrics-provider-priority sportsipy \
+  --torvik-provider-priority barttorvik \
+  --skip-public-picks \
+  --allow-invalid-payloads
+```
+
+```bash
+# Option A (recommended after Selection Sunday)
+# pip install bigdance
+python -m src.main sota-from-manifest \
+  --manifest data/raw/manifest_2026.json \
+  --output sota_report.json \
+  --simulations 50000 \
+  --pool-size 150 \
+  --bracket-source bigdance
+
+# Option B (manual bracket JSON)
+python -m src.main sota-from-manifest \
+  --manifest data/raw/manifest_2026.json \
+  --output sota_report.json \
+  --simulations 50000 \
+  --pool-size 150 \
+  --bracket-json data/raw/bracket_2026.json
+```
+
+Use `sota_report.json` → `artifacts.ev_max_bracket` to fill your ESPN bracket.
+
+#### Kaggle Export
+
+```bash
+python -m src.main kaggle-export \
+  --manifest data/raw/manifest_2026.json \
+  --sample-submission /path/to/SampleSubmissionStage1.csv \
+  --kaggle-teams /path/to/MTeams.csv \
+  --output kaggle_submission.csv \
+  --year 2026
+```
+
 #### Generate Predictions
 
 ```bash

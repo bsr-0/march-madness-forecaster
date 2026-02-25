@@ -10,8 +10,10 @@ from .data.ingestion.historical_pipeline import HistoricalDataPipeline, Historic
 from .data.features.materialization import HistoricalFeatureMaterializer, MaterializationConfig
 from .data.scrapers.cbbpy_rosters import CBBpyRosterScraper
 from .data.scrapers.roster_enrichment import RosterEnrichment
+from .data.team_name_resolver import TeamNameResolver
+from .exports.kaggle import build_team_id_map, generate_predictions, load_kaggle_teams
 from .ml.evaluation.rdof_audit import freeze_pipeline, run_rdof_audit, run_prospective_evaluation, verify_freeze
-from .pipeline.sota import DataRequirementError, SOTAPipelineConfig, run_sota_pipeline_to_file
+from .pipeline.sota import DataRequirementError, SOTAPipeline, SOTAPipelineConfig, run_sota_pipeline_to_file
 
 
 
@@ -140,6 +142,89 @@ def run_sota_from_manifest(args):
     sims = report["artifacts"]["simulation"]["num_simulations"]
     print(f"Recommended strategy: {strategy}")
     print(f"Monte Carlo simulations: {sims}")
+    return 0
+
+
+def run_kaggle_export(args):
+    """Generate a Kaggle submission CSV using the SOTA pipeline."""
+    manifest_path = Path(args.manifest).resolve()
+    if not manifest_path.exists():
+        candidates = sorted(Path.cwd().glob("data/raw/manifest_*.json"))
+        print(f"Error: manifest file not found: {args.manifest}")
+        if candidates:
+            print("Available manifests:")
+            for p in candidates[:10]:
+                print(f"  - {p}")
+        return 1
+
+    with open(manifest_path, "r") as f:
+        manifest = json.load(f)
+
+    artifacts = manifest.get("artifacts", {})
+    if not isinstance(artifacts, dict):
+        print("Error: manifest is missing an 'artifacts' object.")
+        return 1
+
+    base_dir = manifest_path.parent
+
+    def resolve_path(value):
+        if not value:
+            return None
+        p = Path(value)
+        return str(p if p.is_absolute() else (base_dir / p).resolve())
+
+    year = args.year or int(manifest.get("year", 2026))
+
+    config = SOTAPipelineConfig(
+        year=year,
+        num_simulations=args.simulations,
+        pool_size=100,
+        teams_json=resolve_path(artifacts.get("teams_json")),
+        torvik_json=resolve_path(artifacts.get("torvik_json")),
+        historical_games_json=resolve_path(artifacts.get("historical_games_json")),
+        sports_reference_json=resolve_path(artifacts.get("sports_reference_json")),
+        public_picks_json=resolve_path(artifacts.get("public_picks_json")),
+        roster_json=resolve_path(artifacts.get("rosters_json")),
+        transfer_portal_json=resolve_path(artifacts.get("transfer_portal_json")),
+        scoring_rules_json=resolve_path(artifacts.get("scoring_rules_json")),
+        scrape_live=args.scrape_live,
+        data_cache_dir="data/raw/cache",
+    )
+
+    pipeline = SOTAPipeline(config)
+    try:
+        pipeline.run()
+    except DataRequirementError as exc:
+        print(f"Error: {exc}")
+        return 1
+
+    team_id_to_name = load_kaggle_teams(args.kaggle_teams)
+    resolver = TeamNameResolver()
+    id_map = build_team_id_map(team_id_to_name, resolver)
+
+    # Restrict to teams the pipeline actually knows about.
+    allowed = set(pipeline.feature_engineer.team_features.keys())
+    id_map = {k: v for k, v in id_map.items() if v in allowed}
+
+    import pandas as pd
+    sample_df = pd.read_csv(args.sample_submission)
+    pred_df = generate_predictions(
+        sample_df=sample_df,
+        id_map=id_map,
+        predict_fn=pipeline.predict_probability,
+        season_filter=year,
+    )
+    pred_df.to_csv(args.output, index=False)
+
+    stats = pred_df.attrs.get("kaggle_export_stats", {})
+    print(f"✓ Kaggle submission written to {args.output}")
+    if stats:
+        print(
+            "Rows: {total_rows}, mapped: {mapped_rows}, unmapped: {unmapped_rows}, "
+            "season_mismatch: {season_mismatch}, bad_id: {bad_id_rows}, predict_failures: {predict_failures}".format(
+                **stats
+            )
+        )
     return 0
 
 
@@ -782,6 +867,34 @@ def main():
         default=5,
         help="Minimum number of non-zero RAPM players required per team",
     )
+    manifest_sota_parser.add_argument(
+        "--bracket-source",
+        default="auto",
+        help="Bracket source: auto, bigdance, sports_reference, or path to JSON file",
+    )
+    manifest_sota_parser.add_argument(
+        "--bracket-json",
+        default=None,
+        help="Pre-fetched bracket JSON path (skips live ingestion)",
+    )
+    manifest_sota_parser.add_argument(
+        "--multi-year-games-dir",
+        default="auto",
+        help="Directory with per-year historical game/metric JSONs. "
+             "'auto' detects data/raw/historical. 'none' disables.",
+    )
+
+    kaggle_parser = subparsers.add_parser(
+        "kaggle-export",
+        help="Generate a Kaggle submission CSV using the SOTA pipeline",
+    )
+    kaggle_parser.add_argument("--manifest", required=True, help="Path to ingestion manifest JSON")
+    kaggle_parser.add_argument("--sample-submission", required=True, help="Path to Kaggle SampleSubmission CSV")
+    kaggle_parser.add_argument("--kaggle-teams", required=True, help="Path to Kaggle MTeams CSV")
+    kaggle_parser.add_argument("--output", "-o", default="kaggle_submission.csv", help="Output submission CSV")
+    kaggle_parser.add_argument("--year", type=int, default=None, help="Season year override (default: manifest year)")
+    kaggle_parser.add_argument("--simulations", type=int, default=1, help="Monte Carlo simulations (default: 1)")
+    kaggle_parser.add_argument("--scrape-live", action="store_true", help="Allow live scraping for missing inputs")
     
     args = parser.parse_args()
     
@@ -795,6 +908,8 @@ def main():
         return materialize_features(args)
     elif args.command == "sota-from-manifest":
         return run_sota_from_manifest(args)
+    elif args.command == "kaggle-export":
+        return run_kaggle_export(args)
     elif args.command == "audit-rdof":
         return audit_rdof(args)
     elif args.command == "freeze-pipeline":
