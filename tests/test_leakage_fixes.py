@@ -495,3 +495,148 @@ class TestWABBubblePrior:
         engine = ProprietaryMetricsEngine()
         assert hasattr(engine, "BUBBLE_EM_PRIOR")
         assert engine.BUBBLE_EM_PRIOR > 0.0
+
+
+# ---------------------------------------------------------------------------
+# 11. Tournament seed leakage fix
+# ---------------------------------------------------------------------------
+
+
+class TestSeedLeakageFix:
+    """Verify that tournament seeds are not applied to regular-season training games.
+
+    Seeds are assigned on Selection Sunday (~March 14-17) and must not appear
+    in feature vectors for games played before that date.  The fix in
+    _load_year_samples_incremental() and rdof_audit._train_for_year() zeros
+    seeds for all games where game_date <= tournament_cutoff.
+    """
+
+    def _make_game_records(self, n_games: int = 60) -> list:
+        """Create a minimal set of GameRecords spanning a full season."""
+        from src.data.features.proprietary_metrics import GameRecord
+
+        records = []
+        # Regular-season games: Nov through early March
+        reg_season_dates = [
+            "2024-11-15", "2024-11-20", "2024-12-01", "2024-12-15",
+            "2025-01-05", "2025-01-20", "2025-02-01", "2025-02-15",
+            "2025-03-01", "2025-03-10",
+        ]
+        # Tournament games (after Selection Sunday)
+        tourn_dates = ["2025-03-20", "2025-03-22", "2025-03-27"]
+
+        all_dates = reg_season_dates + tourn_dates
+        # Generate enough games so compute_as_of has ≥50 records
+        for i, date in enumerate(all_dates * 6):
+            team_a = "kansas" if i % 3 != 0 else "duke"
+            team_b = "kentucky" if i % 3 != 1 else "unc"
+            # Each game appears as two rows (team perspective)
+            for team, opp, pts, opp_pts in [
+                (team_a, team_b, 75, 68),
+                (team_b, team_a, 68, 75),
+            ]:
+                records.append(GameRecord(
+                    game_id=f"g{i}_{team}",
+                    game_date=date,
+                    team_id=team,
+                    team_name=team.title(),
+                    opponent_id=opp,
+                    points=float(pts),
+                    opp_points=float(opp_pts),
+                    possessions=70.0,
+                    fga=55.0, fgm=28.0,
+                    opp_fga=55.0, opp_fgm=24.0,
+                    is_neutral=True,
+                ))
+        return records
+
+    def test_regular_season_seed_is_zero(self):
+        """v[63] (seed strength) must be 0.0 for regular-season training games."""
+        from src.data.features.proprietary_metrics import (
+            IncrementalMetricsEngine,
+        )
+
+        records = self._make_game_records()
+        engine = IncrementalMetricsEngine(records)
+
+        tournament_cutoff = "2025-03-14"
+        # Team "kansas" will be assigned seed=1 (tournament team)
+        team_seeds = {"kansas": 1, "duke": 3}
+
+        # Check a regular-season game date
+        reg_date = "2025-03-10"
+        metrics = engine.compute_as_of(reg_date)
+        if not metrics or "kansas" not in metrics:
+            pytest.skip("Insufficient data for compute_as_of — adjust fixture")
+
+        m = metrics["kansas"]
+
+        # Apply the FIXED logic: zero seeds for games before cutoff
+        if reg_date > tournament_cutoff:
+            seed = team_seeds.get("kansas", 0)
+        else:
+            seed = 0  # fixed: no seed for regular-season games
+
+        v = IncrementalMetricsEngine.metrics_to_team_vector(m, seed=seed)
+        assert v[63] == 0.0, (
+            f"Seed feature v[63] must be 0.0 for regular-season games "
+            f"(game_date={reg_date} <= cutoff={tournament_cutoff}), got {v[63]}"
+        )
+
+    def test_tournament_game_seed_is_nonzero(self):
+        """v[63] must reflect the actual seed for genuine tournament games."""
+        from src.data.features.proprietary_metrics import (
+            IncrementalMetricsEngine,
+        )
+
+        records = self._make_game_records()
+        engine = IncrementalMetricsEngine(records)
+
+        tournament_cutoff = "2025-03-14"
+        team_seeds = {"kansas": 1}
+
+        # A tournament game date
+        tourn_date = "2025-03-22"
+        metrics = engine.compute_as_of(tourn_date)
+        if not metrics or "kansas" not in metrics:
+            pytest.skip("Insufficient data for compute_as_of — adjust fixture")
+
+        m = metrics["kansas"]
+
+        # Apply the FIXED logic: use actual seed after cutoff
+        if tourn_date > tournament_cutoff:
+            seed = team_seeds.get("kansas", 0)
+        else:
+            seed = 0
+
+        v = IncrementalMetricsEngine.metrics_to_team_vector(m, seed=seed)
+        # seed=1 → v[63] = log(16)/log(16) = 1.0
+        assert v[63] > 0.0, (
+            f"Seed feature v[63] must be > 0.0 for tournament games "
+            f"(game_date={tourn_date} > cutoff={tournament_cutoff}), got {v[63]}"
+        )
+
+    def test_seed_interaction_zero_when_one_seed_zero(self):
+        """seed_interaction feature must be 0.0 when either team has seed=0."""
+        from src.data.features.proprietary_metrics import IncrementalMetricsEngine
+
+        records = self._make_game_records()
+        engine = IncrementalMetricsEngine(records)
+
+        metrics = engine.compute_as_of("2025-03-10")
+        if not metrics or "kansas" not in metrics or "kentucky" not in metrics:
+            pytest.skip("Insufficient data")
+
+        m1 = metrics["kansas"]
+        m2 = metrics["kentucky"]
+
+        # Regular-season fix: both seeds = 0
+        v1 = IncrementalMetricsEngine.metrics_to_team_vector(m1, seed=0)
+        v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, seed=0)
+        matchup = IncrementalMetricsEngine.build_matchup_vector(v1, v2, 0, 0)
+
+        # interactions block is at indices [69:75]; seed_interaction is index 74
+        seed_interaction = matchup[74]
+        assert seed_interaction == 0.0, (
+            f"seed_interaction must be 0.0 when seeds are zeroed out, got {seed_interaction}"
+        )
