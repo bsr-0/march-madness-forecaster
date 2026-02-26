@@ -121,6 +121,20 @@ except ImportError:
     AblationStudy = None
     ABLATION_AVAILABLE = False
 
+try:
+    from ..ml.ensemble.spread_model import SpreadRegressor
+    SPREAD_MODEL_AVAILABLE = True
+except ImportError:
+    SpreadRegressor = None
+    SPREAD_MODEL_AVAILABLE = False
+
+try:
+    from ..ml.ensemble.bayesian_bt import BayesianBradleyTerry
+    BAYESIAN_BT_AVAILABLE = True
+except ImportError:
+    BayesianBradleyTerry = None
+    BAYESIAN_BT_AVAILABLE = False
+
 
 # ---------------------------------------------------------------------------
 # Fix 4: Feature stability scores for structured point-in-time degradation.
@@ -175,6 +189,10 @@ class SOTAPipelineConfig:
     temporal_cv_splits: int = 5
     optimize_ensemble_weights: bool = True
 
+    # --- Scoring metric ---
+    # "logloss" matches Kaggle's actual evaluation metric; "brier" is legacy.
+    scoring_metric: str = "logloss"
+
     # --- Feature standardization ---
     enable_feature_scaling: bool = True  # StandardScaler before model training
 
@@ -204,9 +222,33 @@ class SOTAPipelineConfig:
     training_year_decay: float = 0.85  # Per-year weight decay (0.85 → 5 years ago gets 0.44x)
     training_year_min_weight: float = 0.15  # Floor weight for oldest years
 
+    # --- Game-level training ---
+    # Minimum games a team must have played before a given date for that
+    # matchup to be included in training.  Filters out early-season games
+    # where PIT features are unreliable due to tiny sample sizes.
+    game_level_min_games_per_team: int = 5
+
+    # --- Point-spread regression model ---
+    # Trains LightGBM regression on actual margins (team1_score - team2_score),
+    # then converts predicted spread to P(win) via logistic CDF.  Provides
+    # orthogonal signal to binary classification models.
+    enable_spread_model: bool = True
+    spread_sigma_init: float = 11.0  # NCAA historical spread std ≈ 11 points
+
+    # --- Bayesian Bradley-Terry model ---
+    # ID-based rating system with uncertainty.  Orthogonal to feature-based
+    # models — captures "who beat whom" without needing engineered features.
+    # Uncertainty propagation naturally shrinks predictions for rare teams.
+    enable_bayesian_bt: bool = True
+    bayesian_bt_prior_std: float = 2.0  # Prior std for team ratings
+
     # --- Probability clipping ---
-    pre_calibration_clip_lo: float = 0.03  # Min probability before calibration
-    pre_calibration_clip_hi: float = 0.97  # Max probability before calibration
+    # Widened from [0.03, 0.97] to [0.01, 0.99] for log-loss optimization.
+    # Log-loss penalizes confident wrong predictions via log(p), so clipping
+    # at 0.03 caps the penalty at -3.5 nats even for genuine upsets. Wider
+    # bounds allow more reward for correct confident predictions.
+    pre_calibration_clip_lo: float = 0.01  # Min probability before calibration
+    pre_calibration_clip_hi: float = 0.99  # Max probability before calibration
 
     # --- Feature selection ---
     # OOS-FIX: Learned feature selection DISABLED by default.  With ~400
@@ -430,6 +472,8 @@ class _TrainedBaselineModel:
         self.stacking_meta: Optional[object] = None
         self.stacking_meta_type: str = "logistic"
         self.stacking_models: List = []
+        # Point-spread regression model (Phase 3)
+        self.spread_model: Optional[object] = None
 
     def predict_proba(self, x: np.ndarray) -> float:
         x_scaled = self._scale(x)
@@ -472,6 +516,8 @@ class _TrainedBaselineModel:
                 total += w * float(model.predict(x_2d)[0])
             elif isinstance(model, XGBoostRanker):
                 total += w * float(model.predict(x_2d)[0])
+            elif SpreadRegressor is not None and isinstance(model, SpreadRegressor):
+                total += w * float(model.predict_probability(x_2d)[0])
             else:
                 total += w * float(model.predict_proba(x_2d)[0][1])
         return total
@@ -485,6 +531,8 @@ class _TrainedBaselineModel:
                 result += w * model.predict(X)
             elif isinstance(model, XGBoostRanker):
                 result += w * model.predict(X)
+            elif SpreadRegressor is not None and isinstance(model, SpreadRegressor):
+                result += w * model.predict_probability(X)
             else:
                 result += w * model.predict_proba(X)[:, 1]
         return result
@@ -601,6 +649,9 @@ class SOTAPipeline:
         self.proprietary_engine = ProprietaryMetricsEngine()
         self.proprietary_metrics: Dict[str, ProprietaryTeamMetrics] = {}
         self.roster_rapm_quality: Dict[str, float] = {}
+
+        # Bayesian Bradley-Terry rating model (ID-based, Phase 4)
+        self.bayesian_bt_model: Optional[object] = None
 
         # Feature selection state
         self.feature_selector: Optional[FeatureSelector] = None
@@ -1958,11 +2009,27 @@ class SOTAPipeline:
             _t2_score = getattr(game, "team2_score", None)
             if _t1_score is not None and _t2_score is not None and (_t1_score + _t2_score) > 0:
                 _label = 1 if _t1_score > _t2_score else 0
+                _margin = float(_t1_score - _t2_score)
             elif game.lead_history and len(game.lead_history) > 0:
                 _label = 1 if game.lead_history[-1] > 0 else 0
+                _margin = float(game.lead_history[-1])  # Approximate margin from final lead
             else:
                 continue  # Skip games with no determinable outcome
-            samples.append((game_key, vec, _label))
+            samples.append((game_key, vec, _label, _margin))
+
+        # Collect BT game triples: (team1_id, team2_id, team1_won)
+        bt_game_triples = []
+        if self.config.enable_bayesian_bt and BAYESIAN_BT_AVAILABLE:
+            for game in all_games:
+                _t1s = getattr(game, "team1_score", None)
+                _t2s = getattr(game, "team2_score", None)
+                if _t1s is not None and _t2s is not None and (_t1s + _t2s) > 0:
+                    bt_outcome = 1.0 if _t1s > _t2s else 0.0
+                elif game.lead_history and len(game.lead_history) > 0:
+                    bt_outcome = 1.0 if game.lead_history[-1] > 0 else 0.0
+                else:
+                    continue
+                bt_game_triples.append((game.team1_id, game.team2_id, bt_outcome))
 
         if not samples:
             return {"model": "none", "samples": 0}
@@ -1970,6 +2037,7 @@ class SOTAPipeline:
         samples.sort(key=lambda x: x[0])
         X_full = np.stack([s[1] for s in samples])
         y_full = np.array([s[2] for s in samples], dtype=int)
+        margins_full = np.array([s[3] for s in samples], dtype=np.float64)
         sort_keys_full = np.array([s[0] for s in samples])
         # (PIT metadata no longer needed — features computed incrementally)
 
@@ -2043,16 +2111,19 @@ class SOTAPipeline:
 
         train_X = X_full[:train_samples]
         train_y = y_full[:train_samples]
+        train_margins = margins_full[:train_samples]
         train_sort_keys = sort_keys_full[:train_samples]
         if valid_samples > 0:
             eval_X = X_full[train_samples:]
             eval_y = y_full[train_samples:]
+            eval_margins = margins_full[train_samples:]
         else:
             # FIX #6: Never use training data as eval — it inflates
             # confidence metrics and causes downstream leakage.  When we
             # can't split, we leave eval empty and skip eval-dependent steps.
             eval_X = np.empty((0, X_full.shape[1]))
             eval_y = np.array([], dtype=int)
+            eval_margins = np.array([], dtype=np.float64)
 
         # ====================================================================
         # MULTI-YEAR TRAINING POOL: Augment current-year training data with
@@ -2121,6 +2192,7 @@ class SOTAPipeline:
 
             hist_X_parts = []
             hist_y_parts = []
+            hist_margin_parts = []
             hist_weight_parts = []
             hist_sortkey_parts = []
             years_loaded = []
@@ -2141,7 +2213,7 @@ class SOTAPipeline:
                     continue
 
                 try:
-                    hX, hy, _end_elo = self._load_year_samples_incremental(
+                    hX, hy, _h_margins, _end_elo = self._load_year_samples_incremental(
                         gp, mp, feature_dim_full, yr,
                         include_tournament=False,
                         prior_elo=_cross_year_elo,
@@ -2183,6 +2255,7 @@ class SOTAPipeline:
 
                 hist_X_parts.append(hX)
                 hist_y_parts.append(hy)
+                hist_margin_parts.append(_h_margins)
                 hist_weight_parts.append(sample_weights)
                 hist_sortkey_parts.append(year_sort_keys)
                 years_loaded.append(yr)
@@ -2201,6 +2274,7 @@ class SOTAPipeline:
             if hist_X_parts:
                 hist_X = np.concatenate(hist_X_parts, axis=0)
                 hist_y = np.concatenate(hist_y_parts)
+                hist_margins = np.concatenate(hist_margin_parts)
                 hist_weights = np.concatenate(hist_weight_parts)
                 hist_sort_keys = np.concatenate(hist_sortkey_parts)
 
@@ -2213,6 +2287,7 @@ class SOTAPipeline:
                 # Prepend historical data to training set (chronologically first)
                 train_X = np.concatenate([hist_X, train_X], axis=0)
                 train_y = np.concatenate([hist_y, train_y])
+                train_margins = np.concatenate([hist_margins, train_margins])
                 train_sort_keys = np.concatenate([hist_sort_keys, train_sort_keys])
 
                 # Store year-based weights to combine with recency weighting later.
@@ -2565,9 +2640,12 @@ class SOTAPipeline:
             except Exception as e:
                 tuning_stats["xgboost_error"] = str(e)
 
-        # --- Logistic regression training (always train as a base learner for stacking) ---
+        # --- Logistic regression (fallback only) ---
+        # Phase 5: LogisticRegression is highly correlated with GBM classifiers
+        # (~0.95 correlation on same features), reducing ensemble diversity.
+        # Train it only as a fallback when GBM models are unavailable.
         logit_trained = False
-        if SKLEARN_AVAILABLE:
+        if SKLEARN_AVAILABLE and not (lgb_trained or xgb_trained):
             try:
                 if (
                     self.config.enable_hyperparameter_tuning
@@ -2634,6 +2712,85 @@ class SOTAPipeline:
                 logit_trained = True
             except Exception as e:
                 tuning_stats["logistic_error"] = str(e)
+
+        # --- Point-spread regression model ---
+        # Trains LightGBM regression on actual margins, converts to P(win)
+        # via logistic CDF.  Provides complementary signal to binary
+        # classifiers — richer gradient from continuous target.
+        spread_trained = False
+        if (
+            self.config.enable_spread_model
+            and SPREAD_MODEL_AVAILABLE
+            and LIGHTGBM_AVAILABLE
+            and train_samples >= 60
+            and len(train_margins) == len(train_y)
+        ):
+            try:
+                spread = SpreadRegressor(
+                    sigma=self.config.spread_sigma_init,
+                )
+                spread_valid_X = eval_X if valid_samples > 0 else None
+                spread_valid_margins = eval_margins if valid_samples > 0 else None
+
+                spread_stats = spread.train(
+                    train_X,
+                    train_margins,
+                    feature_names=feature_names,
+                    num_rounds=200,
+                    sample_weight=train_sample_weight,
+                    valid_X=spread_valid_X,
+                    valid_margins=spread_valid_margins,
+                )
+
+                if spread_stats.get("trained"):
+                    self.baseline_model.spread_model = spread
+                    spread_trained = True
+
+                    # Generate eval predictions (probability) for ensemble weighting
+                    if valid_samples > 0:
+                        spread_eval_preds = spread.predict_probability(eval_X)
+                    else:
+                        spread_eval_preds = np.array([])
+
+                    trained_models.append(("spread", spread, spread_eval_preds))
+                    tuning_stats["spread_model"] = spread_stats
+                    logger.info(
+                        "SpreadRegressor trained: rmse=%.3f, sigma=%.2f",
+                        spread_stats.get("train_rmse", 0),
+                        spread_stats.get("sigma", 11.0),
+                    )
+            except Exception as e:
+                tuning_stats["spread_model_error"] = str(e)
+                logger.warning("SpreadRegressor training failed: %s", e)
+
+        # --- Bayesian Bradley-Terry rating model ---
+        # ID-based model: captures "who beat whom" without engineered features.
+        # Fitted on current-year game triples (team1_id, team2_id, outcome).
+        # Predictions are made via predict_probability(team1, team2) at
+        # inference time — not through the feature-based ensemble.
+        if (
+            self.config.enable_bayesian_bt
+            and BAYESIAN_BT_AVAILABLE
+            and len(bt_game_triples) >= 50
+        ):
+            try:
+                bt_model = BayesianBradleyTerry(
+                    prior_std=self.config.bayesian_bt_prior_std,
+                )
+                bt_stats = bt_model.fit(bt_game_triples)
+                if bt_stats.get("fitted"):
+                    self.bayesian_bt_model = bt_model
+                    tuning_stats["bayesian_bt"] = bt_stats
+                    logger.info(
+                        "BayesianBT: fitted %d teams from %d games, "
+                        "mean_posterior_std=%.3f",
+                        bt_stats.get("n_teams", 0),
+                        bt_stats.get("n_games", 0),
+                        bt_stats.get("mean_posterior_std", 0),
+                    )
+            except Exception as e:
+                tuning_stats["bayesian_bt_error"] = str(e)
+                logger.warning("BayesianBT fitting failed: %s", e)
 
         # ====================================================================
         # MODEL SELECTION / ENSEMBLE
@@ -2703,6 +2860,11 @@ class SOTAPipeline:
                         )
                         fold_model.fit(X_tr_fold, y_tr_fold, sample_weight=w_tr_fold)
                         fold_preds = fold_model.predict_proba(X_val_fold)[:, 1]
+                    elif name == "spread" and SpreadRegressor is not None:
+                        m_tr_fold = train_margins[split.train_indices]
+                        fold_model = SpreadRegressor(sigma=self.config.spread_sigma_init)
+                        fold_model.train(X_tr_fold, m_tr_fold, feature_names=feature_names, num_rounds=200, sample_weight=w_tr_fold)
+                        fold_preds = fold_model.predict_probability(X_val_fold)
                     else:
                         continue
                     oof_preds[name][split.val_indices] = fold_preds
@@ -2738,12 +2900,17 @@ class SOTAPipeline:
         elif len(trained_models) >= 2:
             # --- OOS-FIX: Fixed-weight average (default path) ---
             # Store all models for fixed-weight averaging at inference time.
+            # Base weights (unnormalized); actual weights are normalized to
+            # sum to 1.0 based on which models are present.
             w_lgb = self.config.ensemble_lgb_weight
             w_xgb = self.config.ensemble_xgb_weight
             w_logit = 1.0 - w_lgb - w_xgb
-            _FIXED_WEIGHTS = {"lgb": w_lgb, "xgb": w_xgb, "logit": w_logit}
+            _FIXED_WEIGHTS = {
+                "lgb": w_lgb, "xgb": w_xgb, "logit": w_logit,
+                "spread": 0.25,  # Spread model provides orthogonal signal
+            }
             model_names_present = [name for name, _, _ in trained_models]
-            active_weights = {n: _FIXED_WEIGHTS.get(n, 0.33) for n in model_names_present}
+            active_weights = {n: _FIXED_WEIGHTS.get(n, 0.25) for n in model_names_present}
             w_sum = sum(active_weights.values())
             active_weights = {n: w / w_sum for n, w in active_weights.items()}
 
@@ -2962,7 +3129,7 @@ class SOTAPipeline:
         if len(eval_y) == 0:
             name, model, _ = trained_models[0]
             self._set_primary_model(name, model)
-            name_map = {"lgb": "lightgbm", "xgb": "xgboost", "logit": "logistic_regression"}
+            name_map = {"lgb": "lightgbm", "xgb": "xgboost", "logit": "logistic_regression", "spread": "spread_regressor"}
             return name_map.get(name, name)
 
         for name, model, eval_preds in trained_models:
@@ -2972,7 +3139,7 @@ class SOTAPipeline:
                 best_name = name
                 self._set_primary_model(name, model)
 
-        name_map = {"lgb": "lightgbm", "xgb": "xgboost", "logit": "logistic_regression"}
+        name_map = {"lgb": "lightgbm", "xgb": "xgboost", "logit": "logistic_regression", "spread": "spread_regressor"}
         return name_map.get(best_name, best_name)
 
     def _set_primary_model(self, name: str, model) -> None:
@@ -2989,6 +3156,8 @@ class SOTAPipeline:
             self.baseline_model.logit_model = model
             self.baseline_model.lgb_model = None
             self.baseline_model.xgb_model = None
+        elif name == "spread":
+            self.baseline_model.spread_model = model
 
     # ------------------------------------------------------------------
     # P0: Leave-One-Year-Out Cross-Validation (multi-year validation)
@@ -3042,7 +3211,7 @@ class SOTAPipeline:
                 logger.info("LOYO: skipping year %d (missing data files)", year)
                 continue
 
-            year_X, year_y, _ = self._load_year_samples_incremental(
+            year_X, year_y, _year_margins, _ = self._load_year_samples_incremental(
                 games_path, metrics_path, feature_dim, year
             )
             if len(year_y) < 10:
@@ -3370,14 +3539,27 @@ class SOTAPipeline:
         ]
 
         if not training_games:
-            return np.empty((0, feature_dim)), np.array([]), inc_engine.get_end_of_season_elo()
+            return np.empty((0, feature_dim)), np.array([]), np.array([]), inc_engine.get_end_of_season_elo()
 
         # ── 5. Build feature vectors ──────────────────────────────────────
         X_list: list = []
         y_list: list = []
+        margins_list: list = []
         skipped = 0
 
+        # Minimum-games filter: skip games where either team has played
+        # fewer than N games before this date (PIT features unreliable).
+        min_games = getattr(self.config, "game_level_min_games_per_team", 5)
+
         for g in training_games:
+            # Filter: require both teams to have enough prior games.
+            if min_games > 0:
+                n1 = inc_engine.games_played_before(g.team_id, g.game_date)
+                n2 = inc_engine.games_played_before(g.opponent_id, g.game_date)
+                if n1 < min_games or n2 < min_games:
+                    skipped += 1
+                    continue
+
             # Get metrics as of this game's date (strictly before).
             metrics = inc_engine.compute_as_of(g.game_date)
             if not metrics:
@@ -3433,12 +3615,14 @@ class SOTAPipeline:
 
             X_list.append(matchup)
             y_list.append(1 if g.points > g.opp_points else 0)
+            margins_list.append(float(g.points - g.opp_points))
 
         if not X_list:
-            return np.empty((0, feature_dim)), np.array([]), inc_engine.get_end_of_season_elo()
+            return np.empty((0, feature_dim)), np.array([]), np.array([]), inc_engine.get_end_of_season_elo()
 
         X_arr = np.stack(X_list)
         y_arr = np.array(y_list, dtype=int)
+        margins_arr = np.array(margins_list, dtype=np.float64)
 
         logger.info(
             "Year %d (incremental): %d training samples from %d games "
@@ -3447,7 +3631,7 @@ class SOTAPipeline:
             len(inc_engine._unique_dates), feature_dim,
         )
 
-        return X_arr, y_arr, inc_engine.get_end_of_season_elo()
+        return X_arr, y_arr, margins_arr, inc_engine.get_end_of_season_elo()
 
     def _run_gnn(self, graph: ScheduleGraph) -> Dict:
         multi_hop = compute_multi_hop_sos(graph, hops=3)
@@ -3813,7 +3997,7 @@ class SOTAPipeline:
                         metrics_path = os.path.join(games_dir, f"team_metrics_{yr}.json")
                         if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
                             continue
-                        yr_X, yr_y, _ = self._load_year_samples_incremental(
+                        yr_X, yr_y, _yr_margins, _ = self._load_year_samples_incremental(
                             games_path, metrics_path, feature_dim, yr,
                             include_tournament=True,
                         )
@@ -4739,7 +4923,7 @@ class SOTAPipeline:
         if len(outcomes) < 10:
             return {}
 
-        optimizer = EnsembleWeightOptimizer(step=0.05, min_weight=0.05, random_seed=self.config.random_seed)
+        optimizer = EnsembleWeightOptimizer(step=0.05, min_weight=0.05, n_bootstrap=200, random_seed=self.config.random_seed)
         pred_arrays = {name: np.array(preds) for name, preds in model_preds.items()}
         best_weights, best_brier = optimizer.optimize(
             pred_arrays,
@@ -4765,11 +4949,17 @@ class SOTAPipeline:
             feat_vec = self.feature_selector.transform(feat_vec.reshape(1, -1))[0]
         baseline_prob = self.baseline_model.predict_proba(feat_vec)
 
-        # A1: Use baseline model only. GNN and Transformer were training on
-        # trivial self-supervised tasks (identity-mapping AdjEM and copying
-        # input features respectively) and diluted baseline signal through
-        # CFA weighting. Graph statistics (PageRank SOS, multi-hop SOS) are
-        # retained as feature-engineering inputs.
+        # Blend with Bayesian Bradley-Terry (ID-based) model if available.
+        # The BT model provides orthogonal signal — it captures "who beat
+        # whom" without engineered features.  A 15% blend adds diversity
+        # without overwhelming the feature-based ensemble.
+        if self.bayesian_bt_model is not None:
+            bt_prob, bt_unc = self.bayesian_bt_model.predict_probability(team1_id, team2_id)
+            # Weight BT contribution inversely with uncertainty:
+            # high uncertainty → less weight → closer to baseline
+            bt_weight = 0.15 * max(0.0, 1.0 - bt_unc)
+            baseline_prob = (1.0 - bt_weight) * baseline_prob + bt_weight * bt_prob
+
         # P1: Tighter pre-calibration clip bounds based on empirical upset rates.
         # Historical: 1-seed vs 16-seed upsets occur ~1.5% of the time.
         return float(np.clip(baseline_prob, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
