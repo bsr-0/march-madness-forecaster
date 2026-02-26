@@ -2640,9 +2640,12 @@ class SOTAPipeline:
             except Exception as e:
                 tuning_stats["xgboost_error"] = str(e)
 
-        # --- Logistic regression training (always train as a base learner for stacking) ---
+        # --- Logistic regression (fallback only) ---
+        # Phase 5: LogisticRegression is highly correlated with GBM classifiers
+        # (~0.95 correlation on same features), reducing ensemble diversity.
+        # Train it only as a fallback when GBM models are unavailable.
         logit_trained = False
-        if SKLEARN_AVAILABLE:
+        if SKLEARN_AVAILABLE and not (lgb_trained or xgb_trained):
             try:
                 if (
                     self.config.enable_hyperparameter_tuning
@@ -4920,7 +4923,7 @@ class SOTAPipeline:
         if len(outcomes) < 10:
             return {}
 
-        optimizer = EnsembleWeightOptimizer(step=0.05, min_weight=0.05, random_seed=self.config.random_seed)
+        optimizer = EnsembleWeightOptimizer(step=0.05, min_weight=0.05, n_bootstrap=200, random_seed=self.config.random_seed)
         pred_arrays = {name: np.array(preds) for name, preds in model_preds.items()}
         best_weights, best_brier = optimizer.optimize(
             pred_arrays,
