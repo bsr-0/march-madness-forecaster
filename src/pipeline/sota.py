@@ -14,7 +14,7 @@ import logging
 import math
 import random
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
@@ -136,6 +136,13 @@ class SOTAPipelineConfig:
     num_simulations: int = 50000
     pool_size: int = 100
     random_seed: int = 2026
+    # Dev/holdout partition for RDoF control.
+    # Default: dev=2016-2024, holdout=2025 (used for evaluation only).
+    dev_years: Optional[List[int]] = field(default_factory=lambda: list(range(2016, 2025)))
+    holdout_years: Optional[List[int]] = field(default_factory=lambda: [2025])
+    # Require a verified freeze artifact before running.
+    require_freeze_file: bool = False
+    freeze_file: Optional[str] = None
 
     teams_json: Optional[str] = None
     torvik_json: Optional[str] = None
@@ -255,14 +262,16 @@ class SOTAPipelineConfig:
     #   3. Opponent quality is systematically higher
     # The shrinkage factor blends the raw prediction toward 0.5:
     #   p_adj = shrinkage * 0.5 + (1 - shrinkage) * p_raw
-    tournament_shrinkage: float = 0.08  # 8% shrinkage (calibrated from LOYO)
-    seed_prior_weight: float = 0.05  # Bayesian prior weight toward seed-based win rate
+    tournament_shrinkage: float = 0.0  # Disabled by default unless sensitivity proves value
+    seed_prior_weight: float = 0.0  # Disabled by default unless sensitivity proves value
     seed_prior_slope: float = 0.175  # Sigmoid slope for seed-based win rate approximation
-    consistency_bonus_max: float = 0.02  # Max shift from consistency (variance) difference
+    consistency_bonus_max: float = 0.0  # Disabled by default unless sensitivity proves value
     consistency_normalizer: float = 15.0  # Typical pace_adjusted_variance range for normalization
 
     # --- Monte Carlo simulation ---
     mc_noise_std: float = 0.12  # Logit-space noise for MC simulation (Tier 3, range 0.02-0.25)
+    mc_regional_correlation: float = 0.0  # Disabled unless calibrated/significant
+    mc_calibration_json: Optional[str] = None  # Optional path to MC calibration artifact
 
     # --- Ensemble weights (fixed-weight average, no stacking) ---
     ensemble_lgb_weight: float = 0.45  # LightGBM weight in fixed ensemble
@@ -297,6 +306,11 @@ class SOTAPipelineConfig:
     # (backward compatible), 0.5 = moderate recency bias (recommended),
     # 1.0 = strong recency (earliest game gets ~30% weight).
     gnn_temporal_decay: float = 0.5
+
+    # --- Optional components (disabled unless ablation-justified) ---
+    enable_gnn: bool = False
+    enable_transformer: bool = False
+    enable_embedding_projections: bool = False
 
     # --- VIF multicollinearity pruning (Fix 11) ---
     enable_vif_pruning: bool = True
@@ -628,6 +642,46 @@ class SOTAPipeline:
             cache_dir=self.config.data_cache_dir,
             resolver=self.team_name_resolver,
         )
+        # MC calibration artifact (optional)
+        self._mc_calibration: Optional[Dict] = None
+
+    def _filter_years(self, years: List[int]) -> List[int]:
+        """Filter years by dev/holdout constraints and remove COVID year."""
+        if not years:
+            return []
+        year_set = sorted({y for y in years if y != 2020})
+        if self.config.dev_years:
+            dev_set = set(self.config.dev_years)
+            year_set = [y for y in year_set if y in dev_set]
+        if self.config.holdout_years:
+            holdout_set = set(self.config.holdout_years)
+            year_set = [y for y in year_set if y not in holdout_set]
+        return year_set
+
+    def _load_mc_calibration(self) -> Optional[Dict]:
+        """Load MC calibration artifact and apply calibrated parameters."""
+        import os
+        import json as _json
+        path = self.config.mc_calibration_json
+        if path is None:
+            default_path = os.path.join(os.getcwd(), "data", "raw", "mc_calibration.json")
+            if os.path.isfile(default_path):
+                path = default_path
+        if not path or not os.path.isfile(path):
+            return None
+        try:
+            with open(path, "r") as f:
+                payload = _json.load(f)
+        except Exception:
+            return None
+        best = payload.get("best_params", {})
+        if isinstance(best, dict):
+            if "noise_std" in best:
+                self.config.mc_noise_std = float(best["noise_std"])
+            if "regional_correlation" in best:
+                self.config.mc_regional_correlation = float(best["regional_correlation"])
+        payload["_source_path"] = path
+        return payload
 
     def _compute_train_val_boundary(self, game_flows: Dict[str, List[GameFlow]]) -> None:
         """Establish train/val chronological boundary BEFORE GNN and transformer training.
@@ -687,6 +741,45 @@ class SOTAPipeline:
         except Exception:
             pass  # Non-critical check — don't block pipeline on import/IO errors
 
+        # ── MC calibration (optional) ────────────────────────────────
+        # Load before freeze verification so calibrated parameters are
+        # part of the config hash check.
+        self._mc_calibration = self._load_mc_calibration()
+
+        if self.config.year >= 2026 and self._mc_calibration is None:
+            raise DataRequirementError(
+                "MC calibration artifact required for 2026+ predictions. "
+                "Run `python -m src.main calibrate-mc` and pass --mc-calibration."
+            )
+
+        if self.config.year >= 2026 and not self.config.require_freeze_file:
+            raise DataRequirementError(
+                "Pipeline freeze required for 2026+ predictions. "
+                "Re-run with --require-freeze and a valid --freeze-file."
+            )
+
+        # ── Freeze requirement (pre-registration enforcement) ───────
+        freeze_verification: Optional[Dict] = None
+        if self.config.require_freeze_file:
+            if not self.config.freeze_file:
+                raise DataRequirementError(
+                    "Freeze file required (--require-freeze) but no --freeze-file provided."
+                )
+            try:
+                from ..ml.evaluation.rdof_audit import verify_freeze
+                freeze_verification = verify_freeze(self.config, self.config.freeze_file)
+                if not freeze_verification.get("matches", False):
+                    mismatches = "\n".join(freeze_verification.get("mismatches", []))
+                    raise DataRequirementError(
+                        f"Freeze verification failed for {self.config.freeze_file}:\n{mismatches}"
+                    )
+            except DataRequirementError:
+                raise
+            except Exception as exc:
+                raise DataRequirementError(
+                    f"Freeze verification failed for {self.config.freeze_file}: {exc}"
+                ) from exc
+
         teams = self._load_teams()
         torvik_map, proprietary_map = self._load_team_stat_sources(teams)
         rosters = self._build_rosters(teams)
@@ -737,12 +830,16 @@ class SOTAPipeline:
         schedule_graph = self._construct_schedule_graph(teams)
         adjacency = schedule_graph.get_adjacency_matrix(weighted=True)
 
-        gnn_stats = self._run_gnn(schedule_graph)
+        if self.config.enable_gnn:
+            gnn_stats = self._run_gnn(schedule_graph)
+        else:
+            gnn_stats = {"enabled": False, "reason": "disabled_by_config"}
         baseline_stats = self._train_baseline_model(game_flows)
-        # A1: Transformer removed from ensemble — it trained on a trivial
-        # self-supervised task (copying its own input features). Momentum
-        # features already capture temporal signal with zero parameters.
-        transformer_stats = {"enabled": False, "teams": 0, "reason": "A1: removed from ensemble"}
+        if self.config.enable_transformer:
+            transformer_stats = self._run_transformer(game_flows)
+        else:
+            # A1: Transformer removed from ensemble by default.
+            transformer_stats = {"enabled": False, "teams": 0, "reason": "disabled_by_config"}
 
         # FIX M5: Apply deferred SOS refinement AFTER baseline training so
         # that training features are uncontaminated by GNN-derived SOS.
@@ -756,6 +853,8 @@ class SOTAPipeline:
         # in fusion. GNN graph statistics (PageRank SOS, multi-hop SOS) are
         # retained as feature-engineering inputs only.
         embedding_proj_stats = {}
+        if self.config.enable_embedding_projections:
+            embedding_proj_stats = self._train_embedding_projections(game_flows)
         uncertainty_stats = self._estimate_model_confidence_intervals(game_flows)
 
         self.feature_engineer.attach_gnn_embeddings(self.gnn_embeddings)
@@ -821,6 +920,22 @@ class SOTAPipeline:
 
         calibration_samples = int(calibration_stats.get("samples", 0))
         report = {
+            "audit": {
+                "dev_years": self.config.dev_years,
+                "holdout_years": self.config.holdout_years,
+                "freeze_required": self.config.require_freeze_file,
+                "freeze_verification": freeze_verification or {},
+                "mc_calibration": (
+                    {
+                        "best_params": (self._mc_calibration or {}).get("best_params"),
+                        "dev_score": (self._mc_calibration or {}).get("best_dev_score"),
+                        "holdout_score": (self._mc_calibration or {}).get("holdout_score"),
+                        "source": (self._mc_calibration or {}).get("_source_path"),
+                    }
+                    if self._mc_calibration
+                    else {}
+                ),
+            },
             "ml_diagnostics": {
                 "calibration_samples": calibration_samples,
                 "calibration_min_required": self.config.min_calibration_samples_hard,
@@ -2001,6 +2116,9 @@ class SOTAPipeline:
                             pass
                 hist_years.sort()
 
+            # Enforce dev/holdout split for historical training
+            hist_years = self._filter_years(hist_years)
+
             hist_X_parts = []
             hist_y_parts = []
             hist_weight_parts = []
@@ -2905,6 +3023,9 @@ class SOTAPipeline:
             return {"enabled": False, "reason": f"directory_not_found: {games_dir}"}
 
         years = self.config.loyo_years or [y for y in range(2015, 2026) if y != 2020]
+        years = self._filter_years(years)
+        if not years:
+            return {"enabled": False, "reason": "no_dev_years"}
 
         # ----------------------------------------------------------
         # Step 1: Load multi-year samples
@@ -3331,6 +3452,10 @@ class SOTAPipeline:
     def _run_gnn(self, graph: ScheduleGraph) -> Dict:
         multi_hop = compute_multi_hop_sos(graph, hops=3)
         pagerank = graph.compute_pagerank_sos()
+        training_era_teams = set()
+        for edge in graph.edges:
+            training_era_teams.add(edge.team1_id)
+            training_era_teams.add(edge.team2_id)
 
         if GNN_TORCH_AVAILABLE and ScheduleGCN is not None:
             feat_dim = max(
@@ -3346,11 +3471,6 @@ class SOTAPipeline:
             # NO training-era edges are validation-era-only; setting their target
             # to 0.0 (league average) prevents the GNN from learning their
             # end-of-season strength from leaked labels.
-            training_era_teams = set()
-            for edge in graph.edges:
-                training_era_teams.add(edge.team1_id)
-                training_era_teams.add(edge.team2_id)
-
             target = []
             for idx in range(graph.n_teams):
                 team_id = graph.idx_to_team[idx]
@@ -3679,6 +3799,7 @@ class SOTAPipeline:
             years = self.config.loyo_years or [
                 y for y in range(2015, self.config.year) if y != 2020
             ]
+            years = self._filter_years(years)
             # Determine feature dimensionality from current model
             feature_dim = self.baseline_model.feature_dim
 
@@ -3909,6 +4030,7 @@ class SOTAPipeline:
             injury_probability=0.0,
             random_seed=self.config.random_seed,
             batch_size=500,
+            regional_correlation=self.config.mc_regional_correlation,
         )
 
         bracket = TournamentBracket.create_standard_bracket(teams_by_region)

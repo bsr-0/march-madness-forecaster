@@ -519,12 +519,18 @@ class TestConfigNewFields:
 
     def test_default_values(self):
         config = SOTAPipelineConfig()
-        assert config.seed_prior_weight == 0.05
+        assert config.seed_prior_weight == 0.0
         assert config.seed_prior_slope == 0.175
-        assert config.consistency_bonus_max == 0.02
+        assert config.consistency_bonus_max == 0.0
         assert config.consistency_normalizer == 15.0
         assert config.ensemble_lgb_weight == 0.45
         assert config.ensemble_xgb_weight == 0.35
+        assert config.mc_regional_correlation == 0.0
+        assert config.enable_gnn is False
+        assert config.enable_transformer is False
+        assert config.enable_embedding_projections is False
+        assert 2016 in (config.dev_years or [])
+        assert 2025 in (config.holdout_years or [])
 
     def test_ensemble_weights_sum(self):
         """Default ensemble weights sum to 1."""
@@ -549,6 +555,12 @@ class TestConfigNewFields:
         """Default multi_year_games_dir is 'auto'."""
         config = SOTAPipelineConfig()
         assert config.multi_year_games_dir == "auto"
+
+    def test_filter_years_excludes_holdout(self):
+        from src.pipeline.sota import SOTAPipeline
+        config = SOTAPipelineConfig(dev_years=[2016, 2017, 2025], holdout_years=[2025])
+        pipeline = SOTAPipeline(config)
+        assert pipeline._filter_years([2016, 2017, 2020, 2025]) == [2016, 2017]
 
 
 # ───────────────────────────────────────────────────────────────────────
