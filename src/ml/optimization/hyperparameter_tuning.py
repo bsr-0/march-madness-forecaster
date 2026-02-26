@@ -332,8 +332,8 @@ class LightGBMTuner:
                 X, y, sort_keys, train_fn, predict_fn,
                 sample_weight=sample_weight,
             )
-            mean_brier = float(np.mean([r.brier_score for r in cv_results]))
-            return mean_brier
+            mean_logloss = float(np.mean([r.log_loss for r in cv_results]))
+            return mean_logloss
 
         study = optuna.create_study(
             direction="minimize",
@@ -490,8 +490,8 @@ class XGBoostTuner:
                 X, y, sort_keys, train_fn, predict_fn,
                 sample_weight=sample_weight,
             )
-            mean_brier = float(np.mean([r.brier_score for r in cv_results]))
-            return mean_brier
+            mean_logloss = float(np.mean([r.log_loss for r in cv_results]))
+            return mean_logloss
 
         study = optuna.create_study(
             direction="minimize",
@@ -614,7 +614,7 @@ class LogisticTuner:
                 X, y, sort_keys, train_fn, predict_fn,
                 sample_weight=sample_weight,
             )
-            return float(np.mean([r.brier_score for r in results]))
+            return float(np.mean([r.log_loss for r in results]))
 
         study = optuna.create_study(
             direction="minimize",
@@ -851,8 +851,11 @@ class EnsembleWeightOptimizer:
             combined = np.zeros(n)
             for name in model_names:
                 combined += uniform_weights[name] * preds[name]
-            uniform_brier = float(np.mean((combined - y) ** 2))
-            return uniform_weights, uniform_brier
+            combined_clipped = np.clip(combined, 1e-7, 1 - 1e-7)
+            uniform_score = float(-np.mean(
+                y * np.log(combined_clipped) + (1 - y) * np.log(1 - combined_clipped)
+            ))
+            return uniform_weights, uniform_score
 
         # Generate weight grid once (shared across bootstrap resamples)
         steps = int(round(1.0 / self.step))
@@ -875,7 +878,7 @@ class EnsembleWeightOptimizer:
             y_boot = y[idx]
             preds_boot = {name: preds[name][idx] for name in model_names}
 
-            best_brier_boot = float("inf")
+            best_score_boot = float("inf")
             best_combo_boot = weight_grid[0]
 
             uniform_arr = np.array([1.0 / n_models] * n_models)
@@ -883,13 +886,18 @@ class EnsembleWeightOptimizer:
                 combined = np.zeros(n)
                 for name, w in zip(model_names, combo):
                     combined += w * preds_boot[name]
-                brier = float(np.mean((combined - y_boot) ** 2))
-                # Fix 8: L2 regularization toward uniform weights
+                # Optimize log-loss (Kaggle scoring metric) instead of Brier
+                combined_clipped = np.clip(combined, 1e-7, 1 - 1e-7)
+                score = float(-np.mean(
+                    y_boot * np.log(combined_clipped)
+                    + (1 - y_boot) * np.log(1 - combined_clipped)
+                ))
+                # L2 regularization toward uniform weights
                 if regularization_lambda > 0:
                     combo_arr = np.array(combo)
-                    brier += regularization_lambda * float(np.sum((combo_arr - uniform_arr) ** 2))
-                if brier < best_brier_boot:
-                    best_brier_boot = brier
+                    score += regularization_lambda * float(np.sum((combo_arr - uniform_arr) ** 2))
+                if score < best_score_boot:
+                    best_score_boot = score
                     best_combo_boot = combo
 
             for name, w in zip(model_names, best_combo_boot):
@@ -898,13 +906,16 @@ class EnsembleWeightOptimizer:
         # Average across bootstrap resamples
         best_weights = {name: weight_accum[name] / self.n_bootstrap for name in model_names}
 
-        # Compute Brier score of the averaged weights on full data
+        # Compute log-loss of the averaged weights on full data
         combined = np.zeros(n)
         for name in model_names:
             combined += best_weights[name] * preds[name]
-        best_brier = float(np.mean((combined - y) ** 2))
+        combined_clipped = np.clip(combined, 1e-7, 1 - 1e-7)
+        best_score = float(-np.mean(
+            y * np.log(combined_clipped) + (1 - y) * np.log(1 - combined_clipped)
+        ))
 
-        return best_weights, best_brier
+        return best_weights, best_score
 
     def _generate_weight_grid(
         self, n_models: int, steps: int
