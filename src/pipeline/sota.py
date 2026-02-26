@@ -190,8 +190,9 @@ class SOTAPipelineConfig:
     optimize_ensemble_weights: bool = True
 
     # --- Scoring metric ---
-    # "logloss" matches Kaggle's actual evaluation metric; "brier" is legacy.
-    scoring_metric: str = "logloss"
+    # "brier" matches Kaggle's actual evaluation metric since 2023;
+    # "logloss" was the metric before 2023.
+    scoring_metric: str = "brier"
 
     # --- Feature standardization ---
     enable_feature_scaling: bool = True  # StandardScaler before model training
@@ -243,12 +244,11 @@ class SOTAPipelineConfig:
     bayesian_bt_prior_std: float = 2.0  # Prior std for team ratings
 
     # --- Probability clipping ---
-    # Widened from [0.03, 0.97] to [0.01, 0.99] for log-loss optimization.
-    # Log-loss penalizes confident wrong predictions via log(p), so clipping
-    # at 0.03 caps the penalty at -3.5 nats even for genuine upsets. Wider
-    # bounds allow more reward for correct confident predictions.
-    pre_calibration_clip_lo: float = 0.01  # Min probability before calibration
-    pre_calibration_clip_hi: float = 0.99  # Max probability before calibration
+    # Widened to [0.005, 0.995] for Brier-score optimization.
+    # Brier score penalty is quadratic (not logarithmic), so wider bounds
+    # are safe and allow more credit for correct confident predictions.
+    pre_calibration_clip_lo: float = 0.005  # Min probability before calibration
+    pre_calibration_clip_hi: float = 0.995  # Max probability before calibration
 
     # --- Feature selection ---
     # OOS-FIX: Learned feature selection DISABLED by default.  With ~400
@@ -363,6 +363,32 @@ class SOTAPipelineConfig:
     stability_threshold: float = 0.80  # Feature must be selected in ≥80% of bootstrap runs
     n_bootstrap: int = 10  # Number of bootstrap iterations for stability analysis
 
+    # --- External rating integration (WS3) ---
+    enable_external_ratings: bool = True  # Integrate external rating systems
+    external_ratings_dir: Optional[str] = None  # Dir with cached external rating JSON files
+
+    # --- Brier-optimal post-processing (WS2) ---
+    enable_brier_sharpening: bool = True  # Power-transform sharpening for Brier score
+    brier_sharpening_alpha_bounds: Tuple[float, float] = (0.5, 2.0)
+    enable_seed_overrides: bool = True  # Snap extreme matchups to historical rates
+    seed_override_threshold: float = 0.08  # Max distance from historical to snap
+
+    # --- Women's tournament pipeline (WS1) ---
+    enable_womens_pipeline: bool = True  # Run parallel women's pipeline
+    womens_cache_dir: Optional[str] = None  # Women's data cache (defaults to data_cache_dir)
+    womens_seed_only_mode: bool = False  # Force seed-only mode for women's predictions
+    womens_teams_csv: Optional[str] = None  # Path to Kaggle WTeams.csv
+
+    # --- Bracket portfolio (WS4) ---
+    enable_bracket_portfolio: bool = False  # Generate bracket portfolio
+    portfolio_n_brackets: int = 1000  # Number of brackets in portfolio
+    portfolio_n_simulations: int = 50000  # MC simulations for portfolio generation
+
+    # --- Dual submission meta-strategy (WS5) ---
+    enable_dual_submission: bool = False  # Generate primary + hedge submissions
+    dual_max_deviations: int = 5  # Max games to deviate on in hedge
+    dual_deviation_strength: float = 0.15  # How far to push hedge predictions
+
 
 # C2: Fixed domain-knowledge feature set with published citations.
 # Features were selected from the basketball analytics literature BEFORE
@@ -447,6 +473,13 @@ FIXED_FEATURE_SET = [
     "seed_interaction",
     # travel_advantage — [KAG]: rest/travel in top submissions; 0.0 in historical
     "travel_advantage",
+    # External rating composite — [KAG]: meta-ranking of 100+ systems (WS3)
+    # 0.0 in historical training unless external rating caches exist.
+    # Captures information not in box-score features (coaching, eye-test, etc.)
+    "diff_external_rating_composite",
+    # External rating spread — disagreement across rating systems (WS3)
+    # High spread = more uncertainty = potential upset risk
+    "diff_external_rating_spread",
 ]
 
 
@@ -462,7 +495,7 @@ class _TrainedBaselineModel:
         self.xgb_model: Optional[XGBoostRanker] = None
         self.logit_model: Optional[LogisticRegression] = None
         self.scaler: Optional[object] = None  # StandardScaler
-        self.feature_dim: int = 75  # C4 fix: 64 diff + 5 absolute + 6 interaction (was 77=66+5+6)
+        self.feature_dim: int = 77  # C4+WS3: 66 diff + 5 absolute + 6 interaction
         # OOS-FIX: Fixed feature indices for domain-knowledge feature selection
         self.fixed_feature_indices: Optional[List[int]] = None
         # OOS-FIX: Fixed-weight ensemble (replaces learned stacking by default)
@@ -677,6 +710,22 @@ class SOTAPipeline:
 
         # Hyperparameter tuning state
         self.tuning_result: Optional[Dict] = None
+
+        # WS2: Brier-optimal post-processing (seed overrides + sharpening)
+        self._brier_post_processor = None
+        if self.config.enable_seed_overrides or self.config.enable_brier_sharpening:
+            try:
+                from ..ml.calibration.brier_optimal import BrierPostProcessor, SeedBasedOverrides
+                self._brier_post_processor = BrierPostProcessor(
+                    seed_overrides_mens=SeedBasedOverrides(
+                        snap_threshold=self.config.seed_override_threshold,
+                        is_womens=False,
+                    ),
+                    clip_lo=self.config.pre_calibration_clip_lo,
+                    clip_hi=self.config.pre_calibration_clip_hi,
+                )
+            except ImportError:
+                pass
 
         # Deferred GNN SOS refinement (FIX M5): stored during _run_gnn(),
         # applied after _train_baseline_model() to avoid contaminating
@@ -4978,6 +5027,16 @@ class SOTAPipeline:
 
         if self.config.enable_tournament_adaptation:
             raw = self._tournament_adapt(raw, team1_id, team2_id)
+
+        # WS2: Brier-optimal post-processing (seed overrides + sharpening)
+        if self.config.enable_seed_overrides and hasattr(self, '_brier_post_processor') and self._brier_post_processor is not None:
+            t1 = self.feature_engineer.team_features.get(team1_id)
+            t2 = self.feature_engineer.team_features.get(team2_id)
+            s1 = t1.seed if t1 else 0
+            s2 = t2.seed if t2 else 0
+            raw = self._brier_post_processor.process(
+                raw, seed1=s1, seed2=s2, is_womens=False,
+            )
 
         return raw
 

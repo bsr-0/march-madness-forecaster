@@ -508,8 +508,8 @@ def test_transition_efficiency_removed():
     """C4: transition_efficiency fields default to 0.0 and are not computed."""
     from src.data.features.feature_engineering import TeamFeatures, TEAM_FEATURE_DIM
 
-    # TEAM_FEATURE_DIM should now be 64 (was 66)
-    assert TEAM_FEATURE_DIM == 64, f"Expected 64, got {TEAM_FEATURE_DIM}"
+    # TEAM_FEATURE_DIM = 66 (64 base + 2 external rating features from WS3)
+    assert TEAM_FEATURE_DIM == 66, f"Expected 66, got {TEAM_FEATURE_DIM}"
 
     names = TeamFeatures.get_feature_names(include_embeddings=False)
     assert "transition_efficiency" not in names
