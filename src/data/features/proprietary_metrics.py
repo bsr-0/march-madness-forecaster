@@ -2165,6 +2165,27 @@ class IncrementalMetricsEngine:
         """Return end-of-season Elo for cross-season carryover."""
         return dict(self._end_of_season_elo)
 
+    def games_played_before(self, team_id: str, date: str) -> int:
+        """Return count of games played by *team_id* strictly before *date*.
+
+        Uses a precomputed lookup for O(1) amortized performance.
+        """
+        if not hasattr(self, "_games_before_cache"):
+            # Build sorted per-team date lists once, then binary-search.
+            from collections import defaultdict
+            import bisect
+            team_dates: Dict[str, list] = defaultdict(list)
+            for g in self._all_records:
+                team_dates[g.team_id].append(g.game_date)
+            self._games_before_cache = {
+                tid: sorted(dates) for tid, dates in team_dates.items()
+            }
+        dates = self._games_before_cache.get(team_id)
+        if not dates:
+            return 0
+        import bisect
+        return bisect.bisect_left(dates, date)
+
     def compute_as_of(self, as_of_date: str) -> Dict[str, ProprietaryTeamMetrics]:
         """Compute metrics for all teams using only games before *as_of_date*.
 

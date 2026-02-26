@@ -108,7 +108,7 @@ class TestEnsembleWeightOptimizer:
         model_b = np.clip(0.5 + rng.normal(0, 0.1, n), 0, 1)
 
         optimizer = EnsembleWeightOptimizer(step=0.1)
-        weights, brier = optimizer.optimize(
+        weights, score = optimizer.optimize(
             {"model_a": model_a, "model_b": model_b}, y
         )
 
@@ -116,6 +116,7 @@ class TestEnsembleWeightOptimizer:
             "Better model should get higher weight"
         )
         assert abs(sum(weights.values()) - 1.0) < 1e-6
+        assert np.isfinite(score), "Score must be finite"
 
     def test_weights_sum_to_one(self):
         rng = np.random.RandomState(42)
@@ -128,8 +129,9 @@ class TestEnsembleWeightOptimizer:
         }
 
         optimizer = EnsembleWeightOptimizer(step=0.1)
-        weights, brier = optimizer.optimize(preds, y)
+        weights, score = optimizer.optimize(preds, y)
         assert abs(sum(weights.values()) - 1.0) < 1e-6
+        assert np.isfinite(score), "Score must be finite"
 
     def test_three_model_optimization(self):
         rng = np.random.RandomState(42)
@@ -143,7 +145,7 @@ class TestEnsembleWeightOptimizer:
         }
 
         optimizer = EnsembleWeightOptimizer(step=0.05)
-        weights, brier = optimizer.optimize(preds, y)
+        weights, score = optimizer.optimize(preds, y)
         assert len(weights) == 3
         # GNN should get highest weight (lowest noise)
         assert weights["gnn"] >= weights["baseline"]
