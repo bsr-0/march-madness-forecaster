@@ -29,10 +29,32 @@ def _resolve_multi_year_dir(raw_value):
     return raw_value
 
 
+def _parse_year_list(raw_value):
+    if raw_value is None:
+        return None
+    if isinstance(raw_value, list):
+        return [int(v) for v in raw_value]
+    s = str(raw_value).strip()
+    if not s:
+        return None
+    return [int(v.strip()) for v in s.split(",") if v.strip()]
+
+
+def _parse_float_list(raw_value):
+    if raw_value is None:
+        return None
+    s = str(raw_value).strip()
+    if not s:
+        return None
+    return [float(v.strip()) for v in s.split(",") if v.strip()]
+
+
 def run_sota(args):
     """Run the full SOTA rubric pipeline."""
     print("Running SOTA pipeline...")
-    config = SOTAPipelineConfig(
+    dev_years = _parse_year_list(getattr(args, "dev_years", None))
+    holdout_years = _parse_year_list(getattr(args, "holdout_years", None))
+    config_kwargs = dict(
         year=args.year,
         num_simulations=args.simulations,
         pool_size=args.pool_size,
@@ -56,7 +78,18 @@ def run_sota(args):
         bracket_source=getattr(args, "bracket_source", "auto"),
         bracket_json=getattr(args, "bracket_json", None),
         multi_year_games_dir=_resolve_multi_year_dir(getattr(args, "multi_year_games_dir", "auto")),
+        require_freeze_file=bool(getattr(args, "require_freeze", False)),
+        freeze_file=getattr(args, "freeze_file", None),
+        mc_calibration_json=getattr(args, "mc_calibration", None),
+        enable_gnn=bool(getattr(args, "enable_gnn", False)),
+        enable_transformer=bool(getattr(args, "enable_transformer", False)),
+        enable_embedding_projections=bool(getattr(args, "enable_embedding_projections", False)),
     )
+    if dev_years is not None:
+        config_kwargs["dev_years"] = dev_years
+    if holdout_years is not None:
+        config_kwargs["holdout_years"] = holdout_years
+    config = SOTAPipelineConfig(**config_kwargs)
 
     try:
         report = run_sota_pipeline_to_file(config, args.output)
@@ -105,7 +138,9 @@ def run_sota_from_manifest(args):
     teams_path = resolve_path(args.input or artifacts.get("teams_json"))
     rosters_path = resolve_path(args.rosters or artifacts.get("rosters_json"))
 
-    config = SOTAPipelineConfig(
+    dev_years = _parse_year_list(getattr(args, "dev_years", None))
+    holdout_years = _parse_year_list(getattr(args, "holdout_years", None))
+    config_kwargs = dict(
         year=args.year or int(manifest.get("year", 2026)),
         num_simulations=args.simulations,
         pool_size=args.pool_size,
@@ -129,7 +164,18 @@ def run_sota_from_manifest(args):
         bracket_source=getattr(args, "bracket_source", "auto"),
         bracket_json=getattr(args, "bracket_json", None),
         multi_year_games_dir=_resolve_multi_year_dir(getattr(args, "multi_year_games_dir", "auto")),
+        require_freeze_file=bool(getattr(args, "require_freeze", False)),
+        freeze_file=getattr(args, "freeze_file", None),
+        mc_calibration_json=getattr(args, "mc_calibration", None),
+        enable_gnn=bool(getattr(args, "enable_gnn", False)),
+        enable_transformer=bool(getattr(args, "enable_transformer", False)),
+        enable_embedding_projections=bool(getattr(args, "enable_embedding_projections", False)),
     )
+    if dev_years is not None:
+        config_kwargs["dev_years"] = dev_years
+    if holdout_years is not None:
+        config_kwargs["holdout_years"] = holdout_years
+    config = SOTAPipelineConfig(**config_kwargs)
 
     try:
         report = run_sota_pipeline_to_file(config, args.output)
@@ -175,7 +221,9 @@ def run_kaggle_export(args):
 
     year = args.year or int(manifest.get("year", 2026))
 
-    config = SOTAPipelineConfig(
+    dev_years = _parse_year_list(getattr(args, "dev_years", None))
+    holdout_years = _parse_year_list(getattr(args, "holdout_years", None))
+    config_kwargs = dict(
         year=year,
         num_simulations=args.simulations,
         pool_size=100,
@@ -189,7 +237,18 @@ def run_kaggle_export(args):
         scoring_rules_json=resolve_path(artifacts.get("scoring_rules_json")),
         scrape_live=args.scrape_live,
         data_cache_dir="data/raw/cache",
+        require_freeze_file=bool(getattr(args, "require_freeze", False)),
+        freeze_file=getattr(args, "freeze_file", None),
+        mc_calibration_json=getattr(args, "mc_calibration", None),
+        enable_gnn=bool(getattr(args, "enable_gnn", False)),
+        enable_transformer=bool(getattr(args, "enable_transformer", False)),
+        enable_embedding_projections=bool(getattr(args, "enable_embedding_projections", False)),
     )
+    if dev_years is not None:
+        config_kwargs["dev_years"] = dev_years
+    if holdout_years is not None:
+        config_kwargs["holdout_years"] = holdout_years
+    config = SOTAPipelineConfig(**config_kwargs)
 
     pipeline = SOTAPipeline(config)
     try:
@@ -225,6 +284,40 @@ def run_kaggle_export(args):
                 **stats
             )
         )
+    return 0
+
+
+def run_calibrate_mc(args):
+    """Calibrate Monte Carlo noise parameters against historical upset rates."""
+    from .simulation.mc_calibration import calibrate_mc_parameters
+
+    dev_years = _parse_year_list(args.dev_years) or list(range(2016, 2025))
+    holdout_years = _parse_year_list(args.holdout_years) or [2025]
+    noise_grid = _parse_float_list(args.noise_grid)
+    corr_grid = _parse_float_list(args.corr_grid)
+    if not args.tune_regional_correlation:
+        corr_grid = [0.0]
+
+    result = calibrate_mc_parameters(
+        historical_dir=args.historical_dir,
+        dev_years=dev_years,
+        holdout_years=holdout_years,
+        noise_grid=noise_grid,
+        corr_grid=corr_grid,
+        num_simulations=args.simulations,
+        em_slope=args.em_slope,
+        seed_slope=args.seed_slope,
+        random_seed=args.seed,
+        parallel_workers=args.parallel_workers,
+    )
+
+    with open(args.output, "w") as f:
+        json.dump(result, f, indent=2)
+
+    best = result.get("best_params", {})
+    print(f"✓ MC calibration written to {args.output}")
+    print(f"Best noise_std={best.get('noise_std')}, regional_correlation={best.get('regional_correlation')}")
+    print(f"Dev score={result.get('best_dev_score')}, Holdout score={result.get('holdout_score')}")
     return 0
 
 
@@ -301,8 +394,14 @@ def audit_rdof(args):
     import logging
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-    holdout_years = [int(y) for y in args.holdout_years.split(",")]
-    config = SOTAPipelineConfig()
+    holdout_years = _parse_year_list(args.holdout_years)
+    dev_years = _parse_year_list(getattr(args, "dev_years", None))
+    config_kwargs = {}
+    if dev_years is not None:
+        config_kwargs["dev_years"] = dev_years
+    if holdout_years is not None:
+        config_kwargs["holdout_years"] = holdout_years
+    config = SOTAPipelineConfig(**config_kwargs)
 
     result = run_rdof_audit(
         historical_dir=args.historical_dir,
@@ -321,7 +420,10 @@ def audit_rdof(args):
 
 def freeze_pipeline_cmd(args):
     """Create a pre-registration freeze artifact."""
-    config = SOTAPipelineConfig()
+    config_kwargs = {}
+    if getattr(args, "mc_calibration", None):
+        config_kwargs["mc_calibration_json"] = args.mc_calibration
+    config = SOTAPipelineConfig(**config_kwargs)
     result = freeze_pipeline(config, output_path=args.output)
     print(f"Pipeline frozen.  Hash: {result['config_hash']}")
     print(f"Artifact: {args.output}")
@@ -510,6 +612,38 @@ def main():
         help="Directory with per-year historical game/metric JSONs. "
              "'auto' detects data/raw/historical. 'none' disables.",
     )
+    sota_parser.add_argument(
+        "--dev-years",
+        default=None,
+        help="Comma-separated dev years for training/selection (default: 2016-2024)",
+    )
+    sota_parser.add_argument(
+        "--holdout-years",
+        default=None,
+        help="Comma-separated holdout years for evaluation only (default: 2025)",
+    )
+    sota_parser.add_argument(
+        "--require-freeze",
+        action="store_true",
+        help="Require a verified freeze artifact before running",
+    )
+    sota_parser.add_argument(
+        "--freeze-file",
+        default="pipeline_freeze.json",
+        help="Freeze artifact JSON path (used when --require-freeze)",
+    )
+    sota_parser.add_argument(
+        "--mc-calibration",
+        default=None,
+        help="Path to MC calibration artifact JSON (optional)",
+    )
+    sota_parser.add_argument("--enable-gnn", action="store_true", help="Enable GNN training")
+    sota_parser.add_argument("--enable-transformer", action="store_true", help="Enable transformer training")
+    sota_parser.add_argument(
+        "--enable-embedding-projections",
+        action="store_true",
+        help="Enable embedding projection models (requires GNN/transformer)",
+    )
 
     ingest_parser = subparsers.add_parser("ingest", help="Collect real-world data sources and write a manifest")
     ingest_parser.add_argument("--year", type=int, required=True, help="Season year to ingest")
@@ -679,8 +813,13 @@ def main():
     )
     rdof_parser.add_argument(
         "--holdout-years",
-        default="2024,2025",
+        default="2025",
         help="Comma-separated years to hold out from all decisions",
+    )
+    rdof_parser.add_argument(
+        "--dev-years",
+        default=None,
+        help="Comma-separated dev years for training/selection (overrides auto)",
     )
     rdof_parser.add_argument(
         "--output", "-o",
@@ -725,6 +864,11 @@ def main():
         default="pipeline_freeze.json",
         help="Path to write freeze artifact JSON",
     )
+    freeze_parser.add_argument(
+        "--mc-calibration",
+        default=None,
+        help="Optional MC calibration artifact JSON to embed in the freeze",
+    )
 
     # verify-freeze command
     verify_parser = subparsers.add_parser(
@@ -762,6 +906,62 @@ def main():
         "--output", "-o",
         default=None,
         help="Path to write evaluation report JSON (auto-generated if omitted)",
+    )
+
+    # calibrate-mc command
+    mc_parser = subparsers.add_parser(
+        "calibrate-mc",
+        help="Auto-calibrate Monte Carlo parameters against historical upset rates",
+    )
+    mc_parser.add_argument(
+        "--historical-dir",
+        default="data/raw/historical",
+        help="Directory with historical games/metrics/seeds JSONs",
+    )
+    mc_parser.add_argument(
+        "--dev-years",
+        default=None,
+        help="Comma-separated dev years (default: 2016-2024)",
+    )
+    mc_parser.add_argument(
+        "--holdout-years",
+        default=None,
+        help="Comma-separated holdout years (default: 2025)",
+    )
+    mc_parser.add_argument(
+        "--noise-grid",
+        default=None,
+        help="Comma-separated noise_std grid values (e.g. 0.06,0.08,0.10)",
+    )
+    mc_parser.add_argument(
+        "--corr-grid",
+        default=None,
+        help="Comma-separated regional_correlation grid values (e.g. 0.0,0.05,0.10)",
+    )
+    mc_parser.add_argument(
+        "--tune-regional-correlation",
+        action="store_true",
+        help="Tune regional_correlation in addition to noise_std",
+    )
+    mc_parser.add_argument(
+        "--simulations",
+        type=int,
+        default=5000,
+        help="Simulations per year (default: 5000)",
+    )
+    mc_parser.add_argument("--seed", type=int, default=42, help="Random seed")
+    mc_parser.add_argument("--em-slope", type=float, default=0.1735, help="AdjEM logistic slope")
+    mc_parser.add_argument("--seed-slope", type=float, default=0.175, help="Seed prior slope")
+    mc_parser.add_argument(
+        "--parallel-workers",
+        type=int,
+        default=None,
+        help="Parallel workers for simulation (default: cpu_count-1)",
+    )
+    mc_parser.add_argument(
+        "--output", "-o",
+        default="data/raw/mc_calibration.json",
+        help="Output calibration artifact JSON",
     )
 
     # scrape-rosters command
@@ -883,6 +1083,38 @@ def main():
         help="Directory with per-year historical game/metric JSONs. "
              "'auto' detects data/raw/historical. 'none' disables.",
     )
+    manifest_sota_parser.add_argument(
+        "--dev-years",
+        default=None,
+        help="Comma-separated dev years for training/selection (default: 2016-2024)",
+    )
+    manifest_sota_parser.add_argument(
+        "--holdout-years",
+        default=None,
+        help="Comma-separated holdout years for evaluation only (default: 2025)",
+    )
+    manifest_sota_parser.add_argument(
+        "--require-freeze",
+        action="store_true",
+        help="Require a verified freeze artifact before running",
+    )
+    manifest_sota_parser.add_argument(
+        "--freeze-file",
+        default="pipeline_freeze.json",
+        help="Freeze artifact JSON path (used when --require-freeze)",
+    )
+    manifest_sota_parser.add_argument(
+        "--mc-calibration",
+        default=None,
+        help="Path to MC calibration artifact JSON (optional)",
+    )
+    manifest_sota_parser.add_argument("--enable-gnn", action="store_true", help="Enable GNN training")
+    manifest_sota_parser.add_argument("--enable-transformer", action="store_true", help="Enable transformer training")
+    manifest_sota_parser.add_argument(
+        "--enable-embedding-projections",
+        action="store_true",
+        help="Enable embedding projection models (requires GNN/transformer)",
+    )
 
     kaggle_parser = subparsers.add_parser(
         "kaggle-export",
@@ -918,6 +1150,8 @@ def main():
         return verify_freeze_cmd(args)
     elif args.command == "prospective-eval":
         return prospective_eval(args)
+    elif args.command == "calibrate-mc":
+        return run_calibrate_mc(args)
     elif args.command == "scrape-rosters":
         return scrape_rosters(args)
     elif args.command == "enrich-rosters":

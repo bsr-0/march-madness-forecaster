@@ -169,23 +169,23 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
     PipelineConstant("ensemble_xgb_weight", 3, 0.35,
         "ensemble weights in _train_baseline_model", (0.10, 0.60),
         "Calibrated from LOYO; coupled with lgb weight"),
-    PipelineConstant("tournament_shrinkage", 3, 0.08,
+    PipelineConstant("tournament_shrinkage", 3, 0.0,
         "SOTAPipelineConfig.tournament_shrinkage", (0.0, 0.25),
-        "Calibrated from LOYO — comment says so explicitly"),
-    PipelineConstant("seed_prior_weight", 3, 0.05,
+        "Disabled by default unless sensitivity proves value"),
+    PipelineConstant("seed_prior_weight", 3, 0.0,
         "SOTAPipelineConfig.seed_prior_weight", (0.0, 0.15),
-        "Iteratively adjusted alongside tournament_shrinkage"),
-    PipelineConstant("consistency_bonus_max", 3, 0.02,
+        "Disabled by default unless sensitivity proves value"),
+    PipelineConstant("consistency_bonus_max", 3, 0.0,
         "SOTAPipelineConfig.consistency_bonus_max", (0.0, 0.06),
-        "Iteratively adjusted; small effect"),
+        "Disabled by default unless sensitivity proves value"),
     PipelineConstant("consistency_normalizer", 3, 15.0,
         "SOTAPipelineConfig.consistency_normalizer", (5.0, 30.0),
         "Paired with consistency_bonus_max; normalizes variance range"),
     PipelineConstant("mc_noise_std", 3, 0.12,
         "SimulationConfig.noise_std", (0.02, 0.25),
         "Changed 0.04→0.035→0.02→0.12 across fix rounds"),
-    PipelineConstant("mc_regional_correlation", 3, 0.10,
-        "SimulationConfig.regional_correlation", (0.0, 0.30),
+    PipelineConstant("mc_regional_correlation", 3, 0.0,
+        "SOTAPipelineConfig.mc_regional_correlation", (0.0, 0.30),
         "Reduced from 0.25 during OOS fix round"),
 
     # ── Additional Tier 1: Published/External ─────────────────────────
@@ -361,6 +361,46 @@ def get_constants_by_tier(tier: int) -> List[PipelineConstant]:
 # 2. Config Hashing (audit trail)
 # ───────────────────────────────────────────────────────────────────────
 
+def _feature_set_hash() -> Optional[str]:
+    """Hash of the fixed feature set used by the pipeline."""
+    try:
+        from ...pipeline.sota import FIXED_FEATURE_SET
+    except Exception:
+        return None
+    canonical = json.dumps(list(FIXED_FEATURE_SET), sort_keys=False)
+    return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+
+
+def _apply_mc_calibration_to_config(config) -> Optional[Dict[str, Any]]:
+    """Apply MC calibration artifact to config (if present)."""
+    mc_path = getattr(config, "mc_calibration_json", None)
+    if mc_path is None:
+        default_path = os.path.join(os.getcwd(), "data", "raw", "mc_calibration.json")
+        if os.path.isfile(default_path):
+            mc_path = default_path
+    if not mc_path or not os.path.isfile(mc_path):
+        return None
+    try:
+        with open(mc_path, "r") as f:
+            payload = json.load(f)
+    except Exception:
+        return None
+    best = payload.get("best_params", {})
+    if isinstance(best, dict):
+        if "noise_std" in best:
+            try:
+                config.mc_noise_std = float(best["noise_std"])
+            except Exception:
+                pass
+        if "regional_correlation" in best:
+            try:
+                config.mc_regional_correlation = float(best["regional_correlation"])
+            except Exception:
+                pass
+    payload["_source_path"] = mc_path
+    return payload
+
+
 def config_hash(config) -> str:
     """SHA-256 hash of all pipeline config fields for audit trail.
 
@@ -397,6 +437,7 @@ def freeze_pipeline(
     """
     import subprocess
 
+    mc_payload = _apply_mc_calibration_to_config(config)
     cfg_hash = config_hash(config)
     timestamp = time.strftime("%Y-%m-%dT%H:%M:%S")
     date_str = time.strftime("%Y-%m-%d")
@@ -448,7 +489,17 @@ def freeze_pipeline(
         "n_constants": len(CONSTANT_REGISTRY),
         "constant_registry": registry_snapshot,
         "config_fields": config_fields,
+        "feature_set_hash": _feature_set_hash(),
     }
+
+    # Attach MC calibration artifact if present
+    if mc_payload is not None:
+        freeze_artifact["mc_calibration"] = {
+            "best_params": mc_payload.get("best_params"),
+            "best_dev_score": mc_payload.get("best_dev_score"),
+            "holdout_score": mc_payload.get("holdout_score"),
+            "source": mc_payload.get("_source_path"),
+        }
 
     # Write lockfile
     with open(output_path, "w") as f:
@@ -493,6 +544,7 @@ def verify_freeze(
     with open(freeze_path, "r") as f:
         freeze = json.load(f)
 
+    _apply_mc_calibration_to_config(config)
     current_hash = config_hash(config)
     frozen_hash = freeze.get("config_hash", "")
 
@@ -515,6 +567,14 @@ def verify_freeze(
                     f"frozen={frozen_val}, current={current_val}"
                 )
 
+    # Feature set hash mismatch (fixed feature selection)
+    frozen_feat_hash = freeze.get("feature_set_hash")
+    current_feat_hash = _feature_set_hash()
+    if frozen_feat_hash and current_feat_hash and frozen_feat_hash != current_feat_hash:
+        mismatches.append(
+            f"Feature set hash mismatch: current={current_feat_hash}, frozen={frozen_feat_hash}"
+        )
+
     # Check constant registry — distinguish behavioral changes (value
     # changed) from documentary additions (new constant registered).
     # Only value changes are mismatches; new registry entries are warnings
@@ -532,6 +592,22 @@ def verify_freeze(
                 f"Constant '{c.name}' changed: "
                 f"frozen={frozen_c['current_value']}, current={c.current_value}"
             )
+
+    # MC calibration consistency (if freeze captured it)
+    frozen_mc = freeze.get("mc_calibration", {})
+    if isinstance(frozen_mc, dict) and frozen_mc.get("best_params"):
+        best = frozen_mc.get("best_params", {})
+        try:
+            if "noise_std" in best and abs(float(best["noise_std"]) - float(getattr(config, "mc_noise_std", 0.0))) > 1e-6:
+                mismatches.append(
+                    f"MC noise_std mismatch: frozen={best['noise_std']}, current={getattr(config, 'mc_noise_std', 0.0)}"
+                )
+            if "regional_correlation" in best and abs(float(best["regional_correlation"]) - float(getattr(config, "mc_regional_correlation", 0.0))) > 1e-6:
+                mismatches.append(
+                    f"MC regional_correlation mismatch: frozen={best['regional_correlation']}, current={getattr(config, 'mc_regional_correlation', 0.0)}"
+                )
+        except Exception:
+            warnings.append("Could not verify MC calibration parameters against freeze artifact.")
 
     return {
         "matches": len(mismatches) == 0,
@@ -984,6 +1060,7 @@ class HoldoutEvaluator:
         self,
         historical_dir: str = "data/raw/historical",
         all_years: Optional[List[int]] = None,
+        dev_years: Optional[List[int]] = None,
     ):
         self.historical_dir = Path(historical_dir)
         if all_years is None:
@@ -991,6 +1068,10 @@ class HoldoutEvaluator:
             self.all_years = sorted(self._detect_years())
         else:
             self.all_years = sorted(all_years)
+        if dev_years is not None:
+            self.dev_years = sorted({y for y in dev_years if y != 2020})
+        else:
+            self.dev_years = None
 
     def _detect_years(self) -> List[int]:
         """Find years with both games and metrics files."""
@@ -1169,7 +1250,8 @@ class HoldoutEvaluator:
         )
         from datetime import date as _dtdate, timedelta as _dttd
 
-        training_years = [y for y in self.all_years
+        base_years = self.dev_years if self.dev_years is not None else self.all_years
+        training_years = [y for y in base_years
                           if y != holdout_year and y != 2020]
         if not training_years:
             raise ValueError(f"No training years available for holdout {holdout_year}")
@@ -1666,10 +1748,11 @@ class SensitivityAnalyzer:
         holdout_years: Optional[List[int]] = None,
         n_grid_points: int = 11,
     ):
-        self.evaluator = HoldoutEvaluator(historical_dir)
+        self.evaluator = HoldoutEvaluator(historical_dir, dev_years=dev_years)
         self.holdout_years = holdout_years or []
         if dev_years is not None:
-            self.dev_years = dev_years
+            holdout_set = set(self.holdout_years)
+            self.dev_years = [y for y in dev_years if y not in holdout_set and y != 2020]
         else:
             self.dev_years = [
                 y for y in self.evaluator.all_years
@@ -2654,6 +2737,7 @@ def record_holdout_evaluation(
     holdout_years: List[int],
     config_hash_value: str,
     report_summary: Dict[str, Any],
+    dev_years: Optional[List[int]] = None,
 ) -> None:
     """Record that holdout years have been evaluated with a specific config.
 
@@ -2671,6 +2755,7 @@ def record_holdout_evaluation(
     lock_path = _lockfile_path(historical_dir)
     lock_data = {
         "holdout_years": sorted(holdout_years),
+        "dev_years": sorted(dev_years or []),
         "config_hash": config_hash_value,
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         "aggregate_brier": report_summary.get("aggregate_brier"),
@@ -2719,6 +2804,7 @@ def check_holdout_contamination(
         "locked_config_hash": locked_hash,
         "current_config_hash": current_hash,
         "holdout_years": lock_data.get("holdout_years", []),
+        "dev_years": lock_data.get("dev_years", []),
         "locked_timestamp": lock_data.get("timestamp", "unknown"),
         "message": (
             f"Pipeline config has changed since holdout evaluation on "
@@ -2767,6 +2853,12 @@ def adopt_sensitivity_optima(
     """
     cfg = copy.deepcopy(base_config)
     log: Dict[str, Any] = {}
+    neutral_defaults = {
+        "tournament_shrinkage": 0.0,
+        "seed_prior_weight": 0.0,
+        "consistency_bonus_max": 0.0,
+        "mc_regional_correlation": 0.0,
+    }
 
     for name, sr in sensitivity_results.items():
         entry: Dict[str, Any] = {
@@ -2776,18 +2868,23 @@ def adopt_sensitivity_optima(
             "is_flat": sr.is_flat,
         }
 
-        if require_not_flat and sr.is_flat:
-            entry["action"] = "skipped"
-            entry["reason"] = "constant is insensitive (flat)"
-            log[name] = entry
-            continue
-
-        if sr.brier_gap < min_brier_improvement:
-            entry["action"] = "skipped"
-            entry["reason"] = (
-                f"improvement {sr.brier_gap:.5f} below threshold "
-                f"{min_brier_improvement:.5f}"
-            )
+        if (require_not_flat and sr.is_flat) or (sr.brier_gap < min_brier_improvement):
+            if name in neutral_defaults:
+                neutral_val = neutral_defaults[name]
+                if name == "tournament_shrinkage":
+                    cfg.tournament_shrinkage = neutral_val
+                elif name == "seed_prior_weight":
+                    cfg.seed_prior_weight = neutral_val
+                elif name == "consistency_bonus_max":
+                    cfg.consistency_bonus_max = neutral_val
+                elif name == "mc_regional_correlation":
+                    cfg.mc_regional_correlation = neutral_val
+                entry["action"] = "neutralized"
+                entry["new_value"] = neutral_val
+                entry["reason"] = "insignificant or flat sensitivity"
+            else:
+                entry["action"] = "skipped"
+                entry["reason"] = "insignificant or flat sensitivity"
             log[name] = entry
             continue
 
@@ -2810,6 +2907,8 @@ def adopt_sensitivity_optima(
             cfg.ensemble_lgb_weight = sr.optimal_value
         elif name == "ensemble_xgb_weight":
             cfg.ensemble_xgb_weight = sr.optimal_value
+        elif name == "mc_regional_correlation":
+            cfg.mc_regional_correlation = sr.optimal_value
         else:
             entry["action"] = "skipped"
             entry["reason"] = f"no config mapping for {name}"
@@ -2842,7 +2941,7 @@ def run_rdof_audit(
 
     Args:
         historical_dir: Path to historical game/metric JSON files
-        holdout_years: Years to hold out (default: [2024, 2025])
+        holdout_years: Years to hold out (default: config.holdout_years or [2024, 2025])
         run_holdout: Whether to run holdout evaluation
         run_sensitivity: Whether to run sensitivity analysis
         sensitivity_grid: Grid points per constant for sensitivity
@@ -2854,12 +2953,20 @@ def run_rdof_audit(
     Returns:
         Audit report dict
     """
-    if holdout_years is None:
-        holdout_years = [2024, 2025]
-
     if config is None:
         from ...pipeline.sota import SOTAPipelineConfig
         config = SOTAPipelineConfig()
+    if holdout_years is None and getattr(config, "holdout_years", None):
+        holdout_years = list(config.holdout_years)
+    if holdout_years is None:
+        holdout_years = [2024, 2025]
+
+    dev_years = getattr(config, "dev_years", None)
+    if dev_years is not None:
+        dev_years = sorted({y for y in dev_years if y != 2020})
+        if holdout_years:
+            holdout_set = set(holdout_years)
+            dev_years = [y for y in dev_years if y not in holdout_set]
 
     # ── Contamination check: warn if config changed since last holdout ──
     contamination = check_holdout_contamination(historical_dir, config)
@@ -2873,7 +2980,7 @@ def run_rdof_audit(
 
     if run_holdout:
         logger.info("Running holdout evaluation for years: %s", holdout_years)
-        evaluator = HoldoutEvaluator(historical_dir)
+        evaluator = HoldoutEvaluator(historical_dir, dev_years=dev_years)
         holdout_report = evaluator.run_holdout_protocol(holdout_years, config)
 
         # Record the evaluation to detect future contamination
@@ -2883,12 +2990,14 @@ def run_rdof_audit(
                 holdout_years,
                 config_hash(config),
                 holdout_report.to_dict(),
+                dev_years=dev_years,
             )
 
     if run_sensitivity:
         logger.info("Running sensitivity analysis...")
         analyzer = SensitivityAnalyzer(
             historical_dir=historical_dir,
+            dev_years=dev_years,
             holdout_years=holdout_years,
             n_grid_points=sensitivity_grid,
         )
@@ -2913,12 +3022,35 @@ def run_rdof_audit(
     if contamination:
         report_dict["holdout_contamination_warning"] = contamination
 
+    report_dict["audit_context"] = {
+        "dev_years": dev_years or [],
+        "holdout_years": holdout_years or [],
+        "config_hash": config_hash(config),
+    }
+
     # Include auto-adoption recommendations if sensitivity was run
     if sensitivity_results:
         _, adoption_log = adopt_sensitivity_optima(
             sensitivity_results, config,
         )
         report_dict["sensitivity_auto_adoption"] = adoption_log
+
+    # Attach MC calibration summary if available
+    try:
+        mc_path = getattr(config, "mc_calibration_json", None)
+        if mc_path is None:
+            mc_path = os.path.join(historical_dir, "..", "mc_calibration.json")
+        if mc_path and os.path.isfile(mc_path):
+            with open(mc_path, "r") as f:
+                mc_payload = json.load(f)
+            report_dict["mc_calibration"] = {
+                "best_params": mc_payload.get("best_params"),
+                "best_dev_score": mc_payload.get("best_dev_score"),
+                "holdout_score": mc_payload.get("holdout_score"),
+                "source": mc_path,
+            }
+    except Exception:
+        pass
 
     # Always write output — auto-generate path if not provided
     if output_path is None:
