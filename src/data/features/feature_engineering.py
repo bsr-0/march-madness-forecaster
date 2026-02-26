@@ -72,7 +72,7 @@ REMOVED_REDUNDANCIES = [
 # games with stability=0.1, near-zero predictive power per academic lit).
 # FIX 2.3: preseason_ap_rank encoding smoothed (was cliff at #25→unranked).
 # Down from 67 → 66 team features.
-TEAM_FEATURE_DIM = 64  # C4: removed transition_efficiency + defensive_transition_vulnerability
+TEAM_FEATURE_DIM = 66  # C4+WS3: 64 base + 2 external rating features
 
 # FIX #4: Indices (into the team feature vector) of the top features used
 # for absolute-level matchup context.  These are the features where the
@@ -291,6 +291,12 @@ class TeamFeatures:
     # Position-specific depth (backcourt/frontcourt RAPM splits)
     backcourt_rapm: float = 0.0
     frontcourt_rapm: float = 0.0
+
+    # External rating composite (WS3: meta-ranking of 100+ systems)
+    # 0.0 when no external ratings are available (historical training)
+    external_rating_composite: float = 0.0
+    # External rating spread (disagreement across rating systems)
+    external_rating_spread: float = 0.0
 
     # GNN embedding (if available)
     gnn_embedding: Optional[np.ndarray] = None
@@ -541,6 +547,11 @@ class TeamFeatures:
             self.backcourt_rapm,
             self.frontcourt_rapm,
 
+            # External ratings (2) — WS3: orthogonal signal from rating systems
+            # 0.0 when no external data available; tree models handle gracefully
+            self.external_rating_composite,
+            self.external_rating_spread,
+
             # Seed (1) - log-transformed per rubric
             float(np.log1p(17 - self.seed) / np.log1p(16)),
         ]
@@ -660,6 +671,8 @@ class TeamFeatures:
             'home_court_dependence',
             # C4: 'transition_efficiency', 'defensive_transition_vulnerability' REMOVED
             'backcourt_rapm', 'frontcourt_rapm',
+            # External ratings (2) — WS3
+            'external_rating_composite', 'external_rating_spread',
             # Seed (1)
             'seed_strength',
         ]

@@ -192,7 +192,15 @@ def run_sota_from_manifest(args):
 
 
 def run_kaggle_export(args):
-    """Generate a Kaggle submission CSV using the SOTA pipeline."""
+    """Generate a Kaggle submission CSV using the SOTA pipeline.
+
+    Supports both men's and women's tournaments. Women's TeamIDs (>= 3000)
+    are handled by the parallel women's pipeline (WS1).
+    """
+    from .pipeline.womens import WomensPipeline, WomensPipelineConfig
+    from .exports.kaggle import load_kaggle_womens_teams, is_womens_team
+    from .ml.evaluation.kaggle_backtest import validate_submission
+
     manifest_path = Path(args.manifest).resolve()
     if not manifest_path.exists():
         candidates = sorted(Path.cwd().glob("data/raw/manifest_*.json"))
@@ -250,6 +258,7 @@ def run_kaggle_export(args):
         config_kwargs["holdout_years"] = holdout_years
     config = SOTAPipelineConfig(**config_kwargs)
 
+    # --- Men's pipeline ---
     pipeline = SOTAPipeline(config)
     try:
         pipeline.run()
@@ -265,6 +274,62 @@ def run_kaggle_export(args):
     allowed = set(pipeline.feature_engineer.team_features.keys())
     id_map = {k: v for k, v in id_map.items() if v in allowed}
 
+    # --- Women's pipeline (WS1) ---
+    womens_id_map = None
+    womens_predict_fn = None
+    womens_teams_csv = getattr(args, "womens_teams", None)
+
+    if womens_teams_csv:
+        print("Running women's tournament pipeline...")
+        w_config = WomensPipelineConfig(
+            year=year,
+            cache_dir=config.womens_cache_dir or config.data_cache_dir,
+        )
+        womens_pipeline = WomensPipeline(w_config)
+        try:
+            w_report = womens_pipeline.run()
+            print(f"  Women's pipeline: {w_report.get('teams_loaded', 0)} teams loaded")
+        except Exception as exc:
+            print(f"  Women's pipeline error (falling back to seed-based): {exc}")
+
+        # Build women's team ID map
+        womens_team_id_to_name = load_kaggle_womens_teams(womens_teams_csv)
+        womens_resolver = TeamNameResolver()
+        womens_id_map = build_team_id_map(womens_team_id_to_name, womens_resolver)
+
+        # For unmapped women's teams, create seed-based entries
+        # by parsing the sample submission to find all women's team IDs
+        import pandas as pd
+        sample_df_peek = pd.read_csv(args.sample_submission)
+        womens_team_ids = set()
+        for raw_id in sample_df_peek["ID"].astype(str):
+            parts = raw_id.split("_")
+            if len(parts) == 3:
+                for tid_str in parts[1:]:
+                    try:
+                        tid = int(tid_str)
+                        if is_womens_team(tid):
+                            womens_team_ids.add(tid)
+                    except ValueError:
+                        pass
+
+        # Ensure all women's team IDs have mappings
+        for wtid in womens_team_ids:
+            if wtid not in womens_id_map:
+                # Use Kaggle team ID as canonical ID
+                canonical = f"w_team_{wtid}"
+                womens_id_map[wtid] = canonical
+                # Generate seed-based features (assume seed 8 as unknown default)
+                if canonical not in womens_pipeline.feature_engineer.team_features:
+                    womens_pipeline.set_team_seeds({canonical: 8})
+
+        womens_predict_fn = womens_pipeline.predict_probability
+        print(f"  Women's teams mapped: {len(womens_id_map)}")
+    else:
+        print("No women's teams CSV provided (--womens-teams). "
+              "Women's matchups will default to 0.5.")
+
+    # --- Generate predictions ---
     import pandas as pd
     sample_df = pd.read_csv(args.sample_submission)
     pred_df = generate_predictions(
@@ -272,7 +337,18 @@ def run_kaggle_export(args):
         id_map=id_map,
         predict_fn=pipeline.predict_probability,
         season_filter=year,
+        womens_id_map=womens_id_map,
+        womens_predict_fn=womens_predict_fn,
     )
+
+    # --- Validate submission (WS6) ---
+    issues = validate_submission(pred_df, expected_rows=len(sample_df))
+    if issues:
+        print("\nSubmission validation:")
+        for issue in issues:
+            print(f"  {issue}")
+        print()
+
     pred_df.to_csv(args.output, index=False)
 
     stats = pred_df.attrs.get("kaggle_export_stats", {})
@@ -280,10 +356,14 @@ def run_kaggle_export(args):
     if stats:
         print(
             "Rows: {total_rows}, mapped: {mapped_rows}, unmapped: {unmapped_rows}, "
-            "season_mismatch: {season_mismatch}, bad_id: {bad_id_rows}, predict_failures: {predict_failures}".format(
-                **stats
-            )
+            "season_mismatch: {season_mismatch}, bad_id: {bad_id_rows}, "
+            "predict_failures: {predict_failures}".format(**stats)
         )
+        if stats.get("mens_rows", 0) > 0 or stats.get("womens_rows", 0) > 0:
+            print(
+                "Men's: {mens_rows} rows ({mens_mapped} mapped), "
+                "Women's: {womens_rows} rows ({womens_mapped} mapped)".format(**stats)
+            )
     return 0
 
 
@@ -1127,6 +1207,7 @@ def main():
     kaggle_parser.add_argument("--year", type=int, default=None, help="Season year override (default: manifest year)")
     kaggle_parser.add_argument("--simulations", type=int, default=1, help="Monte Carlo simulations (default: 1)")
     kaggle_parser.add_argument("--scrape-live", action="store_true", help="Allow live scraping for missing inputs")
+    kaggle_parser.add_argument("--womens-teams", default=None, help="Path to Kaggle WTeams.csv for women's tournament predictions")
     
     args = parser.parse_args()
     
