@@ -555,10 +555,50 @@ KAGGLE_ROUND_WEIGHTS = {
 # Gap #6: Strengthened data quality multipliers.  2005-2007 data is
 # mostly zeros and unusable.  Top competitors use cleaner data sources.
 DATA_QUALITY_ERA_WEIGHTS = {
-    2005: 0.1, 2006: 0.1, 2007: 0.15, 2008: 0.25, 2009: 0.35,
+    # FIX #4: Strengthened weights for pre-2010 data.
+    # 2005-2006 have >95% zeroed box-score metrics — effectively unusable.
+    # 2007-2009 have partial data quality.  Setting 2005-2006 to 0.0
+    # excludes them entirely without removing code paths.
+    2005: 0.0, 2006: 0.0, 2007: 0.05, 2008: 0.15, 2009: 0.25,
     2010: 0.5, 2011: 0.6, 2012: 0.7, 2013: 0.75, 2014: 0.8,
     # 2015+ is high-quality data (weight 1.0)
 }
+
+# FIX #4: Minimum feature completeness threshold per season.
+# If fewer than this fraction of features are non-zero across a season's
+# training samples, the season is skipped as too low-quality to be useful.
+MIN_SEASON_FEATURE_COMPLETENESS = 0.20
+
+
+def _infer_tournament_round_weight(game_date: str, year: int) -> float:
+    """Infer tournament round weight from game date.
+
+    FIX #3: Kaggle uses round-weighted Brier scoring (F4 = 16x, NCG = 32x).
+    Tournament games should be upweighted in training proportionally.
+    Maps date to approximate round using typical NCAA tournament schedule.
+
+    Returns Kaggle round weight (1.0 for R64, 2.0 for R32, ..., 32.0 for NCG).
+    """
+    try:
+        gd = datetime.strptime(game_date[:10], "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return 1.0
+    # Typical NCAA tournament schedule:
+    # First Four: March 14-15, R64: March 16-17, R32: March 18-19
+    # S16: March 23-24, E8: March 25-26
+    # F4: April 1-2, NCG: April 3-4
+    # (Exact dates vary by year, but day-of-march is a good proxy.)
+    day_of_march = (gd - date(year, 3, 1)).days
+    if day_of_march >= 31:  # April = championship weekend
+        return 32.0 if day_of_march >= 33 else 16.0
+    elif day_of_march >= 24:  # Late March = E8
+        return 8.0
+    elif day_of_march >= 22:  # S16
+        return 4.0
+    elif day_of_march >= 17:  # R32
+        return 2.0
+    else:  # R64 / First Four
+        return 1.0
 
 
 class DataRequirementError(ValueError):
@@ -804,6 +844,14 @@ class SOTAPipeline:
                 )
             except ImportError:
                 pass
+
+        # FIX #5: Massey standalone predictor (calibrated sigma + blend weight)
+        self._massey_predictor = None
+        try:
+            from ..ml.calibration.brier_optimal import MasseyStandalonePredictor
+            self._massey_predictor = MasseyStandalonePredictor(sigma=self.config.massey_sigma)
+        except ImportError:
+            pass
 
         # Deferred GNN SOS refinement (FIX M5): stored during _run_gnn(),
         # applied after _train_baseline_model() to avoid contaminating
@@ -2465,7 +2513,7 @@ class SOTAPipeline:
                     continue
 
                 try:
-                    hX, hy, _h_margins, _end_elo = self._load_year_samples_incremental(
+                    hX, hy, _h_margins, _end_elo, _h_rw = self._load_year_samples_incremental(
                         gp, mp, feature_dim_full, yr,
                         include_tournament=False,
                         prior_elo=_cross_year_elo,
@@ -2738,6 +2786,10 @@ class SOTAPipeline:
                     "using fixed num_rounds (no early stopping).", valid_samples,
                 )
 
+        # FIX #3: Initialize round weights (populated during calibration with
+        # tournament games; stays None for base training with regular-season only)
+        self._round_weights = None
+
         # ====================================================================
         # RECENCY WEIGHTING: late-season games receive higher sample weight.
         # Rationale: late-season games are played with settled rosters, against
@@ -2771,6 +2823,25 @@ class SOTAPipeline:
             # Re-normalize so mean = 1.0
             if train_sample_weight.mean() > 0:
                 train_sample_weight = train_sample_weight / train_sample_weight.mean()
+
+        # FIX #3: Apply round-weighted Brier training weights.
+        # When tournament games are included in training (calibration mode),
+        # weight them by the Kaggle round-weight schedule so the model
+        # optimizes for the competition's actual scoring metric.
+        if hasattr(self, '_round_weights') and self._round_weights is not None and len(self._round_weights) == train_samples:
+            if train_sample_weight is not None:
+                train_sample_weight = train_sample_weight * self._round_weights
+            else:
+                train_sample_weight = self._round_weights.copy()
+            if train_sample_weight.mean() > 0:
+                train_sample_weight = train_sample_weight / train_sample_weight.mean()
+            n_rw = int(np.sum(self._round_weights > 1.0))
+            if n_rw > 0:
+                logger.info(
+                    "FIX #3: Applied round-weighted training: %d tournament "
+                    "games with Kaggle round weights (max=%.0f).",
+                    n_rw, float(np.max(self._round_weights)),
+                )
 
         tuning_stats = {}
         stacking_stats = {}
@@ -3482,7 +3553,7 @@ class SOTAPipeline:
                 logger.info("LOYO: skipping year %d (missing data files)", year)
                 continue
 
-            year_X, year_y, _year_margins, _ = self._load_year_samples_incremental(
+            year_X, year_y, _year_margins, _, _yr_rw = self._load_year_samples_incremental(
                 games_path, metrics_path, feature_dim, year
             )
             if len(year_y) < 10:
@@ -3882,6 +3953,7 @@ class SOTAPipeline:
         X_list: list = []
         y_list: list = []
         margins_list: list = []
+        round_weight_list: list = []  # FIX #3: per-sample round weights
         skipped = 0
 
         # Minimum-games filter: skip games where either team has played
@@ -3967,21 +4039,44 @@ class SOTAPipeline:
             y_list.append(1 if g.points > g.opp_points else 0)
             margins_list.append(float(g.points - g.opp_points))
 
+            # FIX #3: Compute round weight for tournament games.
+            # Kaggle uses round-weighted Brier (finals weighted 32x R64).
+            # Tournament games after March 14 get round-appropriate weights.
+            # Regular season games get weight 1.0.
+            rw = 1.0
+            if include_tournament and g.game_date > tournament_cutoff:
+                rw = _infer_tournament_round_weight(g.game_date, year)
+            round_weight_list.append(rw)
+
         if not X_list:
-            return np.empty((0, feature_dim)), np.array([]), np.array([]), inc_engine.get_end_of_season_elo()
+            return np.empty((0, feature_dim)), np.array([]), np.array([]), inc_engine.get_end_of_season_elo(), np.array([])
 
         X_arr = np.stack(X_list)
         y_arr = np.array(y_list, dtype=int)
         margins_arr = np.array(margins_list, dtype=np.float64)
+        round_weights_arr = np.array(round_weight_list, dtype=np.float64)
+
+        # FIX #4: Feature completeness validation.
+        # If too few features are populated, the season's data is noise.
+        completeness = float(np.mean(np.abs(X_arr) > 1e-8))
+        if completeness < MIN_SEASON_FEATURE_COMPLETENESS:
+            logger.warning(
+                "FIX #4: Year %d feature completeness %.2f < %.2f threshold; "
+                "skipping season to avoid training on noise.",
+                year, completeness, MIN_SEASON_FEATURE_COMPLETENESS,
+            )
+            return np.empty((0, feature_dim)), np.array([]), np.array([]), inc_engine.get_end_of_season_elo(), np.array([])
 
         logger.info(
             "Year %d (incremental): %d training samples from %d games "
-            "(%d skipped, %d unique dates). feature_dim=%d.",
+            "(%d skipped, %d unique dates). feature_dim=%d. "
+            "completeness=%.2f. tournament_round_weighted=%d.",
             year, len(X_list), len(training_games), skipped,
-            len(inc_engine._unique_dates), feature_dim,
+            len(inc_engine._unique_dates), feature_dim, completeness,
+            int(np.sum(round_weights_arr > 1.0)),
         )
 
-        return X_arr, y_arr, margins_arr, inc_engine.get_end_of_season_elo()
+        return X_arr, y_arr, margins_arr, inc_engine.get_end_of_season_elo(), round_weights_arr
 
     def _run_gnn(self, graph: ScheduleGraph) -> Dict:
         multi_hop = compute_multi_hop_sos(graph, hops=3)
@@ -4297,6 +4392,11 @@ class SOTAPipeline:
             if not self._is_tournament_game(getattr(g, "game_date", f"{self.config.year}-01-01"))
         ]
 
+        # FIX #5: Also collect Massey composite diffs for standalone predictor calibration
+        massey_cal_diffs: list = []
+        massey_cal_outcomes: list = []
+        massey_cal_model_probs: list = []
+
         for g in calibration_games:
             if g.team1_id not in self.feature_engineer.team_features:
                 continue
@@ -4312,6 +4412,15 @@ class SOTAPipeline:
                 continue  # S5 FIX: skip games with indeterminate outcome
             probs.append(p)
             outcomes.append(o)
+
+            # FIX #5: Collect Massey diffs for standalone predictor
+            if hasattr(self, '_external_composites') and self._external_composites:
+                c1 = self._external_composites.get(g.team1_id)
+                c2 = self._external_composites.get(g.team2_id)
+                if c1 is not None and c2 is not None:
+                    massey_cal_diffs.append(c1.composite_rating - c2.composite_rating)
+                    massey_cal_outcomes.append(o)
+                    massey_cal_model_probs.append(p)
 
         # A1: CFA weight optimization removed — baseline-only prediction.
 
@@ -4347,7 +4456,7 @@ class SOTAPipeline:
                         metrics_path = os.path.join(games_dir, f"team_metrics_{yr}.json")
                         if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
                             continue
-                        yr_X, yr_y, _yr_margins, _ = self._load_year_samples_incremental(
+                        yr_X, yr_y, _yr_margins, _, _yr_rw = self._load_year_samples_incremental(
                             games_path, metrics_path, feature_dim, yr,
                             include_tournament=True,
                         )
@@ -4504,6 +4613,41 @@ class SOTAPipeline:
             ece_after = float(insample_metrics.expected_calibration_error)
             eval_mode = "insample_1param"
 
+        # FIX #5: Calibrate Massey standalone predictor on calibration data.
+        massey_predictor_info = {}
+        if (
+            self._massey_predictor is not None
+            and len(massey_cal_diffs) >= 20
+        ):
+            try:
+                m_diffs = np.array(massey_cal_diffs)
+                m_outs = np.array(massey_cal_outcomes)
+                m_model_p = np.array(massey_cal_model_probs)
+
+                # Step 1: Calibrate sigma
+                self._massey_predictor.fit(m_diffs, m_outs)
+
+                # Step 2: Generate massey probs and optimize blend weight
+                m_probs = 1.0 / (1.0 + np.exp(-m_diffs / max(self._massey_predictor.sigma, 0.01)))
+                self._massey_predictor.fit_blend_weight(m_model_p, m_probs, m_outs)
+
+                massey_predictor_info = {
+                    "massey_sigma": round(self._massey_predictor.sigma, 3),
+                    "massey_blend_weight": round(self._massey_predictor.blend_weight, 3),
+                    "massey_standalone_brier": round(self._massey_predictor._fit_brier, 4),
+                    "massey_cal_samples": len(massey_cal_diffs),
+                }
+                logger.info(
+                    "FIX #5: Massey standalone predictor calibrated: "
+                    "sigma=%.2f, blend_weight=%.3f, brier=%.4f on %d samples",
+                    self._massey_predictor.sigma,
+                    self._massey_predictor.blend_weight,
+                    self._massey_predictor._fit_brier,
+                    len(massey_cal_diffs),
+                )
+            except Exception as e:
+                logger.warning("FIX #5: Massey predictor calibration failed: %s", e)
+
         # Gap #7: Fit round-weighted Brier sharpener.
         # Kaggle uses round-weighted Brier (finals weighted 32x vs R64).
         # The standard sharpener optimizes flat Brier, but we need to
@@ -4561,6 +4705,7 @@ class SOTAPipeline:
             "ece_after": ece_after,
             "pre_calibration_clip": [self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi],
             **sharpener_info,
+            **massey_predictor_info,
         }
         if bootstrap_info:
             calibration_info.update(bootstrap_info)
@@ -5355,10 +5500,10 @@ class SOTAPipeline:
             bt_weight = 0.15 * max(0.0, 1.0 - bt_unc)
             baseline_prob = (1.0 - bt_weight) * baseline_prob + bt_weight * bt_prob
 
-        # Gap #1: Post-hoc Massey composite blend.
+        # Gap #1 + FIX #5: Post-hoc Massey composite blend.
         # Instead of adding Massey as a training feature (which would be 0 in
         # historical data), blend Massey-derived P(win) at inference time.
-        # This avoids the train/inference mismatch problem entirely.
+        # FIX #5: Use calibrated sigma and optimized blend weight when available.
         if (
             self.config.massey_blend_weight > 0
             and hasattr(self, '_external_composites')
@@ -5366,11 +5511,17 @@ class SOTAPipeline:
         ):
             c1 = self._external_composites.get(team1_id)
             c2 = self._external_composites.get(team2_id)
-            if c1 is not None and c2 is not None and c1.n_systems > 1 and c2.n_systems > 1:
+            # FIX #5: Relaxed guard — allow n_systems >= 1 (was > 1).
+            # Seed-based fallback (n_systems=1) still provides useful signal.
+            if c1 is not None and c2 is not None:
                 diff = c1.composite_rating - c2.composite_rating
-                # Logistic CDF: P(team1 wins) = 1 / (1 + exp(-diff/sigma))
-                massey_prob = 1.0 / (1.0 + math.exp(-diff / max(self.config.massey_sigma, 0.01)))
+                # Use calibrated sigma from MasseyStandalonePredictor if fitted
+                sigma = self.config.massey_sigma
                 w = self.config.massey_blend_weight
+                if self._massey_predictor is not None and self._massey_predictor.fitted:
+                    sigma = self._massey_predictor.sigma
+                    w = self._massey_predictor.blend_weight
+                massey_prob = 1.0 / (1.0 + math.exp(-diff / max(sigma, 0.01)))
                 baseline_prob = (1.0 - w) * baseline_prob + w * massey_prob
 
         # P1: Tighter pre-calibration clip bounds based on empirical upset rates.

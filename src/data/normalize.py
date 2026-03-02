@@ -6,6 +6,12 @@ in ``collector.py``, ``providers.py``, ``historical_pipeline.py``,
 ``materialization.py``, and ``tournament_bracket.py``.  Having a single
 implementation prevents silent divergence (e.g. Unicode handling of
 ``San José State`` producing different IDs in different modules).
+
+FIX #2: Added resolver-backed canonical resolution.  The raw string
+normalization alone cannot handle cross-source naming mismatches
+(CBBpy mascots vs Sports Reference school names vs Kaggle canonical IDs).
+The ``_QUICK_ALIAS`` table maps the most common mismatches deterministically
+without the overhead of fuzzy matching.
 """
 
 from __future__ import annotations
@@ -13,6 +19,93 @@ from __future__ import annotations
 import html as _html
 import re
 import unicodedata
+
+# FIX #2: Quick alias table for the most common cross-source mismatches.
+# These are the 7 known tournament-team misresolution risks from the audit
+# plus additional high-frequency mismatches found in historical data.
+# Maps raw normalized form → canonical ID.
+_QUICK_ALIAS: dict[str, str] = {
+    # Audit-identified critical mismatches
+    "unc": "north_carolina",
+    "byu": "brigham_young",
+    "uconn": "connecticut",
+    "vcu": "virginia_commonwealth",
+    "ole_miss": "mississippi",
+    "saint_mary_s": "saint_mary_s__ca",
+    "texas_a_amp_m": "texas_a_m",
+    # CBBpy mascot-suffixed forms (top 30 tournament programs)
+    "duke_blue_devils": "duke",
+    "kansas_jayhawks": "kansas",
+    "kentucky_wildcats": "kentucky",
+    "north_carolina_tar_heels": "north_carolina",
+    "gonzaga_bulldogs": "gonzaga",
+    "villanova_wildcats": "villanova",
+    "michigan_state_spartans": "michigan_state",
+    "virginia_cavaliers": "virginia",
+    "purdue_boilermakers": "purdue",
+    "houston_cougars": "houston",
+    "alabama_crimson_tide": "alabama",
+    "tennessee_volunteers": "tennessee",
+    "auburn_tigers": "auburn",
+    "connecticut_huskies": "connecticut",
+    "baylor_bears": "baylor",
+    "arizona_wildcats": "arizona",
+    "creighton_bluejays": "creighton",
+    "marquette_golden_eagles": "marquette",
+    "iowa_state_cyclones": "iowa_state",
+    "texas_longhorns": "texas",
+    "florida_gators": "florida",
+    "indiana_hoosiers": "indiana",
+    "oregon_ducks": "oregon",
+    "clemson_tigers": "clemson",
+    "san_diego_state_aztecs": "san_diego_state",
+    "florida_atlantic_owls": "florida_atlantic",
+    "northwestern_wildcats": "northwestern",
+    "memphis_tigers": "memphis",
+    "drake_bulldogs": "drake",
+    "colorado_state_rams": "colorado_state",
+    # Sports Reference slug mismatches
+    "louisiana_state": "louisiana_state",
+    "lsu": "louisiana_state",
+    "smu": "southern_methodist",
+    "usc": "southern_california",
+    "ucf": "ucf",
+    "fau": "florida_atlantic",
+    "fdu": "fairleigh_dickinson",
+    # Common abbreviation mismatches
+    "nc_state": "nc_state",
+    "n_c_state": "nc_state",
+    "pitt": "pittsburgh",
+    "cuse": "syracuse",
+    "wisc": "wisconsin",
+    # NCAA suffix forms (Sports Reference tournament pages)
+    "dukencaa": "duke",
+    "kansasncaa": "kansas",
+    "kentuckyncaa": "kentucky",
+    "north_carolinancaa": "north_carolina",
+    "gonzagancaa": "gonzaga",
+    "connecticutncaa": "connecticut",
+    "purduencaa": "purdue",
+    "houstonncaa": "houston",
+    "alabamancaa": "alabama",
+    "tennesseencaa": "tennessee",
+}
+
+
+_NCAA_SUFFIX_RE = re.compile(r"ncaa$", re.IGNORECASE)
+
+
+def _raw_normalize(name: str) -> str:
+    """Raw string normalization without alias resolution."""
+    if not name:
+        return ""
+    s = _html.unescape(str(name))
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    s = s.lower()
+    s = re.sub(r"[^a-z0-9]", "_", s)
+    s = re.sub(r"_+", "_", s)
+    return s.strip("_")
 
 
 def normalize_team_id(name: str) -> str:
@@ -24,6 +117,8 @@ def normalize_team_id(name: str) -> str:
     3. Lowercase
     4. Replace non-alphanumeric characters with ``_``
     5. Collapse repeated underscores and strip leading/trailing ``_``
+    6. Check quick alias table for known cross-source mismatches
+    7. Strip NCAA suffix if present
 
     Examples::
 
@@ -31,19 +126,24 @@ def normalize_team_id(name: str) -> str:
         'texas_a_m'
         >>> normalize_team_id("San José State")
         'san_jose_state'
+        >>> normalize_team_id("UConn")
+        'connecticut'
+        >>> normalize_team_id("BYU")
+        'brigham_young'
         >>> normalize_team_id("DukeNCAA")
-        'dukencaa'
+        'duke'
     """
-    if not name:
+    raw = _raw_normalize(name)
+    if not raw:
         return ""
-    s = _html.unescape(str(name))
-    # NFKD decomposition + strip combining characters (accents)
-    s = unicodedata.normalize("NFKD", s)
-    s = "".join(ch for ch in s if not unicodedata.combining(ch))
-    s = s.lower()
-    s = re.sub(r"[^a-z0-9]", "_", s)
-    s = re.sub(r"_+", "_", s)
-    return s.strip("_")
+    # FIX #2: Check quick alias table first (O(1) lookup, no fuzzy matching)
+    if raw in _QUICK_ALIAS:
+        return _QUICK_ALIAS[raw]
+    # Strip NCAA suffix (Sports Reference tournament qualifier)
+    stripped = _NCAA_SUFFIX_RE.sub("", raw).rstrip("_") if _NCAA_SUFFIX_RE.search(raw) else raw
+    if stripped != raw and stripped in _QUICK_ALIAS:
+        return _QUICK_ALIAS[stripped]
+    return stripped if stripped != raw else raw
 
 
 def normalize_team_name(name: str) -> str:
@@ -61,9 +161,6 @@ def normalize_team_name(name: str) -> str:
     s = re.sub(r"[^a-z0-9 ]", " ", s)
     tokens = [t for t in s.split() if t not in {"the", "university", "college", "at", "of"}]
     return " ".join(tokens)
-
-
-_NCAA_SUFFIX_RE = re.compile(r"ncaa$", re.IGNORECASE)
 
 
 def strip_ncaa_suffix(team_id: str) -> str:
