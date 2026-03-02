@@ -78,6 +78,26 @@ _QUICK_ALIAS: dict[str, str] = {
     "pitt": "pittsburgh",
     "cuse": "syracuse",
     "wisc": "wisconsin",
+    "mich": "michigan",
+    "mich_st": "michigan_state",
+    "miss_st": "mississippi_state",
+    "ok_state": "oklahoma_state",
+    "okla_st": "oklahoma_state",
+    # Kaggle team ID forms (Kaggle uses integer IDs mapped to these names)
+    "miami_fl": "miami__fl",
+    "miami_oh": "miami__oh",
+    "st_john_s": "st_john_s__ny",
+    "saint_john_s": "st_john_s__ny",
+    "saint_joseph_s": "saint_joseph_s",
+    "saint_peter_s": "saint_peter_s",
+    "texas_a_m": "texas_a_m",
+    # Additional cross-source forms for teams with ambiguous short names
+    "unc_asheville": "unc_asheville",
+    "unc_greensboro": "unc_greensboro",
+    "unc_wilmington": "unc_wilmington",
+    "north_carolina_asheville": "unc_asheville",
+    "north_carolina_greensboro": "unc_greensboro",
+    "north_carolina_wilmington": "unc_wilmington",
     # NCAA suffix forms (Sports Reference tournament pages)
     "dukencaa": "duke",
     "kansasncaa": "kansas",
@@ -89,6 +109,13 @@ _QUICK_ALIAS: dict[str, str] = {
     "houstonncaa": "houston",
     "alabamancaa": "alabama",
     "tennesseencaa": "tennessee",
+    "auburnncaa": "auburn",
+    "floridancaa": "florida",
+    "michiganncaa": "michigan",
+    "michigan_statencaa": "michigan_state",
+    "arizonancaa": "arizona",
+    "texasncaa": "texas",
+    "iowa_statencaa": "iowa_state",
 }
 
 
