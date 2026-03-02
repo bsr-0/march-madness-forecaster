@@ -61,6 +61,10 @@ class IngestionConfig:
     weather_context_url: Optional[str] = None
     travel_context_url: Optional[str] = None
 
+    # Kaggle competition data directory (contains CSV files like
+    # MRegularSeasonDetailedResults.csv, MMasseyOrdinals.csv, etc.)
+    kaggle_dir: Optional[str] = None
+
     # Tournament context enrichment (AP polls, coach history, conf tourney)
     scrape_tournament_context: bool = True
     preseason_ap_json: Optional[str] = None  # Pre-built JSON path override
@@ -341,6 +345,10 @@ class RealDataCollector:
             out[artifact_key] = self._write(filename, payload)
             provider_lineage[artifact_key] = "open_feed"
 
+        # --- Kaggle competition CSV data integration ---
+        if self.config.kaggle_dir:
+            self._ingest_kaggle_data(year, out, provider_lineage, validation_errors)
+
         manifest = {
             "year": year,
             "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -483,6 +491,98 @@ class RealDataCollector:
             return f"id:{raw_id.lower()}"
         name = str(player.get("name") or "").strip().lower()
         return f"name:{name}" if name else ""
+
+    def _ingest_kaggle_data(
+        self,
+        year: int,
+        out: Dict[str, str],
+        provider_lineage: Dict[str, str],
+        validation_errors: Dict[str, List[str]],
+    ) -> None:
+        """Load Kaggle competition CSV data and cache external ratings."""
+        from ..kaggle_loader import KaggleDataLoader
+        from ..scrapers.external_ratings import ExternalRatingsLoader
+
+        kaggle_dir = self.config.kaggle_dir
+        if not kaggle_dir:
+            return
+
+        loader = KaggleDataLoader(kaggle_dir)
+
+        # 1. Massey Ordinals → external ratings cache
+        try:
+            ratings_loader = ExternalRatingsLoader(cache_dir=str(self.output_dir))
+            n_systems = ratings_loader.populate_from_massey_ordinals(kaggle_dir, year)
+            if n_systems > 0:
+                out["massey_ordinals_systems"] = str(n_systems)
+                provider_lineage["massey_ordinals"] = "kaggle_csv"
+                logger.info("Cached %d Massey Ordinal systems from Kaggle", n_systems)
+        except Exception as e:
+            logger.warning("Massey Ordinals ingestion failed: %s", e)
+
+        # 2. Tournament seeds (authoritative source)
+        try:
+            seeds = loader.load_tourney_seeds(year)
+            if seeds:
+                payload = {"teams": seeds, "source": "kaggle_csv"}
+                out["kaggle_tourney_seeds_json"] = self._write(
+                    f"kaggle_tourney_seeds_{year}.json", payload,
+                )
+                provider_lineage["kaggle_tourney_seeds_json"] = "kaggle_csv"
+        except Exception as e:
+            logger.warning("Kaggle tourney seeds load failed: %s", e)
+
+        # 3. Regular season detailed results (official Four Factors)
+        try:
+            games = loader.load_regular_season_detailed(year)
+            if not games:
+                games = loader.load_regular_season_compact(year)
+            if games:
+                payload = {"games": games, "source": "kaggle_csv"}
+                out["kaggle_regular_season_json"] = self._write(
+                    f"kaggle_regular_season_{year}.json", payload,
+                )
+                provider_lineage["kaggle_regular_season_json"] = "kaggle_csv"
+        except Exception as e:
+            logger.warning("Kaggle regular season load failed: %s", e)
+
+        # 4. Tournament results (for backtesting)
+        try:
+            tourney = loader.load_tourney_detailed(year)
+            if not tourney:
+                tourney = loader.load_tourney_compact(year)
+            if tourney:
+                payload = {"games": tourney, "source": "kaggle_csv"}
+                out["kaggle_tourney_results_json"] = self._write(
+                    f"kaggle_tourney_results_{year}.json", payload,
+                )
+                provider_lineage["kaggle_tourney_results_json"] = "kaggle_csv"
+        except Exception as e:
+            logger.warning("Kaggle tourney results load failed: %s", e)
+
+        # 5. Team coaches
+        try:
+            coaches = loader.load_team_coaches(year)
+            if coaches:
+                payload = {"coaches": coaches, "source": "kaggle_csv"}
+                out["kaggle_coaches_json"] = self._write(
+                    f"kaggle_coaches_{year}.json", payload,
+                )
+                provider_lineage["kaggle_coaches_json"] = "kaggle_csv"
+        except Exception as e:
+            logger.warning("Kaggle coaches load failed: %s", e)
+
+        # 6. Team conferences
+        try:
+            confs = loader.load_team_conferences(year)
+            if confs:
+                payload = {"conferences": confs, "source": "kaggle_csv"}
+                out["kaggle_conferences_json"] = self._write(
+                    f"kaggle_conferences_{year}.json", payload,
+                )
+                provider_lineage["kaggle_conferences_json"] = "kaggle_csv"
+        except Exception as e:
+            logger.warning("Kaggle conferences load failed: %s", e)
 
     def _validate_roster_rapm_quality(self, payload: Dict, min_players: int) -> List[str]:
         if min_players <= 0:

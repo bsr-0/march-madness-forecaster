@@ -435,6 +435,7 @@ def ingest_data(args):
         torvik_provider_priority=parse_priority(args.torvik_provider_priority),
         strict_validation=not args.allow_invalid_payloads,
         min_nonzero_rapm_players_per_team=args.min_nonzero_rapm_players_per_team,
+        kaggle_dir=getattr(args, "kaggle_dir", None),
     )
     manifest = RealDataCollector(config).run()
     print(f"✓ Ingestion complete. Manifest: {manifest['manifest_path']}")
@@ -463,6 +464,7 @@ def ingest_historical(args):
         max_games_per_season=args.max_games_per_season,
         team_metrics_provider_priority=parse_priority(args.team_metrics_provider_priority),
         torvik_provider_priority=parse_priority(args.torvik_provider_priority),
+        kaggle_dir=getattr(args, "kaggle_dir", None),
     )
     manifest = HistoricalDataPipeline(config).run()
     print(f"✓ Historical ingestion complete. Manifest: {manifest['manifest_path']}")
@@ -772,6 +774,11 @@ def main():
         default=3,
         help="Minimum non-zero RAPM players required per team in roster payloads",
     )
+    ingest_parser.add_argument(
+        "--kaggle-dir",
+        default=None,
+        help="Path to Kaggle competition CSV directory (loads Massey Ordinals, seeds, results, etc.)",
+    )
 
     historical_parser = subparsers.add_parser(
         "ingest-historical",
@@ -836,6 +843,11 @@ def main():
         "--allow-invalid-payloads",
         action="store_true",
         help="Do not fail ingestion when schema checks fail",
+    )
+    historical_parser.add_argument(
+        "--kaggle-dir",
+        default=None,
+        help="Path to Kaggle competition CSV directory (loads Massey Ordinals per season)",
     )
 
     materialize_parser = subparsers.add_parser(
