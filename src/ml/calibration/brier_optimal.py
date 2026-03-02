@@ -8,6 +8,7 @@ and rewards confident correct predictions differently. This module provides:
    0.5 when model discrimination is good
 2. SeedBasedOverrides: Snap extreme matchups to historical rates
 3. BrierCalibrator: Temperature scaling minimizing Brier (not NLL)
+4. round_weighted_brier: Kaggle's actual scoring metric since 2023
 """
 
 from __future__ import annotations
@@ -358,3 +359,160 @@ class BrierPostProcessor:
 
         # Clip
         return np.clip(result, self.clip_lo, self.clip_hi)
+
+
+# ---------------------------------------------------------------------------
+# Gap #7: Kaggle round-weighted Brier scoring
+# ---------------------------------------------------------------------------
+
+# Kaggle March Mania 2023-2026 round weight schedule.
+# All rounds contribute equally to the total score (32 points each), but
+# individual late-round games are worth 32× an R64 game.
+KAGGLE_ROUND_WEIGHTS = {
+    "R64": 1.0,    # 32 games × 1.0  = 32
+    "R32": 2.0,    # 16 games × 2.0  = 32
+    "S16": 4.0,    #  8 games × 4.0  = 32
+    "E8":  8.0,    #  4 games × 8.0  = 32
+    "F4": 16.0,    #  2 games × 16.0 = 32
+    "NCG": 32.0,   #  1 game  × 32.0 = 32
+}
+
+# Map number of remaining teams to round name
+_TEAMS_TO_ROUND = {
+    64: "R64", 32: "R32", 16: "S16", 8: "E8", 4: "F4", 2: "NCG",
+}
+
+
+def round_weighted_brier(
+    predictions: np.ndarray,
+    outcomes: np.ndarray,
+    round_labels: Optional[List[str]] = None,
+    weights_schedule: Optional[Dict[str, float]] = None,
+) -> float:
+    """Compute Kaggle's round-weighted Brier score.
+
+    This is the actual competition metric.  Later-round games are weighted
+    more heavily, making accurate predictions for Elite Eight / Final Four /
+    Championship games much more valuable than Round of 64 games.
+
+    Args:
+        predictions: Model probabilities [N].
+        outcomes: Actual outcomes (0 or 1) [N].
+        round_labels: Round name per game (e.g., ["R64", "R32", ...]).
+            If None, uses uniform weights (standard Brier).
+        weights_schedule: Custom weight map.  Defaults to KAGGLE_ROUND_WEIGHTS.
+
+    Returns:
+        Weighted Brier score (lower is better).
+    """
+    predictions = np.asarray(predictions, dtype=np.float64)
+    outcomes = np.asarray(outcomes, dtype=np.float64)
+
+    if round_labels is None or len(round_labels) != len(predictions):
+        # Fallback: uniform (standard Brier)
+        return float(np.mean((predictions - outcomes) ** 2))
+
+    schedule = weights_schedule or KAGGLE_ROUND_WEIGHTS
+    weights = np.array(
+        [schedule.get(r, 1.0) for r in round_labels],
+        dtype=np.float64,
+    )
+
+    squared_errors = (predictions - outcomes) ** 2
+    return float(np.sum(weights * squared_errors) / np.sum(weights))
+
+
+def round_label_from_seed_matchup(
+    seed1: int, seed2: int, game_round: Optional[str] = None
+) -> str:
+    """Infer round label from context or return a default."""
+    if game_round:
+        # Normalize common variations
+        r = game_round.upper().replace(" ", "").replace("_", "")
+        for key in KAGGLE_ROUND_WEIGHTS:
+            if key in r:
+                return key
+        if "ROUND OF 64" in r or "FIRST" in r:
+            return "R64"
+        if "ROUND OF 32" in r or "SECOND" in r:
+            return "R32"
+        if "SWEET" in r:
+            return "S16"
+        if "ELITE" in r:
+            return "E8"
+        if "FINAL" in r and "FOUR" in r:
+            return "F4"
+        if "CHAMP" in r or "NATIONAL" in r:
+            return "NCG"
+    return "R64"  # Default to lowest weight
+
+
+class RoundWeightedSharpener(BrierOptimalSharpener):
+    """Sharpener optimized for round-weighted Brier score.
+
+    Late-round games (between closely-matched top seeds) dominate the
+    competition score.  This sharpener finds the alpha that minimizes
+    the *weighted* Brier score rather than the flat Brier.
+    """
+
+    def fit_weighted(
+        self,
+        predictions: np.ndarray,
+        outcomes: np.ndarray,
+        round_labels: List[str],
+        alpha_bounds: Tuple[float, float] = (0.5, 2.0),
+    ) -> float:
+        """Fit alpha minimizing round-weighted Brier score.
+
+        Args:
+            predictions: Model probabilities [N].
+            outcomes: Actual outcomes (0 or 1) [N].
+            round_labels: Round name per prediction.
+            alpha_bounds: Search range for alpha.
+
+        Returns:
+            Optimal alpha value.
+        """
+        predictions = np.asarray(predictions, dtype=np.float64)
+        outcomes = np.asarray(outcomes, dtype=np.float64)
+        weights = np.array(
+            [KAGGLE_ROUND_WEIGHTS.get(r, 1.0) for r in round_labels],
+            dtype=np.float64,
+        )
+        w_sum = np.sum(weights)
+        if w_sum < 1e-9:
+            return self.fit(predictions, outcomes, alpha_bounds)
+
+        def weighted_brier_at_alpha(alpha: float) -> float:
+            sharpened = self._apply(predictions, alpha)
+            return float(np.sum(weights * (sharpened - outcomes) ** 2) / w_sum)
+
+        if SCIPY_AVAILABLE:
+            result = minimize_scalar(
+                weighted_brier_at_alpha,
+                bounds=alpha_bounds,
+                method="bounded",
+                options={"xatol": 1e-4, "maxiter": 200},
+            )
+            self.alpha = float(result.x)
+        else:
+            best_alpha = 1.0
+            best_score = weighted_brier_at_alpha(1.0)
+            for alpha in np.linspace(alpha_bounds[0], alpha_bounds[1], 50):
+                score = weighted_brier_at_alpha(alpha)
+                if score < best_score:
+                    best_score = score
+                    best_alpha = alpha
+            self.alpha = best_alpha
+
+        self.fitted = True
+        flat_before = float(np.mean((predictions - outcomes) ** 2))
+        flat_after = float(np.mean((self._apply(predictions, self.alpha) - outcomes) ** 2))
+        logger.info(
+            "Round-weighted sharpener: alpha=%.3f (flat Brier: %.4f -> %.4f, "
+            "weighted Brier: %.4f -> %.4f)",
+            self.alpha,
+            flat_before, flat_after,
+            weighted_brier_at_alpha(1.0), weighted_brier_at_alpha(self.alpha),
+        )
+        return self.alpha
