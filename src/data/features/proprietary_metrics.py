@@ -2415,8 +2415,10 @@ class IncrementalMetricsEngine:
     def metrics_to_team_vector(
         m: ProprietaryTeamMetrics,
         seed: int = 0,
+        external_rating_composite: float = 0.0,
+        external_rating_spread: float = 0.0,
     ) -> np.ndarray:
-        """Convert ProprietaryTeamMetrics to a 64-dim team feature vector.
+        """Convert ProprietaryTeamMetrics to a 66-dim team feature vector.
 
         Matches the exact ordering in TeamFeatures.to_vector() so that
         matchup vectors built from incremental metrics are compatible with
@@ -2425,8 +2427,12 @@ class IncrementalMetricsEngine:
         Features requiring roster/PBP data (RAPM, volatility, etc.) are
         set to zero.  Features requiring external data (AP rank, coach
         data) use neutral defaults.
+
+        Gap #1: Extended from 64 to 66 dims to include external_rating_composite
+        and external_rating_spread (indices 64-65), matching TEAM_FEATURE_DIM=66.
+        This ensures feature name alignment between training and inference.
         """
-        v = np.zeros(64, dtype=np.float64)
+        v = np.zeros(66, dtype=np.float64)
         # Core efficiency (3)
         v[0] = m.adj_offensive_efficiency
         v[1] = m.adj_defensive_efficiency
@@ -2518,6 +2524,13 @@ class IncrementalMetricsEngine:
         else:
             v[63] = 0.0
 
+        # Gap #1: External rating composite + spread (2)
+        # These are populated from Massey Ordinals when available for
+        # historical years, enabling the highest-signal feature to be
+        # used in training (not just inference-time blending).
+        v[64] = external_rating_composite
+        v[65] = external_rating_spread
+
         # NaN/inf guard
         bad = np.isnan(v) | np.isinf(v)
         if bad.any():
@@ -2531,19 +2544,19 @@ class IncrementalMetricsEngine:
         seed1: int = 0,
         seed2: int = 0,
     ) -> np.ndarray:
-        """Build a 75-dim matchup vector from two 64-dim team vectors.
+        """Build a 78-dim matchup vector from two 66-dim team vectors.
 
-        Layout: [0:64] diff, [64:69] absolute, [69:75] interactions.
+        Layout: [0:66] diff, [66:71] absolute, [71:78] interactions.
         Matches MatchupFeatures.to_vector() from feature_engineering.py.
         """
-        # Differential (64)
+        # Differential (66) — includes external_rating_composite and spread
         diff = v1 - v2
 
         # Absolute-level features (5) at indices [0, 1, 26, 35, 47]
         _ABS_IDX = [0, 1, 26, 35, 47]
         absolute = np.array([(v1[i] + v2[i]) / 2.0 for i in _ABS_IDX])
 
-        # Interaction features (6)
+        # Interaction features (7)
         tempo_interaction = (v1[2] * v2[2]) / 4624.0
         tempo_diff = v1[2] - v2[2]
         eff_diff = (v1[0] - v1[1]) - (v2[0] - v2[1])
@@ -2553,12 +2566,16 @@ class IncrementalMetricsEngine:
         travel_advantage = 0.0  # no venue data
         if seed1 > 0 and seed2 > 0:
             seed_interaction = (seed1 * seed2) / 128.0 - 1.0
+            # Gap #3: Raw seed difference — strongest single predictor
+            seed_diff = (seed1 - seed2) / 15.0
         else:
             seed_interaction = 0.0
+            seed_diff = 0.0
 
         interactions = np.array([
             tempo_interaction, style_mismatch, h2h_record,
             common_opp_margin, travel_advantage, seed_interaction,
+            seed_diff,
         ])
 
         return np.concatenate([diff, absolute, interactions])
