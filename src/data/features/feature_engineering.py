@@ -742,6 +742,10 @@ class MatchupFeatures:
     # Seed matchup interaction
     seed_interaction: float = 0.0
 
+    # Gap #3: Raw seed difference (highest-signal single feature for tournament)
+    # Normalized to [-1, 1] range: (seed1 - seed2) / 15.0
+    seed_diff: float = 0.0
+
     # FIX #8: Missing-data indicator flags (1.0 = data present, 0.0 = default)
     has_h2h_data: float = 0.0
     has_common_opp_data: float = 0.0
@@ -768,6 +772,7 @@ class MatchupFeatures:
             self.common_opponent_margin,
             self.travel_advantage,
             self.seed_interaction,
+            self.seed_diff,
         ])
         parts = [self.diff_features]
         if len(self.absolute_features) > 0:
@@ -1129,6 +1134,8 @@ class FeatureEngineer:
 
         # Seed matchup interaction
         seed_interaction = (t1.seed * t2.seed) / 128.0 - 1.0
+        # Gap #3: Raw seed difference — strongest single tournament predictor
+        seed_diff = (t1.seed - t2.seed) / 15.0 if (t1.seed > 0 and t2.seed > 0) else 0.0
 
         # H2H record and common opponent margin
         h2h_record = 0.5
@@ -1164,6 +1171,7 @@ class FeatureEngineer:
             common_opponent_margin=common_opponent_margin,
             travel_advantage=travel_advantage,
             seed_interaction=seed_interaction,
+            seed_diff=seed_diff,
             has_h2h_data=has_h2h,
             has_common_opp_data=has_common_opp,
             has_preseason_ap_t1=has_ap_t1,

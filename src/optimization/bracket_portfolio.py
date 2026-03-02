@@ -98,11 +98,16 @@ class BracketPortfolioGenerator:
             List of GeneratedBracket objects
         """
         if strategy_mix is None:
+            # Gap #5: Optimized for bracket portfolio format (2024+).
+            # In large-field competitions, contrarian and champion-targeted
+            # strategies dominate because chalk brackets are duplicated
+            # across thousands of entrants.  Maximize the chance of
+            # having a uniquely-good bracket rather than a consensus-average one.
             strategy_mix = {
-                "chalk": 0.10,       # Follow favorites
-                "balanced": 0.40,    # Model-probability sampling
-                "contrarian": 0.30,  # Anti-correlated with public
-                "targeted": 0.20,    # Champion-targeted brackets
+                "chalk": 0.05,       # Minimal: only 1 or 2 "safe" brackets
+                "balanced": 0.30,    # Model-probability sampling
+                "contrarian": 0.35,  # Anti-correlated with public picks
+                "targeted": 0.30,    # Champion-diversification brackets
             }
 
         rng = np.random.default_rng(seed)
