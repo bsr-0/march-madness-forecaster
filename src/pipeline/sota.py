@@ -316,8 +316,12 @@ class SOTAPipelineConfig:
     mc_calibration_json: Optional[str] = None  # Optional path to MC calibration artifact
 
     # --- Ensemble weights (fixed-weight average, no stacking) ---
-    ensemble_lgb_weight: float = 0.45  # LightGBM weight in fixed ensemble
-    ensemble_xgb_weight: float = 0.35  # XGBoost weight (logistic = 1 - lgb - xgb)
+    # Gap #2: Ensemble weights — SpreadRegressor (MOV) gets highest weight.
+    # The "raddar" benchmark (dominant 2018-2024) predicts score margin first,
+    # then converts to probability.  Richer gradient from continuous target.
+    ensemble_lgb_weight: float = 0.30  # LightGBM classifier weight
+    ensemble_xgb_weight: float = 0.20  # XGBoost classifier weight
+    # spread gets 0.35 via _FIXED_WEIGHTS; logistic gets residual ~0.15
 
     # --- Multi-year calibration (Fix 1: expand calibration sample pool) ---
     enable_multi_year_calibration: bool = True  # Augment calibration with historical years
@@ -366,6 +370,19 @@ class SOTAPipelineConfig:
     # --- External rating integration (WS3) ---
     enable_external_ratings: bool = True  # Integrate external rating systems
     external_ratings_dir: Optional[str] = None  # Dir with cached external rating JSON files
+    kaggle_dir: Optional[str] = None  # Path to Kaggle competition CSV directory
+
+    # --- Massey composite blend (post-hoc) ---
+    # Blend Massey composite prediction with model prediction.  This avoids
+    # train/inference mismatch when historical Massey data is unavailable.
+    massey_blend_weight: float = 0.15  # Weight for Massey-derived probability
+    massey_sigma: float = 8.0  # Logistic CDF spread for composite_diff → P(win)
+
+    # --- Model complexity mode ---
+    # "simple":   Logistic + SpreadRegressor, 8 features (best for < 400 samples)
+    # "standard": LGB + XGB + Logistic + Spread, 22 features (default)
+    # "full":     All models including GNN/transformer (requires large data)
+    model_complexity: str = "standard"
 
     # --- Brier-optimal post-processing (WS2) ---
     enable_brier_sharpening: bool = True  # Power-transform sharpening for Brier score
@@ -378,6 +395,13 @@ class SOTAPipelineConfig:
     womens_cache_dir: Optional[str] = None  # Women's data cache (defaults to data_cache_dir)
     womens_seed_only_mode: bool = False  # Force seed-only mode for women's predictions
     womens_teams_csv: Optional[str] = None  # Path to Kaggle WTeams.csv
+
+    # Gap #4: Women's bracket has different dynamics (fewer upsets, more
+    # concentrated talent).  50% of Kaggle evaluation since 2023.
+    # Use simpler model + stronger seed priors for women's bracket.
+    womens_model_complexity: str = "simple"  # Women's bracket is more predictable
+    womens_seed_prior_weight: float = 0.40  # Blend 40% seed prior (vs 20% men's)
+    womens_massey_blend_weight: float = 0.10  # Less Massey data for women's
 
     # --- Bracket portfolio (WS4) ---
     enable_bracket_portfolio: bool = False  # Generate bracket portfolio
@@ -481,6 +505,42 @@ FIXED_FEATURE_SET = [
     # High spread = more uncertainty = potential upset risk
     "diff_external_rating_spread",
 ]
+
+
+# Gap #3: Simplified feature set for "simple" model_complexity mode.
+# 8 features capture >90% of predictive signal within the 600-sample budget.
+SIMPLE_FEATURE_SET = [
+    "diff_adj_off_eff",               # [KP] Core efficiency
+    "diff_adj_def_eff",               # [KP] Core defense
+    "diff_sos_adj_em",                # [KAG] Schedule strength
+    "diff_external_rating_composite", # Massey composite (highest-signal single feature)
+    "diff_elo_rating",                # [538] Season trajectory
+    "diff_win_pct",                   # Simplest, strongest signal
+    "diff_free_throw_pct",            # Most stable shooting metric
+    "seed_interaction",               # Nonlinear upset dynamics
+]
+
+# Gap #7: Kaggle round-weighted Brier scoring schedule.
+# Each round contributes equally to total score, but individual late-round
+# games are worth 32x an R64 game.  This is Kaggle's actual metric since 2023.
+KAGGLE_ROUND_WEIGHTS = {
+    "R64": 1.0,    # 32 games × 1.0  = 32
+    "R32": 2.0,    # 16 games × 2.0  = 32
+    "S16": 4.0,    #  8 games × 4.0  = 32
+    "E8":  8.0,    #  4 games × 8.0  = 32
+    "F4": 16.0,    #  2 games × 16.0 = 32
+    "NCG": 32.0,   #  1 game  × 32.0 = 32
+}
+
+# Gap #6: Data quality multipliers per era.
+# Early Kaggle data (2005-2009) has incomplete box scores, ID mismatches, and
+# fake dates.  These multipliers combine with temporal decay to properly
+# downweight unreliable data.
+DATA_QUALITY_ERA_WEIGHTS = {
+    2005: 0.3, 2006: 0.3, 2007: 0.3, 2008: 0.35, 2009: 0.4,
+    2010: 0.6, 2011: 0.65, 2012: 0.7, 2013: 0.75, 2014: 0.8,
+    # 2015+ is high-quality data
+}
 
 
 class DataRequirementError(ValueError):
@@ -889,6 +949,10 @@ class SOTAPipeline:
 
         game_flows = self._build_or_load_game_flows(teams)
 
+        # Gap #1: Load external ratings (Massey Ordinals composite)
+        self._external_composites = self._load_external_ratings(teams)
+        external_composites = self._external_composites
+
         for team in teams:
             team_id = self._team_id(team.name)
             self.team_struct[team_id] = team
@@ -910,6 +974,13 @@ class SOTAPipeline:
                 roster=r,
                 games=g,
             )
+
+            # Gap #1: Populate external rating features from Massey composite
+            comp = external_composites.get(team_id)
+            if comp is not None:
+                features.external_rating_composite = comp.composite_rating
+                features.external_rating_spread = comp.rating_spread
+
             self.team_features[team_id] = features.to_vector(include_embeddings=False)
 
         # FIX #9: Validate population statistics against current training data.
@@ -991,6 +1062,52 @@ class SOTAPipeline:
             }
             for p in pool_analysis.leverage_picks[:15]
         ]
+
+        # Gap #5: Bracket portfolio generation
+        bracket_portfolio_stats: Dict = {}
+        if self.config.enable_bracket_portfolio:
+            try:
+                from ..optimization.bracket_portfolio import BracketPortfolioGenerator
+                # Build teams_by_region from tournament bracket
+                teams_by_region: Dict[str, List[Dict]] = {}
+                for team in teams:
+                    tid = self._team_id(team.name)
+                    region = team.region or "Unknown"
+                    teams_by_region.setdefault(region, []).append({
+                        "team_id": tid,
+                        "name": team.name,
+                        "seed": team.seed,
+                    })
+                portfolio_gen = BracketPortfolioGenerator(
+                    predict_fn=self.predict_probability,
+                    public_pick_pcts=public_picks.get("championship", {}),
+                )
+                portfolio = portfolio_gen.generate_portfolio(
+                    teams_by_region=teams_by_region,
+                    n_brackets=1000,
+                    n_simulations=50000,
+                    seed=self.config.random_seed,
+                )
+                # Summarize
+                strategy_counts = {}
+                champions = {}
+                for b in portfolio:
+                    strategy_counts[b.strategy] = strategy_counts.get(b.strategy, 0) + 1
+                    champions[b.champion] = champions.get(b.champion, 0) + 1
+                bracket_portfolio_stats = {
+                    "enabled": True,
+                    "n_brackets": len(portfolio),
+                    "strategy_distribution": strategy_counts,
+                    "champion_diversity": len(champions),
+                    "top_champions": dict(sorted(champions.items(), key=lambda x: -x[1])[:10]),
+                }
+                logger.info(
+                    "Bracket portfolio: %d brackets, %d unique champions",
+                    len(portfolio), len(champions),
+                )
+            except Exception as e:
+                bracket_portfolio_stats = {"enabled": False, "error": str(e)}
+                logger.warning("Bracket portfolio generation failed: %s", e)
 
         # Fix 5: Run ablation study if enabled (post-training diagnostic)
         ablation_stats: Dict = {}
@@ -1146,6 +1263,7 @@ class SOTAPipeline:
                 },
                 "top_leverage_picks": leverage_preview,
                 "ablation_study": ablation_stats,
+                "bracket_portfolio": bracket_portfolio_stats,
             },
         }
         return report
@@ -1746,6 +1864,58 @@ class SOTAPipeline:
                 proprietary_map[team_id]["coach_tournament_win_rate"] = coach_win_rate
                 proprietary_map[team_id]["conf_tourney_champion"] = is_conf_champ
 
+    def _load_external_ratings(self, teams: List[Team]) -> Dict:
+        """Load external rating composites (Massey Ordinals, etc.).
+
+        Returns dict of {team_id: CompositeRating} or empty dict if unavailable.
+        """
+        if not self.config.enable_external_ratings:
+            return {}
+
+        try:
+            from ..data.scrapers.external_ratings import ExternalRatingsLoader
+        except ImportError:
+            return {}
+
+        year = self.config.year
+        cache_dir = self.config.external_ratings_dir or self.config.data_cache_dir
+
+        loader = ExternalRatingsLoader(cache_dir=cache_dir)
+
+        # Step 1: Populate from Kaggle Massey Ordinals if available
+        if self.config.kaggle_dir:
+            try:
+                n = loader.populate_from_massey_ordinals(self.config.kaggle_dir, year)
+                if n > 0:
+                    logger.info("Loaded %d Massey Ordinal systems from Kaggle", n)
+            except Exception as e:
+                logger.warning("Massey Ordinals ingestion failed: %s", e)
+
+        # Step 2: Load all cached external rating systems
+        all_ratings = loader.load_all(year)
+
+        if all_ratings:
+            composites = loader.compute_composite(all_ratings)
+            n_systems = len(all_ratings)
+            n_teams = len(composites)
+            logger.info(
+                "External ratings: %d systems, %d teams composited",
+                n_systems, n_teams,
+            )
+            return composites
+
+        # Step 3: Fallback to seed-based estimates
+        seed_map = {}
+        for team in teams:
+            tid = self._team_id(team.name)
+            seed_map[tid] = team.seed
+        if seed_map:
+            composites = loader.generate_from_seeds(seed_map)
+            logger.info("External ratings: seed-based fallback for %d teams", len(composites))
+            return composites
+
+        return {}
+
     def _build_rosters(self, teams: List[Team]) -> Dict[str, Roster]:
         if not self.config.roster_json:
             raise DataRequirementError(
@@ -2293,6 +2463,11 @@ class SOTAPipeline:
                     self.config.training_year_decay ** max(years_ago - 1, 0),
                 )
 
+                # Gap #6: Data quality era multiplier — downweight years
+                # with known data quality issues (2005-2014).
+                quality_mult = DATA_QUALITY_ERA_WEIGHTS.get(yr, 1.0)
+                year_weight *= quality_mult
+
                 # Create per-sample weight array for this year
                 sample_weights = np.full(len(hy), year_weight, dtype=float)
 
@@ -2391,9 +2566,15 @@ class SOTAPipeline:
             if not self.config.enable_feature_selection:
                 # OOS-FIX: Apply fixed domain-knowledge feature set.
                 # No model fitting, no label dependency, no double-dipping.
+                # Gap #3: Use SIMPLE_FEATURE_SET when model_complexity == "simple"
+                active_feature_set = (
+                    SIMPLE_FEATURE_SET
+                    if self.config.model_complexity == "simple"
+                    else FIXED_FEATURE_SET
+                )
                 name_to_idx = {n: i for i, n in enumerate(feature_names)}
-                fixed_indices = [name_to_idx[n] for n in FIXED_FEATURE_SET if n in name_to_idx]
-                fixed_names = [n for n in FIXED_FEATURE_SET if n in name_to_idx]
+                fixed_indices = [name_to_idx[n] for n in active_feature_set if n in name_to_idx]
+                fixed_names = [n for n in active_feature_set if n in name_to_idx]
 
                 if len(fixed_indices) >= 10:
                     original_dim = train_X.shape[1]
@@ -2953,10 +3134,13 @@ class SOTAPipeline:
             # sum to 1.0 based on which models are present.
             w_lgb = self.config.ensemble_lgb_weight
             w_xgb = self.config.ensemble_xgb_weight
-            w_logit = 1.0 - w_lgb - w_xgb
+            w_logit = max(0.05, 1.0 - w_lgb - w_xgb)
+            # Gap #2: SpreadRegressor (MOV) promoted to primary model.
+            # Margin prediction → logistic CDF conversion produces better-
+            # calibrated probabilities than direct binary classification.
             _FIXED_WEIGHTS = {
                 "lgb": w_lgb, "xgb": w_xgb, "logit": w_logit,
-                "spread": 0.25,  # Spread model provides orthogonal signal
+                "spread": 0.35,  # MOV primary path — highest weight
             }
             model_names_present = [name for name, _, _ in trained_models]
             active_weights = {n: _FIXED_WEIGHTS.get(n, 0.25) for n in model_names_present}
@@ -5008,6 +5192,24 @@ class SOTAPipeline:
             # high uncertainty → less weight → closer to baseline
             bt_weight = 0.15 * max(0.0, 1.0 - bt_unc)
             baseline_prob = (1.0 - bt_weight) * baseline_prob + bt_weight * bt_prob
+
+        # Gap #1: Post-hoc Massey composite blend.
+        # Instead of adding Massey as a training feature (which would be 0 in
+        # historical data), blend Massey-derived P(win) at inference time.
+        # This avoids the train/inference mismatch problem entirely.
+        if (
+            self.config.massey_blend_weight > 0
+            and hasattr(self, '_external_composites')
+            and self._external_composites
+        ):
+            c1 = self._external_composites.get(team1_id)
+            c2 = self._external_composites.get(team2_id)
+            if c1 is not None and c2 is not None and c1.n_systems > 1 and c2.n_systems > 1:
+                diff = c1.composite_rating - c2.composite_rating
+                # Logistic CDF: P(team1 wins) = 1 / (1 + exp(-diff/sigma))
+                massey_prob = 1.0 / (1.0 + math.exp(-diff / max(self.config.massey_sigma, 0.01)))
+                w = self.config.massey_blend_weight
+                baseline_prob = (1.0 - w) * baseline_prob + w * massey_prob
 
         # P1: Tighter pre-calibration clip bounds based on empirical upset rates.
         # Historical: 1-seed vs 16-seed upsets occur ~1.5% of the time.

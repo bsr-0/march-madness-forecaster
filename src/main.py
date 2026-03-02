@@ -84,6 +84,9 @@ def run_sota(args):
         enable_gnn=bool(getattr(args, "enable_gnn", False)),
         enable_transformer=bool(getattr(args, "enable_transformer", False)),
         enable_embedding_projections=bool(getattr(args, "enable_embedding_projections", False)),
+        kaggle_dir=getattr(args, "kaggle_dir", None),
+        model_complexity=getattr(args, "model_complexity", "standard"),
+        enable_bracket_portfolio=bool(getattr(args, "enable_bracket_portfolio", False)),
     )
     if dev_years is not None:
         config_kwargs["dev_years"] = dev_years
@@ -725,6 +728,22 @@ def main():
         "--enable-embedding-projections",
         action="store_true",
         help="Enable embedding projection models (requires GNN/transformer)",
+    )
+    sota_parser.add_argument(
+        "--kaggle-dir",
+        default=None,
+        help="Path to Kaggle competition CSV directory (loads Massey Ordinals, seeds, etc.)",
+    )
+    sota_parser.add_argument(
+        "--model-complexity",
+        choices=["simple", "standard", "full"],
+        default="standard",
+        help="Model complexity mode: simple (8 features), standard (22), full (all)",
+    )
+    sota_parser.add_argument(
+        "--enable-bracket-portfolio",
+        action="store_true",
+        help="Generate diverse bracket portfolio (1000 brackets for Kaggle 2024+ format)",
     )
 
     ingest_parser = subparsers.add_parser("ingest", help="Collect real-world data sources and write a manifest")
