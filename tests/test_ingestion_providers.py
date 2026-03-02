@@ -74,5 +74,5 @@ def test_cbbpy_provider_normalizes_tuple_boxscore(monkeypatch):
     assert result.provider == "cbbpy"
     assert len(result.records) == 2
     assert result.records[0]["game_id"] == "401"
-    assert {"duke", "unc"} == {result.records[0]["team_id"], result.records[1]["team_id"]}
+    assert {"duke", "north_carolina"} == {result.records[0]["team_id"], result.records[1]["team_id"]}
     assert all("opponent_id" in row for row in result.records)

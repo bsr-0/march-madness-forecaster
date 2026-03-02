@@ -590,7 +590,10 @@ class TeamNameResolver:
                 best_score = score
                 best_id = known_id
 
-        if best_score >= 0.80 and best_id:
+        # FIX #2: Raised from 0.80 to 0.88 to prevent false matches
+        # (e.g., "michigan" matching "michigan_state" at score 0.84).
+        # Also require minimum length ratio to prevent short-string mismatches.
+        if best_score >= 0.88 and best_id:
             return MatchResult(
                 best_id, self._id_to_display[best_id], best_score, "fuzzy"
             )

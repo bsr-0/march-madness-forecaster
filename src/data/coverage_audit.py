@@ -242,7 +242,9 @@ def build_game_id_resolver(
 
 
 def _normalize_team_id(name: str) -> str:
-    return "".join(c.lower() if c.isalnum() else "_" for c in name).strip("_")
+    # FIX #2: Delegate to shared normalizer for cross-pipeline consistency.
+    from .normalize import normalize_team_id as _shared
+    return _shared(name)
 
 
 def _load_json(path: str) -> Dict:
