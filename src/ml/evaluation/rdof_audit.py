@@ -1228,7 +1228,7 @@ class HoldoutEvaluator:
         self,
         holdout_year: int,
         config,
-        feature_dim: int = 75,
+        feature_dim: int = 78,
     ) -> dict:
         """Train models for one holdout year; return cached artifacts.
 
@@ -1661,7 +1661,7 @@ class HoldoutEvaluator:
         self,
         holdout_year: int,
         config,
-        feature_dim: int = 75,
+        feature_dim: int = 78,
     ) -> YearMetrics:
         """Full holdout evaluation: train + score with all post-hoc params."""
         cached = self._train_for_year(holdout_year, config, feature_dim)
