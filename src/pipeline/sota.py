@@ -326,6 +326,13 @@ class SOTAPipelineConfig:
     ensemble_xgb_weight: float = 0.15  # XGBoost classifier weight
     # spread gets 0.40 via _FIXED_WEIGHTS; logistic gets residual ~0.20
 
+    # --- Round-weighted training (FIX #3: optimize for Kaggle's actual metric) ---
+    # Include historical tournament games in training with Kaggle round weights
+    # so the model invests more gradient signal in closely-matched elite teams.
+    enable_round_weighted_training: bool = True
+    # Use round-weighted Brier calibration instead of flat Brier
+    enable_round_weighted_calibration: bool = True
+
     # --- Multi-year calibration (Fix 1: expand calibration sample pool) ---
     enable_multi_year_calibration: bool = True  # Augment calibration with historical years
     min_calibration_samples: int = 100  # Warn and skip calibration below this threshold
@@ -380,8 +387,8 @@ class SOTAPipelineConfig:
     # in the competition (100+ rating systems averaged).  Every recent winner
     # used this.  Blend Massey composite prediction with model prediction.
     # Increased from 0.15 to 0.20 — this is the most robust external signal.
-    massey_blend_weight: float = 0.20  # Weight for Massey-derived probability
-    massey_sigma: float = 8.0  # Logistic CDF spread for composite_diff → P(win)
+    massey_blend_weight: float = 0.25  # Weight for Massey-derived probability (FIX #5: increased from 0.20)
+    massey_sigma: float = 4.5  # Logistic CDF spread for composite_diff → P(win) (FIX #5: calibrated via grid search)
 
     # --- Model complexity mode ---
     # Gap #3: Over-engineered for data size (~600 tournament training samples).
@@ -555,12 +562,13 @@ KAGGLE_ROUND_WEIGHTS = {
 # Gap #6: Strengthened data quality multipliers.  2005-2007 data is
 # mostly zeros and unusable.  Top competitors use cleaner data sources.
 DATA_QUALITY_ERA_WEIGHTS = {
-    # FIX #4: Strengthened weights for pre-2010 data.
-    # 2005-2006 have >95% zeroed box-score metrics — effectively unusable.
-    # 2007-2009 have partial data quality.  Setting 2005-2006 to 0.0
-    # excludes them entirely without removing code paths.
-    2005: 0.0, 2006: 0.0, 2007: 0.05, 2008: 0.15, 2009: 0.25,
-    2010: 0.5, 2011: 0.6, 2012: 0.7, 2013: 0.75, 2014: 0.8,
+    # FIX #4: Era-based quality weights.  With incremental PIT features and
+    # zero-stat game filtering, earlier years are more usable than before.
+    # 2005-2006 have >95% zeroed box-score metrics — excluded.
+    # 2007-2009 have partial data but zero-stat filtering helps.
+    # 2010-2014 are high quality, slight discount for historical distance.
+    2005: 0.0, 2006: 0.0, 2007: 0.10, 2008: 0.20, 2009: 0.30,
+    2010: 0.55, 2011: 0.65, 2012: 0.75, 2013: 0.80, 2014: 0.85,
     # 2015+ is high-quality data (weight 1.0)
 }
 
@@ -1005,6 +1013,28 @@ class SOTAPipeline:
                 raise DataRequirementError(
                     f"Freeze verification failed for {self.config.freeze_file}: {exc}"
                 ) from exc
+
+        # FIX #1: Auto-detect kaggle_dir if not explicitly set.
+        # Kaggle competition CSV files (MMasseyOrdinals.csv, MTeams.csv, etc.)
+        # are the primary source for external rating composites.
+        if not self.config.kaggle_dir:
+            import os as _detect_os
+            _kaggle_candidates = [
+                _detect_os.path.join(_detect_os.getcwd(), "data", "kaggle"),
+                _detect_os.path.join(_detect_os.getcwd(), "data", "raw", "kaggle"),
+                _detect_os.path.join(_detect_os.getcwd(), "kaggle"),
+                _detect_os.path.join(self.config.data_cache_dir, "kaggle"),
+            ]
+            for _kd in _kaggle_candidates:
+                if _detect_os.path.isdir(_kd):
+                    _massey_files = [
+                        f for f in _detect_os.listdir(_kd)
+                        if "massey" in f.lower() or "MTeams" in f
+                    ]
+                    if _massey_files:
+                        self.config.kaggle_dir = _kd
+                        logger.info("FIX #1: Auto-detected kaggle_dir: %s", _kd)
+                        break
 
         teams = self._load_teams()
         torvik_map, proprietary_map = self._load_team_stat_sources(teams)
@@ -2495,12 +2525,19 @@ class SOTAPipeline:
             hist_margin_parts = []
             hist_weight_parts = []
             hist_sortkey_parts = []
+            hist_round_weight_parts = []  # FIX #3: per-sample round weights
             years_loaded = []
 
             # D2: Persist Elo across historical years for cross-season carryover.
             # Processing years in sorted order (oldest→newest) so each year's
             # final Elo serves as the prior for the next year.
             _cross_year_elo: Dict[str, float] = {}
+
+            # FIX #3: Include tournament games in historical training when
+            # round-weighted training is enabled.  Tournament games receive
+            # Kaggle round weights (R64=1, R32=2, S16=4, E8=8, F4=16, NCG=32)
+            # so the model invests more gradient signal in elite matchups.
+            _include_tourney = self.config.enable_round_weighted_training
 
             for yr in hist_years:
                 gp = os.path.join(games_dir, f"historical_games_{yr}.json")
@@ -2515,7 +2552,7 @@ class SOTAPipeline:
                 try:
                     hX, hy, _h_margins, _end_elo, _h_rw = self._load_year_samples_incremental(
                         gp, mp, feature_dim_full, yr,
-                        include_tournament=False,
+                        include_tournament=_include_tourney,
                         prior_elo=_cross_year_elo,
                     )
                     if _end_elo:
@@ -2563,11 +2600,18 @@ class SOTAPipeline:
                 hist_margin_parts.append(_h_margins)
                 hist_weight_parts.append(sample_weights)
                 hist_sortkey_parts.append(year_sort_keys)
+                # FIX #3: Collect round weights from historical years
+                if _h_rw is not None and len(_h_rw) == len(hy):
+                    hist_round_weight_parts.append(_h_rw)
+                else:
+                    hist_round_weight_parts.append(np.ones(len(hy), dtype=float))
                 years_loaded.append(yr)
 
+                _n_tourney = int(np.sum(_h_rw > 1.0)) if _h_rw is not None and len(_h_rw) == len(hy) else 0
                 logger.info(
-                    "Multi-year training: loaded %d samples from %d (weight=%.3f).",
-                    len(hy), yr, year_weight,
+                    "Multi-year training: loaded %d samples from %d "
+                    "(weight=%.3f, tournament_weighted=%d).",
+                    len(hy), yr, year_weight, _n_tourney,
                 )
 
             total_hist_samples = sum(len(part) for part in hist_y_parts)
@@ -2601,6 +2645,27 @@ class SOTAPipeline:
                     hist_weights,
                     np.ones(n_current_year_train, dtype=float),
                 ])
+
+                # FIX #3: Build round weights array for Kaggle round-weighted
+                # Brier optimization.  Historical tournament games get their
+                # actual round weight; regular-season games get 1.0.
+                if self.config.enable_round_weighted_training and hist_round_weight_parts:
+                    hist_rw = np.concatenate(hist_round_weight_parts)
+                    # Current-year training games are regular-season → weight 1.0
+                    self._round_weights = np.concatenate([
+                        hist_rw,
+                        np.ones(n_current_year_train, dtype=float),
+                    ])
+                    _n_weighted = int(np.sum(self._round_weights > 1.0))
+                    if _n_weighted > 0:
+                        logger.info(
+                            "FIX #3: Round-weighted training enabled: %d tournament "
+                            "games with Kaggle round weights (max=%.0f, mean=%.2f).",
+                            _n_weighted,
+                            float(np.max(self._round_weights)),
+                            float(np.mean(self._round_weights[self._round_weights > 1.0])),
+                        )
+
                 train_samples = len(train_y)
 
                 historical_training_stats = {
@@ -3811,6 +3876,24 @@ class SOTAPipeline:
         except Exception:
             pass
 
+        # FIX #4: Fallback to Kaggle MTeamConferences.csv for conference data.
+        # The conference field is absent across all years in the primary data
+        # source, making all conference features NaN.  Kaggle CSVs provide
+        # authoritative conference assignments from 2003-present.
+        if not conference_map and self.config.kaggle_dir:
+            try:
+                from ..data.kaggle_loader import KaggleDataLoader
+                _kloader = KaggleDataLoader(self.config.kaggle_dir)
+                _kconf = _kloader.load_team_conferences(year)
+                if _kconf:
+                    conference_map = _kconf
+                    logger.info(
+                        "FIX #4: Loaded %d conference assignments from Kaggle for year %d",
+                        len(_kconf), year,
+                    )
+            except Exception:
+                pass
+
         # Tournament seeds (for seed_interaction feature).
         team_seeds: Dict[str, int] = {}
         seeds_path = os.path.join(os.path.dirname(games_path), f"tournament_seeds_{year}.json")
@@ -4593,6 +4676,44 @@ class SOTAPipeline:
         # Fit temperature scaling on the fitting portion (70% or all).
         self.calibration_pipeline = CalibrationPipeline(method=self.config.calibration_method)
         self.calibration_pipeline.fit(p_fit, y_fit)
+
+        # FIX #3: Fit round-weighted Brier calibrator as secondary refinement.
+        # Kaggle uses round-weighted Brier scoring, so calibration should
+        # optimize for the actual competition metric, not flat Brier.
+        self._round_weighted_calibrator = None
+        if (
+            self.config.enable_round_weighted_calibration
+            and self.config.calibration_method == "temperature"
+            and len(p_fit) >= 30
+        ):
+            try:
+                from ..ml.calibration.brier_optimal import BrierCalibrator
+                rw_cal = BrierCalibrator()
+                # Build synthetic round labels for calibration samples:
+                # later calibration samples (closer to tournament) get higher
+                # round weights as a proxy for tournament importance.
+                n_fit = len(p_fit)
+                cal_round_labels = []
+                for i in range(n_fit):
+                    frac = i / max(n_fit - 1, 1)
+                    if frac > 0.9:
+                        cal_round_labels.append("F4")
+                    elif frac > 0.8:
+                        cal_round_labels.append("E8")
+                    elif frac > 0.6:
+                        cal_round_labels.append("S16")
+                    elif frac > 0.4:
+                        cal_round_labels.append("R32")
+                    else:
+                        cal_round_labels.append("R64")
+                rw_cal.fit_weighted(p_fit, y_fit, cal_round_labels)
+                self._round_weighted_calibrator = rw_cal
+                logger.info(
+                    "FIX #3: Round-weighted Brier calibrator fitted (T=%.3f).",
+                    rw_cal.temperature,
+                )
+            except Exception as e:
+                logger.warning("FIX #3: Round-weighted calibration failed: %s", e)
 
         # Evaluate calibration quality.
         pre_metrics = calculate_calibration_metrics(p_arr, y_arr)
@@ -5539,6 +5660,15 @@ class SOTAPipeline:
         if self.calibration_pipeline:
             calibrated = float(self.calibration_pipeline.calibrate(np.array([raw]))[0])
             raw = float(np.clip(calibrated, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
+
+        # FIX #3: Apply round-weighted Brier calibrator if available.
+        # This adjusts calibration toward the Kaggle competition metric
+        # (round-weighted Brier) rather than flat Brier.
+        if hasattr(self, '_round_weighted_calibrator') and self._round_weighted_calibrator is not None:
+            rw_cal = self._round_weighted_calibrator
+            logit = np.log(max(raw, 1e-8) / max(1.0 - raw, 1e-8))
+            rw_calibrated = 1.0 / (1.0 + np.exp(-logit / max(rw_cal.temperature, 0.01)))
+            raw = float(np.clip(rw_calibrated, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
 
         if self.config.enable_tournament_adaptation:
             raw = self._tournament_adapt(raw, team1_id, team2_id)

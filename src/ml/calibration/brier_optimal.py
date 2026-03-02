@@ -668,9 +668,13 @@ class MasseyStandalonePredictor:
         model_probs: np.ndarray,
         massey_probs: np.ndarray,
         outcomes: np.ndarray,
-        weight_bounds: Tuple[float, float] = (0.10, 0.35),
+        weight_bounds: Tuple[float, float] = (0.05, 0.40),
     ) -> float:
         """Optimize the blend weight between model and Massey predictions.
+
+        FIX #5: Widened bounds from (0.10, 0.35) to (0.05, 0.40) to allow
+        the optimizer to find the true optimal blend.  Top Kaggle solutions
+        use 0.20-0.30 Massey weight; wider bounds let the data decide.
 
         Args:
             model_probs: Base model probabilities [N].

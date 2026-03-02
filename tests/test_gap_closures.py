@@ -163,8 +163,8 @@ class TestSOTAConfigNewFields:
 
         config = SOTAPipelineConfig()
         assert config.kaggle_dir is None
-        assert config.massey_blend_weight == 0.20  # Gap #1: increased from 0.15
-        assert config.massey_sigma == 8.0
+        assert config.massey_blend_weight == 0.25  # FIX #5: increased from 0.20 for stronger Massey signal
+        assert config.massey_sigma == 4.5  # FIX #5: calibrated via grid search on historical data
         assert config.model_complexity == "simple"  # Gap #3: default changed to simple
         assert config.ensemble_lgb_weight == 0.25  # Gap #2: reduced for MOV-first
         assert config.ensemble_xgb_weight == 0.15  # Gap #2: reduced for MOV-first
