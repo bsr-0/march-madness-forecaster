@@ -70,8 +70,8 @@ class TestNormalizeTeamId:
         assert normalize_team_id("None") == "none"
 
     def test_mascot_suffix(self):
-        """CBBpy-style mascot IDs are passed through without special handling."""
-        assert normalize_team_id("Duke Blue Devils") == "duke_blue_devils"
+        """CBBpy-style mascot IDs are resolved to Kaggle canonical form."""
+        assert normalize_team_id("Duke Blue Devils") == "duke"
 
     def test_double_html_entity(self):
         """Ensure double-encoded entities are decoded once."""
@@ -456,7 +456,7 @@ class TestCrossPipelineConsistency:
         test_cases = [
             ("Texas A&amp;M", "texas_a_m"),
             ("San José State", "san_jose_state"),
-            ("Duke Blue Devils", "duke_blue_devils"),
+            ("Duke Blue Devils", "duke"),
             ("St. John's (NY)", "st_john_s_ny"),
         ]
         for input_name, expected in test_cases:
