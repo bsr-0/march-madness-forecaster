@@ -264,6 +264,70 @@ class BrierCalibrator:
             brier_at_T(self.temperature),
         )
 
+    def fit_weighted(
+        self,
+        predictions: np.ndarray,
+        outcomes: np.ndarray,
+        round_labels: List[str],
+        weights_schedule: Optional[Dict[str, float]] = None,
+    ) -> None:
+        """Fit temperature minimizing round-weighted Brier score.
+
+        FIX #3: Kaggle evaluates on round-weighted Brier.  Late-round games
+        (E8, F4, NCG) are worth 8-32x R64 games.  This calibrates the
+        temperature specifically for the competition's scoring metric.
+
+        Args:
+            predictions: Raw probabilities
+            outcomes: Actual outcomes (0 or 1)
+            round_labels: Round label per prediction (R64, R32, S16, E8, F4, NCG)
+            weights_schedule: Round -> weight mapping (defaults to Kaggle schedule)
+        """
+        if weights_schedule is None:
+            weights_schedule = KAGGLE_ROUND_WEIGHTS
+
+        predictions = np.clip(predictions, 1e-7, 1 - 1e-7)
+        logits = np.log(predictions / (1 - predictions))
+        outcomes = np.asarray(outcomes, dtype=np.float64)
+        weights = np.array(
+            [weights_schedule.get(r, 1.0) for r in round_labels],
+            dtype=np.float64,
+        )
+        w_sum = np.sum(weights)
+        if w_sum < 1e-9:
+            return self.fit(predictions, outcomes)
+
+        def weighted_brier_at_T(T: float) -> float:
+            scaled = np.clip(logits / T, -30.0, 30.0)
+            probs = 1.0 / (1.0 + np.exp(-scaled))
+            return float(np.sum(weights * (probs - outcomes) ** 2) / w_sum)
+
+        if SCIPY_AVAILABLE:
+            result = minimize_scalar(
+                weighted_brier_at_T,
+                bounds=(0.1, 10.0),
+                method="bounded",
+                options={"xatol": 1e-6, "maxiter": 500},
+            )
+            self.temperature = float(result.x)
+        else:
+            best_T = 1.0
+            best_brier = weighted_brier_at_T(1.0)
+            for T in np.linspace(0.1, 5.0, 100):
+                brier = weighted_brier_at_T(T)
+                if brier < best_brier:
+                    best_brier = brier
+                    best_T = T
+            self.temperature = best_T
+
+        self.fitted = True
+        logger.info(
+            "Round-weighted Brier calibrator: T=%.3f (weighted Brier: %.4f -> %.4f)",
+            self.temperature,
+            weighted_brier_at_T(1.0),
+            weighted_brier_at_T(self.temperature),
+        )
+
     def calibrate(self, predictions: np.ndarray) -> np.ndarray:
         """Apply Brier-optimal temperature scaling."""
         if not self.fitted:
@@ -516,3 +580,152 @@ class RoundWeightedSharpener(BrierOptimalSharpener):
             weighted_brier_at_alpha(1.0), weighted_brier_at_alpha(self.alpha),
         )
         return self.alpha
+
+
+# ---------------------------------------------------------------------------
+# FIX #5: Massey Composite Standalone Predictor
+# ---------------------------------------------------------------------------
+
+
+class MasseyStandalonePredictor:
+    """Standalone predictor using only Massey Composite rating differences.
+
+    FIX #5: Every recent Kaggle winner used Massey Ordinals or equivalent.
+    This class creates an independent probability predictor from composite
+    rating differences, calibrated on historical tournament results.
+
+    The predictor uses a logistic CDF:
+        P(team1 wins) = 1 / (1 + exp(-composite_diff / sigma))
+
+    where sigma is calibrated to minimize Brier score on historical data.
+    This provides an orthogonal signal to the feature-based ensemble.
+    """
+
+    def __init__(self, sigma: float = 8.0):
+        self.sigma: float = sigma
+        self.fitted: bool = False
+        self.blend_weight: float = 0.20  # Default blend weight
+        self._fit_brier: float = 0.0
+
+    def fit(
+        self,
+        composite_diffs: np.ndarray,
+        outcomes: np.ndarray,
+        sigma_bounds: Tuple[float, float] = (1.0, 25.0),
+    ) -> float:
+        """Calibrate sigma on historical tournament results.
+
+        Args:
+            composite_diffs: Rating differences (team1 - team2) [N].
+            outcomes: Actual outcomes (1 = team1 won, 0 = team1 lost) [N].
+            sigma_bounds: Search range for sigma.
+
+        Returns:
+            Optimal sigma value.
+        """
+        composite_diffs = np.asarray(composite_diffs, dtype=np.float64)
+        outcomes = np.asarray(outcomes, dtype=np.float64)
+
+        if len(composite_diffs) < 10:
+            logger.warning(
+                "MasseyStandalonePredictor: too few samples (%d) to calibrate; "
+                "using default sigma=%.1f", len(composite_diffs), self.sigma,
+            )
+            return self.sigma
+
+        def brier_at_sigma(sigma: float) -> float:
+            probs = 1.0 / (1.0 + np.exp(-composite_diffs / max(sigma, 0.01)))
+            return float(np.mean((probs - outcomes) ** 2))
+
+        if SCIPY_AVAILABLE:
+            result = minimize_scalar(
+                brier_at_sigma,
+                bounds=sigma_bounds,
+                method="bounded",
+                options={"xatol": 1e-4, "maxiter": 200},
+            )
+            self.sigma = float(result.x)
+        else:
+            best_sigma = self.sigma
+            best_brier = brier_at_sigma(self.sigma)
+            for s in np.linspace(sigma_bounds[0], sigma_bounds[1], 100):
+                b = brier_at_sigma(s)
+                if b < best_brier:
+                    best_brier = b
+                    best_sigma = s
+            self.sigma = best_sigma
+
+        self.fitted = True
+        self._fit_brier = brier_at_sigma(self.sigma)
+        logger.info(
+            "MasseyStandalonePredictor: sigma=%.3f (Brier=%.4f on %d samples)",
+            self.sigma, self._fit_brier, len(outcomes),
+        )
+        return self.sigma
+
+    def fit_blend_weight(
+        self,
+        model_probs: np.ndarray,
+        massey_probs: np.ndarray,
+        outcomes: np.ndarray,
+        weight_bounds: Tuple[float, float] = (0.10, 0.35),
+    ) -> float:
+        """Optimize the blend weight between model and Massey predictions.
+
+        Args:
+            model_probs: Base model probabilities [N].
+            massey_probs: Massey standalone probabilities [N].
+            outcomes: Actual outcomes [N].
+            weight_bounds: Constrained range for Massey weight.
+
+        Returns:
+            Optimal blend weight.
+        """
+        model_probs = np.asarray(model_probs, dtype=np.float64)
+        massey_probs = np.asarray(massey_probs, dtype=np.float64)
+        outcomes = np.asarray(outcomes, dtype=np.float64)
+
+        if len(outcomes) < 20:
+            logger.warning(
+                "MasseyStandalonePredictor: too few samples (%d) for blend "
+                "weight optimization; using default w=%.2f",
+                len(outcomes), self.blend_weight,
+            )
+            return self.blend_weight
+
+        def brier_at_w(w: float) -> float:
+            blended = (1.0 - w) * model_probs + w * massey_probs
+            return float(np.mean((blended - outcomes) ** 2))
+
+        if SCIPY_AVAILABLE:
+            result = minimize_scalar(
+                brier_at_w,
+                bounds=weight_bounds,
+                method="bounded",
+                options={"xatol": 1e-4, "maxiter": 100},
+            )
+            self.blend_weight = float(result.x)
+        else:
+            best_w = self.blend_weight
+            best_brier = brier_at_w(self.blend_weight)
+            for w in np.linspace(weight_bounds[0], weight_bounds[1], 50):
+                b = brier_at_w(w)
+                if b < best_brier:
+                    best_brier = b
+                    best_w = w
+            self.blend_weight = best_w
+
+        logger.info(
+            "MasseyStandalonePredictor: blend_weight=%.3f "
+            "(model-only Brier=%.4f, blended Brier=%.4f, massey-only=%.4f)",
+            self.blend_weight,
+            brier_at_w(0.0),
+            brier_at_w(self.blend_weight),
+            brier_at_w(1.0),
+        )
+        return self.blend_weight
+
+    def predict(self, composite_diff: float) -> float:
+        """Predict P(team1 wins) from composite rating difference."""
+        import math
+        return 1.0 / (1.0 + math.exp(-composite_diff / max(self.sigma, 0.01)))

@@ -165,12 +165,12 @@ class HerHoopStatsScraper:
 
 
 def _normalize_team_id(name: str) -> str:
-    """Normalize team name to canonical ID format."""
-    s = name.lower().strip()
-    s = s.replace("&", "_")
-    s = re.sub(r"[^a-z0-9]", "_", s)
-    s = re.sub(r"_+", "_", s)
-    return s.strip("_")
+    """Normalize team name to canonical ID format.
+
+    FIX #2: Delegate to shared normalizer for cross-pipeline consistency.
+    """
+    from ...normalize import normalize_team_id as _shared
+    return _shared(name)
 
 
 def _estimate_from_seed(team_id: str, seed: int) -> WomensTeamStats:
