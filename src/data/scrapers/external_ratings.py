@@ -276,3 +276,120 @@ class ExternalRatingsLoader:
             })
         with open(path, "w") as f:
             json.dump(data, f, indent=2)
+
+    def populate_from_massey_ordinals(
+        self,
+        kaggle_dir: str,
+        year: int,
+        *,
+        ranking_day_num: Optional[int] = None,
+        systems: Optional[List[str]] = None,
+    ) -> int:
+        """Populate the external ratings cache from Kaggle MMasseyOrdinals CSV.
+
+        This is the primary integration point for Kaggle-provided ordinal
+        rankings.  MMasseyOrdinals contains rankings from 50-160+ systems
+        (depending on the season), making it the richest single data source
+        for external ratings.
+
+        Args:
+            kaggle_dir: Path to directory containing Kaggle CSV files.
+            year: Season year (e.g. 2025 for the 2024-25 season).
+            ranking_day_num: Specific day number to use (None = latest).
+            systems: Restrict to these system names.  If None, loads the
+                top systems by coverage (those with rankings for 300+ teams).
+
+        Returns:
+            Number of systems successfully cached.
+        """
+        from ..kaggle_loader import KaggleDataLoader
+
+        loader = KaggleDataLoader(kaggle_dir)
+        all_systems = loader.load_massey_ordinals_as_external_ratings(
+            year, ranking_day_num=ranking_day_num,
+        )
+        if not all_systems:
+            logger.warning("No Massey Ordinals found for %d in %s", year, kaggle_dir)
+            return 0
+
+        cached = 0
+        for system_name, entries in all_systems.items():
+            if systems and system_name not in systems:
+                continue
+            # Only cache systems with meaningful coverage (50+ teams)
+            if len(entries) < 50:
+                continue
+            ratings: Dict[str, ExternalRating] = {}
+            for e in entries:
+                r = ExternalRating(
+                    system_name=system_name,
+                    team_name=e["team_name"],
+                    team_id=e["team_id"],
+                    rating=e["rating"],
+                    ranking=e["ranking"],
+                    normalized=e["normalized"],
+                )
+                ratings[r.team_id] = r
+            self.save_system(system_name, year, ratings)
+            cached += 1
+
+        # Also create a "massey_composite" meta-system by averaging
+        # all available ordinal systems.
+        if cached > 0:
+            self._build_massey_composite_cache(year, all_systems)
+            cached += 1
+
+        logger.info(
+            "Cached %d Massey Ordinal systems for %d from %s",
+            cached, year, kaggle_dir,
+        )
+        return cached
+
+    def _build_massey_composite_cache(
+        self,
+        year: int,
+        all_systems: Dict[str, List[Dict]],
+    ) -> None:
+        """Build a massey_composite meta-system from all available ordinals.
+
+        For each team, compute the average normalized rating across all
+        systems that rank them, then save as a unified "massey_composite"
+        system.
+        """
+        team_scores: Dict[str, List[float]] = {}
+        team_names: Dict[str, str] = {}
+        for system_name, entries in all_systems.items():
+            if len(entries) < 50:
+                continue
+            for e in entries:
+                tid = e["team_id"]
+                team_scores.setdefault(tid, []).append(e["normalized"])
+                if not team_names.get(tid):
+                    team_names[tid] = e["team_name"]
+
+        if not team_scores:
+            return
+
+        # Average normalized rating across all systems
+        composite_ratings: Dict[str, ExternalRating] = {}
+        for tid, scores in team_scores.items():
+            avg = sum(scores) / len(scores)
+            composite_ratings[tid] = ExternalRating(
+                system_name="massey_composite",
+                team_name=team_names.get(tid, tid),
+                team_id=tid,
+                rating=avg * 1000,  # Scale to a reasonable range
+                ranking=0,  # Will be assigned below
+                normalized=round(avg, 6),
+            )
+
+        # Assign rankings by composite rating
+        sorted_teams = sorted(
+            composite_ratings.values(),
+            key=lambda r: r.normalized,
+            reverse=True,
+        )
+        for rank, r in enumerate(sorted_teams, 1):
+            r.ranking = rank
+
+        self.save_system("massey_composite", year, composite_ratings)
