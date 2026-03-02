@@ -39,6 +39,9 @@ class HistoricalIngestionConfig:
     team_metrics_provider_priority: Optional[List[str]] = None
     torvik_provider_priority: Optional[List[str]] = None
 
+    # Kaggle competition data directory for supplemental data
+    kaggle_dir: Optional[str] = None
+
 
 class HistoricalDataPipeline:
     """Collects real historical team/game data for model training."""
@@ -120,6 +123,10 @@ class HistoricalDataPipeline:
                     manifest["providers"][str(season)]["tournament_seeds_json"] = tournament_provider
                     manifest["validation_errors"][str(season)]["tournament_seeds_json"] = []
                     manifest["season_counts"][str(season)]["tournament_seed_teams"] = len(tournament_payload["teams"])
+
+            # Kaggle Massey Ordinals → external rating caches
+            if self.config.kaggle_dir:
+                self._collect_kaggle_data(season, manifest)
 
         manifest_path = self._write_json(
             f"historical_manifest_{self.config.start_season}_{self.config.end_season}.json",
@@ -520,6 +527,25 @@ class HistoricalDataPipeline:
         if not rows:
             raise ValueError(f"No team metrics available for season {season}")
         return {"season": season, "teams": rows}, provider
+
+    def _collect_kaggle_data(self, season: int, manifest: Dict) -> None:
+        """Load Kaggle CSV data for a historical season."""
+        from ..scrapers.external_ratings import ExternalRatingsLoader
+
+        kaggle_dir = self.config.kaggle_dir
+        if not kaggle_dir:
+            return
+
+        try:
+            ratings_loader = ExternalRatingsLoader(cache_dir=str(self.output_dir))
+            n_systems = ratings_loader.populate_from_massey_ordinals(kaggle_dir, season)
+            if n_systems > 0:
+                manifest["artifacts"].setdefault(str(season), {})["massey_ordinals_systems"] = n_systems
+                manifest["providers"].setdefault(str(season), {})["massey_ordinals"] = "kaggle_csv"
+                manifest["season_counts"].setdefault(str(season), {})["massey_ordinal_systems"] = n_systems
+                logger.info("Cached %d Massey Ordinal systems for season %d", n_systems, season)
+        except Exception as e:
+            logger.warning("Massey Ordinals ingestion failed for season %d: %s", season, e)
 
     def _collect_tournament_context(self, season: int) -> Tuple[Dict, str]:
         try:
