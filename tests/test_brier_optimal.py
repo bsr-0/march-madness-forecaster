@@ -88,26 +88,32 @@ class TestBrierOptimalSharpener:
 
 class TestSeedBasedOverrides:
 
-    def test_snap_1v16_mens(self):
-        """1v16 should snap to historical rate when prediction is close."""
+    def test_shrinkage_1v16_mens(self):
+        """1v16 should shrink toward historical rate (0.987) for extreme matchups."""
         overrides = SeedBasedOverrides(snap_threshold=0.08, is_womens=False)
-        # Model predicts 0.96 for 1-seed, historical is 0.987
+        # Model predicts 0.96 for 1-seed, historical is 0.987.
+        # With Bayesian shrinkage (~80% for 1v16), result should be
+        # pulled strongly toward 0.987.
         result = overrides.apply(0.96, seed1=1, seed2=16)
-        assert result == 0.987
+        assert 0.96 < result <= 0.987  # Pulled toward historical
+        # Should be closer to historical than original (strong shrinkage)
+        assert abs(result - 0.987) < abs(0.96 - 0.987)
 
-    def test_no_snap_when_far(self):
-        """Should NOT snap when prediction differs too much from historical."""
+    def test_no_shrinkage_when_far(self):
+        """Should NOT shrink when prediction differs too much from historical."""
         overrides = SeedBasedOverrides(snap_threshold=0.08, is_womens=False)
         # Model predicts 0.85 for 1-seed (very different from 0.987)
         result = overrides.apply(0.85, seed1=1, seed2=16)
-        assert result == 0.85  # Unchanged
+        assert result == 0.85  # Unchanged (beyond snap_threshold)
 
-    def test_snap_flipped_seeds(self):
+    def test_shrinkage_flipped_seeds(self):
         """Should handle when the higher seed is team1."""
         overrides = SeedBasedOverrides(snap_threshold=0.08, is_womens=False)
         # 16-seed vs 1-seed: prediction for team1 (16-seed) winning
         result = overrides.apply(0.02, seed1=16, seed2=1)
-        assert abs(result - (1.0 - 0.987)) < 1e-6  # Should snap to 0.013
+        # Should be pulled toward 1 - 0.987 = 0.013
+        assert result < 0.02  # Pulled toward lower historical rate
+        assert result >= 0.013
 
     def test_womens_different_rates(self):
         """Women's rates should differ from men's."""
@@ -123,10 +129,12 @@ class TestSeedBasedOverrides:
         assert result == 0.65
 
     def test_8v9_close_matchup(self):
-        """8v9 snap should work for close matchups."""
+        """8v9 shrinkage should work for close matchups."""
         overrides = SeedBasedOverrides(snap_threshold=0.08, is_womens=False)
         result = overrides.apply(0.52, seed1=8, seed2=9)
-        assert result == 0.510
+        # Historical rate is 0.510.  For 8v9 (seed_gap=1), shrinkage
+        # is moderate (~0.615).  Result should be between model and historical.
+        assert 0.510 <= result <= 0.52
 
 
 # --- BrierCalibrator ---
@@ -185,9 +193,10 @@ class TestBrierPostProcessor:
 
     def test_process_applies_seed_override(self):
         pp = BrierPostProcessor()
-        # 1v16 matchup should snap
+        # 1v16 matchup should be pulled toward historical rate via Bayesian shrinkage
         result = pp.process(0.96, seed1=1, seed2=16, is_womens=False)
-        assert result == pytest.approx(0.987, abs=0.001)
+        # With ~80% shrinkage for 1v16, result should be between 0.96 and 0.987
+        assert 0.96 < result <= 0.987
 
     def test_process_womens_uses_womens_rates(self):
         pp = BrierPostProcessor()

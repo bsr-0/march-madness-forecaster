@@ -177,20 +177,21 @@ class SpreadRegressor:
         self,
         X: np.ndarray,
         actual_margins: np.ndarray,
+        metric: str = "brier",
     ) -> float:
-        """Calibrate sigma from validation residuals via MLE.
+        """Calibrate sigma from validation data to minimize Brier score.
 
-        Finds sigma that maximizes the log-likelihood of observed outcomes
-        under the logistic CDF model:
+        Since Kaggle switched to Brier score in 2023, we optimize sigma
+        directly for Brier rather than log-likelihood.  Brier-optimal sigma
+        is typically slightly larger (less confident) than MLE sigma because
+        Brier penalizes overconfidence quadratically rather than logarithmically.
 
-            L(sigma) = sum_i [ y_i * log(P_i) + (1-y_i) * log(1-P_i) ]
-
-        where P_i = logistic_cdf(predicted_spread_i / sigma) and
-        y_i = 1 if team1 won.
+        Also supports "logloss" mode for backwards compatibility.
 
         Args:
             X: Validation features.
             actual_margins: Actual point margins.
+            metric: "brier" (default, Kaggle 2023+) or "logloss" (pre-2023).
 
         Returns:
             Calibrated sigma value.
@@ -201,22 +202,33 @@ class SpreadRegressor:
         predicted_spreads = self.predict_spread(X)
         outcomes = (actual_margins > 0).astype(float)
 
-        # Grid search over sigma in [5, 20] — 1-parameter optimization
         best_sigma = self.sigma
-        best_ll = -float("inf")
+        best_score = float("inf") if metric == "brier" else -float("inf")
 
         for sigma_candidate in np.linspace(5.0, 20.0, 61):
             probs = _logistic_cdf(predicted_spreads, sigma_candidate)
             probs = np.clip(probs, 1e-7, 1 - 1e-7)
-            ll = float(np.sum(
-                outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)
-            ))
-            if ll > best_ll:
-                best_ll = ll
-                best_sigma = sigma_candidate
+
+            if metric == "brier":
+                # Minimize Brier score = mean((p - y)^2)
+                score = float(np.mean((probs - outcomes) ** 2))
+                if score < best_score:
+                    best_score = score
+                    best_sigma = sigma_candidate
+            else:
+                # Maximize log-likelihood (legacy)
+                ll = float(np.sum(
+                    outcomes * np.log(probs) + (1 - outcomes) * np.log(1 - probs)
+                ))
+                if ll > best_score:
+                    best_score = ll
+                    best_sigma = sigma_candidate
 
         self.sigma = float(best_sigma)
-        logger.info("SpreadRegressor: calibrated sigma=%.2f (log-likelihood=%.2f)", self.sigma, best_ll)
+        logger.info(
+            "SpreadRegressor: calibrated sigma=%.2f (%s=%.4f)",
+            self.sigma, metric, best_score,
+        )
         return self.sigma
 
 
