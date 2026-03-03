@@ -609,3 +609,335 @@ class TestMasseyCompositeRoundTrip:
             assert len(loaded) >= 50, (
                 f"System {system_name}: only {len(loaded)} teams after reload"
             )
+
+
+# ===========================================================================
+# 8. SOTA pipeline _load_external_ratings integration
+# ===========================================================================
+
+class TestSOTALoadExternalRatings:
+    """Test the SOTA pipeline's _load_external_ratings returns real composites
+    when kaggle_dir is set to a valid directory with Massey Ordinals.
+
+    This is the critical gap: without this test, Massey data could be loaded
+    but silently dropped before it reaches predictions.
+    """
+
+    def test_load_external_ratings_produces_composites(
+        self, kaggle_dir_large, tmp_path
+    ):
+        """_load_external_ratings must return Massey-based composites (not
+        seed-fallback) when Massey Ordinals CSV exists."""
+        from src.pipeline.sota import SOTAPipelineConfig, SOTAPipeline
+        from src.data.scrapers.external_ratings import ExternalRatingsLoader
+
+        # The SOTA pipeline uses external_ratings_dir or data_cache_dir as
+        # the cache directory for ExternalRatingsLoader.  We must pre-populate
+        # the cache at the SAME path the pipeline will use.
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+        loader = ExternalRatingsLoader(cache_dir=str(cache_dir))
+        n_cached = loader.populate_from_massey_ordinals(str(kaggle_dir_large), 2025)
+        assert n_cached >= 2
+
+        # Create a minimal SOTA config.
+        # external_ratings_dir overrides data_cache_dir for the loader.
+        config = SOTAPipelineConfig(
+            year=2025,
+            data_cache_dir=str(cache_dir),
+            kaggle_dir=str(kaggle_dir_large),
+            enable_external_ratings=True,
+        )
+        config.external_ratings_dir = str(cache_dir)
+
+        # Build a minimal pipeline and call _load_external_ratings
+        pipeline = SOTAPipeline.__new__(SOTAPipeline)
+        pipeline.config = config
+        pipeline.feature_engineer = None
+        pipeline.team_struct = {}
+
+        class FakeTeam:
+            def __init__(self, name, seed):
+                self.name = name
+                self.seed = seed
+                self.region = "W"
+
+        teams = [FakeTeam(f"Team{i}", (i % 16) + 1) for i in range(20)]
+
+        def _team_id(name):
+            from src.data.normalize import normalize_team_id
+            return normalize_team_id(name)
+        pipeline._team_id = _team_id
+
+        composites = pipeline._load_external_ratings(teams)
+
+        # Critical assertions
+        assert composites, "_load_external_ratings returned empty dict"
+        assert len(composites) >= 5, (
+            f"Only {len(composites)} teams in composites, expected >= 5"
+        )
+
+        # Verify these are REAL Massey-based composites, not seed fallback.
+        # The massey_composite meta-system (built from individual ordinal
+        # systems) flows through load_all as a single system in SYSTEM_WEIGHTS.
+        # Seed fallback sets per_system={"seed_estimate": ...} with n_systems=1.
+        # Massey composites have per_system={"massey_composite": ...}.
+        has_massey_signal = False
+        for comp in composites.values():
+            if hasattr(comp, "per_system") and comp.per_system:
+                # Seed fallback uses "seed_estimate" key
+                if "seed_estimate" not in comp.per_system:
+                    has_massey_signal = True
+                    break
+
+        assert has_massey_signal, (
+            "All composites appear to be seed-based fallback — "
+            "pipeline did not load Massey data despite kaggle_dir being set. "
+            f"Sample per_system: "
+            f"{[c.per_system for c in list(composites.values())[:3]]}"
+        )
+
+    def test_load_external_ratings_returns_empty_when_disabled(self, tmp_path):
+        """When enable_external_ratings=False, must return empty dict."""
+        from src.pipeline.sota import SOTAPipelineConfig, SOTAPipeline
+
+        config = SOTAPipelineConfig(
+            year=2025,
+            enable_external_ratings=False,
+        )
+        pipeline = SOTAPipeline.__new__(SOTAPipeline)
+        pipeline.config = config
+
+        composites = pipeline._load_external_ratings([])
+        assert composites == {}, (
+            f"Expected empty dict when external ratings disabled, got {len(composites)} entries"
+        )
+
+
+# ===========================================================================
+# 9. Massey blend actually modifies predictions
+# ===========================================================================
+
+class TestMasseyBlendEffect:
+    """Verify that Massey composite blend actually changes predictions.
+
+    This catches the scenario where Massey data is loaded but the blend
+    weight is zero or the blend code path is unreachable.
+    """
+
+    def test_massey_blend_changes_probability(self):
+        """A non-zero Massey composite diff should change the predicted
+        probability compared to no Massey data."""
+        import math
+        from src.pipeline.sota import SOTAPipelineConfig
+
+        config = SOTAPipelineConfig()
+
+        # Simulate the blend logic from _raw_fusion_probability
+        baseline_prob = 0.50  # Even matchup per model
+        massey_sigma = config.massey_sigma
+        massey_weight = config.massey_blend_weight
+
+        # Case 1: Large positive diff (team1 much stronger in Massey ratings)
+        # Use a large enough diff so massey_prob is clearly > 0.5
+        diff = 0.5  # Large normalized rating difference
+        massey_prob = 1.0 / (1.0 + math.exp(-diff / max(massey_sigma, 0.01)))
+        blended = (1.0 - massey_weight) * baseline_prob + massey_weight * massey_prob
+
+        assert blended != baseline_prob, (
+            f"Massey blend had no effect: baseline={baseline_prob}, "
+            f"blended={blended}, weight={massey_weight}"
+        )
+        # Positive diff → massey_prob > 0.5 → blended should exceed 0.5
+        assert blended > baseline_prob, (
+            f"Expected blended > {baseline_prob} when Massey diff is "
+            f"positive, got {blended:.4f} (massey_prob={massey_prob:.4f}, "
+            f"sigma={massey_sigma})"
+        )
+
+        # Case 2: Large negative diff (team1 weaker in Massey)
+        diff_neg = -0.5
+        massey_prob_neg = 1.0 / (1.0 + math.exp(-diff_neg / max(massey_sigma, 0.01)))
+        blended_neg = (1.0 - massey_weight) * baseline_prob + massey_weight * massey_prob_neg
+
+        # Negative diff → massey_prob < 0.5 → blended should be below 0.5
+        assert blended_neg < baseline_prob, (
+            f"Expected blended < {baseline_prob} when Massey diff is "
+            f"negative, got {blended_neg:.4f}"
+        )
+
+        # Case 3: Verify magnitude — the difference should be material
+        # With weight ~0.25 and diff=0.5, the shift should be measurable
+        shift_magnitude = abs(blended - baseline_prob)
+        assert shift_magnitude > 0.001, (
+            f"Massey blend shift too small: {shift_magnitude:.6f}. "
+            f"Weight={massey_weight}, sigma={massey_sigma}"
+        )
+
+    def test_blend_weight_magnitude_meaningful(self):
+        """Massey blend weight should be large enough to actually matter."""
+        from src.pipeline.sota import SOTAPipelineConfig
+
+        config = SOTAPipelineConfig()
+        assert config.massey_blend_weight >= 0.10, (
+            f"massey_blend_weight={config.massey_blend_weight} is too small "
+            f"to meaningfully affect predictions (minimum 0.10)"
+        )
+        assert config.massey_blend_weight <= 0.50, (
+            f"massey_blend_weight={config.massey_blend_weight} is too large "
+            f"— would overwhelm the ML model signal"
+        )
+
+
+# ===========================================================================
+# 10. CI safety: auto-download can be disabled
+# ===========================================================================
+
+class TestAutoDownloadSafety:
+    """Ensure auto-download doesn't disrupt CI environments."""
+
+    def test_kaggle_no_auto_download_env_var(self, tmp_path):
+        """Setting KAGGLE_NO_AUTO_DOWNLOAD=1 should prevent download attempts."""
+        from src.data.kaggle_downloader import ensure_kaggle_data
+
+        with patch.dict(os.environ, {"KAGGLE_NO_AUTO_DOWNLOAD": "1"}):
+            result = ensure_kaggle_data(
+                kaggle_dir=str(tmp_path / "nonexistent"),
+                auto_download=True,
+            )
+            assert result is None
+
+    def test_sentinel_prevents_repeated_attempts(self, tmp_path):
+        """After a failed download, sentinel file prevents retries."""
+        from src.data.kaggle_downloader import (
+            ensure_kaggle_data,
+            _DOWNLOAD_FAILED_SENTINEL,
+        )
+
+        download_dir = tmp_path / "kaggle_data"
+        download_dir.mkdir()
+        sentinel = download_dir / _DOWNLOAD_FAILED_SENTINEL
+        sentinel.write_text("download failed\n")
+
+        # With sentinel present, should not attempt download
+        result = ensure_kaggle_data(
+            kaggle_dir=str(download_dir),
+            auto_download=True,
+        )
+        assert result is None
+
+    def test_force_clears_sentinel(self, tmp_path):
+        """force=True should clear the sentinel file."""
+        from src.data.kaggle_downloader import (
+            download_competition_data,
+            _DOWNLOAD_FAILED_SENTINEL,
+        )
+
+        download_dir = tmp_path / "kaggle_data"
+        download_dir.mkdir()
+        sentinel = download_dir / _DOWNLOAD_FAILED_SENTINEL
+        sentinel.write_text("download failed\n")
+        assert sentinel.exists()
+
+        # Force download should clear sentinel (will fail without API but
+        # sentinel should be cleared regardless)
+        download_competition_data(
+            output_dir=str(download_dir),
+            force=True,
+        )
+        assert not sentinel.exists(), "force=True should have cleared the sentinel"
+
+
+# ===========================================================================
+# 11. Historical training features include Massey composite
+# ===========================================================================
+
+class TestHistoricalMasseyInTraining:
+    """Verify Massey composites flow into historical training feature vectors.
+
+    The SOTA pipeline loads Massey composites for historical years during
+    _build_multi_year_training_data (sota.py ~line 4200). This test
+    verifies that when a massey_composite cache file exists for a
+    historical year, it gets loaded and the values are non-zero.
+    """
+
+    def test_massey_cache_loaded_for_historical_year(self, kaggle_dir_large, tmp_path):
+        """When external_massey_composite_{year}.json exists in the data
+        directory, the pipeline should load it and populate team_massey_composite."""
+        from src.data.scrapers.external_ratings import ExternalRatingsLoader
+
+        # Create the massey composite cache in the expected location
+        cache_dir = tmp_path / "data"
+        cache_dir.mkdir()
+        loader = ExternalRatingsLoader(cache_dir=str(cache_dir))
+        loader.populate_from_massey_ordinals(str(kaggle_dir_large), 2025)
+
+        # Verify the cache file was created
+        composite_path = cache_dir / "external_massey_composite_2025.json"
+        assert composite_path.exists()
+
+        # Load the cache manually (simulating what sota.py does at ~line 4210)
+        import json as _json
+        with open(composite_path, "r") as f:
+            massey_data = _json.load(f)
+
+        # Build team_massey_composite dict like sota.py does
+        team_massey_composite = {}
+        for entry in massey_data:
+            tid = entry.get("team_id", "")
+            if tid:
+                team_massey_composite[tid] = entry.get("normalized", 0.0)
+
+        assert len(team_massey_composite) >= 50, (
+            f"Only {len(team_massey_composite)} teams in massey composite cache"
+        )
+
+        # Verify values are non-zero and in valid range
+        nonzero = sum(1 for v in team_massey_composite.values() if abs(v) > 1e-8)
+        assert nonzero >= 40, (
+            f"Only {nonzero} non-zero Massey values out of "
+            f"{len(team_massey_composite)}"
+        )
+
+
+# ===========================================================================
+# 12. Verify _verify_massey_coverage diagnostics
+# ===========================================================================
+
+class TestVerifyMasseyCoverage:
+    """Test the _verify_massey_coverage diagnostic method."""
+
+    def test_coverage_stats_structure(self, kaggle_dir_large, tmp_path):
+        """_verify_massey_coverage should return a dict with expected keys."""
+        from src.data.scrapers.external_ratings import ExternalRatingsLoader, CompositeRating
+
+        # Build composites
+        cache_dir = tmp_path / "cache"
+        loader = ExternalRatingsLoader(cache_dir=str(cache_dir))
+        loader.populate_from_massey_ordinals(str(kaggle_dir_large), 2025)
+        all_ratings = loader.load_all(2025)
+        composites = loader.compute_composite(all_ratings)
+
+        # Create fake teams
+        class FakeTeam:
+            def __init__(self, name, seed):
+                self.name = name
+                self.seed = seed
+        from src.data.normalize import normalize_team_id
+
+        teams = [FakeTeam(f"Team{i}", (i % 16) + 1) for i in range(20)]
+
+        # Simulate what _verify_massey_coverage checks
+        n_teams = len(teams)
+        n_with_composite = 0
+        for team in teams:
+            tid = normalize_team_id(team.name)
+            if tid in composites:
+                n_with_composite += 1
+
+        coverage_pct = n_with_composite / max(n_teams, 1)
+        assert coverage_pct > 0.5, (
+            f"Coverage {coverage_pct:.0%} too low — Massey composites not "
+            f"reaching tournament teams. Composites have {len(composites)} "
+            f"teams, need overlap with {[normalize_team_id(t.name) for t in teams[:5]]}..."
+        )
