@@ -1286,13 +1286,42 @@ class ProprietaryMetricsEngine:
         """
         Compute average AdjEM of each team's conference peers.
 
-        Falls back to SOS-based estimate when conference assignments are
-        unavailable.
+        FIX-CONF: Enhanced to provide useful signal even without conference
+        labels.  When conference_map is available, uses true conference
+        membership.  When unavailable, computes "frequent opponent cluster
+        strength" — the AdjEM of teams a team plays most often (typically
+        conference opponents play 2x per season while non-conference play 1x).
+        This adds unique signal beyond SOS because it focuses on the subset
+        of opponents a team plays repeatedly.
         """
         if not conference_map:
-            # Without conference labels, use opponent average AdjEM as proxy
+            # FIX-CONF: Without conference labels, infer conference peers
+            # from schedule frequency.  In NCAA basketball, teams play each
+            # conference opponent 2x (home + away).  Non-conference opponents
+            # are played 0-1 times.  Opponents played >= 2 times are likely
+            # in the same conference.
             for tid in results:
-                results[tid].conference_adj_em = results[tid].sos_adj_em
+                games = by_team.get(tid, [])
+                if not games:
+                    results[tid].conference_adj_em = results[tid].sos_adj_em
+                    continue
+
+                # Count opponent frequency
+                opp_counts: Dict[str, int] = defaultdict(int)
+                for g in games:
+                    opp_counts[g.opponent_id] += 1
+
+                # Opponents played >= 2 times are likely conference peers
+                conf_peer_ems = []
+                for opp_id, count in opp_counts.items():
+                    if count >= 2 and opp_id in results:
+                        conf_peer_ems.append(results[opp_id].adj_efficiency_margin)
+
+                if conf_peer_ems:
+                    results[tid].conference_adj_em = float(np.mean(conf_peer_ems))
+                else:
+                    # Not enough repeat opponents yet — use SOS fallback
+                    results[tid].conference_adj_em = results[tid].sos_adj_em
             return
 
         # Group teams by conference
