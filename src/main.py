@@ -640,6 +640,33 @@ def enrich_rosters(args):
     return 0
 
 
+def download_kaggle(args):
+    """Download Kaggle competition data (MMasseyOrdinals, etc.)."""
+    from .data.kaggle_downloader import download_competition_data, verify_massey_ordinals
+
+    result = download_competition_data(
+        output_dir=args.output_dir,
+        competition=getattr(args, "competition", None),
+        force=args.force,
+    )
+
+    if result:
+        print(f"Kaggle data available at: {result}")
+        if args.verify_season:
+            diag = verify_massey_ordinals(result, args.verify_season)
+            print(f"Massey Ordinals verification for {args.verify_season}:")
+            for k, v in diag.items():
+                if k == "system_names":
+                    print(f"  systems ({len(v)}): {', '.join(v[:10])}...")
+                elif k != "available_files":
+                    print(f"  {k}: {v}")
+            return 0 if diag["status"] in ("ok", "partial") else 1
+        return 0
+    else:
+        print("Failed to download Kaggle data. Ensure KAGGLE_USERNAME and KAGGLE_KEY are set.")
+        return 1
+
+
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -1227,6 +1254,34 @@ def main():
         help="Enable embedding projection models (requires GNN/transformer)",
     )
 
+    # download-kaggle command
+    dl_kaggle_parser = subparsers.add_parser(
+        "download-kaggle",
+        help="Download Kaggle March Mania competition data (MMasseyOrdinals, MTeams, etc.)",
+    )
+    dl_kaggle_parser.add_argument(
+        "--output-dir",
+        default="data/kaggle",
+        help="Output directory for Kaggle CSV files (default: data/kaggle)",
+    )
+    dl_kaggle_parser.add_argument(
+        "--competition",
+        default=None,
+        help="Specific Kaggle competition slug (default: tries recent competitions)",
+    )
+    dl_kaggle_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-download even if data already exists",
+    )
+    dl_kaggle_parser.add_argument(
+        "--verify-season",
+        type=int,
+        default=None,
+        metavar="SEASON",
+        help="Verify Massey Ordinals for a specific season after download",
+    )
+
     kaggle_parser = subparsers.add_parser(
         "kaggle-export",
         help="Generate a Kaggle submission CSV using the SOTA pipeline",
@@ -1268,6 +1323,8 @@ def main():
         return scrape_rosters(args)
     elif args.command == "enrich-rosters":
         return enrich_rosters(args)
+    elif args.command == "download-kaggle":
+        return download_kaggle(args)
     elif args.command == "audit-metrics-coverage":
         from .data.coverage_audit import run_coverage_audit
         run_coverage_audit(
