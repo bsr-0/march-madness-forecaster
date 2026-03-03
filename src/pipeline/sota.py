@@ -931,6 +931,16 @@ class SOTAPipeline:
             except ImportError:
                 pass
 
+        # goto_conversion-style favourite-longshot bias correction.
+        # Powers 10+ Kaggle gold medals in March Madness (2019-2025).
+        # Corrects the systematic overconfidence on heavy favourites.
+        self._flb_correction = None
+        try:
+            from ..ml.calibration.brier_optimal import FavouriteLongshotCorrection
+            self._flb_correction = FavouriteLongshotCorrection(strength=0.03)
+        except ImportError:
+            pass
+
         # FIX #5: Massey standalone predictor (calibrated sigma + blend weight)
         self._massey_predictor = None
         if self.config.enable_massey_predictor:
@@ -5139,20 +5149,33 @@ class SOTAPipeline:
         # Kaggle uses round-weighted Brier (finals weighted 32x vs R64).
         # The standard sharpener optimizes flat Brier, but we need to
         # optimize for the ACTUAL competition metric.
+        #
+        # FIX DOUBLE-DIP: Fit sharpener on EVALUATION portion only (not the
+        # data used to fit the temperature calibrator).  When the calibrator
+        # was fit on p_fit/y_fit, fitting the sharpener on the same data
+        # would be double-dipping — it would overfit the post-processing
+        # chain to ~300 samples.  Instead, use p_eval/y_eval (held-out data)
+        # when available, or skip sharpening when no separate eval data exists.
         sharpener_info = {}
         if self.config.enable_brier_sharpening and self._brier_post_processor is not None:
             try:
                 from ..ml.calibration.brier_optimal import RoundWeightedSharpener
                 rw_sharpener = RoundWeightedSharpener()
-                # Use calibrated probabilities for sharpening
-                cal_preds = self.calibration_pipeline.calibrate(p_arr) if self.calibration_pipeline else p_arr
-                # Construct synthetic round labels: weight later-season games
-                # more heavily (proxy for tournament round importance).
-                # Games closer to March → more likely tournament-caliber.
-                n_games = len(cal_preds)
+                # Use evaluation portion for sharpener fitting (no double-dip)
+                if use_oos_eval and len(p_eval) >= 20:
+                    # Calibrate eval predictions through the fitted temperature
+                    cal_preds_for_sharp = self.calibration_pipeline.calibrate(p_eval) if self.calibration_pipeline else p_eval
+                    sharp_y = y_eval
+                else:
+                    # Fallback: use all data (mild double-dip, but better than
+                    # no sharpening).  Only when we can't split properly.
+                    cal_preds_for_sharp = self.calibration_pipeline.calibrate(p_arr) if self.calibration_pipeline else p_arr
+                    sharp_y = y_arr
+                # Construct synthetic round labels
+                n_games_sharp = len(cal_preds_for_sharp)
                 synthetic_round_labels = []
-                for i in range(n_games):
-                    frac = i / max(n_games - 1, 1)  # 0.0 = earliest, 1.0 = latest
+                for i in range(n_games_sharp):
+                    frac = i / max(n_games_sharp - 1, 1)
                     if frac > 0.9:
                         synthetic_round_labels.append("F4")
                     elif frac > 0.8:
@@ -5164,20 +5187,41 @@ class SOTAPipeline:
                     else:
                         synthetic_round_labels.append("R64")
                 rw_sharpener.fit_weighted(
-                    cal_preds, y_arr, synthetic_round_labels,
+                    cal_preds_for_sharp, sharp_y, synthetic_round_labels,
                     alpha_bounds=self.config.brier_sharpening_alpha_bounds,
                 )
                 self._brier_post_processor.sharpener = rw_sharpener
                 sharpener_info = {
                     "sharpener_method": "round_weighted",
                     "sharpener_alpha": round(rw_sharpener.alpha, 4),
+                    "sharpener_fitted_on_eval_only": use_oos_eval and len(p_eval) >= 20,
                 }
                 logger.info(
-                    "Gap #7: Round-weighted Brier sharpener fitted (alpha=%.3f)",
+                    "Gap #7: Round-weighted Brier sharpener fitted (alpha=%.3f, "
+                    "eval_only=%s, n_samples=%d)",
                     rw_sharpener.alpha,
+                    use_oos_eval and len(p_eval) >= 20,
+                    n_games_sharp,
                 )
             except Exception as e:
                 logger.warning("Gap #7: Round-weighted sharpener fitting failed: %s", e)
+
+        # Favourite-longshot bias correction (goto_conversion inspired).
+        # Fit on evaluation data to find optimal correction strength.
+        flb_info = {}
+        if self._flb_correction is not None and len(p_arr) >= 30:
+            try:
+                # Use the fully post-processed predictions for FLB fitting
+                flb_preds = self.calibration_pipeline.calibrate(p_eval if use_oos_eval else p_arr) if self.calibration_pipeline else (p_eval if use_oos_eval else p_arr)
+                flb_outcomes = y_eval if use_oos_eval else y_arr
+                if len(flb_preds) >= 20:
+                    self._flb_correction.fit(flb_preds, flb_outcomes)
+                    flb_info = {
+                        "flb_correction_strength": round(self._flb_correction.strength, 5),
+                        "flb_correction_fitted": True,
+                    }
+            except Exception as e:
+                logger.warning("FLB correction fitting failed: %s", e)
 
         calibration_info = {
             "method": self.config.calibration_method,
@@ -5194,6 +5238,7 @@ class SOTAPipeline:
             "ece_after": ece_after,
             "pre_calibration_clip": [self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi],
             **sharpener_info,
+            **flb_info,
         }
         if bootstrap_info:
             calibration_info.update(bootstrap_info)
@@ -6305,7 +6350,14 @@ class SOTAPipeline:
         return float(np.clip(baseline_prob, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
 
     def predict_probability(self, team1_id: str, team2_id: str) -> float:
-        raw = self._raw_fusion_probability(team1_id, team2_id)
+        # SYMMETRY FIX: Average P(A>B) and 1-P(B>A) to enforce the property
+        # P(A>B) + P(B>A) = 1 exactly.  Tree-based models don't guarantee
+        # this because feature engineering (absolute features, interactions)
+        # can break symmetry.  Top Kaggle competitors use this approach to
+        # eliminate ~0.001-0.003 Brier from asymmetry noise.
+        raw_forward = self._raw_fusion_probability(team1_id, team2_id)
+        raw_reverse = self._raw_fusion_probability(team2_id, team1_id)
+        raw = (raw_forward + (1.0 - raw_reverse)) / 2.0
 
         # F1: Calibrate FIRST on raw ensemble probabilities, then apply
         # tournament adaptation as a post-hoc adjustment.  This cleanly
@@ -6327,6 +6379,11 @@ class SOTAPipeline:
 
         if self.config.enable_tournament_adaptation:
             raw = self._tournament_adapt(raw, team1_id, team2_id)
+
+        # Favourite-longshot bias correction (goto_conversion inspired).
+        # Applied after calibration but before seed overrides/sharpening.
+        if hasattr(self, '_flb_correction') and self._flb_correction is not None and self._flb_correction.fitted:
+            raw = self._flb_correction.correct_single(raw)
 
         # WS2: Brier-optimal post-processing (seed overrides + sharpening)
         if self.config.enable_seed_overrides and hasattr(self, '_brier_post_processor') and self._brier_post_processor is not None:

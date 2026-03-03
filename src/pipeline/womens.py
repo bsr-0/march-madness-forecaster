@@ -214,12 +214,18 @@ class WomensPipeline:
         if s2 == 0 and team2_id in self.team_stats:
             s2 = self.team_stats[team2_id].seed
 
-        # Get base prediction
+        # Get base prediction with SYMMETRY ENFORCEMENT.
+        # Average P(A>B) and 1-P(B>A) to guarantee P(A>B)+P(B>A)=1.
         if f1 is not None and f2 is not None and self.model is not None:
-            # ML model prediction using full matchup features
-            features = self.feature_engineer.get_matchup_features(team1_id, team2_id)
-            if features is not None:
-                ml_pred = self._predict_with_model(features)
+            # ML model prediction using full matchup features (both directions)
+            features_fwd = self.feature_engineer.get_matchup_features(team1_id, team2_id)
+            features_rev = self.feature_engineer.get_matchup_features(team2_id, team1_id)
+            if features_fwd is not None and features_rev is not None:
+                ml_fwd = self._predict_with_model(features_fwd)
+                ml_rev = self._predict_with_model(features_rev)
+                ml_pred = (ml_fwd + (1.0 - ml_rev)) / 2.0
+            elif features_fwd is not None:
+                ml_pred = self._predict_with_model(features_fwd)
             else:
                 ml_pred = 0.5
 
