@@ -125,6 +125,16 @@ class HistoricalDataPipeline:
                     manifest["season_counts"][str(season)]["tournament_seed_teams"] = len(tournament_payload["teams"])
 
             # Kaggle Massey Ordinals → external rating caches
+            # Auto-resolve kaggle_dir if not explicitly set
+            if not self.config.kaggle_dir:
+                try:
+                    from ..kaggle_downloader import ensure_kaggle_data
+                    _resolved = ensure_kaggle_data(kaggle_dir=None, auto_download=True)
+                    if _resolved:
+                        self.config.kaggle_dir = _resolved
+                        logger.info("Auto-resolved kaggle_dir: %s", _resolved)
+                except Exception as _e:
+                    logger.debug("kaggle_downloader.ensure_kaggle_data failed: %s", _e)
             if self.config.kaggle_dir:
                 self._collect_kaggle_data(season, manifest)
 

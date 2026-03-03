@@ -30,6 +30,7 @@ Thumbs.db
 
 # Data caches (large / regenerable)
 data/raw/cache/
+data/kaggle/
 
 # Logs
 *.log
