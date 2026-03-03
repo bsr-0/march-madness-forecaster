@@ -38,6 +38,10 @@ class YearBacktestResult:
     n_upsets_total: int      # Total actual upsets
     per_round_brier: Dict[str, float] = field(default_factory=dict)
     estimated_kaggle_rank: str = ""  # "top 1%", "top 5%", etc.
+    # Kaggle's actual metric since 2023: round-weighted Brier score.
+    # Each round contributes equally to total score (32 weight-points each).
+    # R64=1x, R32=2x, S16=4x, E8=8x, F4=16x, NCG=32x per game.
+    round_weighted_brier: float = 0.0
 
     @property
     def brier_skill_score(self) -> float:
@@ -64,6 +68,7 @@ class BacktestReport:
         for yr in self.year_results:
             lines.append(
                 f"  {yr.year}: Brier={yr.brier_score:.4f}  "
+                f"RW-Brier={yr.round_weighted_brier:.4f}  "
                 f"Accuracy={yr.accuracy:.1%}  "
                 f"Upsets={yr.n_upsets_predicted}/{yr.n_upsets_total}  "
                 f"[{yr.estimated_kaggle_rank}]"
@@ -155,6 +160,17 @@ class KaggleBacktester:
         upsets_predicted = 0
         upsets_total = 0
         per_round_errors: Dict[str, List[float]] = {}
+        # Kaggle round-weighted Brier (2023+ metric)
+        weighted_se_sum = 0.0
+        weight_sum = 0.0
+        _ROUND_WEIGHTS = {
+            "R64": 1.0, "Round of 64": 1.0, "First Round": 1.0,
+            "R32": 2.0, "Round of 32": 2.0, "Second Round": 2.0,
+            "S16": 4.0, "Sweet 16": 4.0, "Sweet Sixteen": 4.0,
+            "E8": 8.0, "Elite 8": 8.0, "Elite Eight": 8.0,
+            "F4": 16.0, "Final Four": 16.0, "Final 4": 16.0,
+            "NCG": 32.0, "Championship": 32.0, "Finals": 32.0,
+        }
 
         for game in actual_games:
             t1 = game.get("team1_id", game.get("team1", ""))
@@ -176,6 +192,11 @@ class KaggleBacktester:
             # Brier score component
             se = (pred - outcome) ** 2
             squared_errors.append(se)
+
+            # Round-weighted Brier component (Kaggle metric since 2023)
+            rw = _ROUND_WEIGHTS.get(round_name, 1.0)
+            weighted_se_sum += rw * se
+            weight_sum += rw
 
             # Log loss component
             eps = 1e-7
@@ -205,6 +226,7 @@ class KaggleBacktester:
         n_games = len(squared_errors)
         brier = float(np.mean(squared_errors)) if squared_errors else 0.25
         ll = float(np.mean(log_losses)) if log_losses else 0.693
+        rw_brier = float(weighted_se_sum / weight_sum) if weight_sum > 0 else brier
 
         per_round_brier = {
             r: float(np.mean(errs)) for r, errs in per_round_errors.items()
@@ -222,6 +244,7 @@ class KaggleBacktester:
             n_upsets_total=upsets_total,
             per_round_brier=per_round_brier,
             estimated_kaggle_rank=_get_kaggle_rank(brier, year),
+            round_weighted_brier=rw_brier,
         )
 
         logger.info(

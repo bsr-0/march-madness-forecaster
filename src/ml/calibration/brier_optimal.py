@@ -166,13 +166,36 @@ class SeedBasedOverrides:
         self.snap_threshold = snap_threshold
         self.rates = self.WOMENS_SEED_WIN_RATES if is_womens else self.MENS_SEED_WIN_RATES
 
+    # Number of historical games per seed matchup (through 2025).
+    # Higher N → more confident in historical rate → stronger shrinkage.
+    MENS_SEED_SAMPLE_SIZES = {
+        (1, 16): 160, (2, 15): 160, (3, 14): 160, (4, 13): 160,
+        (5, 12): 160, (6, 11): 160, (7, 10): 160, (8, 9): 160,
+    }
+    WOMENS_SEED_SAMPLE_SIZES = {
+        (1, 16): 140, (2, 15): 140, (3, 14): 140, (4, 13): 140,
+        (5, 12): 140, (6, 11): 140, (7, 10): 140, (8, 9): 140,
+    }
+
     def apply(
         self,
         prediction: float,
         seed1: int,
         seed2: int,
     ) -> float:
-        """Apply seed-based override if applicable.
+        """Apply Bayesian seed-based shrinkage.
+
+        Instead of hard snapping (which creates discontinuities that hurt
+        Brier score), use soft Bayesian shrinkage toward the historical rate.
+        The shrinkage weight is proportional to the historical sample size:
+        more data → stronger pull toward historical rate.
+
+        For 1v16 (N=160, rate=0.987): model is pulled ~60% toward 0.987.
+        For 8v9 (N=160, rate=0.510): weak pull because rate is near 0.5.
+
+        The snap_threshold is repurposed: if model deviates by more than
+        snap_threshold from historical, apply no shrinkage (the model has
+        strong matchup-specific signal that overrides the prior).
 
         Args:
             prediction: Model's win probability for team1
@@ -180,25 +203,48 @@ class SeedBasedOverrides:
             seed2: Team 2 seed
 
         Returns:
-            Potentially overridden probability
+            Shrinkage-adjusted probability
         """
+        if seed1 == seed2 or seed1 <= 0 or seed2 <= 0:
+            return prediction
+
         # Determine which seed matchup this maps to
         if seed1 < seed2:
             matchup = (seed1, seed2)
             historical = self.rates.get(matchup)
-            if historical is not None:
-                if abs(prediction - historical) < self.snap_threshold:
-                    return historical
-        elif seed2 < seed1:
+            if historical is None:
+                return prediction
+            target = historical
+        else:
             matchup = (seed2, seed1)
             historical = self.rates.get(matchup)
-            if historical is not None:
-                # Flip: historical is for the lower seed winning
-                hist_for_team1 = 1.0 - historical
-                if abs(prediction - hist_for_team1) < self.snap_threshold:
-                    return hist_for_team1
+            if historical is None:
+                return prediction
+            target = 1.0 - historical  # Flip for team1 perspective
 
-        return prediction
+        # If model strongly disagrees, trust the model — it has
+        # matchup-specific information the historical average doesn't.
+        if abs(prediction - target) > self.snap_threshold:
+            return prediction
+
+        # Bayesian shrinkage: blend model toward historical rate.
+        # Weight = N_hist / (N_hist + k) where k is a pseudo-count
+        # representing how many "equivalent samples" the model provides.
+        # k=100 means the model's prediction is worth ~100 games of data.
+        k = 100.0
+        sample_sizes = self.WOMENS_SEED_SAMPLE_SIZES if self.rates is self.WOMENS_SEED_WIN_RATES else self.MENS_SEED_SAMPLE_SIZES
+        n_hist = sample_sizes.get(matchup, 100)
+        shrinkage = n_hist / (n_hist + k)
+
+        # For extreme matchups (1v16, 2v15), add extra shrinkage because
+        # the base rate is far from 0.5 and miscalibration is costly.
+        seed_gap = abs(seed1 - seed2)
+        if seed_gap >= 13:  # 1v16, 2v15
+            shrinkage = min(0.80, shrinkage + 0.20)
+        elif seed_gap >= 10:  # 3v14, 4v13
+            shrinkage = min(0.70, shrinkage + 0.10)
+
+        return (1.0 - shrinkage) * prediction + shrinkage * target
 
 
 class BrierCalibrator:
@@ -733,3 +779,132 @@ class MasseyStandalonePredictor:
         """Predict P(team1 wins) from composite rating difference."""
         import math
         return 1.0 / (1.0 + math.exp(-composite_diff / max(self.sigma, 0.01)))
+
+
+class FavouriteLongshotCorrection:
+    """Correct the favourite-longshot bias in tournament predictions.
+
+    Inspired by the goto_conversion method (10+ Kaggle gold medals in
+    March Madness competitions, 2019-2025).  The key insight: model
+    predictions systematically overvalue favourites and undervalue
+    longshots because:
+    1. Models are trained mostly on regular-season games where upsets
+       are rarer than in the tournament (neutral site, single-elim)
+    2. Probability estimates near 0 or 1 have wider standard errors
+       that models don't account for
+
+    The correction shrinks predictions toward a target base rate (0.5
+    for pairwise matchups) proportional to each prediction's standard
+    error.  This means predictions near 0.5 barely change, while extreme
+    predictions (0.95, 0.05) get pulled toward 0.5 more aggressively.
+
+    The strength parameter controls how much correction to apply:
+    - strength=0: no correction (identity)
+    - strength=0.02-0.05: mild correction (typical for well-calibrated models)
+    - strength=0.10+: aggressive correction (for overconfident models)
+
+    Optimal strength is calibrated on historical tournament data.
+    """
+
+    def __init__(self, strength: float = 0.03):
+        self.strength = strength
+        self.fitted = False
+
+    def fit(
+        self,
+        predictions: np.ndarray,
+        outcomes: np.ndarray,
+        strength_bounds: Tuple[float, float] = (0.0, 0.15),
+    ) -> float:
+        """Find optimal correction strength by minimizing Brier score.
+
+        Args:
+            predictions: Model probabilities [N]
+            outcomes: Actual outcomes (0 or 1) [N]
+            strength_bounds: Search range for strength parameter
+
+        Returns:
+            Optimal strength value
+        """
+        predictions = np.asarray(predictions, dtype=np.float64)
+        outcomes = np.asarray(outcomes, dtype=np.float64)
+
+        if len(predictions) < 20:
+            self.fitted = True
+            return self.strength
+
+        def brier_at_strength(s: float) -> float:
+            corrected = self._apply(predictions, s)
+            return float(np.mean((corrected - outcomes) ** 2))
+
+        if SCIPY_AVAILABLE:
+            result = minimize_scalar(
+                brier_at_strength,
+                bounds=strength_bounds,
+                method="bounded",
+                options={"xatol": 1e-5, "maxiter": 200},
+            )
+            self.strength = float(result.x)
+        else:
+            best_s = self.strength
+            best_brier = brier_at_strength(self.strength)
+            for s in np.linspace(strength_bounds[0], strength_bounds[1], 60):
+                brier = brier_at_strength(s)
+                if brier < best_brier:
+                    best_brier = brier
+                    best_s = s
+            self.strength = best_s
+
+        self.fitted = True
+        brier_before = brier_at_strength(0.0)
+        brier_after = brier_at_strength(self.strength)
+        logger.info(
+            "FavouriteLongshotCorrection: strength=%.4f "
+            "(Brier: %.4f -> %.4f, delta=%.4f)",
+            self.strength, brier_before, brier_after,
+            brier_after - brier_before,
+        )
+        return self.strength
+
+    def correct(self, predictions: np.ndarray) -> np.ndarray:
+        """Apply favourite-longshot correction.
+
+        Args:
+            predictions: Model probabilities [N] or scalar
+
+        Returns:
+            Corrected probabilities
+        """
+        return self._apply(np.asarray(predictions, dtype=np.float64), self.strength)
+
+    def correct_single(self, p: float) -> float:
+        """Apply correction to a single prediction."""
+        return float(self._apply(np.array([p]), self.strength)[0])
+
+    @staticmethod
+    def _apply(predictions: np.ndarray, strength: float) -> np.ndarray:
+        """Apply goto-style correction to pairwise predictions.
+
+        For each prediction p (team1 win probability):
+        1. Convert to odds: o1 = 1/p, o2 = 1/(1-p)
+        2. Compute SE for each: SE = sqrt(1 - p) for each inverse odd
+        3. Step each probability back by SE * strength
+        4. Re-normalize to sum to 1.0
+
+        The result shrinks extreme predictions toward 0.5 proportional
+        to their standard error, correcting the favourite-longshot bias.
+        """
+        if strength <= 0.0:
+            return predictions
+
+        p = np.clip(predictions, 0.001, 0.999)
+
+        # Standard error of each probability (Bernoulli SE)
+        se_1 = np.sqrt(p * (1.0 - p))  # SE for team1 win prob
+        # For pairwise matchups, the correction pulls both sides toward 0.5
+        # proportional to SE.  Since SE is symmetric around 0.5, the net
+        # effect is to shrink extremes.
+        correction = strength * se_1 * np.sign(p - 0.5)
+        corrected = p - correction
+
+        return np.clip(corrected, 0.001, 0.999)

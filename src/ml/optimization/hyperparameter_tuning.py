@@ -851,10 +851,7 @@ class EnsembleWeightOptimizer:
             combined = np.zeros(n)
             for name in model_names:
                 combined += uniform_weights[name] * preds[name]
-            combined_clipped = np.clip(combined, 1e-7, 1 - 1e-7)
-            uniform_score = float(-np.mean(
-                y * np.log(combined_clipped) + (1 - y) * np.log(1 - combined_clipped)
-            ))
+            uniform_score = float(np.mean((combined - y) ** 2))
             return uniform_weights, uniform_score
 
         # Generate weight grid once (shared across bootstrap resamples)
@@ -886,12 +883,11 @@ class EnsembleWeightOptimizer:
                 combined = np.zeros(n)
                 for name, w in zip(model_names, combo):
                     combined += w * preds_boot[name]
-                # Optimize log-loss (Kaggle scoring metric) instead of Brier
-                combined_clipped = np.clip(combined, 1e-7, 1 - 1e-7)
-                score = float(-np.mean(
-                    y_boot * np.log(combined_clipped)
-                    + (1 - y_boot) * np.log(1 - combined_clipped)
-                ))
+                # FIX: Optimize Brier score — Kaggle's actual metric since 2023.
+                # Previously optimized log-loss, which heavily penalizes confident
+                # wrong answers and produces different optimal weights than Brier.
+                # Brier = mean((p - y)^2) rewards moderate confidence more.
+                score = float(np.mean((combined - y_boot) ** 2))
                 # L2 regularization toward uniform weights
                 if regularization_lambda > 0:
                     combo_arr = np.array(combo)
@@ -906,14 +902,11 @@ class EnsembleWeightOptimizer:
         # Average across bootstrap resamples
         best_weights = {name: weight_accum[name] / self.n_bootstrap for name in model_names}
 
-        # Compute log-loss of the averaged weights on full data
+        # Compute Brier score of the averaged weights on full data
         combined = np.zeros(n)
         for name in model_names:
             combined += best_weights[name] * preds[name]
-        combined_clipped = np.clip(combined, 1e-7, 1 - 1e-7)
-        best_score = float(-np.mean(
-            y * np.log(combined_clipped) + (1 - y) * np.log(1 - combined_clipped)
-        ))
+        best_score = float(np.mean((combined - y) ** 2))
 
         return best_weights, best_score
 
