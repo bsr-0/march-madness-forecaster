@@ -392,6 +392,13 @@ class SOTAPipelineConfig:
     massey_blend_weight: float = 0.25  # Weight for Massey-derived probability (FIX #5: increased from 0.20)
     massey_sigma: float = 4.5  # Logistic CDF spread for composite_diff → P(win) (FIX #5: calibrated via grid search)
 
+    # --- Massey standalone predictor training ---
+    enable_massey_predictor: bool = True  # Fit MasseyStandalonePredictor during training
+    massey_sigma_bounds: Tuple[float, float] = (1.0, 25.0)  # Search bounds for sigma calibration
+    massey_blend_weight_bounds: Tuple[float, float] = (0.05, 0.40)  # Search bounds for blend weight
+    fit_massey_on_training: bool = True  # Whether to fit the predictor during run()
+    massey_min_calibration_samples: int = 30  # Skip fitting if fewer samples available
+
     # --- Model complexity mode ---
     # Gap #3: Over-engineered for data size (~600 tournament training samples).
     # Simpler is better for top 1%.  "simple" mode uses Logistic + Spread
@@ -926,11 +933,12 @@ class SOTAPipeline:
 
         # FIX #5: Massey standalone predictor (calibrated sigma + blend weight)
         self._massey_predictor = None
-        try:
-            from ..ml.calibration.brier_optimal import MasseyStandalonePredictor
-            self._massey_predictor = MasseyStandalonePredictor(sigma=self.config.massey_sigma)
-        except ImportError:
-            pass
+        if self.config.enable_massey_predictor:
+            try:
+                from ..ml.calibration.brier_optimal import MasseyStandalonePredictor
+                self._massey_predictor = MasseyStandalonePredictor(sigma=self.config.massey_sigma)
+            except ImportError:
+                pass
 
         # Deferred GNN SOS refinement (FIX M5): stored during _run_gnn(),
         # applied after _train_baseline_model() to avoid contaminating
@@ -1217,6 +1225,7 @@ class SOTAPipeline:
         self.feature_engineer.attach_transformer_embeddings(self.transformer_embeddings)
 
         calibration_stats = self._fit_calibration(game_flows)
+        massey_predictor_stats = self._fit_massey_predictor(game_flows)
         bracket_sim = self._run_monte_carlo(teams, rosters)
 
         model_round_probs = self._to_round_probabilities(bracket_sim)
@@ -1395,6 +1404,7 @@ class SOTAPipeline:
                 "transformer": transformer_stats,
                 "model_uncertainty": uncertainty_stats,
                 "calibration": calibration_stats,
+                "massey_predictor": massey_predictor_stats,
                 "simulation": {
                     "num_simulations": bracket_sim.num_simulations,
                     "round_of_32_odds": bracket_sim.round_of_32_odds,
@@ -4838,11 +4848,6 @@ class SOTAPipeline:
             if not self._is_tournament_game(getattr(g, "game_date", f"{self.config.year}-01-01"))
         ]
 
-        # FIX #5: Also collect Massey composite diffs for standalone predictor calibration
-        massey_cal_diffs: list = []
-        massey_cal_outcomes: list = []
-        massey_cal_model_probs: list = []
-
         for g in calibration_games:
             if g.team1_id not in self.feature_engineer.team_features:
                 continue
@@ -4859,15 +4864,6 @@ class SOTAPipeline:
             probs.append(p)
             outcomes.append(o)
             _n_current_year_cal += 1
-
-            # FIX #5: Collect Massey diffs for standalone predictor
-            if hasattr(self, '_external_composites') and self._external_composites:
-                c1 = self._external_composites.get(g.team1_id)
-                c2 = self._external_composites.get(g.team2_id)
-                if c1 is not None and c2 is not None:
-                    massey_cal_diffs.append(c1.composite_rating - c2.composite_rating)
-                    massey_cal_outcomes.append(o)
-                    massey_cal_model_probs.append(p)
 
         # A1: CFA weight optimization removed — baseline-only prediction.
 
@@ -5139,41 +5135,6 @@ class SOTAPipeline:
             ece_after = float(insample_metrics.expected_calibration_error)
             eval_mode = "insample_1param"
 
-        # FIX #5: Calibrate Massey standalone predictor on calibration data.
-        massey_predictor_info = {}
-        if (
-            self._massey_predictor is not None
-            and len(massey_cal_diffs) >= 20
-        ):
-            try:
-                m_diffs = np.array(massey_cal_diffs)
-                m_outs = np.array(massey_cal_outcomes)
-                m_model_p = np.array(massey_cal_model_probs)
-
-                # Step 1: Calibrate sigma
-                self._massey_predictor.fit(m_diffs, m_outs)
-
-                # Step 2: Generate massey probs and optimize blend weight
-                m_probs = 1.0 / (1.0 + np.exp(-m_diffs / max(self._massey_predictor.sigma, 0.01)))
-                self._massey_predictor.fit_blend_weight(m_model_p, m_probs, m_outs)
-
-                massey_predictor_info = {
-                    "massey_sigma": round(self._massey_predictor.sigma, 3),
-                    "massey_blend_weight": round(self._massey_predictor.blend_weight, 3),
-                    "massey_standalone_brier": round(self._massey_predictor._fit_brier, 4),
-                    "massey_cal_samples": len(massey_cal_diffs),
-                }
-                logger.info(
-                    "FIX #5: Massey standalone predictor calibrated: "
-                    "sigma=%.2f, blend_weight=%.3f, brier=%.4f on %d samples",
-                    self._massey_predictor.sigma,
-                    self._massey_predictor.blend_weight,
-                    self._massey_predictor._fit_brier,
-                    len(massey_cal_diffs),
-                )
-            except Exception as e:
-                logger.warning("FIX #5: Massey predictor calibration failed: %s", e)
-
         # Gap #7: Fit round-weighted Brier sharpener.
         # Kaggle uses round-weighted Brier (finals weighted 32x vs R64).
         # The standard sharpener optimizes flat Brier, but we need to
@@ -5233,7 +5194,6 @@ class SOTAPipeline:
             "ece_after": ece_after,
             "pre_calibration_clip": [self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi],
             **sharpener_info,
-            **massey_predictor_info,
         }
         if bootstrap_info:
             calibration_info.update(bootstrap_info)
@@ -5244,8 +5204,107 @@ class SOTAPipeline:
 
         return calibration_info
 
+    def _fit_massey_predictor(self, game_flows: Dict[str, List["GameFlow"]]) -> Dict:
+        """Fit MasseyStandalonePredictor on validation-era games.
+
+        Extracts Massey composite differences from validation-era game flows,
+        calibrates sigma to minimize Brier score, and optimizes the blend
+        weight between the base model and Massey-derived probabilities.
+
+        Called from run() after _fit_calibration() so the base model is ready.
+
+        Returns:
+            Dict with fit statistics (sigma, blend_weight, brier, samples).
+            Returns empty dict if fitting is disabled or insufficient data.
+        """
+        if not self.config.fit_massey_on_training or self._massey_predictor is None:
+            return {}
+
+        if not hasattr(self, '_external_composites') or not self._external_composites:
+            logger.debug(
+                "_fit_massey_predictor: no external composites loaded; skipping."
+            )
+            return {}
+
+        calibration_games = self._get_validation_era_games(game_flows)
+        massey_cal_diffs: list = []
+        massey_cal_outcomes: list = []
+        massey_cal_model_probs: list = []
+
+        for g in calibration_games:
+            if g.team1_id not in self.feature_engineer.team_features:
+                continue
+            if g.team2_id not in self.feature_engineer.team_features:
+                continue
+            c1 = self._external_composites.get(g.team1_id)
+            c2 = self._external_composites.get(g.team2_id)
+            if c1 is None or c2 is None:
+                continue
+            o = self._game_outcome(g)
+            if o is None:
+                continue
+            p = float(np.clip(
+                self._raw_fusion_probability(g.team1_id, g.team2_id),
+                self.config.pre_calibration_clip_lo,
+                self.config.pre_calibration_clip_hi,
+            ))
+            massey_cal_diffs.append(c1.composite_rating - c2.composite_rating)
+            massey_cal_outcomes.append(o)
+            massey_cal_model_probs.append(p)
+
+        n_samples = len(massey_cal_diffs)
+        if n_samples < self.config.massey_min_calibration_samples:
+            logger.warning(
+                "_fit_massey_predictor: only %d samples (need >= %d); "
+                "using default sigma=%.1f, blend_weight=%.2f",
+                n_samples,
+                self.config.massey_min_calibration_samples,
+                self._massey_predictor.sigma,
+                self._massey_predictor.blend_weight,
+            )
+            return {"massey_cal_samples": n_samples, "fitted": False}
+
+        try:
+            m_diffs = np.array(massey_cal_diffs, dtype=np.float64)
+            m_outs = np.array(massey_cal_outcomes, dtype=np.float64)
+            m_model_p = np.array(massey_cal_model_probs, dtype=np.float64)
+
+            # Step 1: Calibrate sigma using configured bounds
+            self._massey_predictor.fit(
+                m_diffs, m_outs,
+                sigma_bounds=self.config.massey_sigma_bounds,
+            )
+
+            # Step 2: Generate Massey probs and optimize blend weight
+            m_probs = 1.0 / (1.0 + np.exp(
+                -m_diffs / max(self._massey_predictor.sigma, 0.01)
+            ))
+            self._massey_predictor.fit_blend_weight(
+                m_model_p, m_probs, m_outs,
+                weight_bounds=self.config.massey_blend_weight_bounds,
+            )
+
+            stats = {
+                "massey_sigma": round(self._massey_predictor.sigma, 3),
+                "massey_blend_weight": round(self._massey_predictor.blend_weight, 3),
+                "massey_standalone_brier": round(self._massey_predictor._fit_brier, 4),
+                "massey_cal_samples": n_samples,
+                "fitted": True,
+            }
+            logger.info(
+                "_fit_massey_predictor: sigma=%.3f, blend_weight=%.3f, "
+                "brier=%.4f on %d samples",
+                self._massey_predictor.sigma,
+                self._massey_predictor.blend_weight,
+                self._massey_predictor._fit_brier,
+                n_samples,
+            )
+            return stats
+        except Exception as e:
+            logger.warning("_fit_massey_predictor: fitting failed: %s", e)
+            return {"massey_cal_samples": n_samples, "fitted": False, "error": str(e)}
+
     def _run_monte_carlo(self, teams: List[Team], rosters: Dict[str, Roster]):
-        teams_by_region: Dict[str, List[TournamentTeam]] = {"East": [], "West": [], "South": [], "Midwest": []}
 
         for team in teams:
             if team.region not in teams_by_region:
