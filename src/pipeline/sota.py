@@ -389,8 +389,11 @@ class SOTAPipelineConfig:
     # in the competition (100+ rating systems averaged).  Every recent winner
     # used this.  Blend Massey composite prediction with model prediction.
     # Increased from 0.15 to 0.20 — this is the most robust external signal.
+    enable_massey_blending: bool = True  # Master toggle for Massey standalone predictor blend
     massey_blend_weight: float = 0.25  # Weight for Massey-derived probability (FIX #5: increased from 0.20)
     massey_sigma: float = 4.5  # Logistic CDF spread for composite_diff → P(win) (FIX #5: calibrated via grid search)
+    massey_sigma_bounds: Tuple[float, float] = (1.0, 25.0)  # Search range for sigma calibration
+    massey_optimize_blend_weight: bool = True  # If True, optimize blend weight on training data; else use massey_blend_weight
 
     # --- Model complexity mode ---
     # Gap #3: Over-engineered for data size (~600 tournament training samples).
@@ -926,11 +929,12 @@ class SOTAPipeline:
 
         # FIX #5: Massey standalone predictor (calibrated sigma + blend weight)
         self._massey_predictor = None
-        try:
-            from ..ml.calibration.brier_optimal import MasseyStandalonePredictor
-            self._massey_predictor = MasseyStandalonePredictor(sigma=self.config.massey_sigma)
-        except ImportError:
-            pass
+        if self.config.enable_massey_blending:
+            try:
+                from ..ml.calibration.brier_optimal import MasseyStandalonePredictor
+                self._massey_predictor = MasseyStandalonePredictor(sigma=self.config.massey_sigma)
+            except ImportError:
+                pass
 
         # Deferred GNN SOS refinement (FIX M5): stored during _run_gnn(),
         # applied after _train_baseline_model() to avoid contaminating
@@ -5150,12 +5154,22 @@ class SOTAPipeline:
                 m_outs = np.array(massey_cal_outcomes)
                 m_model_p = np.array(massey_cal_model_probs)
 
-                # Step 1: Calibrate sigma
-                self._massey_predictor.fit(m_diffs, m_outs)
+                # Step 1: Calibrate sigma using configured bounds
+                self._massey_predictor.fit(
+                    m_diffs, m_outs,
+                    sigma_bounds=self.config.massey_sigma_bounds,
+                )
 
                 # Step 2: Generate massey probs and optimize blend weight
                 m_probs = 1.0 / (1.0 + np.exp(-m_diffs / max(self._massey_predictor.sigma, 0.01)))
-                self._massey_predictor.fit_blend_weight(m_model_p, m_probs, m_outs)
+                if self.config.massey_optimize_blend_weight:
+                    self._massey_predictor.fit_blend_weight(m_model_p, m_probs, m_outs)
+                else:
+                    # Skip blend-weight optimization: use the config default.
+                    # Still mark fitted=True so inference uses the calibrated
+                    # sigma rather than falling back to config.massey_sigma.
+                    self._massey_predictor.blend_weight = self.config.massey_blend_weight
+                    self._massey_predictor.fitted = True
 
                 massey_predictor_info = {
                     "massey_sigma": round(self._massey_predictor.sigma, 3),
@@ -6221,7 +6235,8 @@ class SOTAPipeline:
         # historical data), blend Massey-derived P(win) at inference time.
         # FIX #5: Use calibrated sigma and optimized blend weight when available.
         if (
-            self.config.massey_blend_weight > 0
+            self.config.enable_massey_blending
+            and self.config.massey_blend_weight > 0
             and hasattr(self, '_external_composites')
             and self._external_composites
         ):

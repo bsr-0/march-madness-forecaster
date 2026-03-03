@@ -788,6 +788,34 @@ class TestMasseyBlendEffect:
             f"— would overwhelm the ML model signal"
         )
 
+    def test_enable_massey_blending_default_true(self):
+        """enable_massey_blending should default to True."""
+        from src.pipeline.sota import SOTAPipelineConfig
+
+        config = SOTAPipelineConfig()
+        assert config.enable_massey_blending is True, (
+            "enable_massey_blending should default to True to activate Massey blend"
+        )
+
+    def test_massey_sigma_bounds_default(self):
+        """massey_sigma_bounds should have valid lower < upper bounds."""
+        from src.pipeline.sota import SOTAPipelineConfig
+
+        config = SOTAPipelineConfig()
+        lo, hi = config.massey_sigma_bounds
+        assert lo > 0, "Lower sigma bound must be positive"
+        assert hi > lo, "Upper sigma bound must exceed lower bound"
+
+    def test_massey_optimize_blend_weight_default_true(self):
+        """massey_optimize_blend_weight should default to True."""
+        from src.pipeline.sota import SOTAPipelineConfig
+
+        config = SOTAPipelineConfig()
+        assert config.massey_optimize_blend_weight is True, (
+            "massey_optimize_blend_weight should default to True to enable "
+            "data-driven blend weight optimization"
+        )
+
 
 # ===========================================================================
 # 10. CI safety: auto-download can be disabled

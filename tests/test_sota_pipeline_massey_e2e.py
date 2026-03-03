@@ -393,6 +393,27 @@ def test_sota_pipeline_run_e2e_with_massey(tmp_path):
         f"This suggests seed-fallback rather than real Massey data."
     )
 
+    # --- Verify Massey standalone predictor was fitted during training ---
+    massey_predictor = pipeline._massey_predictor
+    assert massey_predictor is not None, (
+        "_massey_predictor is None — MasseyStandalonePredictor was not instantiated. "
+        "Check that enable_massey_blending=True (default) in config."
+    )
+    assert massey_predictor.fitted, (
+        "MasseyStandalonePredictor.fitted is False after pipeline.run(). "
+        "The predictor was not calibrated on training data — "
+        "_fit_calibration() did not call predictor.fit()."
+    )
+    # Sigma should be within calibration search bounds (default 1.0–25.0)
+    sigma_lo, sigma_hi = config.massey_sigma_bounds
+    assert sigma_lo <= massey_predictor.sigma <= sigma_hi, (
+        f"Fitted sigma={massey_predictor.sigma:.3f} is outside expected bounds [{sigma_lo}, {sigma_hi}]."
+    )
+    # Blend weight should be within optimization bounds (default 0.05–0.40)
+    assert 0.05 <= massey_predictor.blend_weight <= 0.40, (
+        f"Fitted blend_weight={massey_predictor.blend_weight:.3f} is outside expected bounds [0.05, 0.40]."
+    )
+
     # --- Verify core pipeline artifacts exist ---
     artifacts = report["artifacts"]
     assert "simulation" in artifacts
