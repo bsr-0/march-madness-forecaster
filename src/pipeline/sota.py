@@ -5305,6 +5305,7 @@ class SOTAPipeline:
             return {"massey_cal_samples": n_samples, "fitted": False, "error": str(e)}
 
     def _run_monte_carlo(self, teams: List[Team], rosters: Dict[str, Roster]):
+        teams_by_region: Dict[str, List[TournamentTeam]] = {r: [] for r in ["East", "West", "South", "Midwest"]}
 
         for team in teams:
             if team.region not in teams_by_region:
