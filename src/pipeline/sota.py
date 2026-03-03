@@ -1189,7 +1189,7 @@ class SOTAPipeline:
         if self.config.enable_gnn:
             gnn_stats = self._run_gnn(schedule_graph)
         else:
-            gnn_stats = {"enabled": False, "reason": "disabled_by_config"}
+            gnn_stats = {"enabled": False, "reason": "disabled_by_config", "framework": "none"}
         baseline_stats = self._train_baseline_model(game_flows)
         if self.config.enable_transformer:
             transformer_stats = self._run_transformer(game_flows)
