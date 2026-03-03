@@ -2069,13 +2069,25 @@ class SOTAPipeline:
         loader = ExternalRatingsLoader(cache_dir=cache_dir)
 
         # Step 1: Populate from Kaggle Massey Ordinals if available
+        massey_populated = False
         if self.config.kaggle_dir:
             try:
                 n = loader.populate_from_massey_ordinals(self.config.kaggle_dir, year)
                 if n > 0:
+                    massey_populated = True
                     logger.info("Loaded %d Massey Ordinal systems from Kaggle", n)
+                else:
+                    logger.warning(
+                        "Massey Ordinals: kaggle_dir=%s set but 0 systems cached. "
+                        "Check that MMasseyOrdinals.csv exists and has data for season %d.",
+                        self.config.kaggle_dir, year,
+                    )
             except Exception as e:
-                logger.warning("Massey Ordinals ingestion failed: %s", e)
+                logger.warning(
+                    "Massey Ordinals ingestion failed (kaggle_dir=%s): %s. "
+                    "Falling back to cached ratings or seed-based estimates.",
+                    self.config.kaggle_dir, e,
+                )
 
         # Step 2: Load all cached external rating systems
         all_ratings = loader.load_all(year)
@@ -2084,13 +2096,29 @@ class SOTAPipeline:
             composites = loader.compute_composite(all_ratings)
             n_systems = len(all_ratings)
             n_teams = len(composites)
+            has_massey = "massey_composite" in all_ratings
             logger.info(
-                "External ratings: %d systems, %d teams composited",
-                n_systems, n_teams,
+                "External ratings: %d systems, %d teams composited "
+                "(massey_composite=%s)",
+                n_systems, n_teams, "present" if has_massey else "MISSING",
             )
+            if not has_massey and self.config.kaggle_dir:
+                logger.warning(
+                    "massey_composite not in loaded systems despite kaggle_dir "
+                    "being set. Systems found: %s. This indicates a data "
+                    "loading issue — predictions will lack Massey signal.",
+                    list(all_ratings.keys()),
+                )
             return composites
 
         # Step 3: Fallback to seed-based estimates
+        logger.warning(
+            "No cached external ratings found for year %d. Using seed-based "
+            "fallback. This is significantly less accurate than Massey Ordinals "
+            "(-0.008 to -0.015 Brier). Set kaggle_dir or run: "
+            "python -m src.data.kaggle_downloader",
+            year,
+        )
         seed_map = {}
         for team in teams:
             tid = self._team_id(team.name)
