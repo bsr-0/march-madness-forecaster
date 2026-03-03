@@ -346,6 +346,16 @@ class RealDataCollector:
             provider_lineage[artifact_key] = "open_feed"
 
         # --- Kaggle competition CSV data integration ---
+        # Auto-resolve kaggle_dir if not explicitly set (downloads if needed)
+        if not self.config.kaggle_dir:
+            try:
+                from ..kaggle_downloader import ensure_kaggle_data
+                _resolved = ensure_kaggle_data(kaggle_dir=None, auto_download=True)
+                if _resolved:
+                    self.config.kaggle_dir = _resolved
+                    logger.info("Auto-resolved kaggle_dir: %s", _resolved)
+            except Exception as _e:
+                logger.debug("kaggle_downloader.ensure_kaggle_data failed: %s", _e)
         if self.config.kaggle_dir:
             self._ingest_kaggle_data(year, out, provider_lineage, validation_errors)
 

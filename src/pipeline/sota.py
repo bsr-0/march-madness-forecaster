@@ -1088,24 +1088,35 @@ class SOTAPipeline:
         # FIX #1: Auto-detect kaggle_dir if not explicitly set.
         # Kaggle competition CSV files (MMasseyOrdinals.csv, MTeams.csv, etc.)
         # are the primary source for external rating composites.
+        # Uses ensure_kaggle_data() which searches standard locations and
+        # auto-downloads from the Kaggle API if credentials are available.
         if not self.config.kaggle_dir:
-            import os as _detect_os
-            _kaggle_candidates = [
-                _detect_os.path.join(_detect_os.getcwd(), "data", "kaggle"),
-                _detect_os.path.join(_detect_os.getcwd(), "data", "raw", "kaggle"),
-                _detect_os.path.join(_detect_os.getcwd(), "kaggle"),
-                _detect_os.path.join(self.config.data_cache_dir, "kaggle"),
-            ]
-            for _kd in _kaggle_candidates:
-                if _detect_os.path.isdir(_kd):
-                    _massey_files = [
-                        f for f in _detect_os.listdir(_kd)
-                        if "massey" in f.lower() or "MTeams" in f
-                    ]
-                    if _massey_files:
-                        self.config.kaggle_dir = _kd
-                        logger.info("FIX #1: Auto-detected kaggle_dir: %s", _kd)
-                        break
+            try:
+                from ..data.kaggle_downloader import ensure_kaggle_data
+                _resolved = ensure_kaggle_data(kaggle_dir=None, auto_download=True)
+                if _resolved:
+                    self.config.kaggle_dir = _resolved
+                    logger.info("FIX #1: Resolved kaggle_dir via ensure_kaggle_data: %s", _resolved)
+            except Exception as _e:
+                logger.debug("kaggle_downloader.ensure_kaggle_data failed: %s", _e)
+                # Fallback to legacy directory scanning
+                import os as _detect_os
+                _kaggle_candidates = [
+                    _detect_os.path.join(_detect_os.getcwd(), "data", "kaggle"),
+                    _detect_os.path.join(_detect_os.getcwd(), "data", "raw", "kaggle"),
+                    _detect_os.path.join(_detect_os.getcwd(), "kaggle"),
+                    _detect_os.path.join(self.config.data_cache_dir, "kaggle"),
+                ]
+                for _kd in _kaggle_candidates:
+                    if _detect_os.path.isdir(_kd):
+                        _massey_files = [
+                            f for f in _detect_os.listdir(_kd)
+                            if "massey" in f.lower() or "MTeams" in f
+                        ]
+                        if _massey_files:
+                            self.config.kaggle_dir = _kd
+                            logger.info("FIX #1: Auto-detected kaggle_dir: %s", _kd)
+                            break
 
         teams = self._load_teams()
         torvik_map, proprietary_map = self._load_team_stat_sources(teams)
