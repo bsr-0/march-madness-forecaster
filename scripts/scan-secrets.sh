@@ -66,6 +66,11 @@ BLOCKED_FILENAMES=(
     "id_ed25519$"
 )
 
+# Files that match BLOCKED_FILENAMES but are safe (templates with placeholders).
+ALLOWED_FILENAMES=(
+    "^\.env\.example$"
+)
+
 echo "Scanning for secrets..."
 
 # ── Check blocked file names/extensions ──────────────────────────────
@@ -81,8 +86,18 @@ for file in $FILES; do
 
     for pattern in "${BLOCKED_FILENAMES[@]}"; do
         if echo "$basename" | grep -qE "$pattern"; then
-            echo -e "${RED}BLOCKED${NC}: $file — sensitive filename (${basename})"
-            ERRORS=$((ERRORS + 1))
+            # Check if file is in the allowlist before blocking
+            allowed=false
+            for allow_pattern in "${ALLOWED_FILENAMES[@]}"; do
+                if echo "$basename" | grep -qE "$allow_pattern"; then
+                    allowed=true
+                    break
+                fi
+            done
+            if [ "$allowed" = false ]; then
+                echo -e "${RED}BLOCKED${NC}: $file — sensitive filename (${basename})"
+                ERRORS=$((ERRORS + 1))
+            fi
         fi
     done
 done
