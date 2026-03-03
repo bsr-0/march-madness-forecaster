@@ -56,6 +56,10 @@ OPTIONAL_FILES = [
 
 DEFAULT_KAGGLE_DIR = "data/kaggle"
 
+# Sentinel file written after a failed download attempt to prevent
+# retrying on every pipeline run (cleared when force=True).
+_DOWNLOAD_FAILED_SENTINEL = ".kaggle_download_attempted"
+
 
 def kaggle_api_available() -> bool:
     """Check if the Kaggle API is importable and credentials exist."""
@@ -158,6 +162,12 @@ def download_competition_data(
         Path to the directory containing CSVs, or None on failure.
     """
     output_path = Path(output_dir)
+
+    # Clear sentinel on force re-download
+    if force:
+        sentinel = output_path / _DOWNLOAD_FAILED_SENTINEL
+        if sentinel.exists():
+            sentinel.unlink()
 
     # Check if data already exists
     if not force and _has_massey_ordinals(output_path):
@@ -286,6 +296,13 @@ def ensure_kaggle_data(
     This is the primary entry point for pipeline integration. Call this
     before accessing Kaggle data to ensure MMasseyOrdinals.csv exists.
 
+    Respects the ``KAGGLE_NO_AUTO_DOWNLOAD`` environment variable — if set
+    to ``1`` or ``true``, auto-download is disabled (useful for CI).
+
+    To prevent repeated download attempts on every pipeline run, a sentinel
+    file is written after a failed attempt.  Delete it or pass
+    ``force=True`` to ``download_competition_data`` to retry.
+
     Args:
         kaggle_dir: Explicit path to Kaggle data directory. If None,
             searches standard locations.
@@ -305,16 +322,37 @@ def ensure_kaggle_data(
             logger.info("Found Kaggle data at: %s", candidate)
             return candidate
 
-    # 3. Auto-download if enabled
+    # 3. Auto-download if enabled and not suppressed
+    no_auto = os.environ.get("KAGGLE_NO_AUTO_DOWNLOAD", "").lower()
+    if no_auto in ("1", "true", "yes"):
+        auto_download = False
+        logger.info(
+            "KAGGLE_NO_AUTO_DOWNLOAD is set — skipping auto-download"
+        )
+
     if auto_download:
         download_dir = kaggle_dir or DEFAULT_KAGGLE_DIR
-        logger.info(
-            "Kaggle data not found locally. Attempting auto-download to %s...",
-            download_dir,
-        )
-        result = download_competition_data(output_dir=download_dir)
-        if result:
-            return result
+        sentinel = Path(download_dir) / _DOWNLOAD_FAILED_SENTINEL
+        if sentinel.exists():
+            logger.debug(
+                "Previous download attempt failed (sentinel %s exists). "
+                "Delete it or run with --force to retry.",
+                sentinel,
+            )
+        else:
+            logger.info(
+                "Kaggle data not found locally. Attempting auto-download to %s...",
+                download_dir,
+            )
+            result = download_competition_data(output_dir=download_dir)
+            if result:
+                return result
+            # Write sentinel so we don't retry on next pipeline run
+            try:
+                Path(download_dir).mkdir(parents=True, exist_ok=True)
+                sentinel.write_text("download failed\n")
+            except OSError:
+                pass
 
     logger.warning(
         "Kaggle data (MMasseyOrdinals.csv) not available. "
