@@ -306,10 +306,10 @@ class SOTAPipelineConfig:
     #   3. Opponent quality is systematically higher
     # The shrinkage factor blends the raw prediction toward 0.5:
     #   p_adj = shrinkage * 0.5 + (1 - shrinkage) * p_raw
-    tournament_shrinkage: float = 0.02  # Small shrinkage toward 0.5 for tournament uncertainty
+    tournament_shrinkage: float = 0.06  # Increased shrinkage for tournament uncertainty (was 0.02)
     # Gap #3: Seed prior enabled — seed difference is the strongest single predictor.
     # A weak prior (10%) provides regularization without overwhelming the model.
-    seed_prior_weight: float = 0.10  # Blend 10% seed prior for tournament domain adaptation
+    seed_prior_weight: float = 0.15  # Increased seed prior weight for tournament domain adaptation (was 0.10)
     seed_prior_slope: float = 0.175  # Sigmoid slope for seed-based win rate approximation
     consistency_bonus_max: float = 0.0  # Disabled by default unless sensitivity proves value
     consistency_normalizer: float = 15.0  # Typical pace_adjusted_variance range for normalization
@@ -323,10 +323,10 @@ class SOTAPipelineConfig:
     # Gap #2: Ensemble weights — SpreadRegressor (MOV) gets highest weight.
     # The "raddar" benchmark (dominant 2018-2024) predicts score margin first,
     # then converts to probability.  Richer gradient from continuous target.
-    # MOV-first: spread=0.40 is the primary prediction path.
-    ensemble_lgb_weight: float = 0.25  # LightGBM classifier weight
+    # MOV-first: spread=0.50 is the primary prediction path (increased from 0.40).
+    ensemble_lgb_weight: float = 0.15  # LightGBM classifier weight (reduced from 0.25)
     ensemble_xgb_weight: float = 0.15  # XGBoost classifier weight
-    # spread gets 0.40 via _FIXED_WEIGHTS; logistic gets residual ~0.20
+    # spread gets 0.50 via _FIXED_WEIGHTS (increased from 0.40); logistic gets residual ~0.20
 
     # --- Round-weighted training (FIX #3: optimize for Kaggle's actual metric) ---
     # Include historical tournament games in training with Kaggle round weights
@@ -425,8 +425,8 @@ class SOTAPipelineConfig:
     # Needs its own dedicated model with different calibration.
     # Use simpler model + stronger seed priors for women's bracket.
     womens_model_complexity: str = "simple"  # Women's bracket is more predictable
-    womens_seed_prior_weight: float = 0.50  # Blend 50% seed prior — women's is highly seed-predictable
-    womens_massey_blend_weight: float = 0.15  # Increased Massey for women's (if available)
+    womens_seed_prior_weight: float = 0.40  # Reduced seed prior weight for women's (was 0.50, to avoid over-relying on seed)
+    womens_massey_blend_weight: float = 0.25  # Increased Massey for women's (was 0.15, to use more rating information)
 
     # --- Bracket portfolio (WS4) ---
     # Gap #5: Since 2024, the competition is bracket portfolios (1-100k brackets),
@@ -534,6 +534,9 @@ FIXED_FEATURE_SET = [
     # External rating spread — disagreement across rating systems (WS3)
     # High spread = more uncertainty = potential upset risk
     "diff_external_rating_spread",
+    # Momentum — late-season trajectory (last-10-game rolling AdjEM delta)
+    # Teams peaking vs. fading entering the tournament
+    "diff_momentum",
 ]
 
 
@@ -550,6 +553,7 @@ SIMPLE_FEATURE_SET = [
     "diff_free_throw_pct",            # Most stable shooting metric
     "seed_interaction",               # Nonlinear upset dynamics
     "seed_diff",                      # Raw seed difference — strongest single predictor
+    "diff_momentum",                  # [NEW] Late-season momentum (8-game rolling win%)
 ]
 
 # Gap #7: Kaggle round-weighted Brier scoring schedule.
@@ -949,6 +953,18 @@ class SOTAPipeline:
                 self._massey_predictor = MasseyStandalonePredictor(sigma=self.config.massey_sigma)
             except ImportError:
                 pass
+
+        # Tournament domain adapter: blends regular-season model with
+        # tournament-specific historical base rates and round shrinkage.
+        self._tournament_domain_adapter = None
+        try:
+            from ..ml.ensemble.tournament_domain import TournamentDomainAdapter
+            self._tournament_domain_adapter = TournamentDomainAdapter(
+                base_rate_weight=0.15,
+                is_womens=False,
+            )
+        except ImportError:
+            pass
 
         # Deferred GNN SOS refinement (FIX M5): stored during _run_gnn(),
         # applied after _train_baseline_model() to avoid contaminating
@@ -3598,7 +3614,7 @@ class SOTAPipeline:
             # calibrated probabilities than direct binary classification.
             _FIXED_WEIGHTS = {
                 "lgb": w_lgb, "xgb": w_xgb, "logit": w_logit,
-                "spread": 0.40,  # Gap #2: MOV primary path — highest weight
+                "spread": 0.50,  # Gap #2: MOV primary path — highest weight (increased from 0.40)
             }
             model_names_present = [name for name, _, _ in trained_models]
             active_weights = {n: _FIXED_WEIGHTS.get(n, 0.25) for n in model_names_present}
@@ -6400,29 +6416,39 @@ class SOTAPipeline:
     def _tournament_adapt(self, prob: float, team1_id: str, team2_id: str) -> float:
         """Apply tournament domain adaptation to a regular-season-trained probability.
 
-        Three adjustments:
-        1. **Shrinkage toward 0.5** — regular-season models are overconfident
+        Four adjustments:
+        1. **Tournament domain adapter** — blend with historical seed-matchup
+           base rates (empirical Bayes) when available.
+        2. **Shrinkage toward 0.5** — regular-season models are overconfident
            because tournament games are played on neutral courts with higher
            variance.  We apply a small blend toward 0.5.
-        2. **Seed-based Bayesian prior** — incorporate the historical base
+        3. **Seed-based Bayesian prior** — incorporate the historical base
            rate for the seed matchup as a weak prior.  This prevents the model
            from making extreme predictions that conflict with decades of
            tournament evidence.
-        3. **Consistency bonus** — teams with low scoring-margin variance
+        4. **Consistency bonus** — teams with low scoring-margin variance
            (high consistency) perform better in single-elimination.  Give
            a small bonus to the more consistent team.
         """
+        # 0. Tournament domain adapter (empirical Bayes from historical matchups)
+        t1 = self.feature_engineer.team_features.get(team1_id)
+        t2 = self.feature_engineer.team_features.get(team2_id)
+        seed1 = t1.seed if t1 is not None else 0
+        seed2 = t2.seed if t2 is not None else 0
+
+        if self._tournament_domain_adapter is not None and seed1 > 0 and seed2 > 0:
+            prob = self._tournament_domain_adapter.adapt(
+                prob, seed1, seed2, round_label="R64",
+            )
+
+        # 1. Shrinkage toward 0.5
         shrinkage = self.config.tournament_shrinkage
         adapted = shrinkage * 0.5 + (1.0 - shrinkage) * prob
 
-        # Seed-based Bayesian prior (weak prior weight from config)
-        t1 = self.feature_engineer.team_features.get(team1_id)
-        t2 = self.feature_engineer.team_features.get(team2_id)
+        # 2. Seed-based Bayesian prior (weak prior weight from config)
         if t1 is not None and t2 is not None:
-            seed1 = t1.seed
-            seed2 = t2.seed
             # Historical seed win rate approximation:
-            # Based on 1985–2024 tournament data, lower seed wins at rate
+            # Based on 1985-2024 tournament data, lower seed wins at rate
             # approximately = sigmoid(slope * (seed2 - seed1))
             seed_diff = seed2 - seed1
             slope = self.config.seed_prior_slope
@@ -6430,16 +6456,10 @@ class SOTAPipeline:
             w = self.config.seed_prior_weight
             adapted = (1.0 - w) * adapted + w * seed_prior
 
-            # Consistency bonus: more consistent team gets a small edge
+            # 3. Consistency bonus: more consistent team gets a small edge
             # in single-elimination (lower variance = fewer bad games).
-            # FIX 5.2: Use pace_adjusted_variance (which IS in the ML feature
-            # vector) instead of t1.consistency (which was REMOVED from the
-            # vector as near-inverse of pace_adj_var).  Lower variance → higher
-            # consistency, so we negate the sign.  Normalize by dividing by
-            # a typical range to get bounded max shift.
             pav1 = t1.pace_adjusted_variance
             pav2 = t2.pace_adjusted_variance
-            # Lower variance = more consistent = positive edge
             bonus_max = self.config.consistency_bonus_max
             normalizer = self.config.consistency_normalizer
             consistency_edge = bonus_max * np.clip((pav2 - pav1) / normalizer, -1.0, 1.0)
