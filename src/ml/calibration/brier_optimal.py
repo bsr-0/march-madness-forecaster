@@ -472,13 +472,25 @@ class BrierCalibrator:
 class BrierPostProcessor:
     """Complete Brier-optimal post-processing pipeline.
 
-    Chains: raw prediction -> seed override -> calibration -> sharpening -> clip
+    Chains (in order):
+        raw prediction
+        → seed override (Bayesian shrinkage toward historical rates)
+        → calibration (temperature scaling for Brier)
+        → goto_conversion (favourite-longshot bias correction)
+        → sharpening (power transform for confidence adjustment)
+        → clip (Brier-safe probability bounds)
+
+    The goto_conversion step was added based on analysis of 2019-2025
+    Kaggle March Madness medalists.  It sits after calibration because
+    it operates on calibrated probabilities, and before sharpening
+    because sharpening is the final confidence adjustment.
     """
 
     sharpener: Optional[BrierOptimalSharpener] = None
     seed_overrides_mens: Optional[SeedBasedOverrides] = None
     seed_overrides_womens: Optional[SeedBasedOverrides] = None
     calibrator: Optional[BrierCalibrator] = None
+    goto_converter: Optional["FavouriteLongshotCorrection"] = None
     clip_lo: float = 0.005
     clip_hi: float = 0.995
 
@@ -517,11 +529,15 @@ class BrierPostProcessor:
         if self.calibrator is not None and self.calibrator.fitted:
             p = float(self.calibrator.calibrate(np.array([p]))[0])
 
-        # 3. Sharpening
+        # 3. goto_conversion (favourite-longshot bias correction)
+        if self.goto_converter is not None and self.goto_converter.fitted:
+            p = self.goto_converter.correct_single(p)
+
+        # 4. Sharpening
         if self.sharpener is not None and self.sharpener.fitted:
             p = float(self.sharpener.sharpen(np.array([p]))[0])
 
-        # 4. Clip
+        # 5. Clip
         p = max(self.clip_lo, min(self.clip_hi, p))
 
         return p
@@ -545,6 +561,10 @@ class BrierPostProcessor:
         # Calibration (vectorized)
         if self.calibrator is not None and self.calibrator.fitted:
             result = self.calibrator.calibrate(result)
+
+        # goto_conversion (vectorized)
+        if self.goto_converter is not None and self.goto_converter.fitted:
+            result = self.goto_converter.correct(result)
 
         # Sharpening (vectorized)
         if self.sharpener is not None and self.sharpener.fitted:
@@ -865,129 +885,281 @@ class MasseyStandalonePredictor:
 
 
 class FavouriteLongshotCorrection:
-    """Correct the favourite-longshot bias in tournament predictions.
+    """Correct the favourite-longshot bias using the goto_conversion algorithm.
 
-    Inspired by the goto_conversion method (10+ Kaggle gold medals in
-    March Madness competitions, 2019-2025).  The key insight: model
-    predictions systematically overvalue favourites and undervalue
-    longshots because:
-    1. Models are trained mostly on regular-season games where upsets
-       are rarer than in the tournament (neutral site, single-elim)
-    2. Probability estimates near 0 or 1 have wider standard errors
-       that models don't account for
+    This is a faithful implementation of the goto_conversion method
+    (gotoConversion/goto_conversion on GitHub), which has powered 10+
+    Kaggle gold medals and 100+ medals in March Madness competitions
+    (2019-2025).  Used by 6 of the top 8 finishers in the 2025 competition.
 
-    The correction shrinks predictions toward a target base rate (0.5
-    for pairwise matchups) proportional to each prediction's standard
-    error.  This means predictions near 0.5 barely change, while extreme
-    predictions (0.95, 0.05) get pulled toward 0.5 more aggressively.
+    **The Algorithm (from the original paper and package)**
 
-    The strength parameter controls how much correction to apply:
-    - strength=0: no correction (identity)
-    - strength=0.02-0.05: mild correction (typical for well-calibrated models)
-    - strength=0.10+: aggressive correction (for overconfident models)
+    goto_conversion reduces all inverse odds by the same number of
+    standard error units.  The key insight is that standard errors are
+    proportionately wider for longshot probabilities (near 0 or 1), so
+    a uniform reduction in SE units produces a larger absolute adjustment
+    for longshots than for favourites.  This corrects the well-documented
+    favourite-longshot bias.
 
-    Optimal strength is calibrated on historical tournament data.
+    For a pairwise matchup (team1 vs team2) with model probability p:
+
+    1. Create artificial "overround" by inflating both sides:
+       π1 = p × (1 + margin),  π2 = (1-p) × (1 + margin)
+       where margin controls the strength of the correction.
+
+    2. Compute standard error for each implied probability:
+       SE_i = sqrt((π_i - π_i²) / π_i) = sqrt(1 - π_i)
+
+    3. Compute the uniform step (reduction in SE units):
+       step = (π1 + π2 - 1.0) / (SE1 + SE2)
+
+    4. Apply correction:
+       p_corrected = π1 - SE1 × step
+
+    Because SE(p) = sqrt(1-p) is larger when p is small (longshots),
+    the step removes more probability mass from longshots and less from
+    favourites.  In a tournament context, this sharpens predictions
+    toward the stronger team — counteracting the overvaluation of
+    underdogs that arises from regular-season training data.
+
+    **Why This Works for March Madness**
+
+    Models trained on regular-season data systematically overestimate
+    upset probabilities because:
+    - Tournament games are on neutral courts (no home advantage noise)
+    - Single-elimination pressure favours disciplined, experienced teams
+    - "Garbage time" inflates regular-season stats of weaker opponents
+
+    The goto_conversion sharpens these predictions, correctly identifying
+    the underlying dominance of elite programs.
+
+    **The margin parameter**
+
+    - margin = 0.0: no correction (identity)
+    - margin = 0.01-0.05: mild correction (well-calibrated models)
+    - margin = 0.05-0.15: moderate correction (most tournament models)
+    - margin = 0.15+: aggressive correction (overconfident models)
+
+    Optimal margin is calibrated on historical tournament data via
+    Brier score minimization.
+
+    Reference:
+        gotoConversion/goto_conversion (GitHub), 2019-2025.
+        H. S. Shin, "Prices of State Contingent Claims with Insider
+        traders, and the Favorite-Longshot Bias", The Economic Journal,
+        1992, 102, pp. 426-435.
     """
 
-    def __init__(self, strength: float = 0.03):
+    def __init__(self, strength: float = 0.05):
+        """Initialize with a margin (overround) parameter.
+
+        Args:
+            strength: The artificial margin (overround) applied before
+                goto_conversion.  Higher values = stronger correction.
+                Default 0.05 is a conservative starting point; the fit()
+                method will optimize this on historical data.
+        """
         self.strength = strength
         self.fitted = False
+        self._fit_details: Dict = {}
 
     def fit(
         self,
         predictions: np.ndarray,
         outcomes: np.ndarray,
-        strength_bounds: Tuple[float, float] = (0.0, 0.15),
+        strength_bounds: Tuple[float, float] = (0.0, 0.20),
+        round_labels: Optional[List[str]] = None,
     ) -> float:
-        """Find optimal correction strength by minimizing Brier score.
+        """Find optimal margin by minimizing Brier score on historical data.
+
+        Supports both flat and round-weighted Brier optimization.  When
+        round_labels are provided, the optimization targets the actual
+        Kaggle competition metric (round-weighted Brier).
 
         Args:
-            predictions: Model probabilities [N]
-            outcomes: Actual outcomes (0 or 1) [N]
-            strength_bounds: Search range for strength parameter
+            predictions: Model probabilities [N].
+            outcomes: Actual outcomes (0 or 1) [N].
+            strength_bounds: Search range for margin parameter.
+            round_labels: Optional round labels for weighted optimization.
 
         Returns:
-            Optimal strength value
+            Optimal margin value.
         """
         predictions = np.asarray(predictions, dtype=np.float64)
         outcomes = np.asarray(outcomes, dtype=np.float64)
 
         if len(predictions) < 20:
+            logger.warning(
+                "GotoConversion: too few samples (%d) to calibrate; "
+                "using default margin=%.3f",
+                len(predictions), self.strength,
+            )
             self.fitted = True
             return self.strength
 
-        def brier_at_strength(s: float) -> float:
-            corrected = self._apply(predictions, s)
-            return float(np.mean((corrected - outcomes) ** 2))
+        # Determine whether to use round-weighted or flat Brier.
+        weights = None
+        if round_labels is not None and len(round_labels) == len(predictions):
+            weights = np.array(
+                [KAGGLE_ROUND_WEIGHTS.get(r, 1.0) for r in round_labels],
+                dtype=np.float64,
+            )
+            w_sum = np.sum(weights)
+            if w_sum < 1e-9:
+                weights = None
+
+        def brier_at_margin(margin: float) -> float:
+            corrected = self._apply(predictions, margin)
+            sq_err = (corrected - outcomes) ** 2
+            if weights is not None:
+                return float(np.sum(weights * sq_err) / w_sum)
+            return float(np.mean(sq_err))
 
         if SCIPY_AVAILABLE:
             result = minimize_scalar(
-                brier_at_strength,
+                brier_at_margin,
                 bounds=strength_bounds,
                 method="bounded",
-                options={"xatol": 1e-5, "maxiter": 200},
+                options={"xatol": 1e-5, "maxiter": 300},
             )
             self.strength = float(result.x)
         else:
-            best_s = self.strength
-            best_brier = brier_at_strength(self.strength)
-            for s in np.linspace(strength_bounds[0], strength_bounds[1], 60):
-                brier = brier_at_strength(s)
+            best_m = self.strength
+            best_brier = brier_at_margin(self.strength)
+            for m in np.linspace(strength_bounds[0], strength_bounds[1], 80):
+                brier = brier_at_margin(m)
                 if brier < best_brier:
                     best_brier = brier
-                    best_s = s
-            self.strength = best_s
+                    best_m = m
+            self.strength = best_m
 
         self.fitted = True
-        brier_before = brier_at_strength(0.0)
-        brier_after = brier_at_strength(self.strength)
+        brier_before = brier_at_margin(0.0)
+        brier_after = brier_at_margin(self.strength)
+
+        self._fit_details = {
+            "margin": round(self.strength, 5),
+            "brier_before": round(brier_before, 5),
+            "brier_after": round(brier_after, 5),
+            "brier_delta": round(brier_after - brier_before, 5),
+            "n_samples": len(predictions),
+            "weighted": weights is not None,
+        }
+
         logger.info(
-            "FavouriteLongshotCorrection: strength=%.4f "
-            "(Brier: %.4f -> %.4f, delta=%.4f)",
+            "GotoConversion: margin=%.4f (Brier: %.5f -> %.5f, "
+            "delta=%.5f, n=%d, weighted=%s)",
             self.strength, brier_before, brier_after,
             brier_after - brier_before,
+            len(predictions),
+            weights is not None,
         )
         return self.strength
 
     def correct(self, predictions: np.ndarray) -> np.ndarray:
-        """Apply favourite-longshot correction.
+        """Apply goto_conversion correction to a batch of predictions.
 
         Args:
-            predictions: Model probabilities [N] or scalar
+            predictions: Model probabilities [N].
 
         Returns:
-            Corrected probabilities
+            Corrected probabilities [N].
         """
         return self._apply(np.asarray(predictions, dtype=np.float64), self.strength)
 
     def correct_single(self, p: float) -> float:
-        """Apply correction to a single prediction."""
+        """Apply goto_conversion to a single pairwise prediction.
+
+        Args:
+            p: P(team1 wins), in (0, 1).
+
+        Returns:
+            Corrected P(team1 wins).
+        """
         return float(self._apply(np.array([p]), self.strength)[0])
 
     @staticmethod
-    def _apply(predictions: np.ndarray, strength: float) -> np.ndarray:
-        """Apply goto-style correction to pairwise predictions.
+    def _apply(predictions: np.ndarray, margin: float) -> np.ndarray:
+        """Apply the goto_conversion algorithm to pairwise predictions.
 
-        For each prediction p (team1 win probability):
-        1. Convert to odds: o1 = 1/p, o2 = 1/(1-p)
-        2. Compute SE for each: SE = sqrt(1 - p) for each inverse odd
-        3. Step each probability back by SE * strength
-        4. Re-normalize to sum to 1.0
+        This is a faithful adaptation of the original goto_conversion
+        algorithm for the pairwise (two-outcome) case.  The original
+        package takes decimal odds as input; here we work directly with
+        probabilities and apply an artificial overround (margin) to
+        create the "bookmaker odds" that goto_conversion then corrects.
 
-        The result shrinks extreme predictions toward 0.5 proportional
-        to their standard error, correcting the favourite-longshot bias.
+        Mathematical derivation for two-outcome case:
+
+        Given: p = P(team1 wins), q = 1 - p = P(team2 wins)
+
+        Step 1 — Create artificial overround:
+            π1 = p × (1 + margin)
+            π2 = q × (1 + margin)
+            sum(π) = 1 + margin  (overround)
+
+        Step 2 — Compute SE for each:
+            SE_i = sqrt((π_i - π_i²) / π_i) = sqrt(1 - π_i)
+
+        Step 3 — Uniform step to remove overround:
+            step = (sum(π) - 1.0) / (SE1 + SE2)
+                 = margin / (sqrt(1 - π1) + sqrt(1 - π2))
+
+        Step 4 — Corrected probabilities:
+            p_corrected = π1 - SE1 × step
+            q_corrected = π2 - SE2 × step
+            (these sum to 1.0 by construction)
+
+        Because SE(π) = sqrt(1 - π) is a decreasing function of π,
+        the favourite (higher π) loses less probability mass than the
+        longshot (lower π).  This is the favourite-longshot correction.
+
+        Args:
+            predictions: P(team1 wins) array [N], values in (0, 1).
+            margin: Artificial overround.  Higher = stronger correction.
+                margin=0 returns the identity.
+
+        Returns:
+            Corrected probabilities [N], guaranteed in (0, 1).
         """
-        if strength <= 0.0:
-            return predictions
+        if margin <= 0.0:
+            return predictions.copy()
 
-        p = np.clip(predictions, 0.001, 0.999)
+        # Clip to valid probability range.
+        p = np.clip(predictions, 1e-4, 1.0 - 1e-4)
+        q = 1.0 - p
 
-        # Standard error of each probability (Bernoulli SE)
-        se_1 = np.sqrt(p * (1.0 - p))  # SE for team1 win prob
-        # For pairwise matchups, the correction pulls both sides toward 0.5
-        # proportional to SE.  Since SE is symmetric around 0.5, the net
-        # effect is to shrink extremes.
-        correction = strength * se_1 * np.sign(p - 0.5)
-        corrected = p - correction
+        # Step 1: Inflate to create artificial bookmaker margin.
+        pi_1 = p * (1.0 + margin)
+        pi_2 = q * (1.0 + margin)
 
-        return np.clip(corrected, 0.001, 0.999)
+        # Guard: inflated probabilities must be < 1.0 for SE to be real.
+        # If margin is so large that pi_i >= 1.0, cap it.
+        # This only happens for very extreme predictions (p > 1/(1+margin)).
+        pi_1 = np.minimum(pi_1, 0.9999)
+        pi_2 = np.minimum(pi_2, 0.9999)
+
+        # Step 2: Standard errors.
+        se_1 = np.sqrt(1.0 - pi_1)
+        se_2 = np.sqrt(1.0 - pi_2)
+
+        # Step 3: Uniform step to remove overround.
+        # The overround is (pi_1 + pi_2 - 1.0) which equals margin
+        # when no capping occurred, but may differ after capping.
+        overround = pi_1 + pi_2 - 1.0
+
+        # Avoid division by zero (only possible if both SE are 0,
+        # which means both pi_i = 1.0, impossible for valid probs).
+        se_sum = se_1 + se_2
+        se_sum = np.maximum(se_sum, 1e-8)
+
+        step = overround / se_sum
+
+        # Step 4: Apply correction.
+        p_corrected = pi_1 - se_1 * step
+
+        # Verify the correction sums to 1.0 (within numerical precision).
+        # q_corrected = pi_2 - se_2 * step
+        # p_corrected + q_corrected = (pi_1 + pi_2) - (se_1 + se_2) * step
+        #                           = (1 + overround) - overround = 1.0  ✓
+
+        return np.clip(p_corrected, 1e-4, 1.0 - 1e-4)

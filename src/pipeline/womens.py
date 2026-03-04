@@ -51,6 +51,7 @@ from ..ml.calibration.brier_optimal import (
     BrierCalibrator,
     BrierOptimalSharpener,
     BrierPostProcessor,
+    FavouriteLongshotCorrection,
     RoundWeightedSharpener,
     SeedBasedOverrides,
 )
@@ -107,6 +108,13 @@ class WomensPipelineConfig:
     # Feature standardization (aligned with men's)
     enable_feature_scaling: bool = True
 
+    # goto_conversion (favourite-longshot bias correction)
+    # Women's tournament has even fewer upsets, so goto_conversion
+    # should sharpen toward favourites even more aggressively.
+    enable_goto_conversion: bool = True
+    goto_conversion_margin_init: float = 0.06  # Slightly higher for women's
+    goto_conversion_margin_bounds: Tuple[float, float] = (0.0, 0.25)
+
 
 class WomensPipeline:
     """End-to-end women's tournament prediction pipeline.
@@ -133,11 +141,19 @@ class WomensPipeline:
         self.model = None
         self.scaler = None
         self.calibrator = None
+        # goto_conversion for women's bracket
+        self._goto_converter = None
+        if self.config.enable_goto_conversion:
+            self._goto_converter = FavouriteLongshotCorrection(
+                strength=self.config.goto_conversion_margin_init,
+            )
+
         self.post_processor = BrierPostProcessor(
             seed_overrides_womens=SeedBasedOverrides(
                 snap_threshold=self.config.seed_override_threshold,
                 is_womens=True,
             ),
+            goto_converter=self._goto_converter,
             clip_lo=self.config.clip_lo,
             clip_hi=self.config.clip_hi,
         )
@@ -446,10 +462,31 @@ class WomensPipeline:
                 sharpener.fit(preds, actuals)
                 self.post_processor.sharpener = sharpener
 
+        # Fit goto_conversion for women's bracket.
+        # Women's tournament has fewer upsets, so goto_conversion should
+        # sharpen toward favourites.  Fit on the same calibration data.
+        if self._goto_converter is not None and len(preds) >= 20:
+            try:
+                # Calibrate the predictions first before fitting goto
+                cal_preds = calibrator.calibrate(preds)
+                self._goto_converter.fit(
+                    cal_preds, actuals,
+                    strength_bounds=self.config.goto_conversion_margin_bounds,
+                    round_labels=round_labels if self.config.enable_brier_sharpening else None,
+                )
+                self.post_processor.goto_converter = self._goto_converter
+                logger.info(
+                    "Women's goto_conversion fitted: margin=%.4f",
+                    self._goto_converter.strength,
+                )
+            except Exception as e:
+                logger.warning("Women's goto_conversion fitting failed: %s", e)
+
         logger.info(
-            "Women's calibration fitted: T=%.3f, alpha=%.3f",
+            "Women's calibration fitted: T=%.3f, alpha=%.3f, goto_margin=%.4f",
             calibrator.temperature,
             self.post_processor.sharpener.alpha if self.post_processor.sharpener else 1.0,
+            self._goto_converter.strength if self._goto_converter and self._goto_converter.fitted else 0.0,
         )
 
     def set_team_seeds(self, seed_map: Dict[str, int]) -> None:
