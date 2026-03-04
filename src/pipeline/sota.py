@@ -771,6 +771,11 @@ class _TrainedBaselineModel:
     def _select_features(self, x: np.ndarray) -> np.ndarray:
         """Apply fixed feature selection if configured."""
         if self.fixed_feature_indices is not None:
+            n_cols = x.shape[-1] if x.ndim >= 1 else 0
+            expected = len(self.fixed_feature_indices)
+            # Skip if data is already the reduced width (avoid double selection)
+            if n_cols == expected:
+                return x
             if x.ndim == 1:
                 return x[self.fixed_feature_indices]
             return x[:, self.fixed_feature_indices]

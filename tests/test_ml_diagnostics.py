@@ -286,79 +286,9 @@ class TestROCAUCAndBootstrapCI:
 # ---------------------------------------------------------------------------
 # Fix 4: Ensemble Diversity
 # ---------------------------------------------------------------------------
-
-
-class TestEnsembleDiversity:
-    """Tests for ensemble diversity metrics."""
-
-    def test_pairwise_correlation_identical_models(self):
-        """Identical predictions should have correlation 1.0."""
-        from src.ml.ensemble.cfa import CombinatorialFusionAnalysis
-
-        preds = np.array([0.3, 0.5, 0.7, 0.2, 0.8, 0.6])
-        model_preds = {"model_a": preds, "model_b": preds.copy()}
-
-        corrs = CombinatorialFusionAnalysis.compute_pairwise_correlation(model_preds)
-        assert "model_a_vs_model_b" in corrs
-        assert abs(corrs["model_a_vs_model_b"] - 1.0) < 0.01
-
-    def test_pairwise_correlation_independent_models(self):
-        """Independent predictions should have low correlation."""
-        from src.ml.ensemble.cfa import CombinatorialFusionAnalysis
-
-        rng = np.random.default_rng(42)
-        n = 200
-        model_preds = {
-            "model_a": rng.uniform(0, 1, n),
-            "model_b": rng.uniform(0, 1, n),
-        }
-
-        corrs = CombinatorialFusionAnalysis.compute_pairwise_correlation(model_preds)
-        assert "model_a_vs_model_b" in corrs
-        assert abs(corrs["model_a_vs_model_b"]) < 0.2
-
-    def test_pairwise_correlation_three_models(self):
-        """Three models should produce 3 pairwise correlations."""
-        from src.ml.ensemble.cfa import CombinatorialFusionAnalysis
-
-        rng = np.random.default_rng(42)
-        n = 100
-        model_preds = {
-            "lgb": rng.uniform(0, 1, n),
-            "xgb": rng.uniform(0, 1, n),
-            "logit": rng.uniform(0, 1, n),
-        }
-
-        corrs = CombinatorialFusionAnalysis.compute_pairwise_correlation(model_preds)
-        assert len(corrs) == 3  # C(3,2) = 3
-
-    def test_diversity_metrics_single_prediction(self):
-        """Diversity metrics should handle single-model case gracefully."""
-        from src.ml.ensemble.cfa import CombinatorialFusionAnalysis, ModelPrediction
-
-        cfa = CombinatorialFusionAnalysis()
-        preds = {"baseline": ModelPrediction("baseline", 0.6, 0.8)}
-
-        metrics = cfa.compute_diversity_metrics(preds)
-        assert metrics["prediction_spread"] == 0.0
-        assert metrics["prediction_std"] == 0.0
-
-    def test_diversity_metrics_multi_model(self):
-        """Multiple models should produce meaningful diversity metrics."""
-        from src.ml.ensemble.cfa import CombinatorialFusionAnalysis, ModelPrediction
-
-        cfa = CombinatorialFusionAnalysis()
-        preds = {
-            "gnn": ModelPrediction("gnn", 0.7, 0.8),
-            "transformer": ModelPrediction("transformer", 0.5, 0.6),
-            "baseline": ModelPrediction("baseline", 0.6, 0.9),
-        }
-
-        metrics = cfa.compute_diversity_metrics(preds)
-        assert metrics["prediction_spread"] == pytest.approx(0.2, abs=0.01)
-        assert metrics["prediction_std"] > 0
-        assert "deviation_gnn" in metrics
-        assert "ensemble_mean" in metrics
+# CombinatorialFusionAnalysis class was removed from cfa.py.
+# The ensemble now uses fixed-weight averaging (LGB/XGB/Logistic)
+# instead of CFA-style dynamic fusion.
 
 
 # ---------------------------------------------------------------------------

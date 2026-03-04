@@ -149,7 +149,7 @@ class TestConfigHash:
     def test_new_fields_change_hash(self):
         """Changing the new config fields produces different hashes."""
         c_base = SOTAPipelineConfig()
-        c_seed = SOTAPipelineConfig(seed_prior_weight=0.25)  # Different from default 0.10
+        c_seed = SOTAPipelineConfig(seed_prior_weight=0.25)  # Different from default 0.15
         c_bonus = SOTAPipelineConfig(consistency_bonus_max=0.05)
         c_lgb = SOTAPipelineConfig(ensemble_lgb_weight=0.50)
         hashes = {config_hash(c) for c in [c_base, c_seed, c_bonus, c_lgb]}
@@ -519,12 +519,12 @@ class TestConfigNewFields:
 
     def test_default_values(self):
         config = SOTAPipelineConfig()
-        assert config.seed_prior_weight == 0.10  # Gap #3: enabled seed prior
+        assert config.seed_prior_weight == 0.15  # Gap #3: enabled seed prior
         assert config.seed_prior_slope == 0.175
         assert config.consistency_bonus_max == 0.0
         assert config.consistency_normalizer == 15.0
-        assert config.ensemble_lgb_weight == 0.25  # Gap #2: MOV-first rebalance
-        assert config.ensemble_xgb_weight == 0.15  # Gap #2: MOV-first rebalance
+        assert config.ensemble_lgb_weight == 0.15  # LightGBM classifier weight
+        assert config.ensemble_xgb_weight == 0.15  # XGBoost classifier weight
         assert config.mc_regional_correlation == 0.0
         assert config.enable_gnn is False
         assert config.enable_transformer is False
