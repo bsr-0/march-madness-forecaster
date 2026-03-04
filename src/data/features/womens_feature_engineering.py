@@ -33,13 +33,13 @@ logger = logging.getLogger(__name__)
 # Women's team feature dimension.  This MUST match the length of
 # WomensTeamFeatures.to_vector() output and get_team_feature_names().
 # Alignment: includes all Four Factors (offense + defense) like men's.
-WOMENS_TEAM_FEATURE_DIM = 18  # 16 original + defensive_reb_rate + opp_free_throw_rate
+WOMENS_TEAM_FEATURE_DIM = 20  # 16 original + defensive_reb_rate + opp_free_throw_rate + rebounding_margin + ato_ratio
 
 # Matchup feature names — ordered vector returned by get_matchup_features().
 # Alignment: mirrors men's FIXED_FEATURE_SET structure with diff + absolute +
 # interaction features.
 WOMENS_FEATURE_NAMES = [
-    # Differential features (team1 - team2) — 17 features
+    # Differential features (team1 - team2) — 19 features
     "diff_adj_off_eff",
     "diff_adj_def_eff",
     "diff_adj_tempo",
@@ -51,6 +51,8 @@ WOMENS_FEATURE_NAMES = [
     "diff_opp_to_rate",
     "diff_drb_rate",          # NEW: defensive rebound rate (men's has this)
     "diff_opp_ft_rate",       # NEW: opponent free throw rate (men's has this)
+    "diff_rebounding_margin", # NEW: women's-specific high-signal feature
+    "diff_assist_to_turnover", # NEW: more predictive of WNCAA upsets
     "diff_sos_adj_em",
     "diff_elo_rating",
     "diff_free_throw_pct",
@@ -85,6 +87,8 @@ WOMENS_POPULATION_STATS = {
     "opp_to_rate":     (0.210,  0.030),
     "drb_rate":        (0.680,  0.040),
     "opp_ft_rate":     (0.290,  0.055),
+    "rebounding_margin": (0.0,  5.0),
+    "ato_ratio":       (1.0,    0.25),
     "sos_adj_em":      (0.0,    6.0),
     "elo":             (1500.0, 110.0),
     "ft_pct":          (0.700,  0.050),
@@ -128,6 +132,10 @@ class WomensTeamFeatures:
     defensive_reb_rate: float = 0.70
     opp_free_throw_rate: float = 0.30
 
+    # Women's-specific high-signal features
+    rebounding_margin: float = 0.0  # Offensive rebounds - defensive rebounds allowed
+    assist_to_turnover_ratio: float = 1.0  # More predictive of WNCAA upsets
+
     # Schedule and record
     sos_adj_em: float = 0.0
     win_pct: float = 0.5
@@ -164,6 +172,9 @@ class WomensTeamFeatures:
             self.opp_turnover_rate,
             self.defensive_reb_rate,
             self.opp_free_throw_rate,
+            # Women's-specific high-signal features
+            self.rebounding_margin,
+            self.assist_to_turnover_ratio,
             # Schedule / record / ratings
             self.sos_adj_em,
             self.elo_rating,
@@ -224,6 +235,8 @@ class WomensTeamFeatures:
             opp_turnover_rate=stats.opp_turnover_rate,
             defensive_reb_rate=getattr(stats, 'defensive_reb_rate', 0.70),
             opp_free_throw_rate=getattr(stats, 'opp_free_throw_rate', 0.30),
+            rebounding_margin=getattr(stats, 'rebounding_margin', 0.0),
+            assist_to_turnover_ratio=getattr(stats, 'assist_to_turnover_ratio', 1.0),
             sos_adj_em=stats.sos_adj_em,
             win_pct=stats.win_pct,
             elo_rating=stats.elo_rating,
@@ -242,6 +255,7 @@ def get_team_feature_names() -> List[str]:
         'adj_off_eff', 'adj_def_eff', 'adj_tempo',
         'efg_pct', 'to_rate', 'orb_rate', 'ft_rate',
         'opp_efg_pct', 'opp_to_rate', 'drb_rate', 'opp_ft_rate',
+        'rebounding_margin', 'assist_to_turnover_ratio',
         'sos_adj_em', 'elo_rating', 'free_throw_pct',
         'win_pct', 'three_pt_pct', 'three_pt_variance', 'net_rating',
     ]
@@ -324,9 +338,9 @@ class WomensFeatureEngineer:
         # Differential features (all team-level features)
         diff = v1 - v2
 
-        # Drop net_rating from diff (index 17) — it's a rank-based metric
-        # that doesn't difference meaningfully.  Keep first 17 elements.
-        diff = diff[:17]
+        # Drop net_rating from diff (index 19) — it's a rank-based metric
+        # that doesn't difference meaningfully.  Keep first 19 elements.
+        diff = diff[:19]
 
         # Absolute-level features (average of both teams) — captures
         # game-quality context that pure diffs lose (men's FIX #4)
