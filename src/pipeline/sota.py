@@ -318,6 +318,16 @@ class SOTAPipelineConfig:
     ensemble_xgb_weight: float = 0.15  # XGBoost classifier weight
     # spread gets 0.50 via _FIXED_WEIGHTS (increased from 0.40); logistic gets residual ~0.20
 
+    # --- Symmetric training augmentation ---
+    # For every game A vs B, create two training rows: one from A's perspective
+    # and one from B's perspective.  This enforces zero-sum learning
+    # (P(A>B) + P(B>A) = 1), doubles training samples, and eliminates team-order
+    # bias.  Every Kaggle March Madness medalist since 2019 uses this.
+    # The previous concern about tree model overfitting to correlated duplicates
+    # is mitigated by: (1) chronological split keeps pairs together, (2) LOYO
+    # keeps pairs in the same fold, (3) regularization handles mild correlation.
+    enable_symmetric_augmentation: bool = True
+
     # --- Round-weighted training (FIX #3: optimize for Kaggle's actual metric) ---
     # Include historical tournament games in training with Kaggle round weights
     # so the model invests more gradient signal in closely-matched elite teams.
@@ -2687,11 +2697,16 @@ class SOTAPipeline:
         # prevents the validation set from influencing feature selection,
         # importance ranking, correlation pruning, or Optuna search.
         #
-        # OOS-FIX: With symmetric augmentation removed, each sample is one
-        # unique game.  No pair alignment needed — simple chronological split.
+        # With symmetric augmentation enabled (default), each game produces
+        # 2 interleaved samples: [orig, swap, orig, swap, ...].  Both
+        # perspectives share the same game date / sort_key, so a simple
+        # chronological split keeps pairs together — no leakage.
         # ====================================================================
         n = len(y_full)
-        n_unique_games = n  # Each game produces 1 sample (no symmetric augmentation)
+        if getattr(self.config, "enable_symmetric_augmentation", True):
+            n_unique_games = n // 2  # Each game produces 2 samples
+        else:
+            n_unique_games = n  # Each game produces 1 sample
         train_samples = n
         valid_samples = 0
 
@@ -4551,6 +4566,16 @@ class SOTAPipeline:
             n_dead_cols,
             int(np.sum(round_weights_arr > 1.0)),
         )
+
+        # --- Symmetric augmentation ---
+        # Double training samples by adding team-swap perspective of each game.
+        # Both perspectives share the same game date, so chronological
+        # train/val splits and LOYO folds keep them together (no leakage).
+        if getattr(self.config, "enable_symmetric_augmentation", True):
+            from ..ml.training.symmetric import symmetric_augment
+            X_arr, y_arr, margins_arr, round_weights_arr, _ = symmetric_augment(
+                X_arr, y_arr, margins_arr, round_weights_arr,
+            )
 
         return X_arr, y_arr, margins_arr, inc_engine.get_end_of_season_elo(), round_weights_arr
 
