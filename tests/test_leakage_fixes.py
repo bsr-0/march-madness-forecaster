@@ -551,10 +551,13 @@ class TestSeedLeakageFix:
         return records
 
     def test_regular_season_seed_is_zero(self):
-        """v[63] (seed strength) must be 0.0 for regular-season training games."""
+        """Seed strength feature must be 0.0 for regular-season training games."""
         from src.data.features.proprietary_metrics import (
             IncrementalMetricsEngine,
         )
+        from src.data.features.feature_engineering import TeamFeatures
+
+        seed_idx = TeamFeatures.get_feature_names().index('seed_strength')
 
         records = self._make_game_records()
         engine = IncrementalMetricsEngine(records)
@@ -578,16 +581,19 @@ class TestSeedLeakageFix:
             seed = 0  # fixed: no seed for regular-season games
 
         v = IncrementalMetricsEngine.metrics_to_team_vector(m, seed=seed)
-        assert v[63] == 0.0, (
-            f"Seed feature v[63] must be 0.0 for regular-season games "
-            f"(game_date={reg_date} <= cutoff={tournament_cutoff}), got {v[63]}"
+        assert v[seed_idx] == 0.0, (
+            f"Seed feature v[{seed_idx}] must be 0.0 for regular-season games "
+            f"(game_date={reg_date} <= cutoff={tournament_cutoff}), got {v[seed_idx]}"
         )
 
     def test_tournament_game_seed_is_nonzero(self):
-        """v[63] must reflect the actual seed for genuine tournament games."""
+        """Seed strength feature must reflect the actual seed for genuine tournament games."""
         from src.data.features.proprietary_metrics import (
             IncrementalMetricsEngine,
         )
+        from src.data.features.feature_engineering import TeamFeatures
+
+        seed_idx = TeamFeatures.get_feature_names().index('seed_strength')
 
         records = self._make_game_records()
         engine = IncrementalMetricsEngine(records)
@@ -610,10 +616,10 @@ class TestSeedLeakageFix:
             seed = 0
 
         v = IncrementalMetricsEngine.metrics_to_team_vector(m, seed=seed)
-        # seed=1 → v[63] = log(16)/log(16) = 1.0
-        assert v[63] > 0.0, (
-            f"Seed feature v[63] must be > 0.0 for tournament games "
-            f"(game_date={tourn_date} > cutoff={tournament_cutoff}), got {v[63]}"
+        # seed=1 → v[seed_idx] = log(16)/log(16) = 1.0
+        assert v[seed_idx] > 0.0, (
+            f"Seed feature v[{seed_idx}] must be > 0.0 for tournament games "
+            f"(game_date={tourn_date} > cutoff={tournament_cutoff}), got {v[seed_idx]}"
         )
 
     def test_seed_interaction_zero_when_one_seed_zero(self):

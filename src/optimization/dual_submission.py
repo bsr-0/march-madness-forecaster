@@ -8,6 +8,31 @@ P(top finish), not E[score]. This means:
 
 The optimal strategy depends on the number of competitors and the
 distribution of their submissions.
+
+THE 0-1 TRICK (Champion Boost Strategy)
+========================================
+The most powerful hedge for Kaggle's March Madness competition exploits
+the round-weight structure: NCG is worth 32× an R64 game, F4 is 16×.
+By picking a specific champion and pushing ALL of that team's games
+toward 1.0 (or 0.0 for opponents), you create a submission that:
+
+- Scores terribly if your champion pick is wrong (~0.25 Brier penalty
+  across ~6 games × high weights)
+- Scores EXTREMELY well if correct, because you get near-zero Brier
+  on the highest-weighted games (NCG=32×, F4=16×, E8=8×, S16=4×)
+
+With Kaggle allowing 2 submissions, the optimal strategy is:
+  Slot 1: Best calibrated probabilities (minimize E[Brier])
+  Slot 2: Champion boost on the most likely winner (maximize P(top-10 finish))
+
+The expected value of slot 2 is negative in isolation, but the combined
+probability of at least one slot finishing in prize range exceeds either
+slot alone. This is the key mathematical insight.
+
+References:
+- Landgraf (2017 Kaggle March Mania winner)
+- FiveThirtyEight methodology (champion path probability)
+- Kaggle forum consensus on dual submission strategy
 """
 
 from __future__ import annotations
@@ -21,6 +46,16 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+# Kaggle round weights (2023+ Brier scoring)
+_KAGGLE_ROUND_WEIGHTS = {
+    "R64": 1.0,
+    "R32": 2.0,
+    "S16": 4.0,
+    "E8": 8.0,
+    "F4": 16.0,
+    "NCG": 32.0,
+}
+
 
 @dataclass
 class SubmissionPair:
@@ -31,6 +66,543 @@ class SubmissionPair:
     hedge_expected_brier: float = 0.0
     combined_coverage: float = 0.0  # Estimated P(at least one in top N)
     deviations: List[str] = field(default_factory=list)  # Matchups where hedge differs
+    strategy: str = "leverage"     # Strategy used for hedge: "leverage", "champion_boost", "upset_path"
+    champion_team: Optional[str] = None  # Champion team for champion_boost strategy
+
+
+@dataclass
+class ChampionPathPick:
+    """A champion pick with its full tournament path probabilities."""
+    champion_id: str
+    champion_name: str
+    seed: int
+    championship_probability: float  # P(wins tournament)
+    path_matchups: List[str]         # Kaggle matchup IDs along the path
+    path_probabilities: Dict[str, float]  # matchup_id -> P(champion wins this game)
+    expected_brier_gain: float = 0.0      # Expected Brier improvement if champion is correct
+    crowd_championship_prob: float = 0.0  # Estimated crowd P(champion)
+    leverage_ratio: float = 0.0           # model_prob / crowd_prob
+
+
+class ChampionBoostStrategy:
+    """The 0-1 trick: push a specific champion's games toward certainty.
+
+    The strategy exploits Kaggle's round-weighted Brier scoring:
+    - NCG game: 32× weight. Getting P=0.99 when correct yields Brier 0.0001×32
+      vs the crowd's P=0.55 yielding Brier 0.2025×32. Delta = ~6.5 Brier points.
+    - F4 games (2): 16× each. Similar magnitude gains.
+    - The total Brier gain from correctly predicting a champion's full path
+      at ~1.0 probability is approximately 20-40 Brier points depending on
+      how confident the crowd was.
+
+    The cost of being wrong: losing ~6-12 Brier points on games where your
+    P=0.99 but outcome=0. But with 2 submissions allowed, the EV of the
+    pair exceeds either submission alone.
+
+    Mathematical framework:
+        Let B₁ = Brier of primary (calibrated).
+        Let B₂(c) = Brier of champion boost on team c.
+        P(c) = P(team c wins tournament).
+
+        E[B₂(c)] = P(c) × B₂(c|correct) + (1-P(c)) × B₂(c|wrong)
+
+        The optimal champion to boost is:
+        c* = argmax_c P(c) × [B_crowd(c|correct) - B₂(c|correct)]
+
+        This maximizes the expected Brier advantage over the crowd when
+        the champion pick is correct, weighted by how likely it is to be correct.
+    """
+
+    # How aggressively to push champion's game probabilities
+    # 0.0 = no boost, 1.0 = push to 0.99/0.01
+    BOOST_STRENGTH_HIGH = 0.97    # For F4 and NCG games (highest weight)
+    BOOST_STRENGTH_MEDIUM = 0.93  # For E8 and S16 games
+    BOOST_STRENGTH_LOW = 0.88     # For R32 and R64 games
+
+    # Minimum championship probability to consider a team for boosting
+    MIN_CHAMPIONSHIP_PROB = 0.03  # ~3% floor
+
+    # Kaggle allows probabilities to be very close to 0/1 but not exactly
+    PROB_FLOOR = 0.005
+    PROB_CEIL = 0.995
+
+    def __init__(
+        self,
+        n_champion_candidates: int = 5,
+        boost_non_path_games: bool = True,
+    ):
+        """
+        Args:
+            n_champion_candidates: Number of top champion candidates to evaluate
+            boost_non_path_games: Whether to also adjust non-path games
+                (e.g., push opponents of our champion's likely opponents
+                 toward winning so the bracket path is maximally favorable)
+        """
+        self.n_champion_candidates = n_champion_candidates
+        self.boost_non_path_games = boost_non_path_games
+
+    def select_champion(
+        self,
+        primary_predictions: Dict[str, float],
+        team_seeds: Dict[str, int],
+        championship_probs: Optional[Dict[str, float]] = None,
+        crowd_probs: Optional[Dict[str, float]] = None,
+    ) -> Optional[str]:
+        """Select the optimal champion to boost.
+
+        Uses the leverage-weighted expected value framework:
+            c* = argmax_c P(c) × (crowd_distance_c) × round_weight_sum_c
+
+        Args:
+            primary_predictions: matchup_id -> P(team1 wins) from primary model
+            team_seeds: team_id -> seed (1-16)
+            championship_probs: team_id -> P(wins tournament). If None,
+                estimated from seeds.
+            crowd_probs: matchup_id -> estimated crowd prediction
+
+        Returns:
+            Champion team ID to boost, or None if no viable candidate
+        """
+        if championship_probs is None:
+            championship_probs = self._estimate_championship_probs(team_seeds)
+
+        if crowd_probs is None:
+            crowd_probs = {}
+
+        # Score each candidate
+        candidates = sorted(
+            championship_probs.items(),
+            key=lambda x: x[1],
+            reverse=True,
+        )[:self.n_champion_candidates]
+
+        if not candidates:
+            return None
+
+        best_team = None
+        best_score = -float("inf")
+
+        for team_id, champ_prob in candidates:
+            if champ_prob < self.MIN_CHAMPIONSHIP_PROB:
+                continue
+
+            # Estimate leverage: how much better would we do vs crowd if correct?
+            # Higher-seeded teams that the crowd underestimates are most valuable
+            seed = team_seeds.get(team_id, 8)
+            seed_bonus = max(0, (5 - seed)) * 0.1  # 1-seeds get +0.4 bonus
+
+            # Champion probability relative to crowd expectation
+            crowd_champ = self._estimate_crowd_championship_prob(seed)
+            leverage = champ_prob / max(crowd_champ, 0.01)
+
+            # Combined score: probability × leverage × seed quality
+            score = champ_prob * (1.0 + math.log(max(leverage, 0.5))) * (1.0 + seed_bonus)
+
+            if score > best_score:
+                best_score = score
+                best_team = team_id
+
+        if best_team is not None:
+            best_prob = championship_probs.get(best_team, 0)
+            logger.info(
+                "Champion boost: selected %s (seed=%d, P(champ)=%.3f, score=%.3f)",
+                best_team,
+                team_seeds.get(best_team, 0),
+                best_prob,
+                best_score,
+            )
+
+        return best_team
+
+    def generate_champion_boost(
+        self,
+        primary_predictions: Dict[str, float],
+        champion_id: str,
+        matchup_teams: Dict[str, Tuple[str, str]],
+        team_seeds: Optional[Dict[str, int]] = None,
+    ) -> Dict[str, float]:
+        """Generate champion-boosted submission using the 0-1 trick.
+
+        For every matchup involving the champion, push probability toward
+        1.0 (champion wins) or 0.0 (champion loses = opponent wins).
+        The boost strength varies by inferred round — later rounds get
+        more aggressive boosting because:
+        1. They carry higher Kaggle weight (16-32×)
+        2. Getting them right yields disproportionate Brier gain
+        3. The crowd is more uncertain about later rounds
+
+        For non-champion games, the primary predictions are preserved.
+
+        Args:
+            primary_predictions: matchup_id -> P(team1 wins) from calibrated model
+            champion_id: Team ID of the champion to boost
+            matchup_teams: matchup_id -> (team1_id, team2_id)
+            team_seeds: team_id -> seed (for inferring round from seed matchups)
+
+        Returns:
+            Dict of matchup_id -> boosted probability
+        """
+        boosted = dict(primary_predictions)
+        boosted_games = []
+
+        for matchup_id, prob in primary_predictions.items():
+            teams = matchup_teams.get(matchup_id)
+            if teams is None:
+                continue
+
+            team1_id, team2_id = teams
+            involves_champion = (team1_id == champion_id or team2_id == champion_id)
+
+            if not involves_champion:
+                continue
+
+            # Determine boost strength based on seed matchup (proxy for round)
+            boost = self._get_boost_strength(
+                team1_id, team2_id, team_seeds,
+            )
+
+            if team1_id == champion_id:
+                # Champion is team1: push probability toward 1.0
+                boosted_prob = max(boost, prob)  # Never make it less confident
+                boosted[matchup_id] = min(boosted_prob, self.PROB_CEIL)
+            else:
+                # Champion is team2: push probability toward 0.0
+                boosted_prob = min(1.0 - boost, prob)  # Never make it less confident
+                boosted[matchup_id] = max(boosted_prob, self.PROB_FLOOR)
+
+            boosted_games.append(matchup_id)
+
+        logger.info(
+            "Champion boost applied to %d games for team %s",
+            len(boosted_games), champion_id,
+        )
+        return boosted
+
+    def estimate_champion_boost_ev(
+        self,
+        primary_predictions: Dict[str, float],
+        boosted_predictions: Dict[str, float],
+        champion_id: str,
+        matchup_teams: Dict[str, Tuple[str, str]],
+        championship_prob: float,
+    ) -> Dict:
+        """Estimate the expected value of the champion boost.
+
+        Computes Brier score impact under two scenarios:
+        1. Champion wins tournament (weight by championship_prob)
+        2. Champion loses (weight by 1 - championship_prob)
+
+        Args:
+            primary_predictions: Original calibrated predictions
+            boosted_predictions: Champion-boosted predictions
+            champion_id: Boosted champion
+            matchup_teams: matchup_id -> (team1, team2)
+            championship_prob: P(champion wins tournament)
+
+        Returns:
+            Dict with EV analysis
+        """
+        champion_games = []
+        for mid, (t1, t2) in matchup_teams.items():
+            if t1 == champion_id or t2 == champion_id:
+                champion_games.append(mid)
+
+        if not champion_games:
+            return {"ev_delta": 0.0, "champion_games": 0}
+
+        # Scenario 1: Champion wins all their games
+        brier_primary_if_correct = 0.0
+        brier_boosted_if_correct = 0.0
+        brier_primary_if_wrong = 0.0
+        brier_boosted_if_wrong = 0.0
+
+        for mid in champion_games:
+            t1, t2 = matchup_teams[mid]
+            p_primary = primary_predictions.get(mid, 0.5)
+            p_boosted = boosted_predictions.get(mid, 0.5)
+
+            if t1 == champion_id:
+                # outcome = 1 if champion wins
+                brier_primary_if_correct += (p_primary - 1.0) ** 2
+                brier_boosted_if_correct += (p_boosted - 1.0) ** 2
+                brier_primary_if_wrong += (p_primary - 0.0) ** 2
+                brier_boosted_if_wrong += (p_boosted - 0.0) ** 2
+            else:
+                # outcome = 0 if champion wins (team2 = champion)
+                brier_primary_if_correct += (p_primary - 0.0) ** 2
+                brier_boosted_if_correct += (p_boosted - 0.0) ** 2
+                brier_primary_if_wrong += (p_primary - 1.0) ** 2
+                brier_boosted_if_wrong += (p_boosted - 1.0) ** 2
+
+        # Expected Brier delta
+        ev_correct = championship_prob * (brier_primary_if_correct - brier_boosted_if_correct)
+        ev_wrong = (1.0 - championship_prob) * (brier_primary_if_wrong - brier_boosted_if_wrong)
+        ev_delta = ev_correct + ev_wrong  # Positive = boost helps
+
+        return {
+            "champion_id": champion_id,
+            "championship_prob": round(championship_prob, 4),
+            "champion_games": len(champion_games),
+            "brier_gain_if_correct": round(
+                brier_primary_if_correct - brier_boosted_if_correct, 5
+            ),
+            "brier_cost_if_wrong": round(
+                brier_boosted_if_wrong - brier_primary_if_wrong, 5
+            ),
+            "ev_delta": round(ev_delta, 5),
+            "ev_favorable": ev_delta > 0,
+        }
+
+    def _get_boost_strength(
+        self,
+        team1_id: str,
+        team2_id: str,
+        team_seeds: Optional[Dict[str, int]],
+    ) -> float:
+        """Determine boost strength based on likely round.
+
+        Uses seed matchup as proxy for tournament round:
+        - 1 vs 16, 2 vs 15, etc. → R64 → low boost
+        - 1 vs 8, 2 vs 7, etc. → R32 → low boost
+        - 1 vs 4, 2 vs 3, etc. → S16/E8 → medium boost
+        - 1 vs 1, 1 vs 2, etc. → F4/NCG → high boost
+        """
+        if team_seeds is None:
+            return self.BOOST_STRENGTH_MEDIUM
+
+        s1 = team_seeds.get(team1_id, 8)
+        s2 = team_seeds.get(team2_id, 8)
+
+        # Use seed sum as a proxy for round depth:
+        # R64: seed sums = 17 (1+16, 2+15, etc.)
+        # R32: seed sums ≈ 9-17
+        # S16: seed sums ≈ 4-10
+        # E8/F4: seed sums ≈ 2-6
+        # NCG: seed sums ≈ 2-4
+        seed_sum = s1 + s2
+
+        if seed_sum <= 4:
+            return self.BOOST_STRENGTH_HIGH   # F4/NCG territory
+        elif seed_sum <= 8:
+            return self.BOOST_STRENGTH_MEDIUM  # E8/S16 territory
+        else:
+            return self.BOOST_STRENGTH_LOW     # R32/R64 territory
+
+    def _estimate_championship_probs(
+        self,
+        team_seeds: Dict[str, int],
+    ) -> Dict[str, float]:
+        """Estimate championship probabilities from seeds alone.
+
+        Historical rates (1985-2024 men's):
+        - 1-seeds: ~55% of championships
+        - 2-seeds: ~20%
+        - 3-seeds: ~10%
+        - 4-seeds: ~5%
+        - Other: ~10%
+        """
+        # Historical championship win rates by seed
+        seed_champ_rates = {
+            1: 0.135,   # Per 1-seed (4 per year, ~54% total)
+            2: 0.050,   # Per 2-seed (~20% total)
+            3: 0.025,   # Per 3-seed (~10% total)
+            4: 0.012,   # Per 4-seed (~5% total)
+            5: 0.005,
+            6: 0.004,
+            7: 0.003,
+            8: 0.002,
+        }
+
+        probs = {}
+        for team_id, seed in team_seeds.items():
+            probs[team_id] = seed_champ_rates.get(seed, 0.001)
+
+        # Normalize to sum to 1.0
+        total = sum(probs.values())
+        if total > 0:
+            for team_id in probs:
+                probs[team_id] /= total
+
+        return probs
+
+    def _estimate_crowd_championship_prob(self, seed: int) -> float:
+        """Estimate what the crowd thinks a seed's championship probability is."""
+        crowd_rates = {
+            1: 0.15, 2: 0.06, 3: 0.03, 4: 0.015,
+            5: 0.005, 6: 0.004, 7: 0.003, 8: 0.002,
+        }
+        return crowd_rates.get(seed, 0.001)
+
+
+class KaggleDualSubmissionGenerator:
+    """Orchestrates Slot 1 (calibrated) + Slot 2 (champion boost) submissions.
+
+    This is the top-level class that implements the dual submission strategy
+    for Kaggle's March Madness competition. It generates two CSV-ready
+    prediction sets:
+
+    Slot 1 (Primary): The calibrated model's best probability estimates,
+        optimized to minimize expected Brier score.
+
+    Slot 2 (Champion Boost): A modified version where the predicted champion's
+        games are pushed toward certainty (the 0-1 trick), creating a high-
+        variance "lottery ticket" that scores extraordinarily well if the
+        champion pick is correct.
+
+    The mathematical justification:
+        With N~1000 competitors, your primary submission places around
+        position ~100-200 in expectation. The champion boost:
+        - Fails (90-97%): Places ~500-900 (bad but irrelevant)
+        - Succeeds (3-10%): Places ~1-20 (prize range!)
+
+        P(at least one in top-50) ≈ 1 - (1-P₁)(1-P₂) >> max(P₁, P₂)
+    """
+
+    def __init__(
+        self,
+        predict_fn: Callable[[str, str], float],
+        team_seeds: Dict[str, int],
+        championship_probs: Optional[Dict[str, float]] = None,
+        crowd_predictions: Optional[Dict[str, float]] = None,
+        n_champion_candidates: int = 5,
+    ):
+        """
+        Args:
+            predict_fn: (team1_id, team2_id) -> P(team1 wins)
+            team_seeds: team_id -> seed
+            championship_probs: team_id -> P(wins tournament). If None,
+                estimated from model predictions + seeds.
+            crowd_predictions: matchup_id -> crowd median prediction
+            n_champion_candidates: How many champion candidates to evaluate
+        """
+        self.predict_fn = predict_fn
+        self.team_seeds = team_seeds
+        self.championship_probs = championship_probs
+        self.crowd_predictions = crowd_predictions or {}
+        self.champion_boost = ChampionBoostStrategy(
+            n_champion_candidates=n_champion_candidates,
+        )
+        self._legacy_dual = DualSubmissionStrategy(
+            predict_fn=predict_fn,
+            crowd_predictions=crowd_predictions,
+        )
+
+    def generate_submissions(
+        self,
+        matchup_ids: List[Tuple[str, str, str]],
+        strategy: str = "champion_boost",
+    ) -> SubmissionPair:
+        """Generate the dual submission pair.
+
+        Args:
+            matchup_ids: List of (kaggle_id, team1_id, team2_id) tuples
+            strategy: "champion_boost" (0-1 trick, recommended) or
+                      "leverage" (legacy contrarian hedge)
+
+        Returns:
+            SubmissionPair with primary and hedge predictions
+        """
+        # Generate primary predictions (Slot 1)
+        primary = {}
+        matchup_teams = {}
+        for kaggle_id, t1, t2 in matchup_ids:
+            p = self.predict_fn(t1, t2)
+            primary[kaggle_id] = p
+            matchup_teams[kaggle_id] = (t1, t2)
+
+        if strategy == "champion_boost":
+            return self._generate_champion_boost_pair(
+                primary, matchup_teams, matchup_ids,
+            )
+        else:
+            return self._legacy_dual.generate_pair(matchup_ids)
+
+    def _generate_champion_boost_pair(
+        self,
+        primary: Dict[str, float],
+        matchup_teams: Dict[str, Tuple[str, str]],
+        matchup_ids: List[Tuple[str, str, str]],
+    ) -> SubmissionPair:
+        """Generate champion boost submission (the 0-1 trick)."""
+        # Select champion to boost
+        champion_id = self.champion_boost.select_champion(
+            primary_predictions=primary,
+            team_seeds=self.team_seeds,
+            championship_probs=self.championship_probs,
+            crowd_probs=self.crowd_predictions,
+        )
+
+        if champion_id is None:
+            logger.warning(
+                "No viable champion candidate found; falling back to "
+                "leverage-based hedge"
+            )
+            return self._legacy_dual.generate_pair(matchup_ids)
+
+        # Generate boosted submission
+        hedge = self.champion_boost.generate_champion_boost(
+            primary_predictions=primary,
+            champion_id=champion_id,
+            matchup_teams=matchup_teams,
+            team_seeds=self.team_seeds,
+        )
+
+        # Compute EV analysis
+        champ_prob = (
+            self.championship_probs.get(champion_id, 0.05)
+            if self.championship_probs
+            else 0.05
+        )
+        ev_analysis = self.champion_boost.estimate_champion_boost_ev(
+            primary, hedge, champion_id, matchup_teams, champ_prob,
+        )
+
+        # Identify deviations
+        deviations = [
+            mid for mid in primary
+            if abs(primary[mid] - hedge[mid]) > 0.01
+        ]
+
+        # Compute expected Brier scores
+        primary_brier = self._estimate_expected_brier(primary)
+        hedge_brier = self._estimate_expected_brier(hedge)
+
+        pair = SubmissionPair(
+            primary=primary,
+            hedge=hedge,
+            primary_expected_brier=primary_brier,
+            hedge_expected_brier=hedge_brier,
+            deviations=deviations,
+            strategy="champion_boost",
+            champion_team=champion_id,
+        )
+
+        logger.info(
+            "Champion boost: team=%s (seed=%d), P(champ)=%.3f, "
+            "%d games boosted, EV delta=%.4f (%s)",
+            champion_id,
+            self.team_seeds.get(champion_id, 0),
+            champ_prob,
+            len(deviations),
+            ev_analysis["ev_delta"],
+            "favorable" if ev_analysis["ev_favorable"] else "unfavorable",
+        )
+
+        return pair
+
+    def _estimate_expected_brier(self, predictions: Dict[str, float]) -> float:
+        """Estimate expected Brier from prediction entropy.
+
+        Approximation: E[Brier] ≈ mean(p(1-p)) for each matchup,
+        where p is the predicted probability. This assumes the model
+        is well-calibrated (the true win rate equals the predicted probability).
+        """
+        if not predictions:
+            return 0.25
+        brier_sum = 0.0
+        for p in predictions.values():
+            brier_sum += p * (1.0 - p)  # E[(p - y)²] when calibrated
+        return brier_sum / len(predictions)
 
 
 class DualSubmissionStrategy:
@@ -117,6 +689,7 @@ class DualSubmissionStrategy:
             primary=primary,
             hedge=hedge,
             deviations=deviations,
+            strategy="leverage",
         )
 
         logger.info(

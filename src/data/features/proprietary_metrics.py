@@ -142,6 +142,16 @@ class ProprietaryTeamMetrics:
     # WAB
     wab: float = 0.0
 
+    # --- Poisson Binomial resume metrics (NCAA selection committee) ---
+    # SOR: P(avg_top25_team achieves ≤ this team's wins against this schedule)
+    # Computed via Poisson Binomial CDF over per-game win probabilities.
+    sor: float = 0.5
+
+    # WAB via Poisson Binomial: actual_wins - E[wins_for_bubble_team]
+    # More principled than game-by-game WAB: uses the full distribution
+    # of expected wins rather than summing marginal per-game contributions.
+    wab_poisson: float = 0.0
+
     # Proprietary xP per possession  (Four-Factors decomposition)
     offensive_xp_per_possession: float = 1.0
     defensive_xp_per_possession: float = 1.0
@@ -279,6 +289,12 @@ class ProprietaryTeamMetrics:
     # Defensive transition vulnerability (opponent pace interaction)
     # Approximated from pace-adjusted defensive efficiency differential
     defensive_transition_vulnerability: float = 0.0
+
+    # Road + neutral record (tournament-critical — all tourney games are neutral)
+    road_neutral_wins: int = 0
+    road_neutral_losses: int = 0
+    road_neutral_games: int = 0
+    road_neutral_win_pct: float = 0.5
 
     # Record
     wins: int = 0
@@ -482,6 +498,9 @@ class ProprietaryMetricsEngine:
 
         # --- Step 4: WAB (needs full-league rankings) ---
         self._compute_wab(results, by_team)
+
+        # --- Step 4b: Poisson Binomial SOR & WAB (schedule-aware resume metrics) ---
+        self._compute_sor_and_wab_poisson(results, by_team)
 
         # --- Step 5: Elo ratings (needs all games chronologically) ---
         # D2: Pass prior_elo if set (cross-season carryover); save end-of-season result.
@@ -1130,6 +1149,160 @@ class ProprietaryMetricsEngine:
 
             results[tid].wab = round(total_wab, 2)
 
+    # ------------------------------------------------------------------
+    # Poisson Binomial SOR & WAB  (NCAA Selection Committee metrics)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _poisson_binomial_cdf(k: int, probs: List[float]) -> float:
+        """
+        Compute P(X ≤ k) for a Poisson Binomial distribution.
+
+        The Poisson Binomial is the distribution of the sum of n independent
+        (but NOT identically distributed) Bernoulli random variables.  Each
+        game has a different win probability p_i for the reference team.
+
+        Uses the recursive DP method (O(n²) time, O(n) space) which is
+        exact and numerically stable for n ≤ 40 (typical season length).
+        For very long schedules, falls back to the DFT-CF method.
+
+        Args:
+            k: number of successes (wins) to evaluate CDF at
+            probs: list of per-game win probabilities [p_1, ..., p_n]
+
+        Returns:
+            P(X ≤ k) — cumulative probability of k or fewer wins
+        """
+        n = len(probs)
+        if n == 0:
+            return 1.0
+        k = max(0, min(k, n))
+
+        # DP approach: pmf[j] = P(exactly j wins after processing games so far)
+        # Initialize with "0 games processed" → P(0 wins) = 1.0
+        pmf = np.zeros(n + 1, dtype=np.float64)
+        pmf[0] = 1.0
+
+        for p_i in probs:
+            # Clamp to avoid degenerate probabilities
+            p_i = float(np.clip(p_i, 1e-6, 1.0 - 1e-6))
+            q_i = 1.0 - p_i
+            # Process in reverse to avoid overwriting values we still need
+            new_pmf = np.zeros_like(pmf)
+            new_pmf[0] = pmf[0] * q_i
+            for j in range(1, n + 1):
+                new_pmf[j] = pmf[j] * q_i + pmf[j - 1] * p_i
+            pmf = new_pmf
+
+        # CDF = P(X ≤ k) = sum of pmf[0..k]
+        return float(np.sum(pmf[: k + 1]))
+
+    @staticmethod
+    def _poisson_binomial_mean(probs: List[float]) -> float:
+        """Expected value of Poisson Binomial = sum of probabilities."""
+        return float(sum(probs))
+
+    def _compute_sor_and_wab_poisson(
+        self,
+        results: Dict[str, ProprietaryTeamMetrics],
+        by_team: Dict[str, List[GameRecord]],
+    ) -> None:
+        """
+        Compute Strength of Record (SOR) and WAB via Poisson Binomial distributions.
+
+        SOR — "How impressive is this record given this schedule?"
+        =====================================================================
+        For each team, compute the probability that a reference team
+        (AdjEM ≈ top-25, i.e., AdjEM = 10.0) would achieve *at most* the
+        same number of wins against this team's exact schedule.
+
+            SOR = P(X ≤ actual_wins)  where X ~ PoissonBinomial(p_1, ..., p_n)
+
+        Each p_i is the probability that the reference team beats opponent_i,
+        accounting for game location (home/away/neutral).
+
+        High SOR (→1.0) means the team's record is very impressive: even a
+        strong reference team would rarely do as well against this schedule.
+        Low SOR (→0.0) means the record is unimpressive: a top-25 team would
+        almost always match or exceed this win total.
+
+        The NCAA selection committee adopted SOR in 2018 as a primary
+        at-large selection and seeding metric.
+
+        WAB (Poisson Binomial) — "How many more wins than a bubble team?"
+        =====================================================================
+        WAB_pb = actual_wins - E[wins for bubble team against same schedule]
+
+        where E[wins] = sum of per-game bubble win probabilities (the mean
+        of the Poisson Binomial distribution for the bubble team).
+
+        This is mathematically equivalent to the per-game WAB sum but
+        conceptually framed as the difference between actual wins and the
+        expected wins from the Poisson Binomial distribution.  The Poisson
+        Binomial framing is preferred because it makes clear that WAB is
+        fundamentally about the *expected number of wins* against a specific
+        schedule, not just a sum of per-game credits/debits.
+
+        Constants:
+            - Reference team AdjEM = 10.0 (top-25 caliber, ~NCAA average at-large)
+            - Bubble team AdjEM = 5.0 (BUBBLE_EM_PRIOR, ~45th team)
+            - HCA = 3.75 points (HCA_POINTS)
+        """
+        REFERENCE_EM = 10.0  # Top-25 team for SOR (NCAA committee standard)
+        bubble_em = self.BUBBLE_EM_PRIOR  # ~45th team for WAB
+
+        for tid, games in by_team.items():
+            if tid not in results:
+                continue
+
+            ref_win_probs = []    # P(reference team wins game_i) — for SOR
+            bubble_win_probs = [] # P(bubble team wins game_i) — for WAB
+
+            for g in games:
+                opp = results.get(g.opponent_id)
+                opp_em = opp.adj_efficiency_margin if opp else 0.0
+
+                # --- Reference team (SOR) ---
+                if g.is_neutral:
+                    ref_p = self._log5_win_prob(REFERENCE_EM, opp_em)
+                elif g.is_home:
+                    # Team was home → reference plays in team's home venue → ref gets HCA
+                    ref_p = self._log5_win_prob(REFERENCE_EM + self.HCA_POINTS, opp_em)
+                else:
+                    # Team was away → reference plays away → opponent gets HCA
+                    ref_p = self._log5_win_prob(REFERENCE_EM, opp_em + self.HCA_POINTS)
+
+                ref_p = float(np.clip(ref_p, 0.005, 0.995))
+                ref_win_probs.append(ref_p)
+
+                # --- Bubble team (WAB Poisson) ---
+                if g.is_neutral:
+                    bub_p = self._log5_win_prob(bubble_em, opp_em)
+                elif g.is_home:
+                    # Team was home → bubble is away → opponent gets HCA
+                    bub_p = self._log5_win_prob(bubble_em, opp_em + self.HCA_POINTS)
+                else:
+                    # Team was away → bubble is home → bubble gets HCA
+                    bub_p = self._log5_win_prob(bubble_em + self.HCA_POINTS, opp_em)
+
+                bub_p = float(np.clip(bub_p, 0.005, 0.995))
+                bubble_win_probs.append(bub_p)
+
+            actual_wins = sum(1 for g in games if g.points > g.opp_points)
+
+            # --- SOR via Poisson Binomial CDF ---
+            if ref_win_probs:
+                sor = self._poisson_binomial_cdf(actual_wins, ref_win_probs)
+            else:
+                sor = 0.5
+
+            # --- WAB via Poisson Binomial expected value ---
+            expected_bubble_wins = self._poisson_binomial_mean(bubble_win_probs)
+            wab_pb = actual_wins - expected_bubble_wins
+
+            results[tid].sor = round(sor, 4)
+            results[tid].wab_poisson = round(wab_pb, 2)
+
     def _extended_box_score_metrics(self, games: List[GameRecord]) -> Dict[str, float]:
         """
         Compute extended box-score metrics not in original Four Factors:
@@ -1377,6 +1550,7 @@ class ProprietaryMetricsEngine:
 
             elite_ems: List[float] = []
             q1_w, q1_l = 0, 0
+            rn_w, rn_l = 0, 0
 
             for g in games:
                 opp_em = (adj_off.get(g.opponent_id, 100.0)
@@ -1395,10 +1569,23 @@ class ProprietaryMetricsEngine:
                     else:
                         q1_l += 1
 
+                # Road + neutral record (tournament-critical: all tourney
+                # games are on neutral courts, so road/neutral performance
+                # is more predictive than overall record)
+                if g.is_neutral or not g.is_home:
+                    if is_win:
+                        rn_w += 1
+                    else:
+                        rn_l += 1
+
             results[tid].elite_sos = float(np.mean(elite_ems)) if elite_ems else 0.0
             results[tid].q1_wins = q1_w
             results[tid].q1_losses = q1_l
             results[tid].q1_win_pct = q1_w / max(q1_w + q1_l, 1)
+            results[tid].road_neutral_wins = rn_w
+            results[tid].road_neutral_losses = rn_l
+            results[tid].road_neutral_games = rn_w + rn_l
+            results[tid].road_neutral_win_pct = rn_w / max(rn_w + rn_l, 1)
 
     @staticmethod
     def _classify_quadrant_by_em(opp_em: float, is_home: bool, is_neutral: bool) -> int:
@@ -2383,6 +2570,9 @@ class IncrementalMetricsEngine:
         # WAB: needs all teams' results to assess opponent quality.
         engine._compute_wab(results, by_team)
 
+        # Poisson Binomial SOR & WAB (schedule-aware resume metrics).
+        engine._compute_sor_and_wab_poisson(results, by_team)
+
         # Elite SOS & Quadrants.
         engine._compute_elite_sos_and_quadrants(results, by_team, adj_off, adj_def)
 
@@ -2458,10 +2648,11 @@ class IncrementalMetricsEngine:
         data) use neutral defaults.
 
         Gap #1: Extended from 64 to 66 dims to include external_rating_composite
-        and external_rating_spread (indices 64-65), matching TEAM_FEATURE_DIM=66.
+        and external_rating_spread (indices 66-67), matching TEAM_FEATURE_DIM=68.
         This ensures feature name alignment between training and inference.
         """
-        v = np.zeros(66, dtype=np.float64)
+        from .feature_engineering import TEAM_FEATURE_DIM
+        v = np.zeros(TEAM_FEATURE_DIM, dtype=np.float64)
         # Core efficiency (3)
         v[0] = m.adj_offensive_efficiency
         v[1] = m.adj_defensive_efficiency
@@ -2491,74 +2682,85 @@ class IncrementalMetricsEngine:
         v[30] = m.luck
         # WAB (1)
         v[31] = m.wab
+        # Poisson Binomial resume metrics (2) — SOR + WAB_poisson
+        v[32] = m.sor
+        v[33] = m.wab_poisson
         # Momentum (1)
-        v[32] = m.momentum
+        v[34] = m.momentum
         # Variance (2)
-        v[33] = m.three_pt_variance
-        v[34] = m.pace_adjusted_variance
+        v[35] = m.three_pt_variance
+        v[36] = m.pace_adjusted_variance
         # Elo (1)
-        v[35] = m.elo_rating
+        v[37] = m.elo_rating
         # Free throw % (1)
-        v[36] = m.free_throw_pct
+        v[38] = m.free_throw_pct
         # Ball movement (2)
-        v[37] = m.assist_to_turnover_ratio
-        v[38] = m.assist_rate
+        v[39] = m.assist_to_turnover_ratio
+        v[40] = m.assist_rate
         # Defensive disruption (2)
-        v[39] = m.steal_rate
-        v[40] = m.block_rate
+        v[41] = m.steal_rate
+        v[42] = m.block_rate
         # Opponent shot selection (2)
-        v[41] = m.opp_two_pt_pct_allowed
-        v[42] = m.opp_three_pt_attempt_rate
+        v[43] = m.opp_two_pt_pct_allowed
+        v[44] = m.opp_three_pt_attempt_rate
         # Conference quality (1)
-        v[43] = m.conference_adj_em
+        v[45] = m.conference_adj_em
         # Shooting splits (2)
-        v[44] = m.three_pt_pct
-        v[45] = m.three_pt_rate
+        v[46] = m.three_pt_pct
+        v[47] = m.three_pt_rate
         # Defensive xP (1)
-        v[46] = m.defensive_xp_per_possession
+        v[48] = m.defensive_xp_per_possession
         # Win % (1)
-        v[47] = m.win_pct
+        v[49] = m.win_pct
         # Elite SOS (1)
-        v[48] = m.elite_sos
+        v[50] = m.elite_sos
         # Q1 win % (1)
-        v[49] = m.q1_win_pct
+        v[51] = m.q1_win_pct
         # Foul rate (1)
-        v[50] = m.foul_rate
+        v[52] = m.foul_rate
         # 3PT regression (1)
-        v[51] = m.three_pt_regression_signal
+        v[53] = m.three_pt_regression_signal
         # Rest days (1) — capped at 14
-        v[52] = min(m.rest_days, 14.0)
+        v[54] = min(m.rest_days, 14.0)
         # Top5 minutes share (1) — zero (no roster)
-        v[53] = 0.0
-        # Preseason AP rank (1) — default unranked: 0.25
-        v[54] = 0.25
-        # Coach tournament exp (1) — default 0
         v[55] = 0.0
+        # Preseason AP rank (1) — default unranked: 0.25
+        v[56] = 0.25
+        # Coach tournament exp (1) — default 0
+        v[57] = 0.0
         # Coach tournament win rate (1) — default 0
-        v[56] = 0.0
-        # Pace variance (1)
-        v[57] = m.pace_variance
-        # Conf tourney champion (1) — 0 (not known incrementally)
         v[58] = 0.0
+        # Pace variance (1)
+        v[59] = m.pace_variance
+        # Conf tourney champion (1) — 0 (not known incrementally)
+        v[60] = 0.0
         # Neutral-site win % (1)
-        v[59] = m.neutral_site_win_pct
+        v[61] = m.neutral_site_win_pct
         # Home court dependence (1)
-        v[60] = m.home_court_dependence
+        v[62] = m.home_court_dependence
+        # Tournament resume composite (1) — Bayesian-shrunk opponent quality
+        from .tournament_features import compute_tournament_resume_composite
+        v[63] = compute_tournament_resume_composite(
+            q1_win_pct=m.q1_win_pct,
+            q1_games=m.q1_wins + m.q1_losses,
+            road_neutral_win_pct=m.road_neutral_win_pct,
+            road_neutral_games=m.road_neutral_games,
+            elite_sos=m.elite_sos,
+            sor=m.sor,
+        )
         # Position RAPM (2) — zero (no roster)
-        v[61] = 0.0
-        v[62] = 0.0
+        v[64] = 0.0
+        v[65] = 0.0
+
+        # External rating composite + spread (2)
+        v[66] = external_rating_composite
+        v[67] = external_rating_spread
+
         # Seed strength (1)
         if seed > 0:
-            v[63] = float(np.log1p(17 - seed) / np.log1p(16))
+            v[68] = float(np.log1p(17 - seed) / np.log1p(16))
         else:
-            v[63] = 0.0
-
-        # Gap #1: External rating composite + spread (2)
-        # These are populated from Massey Ordinals when available for
-        # historical years, enabling the highest-signal feature to be
-        # used in training (not just inference-time blending).
-        v[64] = external_rating_composite
-        v[65] = external_rating_spread
+            v[68] = 0.0
 
         # NaN/inf guard
         bad = np.isnan(v) | np.isinf(v)
@@ -2573,16 +2775,17 @@ class IncrementalMetricsEngine:
         seed1: int = 0,
         seed2: int = 0,
     ) -> np.ndarray:
-        """Build a 78-dim matchup vector from two 66-dim team vectors.
+        """Build matchup vector from two TEAM_FEATURE_DIM team vectors.
 
-        Layout: [0:66] diff, [66:71] absolute, [71:78] interactions.
+        Layout: [0:N] diff, [N:N+5] absolute, [N+5:N+12] interactions.
         Matches MatchupFeatures.to_vector() from feature_engineering.py.
         """
-        # Differential (66) — includes external_rating_composite and spread
+        # Differential — includes all team features
         diff = v1 - v2
 
-        # Absolute-level features (5) at indices [0, 1, 26, 35, 47]
-        _ABS_IDX = [0, 1, 26, 35, 47]
+        # Absolute-level features — use resolved indices from feature_engineering
+        from .feature_engineering import ABSOLUTE_LEVEL_INDICES
+        _ABS_IDX = ABSOLUTE_LEVEL_INDICES if ABSOLUTE_LEVEL_INDICES else [0, 1, 26, 37, 49]
         absolute = np.array([(v1[i] + v2[i]) / 2.0 for i in _ABS_IDX])
 
         # Interaction features (7)

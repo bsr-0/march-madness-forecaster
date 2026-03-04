@@ -13,6 +13,12 @@ Ensemble weights:
 - Logistic Regression: 15%
 
 This is blended with the TournamentExpert at 0.30 weight.
+
+Tournament-specific sigma calibration: uses TournamentSigmaCalibrator
+to derive empirically-optimal sigma per round from historical tournament
+data. This corrects the domain mismatch between regular-season sigma
+(~11 pts) and tournament sigma (~9-10 pts), which matters most in late
+rounds where Kaggle applies 16-32× scoring weight.
 """
 
 from __future__ import annotations
@@ -35,13 +41,14 @@ _MARGIN_FIRST_WEIGHTS = {
 
 # Round-specific sigma values (tighter in later rounds)
 # Later rounds have closer matchups -> need different calibration
+# These are conservative defaults; empirical calibration overrides them.
 DEFAULT_ROUND_SIGMAS = {
-    "R64": 11.0,
-    "R32": 10.5,
-    "S16": 10.0,
-    "E8":  9.5,
-    "F4":  9.0,
-    "NCG": 8.5,
+    "R64": 10.5,
+    "R32": 10.0,
+    "S16": 9.5,
+    "E8":  9.0,
+    "F4":  8.5,
+    "NCG": 8.0,
 }
 
 
@@ -49,13 +56,49 @@ class RoundSpecificCalibrator:
     """Calibrate logistic CDF parameters per tournament round.
 
     Later rounds feature closer matchups between better teams,
-    requiring tighter sigma values. Uses Optuna for optimization
-    when available.
+    requiring tighter sigma values.
+
+    Supports two calibration backends:
+    1. TournamentSigmaCalibrator (preferred): empirically-derived from
+       historical tournament residuals with Bayesian shrinkage
+    2. Optuna/grid search (fallback): joint k,sigma optimization
     """
 
     def __init__(self):
         self.round_params: Dict[str, Dict[str, float]] = {}
         self.calibrated = False
+        self._tournament_sigma_calibrator = None
+
+    def set_tournament_sigma_calibrator(self, calibrator) -> None:
+        """Attach a fitted TournamentSigmaCalibrator.
+
+        When attached, this calibrator's sigmas take priority over
+        the Optuna/grid-search path. The k parameter is set to 1.0
+        since the sigma already captures the full calibration.
+
+        Args:
+            calibrator: A fitted TournamentSigmaCalibrator instance
+        """
+        if calibrator is not None and calibrator.fitted:
+            self._tournament_sigma_calibrator = calibrator
+            # Populate round_params from the calibrator
+            for round_name, sigma in calibrator.get_all_sigmas().items():
+                self.round_params[round_name] = {
+                    "k": 1.0,
+                    "sigma": sigma,
+                    "brier": None,
+                    "n_samples": (
+                        calibrator.round_estimates[round_name].n_games
+                        if round_name in calibrator.round_estimates
+                        else 0
+                    ),
+                    "source": "tournament_sigma_calibrator",
+                }
+            self.calibrated = True
+            logger.info(
+                "RoundSpecificCalibrator: using TournamentSigmaCalibrator sigmas: %s",
+                {r: f"{p['sigma']:.1f}" for r, p in self.round_params.items()},
+            )
 
     def calibrate(
         self,
@@ -64,6 +107,10 @@ class RoundSpecificCalibrator:
         use_optuna: bool = True,
     ) -> Dict[str, Dict[str, float]]:
         """Calibrate k and sigma per round.
+
+        If a TournamentSigmaCalibrator is attached and fitted, its sigmas
+        are used as the initial sigma for optimization (warm-starting the
+        search near the tournament-specific optimum).
 
         P(Win) = 1 / (1 + exp(-(k * Margin / sigma)))
 
@@ -80,10 +127,11 @@ class RoundSpecificCalibrator:
             outcomes = outcomes_by_round[round_name]
 
             if len(spreads) < 10:
-                # Too few samples; use defaults
+                # Too few samples; use tournament-calibrated or defaults
+                default_sigma = self._get_default_sigma(round_name)
                 self.round_params[round_name] = {
                     "k": 1.0,
-                    "sigma": DEFAULT_ROUND_SIGMAS.get(round_name, 11.0),
+                    "sigma": default_sigma,
                     "brier": None,
                     "n_samples": len(spreads),
                 }
@@ -120,7 +168,7 @@ class RoundSpecificCalibrator:
         """
         params = self.round_params.get(round_name, {})
         k = params.get("k", 1.0)
-        sigma = params.get("sigma", DEFAULT_ROUND_SIGMAS.get(round_name, 11.0))
+        sigma = params.get("sigma", self._get_default_sigma(round_name))
 
         return 1.0 / (1.0 + math.exp(-(k * spread / max(sigma, 0.01))))
 
@@ -132,9 +180,19 @@ class RoundSpecificCalibrator:
         """Batch version of spread-to-prob conversion."""
         params = self.round_params.get(round_name, {})
         k = params.get("k", 1.0)
-        sigma = params.get("sigma", DEFAULT_ROUND_SIGMAS.get(round_name, 11.0))
+        sigma = params.get("sigma", self._get_default_sigma(round_name))
 
         return 1.0 / (1.0 + np.exp(-(k * spreads / max(sigma, 0.01))))
+
+    def _get_default_sigma(self, round_name: str) -> float:
+        """Get default sigma for a round.
+
+        Prefers tournament-calibrated sigma if available, otherwise
+        falls back to hardcoded defaults.
+        """
+        if self._tournament_sigma_calibrator is not None:
+            return self._tournament_sigma_calibrator.get_sigma(round_name)
+        return DEFAULT_ROUND_SIGMAS.get(round_name, 10.5)
 
     def _optimize_with_optuna(
         self,
@@ -149,9 +207,16 @@ class RoundSpecificCalibrator:
         except ImportError:
             return self._optimize_grid(spreads, outcomes, round_name)
 
+        # Warm-start sigma search around tournament-calibrated value
+        default_sigma = self._get_default_sigma(round_name)
+
         def objective(trial):
             k = trial.suggest_float("k", 0.5, 2.0)
-            sigma = trial.suggest_float("sigma", 4.0, 18.0)
+            sigma = trial.suggest_float(
+                "sigma",
+                max(4.0, default_sigma - 4.0),
+                min(18.0, default_sigma + 4.0),
+            )
 
             probs = 1.0 / (1.0 + np.exp(-(k * spreads / max(sigma, 0.01))))
             probs = np.clip(probs, 1e-7, 1 - 1e-7)
@@ -183,10 +248,15 @@ class RoundSpecificCalibrator:
         """Grid search fallback for k and sigma optimization."""
         best_brier = float("inf")
         best_k = 1.0
-        best_sigma = DEFAULT_ROUND_SIGMAS.get(round_name, 11.0)
+        default_sigma = self._get_default_sigma(round_name)
+        best_sigma = default_sigma
+
+        # Center grid around tournament-calibrated sigma
+        sigma_lo = max(4.0, default_sigma - 5.0)
+        sigma_hi = min(18.0, default_sigma + 5.0)
 
         for k in np.linspace(0.5, 2.0, 31):
-            for sigma in np.linspace(5.0, 18.0, 27):
+            for sigma in np.linspace(sigma_lo, sigma_hi, 41):
                 probs = 1.0 / (1.0 + np.exp(-(k * spreads / max(sigma, 0.01))))
                 probs = np.clip(probs, 1e-7, 1 - 1e-7)
                 brier = float(np.mean((probs - outcomes) ** 2))
@@ -211,7 +281,7 @@ class MarginFirstEnsemble:
     2. LightGBM, XGBoost, Logistic provide complementary signals
     3. Fixed-weight combination (55/15/15/15)
     4. TournamentExpert blend at 0.30
-    5. Round-specific sigma calibration
+    5. Round-specific sigma calibration (tournament-aware)
     """
 
     def __init__(
@@ -224,6 +294,25 @@ class MarginFirstEnsemble:
         self.models: Dict[str, object] = {}
         self.round_calibrator = RoundSpecificCalibrator()
         self.tournament_expert = None
+        self._tournament_sigma_calibrator = None
+
+    def set_tournament_sigma_calibrator(self, calibrator) -> None:
+        """Attach a fitted TournamentSigmaCalibrator to the ensemble.
+
+        This propagates tournament-calibrated sigmas to:
+        1. The RoundSpecificCalibrator (for spread->prob conversion)
+        2. The SpreadRegressor fallback (when round calibrator isn't used)
+
+        Args:
+            calibrator: A fitted TournamentSigmaCalibrator instance
+        """
+        self._tournament_sigma_calibrator = calibrator
+        self.round_calibrator.set_tournament_sigma_calibrator(calibrator)
+        logger.info(
+            "MarginFirstEnsemble: tournament sigma calibrator attached "
+            "(global_sigma=%.2f)",
+            calibrator.global_tournament_sigma if calibrator else 0.0,
+        )
 
     def set_models(
         self,
@@ -279,6 +368,13 @@ class MarginFirstEnsemble:
                         preds = self.round_calibrator.convert_spreads_to_probs(
                             spreads, round_name
                         )
+                    elif (
+                        self._tournament_sigma_calibrator is not None
+                        and self._tournament_sigma_calibrator.fitted
+                    ):
+                        # Use tournament-calibrated sigma directly
+                        sigma = self._tournament_sigma_calibrator.get_sigma(round_name)
+                        preds = model.predict_probability(X, sigma_override=sigma)
                     else:
                         preds = model.predict_probability(X)
                 else:
@@ -314,7 +410,7 @@ class MarginFirstEnsemble:
 
     def get_diagnostics(self) -> Dict:
         """Return ensemble diagnostics."""
-        return {
+        diag = {
             "weights": dict(self.weights),
             "n_models": len(self.models),
             "models_available": list(self.models.keys()),
@@ -324,4 +420,11 @@ class MarginFirstEnsemble:
             ),
             "round_calibrated": self.round_calibrator.calibrated,
             "round_params": dict(self.round_calibrator.round_params),
+            "tournament_sigma_calibrator_active": (
+                self._tournament_sigma_calibrator is not None
+                and self._tournament_sigma_calibrator.fitted
+            ),
         }
+        if self._tournament_sigma_calibrator is not None and self._tournament_sigma_calibrator.fitted:
+            diag["tournament_sigmas"] = self._tournament_sigma_calibrator.get_all_sigmas()
+        return diag
