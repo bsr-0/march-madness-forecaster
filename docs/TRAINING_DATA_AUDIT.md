@@ -330,9 +330,26 @@ Despite the filename spanning 2022-2025, this file contains only 36 rows, all fr
 
 The `_load_year_samples` docstring (lines 3059-3109) explicitly documents which features are populated and which stay zero. This is good practice — the sparsity is acknowledged rather than hidden.
 
-### O2. Symmetric Augmentation Was Correctly Removed
+### O2. Symmetric Augmentation Re-enabled With Leakage Safeguards
 
-Multiple comments note that symmetric augmentation (flipping team1/team2 for each game) was removed because it doubled sample count without adding information. This is the correct decision — tree models with bagging would overfit to the correlated duplicates.
+Symmetric augmentation (creating both A-vs-B and B-vs-A perspectives for each
+game) was previously removed due to concerns about tree models overfitting to
+correlated duplicates.  It has been **re-enabled** (default: on) because:
+
+1. Every Kaggle March Madness medalist since 2019 uses symmetric training.
+2. It enforces the zero-sum property: P(A>B) + P(B>A) = 1.
+3. It doubles training samples, addressing the fundamental small-sample problem.
+4. It eliminates team-order bias in the feature representation.
+
+Leakage safeguards:
+- Both perspectives share the same game_date / sort_key, so chronological
+  train/val splits keep pairs together (no information leakage).
+- Both perspectives share the same year, so LOYO folds keep them together.
+- LightGBM's L1/L2 regularization and min_child_samples handle mild correlation.
+
+Implementation: `src/ml/training/symmetric.py`, controlled by
+`SOTAPipelineConfig.enable_symmetric_augmentation` (default: True).
+Tests: `tests/test_symmetric_training.py` (53 tests).
 
 ### O3. The Leakage Controls Are Genuine
 
