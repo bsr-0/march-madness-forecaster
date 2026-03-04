@@ -641,8 +641,13 @@ class TestSeedLeakageFix:
         v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, seed=0)
         matchup = IncrementalMetricsEngine.build_matchup_vector(v1, v2, 0, 0)
 
-        # interactions block is at indices [69:75]; seed_interaction is index 74
-        seed_interaction = matchup[74]
+        # Interactions block: [TEAM_FEATURE_DIM : TEAM_FEATURE_DIM+5] = absolute,
+        # then [TEAM_FEATURE_DIM+5 : TEAM_FEATURE_DIM+12] = interactions.
+        # Within interactions: seed_interaction is at offset 5 (6th element).
+        from src.data.features.feature_engineering import TEAM_FEATURE_DIM
+        n_abs = 5  # len(ABSOLUTE_LEVEL_FEATURE_NAMES)
+        seed_interaction_idx = TEAM_FEATURE_DIM + n_abs + 5  # tempo, style, h2h, common_opp, travel, then seed_interaction
+        seed_interaction = matchup[seed_interaction_idx]
         assert seed_interaction == 0.0, (
             f"seed_interaction must be 0.0 when seeds are zeroed out, got {seed_interaction}"
         )
