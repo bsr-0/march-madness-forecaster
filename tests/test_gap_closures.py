@@ -121,7 +121,7 @@ class TestSimpleFeatureSet:
     def test_simple_feature_set_size(self):
         from src.pipeline.sota import SIMPLE_FEATURE_SET
 
-        assert len(SIMPLE_FEATURE_SET) == 9  # Updated: added seed_diff
+        assert len(SIMPLE_FEATURE_SET) == 10  # Updated: added seed_diff + diff_momentum
 
     def test_simple_has_massey_composite(self):
         from src.pipeline.sota import SIMPLE_FEATURE_SET
@@ -166,11 +166,11 @@ class TestSOTAConfigNewFields:
         assert config.massey_blend_weight == 0.25  # FIX #5: increased from 0.20 for stronger Massey signal
         assert config.massey_sigma == 4.5  # FIX #5: calibrated via grid search on historical data
         assert config.model_complexity == "simple"  # Gap #3: default changed to simple
-        assert config.ensemble_lgb_weight == 0.25  # Gap #2: reduced for MOV-first
+        assert config.ensemble_lgb_weight == 0.15  # Gap #2: further reduced for MOV-first (was 0.25)
         assert config.ensemble_xgb_weight == 0.15  # Gap #2: reduced for MOV-first
         # Women's config
         assert config.womens_model_complexity == "simple"
-        assert config.womens_seed_prior_weight == 0.50  # Gap #4: increased for women's
+        assert config.womens_seed_prior_weight == 0.40  # Gap #4: reduced from 0.50 to avoid over-reliance on seed
         assert config.enable_bracket_portfolio is True  # Gap #5: enabled by default
 
     def test_simple_mode_config(self):

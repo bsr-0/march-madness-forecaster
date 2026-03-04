@@ -152,6 +152,29 @@ class SeedBasedOverrides:
         (8, 9):  0.520,
     }
 
+    # Later-round historical matchups (men's, 1985-2025 approximate)
+    # Sweet 16, Elite 8, Final Four common seed pairings
+    MENS_LATER_ROUND_RATES = {
+        # Sweet 16 common matchups
+        (1, 4): 0.69, (1, 5): 0.73, (2, 3): 0.53, (2, 6): 0.68,
+        (3, 7): 0.58, (4, 8): 0.56, (1, 8): 0.80, (1, 9): 0.82,
+        # Elite 8 common matchups
+        (1, 2): 0.53, (1, 3): 0.62, (1, 6): 0.72, (2, 6): 0.68,
+        # Final Four / Championship (all close to 0.5)
+        (1, 1): 0.50,
+    }
+
+    # Women's later-round historical matchups
+    WOMENS_LATER_ROUND_RATES = {
+        # Sweet 16 common matchups
+        (1, 4): 0.75, (1, 5): 0.78, (2, 3): 0.55, (2, 6): 0.72,
+        (3, 7): 0.62, (4, 8): 0.60, (1, 8): 0.85, (1, 9): 0.87,
+        # Elite 8 common matchups
+        (1, 2): 0.55, (1, 3): 0.65, (1, 6): 0.75, (2, 6): 0.72,
+        # Final Four / Championship
+        (1, 1): 0.50,
+    }
+
     def __init__(
         self,
         snap_threshold: float = 0.08,
@@ -243,6 +266,66 @@ class SeedBasedOverrides:
             shrinkage = min(0.80, shrinkage + 0.20)
         elif seed_gap >= 10:  # 3v14, 4v13
             shrinkage = min(0.70, shrinkage + 0.10)
+
+        return (1.0 - shrinkage) * prediction + shrinkage * target
+
+    def apply_with_round(
+        self,
+        prediction: float,
+        seed1: int,
+        seed2: int,
+        round_label: str = "R64",
+    ) -> float:
+        """Apply round-specific seed-based shrinkage for later-round matchups.
+
+        For later-round games (S16, E8, F4, NCG), use tournament-specific
+        historical rates. For R64/R32, fall back to standard apply().
+
+        Args:
+            prediction: Model's win probability for team1
+            seed1: Team 1 seed
+            seed2: Team 2 seed
+            round_label: Tournament round (R64, R32, S16, E8, F4, NCG)
+
+        Returns:
+            Shrinkage-adjusted probability
+        """
+        # Only use later-round rates for actual later-round matchups
+        if round_label not in ["S16", "E8", "F4", "NCG"]:
+            return self.apply(prediction, seed1, seed2)
+
+        if seed1 == seed2 or seed1 <= 0 or seed2 <= 0:
+            return prediction
+
+        # Select appropriate later-round rate table
+        later_round_rates = (
+            self.WOMENS_LATER_ROUND_RATES if self.rates is self.WOMENS_SEED_WIN_RATES
+            else self.MENS_LATER_ROUND_RATES
+        )
+
+        # Determine which seed matchup this maps to
+        if seed1 < seed2:
+            matchup = (seed1, seed2)
+            historical = later_round_rates.get(matchup)
+            if historical is None:
+                return self.apply(prediction, seed1, seed2)
+            target = historical
+        else:
+            matchup = (seed2, seed1)
+            historical = later_round_rates.get(matchup)
+            if historical is None:
+                return self.apply(prediction, seed1, seed2)
+            target = 1.0 - historical
+
+        # If model strongly disagrees, trust the model
+        if abs(prediction - target) > self.snap_threshold:
+            return prediction
+
+        # Apply Bayesian shrinkage with lower sample size for later rounds
+        # (fewer games in later rounds means less historical data)
+        k = 50.0  # Lower pseudo-count for later rounds
+        n_hist = 30  # Approximate number of historical later-round matchups
+        shrinkage = n_hist / (n_hist + k)
 
         return (1.0 - shrinkage) * prediction + shrinkage * target
 
