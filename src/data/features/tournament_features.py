@@ -1,0 +1,343 @@
+"""Tournament-specific feature engineering.
+
+Features that capture tournament-specific dynamics not present in
+regular season data: opponent-adjusted signals, coaching edges,
+and historical seed-matchup priors.
+"""
+
+from __future__ import annotations
+
+import logging
+import math
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple
+
+import numpy as np
+
+logger = logging.getLogger(__name__)
+
+
+# =========================================================================
+# Historical Seed Matchup Prior (1985-2025)
+# Source: NCAA tournament results, all rounds combined.
+# Used in Phase 4 for post-hoc bias correction, NOT as training feature.
+# =========================================================================
+HISTORICAL_SEED_WIN_RATES: Dict[Tuple[int, int], float] = {
+    # (lower_seed, higher_seed) -> P(lower_seed_wins)
+    # Round of 64 matchups (canonical pairings)
+    (1, 16): 0.993,
+    (2, 15): 0.943,
+    (3, 14): 0.853,
+    (4, 13): 0.793,
+    (5, 12): 0.644,
+    (6, 11): 0.623,
+    (7, 10): 0.608,
+    (8, 9):  0.519,
+    # Round of 32 common matchups
+    (1, 8):  0.796,
+    (1, 9):  0.827,
+    (2, 7):  0.670,
+    (2, 10): 0.700,
+    (3, 6):  0.580,
+    (3, 11): 0.615,
+    (4, 5):  0.539,
+    (4, 12): 0.620,
+    (4, 13): 0.690,
+    # Sweet 16 common matchups
+    (1, 4):  0.630,
+    (1, 5):  0.685,
+    (2, 3):  0.555,
+    (2, 6):  0.605,
+    (1, 3):  0.610,
+    # Elite 8 / Final Four
+    (1, 2):  0.535,
+    (1, 1):  0.500,
+    (2, 2):  0.500,
+    (3, 3):  0.500,
+}
+
+
+def get_seed_matchup_prior(seed1: int, seed2: int) -> float:
+    """Get historical win rate for a seed matchup.
+
+    Args:
+        seed1: Seed of team 1 (1-16)
+        seed2: Seed of team 2 (1-16)
+
+    Returns:
+        P(team1 wins) based on historical seed matchup data.
+        Falls back to logistic approximation for unseen pairings.
+    """
+    if seed1 == seed2:
+        return 0.5
+
+    lower = min(seed1, seed2)
+    higher = max(seed1, seed2)
+
+    # Look up historical rate
+    prior = HISTORICAL_SEED_WIN_RATES.get((lower, higher))
+
+    if prior is not None:
+        # Return from team1's perspective
+        if seed1 <= seed2:
+            return prior
+        else:
+            return 1.0 - prior
+
+    # Fallback: logistic approximation
+    # Fitted to historical data: P(lower wins) = 1 / (1 + exp(0.175 * (lower - higher)))
+    seed_diff = seed1 - seed2
+    return 1.0 / (1.0 + math.exp(0.175 * seed_diff))
+
+
+def build_full_seed_prior_table() -> Dict[Tuple[int, int], float]:
+    """Build complete 16x16 seed matchup lookup table.
+
+    Returns:
+        Dict mapping (seed1, seed2) -> P(seed1 wins) for all 256 pairings.
+    """
+    table = {}
+    for s1 in range(1, 17):
+        for s2 in range(1, 17):
+            table[(s1, s2)] = get_seed_matchup_prior(s1, s2)
+    return table
+
+
+@dataclass
+class OpponentAdjustedSignals:
+    """Opponent-adjusted performance signals for tournament prediction."""
+
+    # Strength of Record: fraction of games a typical top-25 team
+    # would be expected to win against this team's schedule
+    strength_of_record: float = 0.0
+
+    # Win rate against AP Top 25 opponents
+    top25_win_pct: float = 0.0
+    top25_games_played: int = 0
+
+    # Road and neutral site record
+    # Tournament games are NEVER true home games
+    road_neutral_win_pct: float = 0.0
+    road_neutral_games: int = 0
+
+    # Quad 1 record (NET 1-30 on road/neutral, 1-75 at home)
+    quad1_win_pct: float = 0.0
+    quad1_games: int = 0
+
+    def to_vector(self) -> np.ndarray:
+        """Convert to feature vector."""
+        return np.array([
+            self.strength_of_record,
+            self.top25_win_pct,
+            self.road_neutral_win_pct,
+            self.quad1_win_pct,
+        ], dtype=np.float64)
+
+    @staticmethod
+    def feature_names() -> List[str]:
+        return [
+            "strength_of_record",
+            "top25_win_pct",
+            "road_neutral_win_pct",
+            "quad1_win_pct",
+        ]
+
+
+def compute_strength_of_record(
+    team_results: List[Dict],
+    opponent_ratings: Dict[str, float],
+    baseline_rating: float = 15.0,
+) -> float:
+    """Compute Strength of Record (SOR).
+
+    SOR measures how impressive a team's wins are given their schedule.
+    It answers: "What fraction of games would a baseline top-25 team
+    be expected to win against this schedule?"
+
+    Args:
+        team_results: List of game results with keys:
+            'opponent_id', 'win' (bool), 'location' ('home'/'away'/'neutral')
+        opponent_ratings: Dict of opponent_id -> efficiency rating
+        baseline_rating: Rating of a hypothetical average top-25 team
+
+    Returns:
+        SOR value (higher = more impressive record)
+    """
+    if not team_results:
+        return 0.0
+
+    expected_wins = 0.0
+    actual_wins = 0.0
+
+    for game in team_results:
+        opp_id = game.get('opponent_id', '')
+        opp_rating = opponent_ratings.get(opp_id, 0.0)
+
+        # Home court adjustment (~3.5 points)
+        location = game.get('location', 'neutral')
+        hca = 3.5 if location == 'home' else (-3.5 if location == 'away' else 0.0)
+
+        # Expected win probability for baseline team
+        diff = baseline_rating - opp_rating + hca
+        expected_p = 1.0 / (1.0 + math.exp(-diff / 11.0))
+        expected_wins += expected_p
+
+        if game.get('win', False):
+            actual_wins += 1.0
+
+    n_games = len(team_results)
+    if n_games == 0:
+        return 0.0
+
+    # SOR = actual_wins / expected_wins (normalized)
+    if expected_wins > 0:
+        return actual_wins / expected_wins
+    return actual_wins / n_games
+
+
+def compute_top25_performance(
+    team_results: List[Dict],
+    opponent_rankings: Dict[str, int],
+) -> Tuple[float, int]:
+    """Compute win rate against AP Top 25 opponents.
+
+    Args:
+        team_results: List of game results
+        opponent_rankings: Dict of opponent_id -> AP ranking (1-25, or 0/None if unranked)
+
+    Returns:
+        Tuple of (win_pct_vs_top25, n_games_vs_top25)
+    """
+    top25_games = []
+    for game in team_results:
+        opp_id = game.get('opponent_id', '')
+        rank = opponent_rankings.get(opp_id, 0)
+        if rank and 1 <= rank <= 25:
+            top25_games.append(game.get('win', False))
+
+    if not top25_games:
+        return 0.0, 0
+
+    return sum(top25_games) / len(top25_games), len(top25_games)
+
+
+def compute_road_neutral_record(
+    team_results: List[Dict],
+) -> Tuple[float, int]:
+    """Compute road + neutral site win percentage.
+
+    Tournament games are never true home games, so road/neutral
+    performance is more predictive than overall record.
+
+    Args:
+        team_results: List of game results with 'location' key
+
+    Returns:
+        Tuple of (road_neutral_win_pct, n_games)
+    """
+    rn_games = [
+        g for g in team_results
+        if g.get('location', 'neutral') in ('away', 'neutral')
+    ]
+
+    if not rn_games:
+        return 0.5, 0
+
+    wins = sum(1 for g in rn_games if g.get('win', False))
+    return wins / len(rn_games), len(rn_games)
+
+
+@dataclass
+class CoachTournamentPower:
+    """Coach's tournament track record feature.
+
+    Weighted average of:
+    - Career tournament win percentage
+    - Number of tournament games managed (experience)
+    """
+
+    coach_name: str = ""
+    career_tournament_wins: int = 0
+    career_tournament_losses: int = 0
+    tournament_appearances: int = 0
+    final_fours: int = 0
+    championships: int = 0
+
+    @property
+    def tournament_games_managed(self) -> int:
+        return self.career_tournament_wins + self.career_tournament_losses
+
+    @property
+    def tournament_win_pct(self) -> float:
+        total = self.tournament_games_managed
+        if total == 0:
+            return 0.5  # Prior for unknown coaches
+        return self.career_tournament_wins / total
+
+    @property
+    def power_score(self) -> float:
+        """Compute Coach Tournament Power score.
+
+        Weighted combination:
+        - 60% career tournament win percentage
+        - 25% log(tournament games managed + 1) normalized
+        - 15% deep run bonus (Final Fours and championships)
+
+        Returns:
+            Score in [0, 1] range
+        """
+        # Win rate component (60%)
+        win_component = self.tournament_win_pct * 0.60
+
+        # Experience component (25%) - log scale, normalized
+        # ~20 tournament games = experienced, ~60+ = elite
+        experience = math.log1p(self.tournament_games_managed) / math.log1p(60)
+        experience = min(experience, 1.0)
+        exp_component = experience * 0.25
+
+        # Deep run bonus (15%)
+        # Final Four = 0.5, Championship = 1.0 each, capped
+        deep_run = min(
+            (self.final_fours * 0.3 + self.championships * 0.5),
+            1.0
+        )
+        deep_component = deep_run * 0.15
+
+        return win_component + exp_component + deep_component
+
+    def to_feature(self) -> float:
+        """Return the Coach Tournament Power feature value."""
+        return self.power_score
+
+
+def compute_coach_tournament_power(
+    coach_data: Dict,
+) -> CoachTournamentPower:
+    """Build CoachTournamentPower from raw coach data.
+
+    Args:
+        coach_data: Dict with keys like 'name', 'tournament_wins',
+                    'tournament_losses', 'appearances', 'final_fours', 'championships'
+
+    Returns:
+        CoachTournamentPower instance
+    """
+    return CoachTournamentPower(
+        coach_name=coach_data.get('name', ''),
+        career_tournament_wins=coach_data.get('tournament_wins', 0),
+        career_tournament_losses=coach_data.get('tournament_losses', 0),
+        tournament_appearances=coach_data.get('appearances', 0),
+        final_fours=coach_data.get('final_fours', 0),
+        championships=coach_data.get('championships', 0),
+    )
+
+
+# =========================================================================
+# Tournament Feature Names (for integration with FIXED_FEATURE_SET)
+# =========================================================================
+TOURNAMENT_FEATURE_NAMES = [
+    "diff_strength_of_record",
+    "diff_top25_win_pct",
+    "diff_road_neutral_win_pct",
+    "diff_coach_tournament_power",
+]

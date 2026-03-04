@@ -65,9 +65,9 @@ from ..data.team_name_resolver import TeamNameResolver
 from ..data.scrapers.torvik import BartTorvikScraper
 from ..data.scrapers.tournament_context import TournamentContextScraper
 from ..ml.calibration.calibration import CalibrationPipeline, calculate_calibration_metrics
-from ..ml.ensemble.cfa import CombinatorialFusionAnalysis, LightGBMRanker, XGBoostRanker, ModelPrediction, LIGHTGBM_AVAILABLE, XGBOOST_AVAILABLE
-from ..ml.gnn.schedule_graph import ScheduleEdge, ScheduleGraph, TORCH_AVAILABLE as GNN_TORCH_AVAILABLE, compute_multi_hop_sos
-from ..ml.transformer.game_sequence import GameEmbedding, SeasonSequence, TORCH_AVAILABLE as TRANSFORMER_TORCH_AVAILABLE
+from ..ml.ensemble.cfa import LightGBMRanker, XGBoostRanker, ModelPrediction, LIGHTGBM_AVAILABLE, XGBOOST_AVAILABLE
+from ..ml.gnn.schedule_graph import ScheduleEdge, ScheduleGraph, compute_multi_hop_sos
+from ..ml.transformer.game_sequence import GameEmbedding, SeasonSequence
 from ..models.team import Team
 from ..optimization.leverage import TeamMetadata, analyze_pool
 from ..simulation.monte_carlo import SimulationConfig, TournamentBracket, TournamentTeam
@@ -98,16 +98,6 @@ try:
     SCALER_AVAILABLE = True
 except ImportError:
     SCALER_AVAILABLE = False
-
-try:
-    from ..ml.gnn.schedule_graph import ScheduleGCN  # type: ignore
-except ImportError:
-    ScheduleGCN = None
-
-try:
-    from ..ml.transformer.game_sequence import GameFlowTransformer  # type: ignore
-except ImportError:
-    GameFlowTransformer = None
 
 try:
     from ..ml.evaluation.statistical_tests import model_significance_report
@@ -249,8 +239,8 @@ class SOTAPipelineConfig:
     # Widened to [0.005, 0.995] for Brier-score optimization.
     # Brier score penalty is quadratic (not logarithmic), so wider bounds
     # are safe and allow more credit for correct confident predictions.
-    pre_calibration_clip_lo: float = 0.005  # Min probability before calibration
-    pre_calibration_clip_hi: float = 0.995  # Max probability before calibration
+    pre_calibration_clip_lo: float = 0.001  # Min probability before calibration
+    pre_calibration_clip_hi: float = 0.999  # Max probability before calibration
 
     # --- Feature selection ---
     # OOS-FIX: Learned feature selection DISABLED by default.  With ~400
@@ -863,7 +853,8 @@ class SOTAPipeline:
             torch.manual_seed(self.config.random_seed)
 
         self.feature_engineer = FeatureEngineer()
-        self.cfa = CombinatorialFusionAnalysis()
+        # Base ensemble weights (previously managed by CombinatorialFusionAnalysis)
+        self.ensemble_base_weights: Dict[str, float] = {}
 
         self.team_id_to_name: Dict[str, str] = {}
         self.team_name_to_id: Dict[str, str] = {}
@@ -3606,15 +3597,16 @@ class SOTAPipeline:
             # Store all models for fixed-weight averaging at inference time.
             # Base weights (unnormalized); actual weights are normalized to
             # sum to 1.0 based on which models are present.
-            w_lgb = self.config.ensemble_lgb_weight
-            w_xgb = self.config.ensemble_xgb_weight
-            w_logit = max(0.05, 1.0 - w_lgb - w_xgb)
-            # Gap #2: SpreadRegressor (MOV) promoted to primary model.
-            # Margin prediction → logistic CDF conversion produces better-
-            # calibrated probabilities than direct binary classification.
+            # Phase 3: Margin-First Ensemble (Raddar-style modeling)
+            # SpreadRegressor: 0.55 (primary margin prediction path)
+            # LightGBM: 0.15 (secondary classifier)
+            # XGBoost: 0.15 (secondary classifier)
+            # Logistic: 0.15 (complementary signal)
             _FIXED_WEIGHTS = {
-                "lgb": w_lgb, "xgb": w_xgb, "logit": w_logit,
-                "spread": 0.50,  # Gap #2: MOV primary path — highest weight (increased from 0.40)
+                "spread": 0.55,  # Primary: margin prediction via logistic CDF
+                "lgb": 0.15,     # Secondary: LightGBM classifier
+                "xgb": 0.15,     # Secondary: XGBoost classifier
+                "logit": 0.15,   # Complementary: Logistic regression
             }
             model_names_present = [name for name, _, _ in trained_models]
             active_weights = {n: _FIXED_WEIGHTS.get(n, 0.25) for n in model_names_present}
@@ -4550,99 +4542,7 @@ class SOTAPipeline:
             training_era_teams.add(edge.team1_id)
             training_era_teams.add(edge.team2_id)
 
-        if GNN_TORCH_AVAILABLE and ScheduleGCN is not None:
-            feat_dim = max(
-                len(next(iter(graph.team_features.values()))) if graph.team_features else 16,
-                16,
-            )
-            data = graph.to_pyg_data(feature_dim=feat_dim)
-            edge_weight = data.edge_attr.squeeze(1) if data.edge_attr is not None else None
-
-            # FIX: GNN transductive target leakage — only provide supervised
-            # AdjEM targets for teams that appear in training-era games (the
-            # graph edges).  Teams that appear in the graph's node list but have
-            # NO training-era edges are validation-era-only; setting their target
-            # to 0.0 (league average) prevents the GNN from learning their
-            # end-of-season strength from leaked labels.
-            target = []
-            for idx in range(graph.n_teams):
-                team_id = graph.idx_to_team[idx]
-                feats = self.feature_engineer.team_features.get(team_id)
-                if feats is not None and team_id in training_era_teams:
-                    target.append(feats.adj_efficiency_margin / 30.0)
-                else:
-                    target.append(0.0)  # league-average prior for non-training teams
-            y = torch.tensor(target, dtype=torch.float32).unsqueeze(1)
-
-            gcn = ScheduleGCN(input_dim=data.x.shape[1], hidden_dim=48, output_dim=16, num_layers=3)
-            head = nn.Linear(16, 1)
-            optimizer = torch.optim.Adam(
-                list(gcn.parameters()) + list(head.parameters()),
-                lr=0.01, weight_decay=1e-4,
-            )
-            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
-
-            final_loss = 0.0
-            for _ in range(100):
-                gcn.train()
-                optimizer.zero_grad()
-                embeddings = gcn(data.x, data.edge_index, edge_weight=edge_weight)
-                pred = head(embeddings)
-                loss = torch.mean((pred - y) ** 2)
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(gcn.parameters(), max_norm=1.0)
-                optimizer.step()
-                scheduler.step()
-                final_loss = float(loss.item())
-
-            gcn.eval()
-            with torch.no_grad():
-                emb = gcn(data.x, data.edge_index, edge_weight=edge_weight).numpy()
-                pred_all = head(gcn(data.x, data.edge_index, edge_weight=edge_weight))
-
-            self.gnn_embeddings = {graph.idx_to_team[i]: emb[i] for i in range(graph.n_teams)}
-            # FIX M5: Store SOS refinement values but DO NOT apply them to
-            # team features yet.  Applying before baseline training leaks
-            # GNN-derived information into both train and val feature vectors.
-            # The refinement is deferred to prediction time via
-            # _apply_deferred_sos_refinement().
-            self._sos_refinement_pending = (multi_hop, pagerank)
-
-            # Fix 12: Use VALIDATION loss (not training loss) for GNN confidence.
-            # Validation teams = those NOT in training-era edges.
-            # FIX minor: Use actual AdjEM from feature_engineer for val teams
-            # instead of the 0.0 training placeholder (which would make a
-            # model that predicts 0.0 for all unseen teams look perfect).
-            val_indices = []
-            val_actual_targets = []
-            for idx in range(graph.n_teams):
-                team_id = graph.idx_to_team[idx]
-                if team_id not in training_era_teams:
-                    feats = self.feature_engineer.team_features.get(team_id)
-                    if feats is not None:
-                        val_indices.append(idx)
-                        val_actual_targets.append(feats.adj_efficiency_margin / 30.0)
-            if len(val_indices) >= 5:
-                val_pred = pred_all[val_indices]
-                val_target_tensor = torch.tensor(val_actual_targets, dtype=torch.float32).unsqueeze(1)
-                val_loss = float(torch.mean((val_pred - val_target_tensor) ** 2).item())
-                # OOS-FIX: Cap GNN confidence at 0.5 — 68-node graph is too
-                # small for deep learning to reliably outperform tabular models.
-                self.model_confidence["gnn"] = float(np.clip(1.0 / (1.0 + val_loss), 0.1, 0.5))
-            else:
-                # Not enough validation teams — penalize training loss
-                self.model_confidence["gnn"] = float(np.clip(1.0 / (1.0 + final_loss) * 0.8, 0.1, 0.5))
-
-            return {
-                "enabled": True,
-                "framework": "pytorch_geometric",
-                "nodes": graph.n_teams,
-                "edges": len(graph.edges),
-                "training_loss": final_loss,
-                "validation_teams": len(val_indices),
-            }
-
-        # Fallback embedding from graph statistics.
+        # GNN disabled — use fallback embedding from graph statistics.
         self.gnn_embeddings = {}
         for team_id in graph.team_ids:
             self.gnn_embeddings[team_id] = np.array([
@@ -4741,72 +4641,7 @@ class SOTAPipeline:
             if len(embeddings) >= 6:
                 sequences[team_id] = SeasonSequence(team_id=team_id, games=embeddings)
 
-        if TRANSFORMER_TORCH_AVAILABLE and sequences and GameFlowTransformer is not None:
-            model = GameFlowTransformer(input_dim=8, d_model=48, nhead=4, num_layers=2, max_games=64)
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=1e-4)
-            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=60)
-
-            tensors = [torch.tensor(seq.to_matrix(), dtype=torch.float32) for seq in sequences.values()]
-            max_len = max(t.shape[0] for t in tensors)
-
-            x_batch = []
-            y_batch = []
-            masks = []
-            for t in tensors:
-                pad = max_len - t.shape[0]
-                x_p = torch.cat([t, torch.zeros((pad, t.shape[1]))], dim=0)
-                mask = torch.ones(max_len, dtype=torch.bool)
-                if pad > 0:
-                    mask[-pad:] = False
-
-                target = x_p[:, :2]  # predict normalized offensive/defensive efficiencies
-                x_batch.append(x_p)
-                y_batch.append(target)
-                masks.append(mask)
-
-            X = torch.stack(x_batch)
-            Y = torch.stack(y_batch)
-            M = torch.stack(masks)
-
-            final_loss = 0.0
-            for _ in range(60):
-                model.train()
-                optimizer.zero_grad()
-                efficiency, _, _ = model(X, mask=~M)
-                loss = torch.mean((efficiency - Y) ** 2)
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                optimizer.step()
-                scheduler.step()
-                final_loss = float(loss.item())
-
-            self.transformer_embeddings = {
-                team_id: model.get_season_embedding(seq)
-                for team_id, seq in sequences.items()
-            }
-            breakout_windows = {
-                team_id: model.detect_breakout_window(seq, threshold=0.65)
-                for team_id, seq in sequences.items()
-            }
-            breakout_count = int(sum(len(w) for w in breakout_windows.values()))
-
-            # FIX minor: Penalize training loss by 0.6x to discount overfit.
-            # A model with low training loss gets high raw confidence, which
-            # over-weights it in the CFA ensemble.  The penalty accounts for
-            # the gap between training and generalization loss.
-            # OOS-FIX: Cap transformer confidence at 0.4 — sequence model
-            # on ~30 games per team cannot reliably learn temporal patterns
-            # that the tabular model with recency weighting doesn't already capture.
-            self.model_confidence["transformer"] = float(np.clip(1.0 / (1.0 + final_loss) * 0.5, 0.1, 0.4))
-            return {
-                "enabled": True,
-                "framework": "pytorch_transformer",
-                "teams": len(sequences),
-                "training_loss": final_loss,
-                "breakout_windows_detected": breakout_count,
-            }
-
-        # Fallback from trend statistics.
+        # Transformer disabled — use fallback from trend statistics.
         self.transformer_embeddings = {}
         breakout_count = 0
         for team_id, seq in sequences.items():
@@ -6270,8 +6105,8 @@ class SOTAPipeline:
         FIX #5: Snapshots pre-optimization CFA weights before applying new ones,
         so that calibration can generate predictions with un-optimized weights.
         """
-        # Snapshot current CFA weights BEFORE optimization (Fix #5)
-        self._pre_optimization_cfa_weights = dict(self.cfa.base_weights)
+        # Snapshot current ensemble weights BEFORE optimization (Fix #5)
+        self._pre_optimization_cfa_weights = dict(self.ensemble_base_weights)
 
         model_preds: Dict[str, List[float]] = {"baseline": [], "gnn": [], "transformer": []}
         outcomes: List[int] = []
@@ -6309,8 +6144,8 @@ class SOTAPipeline:
             regularization_lambda=self.config.ensemble_weight_regularization,
         )
 
-        # Apply optimized weights to CFA
-        self.cfa.base_weights = best_weights
+        # Apply optimized weights to ensemble
+        self.ensemble_base_weights = best_weights
 
         return {
             "optimized_weights": {k: round(v, 3) for k, v in best_weights.items()},
