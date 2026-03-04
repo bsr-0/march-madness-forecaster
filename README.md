@@ -1,457 +1,157 @@
-
 # March Madness Forecaster
 
-**State-of-the-Art NCAA Tournament Prediction System**
+NCAA Tournament prediction system using ensemble ML, Monte Carlo simulation, and game-theoretic bracket optimization.
 
-A professional-grade prediction system using Graph Neural Networks (GNN), Transformers, Monte Carlo simulation, and game-theoretic bracket optimization. Designed to compete with the top 5% of sophisticated bracket pools.
-
-## Architecture Overview
-
-This system implements cutting-edge ML techniques:
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    PREDICTION PIPELINE                          │
-├─────────────────────────────────────────────────────────────────┤
-│  Data Layer          │  ML Models           │  Optimization     │
-│  ─────────────       │  ─────────           │  ────────────     │
-│  • Public advanced metrics (sportsdataverse/CBBpy) │  • GNN (Schedule)    │  • Monte Carlo    │
-│  • Torvik Scraper    │  • Transformer       │  • Calibration    │
-│  • ESPN Picks        │  • LightGBM          │  • Leverage Calc  │
-│  • Player RAPM/WARP  │  • CFA Ensemble      │  • Pareto Optim   │
-│  • xP Shot Quality   │  • Elo/Seed Base     │  • Pool Analysis  │
-└─────────────────────────────────────────────────────────────────┘
+Data Ingestion        Feature Engineering       ML Ensemble          Optimization
+──────────────        ───────────────────       ───────────          ────────────
+cbbpy/sportsipy  ──►  64-dim team vector   ──►  LightGBM (0.45)  ──►  Monte Carlo sim
+Torvik scraper        75-dim matchup features   XGBoost  (0.35)      Isotonic calibration
+ESPN public picks     Incremental PIT metrics   Logistic (0.20)      Leverage/contrarian
+Kaggle Massey         Elo, SOS, Four Factors    CFA fusion            Bracket portfolio
 ```
 
-## Key Features
-
-### Phase 1: High-Resolution Data Engineering
-- **Possession-level xP** (Expected Points) calculation
-- **Player-level RAPM/WARP** tracking with transfer portal impact
-- **Lead volatility & entropy** metrics for upset detection
-- **Four Factors** analysis (eFG%, TO%, ORB%, FTR)
-
-### Phase 2: GNN-Transformer Hybrid Architecture
-- **Graph Convolutional Network (GCN)** for schedule-based strength propagation
-- **Multi-hop SOS analysis** (opponent's opponent quality)
-- **Temporal Transformer** for detecting "breakout windows"
-- **Attention mechanisms** for game importance weighting
-
-### Phase 3: Uncertainty Quantification
-- **50,000+ Monte Carlo simulations** with injury noise injection
-- **Brier Score optimization** for probability calibration
-- **Isotonic regression** post-processing
-- **Reliability diagrams** for model validation
-
-### Phase 4: Game Theory Optimization
-- **Public consensus scraping** from ESPN/Yahoo/CBS
-- **Leverage ratio calculation** (Win Prob / Pick %)
-- **Pareto-optimal bracket generation** (chalk to contrarian)
-- **Pool size-specific strategy** recommendations
+**Key design principles:**
+- Zero temporal leakage — every training sample uses only data available before game date
+- Multi-year training pool (2005-2025) with exponential decay weighting
+- RDoF audit framework with 58+ tracked constants across 3 tiers
+- Brier score optimization (Kaggle metric since 2023)
 
 ## Installation
 
-### Requirements
+**Requirements:** Python 3.8+
 
-- Python 3.8 or higher
-
-### Setup
-
-1. Clone or navigate to the repository:
 ```bash
-cd march-madness-forecaster
-```
+# Option A: install as package (recommended)
+pip install -e .
 
-2. Install dependencies:
-```bash
+# Option B: install dependencies only
 pip install -r requirements.txt
 ```
 
-Or install the package:
-```bash
-pip install -e .
-```
+After `pip install -e .`, use the `march-madness` command. Otherwise use `python -m src`.
+
+Both forms are shown below; pick whichever you installed.
 
 ## Quick Start
 
-### 1. Generate Sample Data
-
-Create sample tournament data to test the system:
+### 1. Ingest historical data (multi-year training)
 
 ```bash
-python -m src.main sample --output sample_tournament.json
+# Scrapes game-level data for 2005-2025 via cbbpy/sportsipy
+march-madness ingest-historical --start-season 2005 --end-season 2025
+
+# Or with python -m:
+python -m src ingest-historical --start-season 2005 --end-season 2025
 ```
 
-### 2. Run Predictions
+Output: `historical_games_{year}.json`, `team_metrics_{year}.json`, `tournament_seeds_{year}.json` in `data/raw/historical/`.
 
-Generate bracket predictions using the ensemble model (recommended):
+Options:
+- `--kaggle-dir data/kaggle` — load Massey Ordinals per season
+- `--skip-torvik` — skip Torvik historical backfill
+- `--include-pbp` — include play-by-play events (larger files)
+- `--max-games-per-season 50` — cap for smoke tests
+
+### 2. Scrape rosters
 
 ```bash
-python -m src.main predict --input sample_tournament.json --output predictions.json
+march-madness scrape-rosters --start-year 2005 --end-year 2026
+march-madness enrich-rosters --start-year 2005 --end-year 2026
 ```
 
-The system will:
-- Load tournament teams and their statistics
-- Run predictions using the selected model
-- Display predicted champion, Final Four, and notable upsets
-- Save complete bracket predictions to JSON
+Builds `cbbpy_rosters_{year}.json` with player-level box score data, then cross-references across years for transfer/eligibility tracking.
 
-## Usage
-
-### Command-Line Interface
-
-#### Ingest Real Data (Required for SOTA)
+### 3. Ingest current-year data
 
 ```bash
-python -m src.main ingest \
-  --year 2026 \
-  --output-dir data/raw \
-  --ncaa-teams-url \"https://<your-teams-endpoint>.json\" \
-  --ncaa-games-url \"https://<your-games-endpoint>.json\" \
-  --transfer-portal-url \"https://<your-transfer-endpoint>.json\"
+march-madness ingest --year 2026
 ```
 
-This writes a manifest and canonical files under `data/raw/`.
-The manifest includes metadata about which provider produced each artifact, plus credential requirements.
-ShotQuality artifacts are written only from real ShotQuality sources (cache or live endpoints). Synthetic possession generation is not used.
+Collects teams, rosters, Torvik, public picks, etc. into `data/raw/` and writes a manifest (`manifest_2026.json`).
 
-Optional provider env vars for library-first ingestion:
+Options:
+- `--skip-torvik`, `--skip-public-picks`, `--skip-sports-reference`, `--skip-rosters`
+- `--kaggle-dir data/kaggle` — load Kaggle competition data
+- `--allow-invalid-payloads` — don't fail on schema errors
+- `--historical-games-provider-priority cbbpy,sportsipy` — provider ordering
+
+### 4. Run the full pipeline
 
 ```bash
-export KENPOM_EMAIL=...
-export KENPOM_PASSWORD=...
-export CBBDATA_API_KEY=...
-export CBBDATA_KENPOM_URL=\"https://.../{year}/kenpom\"
-export CBBDATA_TORVIK_URL=\"https://.../{year}/torvik\"
-export BARTTORVIK_TORVIK_URL=\"https://barttorvik.com/{year}_team_results.csv\"
-export CBBDATA_GAMES_URL=\"https://.../{year}/games\"
-export CBBDATA_TEAM_METRICS_URL=\"https://.../{year}/teams\"
-export SHOTQUALITY_TEAMS_URL=\"https://.../{year}/shotquality/teams\"
-export SHOTQUALITY_GAMES_URL=\"https://.../{year}/shotquality/games\"
-export SHOTQUALITY_GAME_URL_TEMPLATE=\"https://.../{year}/shotquality/games/{game_id}\"
-export ESPN_PUBLIC_PICKS_URL=\"https://.../{year}/public-picks\"
+march-madness sota --year 2026 --scrape-live
 ```
 
-### Historical Training Data Pipeline (2022-2025)
+Runs: feature engineering, model training, calibration, Monte Carlo simulation, bracket optimization. Output: `sota_report.json`.
 
-Use this command to build game-level and team-level datasets for model training:
+Key flags:
+- `--simulations 50000` — Monte Carlo simulations (default)
+- `--pool-size 100` — bracket pool size for strategy optimization
+- `--kaggle-dir data/kaggle` — for Massey Ordinals and seeds
+- `--enable-bracket-portfolio` — generate diverse bracket set for Kaggle
+- `--model-complexity simple|standard|full` — feature count (8/22/all)
+- `--calibration isotonic|platt|none` — calibration method
 
-```bash
-python -m src.main ingest-historical \
-  --start-season 2022 \
-  --end-season 2025 \
-  --output-dir data/raw/historical
-```
-
-Pipeline behavior:
-- Pulls season game data from `cbbpy` and writes canonical `historical_games_<season>.json`.
-- Pulls team metrics from `sportsipy`; if `sportsipy` is empty, falls back to Sports Reference.
-- Pulls NCAA tournament seed/region context from Sports Reference (`tournament_seeds_<season>.json`).
-- Adds strict schema validation and writes a multi-season manifest with provider lineage.
-
-### Leakage-Safe Feature Materialization
-
-Build model-ready training tables where every pregame feature is computed from prior games only:
+### 5. Run from ingest manifest (combines steps 3+4)
 
 ```bash
-python -m src.main materialize-features \
-  --start-season 2022 \
-  --end-season 2025 \
-  --historical-dir data/raw/historical \
-  --raw-dir data/raw \
-  --output-dir data/processed
-```
-
-By default this command fails if any requested season is missing from `historical_games_<season>.json`.  
-Use `--allow-missing-seasons` only for debugging/incremental backfills.
-
-Artifacts:
-- `team_game_features_<start>_<end>.parquet|csv`: one row per team-game with leakage-safe rolling/expanding features.
-- `matchup_features_<start>_<end>.parquet|csv`: one row per game with team-vs-team differential features.
-- `tournament_matchup_features_<start>_<end>.parquet|csv`: tournament-window matchup table with seed features.
-- `materialization_manifest_<start>_<end>.json`: leakage checks, row counts, missingness report, variable coverage audit, and study-alignment scorecard.
-
-Feature families in materialization include:
-- Complete Four Factors priors (`eFG`, `TO%`, `FT rate`, `ORB%`/`DRB%`) and pace/efficiency trend windows.
-- Rest/fatigue, venue context, and matchup style differentials.
-- Prior-season conference-strength priors (`SRS`/`SOS` and conference mean ratings).
-- Optional prior-season external priors (KenPom, Torvik, ShotQuality, roster RAPM/WARP, transfer and continuity proxies, market priors).
-
-Methodology and variable-source mapping: `docs/historical_feature_research.md`
-
-Provider priority and validation controls:
-
-```bash
-python -m src.main ingest \
-  --year 2026 \
-  --historical-games-provider-priority sportsdataverse,cbbpy,cbbdata \
-  --team-metrics-provider-priority sportsdataverse,cbbdata \
-  --kenpom-provider-priority cbbdata \
-  --torvik-provider-priority barttorvik,cbbdata
-```
-
-By default ingestion is strict and fails on schema problems. To keep artifacts even with schema errors:
-
-```bash
-python -m src.main ingest --year 2026 --allow-invalid-payloads
-```
-
-#### Run Full SOTA Pipeline (2026 Rubric)
-
-```bash
-python -m src.main sota \
-  --input data/raw/teams_2026.json \
-  --kenpom data/raw/kenpom_2026.json \
-  --torvik data/raw/torvik_2026.json \
-  --shotquality-teams data/raw/shotquality_teams_2026.json \
-  --shotquality-games data/raw/shotquality_games_2026.json \
-  --rosters data/raw/rosters_2026.json \
-  --public-picks data/raw/public_picks_2026.json \
-  --transfer-portal data/raw/transfer_portal_2026.json \
-  --output sota_report.json \
-  --simulations 50000 \
-  --pool-size 150
-```
-
-With live scraping fallback enabled:
-
-```bash
-python -m src.main sota \
-  --input teams_2026.json \
-  --kenpom kenpom_2026.json \
-  --torvik torvik_2026.json \
-  --shotquality-teams shotquality_teams_2026.json \
-  --shotquality-games shotquality_games_2026.json \
-  --rosters rosters_2026.json \
-  --public-picks public_picks_2026.json \
-  --scoring-rules pool_scoring.json \
-  --scrape-live \
-  --simulations 50000 \
-  --output selection_sunday_report.json
-```
-
-This command executes the full rubric pipeline:
-- Possession-level xP + player-level RAPM feature engineering
-- Schedule adjacency + GCN SOS refinement
-- Temporal transformer embeddings
-- CFA model fusion + isotonic calibration
-- Injury-noise Monte Carlo bracket simulation
-- EV-max bracket selection with leverage and Pareto risk profiles
-
-#### 2026 ESPN Runbook
-
-```bash
-python -m src.main ingest \
-  --year 2026 \
-  --output-dir data/raw \
-  --cache-dir data/raw/cache \
-  --historical-games-provider-priority cbbpy,sportsipy \
-  --team-metrics-provider-priority sportsipy \
-  --torvik-provider-priority barttorvik \
-  --skip-public-picks \
-  --allow-invalid-payloads
-```
-
-```bash
-# Option A (recommended after Selection Sunday)
-# pip install bigdance
-python -m src.main sota-from-manifest \
+march-madness sota-from-manifest \
   --manifest data/raw/manifest_2026.json \
   --output sota_report.json \
-  --simulations 50000 \
-  --pool-size 150 \
-  --bracket-source bigdance
+  --simulations 50000
+```
 
-# Option B (manual bracket JSON)
-python -m src.main sota-from-manifest \
+## All Commands
+
+| Command | Description |
+|---------|-------------|
+| `sota` | Run full prediction pipeline |
+| `sota-from-manifest` | Run pipeline using an ingestion manifest |
+| `ingest` | Collect current-year data sources |
+| `ingest-historical` | Scrape historical seasons for training |
+| `materialize-features` | Build leakage-safe feature tables |
+| `scrape-rosters` | Scrape cbbpy box scores for roster data |
+| `enrich-rosters` | Cross-reference rosters for transfers/eligibility |
+| `audit-rdof` | Run researcher degrees of freedom audit |
+| `freeze-pipeline` | Freeze pipeline constants for reproducibility |
+| `verify-freeze` | Verify a freeze artifact matches current code |
+| `prospective-eval` | Evaluate on a holdout year |
+| `calibrate-mc` | Calibrate Monte Carlo noise parameter |
+| `download-kaggle` | Download Kaggle competition CSVs |
+| `kaggle-export` | Generate Kaggle submission CSV |
+| `audit-metrics-coverage` | Audit coverage gaps in historical data |
+
+## Evaluation & Auditing
+
+```bash
+# RDoF audit with holdout evaluation
+march-madness audit-rdof --holdout-years 2025
+
+# With sensitivity analysis on Tier 3 constants
+march-madness audit-rdof --holdout-years 2025 --sensitivity
+
+# Prospective evaluation on a specific year
+march-madness prospective-eval --year 2024
+
+# Freeze pipeline constants before tournament
+march-madness freeze-pipeline
+march-madness verify-freeze
+```
+
+## Kaggle Export
+
+```bash
+# Download competition data
+march-madness download-kaggle --output-dir data/kaggle
+
+# Generate submission
+march-madness kaggle-export \
   --manifest data/raw/manifest_2026.json \
-  --output sota_report.json \
-  --simulations 50000 \
-  --pool-size 150 \
-  --bracket-json data/raw/bracket_2026.json
-```
-
-Use `sota_report.json` → `artifacts.ev_max_bracket` to fill your ESPN bracket.
-
-#### Kaggle Export
-
-```bash
-python -m src.main kaggle-export \
-  --manifest data/raw/manifest_2026.json \
-  --sample-submission /path/to/SampleSubmissionStage1.csv \
-  --kaggle-teams /path/to/MTeams.csv \
-  --output kaggle_submission.csv \
-  --year 2026
-```
-
-#### Generate Predictions
-
-```bash
-python -m src.main predict --input TEAMS.json --output PREDICTIONS.json [OPTIONS]
-```
-
-**Options:**
-- `--input, -i`: Input JSON file with tournament teams (required)
-- `--output, -o`: Output JSON file for predictions (default: `bracket_predictions.json`)
-- `--model, -m`: Prediction model to use (default: `ensemble`)
-  - `elo`: Elo rating system only
-  - `seed`: Historical seed performance only
-  - `statistical`: Team statistics only
-  - `ensemble`: Combine all models (recommended)
-- `--upset-threshold`: Minimum probability to pick upsets, 0-1 (default: `0.4`)
-
-**Examples:**
-
-```bash
-# Use ensemble model with default settings
-python -m src.main predict -i teams.json -o my_bracket.json
-
-# Use only Elo ratings
-python -m src.main predict -i teams.json -o bracket.json --model elo
-
-# More conservative upset picks (higher threshold)
-python -m src.main predict -i teams.json --upset-threshold 0.6
-```
-
-#### Create Sample Data
-
-```bash
-python -m src.main sample --output FILENAME.json
-```
-
-Creates a sample tournament JSON file for testing.
-
-## Input Data Format
-
-The system expects tournament data in JSON format:
-
-```json
-{
-  "teams": [
-    {
-      "name": "Duke",
-      "seed": 1,
-      "region": "East",
-      "elo_rating": 1800,
-      "stats": {
-        "offensive_efficiency": 95,
-        "defensive_efficiency": 90,
-        "strength_of_schedule": 85,
-        "recent_performance": 92,
-        "tempo": 70,
-        "experience": 80
-      }
-    },
-    {
-      "name": "Kentucky",
-      "seed": 2,
-      "region": "East",
-      "elo_rating": 1750,
-      "stats": {
-        "offensive_efficiency": 90,
-        "defensive_efficiency": 88,
-        "strength_of_schedule": 80,
-        "recent_performance": 85,
-        "tempo": 68,
-        "experience": 75
-      }
-    }
-  ]
-}
-```
-
-### Required Fields
-
-- `name`: Team name (string)
-- `seed`: Tournament seed 1-16 (integer)
-- `region`: One of "East", "West", "South", "Midwest" (string)
-
-### Optional Fields
-
-- `elo_rating`: Elo rating (default: 1500.0)
-- `stats`: Dictionary of team statistics
-  - `offensive_efficiency`: Offensive rating
-  - `defensive_efficiency`: Defensive rating
-  - `strength_of_schedule`: Schedule difficulty
-  - `recent_performance`: Recent form
-  - `tempo`: Pace of play
-  - `experience`: Team experience level
-
-## Output Format
-
-Predictions are saved as JSON with complete bracket information:
-
-```json
-{
-  "teams": [...],
-  "games": [
-    {
-      "game_id": 1,
-      "round": 1,
-      "team1": "Duke",
-      "team2": "FGCU",
-      "predicted_winner": "Duke",
-      "win_probability": 0.952,
-      "model_scores": {
-        "elo": 0.95,
-        "seed_baseline": 0.995,
-        "statistical": 0.91
-      }
-    }
-  ],
-  "champion": "Duke",
-  "final_four": ["Duke", "Kentucky", "Kansas", "Gonzaga"]
-}
-```
-
-## Mathematical Approach
-
-### Elo Rating System
-
-The Elo system dynamically adjusts team ratings based on game outcomes:
-
-- **Win Probability**: `P = 1 / (1 + 10^((R_opponent - R_team) / 400))`
-- **Rating Update**: `R_new = R_old + K × (actual - expected)`
-- Default K-factor: 32
-
-### Seed-Based Baseline
-
-Uses historical NCAA tournament data to estimate win probabilities by seed matchup. For example:
-- 1 seed vs 16 seed: 99.5% win rate for 1 seed
-- 5 seed vs 12 seed: 64.7% win rate for 5 seed
-- 8 seed vs 9 seed: 48.8% win rate for 8 seed (nearly even)
-
-### Statistical Model
-
-Calculates team scores using weighted features:
-- Offensive efficiency: 30%
-- Defensive efficiency: 30%
-- Strength of schedule: 15%
-- Recent performance: 15%
-- Tempo: 5%
-- Experience: 5%
-
-Converts score differences to win probabilities using a logistic function.
-
-### Ensemble Method
-
-Combines predictions from all models using weighted averaging:
-- Each model provides a win probability
-- Weights can be customized or set to equal (default)
-- Final probability is the weighted sum of individual model predictions
-
-## Testing
-
-Run the test suite:
-
-```bash
-pytest tests/
-```
-
-Run with coverage:
-
-```bash
-pytest --cov=src tests/
+  --sample-submission data/kaggle/SampleSubmissionStage1.csv \
+  --kaggle-teams data/kaggle/MTeams.csv \
+  --output kaggle_submission.csv
 ```
 
 ## Project Structure
@@ -459,75 +159,47 @@ pytest --cov=src tests/
 ```
 march-madness-forecaster/
 ├── src/
-│   ├── models/
-│   │   ├── team.py          # Team data model
-│   │   ├── game.py          # Game representation
-│   │   └── bracket.py       # Bracket structure
-│   ├── predictors/
-│   │   ├── base.py          # Base predictor interface
-│   │   ├── elo.py           # Elo rating system
-│   │   ├── statistical.py   # Statistical model
-│   │   ├── seed_baseline.py # Seed-based predictions
-│   │   └── ensemble.py      # Ensemble predictor
+│   ├── main.py                    # CLI entry point
+│   ├── pipeline/
+│   │   └── sota.py                # Main prediction pipeline
 │   ├── data/
-│   │   └── loader.py        # Data loading/saving
-│   ├── bracket_generator.py # Bracket generation
-│   └── main.py              # CLI entry point
-├── tests/
-│   ├── test_predictors.py   # Predictor tests
-│   └── test_bracket.py      # Model tests
-├── requirements.txt
+│   │   ├── features/
+│   │   │   ├── feature_engineering.py   # 64-dim team feature vector
+│   │   │   └── proprietary_metrics.py   # Incremental PIT engine
+│   │   ├── ingestion/             # Data collection & validation
+│   │   └── scrapers/              # Torvik, ESPN, rosters, etc.
+│   ├── ml/
+│   │   ├── ensemble/cfa.py        # CFA model fusion
+│   │   ├── calibration/           # Isotonic/Platt calibration
+│   │   └── evaluation/rdof_audit.py  # RDoF audit framework
+│   ├── simulation/
+│   │   └── monte_carlo.py         # MC bracket simulation
+│   ├── optimization/
+│   │   └── leverage.py            # Contrarian bracket optimization
+│   └── exports/kaggle.py          # Kaggle submission generation
+├── tests/                         # 46 test files
+├── data/                          # Historical & current-year data
 ├── setup.py
+├── requirements.txt
 └── README.md
 ```
 
-## Example Workflow
-
-1. **Prepare your tournament data** in JSON format with team information
-2. **Run predictions** using the CLI
-3. **Review the output** including champion, Final Four, and upsets
-4. **Use the predictions** to fill out your bracket
+## Testing
 
 ```bash
-# Create sample data
-python -m src.main sample --output my_teams.json
-
-# Edit my_teams.json with actual tournament data
-
-# Generate predictions
-python -m src.main predict --input my_teams.json --output my_bracket.json
-
-# Review predictions
-cat my_bracket.json
+pytest tests/
+pytest tests/ --cov=src
 ```
 
-## Tips for Best Results
+## Technical Details
 
-- **Use ensemble model**: Combines strengths of all models for most robust predictions
-- **Provide quality data**: Better input statistics lead to better predictions
-- **Tune upset threshold**: Lower values (0.3-0.4) pick more upsets, higher values (0.5+) are more conservative
-- **Consider context**: The model doesn't account for injuries, coaching changes, or other real-time factors
-
-## Future Enhancements
-
-Potential improvements for the system:
-- Historical game data integration for training
-- Machine learning model optimization
-- Real-time data fetching from sports APIs
-- Injury and roster change adjustments
-- Monte Carlo simulation for probability ranges
-- Web interface for easier interaction
+- **Feature vector:** 64 team features, 75-dim matchup (64 diff + 5 absolute + 6 interaction)
+- **Ensemble:** LightGBM (0.45) / XGBoost (0.35) / Logistic (0.20), CFA fusion
+- **Calibration:** Isotonic regression, 70/30 chronological OOS split
+- **Monte Carlo:** 50k simulations with configurable noise injection
+- **Training pool:** 2005-2025, exponential decay 0.85/yr, floor 0.15
+- **Elo:** K=38, cross-season carryover (0.75 * prior + 0.25 * 1500)
 
 ## License
 
 MIT License
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit pull requests or open issues.
-
-## Acknowledgments
-
-- Historical seed matchup data based on NCAA tournament history (1985-present)
-- Elo rating system adapted from chess ratings
-- Statistical methodology inspired by KenPom-style advanced metrics derived from public data (sportsdataverse/CBBpy/Sportsipy)
