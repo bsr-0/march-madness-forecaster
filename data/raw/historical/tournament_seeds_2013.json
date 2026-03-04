@@ -229,7 +229,7 @@
       "season": 2013,
       "team_name": "Saint Mary's",
       "school_slug": "saint-marys-ca",
-      "team_id": "saint_mary_s",
+      "team_id": "saint_mary_s__ca",
       "seed": 11,
       "region": "Midwest"
     },
@@ -261,7 +261,7 @@
       "season": 2013,
       "team_name": "Albany (NY)",
       "school_slug": "albany-ny",
-      "team_id": "albany__ny",
+      "team_id": "albany_ny",
       "seed": 15,
       "region": "Midwest"
     },
@@ -317,7 +317,7 @@
       "season": 2013,
       "team_name": "VCU",
       "school_slug": "virginia-commonwealth",
-      "team_id": "vcu",
+      "team_id": "virginia_commonwealth",
       "seed": 5,
       "region": "South"
     },
@@ -341,7 +341,7 @@
       "season": 2013,
       "team_name": "UNC",
       "school_slug": "north-carolina",
-      "team_id": "unc",
+      "team_id": "north_carolina",
       "seed": 8,
       "region": "South"
     },
@@ -469,7 +469,7 @@
       "season": 2013,
       "team_name": "Pitt",
       "school_slug": "pittsburgh",
-      "team_id": "pitt",
+      "team_id": "pittsburgh",
       "seed": 8,
       "region": "West"
     },
@@ -501,7 +501,7 @@
       "season": 2013,
       "team_name": "Ole Miss",
       "school_slug": "mississippi",
-      "team_id": "ole_miss",
+      "team_id": "mississippi",
       "seed": 12,
       "region": "West"
     },

@@ -5,7 +5,7 @@
       "season": 2024,
       "team_name": "UConn",
       "school_slug": "connecticut",
-      "team_id": "uconn",
+      "team_id": "connecticut",
       "seed": 1,
       "region": "East"
     },
@@ -45,7 +45,7 @@
       "season": 2024,
       "team_name": "BYU",
       "school_slug": "brigham-young",
-      "team_id": "byu",
+      "team_id": "brigham_young",
       "seed": 6,
       "region": "East"
     },
@@ -253,7 +253,7 @@
       "season": 2024,
       "team_name": "St. Peter's",
       "school_slug": "saint-peters",
-      "team_id": "st__peter_s",
+      "team_id": "st_peter_s",
       "seed": 15,
       "region": "Midwest"
     },
@@ -413,7 +413,7 @@
       "season": 2024,
       "team_name": "UNC",
       "school_slug": "north-carolina",
-      "team_id": "unc",
+      "team_id": "north_carolina",
       "seed": 1,
       "region": "West"
     },
@@ -445,7 +445,7 @@
       "season": 2024,
       "team_name": "Saint Mary's",
       "school_slug": "saint-marys-ca",
-      "team_id": "saint_mary_s",
+      "team_id": "saint_mary_s__ca",
       "seed": 5,
       "region": "West"
     },

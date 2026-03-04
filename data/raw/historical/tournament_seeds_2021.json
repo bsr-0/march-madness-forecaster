@@ -45,7 +45,7 @@
       "season": 2021,
       "team_name": "BYU",
       "school_slug": "brigham-young",
-      "team_id": "byu",
+      "team_id": "brigham_young",
       "seed": 6,
       "region": "East"
     },
@@ -53,7 +53,7 @@
       "season": 2021,
       "team_name": "UConn",
       "school_slug": "connecticut",
-      "team_id": "uconn",
+      "team_id": "connecticut",
       "seed": 7,
       "region": "East"
     },
@@ -61,7 +61,7 @@
       "season": 2021,
       "team_name": "LSU",
       "school_slug": "louisiana-state",
-      "team_id": "lsu",
+      "team_id": "louisiana_state",
       "seed": 8,
       "region": "East"
     },
@@ -69,7 +69,7 @@
       "season": 2021,
       "team_name": "St. Bonaventure",
       "school_slug": "st-bonaventure",
-      "team_id": "st__bonaventure",
+      "team_id": "st_bonaventure",
       "seed": 9,
       "region": "East"
     },
@@ -133,7 +133,7 @@
       "season": 2021,
       "team_name": "Mount St. Mary's",
       "school_slug": "mount-st-marys",
-      "team_id": "mount_st__mary_s",
+      "team_id": "mount_st_mary_s",
       "seed": 16,
       "region": "East"
     },
@@ -205,7 +205,7 @@
       "season": 2021,
       "team_name": "Loyola (IL)",
       "school_slug": "loyola-il",
-      "team_id": "loyola__il",
+      "team_id": "loyola_il",
       "seed": 8,
       "region": "Midwest"
     },
@@ -333,7 +333,7 @@
       "season": 2021,
       "team_name": "UNC",
       "school_slug": "north-carolina",
-      "team_id": "unc",
+      "team_id": "north_carolina",
       "seed": 8,
       "region": "South"
     },
@@ -445,7 +445,7 @@
       "season": 2021,
       "team_name": "USC",
       "school_slug": "southern-california",
-      "team_id": "usc",
+      "team_id": "southern_california",
       "seed": 6,
       "region": "West"
     },
@@ -477,7 +477,7 @@
       "season": 2021,
       "team_name": "VCU",
       "school_slug": "virginia-commonwealth",
-      "team_id": "vcu",
+      "team_id": "virginia_commonwealth",
       "seed": 10,
       "region": "West"
     },

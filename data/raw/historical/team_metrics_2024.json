@@ -83,7 +83,7 @@
       "srs": -6.6,
       "sos": -5.22,
       "name": "Albany (NY)",
-      "team_id": "albany__ny"
+      "team_id": "albany_ny"
     },
     {
       "team_name": "Alcorn State",
@@ -1031,7 +1031,7 @@
       "srs": -14.41,
       "sos": -9.27,
       "name": "FDU",
-      "team_id": "fdu"
+      "team_id": "fairleigh_dickinson"
     },
     {
       "team_name": "Florida",
@@ -1871,7 +1871,7 @@
       "srs": 6.57,
       "sos": 2.42,
       "name": "Loyola (IL)",
-      "team_id": "loyola__il"
+      "team_id": "loyola_il"
     },
     {
       "team_name": "Loyola (MD)",
@@ -1883,7 +1883,7 @@
       "srs": -16.17,
       "sos": -6.94,
       "name": "Loyola (MD)",
-      "team_id": "loyola__md"
+      "team_id": "loyola_md"
     },
     {
       "team_name": "Loyola Marymount",
@@ -2279,7 +2279,7 @@
       "srs": -6.54,
       "sos": -7.45,
       "name": "Mount St. Mary's",
-      "team_id": "mount_st__mary_s"
+      "team_id": "mount_st_mary_s"
     },
     {
       "team_name": "Murray State",
@@ -2939,7 +2939,7 @@
       "srs": -8.75,
       "sos": -3.49,
       "name": "Queens (NC)",
-      "team_id": "queens__nc"
+      "team_id": "queens_nc"
     },
     {
       "team_name": "Quinnipiac",
@@ -3071,7 +3071,7 @@
       "srs": -18.6,
       "sos": -8.14,
       "name": "Saint Francis (PA)",
-      "team_id": "saint_francis__pa"
+      "team_id": "saint_francis_pa"
     },
     {
       "team_name": "Saint Joseph's",
@@ -3107,7 +3107,7 @@
       "srs": 16.31,
       "sos": 3.46,
       "name": "Saint Mary's (CA)",
-      "team_id": "saint_mary_s__ca"
+      "team_id": "saint_mary_s_ca"
     },
     {
       "team_name": "Saint Peter's",
@@ -3455,7 +3455,7 @@
       "srs": 6.77,
       "sos": 1.95,
       "name": "St. Bonaventure",
-      "team_id": "st__bonaventure"
+      "team_id": "st_bonaventure"
     },
     {
       "team_name": "St. John's (NY)",
@@ -3467,7 +3467,7 @@
       "srs": 16.49,
       "sos": 9.58,
       "name": "St. John's (NY)",
-      "team_id": "st__john_s__ny"
+      "team_id": "st_john_s_ny"
     },
     {
       "team_name": "St. Thomas",
@@ -3479,7 +3479,7 @@
       "srs": -0.92,
       "sos": -5.72,
       "name": "St. Thomas",
-      "team_id": "st__thomas"
+      "team_id": "st_thomas"
     },
     {
       "team_name": "Stanford",
@@ -3503,7 +3503,7 @@
       "srs": -0.95,
       "sos": -1.76,
       "name": "Stephen F. Austin",
-      "team_id": "stephen_f__austin"
+      "team_id": "stephen_f_austin"
     },
     {
       "team_name": "Stetson",
@@ -4247,7 +4247,7 @@
       "srs": -11.33,
       "sos": -5.55,
       "name": "William & Mary",
-      "team_id": "william___mary"
+      "team_id": "william_mary"
     },
     {
       "team_name": "Winthrop",

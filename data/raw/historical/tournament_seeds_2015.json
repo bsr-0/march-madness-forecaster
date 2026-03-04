@@ -69,7 +69,7 @@
       "season": 2015,
       "team_name": "LSU",
       "school_slug": "louisiana-state",
-      "team_id": "lsu",
+      "team_id": "louisiana_state",
       "seed": 9,
       "region": "East"
     },
@@ -117,7 +117,7 @@
       "season": 2015,
       "team_name": "Albany (NY)",
       "school_slug": "albany-ny",
-      "team_id": "albany__ny",
+      "team_id": "albany_ny",
       "seed": 14,
       "region": "East"
     },
@@ -317,7 +317,7 @@
       "season": 2015,
       "team_name": "SMU",
       "school_slug": "southern-methodist",
-      "team_id": "smu",
+      "team_id": "southern_methodist",
       "seed": 6,
       "region": "South"
     },
@@ -341,7 +341,7 @@
       "season": 2015,
       "team_name": "St. John's (NY)",
       "school_slug": "st-johns-ny",
-      "team_id": "st__john_s__ny",
+      "team_id": "st_john_s_ny",
       "seed": 9,
       "region": "South"
     },
@@ -365,7 +365,7 @@
       "season": 2015,
       "team_name": "Stephen F. Austin",
       "school_slug": "stephen-f-austin",
-      "team_id": "stephen_f__austin",
+      "team_id": "stephen_f_austin",
       "seed": 12,
       "region": "South"
     },
@@ -437,7 +437,7 @@
       "season": 2015,
       "team_name": "UNC",
       "school_slug": "north-carolina",
-      "team_id": "unc",
+      "team_id": "north_carolina",
       "seed": 4,
       "region": "West"
     },
@@ -461,7 +461,7 @@
       "season": 2015,
       "team_name": "VCU",
       "school_slug": "virginia-commonwealth",
-      "team_id": "vcu",
+      "team_id": "virginia_commonwealth",
       "seed": 7,
       "region": "West"
     },
@@ -493,7 +493,7 @@
       "season": 2015,
       "team_name": "BYU",
       "school_slug": "brigham-young",
-      "team_id": "byu",
+      "team_id": "brigham_young",
       "seed": 11,
       "region": "West"
     },
@@ -501,7 +501,7 @@
       "season": 2015,
       "team_name": "Ole Miss",
       "school_slug": "mississippi",
-      "team_id": "ole_miss",
+      "team_id": "mississippi",
       "seed": 11,
       "region": "West"
     },

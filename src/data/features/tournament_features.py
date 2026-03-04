@@ -333,6 +333,103 @@ def compute_coach_tournament_power(
 
 
 # =========================================================================
+# Tournament Resume Composite
+# =========================================================================
+#
+# Kaggle grandmaster insight: adding 4 separate opponent-quality features
+# (SOR, top-25%, road/neutral%, Q1%) to an already 26-feature model on
+# ~600 tournament samples is an overfitting trap.  Instead, compress them
+# into a single "tournament resume" score using Bayesian-shrunk weights.
+#
+# Each component is shrunk toward the population mean proportional to its
+# sample size — top-25 record (3-8 games/team) gets heavy shrinkage,
+# Q1 record (8-15 games) gets moderate shrinkage, road/neutral (12-18 games)
+# gets light shrinkage.  This prevents a team with a 1-0 top-25 record
+# from getting a misleading 1.000 win rate.
+#
+# The composite is a single feature that carries the combined signal of all
+# four opponent-quality metrics without the dimensionality cost.
+
+
+def compute_tournament_resume_composite(
+    q1_win_pct: float,
+    q1_games: int,
+    road_neutral_win_pct: float,
+    road_neutral_games: int,
+    elite_sos: float,
+    sor: float,
+    *,
+    prior_win_pct: float = 0.40,
+    prior_strength: float = 5.0,
+) -> float:
+    """Compute a single tournament-resume composite feature.
+
+    Combines opponent-quality signals into one Bayesian-shrunk score,
+    avoiding dimensionality bloat on small tournament samples.
+
+    Components and weights (derived from NCAA committee emphasis):
+      - Q1 record:            35%  (committee's #1 metric)
+      - Road/Neutral record:  25%  (tournament = neutral site)
+      - Strength of Record:   25%  (holistic schedule quality)
+      - Elite SOS:            15%  (quality of hardest opponents)
+
+    Each win-rate component is Bayesian-shrunk toward `prior_win_pct`
+    using the formula:
+        shrunk = (n * observed + prior_strength * prior) / (n + prior_strength)
+
+    This prevents small-sample noise (e.g., 1-0 vs top-25 → 100%) from
+    dominating the composite.
+
+    Args:
+        q1_win_pct: Quad 1 win percentage [0, 1]
+        q1_games: Number of Q1 games played
+        road_neutral_win_pct: Road + neutral site win % [0, 1]
+        road_neutral_games: Number of road/neutral games
+        elite_sos: Average AdjEM of top-30 opponents (raw scale, ~15-25)
+        sor: Strength of Record ratio (actual_wins / expected_wins_for_top25_team)
+        prior_win_pct: Bayesian prior for win rates (default 0.40 — slightly
+            below .500 because tournament teams face selection bias)
+        prior_strength: Pseudocount for shrinkage (higher = more conservative)
+
+    Returns:
+        Tournament resume composite in [0, 1] range.
+    """
+    # Bayesian shrinkage for win-rate components
+    def _shrink(observed: float, n_games: int) -> float:
+        """Shrink observed rate toward prior proportional to sample size."""
+        if n_games == 0:
+            return prior_win_pct
+        alpha = n_games / (n_games + prior_strength)
+        return alpha * observed + (1.0 - alpha) * prior_win_pct
+
+    shrunk_q1 = _shrink(q1_win_pct, q1_games)
+    shrunk_rn = _shrink(road_neutral_win_pct, road_neutral_games)
+
+    # SOR is already a ratio (actual/expected wins); normalize to [0, 1]
+    # SOR ~1.0 = average top-25 team, ~1.5 = elite, ~0.5 = weak schedule
+    # Logistic squash: centered at 1.0, scale 0.4
+    sor_normalized = 1.0 / (1.0 + math.exp(-(sor - 1.0) / 0.4))
+
+    # Elite SOS: normalize to [0, 1] using logistic
+    # AdjEM of top-30 opponents is typically 15-25; mean ~18
+    # 0.0 means no elite opponents faced
+    if elite_sos > 0:
+        elite_normalized = 1.0 / (1.0 + math.exp(-(elite_sos - 18.0) / 4.0))
+    else:
+        elite_normalized = 0.3  # Prior for teams with no elite opponents
+
+    # Weighted combination
+    composite = (
+        0.35 * shrunk_q1
+        + 0.25 * shrunk_rn
+        + 0.25 * sor_normalized
+        + 0.15 * elite_normalized
+    )
+
+    return float(np.clip(composite, 0.0, 1.0))
+
+
+# =========================================================================
 # Tournament Feature Names (for integration with FIXED_FEATURE_SET)
 # =========================================================================
 TOURNAMENT_FEATURE_NAMES = [
@@ -340,4 +437,5 @@ TOURNAMENT_FEATURE_NAMES = [
     "diff_top25_win_pct",
     "diff_road_neutral_win_pct",
     "diff_coach_tournament_power",
+    "diff_tournament_resume",
 ]

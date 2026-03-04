@@ -159,19 +159,27 @@ class SpreadRegressor:
             X = X.reshape(1, -1)
         return self.model.predict(X)
 
-    def predict_probability(self, X: np.ndarray) -> np.ndarray:
+    def predict_probability(
+        self,
+        X: np.ndarray,
+        sigma_override: Optional[float] = None,
+    ) -> np.ndarray:
         """Convert predicted spread to win probability via logistic CDF.
 
         P(team1 wins) = 1 / (1 + exp(-spread / sigma))
 
         Args:
             X: Feature matrix [N, D] or single sample [D].
+            sigma_override: Optional tournament-calibrated sigma to use
+                instead of the model's default. This enables per-round
+                tournament sigma calibration without modifying model state.
 
         Returns:
             Win probabilities as np.ndarray.
         """
         spreads = self.predict_spread(X)
-        return _logistic_cdf(spreads, self.sigma)
+        effective_sigma = sigma_override if sigma_override is not None else self.sigma
+        return _logistic_cdf(spreads, effective_sigma)
 
     def calibrate_sigma(
         self,

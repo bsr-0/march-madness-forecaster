@@ -21,7 +21,7 @@
       "season": 2019,
       "team_name": "LSU",
       "school_slug": "louisiana-state",
-      "team_id": "lsu",
+      "team_id": "louisiana_state",
       "seed": 3,
       "region": "East"
     },
@@ -61,7 +61,7 @@
       "season": 2019,
       "team_name": "VCU",
       "school_slug": "virginia-commonwealth",
-      "team_id": "vcu",
+      "team_id": "virginia_commonwealth",
       "seed": 8,
       "region": "East"
     },
@@ -149,7 +149,7 @@
       "season": 2019,
       "team_name": "UNC",
       "school_slug": "north-carolina",
-      "team_id": "unc",
+      "team_id": "north_carolina",
       "seed": 1,
       "region": "Midwest"
     },
@@ -333,7 +333,7 @@
       "season": 2019,
       "team_name": "Ole Miss",
       "school_slug": "mississippi",
-      "team_id": "ole_miss",
+      "team_id": "mississippi",
       "seed": 8,
       "region": "South"
     },
@@ -357,7 +357,7 @@
       "season": 2019,
       "team_name": "Saint Mary's",
       "school_slug": "saint-marys-ca",
-      "team_id": "saint_mary_s",
+      "team_id": "saint_mary_s__ca",
       "seed": 11,
       "region": "South"
     },
@@ -493,7 +493,7 @@
       "season": 2019,
       "team_name": "St. John's (NY)",
       "school_slug": "st-johns-ny",
-      "team_id": "st__john_s__ny",
+      "team_id": "st_john_s_ny",
       "seed": 11,
       "region": "West"
     },
@@ -533,7 +533,7 @@
       "season": 2019,
       "team_name": "FDU",
       "school_slug": "fairleigh-dickinson",
-      "team_id": "fdu",
+      "team_id": "fairleigh_dickinson",
       "seed": 16,
       "region": "West"
     },

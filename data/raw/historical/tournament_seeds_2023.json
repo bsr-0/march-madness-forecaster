@@ -77,7 +77,7 @@
       "season": 2023,
       "team_name": "USC",
       "school_slug": "southern-california",
-      "team_id": "usc",
+      "team_id": "southern_california",
       "seed": 10,
       "region": "East"
     },
@@ -125,7 +125,7 @@
       "season": 2023,
       "team_name": "FDU",
       "school_slug": "fairleigh-dickinson",
-      "team_id": "fdu",
+      "team_id": "fairleigh_dickinson",
       "seed": 16,
       "region": "East"
     },
@@ -229,7 +229,7 @@
       "season": 2023,
       "team_name": "Pitt",
       "school_slug": "pittsburgh",
-      "team_id": "pitt",
+      "team_id": "pittsburgh",
       "seed": 11,
       "region": "Midwest"
     },
@@ -437,7 +437,7 @@
       "season": 2023,
       "team_name": "UConn",
       "school_slug": "connecticut",
-      "team_id": "uconn",
+      "team_id": "connecticut",
       "seed": 4,
       "region": "West"
     },
@@ -445,7 +445,7 @@
       "season": 2023,
       "team_name": "Saint Mary's",
       "school_slug": "saint-marys-ca",
-      "team_id": "saint_mary_s",
+      "team_id": "saint_mary_s__ca",
       "seed": 5,
       "region": "West"
     },
@@ -509,7 +509,7 @@
       "season": 2023,
       "team_name": "VCU",
       "school_slug": "virginia-commonwealth",
-      "team_id": "vcu",
+      "team_id": "virginia_commonwealth",
       "seed": 12,
       "region": "West"
     },

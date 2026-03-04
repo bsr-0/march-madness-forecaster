@@ -37,7 +37,7 @@
       "season": 2022,
       "team_name": "Saint Mary's",
       "school_slug": "saint-marys-ca",
-      "team_id": "saint_mary_s",
+      "team_id": "saint_mary_s__ca",
       "seed": 5,
       "region": "East"
     },
@@ -61,7 +61,7 @@
       "season": 2022,
       "team_name": "UNC",
       "school_slug": "north-carolina",
-      "team_id": "unc",
+      "team_id": "north_carolina",
       "seed": 8,
       "region": "East"
     },
@@ -125,7 +125,7 @@
       "season": 2022,
       "team_name": "St. Peter's",
       "school_slug": "saint-peters",
-      "team_id": "st__peter_s",
+      "team_id": "st_peter_s",
       "seed": 15,
       "region": "East"
     },
@@ -181,7 +181,7 @@
       "season": 2022,
       "team_name": "LSU",
       "school_slug": "louisiana-state",
-      "team_id": "lsu",
+      "team_id": "louisiana_state",
       "seed": 6,
       "region": "Midwest"
     },
@@ -189,7 +189,7 @@
       "season": 2022,
       "team_name": "USC",
       "school_slug": "southern-california",
-      "team_id": "usc",
+      "team_id": "southern_california",
       "seed": 7,
       "region": "Midwest"
     },
@@ -349,7 +349,7 @@
       "season": 2022,
       "team_name": "Loyola (IL)",
       "school_slug": "loyola-il",
-      "team_id": "loyola__il",
+      "team_id": "loyola_il",
       "seed": 10,
       "region": "South"
     },
@@ -445,7 +445,7 @@
       "season": 2022,
       "team_name": "UConn",
       "school_slug": "connecticut",
-      "team_id": "uconn",
+      "team_id": "connecticut",
       "seed": 5,
       "region": "West"
     },

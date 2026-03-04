@@ -367,6 +367,71 @@ def run_kaggle_export(args):
                 "Men's: {mens_rows} rows ({mens_mapped} mapped), "
                 "Women's: {womens_rows} rows ({womens_mapped} mapped)".format(**stats)
             )
+
+    # --- Dual submission: 0-1 trick / champion boost (Slot 2) ---
+    if pipeline.config.enable_dual_submission:
+        try:
+            from .optimization.dual_submission import KaggleDualSubmissionGenerator
+            from .exports.kaggle import parse_kaggle_id
+
+            # Build matchup list and team seeds from primary predictions
+            matchup_ids = []
+            for raw_id in sample_df["ID"].astype(str).tolist():
+                try:
+                    season, team1, team2 = parse_kaggle_id(raw_id)
+                    if year is not None and season != year:
+                        continue
+                    t1 = id_map.get(team1)
+                    t2 = id_map.get(team2)
+                    if t1 and t2:
+                        matchup_ids.append((raw_id, t1, t2))
+                except ValueError:
+                    continue
+
+            # Collect team seeds from feature engineer
+            team_seeds = {}
+            if hasattr(pipeline, 'feature_engineer') and pipeline.feature_engineer:
+                for tid, tf in pipeline.feature_engineer.team_features.items():
+                    if hasattr(tf, 'seed') and tf.seed > 0:
+                        team_seeds[tid] = tf.seed
+
+            if matchup_ids and team_seeds:
+                generator = KaggleDualSubmissionGenerator(
+                    predict_fn=pipeline.predict_probability,
+                    team_seeds=team_seeds,
+                    n_champion_candidates=pipeline.config.dual_n_champion_candidates,
+                )
+
+                pair = generator.generate_submissions(
+                    matchup_ids=matchup_ids,
+                    strategy=pipeline.config.dual_strategy,
+                )
+
+                # Write hedge submission (Slot 2)
+                hedge_df = sample_df.copy()
+                hedge_preds = []
+                for raw_id in hedge_df["ID"].astype(str).tolist():
+                    hedge_preds.append(pair.hedge.get(raw_id, 0.5))
+                hedge_df["Pred"] = hedge_preds
+
+                hedge_output = args.output.replace(".csv", "_hedge.csv")
+                if hedge_output == args.output:
+                    hedge_output = args.output + ".hedge.csv"
+                hedge_df.to_csv(hedge_output, index=False)
+
+                champ_info = ""
+                if pair.champion_team:
+                    seed = team_seeds.get(pair.champion_team, 0)
+                    champ_info = f" (champion={pair.champion_team}, seed={seed})"
+
+                print(f"\n✓ Hedge submission (Slot 2) written to {hedge_output}")
+                print(f"  Strategy: {pair.strategy}{champ_info}")
+                print(f"  Games boosted: {len(pair.deviations)}")
+            else:
+                print("\n⚠ Dual submission skipped: insufficient matchup data or seeds")
+        except Exception as e:
+            print(f"\n⚠ Dual submission generation failed: {e}")
+
     return 0
 
 

@@ -109,7 +109,7 @@
       "season": 2012,
       "team_name": "St. Bonaventure",
       "school_slug": "st-bonaventure",
-      "team_id": "st__bonaventure",
+      "team_id": "st_bonaventure",
       "seed": 14,
       "region": "East"
     },
@@ -117,7 +117,7 @@
       "season": 2012,
       "team_name": "Loyola (MD)",
       "school_slug": "loyola-md",
-      "team_id": "loyola__md",
+      "team_id": "loyola_md",
       "seed": 15,
       "region": "East"
     },
@@ -133,7 +133,7 @@
       "season": 2012,
       "team_name": "UNC",
       "school_slug": "north-carolina",
-      "team_id": "unc",
+      "team_id": "north_carolina",
       "seed": 1,
       "region": "Midwest"
     },
@@ -181,7 +181,7 @@
       "season": 2012,
       "team_name": "Saint Mary's",
       "school_slug": "saint-marys-ca",
-      "team_id": "saint_mary_s",
+      "team_id": "saint_mary_s__ca",
       "seed": 7,
       "region": "Midwest"
     },
@@ -341,7 +341,7 @@
       "season": 2012,
       "team_name": "UConn",
       "school_slug": "connecticut",
-      "team_id": "uconn",
+      "team_id": "connecticut",
       "seed": 9,
       "region": "South"
     },
@@ -365,7 +365,7 @@
       "season": 2012,
       "team_name": "VCU",
       "school_slug": "virginia-commonwealth",
-      "team_id": "vcu",
+      "team_id": "virginia_commonwealth",
       "seed": 12,
       "region": "South"
     },
@@ -517,7 +517,7 @@
       "season": 2012,
       "team_name": "BYU",
       "school_slug": "brigham-young",
-      "team_id": "byu",
+      "team_id": "brigham_young",
       "seed": 14,
       "region": "West"
     },

@@ -2,7 +2,7 @@
   "season": 2021,
   "teams": [
     {
-      "team_name": "Abilene ChristianNCAA",
+      "team_name": "Abilene Christian",
       "pace": 72.0,
       "off_rtg": 105.2,
       "def_rtg": 83.955938697318,
@@ -10,7 +10,7 @@
       "losses": 5,
       "srs": 6.27,
       "sos": -6.37,
-      "name": "Abilene ChristianNCAA",
+      "name": "Abilene Christian",
       "team_id": "abilene_christian"
     },
     {
@@ -38,7 +38,7 @@
       "team_id": "akron"
     },
     {
-      "team_name": "AlabamaNCAA",
+      "team_name": "Alabama",
       "pace": 74.7,
       "off_rtg": 106.3,
       "def_rtg": 93.82986491420226,
@@ -46,7 +46,7 @@
       "losses": 7,
       "srs": 19.58,
       "sos": 10.01,
-      "name": "AlabamaNCAA",
+      "name": "Alabama",
       "team_id": "alabama"
     },
     {
@@ -83,7 +83,7 @@
       "srs": -4.53,
       "sos": -5.22,
       "name": "Albany (NY)",
-      "team_id": "albany__ny"
+      "team_id": "albany_ny"
     },
     {
       "team_name": "Alcorn State",
@@ -110,7 +110,7 @@
       "team_id": "american"
     },
     {
-      "team_name": "Appalachian StateNCAA",
+      "team_name": "Appalachian State",
       "pace": 66.8,
       "off_rtg": 103.1,
       "def_rtg": 96.01486681808797,
@@ -118,7 +118,7 @@
       "losses": 12,
       "srs": -5.84,
       "sos": -5.72,
-      "name": "Appalachian StateNCAA",
+      "name": "Appalachian State",
       "team_id": "appalachian_state"
     },
     {
@@ -146,7 +146,7 @@
       "team_id": "arizona_state"
     },
     {
-      "team_name": "ArkansasNCAA",
+      "team_name": "Arkansas",
       "pace": 75.1,
       "off_rtg": 108.0,
       "def_rtg": 94.20772303595207,
@@ -154,7 +154,7 @@
       "losses": 7,
       "srs": 17.8,
       "sos": 7.18,
-      "name": "ArkansasNCAA",
+      "name": "Arkansas",
       "team_id": "arkansas"
     },
     {
@@ -230,7 +230,7 @@
       "team_id": "ball_state"
     },
     {
-      "team_name": "BaylorNCAA",
+      "team_name": "Baylor",
       "pace": 69.6,
       "off_rtg": 118.6,
       "def_rtg": 94.06130268199233,
@@ -238,7 +238,7 @@
       "losses": 2,
       "srs": 24.83,
       "sos": 7.4,
-      "name": "BaylorNCAA",
+      "name": "Baylor",
       "team_id": "baylor"
     },
     {
@@ -338,7 +338,7 @@
       "team_id": "bradley"
     },
     {
-      "team_name": "Brigham YoungNCAA",
+      "team_name": "Brigham Young",
       "pace": 70.2,
       "off_rtg": 109.8,
       "def_rtg": 97.76300517041257,
@@ -346,7 +346,7 @@
       "losses": 7,
       "srs": 15.19,
       "sos": 7.23,
-      "name": "Brigham YoungNCAA",
+      "name": "Brigham Young",
       "team_id": "brigham_young"
     },
     {
@@ -590,7 +590,7 @@
       "team_id": "cincinnati"
     },
     {
-      "team_name": "ClemsonNCAA",
+      "team_name": "Clemson",
       "pace": 64.9,
       "off_rtg": 99.5,
       "def_rtg": 95.40318438623522,
@@ -598,11 +598,11 @@
       "losses": 8,
       "srs": 12.49,
       "sos": 9.49,
-      "name": "ClemsonNCAA",
+      "name": "Clemson",
       "team_id": "clemson"
     },
     {
-      "team_name": "Cleveland StateNCAA",
+      "team_name": "Cleveland State",
       "pace": 67.6,
       "off_rtg": 102.6,
       "def_rtg": 105.30352838045147,
@@ -610,7 +610,7 @@
       "losses": 8,
       "srs": -5.12,
       "sos": -4.82,
-      "name": "Cleveland StateNCAA",
+      "name": "Cleveland State",
       "team_id": "cleveland_state"
     },
     {
@@ -626,7 +626,7 @@
       "team_id": "coastal_carolina"
     },
     {
-      "team_name": "ColgateNCAA",
+      "team_name": "Colgate",
       "pace": 72.7,
       "off_rtg": 116.3,
       "def_rtg": 95.77028885832186,
@@ -634,7 +634,7 @@
       "losses": 2,
       "srs": 13.66,
       "sos": -1.9,
-      "name": "ColgateNCAA",
+      "name": "Colgate",
       "team_id": "colgate"
     },
     {
@@ -650,7 +650,7 @@
       "team_id": "college_of_charleston"
     },
     {
-      "team_name": "ColoradoNCAA",
+      "team_name": "Colorado",
       "pace": 66.5,
       "off_rtg": 109.9,
       "def_rtg": 95.95864661654136,
@@ -658,7 +658,7 @@
       "losses": 9,
       "srs": 18.88,
       "sos": 9.57,
-      "name": "ColoradoNCAA",
+      "name": "Colorado",
       "team_id": "colorado"
     },
     {
@@ -674,7 +674,7 @@
       "team_id": "colorado_state"
     },
     {
-      "team_name": "ConnecticutNCAA",
+      "team_name": "Connecticut",
       "pace": 66.2,
       "off_rtg": 107.8,
       "def_rtg": 97.53053986601864,
@@ -682,7 +682,7 @@
       "losses": 8,
       "srs": 15.77,
       "sos": 8.59,
-      "name": "ConnecticutNCAA",
+      "name": "Connecticut",
       "team_id": "connecticut"
     },
     {
@@ -698,7 +698,7 @@
       "team_id": "coppin_state"
     },
     {
-      "team_name": "CreightonNCAA",
+      "team_name": "Creighton",
       "pace": 69.6,
       "off_rtg": 108.3,
       "def_rtg": 98.02558398220245,
@@ -706,7 +706,7 @@
       "losses": 9,
       "srs": 16.28,
       "sos": 8.54,
-      "name": "CreightonNCAA",
+      "name": "Creighton",
       "team_id": "creighton"
     },
     {
@@ -794,7 +794,7 @@
       "team_id": "detroit_mercy"
     },
     {
-      "team_name": "DrakeNCAA",
+      "team_name": "Drake",
       "pace": 66.8,
       "off_rtg": 112.8,
       "def_rtg": 96.53274096967357,
@@ -802,11 +802,11 @@
       "losses": 5,
       "srs": 9.42,
       "sos": -0.48,
-      "name": "DrakeNCAA",
+      "name": "Drake",
       "team_id": "drake"
     },
     {
-      "team_name": "DrexelNCAA",
+      "team_name": "Drexel",
       "pace": 66.0,
       "off_rtg": 106.5,
       "def_rtg": 102.12121212121212,
@@ -814,7 +814,7 @@
       "losses": 8,
       "srs": -0.97,
       "sos": -3.92,
-      "name": "DrexelNCAA",
+      "name": "Drexel",
       "team_id": "drexel"
     },
     {
@@ -902,7 +902,7 @@
       "team_id": "eastern_michigan"
     },
     {
-      "team_name": "Eastern WashingtonNCAA",
+      "team_name": "Eastern Washington",
       "pace": 71.8,
       "off_rtg": 109.0,
       "def_rtg": 98.07335190343548,
@@ -910,7 +910,7 @@
       "losses": 8,
       "srs": 4.03,
       "sos": -3.15,
-      "name": "Eastern WashingtonNCAA",
+      "name": "Eastern Washington",
       "team_id": "eastern_washington"
     },
     {
@@ -959,10 +959,10 @@
       "srs": -10.17,
       "sos": -6.46,
       "name": "FDU",
-      "team_id": "fdu"
+      "team_id": "fairleigh_dickinson"
     },
     {
-      "team_name": "FloridaNCAA",
+      "team_name": "Florida",
       "pace": 70.6,
       "off_rtg": 104.6,
       "def_rtg": 99.54674220963174,
@@ -970,7 +970,7 @@
       "losses": 10,
       "srs": 13.7,
       "sos": 9.82,
-      "name": "FloridaNCAA",
+      "name": "Florida",
       "team_id": "florida"
     },
     {
@@ -1022,7 +1022,7 @@
       "team_id": "florida_international"
     },
     {
-      "team_name": "Florida StateNCAA",
+      "team_name": "Florida State",
       "pace": 70.0,
       "off_rtg": 109.1,
       "def_rtg": 98.85714285714286,
@@ -1030,7 +1030,7 @@
       "losses": 7,
       "srs": 17.12,
       "sos": 9.16,
-      "name": "Florida StateNCAA",
+      "name": "Florida State",
       "team_id": "florida_state"
     },
     {
@@ -1106,7 +1106,7 @@
       "team_id": "george_washington"
     },
     {
-      "team_name": "GeorgetownNCAA",
+      "team_name": "Georgetown",
       "pace": 70.4,
       "off_rtg": 101.0,
       "def_rtg": 101.78103146853147,
@@ -1114,7 +1114,7 @@
       "losses": 13,
       "srs": 10.13,
       "sos": 10.36,
-      "name": "GeorgetownNCAA",
+      "name": "Georgetown",
       "team_id": "georgetown"
     },
     {
@@ -1154,7 +1154,7 @@
       "team_id": "georgia_state"
     },
     {
-      "team_name": "Georgia TechNCAA",
+      "team_name": "Georgia Tech",
       "pace": 67.9,
       "off_rtg": 107.8,
       "def_rtg": 103.14942789169592,
@@ -1162,11 +1162,11 @@
       "losses": 9,
       "srs": 12.79,
       "sos": 7.91,
-      "name": "Georgia TechNCAA",
+      "name": "Georgia Tech",
       "team_id": "georgia_tech"
     },
     {
-      "team_name": "GonzagaNCAA",
+      "team_name": "Gonzaga",
       "pace": 74.6,
       "off_rtg": 121.5,
       "def_rtg": 93.41487935656838,
@@ -1174,7 +1174,7 @@
       "losses": 1,
       "srs": 27.2,
       "sos": 5.92,
-      "name": "GonzagaNCAA",
+      "name": "Gonzaga",
       "team_id": "gonzaga"
     },
     {
@@ -1190,7 +1190,7 @@
       "team_id": "grambling"
     },
     {
-      "team_name": "Grand CanyonNCAA",
+      "team_name": "Grand Canyon",
       "pace": 68.2,
       "off_rtg": 110.7,
       "def_rtg": 91.0923753665689,
@@ -1198,7 +1198,7 @@
       "losses": 7,
       "srs": 5.11,
       "sos": -3.46,
-      "name": "Grand CanyonNCAA",
+      "name": "Grand Canyon",
       "team_id": "grand_canyon"
     },
     {
@@ -1226,7 +1226,7 @@
       "team_id": "hampton"
     },
     {
-      "team_name": "HartfordNCAA",
+      "team_name": "Hartford",
       "pace": 67.0,
       "off_rtg": 97.6,
       "def_rtg": 95.39800995024876,
@@ -1234,7 +1234,7 @@
       "losses": 9,
       "srs": -3.45,
       "sos": -4.95,
-      "name": "HartfordNCAA",
+      "name": "Hartford",
       "team_id": "hartford"
     },
     {
@@ -1286,7 +1286,7 @@
       "team_id": "holy_cross"
     },
     {
-      "team_name": "HoustonNCAA",
+      "team_name": "Houston",
       "pace": 66.1,
       "off_rtg": 115.1,
       "def_rtg": 88.07677760968231,
@@ -1294,7 +1294,7 @@
       "losses": 4,
       "srs": 21.66,
       "sos": 5.37,
-      "name": "HoustonNCAA",
+      "name": "Houston",
       "team_id": "houston"
     },
     {
@@ -1346,7 +1346,7 @@
       "team_id": "idaho_state"
     },
     {
-      "team_name": "IllinoisNCAA",
+      "team_name": "Illinois",
       "pace": 71.2,
       "off_rtg": 111.7,
       "def_rtg": 96.41174338528451,
@@ -1354,7 +1354,7 @@
       "losses": 7,
       "srs": 23.25,
       "sos": 11.34,
-      "name": "IllinoisNCAA",
+      "name": "Illinois",
       "team_id": "illinois"
     },
     {
@@ -1418,7 +1418,7 @@
       "team_id": "indiana_state"
     },
     {
-      "team_name": "IonaNCAA",
+      "team_name": "Iona",
       "pace": 69.9,
       "off_rtg": 102.0,
       "def_rtg": 94.50007947862025,
@@ -1426,11 +1426,11 @@
       "losses": 6,
       "srs": -1.2,
       "sos": -6.42,
-      "name": "IonaNCAA",
+      "name": "Iona",
       "team_id": "iona"
     },
     {
-      "team_name": "IowaNCAA",
+      "team_name": "Iowa",
       "pace": 71.0,
       "off_rtg": 117.5,
       "def_rtg": 102.4534302589732,
@@ -1438,7 +1438,7 @@
       "losses": 9,
       "srs": 21.4,
       "sos": 10.43,
-      "name": "IowaNCAA",
+      "name": "Iowa",
       "team_id": "iowa"
     },
     {
@@ -1514,7 +1514,7 @@
       "team_id": "james_madison"
     },
     {
-      "team_name": "KansasNCAA",
+      "team_name": "Kansas",
       "pace": 69.7,
       "off_rtg": 104.3,
       "def_rtg": 96.12625538020086,
@@ -1522,7 +1522,7 @@
       "losses": 9,
       "srs": 15.29,
       "sos": 10.26,
-      "name": "KansasNCAA",
+      "name": "Kansas",
       "team_id": "kansas"
     },
     {
@@ -1634,7 +1634,7 @@
       "team_id": "lehigh"
     },
     {
-      "team_name": "LibertyNCAA",
+      "team_name": "Liberty",
       "pace": 64.9,
       "off_rtg": 114.6,
       "def_rtg": 92.39679081876626,
@@ -1642,7 +1642,7 @@
       "losses": 6,
       "srs": 4.06,
       "sos": -6.14,
-      "name": "LibertyNCAA",
+      "name": "Liberty",
       "team_id": "liberty"
     },
     {
@@ -1718,7 +1718,7 @@
       "team_id": "louisiana"
     },
     {
-      "team_name": "Louisiana StateNCAA",
+      "team_name": "Louisiana State",
       "pace": 72.6,
       "off_rtg": 112.1,
       "def_rtg": 103.59076660017101,
@@ -1726,7 +1726,7 @@
       "losses": 10,
       "srs": 15.7,
       "sos": 9.14,
-      "name": "Louisiana StateNCAA",
+      "name": "Louisiana State",
       "team_id": "louisiana_state"
     },
     {
@@ -1766,7 +1766,7 @@
       "team_id": "louisville"
     },
     {
-      "team_name": "Loyola (IL)NCAA",
+      "team_name": "Loyola (IL)",
       "pace": 63.8,
       "off_rtg": 110.5,
       "def_rtg": 87.87541713014461,
@@ -1774,8 +1774,8 @@
       "losses": 5,
       "srs": 15.12,
       "sos": 1.37,
-      "name": "Loyola (IL)NCAA",
-      "team_id": "loyola__il"
+      "name": "Loyola (IL)",
+      "team_id": "loyola_il"
     },
     {
       "team_name": "Loyola (MD)",
@@ -1787,7 +1787,7 @@
       "srs": -2.29,
       "sos": -3.47,
       "name": "Loyola (MD)",
-      "team_id": "loyola__md"
+      "team_id": "loyola_md"
     },
     {
       "team_name": "Loyola Marymount",
@@ -1862,7 +1862,7 @@
       "team_id": "marshall"
     },
     {
-      "team_name": "MarylandNCAA",
+      "team_name": "Maryland",
       "pace": 65.9,
       "off_rtg": 104.4,
       "def_rtg": 99.56434480395515,
@@ -1870,7 +1870,7 @@
       "losses": 14,
       "srs": 13.94,
       "sos": 11.97,
-      "name": "MarylandNCAA",
+      "name": "Maryland",
       "team_id": "maryland"
     },
     {
@@ -1982,7 +1982,7 @@
       "team_id": "miami__oh"
     },
     {
-      "team_name": "MichiganNCAA",
+      "team_name": "Michigan",
       "pace": 67.8,
       "off_rtg": 111.3,
       "def_rtg": 95.9755583649389,
@@ -1990,11 +1990,11 @@
       "losses": 5,
       "srs": 22.0,
       "sos": 11.25,
-      "name": "MichiganNCAA",
+      "name": "Michigan",
       "team_id": "michigan"
     },
     {
-      "team_name": "Michigan StateNCAA",
+      "team_name": "Michigan State",
       "pace": 68.9,
       "off_rtg": 100.3,
       "def_rtg": 103.20340037321168,
@@ -2002,7 +2002,7 @@
       "losses": 13,
       "srs": 9.8,
       "sos": 11.48,
-      "name": "Michigan StateNCAA",
+      "name": "Michigan State",
       "team_id": "michigan_state"
     },
     {
@@ -2078,7 +2078,7 @@
       "team_id": "mississippi_valley_state"
     },
     {
-      "team_name": "MissouriNCAA",
+      "team_name": "Missouri",
       "pace": 70.4,
       "off_rtg": 103.3,
       "def_rtg": 102.16346153846153,
@@ -2086,7 +2086,7 @@
       "losses": 10,
       "srs": 12.37,
       "sos": 10.87,
-      "name": "MissouriNCAA",
+      "name": "Missouri",
       "team_id": "missouri"
     },
     {
@@ -2138,7 +2138,7 @@
       "team_id": "montana_state"
     },
     {
-      "team_name": "Morehead StateNCAA",
+      "team_name": "Morehead State",
       "pace": 67.1,
       "off_rtg": 101.6,
       "def_rtg": 95.47617902985434,
@@ -2146,7 +2146,7 @@
       "losses": 8,
       "srs": -0.95,
       "sos": -4.33,
-      "name": "Morehead StateNCAA",
+      "name": "Morehead State",
       "team_id": "morehead_state"
     },
     {
@@ -2162,7 +2162,7 @@
       "team_id": "morgan_state"
     },
     {
-      "team_name": "Mount St. Mary'sNCAA",
+      "team_name": "Mount St. Mary's",
       "pace": 63.8,
       "off_rtg": 98.0,
       "def_rtg": 97.51942210712826,
@@ -2170,8 +2170,8 @@
       "losses": 11,
       "srs": -5.67,
       "sos": -6.67,
-      "name": "Mount St. Mary'sNCAA",
-      "team_id": "mount_st__mary_s"
+      "name": "Mount St. Mary's",
+      "team_id": "mount_st_mary_s"
     },
     {
       "team_name": "Murray State",
@@ -2330,7 +2330,7 @@
       "team_id": "njit"
     },
     {
-      "team_name": "Norfolk StateNCAA",
+      "team_name": "Norfolk State",
       "pace": 72.0,
       "off_rtg": 101.7,
       "def_rtg": 96.77777777777777,
@@ -2338,7 +2338,7 @@
       "losses": 8,
       "srs": -6.16,
       "sos": -8.51,
-      "name": "Norfolk StateNCAA",
+      "name": "Norfolk State",
       "team_id": "norfolk_state"
     },
     {
@@ -2354,7 +2354,7 @@
       "team_id": "north_alabama"
     },
     {
-      "team_name": "North CarolinaNCAA",
+      "team_name": "North Carolina",
       "pace": 71.8,
       "off_rtg": 104.8,
       "def_rtg": 97.39698395927385,
@@ -2362,7 +2362,7 @@
       "losses": 11,
       "srs": 14.79,
       "sos": 9.52,
-      "name": "North CarolinaNCAA",
+      "name": "North Carolina",
       "team_id": "north_carolina"
     },
     {
@@ -2426,7 +2426,7 @@
       "team_id": "north_florida"
     },
     {
-      "team_name": "North TexasNCAA",
+      "team_name": "North Texas",
       "pace": 65.2,
       "off_rtg": 106.1,
       "def_rtg": 95.58501314636283,
@@ -2434,7 +2434,7 @@
       "losses": 10,
       "srs": 7.58,
       "sos": 1.02,
-      "name": "North TexasNCAA",
+      "name": "North Texas",
       "team_id": "north_texas"
     },
     {
@@ -2558,7 +2558,7 @@
       "team_id": "oakland"
     },
     {
-      "team_name": "OhioNCAA",
+      "team_name": "Ohio",
       "pace": 71.6,
       "off_rtg": 110.6,
       "def_rtg": 101.39664804469275,
@@ -2566,11 +2566,11 @@
       "losses": 8,
       "srs": 5.48,
       "sos": -0.57,
-      "name": "OhioNCAA",
+      "name": "Ohio",
       "team_id": "ohio"
     },
     {
-      "team_name": "Ohio StateNCAA",
+      "team_name": "Ohio State",
       "pace": 67.6,
       "off_rtg": 112.7,
       "def_rtg": 105.17274288986448,
@@ -2578,11 +2578,11 @@
       "losses": 10,
       "srs": 18.25,
       "sos": 12.19,
-      "name": "Ohio StateNCAA",
+      "name": "Ohio State",
       "team_id": "ohio_state"
     },
     {
-      "team_name": "OklahomaNCAA",
+      "team_name": "Oklahoma",
       "pace": 69.2,
       "off_rtg": 106.2,
       "def_rtg": 100.94198244487261,
@@ -2590,11 +2590,11 @@
       "losses": 11,
       "srs": 13.52,
       "sos": 8.86,
-      "name": "OklahomaNCAA",
+      "name": "Oklahoma",
       "team_id": "oklahoma"
     },
     {
-      "team_name": "Oklahoma StateNCAA",
+      "team_name": "Oklahoma State",
       "pace": 73.0,
       "off_rtg": 102.7,
       "def_rtg": 99.58904109589041,
@@ -2602,7 +2602,7 @@
       "losses": 9,
       "srs": 13.65,
       "sos": 9.78,
-      "name": "Oklahoma StateNCAA",
+      "name": "Oklahoma State",
       "team_id": "oklahoma_state"
     },
     {
@@ -2630,7 +2630,7 @@
       "team_id": "omaha"
     },
     {
-      "team_name": "Oral RobertsNCAA",
+      "team_name": "Oral Roberts",
       "pace": 73.6,
       "off_rtg": 109.7,
       "def_rtg": 102.69865067466269,
@@ -2638,11 +2638,11 @@
       "losses": 11,
       "srs": 1.73,
       "sos": -0.04,
-      "name": "Oral RobertsNCAA",
+      "name": "Oral Roberts",
       "team_id": "oral_roberts"
     },
     {
-      "team_name": "OregonNCAA",
+      "team_name": "Oregon",
       "pace": 68.2,
       "off_rtg": 109.9,
       "def_rtg": 100.28278173439463,
@@ -2650,11 +2650,11 @@
       "losses": 7,
       "srs": 16.15,
       "sos": 9.65,
-      "name": "OregonNCAA",
+      "name": "Oregon",
       "team_id": "oregon"
     },
     {
-      "team_name": "Oregon StateNCAA",
+      "team_name": "Oregon State",
       "pace": 66.2,
       "off_rtg": 105.7,
       "def_rtg": 102.16973358967317,
@@ -2662,7 +2662,7 @@
       "losses": 13,
       "srs": 11.48,
       "sos": 10.82,
-      "name": "Oregon StateNCAA",
+      "name": "Oregon State",
       "team_id": "oregon_state"
     },
     {
@@ -2774,7 +2774,7 @@
       "team_id": "providence"
     },
     {
-      "team_name": "PurdueNCAA",
+      "team_name": "Purdue",
       "pace": 66.5,
       "off_rtg": 105.8,
       "def_rtg": 100.32223415682063,
@@ -2782,7 +2782,7 @@
       "losses": 10,
       "srs": 15.55,
       "sos": 11.23,
-      "name": "PurdueNCAA",
+      "name": "Purdue",
       "team_id": "purdue"
     },
     {
@@ -2882,7 +2882,7 @@
       "team_id": "robert_morris"
     },
     {
-      "team_name": "RutgersNCAA",
+      "team_name": "Rutgers",
       "pace": 68.3,
       "off_rtg": 101.0,
       "def_rtg": 98.98556787282996,
@@ -2890,7 +2890,7 @@
       "losses": 12,
       "srs": 14.14,
       "sos": 12.5,
-      "name": "RutgersNCAA",
+      "name": "Rutgers",
       "team_id": "rutgers"
     },
     {
@@ -2927,7 +2927,7 @@
       "srs": -10.3,
       "sos": -5.8,
       "name": "Saint Francis (PA)",
-      "team_id": "saint_francis__pa"
+      "team_id": "saint_francis_pa"
     },
     {
       "team_name": "Saint Joseph's",
@@ -2963,7 +2963,7 @@
       "srs": 8.05,
       "sos": 6.43,
       "name": "Saint Mary's (CA)",
-      "team_id": "saint_mary_s__ca"
+      "team_id": "saint_mary_s_ca"
     },
     {
       "team_name": "Saint Peter's",
@@ -3014,7 +3014,7 @@
       "team_id": "san_diego"
     },
     {
-      "team_name": "San Diego StateNCAA",
+      "team_name": "San Diego State",
       "pace": 66.9,
       "off_rtg": 109.5,
       "def_rtg": 91.44778987828313,
@@ -3022,7 +3022,7 @@
       "losses": 5,
       "srs": 14.36,
       "sos": 2.99,
-      "name": "San Diego StateNCAA",
+      "name": "San Diego State",
       "team_id": "san_diego_state"
     },
     {
@@ -3218,7 +3218,7 @@
       "team_id": "southern"
     },
     {
-      "team_name": "Southern CaliforniaNCAA",
+      "team_name": "Southern California",
       "pace": 67.7,
       "off_rtg": 109.0,
       "def_rtg": 96.14609910030886,
@@ -3226,7 +3226,7 @@
       "losses": 8,
       "srs": 20.5,
       "sos": 10.65,
-      "name": "Southern CaliforniaNCAA",
+      "name": "Southern California",
       "team_id": "southern_california"
     },
     {
@@ -3290,7 +3290,7 @@
       "team_id": "southern_utah"
     },
     {
-      "team_name": "St. BonaventureNCAA",
+      "team_name": "St. Bonaventure",
       "pace": 65.3,
       "off_rtg": 107.3,
       "def_rtg": 93.56085466345803,
@@ -3298,8 +3298,8 @@
       "losses": 5,
       "srs": 13.44,
       "sos": 4.49,
-      "name": "St. BonaventureNCAA",
-      "team_id": "st__bonaventure"
+      "name": "St. Bonaventure",
+      "team_id": "st_bonaventure"
     },
     {
       "team_name": "St. Francis (NY)",
@@ -3311,7 +3311,7 @@
       "srs": -10.23,
       "sos": -8.38,
       "name": "St. Francis (NY)",
-      "team_id": "st__francis__ny"
+      "team_id": "st_francis_ny"
     },
     {
       "team_name": "St. John's (NY)",
@@ -3323,7 +3323,7 @@
       "srs": 9.41,
       "sos": 7.19,
       "name": "St. John's (NY)",
-      "team_id": "st__john_s__ny"
+      "team_id": "st_john_s_ny"
     },
     {
       "team_name": "Stanford",
@@ -3347,7 +3347,7 @@
       "srs": -1.63,
       "sos": -8.46,
       "name": "Stephen F. Austin",
-      "team_id": "stephen_f__austin"
+      "team_id": "stephen_f_austin"
     },
     {
       "team_name": "Stetson",
@@ -3374,7 +3374,7 @@
       "team_id": "stony_brook"
     },
     {
-      "team_name": "SyracuseNCAA",
+      "team_name": "Syracuse",
       "pace": 69.3,
       "off_rtg": 107.5,
       "def_rtg": 101.21624407338693,
@@ -3382,7 +3382,7 @@
       "losses": 10,
       "srs": 13.27,
       "sos": 8.59,
-      "name": "SyracuseNCAA",
+      "name": "Syracuse",
       "team_id": "syracuse"
     },
     {
@@ -3422,7 +3422,7 @@
       "team_id": "temple"
     },
     {
-      "team_name": "TennesseeNCAA",
+      "team_name": "Tennessee",
       "pace": 68.7,
       "off_rtg": 104.6,
       "def_rtg": 92.40390317537333,
@@ -3430,7 +3430,7 @@
       "losses": 9,
       "srs": 16.87,
       "sos": 8.46,
-      "name": "TennesseeNCAA",
+      "name": "Tennessee",
       "team_id": "tennessee"
     },
     {
@@ -3470,7 +3470,7 @@
       "team_id": "tennessee_martin"
     },
     {
-      "team_name": "TexasNCAA",
+      "team_name": "Texas",
       "pace": 69.5,
       "off_rtg": 105.5,
       "def_rtg": 98.16147082334133,
@@ -3478,7 +3478,7 @@
       "losses": 8,
       "srs": 15.51,
       "sos": 9.36,
-      "name": "TexasNCAA",
+      "name": "Texas",
       "team_id": "texas"
     },
     {
@@ -3506,7 +3506,7 @@
       "team_id": "texas_a_m_corpus_christi"
     },
     {
-      "team_name": "Texas SouthernNCAA",
+      "team_name": "Texas Southern",
       "pace": 73.9,
       "off_rtg": 99.6,
       "def_rtg": 93.99396273550536,
@@ -3514,7 +3514,7 @@
       "losses": 9,
       "srs": -6.15,
       "sos": -9.03,
-      "name": "Texas SouthernNCAA",
+      "name": "Texas Southern",
       "team_id": "texas_southern"
     },
     {
@@ -3530,7 +3530,7 @@
       "team_id": "texas_state"
     },
     {
-      "team_name": "Texas TechNCAA",
+      "team_name": "Texas Tech",
       "pace": 67.1,
       "off_rtg": 107.1,
       "def_rtg": 94.19805745413434,
@@ -3538,7 +3538,7 @@
       "losses": 11,
       "srs": 16.59,
       "sos": 7.28,
-      "name": "Texas TechNCAA",
+      "name": "Texas Tech",
       "team_id": "texas_tech"
     },
     {
@@ -3686,7 +3686,7 @@
       "team_id": "uc_san_diego"
     },
     {
-      "team_name": "UC Santa BarbaraNCAA",
+      "team_name": "UC Santa Barbara",
       "pace": 67.2,
       "off_rtg": 112.0,
       "def_rtg": 93.47442680776014,
@@ -3694,7 +3694,7 @@
       "losses": 5,
       "srs": 7.8,
       "sos": -2.08,
-      "name": "UC Santa BarbaraNCAA",
+      "name": "UC Santa Barbara",
       "team_id": "uc_santa_barbara"
     },
     {
@@ -3710,7 +3710,7 @@
       "team_id": "ucf"
     },
     {
-      "team_name": "UCLANCAA",
+      "team_name": "UCLA",
       "pace": 65.4,
       "off_rtg": 108.4,
       "def_rtg": 104.64449541284402,
@@ -3718,7 +3718,7 @@
       "losses": 10,
       "srs": 16.3,
       "sos": 11.34,
-      "name": "UCLANCAA",
+      "name": "UCLA",
       "team_id": "ucla"
     },
     {
@@ -3734,7 +3734,7 @@
       "team_id": "unc_asheville"
     },
     {
-      "team_name": "UNC GreensboroNCAA",
+      "team_name": "UNC Greensboro",
       "pace": 70.5,
       "off_rtg": 103.1,
       "def_rtg": 95.50827423167848,
@@ -3742,7 +3742,7 @@
       "losses": 9,
       "srs": 3.48,
       "sos": -2.15,
-      "name": "UNC GreensboroNCAA",
+      "name": "UNC Greensboro",
       "team_id": "unc_greensboro"
     },
     {
@@ -3782,7 +3782,7 @@
       "team_id": "utah"
     },
     {
-      "team_name": "Utah StateNCAA",
+      "team_name": "Utah State",
       "pace": 69.5,
       "off_rtg": 104.4,
       "def_rtg": 89.70478789382287,
@@ -3790,7 +3790,7 @@
       "losses": 9,
       "srs": 10.99,
       "sos": 1.32,
-      "name": "Utah StateNCAA",
+      "name": "Utah State",
       "team_id": "utah_state"
     },
     {
@@ -3878,7 +3878,7 @@
       "team_id": "vermont"
     },
     {
-      "team_name": "VillanovaNCAA",
+      "team_name": "Villanova",
       "pace": 65.7,
       "off_rtg": 113.3,
       "def_rtg": 101.24809741248097,
@@ -3886,11 +3886,11 @@
       "losses": 7,
       "srs": 17.47,
       "sos": 9.19,
-      "name": "VillanovaNCAA",
+      "name": "Villanova",
       "team_id": "villanova"
     },
     {
-      "team_name": "VirginiaNCAA",
+      "team_name": "Virginia",
       "pace": 60.8,
       "off_rtg": 111.5,
       "def_rtg": 99.53947368421052,
@@ -3898,11 +3898,11 @@
       "losses": 7,
       "srs": 15.27,
       "sos": 7.59,
-      "name": "VirginiaNCAA",
+      "name": "Virginia",
       "team_id": "virginia"
     },
     {
-      "team_name": "Virginia CommonwealthNCAA",
+      "team_name": "Virginia Commonwealth",
       "pace": 70.5,
       "off_rtg": 101.2,
       "def_rtg": 92.41680305510093,
@@ -3910,7 +3910,7 @@
       "losses": 7,
       "srs": 11.3,
       "sos": 4.76,
-      "name": "Virginia CommonwealthNCAA",
+      "name": "Virginia Commonwealth",
       "team_id": "virginia_commonwealth"
     },
     {
@@ -3926,7 +3926,7 @@
       "team_id": "vmi"
     },
     {
-      "team_name": "Virginia TechNCAA",
+      "team_name": "Virginia Tech",
       "pace": 66.4,
       "off_rtg": 106.7,
       "def_rtg": 99.32913472070098,
@@ -3934,7 +3934,7 @@
       "losses": 7,
       "srs": 12.59,
       "sos": 6.5,
-      "name": "Virginia TechNCAA",
+      "name": "Virginia Tech",
       "team_id": "virginia_tech"
     },
     {
@@ -3998,7 +3998,7 @@
       "team_id": "weber_state"
     },
     {
-      "team_name": "West VirginiaNCAA",
+      "team_name": "West Virginia",
       "pace": 70.6,
       "off_rtg": 108.2,
       "def_rtg": 102.03184526716812,
@@ -4006,7 +4006,7 @@
       "losses": 10,
       "srs": 15.36,
       "sos": 10.05,
-      "name": "West VirginiaNCAA",
+      "name": "West Virginia",
       "team_id": "west_virginia"
     },
     {
@@ -4058,7 +4058,7 @@
       "team_id": "western_michigan"
     },
     {
-      "team_name": "Wichita StateNCAA",
+      "team_name": "Wichita State",
       "pace": 68.6,
       "off_rtg": 103.0,
       "def_rtg": 97.33633713225551,
@@ -4066,7 +4066,7 @@
       "losses": 6,
       "srs": 9.36,
       "sos": 6.91,
-      "name": "Wichita StateNCAA",
+      "name": "Wichita State",
       "team_id": "wichita_state"
     },
     {
@@ -4079,10 +4079,10 @@
       "srs": -11.23,
       "sos": -3.99,
       "name": "William & Mary",
-      "team_id": "william___mary"
+      "team_id": "william_mary"
     },
     {
-      "team_name": "WinthropNCAA",
+      "team_name": "Winthrop",
       "pace": 72.5,
       "off_rtg": 108.8,
       "def_rtg": 92.46896551724137,
@@ -4090,11 +4090,11 @@
       "losses": 2,
       "srs": 4.69,
       "sos": -7.15,
-      "name": "WinthropNCAA",
+      "name": "Winthrop",
       "team_id": "winthrop"
     },
     {
-      "team_name": "WisconsinNCAA",
+      "team_name": "Wisconsin",
       "pace": 65.8,
       "off_rtg": 105.4,
       "def_rtg": 98.19590155897637,
@@ -4102,7 +4102,7 @@
       "losses": 13,
       "srs": 17.22,
       "sos": 11.93,
-      "name": "WisconsinNCAA",
+      "name": "Wisconsin",
       "team_id": "wisconsin"
     },
     {

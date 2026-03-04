@@ -333,7 +333,7 @@
       "season": 2010,
       "team_name": "Saint Mary's",
       "school_slug": "saint-marys-ca",
-      "team_id": "saint_mary_s",
+      "team_id": "saint_mary_s__ca",
       "seed": 10,
       "region": "South"
     },
@@ -413,7 +413,7 @@
       "season": 2010,
       "team_name": "Pitt",
       "school_slug": "pittsburgh",
-      "team_id": "pitt",
+      "team_id": "pittsburgh",
       "seed": 3,
       "region": "West"
     },
@@ -445,7 +445,7 @@
       "season": 2010,
       "team_name": "BYU",
       "school_slug": "brigham-young",
-      "team_id": "byu",
+      "team_id": "brigham_young",
       "seed": 7,
       "region": "West"
     },

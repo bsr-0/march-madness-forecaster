@@ -72,7 +72,7 @@ REMOVED_REDUNDANCIES = [
 # games with stability=0.1, near-zero predictive power per academic lit).
 # FIX 2.3: preseason_ap_rank encoding smoothed (was cliff at #25→unranked).
 # Down from 67 → 66 team features.
-TEAM_FEATURE_DIM = 66  # C4+WS3: 64 base + 2 external rating features
+TEAM_FEATURE_DIM = 69  # C4+WS3: 64 base + 2 external rating + 2 Poisson Binomial resume + 1 tournament resume composite
 
 # FIX #4: Indices (into the team feature vector) of the top features used
 # for absolute-level matchup context.  These are the features where the
@@ -162,6 +162,12 @@ class TeamFeatures:
 
     # WAB (Wins Above Bubble)
     wab: float = 0.0
+
+    # Poisson Binomial resume metrics (NCAA selection committee)
+    # SOR: P(top-25 reference team achieves ≤ this team's wins vs this schedule)
+    sor: float = 0.5
+    # WAB via Poisson Binomial: actual_wins - E[bubble_team_wins vs same schedule]
+    wab_poisson: float = 0.0
 
     # Momentum (last-10-game rolling AdjEM delta)
     momentum: float = 0.0
@@ -280,6 +286,11 @@ class TeamFeatures:
     # Home-court dependence (home AdjEM - away AdjEM; high = location-sensitive)
     home_court_dependence: float = 0.0
 
+    # Tournament resume composite — Bayesian-shrunk combination of Q1 record,
+    # road/neutral record, SOR, and elite SOS.  Single feature that captures
+    # opponent-quality signal without dimensionality cost.
+    tournament_resume: float = 0.0
+
     # NOTE: momentum_5g kept as attribute but REMOVED from to_vector()
     # (FIX #1: ~r=0.85 with momentum)
     momentum_5g: float = 0.0
@@ -343,6 +354,8 @@ class TeamFeatures:
         "ncsos_adj_em":         (0.0,    5.0),
         "luck":                 (0.0,    0.045),
         "wab":                  (0.0,    4.5),
+        "sor":                  (0.50,   0.25),
+        "wab_poisson":          (0.0,    4.5),
         "momentum":             (0.0,    4.0),
         "three_pt_var":         (0.07,   0.03),
         "pace_adj_var":         (7.0,    4.0),
@@ -450,6 +463,12 @@ class TeamFeatures:
             # WAB (1)
             self.wab,
 
+            # Poisson Binomial resume metrics (2)
+            # SOR: schedule-aware record impressiveness [0,1]
+            self.sor,
+            # WAB via Poisson Binomial expected wins
+            self.wab_poisson,
+
             # Momentum (1) — momentum_5g REMOVED (~r=0.85 with momentum)
             self.momentum,
 
@@ -540,6 +559,9 @@ class TeamFeatures:
             # Home-court dependence (1)
             self.home_court_dependence,
 
+            # Tournament resume composite (1) — Bayesian-shrunk opponent quality
+            self.tournament_resume,
+
             # C4: transition_efficiency + defensive_transition_vulnerability REMOVED
             # (speculative formula — pace_surplus * (AdjO/100-1) has no empirical basis)
 
@@ -628,6 +650,8 @@ class TeamFeatures:
             'luck',
             # WAB (1)
             'wab',
+            # Poisson Binomial resume metrics (2)
+            'sor', 'wab_poisson',
             # Momentum (1)
             'momentum',
             # Variance / upset risk (2)
@@ -669,6 +693,8 @@ class TeamFeatures:
             # KenPom / ShotQuality replacements (reduced)
             'neutral_site_win_pct',
             'home_court_dependence',
+            # Tournament resume composite (1)
+            'tournament_resume',
             # C4: 'transition_efficiency', 'defensive_transition_vulnerability' REMOVED
             'backcourt_rapm', 'frontcourt_rapm',
             # External ratings (2) — WS3
@@ -846,6 +872,8 @@ class FeatureEngineer:
             features.ncsos_adj_em = pm.get('ncsos_adj_em', 0.0)
             features.luck = pm.get('luck', 0.0)
             features.wab = pm.get('wab', 0.0)
+            features.sor = pm.get('sor', 0.5)
+            features.wab_poisson = pm.get('wab_poisson', 0.0)
             features.momentum = pm.get('momentum', 0.0)
             features.three_pt_variance = pm.get('three_pt_variance', 0.095)
             features.consistency = pm.get('consistency', 0.5)
@@ -896,6 +924,18 @@ class FeatureEngineer:
             features.opp_true_shooting_pct = pm.get('opp_true_shooting_pct', 0.54)
             features.neutral_site_win_pct = pm.get('neutral_site_win_pct', 0.5)
             features.home_court_dependence = pm.get('home_court_dependence', 0.0)
+
+            # Tournament resume composite — Bayesian-shrunk opponent quality
+            from .tournament_features import compute_tournament_resume_composite
+            features.tournament_resume = compute_tournament_resume_composite(
+                q1_win_pct=features.q1_win_pct,
+                q1_games=int(pm.get('q1_wins', 0)) + int(pm.get('q1_losses', 0)),
+                road_neutral_win_pct=pm.get('road_neutral_win_pct', features.neutral_site_win_pct),
+                road_neutral_games=int(pm.get('road_neutral_games', 0)),
+                elite_sos=features.elite_sos,
+                sor=pm.get('sor', features.sor),
+            )
+
             features.momentum_5g = pm.get('momentum_5g', 0.0)
             # C4: transition_efficiency and defensive_transition_vulnerability no longer set
             # (fields remain on dataclass at default 0.0)

@@ -85,7 +85,7 @@
       "season": 2018,
       "team_name": "St. Bonaventure",
       "school_slug": "st-bonaventure",
-      "team_id": "st__bonaventure",
+      "team_id": "st_bonaventure",
       "seed": 11,
       "region": "East"
     },
@@ -117,7 +117,7 @@
       "season": 2018,
       "team_name": "Stephen F. Austin",
       "school_slug": "stephen-f-austin",
-      "team_id": "stephen_f__austin",
+      "team_id": "stephen_f_austin",
       "seed": 14,
       "region": "East"
     },
@@ -365,7 +365,7 @@
       "season": 2018,
       "team_name": "Loyola (IL)",
       "school_slug": "loyola-il",
-      "team_id": "loyola__il",
+      "team_id": "loyola_il",
       "seed": 11,
       "region": "South"
     },
@@ -421,7 +421,7 @@
       "season": 2018,
       "team_name": "UNC",
       "school_slug": "north-carolina",
-      "team_id": "unc",
+      "team_id": "north_carolina",
       "seed": 2,
       "region": "West"
     },

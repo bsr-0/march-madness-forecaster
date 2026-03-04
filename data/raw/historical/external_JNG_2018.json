@@ -1,0 +1,2459 @@
+[
+  {
+    "team_name": "Abilene Chr",
+    "team_id": "abilene_chr",
+    "rating": 137.0,
+    "ranking": 215,
+    "normalized": 0.388571
+  },
+  {
+    "team_name": "Air Force",
+    "team_id": "air_force",
+    "rating": 91.0,
+    "ranking": 261,
+    "normalized": 0.257143
+  },
+  {
+    "team_name": "Akron",
+    "team_id": "akron",
+    "rating": 118.0,
+    "ranking": 234,
+    "normalized": 0.334286
+  },
+  {
+    "team_name": "Alabama",
+    "team_id": "alabama",
+    "rating": 315.0,
+    "ranking": 37,
+    "normalized": 0.897143
+  },
+  {
+    "team_name": "Alabama A&M",
+    "team_id": "alabama_a_m",
+    "rating": 1.0,
+    "ranking": 351,
+    "normalized": 0.0
+  },
+  {
+    "team_name": "Alabama St",
+    "team_id": "alabama_st",
+    "rating": 24.0,
+    "ranking": 328,
+    "normalized": 0.065714
+  },
+  {
+    "team_name": "SUNY Albany",
+    "team_id": "suny_albany",
+    "rating": 214.0,
+    "ranking": 138,
+    "normalized": 0.608571
+  },
+  {
+    "team_name": "Alcorn St",
+    "team_id": "alcorn_st",
+    "rating": 43.0,
+    "ranking": 309,
+    "normalized": 0.12
+  },
+  {
+    "team_name": "American Univ",
+    "team_id": "american_univ",
+    "rating": 9.0,
+    "ranking": 343,
+    "normalized": 0.022857
+  },
+  {
+    "team_name": "Appalachian St",
+    "team_id": "appalachian_st",
+    "rating": 111.0,
+    "ranking": 241,
+    "normalized": 0.314286
+  },
+  {
+    "team_name": "Arizona",
+    "team_id": "arizona",
+    "rating": 336.0,
+    "ranking": 16,
+    "normalized": 0.957143
+  },
+  {
+    "team_name": "Arizona St",
+    "team_id": "arizona_st",
+    "rating": 300.0,
+    "ranking": 52,
+    "normalized": 0.854286
+  },
+  {
+    "team_name": "Ark Little Rock",
+    "team_id": "ark_little_rock",
+    "rating": 21.0,
+    "ranking": 331,
+    "normalized": 0.057143
+  },
+  {
+    "team_name": "Ark Pine Bluff",
+    "team_id": "ark_pine_bluff",
+    "rating": 71.0,
+    "ranking": 281,
+    "normalized": 0.2
+  },
+  {
+    "team_name": "Arkansas",
+    "team_id": "arkansas",
+    "rating": 330.0,
+    "ranking": 22,
+    "normalized": 0.94
+  },
+  {
+    "team_name": "Arkansas St",
+    "team_id": "arkansas_st",
+    "rating": 49.0,
+    "ranking": 303,
+    "normalized": 0.137143
+  },
+  {
+    "team_name": "Army",
+    "team_id": "army",
+    "rating": 56.0,
+    "ranking": 296,
+    "normalized": 0.157143
+  },
+  {
+    "team_name": "Auburn",
+    "team_id": "auburn",
+    "rating": 340.0,
+    "ranking": 12,
+    "normalized": 0.968571
+  },
+  {
+    "team_name": "Austin Peay",
+    "team_id": "austin_peay",
+    "rating": 201.0,
+    "ranking": 151,
+    "normalized": 0.571429
+  },
+  {
+    "team_name": "Ball St",
+    "team_id": "ball_st",
+    "rating": 224.0,
+    "ranking": 128,
+    "normalized": 0.637143
+  },
+  {
+    "team_name": "Baylor",
+    "team_id": "baylor",
+    "rating": 307.0,
+    "ranking": 45,
+    "normalized": 0.874286
+  },
+  {
+    "team_name": "Belmont",
+    "team_id": "belmont",
+    "rating": 276.0,
+    "ranking": 76,
+    "normalized": 0.785714
+  },
+  {
+    "team_name": "Bethune-Cookman",
+    "team_id": "bethune_cookman",
+    "rating": 157.0,
+    "ranking": 195,
+    "normalized": 0.445714
+  },
+  {
+    "team_name": "Binghamton",
+    "team_id": "binghamton",
+    "rating": 36.0,
+    "ranking": 316,
+    "normalized": 0.1
+  },
+  {
+    "team_name": "Boise St",
+    "team_id": "boise_st",
+    "rating": 288.0,
+    "ranking": 64,
+    "normalized": 0.82
+  },
+  {
+    "team_name": "Boston College",
+    "team_id": "boston_college",
+    "rating": 278.0,
+    "ranking": 74,
+    "normalized": 0.791429
+  },
+  {
+    "team_name": "Boston Univ",
+    "team_id": "boston_univ",
+    "rating": 115.0,
+    "ranking": 237,
+    "normalized": 0.325714
+  },
+  {
+    "team_name": "Bowling Green",
+    "team_id": "bowling_green",
+    "rating": 142.0,
+    "ranking": 210,
+    "normalized": 0.402857
+  },
+  {
+    "team_name": "Bradley",
+    "team_id": "bradley",
+    "rating": 227.0,
+    "ranking": 125,
+    "normalized": 0.645714
+  },
+  {
+    "team_name": "Brown",
+    "team_id": "brown",
+    "rating": 52.0,
+    "ranking": 300,
+    "normalized": 0.145714
+  },
+  {
+    "team_name": "Bryant",
+    "team_id": "bryant",
+    "rating": 3.0,
+    "ranking": 349,
+    "normalized": 0.005714
+  },
+  {
+    "team_name": "Bucknell",
+    "team_id": "bucknell",
+    "rating": 268.0,
+    "ranking": 84,
+    "normalized": 0.762857
+  },
+  {
+    "team_name": "Buffalo",
+    "team_id": "buffalo",
+    "rating": 294.0,
+    "ranking": 58,
+    "normalized": 0.837143
+  },
+  {
+    "team_name": "Butler",
+    "team_id": "butler",
+    "rating": 320.0,
+    "ranking": 32,
+    "normalized": 0.911429
+  },
+  {
+    "team_name": "BYU",
+    "team_id": "brigham_young",
+    "rating": 280.0,
+    "ranking": 72,
+    "normalized": 0.797143
+  },
+  {
+    "team_name": "C Michigan",
+    "team_id": "c_michigan",
+    "rating": 197.0,
+    "ranking": 155,
+    "normalized": 0.56
+  },
+  {
+    "team_name": "Cal Poly",
+    "team_id": "cal_poly",
+    "rating": 34.0,
+    "ranking": 318,
+    "normalized": 0.094286
+  },
+  {
+    "team_name": "California",
+    "team_id": "california",
+    "rating": 85.0,
+    "ranking": 267,
+    "normalized": 0.24
+  },
+  {
+    "team_name": "Campbell",
+    "team_id": "campbell",
+    "rating": 131.0,
+    "ranking": 221,
+    "normalized": 0.371429
+  },
+  {
+    "team_name": "Canisius",
+    "team_id": "canisius",
+    "rating": 228.0,
+    "ranking": 124,
+    "normalized": 0.648571
+  },
+  {
+    "team_name": "Cent Arkansas",
+    "team_id": "cent_arkansas",
+    "rating": 154.0,
+    "ranking": 198,
+    "normalized": 0.437143
+  },
+  {
+    "team_name": "Central Conn",
+    "team_id": "central_conn",
+    "rating": 78.0,
+    "ranking": 274,
+    "normalized": 0.22
+  },
+  {
+    "team_name": "Charleston So",
+    "team_id": "charleston_so",
+    "rating": 116.0,
+    "ranking": 236,
+    "normalized": 0.328571
+  },
+  {
+    "team_name": "Charlotte",
+    "team_id": "charlotte",
+    "rating": 14.0,
+    "ranking": 338,
+    "normalized": 0.037143
+  },
+  {
+    "team_name": "Chattanooga",
+    "team_id": "chattanooga",
+    "rating": 47.0,
+    "ranking": 305,
+    "normalized": 0.131429
+  },
+  {
+    "team_name": "Chicago St",
+    "team_id": "chicago_st",
+    "rating": 7.0,
+    "ranking": 345,
+    "normalized": 0.017143
+  },
+  {
+    "team_name": "Cincinnati",
+    "team_id": "cincinnati",
+    "rating": 344.0,
+    "ranking": 8,
+    "normalized": 0.98
+  },
+  {
+    "team_name": "Citadel",
+    "team_id": "citadel",
+    "rating": 75.0,
+    "ranking": 277,
+    "normalized": 0.211429
+  },
+  {
+    "team_name": "Clemson",
+    "team_id": "clemson",
+    "rating": 332.0,
+    "ranking": 20,
+    "normalized": 0.945714
+  },
+  {
+    "team_name": "Cleveland St",
+    "team_id": "cleveland_st",
+    "rating": 65.0,
+    "ranking": 287,
+    "normalized": 0.182857
+  },
+  {
+    "team_name": "Coastal Car",
+    "team_id": "coastal_car",
+    "rating": 95.0,
+    "ranking": 257,
+    "normalized": 0.268571
+  },
+  {
+    "team_name": "Col Charleston",
+    "team_id": "col_charleston",
+    "rating": 275.0,
+    "ranking": 77,
+    "normalized": 0.782857
+  },
+  {
+    "team_name": "Colgate",
+    "team_id": "colgate",
+    "rating": 186.0,
+    "ranking": 166,
+    "normalized": 0.528571
+  },
+  {
+    "team_name": "Colorado",
+    "team_id": "colorado",
+    "rating": 258.0,
+    "ranking": 94,
+    "normalized": 0.734286
+  },
+  {
+    "team_name": "Colorado St",
+    "team_id": "colorado_st",
+    "rating": 106.0,
+    "ranking": 246,
+    "normalized": 0.3
+  },
+  {
+    "team_name": "Columbia",
+    "team_id": "columbia",
+    "rating": 30.0,
+    "ranking": 322,
+    "normalized": 0.082857
+  },
+  {
+    "team_name": "Connecticut",
+    "team_id": "connecticut",
+    "rating": 175.0,
+    "ranking": 177,
+    "normalized": 0.497143
+  },
+  {
+    "team_name": "Coppin St",
+    "team_id": "coppin_st",
+    "rating": 6.0,
+    "ranking": 346,
+    "normalized": 0.014286
+  },
+  {
+    "team_name": "Cornell",
+    "team_id": "cornell",
+    "rating": 89.0,
+    "ranking": 263,
+    "normalized": 0.251429
+  },
+  {
+    "team_name": "Creighton",
+    "team_id": "creighton",
+    "rating": 313.0,
+    "ranking": 39,
+    "normalized": 0.891429
+  },
+  {
+    "team_name": "CS Bakersfield",
+    "team_id": "cs_bakersfield",
+    "rating": 104.0,
+    "ranking": 248,
+    "normalized": 0.294286
+  },
+  {
+    "team_name": "CS Fullerton",
+    "team_id": "cs_fullerton",
+    "rating": 235.0,
+    "ranking": 117,
+    "normalized": 0.668571
+  },
+  {
+    "team_name": "CS Northridge",
+    "team_id": "cs_northridge",
+    "rating": 8.0,
+    "ranking": 344,
+    "normalized": 0.02
+  },
+  {
+    "team_name": "CS Sacramento",
+    "team_id": "cs_sacramento",
+    "rating": 22.0,
+    "ranking": 330,
+    "normalized": 0.06
+  },
+  {
+    "team_name": "Dartmouth",
+    "team_id": "dartmouth",
+    "rating": 18.0,
+    "ranking": 334,
+    "normalized": 0.048571
+  },
+  {
+    "team_name": "Davidson",
+    "team_id": "davidson",
+    "rating": 285.0,
+    "ranking": 67,
+    "normalized": 0.811429
+  },
+  {
+    "team_name": "Dayton",
+    "team_id": "dayton",
+    "rating": 140.0,
+    "ranking": 212,
+    "normalized": 0.397143
+  },
+  {
+    "team_name": "Delaware",
+    "team_id": "delaware",
+    "rating": 123.0,
+    "ranking": 229,
+    "normalized": 0.348571
+  },
+  {
+    "team_name": "Delaware St",
+    "team_id": "delaware_st",
+    "rating": 2.0,
+    "ranking": 350,
+    "normalized": 0.002857
+  },
+  {
+    "team_name": "Denver",
+    "team_id": "denver",
+    "rating": 138.0,
+    "ranking": 214,
+    "normalized": 0.391429
+  },
+  {
+    "team_name": "DePaul",
+    "team_id": "depaul",
+    "rating": 143.0,
+    "ranking": 209,
+    "normalized": 0.405714
+  },
+  {
+    "team_name": "Detroit",
+    "team_id": "detroit",
+    "rating": 29.0,
+    "ranking": 323,
+    "normalized": 0.08
+  },
+  {
+    "team_name": "Drake",
+    "team_id": "drake",
+    "rating": 159.0,
+    "ranking": 193,
+    "normalized": 0.451429
+  },
+  {
+    "team_name": "Drexel",
+    "team_id": "drexel",
+    "rating": 105.0,
+    "ranking": 247,
+    "normalized": 0.297143
+  },
+  {
+    "team_name": "Duke",
+    "team_id": "duke",
+    "rating": 346.0,
+    "ranking": 6,
+    "normalized": 0.985714
+  },
+  {
+    "team_name": "Duquesne",
+    "team_id": "duquesne",
+    "rating": 139.0,
+    "ranking": 213,
+    "normalized": 0.394286
+  },
+  {
+    "team_name": "E Illinois",
+    "team_id": "e_illinois",
+    "rating": 81.0,
+    "ranking": 271,
+    "normalized": 0.228571
+  },
+  {
+    "team_name": "E Kentucky",
+    "team_id": "e_kentucky",
+    "rating": 61.0,
+    "ranking": 291,
+    "normalized": 0.171429
+  },
+  {
+    "team_name": "E Michigan",
+    "team_id": "e_michigan",
+    "rating": 231.0,
+    "ranking": 121,
+    "normalized": 0.657143
+  },
+  {
+    "team_name": "E Washington",
+    "team_id": "e_washington",
+    "rating": 225.0,
+    "ranking": 127,
+    "normalized": 0.64
+  },
+  {
+    "team_name": "East Carolina",
+    "team_id": "east_carolina",
+    "rating": 69.0,
+    "ranking": 283,
+    "normalized": 0.194286
+  },
+  {
+    "team_name": "SIUE",
+    "team_id": "siue",
+    "rating": 38.0,
+    "ranking": 314,
+    "normalized": 0.105714
+  },
+  {
+    "team_name": "Elon",
+    "team_id": "elon",
+    "rating": 125.0,
+    "ranking": 227,
+    "normalized": 0.354286
+  },
+  {
+    "team_name": "ETSU",
+    "team_id": "etsu",
+    "rating": 265.0,
+    "ranking": 87,
+    "normalized": 0.754286
+  },
+  {
+    "team_name": "Evansville",
+    "team_id": "evansville",
+    "rating": 188.0,
+    "ranking": 164,
+    "normalized": 0.534286
+  },
+  {
+    "team_name": "F Dickinson",
+    "team_id": "f_dickinson",
+    "rating": 87.0,
+    "ranking": 265,
+    "normalized": 0.245714
+  },
+  {
+    "team_name": "Fairfield",
+    "team_id": "fairfield",
+    "rating": 173.0,
+    "ranking": 179,
+    "normalized": 0.491429
+  },
+  {
+    "team_name": "FL Atlantic",
+    "team_id": "fl_atlantic",
+    "rating": 74.0,
+    "ranking": 278,
+    "normalized": 0.208571
+  },
+  {
+    "team_name": "FGCU",
+    "team_id": "fgcu",
+    "rating": 226.0,
+    "ranking": 126,
+    "normalized": 0.642857
+  },
+  {
+    "team_name": "Florida",
+    "team_id": "florida",
+    "rating": 334.0,
+    "ranking": 18,
+    "normalized": 0.951429
+  },
+  {
+    "team_name": "Florida A&M",
+    "team_id": "florida_a_m",
+    "rating": 33.0,
+    "ranking": 319,
+    "normalized": 0.091429
+  },
+  {
+    "team_name": "Florida Intl",
+    "team_id": "florida_intl",
+    "rating": 83.0,
+    "ranking": 269,
+    "normalized": 0.234286
+  },
+  {
+    "team_name": "Florida St",
+    "team_id": "florida_st",
+    "rating": 310.0,
+    "ranking": 42,
+    "normalized": 0.882857
+  },
+  {
+    "team_name": "Fordham",
+    "team_id": "fordham",
+    "rating": 48.0,
+    "ranking": 304,
+    "normalized": 0.134286
+  },
+  {
+    "team_name": "Fresno St",
+    "team_id": "fresno_st",
+    "rating": 251.0,
+    "ranking": 101,
+    "normalized": 0.714286
+  },
+  {
+    "team_name": "Furman",
+    "team_id": "furman",
+    "rating": 263.0,
+    "ranking": 89,
+    "normalized": 0.748571
+  },
+  {
+    "team_name": "G Washington",
+    "team_id": "g_washington",
+    "rating": 149.0,
+    "ranking": 203,
+    "normalized": 0.422857
+  },
+  {
+    "team_name": "Ga Southern",
+    "team_id": "ga_southern",
+    "rating": 207.0,
+    "ranking": 145,
+    "normalized": 0.588571
+  },
+  {
+    "team_name": "Gardner Webb",
+    "team_id": "gardner_webb",
+    "rating": 114.0,
+    "ranking": 238,
+    "normalized": 0.322857
+  },
+  {
+    "team_name": "George Mason",
+    "team_id": "george_mason",
+    "rating": 141.0,
+    "ranking": 211,
+    "normalized": 0.4
+  },
+  {
+    "team_name": "Georgetown",
+    "team_id": "georgetown",
+    "rating": 198.0,
+    "ranking": 154,
+    "normalized": 0.562857
+  },
+  {
+    "team_name": "Georgia",
+    "team_id": "georgia",
+    "rating": 292.0,
+    "ranking": 60,
+    "normalized": 0.831429
+  },
+  {
+    "team_name": "Georgia St",
+    "team_id": "georgia_st",
+    "rating": 212.0,
+    "ranking": 140,
+    "normalized": 0.602857
+  },
+  {
+    "team_name": "Georgia Tech",
+    "team_id": "georgia_tech",
+    "rating": 170.0,
+    "ranking": 182,
+    "normalized": 0.482857
+  },
+  {
+    "team_name": "Gonzaga",
+    "team_id": "gonzaga",
+    "rating": 337.0,
+    "ranking": 15,
+    "normalized": 0.96
+  },
+  {
+    "team_name": "Grambling",
+    "team_id": "grambling",
+    "rating": 162.0,
+    "ranking": 190,
+    "normalized": 0.46
+  },
+  {
+    "team_name": "Grand Canyon",
+    "team_id": "grand_canyon",
+    "rating": 233.0,
+    "ranking": 119,
+    "normalized": 0.662857
+  },
+  {
+    "team_name": "Hampton",
+    "team_id": "hampton",
+    "rating": 183.0,
+    "ranking": 169,
+    "normalized": 0.52
+  },
+  {
+    "team_name": "Hartford",
+    "team_id": "hartford",
+    "rating": 182.0,
+    "ranking": 170,
+    "normalized": 0.517143
+  },
+  {
+    "team_name": "Harvard",
+    "team_id": "harvard",
+    "rating": 221.0,
+    "ranking": 131,
+    "normalized": 0.628571
+  },
+  {
+    "team_name": "Hawaii",
+    "team_id": "hawaii",
+    "rating": 192.0,
+    "ranking": 160,
+    "normalized": 0.545714
+  },
+  {
+    "team_name": "High Point",
+    "team_id": "high_point",
+    "rating": 98.0,
+    "ranking": 254,
+    "normalized": 0.277143
+  },
+  {
+    "team_name": "Hofstra",
+    "team_id": "hofstra",
+    "rating": 242.0,
+    "ranking": 110,
+    "normalized": 0.688571
+  },
+  {
+    "team_name": "Holy Cross",
+    "team_id": "holy_cross",
+    "rating": 53.0,
+    "ranking": 299,
+    "normalized": 0.148571
+  },
+  {
+    "team_name": "Houston",
+    "team_id": "houston",
+    "rating": 329.0,
+    "ranking": 23,
+    "normalized": 0.937143
+  },
+  {
+    "team_name": "Houston Chr",
+    "team_id": "houston_chr",
+    "rating": 13.0,
+    "ranking": 339,
+    "normalized": 0.034286
+  },
+  {
+    "team_name": "Howard",
+    "team_id": "howard",
+    "rating": 28.0,
+    "ranking": 324,
+    "normalized": 0.077143
+  },
+  {
+    "team_name": "Idaho",
+    "team_id": "idaho",
+    "rating": 229.0,
+    "ranking": 123,
+    "normalized": 0.651429
+  },
+  {
+    "team_name": "Idaho St",
+    "team_id": "idaho_st",
+    "rating": 94.0,
+    "ranking": 258,
+    "normalized": 0.265714
+  },
+  {
+    "team_name": "IL Chicago",
+    "team_id": "il_chicago",
+    "rating": 165.0,
+    "ranking": 187,
+    "normalized": 0.468571
+  },
+  {
+    "team_name": "Illinois",
+    "team_id": "illinois",
+    "rating": 151.0,
+    "ranking": 201,
+    "normalized": 0.428571
+  },
+  {
+    "team_name": "Illinois St",
+    "team_id": "illinois_st",
+    "rating": 240.0,
+    "ranking": 112,
+    "normalized": 0.682857
+  },
+  {
+    "team_name": "Incarnate Word",
+    "team_id": "incarnate_word",
+    "rating": 19.0,
+    "ranking": 333,
+    "normalized": 0.051429
+  },
+  {
+    "team_name": "Indiana",
+    "team_id": "indiana",
+    "rating": 216.0,
+    "ranking": 136,
+    "normalized": 0.614286
+  },
+  {
+    "team_name": "Indiana St",
+    "team_id": "indiana_st",
+    "rating": 126.0,
+    "ranking": 226,
+    "normalized": 0.357143
+  },
+  {
+    "team_name": "Iona",
+    "team_id": "iona",
+    "rating": 230.0,
+    "ranking": 122,
+    "normalized": 0.654286
+  },
+  {
+    "team_name": "Iowa",
+    "team_id": "iowa",
+    "rating": 156.0,
+    "ranking": 196,
+    "normalized": 0.442857
+  },
+  {
+    "team_name": "Iowa St",
+    "team_id": "iowa_st",
+    "rating": 195.0,
+    "ranking": 157,
+    "normalized": 0.554286
+  },
+  {
+    "team_name": "PFW",
+    "team_id": "pfw",
+    "rating": 178.0,
+    "ranking": 174,
+    "normalized": 0.505714
+  },
+  {
+    "team_name": "IUPUI",
+    "team_id": "iupui",
+    "rating": 60.0,
+    "ranking": 292,
+    "normalized": 0.168571
+  },
+  {
+    "team_name": "Jackson St",
+    "team_id": "jackson_st",
+    "rating": 58.0,
+    "ranking": 294,
+    "normalized": 0.162857
+  },
+  {
+    "team_name": "Jacksonville",
+    "team_id": "jacksonville",
+    "rating": 102.0,
+    "ranking": 250,
+    "normalized": 0.288571
+  },
+  {
+    "team_name": "Jacksonville St",
+    "team_id": "jacksonville_st",
+    "rating": 213.0,
+    "ranking": 139,
+    "normalized": 0.605714
+  },
+  {
+    "team_name": "James Madison",
+    "team_id": "james_madison",
+    "rating": 55.0,
+    "ranking": 297,
+    "normalized": 0.154286
+  },
+  {
+    "team_name": "Kansas",
+    "team_id": "kansas",
+    "rating": 350.0,
+    "ranking": 2,
+    "normalized": 0.997143
+  },
+  {
+    "team_name": "Kansas St",
+    "team_id": "kansas_st",
+    "rating": 325.0,
+    "ranking": 27,
+    "normalized": 0.925714
+  },
+  {
+    "team_name": "Kennesaw",
+    "team_id": "kennesaw",
+    "rating": 54.0,
+    "ranking": 298,
+    "normalized": 0.151429
+  },
+  {
+    "team_name": "Kent",
+    "team_id": "kent",
+    "rating": 168.0,
+    "ranking": 184,
+    "normalized": 0.477143
+  },
+  {
+    "team_name": "Kentucky",
+    "team_id": "kentucky",
+    "rating": 335.0,
+    "ranking": 17,
+    "normalized": 0.954286
+  },
+  {
+    "team_name": "La Salle",
+    "team_id": "la_salle",
+    "rating": 122.0,
+    "ranking": 230,
+    "normalized": 0.345714
+  },
+  {
+    "team_name": "Lafayette",
+    "team_id": "lafayette",
+    "rating": 31.0,
+    "ranking": 321,
+    "normalized": 0.085714
+  },
+  {
+    "team_name": "Lamar",
+    "team_id": "lamar",
+    "rating": 174.0,
+    "ranking": 178,
+    "normalized": 0.494286
+  },
+  {
+    "team_name": "Lehigh",
+    "team_id": "lehigh",
+    "rating": 164.0,
+    "ranking": 188,
+    "normalized": 0.465714
+  },
+  {
+    "team_name": "Liberty",
+    "team_id": "liberty",
+    "rating": 191.0,
+    "ranking": 161,
+    "normalized": 0.542857
+  },
+  {
+    "team_name": "Lipscomb",
+    "team_id": "lipscomb",
+    "rating": 255.0,
+    "ranking": 97,
+    "normalized": 0.725714
+  },
+  {
+    "team_name": "Long Beach St",
+    "team_id": "long_beach_st",
+    "rating": 130.0,
+    "ranking": 222,
+    "normalized": 0.368571
+  },
+  {
+    "team_name": "LIU Brooklyn",
+    "team_id": "liu_brooklyn",
+    "rating": 158.0,
+    "ranking": 194,
+    "normalized": 0.448571
+  },
+  {
+    "team_name": "Longwood",
+    "team_id": "longwood",
+    "rating": 12.0,
+    "ranking": 340,
+    "normalized": 0.031429
+  },
+  {
+    "team_name": "Louisiana Tech",
+    "team_id": "louisiana_tech",
+    "rating": 169.0,
+    "ranking": 183,
+    "normalized": 0.48
+  },
+  {
+    "team_name": "Louisville",
+    "team_id": "louisville",
+    "rating": 308.0,
+    "ranking": 44,
+    "normalized": 0.877143
+  },
+  {
+    "team_name": "Loy Marymount",
+    "team_id": "loy_marymount",
+    "rating": 88.0,
+    "ranking": 264,
+    "normalized": 0.248571
+  },
+  {
+    "team_name": "Loyola MD",
+    "team_id": "loyola_md",
+    "rating": 26.0,
+    "ranking": 326,
+    "normalized": 0.071429
+  },
+  {
+    "team_name": "Loyola-Chicago",
+    "team_id": "loyola_chicago",
+    "rating": 301.0,
+    "ranking": 51,
+    "normalized": 0.857143
+  },
+  {
+    "team_name": "LSU",
+    "team_id": "louisiana_state",
+    "rating": 291.0,
+    "ranking": 61,
+    "normalized": 0.828571
+  },
+  {
+    "team_name": "MA Lowell",
+    "team_id": "ma_lowell",
+    "rating": 63.0,
+    "ranking": 289,
+    "normalized": 0.177143
+  },
+  {
+    "team_name": "Maine",
+    "team_id": "maine",
+    "rating": 10.0,
+    "ranking": 342,
+    "normalized": 0.025714
+  },
+  {
+    "team_name": "Manhattan",
+    "team_id": "manhattan",
+    "rating": 110.0,
+    "ranking": 242,
+    "normalized": 0.311429
+  },
+  {
+    "team_name": "Marist",
+    "team_id": "marist",
+    "rating": 16.0,
+    "ranking": 336,
+    "normalized": 0.042857
+  },
+  {
+    "team_name": "Marquette",
+    "team_id": "marquette",
+    "rating": 305.0,
+    "ranking": 47,
+    "normalized": 0.868571
+  },
+  {
+    "team_name": "Marshall",
+    "team_id": "marshall",
+    "rating": 267.0,
+    "ranking": 85,
+    "normalized": 0.76
+  },
+  {
+    "team_name": "Maryland",
+    "team_id": "maryland",
+    "rating": 271.0,
+    "ranking": 81,
+    "normalized": 0.771429
+  },
+  {
+    "team_name": "Massachusetts",
+    "team_id": "massachusetts",
+    "rating": 107.0,
+    "ranking": 245,
+    "normalized": 0.302857
+  },
+  {
+    "team_name": "McNeese St",
+    "team_id": "mcneese_st",
+    "rating": 59.0,
+    "ranking": 293,
+    "normalized": 0.165714
+  },
+  {
+    "team_name": "MD E Shore",
+    "team_id": "md_e_shore",
+    "rating": 20.0,
+    "ranking": 332,
+    "normalized": 0.054286
+  },
+  {
+    "team_name": "Memphis",
+    "team_id": "memphis",
+    "rating": 256.0,
+    "ranking": 96,
+    "normalized": 0.728571
+  },
+  {
+    "team_name": "Mercer",
+    "team_id": "mercer",
+    "rating": 206.0,
+    "ranking": 146,
+    "normalized": 0.585714
+  },
+  {
+    "team_name": "Miami FL",
+    "team_id": "miami__fl",
+    "rating": 326.0,
+    "ranking": 26,
+    "normalized": 0.928571
+  },
+  {
+    "team_name": "Miami OH",
+    "team_id": "miami__oh",
+    "rating": 146.0,
+    "ranking": 206,
+    "normalized": 0.414286
+  },
+  {
+    "team_name": "Michigan",
+    "team_id": "michigan",
+    "rating": 338.0,
+    "ranking": 14,
+    "normalized": 0.962857
+  },
+  {
+    "team_name": "Michigan St",
+    "team_id": "michigan_st",
+    "rating": 341.0,
+    "ranking": 11,
+    "normalized": 0.971429
+  },
+  {
+    "team_name": "Minnesota",
+    "team_id": "minnesota",
+    "rating": 171.0,
+    "ranking": 181,
+    "normalized": 0.485714
+  },
+  {
+    "team_name": "Mississippi",
+    "team_id": "mississippi",
+    "rating": 172.0,
+    "ranking": 180,
+    "normalized": 0.488571
+  },
+  {
+    "team_name": "Mississippi St",
+    "team_id": "mississippi_st",
+    "rating": 298.0,
+    "ranking": 54,
+    "normalized": 0.848571
+  },
+  {
+    "team_name": "Missouri",
+    "team_id": "missouri",
+    "rating": 317.0,
+    "ranking": 35,
+    "normalized": 0.902857
+  },
+  {
+    "team_name": "Missouri KC",
+    "team_id": "missouri_kc",
+    "rating": 64.0,
+    "ranking": 288,
+    "normalized": 0.18
+  },
+  {
+    "team_name": "Missouri St",
+    "team_id": "missouri_st",
+    "rating": 208.0,
+    "ranking": 144,
+    "normalized": 0.591429
+  },
+  {
+    "team_name": "Monmouth NJ",
+    "team_id": "monmouth_nj",
+    "rating": 82.0,
+    "ranking": 270,
+    "normalized": 0.231429
+  },
+  {
+    "team_name": "Montana",
+    "team_id": "montana",
+    "rating": 273.0,
+    "ranking": 79,
+    "normalized": 0.777143
+  },
+  {
+    "team_name": "Montana St",
+    "team_id": "montana_st",
+    "rating": 70.0,
+    "ranking": 282,
+    "normalized": 0.197143
+  },
+  {
+    "team_name": "Morehead St",
+    "team_id": "morehead_st",
+    "rating": 41.0,
+    "ranking": 311,
+    "normalized": 0.114286
+  },
+  {
+    "team_name": "Morgan St",
+    "team_id": "morgan_st",
+    "rating": 51.0,
+    "ranking": 301,
+    "normalized": 0.142857
+  },
+  {
+    "team_name": "MS Valley St",
+    "team_id": "ms_valley_st",
+    "rating": 4.0,
+    "ranking": 348,
+    "normalized": 0.008571
+  },
+  {
+    "team_name": "Mt St Mary's",
+    "team_id": "mt_st_mary_s",
+    "rating": 166.0,
+    "ranking": 186,
+    "normalized": 0.471429
+  },
+  {
+    "team_name": "MTSU",
+    "team_id": "mtsu",
+    "rating": 299.0,
+    "ranking": 53,
+    "normalized": 0.851429
+  },
+  {
+    "team_name": "Murray St",
+    "team_id": "murray_st",
+    "rating": 295.0,
+    "ranking": 57,
+    "normalized": 0.84
+  },
+  {
+    "team_name": "N Colorado",
+    "team_id": "n_colorado",
+    "rating": 234.0,
+    "ranking": 118,
+    "normalized": 0.665714
+  },
+  {
+    "team_name": "N Dakota St",
+    "team_id": "n_dakota_st",
+    "rating": 133.0,
+    "ranking": 219,
+    "normalized": 0.377143
+  },
+  {
+    "team_name": "N Illinois",
+    "team_id": "n_illinois",
+    "rating": 93.0,
+    "ranking": 259,
+    "normalized": 0.262857
+  },
+  {
+    "team_name": "N Kentucky",
+    "team_id": "n_kentucky",
+    "rating": 249.0,
+    "ranking": 103,
+    "normalized": 0.708571
+  },
+  {
+    "team_name": "Navy",
+    "team_id": "navy",
+    "rating": 184.0,
+    "ranking": 168,
+    "normalized": 0.522857
+  },
+  {
+    "team_name": "NC A&T",
+    "team_id": "nc_a_t",
+    "rating": 181.0,
+    "ranking": 171,
+    "normalized": 0.514286
+  },
+  {
+    "team_name": "NC Central",
+    "team_id": "nc_central",
+    "rating": 160.0,
+    "ranking": 192,
+    "normalized": 0.454286
+  },
+  {
+    "team_name": "NC State",
+    "team_id": "nc_state",
+    "rating": 321.0,
+    "ranking": 31,
+    "normalized": 0.914286
+  },
+  {
+    "team_name": "NE Omaha",
+    "team_id": "ne_omaha",
+    "rating": 68.0,
+    "ranking": 284,
+    "normalized": 0.191429
+  },
+  {
+    "team_name": "Nebraska",
+    "team_id": "nebraska",
+    "rating": 284.0,
+    "ranking": 68,
+    "normalized": 0.808571
+  },
+  {
+    "team_name": "Nevada",
+    "team_id": "nevada",
+    "rating": 314.0,
+    "ranking": 38,
+    "normalized": 0.894286
+  },
+  {
+    "team_name": "New Hampshire",
+    "team_id": "new_hampshire",
+    "rating": 42.0,
+    "ranking": 310,
+    "normalized": 0.117143
+  },
+  {
+    "team_name": "New Mexico",
+    "team_id": "new_mexico",
+    "rating": 241.0,
+    "ranking": 111,
+    "normalized": 0.685714
+  },
+  {
+    "team_name": "New Mexico St",
+    "team_id": "new_mexico_st",
+    "rating": 302.0,
+    "ranking": 50,
+    "normalized": 0.86
+  },
+  {
+    "team_name": "New Orleans",
+    "team_id": "new_orleans",
+    "rating": 124.0,
+    "ranking": 228,
+    "normalized": 0.351429
+  },
+  {
+    "team_name": "Niagara",
+    "team_id": "niagara",
+    "rating": 205.0,
+    "ranking": 147,
+    "normalized": 0.582857
+  },
+  {
+    "team_name": "Nicholls St",
+    "team_id": "nicholls_st",
+    "rating": 220.0,
+    "ranking": 132,
+    "normalized": 0.625714
+  },
+  {
+    "team_name": "NJIT",
+    "team_id": "njit",
+    "rating": 103.0,
+    "ranking": 249,
+    "normalized": 0.291429
+  },
+  {
+    "team_name": "Norfolk St",
+    "team_id": "norfolk_st",
+    "rating": 84.0,
+    "ranking": 268,
+    "normalized": 0.237143
+  },
+  {
+    "team_name": "North Carolina",
+    "team_id": "north_carolina",
+    "rating": 347.0,
+    "ranking": 5,
+    "normalized": 0.988571
+  },
+  {
+    "team_name": "North Dakota",
+    "team_id": "north_dakota",
+    "rating": 97.0,
+    "ranking": 255,
+    "normalized": 0.274286
+  },
+  {
+    "team_name": "North Florida",
+    "team_id": "north_florida",
+    "rating": 127.0,
+    "ranking": 225,
+    "normalized": 0.36
+  },
+  {
+    "team_name": "North Texas",
+    "team_id": "north_texas",
+    "rating": 121.0,
+    "ranking": 231,
+    "normalized": 0.342857
+  },
+  {
+    "team_name": "Northeastern",
+    "team_id": "northeastern",
+    "rating": 272.0,
+    "ranking": 80,
+    "normalized": 0.774286
+  },
+  {
+    "team_name": "Northern Arizona",
+    "team_id": "northern_arizona",
+    "rating": 11.0,
+    "ranking": 341,
+    "normalized": 0.028571
+  },
+  {
+    "team_name": "Northern Iowa",
+    "team_id": "northern_iowa",
+    "rating": 176.0,
+    "ranking": 176,
+    "normalized": 0.5
+  },
+  {
+    "team_name": "Northwestern",
+    "team_id": "northwestern",
+    "rating": 161.0,
+    "ranking": 191,
+    "normalized": 0.457143
+  },
+  {
+    "team_name": "Northwestern LA",
+    "team_id": "northwestern_la",
+    "rating": 5.0,
+    "ranking": 347,
+    "normalized": 0.011429
+  },
+  {
+    "team_name": "Notre Dame",
+    "team_id": "notre_dame",
+    "rating": 296.0,
+    "ranking": 56,
+    "normalized": 0.842857
+  },
+  {
+    "team_name": "Oakland",
+    "team_id": "oakland",
+    "rating": 202.0,
+    "ranking": 150,
+    "normalized": 0.574286
+  },
+  {
+    "team_name": "Ohio",
+    "team_id": "ohio",
+    "rating": 134.0,
+    "ranking": 218,
+    "normalized": 0.38
+  },
+  {
+    "team_name": "Ohio St",
+    "team_id": "ohio_st",
+    "rating": 327.0,
+    "ranking": 25,
+    "normalized": 0.931429
+  },
+  {
+    "team_name": "Oklahoma",
+    "team_id": "oklahoma",
+    "rating": 318.0,
+    "ranking": 34,
+    "normalized": 0.905714
+  },
+  {
+    "team_name": "Oklahoma St",
+    "team_id": "oklahoma_st",
+    "rating": 306.0,
+    "ranking": 46,
+    "normalized": 0.871429
+  },
+  {
+    "team_name": "Old Dominion",
+    "team_id": "old_dominion",
+    "rating": 274.0,
+    "ranking": 78,
+    "normalized": 0.78
+  },
+  {
+    "team_name": "Oral Roberts",
+    "team_id": "oral_roberts",
+    "rating": 77.0,
+    "ranking": 275,
+    "normalized": 0.217143
+  },
+  {
+    "team_name": "Oregon",
+    "team_id": "oregon",
+    "rating": 287.0,
+    "ranking": 65,
+    "normalized": 0.817143
+  },
+  {
+    "team_name": "Oregon St",
+    "team_id": "oregon_st",
+    "rating": 193.0,
+    "ranking": 159,
+    "normalized": 0.548571
+  },
+  {
+    "team_name": "Pacific",
+    "team_id": "pacific",
+    "rating": 136.0,
+    "ranking": 216,
+    "normalized": 0.385714
+  },
+  {
+    "team_name": "Penn",
+    "team_id": "penn",
+    "rating": 243.0,
+    "ranking": 109,
+    "normalized": 0.691429
+  },
+  {
+    "team_name": "Penn St",
+    "team_id": "penn_st",
+    "rating": 282.0,
+    "ranking": 70,
+    "normalized": 0.802857
+  },
+  {
+    "team_name": "Pepperdine",
+    "team_id": "pepperdine",
+    "rating": 27.0,
+    "ranking": 325,
+    "normalized": 0.074286
+  },
+  {
+    "team_name": "Pittsburgh",
+    "team_id": "pittsburgh",
+    "rating": 109.0,
+    "ranking": 243,
+    "normalized": 0.308571
+  },
+  {
+    "team_name": "Portland",
+    "team_id": "portland",
+    "rating": 73.0,
+    "ranking": 279,
+    "normalized": 0.205714
+  },
+  {
+    "team_name": "Portland St",
+    "team_id": "portland_st",
+    "rating": 210.0,
+    "ranking": 142,
+    "normalized": 0.597143
+  },
+  {
+    "team_name": "Prairie View",
+    "team_id": "prairie_view",
+    "rating": 132.0,
+    "ranking": 220,
+    "normalized": 0.374286
+  },
+  {
+    "team_name": "Presbyterian",
+    "team_id": "presbyterian",
+    "rating": 50.0,
+    "ranking": 302,
+    "normalized": 0.14
+  },
+  {
+    "team_name": "Princeton",
+    "team_id": "princeton",
+    "rating": 113.0,
+    "ranking": 239,
+    "normalized": 0.32
+  },
+  {
+    "team_name": "Providence",
+    "team_id": "providence",
+    "rating": 324.0,
+    "ranking": 28,
+    "normalized": 0.922857
+  },
+  {
+    "team_name": "Purdue",
+    "team_id": "purdue",
+    "rating": 342.0,
+    "ranking": 10,
+    "normalized": 0.974286
+  },
+  {
+    "team_name": "Quinnipiac",
+    "team_id": "quinnipiac",
+    "rating": 57.0,
+    "ranking": 295,
+    "normalized": 0.16
+  },
+  {
+    "team_name": "Radford",
+    "team_id": "radford",
+    "rating": 232.0,
+    "ranking": 120,
+    "normalized": 0.66
+  },
+  {
+    "team_name": "Rhode Island",
+    "team_id": "rhode_island",
+    "rating": 322.0,
+    "ranking": 30,
+    "normalized": 0.917143
+  },
+  {
+    "team_name": "Rice",
+    "team_id": "rice",
+    "rating": 23.0,
+    "ranking": 329,
+    "normalized": 0.062857
+  },
+  {
+    "team_name": "Richmond",
+    "team_id": "richmond",
+    "rating": 112.0,
+    "ranking": 240,
+    "normalized": 0.317143
+  },
+  {
+    "team_name": "Rider",
+    "team_id": "rider",
+    "rating": 261.0,
+    "ranking": 91,
+    "normalized": 0.742857
+  },
+  {
+    "team_name": "Robert Morris",
+    "team_id": "robert_morris",
+    "rating": 128.0,
+    "ranking": 224,
+    "normalized": 0.362857
+  },
+  {
+    "team_name": "Rutgers",
+    "team_id": "rutgers",
+    "rating": 155.0,
+    "ranking": 197,
+    "normalized": 0.44
+  },
+  {
+    "team_name": "S Carolina St",
+    "team_id": "s_carolina_st",
+    "rating": 46.0,
+    "ranking": 306,
+    "normalized": 0.128571
+  },
+  {
+    "team_name": "S Dakota St",
+    "team_id": "s_dakota_st",
+    "rating": 297.0,
+    "ranking": 55,
+    "normalized": 0.845714
+  },
+  {
+    "team_name": "S Illinois",
+    "team_id": "s_illinois",
+    "rating": 252.0,
+    "ranking": 100,
+    "normalized": 0.717143
+  },
+  {
+    "team_name": "Sacred Heart",
+    "team_id": "sacred_heart",
+    "rating": 32.0,
+    "ranking": 320,
+    "normalized": 0.088571
+  },
+  {
+    "team_name": "Sam Houston St",
+    "team_id": "sam_houston_st",
+    "rating": 185.0,
+    "ranking": 167,
+    "normalized": 0.525714
+  },
+  {
+    "team_name": "Samford",
+    "team_id": "samford",
+    "rating": 67.0,
+    "ranking": 285,
+    "normalized": 0.188571
+  },
+  {
+    "team_name": "San Diego",
+    "team_id": "san_diego",
+    "rating": 222.0,
+    "ranking": 130,
+    "normalized": 0.631429
+  },
+  {
+    "team_name": "San Diego St",
+    "team_id": "san_diego_st",
+    "rating": 289.0,
+    "ranking": 63,
+    "normalized": 0.822857
+  },
+  {
+    "team_name": "San Francisco",
+    "team_id": "san_francisco",
+    "rating": 217.0,
+    "ranking": 135,
+    "normalized": 0.617143
+  },
+  {
+    "team_name": "San Jose St",
+    "team_id": "san_jose_st",
+    "rating": 15.0,
+    "ranking": 337,
+    "normalized": 0.04
+  },
+  {
+    "team_name": "UC Santa Barbara",
+    "team_id": "uc_santa_barbara",
+    "rating": 239.0,
+    "ranking": 113,
+    "normalized": 0.68
+  },
+  {
+    "team_name": "Santa Clara",
+    "team_id": "santa_clara",
+    "rating": 76.0,
+    "ranking": 276,
+    "normalized": 0.214286
+  },
+  {
+    "team_name": "Savannah St",
+    "team_id": "savannah_st",
+    "rating": 145.0,
+    "ranking": 207,
+    "normalized": 0.411429
+  },
+  {
+    "team_name": "SC Upstate",
+    "team_id": "sc_upstate",
+    "rating": 17.0,
+    "ranking": 335,
+    "normalized": 0.045714
+  },
+  {
+    "team_name": "SE Louisiana",
+    "team_id": "se_louisiana",
+    "rating": 211.0,
+    "ranking": 141,
+    "normalized": 0.6
+  },
+  {
+    "team_name": "SE Missouri St",
+    "team_id": "se_missouri_st",
+    "rating": 100.0,
+    "ranking": 252,
+    "normalized": 0.282857
+  },
+  {
+    "team_name": "Seattle",
+    "team_id": "seattle",
+    "rating": 215.0,
+    "ranking": 137,
+    "normalized": 0.611429
+  },
+  {
+    "team_name": "Seton Hall",
+    "team_id": "seton_hall",
+    "rating": 323.0,
+    "ranking": 29,
+    "normalized": 0.92
+  },
+  {
+    "team_name": "SF Austin",
+    "team_id": "sf_austin",
+    "rating": 254.0,
+    "ranking": 98,
+    "normalized": 0.722857
+  },
+  {
+    "team_name": "Siena",
+    "team_id": "siena",
+    "rating": 39.0,
+    "ranking": 313,
+    "normalized": 0.108571
+  },
+  {
+    "team_name": "SMU",
+    "team_id": "southern_methodist",
+    "rating": 219.0,
+    "ranking": 133,
+    "normalized": 0.622857
+  },
+  {
+    "team_name": "South Alabama",
+    "team_id": "south_alabama",
+    "rating": 86.0,
+    "ranking": 266,
+    "normalized": 0.242857
+  },
+  {
+    "team_name": "South Carolina",
+    "team_id": "south_carolina",
+    "rating": 257.0,
+    "ranking": 95,
+    "normalized": 0.731429
+  },
+  {
+    "team_name": "South Dakota",
+    "team_id": "south_dakota",
+    "rating": 266.0,
+    "ranking": 86,
+    "normalized": 0.757143
+  },
+  {
+    "team_name": "South Florida",
+    "team_id": "south_florida",
+    "rating": 62.0,
+    "ranking": 290,
+    "normalized": 0.174286
+  },
+  {
+    "team_name": "Southern Miss",
+    "team_id": "southern_miss",
+    "rating": 147.0,
+    "ranking": 205,
+    "normalized": 0.417143
+  },
+  {
+    "team_name": "Southern Univ",
+    "team_id": "southern_univ",
+    "rating": 99.0,
+    "ranking": 253,
+    "normalized": 0.28
+  },
+  {
+    "team_name": "Southern Utah",
+    "team_id": "southern_utah",
+    "rating": 96.0,
+    "ranking": 256,
+    "normalized": 0.271429
+  },
+  {
+    "team_name": "St Bonaventure",
+    "team_id": "st_bonaventure",
+    "rating": 312.0,
+    "ranking": 40,
+    "normalized": 0.888571
+  },
+  {
+    "team_name": "St Francis NY",
+    "team_id": "st_francis_ny",
+    "rating": 66.0,
+    "ranking": 286,
+    "normalized": 0.185714
+  },
+  {
+    "team_name": "St Francis PA",
+    "team_id": "st_francis_pa",
+    "rating": 196.0,
+    "ranking": 156,
+    "normalized": 0.557143
+  },
+  {
+    "team_name": "St John's",
+    "team_id": "st_john_s__ny",
+    "rating": 236.0,
+    "ranking": 116,
+    "normalized": 0.671429
+  },
+  {
+    "team_name": "St Joseph's PA",
+    "team_id": "st_joseph_s_pa",
+    "rating": 177.0,
+    "ranking": 175,
+    "normalized": 0.502857
+  },
+  {
+    "team_name": "St Louis",
+    "team_id": "st_louis",
+    "rating": 190.0,
+    "ranking": 162,
+    "normalized": 0.54
+  },
+  {
+    "team_name": "St Mary's CA",
+    "team_id": "st_mary_s_ca",
+    "rating": 303.0,
+    "ranking": 49,
+    "normalized": 0.862857
+  },
+  {
+    "team_name": "St Peter's",
+    "team_id": "st_peter_s",
+    "rating": 101.0,
+    "ranking": 251,
+    "normalized": 0.285714
+  },
+  {
+    "team_name": "Stanford",
+    "team_id": "stanford",
+    "rating": 270.0,
+    "ranking": 82,
+    "normalized": 0.768571
+  },
+  {
+    "team_name": "Stetson",
+    "team_id": "stetson",
+    "rating": 44.0,
+    "ranking": 308,
+    "normalized": 0.122857
+  },
+  {
+    "team_name": "Stony Brook",
+    "team_id": "stony_brook",
+    "rating": 108.0,
+    "ranking": 244,
+    "normalized": 0.305714
+  },
+  {
+    "team_name": "Syracuse",
+    "team_id": "syracuse",
+    "rating": 304.0,
+    "ranking": 48,
+    "normalized": 0.865714
+  },
+  {
+    "team_name": "TAM C. Christi",
+    "team_id": "tam_c_christi",
+    "rating": 45.0,
+    "ranking": 307,
+    "normalized": 0.125714
+  },
+  {
+    "team_name": "TCU",
+    "team_id": "tcu",
+    "rating": 328.0,
+    "ranking": 24,
+    "normalized": 0.934286
+  },
+  {
+    "team_name": "Temple",
+    "team_id": "temple",
+    "rating": 269.0,
+    "ranking": 83,
+    "normalized": 0.765714
+  },
+  {
+    "team_name": "Tennessee",
+    "team_id": "tennessee",
+    "rating": 345.0,
+    "ranking": 7,
+    "normalized": 0.982857
+  },
+  {
+    "team_name": "Tennessee St",
+    "team_id": "tennessee_st",
+    "rating": 150.0,
+    "ranking": 202,
+    "normalized": 0.425714
+  },
+  {
+    "team_name": "Tennessee Tech",
+    "team_id": "tennessee_tech",
+    "rating": 199.0,
+    "ranking": 153,
+    "normalized": 0.565714
+  },
+  {
+    "team_name": "Texas",
+    "team_id": "texas",
+    "rating": 316.0,
+    "ranking": 36,
+    "normalized": 0.9
+  },
+  {
+    "team_name": "Texas A&M",
+    "team_id": "texas_a_m",
+    "rating": 331.0,
+    "ranking": 21,
+    "normalized": 0.942857
+  },
+  {
+    "team_name": "Texas St",
+    "team_id": "texas_st",
+    "rating": 92.0,
+    "ranking": 260,
+    "normalized": 0.26
+  },
+  {
+    "team_name": "Texas Tech",
+    "team_id": "texas_tech",
+    "rating": 339.0,
+    "ranking": 13,
+    "normalized": 0.965714
+  },
+  {
+    "team_name": "TN Martin",
+    "team_id": "tn_martin",
+    "rating": 37.0,
+    "ranking": 315,
+    "normalized": 0.102857
+  },
+  {
+    "team_name": "Toledo",
+    "team_id": "toledo",
+    "rating": 264.0,
+    "ranking": 88,
+    "normalized": 0.751429
+  },
+  {
+    "team_name": "Towson",
+    "team_id": "towson",
+    "rating": 189.0,
+    "ranking": 163,
+    "normalized": 0.537143
+  },
+  {
+    "team_name": "Troy",
+    "team_id": "troy",
+    "rating": 135.0,
+    "ranking": 217,
+    "normalized": 0.382857
+  },
+  {
+    "team_name": "Tulane",
+    "team_id": "tulane",
+    "rating": 153.0,
+    "ranking": 199,
+    "normalized": 0.434286
+  },
+  {
+    "team_name": "Tulsa",
+    "team_id": "tulsa",
+    "rating": 262.0,
+    "ranking": 90,
+    "normalized": 0.745714
+  },
+  {
+    "team_name": "UTRGV",
+    "team_id": "utrgv",
+    "rating": 119.0,
+    "ranking": 233,
+    "normalized": 0.337143
+  },
+  {
+    "team_name": "TX Southern",
+    "team_id": "tx_southern",
+    "rating": 148.0,
+    "ranking": 204,
+    "normalized": 0.42
+  },
+  {
+    "team_name": "UAB",
+    "team_id": "uab",
+    "rating": 223.0,
+    "ranking": 129,
+    "normalized": 0.634286
+  },
+  {
+    "team_name": "UC Davis",
+    "team_id": "uc_davis",
+    "rating": 250.0,
+    "ranking": 102,
+    "normalized": 0.711429
+  },
+  {
+    "team_name": "UC Irvine",
+    "team_id": "uc_irvine",
+    "rating": 200.0,
+    "ranking": 152,
+    "normalized": 0.568571
+  },
+  {
+    "team_name": "UC Riverside",
+    "team_id": "uc_riverside",
+    "rating": 35.0,
+    "ranking": 317,
+    "normalized": 0.097143
+  },
+  {
+    "team_name": "UCF",
+    "team_id": "ucf",
+    "rating": 277.0,
+    "ranking": 75,
+    "normalized": 0.788571
+  },
+  {
+    "team_name": "UCLA",
+    "team_id": "ucla",
+    "rating": 311.0,
+    "ranking": 41,
+    "normalized": 0.885714
+  },
+  {
+    "team_name": "Louisiana",
+    "team_id": "louisiana",
+    "rating": 281.0,
+    "ranking": 71,
+    "normalized": 0.8
+  },
+  {
+    "team_name": "ULM",
+    "team_id": "ulm",
+    "rating": 163.0,
+    "ranking": 189,
+    "normalized": 0.462857
+  },
+  {
+    "team_name": "UMBC",
+    "team_id": "umbc",
+    "rating": 246.0,
+    "ranking": 106,
+    "normalized": 0.7
+  },
+  {
+    "team_name": "UNC Asheville",
+    "team_id": "unc_asheville",
+    "rating": 237.0,
+    "ranking": 115,
+    "normalized": 0.674286
+  },
+  {
+    "team_name": "UNC Greensboro",
+    "team_id": "unc_greensboro",
+    "rating": 283.0,
+    "ranking": 69,
+    "normalized": 0.805714
+  },
+  {
+    "team_name": "UNC Wilmington",
+    "team_id": "unc_wilmington",
+    "rating": 90.0,
+    "ranking": 262,
+    "normalized": 0.254286
+  },
+  {
+    "team_name": "UNLV",
+    "team_id": "unlv",
+    "rating": 248.0,
+    "ranking": 104,
+    "normalized": 0.705714
+  },
+  {
+    "team_name": "USC",
+    "team_id": "southern_california",
+    "rating": 309.0,
+    "ranking": 43,
+    "normalized": 0.88
+  },
+  {
+    "team_name": "UT Arlington",
+    "team_id": "ut_arlington",
+    "rating": 238.0,
+    "ranking": 114,
+    "normalized": 0.677143
+  },
+  {
+    "team_name": "UT San Antonio",
+    "team_id": "ut_san_antonio",
+    "rating": 203.0,
+    "ranking": 149,
+    "normalized": 0.577143
+  },
+  {
+    "team_name": "Utah",
+    "team_id": "utah",
+    "rating": 293.0,
+    "ranking": 59,
+    "normalized": 0.834286
+  },
+  {
+    "team_name": "Utah St",
+    "team_id": "utah_st",
+    "rating": 180.0,
+    "ranking": 172,
+    "normalized": 0.511429
+  },
+  {
+    "team_name": "Utah Valley",
+    "team_id": "utah_valley",
+    "rating": 253.0,
+    "ranking": 99,
+    "normalized": 0.72
+  },
+  {
+    "team_name": "UTEP",
+    "team_id": "utep",
+    "rating": 72.0,
+    "ranking": 280,
+    "normalized": 0.202857
+  },
+  {
+    "team_name": "VCU",
+    "team_id": "virginia_commonwealth",
+    "rating": 218.0,
+    "ranking": 134,
+    "normalized": 0.62
+  },
+  {
+    "team_name": "Valparaiso",
+    "team_id": "valparaiso",
+    "rating": 129.0,
+    "ranking": 223,
+    "normalized": 0.365714
+  },
+  {
+    "team_name": "Vanderbilt",
+    "team_id": "vanderbilt",
+    "rating": 187.0,
+    "ranking": 165,
+    "normalized": 0.531429
+  },
+  {
+    "team_name": "Vermont",
+    "team_id": "vermont",
+    "rating": 286.0,
+    "ranking": 66,
+    "normalized": 0.814286
+  },
+  {
+    "team_name": "Villanova",
+    "team_id": "villanova",
+    "rating": 349.0,
+    "ranking": 3,
+    "normalized": 0.994286
+  },
+  {
+    "team_name": "Virginia",
+    "team_id": "virginia",
+    "rating": 351.0,
+    "ranking": 1,
+    "normalized": 1.0
+  },
+  {
+    "team_name": "Virginia Tech",
+    "team_id": "virginia_tech",
+    "rating": 319.0,
+    "ranking": 33,
+    "normalized": 0.908571
+  },
+  {
+    "team_name": "VMI",
+    "team_id": "vmi",
+    "rating": 40.0,
+    "ranking": 312,
+    "normalized": 0.111429
+  },
+  {
+    "team_name": "W Carolina",
+    "team_id": "w_carolina",
+    "rating": 117.0,
+    "ranking": 235,
+    "normalized": 0.331429
+  },
+  {
+    "team_name": "W Illinois",
+    "team_id": "w_illinois",
+    "rating": 80.0,
+    "ranking": 272,
+    "normalized": 0.225714
+  },
+  {
+    "team_name": "WKU",
+    "team_id": "wku",
+    "rating": 279.0,
+    "ranking": 73,
+    "normalized": 0.794286
+  },
+  {
+    "team_name": "W Michigan",
+    "team_id": "w_michigan",
+    "rating": 179.0,
+    "ranking": 173,
+    "normalized": 0.508571
+  },
+  {
+    "team_name": "Wagner",
+    "team_id": "wagner",
+    "rating": 245.0,
+    "ranking": 107,
+    "normalized": 0.697143
+  },
+  {
+    "team_name": "Wake Forest",
+    "team_id": "wake_forest",
+    "rating": 152.0,
+    "ranking": 200,
+    "normalized": 0.431429
+  },
+  {
+    "team_name": "Washington",
+    "team_id": "washington",
+    "rating": 290.0,
+    "ranking": 62,
+    "normalized": 0.825714
+  },
+  {
+    "team_name": "Washington St",
+    "team_id": "washington_st",
+    "rating": 144.0,
+    "ranking": 208,
+    "normalized": 0.408571
+  },
+  {
+    "team_name": "Weber St",
+    "team_id": "weber_st",
+    "rating": 209.0,
+    "ranking": 143,
+    "normalized": 0.594286
+  },
+  {
+    "team_name": "West Virginia",
+    "team_id": "west_virginia",
+    "rating": 343.0,
+    "ranking": 9,
+    "normalized": 0.977143
+  },
+  {
+    "team_name": "WI Green Bay",
+    "team_id": "wi_green_bay",
+    "rating": 79.0,
+    "ranking": 273,
+    "normalized": 0.222857
+  },
+  {
+    "team_name": "WI Milwaukee",
+    "team_id": "wi_milwaukee",
+    "rating": 120.0,
+    "ranking": 232,
+    "normalized": 0.34
+  },
+  {
+    "team_name": "Wichita St",
+    "team_id": "wichita_st",
+    "rating": 333.0,
+    "ranking": 19,
+    "normalized": 0.948571
+  },
+  {
+    "team_name": "William & Mary",
+    "team_id": "william_mary",
+    "rating": 247.0,
+    "ranking": 105,
+    "normalized": 0.702857
+  },
+  {
+    "team_name": "Winthrop",
+    "team_id": "winthrop",
+    "rating": 204.0,
+    "ranking": 148,
+    "normalized": 0.58
+  },
+  {
+    "team_name": "Wisconsin",
+    "team_id": "wisconsin",
+    "rating": 194.0,
+    "ranking": 158,
+    "normalized": 0.551429
+  },
+  {
+    "team_name": "Wofford",
+    "team_id": "wofford",
+    "rating": 244.0,
+    "ranking": 108,
+    "normalized": 0.694286
+  },
+  {
+    "team_name": "Wright St",
+    "team_id": "wright_st",
+    "rating": 259.0,
+    "ranking": 93,
+    "normalized": 0.737143
+  },
+  {
+    "team_name": "Wyoming",
+    "team_id": "wyoming",
+    "rating": 260.0,
+    "ranking": 92,
+    "normalized": 0.74
+  },
+  {
+    "team_name": "Xavier",
+    "team_id": "xavier",
+    "rating": 348.0,
+    "ranking": 4,
+    "normalized": 0.991429
+  },
+  {
+    "team_name": "Yale",
+    "team_id": "yale",
+    "rating": 167.0,
+    "ranking": 185,
+    "normalized": 0.474286
+  },
+  {
+    "team_name": "Youngstown St",
+    "team_id": "youngstown_st",
+    "rating": 25.0,
+    "ranking": 327,
+    "normalized": 0.068571
+  }
+]

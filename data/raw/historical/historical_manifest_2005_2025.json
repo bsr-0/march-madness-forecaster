@@ -1,0 +1,577 @@
+{
+  "generated_at": "2026-03-04T01:58:38.822211+00:00",
+  "start_season": 2005,
+  "end_season": 2025,
+  "artifacts": {
+    "2005": {
+      "historical_games_json": "data/raw/historical/historical_games_2005.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2005.json",
+      "massey_ordinals_systems": 38
+    },
+    "2006": {
+      "historical_games_json": "data/raw/historical/historical_games_2006.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2006.json",
+      "massey_ordinals_systems": 38
+    },
+    "2007": {
+      "historical_games_json": "data/raw/historical/historical_games_2007.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2007.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2007.json",
+      "massey_ordinals_systems": 41
+    },
+    "2008": {
+      "historical_games_json": "data/raw/historical/historical_games_2008.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2008.json",
+      "torvik_json": "data/raw/historical/torvik_2008.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2008.json",
+      "massey_ordinals_systems": 46
+    },
+    "2009": {
+      "historical_games_json": "data/raw/historical/historical_games_2009.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2009.json",
+      "torvik_json": "data/raw/historical/torvik_2009.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2009.json",
+      "massey_ordinals_systems": 48
+    },
+    "2010": {
+      "historical_games_json": "data/raw/historical/historical_games_2010.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2010.json",
+      "torvik_json": "data/raw/historical/torvik_2010.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2010.json",
+      "massey_ordinals_systems": 51
+    },
+    "2011": {
+      "historical_games_json": "data/raw/historical/historical_games_2011.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2011.json",
+      "torvik_json": "data/raw/historical/torvik_2011.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2011.json",
+      "massey_ordinals_systems": 53
+    },
+    "2012": {
+      "historical_games_json": "data/raw/historical/historical_games_2012.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2012.json",
+      "torvik_json": "data/raw/historical/torvik_2012.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2012.json",
+      "massey_ordinals_systems": 61
+    },
+    "2013": {
+      "historical_games_json": "data/raw/historical/historical_games_2013.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2013.json",
+      "torvik_json": "data/raw/historical/torvik_2013.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2013.json",
+      "massey_ordinals_systems": 60
+    },
+    "2014": {
+      "historical_games_json": "data/raw/historical/historical_games_2014.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2014.json",
+      "torvik_json": "data/raw/historical/torvik_2014.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2014.json",
+      "massey_ordinals_systems": 66
+    },
+    "2015": {
+      "historical_games_json": "data/raw/historical/historical_games_2015.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2015.json",
+      "torvik_json": "data/raw/historical/torvik_2015.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2015.json",
+      "massey_ordinals_systems": 63
+    },
+    "2016": {
+      "historical_games_json": "data/raw/historical/historical_games_2016.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2016.json",
+      "torvik_json": "data/raw/historical/torvik_2016.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2016.json",
+      "massey_ordinals_systems": 66
+    },
+    "2017": {
+      "historical_games_json": "data/raw/historical/historical_games_2017.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2017.json",
+      "torvik_json": "data/raw/historical/torvik_2017.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2017.json",
+      "massey_ordinals_systems": 74
+    },
+    "2018": {
+      "historical_games_json": "data/raw/historical/historical_games_2018.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2018.json",
+      "torvik_json": "data/raw/historical/torvik_2018.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2018.json",
+      "massey_ordinals_systems": 67
+    },
+    "2019": {
+      "historical_games_json": "data/raw/historical/historical_games_2019.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2019.json",
+      "torvik_json": "data/raw/historical/torvik_2019.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2019.json",
+      "massey_ordinals_systems": 68
+    },
+    "2020": {
+      "historical_games_json": "data/raw/historical/historical_games_2020.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2020.json",
+      "torvik_json": "data/raw/historical/torvik_2020.json",
+      "massey_ordinals_systems": 66
+    },
+    "2021": {
+      "historical_games_json": "data/raw/historical/historical_games_2021.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2021.json",
+      "torvik_json": "data/raw/historical/torvik_2021.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2021.json",
+      "massey_ordinals_systems": 55
+    },
+    "2022": {
+      "historical_games_json": "data/raw/historical/historical_games_2022.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2022.json",
+      "torvik_json": "data/raw/historical/torvik_2022.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2022.json",
+      "massey_ordinals_systems": 64
+    },
+    "2023": {
+      "historical_games_json": "data/raw/historical/historical_games_2023.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2023.json",
+      "torvik_json": "data/raw/historical/torvik_2023.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2023.json",
+      "massey_ordinals_systems": 66
+    },
+    "2024": {
+      "historical_games_json": "data/raw/historical/historical_games_2024.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2024.json",
+      "torvik_json": "data/raw/historical/torvik_2024.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2024.json",
+      "massey_ordinals_systems": 61
+    },
+    "2025": {
+      "historical_games_json": "data/raw/historical/historical_games_2025.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2025.json",
+      "torvik_json": "data/raw/historical/torvik_2025.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2025.json",
+      "massey_ordinals_systems": 56
+    }
+  },
+  "providers": {
+    "2005": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2006": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2007": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2008": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2009": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2010": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2011": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2012": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2013": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2014": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2015": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2016": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2017": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2018": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2019": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2020": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2021": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2022": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2023": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2024": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2025": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    }
+  },
+  "validation_errors": {
+    "2005": {
+      "historical_games_json": [],
+      "team_metrics_json": []
+    },
+    "2006": {
+      "historical_games_json": [],
+      "team_metrics_json": []
+    },
+    "2007": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "tournament_seeds_json": []
+    },
+    "2008": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2009": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2010": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2011": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2012": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2013": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2014": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2015": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2016": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2017": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2018": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2019": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2020": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": []
+    },
+    "2021": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2022": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2023": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2024": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2025": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    }
+  },
+  "season_counts": {
+    "2005": {
+      "games": 4223,
+      "team_games": 8446,
+      "teams": 330,
+      "massey_ordinal_systems": 38
+    },
+    "2006": {
+      "games": 4702,
+      "team_games": 9404,
+      "teams": 334,
+      "massey_ordinal_systems": 38
+    },
+    "2007": {
+      "games": 5195,
+      "team_games": 10390,
+      "teams": 337,
+      "tournament_seed_teams": 65,
+      "massey_ordinal_systems": 41
+    },
+    "2008": {
+      "games": 5537,
+      "team_games": 11074,
+      "teams": 341,
+      "torvik_teams": 341,
+      "tournament_seed_teams": 65,
+      "massey_ordinal_systems": 46
+    },
+    "2009": {
+      "games": 5501,
+      "team_games": 11002,
+      "teams": 344,
+      "torvik_teams": 344,
+      "tournament_seed_teams": 65,
+      "massey_ordinal_systems": 48
+    },
+    "2010": {
+      "games": 5568,
+      "team_games": 11136,
+      "teams": 347,
+      "torvik_teams": 347,
+      "tournament_seed_teams": 65,
+      "massey_ordinal_systems": 51
+    },
+    "2011": {
+      "games": 5553,
+      "team_games": 11106,
+      "teams": 345,
+      "torvik_teams": 345,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 53
+    },
+    "2012": {
+      "games": 4891,
+      "team_games": 9782,
+      "teams": 344,
+      "torvik_teams": 345,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 61
+    },
+    "2013": {
+      "games": 4960,
+      "team_games": 9920,
+      "teams": 347,
+      "torvik_teams": 347,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 60
+    },
+    "2014": {
+      "games": 5928,
+      "team_games": 11856,
+      "teams": 351,
+      "torvik_teams": 351,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 66
+    },
+    "2015": {
+      "games": 5926,
+      "team_games": 11852,
+      "teams": 351,
+      "torvik_teams": 351,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 63
+    },
+    "2016": {
+      "games": 5940,
+      "team_games": 11880,
+      "teams": 351,
+      "torvik_teams": 351,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 66
+    },
+    "2017": {
+      "games": 5919,
+      "team_games": 11838,
+      "teams": 351,
+      "torvik_teams": 351,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 74
+    },
+    "2018": {
+      "games": 5995,
+      "team_games": 11990,
+      "teams": 351,
+      "torvik_teams": 351,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 67
+    },
+    "2019": {
+      "games": 6040,
+      "team_games": 12080,
+      "teams": 353,
+      "torvik_teams": 353,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 68
+    },
+    "2020": {
+      "games": 5767,
+      "team_games": 11534,
+      "teams": 353,
+      "torvik_teams": 353,
+      "massey_ordinal_systems": 66
+    },
+    "2021": {
+      "games": 4285,
+      "team_games": 8570,
+      "teams": 347,
+      "torvik_teams": 347,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 55
+    },
+    "2022": {
+      "games": 5964,
+      "team_games": 11928,
+      "teams": 358,
+      "torvik_teams": 358,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 64
+    },
+    "2023": {
+      "games": 6222,
+      "team_games": 12444,
+      "teams": 363,
+      "torvik_teams": 363,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 66
+    },
+    "2024": {
+      "games": 6242,
+      "team_games": 12484,
+      "teams": 362,
+      "torvik_teams": 362,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 61
+    },
+    "2025": {
+      "games": 6291,
+      "team_games": 12582,
+      "teams": 364,
+      "torvik_teams": 364,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 56
+    }
+  }
+}
