@@ -5,7 +5,7 @@
       "season": 2008,
       "team_name": "UNC",
       "school_slug": "north-carolina",
-      "team_id": "unc",
+      "team_id": "north_carolina",
       "seed": 1,
       "region": "East"
     },
@@ -85,7 +85,7 @@
       "season": 2008,
       "team_name": "St. Joseph's",
       "school_slug": "saint-josephs",
-      "team_id": "st__joseph_s",
+      "team_id": "st_joseph_s",
       "seed": 11,
       "region": "East"
     },
@@ -133,7 +133,7 @@
       "season": 2008,
       "team_name": "Mount St. Mary's",
       "school_slug": "mount-st-marys",
-      "team_id": "mount_st__mary_s",
+      "team_id": "mount_st_mary_s",
       "seed": 16,
       "region": "East"
     },
@@ -181,7 +181,7 @@
       "season": 2008,
       "team_name": "USC",
       "school_slug": "southern-california",
-      "team_id": "usc",
+      "team_id": "southern_california",
       "seed": 6,
       "region": "Midwest"
     },
@@ -293,7 +293,7 @@
       "season": 2008,
       "team_name": "Pitt",
       "school_slug": "pittsburgh",
-      "team_id": "pitt",
+      "team_id": "pittsburgh",
       "seed": 4,
       "region": "South"
     },
@@ -341,7 +341,7 @@
       "season": 2008,
       "team_name": "Saint Mary's",
       "school_slug": "saint-marys-ca",
-      "team_id": "saint_mary_s",
+      "team_id": "saint_mary_s__ca",
       "seed": 10,
       "region": "South"
     },
@@ -421,7 +421,7 @@
       "season": 2008,
       "team_name": "UConn",
       "school_slug": "connecticut",
-      "team_id": "uconn",
+      "team_id": "connecticut",
       "seed": 4,
       "region": "West"
     },
@@ -453,7 +453,7 @@
       "season": 2008,
       "team_name": "BYU",
       "school_slug": "brigham-young",
-      "team_id": "byu",
+      "team_id": "brigham_young",
       "seed": 8,
       "region": "West"
     },

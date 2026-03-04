@@ -5,7 +5,7 @@
       "season": 2007,
       "team_name": "UNC",
       "school_slug": "north-carolina",
-      "team_id": "unc",
+      "team_id": "north_carolina",
       "seed": 1,
       "region": "East"
     },
@@ -37,7 +37,7 @@
       "season": 2007,
       "team_name": "USC",
       "school_slug": "southern-california",
-      "team_id": "usc",
+      "team_id": "southern_california",
       "seed": 5,
       "region": "East"
     },
@@ -317,7 +317,7 @@
       "season": 2007,
       "team_name": "BYU",
       "school_slug": "brigham-young",
-      "team_id": "byu",
+      "team_id": "brigham_young",
       "seed": 8,
       "region": "South"
     },
@@ -357,7 +357,7 @@
       "season": 2007,
       "team_name": "Albany (NY)",
       "school_slug": "albany-ny",
-      "team_id": "albany__ny",
+      "team_id": "albany_ny",
       "seed": 13,
       "region": "South"
     },
@@ -405,7 +405,7 @@
       "season": 2007,
       "team_name": "Pitt",
       "school_slug": "pittsburgh",
-      "team_id": "pitt",
+      "team_id": "pittsburgh",
       "seed": 3,
       "region": "West"
     },
@@ -469,7 +469,7 @@
       "season": 2007,
       "team_name": "VCU",
       "school_slug": "virginia-commonwealth",
-      "team_id": "vcu",
+      "team_id": "virginia_commonwealth",
       "seed": 11,
       "region": "West"
     },
