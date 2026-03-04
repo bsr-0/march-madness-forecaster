@@ -6445,13 +6445,26 @@ class SOTAPipeline:
         if self.config.enable_tournament_adaptation:
             raw = self._tournament_adapt(raw, team1_id, team2_id)
 
-        # Favourite-longshot bias correction (goto_conversion inspired).
-        # Applied after calibration but before seed overrides/sharpening.
-        if hasattr(self, '_flb_correction') and self._flb_correction is not None and self._flb_correction.fitted:
-            raw = self._flb_correction.correct_single(raw)
+        # WS2: Brier-optimal post-processing (seed overrides + sharpening).
+        # NOTE: BrierPostProcessor.process() already applies goto_conversion
+        # internally (step 3), so we must NOT apply it directly here when
+        # the post-processor will run — otherwise the correction is applied
+        # twice, over-sharpening toward favourites.
+        _will_use_post_processor = (
+            self.config.enable_seed_overrides
+            and hasattr(self, '_brier_post_processor')
+            and self._brier_post_processor is not None
+        )
 
-        # WS2: Brier-optimal post-processing (seed overrides + sharpening)
-        if self.config.enable_seed_overrides and hasattr(self, '_brier_post_processor') and self._brier_post_processor is not None:
+        # Favourite-longshot bias correction (goto_conversion inspired).
+        # Only applied directly when BrierPostProcessor is disabled;
+        # otherwise BrierPostProcessor handles it in the correct pipeline
+        # order: seed overrides → calibration → goto → sharpening → clip.
+        if not _will_use_post_processor:
+            if hasattr(self, '_flb_correction') and self._flb_correction is not None and self._flb_correction.fitted:
+                raw = self._flb_correction.correct_single(raw)
+
+        if _will_use_post_processor:
             t1 = self.feature_engineer.team_features.get(team1_id)
             t2 = self.feature_engineer.team_features.get(team2_id)
             s1 = t1.seed if t1 else 0
