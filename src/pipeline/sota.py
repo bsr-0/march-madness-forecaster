@@ -7215,13 +7215,12 @@ class SOTAPipeline:
             X_val = all_X[hold_yr]
             y_val = all_y[hold_yr]
 
-            # Apply feature selection if fitted
-            if self.feature_selector is not None and self.feature_selector.is_fitted:
-                try:
-                    X_train = self.feature_selector.transform(X_train)
-                    X_val = self.feature_selector.transform(X_val)
-                except Exception:
-                    continue
+            # FIX-LEAKAGE-ENSEMBLE-WEIGHTS: Do NOT reuse the primary
+            # feature selector here.  It was fitted on training data that
+            # includes the held-out year, so its importance scores encode
+            # test-year labels.  Instead, skip feature selection (use raw
+            # features) — same approach as the main LOYO CV (line 5047).
+            # The per-fold scaler below handles scale normalization.
 
             # Apply scaler
             from sklearn.preprocessing import StandardScaler as _SS
