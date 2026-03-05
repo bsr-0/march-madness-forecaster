@@ -538,6 +538,7 @@ class EVModeReport:
     model_vs_public_divergence: Dict[str, float] = field(default_factory=dict)
     bracket_portfolio_summary: Dict = field(default_factory=dict)
     win_probabilities: Dict[str, float] = field(default_factory=dict)
+    competition_simulation: Dict = field(default_factory=dict)
     pareto_brackets: List[Dict] = field(default_factory=list)
     pool_ev_analysis: Dict[str, float] = field(default_factory=dict)
     picks_staleness_warning: Optional[str] = None
@@ -554,6 +555,7 @@ class EVModeReport:
             "model_vs_public_divergence": self.model_vs_public_divergence,
             "bracket_portfolio_summary": self.bracket_portfolio_summary,
             "win_probabilities": self.win_probabilities,
+            "competition_simulation": self.competition_simulation,
             "pareto_brackets": self.pareto_brackets,
             "pool_ev_analysis": self.pool_ev_analysis,
         }
@@ -1392,21 +1394,40 @@ class SOTAPipeline:
         # Bracket portfolio summary from base report
         ev.bracket_portfolio_summary = artifacts.get("bracket_portfolio", {})
 
-        # Win probability estimates
-        ev.win_probabilities = {
-            "top_1pct": 0.0,  # Placeholder — requires competition simulation (Phase 4)
-            "top_5pct": 0.0,
-            "top_10pct": 0.0,
-        }
+        # Win probability estimates via pool competition simulation
+        # (Phase 4: double Monte Carlo — simulate tournament outcomes,
+        # score all brackets, rank against synthetic opponent field.)
+        effective_picks = archetype_pick_dist if archetype_pick_dist is not None else public_picks
+        try:
+            pool_sim_result = self._run_pool_competition_simulation(
+                pareto_brackets=pool_analysis.pareto_brackets,
+                pick_distribution=effective_picks,
+                scoring_system=ev_scoring,
+                target_percentiles=[
+                    self.config.ev_target_percentile,
+                    0.01, 0.05, 0.10, 0.25,
+                ],
+            )
+            ev.win_probabilities = pool_sim_result.get_best_win_probabilities()
+            ev.competition_simulation = pool_sim_result.to_dict()
+        except Exception as exc:
+            logger.warning("Pool competition simulation failed: %s", exc)
+            ev.win_probabilities = {
+                "top_1pct": 0.0,
+                "top_5pct": 0.0,
+                "top_10pct": 0.0,
+            }
+            ev.competition_simulation = {"error": str(exc)}
 
         logger.info(
             "EV Mode: pool_size=%d, scoring=%s, strategy=%s, "
-            "leverage_picks=%d, fade_picks=%d",
+            "leverage_picks=%d, fade_picks=%d, win_probs=%s",
             ev.pool_size,
             ev.scoring_system,
             ev.recommended_strategy,
             len(ev.leverage_picks),
             len(ev.fade_picks),
+            {k: f"{v:.3f}" for k, v in ev.win_probabilities.items()},
         )
 
         return ev
@@ -1420,6 +1441,281 @@ class SOTAPipeline:
             return {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
         # Standard ESPN scoring
         return {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
+
+    # ------------------------------------------------------------------
+    # Pool competition simulation (Phase 4)
+    # ------------------------------------------------------------------
+
+    def _run_pool_competition_simulation(
+        self,
+        pareto_brackets: List,
+        pick_distribution: Dict[str, Dict[str, float]],
+        scoring_system: Dict[str, int],
+        target_percentiles: Optional[List[float]] = None,
+    ):
+        """Run double-MC pool competition simulation for win probabilities.
+
+        Generates synthetic opponent brackets from the pick distribution,
+        simulates tournament outcomes, scores all brackets, and computes
+        the probability of finishing in each target percentile.
+
+        Args:
+            pareto_brackets: Pareto-optimal BracketConfiguration objects
+                from the leverage optimizer.
+            pick_distribution: Archetype-blended or public pick probs,
+                team_id -> {round_name: pick_probability}.
+            scoring_system: Round -> points mapping.
+            target_percentiles: Percentile thresholds to estimate.
+
+        Returns:
+            PoolSimulationResult with per-bracket performance summaries.
+        """
+        from ..simulation.pool_competition import (
+            PoolCompetitionSimulator,
+            PoolSimulationConfig,
+        )
+        from ..simulation.monte_carlo import TournamentBracket, TournamentTeam
+
+        # Build TournamentBracket to get first_round_matchups
+        teams_by_region: Dict[str, List[TournamentTeam]] = {
+            r: [] for r in ["East", "West", "South", "Midwest"]
+        }
+        seeds: Dict[str, int] = {}
+        for team_id, team in self.team_struct.items():
+            if team.region not in teams_by_region:
+                continue
+            strength = 0.5
+            if hasattr(self, "feature_engineer") and team_id in self.feature_engineer.team_features:
+                strength = float(self.feature_engineer.team_features[team_id].adj_efficiency_margin)
+            teams_by_region[team.region].append(
+                TournamentTeam(
+                    team_id=team_id,
+                    seed=team.seed,
+                    region=team.region,
+                    strength=strength,
+                )
+            )
+            seeds[team_id] = team.seed
+
+        # Sort by seed for standard bracket construction
+        for region in teams_by_region:
+            teams_by_region[region] = sorted(
+                teams_by_region[region], key=lambda t: t.seed
+            )
+
+        bracket = TournamentBracket.create_standard_bracket(teams_by_region)
+        first_round = bracket.first_round_matchups
+
+        # Pre-compute matchup probabilities
+        matchup_probs: Dict = {}
+        team_ids = [t.team_id for t in bracket.teams]
+        for i, t1 in enumerate(team_ids):
+            for j, t2 in enumerate(team_ids):
+                if i < j:
+                    p = self.predict_probability(t1, t2)
+                    matchup_probs[(t1, t2)] = p
+                    matchup_probs[(t2, t1)] = 1.0 - p
+
+        # Convert Pareto brackets to winner-list format
+        model_brackets, model_metadata = self._pareto_brackets_to_winner_lists(
+            pareto_brackets, first_round,
+        )
+
+        if not model_brackets:
+            logger.warning(
+                "No valid model brackets for competition simulation; "
+                "generating chalk bracket as fallback."
+            )
+            chalk_winners = self._generate_chalk_winners(first_round, matchup_probs)
+            model_brackets = [{"winners": chalk_winners}]
+            model_metadata = [{"id": "chalk_fallback", "strategy": "chalk"}]
+
+        # Deduplicate target percentiles and sort
+        if target_percentiles:
+            target_percentiles = sorted(set(target_percentiles))
+
+        # Scale n_tournaments by pool size for adequate sampling:
+        # Larger pools need more simulations to estimate rare tail events.
+        pool_size = self.config.ev_pool_size
+        base_n_tournaments = 1000
+        if pool_size > 1000:
+            base_n_tournaments = 2000
+        elif pool_size > 5000:
+            base_n_tournaments = 5000
+
+        config = PoolSimulationConfig(
+            n_tournaments=base_n_tournaments,
+            n_opponents=max(1, pool_size - len(model_brackets)),
+            noise_std=self.config.mc_noise_std,
+            random_seed=self.config.random_seed,
+            scoring_system=scoring_system,
+            upset_bonus_enabled=(self.config.ev_scoring_system == "upset_bonus"),
+        )
+
+        simulator = PoolCompetitionSimulator(
+            config=config,
+            first_round_matchups=first_round,
+            matchup_probs=matchup_probs,
+            pick_distribution=pick_distribution,
+            seeds=seeds,
+        )
+
+        return simulator.run(
+            model_brackets,
+            model_bracket_metadata=model_metadata,
+            target_percentiles=target_percentiles,
+        )
+
+    def _pareto_brackets_to_winner_lists(
+        self,
+        pareto_brackets: List,
+        first_round_matchups: List[str],
+    ) -> tuple:
+        """Convert Pareto BracketConfiguration objects to winner-list format.
+
+        Replays each bracket's picks dict through the bracket structure
+        to produce a flat list of 63 winners in standard game order.
+
+        Returns:
+            Tuple of (model_brackets, model_metadata) where model_brackets
+            is a list of {"winners": [team_id, ...]} dicts.
+        """
+        SEED_ORDER = [
+            (1, 16), (8, 9), (5, 12), (4, 13),
+            (6, 11), (3, 14), (7, 10), (2, 15),
+        ]
+
+        # Build seed-to-team mapping by region
+        by_region: Dict[str, Dict[int, str]] = {
+            r: {} for r in ("East", "West", "South", "Midwest")
+        }
+        for team_id, team in self.team_struct.items():
+            if team.region in by_region:
+                by_region[team.region][team.seed] = team_id
+
+        model_brackets = []
+        model_metadata = []
+
+        for b_idx, bracket in enumerate(pareto_brackets):
+            if not hasattr(bracket, "picks"):
+                continue
+
+            picks = bracket.picks
+            winners: List[str] = []
+
+            # Replay the bracket structure to extract winners in game order
+            # R64
+            region_winners: Dict[str, List[str]] = {}
+            for region in ("East", "West", "South", "Midwest"):
+                region_r64 = []
+                for high_seed, low_seed in SEED_ORDER:
+                    game_key = f"R64_{region}_{high_seed}v{low_seed}"
+                    winner = picks.get(game_key)
+                    if winner is None:
+                        # Fallback: pick higher seed
+                        winner = by_region.get(region, {}).get(high_seed, "")
+                    winners.append(winner)
+                    region_r64.append(winner)
+                region_winners[region] = region_r64
+
+            # R32
+            for region in ("East", "West", "South", "Midwest"):
+                r32_winners = []
+                prev = region_winners[region]
+                for idx in range(0, len(prev), 2):
+                    game_key = f"R32_{region}_{idx // 2 + 1}"
+                    winner = picks.get(game_key)
+                    if winner is None:
+                        winner = prev[idx] if idx < len(prev) else ""
+                    winners.append(winner)
+                    r32_winners.append(winner)
+                region_winners[region] = r32_winners
+
+            # S16
+            for region in ("East", "West", "South", "Midwest"):
+                s16_winners = []
+                prev = region_winners[region]
+                for idx in range(0, len(prev), 2):
+                    game_key = f"S16_{region}_{idx // 2 + 1}"
+                    winner = picks.get(game_key)
+                    if winner is None:
+                        winner = prev[idx] if idx < len(prev) else ""
+                    winners.append(winner)
+                    s16_winners.append(winner)
+                region_winners[region] = s16_winners
+
+            # E8 (region finals)
+            for region in ("East", "West", "South", "Midwest"):
+                prev = region_winners[region]
+                game_key = f"E8_{region}_1"
+                winner = picks.get(game_key)
+                if winner is None:
+                    winner = prev[0] if prev else ""
+                winners.append(winner)
+                region_winners[region] = [winner]
+
+            # F4 (semi-finals: East vs West, South vs Midwest — standard pairing)
+            f4_teams = [
+                region_winners.get("East", [""])[0],
+                region_winners.get("West", [""])[0],
+                region_winners.get("South", [""])[0],
+                region_winners.get("Midwest", [""])[0],
+            ]
+            f4_winners = []
+            for idx in range(0, len(f4_teams), 2):
+                game_key = f"F4_{idx // 2 + 1}"
+                winner = picks.get(game_key)
+                if winner is None:
+                    winner = f4_teams[idx] if idx < len(f4_teams) else ""
+                winners.append(winner)
+                f4_winners.append(winner)
+
+            # Championship
+            game_key = "CHAMP_1"
+            winner = picks.get(game_key)
+            if winner is None:
+                winner = bracket.champion if hasattr(bracket, "champion") else (
+                    f4_winners[0] if f4_winners else ""
+                )
+            winners.append(winner)
+
+            if len(winners) == 63:
+                model_brackets.append({"winners": winners})
+                model_metadata.append({
+                    "id": f"pareto_{b_idx}",
+                    "strategy": getattr(bracket, "strategy", "unknown"),
+                })
+            else:
+                logger.warning(
+                    "Pareto bracket %d produced %d winners (expected 63), skipping",
+                    b_idx, len(winners),
+                )
+
+        return model_brackets, model_metadata
+
+    @staticmethod
+    def _generate_chalk_winners(
+        first_round_matchups: List[str],
+        matchup_probs: Dict,
+    ) -> List[str]:
+        """Generate a chalk bracket (always pick favorite) as fallback."""
+        current_teams = list(first_round_matchups)
+        winners: List[str] = []
+
+        while len(current_teams) > 1:
+            next_round = []
+            for g in range(0, len(current_teams), 2):
+                if g + 1 >= len(current_teams):
+                    next_round.append(current_teams[g])
+                    continue
+                t1, t2 = current_teams[g], current_teams[g + 1]
+                p = matchup_probs.get((t1, t2), 0.5)
+                winner = t1 if p >= 0.5 else t2
+                winners.append(winner)
+                next_round.append(winner)
+            current_teams = next_round
+
+        return winners
 
     # ------------------------------------------------------------------
     # Betting market integration
