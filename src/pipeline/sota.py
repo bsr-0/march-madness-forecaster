@@ -1239,7 +1239,64 @@ class SOTAPipeline:
         report["ev_analysis"] = ev_report.to_dict()
         report["mode"] = "ev"
 
+        # Store reference for refresh workflow
+        self._last_ev_report = report
         return report
+
+    def refresh_ev_analysis(
+        self,
+        new_picks_json: Optional[str] = None,
+        force: bool = False,
+        significance_threshold_pp: float = 1.0,
+    ) -> Dict:
+        """Re-optimize EV analysis with updated public picks without re-training.
+
+        This is the fast path for the 48-hour pre-tournament window.  Models
+        remain frozen; only leverage analysis, bracket portfolio, and strategy
+        recommendations are recomputed against fresh public pick data.
+
+        Args:
+            new_picks_json: Optional path to updated picks JSON.  If None,
+                re-fetches from live scrapers.
+            force: Force re-optimization even if picks appear unchanged.
+            significance_threshold_pp: Minimum championship pick shift (in
+                percentage points) to trigger re-optimization.
+
+        Returns:
+            Dict with ``refresh_result`` key containing comparison metrics
+            and ``ev_analysis`` with the updated EV report (if reoptimized).
+
+        Raises:
+            RuntimeError: If called before ``run()`` or on a non-EV pipeline.
+        """
+        if not hasattr(self, "_last_ev_report") or self._last_ev_report is None:
+            raise RuntimeError(
+                "refresh_ev_analysis() requires a prior run(). "
+                "Call pipeline.run() first to train models and generate initial EV analysis."
+            )
+        if self.config.mode != "ev":
+            raise RuntimeError(
+                "refresh_ev_analysis() is only available in EV mode. "
+                f"Current mode: {self.config.mode}"
+            )
+
+        from ..optimization.live_refresh import LivePicksRefreshWorkflow
+
+        workflow = LivePicksRefreshWorkflow.from_pipeline_run(
+            self, self._last_ev_report,
+        )
+        result = workflow.refresh(
+            force=force,
+            significance_threshold_pp=significance_threshold_pp,
+            new_picks_json=new_picks_json,
+        )
+
+        output = {"refresh_result": result.to_dict()}
+        if result.was_refreshed and result.updated_ev_report:
+            self._last_ev_report["ev_analysis"] = result.updated_ev_report
+            output["ev_analysis"] = result.updated_ev_report
+
+        return output
 
     def _build_ev_analysis(self, base_report: Dict) -> "EVModeReport":
         """Construct EV-mode analysis from shared pipeline results.

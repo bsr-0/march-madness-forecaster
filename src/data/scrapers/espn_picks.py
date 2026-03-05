@@ -657,6 +657,24 @@ class OrchestratorResult:
 # ---------------------------------------------------------------------------
 
 @dataclass
+class RoundDelta:
+    """Per-team per-round change in pick percentage."""
+
+    team_id: str
+    round_name: str
+    old_pct: float
+    new_pct: float
+
+    @property
+    def delta(self) -> float:
+        return self.new_pct - self.old_pct
+
+    @property
+    def abs_delta(self) -> float:
+        return abs(self.delta)
+
+
+@dataclass
 class PicksUpdate:
     """Result of a picks refresh operation, tracking changes between fetches."""
 
@@ -666,16 +684,37 @@ class PicksUpdate:
     max_delta: float = 0.0  # Largest absolute change in any championship pick %
     refresh_timestamp: float = 0.0  # Unix timestamp of the refresh
     was_stale: bool = False  # Whether the previous data was stale
+    round_deltas: List[RoundDelta] = field(default_factory=list)  # Per-round changes
+
+    @property
+    def max_round_delta(self) -> float:
+        """Largest absolute change across all rounds."""
+        if not self.round_deltas:
+            return self.max_delta
+        return max(d.abs_delta for d in self.round_deltas)
+
+    @property
+    def late_round_max_delta(self) -> float:
+        """Largest absolute change in E8/F4/CHAMP rounds (high-weight)."""
+        late = [d for d in self.round_deltas if d.round_name in ("E8", "F4", "CHAMP")]
+        if not late:
+            return 0.0
+        return max(d.abs_delta for d in late)
 
     @property
     def summary(self) -> str:
         """Human-readable summary of what changed."""
         if not self.changed_teams:
             return "No significant changes in public picks."
-        return (
+        parts = [
             f"{len(self.changed_teams)} teams changed significantly "
             f"(max delta: {self.max_delta:.1f}pp): {', '.join(self.changed_teams[:5])}"
-        )
+        ]
+        if self.round_deltas:
+            late_delta = self.late_round_max_delta
+            if late_delta > 0.5:
+                parts.append(f"Late-round max shift: {late_delta:.1f}pp")
+        return "; ".join(parts)
 
 
 class RefreshablePicksManager:
@@ -761,6 +800,16 @@ class RefreshablePicksManager:
         """Compute differences between old and new pick data."""
         changed: List[str] = []
         max_delta = 0.0
+        round_deltas: List[RoundDelta] = []
+
+        round_attrs = [
+            ("R64", "round_of_64_pct"),
+            ("R32", "round_of_32_pct"),
+            ("S16", "sweet_16_pct"),
+            ("E8", "elite_8_pct"),
+            ("F4", "final_four_pct"),
+            ("CHAMP", "champion_pct"),
+        ]
 
         all_teams = set(old.teams.keys()) | set(new.teams.keys())
         for tid in all_teams:
@@ -771,6 +820,18 @@ class RefreshablePicksManager:
                 changed.append(tid)
             max_delta = max(max_delta, delta)
 
+            # Per-round deltas
+            for rnd_name, attr in round_attrs:
+                old_val = getattr(old.teams[tid], attr, 0.0) if tid in old.teams else 0.0
+                new_val = getattr(new.teams[tid], attr, 0.0) if tid in new.teams else 0.0
+                if abs(new_val - old_val) > 0.01:
+                    round_deltas.append(RoundDelta(
+                        team_id=tid,
+                        round_name=rnd_name,
+                        old_pct=old_val,
+                        new_pct=new_val,
+                    ))
+
         return PicksUpdate(
             previous=old,
             current=new,
@@ -778,4 +839,5 @@ class RefreshablePicksManager:
             max_delta=max_delta,
             refresh_timestamp=time.time(),
             was_stale=was_stale,
+            round_deltas=sorted(round_deltas, key=lambda d: d.abs_delta, reverse=True),
         )
