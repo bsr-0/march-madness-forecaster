@@ -414,3 +414,239 @@ def aggregate_consensus(
         teams=aggregated,
         sources=["espn", "yahoo", "cbs"],
     )
+
+
+# ---------------------------------------------------------------------------
+# Robust Scraper Orchestration with Retries and Health Tracking
+# ---------------------------------------------------------------------------
+
+import time
+import concurrent.futures
+from enum import Enum
+
+
+class SourceHealth(Enum):
+    """Health status of a scraping source."""
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
+    FAILED = "failed"
+
+
+@dataclass
+class SourceStatus:
+    """Runtime health status for a single data source."""
+    name: str
+    health: SourceHealth = SourceHealth.HEALTHY
+    last_success: Optional[float] = None  # Unix timestamp
+    last_failure: Optional[float] = None
+    consecutive_failures: int = 0
+    last_error: Optional[str] = None
+    latency_ms: Optional[float] = None
+
+    @property
+    def is_stale(self) -> bool:
+        """Data is stale if last success > 24 hours ago or never succeeded."""
+        if self.last_success is None:
+            return True
+        return (time.time() - self.last_success) > 86400  # 24 hours
+
+
+class ScraperOrchestrator:
+    """Parallel scraper execution with retry logic, circuit breakers,
+    and source health tracking.
+
+    Rationale (senior ML engineer perspective):
+    - Public pick data is the *single most important input* for EV mode.
+      If scraping fails silently, the entire game-theory layer collapses
+      to a chalk bracket (model_prob == public_prob → leverage == 1.0
+      for all picks → zero contrarian value).
+    - Multiple independent sources (ESPN, Yahoo, CBS) provide redundancy.
+      If one source goes down, the others still give usable signal.
+    - Exponential backoff prevents rate-limiting bans.
+    - Health tracking lets the pipeline log degradation warnings
+      rather than failing silently.
+
+    Usage:
+        orchestrator = ScraperOrchestrator(cache_dir="data/raw")
+        result = orchestrator.fetch_all_picks(year=2026)
+        # result.consensus has aggregated picks
+        # result.source_statuses has per-source health info
+    """
+
+    MAX_RETRIES = 3
+    BACKOFF_BASE_SECONDS = 2.0
+    TIMEOUT_SECONDS = 45
+    # Circuit breaker: skip source after N consecutive failures
+    CIRCUIT_BREAKER_THRESHOLD = 5
+
+    def __init__(self, cache_dir: Optional[str] = None):
+        self.cache_dir = cache_dir
+        self.source_statuses: Dict[str, SourceStatus] = {
+            "espn": SourceStatus(name="espn"),
+            "yahoo": SourceStatus(name="yahoo"),
+            "cbs": SourceStatus(name="cbs"),
+        }
+
+    def fetch_all_picks(
+        self,
+        year: int = 2026,
+        weights: Optional[Dict[str, float]] = None,
+        min_sources: int = 2,
+    ) -> "OrchestratorResult":
+        """Fetch picks from all sources in parallel with retries.
+
+        Args:
+            year: Tournament year.
+            weights: Source weights for aggregation.
+            min_sources: Minimum sources required for valid consensus.
+
+        Returns:
+            OrchestratorResult with consensus data and source health.
+
+        Raises:
+            DataRequirementError if fewer than min_sources succeed.
+        """
+        if weights is None:
+            weights = {"espn": 0.5, "yahoo": 0.3, "cbs": 0.2}
+
+        scrapers = {
+            "espn": ESPNPicksScraper(cache_dir=self.cache_dir),
+            "yahoo": YahooPicksScraper(cache_dir=self.cache_dir),
+            "cbs": CBSPicksScraper(cache_dir=self.cache_dir),
+        }
+
+        results: Dict[str, ConsensusData] = {}
+
+        # Parallel fetch with ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            future_to_source = {}
+            for source_name, scraper in scrapers.items():
+                status = self.source_statuses[source_name]
+                # Circuit breaker: skip if too many consecutive failures
+                if status.consecutive_failures >= self.CIRCUIT_BREAKER_THRESHOLD:
+                    logger.warning(
+                        "Circuit breaker OPEN for %s (%d consecutive failures). Skipping.",
+                        source_name, status.consecutive_failures,
+                    )
+                    continue
+                future = executor.submit(
+                    self._fetch_with_retry, source_name, scraper, year
+                )
+                future_to_source[future] = source_name
+
+            for future in concurrent.futures.as_completed(
+                future_to_source, timeout=self.TIMEOUT_SECONDS * self.MAX_RETRIES
+            ):
+                source_name = future_to_source[future]
+                try:
+                    consensus = future.result()
+                    if consensus and consensus.teams:
+                        results[source_name] = consensus
+                except Exception as e:
+                    logger.error("Orchestrator: %s failed completely: %s", source_name, e)
+
+        # Check minimum source requirement
+        successful_sources = list(results.keys())
+        if len(successful_sources) < min_sources:
+            logger.error(
+                "Only %d/%d sources succeeded: %s. Minimum required: %d.",
+                len(successful_sources), len(scrapers), successful_sources, min_sources,
+            )
+
+        # Build aggregated consensus from successful sources
+        espn_data = results.get("espn", ConsensusData(sources=["espn"]))
+        yahoo_data = results.get("yahoo", ConsensusData(sources=["yahoo"]))
+        cbs_data = results.get("cbs", ConsensusData(sources=["cbs"]))
+
+        # Reweight based on which sources actually returned data
+        active_weights = {s: weights.get(s, 0.0) for s in successful_sources}
+        total_w = sum(active_weights.values())
+        if total_w > 0:
+            active_weights = {s: w / total_w for s, w in active_weights.items()}
+        else:
+            active_weights = {"espn": 1.0}  # Fallback
+
+        consensus = aggregate_consensus(
+            espn_data, yahoo_data, cbs_data, weights=active_weights
+        )
+
+        return OrchestratorResult(
+            consensus=consensus,
+            successful_sources=successful_sources,
+            source_statuses=dict(self.source_statuses),
+        )
+
+    def _fetch_with_retry(
+        self, source_name: str, scraper, year: int
+    ) -> Optional[ConsensusData]:
+        """Fetch from a single source with exponential backoff retries."""
+        status = self.source_statuses[source_name]
+
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                start = time.monotonic()
+                result = scraper.fetch_picks(year)
+                elapsed_ms = (time.monotonic() - start) * 1000
+
+                if result and result.teams:
+                    # Success
+                    status.health = SourceHealth.HEALTHY
+                    status.last_success = time.time()
+                    status.consecutive_failures = 0
+                    status.latency_ms = elapsed_ms
+                    status.last_error = None
+                    logger.info(
+                        "%s: fetched %d teams in %.0fms (attempt %d)",
+                        source_name, len(result.teams), elapsed_ms, attempt + 1,
+                    )
+                    return result
+                else:
+                    # Empty result — retry
+                    logger.warning(
+                        "%s: empty result on attempt %d/%d",
+                        source_name, attempt + 1, self.MAX_RETRIES,
+                    )
+
+            except Exception as e:
+                status.last_error = str(e)
+                logger.warning(
+                    "%s: attempt %d/%d failed: %s",
+                    source_name, attempt + 1, self.MAX_RETRIES, e,
+                )
+
+            # Exponential backoff before retry
+            if attempt < self.MAX_RETRIES - 1:
+                backoff = self.BACKOFF_BASE_SECONDS * (2 ** attempt)
+                time.sleep(backoff)
+
+        # All retries exhausted
+        status.health = SourceHealth.FAILED
+        status.last_failure = time.time()
+        status.consecutive_failures += 1
+        logger.error("%s: all %d retries exhausted", source_name, self.MAX_RETRIES)
+        return None
+
+
+@dataclass
+class OrchestratorResult:
+    """Result from the scraper orchestrator."""
+    consensus: ConsensusData
+    successful_sources: List[str]
+    source_statuses: Dict[str, SourceStatus]
+
+    @property
+    def is_degraded(self) -> bool:
+        """True if any source failed."""
+        return len(self.successful_sources) < 3
+
+    @property
+    def health_summary(self) -> str:
+        """Human-readable health summary."""
+        lines = [f"Sources: {len(self.successful_sources)}/3 healthy"]
+        for name, status in self.source_statuses.items():
+            lines.append(f"  {name}: {status.health.value}")
+            if status.last_error:
+                lines.append(f"    Last error: {status.last_error}")
+            if status.is_stale:
+                lines.append(f"    WARNING: Data is stale")
+        return "\n".join(lines)

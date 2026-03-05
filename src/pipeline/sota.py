@@ -488,7 +488,7 @@ class SOTAPipelineConfig:
 
     # --- Betting market integration ---
     betting_odds_json: Optional[str] = None  # Path to cached betting odds JSON
-    enable_market_blend: bool = False  # Blend model predictions with betting market implied probabilities
+    enable_market_blend: bool = True  # Blend model predictions with betting market implied probabilities
     market_blend_weight: float = 0.20  # Weight for market data in blend (0.0-1.0); model gets 1-weight
 
     def __post_init__(self):
@@ -1685,6 +1685,11 @@ class SOTAPipeline:
             self._apply_sos_refinement(mh, pr)
             self._sos_refinement_pending = None
 
+        # Compute graph-theoretic win quality metrics from the schedule graph
+        # and attach to team features.  These capture "who you beat" (not just
+        # "how many"), which is the NCAA committee's primary evaluation lens.
+        self._apply_win_quality_metrics(schedule_graph)
+
         # A1: Embedding projections removed — GNN/Transformer no longer used
         # in fusion. GNN graph statistics (PageRank SOS, multi-hop SOS) are
         # retained as feature-engineering inputs only.
@@ -2553,6 +2558,21 @@ class SOTAPipeline:
                     ctp = compute_coach_tournament_power(raw_coach)
                     coach_deep_run_rate = ctp.deep_run_rate
                     coach_stage_consistency = ctp.stage_consistency
+                    # Per-stage coaching breakdowns: expose F4/E8/S16 counts
+                    # independently so the model can learn stage-specific effects.
+                    # A coach with 5 Final Fours but 0 championships is different
+                    # from one with 2 F4s and 2 titles.
+                    coach_f4_apps = ctp.final_fours
+                    coach_e8_apps = ctp.elite_8_appearances
+                    coach_s16_apps = ctp.sweet_16_appearances
+                else:
+                    coach_f4_apps = 0
+                    coach_e8_apps = 0
+                    coach_s16_apps = 0
+            else:
+                coach_f4_apps = 0
+                coach_e8_apps = 0
+                coach_s16_apps = 0
 
             # --- Conference tournament champion ---
             is_conf_champ = 0.0
@@ -2572,6 +2592,9 @@ class SOTAPipeline:
                 torvik_map[team_id]["coach_tournament_win_rate"] = coach_win_rate
                 torvik_map[team_id]["coach_deep_run_rate"] = coach_deep_run_rate
                 torvik_map[team_id]["coach_stage_consistency"] = coach_stage_consistency
+                torvik_map[team_id]["coach_f4_appearances"] = coach_f4_apps
+                torvik_map[team_id]["coach_e8_appearances"] = coach_e8_apps
+                torvik_map[team_id]["coach_s16_appearances"] = coach_s16_apps
                 torvik_map[team_id]["conf_tourney_champion"] = is_conf_champ
 
             # Write into proprietary_map
@@ -2581,6 +2604,9 @@ class SOTAPipeline:
                 proprietary_map[team_id]["coach_tournament_win_rate"] = coach_win_rate
                 proprietary_map[team_id]["coach_deep_run_rate"] = coach_deep_run_rate
                 proprietary_map[team_id]["coach_stage_consistency"] = coach_stage_consistency
+                proprietary_map[team_id]["coach_f4_appearances"] = coach_f4_apps
+                proprietary_map[team_id]["coach_e8_appearances"] = coach_e8_apps
+                proprietary_map[team_id]["coach_s16_appearances"] = coach_s16_apps
                 proprietary_map[team_id]["conf_tourney_champion"] = is_conf_champ
 
     def _load_external_ratings(self, teams: List[Team]) -> Dict:
@@ -5124,7 +5150,49 @@ class SOTAPipeline:
             pr = float(pagerank.get(team_id, pr_mean))
             refined_sos = 0.5 * feats.sos_adj_em + 3.0 * mh + 12.0 * (pr - pr_mean)
             feats.sos_adj_em = float(refined_sos)
+
+            # Expose PageRank and multi-hop as standalone features so the
+            # ensemble can learn their weights independently rather than
+            # relying on the hardcoded blend above.  The blend still
+            # refines sos_adj_em for backward compatibility, but the raw
+            # graph signals are now available as independent dimensions.
+            feats.pagerank_sos = float(pr - pr_mean)
+            feats.multi_hop_sos = float(mh)
+
             self.team_features[team_id] = feats.to_vector(include_embeddings=False)
+
+    def _apply_win_quality_metrics(self, graph: ScheduleGraph) -> None:
+        """Compute and attach graph-theoretic win quality metrics to team features.
+
+        These features capture *who you beat* and *how convincingly*, which
+        traditional win-loss records miss entirely.  A 25-5 team with zero
+        top-50 wins is fundamentally different from a 22-8 team with five
+        top-25 wins — but both look similar in record-based features.
+
+        The schedule graph has already been built from training-era games
+        only (leakage-safe), so these metrics are valid for both training
+        and inference.
+        """
+        if not self.feature_engineer.team_features or not graph.edges:
+            return
+
+        win_quality = graph.compute_win_quality_metrics()
+
+        for team_id, feats in self.feature_engineer.team_features.items():
+            metrics = win_quality.get(team_id, {})
+            feats.best_win_percentile = float(metrics.get("best_win_percentile", 0.5))
+            feats.paper_tiger_score = float(metrics.get("paper_tiger_score", 0.0))
+            feats.dominance_ratio = float(metrics.get("dominance_ratio", 1.0))
+            self.team_features[team_id] = feats.to_vector(include_embeddings=False)
+
+        n_enriched = sum(
+            1 for tid in self.feature_engineer.team_features
+            if tid in win_quality
+        )
+        logger.info(
+            "Win quality metrics: enriched %d/%d teams (best_win_pctile, paper_tiger, dominance)",
+            n_enriched, len(self.feature_engineer.team_features),
+        )
 
     def _run_transformer(self, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         sequences: Dict[str, SeasonSequence] = {}
@@ -5937,22 +6005,28 @@ class SOTAPipeline:
             self.public_pick_sources = ["model_fallback"]
             return {team_id: dict(round_probs) for team_id, round_probs in model_probs.items()}
 
-        espn = ESPNPicksScraper(cache_dir=self.config.data_cache_dir).fetch_picks(self.config.year)
-        yahoo = YahooPicksScraper(cache_dir=self.config.data_cache_dir).fetch_picks(self.config.year)
-        cbs = CBSPicksScraper(cache_dir=self.config.data_cache_dir).fetch_picks(self.config.year)
-        self.public_pick_sources = []
-        if espn.teams:
-            self.public_pick_sources.append("espn")
-        if yahoo.teams:
-            self.public_pick_sources.append("yahoo")
-        if cbs.teams:
-            self.public_pick_sources.append("cbs")
+        # Use ScraperOrchestrator for parallel fetching with retries,
+        # circuit breakers, and health tracking.  This replaces the
+        # sequential scraper calls that had no retry logic.
+        from ..data.scrapers.espn_picks import ScraperOrchestrator
+        orchestrator = ScraperOrchestrator(cache_dir=self.config.data_cache_dir)
+        result = orchestrator.fetch_all_picks(
+            year=self.config.year,
+            min_sources=self.config.min_public_sources,
+        )
+        self.public_pick_sources = result.successful_sources
         if len(set(self.public_pick_sources)) < self.config.min_public_sources:
             raise DataRequirementError(
                 f"Public pick source coverage too low ({len(set(self.public_pick_sources))}). "
-                f"Need at least {self.config.min_public_sources} independent sources."
+                f"Need at least {self.config.min_public_sources} independent sources. "
+                f"Health: {result.health_summary}"
             )
-        consensus = aggregate_consensus(espn, yahoo, cbs)
+        if result.is_degraded:
+            logger.warning(
+                "Scraper orchestrator degraded: %d/3 sources succeeded.\n%s",
+                len(result.successful_sources), result.health_summary,
+            )
+        consensus = result.consensus
         public = {self._team_id(team_id): self._normalize_public_pick_row(picks.as_dict) for team_id, picks in consensus.teams.items()}
         self._validate_source_coverage("Public picks", public, list(self.team_struct.values()), min_ratio=0.75)
         return public
