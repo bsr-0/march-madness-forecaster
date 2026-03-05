@@ -65,20 +65,38 @@ class BracketPortfolioGenerator:
     The key insight: in a portfolio competition, you want brackets that
     are collectively unlikely to ALL be wrong. Diverse brackets achieve
     this better than many copies of the "best" bracket.
+
+    Cross-strategy synergy: when a ``PoolStrategyProfile`` is provided,
+    the generator uses its ``contrarian_strength`` to modulate how
+    aggressively contrarian brackets over-weight leverage picks.  When
+    ``leverage_picks`` are supplied (from the EV mode's pool analysis),
+    contrarian and targeted strategies use per-round leverage data to
+    make smarter pick decisions, not just champion-level selection.
     """
 
     def __init__(
         self,
         predict_fn: Callable[[str, str], float],
         public_pick_pcts: Optional[Dict[str, float]] = None,
+        round_public_picks: Optional[Dict[str, Dict[str, float]]] = None,
+        leverage_picks: Optional[List[Dict]] = None,
     ):
         """
         Args:
             predict_fn: (team1_id, team2_id) -> P(team1 wins)
             public_pick_pcts: team_id -> championship pick percentage
+            round_public_picks: team_id -> {round: pick_pct} for per-round
+                leverage.  When provided, contrarian brackets use per-round
+                leverage instead of champion-only.
+            leverage_picks: Serialized LeveragePick dicts from pool analysis.
+                When provided, contrarian and targeted strategies use these
+                pre-computed leverage opportunities.
         """
         self.predict_fn = predict_fn
         self.public_picks = public_pick_pcts or {}
+        self.round_public_picks = round_public_picks or {}
+        self.leverage_picks = leverage_picks or []
+        self._contrarian_strength = 1.0  # Set from profile in generate_portfolio
 
     def generate_portfolio(
         self,
@@ -113,11 +131,13 @@ class BracketPortfolioGenerator:
             # Cross-strategy synergy: reuse pool-size-adaptive allocations
             # from the EV mode's game-theoretic analysis.
             strategy_mix = pool_strategy_profile.strategy_mix.copy()
+            self._contrarian_strength = pool_strategy_profile.contrarian_strength
             logger.info(
-                "Using pool strategy profile (pool_size=%d, payout=%s) "
-                "for bracket portfolio allocation: %s",
+                "Using pool strategy profile (pool_size=%d, payout=%s, "
+                "contrarian_strength=%.1f) for bracket portfolio allocation: %s",
                 pool_strategy_profile.pool_size,
                 pool_strategy_profile.payout_structure,
+                pool_strategy_profile.contrarian_strength,
                 strategy_mix,
             )
         elif strategy_mix is None:
@@ -523,9 +543,19 @@ class BracketPortfolioGenerator:
     ) -> List[GeneratedBracket]:
         """Generate brackets with contrarian champions (anti-correlated to public).
 
-        Over-represent champions where model_prob >> public_prob.
+        Over-represent champions where model_prob >> public_prob.  When
+        per-round leverage data is available, also scores individual bracket
+        simulations by how many per-round leverage picks they contain —
+        preferring brackets that capture multiple leverage opportunities
+        across rounds, not just the champion pick.
+
+        The ``contrarian_strength`` from the pool strategy profile scales
+        how aggressively leverage ratios are amplified:
+        - 0.5: mild (small pools where accuracy matters more)
+        - 1.0: neutral
+        - 2.0+: aggressive (large pools where differentiation is mandatory)
         """
-        if not self.public_picks:
+        if not self.public_picks and not self.round_public_picks:
             # Without public data, fall back to diverse selection
             return self._select_diverse_brackets(sim_results, n_brackets, rng)
 
@@ -538,13 +568,26 @@ class BracketPortfolioGenerator:
 
         total_sims = len(sim_results)
 
-        # Compute leverage ratio per champion
+        # Compute leverage ratio per champion, amplified by contrarian_strength
         champion_leverage = {}
         for champ, brackets in by_champion.items():
             model_p = len(brackets) / total_sims
             public_p = self.public_picks.get(champ, 0.01)
-            leverage = model_p / max(public_p, 0.001)
-            champion_leverage[champ] = leverage
+            raw_leverage = model_p / max(public_p, 0.001)
+            # Apply contrarian_strength: raise leverage to the power of strength.
+            # strength=1 is neutral; >1 amplifies high-leverage champions;
+            # <1 dampens, pulling allocation back toward model probabilities.
+            champion_leverage[champ] = raw_leverage ** self._contrarian_strength
+            if self._contrarian_strength > 1.0:
+                logger.debug(
+                    "Contrarian champion %s: raw_lev=%.2f, amplified=%.2f "
+                    "(strength=%.1f)",
+                    champ, raw_leverage, champion_leverage[champ],
+                    self._contrarian_strength,
+                )
+
+        # Build per-round leverage lookup for scoring individual brackets
+        leverage_teams_by_round = self._build_leverage_lookup()
 
         # Weight selection toward high-leverage champions
         total_leverage = sum(champion_leverage.values())
@@ -553,10 +596,55 @@ class BracketPortfolioGenerator:
         for champ, leverage in champion_leverage.items():
             n_for_champ = max(1, int(n_brackets * leverage / total_leverage))
             brackets = by_champion.get(champ, [])
-            brackets.sort(key=lambda b: b.log_probability, reverse=True)
+
+            if leverage_teams_by_round:
+                # Score each bracket by how many per-round leverage picks it
+                # contains, then sort by (leverage_score, log_probability).
+                for b in brackets:
+                    b._leverage_score = self._score_bracket_leverage(
+                        b, leverage_teams_by_round,
+                    )
+                brackets.sort(
+                    key=lambda b: (b._leverage_score, b.log_probability),
+                    reverse=True,
+                )
+            else:
+                brackets.sort(key=lambda b: b.log_probability, reverse=True)
+
             selected.extend(brackets[:n_for_champ])
 
         return selected[:n_brackets]
+
+    def _build_leverage_lookup(self) -> Dict[int, set]:
+        """Build round -> set of leverage team IDs from leverage_picks."""
+        if not self.leverage_picks:
+            return {}
+        round_to_num = {"R64": 0, "R32": 1, "S16": 2, "E8": 3, "F4": 4, "CHAMP": 5}
+        lookup: Dict[int, set] = {}
+        for lp in self.leverage_picks:
+            rnd = lp.get("round", "")
+            rn = round_to_num.get(rnd)
+            if rn is not None:
+                lookup.setdefault(rn, set()).add(lp.get("team_id", ""))
+        return lookup
+
+    def _score_bracket_leverage(
+        self,
+        bracket: GeneratedBracket,
+        leverage_teams_by_round: Dict[int, set],
+    ) -> float:
+        """Score a bracket by how many leverage picks it contains.
+
+        Each pick that matches a leverage opportunity contributes the
+        pick's win_probability as its score (so higher-probability
+        leverage picks are worth more).
+        """
+        score = 0.0
+        for pick in bracket.picks:
+            leverage_teams = leverage_teams_by_round.get(pick.round_num, set())
+            if pick.winner_id in leverage_teams:
+                score += pick.win_probability
+        return score
 
     def _generate_targeted_brackets(
         self,
@@ -568,7 +656,10 @@ class BracketPortfolioGenerator:
         """Generate brackets each targeting a specific champion.
 
         Ensures the portfolio includes at least one bracket for each
-        viable champion (>1% model probability).
+        viable champion (>1% model probability).  When public pick data
+        is available, allocates more brackets to high-leverage champions
+        (undervalued by the public) while still guaranteeing coverage
+        of every viable champion.
         """
         by_champion: Dict[str, List[GeneratedBracket]] = {}
         for b in sim_results:
@@ -580,11 +671,47 @@ class BracketPortfolioGenerator:
         viable = {c: bs for c, bs in by_champion.items()
                    if len(bs) / total >= 0.01}
 
+        if not viable:
+            return self._select_diverse_brackets(sim_results, n_brackets, rng)
+
+        # Leverage-weighted allocation: give more brackets to undervalued
+        # champions while guaranteeing at least 1 per viable champion.
+        leverage_teams_by_round = self._build_leverage_lookup()
+        if self.public_picks:
+            champion_weights = {}
+            for champ in viable:
+                model_p = len(viable[champ]) / total
+                public_p = self.public_picks.get(champ, model_p)
+                leverage = model_p / max(public_p, 0.001)
+                # Blend leverage with model probability to avoid allocating
+                # brackets to champions with high leverage but negligible
+                # probability.  Weight: 60% leverage, 40% model probability.
+                champion_weights[champ] = 0.6 * leverage + 0.4 * (model_p * 100)
+            total_weight = sum(champion_weights.values())
+        else:
+            champion_weights = {c: len(bs) / total for c, bs in viable.items()}
+            total_weight = sum(champion_weights.values())
+
         selected = []
-        per_champ = max(1, n_brackets // max(len(viable), 1))
+        guaranteed = max(1, n_brackets // max(len(viable), 1) // 2)  # Floor guarantee
+        remaining = n_brackets - guaranteed * len(viable)
 
         for champ, brackets in viable.items():
-            brackets.sort(key=lambda b: b.log_probability, reverse=True)
-            selected.extend(brackets[:per_champ])
+            weight = champion_weights.get(champ, 1.0) / max(total_weight, 1e-9)
+            n_for_champ = guaranteed + max(0, int(remaining * weight))
+
+            if leverage_teams_by_round:
+                for b in brackets:
+                    b._leverage_score = self._score_bracket_leverage(
+                        b, leverage_teams_by_round,
+                    )
+                brackets.sort(
+                    key=lambda b: (b._leverage_score, b.log_probability),
+                    reverse=True,
+                )
+            else:
+                brackets.sort(key=lambda b: b.log_probability, reverse=True)
+
+            selected.extend(brackets[:n_for_champ])
 
         return selected[:n_brackets]
