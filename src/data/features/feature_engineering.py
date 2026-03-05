@@ -72,7 +72,7 @@ REMOVED_REDUNDANCIES = [
 # games with stability=0.1, near-zero predictive power per academic lit).
 # FIX 2.3: preseason_ap_rank encoding smoothed (was cliff at #25→unranked).
 # Down from 67 → 66 team features.
-TEAM_FEATURE_DIM = 69  # C4+WS3: 64 base + 2 external rating + 2 Poisson Binomial resume + 1 tournament resume composite
+TEAM_FEATURE_DIM = 71  # C4+WS3: 64 base + 2 external rating + 2 Poisson Binomial resume + 1 tournament resume composite + 2 coach stage experience
 
 # FIX #4: Indices (into the team feature vector) of the top features used
 # for absolute-level matchup context.  These are the features where the
@@ -266,6 +266,12 @@ class TeamFeatures:
 
     # Coach tournament win rate (wins / games in NCAA tournament)
     coach_tournament_win_rate: float = 0.0
+
+    # Coach deep run rate: fraction of tournament appearances reaching F4+
+    coach_deep_run_rate: float = 0.0
+
+    # Coach stage consistency: weighted measure of reaching late rounds
+    coach_stage_consistency: float = 0.0
 
     # Per-game pace variance (game-to-game tempo stdev — upset risk amplifier)
     pace_variance: float = 0.0
@@ -543,6 +549,12 @@ class TeamFeatures:
             # Coach tournament win rate (1)
             self.coach_tournament_win_rate,
 
+            # Coach deep run rate (1) — F4+/appearances ratio
+            self.coach_deep_run_rate,
+
+            # Coach stage consistency (1) — weighted late-round consistency
+            self.coach_stage_consistency,
+
             # Per-game pace variance (1) — upset risk amplifier
             self.pace_variance,
 
@@ -688,6 +700,8 @@ class TeamFeatures:
             'preseason_ap_rank',
             'coach_tournament_exp',
             'coach_tournament_win_rate',
+            'coach_deep_run_rate',
+            'coach_stage_consistency',
             'pace_variance',
             'conf_tourney_champ',
             # KenPom / ShotQuality replacements (reduced)
@@ -916,6 +930,8 @@ class FeatureEngineer:
             features.preseason_ap_rank = int(pm.get('preseason_ap_rank', 0))
             features.coach_tournament_appearances = int(pm.get('coach_tournament_appearances', 0))
             features.coach_tournament_win_rate = float(pm.get('coach_tournament_win_rate', 0.0))
+            features.coach_deep_run_rate = float(pm.get('coach_deep_run_rate', 0.0))
+            features.coach_stage_consistency = float(pm.get('coach_stage_consistency', 0.0))
             features.pace_variance = float(pm.get('pace_variance', 0.0))
             features.conf_tourney_champion = float(pm.get('conf_tourney_champion', False))
 

@@ -93,6 +93,191 @@ class TeamMetadata:
     region: str
 
 
+# ---------------------------------------------------------------------------
+# Pool-Size-Adaptive Strategy (Phase 2: EV Mode)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class PoolStrategyProfile:
+    """Graduated strategy profile based on pool size and scoring system.
+
+    Encodes how aggressively contrarian the bracket optimizer should be
+    given the competitive landscape.  Larger pools require more
+    differentiation; smaller pools reward accuracy.
+    """
+
+    pool_size: int
+    scoring_system: str  # "standard", "flat", "upset_bonus"
+    strategy_mix: Dict[str, float]  # {"chalk": 0.3, "balanced": 0.4, ...}
+    contrarian_strength: float  # Multiplier on leverage picks (0.5–3.0)
+    champion_risk_level: str  # "very_low", "low", "moderate", "high", "extreme"
+    description: str = ""
+
+    def validate(self) -> None:
+        """Ensure strategy_mix sums to ~1.0."""
+        total = sum(self.strategy_mix.values())
+        if abs(total - 1.0) > 0.01:
+            raise ValueError(
+                f"strategy_mix must sum to 1.0, got {total:.3f}"
+            )
+
+
+def get_strategy_profile(
+    pool_size: int,
+    scoring_system: str = "standard",
+    contrarian_override: Optional[float] = None,
+) -> PoolStrategyProfile:
+    """Return a graduated strategy profile for the given pool size.
+
+    Strategic pivot points based on empirical bracket pool analysis:
+    - Tiny pools (<30): Chalk-heavy.  Accuracy wins; upsets dilute score.
+    - Small pools (30-100): Balanced.  1-2 leverage picks for edge.
+    - Medium pools (101-1000): Contrarian-leaning.  Must differentiate.
+    - Large pools (1000+): Aggressive.  Only outlier paths can win.
+
+    Args:
+        pool_size: Number of competitors in the pool.
+        scoring_system: "standard" (ESPN), "flat", or "upset_bonus".
+        contrarian_override: If set, overrides the profile's contrarian_strength.
+
+    Returns:
+        PoolStrategyProfile with recommended strategy allocation.
+    """
+    if pool_size < 30:
+        profile = PoolStrategyProfile(
+            pool_size=pool_size,
+            scoring_system=scoring_system,
+            strategy_mix={
+                "chalk": 0.60,
+                "balanced": 0.35,
+                "contrarian": 0.05,
+                "targeted": 0.00,
+            },
+            contrarian_strength=0.5,
+            champion_risk_level="very_low",
+            description="Tiny pool: accuracy-first, minimal risk",
+        )
+    elif pool_size <= 100:
+        profile = PoolStrategyProfile(
+            pool_size=pool_size,
+            scoring_system=scoring_system,
+            strategy_mix={
+                "chalk": 0.30,
+                "balanced": 0.40,
+                "contrarian": 0.20,
+                "targeted": 0.10,
+            },
+            contrarian_strength=1.0,
+            champion_risk_level="low",
+            description="Small pool: balanced with selective leverage",
+        )
+    elif pool_size <= 1000:
+        profile = PoolStrategyProfile(
+            pool_size=pool_size,
+            scoring_system=scoring_system,
+            strategy_mix={
+                "chalk": 0.10,
+                "balanced": 0.25,
+                "contrarian": 0.40,
+                "targeted": 0.25,
+            },
+            contrarian_strength=1.5,
+            champion_risk_level="high",
+            description="Medium pool: contrarian-leaning, differentiation required",
+        )
+    else:
+        profile = PoolStrategyProfile(
+            pool_size=pool_size,
+            scoring_system=scoring_system,
+            strategy_mix={
+                "chalk": 0.05,
+                "balanced": 0.15,
+                "contrarian": 0.40,
+                "targeted": 0.40,
+            },
+            contrarian_strength=2.0,
+            champion_risk_level="extreme",
+            description="Large pool: aggressive contrarianism mandatory",
+        )
+
+    if contrarian_override is not None:
+        profile.contrarian_strength = contrarian_override
+
+    return profile
+
+
+@dataclass
+class ScoringSystemAdapter:
+    """Adapts leverage ratios by round weight for different scoring systems.
+
+    Standard ESPN scoring (10-20-40-80-160-320) heavily favors late rounds,
+    so leverage in the Final Four and Championship is amplified.  Flat
+    scoring (1-2-3-4-5-6) equalizes round importance, so first-round
+    leverage is just as valuable.  Upset bonus systems reward contrarian
+    picks in all rounds.
+    """
+
+    system: str  # "standard", "flat", "upset_bonus"
+    round_weights: Dict[str, float]
+    leverage_priority: str  # "late_rounds", "early_rounds", "balanced"
+
+    def adjust_leverage_ratio(
+        self, round_name: str, base_ratio: float, seed_diff: int = 0
+    ) -> float:
+        """Weight leverage by round importance and scoring system.
+
+        Args:
+            round_name: Round identifier (R64, R32, S16, E8, F4, CHAMP).
+            base_ratio: Raw leverage ratio (model_prob / public_pct).
+            seed_diff: Absolute seed difference (for upset bonus).
+
+        Returns:
+            Adjusted leverage ratio.
+        """
+        weight = self.round_weights.get(round_name, 1.0)
+
+        if self.system == "flat":
+            # All rounds equally important — no amplification
+            return base_ratio
+        elif self.system == "upset_bonus":
+            # Extra reward for picking high-seed upsets
+            upset_mult = 1.0 + 0.05 * seed_diff if seed_diff > 0 else 1.0
+            return base_ratio * upset_mult
+        else:
+            # Standard: amplify leverage in high-weight rounds.
+            # Use sqrt dampening to avoid excessive variance.
+            return base_ratio * (weight ** 0.5)
+
+
+def get_scoring_adapter(scoring_system: str = "standard") -> ScoringSystemAdapter:
+    """Factory for ScoringSystemAdapter instances.
+
+    Args:
+        scoring_system: "standard", "flat", or "upset_bonus".
+
+    Returns:
+        Configured ScoringSystemAdapter.
+    """
+    if scoring_system == "flat":
+        return ScoringSystemAdapter(
+            system="flat",
+            round_weights={"R64": 1, "R32": 2, "S16": 3, "E8": 4, "F4": 5, "CHAMP": 6},
+            leverage_priority="balanced",
+        )
+    elif scoring_system == "upset_bonus":
+        return ScoringSystemAdapter(
+            system="upset_bonus",
+            round_weights={"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320},
+            leverage_priority="balanced",
+        )
+    else:
+        return ScoringSystemAdapter(
+            system="standard",
+            round_weights={"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320},
+            leverage_priority="late_rounds",
+        )
+
+
 class LeverageCalculator:
     """
     Calculates leverage ratios for bracket optimization.
@@ -716,49 +901,92 @@ def analyze_pool(
     public_picks: Dict[str, Dict[str, float]],
     scoring_system: Optional[Dict[str, int]] = None,
     team_metadata: Optional[Dict[str, TeamMetadata]] = None,
+    ev_scoring_system: Optional[str] = None,
+    strategy_profile: Optional[PoolStrategyProfile] = None,
+    archetype_picks: Optional[Dict[str, Dict[str, float]]] = None,
 ) -> PoolAnalysis:
     """
     Complete pool analysis.
-    
+
     Args:
         pool_size: Number of entries
         model_probs: Model probabilities by team and round
         public_picks: Public pick percentages
-        
+        scoring_system: Round -> points mapping (overrides adapter if set)
+        team_metadata: Team metadata for richer recommendations
+        ev_scoring_system: Scoring system name for adapter ("standard", "flat", "upset_bonus")
+        strategy_profile: Pre-computed strategy profile (auto-generated if None)
+        archetype_picks: Blended opponent pick distribution from behavioral
+            archetype modeling.  When provided, this replaces ``public_picks``
+            for leverage calculations, producing more realistic field models.
+
     Returns:
         PoolAnalysis with recommendations
     """
+    # When archetype-modeled picks are available, use them for leverage
+    # instead of raw public consensus.  This gives a more realistic view
+    # of what competitors actually pick.
+    effective_picks = archetype_picks if archetype_picks is not None else public_picks
+
+    # Use scoring adapter if ev_scoring_system specified and no explicit scoring_system
+    adapter = None
+    if ev_scoring_system and not scoring_system:
+        adapter = get_scoring_adapter(ev_scoring_system)
+        scoring_system = {k: int(v) for k, v in adapter.round_weights.items()}
+
     calculator = LeverageCalculator(
         model_probs,
-        public_picks,
+        effective_picks,
         scoring_system=scoring_system,
         team_metadata=team_metadata,
     )
     optimizer = ParetoOptimizer(calculator, pool_size)
-    
+
     leverage_picks = calculator.find_leverage_picks()
     fade_picks = calculator.find_fade_picks()
-    
+
     pareto_brackets = optimizer.generate_pareto_brackets()
-    
+
     # Calculate strategy EVs
     championship_model = {
-        tid: probs.get("CHAMP", 0) 
+        tid: probs.get("CHAMP", 0)
         for tid, probs in model_probs.items()
     }
     championship_public = {
-        tid: probs.get("CHAMP", 0.01) 
-        for tid, probs in public_picks.items()
+        tid: probs.get("CHAMP", 0.01)
+        for tid, probs in effective_picks.items()
     }
-    
+
     dynamics = calculate_pool_dynamics(
         pool_size, championship_model, championship_public
     )
-    
+
+    # Generate or use provided strategy profile for recommendation
+    if strategy_profile is None:
+        profile = get_strategy_profile(
+            pool_size, scoring_system=ev_scoring_system or "standard"
+        )
+    else:
+        profile = strategy_profile
+
+    # Override recommendation with profile-based strategy
+    recommended = dynamics.get("recommendation", "balanced")
+    if profile.contrarian_strength >= 1.5:
+        recommended = "contrarian"
+    elif profile.contrarian_strength <= 0.5:
+        recommended = "chalk"
+
+    dynamics["strategy_profile"] = {
+        "strategy_mix": profile.strategy_mix,
+        "contrarian_strength": profile.contrarian_strength,
+        "champion_risk_level": profile.champion_risk_level,
+        "description": profile.description,
+    }
+
     return PoolAnalysis(
         pool_size=pool_size,
         strategy_evs=dynamics,
-        recommended_strategy=dynamics.get("recommendation", "balanced"),
+        recommended_strategy=recommended,
         leverage_picks=leverage_picks,
         fade_picks=fade_picks,
         pareto_brackets=pareto_brackets,

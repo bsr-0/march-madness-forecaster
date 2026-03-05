@@ -263,6 +263,10 @@ class CoachTournamentPower:
     final_fours: int = 0
     championships: int = 0
 
+    # Stage experience: how many times the coach has reached each round
+    sweet_16_appearances: int = 0
+    elite_8_appearances: int = 0
+
     @property
     def tournament_games_managed(self) -> int:
         return self.career_tournament_wins + self.career_tournament_losses
@@ -273,6 +277,47 @@ class CoachTournamentPower:
         if total == 0:
             return 0.5  # Prior for unknown coaches
         return self.career_tournament_wins / total
+
+    @property
+    def deep_run_rate(self) -> float:
+        """Fraction of tournament appearances that reached the Final Four or better.
+
+        Captures a coach's ability to consistently advance deep into the
+        bracket — a stronger signal than raw win count for late-round matchups.
+
+        Returns:
+            Rate in [0, 1].  0.0 for coaches with no tournament appearances.
+        """
+        if self.tournament_appearances <= 0:
+            return 0.0
+        deep_runs = self.final_fours + self.championships
+        return min(1.0, deep_runs / self.tournament_appearances)
+
+    @property
+    def stage_consistency(self) -> float:
+        """Normalized measure of how consistently a coach reaches late rounds.
+
+        Weights each round's appearances and normalizes by total
+        tournament appearances to produce a score in [0, 1].  Coaches
+        who routinely make the Elite 8 and beyond score higher than
+        those with only a few deep runs.
+
+        Returns:
+            Score in [0, 1].  0.0 for unknown or zero-appearance coaches.
+        """
+        if self.tournament_appearances <= 0:
+            return 0.0
+        # Weight late-round appearances more heavily
+        weighted = (
+            self.sweet_16_appearances * 1.0
+            + self.elite_8_appearances * 2.0
+            + self.final_fours * 3.0
+            + self.championships * 5.0
+        )
+        # Normalize: a coach who reaches the championship every appearance
+        # scores ~1.0 (5 * apps / (5 * apps) = 1.0).
+        max_possible = 5.0 * self.tournament_appearances
+        return min(1.0, weighted / max_possible) if max_possible > 0 else 0.0
 
     @property
     def power_score(self) -> float:
@@ -329,6 +374,8 @@ def compute_coach_tournament_power(
         tournament_appearances=coach_data.get('appearances', 0),
         final_fours=coach_data.get('final_fours', 0),
         championships=coach_data.get('championships', 0),
+        sweet_16_appearances=coach_data.get('sweet_16_appearances', 0),
+        elite_8_appearances=coach_data.get('elite_8_appearances', 0),
     )
 
 
