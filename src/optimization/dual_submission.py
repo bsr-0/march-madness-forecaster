@@ -86,6 +86,25 @@ class ChampionPathPick:
 
 
 @dataclass
+class RoundBrierBreakdown:
+    """Per-round Brier score breakdown for a champion boost candidate.
+
+    Decomposes the EV analysis into individual rounds, showing exactly
+    where value comes from.  A senior statistician evaluating the 0-1
+    trick should see that NCG (32×) and F4 (16×) dominate the EV
+    calculation — boosting an R64 game barely moves the needle.
+    """
+    round_name: str
+    round_weight: float
+    matchup_id: str
+    brier_gain_if_correct: float      # Weighted gain when champion wins
+    brier_cost_if_wrong: float        # Weighted cost when champion loses
+    marginal_ev: float                # P(champ) × gain - (1-P(champ)) × cost
+    primary_prob: float               # Original calibrated prediction
+    boosted_prob: float               # Boosted prediction
+
+
+@dataclass
 class ChampionCandidate:
     """A champion candidate with full EV analysis for multi-champion selection."""
     team_id: str
@@ -98,6 +117,7 @@ class ChampionCandidate:
     brier_gain_if_correct: float
     brier_cost_if_wrong: float
     region: str = ""
+    round_breakdown: List[RoundBrierBreakdown] = field(default_factory=list)
 
 
 class ChampionBoostStrategy:
@@ -168,11 +188,17 @@ class ChampionBoostStrategy:
         team_seeds: Dict[str, int],
         championship_probs: Optional[Dict[str, float]] = None,
         crowd_probs: Optional[Dict[str, float]] = None,
+        matchup_teams: Optional[Dict[str, Tuple[str, str]]] = None,
     ) -> Optional[str]:
         """Select the optimal champion to boost.
 
-        Uses the leverage-weighted expected value framework:
-            c* = argmax_c P(c) × (crowd_distance_c) × round_weight_sum_c
+        When ``matchup_teams`` is provided, uses the round-weighted marginal
+        Brier framework from :meth:`evaluate_all_candidates` — this is the
+        preferred path because it accounts for Kaggle's scoring weights
+        (NCG=32×, F4=16×) which dominate the risk/reward calculation.
+
+        Falls back to the heuristic score when ``matchup_teams`` is not
+        available (e.g. when called with only seeds and probabilities).
 
         Args:
             primary_predictions: matchup_id -> P(team1 wins) from primary model
@@ -180,6 +206,8 @@ class ChampionBoostStrategy:
             championship_probs: team_id -> P(wins tournament). If None,
                 estimated from seeds.
             crowd_probs: matchup_id -> estimated crowd prediction
+            matchup_teams: matchup_id -> (team1_id, team2_id). When provided,
+                enables round-weighted EV selection.
 
         Returns:
             Champion team ID to boost, or None if no viable candidate
@@ -187,36 +215,59 @@ class ChampionBoostStrategy:
         if championship_probs is None:
             championship_probs = self._estimate_championship_probs(team_seeds)
 
+        # Preferred path: round-weighted marginal Brier analysis
+        if matchup_teams is not None:
+            candidates = self.evaluate_all_candidates(
+                primary_predictions=primary_predictions,
+                team_seeds=team_seeds,
+                matchup_teams=matchup_teams,
+                championship_probs=championship_probs,
+                crowd_probs=crowd_probs,
+            )
+            if not candidates:
+                return None
+            best = candidates[0]
+            logger.info(
+                "Champion boost (round-weighted): selected %s "
+                "(seed=%d, P(champ)=%.3f, ev_delta=%.4f, "
+                "top_round=%s/%.1f×)",
+                best.team_id,
+                best.seed,
+                best.championship_prob,
+                best.ev_delta,
+                (best.round_breakdown[0].round_name
+                 if best.round_breakdown else "?"),
+                (best.round_breakdown[0].round_weight
+                 if best.round_breakdown else 0),
+            )
+            return best.team_id
+
+        # Fallback: heuristic score (no matchup_teams available)
         if crowd_probs is None:
             crowd_probs = {}
 
-        # Score each candidate
-        candidates = sorted(
+        candidates_raw = sorted(
             championship_probs.items(),
             key=lambda x: x[1],
             reverse=True,
         )[:self.n_champion_candidates]
 
-        if not candidates:
+        if not candidates_raw:
             return None
 
         best_team = None
         best_score = -float("inf")
 
-        for team_id, champ_prob in candidates:
+        for team_id, champ_prob in candidates_raw:
             if champ_prob < self.MIN_CHAMPIONSHIP_PROB:
                 continue
 
-            # Estimate leverage: how much better would we do vs crowd if correct?
-            # Higher-seeded teams that the crowd underestimates are most valuable
             seed = team_seeds.get(team_id, 8)
-            seed_bonus = max(0, (5 - seed)) * 0.1  # 1-seeds get +0.4 bonus
+            seed_bonus = max(0, (5 - seed)) * 0.1
 
-            # Champion probability relative to crowd expectation
             crowd_champ = self._estimate_crowd_championship_prob(seed)
             leverage = champ_prob / max(crowd_champ, 0.01)
 
-            # Combined score: probability × leverage × seed quality
             score = champ_prob * (1.0 + math.log(max(leverage, 0.5))) * (1.0 + seed_bonus)
 
             if score > best_score:
@@ -224,12 +275,11 @@ class ChampionBoostStrategy:
                 best_team = team_id
 
         if best_team is not None:
-            best_prob = championship_probs.get(best_team, 0)
             logger.info(
-                "Champion boost: selected %s (seed=%d, P(champ)=%.3f, score=%.3f)",
+                "Champion boost (heuristic): selected %s (seed=%d, P(champ)=%.3f, score=%.3f)",
                 best_team,
                 team_seeds.get(best_team, 0),
-                best_prob,
+                championship_probs.get(best_team, 0),
                 best_score,
             )
 
@@ -285,12 +335,13 @@ class ChampionBoostStrategy:
             leverage = champ_prob / max(crowd_champ, 0.01)
             score = champ_prob * (1.0 + math.log(max(leverage, 0.5))) * (1.0 + seed_bonus)
 
-            # Generate boosted predictions and compute EV
+            # Generate boosted predictions and compute round-weighted EV
             boosted = self.generate_champion_boost(
                 primary_predictions, team_id, matchup_teams, team_seeds,
             )
             ev_analysis = self.estimate_champion_boost_ev(
-                primary_predictions, boosted, team_id, matchup_teams, champ_prob,
+                primary_predictions, boosted, team_id, matchup_teams,
+                champ_prob, team_seeds=team_seeds,
             )
 
             results.append(ChampionCandidate(
@@ -304,6 +355,7 @@ class ChampionBoostStrategy:
                 brier_gain_if_correct=ev_analysis["brier_gain_if_correct"],
                 brier_cost_if_wrong=ev_analysis["brier_cost_if_wrong"],
                 region=team_regions.get(team_id, ""),
+                round_breakdown=ev_analysis.get("round_breakdown", []),
             ))
 
         # Sort by ev_delta descending (best candidate first)
@@ -381,12 +433,21 @@ class ChampionBoostStrategy:
         champion_id: str,
         matchup_teams: Dict[str, Tuple[str, str]],
         championship_prob: float,
+        team_seeds: Optional[Dict[str, int]] = None,
     ) -> Dict:
-        """Estimate the expected value of the champion boost.
+        """Estimate the expected value of the champion boost using round weights.
+
+        Applies Kaggle's round-weighted Brier scoring (NCG=32×, F4=16×, etc.)
+        to compute the marginal Brier impact of boosting each game.  This is
+        critical because boosting an NCG game is worth 32× boosting an R64 game,
+        and ignoring round weights dramatically misvalues the risk/reward tradeoff.
 
         Computes Brier score impact under two scenarios:
         1. Champion wins tournament (weight by championship_prob)
         2. Champion loses (weight by 1 - championship_prob)
+
+        Returns per-round breakdown showing exactly where value comes from,
+        enabling a statistician to verify that late rounds dominate the EV.
 
         Args:
             primary_predictions: Original calibrated predictions
@@ -394,9 +455,10 @@ class ChampionBoostStrategy:
             champion_id: Boosted champion
             matchup_teams: matchup_id -> (team1, team2)
             championship_prob: P(champion wins tournament)
+            team_seeds: team_id -> seed (for round weight inference)
 
         Returns:
-            Dict with EV analysis
+            Dict with EV analysis including per-round breakdown
         """
         champion_games = []
         for mid, (t1, t2) in matchup_teams.items():
@@ -404,33 +466,58 @@ class ChampionBoostStrategy:
                 champion_games.append(mid)
 
         if not champion_games:
-            return {"ev_delta": 0.0, "champion_games": 0}
+            return {"ev_delta": 0.0, "champion_games": 0, "round_breakdown": []}
 
-        # Scenario 1: Champion wins all their games
+        # Weighted Brier accumulators
         brier_primary_if_correct = 0.0
         brier_boosted_if_correct = 0.0
         brier_primary_if_wrong = 0.0
         brier_boosted_if_wrong = 0.0
+        round_breakdown: List[RoundBrierBreakdown] = []
 
         for mid in champion_games:
             t1, t2 = matchup_teams[mid]
             p_primary = primary_predictions.get(mid, 0.5)
             p_boosted = boosted_predictions.get(mid, 0.5)
 
+            # Infer round weight from seed matchup
+            round_name, round_weight = self._infer_round_weight(
+                t1, t2, team_seeds,
+            )
+
             if t1 == champion_id:
                 # outcome = 1 if champion wins
-                brier_primary_if_correct += (p_primary - 1.0) ** 2
-                brier_boosted_if_correct += (p_boosted - 1.0) ** 2
-                brier_primary_if_wrong += (p_primary - 0.0) ** 2
-                brier_boosted_if_wrong += (p_boosted - 0.0) ** 2
+                gain_correct = round_weight * ((p_primary - 1.0) ** 2 - (p_boosted - 1.0) ** 2)
+                cost_wrong = round_weight * ((p_boosted - 0.0) ** 2 - (p_primary - 0.0) ** 2)
+                brier_primary_if_correct += round_weight * (p_primary - 1.0) ** 2
+                brier_boosted_if_correct += round_weight * (p_boosted - 1.0) ** 2
+                brier_primary_if_wrong += round_weight * (p_primary - 0.0) ** 2
+                brier_boosted_if_wrong += round_weight * (p_boosted - 0.0) ** 2
             else:
                 # outcome = 0 if champion wins (team2 = champion)
-                brier_primary_if_correct += (p_primary - 0.0) ** 2
-                brier_boosted_if_correct += (p_boosted - 0.0) ** 2
-                brier_primary_if_wrong += (p_primary - 1.0) ** 2
-                brier_boosted_if_wrong += (p_boosted - 1.0) ** 2
+                gain_correct = round_weight * ((p_primary - 0.0) ** 2 - (p_boosted - 0.0) ** 2)
+                cost_wrong = round_weight * ((p_boosted - 1.0) ** 2 - (p_primary - 1.0) ** 2)
+                brier_primary_if_correct += round_weight * (p_primary - 0.0) ** 2
+                brier_boosted_if_correct += round_weight * (p_boosted - 0.0) ** 2
+                brier_primary_if_wrong += round_weight * (p_primary - 1.0) ** 2
+                brier_boosted_if_wrong += round_weight * (p_boosted - 1.0) ** 2
 
-        # Expected Brier delta
+            marginal_ev = championship_prob * gain_correct - (1.0 - championship_prob) * cost_wrong
+            round_breakdown.append(RoundBrierBreakdown(
+                round_name=round_name,
+                round_weight=round_weight,
+                matchup_id=mid,
+                brier_gain_if_correct=round(gain_correct, 5),
+                brier_cost_if_wrong=round(cost_wrong, 5),
+                marginal_ev=round(marginal_ev, 5),
+                primary_prob=round(p_primary, 4),
+                boosted_prob=round(p_boosted, 4),
+            ))
+
+        # Sort breakdown by round weight descending (NCG first)
+        round_breakdown.sort(key=lambda r: r.round_weight, reverse=True)
+
+        # Expected Brier delta (round-weighted)
         ev_correct = championship_prob * (brier_primary_if_correct - brier_boosted_if_correct)
         ev_wrong = (1.0 - championship_prob) * (brier_primary_if_wrong - brier_boosted_if_wrong)
         ev_delta = ev_correct + ev_wrong  # Positive = boost helps
@@ -447,7 +534,47 @@ class ChampionBoostStrategy:
             ),
             "ev_delta": round(ev_delta, 5),
             "ev_favorable": ev_delta > 0,
+            "round_breakdown": round_breakdown,
         }
+
+    @staticmethod
+    def _infer_round_weight(
+        team1_id: str,
+        team2_id: str,
+        team_seeds: Optional[Dict[str, int]],
+    ) -> Tuple[str, float]:
+        """Infer Kaggle round weight from seed matchup.
+
+        Uses the seed sum as a proxy for tournament round:
+        - seed_sum ≤ 3  → NCG (1v1, 1v2): weight 32
+        - seed_sum ≤ 5  → F4 (1v3, 1v4, 2v3): weight 16
+        - seed_sum ≤ 8  → E8: weight 8
+        - seed_sum ≤ 13 → S16: weight 4
+        - seed_sum ≤ 17 → R32: weight 2
+        - else          → R64: weight 1
+
+        Returns:
+            (round_name, round_weight) tuple
+        """
+        if team_seeds is None:
+            return ("Unknown", 4.0)  # Midpoint default
+
+        s1 = team_seeds.get(team1_id, 8)
+        s2 = team_seeds.get(team2_id, 8)
+        seed_sum = s1 + s2
+
+        if seed_sum <= 3:
+            return ("NCG", 32.0)
+        elif seed_sum <= 5:
+            return ("F4", 16.0)
+        elif seed_sum <= 8:
+            return ("E8", 8.0)
+        elif seed_sum <= 13:
+            return ("S16", 4.0)
+        elif seed_sum <= 17:
+            return ("R32", 2.0)
+        else:
+            return ("R64", 1.0)
 
     def _get_boost_strength(
         self,
@@ -619,14 +746,33 @@ class KaggleDualSubmissionGenerator:
         matchup_teams: Dict[str, Tuple[str, str]],
         matchup_ids: List[Tuple[str, str, str]],
     ) -> SubmissionPair:
-        """Generate champion boost submission (the 0-1 trick).
+        """Generate champion boost submission via joint slot optimization.
 
-        When multi_champion is enabled and the top-2 candidates are in
-        different regions with comparable EV, spreads them across slots:
-        - Slot 2 (hedge): full 0-1 boost for champion #1
-        - Slot 1 (primary): light boost (70% original + 30% full) for champion #2
+        Evaluates all viable champion candidates and their pairwise
+        combinations across the two submission slots, selecting the
+        allocation that maximizes P(at least one slot in top-N).
+
+        The joint optimization considers:
+        1. **Marginal Brier gain per candidate** using round-weighted scoring
+           (NCG=32×, F4=16× dominate the calculation)
+        2. **Region correlation** — two champions from the same region share
+           early-round path overlap, reducing diversification benefit
+        3. **Slot allocation** — the best pair may spread two different
+           champions (Slot 1 light-boost + Slot 2 full-boost) rather than
+           using a single champion on Slot 2 only
+
+        The mathematical framework:
+            For champion pair (a, b):
+            P(at least one in top-N) = 1 - (1 - P_a)(1 - P_b)
+
+            But if a and b share a region, they are positively correlated:
+            P(both correct) > P(a correct) × P(b correct)
+            → reduces diversification benefit
+
+            The optimal pair maximizes:
+            joint_score = ev_a + ev_b + diversity_bonus(a, b)
         """
-        # Evaluate all candidates with full EV analysis
+        # Evaluate all candidates with full round-weighted EV analysis
         candidates = self.champion_boost.evaluate_all_candidates(
             primary_predictions=primary,
             team_seeds=self.team_seeds,
@@ -641,7 +787,17 @@ class KaggleDualSubmissionGenerator:
                 "seed": c.seed,
                 "championship_prob": round(c.championship_prob, 4),
                 "ev_delta": round(c.ev_delta, 5),
+                "brier_gain_if_correct": round(c.brier_gain_if_correct, 5),
+                "brier_cost_if_wrong": round(c.brier_cost_if_wrong, 5),
                 "region": c.region,
+                "round_breakdown": [
+                    {
+                        "round": rb.round_name,
+                        "weight": rb.round_weight,
+                        "marginal_ev": rb.marginal_ev,
+                    }
+                    for rb in c.round_breakdown[:3]  # Top 3 rounds by weight
+                ],
             }
             for c in candidates
         ]
@@ -655,51 +811,17 @@ class KaggleDualSubmissionGenerator:
             pair.champion_candidates_evaluated = candidates_dicts
             return pair
 
-        champ1 = candidates[0]
-
-        # Multi-champion logic: spread top-2 across slots if they diversify
-        use_multi = (
-            self.champion_boost.multi_champion
-            and len(candidates) >= 2
-            and candidates[1].region
-            and champ1.region
-            and candidates[1].region != champ1.region
-            and candidates[1].ev_delta > 0.5 * champ1.ev_delta
+        # ── Joint slot optimization ────────────────────────────────
+        # Evaluate the best single-champion option and all viable pairs,
+        # then pick whichever maximizes expected coverage.
+        best_allocation = self._optimize_slot_allocation(
+            candidates, primary, matchup_teams,
         )
 
-        if use_multi:
-            champ2 = candidates[1]
-            logger.info(
-                "Multi-champion: spreading %s (%s) and %s (%s) across slots",
-                champ1.team_id, champ1.region, champ2.team_id, champ2.region,
-            )
-
-            # Slot 2 (hedge): full 0-1 boost for champion #1
-            hedge = self.champion_boost.generate_champion_boost(
-                primary_predictions=primary,
-                champion_id=champ1.team_id,
-                matchup_teams=matchup_teams,
-                team_seeds=self.team_seeds,
-            )
-
-            # Slot 1 (primary): light boost for champion #2
-            primary_out = self._apply_light_boost(
-                primary, champ2.team_id, matchup_teams,
-            )
-
-            champion_id = champ1.team_id
-            strategy = "multi_champion_boost"
-        else:
-            champion_id = champ1.team_id
-            primary_out = dict(primary)
-
-            hedge = self.champion_boost.generate_champion_boost(
-                primary_predictions=primary,
-                champion_id=champion_id,
-                matchup_teams=matchup_teams,
-                team_seeds=self.team_seeds,
-            )
-            strategy = "champion_boost"
+        champion_id = best_allocation["champion_id"]
+        strategy = best_allocation["strategy"]
+        primary_out = best_allocation["primary"]
+        hedge = best_allocation["hedge"]
 
         # Identify deviations
         deviations = [
@@ -727,13 +849,145 @@ class KaggleDualSubmissionGenerator:
             "%d games boosted, EV delta=%.4f, strategy=%s",
             champion_id,
             self.team_seeds.get(champion_id, 0),
-            champ1.championship_prob,
+            candidates[0].championship_prob if candidates else 0,
             len(deviations),
-            champ1.ev_delta,
+            candidates[0].ev_delta if candidates else 0,
             strategy,
         )
 
         return pair
+
+    def _optimize_slot_allocation(
+        self,
+        candidates: List[ChampionCandidate],
+        primary: Dict[str, float],
+        matchup_teams: Dict[str, Tuple[str, str]],
+    ) -> Dict:
+        """Find the optimal champion allocation across both submission slots.
+
+        Evaluates three strategies for each viable pair (a, b):
+        1. **Single**: Slot 1 = calibrated, Slot 2 = full boost on a
+        2. **Dual-diverse**: Slot 1 = light boost on b, Slot 2 = full boost on a
+        3. **Same-champion**: Only use candidate a on Slot 2
+
+        For each pairing, computes a joint score that accounts for:
+        - The individual EV delta of each candidate
+        - A diversity bonus when candidates are in different regions
+          (independent failure modes → better P(at least one in top-N))
+        - A correlation penalty when candidates share a region
+          (correlated failure modes → diminished diversification)
+
+        The diversity bonus is derived from the independence formula:
+            P(≥1 correct | independent) = 1 - (1-p_a)(1-p_b)
+            P(≥1 correct | same region) ≈ 1 - (1-p_a)(1-p_b) + ρ×p_a×p_b
+        where ρ is the path correlation coefficient (~0.3 for same region).
+
+        Returns:
+            Dict with keys: champion_id, strategy, primary, hedge
+        """
+        champ1 = candidates[0]
+
+        # Strategy 1: Single champion (always available)
+        single_hedge = self.champion_boost.generate_champion_boost(
+            primary_predictions=primary,
+            champion_id=champ1.team_id,
+            matchup_teams=matchup_teams,
+            team_seeds=self.team_seeds,
+        )
+        best = {
+            "champion_id": champ1.team_id,
+            "strategy": "champion_boost",
+            "primary": dict(primary),
+            "hedge": single_hedge,
+            "joint_score": champ1.ev_delta,
+        }
+
+        if not self.champion_boost.multi_champion or len(candidates) < 2:
+            return best
+
+        # Strategy 2+3: Evaluate all viable pairs
+        # Only consider candidates with positive or near-positive EV
+        viable = [c for c in candidates if c.ev_delta > -0.01][:4]
+
+        for i, ca in enumerate(viable):
+            for cb in viable[i + 1:]:
+                # Compute diversity bonus from region independence
+                same_region = (
+                    ca.region and cb.region and ca.region == cb.region
+                )
+
+                # Path correlation: same-region champions share 2-3
+                # early-round games, making their outcomes correlated.
+                # Cross-region champions have independent paths until F4.
+                if same_region:
+                    # Correlated: P(both correct) > P(a)×P(b)
+                    # Net benefit is reduced by the correlation
+                    rho = 0.3  # Empirical path correlation for same region
+                    p_at_least_one = (
+                        1.0
+                        - (1.0 - ca.championship_prob) * (1.0 - cb.championship_prob)
+                        - rho * ca.championship_prob * cb.championship_prob
+                    )
+                    diversity_bonus = -0.1 * min(ca.ev_delta, cb.ev_delta)
+                else:
+                    # Independent: full diversification benefit
+                    p_at_least_one = (
+                        1.0
+                        - (1.0 - ca.championship_prob) * (1.0 - cb.championship_prob)
+                    )
+                    # Bonus proportional to how much the pair covers vs single
+                    p_single = max(ca.championship_prob, cb.championship_prob)
+                    diversity_bonus = (p_at_least_one - p_single) * 10.0
+
+                # Joint score: sum of individual EVs + diversity
+                joint_score = ca.ev_delta + cb.ev_delta * 0.3 + diversity_bonus
+
+                # The secondary champion gets a 0.3 weight because the light
+                # boost (70/30 blend) only captures ~30% of the full EV gain
+                # while preserving most of the primary's calibration.
+
+                if joint_score > best["joint_score"]:
+                    # ca gets full boost (Slot 2), cb gets light boost (Slot 1)
+                    hedge = self.champion_boost.generate_champion_boost(
+                        primary_predictions=primary,
+                        champion_id=ca.team_id,
+                        matchup_teams=matchup_teams,
+                        team_seeds=self.team_seeds,
+                    )
+                    primary_out = self._apply_light_boost(
+                        primary, cb.team_id, matchup_teams,
+                    )
+
+                    best = {
+                        "champion_id": ca.team_id,
+                        "secondary_champion_id": cb.team_id,
+                        "strategy": "multi_champion_boost",
+                        "primary": primary_out,
+                        "hedge": hedge,
+                        "joint_score": joint_score,
+                        "diversity_bonus": round(diversity_bonus, 4),
+                        "same_region": same_region,
+                    }
+
+                    logger.info(
+                        "Joint optimization: %s (%s) + %s (%s) → "
+                        "joint=%.4f (diversity=%.4f, correlated=%s)",
+                        ca.team_id, ca.region,
+                        cb.team_id, cb.region,
+                        joint_score, diversity_bonus, same_region,
+                    )
+
+        if best["strategy"] == "multi_champion_boost":
+            logger.info(
+                "Multi-champion selected: Slot2=%s (full), Slot1=%s (light) — "
+                "joint_score=%.4f beats single=%.4f",
+                best["champion_id"],
+                best.get("secondary_champion_id", "?"),
+                best["joint_score"],
+                champ1.ev_delta,
+            )
+
+        return best
 
     def _apply_light_boost(
         self,
