@@ -242,18 +242,49 @@ POOL_TYPE_ARCHETYPES = {
 }
 
 
+VALID_ARCHETYPE_NAMES = frozenset({"chalk_picker", "expert_mimic", "chaos_seeker", "homer"})
+
+
 def get_archetype_mix(
     pool_type: str = "espn_national",
+    overrides: Optional[Dict[str, float]] = None,
 ) -> Dict[str, float]:
     """Return archetype prevalence distribution for a pool type.
 
     Args:
         pool_type: One of "espn_national", "office_pool", "kaggle", "friends_pool".
+        overrides: Optional dict mapping archetype names to custom prevalences.
+            Merged on top of the base distribution for the given pool_type.
+            Values must sum to approximately 1.0 (tolerance 0.05); the result
+            is renormalized after merging.
 
     Returns:
         Dict mapping archetype name to prevalence (sums to 1.0).
+
+    Raises:
+        ValueError: If override keys are not valid archetype names or values
+            do not sum to approximately 1.0.
     """
-    return POOL_TYPE_ARCHETYPES.get(pool_type, POOL_TYPE_ARCHETYPES["espn_national"]).copy()
+    mix = POOL_TYPE_ARCHETYPES.get(pool_type, POOL_TYPE_ARCHETYPES["espn_national"]).copy()
+
+    if overrides:
+        invalid = set(overrides.keys()) - VALID_ARCHETYPE_NAMES
+        if invalid:
+            raise ValueError(
+                f"Invalid archetype names: {sorted(invalid)}. "
+                f"Valid names: {sorted(VALID_ARCHETYPE_NAMES)}"
+            )
+        mix.update(overrides)
+        total = sum(mix.values())
+        if abs(total - 1.0) > 0.05:
+            raise ValueError(
+                f"Archetype overrides must sum to approximately 1.0, got {total:.3f}"
+            )
+        # Renormalize to exactly 1.0
+        if total > 0:
+            mix = {k: v / total for k, v in mix.items()}
+
+    return mix
 
 
 def create_archetypes(

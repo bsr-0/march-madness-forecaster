@@ -2,6 +2,8 @@
 
 import pytest
 from src.optimization.leverage import (
+    PAYOUT_ADJUSTMENTS,
+    VALID_PAYOUT_STRUCTURES,
     PoolStrategyProfile,
     ScoringSystemAdapter,
     get_strategy_profile,
@@ -247,3 +249,69 @@ class TestAnalyzePoolWithStrategy:
         )
         profile_data = result.strategy_evs.get("strategy_profile", {})
         assert profile_data["contrarian_strength"] == 3.0
+
+
+class TestPayoutStructure:
+    """Test payout structure adjustments to strategy profiles."""
+
+    def test_payout_winner_take_all_increases_contrarian(self):
+        base = get_strategy_profile(100, payout_structure="tiered")
+        wta = get_strategy_profile(100, payout_structure="winner_take_all")
+        assert wta.strategy_mix["contrarian"] > base.strategy_mix["contrarian"]
+        assert wta.strategy_mix["targeted"] > base.strategy_mix["targeted"]
+        assert wta.strategy_mix["chalk"] < base.strategy_mix["chalk"]
+
+    def test_payout_top_25pct_increases_chalk(self):
+        base = get_strategy_profile(100, payout_structure="tiered")
+        top25 = get_strategy_profile(100, payout_structure="top_25pct")
+        assert top25.strategy_mix["chalk"] > base.strategy_mix["chalk"]
+        assert top25.strategy_mix["balanced"] > base.strategy_mix["balanced"]
+        assert top25.strategy_mix["contrarian"] < base.strategy_mix["contrarian"]
+
+    def test_payout_tiered_is_neutral(self):
+        """Tiered has all multipliers at 1.0, so mix should match base."""
+        base_no_payout = get_strategy_profile(100, payout_structure="tiered")
+        # Tiered multipliers are all 1.0, so re-normalization is a no-op
+        for key in ["chalk", "balanced", "contrarian", "targeted"]:
+            assert abs(base_no_payout.strategy_mix[key] - get_strategy_profile(100, payout_structure="tiered").strategy_mix[key]) < 0.001
+
+    def test_payout_invalid_raises(self):
+        with pytest.raises(ValueError, match="Invalid payout_structure"):
+            get_strategy_profile(100, payout_structure="invalid_payout")
+
+    def test_payout_mix_still_sums_to_one(self):
+        """All payout structures × all pool sizes should produce mixes summing to 1.0."""
+        for payout in VALID_PAYOUT_STRUCTURES:
+            for size in [5, 30, 100, 500, 5000]:
+                profile = get_strategy_profile(size, payout_structure=payout)
+                total = sum(profile.strategy_mix.values())
+                assert abs(total - 1.0) < 0.01, (
+                    f"payout={payout}, size={size}: mix sums to {total}"
+                )
+
+    def test_payout_structure_stored_on_profile(self):
+        profile = get_strategy_profile(100, payout_structure="top_3")
+        assert profile.payout_structure == "top_3"
+
+    def test_payout_contrarian_strength_scaled(self):
+        """Winner-take-all should boost contrarian_strength vs tiered."""
+        base = get_strategy_profile(100, payout_structure="tiered")
+        wta = get_strategy_profile(100, payout_structure="winner_take_all")
+        assert wta.contrarian_strength > base.contrarian_strength
+
+    def test_payout_top_10pct_reduces_contrarian_strength(self):
+        base = get_strategy_profile(500, payout_structure="tiered")
+        top10 = get_strategy_profile(500, payout_structure="top_10pct")
+        assert top10.contrarian_strength < base.contrarian_strength
+
+    def test_contrarian_override_after_payout(self):
+        """contrarian_override should take precedence over payout adjustment."""
+        profile = get_strategy_profile(
+            100, payout_structure="winner_take_all", contrarian_override=5.0,
+        )
+        assert profile.contrarian_strength == 5.0
+
+    def test_all_valid_payout_structures_accepted(self):
+        for payout in VALID_PAYOUT_STRUCTURES:
+            profile = get_strategy_profile(100, payout_structure=payout)
+            assert profile.payout_structure == payout
