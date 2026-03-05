@@ -2730,17 +2730,32 @@ class IncrementalMetricsEngine:
         v[57] = 0.0
         # Coach tournament win rate (1) — default 0
         v[58] = 0.0
-        # Pace variance (1)
-        v[59] = m.pace_variance
-        # Conf tourney champion (1) — 0 (not known incrementally)
+        # Coach deep run rate (1) — default 0
+        v[59] = 0.0
+        # Coach stage consistency (1) — default 0
         v[60] = 0.0
+        # Per-stage coaching (3) — default 0 (no coach data incrementally)
+        v[61] = 0.0  # coach_f4_appearances
+        v[62] = 0.0  # coach_e8_appearances
+        v[63] = 0.0  # coach_s16_appearances
+        # Graph-theoretic SOS (2) — default 0 (no graph data incrementally)
+        v[64] = 0.0  # pagerank_sos
+        v[65] = 0.0  # multi_hop_sos
+        # Win quality metrics (3) — default 0 (no graph data incrementally)
+        v[66] = 0.0  # best_win_percentile
+        v[67] = 0.0  # paper_tiger_score
+        v[68] = 0.0  # dominance_ratio
+        # Pace variance (1)
+        v[69] = m.pace_variance
+        # Conf tourney champion (1) — 0 (not known incrementally)
+        v[70] = 0.0
         # Neutral-site win % (1)
-        v[61] = m.neutral_site_win_pct
+        v[71] = m.neutral_site_win_pct
         # Home court dependence (1)
-        v[62] = m.home_court_dependence
+        v[72] = m.home_court_dependence
         # Tournament resume composite (1) — Bayesian-shrunk opponent quality
         from .tournament_features import compute_tournament_resume_composite
-        v[63] = compute_tournament_resume_composite(
+        v[73] = compute_tournament_resume_composite(
             q1_win_pct=m.q1_win_pct,
             q1_games=m.q1_wins + m.q1_losses,
             road_neutral_win_pct=m.road_neutral_win_pct,
@@ -2749,18 +2764,18 @@ class IncrementalMetricsEngine:
             sor=m.sor,
         )
         # Position RAPM (2) — zero (no roster)
-        v[64] = 0.0
-        v[65] = 0.0
+        v[74] = 0.0
+        v[75] = 0.0
 
         # External rating composite + spread (2)
-        v[66] = external_rating_composite
-        v[67] = external_rating_spread
+        v[76] = external_rating_composite
+        v[77] = external_rating_spread
 
         # Seed strength (1)
         if seed > 0:
-            v[68] = float(np.log1p(17 - seed) / np.log1p(16))
+            v[78] = float(np.log1p(17 - seed) / np.log1p(16))
         else:
-            v[68] = 0.0
+            v[78] = 0.0
 
         # NaN/inf guard
         bad = np.isnan(v) | np.isinf(v)
