@@ -111,6 +111,7 @@ class PoolStrategyProfile:
     strategy_mix: Dict[str, float]  # {"chalk": 0.3, "balanced": 0.4, ...}
     contrarian_strength: float  # Multiplier on leverage picks (0.5–3.0)
     champion_risk_level: str  # "very_low", "low", "moderate", "high", "extreme"
+    payout_structure: str = "tiered"  # Prize structure affecting variance preference
     description: str = ""
 
     def validate(self) -> None:
@@ -122,10 +123,59 @@ class PoolStrategyProfile:
             )
 
 
+# ---------------------------------------------------------------------------
+# Payout Structure Adjustments
+# ---------------------------------------------------------------------------
+# Multipliers applied to the base pool-size strategy mix to account for prize
+# structure.  Winner-take-all demands maximum variance (contrarian/targeted);
+# top-25pct rewards accuracy (chalk/balanced).
+
+PAYOUT_ADJUSTMENTS: Dict[str, Dict[str, float]] = {
+    "winner_take_all": {
+        "chalk_mult": 0.5,
+        "balanced_mult": 0.7,
+        "contrarian_mult": 1.4,
+        "targeted_mult": 1.5,
+        "contrarian_strength_mult": 1.3,
+    },
+    "top_3": {
+        "chalk_mult": 0.7,
+        "balanced_mult": 0.8,
+        "contrarian_mult": 1.2,
+        "targeted_mult": 1.3,
+        "contrarian_strength_mult": 1.15,
+    },
+    "top_10pct": {
+        "chalk_mult": 1.2,
+        "balanced_mult": 1.1,
+        "contrarian_mult": 0.85,
+        "targeted_mult": 0.85,
+        "contrarian_strength_mult": 0.8,
+    },
+    "top_25pct": {
+        "chalk_mult": 1.4,
+        "balanced_mult": 1.2,
+        "contrarian_mult": 0.7,
+        "targeted_mult": 0.6,
+        "contrarian_strength_mult": 0.6,
+    },
+    "tiered": {
+        "chalk_mult": 1.0,
+        "balanced_mult": 1.0,
+        "contrarian_mult": 1.0,
+        "targeted_mult": 1.0,
+        "contrarian_strength_mult": 1.0,
+    },
+}
+
+VALID_PAYOUT_STRUCTURES = frozenset(PAYOUT_ADJUSTMENTS.keys())
+
+
 def get_strategy_profile(
     pool_size: int,
     scoring_system: str = "standard",
     contrarian_override: Optional[float] = None,
+    payout_structure: str = "tiered",
 ) -> PoolStrategyProfile:
     """Return a graduated strategy profile for the given pool size.
 
@@ -139,10 +189,18 @@ def get_strategy_profile(
         pool_size: Number of competitors in the pool.
         scoring_system: "standard" (ESPN), "flat", or "upset_bonus".
         contrarian_override: If set, overrides the profile's contrarian_strength.
+        payout_structure: Prize structure that modulates variance preference.
+            "winner_take_all" pushes toward max variance; "top_25pct" rewards
+            accuracy.  See PAYOUT_ADJUSTMENTS for all options.
 
     Returns:
         PoolStrategyProfile with recommended strategy allocation.
     """
+    if payout_structure not in VALID_PAYOUT_STRUCTURES:
+        raise ValueError(
+            f"Invalid payout_structure '{payout_structure}': "
+            f"must be one of {sorted(VALID_PAYOUT_STRUCTURES)}"
+        )
     if pool_size < 30:
         profile = PoolStrategyProfile(
             pool_size=pool_size,
@@ -199,6 +257,20 @@ def get_strategy_profile(
             champion_risk_level="extreme",
             description="Large pool: aggressive contrarianism mandatory",
         )
+
+    # Apply payout structure adjustments to the base strategy mix.
+    adjustments = PAYOUT_ADJUSTMENTS[payout_structure]
+    raw_mix = {
+        "chalk": profile.strategy_mix.get("chalk", 0.0) * adjustments["chalk_mult"],
+        "balanced": profile.strategy_mix.get("balanced", 0.0) * adjustments["balanced_mult"],
+        "contrarian": profile.strategy_mix.get("contrarian", 0.0) * adjustments["contrarian_mult"],
+        "targeted": profile.strategy_mix.get("targeted", 0.0) * adjustments["targeted_mult"],
+    }
+    total = sum(raw_mix.values())
+    if total > 0:
+        profile.strategy_mix = {k: v / total for k, v in raw_mix.items()}
+    profile.contrarian_strength *= adjustments["contrarian_strength_mult"]
+    profile.payout_structure = payout_structure
 
     if contrarian_override is not None:
         profile.contrarian_strength = contrarian_override

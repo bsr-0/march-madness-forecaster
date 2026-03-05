@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
 import requests
@@ -650,3 +650,132 @@ class OrchestratorResult:
             if status.is_stale:
                 lines.append(f"    WARNING: Data is stale")
         return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Dynamic Public Pick Refresh
+# ---------------------------------------------------------------------------
+
+@dataclass
+class PicksUpdate:
+    """Result of a picks refresh operation, tracking changes between fetches."""
+
+    previous: ConsensusData
+    current: ConsensusData
+    changed_teams: List[str]  # Teams whose champion pick % changed significantly
+    max_delta: float = 0.0  # Largest absolute change in any championship pick %
+    refresh_timestamp: float = 0.0  # Unix timestamp of the refresh
+    was_stale: bool = False  # Whether the previous data was stale
+
+    @property
+    def summary(self) -> str:
+        """Human-readable summary of what changed."""
+        if not self.changed_teams:
+            return "No significant changes in public picks."
+        return (
+            f"{len(self.changed_teams)} teams changed significantly "
+            f"(max delta: {self.max_delta:.1f}pp): {', '.join(self.changed_teams[:5])}"
+        )
+
+
+class RefreshablePicksManager:
+    """Manages pick data freshness and transparent re-fetching.
+
+    Wraps a :class:`ScraperOrchestrator` with staleness detection and
+    delta tracking.  Used in EV mode to ensure leverage calculations
+    are based on current public pick data, especially in the 48 hours
+    before tournament tip-off when distributions shift significantly.
+
+    Usage:
+        manager = RefreshablePicksManager(orchestrator)
+        result, update = manager.fetch_or_refresh(year=2026)
+        if update:
+            logger.info("Picks refreshed: %s", update.summary)
+    """
+
+    SIGNIFICANT_CHANGE_THRESHOLD = 0.5  # percentage-point change threshold
+
+    def __init__(
+        self,
+        orchestrator: ScraperOrchestrator,
+        staleness_threshold_hours: float = 24.0,
+    ):
+        self.orchestrator = orchestrator
+        self.staleness_threshold_hours = staleness_threshold_hours
+        self._last_result: Optional[OrchestratorResult] = None
+        self._last_fetch_time: Optional[float] = None
+
+    @property
+    def is_stale(self) -> bool:
+        """True if data has never been fetched or exceeds staleness threshold."""
+        if self._last_fetch_time is None:
+            return True
+        elapsed_hours = (time.time() - self._last_fetch_time) / 3600
+        return elapsed_hours > self.staleness_threshold_hours
+
+    @property
+    def hours_since_refresh(self) -> Optional[float]:
+        """Hours since last successful fetch, or None if never fetched."""
+        if self._last_fetch_time is None:
+            return None
+        return (time.time() - self._last_fetch_time) / 3600
+
+    def fetch_or_refresh(
+        self,
+        year: int = 2026,
+        force_refresh: bool = False,
+    ) -> Tuple[OrchestratorResult, Optional[PicksUpdate]]:
+        """Fetch picks, refreshing if stale or forced.
+
+        Args:
+            year: Tournament year.
+            force_refresh: If True, bypass staleness check and re-fetch.
+
+        Returns:
+            Tuple of (current OrchestratorResult, PicksUpdate if data
+            was refreshed and previous data existed, else None).
+        """
+        if not force_refresh and not self.is_stale and self._last_result is not None:
+            return self._last_result, None
+
+        previous = self._last_result
+        was_stale = self.is_stale
+        new_result = self.orchestrator.fetch_all_picks(year=year)
+        self._last_fetch_time = time.time()
+
+        update = None
+        if previous is not None:
+            update = self._compute_delta(
+                previous.consensus, new_result.consensus, was_stale,
+            )
+
+        self._last_result = new_result
+        return new_result, update
+
+    def _compute_delta(
+        self,
+        old: ConsensusData,
+        new: ConsensusData,
+        was_stale: bool = False,
+    ) -> PicksUpdate:
+        """Compute differences between old and new pick data."""
+        changed: List[str] = []
+        max_delta = 0.0
+
+        all_teams = set(old.teams.keys()) | set(new.teams.keys())
+        for tid in all_teams:
+            old_champ = old.teams[tid].champion_pct if tid in old.teams else 0.0
+            new_champ = new.teams[tid].champion_pct if tid in new.teams else 0.0
+            delta = abs(new_champ - old_champ)
+            if delta > self.SIGNIFICANT_CHANGE_THRESHOLD:
+                changed.append(tid)
+            max_delta = max(max_delta, delta)
+
+        return PicksUpdate(
+            previous=old,
+            current=new,
+            changed_teams=sorted(changed),
+            max_delta=max_delta,
+            refresh_timestamp=time.time(),
+            was_stale=was_stale,
+        )
