@@ -245,6 +245,132 @@ class ScheduleGraph:
             for i in range(self.n_teams)
         }
 
+    def compute_win_quality_metrics(self) -> Dict[str, Dict[str, float]]:
+        """Compute graph-theoretic win quality metrics for every team.
+
+        Returns dict of team_id -> {
+            "best_win_percentile": float,   # Percentile rank of best win (0-1)
+            "win_quality_score": float,      # Weighted sum of opponent quality in wins
+            "paper_tiger_score": float,      # Degree to which record is inflated vs weak schedule
+            "loss_quality_score": float,     # Weighted sum of opponent quality in losses (lower = better losses)
+            "dominance_ratio": float,        # Avg quality-adjusted margin in wins / abs(losses)
+        }
+
+        Sport-stats rationale:
+        - **best_win_percentile**: NCAA selection committees and bracketologists heavily
+          weight "best win" as a tiebreaker.  A team with a top-5 win beats a team
+          whose best win is top-40, even with identical records.
+        - **win_quality_score**: PageRank-weighted sum over victories.  Not just *how
+          many* wins, but *who* you beat.  Graph-theoretic because opponent quality
+          propagates through the schedule (A beat B who beat C).
+        - **paper_tiger_score**: Compares actual win% to win% predicted by schedule
+          difficulty.  High values flag teams with inflated records against weak
+          schedules (e.g., a 28-3 mid-major with 0 Q1 wins).  These teams are
+          historically over-seeded and prone to first-round upsets.
+        - **loss_quality_score**: Losing to Kansas is different from losing to a
+          sub-200 team.  This captures "quality of losses" which the committee
+          explicitly evaluates.
+        - **dominance_ratio**: A team that beats good teams by 15 is different from
+          one that squeaks by.  Margin-quality interaction captures dominance.
+        """
+        if not self.edges:
+            return {tid: {
+                "best_win_percentile": 0.5,
+                "win_quality_score": 0.0,
+                "paper_tiger_score": 0.0,
+                "loss_quality_score": 0.0,
+                "dominance_ratio": 1.0,
+            } for tid in self.team_ids}
+
+        # Step 1: Compute PageRank as the canonical "team quality" measure
+        pagerank = self.compute_pagerank_sos()
+        pr_values = sorted(pagerank.values())
+        n_pr = len(pr_values)
+
+        def pr_percentile(team_id: str) -> float:
+            """What percentile is this team's PageRank among all teams?"""
+            pr_val = pagerank.get(team_id, 0.0)
+            # Bisect for rank position
+            rank = 0
+            for v in pr_values:
+                if v < pr_val:
+                    rank += 1
+                else:
+                    break
+            return rank / max(n_pr - 1, 1)
+
+        # Step 2: For each team, partition edges into wins and losses
+        # and accumulate quality metrics
+        recency = self._compute_recency_multipliers()
+        team_metrics: Dict[str, Dict[str, float]] = {}
+
+        for team_id in self.team_ids:
+            best_win_opp_pctile = 0.0
+            win_quality_sum = 0.0
+            loss_quality_sum = 0.0
+            win_margin_quality_sum = 0.0
+            loss_margin_quality_sum = 0.0
+            n_wins = 0
+            n_losses = 0
+            n_games = 0
+
+            for edge in self.edges:
+                # Determine if this team is involved
+                if edge.team1_id == team_id:
+                    opp_id = edge.team2_id
+                    margin = edge.quality_adjusted_margin  # positive = team1 won
+                elif edge.team2_id == team_id:
+                    opp_id = edge.team1_id
+                    margin = -edge.quality_adjusted_margin  # flip perspective
+                else:
+                    continue
+
+                r = recency.get(edge.game_id, 1.0)
+                opp_pr_pctile = pr_percentile(opp_id)
+                opp_pr = pagerank.get(opp_id, 0.0)
+                n_games += 1
+
+                if margin > 0:
+                    # Win
+                    n_wins += 1
+                    win_quality_sum += opp_pr * r
+                    win_margin_quality_sum += margin * opp_pr * r
+                    if opp_pr_pctile > best_win_opp_pctile:
+                        best_win_opp_pctile = opp_pr_pctile
+                else:
+                    # Loss (or tie → treated as loss)
+                    n_losses += 1
+                    loss_quality_sum += opp_pr * r
+                    loss_margin_quality_sum += abs(margin) * opp_pr * r
+
+            # Paper tiger: compare actual win% to expected win% from schedule
+            actual_win_pct = n_wins / max(n_games, 1)
+            # Expected win% from schedule = fraction of opponents below median
+            # (crude but effective proxy using PageRank rank)
+            own_pr_pctile = pr_percentile(team_id)
+            # If your PageRank says you're the 30th percentile team but you're
+            # winning 80% of games, something is off → paper tiger
+            expected_win_pct = own_pr_pctile  # Rough: top PR team should win most
+            paper_tiger = max(0.0, actual_win_pct - expected_win_pct)
+
+            # Dominance ratio: quality-weighted margin in wins / abs(losses)
+            if loss_margin_quality_sum > 1e-8:
+                dominance = win_margin_quality_sum / loss_margin_quality_sum
+            elif win_margin_quality_sum > 0:
+                dominance = 5.0  # Capped high for undefeated-like teams
+            else:
+                dominance = 1.0
+
+            team_metrics[team_id] = {
+                "best_win_percentile": best_win_opp_pctile,
+                "win_quality_score": win_quality_sum,
+                "paper_tiger_score": paper_tiger,
+                "loss_quality_score": loss_quality_sum,
+                "dominance_ratio": min(dominance, 5.0),  # Cap at 5x
+            }
+
+        return team_metrics
+
 
 def compute_multi_hop_sos(
     graph: ScheduleGraph,

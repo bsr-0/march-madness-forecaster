@@ -72,7 +72,7 @@ REMOVED_REDUNDANCIES = [
 # games with stability=0.1, near-zero predictive power per academic lit).
 # FIX 2.3: preseason_ap_rank encoding smoothed (was cliff at #25→unranked).
 # Down from 67 → 66 team features.
-TEAM_FEATURE_DIM = 71  # C4+WS3: 64 base + 2 external rating + 2 Poisson Binomial resume + 1 tournament resume composite + 2 coach stage experience
+TEAM_FEATURE_DIM = 79  # 71 base + 2 graph SOS (PageRank, multi-hop) + 3 win quality (best_win, paper_tiger, dominance) + 3 per-stage coaching (F4/E8/S16 appearances)
 
 # FIX #4: Indices (into the team feature vector) of the top features used
 # for absolute-level matchup context.  These are the features where the
@@ -272,6 +272,22 @@ class TeamFeatures:
 
     # Coach stage consistency: weighted measure of reaching late rounds
     coach_stage_consistency: float = 0.0
+
+    # Per-stage coaching breakdowns (count-based, log-scaled in to_vector)
+    coach_f4_appearances: int = 0     # Final Four appearances
+    coach_e8_appearances: int = 0     # Elite Eight appearances
+    coach_s16_appearances: int = 0    # Sweet Sixteen appearances
+
+    # Graph-theoretic features (from schedule_graph.py, exposed as standalone signals)
+    # Previously these were baked into sos_adj_em; now exposed independently
+    # so the ensemble can learn their weights.
+    pagerank_sos: float = 0.0          # PageRank-derived schedule strength
+    multi_hop_sos: float = 0.0         # Multi-hop propagated schedule strength
+
+    # Win quality metrics (from compute_win_quality_metrics)
+    best_win_percentile: float = 0.5   # Percentile rank of best win opponent
+    paper_tiger_score: float = 0.0     # Record inflation vs schedule difficulty
+    dominance_ratio: float = 1.0       # Quality-adjusted margin wins / losses
 
     # Per-game pace variance (game-to-game tempo stdev — upset risk amplifier)
     pace_variance: float = 0.0
@@ -555,6 +571,30 @@ class TeamFeatures:
             # Coach stage consistency (1) — weighted late-round consistency
             self.coach_stage_consistency,
 
+            # Per-stage coaching (3) — log-scaled appearance counts
+            # Rationale: A coach with 5 Final Fours is fundamentally different
+            # from one with 5 Sweet Sixteens.  Aggregate "appearances" hides this.
+            # Log-scaled because marginal value of 10th F4 < 2nd F4.
+            float(np.log1p(self.coach_f4_appearances) / np.log1p(15)),
+            float(np.log1p(self.coach_e8_appearances) / np.log1p(20)),
+            float(np.log1p(self.coach_s16_appearances) / np.log1p(25)),
+
+            # Graph-theoretic SOS (2) — standalone PageRank and multi-hop
+            # Previously baked into sos_adj_em via hardcoded weights; now
+            # exposed independently so the ensemble can learn optimal weighting.
+            # This is the key architectural fix: let the model decide how much
+            # weight to give graph-propagated schedule quality vs traditional SOS.
+            self.pagerank_sos,
+            self.multi_hop_sos,
+
+            # Win quality metrics (3) — from schedule graph analysis
+            # best_win_percentile: NCAA committee's #1 tiebreaker metric
+            # paper_tiger_score: flags inflated records (upset predictor)
+            # dominance_ratio: margin-quality interaction
+            self.best_win_percentile,
+            self.paper_tiger_score,
+            self.dominance_ratio,
+
             # Per-game pace variance (1) — upset risk amplifier
             self.pace_variance,
 
@@ -702,6 +742,12 @@ class TeamFeatures:
             'coach_tournament_win_rate',
             'coach_deep_run_rate',
             'coach_stage_consistency',
+            # Per-stage coaching (3)
+            'coach_f4_appearances', 'coach_e8_appearances', 'coach_s16_appearances',
+            # Graph-theoretic SOS (2)
+            'pagerank_sos', 'multi_hop_sos',
+            # Win quality metrics (3)
+            'best_win_percentile', 'paper_tiger_score', 'dominance_ratio',
             'pace_variance',
             'conf_tourney_champ',
             # KenPom / ShotQuality replacements (reduced)
@@ -932,6 +978,9 @@ class FeatureEngineer:
             features.coach_tournament_win_rate = float(pm.get('coach_tournament_win_rate', 0.0))
             features.coach_deep_run_rate = float(pm.get('coach_deep_run_rate', 0.0))
             features.coach_stage_consistency = float(pm.get('coach_stage_consistency', 0.0))
+            features.coach_f4_appearances = int(pm.get('coach_f4_appearances', 0))
+            features.coach_e8_appearances = int(pm.get('coach_e8_appearances', 0))
+            features.coach_s16_appearances = int(pm.get('coach_s16_appearances', 0))
             features.pace_variance = float(pm.get('pace_variance', 0.0))
             features.conf_tourney_champion = float(pm.get('conf_tourney_champion', False))
 
@@ -974,6 +1023,12 @@ class FeatureEngineer:
                 features.preseason_ap_rank = int(torvik_data['preseason_ap_rank'])
             if 'coach_tournament_appearances' in torvik_data:
                 features.coach_tournament_appearances = int(torvik_data['coach_tournament_appearances'])
+            if 'coach_f4_appearances' in torvik_data:
+                features.coach_f4_appearances = int(torvik_data['coach_f4_appearances'])
+            if 'coach_e8_appearances' in torvik_data:
+                features.coach_e8_appearances = int(torvik_data['coach_e8_appearances'])
+            if 'coach_s16_appearances' in torvik_data:
+                features.coach_s16_appearances = int(torvik_data['coach_s16_appearances'])
             if 'conf_tourney_champion' in torvik_data:
                 features.conf_tourney_champion = float(torvik_data['conf_tourney_champion'])
 
