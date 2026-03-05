@@ -671,26 +671,13 @@ class HistoricalFeatureMaterializer:
         prior_metrics = self._shift_prior_season_table(team_metrics, self.BASE_PRIOR_METRIC_COLUMNS, prefix="prior_season_")
         df = df.merge(prior_metrics, on=["season", "team_id"], how="left")
 
-        # M3: For the first season in the window, prior-season features are
-        # all NaN.  Fall back to current-season pre-tournament metrics so
-        # the model has *some* baseline rather than pure NaN.
-        prior_cols = [f"prior_season_{c}" for c in self.BASE_PRIOR_METRIC_COLUMNS if f"prior_season_{c}" in df.columns]
-        if prior_cols:
-            first_season = df["season"].min()
-            mask = (df["season"] == first_season) & df[prior_cols[0]].isna()
-            if mask.any():
-                current_metrics = team_metrics[team_metrics["season"] == first_season][["team_id"] + self.BASE_PRIOR_METRIC_COLUMNS].copy()
-                current_metrics = current_metrics.drop_duplicates(subset=["team_id"])
-                rename = {c: f"prior_season_{c}" for c in self.BASE_PRIOR_METRIC_COLUMNS if c in current_metrics.columns}
-                fallback = current_metrics.rename(columns=rename)
-                for col in prior_cols:
-                    base = col.replace("prior_season_", "")
-                    if base in fallback.columns or col in fallback.columns:
-                        fb_col = col if col in fallback.columns else base
-                        fb_map = fallback.set_index("team_id")[fb_col] if fb_col in fallback.columns else None
-                        if fb_map is not None:
-                            fill = df.loc[mask, "team_id"].map(fb_map)
-                            df.loc[mask, col] = df.loc[mask, col].fillna(fill)
+        # M3 REMOVED (FIX-LEAKAGE-M3): The prior M3 fallback filled
+        # prior-season features for the first season using CURRENT-season
+        # end-of-season metrics (off_rtg, def_rtg, wins, losses, SRS, SOS).
+        # This leaked end-of-season outcomes into mid-season predictions.
+        # Tree models (LightGBM) handle NaN natively, so leaving prior-
+        # season features as NaN for the first season is both safe and
+        # correct — the model learns to ignore them when unavailable.
 
         # L2: Only compute conference features if conference data is actually
         # present and non-empty.  Conference field is absent from all years
@@ -1413,10 +1400,10 @@ class HistoricalFeatureMaterializer:
                     "team_name": team_name or team_id,
                     "polls_ap_preseason": self._to_float(row.get("ap_preseason_rank")),
                     "polls_coaches_preseason": self._to_float(row.get("coaches_preseason_rank")),
-                    "polls_ap_weekly_mean": self._to_float(row.get("ap_weekly_mean")),
-                    "polls_coaches_weekly_mean": self._to_float(row.get("coaches_weekly_mean")),
-                    "polls_ap_weekly_std": self._to_float(row.get("ap_weekly_std")),
-                    "polls_coaches_weekly_std": self._to_float(row.get("coaches_weekly_std")),
+                    # FIX-LEAKAGE-POLLS: Weekly mean/std aggregates included
+                    # post-tournament poll activity, leaking tournament outcomes
+                    # into next-season prior features.  Only preseason polls
+                    # (available before game 1) are safe to use.
                 }
             )
         return pd.DataFrame(out) if out else None
@@ -1775,8 +1762,8 @@ class HistoricalFeatureMaterializer:
 
     @staticmethod
     def _rolling_day_counts(dates: pd.Series, window_days: int) -> List[float]:
-        arr = dates.sort_values().astype("datetime64[ns]").view("int64")
-        arr = (arr // 86_400_000_000_000).to_numpy()  # day index
+        sorted_dates = dates.sort_values().astype("datetime64[ns]")
+        arr = sorted_dates.to_numpy().astype("int64") // 86_400_000_000_000  # day index
         out = np.zeros(len(arr), dtype=float)
         left = 0
         for idx in range(len(arr)):
