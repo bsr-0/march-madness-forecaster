@@ -77,6 +77,19 @@ class TestSOTAPipelineConfigMode:
         config = SOTAPipelineConfig(mode="ev")
         assert config.ev_pool_type == "espn_national"
 
+    def test_ev_payout_structure_default(self):
+        config = SOTAPipelineConfig(mode="ev")
+        assert config.ev_payout_structure == "tiered"
+
+    def test_ev_payout_structure_valid_values(self):
+        for payout in ["winner_take_all", "top_3", "top_10pct", "top_25pct", "tiered"]:
+            config = SOTAPipelineConfig(mode="ev", ev_payout_structure=payout)
+            assert config.ev_payout_structure == payout
+
+    def test_ev_payout_structure_invalid_raises(self):
+        with pytest.raises(ValueError, match="ev_payout_structure"):
+            SOTAPipelineConfig(mode="ev", ev_payout_structure="bogus")
+
     def test_calibration_mode_ignores_ev_params(self):
         """EV params exist but aren't validated in calibration mode."""
         config = SOTAPipelineConfig(mode="calibration", ev_pool_size=0)

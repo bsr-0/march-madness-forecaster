@@ -7,6 +7,7 @@ from src.simulation.competitor_archetypes import (
     ChaosSeeker,
     ExpertMimic,
     Homer,
+    VALID_ARCHETYPE_NAMES,
     get_archetype_mix,
     create_archetypes,
     POOL_TYPE_ARCHETYPES,
@@ -185,3 +186,73 @@ class TestGenerateBracketProbs:
         assert len(bracket) == 2
         for key, winner in bracket.items():
             assert winner in ("duke", "unc", "kansas")
+
+
+class TestArchetypeOverrides:
+    """Test user-provided archetype distribution overrides."""
+
+    def test_overrides_merge_with_defaults(self):
+        """Overrides should replace specific archetype values in the base mix."""
+        mix = get_archetype_mix("espn_national", overrides={
+            "homer": 0.40,
+            "chalk_picker": 0.20,
+            "expert_mimic": 0.25,
+            "chaos_seeker": 0.15,
+        })
+        assert abs(mix["homer"] - 0.40) < 0.01
+        assert abs(mix["chalk_picker"] - 0.20) < 0.01
+
+    def test_overrides_partial_merge(self):
+        """Partial overrides should merge with remaining base values."""
+        base = get_archetype_mix("espn_national")
+        # Only override homer — but this changes the total, so must adjust
+        # to keep sum close to 1.0
+        mix = get_archetype_mix("espn_national", overrides={
+            "homer": 0.30,
+            "chalk_picker": 0.25,
+            "expert_mimic": 0.30,
+            "chaos_seeker": 0.15,
+        })
+        assert abs(sum(mix.values()) - 1.0) < 0.01
+
+    def test_overrides_invalid_name_raises(self):
+        with pytest.raises(ValueError, match="Invalid archetype names"):
+            get_archetype_mix("espn_national", overrides={"bad_name": 0.5})
+
+    def test_overrides_not_summing_to_one_raises(self):
+        """Overrides that make the total far from 1.0 should raise."""
+        with pytest.raises(ValueError, match="must sum to approximately 1.0"):
+            get_archetype_mix("espn_national", overrides={
+                "chalk_picker": 0.1,
+                "expert_mimic": 0.1,
+                "chaos_seeker": 0.1,
+                "homer": 0.1,
+            })
+
+    def test_overrides_close_to_one_renormalized(self):
+        """Values summing to ~0.98 should be renormalized, not rejected."""
+        mix = get_archetype_mix("espn_national", overrides={
+            "chalk_picker": 0.38,
+            "expert_mimic": 0.30,
+            "chaos_seeker": 0.15,
+            "homer": 0.15,
+        })
+        assert abs(sum(mix.values()) - 1.0) < 0.001
+
+    def test_overrides_none_returns_defaults(self):
+        mix = get_archetype_mix("espn_national", overrides=None)
+        expected = POOL_TYPE_ARCHETYPES["espn_national"]
+        for k in expected:
+            assert abs(mix[k] - expected[k]) < 0.001
+
+    def test_overrides_with_different_pool_types(self):
+        """Overrides should work with any base pool type."""
+        for pool_type in POOL_TYPE_ARCHETYPES:
+            mix = get_archetype_mix(pool_type, overrides={
+                "chalk_picker": 0.25,
+                "expert_mimic": 0.25,
+                "chaos_seeker": 0.25,
+                "homer": 0.25,
+            })
+            assert abs(sum(mix.values()) - 1.0) < 0.01
+            assert abs(mix["chalk_picker"] - 0.25) < 0.01

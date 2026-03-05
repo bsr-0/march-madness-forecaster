@@ -5,6 +5,7 @@ import pytest
 
 from src.optimization.dual_submission import (
     ChampionBoostStrategy,
+    ChampionCandidate,
     DualSubmissionStrategy,
     KaggleDualSubmissionGenerator,
     OpponentModel,
@@ -599,3 +600,136 @@ class TestZeroOneTrickMath:
 
         assert p_combined > max(p1, p2)
         assert p_combined > 0.14  # Should be ~0.145
+
+
+# ---------------------------------------------------------------------------
+# Multi-Champion & evaluate_all_candidates
+# ---------------------------------------------------------------------------
+
+
+class TestChampionCandidate:
+
+    def test_dataclass_construction(self):
+        c = ChampionCandidate(
+            team_id="duke", seed=1, championship_prob=0.15,
+            crowd_championship_prob=0.12, leverage_ratio=1.25,
+            selection_score=0.2, ev_delta=0.05,
+            brier_gain_if_correct=0.3, brier_cost_if_wrong=0.4,
+            region="East",
+        )
+        assert c.team_id == "duke"
+        assert c.ev_delta == 0.05
+        assert c.region == "East"
+
+
+class TestEvaluateAllCandidates:
+
+    def _make_matchups(self):
+        """Simple 3-matchup setup with 4 teams."""
+        return {
+            "m1": ("east_1", "east_16"),
+            "m2": ("west_1", "west_16"),
+            "m3": ("east_1", "west_1"),
+        }
+
+    def _make_seeds(self):
+        return {"east_1": 1, "east_16": 16, "west_1": 1, "west_16": 16}
+
+    def _make_primary(self):
+        return {"m1": 0.95, "m2": 0.90, "m3": 0.55}
+
+    def _make_champ_probs(self):
+        return {"east_1": 0.20, "west_1": 0.15, "east_16": 0.01, "west_16": 0.01}
+
+    def test_returns_ranked_list(self):
+        strategy = ChampionBoostStrategy(n_champion_candidates=5)
+        candidates = strategy.evaluate_all_candidates(
+            primary_predictions=self._make_primary(),
+            team_seeds=self._make_seeds(),
+            matchup_teams=self._make_matchups(),
+            championship_probs=self._make_champ_probs(),
+            team_regions={"east_1": "East", "west_1": "West"},
+        )
+        assert len(candidates) >= 2
+        assert isinstance(candidates[0], ChampionCandidate)
+        # Should be sorted by ev_delta descending
+        for i in range(len(candidates) - 1):
+            assert candidates[i].ev_delta >= candidates[i + 1].ev_delta
+
+    def test_candidates_have_regions(self):
+        strategy = ChampionBoostStrategy(n_champion_candidates=5)
+        candidates = strategy.evaluate_all_candidates(
+            primary_predictions=self._make_primary(),
+            team_seeds=self._make_seeds(),
+            matchup_teams=self._make_matchups(),
+            championship_probs=self._make_champ_probs(),
+            team_regions={"east_1": "East", "west_1": "West"},
+        )
+        regions_seen = {c.region for c in candidates if c.region}
+        assert len(regions_seen) >= 1
+
+    def test_filters_low_probability_candidates(self):
+        strategy = ChampionBoostStrategy(
+            n_champion_candidates=5,
+        )
+        # Only east_16 has very low prob, should be filtered
+        candidates = strategy.evaluate_all_candidates(
+            primary_predictions=self._make_primary(),
+            team_seeds=self._make_seeds(),
+            matchup_teams=self._make_matchups(),
+            championship_probs={"east_16": 0.01, "west_16": 0.01},
+        )
+        # Both are below MIN_CHAMPIONSHIP_PROB (0.03)
+        assert len(candidates) == 0
+
+
+class TestMultiChampionBoostPair:
+
+    @staticmethod
+    def _simple_predict(t1, t2):
+        return 0.6
+
+    def _make_matchup_ids(self):
+        return [
+            ("m1", "east_1", "east_16"),
+            ("m2", "west_1", "west_16"),
+            ("m3", "east_1", "west_1"),
+        ]
+
+    def _make_generator(self, multi_champion=True):
+        seeds = {"east_1": 1, "east_16": 16, "west_1": 1, "west_16": 16}
+        champ_probs = {"east_1": 0.20, "west_1": 0.15, "east_16": 0.01, "west_16": 0.01}
+        gen = KaggleDualSubmissionGenerator(
+            predict_fn=self._simple_predict,
+            team_seeds=seeds,
+            championship_probs=champ_probs,
+            n_champion_candidates=5,
+        )
+        gen.champion_boost.multi_champion = multi_champion
+        return gen
+
+    def test_multi_champion_disabled_uses_single(self):
+        gen = self._make_generator(multi_champion=False)
+        pair = gen.generate_submissions(self._make_matchup_ids())
+        assert pair.strategy == "champion_boost"
+
+    def test_candidates_evaluated_tracked(self):
+        gen = self._make_generator(multi_champion=True)
+        pair = gen.generate_submissions(self._make_matchup_ids())
+        assert len(pair.champion_candidates_evaluated) >= 1
+        assert "team_id" in pair.champion_candidates_evaluated[0]
+
+    def test_light_boost_is_between_primary_and_full(self):
+        gen = self._make_generator()
+        primary = {"m1": 0.60, "m2": 0.55, "m3": 0.50}
+        matchup_teams = {"m1": ("east_1", "east_16"), "m2": ("west_1", "west_16"), "m3": ("east_1", "west_1")}
+        light = gen._apply_light_boost(primary, "east_1", matchup_teams)
+        full = gen.champion_boost.generate_champion_boost(
+            primary, "east_1", matchup_teams, gen.team_seeds,
+        )
+        # For champion games, light boost should be between primary and full
+        for mid in primary:
+            teams = matchup_teams.get(mid)
+            if teams and ("east_1" in teams):
+                assert min(primary[mid], full[mid]) <= light[mid] + 0.001
+                assert light[mid] <= max(primary[mid], full[mid]) + 0.001
