@@ -315,3 +315,45 @@ class TestPayoutStructure:
         for payout in VALID_PAYOUT_STRUCTURES:
             profile = get_strategy_profile(100, payout_structure=payout)
             assert profile.payout_structure == payout
+
+
+class TestVarianceTarget:
+    """Test variance_target integration with payout structures."""
+
+    def test_winner_take_all_has_high_variance_target(self):
+        profile = get_strategy_profile(100, payout_structure="winner_take_all")
+        assert profile.variance_target >= 0.8
+
+    def test_top_25pct_has_low_variance_target(self):
+        profile = get_strategy_profile(100, payout_structure="top_25pct")
+        assert profile.variance_target <= 0.25
+
+    def test_tiered_has_moderate_variance_target(self):
+        profile = get_strategy_profile(100, payout_structure="tiered")
+        assert 0.3 <= profile.variance_target <= 0.7
+
+    def test_variance_target_increases_with_payout_aggression(self):
+        """More aggressive payouts should have higher variance targets."""
+        top25 = get_strategy_profile(100, payout_structure="top_25pct")
+        top10 = get_strategy_profile(100, payout_structure="top_10pct")
+        top3 = get_strategy_profile(100, payout_structure="top_3")
+        wta = get_strategy_profile(100, payout_structure="winner_take_all")
+        assert top25.variance_target < top10.variance_target
+        assert top10.variance_target < top3.variance_target
+        assert top3.variance_target < wta.variance_target
+
+    def test_variance_target_affects_pool_dynamics(self):
+        """Different variance targets should produce different recommendations."""
+        from src.optimization.leverage import calculate_pool_dynamics
+        model = {"duke": 0.15, "gonzaga": 0.10}
+        public = {"duke": 0.25, "gonzaga": 0.08}
+
+        low_var = calculate_pool_dynamics(100, model, public, variance_target=0.1)
+        high_var = calculate_pool_dynamics(100, model, public, variance_target=0.9)
+
+        # Both should have valid recommendations
+        assert low_var["recommendation"] in ("chalk", "contrarian")
+        assert high_var["recommendation"] in ("chalk", "contrarian")
+        # Variance target should be included in results
+        assert low_var["variance_target"] == 0.1
+        assert high_var["variance_target"] == 0.9

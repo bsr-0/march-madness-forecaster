@@ -787,6 +787,15 @@ class UnifiedBacktestResult:
                 f"  Mean RW-Brier: {np.mean(rw_briers):.4f} +/- {np.std(rw_briers):.4f}"
             )
 
+            # Year-over-year trend
+            if "calibration" in self.summary_by_mode:
+                trend = self.summary_by_mode["calibration"].get("yoy_brier_trend")
+                if trend is not None:
+                    direction = "improving" if trend < 0 else "worsening"
+                    lines.append(
+                        f"  YoY Brier trend: {trend:+.5f}/year ({direction})"
+                    )
+
             # Champion boost summary
             boost_results = [
                 r.champion_boost for r in calibration_results
@@ -1173,6 +1182,11 @@ class UnifiedBacktester:
                 "n_years": float(len(cal_results)),
             }
 
+            # Trend analysis: compute year-over-year Brier improvement
+            trend = self._compute_trend(cal_results)
+            if trend is not None:
+                summary["calibration"]["yoy_brier_trend"] = trend
+
         ev_results = [r for r in results if r.mode == "ev"]
         if ev_results:
             pcts = [r.pool_rank_percentile for r in ev_results]
@@ -1185,4 +1199,65 @@ class UnifiedBacktester:
                 "win_rate": float(wins / len(ev_results)) if ev_results else 0.0,
             }
 
+            # Per-payout-structure breakdown
+            payout_breakdown = self._compute_payout_breakdown(ev_results)
+            if payout_breakdown:
+                summary["ev_by_payout"] = payout_breakdown
+
         return summary
+
+    @staticmethod
+    def _compute_trend(
+        cal_results: List[YearModeResult],
+    ) -> Optional[float]:
+        """Compute year-over-year Brier trend via simple linear regression.
+
+        A negative trend means the model is improving (lower Brier) over time.
+
+        Returns:
+            Slope of Brier score vs year, or None if insufficient data.
+        """
+        sorted_results = sorted(cal_results, key=lambda r: r.year)
+        if len(sorted_results) < 3:
+            return None
+
+        years = np.array([r.year for r in sorted_results], dtype=float)
+        briers = np.array([r.brier_score for r in sorted_results], dtype=float)
+
+        # Simple OLS: slope = cov(x,y) / var(x)
+        x_mean = years.mean()
+        y_mean = briers.mean()
+        numerator = ((years - x_mean) * (briers - y_mean)).sum()
+        denominator = ((years - x_mean) ** 2).sum()
+        if abs(denominator) < 1e-12:
+            return None
+        return float(numerator / denominator)
+
+    @staticmethod
+    def _compute_payout_breakdown(
+        ev_results: List[YearModeResult],
+    ) -> Dict[str, Dict[str, float]]:
+        """Break down EV results by payout structure for strategy comparison.
+
+        Returns:
+            Dict mapping payout_structure -> {mean_percentile, win_rate, ...}
+        """
+        from collections import defaultdict
+
+        by_payout: Dict[str, List[YearModeResult]] = defaultdict(list)
+        for r in ev_results:
+            by_payout[r.payout_structure].append(r)
+
+        breakdown: Dict[str, Dict[str, float]] = {}
+        for payout, results in by_payout.items():
+            pcts = [r.pool_rank_percentile for r in results]
+            wins = sum(1 for r in results if r.pool_rank_position == 1)
+            breakdown[payout] = {
+                "mean_percentile": float(np.mean(pcts)),
+                "n_configs": float(len(results)),
+                "win_rate": float(wins / len(results)) if results else 0.0,
+                "best_percentile": float(min(pcts)) if pcts else 1.0,
+                "worst_percentile": float(max(pcts)) if pcts else 1.0,
+            }
+
+        return breakdown

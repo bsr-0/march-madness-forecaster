@@ -104,6 +104,13 @@ class PoolStrategyProfile:
     Encodes how aggressively contrarian the bracket optimizer should be
     given the competitive landscape.  Larger pools require more
     differentiation; smaller pools reward accuracy.
+
+    The ``variance_target`` field captures the desired outcome variance
+    implied by the payout structure.  Winner-take-all pools demand high
+    variance (only 1st place pays, so you need a "lottery ticket"
+    bracket), while top-25% pools reward low variance (consistent
+    accuracy keeps you in the money).  The bracket optimizer uses this
+    to tune how much outcome variance to inject via upset picks.
     """
 
     pool_size: int
@@ -112,6 +119,7 @@ class PoolStrategyProfile:
     contrarian_strength: float  # Multiplier on leverage picks (0.5–3.0)
     champion_risk_level: str  # "very_low", "low", "moderate", "high", "extreme"
     payout_structure: str = "tiered"  # Prize structure affecting variance preference
+    variance_target: float = 0.5  # 0.0 = minimize variance, 1.0 = maximize variance
     description: str = ""
 
     def validate(self) -> None:
@@ -137,6 +145,7 @@ PAYOUT_ADJUSTMENTS: Dict[str, Dict[str, float]] = {
         "contrarian_mult": 1.4,
         "targeted_mult": 1.5,
         "contrarian_strength_mult": 1.3,
+        "variance_target": 0.95,  # Maximum variance — only 1st place pays
     },
     "top_3": {
         "chalk_mult": 0.7,
@@ -144,6 +153,7 @@ PAYOUT_ADJUSTMENTS: Dict[str, Dict[str, float]] = {
         "contrarian_mult": 1.2,
         "targeted_mult": 1.3,
         "contrarian_strength_mult": 1.15,
+        "variance_target": 0.75,
     },
     "top_10pct": {
         "chalk_mult": 1.2,
@@ -151,6 +161,7 @@ PAYOUT_ADJUSTMENTS: Dict[str, Dict[str, float]] = {
         "contrarian_mult": 0.85,
         "targeted_mult": 0.85,
         "contrarian_strength_mult": 0.8,
+        "variance_target": 0.35,
     },
     "top_25pct": {
         "chalk_mult": 1.4,
@@ -158,6 +169,7 @@ PAYOUT_ADJUSTMENTS: Dict[str, Dict[str, float]] = {
         "contrarian_mult": 0.7,
         "targeted_mult": 0.6,
         "contrarian_strength_mult": 0.6,
+        "variance_target": 0.15,  # Low variance — consistent accuracy pays
     },
     "tiered": {
         "chalk_mult": 1.0,
@@ -165,6 +177,7 @@ PAYOUT_ADJUSTMENTS: Dict[str, Dict[str, float]] = {
         "contrarian_mult": 1.0,
         "targeted_mult": 1.0,
         "contrarian_strength_mult": 1.0,
+        "variance_target": 0.50,
     },
 }
 
@@ -271,6 +284,7 @@ def get_strategy_profile(
         profile.strategy_mix = {k: v / total for k, v in raw_mix.items()}
     profile.contrarian_strength *= adjustments["contrarian_strength_mult"]
     profile.payout_structure = payout_structure
+    profile.variance_target = adjustments.get("variance_target", 0.5)
 
     if contrarian_override is not None:
         profile.contrarian_strength = contrarian_override
@@ -883,57 +897,77 @@ class ParetoOptimizer:
 def calculate_pool_dynamics(
     pool_size: int,
     model_probs: Dict[str, float],
-    public_picks: Dict[str, float]
+    public_picks: Dict[str, float],
+    variance_target: float = 0.5,
 ) -> Dict[str, float]:
     """
     Calculate expected performance dynamics for different strategies.
-    
+
+    The ``variance_target`` (from the payout structure) adjusts how the
+    EV of each strategy is weighted.  High variance_target (winner-take-all)
+    penalizes chalk strategies because many competitors share the same
+    pick, making it harder to win outright.  Low variance_target (top-25%)
+    rewards chalk because consistent accuracy keeps you in the money.
+
     Args:
         pool_size: Number of competitors
         model_probs: Our championship probabilities
         public_picks: Public championship picks
-        
+        variance_target: 0.0 = minimize variance, 1.0 = maximize variance
+
     Returns:
         Strategy performance estimates
     """
     results = {}
-    
+
     # Chalk strategy - pick by probability
     chalk_champion = max(model_probs, key=model_probs.get)
     chalk_prob = model_probs[chalk_champion]
     chalk_public = public_picks.get(chalk_champion, 0.3)
-    
+
     # Expected competitors also picking chalk champion
     expected_chalk_competition = pool_size * chalk_public
-    
+
     # Probability of winning pool with chalk
     # If chalk wins, we split with ~N*public_pct people
     chalk_win_share = chalk_prob / max(expected_chalk_competition, 1)
     results["chalk_ev"] = chalk_win_share
-    
+
     # Contrarian strategy - pick high leverage
     contrarian_options = [
         (tid, model_probs[tid] / max(public_picks.get(tid, 0.01), 0.01))
         for tid in model_probs
     ]
     contrarian_options.sort(key=lambda x: x[1], reverse=True)
-    
+
     if contrarian_options:
         contrarian_champion = contrarian_options[0][0]
         contrarian_prob = model_probs[contrarian_champion]
         contrarian_public = public_picks.get(contrarian_champion, 0.01)
-        
+
         expected_contrarian_competition = pool_size * contrarian_public
         contrarian_win_share = contrarian_prob / max(expected_contrarian_competition, 1)
         results["contrarian_ev"] = contrarian_win_share
         results["leverage_ratio"] = contrarian_prob / contrarian_public
-    
-    # Recommendation
-    if results.get("contrarian_ev", 0) > results.get("chalk_ev", 0):
+
+    # Variance-adjusted recommendation: blend chalk and contrarian EVs
+    # based on the payout structure's variance preference.
+    # High variance_target → prefer contrarian (unique picks win outright).
+    # Low variance_target → prefer chalk (consistent accuracy stays in money).
+    chalk_ev = results.get("chalk_ev", 0)
+    contrarian_ev = results.get("contrarian_ev", 0)
+
+    # Effective EV weights contrarian more when variance_target is high
+    chalk_adjusted = chalk_ev * (1.0 - 0.5 * variance_target)
+    contrarian_adjusted = contrarian_ev * (0.5 + 0.5 * variance_target)
+
+    if contrarian_adjusted > chalk_adjusted:
         results["recommendation"] = "contrarian"
     else:
         results["recommendation"] = "chalk"
-    
+
+    results["variance_target"] = variance_target
+
     return results
 
 
@@ -1019,6 +1053,14 @@ def analyze_pool(
 
     pareto_brackets = optimizer.generate_pareto_brackets()
 
+    # Generate or use provided strategy profile for recommendation
+    if strategy_profile is None:
+        profile = get_strategy_profile(
+            pool_size, scoring_system=ev_scoring_system or "standard"
+        )
+    else:
+        profile = strategy_profile
+
     # Calculate strategy EVs
     championship_model = {
         tid: probs.get("CHAMP", 0)
@@ -1030,16 +1072,9 @@ def analyze_pool(
     }
 
     dynamics = calculate_pool_dynamics(
-        pool_size, championship_model, championship_public
+        pool_size, championship_model, championship_public,
+        variance_target=profile.variance_target,
     )
-
-    # Generate or use provided strategy profile for recommendation
-    if strategy_profile is None:
-        profile = get_strategy_profile(
-            pool_size, scoring_system=ev_scoring_system or "standard"
-        )
-    else:
-        profile = strategy_profile
 
     # Override recommendation with profile-based strategy
     recommended = dynamics.get("recommendation", "balanced")
