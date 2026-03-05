@@ -485,6 +485,10 @@ class SOTAPipelineConfig:
     ev_enable_search: bool = False  # Enable hill climbing / simulated annealing bracket optimization
     ev_enable_archetypes: bool = False  # Enable behavioral archetype competitor modeling
     ev_pool_type: str = "espn_national"  # "espn_national", "office_pool", "kaggle" — affects archetype mix
+    ev_payout_structure: str = "tiered"  # Prize structure: "winner_take_all", "top_3", "top_10pct", "top_25pct", "tiered"
+    ev_archetype_overrides: Optional[Dict[str, float]] = None  # Custom archetype prevalence overrides
+    ev_auto_refresh: bool = False  # Auto-refresh stale public pick data before EV analysis
+    kaggle_effective_pool_size: int = 3000  # Effective "pool size" for Kaggle bracket portfolio allocation
 
     # --- Betting market integration ---
     betting_odds_json: Optional[str] = None  # Path to cached betting odds JSON
@@ -505,6 +509,14 @@ class SOTAPipelineConfig:
                 raise ValueError(
                     f"Invalid ev_scoring_system '{self.ev_scoring_system}': "
                     "must be 'standard', 'flat', or 'upset_bonus'"
+                )
+            valid_payouts = {
+                "winner_take_all", "top_3", "top_10pct", "top_25pct", "tiered",
+            }
+            if self.ev_payout_structure not in valid_payouts:
+                raise ValueError(
+                    f"Invalid ev_payout_structure '{self.ev_payout_structure}': "
+                    f"must be one of {sorted(valid_payouts)}"
                 )
 
 
@@ -528,9 +540,10 @@ class EVModeReport:
     win_probabilities: Dict[str, float] = field(default_factory=dict)
     pareto_brackets: List[Dict] = field(default_factory=list)
     pool_ev_analysis: Dict[str, float] = field(default_factory=dict)
+    picks_staleness_warning: Optional[str] = None
 
     def to_dict(self) -> Dict:
-        return {
+        d = {
             "mode": "ev",
             "pool_size": self.pool_size,
             "scoring_system": self.scoring_system,
@@ -544,6 +557,9 @@ class EVModeReport:
             "pareto_brackets": self.pareto_brackets,
             "pool_ev_analysis": self.pool_ev_analysis,
         }
+        if self.picks_staleness_warning:
+            d["picks_staleness_warning"] = self.picks_staleness_warning
+        return d
 
 
 # C2: Fixed domain-knowledge feature set with published citations.
@@ -1274,6 +1290,7 @@ class SOTAPipeline:
                 if self.config.ev_contrarian_strength != 1.0
                 else None
             ),
+            payout_structure=self.config.ev_payout_structure,
         )
         logger.info(
             "EV strategy profile: pool_size=%d, contrarian=%.1f, risk=%s — %s",
@@ -1292,7 +1309,10 @@ class SOTAPipeline:
                     create_archetypes,
                     get_archetype_mix,
                 )
-                archetype_mix = get_archetype_mix(self.config.ev_pool_type)
+                archetype_mix = get_archetype_mix(
+                    self.config.ev_pool_type,
+                    overrides=self.config.ev_archetype_overrides,
+                )
                 archetypes = create_archetypes(archetype_mix)
                 # Build seed lookup from team metadata
                 seed_lookup = {
@@ -1758,10 +1778,13 @@ class SOTAPipeline:
                     predict_fn=self.predict_probability,
                     public_pick_pcts=public_picks.get("championship", {}),
                 )
-                # Use pool-size-adaptive strategy mix in EV mode
-                ev_strategy_mix = None
+                # Use pool-size-adaptive strategy profile for portfolio allocation.
+                # In EV mode, derive from the user's actual pool parameters.
+                # In calibration mode, use Kaggle-specific pool-size estimate
+                # to allocate strategies via the same game-theoretic logic.
+                portfolio_profile = None
                 if self.config.mode == "ev":
-                    ev_profile = get_strategy_profile(
+                    portfolio_profile = get_strategy_profile(
                         self.config.ev_pool_size,
                         scoring_system=self.config.ev_scoring_system or "standard",
                         contrarian_override=(
@@ -1769,10 +1792,24 @@ class SOTAPipeline:
                             if self.config.ev_contrarian_strength != 1.0
                             else None
                         ),
+                        payout_structure=self.config.ev_payout_structure,
                     )
-                    ev_strategy_mix = ev_profile.strategy_mix
                     logger.info(
-                        "Portfolio using EV strategy mix: %s", ev_strategy_mix
+                        "Portfolio using EV strategy profile: %s",
+                        portfolio_profile.strategy_mix,
+                    )
+                else:
+                    # Calibration mode: treat Kaggle as a pool and use
+                    # pool-size-adaptive allocation for bracket diversity.
+                    portfolio_profile = get_strategy_profile(
+                        self.config.kaggle_effective_pool_size,
+                        payout_structure="top_10pct",
+                    )
+                    logger.info(
+                        "Portfolio using Kaggle strategy profile "
+                        "(effective_pool_size=%d): %s",
+                        self.config.kaggle_effective_pool_size,
+                        portfolio_profile.strategy_mix,
                     )
 
                 portfolio = portfolio_gen.generate_portfolio(
@@ -1780,7 +1817,7 @@ class SOTAPipeline:
                     n_brackets=1000,
                     n_simulations=50000,
                     seed=self.config.random_seed,
-                    strategy_mix=ev_strategy_mix,
+                    pool_strategy_profile=portfolio_profile,
                     enable_search=(
                         self.config.ev_enable_search
                         if self.config.mode == "ev"

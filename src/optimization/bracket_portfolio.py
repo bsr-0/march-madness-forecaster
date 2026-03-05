@@ -16,9 +16,12 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from .leverage import PoolStrategyProfile
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +88,7 @@ class BracketPortfolioGenerator:
         seed: int = 42,
         strategy_mix: Optional[Dict[str, float]] = None,
         enable_search: bool = False,
+        pool_strategy_profile: Optional["PoolStrategyProfile"] = None,
     ) -> List[GeneratedBracket]:
         """Generate a diverse bracket portfolio.
 
@@ -93,14 +97,30 @@ class BracketPortfolioGenerator:
             n_brackets: Number of brackets to generate
             n_simulations: Monte Carlo simulations for sampling
             seed: Random seed
-            strategy_mix: Fraction of brackets per strategy type
+            strategy_mix: Fraction of brackets per strategy type.  Takes
+                precedence over ``pool_strategy_profile`` if both are provided.
             enable_search: If True, refine top brackets using Simulated
                 Annealing search after initial MC sampling.
+            pool_strategy_profile: Optional :class:`PoolStrategyProfile` from
+                :mod:`~src.optimization.leverage`.  When provided and
+                ``strategy_mix`` is not, uses the profile's pool-size-adaptive
+                strategy allocation instead of hardcoded defaults.
 
         Returns:
             List of GeneratedBracket objects
         """
-        if strategy_mix is None:
+        if strategy_mix is None and pool_strategy_profile is not None:
+            # Cross-strategy synergy: reuse pool-size-adaptive allocations
+            # from the EV mode's game-theoretic analysis.
+            strategy_mix = pool_strategy_profile.strategy_mix.copy()
+            logger.info(
+                "Using pool strategy profile (pool_size=%d, payout=%s) "
+                "for bracket portfolio allocation: %s",
+                pool_strategy_profile.pool_size,
+                pool_strategy_profile.payout_structure,
+                strategy_mix,
+            )
+        elif strategy_mix is None:
             # Gap #5: Optimized for bracket portfolio format (2024+).
             # In large-field competitions, contrarian and champion-targeted
             # strategies dominate because chalk brackets are duplicated

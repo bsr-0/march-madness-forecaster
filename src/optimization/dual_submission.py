@@ -68,6 +68,7 @@ class SubmissionPair:
     deviations: List[str] = field(default_factory=list)  # Matchups where hedge differs
     strategy: str = "leverage"     # Strategy used for hedge: "leverage", "champion_boost", "upset_path"
     champion_team: Optional[str] = None  # Champion team for champion_boost strategy
+    champion_candidates_evaluated: List[Dict] = field(default_factory=list)  # All candidates considered
 
 
 @dataclass
@@ -82,6 +83,21 @@ class ChampionPathPick:
     expected_brier_gain: float = 0.0      # Expected Brier improvement if champion is correct
     crowd_championship_prob: float = 0.0  # Estimated crowd P(champion)
     leverage_ratio: float = 0.0           # model_prob / crowd_prob
+
+
+@dataclass
+class ChampionCandidate:
+    """A champion candidate with full EV analysis for multi-champion selection."""
+    team_id: str
+    seed: int
+    championship_prob: float
+    crowd_championship_prob: float
+    leverage_ratio: float
+    selection_score: float  # Combined score from select_champion logic
+    ev_delta: float  # Expected Brier delta from boosting this candidate
+    brier_gain_if_correct: float
+    brier_cost_if_wrong: float
+    region: str = ""
 
 
 class ChampionBoostStrategy:
@@ -130,6 +146,7 @@ class ChampionBoostStrategy:
         self,
         n_champion_candidates: int = 5,
         boost_non_path_games: bool = True,
+        multi_champion: bool = True,
     ):
         """
         Args:
@@ -137,9 +154,13 @@ class ChampionBoostStrategy:
             boost_non_path_games: Whether to also adjust non-path games
                 (e.g., push opponents of our champion's likely opponents
                  toward winning so the bracket path is maximally favorable)
+            multi_champion: Whether to spread top-2 champions across
+                submission slots when they are in different regions and
+                have comparable EV.
         """
         self.n_champion_candidates = n_champion_candidates
         self.boost_non_path_games = boost_non_path_games
+        self.multi_champion = multi_champion
 
     def select_champion(
         self,
@@ -213,6 +234,81 @@ class ChampionBoostStrategy:
             )
 
         return best_team
+
+    def evaluate_all_candidates(
+        self,
+        primary_predictions: Dict[str, float],
+        team_seeds: Dict[str, int],
+        matchup_teams: Dict[str, Tuple[str, str]],
+        championship_probs: Optional[Dict[str, float]] = None,
+        crowd_probs: Optional[Dict[str, float]] = None,
+        team_regions: Optional[Dict[str, str]] = None,
+    ) -> List[ChampionCandidate]:
+        """Evaluate and rank all viable champion candidates with full EV analysis.
+
+        Consolidates the scoring logic from :meth:`select_champion` and the
+        EV computation from :meth:`estimate_champion_boost_ev` into a single
+        pass, returning a ranked list that the multi-champion strategy can use
+        to spread picks across submission slots.
+
+        Args:
+            primary_predictions: matchup_id -> P(team1 wins)
+            team_seeds: team_id -> seed
+            matchup_teams: matchup_id -> (team1_id, team2_id)
+            championship_probs: team_id -> P(wins tournament)
+            crowd_probs: matchup_id -> crowd prediction (unused for scoring,
+                but crowd championship probs are estimated from seeds)
+            team_regions: team_id -> region name (for multi-champion diversity)
+
+        Returns:
+            List of ChampionCandidate sorted by ev_delta descending.
+        """
+        if championship_probs is None:
+            championship_probs = self._estimate_championship_probs(team_seeds)
+        if team_regions is None:
+            team_regions = {}
+
+        candidates_raw = sorted(
+            championship_probs.items(),
+            key=lambda x: x[1],
+            reverse=True,
+        )[:self.n_champion_candidates]
+
+        results: List[ChampionCandidate] = []
+        for team_id, champ_prob in candidates_raw:
+            if champ_prob < self.MIN_CHAMPIONSHIP_PROB:
+                continue
+
+            seed = team_seeds.get(team_id, 8)
+            seed_bonus = max(0, (5 - seed)) * 0.1
+            crowd_champ = self._estimate_crowd_championship_prob(seed)
+            leverage = champ_prob / max(crowd_champ, 0.01)
+            score = champ_prob * (1.0 + math.log(max(leverage, 0.5))) * (1.0 + seed_bonus)
+
+            # Generate boosted predictions and compute EV
+            boosted = self.generate_champion_boost(
+                primary_predictions, team_id, matchup_teams, team_seeds,
+            )
+            ev_analysis = self.estimate_champion_boost_ev(
+                primary_predictions, boosted, team_id, matchup_teams, champ_prob,
+            )
+
+            results.append(ChampionCandidate(
+                team_id=team_id,
+                seed=seed,
+                championship_prob=champ_prob,
+                crowd_championship_prob=crowd_champ,
+                leverage_ratio=leverage,
+                selection_score=score,
+                ev_delta=ev_analysis["ev_delta"],
+                brier_gain_if_correct=ev_analysis["brier_gain_if_correct"],
+                brier_cost_if_wrong=ev_analysis["brier_cost_if_wrong"],
+                region=team_regions.get(team_id, ""),
+            ))
+
+        # Sort by ev_delta descending (best candidate first)
+        results.sort(key=lambda c: c.ev_delta, reverse=True)
+        return results
 
     def generate_champion_boost(
         self,
@@ -523,72 +619,141 @@ class KaggleDualSubmissionGenerator:
         matchup_teams: Dict[str, Tuple[str, str]],
         matchup_ids: List[Tuple[str, str, str]],
     ) -> SubmissionPair:
-        """Generate champion boost submission (the 0-1 trick)."""
-        # Select champion to boost
-        champion_id = self.champion_boost.select_champion(
+        """Generate champion boost submission (the 0-1 trick).
+
+        When multi_champion is enabled and the top-2 candidates are in
+        different regions with comparable EV, spreads them across slots:
+        - Slot 2 (hedge): full 0-1 boost for champion #1
+        - Slot 1 (primary): light boost (70% original + 30% full) for champion #2
+        """
+        # Evaluate all candidates with full EV analysis
+        candidates = self.champion_boost.evaluate_all_candidates(
             primary_predictions=primary,
             team_seeds=self.team_seeds,
+            matchup_teams=matchup_teams,
             championship_probs=self.championship_probs,
             crowd_probs=self.crowd_predictions,
         )
 
-        if champion_id is None:
+        candidates_dicts = [
+            {
+                "team_id": c.team_id,
+                "seed": c.seed,
+                "championship_prob": round(c.championship_prob, 4),
+                "ev_delta": round(c.ev_delta, 5),
+                "region": c.region,
+            }
+            for c in candidates
+        ]
+
+        if not candidates:
             logger.warning(
                 "No viable champion candidate found; falling back to "
                 "leverage-based hedge"
             )
-            return self._legacy_dual.generate_pair(matchup_ids)
+            pair = self._legacy_dual.generate_pair(matchup_ids)
+            pair.champion_candidates_evaluated = candidates_dicts
+            return pair
 
-        # Generate boosted submission
-        hedge = self.champion_boost.generate_champion_boost(
-            primary_predictions=primary,
-            champion_id=champion_id,
-            matchup_teams=matchup_teams,
-            team_seeds=self.team_seeds,
+        champ1 = candidates[0]
+
+        # Multi-champion logic: spread top-2 across slots if they diversify
+        use_multi = (
+            self.champion_boost.multi_champion
+            and len(candidates) >= 2
+            and candidates[1].region
+            and champ1.region
+            and candidates[1].region != champ1.region
+            and candidates[1].ev_delta > 0.5 * champ1.ev_delta
         )
 
-        # Compute EV analysis
-        champ_prob = (
-            self.championship_probs.get(champion_id, 0.05)
-            if self.championship_probs
-            else 0.05
-        )
-        ev_analysis = self.champion_boost.estimate_champion_boost_ev(
-            primary, hedge, champion_id, matchup_teams, champ_prob,
-        )
+        if use_multi:
+            champ2 = candidates[1]
+            logger.info(
+                "Multi-champion: spreading %s (%s) and %s (%s) across slots",
+                champ1.team_id, champ1.region, champ2.team_id, champ2.region,
+            )
+
+            # Slot 2 (hedge): full 0-1 boost for champion #1
+            hedge = self.champion_boost.generate_champion_boost(
+                primary_predictions=primary,
+                champion_id=champ1.team_id,
+                matchup_teams=matchup_teams,
+                team_seeds=self.team_seeds,
+            )
+
+            # Slot 1 (primary): light boost for champion #2
+            primary_out = self._apply_light_boost(
+                primary, champ2.team_id, matchup_teams,
+            )
+
+            champion_id = champ1.team_id
+            strategy = "multi_champion_boost"
+        else:
+            champion_id = champ1.team_id
+            primary_out = dict(primary)
+
+            hedge = self.champion_boost.generate_champion_boost(
+                primary_predictions=primary,
+                champion_id=champion_id,
+                matchup_teams=matchup_teams,
+                team_seeds=self.team_seeds,
+            )
+            strategy = "champion_boost"
 
         # Identify deviations
         deviations = [
             mid for mid in primary
-            if abs(primary[mid] - hedge[mid]) > 0.01
+            if abs(primary_out[mid] - hedge[mid]) > 0.01
         ]
 
         # Compute expected Brier scores
-        primary_brier = self._estimate_expected_brier(primary)
+        primary_brier = self._estimate_expected_brier(primary_out)
         hedge_brier = self._estimate_expected_brier(hedge)
 
         pair = SubmissionPair(
-            primary=primary,
+            primary=primary_out,
             hedge=hedge,
             primary_expected_brier=primary_brier,
             hedge_expected_brier=hedge_brier,
             deviations=deviations,
-            strategy="champion_boost",
+            strategy=strategy,
             champion_team=champion_id,
+            champion_candidates_evaluated=candidates_dicts,
         )
 
         logger.info(
             "Champion boost: team=%s (seed=%d), P(champ)=%.3f, "
-            "%d games boosted, EV delta=%.4f (%s)",
+            "%d games boosted, EV delta=%.4f, strategy=%s",
             champion_id,
             self.team_seeds.get(champion_id, 0),
-            champ_prob,
+            champ1.championship_prob,
             len(deviations),
-            ev_analysis["ev_delta"],
-            "favorable" if ev_analysis["ev_favorable"] else "unfavorable",
+            champ1.ev_delta,
+            strategy,
         )
 
         return pair
+
+    def _apply_light_boost(
+        self,
+        predictions: Dict[str, float],
+        champion_id: str,
+        matchup_teams: Dict[str, Tuple[str, str]],
+    ) -> Dict[str, float]:
+        """Apply a gentle boost for the secondary champion (70% original + 30% full boost).
+
+        This preserves most of the calibrated probabilities while nudging
+        the bracket toward the secondary champion, creating region-diverse
+        coverage across the two submission slots.
+        """
+        full_boost = self.champion_boost.generate_champion_boost(
+            predictions, champion_id, matchup_teams, self.team_seeds,
+        )
+        blended = {}
+        for mid in predictions:
+            blended[mid] = 0.7 * predictions[mid] + 0.3 * full_boost[mid]
+        return blended
 
     def _estimate_expected_brier(self, predictions: Dict[str, float]) -> float:
         """Estimate expected Brier from prediction entropy.
