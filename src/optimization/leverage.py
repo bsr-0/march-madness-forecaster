@@ -124,6 +124,155 @@ class PoolStrategyProfile:
 
 
 # ---------------------------------------------------------------------------
+# Entry Fee / Prize Pool ROI (Kelly Criterion)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class PoolEconomics:
+    """Entry fee and prize structure for Kelly-criterion ROI analysis.
+
+    In bracket pools with real money, the optimal number of entries and
+    risk tolerance depend on the ratio of entry fee to expected prize.
+    A $10-entry winner-take-all pool with a $500 pot is fundamentally
+    different from a $100-entry pool where top-25% pay out.
+
+    The Kelly fraction tells you what fraction of your bankroll to risk,
+    and the ROI estimate tells you whether entering at all has positive
+    expected value given your model's estimated edge.
+    """
+
+    entry_fee: float
+    prize_pool: float
+    payout_spots: int  # Number of places that pay out
+    pool_size: int
+    payout_structure: str = "tiered"  # matches PAYOUT_ADJUSTMENTS keys
+
+    @property
+    def prize_per_spot(self) -> float:
+        """Average prize per payout spot."""
+        return self.prize_pool / max(self.payout_spots, 1)
+
+    @property
+    def rake(self) -> float:
+        """House rake: fraction of entry fees not returned as prizes."""
+        total_fees = self.entry_fee * self.pool_size
+        if total_fees <= 0:
+            return 0.0
+        return max(0.0, 1.0 - self.prize_pool / total_fees)
+
+    @property
+    def base_win_rate(self) -> float:
+        """Probability of landing in a payout spot by random chance."""
+        return min(1.0, self.payout_spots / max(self.pool_size, 1))
+
+
+def compute_kelly_fraction(
+    estimated_edge: float,
+    win_probability: float,
+    odds: float,
+) -> float:
+    """Compute the Kelly-criterion optimal fraction of bankroll to wager.
+
+    Kelly fraction = (bp - q) / b
+    where b = odds (net profit per $1 wagered if win),
+          p = probability of winning, q = 1 - p.
+
+    Args:
+        estimated_edge: Not used directly; provided for logging context.
+        win_probability: P(landing in a payout spot).
+        odds: Net payout per dollar wagered (prize/entry - 1).
+
+    Returns:
+        Kelly fraction in [0, 1].  0 means don't enter; 1 means go all-in.
+        Negative edge returns 0 (never bet with negative EV).
+    """
+    if odds <= 0 or win_probability <= 0:
+        return 0.0
+    q = 1.0 - win_probability
+    kelly = (odds * win_probability - q) / odds
+    return max(0.0, min(1.0, kelly))
+
+
+def evaluate_pool_roi(
+    economics: PoolEconomics,
+    model_win_probability: float,
+    n_entries: int = 1,
+) -> Dict[str, float]:
+    """Evaluate the ROI of entering a bracket pool.
+
+    Computes expected value, Kelly fraction, and recommended number of
+    entries given a model's estimated probability of finishing in a
+    payout spot.
+
+    A senior statistician's approach: the model's P(top-K) comes from
+    the competition simulator.  This function translates that into
+    bankroll management advice.
+
+    Args:
+        economics: Pool entry fee and prize structure.
+        model_win_probability: Model's estimated P(finishing in payout spots).
+        n_entries: Number of entries being considered.
+
+    Returns:
+        Dict with ROI analysis metrics.
+    """
+    entry_cost = economics.entry_fee * n_entries
+    if entry_cost <= 0:
+        return {
+            "expected_value": 0.0,
+            "roi_pct": 0.0,
+            "kelly_fraction": 0.0,
+            "recommended_entries": 0,
+            "edge_per_entry": 0.0,
+            "breakeven_win_rate": 0.0,
+        }
+
+    # Expected prize per entry
+    expected_prize_per_entry = model_win_probability * economics.prize_per_spot
+
+    # Net odds per dollar wagered
+    odds = (economics.prize_per_spot / economics.entry_fee) - 1.0 if economics.entry_fee > 0 else 0.0
+
+    kelly = compute_kelly_fraction(
+        estimated_edge=model_win_probability - economics.base_win_rate,
+        win_probability=model_win_probability,
+        odds=odds,
+    )
+
+    # With multiple entries, diminishing returns: each additional entry
+    # competes with your own entries.  P(at least one wins) =
+    # 1 - (1 - p)^n, but the cost scales linearly.
+    p_at_least_one = 1.0 - (1.0 - model_win_probability) ** n_entries
+    total_expected_prize = p_at_least_one * economics.prize_per_spot
+    ev = total_expected_prize - entry_cost
+    roi_pct = (ev / entry_cost) * 100.0 if entry_cost > 0 else 0.0
+
+    # Breakeven: minimum win rate where EV >= 0
+    breakeven = economics.entry_fee / economics.prize_per_spot if economics.prize_per_spot > 0 else 1.0
+
+    # Recommended entries: find n that maximizes ROI
+    best_n = 0
+    best_ev = 0.0
+    for trial_n in range(1, min(economics.pool_size, 50) + 1):
+        trial_p = 1.0 - (1.0 - model_win_probability) ** trial_n
+        trial_ev = trial_p * economics.prize_per_spot - economics.entry_fee * trial_n
+        if trial_ev > best_ev:
+            best_ev = trial_ev
+            best_n = trial_n
+
+    return {
+        "expected_value": round(ev, 2),
+        "roi_pct": round(roi_pct, 1),
+        "kelly_fraction": round(kelly, 4),
+        "recommended_entries": best_n,
+        "edge_per_entry": round(expected_prize_per_entry - economics.entry_fee, 2),
+        "breakeven_win_rate": round(breakeven, 4),
+        "p_at_least_one_wins": round(p_at_least_one, 4),
+        "house_rake": round(economics.rake, 3),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Payout Structure Adjustments
 # ---------------------------------------------------------------------------
 # Multipliers applied to the base pool-size strategy mix to account for prize
