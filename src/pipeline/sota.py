@@ -1257,16 +1257,12 @@ class SOTAPipeline:
         # Extract artifacts from the shared pipeline
         artifacts = base_report.get("artifacts", {})
         sim_data = artifacts.get("simulation", {})
-        championship_odds = sim_data.get("championship_odds", {})
-        final_four_odds = sim_data.get("final_four_odds", {})
 
-        # Re-run pool analysis with EV-specific pool size
-        model_round_probs = {}
-        for team_id, champ_prob in championship_odds.items():
-            model_round_probs[team_id] = {
-                "championship": champ_prob,
-                "final_four": final_four_odds.get(team_id, 0.0),
-            }
+        # Build full round probabilities from MC simulation results.
+        # The shared pipeline stores per-round odds; we extract all rounds
+        # so EV analysis has the complete picture for leverage calculation
+        # across every tournament round (not just championship/F4).
+        model_round_probs = self._to_round_probabilities_from_sim(sim_data)
 
         # Load public picks for leverage calculation
         public_picks = self._load_public_picks(model_round_probs)
@@ -2027,37 +2023,66 @@ class SOTAPipeline:
             self._apply_market_blend(bracket_sim, market_consensus)
 
         model_round_probs = self._to_round_probabilities(bracket_sim)
-        public_picks = self._load_public_picks(model_round_probs)
-        scoring_system = self._load_scoring_rules()
-        team_metadata = {
-            team_id: TeamMetadata(team_name=team.name, seed=team.seed, region=team.region)
-            for team_id, team in self.team_struct.items()
-        }
-        pool_analysis = analyze_pool(
-            self.config.pool_size,
-            model_round_probs,
-            public_picks,
-            scoring_system=scoring_system,
-            team_metadata=team_metadata,
-        )
-        ev_max_bracket = self._select_ev_bracket(pool_analysis)
 
-        leverage_preview = [
-            {
-                "team_id": p.team_id,
-                "team_name": self.team_id_to_name.get(p.team_id, p.team_name),
-                "round": p.round_name,
-                "model_probability": p.model_probability,
-                "public_pick_percentage": p.public_pick_percentage,
-                "leverage_ratio": p.leverage_ratio,
-                "ev_differential": p.expected_value_differential,
+        # ── Mode-gated sections ──────────────────────────────────────
+        # Pool analysis, leverage picks, and public pick loading are
+        # only relevant for EV mode (game-theoretic optimization against
+        # a modeled opponent field).  In calibration mode, the objective
+        # is Brier score minimization — public pick data has no bearing
+        # on calibrated probability accuracy.
+        #
+        # Bracket portfolio generation is only relevant for calibration
+        # mode (Kaggle's bracket portfolio format, 2024+).  In EV mode,
+        # _build_ev_analysis runs its own dedicated pool analysis with
+        # EV-specific parameters (pool size, scoring system, archetypes).
+
+        is_ev = self.config.mode == "ev"
+        is_calibration = not is_ev
+
+        # Public picks: only loaded for calibration-mode pool analysis
+        # preview.  EV mode loads its own via _build_ev_analysis with
+        # EV-specific parameters and archetype blending.
+        public_picks: Dict[str, Dict[str, float]] = {}
+        scoring_system = None
+        pool_analysis = None
+        ev_max_bracket = None
+        leverage_preview: List[Dict] = []
+
+        if is_calibration:
+            public_picks = self._load_public_picks(model_round_probs)
+            scoring_system = self._load_scoring_rules()
+            team_metadata = {
+                team_id: TeamMetadata(team_name=team.name, seed=team.seed, region=team.region)
+                for team_id, team in self.team_struct.items()
             }
-            for p in pool_analysis.leverage_picks[:15]
-        ]
+            pool_analysis = analyze_pool(
+                self.config.pool_size,
+                model_round_probs,
+                public_picks,
+                scoring_system=scoring_system,
+                team_metadata=team_metadata,
+            )
+            ev_max_bracket = self._select_ev_bracket(pool_analysis)
 
-        # Gap #5: Bracket portfolio generation
+            leverage_preview = [
+                {
+                    "team_id": p.team_id,
+                    "team_name": self.team_id_to_name.get(p.team_id, p.team_name),
+                    "round": p.round_name,
+                    "model_probability": p.model_probability,
+                    "public_pick_percentage": p.public_pick_percentage,
+                    "leverage_ratio": p.leverage_ratio,
+                    "ev_differential": p.expected_value_differential,
+                }
+                for p in pool_analysis.leverage_picks[:15]
+            ]
+
+        # Gap #5: Bracket portfolio generation (calibration mode only).
+        # In EV mode, bracket strategy is driven by _build_ev_analysis's
+        # Pareto optimizer with pool-specific parameters, not this generic
+        # portfolio generator.
         bracket_portfolio_stats: Dict = {}
-        if self.config.enable_bracket_portfolio:
+        if self.config.enable_bracket_portfolio and is_calibration:
             try:
                 from ..optimization.bracket_portfolio import BracketPortfolioGenerator
                 # Build teams_by_region from tournament bracket
@@ -2168,7 +2193,106 @@ class SOTAPipeline:
                 ablation_stats = {"error": "ablation study failed"}
 
         calibration_samples = int(calibration_stats.get("samples", 0))
+
+        # ── Report assembly ──────────────────────────────────────────
+        # The report is mode-aware: calibration mode includes Kaggle-
+        # specific artifacts (Brier rubric, bracket portfolio, dual
+        # submission prep); EV mode omits those and instead provides
+        # placeholders that _build_ev_analysis will populate with
+        # game-theoretic analysis (leverage picks, win probabilities,
+        # competition simulation).
+
+        # Shared artifacts (both modes)
+        shared_artifacts = {
+            "adjacency_matrix": adjacency.tolist(),
+            "baseline_training": baseline_stats,
+            "gnn": gnn_stats,
+            "transformer": transformer_stats,
+            "model_uncertainty": uncertainty_stats,
+            "calibration": calibration_stats,
+            "massey_predictor": massey_predictor_stats,
+            "simulation": {
+                "num_simulations": bracket_sim.num_simulations,
+                "round_of_32_odds": bracket_sim.round_of_32_odds,
+                "sweet_sixteen_odds": bracket_sim.sweet_sixteen_odds,
+                "elite_eight_odds": bracket_sim.elite_eight_odds,
+                "championship_odds": bracket_sim.championship_odds,
+                "final_four_odds": bracket_sim.final_four_odds,
+                "injury_noise_samples_per_matchup": self.config.injury_noise_samples,
+            },
+            "proprietary_metrics_summary": {
+                "teams_computed": len(self.proprietary_metrics),
+                "avg_adj_em": float(np.mean([m.adj_efficiency_margin for m in self.proprietary_metrics.values()] or [0.0])),
+            },
+            "roster_rapm_quality": self.roster_rapm_quality,
+            "injury_integration": injury_stats,
+            "hyperparameter_tuning": self.tuning_result or {},
+            "feature_selection": (
+                {
+                    "original_dim": self.feature_selection_result.original_dim,
+                    "reduced_dim": self.feature_selection_result.reduced_dim,
+                    "correlation_dropped": len(self.feature_selection_result.correlation_dropped),
+                    "importance_dropped": len(self.feature_selection_result.low_importance_dropped),
+                    "top_features": [
+                        {"name": f.name, "importance": round(f.importance, 4)}
+                        for f in self.feature_selection_result.importance_scores[:15]
+                    ],
+                    # FIX #6: Bootstrap stability scores
+                    **(
+                        {"stability_scores": {
+                            k: round(v, 3) for k, v in sorted(
+                                self.feature_selection_result.stability_scores.items(),
+                                key=lambda x: x[1], reverse=True,
+                            )[:10]
+                        }}
+                        if self.feature_selection_result.stability_scores
+                        else {}
+                    ),
+                }
+                if self.feature_selection_result
+                else {}
+            ),
+            "ablation_study": ablation_stats,
+        }
+
+        # Calibration-mode artifacts: Kaggle-specific outputs
+        if is_calibration:
+            shared_artifacts["ev_max_bracket"] = ev_max_bracket.to_dict()
+            shared_artifacts["pool_recommendation"] = pool_analysis.recommended_strategy
+            shared_artifacts["public_pick_sources"] = self.public_pick_sources
+            shared_artifacts["scoring_system"] = scoring_system or {
+                "R64": 10, "R32": 20, "S16": 40,
+                "E8": 80, "F4": 160, "CHAMP": 320,
+            }
+            shared_artifacts["top_leverage_picks"] = leverage_preview
+            shared_artifacts["bracket_portfolio"] = bracket_portfolio_stats
+
+        # EV-mode artifacts: minimal placeholders; _build_ev_analysis
+        # populates the full game-theoretic analysis in the "ev_analysis"
+        # top-level key after this method returns.
+        if is_ev:
+            shared_artifacts["bracket_portfolio"] = {"enabled": False, "reason": "ev_mode"}
+
+        # Rubric: phase_4 game theory only evaluated in calibration mode
+        # (it measures Kaggle-specific public consensus and leverage
+        # coverage).  In EV mode, the equivalent checks are in
+        # _build_ev_analysis which has its own validation.
+        phase_4_rubric = (
+            {
+                "public_consensus": len(self.public_pick_sources) >= self.config.min_public_sources,
+                "leverage_ratio": len(leverage_preview) > 0,
+                "pareto_front": len(pool_analysis.pareto_brackets) > 0 if pool_analysis else False,
+            }
+            if is_calibration
+            else {
+                "note": "Game theory evaluated in EV analysis layer",
+                "pool_size": self.config.ev_pool_size,
+                "scoring_system": self.config.ev_scoring_system,
+            }
+        )
+
         report = {
+            "mode": self.config.mode,
             "audit": {
                 "dev_years": self.config.dev_years,
                 "holdout_years": self.config.holdout_years,
@@ -2215,11 +2339,7 @@ class SOTAPipeline:
                     "isotonic": self.config.calibration_method == "isotonic",
                     "injury_noise_monte_carlo": self.config.injury_noise_samples >= 10000,
                 },
-                "phase_4_game_theory": {
-                    "public_consensus": len(self.public_pick_sources) >= self.config.min_public_sources,
-                    "leverage_ratio": len(leverage_preview) > 0,
-                    "pareto_front": len(pool_analysis.pareto_brackets) > 0,
-                },
+                "phase_4_game_theory": phase_4_rubric,
                 "execution_steps": {
                     "step_1_data_stack": bool(
                         (self.config.torvik_json or self.config.scrape_live)
@@ -2232,74 +2352,17 @@ class SOTAPipeline:
                     "step_3_loyo_cv": bool(baseline_stats.get("loyo_cv", {}).get("enabled")),
                     "step_4_pyg_gcn": gnn_stats["framework"] == "pytorch_geometric",
                     "step_5_50k_monte_carlo": self.config.num_simulations >= 50000,
-                    "step_6_ev_max_output": True,
+                    "step_6_ev_max_output": is_calibration,
                 },
             },
-            "artifacts": {
-                "adjacency_matrix": adjacency.tolist(),
-                "baseline_training": baseline_stats,
-                "gnn": gnn_stats,
-                "transformer": transformer_stats,
-                "model_uncertainty": uncertainty_stats,
-                "calibration": calibration_stats,
-                "massey_predictor": massey_predictor_stats,
-                "simulation": {
-                    "num_simulations": bracket_sim.num_simulations,
-                    "round_of_32_odds": bracket_sim.round_of_32_odds,
-                    "sweet_sixteen_odds": bracket_sim.sweet_sixteen_odds,
-                    "elite_eight_odds": bracket_sim.elite_eight_odds,
-                    "championship_odds": bracket_sim.championship_odds,
-                    "final_four_odds": bracket_sim.final_four_odds,
-                    "injury_noise_samples_per_matchup": self.config.injury_noise_samples,
-                },
-                "proprietary_metrics_summary": {
-                    "teams_computed": len(self.proprietary_metrics),
-                    "avg_adj_em": float(np.mean([m.adj_efficiency_margin for m in self.proprietary_metrics.values()] or [0.0])),
-                },
-                "roster_rapm_quality": self.roster_rapm_quality,
-                "injury_integration": injury_stats,
-                "hyperparameter_tuning": self.tuning_result or {},
-                "feature_selection": (
-                    {
-                        "original_dim": self.feature_selection_result.original_dim,
-                        "reduced_dim": self.feature_selection_result.reduced_dim,
-                        "correlation_dropped": len(self.feature_selection_result.correlation_dropped),
-                        "importance_dropped": len(self.feature_selection_result.low_importance_dropped),
-                        "top_features": [
-                            {"name": f.name, "importance": round(f.importance, 4)}
-                            for f in self.feature_selection_result.importance_scores[:15]
-                        ],
-                        # FIX #6: Bootstrap stability scores
-                        **(
-                            {"stability_scores": {
-                                k: round(v, 3) for k, v in sorted(
-                                    self.feature_selection_result.stability_scores.items(),
-                                    key=lambda x: x[1], reverse=True,
-                                )[:10]
-                            }}
-                            if self.feature_selection_result.stability_scores
-                            else {}
-                        ),
-                    }
-                    if self.feature_selection_result
-                    else {}
-                ),
-                "ev_max_bracket": ev_max_bracket.to_dict(),
-                "pool_recommendation": pool_analysis.recommended_strategy,
-                "public_pick_sources": self.public_pick_sources,
-                "scoring_system": scoring_system or {
-                    "R64": 10,
-                    "R32": 20,
-                    "S16": 40,
-                    "E8": 80,
-                    "F4": 160,
-                    "CHAMP": 320,
-                },
-                "top_leverage_picks": leverage_preview,
-                "ablation_study": ablation_stats,
-                "bracket_portfolio": bracket_portfolio_stats,
-            },
+            "artifacts": shared_artifacts,
         }
+
+        logger.info(
+            "Shared pipeline complete (mode=%s): skipped %s",
+            self.config.mode,
+            "pool_analysis/leverage/portfolio" if is_ev else "nothing (calibration runs all)",
+        )
         return report
 
     def _apply_injury_reports(self, rosters: Dict[str, Roster]) -> Dict:
@@ -6301,6 +6364,37 @@ class SOTAPipeline:
                 "R64": 1.0,
             }
 
+        return model_probs
+
+    def _to_round_probabilities_from_sim(self, sim_data: Dict) -> Dict[str, Dict[str, float]]:
+        """Build round probabilities from serialized simulation data.
+
+        Like ``_to_round_probabilities`` but operates on the dict stored in
+        the report's ``artifacts.simulation`` rather than a live
+        ``AggregatedResults`` object.  Used by ``_build_ev_analysis`` which
+        receives the report dict, not the raw simulation object.
+        """
+        championship_odds = sim_data.get("championship_odds", {})
+        final_four_odds = sim_data.get("final_four_odds", {})
+        elite_eight_odds = sim_data.get("elite_eight_odds", {})
+        sweet_sixteen_odds = sim_data.get("sweet_sixteen_odds", {})
+        round_of_32_odds = sim_data.get("round_of_32_odds", {})
+
+        team_ids = set(self.team_struct.keys())
+        for odds_dict in (championship_odds, final_four_odds, elite_eight_odds,
+                          sweet_sixteen_odds, round_of_32_odds):
+            team_ids.update(odds_dict.keys())
+
+        model_probs: Dict[str, Dict[str, float]] = {}
+        for team_id in team_ids:
+            model_probs[team_id] = {
+                "R64": 1.0,
+                "R32": round_of_32_odds.get(team_id, 0.0),
+                "S16": sweet_sixteen_odds.get(team_id, 0.0),
+                "E8": elite_eight_odds.get(team_id, 0.0),
+                "F4": final_four_odds.get(team_id, 0.0),
+                "CHAMP": championship_odds.get(team_id, 0.0),
+            }
         return model_probs
 
     def _load_public_picks(self, model_probs: Dict[str, Dict[str, float]]) -> Dict[str, Dict[str, float]]:
