@@ -2134,12 +2134,66 @@ class SOTAPipeline:
                 for p in pool_analysis.leverage_picks[:15]
             ]
 
-        # Gap #5: Bracket portfolio generation (calibration mode only).
-        # In EV mode, bracket strategy is driven by _build_ev_analysis's
-        # Pareto optimizer with pool-specific parameters, not this generic
-        # portfolio generator.
+        # Bracket portfolio generation.
+        # Both modes generate portfolios using pool-size-adaptive strategy
+        # allocation.  In EV mode, the portfolio additionally uses per-round
+        # leverage picks from a preliminary pool analysis, enabling
+        # cross-strategy synergy between the EV leverage engine and the
+        # bracket generator.
         bracket_portfolio_stats: Dict = {}
-        if self.config.enable_bracket_portfolio and is_calibration:
+        ev_leverage_preview: List[Dict] = []
+        if self.config.enable_bracket_portfolio and is_ev:
+            # EV mode: run a preliminary pool analysis to get leverage picks,
+            # then feed them into the portfolio generator for leverage-aware
+            # bracket construction.
+            try:
+                ev_public_picks = self._load_public_picks(model_round_probs)
+                ev_team_metadata = {
+                    team_id: TeamMetadata(
+                        team_name=team.name, seed=team.seed, region=team.region,
+                    )
+                    for team_id, team in self.team_struct.items()
+                }
+                ev_scoring_name = self.config.ev_scoring_system or "standard"
+                ev_profile = get_strategy_profile(
+                    self.config.ev_pool_size,
+                    scoring_system=ev_scoring_name,
+                    contrarian_override=(
+                        self.config.ev_contrarian_strength
+                        if self.config.ev_contrarian_strength != 1.0
+                        else None
+                    ),
+                    payout_structure=self.config.ev_payout_structure,
+                )
+                prelim_analysis = analyze_pool(
+                    self.config.ev_pool_size,
+                    model_round_probs,
+                    ev_public_picks,
+                    team_metadata=ev_team_metadata,
+                    ev_scoring_system=ev_scoring_name,
+                    strategy_profile=ev_profile,
+                )
+                ev_leverage_preview = [
+                    {
+                        "team_id": p.team_id,
+                        "team_name": self.team_id_to_name.get(p.team_id, p.team_name),
+                        "round": p.round_name,
+                        "model_probability": p.model_probability,
+                        "public_pick_percentage": p.public_pick_percentage,
+                        "leverage_ratio": p.leverage_ratio,
+                        "ev_differential": p.expected_value_differential,
+                    }
+                    for p in prelim_analysis.leverage_picks[:20]
+                ]
+                # Store for _build_ev_analysis to reuse
+                self._ev_preliminary_public_picks = ev_public_picks
+                self._ev_preliminary_leverage = ev_leverage_preview
+                public_picks = ev_public_picks
+                leverage_preview = ev_leverage_preview
+            except Exception as e:
+                logger.warning("EV preliminary pool analysis failed: %s", e)
+
+        if self.config.enable_bracket_portfolio:
             try:
                 from ..optimization.bracket_portfolio import BracketPortfolioGenerator
                 # Build teams_by_region from tournament bracket
@@ -2152,9 +2206,21 @@ class SOTAPipeline:
                         "name": team.name,
                         "seed": team.seed,
                     })
+                # Extract championship-level public picks.  For round-level
+                # picks used by the leverage-aware contrarian/targeted strategies,
+                # pass the full per-team per-round public picks dict.
+                champ_public = {}
+                for tid, rounds in public_picks.items():
+                    if isinstance(rounds, dict):
+                        champ_public[tid] = rounds.get("CHAMP", rounds.get("champion_pct", 0.0))
+                    else:
+                        champ_public[tid] = float(rounds)
+
                 portfolio_gen = BracketPortfolioGenerator(
                     predict_fn=self.predict_probability,
-                    public_pick_pcts=public_picks.get("championship", {}),
+                    public_pick_pcts=champ_public,
+                    round_public_picks=public_picks if is_ev else None,
+                    leverage_picks=ev_leverage_preview if is_ev else leverage_preview,
                 )
                 # Use pool-size-adaptive strategy profile for portfolio allocation.
                 # In EV mode, derive from the user's actual pool parameters.
@@ -2324,11 +2390,17 @@ class SOTAPipeline:
             shared_artifacts["top_leverage_picks"] = leverage_preview
             shared_artifacts["bracket_portfolio"] = bracket_portfolio_stats
 
-        # EV-mode artifacts: minimal placeholders; _build_ev_analysis
-        # populates the full game-theoretic analysis in the "ev_analysis"
-        # top-level key after this method returns.
+        # EV-mode artifacts: _build_ev_analysis populates the full
+        # game-theoretic analysis in the "ev_analysis" top-level key.
+        # The bracket_portfolio is now generated in both modes via the
+        # cross-strategy synergy integration.
         if is_ev:
-            shared_artifacts["bracket_portfolio"] = {"enabled": False, "reason": "ev_mode"}
+            if bracket_portfolio_stats:
+                shared_artifacts["bracket_portfolio"] = bracket_portfolio_stats
+                shared_artifacts["top_leverage_picks"] = ev_leverage_preview
+                shared_artifacts["public_pick_sources"] = self.public_pick_sources
+            else:
+                shared_artifacts["bracket_portfolio"] = {"enabled": False, "reason": "ev_mode"}
 
         # Rubric: phase_4 game theory only evaluated in calibration mode
         # (it measures Kaggle-specific public consensus and leverage
