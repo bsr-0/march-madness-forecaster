@@ -4556,19 +4556,13 @@ class SOTAPipeline:
         y = np.concatenate(all_y)
         game_years = np.concatenate(all_years)
 
-        # Apply feature selection if fitted (transform to same space as primary model)
-        if self.feature_selector is not None and self.feature_selector.is_fitted:
-            try:
-                X = self.feature_selector.transform(X)
-            except Exception:
-                pass  # Dimension mismatch — use raw features
-
-        # Apply scaling if fitted
-        if self.baseline_model.scaler is not None:
-            try:
-                X = self.baseline_model.scaler.transform(X)
-            except Exception:
-                pass  # Dimension mismatch — use unscaled features
+        # FIX-LEAKAGE-LOYO: Do NOT apply the primary model's feature
+        # selector or scaler here.  Both were fitted on training data that
+        # includes the held-out year, so reusing them leaks information
+        # (the feature selector's importance scores encode test-year labels;
+        # the scaler's mean/std include test-year feature distributions).
+        # Instead, each LOYO fold re-fits its own scaler below in train_fn.
+        # Feature selection is omitted — the fold-level model sees raw features.
 
         # ----------------------------------------------------------
         # Step 2: Run LeaveOneYearOutCV
@@ -5028,11 +5022,18 @@ class SOTAPipeline:
                 seed2 = team_seeds.get(g.opponent_id, 0)
             else:
                 seed1, seed2 = 0, 0
-            # Gap #1: Pass Massey composite ratings to team vectors
-            _mc1 = team_massey_composite.get(g.team_id, 0.0)
-            _mc2 = team_massey_composite.get(g.opponent_id, 0.0)
-            _ms1 = team_massey_spread.get(g.team_id, 0.0)
-            _ms2 = team_massey_spread.get(g.opponent_id, 0.0)
+            # Gap #1: Pass Massey composite ratings to team vectors.
+            # FIX-LEAKAGE-MASSEY: Massey ordinals are end-of-season aggregates
+            # (100+ rating systems).  Using them for regular-season training
+            # games leaks post-season knowledge into early features.  Only
+            # attach Massey ratings to tournament games (same guard as seeds).
+            if g.game_date > tournament_cutoff:
+                _mc1 = team_massey_composite.get(g.team_id, 0.0)
+                _mc2 = team_massey_composite.get(g.opponent_id, 0.0)
+                _ms1 = team_massey_spread.get(g.team_id, 0.0)
+                _ms2 = team_massey_spread.get(g.opponent_id, 0.0)
+            else:
+                _mc1 = _mc2 = _ms1 = _ms2 = 0.0
             v1 = IncrementalMetricsEngine.metrics_to_team_vector(
                 m1, seed=seed1,
                 external_rating_composite=_mc1,
@@ -5323,6 +5324,15 @@ class SOTAPipeline:
         The historical tournament predictions are the cleanest calibration
         signal because they match the inference domain (tournament games) and
         are truly out-of-sample with respect to the trained model.
+
+        NOTE (LEAKAGE-AUDIT): Historical tournament games are semi-OOS: the
+        model trained on regular-season data from those same years, so it saw
+        the same teams' features during training.  This is an acceptable
+        engineering tradeoff — the predictions are for unseen *games* (not
+        unseen *teams*), matching real inference conditions.  For maximum
+        rigor, one could restrict to tournament games from years NOT in the
+        multi-year training pool, at the cost of much smaller calibration
+        samples.
 
         FIX #5: Temporarily restores pre-optimization CFA weights while
         generating calibration probabilities.  This prevents the calibrator
@@ -5653,6 +5663,7 @@ class SOTAPipeline:
         # chain to ~300 samples.  Instead, use p_eval/y_eval (held-out data)
         # when available, or skip sharpening when no separate eval data exists.
         sharpener_info = {}
+        synthetic_round_labels = []  # May be populated by sharpener, used by FLB
         if self.config.enable_brier_sharpening and self._brier_post_processor is not None:
             try:
                 from ..ml.calibration.brier_optimal import RoundWeightedSharpener
@@ -5663,42 +5674,55 @@ class SOTAPipeline:
                     cal_preds_for_sharp = self.calibration_pipeline.calibrate(p_eval) if self.calibration_pipeline else p_eval
                     sharp_y = y_eval
                 else:
-                    # Fallback: use all data (mild double-dip, but better than
-                    # no sharpening).  Only when we can't split properly.
-                    cal_preds_for_sharp = self.calibration_pipeline.calibrate(p_arr) if self.calibration_pipeline else p_arr
-                    sharp_y = y_arr
-                # Construct synthetic round labels
-                n_games_sharp = len(cal_preds_for_sharp)
-                synthetic_round_labels = []
-                for i in range(n_games_sharp):
-                    frac = i / max(n_games_sharp - 1, 1)
-                    if frac > 0.9:
-                        synthetic_round_labels.append("F4")
-                    elif frac > 0.8:
-                        synthetic_round_labels.append("E8")
-                    elif frac > 0.6:
-                        synthetic_round_labels.append("S16")
-                    elif frac > 0.4:
-                        synthetic_round_labels.append("R32")
-                    else:
-                        synthetic_round_labels.append("R64")
-                rw_sharpener.fit_weighted(
-                    cal_preds_for_sharp, sharp_y, synthetic_round_labels,
-                    alpha_bounds=self.config.brier_sharpening_alpha_bounds,
-                )
-                self._brier_post_processor.sharpener = rw_sharpener
-                sharpener_info = {
-                    "sharpener_method": "round_weighted",
-                    "sharpener_alpha": round(rw_sharpener.alpha, 4),
-                    "sharpener_fitted_on_eval_only": use_oos_eval and len(p_eval) >= 20,
-                }
-                logger.info(
-                    "Gap #7: Round-weighted Brier sharpener fitted (alpha=%.3f, "
-                    "eval_only=%s, n_samples=%d)",
-                    rw_sharpener.alpha,
-                    use_oos_eval and len(p_eval) >= 20,
-                    n_games_sharp,
-                )
+                    # FIX-LEAKAGE-SHARP: Previously fell back to fitting on
+                    # the same p_arr/y_arr used for calibration (double-dip).
+                    # Use a safe default alpha=1.0 (no sharpening) instead.
+                    rw_sharpener.alpha = 1.0
+                    self._brier_post_processor.sharpener = rw_sharpener
+                    sharpener_info = {
+                        "sharpener_method": "round_weighted",
+                        "sharpener_alpha": 1.0,
+                        "sharpener_fitted_on_eval_only": False,
+                        "sharpener_used_default": True,
+                    }
+                    logger.info(
+                        "Gap #7: Sharpener using safe default alpha=1.0 "
+                        "(insufficient OOS eval data for fitting)"
+                    )
+                    cal_preds_for_sharp = None  # Signal to skip fitting below
+
+                # Construct synthetic round labels and fit only if we have OOS data
+                if cal_preds_for_sharp is not None:
+                    n_games_sharp = len(cal_preds_for_sharp)
+                    synthetic_round_labels = []
+                    for i in range(n_games_sharp):
+                        frac = i / max(n_games_sharp - 1, 1)
+                        if frac > 0.9:
+                            synthetic_round_labels.append("F4")
+                        elif frac > 0.8:
+                            synthetic_round_labels.append("E8")
+                        elif frac > 0.6:
+                            synthetic_round_labels.append("S16")
+                        elif frac > 0.4:
+                            synthetic_round_labels.append("R32")
+                        else:
+                            synthetic_round_labels.append("R64")
+                    rw_sharpener.fit_weighted(
+                        cal_preds_for_sharp, sharp_y, synthetic_round_labels,
+                        alpha_bounds=self.config.brier_sharpening_alpha_bounds,
+                    )
+                    self._brier_post_processor.sharpener = rw_sharpener
+                    sharpener_info = {
+                        "sharpener_method": "round_weighted",
+                        "sharpener_alpha": round(rw_sharpener.alpha, 4),
+                        "sharpener_fitted_on_eval_only": True,
+                    }
+                    logger.info(
+                        "Gap #7: Round-weighted Brier sharpener fitted (alpha=%.3f, "
+                        "eval_only=True, n_samples=%d)",
+                        rw_sharpener.alpha,
+                        n_games_sharp,
+                    )
             except Exception as e:
                 logger.warning("Gap #7: Round-weighted sharpener fitting failed: %s", e)
 
@@ -5707,18 +5731,28 @@ class SOTAPipeline:
         # Fit the margin parameter on evaluation data to minimize Brier score.
         # Supports round-weighted fitting when round labels are available.
         flb_info = {}
-        if self._flb_correction is not None and len(p_arr) >= 30:
+        _fit_flb = self._flb_correction is not None and len(p_arr) >= 30
+        # FIX-LEAKAGE-FLB: Only fit goto_conversion on genuinely OOS eval
+        # data.  Falling back to p_arr/y_arr is a double-dip since the same
+        # data fitted the calibration temperature.
+        if _fit_flb and not (use_oos_eval and len(p_eval) >= 20):
+            logger.info(
+                "Gap #7: goto_conversion skipped (insufficient OOS "
+                "eval data — using default margin to avoid double-dip)"
+            )
+            flb_info = {"goto_conversion_skipped": True, "reason": "no_oos_eval"}
+            _fit_flb = False
+        if _fit_flb:
             try:
-                # Use the fully post-processed predictions for FLB fitting
-                flb_preds = self.calibration_pipeline.calibrate(p_eval if use_oos_eval else p_arr) if self.calibration_pipeline else (p_eval if use_oos_eval else p_arr)
-                flb_outcomes = y_eval if use_oos_eval else y_arr
+                flb_preds = self.calibration_pipeline.calibrate(p_eval) if self.calibration_pipeline else p_eval
+                flb_outcomes = y_eval
                 if len(flb_preds) >= 20:
                     # Build round labels for weighted optimization if possible.
                     # This targets the actual Kaggle metric (round-weighted Brier).
                     flb_round_labels = None
                     if hasattr(self, '_cal_round_labels') and self._cal_round_labels is not None:
                         flb_round_labels = self._cal_round_labels
-                    elif len(synthetic_round_labels) == len(flb_preds):
+                    elif synthetic_round_labels and len(synthetic_round_labels) == len(flb_preds):
                         flb_round_labels = synthetic_round_labels
 
                     self._flb_correction.fit(
