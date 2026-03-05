@@ -648,6 +648,84 @@ class ChampionBoostStrategy:
 
         return probs
 
+    def compare_top_champions(
+        self,
+        primary_predictions: Dict[str, float],
+        team_seeds: Dict[str, int],
+        matchup_teams: Dict[str, Tuple[str, str]],
+        championship_probs: Optional[Dict[str, float]] = None,
+        crowd_probs: Optional[Dict[str, float]] = None,
+        team_regions: Optional[Dict[str, str]] = None,
+        n_top: int = 3,
+    ) -> List[Dict]:
+        """Compare the top-N champion candidates side-by-side with Brier analysis.
+
+        Produces a comparison table of the top candidates showing:
+        - Championship probability and leverage ratio
+        - Per-round marginal Brier EV breakdown
+        - Total EV delta and risk/reward ratio
+        - Region info for diversification planning
+
+        This enables informed champion selection for the 0-1 trick by showing
+        exactly where each candidate's value comes from (NCG=32x dominance)
+        and how candidates compare on risk-adjusted expected value.
+
+        Args:
+            primary_predictions: matchup_id -> P(team1 wins)
+            team_seeds: team_id -> seed
+            matchup_teams: matchup_id -> (team1_id, team2_id)
+            championship_probs: team_id -> P(wins tournament)
+            crowd_probs: matchup_id -> crowd prediction
+            team_regions: team_id -> region name
+            n_top: Number of top candidates to compare (default 3)
+
+        Returns:
+            List of comparison dicts, one per candidate, sorted by ev_delta.
+        """
+        candidates = self.evaluate_all_candidates(
+            primary_predictions=primary_predictions,
+            team_seeds=team_seeds,
+            matchup_teams=matchup_teams,
+            championship_probs=championship_probs,
+            crowd_probs=crowd_probs,
+            team_regions=team_regions,
+        )
+
+        comparisons = []
+        for c in candidates[:n_top]:
+            # Compute risk/reward ratio
+            risk_reward = (
+                c.brier_gain_if_correct / max(c.brier_cost_if_wrong, 1e-6)
+                if c.brier_cost_if_wrong > 0 else float("inf")
+            )
+
+            # Summarize top rounds by marginal EV contribution
+            round_summary = []
+            for rb in c.round_breakdown[:4]:
+                round_summary.append({
+                    "round": rb.round_name,
+                    "weight": rb.round_weight,
+                    "marginal_ev": round(rb.marginal_ev, 5),
+                    "gain_if_correct": round(rb.brier_gain_if_correct, 5),
+                    "cost_if_wrong": round(rb.brier_cost_if_wrong, 5),
+                })
+
+            comparisons.append({
+                "team_id": c.team_id,
+                "seed": c.seed,
+                "region": c.region,
+                "championship_prob": round(c.championship_prob, 4),
+                "crowd_championship_prob": round(c.crowd_championship_prob, 4),
+                "leverage_ratio": round(c.leverage_ratio, 3),
+                "ev_delta": round(c.ev_delta, 5),
+                "brier_gain_if_correct": round(c.brier_gain_if_correct, 5),
+                "brier_cost_if_wrong": round(c.brier_cost_if_wrong, 5),
+                "risk_reward_ratio": round(risk_reward, 3),
+                "round_breakdown": round_summary,
+            })
+
+        return comparisons
+
     def _estimate_crowd_championship_prob(self, seed: int) -> float:
         """Estimate what the crowd thinks a seed's championship probability is."""
         crowd_rates = {

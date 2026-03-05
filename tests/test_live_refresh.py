@@ -684,3 +684,49 @@ class TestEndToEndRefresh:
         summary = result.change_summary
         assert "Refresh completed" in summary
         assert "Top pick shifts" in summary
+
+
+class TestConvergenceDetection:
+    """Test pick convergence detection across refresh history."""
+
+    def test_insufficient_data(self):
+        initial_picks = _make_picks({"duke": 0.25, "unc": 0.10})
+        workflow = _build_workflow(initial_picks)
+        result = workflow.detect_convergence()
+        assert result["trend"] == "insufficient_data"
+        assert result["converged"] is False
+
+    def test_convergence_after_stable_refreshes(self):
+        """Convergence should be detected when picks stop shifting."""
+        initial_picks = _make_picks({"duke": 0.25, "unc": 0.10})
+        workflow = _build_workflow(initial_picks)
+
+        # Simulate multiple refresh results with tiny deltas
+        for i in range(4):
+            r = RefreshResult(was_refreshed=True)
+            r.pick_deltas = [
+                PickDelta("duke", "Duke", "CHAMP", 25.0 + i * 0.1, 25.0 + (i + 1) * 0.1),
+            ]
+            workflow._refresh_history.append(r)
+
+        conv = workflow.detect_convergence(window=3)
+        assert conv["converged"] is True
+        assert conv["trend"] == "stabilizing"
+        assert conv["recommended_action"] == "lock_bracket"
+
+    def test_volatile_when_large_shifts(self):
+        """Should detect volatility when picks are shifting a lot."""
+        initial_picks = _make_picks({"duke": 0.25, "unc": 0.10})
+        workflow = _build_workflow(initial_picks)
+
+        for i in range(4):
+            r = RefreshResult(was_refreshed=True)
+            r.pick_deltas = [
+                PickDelta("duke", "Duke", "CHAMP", 20.0 + i * 5.0, 25.0 + i * 5.0),
+            ]
+            workflow._refresh_history.append(r)
+
+        conv = workflow.detect_convergence(window=3)
+        assert conv["converged"] is False
+        assert conv["trend"] == "volatile"
+        assert conv["recommended_action"] == "re-optimize"
