@@ -1,5 +1,14 @@
 """Scraper exports."""
 
+from .betting_markets import (
+    BettingMarketOdds,
+    BettingMarketScraper,
+    DraftKingsScraper,
+    FanDuelScraper,
+    MarketConsensus,
+    blend_with_model,
+    compute_market_consensus,
+)
 from .bracket_ingestion import BracketIngestionPipeline, BracketTeam, TournamentBracketData
 from .espn_picks import CBSPicksScraper, ESPNPicksScraper, YahooPicksScraper, aggregate_consensus
 from .cbbpy_rosters import CBBpyRosterScraper
@@ -15,11 +24,16 @@ from .transfer_portal import TransferPortalScraper
 
 __all__ = [
     "BartTorvikScraper",
+    "BettingMarketOdds",
+    "BettingMarketScraper",
     "BracketIngestionPipeline",
     "BracketTeam",
     "CBBpyRosterScraper",
+    "DraftKingsScraper",
+    "FanDuelScraper",
     "InjuryReportScraper",
     "InjurySeverityModel",
+    "MarketConsensus",
     "NCAAStatsScraper",
     "OpenDataFeedScraper",
     "PlayerMetricsScraper",
@@ -33,4 +47,6 @@ __all__ = [
     "YahooPicksScraper",
     "CBSPicksScraper",
     "aggregate_consensus",
+    "blend_with_model",
+    "compute_market_consensus",
 ]

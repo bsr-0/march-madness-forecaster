@@ -69,7 +69,7 @@ from ..ml.ensemble.cfa import LightGBMRanker, XGBoostRanker, ModelPrediction, LI
 from ..ml.gnn.schedule_graph import ScheduleEdge, ScheduleGraph, compute_multi_hop_sos
 from ..ml.transformer.game_sequence import GameEmbedding, SeasonSequence
 from ..models.team import Team
-from ..optimization.leverage import TeamMetadata, analyze_pool
+from ..optimization.leverage import TeamMetadata, analyze_pool, get_strategy_profile
 from ..simulation.monte_carlo import SimulationConfig, TournamentBracket, TournamentTeam
 
 try:
@@ -466,6 +466,84 @@ class SOTAPipelineConfig:
     dual_max_deviations: int = 5  # Max games to deviate on in leverage hedge
     dual_deviation_strength: float = 0.15  # How far to push leverage hedge predictions
     dual_n_champion_candidates: int = 5   # Number of champion candidates to evaluate for 0-1 trick
+
+    # --- Pipeline mode ---
+    # "calibration": Optimize for Brier score (Kaggle competition).
+    # "ev": Optimize for expected value in ESPN-style bracket pools —
+    #        maximizes P(top finish) via game-theoretic contrarianism.
+    # Both modes share the same predictive core (data loading, feature
+    # engineering, model training, calibration).  They diverge at the
+    # optimization layer: calibration minimizes Brier; EV maximizes
+    # relative rank against a modeled field of human competitors.
+    mode: str = "calibration"  # "calibration" | "ev"
+
+    # --- EV Mode parameters (only used when mode="ev") ---
+    ev_pool_size: int = 100  # Number of competitors in the bracket pool
+    ev_scoring_system: str = "standard"  # "standard" (ESPN 10-20-40-80-160-320), "flat" (1-2-3-4-5-6), "upset_bonus"
+    ev_target_percentile: float = 0.05  # Target top-X% finish (0.01 = win, 0.05 = top 5%)
+    ev_contrarian_strength: float = 1.0  # Multiplier on contrarianism (higher = more contrarian picks)
+    ev_enable_search: bool = False  # Enable hill climbing / simulated annealing bracket optimization
+    ev_enable_archetypes: bool = False  # Enable behavioral archetype competitor modeling
+    ev_pool_type: str = "espn_national"  # "espn_national", "office_pool", "kaggle" — affects archetype mix
+
+    # --- Betting market integration ---
+    betting_odds_json: Optional[str] = None  # Path to cached betting odds JSON
+    enable_market_blend: bool = False  # Blend model predictions with betting market implied probabilities
+    market_blend_weight: float = 0.20  # Weight for market data in blend (0.0-1.0); model gets 1-weight
+
+    def __post_init__(self):
+        if self.mode not in ("calibration", "ev"):
+            raise ValueError(f"Invalid mode '{self.mode}': must be 'calibration' or 'ev'")
+        if self.mode == "ev":
+            if self.ev_pool_size < 1:
+                raise ValueError(f"ev_pool_size must be >= 1, got {self.ev_pool_size}")
+            if not (0.0 < self.ev_target_percentile <= 0.5):
+                raise ValueError(
+                    f"ev_target_percentile must be in (0, 0.5], got {self.ev_target_percentile}"
+                )
+            if self.ev_scoring_system not in ("standard", "flat", "upset_bonus"):
+                raise ValueError(
+                    f"Invalid ev_scoring_system '{self.ev_scoring_system}': "
+                    "must be 'standard', 'flat', or 'upset_bonus'"
+                )
+
+
+@dataclass
+class EVModeReport:
+    """Report structure for EV Mode optimization results.
+
+    Contains all game-theoretic analysis outputs: leverage picks,
+    strategy recommendations, portfolio summaries, and win probability
+    estimates against the modeled field.
+    """
+
+    pool_size: int = 0
+    scoring_system: str = "standard"
+    target_percentile: float = 0.05
+    recommended_strategy: str = ""
+    leverage_picks: List[Dict] = field(default_factory=list)
+    fade_picks: List[Dict] = field(default_factory=list)
+    model_vs_public_divergence: Dict[str, float] = field(default_factory=dict)
+    bracket_portfolio_summary: Dict = field(default_factory=dict)
+    win_probabilities: Dict[str, float] = field(default_factory=dict)
+    pareto_brackets: List[Dict] = field(default_factory=list)
+    pool_ev_analysis: Dict[str, float] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict:
+        return {
+            "mode": "ev",
+            "pool_size": self.pool_size,
+            "scoring_system": self.scoring_system,
+            "target_percentile": self.target_percentile,
+            "recommended_strategy": self.recommended_strategy,
+            "leverage_picks": self.leverage_picks,
+            "fade_picks": self.fade_picks,
+            "model_vs_public_divergence": self.model_vs_public_divergence,
+            "bracket_portfolio_summary": self.bracket_portfolio_summary,
+            "win_probabilities": self.win_probabilities,
+            "pareto_brackets": self.pareto_brackets,
+            "pool_ev_analysis": self.pool_ev_analysis,
+        }
 
 
 # C2: Fixed domain-knowledge feature set with published citations.
@@ -1112,7 +1190,323 @@ class SOTAPipeline:
         )
 
     def run(self) -> Dict:
-        """Run the complete pipeline and return report artifacts."""
+        """Run the complete pipeline and return report artifacts.
+
+        Dispatches to the appropriate mode:
+        - ``calibration``: Optimize for Brier score (Kaggle competition).
+        - ``ev``: Optimize for expected value in ESPN-style bracket pools.
+
+        Both modes share the same predictive core (data loading, feature
+        engineering, model training).  They diverge at the optimization layer.
+        """
+        if self.config.mode == "ev":
+            return self._run_ev_mode()
+        return self._run_calibration_mode()
+
+    def _run_calibration_mode(self) -> Dict:
+        """Calibration mode: minimize Brier score for Kaggle submission."""
+        return self._run_shared_pipeline()
+
+    def _run_ev_mode(self) -> Dict:
+        """EV mode: maximize expected value in ESPN-style bracket pools.
+
+        Runs the shared predictive pipeline, then applies game-theoretic
+        optimization targeting pool rank rather than raw Brier score.
+        """
+        # Run the shared pipeline (data, models, calibration, MC sim, portfolio)
+        report = self._run_shared_pipeline()
+
+        # Build EV-specific analysis on top of the shared results
+        ev_report = self._build_ev_analysis(report)
+        report["ev_analysis"] = ev_report.to_dict()
+        report["mode"] = "ev"
+
+        return report
+
+    def _build_ev_analysis(self, base_report: Dict) -> "EVModeReport":
+        """Construct EV-mode analysis from shared pipeline results.
+
+        Uses the model's calibrated probabilities and public pick data
+        to identify leverage opportunities and generate pool-optimized
+        bracket recommendations.
+        """
+        ev = EVModeReport(
+            pool_size=self.config.ev_pool_size,
+            scoring_system=self.config.ev_scoring_system,
+            target_percentile=self.config.ev_target_percentile,
+        )
+
+        # Extract artifacts from the shared pipeline
+        artifacts = base_report.get("artifacts", {})
+        sim_data = artifacts.get("simulation", {})
+        championship_odds = sim_data.get("championship_odds", {})
+        final_four_odds = sim_data.get("final_four_odds", {})
+
+        # Re-run pool analysis with EV-specific pool size
+        model_round_probs = {}
+        for team_id, champ_prob in championship_odds.items():
+            model_round_probs[team_id] = {
+                "championship": champ_prob,
+                "final_four": final_four_odds.get(team_id, 0.0),
+            }
+
+        # Load public picks for leverage calculation
+        public_picks = self._load_public_picks(model_round_probs)
+
+        # Build team metadata
+        team_metadata = {
+            team_id: TeamMetadata(
+                team_name=team.name, seed=team.seed, region=team.region
+            )
+            for team_id, team in self.team_struct.items()
+        }
+
+        # EV scoring system round weights
+        ev_scoring = self._get_ev_scoring_system()
+
+        # Build pool-size-adaptive strategy profile from config
+        ev_scoring_name = self.config.ev_scoring_system or "standard"
+        strategy_profile = get_strategy_profile(
+            self.config.ev_pool_size,
+            scoring_system=ev_scoring_name,
+            contrarian_override=(
+                self.config.ev_contrarian_strength
+                if self.config.ev_contrarian_strength != 1.0
+                else None
+            ),
+        )
+        logger.info(
+            "EV strategy profile: pool_size=%d, contrarian=%.1f, risk=%s — %s",
+            strategy_profile.pool_size,
+            strategy_profile.contrarian_strength,
+            strategy_profile.champion_risk_level,
+            strategy_profile.description,
+        )
+
+        # Behavioral archetype modeling for realistic opponent field
+        archetype_pick_dist = None
+        if self.config.ev_enable_archetypes:
+            try:
+                from ..simulation.competitor_archetypes import (
+                    blend_archetype_picks,
+                    create_archetypes,
+                    get_archetype_mix,
+                )
+                archetype_mix = get_archetype_mix(self.config.ev_pool_type)
+                archetypes = create_archetypes(archetype_mix)
+                # Build seed lookup from team metadata
+                seed_lookup = {
+                    tid: tm.seed for tid, tm in team_metadata.items()
+                }
+                archetype_pick_dist = blend_archetype_picks(
+                    archetypes, model_round_probs, public_picks,
+                    seeds=seed_lookup,
+                )
+                logger.info(
+                    "Archetype modeling enabled: pool_type=%s, archetypes=%s",
+                    self.config.ev_pool_type,
+                    [a.params.name for a in archetypes],
+                )
+            except Exception as e:
+                logger.warning("Archetype modeling failed: %s", e)
+
+        # Run pool analysis with EV parameters and strategy profile
+        pool_analysis = analyze_pool(
+            self.config.ev_pool_size,
+            model_round_probs,
+            public_picks,
+            scoring_system=ev_scoring,
+            team_metadata=team_metadata,
+            ev_scoring_system=ev_scoring_name,
+            strategy_profile=strategy_profile,
+            archetype_picks=archetype_pick_dist,
+        )
+
+        ev.recommended_strategy = pool_analysis.recommended_strategy
+
+        # Leverage picks
+        ev.leverage_picks = [
+            {
+                "team_id": p.team_id,
+                "team_name": self.team_id_to_name.get(p.team_id, p.team_name),
+                "round": p.round_name,
+                "model_probability": round(p.model_probability, 4),
+                "public_pick_percentage": round(p.public_pick_percentage, 4),
+                "leverage_ratio": round(p.leverage_ratio, 3),
+                "ev_differential": round(p.expected_value_differential, 3),
+            }
+            for p in pool_analysis.leverage_picks[:20]
+        ]
+
+        # Fade picks (over-owned teams to avoid)
+        ev.fade_picks = [
+            {
+                "team_id": p.team_id,
+                "team_name": self.team_id_to_name.get(p.team_id, p.team_name),
+                "round": p.round_name,
+                "model_probability": round(p.model_probability, 4),
+                "public_pick_percentage": round(p.public_pick_percentage, 4),
+                "leverage_ratio": round(p.leverage_ratio, 3),
+            }
+            for p in pool_analysis.fade_picks[:15]
+        ]
+
+        # Model vs public divergence for championship
+        champ_public = public_picks.get("championship", {})
+        for team_id, model_prob in championship_odds.items():
+            pub_prob = champ_public.get(team_id, 0.0)
+            if pub_prob > 0.01 or model_prob > 0.01:
+                ev.model_vs_public_divergence[team_id] = round(
+                    model_prob - pub_prob, 4
+                )
+
+        # Pareto brackets summary
+        ev.pareto_brackets = [
+            b.to_dict() if hasattr(b, "to_dict") else {}
+            for b in pool_analysis.pareto_brackets[:5]
+        ]
+
+        # Pool EV analysis by strategy
+        ev.pool_ev_analysis = pool_analysis.strategy_evs if hasattr(pool_analysis, "strategy_evs") else {}
+
+        # Bracket portfolio summary from base report
+        ev.bracket_portfolio_summary = artifacts.get("bracket_portfolio", {})
+
+        # Win probability estimates
+        ev.win_probabilities = {
+            "top_1pct": 0.0,  # Placeholder — requires competition simulation (Phase 4)
+            "top_5pct": 0.0,
+            "top_10pct": 0.0,
+        }
+
+        logger.info(
+            "EV Mode: pool_size=%d, scoring=%s, strategy=%s, "
+            "leverage_picks=%d, fade_picks=%d",
+            ev.pool_size,
+            ev.scoring_system,
+            ev.recommended_strategy,
+            len(ev.leverage_picks),
+            len(ev.fade_picks),
+        )
+
+        return ev
+
+    def _get_ev_scoring_system(self) -> Dict[str, int]:
+        """Return round-point mapping for the configured EV scoring system."""
+        if self.config.ev_scoring_system == "flat":
+            return {"R64": 1, "R32": 2, "S16": 3, "E8": 4, "F4": 5, "CHAMP": 6}
+        elif self.config.ev_scoring_system == "upset_bonus":
+            # Base points + seed-difference bonus handled downstream
+            return {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
+        # Standard ESPN scoring
+        return {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
+
+    # ------------------------------------------------------------------
+    # Betting market integration
+    # ------------------------------------------------------------------
+
+    def _load_betting_markets(self) -> Optional["MarketConsensus"]:
+        """Load betting market odds and compute market consensus.
+
+        Tries JSON cache first, then live scrapers.  Returns None if
+        no betting data is available.
+        """
+        try:
+            from ..data.scrapers.betting_markets import (
+                FanDuelScraper,
+                DraftKingsScraper,
+                MarketConsensus,
+                compute_market_consensus,
+            )
+        except ImportError:
+            logger.debug("betting_markets module not available")
+            return None
+
+        odds_by_source = []
+        cache_dir = getattr(self.config, "data_cache_dir", "data/raw/betting_odds")
+
+        # Try JSON cache path first
+        if self.config.betting_odds_json:
+            try:
+                import json
+                with open(self.config.betting_odds_json) as f:
+                    raw = json.load(f)
+                from ..data.scrapers.betting_markets import BettingMarketOdds
+                loaded = {}
+                for tid, data in raw.items():
+                    loaded[tid] = BettingMarketOdds(
+                        team_id=tid,
+                        team_name=data.get("team_name", tid),
+                        season=data.get("season", self.config.year),
+                        source=data.get("source", "cache"),
+                        championship_odds=data.get("championship_odds", 0),
+                        implied_probability=data.get("implied_probability", 0.0),
+                    )
+                if loaded:
+                    odds_by_source.append(loaded)
+                    logger.info("Loaded %d teams from betting odds cache", len(loaded))
+            except Exception as e:
+                logger.warning("Failed to load betting odds cache: %s", e)
+
+        # Try live scrapers
+        for ScraperCls in [FanDuelScraper, DraftKingsScraper]:
+            try:
+                scraper = ScraperCls(cache_dir=cache_dir)
+                odds = scraper.scrape(self.config.year)
+                if odds:
+                    odds_by_source.append(odds)
+                    logger.info(
+                        "Loaded %d teams from %s",
+                        len(odds), ScraperCls.__name__,
+                    )
+            except Exception as e:
+                logger.debug("%s scrape failed: %s", ScraperCls.__name__, e)
+
+        if not odds_by_source:
+            logger.info("No betting market data available")
+            return None
+
+        consensus = compute_market_consensus(odds_by_source, adjust_vig=True)
+        logger.info(
+            "Market consensus: %d teams, sources=%s",
+            len(consensus.team_probabilities), consensus.sources,
+        )
+        return consensus
+
+    def _apply_market_blend(
+        self,
+        bracket_sim,
+        market_consensus: "MarketConsensus",
+    ) -> None:
+        """Blend market implied probabilities into simulation championship odds.
+
+        Modifies ``bracket_sim.championship_odds`` in-place, combining
+        the model's MC-derived championship probabilities with sportsbook
+        implied probabilities using the configured blend weight.
+        """
+        from ..data.scrapers.betting_markets import blend_with_model
+
+        market_probs = market_consensus.team_probabilities
+        model_champ = bracket_sim.championship_odds
+
+        blended = blend_with_model(
+            model_probs=model_champ,
+            market_probs=market_probs,
+            market_weight=self.config.market_blend_weight,
+        )
+
+        # Update in-place
+        for tid, prob in blended.items():
+            bracket_sim.championship_odds[tid] = prob
+
+        logger.info(
+            "Applied market blend (weight=%.2f): %d teams adjusted",
+            self.config.market_blend_weight,
+            len(blended),
+        )
+
+    def _run_shared_pipeline(self) -> Dict:
+        """Shared predictive pipeline used by both calibration and EV modes."""
         # ── Holdout contamination check ──────────────────────────────
         # If a previous RDoF audit evaluated holdout years with a frozen
         # config, warn if the current config has drifted.  This catches
@@ -1306,6 +1700,11 @@ class SOTAPipeline:
         massey_predictor_stats = self._fit_massey_predictor(game_flows)
         bracket_sim = self._run_monte_carlo(teams, rosters)
 
+        # Betting market blend: integrate sportsbook implied probabilities
+        market_consensus = self._load_betting_markets()
+        if market_consensus is not None and self.config.enable_market_blend:
+            self._apply_market_blend(bracket_sim, market_consensus)
+
         model_round_probs = self._to_round_probabilities(bracket_sim)
         public_picks = self._load_public_picks(model_round_probs)
         scoring_system = self._load_scoring_rules()
@@ -1354,11 +1753,34 @@ class SOTAPipeline:
                     predict_fn=self.predict_probability,
                     public_pick_pcts=public_picks.get("championship", {}),
                 )
+                # Use pool-size-adaptive strategy mix in EV mode
+                ev_strategy_mix = None
+                if self.config.mode == "ev":
+                    ev_profile = get_strategy_profile(
+                        self.config.ev_pool_size,
+                        scoring_system=self.config.ev_scoring_system or "standard",
+                        contrarian_override=(
+                            self.config.ev_contrarian_strength
+                            if self.config.ev_contrarian_strength != 1.0
+                            else None
+                        ),
+                    )
+                    ev_strategy_mix = ev_profile.strategy_mix
+                    logger.info(
+                        "Portfolio using EV strategy mix: %s", ev_strategy_mix
+                    )
+
                 portfolio = portfolio_gen.generate_portfolio(
                     teams_by_region=teams_by_region,
                     n_brackets=1000,
                     n_simulations=50000,
                     seed=self.config.random_seed,
+                    strategy_mix=ev_strategy_mix,
+                    enable_search=(
+                        self.config.ev_enable_search
+                        if self.config.mode == "ev"
+                        else False
+                    ),
                 )
                 # Summarize
                 strategy_counts = {}
@@ -2109,9 +2531,28 @@ class SOTAPipeline:
                             ap_rank = rank_val
                             break
 
-            # --- Coach tournament appearances + win rate ---
+            # --- Coach tournament appearances + win rate + stage experience ---
             coach_apps = coach_appearances_by_team.get(team_id, 0)
             coach_win_rate = coach_win_rate_by_team.get(team_id, 0.0)
+
+            # Derive stage experience from raw coach data
+            coach_deep_run_rate = 0.0
+            coach_stage_consistency = 0.0
+            if coach_data and team_to_coach_map:
+                coach_name = team_to_coach_map.get(team_id, "")
+                raw_coach = coach_data.get(coach_name, {})
+                if not raw_coach:
+                    # Try fuzzy match on last name
+                    last = coach_name.split()[-1].lower() if coach_name else ""
+                    for ck, cv in coach_data.items():
+                        if last and last in ck.lower():
+                            raw_coach = cv
+                            break
+                if raw_coach:
+                    from ..data.features.tournament_features import compute_coach_tournament_power
+                    ctp = compute_coach_tournament_power(raw_coach)
+                    coach_deep_run_rate = ctp.deep_run_rate
+                    coach_stage_consistency = ctp.stage_consistency
 
             # --- Conference tournament champion ---
             is_conf_champ = 0.0
@@ -2129,6 +2570,8 @@ class SOTAPipeline:
                 torvik_map[team_id]["preseason_ap_rank"] = ap_rank
                 torvik_map[team_id]["coach_tournament_appearances"] = coach_apps
                 torvik_map[team_id]["coach_tournament_win_rate"] = coach_win_rate
+                torvik_map[team_id]["coach_deep_run_rate"] = coach_deep_run_rate
+                torvik_map[team_id]["coach_stage_consistency"] = coach_stage_consistency
                 torvik_map[team_id]["conf_tourney_champion"] = is_conf_champ
 
             # Write into proprietary_map
@@ -2136,6 +2579,8 @@ class SOTAPipeline:
                 proprietary_map[team_id]["preseason_ap_rank"] = ap_rank
                 proprietary_map[team_id]["coach_tournament_appearances"] = coach_apps
                 proprietary_map[team_id]["coach_tournament_win_rate"] = coach_win_rate
+                proprietary_map[team_id]["coach_deep_run_rate"] = coach_deep_run_rate
+                proprietary_map[team_id]["coach_stage_consistency"] = coach_stage_consistency
                 proprietary_map[team_id]["conf_tourney_champion"] = is_conf_champ
 
     def _load_external_ratings(self, teams: List[Team]) -> Dict:

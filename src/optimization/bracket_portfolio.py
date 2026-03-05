@@ -84,6 +84,7 @@ class BracketPortfolioGenerator:
         n_simulations: int = 50000,
         seed: int = 42,
         strategy_mix: Optional[Dict[str, float]] = None,
+        enable_search: bool = False,
     ) -> List[GeneratedBracket]:
         """Generate a diverse bracket portfolio.
 
@@ -93,6 +94,8 @@ class BracketPortfolioGenerator:
             n_simulations: Monte Carlo simulations for sampling
             seed: Random seed
             strategy_mix: Fraction of brackets per strategy type
+            enable_search: If True, refine top brackets using Simulated
+                Annealing search after initial MC sampling.
 
         Returns:
             List of GeneratedBracket objects
@@ -157,6 +160,127 @@ class BracketPortfolioGenerator:
             "Generated portfolio of %d brackets (strategies: %s)",
             len(brackets),
             {s: int(n_brackets * f) for s, f in strategy_mix.items()},
+        )
+
+        # Post-sampling search refinement
+        if enable_search and brackets:
+            brackets = self._refine_with_search(brackets, seed)
+
+        return brackets
+
+    def _refine_with_search(
+        self,
+        brackets: List[GeneratedBracket],
+        seed: int = 42,
+    ) -> List[GeneratedBracket]:
+        """Refine top brackets using Simulated Annealing search.
+
+        Takes the top 10% of brackets by log_probability, converts them
+        to SearchBracket format, optimizes with SA, and replaces the
+        originals if the search finds better fitness.
+
+        Args:
+            brackets: Portfolio of generated brackets.
+            seed: Random seed for SA optimizer.
+
+        Returns:
+            Portfolio with top brackets refined by search.
+        """
+        try:
+            from .bracket_search import (
+                SAConfig,
+                SearchBracket,
+                SimulatedAnnealingOptimizer,
+                BracketPick as SearchBracketPick,
+            )
+        except ImportError:
+            logger.warning("bracket_search module unavailable; skipping refinement")
+            return brackets
+
+        n_refine = max(1, len(brackets) // 10)
+
+        # Sort by log probability to find top candidates
+        ranked = sorted(
+            enumerate(brackets),
+            key=lambda ib: ib[1].log_probability,
+            reverse=True,
+        )
+        top_indices = [idx for idx, _ in ranked[:n_refine]]
+
+        sa_config = SAConfig(
+            max_iterations=500,
+            max_no_improve=100,
+            random_seed=seed,
+            initial_temperature=0.5,
+            cooling_rate=0.99,
+            min_temperature=0.005,
+            leverage_weight=0.6,
+            robustness_weight=0.3,
+            diversity_weight=0.1,
+        )
+
+        optimizer = SimulatedAnnealingOptimizer(
+            predict_fn=self.predict_fn,
+            config=sa_config,
+            public_picks=self.public_picks,
+        )
+
+        refined_count = 0
+        for idx in top_indices:
+            original = brackets[idx]
+
+            # Convert GeneratedBracket -> SearchBracket
+            search_picks = [
+                SearchBracketPick(
+                    round_num=p.round_num,
+                    game_idx=p.game_idx,
+                    winner_id=p.winner_id,
+                    loser_id=p.loser_id,
+                    win_probability=p.win_probability,
+                )
+                for p in original.picks
+            ]
+            search_bracket = SearchBracket(
+                picks=search_picks,
+                champion=original.champion,
+                log_probability=original.log_probability,
+            )
+
+            # Run SA optimization
+            optimized = optimizer.optimize(search_bracket)
+
+            # Convert back and replace if improved
+            if optimized.fitness > optimizer.evaluate_bracket(search_bracket):
+                new_picks = [
+                    BracketPick(
+                        round_num=p.round_num,
+                        game_idx=p.game_idx,
+                        winner_id=p.winner_id,
+                        loser_id=p.loser_id,
+                        win_probability=p.win_probability,
+                    )
+                    for p in optimized.picks
+                ]
+                new_log_prob = sum(
+                    math.log(max(p.win_probability, 1e-10)) for p in new_picks
+                )
+                brackets[idx] = GeneratedBracket(
+                    bracket_id=original.bracket_id,
+                    picks=new_picks,
+                    champion=optimized.champion,
+                    final_four=[
+                        p.winner_id for p in optimized.picks
+                        if p.round_num == 4
+                    ],
+                    expected_score=original.expected_score,
+                    log_probability=new_log_prob,
+                    strategy=f"{original.strategy}_sa_refined",
+                )
+                refined_count += 1
+
+        logger.info(
+            "Search refinement: refined %d/%d top brackets via SA",
+            refined_count, n_refine,
         )
         return brackets
 
