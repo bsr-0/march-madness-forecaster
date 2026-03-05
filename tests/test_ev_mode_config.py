@@ -135,6 +135,7 @@ class TestEVModeReport:
             "model_vs_public_divergence",
             "bracket_portfolio_summary",
             "win_probabilities",
+            "competition_simulation",
             "pareto_brackets",
             "pool_ev_analysis",
         }

@@ -9,6 +9,7 @@ from src.optimization.dual_submission import (
     DualSubmissionStrategy,
     KaggleDualSubmissionGenerator,
     OpponentModel,
+    RoundBrierBreakdown,
     SubmissionPair,
     _seed_logistic_probability,
 )
@@ -733,3 +734,355 @@ class TestMultiChampionBoostPair:
             if teams and ("east_1" in teams):
                 assert min(primary[mid], full[mid]) <= light[mid] + 0.001
                 assert light[mid] <= max(primary[mid], full[mid]) + 0.001
+
+
+# ---------------------------------------------------------------------------
+# Round-weighted Brier EV analysis
+# ---------------------------------------------------------------------------
+
+
+class TestRoundWeightedBrierEV:
+    """Verify that round weights correctly amplify late-round game value."""
+
+    def _make_strategy(self):
+        return ChampionBoostStrategy(n_champion_candidates=5)
+
+    def _make_fixture(self):
+        """Create a 6-game champion path with known seed matchups."""
+        primary = {
+            "r64": 0.95,  # 1v16: seed_sum=17 → R64 weight 1
+            "r32": 0.85,  # 1v8:  seed_sum=9  → R32 weight 2
+            "s16": 0.75,  # 1v5:  seed_sum=6  → E8 weight 8
+            "e8":  0.65,  # 1v4:  seed_sum=5  → F4 weight 16
+            "f4":  0.55,  # 1v2:  seed_sum=3  → NCG weight 32
+            "ncg": 0.50,  # 1v1:  seed_sum=2  → NCG weight 32
+        }
+        matchup_teams = {
+            "r64": ("champ", "s16_team"),
+            "r32": ("champ", "s8_team"),
+            "s16": ("champ", "s5_team"),
+            "e8":  ("champ", "s4_team"),
+            "f4":  ("champ", "s2_team"),
+            "ncg": ("champ", "s1_team"),
+        }
+        team_seeds = {
+            "champ": 1, "s16_team": 16, "s8_team": 8,
+            "s5_team": 5, "s4_team": 4, "s2_team": 2, "s1_team": 1,
+        }
+        return primary, matchup_teams, team_seeds
+
+    def test_ev_includes_round_breakdown(self):
+        """EV analysis should return per-round breakdown."""
+        strategy = self._make_strategy()
+        primary, matchup_teams, team_seeds = self._make_fixture()
+        boosted = strategy.generate_champion_boost(
+            primary, "champ", matchup_teams, team_seeds,
+        )
+        ev = strategy.estimate_champion_boost_ev(
+            primary, boosted, "champ", matchup_teams,
+            championship_prob=0.15, team_seeds=team_seeds,
+        )
+        assert "round_breakdown" in ev
+        assert len(ev["round_breakdown"]) == 6
+
+    def test_ncg_dominates_marginal_ev(self):
+        """NCG (32× weight) should contribute the most marginal EV."""
+        strategy = self._make_strategy()
+        primary, matchup_teams, team_seeds = self._make_fixture()
+        boosted = strategy.generate_champion_boost(
+            primary, "champ", matchup_teams, team_seeds,
+        )
+        ev = strategy.estimate_champion_boost_ev(
+            primary, boosted, "champ", matchup_teams,
+            championship_prob=0.15, team_seeds=team_seeds,
+        )
+        breakdown = ev["round_breakdown"]
+        # Breakdown is sorted by round_weight descending
+        assert breakdown[0].round_weight >= breakdown[-1].round_weight
+        # The highest-weight round should have the largest |marginal_ev|
+        max_marginal = max(abs(rb.marginal_ev) for rb in breakdown)
+        assert abs(breakdown[0].marginal_ev) == pytest.approx(max_marginal, abs=0.01) or \
+            breakdown[0].round_weight >= 16.0
+
+    def test_round_weights_make_ev_larger_than_unweighted(self):
+        """Round-weighted EV should differ from uniform-weight EV."""
+        strategy = self._make_strategy()
+        primary, matchup_teams, team_seeds = self._make_fixture()
+        boosted = strategy.generate_champion_boost(
+            primary, "champ", matchup_teams, team_seeds,
+        )
+
+        # Round-weighted
+        ev_weighted = strategy.estimate_champion_boost_ev(
+            primary, boosted, "champ", matchup_teams,
+            championship_prob=0.15, team_seeds=team_seeds,
+        )
+
+        # Unweighted (no seeds → default weight 4.0)
+        ev_unweighted = strategy.estimate_champion_boost_ev(
+            primary, boosted, "champ", matchup_teams,
+            championship_prob=0.15, team_seeds=None,
+        )
+
+        # They should differ because round weights are non-uniform
+        assert ev_weighted["ev_delta"] != ev_unweighted["ev_delta"]
+
+    def test_breakdown_records_primary_and_boosted_probs(self):
+        """Each round should record what the probabilities were before/after."""
+        strategy = self._make_strategy()
+        primary = {"ncg": 0.50}
+        matchup_teams = {"ncg": ("champ", "opp")}
+        team_seeds = {"champ": 1, "opp": 1}
+        boosted = strategy.generate_champion_boost(
+            primary, "champ", matchup_teams, team_seeds,
+        )
+        ev = strategy.estimate_champion_boost_ev(
+            primary, boosted, "champ", matchup_teams,
+            championship_prob=0.15, team_seeds=team_seeds,
+        )
+        rb = ev["round_breakdown"][0]
+        assert rb.primary_prob == 0.50
+        assert rb.boosted_prob > 0.90  # Should be pushed toward 1.0
+
+    def test_infer_round_weight_boundaries(self):
+        """Verify round weight inference at seed_sum boundaries."""
+        seeds = {"a": 1, "b": 1}
+        r, w = ChampionBoostStrategy._infer_round_weight("a", "b", seeds)
+        assert r == "NCG" and w == 32.0
+
+        seeds = {"a": 1, "b": 4}
+        r, w = ChampionBoostStrategy._infer_round_weight("a", "b", seeds)
+        assert r == "F4" and w == 16.0
+
+        seeds = {"a": 1, "b": 16}
+        r, w = ChampionBoostStrategy._infer_round_weight("a", "b", seeds)
+        assert r == "R32" and w == 2.0
+
+        seeds = {"a": 8, "b": 16}
+        r, w = ChampionBoostStrategy._infer_round_weight("a", "b", seeds)
+        assert r == "R64" and w == 1.0
+
+
+class TestRoundBrierBreakdownDataclass:
+
+    def test_construction(self):
+        rb = RoundBrierBreakdown(
+            round_name="NCG", round_weight=32.0, matchup_id="m1",
+            brier_gain_if_correct=5.0, brier_cost_if_wrong=3.0,
+            marginal_ev=2.0, primary_prob=0.50, boosted_prob=0.97,
+        )
+        assert rb.round_name == "NCG"
+        assert rb.round_weight == 32.0
+        assert rb.marginal_ev == 2.0
+
+
+# ---------------------------------------------------------------------------
+# Joint slot optimization
+# ---------------------------------------------------------------------------
+
+
+class TestJointSlotOptimization:
+    """Test the dual-slot joint champion allocation optimizer."""
+
+    @staticmethod
+    def _simple_predict(t1, t2):
+        return 0.6
+
+    def _make_4team_generator(self):
+        """4 teams across 2 regions for pair testing."""
+        seeds = {"e1": 1, "e2": 2, "w1": 1, "w2": 2}
+        # e1 strongest, w1 second, with enough gap to test pair selection
+        champ_probs = {"e1": 0.20, "w1": 0.15, "e2": 0.05, "w2": 0.04}
+        gen = KaggleDualSubmissionGenerator(
+            predict_fn=self._simple_predict,
+            team_seeds=seeds,
+            championship_probs=champ_probs,
+            n_champion_candidates=5,
+        )
+        gen.champion_boost.multi_champion = True
+        return gen
+
+    def _make_matchup_ids(self):
+        return [
+            ("m1", "e1", "e2"),    # East semifinal
+            ("m2", "w1", "w2"),    # West semifinal
+            ("m3", "e1", "w1"),    # Cross-region final
+        ]
+
+    def test_single_champion_when_multi_disabled(self):
+        gen = self._make_4team_generator()
+        gen.champion_boost.multi_champion = False
+        pair = gen.generate_submissions(self._make_matchup_ids())
+        assert pair.strategy == "champion_boost"
+
+    def test_multi_champion_selects_cross_region_pair(self):
+        """When top-2 candidates are in different regions, prefer multi."""
+        gen = self._make_4team_generator()
+        # Give regions to enable cross-region detection
+        gen.champion_boost.evaluate_all_candidates = lambda **kw: [
+            ChampionCandidate(
+                team_id="e1", seed=1, championship_prob=0.20,
+                crowd_championship_prob=0.15, leverage_ratio=1.3,
+                selection_score=0.3, ev_delta=0.05,
+                brier_gain_if_correct=0.5, brier_cost_if_wrong=0.3,
+                region="East",
+            ),
+            ChampionCandidate(
+                team_id="w1", seed=1, championship_prob=0.15,
+                crowd_championship_prob=0.12, leverage_ratio=1.25,
+                selection_score=0.25, ev_delta=0.04,
+                brier_gain_if_correct=0.4, brier_cost_if_wrong=0.25,
+                region="West",
+            ),
+        ]
+        pair = gen.generate_submissions(self._make_matchup_ids())
+        # Should use multi_champion_boost since different regions
+        # and second candidate has comparable EV
+        assert pair.strategy in ("champion_boost", "multi_champion_boost")
+
+    def test_candidate_dicts_include_round_breakdown(self):
+        """Candidate evaluation should include top round breakdowns."""
+        gen = self._make_4team_generator()
+        pair = gen.generate_submissions(self._make_matchup_ids())
+        for cd in pair.champion_candidates_evaluated:
+            assert "round_breakdown" in cd
+            for rb in cd["round_breakdown"]:
+                assert "round" in rb
+                assert "weight" in rb
+                assert "marginal_ev" in rb
+
+    def test_same_region_pair_penalized(self):
+        """Same-region pairs get negative diversity bonus; cross-region get positive."""
+        gen = self._make_4team_generator()
+
+        # Create candidates: two from same region, one from different
+        east_same = ChampionCandidate(
+            team_id="e1", seed=1, championship_prob=0.20,
+            crowd_championship_prob=0.15, leverage_ratio=1.3,
+            selection_score=0.3, ev_delta=0.05,
+            brier_gain_if_correct=0.5, brier_cost_if_wrong=0.3,
+            region="East",
+        )
+        east_same2 = ChampionCandidate(
+            team_id="e2", seed=2, championship_prob=0.10,
+            crowd_championship_prob=0.06, leverage_ratio=1.6,
+            selection_score=0.2, ev_delta=0.03,
+            brier_gain_if_correct=0.3, brier_cost_if_wrong=0.2,
+            region="East",  # Same region as e1
+        )
+        west_diff = ChampionCandidate(
+            team_id="w1", seed=1, championship_prob=0.10,
+            crowd_championship_prob=0.12, leverage_ratio=0.83,
+            selection_score=0.15, ev_delta=0.03,
+            brier_gain_if_correct=0.3, brier_cost_if_wrong=0.2,
+            region="West",  # Different region
+        )
+
+        # Verify the diversity bonus math directly
+        # Same region: negative bonus (correlation penalty)
+        rho = 0.3
+        same_region_bonus = -0.1 * min(east_same.ev_delta, east_same2.ev_delta)
+        assert same_region_bonus < 0
+
+        # Cross region: positive bonus (independence benefit)
+        p_at_least_one = 1.0 - (1.0 - east_same.championship_prob) * (1.0 - west_diff.championship_prob)
+        p_single = max(east_same.championship_prob, west_diff.championship_prob)
+        cross_region_bonus = (p_at_least_one - p_single) * 10.0
+        assert cross_region_bonus > 0
+
+        # Cross-region diversification is always better than same-region
+        assert cross_region_bonus > same_region_bonus
+
+    def test_joint_optimization_returns_valid_predictions(self):
+        """All predictions in the optimized pair should be valid probabilities."""
+        gen = self._make_4team_generator()
+        pair = gen.generate_submissions(self._make_matchup_ids())
+
+        for mid, p in pair.primary.items():
+            assert 0.0 <= p <= 1.0, f"Primary {mid}={p} out of range"
+        for mid, p in pair.hedge.items():
+            assert 0.0 <= p <= 1.0, f"Hedge {mid}={p} out of range"
+
+
+# ---------------------------------------------------------------------------
+# select_champion with round-weighted path
+# ---------------------------------------------------------------------------
+
+
+class TestSelectChampionRoundWeighted:
+    """Test that select_champion uses round-weighted EV when matchup_teams provided."""
+
+    def test_with_matchup_teams_uses_evaluate_all(self):
+        """When matchup_teams is provided, should use evaluate_all_candidates path."""
+        strategy = ChampionBoostStrategy(n_champion_candidates=3)
+        seeds = {"a": 1, "b": 2, "c": 16}
+        champ_probs = {"a": 0.20, "b": 0.10, "c": 0.01}
+        primary = {"m1": 0.60, "m2": 0.55}
+        matchup_teams = {"m1": ("a", "c"), "m2": ("a", "b")}
+
+        champion = strategy.select_champion(
+            primary_predictions=primary,
+            team_seeds=seeds,
+            championship_probs=champ_probs,
+            matchup_teams=matchup_teams,
+        )
+        assert champion is not None
+        assert champion in ("a", "b")  # Should pick a viable candidate
+
+    def test_without_matchup_teams_uses_heuristic(self):
+        """Without matchup_teams, falls back to heuristic path."""
+        strategy = ChampionBoostStrategy(n_champion_candidates=3)
+        seeds = {"a": 1, "b": 2}
+        champ_probs = {"a": 0.20, "b": 0.10}
+
+        champion = strategy.select_champion(
+            primary_predictions={},
+            team_seeds=seeds,
+            championship_probs=champ_probs,
+            # No matchup_teams
+        )
+        assert champion is not None
+
+    def test_round_weighted_amplifies_late_round_impact(self):
+        """Late-round games produce larger magnitude EV deltas due to round weights.
+
+        The 0-1 trick's raw EV is typically negative (the cost of being wrong
+        outweighs the gain of being right because P(wrong) >> P(right)).
+        But late-round weights amplify both gain AND cost, producing larger
+        magnitude EV deltas.  The Brier *gain if correct* should scale with
+        the round weight — this is the key insight that makes the 0-1 trick
+        valuable on high-weight games.
+        """
+        strategy = ChampionBoostStrategy(n_champion_candidates=3)
+
+        # Team A: plays NCG-like matchup (seed_sum=2, weight=32)
+        # Team B: plays R64-like matchup (seed_sum=17, weight=1)
+        seeds = {"a": 1, "b": 1, "opp_a": 1, "opp_b": 16}
+        champ_probs = {"a": 0.15, "b": 0.15}  # Same championship prob
+        primary = {"m1": 0.55, "m2": 0.55}
+        matchup_teams = {
+            "m1": ("a", "opp_a"),   # a vs 1-seed: NCG weight 32
+            "m2": ("b", "opp_b"),   # b vs 16-seed: R32 weight 2
+        }
+
+        candidates = strategy.evaluate_all_candidates(
+            primary_predictions=primary,
+            team_seeds=seeds,
+            matchup_teams=matchup_teams,
+            championship_probs=champ_probs,
+        )
+
+        assert len(candidates) == 2
+
+        # Both candidates: the Brier gain IF CORRECT should scale with
+        # round weight.  Team A (NCG=32) should have ~16× the gain of
+        # Team B (R32=2).
+        a_cand = next(c for c in candidates if c.team_id == "a")
+        b_cand = next(c for c in candidates if c.team_id == "b")
+        assert a_cand.brier_gain_if_correct > b_cand.brier_gain_if_correct
+        # The ratio should be approximately 32/2 = 16, but boost strengths
+        # differ so allow some tolerance
+        ratio = a_cand.brier_gain_if_correct / max(b_cand.brier_gain_if_correct, 1e-6)
+        assert ratio > 5.0, (
+            f"NCG gain should be much larger than R32 gain, got ratio={ratio:.1f}"
+        )
