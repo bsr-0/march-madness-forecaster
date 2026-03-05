@@ -30,6 +30,7 @@ Thumbs.db
 
 # Data caches (large / regenerable)
 data/raw/cache/
+data/raw/prospective_eval_*.json
 data/kaggle/
 
 # Logs
