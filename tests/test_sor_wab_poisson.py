@@ -351,8 +351,8 @@ class TestFeatureVectorIntegration:
     """Ensure SOR and WAB_pb are in the feature vector at correct positions."""
 
     def test_feature_dim_updated(self):
-        """TEAM_FEATURE_DIM should be 68 (66 + 2 Poisson Binomial resume metrics)."""
-        assert TEAM_FEATURE_DIM == 68
+        """TEAM_FEATURE_DIM should be 79 (71 base + 2 graph SOS + 3 win quality + 3 per-stage coaching)."""
+        assert TEAM_FEATURE_DIM == 79
 
     def test_to_vector_length(self):
         """to_vector() output length should match TEAM_FEATURE_DIM."""
