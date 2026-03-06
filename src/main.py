@@ -843,6 +843,36 @@ def run_backtest_unified(args):
     return 0
 
 
+def run_validate_metrics(args):
+    """Validate proprietary metrics against public data sources."""
+    import json as _json
+
+    from src.ml.evaluation.metrics_validation import (
+        validate_metrics_for_year,
+        validate_metrics_multi_year,
+    )
+
+    if args.years:
+        years = [int(y.strip()) for y in args.years.split(",")]
+        reports = validate_metrics_multi_year(years, args.historical_dir, args.raw_dir)
+        for year, report in sorted(reports.items()):
+            print(f"\n{report.summary()}\n")
+        if args.output:
+            combined = {yr: r.to_dict() for yr, r in reports.items()}
+            with open(args.output, "w") as f:
+                _json.dump(combined, f, indent=2)
+            print(f"Report written to {args.output}")
+    else:
+        report = validate_metrics_for_year(args.year, args.historical_dir, args.raw_dir)
+        print(report.summary())
+        if args.output:
+            with open(args.output, "w") as f:
+                _json.dump(report.to_dict(), f, indent=2)
+            print(f"Report written to {args.output}")
+
+    return 0
+
+
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -1504,6 +1534,17 @@ def main():
     bt_unified_parser.add_argument("--pool-sizes", default="100,500", help="Comma-separated pool sizes for EV mode")
     bt_unified_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
 
+    # --- validate-metrics ---
+    vm_parser = subparsers.add_parser(
+        "validate-metrics",
+        help="Validate proprietary metrics against public Torvik/Sports Reference data",
+    )
+    vm_parser.add_argument("--year", type=int, default=2025, help="Season year to validate")
+    vm_parser.add_argument("--years", default=None, help="Comma-separated years for multi-year validation")
+    vm_parser.add_argument("--historical-dir", default="data/raw/historical", help="Directory with historical game JSONs")
+    vm_parser.add_argument("--raw-dir", default="data/raw", help="Directory with Torvik/SportsRef JSONs")
+    vm_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
+
     args = parser.parse_args()
     
     if args.command == "sota":
@@ -1548,6 +1589,8 @@ def main():
         return run_backtest_kaggle(args)
     elif args.command == "backtest-unified":
         return run_backtest_unified(args)
+    elif args.command == "validate-metrics":
+        return run_validate_metrics(args)
     else:
         parser.print_help()
         return 1
