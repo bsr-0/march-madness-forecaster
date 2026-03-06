@@ -268,7 +268,7 @@ class HistoricalDataPipeline:
 
     def _collect_season_games_fast(self, season: int, scraper) -> Optional[Dict]:
         try:
-            games_tuple = scraper.get_games_season(season, info=False, box=True, pbp=False)
+            games_tuple = scraper.get_games_season(season, info=True, box=True, pbp=False)
         except TypeError:
             try:
                 games_tuple = scraper.get_games_season(season)
@@ -277,17 +277,49 @@ class HistoricalDataPipeline:
         except Exception:
             return None
 
+        # Extract game_id → date mapping from info DataFrame (element 0).
+        # cbbpy's info DataFrame has 'game_id' and 'game_day' columns
+        # (e.g. "January 15, 2024") which we parse to ISO format.
+        game_date_map: Dict[str, str] = {}
+        if isinstance(games_tuple, tuple) and len(games_tuple) > 0:
+            info_df = games_tuple[0]
+            if hasattr(info_df, "iterrows") and not getattr(info_df, "empty", True):
+                for _, info_row in info_df.iterrows():
+                    gid = str(info_row.get("game_id", "")).strip()
+                    raw_day = str(info_row.get("game_day", "")).strip()
+                    if gid and raw_day:
+                        try:
+                            parsed = datetime.strptime(raw_day, "%B %d, %Y")
+                            game_date_map[gid] = parsed.strftime("%Y-%m-%d")
+                        except ValueError:
+                            pass
+
+        if game_date_map:
+            logger.info(
+                "Fast path: extracted %d game dates from info DataFrame for season %d",
+                len(game_date_map), season,
+            )
+        else:
+            logger.warning(
+                "Fast path: no dates extracted from info DataFrame for season %d. "
+                "Games will have fallback dates.",
+                season,
+            )
+
         team_games = self.providers._normalize_cbbpy_records(games_tuple)
         if not team_games:
             return None
         for row in team_games:
             row["season"] = season
-            # Preserve actual game dates from cbbpy when available.
-            # The 'date' field may be populated by cbbpy's bulk API;
-            # only fall back to season-start if truly missing.
-            existing_date = row.get("date") or row.get("game_date") or ""
-            if not existing_date or existing_date == f"{season-1}-11-01":
-                row["date"] = row.get("date") or f"{season-1}-11-01"
+            gid = str(row.get("game_id", "")).strip()
+            # Use date from info DataFrame if available; otherwise check
+            # if the row already has a real date; fall back only as last resort.
+            if gid in game_date_map:
+                row["date"] = game_date_map[gid]
+            else:
+                existing_date = row.get("date") or row.get("game_date") or ""
+                if not existing_date:
+                    row["date"] = f"{season-1}-11-01"
 
         games = self._team_games_to_games(team_games, season)
         return {
@@ -321,6 +353,11 @@ class HistoricalDataPipeline:
         }
         if self.config.include_pbp:
             out["pbp"] = pbp_rows
+
+        # Validate dates before writing
+        date_warnings = self._validate_game_dates(games, season)
+        for warning in date_warnings:
+            logger.warning("Season %d date check: %s", season, warning)
 
         with open(season_cache, "w") as f:
             json.dump(out, f, indent=2)
@@ -601,6 +638,174 @@ class HistoricalDataPipeline:
         while current <= stop:
             yield current
             current += timedelta(days=1)
+
+    # ------------------------------------------------------------------
+    # Date validation & repair
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _validate_game_dates(games: List[Dict], season: int) -> List[str]:
+        """Return warnings if game dates look suspicious."""
+        if not games:
+            return []
+        warnings: List[str] = []
+        fallback = f"{season - 1}-11-01"
+        fallback_count = sum(1 for g in games if g.get("date") == fallback)
+        total = len(games)
+        if fallback_count > total * 0.5:
+            warnings.append(
+                f"CRITICAL: {fallback_count}/{total} games have fallback date "
+                f"{fallback}. Dates are likely missing from source data."
+            )
+        unique_dates = len(set(g.get("date", "") for g in games))
+        if unique_dates < 10 and total > 100:
+            warnings.append(
+                f"WARNING: Only {unique_dates} unique dates across {total} games. "
+                f"Date diversity is suspiciously low."
+            )
+        return warnings
+
+    def repair_historical_dates(
+        self,
+        seasons: Optional[List[int]] = None,
+        dry_run: bool = False,
+        force_slow: bool = False,
+    ) -> Dict[int, Dict]:
+        """Re-fetch game dates and patch existing historical JSON files.
+
+        Returns a dict mapping season → {total, repaired, unique_dates}.
+        """
+        historical_dir = self.output_dir
+        if seasons is None:
+            import glob as _glob
+
+            files = sorted(_glob.glob(str(historical_dir / "historical_games_*.json")))
+            seasons = []
+            for f in files:
+                try:
+                    yr = int(Path(f).stem.split("_")[-1])
+                    seasons.append(yr)
+                except ValueError:
+                    continue
+
+        scraper = self.providers._import_module("cbbpy.mens_scraper")
+        if scraper is None:
+            raise RuntimeError("cbbpy is required for date repair")
+
+        results: Dict[int, Dict] = {}
+        for season in seasons:
+            json_path = historical_dir / f"historical_games_{season}.json"
+            if not json_path.exists():
+                logger.warning("No historical file for season %d, skipping", season)
+                continue
+
+            with open(json_path) as f:
+                data = json.load(f)
+            games = data.get("games", [])
+            team_games = data.get("team_games", [])
+
+            # Build game_id → date mapping
+            game_date_map = self._fetch_date_map_for_season(
+                season, scraper, force_slow=force_slow,
+            )
+
+            if not game_date_map:
+                logger.warning(
+                    "Season %d: could not retrieve any dates. Skipping.", season,
+                )
+                results[season] = {"total": len(games), "repaired": 0, "unique_dates": 0}
+                continue
+
+            repaired = 0
+            for g in games:
+                gid = str(g.get("game_id", "")).strip()
+                if gid in game_date_map and g.get("date") != game_date_map[gid]:
+                    if not dry_run:
+                        g["date"] = game_date_map[gid]
+                    repaired += 1
+
+            # Also repair team_games
+            for tg in team_games:
+                gid = str(tg.get("game_id", "")).strip()
+                if gid in game_date_map and tg.get("date") != game_date_map[gid]:
+                    if not dry_run:
+                        tg["date"] = game_date_map[gid]
+
+            unique_dates = len(set(
+                game_date_map.get(str(g.get("game_id", "")).strip(), g.get("date", ""))
+                for g in games
+            ))
+
+            if not dry_run and repaired > 0:
+                with open(json_path, "w") as f:
+                    json.dump(data, f, indent=2)
+
+            logger.info(
+                "Season %d: %d games, %d dates repaired, %d unique dates%s",
+                season, len(games), repaired, unique_dates,
+                " (dry run)" if dry_run else "",
+            )
+            results[season] = {
+                "total": len(games),
+                "repaired": repaired,
+                "unique_dates": unique_dates,
+            }
+
+        return results
+
+    def _fetch_date_map_for_season(
+        self,
+        season: int,
+        scraper,
+        force_slow: bool = False,
+    ) -> Dict[str, str]:
+        """Return {game_id: 'YYYY-MM-DD'} for all games in a season."""
+        game_date_map: Dict[str, str] = {}
+
+        # Try fast path first: info DataFrame from get_games_season
+        if not force_slow:
+            try:
+                games_tuple = scraper.get_games_season(
+                    season, info=True, box=False, pbp=False,
+                )
+                if isinstance(games_tuple, tuple) and len(games_tuple) > 0:
+                    info_df = games_tuple[0]
+                    if hasattr(info_df, "iterrows") and not getattr(info_df, "empty", True):
+                        for _, row in info_df.iterrows():
+                            gid = str(row.get("game_id", "")).strip()
+                            raw_day = str(row.get("game_day", "")).strip()
+                            if gid and raw_day:
+                                try:
+                                    parsed = datetime.strptime(raw_day, "%B %d, %Y")
+                                    game_date_map[gid] = parsed.strftime("%Y-%m-%d")
+                                except ValueError:
+                                    pass
+            except Exception as exc:
+                logger.warning("Fast date fetch failed for season %d: %s", season, exc)
+
+        if game_date_map and not force_slow:
+            logger.info(
+                "Season %d: extracted %d dates via fast path", season, len(game_date_map),
+            )
+            return game_date_map
+
+        # Slow path: iterate day-by-day
+        logger.info("Season %d: falling back to slow day-by-day date fetch", season)
+        for day in self._season_dates(season):
+            day_str = day.isoformat()
+            try:
+                ids = scraper.get_game_ids(day_str)
+            except Exception:
+                continue
+            for game_id in ids:
+                gid = str(game_id).strip()
+                if gid and gid not in game_date_map:
+                    game_date_map[gid] = day_str
+
+        logger.info(
+            "Season %d: extracted %d dates via slow path", season, len(game_date_map),
+        )
+        return game_date_map
 
     def _write_json(self, filename: str, payload: Dict) -> str:
         path = self.output_dir / filename
