@@ -40,7 +40,10 @@ Both forms are shown below; pick whichever you installed.
 ### 1. Ingest historical data (multi-year training)
 
 ```bash
-# Scrapes game-level data for 2005-2025 via cbbpy/sportsipy
+# Scrapes game-level data via cbbpy/sportsipy (defaults: 2022-2025)
+march-madness ingest-historical
+
+# Or specify a wider range for full training pool:
 march-madness ingest-historical --start-season 2005 --end-season 2025
 
 # Or with python -m:
@@ -76,7 +79,7 @@ Options:
 - `--skip-torvik`, `--skip-public-picks`, `--skip-sports-reference`, `--skip-rosters`
 - `--kaggle-dir data/kaggle` — load Kaggle competition data
 - `--allow-invalid-payloads` — don't fail on schema errors
-- `--historical-games-provider-priority cbbpy,sportsipy` — provider ordering
+- `--historical-games-provider-priority sportsdataverse,cbbpy,sportsipy,cbbdata` — provider ordering
 
 ### 4. Run the full pipeline
 
@@ -121,6 +124,12 @@ march-madness sota-from-manifest \
 | `calibrate-mc` | Calibrate Monte Carlo noise parameter |
 | `download-kaggle` | Download Kaggle competition CSVs |
 | `kaggle-export` | Generate Kaggle submission CSV |
+| `loyo-validate` | Run Leave-One-Year-Out validation across historical years |
+| `backtest-kaggle` | Evaluate predictions against historical Kaggle results |
+| `backtest-unified` | Run unified backtest (Kaggle calibration + ESPN bracket pool) |
+| `validate-metrics` | Validate proprietary metrics against public data |
+| `scrape-tournament-results` | Scrape historical tournament results from Sports Reference |
+| `repair-dates` | Re-fetch and repair game dates in historical JSON files |
 | `audit-metrics-coverage` | Audit coverage gaps in historical data |
 
 ## Evaluation & Auditing
@@ -132,8 +141,8 @@ march-madness audit-rdof --holdout-years 2025
 # With sensitivity analysis on Tier 3 constants
 march-madness audit-rdof --holdout-years 2025 --sensitivity
 
-# Prospective evaluation on a specific year
-march-madness prospective-eval --year 2024
+# Prospective evaluation on a specific year (requires a freeze artifact)
+march-madness prospective-eval --freeze-file pipeline_freeze.json --year 2024
 
 # Freeze pipeline constants before tournament
 march-madness freeze-pipeline
@@ -177,7 +186,7 @@ march-madness-forecaster/
 │   ├── optimization/
 │   │   └── leverage.py            # Contrarian bracket optimization
 │   └── exports/kaggle.py          # Kaggle submission generation
-├── tests/                         # 46 test files
+├── tests/                         # 67 test files
 ├── data/                          # Historical & current-year data
 ├── setup.py
 ├── requirements.txt
