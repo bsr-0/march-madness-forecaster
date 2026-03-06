@@ -778,29 +778,98 @@ def run_loyo_validate(args):
 
 
 def run_backtest_kaggle(args):
-    """Evaluate predictions against historical Kaggle tournament results."""
+    """Evaluate predictions against historical Kaggle tournament results.
+
+    For each year, loads tournament results and evaluates a seed-based
+    baseline prediction.  This gives the baseline Brier score that any
+    model must beat.  To evaluate the full pipeline, use --pipeline mode
+    (requires running the SOTA pipeline per year).
+    """
     import json as _json
+    from .data.historical_tournament_results import (
+        get_available_years,
+        get_tournament_games_for_eval,
+    )
     from .ml.evaluation.kaggle_backtest import KaggleBacktester, KAGGLE_THRESHOLDS
     from .ml.evaluation.loyo_protocol import LOYO_YEARS
 
     years = [int(y) for y in args.years.split(",")] if args.years else list(LOYO_YEARS)
-    kaggle_dir = Path(args.kaggle_dir)
+    data_dir = args.results_dir
 
-    if not kaggle_dir.exists():
-        print(f"Error: Kaggle directory not found: {kaggle_dir}")
+    available = get_available_years(data_dir)
+    if not available:
+        print(f"Error: No tournament results found in {data_dir}")
+        print("Run 'scrape-tournament-results' first to fetch historical outcomes.")
         return 1
 
-    print(f"Kaggle backtest for years: {years}")
-    print(f"Kaggle data directory: {kaggle_dir}")
-    print(f"Thresholds available for years: {sorted(k for k in KAGGLE_THRESHOLDS if isinstance(k, int))}")
+    years_to_eval = [y for y in years if y in available]
+    skipped = [y for y in years if y not in available]
+    if skipped:
+        print(f"Skipping years without results: {skipped}")
+    if not years_to_eval:
+        print(f"No results available for requested years. Available: {available}")
+        return 1
 
-    backtester = KaggleBacktester()
-    print("KaggleBacktester initialized. Use the API to run full evaluation.")
+    backtester = KaggleBacktester(historical_results_dir=data_dir)
+    year_results = []
+
+    for year in years_to_eval:
+        actual_games = get_tournament_games_for_eval(year, data_dir)
+        if not actual_games:
+            print(f"  {year}: No games found, skipping")
+            continue
+
+        # Seed-based baseline predictions:
+        # P(lower seed wins) based on historical rates
+        from .data.features.tournament_features import HISTORICAL_SEED_WIN_RATES
+        predictions = {}
+        for game in actual_games:
+            t1 = game["team1_id"]
+            t2 = game["team2_id"]
+            s1 = game["team1_seed"]
+            s2 = game["team2_seed"]
+            key = (min(s1, s2), max(s1, s2))
+            hist_rate = HISTORICAL_SEED_WIN_RATES.get(key, 0.5)
+            # hist_rate is P(lower seed wins)
+            if s1 <= s2:
+                predictions[(t1, t2)] = hist_rate
+            else:
+                predictions[(t1, t2)] = 1.0 - hist_rate
+
+        result = backtester.evaluate_predictions(predictions, actual_games, year)
+        year_results.append(result)
+
+    if not year_results:
+        print("No years evaluated successfully.")
+        return 1
+
+    report = backtester.aggregate_results(year_results)
+    print(report.summary())
+    print()
+    print("NOTE: These are SEED-BASED BASELINE scores.")
+    print("The pipeline must beat these to demonstrate value.")
 
     if args.output:
-        report = {"years": years, "kaggle_dir": str(kaggle_dir), "status": "ready"}
+        out = {
+            "mode": "seed_baseline",
+            "years": [yr.year for yr in year_results],
+            "mean_brier": report.mean_brier,
+            "std_brier": report.std_brier,
+            "per_year": [
+                {
+                    "year": yr.year,
+                    "brier": yr.brier_score,
+                    "rw_brier": yr.round_weighted_brier,
+                    "accuracy": yr.accuracy,
+                    "upsets": f"{yr.n_upsets_predicted}/{yr.n_upsets_total}",
+                    "rank": yr.estimated_kaggle_rank,
+                    "per_round": yr.per_round_brier,
+                }
+                for yr in year_results
+            ],
+        }
         with open(args.output, "w") as f:
-            _json.dump(report, f, indent=2)
+            _json.dump(out, f, indent=2)
         print(f"Report written to {args.output}")
 
     return 0
@@ -839,6 +908,57 @@ def run_backtest_unified(args):
         with open(args.output, "w") as f:
             _json.dump(report, f, indent=2)
         print(f"Report written to {args.output}")
+
+    return 0
+
+
+def scrape_tournament_results(args):
+    """Scrape tournament game results from Sports Reference."""
+    import json as _json
+    from .data.scrapers.tournament_results import TournamentResultsScraper
+    from .data.historical_tournament_results import (
+        TournamentGame,
+        save_tournament_results,
+    )
+
+    if args.year:
+        years = [args.year]
+    elif args.years:
+        years = [int(y.strip()) for y in args.years.split(",")]
+    else:
+        years = [2018, 2019, 2021, 2022, 2023, 2024, 2025]
+
+    scraper = TournamentResultsScraper(cache_dir=args.cache_dir)
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for year in years:
+        try:
+            games = scraper.scrape_year(year)
+            if not games:
+                print(f"  {year}: No games scraped")
+                continue
+
+            # Convert to TournamentGame objects and save
+            tg_list = [
+                TournamentGame(
+                    year=g["year"],
+                    round_name=g["round_name"],
+                    team1_id=g["team1_id"],
+                    team2_id=g["team2_id"],
+                    team1_seed=g["team1_seed"],
+                    team2_seed=g["team2_seed"],
+                    team1_score=g.get("team1_score", 0),
+                    team2_score=g.get("team2_score", 0),
+                    team1_won=g["team1_won"],
+                    region=g.get("region", ""),
+                )
+                for g in games
+            ]
+            save_tournament_results(tg_list, year, str(output_dir))
+            print(f"  {year}: {len(tg_list)} games saved")
+        except Exception as e:
+            print(f"  {year}: Failed - {e}")
 
     return 0
 
@@ -1560,7 +1680,7 @@ def main():
         "backtest-kaggle",
         help="Evaluate predictions against historical Kaggle tournament results",
     )
-    bt_kaggle_parser.add_argument("--kaggle-dir", required=True, help="Directory with Kaggle CSV data")
+    bt_kaggle_parser.add_argument("--results-dir", default="data/raw/historical", help="Directory with tournament_results_YYYY.json files")
     bt_kaggle_parser.add_argument("--years", default=None, help="Comma-separated years (default: LOYO_YEARS)")
     bt_kaggle_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
 
@@ -1587,6 +1707,17 @@ def main():
     vm_parser.add_argument("--raw-dir", default="data/raw", help="Directory with Torvik/SportsRef JSONs")
     vm_parser.add_argument("--sensitivity", action="store_true", help="Run constant sensitivity analysis (read-only diagnostic)")
     vm_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
+
+    # --- scrape-tournament-results ---
+    str_parser = subparsers.add_parser(
+        "scrape-tournament-results",
+        help="Scrape historical tournament game results from Sports Reference",
+    )
+    str_parser.add_argument("--year", type=int, default=None, help="Single year to scrape")
+    str_parser.add_argument("--years", default=None, help="Comma-separated years (default: 2018-2019,2021-2025)")
+    str_parser.add_argument("--cache-dir", default="data/raw/cache", help="Cache directory for HTTP responses")
+    str_parser.add_argument("--output-dir", default="data/raw/historical", help="Output directory for tournament_results_YYYY.json")
+    str_parser.add_argument("--delay", type=float, default=3.0, help="Seconds between requests")
 
     args = parser.parse_args()
     
@@ -1634,6 +1765,8 @@ def main():
         return run_backtest_unified(args)
     elif args.command == "validate-metrics":
         return run_validate_metrics(args)
+    elif args.command == "scrape-tournament-results":
+        return scrape_tournament_results(args)
     else:
         parser.print_help()
         return 1
