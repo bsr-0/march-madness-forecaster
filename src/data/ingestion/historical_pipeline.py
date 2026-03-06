@@ -319,7 +319,13 @@ class HistoricalDataPipeline:
             else:
                 existing_date = row.get("date") or row.get("game_date") or ""
                 if not existing_date:
-                    row["date"] = f"{season-1}-11-01"
+                    # Mark as missing rather than using a fake Nov 1 date.
+                    # The offline date repair script can fix these later.
+                    row["date"] = ""
+                    logger.debug(
+                        "Season %d game %s: no date available from info DataFrame",
+                        season, gid,
+                    )
 
         games = self._team_games_to_games(team_games, season)
         return {
@@ -525,7 +531,7 @@ class HistoricalDataPipeline:
                 {
                     "game_id": game_id,
                     "season": season,
-                    "date": t1.get("date") or t2.get("date") or f"{season-1}-11-01",
+                    "date": t1.get("date") or t2.get("date") or "",
                     "team1_id": t1.get("team_id"),
                     "team1_name": t1.get("team_name"),
                     "team2_id": t2.get("team_id"),

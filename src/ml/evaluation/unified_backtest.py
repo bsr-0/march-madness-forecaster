@@ -333,14 +333,44 @@ def load_tournament_history_from_json(
 
     first_round_matchups = _build_first_round_matchups(seeds, regions)
 
-    # Without actual game results in JSON, we can only return the
-    # bracket structure.  For full backtesting we need Kaggle CSVs.
+    # Load actual game results from tournament_results_{year}.json
+    games: List[TournamentGame] = []
+    champion_id = ""
+    results_path = Path(history_dir) / f"tournament_results_{year}.json"
+    if results_path.exists():
+        try:
+            with open(results_path) as f:
+                results_data = json.load(f)
+            raw_games = results_data if isinstance(results_data, list) else results_data.get("games", [])
+            for g in raw_games:
+                games.append(TournamentGame(
+                    team1_id=g["team1_id"],
+                    team2_id=g["team2_id"],
+                    team1_seed=g.get("team1_seed", seeds.get(g["team1_id"], 8)),
+                    team2_seed=g.get("team2_seed", seeds.get(g["team2_id"], 8)),
+                    team1_won=g["team1_won"],
+                    round_name=g.get("round_name", "R64"),
+                    team1_score=g.get("team1_score", 0),
+                    team2_score=g.get("team2_score", 0),
+                ))
+            # Identify champion from NCG
+            ncg = [g for g in games if g.round_name == "NCG"]
+            if ncg:
+                champion_id = ncg[0].winner_id
+            logger.info(
+                "Loaded %d tournament games from %s (champion=%s)",
+                len(games), results_path, champion_id,
+            )
+        except Exception as e:
+            logger.warning("Failed to load tournament results for %d: %s", year, e)
+
     return TournamentHistory(
         year=year,
-        games=[],
+        games=games,
         seeds=seeds,
         regions=regions,
         first_round_matchups=first_round_matchups,
+        champion_id=champion_id,
     )
 
 
@@ -425,6 +455,13 @@ def _evaluate_champion_boost(
         return None
 
     if not predictions or not games:
+        return None
+
+    # Guard against API mismatches between the strategy class versions.
+    import inspect
+    init_params = inspect.signature(ChampionBoostStrategy.__init__).parameters
+    if "predict_fn" not in init_params:
+        logger.debug("ChampionBoostStrategy API does not accept predict_fn; skipping boost eval.")
         return None
 
     # Find actual champion
