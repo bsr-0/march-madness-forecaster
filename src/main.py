@@ -154,6 +154,10 @@ def run_sota_from_manifest(args):
         public_picks_json=resolve_path(args.public_picks or artifacts.get("public_picks_json")),
         roster_json=rosters_path,
         transfer_portal_json=resolve_path(args.transfer_portal or artifacts.get("transfer_portal_json")),
+        preseason_ap_json=resolve_path(args.preseason_ap or artifacts.get("preseason_ap_json")),
+        coach_tournament_json=resolve_path(args.coach_tournament or artifacts.get("coach_tournament_json")),
+        conf_champions_json=resolve_path(args.conf_champions or artifacts.get("conf_champions_json")),
+        betting_odds_json=resolve_path(args.betting_odds or artifacts.get("odds_json")),
         scoring_rules_json=resolve_path(args.scoring_rules or artifacts.get("scoring_rules_json")),
         calibration_method=args.calibration,
         random_seed=args.seed,
@@ -245,6 +249,10 @@ def run_kaggle_export(args):
         public_picks_json=resolve_path(artifacts.get("public_picks_json")),
         roster_json=resolve_path(artifacts.get("rosters_json")),
         transfer_portal_json=resolve_path(artifacts.get("transfer_portal_json")),
+        preseason_ap_json=resolve_path(artifacts.get("preseason_ap_json")),
+        coach_tournament_json=resolve_path(artifacts.get("coach_tournament_json")),
+        conf_champions_json=resolve_path(artifacts.get("conf_champions_json")),
+        betting_odds_json=resolve_path(artifacts.get("odds_json")),
         scoring_rules_json=resolve_path(artifacts.get("scoring_rules_json")),
         scrape_live=args.scrape_live,
         data_cache_dir="data/raw/cache",
@@ -1258,6 +1266,10 @@ def main():
     manifest_sota_parser.add_argument("--public-picks", default=None, help="Override public picks JSON")
     manifest_sota_parser.add_argument("--rosters", default=None, help="Override roster JSON path")
     manifest_sota_parser.add_argument("--transfer-portal", default=None, help="Override transfer portal JSON")
+    manifest_sota_parser.add_argument("--preseason-ap", default=None, help="Override preseason AP rankings JSON")
+    manifest_sota_parser.add_argument("--coach-tournament", default=None, help="Override coach tournament history JSON")
+    manifest_sota_parser.add_argument("--conf-champions", default=None, help="Override conference champions JSON")
+    manifest_sota_parser.add_argument("--betting-odds", default=None, help="Override betting/odds JSON")
     manifest_sota_parser.add_argument("--scoring-rules", default=None, help="Override scoring rules JSON")
     manifest_sota_parser.add_argument("--scrape-live", action="store_true", help="Allow live scraping for missing inputs")
     manifest_sota_parser.add_argument("--cache-dir", default="data/raw/cache", help="Cache directory for scraper responses")
