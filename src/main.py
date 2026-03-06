@@ -963,6 +963,37 @@ def scrape_tournament_results(args):
     return 0
 
 
+def repair_dates(args):
+    """Re-fetch and repair game dates in historical JSON files."""
+    seasons = None
+    if args.seasons:
+        raw = args.seasons.strip()
+        if "-" in raw and "," not in raw:
+            start, end = raw.split("-", 1)
+            seasons = list(range(int(start.strip()), int(end.strip()) + 1))
+        else:
+            seasons = [int(s.strip()) for s in raw.split(",") if s.strip()]
+
+    config = HistoricalIngestionConfig(output_dir=args.historical_dir)
+    pipeline = HistoricalDataPipeline(config)
+    results = pipeline.repair_historical_dates(
+        seasons=seasons,
+        dry_run=args.dry_run,
+        force_slow=args.force_slow,
+    )
+
+    print(f"\n{'Season':<10} {'Total':<10} {'Repaired':<12} {'Unique Dates':<15}")
+    print("-" * 47)
+    for season in sorted(results.keys()):
+        r = results[season]
+        print(f"{season:<10} {r['total']:<10} {r['repaired']:<12} {r['unique_dates']:<15}")
+
+    if args.dry_run:
+        print("\n(dry run — no files were modified)")
+
+    return 0
+
+
 def run_validate_metrics(args):
     """Validate proprietary metrics against public data sources."""
     import json as _json
@@ -1719,6 +1750,19 @@ def main():
     str_parser.add_argument("--output-dir", default="data/raw/historical", help="Output directory for tournament_results_YYYY.json")
     str_parser.add_argument("--delay", type=float, default=3.0, help="Seconds between requests")
 
+    # --- repair-dates ---
+    repair_parser = subparsers.add_parser(
+        "repair-dates",
+        help="Re-fetch and repair game dates in historical JSON files",
+    )
+    repair_parser.add_argument(
+        "--seasons", default=None,
+        help="Comma-separated seasons or range (e.g. '2017,2018' or '2005-2024'). Default: all existing files.",
+    )
+    repair_parser.add_argument("--historical-dir", default="data/raw/historical", help="Directory with historical_games_YYYY.json files")
+    repair_parser.add_argument("--dry-run", action="store_true", help="Show what would change without writing")
+    repair_parser.add_argument("--force-slow", action="store_true", help="Use slow day-by-day date fetch for all seasons")
+
     args = parser.parse_args()
     
     if args.command == "sota":
@@ -1767,6 +1811,8 @@ def main():
         return run_validate_metrics(args)
     elif args.command == "scrape-tournament-results":
         return scrape_tournament_results(args)
+    elif args.command == "repair-dates":
+        return repair_dates(args)
     else:
         parser.print_help()
         return 1
