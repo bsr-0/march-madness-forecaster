@@ -863,6 +863,72 @@ class TestRoundWeightedBrierEV:
         assert r == "R64" and w == 1.0
 
 
+class TestCompareTopChampions:
+    """Test the compare_top_champions side-by-side analysis."""
+
+    def _make_strategy(self):
+        return ChampionBoostStrategy(n_champion_candidates=5)
+
+    def _make_fixture(self):
+        primary = {"m1": 0.60, "m2": 0.55, "m3": 0.50}
+        matchup_teams = {
+            "m1": ("east_1", "east_16"),
+            "m2": ("west_1", "west_16"),
+            "m3": ("east_1", "west_1"),
+        }
+        seeds = {"east_1": 1, "east_16": 16, "west_1": 1, "west_16": 16}
+        champ_probs = {"east_1": 0.20, "west_1": 0.15, "east_16": 0.01, "west_16": 0.01}
+        regions = {"east_1": "East", "west_1": "West"}
+        return primary, matchup_teams, seeds, champ_probs, regions
+
+    def test_returns_correct_count(self):
+        strategy = self._make_strategy()
+        primary, matchup_teams, seeds, champ_probs, regions = self._make_fixture()
+        results = strategy.compare_top_champions(
+            primary, seeds, matchup_teams, champ_probs,
+            team_regions=regions, n_top=2,
+        )
+        assert len(results) <= 2
+
+    def test_comparison_has_required_fields(self):
+        strategy = self._make_strategy()
+        primary, matchup_teams, seeds, champ_probs, regions = self._make_fixture()
+        results = strategy.compare_top_champions(
+            primary, seeds, matchup_teams, champ_probs,
+            team_regions=regions,
+        )
+        assert len(results) >= 1
+        r = results[0]
+        assert "team_id" in r
+        assert "ev_delta" in r
+        assert "risk_reward_ratio" in r
+        assert "round_breakdown" in r
+        assert "championship_prob" in r
+
+    def test_sorted_by_ev_delta(self):
+        strategy = self._make_strategy()
+        primary, matchup_teams, seeds, champ_probs, regions = self._make_fixture()
+        results = strategy.compare_top_champions(
+            primary, seeds, matchup_teams, champ_probs,
+            team_regions=regions,
+        )
+        for i in range(len(results) - 1):
+            assert results[i]["ev_delta"] >= results[i + 1]["ev_delta"]
+
+    def test_round_breakdown_present(self):
+        strategy = self._make_strategy()
+        primary, matchup_teams, seeds, champ_probs, regions = self._make_fixture()
+        results = strategy.compare_top_champions(
+            primary, seeds, matchup_teams, champ_probs,
+            team_regions=regions,
+        )
+        for r in results:
+            for rb in r["round_breakdown"]:
+                assert "round" in rb
+                assert "weight" in rb
+                assert "marginal_ev" in rb
+
+
 class TestRoundBrierBreakdownDataclass:
 
     def test_construction(self):

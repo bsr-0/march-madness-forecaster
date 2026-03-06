@@ -256,3 +256,58 @@ class TestArchetypeOverrides:
             })
             assert abs(sum(mix.values()) - 1.0) < 0.01
             assert abs(mix["chalk_picker"] - 0.25) < 0.01
+
+
+class TestHistoricalCalibration:
+    """Test historical archetype calibration from bracket data."""
+
+    def test_calibrated_mix_sums_to_one(self):
+        from src.simulation.competitor_archetypes import get_calibrated_mix
+        mix = get_calibrated_mix("espn_national")
+        assert abs(sum(mix.values()) - 1.0) < 0.01
+
+    def test_calibrated_mix_has_all_archetypes(self):
+        from src.simulation.competitor_archetypes import get_calibrated_mix
+        mix = get_calibrated_mix("espn_national")
+        assert "chalk_picker" in mix
+        assert "expert_mimic" in mix
+        assert "chaos_seeker" in mix
+        assert "homer" in mix
+
+    def test_calibrated_mix_specific_years(self):
+        from src.simulation.competitor_archetypes import get_calibrated_mix
+        mix = get_calibrated_mix("espn_national", years=[2023, 2024])
+        assert abs(sum(mix.values()) - 1.0) < 0.01
+
+    def test_calibrated_mix_with_overrides(self):
+        from src.simulation.competitor_archetypes import get_calibrated_mix
+        mix = get_calibrated_mix("espn_national", overrides={
+            "chalk_picker": 0.50,
+            "expert_mimic": 0.20,
+            "chaos_seeker": 0.15,
+            "homer": 0.15,
+        })
+        assert abs(mix["chalk_picker"] - 0.50) < 0.02
+        assert abs(sum(mix.values()) - 1.0) < 0.01
+
+    def test_calibrated_mix_non_espn_falls_back(self):
+        from src.simulation.competitor_archetypes import get_calibrated_mix
+        mix = get_calibrated_mix("office_pool")
+        expected = get_archetype_mix("office_pool")
+        for k in expected:
+            assert abs(mix[k] - expected[k]) < 0.001
+
+    def test_expert_mimic_trending_up(self):
+        """Historical data shows expert_mimic increasing over time."""
+        from src.simulation.competitor_archetypes import HISTORICAL_ARCHETYPE_ESTIMATES
+        years = sorted(HISTORICAL_ARCHETYPE_ESTIMATES.keys())
+        if len(years) >= 2:
+            early = HISTORICAL_ARCHETYPE_ESTIMATES[years[0]]["expert_mimic"]
+            late = HISTORICAL_ARCHETYPE_ESTIMATES[years[-1]]["expert_mimic"]
+            assert late >= early
+
+    def test_historical_estimates_sum_to_one(self):
+        from src.simulation.competitor_archetypes import HISTORICAL_ARCHETYPE_ESTIMATES
+        for year, mix in HISTORICAL_ARCHETYPE_ESTIMATES.items():
+            total = sum(mix.values())
+            assert abs(total - 1.0) < 0.01, f"Year {year} sums to {total}"
