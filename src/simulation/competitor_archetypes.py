@@ -15,6 +15,7 @@ opponent brackets for EV optimization.
 
 from __future__ import annotations
 
+import hashlib
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -155,11 +156,12 @@ class ChaosSeeker(CompetitorArchetype):
     def predict_pick_probability(
         self, team_id, round_name, model_prob, public_pct, seed,
     ) -> float:
-        # Boost for high-seed underdogs
-        upset_factor = 1.3 if seed >= 9 else 1.0
-        # Less reliance on public, more on raw probability boosted by chaos factor
-        raw = model_prob * upset_factor
-        return min(1.0, 0.8 * raw + 0.2 * public_pct)
+        # Chaos seekers favor underdogs: seed attractiveness inverts seed order
+        # 16-seed → 1.0 (very attractive), 1-seed → 0.0625 (unattractive)
+        seed_upset = seed / 16.0
+        # Contrarian: go against public consensus
+        contrarian = 1.0 - public_pct
+        return 0.5 * seed_upset + 0.3 * contrarian + 0.2 * model_prob
 
 
 class ExpertMimic(CompetitorArchetype):
@@ -203,7 +205,8 @@ class Homer(CompetitorArchetype):
     ) -> float:
         # ~10% chance of homer bias on any team (simulates random loyalty)
         # In production, this would use geographic data or pool demographics
-        team_hash = hash(team_id) % 10
+        # Use deterministic hash (SHA-1) instead of Python's randomized hash()
+        team_hash = int(hashlib.sha1(team_id.encode()).hexdigest(), 16) % 10
         if team_hash == 0:
             return min(1.0, model_prob * self.homer_boost)
         return model_prob
