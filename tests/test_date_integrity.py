@@ -106,7 +106,9 @@ class TestFastPathPreservesDates:
 
         result = pipeline._collect_season_games_fast(2024, MockScraper)
         assert result is not None
-        assert result["games"][0]["date"] == "2023-11-01"
+        # After the fix, missing dates produce empty string (not fake Nov 1)
+        # so the offline date repair script can detect and fix them.
+        assert result["games"][0]["date"] == ""
 
     def test_partial_info_uses_fallback_for_missing(self, tmp_path):
         """Games without info entries get fallback; those with info get real dates."""
@@ -125,7 +127,7 @@ class TestFastPathPreservesDates:
 
         date_map = {g["game_id"]: g["date"] for g in result["games"]}
         assert date_map["401"] == "2024-01-10"
-        assert date_map["402"] == "2023-11-01"  # fallback
+        assert date_map["402"] == ""  # missing date (no longer uses fake Nov 1 fallback)
 
 
 # ---------------------------------------------------------------------------
