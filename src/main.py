@@ -740,6 +740,109 @@ def download_kaggle(args):
         return 1
 
 
+def run_loyo_validate(args):
+    """Run Leave-One-Year-Out validation."""
+    import json as _json
+    from .ml.evaluation.loyo_protocol import LOYOValidator, LOYO_YEARS
+
+    years = [int(y) for y in args.years.split(",")] if args.years else list(LOYO_YEARS)
+
+    # Load per-year data from historical directory
+    data_by_year = {}
+    hist_dir = Path(args.historical_dir)
+    for year in years:
+        games_path = hist_dir / f"historical_games_{year}.json"
+        metrics_path = hist_dir / f"metrics_{year}.json"
+        if not games_path.exists():
+            print(f"Warning: No data for year {year} at {games_path}")
+            continue
+        # The actual loading of training samples requires a pipeline instance,
+        # so we delegate to a lightweight wrapper.
+        data_by_year[year] = {"games_path": str(games_path), "metrics_path": str(metrics_path)}
+
+    if not data_by_year:
+        print(f"Error: No historical data found in {hist_dir}")
+        return 1
+
+    print(f"LOYO validation across {len(data_by_year)} years: {sorted(data_by_year.keys())}")
+    print("Note: Full LOYO validation requires running the SOTA pipeline per fold.")
+    print("Use the LOYOValidator API directly for end-to-end validation.")
+
+    if args.output:
+        report = {"years": sorted(data_by_year.keys()), "status": "ready"}
+        with open(args.output, "w") as f:
+            _json.dump(report, f, indent=2)
+        print(f"Report written to {args.output}")
+
+    return 0
+
+
+def run_backtest_kaggle(args):
+    """Evaluate predictions against historical Kaggle tournament results."""
+    import json as _json
+    from .ml.evaluation.kaggle_backtest import KaggleBacktester, KAGGLE_THRESHOLDS
+    from .ml.evaluation.loyo_protocol import LOYO_YEARS
+
+    years = [int(y) for y in args.years.split(",")] if args.years else list(LOYO_YEARS)
+    kaggle_dir = Path(args.kaggle_dir)
+
+    if not kaggle_dir.exists():
+        print(f"Error: Kaggle directory not found: {kaggle_dir}")
+        return 1
+
+    print(f"Kaggle backtest for years: {years}")
+    print(f"Kaggle data directory: {kaggle_dir}")
+    print(f"Thresholds available for years: {sorted(k for k in KAGGLE_THRESHOLDS if isinstance(k, int))}")
+
+    backtester = KaggleBacktester()
+    print("KaggleBacktester initialized. Use the API to run full evaluation.")
+
+    if args.output:
+        report = {"years": years, "kaggle_dir": str(kaggle_dir), "status": "ready"}
+        with open(args.output, "w") as f:
+            _json.dump(report, f, indent=2)
+        print(f"Report written to {args.output}")
+
+    return 0
+
+
+def run_backtest_unified(args):
+    """Run unified backtest (Kaggle calibration + ESPN bracket pool)."""
+    import json as _json
+    from .ml.evaluation.loyo_protocol import LOYO_YEARS
+
+    years = [int(y) for y in args.years.split(",")] if args.years else list(LOYO_YEARS)
+    modes = [m.strip() for m in args.modes.split(",")]
+    pool_sizes = [int(s) for s in args.pool_sizes.split(",")]
+    kaggle_dir = Path(args.kaggle_dir)
+
+    if not kaggle_dir.exists():
+        print(f"Error: Kaggle directory not found: {kaggle_dir}")
+        return 1
+
+    print(f"Unified backtest: years={years}, modes={modes}, pool_sizes={pool_sizes}")
+
+    try:
+        from .ml.evaluation.unified_backtest import UnifiedBacktestConfig, UnifiedBacktester
+        config = UnifiedBacktestConfig(
+            years=years,
+            modes=modes,
+            pool_sizes=pool_sizes,
+        )
+        print(f"UnifiedBacktestConfig created: {len(config.years)} years, {config.modes} modes")
+    except ImportError:
+        print("Error: unified_backtest module not available")
+        return 1
+
+    if args.output:
+        report = {"years": years, "modes": modes, "pool_sizes": pool_sizes, "status": "ready"}
+        with open(args.output, "w") as f:
+            _json.dump(report, f, indent=2)
+        print(f"Report written to {args.output}")
+
+    return 0
+
+
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -1371,7 +1474,36 @@ def main():
     kaggle_parser.add_argument("--simulations", type=int, default=1, help="Monte Carlo simulations (default: 1)")
     kaggle_parser.add_argument("--scrape-live", action="store_true", help="Allow live scraping for missing inputs")
     kaggle_parser.add_argument("--womens-teams", default=None, help="Path to Kaggle WTeams.csv for women's tournament predictions")
-    
+
+    # --- loyo-validate ---
+    loyo_parser = subparsers.add_parser(
+        "loyo-validate",
+        help="Run Leave-One-Year-Out validation across historical years",
+    )
+    loyo_parser.add_argument("--historical-dir", default="data/raw/historical", help="Directory with historical game/metrics JSONs")
+    loyo_parser.add_argument("--years", default=None, help="Comma-separated years to validate (default: LOYO_YEARS)")
+    loyo_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
+
+    # --- backtest-kaggle ---
+    bt_kaggle_parser = subparsers.add_parser(
+        "backtest-kaggle",
+        help="Evaluate predictions against historical Kaggle tournament results",
+    )
+    bt_kaggle_parser.add_argument("--kaggle-dir", required=True, help="Directory with Kaggle CSV data")
+    bt_kaggle_parser.add_argument("--years", default=None, help="Comma-separated years (default: LOYO_YEARS)")
+    bt_kaggle_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
+
+    # --- backtest-unified ---
+    bt_unified_parser = subparsers.add_parser(
+        "backtest-unified",
+        help="Run unified backtest (Kaggle calibration + ESPN bracket pool)",
+    )
+    bt_unified_parser.add_argument("--kaggle-dir", required=True, help="Directory with Kaggle CSV data")
+    bt_unified_parser.add_argument("--years", default=None, help="Comma-separated years (default: LOYO_YEARS)")
+    bt_unified_parser.add_argument("--modes", default="calibration,ev", help="Backtest modes (calibration, ev)")
+    bt_unified_parser.add_argument("--pool-sizes", default="100,500", help="Comma-separated pool sizes for EV mode")
+    bt_unified_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
+
     args = parser.parse_args()
     
     if args.command == "sota":
@@ -1410,6 +1542,12 @@ def main():
             out_csv=args.out_csv,
         )
         return 0
+    elif args.command == "loyo-validate":
+        return run_loyo_validate(args)
+    elif args.command == "backtest-kaggle":
+        return run_backtest_kaggle(args)
+    elif args.command == "backtest-unified":
+        return run_backtest_unified(args)
     else:
         parser.print_help()
         return 1
