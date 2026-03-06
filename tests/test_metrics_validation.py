@@ -1,14 +1,18 @@
 """Tests for proprietary metrics validation against public sources."""
 
 import json
-import math
 
 import numpy as np
 import pytest
 
 from src.ml.evaluation.metrics_validation import (
+    DEFAULT_DIAGNOSTIC_YEARS,
+    DEFAULT_HOLDOUT_YEARS,
+    ConstantSensitivityResult,
     MetricComparison,
+    MultiYearValidationResult,
     ValidationReport,
+    _TOURNAMENT_START_DATES,
     _compare_arrays,
 )
 
@@ -121,6 +125,7 @@ class TestValidationReport:
             n_teams_matched=300,
             n_teams_proprietary=362,
             n_teams_public=365,
+            cutoff_date="2025-03-18",
             comparisons=[
                 MetricComparison(
                     metric_name="adj_off_efficiency",
@@ -137,6 +142,7 @@ class TestValidationReport:
         assert "2025" in s
         assert "300" in s
         assert "adj_off_efficiency" in s
+        assert "pre-tournament only" in s
 
     def test_summary_with_warnings(self):
         report = ValidationReport(
@@ -150,6 +156,7 @@ class TestValidationReport:
         report = ValidationReport(
             year=2025,
             n_teams_matched=100,
+            cutoff_date="2025-03-18",
             comparisons=[
                 MetricComparison(
                     metric_name="tempo",
@@ -165,6 +172,7 @@ class TestValidationReport:
         d = report.to_dict()
         assert d["year"] == 2025
         assert d["n_teams_matched"] == 100
+        assert d["cutoff_date"] == "2025-03-18"
         assert len(d["comparisons"]) == 1
         assert d["comparisons"][0]["metric"] == "tempo"
         assert d["comparisons"][0]["grade"] == "C"
@@ -189,12 +197,28 @@ class TestValidationReport:
 
 
 # ---------------------------------------------------------------------------
-# validate_metrics_for_year tests (with file system)
+# Temporal leakage prevention tests
 # ---------------------------------------------------------------------------
 
 
-class TestValidateMetricsForYear:
-    """Integration tests for the full validation pipeline."""
+class TestTemporalLeakagePrevention:
+    """Tests ensuring tournament games don't leak into validation."""
+
+    def test_tournament_start_dates_exclude_2020(self):
+        """COVID year should have no tournament start date."""
+        assert 2020 not in _TOURNAMENT_START_DATES
+
+    def test_tournament_start_dates_cover_key_years(self):
+        for year in [2018, 2019, 2021, 2022, 2023, 2024, 2025]:
+            assert year in _TOURNAMENT_START_DATES
+            # Should be in March
+            assert _TOURNAMENT_START_DATES[year].startswith(f"{year}-03-")
+
+    def test_cutoff_date_appears_in_report(self):
+        report = ValidationReport(year=2024, cutoff_date="2024-03-19")
+        s = report.summary()
+        assert "2024-03-19" in s
+        assert "pre-tournament" in s
 
     def test_missing_games_file(self, tmp_path):
         from src.ml.evaluation.metrics_validation import validate_metrics_for_year
@@ -206,7 +230,123 @@ class TestValidateMetricsForYear:
         )
         assert len(report.warnings) > 0
         assert any("No game data" in w for w in report.warnings)
+        # Cutoff should still be set
+        assert report.cutoff_date is not None
 
+
+# ---------------------------------------------------------------------------
+# Train/holdout split tests
+# ---------------------------------------------------------------------------
+
+
+class TestTrainHoldoutSplit:
+    """Tests for the multi-year validation split."""
+
+    def test_default_split_no_overlap(self):
+        """Diagnostic and holdout years must be disjoint."""
+        diag_set = set(DEFAULT_DIAGNOSTIC_YEARS)
+        hold_set = set(DEFAULT_HOLDOUT_YEARS)
+        assert diag_set & hold_set == set()
+
+    def test_default_split_excludes_2020(self):
+        assert 2020 not in DEFAULT_DIAGNOSTIC_YEARS
+        assert 2020 not in DEFAULT_HOLDOUT_YEARS
+
+    def test_multi_year_result_summary(self):
+        result = MultiYearValidationResult(
+            diagnostic_reports={
+                2024: ValidationReport(
+                    year=2024,
+                    comparisons=[
+                        MetricComparison(metric_name="adj_off", pearson_r=0.93, n_teams=300),
+                    ],
+                ),
+            },
+            holdout_reports={
+                2025: ValidationReport(
+                    year=2025,
+                    comparisons=[
+                        MetricComparison(metric_name="adj_off", pearson_r=0.91, n_teams=300),
+                    ],
+                ),
+            },
+        )
+        s = result.summary()
+        assert "DIAGNOSTIC YEARS" in s
+        assert "HOLDOUT YEARS" in s
+        assert "NOT for tuning" in s
+        assert "DO NOT tune" in s
+        assert "LOYO" in s
+
+    def test_multi_year_to_dict(self):
+        result = MultiYearValidationResult(
+            diagnostic_reports={2024: ValidationReport(year=2024)},
+            holdout_reports={2025: ValidationReport(year=2025)},
+        )
+        d = result.to_dict()
+        assert 2024 in d["diagnostic"]
+        assert 2025 in d["holdout"]
+
+
+# ---------------------------------------------------------------------------
+# ConstantSensitivityResult tests
+# ---------------------------------------------------------------------------
+
+
+class TestConstantSensitivity:
+    """Tests for the constant sensitivity analysis."""
+
+    def test_recommendation_keep_default(self):
+        sens = ConstantSensitivityResult(
+            constant_name="HCA_POINTS",
+            default_value=3.75,
+            tested_values=[3.0, 3.5, 3.75, 4.0, 4.5],
+            correlations_by_metric={
+                "adj_off_efficiency [vs Torvik]": [0.930, 0.935, 0.940, 0.938, 0.932],
+            },
+        )
+        rec = sens.recommendation
+        assert "KEEP" in rec
+
+    def test_recommendation_investigate(self):
+        sens = ConstantSensitivityResult(
+            constant_name="HCA_POINTS",
+            default_value=3.75,
+            tested_values=[3.0, 3.5, 3.75, 4.0, 4.5],
+            correlations_by_metric={
+                "adj_off_efficiency [vs Torvik]": [0.930, 0.935, 0.900, 0.960, 0.955],
+            },
+        )
+        rec = sens.recommendation
+        assert "INVESTIGATE" in rec
+        assert "LOYO Brier" in rec
+        assert "do NOT auto-apply" in rec.lower() or "NOT auto-apply" in rec
+
+    def test_recommendation_insufficient_data(self):
+        sens = ConstantSensitivityResult(
+            constant_name="HCA_POINTS",
+            default_value=3.75,
+        )
+        assert sens.recommendation == "insufficient_data"
+
+    def test_recommendation_no_primary_metric(self):
+        sens = ConstantSensitivityResult(
+            constant_name="HCA_POINTS",
+            default_value=3.75,
+            tested_values=[3.0, 3.75, 4.5],
+            correlations_by_metric={
+                "tempo [vs Torvik]": [0.90, 0.91, 0.89],
+            },
+        )
+        assert sens.recommendation == "no_primary_metric"
+
+
+# ---------------------------------------------------------------------------
+# Empty / edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestEdgeCases:
     def test_empty_report_defaults(self):
         report = ValidationReport(year=2025)
         assert report.n_teams_matched == 0
