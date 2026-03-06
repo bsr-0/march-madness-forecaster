@@ -684,6 +684,132 @@ def _generate_model_bracket(
 
 
 # ---------------------------------------------------------------------------
+# Archetype-aware opponent generation
+# ---------------------------------------------------------------------------
+
+def _generate_archetype_opponent_brackets(
+    n_opponents: int,
+    first_round_matchups: List[str],
+    seeds: Dict[str, int],
+    predict_fn: Callable[[str, str], float],
+    rng: np.random.Generator,
+    random_seed: int = 42,
+) -> List[List[str]]:
+    """Generate opponent brackets using the behavioral archetype engine.
+
+    Replaces the crude upset-propensity heuristic with the full archetype
+    model: ChalkPicker, ExpertMimic, ChaosSeeker, Homer — each filling
+    brackets according to their behavioral patterns.
+
+    The archetype mix defaults to ESPN national pool distribution.  Each
+    opponent is assigned an archetype sampled from the mix, then that
+    archetype's behavioral model determines pick probabilities for each
+    matchup in the bracket.
+
+    Args:
+        n_opponents: Number of opponent brackets to generate.
+        first_round_matchups: 64 team IDs in standard bracket order.
+        seeds: team_id -> seed.
+        predict_fn: (team1, team2) -> P(team1 wins) for model probs.
+        rng: NumPy random generator.
+        random_seed: Base seed for per-bracket RNG.
+
+    Returns:
+        List of 63-element winner lists (one per opponent).
+    """
+    from ...simulation.competitor_archetypes import (
+        get_archetype_mix,
+        create_archetypes,
+    )
+
+    # Build model probs and synthetic public picks from seeds for the archetypes
+    model_probs: Dict[str, Dict[str, float]] = {}
+    for tid in set(first_round_matchups):
+        # Build approximate round probabilities from seed
+        seed = seeds.get(tid, 8)
+        seed_strength = max(0.0, (17 - seed) / 16.0)
+        model_probs[tid] = {
+            "R64": min(0.99, seed_strength * 0.8 + 0.1),
+            "R32": min(0.95, seed_strength * 0.6 + 0.05),
+            "S16": min(0.9, seed_strength * 0.4 + 0.02),
+            "E8": min(0.8, seed_strength * 0.25 + 0.01),
+            "F4": min(0.6, seed_strength * 0.15),
+            "CHAMP": min(0.4, seed_strength * 0.08),
+        }
+
+    # Use model probs as proxy for public picks (they correlate highly)
+    public_picks = model_probs
+
+    mix = get_archetype_mix("espn_national")
+    archetypes = create_archetypes(mix)
+    archetype_names = [a.params.name for a in archetypes]
+    archetype_weights = [a.params.prevalence for a in archetypes]
+
+    # Normalize
+    total_w = sum(archetype_weights)
+    if total_w > 0:
+        archetype_weights = [w / total_w for w in archetype_weights]
+
+    # Cumulative distribution for sampling
+    cum_weights = []
+    running = 0.0
+    for w in archetype_weights:
+        running += w
+        cum_weights.append(running)
+
+    opponent_brackets = []
+    for i in range(n_opponents):
+        # Sample an archetype
+        r = rng.random()
+        arch_idx = 0
+        for j, cw in enumerate(cum_weights):
+            if r <= cw:
+                arch_idx = j
+                break
+        archetype = archetypes[arch_idx]
+
+        # Generate bracket using archetype's behavioral model
+        bracket_rng = np.random.RandomState(random_seed + i)
+        winners = []
+        current_teams = list(first_round_matchups)
+
+        for round_idx in range(6):
+            round_names = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
+            round_name = round_names[min(round_idx, 5)]
+            next_round_teams = []
+
+            for g in range(0, len(current_teams), 2):
+                if g + 1 >= len(current_teams):
+                    next_round_teams.append(current_teams[g])
+                    continue
+
+                t1, t2 = current_teams[g], current_teams[g + 1]
+                seed_t1 = seeds.get(t1, 8)
+
+                m_prob = model_probs.get(t1, {}).get(round_name, 0.5)
+                p_pct = public_picks.get(t1, {}).get(round_name, 0.5)
+
+                pick_prob = archetype.predict_pick_probability(
+                    t1, round_name, m_prob, p_pct, seed_t1,
+                )
+                pick_prob = max(0.01, min(0.99, pick_prob))
+
+                if bracket_rng.rand() < pick_prob:
+                    winner = t1
+                else:
+                    winner = t2
+
+                winners.append(winner)
+                next_round_teams.append(winner)
+
+            current_teams = next_round_teams
+
+        opponent_brackets.append(winners)
+
+    return opponent_brackets
+
+
+# ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 
@@ -1085,25 +1211,19 @@ class UnifiedBacktester:
             )
             model_brackets.append(bracket)
 
-        # Generate opponent brackets with varying upset propensity
+        # Generate opponent brackets using the archetype engine for realistic
+        # field modeling.  Each archetype produces brackets with distinct
+        # behavioral patterns (chalk, expert, chaos, homer) — much more
+        # realistic than uniform upset-propensity noise.
         n_opponents = max(1, pool_size - config.n_model_brackets)
-        opponent_brackets = []
-        for i in range(n_opponents):
-            # Vary upset propensity: chalk pickers (0.0-0.1), experts (0.1-0.3),
-            # chaos seekers (0.3-0.6)
-            if i < n_opponents * 0.35:
-                propensity = rng.uniform(0.0, 0.1)  # Chalk
-            elif i < n_opponents * 0.70:
-                propensity = rng.uniform(0.1, 0.3)  # Expert
-            else:
-                propensity = rng.uniform(0.3, 0.6)  # Chaos
-            bracket = _generate_seed_based_bracket(
-                history.first_round_matchups,
-                history.seeds,
-                np.random.default_rng(config.random_seed + year * 10000 + i),
-                upset_propensity=propensity,
-            )
-            opponent_brackets.append(bracket)
+        opponent_brackets = _generate_archetype_opponent_brackets(
+            n_opponents=n_opponents,
+            first_round_matchups=history.first_round_matchups,
+            seeds=history.seeds,
+            predict_fn=predict_fn,
+            rng=rng,
+            random_seed=config.random_seed + year * 10000,
+        )
 
         # Score all brackets against actual outcome
         model_scores = []

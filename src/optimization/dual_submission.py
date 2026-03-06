@@ -1023,6 +1023,109 @@ class KaggleDualSubmissionGenerator:
             brier_sum += p * (1.0 - p)  # E[(p - y)²] when calibrated
         return brier_sum / len(predictions)
 
+    def evaluate_joint_slot_brier(
+        self,
+        slot1_predictions: Dict[str, float],
+        slot2_predictions: Dict[str, float],
+        matchup_teams: Dict[str, Tuple[str, str]],
+        champion_probs: Dict[str, float],
+        n_scenarios: int = 5000,
+        random_seed: int = 42,
+    ) -> Dict[str, float]:
+        """Monte Carlo evaluation of joint min-Brier across two submission slots.
+
+        The key insight for dual submissions: Kaggle scores your *best*
+        submission.  So E[score] = E[min(Brier_slot1, Brier_slot2)].
+
+        This is strictly better than E[Brier_slot1] alone whenever slot2
+        has any probability of beating slot1.  The optimal slot2 is NOT
+        the one that minimizes its own expected Brier, but the one that
+        maximizes the probability of beating slot1 conditional on slot1
+        doing poorly (i.e., anti-correlated performance).
+
+        Args:
+            slot1_predictions: matchup_id -> P(team1 wins) for slot 1.
+            slot2_predictions: matchup_id -> P(team1 wins) for slot 2.
+            matchup_teams: matchup_id -> (team1_id, team2_id).
+            champion_probs: team_id -> P(wins tournament).
+            n_scenarios: Number of tournament outcome scenarios to simulate.
+            random_seed: Random seed for reproducibility.
+
+        Returns:
+            Dict with joint evaluation metrics:
+            - joint_expected_brier: E[min(B1, B2)]
+            - slot1_expected_brier: E[B1]
+            - slot2_expected_brier: E[B2]
+            - slot2_wins_pct: Fraction of scenarios where slot2 < slot1
+            - brier_improvement: How much joint < slot1 alone
+            - correlation: Pearson correlation between slot1 and slot2 Brier
+        """
+        rng = np.random.RandomState(random_seed)
+
+        matchup_ids = sorted(set(slot1_predictions.keys()) & set(slot2_predictions.keys()))
+        if not matchup_ids:
+            return {"joint_expected_brier": 0.25, "slot1_expected_brier": 0.25,
+                    "slot2_expected_brier": 0.25, "slot2_wins_pct": 0.0,
+                    "brier_improvement": 0.0, "correlation": 1.0}
+
+        # Round weights for Kaggle scoring
+        round_weights = {"R64": 1, "R32": 2, "S16": 4, "E8": 8, "F4": 16, "NCG": 32}
+
+        # Infer round weights per matchup from seed differences
+        matchup_weights = np.ones(len(matchup_ids))
+        for i, mid in enumerate(matchup_ids):
+            teams = matchup_teams.get(mid)
+            if teams:
+                s1 = self.team_seeds.get(teams[0], 8)
+                s2 = self.team_seeds.get(teams[1], 8)
+                seed_diff = abs(s1 - s2)
+                # Rough mapping: big seed diff = early round, small = late
+                if seed_diff >= 8:
+                    matchup_weights[i] = 1.0  # R64
+                elif seed_diff >= 4:
+                    matchup_weights[i] = 2.0  # R32
+                elif seed_diff >= 2:
+                    matchup_weights[i] = 4.0  # S16
+                else:
+                    matchup_weights[i] = 16.0  # Late rounds
+        matchup_weights /= matchup_weights.sum()
+
+        s1_probs = np.array([slot1_predictions[mid] for mid in matchup_ids])
+        s2_probs = np.array([slot2_predictions[mid] for mid in matchup_ids])
+
+        # Use the calibrated model probs as the "true" outcome distribution
+        # (i.e., simulate outcomes from our model's beliefs)
+        true_probs = np.array([slot1_predictions[mid] for mid in matchup_ids])
+
+        slot1_briers = []
+        slot2_briers = []
+
+        for _ in range(n_scenarios):
+            outcomes = rng.binomial(1, true_probs).astype(float)
+            b1 = float(np.sum(matchup_weights * (s1_probs - outcomes) ** 2))
+            b2 = float(np.sum(matchup_weights * (s2_probs - outcomes) ** 2))
+            slot1_briers.append(b1)
+            slot2_briers.append(b2)
+
+        s1_arr = np.array(slot1_briers)
+        s2_arr = np.array(slot2_briers)
+        joint = np.minimum(s1_arr, s2_arr)
+
+        # Correlation
+        if np.std(s1_arr) > 0 and np.std(s2_arr) > 0:
+            corr = float(np.corrcoef(s1_arr, s2_arr)[0, 1])
+        else:
+            corr = 1.0
+
+        return {
+            "joint_expected_brier": float(np.mean(joint)),
+            "slot1_expected_brier": float(np.mean(s1_arr)),
+            "slot2_expected_brier": float(np.mean(s2_arr)),
+            "slot2_wins_pct": float(np.mean(s2_arr < s1_arr)),
+            "brier_improvement": float(np.mean(s1_arr) - np.mean(joint)),
+            "correlation": round(corr, 4),
+        }
+
 
 class DualSubmissionStrategy:
     """Generate primary and hedge submissions optimizing for prize probability.

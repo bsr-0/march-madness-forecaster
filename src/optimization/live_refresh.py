@@ -254,6 +254,12 @@ class RefreshSchedule:
     significance_threshold_pp: float = 1.0  # Percentage-point threshold for re-optimization
     max_refreshes: int = 50
     force_reoptimize: bool = False  # Always re-optimize even if picks haven't changed
+    # Exponential backoff on scraper failures
+    max_retries: int = 4
+    initial_backoff_seconds: float = 2.0
+    # Convergence detection: stop early if picks stabilize
+    convergence_window: int = 3  # Number of consecutive non-significant refreshes
+    convergence_threshold_pp: float = 0.5  # Max delta to consider "converged"
 
     @classmethod
     def game_week(cls) -> RefreshSchedule:
@@ -591,6 +597,11 @@ class LivePicksRefreshWorkflow:
     ) -> List[RefreshResult]:
         """Run a series of refresh cycles according to a schedule.
 
+        Includes convergence detection: if the last ``convergence_window``
+        consecutive refreshes all have max delta below ``convergence_threshold_pp``,
+        the loop terminates early.  This avoids wasting API calls when
+        public picks have stabilized (common >24h before tip-off).
+
         This is a blocking loop that sleeps between refreshes.  For production
         use, prefer calling ``refresh()`` from an external scheduler (cron,
         Airflow, etc.).
@@ -604,6 +615,7 @@ class LivePicksRefreshWorkflow:
         """
         results: List[RefreshResult] = []
         interval_seconds = schedule.interval_hours * 3600
+        consecutive_stable = 0
 
         for i in range(schedule.max_refreshes):
             if i > 0:
@@ -623,10 +635,30 @@ class LivePicksRefreshWorkflow:
                 callback(result)
 
             if result.is_significant:
+                consecutive_stable = 0
                 logger.info(
                     "Significant changes detected on refresh %d: %s",
                     i + 1, result.change_summary,
                 )
+            else:
+                # Check convergence: is max delta below convergence threshold?
+                max_delta = 0.0
+                if result.pick_deltas:
+                    max_delta = max(d.abs_delta for d in result.pick_deltas)
+
+                if max_delta <= schedule.convergence_threshold_pp:
+                    consecutive_stable += 1
+                else:
+                    consecutive_stable = 0
+
+                if consecutive_stable >= schedule.convergence_window:
+                    logger.info(
+                        "Convergence detected: %d consecutive stable refreshes "
+                        "(max delta %.1fpp <= threshold %.1fpp). Stopping early.",
+                        consecutive_stable, max_delta,
+                        schedule.convergence_threshold_pp,
+                    )
+                    break
 
         return results
 
@@ -650,32 +682,66 @@ class LivePicksRefreshWorkflow:
     # ------------------------------------------------------------------
 
     def _fetch_new_picks(
-        self, json_path: Optional[str] = None,
+        self,
+        json_path: Optional[str] = None,
+        max_retries: int = 4,
+        initial_backoff: float = 2.0,
     ) -> Optional[Dict[str, Dict[str, float]]]:
-        """Fetch updated picks from file or scraper."""
+        """Fetch updated picks from file or scraper with exponential backoff.
+
+        On scraper failures, retries up to ``max_retries`` times with
+        exponential backoff (2s, 4s, 8s, 16s by default).  This handles
+        transient ESPN/CBS/Yahoo scraper failures that are common in the
+        48 hours before tip-off when traffic spikes.
+
+        Args:
+            json_path: If provided, loads from file (no retries needed).
+            max_retries: Maximum number of retry attempts.
+            initial_backoff: Initial backoff delay in seconds (doubles each retry).
+
+        Returns:
+            Updated pick data, or None if all attempts failed.
+        """
         if json_path:
             return self._load_picks_from_json(json_path)
 
-        try:
-            orch_result, update = self._picks_manager.fetch_or_refresh(
-                force_refresh=True,
-            )
-            if not orch_result.consensus.teams:
-                logger.warning("Refresh returned empty pick data")
-                return None
+        last_error = None
+        for attempt in range(max_retries + 1):
+            try:
+                orch_result, update = self._picks_manager.fetch_or_refresh(
+                    force_refresh=True,
+                )
+                if not orch_result.consensus.teams:
+                    logger.warning("Refresh returned empty pick data (attempt %d)", attempt + 1)
+                    last_error = "empty pick data"
+                    if attempt < max_retries:
+                        backoff = initial_backoff * (2 ** attempt)
+                        time.sleep(backoff)
+                    continue
 
-            picks: Dict[str, Dict[str, float]] = {}
-            for team_id, pp in orch_result.consensus.teams.items():
-                row = pp.as_dict
-                # Normalize: if values > 1, they're percentages; convert to fractions
-                picks[team_id] = {
-                    rnd: v / 100.0 if v > 1.0 else v
-                    for rnd, v in row.items()
-                }
-            return picks
-        except Exception as e:
-            logger.error("Failed to fetch updated picks: %s", e)
-            return None
+                picks: Dict[str, Dict[str, float]] = {}
+                for team_id, pp in orch_result.consensus.teams.items():
+                    row = pp.as_dict
+                    picks[team_id] = {
+                        rnd: v / 100.0 if v > 1.0 else v
+                        for rnd, v in row.items()
+                    }
+                return picks
+            except Exception as e:
+                last_error = str(e)
+                if attempt < max_retries:
+                    backoff = initial_backoff * (2 ** attempt)
+                    logger.warning(
+                        "Scraper attempt %d/%d failed: %s. Retrying in %.0fs",
+                        attempt + 1, max_retries + 1, e, backoff,
+                    )
+                    time.sleep(backoff)
+
+        logger.error(
+            "All %d fetch attempts failed. Last error: %s",
+            max_retries + 1, last_error,
+        )
+        return None
 
     def _load_picks_from_json(
         self, json_path: str,

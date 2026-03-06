@@ -318,6 +318,150 @@ def create_archetypes(
 
 
 # ---------------------------------------------------------------------------
+# Historical Calibration
+# ---------------------------------------------------------------------------
+
+def calibrate_archetypes_from_brackets(
+    historical_brackets: List[Dict[str, str]],
+    actual_seeds: Dict[str, int],
+    model_probs: Dict[str, Dict[str, float]],
+    public_picks: Dict[str, Dict[str, float]],
+) -> Dict[str, float]:
+    """Infer archetype prevalence from a set of historical bracket picks.
+
+    Given a collection of actual brackets (e.g., from an ESPN pool export
+    or historical data), estimates what fraction of entrants behave like
+    each archetype by computing a maximum-likelihood fit.
+
+    The approach: for each bracket, compute the log-likelihood of that
+    bracket under each archetype's behavioral model.  Then find the
+    prevalence weights that maximize the total log-likelihood across
+    all brackets (EM-style).
+
+    This lets a user who has access to their office pool's historical
+    brackets calibrate the archetype distribution, rather than relying
+    on hardcoded defaults.
+
+    Args:
+        historical_brackets: List of {game_key -> winner_team_id} dicts.
+            Each dict represents one historical bracket entry.
+        actual_seeds: team_id -> seed (1-16) for the relevant tournament.
+        model_probs: team_id -> {round: probability} model predictions.
+        public_picks: team_id -> {round: pick_pct} public consensus.
+
+    Returns:
+        Dict mapping archetype name to calibrated prevalence (sums to 1.0).
+    """
+    if not historical_brackets:
+        return get_archetype_mix("espn_national")
+
+    # Create one instance of each archetype at uniform prevalence
+    archetype_instances = {
+        "chalk_picker": ChalkPicker(prevalence=0.25),
+        "expert_mimic": ExpertMimic(prevalence=0.25),
+        "chaos_seeker": ChaosSeeker(prevalence=0.25),
+        "homer": Homer(prevalence=0.25),
+    }
+
+    n_brackets = len(historical_brackets)
+    n_archetypes = len(archetype_instances)
+    archetype_names = list(archetype_instances.keys())
+
+    # Initialize uniform prevalence
+    prevalence = {name: 1.0 / n_archetypes for name in archetype_names}
+
+    # EM iterations
+    for _iteration in range(20):
+        # E-step: compute responsibility of each archetype for each bracket
+        # responsibilities[bracket_idx][archetype_name] = P(archetype | bracket)
+        responsibilities = []
+
+        for bracket in historical_brackets:
+            log_likelihoods = {}
+            for name, archetype in archetype_instances.items():
+                ll = _bracket_log_likelihood(
+                    bracket, archetype, actual_seeds, model_probs, public_picks,
+                )
+                log_likelihoods[name] = ll
+
+            # Convert to responsibilities using current prevalence as prior
+            max_ll = max(log_likelihoods.values())
+            weighted = {}
+            for name in archetype_names:
+                # Prevent overflow by subtracting max
+                weighted[name] = prevalence[name] * math.exp(
+                    log_likelihoods[name] - max_ll
+                )
+            total_w = sum(weighted.values())
+            if total_w > 0:
+                resp = {name: w / total_w for name, w in weighted.items()}
+            else:
+                resp = {name: 1.0 / n_archetypes for name in archetype_names}
+            responsibilities.append(resp)
+
+        # M-step: update prevalence to mean responsibility
+        new_prevalence = {name: 0.0 for name in archetype_names}
+        for resp in responsibilities:
+            for name in archetype_names:
+                new_prevalence[name] += resp[name]
+        total = sum(new_prevalence.values())
+        if total > 0:
+            new_prevalence = {name: v / total for name, v in new_prevalence.items()}
+
+        # Check convergence
+        max_change = max(
+            abs(new_prevalence[name] - prevalence[name])
+            for name in archetype_names
+        )
+        prevalence = new_prevalence
+        if max_change < 0.001:
+            break
+
+    return prevalence
+
+
+def _bracket_log_likelihood(
+    bracket: Dict[str, str],
+    archetype: CompetitorArchetype,
+    seeds: Dict[str, int],
+    model_probs: Dict[str, Dict[str, float]],
+    public_picks: Dict[str, Dict[str, float]],
+) -> float:
+    """Compute log-likelihood of a bracket under an archetype's model.
+
+    For each game in the bracket, compute the archetype's probability of
+    picking the chosen winner, then sum log-probabilities.
+
+    Args:
+        bracket: {game_key -> winner_team_id}
+        archetype: Archetype instance to evaluate.
+        seeds: team_id -> seed.
+        model_probs: team_id -> {round: probability}.
+        public_picks: team_id -> {round: pick_pct}.
+
+    Returns:
+        Log-likelihood (more negative = less likely under this archetype).
+    """
+    log_ll = 0.0
+    for game_key, winner in bracket.items():
+        # Parse round from game_key (format: "ROUND_team1_team2" or similar)
+        parts = game_key.split("_", 1)
+        round_name = parts[0] if parts else "R64"
+
+        seed = seeds.get(winner, 8)
+        m_prob = model_probs.get(winner, {}).get(round_name, 0.5)
+        p_pct = public_picks.get(winner, {}).get(round_name, 0.5)
+
+        pick_prob = archetype.predict_pick_probability(
+            winner, round_name, m_prob, p_pct, seed,
+        )
+        pick_prob = max(0.01, min(0.99, pick_prob))
+        log_ll += math.log(pick_prob)
+
+    return log_ll
+
+
+# ---------------------------------------------------------------------------
 # Archetype-blended opponent pick distribution
 # ---------------------------------------------------------------------------
 
