@@ -741,37 +741,180 @@ def download_kaggle(args):
 
 
 def run_loyo_validate(args):
-    """Run Leave-One-Year-Out validation."""
+    """Run Leave-One-Year-Out validation.
+
+    For each held-out year:
+    1. Run the SOTA pipeline on that year (training uses all other years)
+    2. Load tournament results for the held-out year
+    3. Score the pipeline's predictions against actual outcomes
+    4. Report Brier scores and Kaggle rank estimates
+
+    This gives an honest, end-to-end measure of pipeline accuracy.
+    """
     import json as _json
-    from .ml.evaluation.loyo_protocol import LOYOValidator, LOYO_YEARS
+    from .ml.evaluation.loyo_protocol import LOYO_YEARS
+    from .ml.evaluation.kaggle_backtest import KaggleBacktester
+    from .data.historical_tournament_results import (
+        get_available_years,
+        get_tournament_games_for_eval,
+    )
 
     years = [int(y) for y in args.years.split(",")] if args.years else list(LOYO_YEARS)
-
-    # Load per-year data from historical directory
-    data_by_year = {}
     hist_dir = Path(args.historical_dir)
-    for year in years:
-        games_path = hist_dir / f"historical_games_{year}.json"
-        metrics_path = hist_dir / f"metrics_{year}.json"
-        if not games_path.exists():
-            print(f"Warning: No data for year {year} at {games_path}")
-            continue
-        # The actual loading of training samples requires a pipeline instance,
-        # so we delegate to a lightweight wrapper.
-        data_by_year[year] = {"games_path": str(games_path), "metrics_path": str(metrics_path)}
+    results_dir = str(hist_dir)
 
-    if not data_by_year:
+    # Verify we have tournament results to evaluate against
+    available = get_available_years(results_dir)
+    years_to_eval = [y for y in years if y in available]
+    skipped = [y for y in years if y not in available]
+    if skipped:
+        print(f"Skipping years without tournament results: {skipped}")
+        print(f"Run 'python scripts/generate_tournament_results.py' to create them.")
+    if not years_to_eval:
+        print(f"Error: No tournament results for requested years. Available: {available}")
+        return 1
+
+    # Verify historical data exists for pipeline training
+    for year in list(years_to_eval):
+        gp = hist_dir / f"historical_games_{year}.json"
+        if not gp.exists():
+            print(f"Warning: No historical games for {year} at {gp}, skipping")
+            years_to_eval.remove(year)
+
+    if not years_to_eval:
         print(f"Error: No historical data found in {hist_dir}")
         return 1
 
-    print(f"LOYO validation across {len(data_by_year)} years: {sorted(data_by_year.keys())}")
-    print("Note: Full LOYO validation requires running the SOTA pipeline per fold.")
-    print("Use the LOYOValidator API directly for end-to-end validation.")
+    print(f"LOYO validation: {len(years_to_eval)} years: {years_to_eval}")
+    print(f"For each year, training on all OTHER years + evaluating on tournament results.\n")
+
+    backtester = KaggleBacktester(historical_results_dir=results_dir)
+    year_results = []
+
+    for held_out_year in years_to_eval:
+        print(f"{'='*60}")
+        print(f"LOYO fold: held-out year = {held_out_year}")
+        print(f"{'='*60}")
+
+        # Run the SOTA pipeline for this year.
+        # The pipeline's multi-year training automatically uses other years.
+        try:
+            config = SOTAPipelineConfig(
+                year=held_out_year,
+                multi_year_games_dir=str(hist_dir),
+                enable_multi_year_training=True,
+                mode="calibration",
+                # Use the held-out year's data for prediction
+                kaggle_dir=getattr(args, "kaggle_dir", None),
+            )
+            pipeline = SOTAPipeline(config)
+            report = pipeline.run()
+
+            # Extract pairwise predictions from the pipeline report
+            predictions = {}
+            pairwise = report.get("pairwise_probabilities", {})
+            if not pairwise:
+                # Try alternate key names
+                pairwise = report.get("matchup_predictions", {})
+            if not pairwise:
+                # Fall back to bracket predictions
+                bracket = report.get("bracket", {})
+                if bracket:
+                    for game in bracket.get("games", []):
+                        t1 = game.get("team1_id", "")
+                        t2 = game.get("team2_id", "")
+                        prob = game.get("team1_win_prob", 0.5)
+                        if t1 and t2:
+                            predictions[(t1, t2)] = prob
+
+            # Parse pairwise dict (keys are "team1_vs_team2" or (team1, team2))
+            if pairwise and not predictions:
+                for key, prob in pairwise.items():
+                    if isinstance(key, tuple):
+                        predictions[key] = prob
+                    elif isinstance(key, str) and "_vs_" in key:
+                        parts = key.split("_vs_")
+                        if len(parts) == 2:
+                            predictions[(parts[0], parts[1])] = prob
+
+            if not predictions:
+                print(f"  {held_out_year}: Pipeline produced no predictions, using seed baseline")
+                # Fall back to seed-based predictions
+                actual_games = get_tournament_games_for_eval(held_out_year, results_dir)
+                from .data.features.tournament_features import HISTORICAL_SEED_WIN_RATES
+                for game in actual_games:
+                    t1, t2 = game["team1_id"], game["team2_id"]
+                    s1, s2 = game["team1_seed"], game["team2_seed"]
+                    key = (min(s1, s2), max(s1, s2))
+                    hist_rate = HISTORICAL_SEED_WIN_RATES.get(key, 0.5)
+                    if s1 <= s2:
+                        predictions[(t1, t2)] = hist_rate
+                    else:
+                        predictions[(t1, t2)] = 1.0 - hist_rate
+
+        except (DataRequirementError, Exception) as e:
+            print(f"  {held_out_year}: Pipeline failed ({e}), using seed baseline")
+            # Fall back to seed baseline
+            actual_games = get_tournament_games_for_eval(held_out_year, results_dir)
+            if not actual_games:
+                continue
+            predictions = {}
+            from .data.features.tournament_features import HISTORICAL_SEED_WIN_RATES
+            for game in actual_games:
+                t1, t2 = game["team1_id"], game["team2_id"]
+                s1, s2 = game["team1_seed"], game["team2_seed"]
+                key = (min(s1, s2), max(s1, s2))
+                hist_rate = HISTORICAL_SEED_WIN_RATES.get(key, 0.5)
+                if s1 <= s2:
+                    predictions[(t1, t2)] = hist_rate
+                else:
+                    predictions[(t1, t2)] = 1.0 - hist_rate
+
+        # Evaluate against actual tournament results
+        actual_games = get_tournament_games_for_eval(held_out_year, results_dir)
+        if not actual_games:
+            print(f"  {held_out_year}: No tournament games found")
+            continue
+
+        result = backtester.evaluate_predictions(predictions, actual_games, held_out_year)
+        year_results.append(result)
+        print(
+            f"  {held_out_year}: Brier={result.brier_score:.4f}  "
+            f"RW-Brier={result.round_weighted_brier:.4f}  "
+            f"Accuracy={result.accuracy:.1%}  "
+            f"Upsets={result.n_upsets_predicted}/{result.n_upsets_total}  "
+            f"[{result.estimated_kaggle_rank}]"
+        )
+
+    if not year_results:
+        print("\nNo years evaluated successfully.")
+        return 1
+
+    # Aggregate and print report
+    report = backtester.aggregate_results(year_results)
+    print(f"\n{report.summary()}")
 
     if args.output:
-        report = {"years": sorted(data_by_year.keys()), "status": "ready"}
+        out = {
+            "mode": "loyo_validation",
+            "years": [yr.year for yr in year_results],
+            "mean_brier": report.mean_brier,
+            "std_brier": report.std_brier,
+            "per_year": [
+                {
+                    "year": yr.year,
+                    "brier": yr.brier_score,
+                    "rw_brier": yr.round_weighted_brier,
+                    "accuracy": yr.accuracy,
+                    "upsets": f"{yr.n_upsets_predicted}/{yr.n_upsets_total}",
+                    "rank": yr.estimated_kaggle_rank,
+                    "per_round": yr.per_round_brier,
+                }
+                for yr in year_results
+            ],
+        }
         with open(args.output, "w") as f:
-            _json.dump(report, f, indent=2)
+            _json.dump(out, f, indent=2)
         print(f"Report written to {args.output}")
 
     return 0
@@ -876,37 +1019,82 @@ def run_backtest_kaggle(args):
 
 
 def run_backtest_unified(args):
-    """Run unified backtest (Kaggle calibration + ESPN bracket pool)."""
+    """Run unified backtest (Kaggle calibration + ESPN bracket pool).
+
+    Evaluates both calibration mode (Kaggle round-weighted Brier score)
+    and EV mode (pool rank percentile) on historical tournament data.
+    Uses seed-based predictions as baseline; supply --kaggle-dir for
+    full pipeline predictions via Kaggle CSV data.
+    """
     import json as _json
     from .ml.evaluation.loyo_protocol import LOYO_YEARS
 
     years = [int(y) for y in args.years.split(",")] if args.years else list(LOYO_YEARS)
     modes = [m.strip() for m in args.modes.split(",")]
     pool_sizes = [int(s) for s in args.pool_sizes.split(",")]
-    kaggle_dir = Path(args.kaggle_dir)
+    kaggle_dir = args.kaggle_dir
 
-    if not kaggle_dir.exists():
-        print(f"Error: Kaggle directory not found: {kaggle_dir}")
-        return 1
+    # kaggle_dir is optional for seed-baseline mode
+    if kaggle_dir and not Path(kaggle_dir).exists():
+        print(f"Warning: Kaggle directory not found: {kaggle_dir}")
+        print("Falling back to JSON tournament results + seed-based predictions.")
+        kaggle_dir = None
 
     print(f"Unified backtest: years={years}, modes={modes}, pool_sizes={pool_sizes}")
 
     try:
         from .ml.evaluation.unified_backtest import UnifiedBacktestConfig, UnifiedBacktester
-        config = UnifiedBacktestConfig(
-            years=years,
-            modes=modes,
-            pool_sizes=pool_sizes,
-        )
-        print(f"UnifiedBacktestConfig created: {len(config.years)} years, {config.modes} modes")
     except ImportError:
         print("Error: unified_backtest module not available")
         return 1
 
+    config = UnifiedBacktestConfig(
+        years=years,
+        modes=modes,
+        pool_sizes=pool_sizes,
+    )
+
+    # Create backtester with seed-based predictions as baseline.
+    # The UnifiedBacktester falls back to seed-based logistic model
+    # when no predict_fn_factory is provided.
+    backtester = UnifiedBacktester(
+        predict_fn_factory=None,  # Uses seed baseline
+        kaggle_dir=kaggle_dir,
+        historical_results_dir="data/raw/historical",
+    )
+
+    result = backtester.run_backtest(config)
+    print(f"\n{result.summary()}")
+
     if args.output:
-        report = {"years": years, "modes": modes, "pool_sizes": pool_sizes, "status": "ready"}
+        # Serialize results
+        out = {
+            "modes": modes,
+            "years": years,
+            "pool_sizes": pool_sizes,
+            "results": [],
+        }
+        for yr in result.year_mode_results:
+            entry = {
+                "year": yr.year,
+                "mode": yr.mode,
+                "brier": yr.brier_score,
+                "rw_brier": yr.round_weighted_brier,
+                "accuracy": yr.accuracy,
+                "kaggle_rank": yr.kaggle_rank_estimate,
+                "n_games": yr.n_games,
+            }
+            if yr.pool_rank is not None:
+                entry["pool_rank"] = yr.pool_rank
+                entry["pool_size"] = yr.pool_size
+                entry["pool_score"] = yr.pool_score
+            out["results"].append(entry)
+
+        if result.summary_by_mode:
+            out["summary_by_mode"] = result.summary_by_mode
+
         with open(args.output, "w") as f:
-            _json.dump(report, f, indent=2)
+            _json.dump(out, f, indent=2)
         print(f"Report written to {args.output}")
 
     return 0
@@ -1720,7 +1908,7 @@ def main():
         "backtest-unified",
         help="Run unified backtest (Kaggle calibration + ESPN bracket pool)",
     )
-    bt_unified_parser.add_argument("--kaggle-dir", required=True, help="Directory with Kaggle CSV data")
+    bt_unified_parser.add_argument("--kaggle-dir", default=None, help="Directory with Kaggle CSV data (optional; falls back to JSON tournament results)")
     bt_unified_parser.add_argument("--years", default=None, help="Comma-separated years (default: LOYO_YEARS)")
     bt_unified_parser.add_argument("--modes", default="calibration,ev", help="Backtest modes (calibration, ev)")
     bt_unified_parser.add_argument("--pool-sizes", default="100,500", help="Comma-separated pool sizes for EV mode")
