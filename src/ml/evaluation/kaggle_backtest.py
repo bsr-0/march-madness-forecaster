@@ -90,9 +90,11 @@ class BacktestReport:
 # These are approximate thresholds for combined men's+women's tournaments
 KAGGLE_THRESHOLDS = {
     # year: {"top_1pct": brier, "top_5pct": brier, "median": brier}
+    2025: {"top_1pct": 0.418, "top_5pct": 0.438, "median": 0.478},
     2024: {"top_1pct": 0.420, "top_5pct": 0.440, "median": 0.480},
     2023: {"top_1pct": 0.415, "top_5pct": 0.435, "median": 0.475},
     2022: {"top_1pct": 0.425, "top_5pct": 0.445, "median": 0.490},
+    2021: {"top_1pct": 0.430, "top_5pct": 0.450, "median": 0.490},
     2019: {"top_1pct": 0.410, "top_5pct": 0.430, "median": 0.470},
     2018: {"top_1pct": 0.430, "top_5pct": 0.450, "median": 0.495},
     2017: {"top_1pct": 0.420, "top_5pct": 0.440, "median": 0.480},

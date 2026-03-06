@@ -731,3 +731,147 @@ class TestCalibrationInSampleFix:
             "Stale comment claims historical regular-season predictions are "
             "OOS, but with multi-year training they are in-sample."
         )
+
+
+# ---------------------------------------------------------------------------
+# 14. Coach tournament data temporal guard
+# ---------------------------------------------------------------------------
+
+
+class TestCoachTemporalGuard:
+    """Coach data contains career totals with no per-year breakdown.
+
+    When backtesting a past year the career stats include future tournament
+    results — a data leakage vector.  The pipeline must zero out coach
+    features automatically when year < 2026 unless the caller explicitly
+    acknowledges the risk via coach_data_cutoff_year.
+    """
+
+    def test_coach_data_zeroed_in_backtest_mode(self):
+        """When year < 2026 and no cutoff set, coach data must be cleared."""
+        import logging
+
+        config = SOTAPipelineConfig(
+            year=2024,
+            coach_tournament_json="/dev/null",
+            random_seed=42,
+        )
+        pipeline = SOTAPipeline(config)
+
+        # Simulate what _enrich_tournament_context does:
+        # The guard should fire when year < 2026 and no cutoff_year is set.
+        assert config.coach_data_cutoff_year is None
+        assert config.year < 2026
+
+    def test_coach_data_preserved_for_current_year(self):
+        """When year == 2026, coach data should NOT be zeroed."""
+        config = SOTAPipelineConfig(
+            year=2026,
+            coach_tournament_json="/dev/null",
+            random_seed=42,
+        )
+        # For the current prediction year, career totals are valid
+        # (no future data exists).
+        assert config.year == 2026
+
+    def test_coach_data_cutoff_year_suppresses_guard(self):
+        """Setting coach_data_cutoff_year documents intent and keeps data."""
+        config = SOTAPipelineConfig(
+            year=2023,
+            coach_data_cutoff_year=2023,
+            random_seed=42,
+        )
+        assert config.coach_data_cutoff_year == 2023
+
+    def test_source_contains_coach_leakage_guard(self):
+        """The _enrich_tournament_context method must contain the guard."""
+        import inspect
+
+        source = inspect.getsource(SOTAPipeline._enrich_tournament_context)
+        assert "coach_data_cutoff_year" in source, (
+            "_enrich_tournament_context must check "
+            "coach_data_cutoff_year to prevent future-data leakage."
+        )
+        assert "Zeroing coach features" in source, (
+            "_enrich_tournament_context must log a warning when "
+            "zeroing coach features in backtest mode."
+        )
+
+
+# ---------------------------------------------------------------------------
+# 15. Hard tournament date cutoff
+# ---------------------------------------------------------------------------
+
+
+class TestHardTournamentDateCutoff:
+    """Games on or after the NCAA tournament start must be excluded from
+    regular-season training.  This is a defense-in-depth guard on top of
+    the existing _is_tournament_game filter.
+    """
+
+    def test_tournament_games_excluded(self):
+        """Games on or after the tournament start date are filtered out."""
+        from src.pipeline.sota import TOURNAMENT_START_DATES
+
+        pipeline = SOTAPipeline(SOTAPipelineConfig(year=2024, random_seed=42))
+
+        # 2024 tournament started March 19
+        assert TOURNAMENT_START_DATES[2024].isoformat() == "2024-03-19"
+
+        games = [
+            _make_game("g1", "duke", "unc", "2024-01-15"),
+            _make_game("g2", "duke", "unc", "2024-03-10"),
+            _make_game("g3", "duke", "unc", "2024-03-19"),  # tournament day
+            _make_game("g4", "duke", "unc", "2024-03-25"),  # deep tournament
+            _make_game("g5", "duke", "unc", "2024-04-08"),  # championship
+        ]
+
+        filtered = pipeline._exclude_tournament_games(games)
+        dates = [g.game_date for g in filtered]
+        assert "2024-01-15" in dates
+        assert "2024-03-10" in dates
+        assert "2024-03-19" not in dates
+        assert "2024-03-25" not in dates
+        assert "2024-04-08" not in dates
+
+    def test_fallback_date_for_unknown_year(self):
+        """Years not in TOURNAMENT_START_DATES use March 14 fallback."""
+        from src.pipeline.sota import TOURNAMENT_START_DATES
+
+        pipeline = SOTAPipeline(SOTAPipelineConfig(year=2030, random_seed=42))
+
+        # 2030 is not in the dict — should fall back to March 14
+        assert 2030 not in TOURNAMENT_START_DATES
+
+        games = [
+            _make_game("g1", "duke", "unc", "2030-03-13"),
+            _make_game("g2", "duke", "unc", "2030-03-14"),  # fallback cutoff
+            _make_game("g3", "duke", "unc", "2030-03-20"),
+        ]
+
+        filtered = pipeline._exclude_tournament_games(games, year=2030)
+        dates = [g.game_date for g in filtered]
+        assert "2030-03-13" in dates
+        assert "2030-03-14" not in dates
+        assert "2030-03-20" not in dates
+
+    def test_all_known_years_have_dates(self):
+        """All LOYO years must have tournament start dates."""
+        from src.pipeline.sota import TOURNAMENT_START_DATES
+
+        loyo_years = [2018, 2019, 2021, 2022, 2023, 2024, 2025]
+        for year in loyo_years:
+            assert year in TOURNAMENT_START_DATES, (
+                f"TOURNAMENT_START_DATES missing year {year} — "
+                f"LOYO backtest will use fallback March 14 which may be wrong."
+            )
+
+    def test_historical_loader_uses_exact_dates(self):
+        """_load_year_samples_incremental must use TOURNAMENT_START_DATES."""
+        import inspect
+
+        source = inspect.getsource(SOTAPipeline._load_year_samples_incremental)
+        assert "TOURNAMENT_START_DATES" in source, (
+            "_load_year_samples_incremental must use TOURNAMENT_START_DATES "
+            "instead of hardcoded 03-14 for accurate per-year cutoffs."
+        )

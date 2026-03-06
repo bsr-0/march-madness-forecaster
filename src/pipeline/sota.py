@@ -140,6 +140,24 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
+# Hard tournament start dates by year.  Games on or after these dates are
+# NCAA tournament games and MUST be excluded from regular-season training
+# to prevent result leakage.  Dates correspond to the First Four / first
+# round of the NCAA tournament (Selection Sunday + 2-3 days).
+# ---------------------------------------------------------------------------
+TOURNAMENT_START_DATES: Dict[int, date] = {
+    2017: date(2017, 3, 14),
+    2018: date(2018, 3, 13),
+    2019: date(2019, 3, 19),
+    2021: date(2021, 3, 18),
+    2022: date(2022, 3, 15),
+    2023: date(2023, 3, 14),
+    2024: date(2024, 3, 19),
+    2025: date(2025, 3, 18),
+    2026: date(2026, 3, 17),
+}
+
+# ---------------------------------------------------------------------------
 # Fix 4: Feature stability scores for structured point-in-time degradation.
 # 1.0 = very stable across season (e.g. tempo, FT%);
 # 0.0 = very volatile early season (e.g. luck, close game record).
@@ -174,6 +192,12 @@ class SOTAPipelineConfig:
     preseason_ap_json: Optional[str] = None
     coach_tournament_json: Optional[str] = None
     conf_champions_json: Optional[str] = None
+
+    # When set, coach tournament features are zeroed for years >= this cutoff
+    # to prevent future-data leakage.  The scraped career totals include
+    # tournaments from ALL years, so backtest mode (year < current) must
+    # disable them.  Set to the held-out year in LOYO validation.
+    coach_data_cutoff_year: Optional[int] = None
 
     calibration_method: str = "temperature"  # "temperature" (default, robust for small data), "isotonic", "platt", "none"
     scrape_live: bool = False
@@ -3006,6 +3030,28 @@ class SOTAPipeline:
                 self.config.coach_tournament_json
             )
 
+        # Temporal guard: the scraped coach data contains career totals with
+        # no per-year breakdown.  When backtesting a past year the stats
+        # include future tournament results — a data leakage vector.  Zero
+        # out coach features unless the caller explicitly acknowledges this
+        # via coach_data_cutoff_year.
+        if coach_data and self.config.year < 2026:
+            if self.config.coach_data_cutoff_year is None:
+                logger.warning(
+                    "Coach tournament data contains career totals that may "
+                    "include future years.  Zeroing coach features for "
+                    "year=%d to prevent leakage.  Set "
+                    "coach_data_cutoff_year to suppress this guard.",
+                    self.config.year,
+                )
+                coach_data = {}
+            else:
+                logger.info(
+                    "Coach data loaded with cutoff_year=%d for year=%d",
+                    self.config.coach_data_cutoff_year,
+                    self.config.year,
+                )
+
         # --- 3. Conference tournament champions ---
         conf_champions: Dict[str, str] = {}
         if self.config.conf_champions_json:
@@ -3563,6 +3609,10 @@ class SOTAPipeline:
             g for g in self._unique_games(game_flows)
             if not self._is_tournament_game(getattr(g, "game_date", f"{self.config.year}-01-01"))
         ]
+
+        # Hard tournament date cutoff — defense-in-depth guard that ensures
+        # no game on or after the actual tournament start date survives.
+        all_games = self._exclude_tournament_games(all_games)
 
         # Late-season cutoff — with incremental PIT features this is no
         # longer strictly necessary (all games have accurate PIT features),
@@ -5430,11 +5480,13 @@ class SOTAPipeline:
             all_games.append(g)
 
         # Filter: regular season only (exclude tournament games unless requested).
-        tournament_cutoff = f"{year}-03-14"
+        # Use the exact tournament start date for each year to prevent leakage.
+        _t_start = TOURNAMENT_START_DATES.get(year, date(year, 3, 14))
+        tournament_cutoff = _t_start.isoformat()
         if include_tournament:
             training_games = all_games
         else:
-            training_games = [g for g in all_games if g.game_date <= tournament_cutoff]
+            training_games = [g for g in all_games if g.game_date < tournament_cutoff]
 
         # Gap #6: Data quality filtering — 2005-2009 data has mostly-zero
         # box scores, team ID mismatches, and fake dates.  Filter aggressively
@@ -6995,6 +7047,32 @@ class SOTAPipeline:
         start = date(self.config.year - 1, 8, 1)
         end = date(self.config.year, 4, 30)
         return start <= game_day <= end
+
+    def _exclude_tournament_games(
+        self, games: List[GameFlow], year: Optional[int] = None
+    ) -> List[GameFlow]:
+        """Remove games on or after the NCAA tournament start date.
+
+        This is a hard safety guard to ensure tournament results never
+        leak into regular-season training features.
+        """
+        yr = year or self.config.year
+        t_start = TOURNAMENT_START_DATES.get(yr, date(yr, 3, 14))
+        cutoff_key = self._game_sort_key(t_start.isoformat())
+        before = len(games)
+        filtered = [
+            g for g in games
+            if self._game_sort_key(
+                getattr(g, "game_date", f"{yr}-01-01")
+            ) < cutoff_key
+        ]
+        removed = before - len(filtered)
+        if removed > 0:
+            logger.info(
+                "Hard tournament cutoff: excluded %d games on or after %s for year %d",
+                removed, t_start.isoformat(), yr,
+            )
+        return filtered
 
     def _fit_tournament_sigma(self, spread_model, tuning_stats: Dict) -> None:
         """Fit tournament-specific sigma from historical tournament data.
