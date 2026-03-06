@@ -418,6 +418,7 @@ class LibraryProviderHub:
                     "orb": 0.0,
                     "drb": 0.0,
                     "player_rows": 0,
+                    "date": "",
                 },
             )
             stats["team_score"] += self._to_float(row.get("pts"))
@@ -430,6 +431,8 @@ class LibraryProviderHub:
             stats["orb"] += self._to_float(row.get("oreb"))
             stats["drb"] += self._to_float(row.get("dreb"))
             stats["player_rows"] += 1
+            if not stats["date"]:
+                stats["date"] = str(row.get("date") or row.get("game_day") or "").strip()
 
         out: List[Dict] = []
         for game_id, game_teams in by_game_team.items():
@@ -440,26 +443,27 @@ class LibraryProviderHub:
             first, second = team_list
             for team, opp in ((first, second), (second, first)):
                 poss = team["fga"] - team["orb"] + team["turnovers"] + 0.475 * team["fta"]
-                out.append(
-                    {
-                        "game_id": game_id,
-                        "team_id": team["team_id"],
-                        "team_name": team["team_name"],
-                        "opponent_id": opp["team_id"],
-                        "opponent_name": opp["team_name"],
-                        "team_score": int(round(team["team_score"])),
-                        "opponent_score": int(round(opp["team_score"])),
-                        "possessions": max(float(poss), 0.0),
-                        "fgm": team["fgm"],
-                        "fga": team["fga"],
-                        "fg3m": team["fg3m"],
-                        "fg3a": team["fg3a"],
-                        "fta": team["fta"],
-                        "turnovers": team["turnovers"],
-                        "orb": team["orb"],
-                        "drb": team["drb"],
-                    }
-                )
+                rec: Dict = {
+                    "game_id": game_id,
+                    "team_id": team["team_id"],
+                    "team_name": team["team_name"],
+                    "opponent_id": opp["team_id"],
+                    "opponent_name": opp["team_name"],
+                    "team_score": int(round(team["team_score"])),
+                    "opponent_score": int(round(opp["team_score"])),
+                    "possessions": max(float(poss), 0.0),
+                    "fgm": team["fgm"],
+                    "fga": team["fga"],
+                    "fg3m": team["fg3m"],
+                    "fg3a": team["fg3a"],
+                    "fta": team["fta"],
+                    "turnovers": team["turnovers"],
+                    "orb": team["orb"],
+                    "drb": team["drb"],
+                }
+                if team.get("date"):
+                    rec["date"] = team["date"]
+                out.append(rec)
         return out
 
     @staticmethod
