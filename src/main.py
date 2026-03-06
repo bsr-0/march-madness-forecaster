@@ -843,6 +843,77 @@ def run_backtest_unified(args):
     return 0
 
 
+def run_validate_metrics(args):
+    """Validate proprietary metrics against public data sources."""
+    import json as _json
+
+    from src.ml.evaluation.metrics_validation import (
+        run_constant_sensitivity,
+        validate_metrics_for_year,
+        validate_metrics_multi_year,
+    )
+
+    if args.sensitivity:
+        # Constant sensitivity analysis (read-only diagnostic)
+        year = args.year
+        print(f"Running constant sensitivity analysis for {year}...")
+        results = run_constant_sensitivity(year, args.historical_dir, args.raw_dir)
+        for sens in results:
+            print(f"\n{sens.constant_name} (default={sens.default_value}):")
+            for metric, corrs in sens.correlations_by_metric.items():
+                vals_str = ", ".join(
+                    f"{v:.1f}→r={c:.4f}" for v, c in zip(sens.tested_values, corrs)
+                )
+                print(f"  {metric}: {vals_str}")
+            print(f"  → {sens.recommendation}")
+        if args.output:
+            out = [
+                {
+                    "constant": s.constant_name,
+                    "default": s.default_value,
+                    "values": s.tested_values,
+                    "correlations": s.correlations_by_metric,
+                    "recommendation": s.recommendation,
+                }
+                for s in results
+            ]
+            with open(args.output, "w") as f:
+                _json.dump(out, f, indent=2)
+            print(f"Report written to {args.output}")
+        return 0
+
+    if args.years:
+        years = [int(y.strip()) for y in args.years.split(",")]
+        # If --holdout-years specified, use train/holdout split
+        holdout = None
+        if args.holdout_years:
+            holdout = [int(y.strip()) for y in args.holdout_years.split(",")]
+            diag = [y for y in years if y not in holdout]
+            result = validate_metrics_multi_year(
+                diagnostic_years=diag, holdout_years=holdout,
+                historical_dir=args.historical_dir, raw_dir=args.raw_dir,
+            )
+        else:
+            result = validate_metrics_multi_year(
+                years=years,
+                historical_dir=args.historical_dir, raw_dir=args.raw_dir,
+            )
+        print(result.summary())
+        if args.output:
+            with open(args.output, "w") as f:
+                _json.dump(result.to_dict(), f, indent=2)
+            print(f"Report written to {args.output}")
+    else:
+        report = validate_metrics_for_year(args.year, args.historical_dir, args.raw_dir)
+        print(report.summary())
+        if args.output:
+            with open(args.output, "w") as f:
+                _json.dump(report.to_dict(), f, indent=2)
+            print(f"Report written to {args.output}")
+
+    return 0
+
+
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -1504,6 +1575,19 @@ def main():
     bt_unified_parser.add_argument("--pool-sizes", default="100,500", help="Comma-separated pool sizes for EV mode")
     bt_unified_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
 
+    # --- validate-metrics ---
+    vm_parser = subparsers.add_parser(
+        "validate-metrics",
+        help="Validate proprietary metrics against public Torvik/Sports Reference data",
+    )
+    vm_parser.add_argument("--year", type=int, default=2025, help="Season year to validate")
+    vm_parser.add_argument("--years", default=None, help="Comma-separated years for multi-year validation")
+    vm_parser.add_argument("--holdout-years", default=None, help="Comma-separated holdout years (disjoint from --years)")
+    vm_parser.add_argument("--historical-dir", default="data/raw/historical", help="Directory with historical game JSONs")
+    vm_parser.add_argument("--raw-dir", default="data/raw", help="Directory with Torvik/SportsRef JSONs")
+    vm_parser.add_argument("--sensitivity", action="store_true", help="Run constant sensitivity analysis (read-only diagnostic)")
+    vm_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
+
     args = parser.parse_args()
     
     if args.command == "sota":
@@ -1548,6 +1632,8 @@ def main():
         return run_backtest_kaggle(args)
     elif args.command == "backtest-unified":
         return run_backtest_unified(args)
+    elif args.command == "validate-metrics":
+        return run_validate_metrics(args)
     else:
         parser.print_help()
         return 1
