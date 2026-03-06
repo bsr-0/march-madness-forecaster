@@ -127,8 +127,17 @@ class TournamentExpert:
             callbacks=[lgb.log_evaluation(period=0)],
         )
 
-        # Calibrate sigma on training data (Brier-optimal)
-        self._calibrate_sigma(X, margins)
+        # FIX-LEAKAGE: Calibrate sigma on a held-out split to avoid
+        # in-sample sigma optimization.  Use last 30% as calibration holdout.
+        n_cal = max(20, int(n_samples * 0.3))
+        if n_samples >= 80:
+            # Enough data to hold out a calibration split
+            cal_X = X[-n_cal:]
+            cal_margins = margins[-n_cal:]
+            self._calibrate_sigma(cal_X, cal_margins)
+        else:
+            # Too little data to split — use conservative default sigma
+            self.sigma = 11.0
 
         # Also train a lightweight classifier for ensemble diversity
         cls_params = {

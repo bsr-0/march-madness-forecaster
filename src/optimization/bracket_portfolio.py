@@ -150,6 +150,7 @@ class BracketPortfolioGenerator:
         self.round_public_picks = round_public_picks or {}
         self.leverage_picks = leverage_picks or []
         self._contrarian_strength = 1.0  # Set from profile in generate_portfolio
+        self._variance_target = 0.5  # Set from profile in generate_portfolio
 
     def generate_portfolio(
         self,
@@ -214,12 +215,17 @@ class BracketPortfolioGenerator:
             # from the EV mode's game-theoretic analysis.
             strategy_mix = pool_strategy_profile.strategy_mix.copy()
             self._contrarian_strength = pool_strategy_profile.contrarian_strength
+            self._variance_target = getattr(
+                pool_strategy_profile, "variance_target", 0.5,
+            )
             logger.info(
                 "Using pool strategy profile (pool_size=%d, payout=%s, "
-                "contrarian_strength=%.1f) for bracket portfolio allocation: %s",
+                "contrarian_strength=%.1f, variance_target=%.2f) "
+                "for bracket portfolio allocation: %s",
                 pool_strategy_profile.pool_size,
                 pool_strategy_profile.payout_structure,
                 pool_strategy_profile.contrarian_strength,
+                self._variance_target,
                 strategy_mix,
             )
         elif strategy_mix is None:
@@ -457,7 +463,11 @@ class BracketPortfolioGenerator:
     ) -> List[GeneratedBracket]:
         """Run MC simulations and return bracket results."""
         results = []
-        noise_std = 0.12  # Match pipeline's MC noise
+        # Scale MC noise by variance_target: higher variance_target → more noise
+        # → more diverse/upset-heavy brackets in the simulation pool.
+        # Base noise 0.12 (pipeline default); winner-take-all (vt=0.95) → 0.17;
+        # top-25% (vt=0.15) → 0.10.
+        noise_std = 0.10 + 0.08 * self._variance_target
 
         for sim in range(n_sims):
             current = list(first_round)

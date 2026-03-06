@@ -662,6 +662,70 @@ class LivePicksRefreshWorkflow:
 
         return results
 
+    def detect_convergence(self, window: int = 3) -> Dict[str, Any]:
+        """Analyze recent refresh history to detect pick convergence.
+
+        When public picks stop shifting significantly across multiple
+        consecutive refreshes, the market has "converged" and further
+        refreshes are unlikely to change the optimal strategy.
+
+        Args:
+            window: Number of recent refreshes to analyze.
+
+        Returns:
+            Dict with convergence analysis:
+            - ``converged``: True if picks have stabilized.
+            - ``max_recent_delta``: Largest pick shift in the window.
+            - ``trend``: "stabilizing", "volatile", or "insufficient_data".
+            - ``recommended_action``: "lock_bracket", "continue_monitoring",
+              or "re-optimize".
+        """
+        recent = self._refresh_history[-window:]
+        if len(recent) < 2:
+            return {
+                "converged": False,
+                "max_recent_delta": 0.0,
+                "trend": "insufficient_data",
+                "recommended_action": "continue_monitoring",
+            }
+
+        # Collect max deltas from each recent refresh
+        max_deltas = []
+        for r in recent:
+            if r.pick_deltas:
+                max_deltas.append(max(d.abs_delta for d in r.pick_deltas))
+            else:
+                max_deltas.append(0.0)
+
+        max_recent = max(max_deltas) if max_deltas else 0.0
+        avg_delta = sum(max_deltas) / len(max_deltas)
+
+        # Check if deltas are decreasing (stabilizing)
+        is_decreasing = all(
+            max_deltas[i] >= max_deltas[i + 1] - 0.1
+            for i in range(len(max_deltas) - 1)
+        )
+
+        converged = avg_delta < 1.0 and max_recent < 2.0
+        if converged:
+            trend = "stabilizing"
+            action = "lock_bracket"
+        elif is_decreasing and avg_delta < 3.0:
+            trend = "stabilizing"
+            action = "continue_monitoring"
+        else:
+            trend = "volatile"
+            action = "re-optimize"
+
+        return {
+            "converged": converged,
+            "max_recent_delta": round(max_recent, 2),
+            "avg_delta": round(avg_delta, 2),
+            "trend": trend,
+            "recommended_action": action,
+            "refreshes_analyzed": len(recent),
+        }
+
     @property
     def refresh_history(self) -> List[RefreshResult]:
         """All refresh results from this workflow's lifetime."""
