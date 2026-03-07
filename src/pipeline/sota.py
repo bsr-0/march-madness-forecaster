@@ -52,7 +52,8 @@ from ..data.normalize import normalize_team_id as _shared_normalize_team_id, str
 from ..data.team_name_resolver import TeamNameResolver
 from ..data.scrapers.torvik import BartTorvikScraper
 from ..data.scrapers.tournament_context import TournamentContextScraper
-from ..ml.calibration.calibration import CalibrationPipeline, calculate_calibration_metrics
+from ..exceptions import LeakageError
+from ..ml.calibration.calibration import CalibrationPipeline, CalibrationLeakageError, calculate_calibration_metrics
 from ..ml.ensemble.cfa import LightGBMRanker, XGBoostRanker, ModelPrediction, LIGHTGBM_AVAILABLE, XGBOOST_AVAILABLE
 from ..ml.gnn.schedule_graph import ScheduleEdge, ScheduleGraph, compute_multi_hop_sos
 from ..ml.transformer.game_sequence import GameEmbedding, SeasonSequence
@@ -280,6 +281,11 @@ class SOTAPipelineConfig:
     seed_prior_slope: float = 0.175  # Sigmoid slope for seed-based win rate approximation
     consistency_bonus_max: float = 0.0  # Disabled by default unless sensitivity proves value
     consistency_normalizer: float = 15.0  # Typical pace_adjusted_variance range for normalization
+
+    # --- Leakage safety ---
+    # When True, leakage check failures raise LeakageError and halt the pipeline
+    # instead of logging warnings.  Enabled by default for production runs.
+    strict_leakage_mode: bool = True
 
     # --- Monte Carlo simulation ---
     mc_noise_std: float = 0.12  # Logit-space noise for MC simulation (Tier 3, range 0.02-0.25)
@@ -1173,6 +1179,86 @@ class SOTAPipeline:
             getattr(boundary_game, "game_date", f"{self.config.year}-01-01")
         )
 
+    def _pre_run_validation(self) -> Dict:
+        """Pre-run validation checklist (S25-1).
+
+        Verifies data freshness, feature completeness, and model readiness
+        before executing the pipeline.  Returns a validation report dict.
+        Raises PreRunValidationError if any CRITICAL check fails.
+        """
+        from ..exceptions import PreRunValidationError
+        from ..monitoring.pipeline_monitor import PipelineMonitor
+
+        checks: list = []
+        critical_failures: list = []
+
+        # 1. Data freshness check
+        monitor = PipelineMonitor()
+        freshness = monitor.check_data_freshness(self.config.data_cache_dir)
+        stale_sources = [c for c in freshness if c.status == "stale"]
+        missing_sources = [c for c in freshness if c.status == "missing"]
+        checks.append({
+            "check": "data_freshness",
+            "status": "pass" if not stale_sources and not missing_sources else "warn",
+            "stale_count": len(stale_sources),
+            "missing_count": len(missing_sources),
+        })
+
+        # 2. Required input files
+        required_files = []
+        if self.config.teams_json:
+            required_files.append(("teams_json", self.config.teams_json))
+        if self.config.historical_games_json:
+            required_files.append(("historical_games_json", self.config.historical_games_json))
+
+        import os
+        for label, path in required_files:
+            if not os.path.exists(path):
+                critical_failures.append(f"Required input file missing: {label}={path}")
+                checks.append({"check": f"file_{label}", "status": "CRITICAL", "path": path})
+            else:
+                checks.append({"check": f"file_{label}", "status": "pass", "path": path})
+
+        # 3. Configuration sanity
+        if self.config.num_simulations < 1000:
+            checks.append({
+                "check": "mc_simulations",
+                "status": "warn",
+                "message": f"num_simulations={self.config.num_simulations} is low (recommended: 10000+)",
+            })
+
+        if self.config.holdout_years and self.config.dev_years:
+            overlap = set(self.config.holdout_years) & set(self.config.dev_years)
+            if overlap:
+                critical_failures.append(f"Holdout/dev year overlap: {overlap}")
+                checks.append({"check": "holdout_dev_overlap", "status": "CRITICAL", "overlap": list(overlap)})
+
+        # 4. Random seed set
+        if self.config.random_seed == 0:
+            checks.append({
+                "check": "random_seed",
+                "status": "warn",
+                "message": "random_seed=0 — consider setting for reproducibility",
+            })
+
+        validation_report = {
+            "checks": checks,
+            "critical_failures": critical_failures,
+            "passed": len(critical_failures) == 0,
+        }
+
+        if critical_failures:
+            logger.error("Pre-run validation FAILED: %s", critical_failures)
+            if self.config.strict_leakage_mode:
+                raise PreRunValidationError(
+                    f"Pre-run validation failed with {len(critical_failures)} critical issue(s): "
+                    + "; ".join(critical_failures)
+                )
+        else:
+            logger.info("Pre-run validation passed (%d checks)", len(checks))
+
+        return validation_report
+
     def run(self) -> Dict:
         """Run the complete pipeline and return report artifacts.
 
@@ -1183,6 +1269,9 @@ class SOTAPipeline:
         Both modes share the same predictive core (data loading, feature
         engineering, model training).  They diverge at the optimization layer.
         """
+        # Pre-run validation checklist
+        self._pre_run_validation()
+
         if self.config.mode == "ev":
             return self._run_ev_mode()
         return self._run_calibration_mode()
@@ -1855,9 +1944,10 @@ class SOTAPipeline:
             hist_dir = self.config.multi_year_games_dir or "data/raw/historical"
             contamination = check_holdout_contamination(hist_dir, self.config)
             if contamination:
-                _rdof_logger.warning(
-                    "HOLDOUT CONTAMINATION: %s", contamination["message"]
-                )
+                msg = f"HOLDOUT CONTAMINATION: {contamination['message']}"
+                if self.config.strict_leakage_mode:
+                    raise LeakageError(msg)
+                _rdof_logger.warning(msg)
         except Exception as _holdout_exc:
             logger.debug("Holdout contamination check skipped: %s", _holdout_exc)
 
@@ -2990,13 +3080,15 @@ class SOTAPipeline:
         # via coach_data_cutoff_year.
         if coach_data and self.config.year < 2026:
             if self.config.coach_data_cutoff_year is None:
-                logger.warning(
+                msg = (
                     "Coach tournament data contains career totals that may "
                     "include future years.  Zeroing coach features for "
-                    "year=%d to prevent leakage.  Set "
-                    "coach_data_cutoff_year to suppress this guard.",
-                    self.config.year,
+                    f"year={self.config.year} to prevent leakage.  Set "
+                    "coach_data_cutoff_year to suppress this guard."
                 )
+                if self.config.strict_leakage_mode:
+                    raise LeakageError(msg)
+                logger.warning(msg)
                 coach_data = {}
             else:
                 logger.info(

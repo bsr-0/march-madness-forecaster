@@ -766,6 +766,12 @@ CALIBRATION_MIN_SAMPLES = {
 REQUIRES_NESTED_CV = {"platt", "isotonic"}
 
 
+class CalibrationLeakageError(ValueError):
+    """Raised when calibration evaluate() is called on the same data used for fit()."""
+
+    pass
+
+
 class CalibrationPipeline:
     """
     Complete calibration pipeline for tournament predictions.
@@ -783,6 +789,7 @@ class CalibrationPipeline:
         self,
         method: str = "isotonic",
         nested_cv: bool = False,
+        strict_mode: bool = True,
     ):
         """
         Initialize pipeline.
@@ -792,9 +799,13 @@ class CalibrationPipeline:
             nested_cv: Whether nested CV is being used for calibration.
                 If False and method is isotonic/platt, a sample-size guard
                 will auto-downgrade to temperature scaling when N is small.
+            strict_mode: If True, raise CalibrationLeakageError when evaluate()
+                is called on the same data used for fit().  If False, emit a
+                warning instead.
         """
         self.method = method
         self.nested_cv = nested_cv
+        self.strict_mode = strict_mode
         self._downgraded_from: Optional[str] = None
         self._fit_data_hash: Optional[str] = None
 
@@ -893,17 +904,20 @@ class CalibrationPipeline:
         Returns:
             Tuple of (pre_calibration_metrics, post_calibration_metrics)
         """
-        # Warn if evaluating on the same data used for fitting
+        # Guard against evaluating on the same data used for fitting
         if self._fit_data_hash is not None:
             eval_hash = hashlib.sha256(
                 predictions.tobytes() + outcomes.tobytes()
             ).hexdigest()[:16]
             if eval_hash == self._fit_data_hash:
-                logger.warning(
+                msg = (
                     "Calibration evaluate() called on same data used for fit(). "
                     "This is in-sample evaluation — results may be overly "
                     "optimistic. Use separate held-out data for honest evaluation."
                 )
+                if self.strict_mode:
+                    raise CalibrationLeakageError(msg)
+                logger.warning(msg)
 
         pre_metrics = calculate_calibration_metrics(predictions, outcomes)
 
