@@ -22,19 +22,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-try:
-    import torch
-    import torch.nn as nn
-    TORCH_AVAILABLE = True
-except ImportError:
-    TORCH_AVAILABLE = False
-
-try:
-    from sklearn.linear_model import LogisticRegression
-    SKLEARN_AVAILABLE = True
-except ImportError:
-    SKLEARN_AVAILABLE = False
-
+# --- Required imports ---
 from ..data.features.feature_engineering import (
     FeatureEngineer,
     compute_rapm,
@@ -72,71 +60,25 @@ from ..models.team import Team
 from ..optimization.leverage import TeamMetadata, analyze_pool, get_strategy_profile
 from ..simulation.monte_carlo import SimulationConfig, TournamentBracket, TournamentTeam
 
+# --- Optional dependencies (centralized in _optional_imports.py) ---
+from ._optional_imports import (  # noqa: F401 — re-exported for backward compat
+    torch, nn,
+    TORCH_AVAILABLE, SKLEARN_AVAILABLE, SCALER_AVAILABLE,
+    OPTUNA_AVAILABLE, SIGNIFICANCE_TESTING_AVAILABLE,
+    ABLATION_AVAILABLE, SPREAD_MODEL_AVAILABLE,
+    TOURNAMENT_SIGMA_AVAILABLE, BAYESIAN_BT_AVAILABLE,
+    TUNER_XGBOOST_AVAILABLE,
+    LogisticRegression, StandardScaler,
+    LightGBMTuner, XGBoostTuner, LogisticTuner,
+    EnsembleWeightOptimizer, TemporalCrossValidator, LeaveOneYearOutCV,
+    model_significance_report, AblationStudy,
+    SpreadRegressor, TournamentSigmaCalibrator, BayesianBradleyTerry,
+)
 try:
-    from ..ml.optimization.hyperparameter_tuning import (
-        LightGBMTuner,
-        XGBoostTuner,
-        LogisticTuner,
-        EnsembleWeightOptimizer,
-        TemporalCrossValidator,
-        LeaveOneYearOutCV,
-        OPTUNA_AVAILABLE,
-        XGBOOST_AVAILABLE as TUNER_XGBOOST_AVAILABLE,
-    )
+    from ._optional_imports import load_tournament_sigma_data, daynum_to_round
 except ImportError:
-    OPTUNA_AVAILABLE = False
-    LightGBMTuner = None
-    XGBoostTuner = None
-    LogisticTuner = None
-    EnsembleWeightOptimizer = None
-    TemporalCrossValidator = None
-    LeaveOneYearOutCV = None
-    TUNER_XGBOOST_AVAILABLE = False
-
-try:
-    from sklearn.preprocessing import StandardScaler
-    SCALER_AVAILABLE = True
-except ImportError:
-    SCALER_AVAILABLE = False
-
-try:
-    from ..ml.evaluation.statistical_tests import model_significance_report
-    SIGNIFICANCE_TESTING_AVAILABLE = True
-except ImportError:
-    model_significance_report = None
-    SIGNIFICANCE_TESTING_AVAILABLE = False
-
-try:
-    from ..ml.evaluation.ablation import AblationStudy
-    ABLATION_AVAILABLE = True
-except ImportError:
-    AblationStudy = None
-    ABLATION_AVAILABLE = False
-
-try:
-    from ..ml.ensemble.spread_model import SpreadRegressor
-    SPREAD_MODEL_AVAILABLE = True
-except ImportError:
-    SpreadRegressor = None
-    SPREAD_MODEL_AVAILABLE = False
-
-try:
-    from ..ml.ensemble.tournament_sigma import (
-        TournamentSigmaCalibrator,
-        load_tournament_sigma_data,
-        daynum_to_round,
-    )
-    TOURNAMENT_SIGMA_AVAILABLE = True
-except ImportError:
-    TournamentSigmaCalibrator = None
-    TOURNAMENT_SIGMA_AVAILABLE = False
-
-try:
-    from ..ml.ensemble.bayesian_bt import BayesianBradleyTerry
-    BAYESIAN_BT_AVAILABLE = True
-except ImportError:
-    BayesianBradleyTerry = None
-    BAYESIAN_BT_AVAILABLE = False
+    load_tournament_sigma_data = None  # type: ignore[assignment]
+    daynum_to_round = None  # type: ignore[assignment]
 
 
 # ---------------------------------------------------------------------------
@@ -1916,8 +1858,8 @@ class SOTAPipeline:
                 _rdof_logger.warning(
                     "HOLDOUT CONTAMINATION: %s", contamination["message"]
                 )
-        except Exception:
-            pass  # Non-critical check — don't block pipeline on import/IO errors
+        except Exception as _holdout_exc:
+            logger.debug("Holdout contamination check skipped: %s", _holdout_exc)
 
         # ── MC calibration (optional) ────────────────────────────────
         # Load before freeze verification so calibrated parameters are
@@ -2336,8 +2278,9 @@ class SOTAPipeline:
                     ablation = AblationStudy(self, val_games)
                     ablation_report = ablation.run_full_ablation()
                     ablation_stats = ablation_report.to_dict()
-            except Exception:
-                ablation_stats = {"error": "ablation study failed"}
+            except Exception as _abl_exc:
+                ablation_stats = {"error": f"ablation study failed: {_abl_exc}"}
+                logger.warning("Ablation study failed: %s", _abl_exc)
 
         calibration_samples = int(calibration_stats.get("samples", 0))
 
@@ -2598,8 +2541,8 @@ class SOTAPipeline:
                 logging.getLogger(__name__).info("Bracket saved to %s", saved_path)
 
                 return self._bracket_data_to_teams(bracket)
-            except Exception:
-                pass  # Fall through to error
+            except Exception as _bracket_exc:
+                logger.warning("Bracket auto-fetch failed: %s", _bracket_exc)
 
         raise DataRequirementError(
             "Missing teams dataset. Provide --input teams JSON, --bracket-json, "
@@ -3086,8 +3029,8 @@ class SOTAPipeline:
                     coach = team_block.get("coach") or team_block.get("head_coach") or ""
                     if tid and coach:
                         team_to_coach_map[tid] = str(coach)
-            except Exception:
-                pass
+            except Exception as _coach_exc:
+                logger.debug("Coach map extraction failed: %s", _coach_exc)
 
         # Use TournamentContextScraper helper to map teams to coach appearances + win rate
         coach_appearances_by_team: Dict[str, int] = {}
@@ -4790,8 +4733,8 @@ class SOTAPipeline:
                 try:
                     from sklearn.metrics import roc_auc_score
                     eval_roc_auc = float(roc_auc_score(eval_y, y_pred))
-                except Exception:
-                    pass
+                except Exception as _auc_exc:
+                    logger.debug("ROC-AUC computation failed: %s", _auc_exc)
 
             if valid_samples >= 20:
                 _rng = np.random.default_rng(self.config.random_seed)
@@ -5335,8 +5278,8 @@ class SOTAPipeline:
                         if conference_map is None:
                             conference_map = {}
                         conference_map[tid] = info["conference"]
-        except Exception:
-            pass
+        except Exception as _conf_exc:
+            logger.debug("Conference map extraction from metrics failed: %s", _conf_exc)
 
         # FIX #4 + FIX-CONF: Fallback to Kaggle MTeamConferences.csv for
         # conference data.  The conference field is absent across all years in
@@ -5355,8 +5298,8 @@ class SOTAPipeline:
                         "for year %d — conference_adj_em will use true conf peers.",
                         len(_kconf), year,
                     )
-            except Exception:
-                pass
+            except Exception as _kconf_exc:
+                logger.debug("Kaggle conference fallback failed for year %d: %s", year, _kconf_exc)
 
         # FIX-CONF: Log conference data availability for diagnostics.
         if conference_map:
@@ -5389,8 +5332,8 @@ class SOTAPipeline:
                         if tid and seed:
                             from ..data.features.proprietary_metrics import _team_id
                             team_seeds[_team_id(tid)] = seed
-            except Exception:
-                pass
+            except Exception as _seed_exc:
+                logger.debug("Tournament seeds loading failed for year %d: %s", year, _seed_exc)
 
         # Gap #1: Massey Ordinals composite for historical training years.
         # This is the single highest-signal feature in the competition —
@@ -5418,8 +5361,8 @@ class SOTAPipeline:
                         team_massey_composite[_team_id(tid)] = entry.get("normalized", 0.0)
                 _massey_loaded = True
                 logger.info("Gap #1: Loaded Massey composite cache for year %d (%d teams)", year, len(team_massey_composite))
-            except Exception:
-                pass
+            except Exception as _massey_cache_exc:
+                logger.debug("Massey composite cache load failed for year %d: %s", year, _massey_cache_exc)
         # Try loading from Kaggle directory if cache doesn't exist
         if not _massey_loaded and self.config.kaggle_dir:
             try:
@@ -5470,8 +5413,8 @@ class SOTAPipeline:
                     for tid, info in roster_data.items():
                         if isinstance(info, dict):
                             team_roster_features[tid] = info
-            except Exception:
-                pass
+            except Exception as _roster_exc:
+                logger.debug("Roster features loading failed for year %d: %s", year, _roster_exc)
 
         # ── 3. Create incremental engine ──────────────────────────────────
         inc_engine = IncrementalMetricsEngine(
@@ -6808,8 +6751,8 @@ class SOTAPipeline:
                     y,
                 )
                 stats["pairwise_tests"] = sig_report
-            except Exception:
-                pass  # Non-critical diagnostic — don't break pipeline
+            except Exception as _sig_exc:
+                logger.debug("Model significance testing failed: %s", _sig_exc)
 
         self.model_uncertainty = stats
         return stats
