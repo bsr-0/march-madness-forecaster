@@ -107,7 +107,7 @@ class TestPoissonBinomialCDF:
     """Test the _poisson_binomial_cdf static method."""
 
     def setup_method(self):
-        self.engine = ProprietaryMetricsEngine()
+        self.engine = ProprietaryMetricsEngine(require_cutoff_date=False)
 
     def test_identical_probs_matches_binomial(self):
         """When all p_i are equal, PoissonBinomial reduces to Binomial."""
@@ -179,7 +179,7 @@ class TestSOR:
     """Test SOR computation via the full engine."""
 
     def _run_engine(self, games):
-        engine = ProprietaryMetricsEngine()
+        engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         results = engine.compute(games)
         return results
 
@@ -282,7 +282,7 @@ class TestWABPoisson:
     """Test WAB_poisson metric properties."""
 
     def _run_engine(self, games):
-        engine = ProprietaryMetricsEngine()
+        engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         return engine.compute(games)
 
     def test_wab_poisson_sign(self):
@@ -444,7 +444,7 @@ class TestEndToEnd:
                 games.append(_make_game(t1, t2, t1_pts, t2_pts, game_date=date))
                 games.append(_make_game(t2, t1, t2_pts, t1_pts, game_date=date))
 
-        engine = ProprietaryMetricsEngine()
+        engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         results = engine.compute(games)
 
         for tid in teams:
@@ -470,7 +470,7 @@ class TestEndToEnd:
                 games.append(_make_game(t1, t2, t1_pts, t2_pts, game_date=date))
                 games.append(_make_game(t2, t1, t2_pts, t1_pts, game_date=date))
 
-        engine = ProprietaryMetricsEngine()
+        engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         results = engine.compute(games)
 
         # T6 should have highest SOR (most wins), T1 lowest

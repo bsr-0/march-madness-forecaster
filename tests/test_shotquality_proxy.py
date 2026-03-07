@@ -59,7 +59,7 @@ def test_proprietary_engine_computes_metrics_from_game_records():
     records = _make_game_pair(
         "g1", "2026-01-10", "duke", "Duke", "unc", "UNC", 78, 70,
     )
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute(records)
 
     assert len(results) == 2
@@ -82,7 +82,7 @@ def test_proprietary_engine_computes_metrics_from_game_records():
 
 
 def test_proprietary_engine_handles_empty_records():
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute([])
     assert results == {}
 
@@ -92,7 +92,7 @@ def test_elo_ratings_computed():
     records = _make_game_pair(
         "g1", "2026-01-10", "duke", "Duke", "unc", "UNC", 78, 70,
     )
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute(records)
 
     duke = results["duke"]
@@ -110,7 +110,7 @@ def test_extended_box_score_metrics():
         "g1", "2026-01-10", "duke", "Duke", "unc", "UNC", 78, 70,
         ast=14, stl=6, blk=3, opp_ast=12, opp_stl=5, opp_blk=2,
     )
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute(records)
 
     duke = results["duke"]
@@ -133,7 +133,7 @@ def test_opponent_shot_selection_metrics():
     records = _make_game_pair(
         "g1", "2026-01-10", "duke", "Duke", "unc", "UNC", 78, 70,
     )
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute(records)
 
     duke = results["duke"]
@@ -151,7 +151,7 @@ def test_conference_strength_with_map():
         "g1", "2026-01-10", "duke", "Duke", "unc", "UNC", 78, 70,
     )
     conf_map = {"duke": "ACC", "unc": "ACC"}
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute(records, conference_map=conf_map)
 
     # Both are in ACC, so conference AdjEM should be the average of their AdjEM
@@ -165,7 +165,7 @@ def test_conference_strength_without_map():
     records = _make_game_pair(
         "g1", "2026-01-10", "duke", "Duke", "unc", "UNC", 78, 70,
     )
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute(records, conference_map=None)
 
     # Should fall back to SOS
@@ -178,7 +178,7 @@ def test_to_dict_includes_all_new_fields():
         "g1", "2026-01-10", "duke", "Duke", "unc", "UNC", 78, 70,
         ast=14, stl=6, blk=3,
     )
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute(records)
     d = results["duke"].to_dict()
 
@@ -210,7 +210,7 @@ def test_multi_game_elo_convergence():
             "duke", "Duke", "unc", "UNC",
             pts=75 + i, opp_pts=70 - i,  # Duke wins by increasing margins
         ))
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute(records)
 
     # After 5 straight wins, Duke's Elo should be meaningfully above UNC's
@@ -223,7 +223,7 @@ def test_foul_rate_computed():
         "g1", "2026-01-10", "duke", "Duke", "unc", "UNC", 78, 70,
         pf=16, opp_pf=18,
     )
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute(records)
 
     duke = results["duke"]
@@ -242,7 +242,7 @@ def test_win_pct_and_efficiency_ratio():
     records = _make_game_pair(
         "g1", "2026-01-10", "duke", "Duke", "unc", "UNC", 78, 70,
     )
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute(records)
 
     duke = results["duke"]
@@ -263,7 +263,7 @@ def test_three_pt_regression_signal():
         "g1", "2026-01-10", "duke", "Duke", "unc", "UNC", 78, 70,
         fg3a=20, fg3m=8,  # Duke 3P% = 0.400
     )
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute(records)
 
     duke = results["duke"]
@@ -277,7 +277,7 @@ def test_barthag_computed():
     records = _make_game_pair(
         "g1", "2026-01-10", "duke", "Duke", "unc", "UNC", 78, 70,
     )
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute(records)
 
     duke = results["duke"]
@@ -295,7 +295,7 @@ def test_rest_days_computed():
     records = _make_game_pair(
         "g1", "2026-03-15", "duke", "Duke", "unc", "UNC", 78, 70,
     )
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute(records)
 
     duke = results["duke"]
@@ -342,7 +342,7 @@ def test_three_pt_variance_bayesian_shrinkage():
     """C1 fix: 3PT variance should be shrunk toward D1 prior (0.095)."""
     import numpy as np
 
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
 
     # Build 6 games with known per-game 3P%: 0.20, 0.40, 0.20, 0.40, 0.20, 0.40
     # Raw sample stdev = 0.1095 (ddof=1), variance = 0.012
@@ -372,7 +372,7 @@ def test_three_pt_variance_bayesian_shrinkage():
 
 def test_three_pt_variance_small_sample_returns_prior():
     """C1 fix: With < 5 qualifying games, return population prior stdev."""
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
 
     # Only 3 games with fg3a >= 5 — should return prior (0.095)
     games = []
@@ -392,7 +392,7 @@ def test_three_pt_variance_large_sample_minimal_shrinkage():
     """C1 fix: With 30+ games, shrinkage should be minimal."""
     import numpy as np
 
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
 
     # 30 games alternating 0.30 and 0.40 → raw stdev ≈ 0.0523
     games = []
@@ -437,7 +437,7 @@ def test_feature_vector_dimension_matches_names():
 
 def test_sos_adjusted_consistency_small_sample():
     """C3: returns 0.5 prior for fewer than 5 games."""
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     assert engine._sos_adjusted_consistency([], {}, {}) == 0.5
     # 4 games — also below threshold
     records = _make_game_pair("g1", "2026-01-10", "ta", "A", "tb", "B", 75, 65)
@@ -447,7 +447,7 @@ def test_sos_adjusted_consistency_small_sample():
 
 def test_sos_adjusted_consistency_perfect():
     """C3: team that outperforms opp_em by exactly +5 every game → sos_c == 1.0."""
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     # Build 5 games against opponents with varying quality.
     # Team always wins by exactly (opp_em + 5), so residuals are all +5 → stdev=0.
     opp_ems = [-15.0, -5.0, 0.0, 10.0, 15.0]
@@ -496,7 +496,7 @@ def test_sos_adjusted_consistency_in_results():
         records.extend(
             _make_game_pair(f"g{i}", "2026-01-10", "ta", "A", "tb", "B", 70, 65)
         )
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     results = engine.compute(records)
     assert hasattr(results["ta"], "sos_adjusted_consistency")
     assert 0.0 <= results["ta"].sos_adjusted_consistency <= 1.0
@@ -531,7 +531,7 @@ def test_elo_prior_regression_formula():
 
 def test_elo_prior_initialization():
     """D2: teams with prior Elo above 1500 start with regressed advantage."""
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     engine._elo_prior = {"ta": 1700.0, "tb": 1300.0}
     # ta regressed start: 0.75*1700 + 0.25*1500 = 1650
     # tb regressed start: 0.75*1300 + 0.25*1500 = 1350
@@ -549,7 +549,7 @@ def test_elo_prior_initialization():
 
 def test_elo_prior_missing_team_defaults_to_mean():
     """D2: teams absent from prior_elo start at 1500 without crashing."""
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     engine._elo_prior = {"some_other_team": 1600.0}
     records = _make_game_pair("g1", "2026-01-15", "ta", "A", "tb", "B", 70, 65)
     results = engine.compute(records)
@@ -559,7 +559,7 @@ def test_elo_prior_missing_team_defaults_to_mean():
 
 def test_elo_cold_start_baseline():
     """D2: without prior, engine still works (flat 1500 start, backward compat)."""
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     assert engine._elo_prior is None
     records = _make_game_pair("g1", "2026-01-15", "ta", "A", "tb", "B", 70, 65)
     results = engine.compute(records)
@@ -571,7 +571,7 @@ def test_elo_cold_start_baseline():
 
 def test_pythagorean_win_pct_calibration():
     """D1: scale 0.1735 gives AdjEM=+10 → 0.850, not the erroneous 0.810."""
-    engine = ProprietaryMetricsEngine()
+    engine = ProprietaryMetricsEngine(require_cutoff_date=False)
     p10 = engine._pythagorean_win_pct(110.0, 100.0)
     assert abs(p10 - 0.850) < 0.001, f"Expected ~0.850 at AdjEM=+10, got {p10:.4f}"
 
