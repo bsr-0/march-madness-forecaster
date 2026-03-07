@@ -8,6 +8,7 @@ import io
 import logging
 import os
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Callable, Dict, List, Optional
 
 import requests
@@ -150,9 +151,9 @@ class LibraryProviderHub:
                 continue
             try:
                 if fn_name == "get_games_season":
-                    games = fn(year, info=False, box=True, pbp=False)
+                    games = fn(year, info=True, box=True, pbp=False)
                 else:
-                    games = fn(f"{year-1}-11-01", f"{year}-04-15", info=False, box=True, pbp=False)
+                    games = fn(f"{year-1}-11-01", f"{year}-04-15", info=True, box=True, pbp=False)
             except TypeError:
                 try:
                     games = fn(year) if fn_name == "get_games_season" else fn(f"{year-1}-11-01", f"{year}-04-15")
@@ -380,15 +381,43 @@ class LibraryProviderHub:
         box_df = obj[1] if len(obj) > 1 else None
         pbp_df = obj[2] if len(obj) > 2 else None
 
+        # Extract game_id → date mapping from the info DataFrame so that
+        # downstream records carry correct game dates (not fallback values).
+        game_date_map = self._extract_date_map_from_info(info_df)
+
         box_rows = self._frame_to_records(box_df)
         team_games = self._aggregate_cbbpy_box_rows(box_rows)
         if team_games:
+            # Apply dates from info DataFrame to aggregated game records.
+            for row in team_games:
+                gid = str(row.get("game_id", "")).strip()
+                if gid in game_date_map:
+                    row["date"] = game_date_map[gid]
             return team_games
 
         info_rows = self._frame_to_records(info_df)
         if info_rows:
             return info_rows
         return self._frame_to_records(pbp_df)
+
+    @staticmethod
+    def _extract_date_map_from_info(info_df) -> Dict[str, str]:
+        """Parse game_id → ISO date from a cbbpy info DataFrame."""
+        date_map: Dict[str, str] = {}
+        if info_df is None:
+            return date_map
+        if not hasattr(info_df, "iterrows") or getattr(info_df, "empty", True):
+            return date_map
+        for _, row in info_df.iterrows():
+            gid = str(row.get("game_id", "")).strip()
+            raw_day = str(row.get("game_day", "")).strip()
+            if gid and raw_day:
+                try:
+                    parsed = datetime.strptime(raw_day, "%B %d, %Y")
+                    date_map[gid] = parsed.strftime("%Y-%m-%d")
+                except ValueError:
+                    pass
+        return date_map
 
     def _aggregate_cbbpy_box_rows(self, rows: List[Dict]) -> List[Dict]:
         by_game_team: Dict[str, Dict[str, Dict]] = {}
