@@ -177,6 +177,7 @@ class RealDataCollector:
 
         if self.config.ncaa_games_url:
             games = NCAAStatsScraper(str(self.cache_dir)).fetch_historical_games(year, self.config.ncaa_games_url)
+            self._ensure_game_dates(games, year)
             payload = {"games": games}
             validation_errors["historical_games_json"] = validate_games_payload(payload)
             self._assert_valid("historical_games_json", validation_errors["historical_games_json"])
@@ -189,6 +190,7 @@ class RealDataCollector:
                 priority=self.config.historical_games_provider_priority,
             )
             if game_provider.records:
+                self._ensure_game_dates(game_provider.records, year)
                 historical_team_rows = [g for g in game_provider.records if isinstance(g, dict)]
                 payload = {"games": game_provider.records}
                 validation_errors["historical_games_json"] = validate_games_payload(payload)
@@ -381,6 +383,29 @@ class RealDataCollector:
     def _assert_valid(self, artifact_name: str, errors: List[str]) -> None:
         if errors and self.config.strict_validation:
             raise ValueError(f"{artifact_name} validation failed: {errors[:5]}")
+
+    @staticmethod
+    def _ensure_game_dates(records: List[Dict], year: int) -> None:
+        """Normalise date fields and log warnings for games missing dates.
+
+        This is a safety net: every provider *should* already supply dates, but
+        if any records slip through without one this method ensures the ``date``
+        key exists and logs the gap so operators can investigate.
+        """
+        from .providers import LibraryProviderHub
+
+        LibraryProviderHub._normalize_date_field(records)
+
+        missing = sum(1 for r in records if not r.get("date"))
+        if missing:
+            logger.warning(
+                "Year %d: %d/%d game records have no date after provider "
+                "normalisation. Downstream date-dependent features (Elo, "
+                "momentum) may be inaccurate for these games.",
+                year,
+                missing,
+                len(records),
+            )
 
     @staticmethod
     def _normalize_team_id(name: str) -> str:

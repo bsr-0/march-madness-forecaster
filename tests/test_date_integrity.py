@@ -401,6 +401,44 @@ class TestExtractDateMapFromInfo:
 
 
 # ---------------------------------------------------------------------------
+# Test: _normalize_date_field normalises provider date columns
+# ---------------------------------------------------------------------------
+
+class TestNormalizeDateField:
+    """Verify _normalize_date_field handles various provider column names."""
+
+    def test_normalises_game_date_column(self):
+        hub = LibraryProviderHub()
+        records = [{"game_id": "1", "game_date": "2024-01-15"}]
+        hub._normalize_date_field(records)
+        assert records[0]["date"] == "2024-01-15"
+
+    def test_normalises_start_date_column(self):
+        hub = LibraryProviderHub()
+        records = [{"game_id": "1", "start_date": "2024-02-20T19:00:00"}]
+        hub._normalize_date_field(records)
+        assert records[0]["date"] == "2024-02-20"
+
+    def test_preserves_existing_date(self):
+        hub = LibraryProviderHub()
+        records = [{"game_id": "1", "date": "2024-03-05", "game_date": "2024-01-01"}]
+        hub._normalize_date_field(records)
+        assert records[0]["date"] == "2024-03-05"
+
+    def test_sets_empty_when_no_date_available(self):
+        hub = LibraryProviderHub()
+        records = [{"game_id": "1", "team_id": "foo"}]
+        hub._normalize_date_field(records)
+        assert records[0]["date"] == ""
+
+    def test_handles_verbose_date_format(self):
+        hub = LibraryProviderHub()
+        records = [{"game_id": "1", "game_day": "March 15, 2024"}]
+        hub._normalize_date_field(records)
+        assert records[0]["date"] == "2024-03-15"
+
+
+# ---------------------------------------------------------------------------
 # Regression tests: scan on-disk historical data files for date corruption
 # ---------------------------------------------------------------------------
 
@@ -410,10 +448,16 @@ from collections import Counter
 
 
 def _collect_historical_game_files():
-    """Find all historical_games_*.json files across data directories."""
+    """Find all historical_games_*.json files across data directories.
+
+    Covers the historical training-data directory, the full backup directory,
+    *and* the current-year ``data/raw/`` directory so that current-season game
+    files are also validated against date-corruption regressions.
+    """
     patterns = [
         "data/raw/historical/historical_games_*.json",
         "data/raw/historical_full/historical_games_*.json",
+        "data/raw/historical_games_*.json",
     ]
     files = []
     for pattern in patterns:
