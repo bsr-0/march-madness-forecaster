@@ -1898,8 +1898,42 @@ def main():
     repair_parser.add_argument("--dry-run", action="store_true", help="Show what would change without writing")
     repair_parser.add_argument("--force-slow", action="store_true", help="Use slow day-by-day date fetch for all seasons")
 
+    # --- monitor ---
+    monitor_parser = subparsers.add_parser(
+        "monitor",
+        help="Run pipeline monitoring checks (data freshness, feature drift)",
+    )
+    monitor_parser.add_argument("--data-dir", default="data/raw", help="Data directory to check")
+    monitor_parser.add_argument("--baseline", default=None, help="Path to feature baseline JSON for drift detection")
+    monitor_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
+
+    # --- save-baseline ---
+    save_baseline_parser = subparsers.add_parser(
+        "save-baseline",
+        help="Save current feature statistics as baseline for drift detection",
+    )
+    save_baseline_parser.add_argument("--features", required=True, help="Path to feature table (CSV or Parquet)")
+    save_baseline_parser.add_argument("--output", "-o", default="data/feature_baseline.json", help="Output baseline JSON path")
+
+    # --- list-experiments ---
+    list_exp_parser = subparsers.add_parser(
+        "list-experiments",
+        help="List recent experiments from the experiment ledger",
+    )
+    list_exp_parser.add_argument("--last", type=int, default=10, help="Number of recent experiments to show")
+    list_exp_parser.add_argument("--ledger", default="data/experiment_ledger.jsonl", help="Path to experiment ledger")
+
+    # --- log-experiment ---
+    log_exp_parser = subparsers.add_parser(
+        "log-experiment",
+        help="Log a pipeline result to the experiment ledger",
+    )
+    log_exp_parser.add_argument("--result", required=True, help="Path to pipeline result JSON")
+    log_exp_parser.add_argument("--notes", default="", help="Free-text notes for this experiment")
+    log_exp_parser.add_argument("--ledger", default="data/experiment_ledger.jsonl", help="Path to experiment ledger")
+
     args = parser.parse_args()
-    
+
     if args.command == "sota":
         return run_sota(args)
     elif args.command == "ingest":
@@ -1948,6 +1982,69 @@ def main():
         return scrape_tournament_results(args)
     elif args.command == "repair-dates":
         return repair_dates(args)
+    elif args.command == "monitor":
+        from .monitoring.pipeline_monitor import PipelineMonitor
+        monitor = PipelineMonitor()
+        baseline_stats = None
+        if args.baseline:
+            baseline_stats = PipelineMonitor.load_baseline(args.baseline)
+        report = monitor.generate_report(
+            data_dir=args.data_dir,
+            baseline_stats=baseline_stats,
+        )
+        print(report.summary())
+        if args.output:
+            with open(args.output, "w") as f:
+                json.dump(report.to_dict(), f, indent=2)
+            print(f"\nFull report saved to {args.output}")
+        return 0
+    elif args.command == "save-baseline":
+        import pandas as pd
+        from .monitoring.pipeline_monitor import PipelineMonitor
+        features_path = args.features
+        if features_path.endswith(".parquet"):
+            df = pd.read_parquet(features_path)
+        else:
+            df = pd.read_csv(features_path)
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        features = df[numeric_cols].values
+        stats = PipelineMonitor.compute_feature_stats(features, numeric_cols)
+        PipelineMonitor.save_baseline(stats, args.output)
+        print(f"Saved baseline for {len(stats)} features to {args.output}")
+        return 0
+    elif args.command == "list-experiments":
+        from .ml.evaluation.experiment_registry import ExperimentRegistry
+        registry = ExperimentRegistry(args.ledger)
+        print(registry.summary())
+        records = registry.list(n=args.last)
+        if records:
+            print(f"\nShowing last {len(records)} experiments:")
+            for rec in records:
+                print(
+                    f"  {rec.experiment_id}  Brier={rec.loyo_mean_brier:.6f}  "
+                    f"components={rec.model_components}  {rec.timestamp[:19]}"
+                )
+        return 0
+    elif args.command == "log-experiment":
+        from .ml.evaluation.experiment_registry import ExperimentRecord, ExperimentRegistry
+        with open(args.result) as f:
+            result_data = json.load(f)
+        record = ExperimentRecord(
+            config_hash=result_data.get("config_hash", ""),
+            feature_set_hash=result_data.get("feature_set_hash", ""),
+            dataset_version=result_data.get("dataset_version", ""),
+            loyo_mean_brier=result_data.get("loyo_mean_brier", result_data.get("mean_brier", 0.0)),
+            loyo_std_brier=result_data.get("loyo_std_brier", result_data.get("std_brier", 0.0)),
+            loyo_year_briers=result_data.get("loyo_year_briers", result_data.get("year_briers", {})),
+            model_components=result_data.get("model_components", []),
+            calibration_method=result_data.get("calibration_method", ""),
+            scoring_metric=result_data.get("scoring_metric", ""),
+            notes=args.notes or result_data.get("notes", ""),
+        )
+        registry = ExperimentRegistry(args.ledger)
+        exp_id = registry.log(record)
+        print(f"Logged experiment {exp_id}")
+        return 0
     else:
         parser.print_help()
         return 1

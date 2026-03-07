@@ -1,0 +1,15 @@
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]  # Start conservative: errors, pyflakes, warnings
+
+[tool.pytest.ini_options]
+addopts = "-x --tb=short"
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.coverage.report]
+fail_under = 40  # Start low, increase as test coverage improves

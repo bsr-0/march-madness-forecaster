@@ -8,6 +8,7 @@ Ensures predicted probabilities are well-calibrated:
 Reference: "Obtaining Calibrated Probabilities from Boosting" (Niculescu-Mizil & Caruana)
 """
 
+import hashlib
 import logging
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
@@ -795,6 +796,7 @@ class CalibrationPipeline:
         self.method = method
         self.nested_cv = nested_cv
         self._downgraded_from: Optional[str] = None
+        self._fit_data_hash: Optional[str] = None
 
         if method == "isotonic":
             self.calibrator = IsotonicCalibrator()
@@ -827,6 +829,11 @@ class CalibrationPipeline:
         """
         pre_metrics = calculate_calibration_metrics(predictions, outcomes)
         n_samples = len(predictions)
+
+        # Track data hash to detect in-sample evaluation
+        self._fit_data_hash = hashlib.sha256(
+            predictions.tobytes() + outcomes.tobytes()
+        ).hexdigest()[:16]
 
         # Guardrail: Isotonic/Platt without nested CV on small datasets
         if (
@@ -886,8 +893,20 @@ class CalibrationPipeline:
         Returns:
             Tuple of (pre_calibration_metrics, post_calibration_metrics)
         """
+        # Warn if evaluating on the same data used for fitting
+        if self._fit_data_hash is not None:
+            eval_hash = hashlib.sha256(
+                predictions.tobytes() + outcomes.tobytes()
+            ).hexdigest()[:16]
+            if eval_hash == self._fit_data_hash:
+                logger.warning(
+                    "Calibration evaluate() called on same data used for fit(). "
+                    "This is in-sample evaluation — results may be overly "
+                    "optimistic. Use separate held-out data for honest evaluation."
+                )
+
         pre_metrics = calculate_calibration_metrics(predictions, outcomes)
-        
+
         if self.calibrator:
             calibrated = self.calibrate(predictions)
             post_metrics = calculate_calibration_metrics(calibrated, outcomes)

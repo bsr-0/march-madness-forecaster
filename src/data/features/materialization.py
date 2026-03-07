@@ -62,6 +62,7 @@ class HistoricalFeatureMaterializer:
         team_metrics = self._load_team_metrics(artifacts)
         team_metrics = self._align_source_team_ids(team_metrics, canonical_teams, source_name_col="team_name")
         optional_priors = self._load_optional_prior_sources()
+        self._validate_prior_source_availability(optional_priors)
         optional_priors = self._align_source_team_ids(optional_priors, canonical_teams, source_name_col="team_name")
         tournament_seeds = self._load_tournament_seeds(artifacts)
         tournament_seeds = self._align_source_team_ids(tournament_seeds, canonical_teams, source_name_col="team_name")
@@ -402,6 +403,89 @@ class HistoricalFeatureMaterializer:
         out = pd.concat(season_rows, ignore_index=True)
         out = out.drop_duplicates(subset=["season", "team_id"])
         return out
+
+    def _validate_prior_source_availability(self, optional_priors: pd.DataFrame) -> List[str]:
+        """Check optional prior sources for temporal availability issues.
+
+        Validates that market odds, transfer portal, and weather data
+        don't contain entries from periods after the tournament selection
+        date (mid-March). Sources loaded here are used as prior-season
+        features (shifted by one year), but the raw data itself should
+        reflect pre-tournament snapshots.
+
+        Returns a list of warning messages (empty if all checks pass).
+        """
+        warnings_list: List[str] = []
+
+        if optional_priors.empty:
+            return warnings_list
+
+        # Check for seasons beyond the configured end_season
+        if "season" in optional_priors.columns:
+            future_seasons = optional_priors[optional_priors["season"] > self.config.end_season]
+            if not future_seasons.empty:
+                msg = (
+                    f"Optional priors contain {len(future_seasons)} rows from "
+                    f"seasons beyond end_season={self.config.end_season}. "
+                    f"Future season data: {sorted(future_seasons['season'].unique())}"
+                )
+                warnings_list.append(msg)
+                logger.warning(msg)
+
+        # Check market odds files for post-tournament timestamps
+        for season in range(self.config.start_season, self.config.end_season + 1):
+            odds_path = self.raw_dir / f"odds_{season}.json"
+            if odds_path.exists():
+                try:
+                    with open(odds_path, "r") as f:
+                        payload = json.load(f)
+                    snapshot_date = payload.get("snapshot_date") or payload.get("last_updated")
+                    if snapshot_date:
+                        snap = datetime.fromisoformat(snapshot_date.replace("Z", "+00:00"))
+                        # Selection Sunday is typically mid-March
+                        selection_cutoff = datetime(season, 3, 20, tzinfo=timezone.utc)
+                        if snap > selection_cutoff:
+                            msg = (
+                                f"Market odds for {season} have snapshot_date={snapshot_date} "
+                                f"which is after Selection Sunday (~March 20). "
+                                f"Post-selection odds may embed tournament bracket information."
+                            )
+                            warnings_list.append(msg)
+                            logger.warning(msg)
+                except (json.JSONDecodeError, ValueError, KeyError):
+                    pass
+
+            # Check transfer portal for post-tournament entries
+            transfer_path = self.raw_dir / f"transfer_portal_{season}.json"
+            if transfer_path.exists():
+                try:
+                    with open(transfer_path, "r") as f:
+                        payload = json.load(f)
+                    snapshot_date = payload.get("snapshot_date") or payload.get("last_updated")
+                    if snapshot_date:
+                        snap = datetime.fromisoformat(snapshot_date.replace("Z", "+00:00"))
+                        # Transfer portal activity after April typically reflects
+                        # post-tournament decisions
+                        transfer_cutoff = datetime(season, 4, 15, tzinfo=timezone.utc)
+                        if snap > transfer_cutoff:
+                            msg = (
+                                f"Transfer portal data for {season} has snapshot_date={snapshot_date} "
+                                f"which is after April 15. Late transfers may reflect "
+                                f"post-tournament roster decisions."
+                            )
+                            warnings_list.append(msg)
+                            logger.warning(msg)
+                except (json.JSONDecodeError, ValueError, KeyError):
+                    pass
+
+        if self.config.strict_validation and warnings_list:
+            logger.warning(
+                "Prior source temporal validation found %d issue(s). "
+                "Review warnings above to ensure no post-tournament data leakage.",
+                len(warnings_list),
+            )
+
+        return warnings_list
 
     def _load_tournament_seeds(self, artifacts: Dict[str, Dict[str, str]]) -> pd.DataFrame:
         import html as _html

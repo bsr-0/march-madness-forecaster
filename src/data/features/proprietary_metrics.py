@@ -331,7 +331,7 @@ class ProprietaryMetricsEngine:
     # Convergence iterations for SOS adjustment
     SOS_ITERATIONS: int = 15
 
-    def __init__(self) -> None:
+    def __init__(self, require_cutoff_date: bool = True) -> None:
         # D2: Cross-season Elo state.
         # Set _elo_prior before calling compute() to initialize teams from
         # prior-season end-of-season ratings.  After compute(), _end_of_season_elo
@@ -339,6 +339,7 @@ class ProprietaryMetricsEngine:
         # Standard regression: start_elo = 0.75 * prior + 0.25 * 1500.
         self._elo_prior: Optional[Dict[str, float]] = None
         self._end_of_season_elo: Optional[Dict[str, float]] = None
+        self._require_cutoff_date = require_cutoff_date
 
     def compute(
         self,
@@ -354,13 +355,26 @@ class ProprietaryMetricsEngine:
             conference_map: optional team_id → conference name
             cutoff_date: YYYY-MM-DD — only use games on or before this date.
                          Prevents leakage from tournament games when computing
-                         pre-tournament metrics.  If None, use all games.
+                         pre-tournament metrics.  Required by default to prevent
+                         accidental temporal leakage.
+
+        Raises:
+            ValueError: If cutoff_date is None and require_cutoff_date is True.
         """
+        if cutoff_date is None and self._require_cutoff_date:
+            raise ValueError(
+                "cutoff_date is required to prevent temporal leakage. "
+                "Pass cutoff_date='YYYY-MM-DD' (e.g. the day before the "
+                "tournament starts) or set require_cutoff_date=False when "
+                "constructing ProprietaryMetricsEngine for testing."
+            )
+
         if not game_records:
             return {}
 
         # Filter games to prevent temporal leakage
         if cutoff_date:
+            logger.info("Filtering games to cutoff_date=%s", cutoff_date)
             game_records = [g for g in game_records if g.game_date <= cutoff_date]
             if not game_records:
                 return {}
@@ -2417,8 +2431,9 @@ class IncrementalMetricsEngine:
             self._cache[as_of_date] = {}
             return {}
 
-        # Create a temporary engine for this prefix.
-        engine = ProprietaryMetricsEngine()
+        # Create a temporary engine for this prefix (no cutoff_date needed —
+        # the prefix is already filtered to games before as_of_date).
+        engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         engine._elo_prior = self._prior_elo
 
         # Always cold-start SOS with full iterations to match the batch

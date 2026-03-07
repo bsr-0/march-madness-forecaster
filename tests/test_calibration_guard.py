@@ -1,3 +1,6 @@
+import logging
+
+import numpy as np
 import pytest
 
 from src.pipeline.sota import SOTAPipeline, SOTAPipelineConfig, DataRequirementError
@@ -12,3 +15,50 @@ def test_calibration_hard_min_raises(monkeypatch):
 
     with pytest.raises(DataRequirementError):
         pipeline._fit_calibration({})
+
+
+# ---------------------------------------------------------------------------
+# C3: Calibration train/test separation enforcement
+# ---------------------------------------------------------------------------
+
+
+class TestCalibrationTrainTestSeparation:
+    """Verify that CalibrationPipeline warns when evaluate() uses fit() data."""
+
+    def test_same_data_warns(self, caplog):
+        """Fitting and evaluating on same data must produce a warning."""
+        from src.ml.calibration.calibration import CalibrationPipeline
+
+        pipeline = CalibrationPipeline(method="temperature")
+        preds = np.array([0.3, 0.5, 0.7, 0.9, 0.2, 0.6, 0.8, 0.4])
+        outcomes = np.array([0, 1, 1, 1, 0, 0, 1, 0], dtype=float)
+
+        pipeline.fit(preds, outcomes)
+
+        with caplog.at_level(logging.WARNING):
+            pipeline.evaluate(preds, outcomes)
+
+        assert any(
+            "same data used for fit" in msg
+            for msg in caplog.messages
+        ), f"Expected in-sample warning, got: {caplog.messages}"
+
+    def test_different_data_no_warning(self, caplog):
+        """Evaluating on different data must NOT produce the warning."""
+        from src.ml.calibration.calibration import CalibrationPipeline
+
+        pipeline = CalibrationPipeline(method="temperature")
+        train_preds = np.array([0.3, 0.5, 0.7, 0.9, 0.2, 0.6, 0.8, 0.4])
+        train_outcomes = np.array([0, 1, 1, 1, 0, 0, 1, 0], dtype=float)
+        test_preds = np.array([0.4, 0.6, 0.8, 0.1])
+        test_outcomes = np.array([0, 1, 1, 0], dtype=float)
+
+        pipeline.fit(train_preds, train_outcomes)
+
+        with caplog.at_level(logging.WARNING):
+            pipeline.evaluate(test_preds, test_outcomes)
+
+        assert not any(
+            "same data used for fit" in msg
+            for msg in caplog.messages
+        ), f"Unexpected in-sample warning on different data: {caplog.messages}"
