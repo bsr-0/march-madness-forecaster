@@ -393,3 +393,213 @@ class TestExtractDateMapFromInfo:
     def test_none_returns_empty(self):
         result = LibraryProviderHub._extract_date_map_from_info(None)
         assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# Regression tests: scan on-disk historical data files for date corruption
+# ---------------------------------------------------------------------------
+
+import glob
+import re
+from collections import Counter
+
+
+def _collect_historical_game_files():
+    """Find all historical_games_*.json files across data directories."""
+    patterns = [
+        "data/raw/historical/historical_games_*.json",
+        "data/raw/historical_full/historical_games_*.json",
+    ]
+    files = []
+    for pattern in patterns:
+        files.extend(sorted(glob.glob(pattern)))
+    return files
+
+
+def _load_games_file(path):
+    """Load a historical games JSON and return (season, games, team_games)."""
+    with open(path) as f:
+        data = json.load(f)
+    season = data.get("season")
+    games = data.get("games", [])
+    team_games = data.get("team_games", [])
+    return season, games, team_games
+
+
+class TestHistoricalDataFileDateRegression:
+    """Regression tests that scan committed data files for the date corruption
+    bug where all games shared a single fallback date ({season-1}-11-01).
+
+    These tests act as a tripwire: even if a code-level guard is bypassed,
+    corrupted data in the repository will cause an immediate test failure.
+    """
+
+    def _get_files_or_skip(self):
+        files = _collect_historical_game_files()
+        if not files:
+            pytest.skip("No historical game data files found on disk")
+        return files
+
+    def test_no_historical_games_have_nov1_fallback_date(self):
+        """No game should have the {season-1}-11-01 fallback date.
+
+        This was the signature of the original bug: cbbpy was called with
+        info=False, so game dates defaulted to Nov 1 of the prior year.
+        """
+        files = self._get_files_or_skip()
+        violations = []
+        for path in files:
+            season, games, team_games = _load_games_file(path)
+            if not games or season is None:
+                continue
+            fallback = f"{season - 1}-11-01"
+            bad_games = [g for g in games if g.get("date") == fallback]
+            if bad_games:
+                violations.append(
+                    f"{path}: {len(bad_games)}/{len(games)} games have "
+                    f"fallback date {fallback}"
+                )
+            bad_tg = [tg for tg in team_games if tg.get("date") == fallback]
+            if bad_tg:
+                violations.append(
+                    f"{path}: {len(bad_tg)}/{len(team_games)} team_games have "
+                    f"fallback date {fallback}"
+                )
+        assert not violations, (
+            "Games with fallback Nov 1 dates found (date bug regression):\n"
+            + "\n".join(violations)
+        )
+
+    def test_historical_games_have_sufficient_date_diversity(self):
+        """Seasons with 100+ games must have at least 50 unique dates.
+
+        Real NCAA seasons have 154-155 game days. Anything below 50 indicates
+        dates are missing, duplicated, or fabricated.
+        """
+        files = self._get_files_or_skip()
+        violations = []
+        for path in files:
+            season, games, _ = _load_games_file(path)
+            if not games or len(games) < 100:
+                continue
+            unique_dates = len(set(g.get("date", "") for g in games))
+            if unique_dates < 50:
+                violations.append(
+                    f"{path}: season {season} has only {unique_dates} unique "
+                    f"dates across {len(games)} games (minimum: 50)"
+                )
+        assert not violations, (
+            "Insufficient date diversity (possible date corruption):\n"
+            + "\n".join(violations)
+        )
+
+    def test_no_historical_games_have_empty_dates(self):
+        """No committed game data should have empty or missing date fields."""
+        files = self._get_files_or_skip()
+        violations = []
+        for path in files:
+            season, games, team_games = _load_games_file(path)
+            if not games:
+                continue
+            empty_games = [g for g in games if not g.get("date")]
+            if empty_games:
+                violations.append(
+                    f"{path}: {len(empty_games)}/{len(games)} games have "
+                    f"empty/missing date"
+                )
+            empty_tg = [tg for tg in team_games if not tg.get("date")]
+            if empty_tg:
+                violations.append(
+                    f"{path}: {len(empty_tg)}/{len(team_games)} team_games "
+                    f"have empty/missing date"
+                )
+        assert not violations, (
+            "Games with empty dates found:\n" + "\n".join(violations)
+        )
+
+    def test_all_historical_game_dates_are_valid_iso_format(self):
+        """Every game date must be a valid YYYY-MM-DD string."""
+        files = self._get_files_or_skip()
+        iso_re = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+        violations = []
+        for path in files:
+            season, games, _ = _load_games_file(path)
+            if not games:
+                continue
+            for g in games:
+                d = g.get("date", "")
+                if not d:
+                    continue  # caught by the empty-date test
+                if not iso_re.match(d):
+                    violations.append(
+                        f"{path}: game {g.get('game_id')} has non-ISO date "
+                        f"'{d}'"
+                    )
+                    continue
+                try:
+                    datetime.strptime(d, "%Y-%m-%d")
+                except ValueError:
+                    violations.append(
+                        f"{path}: game {g.get('game_id')} has unparseable "
+                        f"date '{d}'"
+                    )
+        assert not violations, (
+            "Invalid date formats found:\n" + "\n".join(violations[:20])
+        )
+
+    def test_all_historical_game_dates_fall_within_season_range(self):
+        """Game dates must fall within the season window (Nov 1 to May 1).
+
+        A date outside this range indicates a parsing error or data corruption.
+        """
+        files = self._get_files_or_skip()
+        violations = []
+        for path in files:
+            season, games, _ = _load_games_file(path)
+            if not games or season is None:
+                continue
+            season_start = datetime(season - 1, 11, 1)
+            season_end = datetime(season, 5, 1)
+            for g in games:
+                d = g.get("date", "")
+                if not d:
+                    continue
+                try:
+                    parsed = datetime.strptime(d, "%Y-%m-%d")
+                except ValueError:
+                    continue  # caught by iso-format test
+                if parsed < season_start or parsed > season_end:
+                    violations.append(
+                        f"{path}: game {g.get('game_id')} date {d} is outside "
+                        f"season {season} range "
+                        f"({season_start.date()} to {season_end.date()})"
+                    )
+        assert not violations, (
+            "Dates outside season range:\n" + "\n".join(violations[:20])
+        )
+
+    def test_no_single_date_has_excessive_game_concentration(self):
+        """No single date should have more than 5% of a season's games.
+
+        The original bug put 100% of games on one date. Real NCAA schedules
+        peak at ~0.7% per date. A 5% threshold catches corruption while
+        allowing for heavy tournament days.
+        """
+        files = self._get_files_or_skip()
+        violations = []
+        for path in files:
+            season, games, _ = _load_games_file(path)
+            if not games or len(games) < 100:
+                continue
+            date_counts = Counter(g.get("date", "") for g in games)
+            threshold = len(games) * 0.05
+            for d, count in date_counts.most_common(5):
+                if count > threshold:
+                    violations.append(
+                        f"{path}: date {d} has {count}/{len(games)} games "
+                        f"({count/len(games)*100:.1f}%), exceeds 5% threshold"
+                    )
+        assert not violations, (
+            "Excessive game concentration on single dates:\n"
+            + "\n".join(violations)
+        )
