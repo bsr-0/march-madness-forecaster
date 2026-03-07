@@ -1898,8 +1898,25 @@ def main():
     repair_parser.add_argument("--dry-run", action="store_true", help="Show what would change without writing")
     repair_parser.add_argument("--force-slow", action="store_true", help="Use slow day-by-day date fetch for all seasons")
 
+    # --- list-experiments ---
+    list_exp_parser = subparsers.add_parser(
+        "list-experiments",
+        help="List recent experiments from the experiment ledger",
+    )
+    list_exp_parser.add_argument("--last", type=int, default=10, help="Number of recent experiments to show")
+    list_exp_parser.add_argument("--ledger", default="data/experiment_ledger.jsonl", help="Path to experiment ledger")
+
+    # --- log-experiment ---
+    log_exp_parser = subparsers.add_parser(
+        "log-experiment",
+        help="Log a pipeline result to the experiment ledger",
+    )
+    log_exp_parser.add_argument("--result", required=True, help="Path to pipeline result JSON")
+    log_exp_parser.add_argument("--notes", default="", help="Free-text notes for this experiment")
+    log_exp_parser.add_argument("--ledger", default="data/experiment_ledger.jsonl", help="Path to experiment ledger")
+
     args = parser.parse_args()
-    
+
     if args.command == "sota":
         return run_sota(args)
     elif args.command == "ingest":
@@ -1948,6 +1965,39 @@ def main():
         return scrape_tournament_results(args)
     elif args.command == "repair-dates":
         return repair_dates(args)
+    elif args.command == "list-experiments":
+        from .ml.evaluation.experiment_registry import ExperimentRegistry
+        registry = ExperimentRegistry(args.ledger)
+        print(registry.summary())
+        records = registry.list(n=args.last)
+        if records:
+            print(f"\nShowing last {len(records)} experiments:")
+            for rec in records:
+                print(
+                    f"  {rec.experiment_id}  Brier={rec.loyo_mean_brier:.6f}  "
+                    f"components={rec.model_components}  {rec.timestamp[:19]}"
+                )
+        return 0
+    elif args.command == "log-experiment":
+        from .ml.evaluation.experiment_registry import ExperimentRecord, ExperimentRegistry
+        with open(args.result) as f:
+            result_data = json.load(f)
+        record = ExperimentRecord(
+            config_hash=result_data.get("config_hash", ""),
+            feature_set_hash=result_data.get("feature_set_hash", ""),
+            dataset_version=result_data.get("dataset_version", ""),
+            loyo_mean_brier=result_data.get("loyo_mean_brier", result_data.get("mean_brier", 0.0)),
+            loyo_std_brier=result_data.get("loyo_std_brier", result_data.get("std_brier", 0.0)),
+            loyo_year_briers=result_data.get("loyo_year_briers", result_data.get("year_briers", {})),
+            model_components=result_data.get("model_components", []),
+            calibration_method=result_data.get("calibration_method", ""),
+            scoring_metric=result_data.get("scoring_metric", ""),
+            notes=args.notes or result_data.get("notes", ""),
+        )
+        registry = ExperimentRegistry(args.ledger)
+        exp_id = registry.log(record)
+        print(f"Logged experiment {exp_id}")
+        return 0
     else:
         parser.print_help()
         return 1
