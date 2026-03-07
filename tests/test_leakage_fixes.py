@@ -477,7 +477,7 @@ class TestWABBubblePrior:
         """WAB bubble AdjEM should be blended toward the historical prior."""
         from src.data.features.proprietary_metrics import ProprietaryMetricsEngine
 
-        engine = ProprietaryMetricsEngine()
+        engine = ProprietaryMetricsEngine(require_cutoff_date=False)
 
         # The raw bubble EM and the blended value should differ
         raw_bubble_em = 8.0  # hypothetical current-year 45th team
@@ -492,9 +492,60 @@ class TestWABBubblePrior:
         """ProprietaryMetricsEngine should have BUBBLE_EM_PRIOR attribute."""
         from src.data.features.proprietary_metrics import ProprietaryMetricsEngine
 
-        engine = ProprietaryMetricsEngine()
+        engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         assert hasattr(engine, "BUBBLE_EM_PRIOR")
         assert engine.BUBBLE_EM_PRIOR > 0.0
+
+
+# ---------------------------------------------------------------------------
+# 10b. cutoff_date enforcement (C1 fix)
+# ---------------------------------------------------------------------------
+
+
+class TestCutoffDateEnforcement:
+    """Verify that ProprietaryMetricsEngine requires cutoff_date by default."""
+
+    def test_compute_raises_without_cutoff_date(self):
+        """Engine must raise ValueError when cutoff_date is not provided."""
+        import pytest
+        from src.data.features.proprietary_metrics import (
+            GameRecord,
+            ProprietaryMetricsEngine,
+        )
+
+        engine = ProprietaryMetricsEngine()  # require_cutoff_date=True by default
+        records = [
+            GameRecord(
+                team_id="team_a", game_date="2025-01-15", game_id="g1",
+                opponent_id="team_b", team_score=80, opponent_score=70,
+                fga=60, fgm=30, fga3=20, fgm3=8, fta=15, ftm=12,
+                off_reb=10, def_reb=25, turnovers=12, home=True,
+            ),
+        ]
+        with pytest.raises(ValueError, match="cutoff_date is required"):
+            engine.compute(records, cutoff_date=None)
+
+    def test_compute_succeeds_with_cutoff_date(self):
+        """Engine must succeed when cutoff_date is explicitly provided."""
+        from src.data.features.proprietary_metrics import (
+            GameRecord,
+            ProprietaryMetricsEngine,
+        )
+
+        engine = ProprietaryMetricsEngine()
+        # Empty records + cutoff_date → empty dict (no error)
+        result = engine.compute([], cutoff_date="2025-03-13")
+        assert result == {}
+
+    def test_compute_succeeds_with_require_false(self):
+        """Engine with require_cutoff_date=False allows None cutoff."""
+        from src.data.features.proprietary_metrics import (
+            ProprietaryMetricsEngine,
+        )
+
+        engine = ProprietaryMetricsEngine(require_cutoff_date=False)
+        result = engine.compute([], cutoff_date=None)
+        assert result == {}
 
 
 # ---------------------------------------------------------------------------
