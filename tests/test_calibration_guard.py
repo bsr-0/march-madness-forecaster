@@ -23,13 +23,26 @@ def test_calibration_hard_min_raises(monkeypatch):
 
 
 class TestCalibrationTrainTestSeparation:
-    """Verify that CalibrationPipeline warns when evaluate() uses fit() data."""
+    """Verify that CalibrationPipeline guards against same-data fit+evaluate."""
 
-    def test_same_data_warns(self, caplog):
-        """Fitting and evaluating on same data must produce a warning."""
+    def test_same_data_raises_in_strict_mode(self):
+        """Fitting and evaluating on same data must raise CalibrationLeakageError in strict mode."""
+        from src.ml.calibration.calibration import CalibrationPipeline, CalibrationLeakageError
+
+        pipeline = CalibrationPipeline(method="temperature", strict_mode=True)
+        preds = np.array([0.3, 0.5, 0.7, 0.9, 0.2, 0.6, 0.8, 0.4])
+        outcomes = np.array([0, 1, 1, 1, 0, 0, 1, 0], dtype=float)
+
+        pipeline.fit(preds, outcomes)
+
+        with pytest.raises(CalibrationLeakageError, match="same data used for fit"):
+            pipeline.evaluate(preds, outcomes)
+
+    def test_same_data_warns_in_non_strict_mode(self, caplog):
+        """Fitting and evaluating on same data must produce a warning when strict_mode=False."""
         from src.ml.calibration.calibration import CalibrationPipeline
 
-        pipeline = CalibrationPipeline(method="temperature")
+        pipeline = CalibrationPipeline(method="temperature", strict_mode=False)
         preds = np.array([0.3, 0.5, 0.7, 0.9, 0.2, 0.6, 0.8, 0.4])
         outcomes = np.array([0, 1, 1, 1, 0, 0, 1, 0], dtype=float)
 

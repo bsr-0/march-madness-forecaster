@@ -4,6 +4,12 @@ Records experiment metadata, configuration hashes, and LOYO validation
 results in a JSONL file.  Extends the RDoF audit framework's config_hash
 and feature_set_hash for cross-run comparison.
 
+Implements the full Directive V7 experiment record schema (Section 3):
+  problem_id, dataset_version, as_of_timestamp_rules, feature_set_id,
+  model_family, hyperparameters, validation_scheme, calibration_method,
+  decision_policy, primary_metric, secondary_metrics, path_risk_metrics,
+  reproducibility_hash, experiment_timestamp.
+
 Usage:
     python -m src.main log-experiment --result pipeline_result.json
     python -m src.main list-experiments --last 10
@@ -26,21 +32,64 @@ DEFAULT_LEDGER_PATH = "data/experiment_ledger.jsonl"
 
 @dataclass
 class ExperimentRecord:
-    """A single experiment entry in the ledger."""
+    """A single experiment entry in the ledger.
 
+    Covers the full Directive V7 S3 schema plus pipeline-specific fields.
+    """
+
+    # --- Identity ---
     experiment_id: str = ""
     timestamp: str = ""
+    problem_id: str = "ncaa_tournament_prediction"
+
+    # --- Data provenance ---
     config_hash: str = ""
     feature_set_hash: str = ""
     dataset_version: str = ""  # e.g. "2016-2025"
+    dataset_hashes: Dict[str, str] = field(default_factory=dict)  # file → SHA-256
+    as_of_timestamp_rules: str = ""  # e.g. "PIT: shift(1).expanding().mean()"
+
+    # --- Model specification ---
+    model_family: str = ""  # e.g. "ensemble_lgb_xgb_logistic"
+    model_components: List[str] = field(default_factory=list)
+    hyperparameters: Dict[str, Any] = field(default_factory=dict)
+    feature_set_id: str = ""  # hash or name of the feature set used
+    calibration_method: str = ""
+
+    # --- Validation ---
+    validation_scheme: str = ""  # e.g. "LOYO_2016_2025"
     loyo_mean_brier: float = 0.0
     loyo_std_brier: float = 0.0
     loyo_year_briers: Dict[int, float] = field(default_factory=dict)
     holdout_integrity_level: int = 3  # 1=prospective, 2=quasi, 3=retrospective
-    model_components: List[str] = field(default_factory=list)
-    calibration_method: str = ""
+
+    # --- Metrics ---
     scoring_metric: str = ""
+    primary_metric_value: float = 0.0
+    secondary_metrics: Dict[str, float] = field(default_factory=dict)
+
+    # --- Risk metrics (S10/S13) ---
+    path_risk_metrics: Dict[str, float] = field(default_factory=dict)
+    # Expected keys: max_drawdown, worst_year_brier, tail_loss_10pct,
+    #                max_losing_streak, brier_trend_slope
+
+    # --- Decision policy ---
+    decision_policy: str = ""  # e.g. "kelly_criterion", "bracket_ev"
+
+    # --- Reproducibility ---
+    reproducibility_hash: str = ""  # hash(code_hash + data_hash + config_hash)
+    code_version: str = ""  # git SHA or tag
+    random_seed: int = 0
+
+    # --- Timing (S20) ---
+    phase_timings: Dict[str, float] = field(default_factory=dict)
+    # Expected keys: data_loading, feature_engineering, model_training,
+    #                calibration, simulation, optimization, total
+    total_wall_clock_seconds: float = 0.0
+
+    # --- Metadata ---
     notes: str = ""
+    tags: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -133,6 +182,10 @@ class ExperimentRegistry:
             "differences": diff,
         }
 
+    def filter_by_tag(self, tag: str) -> List[ExperimentRecord]:
+        """Return all experiments with the given tag."""
+        return [r for r in self._load_all() if tag in r.tags]
+
     def _load_all(self) -> List[ExperimentRecord]:
         if not self.ledger_path.exists():
             return []
@@ -175,9 +228,12 @@ class ExperimentRegistry:
             "  Last 5 experiments:",
         ]
         for rec in records[-5:]:
+            timing_str = ""
+            if rec.total_wall_clock_seconds > 0:
+                timing_str = f"  {rec.total_wall_clock_seconds:.0f}s"
             lines.append(
                 f"    {rec.experiment_id}  Brier={rec.loyo_mean_brier:.6f}  "
                 f"hash={rec.config_hash[:8] if rec.config_hash else 'n/a'}  "
-                f"{rec.timestamp[:19]}"
+                f"{rec.timestamp[:19]}{timing_str}"
             )
         return "\n".join(lines)
