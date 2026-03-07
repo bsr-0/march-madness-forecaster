@@ -2,6 +2,7 @@
 
 import json
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import patch
 
 import pandas as pd
@@ -297,3 +298,98 @@ class TestRepairHistoricalDates:
         results = pipeline.repair_historical_dates()
         assert 2022 in results
         assert 2023 in results
+
+
+# ---------------------------------------------------------------------------
+# Test: Fast path rejects bad dates
+# ---------------------------------------------------------------------------
+
+class TestFastPathRejectsBadDates:
+    """Verify _collect_season_games_fast returns None when dates are all fallback."""
+
+    def test_fast_path_returns_none_on_all_fallback_dates(self, tmp_path):
+        """When info DataFrame is empty (no dates), fast path should return None."""
+        config = HistoricalIngestionConfig(
+            start_season=2024, end_season=2024,
+            output_dir=str(tmp_path), cache_dir=str(tmp_path / "cache"),
+        )
+        pipeline = HistoricalDataPipeline(config)
+
+        # Create box data with many games but no info DataFrame dates.
+        # With enough games (> 100), _validate_game_dates will trigger the
+        # low-diversity warning (only 1 unique empty date).
+        game_ids = [str(i) for i in range(401, 601)]  # 200 games
+        box_rows = []
+        for gid in game_ids:
+            box_rows.extend([
+                {"game_id": gid, "team": "A", "player": "p1", "pts": 10, "fgm": 4, "fga": 8, "3pm": 1, "3pa": 3, "fta": 1, "to": 1, "oreb": 1, "dreb": 2},
+                {"game_id": gid, "team": "B", "player": "p2", "pts": 8, "fgm": 3, "fga": 6, "3pm": 0, "3pa": 2, "fta": 2, "to": 0, "oreb": 0, "dreb": 1},
+            ])
+        box_df = pd.DataFrame(box_rows)
+
+        class MockScraper:
+            @staticmethod
+            def get_games_season(season, info=True, box=True, pbp=False):
+                return (pd.DataFrame(), box_df, pd.DataFrame())
+
+        result = pipeline._collect_season_games_fast(2024, MockScraper)
+        # With 200 games all having empty dates (only 1 unique date value),
+        # validation should flag this as critically low diversity and reject.
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Test: Cache save blocks completion on bad dates
+# ---------------------------------------------------------------------------
+
+class TestCacheSaveBlocksBadDates:
+    """Verify _save_season_cache refuses to mark complete with bad dates."""
+
+    def test_save_cache_downgrades_complete_on_critical_dates(self, tmp_path):
+        config = HistoricalIngestionConfig(
+            start_season=2024, end_season=2024,
+            output_dir=str(tmp_path), cache_dir=str(tmp_path / "cache"),
+        )
+        pipeline = HistoricalDataPipeline(config)
+
+        # All games with fallback date
+        games = [{"game_id": str(i), "date": "2023-11-01", "season": 2024}
+                 for i in range(200)]
+
+        cache_file = Path(tmp_path / "cache" / "test_cache.json")
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+
+        result = pipeline._save_season_cache(
+            cache_file, 2024, games, [], [], [], complete=True,
+        )
+        # Should have downgraded complete to False due to critical date issue
+        assert result["complete"] is False
+
+        # Verify the file on disk also has complete=False
+        with open(cache_file) as f:
+            saved = json.load(f)
+        assert saved["complete"] is False
+
+
+# ---------------------------------------------------------------------------
+# Test: _extract_date_map_from_info
+# ---------------------------------------------------------------------------
+
+class TestExtractDateMapFromInfo:
+    """Verify providers._extract_date_map_from_info extracts dates correctly."""
+
+    def test_extracts_dates(self):
+        info_df = pd.DataFrame([
+            {"game_id": "100", "game_day": "November 10, 2023"},
+            {"game_id": "200", "game_day": "March 15, 2024"},
+        ])
+        result = LibraryProviderHub._extract_date_map_from_info(info_df)
+        assert result == {"100": "2023-11-10", "200": "2024-03-15"}
+
+    def test_empty_df_returns_empty(self):
+        result = LibraryProviderHub._extract_date_map_from_info(pd.DataFrame())
+        assert result == {}
+
+    def test_none_returns_empty(self):
+        result = LibraryProviderHub._extract_date_map_from_info(None)
+        assert result == {}
