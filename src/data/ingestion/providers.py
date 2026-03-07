@@ -111,6 +111,7 @@ class LibraryProviderHub:
                 df = fn(**kwargs)
                 records = self._frame_to_records(df)
                 if records:
+                    self._normalize_date_field(records)
                     return ProviderResult("sportsdataverse", records)
             except Exception:
                 continue
@@ -191,18 +192,29 @@ class LibraryProviderHub:
                 seen.add(game_id)
                 opponent = getattr(game, "opponent_name", "")
                 opp_id = self._normalize_team_name(opponent)
-                records.append(
-                    {
-                        "game_id": game_id,
-                        "team_id": team_id,
-                        "team_name": team.name,
-                        "opponent_id": opp_id,
-                        "opponent_name": opponent,
-                        "team_score": getattr(game, "points", 0),
-                        "opponent_score": getattr(game, "opponent_points", 0),
-                        "possessions": getattr(game, "possessions", 0),
-                    }
-                )
+                # Extract game date — sportsipy exposes it as datetime or date.
+                game_date = ""
+                raw_date = getattr(game, "datetime", None) or getattr(game, "date", None)
+                if raw_date is not None:
+                    try:
+                        if hasattr(raw_date, "strftime"):
+                            game_date = raw_date.strftime("%Y-%m-%d")
+                        else:
+                            game_date = str(raw_date)[:10]
+                    except Exception:
+                        pass
+                rec = {
+                    "game_id": game_id,
+                    "date": game_date,
+                    "team_id": team_id,
+                    "team_name": team.name,
+                    "opponent_id": opp_id,
+                    "opponent_name": opponent,
+                    "team_score": getattr(game, "points", 0),
+                    "opponent_score": getattr(game, "opponent_points", 0),
+                    "possessions": getattr(game, "possessions", 0),
+                }
+                records.append(rec)
         return ProviderResult("sportsipy", records)
 
     def _from_cbbdata_team_metrics_api(self, year: int) -> ProviderResult:
@@ -490,8 +502,9 @@ class LibraryProviderHub:
                     "orb": team["orb"],
                     "drb": team["drb"],
                 }
-                if team.get("date"):
-                    rec["date"] = team["date"]
+                # Always include the date key so downstream code never
+                # encounters records with a missing date field.
+                rec["date"] = team.get("date") or ""
                 out.append(rec)
         return out
 
@@ -520,6 +533,45 @@ class LibraryProviderHub:
             except Exception:
                 pass
         return []
+
+    @staticmethod
+    def _normalize_date_field(records: List[Dict]) -> None:
+        """Ensure each record has a ``date`` key in ISO format (YYYY-MM-DD).
+
+        DataFrames from different providers use various column names for dates
+        (``game_date``, ``start_date``, ``date``, ``game_day``, etc.).  This
+        method normalises them all to a single ``date`` key so downstream code
+        never encounters records without dates.
+        """
+        _DATE_KEYS = ("date", "game_date", "start_date", "game_day", "gamedate")
+        for rec in records:
+            existing = rec.get("date")
+            if existing and str(existing).strip():
+                raw = str(existing).strip()
+            else:
+                raw = ""
+                for key in _DATE_KEYS:
+                    val = rec.get(key)
+                    if val and str(val).strip():
+                        raw = str(val).strip()
+                        break
+            if not raw:
+                rec["date"] = ""
+                continue
+            # Already ISO?
+            if len(raw) >= 10 and raw[4] == "-" and raw[7] == "-":
+                rec["date"] = raw[:10]
+                continue
+            # Try common date formats
+            for fmt in ("%B %d, %Y", "%Y-%m-%dT%H:%M:%S", "%m/%d/%Y", "%Y%m%d"):
+                try:
+                    rec["date"] = datetime.strptime(raw[:min(len(raw), 20)], fmt).strftime("%Y-%m-%d")
+                    break
+                except (ValueError, TypeError):
+                    continue
+            else:
+                # Last resort: keep first 10 chars if they look date-like
+                rec.setdefault("date", "")
 
     @staticmethod
     def _normalize_team_name(name: str) -> str:
