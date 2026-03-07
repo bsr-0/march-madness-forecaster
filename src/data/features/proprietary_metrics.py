@@ -355,8 +355,9 @@ class ProprietaryMetricsEngine:
             conference_map: optional team_id → conference name
             cutoff_date: YYYY-MM-DD — only use games on or before this date.
                          Prevents leakage from tournament games when computing
-                         pre-tournament metrics.  Required by default to prevent
-                         accidental temporal leakage.
+                         pre-tournament metrics.  **Always required** unless
+                         require_cutoff_date=False was passed at construction
+                         (testing only).
 
         Raises:
             ValueError: If cutoff_date is None and require_cutoff_date is True.
@@ -366,7 +367,7 @@ class ProprietaryMetricsEngine:
                 "cutoff_date is required to prevent temporal leakage. "
                 "Pass cutoff_date='YYYY-MM-DD' (e.g. the day before the "
                 "tournament starts) or set require_cutoff_date=False when "
-                "constructing ProprietaryMetricsEngine for testing."
+                "constructing ProprietaryMetricsEngine for testing only."
             )
 
         if not game_records:
@@ -2263,6 +2264,14 @@ def team_games_to_game_records(
         logger.info(
             "Year %d: inferred dates for %d games → %d monthly buckets from game_id ordering.",
             season_year, n_unique_games, n_inferred_dates,
+        )
+        logger.warning(
+            "Year %d: synthetic date inference active — rest_days and "
+            "back_to_back features will be degenerate (coarse monthly "
+            "buckets make same-day/next-day detection unreliable). "
+            "Consider excluding these features for this season or "
+            "treating them as missing.",
+            season_year,
         )
 
     logger.info(
