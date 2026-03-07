@@ -328,6 +328,15 @@ class HistoricalDataPipeline:
                     )
 
         games = self._team_games_to_games(team_games, season)
+
+        # Reject fast-path results if dates look corrupted — fall through to
+        # the slow day-by-day path which always has correct dates.
+        date_warnings = self._validate_game_dates(games, season)
+        if any("CRITICAL" in w for w in date_warnings):
+            for w in date_warnings:
+                logger.error("Fast path rejected for season %d: %s", season, w)
+            return None
+
         return {
             "season": season,
             "provider": "cbbpy",
@@ -360,10 +369,18 @@ class HistoricalDataPipeline:
         if self.config.include_pbp:
             out["pbp"] = pbp_rows
 
-        # Validate dates before writing
+        # Validate dates before writing — refuse to mark as complete if dates
+        # are critically wrong, preventing corrupted caches from persisting.
         date_warnings = self._validate_game_dates(games, season)
         for warning in date_warnings:
             logger.warning("Season %d date check: %s", season, warning)
+        if complete and any("CRITICAL" in w for w in date_warnings):
+            logger.error(
+                "Season %d: refusing to mark cache as complete due to critical "
+                "date issues. Cache will be re-fetched on next run.",
+                season,
+            )
+            out["complete"] = False
 
         with open(season_cache, "w") as f:
             json.dump(out, f, indent=2)
@@ -666,7 +683,7 @@ class HistoricalDataPipeline:
         unique_dates = len(set(g.get("date", "") for g in games))
         if unique_dates < 10 and total > 100:
             warnings.append(
-                f"WARNING: Only {unique_dates} unique dates across {total} games. "
+                f"CRITICAL: Only {unique_dates} unique dates across {total} games. "
                 f"Date diversity is suspiciously low."
             )
         return warnings
