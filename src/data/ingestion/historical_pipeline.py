@@ -193,6 +193,12 @@ class HistoricalDataPipeline:
         ):
             fast_payload = self._collect_season_games_fast(season, scraper)
             if fast_payload is not None and fast_payload.get("games"):
+                # Validate dates before writing to cache
+                date_warnings = self._validate_game_dates(
+                    fast_payload["games"], season,
+                )
+                for warning in date_warnings:
+                    logger.warning("Season %d fast-path date check: %s", season, warning)
                 with open(season_cache, "w") as f:
                     json.dump(fast_payload, f, indent=2)
                 return fast_payload, "cbbpy"
@@ -271,6 +277,14 @@ class HistoricalDataPipeline:
             games_tuple = scraper.get_games_season(season, info=True, box=True, pbp=False)
         except TypeError:
             try:
+                # Older cbbpy versions may not accept keyword args; the
+                # positional call still returns (info, box, pbp) tuple.
+                logger.warning(
+                    "Season %d: cbbpy.get_games_season() does not accept "
+                    "keyword args; falling back to positional call. "
+                    "Dates may be missing if info DataFrame is not returned.",
+                    season,
+                )
                 games_tuple = scraper.get_games_season(season)
             except Exception:
                 return None
@@ -651,7 +665,13 @@ class HistoricalDataPipeline:
 
     @staticmethod
     def _validate_game_dates(games: List[Dict], season: int) -> List[str]:
-        """Return warnings if game dates look suspicious."""
+        """Return warnings if game dates look suspicious.
+
+        Checks for:
+        - Majority of games sharing the fallback date (``{season-1}-11-01``)
+        - Suspiciously low date diversity (< 10 unique dates for > 100 games)
+        - Games with empty/missing date strings
+        """
         if not games:
             return []
         warnings: List[str] = []
@@ -662,6 +682,12 @@ class HistoricalDataPipeline:
             warnings.append(
                 f"CRITICAL: {fallback_count}/{total} games have fallback date "
                 f"{fallback}. Dates are likely missing from source data."
+            )
+        empty_count = sum(1 for g in games if not g.get("date"))
+        if empty_count > 0:
+            warnings.append(
+                f"WARNING: {empty_count}/{total} games have empty or missing "
+                f"date field."
             )
         unique_dates = len(set(g.get("date", "") for g in games))
         if unique_dates < 10 and total > 100:

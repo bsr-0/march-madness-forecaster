@@ -2726,14 +2726,15 @@ class SOTAPipeline:
                 hist_payload = json.load(f)
             self._validate_feed_freshness("Historical games", hist_payload)
             historical_games = hist_payload.get("games", [])
-            # Warn if dates look suspicious (all fallback)
+            # Reject data if dates are clearly corrupted (all fallback)
             _fallback_date = f"{self.config.year - 1}-11-01"
             _fb_count = sum(1 for _g in historical_games if _g.get("date") == _fallback_date)
             if _fb_count > len(historical_games) * 0.5 and len(historical_games) > 50:
-                logger.error(
-                    "Historical data for season %d has %d/%d games with fallback "
-                    "date %s. Run `python -m src.main repair-dates` to fix.",
-                    self.config.year, _fb_count, len(historical_games), _fallback_date,
+                raise DataRequirementError(
+                    f"Historical data for season {self.config.year} has "
+                    f"{_fb_count}/{len(historical_games)} games with fallback "
+                    f"date {_fallback_date}. Game dates are corrupted. "
+                    f"Run `python -m src.main repair-dates` to fix."
                 )
         elif self.config.scrape_live:
             # Torvik game data can serve as historical games when scraping live

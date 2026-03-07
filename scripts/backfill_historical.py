@@ -56,6 +56,22 @@ def _season_complete(base_dir: Path, season: int, require_tournament: bool) -> T
         return False, "team metrics payload empty"
     if require_tournament and (not isinstance(seeds, list) or len(seeds) < 64):
         return False, "tournament seeds payload undersized"
+
+    # Validate that game dates are not all fallback (the old bug)
+    fallback_date = f"{season - 1}-11-01"
+    fallback_count = sum(1 for g in games if g.get("date") == fallback_date)
+    if fallback_count > len(games) * 0.5:
+        return False, (
+            f"game dates corrupted: {fallback_count}/{len(games)} games have "
+            f"fallback date {fallback_date}"
+        )
+    unique_dates = len(set(g.get("date", "") for g in games))
+    if unique_dates < 10 and len(games) > 100:
+        return False, (
+            f"game dates suspicious: only {unique_dates} unique dates "
+            f"across {len(games)} games"
+        )
+
     return True, "ok"
 
 
