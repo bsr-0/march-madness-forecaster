@@ -32,6 +32,10 @@ from pathlib import Path
 
 
 HIST_DIR = Path("data/raw/historical")
+# Additional directories that may contain historical game files
+ADDITIONAL_HIST_DIRS = [
+    Path("data/raw/historical_full"),
+]
 
 
 def _season_date_range(season: int):
@@ -69,11 +73,11 @@ def _distribute_dates(n_games: int, season: int):
     return dates
 
 
-def repair_season(season: int, dry_run: bool = False) -> dict:
+def repair_season(season: int, dry_run: bool = False, hist_dir: Path = HIST_DIR) -> dict:
     """Repair dates for a single season."""
-    json_path = HIST_DIR / f"historical_games_{season}.json"
+    json_path = hist_dir / f"historical_games_{season}.json"
     if not json_path.exists():
-        return {"season": season, "status": "missing"}
+        return {"season": season, "status": "missing", "dir": str(hist_dir)}
 
     with open(json_path) as f:
         data = json.load(f)
@@ -152,39 +156,49 @@ def main():
                        help="Show what would change without writing")
     args = parser.parse_args()
 
+    # Collect all directories to scan
+    all_dirs = [HIST_DIR] + [d for d in ADDITIONAL_HIST_DIRS if d.exists()]
+
     if args.seasons:
         seasons = [int(s.strip()) for s in args.seasons.split(",")]
     else:
-        # Find all historical game files
-        seasons = []
-        for p in sorted(HIST_DIR.glob("historical_games_*.json")):
-            try:
-                yr = int(p.stem.split("_")[-1])
-                seasons.append(yr)
-            except ValueError:
-                pass
+        # Find all historical game files across all directories
+        seasons_set: set = set()
+        for hist_dir in all_dirs:
+            for p in hist_dir.glob("historical_games_*.json"):
+                try:
+                    yr = int(p.stem.split("_")[-1])
+                    seasons_set.add(yr)
+                except ValueError:
+                    pass
+        seasons = sorted(seasons_set)
 
     if not seasons:
         print("No seasons found.")
         return
 
     print(f"Repairing dates for {len(seasons)} seasons: {seasons}")
+    print(f"Scanning directories: {[str(d) for d in all_dirs]}")
     if args.dry_run:
         print("(DRY RUN — no files will be modified)\n")
     print()
 
-    print(f"{'Season':<10} {'Total':<10} {'Repaired':<12} {'Unique Dates':<15} {'Status'}")
-    print("-" * 60)
+    print(f"{'Directory':<30} {'Season':<10} {'Total':<10} {'Repaired':<12} {'Unique Dates':<15} {'Status'}")
+    print("-" * 90)
 
-    for season in sorted(seasons):
-        result = repair_season(season, dry_run=args.dry_run)
-        print(
-            f"{result['season']:<10} "
-            f"{result.get('total', '-'):<10} "
-            f"{result.get('repaired', '-'):<12} "
-            f"{result.get('unique_dates', '-'):<15} "
-            f"{result['status']}"
-        )
+    for hist_dir in all_dirs:
+        for season in sorted(seasons):
+            result = repair_season(season, dry_run=args.dry_run, hist_dir=hist_dir)
+            if result["status"] == "missing":
+                continue
+            print(
+                f"{str(hist_dir):<30} "
+                f"{result['season']:<10} "
+                f"{result.get('total', '-'):<10} "
+                f"{result.get('repaired', '-'):<12} "
+                f"{result.get('unique_dates', '-'):<15} "
+                f"{result['status']}"
+            )
 
 
 if __name__ == "__main__":
