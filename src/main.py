@@ -49,32 +49,41 @@ def _parse_float_list(raw_value):
     return [float(v.strip()) for v in s.split(",") if v.strip()]
 
 
-def run_sota(args):
-    """Run the full SOTA rubric pipeline."""
-    print("Running SOTA pipeline...")
+def _build_pipeline_config(args, path_overrides=None):
+    """Build SOTAPipelineConfig from CLI args with optional path overrides.
+
+    Args:
+        args: Parsed argparse namespace with CLI arguments.
+        path_overrides: Optional dict of config field -> resolved path value.
+            Used by manifest-based commands to inject manifest-resolved paths.
+
+    Returns:
+        SOTAPipelineConfig instance.
+    """
+    path_overrides = path_overrides or {}
     dev_years = _parse_year_list(getattr(args, "dev_years", None))
     holdout_years = _parse_year_list(getattr(args, "holdout_years", None))
     config_kwargs = dict(
-        year=args.year,
+        year=path_overrides.get("year", args.year),
         num_simulations=args.simulations,
-        pool_size=args.pool_size,
-        teams_json=args.input,
-        torvik_json=args.torvik,
-        historical_games_json=args.historical_games,
-        sports_reference_json=args.sports_reference,
-        public_picks_json=args.public_picks,
-        roster_json=args.rosters,
-        transfer_portal_json=args.transfer_portal,
-        scoring_rules_json=args.scoring_rules,
-        calibration_method=args.calibration,
-        random_seed=args.seed,
-        scrape_live=args.scrape_live,
-        data_cache_dir=args.cache_dir,
-        injury_noise_samples=args.injury_noise_samples,
-        enforce_feed_freshness=not args.allow_stale_feeds,
-        max_feed_age_hours=args.max_feed_age_hours,
-        min_public_sources=args.min_public_sources,
-        min_rapm_players_per_team=args.min_rapm_players_per_team,
+        pool_size=getattr(args, "pool_size", 100),
+        teams_json=path_overrides.get("teams_json", getattr(args, "input", None)),
+        torvik_json=path_overrides.get("torvik_json", getattr(args, "torvik", None)),
+        historical_games_json=path_overrides.get("historical_games_json", getattr(args, "historical_games", None)),
+        sports_reference_json=path_overrides.get("sports_reference_json", getattr(args, "sports_reference", None)),
+        public_picks_json=path_overrides.get("public_picks_json", getattr(args, "public_picks", None)),
+        roster_json=path_overrides.get("roster_json", getattr(args, "rosters", None)),
+        transfer_portal_json=path_overrides.get("transfer_portal_json", getattr(args, "transfer_portal", None)),
+        scoring_rules_json=path_overrides.get("scoring_rules_json", getattr(args, "scoring_rules", None)),
+        calibration_method=getattr(args, "calibration", "temperature"),
+        random_seed=getattr(args, "seed", 2026),
+        scrape_live=getattr(args, "scrape_live", False),
+        data_cache_dir=getattr(args, "cache_dir", "data/raw"),
+        injury_noise_samples=getattr(args, "injury_noise_samples", 10000),
+        enforce_feed_freshness=not getattr(args, "allow_stale_feeds", False),
+        max_feed_age_hours=getattr(args, "max_feed_age_hours", 168),
+        min_public_sources=getattr(args, "min_public_sources", 2),
+        min_rapm_players_per_team=getattr(args, "min_rapm_players_per_team", 5),
         bracket_source=getattr(args, "bracket_source", "auto"),
         bracket_json=getattr(args, "bracket_json", None),
         multi_year_games_dir=_resolve_multi_year_dir(getattr(args, "multi_year_games_dir", "auto")),
@@ -88,39 +97,56 @@ def run_sota(args):
         model_complexity=getattr(args, "model_complexity", "standard"),
         enable_bracket_portfolio=bool(getattr(args, "enable_bracket_portfolio", False)),
     )
+    # Merge any additional path overrides (e.g., from manifest)
+    for key in ("preseason_ap_json", "coach_tournament_json", "conf_champions_json",
+                "betting_odds_json"):
+        if key in path_overrides:
+            config_kwargs[key] = path_overrides[key]
+
     if dev_years is not None:
         config_kwargs["dev_years"] = dev_years
     if holdout_years is not None:
         config_kwargs["holdout_years"] = holdout_years
-    config = SOTAPipelineConfig(**config_kwargs)
+    return SOTAPipelineConfig(**config_kwargs)
 
+
+def _run_pipeline_and_report(config, output_path):
+    """Run the SOTA pipeline and print results. Returns exit code."""
     try:
-        report = run_sota_pipeline_to_file(config, args.output)
+        report = run_sota_pipeline_to_file(config, output_path)
     except DataRequirementError as exc:
         print(f"Error: {exc}")
-        return 1
+        return 1, None
 
-    print(f"✓ SOTA pipeline complete. Results written to {args.output}")
+    print(f"✓ SOTA pipeline complete. Results written to {output_path}")
     strategy = report["artifacts"]["pool_recommendation"]
     sims = report["artifacts"]["simulation"]["num_simulations"]
     print(f"Recommended strategy: {strategy}")
     print(f"Monte Carlo simulations: {sims}")
-    return 0
+    return 0, report
 
 
-def run_sota_from_manifest(args):
-    """Run SOTA using artifact paths from an ingestion manifest."""
-    manifest_path = Path(args.manifest).resolve()
+def run_sota(args):
+    """Run the full SOTA rubric pipeline."""
+    print("Running SOTA pipeline...")
+    config = _build_pipeline_config(args)
+    exit_code, _ = _run_pipeline_and_report(config, args.output)
+    return exit_code
+
+
+def _load_manifest(manifest_arg):
+    """Load and validate an ingestion manifest. Returns (manifest, base_dir) or exits."""
+    manifest_path = Path(manifest_arg).resolve()
     if not manifest_path.exists():
         candidates = sorted(Path.cwd().glob("data/raw/manifest_*.json"))
-        print(f"Error: manifest file not found: {args.manifest}")
+        print(f"Error: manifest file not found: {manifest_arg}")
         if candidates:
             print("Available manifests:")
             for p in candidates[:10]:
                 print(f"  - {p}")
         print("Create one first with:")
         print("  python -m src.main ingest --year 2026 --output-dir data/raw")
-        return 1
+        return None, None
 
     with open(manifest_path, "r") as f:
         manifest = json.load(f)
@@ -128,9 +154,14 @@ def run_sota_from_manifest(args):
     artifacts = manifest.get("artifacts", {})
     if not isinstance(artifacts, dict):
         print("Error: manifest is missing an 'artifacts' object.")
-        return 1
+        return None, None
 
-    base_dir = manifest_path.parent
+    return manifest, manifest_path.parent
+
+
+def _resolve_manifest_paths(args, manifest, base_dir):
+    """Resolve file paths from manifest artifacts, with CLI arg overrides."""
+    artifacts = manifest.get("artifacts", {})
 
     def resolve_path(value):
         if not value:
@@ -138,64 +169,33 @@ def run_sota_from_manifest(args):
         p = Path(value)
         return str(p if p.is_absolute() else (base_dir / p).resolve())
 
-    teams_path = resolve_path(args.input or artifacts.get("teams_json"))
-    rosters_path = resolve_path(args.rosters or artifacts.get("rosters_json"))
+    return {
+        "year": getattr(args, "year", None) or int(manifest.get("year", 2026)),
+        "teams_json": resolve_path(getattr(args, "input", None) or artifacts.get("teams_json")),
+        "torvik_json": resolve_path(getattr(args, "torvik", None) or artifacts.get("torvik_json")),
+        "historical_games_json": resolve_path(getattr(args, "historical_games", None) or artifacts.get("historical_games_json")),
+        "sports_reference_json": resolve_path(getattr(args, "sports_reference", None) or artifacts.get("sports_reference_json")),
+        "public_picks_json": resolve_path(getattr(args, "public_picks", None) or artifacts.get("public_picks_json")),
+        "roster_json": resolve_path(getattr(args, "rosters", None) or artifacts.get("rosters_json")),
+        "transfer_portal_json": resolve_path(getattr(args, "transfer_portal", None) or artifacts.get("transfer_portal_json")),
+        "preseason_ap_json": resolve_path(getattr(args, "preseason_ap", None) or artifacts.get("preseason_ap_json")),
+        "coach_tournament_json": resolve_path(getattr(args, "coach_tournament", None) or artifacts.get("coach_tournament_json")),
+        "conf_champions_json": resolve_path(getattr(args, "conf_champions", None) or artifacts.get("conf_champions_json")),
+        "betting_odds_json": resolve_path(getattr(args, "betting_odds", None) or artifacts.get("odds_json")),
+        "scoring_rules_json": resolve_path(getattr(args, "scoring_rules", None) or artifacts.get("scoring_rules_json")),
+    }
 
-    dev_years = _parse_year_list(getattr(args, "dev_years", None))
-    holdout_years = _parse_year_list(getattr(args, "holdout_years", None))
-    config_kwargs = dict(
-        year=args.year or int(manifest.get("year", 2026)),
-        num_simulations=args.simulations,
-        pool_size=args.pool_size,
-        teams_json=teams_path,
-        torvik_json=resolve_path(args.torvik or artifacts.get("torvik_json")),
-        historical_games_json=resolve_path(args.historical_games or artifacts.get("historical_games_json")),
-        sports_reference_json=resolve_path(args.sports_reference or artifacts.get("sports_reference_json")),
-        public_picks_json=resolve_path(args.public_picks or artifacts.get("public_picks_json")),
-        roster_json=rosters_path,
-        transfer_portal_json=resolve_path(args.transfer_portal or artifacts.get("transfer_portal_json")),
-        preseason_ap_json=resolve_path(args.preseason_ap or artifacts.get("preseason_ap_json")),
-        coach_tournament_json=resolve_path(args.coach_tournament or artifacts.get("coach_tournament_json")),
-        conf_champions_json=resolve_path(args.conf_champions or artifacts.get("conf_champions_json")),
-        betting_odds_json=resolve_path(args.betting_odds or artifacts.get("odds_json")),
-        scoring_rules_json=resolve_path(args.scoring_rules or artifacts.get("scoring_rules_json")),
-        calibration_method=args.calibration,
-        random_seed=args.seed,
-        scrape_live=args.scrape_live,
-        data_cache_dir=args.cache_dir,
-        injury_noise_samples=args.injury_noise_samples,
-        enforce_feed_freshness=not args.allow_stale_feeds,
-        max_feed_age_hours=args.max_feed_age_hours,
-        min_public_sources=args.min_public_sources,
-        min_rapm_players_per_team=args.min_rapm_players_per_team,
-        bracket_source=getattr(args, "bracket_source", "auto"),
-        bracket_json=getattr(args, "bracket_json", None),
-        multi_year_games_dir=_resolve_multi_year_dir(getattr(args, "multi_year_games_dir", "auto")),
-        require_freeze_file=bool(getattr(args, "require_freeze", False)),
-        freeze_file=getattr(args, "freeze_file", None),
-        mc_calibration_json=getattr(args, "mc_calibration", None),
-        enable_gnn=bool(getattr(args, "enable_gnn", False)),
-        enable_transformer=bool(getattr(args, "enable_transformer", False)),
-        enable_embedding_projections=bool(getattr(args, "enable_embedding_projections", False)),
-    )
-    if dev_years is not None:
-        config_kwargs["dev_years"] = dev_years
-    if holdout_years is not None:
-        config_kwargs["holdout_years"] = holdout_years
-    config = SOTAPipelineConfig(**config_kwargs)
 
-    try:
-        report = run_sota_pipeline_to_file(config, args.output)
-    except DataRequirementError as exc:
-        print(f"Error: {exc}")
+def run_sota_from_manifest(args):
+    """Run SOTA using artifact paths from an ingestion manifest."""
+    manifest, base_dir = _load_manifest(args.manifest)
+    if manifest is None:
         return 1
 
-    print(f"✓ SOTA pipeline complete. Results written to {args.output}")
-    strategy = report["artifacts"]["pool_recommendation"]
-    sims = report["artifacts"]["simulation"]["num_simulations"]
-    print(f"Recommended strategy: {strategy}")
-    print(f"Monte Carlo simulations: {sims}")
-    return 0
+    path_overrides = _resolve_manifest_paths(args, manifest, base_dir)
+    config = _build_pipeline_config(args, path_overrides=path_overrides)
+    exit_code, _ = _run_pipeline_and_report(config, args.output)
+    return exit_code
 
 
 def run_kaggle_export(args):
@@ -208,66 +208,13 @@ def run_kaggle_export(args):
     from .exports.kaggle import load_kaggle_womens_teams, is_womens_team
     from .ml.evaluation.kaggle_backtest import validate_submission
 
-    manifest_path = Path(args.manifest).resolve()
-    if not manifest_path.exists():
-        candidates = sorted(Path.cwd().glob("data/raw/manifest_*.json"))
-        print(f"Error: manifest file not found: {args.manifest}")
-        if candidates:
-            print("Available manifests:")
-            for p in candidates[:10]:
-                print(f"  - {p}")
+    manifest, base_dir = _load_manifest(args.manifest)
+    if manifest is None:
         return 1
 
-    with open(manifest_path, "r") as f:
-        manifest = json.load(f)
-
-    artifacts = manifest.get("artifacts", {})
-    if not isinstance(artifacts, dict):
-        print("Error: manifest is missing an 'artifacts' object.")
-        return 1
-
-    base_dir = manifest_path.parent
-
-    def resolve_path(value):
-        if not value:
-            return None
-        p = Path(value)
-        return str(p if p.is_absolute() else (base_dir / p).resolve())
-
-    year = args.year or int(manifest.get("year", 2026))
-
-    dev_years = _parse_year_list(getattr(args, "dev_years", None))
-    holdout_years = _parse_year_list(getattr(args, "holdout_years", None))
-    config_kwargs = dict(
-        year=year,
-        num_simulations=args.simulations,
-        pool_size=100,
-        teams_json=resolve_path(artifacts.get("teams_json")),
-        torvik_json=resolve_path(artifacts.get("torvik_json")),
-        historical_games_json=resolve_path(artifacts.get("historical_games_json")),
-        sports_reference_json=resolve_path(artifacts.get("sports_reference_json")),
-        public_picks_json=resolve_path(artifacts.get("public_picks_json")),
-        roster_json=resolve_path(artifacts.get("rosters_json")),
-        transfer_portal_json=resolve_path(artifacts.get("transfer_portal_json")),
-        preseason_ap_json=resolve_path(artifacts.get("preseason_ap_json")),
-        coach_tournament_json=resolve_path(artifacts.get("coach_tournament_json")),
-        conf_champions_json=resolve_path(artifacts.get("conf_champions_json")),
-        betting_odds_json=resolve_path(artifacts.get("odds_json")),
-        scoring_rules_json=resolve_path(artifacts.get("scoring_rules_json")),
-        scrape_live=args.scrape_live,
-        data_cache_dir="data/raw/cache",
-        require_freeze_file=bool(getattr(args, "require_freeze", False)),
-        freeze_file=getattr(args, "freeze_file", None),
-        mc_calibration_json=getattr(args, "mc_calibration", None),
-        enable_gnn=bool(getattr(args, "enable_gnn", False)),
-        enable_transformer=bool(getattr(args, "enable_transformer", False)),
-        enable_embedding_projections=bool(getattr(args, "enable_embedding_projections", False)),
-    )
-    if dev_years is not None:
-        config_kwargs["dev_years"] = dev_years
-    if holdout_years is not None:
-        config_kwargs["holdout_years"] = holdout_years
-    config = SOTAPipelineConfig(**config_kwargs)
+    path_overrides = _resolve_manifest_paths(args, manifest, base_dir)
+    year = path_overrides["year"]
+    config = _build_pipeline_config(args, path_overrides=path_overrides)
 
     # --- Men's pipeline ---
     pipeline = SOTAPipeline(config)
