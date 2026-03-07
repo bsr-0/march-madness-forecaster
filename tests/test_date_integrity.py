@@ -190,6 +190,11 @@ class TestDateValidation:
         warnings = HistoricalDataPipeline._validate_game_dates(games, 2024)
         assert len(warnings) == 0
 
+    def test_catches_empty_dates(self):
+        games = [{"date": ""}, {"date": "2024-01-15"}, {"date": ""}, {}]
+        warnings = HistoricalDataPipeline._validate_game_dates(games, 2025)
+        assert any("empty or missing" in w.lower() for w in warnings)
+
     def test_empty_games_no_warnings(self):
         warnings = HistoricalDataPipeline._validate_game_dates([], 2024)
         assert warnings == []
