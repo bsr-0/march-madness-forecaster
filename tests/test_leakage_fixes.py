@@ -517,9 +517,10 @@ class TestCutoffDateEnforcement:
         records = [
             GameRecord(
                 team_id="team_a", game_date="2025-01-15", game_id="g1",
-                opponent_id="team_b", team_score=80, opponent_score=70,
-                fga=60, fgm=30, fga3=20, fgm3=8, fta=15, ftm=12,
-                off_reb=10, def_reb=25, turnovers=12, home=True,
+                opponent_id="team_b", team_name="Team A",
+                points=80, opp_points=70, possessions=70.0,
+                fga=60, fgm=30, fg3a=20, fg3m=8, fta=15, ftm=12,
+                orb=10, drb=25, tov=12, is_home=True,
             ),
         ]
         with pytest.raises(ValueError, match="cutoff_date is required"):
