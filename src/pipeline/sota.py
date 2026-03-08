@@ -55,9 +55,24 @@ from ..data.scrapers.tournament_context import TournamentContextScraper
 from ..exceptions import LeakageError
 from ..ml.calibration.calibration import CalibrationPipeline, CalibrationLeakageError, calculate_calibration_metrics
 from ..ml.evaluation.experiment_registry import ExperimentRegistry, ExperimentRecord
+from ..ml.research.research_loop import ResearchLoop
 from ..ml.evaluation.risk_report import RiskReport
 from ..monitoring.phase_timer import PhaseTimer
 from ..ml.ensemble.cfa import LightGBMRanker, XGBoostRanker, ModelPrediction, LIGHTGBM_AVAILABLE, XGBOOST_AVAILABLE
+from .config import (  # noqa: F401 — extracted from this file for decomposition
+    SOTAPipelineConfig,
+    EVModeReport,
+    _TrainedBaselineModel,
+    TOURNAMENT_START_DATES as _CONFIG_TOURNAMENT_START_DATES,
+    FIXED_FEATURE_SET as _CONFIG_FIXED_FEATURE_SET,
+    SIMPLE_FEATURE_SET as _CONFIG_SIMPLE_FEATURE_SET,
+    KAGGLE_ROUND_WEIGHTS as _CONFIG_KAGGLE_ROUND_WEIGHTS,
+    DATA_QUALITY_ERA_WEIGHTS as _CONFIG_DATA_QUALITY_ERA_WEIGHTS,
+    MIN_SEASON_FEATURE_COMPLETENESS as _CONFIG_MIN_SEASON_FEATURE_COMPLETENESS,
+    DataRequirementError as _ConfigDataRequirementError,
+    compute_year_data_quality as _config_compute_year_data_quality,
+    _infer_tournament_round_weight as _config_infer_tournament_round_weight,
+)
 from ..ml.gnn.schedule_graph import ScheduleEdge, ScheduleGraph, compute_multi_hop_sos
 from ..ml.transformer.game_sequence import GameEmbedding, SeasonSequence
 from ..models.team import Team
@@ -987,6 +1002,10 @@ class SOTAPipeline:
         )
         # Experiment registry (S3-1)
         self._experiment_registry = ExperimentRegistry()
+        # Research loop (S14) — continuous improvement orchestrator
+        self._research_loop = ResearchLoop(
+            experiment_registry=self._experiment_registry,
+        )
         # Pipeline stages (S2) — modular decomposition
         from .stages.context import PipelineContext
         self._pipeline_context = PipelineContext(
@@ -2687,51 +2706,109 @@ class SOTAPipeline:
                 logger.debug("Risk report generation failed: %s", _risk_exc)
 
         # ── Experiment registry logging (S3-1) ───────────────────────
-        if loyo_cv.get("enabled"):
-            try:
-                import hashlib
-                config_json = json.dumps(
-                    {k: str(v) for k, v in sorted(vars(self.config).items())},
-                    sort_keys=True,
-                )
-                config_hash = hashlib.sha256(config_json.encode()).hexdigest()[:16]
+        # Always log — not just when LOYO is enabled (Directive V7 S3).
+        try:
+            import hashlib
+            from .stages.context import get_code_version
 
-                loyo_year_briers = {}
+            config_json = json.dumps(
+                {k: str(v) for k, v in sorted(vars(self.config).items())},
+                sort_keys=True,
+            )
+            config_hash = hashlib.sha256(config_json.encode()).hexdigest()[:16]
+
+            # LOYO metrics (populated when available)
+            loyo_year_briers = {}
+            if loyo_cv.get("enabled"):
                 for yr, info in loyo_cv.get("per_year", {}).items():
                     loyo_year_briers[int(yr)] = info["brier"]
+            validation_scheme = (
+                f"LOYO_{loyo_cv.get('years_evaluated', 0)}yr"
+                if loyo_cv.get("enabled") else "none"
+            )
 
-                risk_metrics = {}
-                if "risk_report" in report:
-                    rm = report["risk_report"].get("risk_metrics", {})
-                    risk_metrics = {
-                        "max_drawdown": rm.get("max_drawdown", 0),
-                        "worst_year_brier": rm.get("worst_year_brier", 0),
-                        "tail_loss_10pct": rm.get("tail_loss_10pct", 0),
-                        "max_losing_streak": rm.get("max_losing_streak", 0),
-                        "brier_trend_slope": rm.get("brier_trend_slope", 0),
-                    }
+            risk_metrics = {}
+            if "risk_report" in report:
+                rm = report["risk_report"].get("risk_metrics", {})
+                risk_metrics = {
+                    "max_drawdown": rm.get("max_drawdown", 0),
+                    "worst_year_brier": rm.get("worst_year_brier", 0),
+                    "tail_loss_10pct": rm.get("tail_loss_10pct", 0),
+                    "max_losing_streak": rm.get("max_losing_streak", 0),
+                    "brier_trend_slope": rm.get("brier_trend_slope", 0),
+                }
 
-                record = ExperimentRecord(
-                    config_hash=config_hash,
-                    model_family=baseline_stats.get("model", "unknown"),
-                    validation_scheme=f"LOYO_{loyo_cv.get('years_evaluated', 0)}yr",
-                    loyo_mean_brier=loyo_cv.get("mean_brier", 0),
-                    loyo_std_brier=float(np.std(list(loyo_year_briers.values()))) if loyo_year_briers else 0,
-                    loyo_year_briers=loyo_year_briers,
-                    scoring_metric="brier",
-                    primary_metric_value=loyo_cv.get("mean_brier", 0),
-                    path_risk_metrics=risk_metrics,
-                    regime_analysis=report.get("regime_analysis", {}),
-                    scenario_analysis=report.get("scenario_analysis", {}),
-                    decision_policy=self.config.mode,
-                    random_seed=self.config.random_seed,
-                    phase_timings=self._phase_timer.get_timings(),
-                    total_wall_clock_seconds=round(self._phase_timer.total_seconds(), 2),
-                    tags=[f"year_{self.config.year}", self.config.mode],
+            # Model components — list active ensemble members
+            model_components = []
+            for name in ("lightgbm", "xgboost", "logistic", "spread_regressor"):
+                if baseline_stats.get(name, {}).get("enabled", False) or name in baseline_stats.get("model", ""):
+                    model_components.append(name)
+            if not model_components:
+                model_components = [baseline_stats.get("model", "unknown")]
+
+            # Hyperparameters from tuning results
+            hyperparams = {}
+            for key in ("lightgbm", "xgboost", "logistic_regression"):
+                tuning = baseline_stats.get(f"{key}_tuning", {})
+                if tuning:
+                    hyperparams[key] = tuning.get("best_params", {})
+
+            # Calibration method
+            cal_method = "none"
+            if calibration_stats and isinstance(calibration_stats, dict):
+                cal_method = calibration_stats.get("method", "temperature")
+
+            # Feature set hash
+            feat_hash = ""
+            if hasattr(self, "team_features") and self.team_features:
+                feat_list = sorted(self.feature_engineer.feature_names) if hasattr(self.feature_engineer, "feature_names") else []
+                if feat_list:
+                    feat_hash = hashlib.sha256(str(feat_list).encode()).hexdigest()[:12]
+
+            record = ExperimentRecord(
+                config_hash=config_hash,
+                model_family=baseline_stats.get("model", "unknown"),
+                model_components=model_components,
+                hyperparameters=hyperparams,
+                calibration_method=cal_method,
+                code_version=get_code_version(),
+                dataset_version=f"{self.config.year}",
+                as_of_timestamp_rules="PIT: shift(1).expanding().mean(); cutoff_date enforced",
+                feature_set_id=feat_hash,
+                validation_scheme=validation_scheme,
+                loyo_mean_brier=loyo_cv.get("mean_brier", 0),
+                loyo_std_brier=float(np.std(list(loyo_year_briers.values()))) if loyo_year_briers else 0,
+                loyo_year_briers=loyo_year_briers,
+                scoring_metric="brier",
+                primary_metric_value=loyo_cv.get("mean_brier", 0),
+                path_risk_metrics=risk_metrics,
+                regime_analysis=report.get("regime_analysis", {}),
+                scenario_analysis=report.get("scenario_analysis", {}),
+                decision_policy=self.config.mode,
+                random_seed=self.config.random_seed,
+                phase_timings=self._phase_timer.get_timings(),
+                total_wall_clock_seconds=round(self._phase_timer.total_seconds(), 2),
+                tags=[f"year_{self.config.year}", self.config.mode],
+            )
+            self._experiment_registry.log(record)
+        except Exception as _reg_exc:
+            logger.debug("Experiment registry logging failed: %s", _reg_exc)
+
+        # S14: Research loop — generate hypotheses from diagnostics
+        try:
+            diagnostics = {}
+            if loyo_year_briers:
+                diagnostics["loyo_year_briers"] = loyo_year_briers
+            if diagnostics:
+                self._research_loop.hypothesis_registry.generate_from_diagnostics(
+                    loyo_year_briers=diagnostics.get("loyo_year_briers"),
                 )
-                self._experiment_registry.log(record)
-            except Exception as _reg_exc:
-                logger.debug("Experiment registry logging failed: %s", _reg_exc)
+                logger.info(
+                    "Research loop: %s",
+                    self._research_loop.hypothesis_registry.summary(),
+                )
+        except Exception as _rl_exc:
+            logger.debug("Research loop hypothesis generation failed: %s", _rl_exc)
 
         logger.info(
             "Shared pipeline complete (mode=%s): skipped %s",

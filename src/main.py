@@ -1973,6 +1973,26 @@ def main():
     rs_parser.add_argument("--target-dir", default="data/raw", help="Target directory")
     rs_parser.add_argument("--snapshot-dir", default="data/snapshots", help="Snapshot base directory")
 
+    # --- research-report (S14) ---
+    rr_parser = subparsers.add_parser(
+        "research-report",
+        help="Show research loop trajectory and hypothesis status (S14)",
+    )
+    rr_parser.add_argument(
+        "--hypothesis-registry",
+        default="data/hypothesis_registry.jsonl",
+        help="Path to hypothesis registry",
+    )
+    rr_parser.add_argument(
+        "--loop-log",
+        default="data/research_loop_log.jsonl",
+        help="Path to research loop log",
+    )
+    rr_parser.add_argument(
+        "--output", "-o", default=None,
+        help="Output JSON report path",
+    )
+
     args = parser.parse_args()
 
     if args.command == "sota":
@@ -2122,6 +2142,24 @@ def main():
         from .data.versioning import restore_snapshot
         n = restore_snapshot(args.id, args.target_dir, args.snapshot_dir)
         print(f"Restored {n} files from snapshot '{args.id}' to {args.target_dir}")
+        return 0
+    elif args.command == "research-report":
+        from .ml.research.hypothesis_registry import HypothesisRegistry
+        from .ml.research.research_loop import ResearchLoop
+        from .ml.evaluation.experiment_registry import ExperimentRegistry
+        h_reg = HypothesisRegistry(registry_path=args.hypothesis_registry)
+        e_reg = ExperimentRegistry(ledger_path=args.loop_log.replace("research_loop_log", "experiment_ledger"))
+        loop = ResearchLoop(
+            hypothesis_registry=h_reg,
+            experiment_registry=e_reg,
+            log_path=args.loop_log,
+        )
+        print(loop.report())
+        if args.output:
+            report = loop.generate_research_report()
+            with open(args.output, "w") as f:
+                json.dump(report, f, indent=2)
+            print(f"\nFull report saved to {args.output}")
         return 0
     else:
         parser.print_help()
