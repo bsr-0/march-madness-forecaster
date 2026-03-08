@@ -55,6 +55,7 @@ from ..data.scrapers.tournament_context import TournamentContextScraper
 from ..exceptions import LeakageError
 from ..ml.calibration.calibration import CalibrationPipeline, CalibrationLeakageError, calculate_calibration_metrics
 from ..ml.evaluation.experiment_registry import ExperimentRegistry, ExperimentRecord
+from ..ml.research.research_loop import ResearchLoop
 from ..ml.evaluation.risk_report import RiskReport
 from ..monitoring.phase_timer import PhaseTimer
 from ..ml.ensemble.cfa import LightGBMRanker, XGBoostRanker, ModelPrediction, LIGHTGBM_AVAILABLE, XGBOOST_AVAILABLE
@@ -1001,6 +1002,10 @@ class SOTAPipeline:
         )
         # Experiment registry (S3-1)
         self._experiment_registry = ExperimentRegistry()
+        # Research loop (S14) — continuous improvement orchestrator
+        self._research_loop = ResearchLoop(
+            experiment_registry=self._experiment_registry,
+        )
         # Pipeline stages (S2) — modular decomposition
         from .stages.context import PipelineContext
         self._pipeline_context = PipelineContext(
@@ -2788,6 +2793,22 @@ class SOTAPipeline:
             self._experiment_registry.log(record)
         except Exception as _reg_exc:
             logger.debug("Experiment registry logging failed: %s", _reg_exc)
+
+        # S14: Research loop — generate hypotheses from diagnostics
+        try:
+            diagnostics = {}
+            if loyo_year_briers:
+                diagnostics["loyo_year_briers"] = loyo_year_briers
+            if diagnostics:
+                self._research_loop.hypothesis_registry.generate_from_diagnostics(
+                    loyo_year_briers=diagnostics.get("loyo_year_briers"),
+                )
+                logger.info(
+                    "Research loop: %s",
+                    self._research_loop.hypothesis_registry.summary(),
+                )
+        except Exception as _rl_exc:
+            logger.debug("Research loop hypothesis generation failed: %s", _rl_exc)
 
         logger.info(
             "Shared pipeline complete (mode=%s): skipped %s",
