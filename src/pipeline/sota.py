@@ -54,6 +54,9 @@ from ..data.scrapers.torvik import BartTorvikScraper
 from ..data.scrapers.tournament_context import TournamentContextScraper
 from ..exceptions import LeakageError
 from ..ml.calibration.calibration import CalibrationPipeline, CalibrationLeakageError, calculate_calibration_metrics
+from ..ml.evaluation.experiment_registry import ExperimentRegistry, ExperimentRecord
+from ..ml.evaluation.risk_report import RiskReport
+from ..monitoring.phase_timer import PhaseTimer
 from ..ml.ensemble.cfa import LightGBMRanker, XGBoostRanker, ModelPrediction, LIGHTGBM_AVAILABLE, XGBOOST_AVAILABLE
 from ..ml.gnn.schedule_graph import ScheduleEdge, ScheduleGraph, compute_multi_hop_sos
 from ..ml.transformer.game_sequence import GameEmbedding, SeasonSequence
@@ -172,6 +175,9 @@ class SOTAPipelineConfig:
     # (9 features from 3 base models) overfits OOF predictions from ~400
     # samples.  A fixed-weight average is more robust out-of-sample.
     enable_stacking: bool = False
+
+    # --- Model search expansion (S7-2) ---
+    margin_first_training: bool = False  # Train LGB on point margins, convert via logistic CDF
 
     # --- Multi-year LOYO ---
     enable_loyo_cv: bool = True  # Leave-One-Year-Out cross-validation
@@ -972,6 +978,10 @@ class SOTAPipeline:
             torch.manual_seed(self.config.random_seed)
 
         self.feature_engineer = FeatureEngineer()
+        # Phase timing (S20-1)
+        self._phase_timer = PhaseTimer()
+        # Experiment registry (S3-1)
+        self._experiment_registry = ExperimentRegistry()
         # Base ensemble weights (previously managed by CombinatorialFusionAnalysis)
         self.ensemble_base_weights: Dict[str, float] = {}
 
@@ -2023,112 +2033,118 @@ class SOTAPipeline:
                             logger.info("FIX #1: Auto-detected kaggle_dir: %s", _kd)
                             break
 
-        teams = self._load_teams()
-        torvik_map, proprietary_map = self._load_team_stat_sources(teams)
-        rosters = self._build_rosters(teams)
+        with self._phase_timer.phase("data_loading"):
+            teams = self._load_teams()
+            torvik_map, proprietary_map = self._load_team_stat_sources(teams)
+            rosters = self._build_rosters(teams)
 
-        # --- Injury report integration ---
-        injury_stats = self._apply_injury_reports(rosters)
+            # --- Injury report integration ---
+            injury_stats = self._apply_injury_reports(rosters)
 
-        game_flows = self._build_or_load_game_flows(teams)
+            game_flows = self._build_or_load_game_flows(teams)
 
-        # Gap #1: Load external ratings (Massey Ordinals composite)
-        self._external_composites = self._load_external_ratings(teams)
-        external_composites = self._external_composites
+            # Gap #1: Load external ratings (Massey Ordinals composite)
+            self._external_composites = self._load_external_ratings(teams)
+            external_composites = self._external_composites
 
-        for team in teams:
-            team_id = self._team_id(team.name)
-            self.team_struct[team_id] = team
-            self.team_id_to_name[team_id] = team.name
-            self.team_name_to_id[team.name] = team_id
+        with self._phase_timer.phase("feature_engineering"):
+            for team in teams:
+                team_id = self._team_id(team.name)
+                self.team_struct[team_id] = team
+                self.team_id_to_name[team_id] = team.name
+                self.team_name_to_id[team.name] = team_id
 
-            pm = proprietary_map.get(team_id, {})
-            t = torvik_map.get(team_id, {})
-            r = rosters.get(team_id)
-            g = game_flows.get(team_id, [])
+                pm = proprietary_map.get(team_id, {})
+                t = torvik_map.get(team_id, {})
+                r = rosters.get(team_id)
+                g = game_flows.get(team_id, [])
 
-            features = self.feature_engineer.extract_team_features(
-                team_id=team_id,
-                team_name=team.name,
-                seed=team.seed,
-                region=team.region,
-                proprietary_metrics=pm,
-                torvik_data=t,
-                roster=r,
-                games=g,
+                features = self.feature_engineer.extract_team_features(
+                    team_id=team_id,
+                    team_name=team.name,
+                    seed=team.seed,
+                    region=team.region,
+                    proprietary_metrics=pm,
+                    torvik_data=t,
+                    roster=r,
+                    games=g,
+                )
+
+                # Gap #1: Populate external rating features from Massey composite
+                comp = external_composites.get(team_id)
+                if comp is not None:
+                    features.external_rating_composite = comp.composite_rating
+                    features.external_rating_spread = comp.rating_spread
+
+                self.team_features[team_id] = features.to_vector(include_embeddings=False)
+
+            # FIX-MASSEY: Verify Massey Ordinals coverage — the single highest-ROI
+            # data integration in the competition.  Every recent Kaggle winner used
+            # external rating composites.  Alert immediately if coverage is low.
+            self._massey_coverage_stats = self._verify_massey_coverage(
+                teams, external_composites,
             )
 
-            # Gap #1: Populate external rating features from Massey composite
-            comp = external_composites.get(team_id)
-            if comp is not None:
-                features.external_rating_composite = comp.composite_rating
-                features.external_rating_spread = comp.rating_spread
+            # FIX #9: Validate population statistics against current training data.
+            # Logs warnings when feature distributions diverge from historical norms,
+            # catching rule changes, COVID effects, or data pipeline regressions.
+            pop_warnings = validate_population_stats(self.feature_engineer.team_features)
+            if pop_warnings:
+                logger.warning(
+                    "FIX#9: %d features diverged from population stats — "
+                    "review warnings above for potential data quality issues.",
+                    len(pop_warnings),
+                )
 
-            self.team_features[team_id] = features.to_vector(include_embeddings=False)
-
-        # FIX-MASSEY: Verify Massey Ordinals coverage — the single highest-ROI
-        # data integration in the competition.  Every recent Kaggle winner used
-        # external rating composites.  Alert immediately if coverage is low.
-        self._massey_coverage_stats = self._verify_massey_coverage(
-            teams, external_composites,
-        )
-
-        # FIX #9: Validate population statistics against current training data.
-        # Logs warnings when feature distributions diverge from historical norms,
-        # catching rule changes, COVID effects, or data pipeline regressions.
-        pop_warnings = validate_population_stats(self.feature_engineer.team_features)
-        if pop_warnings:
-            logger.warning(
-                "FIX#9: %d features diverged from population stats — "
-                "review warnings above for potential data quality issues.",
-                len(pop_warnings),
-            )
-
-        # Compute train/val boundary BEFORE GNN and transformer training so
-        # they can restrict their data to training-era games only.
-        self._compute_train_val_boundary(game_flows)
+            # Compute train/val boundary BEFORE GNN and transformer training so
+            # they can restrict their data to training-era games only.
+            self._compute_train_val_boundary(game_flows)
 
         schedule_graph = self._construct_schedule_graph(teams)
         adjacency = schedule_graph.get_adjacency_matrix(weighted=True)
 
-        if self.config.enable_gnn:
-            gnn_stats = self._run_gnn(schedule_graph)
-        else:
-            gnn_stats = {"enabled": False, "reason": "disabled_by_config", "framework": "none"}
-        baseline_stats = self._train_baseline_model(game_flows)
-        if self.config.enable_transformer:
-            transformer_stats = self._run_transformer(game_flows)
-        else:
-            # A1: Transformer removed from ensemble by default.
-            transformer_stats = {"enabled": False, "teams": 0, "reason": "disabled_by_config"}
+        with self._phase_timer.phase("model_training"):
+            if self.config.enable_gnn:
+                gnn_stats = self._run_gnn(schedule_graph)
+            else:
+                gnn_stats = {"enabled": False, "reason": "disabled_by_config", "framework": "none"}
+            baseline_stats = self._train_baseline_model(game_flows)
+            if self.config.enable_transformer:
+                transformer_stats = self._run_transformer(game_flows)
+            else:
+                # A1: Transformer removed from ensemble by default.
+                transformer_stats = {"enabled": False, "teams": 0, "reason": "disabled_by_config"}
 
-        # FIX M5: Apply deferred SOS refinement AFTER baseline training so
-        # that training features are uncontaminated by GNN-derived SOS.
-        # The refinement is only applied for inference-time features.
-        if self._sos_refinement_pending is not None:
-            mh, pr = self._sos_refinement_pending
-            self._apply_sos_refinement(mh, pr)
-            self._sos_refinement_pending = None
+            # FIX M5: Apply deferred SOS refinement AFTER baseline training so
+            # that training features are uncontaminated by GNN-derived SOS.
+            # The refinement is only applied for inference-time features.
+            if self._sos_refinement_pending is not None:
+                mh, pr = self._sos_refinement_pending
+                self._apply_sos_refinement(mh, pr)
+                self._sos_refinement_pending = None
 
-        # Compute graph-theoretic win quality metrics from the schedule graph
-        # and attach to team features.  These capture "who you beat" (not just
-        # "how many"), which is the NCAA committee's primary evaluation lens.
-        self._apply_win_quality_metrics(schedule_graph)
+            # Compute graph-theoretic win quality metrics from the schedule graph
+            # and attach to team features.  These capture "who you beat" (not just
+            # "how many"), which is the NCAA committee's primary evaluation lens.
+            self._apply_win_quality_metrics(schedule_graph)
 
-        # A1: Embedding projections removed — GNN/Transformer no longer used
-        # in fusion. GNN graph statistics (PageRank SOS, multi-hop SOS) are
-        # retained as feature-engineering inputs only.
-        embedding_proj_stats = {}
-        if self.config.enable_embedding_projections:
-            embedding_proj_stats = self._train_embedding_projections(game_flows)
-        uncertainty_stats = self._estimate_model_confidence_intervals(game_flows)
+            # A1: Embedding projections removed — GNN/Transformer no longer used
+            # in fusion. GNN graph statistics (PageRank SOS, multi-hop SOS) are
+            # retained as feature-engineering inputs only.
+            embedding_proj_stats = {}
+            if self.config.enable_embedding_projections:
+                embedding_proj_stats = self._train_embedding_projections(game_flows)
+            uncertainty_stats = self._estimate_model_confidence_intervals(game_flows)
 
-        self.feature_engineer.attach_gnn_embeddings(self.gnn_embeddings)
-        self.feature_engineer.attach_transformer_embeddings(self.transformer_embeddings)
+            self.feature_engineer.attach_gnn_embeddings(self.gnn_embeddings)
+            self.feature_engineer.attach_transformer_embeddings(self.transformer_embeddings)
 
-        calibration_stats = self._fit_calibration(game_flows)
-        massey_predictor_stats = self._fit_massey_predictor(game_flows)
-        bracket_sim = self._run_monte_carlo(teams, rosters)
+        with self._phase_timer.phase("calibration"):
+            calibration_stats = self._fit_calibration(game_flows)
+            massey_predictor_stats = self._fit_massey_predictor(game_flows)
+
+        with self._phase_timer.phase("simulation"):
+            bracket_sim = self._run_monte_carlo(teams, rosters)
 
         # Betting market blend: integrate sportsbook implied probabilities
         market_consensus = self._load_betting_markets()
@@ -2542,13 +2558,73 @@ class SOTAPipeline:
                 },
             },
             "artifacts": shared_artifacts,
+            "phase_timings": self._phase_timer.get_timings(),
         }
+
+        # ── Risk report from LOYO results (S10-1, S13-1, S13-3) ─────
+        loyo_cv = baseline_stats.get("loyo_cv", {})
+        if loyo_cv.get("enabled") and loyo_cv.get("per_year"):
+            try:
+                year_briers = {
+                    int(yr): info["brier"]
+                    for yr, info in loyo_cv["per_year"].items()
+                }
+                risk_report = RiskReport.from_loyo_results(year_briers)
+                report["risk_report"] = risk_report.to_dict()
+            except Exception as _risk_exc:
+                logger.debug("Risk report generation failed: %s", _risk_exc)
+
+        # ── Experiment registry logging (S3-1) ───────────────────────
+        if loyo_cv.get("enabled"):
+            try:
+                import hashlib
+                config_json = json.dumps(
+                    {k: str(v) for k, v in sorted(vars(self.config).items())},
+                    sort_keys=True,
+                )
+                config_hash = hashlib.sha256(config_json.encode()).hexdigest()[:16]
+
+                loyo_year_briers = {}
+                for yr, info in loyo_cv.get("per_year", {}).items():
+                    loyo_year_briers[int(yr)] = info["brier"]
+
+                risk_metrics = {}
+                if "risk_report" in report:
+                    rm = report["risk_report"].get("risk_metrics", {})
+                    risk_metrics = {
+                        "max_drawdown": rm.get("max_drawdown", 0),
+                        "worst_year_brier": rm.get("worst_year_brier", 0),
+                        "tail_loss_10pct": rm.get("tail_loss_10pct", 0),
+                        "max_losing_streak": rm.get("max_losing_streak", 0),
+                        "brier_trend_slope": rm.get("brier_trend_slope", 0),
+                    }
+
+                record = ExperimentRecord(
+                    config_hash=config_hash,
+                    model_family=baseline_stats.get("model", "unknown"),
+                    validation_scheme=f"LOYO_{loyo_cv.get('years_evaluated', 0)}yr",
+                    loyo_mean_brier=loyo_cv.get("mean_brier", 0),
+                    loyo_std_brier=float(np.std(list(loyo_year_briers.values()))) if loyo_year_briers else 0,
+                    loyo_year_briers=loyo_year_briers,
+                    scoring_metric="brier",
+                    primary_metric_value=loyo_cv.get("mean_brier", 0),
+                    path_risk_metrics=risk_metrics,
+                    decision_policy=self.config.mode,
+                    random_seed=self.config.random_seed,
+                    phase_timings=self._phase_timer.get_timings(),
+                    total_wall_clock_seconds=round(self._phase_timer.total_seconds(), 2),
+                    tags=[f"year_{self.config.year}", self.config.mode],
+                )
+                self._experiment_registry.log(record)
+            except Exception as _reg_exc:
+                logger.debug("Experiment registry logging failed: %s", _reg_exc)
 
         logger.info(
             "Shared pipeline complete (mode=%s): skipped %s",
             self.config.mode,
             "pool_analysis/leverage/portfolio" if is_ev else "nothing (calibration runs all)",
         )
+        logger.info("Phase timings:\n%s", self._phase_timer.summary())
         return report
 
     def _apply_injury_reports(self, rosters: Dict[str, Roster]) -> Dict:
