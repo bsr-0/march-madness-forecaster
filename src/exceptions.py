@@ -21,3 +21,19 @@ class PreRunValidationError(RuntimeError):
     """Raised when pre-run validation checks fail."""
 
     pass
+
+
+class ComputeBudgetExceeded(RuntimeError):
+    """Raised when pipeline execution exceeds compute budget limits.
+
+    Only raised in strict mode; otherwise budget violations are logged
+    as warnings.
+    """
+
+    pass
+
+
+class DataRequirementError(RuntimeError):
+    """Raised when a required data artifact is missing or invalid."""
+
+    pass

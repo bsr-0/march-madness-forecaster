@@ -352,6 +352,87 @@ def validate_calibration_data(
     return ValidationResult(passed=passed, warnings=warnings, errors=errors)
 
 
+# ---------------------------------------------------------------------------
+# Inter-stage data contract validation (S2/S19)
+# ---------------------------------------------------------------------------
+
+
+def validate_loaded_data(loaded_data: object) -> ValidationResult:
+    """Validate the output of the data-loading stage.
+
+    Checks that teams are non-empty and critical maps are populated.
+    """
+    warnings: List[str] = []
+    errors: List[str] = []
+
+    teams = getattr(loaded_data, "teams", [])
+    if not teams:
+        errors.append("LoadedData.teams is empty — no teams loaded")
+    elif len(teams) < 50:
+        warnings.append(f"Only {len(teams)} teams loaded (expected 350+)")
+
+    torvik = getattr(loaded_data, "torvik_map", {})
+    if not torvik:
+        warnings.append("LoadedData.torvik_map is empty")
+
+    rosters = getattr(loaded_data, "rosters", {})
+    if not rosters:
+        warnings.append("LoadedData.rosters is empty")
+
+    passed = len(errors) == 0
+    if not passed:
+        logger.error("LoadedData validation FAILED: %s", errors)
+    return ValidationResult(passed=passed, warnings=warnings, errors=errors)
+
+
+def validate_engineered_features(features: object) -> ValidationResult:
+    """Validate the output of the feature-engineering stage."""
+    warnings: List[str] = []
+    errors: List[str] = []
+
+    team_features = getattr(features, "team_features", {})
+    if not team_features:
+        errors.append("EngineeredFeatures.team_features is empty")
+    else:
+        dims = set()
+        for tid, vec in team_features.items():
+            if hasattr(vec, "shape"):
+                dims.add(vec.shape[0] if vec.ndim >= 1 else 0)
+        if len(dims) > 1:
+            errors.append(
+                f"Inconsistent feature dimensions across teams: {sorted(dims)}"
+            )
+
+    team_struct = getattr(features, "team_struct", {})
+    if not team_struct:
+        warnings.append("EngineeredFeatures.team_struct is empty")
+
+    passed = len(errors) == 0
+    return ValidationResult(passed=passed, warnings=warnings, errors=errors)
+
+
+def validate_trained_models(models: object) -> ValidationResult:
+    """Validate the output of the model-training stage."""
+    warnings: List[str] = []
+    errors: List[str] = []
+
+    baseline = getattr(models, "baseline_model", None)
+    if baseline is None:
+        errors.append("TrainedModels.baseline_model is None")
+
+    oof_preds = getattr(models, "oof_predictions", None)
+    oof_actuals = getattr(models, "oof_actuals", None)
+    if oof_preds is not None and oof_actuals is not None:
+        if len(oof_preds) != len(oof_actuals):
+            errors.append(
+                f"OOF predictions ({len(oof_preds)}) and actuals ({len(oof_actuals)}) "
+                "have different lengths"
+            )
+
+    passed = len(errors) == 0
+    return ValidationResult(passed=passed, warnings=warnings, errors=errors)
+
+
 def validate_matchup_vector(
     vector: np.ndarray,
     expected_dim: Optional[int] = None,
