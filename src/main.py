@@ -1932,6 +1932,47 @@ def main():
     log_exp_parser.add_argument("--notes", default="", help="Free-text notes for this experiment")
     log_exp_parser.add_argument("--ledger", default="data/experiment_ledger.jsonl", help="Path to experiment ledger")
 
+    # --- pre-tournament-check ---
+    ptc_parser = subparsers.add_parser(
+        "pre-tournament-check",
+        help="Run pre-tournament readiness checklist",
+    )
+    ptc_parser.add_argument("--data-dir", default="data/raw", help="Data directory")
+    ptc_parser.add_argument("--freeze-file", default=None, help="Pipeline freeze file")
+    ptc_parser.add_argument("--mc-calibration", default=None, help="MC calibration artifact")
+
+    # --- run-history ---
+    rh_parser = subparsers.add_parser(
+        "run-history",
+        help="Show pipeline run history",
+    )
+    rh_parser.add_argument("--last", type=int, default=10, help="Number of recent runs")
+    rh_parser.add_argument("--history-file", default="data/run_history.jsonl", help="Run history file")
+
+    # --- snapshot ---
+    snap_parser = subparsers.add_parser(
+        "snapshot",
+        help="Create a snapshot of the data directory",
+    )
+    snap_parser.add_argument("--data-dir", default="data/raw", help="Data directory to snapshot")
+    snap_parser.add_argument("--label", default=None, help="Human-readable label")
+
+    # --- list-snapshots ---
+    ls_parser = subparsers.add_parser(
+        "list-snapshots",
+        help="List available data snapshots",
+    )
+    ls_parser.add_argument("--snapshot-dir", default="data/snapshots", help="Snapshot base directory")
+
+    # --- restore-snapshot ---
+    rs_parser = subparsers.add_parser(
+        "restore-snapshot",
+        help="Restore data from a snapshot",
+    )
+    rs_parser.add_argument("--id", required=True, help="Snapshot ID to restore")
+    rs_parser.add_argument("--target-dir", default="data/raw", help="Target directory")
+    rs_parser.add_argument("--snapshot-dir", default="data/snapshots", help="Snapshot base directory")
+
     args = parser.parse_args()
 
     if args.command == "sota":
@@ -2044,6 +2085,43 @@ def main():
         registry = ExperimentRegistry(args.ledger)
         exp_id = registry.log(record)
         print(f"Logged experiment {exp_id}")
+        return 0
+    elif args.command == "pre-tournament-check":
+        from .monitoring.pre_tournament_checklist import PreTournamentChecklist
+        checklist = PreTournamentChecklist(
+            data_dir=args.data_dir,
+            freeze_file=args.freeze_file,
+            mc_calibration_file=args.mc_calibration,
+        )
+        report = checklist.run()
+        print(report.summary())
+        return 0 if report.ready() else 1
+    elif args.command == "run-history":
+        from .monitoring.run_history import RunHistory
+        history = RunHistory(args.history_file)
+        print(history.summary())
+        return 0
+    elif args.command == "snapshot":
+        from .data.versioning import snapshot_data_dir
+        sid = snapshot_data_dir(args.data_dir, label=args.label)
+        print(f"Snapshot created: {sid}")
+        return 0
+    elif args.command == "list-snapshots":
+        from .data.versioning import list_snapshots
+        snapshots = list_snapshots(args.snapshot_dir)
+        if not snapshots:
+            print("No snapshots found.")
+        else:
+            print(f"{'ID':<40s} {'Files':>6s} {'Size MB':>10s} {'Label'}")
+            print("-" * 70)
+            for s in snapshots:
+                size_mb = s.total_size_bytes / (1024 * 1024)
+                print(f"{s.snapshot_id:<40s} {s.file_count:>6d} {size_mb:>9.1f}  {s.label or ''}")
+        return 0
+    elif args.command == "restore-snapshot":
+        from .data.versioning import restore_snapshot
+        n = restore_snapshot(args.id, args.target_dir, args.snapshot_dir)
+        print(f"Restored {n} files from snapshot '{args.id}' to {args.target_dir}")
         return 0
     else:
         parser.print_help()
