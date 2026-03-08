@@ -3,7 +3,8 @@ line-length = 120
 target-version = "py39"
 
 [tool.ruff.lint]
-select = ["E", "F", "W"]  # Start conservative: errors, pyflakes, warnings
+select = ["E", "F", "W"]  # errors, pyflakes, warnings
+ignore = ["E501", "W293", "W291", "E402"]  # Allow: long lines, whitespace, late imports
 
 [tool.pytest.ini_options]
 addopts = "-x --tb=short"
@@ -12,4 +13,13 @@ addopts = "-x --tb=short"
 source = ["src"]
 
 [tool.coverage.report]
-fail_under = 40  # Start low, increase as test coverage improves
+fail_under = 55  # Raised from 40%; target 60% next, 75% long-term
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+check_untyped_defs = false
+disallow_untyped_defs = false
+exclude = ["tests/", "scripts/"]

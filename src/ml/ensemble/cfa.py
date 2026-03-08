@@ -371,6 +371,133 @@ def create_matchup_features(
 
 
 
+class LightGBMMarginRegressor:
+    """LightGBM regression model that predicts point margins then converts to win probabilities.
+
+    Implements the "margin-first" training approach (Directive V7 S7-2):
+    train a regression model on actual point margins, then convert
+    predicted margins to win probabilities via a logistic CDF.
+
+    This approach can outperform direct classification because:
+    - Point margins carry more information than binary outcomes
+    - The logistic CDF conversion naturally calibrates probabilities
+    - Regression on margins is less sensitive to label noise
+
+    Usage:
+        model = LightGBMMarginRegressor()
+        model.train(X, margins)
+        probs = model.predict_proba(X)  # Returns win probabilities
+    """
+
+    # Logistic CDF scale parameter.  Empirically, tournament margins
+    # have std ~10 points.  scale = std * sqrt(3) / pi ≈ 5.5.
+    DEFAULT_LOGISTIC_SCALE = 5.5
+
+    def __init__(self, params: Dict = None, logistic_scale: float = None):
+        if not LIGHTGBM_AVAILABLE:
+            raise ImportError("LightGBM not installed")
+
+        self.logistic_scale = logistic_scale or self.DEFAULT_LOGISTIC_SCALE
+        self.params = params or {
+            "objective": "regression",
+            "metric": "rmse",
+            "boosting_type": "gbdt",
+            "num_leaves": 8,
+            "learning_rate": 0.05,
+            "feature_fraction": 0.7,
+            "bagging_fraction": 0.7,
+            "bagging_freq": 5,
+            "min_child_samples": 50,
+            "lambda_l1": 1.0,
+            "lambda_l2": 1.0,
+            "verbose": -1,
+            "num_threads": 1,
+        }
+        self.model = None
+        self.feature_names = None
+
+    def train(
+        self,
+        X: np.ndarray,
+        margins: np.ndarray,
+        feature_names: List[str] = None,
+        num_rounds: int = 500,
+        early_stopping_rounds: Optional[int] = 50,
+        valid_set: Optional[Tuple[np.ndarray, np.ndarray]] = None,
+        sample_weight: np.ndarray = None,
+    ) -> None:
+        """Train on point margins (positive = team1 win).
+
+        Args:
+            X: Feature matrix [N, D].
+            margins: Point margins [N] (team1_score - team2_score).
+            feature_names: Feature names for interpretability.
+            num_rounds: Boosting rounds.
+            early_stopping_rounds: Early stopping patience.
+            valid_set: (X_val, margins_val) for early stopping.
+            sample_weight: Per-sample weights.
+        """
+        self.feature_names = feature_names
+        train_data = lgb.Dataset(
+            X, label=margins, feature_name=feature_names,
+            weight=sample_weight,
+        )
+
+        valid_sets = [train_data]
+        valid_names = ["train"]
+        if valid_set is not None:
+            valid_data = lgb.Dataset(
+                valid_set[0], label=valid_set[1],
+                feature_name=feature_names, reference=train_data,
+            )
+            valid_sets.append(valid_data)
+            valid_names.append("valid")
+
+        callbacks = []
+        if early_stopping_rounds and valid_set is not None:
+            callbacks.append(lgb.early_stopping(early_stopping_rounds))
+        callbacks.append(lgb.log_evaluation(period=100))
+
+        self.model = lgb.train(
+            self.params, train_data,
+            num_boost_round=num_rounds,
+            valid_sets=valid_sets,
+            valid_names=valid_names,
+            callbacks=callbacks,
+        )
+
+    def predict_margin(self, X: np.ndarray) -> np.ndarray:
+        """Predict raw point margins."""
+        if self.model is None:
+            raise ValueError("Model not trained")
+        return self.model.predict(X)
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """Predict win probabilities via logistic CDF of predicted margins."""
+        margins = self.predict_margin(X)
+        return self._margin_to_probability(margins)
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        """Alias for predict() — returns win probabilities."""
+        return self.predict(X)
+
+    def _margin_to_probability(self, margins: np.ndarray) -> np.ndarray:
+        """Convert predicted margins to win probabilities via logistic CDF.
+
+        P(win) = 1 / (1 + exp(-margin / scale))
+        """
+        return 1.0 / (1.0 + np.exp(-margins / self.logistic_scale))
+
+    def get_feature_importance(self) -> Dict[str, float]:
+        """Get feature importance scores."""
+        if self.model is None:
+            return {}
+        importance = self.model.feature_importance(importance_type="gain")
+        if self.feature_names:
+            return dict(zip(self.feature_names, importance))
+        return {f"feature_{i}": imp for i, imp in enumerate(importance)}
+
+
 # FIX 1.2: SOTAEnsemble class REMOVED — was unused dead code with
 # hardcoded weights for 5 models that diverged from the actual 3-model
 # ensemble (baseline, gnn, transformer) used in the pipeline.  All
