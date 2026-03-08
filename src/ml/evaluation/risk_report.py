@@ -5,10 +5,14 @@ Implements Directive V7 requirements:
   S13-3: Tail-loss metric (Brier on worst 10% of predictions per fold)
   S10-1: Path-dependent risk report (per-year Brier, cumulative drawdown,
          max losing streak, worst-season analysis)
+  S13-2: Regime-conditional performance (upset-heavy vs chalk years)
+  S10-2: Named scenario analysis (optimistic/base/pessimistic)
 
 Usage:
-    from src.ml.evaluation.risk_report import RiskReport
+    from src.ml.evaluation.risk_report import RiskReport, RegimeAnalysis, ScenarioAnalysis
     report = RiskReport.from_loyo_results(year_briers, year_predictions)
+    regime = RegimeAnalysis.from_loyo_results(year_briers, year_upset_rates)
+    scenario = ScenarioAnalysis.from_loyo_results(year_briers)
 """
 
 from __future__ import annotations
@@ -209,3 +213,199 @@ class RiskReport:
             lines.append(f"  Tail loss (worst 10%): {m.tail_loss_10pct:.4f}")
             lines.append(f"  Tail loss (worst  5%): {m.tail_loss_5pct:.4f}")
         return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Regime-conditional performance analysis (S13-2)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class RegimeAnalysis:
+    """Performance breakdown by tournament regime type.
+
+    Regime classification is based on upset rate: the fraction of games
+    in a tournament year where the lower-seeded team (higher seed number)
+    won.  Years above median upset rate are "upset-heavy"; below are "chalk".
+    """
+
+    regime_labels: Dict[int, str] = field(default_factory=dict)
+    regime_briers: Dict[str, List[float]] = field(default_factory=dict)
+    regime_mean_brier: Dict[str, float] = field(default_factory=dict)
+    regime_count: Dict[str, int] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "regime_labels": self.regime_labels,
+            "regime_mean_brier": {k: round(v, 6) for k, v in self.regime_mean_brier.items()},
+            "regime_count": self.regime_count,
+            "per_regime": {
+                regime: {
+                    "years": [y for y, r in self.regime_labels.items() if r == regime],
+                    "mean_brier": round(self.regime_mean_brier.get(regime, 0), 6),
+                    "brier_values": [round(b, 6) for b in briers],
+                }
+                for regime, briers in self.regime_briers.items()
+            },
+        }
+
+    @classmethod
+    def from_loyo_results(
+        cls,
+        year_briers: Dict[int, float],
+        year_upset_rates: Optional[Dict[int, float]] = None,
+    ) -> "RegimeAnalysis":
+        """Build regime analysis from LOYO results.
+
+        Args:
+            year_briers: {year: brier_score} from LOYO folds.
+            year_upset_rates: {year: upset_rate} — fraction of games won
+                by the lower seed.  If None, uses Brier score to proxy regimes.
+
+        Returns:
+            RegimeAnalysis with per-regime performance breakdown.
+        """
+        if len(year_briers) < 4:
+            return cls()
+
+        years = sorted(year_briers.keys())
+
+        if year_upset_rates and len(year_upset_rates) >= len(years) // 2:
+            available_years = [y for y in years if y in year_upset_rates]
+            if len(available_years) < 4:
+                return cls()
+            median_upset = float(np.median([year_upset_rates[y] for y in available_years]))
+            regime_labels = {
+                y: "upset_heavy" if year_upset_rates.get(y, median_upset) > median_upset else "chalk"
+                for y in years
+            }
+        else:
+            briers = [year_briers[y] for y in years]
+            median_brier = float(np.median(briers))
+            regime_labels = {
+                y: "upset_heavy" if year_briers[y] > median_brier else "chalk"
+                for y in years
+            }
+
+        regime_briers: Dict[str, List[float]] = {}
+        for y in years:
+            regime = regime_labels[y]
+            regime_briers.setdefault(regime, []).append(year_briers[y])
+
+        regime_mean_brier = {
+            r: float(np.mean(bs)) for r, bs in regime_briers.items()
+        }
+        regime_count = {r: len(bs) for r, bs in regime_briers.items()}
+
+        analysis = cls(
+            regime_labels=regime_labels,
+            regime_briers=regime_briers,
+            regime_mean_brier=regime_mean_brier,
+            regime_count=regime_count,
+        )
+
+        logger.info(
+            "Regime analysis: %s",
+            {r: f"mean={regime_mean_brier[r]:.4f} (n={regime_count[r]})"
+             for r in sorted(regime_mean_brier)},
+        )
+        return analysis
+
+
+# ---------------------------------------------------------------------------
+# Named scenario analysis (S10-2)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ScenarioAnalysis:
+    """Optimistic/base/pessimistic scenario projections.
+
+    Quantifies the range of expected Brier scores under different
+    assumptions about data quality, model stability, and tournament regime.
+    """
+
+    optimistic: Dict[str, Any] = field(default_factory=dict)
+    base: Dict[str, Any] = field(default_factory=dict)
+    pessimistic: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "optimistic": self.optimistic,
+            "base": self.base,
+            "pessimistic": self.pessimistic,
+        }
+
+    @classmethod
+    def from_loyo_results(
+        cls,
+        year_briers: Dict[int, float],
+    ) -> "ScenarioAnalysis":
+        """Build scenario projections from LOYO validation history.
+
+        Scenarios:
+        - Optimistic: 25th percentile of historical Brier
+        - Base: Mean of historical Brier
+        - Pessimistic: 75th percentile + max_drawdown risk
+
+        Args:
+            year_briers: {year: brier_score} from LOYO folds.
+        """
+        if not year_briers:
+            return cls()
+
+        briers = list(year_briers.values())
+
+        mean_brier = float(np.mean(briers))
+        std_brier = float(np.std(briers))
+        p25 = float(np.percentile(briers, 25))
+        p75 = float(np.percentile(briers, 75))
+        best = min(briers)
+        worst = max(briers)
+
+        max_dd = 0.0
+        sorted_briers = [year_briers[y] for y in sorted(year_briers.keys())]
+        for i in range(1, len(sorted_briers)):
+            delta = sorted_briers[i] - sorted_briers[i - 1]
+            if delta > max_dd:
+                max_dd = delta
+
+        return cls(
+            optimistic={
+                "label": "Optimistic (P25)",
+                "expected_brier": round(p25, 6),
+                "assumptions": [
+                    "Chalk-heavy tournament (low upset rate)",
+                    "All data sources fresh and complete",
+                    "Model performance near historical best",
+                ],
+                "historical_best": round(best, 6),
+                "confidence_interval": [round(best, 6), round(mean_brier, 6)],
+            },
+            base={
+                "label": "Base (Mean)",
+                "expected_brier": round(mean_brier, 6),
+                "assumptions": [
+                    "Typical tournament upset rate",
+                    "Normal data quality and availability",
+                    "Model performs at historical average",
+                ],
+                "std_dev": round(std_brier, 6),
+                "confidence_interval": [
+                    round(mean_brier - std_brier, 6),
+                    round(mean_brier + std_brier, 6),
+                ],
+            },
+            pessimistic={
+                "label": "Pessimistic (P75 + drawdown risk)",
+                "expected_brier": round(p75 + max_dd * 0.5, 6),
+                "assumptions": [
+                    "Upset-heavy tournament with unusual results",
+                    "Possible data staleness or missing sources",
+                    "Model experiences worst-case drawdown",
+                ],
+                "historical_worst": round(worst, 6),
+                "max_drawdown": round(max_dd, 6),
+                "confidence_interval": [round(p75, 6), round(worst, 6)],
+            },
+        )

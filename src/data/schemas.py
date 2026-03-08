@@ -230,3 +230,173 @@ def validate_loyo_fold(
 
     passed = len(errors) == 0
     return ValidationResult(passed=passed, warnings=warnings, errors=errors)
+
+
+# ---------------------------------------------------------------------------
+# Ensemble weight contracts (S19-1)
+# ---------------------------------------------------------------------------
+
+
+def validate_ensemble_weights(
+    weights: Dict[str, float],
+    expected_components: Optional[List[str]] = None,
+    tolerance: float = 0.05,
+) -> ValidationResult:
+    """Validate ensemble component weights at the fusion boundary.
+
+    Checks:
+    - All weights are non-negative
+    - Weights sum to approximately 1.0
+    - No unexpected components
+    - No missing expected components
+
+    Args:
+        weights: Component name → weight mapping.
+        expected_components: If provided, validates exact component set.
+        tolerance: Maximum deviation of weight sum from 1.0.
+
+    Returns:
+        ValidationResult with pass/fail and diagnostic messages.
+    """
+    warnings: List[str] = []
+    errors: List[str] = []
+
+    if not weights:
+        errors.append("Ensemble weights are empty")
+        return ValidationResult(passed=False, warnings=warnings, errors=errors)
+
+    # Non-negative check
+    negative = {k: v for k, v in weights.items() if v < 0}
+    if negative:
+        errors.append(f"Negative weights: {negative}")
+
+    # Sum-to-one check
+    weight_sum = sum(weights.values())
+    if abs(weight_sum - 1.0) > tolerance:
+        errors.append(
+            f"Weights sum to {weight_sum:.4f}, expected ~1.0 (tolerance={tolerance})"
+        )
+
+    # Component set check
+    if expected_components is not None:
+        expected_set = set(expected_components)
+        actual_set = set(weights.keys())
+        missing = expected_set - actual_set
+        extra = actual_set - expected_set
+        if missing:
+            warnings.append(f"Missing expected components: {missing}")
+        if extra:
+            warnings.append(f"Unexpected components: {extra}")
+
+    passed = len(errors) == 0
+    if not passed:
+        logger.error("Ensemble weight validation FAILED: %s", errors)
+    return ValidationResult(passed=passed, warnings=warnings, errors=errors)
+
+
+def validate_calibration_data(
+    predictions: np.ndarray,
+    outcomes: np.ndarray,
+    min_samples: int = 30,
+) -> ValidationResult:
+    """Validate data entering the calibration pipeline.
+
+    Checks:
+    - Matching array lengths
+    - Outcomes are binary (0 or 1)
+    - Predictions in [0, 1]
+    - Minimum sample size for reliable calibration
+    - Both classes present in outcomes
+
+    Args:
+        predictions: Raw model probabilities.
+        outcomes: Binary ground truth labels.
+        min_samples: Minimum samples for reliable calibration.
+
+    Returns:
+        ValidationResult.
+    """
+    warnings: List[str] = []
+    errors: List[str] = []
+
+    if len(predictions) != len(outcomes):
+        errors.append(
+            f"Length mismatch: predictions={len(predictions)}, outcomes={len(outcomes)}"
+        )
+        return ValidationResult(passed=False, warnings=warnings, errors=errors)
+
+    if len(predictions) < min_samples:
+        warnings.append(
+            f"Only {len(predictions)} samples for calibration "
+            f"(recommended minimum: {min_samples})"
+        )
+
+    # Outcomes binary check
+    unique_outcomes = set(np.unique(outcomes))
+    if not unique_outcomes.issubset({0.0, 1.0}):
+        errors.append(f"Outcomes must be binary (0 or 1), found: {unique_outcomes}")
+
+    if len(unique_outcomes) < 2:
+        errors.append(
+            f"Only one class in outcomes ({unique_outcomes}). "
+            "Calibration requires both classes."
+        )
+
+    # Predictions range check
+    pred_result = validate_predictions(predictions)
+    if not pred_result.passed:
+        errors.extend(pred_result.errors)
+    warnings.extend(pred_result.warnings)
+
+    passed = len(errors) == 0
+    return ValidationResult(passed=passed, warnings=warnings, errors=errors)
+
+
+def validate_matchup_vector(
+    vector: np.ndarray,
+    expected_dim: Optional[int] = None,
+) -> ValidationResult:
+    """Validate a single matchup feature vector.
+
+    Checks:
+    - Vector is 1-dimensional
+    - Expected dimensionality (if specified)
+    - No infinite values
+    - NaN fraction below threshold
+
+    Args:
+        vector: Matchup feature vector (team1 - team2 differentials).
+        expected_dim: Expected feature count (e.g., 77 for full matchup).
+
+    Returns:
+        ValidationResult.
+    """
+    warnings: List[str] = []
+    errors: List[str] = []
+
+    if vector.ndim != 1:
+        errors.append(f"Matchup vector must be 1D, got {vector.ndim}D")
+        return ValidationResult(passed=False, warnings=warnings, errors=errors)
+
+    if expected_dim is not None and len(vector) != expected_dim:
+        errors.append(
+            f"Matchup vector dimension {len(vector)} != expected {expected_dim}"
+        )
+
+    inf_count = int(np.isinf(vector).sum())
+    if inf_count > 0:
+        errors.append(f"Matchup vector contains {inf_count} infinite values")
+
+    nan_count = int(np.isnan(vector).sum())
+    nan_frac = nan_count / max(len(vector), 1)
+    if nan_frac > 0.5:
+        errors.append(
+            f"Matchup vector has {nan_frac:.0%} NaN ({nan_count}/{len(vector)})"
+        )
+    elif nan_frac > 0.2:
+        warnings.append(
+            f"Matchup vector has {nan_frac:.0%} NaN ({nan_count}/{len(vector)})"
+        )
+
+    passed = len(errors) == 0
+    return ValidationResult(passed=passed, warnings=warnings, errors=errors)

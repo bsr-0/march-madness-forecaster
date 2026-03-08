@@ -1202,16 +1202,36 @@ class SOTAPipeline:
         checks: list = []
         critical_failures: list = []
 
-        # 1. Data freshness check
+        # 1. Data freshness check (S18-1/R8: enforce freshness SLA)
         monitor = PipelineMonitor()
         freshness = monitor.check_data_freshness(self.config.data_cache_dir)
         stale_sources = [c for c in freshness if c.status == "stale"]
         missing_sources = [c for c in freshness if c.status == "missing"]
+
+        freshness_status = "pass"
+        if missing_sources:
+            freshness_status = "CRITICAL"
+            critical_failures.append(
+                f"Missing data sources ({len(missing_sources)}): "
+                + ", ".join(c.source for c in missing_sources)
+            )
+        elif stale_sources:
+            freshness_status = "warn"
+            logger.warning(
+                "Stale data sources (%d): %s",
+                len(stale_sources),
+                [(c.source, f"{c.staleness_hours:.0f}h > {c.sla_hours:.0f}h SLA")
+                 for c in stale_sources],
+            )
         checks.append({
             "check": "data_freshness",
-            "status": "pass" if not stale_sources and not missing_sources else "warn",
+            "status": freshness_status,
             "stale_count": len(stale_sources),
             "missing_count": len(missing_sources),
+            "stale_details": [
+                {"source": c.source, "hours": c.staleness_hours, "sla": c.sla_hours}
+                for c in stale_sources
+            ],
         })
 
         # 2. Required input files
@@ -2571,6 +2591,17 @@ class SOTAPipeline:
                 }
                 risk_report = RiskReport.from_loyo_results(year_briers)
                 report["risk_report"] = risk_report.to_dict()
+
+                # S13-2: Regime-conditional performance analysis
+                from ..ml.evaluation.risk_report import RegimeAnalysis, ScenarioAnalysis
+                regime = RegimeAnalysis.from_loyo_results(year_briers)
+                if regime.regime_labels:
+                    report["regime_analysis"] = regime.to_dict()
+
+                # S10-2: Named scenario analysis
+                scenario = ScenarioAnalysis.from_loyo_results(year_briers)
+                if scenario.base:
+                    report["scenario_analysis"] = scenario.to_dict()
             except Exception as _risk_exc:
                 logger.debug("Risk report generation failed: %s", _risk_exc)
 
@@ -2609,6 +2640,8 @@ class SOTAPipeline:
                     scoring_metric="brier",
                     primary_metric_value=loyo_cv.get("mean_brier", 0),
                     path_risk_metrics=risk_metrics,
+                    regime_analysis=report.get("regime_analysis", {}),
+                    scenario_analysis=report.get("scenario_analysis", {}),
                     decision_policy=self.config.mode,
                     random_seed=self.config.random_seed,
                     phase_timings=self._phase_timer.get_timings(),
