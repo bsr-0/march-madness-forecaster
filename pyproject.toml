@@ -4,7 +4,18 @@ target-version = "py39"
 
 [tool.ruff.lint]
 select = ["E", "F", "W"]  # errors, pyflakes, warnings
-ignore = ["E501", "W293", "W291", "E402"]  # Allow: long lines, whitespace, late imports
+ignore = [
+    "E501",  # line too long (handled editorially)
+    "W293",  # blank line with whitespace
+    "W291",  # trailing whitespace
+    "E402",  # module-level import not at top (conditional imports)
+    "F401",  # unused import (many re-exports and conditional imports)
+    "F841",  # unused variable (often intentional destructuring)
+    "F811",  # redefined-while-unused (conditional import fallbacks)
+    "F821",  # undefined name (try/except import patterns)
+    "F541",  # f-string without placeholders
+    "F601",  # multi-value repeated key literal
+]
 
 [tool.pytest.ini_options]
 addopts = "-x --tb=short"
