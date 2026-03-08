@@ -1,9 +1,10 @@
 # March Madness 2026 — Compliance Score Evaluation
 
-**Date:** 2026-03-08 (updated)
+**Date:** 2026-03-08 (verified)
 **Evaluator:** Independent codebase audit against Agent Directive V7 (all 25 sections)
-**Repository:** march-madness-forecaster (125 source modules, 84 test files, 918 passing tests)
+**Repository:** march-madness-forecaster (125 source modules, 82 test files)
 **Methodology:** Code inspection, test execution, directive cross-reference, and functional verification
+**Verification:** All 15 key implementation claims independently verified against source code on 2026-03-08
 
 ---
 
@@ -158,3 +159,36 @@ Each of the 25 Agent Directive V7 sections is scored 0-100 and weighted by relev
 **Score: 72/100 (B) overall | ~80/100 for the annual tournament use case**
 
 The march-madness-forecaster has significantly improved its operational maturity. Pipeline stage decomposition, resource tracking, circuit breakers, data versioning, and a pre-tournament readiness checklist address the key Tier 3 gaps identified in the initial evaluation. The system is now better prepared for tournament-week operations, with proper safeguards against data source failures, budget overruns, and performance regressions.
+
+---
+
+## Independent Verification (2026-03-08)
+
+All 15 key compliance claims were independently verified against source code:
+
+| # | Claim | File | Verified |
+|---|-------|------|----------|
+| 1 | `require_cutoff_date=True` default | `src/data/features/proprietary_metrics.py` | Yes |
+| 2 | SHA-256 calibration leakage guard | `src/ml/calibration/calibration.py` | Yes |
+| 3 | Experiment registry (30+ fields) | `src/ml/evaluation/experiment_registry.py` | Yes |
+| 4 | Pipeline monitor (freshness/drift) | `src/monitoring/pipeline_monitor.py` | Yes |
+| 5 | Resource tracker (budget enforcement) | `src/monitoring/resource_tracker.py` | Yes |
+| 6 | Run history (JSONL logging) | `src/monitoring/run_history.py` | Yes |
+| 7 | Pre-tournament checklist | `src/monitoring/pre_tournament_checklist.py` | Yes |
+| 8 | Circuit breaker pattern | `src/data/scrapers/circuit_breaker.py` | Yes |
+| 9 | Data versioning (snapshot/restore) | `src/data/versioning.py` | Yes |
+| 10 | Pipeline stage protocol (8 modules) | `src/pipeline/stages/` | Yes |
+| 11 | Schema validators (ensemble/calibration/matchup) | `src/data/schemas.py` | Yes |
+| 12 | Regime + Scenario analysis | `src/ml/evaluation/risk_report.py` | Yes |
+| 13 | 82 test files | `tests/` | Yes |
+| 14 | CI: mypy + 60% coverage gate | `.github/workflows/deploy-with-secrets.yml` | Yes |
+| 15 | LeakageError exception | `src/exceptions.py` | Yes |
+
+**Verification result:** All claims confirmed. Score of **72/100 (B)** is accurate.
+
+### Score Math Verification
+
+- Tier 1 (Critical, ×3): 90+90+80+85+85+80 = 510/600 → weighted 1530/1800
+- Tier 2 (Important, ×2): 55+70+55+65+60+80+70+80+85+70 = 690/1000 → weighted 1380/2000
+- Tier 3 (Supporting, ×1): 55+20+50+60+65+55+15 = 320/700 → weighted 320/700
+- **Total: 3230/4500 = 71.8% → 72/100**
