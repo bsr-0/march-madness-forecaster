@@ -87,6 +87,10 @@ class ExperimentRecord:
     #                calibration, simulation, optimization, total
     total_wall_clock_seconds: float = 0.0
 
+    # --- Regime & Scenario (S13-2, S10-2) ---
+    regime_analysis: Dict[str, Any] = field(default_factory=dict)
+    scenario_analysis: Dict[str, Any] = field(default_factory=dict)
+
     # --- Metadata ---
     notes: str = ""
     tags: List[str] = field(default_factory=list)

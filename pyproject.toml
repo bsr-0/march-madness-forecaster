@@ -24,7 +24,7 @@ addopts = "-x --tb=short"
 source = ["src"]
 
 [tool.coverage.report]
-fail_under = 55  # Raised from 40%; target 60% next, 75% long-term
+fail_under = 60  # Raised from 55%; target 75% long-term
 
 [tool.mypy]
 python_version = "3.9"
