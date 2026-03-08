@@ -978,10 +978,26 @@ class SOTAPipeline:
             torch.manual_seed(self.config.random_seed)
 
         self.feature_engineer = FeatureEngineer()
-        # Phase timing (S20-1)
+        # Phase timing (S20-1) — kept for backward compat
         self._phase_timer = PhaseTimer()
+        # Resource tracking (S20-2) — extends phase timer with memory/CPU
+        from ..monitoring.resource_tracker import ResourceTracker, ResourceBudget
+        self._resource_tracker = ResourceTracker(
+            budget=ResourceBudget(max_wall_seconds=3600, max_memory_mb=8192)
+        )
         # Experiment registry (S3-1)
         self._experiment_registry = ExperimentRegistry()
+        # Pipeline stages (S2) — modular decomposition
+        from .stages.context import PipelineContext
+        self._pipeline_context = PipelineContext(
+            config=self.config,
+            phase_timer=self._phase_timer,
+            resource_tracker=self._resource_tracker,
+            experiment_registry=self._experiment_registry,
+        )
+        # Run history (S18)
+        from ..monitoring.run_history import RunHistory
+        self._run_history = RunHistory()
         # Base ensemble weights (previously managed by CombinatorialFusionAnalysis)
         self.ensemble_base_weights: Dict[str, float] = {}
 
@@ -1302,9 +1318,74 @@ class SOTAPipeline:
         # Pre-run validation checklist
         self._pre_run_validation()
 
-        if self.config.mode == "ev":
-            return self._run_ev_mode()
-        return self._run_calibration_mode()
+        import time as _run_time
+        _run_start = _run_time.perf_counter()
+        _run_error = None
+        try:
+            if self.config.mode == "ev":
+                result = self._run_ev_mode()
+            else:
+                result = self._run_calibration_mode()
+        except Exception as exc:
+            _run_error = exc
+            # Log failed run to history
+            self._log_run_to_history(
+                status="error",
+                duration=_run_time.perf_counter() - _run_start,
+                error_message=str(exc),
+            )
+            raise
+
+        # Log successful run to history
+        brier = result.get("loyo_mean_brier") if isinstance(result, dict) else None
+        self._log_run_to_history(
+            status="success",
+            duration=_run_time.perf_counter() - _run_start,
+            brier_score=brier,
+        )
+
+        # Check for Brier score regression
+        if brier is not None and hasattr(self, "_run_history"):
+            regression_msg = self._run_history.check_regression(
+                brier, mode=self.config.mode
+            )
+            if regression_msg:
+                logger.warning("REGRESSION: %s", regression_msg)
+
+        # Log resource usage summary
+        if hasattr(self, "_resource_tracker"):
+            logger.info(self._resource_tracker.summary())
+            self._resource_tracker.check_budget()
+
+        return result
+
+    def _log_run_to_history(
+        self,
+        status: str,
+        duration: float,
+        brier_score: Optional[float] = None,
+        error_message: Optional[str] = None,
+    ) -> None:
+        """Log a pipeline run to the run history."""
+        if not hasattr(self, "_run_history"):
+            return
+        try:
+            from ..monitoring.run_history import RunRecord
+            resource_usage = {}
+            if hasattr(self, "_resource_tracker"):
+                resource_usage = self._resource_tracker.to_dict()
+            record = RunRecord(
+                mode=self.config.mode,
+                year=self.config.year,
+                status=status,
+                duration_seconds=round(duration, 1),
+                resource_usage=resource_usage,
+                brier_score=brier_score,
+                error_message=error_message,
+            )
+            self._run_history.log_run(record)
+        except Exception as exc:
+            logger.debug("Failed to log run to history: %s", exc)
 
     def _run_calibration_mode(self) -> Dict:
         """Calibration mode: minimize Brier score for Kaggle submission."""
