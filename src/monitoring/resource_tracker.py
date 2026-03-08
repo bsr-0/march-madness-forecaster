@@ -283,3 +283,179 @@ class ResourceTracker:
             return 0.0
         _, peak = tracemalloc.get_traced_memory()
         return peak / (1024 * 1024)
+
+
+# ---------------------------------------------------------------------------
+# Cost-per-improvement tracking and Pareto frontier (S20 extension)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ImprovementRecord:
+    """Records the cost (compute) and benefit (metric improvement) of a change."""
+
+    label: str
+    wall_seconds: float
+    cpu_seconds: float
+    peak_memory_mb: float
+    brier_improvement: float  # Negative = better (lower Brier)
+    description: str = ""
+
+    @property
+    def cost_per_improvement(self) -> float:
+        """Wall-clock seconds per unit of Brier improvement."""
+        if abs(self.brier_improvement) < 1e-10:
+            return float("inf")
+        return self.wall_seconds / abs(self.brier_improvement)
+
+
+class ComputeEfficiencyTracker:
+    """Track cost-per-improvement and compute Pareto frontier.
+
+    Implements Agent Directive V7 S20 requirements for:
+      - Pre-cycle budget allocation awareness
+      - Cost-per-improvement tracking across experiments
+      - Pareto frontier: identify experiments that are not dominated
+        (i.e., no other experiment is both cheaper AND more impactful)
+    """
+
+    def __init__(self) -> None:
+        self._records: List[ImprovementRecord] = []
+
+    def record(
+        self,
+        label: str,
+        wall_seconds: float,
+        cpu_seconds: float,
+        peak_memory_mb: float,
+        brier_improvement: float,
+        description: str = "",
+    ) -> ImprovementRecord:
+        """Log a compute-vs-improvement data point."""
+        rec = ImprovementRecord(
+            label=label,
+            wall_seconds=wall_seconds,
+            cpu_seconds=cpu_seconds,
+            peak_memory_mb=peak_memory_mb,
+            brier_improvement=brier_improvement,
+            description=description,
+        )
+        self._records.append(rec)
+        logger.info(
+            "Recorded improvement: %s (%.1fs, Brier delta=%.6f, "
+            "cost/improvement=%.0f s/unit)",
+            label,
+            wall_seconds,
+            brier_improvement,
+            rec.cost_per_improvement,
+        )
+        return rec
+
+    def pareto_frontier(self) -> List[ImprovementRecord]:
+        """Compute the Pareto frontier of (cost, improvement) tradeoffs.
+
+        Returns records that are not dominated by any other record.
+        A record is dominated if another record has both lower cost
+        AND greater improvement.
+        """
+        if not self._records:
+            return []
+
+        frontier: List[ImprovementRecord] = []
+        for candidate in self._records:
+            dominated = False
+            for other in self._records:
+                if other is candidate:
+                    continue
+                # other dominates candidate if:
+                #   - other is cheaper (less wall time)
+                #   - AND other has better improvement (more negative brier_improvement)
+                if (
+                    other.wall_seconds <= candidate.wall_seconds
+                    and other.brier_improvement <= candidate.brier_improvement
+                    and (
+                        other.wall_seconds < candidate.wall_seconds
+                        or other.brier_improvement < candidate.brier_improvement
+                    )
+                ):
+                    dominated = True
+                    break
+            if not dominated:
+                frontier.append(candidate)
+
+        return sorted(frontier, key=lambda r: r.wall_seconds)
+
+    def budget_allocation_report(
+        self,
+        total_budget_seconds: float,
+    ) -> Dict[str, object]:
+        """Suggest budget allocation based on historical cost-per-improvement.
+
+        Given a total compute budget, recommend which experiments to
+        prioritize based on their cost-efficiency ratio.
+        """
+        if not self._records:
+            return {"error": "No improvement records available"}
+
+        # Sort by cost-per-improvement (most efficient first)
+        efficient = sorted(
+            [r for r in self._records if r.brier_improvement < 0],
+            key=lambda r: r.cost_per_improvement,
+        )
+
+        allocated: List[Dict[str, object]] = []
+        remaining = total_budget_seconds
+        total_expected_improvement = 0.0
+
+        for rec in efficient:
+            if remaining <= 0:
+                break
+            if rec.wall_seconds <= remaining:
+                allocated.append({
+                    "label": rec.label,
+                    "wall_seconds": rec.wall_seconds,
+                    "expected_improvement": abs(rec.brier_improvement),
+                    "cost_per_improvement": round(rec.cost_per_improvement, 1),
+                })
+                remaining -= rec.wall_seconds
+                total_expected_improvement += abs(rec.brier_improvement)
+
+        return {
+            "total_budget_seconds": total_budget_seconds,
+            "allocated_seconds": total_budget_seconds - remaining,
+            "remaining_seconds": remaining,
+            "n_experiments_recommended": len(allocated),
+            "total_expected_improvement": round(total_expected_improvement, 6),
+            "allocations": allocated,
+            "pareto_frontier_size": len(self.pareto_frontier()),
+        }
+
+    def summary(self) -> str:
+        """Human-readable cost-efficiency summary."""
+        if not self._records:
+            return "No improvement records logged."
+
+        lines = [
+            "Compute Efficiency Report",
+            "=" * 60,
+            f"  {'Experiment':<30s} {'Time':>8s}  {'Brier Δ':>10s}  {'Cost/Imp':>10s}",
+            "-" * 60,
+        ]
+
+        for rec in sorted(self._records, key=lambda r: r.cost_per_improvement):
+            cpi = (
+                f"{rec.cost_per_improvement:>9.0f}s"
+                if rec.cost_per_improvement < float("inf")
+                else "      inf"
+            )
+            lines.append(
+                f"  {rec.label:<30s} {rec.wall_seconds:>7.1f}s"
+                f"  {rec.brier_improvement:>+10.6f}  {cpi}"
+            )
+
+        frontier = self.pareto_frontier()
+        lines.append("-" * 60)
+        lines.append(f"Pareto frontier: {len(frontier)} non-dominated experiments")
+        for rec in frontier:
+            lines.append(f"  * {rec.label} ({rec.wall_seconds:.0f}s, {rec.brier_improvement:+.6f})")
+
+        return "\n".join(lines)
