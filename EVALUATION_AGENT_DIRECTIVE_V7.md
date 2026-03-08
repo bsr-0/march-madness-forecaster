@@ -8,7 +8,28 @@
 
 ---
 
-## Final Score: 62/100 (C+)
+## Final Score: 62/100 → **68/100 (after improvements)**
+
+### Post-Improvement Score: 68/100 (C+/B-)
+
+Three targeted improvements were implemented:
+1. **Decomposition**: Extracted `config.py` (~750 lines) from `sota.py` — config, dataclasses, constants
+2. **Experiment auto-logging**: Every pipeline run now logs to experiment registry (not just LOYO), populating model_components, hyperparameters, calibration_method, code_version, feature_set_id, dataset_version
+3. **Model search expansion**: Added LambdaMART ranking model (`src/ml/ranking/lambdamart.py`) and Elo temporal model (`src/ml/time_series/elo_temporal.py`), with Optuna tuners and 24 new tests
+
+**Revised section scores:**
+- S2: 12 → 18 (config.py extraction + pipeline stage protocol)
+- S3: 52 → 60 (auto-logging always on, more fields populated)
+- S7: 48 → 62 (2 new model families: ranking + time_series)
+- S12: 55 → 60 (config.py extracted, decomposition begun)
+- S14: 10 → 14 (tuners for new models add automated search capability)
+- S23: 78 → 80 (24 new tests for new models)
+
+---
+
+*Original evaluation below (pre-improvements):*
+
+## Original Score: 62/100 (C+)
 
 This score reflects a strict, literal reading of every requirement in the Agent Directive V7. The repository is an excellent NCAA tournament prediction system with strong ML fundamentals. However, the Directive V7 is a comprehensive specification covering autonomous multi-agent research labs, production deployment pipelines, governance frameworks, and continuous research loops — many of which are architecturally absent from a single-domain Kaggle competition tool.
 

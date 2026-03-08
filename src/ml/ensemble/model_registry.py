@@ -109,11 +109,20 @@ MODEL_REGISTRY: List[ModelFamilySpec] = [
     ModelFamilySpec(
         name="lambda_mart",
         family="ranking",
-        implemented=False,
-        module_path=None,
+        implemented=True,
+        module_path="src.ml.ranking.lambdamart",
         strengths="Learning-to-rank objective, optimizes ordering directly",
         when_to_use="Bracket optimization where rank ordering matters more than calibration",
         min_samples=300,
+    ),
+    ModelFamilySpec(
+        name="elo_temporal",
+        family="time_series",
+        implemented=True,
+        module_path="src.ml.time_series.elo_temporal",
+        strengths="Chronological rating dynamics, inherent temporal integrity, mean reversion",
+        when_to_use="Temporal strength estimation; ensemble diversity via non-feature-based model",
+        min_samples=100,
     ),
     ModelFamilySpec(
         name="gaussian_process",
