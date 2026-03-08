@@ -16,6 +16,7 @@ import pandas as pd
 
 from ..normalize import normalize_team_id, normalize_team_name, strip_ncaa_suffix, strip_ncaa_suffix_name
 from ..team_name_resolver import TeamNameResolver
+from ...exceptions import LeakageError
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ class HistoricalFeatureMaterializer:
         coverage = self._variable_coverage_report(team_game_features, matchup_features, tournament_matchup_features)
         study_alignment = self._study_alignment_report(coverage)
         if self.config.strict_validation and not leakage["passed"]:
-            raise ValueError(f"Leakage checks failed: {leakage['issues']}")
+            raise LeakageError(f"Leakage checks failed: {leakage['issues']}")
 
         team_table_path, team_table_format = self._write_table(
             team_game_features,
