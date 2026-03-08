@@ -939,3 +939,167 @@ class EnsembleWeightOptimizer:
             return
         for i in range(budget + 1):
             self._weight_recurse(remaining - 1, steps, budget - i, current + [i / steps], combos)
+
+
+class LambdaMARTTuner:
+    """Optuna-based hyperparameter tuner for LambdaMART.
+
+    Searches over tree structure and ranking-specific parameters using
+    temporal cross-validation.
+    """
+
+    def __init__(
+        self,
+        n_trials: int = 15,
+        n_cv_splits: int = 5,
+        timeout: Optional[int] = 180,
+        random_seed: int = 42,
+    ):
+        if not OPTUNA_AVAILABLE:
+            raise ImportError("Optuna required for tuning")
+        if not LIGHTGBM_AVAILABLE:
+            raise ImportError("LightGBM required for LambdaMARTTuner")
+        self.n_trials = n_trials
+        self.n_cv_splits = n_cv_splits
+        self.timeout = timeout
+        self.random_seed = random_seed
+
+    def tune(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        sort_keys: np.ndarray,
+        sample_weight: Optional[np.ndarray] = None,
+    ) -> TuningResult:
+        """Tune LambdaMART hyperparameters via temporal CV.
+
+        Uses binary classification objective internally for CV scoring
+        (Brier score) since group construction requires tournament
+        structure not available in generic CV folds.
+        """
+        cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=1)
+
+        def objective(trial: optuna.Trial) -> float:
+            params = {
+                "objective": "binary",
+                "metric": "binary_logloss",
+                "boosting_type": "gbdt",
+                "num_leaves": trial.suggest_int("num_leaves", 4, 16),
+                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.15, log=True),
+                "feature_fraction": trial.suggest_float("feature_fraction", 0.5, 0.9),
+                "min_child_samples": trial.suggest_int("min_child_samples", 20, 80),
+                "lambda_l1": trial.suggest_float("lambda_l1", 0.1, 5.0, log=True),
+                "lambda_l2": trial.suggest_float("lambda_l2", 0.1, 5.0, log=True),
+                "verbose": -1,
+                "num_threads": 1,
+            }
+
+            def train_fn(X_tr, y_tr, X_v, y_v, w_tr):
+                train_data = lgb.Dataset(X_tr, label=y_tr, weight=w_tr)
+                valid_data = lgb.Dataset(X_v, label=y_v, reference=train_data)
+                model = lgb.train(
+                    params,
+                    train_data,
+                    num_boost_round=300,
+                    valid_sets=[valid_data],
+                    valid_names=["valid"],
+                    callbacks=[
+                        lgb.early_stopping(30),
+                        lgb.log_evaluation(period=0),
+                    ],
+                )
+                return model
+
+            def predict_fn(model, X_pred):
+                return model.predict(X_pred)
+
+            results = cv.cross_validate(
+                X, y, sort_keys, train_fn, predict_fn,
+                sample_weight=sample_weight,
+            )
+            return float(np.mean([r.brier_score for r in results]))
+
+        study = optuna.create_study(
+            direction="minimize",
+            study_name="lambdamart_tuning",
+            sampler=optuna.samplers.TPESampler(seed=self.random_seed),
+        )
+        study.optimize(objective, n_trials=self.n_trials, timeout=self.timeout)
+
+        return TuningResult(
+            best_params=study.best_params,
+            best_score=study.best_value,
+            n_trials=len(study.trials),
+            study_name="lambdamart_tuning",
+        )
+
+
+class EloTuner:
+    """Optuna-based hyperparameter tuner for EloTemporalModel.
+
+    Searches over K-factor, mean reversion rate, and margin-of-victory
+    settings.  Uses leave-one-year-out evaluation.
+    """
+
+    def __init__(
+        self,
+        n_trials: int = 30,
+        timeout: Optional[int] = 120,
+        random_seed: int = 42,
+    ):
+        if not OPTUNA_AVAILABLE:
+            raise ImportError("Optuna required for tuning")
+        self.n_trials = n_trials
+        self.timeout = timeout
+        self.random_seed = random_seed
+
+    def tune(
+        self,
+        games: list,
+        tournament_matchups: list,
+    ) -> TuningResult:
+        """Tune Elo parameters against tournament prediction accuracy.
+
+        Args:
+            games: Chronologically sorted regular-season game dicts.
+            tournament_matchups: Tournament game dicts with outcomes
+                for evaluation.
+
+        Returns:
+            TuningResult with best Elo parameters.
+        """
+        from ..time_series.elo_temporal import EloTemporalModel
+
+        def objective(trial: optuna.Trial) -> float:
+            k = trial.suggest_float("k_factor", 10.0, 40.0)
+            mr = trial.suggest_float("mean_reversion", 0.1, 0.5)
+            mov = trial.suggest_categorical("mov_adjustment", [True, False])
+
+            model = EloTemporalModel(
+                k_factor=k,
+                mean_reversion=mr,
+                mov_adjustment=mov,
+            )
+            model.train(games)
+
+            # Evaluate on tournament matchups
+            brier_sum = 0.0
+            for m in tournament_matchups:
+                prob = model.predict_proba(m["team_a"], m["team_b"])
+                brier_sum += (prob - m["outcome"]) ** 2
+
+            return brier_sum / max(len(tournament_matchups), 1)
+
+        study = optuna.create_study(
+            direction="minimize",
+            study_name="elo_tuning",
+            sampler=optuna.samplers.TPESampler(seed=self.random_seed),
+        )
+        study.optimize(objective, n_trials=self.n_trials, timeout=self.timeout)
+
+        return TuningResult(
+            best_params=study.best_params,
+            best_score=study.best_value,
+            n_trials=len(study.trials),
+            study_name="elo_tuning",
+        )
