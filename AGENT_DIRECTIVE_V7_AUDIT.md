@@ -2,7 +2,7 @@
 
 ## March Madness Forecaster — Comprehensive Evaluation
 
-**Audit Date:** 2026-03-07 (Updated)
+**Audit Date:** 2026-03-08 (Updated — includes R1-R8 improvements)
 **Directive Version:** Agent Directive V7 Complete (All 25 Sections)
 **Repository:** march-madness-forecaster
 **Branch:** claude/audit-agent-directive-v7-fNmIe
@@ -16,7 +16,7 @@ The march-madness-forecaster is a **research-grade NCAA tournament prediction sy
 
 Two prior rounds of improvements addressed critical findings from the initial audit. This report evaluates the **current state** of all implementations.
 
-**Overall Compliance: ~55% of Directive V7 requirements fully met** (up from ~48% pre-fixes).
+**Overall Compliance: ~62% of Directive V7 requirements fully met** (up from ~48% pre-fixes, ~55% after critical fixes).
 
 ### Compliance Scorecard
 
@@ -24,28 +24,28 @@ Two prior rounds of improvements addressed critical findings from the initial au
 |---|---|---|---|---|
 | Core Principles / Temporal Integrity | S1 | 90% | A | +5% |
 | Agent Architecture | S2 | 15% | D | — |
-| Experiment Logging | S3 | 55% | C+ | +20% |
+| Experiment Logging | S3 | 70% | B | +35% |
 | Problem Definition | S4 | 90% | A | — |
 | Data Discovery & Lineage | S5 | 65% | B- | — |
 | Feature Discovery | S6 | 80% | A- | — |
-| Model Search | S7 | 55% | C+ | — |
+| Model Search | S7 | 65% | B- | +10% |
 | Ensemble & Calibration | S8 | 80% | A- | +5% |
 | Decision Optimization | S9 | 85% | A | — |
 | Backtesting Realism | S10 | 75% | B | +5% |
-| Skeptical Audit | S11 | 60% | B- | +5% |
+| Skeptical Audit | S11 | 70% | B | +15% |
 | Codebase Quality | S12 | 70% | B | +5% |
 | Evaluation Matrix | S13 | 75% | B+ | +5% |
 | Continuous Research Loop | S14 | 20% | D+ | — |
 | Failure Mode Rejection | S15 | 70% | B | +10% |
 | Final Deliverables | S16 | 45% | C | — |
-| Deployment & Monitoring | S18 | 15% | D | +10% |
-| Data Eng. & Pipelines | S19 | 25% | D | — |
-| Compute Budget | S20 | 15% | D | +10% |
+| Deployment & Monitoring | S18 | 25% | D+ | +20% |
+| Data Eng. & Pipelines | S19 | 40% | C- | +15% |
+| Compute Budget | S20 | 30% | D+ | +25% |
 | Human Governance | S21 | 15% | D | — |
 | Conflict Resolution | S22 | N/A | N/A | — |
-| Testing & CI/CD | S23 | 60% | B- | +10% |
+| Testing & CI/CD | S23 | 70% | B | +20% |
 | Domain Integration | S24 | 85% | A | — |
-| Extended Failure Modes | S25 | 35% | D+ | +5% |
+| Extended Failure Modes | S25 | 45% | C | +15% |
 
 ---
 
