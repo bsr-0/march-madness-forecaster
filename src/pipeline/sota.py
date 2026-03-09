@@ -617,6 +617,76 @@ class SOTAPipeline:
         except Exception as exc:
             logger.debug("Failed to log run to history: %s", exc)
 
+    def train_for_predictions(self) -> None:
+        """Train models only, without running tournament simulation or exports.
+
+        After calling this method, ``predict_probability()`` is functional
+        for arbitrary team pairs.  Useful for conference tournament predictions
+        and other pre-tournament analysis that don't need the full pipeline.
+
+        Stages executed: data loading → feature engineering → model training
+        → calibration.  Skips: Monte Carlo simulation, bracket optimization,
+        Kaggle export, pool analysis.
+        """
+        # Pre-run checks (light)
+        _orch.run_pre_checks(self)
+
+        # 1. Data loading
+        teams = self._load_teams()
+        torvik_map, proprietary_map = self._load_team_stat_sources(teams)
+        rosters = self._build_rosters(teams)
+        self._apply_injury_reports(rosters)
+        game_flows = self._build_or_load_game_flows(teams)
+        self._external_composites = self._load_external_ratings(teams)
+
+        # 2. Feature engineering
+        for team in teams:
+            team_id = self._team_id(team.name)
+            self.team_struct[team_id] = team
+            self.team_id_to_name[team_id] = team.name
+            self.team_name_to_id[team.name] = team_id
+
+            pm = proprietary_map.get(team_id, {})
+            t = torvik_map.get(team_id, {})
+            r = rosters.get(team_id)
+            g = game_flows.get(team_id, [])
+
+            features = self.feature_engineer.extract_team_features(
+                team_id=team_id, team_name=team.name,
+                seed=team.seed, region=team.region,
+                proprietary_metrics=pm, torvik_data=t, roster=r, games=g,
+            )
+
+            comp = self._external_composites.get(team_id)
+            if comp is not None:
+                features.external_rating_composite = comp.composite_rating
+                features.external_rating_spread = comp.rating_spread
+
+            self.team_features[team_id] = features.to_vector(include_embeddings=False)
+
+        self._compute_train_val_boundary(game_flows)
+        self._construct_schedule_graph(teams)
+
+        # 3. Model training
+        self._train_baseline_model(game_flows)
+
+        # 4. Calibration (best-effort)
+        try:
+            self._fit_calibration(game_flows)
+        except Exception as e:
+            logger.warning("Calibration failed, using uncalibrated model: %s", e)
+
+        try:
+            self._fit_massey_predictor(game_flows)
+        except Exception as e:
+            logger.debug("Massey predictor fitting skipped: %s", e)
+
+        logger.info(
+            "Pipeline trained for predictions (%d teams, %d features)",
+            len(self.team_features),
+            next(iter(self.team_features.values())).shape[0] if self.team_features else 0,
+        )
+
     def _run_calibration_mode(self) -> Dict:
         """Calibration mode: minimize Brier score for Kaggle submission."""
         return self._run_shared_pipeline()
