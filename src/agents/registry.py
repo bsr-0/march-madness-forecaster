@@ -33,6 +33,20 @@ class AgentRegistry:
             if capability in agent.capabilities()
         ]
 
+    def health_check(self) -> Dict[str, str]:
+        """Check status of all registered agents.
+
+        Returns:
+            Dict mapping agent name to its current status string.
+        """
+        health: Dict[str, str] = {}
+        for name, agent in self._agents.items():
+            try:
+                health[name] = agent.status().value
+            except Exception:
+                health[name] = "unknown"
+        return health
+
 
 class MessageBus:
     """Routes messages between agents and records history."""

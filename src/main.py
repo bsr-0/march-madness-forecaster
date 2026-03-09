@@ -1993,6 +1993,34 @@ def main():
         help="Output JSON report path",
     )
 
+    # Governance commands (S21)
+    gov_parser = subparsers.add_parser(
+        "governance", help="Governance gate management (S21)"
+    )
+    gov_sub = gov_parser.add_subparsers(dest="gov_command")
+    gov_sub.add_parser("status", help="Show pending approvals and authority matrix")
+    gov_approve = gov_sub.add_parser("approve", help="Approve a pending request")
+    gov_approve.add_argument("request_id", help="Request ID to approve")
+    gov_approve.add_argument("--reviewer", default="cli_user", help="Reviewer name")
+    gov_approve.add_argument("--notes", default="", help="Approval notes")
+    gov_deny = gov_sub.add_parser("deny", help="Deny a pending request")
+    gov_deny.add_argument("request_id", help="Request ID to deny")
+    gov_deny.add_argument("--reviewer", default="cli_user", help="Reviewer name")
+    gov_deny.add_argument("--reason", default="", help="Denial reason")
+    gov_sub.add_parser("audit", help="Show recent audit log entries")
+
+    # Deploy commands (S18)
+    deploy_parser = subparsers.add_parser(
+        "deploy", help="Model deployment management (S18)"
+    )
+    deploy_sub = deploy_parser.add_subparsers(dest="deploy_command")
+    deploy_sub.add_parser("list", help="List all model versions")
+    deploy_shadow = deploy_sub.add_parser("shadow", help="Run shadow comparison")
+    deploy_shadow.add_argument("--candidate", required=True, help="Candidate version ID")
+    deploy_promote = deploy_sub.add_parser("promote", help="Promote a model version")
+    deploy_promote.add_argument("--version", required=True, help="Version ID to promote")
+    deploy_sub.add_parser("drift-check", help="Run drift analysis on latest model")
+
     args = parser.parse_args()
 
     if args.command == "sota":
@@ -2160,6 +2188,58 @@ def main():
             with open(args.output, "w") as f:
                 json.dump(report, f, indent=2)
             print(f"\nFull report saved to {args.output}")
+        return 0
+    elif args.command == "governance":
+        from .governance.gate import GovernanceGate
+        gate = GovernanceGate()
+        if args.gov_command == "status":
+            print(gate.status())
+        elif args.gov_command == "approve":
+            ok = gate.approve(args.request_id, args.reviewer, args.notes)
+            print(f"Approved: {ok}")
+        elif args.gov_command == "deny":
+            ok = gate.deny(args.request_id, args.reviewer, args.reason)
+            print(f"Denied: {ok}")
+        elif args.gov_command == "audit":
+            from .governance.audit_trail import GovernanceAuditLog
+            audit = GovernanceAuditLog()
+            entries = audit.query()
+            if not entries:
+                print("No audit entries.")
+            else:
+                for entry in entries[-20:]:
+                    print(f"  [{entry.get('timestamp', '')[:19]}] "
+                          f"{entry.get('type', '')} - {entry.get('action', entry.get('checkpoint', ''))}")
+        else:
+            gov_parser.print_help()
+        return 0
+    elif args.command == "deploy":
+        from .deployment.model_store import ModelStore
+        store = ModelStore()
+        if args.deploy_command == "list":
+            versions = store.list_versions()
+            if not versions:
+                print("No model versions found.")
+            else:
+                print(f"{'Version ID':<20s} {'Model':<20s} {'Brier':>8s} {'Production':>12s} {'Created'}")
+                print("-" * 80)
+                for v in versions:
+                    prod = "YES" if v.is_production else ""
+                    brier = f"{v.brier_score:.4f}" if v.brier_score is not None else "N/A"
+                    print(f"{v.version_id:<20s} {v.model_name:<20s} {brier:>8s} {prod:>12s} {v.created_at[:19]}")
+        elif args.deploy_command == "promote":
+            store.promote(args.version)
+            print(f"Promoted version {args.version} to production")
+        elif args.deploy_command == "shadow":
+            from .deployment.orchestrator import DeploymentOrchestrator
+            orch = DeploymentOrchestrator(model_store=store)
+            result = orch.deploy_shadow(args.candidate)
+            print(json.dumps(result, indent=2, default=str))
+        elif args.deploy_command == "drift-check":
+            print("Drift check requires baseline and current feature stats.")
+            print("Run the pipeline first to generate feature statistics.")
+        else:
+            deploy_parser.print_help()
         return 0
     else:
         parser.print_help()

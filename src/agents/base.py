@@ -50,3 +50,33 @@ class Agent(Protocol):
     def status(self) -> AgentStatus:
         """Return current agent status."""
         ...
+
+
+class AgentHealthMonitor:
+    """Tracks agent health via last-seen timestamps and status checks."""
+
+    def __init__(self, timeout_seconds: float = 300.0) -> None:
+        self._last_seen: Dict[str, str] = {}
+        self._timeout_seconds = timeout_seconds
+
+    def record_heartbeat(self, agent_name: str) -> None:
+        """Record that an agent was last seen now."""
+        self._last_seen[agent_name] = datetime.now(timezone.utc).isoformat()
+
+    def check_health(self, agents: Dict[str, "Agent"]) -> Dict[str, str]:
+        """Check health of all agents. Returns agent_name -> status string."""
+        health: Dict[str, str] = {}
+        now = datetime.now(timezone.utc)
+        for name, agent in agents.items():
+            agent_status = agent.status().value
+            last_seen = self._last_seen.get(name)
+            if last_seen:
+                try:
+                    last_dt = datetime.fromisoformat(last_seen)
+                    elapsed = (now - last_dt).total_seconds()
+                    if elapsed > self._timeout_seconds:
+                        agent_status = f"{agent_status} (stale: {elapsed:.0f}s)"
+                except (ValueError, TypeError):
+                    pass
+            health[name] = agent_status
+        return health
