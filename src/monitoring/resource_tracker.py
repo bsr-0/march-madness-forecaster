@@ -42,6 +42,8 @@ class ResourceBudget:
     max_memory_mb: Optional[float] = 8192.0  # 8 GB default
     max_total_cpu_seconds: Optional[float] = None  # No CPU limit by default
     strict: bool = False  # If True, raise on budget exceeded; else warn
+    phase_budgets: Optional[Dict[str, float]] = None  # phase name -> max wall seconds
+    warning_thresholds: List[float] = field(default_factory=lambda: [0.8, 0.9])
 
 
 @dataclass
@@ -130,6 +132,48 @@ class ResourceTracker:
                 record.cpu_seconds,
                 record.peak_memory_mb,
             )
+
+            # Mid-pipeline budget enforcement
+            self._check_phase_budget(name, record)
+            self._check_cumulative_budget()
+
+    def budget_utilization(self) -> float:
+        """Return fraction of wall-clock budget consumed (0.0 to 1.0+)."""
+        if self._budget.max_wall_seconds is None or self._budget.max_wall_seconds <= 0:
+            return 0.0
+        return self.total_seconds() / self._budget.max_wall_seconds
+
+    def _check_phase_budget(self, name: str, record: PhaseResourceRecord) -> None:
+        """Check if a specific phase exceeded its individual budget."""
+        if self._budget.phase_budgets is None:
+            return
+        phase_limit = self._budget.phase_budgets.get(name)
+        if phase_limit is not None and record.wall_seconds > phase_limit:
+            msg = (
+                f"Phase '{name}' exceeded its budget: "
+                f"{record.wall_seconds:.1f}s > {phase_limit:.0f}s"
+            )
+            if self._budget.strict:
+                from ..exceptions import ComputeBudgetExceeded
+                raise ComputeBudgetExceeded(msg)
+            logger.warning("PHASE BUDGET: %s", msg)
+
+    def _check_cumulative_budget(self) -> None:
+        """Check cumulative budget utilization and log at warning thresholds."""
+        utilization = self.budget_utilization()
+        if utilization <= 0:
+            return
+        for threshold in self._budget.warning_thresholds:
+            # Log once per threshold crossing (check if previous phase was below)
+            prev_wall = self.total_seconds() - (self._records[-1].wall_seconds if self._records else 0)
+            prev_util = prev_wall / self._budget.max_wall_seconds if self._budget.max_wall_seconds else 0
+            if prev_util < threshold <= utilization:
+                logger.warning(
+                    "BUDGET ALERT: %.0f%% of wall-clock budget consumed (%.0fs / %.0fs)",
+                    utilization * 100,
+                    self.total_seconds(),
+                    self._budget.max_wall_seconds,
+                )
 
     def get_timings(self) -> Dict[str, float]:
         """Return phase name -> elapsed wall-clock seconds (PhaseTimer compat)."""

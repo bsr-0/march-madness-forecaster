@@ -488,6 +488,12 @@ class SOTAPipelineConfig:
     enable_market_blend: bool = True  # Blend model predictions with betting market implied probabilities
     market_blend_weight: float = 0.20  # Weight for market data in blend (0.0-1.0); model gets 1-weight
 
+    # Compute budget management (S20)
+    compute_budget_seconds: float = 3600.0
+    enable_budget_degradation: bool = True
+    # Multi-agent orchestration (S2)
+    use_agent_orchestration: bool = False
+
     def __post_init__(self):
         if self.mode not in ("calibration", "ev"):
             raise ValueError(f"Invalid mode '{self.mode}': must be 'calibration' or 'ev'")
@@ -998,8 +1004,20 @@ class SOTAPipeline:
         # Resource tracking (S20-2) — extends phase timer with memory/CPU
         from ..monitoring.resource_tracker import ResourceTracker, ResourceBudget
         self._resource_tracker = ResourceTracker(
-            budget=ResourceBudget(max_wall_seconds=3600, max_memory_mb=8192)
+            budget=ResourceBudget(
+                max_wall_seconds=self.config.compute_budget_seconds,
+                max_memory_mb=8192,
+                phase_budgets={
+                    "data_loading": 300,
+                    "feature_engineering": 600,
+                    "model_training": 1800,
+                    "calibration": 300,
+                    "simulation": 600,
+                },
+            )
         )
+        from ..monitoring.cost_tracker import CostTracker
+        self._cost_tracker = CostTracker()
         # Experiment registry (S3-1)
         self._experiment_registry = ExperimentRegistry()
         # Research loop (S14) — continuous improvement orchestrator
@@ -1017,6 +1035,11 @@ class SOTAPipeline:
         # Run history (S18)
         from ..monitoring.run_history import RunHistory
         self._run_history = RunHistory()
+        # Governance (S21) — unified gate + compliance checks
+        from ..governance.gate import GovernanceGate
+        from ..governance.compliance import ComplianceRunner, default_compliance_checkpoints
+        self._governance_gate = GovernanceGate()
+        self._compliance_runner = ComplianceRunner(default_compliance_checkpoints())
         # Base ensemble weights (previously managed by CombinatorialFusionAnalysis)
         self.ensemble_base_weights: Dict[str, float] = {}
 
@@ -1375,6 +1398,23 @@ class SOTAPipeline:
         if hasattr(self, "_resource_tracker"):
             logger.info(self._resource_tracker.summary())
             self._resource_tracker.check_budget()
+
+        # Log cost-performance data for Pareto frontier analysis
+        if hasattr(self, "_cost_tracker") and brier is not None:
+            try:
+                usage = self._resource_tracker.to_dict()
+                phase_records = usage.get("phases", {})
+                phase_costs = self._cost_tracker.compute_phase_costs(phase_records)
+                self._cost_tracker.add_run(
+                    brier_score=brier,
+                    wall_seconds=usage.get("total_wall_seconds", 0),
+                    cpu_seconds=usage.get("total_cpu_seconds", 0),
+                    peak_memory_mb=usage.get("peak_memory_mb", 0),
+                    phase_costs=phase_costs,
+                )
+                logger.info(self._cost_tracker.summary())
+            except Exception as exc:
+                logger.debug("Failed to log cost-performance: %s", exc)
 
         return result
 
@@ -2093,6 +2133,52 @@ class SOTAPipeline:
             len(blended),
         )
 
+    def _run_agent_orchestrated_pipeline(self) -> Dict:
+        """Run pipeline via multi-agent orchestration (S2).
+
+        Creates agent registry, registers all four agents with self as context,
+        and delegates pipeline execution to the ResearchOrchestrator.
+        """
+        from ..agents.data_agent import DataAgent
+        from ..agents.feature_agent import FeatureAgent
+        from ..agents.model_agent import ModelAgent
+        from ..agents.audit_agent import AuditAgent
+        from ..agents.orchestrator import ResearchOrchestrator
+        from ..agents.registry import AgentRegistry, MessageBus
+
+        registry = AgentRegistry()
+        registry.register(DataAgent())
+        registry.register(FeatureAgent())
+        registry.register(ModelAgent())
+        registry.register(AuditAgent())
+
+        bus = MessageBus(registry)
+        orchestrator = ResearchOrchestrator(
+            registry=registry, bus=bus, ctx=self,
+            max_retries=2, retry_delay_seconds=1.0,
+        )
+
+        logger.info("Running pipeline via agent orchestration (S2)")
+        result = orchestrator.run_pipeline()
+
+        if result.get("status") == "vetoed":
+            logger.error(
+                "Agent pipeline vetoed at stage '%s': %s",
+                result.get("stage"), result.get("reason"),
+            )
+        elif result.get("status") == "failed":
+            logger.error(
+                "Agent pipeline failed at stage '%s': %s",
+                result.get("stage"), result.get("error"),
+            )
+        else:
+            logger.info("Agent orchestrated pipeline completed successfully")
+            # Log agent health
+            health = registry.health_check()
+            logger.info("Final agent health: %s", health)
+
+        return result
+
     def _run_shared_pipeline(self) -> Dict:
         """Shared predictive pipeline used by both calibration and EV modes."""
         # ── Holdout contamination check ──────────────────────────────
@@ -2187,7 +2273,11 @@ class SOTAPipeline:
                             logger.info("FIX #1: Auto-detected kaggle_dir: %s", _kd)
                             break
 
-        with self._phase_timer.phase("data_loading"):
+        # Agent orchestration branch (S2): if enabled, delegate to agent pipeline
+        if self.config.use_agent_orchestration:
+            return self._run_agent_orchestrated_pipeline()
+
+        with self._resource_tracker.phase("data_loading"):
             teams = self._load_teams()
             torvik_map, proprietary_map = self._load_team_stat_sources(teams)
             rosters = self._build_rosters(teams)
@@ -2201,7 +2291,13 @@ class SOTAPipeline:
             self._external_composites = self._load_external_ratings(teams)
             external_composites = self._external_composites
 
-        with self._phase_timer.phase("feature_engineering"):
+        # Governance: post-data-load compliance checks
+        if hasattr(self, "_compliance_runner"):
+            self._compliance_runner.run_stage_checks("post_data_load", ctx=self)
+            if self._compliance_runner.has_blocking_failure("post_data_load"):
+                logger.error("Blocking compliance failure after data loading")
+
+        with self._resource_tracker.phase("feature_engineering"):
             for team in teams:
                 team_id = self._team_id(team.name)
                 self.team_struct[team_id] = team
@@ -2257,7 +2353,7 @@ class SOTAPipeline:
         schedule_graph = self._construct_schedule_graph(teams)
         adjacency = schedule_graph.get_adjacency_matrix(weighted=True)
 
-        with self._phase_timer.phase("model_training"):
+        with self._resource_tracker.phase("model_training"):
             if self.config.enable_gnn:
                 gnn_stats = self._run_gnn(schedule_graph)
             else:
@@ -2293,11 +2389,32 @@ class SOTAPipeline:
             self.feature_engineer.attach_gnn_embeddings(self.gnn_embeddings)
             self.feature_engineer.attach_transformer_embeddings(self.transformer_embeddings)
 
-        with self._phase_timer.phase("calibration"):
+        # Governance: post-training compliance checks
+        if hasattr(self, "_compliance_runner"):
+            self._compliance_runner.run_stage_checks("post_training", ctx=self)
+            if self._compliance_runner.has_blocking_failure("post_training"):
+                logger.error("Blocking compliance failure after model training")
+
+        # Budget-aware degradation: if >80% budget consumed, reduce remaining work
+        if self.config.enable_budget_degradation and hasattr(self, "_resource_tracker"):
+            utilization = self._resource_tracker.budget_utilization()
+            if utilization > 0.8:
+                logger.warning(
+                    "BUDGET DEGRADATION: %.0f%% budget consumed — "
+                    "reducing simulations and disabling optional models",
+                    utilization * 100,
+                )
+                self.config.num_simulations = max(
+                    1000, self.config.num_simulations // 2
+                )
+                self.config.enable_gnn = False
+                self.config.enable_transformer = False
+
+        with self._resource_tracker.phase("calibration"):
             calibration_stats = self._fit_calibration(game_flows)
             massey_predictor_stats = self._fit_massey_predictor(game_flows)
 
-        with self._phase_timer.phase("simulation"):
+        with self._resource_tracker.phase("simulation"):
             bracket_sim = self._run_monte_carlo(teams, rosters)
 
         # Betting market blend: integrate sportsbook implied probabilities
