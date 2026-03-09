@@ -836,16 +836,18 @@ class TestCoachTemporalGuard:
         assert config.coach_data_cutoff_year == 2023
 
     def test_source_contains_coach_leakage_guard(self):
-        """The _enrich_tournament_context method must contain the guard."""
+        """The enrich_tournament_context implementation must contain the guard."""
         import inspect
 
-        source = inspect.getsource(SOTAPipeline._enrich_tournament_context)
+        # Check the actual implementation (extracted to stages/data_loader.py)
+        from src.pipeline.stages.data_loader import enrich_tournament_context
+        source = inspect.getsource(enrich_tournament_context)
         assert "coach_data_cutoff_year" in source, (
-            "_enrich_tournament_context must check "
+            "enrich_tournament_context must check "
             "coach_data_cutoff_year to prevent future-data leakage."
         )
         assert "Zeroing coach features" in source, (
-            "_enrich_tournament_context must log a warning when "
+            "enrich_tournament_context must log a warning when "
             "zeroing coach features in backtest mode."
         )
 

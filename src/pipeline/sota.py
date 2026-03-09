@@ -90,6 +90,7 @@ from .stages.game_utils import (
     normalize_key as _gu_normalize_key,
     validate_source_coverage as _gu_validate_source_coverage,
 )
+from .stages import data_loader as _dl
 from ..optimization.leverage import TeamMetadata, analyze_pool, get_strategy_profile
 from ..simulation.monte_carlo import SimulationConfig, TournamentBracket, TournamentTeam
 
@@ -2351,500 +2352,44 @@ class SOTAPipeline:
 
     def _apply_injury_reports(self, rosters: Dict[str, Roster]) -> Dict:
         """Load injury reports and apply severity modeling + positional depth."""
-        stats: Dict = {
-            "injury_report_loaded": False,
-            "players_updated": 0,
-            "teams_with_injuries": 0,
-            "severity_model_enabled": self.config.enable_injury_severity_model,
-            "positional_depth_enabled": self.config.enable_positional_depth,
-        }
-
-        if self.config.injury_report_json:
-            scraper = InjuryReportScraper(cache_dir=self.config.data_cache_dir)
-            team_reports = scraper.load_from_json(self.config.injury_report_json)
-
-            total_updated = 0
-            teams_injured = 0
-            for team_id, roster in rosters.items():
-                norm_id = self._normalize_key(team_id)
-                report = team_reports.get(team_id) or team_reports.get(norm_id)
-                if report is None:
-                    # Try matching by partial key
-                    for rk, rv in team_reports.items():
-                        if self._normalize_key(rk) == norm_id:
-                            report = rv
-                            break
-
-                if report is not None:
-                    updated = apply_injury_reports_to_roster(roster, report)
-                    total_updated += updated
-                    if report.has_injuries:
-                        teams_injured += 1
-
-            stats["injury_report_loaded"] = True
-            stats["players_updated"] = total_updated
-            stats["teams_with_injuries"] = teams_injured
-
-        # Positional depth analysis
-        if self.config.enable_positional_depth:
-            for team_id, roster in rosters.items():
-                impacts = self.positional_depth_chart.compute_injury_impact(
-                    roster,
-                    severity_model=self.injury_severity_model if self.config.enable_injury_severity_model else None,
-                )
-                self.positional_impacts[team_id] = impacts
-
-            if self.positional_impacts:
-                avg_vulnerability = float(np.mean([
-                    v.get("positional_vulnerability", 0.0)
-                    for v in self.positional_impacts.values()
-                ]))
-                stats["avg_positional_vulnerability"] = round(avg_vulnerability, 4)
-
+        stats, positional_impacts = _dl.apply_injury_reports(
+            self.config, rosters,
+            self.positional_depth_chart, self.injury_severity_model,
+        )
+        self.positional_impacts.update(positional_impacts)
         return stats
 
     def _load_teams(self) -> List[Team]:
-        # Priority 1: Explicit teams JSON (existing behavior)
-        if self.config.teams_json:
-            teams = DataLoader.load_teams_from_json(self.config.teams_json)
-            if teams:
-                return teams
-
-        # Priority 2: Bracket ingestion (auto-fetch from bigdance, SR, or file)
-        if self.config.bracket_json:
-            return self._load_teams_from_bracket(self.config.bracket_json)
-
-        # Priority 3: Auto bracket fetch (Selection Sunday live ingestion)
-        if self.config.bracket_source != "auto" or BIGDANCE_AVAILABLE:
-            try:
-                bracket = self.bracket_pipeline.fetch(source=self.config.bracket_source)
-                if bracket.resolution_warnings:
-                    for w in bracket.resolution_warnings:
-                        import logging
-                        logging.getLogger(__name__).warning("Bracket name resolution: %s", w)
-
-                # Cache the fetched bracket for reproducibility
-                saved_path = self.bracket_pipeline.save(bracket)
-                import logging
-                logging.getLogger(__name__).info("Bracket saved to %s", saved_path)
-
-                return self._bracket_data_to_teams(bracket)
-            except Exception as _bracket_exc:
-                logger.warning("Bracket auto-fetch failed: %s", _bracket_exc)
-
-        raise DataRequirementError(
-            "Missing teams dataset. Provide --input teams JSON, --bracket-json, "
-            "or install bigdance for live bracket ingestion."
-        )
+        return _dl.load_teams(self.config, self.bracket_pipeline)
 
     def _load_teams_from_bracket(self, path: str) -> List[Team]:
         """Load teams from a previously saved bracket JSON."""
         bracket = self.bracket_pipeline.fetch(source=path)
-        return self._bracket_data_to_teams(bracket)
+        return _dl.bracket_data_to_teams(bracket)
 
     def _bracket_data_to_teams(self, bracket) -> List[Team]:
         """Convert TournamentBracketData to List[Team]."""
-        teams = []
-        for bt in bracket.teams:
-            team = Team(
-                name=bt.display_name,
-                seed=bt.seed,
-                region=bt.region,
-            )
-            if bt.rating:
-                team.stats["bracket_rating"] = bt.rating
-            teams.append(team)
-        return teams
+        return _dl.bracket_data_to_teams(bracket)
 
     def _compute_prior_year_elo(self) -> Optional[Dict[str, float]]:
-        """Compute end-of-season Elo for the year immediately before the
-        current year using the IncrementalMetricsEngine.
-
-        This ensures the current year's Elo starts from an informative prior
-        (matching what historical training years get via cross-season
-        carryover), eliminating the train/test distribution shift where
-        historical Elo features are rich and current-year Elo features are
-        flat.
-
-        Returns None if prior-year data is unavailable — the pipeline
-        degrades gracefully to the flat-1500 baseline in that case.
-        """
-        prior_year = self.config.year - 1
-        if prior_year == 2020:
-            prior_year = 2019  # Skip COVID-cancelled season
-
-        # Try to find the prior year's historical games file.
-        import os as _os
-        candidates = []
-        if self.config.multi_year_games_dir and self.config.multi_year_games_dir != "auto":
-            candidates.append(_os.path.join(self.config.multi_year_games_dir, f"historical_games_{prior_year}.json"))
-        # Auto-detect
-        auto_dir = _os.path.join(_os.getcwd(), "data", "raw", "historical")
-        candidates.append(_os.path.join(auto_dir, f"historical_games_{prior_year}.json"))
-
-        games_path = None
-        for c in candidates:
-            if _os.path.isfile(c):
-                games_path = c
-                break
-
-        if games_path is None:
-            logger.info(
-                "Prior-year Elo: no historical data for %d — using flat 1500 baseline.",
-                prior_year,
-            )
-            return None
-
-        try:
-            import json as _json
-            from ..data.features.proprietary_metrics import (
-                IncrementalMetricsEngine,
-                team_games_to_game_records,
-            )
-
-            with open(games_path, "r") as f:
-                payload = _json.load(f)
-
-            team_games_raw = payload.get("team_games", []) if isinstance(payload, dict) else []
-            if not team_games_raw:
-                logger.info("Prior-year Elo: year %d has no box-score data.", prior_year)
-                return None
-
-            game_records = team_games_to_game_records(team_games_raw, prior_year)
-            if len(game_records) < 100:
-                logger.info("Prior-year Elo: year %d has too few games (%d).", prior_year, len(game_records))
-                return None
-
-            # We only need Elo — the full metrics computation is not required.
-            # IncrementalMetricsEngine computes all Elo snapshots at init time.
-            engine = IncrementalMetricsEngine(game_records, conference_map={}, prior_elo=None)
-            end_elo = engine.get_end_of_season_elo()
-
-            if not end_elo:
-                logger.info("Prior-year Elo: year %d produced no Elo data.", prior_year)
-                return None
-
-            return end_elo
-
-        except Exception as e:
-            logger.warning("Prior-year Elo: failed to compute for %d: %s", prior_year, e)
-            return None
+        """Compute end-of-season Elo for the year before the current year."""
+        return _dl.compute_prior_year_elo(self.config)
 
     def _load_team_stat_sources(
         self,
         teams: List[Team],
     ) -> Tuple[Dict[str, Dict], Dict[str, Dict]]:
-        # --- Load Torvik data ---
-        if self.config.torvik_json:
-            with open(self.config.torvik_json, "r") as f:
-                torvik_payload = json.load(f)
-            self._validate_feed_freshness("Torvik", torvik_payload)
-            torvik_teams = BartTorvikScraper().load_from_json(self.config.torvik_json)
-        elif self.config.scrape_live:
-            torvik_teams = BartTorvikScraper(cache_dir=self.config.data_cache_dir).fetch_current_rankings(self.config.year)
-        else:
-            raise DataRequirementError(
-                "Missing Torvik data. Provide --torvik JSON or run with --scrape-live."
-            )
-
-        if not torvik_teams:
-            raise DataRequirementError("Torvik data source is empty.")
-
-        # --- Load historical games for proprietary metrics computation ---
-        historical_games: List[Dict] = []
-        if self.config.historical_games_json:
-            with open(self.config.historical_games_json, "r") as f:
-                hist_payload = json.load(f)
-            self._validate_feed_freshness("Historical games", hist_payload)
-            historical_games = hist_payload.get("games", [])
-            # Reject data if dates are clearly corrupted (all fallback)
-            _fallback_date = f"{self.config.year - 1}-11-01"
-            _fb_count = sum(1 for _g in historical_games if _g.get("date") == _fallback_date)
-            if _fb_count > len(historical_games) * 0.5 and len(historical_games) > 50:
-                raise DataRequirementError(
-                    f"Historical data for season {self.config.year} has "
-                    f"{_fb_count}/{len(historical_games)} games with fallback "
-                    f"date {_fallback_date}. Game dates are corrupted. "
-                    f"Run `python -m src.main repair-dates` to fix."
-                )
-        elif self.config.scrape_live:
-            # Torvik game data can serve as historical games when scraping live
-            historical_games = []
-        if not historical_games:
-            raise DataRequirementError(
-                "Missing historical game data. Provide --historical-games JSON with box-score rows."
-            )
-
-        # --- Build conference map from Torvik data for proprietary engine ---
-        torvik_teams_dicts = []
-        conference_map: Dict[str, str] = {}
-        for tv in torvik_teams:
-            d = tv.to_dict() if hasattr(tv, "to_dict") else tv
-            torvik_teams_dicts.append(d)
-            tid = self._normalize_key(d.get("team_id", ""))
-            conf = d.get("conference", "")
-            if tid and conf:
-                conference_map[tid] = conf
-
-        # --- Compute prior-year Elo for cross-season carryover ---
-        # Historical training years carry Elo forward (year N-1 → year N),
-        # giving early-season samples informative Elo priors.  The current
-        # year must use the same mechanism so that training and prediction
-        # Elo features have the same distributional characteristics.
-        self._prior_year_elo = self._compute_prior_year_elo()
-        if self._prior_year_elo:
-            self.proprietary_engine._elo_prior = self._prior_year_elo
-            logger.info(
-                "Cross-season Elo: loaded %d team priors from year %d.",
-                len(self._prior_year_elo), self.config.year - 1,
-            )
-
-        # --- Compute proprietary metrics from historical box scores ---
-        # Use a pre-tournament cutoff to prevent leakage from tournament games
-        # into team metrics.  Selection Sunday is ~mid-March; First Four starts
-        # March 14.  Conference tournaments (early March) are intentionally
-        # included as they occur before the bracket is set.
-        pre_tournament_cutoff = f"{self.config.year}-03-14"
-        game_records = torvik_to_game_records(
-            torvik_teams_dicts,
-            historical_games,
-            season_year=self.config.year,
-        )
-        # Store for incremental training feature computation.
-        self._current_year_game_records = game_records
-        self._current_year_conference_map = conference_map if conference_map else None
-        proprietary_results = self.proprietary_engine.compute(
-            game_records,
-            conference_map=conference_map if conference_map else None,
-            cutoff_date=pre_tournament_cutoff,
-        )
-        self.proprietary_metrics = proprietary_results
-
-        # --- Build index maps ---
-        def normalize_entry(entry, id_keys, name_keys):
-            value = ""
-            if isinstance(entry, dict):
-                for key in id_keys:
-                    if key in entry and entry[key]:
-                        value = entry[key]
-                        break
-            else:
-                for key in id_keys:
-                    value = getattr(entry, key, None) or value
-                    if value:
-                        break
-            if not value:
-                for key in name_keys:
-                    if isinstance(entry, dict):
-                        value = entry.get(key, value)
-                        if value:
-                            break
-                    else:
-                        value = getattr(entry, key, value)
-                        if value:
-                            break
-            return self._normalize_key(value)
-
-        torvik_index = {normalize_entry(t, ["team_id"], ["name"]): t for t in torvik_teams}
-
-        torvik_map: Dict[str, Dict] = {}
-        proprietary_map: Dict[str, Dict] = {}
-
-        # Store Torvik canonical ID mapping on self for reuse in
-        # _historical_game_to_flow() which also needs to resolve
-        # mascot-suffixed game IDs to canonical tournament IDs.
-        #
-        # Uses the CBBpy team-map CSV (display_name → school location)
-        # plus Torvik team names to build an exact resolver.  This avoids
-        # false prefix matches like "new_mexico_state_aggies" → "new_mexico"
-        # because the CSV correctly distinguishes "New Mexico State" from
-        # "New Mexico" via its location column.
-        #
-        # The resolver is populated lazily: when _build_or_load_game_flows()
-        # pre-scans games, it calls _resolve_to_canonical() with display
-        # names extracted from game data, and the CSV lookup handles
-        # disambiguation.
-
-        # Build Torvik name→canonical_id lookup with multiple normalized
-        # forms to handle HTML entities, parentheticals, suffix variations.
-        _torvik_name_to_id: Dict[str, str] = {}
-        for t in torvik_teams:
-            if isinstance(t, dict):
-                tid = t.get("team_id", "")
-                tname = t.get("name", "")
-            else:
-                tid = getattr(t, "team_id", "")
-                tname = getattr(t, "name", "")
-            if tid and tname:
-                nk = self._normalize_key
-                ti = self._team_id
-                canon = nk(tid)
-                _torvik_name_to_id[nk(ti(tname))] = canon
-                _torvik_name_to_id[canon] = canon
-                cleaned = tname.replace("&amp;", "&")
-                if cleaned != tname:
-                    _torvik_name_to_id[nk(ti(cleaned))] = canon
-                stripped = re.sub(r"\s*\([^)]*\)\s*", "", tname).strip()
-                if stripped != tname:
-                    _torvik_name_to_id[nk(ti(stripped))] = canon
-                    stripped_clean = re.sub(r"\s*\([^)]*\)\s*", "", cleaned).strip()
-                    if stripped_clean != stripped:
-                        _torvik_name_to_id[nk(ti(stripped_clean))] = canon
-
-        # CBBpy→Torvik alias overrides for known naming mismatches.
-        _cbbpy_torvik_aliases = {
-            "mcneese": "mcneese_state",
-            "american_university": "american",
-        }
-        for alias, target in _cbbpy_torvik_aliases.items():
-            if target in _torvik_name_to_id:
-                _torvik_name_to_id[alias] = _torvik_name_to_id[target]
-
-        # Set of Torvik canonical IDs for exact-match fallback.
-        _torvik_id_set = set(_torvik_name_to_id.values())
-
-        # Load CBBpy team map
-        _cbbpy_map = _load_cbbpy_team_map()
-
-        _mascot_cache: Dict[str, str] = {}
-
-        def _resolve_to_canonical(raw_id: str, display_name: str = "") -> str:
-            if raw_id in _mascot_cache:
-                return _mascot_cache[raw_id]
-            # Primary: use CBBpy CSV display_name → location → Torvik name
-            if display_name:
-                location = _cbbpy_map.get(display_name)
-                if location:
-                    norm_loc = self._normalize_key(self._team_id(location))
-                    canon = _torvik_name_to_id.get(norm_loc)
-                    if canon:
-                        _mascot_cache[raw_id] = canon
-                        return canon
-            # Fallback: exact match on Torvik canonical ID (no prefix
-            # matching to avoid false positives like
-            # new_mexico_highlands → new_mexico).
-            if raw_id in _torvik_id_set:
-                _mascot_cache[raw_id] = raw_id
-                return raw_id
-            # No match — keep raw ID (non-tournament team).
-            _mascot_cache[raw_id] = raw_id
-            return raw_id
-
-        self._torvik_name_to_id = _torvik_name_to_id
-        self._cbbpy_map = _cbbpy_map
-        self._mascot_cache = _mascot_cache
-        self._resolve_to_canonical = _resolve_to_canonical
-
-        for team in teams:
-            team_id = self._team_id(team.name)
-            key = self._normalize_key(team_id)
-
-            tv = torvik_index.get(key)
-            if tv:
-                if isinstance(tv, dict):
-                    data = tv
-                else:
-                    data = tv.to_dict()
-                torvik_map[team_id] = {
-                    # Four Factors (primary)
-                    "effective_fg_pct": data.get("effective_fg_pct", 0.5),
-                    "turnover_rate": data.get("turnover_rate", 0.18),
-                    "offensive_reb_rate": data.get("offensive_reb_rate", 0.30),
-                    "free_throw_rate": data.get("free_throw_rate", 0.30),
-                    "opp_effective_fg_pct": data.get("opp_effective_fg_pct", 0.5),
-                    "opp_turnover_rate": data.get("opp_turnover_rate", 0.18),
-                    "defensive_reb_rate": data.get("defensive_reb_rate", 0.70),
-                    "opp_free_throw_rate": data.get("opp_free_throw_rate", 0.30),
-                    # Efficiency ratings (Torvik's own, used as prior/fallback)
-                    "adj_offensive_efficiency": data.get("adj_offensive_efficiency", 100.0),
-                    "adj_defensive_efficiency": data.get("adj_defensive_efficiency", 100.0),
-                    "adj_tempo": data.get("adj_tempo", 68.0),
-                    "barthag": data.get("barthag", 0.5),
-                    "t_rank": data.get("t_rank", 999),
-                    # Shooting splits
-                    "two_pt_pct": data.get("two_pt_pct", 0.0),
-                    "three_pt_pct": data.get("three_pt_pct", 0.0),
-                    "three_pt_rate": data.get("three_pt_rate", 0.0),
-                    "ft_pct": data.get("ft_pct", 0.0),
-                    "opp_two_pt_pct": data.get("opp_two_pt_pct", 0.0),
-                    "opp_three_pt_pct": data.get("opp_three_pt_pct", 0.0),
-                    "opp_three_pt_rate": data.get("opp_three_pt_rate", 0.0),
-                    # WAB, record, conference
-                    "wab": data.get("wab", 0.0),
-                    "wins": data.get("wins", 0),
-                    "losses": data.get("losses", 0),
-                    "conference": data.get("conference", ""),
-                    "conf_wins": data.get("conf_wins", 0),
-                    "conf_losses": data.get("conf_losses", 0),
-                }
-
-            # Map proprietary metrics by team_id — with canonical ID
-            # resolution in torvik_to_game_records(), proprietary_results
-            # is already keyed by canonical IDs (e.g. "duke" not
-            # "duke_blue_devils").
-            pm = proprietary_results.get(key)
-            if pm is not None:
-                proprietary_map[team_id] = pm.to_dict()
-            else:
-                pm = proprietary_results.get(team_id)
-                if pm is not None:
-                    proprietary_map[team_id] = pm.to_dict()
-
-        # Backfill from Sports Reference if available
-        if self.config.sports_reference_json:
-            with open(self.config.sports_reference_json, "r") as f:
-                sr_payload = json.load(f)
-            sr_rows = sr_payload.get("teams", [])
-
-            # Reject the entire SR payload if critical fields are all-zero
-            # (indicates a corrupted scrape — e.g. 2026 off_rtg bug).
-            _sr_off = [float(r.get("off_rtg", 0)) for r in sr_rows if isinstance(r, dict)]
-            if _sr_off and all(abs(v) < 1e-6 for v in _sr_off):
-                logger.warning(
-                    "Sports Reference JSON has all-zero off_rtg — skipping "
-                    "entire SR backfill (corrupted scrape)."
-                )
-                sr_rows = []
-
-            sr_index = {}
-            for row in sr_rows:
-                team_name = row.get("team_name") or row.get("name")
-                if team_name:
-                    sr_index[self._normalize_key(self._team_id(str(team_name)))] = row
-
-            for team in teams:
-                team_id = self._team_id(team.name)
-                key = self._normalize_key(team_id)
-                sr = sr_index.get(key)
-                if not sr:
-                    continue
-
-                if team_id not in proprietary_map:
-                    off = float(sr.get("off_rtg", 0))
-                    deff = float(sr.get("def_rtg", 0))
-                    pace = float(sr.get("pace", 0))
-                    # Skip teams with zero/missing critical metrics —
-                    # indicates a corrupted scrape, not real data.
-                    if off < 1e-6 or deff < 1e-6:
-                        continue
-                    proprietary_map[team_id] = {
-                        "adj_offensive_efficiency": off,
-                        "adj_defensive_efficiency": deff,
-                        "adj_tempo": pace if pace > 1e-6 else 68.0,
-                        "adj_efficiency_margin": off - deff,
-                        "sos_adj_em": 0.0,
-                        "sos_opp_o": 100.0,
-                        "sos_opp_d": 100.0,
-                        "ncsos_adj_em": 0.0,
-                        "luck": 0.0,
-                    }
-
-        # --- Enrich with tournament context data (AP rank, coach exp, conf champs) ---
-        self._enrich_tournament_context(torvik_map, proprietary_map, teams)
-
-        self._validate_source_coverage("Torvik", torvik_map, teams, min_ratio=0.8)
-        self._validate_source_coverage("Proprietary metrics", proprietary_map, teams, min_ratio=0.8)
-        return torvik_map, proprietary_map
+        result = _dl.load_team_stat_sources(self.config, teams, self.proprietary_engine)
+        # Unpack side-effects
+        self._prior_year_elo = result.prior_year_elo
+        self._current_year_game_records = result.current_year_game_records
+        self._current_year_conference_map = result.current_year_conference_map
+        self.proprietary_metrics = result.proprietary_metrics
+        self._torvik_name_to_id = result.torvik_name_to_id
+        self._cbbpy_map = result.cbbpy_map
+        self._mascot_cache = result.mascot_cache
+        self._resolve_to_canonical = result.resolve_to_canonical
+        return result.torvik_map, result.proprietary_map
 
     def _enrich_tournament_context(
         self,
@@ -2852,535 +2397,47 @@ class SOTAPipeline:
         proprietary_map: Dict[str, Dict],
         teams: List[Team],
     ) -> None:
-        """
-        Load preseason AP rankings, coach tournament experience, and
-        conference tournament champions from JSON artifacts and inject
-        the values into torvik_map and proprietary_map for each team.
-        """
-        # --- 1. Preseason AP rankings ---
-        ap_rankings: Dict[str, int] = {}
-        if self.config.preseason_ap_json:
-            ap_rankings = TournamentContextScraper.load_preseason_ap_from_json(
-                self.config.preseason_ap_json
-            )
-
-        # --- 2. Coach tournament experience ---
-        coach_data: Dict[str, Dict] = {}
-        if self.config.coach_tournament_json:
-            coach_data = TournamentContextScraper.load_coach_data_from_json(
-                self.config.coach_tournament_json
-            )
-
-        # Temporal guard: the scraped coach data contains career totals with
-        # no per-year breakdown.  When backtesting a past year the stats
-        # include future tournament results — a data leakage vector.  Zero
-        # out coach features unless the caller explicitly acknowledges this
-        # via coach_data_cutoff_year.
-        if coach_data and self.config.year < 2026:
-            if self.config.coach_data_cutoff_year is None:
-                msg = (
-                    "Coach tournament data contains career totals that may "
-                    "include future years.  Zeroing coach features for "
-                    f"year={self.config.year} to prevent leakage.  Set "
-                    "coach_data_cutoff_year to suppress this guard."
-                )
-                if self.config.strict_leakage_mode:
-                    raise LeakageError(msg)
-                logger.warning(msg)
-                coach_data = {}
-            else:
-                logger.info(
-                    "Coach data loaded with cutoff_year=%d for year=%d",
-                    self.config.coach_data_cutoff_year,
-                    self.config.year,
-                )
-
-        # --- 3. Conference tournament champions ---
-        conf_champions: Dict[str, str] = {}
-        if self.config.conf_champions_json:
-            conf_champions = TournamentContextScraper.load_conf_champions_from_json(
-                self.config.conf_champions_json
-            )
-
-        if not ap_rankings and not coach_data and not conf_champions:
-            return
-
-        # Build a team_to_coach_map from roster JSON if available, else from torvik data
-        team_to_coach_map: Dict[str, str] = {}
-        if self.config.roster_json:
-            try:
-                import json as _json
-                with open(self.config.roster_json, "r") as f:
-                    roster_payload = _json.load(f)
-                for team_block in roster_payload.get("teams", []):
-                    tid = self._team_id(
-                        str(team_block.get("team_id") or team_block.get("team_name") or "")
-                    )
-                    coach = team_block.get("coach") or team_block.get("head_coach") or ""
-                    if tid and coach:
-                        team_to_coach_map[tid] = str(coach)
-            except Exception as _coach_exc:
-                logger.debug("Coach map extraction failed: %s", _coach_exc)
-
-        # Use TournamentContextScraper helper to map teams to coach appearances + win rate
-        coach_appearances_by_team: Dict[str, int] = {}
-        coach_win_rate_by_team: Dict[str, float] = {}
-        if coach_data and team_to_coach_map:
-            ctx = TournamentContextScraper()
-            coach_appearances_by_team = ctx.build_team_to_coach_appearances(
-                coach_data, team_to_coach_map
-            )
-            coach_win_rate_by_team = ctx.build_team_to_coach_win_rate(
-                coach_data, team_to_coach_map
-            )
-
-        # Inject values into torvik_map and proprietary_map for each team
-        for team in teams:
-            team_id = self._team_id(team.name)
-            norm_name = self._normalize_key(team_id)
-
-            # --- AP rank ---
-            ap_rank = 0
-            if ap_rankings:
-                # Try exact match, then fuzzy
-                ap_rank = ap_rankings.get(norm_name, 0)
-                if not ap_rank:
-                    for ap_key, rank_val in ap_rankings.items():
-                        if norm_name in ap_key or ap_key in norm_name:
-                            ap_rank = rank_val
-                            break
-
-            # --- Coach tournament appearances + win rate + stage experience ---
-            coach_apps = coach_appearances_by_team.get(team_id, 0)
-            coach_win_rate = coach_win_rate_by_team.get(team_id, 0.0)
-
-            # Derive stage experience from raw coach data
-            coach_deep_run_rate = 0.0
-            coach_stage_consistency = 0.0
-            if coach_data and team_to_coach_map:
-                coach_name = team_to_coach_map.get(team_id, "")
-                raw_coach = coach_data.get(coach_name, {})
-                if not raw_coach:
-                    # Try fuzzy match on last name
-                    last = coach_name.split()[-1].lower() if coach_name else ""
-                    for ck, cv in coach_data.items():
-                        if last and last in ck.lower():
-                            raw_coach = cv
-                            break
-                if raw_coach:
-                    from ..data.features.tournament_features import compute_coach_tournament_power
-                    ctp = compute_coach_tournament_power(raw_coach)
-                    coach_deep_run_rate = ctp.deep_run_rate
-                    coach_stage_consistency = ctp.stage_consistency
-                    # Per-stage coaching breakdowns: expose F4/E8/S16 counts
-                    # independently so the model can learn stage-specific effects.
-                    # A coach with 5 Final Fours but 0 championships is different
-                    # from one with 2 F4s and 2 titles.
-                    coach_f4_apps = ctp.final_fours
-                    coach_e8_apps = ctp.elite_8_appearances
-                    coach_s16_apps = ctp.sweet_16_appearances
-                else:
-                    coach_f4_apps = 0
-                    coach_e8_apps = 0
-                    coach_s16_apps = 0
-            else:
-                coach_f4_apps = 0
-                coach_e8_apps = 0
-                coach_s16_apps = 0
-
-            # --- Conference tournament champion ---
-            is_conf_champ = 0.0
-            if conf_champions:
-                if norm_name in conf_champions:
-                    is_conf_champ = 1.0
-                else:
-                    for champ_key in conf_champions:
-                        if norm_name in champ_key or champ_key in norm_name:
-                            is_conf_champ = 1.0
-                            break
-
-            # Write into torvik_map
-            if team_id in torvik_map:
-                torvik_map[team_id]["preseason_ap_rank"] = ap_rank
-                torvik_map[team_id]["coach_tournament_appearances"] = coach_apps
-                torvik_map[team_id]["coach_tournament_win_rate"] = coach_win_rate
-                torvik_map[team_id]["coach_deep_run_rate"] = coach_deep_run_rate
-                torvik_map[team_id]["coach_stage_consistency"] = coach_stage_consistency
-                torvik_map[team_id]["coach_f4_appearances"] = coach_f4_apps
-                torvik_map[team_id]["coach_e8_appearances"] = coach_e8_apps
-                torvik_map[team_id]["coach_s16_appearances"] = coach_s16_apps
-                torvik_map[team_id]["conf_tourney_champion"] = is_conf_champ
-
-            # Write into proprietary_map
-            if team_id in proprietary_map:
-                proprietary_map[team_id]["preseason_ap_rank"] = ap_rank
-                proprietary_map[team_id]["coach_tournament_appearances"] = coach_apps
-                proprietary_map[team_id]["coach_tournament_win_rate"] = coach_win_rate
-                proprietary_map[team_id]["coach_deep_run_rate"] = coach_deep_run_rate
-                proprietary_map[team_id]["coach_stage_consistency"] = coach_stage_consistency
-                proprietary_map[team_id]["coach_f4_appearances"] = coach_f4_apps
-                proprietary_map[team_id]["coach_e8_appearances"] = coach_e8_apps
-                proprietary_map[team_id]["coach_s16_appearances"] = coach_s16_apps
-                proprietary_map[team_id]["conf_tourney_champion"] = is_conf_champ
-
+        """Enrich torvik/proprietary maps with AP rank, coach exp, conf champs."""
+        return _dl.enrich_tournament_context(self.config, torvik_map, proprietary_map, teams)
     def _load_external_ratings(self, teams: List[Team]) -> Dict:
-        """Load external rating composites (Massey Ordinals, etc.).
-
-        Returns dict of {team_id: CompositeRating} or empty dict if unavailable.
-        """
-        if not self.config.enable_external_ratings:
-            return {}
-
-        try:
-            from ..data.scrapers.external_ratings import ExternalRatingsLoader
-        except ImportError:
-            return {}
-
-        year = self.config.year
-        cache_dir = self.config.external_ratings_dir or self.config.data_cache_dir
-
-        loader = ExternalRatingsLoader(cache_dir=cache_dir)
-
-        # Step 1: Populate from Kaggle Massey Ordinals if available
-        massey_populated = False
-        if self.config.kaggle_dir:
-            try:
-                n = loader.populate_from_massey_ordinals(self.config.kaggle_dir, year)
-                if n > 0:
-                    massey_populated = True
-                    logger.info("Loaded %d Massey Ordinal systems from Kaggle", n)
-                else:
-                    logger.warning(
-                        "Massey Ordinals: kaggle_dir=%s set but 0 systems cached. "
-                        "Check that MMasseyOrdinals.csv exists and has data for season %d.",
-                        self.config.kaggle_dir, year,
-                    )
-            except Exception as e:
-                logger.warning(
-                    "Massey Ordinals ingestion failed (kaggle_dir=%s): %s. "
-                    "Falling back to cached ratings or seed-based estimates.",
-                    self.config.kaggle_dir, e,
-                )
-
-        # Step 2: Load all cached external rating systems
-        all_ratings = loader.load_all(year)
-
-        if all_ratings:
-            composites = loader.compute_composite(all_ratings)
-            n_systems = len(all_ratings)
-            n_teams = len(composites)
-            has_massey = "massey_composite" in all_ratings
-            logger.info(
-                "External ratings: %d systems, %d teams composited "
-                "(massey_composite=%s)",
-                n_systems, n_teams, "present" if has_massey else "MISSING",
-            )
-            if not has_massey and self.config.kaggle_dir:
-                logger.warning(
-                    "massey_composite not in loaded systems despite kaggle_dir "
-                    "being set. Systems found: %s. This indicates a data "
-                    "loading issue — predictions will lack Massey signal.",
-                    list(all_ratings.keys()),
-                )
-            return composites
-
-        # Step 3: Fallback to seed-based estimates
-        logger.warning(
-            "No cached external ratings found for year %d. Using seed-based "
-            "fallback. This is significantly less accurate than Massey Ordinals "
-            "(-0.008 to -0.015 Brier). Set kaggle_dir or run: "
-            "python -m src.data.kaggle_downloader",
-            year,
-        )
-        seed_map = {}
-        for team in teams:
-            tid = self._team_id(team.name)
-            seed_map[tid] = team.seed
-        if seed_map:
-            composites = loader.generate_from_seeds(seed_map)
-            logger.info("External ratings: seed-based fallback for %d teams", len(composites))
-            return composites
-
-        return {}
+        """Load external rating composites (Massey Ordinals, etc.)."""
+        return _dl.load_external_ratings(self.config, teams)
 
     def _verify_massey_coverage(
         self,
         teams: List[Team],
         composites: Dict,
     ) -> Dict:
-        """FIX-MASSEY: Verify that Massey Ordinals composites flow through
-        the pipeline with sufficient coverage.
-
-        This is the single highest-ROI data integration check (-0.008 to
-        -0.015 Brier).  Logs warnings when coverage drops below expected
-        thresholds and provides actionable diagnostics.
-
-        Returns:
-            Dict with coverage statistics for the pipeline report.
-        """
-        import logging as _logging
-        logger = _logging.getLogger(__name__)
-        n_teams = len(teams)
-        n_with_composite = 0
-        n_with_spread = 0
-        n_seed_only = 0
-        n_multi_system = 0
-        composite_values = []
-        spread_values = []
-        missing_teams = []
-
-        for team in teams:
-            tid = self._team_id(team.name)
-            comp = composites.get(tid)
-            if comp is None:
-                missing_teams.append(team.name)
-                continue
-            n_with_composite += 1
-            composite_values.append(comp.composite_rating)
-
-            if comp.rating_spread > 0:
-                n_with_spread += 1
-                spread_values.append(comp.rating_spread)
-
-            if hasattr(comp, "n_systems"):
-                if comp.n_systems <= 1:
-                    n_seed_only += 1
-                else:
-                    n_multi_system += 1
-
-        coverage_pct = n_with_composite / max(n_teams, 1)
-
-        # Verify that feature vectors actually contain external ratings
-        n_vec_nonzero = 0
-        for team in teams:
-            tid = self._team_id(team.name)
-            tf = self.feature_engineer.team_features.get(tid)
-            if tf is not None and abs(tf.external_rating_composite) > 1e-8:
-                n_vec_nonzero += 1
-        vec_coverage_pct = n_vec_nonzero / max(n_teams, 1)
-
-        stats = {
-            "n_teams": n_teams,
-            "n_with_composite": n_with_composite,
-            "coverage_pct": round(coverage_pct, 3),
-            "n_multi_system": n_multi_system,
-            "n_seed_only_fallback": n_seed_only,
-            "n_missing": len(missing_teams),
-            "feature_vector_coverage_pct": round(vec_coverage_pct, 3),
-        }
-
-        if composite_values:
-            stats["composite_mean"] = round(float(np.mean(composite_values)), 4)
-            stats["composite_std"] = round(float(np.std(composite_values)), 4)
-        if spread_values:
-            stats["spread_mean"] = round(float(np.mean(spread_values)), 4)
-
-        # Diagnostic logging
-        if coverage_pct < 0.50:
-            logger.warning(
-                "FIX-MASSEY CRITICAL: Only %.0f%% of tournament teams have "
-                "external rating composites (%d/%d). This feature is worth "
-                "-0.008 to -0.015 Brier. Check kaggle_dir and "
-                "external_ratings_dir configuration.",
-                coverage_pct * 100, n_with_composite, n_teams,
-            )
-            if missing_teams:
-                logger.warning(
-                    "FIX-MASSEY: Missing teams (first 10): %s",
-                    missing_teams[:10],
-                )
-        elif coverage_pct < 0.90:
-            logger.warning(
-                "FIX-MASSEY: %.0f%% coverage (%d/%d teams). "
-                "%d teams using seed-based fallback. Provide Kaggle "
-                "MMasseyOrdinals.csv for full coverage.",
-                coverage_pct * 100, n_with_composite, n_teams, n_seed_only,
-            )
-        else:
-            logger.info(
-                "FIX-MASSEY: External ratings coverage %.0f%% (%d/%d teams, "
-                "%d multi-system, %d seed-fallback). "
-                "Feature vector propagation: %.0f%%.",
-                coverage_pct * 100, n_with_composite, n_teams,
-                n_multi_system, n_seed_only, vec_coverage_pct * 100,
-            )
-
-        # Verify feature vector propagation
-        if vec_coverage_pct < coverage_pct * 0.8 and coverage_pct > 0.5:
-            logger.warning(
-                "FIX-MASSEY: Feature vector propagation gap — "
-                "%.0f%% of teams have composites but only %.0f%% have "
-                "non-zero external_rating_composite in feature vectors. "
-                "Check that external ratings are populated BEFORE to_vector().",
-                coverage_pct * 100, vec_coverage_pct * 100,
-            )
-
-        return stats
+        """Verify Massey Ordinals coverage for pipeline report."""
+        return _dl.verify_massey_coverage(
+            teams, composites, self.feature_engineer.team_features,
+        )
 
     def _build_rosters(self, teams: List[Team]) -> Dict[str, Roster]:
-        if not self.config.roster_json:
-            raise DataRequirementError(
-                "Missing roster data. Provide --rosters JSON with player-level metrics."
-            )
-
-        with open(self.config.roster_json, "r") as f:
-            payload = json.load(f)
-        self._validate_feed_freshness("Rosters", payload)
-
-        teams_payload = payload.get("teams", [])
-        if not isinstance(teams_payload, list):
-            raise DataRequirementError("Invalid roster JSON: expected top-level 'teams' list.")
-
-        rosters: Dict[str, Roster] = {}
-        for team_block in teams_payload:
-            source_team = team_block.get("team_id") or team_block.get("team_name") or team_block.get("name")
-            if not source_team:
-                continue
-            team_id = self._team_id(str(source_team))
-            players_raw = team_block.get("players", [])
-            players: List[Player] = []
-            for player_data in players_raw:
-                players.append(self._player_from_dict(team_id, player_data))
-            self._enrich_roster_rapm(players, team_block)
-            if players:
-                rosters[team_id] = Roster(team_id=team_id, players=players)
-
-        if self.config.transfer_portal_json:
-            self._apply_transfer_portal_updates(rosters, self.config.transfer_portal_json)
-
-        self.roster_rapm_quality = self._assess_roster_rapm_quality(rosters)
-        if self.roster_rapm_quality.get("team_coverage_ratio", 0.0) < 0.8:
-            raise DataRequirementError(
-                "Roster RAPM quality is too low. Provide richer player RAPM/stint inputs "
-                f"(coverage={self.roster_rapm_quality.get('team_coverage_ratio', 0.0):.1%})."
-            )
-        self._validate_source_coverage("Roster", rosters, teams, min_ratio=0.8)
-        return rosters
+        result = _dl.build_rosters(self.config, teams)
+        self.roster_rapm_quality = result.roster_rapm_quality
+        return result.rosters
 
     def _build_or_load_game_flows(
         self,
         teams: List[Team],
     ) -> Dict[str, List[GameFlow]]:
-        team_to_games: Dict[str, List[GameFlow]] = {self._team_id(t.name): [] for t in teams}
-        all_flows: Dict[str, GameFlow] = {}
-
-        if self.config.historical_games_json:
-            with open(self.config.historical_games_json, "r") as f:
-                payload = json.load(f)
-            games = payload.get("games", [])
-
-            # Pre-scan games to populate the canonical ID cache using CBBpy
-            # team-map CSV.  The CSV ``location`` column gives the school
-            # name without mascot (e.g. "New Mexico State" vs "New Mexico")
-            # which is then matched against Torvik canonical names.
-            if hasattr(self, '_resolve_to_canonical') and hasattr(self, '_mascot_cache'):
-                for game in games:
-                    if not isinstance(game, dict):
-                        continue
-                    for id_keys, name_keys in [
-                        (["team_id", "team1_id"], ["team_name", "team1_name"]),
-                        (["opponent_id", "team2_id"], ["opponent_name", "team2_name"]),
-                    ]:
-                        raw = ""
-                        for k in id_keys:
-                            if game.get(k):
-                                raw = self._team_id(str(game[k]))
-                                break
-                        disp = ""
-                        for k in name_keys:
-                            if game.get(k):
-                                disp = str(game[k])  # Keep original case for CSV lookup
-                                break
-                        if raw and disp and raw not in self._mascot_cache:
-                            self._resolve_to_canonical(raw, display_name=disp)
-
-            for game in games:
-                flow = self._historical_game_to_flow(game)
-                if not flow:
-                    continue
-                all_flows[flow.game_id] = flow
-        else:
-            raise DataRequirementError(
-                "Missing game-level data. Provide --historical-games JSON."
-            )
-
-        in_season_flows = {
-            game_id: flow
-            for game_id, flow in all_flows.items()
-            if self._is_target_season_game(str(getattr(flow, "game_date", "")))
-        }
-        if not in_season_flows:
-            raise DataRequirementError(
-                f"No game-level rows found for target season {self.config.year}. "
-                "Expected games from the 2025-26 window for a 2026 run."
-            )
-
-        for flow in in_season_flows.values():
-            if flow.team1_id in team_to_games:
-                team_to_games[flow.team1_id].append(flow)
-            if flow.team2_id in team_to_games:
-                team_to_games[flow.team2_id].append(flow)
-        self.all_game_flows = list(in_season_flows.values())
-
-        self._validate_source_coverage(
-            "Historical games",
-            {k: v for k, v in team_to_games.items() if v},
-            teams,
-            min_ratio=0.6,
+        result = _dl.build_or_load_game_flows(
+            self.config, teams,
+            resolve_to_canonical=getattr(self, '_resolve_to_canonical', None),
+            mascot_cache=getattr(self, '_mascot_cache', None),
         )
-        return team_to_games
+        self.all_game_flows = result.all_game_flows
+        return result.team_to_games
 
     def _historical_game_to_flow(self, game: Dict) -> Optional[GameFlow]:
-        game_id = str(game.get("game_id") or game.get("id") or "")
-        t1 = game.get("team_id") or game.get("team1_id") or game.get("team1") or game.get("home_team")
-        t2 = game.get("opponent_id") or game.get("team2_id") or game.get("team2") or game.get("away_team")
-        if not game_id or not t1 or not t2:
-            return None
-
-        raw1 = self._team_id(str(t1))
-        raw2 = self._team_id(str(t2))
-        # Resolve mascot-suffixed IDs to canonical IDs if the Torvik
-        # canonical mapping has been loaded (set by _load_team_stat_sources).
-        # Display names are passed for CSV-based disambiguation.
-        if hasattr(self, '_resolve_to_canonical'):
-            disp1 = str(game.get("team_name") or game.get("team1_name") or "")
-            disp2 = str(game.get("opponent_name") or game.get("team2_name") or "")
-            team1_id = self._resolve_to_canonical(raw1, display_name=disp1)
-            team2_id = self._resolve_to_canonical(raw2, display_name=disp2)
-        else:
-            team1_id = raw1
-            team2_id = raw2
-        flow = GameFlow(game_id=game_id, team1_id=team1_id, team2_id=team2_id)
-
-        lead_history = game.get("lead_history")
-        if isinstance(lead_history, list) and lead_history:
-            flow.lead_history = [int(x) for x in lead_history]
-        else:
-            s1 = int(game.get("team1_score", game.get("home_score", 0)))
-            s2 = int(game.get("team2_score", game.get("away_score", 0)))
-            flow.lead_history = [0, s1 - s2]
-        raw_date = game.get("game_date") or game.get("date") or game.get("start_date")
-        fallback_year = self._infer_game_year(game)
-        flow.game_date = self._coerce_game_date(
-            raw_date,
-            fallback_year=fallback_year,
-            game_id=game_id,
-            source="historical_game",
+        return _dl.historical_game_to_flow(
+            game, self.config.year,
+            resolve_to_canonical=getattr(self, '_resolve_to_canonical', None),
         )
-        neutral = bool(game.get("neutral_site", False))
-        flow.location_weight = 0.5 if neutral else 1.0
-        return flow
 
     def _infer_game_year(self, game: Dict) -> int:
-        for key in ("season", "season_year", "year"):
-            value = game.get(key)
-            if isinstance(value, int) and 1900 <= value <= 2100:
-                return value
-            if isinstance(value, str):
-                match = re.search(r"(19|20)\d{2}", value)
-                if match:
-                    return int(match.group(0))
-        return self.config.year
+        return _dl.infer_game_year(game, self.config.year)
 
     def _construct_schedule_graph(self, teams: List[Team]) -> ScheduleGraph:
         team_ids = {self._team_id(t.name) for t in teams}
@@ -6728,83 +5785,13 @@ class SOTAPipeline:
         return float(np.clip(float(np.mean(probs)), 0.01, 0.99))
 
     def _validate_feed_freshness(self, source_name: str, payload: Dict) -> None:
-        if not self.config.enforce_feed_freshness:
-            return
-        if not isinstance(payload, dict):
-            return
-
-        ts = (
-            payload.get("timestamp")
-            or payload.get("generated_at")
-            or payload.get("updated_at")
-            or payload.get("last_updated")
-        )
-        if not ts:
-            raise DataRequirementError(f"{source_name} payload missing required timestamp for freshness checks.")
-
-        ts_dt = self._parse_timestamp(ts)
-        if ts_dt is None:
-            raise DataRequirementError(f"{source_name} timestamp is invalid: {ts}")
-
-        now = datetime.now(ts_dt.tzinfo)
-        age_hours = max(0.0, (now - ts_dt).total_seconds() / 3600.0)
-        if age_hours > float(self.config.max_feed_age_hours):
-            raise DataRequirementError(
-                f"{source_name} feed is stale ({age_hours:.1f}h old, max {self.config.max_feed_age_hours}h)."
-            )
+        _dl.validate_feed_freshness(self.config, source_name, payload)
 
     def _enrich_roster_rapm(self, players: List[Player], team_block: Dict) -> None:
-        if not players:
-            return
-
-        non_zero = sum(1 for p in players if abs(p.rapm_total) > 1e-8)
-        if non_zero >= self.config.min_rapm_players_per_team:
-            return
-
-        stints = team_block.get("stints", [])
-        if isinstance(stints, list) and stints:
-            rapm_map = compute_rapm(players, stints, regularization=0.05)
-            for player in players:
-                rapm_pair = rapm_map.get(player.player_id)
-                if rapm_pair is None:
-                    continue
-                if abs(player.rapm_total) <= 1e-8:
-                    player.rapm_offensive = float(rapm_pair[0])
-                    player.rapm_defensive = float(rapm_pair[1])
-
-        # Backfill any remaining missing RAPM from BPM/WARP/usage priors.
-        for player in players:
-            if abs(player.rapm_total) > 1e-8:
-                continue
-            bpm = float(player.box_plus_minus or 0.0)
-            warp_signal = 4.0 * float(player.warp or 0.0)
-            usage_signal = (float(player.usage_rate or 0.0) - 20.0) / 25.0
-            proxy = 0.6 * bpm + 0.3 * warp_signal + 0.1 * usage_signal
-            off_share = 0.6 if float(player.usage_rate or 0.0) >= 20.0 else 0.45
-            player.rapm_offensive = proxy * off_share
-            player.rapm_defensive = proxy * (1.0 - off_share)
+        _dl.enrich_roster_rapm(players, team_block, self.config.min_rapm_players_per_team)
 
     def _assess_roster_rapm_quality(self, rosters: Dict[str, Roster]) -> Dict[str, float]:
-        if not rosters:
-            return {"teams": 0.0, "team_coverage_ratio": 0.0, "avg_nonzero_rapm_share": 0.0}
-
-        qualified = 0
-        shares: List[float] = []
-        for roster in rosters.values():
-            player_count = max(len(roster.players), 1)
-            non_zero = sum(1 for p in roster.players if abs(p.rapm_total) > 1e-8)
-            share = non_zero / player_count
-            shares.append(share)
-            threshold = min(self.config.min_rapm_players_per_team, player_count)
-            if non_zero >= threshold:
-                qualified += 1
-
-        teams = len(rosters)
-        return {
-            "teams": float(teams),
-            "team_coverage_ratio": float(qualified / teams),
-            "avg_nonzero_rapm_share": float(np.mean(shares)),
-        }
+        return _dl.assess_roster_rapm_quality(rosters, self.config.min_rapm_players_per_team)
 
     @staticmethod
     def _parse_timestamp(value: str) -> Optional[datetime]:
@@ -7164,61 +6151,10 @@ class SOTAPipeline:
         }
 
     def _player_from_dict(self, team_id: str, raw: Dict) -> Player:
-        pos_raw = str(raw.get("position", "PG"))
-        if pos_raw not in {p.value for p in Position}:
-            pos_raw = "PG"
-
-        injury_raw = str(raw.get("injury_status", "healthy"))
-        if injury_raw not in {i.value for i in InjuryStatus}:
-            injury_raw = "healthy"
-
-        return Player(
-            player_id=str(raw.get("player_id") or f"{team_id}_{raw.get('name', 'player')}"),
-            name=str(raw.get("name", "Unknown")),
-            team_id=team_id,
-            position=Position(pos_raw),
-            minutes_per_game=float(raw.get("minutes_per_game", 0.0)),
-            games_played=int(raw.get("games_played", 0)),
-            games_started=int(raw.get("games_started", 0)),
-            rapm_offensive=float(raw.get("rapm_offensive", 0.0)),
-            rapm_defensive=float(raw.get("rapm_defensive", 0.0)),
-            warp=float(raw.get("warp", 0.0)),
-            box_plus_minus=float(raw.get("box_plus_minus", 0.0)),
-            usage_rate=float(raw.get("usage_rate", 0.0)),
-            injury_status=InjuryStatus(injury_raw),
-            is_transfer=bool(raw.get("is_transfer", False)),
-            transfer_from=raw.get("transfer_from"),
-            eligibility_year=int(raw.get("eligibility_year", 1)),
-        )
+        return _dl.player_from_dict(team_id, raw)
 
     def _apply_transfer_portal_updates(self, rosters: Dict[str, Roster], transfer_json_path: str) -> None:
-        with open(transfer_json_path, "r") as f:
-            payload = json.load(f)
-        entries = payload.get("entries", [])
-        if not isinstance(entries, list):
-            return
-
-        for entry in entries:
-            destination = entry.get("destination_team_id") or entry.get("destination_team_name")
-            if not destination:
-                continue
-            team_id = self._team_id(str(destination))
-            roster = rosters.get(team_id)
-            if not roster:
-                continue
-
-            player_id = str(entry.get("player_id", "")).strip()
-            player_name = str(entry.get("player_name", "")).strip().lower()
-            source_team = entry.get("source_team_id") or entry.get("source_team_name")
-
-            for player in roster.players:
-                id_match = bool(player_id) and player.player_id == player_id
-                name_match = bool(player_name) and player.name.strip().lower() == player_name
-                if id_match or name_match:
-                    player.is_transfer = True
-                    if source_team:
-                        player.transfer_from = str(source_team)
-                    break
+        _dl.apply_transfer_portal_updates(rosters, transfer_json_path)
 
     def _load_scoring_rules(self) -> Optional[Dict[str, int]]:
         if not self.config.scoring_rules_json:
