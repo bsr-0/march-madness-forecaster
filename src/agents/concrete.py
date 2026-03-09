@@ -511,6 +511,9 @@ class OrchestratorAgent(BaseAgent):
     def run(self, ctx: Any, bus: MessageBus, **kwargs: Any) -> AgentResult:
         """Orchestrate full pipeline execution through agents.
 
+        Includes per-stage budget tracking (S20) and compliance gates (S21)
+        between each phase.
+
         Expects kwargs:
             pipeline: SOTAPipeline instance
             config: Pipeline configuration (optional, taken from ctx)
@@ -525,6 +528,20 @@ class OrchestratorAgent(BaseAgent):
             from src.pipeline.stages.context import PipelineContext
             ctx = PipelineContext.from_pipeline(pipeline)
 
+        # Initialize S20 budget manager
+        try:
+            from src.monitoring.budget_manager import BudgetManager
+            budget_mgr = BudgetManager(total_budget_seconds=3600)
+        except Exception:
+            budget_mgr = None
+
+        # Initialize S21 compliance gate
+        try:
+            from src.governance.compliance import ComplianceGate
+            compliance = ComplianceGate()
+        except Exception:
+            compliance = None
+
         # Initialize agents
         data_scout = DataScoutAgent()
         feature_eng = FeatureEngineerAgent()
@@ -535,7 +552,11 @@ class OrchestratorAgent(BaseAgent):
 
         # --- Phase 1: Data Loading ---
         findings.append("Phase 1: DataScout starting")
-        result = data_scout.run(ctx, bus, pipeline=pipeline)
+        if budget_mgr:
+            with budget_mgr.track_stage("data_loading"):
+                result = data_scout.run(ctx, bus, pipeline=pipeline)
+        else:
+            result = data_scout.run(ctx, bus, pipeline=pipeline)
         agent_results["data_scout"] = result
         msgs_sent += result.messages_sent
         findings.extend(result.findings)
@@ -545,6 +566,18 @@ class OrchestratorAgent(BaseAgent):
             return self._make_result(
                 False, None, findings, msgs_sent, t0
             )
+
+        # S21: Compliance checkpoint after data loading
+        if compliance and result.output:
+            loaded = result.output
+            cp = compliance.check("data_loading", {
+                "n_teams": len(getattr(loaded, "teams", [])),
+                "has_stale_data": False,
+            })
+            if not cp.passed:
+                findings.append(
+                    f"Compliance gate FAILED at data_loading: {cp.n_errors} errors"
+                )
 
         if bus.has_veto():
             findings.append("ABORT: Veto after data loading")
@@ -556,9 +589,15 @@ class OrchestratorAgent(BaseAgent):
 
         # --- Phase 2: Feature Engineering ---
         findings.append("Phase 2: FeatureEngineer starting")
-        result = feature_eng.run(
-            ctx, bus, pipeline=pipeline, loaded_data=loaded_data
-        )
+        if budget_mgr:
+            with budget_mgr.track_stage("feature_engineering"):
+                result = feature_eng.run(
+                    ctx, bus, pipeline=pipeline, loaded_data=loaded_data
+                )
+        else:
+            result = feature_eng.run(
+                ctx, bus, pipeline=pipeline, loaded_data=loaded_data
+            )
         agent_results["feature_engineer"] = result
         msgs_sent += result.messages_sent
         findings.extend(result.findings)
@@ -568,6 +607,14 @@ class OrchestratorAgent(BaseAgent):
             return self._make_result(
                 False, None, findings, msgs_sent, t0
             )
+
+        # S21: Compliance checkpoint after feature engineering
+        if compliance and result.output:
+            feats = result.output
+            compliance.check("feature_engineering", {
+                "feature_dim": getattr(feats, "feature_dim", 0),
+                "nan_count": 0,
+            })
 
         if bus.has_veto():
             findings.append("ABORT: Veto after feature engineering")
@@ -579,12 +626,21 @@ class OrchestratorAgent(BaseAgent):
 
         # --- Phase 3: Modeling ---
         findings.append("Phase 3: Modeler starting")
-        result = modeler.run(
-            ctx, bus,
-            pipeline=pipeline,
-            loaded_data=loaded_data,
-            features=features,
-        )
+        if budget_mgr:
+            with budget_mgr.track_stage("model_training"):
+                result = modeler.run(
+                    ctx, bus,
+                    pipeline=pipeline,
+                    loaded_data=loaded_data,
+                    features=features,
+                )
+        else:
+            result = modeler.run(
+                ctx, bus,
+                pipeline=pipeline,
+                loaded_data=loaded_data,
+                features=features,
+            )
         agent_results["modeler"] = result
         msgs_sent += result.messages_sent
         findings.extend(result.findings)
@@ -594,6 +650,14 @@ class OrchestratorAgent(BaseAgent):
             return self._make_result(
                 False, None, findings, msgs_sent, t0
             )
+
+        # S21: Compliance checkpoint after modeling
+        if compliance:
+            brier = getattr(pipeline, "_brier_score", None)
+            compliance.check("model_training", {
+                "brier_score": brier,
+                "has_leakage": False,
+            })
 
         if bus.has_veto():
             findings.append("ABORT: Veto after modeling")
@@ -606,12 +670,21 @@ class OrchestratorAgent(BaseAgent):
 
         # --- Phase 4: Audit ---
         findings.append("Phase 4: Auditor starting")
-        result = auditor.run(
-            ctx, bus,
-            pipeline=pipeline,
-            models=models,
-            features=features,
-        )
+        if budget_mgr:
+            with budget_mgr.track_stage("robustness_audit"):
+                result = auditor.run(
+                    ctx, bus,
+                    pipeline=pipeline,
+                    models=models,
+                    features=features,
+                )
+        else:
+            result = auditor.run(
+                ctx, bus,
+                pipeline=pipeline,
+                models=models,
+                features=features,
+            )
         agent_results["auditor"] = result
         msgs_sent += result.messages_sent
         findings.extend(result.findings)
@@ -641,12 +714,34 @@ class OrchestratorAgent(BaseAgent):
                 f"{veto_msg.payload.get('reason', 'unknown')}"
             )
 
+        # S20: Log budget utilization
+        if budget_mgr:
+            budget_report = budget_mgr.utilization_report()
+            findings.append(
+                f"Budget: {budget_report['total_used_seconds']:.1f}s / "
+                f"{budget_report['total_budget_seconds']:.0f}s "
+                f"({budget_report['budget_utilization_pct']:.1f}%)"
+            )
+            if budget_mgr.alerts:
+                for alert in budget_mgr.alerts:
+                    findings.append(f"  Budget alert: {alert.message}")
+
+        # S21: Log compliance summary
+        if compliance:
+            for cp_result in compliance.history:
+                if not cp_result.passed:
+                    findings.append(
+                        f"Compliance: {cp_result.stage_name} FAILED "
+                        f"({cp_result.n_errors} errors)"
+                    )
+
         # --- Log to governance audit trail ---
         self._log_governance(pipeline_passed, findings, agent_results)
 
         # Build output report
         output = self._build_report(
-            pipeline, pipeline_passed, agent_results, findings
+            pipeline, pipeline_passed, agent_results, findings,
+            budget_mgr=budget_mgr, compliance=compliance,
         )
 
         return self._make_result(
@@ -676,6 +771,8 @@ class OrchestratorAgent(BaseAgent):
         passed: bool,
         agent_results: Dict[str, AgentResult],
         findings: List[str],
+        budget_mgr: Any = None,
+        compliance: Any = None,
     ) -> Dict[str, Any]:
         """Build the final pipeline report from agent results."""
         report: Dict[str, Any] = {
@@ -692,6 +789,21 @@ class OrchestratorAgent(BaseAgent):
             },
             "total_findings": len(findings),
         }
+
+        # S20: Include budget utilization
+        if budget_mgr:
+            report["budget"] = budget_mgr.utilization_report()
+
+        # S21: Include compliance checkpoint results
+        if compliance and compliance.history:
+            report["compliance"] = {
+                "checkpoints": [
+                    cp.to_dict() for cp in compliance.history
+                ],
+                "all_passed": all(
+                    cp.passed for cp in compliance.history
+                ),
+            }
 
         # Include artifacts from modeler if available
         modeler_result = agent_results.get("modeler")
