@@ -14,6 +14,9 @@ from src.models.conference_tournament import (
     ConferenceTeam,
     _CONFERENCE_FULL_NAMES,
 )
+from src.conference_tournament.predictor import (
+    ConferenceTournamentPredictor,
+    _DEFAULT_CONF_TOURNAMENT_SIZES,
 from src.conference_tournament.predictor import ConferenceTournamentPredictor
 from src.conference_tournament.data_enrichment import (
     enrich_torvik_teams,
@@ -697,5 +700,56 @@ class TestStandaloneModel:
         t1 = ConferenceTeam("a", "A", 1, "T", adj_o=120.0, adj_d=90.0, adj_em=30.0)
         t2 = ConferenceTeam("b", "B", 2, "T", adj_o=110.0, adj_d=95.0, adj_em=15.0)
         prob = predictor.predict_matchup(t1, t2)
+        # 1/(1+exp(-0.15*20)) ≈ 0.953
+        assert 0.90 < prob < 0.98
+
+
+# ---------------------------------------------------------------------------
+# Tournament size completeness
+# ---------------------------------------------------------------------------
+
+
+class TestTournamentSizeCompleteness:
+    """Verify all 31 conferences have correct tournament size entries."""
+
+    def test_all_conferences_have_tournament_sizes(self):
+        """Every conference in the full-name mapping must have a tournament size."""
+        missing = set(_CONFERENCE_FULL_NAMES) - set(_DEFAULT_CONF_TOURNAMENT_SIZES)
+        assert not missing, f"Conferences missing tournament sizes: {sorted(missing)}"
+
+    def test_tournament_sizes_are_valid(self):
+        """All tournament sizes must be between 4 and 18."""
+        for conf, size in _DEFAULT_CONF_TOURNAMENT_SIZES.items():
+            assert 4 <= size <= 18, (
+                f"{conf} has invalid tournament size {size}"
+            )
+
+    def test_ivy_league_4_team_bracket(self):
+        """Ivy League tournament should use exactly 4 teams (top 4 qualify)."""
+        teams = [
+            ConferenceTeam(f"ivy_{i}", f"Ivy {i}", i, "Ivy", adj_em=20.0 - i * 2)
+            for i in range(1, 9)
+        ]
+        predictor = ConferenceTournamentPredictor(
+            teams_by_conference={"Ivy": teams},
+        )
+        bracket = predictor.predict_conference("Ivy")
+        assert bracket.num_teams == 4
+        assert bracket.total_rounds == 2  # Semis + Championship
+
+    def test_all_conferences_correct_team_count(self):
+        """Integration: each bracket should have the configured number of teams."""
+        torvik_path = "data/raw/torvik_2026.json"
+        if not os.path.exists(torvik_path):
+            pytest.skip("Torvik 2026 data not available")
+
+        predictor = ConferenceTournamentPredictor.from_torvik_json(torvik_path)
+        results = predictor.predict_all()
+
+        for conf, bracket in results.items():
+            expected = _DEFAULT_CONF_TOURNAMENT_SIZES.get(conf, bracket.num_teams)
+            assert bracket.num_teams == expected, (
+                f"{conf}: expected {expected} teams, got {bracket.num_teams}"
+            )
         # Should still produce a reasonable prediction from AdjO/AdjD only
         assert 0.5 < prob < 0.98

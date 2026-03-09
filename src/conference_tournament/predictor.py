@@ -39,25 +39,45 @@ from ..models.conference_tournament import (
 logger = logging.getLogger(__name__)
 
 
-# Default conference tournament sizes (teams invited).
-# Most conferences invite all members; some use a subset.
-# This can be overridden via the conf_sizes parameter.
+# Default conference tournament sizes (teams invited) for all 31 D1
+# conferences.  Reflects 2025-26 formats.  Sizes may vary year-to-year
+# for conferences that change their qualifying rules.
+# Can be overridden via the conf_sizes parameter.
 _DEFAULT_CONF_TOURNAMENT_SIZES: Dict[str, int] = {
-    # Power conferences typically invite all members
-    "ACC": 18,
-    "B10": 18,
-    "B12": 16,
-    "SEC": 16,
-    "BE": 11,
-    # Mid-majors — most invite all
-    "Amer": 13,
-    "MWC": 12,
-    "WCC": 12,
-    "A10": 14,
-    # Smaller conferences — all teams
-    "Ivy": 8,
-    "MEAC": 8,
-    "WAC": 7,
+    # Power conferences
+    "ACC": 15,     # 18 members, bottom 3 don't qualify
+    "B10": 18,     # all teams
+    "B12": 16,     # all teams
+    "SEC": 16,     # all teams
+    "BE": 11,      # all teams
+    # Mid-major conferences
+    "Amer": 10,    # 13 members, top 10 qualify
+    "MWC": 12,     # all teams
+    "WCC": 12,     # all teams
+    "A10": 14,     # all teams
+    "MVC": 11,     # all teams
+    "CAA": 13,     # all teams
+    # Smaller conferences
+    "AE": 8,       # 9 members, top 8 qualify
+    "ASun": 12,    # all teams
+    "BSky": 10,    # all teams
+    "BSth": 9,     # all teams
+    "BW": 8,       # 11 members, top 8 qualify
+    "CUSA": 10,    # 12 members, top 10 qualify
+    "Horz": 11,    # all teams
+    "Ivy": 4,      # 8 members, only top 4 qualify
+    "MAAC": 10,    # 11 members, top 10 qualify
+    "MAC": 8,      # 13 members, top 8 qualify
+    "MEAC": 8,     # all eligible members
+    "NEC": 8,      # 10 members, top 8 qualify
+    "OVC": 8,      # 11 members, top 8 qualify
+    "Pat": 10,     # all teams
+    "SB": 14,      # all teams
+    "SC": 10,      # all teams
+    "SWAC": 12,    # all teams
+    "Slnd": 8,     # 12 members, top 8 qualify
+    "Sum": 8,      # 9 members, top 8 qualify
+    "WAC": 7,      # all teams
 }
 
 # -----------------------------------------------------------------------
