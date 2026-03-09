@@ -2164,6 +2164,26 @@ def main():
         "--list-conferences", action="store_true",
         help="List available conferences and exit",
     )
+    conf_parser.add_argument(
+        "--seeds", default=None,
+        help="Path to seed overrides JSON (conference -> {team_id: seed})",
+    )
+    conf_parser.add_argument(
+        "--simulate", action="store_true",
+        help="Run Monte Carlo simulation for championship probabilities",
+    )
+    conf_parser.add_argument(
+        "--simulations", type=int, default=10000,
+        help="Number of Monte Carlo simulations (default: 10000)",
+    )
+    conf_parser.add_argument(
+        "--use-pipeline", action="store_true",
+        help="Use trained SOTA pipeline for predictions (requires historical data)",
+    )
+    conf_parser.add_argument(
+        "--data-dir", default=None,
+        help="Data directory for supplementary files (Four Factors, shooting)",
+    )
 
     args = parser.parse_args()
 
@@ -2398,7 +2418,27 @@ def run_conference_tournaments(args):
     """Run conference tournament predictions."""
     from .conference_tournament.predictor import ConferenceTournamentPredictor
 
-    predictor = ConferenceTournamentPredictor.from_torvik_json(args.torvik)
+    # Optionally train full pipeline
+    pipeline = None
+    if getattr(args, "use_pipeline", False):
+        print("Training SOTA pipeline for predictions...")
+        from .pipeline.config import SOTAPipelineConfig
+        from .pipeline.sota import SOTAPipeline
+        config = SOTAPipelineConfig(
+            year=args.year,
+            torvik_json=args.torvik,
+        )
+        pipeline = SOTAPipeline(config)
+        pipeline.train_for_predictions()
+        print("Pipeline trained. Using ensemble predictions.")
+
+    predictor = ConferenceTournamentPredictor.from_torvik_json(
+        args.torvik,
+        pipeline=pipeline,
+        data_dir=getattr(args, "data_dir", None),
+        year=args.year,
+        seed_overrides_path=getattr(args, "seeds", None),
+    )
 
     if args.list_conferences:
         print("Available conferences:")
@@ -2409,13 +2449,24 @@ def run_conference_tournaments(args):
 
     conferences = [args.conference] if args.conference else None
 
+    # Monte Carlo simulation
+    simulation_results = None
+    if getattr(args, "simulate", False):
+        from .conference_tournament.simulator import ConferenceTournamentSimulator
+        print(f"Running Monte Carlo simulation ({args.simulations:,} sims)...")
+        simulator = ConferenceTournamentSimulator(
+            predictor,
+            num_simulations=args.simulations,
+        )
+        simulation_results = simulator.simulate_all(conferences)
+
     if args.output:
         output = predictor.to_json(conferences)
         with open(args.output, "w") as f:
             f.write(output)
         print(f"Predictions written to {args.output}")
     else:
-        print(predictor.generate_report(conferences))
+        print(predictor.generate_report(conferences, simulation_results))
 
     return 0
 
