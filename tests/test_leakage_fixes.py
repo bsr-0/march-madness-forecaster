@@ -404,7 +404,8 @@ class TestConfidenceEstimationIsolation:
         complete feature engineering setup.
         """
         import inspect
-        source = inspect.getsource(SOTAPipeline._estimate_model_confidence_intervals)
+        from src.pipeline.stages import simulation as _sim_mod
+        source = inspect.getsource(_sim_mod.estimate_model_confidence_intervals)
 
         # Should NOT directly assign to self.model_confidence
         assert "self.model_confidence[model_name] = " not in source, (
@@ -765,7 +766,8 @@ class TestCalibrationInSampleFix:
         """_fit_calibration must not load regular-season historical games."""
         import inspect
 
-        source = inspect.getsource(SOTAPipeline._fit_calibration)
+        from src.pipeline.stages import calibration as _cal_mod
+        source = inspect.getsource(_cal_mod._fit_calibration)
 
         # The removed block contained this distinctive comment/pattern.
         # If it reappears, the in-sample contamination is back.
@@ -779,7 +781,8 @@ class TestCalibrationInSampleFix:
         """The stale comment claiming all historical predictions are OOS must be gone."""
         import inspect
 
-        source = inspect.getsource(SOTAPipeline._fit_calibration)
+        from src.pipeline.stages import calibration as _cal_mod
+        source = inspect.getsource(_cal_mod._fit_calibration)
 
         assert "genuinely out-of-sample since those" not in source, (
             "Stale comment claims historical regular-season predictions are "
