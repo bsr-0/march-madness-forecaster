@@ -2139,6 +2139,32 @@ def main():
     deploy_promote.add_argument("--version", required=True, help="Version ID to promote")
     deploy_sub.add_parser("drift-check", help="Run drift analysis on latest model")
 
+    # --- conference-tournaments ---
+    conf_parser = subparsers.add_parser(
+        "conference-tournaments",
+        help="Predict conference tournament outcomes (pre-NCAA validation)",
+    )
+    conf_parser.add_argument(
+        "--torvik", default="data/raw/torvik_2026.json",
+        help="Path to Torvik JSON data file",
+    )
+    conf_parser.add_argument(
+        "--conference", "-c", default=None,
+        help="Predict a single conference (e.g. ACC, B12, SEC). Default: all",
+    )
+    conf_parser.add_argument(
+        "--output", "-o", default=None,
+        help="Output JSON file path for predictions",
+    )
+    conf_parser.add_argument(
+        "--year", type=int, default=2026,
+        help="Season year (default: 2026)",
+    )
+    conf_parser.add_argument(
+        "--list-conferences", action="store_true",
+        help="List available conferences and exit",
+    )
+
     args = parser.parse_args()
 
     if args.command == "sota":
@@ -2361,9 +2387,37 @@ def main():
         else:
             deploy_parser.print_help()
         return 0
+    elif args.command == "conference-tournaments":
+        return run_conference_tournaments(args)
     else:
         parser.print_help()
         return 1
+
+
+def run_conference_tournaments(args):
+    """Run conference tournament predictions."""
+    from .conference_tournament.predictor import ConferenceTournamentPredictor
+
+    predictor = ConferenceTournamentPredictor.from_torvik_json(args.torvik)
+
+    if args.list_conferences:
+        print("Available conferences:")
+        for conf in predictor.list_conferences():
+            teams = predictor.get_conference_teams(conf)
+            print(f"  {conf:8s}  ({len(teams)} teams)")
+        return 0
+
+    conferences = [args.conference] if args.conference else None
+
+    if args.output:
+        output = predictor.to_json(conferences)
+        with open(args.output, "w") as f:
+            f.write(output)
+        print(f"Predictions written to {args.output}")
+    else:
+        print(predictor.generate_report(conferences))
+
+    return 0
 
 
 if __name__ == "__main__":
