@@ -318,6 +318,11 @@ class SOTAPipelineConfig:
     enable_market_blend: bool = True
     market_blend_weight: float = 0.20
 
+    # Compute budget management (S20)
+    compute_budget_seconds: float = 3600.0
+    enable_budget_degradation: bool = True
+    use_agent_orchestration: bool = False
+
     def __post_init__(self):
         if self.mode not in ("calibration", "ev"):
             raise ValueError(f"Invalid mode '{self.mode}': must be 'calibration' or 'ev'")

@@ -37,3 +37,15 @@ class DataRequirementError(RuntimeError):
     """Raised when a required data artifact is missing or invalid."""
 
     pass
+
+
+class GovernanceApprovalRequired(RuntimeError):
+    """Raised when a pipeline action requires human approval.
+
+    The request_id attribute can be used to approve or deny the request
+    via the governance CLI commands.
+    """
+
+    def __init__(self, message: str, request_id: str = ""):
+        super().__init__(message)
+        self.request_id = request_id
