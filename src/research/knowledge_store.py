@@ -252,6 +252,45 @@ class KnowledgeStore:
 
         return "\n".join(lines)
 
+    def update_from_registry(self) -> Dict[str, Any]:
+        """Refresh insights from the latest experiments in the registry.
+
+        Returns a summary of what was learned, including weak areas and
+        unexplored parameters that can guide the next scheduling round.
+        """
+        experiments = self._get_experiments()
+        if not experiments:
+            return {"status": "no_experiments", "weak_years": [], "unexplored": []}
+
+        # Identify weak years
+        year_insights = self.insights_by_year()
+        weak_years: List[Dict[str, Any]] = []
+        if year_insights:
+            all_briers = [d["best_brier"] for d in year_insights.values()]
+            if all_briers:
+                mean_best = sum(all_briers) / len(all_briers)
+                for year, data in year_insights.items():
+                    if data["best_brier"] > mean_best * 1.15:
+                        weak_years.append({
+                            "year": year,
+                            "best_brier": data["best_brier"],
+                            "gap": data["best_brier"] - mean_best,
+                        })
+
+        # Identify unexplored parameter regions
+        unexplored = self.unexplored_parameters()
+
+        # Get what works patterns
+        patterns = self.what_works()
+
+        return {
+            "status": "updated",
+            "n_experiments": len(experiments),
+            "weak_years": weak_years,
+            "unexplored": unexplored,
+            "patterns": patterns,
+        }
+
     def _get_experiments(self) -> List[Any]:
         """Load experiments from registry."""
         if self._registry is None:

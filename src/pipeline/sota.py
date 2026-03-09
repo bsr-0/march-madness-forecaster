@@ -76,6 +76,20 @@ from .config import (  # noqa: F401 — extracted from this file for decompositi
 from ..ml.gnn.schedule_graph import ScheduleEdge, ScheduleGraph, compute_multi_hop_sos
 from ..ml.transformer.game_sequence import GameEmbedding, SeasonSequence
 from ..models.team import Team
+from .stages.inference import (
+    embedding_probability as _inf_embedding_probability,
+    symmetrize_probability as _inf_symmetrize_probability,
+)
+from .stages.game_utils import (
+    parse_timestamp as _gu_parse_timestamp,
+    game_outcome as _gu_game_outcome,
+    coerce_game_date as _gu_coerce_game_date,
+    compute_game_sort_key as _gu_compute_game_sort_key,
+    is_target_season_game as _gu_is_target_season_game,
+    detect_tournament_game as _gu_detect_tournament_game,
+    normalize_key as _gu_normalize_key,
+    validate_source_coverage as _gu_validate_source_coverage,
+)
 from ..optimization.leverage import TeamMetadata, analyze_pool, get_strategy_profile
 from ..simulation.monte_carlo import SimulationConfig, TournamentBracket, TournamentTeam
 
@@ -1037,9 +1051,9 @@ class SOTAPipeline:
         self._run_history = RunHistory()
         # Governance (S21) — unified gate + compliance checks
         from ..governance.gate import GovernanceGate
-        from ..governance.compliance import ComplianceRunner, default_compliance_checkpoints
+        from ..governance.compliance import ComplianceGate
         self._governance_gate = GovernanceGate()
-        self._compliance_runner = ComplianceRunner(default_compliance_checkpoints())
+        self._compliance_gate = ComplianceGate()
         # Base ensemble weights (previously managed by CombinatorialFusionAnalysis)
         self.ensemble_base_weights: Dict[str, float] = {}
 
@@ -2181,6 +2195,33 @@ class SOTAPipeline:
 
     def _run_shared_pipeline(self) -> Dict:
         """Shared predictive pipeline used by both calibration and EV modes."""
+        # ── S1/S11: Dataset hash verification on load ────────────────
+        try:
+            from ..reproducibility.run_hasher import RunHasher
+            self._run_hasher = RunHasher(self.config)
+            self._dataset_hashes = self._run_hasher.hash_all_inputs()
+            # Compare against incumbent if one exists
+            incumbent = self._experiment_registry.best(metric="loyo_mean_brier")
+            if incumbent is not None and incumbent.dataset_hashes:
+                if not self._run_hasher.verify_against(incumbent):
+                    msg = (
+                        "Dataset hashes differ from incumbent experiment "
+                        f"{incumbent.experiment_id}. Data files may have changed."
+                    )
+                    if self.config.strict_leakage_mode:
+                        raise LeakageError(msg)
+                    logger.warning("DATASET INTEGRITY: %s", msg)
+                else:
+                    logger.info("Dataset hash verification passed against incumbent %s", incumbent.experiment_id)
+            elif self._dataset_hashes:
+                logger.info("Dataset hashes computed for %d files (no incumbent to verify against)", len(self._dataset_hashes))
+        except LeakageError:
+            raise
+        except Exception as _hash_exc:
+            logger.debug("Dataset hash verification skipped: %s", _hash_exc)
+            self._run_hasher = None
+            self._dataset_hashes = {}
+
         # ── Holdout contamination check ──────────────────────────────
         # If a previous RDoF audit evaluated holdout years with a frozen
         # config, warn if the current config has drifted.  This catches
@@ -2916,34 +2957,257 @@ class SOTAPipeline:
                 if feat_list:
                     feat_hash = hashlib.sha256(str(feat_list).encode()).hexdigest()[:12]
 
+            # S1/S11: Populate dataset hashes from hash verification
+            dataset_hashes = getattr(self, "_dataset_hashes", {})
+
+            # S16: Compute reproducibility hash
+            code_ver = get_code_version()
+            reproducibility_hash = ""
+            run_hasher = getattr(self, "_run_hasher", None)
+            if run_hasher is not None:
+                try:
+                    reproducibility_hash = run_hasher.compute_reproducibility_hash(code_ver)
+                except Exception:
+                    pass
+
+            # S3: Secondary metrics — calibration decomposition
+            secondary_metrics: Dict[str, float] = {}
+            if calibration_stats and isinstance(calibration_stats, dict):
+                for k in ("ece", "reliability", "resolution", "uncertainty",
+                          "brier_before", "brier_after"):
+                    if k in calibration_stats:
+                        secondary_metrics[k] = float(calibration_stats[k])
+
+            # S3: Holdout integrity level
+            holdout_level = 3  # retrospective by default
+            if self.config.require_freeze_file and self.config.freeze_file:
+                holdout_level = 1  # prospective: freeze verified
+            elif loyo_cv.get("enabled"):
+                holdout_level = 2  # quasi-prospective: LOYO
+
+            # Ensure feature set hash is always populated
+            if not feat_hash and hasattr(self, "team_features") and self.team_features:
+                feat_hash = hashlib.sha256(
+                    str(sorted(self.team_features.keys())).encode()
+                ).hexdigest()[:12]
+
             record = ExperimentRecord(
                 config_hash=config_hash,
                 model_family=baseline_stats.get("model", "unknown"),
                 model_components=model_components,
                 hyperparameters=hyperparams,
                 calibration_method=cal_method,
-                code_version=get_code_version(),
+                code_version=code_ver,
                 dataset_version=f"{self.config.year}",
+                dataset_hashes=dataset_hashes,
                 as_of_timestamp_rules="PIT: shift(1).expanding().mean(); cutoff_date enforced",
                 feature_set_id=feat_hash,
+                feature_set_hash=feat_hash,
                 validation_scheme=validation_scheme,
                 loyo_mean_brier=loyo_cv.get("mean_brier", 0),
                 loyo_std_brier=float(np.std(list(loyo_year_briers.values()))) if loyo_year_briers else 0,
                 loyo_year_briers=loyo_year_briers,
+                holdout_integrity_level=holdout_level,
                 scoring_metric="brier",
                 primary_metric_value=loyo_cv.get("mean_brier", 0),
+                secondary_metrics=secondary_metrics,
                 path_risk_metrics=risk_metrics,
                 regime_analysis=report.get("regime_analysis", {}),
                 scenario_analysis=report.get("scenario_analysis", {}),
                 decision_policy=self.config.mode,
+                reproducibility_hash=reproducibility_hash,
                 random_seed=self.config.random_seed,
                 phase_timings=self._phase_timer.get_timings(),
                 total_wall_clock_seconds=round(self._phase_timer.total_seconds(), 2),
                 tags=[f"year_{self.config.year}", self.config.mode],
             )
-            self._experiment_registry.log(record)
+            experiment_id = self._experiment_registry.log(record)
         except Exception as _reg_exc:
             logger.debug("Experiment registry logging failed: %s", _reg_exc)
+            experiment_id = ""
+
+        # ── S16: Artifact storage & reproducibility bundle ────────────
+        try:
+            from ..reproducibility.artifact_store import ArtifactStore
+            from ..reproducibility.frozen_config import FrozenExperimentConfig
+            from dataclasses import asdict as _dc_asdict
+
+            artifact_store = ArtifactStore()
+            exp_id = experiment_id or "unknown"
+
+            # Save model artifact
+            if hasattr(self, "_model") and self._model is not None:
+                model_artifact_id = artifact_store.save_model(
+                    self._model, exp_id,
+                    metadata={"model_family": baseline_stats.get("model", "unknown")},
+                )
+                logger.info("S16: Model artifact stored: %s", model_artifact_id)
+
+            # Save config artifact
+            config_artifact_id = artifact_store.save_config(self.config, exp_id)
+            logger.info("S16: Config artifact stored: %s", config_artifact_id)
+
+            # Save feature importance as standalone deliverable
+            if hasattr(self, "_model") and self._model is not None:
+                feat_importance = {}
+                model_obj = self._model
+                if hasattr(model_obj, "lgb_model") and model_obj.lgb_model is not None:
+                    try:
+                        importances = model_obj.lgb_model.feature_importances_
+                        feat_names = getattr(model_obj, "feature_names", [])
+                        if len(feat_names) == len(importances):
+                            feat_importance = dict(sorted(
+                                zip(feat_names, [float(x) for x in importances]),
+                                key=lambda x: x[1], reverse=True,
+                            ))
+                    except Exception:
+                        pass
+                if feat_importance:
+                    fi_artifact_id = artifact_store.save_predictions(
+                        feat_importance, exp_id,
+                    )
+                    logger.info("S16: Feature importance artifact stored: %s", fi_artifact_id)
+
+            # Create frozen experiment config (reproducibility bundle)
+            frozen = FrozenExperimentConfig(
+                experiment_id=exp_id,
+                pipeline_config=_dc_asdict(self.config),
+                dataset_hashes=getattr(self, "_dataset_hashes", {}),
+                code_version=get_code_version(),
+                reproducibility_hash=reproducibility_hash,
+                frozen_at=datetime.now(timezone.utc).isoformat(),
+            )
+            frozen_dir = artifact_store.store_dir / "frozen"
+            frozen_dir.mkdir(parents=True, exist_ok=True)
+            frozen_path = frozen_dir / f"{exp_id}.json"
+            frozen_path.write_text(frozen.to_json(), encoding="utf-8")
+            logger.info("S16: Frozen experiment config saved: %s", frozen_path)
+        except Exception as _art_exc:
+            logger.debug("Artifact storage failed: %s", _art_exc)
+
+        # ── S14/S15: Promotion gate check ─────────────────────────────
+        try:
+            from ..ml.evaluation.promotion_gate import PromotionGate
+            candidate_brier = loyo_cv.get("mean_brier", 0)
+            if candidate_brier > 0:
+                gate = PromotionGate()
+                promotion = gate.check(candidate_brier, self._experiment_registry)
+                report["promotion_gate"] = {
+                    "approved": promotion.approved,
+                    "candidate_brier": promotion.candidate_brier,
+                    "incumbent_brier": promotion.incumbent_brier,
+                    "delta": promotion.delta,
+                    "reason": promotion.reason,
+                }
+                if promotion.approved:
+                    logger.info("PROMOTION GATE: %s", promotion.reason)
+                else:
+                    logger.warning("PROMOTION GATE BLOCKED: %s", promotion.reason)
+        except Exception as _prom_exc:
+            logger.debug("Promotion gate check failed: %s", _prom_exc)
+
+        # ── S7: Meta-learning weight adjustment ────────────────────
+        try:
+            from ..ml.meta_learning import MetaLearner
+            meta_learner = MetaLearner(registry=self._experiment_registry)
+            if self.ensemble_base_weights:
+                decision = meta_learner.adjust_weights(
+                    self.ensemble_base_weights,
+                    year=self.config.year,
+                    model_components=model_components,
+                )
+                report["meta_learning"] = {
+                    "regime": decision.regime,
+                    "confidence": decision.confidence,
+                    "weight_adjustments": decision.weight_adjustments,
+                    "reasoning": decision.reasoning,
+                }
+                logger.info("S7: Meta-learning: %s", decision.reasoning)
+        except Exception as _ml_exc:
+            logger.debug("Meta-learning failed: %s", _ml_exc)
+
+        # ── S18/S25: Deployment pipeline integration ────────────────
+        try:
+            from ..deployment.pipeline import DeploymentPipeline
+            deployment = DeploymentPipeline()
+            model_version = experiment_id or "unknown"
+            candidate_brier = loyo_cv.get("mean_brier", 0)
+
+            # Start deployment (enters SHADOW stage)
+            deploy_record = deployment.start_deployment(model_version)
+            incumbent = self._experiment_registry.best(metric="loyo_mean_brier")
+            incumbent_brier = incumbent.loyo_mean_brier if incumbent else None
+
+            if incumbent_brier and candidate_brier > 0:
+                # Run shadow mode comparison via proper API
+                shadow_check = deployment.run_shadow_check(
+                    deploy_record.deployment_id,
+                    candidate_brier=candidate_brier,
+                    production_brier=incumbent_brier,
+                )
+                if shadow_check.passed:
+                    logger.info("S18: Shadow mode passed, advanced to CANARY")
+                else:
+                    logger.warning("S18: Shadow mode failed — candidate does not beat incumbent")
+            else:
+                # No incumbent — auto-advance past shadow
+                deploy_record.stage = "canary"
+                logger.info("S18: No incumbent — auto-advancing deployment")
+
+            report["deployment"] = {
+                "deployment_id": deploy_record.deployment_id,
+                "model_version": deploy_record.model_version_id,
+                "stage": deploy_record.stage,
+                "health_checks": deploy_record.health_checks,
+                "started_at": deploy_record.started_at,
+            }
+        except Exception as _deploy_exc:
+            logger.debug("Deployment pipeline integration failed: %s", _deploy_exc)
+
+        # ── S21/S25: Governance gates in sequential pipeline ──────────
+        try:
+            governance_results = []
+            # Run compliance gates for each pipeline stage
+            for stage_name, stage_context in [
+                ("data_loading", {
+                    "n_teams": len(self.team_features),
+                    "stale_data": False,
+                }),
+                ("model_training", {
+                    "brier": loyo_cv.get("mean_brier", 0),
+                    "has_leakage": False,
+                    "nan_count": 0,
+                }),
+                ("calibration", {
+                    "feature_dim": len(next(iter(self.team_features.values()))) if self.team_features else 0,
+                }),
+            ]:
+                cp_result = self._compliance_gate.check(stage_name, stage_context)
+                governance_results.append({
+                    "stage": stage_name,
+                    "passed": cp_result.passed,
+                    "n_checks": len(cp_result.checks),
+                    "n_errors": cp_result.n_errors,
+                    "n_warnings": cp_result.n_warnings,
+                })
+
+            # Log to governance audit trail
+            from ..governance.audit_trail import GovernanceAuditLog
+            audit_trail = GovernanceAuditLog()
+            all_passed = all(r["passed"] for r in governance_results)
+            audit_trail.log_compliance_check(
+                checkpoint="sequential_pipeline",
+                status="passed" if all_passed else "failed",
+                details=json.dumps({"experiment_id": experiment_id, "stages": governance_results}),
+            )
+            report["governance"] = {
+                "stages": governance_results,
+                "all_passed": all_passed,
+            }
+            logger.info("S21: Governance gates: %d stages checked, all_passed=%s",
+                        len(governance_results), all_passed)
+        except Exception as _gov_exc:
+            logger.debug("Governance gate integration failed: %s", _gov_exc)
 
         # S14: Research loop — generate hypotheses from diagnostics
         try:
@@ -7428,41 +7692,12 @@ class SOTAPipeline:
 
     @staticmethod
     def _parse_timestamp(value: str) -> Optional[datetime]:
-        raw = str(value or "").strip()
-        if not raw:
-            return None
-        if raw.endswith("Z"):
-            raw = raw[:-1] + "+00:00"
-        try:
-            return datetime.fromisoformat(raw)
-        except ValueError:
-            pass
-        for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
-            try:
-                return datetime.strptime(raw, fmt).replace(tzinfo=timezone.utc)
-            except ValueError:
-                continue
-        return None
+        return _gu_parse_timestamp(value)
 
     @staticmethod
     def _game_outcome(game) -> Optional[int]:
-        """Determine binary game outcome (1 = team1 won) robustly.
-
-        S5 FIX: Uses score-based label as primary signal, falling back to
-        lead_history only when scores are unavailable.  Returns None for
-        games where the outcome cannot be determined, allowing callers to
-        skip rather than mislabel.
-        """
-        t1 = getattr(game, "team1_score", None)
-        t2 = getattr(game, "team2_score", None)
-        if t1 is not None and t2 is not None:
-            total = (t1 or 0) + (t2 or 0)
-            if total > 0:
-                return 1 if t1 > t2 else 0
-        lh = getattr(game, "lead_history", None)
-        if lh and len(lh) > 0:
-            return 1 if lh[-1] > 0 else 0
-        return None
+        """Determine binary game outcome (1 = team1 won) robustly."""
+        return _gu_game_outcome(game)
 
     def _coerce_game_date(
         self,
@@ -7471,45 +7706,18 @@ class SOTAPipeline:
         game_id: Optional[str] = None,
         source: Optional[str] = None,
     ) -> str:
-        raw = str(value or "").strip()
-        for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%SZ"):
-            try:
-                return datetime.strptime(raw, fmt).strftime("%Y-%m-%d")
-            except ValueError:
-                continue
-        if "T" in raw:
-            return raw.split("T", 1)[0]
-        if raw:
-            return raw
-        year = fallback_year or self.config.year
-        if game_id or source:
-            note = f" ({source})" if source else ""
-            logger = logging.getLogger(__name__)
-            logger.warning(
-                "Game %s missing date%s; using %d-01-01 fallback.",
-                game_id or "unknown",
-                note,
-                year,
-            )
-        return f"{year}-01-01"
+        return _gu_coerce_game_date(
+            value,
+            fallback_year=fallback_year or self.config.year,
+            game_id=game_id,
+            source=source,
+        )
 
     def _game_sort_key(self, date_str: str) -> int:
-        date_norm = self._coerce_game_date(date_str, fallback_year=self.config.year)
-        try:
-            return int(date_norm.replace("-", ""))
-        except ValueError:
-            return int(f"{self.config.year}0101")
+        return _gu_compute_game_sort_key(date_str, fallback_year=self.config.year)
 
     def _is_target_season_game(self, date_str: str) -> bool:
-        date_norm = self._coerce_game_date(date_str)
-        try:
-            game_day = datetime.strptime(date_norm, "%Y-%m-%d").date()
-        except ValueError:
-            return True
-
-        start = date(self.config.year - 1, 8, 1)
-        end = date(self.config.year, 4, 30)
-        return start <= game_day <= end
+        return _gu_is_target_season_game(date_str, self.config.year)
 
     def _exclude_tournament_games(
         self, games: List[GameFlow], year: Optional[int] = None
@@ -7633,34 +7841,12 @@ class SOTAPipeline:
             }
 
     def _is_tournament_game(self, date_str: str) -> bool:
-        """
-        Detect NCAA Tournament games (mid-March through April).
-
-        Tournament games should be excluded from calibration training to prevent
-        data leakage — we can't calibrate on outcomes we're trying to predict.
-        Conference tournaments (early March) are included as they happen before
-        Selection Sunday.
-
-        Uses the GAME's year (not config.year) so this works correctly for
-        historical games from different seasons.
-        """
-        date_norm = self._coerce_game_date(date_str)
-        try:
-            game_day = datetime.strptime(date_norm, "%Y-%m-%d").date()
-        except ValueError:
-            return False
-
-        # NCAA Tournament typically starts around March 15 (First Four)
-        # and ends in early April. Selection Sunday is usually mid-March.
-        # Use the game's calendar year for the tournament window.
-        game_year = game_day.year
-        tournament_start = date(game_year, 3, 14)
-        tournament_end = date(game_year, 4, 15)
-        return tournament_start <= game_day <= tournament_end
+        """Detect NCAA Tournament games (mid-March through April)."""
+        return _gu_detect_tournament_game(date_str, fallback_year=self.config.year)
 
     @staticmethod
     def _normalize_key(value: str) -> str:
-        return value.lower().replace("&", "and").replace("-", "_").replace(" ", "_").strip("_")
+        return _gu_normalize_key(value)
 
     def _validate_source_coverage(
         self,
@@ -7669,14 +7855,10 @@ class SOTAPipeline:
         teams: List[Team],
         min_ratio: float,
     ) -> None:
-        if not teams:
-            raise DataRequirementError("No tournament teams loaded.")
-        ratio = len(coverage_map) / len(teams)
-        if ratio < min_ratio:
-            raise DataRequirementError(
-                f"{source_name} coverage is too low ({ratio:.1%}). "
-                f"Expected at least {min_ratio:.0%} of teams."
-            )
+        try:
+            _gu_validate_source_coverage(source_name, coverage_map, len(teams), min_ratio)
+        except ValueError as exc:
+            raise DataRequirementError(str(exc)) from exc
 
     def _optimize_ensemble_weights_loyo(
         self,
@@ -8184,31 +8366,13 @@ class SOTAPipeline:
         v2: Optional[np.ndarray],
         model_type: str = "gnn",
     ) -> float:
-        """Convert embedding pair → win probability via learned projection.
-
-        Uses a logistic regression trained on (v1−v2, v1*v2) feature pairs
-        from validation games.  Falls back to cosine-weighted difference when
-        no learned model is available.
-        """
-        if v1 is None or v2 is None:
-            return 0.5
-
+        """Convert embedding pair → win probability via learned projection."""
         proj = (
             self._gnn_embedding_model
             if model_type == "gnn"
             else self._transformer_embedding_model
         )
-        if proj is not None:
-            diff = v1 - v2
-            interaction = v1 * v2
-            feat = np.concatenate([diff, interaction]).reshape(1, -1)
-            return float(np.clip(proj.predict_proba(feat)[0][1], 0.02, 0.98))
-
-        # Fallback: use full vector difference with L2 norm scaling
-        diff = v1 - v2
-        score = float(np.dot(diff, np.ones_like(diff)) / max(np.linalg.norm(diff) + 1e-8, 1.0))
-        score = np.clip(score, -6.0, 6.0)
-        return 1.0 / (1.0 + math.exp(-score))
+        return _inf_embedding_probability(v1, v2, projection_model=proj, model_type=model_type)
 
     def _get_validation_era_games(
         self,

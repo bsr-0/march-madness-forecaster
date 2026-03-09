@@ -143,6 +143,96 @@ def run_sota(args):
     return exit_code
 
 
+def run_research_loop(args):
+    """Run autonomous research loop: generate variants, execute, select best.
+
+    Implements Agent Directive V7 S14 (continuous autonomous research loop).
+    """
+    from dataclasses import asdict
+    from .pipeline.sota import SOTAPipeline
+    from .ml.evaluation.experiment_registry import ExperimentRegistry
+    from .ml.evaluation.promotion_gate import PromotionGate
+    from .research.experiment_scheduler import ExperimentScheduler
+    from .research.knowledge_store import KnowledgeStore
+
+    iterations = getattr(args, "iterations", 5)
+    strategy = getattr(args, "strategy", "adaptive")
+    base_config = _build_pipeline_config(args)
+
+    registry = ExperimentRegistry()
+    scheduler = ExperimentScheduler(registry=registry)
+    knowledge = KnowledgeStore(registry=registry)
+    gate = PromotionGate()
+
+    print(f"Starting research loop: {iterations} iterations, strategy={strategy}")
+
+    best_brier = float("inf")
+    incumbent = registry.best()
+    if incumbent and incumbent.loyo_mean_brier > 0:
+        best_brier = incumbent.loyo_mean_brier
+        print(f"Incumbent Brier: {best_brier:.6f}")
+
+    for i in range(iterations):
+        print(f"\n--- Iteration {i + 1}/{iterations} ---")
+
+        # Step 1: Update knowledge from registry
+        insights = knowledge.update_from_registry()
+        if insights.get("weak_years"):
+            weak = insights["weak_years"]
+            print(f"  Weak years: {[w['year'] for w in weak]}")
+
+        # Step 2: Generate variants
+        base_dict = asdict(base_config)
+        variants = scheduler.generate_variants(base_dict, n=1, strategy=strategy)
+        if not variants:
+            print("  No variants generated, stopping.")
+            break
+
+        variant = variants[0]
+        print(f"  Variant {variant.variant_id}: {variant.hypothesis}")
+
+        # Step 3: Apply variant deltas to config
+        variant_config = _build_pipeline_config(args)
+        for param, val in variant.parameter_deltas.items():
+            if hasattr(variant_config, param):
+                setattr(variant_config, param, val)
+
+        # Step 4: Run pipeline with variant config
+        try:
+            pipeline = SOTAPipeline(variant_config)
+            result = pipeline.run()
+            brier = result.get("loyo_mean_brier", 0)
+            if brier <= 0:
+                loyo = result.get("artifacts", {}).get("loyo_cv", {})
+                brier = loyo.get("mean_brier", 0)
+        except Exception as exc:
+            print(f"  Pipeline failed: {exc}")
+            scheduler.mark_completed(variant.variant_id, brier=float("inf"))
+            continue
+
+        # Step 5: Record result
+        scheduler.mark_completed(variant.variant_id, brier=brier)
+        print(f"  Result Brier: {brier:.6f}")
+
+        # Step 6: Promotion gate
+        promotion = gate.check(brier, registry)
+        if promotion.approved and brier < best_brier:
+            best_brier = brier
+            print(f"  PROMOTED: {promotion.reason}")
+        else:
+            print(f"  Not promoted: {promotion.reason}")
+
+    # Summary
+    print(f"\n{'=' * 60}")
+    print(f"Research loop complete. Best Brier: {best_brier:.6f}")
+    best_variant = scheduler.select_best()
+    if best_variant:
+        print(f"Best variant: {best_variant.variant_id} (Brier={best_variant.result_brier:.6f})")
+        print(f"  Hypothesis: {best_variant.hypothesis}")
+    print(knowledge.research_summary())
+    return 0
+
+
 def _load_manifest(manifest_arg):
     """Load and validate an ingestion manifest. Returns (manifest, base_dir) or exits."""
     manifest_path = Path(manifest_arg).resolve()
@@ -1645,6 +1735,24 @@ def main():
         help="Output calibration artifact JSON",
     )
 
+    # research-loop command (S14: autonomous research loop)
+    research_parser = subparsers.add_parser(
+        "research-loop",
+        help="Run autonomous research loop: generate, execute, and promote model variants (S14)",
+    )
+    research_parser.add_argument(
+        "--iterations", type=int, default=5,
+        help="Number of research iterations (default: 5)",
+    )
+    research_parser.add_argument(
+        "--strategy", choices=["perturbation", "grid", "adaptive"], default="adaptive",
+        help="Variant generation strategy (default: adaptive)",
+    )
+    research_parser.add_argument("--year", type=int, default=2026, help="Tournament year")
+    research_parser.add_argument("--simulations", type=int, default=50000, help="Monte Carlo simulations")
+    research_parser.add_argument("--output", "-o", default="data/sota_report.json", help="Output path")
+    research_parser.add_argument("--seed", type=int, default=2026, help="Random seed")
+
     # scrape-rosters command
     roster_parser = subparsers.add_parser(
         "scrape-rosters",
@@ -2035,6 +2143,8 @@ def main():
 
     if args.command == "sota":
         return run_sota(args)
+    elif args.command == "research-loop":
+        return run_research_loop(args)
     elif args.command == "ingest":
         return ingest_data(args)
     elif args.command == "ingest-historical":
