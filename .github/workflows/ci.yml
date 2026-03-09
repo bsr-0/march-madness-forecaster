@@ -1,0 +1,158 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install ruff mypy
+
+      - name: Run ruff linter
+        run: ruff check src/ tests/ --output-format=github
+
+      - name: Run ruff formatter check
+        run: ruff format --check src/ tests/ || true
+
+      - name: Run mypy type checking
+        run: mypy src/ --ignore-missing-imports --no-error-summary || true
+
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-timeout
+
+      - name: Run tests with coverage
+        run: |
+          python -m pytest tests/ \
+            --cov=src \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term-missing \
+            --cov-fail-under=60 \
+            --timeout=120 \
+            -x --tb=short \
+            -q
+        env:
+          PYTHONPATH: .
+
+      - name: Upload coverage artifact
+        if: matrix.python-version == '3.10'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate pipeline imports
+        run: |
+          python -c "
+          from src.pipeline.config import SOTAPipelineConfig
+          from src.agents.orchestrator import ResearchOrchestrator
+          from src.agents.scheduler import ResourceAwareScheduler
+          from src.governance.gate import GovernanceGate
+          from src.governance.escalation import RBACManager, EscalationManager
+          from src.monitoring.budget_manager import ComputeBudgetManager
+          from src.monitoring.resource_tracker import ResourceTracker
+          from src.deployment.pipeline import DeploymentPipeline
+          print('All critical imports OK')
+          "
+
+      - name: Validate project structure
+        run: |
+          python -c "
+          from pathlib import Path
+          required = [
+              'src/agents/orchestrator.py',
+              'src/agents/scheduler.py',
+              'src/agents/base.py',
+              'src/agents/registry.py',
+              'src/governance/gate.py',
+              'src/governance/authority_matrix.py',
+              'src/governance/escalation.py',
+              'src/governance/compliance.py',
+              'src/monitoring/resource_tracker.py',
+              'src/monitoring/cost_tracker.py',
+              'src/monitoring/budget_manager.py',
+              'src/deployment/pipeline.py',
+              'src/deployment/shadow_mode.py',
+              'src/deployment/canary.py',
+              '.github/workflows/ci.yml',
+          ]
+          missing = [f for f in required if not Path(f).exists()]
+          if missing:
+              print(f'FAIL: Missing {len(missing)} required files: {missing}')
+              exit(1)
+          print(f'OK: All {len(required)} required files present')
+          "
+
+      - name: Governance compliance check
+        run: |
+          python -c "
+          from src.governance.authority_matrix import AuthorityMatrix, DEFAULT_AUTHORITY_MATRIX
+          from src.governance.escalation import RBACManager, DEFAULT_RBAC_POLICIES
+
+          matrix = AuthorityMatrix()
+          print(f'Authority matrix: {len(matrix.rules)} rules')
+
+          # Verify critical actions require approval
+          assert matrix.requires_approval('submit_predictions', 'critical'), \
+              'submit_predictions must require approval'
+          assert matrix.requires_approval('promote_model', 'high'), \
+              'promote_model must require approval'
+
+          rbac = RBACManager()
+          print(f'RBAC policies: {len(DEFAULT_RBAC_POLICIES)} policies')
+          print('Governance compliance: PASSED')
+          "
