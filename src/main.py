@@ -128,8 +128,17 @@ def _run_pipeline_and_report(config, output_path):
 
 def run_sota(args):
     """Run the full SOTA rubric pipeline."""
-    print("Running SOTA pipeline...")
     config = _build_pipeline_config(args)
+
+    if getattr(args, "multi_agent", False):
+        print("Running SOTA pipeline (multi-agent mode)...")
+        from .pipeline.sota import SOTAPipeline
+        pipeline = SOTAPipeline(config)
+        result = pipeline.run_multi_agent()
+        print(f"Multi-agent pipeline complete: {len(result)} keys in result")
+        return 0
+
+    print("Running SOTA pipeline...")
     exit_code, _ = _run_pipeline_and_report(config, args.output)
     return exit_code
 
@@ -1234,6 +1243,7 @@ def main():
     sota_parser.add_argument("--cache-dir", default="data/raw/cache", help="Cache directory for scraper responses")
     sota_parser.add_argument("--allow-stale-feeds", action="store_true", help="Disable freshness checks for feed timestamps")
     sota_parser.add_argument("--max-feed-age-hours", type=int, default=168, help="Maximum allowed feed age in hours")
+    sota_parser.add_argument("--multi-agent", action="store_true", help="Run via multi-agent coordination (Directive V7 S2)")
     sota_parser.add_argument("--min-public-sources", type=int, default=2, help="Minimum independent public pick sources")
     sota_parser.add_argument(
         "--min-rapm-players-per-team",

@@ -38,6 +38,7 @@ data/run_history.jsonl
 data/experiment_ledger.jsonl
 data/snapshots/
 data/.circuit_breaker_state.json
+data/governance/
 
 # Logs
 *.log
