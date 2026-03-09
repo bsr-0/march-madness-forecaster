@@ -1378,6 +1378,40 @@ class SOTAPipeline:
 
         return result
 
+    def run_multi_agent(self) -> Dict:
+        """Run the pipeline via multi-agent coordination (Directive V7 S2).
+
+        Each pipeline stage is executed by a specialized agent:
+          - DataScoutAgent: data loading + freshness + validation
+          - FeatureEngineerAgent: feature engineering + ablation
+          - ModelingAgent: training + calibration + simulation
+          - AuditAgent: robustness + leakage detection (has VETO power, S22.3)
+          - OrchestratorAgent: coordinates all agents, conflict resolution
+
+        Agents communicate via MessageBus and write to the shared
+        ExperimentRegistry. The AuditAgent has absolute veto authority
+        over safety issues per S22.3.
+
+        Returns the same result dict format as ``run()``.
+        """
+        from src.agents import MessageBus
+        from src.agents.concrete import OrchestratorAgent
+
+        bus = MessageBus()
+        orchestrator = OrchestratorAgent()
+        result = orchestrator.run(
+            self._pipeline_context, bus, pipeline=self
+        )
+
+        if not result.success:
+            logger.warning(
+                "Multi-agent pipeline blocked (%d findings): %s",
+                len(result.findings),
+                result.findings[-1] if result.findings else "unknown",
+            )
+
+        return result.output or {}
+
     def _log_run_to_history(
         self,
         status: str,
