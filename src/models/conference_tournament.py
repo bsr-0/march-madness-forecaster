@@ -27,6 +27,10 @@ class ConferenceTeam:
         conference: Conference abbreviation (e.g. "ACC").
         t_rank: Overall Torvik T-Rank (national ranking).
         adj_em: Adjusted efficiency margin.
+        adj_o: Adjusted offensive efficiency (per 100 possessions).
+        adj_d: Adjusted defensive efficiency (per 100 possessions).
+        tempo: Adjusted tempo (possessions per 40 minutes).
+        stats: Additional statistics (Four Factors, shooting, etc.).
     """
 
     team_id: str
@@ -35,6 +39,10 @@ class ConferenceTeam:
     conference: str
     t_rank: int = 999
     adj_em: float = 0.0
+    adj_o: float = 0.0
+    adj_d: float = 0.0
+    tempo: float = 0.0
+    stats: Dict[str, float] = field(default_factory=dict)
 
     def __str__(self) -> str:
         return f"[{self.conf_seed}] {self.name}"
