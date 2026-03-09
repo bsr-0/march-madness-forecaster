@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -59,14 +60,33 @@ _DEFAULT_CONF_TOURNAMENT_SIZES: Dict[str, int] = {
     "WAC": 7,
 }
 
+# -----------------------------------------------------------------------
+# Standalone prediction model coefficients
+# -----------------------------------------------------------------------
+# Multi-feature logistic model calibrated from basketball analytics
+# literature (KenPom, Oliver "Basketball on Paper" 2004, Lopez & Matthews
+# JQAS 2015).  Coefficients are in logit-space per unit of each feature
+# difference.
+#
+# Primary signal: AdjO and AdjD differences capture team strength.
+# Secondary: Four Factors provide granularity on *how* teams score.
+# Tempo difference captures pace-mismatch variance.
+
+_COEFF_ADJ_O = 0.075       # Offensive efficiency diff (per point/100 poss)
+_COEFF_ADJ_D = -0.075      # Defensive efficiency diff (lower is better, so negative)
+_COEFF_EFG = 1.5            # eFG% diff (most important Four Factor per Oliver)
+_COEFF_TO_RATE = -1.0       # Turnover rate diff (lower is better)
+_COEFF_ORB_RATE = 0.8       # Offensive rebound rate diff
+_COEFF_FTR = 0.5            # Free throw rate diff
+_COEFF_TEMPO_VAR = 0.001    # Tempo mismatch → increased variance (slight)
+
 
 class ConferenceTournamentPredictor:
     """Predicts conference tournament outcomes using existing team data.
 
     Operates in two modes:
-    1. **Standalone mode** (no SOTA pipeline): Uses Torvik adjusted efficiency
-       margins with a logistic model for pairwise predictions.  Fast, no
-       ML dependencies, good for quick estimates.
+    1. **Standalone mode** (no SOTA pipeline): Uses Torvik metrics with
+       a multi-feature logistic model.  Fast, no ML dependencies.
 
     2. **Pipeline mode** (with trained SOTAPipeline): Uses the full ensemble
        (LightGBM + XGBoost + Logistic + calibration) for predictions.
@@ -99,19 +119,50 @@ class ConferenceTournamentPredictor:
         torvik_path: str,
         pipeline=None,
         conf_tournament_sizes: Optional[Dict[str, int]] = None,
+        data_dir: Optional[str] = None,
+        year: int = 2026,
+        seed_overrides_path: Optional[str] = None,
     ) -> "ConferenceTournamentPredictor":
         """Build predictor from a Torvik JSON data file.
+
+        Automatically enriches data with Four Factors and shooting stats
+        from supplementary files if available.
 
         Args:
             torvik_path: Path to torvik_YYYY.json file.
             pipeline: Optional trained SOTAPipeline instance.
             conf_tournament_sizes: Optional override for tournament sizes.
+            data_dir: Directory containing supplementary data files.
+                Defaults to the parent directory of torvik_path.
+            year: Season year for data file lookups.
+            seed_overrides_path: Optional path to seed overrides JSON.
 
         Returns:
             Configured ConferenceTournamentPredictor.
         """
         with open(torvik_path) as f:
             data = json.load(f)
+
+        # Determine data directory
+        if data_dir is None:
+            data_dir = str(Path(torvik_path).parent)
+
+        # Enrich with Four Factors and shooting data
+        from .data_enrichment import enrich_torvik_teams
+        data = enrich_torvik_teams(data, data_dir=data_dir, year=year)
+
+        # Load seed overrides if provided
+        seed_overrides: Dict[str, Dict[str, int]] = {}
+        if seed_overrides_path:
+            from .seeding import load_seed_overrides
+            seed_overrides = load_seed_overrides(seed_overrides_path)
+
+        # Normalize team IDs for pipeline compatibility
+        try:
+            from ..data.normalize import normalize_team_id
+            _normalize = normalize_team_id
+        except ImportError:
+            _normalize = None
 
         teams_by_conf: Dict[str, List[ConferenceTeam]] = {}
 
@@ -120,25 +171,51 @@ class ConferenceTournamentPredictor:
             if not conf:
                 continue
 
+            raw_id = team_data.get("team_id", "")
+            team_id = _normalize(raw_id) if _normalize else raw_id
+
+            adj_o = team_data.get("adj_offensive_efficiency", 100.0)
+            adj_d = team_data.get("adj_defensive_efficiency", 100.0)
+
+            # Build stats dict from all available numeric fields
+            stats = {}
+            for key in (
+                "effective_fg_pct", "turnover_rate", "offensive_reb_rate",
+                "free_throw_rate", "opp_effective_fg_pct", "opp_turnover_rate",
+                "defensive_reb_rate", "opp_free_throw_rate",
+                "ft_pct", "three_pt_pct",
+            ):
+                val = team_data.get(key, 0.0)
+                if val and val != 0.0:
+                    stats[key] = val
+
+            # Include enriched stats if present
+            enriched = team_data.get("enriched_stats", {})
+            for k, v in enriched.items():
+                if k not in stats or stats[k] == 0.0:
+                    stats[k] = v
+
             team = ConferenceTeam(
-                team_id=team_data.get("team_id", ""),
+                team_id=team_id,
                 name=team_data.get("team_name", "") or team_data.get("name", ""),
-                conf_seed=0,  # Will be assigned by conference standing
+                conf_seed=0,  # Will be assigned below
                 conference=conf,
                 t_rank=team_data.get("t_rank", 999),
-                adj_em=(
-                    team_data.get("adj_offensive_efficiency", 100.0)
-                    - team_data.get("adj_defensive_efficiency", 100.0)
-                ),
+                adj_em=adj_o - adj_d,
+                adj_o=adj_o,
+                adj_d=adj_d,
+                tempo=team_data.get("adj_tempo", 0.0),
+                stats=stats,
             )
             teams_by_conf.setdefault(conf, []).append(team)
 
-        # Sort each conference by adjusted efficiency margin (best first)
-        # and assign conference seeds
+        # Apply seedings
+        from .seeding import apply_seed_overrides, seed_by_adj_em
         for conf, teams in teams_by_conf.items():
-            teams.sort(key=lambda t: -t.adj_em)
-            for i, team in enumerate(teams):
-                team.conf_seed = i + 1
+            if conf in seed_overrides:
+                teams_by_conf[conf] = apply_seed_overrides(teams, seed_overrides[conf])
+            else:
+                teams_by_conf[conf] = seed_by_adj_em(teams)
 
         return cls(
             teams_by_conference=teams_by_conf,
@@ -158,8 +235,8 @@ class ConferenceTournamentPredictor:
     def predict_matchup(self, team1: ConferenceTeam, team2: ConferenceTeam) -> float:
         """Predict P(team1 wins) for a single matchup.
 
-        Uses the SOTA pipeline if available, otherwise falls back to
-        a logistic model based on Torvik AdjEM difference.
+        Uses the SOTA pipeline if available, otherwise uses a multi-feature
+        logistic model calibrated from basketball analytics literature.
 
         Args:
             team1: First team.
@@ -178,14 +255,44 @@ class ConferenceTournamentPredictor:
                     team1.team_id, team2.team_id, e,
                 )
 
-        # Standalone: logistic model on AdjEM difference.
-        # Calibrated from historical college basketball data:
-        # ~75% of games are won by the team with higher AdjEM,
-        # and each point of AdjEM difference ≈ 3% win probability shift.
-        import math
-        em_diff = team1.adj_em - team2.adj_em
-        # Slope of 0.15 in logit space: 10-point AdjEM gap ≈ 82% win prob
-        prob = 1.0 / (1.0 + math.exp(-0.15 * em_diff))
+        return self._standalone_predict(team1, team2)
+
+    def _standalone_predict(self, team1: ConferenceTeam, team2: ConferenceTeam) -> float:
+        """Multi-feature standalone prediction model.
+
+        Uses available Torvik features in a logistic model with
+        literature-derived coefficients.  Falls back gracefully when
+        Four Factors are missing (uses AdjO/AdjD only).
+        """
+        # Core signal: offensive and defensive efficiency differences
+        logit = _COEFF_ADJ_O * (team1.adj_o - team2.adj_o)
+        logit += _COEFF_ADJ_D * (team1.adj_d - team2.adj_d)
+
+        # Four Factors contributions (when available)
+        s1 = team1.stats
+        s2 = team2.stats
+
+        efg1 = s1.get("effective_fg_pct", 0.0)
+        efg2 = s2.get("effective_fg_pct", 0.0)
+        if efg1 > 0 and efg2 > 0:
+            logit += _COEFF_EFG * (efg1 - efg2)
+
+        to1 = s1.get("turnover_rate", 0.0)
+        to2 = s2.get("turnover_rate", 0.0)
+        if to1 > 0 and to2 > 0:
+            logit += _COEFF_TO_RATE * (to1 - to2)
+
+        orb1 = s1.get("offensive_reb_rate", 0.0)
+        orb2 = s2.get("offensive_reb_rate", 0.0)
+        if orb1 > 0 and orb2 > 0:
+            logit += _COEFF_ORB_RATE * (orb1 - orb2)
+
+        ftr1 = s1.get("free_throw_rate", 0.0)
+        ftr2 = s2.get("free_throw_rate", 0.0)
+        if ftr1 > 0 and ftr2 > 0:
+            logit += _COEFF_FTR * (ftr1 - ftr2)
+
+        prob = 1.0 / (1.0 + math.exp(-logit))
         return float(max(0.02, min(0.98, prob)))
 
     def predict_conference(
@@ -314,11 +421,13 @@ class ConferenceTournamentPredictor:
     def generate_report(
         self,
         conferences: Optional[List[str]] = None,
+        simulation_results: Optional[Dict] = None,
     ) -> str:
         """Generate a human-readable prediction report.
 
         Args:
             conferences: Conferences to include.  None = all.
+            simulation_results: Optional Monte Carlo results to include.
 
         Returns:
             Formatted string report.
@@ -344,6 +453,17 @@ class ConferenceTournamentPredictor:
                     f"{conf_name:<25} {bracket.champion.name:<25} "
                     f"{bracket.champion.conf_seed:>4}  {bracket.champion.t_rank:>6}"
                 )
+
+        # Monte Carlo championship odds (if available)
+        if simulation_results:
+            lines.append(f"\n{'='*70}")
+            lines.append("  CHAMPIONSHIP ODDS (Monte Carlo)")
+            lines.append(f"{'='*70}")
+            for conf in sorted(simulation_results.keys()):
+                sim = simulation_results[conf]
+                conf_name = _CONFERENCE_FULL_NAMES.get(conf, conf)
+                lines.append(f"\n  {conf_name}:")
+                lines.append(sim.summary())
 
         # Upset alerts
         lines.append(f"\n{'='*70}")
