@@ -96,6 +96,7 @@ from .stages import baseline_training as _bt
 from .stages import calibration as _cal
 from .stages import simulation as _sim
 from .stages import ev_analysis as _ev
+from .stages import orchestration as _orch
 from ..optimization.leverage import TeamMetadata, analyze_pool, get_strategy_profile
 from ..simulation.monte_carlo import SimulationConfig, TournamentBracket, TournamentTeam
 
@@ -726,126 +727,10 @@ class SOTAPipeline:
 
     def _run_shared_pipeline(self) -> Dict:
         """Shared predictive pipeline used by both calibration and EV modes."""
-        # ── S1/S11: Dataset hash verification on load ────────────────
-        try:
-            from ..reproducibility.run_hasher import RunHasher
-            self._run_hasher = RunHasher(self.config)
-            self._dataset_hashes = self._run_hasher.hash_all_inputs()
-            # Compare against incumbent if one exists
-            incumbent = self._experiment_registry.best(metric="loyo_mean_brier")
-            if incumbent is not None and incumbent.dataset_hashes:
-                if not self._run_hasher.verify_against(incumbent):
-                    msg = (
-                        "Dataset hashes differ from incumbent experiment "
-                        f"{incumbent.experiment_id}. Data files may have changed."
-                    )
-                    if self.config.strict_leakage_mode:
-                        raise LeakageError(msg)
-                    logger.warning("DATASET INTEGRITY: %s", msg)
-                else:
-                    logger.info("Dataset hash verification passed against incumbent %s", incumbent.experiment_id)
-            elif self._dataset_hashes:
-                logger.info("Dataset hashes computed for %d files (no incumbent to verify against)", len(self._dataset_hashes))
-        except LeakageError:
-            raise
-        except Exception as _hash_exc:
-            logger.debug("Dataset hash verification skipped: %s", _hash_exc)
-            self._run_hasher = None
-            self._dataset_hashes = {}
+        # Pre-run checks (dataset hashing, freeze verification, kaggle_dir)
+        freeze_verification = _orch.run_pre_checks(self)
 
-        # ── Holdout contamination check ──────────────────────────────
-        # If a previous RDoF audit evaluated holdout years with a frozen
-        # config, warn if the current config has drifted.  This catches
-        # the scenario where a developer views holdout results, tweaks
-        # a Tier 3 constant, and re-runs the pipeline — which constitutes
-        # implicit overfitting to the holdout set.
-        try:
-            from ..ml.evaluation.rdof_audit import check_holdout_contamination
-            import logging as _logging
-            _rdof_logger = _logging.getLogger(__name__)
-            hist_dir = self.config.multi_year_games_dir or "data/raw/historical"
-            contamination = check_holdout_contamination(hist_dir, self.config)
-            if contamination:
-                msg = f"HOLDOUT CONTAMINATION: {contamination['message']}"
-                if self.config.strict_leakage_mode:
-                    raise LeakageError(msg)
-                _rdof_logger.warning(msg)
-        except Exception as _holdout_exc:
-            logger.debug("Holdout contamination check skipped: %s", _holdout_exc)
-
-        # ── MC calibration (optional) ────────────────────────────────
-        # Load before freeze verification so calibrated parameters are
-        # part of the config hash check.
-        self._mc_calibration = self._load_mc_calibration()
-
-        if self.config.year >= 2026 and self._mc_calibration is None:
-            raise DataRequirementError(
-                "MC calibration artifact required for 2026+ predictions. "
-                "Run `python -m src.main calibrate-mc` and pass --mc-calibration."
-            )
-
-        if self.config.year >= 2026 and not self.config.require_freeze_file:
-            raise DataRequirementError(
-                "Pipeline freeze required for 2026+ predictions. "
-                "Re-run with --require-freeze and a valid --freeze-file."
-            )
-
-        # ── Freeze requirement (pre-registration enforcement) ───────
-        freeze_verification: Optional[Dict] = None
-        if self.config.require_freeze_file:
-            if not self.config.freeze_file:
-                raise DataRequirementError(
-                    "Freeze file required (--require-freeze) but no --freeze-file provided."
-                )
-            try:
-                from ..ml.evaluation.rdof_audit import verify_freeze
-                freeze_verification = verify_freeze(self.config, self.config.freeze_file)
-                if not freeze_verification.get("matches", False):
-                    mismatches = "\n".join(freeze_verification.get("mismatches", []))
-                    raise DataRequirementError(
-                        f"Freeze verification failed for {self.config.freeze_file}:\n{mismatches}"
-                    )
-            except DataRequirementError:
-                raise
-            except Exception as exc:
-                raise DataRequirementError(
-                    f"Freeze verification failed for {self.config.freeze_file}: {exc}"
-                ) from exc
-
-        # FIX #1: Auto-detect kaggle_dir if not explicitly set.
-        # Kaggle competition CSV files (MMasseyOrdinals.csv, MTeams.csv, etc.)
-        # are the primary source for external rating composites.
-        # Uses ensure_kaggle_data() which searches standard locations and
-        # auto-downloads from the Kaggle API if credentials are available.
-        if not self.config.kaggle_dir:
-            try:
-                from ..data.kaggle_downloader import ensure_kaggle_data
-                _resolved = ensure_kaggle_data(kaggle_dir=None, auto_download=True)
-                if _resolved:
-                    self.config.kaggle_dir = _resolved
-                    logger.info("FIX #1: Resolved kaggle_dir via ensure_kaggle_data: %s", _resolved)
-            except Exception as _e:
-                logger.debug("kaggle_downloader.ensure_kaggle_data failed: %s", _e)
-                # Fallback to legacy directory scanning
-                import os as _detect_os
-                _kaggle_candidates = [
-                    _detect_os.path.join(_detect_os.getcwd(), "data", "kaggle"),
-                    _detect_os.path.join(_detect_os.getcwd(), "data", "raw", "kaggle"),
-                    _detect_os.path.join(_detect_os.getcwd(), "kaggle"),
-                    _detect_os.path.join(self.config.data_cache_dir, "kaggle"),
-                ]
-                for _kd in _kaggle_candidates:
-                    if _detect_os.path.isdir(_kd):
-                        _massey_files = [
-                            f for f in _detect_os.listdir(_kd)
-                            if "massey" in f.lower() or "MTeams" in f
-                        ]
-                        if _massey_files:
-                            self.config.kaggle_dir = _kd
-                            logger.info("FIX #1: Auto-detected kaggle_dir: %s", _kd)
-                            break
-
-        # Agent orchestration branch (S2): if enabled, delegate to agent pipeline
+        # Agent orchestration branch (S2)
         if self.config.use_agent_orchestration:
             return self._run_agent_orchestrated_pipeline()
 
@@ -853,13 +738,8 @@ class SOTAPipeline:
             teams = self._load_teams()
             torvik_map, proprietary_map = self._load_team_stat_sources(teams)
             rosters = self._build_rosters(teams)
-
-            # --- Injury report integration ---
             injury_stats = self._apply_injury_reports(rosters)
-
             game_flows = self._build_or_load_game_flows(teams)
-
-            # Gap #1: Load external ratings (Massey Ordinals composite)
             self._external_composites = self._load_external_ratings(teams)
             external_composites = self._external_composites
 
@@ -882,17 +762,11 @@ class SOTAPipeline:
                 g = game_flows.get(team_id, [])
 
                 features = self.feature_engineer.extract_team_features(
-                    team_id=team_id,
-                    team_name=team.name,
-                    seed=team.seed,
-                    region=team.region,
-                    proprietary_metrics=pm,
-                    torvik_data=t,
-                    roster=r,
-                    games=g,
+                    team_id=team_id, team_name=team.name,
+                    seed=team.seed, region=team.region,
+                    proprietary_metrics=pm, torvik_data=t, roster=r, games=g,
                 )
 
-                # Gap #1: Populate external rating features from Massey composite
                 comp = external_composites.get(team_id)
                 if comp is not None:
                     features.external_rating_composite = comp.composite_rating
@@ -900,26 +774,15 @@ class SOTAPipeline:
 
                 self.team_features[team_id] = features.to_vector(include_embeddings=False)
 
-            # FIX-MASSEY: Verify Massey Ordinals coverage — the single highest-ROI
-            # data integration in the competition.  Every recent Kaggle winner used
-            # external rating composites.  Alert immediately if coverage is low.
             self._massey_coverage_stats = self._verify_massey_coverage(
                 teams, external_composites,
             )
-
-            # FIX #9: Validate population statistics against current training data.
-            # Logs warnings when feature distributions diverge from historical norms,
-            # catching rule changes, COVID effects, or data pipeline regressions.
             pop_warnings = validate_population_stats(self.feature_engineer.team_features)
             if pop_warnings:
                 logger.warning(
-                    "FIX#9: %d features diverged from population stats — "
-                    "review warnings above for potential data quality issues.",
+                    "FIX#9: %d features diverged from population stats.",
                     len(pop_warnings),
                 )
-
-            # Compute train/val boundary BEFORE GNN and transformer training so
-            # they can restrict their data to training-era games only.
             self._compute_train_val_boundary(game_flows)
 
         schedule_graph = self._construct_schedule_graph(teams)
@@ -934,25 +797,14 @@ class SOTAPipeline:
             if self.config.enable_transformer:
                 transformer_stats = self._run_transformer(game_flows)
             else:
-                # A1: Transformer removed from ensemble by default.
                 transformer_stats = {"enabled": False, "teams": 0, "reason": "disabled_by_config"}
 
-            # FIX M5: Apply deferred SOS refinement AFTER baseline training so
-            # that training features are uncontaminated by GNN-derived SOS.
-            # The refinement is only applied for inference-time features.
             if self._sos_refinement_pending is not None:
                 mh, pr = self._sos_refinement_pending
                 self._apply_sos_refinement(mh, pr)
                 self._sos_refinement_pending = None
-
-            # Compute graph-theoretic win quality metrics from the schedule graph
-            # and attach to team features.  These capture "who you beat" (not just
-            # "how many"), which is the NCAA committee's primary evaluation lens.
             self._apply_win_quality_metrics(schedule_graph)
 
-            # A1: Embedding projections removed — GNN/Transformer no longer used
-            # in fusion. GNN graph statistics (PageRank SOS, multi-hop SOS) are
-            # retained as feature-engineering inputs only.
             embedding_proj_stats = {}
             if self.config.enable_embedding_projections:
                 embedding_proj_stats = self._train_embedding_projections(game_flows)
@@ -967,18 +819,14 @@ class SOTAPipeline:
             if self._compliance_runner.has_blocking_failure("post_training"):
                 logger.error("Blocking compliance failure after model training")
 
-        # Budget-aware degradation: if >80% budget consumed, reduce remaining work
+        # Budget-aware degradation
         if self.config.enable_budget_degradation and hasattr(self, "_resource_tracker"):
             utilization = self._resource_tracker.budget_utilization()
             if utilization > 0.8:
                 logger.warning(
-                    "BUDGET DEGRADATION: %.0f%% budget consumed — "
-                    "reducing simulations and disabling optional models",
-                    utilization * 100,
+                    "BUDGET DEGRADATION: %.0f%% budget consumed", utilization * 100,
                 )
-                self.config.num_simulations = max(
-                    1000, self.config.num_simulations // 2
-                )
+                self.config.num_simulations = max(1000, self.config.num_simulations // 2)
                 self.config.enable_gnn = False
                 self.config.enable_transformer = False
 
@@ -989,780 +837,40 @@ class SOTAPipeline:
         with self._resource_tracker.phase("simulation"):
             bracket_sim = self._run_monte_carlo(teams, rosters)
 
-        # Betting market blend: integrate sportsbook implied probabilities
         market_consensus = self._load_betting_markets()
         if market_consensus is not None and self.config.enable_market_blend:
             self._apply_market_blend(bracket_sim, market_consensus)
 
         model_round_probs = self._to_round_probabilities(bracket_sim)
 
-        # ── Mode-gated sections ──────────────────────────────────────
-        # Pool analysis, leverage picks, and public pick loading are
-        # only relevant for EV mode (game-theoretic optimization against
-        # a modeled opponent field).  In calibration mode, the objective
-        # is Brier score minimization — public pick data has no bearing
-        # on calibrated probability accuracy.
-        #
-        # Bracket portfolio generation is only relevant for calibration
-        # mode (Kaggle's bracket portfolio format, 2024+).  In EV mode,
-        # _build_ev_analysis runs its own dedicated pool analysis with
-        # EV-specific parameters (pool size, scoring system, archetypes).
-
-        is_ev = self.config.mode == "ev"
-        is_calibration = not is_ev
-
-        # Public picks: only loaded for calibration-mode pool analysis
-        # preview.  EV mode loads its own via _build_ev_analysis with
-        # EV-specific parameters and archetype blending.
-        public_picks: Dict[str, Dict[str, float]] = {}
-        scoring_system = None
-        pool_analysis = None
-        ev_max_bracket = None
-        leverage_preview: List[Dict] = []
-
-        if is_calibration:
-            public_picks = self._load_public_picks(model_round_probs)
-            scoring_system = self._load_scoring_rules()
-            team_metadata = {
-                team_id: TeamMetadata(team_name=team.name, seed=team.seed, region=team.region)
-                for team_id, team in self.team_struct.items()
-            }
-            pool_analysis = analyze_pool(
-                self.config.pool_size,
-                model_round_probs,
-                public_picks,
-                scoring_system=scoring_system,
-                team_metadata=team_metadata,
-            )
-            ev_max_bracket = self._select_ev_bracket(pool_analysis)
-
-            leverage_preview = [
-                {
-                    "team_id": p.team_id,
-                    "team_name": self.team_id_to_name.get(p.team_id, p.team_name),
-                    "round": p.round_name,
-                    "model_probability": p.model_probability,
-                    "public_pick_percentage": p.public_pick_percentage,
-                    "leverage_ratio": p.leverage_ratio,
-                    "ev_differential": p.expected_value_differential,
-                }
-                for p in pool_analysis.leverage_picks[:15]
-            ]
-
-        # Bracket portfolio generation.
-        # Both modes generate portfolios using pool-size-adaptive strategy
-        # allocation.  In EV mode, the portfolio additionally uses per-round
-        # leverage picks from a preliminary pool analysis, enabling
-        # cross-strategy synergy between the EV leverage engine and the
-        # bracket generator.
-        bracket_portfolio_stats: Dict = {}
-        ev_leverage_preview: List[Dict] = []
-        if self.config.enable_bracket_portfolio and is_ev:
-            # EV mode: run a preliminary pool analysis to get leverage picks,
-            # then feed them into the portfolio generator for leverage-aware
-            # bracket construction.
-            try:
-                ev_public_picks = self._load_public_picks(model_round_probs)
-                ev_team_metadata = {
-                    team_id: TeamMetadata(
-                        team_name=team.name, seed=team.seed, region=team.region,
-                    )
-                    for team_id, team in self.team_struct.items()
-                }
-                ev_scoring_name = self.config.ev_scoring_system or "standard"
-                ev_profile = get_strategy_profile(
-                    self.config.ev_pool_size,
-                    scoring_system=ev_scoring_name,
-                    contrarian_override=(
-                        self.config.ev_contrarian_strength
-                        if self.config.ev_contrarian_strength != 1.0
-                        else None
-                    ),
-                    payout_structure=self.config.ev_payout_structure,
-                )
-                prelim_analysis = analyze_pool(
-                    self.config.ev_pool_size,
-                    model_round_probs,
-                    ev_public_picks,
-                    team_metadata=ev_team_metadata,
-                    ev_scoring_system=ev_scoring_name,
-                    strategy_profile=ev_profile,
-                )
-                ev_leverage_preview = [
-                    {
-                        "team_id": p.team_id,
-                        "team_name": self.team_id_to_name.get(p.team_id, p.team_name),
-                        "round": p.round_name,
-                        "model_probability": p.model_probability,
-                        "public_pick_percentage": p.public_pick_percentage,
-                        "leverage_ratio": p.leverage_ratio,
-                        "ev_differential": p.expected_value_differential,
-                    }
-                    for p in prelim_analysis.leverage_picks[:20]
-                ]
-                # Store for _build_ev_analysis to reuse
-                self._ev_preliminary_public_picks = ev_public_picks
-                self._ev_preliminary_leverage = ev_leverage_preview
-                public_picks = ev_public_picks
-                leverage_preview = ev_leverage_preview
-            except Exception as e:
-                logger.warning("EV preliminary pool analysis failed: %s", e)
-
-        if self.config.enable_bracket_portfolio:
-            try:
-                from ..optimization.bracket_portfolio import BracketPortfolioGenerator
-                # Build teams_by_region from tournament bracket
-                teams_by_region: Dict[str, List[Dict]] = {}
-                for team in teams:
-                    tid = self._team_id(team.name)
-                    region = team.region or "Unknown"
-                    teams_by_region.setdefault(region, []).append({
-                        "team_id": tid,
-                        "name": team.name,
-                        "seed": team.seed,
-                    })
-                # Extract championship-level public picks.  For round-level
-                # picks used by the leverage-aware contrarian/targeted strategies,
-                # pass the full per-team per-round public picks dict.
-                champ_public = {}
-                for tid, rounds in public_picks.items():
-                    if isinstance(rounds, dict):
-                        champ_public[tid] = rounds.get("CHAMP", rounds.get("champion_pct", 0.0))
-                    else:
-                        champ_public[tid] = float(rounds)
-
-                portfolio_gen = BracketPortfolioGenerator(
-                    predict_fn=self.predict_probability,
-                    public_pick_pcts=champ_public,
-                    round_public_picks=public_picks if is_ev else None,
-                    leverage_picks=ev_leverage_preview if is_ev else leverage_preview,
-                )
-                # Use pool-size-adaptive strategy profile for portfolio allocation.
-                # In EV mode, derive from the user's actual pool parameters.
-                # In calibration mode, use Kaggle-specific pool-size estimate
-                # to allocate strategies via the same game-theoretic logic.
-                portfolio_profile = None
-                if self.config.mode == "ev":
-                    portfolio_profile = get_strategy_profile(
-                        self.config.ev_pool_size,
-                        scoring_system=self.config.ev_scoring_system or "standard",
-                        contrarian_override=(
-                            self.config.ev_contrarian_strength
-                            if self.config.ev_contrarian_strength != 1.0
-                            else None
-                        ),
-                        payout_structure=self.config.ev_payout_structure,
-                    )
-                    logger.info(
-                        "Portfolio using EV strategy profile: %s",
-                        portfolio_profile.strategy_mix,
-                    )
-                else:
-                    # Calibration mode: treat Kaggle as a pool and use
-                    # pool-size-adaptive allocation for bracket diversity.
-                    portfolio_profile = get_strategy_profile(
-                        self.config.kaggle_effective_pool_size,
-                        payout_structure="top_10pct",
-                    )
-                    logger.info(
-                        "Portfolio using Kaggle strategy profile "
-                        "(effective_pool_size=%d): %s",
-                        self.config.kaggle_effective_pool_size,
-                        portfolio_profile.strategy_mix,
-                    )
-
-                portfolio = portfolio_gen.generate_portfolio(
-                    teams_by_region=teams_by_region,
-                    n_brackets=1000,
-                    n_simulations=50000,
-                    seed=self.config.random_seed,
-                    pool_strategy_profile=portfolio_profile,
-                    enable_search=(
-                        self.config.ev_enable_search
-                        if self.config.mode == "ev"
-                        else False
-                    ),
-                )
-                # Summarize
-                strategy_counts = {}
-                champions = {}
-                for b in portfolio:
-                    strategy_counts[b.strategy] = strategy_counts.get(b.strategy, 0) + 1
-                    champions[b.champion] = champions.get(b.champion, 0) + 1
-                bracket_portfolio_stats = {
-                    "enabled": True,
-                    "n_brackets": len(portfolio),
-                    "strategy_distribution": strategy_counts,
-                    "champion_diversity": len(champions),
-                    "top_champions": dict(sorted(champions.items(), key=lambda x: -x[1])[:10]),
-                }
-                logger.info(
-                    "Bracket portfolio: %d brackets, %d unique champions",
-                    len(portfolio), len(champions),
-                )
-            except Exception as e:
-                bracket_portfolio_stats = {"enabled": False, "error": str(e)}
-                logger.warning("Bracket portfolio generation failed: %s", e)
-
-        # Fix 5: Run ablation study if enabled (post-training diagnostic)
-        ablation_stats: Dict = {}
-        if self.config.enable_ablation_study and ABLATION_AVAILABLE:
-            try:
-                # Build validation games list from game_flows
-                val_games = []
-                for g in self._unique_games(game_flows):
-                    if (
-                        g.team1_id in self.feature_engineer.team_features
-                        and g.team2_id in self.feature_engineer.team_features
-                    ):
-                        _outcome = self._game_outcome(g)
-                        if _outcome is None:
-                            continue
-                        val_games.append({
-                            "team1": g.team1_id,
-                            "team2": g.team2_id,
-                            "team1_won": bool(_outcome),
-                        })
-                if len(val_games) >= 20:
-                    ablation = AblationStudy(self, val_games)
-                    ablation_report = ablation.run_full_ablation()
-                    ablation_stats = ablation_report.to_dict()
-            except Exception as _abl_exc:
-                ablation_stats = {"error": f"ablation study failed: {_abl_exc}"}
-                logger.warning("Ablation study failed: %s", _abl_exc)
-
-        calibration_samples = int(calibration_stats.get("samples", 0))
-
-        # ── Report assembly ──────────────────────────────────────────
-        # The report is mode-aware: calibration mode includes Kaggle-
-        # specific artifacts (Brier rubric, bracket portfolio, dual
-        # submission prep); EV mode omits those and instead provides
-        # placeholders that _build_ev_analysis will populate with
-        # game-theoretic analysis (leverage picks, win probabilities,
-        # competition simulation).
-
-        # Shared artifacts (both modes)
-        shared_artifacts = {
-            "adjacency_matrix": adjacency.tolist(),
-            "baseline_training": baseline_stats,
-            "gnn": gnn_stats,
-            "transformer": transformer_stats,
-            "model_uncertainty": uncertainty_stats,
-            "calibration": calibration_stats,
-            "massey_predictor": massey_predictor_stats,
-            "simulation": {
-                "num_simulations": bracket_sim.num_simulations,
-                "round_of_32_odds": bracket_sim.round_of_32_odds,
-                "sweet_sixteen_odds": bracket_sim.sweet_sixteen_odds,
-                "elite_eight_odds": bracket_sim.elite_eight_odds,
-                "championship_odds": bracket_sim.championship_odds,
-                "final_four_odds": bracket_sim.final_four_odds,
-                "injury_noise_samples_per_matchup": self.config.injury_noise_samples,
-            },
-            "proprietary_metrics_summary": {
-                "teams_computed": len(self.proprietary_metrics),
-                "avg_adj_em": float(np.mean([m.adj_efficiency_margin for m in self.proprietary_metrics.values()] or [0.0])),
-            },
-            "roster_rapm_quality": self.roster_rapm_quality,
-            "injury_integration": injury_stats,
-            "hyperparameter_tuning": self.tuning_result or {},
-            "feature_selection": (
-                {
-                    "original_dim": self.feature_selection_result.original_dim,
-                    "reduced_dim": self.feature_selection_result.reduced_dim,
-                    "correlation_dropped": len(self.feature_selection_result.correlation_dropped),
-                    "importance_dropped": len(self.feature_selection_result.low_importance_dropped),
-                    "top_features": [
-                        {"name": f.name, "importance": round(f.importance, 4)}
-                        for f in self.feature_selection_result.importance_scores[:15]
-                    ],
-                    # FIX #6: Bootstrap stability scores
-                    **(
-                        {"stability_scores": {
-                            k: round(v, 3) for k, v in sorted(
-                                self.feature_selection_result.stability_scores.items(),
-                                key=lambda x: x[1], reverse=True,
-                            )[:10]
-                        }}
-                        if self.feature_selection_result.stability_scores
-                        else {}
-                    ),
-                }
-                if self.feature_selection_result
-                else {}
-            ),
-            "ablation_study": ablation_stats,
-        }
-
-        # Calibration-mode artifacts: Kaggle-specific outputs
-        if is_calibration:
-            shared_artifacts["ev_max_bracket"] = ev_max_bracket.to_dict()
-            shared_artifacts["pool_recommendation"] = pool_analysis.recommended_strategy
-            shared_artifacts["public_pick_sources"] = self.public_pick_sources
-            shared_artifacts["scoring_system"] = scoring_system or {
-                "R64": 10, "R32": 20, "S16": 40,
-                "E8": 80, "F4": 160, "CHAMP": 320,
-            }
-            shared_artifacts["top_leverage_picks"] = leverage_preview
-            shared_artifacts["bracket_portfolio"] = bracket_portfolio_stats
-
-        # EV-mode artifacts: _build_ev_analysis populates the full
-        # game-theoretic analysis in the "ev_analysis" top-level key.
-        # The bracket_portfolio is now generated in both modes via the
-        # cross-strategy synergy integration.
-        if is_ev:
-            if bracket_portfolio_stats:
-                shared_artifacts["bracket_portfolio"] = bracket_portfolio_stats
-                shared_artifacts["top_leverage_picks"] = ev_leverage_preview
-                shared_artifacts["public_pick_sources"] = self.public_pick_sources
-            else:
-                shared_artifacts["bracket_portfolio"] = {"enabled": False, "reason": "ev_mode"}
-
-        # Rubric: phase_4 game theory only evaluated in calibration mode
-        # (it measures Kaggle-specific public consensus and leverage
-        # coverage).  In EV mode, the equivalent checks are in
-        # _build_ev_analysis which has its own validation.
-        phase_4_rubric = (
-            {
-                "public_consensus": len(self.public_pick_sources) >= self.config.min_public_sources,
-                "leverage_ratio": len(leverage_preview) > 0,
-                "pareto_front": len(pool_analysis.pareto_brackets) > 0 if pool_analysis else False,
-            }
-            if is_calibration
-            else {
-                "note": "Game theory evaluated in EV analysis layer",
-                "pool_size": self.config.ev_pool_size,
-                "scoring_system": self.config.ev_scoring_system,
-            }
+        # Mode-gated sections (pool analysis, bracket portfolio, ablation)
+        mode_result = _orch.run_mode_gated_sections(
+            self, teams, model_round_probs, game_flows,
         )
 
-        report = {
-            "mode": self.config.mode,
-            "audit": {
-                "dev_years": self.config.dev_years,
-                "holdout_years": self.config.holdout_years,
-                "freeze_required": self.config.require_freeze_file,
-                "freeze_verification": freeze_verification or {},
-                "mc_calibration": (
-                    {
-                        "best_params": (self._mc_calibration or {}).get("best_params"),
-                        "dev_score": (self._mc_calibration or {}).get("best_dev_score"),
-                        "holdout_score": (self._mc_calibration or {}).get("holdout_score"),
-                        "source": (self._mc_calibration or {}).get("_source_path"),
-                    }
-                    if self._mc_calibration
-                    else {}
-                ),
-            },
-            "ml_diagnostics": {
-                "calibration_samples": calibration_samples,
-                "calibration_min_required": self.config.min_calibration_samples_hard,
-                "calibration_method": calibration_stats.get("method", "unknown"),
-                "calibration_enabled": bool(self.calibration_pipeline),
-                "massey_coverage": getattr(self, "_massey_coverage_stats", {}),
-            },
-            "rubric_evaluation": {
-                "phase_1_data_engineering": {
-                    "proprietary_metrics_computed": bool(self.proprietary_metrics),
-                    "player_rapm_and_live_talent": bool(rosters),
-                    "proprietary_xp_coverage": bool(self.proprietary_metrics),
-                    "rapm_team_coverage": self.roster_rapm_quality.get("team_coverage_ratio", 0.0) >= 0.8,
-                    "lead_volatility_entropy": float(
-                        np.mean([f.avg_entropy for f in self.feature_engineer.team_features.values()] or [0.0])
-                    )
-                    > 0.0,
-                },
-                "phase_2_architecture": {
-                    "schedule_graph_constructed": int(adjacency.shape[0]) >= 64 and len(schedule_graph.edges) > 0,
-                    "d1_scale_graph": int(adjacency.shape[0]) >= 362,
-                    "gcn_sos_refinement": gnn_stats["enabled"],
-                    "transformer_temporal_model": transformer_stats["enabled"] or transformer_stats["teams"] > 0,
-                    "cfa_fusion": False,  # A1: baseline-only prediction
-                },
-                "phase_3_uncertainty_calibration": {
-                    "brier_optimized": calibration_stats["brier_before"] >= calibration_stats["brier_after"],
-                    "isotonic": self.config.calibration_method == "isotonic",
-                    "injury_noise_monte_carlo": self.config.injury_noise_samples >= 10000,
-                },
-                "phase_4_game_theory": phase_4_rubric,
-                "execution_steps": {
-                    "step_1_data_stack": bool(
-                        (self.config.torvik_json or self.config.scrape_live)
-                        and (self.config.historical_games_json or self.config.scrape_live)
-                    ),
-                    "step_2_adjacency_matrix": len(schedule_graph.edges) > 0,
-                    "step_3_lightgbm_ranker": baseline_stats["model"] in ("lightgbm", "lightgbm_tuned", "stacking_ensemble"),
-                    "step_3_xgboost_ranker": baseline_stats["model"] in ("xgboost", "xgboost_tuned", "stacking_ensemble"),
-                    "step_3_stacking_meta": baseline_stats["model"] == "stacking_ensemble",
-                    "step_3_loyo_cv": bool(baseline_stats.get("loyo_cv", {}).get("enabled")),
-                    "step_4_pyg_gcn": gnn_stats["framework"] == "pytorch_geometric",
-                    "step_5_50k_monte_carlo": self.config.num_simulations >= 50000,
-                    "step_6_ev_max_output": is_calibration,
-                },
-            },
-            "artifacts": shared_artifacts,
-            "phase_timings": self._phase_timer.get_timings(),
-        }
-
-        # ── Risk report from LOYO results (S10-1, S13-1, S13-3) ─────
-        loyo_cv = baseline_stats.get("loyo_cv", {})
-        if loyo_cv.get("enabled") and loyo_cv.get("per_year"):
-            try:
-                year_briers = {
-                    int(yr): info["brier"]
-                    for yr, info in loyo_cv["per_year"].items()
-                }
-                risk_report = RiskReport.from_loyo_results(year_briers)
-                report["risk_report"] = risk_report.to_dict()
-
-                # S13-2: Regime-conditional performance analysis
-                from ..ml.evaluation.risk_report import RegimeAnalysis, ScenarioAnalysis
-                regime = RegimeAnalysis.from_loyo_results(year_briers)
-                if regime.regime_labels:
-                    report["regime_analysis"] = regime.to_dict()
-
-                # S10-2: Named scenario analysis
-                scenario = ScenarioAnalysis.from_loyo_results(year_briers)
-                if scenario.base:
-                    report["scenario_analysis"] = scenario.to_dict()
-            except Exception as _risk_exc:
-                logger.debug("Risk report generation failed: %s", _risk_exc)
-
-        # ── Experiment registry logging (S3-1) ───────────────────────
-        # Always log — not just when LOYO is enabled (Directive V7 S3).
-        try:
-            import hashlib
-            from .stages.context import get_code_version
-
-            config_json = json.dumps(
-                {k: str(v) for k, v in sorted(vars(self.config).items())},
-                sort_keys=True,
-            )
-            config_hash = hashlib.sha256(config_json.encode()).hexdigest()[:16]
-
-            # LOYO metrics (populated when available)
-            loyo_year_briers = {}
-            if loyo_cv.get("enabled"):
-                for yr, info in loyo_cv.get("per_year", {}).items():
-                    loyo_year_briers[int(yr)] = info["brier"]
-            validation_scheme = (
-                f"LOYO_{loyo_cv.get('years_evaluated', 0)}yr"
-                if loyo_cv.get("enabled") else "none"
-            )
-
-            risk_metrics = {}
-            if "risk_report" in report:
-                rm = report["risk_report"].get("risk_metrics", {})
-                risk_metrics = {
-                    "max_drawdown": rm.get("max_drawdown", 0),
-                    "worst_year_brier": rm.get("worst_year_brier", 0),
-                    "tail_loss_10pct": rm.get("tail_loss_10pct", 0),
-                    "max_losing_streak": rm.get("max_losing_streak", 0),
-                    "brier_trend_slope": rm.get("brier_trend_slope", 0),
-                }
-
-            # Model components — list active ensemble members
-            model_components = []
-            for name in ("lightgbm", "xgboost", "logistic", "spread_regressor"):
-                if baseline_stats.get(name, {}).get("enabled", False) or name in baseline_stats.get("model", ""):
-                    model_components.append(name)
-            if not model_components:
-                model_components = [baseline_stats.get("model", "unknown")]
-
-            # Hyperparameters from tuning results
-            hyperparams = {}
-            for key in ("lightgbm", "xgboost", "logistic_regression"):
-                tuning = baseline_stats.get(f"{key}_tuning", {})
-                if tuning:
-                    hyperparams[key] = tuning.get("best_params", {})
-
-            # Calibration method
-            cal_method = "none"
-            if calibration_stats and isinstance(calibration_stats, dict):
-                cal_method = calibration_stats.get("method", "temperature")
-
-            # Feature set hash
-            feat_hash = ""
-            if hasattr(self, "team_features") and self.team_features:
-                feat_list = sorted(self.feature_engineer.feature_names) if hasattr(self.feature_engineer, "feature_names") else []
-                if feat_list:
-                    feat_hash = hashlib.sha256(str(feat_list).encode()).hexdigest()[:12]
-
-            # S1/S11: Populate dataset hashes from hash verification
-            dataset_hashes = getattr(self, "_dataset_hashes", {})
-
-            # S16: Compute reproducibility hash
-            code_ver = get_code_version()
-            reproducibility_hash = ""
-            run_hasher = getattr(self, "_run_hasher", None)
-            if run_hasher is not None:
-                try:
-                    reproducibility_hash = run_hasher.compute_reproducibility_hash(code_ver)
-                except Exception:
-                    pass
-
-            # S3: Secondary metrics — calibration decomposition
-            secondary_metrics: Dict[str, float] = {}
-            if calibration_stats and isinstance(calibration_stats, dict):
-                for k in ("ece", "reliability", "resolution", "uncertainty",
-                          "brier_before", "brier_after"):
-                    if k in calibration_stats:
-                        secondary_metrics[k] = float(calibration_stats[k])
-
-            # S3: Holdout integrity level
-            holdout_level = 3  # retrospective by default
-            if self.config.require_freeze_file and self.config.freeze_file:
-                holdout_level = 1  # prospective: freeze verified
-            elif loyo_cv.get("enabled"):
-                holdout_level = 2  # quasi-prospective: LOYO
-
-            # Ensure feature set hash is always populated
-            if not feat_hash and hasattr(self, "team_features") and self.team_features:
-                feat_hash = hashlib.sha256(
-                    str(sorted(self.team_features.keys())).encode()
-                ).hexdigest()[:12]
-
-            record = ExperimentRecord(
-                config_hash=config_hash,
-                model_family=baseline_stats.get("model", "unknown"),
-                model_components=model_components,
-                hyperparameters=hyperparams,
-                calibration_method=cal_method,
-                code_version=code_ver,
-                dataset_version=f"{self.config.year}",
-                dataset_hashes=dataset_hashes,
-                as_of_timestamp_rules="PIT: shift(1).expanding().mean(); cutoff_date enforced",
-                feature_set_id=feat_hash,
-                feature_set_hash=feat_hash,
-                validation_scheme=validation_scheme,
-                loyo_mean_brier=loyo_cv.get("mean_brier", 0),
-                loyo_std_brier=float(np.std(list(loyo_year_briers.values()))) if loyo_year_briers else 0,
-                loyo_year_briers=loyo_year_briers,
-                holdout_integrity_level=holdout_level,
-                scoring_metric="brier",
-                primary_metric_value=loyo_cv.get("mean_brier", 0),
-                secondary_metrics=secondary_metrics,
-                path_risk_metrics=risk_metrics,
-                regime_analysis=report.get("regime_analysis", {}),
-                scenario_analysis=report.get("scenario_analysis", {}),
-                decision_policy=self.config.mode,
-                reproducibility_hash=reproducibility_hash,
-                random_seed=self.config.random_seed,
-                phase_timings=self._phase_timer.get_timings(),
-                total_wall_clock_seconds=round(self._phase_timer.total_seconds(), 2),
-                tags=[f"year_{self.config.year}", self.config.mode],
-            )
-            experiment_id = self._experiment_registry.log(record)
-        except Exception as _reg_exc:
-            logger.debug("Experiment registry logging failed: %s", _reg_exc)
-            experiment_id = ""
-
-        # ── S16: Artifact storage & reproducibility bundle ────────────
-        try:
-            from ..reproducibility.artifact_store import ArtifactStore
-            from ..reproducibility.frozen_config import FrozenExperimentConfig
-            from dataclasses import asdict as _dc_asdict
-
-            artifact_store = ArtifactStore()
-            exp_id = experiment_id or "unknown"
-
-            # Save model artifact
-            if hasattr(self, "_model") and self._model is not None:
-                model_artifact_id = artifact_store.save_model(
-                    self._model, exp_id,
-                    metadata={"model_family": baseline_stats.get("model", "unknown")},
-                )
-                logger.info("S16: Model artifact stored: %s", model_artifact_id)
-
-            # Save config artifact
-            config_artifact_id = artifact_store.save_config(self.config, exp_id)
-            logger.info("S16: Config artifact stored: %s", config_artifact_id)
-
-            # Save feature importance as standalone deliverable
-            if hasattr(self, "_model") and self._model is not None:
-                feat_importance = {}
-                model_obj = self._model
-                if hasattr(model_obj, "lgb_model") and model_obj.lgb_model is not None:
-                    try:
-                        importances = model_obj.lgb_model.feature_importances_
-                        feat_names = getattr(model_obj, "feature_names", [])
-                        if len(feat_names) == len(importances):
-                            feat_importance = dict(sorted(
-                                zip(feat_names, [float(x) for x in importances]),
-                                key=lambda x: x[1], reverse=True,
-                            ))
-                    except Exception:
-                        pass
-                if feat_importance:
-                    fi_artifact_id = artifact_store.save_predictions(
-                        feat_importance, exp_id,
-                    )
-                    logger.info("S16: Feature importance artifact stored: %s", fi_artifact_id)
-
-            # Create frozen experiment config (reproducibility bundle)
-            frozen = FrozenExperimentConfig(
-                experiment_id=exp_id,
-                pipeline_config=_dc_asdict(self.config),
-                dataset_hashes=getattr(self, "_dataset_hashes", {}),
-                code_version=get_code_version(),
-                reproducibility_hash=reproducibility_hash,
-                frozen_at=datetime.now(timezone.utc).isoformat(),
-            )
-            frozen_dir = artifact_store.store_dir / "frozen"
-            frozen_dir.mkdir(parents=True, exist_ok=True)
-            frozen_path = frozen_dir / f"{exp_id}.json"
-            frozen_path.write_text(frozen.to_json(), encoding="utf-8")
-            logger.info("S16: Frozen experiment config saved: %s", frozen_path)
-        except Exception as _art_exc:
-            logger.debug("Artifact storage failed: %s", _art_exc)
-
-        # ── S14/S15: Promotion gate check ─────────────────────────────
-        try:
-            from ..ml.evaluation.promotion_gate import PromotionGate
-            candidate_brier = loyo_cv.get("mean_brier", 0)
-            if candidate_brier > 0:
-                gate = PromotionGate()
-                promotion = gate.check(candidate_brier, self._experiment_registry)
-                report["promotion_gate"] = {
-                    "approved": promotion.approved,
-                    "candidate_brier": promotion.candidate_brier,
-                    "incumbent_brier": promotion.incumbent_brier,
-                    "delta": promotion.delta,
-                    "reason": promotion.reason,
-                }
-                if promotion.approved:
-                    logger.info("PROMOTION GATE: %s", promotion.reason)
-                else:
-                    logger.warning("PROMOTION GATE BLOCKED: %s", promotion.reason)
-        except Exception as _prom_exc:
-            logger.debug("Promotion gate check failed: %s", _prom_exc)
-
-        # ── S7: Meta-learning weight adjustment ────────────────────
-        try:
-            from ..ml.meta_learning import MetaLearner
-            meta_learner = MetaLearner(registry=self._experiment_registry)
-            if self.ensemble_base_weights:
-                decision = meta_learner.adjust_weights(
-                    self.ensemble_base_weights,
-                    year=self.config.year,
-                    model_components=model_components,
-                )
-                report["meta_learning"] = {
-                    "regime": decision.regime,
-                    "confidence": decision.confidence,
-                    "weight_adjustments": decision.weight_adjustments,
-                    "reasoning": decision.reasoning,
-                }
-                logger.info("S7: Meta-learning: %s", decision.reasoning)
-        except Exception as _ml_exc:
-            logger.debug("Meta-learning failed: %s", _ml_exc)
-
-        # ── S18/S25: Deployment pipeline integration ────────────────
-        try:
-            from ..deployment.pipeline import DeploymentPipeline
-            deployment = DeploymentPipeline()
-            model_version = experiment_id or "unknown"
-            candidate_brier = loyo_cv.get("mean_brier", 0)
-
-            # Start deployment (enters SHADOW stage)
-            deploy_record = deployment.start_deployment(model_version)
-            incumbent = self._experiment_registry.best(metric="loyo_mean_brier")
-            incumbent_brier = incumbent.loyo_mean_brier if incumbent else None
-
-            if incumbent_brier and candidate_brier > 0:
-                # Run shadow mode comparison via proper API
-                shadow_check = deployment.run_shadow_check(
-                    deploy_record.deployment_id,
-                    candidate_brier=candidate_brier,
-                    production_brier=incumbent_brier,
-                )
-                if shadow_check.passed:
-                    logger.info("S18: Shadow mode passed, advanced to CANARY")
-                else:
-                    logger.warning("S18: Shadow mode failed — candidate does not beat incumbent")
-            else:
-                # No incumbent — auto-advance past shadow
-                deploy_record.stage = "canary"
-                logger.info("S18: No incumbent — auto-advancing deployment")
-
-            report["deployment"] = {
-                "deployment_id": deploy_record.deployment_id,
-                "model_version": deploy_record.model_version_id,
-                "stage": deploy_record.stage,
-                "health_checks": deploy_record.health_checks,
-                "started_at": deploy_record.started_at,
-            }
-        except Exception as _deploy_exc:
-            logger.debug("Deployment pipeline integration failed: %s", _deploy_exc)
-
-        # ── S21/S25: Governance gates in sequential pipeline ──────────
-        try:
-            governance_results = []
-            # Run compliance gates for each pipeline stage
-            for stage_name, stage_context in [
-                ("data_loading", {
-                    "n_teams": len(self.team_features),
-                    "stale_data": False,
-                }),
-                ("model_training", {
-                    "brier": loyo_cv.get("mean_brier", 0),
-                    "has_leakage": False,
-                    "nan_count": 0,
-                }),
-                ("calibration", {
-                    "feature_dim": len(next(iter(self.team_features.values()))) if self.team_features else 0,
-                }),
-            ]:
-                cp_result = self._compliance_gate.check(stage_name, stage_context)
-                governance_results.append({
-                    "stage": stage_name,
-                    "passed": cp_result.passed,
-                    "n_checks": len(cp_result.checks),
-                    "n_errors": cp_result.n_errors,
-                    "n_warnings": cp_result.n_warnings,
-                })
-
-            # Log to governance audit trail
-            from ..governance.audit_trail import GovernanceAuditLog
-            audit_trail = GovernanceAuditLog()
-            all_passed = all(r["passed"] for r in governance_results)
-            audit_trail.log_compliance_check(
-                checkpoint="sequential_pipeline",
-                status="passed" if all_passed else "failed",
-                details=json.dumps({"experiment_id": experiment_id, "stages": governance_results}),
-            )
-            report["governance"] = {
-                "stages": governance_results,
-                "all_passed": all_passed,
-            }
-            logger.info("S21: Governance gates: %d stages checked, all_passed=%s",
-                        len(governance_results), all_passed)
-        except Exception as _gov_exc:
-            logger.debug("Governance gate integration failed: %s", _gov_exc)
-
-        # S14: Research loop — generate hypotheses from diagnostics
-        try:
-            diagnostics = {}
-            if loyo_year_briers:
-                diagnostics["loyo_year_briers"] = loyo_year_briers
-            if diagnostics:
-                self._research_loop.hypothesis_registry.generate_from_diagnostics(
-                    loyo_year_briers=diagnostics.get("loyo_year_briers"),
-                )
-                logger.info(
-                    "Research loop: %s",
-                    self._research_loop.hypothesis_registry.summary(),
-                )
-        except Exception as _rl_exc:
-            logger.debug("Research loop hypothesis generation failed: %s", _rl_exc)
-
-        logger.info(
-            "Shared pipeline complete (mode=%s): skipped %s",
-            self.config.mode,
-            "pool_analysis/leverage/portfolio" if is_ev else "nothing (calibration runs all)",
+        # Report assembly
+        report = _orch.assemble_report(
+            self,
+            adjacency=adjacency,
+            baseline_stats=baseline_stats,
+            gnn_stats=gnn_stats,
+            transformer_stats=transformer_stats,
+            uncertainty_stats=uncertainty_stats,
+            calibration_stats=calibration_stats,
+            massey_predictor_stats=massey_predictor_stats,
+            bracket_sim=bracket_sim,
+            injury_stats=injury_stats,
+            mode_result=mode_result,
+            freeze_verification=freeze_verification,
+            embedding_proj_stats=embedding_proj_stats,
+            schedule_graph=schedule_graph,
         )
-        logger.info("Phase timings:\n%s", self._phase_timer.summary())
+
+        # Post-pipeline integrations (registry, artifacts, deployment, governance)
+        _orch.run_post_pipeline(self, report, baseline_stats, calibration_stats)
+
         return report
+
 
     def _apply_injury_reports(self, rosters: Dict[str, Roster]) -> Dict:
         """Load injury reports and apply severity modeling + positional depth."""
