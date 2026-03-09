@@ -404,7 +404,8 @@ class TestConfidenceEstimationIsolation:
         complete feature engineering setup.
         """
         import inspect
-        source = inspect.getsource(SOTAPipeline._estimate_model_confidence_intervals)
+        from src.pipeline.stages import simulation as _sim_mod
+        source = inspect.getsource(_sim_mod.estimate_model_confidence_intervals)
 
         # Should NOT directly assign to self.model_confidence
         assert "self.model_confidence[model_name] = " not in source, (
@@ -422,12 +423,13 @@ class TestConfidenceEstimationIsolation:
         """GNN and transformer set confidence from training loss, not validation Brier."""
         import inspect
 
-        gnn_source = inspect.getsource(SOTAPipeline._run_gnn)
-        # GNN should set confidence from training loss
+        # Check the actual implementations (extracted to stages/baseline_training.py)
+        from src.pipeline.stages.baseline_training import _run_gnn, _run_transformer
+
+        gnn_source = inspect.getsource(_run_gnn)
         assert 'model_confidence["gnn"]' in gnn_source
 
-        transformer_source = inspect.getsource(SOTAPipeline._run_transformer)
-        # Transformer should set confidence from training loss
+        transformer_source = inspect.getsource(_run_transformer)
         assert 'model_confidence["transformer"]' in transformer_source
 
 
@@ -722,7 +724,8 @@ class TestCurrentYearSeedLeakage:
         """_train_baseline_model must define tournament_cutoff and gate seeds."""
         import inspect
 
-        source = inspect.getsource(SOTAPipeline._train_baseline_model)
+        from src.pipeline.stages import baseline_training
+        source = inspect.getsource(baseline_training._train_baseline_model)
 
         # Must contain the tournament_cutoff definition
         assert "tournament_cutoff" in source, (
@@ -763,7 +766,8 @@ class TestCalibrationInSampleFix:
         """_fit_calibration must not load regular-season historical games."""
         import inspect
 
-        source = inspect.getsource(SOTAPipeline._fit_calibration)
+        from src.pipeline.stages import calibration as _cal_mod
+        source = inspect.getsource(_cal_mod._fit_calibration)
 
         # The removed block contained this distinctive comment/pattern.
         # If it reappears, the in-sample contamination is back.
@@ -777,7 +781,8 @@ class TestCalibrationInSampleFix:
         """The stale comment claiming all historical predictions are OOS must be gone."""
         import inspect
 
-        source = inspect.getsource(SOTAPipeline._fit_calibration)
+        from src.pipeline.stages import calibration as _cal_mod
+        source = inspect.getsource(_cal_mod._fit_calibration)
 
         assert "genuinely out-of-sample since those" not in source, (
             "Stale comment claims historical regular-season predictions are "
@@ -836,16 +841,18 @@ class TestCoachTemporalGuard:
         assert config.coach_data_cutoff_year == 2023
 
     def test_source_contains_coach_leakage_guard(self):
-        """The _enrich_tournament_context method must contain the guard."""
+        """The enrich_tournament_context implementation must contain the guard."""
         import inspect
 
-        source = inspect.getsource(SOTAPipeline._enrich_tournament_context)
+        # Check the actual implementation (extracted to stages/data_loader.py)
+        from src.pipeline.stages.data_loader import enrich_tournament_context
+        source = inspect.getsource(enrich_tournament_context)
         assert "coach_data_cutoff_year" in source, (
-            "_enrich_tournament_context must check "
+            "enrich_tournament_context must check "
             "coach_data_cutoff_year to prevent future-data leakage."
         )
         assert "Zeroing coach features" in source, (
-            "_enrich_tournament_context must log a warning when "
+            "enrich_tournament_context must log a warning when "
             "zeroing coach features in backtest mode."
         )
 
@@ -922,7 +929,8 @@ class TestHardTournamentDateCutoff:
         """_load_year_samples_incremental must use TOURNAMENT_START_DATES."""
         import inspect
 
-        source = inspect.getsource(SOTAPipeline._load_year_samples_incremental)
+        from src.pipeline.stages import sample_loading
+        source = inspect.getsource(sample_loading.load_year_samples_incremental)
         assert "TOURNAMENT_START_DATES" in source, (
             "_load_year_samples_incremental must use TOURNAMENT_START_DATES "
             "instead of hardcoded 03-14 for accurate per-year cutoffs."

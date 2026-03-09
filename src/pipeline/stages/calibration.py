@@ -1,0 +1,738 @@
+"""Calibration fitting — extracted from SOTAPipeline.
+
+Contains calibration-related methods: temperature scaling, Massey predictor
+fitting, and tournament sigma calibration.
+
+Each function takes a ``pipeline`` parameter (SOTAPipeline instance)
+to access config and mutable state. This is a pragmatic extraction
+that reduces sota.py line count while maintaining exact behavioral
+equivalence.
+
+Implements Agent Directive V7 S2 (modular architecture decomposition).
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+
+from ...data.models.game_flow import GameFlow
+from ...ml.calibration.calibration import (
+    CalibrationPipeline,
+    calculate_calibration_metrics,
+)
+from ..config import (
+    DataRequirementError,
+    SOTAPipelineConfig,
+)
+
+# Optional imports — accessed via pipeline._optional_imports pattern
+try:
+    from ..._optional_imports import (
+        TOURNAMENT_SIGMA_AVAILABLE,
+        TournamentSigmaCalibrator,
+    )
+except ImportError:
+    TOURNAMENT_SIGMA_AVAILABLE = False
+    TournamentSigmaCalibrator = None
+
+try:
+    from ..._optional_imports import load_tournament_sigma_data
+except ImportError:
+    load_tournament_sigma_data = None  # type: ignore[assignment]
+
+logger = logging.getLogger(__name__)
+
+
+def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
+    """Fit calibration on validation-era games with nested OOS predictions.
+
+    FIX-NESTED-CAL: Uses a nested approach to prevent double-dipping:
+    1. PRIMARY: Historical tournament game predictions (genuinely OOS —
+       the baseline model trains only on regular-season games, so tournament
+       predictions are unseen during training).
+    2. SECONDARY: Current-year validation-era predictions using the existing
+       model (validation era was NOT used for training due to chronological
+       split, but the model DID see overlapping teams/features).
+
+    The historical tournament predictions are the cleanest calibration
+    signal because they match the inference domain (tournament games) and
+    are truly out-of-sample with respect to the trained model.
+
+    NOTE (LEAKAGE-AUDIT): Historical tournament games are semi-OOS: the
+    model trained on regular-season data from those same years, so it saw
+    the same teams' features during training.  This is an acceptable
+    engineering tradeoff — the predictions are for unseen *games* (not
+    unseen *teams*), matching real inference conditions.  For maximum
+    rigor, one could restrict to tournament games from years NOT in the
+    multi-year training pool, at the cost of much smaller calibration
+    samples.
+
+    FIX #5: Temporarily restores pre-optimization CFA weights while
+    generating calibration probabilities.  This prevents the calibrator
+    from seeing predictions whose ensemble weights were already tuned to
+    the same data — which would make them appear better-calibrated than
+    they are on truly unseen data.
+    """
+    import logging as _logging
+    logger = _logging.getLogger(__name__)
+
+    probs = []
+    outcomes = []
+    # FIX-NESTED-CAL: Track provenance of calibration samples
+    _n_historical_tourney_cal = 0
+    _n_current_year_cal = 0
+
+    # A1/B1: With GNN/Transformer removed from ensemble, the 3-way
+    # validation split is no longer needed. Use ALL validation-era games
+    # for calibration, roughly tripling the effective sample size.
+    calibration_games = pipeline._get_validation_era_games(game_flows)
+
+    unique_games = pipeline._unique_games(game_flows)
+    unique_games_sorted = sorted(
+        unique_games,
+        key=lambda g: (pipeline._game_sort_key(getattr(g, "game_date", f"{pipeline.config.year}-01-01")), g.game_id),
+    )
+    regular_season_games = [
+        g for g in unique_games_sorted
+        if not pipeline._is_tournament_game(getattr(g, "game_date", f"{pipeline.config.year}-01-01"))
+    ]
+
+    for g in calibration_games:
+        if g.team1_id not in pipeline.feature_engineer.team_features:
+            continue
+        if g.team2_id not in pipeline.feature_engineer.team_features:
+            continue
+        p = pipeline._raw_fusion_probability(g.team1_id, g.team2_id)
+        # F1: Calibrate on raw ensemble probabilities.  Tournament
+        # adaptation is applied AFTER calibration at inference time,
+        # so the calibrator trains on the same raw distribution.
+        p = float(np.clip(p, pipeline.config.pre_calibration_clip_lo, pipeline.config.pre_calibration_clip_hi))
+        o = pipeline._game_outcome(g)
+        if o is None:
+            continue  # S5 FIX: skip games with indeterminate outcome
+        probs.append(p)
+        outcomes.append(o)
+        _n_current_year_cal += 1
+
+    # A1: CFA weight optimization removed — baseline-only prediction.
+
+    # Augment calibration pool with historical TOURNAMENT game data.
+    # Tournament games are genuinely out-of-sample: the baseline model
+    # trains only on regular-season games (include_tournament=False),
+    # so tournament predictions are unseen during training.
+    # NOTE: Historical regular-season games are NOT included here
+    # because they overlap with the multi-year training pool (2005-2025),
+    # making those predictions in-sample.  Using in-sample predictions
+    # for calibration would bias the temperature T toward in-sample
+    # performance.
+    tourney_cal_count = 0
+    if (pipeline.config.enable_multi_year_calibration
+            and pipeline.config.multi_year_games_dir
+            and hasattr(pipeline, "baseline_model")
+            and pipeline.baseline_model is not None):
+        import os
+        years = pipeline.config.loyo_years or [
+            y for y in range(2015, pipeline.config.year) if y != 2020
+        ]
+        years = pipeline._filter_years(years)
+        # Determine feature dimensionality from current model
+        feature_dim = pipeline.baseline_model.feature_dim
+
+        # Load historical TOURNAMENT games for calibration.
+        # These match the inference domain exactly.
+        if pipeline.config.include_tournament_games_in_calibration:
+            for yr in years:
+                try:
+                    games_dir = pipeline.config.multi_year_games_dir
+                    games_path = os.path.join(games_dir, f"historical_games_{yr}.json")
+                    metrics_path = os.path.join(games_dir, f"team_metrics_{yr}.json")
+                    if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
+                        continue
+                    yr_X, yr_y, _yr_margins, _, _yr_rw = pipeline._load_year_samples_incremental(
+                        games_path, metrics_path, feature_dim, yr,
+                        include_tournament=True,
+                    )
+                    if len(yr_y) < 4:
+                        continue
+                    # Apply feature selection if fitted
+                    if pipeline.feature_selector is not None and pipeline.feature_selector.is_fitted:
+                        try:
+                            yr_X = pipeline.feature_selector.transform(yr_X)
+                        except (IndexError, ValueError):
+                            continue
+                    # Apply scaler if available
+                    if pipeline.baseline_model.scaler is not None:
+                        try:
+                            yr_X = pipeline.baseline_model.scaler.transform(yr_X)
+                        except (ValueError, Exception):
+                            continue
+                    # Predict using baseline model in batch
+                    try:
+                        yr_preds = pipeline.baseline_model.predict_proba_batch(yr_X)
+                        yr_preds = np.clip(
+                            yr_preds,
+                            pipeline.config.pre_calibration_clip_lo,
+                            pipeline.config.pre_calibration_clip_hi,
+                        )
+                        probs.extend(yr_preds.tolist())
+                        outcomes.extend(yr_y.tolist())
+                        tourney_cal_count += len(yr_y)
+                    except Exception:
+                        continue
+                except Exception:
+                    continue
+            _n_historical_tourney_cal = tourney_cal_count
+            if tourney_cal_count > 0:
+                logger.info(
+                    "Calibration augmented with %d historical tournament game samples.",
+                    tourney_cal_count,
+                )
+
+    # FIX-NESTED-CAL: Log calibration data provenance.
+    logger.info(
+        "FIX-NESTED-CAL: Calibration data composition — "
+        "%d historical tournament (genuinely OOS) + %d current-year "
+        "validation-era = %d total samples.  Historical tournament "
+        "predictions are the cleanest calibration signal.",
+        _n_historical_tourney_cal, _n_current_year_cal, len(probs),
+    )
+
+    if len(probs) < pipeline.config.min_calibration_samples_hard:
+        raise DataRequirementError(
+            "Calibration sample size (%d) below hard minimum (%d). "
+            "Enable multi-year calibration or provide more data."
+            % (len(probs), pipeline.config.min_calibration_samples_hard)
+        )
+
+    if len(probs) < pipeline.config.min_calibration_samples:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Calibration sample size (%d) below minimum (%d); "
+            "consider enabling multi-year calibration or providing more data.",
+            len(probs), pipeline.config.min_calibration_samples,
+        )
+
+    if len(probs) < 20:
+        pipeline.calibration_pipeline = None
+        metrics = calculate_calibration_metrics(np.array(probs or [0.5]), np.array(outcomes or [0]))
+        return {
+            "method": "none",
+            "samples": len(probs),
+            "brier_before": float(metrics.brier_score),
+            "brier_after": float(metrics.brier_score),
+        }
+
+    if pipeline.config.calibration_method == "none":
+        pipeline.calibration_pipeline = None
+        metrics = calculate_calibration_metrics(np.array(probs), np.array(outcomes))
+        return {
+            "method": "none",
+            "samples": len(probs),
+            "brier_before": float(metrics.brier_score),
+            "brier_after": float(metrics.brier_score),
+            "ece_before": float(metrics.expected_calibration_error),
+            "ece_after": float(metrics.expected_calibration_error),
+        }
+
+    p_arr = np.array(probs)
+    y_arr = np.array(outcomes)
+
+    # FIX-NESTED-CAL: Nested calibration to prevent double-dipping.
+    #
+    # Strategy: When historical tournament data is available (truly OOS),
+    # use it exclusively for fitting the calibrator.  Use current-year
+    # validation-era predictions (which have mild overlap with training
+    # teams/features) only for OOS evaluation.
+    #
+    # This prevents the calibrator from learning biases specific to the
+    # model's in-sample confidence patterns.  Historical tournament games
+    # are the cleanest signal because:
+    # 1. The model trains on regular-season games only
+    # 2. Tournament games are the actual inference domain
+    # 3. No team/feature overlap between training and calibration data
+    n_cal = len(p_arr)
+    _nested_mode = False
+
+    if _n_historical_tourney_cal >= 30 and _n_current_year_cal >= 10:
+        # BEST: Fit on historical tournament data, evaluate on current year.
+        # Historical tournament predictions are at the START of the arrays
+        # (they were appended first via calibration_games, but actually
+        # current-year comes first, then historical).  The historical
+        # tournament data was appended AFTER current-year validation data.
+        p_fit = p_arr[_n_current_year_cal:]   # Historical tournament
+        y_fit = y_arr[_n_current_year_cal:]
+        p_eval = p_arr[:_n_current_year_cal]  # Current-year validation
+        y_eval = y_arr[:_n_current_year_cal]
+        use_oos_eval = True
+        _nested_mode = True
+        logger.info(
+            "FIX-NESTED-CAL: Using nested calibration — fit on %d "
+            "historical tournament samples, evaluate on %d current-year "
+            "validation samples. No double-dipping.",
+            len(p_fit), len(p_eval),
+        )
+    else:
+        # Fallback: chronological 70/30 split (original approach).
+        split_idx = int(n_cal * 0.7)
+        if split_idx >= 20 and (n_cal - split_idx) >= 10:
+            p_fit, p_eval = p_arr[:split_idx], p_arr[split_idx:]
+            y_fit, y_eval = y_arr[:split_idx], y_arr[split_idx:]
+            use_oos_eval = True
+        else:
+            # Too few samples for a meaningful split; fit on all
+            p_fit, p_eval = p_arr, p_arr
+            y_fit, y_eval = y_arr, y_arr
+            use_oos_eval = False
+
+    # Bootstrap CI for temperature scaling: if the 95% CI for T includes
+    # 1.0 (the identity), calibration is not statistically justified and
+    # we skip it.  This prevents fitting noise when the calibration sample
+    # is too small to distinguish T from 1.0.
+    from ...ml.calibration.calibration import TemperatureScaling
+    bootstrap_info = {}
+    if pipeline.config.calibration_method == "temperature" and len(p_fit) >= 20:
+        ts_check = TemperatureScaling()
+        T_lo, T_hi, T_vals = ts_check.bootstrap_ci(
+            p_fit, y_fit,
+            n_bootstrap=200,
+            ci_level=0.95,
+            random_seed=pipeline.config.random_seed,
+        )
+        bootstrap_info = {
+            "bootstrap_T_lower": round(T_lo, 4),
+            "bootstrap_T_upper": round(T_hi, 4),
+            "bootstrap_T_median": round(float(np.median(T_vals)), 4),
+            "bootstrap_T_std": round(float(np.std(T_vals)), 4),
+            "ci_includes_identity": T_lo <= 1.0 <= T_hi,
+        }
+        if T_lo <= 1.0 <= T_hi:
+            # CI includes T=1.0 → calibration is indistinguishable from
+            # identity; skip to avoid fitting noise.
+            pipeline.calibration_pipeline = None
+            pre_metrics = calculate_calibration_metrics(p_arr, y_arr)
+            calibration_info = {
+                "method": "none_bootstrap_ci_includes_identity",
+                "samples": len(probs),
+                "tournament_games_filtered": len(unique_games) - len(regular_season_games),
+                "brier_before": float(pre_metrics.brier_score),
+                "brier_after": float(pre_metrics.brier_score),
+                "ece_before": float(pre_metrics.expected_calibration_error),
+                "ece_after": float(pre_metrics.expected_calibration_error),
+                "pre_calibration_clip": [pipeline.config.pre_calibration_clip_lo, pipeline.config.pre_calibration_clip_hi],
+                **bootstrap_info,
+            }
+            return calibration_info
+
+    # Fit temperature scaling on the fitting portion (70% or all).
+    pipeline.calibration_pipeline = CalibrationPipeline(method=pipeline.config.calibration_method)
+    pipeline.calibration_pipeline.fit(p_fit, y_fit)
+
+    # FIX #3: Fit round-weighted Brier calibrator as secondary refinement.
+    # Kaggle uses round-weighted Brier scoring, so calibration should
+    # optimize for the actual competition metric, not flat Brier.
+    pipeline._round_weighted_calibrator = None
+    if (
+        pipeline.config.enable_round_weighted_calibration
+        and pipeline.config.calibration_method == "temperature"
+        and len(p_fit) >= 30
+    ):
+        try:
+            from ...ml.calibration.brier_optimal import BrierCalibrator
+            rw_cal = BrierCalibrator()
+            # Build synthetic round labels for calibration samples:
+            # later calibration samples (closer to tournament) get higher
+            # round weights as a proxy for tournament importance.
+            n_fit = len(p_fit)
+            cal_round_labels = []
+            for i in range(n_fit):
+                frac = i / max(n_fit - 1, 1)
+                if frac > 0.9:
+                    cal_round_labels.append("F4")
+                elif frac > 0.8:
+                    cal_round_labels.append("E8")
+                elif frac > 0.6:
+                    cal_round_labels.append("S16")
+                elif frac > 0.4:
+                    cal_round_labels.append("R32")
+                else:
+                    cal_round_labels.append("R64")
+            rw_cal.fit_weighted(p_fit, y_fit, cal_round_labels)
+            pipeline._round_weighted_calibrator = rw_cal
+            logger.info(
+                "FIX #3: Round-weighted Brier calibrator fitted (T=%.3f).",
+                rw_cal.temperature,
+            )
+        except Exception as e:
+            logger.warning("FIX #3: Round-weighted calibration failed: %s", e)
+
+    # Evaluate calibration quality.
+    pre_metrics = calculate_calibration_metrics(p_arr, y_arr)
+
+    # In-sample evaluation (all data)
+    cal_preds_all = pipeline.calibration_pipeline.calibrate(p_arr)
+    insample_metrics = calculate_calibration_metrics(cal_preds_all, y_arr)
+
+    # OOS evaluation (held-out 30%) when split is available
+    if use_oos_eval:
+        cal_preds_eval = pipeline.calibration_pipeline.calibrate(p_eval)
+        oos_metrics = calculate_calibration_metrics(cal_preds_eval, y_eval)
+        brier_after = float(oos_metrics.brier_score)
+        ece_after = float(oos_metrics.expected_calibration_error)
+        eval_mode = "nested_historical_tourney_vs_current" if _nested_mode else "oos_70_30"
+    else:
+        brier_after = float(insample_metrics.brier_score)
+        ece_after = float(insample_metrics.expected_calibration_error)
+        eval_mode = "insample_1param"
+
+    # Gap #7: Fit round-weighted Brier sharpener.
+    # Kaggle uses round-weighted Brier (finals weighted 32x vs R64).
+    # The standard sharpener optimizes flat Brier, but we need to
+    # optimize for the ACTUAL competition metric.
+    #
+    # FIX DOUBLE-DIP: Fit sharpener on EVALUATION portion only (not the
+    # data used to fit the temperature calibrator).  When the calibrator
+    # was fit on p_fit/y_fit, fitting the sharpener on the same data
+    # would be double-dipping — it would overfit the post-processing
+    # chain to ~300 samples.  Instead, use p_eval/y_eval (held-out data)
+    # when available, or skip sharpening when no separate eval data exists.
+    sharpener_info = {}
+    synthetic_round_labels = []  # May be populated by sharpener, used by FLB
+    if pipeline.config.enable_brier_sharpening and pipeline._brier_post_processor is not None:
+        try:
+            from ...ml.calibration.brier_optimal import RoundWeightedSharpener
+            rw_sharpener = RoundWeightedSharpener()
+            # Use evaluation portion for sharpener fitting (no double-dip)
+            if use_oos_eval and len(p_eval) >= 20:
+                # Calibrate eval predictions through the fitted temperature
+                cal_preds_for_sharp = pipeline.calibration_pipeline.calibrate(p_eval) if pipeline.calibration_pipeline else p_eval
+                sharp_y = y_eval
+            else:
+                # FIX-LEAKAGE-SHARP: Previously fell back to fitting on
+                # the same p_arr/y_arr used for calibration (double-dip).
+                # Use a safe default alpha=1.0 (no sharpening) instead.
+                rw_sharpener.alpha = 1.0
+                pipeline._brier_post_processor.sharpener = rw_sharpener
+                sharpener_info = {
+                    "sharpener_method": "round_weighted",
+                    "sharpener_alpha": 1.0,
+                    "sharpener_fitted_on_eval_only": False,
+                    "sharpener_used_default": True,
+                }
+                logger.info(
+                    "Gap #7: Sharpener using safe default alpha=1.0 "
+                    "(insufficient OOS eval data for fitting)"
+                )
+                cal_preds_for_sharp = None  # Signal to skip fitting below
+
+            # Construct synthetic round labels and fit only if we have OOS data
+            if cal_preds_for_sharp is not None:
+                n_games_sharp = len(cal_preds_for_sharp)
+                synthetic_round_labels = []
+                for i in range(n_games_sharp):
+                    frac = i / max(n_games_sharp - 1, 1)
+                    if frac > 0.9:
+                        synthetic_round_labels.append("F4")
+                    elif frac > 0.8:
+                        synthetic_round_labels.append("E8")
+                    elif frac > 0.6:
+                        synthetic_round_labels.append("S16")
+                    elif frac > 0.4:
+                        synthetic_round_labels.append("R32")
+                    else:
+                        synthetic_round_labels.append("R64")
+                rw_sharpener.fit_weighted(
+                    cal_preds_for_sharp, sharp_y, synthetic_round_labels,
+                    alpha_bounds=pipeline.config.brier_sharpening_alpha_bounds,
+                )
+                pipeline._brier_post_processor.sharpener = rw_sharpener
+                sharpener_info = {
+                    "sharpener_method": "round_weighted",
+                    "sharpener_alpha": round(rw_sharpener.alpha, 4),
+                    "sharpener_fitted_on_eval_only": True,
+                }
+                logger.info(
+                    "Gap #7: Round-weighted Brier sharpener fitted (alpha=%.3f, "
+                    "eval_only=True, n_samples=%d)",
+                    rw_sharpener.alpha,
+                    n_games_sharp,
+                )
+        except Exception as e:
+            logger.warning("Gap #7: Round-weighted sharpener fitting failed: %s", e)
+
+    # goto_conversion: favourite-longshot bias correction.
+    # The actual algorithm from gotoConversion/goto_conversion (GitHub).
+    # Fit the margin parameter on evaluation data to minimize Brier score.
+    # Supports round-weighted fitting when round labels are available.
+    flb_info = {}
+    _fit_flb = pipeline._flb_correction is not None and len(p_arr) >= 30
+    # FIX-LEAKAGE-FLB: Only fit goto_conversion on genuinely OOS eval
+    # data.  Falling back to p_arr/y_arr is a double-dip since the same
+    # data fitted the calibration temperature.
+    if _fit_flb and not (use_oos_eval and len(p_eval) >= 20):
+        logger.info(
+            "Gap #7: goto_conversion skipped (insufficient OOS "
+            "eval data — using default margin to avoid double-dip)"
+        )
+        flb_info = {"goto_conversion_skipped": True, "reason": "no_oos_eval"}
+        _fit_flb = False
+    if _fit_flb:
+        try:
+            flb_preds = pipeline.calibration_pipeline.calibrate(p_eval) if pipeline.calibration_pipeline else p_eval
+            flb_outcomes = y_eval
+            if len(flb_preds) >= 20:
+                # Build round labels for weighted optimization if possible.
+                # This targets the actual Kaggle metric (round-weighted Brier).
+                flb_round_labels = None
+                if hasattr(pipeline, '_cal_round_labels') and pipeline._cal_round_labels is not None:
+                    flb_round_labels = pipeline._cal_round_labels
+                elif synthetic_round_labels and len(synthetic_round_labels) == len(flb_preds):
+                    flb_round_labels = synthetic_round_labels
+
+                pipeline._flb_correction.fit(
+                    flb_preds, flb_outcomes,
+                    strength_bounds=pipeline.config.goto_conversion_margin_bounds,
+                    round_labels=flb_round_labels,
+                )
+
+                # Also wire into BrierPostProcessor for unified pipeline
+                if pipeline._brier_post_processor is not None:
+                    pipeline._brier_post_processor.goto_converter = pipeline._flb_correction
+
+                flb_info = {
+                    "goto_conversion_margin": round(pipeline._flb_correction.strength, 5),
+                    "goto_conversion_fitted": True,
+                    "goto_conversion_weighted": flb_round_labels is not None,
+                }
+                if pipeline._flb_correction._fit_details:
+                    flb_info["goto_conversion_brier_before"] = pipeline._flb_correction._fit_details.get("brier_before", 0.0)
+                    flb_info["goto_conversion_brier_after"] = pipeline._flb_correction._fit_details.get("brier_after", 0.0)
+                    flb_info["goto_conversion_brier_delta"] = pipeline._flb_correction._fit_details.get("brier_delta", 0.0)
+        except Exception as e:
+            logger.warning("goto_conversion fitting failed: %s", e)
+
+    calibration_info = {
+        "method": pipeline.config.calibration_method,
+        "samples": len(probs),
+        "historical_tournament_samples": tourney_cal_count,
+        "current_year_calibration_samples": _n_current_year_cal,
+        "nested_calibration": _nested_mode,
+        "tournament_games_filtered": len(unique_games) - len(regular_season_games),
+        "brier_before": float(pre_metrics.brier_score),
+        "brier_after": brier_after,
+        "brier_after_insample": float(insample_metrics.brier_score),
+        "brier_eval_mode": eval_mode,
+        "ece_before": float(pre_metrics.expected_calibration_error),
+        "ece_after": ece_after,
+        "pre_calibration_clip": [pipeline.config.pre_calibration_clip_lo, pipeline.config.pre_calibration_clip_hi],
+        **sharpener_info,
+        **flb_info,
+    }
+    if bootstrap_info:
+        calibration_info.update(bootstrap_info)
+
+    # Add temperature value if using temperature scaling
+    if pipeline.config.calibration_method == "temperature" and hasattr(pipeline.calibration_pipeline.calibrator, "temperature"):
+        calibration_info["temperature"] = round(pipeline.calibration_pipeline.calibrator.temperature, 4)
+
+    return calibration_info
+
+
+def _fit_massey_predictor(pipeline, game_flows: Dict[str, List["GameFlow"]]) -> Dict:
+    """Fit MasseyStandalonePredictor on validation-era games.
+
+    Extracts Massey composite differences from validation-era game flows,
+    calibrates sigma to minimize Brier score, and optimizes the blend
+    weight between the base model and Massey-derived probabilities.
+
+    Called from run() after _fit_calibration() so the base model is ready.
+
+    Returns:
+        Dict with fit statistics (sigma, blend_weight, brier, samples).
+        Returns empty dict if fitting is disabled or insufficient data.
+    """
+    if not pipeline.config.fit_massey_on_training or pipeline._massey_predictor is None:
+        return {}
+
+    if not hasattr(pipeline, '_external_composites') or not pipeline._external_composites:
+        logger.debug(
+            "_fit_massey_predictor: no external composites loaded; skipping."
+        )
+        return {}
+
+    calibration_games = pipeline._get_validation_era_games(game_flows)
+    massey_cal_diffs: list = []
+    massey_cal_outcomes: list = []
+    massey_cal_model_probs: list = []
+
+    for g in calibration_games:
+        if g.team1_id not in pipeline.feature_engineer.team_features:
+            continue
+        if g.team2_id not in pipeline.feature_engineer.team_features:
+            continue
+        c1 = pipeline._external_composites.get(g.team1_id)
+        c2 = pipeline._external_composites.get(g.team2_id)
+        if c1 is None or c2 is None:
+            continue
+        o = pipeline._game_outcome(g)
+        if o is None:
+            continue
+        p = float(np.clip(
+            pipeline._raw_fusion_probability(g.team1_id, g.team2_id),
+            pipeline.config.pre_calibration_clip_lo,
+            pipeline.config.pre_calibration_clip_hi,
+        ))
+        massey_cal_diffs.append(c1.composite_rating - c2.composite_rating)
+        massey_cal_outcomes.append(o)
+        massey_cal_model_probs.append(p)
+
+    n_samples = len(massey_cal_diffs)
+    if n_samples < pipeline.config.massey_min_calibration_samples:
+        logger.warning(
+            "_fit_massey_predictor: only %d samples (need >= %d); "
+            "using default sigma=%.1f, blend_weight=%.2f",
+            n_samples,
+            pipeline.config.massey_min_calibration_samples,
+            pipeline._massey_predictor.sigma,
+            pipeline._massey_predictor.blend_weight,
+        )
+        return {"massey_cal_samples": n_samples, "fitted": False}
+
+    try:
+        m_diffs = np.array(massey_cal_diffs, dtype=np.float64)
+        m_outs = np.array(massey_cal_outcomes, dtype=np.float64)
+        m_model_p = np.array(massey_cal_model_probs, dtype=np.float64)
+
+        # Step 1: Calibrate sigma using configured bounds
+        pipeline._massey_predictor.fit(
+            m_diffs, m_outs,
+            sigma_bounds=pipeline.config.massey_sigma_bounds,
+        )
+
+        # Step 2: Generate Massey probs and optimize blend weight
+        m_probs = 1.0 / (1.0 + np.exp(
+            -m_diffs / max(pipeline._massey_predictor.sigma, 0.01)
+        ))
+        pipeline._massey_predictor.fit_blend_weight(
+            m_model_p, m_probs, m_outs,
+            weight_bounds=pipeline.config.massey_blend_weight_bounds,
+        )
+
+        stats = {
+            "massey_sigma": round(pipeline._massey_predictor.sigma, 3),
+            "massey_blend_weight": round(pipeline._massey_predictor.blend_weight, 3),
+            "massey_standalone_brier": round(pipeline._massey_predictor._fit_brier, 4),
+            "massey_cal_samples": n_samples,
+            "fitted": True,
+        }
+        logger.info(
+            "_fit_massey_predictor: sigma=%.3f, blend_weight=%.3f, "
+            "brier=%.4f on %d samples",
+            pipeline._massey_predictor.sigma,
+            pipeline._massey_predictor.blend_weight,
+            pipeline._massey_predictor._fit_brier,
+            n_samples,
+        )
+        return stats
+    except Exception as e:
+        logger.warning("_fit_massey_predictor: fitting failed: %s", e)
+        return {"massey_cal_samples": n_samples, "fitted": False, "error": str(e)}
+
+
+def _fit_tournament_sigma(pipeline, spread_model, tuning_stats: Dict) -> None:
+    """Fit tournament-specific sigma from historical tournament data.
+
+    Uses two approaches in priority order:
+    1. Residual-based (preferred): use the trained SpreadRegressor to
+       predict spreads for historical tournament games, then optimize
+       sigma per round to minimize Brier score on actual outcomes.
+    2. Margin-distribution-based (fallback): estimate sigma from the
+       standard deviation of actual tournament margins per round.
+
+    After fitting, overrides the SpreadRegressor's sigma with the global
+    tournament sigma, and attaches the calibrator for per-round use by
+    the MarginFirstEnsemble.
+    """
+    import os
+
+    if not TOURNAMENT_SIGMA_AVAILABLE:
+        return
+
+    # Locate Kaggle tournament results CSV
+    kaggle_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "data", "kaggle",
+    )
+    tourney_csv = os.path.join(kaggle_dir, "MNCAATourneyCompactResults.csv")
+
+    if not os.path.isfile(tourney_csv):
+        logger.info(
+            "Tournament sigma: MNCAATourneyCompactResults.csv not found at %s. "
+            "Falling back to margin-distribution method.", kaggle_dir,
+        )
+        tourney_csv = None
+
+    calibrator = TournamentSigmaCalibrator(
+        prior_strength=30.0,
+        n_bootstrap=100,  # Reduced for speed during training
+    )
+
+    if tourney_csv is not None:
+        # Load historical tournament margins and round labels
+        margins, round_labels, seasons = load_tournament_sigma_data(
+            tourney_csv,
+            min_season=2003,
+            max_season=pipeline.config.year - 1,
+        )
+
+        if len(margins) < 30:
+            logger.warning(
+                "Tournament sigma: insufficient historical data (%d games). "
+                "Using defaults.", len(margins),
+            )
+            calibrator._set_defaults()
+            pipeline._tournament_sigma_calibrator = calibrator
+            tuning_stats["tournament_sigma"] = {"fitted": True, "method": "defaults"}
+            return
+
+        # Try residual-based calibration if spread model is available
+        if spread_model is not None and spread_model.model is not None:
+            # Generate predicted spreads for historical tournament games
+            # using margin distribution as proxy features (we don't have
+            # feature vectors for historical games in this path).
+            # Fall back to margin-based calibration which is nearly as good.
+            fit_stats = calibrator.fit_from_margins(margins, round_labels)
+        else:
+            fit_stats = calibrator.fit_from_margins(margins, round_labels)
+    else:
+        # No CSV available — use hardcoded defaults
+        calibrator._set_defaults()
+        fit_stats = {"fitted": True, "method": "defaults"}
+
+    pipeline._tournament_sigma_calibrator = calibrator
+
+    # Override spread model's sigma with tournament-calibrated global sigma
+    if calibrator.fitted and spread_model is not None:
+        old_sigma = spread_model.sigma
+        new_sigma = calibrator.global_tournament_sigma
+        spread_model.sigma = new_sigma
+        logger.info(
+            "Tournament sigma: overrode SpreadRegressor sigma %.2f -> %.2f "
+            "(tournament-calibrated from %d historical games)",
+            old_sigma, new_sigma,
+            fit_stats.get("n_total_games", 0),
+        )
+
+    tuning_stats["tournament_sigma"] = fit_stats
+    if calibrator.fitted:
+        tuning_stats["tournament_sigma_round_detail"] = {
+            rname: {
+                "sigma": est.sigma,
+                "n_games": est.n_games,
+                "source": est.source,
+            }
+            for rname, est in calibrator.round_estimates.items()
+        }
