@@ -422,12 +422,13 @@ class TestConfidenceEstimationIsolation:
         """GNN and transformer set confidence from training loss, not validation Brier."""
         import inspect
 
-        gnn_source = inspect.getsource(SOTAPipeline._run_gnn)
-        # GNN should set confidence from training loss
+        # Check the actual implementations (extracted to stages/baseline_training.py)
+        from src.pipeline.stages.baseline_training import _run_gnn, _run_transformer
+
+        gnn_source = inspect.getsource(_run_gnn)
         assert 'model_confidence["gnn"]' in gnn_source
 
-        transformer_source = inspect.getsource(SOTAPipeline._run_transformer)
-        # Transformer should set confidence from training loss
+        transformer_source = inspect.getsource(_run_transformer)
         assert 'model_confidence["transformer"]' in transformer_source
 
 
@@ -722,7 +723,8 @@ class TestCurrentYearSeedLeakage:
         """_train_baseline_model must define tournament_cutoff and gate seeds."""
         import inspect
 
-        source = inspect.getsource(SOTAPipeline._train_baseline_model)
+        from src.pipeline.stages import baseline_training
+        source = inspect.getsource(baseline_training._train_baseline_model)
 
         # Must contain the tournament_cutoff definition
         assert "tournament_cutoff" in source, (
@@ -924,7 +926,8 @@ class TestHardTournamentDateCutoff:
         """_load_year_samples_incremental must use TOURNAMENT_START_DATES."""
         import inspect
 
-        source = inspect.getsource(SOTAPipeline._load_year_samples_incremental)
+        from src.pipeline.stages import sample_loading
+        source = inspect.getsource(sample_loading.load_year_samples_incremental)
         assert "TOURNAMENT_START_DATES" in source, (
             "_load_year_samples_incremental must use TOURNAMENT_START_DATES "
             "instead of hardcoded 03-14 for accurate per-year cutoffs."
