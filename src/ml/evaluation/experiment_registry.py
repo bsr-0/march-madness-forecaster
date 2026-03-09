@@ -110,6 +110,20 @@ class ExperimentRecord:
         return cls(**filtered)
 
 
+    # S3: Required fields for complete experiment records
+    REQUIRED_FIELDS = [
+        "config_hash", "model_family", "validation_scheme",
+        "scoring_metric", "code_version", "dataset_version",
+        "calibration_method", "decision_policy",
+    ]
+
+    # S3: Strongly recommended fields
+    RECOMMENDED_FIELDS = [
+        "dataset_hashes", "reproducibility_hash", "feature_set_id",
+        "secondary_metrics", "path_risk_metrics", "phase_timings",
+    ]
+
+
 class ExperimentRegistry:
     """Append-only JSONL experiment ledger.
 
@@ -121,12 +135,51 @@ class ExperimentRegistry:
     def __init__(self, ledger_path: str = DEFAULT_LEDGER_PATH):
         self.ledger_path = Path(ledger_path)
 
+    @staticmethod
+    def validate_record(record: ExperimentRecord) -> List[str]:
+        """Validate that required fields are populated.
+
+        Returns a list of missing/empty field names. An empty list
+        means the record is fully compliant with Directive V7 S3.
+        """
+        missing: List[str] = []
+        for field_name in ExperimentRecord.REQUIRED_FIELDS:
+            val = getattr(record, field_name, "")
+            if not val:
+                missing.append(field_name)
+
+        # Check recommended fields (warn but don't block)
+        for field_name in ExperimentRecord.RECOMMENDED_FIELDS:
+            val = getattr(record, field_name, None)
+            if not val:  # empty string, empty dict, None
+                missing.append(f"{field_name} (recommended)")
+
+        return missing
+
     def log(self, record: ExperimentRecord) -> str:
         """Append a record to the ledger.  Returns the experiment_id."""
         if not record.experiment_id:
             record.experiment_id = str(uuid.uuid4())[:8]
         if not record.timestamp:
             record.timestamp = datetime.now(timezone.utc).isoformat()
+
+        # S3: Validate record completeness
+        missing = self.validate_record(record)
+        if missing:
+            required_missing = [f for f in missing if "(recommended)" not in f]
+            recommended_missing = [f for f in missing if "(recommended)" in f]
+            if required_missing:
+                logger.warning(
+                    "Experiment %s missing required fields: %s",
+                    record.experiment_id,
+                    ", ".join(required_missing),
+                )
+            if recommended_missing:
+                logger.debug(
+                    "Experiment %s missing recommended fields: %s",
+                    record.experiment_id,
+                    ", ".join(recommended_missing),
+                )
 
         # Check for duplicate config_hash (warn but still log)
         if record.config_hash:
