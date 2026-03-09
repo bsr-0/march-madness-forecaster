@@ -1,450 +1,225 @@
-# Agent Directive V7 — Independent Scoring Evaluation
+# Agent Directive V7 — Repository Compliance Score
 
 **Repository:** march-madness-forecaster
-**Evaluation Date:** 2026-03-09
-**Evaluator:** Claude Opus 4.6 (Independent Audit — No Subjective Adjustments)
-**Directive Version:** Agent Directive V7 Complete (25 Sections)
-**Methodology:** Each section scored 0–10 based on verified codebase state. Raw total /250, normalized to 100. No subjective adjustments applied.
+**Date:** 2026-03-09
+**Evaluator:** Claude Opus 4.6 (Fresh independent audit)
+**Directive Version:** Agent Directive V7 Complete (25 Sections, Parts I & II)
+**Methodology:** Each of 25 sections scored 0–4 for functional implementation completeness, then importance-weighted (weight 2–5) and normalized to 100.
 
 ---
 
-## Overall Score: 63 / 100
+## Scoring Scale
 
-**Raw: 158 / 250 (63.2%)**
+| Points | Meaning |
+|--------|---------|
+| 0 | Not implemented |
+| 1 | Stub/placeholder only |
+| 2 | Partial — core idea present, significant gaps |
+| 3 | Mostly complete — functional with minor gaps |
+| 4 | Fully compliant |
 
 ---
 
 ## Part I — Core Research and Validation Protocol (Sections 1–17)
 
-### S1: Mission and Non-Negotiable Principles — 8 / 10
-
-| Principle | Status | Evidence |
-|-----------|--------|----------|
-| Temporal integrity first | Strong | LOYO protocol, `shift(1)` pattern, leakage canary tests, `cutoff_date` enforcement (`require_cutoff_date=True`), `LeakageError` halts pipeline |
-| Decision objective supremacy | Strong | Brier score optimization (Kaggle metric since 2023), pool EV mode, dual submission |
-| Evidence over intuition | Strong | 0.001 Rule for feature ablation, paired Brier t-test, permutation tests, academic citations throughout |
-| Reproducibility over vibes | Partial | RDoF audit (60+ constants), experiment registry with hashes, SHA-256 data hashing — but no frozen dataset versioning enforcement on load |
-| Safety over ambition | Partial | Calibration guardrails, stacking disabled by default, Optuna capped at 15 trials — but no formal kill switch or degraded-mode fallback |
-
-**Deductions:** -1 no dataset hash verification on load; -1 no formal kill switch/degraded-mode fallback
-
----
-
-### S2: Multi-Agent System Architecture — 7 / 10
-
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Specialized agent roles | Implemented | 5 agents: DataScoutAgent, FeatureEngineerAgent, ModelingAgent, AuditAgent (veto), OrchestratorAgent (`src/agents/concrete.py`) |
-| Agent communication | Implemented | `MessageBus` pub/sub with typed `AgentMessage` and `MessageType` enums (`src/agents/__init__.py`) |
-| Shared experiment registry | Implemented | `ExperimentRegistry` JSONL ledger; agents log via `GovernanceAuditTrail` |
-| Budget tracking | Implemented | `BudgetManager` integrated in OrchestratorAgent with per-stage allocation |
-| Compliance gates | Implemented | `ComplianceGate` checks at stage boundaries |
-| Tests | 31 tests | `tests/test_multi_agent.py` |
-
-**Deductions:** -2 agents not the primary execution path (sota.py monolith still dominates); -1 limited evidence agents improve research outcomes vs. architectural compliance
-
----
-
-### S3: Shared Contracts and Required Logs — 6 / 10
-
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Experiment ledger | Implemented | `ExperimentRecord` dataclass with 25+ fields matching V7 schema (`src/ml/evaluation/experiment_registry.py`) |
-| Complete entries | Partial | Schema comprehensive but many fields default to empty strings; actual population depends on pipeline wiring |
-| Dataset hashes | Partial | `dataset_hashes` field exists; SHA-256 computation available but optional |
-| Schema contracts | Implemented | `validate_ensemble_weights()`, `validate_calibration_data()`, `validate_matchup_vector()` (`src/data/schemas.py`) |
-
-**Deductions:** -2 auto-logging not fully wired (many fields default empty); -2 no enforcement that entries must be complete before results trusted
-
----
-
-### S4: Phase 0 — Problem Definition and Utility Mapping — 8 / 10
-
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Prediction target | Clear | NCAA tournament game-level win probabilities |
-| Real optimization target | Clear | Kaggle round-weighted Brier score (calibration mode), pool rank percentile (EV mode) |
-| Action layer | Clear | Submit bracket portfolio (Kaggle), choose optimal bracket for pool play |
-| Operational constraints | Partial | Tournament timing modeled; no explicit latency/budget documentation |
-
-**Deductions:** -1 no explicit latency/budget documentation; -1 no formal utility mapping standalone artifact
-
----
-
-### S5: Phase 1 — Dataset Discovery, Construction, and Lineage — 7 / 10
-
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Broad signal search | Strong | 20+ sources: KenPom, Torvik, ESPN, SportsReference, betting markets, injuries, transfer portal, rosters, Massey ordinals, coach history, HerHoopStats |
-| Point-in-time representation | Implemented | `shift(1)` pattern, `HistoricalDataPipeline` with date preservation |
-| Raw snapshot preservation | Partial | 1400+ historical JSON files (2003-2026) in `data/raw/historical/`; but overwritten on re-scrape |
-| Survivorship/hindsight testing | Partial | Leakage canary tests; no explicit survivorship bias test |
-| Field-level timestamps | Not implemented | No per-field availability timestamp tracking |
-
-**Deductions:** -1 no field-level timestamps; -1 raw data overwritten (no versioned snapshots); -1 no formal dataset_catalog artifact
-
----
-
-### S6: Phase 2 — Feature Discovery Engine — 8 / 10
-
-| Feature Family | Status | Evidence |
-|----------------|--------|----------|
-| Temporal | Implemented | Rolling means, momentum, streaks, EWM stats, recency-weighted deltas |
-| Seasonal/calendar | Implemented | Rest days, travel burden, games in last 7 days, season progress |
-| Hierarchical | Implemented | Conference aggregates, SOS adjustment (15-iteration), quadrant-1 wins |
-| Interaction | Implemented | Matchup differentials, seed x efficiency, tempo interaction, style mismatch |
-| Representation | Implemented | GNN schedule embeddings (`schedule_graph.py`), transformer game sequences (`game_sequence.py`) |
-| Acceptance rules | Implemented | 0.001 Rule, leakage checks, production availability, 22 active features from 77 dimensions |
-| Missing-data indicators | Implemented | Binary flags for sparse features (preseason AP, coach metrics) |
-
-**Deductions:** -1 no formal feature stability report (Kendall tau) wired into pipeline; -1 no feature retirement log
-
----
-
-### S7: Phase 3 — Model Search and Meta-Learning — 6 / 10
-
-| Model Family | Status |
-|--------------|--------|
-| Linear/generalized | Logistic regression (baseline) |
-| Tree ensembles | LightGBM, XGBoost (primary) |
-| Neural sequence | GNN, Transformer (optional, disabled by default) |
-| Bayesian | Bayesian Bradley-Terry rating system |
-| Regression-to-probability | SpreadRegressor → logistic CDF |
-| Ranking/pairwise | Not implemented |
-| Statistical time-series | Not implemented |
-
-**Deductions:** -2 no meta-learning layer; -1 no systematic objective function search; -1 search space dominated by tree ensembles in practice
-
----
-
-### S8: Phase 4 — Ensemble Optimization and Calibration — 8 / 10
-
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Ensemble methods | Implemented | Fixed-weight averaging (Spread 0.55, LGB 0.15, XGB 0.15, Logistic 0.15); stacking available but disabled |
-| Calibration diagnostics | Comprehensive | Brier decomposition, ECE, MCE, reliability curves, per-bin analysis, bootstrap CIs, ROC-AUC |
-| Multiple calibration methods | Implemented | Temperature scaling, Platt scaling, isotonic regression with sample-size-aware auto-downgrade |
-| Leakage protection | Implemented | SHA-256 data hashing; `CalibrationLeakageError` in strict mode |
-| Round-specific calibration | Implemented | `TournamentSigmaCalibrator` with Bayesian shrinkage |
-
-**Deductions:** -1 fixed ensemble weights (not learned); -1 diversity not formally measured
-
----
-
-### S9: Phase 5 — Decision Optimization Layer — 7 / 10
-
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Action policy optimization | Implemented | Bracket portfolio, leverage picks, dual submission (`bracket_portfolio.py`, `leverage.py`, `dual_submission.py`) |
-| Multiple thresholds/budgets | Partial | Pool size estimation varies strategy (Tiny/Small/Medium/Large); no explicit risk budget sweep |
-| Abstention as first-class | Partial | Minimum leverage threshold (1.5x) acts as implicit abstention |
-| Forecast vs decision separation | Partial | Calibration mode vs EV mode separates concerns |
-
-**Deductions:** -1 no formal decision policy evaluation separate from forecast; -1 abstention implicit not explicit; -1 no risk budget sweep
-
----
-
-### S10: Phase 6 — Backtesting and Simulation Realism — 7 / 10
-
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Information arrival simulation | Partial | LOYO simulates forward prediction; Monte Carlo uses pre-computed probs |
-| Friction terms | Partial | Pool competition modeled; no betting friction (spread, slippage, line movement) |
-| Scenario sensitivity | Implemented | `ScenarioAnalysis` (optimistic/base/pessimistic); `RegimeAnalysis` (upset-heavy vs chalk) |
-| Path-dependent risk | Implemented | Max drawdown, cumulative drawdown, tail-loss (10%/5%), losing streaks, worst-year analysis |
-| Monte Carlo | Strong | 50K sims, regional correlation, injury modeling, logit-space noise, Wilson score CIs |
-
-**Deductions:** -1 no information arrival timing simulation; -1 no betting friction terms; -1 correlation coefficients under-validated (wide CIs from ~160 region-years)
-
----
-
-### S11: Phase 7 — Skeptical Audit Layer — 7 / 10
-
-| Audit Type | Status | Evidence |
-|------------|--------|----------|
-| Leakage | Implemented | Canary tests (5 tests, `test_leakage_canary.py`), `shift(1)` enforcement, correlation-based detection |
-| Validation | Implemented | LOYO protocol; calibration leakage detection; no random k-fold misuse |
-| Robustness | Implemented | Feature dropout, PSI drift detection, Kendall tau stability (`src/ml/evaluation/robustness.py`) |
-| Reproducibility | Partial | Config/feature hashes in RDoF audit; experiment registry; but no frozen seed enforcement |
-
-**Deductions:** -1 no bitwise-identical replay test; -1 no formal independent audit cycle; -1 dataset hashes not verified on load
-
----
-
-### S12: Phase 8 — Codebase Review and Refactoring — 5 / 10
-
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Module structure | Clean | `src/data/`, `ml/`, `pipeline/`, `simulation/`, `optimization/`, `exports/`, `monitoring/`, `agents/`, `governance/` |
-| Test coverage | 107 files | Covering agents, governance, robustness, leakage, schemas, deployment, reproducibility |
-| Hub module problem | **Critical** | `sota.py` = 8,368 lines; decomposition roadmap documented (`docs/REFACTORING_ROADMAP.md`) but NOT executed |
-| Coverage threshold | Low | `fail_under = 60` in pyproject.toml (industry standard: 80%+) |
-| Architecture diagram | Missing | No formal dependency graph or architecture documentation |
-
-**Deductions:** -3 sota.py at 8,368 lines is a major maintainability debt; -1 coverage 60% below standard; -1 no architecture diagram
-
----
-
-### S13: Required Evaluation Matrix — 6 / 10
-
-| Metric Class | Status | Evidence |
-|--------------|--------|----------|
-| Predictive accuracy | Reported | Mean LOYO Brier, Log Loss, Accuracy per fold |
-| Calibration | Comprehensive | ECE, MCE, reliability curve, Brier decomposition |
-| Decision utility | Reported | Pool EV, bracket score, ROI |
-| Risk | Implemented | Drawdown, tail-loss, trend slope, losing streaks, worst/best year (`risk_report.py`) |
-| Regime analysis | Implemented | Upset-heavy vs chalk classification with per-regime Brier (`RegimeAnalysis`) |
-| Scenario analysis | Implemented | Optimistic/base/pessimistic projections (`ScenarioAnalysis`) |
-| Cross-system comparability | Not demonstrated | No structured comparison against external baselines |
-
-**Deductions:** -2 no standardized cross-system comparability; -2 metrics not in single comparable matrix format
-
----
-
-### S14: Continuous Autonomous Research Loop — 2 / 10
-
-| Requirement | Status |
-|-------------|--------|
-| Hypothesis generation | Not automated |
-| Experiment execution | Pipeline can run experiments with logging |
-| Adversarial review | Robustness tests exist but aren't auto-triggered |
-| Promotion gate | Not implemented |
-| Knowledge retention | Experiment ledger retains findings; no structured knowledge base |
-
-**This is the single largest gap.** The directive mandates an autonomous research loop. This system is a manually-invoked pipeline. +1 for LOYO serving as manual validation; +1 for experiment registry enabling future automation.
-
----
-
-### S15: Failure Modes — 7 / 10
-
-| Failure Mode | Detection | Evidence |
-|-------------|-----------|----------|
-| Temporal leakage | Yes | `LeakageError` halts pipeline in strict mode |
-| Validation bleed | Yes | LOYO protocol prevents by design |
-| Improvement vanishing after calibration | Partial | Pre/post calibration metrics compared |
-| Stronger model with more instability | Partial | Risk report exists but no automated rejection |
-| Non-rollback-safe code changes | Not enforced | No formal rollback protocol |
-
-**Deductions:** -1 no formal rollback protocol; -1 no rejection gate for codebase changes; -1 some failure modes only partially addressed
-
----
-
-### S16: Final Deliverables — 4 / 10
-
-| Deliverable | Present | Notes |
-|-------------|---------|-------|
-| Validated model artifacts | Partial | Trained in pipeline but not serialized as standalone artifacts |
-| Experiment ledger | Yes | JSONL format |
-| Backtest report | Yes | UnifiedBacktester across years |
-| Risk report | Yes | `risk_report.py` output |
-| Feature importance ranking | Partial | Available via ablation but not as standalone deliverable |
-| Calibration diagnostics | Yes | Comprehensive |
-| Reproducibility package | **No** | No frozen environment + data + config bundle |
-| Codebase audit | Partial | FIX AUDIT comments throughout code |
-
-**Deductions:** -2 no serialized model artifacts; -2 no reproducibility package; -1 no standalone feature importance deliverable; -1 no complete codebase audit deliverable
-
----
-
-### S17: Operating Summary Compliance — 6 / 10
-
-The system is point-in-time valid, empirically tested, decision-relevant, and calibrated.
-
-**Deductions:** -2 not fully reproducible (no bitwise replay); -1 not autonomous; -1 robustness module exists but not integrated into main pipeline flow
-
----
-
-**Part I Subtotal: 109 / 170 (64.1%)**
+### S1: Mission & Non-Negotiable Principles — 3/4 (weight 5)
+- **Temporal integrity**: LOYO protocol enforces leave-one-year-out; `shift(1)` pattern throughout; leakage canary tests; `LeakageError` halts pipeline.
+- **Decision objective**: Brier score primary; bracket scoring and pool EV as decision metrics.
+- **Evidence over intuition**: 0.001 Brier improvement rule with paired t-tests.
+- **Reproducibility**: `run_hasher.py`, `frozen_config.py`, `artifact_store.py` provide SHA-256 hashing, config freezing.
+- **Gap**: No formal kill-switch/degraded-mode fallback; dataset hashes not verified on load.
+
+### S2: Multi-Agent System Architecture — 3/4 (weight 4)
+- Five agent roles: DataScout, FeatureEngineer, Modeler, Auditor, Orchestrator in `src/agents/`.
+- MessageBus pub/sub with typed messages; agent registry; scheduler with budget awareness.
+- Audit agent has veto power; orchestrator runs data→features→model→audit pipeline.
+- **Gap**: Agents are not the primary execution path (sota.py monolith dominates); no dedicated Ensemble or Decision agents.
+
+### S3: Shared Contracts & Required Logs — 3/4 (weight 4)
+- `ExperimentRecord` implements full V7 S3 schema (25+ fields) in append-only JSONL ledger.
+- Schema validation functions in `src/data/schemas.py`.
+- **Gap**: Many ledger fields default to empty strings in practice; no enforcement that entries must be complete before results are trusted.
+
+### S4: Phase 0 — Problem Definition — 3/4 (weight 3)
+- Target: NCAA tournament game win probabilities. Optimization: Brier score + pool EV. Action: bracket portfolio construction.
+- Operational constraints modeled (tournament timing, Kaggle format).
+- **Gap**: No formal `<problem_summary>` or `<constraints_register>` standalone artifacts.
+
+### S5: Phase 1 — Dataset Discovery & Lineage — 3/4 (weight 5)
+- 20+ data sources: KenPom, Torvik, ESPN, SportsReference, betting markets, injuries, transfer portal, rosters, Massey ordinals, coach history, HerHoopStats.
+- DAG-based ingestion with validators; `src/data/versioning.py`.
+- 1400+ historical JSON files in `data/raw/historical/`.
+- **Gap**: No field-level availability timestamps; raw data overwritten on re-scrape; no formal dataset catalog artifact.
+
+### S6: Phase 2 — Feature Discovery Engine — 3/4 (weight 5)
+- Feature families: temporal (rolling, EWM, streaks), seasonal (rest days, travel), hierarchical (conference, SOS), interaction (matchup differentials), representation (GNN, Transformer).
+- 0.001 Rule acceptance criterion; materialization and selection frameworks.
+- **Gap**: No formal feature stability report or feature retirement log.
+
+### S7: Phase 3 — Model Search & Meta-Learning — 2/4 (weight 5)
+- Models: LightGBM, XGBoost, logistic regression, Bayesian Bradley-Terry, SpreadRegressor, LambdaMART ranking, GNN, Transformer.
+- Hyperparameter tuning via Optuna with temporal validation.
+- **Gap**: No meta-learning layer; in practice dominated by tree ensembles; no systematic objective function search; no `<meta_learning_report>`.
+
+### S8: Phase 4 — Ensemble & Calibration — 3/4 (weight 5)
+- Ensemble: fixed-weight averaging (Spread 55%, LGB/XGB/Logistic 15% each); stacking available but disabled.
+- Calibration: temperature/Platt/isotonic scaling; Brier decomposition, ECE, MCE; round-specific sigma calibration.
+- Model registry for tracking components.
+- **Gap**: Ensemble weights not learned/optimized; no formal diversity measurement.
+
+### S9: Phase 5 — Decision Optimization — 3/4 (weight 4)
+- Bracket portfolio optimization, leverage picks, dual submission, pool competition strategy.
+- Pool-size-adaptive strategies (Tiny/Small/Medium/Large).
+- Calibration mode vs EV mode separation.
+- **Gap**: No formal threshold sweep report; abstention implicit not explicit; no risk budget sweep.
+
+### S10: Phase 6 — Backtesting & Simulation — 3/4 (weight 5)
+- LOYO backtesting with per-year/per-round breakdown.
+- Monte Carlo: 50K simulations, regional correlation, injury modeling, Wilson score CIs.
+- Scenario analysis (optimistic/base/pessimistic); regime analysis (upset-heavy vs chalk).
+- **Gap**: No betting friction terms; no information-arrival timing simulation.
+
+### S11: Phase 7 — Skeptical Audit Layer — 3/4 (weight 5)
+- Leakage: canary tests, shift(1) enforcement, correlation detection.
+- Validation: LOYO prevents test-period tuning.
+- Robustness: feature dropout, PSI drift, Kendall tau stability.
+- Reproducibility: config/feature hashes, experiment registry.
+- **Gap**: No bitwise-identical replay test; dataset hashes not verified on load.
+
+### S12: Phase 8 — Codebase Review & Refactoring — 2/4 (weight 3)
+- Clean module structure: `src/data/`, `ml/`, `pipeline/`, `simulation/`, `optimization/`, `agents/`, `governance/`.
+- `docs/REFACTORING_ROADMAP.md` exists.
+- **Critical issue**: sota.py is a massive monolith (~8K lines). Roadmap documented but not executed.
+- No formal architecture diagram or dependency graph.
+
+### S13: Required Evaluation Matrix — 3/4 (weight 4)
+- Predictive: LOYO Brier, log loss, accuracy. Calibration: ECE, MCE, reliability curves, Brier decomposition.
+- Decision: pool EV, bracket score. Risk: drawdown, tail-loss, losing streaks.
+- Stability: per-year, per-regime breakdown.
+- **Gap**: Not consolidated into a single standardized cross-system-comparable matrix.
+
+### S14: Continuous Autonomous Research Loop — 2/4 (weight 4)
+- `research_loop.py`, `hypothesis_registry.py`, `experiment_scheduler.py`, `knowledge_store.py` exist.
+- Experiment registry enables future automation.
+- **Gap**: The loop is not running autonomously. System is manually invoked. No automated promotion gate. Biggest single gap vs. the directive.
+
+### S15: Failure Mode Rejection — 3/4 (weight 4)
+- Temporal leakage: LeakageError halts pipeline.
+- Validation bleed: LOYO prevents by design.
+- Post-calibration vanishing: pre/post metrics compared.
+- **Gap**: No automated rejection for "stronger model with increased drawdown"; no formal rollback protocol for code changes.
+
+### S16: Final Deliverables — 2/4 (weight 3)
+- Experiment ledger, backtest reports, risk reports, calibration diagnostics present.
+- `deliverables_manager.py` exists.
+- **Gap**: No reproducibility package (frozen env + data + config); no serialized model artifacts; many V7 required deliverables not generated.
+
+### S17: Operating Summary — 3/4 (weight 2)
+- System is point-in-time valid, empirically tested, decision-relevant, calibrated.
+- **Gap**: Not fully autonomous; not bitwise reproducible.
 
 ---
 
 ## Part II — Deployment, Operations, and Governance (Sections 18–25)
 
-### S18: Phase 9 — Production Deployment and Live Monitoring — 5 / 10
+### S18: Phase 9 — Deployment & Live Monitoring — 3/4 (weight 4)
+- Full deployment pipeline: Shadow → Canary → Staged Rollout → Production (`src/deployment/`).
+- Drift alerts with PSI thresholds; A/B framework; model store.
+- **Gap**: No live monitoring dashboard; no automated retraining triggers; deployment code exists but not demonstrated in production.
 
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Staged deployment pipeline | Code exists | `src/deployment/shadow_mode.py`, `canary.py`, `orchestrator.py`, `pipeline.py` |
-| Monitoring dashboard | Partial | `PipelineMonitor` with PSI drift detection; JSON reports, not live dashboards |
-| Drift detection | Implemented | PSI-based with warning/alert thresholds |
-| A/B testing framework | Code exists | `src/deployment/ab_framework.py` |
-| Model store | Implemented | `src/deployment/model_store.py` with versioned artifact storage |
-| Automated retraining | Not implemented | No automated retraining triggers |
+### S19: Phase 10 — Data Engineering & Pipelines — 3/4 (weight 4)
+- DAG orchestrator with idempotent tasks, dependency-aware execution, content-hash caching.
+- Data quality gates in validators; schema validation; circuit breaker for scrapers.
+- **Gap**: Not production-grade DAG (no Airflow/Prefect-class); no formal freshness SLA registry; schema contracts not versioned.
 
-**Deductions:** -2 no live dashboard or automated retraining; -2 not demonstrated in actual production use; -1 deployment code exists but no deployment history
+### S20: Compute Budget & Resources — 3/4 (weight 3)
+- BudgetManager with per-stage allocation, cost tracking, utilization reporting.
+- ResourceTracker (wall-clock, CPU, memory); priority-based shedding.
+- Compute efficiency tracker with Pareto frontier.
+- **Gap**: No evidence of actual budget enforcement in real runs; cost-per-improvement not demonstrated.
 
----
+### S21: Governance & Approval Gates — 3/4 (weight 4)
+- Authority matrix with action classifications and auto-approve conditions.
+- RBAC, approval gates, audit trail, escalation protocol, compliance gates.
+- **Gap**: No approval expiration; governance demonstrated in tests only, not production.
 
-### S19: Phase 10 — Data Engineering and Pipeline Resilience — 5 / 10
+### S22: Conflict Resolution Protocol — 3/4 (weight 3)
+- Four conflict categories; resolution hierarchy (safety → evidence → orchestrator → human).
+- Audit Agent veto on safety matters; dissent registry.
+- **Gap**: No evidence of actual conflict resolution; limited to multi-agent mode.
 
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| DAG-based pipelines | Implemented | `src/data/ingestion/dag.py` with DagTask, DagExecutor, dependency-aware execution |
-| Idempotent tasks | Partial | Content hash caching in DAG executor |
-| Fault tolerance | Partial | Scraper fallbacks (graceful degradation); no circuit breaker pattern |
-| Data freshness SLA | Implemented | `DEFAULT_FRESHNESS_SLA` with per-source thresholds |
-| Schema validation | Implemented | `src/data/ingestion/validators.py` with structured validation |
+### S23: Testing & CI/CD — 3/4 (weight 4)
+- 107 test files; CI with lint, type check, multi-Python tests, coverage gate.
+- Temporal integrity tests: leakage canary, walk-forward replay, date integrity.
+- Quality gates in CI validating imports, structure, governance compliance.
+- **Gap**: Coverage target 60% (directive requires 90%); no formal E2E/nightly system tests; no bitwise replay.
 
-**Deductions:** -2 not production-grade DAG orchestrator (no Airflow/Prefect-class); -2 no circuit breaker pattern; -1 limited schema contract scope
+### S24: Domain-Specific Integration — 2/4 (weight 3)
+- Deep sports domain knowledge embedded: upset rates (1985-2025), tournament-specific calibration, injury modeling, pool competition, women's basketball.
+- **Gap**: Domain knowledge implicit in code, not documented per directive template. No `<domain_integration_guide>`, `<domain_data_quirks_checklist>`, or `<regulatory_compliance_checklist>`.
 
----
-
-### S20: Computational Budget and Resource Prioritization — 7 / 10
-
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Compute budget framework | Implemented | `ResourceTracker` with wall-clock, CPU, memory tracking (`src/monitoring/resource_tracker.py`) |
-| Prioritized search | Implemented | `BudgetManager.prioritized_stages()` and `should_shed()` (`src/monitoring/budget_manager.py`) |
-| Cost tracking | Implemented | `ResourceTracker.to_dict()` logged to `RunHistory`; per-phase tracking |
-| Pareto frontier | Implemented | `ComputeEfficiencyTracker` with `pareto_frontier()` |
-| Budget enforcement | Implemented | `ResourceBudget.strict` mode raises `ComputeBudgetExceeded`; alerts at 80%/100%/150% |
-
-**Deductions:** -1 no evidence of actual budget enforcement in real runs; -1 no projected-vs-actual reporting; -1 cost-per-improvement not demonstrated on real experiments
-
----
-
-### S21: Human-in-the-Loop Governance — 7 / 10
-
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Decision authority matrix | Implemented | `DecisionAuthority` with 8 `ActionType` enums, role-based policies (`src/governance/decision_authority.py`) |
-| Approval request protocol | Implemented | `ApprovalRequest` workflow: request → pending → approved/denied; persisted to disk |
-| Compliance checkpoints | Implemented | `ComplianceGate` per stage (data loading, training, calibration, simulation, audit) (`src/governance/compliance.py`) |
-| Audit trail | Implemented | `GovernanceAuditTrail` append-only JSONL with query/filter (`src/governance/audit_trail.py`) |
-| Escalation protocol | Implemented | `EscalationProtocol` with auto-level detection (WARNING→researcher, ERROR→ml_lead, CRITICAL→operator) |
-
-**Deductions:** -1 no evidence of actual governance actions in production; -1 no regulatory compliance (minor, N/A for domain); -1 no 3-year retention policy enforcement
+### S25: Extended Failure Modes & Deliverables — 2/4 (weight 3)
+- Code exists for most Part II failure mode detection (shadow mode, monitoring, DAG idempotency, budget enforcement, authority checks).
+- **Gap**: Enforcement not demonstrated; no consolidated 28-artifact deliverables package; extended failure modes addressed by code existence not proven enforcement.
 
 ---
 
-### S22: Multi-Agent Conflict Resolution — 7 / 10
+## Score Summary
 
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Conflict categories | Implemented | 4 categories: PRIORITY, METHOD, RESOURCE, SAFETY (`src/agents/conflict.py`) |
-| Resolution hierarchy | Implemented | Safety → Audit Agent veto; Empirical → evidence wins; Priority → Orchestrator |
-| Audit Agent veto | Implemented | Absolute veto on S15 failures, leakage detection; no override path |
-| Dissent registry | Implemented | `DissentRegistry` JSONL append-only with file/query/review workflow |
+| Section | Topic | Score | Weight | Weighted |
+|---------|-------|-------|--------|----------|
+| 1 | Mission & Non-Negotiable Principles | 3 | 5 | 15 |
+| 2 | Multi-Agent System Architecture | 3 | 4 | 12 |
+| 3 | Shared Contracts & Required Logs | 3 | 4 | 12 |
+| 4 | Phase 0 — Problem Definition | 3 | 3 | 9 |
+| 5 | Phase 1 — Dataset Discovery | 3 | 5 | 15 |
+| 6 | Phase 2 — Feature Discovery | 3 | 5 | 15 |
+| 7 | Phase 3 — Model Search | 2 | 5 | 10 |
+| 8 | Phase 4 — Ensemble & Calibration | 3 | 5 | 15 |
+| 9 | Phase 5 — Decision Optimization | 3 | 4 | 12 |
+| 10 | Phase 6 — Backtesting & Simulation | 3 | 5 | 15 |
+| 11 | Phase 7 — Skeptical Audit | 3 | 5 | 15 |
+| 12 | Phase 8 — Codebase Review | 2 | 3 | 6 |
+| 13 | Evaluation Matrix | 3 | 4 | 12 |
+| 14 | Continuous Research Loop | 2 | 4 | 8 |
+| 15 | Failure Mode Rejection | 3 | 4 | 12 |
+| 16 | Final Deliverables | 2 | 3 | 6 |
+| 17 | Operating Summary | 3 | 2 | 6 |
+| 18 | Deployment & Monitoring | 3 | 4 | 12 |
+| 19 | Data Engineering & Pipelines | 3 | 4 | 12 |
+| 20 | Compute Budget & Resources | 3 | 3 | 9 |
+| 21 | Governance & Approval Gates | 3 | 4 | 12 |
+| 22 | Conflict Resolution | 3 | 3 | 9 |
+| 23 | Testing & CI/CD | 3 | 4 | 12 |
+| 24 | Domain-Specific Integration | 2 | 3 | 6 |
+| 25 | Extended Failure Modes & Deliverables | 2 | 3 | 6 |
+| | **TOTALS** | | **98** | **279** |
 
-**Deductions:** -1 no evidence of actual conflict resolution in practice; -1 no review of open dissents workflow; -1 limited to multi-agent mode only
-
----
-
-### S23: Testing Strategy and CI/CD Integration — 6 / 10
-
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Testing pyramid | Partial | 107 test files (unit + integration); no explicit E2E tests |
-| Temporal integrity tests | Implemented | `test_leakage_canary.py`, `test_walk_forward_replay.py`, `test_date_integrity.py` |
-| Walk-forward replay | Implemented | 5 tests verifying LOYO determinism, subset consistency, frozen snapshots |
-| Data leakage canary | Implemented | 5 tests inserting deliberately-leaked features |
-| Pipeline ordering test | Not implemented | No bitwise-identical replay verification |
-| CI/CD pipeline | Implemented | `.github/workflows/ci.yml`, `deploy-with-secrets.yml`, `deploy-staging.yml`; Ruff + mypy |
-| Coverage gate | Low | `fail_under = 60` (below 80% standard) |
-
-**Deductions:** -2 no E2E tests; -1 no bitwise replay test; -1 coverage target below 80%
-
----
-
-### S24: Domain-Specific Integration — 8 / 10
-
-| Requirement | Status | Evidence |
-|-------------|--------|----------|
-| Historical upset rates | Implemented | Calibrated against 1985-2025 data |
-| Tournament adjustments | Implemented | Round-specific sigma calibration, travel distance, neutral-site adjustment, coach experience |
-| Injury handling | Implemented | Injury impact modeling in Monte Carlo simulations |
-| Small-sample mitigation | Implemented | Bayesian regularization, conjugate priors, shrinkage toward 0.5 |
-| Women's basketball | Implemented | Dedicated pipeline, scrapers (HerHoopStats, NCAA NET), feature engineering |
-| Pool competition modeling | Implemented | Competitor archetypes, pool-size-adaptive strategies |
-
-**Deductions:** -1 no betting regulatory compliance; -1 domain guide limited to sports (directive covers finance, elections, fantasy)
+**Maximum possible weighted score:** 98 × 4 = **392**
 
 ---
 
-### S25: Extended Failure Modes and Deliverables — 4 / 10
+## Final Score: 71 / 100
 
-| Extended Failure Mode | Detection |
-|-----------------------|-----------|
-| Deployment bypassing shadow/canary | Code exists (`shadow_mode.py`, `canary.py`) but no enforcement evidence |
-| Production without monitoring | `PipelineMonitor` exists; not demonstrated as blocking gate |
-| Pipeline without idempotency | DAG executor has caching; not formally guaranteed |
-| Compute budget overrun | `BudgetManager` alerts exist; not demonstrated in practice |
-| Unauthorized actions | `DecisionAuthority` exists; not demonstrated in practice |
-| Silent agent override | `DissentRegistry` exists; not demonstrated in practice |
-| CI/CD bypass | CI workflows exist; pre-merge gates not verified |
-| Regulatory non-compliance | N/A for this domain |
-| Consolidated deliverables | Not assembled as complete package |
-
-**Deductions:** -2 failure modes addressed by code existence not demonstrated enforcement; -2 no evidence of actual rejection triggering; -2 no consolidated deliverables package
+**(279 / 392 = 71.2%)**
 
 ---
 
-**Part II Subtotal: 49 / 80 (61.3%)**
+## Strengths
 
----
+1. **Temporal integrity is best-in-class** — LOYO, shift(1), leakage canary, cutoff enforcement, and LeakageError provide multiple defense layers.
+2. **Calibration infrastructure is production-quality** — Brier decomposition, ECE, isotonic/Platt/temperature scaling, round-specific sigma calibration.
+3. **Deep domain expertise** — Upset rate calibration (1985-2025), Bayesian shrinkage, pool competition simulation, tournament-specific features.
+4. **Comprehensive feature engineering** — 22 active features from 77 dimensions with the 0.001 Brier improvement rule as a rigorous acceptance criterion.
+5. **Governance and deployment frameworks fully implemented** — Authority matrix, RBAC, approval gates, shadow/canary deployment, drift detection, A/B testing.
+6. **Extensive test suite** — 107 test files covering agents, governance, robustness, leakage, schemas, deployment, reproducibility.
+7. **Experiment ledger matches V7 schema** — Full Section 3 record structure with append-only storage.
 
-## Final Score Summary
+## Key Gaps (Highest Impact for Score Improvement)
 
-| Category | Score | Max | Percentage |
-|----------|-------|-----|------------|
-| Part I: Core Research (S1-S17) | 109 | 170 | 64.1% |
-| Part II: Deployment & Ops (S18-S25) | 49 | 80 | 61.3% |
-| **TOTAL** | **158** | **250** | **63.2%** |
-
-### Normalized Score: 63 / 100
-
----
-
-## Comparison with Prior Evaluations
-
-| Evaluation | Score | Methodology |
-|------------|-------|-------------|
-| AGENT_DIRECTIVE_V7_AUDIT.md | ~68% | Compliance percentage per section |
-| AGENT_DIRECTIVE_V7_SCORE.md (prior) | 77/100 | Raw 56/100 + subjective +21 adjustment |
-| **This evaluation** | **63/100** | Raw scoring, no adjustments, verified implementations |
-
-### Why This Score Differs from 77/100
-
-1. **No subjective adjustment** — Prior score added +21 points for "code quality exceeding what scores capture"
-2. **Stricter on code existence vs. demonstrated use** — Deployment, governance, and conflict resolution modules exist but lack evidence of actual production use
-3. **Stricter on S12 (Codebase Quality)** — sota.py at 8,368 lines is a major maintainability problem
-4. **Stricter on S14 (Research Loop)** — Directive mandates autonomous operation; system is manually invoked
-5. **Stricter on S16 (Deliverables)** — No reproducibility package or serialized model artifacts
-
----
-
-## Top Strengths
-
-1. **Temporal integrity** (S1, S11) — Best-in-class leakage prevention with multiple defense layers: LOYO, shift(1), canary tests, cutoff enforcement, LeakageError
-2. **Calibration infrastructure** (S8) — Production-quality: auto-downgrade, leakage detection via SHA-256, bootstrap CIs, Brier decomposition, round-specific sigma calibration
-3. **Domain expertise** (S24) — Deep tournament-specific knowledge: upset rate calibration (1985-2025), Bayesian shrinkage, pool competition modeling
-4. **Feature engineering rigor** (S6) — 0.001 Rule, missing-data indicators, GNN/transformer representations, ablation testing
-5. **Multi-agent + governance frameworks** (S2, S20-S22) — Fully implemented with tests; architecturally sound even if not primary execution path
-6. **Test coverage breadth** (S23) — 107 test files covering agents, governance, robustness, leakage, schemas, deployment
-
-## Top Gaps
-
-1. **No autonomous research loop** (S14: 2/10) — Single biggest gap; directive mandates continuous autonomous experimentation
-2. **sota.py monolith** (S12: 5/10) — 8,368 lines is a critical maintainability risk; roadmap exists but not executed
-3. **Incomplete deliverables** (S16: 4/10) — No reproducibility package, no serialized model artifacts
-4. **Extended failure modes** (S25: 4/10) — Code exists for detection but enforcement not demonstrated
-5. **No meta-learning** (S7: 6/10) — Model search limited to tree ensembles in practice despite 7 family implementations
-
----
-
-## Path to 80/100
-
-| Improvement | Estimated Impact | Effort |
-|-------------|-----------------|--------|
-| Decompose sota.py (execute refactoring roadmap) | S12: +3 | High |
-| Implement autonomous research loop (even basic) | S14: +4 | High |
-| Serialize model artifacts + reproducibility package | S16: +3 | Medium |
-| Raise coverage to 80% + add E2E tests | S12: +1, S23: +2 | Medium |
-| Wire auto-logging into main pipeline for every fold | S3: +2 | Medium |
-| Demonstrate deployment/governance in real pipeline run | S18: +2, S25: +2 | Medium |
-| Add meta-learning or expand model diversity | S7: +2 | Medium |
-| Add promotion gate (new model must beat incumbent) | S14: +1, S15: +1 | Low |
-| Add bitwise-identical replay test | S11: +1, S23: +1 | Low |
-| Enforce dataset hash verification on load | S1: +1, S11: +1 | Low |
-
-**Total potential: +26 points → 89/100**
+1. **No autonomous research loop** (S14: 2/4) — The single largest gap. The directive mandates continuous automated experimentation; the system is manually invoked.
+2. **sota.py monolith** (S12: 2/4) — ~8K line file is a critical maintainability risk. Refactoring roadmap exists but is unexecuted.
+3. **No meta-learning** (S7: 2/4) — Model search is dominated by tree ensembles in practice despite multiple model family implementations.
+4. **Incomplete deliverables** (S16: 2/4, S25: 2/4) — The 28-artifact consolidated deliverables package is far from complete.
+5. **Domain guide not formalized** (S24: 2/4) — Domain knowledge is deeply embedded in code but not documented per the directive's template.
+6. **Coverage target below directive standard** (S23) — 60% vs. 90% required.
