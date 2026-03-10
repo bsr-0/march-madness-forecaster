@@ -231,36 +231,6 @@
     }
     .data-note a { color: var(--color-accent); }
 
-    /* Hero MC chart */
-    .mc-hero {
-      margin: 0 auto 28px;
-      max-width: 800px;
-      padding: 20px 24px;
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: 12px;
-    }
-    .mc-hero-header { margin-bottom: 14px; }
-    .mc-hero-title {
-      font-size: 1em;
-      font-weight: 700;
-      color: var(--color-accent);
-    }
-    .mc-hero-subtitle {
-      font-size: 0.78em;
-      color: var(--color-text-muted);
-      margin-top: 2px;
-    }
-    .mc-hero-chart-wrap {
-      position: relative;
-      width: 100%;
-      height: 320px;
-    }
-    @media (max-width: 520px) {
-      .mc-hero { padding: 14px 12px; }
-      .mc-hero-chart-wrap { height: 240px; }
-    }
-
     /* Search */
     .search-container {
       max-width: 400px;
@@ -330,19 +300,6 @@
     <section class="section">
       <div class="container">
 
-        <!-- Hero MC convergence chart -->
-        <div class="mc-hero" id="mcHero">
-          <div class="mc-hero-header">
-            <div>
-              <div class="mc-hero-title">Monte Carlo Convergence — 50,000 Simulations</div>
-              <div class="mc-hero-subtitle">Championship probability for power conference favorites as simulations accumulate</div>
-            </div>
-          </div>
-          <div class="mc-hero-chart-wrap">
-            <canvas id="mcHeroChart"></canvas>
-          </div>
-        </div>
-
         <!-- Tier filters -->
         <div class="filter-bar" id="filterBar">
           <button class="filter-btn active" data-filter="all">All Conferences</button>
@@ -393,7 +350,6 @@
       .then(data => {
         DATA = data;
         renderSummary(data);
-        renderHeroChart(data);
         renderAll(data);
         document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString('en-US', {
           year: 'numeric', month: 'long', day: 'numeric'
@@ -416,92 +372,6 @@
         <div class="pred-stat"><div class="pred-stat-value">${oneSeedWins}/${confs}</div><div class="pred-stat-label">#1 Seeds Win</div></div>
         <div class="pred-stat"><div class="pred-stat-value">${upsets}</div><div class="pred-stat-label">Predicted Upsets</div></div>
       `;
-    }
-
-    function renderHeroChart(data) {
-      const canvas = document.getElementById('mcHeroChart');
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const powerConfs = ['ACC','B10','B12','BE','SEC'];
-      const colors = ['#ff6b35','#7c5cfc','#2ed573','#ffa502','#ff4757'];
-      const datasets = [];
-      let xLabels = [];
-
-      powerConfs.forEach((cid, i) => {
-        const conf = data[cid];
-        if (!conf || !conf.convergence) return;
-        const conv = conf.convergence;
-        if (xLabels.length === 0) xLabels = conv.x;
-        // Get the MC favorite team
-        const favTeam = conf.mc_favorite.name;
-        const favId = Object.keys(conv.teams).find(t =>
-          (conv.team_names[t] || '').toLowerCase() === favTeam.toLowerCase()
-        ) || Object.keys(conv.teams)[0];
-        const vals = conv.teams[favId];
-        if (!vals) return;
-        datasets.push({
-          label: `${favTeam} (${conf.conference_name})`,
-          data: vals.map(v => v * 100),
-          borderColor: colors[i],
-          backgroundColor: 'transparent',
-          borderWidth: 2.2,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          tension: 0.3,
-        });
-      });
-
-      new Chart(ctx, {
-        type: 'line',
-        data: { labels: xLabels, datasets },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: {
-              position: 'top',
-              labels: { color: '#8b8fa3', font: { size: 11 }, boxWidth: 14, padding: 12 }
-            },
-            tooltip: {
-              backgroundColor: '#1a1d27',
-              borderColor: '#2a2d3a',
-              borderWidth: 1,
-              titleColor: '#e8eaed',
-              bodyColor: '#8b8fa3',
-              callbacks: {
-                title: (items) => `After ${Number(items[0].label).toLocaleString()} simulations`,
-                label: (item) => ` ${item.dataset.label}: ${item.raw.toFixed(1)}%`
-              }
-            }
-          },
-          scales: {
-            x: {
-              title: { display: true, text: 'Simulations', color: '#5a5e72', font: { size: 11 } },
-              ticks: {
-                color: '#5a5e72',
-                font: { size: 10 },
-                maxTicksLimit: 10,
-                callback: function(val) {
-                  const v = this.getLabelForValue(val);
-                  return v >= 1000 ? (v/1000) + 'k' : v;
-                }
-              },
-              grid: { color: 'rgba(42,45,58,0.5)' }
-            },
-            y: {
-              title: { display: true, text: 'Championship Probability (%)', color: '#5a5e72', font: { size: 11 } },
-              ticks: {
-                color: '#5a5e72',
-                font: { size: 10 },
-                callback: (v) => v + '%'
-              },
-              grid: { color: 'rgba(42,45,58,0.5)' },
-              min: 0
-            }
-          }
-        }
-      });
     }
 
     function renderAll(data, filter = 'all', searchTerm = '') {
