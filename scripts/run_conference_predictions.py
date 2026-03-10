@@ -380,38 +380,57 @@ def simulate_bracket(predictor: EnhancedPredictor, conf: str,
 
 
 def _run_bracket(predictor, teams, deterministic=True,
-                 rng=None, noise_std=0.12, base_probs=None):
-    """Run a single bracket simulation."""
-    n = len(teams)
-    total_rounds = math.ceil(math.log2(n))
-    full_size = 2 ** total_rounds
-    num_byes = full_size - n
+                 rng=None, noise_std=0.12, base_probs=None,
+                 bracket_format=None):
+    """Run a single bracket simulation using BracketFormat definitions.
 
-    bye_teams = teams[:num_byes]
-    first_round_teams = teams[num_byes:]
+    Uses the BracketFormat to determine which seeds enter at each round,
+    supporting multi-level byes (e.g. ACC 15-team format with double byes
+    for top 4 seeds).
+    """
+    from src.conference_tournament.bracket_formats import get_bracket_format
+
+    n = len(teams)
+
+    # Look up the correct bracket format
+    conf = teams[0]["conference"] if teams else ""
+    fmt = bracket_format or get_bracket_format(conf, n)
+
+    total_rounds = fmt.total_rounds
+    seed_to_team = {t["conf_seed"]: t for t in teams}
 
     all_rounds = []
     round_results = []
 
-    # Round 1: pair first-round teams using proper bracket seeding
+    # ── Round 1: pair first-round teams ──────────────────────────────
+    r1_seeds = list(fmt.round_entry.get(1, ()))
+    r1_teams = [seed_to_team[s] for s in r1_seeds if s in seed_to_team]
+    r1_teams.sort(key=lambda t: t["conf_seed"])
+
     r1_games = []
-    n_games = len(first_round_teams) // 2
 
-    if num_byes == 0 and len(first_round_teams) >= 4:
-        # No byes: apply full bracket ordering so #1 and #2 end up on
-        # opposite sides.  With byes the ordering doesn't matter because
-        # Round 2 will re-sort and apply bracket_seed_order.
-        from src.models.conference_tournament import bracket_seed_order
-        positions = bracket_seed_order(len(first_round_teams))
-        ordered_r1 = [first_round_teams[p] for p in positions]
-    else:
-        # With byes: simple top-vs-bottom within the non-bye group is fine
-        # because Round 2 merge will establish proper bracket ordering.
+    if fmt.first_round_matchups:
+        # Explicit matchups
         ordered_r1 = []
-        for i in range(n_games):
-            ordered_r1.append(first_round_teams[i])
-            ordered_r1.append(first_round_teams[len(first_round_teams) - 1 - i])
+        for seed_a, seed_b in fmt.first_round_matchups:
+            if seed_a in seed_to_team and seed_b in seed_to_team:
+                ordered_r1.append(seed_to_team[seed_a])
+                ordered_r1.append(seed_to_team[seed_b])
+    else:
+        n_games = len(r1_teams) // 2
+        has_byes = any(rnd > 1 and seeds for rnd, seeds in fmt.round_entry.items())
 
+        if not has_byes and len(r1_teams) >= 4:
+            from src.models.conference_tournament import bracket_seed_order
+            positions = bracket_seed_order(len(r1_teams))
+            ordered_r1 = [r1_teams[p] for p in positions]
+        else:
+            ordered_r1 = []
+            for i in range(n_games):
+                ordered_r1.append(r1_teams[i])
+                ordered_r1.append(r1_teams[len(r1_teams) - 1 - i])
+
+    n_games = len(ordered_r1) // 2
     for i in range(n_games):
         t1 = ordered_r1[2 * i]
         t2 = ordered_r1[2 * i + 1]
@@ -425,13 +444,15 @@ def _run_bracket(predictor, teams, deterministic=True,
 
     all_rounds.append({"round_name": _round_name(1, total_rounds), "games": r1_games})
 
-    # Round 2+
+    # ── Rounds 2+ ────────────────────────────────────────────────────
     semifinalists = []
     for round_num in range(2, total_rounds + 1):
-        if round_num == 2 and bye_teams:
-            entrants = list(bye_teams) + list(round_results)
-            # Sort by seed then reorder into proper bracket positions
-            # so that #1 and #2 are on opposite sides of the bracket
+        # Check if new seeds enter at this round
+        new_seeds = fmt.round_entry.get(round_num, ())
+        new_teams = [seed_to_team[s] for s in new_seeds if s in seed_to_team]
+
+        if new_teams:
+            entrants = list(new_teams) + list(round_results)
             entrants.sort(key=lambda t: t["conf_seed"])
             from src.models.conference_tournament import bracket_seed_order
             positions = bracket_seed_order(len(entrants))

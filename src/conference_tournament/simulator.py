@@ -227,11 +227,15 @@ class ConferenceTournamentSimulator:
     ) -> Tuple[Optional[str], List[str], List[Tuple[str, str, bool]]]:
         """Simulate a single tournament run with noise.
 
+        Uses the bracket's ``bracket_format`` to determine which seeds
+        enter at each round, supporting multi-level byes.
+
         Returns:
             (champion_id, semifinal_team_ids,
              [(favorite_id, underdog_id, was_upset) for each game])
         """
-        bye_teams = bracket.teams[:bracket.num_byes]
+        fmt = bracket.bracket_format
+        seed_to_team = {t.conf_seed: t for t in bracket.teams}
         semi_teams: List[str] = []
         game_results: List[Tuple[str, str, bool]] = []
 
@@ -245,12 +249,17 @@ class ConferenceTournamentSimulator:
 
         # Subsequent rounds
         for round_idx in range(1, len(bracket.games)):
+            round_num = round_idx + 1  # 1-indexed
             round_games = bracket.games[round_idx]
             prev_round_games = bracket.games[round_idx - 1]
             prev_winners = [g.winner for g in prev_round_games]
 
-            if round_idx == 1 and bye_teams:
-                entrants = list(bye_teams) + list(prev_winners)
+            # Check if new seeds enter at this round
+            new_seeds = fmt.round_entry.get(round_num, ())
+            new_teams = [seed_to_team[s] for s in new_seeds if s in seed_to_team]
+
+            if new_teams:
+                entrants = list(new_teams) + list(prev_winners)
                 # Sort by seed then reorder into proper bracket positions
                 # so that #1 and #2 are on opposite sides of the bracket
                 entrants.sort(key=lambda t: t.conf_seed if t else 999)
