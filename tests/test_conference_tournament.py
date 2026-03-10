@@ -4,6 +4,7 @@ import json
 import math
 import os
 import tempfile
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -1177,3 +1178,85 @@ class TestMultiLevelByes:
         bracket = ConferenceTournamentBracket("MWC", teams)
         round_sizes = [len(rnd) for rnd in bracket.games]
         assert round_sizes == [4, 4, 2, 1]
+
+
+class TestOutputValidation:
+    """Validate the pipeline output JSON against bracket format definitions.
+
+    These tests read the actual generated prediction file and verify it
+    matches the BracketFormat definitions — catching any drift between
+    the format config and the actual pipeline output.
+    """
+
+    JSON_PATH = Path(__file__).resolve().parent.parent / "data" / "processed" / "conference_tournament_predictions_2026.json"
+    DOCS_JSON_PATH = Path(__file__).resolve().parent.parent / "docs" / "data" / "conference_predictions_2026.json"
+
+    @pytest.fixture(autouse=True)
+    def _load_data(self):
+        if not self.JSON_PATH.exists():
+            pytest.skip("Prediction JSON not generated yet")
+        with open(self.JSON_PATH) as f:
+            self.data = json.load(f)
+
+    def test_all_conferences_have_correct_round_count(self):
+        """Every conference's round count matches its BracketFormat."""
+        for conf_key, conf_data in self.data.items():
+            fmt = get_bracket_format(conf_key, conf_data["num_teams"])
+            assert len(conf_data["rounds"]) == fmt.total_rounds, (
+                f"{conf_key}: expected {fmt.total_rounds} rounds, "
+                f"got {len(conf_data['rounds'])}"
+            )
+
+    def test_all_conferences_correct_total_games(self):
+        """Every conference has exactly num_teams - 1 games."""
+        for conf_key, conf_data in self.data.items():
+            total_games = sum(len(r["games"]) for r in conf_data["rounds"])
+            expected = conf_data["num_teams"] - 1
+            assert total_games == expected, (
+                f"{conf_key}: {total_games} games != expected {expected}"
+            )
+
+    def test_custom_formats_r1_matchups_correct(self):
+        """Conferences with explicit first_round_matchups have correct R1 seed pairs."""
+        for conf_key, conf_data in self.data.items():
+            fmt = get_bracket_format(conf_key, conf_data["num_teams"])
+            if not fmt.first_round_matchups:
+                continue
+            r1_games = conf_data["rounds"][0]["games"]
+            expected = set()
+            for a, b in fmt.first_round_matchups:
+                expected.add((min(a, b), max(a, b)))
+            actual = set()
+            for g in r1_games:
+                s1 = int(g["team1"].split(")")[0].strip("( "))
+                s2 = int(g["team2"].split(")")[0].strip("( "))
+                actual.add((min(s1, s2), max(s1, s2)))
+            assert actual == expected, (
+                f"{conf_key}: R1 matchups {sorted(actual)} != expected {sorted(expected)}"
+            )
+
+    def test_acc_r1_has_correct_seed_matchups(self):
+        """ACC Play-in: 10v15, 11v14, 12v13."""
+        acc = self.data["ACC"]
+        r1 = acc["rounds"][0]
+        assert r1["round_name"] == "Play-in"
+        matchups = set()
+        for g in r1["games"]:
+            s1 = int(g["team1"].split(")")[0].strip("( "))
+            s2 = int(g["team2"].split(")")[0].strip("( "))
+            matchups.add((min(s1, s2), max(s1, s2)))
+        assert matchups == {(10, 15), (11, 14), (12, 13)}
+
+    def test_docs_data_in_sync(self):
+        """docs/data JSON matches data/processed JSON."""
+        if not self.DOCS_JSON_PATH.exists():
+            pytest.skip("docs/data JSON not generated yet")
+        with open(self.DOCS_JSON_PATH) as f:
+            docs_data = json.load(f)
+        # Check same conferences and same round counts
+        assert set(docs_data.keys()) == set(self.data.keys())
+        for conf_key in self.data:
+            assert len(docs_data[conf_key]["rounds"]) == len(self.data[conf_key]["rounds"]), (
+                f"{conf_key}: docs has {len(docs_data[conf_key]['rounds'])} rounds, "
+                f"processed has {len(self.data[conf_key]['rounds'])}"
+            )
