@@ -406,14 +406,16 @@ class ConferenceTournamentPredictor:
 
             if round_idx == 1 and bye_teams:
                 # Merge bye teams with first-round winners
-                # Convention: 1-seed plays winner of lowest-seed matchup, etc.
                 entrants = list(bye_teams) + list(prev_winners)
-                # Re-sort by seed to maintain bracket integrity
+                # Sort by seed then reorder into proper bracket positions
+                # so that #1 and #2 are on opposite sides of the bracket
                 entrants.sort(key=lambda t: t.conf_seed if t else 999)
+                from ..models.conference_tournament import bracket_seed_order
+                positions = bracket_seed_order(len(entrants))
+                entrants = [entrants[p] for p in positions]
             else:
                 entrants = list(prev_winners)
 
-            # Pair up: first vs last, second vs second-to-last, etc.
             for i, game in enumerate(round_games):
                 if 2 * i < len(entrants) and 2 * i + 1 < len(entrants):
                     game.team1 = entrants[2 * i]
