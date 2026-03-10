@@ -18,7 +18,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 # Add project root to path
-PROJECT_ROOT = Path("/sessions/intelligent-relaxed-maxwell/mnt/march-madness-forecaster")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
