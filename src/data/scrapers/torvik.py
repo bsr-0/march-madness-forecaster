@@ -3,11 +3,29 @@ BartTorvik data scraper for advanced team metrics.
 
 Scrapes T-Rank efficiency ratings, Four Factors, and game-by-game data
 for temporal modeling.
+
+Data acquisition strategy (March 2026):
+  Torvik's main HTML pages (trank.php, fourfactors.php) are behind a
+  JavaScript browser verification wall that blocks ``requests``.  However,
+  two CSV endpoints remain accessible without JS:
+
+  1. ``/{year}_team_results.csv`` — team-level T-Rank ratings, AdjOE/DE,
+     Barthag, SOS, WAB, record.  Does NOT include Four Factors.
+  2. ``/getadvstats.php?year={year}&csv=1`` — player-level advanced stats
+     (eFG%, TO%, ORB%, 3PM/3PA, FTM/FTA, etc.).  Aggregating to team
+     level yields offensive Four Factors and shooting splits.
+
+  The ``fetch_four_factors`` and ``fetch_shooting_stats`` methods first
+  try the HTML pages (for backward compatibility with saved HTML files),
+  then fall back to the CSV player-stats endpoint automatically.
 """
 
+import csv
+import io
 import json
 import logging
 import math
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
@@ -274,33 +292,48 @@ class BartTorvikScraper:
     def fetch_four_factors(self, year: int = 2026) -> Dict[str, Dict]:
         """
         Fetch Four Factors data for all teams.
-        
+
+        Attempts three sources in order:
+          1. Local cache file.
+          2. HTML scrape of ``fourfactors.php`` (fails if JS wall is up).
+          3. **CSV fallback**: aggregates player-level stats from
+             ``getadvstats.php?year={year}&csv=1`` to compute team-level
+             offensive Four Factors (eFG%, TO%, ORB%, FTR) plus shooting
+             splits (3P%, FT%).  This endpoint is NOT behind the JS wall.
+
         Args:
             year: Season year
-            
+
         Returns:
             Dict of team_id -> four factors dict
         """
         cached = self._load_from_cache(f"torvik_four_factors_{year}.json")
         if cached:
             return cached
-        
+
+        four_factors: Dict[str, Dict] = {}
+
+        # --- Strategy 1: HTML scrape (original approach) ---
         try:
-            # Scrape Four Factors page
             url = f"{self.BASE_URL}/fourfactors.php?year={year}"
             response = self.session.get(url, timeout=30)
             response.raise_for_status()
-            
             four_factors = self._parse_four_factors_page(response.text)
-            
-            if four_factors:
-                self._save_to_cache(f"torvik_four_factors_{year}.json", four_factors)
-            
-            return four_factors
-            
         except Exception as e:
-            logger.warning(f"Could not fetch Four Factors: {e}")
-            return {}
+            logger.debug("HTML Four Factors scrape failed: %s", e)
+
+        # --- Strategy 2: CSV player-stats fallback ---
+        if not four_factors:
+            logger.info(
+                "HTML Four Factors page blocked (JS wall); "
+                "falling back to player-stats CSV aggregation."
+            )
+            four_factors = self._four_factors_from_player_csv(year)
+
+        if four_factors:
+            self._save_to_cache(f"torvik_four_factors_{year}.json", four_factors)
+
+        return four_factors
     
     def _parse_four_factors_page(self, html: str) -> Dict[str, Dict]:
         """Parse Four Factors from HTML."""
@@ -340,8 +373,11 @@ class BartTorvikScraper:
         """
         Fetch per-team shooting percentages (FT%, 3PT%) for all teams.
 
-        Scrapes barttorvik.com/trank.php with the extended-stats view which
-        exposes 3P% and FT% columns not present on fourfactors.php.
+        Attempts three sources in order:
+          1. Local cache file.
+          2. HTML scrape of the extended ``trank.php`` page.
+          3. **CSV fallback**: aggregates from ``getadvstats.php`` player
+             data (same endpoint used by ``fetch_four_factors`` fallback).
 
         Returns:
             Dict of team_id -> {'three_pt_pct': float, 'ft_pct': float}
@@ -350,18 +386,28 @@ class BartTorvikScraper:
         if cached:
             return cached
 
+        shooting: Dict[str, Dict] = {}
+
+        # --- Strategy 1: HTML scrape (original approach) ---
         try:
-            # Extended trank page with shooting splits
             url = f"{self.BASE_URL}/trank.php?year={year}&sort=&hteam=&t=2&q=&dual=show&top=0"
             response = self.session.get(url, timeout=30)
             response.raise_for_status()
             shooting = self._parse_shooting_page(response.text)
-            if shooting:
-                self._save_to_cache(f"torvik_shooting_{year}.json", shooting)
-            return shooting
         except Exception as e:
-            logger.warning(f"Could not fetch shooting stats for {year}: {e}")
-            return {}
+            logger.debug("HTML shooting scrape failed: %s", e)
+
+        # --- Strategy 2: CSV player-stats fallback ---
+        if not shooting:
+            logger.info(
+                "HTML shooting page blocked (JS wall); "
+                "falling back to player-stats CSV aggregation."
+            )
+            shooting = self._shooting_from_player_csv(year)
+
+        if shooting:
+            self._save_to_cache(f"torvik_shooting_{year}.json", shooting)
+        return shooting
 
     def _parse_shooting_page(self, html: str) -> Dict[str, Dict]:
         """
@@ -413,6 +459,200 @@ class BartTorvikScraper:
             except Exception as e:
                 logger.debug(f"Error parsing shooting row: {e}")
                 continue
+        return result
+
+    # ------------------------------------------------------------------
+    # CSV player-stats fallback (bypasses JS verification wall)
+    # ------------------------------------------------------------------
+
+    def _fetch_player_csv(self, year: int) -> str:
+        """Download the raw player-level advanced stats CSV.
+
+        Endpoint: ``/getadvstats.php?year={year}&csv=1``
+
+        This CSV has no header row.  Each row is one player with 68
+        columns.  The key columns (0-indexed) are:
+
+          [0]  Player name
+          [1]  Team name
+          [2]  Conference abbreviation
+          [3]  Games played
+          [4]  Minutes percentage
+          [7]  eFG% (individual)
+          [9]  ORB%
+          [10] DRB%
+          [12] TO%
+          [13] FTM
+          [14] FTA
+          [15] FT%
+          [16] 2PM
+          [17] 2PA
+          [19] 3PM
+          [20] 3PA
+        """
+        url = f"{self.BASE_URL}/getadvstats.php?year={year}&csv=1"
+        response = self.session.get(url, timeout=45)
+        response.raise_for_status()
+        return response.text
+
+    @staticmethod
+    def _normalize_team_name_to_id(name: str) -> str:
+        """Convert display team name to a snake_case team_id."""
+        tid = name.strip().lower()
+        tid = tid.replace("'", "_").replace("&", "_").replace(".", "").replace("-", "_")
+        tid = tid.replace("  ", " ").replace(" ", "_")
+        return tid
+
+    def _aggregate_player_csv(self, csv_text: str) -> Dict[str, Dict]:
+        """Aggregate player-level CSV rows into per-team shooting totals.
+
+        Returns:
+            Dict of team_id -> {
+                'fgm', 'fga', 'fg2m', 'fg2a', 'fg3m', 'fg3a',
+                'ftm', 'fta', 'orb_pct_weighted', 'drb_pct_weighted',
+                'to_pct_weighted', 'min_pct_total',
+            }
+        """
+        teams: Dict[str, Dict] = defaultdict(lambda: {
+            'fgm': 0.0, 'fga': 0.0,
+            'fg2m': 0.0, 'fg2a': 0.0,
+            'fg3m': 0.0, 'fg3a': 0.0,
+            'ftm': 0.0, 'fta': 0.0,
+            'orb_pct_weighted': 0.0,
+            'drb_pct_weighted': 0.0,
+            'to_pct_weighted': 0.0,
+            'min_pct_total': 0.0,
+            'conf': '',
+            'team_name': '',
+        })
+
+        for line in csv_text.strip().split('\n'):
+            cols = [c.strip('"') for c in line.split(',')]
+            if len(cols) < 22:
+                continue
+            try:
+                team_name = cols[1].strip()
+                conf = cols[2].strip()
+                min_pct = float(cols[4]) if cols[4] else 0.0
+                orb_pct = float(cols[9]) if cols[9] else 0.0
+                drb_pct = float(cols[10]) if cols[10] else 0.0
+                to_pct = float(cols[12]) if cols[12] else 0.0
+                ftm = float(cols[13]) if cols[13] else 0.0
+                fta = float(cols[14]) if cols[14] else 0.0
+                fg2m = float(cols[16]) if cols[16] else 0.0
+                fg2a = float(cols[17]) if cols[17] else 0.0
+                fg3m = float(cols[19]) if cols[19] else 0.0
+                fg3a = float(cols[20]) if cols[20] else 0.0
+            except (ValueError, IndexError):
+                continue
+
+            tid = self._normalize_team_name_to_id(team_name)
+            t = teams[tid]
+            t['team_name'] = team_name
+            t['conf'] = conf
+            t['fg2m'] += fg2m
+            t['fg2a'] += fg2a
+            t['fg3m'] += fg3m
+            t['fg3a'] += fg3a
+            t['fgm'] += fg2m + fg3m
+            t['fga'] += fg2a + fg3a
+            t['ftm'] += ftm
+            t['fta'] += fta
+            # Weight percentage stats by minutes share for team-level avg
+            t['orb_pct_weighted'] += orb_pct * min_pct
+            t['drb_pct_weighted'] += drb_pct * min_pct
+            t['to_pct_weighted'] += to_pct * min_pct
+            t['min_pct_total'] += min_pct
+
+        return dict(teams)
+
+    def _four_factors_from_player_csv(self, year: int) -> Dict[str, Dict]:
+        """Compute team-level Four Factors from the player CSV endpoint.
+
+        Returns dict compatible with ``_parse_four_factors_page`` output::
+
+            {team_id: {
+                'effective_fg_pct': float,
+                'turnover_rate': float,
+                'offensive_reb_rate': float,
+                'free_throw_rate': float,
+            }}
+        """
+        try:
+            csv_text = self._fetch_player_csv(year)
+        except Exception as e:
+            logger.warning("Player CSV fetch failed: %s", e)
+            return {}
+
+        aggregated = self._aggregate_player_csv(csv_text)
+        result: Dict[str, Dict] = {}
+
+        for tid, t in aggregated.items():
+            fga = t['fga']
+            if fga < 10:  # skip teams with negligible data
+                continue
+
+            efg = (t['fgm'] + 0.5 * t['fg3m']) / fga
+            ftr = t['fta'] / fga
+            min_total = t['min_pct_total'] or 1.0
+            orb = (t['orb_pct_weighted'] / min_total) / 100.0
+            drb = (t['drb_pct_weighted'] / min_total) / 100.0
+            to_rate = (t['to_pct_weighted'] / min_total) / 100.0
+
+            result[tid] = {
+                'effective_fg_pct': round(efg, 4),
+                'turnover_rate': round(to_rate, 4),
+                'offensive_reb_rate': round(orb, 4),
+                'free_throw_rate': round(ftr, 4),
+                # Defensive Four Factors are not available from offensive
+                # player stats alone.  Set to 0 so downstream code knows
+                # they are unavailable.
+                'opp_effective_fg_pct': 0.0,
+                'opp_turnover_rate': 0.0,
+                'defensive_reb_rate': round(drb, 4),
+                'opp_free_throw_rate': 0.0,
+            }
+
+        logger.info(
+            "Four Factors from player CSV (%d): computed for %d teams",
+            year, len(result),
+        )
+        return result
+
+    def _shooting_from_player_csv(self, year: int) -> Dict[str, Dict]:
+        """Compute team-level shooting splits from the player CSV endpoint.
+
+        Returns dict compatible with ``_parse_shooting_page`` output::
+
+            {team_id: {'three_pt_pct': float, 'ft_pct': float}}
+        """
+        try:
+            csv_text = self._fetch_player_csv(year)
+        except Exception as e:
+            logger.warning("Player CSV fetch failed: %s", e)
+            return {}
+
+        aggregated = self._aggregate_player_csv(csv_text)
+        result: Dict[str, Dict] = {}
+
+        for tid, t in aggregated.items():
+            fg3a = t['fg3a']
+            fta = t['fta']
+            if fg3a < 5 and fta < 5:
+                continue
+
+            three_pt = (t['fg3m'] / fg3a) if fg3a > 0 else 0.0
+            ft_pct = (t['ftm'] / fta) if fta > 0 else 0.0
+
+            result[tid] = {
+                'three_pt_pct': round(three_pt, 4),
+                'ft_pct': round(ft_pct, 4),
+            }
+
+        logger.info(
+            "Shooting stats from player CSV (%d): computed for %d teams",
+            year, len(result),
+        )
         return result
 
     def fetch_team_games(self, team_id: str, year: int = 2026) -> List[TorVikGame]:

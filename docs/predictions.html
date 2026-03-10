@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2026 Conference Tournament Predictions - March Madness Forecaster</title>
+  <meta name="description" content="Live 2026 NCAA conference tournament predictions with round-by-round matchups, win probabilities, and Monte Carlo championship odds for all 31 conferences.">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── Predictions-specific styles ── */
+    .pred-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+      max-width: 700px;
+      margin: 24px auto 0;
+    }
+    .pred-stat {
+      text-align: center;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      padding: 16px 12px;
+    }
+    .pred-stat-value {
+      font-size: 2em;
+      font-weight: 700;
+      color: var(--color-accent);
+      line-height: 1.1;
+    }
+    .pred-stat-label {
+      font-size: 0.8em;
+      color: var(--color-text-muted);
+      margin-top: 4px;
+    }
+
+    /* Filter */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 24px 0 20px;
+      justify-content: center;
+    }
+    .filter-btn {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-muted);
+      padding: 6px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.85em;
+      transition: all 0.2s;
+      font-family: var(--font-sans);
+    }
+    .filter-btn:hover, .filter-btn.active {
+      background: var(--color-accent);
+      color: #fff;
+      border-color: var(--color-accent);
+    }
+
+    /* Tier header */
+    .tier-title {
+      font-size: 1.3em;
+      font-weight: 700;
+      margin: 32px 0 14px;
+      padding-left: 12px;
+      border-left: 4px solid var(--color-accent);
+      color: var(--color-text);
+    }
+    .tier-title.mid { border-color: var(--color-success); }
+    .tier-title.small { border-color: var(--color-warning); }
+
+    /* Conference cards grid */
+    .conf-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 520px) {
+      .conf-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Card */
+    .conf-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .conf-card:hover { transform: translateY(-2px); border-color: var(--color-accent); }
+    .card-header {
+      padding: 16px 20px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      user-select: none;
+    }
+    .card-header:hover { background: rgba(255,107,53,0.04); }
+    .conf-name { font-size: 1.1em; font-weight: 600; }
+    .conf-meta { font-size: 0.78em; color: var(--color-text-muted); margin-top: 2px; }
+    .upset-badge {
+      display: inline-block;
+      background: var(--color-danger);
+      color: #fff;
+      font-size: 0.7em;
+      padding: 1px 8px;
+      border-radius: 10px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .champ-block { text-align: right; }
+    .champ-label { font-size: 0.65em; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .champ-name { font-size: 1.15em; font-weight: 700; color: var(--color-success); }
+    .champ-detail { font-size: 0.72em; color: var(--color-text-muted); }
+    .mc-prob { font-size: 0.72em; color: var(--color-accent); margin-top: 2px; }
+    .expand-icon { font-size: 0.8em; color: var(--color-text-muted); transition: transform 0.2s; margin-left: 4px; }
+    .conf-card.open .expand-icon { transform: rotate(180deg); }
+
+    /* Contenders */
+    .card-body { display: none; padding: 0 20px 16px; }
+    .conf-card.open .card-body { display: block; }
+    .section-label { font-size: 0.7em; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .contender-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 0.85em; }
+    .seed-badge {
+      background: var(--color-border);
+      color: var(--color-text-muted);
+      font-size: 0.75em;
+      padding: 1px 6px;
+      border-radius: 4px;
+      min-width: 28px;
+      text-align: center;
+    }
+    .team-name-col { min-width: 130px; }
+    .prob-bar-bg { flex: 1; height: 8px; background: #1c2128; border-radius: 4px; overflow: hidden; }
+    .prob-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--color-accent), #7c5cfc); }
+    .prob-pct { font-weight: 600; min-width: 45px; text-align: right; font-size: 0.85em; }
+
+    /* Bracket rounds */
+    .bracket-section { margin-top: 16px; }
+    .bracket-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 8px 0 12px; }
+    .bracket-round { min-width: 210px; flex-shrink: 0; }
+    .round-header {
+      font-size: 0.78em;
+      font-weight: 600;
+      color: var(--color-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .bracket-game {
+      background: var(--color-code-bg);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      font-size: 0.82em;
+      position: relative;
+      border-left: 3px solid transparent;
+    }
+    .bracket-game.upset { border-left-color: var(--color-danger); }
+    .matchup-line { padding: 2px 0; color: var(--color-text-muted); }
+    .matchup-line.winner { color: var(--color-success); font-weight: 600; }
+    .game-prob {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      font-size: 0.72em;
+      color: var(--color-text-muted);
+    }
+
+    /* Data note */
+    .data-note {
+      text-align: center;
+      color: var(--color-text-muted);
+      font-size: 0.82em;
+      margin-top: 40px;
+      padding: 20px;
+      border-top: 1px solid var(--color-border);
+    }
+    .data-note a { color: var(--color-accent); }
+
+    /* Search */
+    .search-container {
+      max-width: 400px;
+      margin: 16px auto 0;
+      position: relative;
+    }
+    .search-input {
+      width: 100%;
+      padding: 10px 16px 10px 38px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      color: var(--color-text);
+      font-size: 0.9em;
+      font-family: var(--font-sans);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: var(--color-accent); }
+    .search-input::placeholder { color: var(--color-text-muted); }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--color-text-muted);
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="nav-brand">MM Forecaster</a>
+      <div class="nav-links">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="methodology.html" class="nav-link">Methodology</a>
+        <a href="results.html" class="nav-link">Results</a>
+        <a href="predictions.html" class="nav-link active">Predictions</a>
+        <a href="https://github.com/bsr-0/march-madness-forecaster" class="nav-link nav-link-ext">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <header class="page-header">
+    <div class="container">
+      <h1>2026 Conference Tournament Predictions</h1>
+      <p class="subtitle">Round-by-round matchups &middot; Monte Carlo championship odds &middot; 10,000 simulations per conference</p>
+
+      <div class="pred-summary" id="summaryStats">
+        <!-- Filled by JS -->
+      </div>
+
+      <div class="search-container">
+        <span class="search-icon">&#128269;</span>
+        <input type="text" class="search-input" id="searchInput" placeholder="Search teams or conferences...">
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+
+        <!-- Tier filters -->
+        <div class="filter-bar" id="filterBar">
+          <button class="filter-btn active" data-filter="all">All Conferences</button>
+          <button class="filter-btn" data-filter="power">Power Conferences</button>
+          <button class="filter-btn" data-filter="mid">Mid-Majors</button>
+          <button class="filter-btn" data-filter="small">Small Conferences</button>
+          <button class="filter-btn" data-filter="upsets">Upsets Only</button>
+        </div>
+
+        <!-- Conference cards rendered here -->
+        <div id="confContainer"></div>
+
+        <div class="data-note">
+          Data sourced from <a href="https://barttorvik.com" target="_blank" rel="noopener">BartTorvik</a> (2025-26 season stats).<br>
+          Model uses literature-derived coefficients (Oliver 2004, Lopez &amp; Matthews 2015) with Four Factors, AdjO/AdjD, and shooting splits.<br>
+          Last updated: <span id="lastUpdated"></span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <p>March Madness Forecaster &middot; MIT License &middot; <a href="https://github.com/bsr-0/march-madness-forecaster">GitHub</a></p>
+        <p class="footer-sub">Built with PyTorch, Graph Neural Networks, and Combinatorial Fusion Analysis</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ── Conference tier classification ──
+    const POWER = ['ACC','B10','B12','BE','SEC'];
+    const MID = ['A10','Amer','MWC','MVC','WCC','CUSA','MAC','SB','BSky','BW','Horz','CAA','ASUN','BSth','SC','Ivy','Pat','SL','Slnd','Sum','WAC','OVC'];
+    const SMALL = ['MEAC','SWAC','NEC','AE','MAAC'];
+
+    function getTier(confId) {
+      if (POWER.includes(confId)) return 'power';
+      if (SMALL.includes(confId)) return 'small';
+      return 'mid';
+    }
+
+    // ── Load & render ──
+    let DATA = {};
+
+    fetch('data/conference_predictions_2026.json')
+      .then(r => r.json())
+      .then(data => {
+        DATA = data;
+        renderSummary(data);
+        renderAll(data);
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString('en-US', {
+          year: 'numeric', month: 'long', day: 'numeric'
+        });
+      })
+      .catch(err => {
+        document.getElementById('confContainer').innerHTML =
+          '<p style="text-align:center;color:var(--color-danger);padding:40px;">Failed to load prediction data. Please check that data/conference_predictions_2026.json exists.</p>';
+      });
+
+    function renderSummary(data) {
+      const confs = Object.keys(data).length;
+      const totalGames = Object.values(data).reduce((s, c) => s + c.rounds.reduce((s2, r) => s2 + r.games.length, 0), 0);
+      const upsets = Object.values(data).reduce((s, c) => s + c.rounds.reduce((s2, r) => s2 + r.games.filter(g => g.is_upset).length, 0), 0);
+      const oneSeedWins = Object.values(data).filter(c => c.predicted_champion.seed === 1).length;
+
+      document.getElementById('summaryStats').innerHTML = `
+        <div class="pred-stat"><div class="pred-stat-value">${confs}</div><div class="pred-stat-label">Conferences</div></div>
+        <div class="pred-stat"><div class="pred-stat-value">${totalGames}</div><div class="pred-stat-label">Game Predictions</div></div>
+        <div class="pred-stat"><div class="pred-stat-value">${oneSeedWins}/${confs}</div><div class="pred-stat-label">#1 Seeds Win</div></div>
+        <div class="pred-stat"><div class="pred-stat-value">${upsets}</div><div class="pred-stat-label">Predicted Upsets</div></div>
+      `;
+    }
+
+    function renderAll(data, filter = 'all', searchTerm = '') {
+      const container = document.getElementById('confContainer');
+      container.innerHTML = '';
+
+      // Sort conferences into tiers
+      const entries = Object.entries(data);
+      const tiers = { power: [], mid: [], small: [] };
+      entries.forEach(([id, conf]) => tiers[getTier(id)].push([id, conf]));
+
+      // Sort within each tier by conference name
+      Object.values(tiers).forEach(arr => arr.sort((a, b) => a[1].conference_name.localeCompare(b[1].conference_name)));
+
+      const tierConfig = [
+        { key: 'power', label: 'Power Conferences', cls: '' },
+        { key: 'mid', label: 'Mid-Major Conferences', cls: 'mid' },
+        { key: 'small', label: 'Small Conferences', cls: 'small' },
+      ];
+
+      for (const tier of tierConfig) {
+        let items = tiers[tier.key];
+        if (filter !== 'all' && filter !== tier.key && filter !== 'upsets') continue;
+
+        if (filter === 'upsets') {
+          items = items.filter(([_, c]) => c.rounds.some(r => r.games.some(g => g.is_upset)));
+        }
+
+        if (searchTerm) {
+          const q = searchTerm.toLowerCase();
+          items = items.filter(([_, c]) => {
+            if (c.conference_name.toLowerCase().includes(q)) return true;
+            if (c.predicted_champion.name && c.predicted_champion.name.toLowerCase().includes(q)) return true;
+            return c.rounds.some(r => r.games.some(g =>
+              g.team1.toLowerCase().includes(q) || g.team2.toLowerCase().includes(q)
+            ));
+          });
+        }
+
+        if (items.length === 0) continue;
+
+        const title = document.createElement('div');
+        title.className = `tier-title ${tier.cls}`;
+        title.textContent = tier.label;
+        container.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'conf-grid';
+
+        items.forEach(([confId, conf]) => {
+          grid.appendChild(createCard(confId, conf));
+        });
+
+        container.appendChild(grid);
+      }
+    }
+
+    function createCard(confId, conf) {
+      const card = document.createElement('div');
+      card.className = 'conf-card';
+      card.dataset.conf = confId;
+
+      const upsetCount = conf.rounds.reduce((s, r) => s + r.games.filter(g => g.is_upset).length, 0);
+      const champ = conf.predicted_champion;
+      const mc = conf.mc_favorite;
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'card-header';
+      header.innerHTML = `
+        <div>
+          <div class="conf-name">${conf.conference_name}${upsetCount > 0 ? `<span class="upset-badge">${upsetCount} upset${upsetCount>1?'s':''}</span>` : ''}<span class="expand-icon">&#9660;</span></div>
+          <div class="conf-meta">${conf.num_teams} teams &middot; ${conf.rounds.length} rounds</div>
+        </div>
+        <div class="champ-block">
+          <div class="champ-label">Predicted Champion</div>
+          <div class="champ-name">${champ.name || '—'}</div>
+          <div class="champ-detail">Seed #${champ.seed} &middot; T-Rank ${champ.t_rank}</div>
+          <div class="mc-prob">MC: ${(mc.prob * 100).toFixed(1)}% to win</div>
+        </div>
+      `;
+      header.addEventListener('click', () => card.classList.toggle('open'));
+      card.appendChild(header);
+
+      // Body
+      const body = document.createElement('div');
+      body.className = 'card-body';
+
+      // Championship probability contenders
+      if (conf.championship_probabilities) {
+        const probs = Object.entries(conf.championship_probabilities)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 6);
+
+        if (probs.length > 0) {
+          const maxProb = probs[0][1];
+          let html = '<div class="section-label">Championship Probabilities (Monte Carlo)</div>';
+          probs.forEach(([tid, prob]) => {
+            const name = tid.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+              .replace(/\bSt\b/g, 'St.').replace(/\bMt\b/g, 'Mt.');
+            const pct = (prob * 100).toFixed(1);
+            const width = (prob / maxProb * 100).toFixed(0);
+            html += `
+              <div class="contender-row">
+                <span class="team-name-col">${name}</span>
+                <div class="prob-bar-bg"><div class="prob-bar-fill" style="width:${width}%"></div></div>
+                <span class="prob-pct">${pct}%</span>
+              </div>`;
+          });
+          body.innerHTML += html;
+        }
+      }
+
+      // Bracket rounds
+      if (conf.rounds && conf.rounds.length > 0) {
+        let bracketHTML = '<div class="bracket-section"><div class="section-label">Full Bracket</div><div class="bracket-scroll">';
+
+        conf.rounds.forEach(round => {
+          bracketHTML += `<div class="bracket-round"><div class="round-header">${round.round_name}</div>`;
+          round.games.forEach(game => {
+            const cls = game.is_upset ? 'bracket-game upset' : 'bracket-game';
+            const t1cls = game.winner === game.team1.replace(/^\(\d+\)\s*/, '') ? 'matchup-line winner' : 'matchup-line';
+            const t2cls = game.winner === game.team2.replace(/^\(\d+\)\s*/, '') ? 'matchup-line winner' : 'matchup-line';
+            bracketHTML += `
+              <div class="${cls}">
+                <div class="${t1cls}">${game.team1}</div>
+                <div class="${t2cls}">${game.team2}</div>
+                <div class="game-prob">${(game.win_prob * 100).toFixed(0)}%</div>
+              </div>`;
+          });
+          bracketHTML += '</div>';
+        });
+
+        bracketHTML += '</div></div>';
+        body.innerHTML += bracketHTML;
+      }
+
+      card.appendChild(body);
+      return card;
+    }
+
+    // ── Filter buttons ──
+    document.getElementById('filterBar').addEventListener('click', e => {
+      if (!e.target.classList.contains('filter-btn')) return;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      const filter = e.target.dataset.filter;
+      renderAll(DATA, filter, document.getElementById('searchInput').value);
+    });
+
+    // ── Search ──
+    let searchTimeout;
+    document.getElementById('searchInput').addEventListener('input', e => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        const activeFilter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
+        renderAll(DATA, activeFilter, e.target.value);
+      }, 200);
+    });
+
+    // Mobile nav toggle
+    document.querySelector('.nav-toggle')?.addEventListener('click', function() {
+      document.querySelector('.nav-links').classList.toggle('open');
+    });
+  </script>
+</body>
+</html>
