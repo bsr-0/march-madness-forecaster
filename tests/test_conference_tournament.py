@@ -946,10 +946,10 @@ class TestBracketFormats:
         r3_seeds = set(fmt.round_entry[3])
         assert r3_seeds == {1, 2, 3, 4}
 
-    def test_b10_format_is_5_rounds(self):
-        """Big Ten with 18 teams should have 5 rounds."""
+    def test_b10_format_is_6_rounds(self):
+        """Big Ten with 18 teams should have 6 rounds (stepladder)."""
         fmt = get_bracket_format("B10", 18)
-        assert fmt.total_rounds == 5
+        assert fmt.total_rounds == 6
 
     def test_b10_round1_bottom_4(self):
         """Big Ten round 1 should have seeds 15-18."""
@@ -957,13 +957,14 @@ class TestBracketFormats:
         r1_seeds = set(fmt.round_entry[1])
         assert r1_seeds == {15, 16, 17, 18}
 
-    def test_standard_16_team_format(self):
-        """16-team brackets should have 4 rounds, 0 byes."""
+    def test_sec_16_team_stepladder_format(self):
+        """SEC 16-team bracket should have 5 rounds (stepladder)."""
         fmt = get_bracket_format("SEC", 16)
-        assert fmt.total_rounds == 4
+        assert fmt.total_rounds == 5
         r1_seeds = set(fmt.round_entry[1])
-        assert r1_seeds == set(range(1, 17))
-        assert 2 not in fmt.round_entry  # no byes
+        assert r1_seeds == {9, 10, 11, 12, 13, 14, 15, 16}
+        assert set(fmt.round_entry[2]) == {5, 6, 7, 8}
+        assert set(fmt.round_entry[3]) == {1, 2, 3, 4}
 
     def test_standard_8_team_format(self):
         """8-team brackets should have 3 rounds, 0 byes."""
@@ -1155,12 +1156,12 @@ class TestMultiLevelByes:
         assert round_sizes == [3, 4, 4, 2, 1]
 
     def test_18_team_bracket_structure(self):
-        """18-team bracket (B10 style) has correct round sizes: 2, 8, 4, 2, 1."""
+        """18-team bracket (B10 style) has correct round sizes: 2, 4, 4, 4, 2, 1 (6 rounds)."""
         fmt = get_bracket_format("B10", 18)
         teams = self._make_teams(18, "B10")
         bracket = ConferenceTournamentBracket("B10", teams, bracket_format=fmt)
         round_sizes = [len(rnd) for rnd in bracket.games]
-        assert round_sizes == [2, 8, 4, 2, 1]
+        assert round_sizes == [2, 4, 4, 4, 2, 1]
 
     def test_11_team_bracket_structure(self):
         """11-team bracket (BE style) has correct round sizes: 3, 4, 2, 1."""

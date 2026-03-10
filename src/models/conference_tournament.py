@@ -101,6 +101,7 @@ _ROUND_NAMES = {
     3: {1: "Quarterfinals", 2: "Semifinals", 3: "Championship"},
     4: {1: "First Round", 2: "Quarterfinals", 3: "Semifinals", 4: "Championship"},
     5: {1: "Play-in", 2: "First Round", 3: "Quarterfinals", 4: "Semifinals", 5: "Championship"},
+    6: {1: "Play-in", 2: "First Round", 3: "Second Round", 4: "Quarterfinals", 5: "Semifinals", 6: "Championship"},
 }
 
 

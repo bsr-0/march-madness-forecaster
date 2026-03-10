@@ -177,14 +177,14 @@ def _standard_format(num_teams: int) -> BracketFormat:
 # default need explicit entries here.  All others use _standard_format.
 # ──────────────────────────────────────────────────────────────────────
 
-# ACC: 15 teams, 5 rounds (NOT the mathematical 4 rounds)
+# ──────────────────────────────────────────────────────────────────────
+# ACC: 15 teams, 5 rounds
 # Seeds 1-4: double bye (enter at QF, round 3)
 # Seeds 5-9: single bye (enter at round 2)
-# Seeds 10-15: play in round 1 (play-in)
+# Seeds 10-15: play in round 1
 #
-# Bracket structure:
 #   R1: 10v15, 11v14, 12v13
-#   R2: 8v9, 5vW(12/13), 6vW(11/14), 7vW(10/15)
+#   R2: 7vW(10/15), 6vW(11/14), 5vW(12/13), 8v9
 #   QF: 1vW(8/9), 4vW(5/12/13), 2vW(7/10/15), 3vW(6/11/14)
 #   SF: 2 games
 #   F:  1 game
@@ -199,41 +199,167 @@ _ACC_15 = BracketFormat(
     first_round_matchups=((10, 15), (11, 14), (12, 13)),
 )
 
-# Big Ten: 18 teams, 5 rounds
-# Bottom 4 seeds play in, then a 16-team bracket
-# R1: 15v18, 16v17  (only bottom 4 play)
-# R2: 14 bye teams (seeds 1-14) + 2 R1 winners → 16-team bracket
+# ──────────────────────────────────────────────────────────────────────
+# Big Ten: 18 teams, 6 rounds (NOT the mathematical 5)
+# Seeds 1-4: triple bye (enter at QF, round 4)
+# Seeds 5-8: double bye (enter at round 3)
+# Seeds 9-14: single bye (enter at round 2)
+# Seeds 15-18: play in round 1
+#
+#   R1: 16v17, 15v18
+#   R2: 9vW(16/17), 12v13, 10vW(15/18), 11v14
+#   R3: 8vW(9/16/17), 5vW(12/13), 7vW(10/15/18), 6vW(11/14)
+#   QF: 1vW(8), 4vW(5), 2vW(7), 3vW(6)
+#   SF: 2 games
+#   F:  1 game
 _B10_18 = BracketFormat(
     num_teams=18,
-    total_rounds=5,
+    total_rounds=6,
     round_entry={
         1: (15, 16, 17, 18),
-        2: (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14),
+        2: (9, 10, 11, 12, 13, 14),
+        3: (5, 6, 7, 8),
+        4: (1, 2, 3, 4),
     },
-    first_round_matchups=((15, 18), (16, 17)),
+    first_round_matchups=((16, 17), (15, 18)),
 )
 
+# ──────────────────────────────────────────────────────────────────────
+# Big 12: 16 teams, 5 rounds (NOT the mathematical 4)
+# Seeds 1-4: double bye (enter at QF, round 3)
+# Seeds 5-8: single bye (enter at round 2)
+# Seeds 9-16: play in round 1
+#
+#   R1: 12v13, 9v16, 10v15, 11v14
+#   R2: 5vW(12/13), 8vW(9/16), 7vW(10/15), 6vW(11/14)
+#   QF: 4vW(5), 1vW(8), 2vW(7), 3vW(6)
+#   SF: 2 games
+#   F:  1 game
+_B12_16 = BracketFormat(
+    num_teams=16,
+    total_rounds=5,
+    round_entry={
+        1: (9, 10, 11, 12, 13, 14, 15, 16),
+        2: (5, 6, 7, 8),
+        3: (1, 2, 3, 4),
+    },
+    first_round_matchups=((12, 13), (9, 16), (10, 15), (11, 14)),
+)
+
+# ──────────────────────────────────────────────────────────────────────
+# SEC: 16 teams, 5 rounds (NOT the mathematical 4)
+# Same stepladder structure as Big 12
+# Seeds 1-4: double bye (enter at QF, round 3)
+# Seeds 5-8: single bye (enter at round 2)
+# Seeds 9-16: play in round 1
+#
+#   R1: 16v9, 13v12, 15v10, 14v11
+#   R2: 8vW(16/9), 5vW(13/12), 7vW(14/11), 6vW(15/10)
+#   QF: 1vW(8), 4vW(5), 2vW(7), 3vW(6)
+#   SF: 2 games
+#   F:  1 game
+_SEC_16 = BracketFormat(
+    num_teams=16,
+    total_rounds=5,
+    round_entry={
+        1: (9, 10, 11, 12, 13, 14, 15, 16),
+        2: (5, 6, 7, 8),
+        3: (1, 2, 3, 4),
+    },
+    first_round_matchups=((16, 9), (13, 12), (15, 10), (14, 11)),
+)
+
+# ──────────────────────────────────────────────────────────────────────
+# American Athletic: 10 teams, 5 rounds (NOT the mathematical 4)
+# Stepladder format:
+# Seeds 1-2: triple bye (enter at SF, round 4)
+# Seeds 3-4: double bye (enter at QF, round 3)
+# Seeds 5-6: single bye (enter at round 2)
+# Seeds 7-10: play in round 1
+#
+#   R1: 8v9, 7v10
+#   R2: 5vW(8/9), 6vW(7/10)
+#   QF: 4vW(5), 3vW(6)
+#   SF: 1vW(4), 2vW(3)
+#   F:  1 game
+_AMER_10 = BracketFormat(
+    num_teams=10,
+    total_rounds=5,
+    round_entry={
+        1: (7, 8, 9, 10),
+        2: (5, 6),
+        3: (3, 4),
+        4: (1, 2),
+    },
+    first_round_matchups=((8, 9), (7, 10)),
+)
+
+# ──────────────────────────────────────────────────────────────────────
+# Atlantic 10: 14 teams, 5 rounds (NOT the mathematical 4)
+# Seeds 1-4: double bye (enter at QF, round 3)
+# Seeds 5-10: single bye (enter at round 2)
+# Seeds 11-14: play in round 1
+#
+#   R1: 12v13, 11v14
+#   R2: 8v9, 5vW(12/13), 7v10, 6vW(11/14)
+#   QF: 1vW(8/9), 4vW(5), 2vW(7/10), 3vW(6)
+#   SF: 2 games
+#   F:  1 game
+_A10_14 = BracketFormat(
+    num_teams=14,
+    total_rounds=5,
+    round_entry={
+        1: (11, 12, 13, 14),
+        2: (5, 6, 7, 8, 9, 10),
+        3: (1, 2, 3, 4),
+    },
+    first_round_matchups=((12, 13), (11, 14)),
+)
+
+# ──────────────────────────────────────────────────────────────────────
+# WCC: 12 teams, 6 rounds (stepladder format)
+# Seeds 1-2: enter at round 5 (4 byes)
+# Seeds 3-4: enter at round 4 (3 byes)
+# Seeds 5-6: enter at round 3 (2 byes)
+# Seeds 7-8: enter at round 2 (1 bye)
+# Seeds 9-12: play in round 1
+#
+#   R1: 9v12, 10v11   (2 games → 2 winners)
+#   R2: 7vW, 8vW      (2 games → 2 winners)
+#   R3: 5vW, 6vW      (2 games → 2 winners)
+#   R4: 3vW, 4vW      (2 games → 2 winners)
+#   R5: 1vW, 2vW      (2 games → 2 winners)
+#   R6: Final          (1 game)
+_WCC_12 = BracketFormat(
+    num_teams=12,
+    total_rounds=6,
+    round_entry={
+        1: (9, 10, 11, 12),
+        2: (7, 8),
+        3: (5, 6),
+        4: (3, 4),
+        5: (1, 2),
+    },
+    first_round_matchups=((9, 12), (10, 11)),
+)
+
+# ──────────────────────────────────────────────────────────────────────
 # Conference-specific overrides keyed by (conference_abbrev, num_teams)
 _CONF_FORMATS: Dict[Tuple[str, int], BracketFormat] = {
     ("ACC", 15): _ACC_15,
     ("B10", 18): _B10_18,
+    ("B12", 16): _B12_16,
+    ("SEC", 16): _SEC_16,
+    ("Amer", 10): _AMER_10,
+    ("A10", 14): _A10_14,
+    ("WCC", 12): _WCC_12,
 }
 
-# Also key by num_teams alone for formats used by multiple conferences
-# with the same team count but non-standard bracket.
-# Currently only ACC-15 has a non-standard format.
-
-# For conferences with standard formats, we can pre-compute them.
-# These are listed explicitly to document the expected formats and
-# enable validation.
+# Conferences with standard bracket formats (mathematical default).
+# These use ceil(log2(N)) rounds with 2^rounds - N byes.
 _STANDARD_SIZES: Dict[str, int] = {
-    "B12": 16,
-    "SEC": 16,
     "BE": 11,
-    "Amer": 10,
     "MWC": 12,
-    "WCC": 12,
-    "A10": 14,
     "MVC": 11,
     "CAA": 13,
     "AE": 8,
