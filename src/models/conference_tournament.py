@@ -98,6 +98,38 @@ _ROUND_NAMES = {
 }
 
 
+def bracket_seed_order(n: int) -> List[int]:
+    """Return indices that reorder seed-sorted teams into proper bracket positions.
+
+    Given *n* teams sorted by seed (best first), returns a list of indices
+    such that ``[teams[i] for i in bracket_seed_order(n)]`` places them in
+    standard tournament bracket order.  When these reordered teams are
+    paired adjacently ``(pos 0 vs 1, 2 vs 3, …)`` the resulting bracket
+    guarantees that the #1 and #2 seeds are on opposite halves and can
+    only meet in the final.
+
+    *n* must be a power of 2.
+
+    Examples (index lists, 0-based into a seed-sorted array):
+        n=2  → [0, 1]              → matchups: 1v2
+        n=4  → [0, 3, 1, 2]        → matchups: 1v4, 2v3
+        n=8  → [0, 7, 3, 4, 1, 6, 2, 5]
+               → matchups: 1v8, 4v5, 2v7, 3v6
+    """
+    if n <= 0:
+        return []
+    if n == 1:
+        return [0]
+    if n == 2:
+        return [0, 1]
+    half = bracket_seed_order(n // 2)
+    result = []
+    for p in half:
+        result.append(p)
+        result.append(n - 1 - p)
+    return result
+
+
 class ConferenceTournamentBracket:
     """Single-elimination conference tournament bracket.
 
@@ -158,17 +190,27 @@ class ConferenceTournamentBracket:
         first_round_games = []
         n_first_round = len(first_round_teams) // 2
 
+        if self.num_byes == 0 and len(first_round_teams) >= 4:
+            # No byes: apply bracket ordering so #1 and #2 are on
+            # opposite halves.  With byes, ordering is established
+            # when bye teams merge in Round 2.
+            positions = bracket_seed_order(len(first_round_teams))
+            ordered = [first_round_teams[p] for p in positions]
+        else:
+            # With byes: simple top-vs-bottom within the first-round group
+            ordered = []
+            for i in range(n_first_round):
+                ordered.append(first_round_teams[i])
+                ordered.append(first_round_teams[len(first_round_teams) - 1 - i])
+
         for i in range(n_first_round):
-            # Standard 1-vs-N seeding: top remaining vs bottom remaining
-            top_idx = i
-            bottom_idx = len(first_round_teams) - 1 - i
             game_id += 1
             game = ConferenceTournamentGame(
                 game_id=game_id,
                 round=1,
                 round_name=self._round_name(1),
-                team1=first_round_teams[top_idx],
-                team2=first_round_teams[bottom_idx],
+                team1=ordered[2 * i],
+                team2=ordered[2 * i + 1],
             )
             first_round_games.append(game)
 
