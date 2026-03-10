@@ -171,7 +171,13 @@ class ConferenceTournamentPredictor:
         from .data_enrichment import enrich_torvik_teams
         data = enrich_torvik_teams(data, data_dir=data_dir, year=year)
 
-        # Load seed overrides if provided
+        # Load seed overrides if provided, or auto-detect from data directory
+        if seed_overrides_path is None:
+            auto_path = Path(data_dir) / f"seed_overrides_{year}.json"
+            if auto_path.exists():
+                seed_overrides_path = str(auto_path)
+                logger.info("Auto-detected seed overrides: %s", seed_overrides_path)
+
         seed_overrides: Dict[str, Dict[str, int]] = {}
         if seed_overrides_path:
             from .seeding import load_seed_overrides
