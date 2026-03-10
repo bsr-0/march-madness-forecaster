@@ -72,5 +72,7 @@ jobs:
         with:
           name: staging-validation
           path: |
-            data/*.json
-            data/*.csv
+            data/processed/*.json
+            data/raw/*.json
+            data/raw/*.csv
+            docs/data/*.json
