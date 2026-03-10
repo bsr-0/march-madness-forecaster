@@ -171,6 +171,50 @@
       color: var(--color-text-muted);
     }
 
+    /* MC Convergence chart */
+    .mc-convergence {
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--color-code-bg);
+      border-radius: 10px;
+      border: 1px solid var(--color-border);
+    }
+    .mc-convergence-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .mc-convergence-title {
+      font-size: 0.78em;
+      font-weight: 600;
+      color: var(--color-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .mc-convergence-subtitle {
+      font-size: 0.7em;
+      color: var(--color-text-muted);
+    }
+    .mc-chart-wrap {
+      position: relative;
+      width: 100%;
+      height: 220px;
+    }
+    .mc-toggle-btn {
+      background: linear-gradient(135deg, var(--color-accent), #7c5cfc);
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.78em;
+      font-family: var(--font-sans);
+      transition: opacity 0.2s;
+      margin-top: 12px;
+    }
+    .mc-toggle-btn:hover { opacity: 0.85; }
+
     /* Data note */
     .data-note {
       text-align: center;
@@ -211,6 +255,7 @@
       font-size: 0.9em;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <!-- Navigation -->
@@ -233,7 +278,7 @@
   <header class="page-header">
     <div class="container">
       <h1>2026 Conference Tournament Predictions</h1>
-      <p class="subtitle">Round-by-round matchups &middot; Monte Carlo championship odds &middot; 10,000 simulations per conference</p>
+      <p class="subtitle">Round-by-round matchups &middot; Monte Carlo championship odds &middot; 50,000 simulations per conference</p>
 
       <div class="pred-summary" id="summaryStats">
         <!-- Filled by JS -->
@@ -457,6 +502,99 @@
 
         bracketHTML += '</div></div>';
         body.innerHTML += bracketHTML;
+      }
+
+      // MC Convergence chart
+      if (conf.convergence && conf.convergence.x && conf.convergence.teams) {
+        const chartId = `mc-chart-${confId}`;
+        let mcHTML = `
+          <div class="mc-convergence">
+            <div class="mc-convergence-header">
+              <div>
+                <div class="mc-convergence-title">Monte Carlo Convergence</div>
+                <div class="mc-convergence-subtitle">Championship probability vs. simulation count — watch uncertainty narrow</div>
+              </div>
+            </div>
+            <div class="mc-chart-wrap">
+              <canvas id="${chartId}"></canvas>
+            </div>
+          </div>`;
+        body.innerHTML += mcHTML;
+
+        // Defer chart creation until card is in DOM
+        requestAnimationFrame(() => {
+          const canvas = document.getElementById(chartId);
+          if (!canvas) return;
+          const ctx = canvas.getContext('2d');
+          const conv = conf.convergence;
+          const teamIds = Object.keys(conv.teams);
+          const colors = ['#ff6b35','#7c5cfc','#2ed573','#ffa502','#ff4757','#1e90ff'];
+
+          const datasets = teamIds.map((tid, i) => {
+            const name = conv.team_names[tid] || tid.replace(/_/g, ' ');
+            return {
+              label: name,
+              data: conv.teams[tid].map(v => (v * 100)),
+              borderColor: colors[i % colors.length],
+              backgroundColor: 'transparent',
+              borderWidth: 1.8,
+              pointRadius: 0,
+              tension: 0.3,
+            };
+          });
+
+          new Chart(ctx, {
+            type: 'line',
+            data: { labels: conv.x, datasets },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              plugins: {
+                legend: {
+                  position: 'top',
+                  labels: { color: '#8b8fa3', font: { size: 11 }, boxWidth: 12, padding: 10 }
+                },
+                tooltip: {
+                  backgroundColor: '#1a1d27',
+                  borderColor: '#2a2d3a',
+                  borderWidth: 1,
+                  titleColor: '#e8eaed',
+                  bodyColor: '#8b8fa3',
+                  callbacks: {
+                    title: (items) => \`After \${Number(items[0].label).toLocaleString()} simulations\`,
+                    label: (item) => \` \${item.dataset.label}: \${item.raw.toFixed(1)}%\`
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  title: { display: true, text: 'Simulations', color: '#5a5e72', font: { size: 11 } },
+                  ticks: {
+                    color: '#5a5e72',
+                    font: { size: 10 },
+                    maxTicksLimit: 8,
+                    callback: function(val) {
+                      const v = this.getLabelForValue(val);
+                      return v >= 1000 ? (v/1000) + 'k' : v;
+                    }
+                  },
+                  grid: { color: 'rgba(42,45,58,0.5)' }
+                },
+                y: {
+                  title: { display: true, text: 'Win Probability (%)', color: '#5a5e72', font: { size: 11 } },
+                  ticks: {
+                    color: '#5a5e72',
+                    font: { size: 10 },
+                    callback: (v) => v + '%'
+                  },
+                  grid: { color: 'rgba(42,45,58,0.5)' },
+                  min: 0
+                }
+              }
+            }
+          });
+        });
       }
 
       card.appendChild(body);

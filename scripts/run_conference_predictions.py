@@ -277,7 +277,7 @@ CONF_FULL_NAMES = {
 
 
 def simulate_bracket(predictor: EnhancedPredictor, conf: str,
-                     num_sims: int = 10000, noise_std: float = 0.12,
+                     num_sims: int = 50000, noise_std: float = 0.12,
                      seed: int = 2026) -> dict:
     """
     Simulate a conference tournament bracket via Monte Carlo.
@@ -317,7 +317,21 @@ def simulate_bracket(predictor: EnhancedPredictor, conf: str,
                     base_probs[key] = p
                     base_probs[(t2["team_id"], t1["team_id"])] = 1.0 - p
 
-    for _ in range(num_sims):
+    # Track convergence: snapshot championship probs at intervals
+    # Use ~40 sample points (logarithmically spaced early, linear later)
+    snapshot_points = sorted(set(
+        [int(x) for x in np.geomspace(10, min(500, num_sims), 15)] +
+        list(range(500, num_sims + 1, max(1, num_sims // 25)))
+    ))
+    # Ensure final point is included
+    if num_sims not in snapshot_points:
+        snapshot_points.append(num_sims)
+    snapshot_set = set(snapshot_points)
+
+    convergence = {t["team_id"]: [] for t in teams}
+    convergence_x = []  # simulation counts where snapshots taken
+
+    for sim_i in range(1, num_sims + 1):
         result = _run_bracket(predictor, teams, deterministic=False,
                               rng=rng, noise_std=noise_std, base_probs=base_probs)
         if result["champion"]:
@@ -325,12 +339,28 @@ def simulate_bracket(predictor: EnhancedPredictor, conf: str,
         for t in result.get("semifinalists", []):
             semi_counts[t["team_id"]] += 1
 
+        # Record convergence snapshot
+        if sim_i in snapshot_set:
+            convergence_x.append(sim_i)
+            for t in teams:
+                convergence[t["team_id"]].append(
+                    round(champ_counts.get(t["team_id"], 0) / sim_i, 4)
+                )
+
     # Compute probabilities
     champ_probs = {t["team_id"]: champ_counts.get(t["team_id"], 0) / num_sims for t in teams}
     semi_probs = {t["team_id"]: semi_counts.get(t["team_id"], 0) / num_sims for t in teams}
 
     # Sort champ probs descending
     sorted_champ = sorted(champ_probs.items(), key=lambda x: -x[1])
+
+    # Only keep convergence data for top 6 teams (to keep JSON small)
+    top_team_ids = [tid for tid, _ in sorted_champ[:6]]
+    convergence_data = {
+        "x": convergence_x,
+        "teams": {tid: convergence[tid] for tid in top_team_ids},
+        "team_names": {tid: predictor.teams_by_id[tid]["name"] for tid in top_team_ids},
+    }
 
     return {
         "conference": conf,
@@ -345,6 +375,7 @@ def simulate_bracket(predictor: EnhancedPredictor, conf: str,
             "name": predictor.teams_by_id[sorted_champ[0][0]]["name"],
             "prob": sorted_champ[0][1],
         },
+        "convergence": convergence_data,
     }
 
 
@@ -716,7 +747,7 @@ body {{ background: var(--bg); color: var(--text); font-family: -apple-system, B
 <body>
 <div class="dashboard-header">
     <h1>2026 Conference Tournament Predictions</h1>
-    <div class="subtitle">Multi-feature logistic model + 10,000 Monte Carlo simulations per conference</div>
+    <div class="subtitle">Multi-feature logistic model + 50,000 Monte Carlo simulations per conference</div>
     <div class="subtitle" style="font-size:0.85em; margin-top:4px; color:#5a5e72;">Generated March 9, 2026 | Tournaments begin March 10</div>
 </div>
 
@@ -834,10 +865,10 @@ def main():
     logger.info("  Four Factors enrichment: %d/%d teams (%.0f%%)", n_ff, n_teams, n_ff/n_teams*100 if n_teams else 0)
 
     # Step 3: Run simulations for all conferences
-    logger.info("\n[STEP 3] Running Monte Carlo Simulations (10,000 per conference)")
+    logger.info("\n[STEP 3] Running Monte Carlo Simulations (50,000 per conference)")
     all_results = {}
     for conf in sorted(predictor.teams_by_conf.keys()):
-        result = simulate_bracket(predictor, conf, num_sims=10000)
+        result = simulate_bracket(predictor, conf, num_sims=50000)
         if result:
             all_results[conf] = result
             mc = result["mc_favorite"]
@@ -883,7 +914,8 @@ def main():
                     ]
                 }
                 for rnd in det["rounds"]
-            ]
+            ],
+            "convergence": result.get("convergence"),
         }
 
     json_path = OUTPUT_DIR / "conference_tournament_predictions_2026.json"
