@@ -13,11 +13,12 @@ from src.models.conference_tournament import (
     ConferenceTournamentGame,
     ConferenceTeam,
     _CONFERENCE_FULL_NAMES,
+    bracket_seed_order,
 )
 from src.conference_tournament.predictor import (
     ConferenceTournamentPredictor,
     _DEFAULT_CONF_TOURNAMENT_SIZES,
-from src.conference_tournament.predictor import ConferenceTournamentPredictor
+)
 from src.conference_tournament.data_enrichment import (
     enrich_torvik_teams,
     _fuzzy_lookup,
@@ -193,6 +194,144 @@ class TestConferenceTournamentBracket:
         assert d["conference"] == "ACC"
         assert d["num_teams"] == 4
         assert len(d["rounds"]) == 2
+
+
+# ---------------------------------------------------------------------------
+# Bracket Seed Ordering
+# ---------------------------------------------------------------------------
+
+
+class TestBracketSeedOrder:
+    """Verify bracket_seed_order produces proper tournament bracket positions."""
+
+    def test_2_teams(self):
+        assert bracket_seed_order(2) == [0, 1]
+
+    def test_4_teams(self):
+        # Should produce matchups: 1v4, 2v3
+        order = bracket_seed_order(4)
+        assert order == [0, 3, 1, 2]
+
+    def test_8_teams(self):
+        # Should produce matchups: 1v8, 4v5, 2v7, 3v6
+        # Seeds 1 and 2 on opposite halves
+        order = bracket_seed_order(8)
+        assert order == [0, 7, 3, 4, 1, 6, 2, 5]
+
+    def test_16_teams(self):
+        order = bracket_seed_order(16)
+        # First pair: seed 1 (idx 0) vs seed 16 (idx 15)
+        assert order[0] == 0
+        assert order[1] == 15
+        # Seed 2 (idx 1) should be in the bottom half (positions 8-15)
+        seed2_pos = order.index(1)
+        assert seed2_pos >= 8, "Seed 2 must be in bottom half of bracket"
+
+    def test_1_and_2_on_opposite_halves(self):
+        """#1 and #2 seeds must always be on opposite halves."""
+        for n in [4, 8, 16]:
+            order = bracket_seed_order(n)
+            pos_seed1 = order.index(0)
+            pos_seed2 = order.index(1)
+            half = n // 2
+            seed1_half = pos_seed1 // half
+            seed2_half = pos_seed2 // half
+            assert seed1_half != seed2_half, (
+                f"n={n}: seeds 1 and 2 are in the same half "
+                f"(positions {pos_seed1} and {pos_seed2})"
+            )
+
+    def test_empty_and_single(self):
+        assert bracket_seed_order(0) == []
+        assert bracket_seed_order(1) == [0]
+
+
+class TestBracketSeedingIntegrity:
+    """Integration tests verifying #1 and #2 seeds cannot meet before the final."""
+
+    def _make_teams(self, n):
+        return [
+            ConferenceTeam(
+                team_id=f"team_{i}",
+                name=f"Team {i}",
+                conf_seed=i,
+                conference="TEST",
+                adj_em=30.0 - i * 2,
+                adj_o=120.0 - i,
+                adj_d=90.0 + i,
+            )
+            for i in range(1, n + 1)
+        ]
+
+    def test_8_team_bracket_seeds_opposite_halves(self):
+        """In an 8-team bracket, #1 and #2 should only meet in the Championship."""
+        teams = self._make_teams(8)
+        predictor = ConferenceTournamentPredictor(
+            teams_by_conference={"TEST": teams},
+        )
+        bracket = predictor.predict_conference("TEST")
+
+        # With deterministic predictions, top seeds always win.
+        # #1 and #2 should meet only in the final.
+        final = bracket.games[-1][0]
+        assert final.round_name == "Championship"
+        seeds_in_final = {final.team1.conf_seed, final.team2.conf_seed}
+        assert seeds_in_final == {1, 2}, (
+            f"Expected seeds 1 and 2 in final, got {seeds_in_final}"
+        )
+
+    def test_acc_15_team_bracket_seeds_opposite_halves(self):
+        """In a 15-team bracket (like ACC), #1 and #2 must be on opposite sides."""
+        teams = self._make_teams(15)
+        predictor = ConferenceTournamentPredictor(
+            teams_by_conference={"TEST": teams},
+        )
+        bracket = predictor.predict_conference("TEST")
+
+        # The Championship game should feature seeds 1 and 2 when
+        # higher seeds always win (deterministic).
+        final = bracket.games[-1][0]
+        assert final.round_name == "Championship"
+        seeds_in_final = {final.team1.conf_seed, final.team2.conf_seed}
+        assert seeds_in_final == {1, 2}, (
+            f"Expected seeds 1 and 2 in final, got {seeds_in_final}"
+        )
+
+    def test_16_team_bracket_top4_separation(self):
+        """In a 16-team bracket, seeds 1-4 should be in separate quarter-brackets."""
+        teams = self._make_teams(16)
+        predictor = ConferenceTournamentPredictor(
+            teams_by_conference={"TEST": teams},
+        )
+        bracket = predictor.predict_conference("TEST")
+
+        # Semifinals should feature seeds 1, 2, 3, 4 when top seeds always win
+        semis = bracket.games[-2]
+        semi_seeds = set()
+        for game in semis:
+            semi_seeds.add(game.team1.conf_seed)
+            semi_seeds.add(game.team2.conf_seed)
+        assert semi_seeds == {1, 2, 3, 4}, (
+            f"Expected seeds 1-4 in semis, got {semi_seeds}"
+        )
+
+    def test_1v2_never_before_final(self):
+        """Seed 1 and 2 must never play each other before the Championship."""
+        for n in [4, 8, 12, 15, 16]:
+            teams = self._make_teams(n)
+            predictor = ConferenceTournamentPredictor(
+                teams_by_conference={"TEST": teams},
+            )
+            bracket = predictor.predict_conference("TEST")
+
+            # Check all rounds except the final
+            for round_games in bracket.games[:-1]:
+                for game in round_games:
+                    if game.team1 and game.team2:
+                        seeds = {game.team1.conf_seed, game.team2.conf_seed}
+                        assert seeds != {1, 2}, (
+                            f"n={n}: Seeds 1 and 2 met in {game.round_name}!"
+                        )
 
 
 # ---------------------------------------------------------------------------
