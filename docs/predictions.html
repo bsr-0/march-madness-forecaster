@@ -80,6 +80,11 @@
     }
     @media (max-width: 520px) {
       .conf-grid { grid-template-columns: 1fr; }
+      .mc-chart-wrap { height: 180px; }
+      .mc-convergence { padding: 12px; }
+      .bracket-round { min-width: 180px; }
+      .card-header { padding: 12px 14px; flex-wrap: wrap; gap: 8px; }
+      .champ-block { text-align: left; }
     }
 
     /* Card */
@@ -424,6 +429,79 @@
       }
     }
 
+    function createMCChart(chartId, conv) {
+      const canvas = document.getElementById(chartId);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const teamIds = Object.keys(conv.teams);
+      const colors = ['#ff6b35','#7c5cfc','#2ed573','#ffa502','#ff4757','#1e90ff'];
+
+      const datasets = teamIds.map((tid, i) => {
+        const name = conv.team_names[tid] || tid.replace(/_/g, ' ');
+        return {
+          label: name,
+          data: conv.teams[tid].map(v => (v * 100)),
+          borderColor: colors[i % colors.length],
+          backgroundColor: 'transparent',
+          borderWidth: 1.8,
+          pointRadius: 0,
+          tension: 0.3,
+        };
+      });
+
+      new Chart(ctx, {
+        type: 'line',
+        data: { labels: conv.x, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: { color: '#8b8fa3', font: { size: 10 }, boxWidth: 10, padding: 6 }
+            },
+            tooltip: {
+              backgroundColor: '#1a1d27',
+              borderColor: '#2a2d3a',
+              borderWidth: 1,
+              titleColor: '#e8eaed',
+              bodyColor: '#8b8fa3',
+              callbacks: {
+                title: (items) => `After ${Number(items[0].label).toLocaleString()} simulations`,
+                label: (item) => ` ${item.dataset.label}: ${item.raw.toFixed(1)}%`
+              }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Simulations', color: '#5a5e72', font: { size: 10 } },
+              ticks: {
+                color: '#5a5e72',
+                font: { size: 9 },
+                maxTicksLimit: 6,
+                callback: function(val) {
+                  const v = this.getLabelForValue(val);
+                  return v >= 1000 ? (v/1000) + 'k' : v;
+                }
+              },
+              grid: { color: 'rgba(42,45,58,0.5)' }
+            },
+            y: {
+              title: { display: true, text: 'Win Prob (%)', color: '#5a5e72', font: { size: 10 } },
+              ticks: {
+                color: '#5a5e72',
+                font: { size: 9 },
+                callback: (v) => v + '%'
+              },
+              grid: { color: 'rgba(42,45,58,0.5)' },
+              min: 0
+            }
+          }
+        }
+      });
+    }
+
     function createCard(confId, conf) {
       const card = document.createElement('div');
       card.className = 'conf-card';
@@ -448,7 +526,15 @@
           <div class="mc-prob">MC: ${(mc.prob * 100).toFixed(1)}% to win</div>
         </div>
       `;
-      header.addEventListener('click', () => card.classList.toggle('open'));
+      header.addEventListener('click', () => {
+        card.classList.toggle('open');
+        // Create MC chart on first open when canvas is visible
+        if (card.classList.contains('open') && card._pendingChart) {
+          const { chartId, convergence } = card._pendingChart;
+          delete card._pendingChart;
+          requestAnimationFrame(() => createMCChart(chartId, convergence));
+        }
+      });
       card.appendChild(header);
 
       // Body
@@ -521,80 +607,9 @@
           </div>`;
         body.innerHTML += mcHTML;
 
-        // Defer chart creation until card is in DOM
-        requestAnimationFrame(() => {
-          const canvas = document.getElementById(chartId);
-          if (!canvas) return;
-          const ctx = canvas.getContext('2d');
-          const conv = conf.convergence;
-          const teamIds = Object.keys(conv.teams);
-          const colors = ['#ff6b35','#7c5cfc','#2ed573','#ffa502','#ff4757','#1e90ff'];
-
-          const datasets = teamIds.map((tid, i) => {
-            const name = conv.team_names[tid] || tid.replace(/_/g, ' ');
-            return {
-              label: name,
-              data: conv.teams[tid].map(v => (v * 100)),
-              borderColor: colors[i % colors.length],
-              backgroundColor: 'transparent',
-              borderWidth: 1.8,
-              pointRadius: 0,
-              tension: 0.3,
-            };
-          });
-
-          new Chart(ctx, {
-            type: 'line',
-            data: { labels: conv.x, datasets },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              interaction: { mode: 'index', intersect: false },
-              plugins: {
-                legend: {
-                  position: 'top',
-                  labels: { color: '#8b8fa3', font: { size: 11 }, boxWidth: 12, padding: 10 }
-                },
-                tooltip: {
-                  backgroundColor: '#1a1d27',
-                  borderColor: '#2a2d3a',
-                  borderWidth: 1,
-                  titleColor: '#e8eaed',
-                  bodyColor: '#8b8fa3',
-                  callbacks: {
-                    title: (items) => \`After \${Number(items[0].label).toLocaleString()} simulations\`,
-                    label: (item) => \` \${item.dataset.label}: \${item.raw.toFixed(1)}%\`
-                  }
-                }
-              },
-              scales: {
-                x: {
-                  title: { display: true, text: 'Simulations', color: '#5a5e72', font: { size: 11 } },
-                  ticks: {
-                    color: '#5a5e72',
-                    font: { size: 10 },
-                    maxTicksLimit: 8,
-                    callback: function(val) {
-                      const v = this.getLabelForValue(val);
-                      return v >= 1000 ? (v/1000) + 'k' : v;
-                    }
-                  },
-                  grid: { color: 'rgba(42,45,58,0.5)' }
-                },
-                y: {
-                  title: { display: true, text: 'Win Probability (%)', color: '#5a5e72', font: { size: 11 } },
-                  ticks: {
-                    color: '#5a5e72',
-                    font: { size: 10 },
-                    callback: (v) => v + '%'
-                  },
-                  grid: { color: 'rgba(42,45,58,0.5)' },
-                  min: 0
-                }
-              }
-            }
-          });
-        });
+        // Defer chart creation until card is opened (canvas needs visible dimensions)
+        card.dataset.chartConf = confId;
+        card._pendingChart = { chartId, convergence: conf.convergence };
       }
 
       card.appendChild(body);
