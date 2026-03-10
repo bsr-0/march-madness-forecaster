@@ -320,12 +320,28 @@ def _run_bracket(predictor, teams, deterministic=True,
     all_rounds = []
     round_results = []
 
-    # Round 1: pair first-round teams (top vs bottom within non-bye group)
+    # Round 1: pair first-round teams using proper bracket seeding
     r1_games = []
     n_games = len(first_round_teams) // 2
+
+    if num_byes == 0 and len(first_round_teams) >= 4:
+        # No byes: apply full bracket ordering so #1 and #2 end up on
+        # opposite sides.  With byes the ordering doesn't matter because
+        # Round 2 will re-sort and apply bracket_seed_order.
+        from src.models.conference_tournament import bracket_seed_order
+        positions = bracket_seed_order(len(first_round_teams))
+        ordered_r1 = [first_round_teams[p] for p in positions]
+    else:
+        # With byes: simple top-vs-bottom within the non-bye group is fine
+        # because Round 2 merge will establish proper bracket ordering.
+        ordered_r1 = []
+        for i in range(n_games):
+            ordered_r1.append(first_round_teams[i])
+            ordered_r1.append(first_round_teams[len(first_round_teams) - 1 - i])
+
     for i in range(n_games):
-        t1 = first_round_teams[i]
-        t2 = first_round_teams[len(first_round_teams) - 1 - i]
+        t1 = ordered_r1[2 * i]
+        t2 = ordered_r1[2 * i + 1]
         winner, prob = _play_game(predictor, t1, t2, deterministic, rng, noise_std, base_probs)
         r1_games.append({
             "team1": t1, "team2": t2, "winner": winner,
@@ -341,7 +357,12 @@ def _run_bracket(predictor, teams, deterministic=True,
     for round_num in range(2, total_rounds + 1):
         if round_num == 2 and bye_teams:
             entrants = list(bye_teams) + list(round_results)
+            # Sort by seed then reorder into proper bracket positions
+            # so that #1 and #2 are on opposite sides of the bracket
             entrants.sort(key=lambda t: t["conf_seed"])
+            from src.models.conference_tournament import bracket_seed_order
+            positions = bracket_seed_order(len(entrants))
+            entrants = [entrants[p] for p in positions]
         else:
             entrants = list(round_results)
 

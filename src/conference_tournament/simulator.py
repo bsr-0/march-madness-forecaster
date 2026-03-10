@@ -251,7 +251,12 @@ class ConferenceTournamentSimulator:
 
             if round_idx == 1 and bye_teams:
                 entrants = list(bye_teams) + list(prev_winners)
+                # Sort by seed then reorder into proper bracket positions
+                # so that #1 and #2 are on opposite sides of the bracket
                 entrants.sort(key=lambda t: t.conf_seed if t else 999)
+                from ..models.conference_tournament import bracket_seed_order
+                positions = bracket_seed_order(len(entrants))
+                entrants = [entrants[p] for p in positions]
             else:
                 entrants = list(prev_winners)
 
