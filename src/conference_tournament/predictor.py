@@ -177,6 +177,24 @@ class ConferenceTournamentPredictor:
             if auto_path.exists():
                 seed_overrides_path = str(auto_path)
                 logger.info("Auto-detected seed overrides: %s", seed_overrides_path)
+            else:
+                # Try to auto-scrape seeds from ESPN
+                try:
+                    from ..data.scrapers.conference_seeds import ConferenceSeedsScraper
+                    logger.info("No seed overrides found — scraping from ESPN...")
+                    scraper = ConferenceSeedsScraper(
+                        cache_dir=str(Path(data_dir) / ".." / "cache")
+                    )
+                    scraped = scraper.scrape_seeds(year)
+                    if scraped:
+                        scraper.save_to_file(scraped, str(auto_path))
+                        seed_overrides_path = str(auto_path)
+                        logger.info(
+                            "Auto-scraped seeds for %d conferences, saved to %s",
+                            len(scraped), auto_path,
+                        )
+                except Exception as e:
+                    logger.debug("Auto-scrape failed (will use AdjEM fallback): %s", e)
 
         seed_overrides: Dict[str, Dict[str, int]] = {}
         if seed_overrides_path:
