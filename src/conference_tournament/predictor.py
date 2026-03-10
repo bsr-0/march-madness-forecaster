@@ -412,25 +412,36 @@ class ConferenceTournamentPredictor:
         return results
 
     def _simulate_bracket(self, bracket: ConferenceTournamentBracket):
-        """Simulate all rounds of a bracket, advancing winners."""
-        bye_teams = bracket.teams[:bracket.num_byes]
+        """Simulate all rounds of a bracket, advancing winners.
 
-        # Round 1: predict first-round games
+        Uses the bracket's ``bracket_format`` to determine which new
+        seeds enter at each round (supporting multi-level byes such as
+        double byes for top seeds in the ACC).
+        """
+        fmt = bracket.bracket_format
+        seed_to_team = {t.conf_seed: t for t in bracket.teams}
+
+        # Round 1: predict first-round games (teams already populated)
         for game in bracket.games[0]:
             if game.team1 and game.team2:
                 prob = self.predict_matchup(game.team1, game.team2)
                 winner = game.team1 if prob >= 0.5 else game.team2
                 game.set_prediction(winner, prob if winner == game.team1 else 1 - prob)
 
-        # Round 2+: fill in teams from previous round winners + byes
+        # Round 2+: fill in teams from previous round winners + new entrants
         for round_idx in range(1, len(bracket.games)):
+            round_num = round_idx + 1  # 1-indexed
             round_games = bracket.games[round_idx]
             prev_round_games = bracket.games[round_idx - 1]
             prev_winners = [g.winner for g in prev_round_games]
 
-            if round_idx == 1 and bye_teams:
-                # Merge bye teams with first-round winners
-                entrants = list(bye_teams) + list(prev_winners)
+            # Check if new seeds enter at this round
+            new_seeds = fmt.round_entry.get(round_num, ())
+            new_teams = [seed_to_team[s] for s in new_seeds if s in seed_to_team]
+
+            if new_teams:
+                # Merge new entrants with previous-round winners
+                entrants = list(new_teams) + list(prev_winners)
                 # Sort by seed then reorder into proper bracket positions
                 # so that #1 and #2 are on opposite sides of the bracket
                 entrants.sort(key=lambda t: t.conf_seed if t else 999)

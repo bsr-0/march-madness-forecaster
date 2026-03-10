@@ -1,19 +1,25 @@
 """Conference tournament bracket model.
 
 Represents single-elimination conference tournament brackets with
-variable sizes (8-16 teams), byes for top seeds, and conference-specific
-seeding based on regular-season conference standings.
+variable sizes (4-18 teams), multi-level byes for top seeds, and
+conference-specific seeding based on regular-season conference standings.
 
 Unlike the NCAA tournament Bracket model (which enforces 64/68 teams
 across 4 regions), this supports the diverse formats used by the 32
-D1 conferences.
+D1 conferences.  Bracket formats are defined in
+``src.conference_tournament.bracket_formats`` and handle conferences
+that use more rounds than the mathematical minimum (e.g. the ACC with
+15 teams uses 5 rounds, not 4).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 import math
+
+if TYPE_CHECKING:
+    from ..conference_tournament.bracket_formats import BracketFormat
 
 
 @dataclass
@@ -95,6 +101,7 @@ _ROUND_NAMES = {
     3: {1: "Quarterfinals", 2: "Semifinals", 3: "Championship"},
     4: {1: "First Round", 2: "Quarterfinals", 3: "Semifinals", 4: "Championship"},
     5: {1: "Play-in", 2: "First Round", 3: "Quarterfinals", 4: "Semifinals", 5: "Championship"},
+    6: {1: "Play-in", 2: "First Round", 3: "Second Round", 4: "Quarterfinals", 5: "Semifinals", 6: "Championship"},
 }
 
 
@@ -133,8 +140,9 @@ def bracket_seed_order(n: int) -> List[int]:
 class ConferenceTournamentBracket:
     """Single-elimination conference tournament bracket.
 
-    Supports 4-16 team brackets with optional first-round byes for
-    top seeds (standard in most conference tournaments).
+    Supports 4-18 team brackets with multi-level byes for top seeds.
+    Uses ``BracketFormat`` definitions to determine the correct number
+    of rounds and bye structure for each conference.
 
     The bracket is built as a list of rounds, each containing games.
     Winners advance to fill subsequent rounds.
@@ -145,14 +153,17 @@ class ConferenceTournamentBracket:
         conference: str,
         teams: List[ConferenceTeam],
         num_byes: int = 0,
+        bracket_format: Optional["BracketFormat"] = None,
     ):
         """Build a conference tournament bracket.
 
         Args:
             conference: Conference abbreviation (e.g. "ACC").
             teams: Teams sorted by conference seed (ascending).
-            num_byes: Number of top seeds that receive first-round byes.
-                If 0, auto-calculated to fill bracket to a power of 2.
+            num_byes: Ignored when bracket_format is provided.  Kept for
+                backward compatibility.
+            bracket_format: Explicit bracket format.  If None, looked up
+                from the bracket_formats registry.
         """
         if len(teams) < 2:
             raise ValueError(f"Need at least 2 teams, got {len(teams)}")
@@ -161,15 +172,21 @@ class ConferenceTournamentBracket:
         self.teams = sorted(teams, key=lambda t: t.conf_seed)
         self.num_teams = len(teams)
 
-        # Calculate bracket structure
-        self.total_rounds = math.ceil(math.log2(self.num_teams))
-        full_bracket_size = 2 ** self.total_rounds
+        # Look up bracket format
+        from ..conference_tournament.bracket_formats import get_bracket_format
+        self.bracket_format = bracket_format or get_bracket_format(
+            conference, self.num_teams
+        )
 
-        if num_byes == 0:
-            # Auto-calculate: top seeds get byes to fill the bracket
-            self.num_byes = full_bracket_size - self.num_teams
-        else:
-            self.num_byes = num_byes
+        self.total_rounds = self.bracket_format.total_rounds
+        # num_byes = total teams NOT playing in round 1
+        r1_seeds = self.bracket_format.round_entry.get(1, ())
+        self.num_byes = self.num_teams - len(r1_seeds)
+
+        # Map seed -> team for quick lookup
+        self._seed_to_team: Dict[int, ConferenceTeam] = {
+            t.conf_seed: t for t in self.teams
+        }
 
         self.games: List[List[ConferenceTournamentGame]] = []
         self.champion: Optional[ConferenceTeam] = None
@@ -180,74 +197,91 @@ class ConferenceTournamentBracket:
         return names.get(round_num, f"Round {round_num}")
 
     def _build_bracket(self):
-        """Build the bracket structure with proper seeding and byes."""
+        """Build the bracket structure using the BracketFormat definition.
+
+        Round 1 teams are paired using first_round_matchups (if defined)
+        or top-vs-bottom within the R1 seed group.
+
+        Subsequent rounds merge new entrants (from round_entry) with
+        previous-round winners.  Games are created as empty slots to be
+        filled during simulation.
+        """
+        fmt = self.bracket_format
         game_id = 0
 
-        # First round: pair bottom seeds (those without byes)
-        first_round_teams = self.teams[self.num_byes:]
-        bye_teams = self.teams[:self.num_byes]
+        # ── Round 1 ──────────────────────────────────────────────────
+        r1_seeds = list(fmt.round_entry.get(1, ()))
+        r1_teams = [self._seed_to_team[s] for s in r1_seeds if s in self._seed_to_team]
 
         first_round_games = []
-        n_first_round = len(first_round_teams) // 2
-
-        if self.num_byes == 0 and len(first_round_teams) >= 4:
-            # No byes: apply bracket ordering so #1 and #2 are on
-            # opposite halves.  With byes, ordering is established
-            # when bye teams merge in Round 2.
-            positions = bracket_seed_order(len(first_round_teams))
-            ordered = [first_round_teams[p] for p in positions]
+        if fmt.first_round_matchups:
+            # Explicit matchups defined
+            for seed_a, seed_b in fmt.first_round_matchups:
+                team_a = self._seed_to_team.get(seed_a)
+                team_b = self._seed_to_team.get(seed_b)
+                if team_a and team_b:
+                    game_id += 1
+                    first_round_games.append(ConferenceTournamentGame(
+                        game_id=game_id,
+                        round=1,
+                        round_name=self._round_name(1),
+                        team1=team_a,
+                        team2=team_b,
+                    ))
         else:
-            # With byes: simple top-vs-bottom within the first-round group
-            ordered = []
-            for i in range(n_first_round):
-                ordered.append(first_round_teams[i])
-                ordered.append(first_round_teams[len(first_round_teams) - 1 - i])
+            # No explicit matchups: pair top-vs-bottom within R1 seeds
+            # or use full bracket ordering when there are no byes
+            r1_teams_sorted = sorted(r1_teams, key=lambda t: t.conf_seed)
+            n_games = len(r1_teams_sorted) // 2
 
-        for i in range(n_first_round):
-            game_id += 1
-            game = ConferenceTournamentGame(
-                game_id=game_id,
-                round=1,
-                round_name=self._round_name(1),
-                team1=ordered[2 * i],
-                team2=ordered[2 * i + 1],
+            has_byes = any(
+                rnd > 1 and seeds
+                for rnd, seeds in fmt.round_entry.items()
             )
-            first_round_games.append(game)
+
+            if not has_byes and len(r1_teams_sorted) >= 4:
+                # No byes: apply bracket ordering so #1 and #2 are on
+                # opposite halves
+                positions = bracket_seed_order(len(r1_teams_sorted))
+                ordered = [r1_teams_sorted[p] for p in positions]
+            else:
+                # With byes: top-vs-bottom within first-round group
+                ordered = []
+                for i in range(n_games):
+                    ordered.append(r1_teams_sorted[i])
+                    ordered.append(r1_teams_sorted[len(r1_teams_sorted) - 1 - i])
+
+            for i in range(n_games):
+                game_id += 1
+                first_round_games.append(ConferenceTournamentGame(
+                    game_id=game_id,
+                    round=1,
+                    round_name=self._round_name(1),
+                    team1=ordered[2 * i],
+                    team2=ordered[2 * i + 1],
+                ))
 
         self.games.append(first_round_games)
 
-        # Subsequent rounds: winners from previous round + bye teams
+        # ── Rounds 2+ ────────────────────────────────────────────────
+        # Track how many winners come from the previous round
+        prev_winner_count = len(first_round_games)
+
         for round_num in range(2, self.total_rounds + 1):
+            new_seeds = fmt.round_entry.get(round_num, ())
+            total_entrants = prev_winner_count + len(new_seeds)
+            n_games = total_entrants // 2
+
             round_games = []
-            if round_num == 2 and bye_teams:
-                # Second round pairs bye teams with first-round winners
-                # Bye teams are matched against the winner whose opponent
-                # was the lowest seed (standard bracket convention)
-                prev_winners_slots = len(first_round_games)
-                total_slots = prev_winners_slots + len(bye_teams)
-                n_games = total_slots // 2
-
-                for i in range(n_games):
-                    game_id += 1
-                    game = ConferenceTournamentGame(
-                        game_id=game_id,
-                        round=round_num,
-                        round_name=self._round_name(round_num),
-                    )
-                    round_games.append(game)
-            else:
-                prev_games = len(self.games[-1])
-                n_games = prev_games // 2
-                for i in range(n_games):
-                    game_id += 1
-                    game = ConferenceTournamentGame(
-                        game_id=game_id,
-                        round=round_num,
-                        round_name=self._round_name(round_num),
-                    )
-                    round_games.append(game)
-
+            for _ in range(n_games):
+                game_id += 1
+                round_games.append(ConferenceTournamentGame(
+                    game_id=game_id,
+                    round=round_num,
+                    round_name=self._round_name(round_num),
+                ))
             self.games.append(round_games)
+            prev_winner_count = n_games
 
     def get_all_games(self) -> List[ConferenceTournamentGame]:
         """Return all games flattened across rounds."""
