@@ -9,6 +9,7 @@ and outputs JSON results + interactive HTML dashboard.
 import json
 import logging
 import math
+import shutil
 import sys
 import os
 from collections import Counter, defaultdict
@@ -528,6 +529,68 @@ def _round_name(round_num, total_rounds):
 
 
 # ──────────────────────────────────────────────────────────────────────
+# 3b.  OUTPUT VALIDATION
+# ──────────────────────────────────────────────────────────────────────
+
+def _validate_output(json_path: Path) -> List[str]:
+    """Validate generated JSON output against bracket format definitions.
+
+    Reads back the output file and checks every conference for:
+    - Correct number of rounds per BracketFormat
+    - R1 matchup seeds match first_round_matchups definition
+    - Total games == num_teams - 1
+
+    Returns list of error strings (empty = all valid).
+    """
+    from src.conference_tournament.bracket_formats import get_bracket_format
+
+    with open(json_path) as f:
+        output = json.load(f)
+
+    errors = []
+    for conf_key, conf_data in output.items():
+        rounds = conf_data["rounds"]
+        num_teams = conf_data["num_teams"]
+        fmt = get_bracket_format(conf_key, num_teams)
+
+        # Check round count matches format
+        if len(rounds) != fmt.total_rounds:
+            errors.append(
+                f"{conf_key}: expected {fmt.total_rounds} rounds, got {len(rounds)}"
+            )
+
+        # Check R1 matchups match format definition
+        if fmt.first_round_matchups and rounds:
+            r1_games = rounds[0]["games"]
+            expected_matchups = set()
+            for a, b in fmt.first_round_matchups:
+                expected_matchups.add((min(a, b), max(a, b)))
+
+            actual_matchups = set()
+            for g in r1_games:
+                # Extract seeds from "(10) Stanford" format
+                s1 = int(g["team1"].split(")")[0].strip("( "))
+                s2 = int(g["team2"].split(")")[0].strip("( "))
+                actual_matchups.add((min(s1, s2), max(s1, s2)))
+
+            if actual_matchups != expected_matchups:
+                errors.append(
+                    f"{conf_key}: R1 matchups {sorted(actual_matchups)} "
+                    f"!= expected {sorted(expected_matchups)}"
+                )
+
+        # Check total games == num_teams - 1
+        total_games = sum(len(r["games"]) for r in rounds)
+        expected_games = num_teams - 1
+        if total_games != expected_games:
+            errors.append(
+                f"{conf_key}: {total_games} total games != expected {expected_games}"
+            )
+
+    return errors
+
+
+# ──────────────────────────────────────────────────────────────────────
 # 4.  GENERATE HTML DASHBOARD
 # ──────────────────────────────────────────────────────────────────────
 
@@ -943,6 +1006,25 @@ def main():
     with open(json_path, "w") as f:
         json.dump(json_output, f, indent=2)
     logger.info("  JSON: %s", json_path)
+
+    # Sync to docs/data for the web app (GitHub Pages)
+    docs_data_dir = PROJECT_ROOT / "docs" / "data"
+    docs_data_dir.mkdir(parents=True, exist_ok=True)
+    docs_json_path = docs_data_dir / "conference_predictions_2026.json"
+    shutil.copy2(json_path, docs_json_path)
+    logger.info("  Synced to %s", docs_json_path)
+
+    # Step 4b: Validate output against bracket format definitions
+    logger.info("\n[STEP 4b] Validating Output")
+    validation_errors = _validate_output(json_path)
+    if validation_errors:
+        for err in validation_errors:
+            logger.critical("  VALIDATION FAIL: %s", err)
+        raise RuntimeError(
+            f"Output validation failed with {len(validation_errors)} error(s). "
+            "See log above for details."
+        )
+    logger.info("  All %d conferences passed output validation", len(json_output))
 
     # Step 5: Generate dashboard
     dashboard_path = str(PROJECT_ROOT / "conference_tournament_predictions_2026.html")
