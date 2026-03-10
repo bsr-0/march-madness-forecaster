@@ -12,21 +12,19 @@
     "mc_favorite": {
       "team_id": "saint_louis",
       "name": "Saint Louis",
-      "prob": 0.3845
+      "prob": 0.4725
     },
     "championship_probabilities": {
-      "saint_louis": 0.3845,
-      "vcu": 0.162,
-      "george_washington": 0.1238,
-      "dayton": 0.0754,
-      "davidson": 0.0581,
-      "duquesne": 0.0489,
-      "george_mason": 0.0395,
-      "saint_joseph_s": 0.0367,
-      "rhode_island": 0.0238,
-      "richmond": 0.0212,
-      "st__bonaventure": 0.0121,
-      "fordham": 0.0098
+      "saint_louis": 0.4725,
+      "vcu": 0.2246,
+      "george_washington": 0.1182,
+      "dayton": 0.0771,
+      "davidson": 0.0284,
+      "duquesne": 0.0271,
+      "saint_joseph_s": 0.0161,
+      "george_mason": 0.016,
+      "richmond": 0.0066,
+      "rhode_island": 0.006
     },
     "rounds": [
       {
@@ -81,31 +79,31 @@
         "games": [
           {
             "team1": "(1) Saint Louis",
-            "team2": "(2) VCU",
+            "team2": "(8) George Mason",
             "winner": "Saint Louis",
-            "win_prob": 0.632,
+            "win_prob": 0.825,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Dayton",
+            "team2": "(5) Davidson",
+            "winner": "Dayton",
+            "win_prob": 0.578,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) VCU",
+            "team2": "(7) Saint Joseph's",
+            "winner": "VCU",
+            "win_prob": 0.733,
             "is_upset": false
           },
           {
             "team1": "(3) George Washington",
-            "team2": "(4) Dayton",
-            "winner": "George Washington",
-            "win_prob": 0.537,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Davidson",
             "team2": "(6) Duquesne",
-            "winner": "Davidson",
-            "win_prob": 0.532,
+            "winner": "George Washington",
+            "win_prob": 0.644,
             "is_upset": false
-          },
-          {
-            "team1": "(7) Saint Joseph's",
-            "team2": "(8) George Mason",
-            "winner": "George Mason",
-            "win_prob": 0.5,
-            "is_upset": true
           }
         ]
       },
@@ -114,16 +112,16 @@
         "games": [
           {
             "team1": "(1) Saint Louis",
-            "team2": "(3) George Washington",
+            "team2": "(4) Dayton",
             "winner": "Saint Louis",
-            "win_prob": 0.697,
+            "win_prob": 0.727,
             "is_upset": false
           },
           {
-            "team1": "(5) Davidson",
-            "team2": "(8) George Mason",
-            "winner": "Davidson",
-            "win_prob": 0.564,
+            "team1": "(2) VCU",
+            "team2": "(3) George Washington",
+            "winner": "VCU",
+            "win_prob": 0.572,
             "is_upset": false
           }
         ]
@@ -133,9 +131,9 @@
         "games": [
           {
             "team1": "(1) Saint Louis",
-            "team2": "(5) Davidson",
+            "team2": "(2) VCU",
             "winner": "Saint Louis",
-            "win_prob": 0.785,
+            "win_prob": 0.632,
             "is_upset": false
           }
         ]
@@ -155,23 +153,19 @@
     "mc_favorite": {
       "team_id": "duke",
       "name": "Duke",
-      "prob": 0.414
+      "prob": 0.5006
     },
     "championship_probabilities": {
-      "duke": 0.414,
-      "louisville": 0.1276,
-      "virginia": 0.1069,
-      "smu": 0.0678,
-      "n_c__state": 0.0645,
-      "north_carolina": 0.0537,
-      "miami_fl": 0.0494,
-      "clemson": 0.0472,
-      "virginia_tech": 0.0157,
-      "california": 0.0151,
-      "wake_forest": 0.0111,
-      "syracuse": 0.0103,
-      "florida_st": 0.0074,
-      "stanford": 0.0071
+      "duke": 0.5006,
+      "virginia": 0.1419,
+      "louisville": 0.1374,
+      "north_carolina": 0.0571,
+      "n_c__state": 0.0468,
+      "smu": 0.0431,
+      "clemson": 0.0268,
+      "miami_fl": 0.0224,
+      "virginia_tech": 0.0078,
+      "california": 0.0052
     },
     "rounds": [
       {
@@ -233,30 +227,30 @@
         "games": [
           {
             "team1": "(1) Duke",
-            "team2": "(2) Virginia",
+            "team2": "(8) Miami FL",
             "winner": "Duke",
-            "win_prob": 0.676,
+            "win_prob": 0.813,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) North Carolina",
+            "team2": "(5) N.C. State",
+            "winner": "North Carolina",
+            "win_prob": 0.514,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) Virginia",
+            "team2": "(7) Clemson",
+            "winner": "Virginia",
+            "win_prob": 0.664,
             "is_upset": false
           },
           {
             "team1": "(3) Louisville",
-            "team2": "(4) North Carolina",
-            "winner": "Louisville",
-            "win_prob": 0.606,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) N.C. State",
             "team2": "(6) SMU",
-            "winner": "N.C. State",
-            "win_prob": 0.509,
-            "is_upset": false
-          },
-          {
-            "team1": "(7) Clemson",
-            "team2": "(8) Miami FL",
-            "winner": "Clemson",
-            "win_prob": 0.513,
+            "winner": "Louisville",
+            "win_prob": 0.622,
             "is_upset": false
           }
         ]
@@ -266,17 +260,17 @@
         "games": [
           {
             "team1": "(1) Duke",
-            "team2": "(3) Louisville",
+            "team2": "(4) North Carolina",
             "winner": "Duke",
-            "win_prob": 0.671,
+            "win_prob": 0.759,
             "is_upset": false
           },
           {
-            "team1": "(5) N.C. State",
-            "team2": "(7) Clemson",
-            "winner": "N.C. State",
-            "win_prob": 0.553,
-            "is_upset": false
+            "team1": "(2) Virginia",
+            "team2": "(3) Louisville",
+            "winner": "Louisville",
+            "win_prob": 0.506,
+            "is_upset": true
           }
         ]
       },
@@ -285,9 +279,9 @@
         "games": [
           {
             "team1": "(1) Duke",
-            "team2": "(5) N.C. State",
+            "team2": "(3) Louisville",
             "winner": "Duke",
-            "win_prob": 0.757,
+            "win_prob": 0.671,
             "is_upset": false
           }
         ]
@@ -307,17 +301,17 @@
     "mc_favorite": {
       "team_id": "umbc",
       "name": "UMBC",
-      "prob": 0.3869
+      "prob": 0.4054
     },
     "championship_probabilities": {
-      "umbc": 0.3869,
-      "vermont": 0.2342,
-      "njit": 0.1208,
-      "albany": 0.0932,
-      "umass_lowell": 0.0909,
-      "new_hampshire": 0.043,
-      "maine": 0.0215,
-      "bryant": 0.0095
+      "umbc": 0.4054,
+      "vermont": 0.2469,
+      "njit": 0.1192,
+      "umass_lowell": 0.0763,
+      "albany": 0.0752,
+      "new_hampshire": 0.0377,
+      "maine": 0.0293,
+      "bryant": 0.01
     },
     "rounds": [
       {
@@ -329,6 +323,13 @@
             "winner": "UMBC",
             "win_prob": 0.861,
             "is_upset": false
+          },
+          {
+            "team1": "(4) Albany",
+            "team2": "(5) UMass Lowell",
+            "winner": "UMass Lowell",
+            "win_prob": 0.503,
+            "is_upset": true
           },
           {
             "team1": "(2) Vermont",
@@ -343,13 +344,6 @@
             "winner": "NJIT",
             "win_prob": 0.629,
             "is_upset": false
-          },
-          {
-            "team1": "(4) Albany",
-            "team2": "(5) UMass Lowell",
-            "winner": "UMass Lowell",
-            "win_prob": 0.503,
-            "is_upset": true
           }
         ]
       },
@@ -358,16 +352,16 @@
         "games": [
           {
             "team1": "(1) UMBC",
-            "team2": "(2) Vermont",
+            "team2": "(5) UMass Lowell",
             "winner": "UMBC",
-            "win_prob": 0.567,
+            "win_prob": 0.705,
             "is_upset": false
           },
           {
-            "team1": "(3) NJIT",
-            "team2": "(5) UMass Lowell",
-            "winner": "NJIT",
-            "win_prob": 0.533,
+            "team1": "(2) Vermont",
+            "team2": "(3) NJIT",
+            "winner": "Vermont",
+            "win_prob": 0.615,
             "is_upset": false
           }
         ]
@@ -377,9 +371,9 @@
         "games": [
           {
             "team1": "(1) UMBC",
-            "team2": "(3) NJIT",
+            "team2": "(2) Vermont",
             "winner": "UMBC",
-            "win_prob": 0.677,
+            "win_prob": 0.567,
             "is_upset": false
           }
         ]
@@ -399,21 +393,20 @@
     "mc_favorite": {
       "team_id": "austin_peay",
       "name": "Austin Peay",
-      "prob": 0.2595
+      "prob": 0.3318
     },
     "championship_probabilities": {
-      "austin_peay": 0.2595,
-      "central_arkansas": 0.1937,
-      "queens": 0.1436,
-      "lipscomb": 0.1185,
-      "florida_gulf_coast": 0.1095,
-      "eastern_kentucky": 0.0455,
-      "bellarmine": 0.0384,
-      "jacksonville": 0.0316,
-      "west_georgia": 0.022,
-      "stetson": 0.0184,
-      "north_florida": 0.0139,
-      "north_alabama": 0.0054
+      "austin_peay": 0.3318,
+      "central_arkansas": 0.2649,
+      "queens": 0.1432,
+      "lipscomb": 0.1397,
+      "florida_gulf_coast": 0.0451,
+      "eastern_kentucky": 0.0226,
+      "bellarmine": 0.0171,
+      "jacksonville": 0.013,
+      "west_georgia": 0.01,
+      "stetson": 0.0062,
+      "north_florida": 0.005
     },
     "rounds": [
       {
@@ -454,31 +447,31 @@
         "games": [
           {
             "team1": "(1) Austin Peay",
-            "team2": "(2) Central Arkansas",
+            "team2": "(9) Bellarmine",
             "winner": "Austin Peay",
-            "win_prob": 0.547,
+            "win_prob": 0.774,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Queens",
+            "team2": "(5) Florida Gulf Coast",
+            "winner": "Queens",
+            "win_prob": 0.594,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) Central Arkansas",
+            "team2": "(7) Jacksonville",
+            "winner": "Central Arkansas",
+            "win_prob": 0.756,
             "is_upset": false
           },
           {
             "team1": "(3) Lipscomb",
-            "team2": "(4) Queens",
-            "winner": "Queens",
-            "win_prob": 0.519,
-            "is_upset": true
-          },
-          {
-            "team1": "(5) Florida Gulf Coast",
             "team2": "(6) Eastern Kentucky",
-            "winner": "Florida Gulf Coast",
-            "win_prob": 0.574,
+            "winner": "Lipscomb",
+            "win_prob": 0.647,
             "is_upset": false
-          },
-          {
-            "team1": "(7) Jacksonville",
-            "team2": "(9) Bellarmine",
-            "winner": "Bellarmine",
-            "win_prob": 0.522,
-            "is_upset": true
           }
         ]
       },
@@ -493,10 +486,10 @@
             "is_upset": false
           },
           {
-            "team1": "(5) Florida Gulf Coast",
-            "team2": "(9) Bellarmine",
-            "winner": "Florida Gulf Coast",
-            "win_prob": 0.599,
+            "team1": "(2) Central Arkansas",
+            "team2": "(3) Lipscomb",
+            "winner": "Central Arkansas",
+            "win_prob": 0.583,
             "is_upset": false
           }
         ]
@@ -506,9 +499,9 @@
         "games": [
           {
             "team1": "(1) Austin Peay",
-            "team2": "(5) Florida Gulf Coast",
+            "team2": "(2) Central Arkansas",
             "winner": "Austin Peay",
-            "win_prob": 0.696,
+            "win_prob": 0.547,
             "is_upset": false
           }
         ]
@@ -526,21 +519,21 @@
       "t_rank": 68
     },
     "mc_favorite": {
-      "team_id": "tulsa",
-      "name": "Tulsa",
-      "prob": 0.2491
+      "team_id": "south_florida",
+      "name": "South Florida",
+      "prob": 0.306
     },
     "championship_probabilities": {
-      "tulsa": 0.2491,
-      "south_florida": 0.2328,
+      "south_florida": 0.306,
+      "tulsa": 0.3053,
       "wichita_st": 0.126,
-      "florida_atlantic": 0.1199,
-      "uab": 0.0842,
-      "memphis": 0.0759,
-      "temple": 0.0359,
-      "north_texas": 0.0305,
-      "tulane": 0.0241,
-      "charlotte": 0.0216
+      "florida_atlantic": 0.081,
+      "memphis": 0.074,
+      "uab": 0.0523,
+      "north_texas": 0.0173,
+      "temple": 0.0166,
+      "charlotte": 0.0111,
+      "tulane": 0.0104
     },
     "rounds": [
       {
@@ -567,31 +560,31 @@
         "games": [
           {
             "team1": "(1) South Florida",
-            "team2": "(2) Tulsa",
-            "winner": "Tulsa",
-            "win_prob": 0.516,
+            "team2": "(8) Temple",
+            "winner": "South Florida",
+            "win_prob": 0.748,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Memphis",
+            "team2": "(5) Florida Atlantic",
+            "winner": "Florida Atlantic",
+            "win_prob": 0.509,
             "is_upset": true
+          },
+          {
+            "team1": "(2) Tulsa",
+            "team2": "(7) North Texas",
+            "winner": "Tulsa",
+            "win_prob": 0.773,
+            "is_upset": false
           },
           {
             "team1": "(3) Wichita St.",
-            "team2": "(4) Memphis",
-            "winner": "Wichita St.",
-            "win_prob": 0.565,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Florida Atlantic",
             "team2": "(6) UAB",
-            "winner": "Florida Atlantic",
-            "win_prob": 0.547,
+            "winner": "Wichita St.",
+            "win_prob": 0.602,
             "is_upset": false
-          },
-          {
-            "team1": "(7) North Texas",
-            "team2": "(8) Temple",
-            "winner": "Temple",
-            "win_prob": 0.518,
-            "is_upset": true
           }
         ]
       },
@@ -599,17 +592,17 @@
         "round_name": "Semifinals",
         "games": [
           {
+            "team1": "(1) South Florida",
+            "team2": "(5) Florida Atlantic",
+            "winner": "South Florida",
+            "win_prob": 0.672,
+            "is_upset": false
+          },
+          {
             "team1": "(2) Tulsa",
             "team2": "(3) Wichita St.",
             "winner": "Tulsa",
             "win_prob": 0.635,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Florida Atlantic",
-            "team2": "(8) Temple",
-            "winner": "Florida Atlantic",
-            "win_prob": 0.592,
             "is_upset": false
           }
         ]
@@ -618,11 +611,11 @@
         "round_name": "Championship",
         "games": [
           {
-            "team1": "(2) Tulsa",
-            "team2": "(5) Florida Atlantic",
+            "team1": "(1) South Florida",
+            "team2": "(2) Tulsa",
             "winner": "Tulsa",
-            "win_prob": 0.686,
-            "is_upset": false
+            "win_prob": 0.516,
+            "is_upset": true
           }
         ]
       }
@@ -641,23 +634,19 @@
     "mc_favorite": {
       "team_id": "michigan",
       "name": "Michigan",
-      "prob": 0.2418
+      "prob": 0.3631
     },
     "championship_probabilities": {
-      "michigan": 0.2418,
-      "illinois": 0.1685,
-      "purdue": 0.1525,
-      "ohio_st": 0.077,
-      "michigan_st": 0.0698,
-      "ucla": 0.0483,
-      "nebraska": 0.042,
-      "iowa": 0.0412,
-      "wisconsin": 0.0398,
-      "indiana": 0.0273,
-      "washington": 0.0265,
-      "northwestern": 0.0216,
-      "usc": 0.0198,
-      "minnesota": 0.0177
+      "michigan": 0.3631,
+      "illinois": 0.2572,
+      "purdue": 0.1749,
+      "nebraska": 0.0613,
+      "michigan_st": 0.0513,
+      "wisconsin": 0.0245,
+      "iowa": 0.0202,
+      "ohio_st": 0.016,
+      "indiana": 0.015,
+      "ucla": 0.0081
     },
     "rounds": [
       {
@@ -684,58 +673,58 @@
         "games": [
           {
             "team1": "(1) Michigan",
-            "team2": "(2) Illinois",
+            "team2": "(16) Maryland",
             "winner": "Michigan",
-            "win_prob": 0.547,
+            "win_prob": 0.953,
             "is_upset": false
           },
           {
-            "team1": "(3) Purdue",
-            "team2": "(4) Nebraska",
-            "winner": "Purdue",
-            "win_prob": 0.634,
+            "team1": "(8) Indiana",
+            "team2": "(9) Ohio St.",
+            "winner": "Indiana",
+            "win_prob": 0.501,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Nebraska",
+            "team2": "(13) USC",
+            "winner": "Nebraska",
+            "win_prob": 0.782,
             "is_upset": false
           },
           {
             "team1": "(5) Michigan St.",
-            "team2": "(6) Wisconsin",
+            "team2": "(12) Minnesota",
             "winner": "Michigan St.",
-            "win_prob": 0.562,
+            "win_prob": 0.734,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) Illinois",
+            "team2": "(15) Oregon",
+            "winner": "Illinois",
+            "win_prob": 0.925,
             "is_upset": false
           },
           {
             "team1": "(7) Iowa",
-            "team2": "(8) Indiana",
-            "winner": "Iowa",
-            "win_prob": 0.531,
-            "is_upset": false
-          },
-          {
-            "team1": "(9) Ohio St.",
             "team2": "(10) UCLA",
-            "winner": "Ohio St.",
-            "win_prob": 0.546,
+            "winner": "Iowa",
+            "win_prob": 0.577,
             "is_upset": false
           },
           {
-            "team1": "(11) Washington",
-            "team2": "(12) Minnesota",
-            "winner": "Washington",
-            "win_prob": 0.522,
-            "is_upset": false
-          },
-          {
-            "team1": "(13) USC",
+            "team1": "(3) Purdue",
             "team2": "(14) Northwestern",
-            "winner": "USC",
-            "win_prob": 0.505,
+            "winner": "Purdue",
+            "win_prob": 0.864,
             "is_upset": false
           },
           {
-            "team1": "(15) Oregon",
-            "team2": "(16) Maryland",
-            "winner": "Oregon",
-            "win_prob": 0.573,
+            "team1": "(6) Wisconsin",
+            "team2": "(11) Washington",
+            "winner": "Wisconsin",
+            "win_prob": 0.663,
             "is_upset": false
           }
         ]
@@ -745,30 +734,30 @@
         "games": [
           {
             "team1": "(1) Michigan",
-            "team2": "(3) Purdue",
+            "team2": "(8) Indiana",
             "winner": "Michigan",
-            "win_prob": 0.602,
+            "win_prob": 0.807,
             "is_upset": false
           },
           {
-            "team1": "(5) Michigan St.",
+            "team1": "(4) Nebraska",
+            "team2": "(5) Michigan St.",
+            "winner": "Nebraska",
+            "win_prob": 0.516,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) Illinois",
             "team2": "(7) Iowa",
-            "winner": "Michigan St.",
-            "win_prob": 0.57,
+            "winner": "Illinois",
+            "win_prob": 0.754,
             "is_upset": false
           },
           {
-            "team1": "(9) Ohio St.",
-            "team2": "(11) Washington",
-            "winner": "Ohio St.",
-            "win_prob": 0.626,
-            "is_upset": false
-          },
-          {
-            "team1": "(13) USC",
-            "team2": "(15) Oregon",
-            "winner": "USC",
-            "win_prob": 0.614,
+            "team1": "(3) Purdue",
+            "team2": "(6) Wisconsin",
+            "winner": "Purdue",
+            "win_prob": 0.703,
             "is_upset": false
           }
         ]
@@ -778,16 +767,16 @@
         "games": [
           {
             "team1": "(1) Michigan",
-            "team2": "(5) Michigan St.",
+            "team2": "(4) Nebraska",
             "winner": "Michigan",
-            "win_prob": 0.736,
+            "win_prob": 0.724,
             "is_upset": false
           },
           {
-            "team1": "(9) Ohio St.",
-            "team2": "(13) USC",
-            "winner": "Ohio St.",
-            "win_prob": 0.691,
+            "team1": "(2) Illinois",
+            "team2": "(3) Purdue",
+            "winner": "Illinois",
+            "win_prob": 0.556,
             "is_upset": false
           }
         ]
@@ -797,9 +786,9 @@
         "games": [
           {
             "team1": "(1) Michigan",
-            "team2": "(9) Ohio St.",
+            "team2": "(2) Illinois",
             "winner": "Michigan",
-            "win_prob": 0.808,
+            "win_prob": 0.547,
             "is_upset": false
           }
         ]
@@ -819,20 +808,18 @@
     "mc_favorite": {
       "team_id": "arizona",
       "name": "Arizona",
-      "prob": 0.2528
+      "prob": 0.3078
     },
     "championship_probabilities": {
-      "arizona": 0.2528,
-      "houston": 0.1957,
-      "iowa_st": 0.1476,
-      "kansas": 0.141,
-      "texas_tech": 0.1151,
-      "byu": 0.0585,
-      "ucf": 0.0258,
-      "cincinnati": 0.0241,
-      "baylor": 0.0182,
-      "tcu": 0.0101,
-      "arizona_st": 0.0051
+      "arizona": 0.3078,
+      "houston": 0.2539,
+      "iowa_st": 0.1662,
+      "texas_tech": 0.1143,
+      "kansas": 0.0783,
+      "byu": 0.0342,
+      "cincinnati": 0.0126,
+      "ucf": 0.0123,
+      "baylor": 0.0067
     },
     "rounds": [
       {
@@ -846,17 +833,10 @@
             "is_upset": false
           },
           {
-            "team1": "(2) Houston",
-            "team2": "(15) Utah",
-            "winner": "Houston",
-            "win_prob": 0.902,
-            "is_upset": false
-          },
-          {
-            "team1": "(3) Iowa St.",
-            "team2": "(14) Colorado",
-            "winner": "Iowa St.",
-            "win_prob": 0.859,
+            "team1": "(8) UCF",
+            "team2": "(9) Baylor",
+            "winner": "UCF",
+            "win_prob": 0.538,
             "is_upset": false
           },
           {
@@ -874,10 +854,10 @@
             "is_upset": false
           },
           {
-            "team1": "(6) BYU",
-            "team2": "(11) Arizona St.",
-            "winner": "BYU",
-            "win_prob": 0.695,
+            "team1": "(2) Houston",
+            "team2": "(15) Utah",
+            "winner": "Houston",
+            "win_prob": 0.902,
             "is_upset": false
           },
           {
@@ -888,10 +868,17 @@
             "is_upset": false
           },
           {
-            "team1": "(8) UCF",
-            "team2": "(9) Baylor",
-            "winner": "UCF",
-            "win_prob": 0.538,
+            "team1": "(3) Iowa St.",
+            "team2": "(14) Colorado",
+            "winner": "Iowa St.",
+            "win_prob": 0.859,
+            "is_upset": false
+          },
+          {
+            "team1": "(6) BYU",
+            "team2": "(11) Arizona St.",
+            "winner": "BYU",
+            "win_prob": 0.695,
             "is_upset": false
           }
         ]
@@ -901,31 +888,31 @@
         "games": [
           {
             "team1": "(1) Arizona",
-            "team2": "(2) Houston",
+            "team2": "(8) UCF",
             "winner": "Arizona",
-            "win_prob": 0.539,
+            "win_prob": 0.817,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Texas Tech",
+            "team2": "(5) Kansas",
+            "winner": "Texas Tech",
+            "win_prob": 0.551,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) Houston",
+            "team2": "(7) Cincinnati",
+            "winner": "Houston",
+            "win_prob": 0.793,
             "is_upset": false
           },
           {
             "team1": "(3) Iowa St.",
-            "team2": "(4) Texas Tech",
-            "winner": "Iowa St.",
-            "win_prob": 0.539,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Kansas",
             "team2": "(6) BYU",
-            "winner": "Kansas",
-            "win_prob": 0.6,
+            "winner": "Iowa St.",
+            "win_prob": 0.682,
             "is_upset": false
-          },
-          {
-            "team1": "(7) Cincinnati",
-            "team2": "(8) UCF",
-            "winner": "UCF",
-            "win_prob": 0.502,
-            "is_upset": true
           }
         ]
       },
@@ -934,16 +921,16 @@
         "games": [
           {
             "team1": "(1) Arizona",
-            "team2": "(3) Iowa St.",
+            "team2": "(4) Texas Tech",
             "winner": "Arizona",
-            "win_prob": 0.585,
+            "win_prob": 0.622,
             "is_upset": false
           },
           {
-            "team1": "(5) Kansas",
-            "team2": "(8) UCF",
-            "winner": "Kansas",
-            "win_prob": 0.689,
+            "team1": "(2) Houston",
+            "team2": "(3) Iowa St.",
+            "winner": "Houston",
+            "win_prob": 0.546,
             "is_upset": false
           }
         ]
@@ -953,9 +940,9 @@
         "games": [
           {
             "team1": "(1) Arizona",
-            "team2": "(5) Kansas",
+            "team2": "(2) Houston",
             "winner": "Arizona",
-            "win_prob": 0.668,
+            "win_prob": 0.539,
             "is_upset": false
           }
         ]
@@ -975,20 +962,19 @@
     "mc_favorite": {
       "team_id": "connecticut",
       "name": "Connecticut",
-      "prob": 0.3308
+      "prob": 0.4382
     },
     "championship_probabilities": {
-      "connecticut": 0.3308,
-      "st__john_s": 0.2088,
-      "villanova": 0.1676,
-      "butler": 0.0945,
-      "providence": 0.0513,
-      "seton_hall": 0.0353,
-      "creighton": 0.0323,
-      "georgetown": 0.0257,
-      "marquette": 0.0214,
-      "xavier": 0.0204,
-      "depaul": 0.0119
+      "connecticut": 0.4382,
+      "st__john_s": 0.26,
+      "villanova": 0.1509,
+      "providence": 0.0487,
+      "butler": 0.0438,
+      "seton_hall": 0.0141,
+      "creighton": 0.013,
+      "georgetown": 0.0099,
+      "xavier": 0.0086,
+      "marquette": 0.0085
     },
     "rounds": [
       {
@@ -1022,30 +1008,30 @@
         "games": [
           {
             "team1": "(1) Connecticut",
-            "team2": "(2) St. John's",
+            "team2": "(9) Georgetown",
             "winner": "Connecticut",
-            "win_prob": 0.58,
+            "win_prob": 0.841,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Providence",
+            "team2": "(5) Butler",
+            "winner": "Providence",
+            "win_prob": 0.529,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) St. John's",
+            "team2": "(7) Creighton",
+            "winner": "St. John's",
+            "win_prob": 0.771,
             "is_upset": false
           },
           {
             "team1": "(3) Villanova",
-            "team2": "(4) Providence",
-            "winner": "Villanova",
-            "win_prob": 0.638,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Butler",
             "team2": "(6) Seton Hall",
-            "winner": "Butler",
-            "win_prob": 0.551,
-            "is_upset": false
-          },
-          {
-            "team1": "(7) Creighton",
-            "team2": "(9) Georgetown",
-            "winner": "Creighton",
-            "win_prob": 0.522,
+            "winner": "Villanova",
+            "win_prob": 0.708,
             "is_upset": false
           }
         ]
@@ -1055,16 +1041,16 @@
         "games": [
           {
             "team1": "(1) Connecticut",
-            "team2": "(3) Villanova",
+            "team2": "(4) Providence",
             "winner": "Connecticut",
-            "win_prob": 0.66,
+            "win_prob": 0.774,
             "is_upset": false
           },
           {
-            "team1": "(5) Butler",
-            "team2": "(7) Creighton",
-            "winner": "Butler",
-            "win_prob": 0.559,
+            "team1": "(2) St. John's",
+            "team2": "(3) Villanova",
+            "winner": "St. John's",
+            "win_prob": 0.579,
             "is_upset": false
           }
         ]
@@ -1074,9 +1060,9 @@
         "games": [
           {
             "team1": "(1) Connecticut",
-            "team2": "(5) Butler",
+            "team2": "(2) St. John's",
             "winner": "Connecticut",
-            "win_prob": 0.793,
+            "win_prob": 0.58,
             "is_upset": false
           }
         ]
@@ -1096,19 +1082,19 @@
     "mc_favorite": {
       "team_id": "northern_colorado",
       "name": "Northern Colorado",
-      "prob": 0.1744
+      "prob": 0.2248
     },
     "championship_probabilities": {
-      "northern_colorado": 0.1744,
-      "montana_st": 0.1536,
-      "montana": 0.1459,
-      "portland_st": 0.1313,
-      "idaho": 0.1298,
-      "eastern_washington": 0.1265,
-      "weber_st": 0.0819,
-      "idaho_st": 0.028,
-      "sacramento_st": 0.0183,
-      "northern_arizona": 0.0103
+      "northern_colorado": 0.2248,
+      "montana_st": 0.1805,
+      "portland_st": 0.1439,
+      "eastern_washington": 0.1339,
+      "montana": 0.1189,
+      "idaho": 0.104,
+      "weber_st": 0.0584,
+      "idaho_st": 0.0189,
+      "sacramento_st": 0.0107,
+      "northern_arizona": 0.006
     },
     "rounds": [
       {
@@ -1135,30 +1121,30 @@
         "games": [
           {
             "team1": "(1) Northern Colorado",
-            "team2": "(2) Montana St.",
+            "team2": "(8) Idaho St.",
             "winner": "Northern Colorado",
-            "win_prob": 0.512,
+            "win_prob": 0.702,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Eastern Washington",
+            "team2": "(5) Montana",
+            "winner": "Eastern Washington",
+            "win_prob": 0.513,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) Montana St.",
+            "team2": "(7) Weber St.",
+            "winner": "Montana St.",
+            "win_prob": 0.593,
             "is_upset": false
           },
           {
             "team1": "(3) Portland St.",
-            "team2": "(4) Eastern Washington",
-            "winner": "Portland St.",
-            "win_prob": 0.509,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Montana",
             "team2": "(6) Idaho",
-            "winner": "Montana",
-            "win_prob": 0.52,
-            "is_upset": false
-          },
-          {
-            "team1": "(7) Weber St.",
-            "team2": "(8) Idaho St.",
-            "winner": "Weber St.",
-            "win_prob": 0.606,
+            "winner": "Portland St.",
+            "win_prob": 0.542,
             "is_upset": false
           }
         ]
@@ -1168,16 +1154,16 @@
         "games": [
           {
             "team1": "(1) Northern Colorado",
-            "team2": "(3) Portland St.",
+            "team2": "(4) Eastern Washington",
             "winner": "Northern Colorado",
-            "win_prob": 0.535,
+            "win_prob": 0.544,
             "is_upset": false
           },
           {
-            "team1": "(5) Montana",
-            "team2": "(7) Weber St.",
-            "winner": "Montana",
-            "win_prob": 0.549,
+            "team1": "(2) Montana St.",
+            "team2": "(3) Portland St.",
+            "winner": "Montana St.",
+            "win_prob": 0.522,
             "is_upset": false
           }
         ]
@@ -1187,9 +1173,9 @@
         "games": [
           {
             "team1": "(1) Northern Colorado",
-            "team2": "(5) Montana",
+            "team2": "(2) Montana St.",
             "winner": "Northern Colorado",
-            "win_prob": 0.556,
+            "win_prob": 0.512,
             "is_upset": false
           }
         ]
@@ -1209,17 +1195,17 @@
     "mc_favorite": {
       "team_id": "high_point",
       "name": "High Point",
-      "prob": 0.4342
+      "prob": 0.5169
     },
     "championship_probabilities": {
-      "high_point": 0.4342,
-      "winthrop": 0.1458,
-      "radford": 0.0816,
-      "charleston_southern": 0.0809,
-      "unc_asheville": 0.0772,
-      "longwood": 0.0772,
-      "presbyterian": 0.0682,
-      "usc_upstate": 0.0346
+      "high_point": 0.5169,
+      "winthrop": 0.2161,
+      "radford": 0.0763,
+      "unc_asheville": 0.0657,
+      "charleston_southern": 0.0439,
+      "longwood": 0.0428,
+      "presbyterian": 0.0261,
+      "usc_upstate": 0.012
     },
     "rounds": [
       {
@@ -1239,30 +1225,30 @@
         "games": [
           {
             "team1": "(1) High Point",
-            "team2": "(2) Winthrop",
+            "team2": "(8) USC Upstate",
             "winner": "High Point",
-            "win_prob": 0.67,
+            "win_prob": 0.867,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) UNC Asheville",
+            "team2": "(5) Charleston Southern",
+            "winner": "UNC Asheville",
+            "win_prob": 0.546,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) Winthrop",
+            "team2": "(7) Presbyterian",
+            "winner": "Winthrop",
+            "win_prob": 0.732,
             "is_upset": false
           },
           {
             "team1": "(3) Radford",
-            "team2": "(4) UNC Asheville",
-            "winner": "Radford",
-            "win_prob": 0.51,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Charleston Southern",
             "team2": "(6) Longwood",
-            "winner": "Charleston Southern",
-            "win_prob": 0.508,
-            "is_upset": false
-          },
-          {
-            "team1": "(7) Presbyterian",
-            "team2": "(8) USC Upstate",
-            "winner": "Presbyterian",
-            "win_prob": 0.539,
+            "winner": "Radford",
+            "win_prob": 0.563,
             "is_upset": false
           }
         ]
@@ -1272,16 +1258,16 @@
         "games": [
           {
             "team1": "(1) High Point",
-            "team2": "(3) Radford",
+            "team2": "(4) UNC Asheville",
             "winner": "High Point",
-            "win_prob": 0.784,
+            "win_prob": 0.79,
             "is_upset": false
           },
           {
-            "team1": "(5) Charleston Southern",
-            "team2": "(7) Presbyterian",
-            "winner": "Charleston Southern",
-            "win_prob": 0.551,
+            "team1": "(2) Winthrop",
+            "team2": "(3) Radford",
+            "winner": "Winthrop",
+            "win_prob": 0.641,
             "is_upset": false
           }
         ]
@@ -1291,9 +1277,9 @@
         "games": [
           {
             "team1": "(1) High Point",
-            "team2": "(5) Charleston Southern",
+            "team2": "(2) Winthrop",
             "winner": "High Point",
-            "win_prob": 0.819,
+            "win_prob": 0.67,
             "is_upset": false
           }
         ]
@@ -1313,17 +1299,17 @@
     "mc_favorite": {
       "team_id": "hawaii",
       "name": "Hawaii",
-      "prob": 0.2345
+      "prob": 0.2263
     },
     "championship_probabilities": {
-      "hawaii": 0.2345,
-      "uc_irvine": 0.1833,
-      "uc_santa_barbara": 0.177,
-      "uc_san_diego": 0.1385,
-      "cal_st__northridge": 0.1033,
-      "uc_davis": 0.0836,
-      "cal_st__fullerton": 0.0439,
-      "cal_poly": 0.0359
+      "hawaii": 0.2263,
+      "uc_santa_barbara": 0.1923,
+      "uc_irvine": 0.1739,
+      "uc_san_diego": 0.1354,
+      "cal_st__northridge": 0.106,
+      "uc_davis": 0.0812,
+      "cal_st__fullerton": 0.051,
+      "cal_poly": 0.0339
     },
     "rounds": [
       {
@@ -1334,6 +1320,13 @@
             "team2": "(8) Cal Poly",
             "winner": "Hawaii",
             "win_prob": 0.717,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) UC San Diego",
+            "team2": "(5) Cal St. Northridge",
+            "winner": "UC San Diego",
+            "win_prob": 0.537,
             "is_upset": false
           },
           {
@@ -1349,13 +1342,6 @@
             "winner": "UC Santa Barbara",
             "win_prob": 0.605,
             "is_upset": false
-          },
-          {
-            "team1": "(4) UC San Diego",
-            "team2": "(5) Cal St. Northridge",
-            "winner": "UC San Diego",
-            "win_prob": 0.537,
-            "is_upset": false
           }
         ]
       },
@@ -1364,17 +1350,17 @@
         "games": [
           {
             "team1": "(1) Hawaii",
-            "team2": "(2) UC Irvine",
+            "team2": "(4) UC San Diego",
             "winner": "Hawaii",
-            "win_prob": 0.53,
+            "win_prob": 0.552,
             "is_upset": false
           },
           {
-            "team1": "(3) UC Santa Barbara",
-            "team2": "(4) UC San Diego",
+            "team1": "(2) UC Irvine",
+            "team2": "(3) UC Santa Barbara",
             "winner": "UC Santa Barbara",
-            "win_prob": 0.548,
-            "is_upset": false
+            "win_prob": 0.527,
+            "is_upset": true
           }
         ]
       },
@@ -1405,22 +1391,20 @@
     "mc_favorite": {
       "team_id": "hofstra",
       "name": "Hofstra",
-      "prob": 0.281
+      "prob": 0.3629
     },
     "championship_probabilities": {
-      "hofstra": 0.281,
-      "william___mary": 0.1696,
-      "unc_wilmington": 0.1627,
-      "charleston": 0.0658,
-      "campbell": 0.0619,
-      "drexel": 0.0556,
-      "monmouth": 0.0514,
-      "towson": 0.051,
-      "stony_brook": 0.0439,
-      "elon": 0.0292,
-      "north_carolina_a_t": 0.0124,
-      "hampton": 0.008,
-      "northeastern": 0.0075
+      "hofstra": 0.3629,
+      "unc_wilmington": 0.2093,
+      "william___mary": 0.1752,
+      "charleston": 0.0692,
+      "towson": 0.0385,
+      "drexel": 0.0385,
+      "campbell": 0.0326,
+      "monmouth": 0.027,
+      "stony_brook": 0.0207,
+      "elon": 0.0151,
+      "north_carolina_a_t": 0.0064
     },
     "rounds": [
       {
@@ -1468,30 +1452,30 @@
         "games": [
           {
             "team1": "(1) Hofstra",
-            "team2": "(2) UNC Wilmington",
+            "team2": "(8) Monmouth",
             "winner": "Hofstra",
-            "win_prob": 0.575,
+            "win_prob": 0.731,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Charleston",
+            "team2": "(5) Towson",
+            "winner": "Charleston",
+            "win_prob": 0.564,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) UNC Wilmington",
+            "team2": "(7) Campbell",
+            "winner": "UNC Wilmington",
+            "win_prob": 0.646,
             "is_upset": false
           },
           {
             "team1": "(3) William & Mary",
-            "team2": "(4) Charleston",
-            "winner": "William & Mary",
-            "win_prob": 0.587,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Towson",
             "team2": "(6) Drexel",
-            "winner": "Drexel",
-            "win_prob": 0.51,
-            "is_upset": true
-          },
-          {
-            "team1": "(7) Campbell",
-            "team2": "(8) Monmouth",
-            "winner": "Campbell",
-            "win_prob": 0.524,
+            "winner": "William & Mary",
+            "win_prob": 0.639,
             "is_upset": false
           }
         ]
@@ -1501,17 +1485,17 @@
         "games": [
           {
             "team1": "(1) Hofstra",
-            "team2": "(3) William & Mary",
+            "team2": "(4) Charleston",
             "winner": "Hofstra",
-            "win_prob": 0.596,
+            "win_prob": 0.677,
             "is_upset": false
           },
           {
-            "team1": "(6) Drexel",
-            "team2": "(7) Campbell",
-            "winner": "Campbell",
-            "win_prob": 0.513,
-            "is_upset": true
+            "team1": "(2) UNC Wilmington",
+            "team2": "(3) William & Mary",
+            "winner": "UNC Wilmington",
+            "win_prob": 0.522,
+            "is_upset": false
           }
         ]
       },
@@ -1520,9 +1504,9 @@
         "games": [
           {
             "team1": "(1) Hofstra",
-            "team2": "(7) Campbell",
+            "team2": "(2) UNC Wilmington",
             "winner": "Hofstra",
-            "win_prob": 0.712,
+            "win_prob": 0.575,
             "is_upset": false
           }
         ]
@@ -1542,19 +1526,19 @@
     "mc_favorite": {
       "team_id": "liberty",
       "name": "Liberty",
-      "prob": 0.2749
+      "prob": 0.3411
     },
     "championship_probabilities": {
-      "liberty": 0.2749,
-      "sam_houston_st": 0.1897,
-      "kennesaw_st": 0.1059,
-      "middle_tennessee": 0.1009,
-      "fiu": 0.0999,
-      "new_mexico_st": 0.0791,
-      "western_kentucky": 0.0594,
-      "missouri_st": 0.0428,
-      "jacksonville_st": 0.0351,
-      "louisiana_tech": 0.0123
+      "liberty": 0.3411,
+      "sam_houston_st": 0.2283,
+      "middle_tennessee": 0.1045,
+      "new_mexico_st": 0.0815,
+      "kennesaw_st": 0.0765,
+      "fiu": 0.075,
+      "western_kentucky": 0.0412,
+      "missouri_st": 0.0247,
+      "jacksonville_st": 0.0203,
+      "louisiana_tech": 0.0069
     },
     "rounds": [
       {
@@ -1581,30 +1565,30 @@
         "games": [
           {
             "team1": "(1) Liberty",
-            "team2": "(2) Sam Houston St.",
+            "team2": "(8) Missouri St.",
             "winner": "Liberty",
-            "win_prob": 0.55,
+            "win_prob": 0.728,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) New Mexico St.",
+            "team2": "(5) FIU",
+            "winner": "New Mexico St.",
+            "win_prob": 0.505,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) Sam Houston St.",
+            "team2": "(7) Western Kentucky",
+            "winner": "Sam Houston St.",
+            "win_prob": 0.666,
             "is_upset": false
           },
           {
             "team1": "(3) Middle Tennessee",
-            "team2": "(4) New Mexico St.",
-            "winner": "Middle Tennessee",
-            "win_prob": 0.531,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) FIU",
             "team2": "(6) Kennesaw St.",
-            "winner": "Kennesaw St.",
-            "win_prob": 0.502,
-            "is_upset": true
-          },
-          {
-            "team1": "(7) Western Kentucky",
-            "team2": "(8) Missouri St.",
-            "winner": "Western Kentucky",
-            "win_prob": 0.524,
+            "winner": "Middle Tennessee",
+            "win_prob": 0.535,
             "is_upset": false
           }
         ]
@@ -1614,16 +1598,16 @@
         "games": [
           {
             "team1": "(1) Liberty",
-            "team2": "(3) Middle Tennessee",
+            "team2": "(4) New Mexico St.",
             "winner": "Liberty",
-            "win_prob": 0.664,
+            "win_prob": 0.692,
             "is_upset": false
           },
           {
-            "team1": "(6) Kennesaw St.",
-            "team2": "(7) Western Kentucky",
-            "winner": "Kennesaw St.",
-            "win_prob": 0.516,
+            "team1": "(2) Sam Houston St.",
+            "team2": "(3) Middle Tennessee",
+            "winner": "Sam Houston St.",
+            "win_prob": 0.619,
             "is_upset": false
           }
         ]
@@ -1633,9 +1617,9 @@
         "games": [
           {
             "team1": "(1) Liberty",
-            "team2": "(6) Kennesaw St.",
+            "team2": "(2) Sam Houston St.",
             "winner": "Liberty",
-            "win_prob": 0.695,
+            "win_prob": 0.55,
             "is_upset": false
           }
         ]
@@ -1655,20 +1639,19 @@
     "mc_favorite": {
       "team_id": "wright_st",
       "name": "Wright St.",
-      "prob": 0.2377
+      "prob": 0.2982
     },
     "championship_probabilities": {
-      "wright_st": 0.2377,
-      "green_bay": 0.1749,
-      "robert_morris": 0.1364,
-      "oakland": 0.127,
-      "youngstown_st": 0.1164,
-      "northern_kentucky": 0.0773,
-      "detroit_mercy": 0.0604,
-      "purdue_fort_wayne": 0.0277,
-      "milwaukee": 0.0193,
-      "iu_indy": 0.0123,
-      "cleveland_st": 0.0106
+      "wright_st": 0.2982,
+      "robert_morris": 0.1763,
+      "youngstown_st": 0.1404,
+      "oakland": 0.1235,
+      "green_bay": 0.1149,
+      "northern_kentucky": 0.0591,
+      "detroit_mercy": 0.0423,
+      "purdue_fort_wayne": 0.0208,
+      "milwaukee": 0.0116,
+      "iu_indy": 0.008
     },
     "rounds": [
       {
@@ -1702,30 +1685,30 @@
         "games": [
           {
             "team1": "(1) Wright St.",
-            "team2": "(2) Robert Morris",
+            "team2": "(8) Purdue Fort Wayne",
             "winner": "Wright St.",
-            "win_prob": 0.583,
+            "win_prob": 0.752,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Oakland",
+            "team2": "(5) Green Bay",
+            "winner": "Oakland",
+            "win_prob": 0.512,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) Robert Morris",
+            "team2": "(7) Detroit Mercy",
+            "winner": "Robert Morris",
+            "win_prob": 0.612,
             "is_upset": false
           },
           {
             "team1": "(3) Youngstown St.",
-            "team2": "(4) Oakland",
-            "winner": "Oakland",
-            "win_prob": 0.508,
-            "is_upset": true
-          },
-          {
-            "team1": "(5) Green Bay",
             "team2": "(6) Northern Kentucky",
-            "winner": "Green Bay",
-            "win_prob": 0.552,
-            "is_upset": false
-          },
-          {
-            "team1": "(7) Detroit Mercy",
-            "team2": "(8) Purdue Fort Wayne",
-            "winner": "Detroit Mercy",
-            "win_prob": 0.578,
+            "winner": "Youngstown St.",
+            "win_prob": 0.556,
             "is_upset": false
           }
         ]
@@ -1741,10 +1724,10 @@
             "is_upset": false
           },
           {
-            "team1": "(5) Green Bay",
-            "team2": "(7) Detroit Mercy",
-            "winner": "Green Bay",
-            "win_prob": 0.587,
+            "team1": "(2) Robert Morris",
+            "team2": "(3) Youngstown St.",
+            "winner": "Robert Morris",
+            "win_prob": 0.522,
             "is_upset": false
           }
         ]
@@ -1754,9 +1737,9 @@
         "games": [
           {
             "team1": "(1) Wright St.",
-            "team2": "(5) Green Bay",
+            "team2": "(2) Robert Morris",
             "winner": "Wright St.",
-            "win_prob": 0.609,
+            "win_prob": 0.583,
             "is_upset": false
           }
         ]
@@ -1831,19 +1814,18 @@
     "mc_favorite": {
       "team_id": "merrimack",
       "name": "Merrimack",
-      "prob": 0.2411
+      "prob": 0.3037
     },
     "championship_probabilities": {
-      "merrimack": 0.2411,
-      "siena": 0.1533,
-      "marist": 0.1389,
-      "quinnipiac": 0.121,
-      "saint_peter_s": 0.1106,
-      "iona": 0.1076,
-      "fairfield": 0.0583,
-      "mount_st__mary_s": 0.034,
-      "sacred_heart": 0.0276,
-      "manhattan": 0.0076
+      "merrimack": 0.3037,
+      "siena": 0.1732,
+      "marist": 0.1722,
+      "quinnipiac": 0.1306,
+      "saint_peter_s": 0.0731,
+      "iona": 0.069,
+      "fairfield": 0.0419,
+      "mount_st__mary_s": 0.0187,
+      "sacred_heart": 0.0138
     },
     "rounds": [
       {
@@ -1870,30 +1852,30 @@
         "games": [
           {
             "team1": "(1) Merrimack",
-            "team2": "(2) Marist",
+            "team2": "(8) Mount St. Mary's",
             "winner": "Merrimack",
-            "win_prob": 0.575,
+            "win_prob": 0.729,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Quinnipiac",
+            "team2": "(5) Saint Peter's",
+            "winner": "Quinnipiac",
+            "win_prob": 0.569,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) Marist",
+            "team2": "(7) Fairfield",
+            "winner": "Marist",
+            "win_prob": 0.635,
             "is_upset": false
           },
           {
             "team1": "(3) Siena",
-            "team2": "(4) Quinnipiac",
-            "winner": "Siena",
-            "win_prob": 0.537,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Saint Peter's",
             "team2": "(6) Iona",
-            "winner": "Saint Peter's",
-            "win_prob": 0.506,
-            "is_upset": false
-          },
-          {
-            "team1": "(7) Fairfield",
-            "team2": "(8) Mount St. Mary's",
-            "winner": "Fairfield",
-            "win_prob": 0.553,
+            "winner": "Siena",
+            "win_prob": 0.611,
             "is_upset": false
           }
         ]
@@ -1903,17 +1885,17 @@
         "games": [
           {
             "team1": "(1) Merrimack",
-            "team2": "(3) Siena",
+            "team2": "(4) Quinnipiac",
             "winner": "Merrimack",
-            "win_prob": 0.568,
+            "win_prob": 0.605,
             "is_upset": false
           },
           {
-            "team1": "(5) Saint Peter's",
-            "team2": "(7) Fairfield",
-            "winner": "Saint Peter's",
-            "win_prob": 0.538,
-            "is_upset": false
+            "team1": "(2) Marist",
+            "team2": "(3) Siena",
+            "winner": "Siena",
+            "win_prob": 0.507,
+            "is_upset": true
           }
         ]
       },
@@ -1922,9 +1904,9 @@
         "games": [
           {
             "team1": "(1) Merrimack",
-            "team2": "(5) Saint Peter's",
+            "team2": "(3) Siena",
             "winner": "Merrimack",
-            "win_prob": 0.669,
+            "win_prob": 0.568,
             "is_upset": false
           }
         ]
@@ -1944,17 +1926,17 @@
     "mc_favorite": {
       "team_id": "akron",
       "name": "Akron",
-      "prob": 0.3402
+      "prob": 0.3676
     },
     "championship_probabilities": {
-      "akron": 0.3402,
-      "miami_oh": 0.3165,
-      "toledo": 0.0882,
-      "kent_st": 0.0772,
-      "bowling_green": 0.0762,
-      "massachusetts": 0.0632,
-      "buffalo": 0.0222,
-      "ohio": 0.0163
+      "akron": 0.3676,
+      "miami_oh": 0.3359,
+      "toledo": 0.0781,
+      "kent_st": 0.0607,
+      "bowling_green": 0.0592,
+      "massachusetts": 0.0512,
+      "buffalo": 0.0291,
+      "ohio": 0.0182
     },
     "rounds": [
       {
@@ -1966,6 +1948,13 @@
             "winner": "Akron",
             "win_prob": 0.816,
             "is_upset": false
+          },
+          {
+            "team1": "(4) Bowling Green",
+            "team2": "(5) Kent St.",
+            "winner": "Kent St.",
+            "win_prob": 0.508,
+            "is_upset": true
           },
           {
             "team1": "(2) Miami OH",
@@ -1980,13 +1969,6 @@
             "winner": "Toledo",
             "win_prob": 0.546,
             "is_upset": false
-          },
-          {
-            "team1": "(4) Bowling Green",
-            "team2": "(5) Kent St.",
-            "winner": "Kent St.",
-            "win_prob": 0.508,
-            "is_upset": true
           }
         ]
       },
@@ -1995,16 +1977,16 @@
         "games": [
           {
             "team1": "(1) Akron",
-            "team2": "(2) Miami OH",
-            "winner": "Miami OH",
-            "win_prob": 0.5,
-            "is_upset": true
+            "team2": "(5) Kent St.",
+            "winner": "Akron",
+            "win_prob": 0.729,
+            "is_upset": false
           },
           {
-            "team1": "(3) Toledo",
-            "team2": "(5) Kent St.",
-            "winner": "Toledo",
-            "win_prob": 0.518,
+            "team1": "(2) Miami OH",
+            "team2": "(3) Toledo",
+            "winner": "Miami OH",
+            "win_prob": 0.715,
             "is_upset": false
           }
         ]
@@ -2013,11 +1995,11 @@
         "round_name": "Championship",
         "games": [
           {
-            "team1": "(2) Miami OH",
-            "team2": "(3) Toledo",
+            "team1": "(1) Akron",
+            "team2": "(2) Miami OH",
             "winner": "Miami OH",
-            "win_prob": 0.715,
-            "is_upset": false
+            "win_prob": 0.5,
+            "is_upset": true
           }
         ]
       }
@@ -2036,16 +2018,16 @@
     "mc_favorite": {
       "team_id": "howard",
       "name": "Howard",
-      "prob": 0.5911
+      "prob": 0.6096
     },
     "championship_probabilities": {
-      "howard": 0.5911,
-      "norfolk_st": 0.1511,
-      "north_carolina_central": 0.0675,
-      "south_carolina_st": 0.0566,
-      "maryland_eastern_shore": 0.0547,
-      "morgan_st": 0.0542,
-      "delaware_st": 0.0135,
+      "howard": 0.6096,
+      "norfolk_st": 0.1705,
+      "north_carolina_central": 0.0599,
+      "morgan_st": 0.0466,
+      "south_carolina_st": 0.0429,
+      "maryland_eastern_shore": 0.0402,
+      "delaware_st": 0.019,
       "coppin_st": 0.0113
     },
     "rounds": [
@@ -2060,6 +2042,13 @@
             "is_upset": false
           },
           {
+            "team1": "(4) Maryland Eastern Shore",
+            "team2": "(5) South Carolina St.",
+            "winner": "South Carolina St.",
+            "win_prob": 0.508,
+            "is_upset": true
+          },
+          {
             "team1": "(2) Norfolk St.",
             "team2": "(7) Delaware St.",
             "winner": "Norfolk St.",
@@ -2072,13 +2061,6 @@
             "winner": "North Carolina Central",
             "win_prob": 0.531,
             "is_upset": false
-          },
-          {
-            "team1": "(4) Maryland Eastern Shore",
-            "team2": "(5) South Carolina St.",
-            "winner": "South Carolina St.",
-            "win_prob": 0.508,
-            "is_upset": true
           }
         ]
       },
@@ -2087,16 +2069,16 @@
         "games": [
           {
             "team1": "(1) Howard",
-            "team2": "(2) Norfolk St.",
+            "team2": "(5) South Carolina St.",
             "winner": "Howard",
-            "win_prob": 0.734,
+            "win_prob": 0.844,
             "is_upset": false
           },
           {
-            "team1": "(3) North Carolina Central",
-            "team2": "(5) South Carolina St.",
-            "winner": "North Carolina Central",
-            "win_prob": 0.529,
+            "team1": "(2) Norfolk St.",
+            "team2": "(3) North Carolina Central",
+            "winner": "Norfolk St.",
+            "win_prob": 0.636,
             "is_upset": false
           }
         ]
@@ -2106,9 +2088,9 @@
         "games": [
           {
             "team1": "(1) Howard",
-            "team2": "(3) North Carolina Central",
+            "team2": "(2) Norfolk St.",
             "winner": "Howard",
-            "win_prob": 0.828,
+            "win_prob": 0.734,
             "is_upset": false
           }
         ]
@@ -2128,19 +2110,19 @@
     "mc_favorite": {
       "team_id": "belmont",
       "name": "Belmont",
-      "prob": 0.2831
+      "prob": 0.3617
     },
     "championship_probabilities": {
-      "belmont": 0.2831,
-      "murray_st": 0.1475,
-      "northern_iowa": 0.1463,
-      "illinois_st": 0.1192,
-      "illinois_chicago": 0.1028,
-      "bradley": 0.0658,
-      "southern_illinois": 0.0629,
-      "valparaiso": 0.0447,
-      "indiana_st": 0.0138,
-      "drake": 0.0124
+      "belmont": 0.3617,
+      "northern_iowa": 0.1887,
+      "illinois_st": 0.1369,
+      "illinois_chicago": 0.0962,
+      "murray_st": 0.0897,
+      "bradley": 0.0444,
+      "southern_illinois": 0.0423,
+      "valparaiso": 0.0278,
+      "indiana_st": 0.006,
+      "drake": 0.0057
     },
     "rounds": [
       {
@@ -2174,30 +2156,30 @@
         "games": [
           {
             "team1": "(1) Belmont",
-            "team2": "(2) Northern Iowa",
+            "team2": "(8) Valparaiso",
             "winner": "Belmont",
-            "win_prob": 0.602,
+            "win_prob": 0.75,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Illinois Chicago",
+            "team2": "(5) Murray St.",
+            "winner": "Illinois Chicago",
+            "win_prob": 0.513,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) Northern Iowa",
+            "team2": "(7) Bradley",
+            "winner": "Northern Iowa",
+            "win_prob": 0.625,
             "is_upset": false
           },
           {
             "team1": "(3) Illinois St.",
-            "team2": "(4) Illinois Chicago",
-            "winner": "Illinois St.",
-            "win_prob": 0.522,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Murray St.",
             "team2": "(6) Southern Illinois",
-            "winner": "Murray St.",
-            "win_prob": 0.575,
-            "is_upset": false
-          },
-          {
-            "team1": "(7) Bradley",
-            "team2": "(8) Valparaiso",
-            "winner": "Bradley",
-            "win_prob": 0.543,
+            "winner": "Illinois St.",
+            "win_prob": 0.609,
             "is_upset": false
           }
         ]
@@ -2207,16 +2189,16 @@
         "games": [
           {
             "team1": "(1) Belmont",
-            "team2": "(3) Illinois St.",
+            "team2": "(4) Illinois Chicago",
             "winner": "Belmont",
-            "win_prob": 0.643,
+            "win_prob": 0.663,
             "is_upset": false
           },
           {
-            "team1": "(5) Murray St.",
-            "team2": "(7) Bradley",
-            "winner": "Murray St.",
-            "win_prob": 0.549,
+            "team1": "(2) Northern Iowa",
+            "team2": "(3) Illinois St.",
+            "winner": "Northern Iowa",
+            "win_prob": 0.544,
             "is_upset": false
           }
         ]
@@ -2226,9 +2208,9 @@
         "games": [
           {
             "team1": "(1) Belmont",
-            "team2": "(5) Murray St.",
+            "team2": "(2) Northern Iowa",
             "winner": "Belmont",
-            "win_prob": 0.675,
+            "win_prob": 0.602,
             "is_upset": false
           }
         ]
@@ -2248,19 +2230,18 @@
     "mc_favorite": {
       "team_id": "utah_st",
       "name": "Utah St.",
-      "prob": 0.3161
+      "prob": 0.3941
     },
     "championship_probabilities": {
-      "utah_st": 0.3161,
-      "new_mexico": 0.1387,
-      "san_diego_st": 0.1306,
-      "grand_canyon": 0.1171,
-      "nevada": 0.0915,
-      "boise_st": 0.0883,
-      "colorado_st": 0.0556,
-      "wyoming": 0.0298,
-      "unlv": 0.0184,
-      "fresno_st": 0.0125
+      "utah_st": 0.3941,
+      "san_diego_st": 0.1856,
+      "new_mexico": 0.146,
+      "boise_st": 0.0901,
+      "grand_canyon": 0.0674,
+      "nevada": 0.0539,
+      "colorado_st": 0.0332,
+      "wyoming": 0.0156,
+      "unlv": 0.0085
     },
     "rounds": [
       {
@@ -2301,30 +2282,30 @@
         "games": [
           {
             "team1": "(1) Utah St.",
-            "team2": "(2) San Diego St.",
+            "team2": "(8) Wyoming",
             "winner": "Utah St.",
-            "win_prob": 0.627,
+            "win_prob": 0.796,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Boise St.",
+            "team2": "(5) Grand Canyon",
+            "winner": "Boise St.",
+            "win_prob": 0.524,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) San Diego St.",
+            "team2": "(7) Colorado St.",
+            "winner": "San Diego St.",
+            "win_prob": 0.637,
             "is_upset": false
           },
           {
             "team1": "(3) New Mexico",
-            "team2": "(4) Boise St.",
-            "winner": "New Mexico",
-            "win_prob": 0.562,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Grand Canyon",
             "team2": "(6) Nevada",
-            "winner": "Grand Canyon",
-            "win_prob": 0.505,
-            "is_upset": false
-          },
-          {
-            "team1": "(7) Colorado St.",
-            "team2": "(8) Wyoming",
-            "winner": "Colorado St.",
-            "win_prob": 0.568,
+            "winner": "New Mexico",
+            "win_prob": 0.591,
             "is_upset": false
           }
         ]
@@ -2334,16 +2315,16 @@
         "games": [
           {
             "team1": "(1) Utah St.",
-            "team2": "(3) New Mexico",
+            "team2": "(4) Boise St.",
             "winner": "Utah St.",
-            "win_prob": 0.636,
+            "win_prob": 0.692,
             "is_upset": false
           },
           {
-            "team1": "(5) Grand Canyon",
-            "team2": "(7) Colorado St.",
-            "winner": "Grand Canyon",
-            "win_prob": 0.544,
+            "team1": "(2) San Diego St.",
+            "team2": "(3) New Mexico",
+            "winner": "San Diego St.",
+            "win_prob": 0.51,
             "is_upset": false
           }
         ]
@@ -2353,9 +2334,9 @@
         "games": [
           {
             "team1": "(1) Utah St.",
-            "team2": "(5) Grand Canyon",
+            "team2": "(2) San Diego St.",
             "winner": "Utah St.",
-            "win_prob": 0.712,
+            "win_prob": 0.627,
             "is_upset": false
           }
         ]
@@ -2375,17 +2356,17 @@
     "mc_favorite": {
       "team_id": "liu",
       "name": "LIU",
-      "prob": 0.3343
+      "prob": 0.3373
     },
     "championship_probabilities": {
-      "liu": 0.3343,
-      "mercyhurst": 0.1701,
-      "le_moyne": 0.1532,
-      "central_connecticut": 0.1296,
-      "wagner": 0.0804,
-      "new_haven": 0.0615,
-      "fairleigh_dickinson": 0.0394,
-      "stonehill": 0.0315
+      "liu": 0.3373,
+      "mercyhurst": 0.1755,
+      "le_moyne": 0.1612,
+      "central_connecticut": 0.1149,
+      "wagner": 0.0719,
+      "new_haven": 0.0577,
+      "fairleigh_dickinson": 0.0509,
+      "stonehill": 0.0306
     },
     "rounds": [
       {
@@ -2396,6 +2377,13 @@
             "team2": "(8) Stonehill",
             "winner": "LIU",
             "win_prob": 0.77,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Central Connecticut",
+            "team2": "(5) Wagner",
+            "winner": "Central Connecticut",
+            "win_prob": 0.554,
             "is_upset": false
           },
           {
@@ -2411,13 +2399,6 @@
             "winner": "Le Moyne",
             "win_prob": 0.619,
             "is_upset": false
-          },
-          {
-            "team1": "(4) Central Connecticut",
-            "team2": "(5) Wagner",
-            "winner": "Central Connecticut",
-            "win_prob": 0.554,
-            "is_upset": false
           }
         ]
       },
@@ -2426,16 +2407,16 @@
         "games": [
           {
             "team1": "(1) LIU",
-            "team2": "(2) Mercyhurst",
+            "team2": "(4) Central Connecticut",
             "winner": "LIU",
-            "win_prob": 0.596,
+            "win_prob": 0.641,
             "is_upset": false
           },
           {
-            "team1": "(3) Le Moyne",
-            "team2": "(4) Central Connecticut",
-            "winner": "Le Moyne",
-            "win_prob": 0.529,
+            "team1": "(2) Mercyhurst",
+            "team2": "(3) Le Moyne",
+            "winner": "Mercyhurst",
+            "win_prob": 0.519,
             "is_upset": false
           }
         ]
@@ -2445,9 +2426,9 @@
         "games": [
           {
             "team1": "(1) LIU",
-            "team2": "(3) Le Moyne",
+            "team2": "(2) Mercyhurst",
             "winner": "LIU",
-            "win_prob": 0.614,
+            "win_prob": 0.596,
             "is_upset": false
           }
         ]
@@ -2467,17 +2448,17 @@
     "mc_favorite": {
       "team_id": "tennessee_martin",
       "name": "Tennessee Martin",
-      "prob": 0.2303
+      "prob": 0.2254
     },
     "championship_probabilities": {
-      "tennessee_martin": 0.2303,
-      "southeast_missouri_st": 0.2154,
-      "tennessee_st": 0.1446,
-      "siu_edwardsville": 0.1316,
-      "lindenwood": 0.1114,
-      "morehead_st": 0.0928,
-      "little_rock": 0.038,
-      "eastern_illinois": 0.0359
+      "tennessee_martin": 0.2254,
+      "southeast_missouri_st": 0.209,
+      "siu_edwardsville": 0.1421,
+      "tennessee_st": 0.1397,
+      "lindenwood": 0.1122,
+      "morehead_st": 0.0927,
+      "little_rock": 0.0443,
+      "eastern_illinois": 0.0346
     },
     "rounds": [
       {
@@ -2488,6 +2469,13 @@
             "team2": "(8) Eastern Illinois",
             "winner": "Tennessee Martin",
             "win_prob": 0.713,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Tennessee St.",
+            "team2": "(5) Lindenwood",
+            "winner": "Tennessee St.",
+            "win_prob": 0.531,
             "is_upset": false
           },
           {
@@ -2503,13 +2491,6 @@
             "winner": "SIU Edwardsville",
             "win_prob": 0.551,
             "is_upset": false
-          },
-          {
-            "team1": "(4) Tennessee St.",
-            "team2": "(5) Lindenwood",
-            "winner": "Tennessee St.",
-            "win_prob": 0.531,
-            "is_upset": false
           }
         ]
       },
@@ -2518,17 +2499,17 @@
         "games": [
           {
             "team1": "(1) Tennessee Martin",
-            "team2": "(2) Southeast Missouri St.",
+            "team2": "(4) Tennessee St.",
             "winner": "Tennessee Martin",
-            "win_prob": 0.503,
+            "win_prob": 0.542,
             "is_upset": false
           },
           {
-            "team1": "(3) SIU Edwardsville",
-            "team2": "(4) Tennessee St.",
-            "winner": "Tennessee St.",
-            "win_prob": 0.511,
-            "is_upset": true
+            "team1": "(2) Southeast Missouri St.",
+            "team2": "(3) SIU Edwardsville",
+            "winner": "Southeast Missouri St.",
+            "win_prob": 0.549,
+            "is_upset": false
           }
         ]
       },
@@ -2537,9 +2518,9 @@
         "games": [
           {
             "team1": "(1) Tennessee Martin",
-            "team2": "(4) Tennessee St.",
+            "team2": "(2) Southeast Missouri St.",
             "winner": "Tennessee Martin",
-            "win_prob": 0.542,
+            "win_prob": 0.503,
             "is_upset": false
           }
         ]
@@ -2559,19 +2540,19 @@
     "mc_favorite": {
       "team_id": "navy",
       "name": "Navy",
-      "prob": 0.3412
+      "prob": 0.4067
     },
     "championship_probabilities": {
-      "navy": 0.3412,
-      "colgate": 0.1442,
-      "american": 0.1318,
-      "boston_university": 0.1185,
-      "lehigh": 0.1137,
-      "lafayette": 0.0536,
-      "holy_cross": 0.0324,
-      "loyola_md": 0.0288,
-      "bucknell": 0.0211,
-      "army": 0.0147
+      "navy": 0.4067,
+      "american": 0.1813,
+      "colgate": 0.1718,
+      "boston_university": 0.1173,
+      "lehigh": 0.0509,
+      "lafayette": 0.0285,
+      "holy_cross": 0.019,
+      "loyola_md": 0.0116,
+      "bucknell": 0.0076,
+      "army": 0.0053
     },
     "rounds": [
       {
@@ -2598,30 +2579,30 @@
         "games": [
           {
             "team1": "(1) Navy",
-            "team2": "(2) American",
+            "team2": "(8) Loyola MD",
             "winner": "Navy",
-            "win_prob": 0.64,
+            "win_prob": 0.821,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Boston University",
+            "team2": "(5) Lehigh",
+            "winner": "Boston University",
+            "win_prob": 0.599,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) American",
+            "team2": "(7) Holy Cross",
+            "winner": "American",
+            "win_prob": 0.712,
             "is_upset": false
           },
           {
             "team1": "(3) Colgate",
-            "team2": "(4) Boston University",
-            "winner": "Colgate",
-            "win_prob": 0.529,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Lehigh",
             "team2": "(6) Lafayette",
-            "winner": "Lehigh",
-            "win_prob": 0.588,
-            "is_upset": false
-          },
-          {
-            "team1": "(7) Holy Cross",
-            "team2": "(8) Loyola MD",
-            "winner": "Holy Cross",
-            "win_prob": 0.511,
+            "winner": "Colgate",
+            "win_prob": 0.706,
             "is_upset": false
           }
         ]
@@ -2631,16 +2612,16 @@
         "games": [
           {
             "team1": "(1) Navy",
-            "team2": "(3) Colgate",
+            "team2": "(4) Boston University",
             "winner": "Navy",
-            "win_prob": 0.645,
+            "win_prob": 0.671,
             "is_upset": false
           },
           {
-            "team1": "(5) Lehigh",
-            "team2": "(7) Holy Cross",
-            "winner": "Lehigh",
-            "win_prob": 0.591,
+            "team1": "(2) American",
+            "team2": "(3) Colgate",
+            "winner": "American",
+            "win_prob": 0.505,
             "is_upset": false
           }
         ]
@@ -2650,9 +2631,9 @@
         "games": [
           {
             "team1": "(1) Navy",
-            "team2": "(5) Lehigh",
+            "team2": "(2) American",
             "winner": "Navy",
-            "win_prob": 0.753,
+            "win_prob": 0.64,
             "is_upset": false
           }
         ]
@@ -2672,22 +2653,21 @@
     "mc_favorite": {
       "team_id": "troy",
       "name": "Troy",
-      "prob": 0.1975
+      "prob": 0.2613
     },
     "championship_probabilities": {
-      "troy": 0.1975,
-      "arkansas_st": 0.172,
-      "appalachian_st": 0.1298,
-      "marshall": 0.0968,
-      "south_alabama": 0.0875,
-      "james_madison": 0.0761,
-      "coastal_carolina": 0.0505,
-      "texas_st": 0.0496,
-      "old_dominion": 0.0475,
-      "southern_miss": 0.0403,
-      "georgia_southern": 0.0268,
-      "louisiana": 0.0138,
-      "georgia_st": 0.0101
+      "troy": 0.2613,
+      "arkansas_st": 0.2205,
+      "appalachian_st": 0.1361,
+      "south_alabama": 0.1008,
+      "marshall": 0.0812,
+      "james_madison": 0.0609,
+      "coastal_carolina": 0.0342,
+      "texas_st": 0.0304,
+      "old_dominion": 0.0271,
+      "southern_miss": 0.0207,
+      "georgia_southern": 0.0159,
+      "louisiana": 0.0056
     },
     "rounds": [
       {
@@ -2742,30 +2722,30 @@
         "games": [
           {
             "team1": "(1) Troy",
-            "team2": "(2) Arkansas St.",
+            "team2": "(8) Texas St.",
             "winner": "Troy",
-            "win_prob": 0.514,
+            "win_prob": 0.667,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) South Alabama",
+            "team2": "(5) Marshall",
+            "winner": "South Alabama",
+            "win_prob": 0.512,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) Arkansas St.",
+            "team2": "(7) Coastal Carolina",
+            "winner": "Arkansas St.",
+            "win_prob": 0.644,
             "is_upset": false
           },
           {
             "team1": "(3) Appalachian St.",
-            "team2": "(4) South Alabama",
-            "winner": "Appalachian St.",
-            "win_prob": 0.517,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Marshall",
             "team2": "(6) James Madison",
-            "winner": "Marshall",
-            "win_prob": 0.532,
-            "is_upset": false
-          },
-          {
-            "team1": "(7) Coastal Carolina",
-            "team2": "(8) Texas St.",
-            "winner": "Coastal Carolina",
-            "win_prob": 0.511,
+            "winner": "Appalachian St.",
+            "win_prob": 0.56,
             "is_upset": false
           }
         ]
@@ -2775,16 +2755,16 @@
         "games": [
           {
             "team1": "(1) Troy",
-            "team2": "(3) Appalachian St.",
+            "team2": "(4) South Alabama",
             "winner": "Troy",
-            "win_prob": 0.553,
+            "win_prob": 0.57,
             "is_upset": false
           },
           {
-            "team1": "(5) Marshall",
-            "team2": "(7) Coastal Carolina",
-            "winner": "Marshall",
-            "win_prob": 0.58,
+            "team1": "(2) Arkansas St.",
+            "team2": "(3) Appalachian St.",
+            "winner": "Arkansas St.",
+            "win_prob": 0.539,
             "is_upset": false
           }
         ]
@@ -2794,9 +2774,9 @@
         "games": [
           {
             "team1": "(1) Troy",
-            "team2": "(5) Marshall",
+            "team2": "(2) Arkansas St.",
             "winner": "Troy",
-            "win_prob": 0.581,
+            "win_prob": 0.514,
             "is_upset": false
           }
         ]
@@ -2816,17 +2796,17 @@
     "mc_favorite": {
       "team_id": "east_tennessee_st",
       "name": "East Tennessee St.",
-      "prob": 0.2551
+      "prob": 0.333
     },
     "championship_probabilities": {
-      "east_tennessee_st": 0.2551,
-      "mercer": 0.1616,
-      "furman": 0.1459,
-      "samford": 0.1434,
-      "wofford": 0.1056,
-      "western_carolina": 0.0823,
-      "chattanooga": 0.0579,
-      "unc_greensboro": 0.0438
+      "east_tennessee_st": 0.333,
+      "furman": 0.1874,
+      "mercer": 0.1672,
+      "samford": 0.0989,
+      "western_carolina": 0.085,
+      "wofford": 0.0692,
+      "chattanooga": 0.0354,
+      "unc_greensboro": 0.022
     },
     "rounds": [
       {
@@ -2853,30 +2833,30 @@
         "games": [
           {
             "team1": "(1) East Tennessee St.",
-            "team2": "(2) Furman",
+            "team2": "(8) UNC Greensboro",
             "winner": "East Tennessee St.",
-            "win_prob": 0.575,
+            "win_prob": 0.755,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Western Carolina",
+            "team2": "(5) Samford",
+            "winner": "Samford",
+            "win_prob": 0.519,
+            "is_upset": true
+          },
+          {
+            "team1": "(2) Furman",
+            "team2": "(7) Chattanooga",
+            "winner": "Furman",
+            "win_prob": 0.678,
             "is_upset": false
           },
           {
             "team1": "(3) Mercer",
-            "team2": "(4) Western Carolina",
-            "winner": "Mercer",
-            "win_prob": 0.584,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Samford",
             "team2": "(6) Wofford",
-            "winner": "Samford",
-            "win_prob": 0.542,
-            "is_upset": false
-          },
-          {
-            "team1": "(7) Chattanooga",
-            "team2": "(8) UNC Greensboro",
-            "winner": "Chattanooga",
-            "win_prob": 0.519,
+            "winner": "Mercer",
+            "win_prob": 0.606,
             "is_upset": false
           }
         ]
@@ -2886,16 +2866,16 @@
         "games": [
           {
             "team1": "(1) East Tennessee St.",
-            "team2": "(3) Mercer",
+            "team2": "(5) Samford",
             "winner": "East Tennessee St.",
-            "win_prob": 0.584,
+            "win_prob": 0.646,
             "is_upset": false
           },
           {
-            "team1": "(5) Samford",
-            "team2": "(7) Chattanooga",
-            "winner": "Samford",
-            "win_prob": 0.611,
+            "team1": "(2) Furman",
+            "team2": "(3) Mercer",
+            "winner": "Furman",
+            "win_prob": 0.509,
             "is_upset": false
           }
         ]
@@ -2905,9 +2885,9 @@
         "games": [
           {
             "team1": "(1) East Tennessee St.",
-            "team2": "(5) Samford",
+            "team2": "(2) Furman",
             "winner": "East Tennessee St.",
-            "win_prob": 0.646,
+            "win_prob": 0.575,
             "is_upset": false
           }
         ]
@@ -2927,21 +2907,21 @@
     "mc_favorite": {
       "team_id": "florida",
       "name": "Florida",
-      "prob": 0.2848
+      "prob": 0.3139
     },
     "championship_probabilities": {
-      "florida": 0.2848,
-      "vanderbilt": 0.1458,
-      "arkansas": 0.1391,
-      "alabama": 0.1272,
-      "tennessee": 0.0915,
-      "texas_a_m": 0.0465,
-      "texas": 0.0405,
-      "auburn": 0.0368,
-      "kentucky": 0.0295,
-      "georgia": 0.0294,
-      "missouri": 0.0144,
-      "oklahoma": 0.0087
+      "florida": 0.3139,
+      "vanderbilt": 0.1781,
+      "alabama": 0.1471,
+      "arkansas": 0.1075,
+      "tennessee": 0.0895,
+      "texas_a_m": 0.0401,
+      "auburn": 0.0295,
+      "texas": 0.0274,
+      "georgia": 0.0218,
+      "kentucky": 0.0173,
+      "missouri": 0.014,
+      "oklahoma": 0.007
     },
     "rounds": [
       {
@@ -2955,17 +2935,10 @@
             "is_upset": false
           },
           {
-            "team1": "(2) Vanderbilt",
-            "team2": "(15) Mississippi",
-            "winner": "Vanderbilt",
-            "win_prob": 0.854,
-            "is_upset": false
-          },
-          {
-            "team1": "(3) Alabama",
-            "team2": "(14) Mississippi St.",
-            "winner": "Alabama",
-            "win_prob": 0.838,
+            "team1": "(8) Texas",
+            "team2": "(9) Kentucky",
+            "winner": "Texas",
+            "win_prob": 0.535,
             "is_upset": false
           },
           {
@@ -2983,10 +2956,10 @@
             "is_upset": false
           },
           {
-            "team1": "(6) Texas A&M",
-            "team2": "(11) Missouri",
-            "winner": "Texas A&M",
-            "win_prob": 0.606,
+            "team1": "(2) Vanderbilt",
+            "team2": "(15) Mississippi",
+            "winner": "Vanderbilt",
+            "win_prob": 0.854,
             "is_upset": false
           },
           {
@@ -2997,10 +2970,17 @@
             "is_upset": false
           },
           {
-            "team1": "(8) Texas",
-            "team2": "(9) Kentucky",
-            "winner": "Texas",
-            "win_prob": 0.535,
+            "team1": "(3) Alabama",
+            "team2": "(14) Mississippi St.",
+            "winner": "Alabama",
+            "win_prob": 0.838,
+            "is_upset": false
+          },
+          {
+            "team1": "(6) Texas A&M",
+            "team2": "(11) Missouri",
+            "winner": "Texas A&M",
+            "win_prob": 0.606,
             "is_upset": false
           }
         ]
@@ -3010,31 +2990,31 @@
         "games": [
           {
             "team1": "(1) Florida",
-            "team2": "(2) Vanderbilt",
+            "team2": "(8) Texas",
             "winner": "Florida",
-            "win_prob": 0.598,
+            "win_prob": 0.757,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Tennessee",
+            "team2": "(5) Arkansas",
+            "winner": "Arkansas",
+            "win_prob": 0.526,
+            "is_upset": true
+          },
+          {
+            "team1": "(2) Vanderbilt",
+            "team2": "(7) Auburn",
+            "winner": "Vanderbilt",
+            "win_prob": 0.679,
             "is_upset": false
           },
           {
             "team1": "(3) Alabama",
-            "team2": "(4) Tennessee",
-            "winner": "Alabama",
-            "win_prob": 0.537,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Arkansas",
             "team2": "(6) Texas A&M",
-            "winner": "Arkansas",
-            "win_prob": 0.617,
+            "winner": "Alabama",
+            "win_prob": 0.629,
             "is_upset": false
-          },
-          {
-            "team1": "(7) Auburn",
-            "team2": "(8) Texas",
-            "winner": "Texas",
-            "win_prob": 0.503,
-            "is_upset": true
           }
         ]
       },
@@ -3043,16 +3023,16 @@
         "games": [
           {
             "team1": "(1) Florida",
-            "team2": "(3) Alabama",
+            "team2": "(5) Arkansas",
             "winner": "Florida",
-            "win_prob": 0.625,
+            "win_prob": 0.636,
             "is_upset": false
           },
           {
-            "team1": "(5) Arkansas",
-            "team2": "(8) Texas",
-            "winner": "Arkansas",
-            "win_prob": 0.64,
+            "team1": "(2) Vanderbilt",
+            "team2": "(3) Alabama",
+            "winner": "Vanderbilt",
+            "win_prob": 0.528,
             "is_upset": false
           }
         ]
@@ -3062,9 +3042,9 @@
         "games": [
           {
             "team1": "(1) Florida",
-            "team2": "(5) Arkansas",
+            "team2": "(2) Vanderbilt",
             "winner": "Florida",
-            "win_prob": 0.636,
+            "win_prob": 0.598,
             "is_upset": false
           }
         ]
@@ -3084,20 +3064,20 @@
     "mc_favorite": {
       "team_id": "bethune_cookman",
       "name": "Bethune Cookman",
-      "prob": 0.2407
+      "prob": 0.3168
     },
     "championship_probabilities": {
-      "bethune_cookman": 0.2407,
-      "southern": 0.1818,
-      "texas_southern": 0.1099,
-      "grambling_st": 0.1091,
-      "arkansas_pine_bluff": 0.1006,
-      "alabama_a_m": 0.078,
-      "alabama_st": 0.0647,
-      "florida_a_m": 0.0457,
-      "prairie_view_a_m": 0.0374,
-      "jackson_st": 0.0193,
-      "alcorn_st": 0.0125
+      "bethune_cookman": 0.3168,
+      "southern": 0.2318,
+      "grambling_st": 0.1115,
+      "arkansas_pine_bluff": 0.0999,
+      "texas_southern": 0.0748,
+      "alabama_a_m": 0.0508,
+      "alabama_st": 0.0444,
+      "florida_a_m": 0.0319,
+      "prairie_view_a_m": 0.0205,
+      "jackson_st": 0.0092,
+      "alcorn_st": 0.0081
     },
     "rounds": [
       {
@@ -3138,30 +3118,30 @@
         "games": [
           {
             "team1": "(1) Bethune Cookman",
-            "team2": "(2) Southern",
+            "team2": "(8) Florida A&M",
             "winner": "Bethune Cookman",
-            "win_prob": 0.542,
+            "win_prob": 0.701,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Arkansas Pine Bluff",
+            "team2": "(5) Texas Southern",
+            "winner": "Arkansas Pine Bluff",
+            "win_prob": 0.52,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) Southern",
+            "team2": "(7) Alabama A&M",
+            "winner": "Southern",
+            "win_prob": 0.623,
             "is_upset": false
           },
           {
             "team1": "(3) Grambling St.",
-            "team2": "(4) Arkansas Pine Bluff",
-            "winner": "Grambling St.",
-            "win_prob": 0.514,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Texas Southern",
             "team2": "(6) Alabama St.",
-            "winner": "Texas Southern",
-            "win_prob": 0.523,
-            "is_upset": false
-          },
-          {
-            "team1": "(7) Alabama A&M",
-            "team2": "(8) Florida A&M",
-            "winner": "Alabama A&M",
-            "win_prob": 0.545,
+            "winner": "Grambling St.",
+            "win_prob": 0.557,
             "is_upset": false
           }
         ]
@@ -3171,17 +3151,17 @@
         "games": [
           {
             "team1": "(1) Bethune Cookman",
-            "team2": "(3) Grambling St.",
+            "team2": "(4) Arkansas Pine Bluff",
             "winner": "Bethune Cookman",
-            "win_prob": 0.632,
+            "win_prob": 0.646,
             "is_upset": false
           },
           {
-            "team1": "(5) Texas Southern",
-            "team2": "(7) Alabama A&M",
-            "winner": "Alabama A&M",
-            "win_prob": 0.503,
-            "is_upset": true
+            "team1": "(2) Southern",
+            "team2": "(3) Grambling St.",
+            "winner": "Southern",
+            "win_prob": 0.593,
+            "is_upset": false
           }
         ]
       },
@@ -3190,9 +3170,9 @@
         "games": [
           {
             "team1": "(1) Bethune Cookman",
-            "team2": "(7) Alabama A&M",
+            "team2": "(2) Southern",
             "winner": "Bethune Cookman",
-            "win_prob": 0.661,
+            "win_prob": 0.542,
             "is_upset": false
           }
         ]
@@ -3212,17 +3192,17 @@
     "mc_favorite": {
       "team_id": "mcneese_st",
       "name": "McNeese St.",
-      "prob": 0.3413
+      "prob": 0.3746
     },
     "championship_probabilities": {
-      "mcneese_st": 0.3413,
-      "stephen_f__austin": 0.2836,
-      "ut_rio_grande_valley": 0.1774,
-      "new_orleans": 0.0786,
-      "texas_a_m_corpus_chris": 0.0635,
-      "lamar": 0.0298,
-      "nicholls_st": 0.016,
-      "incarnate_word": 0.0098
+      "mcneese_st": 0.3746,
+      "stephen_f__austin": 0.2914,
+      "ut_rio_grande_valley": 0.1627,
+      "new_orleans": 0.0646,
+      "texas_a_m_corpus_chris": 0.0536,
+      "lamar": 0.0228,
+      "nicholls_st": 0.0206,
+      "incarnate_word": 0.0097
     },
     "rounds": [
       {
@@ -3233,6 +3213,13 @@
             "team2": "(8) Incarnate Word",
             "winner": "McNeese St.",
             "win_prob": 0.852,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) New Orleans",
+            "team2": "(5) Texas A&M Corpus Chris",
+            "winner": "New Orleans",
+            "win_prob": 0.523,
             "is_upset": false
           },
           {
@@ -3248,13 +3235,6 @@
             "winner": "UT Rio Grande Valley",
             "win_prob": 0.717,
             "is_upset": false
-          },
-          {
-            "team1": "(4) New Orleans",
-            "team2": "(5) Texas A&M Corpus Chris",
-            "winner": "New Orleans",
-            "win_prob": 0.523,
-            "is_upset": false
           }
         ]
       },
@@ -3263,16 +3243,16 @@
         "games": [
           {
             "team1": "(1) McNeese St.",
-            "team2": "(2) Stephen F. Austin",
+            "team2": "(4) New Orleans",
             "winner": "McNeese St.",
-            "win_prob": 0.51,
+            "win_prob": 0.718,
             "is_upset": false
           },
           {
-            "team1": "(3) UT Rio Grande Valley",
-            "team2": "(4) New Orleans",
-            "winner": "UT Rio Grande Valley",
-            "win_prob": 0.614,
+            "team1": "(2) Stephen F. Austin",
+            "team2": "(3) UT Rio Grande Valley",
+            "winner": "Stephen F. Austin",
+            "win_prob": 0.607,
             "is_upset": false
           }
         ]
@@ -3282,9 +3262,9 @@
         "games": [
           {
             "team1": "(1) McNeese St.",
-            "team2": "(3) UT Rio Grande Valley",
+            "team2": "(2) Stephen F. Austin",
             "winner": "McNeese St.",
-            "win_prob": 0.616,
+            "win_prob": 0.51,
             "is_upset": false
           }
         ]
@@ -3304,17 +3284,17 @@
     "mc_favorite": {
       "team_id": "north_dakota_st",
       "name": "North Dakota St.",
-      "prob": 0.3606
+      "prob": 0.3826
     },
     "championship_probabilities": {
-      "north_dakota_st": 0.3606,
-      "st__thomas": 0.2702,
-      "denver": 0.1205,
-      "south_dakota_st": 0.0943,
-      "nebraska_omaha": 0.0829,
-      "north_dakota": 0.0407,
-      "south_dakota": 0.0218,
-      "oral_roberts": 0.009
+      "north_dakota_st": 0.3826,
+      "st__thomas": 0.2897,
+      "denver": 0.1138,
+      "south_dakota_st": 0.0741,
+      "nebraska_omaha": 0.0697,
+      "north_dakota": 0.0323,
+      "south_dakota": 0.0285,
+      "oral_roberts": 0.0093
     },
     "rounds": [
       {
@@ -3325,6 +3305,13 @@
             "team2": "(8) Oral Roberts",
             "winner": "North Dakota St.",
             "win_prob": 0.861,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) South Dakota St.",
+            "team2": "(5) Nebraska Omaha",
+            "winner": "South Dakota St.",
+            "win_prob": 0.509,
             "is_upset": false
           },
           {
@@ -3340,13 +3327,6 @@
             "winner": "Denver",
             "win_prob": 0.641,
             "is_upset": false
-          },
-          {
-            "team1": "(4) South Dakota St.",
-            "team2": "(5) Nebraska Omaha",
-            "winner": "South Dakota St.",
-            "win_prob": 0.509,
-            "is_upset": false
           }
         ]
       },
@@ -3355,16 +3335,16 @@
         "games": [
           {
             "team1": "(1) North Dakota St.",
-            "team2": "(2) St. Thomas",
+            "team2": "(4) South Dakota St.",
             "winner": "North Dakota St.",
-            "win_prob": 0.524,
+            "win_prob": 0.7,
             "is_upset": false
           },
           {
-            "team1": "(3) Denver",
-            "team2": "(4) South Dakota St.",
-            "winner": "Denver",
-            "win_prob": 0.54,
+            "team1": "(2) St. Thomas",
+            "team2": "(3) Denver",
+            "winner": "St. Thomas",
+            "win_prob": 0.656,
             "is_upset": false
           }
         ]
@@ -3374,9 +3354,9 @@
         "games": [
           {
             "team1": "(1) North Dakota St.",
-            "team2": "(3) Denver",
+            "team2": "(2) St. Thomas",
             "winner": "North Dakota St.",
-            "win_prob": 0.665,
+            "win_prob": 0.524,
             "is_upset": false
           }
         ]
@@ -3396,16 +3376,16 @@
     "mc_favorite": {
       "team_id": "utah_valley",
       "name": "Utah Valley",
-      "prob": 0.4839
+      "prob": 0.5297
     },
     "championship_probabilities": {
-      "utah_valley": 0.4839,
-      "cal_baptist": 0.1735,
-      "utah_tech": 0.1152,
-      "ut_arlington": 0.096,
-      "tarleton_st": 0.0682,
-      "abilene_christian": 0.0368,
-      "southern_utah": 0.0264
+      "utah_valley": 0.5297,
+      "cal_baptist": 0.1959,
+      "utah_tech": 0.1012,
+      "ut_arlington": 0.0779,
+      "tarleton_st": 0.0512,
+      "abilene_christian": 0.0248,
+      "southern_utah": 0.0193
     },
     "rounds": [
       {
@@ -3439,16 +3419,16 @@
         "games": [
           {
             "team1": "(1) Utah Valley",
-            "team2": "(2) Cal Baptist",
+            "team2": "(4) UT Arlington",
             "winner": "Utah Valley",
-            "win_prob": 0.62,
+            "win_prob": 0.724,
             "is_upset": false
           },
           {
-            "team1": "(3) Utah Tech",
-            "team2": "(4) UT Arlington",
-            "winner": "Utah Tech",
-            "win_prob": 0.528,
+            "team1": "(2) Cal Baptist",
+            "team2": "(3) Utah Tech",
+            "winner": "Cal Baptist",
+            "win_prob": 0.59,
             "is_upset": false
           }
         ]
@@ -3458,9 +3438,9 @@
         "games": [
           {
             "team1": "(1) Utah Valley",
-            "team2": "(3) Utah Tech",
+            "team2": "(2) Cal Baptist",
             "winner": "Utah Valley",
-            "win_prob": 0.702,
+            "win_prob": 0.62,
             "is_upset": false
           }
         ]
@@ -3480,19 +3460,16 @@
     "mc_favorite": {
       "team_id": "gonzaga",
       "name": "Gonzaga",
-      "prob": 0.3438
+      "prob": 0.4732
     },
     "championship_probabilities": {
-      "gonzaga": 0.3438,
-      "saint_mary_s": 0.2659,
-      "santa_clara": 0.19,
-      "seattle": 0.0563,
-      "washington_st": 0.0441,
-      "san_francisco": 0.0301,
-      "pacific": 0.027,
-      "loyola_marymount": 0.0176,
-      "oregon_st": 0.013,
-      "portland": 0.0063
+      "gonzaga": 0.4732,
+      "santa_clara": 0.2458,
+      "saint_mary_s": 0.2036,
+      "pacific": 0.0346,
+      "seattle": 0.0168,
+      "washington_st": 0.0103,
+      "san_francisco": 0.0065
     },
     "rounds": [
       {
@@ -3533,30 +3510,30 @@
         "games": [
           {
             "team1": "(1) Gonzaga",
-            "team2": "(2) Santa Clara",
+            "team2": "(8) Loyola Marymount",
             "winner": "Gonzaga",
-            "win_prob": 0.601,
+            "win_prob": 0.888,
+            "is_upset": false
+          },
+          {
+            "team1": "(4) Pacific",
+            "team2": "(5) Seattle",
+            "winner": "Pacific",
+            "win_prob": 0.537,
+            "is_upset": false
+          },
+          {
+            "team1": "(2) Santa Clara",
+            "team2": "(7) San Francisco",
+            "winner": "Santa Clara",
+            "win_prob": 0.814,
             "is_upset": false
           },
           {
             "team1": "(3) Saint Mary's",
-            "team2": "(4) Pacific",
-            "winner": "Saint Mary's",
-            "win_prob": 0.755,
-            "is_upset": false
-          },
-          {
-            "team1": "(5) Seattle",
             "team2": "(6) Washington St.",
-            "winner": "Seattle",
-            "win_prob": 0.502,
-            "is_upset": false
-          },
-          {
-            "team1": "(7) San Francisco",
-            "team2": "(8) Loyola Marymount",
-            "winner": "San Francisco",
-            "win_prob": 0.547,
+            "winner": "Saint Mary's",
+            "win_prob": 0.783,
             "is_upset": false
           }
         ]
@@ -3566,16 +3543,16 @@
         "games": [
           {
             "team1": "(1) Gonzaga",
-            "team2": "(3) Saint Mary's",
+            "team2": "(4) Pacific",
             "winner": "Gonzaga",
-            "win_prob": 0.605,
+            "win_prob": 0.825,
             "is_upset": false
           },
           {
-            "team1": "(5) Seattle",
-            "team2": "(7) San Francisco",
-            "winner": "Seattle",
-            "win_prob": 0.546,
+            "team1": "(2) Santa Clara",
+            "team2": "(3) Saint Mary's",
+            "winner": "Santa Clara",
+            "win_prob": 0.505,
             "is_upset": false
           }
         ]
@@ -3585,9 +3562,9 @@
         "games": [
           {
             "team1": "(1) Gonzaga",
-            "team2": "(5) Seattle",
+            "team2": "(2) Santa Clara",
             "winner": "Gonzaga",
-            "win_prob": 0.846,
+            "win_prob": 0.601,
             "is_upset": false
           }
         ]
