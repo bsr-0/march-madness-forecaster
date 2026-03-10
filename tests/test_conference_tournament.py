@@ -15,6 +15,12 @@ from src.models.conference_tournament import (
     _CONFERENCE_FULL_NAMES,
     bracket_seed_order,
 )
+from src.conference_tournament.bracket_formats import (
+    BracketFormat,
+    get_bracket_format,
+    get_all_formats,
+    _standard_format,
+)
 from src.conference_tournament.predictor import (
     ConferenceTournamentPredictor,
     _DEFAULT_CONF_TOURNAMENT_SIZES,
@@ -839,8 +845,9 @@ class TestStandaloneModel:
         t1 = ConferenceTeam("a", "A", 1, "T", adj_o=120.0, adj_d=90.0, adj_em=30.0)
         t2 = ConferenceTeam("b", "B", 2, "T", adj_o=110.0, adj_d=95.0, adj_em=15.0)
         prob = predictor.predict_matchup(t1, t2)
-        # 1/(1+exp(-0.15*20)) ≈ 0.953
-        assert 0.90 < prob < 0.98
+        # logit = 0.075*(120-110) + (-0.075)*(90-95) = 0.75+0.375 = 1.125
+        # 1/(1+exp(-1.125)) ≈ 0.755
+        assert 0.70 < prob < 0.85
 
 
 # ---------------------------------------------------------------------------
@@ -890,5 +897,282 @@ class TestTournamentSizeCompleteness:
             assert bracket.num_teams == expected, (
                 f"{conf}: expected {expected} teams, got {bracket.num_teams}"
             )
-        # Should still produce a reasonable prediction from AdjO/AdjD only
-        assert 0.5 < prob < 0.98
+
+
+# ---------------------------------------------------------------------------
+# Bracket format definitions tests
+# ---------------------------------------------------------------------------
+
+
+class TestBracketFormats:
+    """Validate all bracket format definitions."""
+
+    def test_all_formats_validate(self):
+        """Every defined format must pass validation (seeds complete, games = N-1)."""
+        all_fmts = get_all_formats()
+        assert len(all_fmts) >= 31, f"Expected >= 31 formats, got {len(all_fmts)}"
+        for conf, fmt in all_fmts.items():
+            errors = fmt.validate()
+            assert errors == [], f"{conf}: {errors}"
+
+    def test_acc_format_is_5_rounds(self):
+        """ACC with 15 teams must have 5 rounds, NOT the mathematical 4."""
+        fmt = get_bracket_format("ACC", 15)
+        assert fmt.total_rounds == 5
+        assert fmt.num_teams == 15
+
+    def test_acc_round1_has_only_bottom_6_seeds(self):
+        """ACC round 1 should have seeds 10-15 (NOT seeds 2-15)."""
+        fmt = get_bracket_format("ACC", 15)
+        r1_seeds = set(fmt.round_entry[1])
+        assert r1_seeds == {10, 11, 12, 13, 14, 15}
+
+    def test_acc_round1_matchups(self):
+        """ACC first-round matchups must be 10v15, 11v14, 12v13."""
+        fmt = get_bracket_format("ACC", 15)
+        assert fmt.first_round_matchups is not None
+        matchups = set(fmt.first_round_matchups)
+        assert matchups == {(10, 15), (11, 14), (12, 13)}
+
+    def test_acc_round2_seeds_5_through_9(self):
+        """ACC round 2 should have seeds 5-9 entering (single byes)."""
+        fmt = get_bracket_format("ACC", 15)
+        r2_seeds = set(fmt.round_entry[2])
+        assert r2_seeds == {5, 6, 7, 8, 9}
+
+    def test_acc_round3_seeds_1_through_4(self):
+        """ACC round 3 (quarterfinals) should have seeds 1-4 (double byes)."""
+        fmt = get_bracket_format("ACC", 15)
+        r3_seeds = set(fmt.round_entry[3])
+        assert r3_seeds == {1, 2, 3, 4}
+
+    def test_b10_format_is_5_rounds(self):
+        """Big Ten with 18 teams should have 5 rounds."""
+        fmt = get_bracket_format("B10", 18)
+        assert fmt.total_rounds == 5
+
+    def test_b10_round1_bottom_4(self):
+        """Big Ten round 1 should have seeds 15-18."""
+        fmt = get_bracket_format("B10", 18)
+        r1_seeds = set(fmt.round_entry[1])
+        assert r1_seeds == {15, 16, 17, 18}
+
+    def test_standard_16_team_format(self):
+        """16-team brackets should have 4 rounds, 0 byes."""
+        fmt = get_bracket_format("SEC", 16)
+        assert fmt.total_rounds == 4
+        r1_seeds = set(fmt.round_entry[1])
+        assert r1_seeds == set(range(1, 17))
+        assert 2 not in fmt.round_entry  # no byes
+
+    def test_standard_8_team_format(self):
+        """8-team brackets should have 3 rounds, 0 byes."""
+        fmt = get_bracket_format("AE", 8)
+        assert fmt.total_rounds == 3
+        r1_seeds = set(fmt.round_entry[1])
+        assert r1_seeds == set(range(1, 9))
+
+    def test_standard_format_fallback(self):
+        """Unknown conferences should get a mathematical default."""
+        fmt = get_bracket_format("UNKNOWN", 12)
+        assert fmt.total_rounds == 4
+        assert fmt.num_teams == 12
+
+    def test_all_seeds_covered(self):
+        """For every format, all seeds 1..N must appear exactly once."""
+        all_fmts = get_all_formats()
+        for conf, fmt in all_fmts.items():
+            all_seeds = []
+            for seeds in fmt.round_entry.values():
+                all_seeds.extend(seeds)
+            assert sorted(all_seeds) == list(range(1, fmt.num_teams + 1)), (
+                f"{conf}: seed coverage mismatch"
+            )
+
+
+class TestACCBracketIntegration:
+    """Integration tests verifying the ACC bracket produces correct matchups."""
+
+    @staticmethod
+    def _make_acc_teams(n=15):
+        return [
+            ConferenceTeam(
+                team_id=f"team_{i}",
+                name=f"Team {i}",
+                conf_seed=i,
+                conference="ACC",
+                adj_em=30.0 - i * 1.5,
+                adj_o=110.0 - i * 0.5,
+                adj_d=80.0 + i * 0.5,
+            )
+            for i in range(1, n + 1)
+        ]
+
+    def test_acc_bracket_has_5_rounds(self):
+        """ACC bracket should have 5 rounds."""
+        teams = self._make_acc_teams()
+        bracket = ConferenceTournamentBracket("ACC", teams)
+        assert len(bracket.games) == 5
+        assert bracket.total_rounds == 5
+
+    def test_acc_first_round_has_3_games(self):
+        """ACC round 1 should have exactly 3 games (not 7)."""
+        teams = self._make_acc_teams()
+        bracket = ConferenceTournamentBracket("ACC", teams)
+        r1_games = bracket.games[0]
+        assert len(r1_games) == 3
+
+    def test_acc_first_round_matchups_correct(self):
+        """ACC R1 must be 10v15, 11v14, 12v13."""
+        teams = self._make_acc_teams()
+        bracket = ConferenceTournamentBracket("ACC", teams)
+        r1_matchups = set()
+        for game in bracket.games[0]:
+            r1_matchups.add((game.team1.conf_seed, game.team2.conf_seed))
+        assert r1_matchups == {(10, 15), (11, 14), (12, 13)}
+
+    def test_acc_seeds_1_to_4_not_in_rounds_1_or_2(self):
+        """Seeds 1-4 should not appear in any R1 or R2 game (double byes)."""
+        teams = self._make_acc_teams()
+        predictor = ConferenceTournamentPredictor(
+            teams_by_conference={"ACC": teams},
+        )
+        bracket = predictor.predict_conference("ACC")
+
+        top4_seeds = {1, 2, 3, 4}
+        for round_idx in range(2):  # R1 and R2
+            for game in bracket.games[round_idx]:
+                if game.team1:
+                    assert game.team1.conf_seed not in top4_seeds, (
+                        f"Seed {game.team1.conf_seed} found in round {round_idx + 1}"
+                    )
+                if game.team2:
+                    assert game.team2.conf_seed not in top4_seeds, (
+                        f"Seed {game.team2.conf_seed} found in round {round_idx + 1}"
+                    )
+
+    def test_acc_seeds_5_to_9_enter_in_round_2(self):
+        """Seeds 5-9 should first appear in round 2 (single byes)."""
+        teams = self._make_acc_teams()
+        predictor = ConferenceTournamentPredictor(
+            teams_by_conference={"ACC": teams},
+        )
+        bracket = predictor.predict_conference("ACC")
+
+        r2_seeds = set()
+        for game in bracket.games[1]:
+            if game.team1:
+                r2_seeds.add(game.team1.conf_seed)
+            if game.team2:
+                r2_seeds.add(game.team2.conf_seed)
+
+        # R2 should include seeds 5-9 (new entrants) plus R1 winners
+        for seed in [5, 6, 7, 8, 9]:
+            assert seed in r2_seeds, f"Seed {seed} not found in round 2"
+
+    def test_acc_round2_has_4_games(self):
+        """ACC R2 should have exactly 4 games."""
+        teams = self._make_acc_teams()
+        predictor = ConferenceTournamentPredictor(
+            teams_by_conference={"ACC": teams},
+        )
+        bracket = predictor.predict_conference("ACC")
+        assert len(bracket.games[1]) == 4
+
+    def test_acc_quarterfinals_has_4_games(self):
+        """ACC QF (R3) should have exactly 4 games."""
+        teams = self._make_acc_teams()
+        predictor = ConferenceTournamentPredictor(
+            teams_by_conference={"ACC": teams},
+        )
+        bracket = predictor.predict_conference("ACC")
+        assert len(bracket.games[2]) == 4
+
+    def test_acc_champion_is_seed_1_deterministic(self):
+        """With deterministic predictions, seed 1 should win the ACC."""
+        teams = self._make_acc_teams()
+        predictor = ConferenceTournamentPredictor(
+            teams_by_conference={"ACC": teams},
+        )
+        bracket = predictor.predict_conference("ACC")
+        assert bracket.champion is not None
+        assert bracket.champion.conf_seed == 1
+
+    def test_acc_seeds_1_and_2_meet_only_in_final(self):
+        """Seeds 1 and 2 must not meet before the championship."""
+        teams = self._make_acc_teams()
+        predictor = ConferenceTournamentPredictor(
+            teams_by_conference={"ACC": teams},
+        )
+        bracket = predictor.predict_conference("ACC")
+
+        for round_games in bracket.games[:-1]:
+            for game in round_games:
+                if game.team1 and game.team2:
+                    seeds = {game.team1.conf_seed, game.team2.conf_seed}
+                    assert seeds != {1, 2}, (
+                        f"Seeds 1 and 2 met before the final in round {game.round}"
+                    )
+
+    def test_acc_total_games_equals_n_minus_1(self):
+        """Total games in ACC bracket should be 14 (15-1)."""
+        teams = self._make_acc_teams()
+        bracket = ConferenceTournamentBracket("ACC", teams)
+        total_games = sum(len(rnd) for rnd in bracket.games)
+        assert total_games == 14
+
+    def test_acc_round_names(self):
+        """ACC round names should be Play-in, First Round, QF, SF, Championship."""
+        teams = self._make_acc_teams()
+        bracket = ConferenceTournamentBracket("ACC", teams)
+        round_names = [bracket.games[i][0].round_name for i in range(5)]
+        assert round_names == [
+            "Play-in", "First Round", "Quarterfinals",
+            "Semifinals", "Championship",
+        ]
+
+
+class TestMultiLevelByes:
+    """Test that multi-level byes work correctly for various sizes."""
+
+    @staticmethod
+    def _make_teams(n, conf="TEST"):
+        return [
+            ConferenceTeam(
+                team_id=f"t{i}", name=f"T{i}", conf_seed=i,
+                conference=conf, adj_em=30.0 - i,
+                adj_o=110.0 - i * 0.3, adj_d=80.0 + i * 0.3,
+            )
+            for i in range(1, n + 1)
+        ]
+
+    def test_15_team_bracket_structure(self):
+        """15-team bracket (ACC style) has correct round sizes: 3, 4, 4, 2, 1."""
+        fmt = get_bracket_format("ACC", 15)
+        teams = self._make_teams(15, "ACC")
+        bracket = ConferenceTournamentBracket("ACC", teams, bracket_format=fmt)
+        round_sizes = [len(rnd) for rnd in bracket.games]
+        assert round_sizes == [3, 4, 4, 2, 1]
+
+    def test_18_team_bracket_structure(self):
+        """18-team bracket (B10 style) has correct round sizes: 2, 8, 4, 2, 1."""
+        fmt = get_bracket_format("B10", 18)
+        teams = self._make_teams(18, "B10")
+        bracket = ConferenceTournamentBracket("B10", teams, bracket_format=fmt)
+        round_sizes = [len(rnd) for rnd in bracket.games]
+        assert round_sizes == [2, 8, 4, 2, 1]
+
+    def test_11_team_bracket_structure(self):
+        """11-team bracket (BE style) has correct round sizes: 3, 4, 2, 1."""
+        fmt = get_bracket_format("BE", 11)
+        teams = self._make_teams(11, "BE")
+        bracket = ConferenceTournamentBracket("BE", teams, bracket_format=fmt)
+        round_sizes = [len(rnd) for rnd in bracket.games]
+        assert round_sizes == [3, 4, 2, 1]
+
+    def test_12_team_bracket_structure(self):
+        """12-team bracket has correct round sizes: 4, 4, 2, 1."""
+        teams = self._make_teams(12, "MWC")
+        bracket = ConferenceTournamentBracket("MWC", teams)
+        round_sizes = [len(rnd) for rnd in bracket.games]
+        assert round_sizes == [4, 4, 2, 1]
