@@ -47,7 +47,12 @@ def load_seed_overrides(path: str) -> Dict[str, Dict[str, int]]:
         if not isinstance(seeds, dict):
             logger.warning("Invalid seed data for conference %s (expected dict)", conf)
             continue
-        overrides[conf] = {str(k): int(v) for k, v in seeds.items()}
+        # Normalize team IDs in overrides to match pipeline normalization
+        try:
+            from ..data.normalize import normalize_team_id
+            overrides[conf] = {normalize_team_id(str(k)): int(v) for k, v in seeds.items()}
+        except ImportError:
+            overrides[conf] = {str(k): int(v) for k, v in seeds.items()}
 
     logger.info(
         "Loaded seed overrides for %d conferences: %s",

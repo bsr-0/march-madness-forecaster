@@ -71,7 +71,7 @@ class ConferenceTournamentSimulator:
     def __init__(
         self,
         predictor: "ConferenceTournamentPredictor",
-        num_simulations: int = 10000,
+        num_simulations: int = 50000,
         noise_std: float = 0.12,
         random_seed: int = 2026,
     ):

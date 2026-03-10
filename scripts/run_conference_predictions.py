@@ -116,8 +116,15 @@ class EnhancedPredictor:
         return None
 
     def _build_teams(self):
+        try:
+            from src.data.normalize import normalize_team_id as _norm
+        except ImportError:
+            _norm = None
+
         for t in self.raw_data.get("teams", []):
             tid = t.get("team_id", "")
+            if _norm:
+                tid = _norm(tid)
             conf = t.get("conference", "")
             if not tid or not conf:
                 continue
@@ -165,11 +172,46 @@ class EnhancedPredictor:
             self.teams_by_id[tid] = team
             self.teams_by_conf[conf].append(team)
 
-        # Sort each conference by AdjEM (desc) and assign seeds
+        # Load seed overrides if available
+        seed_overrides = {}
+        seed_path = Path(self.data_dir) / f"seed_overrides_{self.year}.json"
+        if seed_path.exists():
+            try:
+                with open(seed_path) as f:
+                    raw_overrides = json.load(f)
+                from src.data.normalize import normalize_team_id
+                for conf_key, seeds in raw_overrides.items():
+                    seed_overrides[conf_key] = {
+                        normalize_team_id(k): v for k, v in seeds.items()
+                    }
+                logger.info("Loaded seed overrides from %s", seed_path)
+            except Exception as e:
+                logger.warning("Failed to load seed overrides: %s", e)
+
+        # Sort each conference by seed override (if available) or AdjEM (desc)
         for conf in self.teams_by_conf:
-            self.teams_by_conf[conf].sort(key=lambda t: -t["adj_em"])
-            for i, t in enumerate(self.teams_by_conf[conf]):
-                t["conf_seed"] = i + 1
+            if conf in seed_overrides:
+                overrides = seed_overrides[conf]
+                # Apply override seeds, fall back to AdjEM for unmatched teams
+                assigned = set()
+                for t in self.teams_by_conf[conf]:
+                    if t["team_id"] in overrides:
+                        t["conf_seed"] = overrides[t["team_id"]]
+                        assigned.add(t["conf_seed"])
+                unassigned = [t for t in self.teams_by_conf[conf] if t["team_id"] not in overrides]
+                unassigned.sort(key=lambda t: -t["adj_em"])
+                next_seed = 1
+                for t in unassigned:
+                    while next_seed in assigned:
+                        next_seed += 1
+                    t["conf_seed"] = next_seed
+                    assigned.add(next_seed)
+                    next_seed += 1
+                self.teams_by_conf[conf].sort(key=lambda t: t["conf_seed"])
+            else:
+                self.teams_by_conf[conf].sort(key=lambda t: -t["adj_em"])
+                for i, t in enumerate(self.teams_by_conf[conf]):
+                    t["conf_seed"] = i + 1
 
     def predict_matchup(self, t1: dict, t2: dict) -> float:
         """P(team1 wins) using multi-feature logistic model."""
