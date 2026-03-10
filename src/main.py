@@ -2139,6 +2139,28 @@ def main():
     deploy_promote.add_argument("--version", required=True, help="Version ID to promote")
     deploy_sub.add_parser("drift-check", help="Run drift analysis on latest model")
 
+    # --- scrape-conference-seeds ---
+    seed_scrape_parser = subparsers.add_parser(
+        "scrape-conference-seeds",
+        help="Scrape conference tournament seeds from ESPN API",
+    )
+    seed_scrape_parser.add_argument(
+        "--year", type=int, default=2026,
+        help="Season year (default: 2026)",
+    )
+    seed_scrape_parser.add_argument(
+        "--output", "-o", default=None,
+        help="Output JSON file path (default: data/raw/seed_overrides_{year}.json)",
+    )
+    seed_scrape_parser.add_argument(
+        "--conferences", nargs="+", default=None,
+        help="Specific conferences to scrape (e.g., ACC SEC B10). Default: all",
+    )
+    seed_scrape_parser.add_argument(
+        "--cache-dir", default="data/cache",
+        help="Cache directory for scraped data (default: data/cache)",
+    )
+
     # --- conference-tournaments ---
     conf_parser = subparsers.add_parser(
         "conference-tournaments",
@@ -2407,11 +2429,35 @@ def main():
         else:
             deploy_parser.print_help()
         return 0
+    elif args.command == "scrape-conference-seeds":
+        return run_scrape_conference_seeds(args)
     elif args.command == "conference-tournaments":
         return run_conference_tournaments(args)
     else:
         parser.print_help()
         return 1
+
+
+def run_scrape_conference_seeds(args):
+    """Scrape conference tournament seeds from ESPN."""
+    from .data.scrapers.conference_seeds import ConferenceSeedsScraper
+
+    output = args.output or f"data/raw/seed_overrides_{args.year}.json"
+    scraper = ConferenceSeedsScraper(cache_dir=args.cache_dir)
+
+    print(f"Scraping conference tournament seeds for {args.year}...")
+    seeds = scraper.scrape_seeds(args.year, conferences=args.conferences)
+
+    if not seeds:
+        print("No seeds scraped. ESPN API may be unavailable.")
+        return 1
+
+    scraper.save_to_file(seeds, output)
+    print(f"\nScraped seeds for {len(seeds)} conferences:")
+    for conf, team_seeds in sorted(seeds.items()):
+        print(f"  {conf}: {len(team_seeds)} teams")
+    print(f"\nSaved to {output}")
+    return 0
 
 
 def run_conference_tournaments(args):
