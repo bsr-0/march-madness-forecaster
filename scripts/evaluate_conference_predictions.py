@@ -275,6 +275,14 @@ def evaluate(results: List[GameResult]):
     print("  Games completed through March 11, 2026")
     print("=" * 78)
 
+    # ── Data Staleness Warning ────────────────────────────────────
+    print(f"\n  DATA STALENESS WARNING:")
+    print(f"  - Torvik data last fetched: Feb 25, 2026 (14 days old)")
+    print(f"  - historical_games_2026.json: through Mar 7 (4 days old)")
+    print(f"  - 4 Torvik Four Factors fields (eFG%, TO%, ORB%, FTR) are ALL ZERO")
+    print(f"  - RAPM fields in rosters are ALL ZERO")
+    print(f"  - Predictions were made with degraded input data")
+
     # ── Overall Accuracy ───────────────────────────────────────────
     correct = sum(1 for r in results if r.correct)
     total = len(results)
@@ -302,11 +310,24 @@ def evaluate(results: List[GameResult]):
     print(f"  Log Loss: {avg_log_loss:.4f} (lower is better)")
     print(f"  Baseline (coin flip): {math.log(2):.4f}")
 
-    # ── Championship Predictions ──────────────────────────────────
-    champ_results = [r for r in results if r.round_name == "Championship"]
-    if champ_results:
-        champ_correct = sum(1 for r in champ_results if r.correct)
-        print(f"\n  CHAMPIONSHIP GAMES: {champ_correct}/{len(champ_results)} correct ({champ_correct/len(champ_results):.1%})")
+    # ── Separate completed-tournament champions from early-round picks ─
+    # Conferences whose tournaments have fully concluded
+    completed_confs = {"Southern", "Sun Belt", "Missouri Valley", "ASUN",
+                       "Horizon League", "CAA", "NEC", "Big South", "WCC",
+                       "Ohio Valley", "MAAC"}
+    # Conferences still in early rounds (power conferences)
+    in_progress_confs = {"ACC", "Big Ten", "Big 12", "SEC", "Big East",
+                         "Mountain West"}
+
+    completed_results = [r for r in results if r.conference_name in completed_confs]
+    early_round_results = [r for r in results if r.conference_name not in completed_confs]
+
+    if completed_results:
+        cc = sum(1 for r in completed_results if r.correct)
+        print(f"\n  COMPLETED TOURNAMENTS (champion known): {cc}/{len(completed_results)} picks correct ({cc/len(completed_results):.1%})")
+    if early_round_results:
+        ec = sum(1 for r in early_round_results if r.correct)
+        print(f"  IN-PROGRESS TOURNAMENTS (early rounds):  {ec}/{len(early_round_results)} picks correct ({ec/len(early_round_results):.1%})")
 
     # ── Upset Detection ───────────────────────────────────────────
     upset_games = [r for r in results if r.is_upset]
@@ -361,9 +382,10 @@ def evaluate(results: List[GameResult]):
             if g.notes:
                 print(f"           Note: {g.notes}")
 
-    # ── Summary Table ─────────────────────────────────────────────
+    # ── Summary Table: Completed Tournaments Only ──────────────────
     print(f"\n  {'═' * 60}")
-    print(f"  CONFERENCE CHAMPION PREDICTIONS")
+    print(f"  COMPLETED CONFERENCE TOURNAMENT CHAMPIONS")
+    print(f"  (only tournaments that have finished)")
     print(f"  {'═' * 60}")
 
     champion_data = [
@@ -388,6 +410,25 @@ def evaluate(results: List[GameResult]):
         print(f"  {conf:<20} {pred:<20} {actual:<22} {icon}{note_str}")
 
     print(f"\n  Champion accuracy: {champ_correct}/{len(champion_data)} ({champ_correct/len(champion_data):.0%})")
+
+    # ── In-Progress Tournaments ──────────────────────────────────
+    print(f"\n  {'═' * 60}")
+    print(f"  IN-PROGRESS TOURNAMENTS (early-round picks only)")
+    print(f"  {'═' * 60}")
+
+    in_progress_data = [
+        ("ACC", "Play-in (3 games completed)", "1/3"),
+        ("Big Ten", "Round 1 (2 games completed)", "1/2"),
+        ("Big 12", "Play-in (3 games completed)", "2/3"),
+        ("SEC", "Play-in (today, results pending)", "--"),
+        ("Big East", "First Round (today, results pending)", "--"),
+        ("Mountain West", "First Round (today, results pending)", "--"),
+    ]
+
+    print(f"\n  {'Conference':<20} {'Stage':<35} {'Record':<8}")
+    print(f"  {'─'*20} {'─'*35} {'─'*8}")
+    for conf, stage, record in in_progress_data:
+        print(f"  {conf:<20} {stage:<35} {record:<8}")
 
     # ── Key Takeaways ─────────────────────────────────────────────
     print(f"\n  {'═' * 60}")
