@@ -35,6 +35,7 @@ from ...data.scrapers.injury_report import (
     InjuryReportScraper,
     apply_injury_reports_to_roster,
 )
+from ...conference_tournament.data_enrichment import enrich_torvik_teams
 from ...data.scrapers.torvik import BartTorvikScraper
 from ...data.scrapers.tournament_context import TournamentContextScraper
 from ...exceptions import LeakageError
@@ -560,6 +561,45 @@ def load_team_stat_sources(
 
     if not torvik_teams:
         raise DataRequirementError("Torvik data source is empty.")
+
+    # --- Enrich Torvik data with Four Factors if missing ---
+    # The main torvik CSV doesn't include Four Factors; they come from
+    # separate files (torvik_four_factors_YYYY.json, torvik_shooting_YYYY.json).
+    # If these fields are zero, attempt enrichment from those files.
+    _sample_efg = [
+        getattr(t, "effective_fg_pct", 0.0) or 0.0 for t in torvik_teams[:20]
+    ]
+    if all(abs(v) < 1e-6 for v in _sample_efg):
+        _data_dir = os.path.dirname(config.torvik_json) if config.torvik_json else "data/raw"
+        logger.warning(
+            "Four Factors are all zero in Torvik data — running enrichment "
+            "from %s/torvik_four_factors_%d.json", _data_dir, config.year,
+        )
+        with open(config.torvik_json, "r") as f:
+            _torvik_payload = json.load(f)
+        _torvik_payload = enrich_torvik_teams(_torvik_payload, data_dir=_data_dir, year=config.year)
+        # Re-parse enriched data
+        torvik_teams = [
+            BartTorvikScraper()._dict_to_team(t)
+            for t in _torvik_payload.get("teams", [])
+        ]
+        # Check if enrichment succeeded
+        _sample_efg_after = [
+            getattr(t, "effective_fg_pct", 0.0) or 0.0 for t in torvik_teams[:20]
+        ]
+        if all(abs(v) < 1e-6 for v in _sample_efg_after):
+            raise DataRequirementError(
+                "Four Factors (eFG%, TO%, ORB%, FTR) are ALL ZERO for every team "
+                "even after enrichment. The torvik_four_factors_{}.json file is "
+                "missing or empty. Re-run data collection to fetch Four Factors "
+                "from barttorvik.com/getadvstats.php.".format(config.year)
+            )
+        else:
+            logger.info(
+                "Four Factors enrichment succeeded: %d/%d teams now have nonzero eFG%%.",
+                sum(1 for v in _sample_efg_after if abs(v) > 1e-6),
+                len(_sample_efg_after),
+            )
 
     # --- Load historical games for proprietary metrics ---
     historical_games: List[Dict] = []
