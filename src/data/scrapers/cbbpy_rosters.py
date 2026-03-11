@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import importlib
 import json
+import logging
 import os
+import re
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 class CBBpyRosterScraper:
@@ -29,20 +33,31 @@ class CBBpyRosterScraper:
         if scraper is None:
             return {}
 
-        box_rows, collection_mode = self._collect_box_rows(scraper, year)
+        enable_pbp = str(os.getenv("CBBPY_ROSTER_ENABLE_PBP", "")).strip().lower() in {
+            "1", "true", "yes", "y",
+        }
+        box_rows, pbp_rows, collection_mode = self._collect_box_and_pbp_rows(
+            scraper, year, enable_pbp=enable_pbp,
+        )
         if not box_rows:
             return {}
 
-        payload = self._build_payload(year, box_rows)
+        payload = self._build_payload(year, box_rows, pbp_rows=pbp_rows)
         if not payload.get("teams"):
             return {}
 
         enrichment = self._enrich_from_player_endpoint(scraper, payload)
         payload["timestamp"] = datetime.now(timezone.utc).isoformat()
         payload["source"] = "cbbpy_schedule_boxscore"
+        total_pbp_stints = sum(
+            len(t.get("stints", [])) for t in payload.get("teams", [])
+        )
         payload["metadata"] = {
             "collection_mode": collection_mode,
             "raw_boxscore_rows": len(box_rows),
+            "raw_pbp_rows": len(pbp_rows),
+            "pbp_enabled": enable_pbp,
+            "pbp_stints_total": total_pbp_stints,
             "player_endpoint_calls": enrichment[0],
             "player_endpoint_successes": enrichment[1],
             "player_endpoint_available": enrichment[2],
@@ -53,13 +68,28 @@ class CBBpyRosterScraper:
         self._save_cache(cache_name, payload)
         return payload
 
-    def _collect_box_rows(self, scraper, year: int) -> Tuple[List[Dict], str]:
+    # ------------------------------------------------------------------
+    # Data collection (box scores + optional PBP)
+    # ------------------------------------------------------------------
+
+    def _collect_box_and_pbp_rows(
+        self, scraper, year: int, *, enable_pbp: bool = False,
+    ) -> Tuple[List[Dict], List[Dict], str]:
+        """Collect box-score rows and optionally PBP rows.
+
+        Returns ``(box_rows, pbp_rows, collection_mode)``.
+        When *enable_pbp* is False, *pbp_rows* is always ``[]``.
+        """
         max_games = self._safe_int(os.getenv("CBBPY_ROSTER_MAX_GAMES"), 0)
-        force_schedule = str(os.getenv("CBBPY_ROSTER_FORCE_SCHEDULE", "")).strip().lower() in {"1", "true", "yes", "y"}
+        force_schedule = str(os.getenv("CBBPY_ROSTER_FORCE_SCHEDULE", "")).strip().lower() in {
+            "1", "true", "yes", "y",
+        }
         get_games_season = getattr(scraper, "get_games_season", None)
+
+        # Fast path: season endpoint (PBP disabled or bulk fetch)
         if callable(get_games_season) and not force_schedule and max_games <= 0:
             try:
-                data = get_games_season(year, info=False, box=True, pbp=False)
+                data = get_games_season(year, info=False, box=True, pbp=enable_pbp)
             except TypeError:
                 try:
                     data = get_games_season(year)
@@ -68,14 +98,23 @@ class CBBpyRosterScraper:
             except Exception:
                 data = None
 
-            rows = self._extract_box_rows(data)
-            if rows:
-                return rows, "season_endpoint"
+            box_rows = self._extract_box_rows(data)
+            pbp_rows = self._extract_pbp_rows(data) if enable_pbp else []
+            if box_rows:
+                if enable_pbp:
+                    logger.info(
+                        "Season endpoint returned %d box rows and %d PBP rows",
+                        len(box_rows), len(pbp_rows),
+                    )
+                return box_rows, pbp_rows, "season_endpoint"
 
-        rows = self._collect_box_rows_via_schedule(scraper, year)
-        if rows:
-            return rows, "schedule_game_endpoints"
-        return [], "none"
+        # Slow path: game-by-game via schedule
+        box_rows, pbp_rows = self._collect_rows_via_schedule(
+            scraper, year, enable_pbp=enable_pbp,
+        )
+        if box_rows:
+            return box_rows, pbp_rows, "schedule_game_endpoints"
+        return [], [], "none"
 
     def _extract_box_rows(self, data) -> List[Dict]:
         if isinstance(data, tuple):
@@ -83,16 +122,25 @@ class CBBpyRosterScraper:
             return self._frame_to_records(box)
         return self._frame_to_records(data)
 
-    def _collect_box_rows_via_schedule(self, scraper, year: int) -> List[Dict]:
+    def _extract_pbp_rows(self, data) -> List[Dict]:
+        """Extract PBP rows from a cbbpy result tuple."""
+        if isinstance(data, tuple) and len(data) > 2:
+            return self._frame_to_records(data[2])
+        return []
+
+    def _collect_rows_via_schedule(
+        self, scraper, year: int, *, enable_pbp: bool = False,
+    ) -> Tuple[List[Dict], List[Dict]]:
         get_game_ids = getattr(scraper, "get_game_ids", None)
         if not callable(get_game_ids):
-            return []
+            return [], []
 
-        get_boxscore = getattr(scraper, "get_game_boxscore", None)
         get_game = getattr(scraper, "get_game", None)
+        get_boxscore = getattr(scraper, "get_game_boxscore", None)
 
-        rows: List[Dict] = []
-        seen_game_ids = set()
+        box_rows: List[Dict] = []
+        pbp_rows: List[Dict] = []
+        seen_game_ids: set = set()
         max_games = self._safe_int(os.getenv("CBBPY_ROSTER_MAX_GAMES"), 0)
 
         for day in self._season_dates(year):
@@ -112,21 +160,29 @@ class CBBpyRosterScraper:
                 seen_game_ids.add(gid)
                 if max_games > 0 and len(seen_game_ids) > max_games:
                     break
-                game_rows = self._fetch_single_game_box_rows(get_boxscore, get_game, gid)
-                if game_rows:
-                    rows.extend(game_rows)
-        return rows
+                game_box, game_pbp = self._fetch_single_game(
+                    get_boxscore, get_game, gid, enable_pbp=enable_pbp,
+                )
+                if game_box:
+                    box_rows.extend(game_box)
+                if game_pbp:
+                    pbp_rows.extend(game_pbp)
+        return box_rows, pbp_rows
 
-    def _fetch_single_game_box_rows(self, get_boxscore, get_game, game_id: str) -> List[Dict]:
-        if callable(get_boxscore):
+    def _fetch_single_game(
+        self, get_boxscore, get_game, game_id: str, *, enable_pbp: bool = False,
+    ) -> Tuple[List[Dict], List[Dict]]:
+        """Fetch box score (and optionally PBP) for a single game."""
+        # If PBP not needed, use the simpler boxscore endpoint first
+        if not enable_pbp and callable(get_boxscore):
             try:
-                return self._frame_to_records(get_boxscore(game_id))
+                return self._frame_to_records(get_boxscore(game_id)), []
             except Exception:
                 pass
 
         if callable(get_game):
             try:
-                data = get_game(game_id, info=False, box=True, pbp=False)
+                data = get_game(game_id, info=False, box=True, pbp=enable_pbp)
             except TypeError:
                 try:
                     data = get_game(game_id)
@@ -135,10 +191,19 @@ class CBBpyRosterScraper:
             except Exception:
                 data = None
             if data is not None:
-                return self._extract_box_rows(data)
-        return []
+                box = self._extract_box_rows(data)
+                pbp = self._extract_pbp_rows(data) if enable_pbp else []
+                return box, pbp
 
-    def _build_payload(self, year: int, box_rows: List[Dict]) -> Dict:
+        # Last resort: boxscore-only endpoint
+        if callable(get_boxscore):
+            try:
+                return self._frame_to_records(get_boxscore(game_id)), []
+            except Exception:
+                pass
+        return [], []
+
+    def _build_payload(self, year: int, box_rows: List[Dict], *, pbp_rows: Optional[List[Dict]] = None) -> Dict:
         teams: Dict[str, Dict] = {}
         game_team_stats: Dict[Tuple[str, str], Dict] = {}
         game_teams: Dict[str, set] = defaultdict(set)
@@ -244,7 +309,17 @@ class CBBpyRosterScraper:
 
             game_teams[game_id].add(team_id)
 
-        self._attach_stints(teams, game_team_stats, game_teams)
+        # Try PBP-derived stints first; fall back to synthetic box-score stints.
+        pbp_stint_count = 0
+        if pbp_rows:
+            pbp_stint_count = self._attach_pbp_stints(
+                teams, pbp_rows or [], box_rows, game_teams,
+            )
+        if pbp_stint_count == 0:
+            self._attach_stints(teams, game_team_stats, game_teams)
+        else:
+            # Still need team_totals populated for usage rate calculations.
+            self._accumulate_team_totals(teams, game_team_stats)
 
         out_teams: List[Dict] = []
         for team_id, team in teams.items():
@@ -366,6 +441,316 @@ class CBBpyRosterScraper:
                         "possessions": round(max(possessions, 1.0), 4),
                     }
                 )
+
+    def _accumulate_team_totals(
+        self,
+        teams: Dict[str, Dict],
+        game_team_stats: Dict[Tuple[str, str], Dict],
+    ) -> None:
+        """Populate team_totals without creating synthetic stints."""
+        for (_game_id, _tid), stats in game_team_stats.items():
+            team_bucket = teams.get(stats["team_id"])
+            if team_bucket is None:
+                continue
+            team_bucket["team_totals"]["fga"] += stats["fga"]
+            team_bucket["team_totals"]["fta"] += stats["fta"]
+            team_bucket["team_totals"]["turnovers"] += stats["turnovers"]
+            team_bucket["team_totals"]["minutes"] += sum(stats["player_minutes"].values())
+            possessions = stats["fga"] - stats["oreb"] + stats["turnovers"] + 0.475 * stats["fta"]
+            team_bucket["team_totals"]["possessions"] += max(possessions, 0.0)
+
+    # ------------------------------------------------------------------
+    # PBP-derived stint building
+    # ------------------------------------------------------------------
+
+    # Regex to detect ESPN substitution descriptions.
+    # Common patterns: "Player A enters the game for Player B"
+    _SUB_RE = re.compile(
+        r"^(?P<player_in>.+?)\s+enters\s+the\s+game\s+for\s+(?P<player_out>.+?)\s*$",
+        re.IGNORECASE,
+    )
+
+    def _attach_pbp_stints(
+        self,
+        teams: Dict[str, Dict],
+        pbp_rows: List[Dict],
+        box_rows: List[Dict],
+        game_teams: Dict[str, set],
+    ) -> int:
+        """Build lineup stints from PBP substitution events.
+
+        Returns the total number of stints created across all teams.
+        Falls back gracefully when PBP data lacks substitution events.
+        """
+        if not pbp_rows:
+            return 0
+
+        # Group PBP and box rows by game_id.
+        pbp_by_game: Dict[str, List[Dict]] = defaultdict(list)
+        for row in pbp_rows:
+            gid = str(row.get("game_id") or "").strip()
+            if gid:
+                pbp_by_game[gid].append(row)
+
+        box_by_game_team: Dict[str, Dict[str, List[Dict]]] = defaultdict(lambda: defaultdict(list))
+        for row in box_rows:
+            gid = str(row.get("game_id") or row.get("id") or "").strip()
+            team_name = str(row.get("team") or row.get("team_name") or "").strip()
+            player_name = str(row.get("player") or row.get("player_name") or "").strip()
+            if gid and team_name and player_name.lower() not in {"team", "totals", "team totals"}:
+                box_by_game_team[gid][team_name].append(row)
+
+        total_stints = 0
+        for game_id, game_pbp in pbp_by_game.items():
+            game_stints = self._build_game_stints(
+                game_id, game_pbp, box_by_game_team.get(game_id, {}),
+            )
+            for team_id, stints in game_stints.items():
+                team_bucket = teams.get(team_id)
+                if team_bucket is not None:
+                    team_bucket["stints"].extend(stints)
+                    total_stints += len(stints)
+
+        if total_stints > 0:
+            logger.info("PBP stint builder created %d stints across all teams", total_stints)
+        return total_stints
+
+    def _build_game_stints(
+        self,
+        game_id: str,
+        pbp_rows: List[Dict],
+        box_by_team: Dict[str, List[Dict]],
+    ) -> Dict[str, List[Dict]]:
+        """Build stints for a single game from PBP events.
+
+        Returns ``{team_id: [stint_dict, ...]}``.
+        """
+        if not pbp_rows or not box_by_team:
+            return {}
+
+        # Build name→player_id mapping and identify starters per team.
+        team_name_map: Dict[str, str] = {}  # team_name -> team_id
+        name_to_pid: Dict[str, Dict[str, str]] = {}  # team_name -> {normalized_name: player_id}
+        starters_by_team: Dict[str, List[str]] = {}  # team_name -> [player_ids]
+
+        for team_name, players in box_by_team.items():
+            team_id = self._team_id(team_name)
+            team_name_map[team_name] = team_id
+            pid_map: Dict[str, str] = {}
+            starter_ids: List[str] = []
+
+            for row in players:
+                player_name = str(row.get("player") or row.get("player_name") or "").strip()
+                player_id = str(row.get("player_id") or "").strip()
+                if not player_id:
+                    player_id = self._player_id(team_id, player_name)
+
+                norm_name = self._normalize_player_name(player_name)
+                pid_map[norm_name] = player_id
+
+                # Also map last name for fuzzy matching.
+                parts = player_name.strip().split()
+                if len(parts) > 1:
+                    pid_map[self._normalize_player_name(parts[-1])] = player_id
+
+                if self._to_bool(row.get("starter")):
+                    starter_ids.append(player_id)
+
+            name_to_pid[team_name] = pid_map
+            starters_by_team[team_name] = starter_ids[:5]
+
+        # Resolve PBP play_team to our team_name keys.
+        # PBP play_team may not exactly match box score team names.
+        pbp_team_resolve: Dict[str, str] = {}
+        for team_name in box_by_team:
+            pbp_team_resolve[team_name.lower()] = team_name
+            # Also try abbreviations/partial matches.
+            for word in team_name.split():
+                if len(word) > 3:
+                    pbp_team_resolve[word.lower()] = team_name
+
+        def resolve_team(play_team: str) -> Optional[str]:
+            if not play_team:
+                return None
+            key = play_team.strip().lower()
+            if key in pbp_team_resolve:
+                return pbp_team_resolve[key]
+            # Fuzzy: check if any known team name is contained in play_team.
+            for known_lower, known in pbp_team_resolve.items():
+                if known_lower in key or key in known_lower:
+                    return known
+            return None
+
+        def resolve_player(team_name: str, player_name: str) -> Optional[str]:
+            pid_map = name_to_pid.get(team_name, {})
+            norm = self._normalize_player_name(player_name)
+            if norm in pid_map:
+                return pid_map[norm]
+            # Try last name only.
+            parts = player_name.strip().split()
+            if len(parts) > 1:
+                last = self._normalize_player_name(parts[-1])
+                if last in pid_map:
+                    return pid_map[last]
+            return None
+
+        # Track current on-court lineups per team.
+        current_lineup: Dict[str, set] = {}
+        for team_name, starter_ids in starters_by_team.items():
+            current_lineup[team_name] = set(starter_ids)
+
+        # Track stint boundaries.
+        # Each stint: {team_name, lineup (frozenset), start_score, end_score, possessions}
+        active_stints: Dict[str, Dict] = {}
+        completed_stints: Dict[str, List[Dict]] = defaultdict(list)
+
+        def get_team_score(row: Dict, team_name: str) -> float:
+            """Get the score for a team from a PBP row."""
+            home_score = self._to_float(row.get("home_score"))
+            away_score = self._to_float(row.get("away_score"))
+            # We don't know which is home/away reliably, so we track
+            # the score tuple and compute delta.
+            return home_score, away_score
+
+        def close_stint(team_name: str, home_score: float, away_score: float) -> None:
+            stint = active_stints.get(team_name)
+            if stint is None or not stint["lineup"]:
+                return
+            start_home, start_away = stint["start_score"]
+            delta_home = home_score - start_home
+            delta_away = away_score - start_away
+            # Determine which score belongs to this team.
+            plus_minus = self._compute_stint_plus_minus(
+                team_name, box_by_team, delta_home, delta_away,
+            )
+            possessions = max(stint["possessions"], 1.0)
+            completed_stints[team_name].append({
+                "game_id": game_id,
+                "players": sorted(stint["lineup"]),
+                "plus_minus": round(plus_minus, 4),
+                "possessions": round(possessions, 4),
+            })
+
+        def open_stint(team_name: str, home_score: float, away_score: float) -> None:
+            active_stints[team_name] = {
+                "lineup": set(current_lineup.get(team_name, set())),
+                "start_score": (home_score, away_score),
+                "possessions": 0.0,
+            }
+
+        # Initialize stints for each team.
+        for team_name in box_by_team:
+            open_stint(team_name, 0.0, 0.0)
+
+        # Process PBP events chronologically.
+        sub_count = 0
+        for row in pbp_rows:
+            play_desc = str(row.get("play_desc") or "").strip()
+            play_team_raw = str(row.get("play_team") or "").strip()
+            play_type = str(row.get("play_type") or "").strip().lower()
+            home_score = self._to_float(row.get("home_score"))
+            away_score = self._to_float(row.get("away_score"))
+
+            resolved_team = resolve_team(play_team_raw)
+
+            # Check for substitution event.
+            sub_match = self._SUB_RE.match(play_desc)
+            if sub_match and resolved_team:
+                player_in_name = sub_match.group("player_in").strip()
+                player_out_name = sub_match.group("player_out").strip()
+                player_in_id = resolve_player(resolved_team, player_in_name)
+                player_out_id = resolve_player(resolved_team, player_out_name)
+
+                if player_in_id and player_out_id:
+                    # Close current stint for this team.
+                    close_stint(resolved_team, home_score, away_score)
+
+                    # Update lineup.
+                    lineup = current_lineup.get(resolved_team, set())
+                    lineup.discard(player_out_id)
+                    lineup.add(player_in_id)
+                    current_lineup[resolved_team] = lineup
+                    sub_count += 1
+
+                    # Open new stint.
+                    open_stint(resolved_team, home_score, away_score)
+
+            # Count possession-ending events for the active stint.
+            if resolved_team and resolved_team in active_stints:
+                stint = active_stints[resolved_team]
+                if self._is_possession_ending(play_type, play_desc, row):
+                    stint["possessions"] += 1.0
+
+        # Close final stints.
+        for team_name in box_by_team:
+            last_home = self._to_float(pbp_rows[-1].get("home_score")) if pbp_rows else 0.0
+            last_away = self._to_float(pbp_rows[-1].get("away_score")) if pbp_rows else 0.0
+            close_stint(team_name, last_home, last_away)
+
+        if sub_count == 0:
+            # No substitutions found — PBP data doesn't contain sub events.
+            return {}
+
+        # Convert to team_id keyed result.
+        result: Dict[str, List[Dict]] = {}
+        for team_name, stints in completed_stints.items():
+            team_id = team_name_map.get(team_name)
+            if team_id and stints:
+                # Filter out trivially short stints.
+                meaningful = [s for s in stints if s["possessions"] >= 1.0]
+                if meaningful:
+                    result[team_id] = meaningful
+
+        logger.info(
+            "Game %s: parsed %d substitutions, produced %d stints",
+            game_id, sub_count, sum(len(s) for s in result.values()),
+        )
+        return result
+
+    def _compute_stint_plus_minus(
+        self,
+        team_name: str,
+        box_by_team: Dict[str, List[Dict]],
+        delta_home: float,
+        delta_away: float,
+    ) -> float:
+        """Determine +/- for a team from home/away score deltas.
+
+        Uses the first box row's team name to guess home/away alignment.
+        Since we can't always determine home vs away from PBP alone, we
+        use a heuristic: if team is listed first in the box score, treat
+        as home.
+        """
+        team_names = list(box_by_team.keys())
+        if not team_names:
+            return delta_home - delta_away
+        # First team in box score is typically home.
+        if team_name == team_names[0]:
+            return delta_home - delta_away
+        return delta_away - delta_home
+
+    @staticmethod
+    def _is_possession_ending(play_type: str, play_desc: str, row: Dict) -> bool:
+        """Return True if this play ends a possession."""
+        pt = play_type.lower()
+        if "turnover" in pt:
+            return True
+        if "made" in pt or ("shooting" in pt and row.get("scoring_play")):
+            return True
+        # Defensive rebound after a miss ends the opponent's possession.
+        if "rebound" in pt and "defensive" in play_desc.lower():
+            return True
+        # End of free throw sequence (last FT made or missed).
+        if "free throw" in pt:
+            desc_lower = play_desc.lower()
+            if "2 of 2" in desc_lower or "3 of 3" in desc_lower or "1 of 1" in desc_lower:
+                return True
+        return False
+
+    @staticmethod
+    def _normalize_player_name(name: str) -> str:
+        """Normalize a player name for fuzzy matching."""
+        return re.sub(r"[^a-z]", "", name.lower())
 
     def _enrich_from_player_endpoint(self, scraper, payload: Dict) -> Tuple[int, int, bool]:
         get_player_info = getattr(scraper, "get_player_info", None)
