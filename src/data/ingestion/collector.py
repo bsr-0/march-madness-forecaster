@@ -125,7 +125,10 @@ class RealDataCollector:
                         "offensive_reb_rate",
                         "free_throw_rate",
                     ],
-                    variance_fields=["barthag", "adj_offensive_efficiency", "adj_defensive_efficiency"],
+                    variance_fields=[
+                        "barthag", "adj_offensive_efficiency", "adj_defensive_efficiency",
+                        "effective_fg_pct", "turnover_rate",
+                    ],
                 )
                 self._assert_valid("torvik_json", validation_errors["torvik_json"])
                 out["torvik_json"] = self._write(f"torvik_{year}.json", payload)
