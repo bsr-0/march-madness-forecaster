@@ -97,6 +97,42 @@ def test_validate_rosters_payload_rejects_all_zero_rapm():
     assert "all RAPM values are zero" in errors[0]
 
 
+def test_validate_ratings_payload_rejects_all_zero_four_factors():
+    """Catch silent data source failure where Four Factors are all zero."""
+    payload = {
+        "teams": [
+            {"team_id": "duke", "name": "Duke", "effective_fg_pct": 0.0, "turnover_rate": 0.0},
+            {"team_id": "unc", "name": "UNC", "effective_fg_pct": 0.0, "turnover_rate": 0.0},
+        ]
+    }
+    errors = validate_ratings_payload(
+        payload,
+        required_numeric_fields=["effective_fg_pct", "turnover_rate"],
+    )
+    assert any("effective_fg_pct" in e and "zero" in e.lower() for e in errors), (
+        f"Expected all-zero detection for effective_fg_pct, got: {errors}"
+    )
+    assert any("turnover_rate" in e and "zero" in e.lower() for e in errors), (
+        f"Expected all-zero detection for turnover_rate, got: {errors}"
+    )
+
+
+def test_validate_ratings_payload_accepts_nonzero_four_factors():
+    """Non-zero Four Factors should pass validation."""
+    payload = {
+        "teams": [
+            {"team_id": "duke", "name": "Duke", "effective_fg_pct": 0.54, "turnover_rate": 0.16},
+            {"team_id": "unc", "name": "UNC", "effective_fg_pct": 0.51, "turnover_rate": 0.18},
+        ]
+    }
+    errors = validate_ratings_payload(
+        payload,
+        required_numeric_fields=["effective_fg_pct", "turnover_rate"],
+    )
+    zero_errors = [e for e in errors if "zero" in e.lower()]
+    assert not zero_errors, f"Unexpected zero-detection errors: {zero_errors}"
+
+
 def test_validate_odds_payload_requires_probability_or_odds():
     payload = {"teams": [{"team_name": "Duke"}]}
     errors = validate_odds_payload(payload)
