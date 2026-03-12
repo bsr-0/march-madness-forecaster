@@ -347,6 +347,89 @@ class TournamentContextScraper:
         return result
 
     # ------------------------------------------------------------------
+    # 2b. Team-to-Coach Mapping (Barttorvik team ratings page)
+    # ------------------------------------------------------------------
+
+    def fetch_team_coaches(self, year: int) -> Dict[str, str]:
+        """Fetch a mapping of team_id -> head coach name from Barttorvik.
+
+        Args:
+            year: Season end year.
+
+        Returns:
+            Dict mapping normalized team_id -> coach full name.
+        """
+        cache_name = f"team_coaches_{year}.json"
+        cached = self._load_cache(cache_name)
+        if cached and "coaches" in cached:
+            return cached["coaches"]
+
+        coaches = self._scrape_team_coaches(year)
+        if coaches:
+            self._save_cache(cache_name, {"coaches": coaches, "year": year})
+        return coaches
+
+    def _scrape_team_coaches(self, year: int) -> Dict[str, str]:
+        """Scrape team-to-coach mapping from Barttorvik team ratings page."""
+        url = f"{self.BASE_URL_TORVIK}/trank.php?year={year}&conyes=1"
+        coaches: Dict[str, str] = {}
+
+        try:
+            resp = self.session.get(url, timeout=30)
+            resp.raise_for_status()
+        except Exception as e:
+            logger.warning("Could not fetch Barttorvik team ratings for %d: %s", year, e)
+            return coaches
+
+        soup = BeautifulSoup(resp.text, "lxml")
+        table = soup.find("table")
+        if not table:
+            logger.warning("No table found on Barttorvik team ratings page")
+            return coaches
+
+        rows = table.find_all("tr")
+        if len(rows) < 2:
+            return coaches
+
+        # Parse header to find team and coach columns
+        header_cells = rows[0].find_all(["th", "td"])
+        headers = [c.get_text(strip=True).lower() for c in header_cells]
+
+        team_col: Optional[int] = None
+        coach_col: Optional[int] = None
+        for idx, h in enumerate(headers):
+            if h in ("team", "team name") and team_col is None:
+                team_col = idx
+            elif h in ("coach", "head coach") and coach_col is None:
+                coach_col = idx
+
+        if team_col is None or coach_col is None:
+            # Fallback: try common positions (team=1, coach=2 on trank page)
+            if len(headers) >= 3:
+                team_col = team_col if team_col is not None else 1
+                coach_col = coach_col if coach_col is not None else 2
+            else:
+                logger.warning(
+                    "Could not identify team/coach columns in headers: %s", headers
+                )
+                return coaches
+
+        for row in rows[1:]:
+            cells = row.find_all(["td", "th"])
+            if len(cells) <= max(team_col, coach_col):
+                continue
+
+            team_name = self._extract_team_name(cells[team_col])
+            coach_name = cells[coach_col].get_text(strip=True)
+
+            if team_name and coach_name:
+                team_id = self._normalize_name(team_name)
+                coaches[team_id] = coach_name
+
+        logger.info("Parsed %d team-coach mappings from Barttorvik for %d", len(coaches), year)
+        return coaches
+
+    # ------------------------------------------------------------------
     # 3. Conference Tournament Champions
     # ------------------------------------------------------------------
 
