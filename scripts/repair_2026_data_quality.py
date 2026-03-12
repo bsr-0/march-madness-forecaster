@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""Repair 2026 data quality issues.
+"""Repair season data quality issues.
 
-Addresses the following gaps in the 2026 season data:
+Addresses the following gaps in scraped season data:
 
 1. Defensive Four Factors (opp_effective_fg_pct, opp_turnover_rate,
    opp_free_throw_rate) are all zero — computed from historical game box scores.
-2. Coach tournament teams arrays are empty — cross-referenced with Torvik
-   team roster to map coaches to their current teams.
+2. Coach tournament teams arrays are empty — populated from Barttorvik
+   team-coach mappings, and head_coach injected into roster data.
 3. Player RAPM values are null — estimated from BPM/WARP/usage priors.
 4. Manifest is stale — updated with current timestamp and cleared errors.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
 import sys
@@ -33,7 +34,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 DATA_DIR = PROJECT_ROOT / "data" / "raw"
-YEAR = 2026
+DEFAULT_YEAR = 2026
 
 # Cache of torvik team IDs, populated by _build_game_id_resolver()
 _TORVIK_IDS: set[str] = set()
@@ -140,19 +141,19 @@ def save_json(filename: str, data: dict | list) -> None:
 
 def compute_defensive_four_factors(
     torvik_data: dict,
+    year: int = DEFAULT_YEAR,
 ) -> dict[str, dict[str, float]]:
     """Aggregate opponent box score stats into defensive Four Factors per team.
 
-    Uses the historical_games_2026.json box scores. For each team, we
-    aggregate opponent shooting/turnover/rebounding across all games they
-    played, giving us:
+    Uses historical game box scores. For each team, we aggregate opponent
+    shooting/turnover/rebounding across all games they played, giving us:
       - opp_effective_fg_pct: opponents' eFG% against this team
       - opp_turnover_rate: opponents' turnover rate against this team
       - opp_free_throw_rate: opponents' FTA/FGA against this team
     """
     resolve = _build_game_id_resolver(torvik_data)
 
-    games_data = load_json(f"historical_games_{YEAR}.json")
+    games_data = load_json(f"historical_games_{year}.json")
     games = games_data.get("games", [])
     logger.info("Loaded %d game records for defensive Four Factors", len(games))
 
@@ -286,72 +287,89 @@ def apply_defensive_four_factors(
 
 def fix_coach_tournament_teams(
     coach_data: dict,
-    torvik_data: dict,
-) -> int:
-    """Cross-reference coaches with Torvik team data to populate teams arrays.
+    roster_data: dict,
+    team_coach_map: dict[str, str],
+) -> tuple[int, int]:
+    """Populate coach tournament teams arrays and inject head_coach into rosters.
 
-    The Barttorvik coach tournament page links may not render team names,
-    leaving the teams array empty. We use a reverse lookup: for each Torvik
-    team that has a known head coach, find the matching coach entry and
-    add the team to their teams list.
+    Uses a team_coach_map (team_id -> coach_name) scraped from Barttorvik to:
+    1. Set head_coach on each roster team block (enables data_loader.py lookup)
+    2. Populate the teams array on coach tournament entries via reverse lookup
 
-    Returns count of coaches updated.
+    Returns (roster_teams_updated, coaches_updated) counts.
     """
-    coaches = coach_data.get("coaches", {})
-    teams = torvik_data.get("teams", [])
-
-    # Build a mapping from normalized coach last name -> coach_ids in file
-    from collections import defaultdict
-    coach_by_lastname: dict[str, list[str]] = defaultdict(list)
-    for cid, info in coaches.items():
-        name = info.get("name", "")
-        # Extract last name (last token)
-        parts = name.split()
-        if parts:
-            last = parts[-1].lower()
-            coach_by_lastname[last].append(cid)
-
-    # Torvik team data doesn't have coach name directly, so we use
-    # the Sports Reference data which has more coverage
-    sr_data = load_json(f"sports_reference_{YEAR}.json")
-    sr_teams = sr_data.get("teams", [])
-
-    # Build team_id -> team_name map from torvik
-    torvik_id_to_name: dict[str, str] = {}
-    for t in teams:
-        torvik_id_to_name[t["team_id"]] = t.get("team_name", t.get("name", ""))
-
-    updated = 0
-    # Since we don't have a direct coach->team mapping from the data,
-    # we at least ensure that coaches who have win/loss records but empty
-    # teams arrays get populated with a placeholder based on name matching.
-    # The key insight: the feature engineering only uses appearances/wins/losses,
-    # and the teams array is used for coach->team lookup which goes through
-    # build_team_to_coach_appearances() with a separate team_to_coach_map.
-    # So having empty teams is OK as long as the pipeline provides the map.
-
-    # However, we can still populate teams for coaches whose names match
-    # known team coaches from the cbbpy roster data.
-    roster_data = load_json(f"rosters_{YEAR}.json")
+    # -- Inject head_coach into roster team blocks --
     roster_teams = roster_data.get("teams", [])
+    roster_updated = 0
 
-    # Build coach_name -> [team_ids] from roster stints/metadata
-    # Roster data doesn't have coach names either, so we need another approach.
-    # Let's check if any roster team has a 'head_coach' field.
-    coach_to_team: dict[str, list[str]] = defaultdict(list)
+    # Build collapsed lookup for fuzzy matching
+    collapsed_map: dict[str, tuple[str, str]] = {}
+    for tid, coach in team_coach_map.items():
+        collapsed_map[tid.replace("_", "")] = (tid, coach)
 
-    # For now, clear out the issue: the empty teams arrays don't block
-    # the pipeline since build_team_to_coach_appearances() requires
-    # an external team_to_coach_map. What we CAN do is set a flag
-    # indicating the data was reviewed.
+    for team in roster_teams:
+        tid = team.get("team_id", "")
+        coach = team_coach_map.get(tid)
+        if not coach:
+            # Try fuzzy match via collapsed form
+            entry = collapsed_map.get(tid.replace("_", ""))
+            if entry:
+                coach = entry[1]
+        if not coach:
+            # Try normalizing team_name
+            tname = team.get("team_name", "")
+            norm = normalize_team_id(tname)
+            coach = team_coach_map.get(norm)
+            if not coach:
+                entry = collapsed_map.get(norm.replace("_", ""))
+                if entry:
+                    coach = entry[1]
+        if coach:
+            team["head_coach"] = coach
+            roster_updated += 1
+
+    # -- Populate teams arrays on coach tournament entries --
+    coaches = coach_data.get("coaches", {})
+
+    # Build reverse map: normalized coach name -> [team_ids]
+    coach_to_teams: dict[str, list[str]] = defaultdict(list)
+    for tid, coach_name in team_coach_map.items():
+        norm_coach = _normalize_coach_name(coach_name)
+        coach_to_teams[norm_coach].append(tid)
+
+    coaches_updated = 0
     for cid, info in coaches.items():
-        if not info.get("teams"):
-            # Mark that we've acknowledged the gap
-            info["teams_source"] = "unavailable_from_scrape"
-            updated += 1
+        coach_name = info.get("name", "")
+        norm = _normalize_coach_name(coach_name)
+        matched_teams = coach_to_teams.get(norm, [])
 
-    logger.info("Reviewed %d coaches with empty teams arrays", updated)
-    return updated
+        # Fallback: try last-name-only matching
+        if not matched_teams and " " in coach_name:
+            last_name = coach_name.split()[-1].lower()
+            for norm_key, teams_list in coach_to_teams.items():
+                if norm_key.endswith(last_name) or last_name in norm_key.split("_"):
+                    matched_teams = teams_list
+                    break
+
+        if matched_teams:
+            info["teams"] = matched_teams
+            info["teams_source"] = "barttorvik_team_coaches"
+            coaches_updated += 1
+        elif not info.get("teams"):
+            info["teams_source"] = "unavailable_from_scrape"
+
+    logger.info(
+        "Coach mapping: %d roster teams updated, %d coaches mapped to teams",
+        roster_updated, coaches_updated,
+    )
+    return roster_updated, coaches_updated
+
+
+def _normalize_coach_name(name: str) -> str:
+    """Normalize a coach name for fuzzy matching."""
+    return "".join(
+        c.lower() if c.isalnum() else "_" for c in (name or "")
+    ).strip("_")
 
 
 # ---------------------------------------------------------------------------
@@ -406,9 +424,11 @@ def update_manifest(
     torvik_ff_fixed: int,
     rapm_fixed: int,
     def_ff_count: int,
+    coaches_mapped: int = 0,
+    year: int = DEFAULT_YEAR,
 ) -> None:
     """Update manifest with current timestamp and revised validation errors."""
-    manifest = load_json(f"manifest_{YEAR}.json")
+    manifest = load_json(f"manifest_{year}.json")
 
     manifest["generated_at"] = datetime.now(timezone.utc).isoformat()
 
@@ -451,10 +471,11 @@ def update_manifest(
         "run_at": datetime.now(timezone.utc).isoformat(),
         "defensive_four_factors_teams": def_ff_count,
         "rapm_players_estimated": rapm_fixed,
+        "coaches_mapped_to_teams": coaches_mapped,
     }
     manifest["provenance"] = provenance
 
-    save_json(f"manifest_{YEAR}.json", manifest)
+    save_json(f"manifest_{year}.json", manifest)
 
 
 # ---------------------------------------------------------------------------
@@ -462,17 +483,25 @@ def update_manifest(
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    logger.info("=== 2026 Data Quality Repair ===")
+    parser = argparse.ArgumentParser(description="Repair season data quality issues")
+    parser.add_argument(
+        "--year", type=int, default=DEFAULT_YEAR,
+        help=f"Season year to repair (default: {DEFAULT_YEAR})",
+    )
+    args = parser.parse_args()
+    year = args.year
+
+    logger.info("=== %d Data Quality Repair ===", year)
 
     # Load data files
-    torvik_data = load_json(f"torvik_{YEAR}.json")
-    ff_data = load_json(f"torvik_four_factors_{YEAR}.json")
-    coach_data = load_json(f"coach_tournament_{YEAR}.json")
-    roster_data = load_json(f"rosters_{YEAR}.json")
+    torvik_data = load_json(f"torvik_{year}.json")
+    ff_data = load_json(f"torvik_four_factors_{year}.json")
+    coach_data = load_json(f"coach_tournament_{year}.json")
+    roster_data = load_json(f"rosters_{year}.json")
 
     # 1. Compute and apply defensive Four Factors
     logger.info("--- Step 1: Defensive Four Factors ---")
-    def_ff = compute_defensive_four_factors(torvik_data)
+    def_ff = compute_defensive_four_factors(torvik_data, year=year)
     torvik_updated, ff_updated = apply_defensive_four_factors(
         torvik_data, ff_data, def_ff,
     )
@@ -483,7 +512,15 @@ def main() -> None:
 
     # 2. Fix coach tournament teams
     logger.info("--- Step 2: Coach Tournament Teams ---")
-    coaches_updated = fix_coach_tournament_teams(coach_data, torvik_data)
+    from src.data.scrapers.tournament_context import TournamentContextScraper
+    team_coach_map = TournamentContextScraper(
+        cache_dir=str(DATA_DIR / "cache"),
+    ).fetch_team_coaches(year)
+    logger.info("Fetched %d team-coach mappings from Barttorvik", len(team_coach_map))
+
+    roster_coaches_updated, coaches_updated = fix_coach_tournament_teams(
+        coach_data, roster_data, team_coach_map,
+    )
 
     # 3. Estimate RAPM from priors
     logger.info("--- Step 3: RAPM Estimation ---")
@@ -491,10 +528,10 @@ def main() -> None:
 
     # Save updated files
     logger.info("--- Saving repaired data ---")
-    save_json(f"torvik_{YEAR}.json", torvik_data)
-    save_json(f"torvik_four_factors_{YEAR}.json", ff_data)
-    save_json(f"coach_tournament_{YEAR}.json", coach_data)
-    save_json(f"rosters_{YEAR}.json", roster_data)
+    save_json(f"torvik_{year}.json", torvik_data)
+    save_json(f"torvik_four_factors_{year}.json", ff_data)
+    save_json(f"coach_tournament_{year}.json", coach_data)
+    save_json(f"rosters_{year}.json", roster_data)
 
     # 4. Update manifest
     logger.info("--- Step 4: Update Manifest ---")
@@ -502,6 +539,8 @@ def main() -> None:
         torvik_ff_fixed=torvik_updated,
         rapm_fixed=rapm_updated,
         def_ff_count=len(def_ff),
+        coaches_mapped=coaches_updated,
+        year=year,
     )
 
     # Summary
@@ -509,7 +548,8 @@ def main() -> None:
     logger.info("  Defensive Four Factors computed for %d teams", len(def_ff))
     logger.info("  Torvik teams updated: %d", torvik_updated)
     logger.info("  Four Factors file entries updated: %d", ff_updated)
-    logger.info("  Coach entries reviewed: %d", coaches_updated)
+    logger.info("  Roster teams with head_coach: %d", roster_coaches_updated)
+    logger.info("  Coach entries mapped to teams: %d", coaches_updated)
     logger.info("  Player RAPM estimated: %d", rapm_updated)
 
 

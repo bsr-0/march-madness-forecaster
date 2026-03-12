@@ -92,7 +92,7 @@ jobs:
 
       - name: Run data quality repair
         if: inputs.run_repair != false
-        run: python scripts/repair_2026_data_quality.py
+        run: python scripts/repair_2026_data_quality.py --year ${{ steps.year.outputs.value }}
 
       - name: Commit and push updated data
         run: |
