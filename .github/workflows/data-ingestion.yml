@@ -1,0 +1,108 @@
+name: Data Ingestion
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Season year to ingest"
+        required: true
+        default: "2026"
+        type: string
+      skip_torvik:
+        description: "Skip Torvik scrape"
+        required: false
+        default: false
+        type: boolean
+      skip_sports_reference:
+        description: "Skip Sports Reference scrape"
+        required: false
+        default: false
+        type: boolean
+      skip_rosters:
+        description: "Skip roster ingestion"
+        required: false
+        default: false
+        type: boolean
+      run_repair:
+        description: "Run data quality repair script after ingestion"
+        required: false
+        default: true
+        type: boolean
+  schedule:
+    # Every Monday at 6:00 UTC during college basketball season (Nov-Apr)
+    - cron: "0 6 * 11-12,1-4 1"
+
+concurrency:
+  group: data-ingestion
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  ingest:
+    name: Ingest Season Data
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Determine year
+        id: year
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # During scheduled runs, use current year for Jan-Apr, or next year for Nov-Dec
+            MONTH=$(date +%-m)
+            YEAR=$(date +%Y)
+            if [ "$MONTH" -ge 11 ]; then
+              YEAR=$((YEAR + 1))
+            fi
+            echo "value=$YEAR" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${{ inputs.year }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build ingestion flags
+        id: flags
+        run: |
+          FLAGS="--year ${{ steps.year.outputs.value }} --allow-invalid-payloads"
+          if [ "${{ inputs.skip_torvik }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-torvik"
+          fi
+          if [ "${{ inputs.skip_sports_reference }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-sports-reference"
+          fi
+          if [ "${{ inputs.skip_rosters }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-rosters"
+          fi
+          echo "flags=$FLAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Run data ingestion
+        run: python -m src.main ingest ${{ steps.flags.outputs.flags }}
+
+      - name: Run data quality repair
+        if: inputs.run_repair != false
+        run: python scripts/repair_2026_data_quality.py
+
+      - name: Commit and push updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/raw/
+          if git diff --cached --quiet; then
+            echo "No data changes to commit"
+          else
+            YEAR="${{ steps.year.outputs.value }}"
+            git commit -m "chore: update ${YEAR} season data ($(date -u +%Y-%m-%d))"
+            git push
+          fi
