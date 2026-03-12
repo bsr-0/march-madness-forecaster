@@ -101,6 +101,7 @@ class RealDataCollector:
         provider_lineage: Dict[str, str] = {}
         validation_errors: Dict[str, List[str]] = {}
         historical_team_rows: List[Dict] = []
+        torvik_teams: List[Dict] = []
 
         if self.config.ncaa_teams_url:
             teams = NCAAStatsScraper(str(self.cache_dir)).fetch_tournament_teams(year, self.config.ncaa_teams_url)
@@ -112,6 +113,7 @@ class RealDataCollector:
         if self.config.scrape_torvik:
             tv_provider = self.providers.fetch_torvik_ratings(year, priority=self.config.torvik_provider_priority)
             if tv_provider.records:
+                torvik_teams = tv_provider.records
                 payload = {"teams": tv_provider.records}
                 validation_errors["torvik_json"] = validate_ratings_payload(
                     payload,
@@ -201,7 +203,7 @@ class RealDataCollector:
                 out["historical_games_json"] = self._write(f"historical_games_{year}.json", payload)
                 provider_lineage["historical_games_json"] = game_provider.provider
 
-                advanced_metrics = self.adv_builder.build(game_provider.records)
+                advanced_metrics = self.adv_builder.build(game_provider.records, teams=torvik_teams)
                 if "advanced_metrics_json" not in out:
                     validation_errors["advanced_metrics_json"] = validate_ratings_payload(advanced_metrics)
                     self._assert_valid("advanced_metrics_json", validation_errors["advanced_metrics_json"])
