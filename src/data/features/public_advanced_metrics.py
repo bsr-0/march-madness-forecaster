@@ -58,8 +58,13 @@ class PublicAdvancedMetricsBuilder:
             tempo[tid] = poss / max(len(games), 1)
             names[tid] = games[0].team_name or tid
 
-        league_off = sum(raw_off.values()) / max(len(raw_off), 1)
-        league_def = sum(raw_def.values()) / max(len(raw_def), 1)
+        # Use a single weighted league average (total pts / total poss) so
+        # that the iterative SOS adjustment stays symmetric and converges.
+        total_pts = sum(sum(g.points for g in gs) for gs in by_team.values())
+        total_poss = sum(sum(g.possessions for g in gs) for gs in by_team.values())
+        league_avg = 100.0 * total_pts / max(total_poss, 1.0)
+        league_off = league_avg
+        league_def = league_avg
         adj_off = dict(raw_off)
         adj_def = dict(raw_def)
 
@@ -70,12 +75,12 @@ class PublicAdvancedMetricsBuilder:
                 off_samples = []
                 def_samples = []
                 for g in games:
-                    opp_def = adj_def.get(g.opponent_id, league_def)
-                    opp_off = adj_off.get(g.opponent_id, league_off)
+                    opp_def = adj_def.get(g.opponent_id, league_avg)
+                    opp_off = adj_off.get(g.opponent_id, league_avg)
                     game_off = 100.0 * g.points / max(g.possessions, 1.0)
                     game_def = 100.0 * g.opp_points / max(g.possessions, 1.0)
-                    off_samples.append(game_off * league_def / max(opp_def, 1e-6))
-                    def_samples.append(game_def * league_off / max(opp_off, 1e-6))
+                    off_samples.append(game_off * league_avg / max(opp_def, 1e-6))
+                    def_samples.append(game_def * league_avg / max(opp_off, 1e-6))
                 next_off[tid] = sum(off_samples) / max(len(off_samples), 1)
                 next_def[tid] = sum(def_samples) / max(len(def_samples), 1)
             adj_off = next_off
@@ -137,6 +142,29 @@ class PublicAdvancedMetricsBuilder:
         return self._to_game_rows(team_metric_records)
 
     def _to_game_rows(self, records: List[Dict]) -> List[TeamGameRow]:
+        # Pre-process: build game_id -> [records] index so we can pair
+        # per-team rows and fill in opponent box score stats from the
+        # companion row when explicit opp_* fields are missing.
+        game_index: Dict[str, List[Dict]] = defaultdict(list)
+        has_game_ids = False
+        for rec in records:
+            if not isinstance(rec, dict):
+                continue
+            gid = rec.get("game_id")
+            if gid:
+                game_index[gid].append(rec)
+                has_game_ids = True
+
+        # Build a lookup: (game_id, team_id) -> companion record
+        companion: Dict[tuple, Dict] = {}
+        if has_game_ids:
+            for gid, sides in game_index.items():
+                if len(sides) == 2:
+                    tid0 = self._team_id(self._pick(sides[0], ["team_id", "team", "team_slug", "school", "team_name"]))
+                    tid1 = self._team_id(self._pick(sides[1], ["team_id", "team", "team_slug", "school", "team_name"]))
+                    companion[(gid, tid0)] = sides[1]
+                    companion[(gid, tid1)] = sides[0]
+
         rows: List[TeamGameRow] = []
         for rec in records:
             if not isinstance(rec, dict):
@@ -169,6 +197,27 @@ class PublicAdvancedMetricsBuilder:
             opp_tov = self._to_float(self._pick(rec, ["opp_tov", "opponent_tov"]))
             opp_orb = self._to_float(self._pick(rec, ["opp_orb", "opponent_orb"]))
             opp_drb = self._to_float(self._pick(rec, ["opp_drb", "opponent_drb"]))
+
+            # If we have a paired companion row (per-team format), pull
+            # opponent box score stats from it and average possessions so
+            # both sides of the game use a consistent possession count.
+            gid = rec.get("game_id")
+            comp = companion.get((gid, team_id)) if gid else None
+            if comp is not None:
+                if opp_fga == 0.0:
+                    opp_fga = self._to_float(self._pick(comp, ["fga", "field_goals_attempted", "team_fga"]))
+                    opp_fgm = self._to_float(self._pick(comp, ["fgm", "field_goals_made", "team_fgm"]))
+                    opp_fg3a = self._to_float(self._pick(comp, ["fg3a", "three_point_attempts", "team_fg3a", "x3pa"]))
+                    opp_fg3m = self._to_float(self._pick(comp, ["fg3m", "three_point_field_goals_made", "team_fg3m", "x3pm"]))
+                    opp_fta = self._to_float(self._pick(comp, ["fta", "free_throws_attempted", "team_fta"]))
+                    opp_tov = self._to_float(self._pick(comp, ["turnovers", "tov", "team_tov"]))
+                    opp_orb = self._to_float(self._pick(comp, ["orb", "offensive_rebounds", "team_orb"]))
+                    opp_drb = self._to_float(self._pick(comp, ["drb", "defensive_rebounds", "team_drb"]))
+                # Average possessions from both sides so efficiency calcs
+                # are symmetric (both teams share the same possession count).
+                comp_poss = self._to_float(self._pick(comp, ["possessions", "team_possessions", "poss"]))
+                if poss > 0 and comp_poss > 0:
+                    poss = (poss + comp_poss) / 2.0
 
             if poss <= 0:
                 poss = fga - orb + tov + 0.475 * fta
