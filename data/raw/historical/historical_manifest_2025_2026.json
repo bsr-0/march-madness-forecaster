@@ -1,0 +1,65 @@
+{
+  "generated_at": "2026-03-09T23:50:55.745157+00:00",
+  "start_season": 2025,
+  "end_season": 2026,
+  "artifacts": {
+    "2025": {
+      "historical_games_json": "data/raw/historical/historical_games_2025.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2025.json",
+      "torvik_json": "data/raw/historical/torvik_2025.json",
+      "tournament_seeds_json": "data/raw/historical/tournament_seeds_2025.json",
+      "massey_ordinals_systems": 56
+    },
+    "2026": {
+      "historical_games_json": "data/raw/historical/historical_games_2026.json",
+      "team_metrics_json": "data/raw/historical/team_metrics_2026.json",
+      "torvik_json": "data/raw/historical/torvik_2026.json",
+      "massey_ordinals_systems": 54
+    }
+  },
+  "providers": {
+    "2025": {
+      "historical_games_json": "cbbpy_cache",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "tournament_seeds_json": "sports_reference_tournament_scraper",
+      "massey_ordinals": "kaggle_csv"
+    },
+    "2026": {
+      "historical_games_json": "cbbpy",
+      "team_metrics_json": "sports_reference_scraper",
+      "torvik_json": "barttorvik",
+      "massey_ordinals": "kaggle_csv"
+    }
+  },
+  "validation_errors": {
+    "2025": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": [],
+      "tournament_seeds_json": []
+    },
+    "2026": {
+      "historical_games_json": [],
+      "team_metrics_json": [],
+      "torvik_json": []
+    }
+  },
+  "season_counts": {
+    "2025": {
+      "games": 6291,
+      "team_games": 12582,
+      "teams": 364,
+      "torvik_teams": 364,
+      "tournament_seed_teams": 68,
+      "massey_ordinal_systems": 56
+    },
+    "2026": {
+      "games": 6029,
+      "team_games": 12058,
+      "teams": 365,
+      "torvik_teams": 365,
+      "massey_ordinal_systems": 54
+    }
+  }
+}

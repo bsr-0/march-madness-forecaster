@@ -23,6 +23,11 @@ on:
         required: false
         default: false
         type: boolean
+      repair_only:
+        description: "Skip full ingestion and only run the data quality repair script"
+        required: false
+        default: false
+        type: boolean
       run_repair:
         description: "Run data quality repair script after ingestion"
         required: false
@@ -88,10 +93,11 @@ jobs:
           echo "flags=$FLAGS" >> "$GITHUB_OUTPUT"
 
       - name: Run data ingestion
+        if: inputs.repair_only != true
         run: python -m src.main ingest ${{ steps.flags.outputs.flags }}
 
       - name: Run data quality repair
-        if: inputs.run_repair != false
+        if: inputs.repair_only == true || inputs.run_repair != false
         run: python scripts/repair_2026_data_quality.py --year ${{ steps.year.outputs.value }}
 
       - name: Commit and push updated data
