@@ -28,6 +28,10 @@ on:
         required: false
         default: false
         type: boolean
+      historical_games_since:
+        description: "Only fetch games from this date forward (ISO, e.g. 2026-03-08). Auto-detected on scheduled runs."
+        required: false
+        type: string
       repair_only:
         description: "Skip full ingestion and only run the data quality repair script"
         required: false
@@ -39,8 +43,10 @@ on:
         default: true
         type: boolean
   schedule:
-    # Every Monday at 6:00 UTC during college basketball season (Nov-Apr)
-    - cron: "0 6 * 11-12,1-4 1"
+    # Every Monday at 6:00 UTC during regular season (Nov-Feb)
+    - cron: "0 6 * 11-12,1-2 1"
+    # Daily at 6:00 UTC during March Madness (March and April)
+    - cron: "0 6 * 3-4 *"
 
 concurrency:
   group: data-ingestion
@@ -54,6 +60,17 @@ jobs:
     name: Ingest Season Data
     runs-on: ubuntu-latest
     timeout-minutes: 45
+
+    # Optional env vars (set in repo Settings > Secrets and variables > Actions):
+    #   CBBDATA_API_KEY      - API key for cbbdata.com Torvik endpoint
+    #   CBBDATA_BASE_URL     - Base URL override for cbbdata API (default: built-in)
+    #   CBBPY_ROSTER_ENABLE_PBP - "true" to collect play-by-play stint data via cbbpy
+    #   PLAYER_METRICS_URL   - URL to a player-metrics JSON feed (manual-provide)
+    env:
+      CBBDATA_API_KEY: ${{ secrets.CBBDATA_API_KEY }}
+      CBBDATA_BASE_URL: ${{ vars.CBBDATA_BASE_URL }}
+      CBBPY_ROSTER_ENABLE_PBP: ${{ vars.CBBPY_ROSTER_ENABLE_PBP }}
+      PLAYER_METRICS_URL: ${{ vars.PLAYER_METRICS_URL }}
 
     steps:
       - uses: actions/checkout@v4
@@ -100,24 +117,66 @@ jobs:
           fi
           echo "flags=$FLAGS" >> "$GITHUB_OUTPUT"
 
-      - name: Auto-skip historical games if data exists
-        id: auto_skip
+      - name: Detect incremental games window
+        id: incremental
         run: |
           YEAR="${{ steps.year.outputs.value }}"
-          if [ -f "data/raw/historical_games_${YEAR}.json" ]; then
-            echo "Historical games file exists, adding --skip-historical-games"
-            echo "flag=--skip-historical-games" >> "$GITHUB_OUTPUT"
+          FILE="data/raw/historical_games_${YEAR}.json"
+
+          # Manual override takes priority
+          if [ -n "${{ inputs.historical_games_since }}" ]; then
+            echo "flag=--historical-games-since ${{ inputs.historical_games_since }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # For scheduled runs: if data exists, do incremental from last game date
+          if [ -f "$FILE" ]; then
+            LAST_DATE=$(python3 -c "
+import json
+with open('$FILE') as f:
+    games = json.load(f).get('games', [])
+dates = [g['date'] for g in games if g.get('date')]
+print(max(dates) if dates else '')
+")
+            if [ -n "$LAST_DATE" ]; then
+              echo "Existing data through $LAST_DATE, fetching incrementally"
+              echo "flag=--historical-games-since $LAST_DATE" >> "$GITHUB_OUTPUT"
+            else
+              echo "flag=" >> "$GITHUB_OUTPUT"
+            fi
           else
+            echo "No existing data, full scrape"
             echo "flag=" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Run data ingestion
         if: inputs.repair_only != true
-        run: python -m src.main ingest ${{ steps.flags.outputs.flags }} ${{ steps.auto_skip.outputs.flag }}
+        run: python -m src.main ingest ${{ steps.flags.outputs.flags }} ${{ steps.incremental.outputs.flag }}
 
       - name: Run data quality repair
         if: inputs.repair_only == true || inputs.run_repair != false
-        run: python scripts/repair_2026_data_quality.py --year ${{ steps.year.outputs.value }}
+        run: |
+          YEAR="${{ steps.year.outputs.value }}"
+          SCRIPT="scripts/repair_${YEAR}_data_quality.py"
+          if [ -f "$SCRIPT" ]; then
+            python "$SCRIPT" --year "$YEAR"
+          else
+            # Fall back to the most recent year-specific repair script
+            LATEST=$(ls scripts/repair_*_data_quality.py 2>/dev/null | sort -t_ -k2 -n | tail -1)
+            if [ -n "$LATEST" ]; then
+              echo "No repair script for $YEAR; using latest available: $LATEST"
+              python "$LATEST" --year "$YEAR"
+            else
+              echo "No repair scripts found, skipping"
+            fi
+          fi
+
+      - name: Prune stale cache files
+        run: |
+          # Remove cache files older than 14 days to prevent unbounded growth
+          find data/raw/cache -type f -mtime +14 -delete 2>/dev/null || true
+          # Remove empty directories left behind
+          find data/raw/cache -type d -empty -delete 2>/dev/null || true
 
       - name: Commit and push updated data
         run: |

@@ -12,6 +12,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from ._retry import rate_limited_call
+
 logger = logging.getLogger(__name__)
 
 
@@ -89,10 +91,13 @@ class CBBpyRosterScraper:
         # Fast path: season endpoint (PBP disabled or bulk fetch)
         if callable(get_games_season) and not force_schedule and max_games <= 0:
             try:
-                data = get_games_season(year, info=False, box=True, pbp=enable_pbp)
+                data = rate_limited_call(
+                    get_games_season, year, info=False, box=True, pbp=enable_pbp,
+                    delay=1.0,
+                )
             except TypeError:
                 try:
-                    data = get_games_season(year)
+                    data = rate_limited_call(get_games_season, year, delay=1.0)
                 except Exception:
                     data = None
             except Exception:
@@ -147,7 +152,9 @@ class CBBpyRosterScraper:
             if max_games > 0 and len(seen_game_ids) >= max_games:
                 break
             try:
-                game_ids = get_game_ids(day.isoformat())
+                game_ids = rate_limited_call(
+                    get_game_ids, day.isoformat(), delay=1.0, max_retries=2,
+                )
             except Exception:
                 continue
             if not isinstance(game_ids, list):
@@ -176,16 +183,21 @@ class CBBpyRosterScraper:
         # If PBP not needed, use the simpler boxscore endpoint first
         if not enable_pbp and callable(get_boxscore):
             try:
-                return self._frame_to_records(get_boxscore(game_id)), []
+                return self._frame_to_records(
+                    rate_limited_call(get_boxscore, game_id, delay=1.0, max_retries=2),
+                ), []
             except Exception:
                 pass
 
         if callable(get_game):
             try:
-                data = get_game(game_id, info=False, box=True, pbp=enable_pbp)
+                data = rate_limited_call(
+                    get_game, game_id, info=False, box=True, pbp=enable_pbp,
+                    delay=1.0, max_retries=2,
+                )
             except TypeError:
                 try:
-                    data = get_game(game_id)
+                    data = rate_limited_call(get_game, game_id, delay=1.0, max_retries=2)
                 except Exception:
                     data = None
             except Exception:
@@ -198,7 +210,9 @@ class CBBpyRosterScraper:
         # Last resort: boxscore-only endpoint
         if callable(get_boxscore):
             try:
-                return self._frame_to_records(get_boxscore(game_id)), []
+                return self._frame_to_records(
+                    rate_limited_call(get_boxscore, game_id, delay=1.0, max_retries=2),
+                ), []
             except Exception:
                 pass
         return [], []
@@ -781,7 +795,10 @@ class CBBpyRosterScraper:
             else:
                 calls += 1
                 try:
-                    profile = self._frame_to_single_row(get_player_info(player_id))
+                    raw = rate_limited_call(
+                        get_player_info, player_id, delay=1.0, max_retries=2,
+                    )
+                    profile = self._frame_to_single_row(raw)
                 except Exception:
                     profile = None
                 cache[player_id] = profile
