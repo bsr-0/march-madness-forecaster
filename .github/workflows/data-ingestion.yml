@@ -100,14 +100,22 @@ jobs:
           fi
           echo "flags=$FLAGS" >> "$GITHUB_OUTPUT"
 
-      - name: Auto-skip historical games if data exists
+      - name: Auto-skip historical games if data is fresh
         id: auto_skip
         run: |
           YEAR="${{ steps.year.outputs.value }}"
-          if [ -f "data/raw/historical_games_${YEAR}.json" ]; then
-            echo "Historical games file exists, adding --skip-historical-games"
-            echo "flag=--skip-historical-games" >> "$GITHUB_OUTPUT"
+          FILE="data/raw/historical_games_${YEAR}.json"
+          if [ -f "$FILE" ]; then
+            FILE_AGE_HOURS=$(( ($(date +%s) - $(stat -c %Y "$FILE")) / 3600 ))
+            if [ "$FILE_AGE_HOURS" -lt 48 ]; then
+              echo "Historical games file is ${FILE_AGE_HOURS}h old (<48h), skipping scrape"
+              echo "flag=--skip-historical-games" >> "$GITHUB_OUTPUT"
+            else
+              echo "Historical games file is ${FILE_AGE_HOURS}h old (>=48h), re-scraping"
+              echo "flag=" >> "$GITHUB_OUTPUT"
+            fi
           else
+            echo "No historical games file, will scrape"
             echo "flag=" >> "$GITHUB_OUTPUT"
           fi
 
