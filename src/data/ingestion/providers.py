@@ -181,9 +181,15 @@ class LibraryProviderHub:
                 continue
             # When falling back to get_games_season during an incremental
             # fetch, filter records to only include games from the since date.
+            # Keep records with empty/missing dates — they likely represent
+            # recent games whose dates weren't extracted from the info
+            # DataFrame.  Dropping them silently loses new data.
             if since and fn_name == "get_games_season":
                 self._normalize_date_field(game_rows)
-                game_rows = [r for r in game_rows if r.get("date", "") >= since]
+                game_rows = [
+                    r for r in game_rows
+                    if not r.get("date") or r["date"] >= since
+                ]
             return ProviderResult("cbbpy", game_rows)
 
         return ProviderResult("cbbpy", [])
