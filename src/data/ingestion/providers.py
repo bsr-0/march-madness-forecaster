@@ -216,7 +216,13 @@ class LibraryProviderHub:
         # CBBpy function names have changed across releases; probe common names.
         # When doing incremental fetches, prefer get_games_range to avoid
         # scraping the entire season.
-        fn_order = ("get_games_range", "get_games_season") if since else ("get_games_season", "get_games_range")
+        # When doing incremental fetches, only use get_games_range so we
+        # actually start from the `since` date.  get_games_season scrapes
+        # the entire season day-by-day (from November) and only filters
+        # results after, wasting significant time.  If get_games_range is
+        # unavailable, let the provider return empty so the next provider
+        # (e.g. espn_scoreboard) can handle it with proper date limiting.
+        fn_order = ("get_games_range",) if since else ("get_games_season", "get_games_range")
         for fn_name in fn_order:
             fn = getattr(scraper, fn_name, None)
             if fn is None:
