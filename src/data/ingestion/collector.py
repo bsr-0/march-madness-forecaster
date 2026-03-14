@@ -420,15 +420,18 @@ class RealDataCollector:
                 data = json.load(f)
             existing_games = data.get("games", [])
 
-        # Deduplicate by (game_id, team_id) or (date, team_id, opponent_id)
+        # Deduplicate by (game_id, team_id).  Earlier versions included date
+        # in the key, which caused mismatches when dates were parsed
+        # differently across runs (empty vs populated) — leading to either
+        # duplicates or silent data loss.
         seen = set()
         for g in existing_games:
-            key = (g.get("game_id", ""), g.get("team_id", ""), g.get("date", ""))
+            key = (g.get("game_id", ""), g.get("team_id", ""))
             seen.add(key)
 
         added = 0
         for g in new_records:
-            key = (g.get("game_id", ""), g.get("team_id", ""), g.get("date", ""))
+            key = (g.get("game_id", ""), g.get("team_id", ""))
             if key not in seen:
                 existing_games.append(g)
                 seen.add(key)

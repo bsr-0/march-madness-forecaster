@@ -116,6 +116,38 @@ def test_cbbpy_provider_incremental_falls_back_to_season(monkeypatch):
     assert all(row.get("date") == "2025-03-10" for row in result.records)
 
 
+def test_cbbpy_provider_incremental_keeps_records_with_empty_dates(monkeypatch):
+    """Records with empty dates should be kept during incremental fetches,
+    not silently dropped — they likely represent recent games."""
+    class DummyCBBpy:
+        @staticmethod
+        def get_games_range(start, end, info=True, box=True, pbp=False):
+            raise Exception("Network error")
+
+        @staticmethod
+        def get_games_season(year, info=True, box=True, pbp=False):
+            # Info only has a date for game 601, not 602
+            info_df = pd.DataFrame([
+                {"game_id": "601", "game_day": "January 15, 2025"},
+            ])
+            box_df = pd.DataFrame([
+                {"game_id": "601", "team": "A", "player": "p1", "pts": 10, "fgm": 4, "fga": 8, "3pm": 1, "3pa": 3, "fta": 1, "to": 1, "oreb": 1, "dreb": 2},
+                {"game_id": "601", "team": "B", "player": "p2", "pts": 8, "fgm": 3, "fga": 6, "3pm": 0, "3pa": 2, "fta": 2, "to": 0, "oreb": 0, "dreb": 1},
+                {"game_id": "602", "team": "C", "player": "p3", "pts": 12, "fgm": 5, "fga": 9, "3pm": 1, "3pa": 3, "fta": 1, "to": 2, "oreb": 1, "dreb": 3},
+                {"game_id": "602", "team": "D", "player": "p4", "pts": 6, "fgm": 2, "fga": 5, "3pm": 1, "3pa": 2, "fta": 1, "to": 1, "oreb": 0, "dreb": 2},
+            ])
+            return (info_df, box_df, pd.DataFrame())
+
+    hub = LibraryProviderHub()
+    monkeypatch.setattr(hub, "_import_module", lambda module_name: DummyCBBpy if module_name == "cbbpy.mens_scraper" else None)
+
+    result = hub.fetch_historical_games(2025, priority=["cbbpy"], since="2025-03-01")
+    assert result.provider == "cbbpy"
+    # Game 602 has no date — should still be included (not filtered out)
+    game_ids = {r["game_id"] for r in result.records}
+    assert "602" in game_ids, "Records with empty dates should be kept during incremental fetch"
+
+
 def test_cbbpy_provider_extracts_dates_from_info(monkeypatch):
     """Verify _from_cbbpy_pbp extracts dates from info DataFrame."""
     class DummyCBBpy:
