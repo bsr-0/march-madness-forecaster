@@ -83,6 +83,24 @@ class PublicAdvancedMetricsBuilder:
                     def_samples.append(game_def * league_avg / max(opp_off, 1e-6))
                 next_off[tid] = sum(off_samples) / max(len(off_samples), 1)
                 next_def[tid] = sum(def_samples) / max(len(def_samples), 1)
+            # Re-center: scale so the possession-weighted mean equals
+            # league_avg after each iteration.  Without this the
+            # multiplicative formula drifts (Jensen's inequality) and
+            # offensive/defensive means diverge from each other.
+            w_off = sum(
+                next_off[tid] * sum(g.possessions for g in games)
+                for tid, games in by_team.items()
+            ) / max(total_poss, 1.0)
+            w_def = sum(
+                next_def[tid] * sum(g.possessions for g in games)
+                for tid, games in by_team.items()
+            ) / max(total_poss, 1.0)
+            if w_off > 0:
+                scale_off = league_avg / w_off
+                next_off = {t: v * scale_off for t, v in next_off.items()}
+            if w_def > 0:
+                scale_def = league_avg / w_def
+                next_def = {t: v * scale_def for t, v in next_def.items()}
             adj_off = next_off
             adj_def = next_def
 
