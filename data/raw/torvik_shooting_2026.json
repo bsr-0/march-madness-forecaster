@@ -677,7 +677,7 @@
   },
   "yale": {
     "three_pt_pct": 0.4,
-    "ft_pct": 0.7634
+    "ft_pct": 0.7586
   },
   "lipscomb": {
     "three_pt_pct": 0.357,
@@ -688,8 +688,8 @@
     "ft_pct": 0.7435
   },
   "umbc": {
-    "three_pt_pct": 0.3582,
-    "ft_pct": 0.7601
+    "three_pt_pct": 0.3592,
+    "ft_pct": 0.764
   },
   "southern_indiana": {
     "three_pt_pct": 0.2992,
@@ -720,8 +720,8 @@
     "ft_pct": 0.688
   },
   "vermont": {
-    "three_pt_pct": 0.3385,
-    "ft_pct": 0.7245
+    "three_pt_pct": 0.3333,
+    "ft_pct": 0.7186
   },
   "northern_illinois": {
     "three_pt_pct": 0.3094,
@@ -1296,8 +1296,8 @@
     "ft_pct": 0.7708
   },
   "cornell": {
-    "three_pt_pct": 0.3866,
-    "ft_pct": 0.7432
+    "three_pt_pct": 0.3826,
+    "ft_pct": 0.7412
   },
   "stanford": {
     "three_pt_pct": 0.3559,
