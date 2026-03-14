@@ -553,6 +553,16 @@ def main() -> None:
     ).fetch_team_coaches(year)
     logger.info("Fetched %d team-coach mappings from Barttorvik", len(team_coach_map))
 
+    # Fallback: if scraper returned empty, try coach fields from torvik data
+    if not team_coach_map:
+        logger.info("Scraper returned empty; trying torvik_data coach fallback")
+        for team in torvik_data.get("teams", []):
+            coach = team.get("coach", "")
+            tid = team.get("team_id", "")
+            if coach and tid:
+                team_coach_map[tid] = coach
+        logger.info("Recovered %d mappings from torvik_data", len(team_coach_map))
+
     roster_coaches_updated = 0
     coaches_updated = 0
     if team_coach_map:
@@ -595,6 +605,48 @@ def main() -> None:
     logger.info("  Roster teams with head_coach: %d", roster_coaches_updated)
     logger.info("  Coach entries mapped to teams: %d", coaches_updated)
     logger.info("  Player RAPM estimated: %d", rapm_updated)
+
+    # --- Data Quality Checks ---
+    logger.info("--- Data Quality Checks ---")
+    warnings = []
+
+    adv_data = load_json(f"advanced_metrics_{year}.json")
+    adv_teams = adv_data.get("teams", [])
+    if adv_teams:
+        barthag_ones = sum(
+            1 for t in adv_teams if t.get("barthag", 0) >= 1.0
+        )
+        if barthag_ones > 10:
+            warnings.append(
+                f"{barthag_ones} teams have barthag >= 1.0 (expected <= 10)"
+            )
+        zero_opp_efg = sum(
+            1 for t in adv_teams
+            if t.get("opp_effective_fg_pct", 0) == 0.0
+        )
+        if zero_opp_efg > 5:
+            warnings.append(
+                f"{zero_opp_efg} teams have opp_effective_fg_pct == 0.0 "
+                f"(expected <= 5)"
+            )
+
+    coach_entries = coach_data.get("coaches", {})
+    if coach_entries:
+        coaches_with_teams = sum(
+            1 for c in coach_entries.values() if c.get("teams")
+        )
+        pct = coaches_with_teams / len(coach_entries) if coach_entries else 0
+        if pct < 0.5:
+            warnings.append(
+                f"Only {coaches_with_teams}/{len(coach_entries)} "
+                f"({pct:.0%}) coaches have non-empty teams"
+            )
+
+    if warnings:
+        for w in warnings:
+            logger.warning("DATA QUALITY: %s", w)
+    else:
+        logger.info("All data quality checks passed")
 
 
 if __name__ == "__main__":
