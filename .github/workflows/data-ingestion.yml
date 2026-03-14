@@ -23,6 +23,11 @@ on:
         required: false
         default: false
         type: boolean
+      skip_historical_games:
+        description: "Skip historical games scrape (slow day-by-day fetch)"
+        required: false
+        default: false
+        type: boolean
       repair_only:
         description: "Skip full ingestion and only run the data quality repair script"
         required: false
@@ -48,7 +53,7 @@ jobs:
   ingest:
     name: Ingest Season Data
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -90,11 +95,25 @@ jobs:
           if [ "${{ inputs.skip_rosters }}" = "true" ]; then
             FLAGS="$FLAGS --skip-rosters"
           fi
+          if [ "${{ inputs.skip_historical_games }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-historical-games"
+          fi
           echo "flags=$FLAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Auto-skip historical games if data exists
+        id: auto_skip
+        run: |
+          YEAR="${{ steps.year.outputs.value }}"
+          if [ -f "data/raw/historical_games_${YEAR}.json" ]; then
+            echo "Historical games file exists, adding --skip-historical-games"
+            echo "flag=--skip-historical-games" >> "$GITHUB_OUTPUT"
+          else
+            echo "flag=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Run data ingestion
         if: inputs.repair_only != true
-        run: python -m src.main ingest ${{ steps.flags.outputs.flags }}
+        run: python -m src.main ingest ${{ steps.flags.outputs.flags }} ${{ steps.auto_skip.outputs.flag }}
 
       - name: Run data quality repair
         if: inputs.repair_only == true || inputs.run_repair != false
