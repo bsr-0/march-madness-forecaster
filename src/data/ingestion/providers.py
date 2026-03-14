@@ -28,7 +28,7 @@ class LibraryProviderHub:
     """Best-effort data provider hub with ordered fallback."""
 
     DEFAULT_PRIORITIES = {
-        "historical_games": ["sportsdataverse", "cbbpy", "sportsipy", "cbbdata"],
+        "historical_games": ["sportsdataverse", "cbbpy", "espn_scoreboard", "sportsipy", "cbbdata"],
         "team_metrics": ["sportsdataverse", "sportsipy", "cbbdata"],
         "torvik": ["barttorvik", "cbbdata"],
     }
@@ -39,6 +39,7 @@ class LibraryProviderHub:
         methods = {
             "sportsdataverse": self._from_sportsdataverse_pbp,
             "cbbpy": self._from_cbbpy_pbp,
+            "espn_scoreboard": self._from_espn_scoreboard_api,
             "sportsipy": self._from_sportsipy_games_api,
             "cbbdata": self._from_cbbdata_games_api,
         }
@@ -152,6 +153,66 @@ class LibraryProviderHub:
         start_date = since or f"{year-1}-11-01"
         end_date = f"{year}-04-15"
 
+        all_game_rows: List[Dict] = []
+
+        # cbbpy hardcodes seasontype/2 (regular season) in its ESPN
+        # scoreboard URL.  Conference tournaments and March Madness are
+        # seasontype/3.  We try the default first, then patch the URL
+        # to also scrape postseason games.
+        season_types_to_try = [None]  # None = use cbbpy default (seasontype/2)
+        # If the date range could include postseason games (March onwards),
+        # also try seasontype/3.
+        if end_date >= f"{year}-03-01":
+            season_types_to_try.append(3)
+
+        for season_type in season_types_to_try:
+            patched = False
+            original_url = None
+            if season_type is not None:
+                try:
+                    utils = self._import_module("cbbpy.utils.cbbpy_utils")
+                    if utils and hasattr(utils, "MENS_SCOREBOARD_URL"):
+                        original_url = utils.MENS_SCOREBOARD_URL
+                        utils.MENS_SCOREBOARD_URL = (
+                            "https://www.espn.com/mens-college-basketball/"
+                            f"scoreboard/_/date/{{}}/seasontype/{season_type}/group/50"
+                        )
+                        patched = True
+                except Exception:
+                    pass
+
+            try:
+                rows = self._cbbpy_scrape_attempt(scraper, year, start_date, end_date, since)
+                if rows:
+                    all_game_rows.extend(rows)
+            finally:
+                # Always restore the original URL
+                if patched and original_url is not None:
+                    try:
+                        utils = self._import_module("cbbpy.utils.cbbpy_utils")
+                        if utils:
+                            utils.MENS_SCOREBOARD_URL = original_url
+                    except Exception:
+                        pass
+
+        if not all_game_rows:
+            return ProviderResult("cbbpy", [])
+
+        # Deduplicate by game_id + team_id
+        seen = set()
+        deduped: List[Dict] = []
+        for row in all_game_rows:
+            key = (str(row.get("game_id", "")), str(row.get("team_id", "")))
+            if key not in seen:
+                seen.add(key)
+                deduped.append(row)
+
+        return ProviderResult("cbbpy", deduped)
+
+    def _cbbpy_scrape_attempt(
+        self, scraper, year: int, start_date: str, end_date: str, since: Optional[str],
+    ) -> List[Dict]:
+        """Run a single cbbpy scraping attempt and return normalised rows."""
         # CBBpy function names have changed across releases; probe common names.
         # When doing incremental fetches, prefer get_games_range to avoid
         # scraping the entire season.
@@ -192,9 +253,108 @@ class LibraryProviderHub:
                     r for r in game_rows
                     if not r.get("date") or r["date"] >= since
                 ]
-            return ProviderResult("cbbpy", game_rows)
+            return game_rows
 
-        return ProviderResult("cbbpy", [])
+        return []
+
+    def _from_espn_scoreboard_api(self, year: int, since: Optional[str] = None) -> ProviderResult:
+        """Fetch games directly from ESPN's public scoreboard JSON API.
+
+        Unlike cbbpy (which hardcodes seasontype=2), this provider queries
+        both regular-season and postseason scoreboards so conference
+        tournament and March Madness games are included.
+        """
+        from datetime import timedelta
+
+        start = datetime.strptime(since or f"{year-1}-11-01", "%Y-%m-%d").date()
+        end = datetime.strptime(f"{year}-04-15", "%Y-%m-%d").date()
+
+        base_url = (
+            "https://site.api.espn.com/apis/site/v2/sports/basketball/"
+            "mens-college-basketball/scoreboard"
+        )
+
+        all_records: List[Dict] = []
+        current = start
+        while current <= end:
+            date_str = current.strftime("%Y%m%d")
+            for season_type in (2, 3):
+                params = {
+                    "dates": date_str,
+                    "seasontype": season_type,
+                    "limit": 200,
+                    "groups": 50,
+                }
+                try:
+                    resp = requests.get(base_url, params=params, timeout=30)
+                    resp.raise_for_status()
+                    data = resp.json()
+                except Exception as exc:
+                    logger.debug("espn_scoreboard API error for %s st=%s: %s", date_str, season_type, exc)
+                    continue
+
+                for event in data.get("events", []):
+                    records = self._parse_espn_event(event, current.strftime("%Y-%m-%d"))
+                    all_records.extend(records)
+
+            current += timedelta(days=1)
+
+        if all_records:
+            # Deduplicate by game_id + team_id
+            seen = set()
+            deduped: List[Dict] = []
+            for rec in all_records:
+                key = (str(rec.get("game_id", "")), str(rec.get("team_id", "")))
+                if key not in seen:
+                    seen.add(key)
+                    deduped.append(rec)
+            return ProviderResult("espn_scoreboard", deduped)
+
+        return ProviderResult("espn_scoreboard", [])
+
+    def _parse_espn_event(self, event: Dict, fallback_date: str) -> List[Dict]:
+        """Parse an ESPN scoreboard event into game records."""
+        game_id = event.get("id", "")
+        competitions = event.get("competitions", [])
+        if not competitions:
+            return []
+
+        comp = competitions[0]
+        competitors = comp.get("competitors", [])
+        if len(competitors) < 2:
+            return []
+
+        # Extract date from event
+        event_date = fallback_date
+        raw_date = event.get("date", "")
+        if raw_date and len(raw_date) >= 10:
+            event_date = raw_date[:10]
+
+        teams_data = []
+        for c in competitors[:2]:
+            team_info = c.get("team", {})
+            teams_data.append({
+                "team_id": self._normalize_team_name(
+                    team_info.get("displayName") or team_info.get("shortDisplayName") or ""
+                ),
+                "team_name": team_info.get("displayName") or team_info.get("shortDisplayName") or "",
+                "score": int(c.get("score", 0) or 0),
+            })
+
+        records = []
+        for i, team in enumerate(teams_data):
+            opp = teams_data[1 - i]
+            records.append({
+                "game_id": game_id,
+                "date": event_date,
+                "team_id": team["team_id"],
+                "team_name": team["team_name"],
+                "opponent_id": opp["team_id"],
+                "opponent_name": opp["team_name"],
+                "team_score": team["score"],
+                "opponent_score": opp["score"],
+            })
+        return records
 
     def _from_cbbdata_games_api(self, year: int, since: Optional[str] = None) -> ProviderResult:
         payload = self._fetch_cbbdata_endpoint("CBBDATA_GAMES_URL", year)
