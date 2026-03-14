@@ -75,6 +75,7 @@ class IngestionConfig:
     scrape_public_picks: bool = True
     scrape_sports_reference: bool = True
     scrape_rosters: bool = True
+    scrape_historical_games: bool = True
 
     historical_games_provider_priority: Optional[List[str]] = None
     team_metrics_provider_priority: Optional[List[str]] = None
@@ -180,7 +181,9 @@ class RealDataCollector:
                 out["public_picks_json"] = self._write(f"public_picks_{year}.json", payload)
                 provider_lineage["public_picks_json"] = ",".join(populated_sources or picks.sources or ["unknown"])
 
-        if self.config.ncaa_games_url:
+        if not self.config.scrape_historical_games:
+            logger.info("Skipping historical games scrape (--skip-historical-games)")
+        elif self.config.ncaa_games_url:
             games = NCAAStatsScraper(str(self.cache_dir)).fetch_historical_games(year, self.config.ncaa_games_url)
             self._ensure_game_dates(games, year)
             payload = {"games": games}
