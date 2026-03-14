@@ -1010,23 +1010,23 @@
     "opp_free_throw_rate": 0.0
   },
   "vanderbilt": {
-    "effective_fg_pct": 0.5537,
-    "turnover_rate": 0.1275,
-    "offensive_reb_rate": 0.0523,
-    "free_throw_rate": 0.3859,
+    "effective_fg_pct": 0.556,
+    "turnover_rate": 0.1266,
+    "offensive_reb_rate": 0.0526,
+    "free_throw_rate": 0.3868,
     "opp_effective_fg_pct": 0.0,
     "opp_turnover_rate": 0.0,
-    "defensive_reb_rate": 0.1304,
+    "defensive_reb_rate": 0.1289,
     "opp_free_throw_rate": 0.0
   },
   "wisconsin": {
-    "effective_fg_pct": 0.5457,
-    "turnover_rate": 0.1324,
-    "offensive_reb_rate": 0.0504,
-    "free_throw_rate": 0.3262,
+    "effective_fg_pct": 0.5446,
+    "turnover_rate": 0.1335,
+    "offensive_reb_rate": 0.0496,
+    "free_throw_rate": 0.3191,
     "opp_effective_fg_pct": 0.0,
     "opp_turnover_rate": 0.0,
-    "defensive_reb_rate": 0.1334,
+    "defensive_reb_rate": 0.133,
     "opp_free_throw_rate": 0.0
   },
   "connecticut": {
@@ -1120,13 +1120,13 @@
     "opp_free_throw_rate": 0.0
   },
   "michigan": {
-    "effective_fg_pct": 0.585,
-    "turnover_rate": 0.1598,
-    "offensive_reb_rate": 0.0615,
-    "free_throw_rate": 0.3914,
+    "effective_fg_pct": 0.5825,
+    "turnover_rate": 0.1611,
+    "offensive_reb_rate": 0.0614,
+    "free_throw_rate": 0.386,
     "opp_effective_fg_pct": 0.0,
     "opp_turnover_rate": 0.0,
-    "defensive_reb_rate": 0.135,
+    "defensive_reb_rate": 0.1353,
     "opp_free_throw_rate": 0.0
   },
   "fairfield": {
@@ -1380,13 +1380,13 @@
     "opp_free_throw_rate": 0.0
   },
   "howard": {
-    "effective_fg_pct": 0.5092,
-    "turnover_rate": 0.1893,
-    "offensive_reb_rate": 0.0585,
-    "free_throw_rate": 0.4341,
+    "effective_fg_pct": 0.5062,
+    "turnover_rate": 0.1877,
+    "offensive_reb_rate": 0.0593,
+    "free_throw_rate": 0.4418,
     "opp_effective_fg_pct": 0.0,
     "opp_turnover_rate": 0.0,
-    "defensive_reb_rate": 0.125,
+    "defensive_reb_rate": 0.1252,
     "opp_free_throw_rate": 0.0
   },
   "eastern_washington": {
@@ -2660,13 +2660,13 @@
     "opp_free_throw_rate": 0.0
   },
   "dayton": {
-    "effective_fg_pct": 0.5207,
-    "turnover_rate": 0.1701,
-    "offensive_reb_rate": 0.0474,
-    "free_throw_rate": 0.4737,
+    "effective_fg_pct": 0.5175,
+    "turnover_rate": 0.1685,
+    "offensive_reb_rate": 0.047,
+    "free_throw_rate": 0.4754,
     "opp_effective_fg_pct": 0.0,
     "opp_turnover_rate": 0.0,
-    "defensive_reb_rate": 0.1323,
+    "defensive_reb_rate": 0.1329,
     "opp_free_throw_rate": 0.0
   },
   "davidson": {
@@ -2700,13 +2700,13 @@
     "opp_free_throw_rate": 0.0
   },
   "penn": {
-    "effective_fg_pct": 0.5036,
-    "turnover_rate": 0.1476,
-    "offensive_reb_rate": 0.053,
-    "free_throw_rate": 0.3656,
+    "effective_fg_pct": 0.5009,
+    "turnover_rate": 0.1453,
+    "offensive_reb_rate": 0.0521,
+    "free_throw_rate": 0.3558,
     "opp_effective_fg_pct": 0.0,
     "opp_turnover_rate": 0.0,
-    "defensive_reb_rate": 0.1286,
+    "defensive_reb_rate": 0.1289,
     "opp_free_throw_rate": 0.0
   },
   "umkc": {
@@ -2800,13 +2800,13 @@
     "opp_free_throw_rate": 0.0
   },
   "saint_louis": {
-    "effective_fg_pct": 0.5994,
-    "turnover_rate": 0.1648,
+    "effective_fg_pct": 0.5975,
+    "turnover_rate": 0.1671,
     "offensive_reb_rate": 0.0535,
-    "free_throw_rate": 0.3472,
+    "free_throw_rate": 0.3468,
     "opp_effective_fg_pct": 0.0,
     "opp_turnover_rate": 0.0,
-    "defensive_reb_rate": 0.1369,
+    "defensive_reb_rate": 0.1368,
     "opp_free_throw_rate": 0.0
   },
   "american": {
@@ -2900,13 +2900,13 @@
     "opp_free_throw_rate": 0.0
   },
   "north_carolina_central": {
-    "effective_fg_pct": 0.476,
-    "turnover_rate": 0.1757,
-    "offensive_reb_rate": 0.0493,
-    "free_throw_rate": 0.3904,
+    "effective_fg_pct": 0.4748,
+    "turnover_rate": 0.1766,
+    "offensive_reb_rate": 0.0499,
+    "free_throw_rate": 0.3927,
     "opp_effective_fg_pct": 0.0,
     "opp_turnover_rate": 0.0,
-    "defensive_reb_rate": 0.1156,
+    "defensive_reb_rate": 0.1152,
     "opp_free_throw_rate": 0.0
   },
   "norfolk_st": {
@@ -3130,13 +3130,13 @@
     "opp_free_throw_rate": 0.0
   },
   "florida": {
-    "effective_fg_pct": 0.5363,
-    "turnover_rate": 0.1556,
-    "offensive_reb_rate": 0.0766,
-    "free_throw_rate": 0.3902,
+    "effective_fg_pct": 0.5353,
+    "turnover_rate": 0.1569,
+    "offensive_reb_rate": 0.0772,
+    "free_throw_rate": 0.3906,
     "opp_effective_fg_pct": 0.0,
     "opp_turnover_rate": 0.0,
-    "defensive_reb_rate": 0.1438,
+    "defensive_reb_rate": 0.1434,
     "opp_free_throw_rate": 0.0
   },
   "umass_lowell": {
@@ -3390,13 +3390,13 @@
     "opp_free_throw_rate": 0.0
   },
   "harvard": {
-    "effective_fg_pct": 0.5346,
-    "turnover_rate": 0.1702,
-    "offensive_reb_rate": 0.0446,
-    "free_throw_rate": 0.2666,
+    "effective_fg_pct": 0.5319,
+    "turnover_rate": 0.1722,
+    "offensive_reb_rate": 0.0449,
+    "free_throw_rate": 0.2572,
     "opp_effective_fg_pct": 0.0,
     "opp_turnover_rate": 0.0,
-    "defensive_reb_rate": 0.1325,
+    "defensive_reb_rate": 0.1336,
     "opp_free_throw_rate": 0.0
   },
   "louisiana": {
