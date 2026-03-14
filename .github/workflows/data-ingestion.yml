@@ -139,8 +139,9 @@ jobs:
           if [ -f "$FILE" ]; then
             LAST_DATE=$(python3 -c "import json; games=json.load(open('$FILE')).get('games',[]); dates=[g['date'] for g in games if g.get('date')]; print(max(dates) if dates else '')")
             if [ -n "$LAST_DATE" ]; then
-              echo "Existing data through $LAST_DATE, fetching incrementally"
-              echo "flag=--historical-games-since $LAST_DATE" >> "$GITHUB_OUTPUT"
+              NEXT_DATE=$(date -d "$LAST_DATE + 1 day" +%Y-%m-%d)
+              echo "Existing data through $LAST_DATE, fetching incrementally from $NEXT_DATE"
+              echo "flag=--historical-games-since $NEXT_DATE" >> "$GITHUB_OUTPUT"
             else
               echo "flag=" >> "$GITHUB_OUTPUT"
             fi
