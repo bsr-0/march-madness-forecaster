@@ -25,6 +25,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.data.features.public_advanced_metrics import PublicAdvancedMetricsBuilder
 from src.data.normalize import normalize_team_id, _raw_normalize
 
 logging.basicConfig(
@@ -282,6 +283,35 @@ def apply_defensive_four_factors(
 
 
 # ---------------------------------------------------------------------------
+# 1b. Rebuild advanced_metrics from historical game box scores
+# ---------------------------------------------------------------------------
+
+def rebuild_advanced_metrics(
+    torvik_data: dict,
+    year: int = DEFAULT_YEAR,
+) -> int:
+    """Regenerate advanced_metrics JSON by re-running PublicAdvancedMetricsBuilder.
+
+    The builder pairs game records by game_id to fill opponent box score stats
+    from the companion row, computes SOS-adjusted efficiency ratings, Four
+    Factors, and Barthag.  Returns the number of teams in the output.
+    """
+    games_data = load_json(f"historical_games_{year}.json")
+    game_records = games_data.get("games", [])
+    if not game_records:
+        logger.warning("No game records found — skipping advanced metrics rebuild")
+        return 0
+
+    torvik_teams = torvik_data.get("teams", [])
+    builder = PublicAdvancedMetricsBuilder()
+    result = builder.build(game_records, teams=torvik_teams)
+
+    team_count = len(result.get("teams", []))
+    save_json(f"advanced_metrics_{year}.json", result)
+    return team_count
+
+
+# ---------------------------------------------------------------------------
 # 2. Map coaches to current teams
 # ---------------------------------------------------------------------------
 
@@ -510,6 +540,11 @@ def main() -> None:
         torvik_updated, ff_updated,
     )
 
+    # 1b. Rebuild advanced_metrics from historical games
+    logger.info("--- Step 1b: Rebuild Advanced Metrics ---")
+    adv_metrics_updated = rebuild_advanced_metrics(torvik_data, year=year)
+    logger.info("Rebuilt advanced_metrics with %d teams", adv_metrics_updated)
+
     # 2. Fix coach tournament teams
     logger.info("--- Step 2: Coach Tournament Teams ---")
     from src.data.scrapers.tournament_context import TournamentContextScraper
@@ -548,6 +583,7 @@ def main() -> None:
     logger.info("  Defensive Four Factors computed for %d teams", len(def_ff))
     logger.info("  Torvik teams updated: %d", torvik_updated)
     logger.info("  Four Factors file entries updated: %d", ff_updated)
+    logger.info("  Advanced metrics rebuilt for %d teams", adv_metrics_updated)
     logger.info("  Roster teams with head_coach: %d", roster_coaches_updated)
     logger.info("  Coach entries mapped to teams: %d", coaches_updated)
     logger.info("  Player RAPM estimated: %d", rapm_updated)
