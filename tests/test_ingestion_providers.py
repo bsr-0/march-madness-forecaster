@@ -112,3 +112,30 @@ def test_cbbpy_provider_extracts_dates_from_info(monkeypatch):
 
     assert date_by_game["501"] == "2024-11-06"
     assert date_by_game["502"] == "2025-02-10"
+
+
+def test_map_barttorvik_row_extracts_coach():
+    row = {
+        "Team": "Duke",
+        "Conf": "ACC",
+        "AdjOE": "120.5",
+        "AdjDE": "95.2",
+        "AdjT": "70.1",
+        "Barthag": "0.95",
+        "Coach": "Jon Scheyer",
+    }
+    result = LibraryProviderHub._map_barttorvik_row(row)
+    assert result is not None
+    assert result["coach"] == "Jon Scheyer"
+
+
+def test_map_barttorvik_row_no_coach_column():
+    row = {
+        "Team": "Duke",
+        "Conf": "ACC",
+        "AdjOE": "120.5",
+        "AdjDE": "95.2",
+    }
+    result = LibraryProviderHub._map_barttorvik_row(row)
+    assert result is not None
+    assert "coach" not in result

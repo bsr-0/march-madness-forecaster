@@ -475,6 +475,11 @@ class TournamentContextScraper:
             logger.warning("Team results CSV has no headers")
             return coaches
 
+        logger.debug(
+            "Barttorvik team results CSV columns for %d: %s",
+            year, reader.fieldnames,
+        )
+
         # Find team and coach columns (case-insensitive)
         lower_fields = {(f or "").strip().lower(): f for f in reader.fieldnames}
         team_key = None
@@ -492,8 +497,9 @@ class TournamentContextScraper:
 
         if not team_key or not coach_key:
             logger.warning(
-                "Team results CSV missing team/coach columns (headers: %s)",
-                list(reader.fieldnames),
+                "Team results CSV missing team/coach columns — "
+                "team_key=%s, coach_key=%s (available headers: %s)",
+                team_key, coach_key, list(reader.fieldnames),
             )
             return coaches
 
