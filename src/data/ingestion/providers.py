@@ -576,6 +576,18 @@ class LibraryProviderHub:
             if len(raw) >= 10 and raw[4] == "-" and raw[7] == "-":
                 rec["date"] = raw[:10]
                 continue
+            # sportsdataverse may return epoch-ms timestamps depending on
+            # library version — detect and convert them first.
+            try:
+                epoch_val = float(raw)
+                # Distinguish seconds vs milliseconds: anything > 1e12 is ms
+                if epoch_val > 1e12:
+                    epoch_val /= 1000.0
+                if 9e8 < epoch_val < 3e9:  # plausible range: ~1998–~2065
+                    rec["date"] = datetime.utcfromtimestamp(epoch_val).strftime("%Y-%m-%d")
+                    continue
+            except (ValueError, TypeError, OverflowError, OSError):
+                pass
             # Try common date formats
             for fmt in ("%B %d, %Y", "%Y-%m-%dT%H:%M:%S", "%m/%d/%Y", "%Y%m%d"):
                 try:
