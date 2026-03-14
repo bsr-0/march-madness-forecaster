@@ -1,8 +1,10 @@
 {
   "year": 2026,
-  "generated_at": "2026-03-14T14:52:31.752187+00:00",
+  "generated_at": "2026-03-14T17:08:45.850940+00:00",
   "artifacts": {
     "torvik_json": "data/raw/torvik_2026.json",
+    "torvik_four_factors_json": "data/raw/torvik_four_factors_2026.json",
+    "torvik_shooting_json": "data/raw/torvik_shooting_2026.json",
     "rosters_json": "data/raw/rosters_2026.json",
     "sports_reference_json": "data/raw/sports_reference_2026.json",
     "coach_tournament_json": "data/raw/coach_tournament_2026.json",
@@ -10,6 +12,8 @@
   },
   "providers": {
     "torvik_json": "barttorvik",
+    "torvik_four_factors_json": "barttorvik",
+    "torvik_shooting_json": "barttorvik",
     "rosters_json": "cbbpy_schedule_boxscore",
     "sports_reference_json": "sports_reference_scraper",
     "coach_tournament_json": "barttorvik",
