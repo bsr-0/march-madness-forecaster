@@ -10,15 +10,15 @@ class StubProviderHub(LibraryProviderHub):
         super().__init__()
         self.calls = []
 
-    def _from_sportsdataverse_pbp(self, year):
+    def _from_sportsdataverse_pbp(self, year, since=None):
         self.calls.append("sportsdataverse")
         return ProviderResult("sportsdataverse", [])
 
-    def _from_cbbpy_pbp(self, year):
+    def _from_cbbpy_pbp(self, year, since=None):
         self.calls.append("cbbpy")
         return ProviderResult("cbbpy", [{"game_id": "g1"}])
 
-    def _from_cbbdata_games_api(self, year):
+    def _from_cbbdata_games_api(self, year, since=None):
         self.calls.append("cbbdata")
         return ProviderResult("cbbdata", [{"game_id": "g2"}])
 
@@ -33,7 +33,7 @@ def test_provider_priority_uses_custom_order():
 
 def test_provider_priority_falls_through_to_next():
     class FallthroughHub(StubProviderHub):
-        def _from_cbbdata_games_api(self, year):
+        def _from_cbbdata_games_api(self, year, since=None):
             self.calls.append("cbbdata")
             return ProviderResult("cbbdata", [])
 
@@ -81,6 +81,39 @@ def test_cbbpy_provider_normalizes_tuple_boxscore(monkeypatch):
     assert all("opponent_id" in row for row in result.records)
     # Verify dates are extracted from info DataFrame
     assert all(row.get("date") == "2025-01-15" for row in result.records)
+
+
+def test_cbbpy_provider_incremental_falls_back_to_season(monkeypatch):
+    """When get_games_range fails, get_games_season should be called with year
+    and records should be filtered by the since date."""
+    class DummyCBBpy:
+        @staticmethod
+        def get_games_range(start, end, info=True, box=True, pbp=False):
+            raise Exception("Network error")
+
+        @staticmethod
+        def get_games_season(year, info=True, box=True, pbp=False):
+            info_df = pd.DataFrame([
+                {"game_id": "601", "game_day": "January 15, 2025", "home_team": "A", "away_team": "B", "home_score": 70, "away_score": 65},
+                {"game_id": "602", "game_day": "March 10, 2025", "home_team": "C", "away_team": "D", "home_score": 80, "away_score": 75},
+            ])
+            box_df = pd.DataFrame([
+                {"game_id": "601", "team": "A", "player": "p1", "pts": 10, "fgm": 4, "fga": 8, "3pm": 1, "3pa": 3, "fta": 1, "to": 1, "oreb": 1, "dreb": 2},
+                {"game_id": "601", "team": "B", "player": "p2", "pts": 8, "fgm": 3, "fga": 6, "3pm": 0, "3pa": 2, "fta": 2, "to": 0, "oreb": 0, "dreb": 1},
+                {"game_id": "602", "team": "C", "player": "p3", "pts": 12, "fgm": 5, "fga": 9, "3pm": 1, "3pa": 3, "fta": 1, "to": 2, "oreb": 1, "dreb": 3},
+                {"game_id": "602", "team": "D", "player": "p4", "pts": 6, "fgm": 2, "fga": 5, "3pm": 1, "3pa": 2, "fta": 1, "to": 1, "oreb": 0, "dreb": 2},
+            ])
+            return (info_df, box_df, pd.DataFrame())
+
+    hub = LibraryProviderHub()
+    monkeypatch.setattr(hub, "_import_module", lambda module_name: DummyCBBpy if module_name == "cbbpy.mens_scraper" else None)
+
+    result = hub.fetch_historical_games(2025, priority=["cbbpy"], since="2025-03-01")
+    assert result.provider == "cbbpy"
+    # Only the March 10 game should be returned (filtered by since date)
+    assert len(result.records) == 2  # 2 records (one per team)
+    assert all(row["game_id"] == "602" for row in result.records)
+    assert all(row.get("date") == "2025-03-10" for row in result.records)
 
 
 def test_cbbpy_provider_extracts_dates_from_info(monkeypatch):
