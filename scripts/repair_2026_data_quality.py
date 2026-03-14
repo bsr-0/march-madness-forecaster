@@ -123,10 +123,21 @@ def _build_game_id_resolver(torvik_data: dict) -> callable:
     return resolve
 
 
-def load_json(filename: str) -> dict | list:
+def load_json(filename: str, required: bool = False) -> dict | list:
     path = DATA_DIR / filename
-    with open(path) as f:
-        return json.load(f)
+    if not path.exists():
+        if required:
+            raise FileNotFoundError(f"Required data file missing: {path}")
+        logger.warning("Data file not found, using empty default: %s", path)
+        return {}
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError) as exc:
+        if required:
+            raise
+        logger.warning("Failed to read %s: %s — using empty default", path, exc)
+        return {}
 
 
 def save_json(filename: str, data: dict | list) -> None:
@@ -523,8 +534,8 @@ def main() -> None:
 
     logger.info("=== %d Data Quality Repair ===", year)
 
-    # Load data files
-    torvik_data = load_json(f"torvik_{year}.json")
+    # Load data files (torvik is required; others degrade gracefully)
+    torvik_data = load_json(f"torvik_{year}.json", required=True)
     ff_data = load_json(f"torvik_four_factors_{year}.json")
     coach_data = load_json(f"coach_tournament_{year}.json")
     roster_data = load_json(f"rosters_{year}.json")
@@ -548,9 +559,13 @@ def main() -> None:
     # 2. Fix coach tournament teams
     logger.info("--- Step 2: Coach Tournament Teams ---")
     from src.data.scrapers.tournament_context import TournamentContextScraper
-    team_coach_map = TournamentContextScraper(
-        cache_dir=str(DATA_DIR / "cache"),
-    ).fetch_team_coaches(year)
+    try:
+        team_coach_map = TournamentContextScraper(
+            cache_dir=str(DATA_DIR / "cache"),
+        ).fetch_team_coaches(year)
+    except Exception as exc:
+        logger.warning("Failed to fetch team coaches: %s", exc)
+        team_coach_map = {}
     logger.info("Fetched %d team-coach mappings from Barttorvik", len(team_coach_map))
 
     # Fallback: if scraper returned empty, try coach fields from torvik data
@@ -579,12 +594,15 @@ def main() -> None:
     logger.info("--- Step 3: RAPM Estimation ---")
     rapm_updated = estimate_rapm_from_priors(roster_data)
 
-    # Save updated files
+    # Save updated files (skip empty dicts to avoid overwriting existing data)
     logger.info("--- Saving repaired data ---")
     save_json(f"torvik_{year}.json", torvik_data)
-    save_json(f"torvik_four_factors_{year}.json", ff_data)
-    save_json(f"coach_tournament_{year}.json", coach_data)
-    save_json(f"rosters_{year}.json", roster_data)
+    if ff_data:
+        save_json(f"torvik_four_factors_{year}.json", ff_data)
+    if coach_data:
+        save_json(f"coach_tournament_{year}.json", coach_data)
+    if roster_data:
+        save_json(f"rosters_{year}.json", roster_data)
 
     # 4. Update manifest
     logger.info("--- Step 4: Update Manifest ---")

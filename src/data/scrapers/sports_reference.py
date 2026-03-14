@@ -11,6 +11,8 @@ from typing import Dict, List, Optional
 import requests
 from bs4 import BeautifulSoup
 
+from ._retry import retry_request
+
 logger = logging.getLogger(__name__)
 
 
@@ -63,8 +65,7 @@ class SportsReferenceScraper:
 
         # Advanced table contains pace/off/def ratings and is stable across seasons.
         url = f"{self.BASE_URL}/{year}-advanced-school-stats.html"
-        response = self.session.get(url, timeout=30)
-        response.raise_for_status()
+        response = retry_request(self.session.get, url, timeout=30)
         teams = self._parse_team_table(response.text)
         if not teams:
             raise ValueError("Sports Reference returned no team rows")
@@ -208,8 +209,7 @@ class SportsReferenceScraper:
         last-resort fallback for computing def_rtg."""
         try:
             url = f"{self.BASE_URL}/{year}-school-stats.html"
-            response = self.session.get(url, timeout=30)
-            response.raise_for_status()
+            response = retry_request(self.session.get, url, timeout=30)
         except Exception as exc:
             logger.warning("Could not fetch basic stats page: %s", exc)
             return {}
