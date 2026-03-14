@@ -130,8 +130,14 @@ def load_json(filename: str, required: bool = False) -> dict | list:
             raise FileNotFoundError(f"Required data file missing: {path}")
         logger.warning("Data file not found, using empty default: %s", path)
         return {}
-    with open(path) as f:
-        return json.load(f)
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError) as exc:
+        if required:
+            raise
+        logger.warning("Failed to read %s: %s — using empty default", path, exc)
+        return {}
 
 
 def save_json(filename: str, data: dict | list) -> None:
@@ -553,9 +559,13 @@ def main() -> None:
     # 2. Fix coach tournament teams
     logger.info("--- Step 2: Coach Tournament Teams ---")
     from src.data.scrapers.tournament_context import TournamentContextScraper
-    team_coach_map = TournamentContextScraper(
-        cache_dir=str(DATA_DIR / "cache"),
-    ).fetch_team_coaches(year)
+    try:
+        team_coach_map = TournamentContextScraper(
+            cache_dir=str(DATA_DIR / "cache"),
+        ).fetch_team_coaches(year)
+    except Exception as exc:
+        logger.warning("Failed to fetch team coaches: %s", exc)
+        team_coach_map = {}
     logger.info("Fetched %d team-coach mappings from Barttorvik", len(team_coach_map))
 
     # Fallback: if scraper returned empty, try coach fields from torvik data
