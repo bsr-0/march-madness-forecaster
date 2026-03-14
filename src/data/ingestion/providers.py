@@ -345,6 +345,8 @@ class LibraryProviderHub:
         orb = normalize_rate(to_float(pick(["orb%", "orb", "offensive_reb_rate", "orb_pct"])))
         ftr = normalize_rate(to_float(pick(["ftr", "ft_rate", "free_throw_rate", "ft_rate_pct"])))
 
+        coach = pick(["coach", "head coach", "head_coach", "coach_name"])
+
         record = {
             "team_id": team_id,
             "team_name": name,
@@ -360,6 +362,8 @@ class LibraryProviderHub:
             "offensive_reb_rate": orb,
             "free_throw_rate": ftr,
         }
+        if coach:
+            record["coach"] = coach
         return record
 
     def _fetch_cbbdata_endpoint(self, url_env: str, year: int) -> Dict:
