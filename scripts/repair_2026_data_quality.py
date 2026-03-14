@@ -553,9 +553,17 @@ def main() -> None:
     ).fetch_team_coaches(year)
     logger.info("Fetched %d team-coach mappings from Barttorvik", len(team_coach_map))
 
-    roster_coaches_updated, coaches_updated = fix_coach_tournament_teams(
-        coach_data, roster_data, team_coach_map,
-    )
+    roster_coaches_updated = 0
+    coaches_updated = 0
+    if team_coach_map:
+        roster_coaches_updated, coaches_updated = fix_coach_tournament_teams(
+            coach_data, roster_data, team_coach_map,
+        )
+    else:
+        logger.warning(
+            "No team-coach mappings available — skipping coach team "
+            "population to preserve any existing data"
+        )
 
     # 3. Estimate RAPM from priors
     logger.info("--- Step 3: RAPM Estimation ---")
