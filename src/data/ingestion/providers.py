@@ -161,13 +161,16 @@ class LibraryProviderHub:
             if fn is None:
                 continue
             try:
-                if fn_name == "get_games_season" and not since:
+                if fn_name == "get_games_season":
                     games = fn(year, info=True, box=True, pbp=False)
                 else:
                     games = fn(start_date, end_date, info=True, box=True, pbp=False)
             except TypeError:
                 try:
-                    games = fn(year) if fn_name == "get_games_season" and not since else fn(start_date, end_date)
+                    if fn_name == "get_games_season":
+                        games = fn(year)
+                    else:
+                        games = fn(start_date, end_date)
                 except Exception:
                     continue
             except Exception:
@@ -176,6 +179,11 @@ class LibraryProviderHub:
             game_rows = self._normalize_cbbpy_records(games)
             if not game_rows:
                 continue
+            # When falling back to get_games_season during an incremental
+            # fetch, filter records to only include games from the since date.
+            if since and fn_name == "get_games_season":
+                self._normalize_date_field(game_rows)
+                game_rows = [r for r in game_rows if r.get("date", "") >= since]
             return ProviderResult("cbbpy", game_rows)
 
         return ProviderResult("cbbpy", [])
