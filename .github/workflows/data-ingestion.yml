@@ -142,7 +142,15 @@ print(max(dates) if dates else '')
 
       - name: Run data quality repair
         if: inputs.repair_only == true || inputs.run_repair != false
-        run: python scripts/repair_2026_data_quality.py --year ${{ steps.year.outputs.value }}
+        run: |
+          YEAR="${{ steps.year.outputs.value }}"
+          SCRIPT="scripts/repair_${YEAR}_data_quality.py"
+          if [ -f "$SCRIPT" ]; then
+            python "$SCRIPT" --year "$YEAR"
+          else
+            echo "No year-specific repair script found at $SCRIPT, trying generic"
+            python scripts/repair_2026_data_quality.py --year "$YEAR"
+          fi
 
       - name: Commit and push updated data
         run: |

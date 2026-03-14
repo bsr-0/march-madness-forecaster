@@ -123,8 +123,13 @@ def _build_game_id_resolver(torvik_data: dict) -> callable:
     return resolve
 
 
-def load_json(filename: str) -> dict | list:
+def load_json(filename: str, required: bool = False) -> dict | list:
     path = DATA_DIR / filename
+    if not path.exists():
+        if required:
+            raise FileNotFoundError(f"Required data file missing: {path}")
+        logger.warning("Data file not found, using empty default: %s", path)
+        return {}
     with open(path) as f:
         return json.load(f)
 
@@ -523,8 +528,8 @@ def main() -> None:
 
     logger.info("=== %d Data Quality Repair ===", year)
 
-    # Load data files
-    torvik_data = load_json(f"torvik_{year}.json")
+    # Load data files (torvik is required; others degrade gracefully)
+    torvik_data = load_json(f"torvik_{year}.json", required=True)
     ff_data = load_json(f"torvik_four_factors_{year}.json")
     coach_data = load_json(f"coach_tournament_{year}.json")
     roster_data = load_json(f"rosters_{year}.json")
@@ -579,12 +584,15 @@ def main() -> None:
     logger.info("--- Step 3: RAPM Estimation ---")
     rapm_updated = estimate_rapm_from_priors(roster_data)
 
-    # Save updated files
+    # Save updated files (skip empty dicts to avoid overwriting existing data)
     logger.info("--- Saving repaired data ---")
     save_json(f"torvik_{year}.json", torvik_data)
-    save_json(f"torvik_four_factors_{year}.json", ff_data)
-    save_json(f"coach_tournament_{year}.json", coach_data)
-    save_json(f"rosters_{year}.json", roster_data)
+    if ff_data:
+        save_json(f"torvik_four_factors_{year}.json", ff_data)
+    if coach_data:
+        save_json(f"coach_tournament_{year}.json", coach_data)
+    if roster_data:
+        save_json(f"rosters_{year}.json", roster_data)
 
     # 4. Update manifest
     logger.info("--- Step 4: Update Manifest ---")
