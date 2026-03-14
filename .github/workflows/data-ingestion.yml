@@ -62,15 +62,21 @@ jobs:
     timeout-minutes: 45
 
     # Optional env vars (set in repo Settings > Secrets and variables > Actions):
-    #   CBBDATA_API_KEY      - API key for cbbdata.com Torvik endpoint
-    #   CBBDATA_BASE_URL     - Base URL override for cbbdata API (default: built-in)
+    #   CBBDATA_API_KEY         - API key for cbbdata.com Torvik endpoint
+    #   CBBDATA_BASE_URL        - Base URL override for cbbdata API (default: built-in)
     #   CBBPY_ROSTER_ENABLE_PBP - "true" to collect play-by-play stint data via cbbpy
-    #   PLAYER_METRICS_URL   - URL to a player-metrics JSON feed (manual-provide)
+    #   PLAYER_METRICS_URL      - URL to a player-metrics JSON feed (manual-provide)
+    #   ESPN_PUBLIC_PICKS_URL   - JSON endpoint for ESPN bracket pick percentages
+    #   YAHOO_PUBLIC_PICKS_URL  - JSON endpoint for Yahoo bracket pick percentages (discontinued)
+    #   CBS_PUBLIC_PICKS_URL    - JSON endpoint for CBS bracket pick percentages
     env:
       CBBDATA_API_KEY: ${{ secrets.CBBDATA_API_KEY }}
       CBBDATA_BASE_URL: ${{ vars.CBBDATA_BASE_URL }}
       CBBPY_ROSTER_ENABLE_PBP: ${{ vars.CBBPY_ROSTER_ENABLE_PBP }}
       PLAYER_METRICS_URL: ${{ vars.PLAYER_METRICS_URL }}
+      ESPN_PUBLIC_PICKS_URL: ${{ vars.ESPN_PUBLIC_PICKS_URL }}
+      YAHOO_PUBLIC_PICKS_URL: ${{ vars.YAHOO_PUBLIC_PICKS_URL }}
+      CBS_PUBLIC_PICKS_URL: ${{ vars.CBS_PUBLIC_PICKS_URL }}
 
     steps:
       - uses: actions/checkout@v4
