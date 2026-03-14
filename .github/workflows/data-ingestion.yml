@@ -161,8 +161,14 @@ print(max(dates) if dates else '')
           if [ -f "$SCRIPT" ]; then
             python "$SCRIPT" --year "$YEAR"
           else
-            echo "No year-specific repair script found at $SCRIPT, trying generic"
-            python scripts/repair_2026_data_quality.py --year "$YEAR"
+            # Fall back to the most recent year-specific repair script
+            LATEST=$(ls scripts/repair_*_data_quality.py 2>/dev/null | sort -t_ -k2 -n | tail -1)
+            if [ -n "$LATEST" ]; then
+              echo "No repair script for $YEAR; using latest available: $LATEST"
+              python "$LATEST" --year "$YEAR"
+            else
+              echo "No repair scripts found, skipping"
+            fi
           fi
 
       - name: Prune stale cache files
