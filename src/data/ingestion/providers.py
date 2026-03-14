@@ -33,7 +33,9 @@ class LibraryProviderHub:
         "torvik": ["barttorvik", "cbbdata"],
     }
 
-    def fetch_historical_games(self, year: int, priority: Optional[List[str]] = None) -> ProviderResult:
+    def fetch_historical_games(
+        self, year: int, priority: Optional[List[str]] = None, since: Optional[str] = None,
+    ) -> ProviderResult:
         methods = {
             "sportsdataverse": self._from_sportsdataverse_pbp,
             "cbbpy": self._from_cbbpy_pbp,
@@ -41,7 +43,7 @@ class LibraryProviderHub:
             "cbbdata": self._from_cbbdata_games_api,
         }
         for method in self._ordered_methods("historical_games", methods, priority):
-            result = method(year)
+            result = method(year, since=since)
             if result.records:
                 return result
         return ProviderResult(provider="none", records=[])
@@ -92,7 +94,7 @@ class LibraryProviderHub:
                 resolved.append(method)
         return resolved
 
-    def _from_sportsdataverse_pbp(self, year: int) -> ProviderResult:
+    def _from_sportsdataverse_pbp(self, year: int, since: Optional[str] = None) -> ProviderResult:
         mbb = self._import_module("sportsdataverse.mbb")
         if mbb is None:
             return ProviderResult("sportsdataverse", [])
@@ -112,6 +114,8 @@ class LibraryProviderHub:
                 records = self._frame_to_records(df)
                 if records:
                     self._normalize_date_field(records)
+                    if since:
+                        records = [r for r in records if r.get("date", "") >= since]
                     return ProviderResult("sportsdataverse", records)
             except Exception:
                 continue
@@ -140,24 +144,30 @@ class LibraryProviderHub:
                 continue
         return ProviderResult("sportsdataverse", [])
 
-    def _from_cbbpy_pbp(self, year: int) -> ProviderResult:
+    def _from_cbbpy_pbp(self, year: int, since: Optional[str] = None) -> ProviderResult:
         scraper = self._import_module("cbbpy.mens_scraper")
         if scraper is None:
             return ProviderResult("cbbpy", [])
 
+        start_date = since or f"{year-1}-11-01"
+        end_date = f"{year}-04-15"
+
         # CBBpy function names have changed across releases; probe common names.
-        for fn_name in ("get_games_season", "get_games_range"):
+        # When doing incremental fetches, prefer get_games_range to avoid
+        # scraping the entire season.
+        fn_order = ("get_games_range", "get_games_season") if since else ("get_games_season", "get_games_range")
+        for fn_name in fn_order:
             fn = getattr(scraper, fn_name, None)
             if fn is None:
                 continue
             try:
-                if fn_name == "get_games_season":
+                if fn_name == "get_games_season" and not since:
                     games = fn(year, info=True, box=True, pbp=False)
                 else:
-                    games = fn(f"{year-1}-11-01", f"{year}-04-15", info=True, box=True, pbp=False)
+                    games = fn(start_date, end_date, info=True, box=True, pbp=False)
             except TypeError:
                 try:
-                    games = fn(year) if fn_name == "get_games_season" else fn(f"{year-1}-11-01", f"{year}-04-15")
+                    games = fn(year) if fn_name == "get_games_season" and not since else fn(start_date, end_date)
                 except Exception:
                     continue
             except Exception:
@@ -170,12 +180,12 @@ class LibraryProviderHub:
 
         return ProviderResult("cbbpy", [])
 
-    def _from_cbbdata_games_api(self, year: int) -> ProviderResult:
+    def _from_cbbdata_games_api(self, year: int, since: Optional[str] = None) -> ProviderResult:
         payload = self._fetch_cbbdata_endpoint("CBBDATA_GAMES_URL", year)
         records = payload.get("games") or payload.get("records") or []
         return ProviderResult("cbbdata", records if isinstance(records, list) else [])
 
-    def _from_sportsipy_games_api(self, year: int) -> ProviderResult:
+    def _from_sportsipy_games_api(self, year: int, since: Optional[str] = None) -> ProviderResult:
         try:
             from sportsipy.ncaab.teams import Teams
         except ImportError:

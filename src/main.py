@@ -553,6 +553,7 @@ def ingest_data(args):
         scrape_sports_reference=not args.skip_sports_reference,
         scrape_rosters=not args.skip_rosters,
         scrape_historical_games=not args.skip_historical_games,
+        historical_games_since=getattr(args, "historical_games_since", None),
         historical_games_provider_priority=parse_priority(args.historical_games_provider_priority),
         team_metrics_provider_priority=parse_priority(args.team_metrics_provider_priority),
         torvik_provider_priority=parse_priority(args.torvik_provider_priority),
@@ -1429,6 +1430,11 @@ def main():
     ingest_parser.add_argument("--skip-sports-reference", action="store_true", help="Skip Sports Reference scrape")
     ingest_parser.add_argument("--skip-rosters", action="store_true", help="Skip player roster ingestion")
     ingest_parser.add_argument("--skip-historical-games", action="store_true", help="Skip historical games scrape (slow cbbpy day-by-day fetch)")
+    ingest_parser.add_argument(
+        "--historical-games-since",
+        default=None,
+        help="Only fetch games from this date forward (ISO format, e.g. 2026-03-08) and merge with existing data",
+    )
     ingest_parser.add_argument(
         "--historical-games-provider-priority",
         default=None,
