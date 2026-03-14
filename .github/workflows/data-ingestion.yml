@@ -28,6 +28,10 @@ on:
         required: false
         default: false
         type: boolean
+      historical_games_since:
+        description: "Only fetch games from this date forward (ISO, e.g. 2026-03-08). Auto-detected on scheduled runs."
+        required: false
+        type: string
       repair_only:
         description: "Skip full ingestion and only run the data quality repair script"
         required: false
@@ -100,28 +104,41 @@ jobs:
           fi
           echo "flags=$FLAGS" >> "$GITHUB_OUTPUT"
 
-      - name: Auto-skip historical games if data is fresh
-        id: auto_skip
+      - name: Detect incremental games window
+        id: incremental
         run: |
           YEAR="${{ steps.year.outputs.value }}"
           FILE="data/raw/historical_games_${YEAR}.json"
+
+          # Manual override takes priority
+          if [ -n "${{ inputs.historical_games_since }}" ]; then
+            echo "flag=--historical-games-since ${{ inputs.historical_games_since }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # For scheduled runs: if data exists, do incremental from last game date
           if [ -f "$FILE" ]; then
-            FILE_AGE_HOURS=$(( ($(date +%s) - $(stat -c %Y "$FILE")) / 3600 ))
-            if [ "$FILE_AGE_HOURS" -lt 48 ]; then
-              echo "Historical games file is ${FILE_AGE_HOURS}h old (<48h), skipping scrape"
-              echo "flag=--skip-historical-games" >> "$GITHUB_OUTPUT"
+            LAST_DATE=$(python3 -c "
+import json
+with open('$FILE') as f:
+    games = json.load(f).get('games', [])
+dates = [g['date'] for g in games if g.get('date')]
+print(max(dates) if dates else '')
+")
+            if [ -n "$LAST_DATE" ]; then
+              echo "Existing data through $LAST_DATE, fetching incrementally"
+              echo "flag=--historical-games-since $LAST_DATE" >> "$GITHUB_OUTPUT"
             else
-              echo "Historical games file is ${FILE_AGE_HOURS}h old (>=48h), re-scraping"
               echo "flag=" >> "$GITHUB_OUTPUT"
             fi
           else
-            echo "No historical games file, will scrape"
+            echo "No existing data, full scrape"
             echo "flag=" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Run data ingestion
         if: inputs.repair_only != true
-        run: python -m src.main ingest ${{ steps.flags.outputs.flags }} ${{ steps.auto_skip.outputs.flag }}
+        run: python -m src.main ingest ${{ steps.flags.outputs.flags }} ${{ steps.incremental.outputs.flag }}
 
       - name: Run data quality repair
         if: inputs.repair_only == true || inputs.run_repair != false
