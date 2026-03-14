@@ -61,6 +61,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
+    # Optional env vars (set in repo Settings > Secrets and variables > Actions):
+    #   CBBDATA_API_KEY      - API key for cbbdata.com Torvik endpoint
+    #   CBBDATA_BASE_URL     - Base URL override for cbbdata API (default: built-in)
+    #   CBBPY_ROSTER_ENABLE_PBP - "true" to collect play-by-play stint data via cbbpy
+    #   PLAYER_METRICS_URL   - URL to a player-metrics JSON feed (manual-provide)
+    env:
+      CBBDATA_API_KEY: ${{ secrets.CBBDATA_API_KEY }}
+      CBBDATA_BASE_URL: ${{ vars.CBBDATA_BASE_URL }}
+      CBBPY_ROSTER_ENABLE_PBP: ${{ vars.CBBPY_ROSTER_ENABLE_PBP }}
+      PLAYER_METRICS_URL: ${{ vars.PLAYER_METRICS_URL }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -153,6 +164,13 @@ print(max(dates) if dates else '')
             echo "No year-specific repair script found at $SCRIPT, trying generic"
             python scripts/repair_2026_data_quality.py --year "$YEAR"
           fi
+
+      - name: Prune stale cache files
+        run: |
+          # Remove cache files older than 14 days to prevent unbounded growth
+          find data/raw/cache -type f -mtime +14 -delete 2>/dev/null || true
+          # Remove empty directories left behind
+          find data/raw/cache -type d -empty -delete 2>/dev/null || true
 
       - name: Commit and push updated data
         run: |
