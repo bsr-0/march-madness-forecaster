@@ -1,6 +1,6 @@
 {
   "year": 2026,
-  "generated_at": "2026-03-11T04:54:25.115904+00:00",
+  "generated_at": "2026-03-14T04:14:39.632679+00:00",
   "artifacts": {
     "torvik_json": "data/raw/torvik_2026.json",
     "historical_games_json": "data/raw/historical_games_2026.json",
@@ -20,9 +20,10 @@
   "provenance": {
     "data_quality_repair": {
       "script": "scripts/repair_2026_data_quality.py",
-      "run_at": "2026-03-11T04:54:25.115979+00:00",
+      "run_at": "2026-03-14T04:14:39.632704+00:00",
       "defensive_four_factors_teams": 665,
-      "rapm_players_estimated": 10014
+      "rapm_players_estimated": 0,
+      "coaches_mapped_to_teams": 0
     }
   },
   "credential_requirements": {
