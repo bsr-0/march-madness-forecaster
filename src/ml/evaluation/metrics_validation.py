@@ -58,15 +58,15 @@ logger = logging.getLogger(__name__)
 
 # Tournament start dates — games on/after this date are excluded from
 # proprietary metric computation to prevent temporal leakage.
-# Matches TOURNAMENT_START_DATES in sota.py.
-_TOURNAMENT_START_DATES: Dict[int, str] = {
-    2008: "2008-03-18", 2009: "2009-03-17", 2010: "2010-03-16",
-    2011: "2011-03-15", 2012: "2012-03-13", 2013: "2013-03-19",
-    2014: "2014-03-18", 2015: "2015-03-17", 2016: "2016-03-15",
-    2017: "2017-03-14", 2018: "2018-03-13", 2019: "2019-03-19",
-    2021: "2021-03-18", 2022: "2022-03-15", 2023: "2023-03-14",
-    2024: "2024-03-19", 2025: "2025-03-18", 2026: "2026-03-17",
-}
+# Derived from the canonical TOURNAMENT_START_DATES in pipeline.config.
+try:
+    from ...pipeline.config import TOURNAMENT_START_DATES as _CANONICAL_DATES
+    _TOURNAMENT_START_DATES: Dict[int, str] = {
+        yr: d.isoformat() for yr, d in _CANONICAL_DATES.items()
+    }
+except ImportError:
+    # Standalone usage without the pipeline package.
+    _TOURNAMENT_START_DATES = {}
 
 # Default year split.  "Diagnostic" years are used to flag methodology
 # bugs (correlation < 0.90).  "Holdout" years verify that any constant
