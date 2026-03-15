@@ -278,6 +278,16 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     sort_keys_full = np.array([s[0] for s in samples])
     # (PIT metadata no longer needed — features computed incrementally)
 
+    # Symmetric augmentation: double the dataset by adding the reverse-
+    # perspective row for every game.  Historical years already get this
+    # via sample_loading.py; current-year samples need it here.
+    if getattr(pipeline.config, "enable_symmetric_augmentation", True):
+        from ...ml.training.symmetric import symmetric_augment
+
+        X_full, y_full, margins_full, _, sort_keys_full = symmetric_augment(
+            X_full, y_full, margins_full, sort_keys=sort_keys_full,
+        )
+
     # ====================================================================
     # FEATURE MATRIX VALIDATION — catch NaN/inf/constant features that
     # indicate upstream data construction failures before they silently
