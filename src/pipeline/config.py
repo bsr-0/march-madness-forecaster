@@ -203,22 +203,39 @@ def compute_year_data_quality(
 
 
 def _infer_tournament_round_weight(game_date: str, year: int) -> float:
-    """Infer tournament round weight from game date."""
+    """Infer tournament round weight from game date.
+
+    Weights are assigned by days-since-tournament-start, using the actual
+    ``TOURNAMENT_START_DATES`` for the year.  This avoids hardcoded
+    day-of-March thresholds that disagree with years where the tournament
+    starts before March 17 (e.g. 2018 starts March 13).
+
+    Any game on or after the tournament start date receives weight >= 2.0.
+    Games before the tournament start date receive weight 1.0.
+    """
     try:
         gd = datetime.strptime(game_date[:10], "%Y-%m-%d").date()
     except (ValueError, TypeError):
         return 1.0
-    day_of_march = (gd - date(year, 3, 1)).days
-    if day_of_march >= 31:
-        return 32.0 if day_of_march >= 33 else 16.0
-    elif day_of_march >= 24:
-        return 8.0
-    elif day_of_march >= 22:
-        return 4.0
-    elif day_of_march >= 17:
-        return 2.0
-    else:
+    t_start = TOURNAMENT_START_DATES.get(year, date(year, 3, 14))
+    if gd < t_start:
         return 1.0
+    days_into = (gd - t_start).days  # 0 = first day of tournament
+    if days_into >= 19:
+        # Championship game / finals (~ 19-20 days after start)
+        return 32.0
+    elif days_into >= 17:
+        # Final Four (~ 17-18 days after start)
+        return 16.0
+    elif days_into >= 10:
+        # Elite 8 (~ 10-12 days)
+        return 8.0
+    elif days_into >= 8:
+        # Sweet 16 (~ 8-9 days)
+        return 4.0
+    else:
+        # First/Second round (days 0-7)
+        return 2.0
 
 
 class DataRequirementError(ValueError):
@@ -453,12 +470,6 @@ class SOTAPipelineConfig:
     enable_multi_year_calibration: bool = True  # Augment calibration with historical years
     min_calibration_samples: int = 100  # Warn and skip calibration below this threshold
     # FIX 8.1: Include historical tournament games in calibration.
-    # The calibration domain should match the inference domain (tournament
-    # games), not the training domain (regular-season games).  Historical
-    # tournament game outcomes are genuinely out-of-sample relative to the
-    # model trained on current-year regular-season data.
-    include_tournament_games_in_calibration: bool = True
-
     # --- LOYO temporal mode (Fix 2: purely temporal CV) ---
     loyo_temporal_mode: str = "rolling_window"  # "rolling_window" (honest) or "leave_one_out" (original)
 

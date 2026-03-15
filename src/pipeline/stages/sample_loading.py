@@ -476,6 +476,20 @@ def _load_year_samples_incremental_core(
     margins_arr = np.array(margins_list, dtype=np.float64)
     round_weights_arr = np.array(round_weight_list, dtype=np.float64)
 
+    # Structural invariant: in tournament_only mode, every sample must
+    # have round weight > 1.0.  This is guaranteed by the conjunction of:
+    #   (a) training_games filtered to game_date >= tournament_cutoff
+    #   (b) _infer_tournament_round_weight returns >= 2.0 for such dates
+    # If this fails, the date filter or round-weight function is broken.
+    if mode == "tournament_only":
+        n_bad = int(np.sum(round_weights_arr <= 1.0))
+        assert n_bad == 0, (
+            f"tournament_only loader produced {n_bad}/{len(round_weights_arr)} "
+            f"samples with round_weight <= 1.0 for year {year}. "
+            f"Tournament cutoff was {tournament_cutoff}. This indicates a bug "
+            f"in the date filter or _infer_tournament_round_weight."
+        )
+
     # FIX-DQ: Feature completeness validation
     completeness = float(np.mean(np.abs(X_arr) > 1e-8))
     col_activity = np.mean(np.abs(X_arr) > 1e-8, axis=0)
