@@ -29,6 +29,7 @@ class LibraryProviderHub:
 
     DEFAULT_PRIORITIES = {
         "historical_games": ["sportsdataverse", "cbbpy", "espn_scoreboard", "sportsipy", "cbbdata"],
+        "historical_games_incremental": ["sportsdataverse", "espn_scoreboard", "cbbpy", "sportsipy", "cbbdata"],
         "team_metrics": ["sportsdataverse", "sportsipy", "cbbdata"],
         "torvik": ["barttorvik", "cbbdata"],
     }
@@ -43,7 +44,8 @@ class LibraryProviderHub:
             "sportsipy": self._from_sportsipy_games_api,
             "cbbdata": self._from_cbbdata_games_api,
         }
-        for method in self._ordered_methods("historical_games", methods, priority):
+        data_kind = "historical_games_incremental" if since and not priority else "historical_games"
+        for method in self._ordered_methods(data_kind, methods, priority):
             result = method(year, since=since)
             if result.records:
                 return result
