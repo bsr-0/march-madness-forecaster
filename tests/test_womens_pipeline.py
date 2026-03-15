@@ -338,7 +338,7 @@ class TestWomensPipeline:
         config = WomensPipelineConfig()
         assert config.enable_tournament_adaptation is True
         assert config.tournament_shrinkage == 0.02
-        assert config.seed_prior_weight == 0.15
+        assert config.seed_prior_weight == 0.0  # Deprecated: redundant with SeedBasedOverrides
         assert config.seed_prior_slope == 0.19
 
     def test_config_has_feature_scaling(self):

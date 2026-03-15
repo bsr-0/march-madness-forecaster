@@ -174,13 +174,15 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
         "Disabled by default unless sensitivity proves value"),
     PipelineConstant("seed_prior_weight", 3, 0.0,
         "SOTAPipelineConfig.seed_prior_weight", (0.0, 0.15),
+        "Experimental-only; excluded from production DoF count. "
         "Disabled by default unless sensitivity proves value"),
     PipelineConstant("consistency_bonus_max", 3, 0.0,
         "SOTAPipelineConfig.consistency_bonus_max", (0.0, 0.06),
+        "Experimental-only; excluded from production DoF count. "
         "Disabled by default unless sensitivity proves value"),
     PipelineConstant("consistency_normalizer", 3, 15.0,
         "SOTAPipelineConfig.consistency_normalizer", (5.0, 30.0),
-        "Paired with consistency_bonus_max; normalizes variance range"),
+        "Experimental-only; paired with consistency_bonus_max"),
     PipelineConstant("mc_noise_std", 3, 0.12,
         "SimulationConfig.noise_std", (0.02, 0.25),
         "Changed 0.04→0.035→0.02→0.12 across fix rounds"),
@@ -1584,6 +1586,7 @@ class HoldoutEvaluator:
         These can be swept without retraining.
         """
         from ..calibration.calibration import TemperatureScaling
+        from ...pipeline.probability_pipeline import apply_calibration, apply_final_clip
 
         per_game = cached["per_game"]
         train_lgb, train_xgb, train_log = cached["train_ensemble_preds"]
@@ -1611,11 +1614,11 @@ class HoldoutEvaluator:
             raw = w_lgb * g["lgb_p"] + w_xgb * g["xgb_p"] + w_log * g["log_p"]
             raw = float(np.clip(raw, 0.03, 0.97))
 
-            # Calibration
-            if calibrator.fitted:
-                raw = float(calibrator.calibrate(np.array([raw]))[0])
+            # Calibration (shared helper)
+            raw = apply_calibration(raw, calibrator if calibrator.fitted else None, 0.03, 0.97)
 
-            # Tournament adaptation (full version using available data)
+            # Tournament adaptation (shared helper for production shrinkage,
+            # plus experimental extras when applicable)
             adapted = self._tournament_adapt(
                 raw, g["em_diff"], g["margin_std_diff"], config
             )
@@ -1674,32 +1677,34 @@ class HoldoutEvaluator:
         margin_std_diff: float,
         config,
     ) -> float:
-        """Apply tournament domain adaptation matching sota.py logic.
+        """Apply tournament domain adaptation using shared production helpers.
 
-        Production path: shrinkage toward 0.5 + consistency bonus.
-        Seed-based corrections are handled by SeedBasedOverrides (via
-        BrierPostProcessor) when enabled, not stacked here.
-
-        Uses margin std difference for consistency bonus.
+        Production path: shrinkage toward 0.5 only.
+        Experimental extras (seed prior, consistency bonus) are only applied
+        when probability_profile == "experimental".
         """
-        # 1. Shrinkage toward 0.5
-        shrinkage = config.tournament_shrinkage
-        adapted = shrinkage * 0.5 + (1.0 - shrinkage) * prob
+        from ...pipeline.probability_pipeline import apply_tournament_shrinkage
 
-        # 2. Seed prior (only when seed_prior_weight > 0, disabled by default)
-        w = getattr(config, 'seed_prior_weight', 0.0)
-        if w > 0:
-            slope = config.seed_prior_slope
-            seed_prior = 1.0 / (1.0 + math.exp(-slope * em_diff / 2.5))
-            adapted = (1.0 - w) * adapted + w * seed_prior
+        # Production: shrinkage only
+        adapted = apply_tournament_shrinkage(prob, config.tournament_shrinkage)
 
-        # 3. Consistency bonus
-        bonus_max = config.consistency_bonus_max
-        normalizer = config.consistency_normalizer
-        consistency_edge = bonus_max * float(np.clip(
-            margin_std_diff / normalizer, -1.0, 1.0
-        ))
-        adapted += consistency_edge
+        # Experimental-only extras
+        profile = getattr(config, 'probability_profile', 'production')
+        if profile == "experimental":
+            # Seed prior (only when seed_prior_weight > 0)
+            w = getattr(config, 'seed_prior_weight', 0.0)
+            if w > 0:
+                slope = config.seed_prior_slope
+                seed_prior = 1.0 / (1.0 + math.exp(-slope * em_diff / 2.5))
+                adapted = (1.0 - w) * adapted + w * seed_prior
+
+            # Consistency bonus
+            bonus_max = config.consistency_bonus_max
+            normalizer = config.consistency_normalizer
+            consistency_edge = bonus_max * float(np.clip(
+                margin_std_diff / normalizer, -1.0, 1.0
+            ))
+            adapted += consistency_edge
 
         return float(np.clip(adapted, config.pre_calibration_clip_lo,
                              config.pre_calibration_clip_hi))

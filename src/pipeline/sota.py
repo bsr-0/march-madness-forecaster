@@ -1287,35 +1287,54 @@ class SOTAPipeline:
         return float(np.clip(baseline_prob, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
 
     def predict_probability(self, team1_id: str, team2_id: str) -> float:
-        # ================================================================
-        # PRODUCTION PROBABILITY PATH (default config):
-        #   Stage A: Raw model probability (ensemble + Massey blend)
-        #   Stage B: Symmetry enforcement
-        #   Stage C: Single calibration (temperature scaling)
-        #   Stage D: Tournament shrinkage toward 0.5
-        #   Stage E: Final clipping
-        #
-        # All other post-processing (seed overrides, goto_conversion,
-        # sharpening, round-weighted calibration, BT blend, seed prior)
-        # is EXPERIMENTAL and must be explicitly enabled via config.
-        # Each experimental component requires OOS ablation evidence
-        # before promotion to the default path.
-        # ================================================================
+        """Route to production or experimental probability path."""
+        if self.config.probability_profile == "experimental":
+            return self.predict_probability_experimental(team1_id, team2_id)
+        return self.predict_probability_production(team1_id, team2_id)
 
-        # SYMMETRY FIX: Average P(A>B) and 1-P(B>A) to enforce the property
-        # P(A>B) + P(B>A) = 1 exactly.  Tree-based models don't guarantee
-        # this because feature engineering (absolute features, interactions)
-        # can break symmetry.  Top Kaggle competitors use this approach to
-        # eliminate ~0.001-0.003 Brier from asymmetry noise.
+    def predict_probability_production(self, team1_id: str, team2_id: str) -> float:
+        """Production probability: raw → calibration → shrinkage → clip.
+
+        This is the entire production inference path.  No post-processor,
+        no seed overrides, no sharpening, no goto_conversion, no seed prior.
+        """
+        from .probability_pipeline import (
+            apply_calibration,
+            apply_final_clip,
+            apply_tournament_shrinkage,
+        )
+
+        # Stage 1: Raw probability with symmetry enforcement
         raw_forward = self._raw_fusion_probability(team1_id, team2_id)
         raw_reverse = self._raw_fusion_probability(team2_id, team1_id)
         raw = (raw_forward + (1.0 - raw_reverse)) / 2.0
 
-        # SINGLE CALIBRATION: Apply at most one calibration step.
-        # Round-weighted calibrator targets Kaggle's actual metric — prefer
-        # it when enabled.  Standard temperature scaling is the fallback.
-        # Never stack both (two sequential temperature scalings compose to
-        # one effective T; fitting one to the right objective is sufficient).
+        # Stage 2: Single calibration (CalibrationPipeline temperature scaling)
+        prob = apply_calibration(
+            raw, self.calibration_pipeline,
+            self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi,
+        )
+
+        # Stage 3: Tournament shrinkage toward 0.5
+        if self.config.enable_tournament_adaptation:
+            prob = apply_tournament_shrinkage(prob, self.config.tournament_shrinkage)
+
+        # Stage 4: Final clip
+        return apply_final_clip(prob, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi)
+
+    def predict_probability_experimental(self, team1_id: str, team2_id: str) -> float:
+        """Experimental probability path — preserves all optional layers.
+
+        Includes: round-weighted calibrator, BrierPostProcessor (seed overrides,
+        goto_conversion, sharpening), FLB correction, seed prior, consistency bonus.
+        Only active when probability_profile == "experimental".
+        """
+        # Symmetry enforcement
+        raw_forward = self._raw_fusion_probability(team1_id, team2_id)
+        raw_reverse = self._raw_fusion_probability(team2_id, team1_id)
+        raw = (raw_forward + (1.0 - raw_reverse)) / 2.0
+
+        # Calibration: round-weighted preferred, standard fallback
         if hasattr(self, '_round_weighted_calibrator') and self._round_weighted_calibrator is not None:
             rw_cal = self._round_weighted_calibrator
             logit = np.log(max(raw, 1e-8) / max(1.0 - raw, 1e-8))
@@ -1325,24 +1344,17 @@ class SOTAPipeline:
             calibrated = float(self.calibration_pipeline.calibrate(np.array([raw]))[0])
             raw = float(np.clip(calibrated, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
 
+        # Tournament adaptation (includes seed prior + consistency bonus)
         if self.config.enable_tournament_adaptation:
-            raw = self._tournament_adapt(raw, team1_id, team2_id)
+            raw = self._tournament_adapt_experimental(raw, team1_id, team2_id)
 
-        # WS2: Brier-optimal post-processing (seed overrides + sharpening).
-        # NOTE: BrierPostProcessor.process() already applies goto_conversion
-        # internally (step 3), so we must NOT apply it directly here when
-        # the post-processor will run — otherwise the correction is applied
-        # twice, over-sharpening toward favourites.
+        # BrierPostProcessor (seed overrides + goto + sharpening + clip)
         _will_use_post_processor = (
             self.config.enable_seed_overrides
             and hasattr(self, '_brier_post_processor')
             and self._brier_post_processor is not None
         )
 
-        # Favourite-longshot bias correction (goto_conversion inspired).
-        # Only applied directly when BrierPostProcessor is disabled;
-        # otherwise BrierPostProcessor handles it in the correct pipeline
-        # order: seed overrides → calibration → goto → sharpening → clip.
         if not _will_use_post_processor:
             if hasattr(self, '_flb_correction') and self._flb_correction is not None and self._flb_correction.fitted:
                 raw = self._flb_correction.correct_single(raw)
@@ -1358,21 +1370,11 @@ class SOTAPipeline:
 
         return raw
 
-    def _tournament_adapt(self, prob: float, team1_id: str, team2_id: str) -> float:
-        """Apply tournament domain adaptation to a regular-season-trained probability.
+    def _tournament_adapt_experimental(self, prob: float, team1_id: str, team2_id: str) -> float:
+        """Experimental tournament adaptation with all optional layers.
 
-        Two adjustments (production path):
-        1. **Shrinkage toward 0.5** — regular-season models are overconfident
-           because tournament games are played on neutral courts with higher
-           variance.  A small blend toward 0.5 corrects the domain shift.
-        2. **Consistency bonus** — teams with low scoring-margin variance
-           (high consistency) perform better in single-elimination.  Disabled
-           by default (consistency_bonus_max=0.0).
-
-        Seed-based corrections (historical rate anchoring) are handled
-        downstream by SeedBasedOverrides via BrierPostProcessor when
-        enable_seed_overrides=True.  They are not applied here to avoid
-        stacking multiple seed adjustments.
+        Includes shrinkage, seed prior, and consistency bonus.
+        Only used when probability_profile == "experimental".
         """
         t1 = self.feature_engineer.team_features.get(team1_id)
         t2 = self.feature_engineer.team_features.get(team2_id)
@@ -1381,8 +1383,7 @@ class SOTAPipeline:
         shrinkage = self.config.tournament_shrinkage
         adapted = shrinkage * 0.5 + (1.0 - shrinkage) * prob
 
-        # 2. Seed-based Bayesian prior (only when seed_prior_weight > 0,
-        #    disabled by default to avoid stacking with SeedBasedOverrides)
+        # 2. Seed-based Bayesian prior (only when seed_prior_weight > 0)
         if self.config.seed_prior_weight > 0 and t1 is not None and t2 is not None:
             seed1 = t1.seed if t1 is not None else 0
             seed2 = t2.seed if t2 is not None else 0
