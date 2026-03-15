@@ -244377,6 +244377,4376 @@
       "orb": 13.0,
       "drb": 12.0,
       "date": "2026-02-25"
+    },
+    {
+      "game_id": "401851762",
+      "date": "2026-03-11",
+      "team_id": "gonzaga",
+      "team_name": "Gonzaga Bulldogs",
+      "opponent_id": "santa_clara_broncos",
+      "opponent_name": "Santa Clara Broncos",
+      "team_score": 79,
+      "opponent_score": 68
+    },
+    {
+      "game_id": "401851762",
+      "date": "2026-03-11",
+      "team_id": "santa_clara_broncos",
+      "team_name": "Santa Clara Broncos",
+      "opponent_id": "gonzaga",
+      "opponent_name": "Gonzaga Bulldogs",
+      "team_score": 68,
+      "opponent_score": 79
+    },
+    {
+      "game_id": "401851282",
+      "date": "2026-03-10",
+      "team_id": "arizona_state_sun_devils",
+      "team_name": "Arizona State Sun Devils",
+      "opponent_id": "baylor",
+      "opponent_name": "Baylor Bears",
+      "team_score": 83,
+      "opponent_score": 79
+    },
+    {
+      "game_id": "401851282",
+      "date": "2026-03-10",
+      "team_id": "baylor",
+      "team_name": "Baylor Bears",
+      "opponent_id": "arizona_state_sun_devils",
+      "opponent_name": "Arizona State Sun Devils",
+      "team_score": 79,
+      "opponent_score": 83
+    },
+    {
+      "game_id": "401851716",
+      "date": "2026-03-10",
+      "team_id": "prairie_view_a_m_panthers",
+      "team_name": "Prairie View A&M Panthers",
+      "opponent_id": "alcorn_state_braves",
+      "opponent_name": "Alcorn State Braves",
+      "team_score": 65,
+      "opponent_score": 56
+    },
+    {
+      "game_id": "401851716",
+      "date": "2026-03-10",
+      "team_id": "alcorn_state_braves",
+      "team_name": "Alcorn State Braves",
+      "opponent_id": "prairie_view_a_m_panthers",
+      "opponent_name": "Prairie View A&M Panthers",
+      "team_score": 56,
+      "opponent_score": 65
+    },
+    {
+      "game_id": "401851170",
+      "date": "2026-03-10",
+      "team_id": "stanford_cardinal",
+      "team_name": "Stanford Cardinal",
+      "opponent_id": "pittsburgh_panthers",
+      "opponent_name": "Pittsburgh Panthers",
+      "team_score": 63,
+      "opponent_score": 64
+    },
+    {
+      "game_id": "401851170",
+      "date": "2026-03-10",
+      "team_id": "pittsburgh_panthers",
+      "team_name": "Pittsburgh Panthers",
+      "opponent_id": "stanford_cardinal",
+      "opponent_name": "Stanford Cardinal",
+      "team_score": 64,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851283",
+      "date": "2026-03-10",
+      "team_id": "cincinnati_bearcats",
+      "team_name": "Cincinnati Bearcats",
+      "opponent_id": "utah_utes",
+      "opponent_name": "Utah Utes",
+      "team_score": 73,
+      "opponent_score": 66
+    },
+    {
+      "game_id": "401851283",
+      "date": "2026-03-10",
+      "team_id": "utah_utes",
+      "team_name": "Utah Utes",
+      "opponent_id": "cincinnati_bearcats",
+      "opponent_name": "Cincinnati Bearcats",
+      "team_score": 66,
+      "opponent_score": 73
+    },
+    {
+      "game_id": "401851171",
+      "date": "2026-03-10",
+      "team_id": "smu_mustangs",
+      "team_name": "SMU Mustangs",
+      "opponent_id": "syracuse_orange",
+      "opponent_name": "Syracuse Orange",
+      "team_score": 86,
+      "opponent_score": 69
+    },
+    {
+      "game_id": "401851171",
+      "date": "2026-03-10",
+      "team_id": "syracuse_orange",
+      "team_name": "Syracuse Orange",
+      "opponent_id": "smu_mustangs",
+      "opponent_name": "SMU Mustangs",
+      "team_score": 69,
+      "opponent_score": 86
+    },
+    {
+      "game_id": "401851362",
+      "date": "2026-03-10",
+      "team_id": "oregon",
+      "team_name": "Oregon Ducks",
+      "opponent_id": "maryland_terrapins",
+      "opponent_name": "Maryland Terrapins",
+      "team_score": 60,
+      "opponent_score": 70
+    },
+    {
+      "game_id": "401851362",
+      "date": "2026-03-10",
+      "team_id": "maryland_terrapins",
+      "team_name": "Maryland Terrapins",
+      "opponent_id": "oregon",
+      "opponent_name": "Oregon Ducks",
+      "team_score": 70,
+      "opponent_score": 60
+    },
+    {
+      "game_id": "401851202",
+      "date": "2026-03-10",
+      "team_id": "umbc_retrievers",
+      "team_name": "UMBC Retrievers",
+      "opponent_id": "umass_lowell_river_hawks",
+      "opponent_name": "UMass Lowell River Hawks",
+      "team_score": 91,
+      "opponent_score": 69
+    },
+    {
+      "game_id": "401851202",
+      "date": "2026-03-10",
+      "team_id": "umass_lowell_river_hawks",
+      "team_name": "UMass Lowell River Hawks",
+      "opponent_id": "umbc_retrievers",
+      "opponent_name": "UMBC Retrievers",
+      "team_score": 69,
+      "opponent_score": 91
+    },
+    {
+      "game_id": "401851405",
+      "date": "2026-03-10",
+      "team_id": "florida_international_panthers",
+      "team_name": "Florida International Panthers",
+      "opponent_id": "missouri_state_bears",
+      "opponent_name": "Missouri State Bears",
+      "team_score": 72,
+      "opponent_score": 75
+    },
+    {
+      "game_id": "401851405",
+      "date": "2026-03-10",
+      "team_id": "missouri_state_bears",
+      "team_name": "Missouri State Bears",
+      "opponent_id": "florida_international_panthers",
+      "opponent_name": "Florida International Panthers",
+      "team_score": 75,
+      "opponent_score": 72
+    },
+    {
+      "game_id": "401856433",
+      "date": "2026-03-10",
+      "team_id": "hofstra_pride",
+      "team_name": "Hofstra Pride",
+      "opponent_id": "monmouth_hawks",
+      "opponent_name": "Monmouth Hawks",
+      "team_score": 75,
+      "opponent_score": 69
+    },
+    {
+      "game_id": "401856433",
+      "date": "2026-03-10",
+      "team_id": "monmouth_hawks",
+      "team_name": "Monmouth Hawks",
+      "opponent_id": "hofstra_pride",
+      "opponent_name": "Hofstra Pride",
+      "team_score": 69,
+      "opponent_score": 75
+    },
+    {
+      "game_id": "401851611",
+      "date": "2026-03-10",
+      "team_id": "stephen_f_austin_lumberjacks",
+      "team_name": "Stephen F. Austin Lumberjacks",
+      "opponent_id": "texas_a_m_corpus_christi_islanders",
+      "opponent_name": "Texas A&M-Corpus Christi Islanders",
+      "team_score": 60,
+      "opponent_score": 58
+    },
+    {
+      "game_id": "401851611",
+      "date": "2026-03-10",
+      "team_id": "texas_a_m_corpus_christi_islanders",
+      "team_name": "Texas A&M-Corpus Christi Islanders",
+      "opponent_id": "stephen_f_austin_lumberjacks",
+      "opponent_name": "Stephen F. Austin Lumberjacks",
+      "team_score": 58,
+      "opponent_score": 60
+    },
+    {
+      "game_id": "401851521",
+      "date": "2026-03-10",
+      "team_id": "long_island_university_sharks",
+      "team_name": "Long Island University Sharks",
+      "opponent_id": "mercyhurst_lakers",
+      "opponent_name": "Mercyhurst Lakers",
+      "team_score": 79,
+      "opponent_score": 70
+    },
+    {
+      "game_id": "401851521",
+      "date": "2026-03-10",
+      "team_id": "mercyhurst_lakers",
+      "team_name": "Mercyhurst Lakers",
+      "opponent_id": "long_island_university_sharks",
+      "opponent_name": "Long Island University Sharks",
+      "team_score": 70,
+      "opponent_score": 79
+    },
+    {
+      "game_id": "401851434",
+      "date": "2026-03-10",
+      "team_id": "wright_state_raiders",
+      "team_name": "Wright State Raiders",
+      "opponent_id": "detroit_mercy_titans",
+      "opponent_name": "Detroit Mercy Titans",
+      "team_score": 66,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851434",
+      "date": "2026-03-10",
+      "team_id": "detroit_mercy_titans",
+      "team_name": "Detroit Mercy Titans",
+      "opponent_id": "wright_state_raiders",
+      "opponent_name": "Wright State Raiders",
+      "team_score": 63,
+      "opponent_score": 66
+    },
+    {
+      "game_id": "401851285",
+      "date": "2026-03-10",
+      "team_id": "byu_cougars",
+      "team_name": "BYU Cougars",
+      "opponent_id": "kansas_state_wildcats",
+      "opponent_name": "Kansas State Wildcats",
+      "team_score": 105,
+      "opponent_score": 91
+    },
+    {
+      "game_id": "401851285",
+      "date": "2026-03-10",
+      "team_id": "kansas_state_wildcats",
+      "team_name": "Kansas State Wildcats",
+      "opponent_id": "byu_cougars",
+      "opponent_name": "BYU Cougars",
+      "team_score": 91,
+      "opponent_score": 105
+    },
+    {
+      "game_id": "401851204",
+      "date": "2026-03-10",
+      "team_id": "vermont_catamounts",
+      "team_name": "Vermont Catamounts",
+      "opponent_id": "njit_highlanders",
+      "opponent_name": "NJIT Highlanders",
+      "team_score": 63,
+      "opponent_score": 54
+    },
+    {
+      "game_id": "401851204",
+      "date": "2026-03-10",
+      "team_id": "njit_highlanders",
+      "team_name": "NJIT Highlanders",
+      "opponent_id": "vermont_catamounts",
+      "opponent_name": "Vermont Catamounts",
+      "team_score": 54,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851172",
+      "date": "2026-03-10",
+      "team_id": "virginia_tech_hokies",
+      "team_name": "Virginia Tech Hokies",
+      "opponent_id": "wake_forest_demon_deacons",
+      "opponent_name": "Wake Forest Demon Deacons",
+      "team_score": 89,
+      "opponent_score": 95
+    },
+    {
+      "game_id": "401851172",
+      "date": "2026-03-10",
+      "team_id": "wake_forest_demon_deacons",
+      "team_name": "Wake Forest Demon Deacons",
+      "opponent_id": "virginia_tech_hokies",
+      "opponent_name": "Virginia Tech Hokies",
+      "team_score": 95,
+      "opponent_score": 89
+    },
+    {
+      "game_id": "401851363",
+      "date": "2026-03-10",
+      "team_id": "northwestern",
+      "team_name": "Northwestern Wildcats",
+      "opponent_id": "penn_state_nittany_lions",
+      "opponent_name": "Penn State Nittany Lions",
+      "team_score": 76,
+      "opponent_score": 66
+    },
+    {
+      "game_id": "401851363",
+      "date": "2026-03-10",
+      "team_id": "penn_state_nittany_lions",
+      "team_name": "Penn State Nittany Lions",
+      "opponent_id": "northwestern",
+      "opponent_name": "Northwestern Wildcats",
+      "team_score": 66,
+      "opponent_score": 76
+    },
+    {
+      "game_id": "401851717",
+      "date": "2026-03-11",
+      "team_id": "jackson_state_tigers",
+      "team_name": "Jackson State Tigers",
+      "opponent_id": "grambling_tigers",
+      "opponent_name": "Grambling Tigers",
+      "team_score": 68,
+      "opponent_score": 65
+    },
+    {
+      "game_id": "401851717",
+      "date": "2026-03-11",
+      "team_id": "grambling_tigers",
+      "team_name": "Grambling Tigers",
+      "opponent_id": "jackson_state_tigers",
+      "opponent_name": "Jackson State Tigers",
+      "team_score": 65,
+      "opponent_score": 68
+    },
+    {
+      "game_id": "401851467",
+      "date": "2026-03-11",
+      "team_id": "merrimack_warriors",
+      "team_name": "Merrimack Warriors",
+      "opponent_id": "siena_saints",
+      "opponent_name": "Siena Saints",
+      "team_score": 54,
+      "opponent_score": 64
+    },
+    {
+      "game_id": "401851467",
+      "date": "2026-03-11",
+      "team_id": "siena_saints",
+      "team_name": "Siena Saints",
+      "opponent_id": "merrimack_warriors",
+      "opponent_name": "Merrimack Warriors",
+      "team_score": 64,
+      "opponent_score": 54
+    },
+    {
+      "game_id": "401851334",
+      "date": "2026-03-11",
+      "team_id": "portland_state_vikings",
+      "team_name": "Portland State Vikings",
+      "opponent_id": "montana_grizzlies",
+      "opponent_name": "Montana Grizzlies",
+      "team_score": 72,
+      "opponent_score": 75
+    },
+    {
+      "game_id": "401851334",
+      "date": "2026-03-11",
+      "team_id": "montana_grizzlies",
+      "team_name": "Montana Grizzlies",
+      "opponent_id": "portland_state_vikings",
+      "opponent_name": "Portland State Vikings",
+      "team_score": 75,
+      "opponent_score": 72
+    },
+    {
+      "game_id": "401851406",
+      "date": "2026-03-11",
+      "team_id": "jacksonville_state_gamecocks",
+      "team_name": "Jacksonville State Gamecocks",
+      "opponent_id": "new_mexico_state_aggies",
+      "opponent_name": "New Mexico State Aggies",
+      "team_score": 63,
+      "opponent_score": 68
+    },
+    {
+      "game_id": "401851406",
+      "date": "2026-03-11",
+      "team_id": "new_mexico_state_aggies",
+      "team_name": "New Mexico State Aggies",
+      "opponent_id": "jacksonville_state_gamecocks",
+      "opponent_name": "Jacksonville State Gamecocks",
+      "team_score": 68,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851612",
+      "date": "2026-03-11",
+      "team_id": "mcneese_cowboys",
+      "team_name": "McNeese Cowboys",
+      "opponent_id": "ut_rio_grande_valley_vaqueros",
+      "opponent_name": "UT Rio Grande Valley Vaqueros",
+      "team_score": 84,
+      "opponent_score": 80
+    },
+    {
+      "game_id": "401851612",
+      "date": "2026-03-11",
+      "team_id": "ut_rio_grande_valley_vaqueros",
+      "team_name": "UT Rio Grande Valley Vaqueros",
+      "opponent_id": "mcneese_cowboys",
+      "opponent_name": "McNeese Cowboys",
+      "team_score": 80,
+      "opponent_score": 84
+    },
+    {
+      "game_id": "401851287",
+      "date": "2026-03-11",
+      "team_id": "colorado_buffaloes",
+      "team_name": "Colorado Buffaloes",
+      "opponent_id": "oklahoma_state_cowboys",
+      "opponent_name": "Oklahoma State Cowboys",
+      "team_score": 83,
+      "opponent_score": 92
+    },
+    {
+      "game_id": "401851287",
+      "date": "2026-03-11",
+      "team_id": "oklahoma_state_cowboys",
+      "team_name": "Oklahoma State Cowboys",
+      "opponent_id": "colorado_buffaloes",
+      "opponent_name": "Colorado Buffaloes",
+      "team_score": 92,
+      "opponent_score": 83
+    },
+    {
+      "game_id": "401851335",
+      "date": "2026-03-11",
+      "team_id": "eastern_washington_eagles",
+      "team_name": "Eastern Washington Eagles",
+      "opponent_id": "idaho_vandals",
+      "opponent_name": "Idaho Vandals",
+      "team_score": 68,
+      "opponent_score": 81
+    },
+    {
+      "game_id": "401851335",
+      "date": "2026-03-11",
+      "team_id": "idaho_vandals",
+      "team_name": "Idaho Vandals",
+      "opponent_id": "eastern_washington_eagles",
+      "opponent_name": "Eastern Washington Eagles",
+      "team_score": 81,
+      "opponent_score": 68
+    },
+    {
+      "game_id": "401851289",
+      "date": "2026-03-11",
+      "team_id": "iowa_state",
+      "team_name": "Iowa State Cyclones",
+      "opponent_id": "arizona_state_sun_devils",
+      "opponent_name": "Arizona State Sun Devils",
+      "team_score": 91,
+      "opponent_score": 42
+    },
+    {
+      "game_id": "401851289",
+      "date": "2026-03-11",
+      "team_id": "arizona_state_sun_devils",
+      "team_name": "Arizona State Sun Devils",
+      "opponent_id": "iowa_state",
+      "opponent_name": "Iowa State Cyclones",
+      "team_score": 42,
+      "opponent_score": 91
+    },
+    {
+      "game_id": "401851174",
+      "date": "2026-03-11",
+      "team_id": "louisville_cardinals",
+      "team_name": "Louisville Cardinals",
+      "opponent_id": "smu_mustangs",
+      "opponent_name": "SMU Mustangs",
+      "team_score": 62,
+      "opponent_score": 58
+    },
+    {
+      "game_id": "401851174",
+      "date": "2026-03-11",
+      "team_id": "smu_mustangs",
+      "team_name": "SMU Mustangs",
+      "opponent_id": "louisville_cardinals",
+      "opponent_name": "Louisville Cardinals",
+      "team_score": 58,
+      "opponent_score": 62
+    },
+    {
+      "game_id": "401851258",
+      "date": "2026-03-11",
+      "team_id": "la_salle_explorers",
+      "team_name": "La Salle Explorers",
+      "opponent_id": "st_bonaventure_bonnies",
+      "opponent_name": "St. Bonaventure Bonnies",
+      "team_score": 80,
+      "opponent_score": 99
+    },
+    {
+      "game_id": "401851258",
+      "date": "2026-03-11",
+      "team_id": "st_bonaventure_bonnies",
+      "team_name": "St. Bonaventure Bonnies",
+      "opponent_id": "la_salle_explorers",
+      "opponent_name": "La Salle Explorers",
+      "team_score": 99,
+      "opponent_score": 80
+    },
+    {
+      "game_id": "401851365",
+      "date": "2026-03-11",
+      "team_id": "iowa_hawkeyes",
+      "team_name": "Iowa Hawkeyes",
+      "opponent_id": "maryland_terrapins",
+      "opponent_name": "Maryland Terrapins",
+      "team_score": 75,
+      "opponent_score": 64
+    },
+    {
+      "game_id": "401851365",
+      "date": "2026-03-11",
+      "team_id": "maryland_terrapins",
+      "team_name": "Maryland Terrapins",
+      "opponent_id": "iowa_hawkeyes",
+      "opponent_name": "Iowa Hawkeyes",
+      "team_score": 64,
+      "opponent_score": 75
+    },
+    {
+      "game_id": "401851173",
+      "date": "2026-03-11",
+      "team_id": "nc_state_wolfpack",
+      "team_name": "NC State Wolfpack",
+      "opponent_id": "pittsburgh_panthers",
+      "opponent_name": "Pittsburgh Panthers",
+      "team_score": 98,
+      "opponent_score": 88
+    },
+    {
+      "game_id": "401851173",
+      "date": "2026-03-11",
+      "team_id": "pittsburgh_panthers",
+      "team_name": "Pittsburgh Panthers",
+      "opponent_id": "nc_state_wolfpack",
+      "opponent_name": "NC State Wolfpack",
+      "team_score": 88,
+      "opponent_score": 98
+    },
+    {
+      "game_id": "401851557",
+      "date": "2026-03-11",
+      "team_id": "kentucky",
+      "team_name": "Kentucky Wildcats",
+      "opponent_id": "lsu_tigers",
+      "opponent_name": "LSU Tigers",
+      "team_score": 87,
+      "opponent_score": 82
+    },
+    {
+      "game_id": "401851557",
+      "date": "2026-03-11",
+      "team_id": "lsu_tigers",
+      "team_name": "LSU Tigers",
+      "opponent_id": "kentucky",
+      "opponent_name": "Kentucky Wildcats",
+      "team_score": 82,
+      "opponent_score": 87
+    },
+    {
+      "game_id": "401851718",
+      "date": "2026-03-11",
+      "team_id": "bethune_cookman_wildcats",
+      "team_name": "Bethune-Cookman Wildcats",
+      "opponent_id": "prairie_view_a_m_panthers",
+      "opponent_name": "Prairie View A&M Panthers",
+      "team_score": 67,
+      "opponent_score": 71
+    },
+    {
+      "game_id": "401851718",
+      "date": "2026-03-11",
+      "team_id": "prairie_view_a_m_panthers",
+      "team_name": "Prairie View A&M Panthers",
+      "opponent_id": "bethune_cookman_wildcats",
+      "opponent_name": "Bethune-Cookman Wildcats",
+      "team_score": 71,
+      "opponent_score": 67
+    },
+    {
+      "game_id": "401851260",
+      "date": "2026-03-11",
+      "team_id": "richmond_spiders",
+      "team_name": "Richmond Spiders",
+      "opponent_id": "loyola_chicago_ramblers",
+      "opponent_name": "Loyola Chicago Ramblers",
+      "team_score": 67,
+      "opponent_score": 75
+    },
+    {
+      "game_id": "401851260",
+      "date": "2026-03-11",
+      "team_id": "loyola_chicago_ramblers",
+      "team_name": "Loyola Chicago Ramblers",
+      "opponent_id": "richmond_spiders",
+      "opponent_name": "Richmond Spiders",
+      "team_score": 75,
+      "opponent_score": 67
+    },
+    {
+      "game_id": "401851367",
+      "date": "2026-03-11",
+      "team_id": "washington_huskies",
+      "team_name": "Washington Huskies",
+      "opponent_id": "usc_trojans",
+      "opponent_name": "USC Trojans",
+      "team_score": 83,
+      "opponent_score": 79
+    },
+    {
+      "game_id": "401851367",
+      "date": "2026-03-11",
+      "team_id": "usc_trojans",
+      "team_name": "USC Trojans",
+      "opponent_id": "washington_huskies",
+      "opponent_name": "Washington Huskies",
+      "team_score": 79,
+      "opponent_score": 83
+    },
+    {
+      "game_id": "401851495",
+      "date": "2026-03-11",
+      "team_id": "unlv_rebels",
+      "team_name": "UNLV Rebels",
+      "opponent_id": "wyoming_cowboys",
+      "opponent_name": "Wyoming Cowboys",
+      "team_score": 73,
+      "opponent_score": 70
+    },
+    {
+      "game_id": "401851495",
+      "date": "2026-03-11",
+      "team_id": "wyoming_cowboys",
+      "team_name": "Wyoming Cowboys",
+      "opponent_id": "unlv_rebels",
+      "opponent_name": "UNLV Rebels",
+      "team_score": 70,
+      "opponent_score": 73
+    },
+    {
+      "game_id": "401851558",
+      "date": "2026-03-11",
+      "team_id": "auburn",
+      "team_name": "Auburn Tigers",
+      "opponent_id": "mississippi_state_bulldogs",
+      "opponent_name": "Mississippi State Bulldogs",
+      "team_score": 79,
+      "opponent_score": 61
+    },
+    {
+      "game_id": "401851558",
+      "date": "2026-03-11",
+      "team_id": "mississippi_state_bulldogs",
+      "team_name": "Mississippi State Bulldogs",
+      "opponent_id": "auburn",
+      "opponent_name": "Auburn Tigers",
+      "team_score": 61,
+      "opponent_score": 79
+    },
+    {
+      "game_id": "401851291",
+      "date": "2026-03-11",
+      "team_id": "ucf_knights",
+      "team_name": "UCF Knights",
+      "opponent_id": "cincinnati_bearcats",
+      "opponent_name": "Cincinnati Bearcats",
+      "team_score": 66,
+      "opponent_score": 65
+    },
+    {
+      "game_id": "401851291",
+      "date": "2026-03-11",
+      "team_id": "cincinnati_bearcats",
+      "team_name": "Cincinnati Bearcats",
+      "opponent_id": "ucf_knights",
+      "opponent_name": "UCF Knights",
+      "team_score": 65,
+      "opponent_score": 66
+    },
+    {
+      "game_id": "401851308",
+      "date": "2026-03-11",
+      "team_id": "butler_bulldogs",
+      "team_name": "Butler Bulldogs",
+      "opponent_id": "providence_friars",
+      "opponent_name": "Providence Friars",
+      "team_score": 81,
+      "opponent_score": 91
+    },
+    {
+      "game_id": "401851308",
+      "date": "2026-03-11",
+      "team_id": "providence_friars",
+      "team_name": "Providence Friars",
+      "opponent_id": "butler_bulldogs",
+      "opponent_name": "Butler Bulldogs",
+      "team_score": 91,
+      "opponent_score": 81
+    },
+    {
+      "game_id": "401851614",
+      "date": "2026-03-11",
+      "team_id": "stephen_f_austin_lumberjacks",
+      "team_name": "Stephen F. Austin Lumberjacks",
+      "opponent_id": "mcneese_cowboys",
+      "opponent_name": "McNeese Cowboys",
+      "team_score": 59,
+      "opponent_score": 76
+    },
+    {
+      "game_id": "401851614",
+      "date": "2026-03-11",
+      "team_id": "mcneese_cowboys",
+      "team_name": "McNeese Cowboys",
+      "opponent_id": "stephen_f_austin_lumberjacks",
+      "opponent_name": "Stephen F. Austin Lumberjacks",
+      "team_score": 76,
+      "opponent_score": 59
+    },
+    {
+      "game_id": "401851496",
+      "date": "2026-03-11",
+      "team_id": "nevada_wolf_pack",
+      "team_name": "Nevada Wolf Pack",
+      "opponent_id": "air_force_falcons",
+      "opponent_name": "Air Force Falcons",
+      "team_score": 80,
+      "opponent_score": 45
+    },
+    {
+      "game_id": "401851496",
+      "date": "2026-03-11",
+      "team_id": "air_force_falcons",
+      "team_name": "Air Force Falcons",
+      "opponent_id": "nevada_wolf_pack",
+      "opponent_name": "Nevada Wolf Pack",
+      "team_score": 45,
+      "opponent_score": 80
+    },
+    {
+      "game_id": "401851472",
+      "date": "2026-03-11",
+      "team_id": "morgan_state_bears",
+      "team_name": "Morgan State Bears",
+      "opponent_id": "delaware_state_hornets",
+      "opponent_name": "Delaware State Hornets",
+      "team_score": 70,
+      "opponent_score": 75
+    },
+    {
+      "game_id": "401851472",
+      "date": "2026-03-11",
+      "team_id": "delaware_state_hornets",
+      "team_name": "Delaware State Hornets",
+      "opponent_id": "morgan_state_bears",
+      "opponent_name": "Morgan State Bears",
+      "team_score": 75,
+      "opponent_score": 70
+    },
+    {
+      "game_id": "401851407",
+      "date": "2026-03-11",
+      "team_id": "liberty_flames",
+      "team_name": "Liberty Flames",
+      "opponent_id": "missouri_state_bears",
+      "opponent_name": "Missouri State Bears",
+      "team_score": 69,
+      "opponent_score": 77
+    },
+    {
+      "game_id": "401851407",
+      "date": "2026-03-11",
+      "team_id": "missouri_state_bears",
+      "team_name": "Missouri State Bears",
+      "opponent_id": "liberty_flames",
+      "opponent_name": "Liberty Flames",
+      "team_score": 77,
+      "opponent_score": 69
+    },
+    {
+      "game_id": "401851369",
+      "date": "2026-03-11",
+      "team_id": "indiana",
+      "team_name": "Indiana Hoosiers",
+      "opponent_id": "northwestern",
+      "opponent_name": "Northwestern Wildcats",
+      "team_score": 61,
+      "opponent_score": 74
+    },
+    {
+      "game_id": "401851369",
+      "date": "2026-03-11",
+      "team_id": "northwestern",
+      "team_name": "Northwestern Wildcats",
+      "opponent_id": "indiana",
+      "opponent_name": "Indiana Hoosiers",
+      "team_score": 74,
+      "opponent_score": 61
+    },
+    {
+      "game_id": "401851309",
+      "date": "2026-03-11",
+      "team_id": "marquette",
+      "team_name": "Marquette Golden Eagles",
+      "opponent_id": "xavier_musketeers",
+      "opponent_name": "Xavier Musketeers",
+      "team_score": 87,
+      "opponent_score": 89
+    },
+    {
+      "game_id": "401851309",
+      "date": "2026-03-11",
+      "team_id": "xavier_musketeers",
+      "team_name": "Xavier Musketeers",
+      "opponent_id": "marquette",
+      "opponent_name": "Marquette Golden Eagles",
+      "team_score": 89,
+      "opponent_score": 87
+    },
+    {
+      "game_id": "401851559",
+      "date": "2026-03-11",
+      "team_id": "texas",
+      "team_name": "Texas Longhorns",
+      "opponent_id": "ole_miss_rebels",
+      "opponent_name": "Ole Miss Rebels",
+      "team_score": 66,
+      "opponent_score": 76
+    },
+    {
+      "game_id": "401851559",
+      "date": "2026-03-11",
+      "team_id": "ole_miss_rebels",
+      "team_name": "Ole Miss Rebels",
+      "opponent_id": "texas",
+      "opponent_name": "Texas Longhorns",
+      "team_score": 76,
+      "opponent_score": 66
+    },
+    {
+      "game_id": "401851549",
+      "date": "2026-03-11",
+      "team_id": "lehigh_mountain_hawks",
+      "team_name": "Lehigh Mountain Hawks",
+      "opponent_id": "boston_university_terriers",
+      "opponent_name": "Boston University Terriers",
+      "team_score": 74,
+      "opponent_score": 60
+    },
+    {
+      "game_id": "401851549",
+      "date": "2026-03-11",
+      "team_id": "boston_university_terriers",
+      "team_name": "Boston University Terriers",
+      "opponent_id": "lehigh_mountain_hawks",
+      "opponent_name": "Lehigh Mountain Hawks",
+      "team_score": 60,
+      "opponent_score": 74
+    },
+    {
+      "game_id": "401851293",
+      "date": "2026-03-11",
+      "team_id": "west_virginia_mountaineers",
+      "team_name": "West Virginia Mountaineers",
+      "opponent_id": "byu_cougars",
+      "opponent_name": "BYU Cougars",
+      "team_score": 48,
+      "opponent_score": 68
+    },
+    {
+      "game_id": "401851293",
+      "date": "2026-03-11",
+      "team_id": "byu_cougars",
+      "team_name": "BYU Cougars",
+      "opponent_id": "west_virginia_mountaineers",
+      "opponent_name": "West Virginia Mountaineers",
+      "team_score": 68,
+      "opponent_score": 48
+    },
+    {
+      "game_id": "401851221",
+      "date": "2026-03-11",
+      "team_id": "memphis",
+      "team_name": "Memphis Tigers",
+      "opponent_id": "tulane_green_wave",
+      "opponent_name": "Tulane Green Wave",
+      "team_score": 69,
+      "opponent_score": 81
+    },
+    {
+      "game_id": "401851221",
+      "date": "2026-03-11",
+      "team_id": "tulane_green_wave",
+      "team_name": "Tulane Green Wave",
+      "opponent_id": "memphis",
+      "opponent_name": "Memphis Tigers",
+      "team_score": 81,
+      "opponent_score": 69
+    },
+    {
+      "game_id": "401851175",
+      "date": "2026-03-11",
+      "team_id": "florida_state_seminoles",
+      "team_name": "Florida State Seminoles",
+      "opponent_id": "california_golden_bears",
+      "opponent_name": "California Golden Bears",
+      "team_score": 95,
+      "opponent_score": 89
+    },
+    {
+      "game_id": "401851175",
+      "date": "2026-03-11",
+      "team_id": "california_golden_bears",
+      "team_name": "California Golden Bears",
+      "opponent_id": "florida_state_seminoles",
+      "opponent_name": "Florida State Seminoles",
+      "team_score": 89,
+      "opponent_score": 95
+    },
+    {
+      "game_id": "401851733",
+      "date": "2026-03-12",
+      "team_id": "abilene_christian_wildcats",
+      "team_name": "Abilene Christian Wildcats",
+      "opponent_id": "tarleton_state_texans",
+      "opponent_name": "Tarleton State Texans",
+      "team_score": 84,
+      "opponent_score": 78
+    },
+    {
+      "game_id": "401851733",
+      "date": "2026-03-12",
+      "team_id": "tarleton_state_texans",
+      "team_name": "Tarleton State Texans",
+      "opponent_id": "abilene_christian_wildcats",
+      "opponent_name": "Abilene Christian Wildcats",
+      "team_score": 78,
+      "opponent_score": 84
+    },
+    {
+      "game_id": "401851721",
+      "date": "2026-03-12",
+      "team_id": "florida_a_m_rattlers",
+      "team_name": "Florida A&M Rattlers",
+      "opponent_id": "jackson_state_tigers",
+      "opponent_name": "Jackson State Tigers",
+      "team_score": 70,
+      "opponent_score": 60
+    },
+    {
+      "game_id": "401851721",
+      "date": "2026-03-12",
+      "team_id": "jackson_state_tigers",
+      "team_name": "Jackson State Tigers",
+      "opponent_id": "florida_a_m_rattlers",
+      "opponent_name": "Florida A&M Rattlers",
+      "team_score": 60,
+      "opponent_score": 70
+    },
+    {
+      "game_id": "401851497",
+      "date": "2026-03-12",
+      "team_id": "colorado_state",
+      "team_name": "Colorado State Rams",
+      "opponent_id": "fresno_state_bulldogs",
+      "opponent_name": "Fresno State Bulldogs",
+      "team_score": 67,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851497",
+      "date": "2026-03-12",
+      "team_id": "fresno_state_bulldogs",
+      "team_name": "Fresno State Bulldogs",
+      "opponent_id": "colorado_state",
+      "opponent_name": "Colorado State Rams",
+      "team_score": 63,
+      "opponent_score": 67
+    },
+    {
+      "game_id": "401851408",
+      "date": "2026-03-12",
+      "team_id": "sam_houston_bearkats",
+      "team_name": "Sam Houston Bearkats",
+      "opponent_id": "new_mexico_state_aggies",
+      "opponent_name": "New Mexico State Aggies",
+      "team_score": 69,
+      "opponent_score": 61
+    },
+    {
+      "game_id": "401851408",
+      "date": "2026-03-12",
+      "team_id": "new_mexico_state_aggies",
+      "team_name": "New Mexico State Aggies",
+      "opponent_id": "sam_houston_bearkats",
+      "opponent_name": "Sam Houston Bearkats",
+      "team_score": 61,
+      "opponent_score": 69
+    },
+    {
+      "game_id": "401851391",
+      "date": "2026-03-12",
+      "team_id": "uc_san_diego_tritons",
+      "team_name": "UC San Diego Tritons",
+      "opponent_id": "cal_poly_mustangs",
+      "opponent_name": "Cal Poly Mustangs",
+      "team_score": 72,
+      "opponent_score": 69
+    },
+    {
+      "game_id": "401851391",
+      "date": "2026-03-12",
+      "team_id": "cal_poly_mustangs",
+      "team_name": "Cal Poly Mustangs",
+      "opponent_id": "uc_san_diego_tritons",
+      "opponent_name": "UC San Diego Tritons",
+      "team_score": 69,
+      "opponent_score": 72
+    },
+    {
+      "game_id": "401851370",
+      "date": "2026-03-12",
+      "team_id": "minnesota_golden_gophers",
+      "team_name": "Minnesota Golden Gophers",
+      "opponent_id": "rutgers_scarlet_knights",
+      "opponent_name": "Rutgers Scarlet Knights",
+      "team_score": 67,
+      "opponent_score": 72
+    },
+    {
+      "game_id": "401851370",
+      "date": "2026-03-12",
+      "team_id": "rutgers_scarlet_knights",
+      "team_name": "Rutgers Scarlet Knights",
+      "opponent_id": "minnesota_golden_gophers",
+      "opponent_name": "Minnesota Golden Gophers",
+      "team_score": 72,
+      "opponent_score": 67
+    },
+    {
+      "game_id": "401851310",
+      "date": "2026-03-12",
+      "team_id": "depaul_blue_demons",
+      "team_name": "DePaul Blue Demons",
+      "opponent_id": "georgetown_hoyas",
+      "opponent_name": "Georgetown Hoyas",
+      "team_score": 56,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851310",
+      "date": "2026-03-12",
+      "team_id": "georgetown_hoyas",
+      "team_name": "Georgetown Hoyas",
+      "opponent_id": "depaul_blue_demons",
+      "opponent_name": "DePaul Blue Demons",
+      "team_score": 63,
+      "opponent_score": 56
+    },
+    {
+      "game_id": "401851176",
+      "date": "2026-03-12",
+      "team_id": "clemson",
+      "team_name": "Clemson Tigers",
+      "opponent_id": "wake_forest_demon_deacons",
+      "opponent_name": "Wake Forest Demon Deacons",
+      "team_score": 71,
+      "opponent_score": 62
+    },
+    {
+      "game_id": "401851176",
+      "date": "2026-03-12",
+      "team_id": "wake_forest_demon_deacons",
+      "team_name": "Wake Forest Demon Deacons",
+      "opponent_id": "clemson",
+      "opponent_name": "Clemson Tigers",
+      "team_score": 62,
+      "opponent_score": 71
+    },
+    {
+      "game_id": "401851560",
+      "date": "2026-03-12",
+      "team_id": "oklahoma_sooners",
+      "team_name": "Oklahoma Sooners",
+      "opponent_id": "south_carolina_gamecocks",
+      "opponent_name": "South Carolina Gamecocks",
+      "team_score": 86,
+      "opponent_score": 74
+    },
+    {
+      "game_id": "401851560",
+      "date": "2026-03-12",
+      "team_id": "south_carolina_gamecocks",
+      "team_name": "South Carolina Gamecocks",
+      "opponent_id": "oklahoma_sooners",
+      "opponent_name": "Oklahoma Sooners",
+      "team_score": 74,
+      "opponent_score": 86
+    },
+    {
+      "game_id": "401851222",
+      "date": "2026-03-12",
+      "team_id": "florida_atlantic",
+      "team_name": "Florida Atlantic Owls",
+      "opponent_id": "temple_owls",
+      "opponent_name": "Temple Owls",
+      "team_score": 63,
+      "opponent_score": 59
+    },
+    {
+      "game_id": "401851222",
+      "date": "2026-03-12",
+      "team_id": "temple_owls",
+      "team_name": "Temple Owls",
+      "opponent_id": "florida_atlantic",
+      "opponent_name": "Florida Atlantic Owls",
+      "team_score": 59,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851294",
+      "date": "2026-03-12",
+      "team_id": "tcu_horned_frogs",
+      "team_name": "TCU Horned Frogs",
+      "opponent_id": "oklahoma_state_cowboys",
+      "opponent_name": "Oklahoma State Cowboys",
+      "team_score": 95,
+      "opponent_score": 88
+    },
+    {
+      "game_id": "401851294",
+      "date": "2026-03-12",
+      "team_id": "oklahoma_state_cowboys",
+      "team_name": "Oklahoma State Cowboys",
+      "opponent_id": "tcu_horned_frogs",
+      "opponent_name": "TCU Horned Frogs",
+      "team_score": 88,
+      "opponent_score": 95
+    },
+    {
+      "game_id": "401851498",
+      "date": "2026-03-12",
+      "team_id": "boise_state_broncos",
+      "team_name": "Boise State Broncos",
+      "opponent_id": "san_jose_state_spartans",
+      "opponent_name": "San Jos\u00e9 State Spartans",
+      "team_score": 74,
+      "opponent_score": 84
+    },
+    {
+      "game_id": "401851498",
+      "date": "2026-03-12",
+      "team_id": "san_jose_state_spartans",
+      "team_name": "San Jos\u00e9 State Spartans",
+      "opponent_id": "boise_state_broncos",
+      "opponent_name": "Boise State Broncos",
+      "team_score": 84,
+      "opponent_score": 74
+    },
+    {
+      "game_id": "401851392",
+      "date": "2026-03-12",
+      "team_id": "uc_davis_aggies",
+      "team_name": "UC Davis Aggies",
+      "opponent_id": "uc_santa_barbara_gauchos",
+      "opponent_name": "UC Santa Barbara Gauchos",
+      "team_score": 79,
+      "opponent_score": 73
+    },
+    {
+      "game_id": "401851392",
+      "date": "2026-03-12",
+      "team_id": "uc_santa_barbara_gauchos",
+      "team_name": "UC Santa Barbara Gauchos",
+      "opponent_id": "uc_davis_aggies",
+      "opponent_name": "UC Davis Aggies",
+      "team_score": 73,
+      "opponent_score": 79
+    },
+    {
+      "game_id": "401851336",
+      "date": "2026-03-12",
+      "team_id": "montana_grizzlies",
+      "team_name": "Montana Grizzlies",
+      "opponent_id": "idaho_vandals",
+      "opponent_name": "Idaho Vandals",
+      "team_score": 66,
+      "opponent_score": 77
+    },
+    {
+      "game_id": "401851336",
+      "date": "2026-03-12",
+      "team_id": "idaho_vandals",
+      "team_name": "Idaho Vandals",
+      "opponent_id": "montana_grizzlies",
+      "opponent_name": "Montana Grizzlies",
+      "team_score": 77,
+      "opponent_score": 66
+    },
+    {
+      "game_id": "401851179",
+      "date": "2026-03-12",
+      "team_id": "duke",
+      "team_name": "Duke Blue Devils",
+      "opponent_id": "florida_state_seminoles",
+      "opponent_name": "Florida State Seminoles",
+      "team_score": 80,
+      "opponent_score": 79
+    },
+    {
+      "game_id": "401851179",
+      "date": "2026-03-12",
+      "team_id": "florida_state_seminoles",
+      "team_name": "Florida State Seminoles",
+      "opponent_id": "duke",
+      "opponent_name": "Duke Blue Devils",
+      "team_score": 79,
+      "opponent_score": 80
+    },
+    {
+      "game_id": "401851299",
+      "date": "2026-03-12",
+      "team_id": "arizona",
+      "team_name": "Arizona Wildcats",
+      "opponent_id": "ucf_knights",
+      "opponent_name": "UCF Knights",
+      "team_score": 81,
+      "opponent_score": 59
+    },
+    {
+      "game_id": "401851299",
+      "date": "2026-03-12",
+      "team_id": "ucf_knights",
+      "team_name": "UCF Knights",
+      "opponent_id": "arizona",
+      "opponent_name": "Arizona Wildcats",
+      "team_score": 59,
+      "opponent_score": 81
+    },
+    {
+      "game_id": "401851300",
+      "date": "2026-03-12",
+      "team_id": "houston",
+      "team_name": "Houston Cougars",
+      "opponent_id": "byu_cougars",
+      "opponent_name": "BYU Cougars",
+      "team_score": 73,
+      "opponent_score": 66
+    },
+    {
+      "game_id": "401851300",
+      "date": "2026-03-12",
+      "team_id": "byu_cougars",
+      "team_name": "BYU Cougars",
+      "opponent_id": "houston",
+      "opponent_name": "Houston Cougars",
+      "team_score": 66,
+      "opponent_score": 73
+    },
+    {
+      "game_id": "401851313",
+      "date": "2026-03-12",
+      "team_id": "uconn_huskies",
+      "team_name": "UConn Huskies",
+      "opponent_id": "xavier_musketeers",
+      "opponent_name": "Xavier Musketeers",
+      "team_score": 93,
+      "opponent_score": 68
+    },
+    {
+      "game_id": "401851313",
+      "date": "2026-03-12",
+      "team_id": "xavier_musketeers",
+      "team_name": "Xavier Musketeers",
+      "opponent_id": "uconn_huskies",
+      "opponent_name": "UConn Huskies",
+      "team_score": 68,
+      "opponent_score": 93
+    },
+    {
+      "game_id": "401851296",
+      "date": "2026-03-12",
+      "team_id": "texas_tech_red_raiders",
+      "team_name": "Texas Tech Red Raiders",
+      "opponent_id": "iowa_state",
+      "opponent_name": "Iowa State Cyclones",
+      "team_score": 53,
+      "opponent_score": 75
+    },
+    {
+      "game_id": "401851296",
+      "date": "2026-03-12",
+      "team_id": "iowa_state",
+      "team_name": "Iowa State Cyclones",
+      "opponent_id": "texas_tech_red_raiders",
+      "opponent_name": "Texas Tech Red Raiders",
+      "team_score": 75,
+      "opponent_score": 53
+    },
+    {
+      "game_id": "401851177",
+      "date": "2026-03-12",
+      "team_id": "virginia",
+      "team_name": "Virginia Cavaliers",
+      "opponent_id": "nc_state_wolfpack",
+      "opponent_name": "NC State Wolfpack",
+      "team_score": 81,
+      "opponent_score": 74
+    },
+    {
+      "game_id": "401851177",
+      "date": "2026-03-12",
+      "team_id": "nc_state_wolfpack",
+      "team_name": "NC State Wolfpack",
+      "opponent_id": "virginia",
+      "opponent_name": "Virginia Cavaliers",
+      "team_score": 74,
+      "opponent_score": 81
+    },
+    {
+      "game_id": "401851311",
+      "date": "2026-03-12",
+      "team_id": "st_john_s_red_storm",
+      "team_name": "St. John's Red Storm",
+      "opponent_id": "providence_friars",
+      "opponent_name": "Providence Friars",
+      "team_score": 85,
+      "opponent_score": 72
+    },
+    {
+      "game_id": "401851311",
+      "date": "2026-03-12",
+      "team_id": "providence_friars",
+      "team_name": "Providence Friars",
+      "opponent_id": "st_john_s_red_storm",
+      "opponent_name": "St. John's Red Storm",
+      "team_score": 72,
+      "opponent_score": 85
+    },
+    {
+      "game_id": "401851302",
+      "date": "2026-03-13",
+      "team_id": "kansas",
+      "team_name": "Kansas Jayhawks",
+      "opponent_id": "tcu_horned_frogs",
+      "opponent_name": "TCU Horned Frogs",
+      "team_score": 78,
+      "opponent_score": 73
+    },
+    {
+      "game_id": "401851302",
+      "date": "2026-03-13",
+      "team_id": "tcu_horned_frogs",
+      "team_name": "TCU Horned Frogs",
+      "opponent_id": "kansas",
+      "opponent_name": "Kansas Jayhawks",
+      "team_score": 73,
+      "opponent_score": 78
+    },
+    {
+      "game_id": "401851377",
+      "date": "2026-03-12",
+      "team_id": "purdue",
+      "team_name": "Purdue Boilermakers",
+      "opponent_id": "northwestern",
+      "opponent_name": "Northwestern Wildcats",
+      "team_score": 81,
+      "opponent_score": 68
+    },
+    {
+      "game_id": "401851377",
+      "date": "2026-03-12",
+      "team_id": "northwestern",
+      "team_name": "Northwestern Wildcats",
+      "opponent_id": "purdue",
+      "opponent_name": "Purdue Boilermakers",
+      "team_score": 68,
+      "opponent_score": 81
+    },
+    {
+      "game_id": "401851180",
+      "date": "2026-03-13",
+      "team_id": "north_carolina",
+      "team_name": "North Carolina Tar Heels",
+      "opponent_id": "clemson",
+      "opponent_name": "Clemson Tigers",
+      "team_score": 79,
+      "opponent_score": 80
+    },
+    {
+      "game_id": "401851180",
+      "date": "2026-03-13",
+      "team_id": "clemson",
+      "team_name": "Clemson Tigers",
+      "opponent_id": "north_carolina",
+      "opponent_name": "North Carolina Tar Heels",
+      "team_score": 80,
+      "opponent_score": 79
+    },
+    {
+      "game_id": "401858186",
+      "date": "2026-03-12",
+      "team_id": "miami_oh_redhawks",
+      "team_name": "Miami (OH) RedHawks",
+      "opponent_id": "massachusetts_minutemen",
+      "opponent_name": "Massachusetts Minutemen",
+      "team_score": 83,
+      "opponent_score": 87
+    },
+    {
+      "game_id": "401858186",
+      "date": "2026-03-12",
+      "team_id": "massachusetts_minutemen",
+      "team_name": "Massachusetts Minutemen",
+      "opponent_id": "miami_oh_redhawks",
+      "opponent_name": "Miami (OH) RedHawks",
+      "team_score": 87,
+      "opponent_score": 83
+    },
+    {
+      "game_id": "401851376",
+      "date": "2026-03-12",
+      "team_id": "wisconsin_badgers",
+      "team_name": "Wisconsin Badgers",
+      "opponent_id": "washington_huskies",
+      "opponent_name": "Washington Huskies",
+      "team_score": 85,
+      "opponent_score": 82
+    },
+    {
+      "game_id": "401851376",
+      "date": "2026-03-12",
+      "team_id": "washington_huskies",
+      "team_name": "Washington Huskies",
+      "opponent_id": "wisconsin_badgers",
+      "opponent_name": "Wisconsin Badgers",
+      "team_score": 82,
+      "opponent_score": 85
+    },
+    {
+      "game_id": "401851178",
+      "date": "2026-03-12",
+      "team_id": "miami_hurricanes",
+      "team_name": "Miami Hurricanes",
+      "opponent_id": "louisville_cardinals",
+      "opponent_name": "Louisville Cardinals",
+      "team_score": 78,
+      "opponent_score": 73
+    },
+    {
+      "game_id": "401851178",
+      "date": "2026-03-12",
+      "team_id": "louisville_cardinals",
+      "team_name": "Louisville Cardinals",
+      "opponent_id": "miami_hurricanes",
+      "opponent_name": "Miami Hurricanes",
+      "team_score": 73,
+      "opponent_score": 78
+    },
+    {
+      "game_id": "401851562",
+      "date": "2026-03-12",
+      "team_id": "tennessee",
+      "team_name": "Tennessee Volunteers",
+      "opponent_id": "auburn",
+      "opponent_name": "Auburn Tigers",
+      "team_score": 72,
+      "opponent_score": 62
+    },
+    {
+      "game_id": "401851562",
+      "date": "2026-03-12",
+      "team_id": "auburn",
+      "team_name": "Auburn Tigers",
+      "opponent_id": "tennessee",
+      "opponent_name": "Tennessee Volunteers",
+      "team_score": 62,
+      "opponent_score": 72
+    },
+    {
+      "game_id": "401851263",
+      "date": "2026-03-12",
+      "team_id": "fordham_rams",
+      "team_name": "Fordham Rams",
+      "opponent_id": "george_washington_revolutionaries",
+      "opponent_name": "George Washington Revolutionaries",
+      "team_score": 62,
+      "opponent_score": 66
+    },
+    {
+      "game_id": "401851263",
+      "date": "2026-03-12",
+      "team_id": "george_washington_revolutionaries",
+      "team_name": "George Washington Revolutionaries",
+      "opponent_id": "fordham_rams",
+      "opponent_name": "Fordham Rams",
+      "team_score": 66,
+      "opponent_score": 62
+    },
+    {
+      "game_id": "401851375",
+      "date": "2026-03-12",
+      "team_id": "ohio_state_buckeyes",
+      "team_name": "Ohio State Buckeyes",
+      "opponent_id": "iowa_hawkeyes",
+      "opponent_name": "Iowa Hawkeyes",
+      "team_score": 72,
+      "opponent_score": 69
+    },
+    {
+      "game_id": "401851375",
+      "date": "2026-03-12",
+      "team_id": "iowa_hawkeyes",
+      "team_name": "Iowa Hawkeyes",
+      "opponent_id": "ohio_state_buckeyes",
+      "opponent_name": "Ohio State Buckeyes",
+      "team_score": 69,
+      "opponent_score": 72
+    },
+    {
+      "game_id": "401851561",
+      "date": "2026-03-12",
+      "team_id": "missouri_tigers",
+      "team_name": "Missouri Tigers",
+      "opponent_id": "kentucky",
+      "opponent_name": "Kentucky Wildcats",
+      "team_score": 72,
+      "opponent_score": 78
+    },
+    {
+      "game_id": "401851561",
+      "date": "2026-03-12",
+      "team_id": "kentucky",
+      "team_name": "Kentucky Wildcats",
+      "opponent_id": "missouri_tigers",
+      "opponent_name": "Missouri Tigers",
+      "team_score": 78,
+      "opponent_score": 72
+    },
+    {
+      "game_id": "401858187",
+      "date": "2026-03-12",
+      "team_id": "toledo_rockets",
+      "team_name": "Toledo Rockets",
+      "opponent_id": "bowling_green_falcons",
+      "opponent_name": "Bowling Green Falcons",
+      "team_score": 77,
+      "opponent_score": 76
+    },
+    {
+      "game_id": "401858187",
+      "date": "2026-03-12",
+      "team_id": "bowling_green_falcons",
+      "team_name": "Bowling Green Falcons",
+      "opponent_id": "toledo_rockets",
+      "opponent_name": "Toledo Rockets",
+      "team_score": 76,
+      "opponent_score": 77
+    },
+    {
+      "game_id": "401851719",
+      "date": "2026-03-12",
+      "team_id": "texas_southern_tigers",
+      "team_name": "Texas Southern Tigers",
+      "opponent_id": "alabama_a_m_bulldogs",
+      "opponent_name": "Alabama A&M Bulldogs",
+      "team_score": 74,
+      "opponent_score": 85
+    },
+    {
+      "game_id": "401851719",
+      "date": "2026-03-12",
+      "team_id": "alabama_a_m_bulldogs",
+      "team_name": "Alabama A&M Bulldogs",
+      "opponent_id": "texas_southern_tigers",
+      "opponent_name": "Texas Southern Tigers",
+      "team_score": 85,
+      "opponent_score": 74
+    },
+    {
+      "game_id": "401851264",
+      "date": "2026-03-12",
+      "team_id": "george_mason_patriots",
+      "team_name": "George Mason Patriots",
+      "opponent_id": "st_bonaventure_bonnies",
+      "opponent_name": "St. Bonaventure Bonnies",
+      "team_score": 57,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851264",
+      "date": "2026-03-12",
+      "team_id": "st_bonaventure_bonnies",
+      "team_name": "St. Bonaventure Bonnies",
+      "opponent_id": "george_mason_patriots",
+      "opponent_name": "George Mason Patriots",
+      "team_score": 63,
+      "opponent_score": 57
+    },
+    {
+      "game_id": "401851312",
+      "date": "2026-03-12",
+      "team_id": "seton_hall_pirates",
+      "team_name": "Seton Hall Pirates",
+      "opponent_id": "creighton",
+      "opponent_name": "Creighton Bluejays",
+      "team_score": 72,
+      "opponent_score": 61
+    },
+    {
+      "game_id": "401851312",
+      "date": "2026-03-12",
+      "team_id": "creighton",
+      "team_name": "Creighton Bluejays",
+      "opponent_id": "seton_hall_pirates",
+      "opponent_name": "Seton Hall Pirates",
+      "team_score": 61,
+      "opponent_score": 72
+    },
+    {
+      "game_id": "401851499",
+      "date": "2026-03-12",
+      "team_id": "utah_state_aggies",
+      "team_name": "Utah State Aggies",
+      "opponent_id": "unlv_rebels",
+      "opponent_name": "UNLV Rebels",
+      "team_score": 80,
+      "opponent_score": 60
+    },
+    {
+      "game_id": "401851499",
+      "date": "2026-03-12",
+      "team_id": "unlv_rebels",
+      "team_name": "UNLV Rebels",
+      "opponent_id": "utah_state_aggies",
+      "opponent_name": "Utah State Aggies",
+      "team_score": 60,
+      "opponent_score": 80
+    },
+    {
+      "game_id": "401858188",
+      "date": "2026-03-12",
+      "team_id": "akron_zips",
+      "team_name": "Akron Zips",
+      "opponent_id": "buffalo_bulls",
+      "opponent_name": "Buffalo Bulls",
+      "team_score": 73,
+      "opponent_score": 70
+    },
+    {
+      "game_id": "401858188",
+      "date": "2026-03-12",
+      "team_id": "buffalo_bulls",
+      "team_name": "Buffalo Bulls",
+      "opponent_id": "akron_zips",
+      "opponent_name": "Akron Zips",
+      "team_score": 70,
+      "opponent_score": 73
+    },
+    {
+      "game_id": "401851266",
+      "date": "2026-03-12",
+      "team_id": "duquesne_dukes",
+      "team_name": "Duquesne Dukes",
+      "opponent_id": "rhode_island_rams",
+      "opponent_name": "Rhode Island Rams",
+      "team_score": 67,
+      "opponent_score": 61
+    },
+    {
+      "game_id": "401851266",
+      "date": "2026-03-12",
+      "team_id": "rhode_island_rams",
+      "team_name": "Rhode Island Rams",
+      "opponent_id": "duquesne_dukes",
+      "opponent_name": "Duquesne Dukes",
+      "team_score": 61,
+      "opponent_score": 67
+    },
+    {
+      "game_id": "401851500",
+      "date": "2026-03-12",
+      "team_id": "grand_canyon_lopes",
+      "team_name": "Grand Canyon Lopes",
+      "opponent_id": "nevada_wolf_pack",
+      "opponent_name": "Nevada Wolf Pack",
+      "team_score": 80,
+      "opponent_score": 84
+    },
+    {
+      "game_id": "401851500",
+      "date": "2026-03-12",
+      "team_id": "nevada_wolf_pack",
+      "team_name": "Nevada Wolf Pack",
+      "opponent_id": "grand_canyon_lopes",
+      "opponent_name": "Grand Canyon Lopes",
+      "team_score": 84,
+      "opponent_score": 80
+    },
+    {
+      "game_id": "401851473",
+      "date": "2026-03-12",
+      "team_id": "norfolk_state_spartans",
+      "team_name": "Norfolk State Spartans",
+      "opponent_id": "south_carolina_state_bulldogs",
+      "opponent_name": "South Carolina State Bulldogs",
+      "team_score": 82,
+      "opponent_score": 88
+    },
+    {
+      "game_id": "401851473",
+      "date": "2026-03-12",
+      "team_id": "south_carolina_state_bulldogs",
+      "team_name": "South Carolina State Bulldogs",
+      "opponent_id": "norfolk_state_spartans",
+      "opponent_name": "Norfolk State Spartans",
+      "team_score": 88,
+      "opponent_score": 82
+    },
+    {
+      "game_id": "401858189",
+      "date": "2026-03-12",
+      "team_id": "kent_state_golden_flashes",
+      "team_name": "Kent State Golden Flashes",
+      "opponent_id": "ohio_bobcats",
+      "opponent_name": "Ohio Bobcats",
+      "team_score": 86,
+      "opponent_score": 75
+    },
+    {
+      "game_id": "401858189",
+      "date": "2026-03-12",
+      "team_id": "ohio_bobcats",
+      "team_name": "Ohio Bobcats",
+      "opponent_id": "kent_state_golden_flashes",
+      "opponent_name": "Kent State Golden Flashes",
+      "team_score": 75,
+      "opponent_score": 86
+    },
+    {
+      "game_id": "401851410",
+      "date": "2026-03-12",
+      "team_id": "louisiana_tech_bulldogs",
+      "team_name": "Louisiana Tech Bulldogs",
+      "opponent_id": "middle_tennessee_blue_raiders",
+      "opponent_name": "Middle Tennessee Blue Raiders",
+      "team_score": 80,
+      "opponent_score": 69
+    },
+    {
+      "game_id": "401851410",
+      "date": "2026-03-12",
+      "team_id": "middle_tennessee_blue_raiders",
+      "team_name": "Middle Tennessee Blue Raiders",
+      "opponent_id": "louisiana_tech_bulldogs",
+      "opponent_name": "Louisiana Tech Bulldogs",
+      "team_score": 69,
+      "opponent_score": 80
+    },
+    {
+      "game_id": "401851563",
+      "date": "2026-03-12",
+      "team_id": "georgia_bulldogs",
+      "team_name": "Georgia Bulldogs",
+      "opponent_id": "ole_miss_rebels",
+      "opponent_name": "Ole Miss Rebels",
+      "team_score": 72,
+      "opponent_score": 76
+    },
+    {
+      "game_id": "401851563",
+      "date": "2026-03-12",
+      "team_id": "ole_miss_rebels",
+      "team_name": "Ole Miss Rebels",
+      "opponent_id": "georgia_bulldogs",
+      "opponent_name": "Georgia Bulldogs",
+      "team_score": 76,
+      "opponent_score": 72
+    },
+    {
+      "game_id": "401851223",
+      "date": "2026-03-12",
+      "team_id": "charlotte_49ers",
+      "team_name": "Charlotte 49ers",
+      "opponent_id": "tulane_green_wave",
+      "opponent_name": "Tulane Green Wave",
+      "team_score": 74,
+      "opponent_score": 60
+    },
+    {
+      "game_id": "401851223",
+      "date": "2026-03-12",
+      "team_id": "tulane_green_wave",
+      "team_name": "Tulane Green Wave",
+      "opponent_id": "charlotte_49ers",
+      "opponent_name": "Charlotte 49ers",
+      "team_score": 60,
+      "opponent_score": 74
+    },
+    {
+      "game_id": "401851268",
+      "date": "2026-03-12",
+      "team_id": "davidson_wildcats",
+      "team_name": "Davidson Wildcats",
+      "opponent_id": "loyola_chicago_ramblers",
+      "opponent_name": "Loyola Chicago Ramblers",
+      "team_score": 64,
+      "opponent_score": 59
+    },
+    {
+      "game_id": "401851268",
+      "date": "2026-03-12",
+      "team_id": "loyola_chicago_ramblers",
+      "team_name": "Loyola Chicago Ramblers",
+      "opponent_id": "davidson_wildcats",
+      "opponent_name": "Davidson Wildcats",
+      "team_score": 59,
+      "opponent_score": 64
+    },
+    {
+      "game_id": "401851720",
+      "date": "2026-03-13",
+      "team_id": "southern_jaguars",
+      "team_name": "Southern Jaguars",
+      "opponent_id": "arkansas_pine_bluff_golden_lions",
+      "opponent_name": "Arkansas-Pine Bluff Golden Lions",
+      "team_score": 84,
+      "opponent_score": 81
+    },
+    {
+      "game_id": "401851720",
+      "date": "2026-03-13",
+      "team_id": "arkansas_pine_bluff_golden_lions",
+      "team_name": "Arkansas-Pine Bluff Golden Lions",
+      "opponent_id": "southern_jaguars",
+      "opponent_name": "Southern Jaguars",
+      "team_score": 81,
+      "opponent_score": 84
+    },
+    {
+      "game_id": "401851734",
+      "date": "2026-03-13",
+      "team_id": "ut_arlington_mavericks",
+      "team_name": "UT Arlington Mavericks",
+      "opponent_id": "southern_utah_thunderbirds",
+      "opponent_name": "Southern Utah Thunderbirds",
+      "team_score": 69,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851734",
+      "date": "2026-03-13",
+      "team_id": "southern_utah_thunderbirds",
+      "team_name": "Southern Utah Thunderbirds",
+      "opponent_id": "ut_arlington_mavericks",
+      "opponent_name": "UT Arlington Mavericks",
+      "team_score": 63,
+      "opponent_score": 69
+    },
+    {
+      "game_id": "401851501",
+      "date": "2026-03-13",
+      "team_id": "san_diego_state",
+      "team_name": "San Diego State Aztecs",
+      "opponent_id": "colorado_state",
+      "opponent_name": "Colorado State Rams",
+      "team_score": 71,
+      "opponent_score": 62
+    },
+    {
+      "game_id": "401851501",
+      "date": "2026-03-13",
+      "team_id": "colorado_state",
+      "team_name": "Colorado State Rams",
+      "opponent_id": "san_diego_state",
+      "opponent_name": "San Diego State Aztecs",
+      "team_score": 62,
+      "opponent_score": 71
+    },
+    {
+      "game_id": "401851411",
+      "date": "2026-03-13",
+      "team_id": "western_kentucky_hilltoppers",
+      "team_name": "Western Kentucky Hilltoppers",
+      "opponent_id": "kennesaw_state_owls",
+      "opponent_name": "Kennesaw State Owls",
+      "team_score": 87,
+      "opponent_score": 96
+    },
+    {
+      "game_id": "401851411",
+      "date": "2026-03-13",
+      "team_id": "kennesaw_state_owls",
+      "team_name": "Kennesaw State Owls",
+      "opponent_id": "western_kentucky_hilltoppers",
+      "opponent_name": "Western Kentucky Hilltoppers",
+      "team_score": 96,
+      "opponent_score": 87
+    },
+    {
+      "game_id": "401851393",
+      "date": "2026-03-13",
+      "team_id": "cal_state_northridge_matadors",
+      "team_name": "Cal State Northridge Matadors",
+      "opponent_id": "uc_san_diego_tritons",
+      "opponent_name": "UC San Diego Tritons",
+      "team_score": 80,
+      "opponent_score": 70
+    },
+    {
+      "game_id": "401851393",
+      "date": "2026-03-13",
+      "team_id": "uc_san_diego_tritons",
+      "team_name": "UC San Diego Tritons",
+      "opponent_id": "cal_state_northridge_matadors",
+      "opponent_name": "Cal State Northridge Matadors",
+      "team_score": 70,
+      "opponent_score": 80
+    },
+    {
+      "game_id": "401851378",
+      "date": "2026-03-13",
+      "team_id": "ucla_bruins",
+      "team_name": "UCLA Bruins",
+      "opponent_id": "rutgers_scarlet_knights",
+      "opponent_name": "Rutgers Scarlet Knights",
+      "team_score": 72,
+      "opponent_score": 59
+    },
+    {
+      "game_id": "401851378",
+      "date": "2026-03-13",
+      "team_id": "rutgers_scarlet_knights",
+      "team_name": "Rutgers Scarlet Knights",
+      "opponent_id": "ucla_bruins",
+      "opponent_name": "UCLA Bruins",
+      "team_score": 59,
+      "opponent_score": 72
+    },
+    {
+      "game_id": "401851474",
+      "date": "2026-03-13",
+      "team_id": "north_carolina_central_eagles",
+      "team_name": "North Carolina Central Eagles",
+      "opponent_id": "maryland_eastern_shore_hawks",
+      "opponent_name": "Maryland Eastern Shore Hawks",
+      "team_score": 83,
+      "opponent_score": 76
+    },
+    {
+      "game_id": "401851474",
+      "date": "2026-03-13",
+      "team_id": "maryland_eastern_shore_hawks",
+      "team_name": "Maryland Eastern Shore Hawks",
+      "opponent_id": "north_carolina_central_eagles",
+      "opponent_name": "North Carolina Central Eagles",
+      "team_score": 76,
+      "opponent_score": 83
+    },
+    {
+      "game_id": "401851314",
+      "date": "2026-03-13",
+      "team_id": "villanova",
+      "team_name": "Villanova Wildcats",
+      "opponent_id": "georgetown_hoyas",
+      "opponent_name": "Georgetown Hoyas",
+      "team_score": 64,
+      "opponent_score": 78
+    },
+    {
+      "game_id": "401851314",
+      "date": "2026-03-13",
+      "team_id": "georgetown_hoyas",
+      "team_name": "Georgetown Hoyas",
+      "opponent_id": "villanova",
+      "opponent_name": "Villanova Wildcats",
+      "team_score": 78,
+      "opponent_score": 64
+    },
+    {
+      "game_id": "401851224",
+      "date": "2026-03-13",
+      "team_id": "north_texas_mean_green",
+      "team_name": "North Texas Mean Green",
+      "opponent_id": "florida_atlantic",
+      "opponent_name": "Florida Atlantic Owls",
+      "team_score": 74,
+      "opponent_score": 70
+    },
+    {
+      "game_id": "401851224",
+      "date": "2026-03-13",
+      "team_id": "florida_atlantic",
+      "team_name": "Florida Atlantic Owls",
+      "opponent_id": "north_texas_mean_green",
+      "opponent_name": "North Texas Mean Green",
+      "team_score": 70,
+      "opponent_score": 74
+    },
+    {
+      "game_id": "401851564",
+      "date": "2026-03-13",
+      "team_id": "texas_a_m_aggies",
+      "team_name": "Texas A&M Aggies",
+      "opponent_id": "oklahoma_sooners",
+      "opponent_name": "Oklahoma Sooners",
+      "team_score": 63,
+      "opponent_score": 83
+    },
+    {
+      "game_id": "401851564",
+      "date": "2026-03-13",
+      "team_id": "oklahoma_sooners",
+      "team_name": "Oklahoma Sooners",
+      "opponent_id": "texas_a_m_aggies",
+      "opponent_name": "Texas A&M Aggies",
+      "team_score": 83,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851735",
+      "date": "2026-03-13",
+      "team_id": "utah_tech_trailblazers",
+      "team_name": "Utah Tech Trailblazers",
+      "opponent_id": "abilene_christian_wildcats",
+      "opponent_name": "Abilene Christian Wildcats",
+      "team_score": 80,
+      "opponent_score": 74
+    },
+    {
+      "game_id": "401851735",
+      "date": "2026-03-13",
+      "team_id": "abilene_christian_wildcats",
+      "team_name": "Abilene Christian Wildcats",
+      "opponent_id": "utah_tech_trailblazers",
+      "opponent_name": "Utah Tech Trailblazers",
+      "team_score": 74,
+      "opponent_score": 80
+    },
+    {
+      "game_id": "401851394",
+      "date": "2026-03-13",
+      "team_id": "cal_state_fullerton_titans",
+      "team_name": "Cal State Fullerton Titans",
+      "opponent_id": "uc_davis_aggies",
+      "opponent_name": "UC Davis Aggies",
+      "team_score": 82,
+      "opponent_score": 70
+    },
+    {
+      "game_id": "401851394",
+      "date": "2026-03-13",
+      "team_id": "uc_davis_aggies",
+      "team_name": "UC Davis Aggies",
+      "opponent_id": "cal_state_fullerton_titans",
+      "opponent_name": "Cal State Fullerton Titans",
+      "team_score": 70,
+      "opponent_score": 82
+    },
+    {
+      "game_id": "401851502",
+      "date": "2026-03-13",
+      "team_id": "new_mexico_lobos",
+      "team_name": "New Mexico Lobos",
+      "opponent_id": "san_jose_state_spartans",
+      "opponent_name": "San Jos\u00e9 State Spartans",
+      "team_score": 93,
+      "opponent_score": 77
+    },
+    {
+      "game_id": "401851502",
+      "date": "2026-03-13",
+      "team_id": "san_jose_state_spartans",
+      "team_name": "San Jos\u00e9 State Spartans",
+      "opponent_id": "new_mexico_lobos",
+      "opponent_name": "New Mexico Lobos",
+      "team_score": 77,
+      "opponent_score": 93
+    },
+    {
+      "game_id": "401851182",
+      "date": "2026-03-14",
+      "team_id": "duke",
+      "team_name": "Duke Blue Devils",
+      "opponent_id": "clemson",
+      "opponent_name": "Clemson Tigers",
+      "team_score": 73,
+      "opponent_score": 61
+    },
+    {
+      "game_id": "401851182",
+      "date": "2026-03-14",
+      "team_id": "clemson",
+      "team_name": "Clemson Tigers",
+      "opponent_id": "duke",
+      "opponent_name": "Duke Blue Devils",
+      "team_score": 61,
+      "opponent_score": 73
+    },
+    {
+      "game_id": "401851304",
+      "date": "2026-03-13",
+      "team_id": "arizona",
+      "team_name": "Arizona Wildcats",
+      "opponent_id": "iowa_state",
+      "opponent_name": "Iowa State Cyclones",
+      "team_score": 82,
+      "opponent_score": 80
+    },
+    {
+      "game_id": "401851304",
+      "date": "2026-03-13",
+      "team_id": "iowa_state",
+      "team_name": "Iowa State Cyclones",
+      "opponent_id": "arizona",
+      "opponent_name": "Arizona Wildcats",
+      "team_score": 80,
+      "opponent_score": 82
+    },
+    {
+      "game_id": "401851380",
+      "date": "2026-03-13",
+      "team_id": "michigan_wolverines",
+      "team_name": "Michigan Wolverines",
+      "opponent_id": "ohio_state_buckeyes",
+      "opponent_name": "Ohio State Buckeyes",
+      "team_score": 71,
+      "opponent_score": 67
+    },
+    {
+      "game_id": "401851380",
+      "date": "2026-03-13",
+      "team_id": "ohio_state_buckeyes",
+      "team_name": "Ohio State Buckeyes",
+      "opponent_id": "michigan_wolverines",
+      "opponent_name": "Michigan Wolverines",
+      "team_score": 67,
+      "opponent_score": 71
+    },
+    {
+      "game_id": "401851565",
+      "date": "2026-03-13",
+      "team_id": "florida",
+      "team_name": "Florida Gators",
+      "opponent_id": "kentucky",
+      "opponent_name": "Kentucky Wildcats",
+      "team_score": 71,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851565",
+      "date": "2026-03-13",
+      "team_id": "kentucky",
+      "team_name": "Kentucky Wildcats",
+      "opponent_id": "florida",
+      "opponent_name": "Florida Gators",
+      "team_score": 63,
+      "opponent_score": 71
+    },
+    {
+      "game_id": "401851305",
+      "date": "2026-03-14",
+      "team_id": "houston",
+      "team_name": "Houston Cougars",
+      "opponent_id": "kansas",
+      "opponent_name": "Kansas Jayhawks",
+      "team_score": 69,
+      "opponent_score": 47
+    },
+    {
+      "game_id": "401851305",
+      "date": "2026-03-14",
+      "team_id": "kansas",
+      "team_name": "Kansas Jayhawks",
+      "opponent_id": "houston",
+      "opponent_name": "Houston Cougars",
+      "team_score": 47,
+      "opponent_score": 69
+    },
+    {
+      "game_id": "401851316",
+      "date": "2026-03-14",
+      "team_id": "uconn_huskies",
+      "team_name": "UConn Huskies",
+      "opponent_id": "georgetown_hoyas",
+      "opponent_name": "Georgetown Hoyas",
+      "team_score": 67,
+      "opponent_score": 51
+    },
+    {
+      "game_id": "401851316",
+      "date": "2026-03-14",
+      "team_id": "georgetown_hoyas",
+      "team_name": "Georgetown Hoyas",
+      "opponent_id": "uconn_huskies",
+      "opponent_name": "UConn Huskies",
+      "team_score": 51,
+      "opponent_score": 67
+    },
+    {
+      "game_id": "401851383",
+      "date": "2026-03-14",
+      "team_id": "michigan_state",
+      "team_name": "Michigan State Spartans",
+      "opponent_id": "ucla_bruins",
+      "opponent_name": "UCLA Bruins",
+      "team_score": 84,
+      "opponent_score": 88
+    },
+    {
+      "game_id": "401851383",
+      "date": "2026-03-14",
+      "team_id": "ucla_bruins",
+      "team_name": "UCLA Bruins",
+      "opponent_id": "michigan_state",
+      "opponent_name": "Michigan State Spartans",
+      "team_score": 88,
+      "opponent_score": 84
+    },
+    {
+      "game_id": "401851381",
+      "date": "2026-03-13",
+      "team_id": "illinois_fighting_illini",
+      "team_name": "Illinois Fighting Illini",
+      "opponent_id": "wisconsin_badgers",
+      "opponent_name": "Wisconsin Badgers",
+      "team_score": 88,
+      "opponent_score": 91
+    },
+    {
+      "game_id": "401851381",
+      "date": "2026-03-13",
+      "team_id": "wisconsin_badgers",
+      "team_name": "Wisconsin Badgers",
+      "opponent_id": "illinois_fighting_illini",
+      "opponent_name": "Illinois Fighting Illini",
+      "team_score": 91,
+      "opponent_score": 88
+    },
+    {
+      "game_id": "401851181",
+      "date": "2026-03-13",
+      "team_id": "virginia",
+      "team_name": "Virginia Cavaliers",
+      "opponent_id": "miami_hurricanes",
+      "opponent_name": "Miami Hurricanes",
+      "team_score": 84,
+      "opponent_score": 62
+    },
+    {
+      "game_id": "401851181",
+      "date": "2026-03-13",
+      "team_id": "miami_hurricanes",
+      "team_name": "Miami Hurricanes",
+      "opponent_id": "virginia",
+      "opponent_name": "Virginia Cavaliers",
+      "team_score": 62,
+      "opponent_score": 84
+    },
+    {
+      "game_id": "401851382",
+      "date": "2026-03-13",
+      "team_id": "nebraska_cornhuskers",
+      "team_name": "Nebraska Cornhuskers",
+      "opponent_id": "purdue",
+      "opponent_name": "Purdue Boilermakers",
+      "team_score": 58,
+      "opponent_score": 74
+    },
+    {
+      "game_id": "401851382",
+      "date": "2026-03-13",
+      "team_id": "purdue",
+      "team_name": "Purdue Boilermakers",
+      "opponent_id": "nebraska_cornhuskers",
+      "opponent_name": "Nebraska Cornhuskers",
+      "team_score": 74,
+      "opponent_score": 58
+    },
+    {
+      "game_id": "401851315",
+      "date": "2026-03-13",
+      "team_id": "st_john_s_red_storm",
+      "team_name": "St. John's Red Storm",
+      "opponent_id": "seton_hall_pirates",
+      "opponent_name": "Seton Hall Pirates",
+      "team_score": 78,
+      "opponent_score": 68
+    },
+    {
+      "game_id": "401851315",
+      "date": "2026-03-13",
+      "team_id": "seton_hall_pirates",
+      "team_name": "Seton Hall Pirates",
+      "opponent_id": "st_john_s_red_storm",
+      "opponent_name": "St. John's Red Storm",
+      "team_score": 68,
+      "opponent_score": 78
+    },
+    {
+      "game_id": "401851567",
+      "date": "2026-03-13",
+      "team_id": "alabama",
+      "team_name": "Alabama Crimson Tide",
+      "opponent_id": "ole_miss_rebels",
+      "opponent_name": "Ole Miss Rebels",
+      "team_score": 79,
+      "opponent_score": 80
+    },
+    {
+      "game_id": "401851567",
+      "date": "2026-03-13",
+      "team_id": "ole_miss_rebels",
+      "team_name": "Ole Miss Rebels",
+      "opponent_id": "alabama",
+      "opponent_name": "Alabama Crimson Tide",
+      "team_score": 80,
+      "opponent_score": 79
+    },
+    {
+      "game_id": "401851568",
+      "date": "2026-03-14",
+      "team_id": "arkansas_razorbacks",
+      "team_name": "Arkansas Razorbacks",
+      "opponent_id": "oklahoma_sooners",
+      "opponent_name": "Oklahoma Sooners",
+      "team_score": 82,
+      "opponent_score": 79
+    },
+    {
+      "game_id": "401851568",
+      "date": "2026-03-14",
+      "team_id": "oklahoma_sooners",
+      "team_name": "Oklahoma Sooners",
+      "opponent_id": "arkansas_razorbacks",
+      "opponent_name": "Arkansas Razorbacks",
+      "team_score": 79,
+      "opponent_score": 82
+    },
+    {
+      "game_id": "401851566",
+      "date": "2026-03-13",
+      "team_id": "vanderbilt_commodores",
+      "team_name": "Vanderbilt Commodores",
+      "opponent_id": "tennessee",
+      "opponent_name": "Tennessee Volunteers",
+      "team_score": 75,
+      "opponent_score": 68
+    },
+    {
+      "game_id": "401851566",
+      "date": "2026-03-13",
+      "team_id": "tennessee",
+      "team_name": "Tennessee Volunteers",
+      "opponent_id": "vanderbilt_commodores",
+      "opponent_name": "Vanderbilt Commodores",
+      "team_score": 68,
+      "opponent_score": 75
+    },
+    {
+      "game_id": "401851270",
+      "date": "2026-03-13",
+      "team_id": "saint_louis_billikens",
+      "team_name": "Saint Louis Billikens",
+      "opponent_id": "george_washington_revolutionaries",
+      "opponent_name": "George Washington Revolutionaries",
+      "team_score": 88,
+      "opponent_score": 81
+    },
+    {
+      "game_id": "401851270",
+      "date": "2026-03-13",
+      "team_id": "george_washington_revolutionaries",
+      "team_name": "George Washington Revolutionaries",
+      "opponent_id": "saint_louis_billikens",
+      "opponent_name": "Saint Louis Billikens",
+      "team_score": 81,
+      "opponent_score": 88
+    },
+    {
+      "game_id": "401851413",
+      "date": "2026-03-13",
+      "team_id": "louisiana_tech_bulldogs",
+      "team_name": "Louisiana Tech Bulldogs",
+      "opponent_id": "missouri_state_bears",
+      "opponent_name": "Missouri State Bears",
+      "team_score": 69,
+      "opponent_score": 66
+    },
+    {
+      "game_id": "401851413",
+      "date": "2026-03-13",
+      "team_id": "missouri_state_bears",
+      "team_name": "Missouri State Bears",
+      "opponent_id": "louisiana_tech_bulldogs",
+      "opponent_name": "Louisiana Tech Bulldogs",
+      "team_score": 66,
+      "opponent_score": 69
+    },
+    {
+      "game_id": "401851225",
+      "date": "2026-03-13",
+      "team_id": "uab_blazers",
+      "team_name": "UAB Blazers",
+      "opponent_id": "charlotte_49ers",
+      "opponent_name": "Charlotte 49ers",
+      "team_score": 78,
+      "opponent_score": 83
+    },
+    {
+      "game_id": "401851225",
+      "date": "2026-03-13",
+      "team_id": "charlotte_49ers",
+      "team_name": "Charlotte 49ers",
+      "opponent_id": "uab_blazers",
+      "opponent_name": "UAB Blazers",
+      "team_score": 83,
+      "opponent_score": 78
+    },
+    {
+      "game_id": "401851722",
+      "date": "2026-03-13",
+      "team_id": "alabama_a_m_bulldogs",
+      "team_name": "Alabama A&M Bulldogs",
+      "opponent_id": "prairie_view_a_m_panthers",
+      "opponent_name": "Prairie View A&M Panthers",
+      "team_score": 55,
+      "opponent_score": 74
+    },
+    {
+      "game_id": "401851722",
+      "date": "2026-03-13",
+      "team_id": "prairie_view_a_m_panthers",
+      "team_name": "Prairie View A&M Panthers",
+      "opponent_id": "alabama_a_m_bulldogs",
+      "opponent_name": "Alabama A&M Bulldogs",
+      "team_score": 74,
+      "opponent_score": 55
+    },
+    {
+      "game_id": "401851272",
+      "date": "2026-03-13",
+      "team_id": "dayton_flyers",
+      "team_name": "Dayton Flyers",
+      "opponent_id": "st_bonaventure_bonnies",
+      "opponent_name": "St. Bonaventure Bonnies",
+      "team_score": 68,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851272",
+      "date": "2026-03-13",
+      "team_id": "st_bonaventure_bonnies",
+      "team_name": "St. Bonaventure Bonnies",
+      "opponent_id": "dayton_flyers",
+      "opponent_name": "Dayton Flyers",
+      "team_score": 63,
+      "opponent_score": 68
+    },
+    {
+      "game_id": "401851414",
+      "date": "2026-03-13",
+      "team_id": "sam_houston_bearkats",
+      "team_name": "Sam Houston Bearkats",
+      "opponent_id": "kennesaw_state_owls",
+      "opponent_name": "Kennesaw State Owls",
+      "team_score": 73,
+      "opponent_score": 79
+    },
+    {
+      "game_id": "401851414",
+      "date": "2026-03-13",
+      "team_id": "kennesaw_state_owls",
+      "team_name": "Kennesaw State Owls",
+      "opponent_id": "sam_houston_bearkats",
+      "opponent_name": "Sam Houston Bearkats",
+      "team_score": 79,
+      "opponent_score": 73
+    },
+    {
+      "game_id": "401851226",
+      "date": "2026-03-13",
+      "team_id": "tulsa_golden_hurricane",
+      "team_name": "Tulsa Golden Hurricane",
+      "opponent_id": "north_texas_mean_green",
+      "opponent_name": "North Texas Mean Green",
+      "team_score": 90,
+      "opponent_score": 84
+    },
+    {
+      "game_id": "401851226",
+      "date": "2026-03-13",
+      "team_id": "north_texas_mean_green",
+      "team_name": "North Texas Mean Green",
+      "opponent_id": "tulsa_golden_hurricane",
+      "opponent_name": "Tulsa Golden Hurricane",
+      "team_score": 84,
+      "opponent_score": 90
+    },
+    {
+      "game_id": "401858190",
+      "date": "2026-03-13",
+      "team_id": "toledo_rockets",
+      "team_name": "Toledo Rockets",
+      "opponent_id": "massachusetts_minutemen",
+      "opponent_name": "Massachusetts Minutemen",
+      "team_score": 77,
+      "opponent_score": 67
+    },
+    {
+      "game_id": "401858190",
+      "date": "2026-03-13",
+      "team_id": "massachusetts_minutemen",
+      "team_name": "Massachusetts Minutemen",
+      "opponent_id": "toledo_rockets",
+      "opponent_name": "Toledo Rockets",
+      "team_score": 67,
+      "opponent_score": 77
+    },
+    {
+      "game_id": "401851273",
+      "date": "2026-03-13",
+      "team_id": "vcu_rams",
+      "team_name": "VCU Rams",
+      "opponent_id": "duquesne_dukes",
+      "opponent_name": "Duquesne Dukes",
+      "team_score": 71,
+      "opponent_score": 66
+    },
+    {
+      "game_id": "401851273",
+      "date": "2026-03-13",
+      "team_id": "duquesne_dukes",
+      "team_name": "Duquesne Dukes",
+      "opponent_id": "vcu_rams",
+      "opponent_name": "VCU Rams",
+      "team_score": 66,
+      "opponent_score": 71
+    },
+    {
+      "game_id": "401851475",
+      "date": "2026-03-13",
+      "team_id": "howard_bison",
+      "team_name": "Howard Bison",
+      "opponent_id": "south_carolina_state_bulldogs",
+      "opponent_name": "South Carolina State Bulldogs",
+      "team_score": 78,
+      "opponent_score": 61
+    },
+    {
+      "game_id": "401851475",
+      "date": "2026-03-13",
+      "team_id": "south_carolina_state_bulldogs",
+      "team_name": "South Carolina State Bulldogs",
+      "opponent_id": "howard_bison",
+      "opponent_name": "Howard Bison",
+      "team_score": 61,
+      "opponent_score": 78
+    },
+    {
+      "game_id": "401858191",
+      "date": "2026-03-13",
+      "team_id": "akron_zips",
+      "team_name": "Akron Zips",
+      "opponent_id": "kent_state_golden_flashes",
+      "opponent_name": "Kent State Golden Flashes",
+      "team_score": 75,
+      "opponent_score": 68
+    },
+    {
+      "game_id": "401858191",
+      "date": "2026-03-13",
+      "team_id": "kent_state_golden_flashes",
+      "team_name": "Kent State Golden Flashes",
+      "opponent_id": "akron_zips",
+      "opponent_name": "Akron Zips",
+      "team_score": 68,
+      "opponent_score": 75
+    },
+    {
+      "game_id": "401851274",
+      "date": "2026-03-13",
+      "team_id": "saint_joseph_s_hawks",
+      "team_name": "Saint Joseph's Hawks",
+      "opponent_id": "davidson_wildcats",
+      "opponent_name": "Davidson Wildcats",
+      "team_score": 70,
+      "opponent_score": 58
+    },
+    {
+      "game_id": "401851274",
+      "date": "2026-03-13",
+      "team_id": "davidson_wildcats",
+      "team_name": "Davidson Wildcats",
+      "opponent_id": "saint_joseph_s_hawks",
+      "opponent_name": "Saint Joseph's Hawks",
+      "team_score": 58,
+      "opponent_score": 70
+    },
+    {
+      "game_id": "401851723",
+      "date": "2026-03-14",
+      "team_id": "florida_a_m_rattlers",
+      "team_name": "Florida A&M Rattlers",
+      "opponent_id": "southern_jaguars",
+      "opponent_name": "Southern Jaguars",
+      "team_score": 70,
+      "opponent_score": 73
+    },
+    {
+      "game_id": "401851723",
+      "date": "2026-03-14",
+      "team_id": "southern_jaguars",
+      "team_name": "Southern Jaguars",
+      "opponent_id": "florida_a_m_rattlers",
+      "opponent_name": "Florida A&M Rattlers",
+      "team_score": 73,
+      "opponent_score": 70
+    },
+    {
+      "game_id": "401851736",
+      "date": "2026-03-14",
+      "team_id": "utah_valley_wolverines",
+      "team_name": "Utah Valley Wolverines",
+      "opponent_id": "ut_arlington_mavericks",
+      "opponent_name": "UT Arlington Mavericks",
+      "team_score": 67,
+      "opponent_score": 65
+    },
+    {
+      "game_id": "401851736",
+      "date": "2026-03-14",
+      "team_id": "ut_arlington_mavericks",
+      "team_name": "UT Arlington Mavericks",
+      "opponent_id": "utah_valley_wolverines",
+      "opponent_name": "Utah Valley Wolverines",
+      "team_score": 65,
+      "opponent_score": 67
+    },
+    {
+      "game_id": "401851395",
+      "date": "2026-03-14",
+      "team_id": "uc_irvine_anteaters",
+      "team_name": "UC Irvine Anteaters",
+      "opponent_id": "cal_state_northridge_matadors",
+      "opponent_name": "Cal State Northridge Matadors",
+      "team_score": 93,
+      "opponent_score": 78
+    },
+    {
+      "game_id": "401851395",
+      "date": "2026-03-14",
+      "team_id": "cal_state_northridge_matadors",
+      "team_name": "Cal State Northridge Matadors",
+      "opponent_id": "uc_irvine_anteaters",
+      "opponent_name": "UC Irvine Anteaters",
+      "team_score": 78,
+      "opponent_score": 93
+    },
+    {
+      "game_id": "401851476",
+      "date": "2026-03-14",
+      "team_id": "north_carolina_central_eagles",
+      "team_name": "North Carolina Central Eagles",
+      "opponent_id": "delaware_state_hornets",
+      "opponent_name": "Delaware State Hornets",
+      "team_score": 59,
+      "opponent_score": 53
+    },
+    {
+      "game_id": "401851476",
+      "date": "2026-03-14",
+      "team_id": "delaware_state_hornets",
+      "team_name": "Delaware State Hornets",
+      "opponent_id": "north_carolina_central_eagles",
+      "opponent_name": "North Carolina Central Eagles",
+      "team_score": 53,
+      "opponent_score": 59
+    },
+    {
+      "game_id": "401851503",
+      "date": "2026-03-14",
+      "team_id": "utah_state_aggies",
+      "team_name": "Utah State Aggies",
+      "opponent_id": "nevada_wolf_pack",
+      "opponent_name": "Nevada Wolf Pack",
+      "team_score": 79,
+      "opponent_score": 66
+    },
+    {
+      "game_id": "401851503",
+      "date": "2026-03-14",
+      "team_id": "nevada_wolf_pack",
+      "team_name": "Nevada Wolf Pack",
+      "opponent_id": "utah_state_aggies",
+      "opponent_name": "Utah State Aggies",
+      "team_score": 66,
+      "opponent_score": 79
+    },
+    {
+      "game_id": "401851738",
+      "date": "2026-03-14",
+      "team_id": "california_baptist_lancers",
+      "team_name": "California Baptist Lancers",
+      "opponent_id": "utah_tech_trailblazers",
+      "opponent_name": "Utah Tech Trailblazers",
+      "team_score": 86,
+      "opponent_score": 72
+    },
+    {
+      "game_id": "401851738",
+      "date": "2026-03-14",
+      "team_id": "utah_tech_trailblazers",
+      "team_name": "Utah Tech Trailblazers",
+      "opponent_id": "california_baptist_lancers",
+      "opponent_name": "California Baptist Lancers",
+      "team_score": 72,
+      "opponent_score": 86
+    },
+    {
+      "game_id": "401851397",
+      "date": "2026-03-14",
+      "team_id": "hawai_i_rainbow_warriors",
+      "team_name": "Hawai'i Rainbow Warriors",
+      "opponent_id": "cal_state_fullerton_titans",
+      "opponent_name": "Cal State Fullerton Titans",
+      "team_score": 78,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851397",
+      "date": "2026-03-14",
+      "team_id": "cal_state_fullerton_titans",
+      "team_name": "Cal State Fullerton Titans",
+      "opponent_id": "hawai_i_rainbow_warriors",
+      "opponent_name": "Hawai'i Rainbow Warriors",
+      "team_score": 63,
+      "opponent_score": 78
+    },
+    {
+      "game_id": "401851504",
+      "date": "2026-03-14",
+      "team_id": "san_diego_state",
+      "team_name": "San Diego State Aztecs",
+      "opponent_id": "new_mexico_lobos",
+      "opponent_name": "New Mexico Lobos",
+      "team_score": 64,
+      "opponent_score": 62
+    },
+    {
+      "game_id": "401851504",
+      "date": "2026-03-14",
+      "team_id": "new_mexico_lobos",
+      "team_name": "New Mexico Lobos",
+      "opponent_id": "san_diego_state",
+      "opponent_name": "San Diego State Aztecs",
+      "team_score": 62,
+      "opponent_score": 64
+    },
+    {
+      "game_id": "401851183",
+      "date": "2026-03-15",
+      "team_id": "duke",
+      "team_name": "Duke Blue Devils",
+      "opponent_id": "virginia",
+      "opponent_name": "Virginia Cavaliers",
+      "team_score": 63,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851183",
+      "date": "2026-03-15",
+      "team_id": "virginia",
+      "team_name": "Virginia Cavaliers",
+      "opponent_id": "duke",
+      "opponent_name": "Duke Blue Devils",
+      "team_score": 63,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851415",
+      "date": "2026-03-15",
+      "team_id": "louisiana_tech_bulldogs",
+      "team_name": "Louisiana Tech Bulldogs",
+      "opponent_id": "kennesaw_state_owls",
+      "opponent_name": "Kennesaw State Owls",
+      "team_score": 52,
+      "opponent_score": 59
+    },
+    {
+      "game_id": "401851415",
+      "date": "2026-03-15",
+      "team_id": "kennesaw_state_owls",
+      "team_name": "Kennesaw State Owls",
+      "opponent_id": "louisiana_tech_bulldogs",
+      "opponent_name": "Louisiana Tech Bulldogs",
+      "team_score": 59,
+      "opponent_score": 52
+    },
+    {
+      "game_id": "401851398",
+      "date": "2026-03-15",
+      "team_id": "uc_irvine_anteaters",
+      "team_name": "UC Irvine Anteaters",
+      "opponent_id": "hawai_i_rainbow_warriors",
+      "opponent_name": "Hawai'i Rainbow Warriors",
+      "team_score": 8,
+      "opponent_score": 11
+    },
+    {
+      "game_id": "401851398",
+      "date": "2026-03-15",
+      "team_id": "hawai_i_rainbow_warriors",
+      "team_name": "Hawai'i Rainbow Warriors",
+      "opponent_id": "uc_irvine_anteaters",
+      "opponent_name": "UC Irvine Anteaters",
+      "team_score": 11,
+      "opponent_score": 8
+    },
+    {
+      "game_id": "401851306",
+      "date": "2026-03-14",
+      "team_id": "arizona",
+      "team_name": "Arizona Wildcats",
+      "opponent_id": "houston",
+      "opponent_name": "Houston Cougars",
+      "team_score": 79,
+      "opponent_score": 74
+    },
+    {
+      "game_id": "401851306",
+      "date": "2026-03-14",
+      "team_id": "houston",
+      "team_name": "Houston Cougars",
+      "opponent_id": "arizona",
+      "opponent_name": "Arizona Wildcats",
+      "team_score": 74,
+      "opponent_score": 79
+    },
+    {
+      "game_id": "401851384",
+      "date": "2026-03-14",
+      "team_id": "michigan_wolverines",
+      "team_name": "Michigan Wolverines",
+      "opponent_id": "wisconsin_badgers",
+      "opponent_name": "Wisconsin Badgers",
+      "team_score": 68,
+      "opponent_score": 65
+    },
+    {
+      "game_id": "401851384",
+      "date": "2026-03-14",
+      "team_id": "wisconsin_badgers",
+      "team_name": "Wisconsin Badgers",
+      "opponent_id": "michigan_wolverines",
+      "opponent_name": "Michigan Wolverines",
+      "team_score": 65,
+      "opponent_score": 68
+    },
+    {
+      "game_id": "401851569",
+      "date": "2026-03-14",
+      "team_id": "florida",
+      "team_name": "Florida Gators",
+      "opponent_id": "vanderbilt_commodores",
+      "opponent_name": "Vanderbilt Commodores",
+      "team_score": 74,
+      "opponent_score": 91
+    },
+    {
+      "game_id": "401851569",
+      "date": "2026-03-14",
+      "team_id": "vanderbilt_commodores",
+      "team_name": "Vanderbilt Commodores",
+      "opponent_id": "florida",
+      "opponent_name": "Florida Gators",
+      "team_score": 91,
+      "opponent_score": 74
+    },
+    {
+      "game_id": "401851317",
+      "date": "2026-03-14",
+      "team_id": "st_john_s_red_storm",
+      "team_name": "St. John's Red Storm",
+      "opponent_id": "uconn_huskies",
+      "opponent_name": "UConn Huskies",
+      "team_score": 72,
+      "opponent_score": 52
+    },
+    {
+      "game_id": "401851317",
+      "date": "2026-03-14",
+      "team_id": "uconn_huskies",
+      "team_name": "UConn Huskies",
+      "opponent_id": "st_john_s_red_storm",
+      "opponent_name": "St. John's Red Storm",
+      "team_score": 52,
+      "opponent_score": 72
+    },
+    {
+      "game_id": "401851570",
+      "date": "2026-03-14",
+      "team_id": "arkansas_razorbacks",
+      "team_name": "Arkansas Razorbacks",
+      "opponent_id": "ole_miss_rebels",
+      "opponent_name": "Ole Miss Rebels",
+      "team_score": 93,
+      "opponent_score": 90
+    },
+    {
+      "game_id": "401851570",
+      "date": "2026-03-14",
+      "team_id": "ole_miss_rebels",
+      "team_name": "Ole Miss Rebels",
+      "opponent_id": "arkansas_razorbacks",
+      "opponent_name": "Arkansas Razorbacks",
+      "team_score": 90,
+      "opponent_score": 93
+    },
+    {
+      "game_id": "401851386",
+      "date": "2026-03-14",
+      "team_id": "ucla_bruins",
+      "team_name": "UCLA Bruins",
+      "opponent_id": "purdue",
+      "opponent_name": "Purdue Boilermakers",
+      "team_score": 66,
+      "opponent_score": 73
+    },
+    {
+      "game_id": "401851386",
+      "date": "2026-03-14",
+      "team_id": "purdue",
+      "team_name": "Purdue Boilermakers",
+      "opponent_id": "ucla_bruins",
+      "opponent_name": "UCLA Bruins",
+      "team_score": 73,
+      "opponent_score": 66
+    },
+    {
+      "game_id": "401851435",
+      "date": "2026-03-14",
+      "team_id": "yale_bulldogs",
+      "team_name": "Yale Bulldogs",
+      "opponent_id": "cornell_big_red",
+      "opponent_name": "Cornell Big Red",
+      "team_score": 88,
+      "opponent_score": 76
+    },
+    {
+      "game_id": "401851435",
+      "date": "2026-03-14",
+      "team_id": "cornell_big_red",
+      "team_name": "Cornell Big Red",
+      "opponent_id": "yale_bulldogs",
+      "opponent_name": "Yale Bulldogs",
+      "team_score": 76,
+      "opponent_score": 88
+    },
+    {
+      "game_id": "401851206",
+      "date": "2026-03-14",
+      "team_id": "umbc_retrievers",
+      "team_name": "UMBC Retrievers",
+      "opponent_id": "vermont_catamounts",
+      "opponent_name": "Vermont Catamounts",
+      "team_score": 74,
+      "opponent_score": 59
+    },
+    {
+      "game_id": "401851206",
+      "date": "2026-03-14",
+      "team_id": "vermont_catamounts",
+      "team_name": "Vermont Catamounts",
+      "opponent_id": "umbc_retrievers",
+      "opponent_name": "UMBC Retrievers",
+      "team_score": 59,
+      "opponent_score": 74
+    },
+    {
+      "game_id": "401851477",
+      "date": "2026-03-14",
+      "team_id": "howard_bison",
+      "team_name": "Howard Bison",
+      "opponent_id": "north_carolina_central_eagles",
+      "opponent_name": "North Carolina Central Eagles",
+      "team_score": 70,
+      "opponent_score": 63
+    },
+    {
+      "game_id": "401851477",
+      "date": "2026-03-14",
+      "team_id": "north_carolina_central_eagles",
+      "team_name": "North Carolina Central Eagles",
+      "opponent_id": "howard_bison",
+      "opponent_name": "Howard Bison",
+      "team_score": 63,
+      "opponent_score": 70
+    },
+    {
+      "game_id": "401851275",
+      "date": "2026-03-14",
+      "team_id": "saint_louis_billikens",
+      "team_name": "Saint Louis Billikens",
+      "opponent_id": "dayton_flyers",
+      "opponent_name": "Dayton Flyers",
+      "team_score": 69,
+      "opponent_score": 70
+    },
+    {
+      "game_id": "401851275",
+      "date": "2026-03-14",
+      "team_id": "dayton_flyers",
+      "team_name": "Dayton Flyers",
+      "opponent_id": "saint_louis_billikens",
+      "opponent_name": "Saint Louis Billikens",
+      "team_score": 70,
+      "opponent_score": 69
+    },
+    {
+      "game_id": "401851436",
+      "date": "2026-03-14",
+      "team_id": "harvard_crimson",
+      "team_name": "Harvard Crimson",
+      "opponent_id": "pennsylvania_quakers",
+      "opponent_name": "Pennsylvania Quakers",
+      "team_score": 60,
+      "opponent_score": 62
+    },
+    {
+      "game_id": "401851436",
+      "date": "2026-03-14",
+      "team_id": "pennsylvania_quakers",
+      "team_name": "Pennsylvania Quakers",
+      "opponent_id": "harvard_crimson",
+      "opponent_name": "Harvard Crimson",
+      "team_score": 62,
+      "opponent_score": 60
+    },
+    {
+      "game_id": "401851227",
+      "date": "2026-03-14",
+      "team_id": "south_florida_bulls",
+      "team_name": "South Florida Bulls",
+      "opponent_id": "charlotte_49ers",
+      "opponent_name": "Charlotte 49ers",
+      "team_score": 86,
+      "opponent_score": 64
+    },
+    {
+      "game_id": "401851227",
+      "date": "2026-03-14",
+      "team_id": "charlotte_49ers",
+      "team_name": "Charlotte 49ers",
+      "opponent_id": "south_florida_bulls",
+      "opponent_name": "South Florida Bulls",
+      "team_score": 64,
+      "opponent_score": 86
+    },
+    {
+      "game_id": "401851276",
+      "date": "2026-03-14",
+      "team_id": "vcu_rams",
+      "team_name": "VCU Rams",
+      "opponent_id": "saint_joseph_s_hawks",
+      "opponent_name": "Saint Joseph's Hawks",
+      "team_score": 77,
+      "opponent_score": 64
+    },
+    {
+      "game_id": "401851276",
+      "date": "2026-03-14",
+      "team_id": "saint_joseph_s_hawks",
+      "team_name": "Saint Joseph's Hawks",
+      "opponent_id": "vcu_rams",
+      "opponent_name": "VCU Rams",
+      "team_score": 64,
+      "opponent_score": 77
+    },
+    {
+      "game_id": "401851228",
+      "date": "2026-03-14",
+      "team_id": "wichita_state_shockers",
+      "team_name": "Wichita State Shockers",
+      "opponent_id": "tulsa_golden_hurricane",
+      "opponent_name": "Tulsa Golden Hurricane",
+      "team_score": 81,
+      "opponent_score": 68
+    },
+    {
+      "game_id": "401851228",
+      "date": "2026-03-14",
+      "team_id": "tulsa_golden_hurricane",
+      "team_name": "Tulsa Golden Hurricane",
+      "opponent_id": "wichita_state_shockers",
+      "opponent_name": "Wichita State Shockers",
+      "team_score": 68,
+      "opponent_score": 81
+    },
+    {
+      "game_id": "401851505",
+      "date": "2026-03-14",
+      "team_id": "utah_state_aggies",
+      "team_name": "Utah State Aggies",
+      "opponent_id": "san_diego_state",
+      "opponent_name": "San Diego State Aztecs",
+      "team_score": 73,
+      "opponent_score": 62
+    },
+    {
+      "game_id": "401851505",
+      "date": "2026-03-14",
+      "team_id": "san_diego_state",
+      "team_name": "San Diego State Aztecs",
+      "opponent_id": "utah_state_aggies",
+      "opponent_name": "Utah State Aggies",
+      "team_score": 62,
+      "opponent_score": 73
+    },
+    {
+      "game_id": "401851726",
+      "date": "2026-03-14",
+      "team_id": "southern_jaguars",
+      "team_name": "Southern Jaguars",
+      "opponent_id": "prairie_view_a_m_panthers",
+      "opponent_name": "Prairie View A&M Panthers",
+      "team_score": 66,
+      "opponent_score": 72
+    },
+    {
+      "game_id": "401851726",
+      "date": "2026-03-14",
+      "team_id": "prairie_view_a_m_panthers",
+      "team_name": "Prairie View A&M Panthers",
+      "opponent_id": "southern_jaguars",
+      "opponent_name": "Southern Jaguars",
+      "team_score": 72,
+      "opponent_score": 66
+    },
+    {
+      "game_id": "401858192",
+      "date": "2026-03-15",
+      "team_id": "akron_zips",
+      "team_name": "Akron Zips",
+      "opponent_id": "toledo_rockets",
+      "opponent_name": "Toledo Rockets",
+      "team_score": 79,
+      "opponent_score": 76
+    },
+    {
+      "game_id": "401858192",
+      "date": "2026-03-15",
+      "team_id": "toledo_rockets",
+      "team_name": "Toledo Rockets",
+      "opponent_id": "akron_zips",
+      "opponent_name": "Akron Zips",
+      "team_score": 76,
+      "opponent_score": 79
+    },
+    {
+      "game_id": "401851739",
+      "date": "2026-03-15",
+      "team_id": "utah_valley_wolverines",
+      "team_name": "Utah Valley Wolverines",
+      "opponent_id": "california_baptist_lancers",
+      "opponent_name": "California Baptist Lancers",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401851739",
+      "date": "2026-03-15",
+      "team_id": "california_baptist_lancers",
+      "team_name": "California Baptist Lancers",
+      "opponent_id": "utah_valley_wolverines",
+      "opponent_name": "Utah Valley Wolverines",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401851437",
+      "date": "2026-03-15",
+      "team_id": "yale_bulldogs",
+      "team_name": "Yale Bulldogs",
+      "opponent_id": "pennsylvania_quakers",
+      "opponent_name": "Pennsylvania Quakers",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401851437",
+      "date": "2026-03-15",
+      "team_id": "pennsylvania_quakers",
+      "team_name": "Pennsylvania Quakers",
+      "opponent_id": "yale_bulldogs",
+      "opponent_name": "Yale Bulldogs",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401851571",
+      "date": "2026-03-15",
+      "team_id": "arkansas_razorbacks",
+      "team_name": "Arkansas Razorbacks",
+      "opponent_id": "vanderbilt_commodores",
+      "opponent_name": "Vanderbilt Commodores",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401851571",
+      "date": "2026-03-15",
+      "team_id": "vanderbilt_commodores",
+      "team_name": "Vanderbilt Commodores",
+      "opponent_id": "arkansas_razorbacks",
+      "opponent_name": "Arkansas Razorbacks",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401851277",
+      "date": "2026-03-15",
+      "team_id": "vcu_rams",
+      "team_name": "VCU Rams",
+      "opponent_id": "dayton_flyers",
+      "opponent_name": "Dayton Flyers",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401851277",
+      "date": "2026-03-15",
+      "team_id": "dayton_flyers",
+      "team_name": "Dayton Flyers",
+      "opponent_id": "vcu_rams",
+      "opponent_name": "VCU Rams",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401851229",
+      "date": "2026-03-15",
+      "team_id": "south_florida_bulls",
+      "team_name": "South Florida Bulls",
+      "opponent_id": "wichita_state_shockers",
+      "opponent_name": "Wichita State Shockers",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401851229",
+      "date": "2026-03-15",
+      "team_id": "wichita_state_shockers",
+      "team_name": "Wichita State Shockers",
+      "opponent_id": "south_florida_bulls",
+      "opponent_name": "South Florida Bulls",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401851388",
+      "date": "2026-03-15",
+      "team_id": "michigan_wolverines",
+      "team_name": "Michigan Wolverines",
+      "opponent_id": "purdue",
+      "opponent_name": "Purdue Boilermakers",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401851388",
+      "date": "2026-03-15",
+      "team_id": "purdue",
+      "team_name": "Purdue Boilermakers",
+      "opponent_id": "michigan_wolverines",
+      "opponent_name": "Michigan Wolverines",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856435",
+      "date": "2026-03-17",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856434",
+      "date": "2026-03-17",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858340",
+      "date": "2026-03-17",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858339",
+      "date": "2026-03-17",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858338",
+      "date": "2026-03-17",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858197",
+      "date": "2026-03-17",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858196",
+      "date": "2026-03-17",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858195",
+      "date": "2026-03-17",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858194",
+      "date": "2026-03-17",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858193",
+      "date": "2026-03-17",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856437",
+      "date": "2026-03-18",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856436",
+      "date": "2026-03-18",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858348",
+      "date": "2026-03-18",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858347",
+      "date": "2026-03-18",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858346",
+      "date": "2026-03-18",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858345",
+      "date": "2026-03-18",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858344",
+      "date": "2026-03-18",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858343",
+      "date": "2026-03-18",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858342",
+      "date": "2026-03-18",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858341",
+      "date": "2026-03-18",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856493",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856492",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856491",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856490",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856489",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856488",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856487",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856486",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856485",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856484",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856483",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856482",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856481",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856480",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856479",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856478",
+      "date": "2026-03-19",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856529",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856528",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856527",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856526",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856525",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856524",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856523",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856522",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856521",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856520",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856519",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856518",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856497",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856496",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856495",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856494",
+      "date": "2026-03-20",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856537",
+      "date": "2026-03-21",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856536",
+      "date": "2026-03-21",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856535",
+      "date": "2026-03-21",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856534",
+      "date": "2026-03-21",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856533",
+      "date": "2026-03-21",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856532",
+      "date": "2026-03-21",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856531",
+      "date": "2026-03-21",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856530",
+      "date": "2026-03-21",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858352",
+      "date": "2026-03-21",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858351",
+      "date": "2026-03-21",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858350",
+      "date": "2026-03-21",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858349",
+      "date": "2026-03-21",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856565",
+      "date": "2026-03-22",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856564",
+      "date": "2026-03-22",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856563",
+      "date": "2026-03-22",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856562",
+      "date": "2026-03-22",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856561",
+      "date": "2026-03-22",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856560",
+      "date": "2026-03-22",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856559",
+      "date": "2026-03-22",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856558",
+      "date": "2026-03-22",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858356",
+      "date": "2026-03-22",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858355",
+      "date": "2026-03-22",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858354",
+      "date": "2026-03-22",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858353",
+      "date": "2026-03-22",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858357",
+      "date": "2026-03-24",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858358",
+      "date": "2026-03-25",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858359",
+      "date": "2026-03-25",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858360",
+      "date": "2026-03-26",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856569",
+      "date": "2026-03-26",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856568",
+      "date": "2026-03-26",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856567",
+      "date": "2026-03-26",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856566",
+      "date": "2026-03-26",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856573",
+      "date": "2026-03-27",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856572",
+      "date": "2026-03-27",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856571",
+      "date": "2026-03-27",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856570",
+      "date": "2026-03-27",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856575",
+      "date": "2026-03-28",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856574",
+      "date": "2026-03-28",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856577",
+      "date": "2026-03-29",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856576",
+      "date": "2026-03-29",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858379",
+      "date": "2026-04-02",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858380",
+      "date": "2026-04-02",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858381",
+      "date": "2026-04-03",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858382",
+      "date": "2026-04-03",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858361",
+      "date": "2026-04-02",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858362",
+      "date": "2026-04-03",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858383",
+      "date": "2026-04-04",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858384",
+      "date": "2026-04-04",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856599",
+      "date": "2026-04-04",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856598",
+      "date": "2026-04-04",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858385",
+      "date": "2026-04-05",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401858363",
+      "date": "2026-04-06",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
+    },
+    {
+      "game_id": "401856600",
+      "date": "2026-04-06",
+      "team_id": "tbd",
+      "team_name": "TBD",
+      "opponent_id": "tbd",
+      "opponent_name": "TBD",
+      "team_score": 0,
+      "opponent_score": 0
     }
   ]
 }

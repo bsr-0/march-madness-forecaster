@@ -204,11 +204,11 @@
     "ft_pct": 0.6952
   },
   "tulsa": {
-    "three_pt_pct": 0.3945,
-    "ft_pct": 0.7853
+    "three_pt_pct": 0.3943,
+    "ft_pct": 0.7829
   },
   "prairie_view_a_m": {
-    "three_pt_pct": 0.326,
+    "three_pt_pct": 0.3316,
     "ft_pct": 0.7516
   },
   "texas": {
@@ -280,8 +280,8 @@
     "ft_pct": 0.686
   },
   "southern": {
-    "three_pt_pct": 0.3505,
-    "ft_pct": 0.6923
+    "three_pt_pct": 0.3478,
+    "ft_pct": 0.6948
   },
   "montana": {
     "three_pt_pct": 0.3658,
@@ -292,8 +292,8 @@
     "ft_pct": 0.74
   },
   "san_diego_st": {
-    "three_pt_pct": 0.346,
-    "ft_pct": 0.7312
+    "three_pt_pct": 0.3452,
+    "ft_pct": 0.7304
   },
   "maryland_eastern_shore": {
     "three_pt_pct": 0.29,
@@ -412,8 +412,8 @@
     "ft_pct": 0.7857
   },
   "connecticut": {
-    "three_pt_pct": 0.3567,
-    "ft_pct": 0.714
+    "three_pt_pct": 0.352,
+    "ft_pct": 0.7157
   },
   "utep": {
     "three_pt_pct": 0.3392,
@@ -428,8 +428,8 @@
     "ft_pct": 0.6429
   },
   "vcu": {
-    "three_pt_pct": 0.3652,
-    "ft_pct": 0.7398
+    "three_pt_pct": 0.3643,
+    "ft_pct": 0.7405
   },
   "utah_valley": {
     "three_pt_pct": 0.3388,
@@ -440,8 +440,8 @@
     "ft_pct": 0.7639
   },
   "arkansas": {
-    "three_pt_pct": 0.3825,
-    "ft_pct": 0.7473
+    "three_pt_pct": 0.3807,
+    "ft_pct": 0.7471
   },
   "loyola_chicago": {
     "three_pt_pct": 0.317,
@@ -481,7 +481,7 @@
   },
   "jr": {
     "three_pt_pct": 0.0156,
-    "ft_pct": 0.337
+    "ft_pct": 0.3369
   },
   "south_alabama": {
     "three_pt_pct": 0.3447,
@@ -520,8 +520,8 @@
     "ft_pct": 0.7086
   },
   "saint_joseph_s": {
-    "three_pt_pct": 0.3061,
-    "ft_pct": 0.7441
+    "three_pt_pct": 0.3078,
+    "ft_pct": 0.7411
   },
   "east_carolina": {
     "three_pt_pct": 0.2932,
@@ -664,8 +664,8 @@
     "ft_pct": 0.6595
   },
   "purdue": {
-    "three_pt_pct": 0.3816,
-    "ft_pct": 0.7455
+    "three_pt_pct": 0.3808,
+    "ft_pct": 0.7435
   },
   "south_dakota": {
     "three_pt_pct": 0.3235,
@@ -736,8 +736,8 @@
     "ft_pct": 0.6797
   },
   "mississippi": {
-    "three_pt_pct": 0.3324,
-    "ft_pct": 0.7485
+    "three_pt_pct": 0.3316,
+    "ft_pct": 0.7493
   },
   "old_dominion": {
     "three_pt_pct": 0.3598,
@@ -760,8 +760,8 @@
     "ft_pct": 0.6941
   },
   "wichita_st": {
-    "three_pt_pct": 0.3339,
-    "ft_pct": 0.6877
+    "three_pt_pct": 0.3389,
+    "ft_pct": 0.6886
   },
   "uab": {
     "three_pt_pct": 0.2781,
@@ -788,8 +788,8 @@
     "ft_pct": 0.7287
   },
   "charlotte": {
-    "three_pt_pct": 0.356,
-    "ft_pct": 0.7172
+    "three_pt_pct": 0.3519,
+    "ft_pct": 0.7156
   },
   "seattle": {
     "three_pt_pct": 0.326,
@@ -848,8 +848,8 @@
     "ft_pct": 0.755
   },
   "houston": {
-    "three_pt_pct": 0.3485,
-    "ft_pct": 0.7731
+    "three_pt_pct": 0.3493,
+    "ft_pct": 0.7717
   },
   "north_carolina_a_t": {
     "three_pt_pct": 0.3157,
@@ -940,12 +940,12 @@
     "ft_pct": 0.7686
   },
   "st_john_s": {
-    "three_pt_pct": 0.3348,
-    "ft_pct": 0.7267
+    "three_pt_pct": 0.3324,
+    "ft_pct": 0.7275
   },
   "south_florida": {
-    "three_pt_pct": 0.3299,
-    "ft_pct": 0.7419
+    "three_pt_pct": 0.3326,
+    "ft_pct": 0.7423
   },
   "central_arkansas": {
     "three_pt_pct": 0.3547,
@@ -996,8 +996,8 @@
     "ft_pct": 0.7858
   },
   "arizona": {
-    "three_pt_pct": 0.3579,
-    "ft_pct": 0.7302
+    "three_pt_pct": 0.3604,
+    "ft_pct": 0.7339
   },
   "nebraska_omaha": {
     "three_pt_pct": 0.3402,
@@ -1012,8 +1012,8 @@
     "ft_pct": 0.75
   },
   "utah_st": {
-    "three_pt_pct": 0.3526,
-    "ft_pct": 0.7092
+    "three_pt_pct": 0.3508,
+    "ft_pct": 0.7062
   },
   "bucknell": {
     "three_pt_pct": 0.3064,
@@ -1032,8 +1032,8 @@
     "ft_pct": 0.7295
   },
   "akron": {
-    "three_pt_pct": 0.3885,
-    "ft_pct": 0.7592
+    "three_pt_pct": 0.385,
+    "ft_pct": 0.7526
   },
   "fairleigh_dickinson": {
     "three_pt_pct": 0.3026,
@@ -1224,8 +1224,8 @@
     "ft_pct": 0.6914
   },
   "ucla": {
-    "three_pt_pct": 0.3829,
-    "ft_pct": 0.7659
+    "three_pt_pct": 0.382,
+    "ft_pct": 0.7668
   },
   "ut_rio_grande_valley": {
     "three_pt_pct": 0.3676,
@@ -1344,8 +1344,8 @@
     "ft_pct": 0.7018
   },
   "toledo": {
-    "three_pt_pct": 0.3695,
-    "ft_pct": 0.7504
+    "three_pt_pct": 0.3713,
+    "ft_pct": 0.7509
   },
   "virginia_tech": {
     "three_pt_pct": 0.3554,
