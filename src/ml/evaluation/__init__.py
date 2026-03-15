@@ -26,6 +26,20 @@ from .evaluation_integrity import (
     require_freeze_for_season,
 )
 
+# Phase 4: Decision-Moment Validation Protocol
+# Lazy import to avoid circular dependencies — use phase4_integration module
+# for explicit imports, or access via src.evaluation directly.
+try:
+    from .phase4_integration import (
+        SelectionSundayBacktester,
+        CalibrationGate,
+        EvaluationReport,
+        compute_round_analysis,
+    )
+    _PHASE4_AVAILABLE = True
+except ImportError:
+    _PHASE4_AVAILABLE = False
+
 __all__ = [
     "FeatureAblator",
     "LOYOFoldResult",
@@ -48,4 +62,9 @@ __all__ = [
     "compute_probability_metrics",
     "compute_upset_metrics",
     "require_freeze_for_season",
+    # Phase 4 (if available)
+    "SelectionSundayBacktester",
+    "CalibrationGate",
+    "EvaluationReport",
+    "compute_round_analysis",
 ]

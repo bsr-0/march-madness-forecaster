@@ -341,8 +341,84 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             }
             return calibration_info
 
-    # Fit temperature scaling on the fitting portion (70% or all).
-    pipeline.calibration_pipeline = CalibrationPipeline(method=pipeline.config.calibration_method)
+    # Phase 5: Auto-select best calibration method via temporal benchmarking.
+    _auto_selection_info = {}
+    effective_calibration_method = pipeline.config.calibration_method
+    if pipeline.config.calibration_method == "auto":
+        try:
+            from ...evaluation.calibration_benchmark import (
+                CalibrationBenchmark,
+                select_best_calibration,
+            )
+            from ...evaluation.calibration_methods import get_all_calibration_models
+
+            benchmark = CalibrationBenchmark(
+                methods=get_all_calibration_models(),
+                n_bootstrap=500,
+                selection_metric="log_loss",
+            )
+            # Build yearly data from fit/eval splits for benchmarking.
+            # Use a simple 2-fold temporal split of the available calibration data.
+            n_fit = len(p_fit)
+            if n_fit >= 40:
+                half = n_fit // 2
+                yearly_preds = {1: p_fit[:half], 2: p_fit[half:]}
+                yearly_outs = {1: y_fit[:half], 2: y_fit[half:]}
+                agg = benchmark.run_temporal_benchmark(
+                    yearly_preds, yearly_outs,
+                    random_seed=getattr(pipeline.config, "random_seed", 42),
+                )
+                selection = select_best_calibration(agg)
+                # Map Phase 5 method names to CalibrationPipeline method names
+                method_map = {
+                    "temperature_scaling": "temperature",
+                    "logistic_calibration": "platt",
+                    "isotonic_regression": "isotonic",
+                    "beta_calibration": "temperature",  # fallback: no native beta in CalibrationPipeline
+                }
+                effective_calibration_method = method_map.get(
+                    selection.chosen_method, "temperature"
+                )
+                _auto_selection_info = {
+                    "auto_selected_method": selection.chosen_method,
+                    "auto_mapped_to": effective_calibration_method,
+                    "auto_selection_metric": selection.selection_metric,
+                    "auto_secondary_metrics": selection.secondary_metrics,
+                }
+                logger.info(
+                    "Phase 5 auto-calibration: selected '%s' (mapped to '%s') "
+                    "via temporal benchmark (log_loss=%.4f)",
+                    selection.chosen_method,
+                    effective_calibration_method,
+                    selection.secondary_metrics.get("log_loss", 0.0),
+                )
+            else:
+                effective_calibration_method = "temperature"
+                _auto_selection_info = {
+                    "auto_selected_method": "temperature_scaling",
+                    "auto_mapped_to": "temperature",
+                    "auto_fallback_reason": f"insufficient samples ({n_fit}) for benchmark",
+                }
+                logger.info(
+                    "Phase 5 auto-calibration: insufficient samples (%d) for "
+                    "benchmark, defaulting to temperature scaling.",
+                    n_fit,
+                )
+        except Exception as e:
+            effective_calibration_method = "temperature"
+            _auto_selection_info = {
+                "auto_selected_method": "temperature_scaling",
+                "auto_mapped_to": "temperature",
+                "auto_fallback_reason": f"benchmark error: {e}",
+            }
+            logger.warning(
+                "Phase 5 auto-calibration benchmark failed (%s); "
+                "defaulting to temperature scaling.",
+                e,
+            )
+
+    # Fit calibration on the fitting portion (70% or all).
+    pipeline.calibration_pipeline = CalibrationPipeline(method=effective_calibration_method)
     pipeline.calibration_pipeline.fit(p_fit, y_fit)
 
     # FIX #3: Fit round-weighted Brier calibrator as secondary refinement.
@@ -547,9 +623,11 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     }
     if bootstrap_info:
         calibration_info.update(bootstrap_info)
+    if _auto_selection_info:
+        calibration_info.update(_auto_selection_info)
 
     # Add temperature value if using temperature scaling
-    if pipeline.config.calibration_method == "temperature" and hasattr(pipeline.calibration_pipeline.calibrator, "temperature"):
+    if effective_calibration_method == "temperature" and hasattr(pipeline.calibration_pipeline.calibrator, "temperature"):
         calibration_info["temperature"] = round(pipeline.calibration_pipeline.calibrator.temperature, 4)
 
     return calibration_info

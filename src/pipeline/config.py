@@ -304,7 +304,7 @@ class SOTAPipelineConfig:
     # disable them.  Set to the held-out year in LOYO validation.
     coach_data_cutoff_year: Optional[int] = None
 
-    calibration_method: str = "temperature"  # "temperature" (default, robust for small data), "isotonic", "platt", "none"
+    calibration_method: str = "temperature"  # "temperature" (default, robust for small data), "isotonic", "platt", "none", "auto" (Phase 5: benchmark and auto-select best method)
     scrape_live: bool = False
     data_cache_dir: str = "data/raw"
     injury_noise_samples: int = 10000
