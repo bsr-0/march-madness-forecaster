@@ -233,6 +233,13 @@ class SOTAPipelineConfig:
     num_simulations: int = 50000
     pool_size: int = 100
     random_seed: int = 2026
+
+    # --- Probability profile ---
+    # "production": strict 4-stage pipeline (raw → calibration → shrinkage → clip).
+    #   All experimental post-processing layers are forbidden.
+    # "experimental": allows all optional layers (seed overrides, sharpening,
+    #   goto_conversion, round-weighted calibration, seed prior, etc.)
+    probability_profile: str = "production"
     # Dev/holdout partition for RDoF control.
     # Default: dev=2016-2024, holdout=2025 (used for evaluation only).
     dev_years: Optional[List[int]] = field(default_factory=lambda: list(range(2016, 2025)))
@@ -597,7 +604,43 @@ class SOTAPipelineConfig:
     # Multi-agent orchestration (S2)
     use_agent_orchestration: bool = False
 
+    def validate_production_profile(self) -> None:
+        """Raise ValueError if production profile has forbidden layers enabled.
+
+        When probability_profile == "production", the pipeline must use only:
+            raw → one calibrator → shrinkage → clip
+        No seed overrides, sharpening, goto_conversion, round-weighted
+        calibration, seed prior, or consistency bonus.
+        """
+        if self.probability_profile != "production":
+            return
+        violations = []
+        if getattr(self, "enable_seed_overrides", False):
+            violations.append("enable_seed_overrides=True")
+        if getattr(self, "enable_brier_sharpening", False):
+            violations.append("enable_brier_sharpening=True")
+        if getattr(self, "enable_goto_conversion", False):
+            violations.append("enable_goto_conversion=True")
+        if getattr(self, "enable_round_weighted_calibration", False):
+            violations.append("enable_round_weighted_calibration=True")
+        if getattr(self, "seed_prior_weight", 0.0) > 0:
+            violations.append(f"seed_prior_weight={self.seed_prior_weight}")
+        if getattr(self, "consistency_bonus_max", 0.0) > 0:
+            violations.append(f"consistency_bonus_max={self.consistency_bonus_max}")
+        if violations:
+            raise ValueError(
+                f"Production probability profile forbids experimental layers. "
+                f"Violations: {', '.join(violations)}. "
+                f"Set probability_profile='experimental' to use these."
+            )
+
     def __post_init__(self):
+        if self.probability_profile not in ("production", "experimental"):
+            raise ValueError(
+                f"Invalid probability_profile '{self.probability_profile}': "
+                "must be 'production' or 'experimental'"
+            )
+        self.validate_production_profile()
         if self.mode not in ("calibration", "ev"):
             raise ValueError(f"Invalid mode '{self.mode}': must be 'calibration' or 'ev'")
         if self.mode == "ev":
