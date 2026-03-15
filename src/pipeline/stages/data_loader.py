@@ -713,14 +713,91 @@ def load_team_stat_sources(
                 if stripped_clean != stripped:
                     _torvik_name_to_id[normalize_key(_team_id(stripped_clean))] = canon
 
-    # CBBpy→Torvik alias overrides
-    _cbbpy_torvik_aliases = {
-        "mcneese": "mcneese_state",
+    # --- Systematic alias expansion ---
+    # 1. Generate "state" <-> "st" variants for all torvik keys.
+    #    Torvik uses abbreviated forms (iowa_st) while bracket/normalize
+    #    produces full forms (iowa_state).  Generate both directions.
+    _state_aliases: Dict[str, str] = {}
+    for key, canon in list(_torvik_name_to_id.items()):
+        if key.endswith("_st") and key + "ate" not in _torvik_name_to_id:
+            _state_aliases[key + "ate"] = canon
+        elif key.endswith("_state") and key[:-3] not in _torvik_name_to_id:
+            _state_aliases[key[:-3]] = canon
+        # Handle "st_" prefix (e.g. st__john_s -> st_john_s)
+        if "_st_" in key:
+            alt = key.replace("_st_", "_state_")
+            if alt not in _torvik_name_to_id:
+                _state_aliases[alt] = canon
+        if "_state_" in key:
+            alt = key.replace("_state_", "_st_")
+            if alt not in _torvik_name_to_id:
+                _state_aliases[alt] = canon
+    _torvik_name_to_id.update(_state_aliases)
+
+    # 2. Collapse double underscores: miami__fl -> miami_fl and vice versa.
+    #    Bracket source uses double underscores for parenthetical qualifiers
+    #    while Torvik uses single underscores.
+    _dunder_aliases: Dict[str, str] = {}
+    for key, canon in list(_torvik_name_to_id.items()):
+        collapsed = re.sub(r"__+", "_", key)
+        if collapsed != key and collapsed not in _torvik_name_to_id:
+            _dunder_aliases[collapsed] = canon
+        expanded = key
+        for suffix in ("_fl", "_oh", "_ny", "_ca", "_pa", "_tx"):
+            if key.endswith(suffix) and not key.endswith("_" + suffix.lstrip("_")):
+                expanded = key[: -len(suffix)] + "_" + suffix.lstrip("_")
+                break
+        if expanded != key and expanded not in _torvik_name_to_id:
+            _dunder_aliases[expanded] = canon
+    _torvik_name_to_id.update(_dunder_aliases)
+
+    # 3. Explicit alias overrides for teams whose names differ
+    #    structurally (abbreviations, nicknames, full names).
+    #    Format: bracket_normalized_key → torvik_key
+    _explicit_aliases: Dict[str, str] = {
+        # Full-name ↔ abbreviation mismatches
+        "brigham_young": "byu",
+        "southern_methodist": "smu",
+        "virginia_commonwealth": "vcu",
+        "maryland_baltimore_county": "umbc",
+        "long_island_university": "liu",
+        # NC State special form
+        "nc_state": "n_c__state",
+        "n_c_state": "n_c__state",
+        # Cal State forms
+        "cal_state_northridge": "cal_st__northridge",
+        "cal_state_fullerton": "cal_st__fullerton",
+        "cal_state_bakersfield": "cal_st__bakersfield",
+        # Mount/Mt variations
+        "mount_st_mary_s": "mount_st__mary_s",
+        # CBBpy legacy aliases
+        "mcneese": "mcneese_st",
         "american_university": "american",
+        # Additional common forms
+        "uc_san_diego": "ucsd",
+        "uc_davis": "uc_davis",
+        "uc_irvine": "uc_irvine",
+        "uc_riverside": "uc_riverside",
+        "uc_santa_barbara": "uc_santa_barbara",
+        "william_and_mary": "william___mary",
+        "william_mary": "william___mary",
+        "texas_a_and_m": "texas_a_m",
+        "texas_a_m_corpus_christi": "texas_a_m_corpus_christi",
     }
-    for alias, target in _cbbpy_torvik_aliases.items():
+    for alias, target in _explicit_aliases.items():
         if target in _torvik_name_to_id:
             _torvik_name_to_id[alias] = _torvik_name_to_id[target]
+        elif target in {v for v in _torvik_name_to_id.values()}:
+            _torvik_name_to_id[alias] = target
+        else:
+            # Target is a raw torvik key; register it directly
+            _torvik_name_to_id[alias] = target
+
+    # 4. Apply the same aliases to torvik_index so that the team.name
+    #    lookup at line ~751 also resolves.
+    for alias, canon in _torvik_name_to_id.items():
+        if alias not in torvik_index and canon in torvik_index:
+            torvik_index[alias] = torvik_index[canon]
 
     _torvik_id_set = set(_torvik_name_to_id.values())
 

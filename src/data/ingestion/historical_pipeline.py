@@ -207,7 +207,9 @@ class HistoricalDataPipeline:
         for day in self._season_dates(season):
             day_str = day.isoformat()
             try:
-                ids = scraper.get_game_ids(day_str)
+                # Use lightweight ESPN API instead of cbbpy's get_game_ids
+                # which calls requests.get() with no timeout.
+                ids = self._scrape_game_ids_for_date(day_str)
             except Exception:
                 continue
             for game_id in ids:
@@ -273,8 +275,17 @@ class HistoricalDataPipeline:
         return out, "cbbpy"
 
     def _collect_season_games_fast(self, season: int, scraper) -> Optional[Dict]:
+        # cbbpy's get_games_season iterates day-by-day internally with no
+        # HTTP timeout and spawns joblib workers per game.  Wrap in a
+        # thread-based timeout so it cannot hang indefinitely.
+        _timeout = 600  # 10 minutes — this fetches full box scores
         try:
-            games_tuple = scraper.get_games_season(season, info=True, box=True, pbp=False)
+            games_tuple = self._run_with_timeout(
+                scraper.get_games_season,
+                args=(season,),
+                kwargs={"info": True, "box": True, "pbp": False},
+                timeout=_timeout,
+            )
         except TypeError:
             try:
                 # Older cbbpy versions may not accept keyword args; the
@@ -285,9 +296,16 @@ class HistoricalDataPipeline:
                     "Dates may be missing if info DataFrame is not returned.",
                     season,
                 )
-                games_tuple = scraper.get_games_season(season)
+                games_tuple = self._run_with_timeout(
+                    scraper.get_games_season, args=(season,), timeout=_timeout,
+                )
             except Exception:
                 return None
+        except TimeoutError:
+            logger.warning(
+                "Season %d: get_games_season timed out after %ds", season, _timeout,
+            )
+            return None
         except Exception:
             return None
 
@@ -802,57 +820,78 @@ class HistoricalDataPipeline:
 
         return results
 
+    @staticmethod
+    def _scrape_game_ids_for_date(day_str: str, http_timeout: int = 15) -> List[str]:
+        """Lightweight ESPN API call for game IDs on a single date.
+
+        Bypasses cbbpy entirely to avoid its ``requests.get()`` with no
+        timeout and ``Parallel(n_jobs=...)`` full-game-fetch overhead.
+        Only returns game IDs — no box-scores, no play-by-play.
+        """
+        import requests
+
+        d = day_str.replace("-", "")
+        api_url = (
+            f"https://site.api.espn.com/apis/site/v2/sports/basketball/"
+            f"mens-college-basketball/scoreboard?dates={d}&groups=50&limit=200"
+        )
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+        }
+        resp = requests.get(api_url, headers=headers, timeout=http_timeout)
+        resp.raise_for_status()
+        data = resp.json()
+        events = data.get("events", [])
+        return [str(e["id"]) for e in events if "id" in e]
+
     def _fetch_date_map_for_season(
         self,
         season: int,
         scraper,
         force_slow: bool = False,
     ) -> Dict[str, str]:
-        """Return {game_id: 'YYYY-MM-DD'} for all games in a season."""
+        """Return {game_id: 'YYYY-MM-DD'} for all games in a season.
+
+        Uses lightweight direct ESPN API calls per day instead of cbbpy's
+        ``get_games_season`` (which fetches full game data and hangs on
+        ESPN HTTP requests that have no timeout).
+        """
         game_date_map: Dict[str, str] = {}
-
-        # Try fast path first: info DataFrame from get_games_season
-        if not force_slow:
-            try:
-                games_tuple = scraper.get_games_season(
-                    season, info=True, box=False, pbp=False,
-                )
-                if isinstance(games_tuple, tuple) and len(games_tuple) > 0:
-                    info_df = games_tuple[0]
-                    if hasattr(info_df, "iterrows") and not getattr(info_df, "empty", True):
-                        for _, row in info_df.iterrows():
-                            gid = str(row.get("game_id", "")).strip()
-                            raw_day = str(row.get("game_day", "")).strip()
-                            if gid and raw_day:
-                                try:
-                                    parsed = datetime.strptime(raw_day, "%B %d, %Y")
-                                    game_date_map[gid] = parsed.strftime("%Y-%m-%d")
-                                except ValueError:
-                                    pass
-            except Exception as exc:
-                logger.warning("Fast date fetch failed for season %d: %s", season, exc)
-
-        if game_date_map and not force_slow:
-            logger.info(
-                "Season %d: extracted %d dates via fast path", season, len(game_date_map),
-            )
-            return game_date_map
-
-        # Slow path: iterate day-by-day
-        logger.info("Season %d: falling back to slow day-by-day date fetch", season)
-        for day in self._season_dates(season):
-            day_str = day.isoformat()
-            try:
-                ids = scraper.get_game_ids(day_str)
-            except Exception:
-                continue
-            for game_id in ids:
-                gid = str(game_id).strip()
-                if gid and gid not in game_date_map:
-                    game_date_map[gid] = day_str
+        days = list(self._season_dates(season))
+        skipped = 0
 
         logger.info(
-            "Season %d: extracted %d dates via slow path", season, len(game_date_map),
+            "Season %d: fetching game IDs for %d days via ESPN API",
+            season, len(days),
+        )
+        for i, day in enumerate(days):
+            day_str = day.isoformat()
+            try:
+                ids = self._scrape_game_ids_for_date(day_str)
+            except Exception as exc:
+                logger.debug("Failed to fetch IDs for %s: %s", day_str, exc)
+                skipped += 1
+                continue
+            for gid in ids:
+                gid = str(gid).strip()
+                if gid and gid not in game_date_map:
+                    game_date_map[gid] = day_str
+            if (i + 1) % 20 == 0 or i + 1 == len(days):
+                logger.info(
+                    "  ... %d/%d days processed, %d game IDs so far",
+                    i + 1, len(days), len(game_date_map),
+                )
+
+        if skipped:
+            logger.warning(
+                "Season %d: skipped %d days due to errors", season, skipped,
+            )
+        logger.info(
+            "Season %d: extracted %d game-date mappings", season, len(game_date_map),
         )
         return game_date_map
 
@@ -897,3 +936,24 @@ class HistoricalDataPipeline:
         finally:
             signal.alarm(0)
             signal.signal(signal.SIGALRM, previous_handler)
+
+    @staticmethod
+    def _run_with_timeout(fn, args=(), kwargs=None, timeout=120):
+        """Run *fn* in a thread and raise ``TimeoutError`` if it exceeds *timeout* seconds.
+
+        Unlike ``signal.alarm``, this works regardless of which thread we're
+        called from and can interrupt cbbpy's blocking ``requests.get()``
+        calls that have no built-in timeout.
+        """
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+
+        kwargs = kwargs or {}
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(fn, *args, **kwargs)
+            try:
+                return future.result(timeout=timeout)
+            except FuturesTimeout:
+                raise TimeoutError(
+                    f"{fn.__name__ if hasattr(fn, '__name__') else fn} "
+                    f"timed out after {timeout}s"
+                )
