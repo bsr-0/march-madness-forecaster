@@ -259,10 +259,12 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
 
     if _n_historical_tourney_cal >= 30 and _n_current_year_cal >= 10:
         # BEST: Fit on historical tournament data, evaluate on current year.
-        # Historical tournament predictions are at the START of the arrays
-        # (they were appended first via calibration_games, but actually
-        # current-year comes first, then historical).  The historical
-        # tournament data was appended AFTER current-year validation data.
+        # Array layout: current-year validation samples are appended first
+        # (lines 104-119), then historical tournament samples (lines 145-188).
+        assert len(p_arr) == _n_current_year_cal + _n_historical_tourney_cal, (
+            f"Calibration split mismatch: {len(p_arr)} != "
+            f"{_n_current_year_cal} + {_n_historical_tourney_cal}"
+        )
         p_fit = p_arr[_n_current_year_cal:]   # Historical tournament
         y_fit = y_arr[_n_current_year_cal:]
         p_eval = p_arr[:_n_current_year_cal]  # Current-year validation
