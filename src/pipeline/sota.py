@@ -1079,6 +1079,20 @@ class SOTAPipeline:
             include_tournament, prior_elo,
         )
 
+    def _load_year_tournament_samples_incremental(
+        self,
+        games_path: str,
+        metrics_path: str,
+        feature_dim: int,
+        year: int,
+        prior_elo: Optional[Dict[str, float]] = None,
+    ) -> Tuple[np.ndarray, np.ndarray, Dict[str, float]]:
+        """Load ONLY tournament games for a historical year."""
+        return _sl.load_year_tournament_samples_incremental(
+            self.config, games_path, metrics_path, feature_dim, year,
+            prior_elo,
+        )
+
     def _run_gnn(self, graph: ScheduleGraph) -> Dict:
         return _bt._run_gnn(self, graph)
 
