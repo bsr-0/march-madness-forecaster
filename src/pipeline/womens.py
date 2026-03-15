@@ -436,21 +436,38 @@ class WomensPipeline:
         X = np.array(X_train)
         y = np.array(y_train)
 
+        # FIX-TEMPORAL-WOMENS: Chronological train/val split so that
+        # StandardScaler is fitted on training data only, not the full
+        # dataset.  Training samples are in chronological order (loaded
+        # from historical games sorted by date), so we split at 80%.
+        n_total = len(y)
+        n_train = max(30, int(0.8 * n_total))
+        X_tr, X_val = X[:n_train], X[n_train:]
+        y_tr, y_val = y[:n_train], y[n_train:]
+
         # StandardScaler (aligned with men's pipeline)
+        # Fit on training split only, transform both
         if SCALER_AVAILABLE and self.config.enable_feature_scaling:
             self.scaler = StandardScaler()
-            X = self.scaler.fit_transform(X)
+            X_tr = self.scaler.fit_transform(X_tr)
+            if len(X_val) > 0:
+                X_val = self.scaler.transform(X_val)
 
         # Train logistic regression (simple, robust for this data size)
         if SKLEARN_AVAILABLE:
             self.model = LogisticRegression(
                 C=1.0, max_iter=500, solver='lbfgs'
             )
-            self.model.fit(X, y)
+            self.model.fit(X_tr, y_tr)
+            val_info = ""
+            if len(y_val) > 0:
+                val_acc = 100 * self.model.score(X_val, y_val)
+                val_info = f", val accuracy: {val_acc:.1f}%"
             logger.info(
                 "Trained women's logistic model on %d matchups "
-                "(train accuracy: %.1f%%, feature dim: %d)",
-                len(y), 100 * self.model.score(X, y), X.shape[1],
+                "(train accuracy: %.1f%%, feature dim: %d%s)",
+                len(y_tr), 100 * self.model.score(X_tr, y_tr), X_tr.shape[1],
+                val_info,
             )
         else:
             logger.warning("sklearn not available, using seed-only mode")

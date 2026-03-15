@@ -34,9 +34,11 @@ def run_pre_checks(pipeline) -> Optional[Dict]:
 
     Returns freeze_verification dict (or None).
     Sets pipeline._run_hasher, pipeline._dataset_hashes, pipeline._mc_calibration.
+    Also validates year-split policy and freeze-before-predict discipline.
     """
     _check_dataset_hashes(pipeline)
     _check_holdout_contamination(pipeline)
+    _validate_year_split_policy(pipeline)
 
     pipeline._mc_calibration = pipeline._load_mc_calibration()
 
@@ -53,6 +55,11 @@ def run_pre_checks(pipeline) -> Optional[Dict]:
         )
 
     freeze_verification = _check_freeze_requirement(pipeline)
+
+    # Phase 1 evaluation integrity: require freeze artifact before any
+    # bracket generation for the target season.
+    _check_freeze_for_season(pipeline, freeze_verification)
+
     _auto_detect_kaggle_dir(pipeline)
 
     return freeze_verification
@@ -105,6 +112,79 @@ def _check_holdout_contamination(pipeline) -> None:
             logger.warning(msg)
     except Exception as exc:
         logger.debug("Holdout contamination check skipped: %s", exc)
+
+
+def _validate_year_split_policy(pipeline) -> None:
+    """Validate that dev/holdout year split is consistent and non-overlapping.
+
+    Uses the evaluation_integrity.YearSplitPolicy to enforce hard boundaries.
+    Training years must be a subset of dev years.
+    """
+    try:
+        from ...ml.evaluation.evaluation_integrity import YearSplitPolicy
+        policy = YearSplitPolicy.from_config(pipeline.config)
+
+        # Verify training years are within the dev partition.
+        training_years = getattr(pipeline.config, "training_years", None) or []
+        if training_years:
+            policy.assert_dev_only(
+                list(training_years),
+                context="model training",
+            )
+
+        # Store the policy on the pipeline for downstream use.
+        pipeline._year_split_policy = policy
+        logger.info(
+            "Year split policy validated: dev=%s, holdout=%s",
+            sorted(policy.dev_years), sorted(policy.holdout_years),
+        )
+    except Exception as exc:
+        if pipeline.config.strict_leakage_mode:
+            raise DataRequirementError(
+                f"Year-split policy validation failed: {exc}"
+            ) from exc
+        logger.warning("Year-split policy validation failed: %s", exc)
+
+
+def _check_freeze_for_season(pipeline, freeze_verification: Optional[Dict]) -> None:
+    """Enforce freeze-before-predict discipline for the target season.
+
+    For 2026+ this is a hard requirement (already enforced above).
+    For earlier years in strict mode, log a warning if no freeze exists.
+    """
+    try:
+        from ...ml.evaluation.evaluation_integrity import require_freeze_for_season
+        if pipeline.config.require_freeze_file and freeze_verification:
+            # Already verified above — record the season-level gate result.
+            logger.info(
+                "Freeze-for-season gate PASSED for year %d (artifact: %s)",
+                pipeline.config.year,
+                pipeline.config.freeze_file,
+            )
+        elif pipeline.config.year >= 2026:
+            # Should not reach here (caught by earlier check), but belt-and-suspenders.
+            result = require_freeze_for_season(
+                pipeline.config.year,
+                pipeline.config,
+                strict=True,
+            )
+        else:
+            # Pre-2026: advisory only, do not block.
+            result = require_freeze_for_season(
+                pipeline.config.year,
+                pipeline.config,
+                strict=False,
+            )
+            if not result.get("verified"):
+                logger.info(
+                    "No freeze artifact for year %d (advisory). "
+                    "Evaluation results will be tagged as retrospective (Level 3).",
+                    pipeline.config.year,
+                )
+    except DataRequirementError:
+        raise
+    except Exception as exc:
+        logger.debug("Freeze-for-season check skipped: %s", exc)
 
 
 def _check_freeze_requirement(pipeline) -> Optional[Dict]:

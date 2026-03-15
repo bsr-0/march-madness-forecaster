@@ -71,9 +71,11 @@ class TestLOYOValidator:
     """Tests for the core LOYO validation engine."""
 
     def test_runs_all_folds(self):
-        """All years with data should produce fold results."""
-        data = {yr: _make_year_data(yr) for yr in LOYO_YEARS}
-        validator = LOYOValidator(years=LOYO_YEARS)
+        """All years with prior data should produce fold results."""
+        # Add years before 2018 so the earliest LOYO year has training data
+        all_years = [2016, 2017] + list(LOYO_YEARS)
+        data = {yr: _make_year_data(yr) for yr in all_years}
+        validator = LOYOValidator(years=list(LOYO_YEARS))
         result = validator.validate(data, _simple_train_fn, _simple_predict_fn)
 
         assert len(result.fold_results) == len(LOYO_YEARS)
@@ -81,26 +83,25 @@ class TestLOYOValidator:
             assert fold.held_out_year in LOYO_YEARS
 
     def test_held_out_year_excluded_from_training(self):
-        """Each fold must train on all years EXCEPT the held-out year."""
-        data = {yr: _make_year_data(yr, n_games=10) for yr in [2022, 2023, 2024]}
+        """Each fold must train on prior years only (rolling_window default)."""
+        data = {yr: _make_year_data(yr, n_games=10) for yr in [2021, 2022, 2023, 2024]}
 
-        train_years_seen = []
+        train_sizes = []
 
         def tracking_train(X, y, margins, names, weights):
-            # X rows = sum of all non-held-out years' games
-            train_years_seen.append(X.shape[0])
+            train_sizes.append(X.shape[0])
             return {"mean_y": float(y.mean())}
 
         validator = LOYOValidator(years=[2022, 2023, 2024])
         result = validator.validate(data, tracking_train, _simple_predict_fn)
 
-        # Each fold trains on 2 years × 10 games = 20 samples
-        for n_train in train_years_seen:
-            assert n_train == 20
+        # rolling_window: hold 2022 → train on 2021 (10), hold 2023 → train on 2021+2022 (20),
+        # hold 2024 → train on 2021+2022+2023 (30)
+        assert train_sizes == [10, 20, 30]
 
     def test_fold_metrics_computed(self):
         """Each fold should have Brier, log-loss, and accuracy."""
-        data = {2023: _make_year_data(2023), 2024: _make_year_data(2024)}
+        data = {yr: _make_year_data(yr) for yr in [2022, 2023, 2024]}
         validator = LOYOValidator(years=[2023, 2024])
         result = validator.validate(data, _simple_train_fn, _simple_predict_fn)
 
@@ -113,7 +114,7 @@ class TestLOYOValidator:
 
     def test_aggregate_metrics(self):
         """Mean and std Brier should be correctly aggregated."""
-        data = {yr: _make_year_data(yr) for yr in [2022, 2023, 2024]}
+        data = {yr: _make_year_data(yr) for yr in [2021, 2022, 2023, 2024]}
         validator = LOYOValidator(years=[2022, 2023, 2024])
         result = validator.validate(data, _simple_train_fn, _simple_predict_fn)
 
@@ -123,7 +124,7 @@ class TestLOYOValidator:
 
     def test_year_briers_dict(self):
         """year_briers should map held-out year to its Brier score."""
-        data = {yr: _make_year_data(yr) for yr in [2023, 2024]}
+        data = {yr: _make_year_data(yr) for yr in [2022, 2023, 2024]}
         validator = LOYOValidator(years=[2023, 2024])
         result = validator.validate(data, _simple_train_fn, _simple_predict_fn)
 
@@ -147,6 +148,13 @@ class TestLOYOValidator:
     def test_per_round_brier(self):
         """When round labels are provided, per-round Brier should be computed."""
         data = {
+            2022: {
+                "X": np.random.randn(20, 3),
+                "y": np.array([1.0, 0.0] * 10),
+                "margins": np.zeros(20),
+                "rounds": ["R64"] * 10 + ["R32"] * 10,
+                "feature_names": ["a", "b", "c"],
+            },
             2023: {
                 "X": np.random.randn(20, 3),
                 "y": np.array([1.0, 0.0] * 10),
@@ -231,7 +239,7 @@ class TestFeatureAblator:
         """A feature that doesn't improve Brier by >= 0.001 should be flagged."""
         ablator = FeatureAblator(min_improvement=0.001)
 
-        data = {yr: _make_year_data(yr, n_features=3) for yr in [2023, 2024]}
+        data = {yr: _make_year_data(yr, n_features=3) for yr in [2022, 2023, 2024]}
         validator = LOYOValidator(years=[2023, 2024])
 
         results = ablator.ablate_features(
@@ -269,7 +277,7 @@ class TestFeatureAblator:
         """When baseline_brier is provided, it should be used directly."""
         ablator = FeatureAblator(min_improvement=0.001)
 
-        data = {yr: _make_year_data(yr, n_features=2) for yr in [2023, 2024]}
+        data = {yr: _make_year_data(yr, n_features=2) for yr in [2022, 2023, 2024]}
         validator = LOYOValidator(years=[2023, 2024])
 
         results = ablator.ablate_features(

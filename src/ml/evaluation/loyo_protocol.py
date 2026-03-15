@@ -292,7 +292,8 @@ class LOYOValidator:
     """Leave-One-Year-Out cross-validation engine.
 
     For each held-out year:
-    1. Assemble training data from all OTHER years
+    1. Assemble training data from prior years (rolling_window) or
+       all other years (leave_one_out)
     2. Train the full pipeline (feature engineering + models + calibration)
     3. Predict on held-out tournament year
     4. Compute Brier score and other metrics
@@ -300,20 +301,42 @@ class LOYOValidator:
     This is the gold standard for tournament prediction validation
     because it simulates the actual prediction task: predict a tournament
     you haven't seen using only historical data.
+
+    temporal_mode controls which years are used for training:
+      - "rolling_window" (default): train on years < held_out_year only.
+        This is the temporally honest mode that prevents future leakage.
+      - "leave_one_out": train on all years except held_out_year.
+        DEPRECATED — includes future years in training, overstating
+        out-of-sample performance.  Use ProspectiveValidator or
+        rolling_window mode instead.
     """
 
     def __init__(
         self,
         years: Optional[List[int]] = None,
         round_weights: Optional[Dict[str, float]] = None,
+        temporal_mode: str = "rolling_window",
     ):
         """
         Args:
             years: Years to validate. Default: LOYO_YEARS
             round_weights: Optional Kaggle round weights for weighted Brier
+            temporal_mode: "rolling_window" (honest, default) or
+                "leave_one_out" (deprecated, includes future years)
         """
         self.years = years or list(LOYO_YEARS)
         self.round_weights = round_weights
+        self.temporal_mode = temporal_mode
+        if temporal_mode == "leave_one_out":
+            import warnings
+            warnings.warn(
+                "LOYOValidator(temporal_mode='leave_one_out') includes future "
+                "years in training folds, which overstates OOS performance. "
+                "Use temporal_mode='rolling_window' (default) or "
+                "ProspectiveValidator instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
     def validate(
         self,
@@ -357,7 +380,7 @@ class LOYOValidator:
 
             fold_start = time.time()
 
-            # Assemble training data (all years except held-out)
+            # Assemble training data
             X_trains = []
             y_trains = []
             m_trains = []
@@ -365,6 +388,9 @@ class LOYOValidator:
 
             for year, data in sorted(data_by_year.items()):
                 if year == held_out_year:
+                    continue
+                # Temporal guard: in rolling_window mode, only use past years
+                if self.temporal_mode == "rolling_window" and year > held_out_year:
                     continue
                 if "X" not in data or "y" not in data:
                     continue
@@ -510,6 +536,13 @@ class FeatureAblator:
     "Delete any feature or sub-model that does not improve the
     mean LOYO Brier score by at least 0.001. No exceptions for
     'cool' features."
+
+    TEMPORAL INTEGRITY NOTE: The ``loyo_validator`` passed to
+    ``ablate_features`` must use ``temporal_mode='rolling_window'``
+    (the default) to ensure ablation decisions are based on
+    temporally honest evaluation.  Using ``leave_one_out`` mode
+    would overstate feature value by including future years in
+    training folds.
     """
 
     def __init__(
