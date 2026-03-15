@@ -263,6 +263,13 @@ class SOTAPipelineConfig:
     # "experimental": allows all optional layers (seed overrides, sharpening,
     #   goto_conversion, round-weighted calibration, seed prior, etc.)
     probability_profile: str = "production"
+    # --- Pipeline mode (Phase 2: production simplification) ---
+    # "production": only sanctioned models/calibration may run.
+    # "experimental": archived or research components may run.
+    pipeline_mode: str = "production"
+    # Production stack identity (for auditing and freeze artifacts)
+    production_model_stack: str = "spread_logistic"
+    production_calibration: str = "temperature"
     # Dev/holdout partition for RDoF control.
     # Default: dev=2016-2019 and 2021-2024 (exclude 2020 COVID), holdout=2025.
     dev_years: Optional[List[int]] = field(default_factory=lambda: [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024])
@@ -451,13 +458,11 @@ class SOTAPipelineConfig:
     mc_calibration_json: Optional[str] = None  # Optional path to MC calibration artifact
 
     # --- Ensemble weights (fixed-weight average, no stacking) ---
-    # Gap #2: Ensemble weights — SpreadRegressor (MOV) gets highest weight.
-    # The "raddar" benchmark (dominant 2018-2024) predicts score margin first,
-    # then converts to probability.  Richer gradient from continuous target.
-    # MOV-first: spread=0.50 is the primary prediction path (increased from 0.40).
-    ensemble_lgb_weight: float = 0.15  # LightGBM classifier weight (reduced from 0.25)
-    ensemble_xgb_weight: float = 0.15  # XGBoost classifier weight
-    # spread gets 0.50 via _FIXED_WEIGHTS (increased from 0.40); logistic gets residual ~0.20
+    # Phase 2: In production mode, weights come from PRODUCTION_BASELINE.
+    # These weights are only used when pipeline_mode == "experimental".
+    # DEPRECATED for production use — retained for experimental mode only.
+    ensemble_lgb_weight: float = 0.15  # LightGBM classifier weight (experimental only)
+    ensemble_xgb_weight: float = 0.15  # XGBoost classifier weight (experimental only)
 
     # --- Symmetric training augmentation ---
     # For every game A vs B, create two training rows: one from A's perspective
@@ -506,6 +511,18 @@ class SOTAPipelineConfig:
     enable_gnn: bool = False
     enable_transformer: bool = False
     enable_embedding_projections: bool = False
+
+    # --- Experimental classifier toggles (Phase 2) ---
+    # These classifiers are removed from the production path.
+    # Set to True only in experimental mode for research.
+    experimental_enable_lgb_classifier: bool = False
+    experimental_enable_xgb_classifier: bool = False
+
+    # --- Admission gate thresholds (Phase 2) ---
+    # Hard gate for production promotion. All conditions must pass.
+    admission_min_mean_brier_improvement: float = 0.0
+    admission_min_fold_improvement_rate: float = 0.60
+    admission_max_calibration_degradation: float = 0.01
 
     # --- VIF multicollinearity pruning (Fix 11) ---
     enable_vif_pruning: bool = True
@@ -679,6 +696,13 @@ class SOTAPipelineConfig:
             return
 
         violations = []
+        # Phase 2: pipeline_mode must be "production" for locked path
+        if self.pipeline_mode != "production":
+            violations.append(f"pipeline_mode={self.pipeline_mode}")
+        if self.experimental_enable_lgb_classifier:
+            violations.append("experimental_enable_lgb_classifier=True")
+        if self.experimental_enable_xgb_classifier:
+            violations.append("experimental_enable_xgb_classifier=True")
         if self.model_complexity != "simple":
             violations.append(f"model_complexity={self.model_complexity}")
         if self.mode != "calibration":
@@ -720,6 +744,11 @@ class SOTAPipelineConfig:
             )
 
     def __post_init__(self):
+        if self.pipeline_mode not in ("production", "experimental"):
+            raise ValueError(
+                f"Invalid pipeline_mode '{self.pipeline_mode}': "
+                "must be 'production' or 'experimental'"
+            )
         if self.probability_profile not in ("production", "experimental"):
             raise ValueError(
                 f"Invalid probability_profile '{self.probability_profile}': "

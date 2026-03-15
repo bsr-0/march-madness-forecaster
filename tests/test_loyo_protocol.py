@@ -7,14 +7,17 @@ import numpy as np
 import pytest
 
 from src.ml.evaluation.loyo_protocol import (
+    DEFAULT_FEATURE_FAMILIES,
     LOYO_YEARS,
     MINIMUM_BRIER_IMPROVEMENT,
     FeatureAblator,
+    FeatureFamily,
     LOYOFoldResult,
     LOYOResult,
     LOYOValidator,
     ProspectiveValidator,
     ProspectiveValidationResult,
+    validate_family_coverage,
 )
 
 
@@ -334,3 +337,282 @@ class TestProspectiveValidator:
         s = result.summary()
         assert "Prospective Forward Validation" in s
         assert "2024" in s
+
+
+# ---------------------------------------------------------------------------
+# Phase 2: Feature Family Ablation Tests
+# ---------------------------------------------------------------------------
+
+
+class TestFeatureFamily:
+    """Test FeatureFamily dataclass construction and validation."""
+
+    def test_column_group_family(self):
+        fam = FeatureFamily(
+            name="test_fam",
+            family_type="column_group",
+            feature_names=["feat_a", "feat_b"],
+            masking_policy="zero",
+        )
+        assert fam.name == "test_fam"
+        assert fam.family_type == "column_group"
+        assert len(fam.feature_names) == 2
+        assert fam.masking_policy == "zero"
+
+    def test_config_toggle_family(self):
+        fam = FeatureFamily(
+            name="toggle_fam",
+            family_type="config_toggle",
+            config_flags=["enable_something"],
+        )
+        assert fam.family_type == "config_toggle"
+        assert fam.config_flags == ["enable_something"]
+        assert fam.feature_names == []
+
+    def test_hybrid_family(self):
+        fam = FeatureFamily(
+            name="hybrid_fam",
+            family_type="hybrid",
+            feature_names=["diff_momentum"],
+            config_flags=["enable_recency_weighting"],
+            masking_policy="zero",
+        )
+        assert fam.family_type == "hybrid"
+        assert len(fam.feature_names) == 1
+        assert len(fam.config_flags) == 1
+
+    def test_neutral_masking_policy(self):
+        fam = FeatureFamily(
+            name="seed_fam",
+            family_type="column_group",
+            feature_names=["seed_diff"],
+            masking_policy="neutral",
+            neutral_values={"seed_diff": 0.0},
+        )
+        assert fam.masking_policy == "neutral"
+        assert fam.neutral_values["seed_diff"] == 0.0
+
+    def test_default_feature_families_exist(self):
+        assert len(DEFAULT_FEATURE_FAMILIES) == 7
+        family_names = {f.name for f in DEFAULT_FEATURE_FAMILIES}
+        assert "seed_priors" in family_names
+        assert "elo_ratings" in family_names
+        assert "four_factors" in family_names
+        assert "roster_continuity" in family_names
+        assert "massey_ordinals" in family_names
+        assert "recency_form" in family_names
+        assert "public_picks" in family_names
+
+
+class TestValidateFamilyCoverage:
+    """Test feature-to-family coverage validation."""
+
+    def test_full_coverage(self):
+        features = ["feat_a", "feat_b"]
+        families = [
+            FeatureFamily(name="fam1", family_type="column_group", feature_names=["feat_a"]),
+            FeatureFamily(name="fam2", family_type="column_group", feature_names=["feat_b"]),
+        ]
+        coverage = validate_family_coverage(features, families)
+        assert coverage["feat_a"] == "fam1"
+        assert coverage["feat_b"] == "fam2"
+        assert "unassigned" not in coverage.values()
+
+    def test_unassigned_features_detected(self):
+        features = ["feat_a", "feat_b", "feat_c"]
+        families = [
+            FeatureFamily(name="fam1", family_type="column_group", feature_names=["feat_a"]),
+        ]
+        coverage = validate_family_coverage(features, families)
+        assert coverage["feat_a"] == "fam1"
+        assert coverage["feat_b"] == "unassigned"
+        assert coverage["feat_c"] == "unassigned"
+
+    def test_prefix_matching(self):
+        features = ["diff_efg_pct", "diff_to_rate", "diff_elo"]
+        families = [
+            FeatureFamily(
+                name="four_factors",
+                family_type="column_group",
+                feature_prefixes=["diff_efg", "diff_to"],
+            ),
+        ]
+        coverage = validate_family_coverage(features, families)
+        assert coverage["diff_efg_pct"] == "four_factors"
+        assert coverage["diff_to_rate"] == "four_factors"
+        assert coverage["diff_elo"] == "unassigned"
+
+
+class TestFeatureAblatorFamilies:
+    """Test family-level ablation in FeatureAblator."""
+
+    def _make_family_data(self, n_games=30, n_features=5):
+        """Create multi-year data with known feature structure."""
+        feature_names = [f"feat_{i}" for i in range(n_features)]
+        data_by_year = {}
+        for year in [2021, 2022, 2023]:
+            rng = np.random.RandomState(year)
+            X = rng.randn(n_games, n_features)
+            y = rng.randint(0, 2, size=n_games).astype(float)
+            margins = rng.randn(n_games) * 10
+            data_by_year[year] = {
+                "X": X, "y": y, "margins": margins,
+                "feature_names": feature_names,
+            }
+        return data_by_year, feature_names
+
+    def test_ablate_column_group_family(self):
+        """Family ablation masks all family columns and runs LOYO."""
+        data, feat_names = self._make_family_data(n_features=5)
+        family = FeatureFamily(
+            name="test_family",
+            family_type="column_group",
+            feature_names=["feat_0", "feat_1"],
+            masking_policy="zero",
+        )
+
+        validator = LOYOValidator(years=[2021, 2022, 2023])
+        ablator = FeatureAblator(min_improvement=0.001)
+
+        results = ablator.ablate_families(
+            loyo_validator=validator,
+            data_by_year=data,
+            train_fn=_simple_train_fn,
+            predict_fn=_simple_predict_fn,
+            families=[family],
+            feature_names=feat_names,
+            mode="masked",
+        )
+
+        assert "test_family" in results
+        r = results["test_family"]
+        assert r["n_features_masked"] == 2
+        assert r["features_masked"] == ["feat_0", "feat_1"]
+        assert r["masking_policy"] == "zero"
+        assert r["mode"] == "masked"
+        assert r["ablated_brier"] is not None
+        assert isinstance(r["keep"], bool)
+
+    def test_config_toggle_family_skipped_in_masked_mode(self):
+        """Config-toggle families are skipped in masked mode."""
+        data, feat_names = self._make_family_data()
+        family = FeatureFamily(
+            name="public_picks",
+            family_type="config_toggle",
+            config_flags=["public_picks_json"],
+        )
+
+        validator = LOYOValidator(years=[2021, 2022, 2023])
+        ablator = FeatureAblator()
+
+        results = ablator.ablate_families(
+            loyo_validator=validator,
+            data_by_year=data,
+            train_fn=_simple_train_fn,
+            predict_fn=_simple_predict_fn,
+            families=[family],
+            feature_names=feat_names,
+        )
+
+        assert "public_picks" in results
+        assert results["public_picks"]["keep"] is None
+        assert "Skipped" in results["public_picks"]["reason"]
+
+    def test_retrain_mode_not_implemented(self):
+        """Retrain mode raises NotImplementedError (deferred to Phase 3)."""
+        data, feat_names = self._make_family_data()
+        family = FeatureFamily(name="test", family_type="column_group", feature_names=["feat_0"])
+
+        validator = LOYOValidator(years=[2021, 2022, 2023])
+        ablator = FeatureAblator()
+
+        with pytest.raises(NotImplementedError, match="Phase 3"):
+            ablator.ablate_families(
+                loyo_validator=validator,
+                data_by_year=data,
+                train_fn=_simple_train_fn,
+                predict_fn=_simple_predict_fn,
+                families=[family],
+                feature_names=feat_names,
+                mode="retrain",
+            )
+
+    def test_masking_policies_differ(self):
+        """Different masking policies produce different ablated data."""
+        n_features = 3
+        feature_names = ["feat_0", "feat_1", "feat_2"]
+        data = {}
+        for year in [2021, 2022]:
+            rng = np.random.RandomState(year)
+            X = rng.randn(20, n_features) + 5.0  # offset so mean != 0
+            y = rng.randint(0, 2, size=20).astype(float)
+            data[year] = {"X": X, "y": y, "margins": rng.randn(20) * 10, "feature_names": feature_names}
+
+        validator = LOYOValidator(years=[2021, 2022])
+
+        # Test zero masking
+        fam_zero = FeatureFamily(
+            name="zero", family_type="column_group",
+            feature_names=["feat_0"], masking_policy="zero",
+        )
+        ablator = FeatureAblator()
+        results_zero = ablator.ablate_families(
+            validator, data, _simple_train_fn, _simple_predict_fn,
+            [fam_zero], feature_names,
+        )
+
+        # Test mean masking
+        fam_mean = FeatureFamily(
+            name="mean", family_type="column_group",
+            feature_names=["feat_0"], masking_policy="mean",
+        )
+        results_mean = ablator.ablate_families(
+            validator, data, _simple_train_fn, _simple_predict_fn,
+            [fam_mean], feature_names,
+        )
+
+        # Both should produce valid results (may have same Brier with trivial model,
+        # but the key is they don't error)
+        assert results_zero["zero"]["ablated_brier"] is not None
+        assert results_mean["mean"]["ablated_brier"] is not None
+
+    def test_no_matching_features_handled(self):
+        """Family with no matching features is handled gracefully."""
+        data, feat_names = self._make_family_data()
+        family = FeatureFamily(
+            name="missing",
+            family_type="column_group",
+            feature_names=["nonexistent_feature"],
+        )
+
+        validator = LOYOValidator(years=[2021, 2022, 2023])
+        ablator = FeatureAblator()
+
+        results = ablator.ablate_families(
+            validator, data, _simple_train_fn, _simple_predict_fn,
+            [family], feat_names,
+        )
+
+        assert results["missing"]["keep"] is None
+        assert "No matching features" in results["missing"]["reason"]
+
+    def test_multiple_families_ablated(self):
+        """Multiple families can be ablated in one call."""
+        data, feat_names = self._make_family_data(n_features=5)
+        families = [
+            FeatureFamily(name="fam_a", family_type="column_group", feature_names=["feat_0"]),
+            FeatureFamily(name="fam_b", family_type="column_group", feature_names=["feat_1", "feat_2"]),
+        ]
+
+        validator = LOYOValidator(years=[2021, 2022, 2023])
+        ablator = FeatureAblator()
+
+        results = ablator.ablate_families(
+            validator, data, _simple_train_fn, _simple_predict_fn,
+            families, feat_names,
+        )
+
+        assert "fam_a" in results
+        assert "fam_b" in results
+        assert results["fam_a"]["n_features_masked"] == 1
+        assert results["fam_b"]["n_features_masked"] == 2

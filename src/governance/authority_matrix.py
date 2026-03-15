@@ -16,7 +16,7 @@ class AuthorityRule:
 DEFAULT_AUTHORITY_MATRIX: List[AuthorityRule] = [
     AuthorityRule("submit_predictions", "critical", "operator"),
     AuthorityRule("promote_model", "high", "operator",
-                  auto_approve_conditions={"brier_improvement": 0.002, "ablation_pass": True}),
+                  auto_approve_conditions={"brier_improvement": 0.002, "ablation_pass": True, "admission_gate_pass": True}),
     AuthorityRule("modify_config.*", "medium", "auto",
                   auto_approve_conditions={"within_sensitivity_range": True}),
     AuthorityRule("override_threshold.*", "high", "operator"),

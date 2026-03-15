@@ -891,9 +891,21 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # is competitive with (or better than) complex ensembles at ~600 samples.
     _use_tree_models = pipeline.config.model_complexity != "simple"
 
-    # --- LightGBM training ---
+    # Phase 2: In production mode, LGB/XGB classifiers are disabled.
+    # They remain available in experimental mode for research.
+    _production_mode = pipeline.config.pipeline_mode == "production"
+    _allow_lgb_classifier = (
+        not _production_mode
+        and pipeline.config.experimental_enable_lgb_classifier
+    )
+    _allow_xgb_classifier = (
+        not _production_mode
+        and pipeline.config.experimental_enable_xgb_classifier
+    )
+
+    # --- LightGBM training (experimental only in Phase 2) ---
     lgb_trained = False
-    if LIGHTGBM_AVAILABLE and _use_tree_models:
+    if LIGHTGBM_AVAILABLE and _use_tree_models and _allow_lgb_classifier:
         try:
             if (
                 pipeline.config.enable_hyperparameter_tuning
@@ -953,9 +965,9 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         except Exception as e:
             tuning_stats["lightgbm_error"] = str(e)
 
-    # --- XGBoost training ---
+    # --- XGBoost training (experimental only in Phase 2) ---
     xgb_trained = False
-    if XGBOOST_AVAILABLE and _use_tree_models:
+    if XGBOOST_AVAILABLE and _use_tree_models and _allow_xgb_classifier:
         try:
             if (
                 pipeline.config.enable_hyperparameter_tuning
@@ -1013,12 +1025,11 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         except Exception as e:
             tuning_stats["xgboost_error"] = str(e)
 
-    # --- Logistic regression (fallback only) ---
-    # Phase 5: LogisticRegression is highly correlated with GBM classifiers
-    # (~0.95 correlation on same features), reducing ensemble diversity.
-    # Train it only as a fallback when GBM models are unavailable.
+    # --- Logistic regression ---
+    # Phase 2: Always trained in both production and experimental mode.
+    # In production mode, this is one of two sanctioned models.
     logit_trained = False
-    if SKLEARN_AVAILABLE and not (lgb_trained or xgb_trained):
+    if SKLEARN_AVAILABLE:
         try:
             if (
                 pipeline.config.enable_hyperparameter_tuning
@@ -1148,7 +1159,10 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # data (Kaggle CSVs), then override the SpreadRegressor's sigma with the
     # tournament-calibrated value.  Per-round sigmas flow through the
     # MarginFirstEnsemble's RoundSpecificCalibrator.
-    if spread_trained and TOURNAMENT_SIGMA_AVAILABLE:
+    # Phase 2: TournamentSigmaCalibrator is experimental only.
+    # In production mode, SpreadRegressor uses its validation-calibrated sigma
+    # and TemperatureScaling is the sole final calibration layer.
+    if spread_trained and TOURNAMENT_SIGMA_AVAILABLE and not _production_mode:
         try:
             pipeline._fit_tournament_sigma(spread, tuning_stats)
         except Exception as e:
@@ -1195,8 +1209,10 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # When stacking IS enabled (opt-in), the original learned meta-learner
     # path is preserved.
     # ====================================================================
+    # Phase 2: Stacking is experimental only.
     if (
-        pipeline.config.enable_stacking
+        not _production_mode
+        and pipeline.config.enable_stacking
         and SKLEARN_AVAILABLE
         and len(trained_models) >= 2
         and valid_samples >= 20
@@ -1290,25 +1306,40 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             baseline_name = pipeline._select_best_single_model(trained_models, eval_y)
 
     elif len(trained_models) >= 2:
-        # --- OOS-FIX: Fixed-weight average (default path) ---
-        # Store all models for fixed-weight averaging at inference time.
-        # Base weights (unnormalized); actual weights are normalized to
-        # sum to 1.0 based on which models are present.
-        # Phase 3: Margin-First Ensemble (Raddar-style modeling)
-        # SpreadRegressor: 0.55 (primary margin prediction path)
-        # LightGBM: 0.15 (secondary classifier)
-        # XGBoost: 0.15 (secondary classifier)
-        # Logistic: 0.15 (complementary signal)
-        _FIXED_WEIGHTS = {
-            "spread": 0.55,  # Primary: margin prediction via logistic CDF
-            "lgb": 0.15,     # Secondary: LightGBM classifier
-            "xgb": 0.15,     # Secondary: XGBoost classifier
-            "logit": 0.15,   # Complementary: Logistic regression
-        }
-        model_names_present = [name for name, _, _ in trained_models]
-        active_weights = {n: _FIXED_WEIGHTS.get(n, 0.25) for n in model_names_present}
-        w_sum = sum(active_weights.values())
-        active_weights = {n: w / w_sum for n, w in active_weights.items()}
+        # --- Fixed-weight average (default path) ---
+        if _production_mode:
+            # Phase 2: Production weights from PRODUCTION_BASELINE.
+            # Default: spread=1.0, logistic=0.0 (spread-only baseline).
+            # Logistic earns weight only via the admission gate.
+            from ..production_baseline import PRODUCTION_BASELINE
+            _prod_weights = dict(PRODUCTION_BASELINE.default_weights)
+            # Map production names to trained_models names
+            _PROD_NAME_MAP = {"spread": "spread", "logistic": "logit"}
+            model_names_present = [name for name, _, _ in trained_models]
+            active_weights = {}
+            for prod_name, weight in _prod_weights.items():
+                internal_name = _PROD_NAME_MAP.get(prod_name, prod_name)
+                if internal_name in model_names_present:
+                    active_weights[internal_name] = weight
+            # Normalize to sum to 1.0
+            w_sum = sum(active_weights.values())
+            if w_sum > 0:
+                active_weights = {n: w / w_sum for n, w in active_weights.items()}
+            else:
+                # Fallback: equal weight if no sanctioned models present
+                active_weights = {n: 1.0 / len(model_names_present) for n in model_names_present}
+        else:
+            # Experimental mode: legacy weights
+            _FIXED_WEIGHTS = {
+                "spread": 0.55,  # Primary: margin prediction via logistic CDF
+                "lgb": 0.15,     # Secondary: LightGBM classifier
+                "xgb": 0.15,     # Secondary: XGBoost classifier
+                "logit": 0.15,   # Complementary: Logistic regression
+            }
+            model_names_present = [name for name, _, _ in trained_models]
+            active_weights = {n: _FIXED_WEIGHTS.get(n, 0.25) for n in model_names_present}
+            w_sum = sum(active_weights.values())
+            active_weights = {n: w / w_sum for n, w in active_weights.items()}
 
         pipeline.baseline_model.fixed_weight_models = [(name, model) for name, model, _ in trained_models]
         pipeline.baseline_model.fixed_weights = active_weights

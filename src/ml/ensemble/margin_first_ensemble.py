@@ -4,21 +4,26 @@ Implements the "Raddar-style" modeling approach where the primary
 prediction path is:
 1. Predict point margin (SpreadRegressor)
 2. Convert margin to probability via Logistic CDF
-3. Calibrate CDF parameter (k, sigma) per tournament round
+3. (Optional, experimental only) Calibrate CDF parameter (k, sigma) per tournament round
 
-Ensemble weights:
-- SpreadRegressor: 55% (primary)
-- LightGBM: 15%
-- XGBoost: 15%
-- Logistic Regression: 15%
+Phase 2 Production Stack:
+- SpreadRegressor: 100% (sole production tree model)
+- Logistic Regression: 0% default (earns weight via admission gate)
+- TemperatureScaling: sole final calibration layer
 
-This is blended with the TournamentExpert at 0.30 weight.
+Experimental Stack (legacy):
+- SpreadRegressor: 55%, LightGBM: 15%, XGBoost: 15%, Logistic: 15%
+- TournamentExpert blend at 0.30 weight
+- RoundSpecificCalibrator / TournamentSigmaCalibrator
 
-Tournament-specific sigma calibration: uses TournamentSigmaCalibrator
-to derive empirically-optimal sigma per round from historical tournament
-data. This corrects the domain mismatch between regular-season sigma
-(~11 pts) and tournament sigma (~9-10 pts), which matters most in late
-rounds where Kaggle applies 16-32× scoring weight.
+Calibration Semantics (Phase 2):
+- Stage 1 (model-internal): SpreadRegressor's sigma converts margin → raw
+  probability. Fitted on validation residuals during training. This is a
+  model parameter, not a calibration layer.
+- Stage 2 (final calibration): TemperatureScaling adjusts final probabilities.
+  This is the one sanctioned production calibration layer.
+- These are NOT double-calibration: sigma maps a continuous prediction to
+  [0,1]; TemperatureScaling adjusts the resulting probabilities' confidence.
 """
 
 from __future__ import annotations
@@ -31,8 +36,15 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Default ensemble weights (Margin-First architecture)
-_MARGIN_FIRST_WEIGHTS = {
+# Phase 2: Production default weights (spread-only baseline).
+# Logistic earns weight only via the admission gate.
+_PRODUCTION_WEIGHTS = {
+    "spread": 1.0,
+    "logistic": 0.0,
+}
+
+# Legacy experimental weights (Margin-First architecture)
+_EXPERIMENTAL_WEIGHTS = {
     "spread": 0.55,
     "lgb": 0.15,
     "xgb": 0.15,
@@ -276,20 +288,31 @@ class RoundSpecificCalibrator:
 class MarginFirstEnsemble:
     """Margin-First ensemble with SpreadRegressor dominance.
 
-    Architecture:
+    Production architecture (Phase 2):
     1. SpreadRegressor predicts margin -> convert to P(win) via logistic CDF
-    2. LightGBM, XGBoost, Logistic provide complementary signals
-    3. Fixed-weight combination (55/15/15/15)
-    4. TournamentExpert blend at 0.30
-    5. Round-specific sigma calibration (tournament-aware)
+    2. TemperatureScaling is the sole final calibration layer
+    3. Logistic Regression available but at weight=0 until it earns weight
+
+    Experimental architecture (legacy):
+    1. SpreadRegressor + LightGBM + XGBoost + Logistic
+    2. Fixed-weight combination (55/15/15/15)
+    3. TournamentExpert blend at 0.30
+    4. Round-specific sigma calibration (tournament-aware)
     """
 
     def __init__(
         self,
         weights: Optional[Dict[str, float]] = None,
         tournament_expert_weight: float = 0.30,
+        production_mode: bool = True,
     ):
-        self.weights = weights or dict(_MARGIN_FIRST_WEIGHTS)
+        self.production_mode = production_mode
+        if weights is not None:
+            self.weights = weights
+        elif production_mode:
+            self.weights = dict(_PRODUCTION_WEIGHTS)
+        else:
+            self.weights = dict(_EXPERIMENTAL_WEIGHTS)
         self.tournament_expert_weight = tournament_expert_weight
         self.models: Dict[str, object] = {}
         self.round_calibrator = RoundSpecificCalibrator()
@@ -322,7 +345,22 @@ class MarginFirstEnsemble:
         logistic_model=None,
         tournament_expert=None,
     ):
-        """Register trained models."""
+        """Register trained models.
+
+        In production mode, only spread and logistic models are allowed.
+        Attempting to set lgb or xgb models in production mode raises ValueError.
+        """
+        if self.production_mode:
+            if lgb_model is not None:
+                raise ValueError(
+                    "LightGBM classifier is not allowed in production mode. "
+                    "Set production_mode=False for experimental use."
+                )
+            if xgb_model is not None:
+                raise ValueError(
+                    "XGBoost classifier is not allowed in production mode. "
+                    "Set production_mode=False for experimental use."
+                )
         if spread_model is not None:
             self.models["spread"] = spread_model
         if lgb_model is not None:
