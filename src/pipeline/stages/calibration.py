@@ -158,6 +158,18 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                     )
                     if len(yr_y) < 4:
                         continue
+                    # FIX: include_tournament=True loads ALL games (regular
+                    # season + tournament).  Regular-season predictions are
+                    # in-sample (model trained on that data) and would bias
+                    # the calibrator.  Filter to tournament-only using round
+                    # weights: tournament games get rw > 1.0 from
+                    # _infer_tournament_round_weight(), regular season = 1.0.
+                    tourney_mask = _yr_rw > 1.0
+                    if tourney_mask.any():
+                        yr_X = yr_X[tourney_mask]
+                        yr_y = yr_y[tourney_mask]
+                    else:
+                        continue
                     # Apply feature selection if fitted
                     if pipeline.feature_selector is not None and pipeline.feature_selector.is_fitted:
                         try:
