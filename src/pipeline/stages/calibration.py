@@ -120,15 +120,15 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
 
     # A1: CFA weight optimization removed — baseline-only prediction.
 
-    # Augment calibration pool with historical TOURNAMENT game data.
+    # Augment calibration pool with historical TOURNAMENT-ONLY game data.
     # Tournament games are genuinely out-of-sample: the baseline model
     # trains only on regular-season games (include_tournament=False),
     # so tournament predictions are unseen during training.
-    # NOTE: Historical regular-season games are NOT included here
-    # because they overlap with the multi-year training pool (2005-2025),
-    # making those predictions in-sample.  Using in-sample predictions
-    # for calibration would bias the temperature T toward in-sample
-    # performance.
+    #
+    # IMPORTANT: We load tournament-only samples by contract via
+    # _load_year_tournament_samples_incremental, which selects games
+    # on or after each year's tournament start date.  Regular-season
+    # games are NEVER loaded — no downstream filtering needed.
     tourney_cal_count = 0
     if (pipeline.config.enable_multi_year_calibration
             and pipeline.config.multi_year_games_dir
@@ -142,7 +142,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         # Determine feature dimensionality from current model
         feature_dim = pipeline.baseline_model.feature_dim
 
-        # Load historical TOURNAMENT games for calibration.
+        # Load historical tournament-only games for calibration.
         # These match the inference domain exactly.
         if pipeline.config.include_tournament_games_in_calibration:
             for yr in years:
@@ -152,24 +152,23 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                     metrics_path = os.path.join(games_dir, f"team_metrics_{yr}.json")
                     if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
                         continue
-                    yr_X, yr_y, _yr_margins, _, _yr_rw = pipeline._load_year_samples_incremental(
+                    yr_X, yr_y, _yr_margins, _, _yr_rw = pipeline._load_year_tournament_samples_incremental(
                         games_path, metrics_path, feature_dim, yr,
-                        include_tournament=True,
                     )
                     if len(yr_y) < 4:
                         continue
-                    # FIX: include_tournament=True loads ALL games (regular
-                    # season + tournament).  Regular-season predictions are
-                    # in-sample (model trained on that data) and would bias
-                    # the calibrator.  Filter to tournament-only using round
-                    # weights: tournament games get rw > 1.0 from
-                    # _infer_tournament_round_weight(), regular season = 1.0.
-                    tourney_mask = _yr_rw > 1.0
-                    if tourney_mask.any():
-                        yr_X = yr_X[tourney_mask]
-                        yr_y = yr_y[tourney_mask]
-                    else:
-                        continue
+                    # Defensive assertion: every sample must be a tournament
+                    # game (round weight > 1.0).  Fail fast if the loader
+                    # ever returns regular-season rows.
+                    assert np.all(_yr_rw > 1.0), (
+                        f"Tournament-only loader returned {int(np.sum(_yr_rw <= 1.0))} "
+                        f"non-tournament rows for year {yr}. This is a data integrity "
+                        f"violation — calibration must never see regular-season samples."
+                    )
+                    logger.info(
+                        "Loaded %d tournament-only calibration samples for %d",
+                        len(yr_y), yr,
+                    )
                     # Apply feature selection if fitted
                     if pipeline.feature_selector is not None and pipeline.feature_selector.is_fitted:
                         try:
@@ -200,7 +199,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             _n_historical_tourney_cal = tourney_cal_count
             if tourney_cal_count > 0:
                 logger.info(
-                    "Calibration augmented with %d historical tournament game samples.",
+                    "Calibration augmented with %d historical tournament-only samples.",
                     tourney_cal_count,
                 )
 

@@ -930,8 +930,8 @@ class TestHardTournamentDateCutoff:
         import inspect
 
         from src.pipeline.stages import sample_loading
-        source = inspect.getsource(sample_loading.load_year_samples_incremental)
+        source = inspect.getsource(sample_loading._load_year_samples_incremental_core)
         assert "TOURNAMENT_START_DATES" in source, (
-            "_load_year_samples_incremental must use TOURNAMENT_START_DATES "
+            "_load_year_samples_incremental_core must use TOURNAMENT_START_DATES "
             "instead of hardcoded 03-14 for accurate per-year cutoffs."
         )

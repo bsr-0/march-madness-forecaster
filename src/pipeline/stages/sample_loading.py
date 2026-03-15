@@ -71,13 +71,75 @@ def load_year_samples_incremental(
         metrics_path: Path to team metrics JSON for conference map.
         feature_dim: Expected feature vector dimension.
         year: Season year.
-        include_tournament: If True, include tournament games.
+        include_tournament: If True, include tournament games alongside
+            regular-season games.  For tournament-only loading, use
+            :func:`load_year_tournament_samples_incremental` instead.
         prior_elo: Prior-season end-of-season Elo for carryover.
 
     Returns:
         Tuple of ``(X, y, margins, end_elo, round_weights)`` or shorter
         tuples on early exit.
     """
+    mode = "all_games" if include_tournament else "regular_season"
+    return _load_year_samples_incremental_core(
+        config, games_path, metrics_path, feature_dim, year, mode, prior_elo,
+    )
+
+
+def load_year_tournament_samples_incremental(
+    config: SOTAPipelineConfig,
+    games_path: str,
+    metrics_path: str,
+    feature_dim: int,
+    year: int,
+    prior_elo: Optional[Dict[str, float]] = None,
+) -> tuple:
+    """Load ONLY NCAA tournament games for a historical year.
+
+    Returns tournament-only samples selected by tournament start date,
+    not by downstream round-weight filtering.  This is the correct
+    loader for calibration: it never loads regular-season games.
+
+    Uses the same PIT feature generation logic as the incremental
+    loader — for each tournament game at date D, features are computed
+    using only games played before D.
+
+    Args:
+        config: Pipeline configuration.
+        games_path: Path to ``historical_games_{year}.json``.
+        metrics_path: Path to team metrics JSON for conference map.
+        feature_dim: Expected feature vector dimension.
+        year: Season year.
+        prior_elo: Prior-season end-of-season Elo for carryover.
+
+    Returns:
+        Tuple of ``(X, y, margins, end_elo, round_weights)``.
+    """
+    return _load_year_samples_incremental_core(
+        config, games_path, metrics_path, feature_dim, year,
+        "tournament_only", prior_elo,
+    )
+
+
+def _load_year_samples_incremental_core(
+    config: SOTAPipelineConfig,
+    games_path: str,
+    metrics_path: str,
+    feature_dim: int,
+    year: int,
+    mode: str = "regular_season",
+    prior_elo: Optional[Dict[str, float]] = None,
+) -> tuple:
+    """Core loader implementing regular_season / all_games / tournament_only.
+
+    Args:
+        mode: One of ``"regular_season"`` (pre-tournament only),
+            ``"all_games"`` (regular season + tournament), or
+            ``"tournament_only"`` (post-tournament-start only).
+    """
+    assert mode in ("regular_season", "all_games", "tournament_only"), (
+        f"Invalid sample loading mode: {mode!r}"
+    )
     # ── 1. Load game data ─────────────────────────────────────────────
     with open(games_path, "r") as f:
         payload = json.load(f)
@@ -272,9 +334,11 @@ def load_year_samples_incremental(
 
     _t_start = TOURNAMENT_START_DATES.get(year, date(year, 3, 14))
     tournament_cutoff = _t_start.isoformat()
-    if include_tournament:
+    if mode == "all_games":
         training_games = all_games
-    else:
+    elif mode == "tournament_only":
+        training_games = [g for g in all_games if g.game_date >= tournament_cutoff]
+    else:  # regular_season
         training_games = [g for g in all_games if g.game_date < tournament_cutoff]
 
     # Gap #6: Data quality filtering
@@ -394,7 +458,7 @@ def load_year_samples_incremental(
         margins_list.append(float(g.points - g.opp_points))
 
         rw = 1.0
-        if include_tournament and g.game_date > tournament_cutoff:
+        if mode in ("all_games", "tournament_only") and g.game_date >= tournament_cutoff:
             rw = _infer_tournament_round_weight(g.game_date, year)
         round_weight_list.append(rw)
 
@@ -442,11 +506,17 @@ def load_year_samples_incremental(
             n_dead_cols,
         )
 
+    _mode_label = {
+        "regular_season": "regular-season",
+        "all_games": "all-games",
+        "tournament_only": "tournament-only",
+    }[mode]
     logger.info(
-        "Year %d (incremental): %d training samples from %d games "
+        "Year %d (%s): %d samples from %d games "
         "(%d skipped, %d unique dates). feature_dim=%d. "
         "completeness=%.2f. dead_features=%d. tournament_round_weighted=%d.",
         year,
+        _mode_label,
         len(X_list),
         len(training_games),
         skipped,
