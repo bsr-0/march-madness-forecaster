@@ -332,7 +332,7 @@ class SOTAPipelineConfig:
     # ID-based rating system with uncertainty.  Orthogonal to feature-based
     # models — captures "who beat whom" without needing engineered features.
     # Uncertainty propagation naturally shrinks predictions for rare teams.
-    enable_bayesian_bt: bool = True
+    enable_bayesian_bt: bool = False  # EXPERIMENTAL: Adds blend complexity; enable with ablation evidence
     bayesian_bt_prior_std: float = 2.0  # Prior std for team ratings
 
     # --- Probability clipping ---
@@ -399,7 +399,7 @@ class SOTAPipelineConfig:
     tournament_shrinkage: float = 0.06  # Increased shrinkage for tournament uncertainty (was 0.02)
     # Gap #3: Seed prior enabled — seed difference is the strongest single predictor.
     # A weak prior (10%) provides regularization without overwhelming the model.
-    seed_prior_weight: float = 0.15  # Increased seed prior weight for tournament domain adaptation (was 0.10)
+    seed_prior_weight: float = 0.0  # DEPRECATED: Redundant with SeedBasedOverrides; set >0 only if seed overrides are disabled
     seed_prior_slope: float = 0.175  # Sigmoid slope for seed-based win rate approximation
     consistency_bonus_max: float = 0.0  # Disabled by default unless sensitivity proves value
     consistency_normalizer: float = 15.0  # Typical pace_adjusted_variance range for normalization
@@ -437,8 +437,10 @@ class SOTAPipelineConfig:
     # Include historical tournament games in training with Kaggle round weights
     # so the model invests more gradient signal in closely-matched elite teams.
     enable_round_weighted_training: bool = True
-    # Use round-weighted Brier calibration instead of flat Brier
-    enable_round_weighted_calibration: bool = True
+    # Use round-weighted Brier calibration instead of flat Brier.
+    # EXPERIMENTAL: Disabled by default — applies a second temperature scaling
+    # on already-calibrated probabilities.  Enable only with OOS evidence.
+    enable_round_weighted_calibration: bool = False
 
     # --- Multi-year calibration (Fix 1: expand calibration sample pool) ---
     enable_multi_year_calibration: bool = True  # Augment calibration with historical years
@@ -514,9 +516,9 @@ class SOTAPipelineConfig:
     model_complexity: str = "simple"
 
     # --- Brier-optimal post-processing (WS2) ---
-    enable_brier_sharpening: bool = True  # Power-transform sharpening for Brier score
+    enable_brier_sharpening: bool = False  # EXPERIMENTAL: Power-transform sharpening — fragile on small OOS samples
     brier_sharpening_alpha_bounds: Tuple[float, float] = (0.5, 2.0)
-    enable_seed_overrides: bool = True  # Snap extreme matchups to historical rates
+    enable_seed_overrides: bool = False  # EXPERIMENTAL: Snap extreme matchups to historical rates
     seed_override_threshold: float = 0.08  # Max distance from historical to snap
 
     # --- goto_conversion (favourite-longshot bias correction) ---
@@ -526,7 +528,7 @@ class SOTAPipelineConfig:
     # favourite-longshot bias by reducing all inverse odds by the same
     # number of standard error units.
     # Used by 6 of the top 8 finishers in the 2025 competition.
-    enable_goto_conversion: bool = True  # Enable goto_conversion post-processing
+    enable_goto_conversion: bool = False  # EXPERIMENTAL: FLB correction — enable with OOS ablation evidence
     goto_conversion_margin_init: float = 0.05  # Initial margin (overround) parameter
     goto_conversion_margin_bounds: Tuple[float, float] = (0.0, 0.20)  # Search bounds for margin optimization
 

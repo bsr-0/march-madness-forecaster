@@ -83,7 +83,7 @@ class WomensPipelineConfig:
     year: int = 2026
     cache_dir: str = "data/raw"
     calibration_method: str = "temperature"
-    enable_brier_sharpening: bool = True
+    enable_brier_sharpening: bool = False  # EXPERIMENTAL: Fragile on small women's sample
     seed_override_threshold: float = 0.08
     clip_lo: float = 0.005
     clip_hi: float = 0.995
@@ -102,7 +102,7 @@ class WomensPipelineConfig:
     tournament_shrinkage: float = 0.02
     # Seed prior weight — higher than men's (0.10) because women's tournament
     # is more seed-predictable.
-    seed_prior_weight: float = 0.15
+    seed_prior_weight: float = 0.0  # DEPRECATED: Redundant with SeedBasedOverrides
     seed_prior_slope: float = 0.19  # Women's steeper slope
 
     # Feature standardization (aligned with men's)
@@ -111,7 +111,7 @@ class WomensPipelineConfig:
     # goto_conversion (favourite-longshot bias correction)
     # Women's tournament has even fewer upsets, so goto_conversion
     # should sharpen toward favourites even more aggressively.
-    enable_goto_conversion: bool = True
+    enable_goto_conversion: bool = False  # EXPERIMENTAL: Enable with OOS ablation evidence
     goto_conversion_margin_init: float = 0.06  # Slightly higher for women's
     goto_conversion_margin_bounds: Tuple[float, float] = (0.0, 0.25)
 
@@ -278,8 +278,9 @@ class WomensPipeline:
         Aligned with men's SOTAPipeline._tournament_adapt():
         1. Shrinkage toward 0.5 — regular-season models are overconfident
            because tournament games are played on neutral courts.
-        2. Seed-based Bayesian prior — incorporate historical base rate
-           for the seed matchup as a weak prior.
+
+        Seed-based corrections are handled downstream by SeedBasedOverrides
+        via BrierPostProcessor when enable_seed_overrides=True.
 
         Args:
             prob: Raw probability
@@ -293,8 +294,9 @@ class WomensPipeline:
         shrinkage = self.config.tournament_shrinkage
         adapted = shrinkage * 0.5 + (1.0 - shrinkage) * prob
 
-        # Seed-based Bayesian prior
-        if seed1 > 0 and seed2 > 0:
+        # Seed-based Bayesian prior (only when seed_prior_weight > 0,
+        # disabled by default to avoid stacking with SeedBasedOverrides)
+        if self.config.seed_prior_weight > 0 and seed1 > 0 and seed2 > 0:
             seed_diff = seed2 - seed1
             slope = self.config.seed_prior_slope
             seed_prior = 1.0 / (1.0 + math.exp(-slope * seed_diff))
@@ -428,10 +430,11 @@ class WomensPipeline:
         preds = np.array(probs)
         actuals = np.array(outcomes, dtype=np.float64)
 
-        # Fit Brier-optimal calibrator
-        calibrator = BrierCalibrator()
-        calibrator.fit(preds, actuals)
-        self.post_processor.calibrator = calibrator
+        # NOTE: BrierCalibrator removed from post-processor to avoid double
+        # calibration.  The post-processor already applies goto_conversion and
+        # sharpening (when enabled) which handle confidence adjustment.
+        # Stacking a separate calibrator on the same small historical dataset
+        # risks overfitting.
 
         # Gap #4/#7: Fit round-weighted sharpener for women's bracket.
         # Women's games have different round distributions — need separate
