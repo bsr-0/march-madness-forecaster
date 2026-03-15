@@ -138,12 +138,9 @@ SIMPLE_FEATURE_SET = [
     "diff_adj_off_eff",               # [KP] Core efficiency
     "diff_adj_def_eff",               # [KP] Core defense
     "diff_sos_adj_em",                # [KAG] Schedule strength
-    "diff_external_rating_composite", # Massey composite
     "diff_elo_rating",                # [538] Season trajectory
     "diff_win_pct",                   # Simplest, strongest signal
     "diff_free_throw_pct",            # Most stable shooting metric
-    "seed_interaction",               # Nonlinear upset dynamics
-    "seed_diff",                      # Raw seed difference
     "diff_momentum",
 ]
 
@@ -270,6 +267,12 @@ class SOTAPipelineConfig:
     # Default: dev=2016-2024, holdout=2025 (used for evaluation only).
     dev_years: Optional[List[int]] = field(default_factory=lambda: list(range(2016, 2025)))
     holdout_years: Optional[List[int]] = field(default_factory=lambda: [2025])
+    # Calibration years are tournament-only years used to fit probability
+    # calibration. By default this is holdout_years, which keeps calibrator
+    # fitting genuinely out-of-sample with respect to model training years.
+    calibration_years: Optional[List[int]] = None
+    # Freeze an explicit production path for tournament runs.
+    enforce_production_path: bool = True
     # Require a verified freeze artifact before running.
     require_freeze_file: bool = False
     freeze_file: Optional[str] = None
@@ -615,7 +618,7 @@ class SOTAPipelineConfig:
 
     # --- Betting market integration ---
     betting_odds_json: Optional[str] = None  # Path to cached betting odds JSON
-    enable_market_blend: bool = True  # Blend model predictions with betting market implied probabilities
+    enable_market_blend: bool = False  # Disabled in locked production path; enable explicitly for experiments
     market_blend_weight: float = 0.20  # Weight for market data in blend (0.0-1.0); model gets 1-weight
 
     # Compute budget management (S20)
@@ -654,6 +657,65 @@ class SOTAPipelineConfig:
                 f"Set probability_profile='experimental' to use these."
             )
 
+    def resolve_calibration_years(self) -> List[int]:
+        """Return explicit tournament calibration years.
+
+        Production default is holdout years only, which are excluded from
+        training and therefore genuinely out-of-sample at the season level.
+        """
+        if self.calibration_years is not None:
+            years = [int(y) for y in self.calibration_years]
+        elif self.holdout_years:
+            years = [int(y) for y in self.holdout_years]
+        else:
+            years = []
+        return sorted({y for y in years if y != 2020})
+
+    def validate_locked_production_path(self) -> None:
+        """Hard-fail if production config drifts from the shipped path."""
+        if not self.enforce_production_path:
+            return
+        if self.probability_profile != "production":
+            return
+
+        violations = []
+        if self.model_complexity != "simple":
+            violations.append(f"model_complexity={self.model_complexity}")
+        if self.mode != "calibration":
+            violations.append(f"mode={self.mode}")
+        if self.use_agent_orchestration:
+            violations.append("use_agent_orchestration=True")
+        if self.enable_gnn:
+            violations.append("enable_gnn=True")
+        if self.enable_transformer:
+            violations.append("enable_transformer=True")
+        if self.enable_embedding_projections:
+            violations.append("enable_embedding_projections=True")
+        if self.enable_stacking:
+            violations.append("enable_stacking=True")
+        if self.enable_market_blend:
+            violations.append("enable_market_blend=True")
+        if not self.holdout_years:
+            violations.append("holdout_years is empty")
+        elif sorted(set(self.holdout_years)) != [2025]:
+            violations.append(f"holdout_years={self.holdout_years} (expected [2025])")
+        if not self.dev_years:
+            violations.append("dev_years is empty")
+        elif sorted(set(self.dev_years)) != list(range(2016, 2025)):
+            violations.append("dev_years must be 2016-2024 for locked production path")
+        cal_years = self.resolve_calibration_years()
+        if cal_years != [2025]:
+            violations.append(f"calibration_years={cal_years} (expected [2025])")
+
+        if violations:
+            raise ValueError(
+                "Locked production path violation. Expected shipped tournament path: "
+                "simple model, production probability profile, calibrated-only probabilities, "
+                "no agent orchestration, no GNN/transformer/stacking/market blend, "
+                "dev years 2016-2024, holdout/calibration year 2025. "
+                f"Violations: {', '.join(violations)}"
+            )
+
     def __post_init__(self):
         if self.probability_profile not in ("production", "experimental"):
             raise ValueError(
@@ -661,6 +723,7 @@ class SOTAPipelineConfig:
                 "must be 'production' or 'experimental'"
             )
         self.validate_production_profile()
+        self.validate_locked_production_path()
         if self.mode not in ("calibration", "ev"):
             raise ValueError(f"Invalid mode '{self.mode}': must be 'calibration' or 'ev'")
         if self.mode == "ev":
