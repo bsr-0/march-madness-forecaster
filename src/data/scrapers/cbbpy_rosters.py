@@ -87,12 +87,20 @@ class CBBpyRosterScraper:
         get_games_season = getattr(scraper, "get_games_season", None)
 
         # Fast path: season endpoint (PBP disabled or bulk fetch)
+        # Wrap in thread-based timeout — cbbpy's internal requests.get()
+        # has no timeout and can hang indefinitely on ESPN.
         if callable(get_games_season) and not force_schedule and max_games <= 0:
             try:
-                data = get_games_season(year, info=False, box=True, pbp=enable_pbp)
+                data = self._run_with_timeout(
+                    get_games_season, args=(year,),
+                    kwargs={"info": False, "box": True, "pbp": enable_pbp},
+                    timeout=600,
+                )
             except TypeError:
                 try:
-                    data = get_games_season(year)
+                    data = self._run_with_timeout(
+                        get_games_season, args=(year,), timeout=600,
+                    )
                 except Exception:
                     data = None
             except Exception:
@@ -131,10 +139,6 @@ class CBBpyRosterScraper:
     def _collect_rows_via_schedule(
         self, scraper, year: int, *, enable_pbp: bool = False,
     ) -> Tuple[List[Dict], List[Dict]]:
-        get_game_ids = getattr(scraper, "get_game_ids", None)
-        if not callable(get_game_ids):
-            return [], []
-
         get_game = getattr(scraper, "get_game", None)
         get_boxscore = getattr(scraper, "get_game_boxscore", None)
 
@@ -147,7 +151,9 @@ class CBBpyRosterScraper:
             if max_games > 0 and len(seen_game_ids) >= max_games:
                 break
             try:
-                game_ids = get_game_ids(day.isoformat())
+                # Use lightweight ESPN API instead of cbbpy's get_game_ids
+                # which calls requests.get() with no timeout.
+                game_ids = self._scrape_game_ids_for_date(day.isoformat())
             except Exception:
                 continue
             if not isinstance(game_ids, list):
@@ -981,3 +987,43 @@ class CBBpyRosterScraper:
         while current <= stop:
             yield current
             current += timedelta(days=1)
+
+    @staticmethod
+    def _scrape_game_ids_for_date(day_str: str, http_timeout: int = 15) -> List:
+        """Lightweight ESPN API call for game IDs on a single date.
+
+        Bypasses cbbpy's ``get_game_ids`` which uses ``requests.get()``
+        with no timeout.
+        """
+        import requests as _requests
+
+        d = day_str.replace("-", "")
+        api_url = (
+            f"https://site.api.espn.com/apis/site/v2/sports/basketball/"
+            f"mens-college-basketball/scoreboard?dates={d}&groups=50&limit=200"
+        )
+        resp = _requests.get(api_url, headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+        }, timeout=http_timeout)
+        resp.raise_for_status()
+        data = resp.json()
+        return [str(e["id"]) for e in data.get("events", []) if "id" in e]
+
+    @staticmethod
+    def _run_with_timeout(fn, args=(), kwargs=None, timeout=120):
+        """Run *fn* in a thread with a timeout to prevent indefinite hangs."""
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+
+        kwargs = kwargs or {}
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(fn, *args, **kwargs)
+            try:
+                return future.result(timeout=timeout)
+            except FuturesTimeout:
+                raise TimeoutError(
+                    f"{getattr(fn, '__name__', fn)} timed out after {timeout}s"
+                )
