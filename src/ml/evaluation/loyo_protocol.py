@@ -89,6 +89,205 @@ class LOYOResult:
         return "\n".join(lines)
 
 
+@dataclass
+class ProspectiveFoldResult:
+    """Result from a single strict forward-looking fold.
+
+    Each fold trains on seasons <= ``train_through_year`` and predicts
+    tournament outcomes for ``predicted_year``.
+    """
+
+    train_through_year: int
+    predicted_year: int
+    train_years: List[int] = field(default_factory=list)
+    n_train_games: int = 0
+    n_test_games: int = 0
+    brier_score: float = 0.0
+    log_loss: float = 0.0
+    accuracy: float = 0.0
+    calibration_error: float = 0.0
+    round_briers: Dict[str, float] = field(default_factory=dict)
+    train_time_seconds: float = 0.0
+
+
+@dataclass
+class ProspectiveValidationResult:
+    """Aggregated metrics for strict season-by-season forward testing."""
+
+    fold_results: List[ProspectiveFoldResult] = field(default_factory=list)
+    mean_brier: float = 0.0
+    std_brier: float = 0.0
+    mean_logloss: float = 0.0
+    mean_accuracy: float = 0.0
+    year_briers: Dict[int, float] = field(default_factory=dict)
+    total_time_seconds: float = 0.0
+
+    def summary(self) -> str:
+        """Human-readable summary."""
+        lines = [
+            (
+                "Prospective Forward Validation "
+                f"({len(self.fold_results)} folds):"
+            ),
+            f"  Mean Brier:  {self.mean_brier:.6f} (+/- {self.std_brier:.6f})",
+            f"  Mean LogLoss: {self.mean_logloss:.6f}",
+            f"  Mean Accuracy: {self.mean_accuracy:.4f}",
+            f"  Total time: {self.total_time_seconds:.1f}s",
+            "",
+            "  Per-year (predicted season) breakdown:",
+        ]
+        for year, brier in sorted(self.year_briers.items()):
+            lines.append(f"    {year}: Brier={brier:.6f}")
+        return "\n".join(lines)
+
+
+class ProspectiveValidator:
+    """Strict out-of-sample validator with rolling-forward splits.
+
+    Fold definition for a target year ``t``:
+      - train years: all available seasons <= t - 1
+      - test year: t
+
+    This prohibits training on future tournaments and better mimics
+    deployment-time behavior than leave-one-year-out validation.
+    """
+
+    def __init__(self, years: Optional[List[int]] = None):
+        self.years = sorted(years or list(LOYO_YEARS))
+
+    def validate(
+        self,
+        data_by_year: Dict[int, Dict],
+        train_fn: Callable,
+        predict_fn: Callable,
+    ) -> ProspectiveValidationResult:
+        """Run season-by-season forward validation."""
+        total_start = time.time()
+        fold_results: List[ProspectiveFoldResult] = []
+
+        for predicted_year in self.years:
+            if predicted_year not in data_by_year:
+                logger.warning(
+                    "Prospective: Year %d not in data. Skipping.",
+                    predicted_year,
+                )
+                continue
+
+            train_years = [
+                year for year in sorted(data_by_year)
+                if year < predicted_year
+            ]
+            if not train_years:
+                logger.info(
+                    "Prospective: No prior seasons before %d. Skipping.",
+                    predicted_year,
+                )
+                continue
+
+            fold_start = time.time()
+
+            X_trains = []
+            y_trains = []
+            m_trains = []
+            w_trains = []
+
+            for year in train_years:
+                data = data_by_year.get(year, {})
+                if "X" not in data or "y" not in data:
+                    continue
+                X_trains.append(data["X"])
+                y_trains.append(data["y"])
+                if "margins" in data:
+                    m_trains.append(data["margins"])
+                w_trains.append(data.get("sample_weights", np.ones(len(data["y"]))))
+
+            if not X_trains:
+                logger.warning(
+                    "Prospective: No training rows available for %d. Skipping.",
+                    predicted_year,
+                )
+                continue
+
+            X_train = np.vstack(X_trains)
+            y_train = np.concatenate(y_trains)
+            margins_train = np.concatenate(m_trains) if m_trains else np.zeros(len(y_train))
+            weights_train = np.concatenate(w_trains)
+
+            test_data = data_by_year[predicted_year]
+            X_test = test_data["X"]
+            y_test = test_data["y"]
+            feature_names = test_data.get("feature_names", [])
+
+            try:
+                model = train_fn(
+                    X_train,
+                    y_train,
+                    margins_train,
+                    feature_names,
+                    weights_train,
+                )
+                predictions = predict_fn(model, X_test)
+            except Exception as e:
+                logger.error(
+                    "Prospective: Fold failed for %d: %s",
+                    predicted_year,
+                    e,
+                )
+                continue
+
+            predictions = np.clip(predictions, 1e-7, 1 - 1e-7)
+            brier = float(np.mean((predictions - y_test) ** 2))
+            logloss = float(-np.mean(
+                y_test * np.log(predictions) + (1 - y_test) * np.log(1 - predictions)
+            ))
+            accuracy = float(np.mean((predictions > 0.5) == y_test))
+            calibration_error = LOYOValidator()._compute_ece(predictions, y_test)
+
+            round_briers = {}
+            if "rounds" in test_data:
+                rounds = test_data["rounds"]
+                for round_name in set(rounds):
+                    mask = np.array([r == round_name for r in rounds])
+                    if mask.sum() > 0:
+                        round_briers[round_name] = float(
+                            np.mean((predictions[mask] - y_test[mask]) ** 2)
+                        )
+
+            fold_results.append(
+                ProspectiveFoldResult(
+                    train_through_year=predicted_year - 1,
+                    predicted_year=predicted_year,
+                    train_years=train_years,
+                    n_train_games=len(y_train),
+                    n_test_games=len(y_test),
+                    brier_score=brier,
+                    log_loss=logloss,
+                    accuracy=accuracy,
+                    calibration_error=calibration_error,
+                    round_briers=round_briers,
+                    train_time_seconds=time.time() - fold_start,
+                )
+            )
+
+        total_time = time.time() - total_start
+        if fold_results:
+            briers = [f.brier_score for f in fold_results]
+            result = ProspectiveValidationResult(
+                fold_results=fold_results,
+                mean_brier=float(np.mean(briers)),
+                std_brier=float(np.std(briers)),
+                mean_logloss=float(np.mean([f.log_loss for f in fold_results])),
+                mean_accuracy=float(np.mean([f.accuracy for f in fold_results])),
+                year_briers={f.predicted_year: f.brier_score for f in fold_results},
+                total_time_seconds=total_time,
+            )
+        else:
+            result = ProspectiveValidationResult(total_time_seconds=total_time)
+
+        logger.info("\n%s", result.summary())
+        return result
+
+
 class LOYOValidator:
     """Leave-One-Year-Out cross-validation engine.
 

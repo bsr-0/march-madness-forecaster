@@ -106,12 +106,33 @@ class ConsensusData:
 class ESPNPicksScraper:
     """
     Scraper for ESPN Tournament Challenge pick percentages.
-    
+
     These percentages represent public consensus and are used for
     game-theory optimization to find contrarian value.
+
+    Data sources (tried in order):
+    1. ESPN_PUBLIC_PICKS_URL env var (user-provided JSON endpoint)
+    2. ESPN Gambit API (undocumented, may require browser headers)
+    3. ESPN "Who Picked Whom" page (legacy, may be discontinued)
+    4. Cache from a previous successful fetch
+
+    If none work, provide a JSON file via --public-picks matching this format:
+    {
+      "teams": {
+        "duke": {
+          "team_name": "Duke", "seed": 1, "region": "East",
+          "round_of_64_pct": 98.0, "round_of_32_pct": 92.0,
+          "sweet_16_pct": 75.0, "elite_8_pct": 55.0,
+          "final_four_pct": 35.0, "champion_pct": 22.0
+        }
+      }
+    }
     """
-    
+
     BASE_URL = "https://fantasy.espn.com/tournament-challenge-bracket"
+    _GAMBIT_URL = "https://gambit-api.fantasy.espn.com/apis/v1/challenges/tournament-challenge-bracket-{year}"
+    _WPW_URL = "https://fantasy.espn.com/tournament-challenge-bracket/{year}/en/whopickedwhom"
+    _PEOPLES_URL = "https://fantasy.espn.com/games/tournament-challenge-bracket-{year}/peoplesbracket"
     
     def __init__(self, cache_dir: Optional[str] = None):
         """Initialize scraper."""
@@ -127,36 +148,60 @@ class ESPNPicksScraper:
     def fetch_picks(self, year: int = 2026) -> ConsensusData:
         """
         Fetch public pick percentages from ESPN.
-        
-        Note: Data only available after Selection Sunday.
-        
-        Args:
-            year: Tournament year
-            
-        Returns:
-            ConsensusData with pick percentages
-        """
-        cached = self._load_from_cache(f"espn_picks_{year}.json")
-        if cached:
-            return self._dict_to_consensus(cached)
 
+        Tries, in order: ESPN_PUBLIC_PICKS_URL env var, ESPN Gambit API,
+        Who Picked Whom page, People's Bracket page, then cache.
+
+        Note: Data only available after Selection Sunday.
+        """
+        # 1. User-provided URL (highest priority)
         source_url = os.getenv("ESPN_PUBLIC_PICKS_URL")
         if source_url:
-            try:
-                response = self.session.get(source_url, timeout=30)
-                response.raise_for_status()
-                payload = response.json()
-                if isinstance(payload, dict):
-                    if self.cache_dir:
-                        self._save_to_cache(f"espn_picks_{year}.json", payload)
-                    return self._dict_to_consensus(payload)
-            except Exception as exc:
-                logger.warning("ESPN picks fetch failed: %s", exc)
+            result = self._try_json_url(source_url, year, "ESPN_PUBLIC_PICKS_URL")
+            if result:
+                return result
+
+        # 2. Try known ESPN API endpoints (best-effort, often blocked)
+        for url in (
+            self._GAMBIT_URL.format(year=year),
+            self._WPW_URL.format(year=year),
+            self._PEOPLES_URL.format(year=year),
+        ):
+            result = self._try_json_url(url, year, url.split("/")[2])
+            if result:
+                return result
+
+        # 3. Fall back to cache from a previous successful fetch
+        cached = self._load_from_cache(f"espn_picks_{year}.json")
+        if cached:
+            logger.info("Using cached ESPN picks for %d", year)
+            return self._dict_to_consensus(cached)
 
         logger.warning(
-            "ESPN pick data unavailable. Set ESPN_PUBLIC_PICKS_URL or provide --public-picks JSON."
+            "ESPN pick data unavailable. Options: "
+            "(1) set ESPN_PUBLIC_PICKS_URL env var to a JSON endpoint, "
+            "(2) provide a JSON file via --public-picks (see tests/fixtures/public_picks_2026.json for format), "
+            "(3) manually create data/raw/public_picks_%d.json",
+            year,
         )
         return ConsensusData(sources=["espn"])
+
+    def _try_json_url(self, url: str, year: int, label: str) -> Optional[ConsensusData]:
+        """Attempt to fetch and parse a JSON picks URL. Returns None on failure."""
+        try:
+            response = self.session.get(url, timeout=15)
+            if response.status_code == 403:
+                logger.debug("%s returned 403 (blocked/JS-required)", label)
+                return None
+            response.raise_for_status()
+            payload = response.json()
+            if isinstance(payload, dict) and payload.get("teams"):
+                if self.cache_dir:
+                    self._save_to_cache(f"espn_picks_{year}.json", payload)
+                return self._dict_to_consensus(payload)
+        except Exception as exc:
+            logger.debug("ESPN picks from %s failed: %s", label, exc)
+        return None
     
     def load_from_json(self, filepath: str) -> ConsensusData:
         """
@@ -228,8 +273,13 @@ class ESPNPicksScraper:
 
 
 class YahooPicksScraper:
-    """Scraper for Yahoo bracket game picks."""
-    
+    """Scraper for Yahoo bracket game picks.
+
+    Note: Yahoo discontinued their NCAA bracket game. This scraper only
+    works if YAHOO_PUBLIC_PICKS_URL points to a user-hosted JSON feed
+    with the same schema as ESPN picks.
+    """
+
     BASE_URL = "https://tournament.fantasysports.yahoo.com"
 
     def __init__(self, cache_dir: Optional[str] = None):
@@ -264,7 +314,10 @@ class YahooPicksScraper:
             except Exception as exc:
                 logger.warning("Yahoo picks fetch failed: %s", exc)
 
-        logger.warning("Yahoo pick data unavailable. Set YAHOO_PUBLIC_PICKS_URL.")
+        logger.info(
+            "Yahoo pick data unavailable (Yahoo discontinued their bracket game). "
+            "Set YAHOO_PUBLIC_PICKS_URL if you have an alternative data source."
+        )
         return ConsensusData(sources=["yahoo"])
 
     def _load_cache(self, filename: str) -> Optional[dict]:
@@ -285,8 +338,13 @@ class YahooPicksScraper:
 
 
 class CBSPicksScraper:
-    """Scraper for CBS bracket game picks."""
-    
+    """Scraper for CBS bracket game picks.
+
+    Note: CBS publishes pick percentages in editorial articles only — no
+    public API. This scraper only works if CBS_PUBLIC_PICKS_URL points to
+    a user-hosted JSON feed with the same schema as ESPN picks.
+    """
+
     BASE_URL = "https://www.cbssports.com/college-basketball/bracketology"
 
     def __init__(self, cache_dir: Optional[str] = None):
@@ -321,7 +379,10 @@ class CBSPicksScraper:
             except Exception as exc:
                 logger.warning("CBS picks fetch failed: %s", exc)
 
-        logger.warning("CBS pick data unavailable. Set CBS_PUBLIC_PICKS_URL.")
+        logger.info(
+            "CBS pick data unavailable (no public API). "
+            "Set CBS_PUBLIC_PICKS_URL if you have an alternative data source."
+        )
         return ConsensusData(sources=["cbs"])
 
     def _load_cache(self, filename: str) -> Optional[dict]:

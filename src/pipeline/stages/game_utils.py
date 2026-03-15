@@ -17,18 +17,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-# Re-export tournament start dates for convenience
-TOURNAMENT_START_DATES: Dict[int, date] = {
-    2017: date(2017, 3, 14),
-    2018: date(2018, 3, 13),
-    2019: date(2019, 3, 19),
-    2021: date(2021, 3, 18),
-    2022: date(2022, 3, 15),
-    2023: date(2023, 3, 14),
-    2024: date(2024, 3, 19),
-    2025: date(2025, 3, 18),
-    2026: date(2026, 3, 17),
-}
+# Re-export canonical tournament start dates from config.
+from ..config import TOURNAMENT_START_DATES
 
 
 def normalize_team_key(name: str) -> str:
@@ -91,7 +81,7 @@ def detect_tournament_game(date_str: str, fallback_year: int) -> bool:
         return False
 
     game_year = game_day.year
-    tournament_start = date(game_year, 3, 14)
+    tournament_start = TOURNAMENT_START_DATES.get(game_year, date(game_year, 3, 14))
     tournament_end = date(game_year, 4, 15)
     return tournament_start <= game_day <= tournament_end
 

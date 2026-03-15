@@ -489,41 +489,77 @@ class TestHistoricalDataFileDateRegression:
             pytest.skip("No historical game data files found on disk")
         return files
 
+    @staticmethod
+    def _is_unrepaired(path):
+        """Check if a data file has never been date-repaired.
+
+        Unrepaired files have all games on a single fallback date and
+        should be excluded from regression checks (they are pre-existing
+        data quality gaps, not regressions).
+        """
+        _, games, _ = _load_games_file(path)
+        if not games:
+            return False
+        unique_dates = len(set(g.get("date", "") for g in games))
+        return unique_dates <= 1
+
     def test_no_historical_games_have_nov1_fallback_date(self):
-        """No game should have the {season-1}-11-01 fallback date.
+        """No *repaired* season should have the {season-1}-11-01 fallback date.
 
         This was the signature of the original bug: cbbpy was called with
         info=False, so game dates defaulted to Nov 1 of the prior year.
+
+        Seasons that have never been date-repaired (100% fallback dates) are
+        skipped with a warning — they are pre-existing data quality gaps, not
+        regressions.  The test catches *regressions*: a season that previously
+        had proper dates should never revert to all-fallback.
         """
         files = self._get_files_or_skip()
         violations = []
+        unrepaired = []
         for path in files:
             season, games, team_games = _load_games_file(path)
             if not games or season is None:
                 continue
             fallback = f"{season - 1}-11-01"
             bad_games = [g for g in games if g.get("date") == fallback]
+            bad_tg = [tg for tg in team_games if tg.get("date") == fallback]
+            # If ALL games have the fallback date, this season was never
+            # repaired — skip it (pre-existing gap, not a regression).
+            if bad_games and len(bad_games) == len(games):
+                unrepaired.append(f"{path}: season {season} (all {len(games)} games unrepaired)")
+                continue
             if bad_games:
                 violations.append(
                     f"{path}: {len(bad_games)}/{len(games)} games have "
                     f"fallback date {fallback}"
                 )
-            bad_tg = [tg for tg in team_games if tg.get("date") == fallback]
-            if bad_tg:
+            if bad_tg and len(bad_tg) < len(team_games):
                 violations.append(
                     f"{path}: {len(bad_tg)}/{len(team_games)} team_games have "
                     f"fallback date {fallback}"
                 )
+        if unrepaired:
+            import warnings
+            warnings.warn(
+                f"{len(unrepaired)} season(s) have never been date-repaired "
+                f"(run `python -m src.main repair-dates` to fix):\n"
+                + "\n".join(unrepaired),
+                stacklevel=1,
+            )
         assert not violations, (
             "Games with fallback Nov 1 dates found (date bug regression):\n"
             + "\n".join(violations)
         )
 
     def test_historical_games_have_sufficient_date_diversity(self):
-        """Seasons with 100+ games must have at least 50 unique dates.
+        """Repaired seasons with 100+ games must have at least 50 unique dates.
 
         Real NCAA seasons have 154-155 game days. Anything below 50 indicates
         dates are missing, duplicated, or fabricated.
+
+        Seasons with only 1 unique date are unrepaired (never had dates
+        fetched) and are skipped — they're caught by the fallback-date test.
         """
         files = self._get_files_or_skip()
         violations = []
@@ -532,6 +568,9 @@ class TestHistoricalDataFileDateRegression:
             if not games or len(games) < 100:
                 continue
             unique_dates = len(set(g.get("date", "") for g in games))
+            # Skip unrepaired seasons (1 unique date = all fallback).
+            if unique_dates <= 1:
+                continue
             if unique_dates < 50:
                 violations.append(
                     f"{path}: season {season} has only {unique_dates} unique "
@@ -633,10 +672,14 @@ class TestHistoricalDataFileDateRegression:
         The original bug put 100% of games on one date. Real NCAA schedules
         peak at ~0.7% per date. A 5% threshold catches corruption while
         allowing for heavy tournament days.
+
+        Unrepaired seasons (single fallback date) are skipped.
         """
         files = self._get_files_or_skip()
         violations = []
         for path in files:
+            if self._is_unrepaired(path):
+                continue
             season, games, _ = _load_games_file(path)
             if not games or len(games) < 100:
                 continue

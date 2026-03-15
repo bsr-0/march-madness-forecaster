@@ -14,6 +14,8 @@ from .data.team_name_resolver import TeamNameResolver
 from .exports.kaggle import build_team_id_map, generate_predictions, load_kaggle_teams
 from .ml.evaluation.rdof_audit import freeze_pipeline, run_rdof_audit, run_prospective_evaluation, verify_freeze
 from .pipeline.sota import DataRequirementError, SOTAPipeline, SOTAPipelineConfig, run_sota_pipeline_to_file
+from .governance.production_runner import run_production_2026
+from .governance.production_validator import ProductionValidationError
 
 
 
@@ -63,6 +65,7 @@ def _build_pipeline_config(args, path_overrides=None):
     path_overrides = path_overrides or {}
     dev_years = _parse_year_list(getattr(args, "dev_years", None))
     holdout_years = _parse_year_list(getattr(args, "holdout_years", None))
+    calibration_years = _parse_year_list(getattr(args, "calibration_years", None))
     config_kwargs = dict(
         year=path_overrides.get("year", args.year),
         num_simulations=args.simulations,
@@ -94,8 +97,10 @@ def _build_pipeline_config(args, path_overrides=None):
         enable_transformer=bool(getattr(args, "enable_transformer", False)),
         enable_embedding_projections=bool(getattr(args, "enable_embedding_projections", False)),
         kaggle_dir=getattr(args, "kaggle_dir", None),
-        model_complexity=getattr(args, "model_complexity", "standard"),
+        model_complexity=getattr(args, "model_complexity", "simple"),
         enable_bracket_portfolio=bool(getattr(args, "enable_bracket_portfolio", False)),
+        probability_profile=getattr(args, "probability_profile", "production"),
+        mode=getattr(args, "mode", "calibration"),
     )
     # Merge any additional path overrides (e.g., from manifest)
     for key in ("preseason_ap_json", "coach_tournament_json", "conf_champions_json",
@@ -107,6 +112,8 @@ def _build_pipeline_config(args, path_overrides=None):
         config_kwargs["dev_years"] = dev_years
     if holdout_years is not None:
         config_kwargs["holdout_years"] = holdout_years
+    if calibration_years is not None:
+        config_kwargs["calibration_years"] = calibration_years
     return SOTAPipelineConfig(**config_kwargs)
 
 
@@ -232,6 +239,33 @@ def run_research_loop(args):
     print(knowledge.research_summary())
     return 0
 
+
+
+
+def run_production_2026_cmd(args):
+    """Run the frozen 2026 production path only."""
+    try:
+        report, freeze_manifest, governance_report = run_production_2026(
+            config_path=args.config,
+            output_report_path=args.output,
+            freeze_manifest_path=args.freeze_manifest,
+            governance_report_path=args.governance_report,
+        )
+    except ProductionValidationError as exc:
+        print(f"Production validation error: {exc}")
+        return 1
+    except DataRequirementError as exc:
+        print(f"Production data requirement error: {exc}")
+        return 1
+
+    print(f"✓ Frozen production run complete: {args.output}")
+    print(f"✓ Freeze manifest: {args.freeze_manifest}")
+    print(f"✓ Governance report: {args.governance_report}")
+    print(
+        "Production path verification: "
+        f"{report.get('production_path_verification', {}).get('probability_profile', 'unknown')}"
+    )
+    return 0
 
 def _load_manifest(manifest_arg):
     """Load and validate an ingestion manifest. Returns (manifest, base_dir) or exits."""
@@ -552,6 +586,8 @@ def ingest_data(args):
         scrape_public_picks=not args.skip_public_picks,
         scrape_sports_reference=not args.skip_sports_reference,
         scrape_rosters=not args.skip_rosters,
+        scrape_historical_games=not args.skip_historical_games,
+        historical_games_since=getattr(args, "historical_games_since", None),
         historical_games_provider_priority=parse_priority(args.historical_games_provider_priority),
         team_metrics_provider_priority=parse_priority(args.team_metrics_provider_priority),
         torvik_provider_priority=parse_priority(args.torvik_provider_priority),
@@ -605,6 +641,8 @@ def audit_rdof(args):
         config_kwargs["dev_years"] = dev_years
     if holdout_years is not None:
         config_kwargs["holdout_years"] = holdout_years
+    if calibration_years is not None:
+        config_kwargs["calibration_years"] = calibration_years
     config = SOTAPipelineConfig(**config_kwargs)
 
     result = run_rdof_audit(
@@ -1321,7 +1359,7 @@ def main():
         help="Player-level injury/noise Monte Carlo samples per matchup (default: 10000)",
     )
     sota_parser.add_argument("--seed", type=int, default=2026, help="Random seed")
-    sota_parser.add_argument("--calibration", choices=["isotonic", "platt", "none"], default="isotonic")
+    sota_parser.add_argument("--calibration", choices=["temperature", "isotonic", "platt", "none"], default="temperature")
     sota_parser.add_argument("--torvik", default=None, help="Optional Torvik JSON")
     sota_parser.add_argument("--historical-games", default=None, help="Historical NCAA game JSON fallback for game flows")
     sota_parser.add_argument("--sports-reference", default=None, help="Sports Reference team stats JSON (backfill)")
@@ -1368,6 +1406,23 @@ def main():
         help="Comma-separated holdout years for evaluation only (default: 2025)",
     )
     sota_parser.add_argument(
+        "--probability-profile",
+        choices=["production", "experimental"],
+        default="production",
+        help="Probability pipeline profile (default: production)",
+    )
+    sota_parser.add_argument(
+        "--mode",
+        choices=["calibration", "ev"],
+        default="calibration",
+        help="Optimization mode (default: calibration)",
+    )
+    sota_parser.add_argument(
+        "--calibration-years",
+        default=None,
+        help="Comma-separated tournament years used for calibrator fitting (default: holdout years)",
+    )
+    sota_parser.add_argument(
         "--require-freeze",
         action="store_true",
         help="Require a verified freeze artifact before running",
@@ -1397,7 +1452,7 @@ def main():
     sota_parser.add_argument(
         "--model-complexity",
         choices=["simple", "standard", "full"],
-        default="standard",
+        default="simple",
         help="Model complexity mode: simple (8 features), standard (22), full (all)",
     )
     sota_parser.add_argument(
@@ -1427,6 +1482,12 @@ def main():
     ingest_parser.add_argument("--skip-public-picks", action="store_true", help="Skip public picks scrape")
     ingest_parser.add_argument("--skip-sports-reference", action="store_true", help="Skip Sports Reference scrape")
     ingest_parser.add_argument("--skip-rosters", action="store_true", help="Skip player roster ingestion")
+    ingest_parser.add_argument("--skip-historical-games", action="store_true", help="Skip historical games scrape (slow cbbpy day-by-day fetch)")
+    ingest_parser.add_argument(
+        "--historical-games-since",
+        default=None,
+        help="Only fetch games from this date forward (ISO format, e.g. 2026-03-08) and merge with existing data",
+    )
     ingest_parser.add_argument(
         "--historical-games-provider-priority",
         default=None,
@@ -1836,7 +1897,7 @@ def main():
         help="Player-level injury/noise Monte Carlo samples per matchup (default: 10000)",
     )
     manifest_sota_parser.add_argument("--seed", type=int, default=2026, help="Random seed")
-    manifest_sota_parser.add_argument("--calibration", choices=["isotonic", "platt", "none"], default="isotonic")
+    manifest_sota_parser.add_argument("--calibration", choices=["temperature", "isotonic", "platt", "none"], default="temperature")
     manifest_sota_parser.add_argument("--input", default=None, help="Override teams JSON path")
     manifest_sota_parser.add_argument("--torvik", default=None, help="Override Torvik JSON path")
     manifest_sota_parser.add_argument("--historical-games", default=None, help="Override historical games JSON")
@@ -1885,6 +1946,23 @@ def main():
         "--holdout-years",
         default=None,
         help="Comma-separated holdout years for evaluation only (default: 2025)",
+    )
+    manifest_sota_parser.add_argument(
+        "--probability-profile",
+        choices=["production", "experimental"],
+        default="production",
+        help="Probability pipeline profile (default: production)",
+    )
+    manifest_sota_parser.add_argument(
+        "--mode",
+        choices=["calibration", "ev"],
+        default="calibration",
+        help="Optimization mode (default: calibration)",
+    )
+    manifest_sota_parser.add_argument(
+        "--calibration-years",
+        default=None,
+        help="Comma-separated tournament years used for calibrator fitting (default: holdout years)",
     )
     manifest_sota_parser.add_argument(
         "--require-freeze",
@@ -2207,6 +2285,32 @@ def main():
         help="Data directory for supplementary files (Four Factors, shooting)",
     )
 
+
+    production_parser = subparsers.add_parser(
+        "run-production-2026",
+        help="Run only the frozen 2026 production predictor path",
+    )
+    production_parser.add_argument(
+        "--config",
+        default="configs/production_2026.json",
+        help="Frozen production config JSON (default: configs/production_2026.json)",
+    )
+    production_parser.add_argument(
+        "--output",
+        default="artifacts/production_report_2026.json",
+        help="Output production report path",
+    )
+    production_parser.add_argument(
+        "--freeze-manifest",
+        default="artifacts/production_freeze_2026.json",
+        help="Output freeze manifest path",
+    )
+    production_parser.add_argument(
+        "--governance-report",
+        default="artifacts/production_governance_report_2026.json",
+        help="Output human-readable governance report path",
+    )
+
     args = parser.parse_args()
 
     if args.command == "sota":
@@ -2431,6 +2535,8 @@ def main():
         return 0
     elif args.command == "scrape-conference-seeds":
         return run_scrape_conference_seeds(args)
+    elif args.command == "run-production-2026":
+        return run_production_2026_cmd(args)
     elif args.command == "conference-tournaments":
         return run_conference_tournaments(args)
     else:

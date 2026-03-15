@@ -1,23 +1,64 @@
 # March Madness Forecaster
 
-NCAA Tournament prediction system using ensemble ML, Monte Carlo simulation, and game-theoretic bracket optimization.
+NCAA Tournament prediction system using a locked, explicit production path for calibrated probabilities and bracket simulation.
+
+## Production Path (Frozen 2026)
+
+The **shipped 2026 production predictor** uses a single frozen path only:
+- `model_complexity = "simple"`
+- `probability_profile = "production"`
+- no GNN
+- no transformer
+- no agent orchestration
+- no experimental probability post-processing
+- temperature calibration only
+- explicit historical training years (`2016,2017,2018,2019,2021,2022,2023,2024`)
+- explicit holdout year (`2025`)
+
+Run this path via:
+
+```bash
+march-madness run-production-2026 --config configs/production_2026.json
+```
+
+This entrypoint hard-fails on missing required paths/artifacts and writes a freeze manifest (`artifacts/production_freeze_2026.json`).
+
+## Research Modules Not Used in Production
+
+The following modules are **research-only** and are not part of the shipped 2026 production predictor:
+- GNN
+- transformer
+- agent orchestration
+- seed overrides
+- Brier sharpening
+- goto_conversion
+- round-weighted calibration
+- Bayesian Bradley-Terry
+- stacking
+- learned feature selection
+- market blend
 
 ## Architecture
 
 ```
-Data Ingestion        Feature Engineering       ML Ensemble          Optimization
-──────────────        ───────────────────       ───────────          ────────────
-cbbpy/sportsipy  ──►  64-dim team vector   ──►  LightGBM (0.45)  ──►  Monte Carlo sim
-Torvik scraper        75-dim matchup features   XGBoost  (0.35)      Isotonic calibration
-ESPN public picks     Incremental PIT metrics   Logistic (0.20)      Leverage/contrarian
-Kaggle Massey         Elo, SOS, Four Factors    CFA fusion            Bracket portfolio
+Data Ingestion        Feature Engineering       ML Ensemble            Probability Path
+──────────────        ───────────────────       ───────────            ───────────────
+cbbpy/sportsipy  ──►  fixed tabular features ─► simple fixed-weight ─► raw → calibrate → shrink → clip
+Torvik scraper        PIT-safe aggregates       ensemble (no stacking)   (production profile)
+ESPN public picks     no learned feature sel.   no GNN/transformer       calibrated probabilities only
+Kaggle Massey         domain checks + guards    no agent orchestration   holdout-year calibration
 ```
 
+
 **Key design principles:**
-- Zero temporal leakage — every training sample uses only data available before game date
-- Multi-year training pool (2005-2025) with exponential decay weighting
-- RDoF audit framework with 58+ tracked constants across 3 tiers
-- Brier score optimization (Kaggle metric since 2023)
+- **Locked production path**: strict config validation hard-fails drift from the shipped setup (simple mode, production profile, calibration mode, no GNN/transformer/stacking/agent/market blending).
+- **Explicit year partition**: dev years are 2016-2024; holdout year is 2025; calibration years default to holdout years only.
+- **Calibration integrity**: calibrator fitting uses tournament-only rows from calibration years (season-level OOS by default).
+- **Distribution-shift mitigation**: production simple feature set excludes tournament-only and coverage-volatile terms (seed/travel/external blend) and applies fixed-feature selection with train/eval drift checks.
+- **Point-in-time features**: every training sample uses only data available before game date, with per-year tournament cutoff dates.
+
+
+**What the production path does not use:** experimental post-processing, agent orchestration, GNN/transformer embeddings, stacking, and market blending are all disabled in locked production mode.
 
 ## Installation
 
@@ -94,8 +135,12 @@ Key flags:
 - `--pool-size 100` — bracket pool size for strategy optimization
 - `--kaggle-dir data/kaggle` — for Massey Ordinals and seeds
 - `--enable-bracket-portfolio` — generate diverse bracket set for Kaggle
-- `--model-complexity simple|standard|full` — feature count (8/22/all)
-- `--calibration isotonic|platt|none` — calibration method
+- `--model-complexity simple|standard|full` — default is `simple` in production
+- `--calibration temperature|isotonic|platt|none` — default is `temperature`
+- `--probability-profile production|experimental` — default is `production`
+- `--mode calibration|ev` — default is `calibration`
+- `--dev-years 2016,...,2024` and `--holdout-years 2025` — locked production split
+- `--calibration-years 2025` — optional override (defaults to holdout years)
 
 ### 5. Run from ingest manifest (combines steps 3+4)
 
@@ -111,6 +156,7 @@ march-madness sota-from-manifest \
 | Command | Description |
 |---------|-------------|
 | `sota` | Run full prediction pipeline |
+| `run-production-2026` | Run frozen 2026 production-only path with governance artifacts |
 | `sota-from-manifest` | Run pipeline using an ingestion manifest |
 | `ingest` | Collect current-year data sources |
 | `ingest-historical` | Scrape historical seasons for training |
@@ -173,13 +219,13 @@ march-madness-forecaster/
 │   │   └── sota.py                # Main prediction pipeline
 │   ├── data/
 │   │   ├── features/
-│   │   │   ├── feature_engineering.py   # 64-dim team feature vector
+│   │   │   ├── feature_engineering.py   # 79-dim team feature vector
 │   │   │   └── proprietary_metrics.py   # Incremental PIT engine
 │   │   ├── ingestion/             # Data collection & validation
 │   │   └── scrapers/              # Torvik, ESPN, rosters, etc.
 │   ├── ml/
-│   │   ├── ensemble/cfa.py        # CFA model fusion
-│   │   ├── calibration/           # Isotonic/Platt calibration
+│   │   ├── ensemble/cfa.py        # LightGBM/XGBoost/Logistic ensemble
+│   │   ├── calibration/           # Temperature scaling calibration
 │   │   └── evaluation/rdof_audit.py  # RDoF audit framework
 │   ├── simulation/
 │   │   └── monte_carlo.py         # MC bracket simulation
@@ -202,12 +248,12 @@ pytest tests/ --cov=src
 
 ## Technical Details
 
-- **Feature vector:** 64 team features, 75-dim matchup (64 diff + 5 absolute + 6 interaction)
-- **Ensemble:** LightGBM (0.45) / XGBoost (0.35) / Logistic (0.20), CFA fusion
-- **Calibration:** Isotonic regression, 70/30 chronological OOS split
+- **Production simple features:** 8 fixed, stable features (efficiency/SOS/Elo/win%/FT%/momentum)
+- **Production ensemble:** simple fixed-weight tabular ensemble with no stacking, no GNN, no transformer
+- **Calibration:** temperature scaling on tournament-only calibration years (default holdout year 2025)
 - **Monte Carlo:** 50k simulations with configurable noise injection
-- **Training pool:** 2005-2025, exponential decay 0.85/yr, floor 0.15
-- **Elo:** K=38, cross-season carryover (0.75 * prior + 0.25 * 1500)
+- **Training partition:** dev years 2016-2024, holdout year 2025 (production-locked defaults)
+- **Elo:** K=20, cross-season carryover (0.75 * prior + 0.25 * 1500)
 
 ## License
 

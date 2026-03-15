@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       year:
-        description: "Season year to ingest"
-        required: true
-        default: "2026"
+        description: "Season year to ingest (auto-detected from date or current month if blank)"
+        required: false
         type: string
       skip_torvik:
         description: "Skip Torvik scrape"
@@ -23,6 +22,15 @@ on:
         required: false
         default: false
         type: boolean
+      skip_historical_games:
+        description: "Skip historical games scrape"
+        required: false
+        default: false
+        type: boolean
+      historical_games_since:
+        description: "Only fetch games from this date forward (ISO, e.g. 2026-03-08). Season year is auto-detected from this date. Auto-detected on scheduled runs."
+        required: false
+        type: string
       repair_only:
         description: "Skip full ingestion and only run the data quality repair script"
         required: false
@@ -34,8 +42,10 @@ on:
         default: true
         type: boolean
   schedule:
-    # Every Monday at 6:00 UTC during college basketball season (Nov-Apr)
-    - cron: "0 6 * 11-12,1-4 1"
+    # Every Monday at 6:00 UTC during regular season (Nov-Feb)
+    - cron: "0 6 * 11-12,1-2 1"
+    # Daily at 6:00 UTC during March Madness (March and April)
+    - cron: "0 6 * 3-4 *"
 
 concurrency:
   group: data-ingestion
@@ -48,7 +58,24 @@ jobs:
   ingest:
     name: Ingest Season Data
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+
+    # Optional env vars (set in repo Settings > Secrets and variables > Actions):
+    #   CBBDATA_API_KEY         - API key for cbbdata.com Torvik endpoint
+    #   CBBDATA_BASE_URL        - Base URL override for cbbdata API (default: built-in)
+    #   CBBPY_ROSTER_ENABLE_PBP - "true" to collect play-by-play stint data via cbbpy
+    #   PLAYER_METRICS_URL      - URL to a player-metrics JSON feed (manual-provide)
+    #   ESPN_PUBLIC_PICKS_URL   - JSON endpoint for ESPN bracket pick percentages
+    #   YAHOO_PUBLIC_PICKS_URL  - JSON endpoint for Yahoo bracket pick percentages (discontinued)
+    #   CBS_PUBLIC_PICKS_URL    - JSON endpoint for CBS bracket pick percentages
+    env:
+      CBBDATA_API_KEY: ${{ secrets.CBBDATA_API_KEY }}
+      CBBDATA_BASE_URL: ${{ vars.CBBDATA_BASE_URL }}
+      CBBPY_ROSTER_ENABLE_PBP: ${{ vars.CBBPY_ROSTER_ENABLE_PBP }}
+      PLAYER_METRICS_URL: ${{ vars.PLAYER_METRICS_URL }}
+      ESPN_PUBLIC_PICKS_URL: ${{ vars.ESPN_PUBLIC_PICKS_URL }}
+      YAHOO_PUBLIC_PICKS_URL: ${{ vars.YAHOO_PUBLIC_PICKS_URL }}
+      CBS_PUBLIC_PICKS_URL: ${{ vars.CBS_PUBLIC_PICKS_URL }}
 
     steps:
       - uses: actions/checkout@v4
@@ -65,17 +92,31 @@ jobs:
       - name: Determine year
         id: year
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            # During scheduled runs, use current year for Jan-Apr, or next year for Nov-Dec
-            MONTH=$(date +%-m)
-            YEAR=$(date +%Y)
+          # If year was explicitly provided, use it
+          if [ -n "${{ inputs.year }}" ]; then
+            echo "value=${{ inputs.year }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Derive from historical_games_since date if provided
+          if [ -n "${{ inputs.historical_games_since }}" ]; then
+            DATE="${{ inputs.historical_games_since }}"
+            MONTH=$(date -d "$DATE" +%-m)
+            YEAR=$(date -d "$DATE" +%Y)
             if [ "$MONTH" -ge 11 ]; then
               YEAR=$((YEAR + 1))
             fi
             echo "value=$YEAR" >> "$GITHUB_OUTPUT"
-          else
-            echo "value=${{ inputs.year }}" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          # Fall back to current date (scheduled runs or manual without either field)
+          MONTH=$(date +%-m)
+          YEAR=$(date +%Y)
+          if [ "$MONTH" -ge 11 ]; then
+            YEAR=$((YEAR + 1))
+          fi
+          echo "value=$YEAR" >> "$GITHUB_OUTPUT"
 
       - name: Build ingestion flags
         id: flags
@@ -90,15 +131,66 @@ jobs:
           if [ "${{ inputs.skip_rosters }}" = "true" ]; then
             FLAGS="$FLAGS --skip-rosters"
           fi
+          if [ "${{ inputs.skip_historical_games }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-historical-games"
+          fi
           echo "flags=$FLAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Detect incremental games window
+        id: incremental
+        run: |
+          YEAR="${{ steps.year.outputs.value }}"
+          FILE="data/raw/historical_games_${YEAR}.json"
+
+          # Manual override takes priority
+          if [ -n "${{ inputs.historical_games_since }}" ]; then
+            echo "flag=--historical-games-since ${{ inputs.historical_games_since }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # For scheduled runs: if data exists, do incremental from last game date
+          if [ -f "$FILE" ]; then
+            LAST_DATE=$(python3 -c "import json; games=json.load(open('$FILE')).get('games',[]); dates=[g['date'] for g in games if g.get('date')]; print(max(dates) if dates else '')")
+            if [ -n "$LAST_DATE" ]; then
+              NEXT_DATE=$(date -d "$LAST_DATE + 1 day" +%Y-%m-%d)
+              echo "Existing data through $LAST_DATE, fetching incrementally from $NEXT_DATE"
+              echo "flag=--historical-games-since $NEXT_DATE" >> "$GITHUB_OUTPUT"
+            else
+              echo "flag=" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "No existing data, full scrape"
+            echo "flag=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Run data ingestion
         if: inputs.repair_only != true
-        run: python -m src.main ingest ${{ steps.flags.outputs.flags }}
+        run: python -m src.main ingest ${{ steps.flags.outputs.flags }} ${{ steps.incremental.outputs.flag }}
 
       - name: Run data quality repair
         if: inputs.repair_only == true || inputs.run_repair != false
-        run: python scripts/repair_2026_data_quality.py --year ${{ steps.year.outputs.value }}
+        run: |
+          YEAR="${{ steps.year.outputs.value }}"
+          SCRIPT="scripts/repair_${YEAR}_data_quality.py"
+          if [ -f "$SCRIPT" ]; then
+            python "$SCRIPT" --year "$YEAR"
+          else
+            # Fall back to the most recent year-specific repair script
+            LATEST=$(ls scripts/repair_*_data_quality.py 2>/dev/null | sort -t_ -k2 -n | tail -1)
+            if [ -n "$LATEST" ]; then
+              echo "No repair script for $YEAR; using latest available: $LATEST"
+              python "$LATEST" --year "$YEAR"
+            else
+              echo "No repair scripts found, skipping"
+            fi
+          fi
+
+      - name: Prune stale cache files
+        run: |
+          # Remove cache files older than 14 days to prevent unbounded growth
+          find data/raw/cache -type f -mtime +14 -delete 2>/dev/null || true
+          # Remove empty directories left behind
+          find data/raw/cache -type d -empty -delete 2>/dev/null || true
 
       - name: Commit and push updated data
         run: |

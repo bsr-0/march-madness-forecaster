@@ -12,6 +12,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from ._retry import rate_limited_call
+
 logger = logging.getLogger(__name__)
 
 
@@ -182,16 +184,21 @@ class CBBpyRosterScraper:
         # If PBP not needed, use the simpler boxscore endpoint first
         if not enable_pbp and callable(get_boxscore):
             try:
-                return self._frame_to_records(get_boxscore(game_id)), []
+                return self._frame_to_records(
+                    rate_limited_call(get_boxscore, game_id, delay=1.0, max_retries=2),
+                ), []
             except Exception:
                 pass
 
         if callable(get_game):
             try:
-                data = get_game(game_id, info=False, box=True, pbp=enable_pbp)
+                data = rate_limited_call(
+                    get_game, game_id, info=False, box=True, pbp=enable_pbp,
+                    delay=1.0, max_retries=2,
+                )
             except TypeError:
                 try:
-                    data = get_game(game_id)
+                    data = rate_limited_call(get_game, game_id, delay=1.0, max_retries=2)
                 except Exception:
                     data = None
             except Exception:
@@ -204,7 +211,9 @@ class CBBpyRosterScraper:
         # Last resort: boxscore-only endpoint
         if callable(get_boxscore):
             try:
-                return self._frame_to_records(get_boxscore(game_id)), []
+                return self._frame_to_records(
+                    rate_limited_call(get_boxscore, game_id, delay=1.0, max_retries=2),
+                ), []
             except Exception:
                 pass
         return [], []
@@ -787,7 +796,10 @@ class CBBpyRosterScraper:
             else:
                 calls += 1
                 try:
-                    profile = self._frame_to_single_row(get_player_info(player_id))
+                    raw = rate_limited_call(
+                        get_player_info, player_id, delay=1.0, max_retries=2,
+                    )
+                    profile = self._frame_to_single_row(raw)
                 except Exception:
                     profile = None
                 cache[player_id] = profile

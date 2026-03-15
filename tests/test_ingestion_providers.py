@@ -10,15 +10,15 @@ class StubProviderHub(LibraryProviderHub):
         super().__init__()
         self.calls = []
 
-    def _from_sportsdataverse_pbp(self, year):
+    def _from_sportsdataverse_pbp(self, year, since=None):
         self.calls.append("sportsdataverse")
         return ProviderResult("sportsdataverse", [])
 
-    def _from_cbbpy_pbp(self, year):
+    def _from_cbbpy_pbp(self, year, since=None):
         self.calls.append("cbbpy")
         return ProviderResult("cbbpy", [{"game_id": "g1"}])
 
-    def _from_cbbdata_games_api(self, year):
+    def _from_cbbdata_games_api(self, year, since=None):
         self.calls.append("cbbdata")
         return ProviderResult("cbbdata", [{"game_id": "g2"}])
 
@@ -33,7 +33,7 @@ def test_provider_priority_uses_custom_order():
 
 def test_provider_priority_falls_through_to_next():
     class FallthroughHub(StubProviderHub):
-        def _from_cbbdata_games_api(self, year):
+        def _from_cbbdata_games_api(self, year, since=None):
             self.calls.append("cbbdata")
             return ProviderResult("cbbdata", [])
 
@@ -83,6 +83,56 @@ def test_cbbpy_provider_normalizes_tuple_boxscore(monkeypatch):
     assert all(row.get("date") == "2025-01-15" for row in result.records)
 
 
+def test_cbbpy_provider_incremental_skips_season_fallback(monkeypatch):
+    """When since is set and get_games_range fails, cbbpy should NOT fall
+    back to get_games_season (which scrapes from November).  Instead it
+    returns empty so the next provider can handle it."""
+    class DummyCBBpy:
+        @staticmethod
+        def get_games_range(start, end, info=True, box=True, pbp=False):
+            raise Exception("Network error")
+
+        @staticmethod
+        def get_games_season(year, info=True, box=True, pbp=False):
+            raise AssertionError("get_games_season should not be called for incremental fetches")
+
+    hub = LibraryProviderHub()
+    monkeypatch.setattr(hub, "_import_module", lambda module_name: DummyCBBpy if module_name == "cbbpy.mens_scraper" else None)
+
+    result = hub.fetch_historical_games(2025, priority=["cbbpy"], since="2025-03-01")
+    # cbbpy should return empty (get_games_range failed, no season fallback)
+    assert result.provider == "none"
+    assert result.records == []
+
+
+def test_cbbpy_provider_incremental_keeps_records_with_empty_dates(monkeypatch):
+    """Records with empty dates should be kept during incremental fetches,
+    not silently dropped — they likely represent recent games."""
+    class DummyCBBpy:
+        @staticmethod
+        def get_games_range(start, end, info=True, box=True, pbp=False):
+            # Info only has a date for game 601, not 602
+            info_df = pd.DataFrame([
+                {"game_id": "601", "game_day": "January 15, 2025"},
+            ])
+            box_df = pd.DataFrame([
+                {"game_id": "601", "team": "A", "player": "p1", "pts": 10, "fgm": 4, "fga": 8, "3pm": 1, "3pa": 3, "fta": 1, "to": 1, "oreb": 1, "dreb": 2},
+                {"game_id": "601", "team": "B", "player": "p2", "pts": 8, "fgm": 3, "fga": 6, "3pm": 0, "3pa": 2, "fta": 2, "to": 0, "oreb": 0, "dreb": 1},
+                {"game_id": "602", "team": "C", "player": "p3", "pts": 12, "fgm": 5, "fga": 9, "3pm": 1, "3pa": 3, "fta": 1, "to": 2, "oreb": 1, "dreb": 3},
+                {"game_id": "602", "team": "D", "player": "p4", "pts": 6, "fgm": 2, "fga": 5, "3pm": 1, "3pa": 2, "fta": 1, "to": 1, "oreb": 0, "dreb": 2},
+            ])
+            return (info_df, box_df, pd.DataFrame())
+
+    hub = LibraryProviderHub()
+    monkeypatch.setattr(hub, "_import_module", lambda module_name: DummyCBBpy if module_name == "cbbpy.mens_scraper" else None)
+
+    result = hub.fetch_historical_games(2025, priority=["cbbpy"], since="2025-03-01")
+    assert result.provider == "cbbpy"
+    # Game 602 has no date — should still be included (not filtered out)
+    game_ids = {r["game_id"] for r in result.records}
+    assert "602" in game_ids, "Records with empty dates should be kept during incremental fetch"
+
+
 def test_cbbpy_provider_extracts_dates_from_info(monkeypatch):
     """Verify _from_cbbpy_pbp extracts dates from info DataFrame."""
     class DummyCBBpy:
@@ -112,3 +162,89 @@ def test_cbbpy_provider_extracts_dates_from_info(monkeypatch):
 
     assert date_by_game["501"] == "2024-11-06"
     assert date_by_game["502"] == "2025-02-10"
+
+
+def test_map_barttorvik_row_extracts_coach():
+    row = {
+        "Team": "Duke",
+        "Conf": "ACC",
+        "AdjOE": "120.5",
+        "AdjDE": "95.2",
+        "AdjT": "70.1",
+        "Barthag": "0.95",
+        "Coach": "Jon Scheyer",
+    }
+    result = LibraryProviderHub._map_barttorvik_row(row)
+    assert result is not None
+    assert result["coach"] == "Jon Scheyer"
+
+
+def test_map_barttorvik_row_no_coach_column():
+    row = {
+        "Team": "Duke",
+        "Conf": "ACC",
+        "AdjOE": "120.5",
+        "AdjDE": "95.2",
+    }
+    result = LibraryProviderHub._map_barttorvik_row(row)
+    assert result is not None
+    assert "coach" not in result
+
+
+class FullStubProviderHub(LibraryProviderHub):
+    """Stub with all providers returning empty except those overridden."""
+    def __init__(self):
+        super().__init__()
+        self.calls = []
+
+    def _from_sportsdataverse_pbp(self, year, since=None):
+        self.calls.append("sportsdataverse")
+        return ProviderResult("sportsdataverse", [])
+
+    def _from_cbbpy_pbp(self, year, since=None):
+        self.calls.append("cbbpy")
+        return ProviderResult("cbbpy", [{"game_id": "g1"}])
+
+    def _from_espn_scoreboard_api(self, year, since=None):
+        self.calls.append("espn_scoreboard")
+        return ProviderResult("espn_scoreboard", [{"game_id": "g2"}])
+
+    def _from_sportsipy_games_api(self, year, since=None):
+        self.calls.append("sportsipy")
+        return ProviderResult("sportsipy", [])
+
+    def _from_cbbdata_games_api(self, year, since=None):
+        self.calls.append("cbbdata")
+        return ProviderResult("cbbdata", [])
+
+
+def test_default_priority_prefers_espn_over_cbbpy():
+    """espn_scoreboard should be tried before cbbpy by default (faster)."""
+    hub = FullStubProviderHub()
+    result = hub.fetch_historical_games(2026)
+
+    assert result.provider == "espn_scoreboard"
+    assert hub.calls == ["sportsdataverse", "espn_scoreboard"]
+
+
+def test_espn_failure_falls_through_to_cbbpy():
+    """If espn_scoreboard returns no data, cbbpy should be tried next."""
+    class EspnFailHub(FullStubProviderHub):
+        def _from_espn_scoreboard_api(self, year, since=None):
+            self.calls.append("espn_scoreboard")
+            return ProviderResult("espn_scoreboard", [])
+
+    hub = EspnFailHub()
+    result = hub.fetch_historical_games(2026)
+
+    assert result.provider == "cbbpy"
+    assert hub.calls == ["sportsdataverse", "espn_scoreboard", "cbbpy"]
+
+
+def test_explicit_priority_overrides_incremental_default():
+    """Explicit priority should be honored even with since set."""
+    hub = FullStubProviderHub()
+    result = hub.fetch_historical_games(2026, priority=["cbbpy"], since="2026-03-05")
+
+    assert result.provider == "cbbpy"
+    assert hub.calls == ["cbbpy"]

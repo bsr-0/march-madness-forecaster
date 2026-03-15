@@ -12,6 +12,8 @@ dict format, and supports JSON caching for reproducibility.
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import logging
 import re
@@ -353,6 +355,9 @@ class TournamentContextScraper:
     def fetch_team_coaches(self, year: int) -> Dict[str, str]:
         """Fetch a mapping of team_id -> head coach name from Barttorvik.
 
+        Tries the HTML trank.php page first, then falls back to the team
+        results CSV (which is not behind Barttorvik's JS verification wall).
+
         Args:
             year: Season end year.
 
@@ -364,7 +369,17 @@ class TournamentContextScraper:
         if cached and "coaches" in cached:
             return cached["coaches"]
 
+        # Strategy 1: HTML scrape (may fail due to JS wall)
         coaches = self._scrape_team_coaches(year)
+
+        # Strategy 2: CSV fallback
+        if not coaches:
+            logger.info(
+                "HTML team-coach scrape returned no results; "
+                "falling back to team results CSV."
+            )
+            coaches = self._team_coaches_from_csv(year)
+
         if coaches:
             self._save_cache(cache_name, {"coaches": coaches, "year": year})
         return coaches
@@ -427,6 +442,78 @@ class TournamentContextScraper:
                 coaches[team_id] = coach_name
 
         logger.info("Parsed %d team-coach mappings from Barttorvik for %d", len(coaches), year)
+        return coaches
+
+    def _team_coaches_from_csv(self, year: int) -> Dict[str, str]:
+        """Extract team-to-coach mapping from Barttorvik's team results CSV.
+
+        The CSV at ``/{year}_team_results.csv`` is not behind the JS
+        verification wall.  It typically includes a Coach column alongside
+        team ratings data.
+        """
+        url = f"{self.BASE_URL_TORVIK}/{year}_team_results.csv"
+        coaches: Dict[str, str] = {}
+
+        try:
+            resp = self.session.get(url, timeout=45)
+            resp.raise_for_status()
+        except Exception as e:
+            logger.warning("Could not fetch Barttorvik team results CSV for %d: %s", year, e)
+            return coaches
+
+        text = resp.text.strip()
+        if not text:
+            return coaches
+
+        try:
+            dialect = csv.Sniffer().sniff(text[:4096])
+        except Exception:
+            dialect = csv.excel
+
+        reader = csv.DictReader(io.StringIO(text), dialect=dialect)
+        if reader.fieldnames is None:
+            logger.warning("Team results CSV has no headers")
+            return coaches
+
+        logger.debug(
+            "Barttorvik team results CSV columns for %d: %s",
+            year, reader.fieldnames,
+        )
+
+        # Find team and coach columns (case-insensitive)
+        lower_fields = {(f or "").strip().lower(): f for f in reader.fieldnames}
+        team_key = None
+        coach_key = None
+        for alias in ("team", "team name", "team_name", "school"):
+            match = lower_fields.get(alias)
+            if match:
+                team_key = match
+                break
+        for alias in ("coach", "head coach", "head_coach", "coach_name"):
+            match = lower_fields.get(alias)
+            if match:
+                coach_key = match
+                break
+
+        if not team_key or not coach_key:
+            logger.warning(
+                "Team results CSV missing team/coach columns — "
+                "team_key=%s, coach_key=%s (available headers: %s)",
+                team_key, coach_key, list(reader.fieldnames),
+            )
+            return coaches
+
+        for row in reader:
+            team_name = (row.get(team_key) or "").strip()
+            coach_name = (row.get(coach_key) or "").strip()
+            if team_name and coach_name:
+                team_id = self._normalize_name(team_name)
+                coaches[team_id] = coach_name
+
+        logger.info(
+            "Parsed %d team-coach mappings from Barttorvik CSV for %d",
+            len(coaches), year,
+        )
         return coaches
 
     # ------------------------------------------------------------------
