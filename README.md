@@ -2,6 +2,42 @@
 
 NCAA Tournament prediction system using a locked, explicit production path for calibrated probabilities and bracket simulation.
 
+## Production Path (Frozen 2026)
+
+The **shipped 2026 production predictor** uses a single frozen path only:
+- `model_complexity = "simple"`
+- `probability_profile = "production"`
+- no GNN
+- no transformer
+- no agent orchestration
+- no experimental probability post-processing
+- temperature calibration only
+- explicit historical training years (`2016,2017,2018,2019,2021,2022,2023,2024`)
+- explicit holdout year (`2025`)
+
+Run this path via:
+
+```bash
+march-madness run-production-2026 --config configs/production_2026.json
+```
+
+This entrypoint hard-fails on missing required paths/artifacts and writes a freeze manifest (`artifacts/production_freeze_2026.json`).
+
+## Research Modules Not Used in Production
+
+The following modules are **research-only** and are not part of the shipped 2026 production predictor:
+- GNN
+- transformer
+- agent orchestration
+- seed overrides
+- Brier sharpening
+- goto_conversion
+- round-weighted calibration
+- Bayesian Bradley-Terry
+- stacking
+- learned feature selection
+- market blend
+
 ## Architecture
 
 ```
@@ -120,6 +156,7 @@ march-madness sota-from-manifest \
 | Command | Description |
 |---------|-------------|
 | `sota` | Run full prediction pipeline |
+| `run-production-2026` | Run frozen 2026 production-only path with governance artifacts |
 | `sota-from-manifest` | Run pipeline using an ingestion manifest |
 | `ingest` | Collect current-year data sources |
 | `ingest-historical` | Scrape historical seasons for training |
