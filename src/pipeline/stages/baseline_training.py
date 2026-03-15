@@ -222,8 +222,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         else:
             s1, s2 = 0, 0
         # Gap #1: Current-year Massey composite for training features
-        _mc1 = pipeline._external_composites.get(game.team1_id, None) if hasattr(self, '_external_composites') and pipeline._external_composites else None
-        _mc2 = pipeline._external_composites.get(game.team2_id, None) if hasattr(self, '_external_composites') and pipeline._external_composites else None
+        _mc1 = pipeline._external_composites.get(game.team1_id, None) if hasattr(pipeline, '_external_composites') and pipeline._external_composites else None
+        _mc2 = pipeline._external_composites.get(game.team2_id, None) if hasattr(pipeline, '_external_composites') and pipeline._external_composites else None
         _erc1 = _mc1.composite_rating if _mc1 is not None else 0.0
         _erc2 = _mc2.composite_rating if _mc2 is not None else 0.0
         _ers1 = _mc1.rating_spread if _mc1 is not None else 0.0
@@ -837,7 +837,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # When tournament games are included in training (calibration mode),
     # weight them by the Kaggle round-weight schedule so the model
     # optimizes for the competition's actual scoring metric.
-    if hasattr(self, '_round_weights') and pipeline._round_weights is not None and len(pipeline._round_weights) == train_samples:
+    if hasattr(pipeline, '_round_weights') and pipeline._round_weights is not None and len(pipeline._round_weights) == train_samples:
         if train_sample_weight is not None:
             train_sample_weight = train_sample_weight * pipeline._round_weights
         else:
