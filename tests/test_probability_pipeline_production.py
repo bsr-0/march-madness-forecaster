@@ -317,17 +317,17 @@ class TestWomenProductionNoBannedComponents:
 class TestAuditUsesSharedHelpers:
     def test_tournament_adapt_imports_shared(self):
         """Verify rdof_audit._tournament_adapt uses probability_pipeline."""
-        from src.ml.evaluation.rdof_audit import ProspectiveEvaluation
+        from src.ml.evaluation.rdof_audit import HoldoutEvaluator
 
-        source = inspect.getsource(ProspectiveEvaluation._tournament_adapt)
+        source = inspect.getsource(HoldoutEvaluator._tournament_adapt)
         assert "probability_pipeline" in source
         assert "apply_tournament_shrinkage" in source
 
     def test_apply_posthoc_imports_shared(self):
         """Verify _apply_posthoc_and_score uses probability_pipeline."""
-        from src.ml.evaluation.rdof_audit import ProspectiveEvaluation
+        from src.ml.evaluation.rdof_audit import HoldoutEvaluator
 
-        source = inspect.getsource(ProspectiveEvaluation._apply_posthoc_and_score)
+        source = inspect.getsource(HoldoutEvaluator._apply_posthoc_and_score)
         assert "probability_pipeline" in source
         assert "apply_calibration" in source
 
