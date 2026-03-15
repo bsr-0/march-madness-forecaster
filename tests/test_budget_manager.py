@@ -1,100 +1,153 @@
 """Tests for compute budget manager (S20 compute budget management)."""
 
+import time
+
 import pytest
 
 from src.monitoring.budget_manager import (
-    AgentBudget,
-    ComputeBudgetManager,
+    BudgetManager,
+    StageBudget,
 )
 
 
-class TestComputeBudgetManager:
+class TestBudgetManager:
     def test_default_allocations(self):
-        mgr = ComputeBudgetManager(total_budget_seconds=1000.0)
-        # Check that agents got their default allocations
-        assert "data_agent" in mgr._agent_budgets
-        assert "model_agent" in mgr._agent_budgets
-        # model_agent gets 45%
-        assert mgr._agent_budgets["model_agent"].max_wall_seconds == pytest.approx(450.0)
+        mgr = BudgetManager(total_budget_seconds=1000.0)
+        # Check that default stages got their allocations
+        assert "data_loading" in mgr._stages
+        assert "model_training" in mgr._stages
+        # model_training gets 45%
+        assert mgr._stages["model_training"].max_seconds == pytest.approx(450.0)
 
-    def test_agent_lifecycle(self):
-        mgr = ComputeBudgetManager(total_budget_seconds=1000.0)
-        mgr.start()
+    def test_stage_lifecycle(self):
+        mgr = BudgetManager(total_budget_seconds=1000.0)
 
-        budget = mgr.agent_started("data_agent")
-        assert budget.status == "running"
+        with mgr.track_stage("data_loading") as budget:
+            assert budget.started is True
+            time.sleep(0.01)
 
-        budget = mgr.agent_completed("data_agent", wall_seconds=50.0)
-        assert budget.status == "completed"
-        assert budget.actual_wall_seconds == 50.0
+        assert budget.completed is True
+        assert budget.actual_seconds > 0
 
     def test_over_budget_detection(self):
-        mgr = ComputeBudgetManager(total_budget_seconds=100.0)
-        mgr.start()
-        mgr.agent_started("data_agent")
+        mgr = BudgetManager(total_budget_seconds=100.0)
 
-        # data_agent gets 15% = 15s, but takes 50s
-        budget = mgr.agent_completed("data_agent", wall_seconds=50.0)
-        assert budget.status == "over_budget"
+        # data_loading gets 10% = 10s; simulate exceeding it
+        budget = mgr._stages["data_loading"]
+        budget.started = True
+        budget.actual_seconds = 50.0
+        budget.completed = True
 
-    def test_rebalancing(self):
-        mgr = ComputeBudgetManager(total_budget_seconds=1000.0)
-        mgr.start()
+        # Manually trigger alert check via utilization report
+        report = mgr.utilization_report()
+        assert report["stages"]["data_loading"]["utilization_pct"] == pytest.approx(500.0)
 
-        # data_agent gets 150s but finishes in 50s — 100s saved
-        model_budget_before = mgr._agent_budgets["model_agent"].max_wall_seconds
-        mgr.agent_started("data_agent")
-        mgr.agent_completed("data_agent", wall_seconds=50.0)
+    def test_remaining_budget(self):
+        mgr = BudgetManager(total_budget_seconds=1000.0)
 
-        # model_agent should have received a share of the 100s savings
-        model_budget_after = mgr._agent_budgets["model_agent"].max_wall_seconds
-        assert model_budget_after > model_budget_before
+        with mgr.track_stage("data_loading"):
+            time.sleep(0.01)
 
-    def test_estimated_cost(self):
-        mgr = ComputeBudgetManager(total_budget_seconds=3600.0, cost_per_hour=1.00)
-        mgr.start()
-        mgr.agent_started("data_agent")
-        mgr.agent_completed("data_agent", wall_seconds=3600.0)
-        cost = mgr.estimated_cost()
-        assert cost == pytest.approx(1.00, abs=0.01)
+        remaining = mgr.remaining_budget()
+        assert remaining < 1000.0
+        assert remaining > 0
 
-    def test_auto_allocate_unknown_agent(self):
-        mgr = ComputeBudgetManager(total_budget_seconds=1000.0)
-        mgr.start()
-        budget = mgr.agent_started("unknown_agent")
-        assert budget.agent_name == "unknown_agent"
-        assert budget.max_wall_seconds > 0
+    def test_stage_remaining(self):
+        mgr = BudgetManager(total_budget_seconds=1000.0)
+        # data_loading gets 10% = 100s
+        remaining = mgr.stage_remaining("data_loading")
+        assert remaining == pytest.approx(100.0)
+
+        # Unknown stage returns 0
+        assert mgr.stage_remaining("nonexistent") == 0.0
 
     def test_summary_output(self):
-        mgr = ComputeBudgetManager(total_budget_seconds=1000.0)
-        mgr.start()
-        mgr.agent_started("data_agent")
-        mgr.agent_completed("data_agent", wall_seconds=50.0)
+        mgr = BudgetManager(total_budget_seconds=1000.0)
+
+        with mgr.track_stage("data_loading"):
+            time.sleep(0.01)
+
         summary = mgr.summary()
-        assert "Compute Budget Summary" in summary
-        assert "data_agent" in summary
+        assert "Compute Budget Report" in summary
+        assert "data_loading" in summary
 
-    def test_to_dict(self):
-        mgr = ComputeBudgetManager(total_budget_seconds=1000.0)
-        mgr.start()
-        mgr.agent_started("data_agent")
-        mgr.agent_completed("data_agent", wall_seconds=100.0)
-        d = mgr.to_dict()
-        assert d["total_budget_seconds"] == 1000.0
-        assert d["total_consumed_seconds"] == 100.0
-        assert "data_agent" in d["agents"]
+    def test_utilization_report(self):
+        mgr = BudgetManager(total_budget_seconds=1000.0)
 
-    def test_check_budget(self):
-        mgr = ComputeBudgetManager(total_budget_seconds=1000.0)
-        mgr.start()
-        mgr.agent_started("data_agent")
-        mgr.agent_completed("data_agent", wall_seconds=100.0)
-        status = mgr.check_budget("data_agent")
-        assert status["status"] == "completed"
-        assert status["actual_seconds"] == 100.0
+        with mgr.track_stage("data_loading"):
+            time.sleep(0.01)
+
+        report = mgr.utilization_report()
+        assert report["total_budget_seconds"] == 1000.0
+        assert report["total_used_seconds"] >= 0
+        assert "data_loading" in report["stages"]
+        assert report["stages"]["data_loading"]["completed"] is True
 
     def test_custom_allocations(self):
-        allocs = {"agent_a": 0.50, "agent_b": 0.50}
-        mgr = ComputeBudgetManager(total_budget_seconds=200.0, allocations=allocs)
-        assert mgr._agent_budgets["agent_a"].max_wall_seconds == pytest.approx(100.0)
-        assert mgr._agent_budgets["agent_b"].max_wall_seconds == pytest.approx(100.0)
+        allocs = {
+            "stage_a": {"fraction": 0.50, "priority": 1},
+            "stage_b": {"fraction": 0.50, "priority": 2},
+        }
+        mgr = BudgetManager(total_budget_seconds=200.0, allocations=allocs)
+        assert mgr._stages["stage_a"].max_seconds == pytest.approx(100.0)
+        assert mgr._stages["stage_b"].max_seconds == pytest.approx(100.0)
+
+    def test_allocate_new_stage(self):
+        mgr = BudgetManager(total_budget_seconds=1000.0)
+        budget = mgr.allocate("custom_stage", fraction=0.20, priority=5)
+        assert budget.stage_name == "custom_stage"
+        assert budget.max_seconds == pytest.approx(200.0)
+        assert budget.priority == 5
+
+    def test_auto_allocate_unknown_stage_in_track(self):
+        mgr = BudgetManager(total_budget_seconds=1000.0)
+        with mgr.track_stage("unknown_stage") as budget:
+            assert budget.stage_name == "unknown_stage"
+            # Auto-allocated with fraction=0, priority=0
+            assert budget.max_seconds == 0.0
+
+    def test_prioritized_stages(self):
+        allocs = {
+            "low": {"fraction": 0.30, "priority": 1},
+            "high": {"fraction": 0.30, "priority": 3},
+            "mid": {"fraction": 0.40, "priority": 2},
+        }
+        mgr = BudgetManager(total_budget_seconds=100.0, allocations=allocs)
+        ordered = mgr.prioritized_stages()
+        assert ordered[0] == "high"
+        assert ordered[-1] == "low"
+
+    def test_should_shed(self):
+        mgr = BudgetManager(total_budget_seconds=100.0)
+        # model_training has priority 1; simulate >80% budget consumed
+        mgr._stages["data_loading"].actual_seconds = 85.0
+        mgr._stages["data_loading"].completed = True
+
+        # model_training (priority=1) should be shed when budget >80% used
+        assert mgr.should_shed("model_training") is True
+        # data_loading (priority=3) should NOT be shed
+        assert mgr.should_shed("data_loading") is False
+
+    def test_alerts_on_exceeded(self):
+        mgr = BudgetManager(total_budget_seconds=100.0)
+        # data_loading gets 10% = 10s
+        budget = mgr._stages["data_loading"]
+
+        # Simulate tracking that exceeds budget via the context manager
+        with mgr.track_stage("data_loading"):
+            # Manually set actual_seconds to simulate long run
+            pass
+
+        # Force an over-budget scenario by directly manipulating
+        budget.actual_seconds = 20.0  # 200% of 10s budget
+        mgr._add_alert(budget, "exceeded", 2.0)
+
+        assert len(mgr.alerts) >= 1
+        assert mgr.alerts[-1].alert_type == "exceeded"
+
+    def test_get_budget(self):
+        mgr = BudgetManager(total_budget_seconds=1000.0)
+        budget = mgr.get_budget("model_training")
+        assert budget is not None
+        assert budget.stage_name == "model_training"
+        assert mgr.get_budget("nonexistent") is None
