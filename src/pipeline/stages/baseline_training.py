@@ -177,7 +177,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # Build IncrementalMetricsEngine for current-year true PIT features.
     # Every training sample uses only data available before its game date,
     # eliminating all temporal leakage from season-end features.
-    from ..data.features.proprietary_metrics import IncrementalMetricsEngine
+    from src.data.features.proprietary_metrics import IncrementalMetricsEngine
     # Use prior-year Elo for cross-season carryover, matching what
     # historical training years get.  This eliminates the distribution
     # shift where historical Elo features are informative early-season
@@ -198,7 +198,10 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # 14-17) and must not appear in feature vectors for regular-season
     # training games.  This matches the guard in
     # _load_year_samples_incremental() at lines 3270-3274.
-    tournament_cutoff = f"{pipeline.config.year}-03-14"
+    _t_start = TOURNAMENT_START_DATES.get(
+        pipeline.config.year, date(pipeline.config.year, 3, 14)
+    )
+    tournament_cutoff = _t_start.isoformat()
 
     for game in all_games:
         game_date = pipeline._coerce_game_date(
@@ -221,9 +224,15 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             s2 = _seed_map.get(game.team2_id, 0)
         else:
             s1, s2 = 0, 0
-        # Gap #1: Current-year Massey composite for training features
-        _mc1 = pipeline._external_composites.get(game.team1_id, None) if hasattr(pipeline, '_external_composites') and pipeline._external_composites else None
-        _mc2 = pipeline._external_composites.get(game.team2_id, None) if hasattr(pipeline, '_external_composites') and pipeline._external_composites else None
+        # LEAKAGE FIX (Gap #1): External composites use end-of-season
+        # ratings (latest RankingDayNum) and must not appear in feature
+        # vectors for regular-season training games — the same temporal
+        # constraint that applies to seeds above.
+        if game_date > tournament_cutoff:
+            _mc1 = pipeline._external_composites.get(game.team1_id, None) if hasattr(pipeline, '_external_composites') and pipeline._external_composites else None
+            _mc2 = pipeline._external_composites.get(game.team2_id, None) if hasattr(pipeline, '_external_composites') and pipeline._external_composites else None
+        else:
+            _mc1, _mc2 = None, None
         _erc1 = _mc1.composite_rating if _mc1 is not None else 0.0
         _erc2 = _mc2.composite_rating if _mc2 is not None else 0.0
         _ers1 = _mc1.rating_spread if _mc1 is not None else 0.0
@@ -402,7 +411,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # data-quality scoring (compute_year_data_quality) below.
     feature_names = None
     if train_samples >= 40:
-        from ..data.features.feature_engineering import TeamFeatures
+        from src.data.features.feature_engineering import TeamFeatures
         base_names = TeamFeatures.get_feature_names(include_embeddings=False)
         diff_names = [f"diff_{n}" for n in base_names]
         absolute_names = [f"abs_{n}" for n in ABSOLUTE_LEVEL_FEATURE_NAMES]
@@ -738,7 +747,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     dist_shift_stats = {}
     if valid_samples >= 20 and feature_names is not None:
         try:
-            from ..data.features.feature_selection import detect_distribution_shift
+            from src.data.features.feature_selection import detect_distribution_shift
             shift_results = detect_distribution_shift(
                 train_X, eval_X, feature_names,
                 psi_threshold=0.25, ks_alpha=0.05,
@@ -1416,7 +1425,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # ====================================================================
     complexity_stats = {}
     try:
-        from ..ml.evaluation.rdof_audit import estimate_model_complexity
+        from src.ml.evaluation.rdof_audit import estimate_model_complexity
         complexity_audit = estimate_model_complexity(
             config=pipeline.config,
             n_training_samples=int(train_samples),
@@ -1652,8 +1661,9 @@ def _run_loyo_validation(
     # includes the held-out year, so reusing them leaks information
     # (the feature selector's importance scores encode test-year labels;
     # the scaler's mean/std include test-year feature distributions).
-    # Instead, each LOYO fold re-fits its own scaler below in train_fn.
-    # Feature selection is omitted — the fold-level model sees raw features.
+    # Instead, each LOYO fold re-fits its own scaler and feature
+    # selector below in train_fn, faithfully mirroring the production
+    # pipeline's preprocessing stack.
 
     # ----------------------------------------------------------
     # Step 2: Run LeaveOneYearOutCV
@@ -1663,10 +1673,42 @@ def _run_loyo_validation(
         temporal_mode=pipeline.config.loyo_temporal_mode,
     )
 
+    # Per-fold state: scaler and feature selector re-fit each fold.
+    # Stored in a mutable container so predict_fn can access them.
+    _fold_transforms = {"scaler": None, "selector": None}
+
     def train_fn(X_tr, y_tr, X_v, y_v, w_tr):
+        # Reset per-fold transforms
+        _fold_transforms["scaler"] = None
+        _fold_transforms["selector"] = None
+
+        # Re-fit feature selector per fold (mirrors production pipeline)
+        if pipeline.config.enable_feature_selection:
+            try:
+                fold_selector = FeatureSelector(
+                    correlation_threshold=pipeline.config.correlation_threshold,
+                    min_features=pipeline.config.min_features,
+                    max_features=pipeline.config.max_features,
+                )
+                fold_selector.fit(X_tr, y_tr, feature_names)
+                X_tr = fold_selector.transform(X_tr)
+                if X_v is not None and len(X_v) > 0:
+                    X_v = fold_selector.transform(X_v)
+                _fold_transforms["selector"] = fold_selector
+            except Exception as _fs_exc:
+                logger.debug("LOYO fold feature selection failed: %s", _fs_exc)
+
+        # Re-fit scaler per fold (mirrors production pipeline)
+        if pipeline.config.enable_feature_scaling and SCALER_AVAILABLE:
+            fold_scaler = StandardScaler()
+            X_tr = fold_scaler.fit_transform(X_tr)
+            if X_v is not None and len(X_v) > 0:
+                X_v = fold_scaler.transform(X_v)
+            _fold_transforms["scaler"] = fold_scaler
+
         if LIGHTGBM_AVAILABLE:
             ranker = LightGBMRanker()
-            vs = (X_v, y_v) if len(y_v) >= 10 else None
+            vs = (X_v, y_v) if X_v is not None and len(y_v) >= 10 else None
             ranker.train(X_tr, y_tr, num_rounds=200, early_stopping_rounds=30 if vs else None,
                          valid_set=vs, sample_weight=w_tr)
             return ranker
@@ -1679,6 +1721,14 @@ def _run_loyo_validation(
     def predict_fn(model, X_pred):
         if model is None:
             return np.full(len(X_pred), 0.5)
+        # Apply the same per-fold transforms used during training
+        if _fold_transforms["selector"] is not None:
+            try:
+                X_pred = _fold_transforms["selector"].transform(X_pred)
+            except (IndexError, ValueError):
+                return np.full(len(X_pred), 0.5)
+        if _fold_transforms["scaler"] is not None:
+            X_pred = _fold_transforms["scaler"].transform(X_pred)
         if isinstance(model, LightGBMRanker):
             return model.predict(X_pred)
         return model.predict_proba(X_pred)[:, 1]
@@ -1930,9 +1980,10 @@ def _optimize_ensemble_weights_loyo(
     if len(years) < 3:
         return {}
 
-    # Step 1: Load all years' data
+    # Step 1: Load all years' data (including margins for spread model)
     all_X: Dict[int, np.ndarray] = {}
     all_y: Dict[int, np.ndarray] = {}
+    all_margins: Dict[int, np.ndarray] = {}
 
     for yr in years:
         gp = os.path.join(games_dir, f"historical_games_{yr}.json")
@@ -1940,12 +1991,13 @@ def _optimize_ensemble_weights_loyo(
         if not os.path.isfile(gp) or not os.path.isfile(mp):
             continue
         try:
-            yr_X, yr_y, _, _, _ = pipeline._load_year_samples_incremental(
+            yr_X, yr_y, yr_margins, _, _ = pipeline._load_year_samples_incremental(
                 gp, mp, feature_dim, yr
             )
             if len(yr_y) >= 20:
                 all_X[yr] = yr_X
                 all_y[yr] = yr_y
+                all_margins[yr] = yr_margins
         except Exception:
             continue
 
@@ -1963,11 +2015,13 @@ def _optimize_ensemble_weights_loyo(
         # Combine training data from all years except hold_yr
         train_X_parts = [all_X[yr] for yr in valid_years if yr != hold_yr]
         train_y_parts = [all_y[yr] for yr in valid_years if yr != hold_yr]
+        train_margin_parts = [all_margins[yr] for yr in valid_years if yr != hold_yr]
         if not train_X_parts:
             continue
 
         X_train = np.concatenate(train_X_parts, axis=0)
         y_train = np.concatenate(train_y_parts)
+        margins_train = np.concatenate(train_margin_parts)
         X_val = all_X[hold_yr]
         y_val = all_y[hold_yr]
 
@@ -1989,12 +2043,12 @@ def _optimize_ensemble_weights_loyo(
         for name, _, _ in trained_models:
             try:
                 if name == "lgb" and LIGHTGBM_AVAILABLE:
-                    from ..ml.models.lightgbm_ranker import LightGBMRanker
+                    from src.ml.models.lightgbm_ranker import LightGBMRanker
                     m = LightGBMRanker()
                     m.train(X_train, y_train, num_rounds=200)
                     fold_preds[name] = np.clip(m.predict(X_val), 0.01, 0.99)
                 elif name == "xgb":
-                    from ..ml.models.xgboost_ranker import XGBoostRanker
+                    from src.ml.models.xgboost_ranker import XGBoostRanker
                     m = XGBoostRanker()
                     m.train(X_train, y_train, num_rounds=200)
                     fold_preds[name] = np.clip(m.predict(X_val), 0.01, 0.99)
@@ -2007,14 +2061,14 @@ def _optimize_ensemble_weights_loyo(
                     fold_preds[name] = np.clip(
                         m.predict_proba(X_val)[:, 1], 0.01, 0.99
                     )
-                elif name == "spread":
-                    from ..ml.models.spread_regressor import SpreadRegressor
+                elif name == "spread" and SpreadRegressor is not None:
                     m = SpreadRegressor(
                         sigma=pipeline.config.spread_sigma_init,
                     )
-                    # SpreadRegressor trains on margins, but we only have
-                    # binary labels here; skip if margins unavailable
-                    fold_preds[name] = np.full(len(y_val), 0.5)
+                    m.train(X_train, margins_train, num_rounds=200)
+                    fold_preds[name] = np.clip(
+                        m.predict_probability(X_val), 0.01, 0.99
+                    )
                 else:
                     fold_preds[name] = np.full(len(y_val), 0.5)
             except Exception:

@@ -1251,6 +1251,7 @@ class HoldoutEvaluator:
             _team_id,
         )
         from datetime import date as _dtdate, timedelta as _dttd
+        from ...pipeline.config import TOURNAMENT_START_DATES as _TOURNEY_DATES
 
         base_years = self.dev_years if self.dev_years is not None else self.all_years
         training_years = [y for y in base_years
@@ -1356,7 +1357,9 @@ class HoldoutEvaluator:
 
             # Build training samples with true PIT features.
             seen_gids: set = set()
-            tournament_cutoff = f"{train_year}-03-14"
+            tournament_cutoff = _TOURNEY_DATES.get(
+                train_year, _dtdate(train_year, 3, 14)
+            ).isoformat()
             for g in sorted(game_records, key=lambda r: r.game_date):
                 if g.game_id in seen_gids:
                     continue
@@ -1491,7 +1494,9 @@ class HoldoutEvaluator:
         )
 
         # Compute end-of-regular-season metrics for tournament predictions.
-        tournament_cutoff = f"{holdout_year}-03-14"
+        tournament_cutoff = _TOURNEY_DATES.get(
+            holdout_year, _dtdate(holdout_year, 3, 14)
+        ).isoformat()
         ho_metrics = ho_engine.compute_as_of(tournament_cutoff)
         if not ho_metrics:
             raise ValueError(f"No metrics computed for holdout year {holdout_year}")
@@ -1561,15 +1566,56 @@ class HoldoutEvaluator:
                 "outcome": 1 if tg.points > tg.opp_points else 0,
             })
 
-        # ── 4. Calibration: fit temperature scaling on training preds ─
-        # In-sample training predictions for calibration fitting.
-        train_preds_lgb = lgb_model.predict(train_X) if lgb_trained else np.full(len(train_X), 0.5)
-        train_preds_xgb = xgb_model.predict(train_X) if xgb_trained else np.full(len(train_X), 0.5)
-        train_preds_log = logistic.predict_proba(train_X_scaled)[:, 1]
+        # ── 4. Out-of-fold predictions for calibration ──────────────
+        # Temperature scaling must be fit on held-out predictions, not
+        # in-sample training predictions.  In-sample predictions are
+        # over-confident (especially for tree models), so fitting a
+        # calibrator on them produces a temperature that does not
+        # transfer to genuinely unseen data.
+        #
+        # We use 5-fold stratified CV to generate out-of-fold (OOF)
+        # predictions: each sample's prediction comes from a model
+        # that never saw that sample during training.
+        from sklearn.model_selection import StratifiedKFold
+
+        n_folds = 5
+        oof_lgb = np.full(len(train_X), 0.5)
+        oof_xgb = np.full(len(train_X), 0.5)
+        oof_log = np.full(len(train_X), 0.5)
+
+        skf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
+        for fold_train_idx, fold_val_idx in skf.split(train_X, train_y):
+            fX_tr, fX_val = train_X[fold_train_idx], train_X[fold_val_idx]
+            fy_tr = train_y[fold_train_idx]
+            fw_tr = train_w[fold_train_idx]
+            fX_tr_sc = scaler.fit_transform(fX_tr)
+            fX_val_sc = scaler.transform(fX_val)
+
+            if lgb_trained:
+                try:
+                    fold_lgb = LightGBMRanker()
+                    fold_lgb.train(fX_tr, fy_tr, num_rounds=200,
+                                   early_stopping_rounds=None, sample_weight=fw_tr)
+                    oof_lgb[fold_val_idx] = fold_lgb.predict(fX_val)
+                except Exception:
+                    pass
+
+            if xgb_trained:
+                try:
+                    fold_xgb = XGBoostRanker()
+                    fold_xgb.train(fX_tr, fy_tr, num_rounds=200,
+                                   early_stopping_rounds=None, sample_weight=fw_tr)
+                    oof_xgb[fold_val_idx] = fold_xgb.predict(fX_val)
+                except Exception:
+                    pass
+
+            fold_log = LogisticRegression(C=1.0, max_iter=1000, solver="lbfgs")
+            fold_log.fit(fX_tr_sc, fy_tr, sample_weight=fw_tr)
+            oof_log[fold_val_idx] = fold_log.predict_proba(fX_val_sc)[:, 1]
 
         return {
             "per_game": per_game,
-            "train_ensemble_preds": (train_preds_lgb, train_preds_xgb, train_preds_log),
+            "train_ensemble_preds": (oof_lgb, oof_xgb, oof_log),
             "train_y": train_y,
             "holdout_year": holdout_year,
         }
@@ -1597,7 +1643,7 @@ class HoldoutEvaluator:
         w_xgb = config.ensemble_xgb_weight
         w_log = 1.0 - w_lgb - w_xgb
 
-        # Fit calibration on training ensemble predictions
+        # Fit calibration on out-of-fold ensemble predictions (not in-sample)
         train_ensemble = np.clip(
             w_lgb * train_lgb + w_xgb * train_xgb + w_log * train_log,
             0.03, 0.97,
@@ -2335,7 +2381,7 @@ class MCParameterBacktester:
             em1 = m1["off_rtg"] - m1["def_rtg"]
             em2 = m2["off_rtg"] - m2["def_rtg"]
             em_diff = em1 - em2
-            return 1.0 / (1.0 + math.exp(-0.145 * em_diff))
+            return 1.0 / (1.0 + math.exp(-0.1735 * em_diff))
 
         # Score tournament games: for each game, compute base probability
         # then apply logit-space noise to get MC-adjusted probability.

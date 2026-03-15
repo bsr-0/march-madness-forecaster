@@ -5,19 +5,22 @@ NCAA Tournament prediction system using ensemble ML, Monte Carlo simulation, and
 ## Architecture
 
 ```
-Data Ingestion        Feature Engineering       ML Ensemble          Optimization
-──────────────        ───────────────────       ───────────          ────────────
-cbbpy/sportsipy  ──►  64-dim team vector   ──►  LightGBM (0.45)  ──►  Monte Carlo sim
-Torvik scraper        75-dim matchup features   XGBoost  (0.35)      Isotonic calibration
-ESPN public picks     Incremental PIT metrics   Logistic (0.20)      Leverage/contrarian
-Kaggle Massey         Elo, SOS, Four Factors    CFA fusion            Bracket portfolio
+Data Ingestion        Feature Engineering       ML Ensemble            Optimization
+──────────────        ───────────────────       ───────────            ────────────
+cbbpy/sportsipy  ──►  79-dim team vector   ──►  Logistic Reg (0.70)  ──►  Monte Carlo sim
+Torvik scraper        91-dim matchup features   LightGBM     (0.15)      Temperature calibration
+ESPN public picks     Incremental PIT metrics   XGBoost      (0.15)      Leverage/contrarian
+Kaggle Massey         Elo, SOS, Four Factors    + Massey blend (0.25)     Bracket portfolio
 ```
 
 **Key design principles:**
-- Zero temporal leakage — every training sample uses only data available before game date
+- Point-in-time features — every training sample uses only data available before game date, with per-year tournament cutoff dates
 - Multi-year training pool (2005-2025) with exponential decay weighting
+- Nested calibration — temperature scaling fit on historical tournament data (genuinely OOS)
 - RDoF audit framework with 58+ tracked constants across 3 tiers
 - Brier score optimization (Kaggle metric since 2023)
+
+**What the pipeline does not use in production:** GNN and transformer embeddings are scaffolded but disabled; the production path is purely tabular.
 
 ## Installation
 
@@ -95,7 +98,7 @@ Key flags:
 - `--kaggle-dir data/kaggle` — for Massey Ordinals and seeds
 - `--enable-bracket-portfolio` — generate diverse bracket set for Kaggle
 - `--model-complexity simple|standard|full` — feature count (8/22/all)
-- `--calibration isotonic|platt|none` — calibration method
+- `--calibration temperature|isotonic|platt|none` — calibration method (default: temperature)
 
 ### 5. Run from ingest manifest (combines steps 3+4)
 
@@ -173,13 +176,13 @@ march-madness-forecaster/
 │   │   └── sota.py                # Main prediction pipeline
 │   ├── data/
 │   │   ├── features/
-│   │   │   ├── feature_engineering.py   # 64-dim team feature vector
+│   │   │   ├── feature_engineering.py   # 79-dim team feature vector
 │   │   │   └── proprietary_metrics.py   # Incremental PIT engine
 │   │   ├── ingestion/             # Data collection & validation
 │   │   └── scrapers/              # Torvik, ESPN, rosters, etc.
 │   ├── ml/
-│   │   ├── ensemble/cfa.py        # CFA model fusion
-│   │   ├── calibration/           # Isotonic/Platt calibration
+│   │   ├── ensemble/cfa.py        # LightGBM/XGBoost/Logistic ensemble
+│   │   ├── calibration/           # Temperature scaling calibration
 │   │   └── evaluation/rdof_audit.py  # RDoF audit framework
 │   ├── simulation/
 │   │   └── monte_carlo.py         # MC bracket simulation
@@ -202,12 +205,12 @@ pytest tests/ --cov=src
 
 ## Technical Details
 
-- **Feature vector:** 64 team features, 75-dim matchup (64 diff + 5 absolute + 6 interaction)
-- **Ensemble:** LightGBM (0.45) / XGBoost (0.35) / Logistic (0.20), CFA fusion
-- **Calibration:** Isotonic regression, 70/30 chronological OOS split
+- **Feature vector:** 79 team features, 91-dim matchup (79 diff + 5 absolute + 7 interaction)
+- **Ensemble:** Logistic (0.70) / LightGBM (0.15) / XGBoost (0.15), plus post-hoc Massey composite blend (0.25)
+- **Calibration:** Temperature scaling, fit on historical tournament predictions (nested OOS)
 - **Monte Carlo:** 50k simulations with configurable noise injection
 - **Training pool:** 2005-2025, exponential decay 0.85/yr, floor 0.15
-- **Elo:** K=38, cross-season carryover (0.75 * prior + 0.25 * 1500)
+- **Elo:** K=20, cross-season carryover (0.75 * prior + 0.25 * 1500)
 
 ## License
 
