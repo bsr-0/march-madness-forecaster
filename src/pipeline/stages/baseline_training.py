@@ -388,6 +388,24 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # before current year).  Validation set remains current-year only
     # for honest evaluation.
     # ====================================================================
+    # Build feature names early so they are available for multi-year
+    # data-quality scoring (compute_year_data_quality) below.
+    feature_names = None
+    if train_samples >= 40:
+        from ..data.features.feature_engineering import TeamFeatures
+        base_names = TeamFeatures.get_feature_names(include_embeddings=False)
+        diff_names = [f"diff_{n}" for n in base_names]
+        absolute_names = [f"abs_{n}" for n in ABSOLUTE_LEVEL_FEATURE_NAMES]
+        interaction_names = ["tempo_interaction", "style_mismatch", "h2h_record", "common_opp_margin", "travel_advantage", "seed_interaction", "seed_diff"]
+        feature_names = diff_names + absolute_names + interaction_names
+        if len(feature_names) != train_X.shape[1]:
+            logger.warning(
+                "Feature name count mismatch: %d names vs %d columns. "
+                "Falling back to generic names.",
+                len(feature_names), train_X.shape[1],
+            )
+            feature_names = [f"f_{i}" for i in range(train_X.shape[1])]
+
     historical_training_stats = {}
     n_current_year_train = train_samples  # Track for logging
 
@@ -634,25 +652,10 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # --- Feature selection ---
     # OOS-FIX: Default path uses a fixed domain-knowledge feature set.
     # Learned feature selection can still be enabled via config.
-    feature_names = None
+    # (feature_names already constructed above, before multi-year block)
     fs_stats = {}
 
-    # Build feature names for the full matchup vector
-    if train_samples >= 40:
-        from ..data.features.feature_engineering import TeamFeatures
-        base_names = TeamFeatures.get_feature_names(include_embeddings=False)
-        diff_names = [f"diff_{n}" for n in base_names]
-        absolute_names = [f"abs_{n}" for n in ABSOLUTE_LEVEL_FEATURE_NAMES]
-        interaction_names = ["tempo_interaction", "style_mismatch", "h2h_record", "common_opp_margin", "travel_advantage", "seed_interaction", "seed_diff"]
-        feature_names = diff_names + absolute_names + interaction_names
-        if len(feature_names) != train_X.shape[1]:
-            logger.warning(
-                "Feature name count mismatch: %d names vs %d columns. "
-                "Falling back to generic names.",
-                len(feature_names), train_X.shape[1],
-            )
-            feature_names = [f"f_{i}" for i in range(train_X.shape[1])]
-
+    if train_samples >= 40 and feature_names is not None:
         if not pipeline.config.enable_feature_selection:
             # OOS-FIX: Apply fixed domain-knowledge feature set.
             # No model fitting, no label dependency, no double-dipping.
