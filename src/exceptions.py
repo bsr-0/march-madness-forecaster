@@ -39,6 +39,17 @@ class DataRequirementError(RuntimeError):
     pass
 
 
+class IntegrityError(RuntimeError):
+    """Raised when model calibration or mathematical integrity checks fail.
+
+    In production mode, a Brier Score exceeding the rejection threshold
+    triggers this error, halting the pipeline.  In experimental mode,
+    the same condition is logged as a warning instead.
+    """
+
+    pass
+
+
 class GovernanceApprovalRequired(RuntimeError):
     """Raised when a pipeline action requires human approval.
 

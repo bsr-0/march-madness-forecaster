@@ -98,6 +98,17 @@ from .stages import simulation as _sim
 from .stages import ev_analysis as _ev
 from .stages import orchestration as _orch
 from ..optimization.leverage import TeamMetadata, analyze_pool, get_strategy_profile
+from ..optimization.pool_optimizer import (
+    AssumptionsManifest,
+    PoolEnvironment,
+    PoolOptimizer,
+    PoolResult,
+)
+from ..forecasting.engine import (
+    CalibrationReport,
+    ForecastEngine,
+    ForecastEngineConfig,
+)
 from ..simulation.monte_carlo import SimulationConfig, TournamentBracket, TournamentTeam
 
 # --- Optional dependencies (centralized in _optional_imports.py) ---
@@ -301,6 +312,10 @@ class SOTAPipeline:
         )
         # MC calibration artifact (optional)
         self._mc_calibration: Optional[Dict] = None
+
+        # Decoupled architecture: ForecastEngine and PoolOptimizer
+        self._forecast_engine: Optional[ForecastEngine] = None
+        self._pool_optimizer: Optional[PoolOptimizer] = None
 
     def _filter_years(self, years: List[int]) -> List[int]:
         """Filter years by dev/holdout constraints and remove COVID year."""
@@ -1299,6 +1314,63 @@ class SOTAPipeline:
         # P1: Tighter pre-calibration clip bounds based on empirical upset rates.
         # Historical: 1-seed vs 16-seed upsets occur ~1.5% of the time.
         return float(np.clip(baseline_prob, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
+
+    @property
+    def forecast_engine(self) -> ForecastEngine:
+        """Return the decoupled ForecastEngine.
+
+        Lazily constructed on first access.  The engine wraps this
+        pipeline's prediction capability behind a strict interface
+        that accepts ONLY (team1_id, team2_id) — no pool/strategy
+        parameters.
+        """
+        if self._forecast_engine is None:
+            engine_config = ForecastEngineConfig(
+                year=self.config.year,
+                random_seed=self.config.random_seed,
+                probability_profile=self.config.probability_profile,
+                mode="production" if self.config.pipeline_mode == "production" else "experimental",
+                calibration_method=self.config.calibration_method,
+                enable_tournament_adaptation=self.config.enable_tournament_adaptation,
+                tournament_shrinkage=self.config.tournament_shrinkage,
+                pre_calibration_clip_lo=self.config.pre_calibration_clip_lo,
+                pre_calibration_clip_hi=self.config.pre_calibration_clip_hi,
+                model_complexity=self.config.model_complexity,
+                enable_spread_model=self.config.enable_spread_model,
+                spread_sigma_init=self.config.spread_sigma_init,
+                massey_blend_weight=self.config.massey_blend_weight,
+                massey_sigma=self.config.massey_sigma,
+            )
+            self._forecast_engine = ForecastEngine(engine_config)
+            self._forecast_engine.set_pipeline(self)
+        return self._forecast_engine
+
+    def create_pool_optimizer(
+        self,
+        environment: PoolEnvironment,
+        team_ids: Optional[List[str]] = None,
+    ) -> PoolOptimizer:
+        """Create a PoolOptimizer from this pipeline's forecast probabilities.
+
+        The optimizer receives a deep-copied probability dict and the
+        specified pool environment.  It cannot modify the engine's
+        probabilities.
+
+        Args:
+            environment: Pool environmental parameters (pool_size,
+                scoring_rules, payout_structure, public_pick_distribution).
+            team_ids: Team IDs to include.  Defaults to all teams.
+
+        Returns:
+            PoolOptimizer instance ready for optimize() or
+            sensitivity_analysis().
+        """
+        if team_ids is None:
+            team_ids = list(self.team_struct.keys())
+        probs = self.forecast_engine.predict_all_matchups(team_ids)
+        optimizer = PoolOptimizer(probs, environment)
+        self._pool_optimizer = optimizer
+        return optimizer
 
     def predict_probability(self, team1_id: str, team2_id: str) -> float:
         """Route to production or experimental probability path."""
