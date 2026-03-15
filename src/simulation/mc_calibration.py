@@ -271,7 +271,7 @@ def _score_year(
         try:
             hi, lo = k.split("v")
             pair = (int(hi), int(lo))
-        except Exception:
+        except (ValueError, AttributeError):
             continue
         sim_rates[pair] = float(entry.get("simulated", 0.0))
 

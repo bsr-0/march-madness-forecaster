@@ -140,7 +140,7 @@ class RobustnessSuite:
                     warnings.append(
                         f"Fragile features detected: {dropout_report.fragile_features}"
                     )
-            except Exception as e:
+            except (ValueError, TypeError, RuntimeError, np.linalg.LinAlgError) as e:
                 logger.warning("Feature dropout test failed: %s", e)
                 warnings.append(f"Feature dropout test failed: {e}")
 
@@ -157,7 +157,7 @@ class RobustnessSuite:
                     warnings.append(
                         f"Significant distribution shift in: {shift_report.significant_features}"
                     )
-            except Exception as e:
+            except (ValueError, TypeError, RuntimeError, np.linalg.LinAlgError) as e:
                 logger.warning("Distribution shift detection failed: %s", e)
                 warnings.append(f"Distribution shift detection failed: {e}")
 
@@ -173,7 +173,7 @@ class RobustnessSuite:
                     warnings.append(
                         f"Unstable feature rankings: {stability_report.unstable_features}"
                     )
-            except Exception as e:
+            except (ValueError, TypeError, RuntimeError, KeyError) as e:
                 logger.warning("Feature stability analysis failed: %s", e)
                 warnings.append(f"Feature stability analysis failed: {e}")
 

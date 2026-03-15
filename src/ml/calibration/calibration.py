@@ -475,7 +475,7 @@ class TemperatureScaling:
                 if ci_lo <= 1.0 <= ci_hi:
                     # CI includes identity — not enough evidence to calibrate
                     self.temperature = 1.0
-            except Exception as e:
+            except (ValueError, TypeError, RuntimeError) as e:
                 logger.warning(
                     "Temperature scaling bootstrap CI failed (%s); "
                     "falling back to T=1.0", e,
@@ -627,7 +627,7 @@ def calculate_calibration_metrics(
         try:
             from sklearn.metrics import roc_auc_score
             roc_auc = float(roc_auc_score(outcomes, predictions))
-        except Exception:
+        except (ValueError, TypeError):
             # Can fail if only one class present in a small sample
             pass
 

@@ -118,7 +118,8 @@ class LibraryProviderHub:
                     if since:
                         records = [r for r in records if r.get("date", "") >= since]
                     return ProviderResult("sportsdataverse", records)
-            except Exception:
+            except (TypeError, ValueError, AttributeError, KeyError, ImportError) as exc:
+                logger.debug("sportsdataverse %s failed: %s", fn_name, exc)
                 continue
         return ProviderResult("sportsdataverse", [])
 
@@ -141,7 +142,8 @@ class LibraryProviderHub:
                 records = self._frame_to_records(df)
                 if records:
                     return ProviderResult("sportsdataverse", records)
-            except Exception:
+            except (TypeError, ValueError, AttributeError, KeyError, ImportError) as exc:
+                logger.debug("sportsdataverse %s failed: %s", fn_name, exc)
                 continue
         return ProviderResult("sportsdataverse", [])
 
@@ -178,8 +180,8 @@ class LibraryProviderHub:
                             f"scoreboard/_/date/{{}}/seasontype/{season_type}/group/50"
                         )
                         patched = True
-                except Exception:
-                    pass
+                except (TypeError, ValueError, AttributeError, ImportError) as exc:
+                    logger.debug("cbbpy URL patch failed: %s", exc)
 
             try:
                 rows = self._cbbpy_scrape_attempt(scraper, year, start_date, end_date, since)
@@ -192,8 +194,8 @@ class LibraryProviderHub:
                         utils = self._import_module("cbbpy.utils.cbbpy_utils")
                         if utils:
                             utils.MENS_SCOREBOARD_URL = original_url
-                    except Exception:
-                        pass
+                    except (TypeError, AttributeError, ImportError) as exc:
+                        logger.debug("cbbpy URL restore failed: %s", exc)
 
         if not all_game_rows:
             return ProviderResult("cbbpy", [])
@@ -238,9 +240,11 @@ class LibraryProviderHub:
                         games = fn(year)
                     else:
                         games = fn(start_date, end_date)
-                except Exception:
+                except (TypeError, ValueError, AttributeError, RuntimeError) as exc:
+                    logger.debug("cbbpy %s fallback failed: %s", fn_name, exc)
                     continue
-            except Exception:
+            except (TypeError, ValueError, AttributeError, RuntimeError, OSError) as exc:
+                logger.debug("cbbpy %s failed: %s", fn_name, exc)
                 continue
 
             game_rows = self._normalize_cbbpy_records(games)
@@ -295,7 +299,7 @@ class LibraryProviderHub:
                     resp = requests.get(base_url, params=params, timeout=30)
                     resp.raise_for_status()
                     data = resp.json()
-                except Exception as exc:
+                except (requests.RequestException, ValueError, KeyError) as exc:
                     logger.debug("espn_scoreboard API error for %s st=%s: %s", date_str, season_type, exc)
                     continue
 
@@ -393,7 +397,7 @@ class LibraryProviderHub:
                             game_date = raw_date.strftime("%Y-%m-%d")
                         else:
                             game_date = str(raw_date)[:10]
-                    except Exception:
+                    except (ValueError, TypeError, AttributeError):
                         pass
                 rec = {
                     "game_id": game_id,
@@ -457,7 +461,7 @@ class LibraryProviderHub:
         try:
             response = requests.get(url, timeout=45)
             response.raise_for_status()
-        except Exception as exc:
+        except (requests.RequestException, ValueError, OSError) as exc:
             logger.warning("barttorvik request failed for %s: %s", url, exc)
             return ProviderResult("barttorvik", [])
 
@@ -468,7 +472,7 @@ class LibraryProviderHub:
         try:
             sample = text[:4096]
             dialect = csv.Sniffer().sniff(sample)
-        except Exception:
+        except csv.Error:
             dialect = csv.excel
 
         reader = csv.reader(io.StringIO(text), dialect)
@@ -577,7 +581,7 @@ class LibraryProviderHub:
                 return data
             if isinstance(data, list):
                 return {"records": data}
-        except Exception as exc:
+        except (requests.RequestException, ValueError, KeyError, OSError) as exc:
             logger.warning("cbbdata request failed for %s: %s", url_env, exc)
         return {}
 
@@ -708,7 +712,7 @@ class LibraryProviderHub:
     def _import_module(module_name: str):
         try:
             return importlib.import_module(module_name)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return None
 
     @staticmethod
@@ -726,7 +730,7 @@ class LibraryProviderHub:
                 records = to_dict("records")
                 if isinstance(records, list):
                     return [r for r in records if isinstance(r, dict)]
-            except Exception:
+            except (TypeError, ValueError, AttributeError):
                 pass
         return []
 
