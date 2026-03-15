@@ -14,6 +14,8 @@ from .data.team_name_resolver import TeamNameResolver
 from .exports.kaggle import build_team_id_map, generate_predictions, load_kaggle_teams
 from .ml.evaluation.rdof_audit import freeze_pipeline, run_rdof_audit, run_prospective_evaluation, verify_freeze
 from .pipeline.sota import DataRequirementError, SOTAPipeline, SOTAPipelineConfig, run_sota_pipeline_to_file
+from .governance.production_runner import run_production_2026
+from .governance.production_validator import ProductionValidationError
 
 
 
@@ -237,6 +239,33 @@ def run_research_loop(args):
     print(knowledge.research_summary())
     return 0
 
+
+
+
+def run_production_2026_cmd(args):
+    """Run the frozen 2026 production path only."""
+    try:
+        report, freeze_manifest, governance_report = run_production_2026(
+            config_path=args.config,
+            output_report_path=args.output,
+            freeze_manifest_path=args.freeze_manifest,
+            governance_report_path=args.governance_report,
+        )
+    except ProductionValidationError as exc:
+        print(f"Production validation error: {exc}")
+        return 1
+    except DataRequirementError as exc:
+        print(f"Production data requirement error: {exc}")
+        return 1
+
+    print(f"✓ Frozen production run complete: {args.output}")
+    print(f"✓ Freeze manifest: {args.freeze_manifest}")
+    print(f"✓ Governance report: {args.governance_report}")
+    print(
+        "Production path verification: "
+        f"{report.get('production_path_verification', {}).get('probability_profile', 'unknown')}"
+    )
+    return 0
 
 def _load_manifest(manifest_arg):
     """Load and validate an ingestion manifest. Returns (manifest, base_dir) or exits."""
@@ -2256,6 +2285,32 @@ def main():
         help="Data directory for supplementary files (Four Factors, shooting)",
     )
 
+
+    production_parser = subparsers.add_parser(
+        "run-production-2026",
+        help="Run only the frozen 2026 production predictor path",
+    )
+    production_parser.add_argument(
+        "--config",
+        default="configs/production_2026.json",
+        help="Frozen production config JSON (default: configs/production_2026.json)",
+    )
+    production_parser.add_argument(
+        "--output",
+        default="artifacts/production_report_2026.json",
+        help="Output production report path",
+    )
+    production_parser.add_argument(
+        "--freeze-manifest",
+        default="artifacts/production_freeze_2026.json",
+        help="Output freeze manifest path",
+    )
+    production_parser.add_argument(
+        "--governance-report",
+        default="artifacts/production_governance_report_2026.json",
+        help="Output human-readable governance report path",
+    )
+
     args = parser.parse_args()
 
     if args.command == "sota":
@@ -2480,6 +2535,8 @@ def main():
         return 0
     elif args.command == "scrape-conference-seeds":
         return run_scrape_conference_seeds(args)
+    elif args.command == "run-production-2026":
+        return run_production_2026_cmd(args)
     elif args.command == "conference-tournaments":
         return run_conference_tournaments(args)
     else:
