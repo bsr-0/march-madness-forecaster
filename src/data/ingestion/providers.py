@@ -216,32 +216,35 @@ class LibraryProviderHub:
     ) -> List[Dict]:
         """Run a single cbbpy scraping attempt and return normalised rows."""
         # CBBpy function names have changed across releases; probe common names.
-        # When doing incremental fetches, prefer get_games_range to avoid
-        # scraping the entire season.
-        # When doing incremental fetches, only use get_games_range so we
-        # actually start from the `since` date.  get_games_season scrapes
-        # the entire season day-by-day (from November) and only filters
-        # results after, wasting significant time.  If get_games_range is
-        # unavailable, let the provider return empty so the next provider
-        # (e.g. espn_scoreboard) can handle it with proper date limiting.
-        fn_order = ("get_games_range",) if since else ("get_games_season", "get_games_range")
-        for fn_name in fn_order:
+        # Wrap in thread-based timeout — cbbpy's internal requests.get()
+        # has no timeout and can hang indefinitely on ESPN.
+        for fn_name in ("get_games_season", "get_games_range"):
             fn = getattr(scraper, fn_name, None)
             if fn is None:
                 continue
             try:
                 if fn_name == "get_games_season":
-                    games = fn(year, info=True, box=True, pbp=False)
+                    games = self._run_with_timeout(
+                        fn, args=(year,),
+                        kwargs={"info": True, "box": True, "pbp": False},
+                        timeout=600,
+                    )
                 else:
-                    games = fn(start_date, end_date, info=True, box=True, pbp=False)
+                    games = self._run_with_timeout(
+                        fn,
+                        args=(f"{year-1}-11-01", f"{year}-04-15"),
+                        kwargs={"info": True, "box": True, "pbp": False},
+                        timeout=600,
+                    )
             except TypeError:
                 try:
                     if fn_name == "get_games_season":
-                        games = fn(year)
+                        games = self._run_with_timeout(fn, args=(year,), timeout=600)
                     else:
-                        games = fn(start_date, end_date)
-                except (TypeError, ValueError, AttributeError, RuntimeError) as exc:
-                    logger.debug("cbbpy %s fallback failed: %s", fn_name, exc)
+                        games = self._run_with_timeout(
+                            fn, args=(f"{year-1}-11-01", f"{year}-04-15"), timeout=600,
+                        )
+                except Exception:
                     continue
             except (TypeError, ValueError, AttributeError, RuntimeError, OSError) as exc:
                 logger.debug("cbbpy %s failed: %s", fn_name, exc)
@@ -714,6 +717,21 @@ class LibraryProviderHub:
             return importlib.import_module(module_name)
         except (ImportError, ModuleNotFoundError):
             return None
+
+    @staticmethod
+    def _run_with_timeout(fn, args=(), kwargs=None, timeout=120):
+        """Run *fn* in a thread with a timeout to prevent indefinite hangs."""
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+
+        kwargs = kwargs or {}
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(fn, *args, **kwargs)
+            try:
+                return future.result(timeout=timeout)
+            except FuturesTimeout:
+                raise TimeoutError(
+                    f"{getattr(fn, '__name__', fn)} timed out after {timeout}s"
+                )
 
     @staticmethod
     def _frame_to_records(obj) -> List[Dict]:
