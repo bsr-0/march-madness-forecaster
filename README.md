@@ -2,41 +2,61 @@
 
 NCAA Tournament prediction system using a locked, explicit production path for calibrated probabilities and bracket simulation.
 
-## Production Path (Frozen 2026)
+## Production Predictor (2026)
 
-The **shipped 2026 production predictor** uses a single frozen path only:
-- `model_complexity = "simple"`
-- `probability_profile = "production"`
-- no GNN
-- no transformer
-- no agent orchestration
-- no experimental probability post-processing
-- temperature calibration only
-- explicit historical training years (`2016,2017,2018,2019,2021,2022,2023,2024`)
-- explicit holdout year (`2025`)
+The **shipped 2026 tournament predictor** is a single frozen, deterministic path. All production runs must use the dedicated entrypoint — generic commands (`sota`, `sota-from-manifest`) are blocked from acting as production.
 
-Run this path via:
+**Dedicated production entrypoint:**
 
 ```bash
-march-madness run-production-2026 --config configs/production_2026.json
+python src/run_production_2026.py            # full production run
+python src/run_production_2026.py --dry-run   # validate config + freeze artifact only
+march-madness run-production-2026             # CLI alias
 ```
 
-This entrypoint hard-fails on missing required paths/artifacts and writes a freeze manifest (`artifacts/production_freeze_2026.json`).
+**Production constraints (hard-fail on violation):**
+
+- **Model complexity:** `simple` — fixed-weight ensemble, no stacking, no learned feature selection
+- **Probability profile:** `production` — raw → temperature calibration → tournament shrinkage → clip
+- **Mode:** `calibration`
+- **Calibration method:** `temperature` (holdout-year tournament games only)
+- **Training years:** 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024 (no 2020, no 2025)
+- **Dev years:** 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024
+- **Holdout year:** 2025
+- **Target year:** 2026
+- **GNN:** disabled (`enable_gnn = false`)
+- **Transformer:** disabled (`enable_transformer = false`)
+- **Agent orchestration:** disabled (`use_agent_orchestration = false`)
+- **Embedding projections:** disabled (`enable_embedding_projections = false`)
+- **All experimental post-processing:** disabled (seed overrides, Brier sharpening, goto conversion, round-weighted calibration, Bayesian Bradley-Terry)
+- **Strict leakage mode:** enabled
+- **Freeze file required:** enabled — `artifacts/freeze_manifest_2026.json` must exist and be consistent with config (hash, years, source file coverage)
+- **No "auto" paths:** every data path must be explicit; no runtime path resolution
+- **No CLI overrides:** the production entrypoint exposes no flags for model complexity, calibration method, training years, or experimental modules
+
+**Production artifacts generated per run:**
+
+- `artifacts/production_manifest_2026.json` — machine-verifiable manifest with config hash, source hashes, data hashes, runtime inference call counts, and production flags verified at runtime
+- `artifacts/production_freeze_2026.json` — freeze manifest with git commit, hashes, year partitions
+- `artifacts/production_governance_report_2026.json` — human-readable governance summary
 
 ## Research Modules Not Used in Production
 
-The following modules are **research-only** and are not part of the shipped 2026 production predictor:
-- GNN
-- transformer
-- agent orchestration
-- seed overrides
-- Brier sharpening
-- goto_conversion
-- round-weighted calibration
-- Bayesian Bradley-Terry
-- stacking
-- learned feature selection
-- market blend
+The following modules exist in the codebase for research purposes and are **explicitly disabled and blocked** in the shipped 2026 production predictor:
+
+- **GNN** (`enable_gnn`) — graph neural network team embeddings
+- **Transformer** (`enable_transformer`) — attention-based team representations
+- **Agent orchestration** (`use_agent_orchestration`) — multi-agent pipeline coordination
+- **Seed overrides** (`enable_seed_overrides`) — manual seed-matchup probability adjustments
+- **Brier sharpening** (`enable_brier_sharpening`) — power-transform probability sharpening
+- **Goto conversion** (`enable_goto_conversion`) — favourite-longshot bias correction
+- **Round-weighted calibration** (`enable_round_weighted_calibration`) — per-round calibrator weighting
+- **Bayesian Bradley-Terry** (`enable_bayesian_bt`) — Bayesian pairwise comparison model
+- **Stacking** (`enable_stacking`) — meta-learner ensemble stacking
+- **Learned feature selection** (`enable_feature_selection`) — automated feature importance pruning
+- **Embedding projections** (`enable_embedding_projections`) — dimensionality-reduced team embeddings
+
+Each of these is validated to be `false` / `0` by the production validator. Enabling any one of them causes an immediate `ProductionValidationError` and run termination.
 
 ## Architecture
 

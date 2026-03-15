@@ -1,0 +1,9 @@
+# Pinned dependency versions for 2026 production freeze.
+# Any version mismatch at runtime will cause ProductionValidationError.
+# Do NOT modify without regenerating the freeze artifact.
+lightgbm==4.6.0
+xgboost==2.0.3
+numpy==1.26.4
+scikit-learn==1.4.2
+scipy==1.11.4
+pandas==2.1.4
