@@ -11,7 +11,7 @@ setup(
         "pandas>=1.5.3,<2.2.0",
         "pytz>=2022.7,<2024.0",
         "scipy>=1.10.1,<1.12.0",
-        "scikit-learn>=1.3.0,<1.5.0",
+        "scikit-learn>=1.5.0,<1.7.0",
         "requests>=2.31.0",
         "beautifulsoup4>=4.12.0",
         "lxml>=4.9.0",
