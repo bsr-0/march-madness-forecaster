@@ -2381,7 +2381,7 @@ class MCParameterBacktester:
             em1 = m1["off_rtg"] - m1["def_rtg"]
             em2 = m2["off_rtg"] - m2["def_rtg"]
             em_diff = em1 - em2
-            return 1.0 / (1.0 + math.exp(-0.145 * em_diff))
+            return 1.0 / (1.0 + math.exp(-0.1735 * em_diff))
 
         # Score tournament games: for each game, compute base probability
         # then apply logit-space noise to get MC-adjusted probability.
