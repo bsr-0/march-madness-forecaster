@@ -161,7 +161,9 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # use all games.
     all_games_uncutoff = list(all_games)  # preserve for fallback
     if pipeline.config.late_season_training_cutoff_days > 0:
-        tournament_start = date(pipeline.config.year, 3, 14)
+        tournament_start = TOURNAMENT_START_DATES.get(
+            pipeline.config.year, date(pipeline.config.year, 3, 14)
+        )
         cutoff_date = tournament_start - timedelta(days=pipeline.config.late_season_training_cutoff_days)
         cutoff_key = pipeline._game_sort_key(cutoff_date.isoformat())
         all_games = [

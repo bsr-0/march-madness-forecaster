@@ -1163,15 +1163,15 @@ class HoldoutEvaluator:
         return games
 
     def _is_tournament_game(self, date_str: str, year: int) -> bool:
-        """Detect NCAA Tournament games (mid-March through mid-April)."""
+        """Detect NCAA Tournament games (tournament start through mid-April)."""
+        from ...pipeline.config import TOURNAMENT_START_DATES
         try:
             parts = date_str.split("-")
             game_year = int(parts[0])
             month = int(parts[1])
             day = int(parts[2])
             game_day = date(game_year, month, day)
-            # Tournament runs ~March 14 to April 15
-            start = date(year, 3, 14)
+            start = TOURNAMENT_START_DATES.get(year, date(year, 3, 14))
             end = date(year, 4, 15)
             return start <= game_day <= end
         except (ValueError, IndexError):
