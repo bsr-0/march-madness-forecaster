@@ -1001,11 +1001,13 @@ class CBBpyRosterScraper:
             current += timedelta(days=1)
 
     @staticmethod
-    def _scrape_game_ids_for_date(day_str: str, http_timeout: int = 15) -> List:
+    def _scrape_game_ids_for_date(day_str: str, http_timeout: int = 15,
+                                  session=None) -> List:
         """Lightweight ESPN API call for game IDs on a single date.
 
         Bypasses cbbpy's ``get_game_ids`` which uses ``requests.get()``
-        with no timeout.
+        with no timeout.  Pass a ``requests.Session`` for connection
+        pooling across calls.
         """
         import requests as _requests
 
@@ -1014,13 +1016,17 @@ class CBBpyRosterScraper:
             f"https://site.api.espn.com/apis/site/v2/sports/basketball/"
             f"mens-college-basketball/scoreboard?dates={d}&groups=50&limit=200"
         )
-        resp = _requests.get(api_url, headers={
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-        }, timeout=http_timeout)
+        getter = session or _requests
+        if session is None:
+            resp = getter.get(api_url, headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+            }, timeout=http_timeout)
+        else:
+            resp = getter.get(api_url, timeout=http_timeout)
         resp.raise_for_status()
         data = resp.json()
         return [str(e["id"]) for e in data.get("events", []) if "id" in e]

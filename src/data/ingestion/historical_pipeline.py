@@ -822,12 +822,15 @@ class HistoricalDataPipeline:
         return results
 
     @staticmethod
-    def _scrape_game_ids_for_date(day_str: str, http_timeout: int = 15) -> List[str]:
+    def _scrape_game_ids_for_date(day_str: str, http_timeout: int = 15,
+                                  session=None) -> List[str]:
         """Lightweight ESPN API call for game IDs on a single date.
 
         Bypasses cbbpy entirely to avoid its ``requests.get()`` with no
         timeout and ``Parallel(n_jobs=...)`` full-game-fetch overhead.
         Only returns game IDs — no box-scores, no play-by-play.
+
+        Pass a ``requests.Session`` for connection pooling across calls.
         """
         import requests
 
@@ -836,14 +839,8 @@ class HistoricalDataPipeline:
             f"https://site.api.espn.com/apis/site/v2/sports/basketball/"
             f"mens-college-basketball/scoreboard?dates={d}&groups=50&limit=200"
         )
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-        }
-        resp = requests.get(api_url, headers=headers, timeout=http_timeout)
+        getter = session or requests
+        resp = getter.get(api_url, timeout=http_timeout)
         resp.raise_for_status()
         data = resp.json()
         events = data.get("events", [])
@@ -859,33 +856,58 @@ class HistoricalDataPipeline:
 
         Uses lightweight direct ESPN API calls per day instead of cbbpy's
         ``get_games_season`` (which fetches full game data and hangs on
-        ESPN HTTP requests that have no timeout).
+        ESPN HTTP requests that have no timeout).  Fetches days
+        concurrently (8 workers) with connection pooling for speed.
         """
+        import requests
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
         game_date_map: Dict[str, str] = {}
         days = list(self._season_dates(season))
-        skipped = 0
 
         logger.info(
             "Season %d: fetching game IDs for %d days via ESPN API",
             season, len(days),
         )
-        for i, day in enumerate(days):
+
+        session = requests.Session()
+        session.headers.update({
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+        })
+
+        skipped = 0
+
+        def _fetch_day(day):
             day_str = day.isoformat()
-            try:
-                ids = self._scrape_game_ids_for_date(day_str)
-            except Exception as exc:
-                logger.debug("Failed to fetch IDs for %s: %s", day_str, exc)
-                skipped += 1
-                continue
-            for gid in ids:
-                gid = str(gid).strip()
-                if gid and gid not in game_date_map:
-                    game_date_map[gid] = day_str
-            if (i + 1) % 20 == 0 or i + 1 == len(days):
-                logger.info(
-                    "  ... %d/%d days processed, %d game IDs so far",
-                    i + 1, len(days), len(game_date_map),
-                )
+            ids = self._scrape_game_ids_for_date(day_str, session=session)
+            return day_str, ids
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            futures = {pool.submit(_fetch_day, d): d for d in days}
+            done = 0
+            for future in as_completed(futures):
+                done += 1
+                try:
+                    day_str, ids = future.result()
+                except Exception as exc:
+                    logger.debug("Failed to fetch IDs for a day: %s", exc)
+                    skipped += 1
+                    continue
+                for gid in ids:
+                    gid = str(gid).strip()
+                    if gid and gid not in game_date_map:
+                        game_date_map[gid] = day_str
+                if done % 50 == 0 or done == len(days):
+                    logger.info(
+                        "  ... %d/%d days processed, %d game IDs so far",
+                        done, len(days), len(game_date_map),
+                    )
+
+        session.close()
 
         if skipped:
             logger.warning(
