@@ -1,0 +1,18 @@
+{
+  "mean": {
+    "flip_rate_increase": 0.04,
+    "calibration_drift": 0.012,
+    "performance_drop": 0.025
+  },
+  "std": {
+    "flip_rate_increase": 0.02,
+    "calibration_drift": 0.005,
+    "performance_drop": 0.01
+  },
+  "n_runs": {
+    "flip_rate_increase": 0,
+    "calibration_drift": 0,
+    "performance_drop": 0
+  },
+  "note": "Initial guardrail defaults. Will be updated by CI runs. Adaptive thresholds: mean + 2*std."
+}

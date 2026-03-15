@@ -49,6 +49,57 @@ jobs:
       - name: Run tests with coverage
         run: pytest tests/ --cov=src --cov-report=term-missing --tb=short -q
 
+  phase3-data-integrity:
+    name: Phase 3 Data Integrity Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Contract schema validation
+        run: |
+          python -c "
+          from src.data.contract_validator import ContractValidator
+          v = ContractValidator()
+          r = v.validate()
+          print(r.summary())
+          assert r.passed, 'Contract validation FAILED'
+          "
+
+      - name: Leakage rules tests
+        run: pytest tests/data_integrity/test_leakage_rules.py -v --tb=short -q
+
+      - name: Training row assembly tests
+        run: pytest tests/data_integrity/test_training_row_assembly.py -v --tb=short -q
+
+      - name: Point-in-time contract tests
+        run: pytest tests/data_integrity/test_point_in_time_contracts.py -v --tb=short -q
+
+      - name: Lineage manifest tests
+        run: pytest tests/data_integrity/test_lineage_manifests.py -v --tb=short -q
+
+      - name: Provider robustness tests
+        run: pytest tests/data_integrity/test_provider_robustness.py -v --tb=short -q
+
+      - name: No untested features check
+        run: |
+          python -c "
+          import yaml
+          from pathlib import Path
+          contracts = yaml.safe_load(open('contracts/feature_contracts.yaml'))
+          untested = [f['feature_name'] for f in contracts['features'] if not f.get('test_ids')]
+          assert not untested, f'Untested features: {untested}'
+          print(f'All {len(contracts[\"features\"])} features have test_ids.')
+          "
+
   audit:
     name: Dependency Audit
     runs-on: ubuntu-latest

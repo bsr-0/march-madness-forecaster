@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/feature_contract.schema.json",
+  "title": "Feature Contract Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "features"
+  ],
+  "properties": {
+    "version": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "features": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/feature"
+      }
+    }
+  },
+  "$defs": {
+    "leakageChecks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "same_game_outcome_leakage",
+        "future_opponent_outcome_leakage",
+        "post_game_aggregate_leakage",
+        "tournament_info_leakage_pre_tournament"
+      ],
+      "properties": {
+        "same_game_outcome_leakage": {
+          "type": "boolean"
+        },
+        "future_opponent_outcome_leakage": {
+          "type": "boolean"
+        },
+        "post_game_aggregate_leakage": {
+          "type": "boolean"
+        },
+        "tournament_info_leakage_pre_tournament": {
+          "type": "boolean"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "dataset",
+        "field"
+      ],
+      "properties": {
+        "system": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dataset": {
+          "type": "string",
+          "minLength": 1
+        },
+        "field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider_priority": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "availableAtLogic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "offset_from_event",
+            "function_ref",
+            "static"
+          ]
+        },
+        "event_timestamp_field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "offset_hours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "offset_from_event" } }
+          },
+          "then": {
+            "required": ["event_timestamp_field", "offset_hours"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "function_ref" } }
+          },
+          "then": {
+            "required": ["ref"]
+          }
+        }
+      ]
+    },
+    "feature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "feature_name",
+        "owner",
+        "source",
+        "event_timestamp_field",
+        "available_at_logic",
+        "transformation_logic_ref",
+        "prediction_time_reference",
+        "allowed_lag",
+        "null_handling_policy",
+        "leakage_checks",
+        "contract_version",
+        "test_ids",
+        "risk_tier",
+        "snapshot_policy",
+        "revision_behavior",
+        "late_arrival_policy"
+      ],
+      "properties": {
+        "feature_name": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_]+$"
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "event_timestamp_field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "available_at_logic": {
+          "$ref": "#/$defs/availableAtLogic"
+        },
+        "transformation_logic_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prediction_time_reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowed_lag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "null_handling_policy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "leakage_checks": {
+          "$ref": "#/$defs/leakageChecks"
+        },
+        "contract_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "test_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "risk_tier": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "snapshot_policy": {
+          "type": "string",
+          "enum": [
+            "point_in_time_snapshot_required",
+            "latest_acceptable"
+          ]
+        },
+        "revision_behavior": {
+          "type": "string",
+          "enum": [
+            "latest_forbidden",
+            "latest_acceptable_with_lag"
+          ]
+        },
+        "late_arrival_policy": {
+          "type": "string",
+          "enum": [
+            "exclude_if_available_after_prediction_time",
+            "accept_with_staleness_flag"
+          ]
+        },
+        "deprecated": {
+          "type": "boolean"
+        },
+        "sunset_date": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    }
+  }
+}

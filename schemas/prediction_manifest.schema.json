@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/prediction_manifest.schema.json",
+  "title": "Prediction Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "created_at",
+    "code",
+    "config",
+    "raw_inputs",
+    "feature_contracts",
+    "training_data",
+    "model",
+    "random_seed",
+    "environment"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "code": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commit_sha",
+        "diff_hash"
+      ],
+      "properties": {
+        "commit_sha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "diff_hash": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "hash"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hash": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "raw_inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "provider",
+          "path_or_uri",
+          "snapshot_timestamp",
+          "checksum"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path_or_uri": {
+            "type": "string",
+            "minLength": 1
+          },
+          "snapshot_timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "checksum": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "feature_contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "hash"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hash": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "training_data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path_or_uri",
+        "hash"
+      ],
+      "properties": {
+        "path_or_uri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hash": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_path_or_uri",
+        "artifact_hash"
+      ],
+      "properties": {
+        "artifact_path_or_uri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_hash": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "random_seed": {
+      "type": "integer"
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "python_version",
+        "os",
+        "lockfile_hash"
+      ],
+      "properties": {
+        "python_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "os": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lockfile_hash": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

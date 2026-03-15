@@ -1,0 +1,2177 @@
+version: 1
+features:
+  # ==========================================================================
+  # Core Efficiency (3 features) — source: proprietary_metrics
+  # ==========================================================================
+  - feature_name: adj_off_eff
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: adj_offensive_efficiency
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_100.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001", "LEAK-R3-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: adj_def_eff
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: adj_defensive_efficiency
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_100.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001", "LEAK-R3-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: adj_tempo
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: adj_tempo
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_68.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Four Factors Offense (4 features) — source: torvik
+  # ==========================================================================
+  - feature_name: efg_pct
+    owner: data-platform
+    source:
+      system: torvik
+      dataset: team_stats
+      field: effective_fg_pct
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 4
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer.extract_team_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.5"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-002", "LEAK-R1-002"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: to_rate
+    owner: data-platform
+    source:
+      system: torvik
+      dataset: team_stats
+      field: turnover_rate
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 4
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer.extract_team_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.18"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-002", "LEAK-R1-002"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: orb_rate
+    owner: data-platform
+    source:
+      system: torvik
+      dataset: team_stats
+      field: offensive_reb_rate
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 4
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer.extract_team_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.30"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-002", "LEAK-R1-002"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: ft_rate
+    owner: data-platform
+    source:
+      system: torvik
+      dataset: team_stats
+      field: free_throw_rate
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 4
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer.extract_team_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.30"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-002", "LEAK-R1-002"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Four Factors Defense (4 features) — source: torvik
+  # ==========================================================================
+  - feature_name: opp_efg_pct
+    owner: data-platform
+    source:
+      system: torvik
+      dataset: team_stats
+      field: opp_effective_fg_pct
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 4
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer.extract_team_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.5"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-002", "LEAK-R1-002"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: opp_to_rate
+    owner: data-platform
+    source:
+      system: torvik
+      dataset: team_stats
+      field: opp_turnover_rate
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 4
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer.extract_team_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.18"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-002", "LEAK-R1-002"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: drb_rate
+    owner: data-platform
+    source:
+      system: torvik
+      dataset: team_stats
+      field: defensive_reb_rate
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 4
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer.extract_team_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.70"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-002", "LEAK-R1-002"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: opp_ft_rate
+    owner: data-platform
+    source:
+      system: torvik
+      dataset: team_stats
+      field: opp_free_throw_rate
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 4
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer.extract_team_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.30"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-002", "LEAK-R1-002"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Player Metrics (6 features) — source: roster
+  # ==========================================================================
+  - feature_name: total_rapm
+    owner: data-platform
+    source:
+      system: roster
+      dataset: player_stats
+      field: rapm_total
+    event_timestamp_field: roster_snapshot_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: roster_snapshot_time
+      offset_hours: 24
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_roster_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-003", "LEAK-R1-003"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: top5_rapm
+    owner: data-platform
+    source:
+      system: roster
+      dataset: player_stats
+      field: rapm_total
+    event_timestamp_field: roster_snapshot_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: roster_snapshot_time
+      offset_hours: 24
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_roster_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-003", "LEAK-R1-003"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: bench_rapm
+    owner: data-platform
+    source:
+      system: roster
+      dataset: player_stats
+      field: rapm_total
+    event_timestamp_field: roster_snapshot_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: roster_snapshot_time
+      offset_hours: 24
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_roster_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-003", "LEAK-R1-003"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: total_warp
+    owner: data-platform
+    source:
+      system: roster
+      dataset: player_stats
+      field: warp
+    event_timestamp_field: roster_snapshot_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: roster_snapshot_time
+      offset_hours: 24
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_roster_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-003", "LEAK-R1-003"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: roster_continuity
+    owner: data-platform
+    source:
+      system: roster
+      dataset: player_stats
+      field: minutes_per_game
+    event_timestamp_field: roster_snapshot_time
+    available_at_logic:
+      type: static
+      description: "Available at start of season from roster composition"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_roster_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.65"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-003"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: transfer_impact
+    owner: data-platform
+    source:
+      system: roster
+      dataset: player_stats
+      field: transfer_impact
+    event_timestamp_field: roster_snapshot_time
+    available_at_logic:
+      type: static
+      description: "Available at start of season from transfer portal data"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_roster_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-003"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Experience/Depth (3 features) — source: roster
+  # ==========================================================================
+  - feature_name: avg_experience
+    owner: data-platform
+    source:
+      system: roster
+      dataset: player_stats
+      field: experience_score
+    event_timestamp_field: roster_snapshot_time
+    available_at_logic:
+      type: static
+      description: "Available at start of season from roster composition"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_roster_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_2.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-003"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: bench_depth
+    owner: data-platform
+    source:
+      system: roster
+      dataset: player_stats
+      field: bench_depth
+    event_timestamp_field: roster_snapshot_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: roster_snapshot_time
+      offset_hours: 24
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_roster_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-003"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: injury_risk
+    owner: data-platform
+    source:
+      system: roster
+      dataset: player_stats
+      field: availability_factor
+    event_timestamp_field: roster_snapshot_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: roster_snapshot_time
+      offset_hours: 12
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_roster_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-003", "LEAK-R1-003"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_acceptable_with_lag
+    late_arrival_policy: accept_with_staleness_flag
+
+  # ==========================================================================
+  # Volatility (4 features) — source: game_flows
+  # ==========================================================================
+  - feature_name: lead_volatility
+    owner: data-platform
+    source:
+      system: game_flows
+      dataset: play_by_play
+      field: lead_volatility
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 1
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_game_flow_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-004", "LEAK-R1-004"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: entropy
+    owner: data-platform
+    source:
+      system: game_flows
+      dataset: play_by_play
+      field: entropy
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 1
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_game_flow_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-004", "LEAK-R1-004"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: lead_sustainability
+    owner: data-platform
+    source:
+      system: game_flows
+      dataset: play_by_play
+      field: derived
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 1
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_game_flow_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.5"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-004"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: comeback_factor
+    owner: data-platform
+    source:
+      system: game_flows
+      dataset: play_by_play
+      field: comeback_factor
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 1
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_game_flow_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-004"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Shot Quality / xP (2 features) — source: proprietary_metrics
+  # ==========================================================================
+  - feature_name: xp_per_poss
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: offensive_xp_per_possession
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_1.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: shot_distribution
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: shot_distribution_score
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Schedule (4 features) — source: proprietary_metrics
+  # ==========================================================================
+  - feature_name: sos_adj_em
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: sos_adj_em
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001", "LEAK-R3-001", "HIST-001"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: sos_opp_o
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: sos_opp_o
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_100.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: sos_opp_d
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: sos_opp_d
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_100.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: ncsos_adj_em
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: ncsos_adj_em
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Luck / WAB / Resume / Momentum (7 features) — source: proprietary_metrics
+  # ==========================================================================
+  - feature_name: luck
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: luck
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: wab
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: wab
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001", "LEAK-R3-001", "HIST-001"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: sor
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: sor
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.5"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001", "LEAK-R3-001", "HIST-001"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: wab_poisson
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: wab_poisson
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001", "LEAK-R3-001", "HIST-001"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: momentum
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: momentum
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001", "LEAK-R3-001", "HIST-001"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: three_pt_variance
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: three_pt_variance
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.095"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: pace_adj_variance
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: pace_adjusted_variance
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Extended Metrics (Elo, FT%, ball movement, defense, etc.) — proprietary_metrics
+  # ==========================================================================
+  - feature_name: elo_rating
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: elo_rating
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_1500.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001", "LEAK-R3-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: free_throw_pct
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: free_throw_pct
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.72"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: assist_to_turnover
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: assist_to_turnover_ratio
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_1.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: assist_rate
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: assist_rate
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.50"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: steal_rate
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: steal_rate
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.08"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: block_rate
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: block_rate
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.05"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: opp_two_pt_pct
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: opp_two_pt_pct_allowed
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.48"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: opp_three_pt_attempt_rate
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: opp_three_pt_attempt_rate
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.35"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: conference_adj_em
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: conference_adj_em
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Shooting splits & defense (5 features) — proprietary_metrics
+  # ==========================================================================
+  - feature_name: three_pt_pct
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: three_pt_pct
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.34"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: three_pt_rate
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: three_pt_rate
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.35"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: def_xp_per_poss
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: defensive_xp_per_possession
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_1.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: win_pct
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: win_pct
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.5"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001", "LEAK-R3-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: elite_sos
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: elite_sos
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001", "LEAK-R3-001", "HIST-001"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: q1_win_pct
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: q1_win_pct
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001", "LEAK-R3-001", "HIST-001"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: foul_rate
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: foul_rate
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.18"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: three_pt_regression
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: three_pt_regression_signal
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Schedule/Context (3 features)
+  # ==========================================================================
+  - feature_name: rest_days
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: schedule
+      field: rest_days
+    event_timestamp_field: schedule_publish_time
+    available_at_logic:
+      type: static
+      description: "Known from published schedule before game day"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer.extract_team_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_5.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-005"]
+    risk_tier: low
+    snapshot_policy: latest_acceptable
+    revision_behavior: latest_acceptable_with_lag
+    late_arrival_policy: accept_with_staleness_flag
+
+  - feature_name: top5_minutes_share
+    owner: data-platform
+    source:
+      system: roster
+      dataset: player_stats
+      field: minutes_per_game
+    event_timestamp_field: roster_snapshot_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: roster_snapshot_time
+      offset_hours: 24
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_roster_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.70"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-003"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: preseason_ap_rank
+    owner: data-platform
+    source:
+      system: torvik
+      dataset: preseason_rankings
+      field: preseason_ap_rank
+    event_timestamp_field: preseason_publish_time
+    available_at_logic:
+      type: static
+      description: "Published before season starts; immutable"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::TeamFeatures.to_vector"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0_maps_to_0.25_in_vector"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-002"]
+    risk_tier: medium
+    snapshot_policy: latest_acceptable
+    revision_behavior: latest_acceptable_with_lag
+    late_arrival_policy: accept_with_staleness_flag
+
+  # ==========================================================================
+  # Coach Features (7 features) — source: coach_tournament
+  # ==========================================================================
+  - feature_name: coach_tournament_exp
+    owner: data-platform
+    source:
+      system: coach_tournament
+      dataset: coach_career_stats
+      field: coach_tournament_appearances
+    event_timestamp_field: career_total_snapshot
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/availability.py::coach_data_available_at"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::TeamFeatures.to_vector"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0_log_scaled"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: true
+    contract_version: "1.0.0"
+    test_ids: ["PIT-006", "LEAK-R4-001", "HIST-002"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: coach_tournament_win_rate
+    owner: data-platform
+    source:
+      system: coach_tournament
+      dataset: coach_career_stats
+      field: coach_tournament_win_rate
+    event_timestamp_field: career_total_snapshot
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/availability.py::coach_data_available_at"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::TeamFeatures.to_vector"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: true
+    contract_version: "1.0.0"
+    test_ids: ["PIT-006", "LEAK-R4-001", "HIST-002"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: coach_deep_run_rate
+    owner: data-platform
+    source:
+      system: coach_tournament
+      dataset: coach_career_stats
+      field: coach_deep_run_rate
+    event_timestamp_field: career_total_snapshot
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/availability.py::coach_data_available_at"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer.extract_team_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: true
+    contract_version: "1.0.0"
+    test_ids: ["PIT-006", "LEAK-R4-001", "HIST-002"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: coach_stage_consistency
+    owner: data-platform
+    source:
+      system: coach_tournament
+      dataset: coach_career_stats
+      field: coach_stage_consistency
+    event_timestamp_field: career_total_snapshot
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/availability.py::coach_data_available_at"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer.extract_team_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: true
+    contract_version: "1.0.0"
+    test_ids: ["PIT-006", "LEAK-R4-001", "HIST-002"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: coach_f4_appearances
+    owner: data-platform
+    source:
+      system: coach_tournament
+      dataset: coach_career_stats
+      field: coach_f4_appearances
+    event_timestamp_field: career_total_snapshot
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/availability.py::coach_data_available_at"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::TeamFeatures.to_vector"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0_log_scaled"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: true
+    contract_version: "1.0.0"
+    test_ids: ["PIT-006", "LEAK-R4-001", "HIST-002"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: coach_e8_appearances
+    owner: data-platform
+    source:
+      system: coach_tournament
+      dataset: coach_career_stats
+      field: coach_e8_appearances
+    event_timestamp_field: career_total_snapshot
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/availability.py::coach_data_available_at"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::TeamFeatures.to_vector"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0_log_scaled"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: true
+    contract_version: "1.0.0"
+    test_ids: ["PIT-006", "LEAK-R4-001", "HIST-002"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: coach_s16_appearances
+    owner: data-platform
+    source:
+      system: coach_tournament
+      dataset: coach_career_stats
+      field: coach_s16_appearances
+    event_timestamp_field: career_total_snapshot
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/availability.py::coach_data_available_at"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::TeamFeatures.to_vector"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0_log_scaled"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: true
+    contract_version: "1.0.0"
+    test_ids: ["PIT-006", "LEAK-R4-001", "HIST-002"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Graph-Theoretic SOS (2 features) — source: schedule_graph
+  # ==========================================================================
+  - feature_name: pagerank_sos
+    owner: data-platform
+    source:
+      system: schedule_graph
+      dataset: schedule_edges
+      field: pagerank_sos
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 1
+    transformation_logic_ref: "src/ml/gnn/schedule_graph.py::ScheduleGraph.compute_pagerank"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-007", "LEAK-R1-005", "LEAK-R3-002"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: multi_hop_sos
+    owner: data-platform
+    source:
+      system: schedule_graph
+      dataset: schedule_edges
+      field: multi_hop_sos
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 1
+    transformation_logic_ref: "src/ml/gnn/schedule_graph.py::ScheduleGraph.compute_multi_hop_sos"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-007", "LEAK-R1-005", "LEAK-R3-002"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Win Quality (3 features) — source: schedule_graph
+  # ==========================================================================
+  - feature_name: best_win_percentile
+    owner: data-platform
+    source:
+      system: schedule_graph
+      dataset: schedule_edges
+      field: best_win_percentile
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 1
+    transformation_logic_ref: "src/ml/gnn/schedule_graph.py::compute_win_quality_metrics"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.5"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-007", "LEAK-R1-005", "LEAK-R3-002", "HIST-001"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: paper_tiger_score
+    owner: data-platform
+    source:
+      system: schedule_graph
+      dataset: schedule_edges
+      field: paper_tiger_score
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 1
+    transformation_logic_ref: "src/ml/gnn/schedule_graph.py::compute_win_quality_metrics"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-007", "LEAK-R1-005", "LEAK-R3-002", "HIST-001"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: dominance_ratio
+    owner: data-platform
+    source:
+      system: schedule_graph
+      dataset: schedule_edges
+      field: dominance_ratio
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 1
+    transformation_logic_ref: "src/ml/gnn/schedule_graph.py::compute_win_quality_metrics"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_1.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-007", "LEAK-R1-005"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Misc game-derived (2 features)
+  # ==========================================================================
+  - feature_name: pace_variance
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: pace_variance
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: conf_tourney_champ
+    owner: data-platform
+    source:
+      system: torvik
+      dataset: conference_results
+      field: conf_tourney_champion
+    event_timestamp_field: conf_tournament_end
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/availability.py::conf_tourney_available_at"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer.extract_team_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: true
+    contract_version: "1.0.0"
+    test_ids: ["PIT-008", "LEAK-R4-002", "HIST-003"]
+    risk_tier: critical
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # KenPom/SQ Replacement + Resume (4 features)
+  # ==========================================================================
+  - feature_name: neutral_site_win_pct
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: neutral_site_win_pct
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.5"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: home_court_dependence
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: game_records
+      field: home_court_dependence
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: game_end_time
+      offset_hours: 0.5
+    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001"]
+    risk_tier: low
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: tournament_resume
+    owner: data-platform
+    source:
+      system: proprietary_metrics
+      dataset: derived
+      field: tournament_resume
+    event_timestamp_field: game_end_time
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/features/tournament_features.py::compute_tournament_resume_composite"
+    transformation_logic_ref: "src/data/features/tournament_features.py::compute_tournament_resume_composite"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-001", "LEAK-R1-001", "LEAK-R3-001", "HIST-001"]
+    risk_tier: high
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Position-specific depth (2 features) — source: roster
+  # ==========================================================================
+  - feature_name: backcourt_rapm
+    owner: data-platform
+    source:
+      system: roster
+      dataset: player_stats
+      field: rapm_total
+    event_timestamp_field: roster_snapshot_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: roster_snapshot_time
+      offset_hours: 24
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_roster_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-003", "LEAK-R1-003"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: frontcourt_rapm
+    owner: data-platform
+    source:
+      system: roster
+      dataset: player_stats
+      field: rapm_total
+    event_timestamp_field: roster_snapshot_time
+    available_at_logic:
+      type: offset_from_event
+      event_timestamp_field: roster_snapshot_time
+      offset_hours: 24
+    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer._extract_roster_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-003", "LEAK-R1-003"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # External Ratings (2 features) — CRITICAL tier
+  # ==========================================================================
+  - feature_name: external_rating_composite
+    owner: data-platform
+    source:
+      system: external_ratings
+      dataset: massey_ordinals
+      field: composite_rating
+    event_timestamp_field: rating_publish_time
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/availability.py::external_rating_available_at"
+    transformation_logic_ref: "src/pipeline/sota.py::SOTAPipeline._load_external_ratings"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0_tree_handles_gracefully"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: true
+      tournament_info_leakage_pre_tournament: true
+    contract_version: "1.0.0"
+    test_ids: ["PIT-009", "LEAK-R3-003", "LEAK-R4-003", "HIST-004"]
+    risk_tier: critical
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: external_rating_spread
+    owner: data-platform
+    source:
+      system: external_ratings
+      dataset: massey_ordinals
+      field: rating_spread
+    event_timestamp_field: rating_publish_time
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/availability.py::external_rating_available_at"
+    transformation_logic_ref: "src/pipeline/sota.py::SOTAPipeline._load_external_ratings"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "use_default_0.0_tree_handles_gracefully"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: true
+      tournament_info_leakage_pre_tournament: true
+    contract_version: "1.0.0"
+    test_ids: ["PIT-009", "LEAK-R3-003", "LEAK-R4-003", "HIST-004"]
+    risk_tier: critical
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Seed (1 feature) — CRITICAL tier
+  # ==========================================================================
+  - feature_name: seed_strength
+    owner: data-platform
+    source:
+      system: bracket
+      dataset: tournament_bracket
+      field: seed
+    event_timestamp_field: selection_sunday
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/availability.py::seed_available_at"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::TeamFeatures.to_vector"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "zero_before_selection_sunday"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: true
+    contract_version: "1.0.0"
+    test_ids: ["PIT-010", "LEAK-R4-004", "HIST-005"]
+    risk_tier: critical
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
