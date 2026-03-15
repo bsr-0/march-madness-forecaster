@@ -221,9 +221,15 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             s2 = _seed_map.get(game.team2_id, 0)
         else:
             s1, s2 = 0, 0
-        # Gap #1: Current-year Massey composite for training features
-        _mc1 = pipeline._external_composites.get(game.team1_id, None) if hasattr(pipeline, '_external_composites') and pipeline._external_composites else None
-        _mc2 = pipeline._external_composites.get(game.team2_id, None) if hasattr(pipeline, '_external_composites') and pipeline._external_composites else None
+        # LEAKAGE FIX (Gap #1): External composites use end-of-season
+        # ratings (latest RankingDayNum) and must not appear in feature
+        # vectors for regular-season training games — the same temporal
+        # constraint that applies to seeds above.
+        if game_date > tournament_cutoff:
+            _mc1 = pipeline._external_composites.get(game.team1_id, None) if hasattr(pipeline, '_external_composites') and pipeline._external_composites else None
+            _mc2 = pipeline._external_composites.get(game.team2_id, None) if hasattr(pipeline, '_external_composites') and pipeline._external_composites else None
+        else:
+            _mc1, _mc2 = None, None
         _erc1 = _mc1.composite_rating if _mc1 is not None else 0.0
         _erc2 = _mc2.composite_rating if _mc2 is not None else 0.0
         _ers1 = _mc1.rating_spread if _mc1 is not None else 0.0
