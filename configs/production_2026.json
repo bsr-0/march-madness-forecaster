@@ -1,0 +1,50 @@
+{
+  "year": 2026,
+  "probability_profile": "production",
+  "mode": "calibration",
+  "model_complexity": "simple",
+
+  "use_agent_orchestration": false,
+  "enable_gnn": false,
+  "enable_transformer": false,
+  "enable_embedding_projections": false,
+
+  "enable_stacking": false,
+  "enable_feature_selection": false,
+
+  "enable_brier_sharpening": false,
+  "enable_seed_overrides": false,
+  "enable_goto_conversion": false,
+  "enable_round_weighted_calibration": false,
+  "seed_prior_weight": 0.0,
+  "consistency_bonus_max": 0.0,
+
+  "enable_bayesian_bt": false,
+
+  "enable_multi_year_training": true,
+  "enable_multi_year_calibration": true,
+  "enable_loyo_cv": true,
+
+  "training_years": [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024],
+  "dev_years": [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024],
+  "holdout_years": [2025],
+
+  "strict_leakage_mode": true,
+  "require_freeze_file": true,
+
+  "calibration_method": "temperature",
+  "enable_tournament_adaptation": true,
+
+  "scoring_metric": "brier",
+
+  "multi_year_games_dir": "data/raw/historical",
+  "kaggle_dir": "data/kaggle",
+  "teams_json": "data/raw/teams_2026.json",
+  "torvik_json": "data/raw/torvik_2026.json",
+  "historical_games_json": "data/raw/historical_games_2026.json",
+  "roster_json": "data/raw/cbbpy_rosters_2026.json",
+  "public_picks_json": "data/raw/public_picks_2026.json",
+  "scoring_rules_json": "data/raw/scoring_rules_2026.json",
+  "mc_calibration_json": "artifacts/mc_calibration_2026.json",
+  "freeze_file": "artifacts/pipeline_freeze_2026.json"
+}

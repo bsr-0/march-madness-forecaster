@@ -264,8 +264,8 @@ class SOTAPipelineConfig:
     #   goto_conversion, round-weighted calibration, seed prior, etc.)
     probability_profile: str = "production"
     # Dev/holdout partition for RDoF control.
-    # Default: dev=2016-2024, holdout=2025 (used for evaluation only).
-    dev_years: Optional[List[int]] = field(default_factory=lambda: list(range(2016, 2025)))
+    # Default: dev=2016-2019 and 2021-2024 (exclude 2020 COVID), holdout=2025.
+    dev_years: Optional[List[int]] = field(default_factory=lambda: [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024])
     holdout_years: Optional[List[int]] = field(default_factory=lambda: [2025])
     # Calibration years are tournament-only years used to fit probability
     # calibration. By default this is holdout_years, which keeps calibrator
@@ -699,10 +699,13 @@ class SOTAPipelineConfig:
             violations.append("holdout_years is empty")
         elif sorted(set(self.holdout_years)) != [2025]:
             violations.append(f"holdout_years={self.holdout_years} (expected [2025])")
+        expected_dev_years = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
         if not self.dev_years:
             violations.append("dev_years is empty")
-        elif sorted(set(self.dev_years)) != list(range(2016, 2025)):
-            violations.append("dev_years must be 2016-2024 for locked production path")
+        elif sorted(set(self.dev_years)) != expected_dev_years:
+            violations.append(
+                "dev_years must be 2016-2019 and 2021-2024 for locked production path"
+            )
         cal_years = self.resolve_calibration_years()
         if cal_years != [2025]:
             violations.append(f"calibration_years={cal_years} (expected [2025])")
