@@ -124,7 +124,7 @@ def _load_env_file(path: Path) -> None:
                         "your_kaggle_username_here",
                     ):
                         os.environ.setdefault(key, value)
-    except Exception:
+    except (OSError, ValueError, UnicodeDecodeError):
         pass
 
 
@@ -191,7 +191,7 @@ def download_competition_data(
     except ImportError as e:
         logger.warning("Kaggle API not available: %s", e)
         return None
-    except Exception as e:
+    except (OSError, ValueError, RuntimeError) as e:
         logger.warning("Kaggle API authentication failed: %s", e)
         return None
 
@@ -212,7 +212,7 @@ def download_competition_data(
                 )
                 return str(output_path)
             logger.info("Downloaded %s but no MMasseyOrdinals found", slug)
-        except Exception as e:
+        except (OSError, ValueError, RuntimeError) as e:
             logger.debug("Competition %s download failed: %s", slug, e)
             continue
 
@@ -222,7 +222,7 @@ def download_competition_data(
             result = _download_individual_files(api, slug, output_path)
             if result:
                 return result
-        except Exception as e:
+        except (OSError, ValueError, RuntimeError) as e:
             logger.debug("Individual file download from %s failed: %s", slug, e)
             continue
 
@@ -254,7 +254,7 @@ def _download_individual_files(
                     zf.extractall(output_path)
                 zip_path.unlink()
             downloaded_any = True
-        except Exception:
+        except (OSError, ValueError, RuntimeError, zipfile.BadZipFile):
             continue
 
     if downloaded_any and _has_massey_ordinals(output_path):
