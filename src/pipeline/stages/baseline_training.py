@@ -1661,8 +1661,9 @@ def _run_loyo_validation(
     # includes the held-out year, so reusing them leaks information
     # (the feature selector's importance scores encode test-year labels;
     # the scaler's mean/std include test-year feature distributions).
-    # Instead, each LOYO fold re-fits its own scaler below in train_fn.
-    # Feature selection is omitted — the fold-level model sees raw features.
+    # Instead, each LOYO fold re-fits its own scaler and feature
+    # selector below in train_fn, faithfully mirroring the production
+    # pipeline's preprocessing stack.
 
     # ----------------------------------------------------------
     # Step 2: Run LeaveOneYearOutCV
@@ -1672,10 +1673,42 @@ def _run_loyo_validation(
         temporal_mode=pipeline.config.loyo_temporal_mode,
     )
 
+    # Per-fold state: scaler and feature selector re-fit each fold.
+    # Stored in a mutable container so predict_fn can access them.
+    _fold_transforms = {"scaler": None, "selector": None}
+
     def train_fn(X_tr, y_tr, X_v, y_v, w_tr):
+        # Reset per-fold transforms
+        _fold_transforms["scaler"] = None
+        _fold_transforms["selector"] = None
+
+        # Re-fit feature selector per fold (mirrors production pipeline)
+        if pipeline.config.enable_feature_selection:
+            try:
+                fold_selector = FeatureSelector(
+                    correlation_threshold=pipeline.config.correlation_threshold,
+                    min_features=pipeline.config.min_features,
+                    max_features=pipeline.config.max_features,
+                )
+                fold_selector.fit(X_tr, y_tr, feature_names)
+                X_tr = fold_selector.transform(X_tr)
+                if X_v is not None and len(X_v) > 0:
+                    X_v = fold_selector.transform(X_v)
+                _fold_transforms["selector"] = fold_selector
+            except Exception as _fs_exc:
+                logger.debug("LOYO fold feature selection failed: %s", _fs_exc)
+
+        # Re-fit scaler per fold (mirrors production pipeline)
+        if pipeline.config.enable_feature_scaling and SCALER_AVAILABLE:
+            fold_scaler = StandardScaler()
+            X_tr = fold_scaler.fit_transform(X_tr)
+            if X_v is not None and len(X_v) > 0:
+                X_v = fold_scaler.transform(X_v)
+            _fold_transforms["scaler"] = fold_scaler
+
         if LIGHTGBM_AVAILABLE:
             ranker = LightGBMRanker()
-            vs = (X_v, y_v) if len(y_v) >= 10 else None
+            vs = (X_v, y_v) if X_v is not None and len(y_v) >= 10 else None
             ranker.train(X_tr, y_tr, num_rounds=200, early_stopping_rounds=30 if vs else None,
                          valid_set=vs, sample_weight=w_tr)
             return ranker
@@ -1688,6 +1721,14 @@ def _run_loyo_validation(
     def predict_fn(model, X_pred):
         if model is None:
             return np.full(len(X_pred), 0.5)
+        # Apply the same per-fold transforms used during training
+        if _fold_transforms["selector"] is not None:
+            try:
+                X_pred = _fold_transforms["selector"].transform(X_pred)
+            except (IndexError, ValueError):
+                return np.full(len(X_pred), 0.5)
+        if _fold_transforms["scaler"] is not None:
+            X_pred = _fold_transforms["scaler"].transform(X_pred)
         if isinstance(model, LightGBMRanker):
             return model.predict(X_pred)
         return model.predict_proba(X_pred)[:, 1]
