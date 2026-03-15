@@ -51,9 +51,9 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     """Fit calibration on validation-era games with nested OOS predictions.
 
     FIX-NESTED-CAL: Uses a nested approach to prevent double-dipping:
-    1. PRIMARY: Historical tournament game predictions (genuinely OOS —
-       the baseline model trains only on regular-season games, so tournament
-       predictions are unseen during training).
+    1. PRIMARY: Historical tournament game predictions from explicitly
+       configured calibration years. By default these are holdout years
+       excluded from model training, so they are season-level OOS.
     2. SECONDARY: Current-year validation-era predictions using the existing
        model (validation era was NOT used for training due to chronological
        split, but the model DID see overlapping teams/features).
@@ -62,14 +62,10 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     signal because they match the inference domain (tournament games) and
     are truly out-of-sample with respect to the trained model.
 
-    NOTE (LEAKAGE-AUDIT): Historical tournament games are semi-OOS: the
-    model trained on regular-season data from those same years, so it saw
-    the same teams' features during training.  This is an acceptable
-    engineering tradeoff — the predictions are for unseen *games* (not
-    unseen *teams*), matching real inference conditions.  For maximum
-    rigor, one could restrict to tournament games from years NOT in the
-    multi-year training pool, at the cost of much smaller calibration
-    samples.
+    NOTE (LEAKAGE-AUDIT): Calibration now defaults to holdout-year
+    tournament games only (via config.resolve_calibration_years()),
+    eliminating year-overlap with training by default. If users override
+    calibration_years, this guarantee no longer automatically holds.
 
     FIX #5: Temporarily restores pre-optimization CFA weights while
     generating calibration probabilities.  This prevents the calibrator
@@ -135,10 +131,12 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             and hasattr(pipeline, "baseline_model")
             and pipeline.baseline_model is not None):
         import os
-        years = pipeline.config.loyo_years or [
-            y for y in range(2015, pipeline.config.year) if y != 2020
-        ]
-        years = pipeline._filter_years(years)
+        years = pipeline.config.resolve_calibration_years()
+        if not years:
+            logger.warning(
+                "No calibration_years resolved (holdout_years/calibration_years empty); "
+                "historical tournament calibration augmentation skipped."
+            )
         # Determine feature dimensionality from current model
         feature_dim = pipeline.baseline_model.feature_dim
 
@@ -209,7 +207,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     # FIX-NESTED-CAL: Log calibration data provenance.
     logger.info(
         "FIX-NESTED-CAL: Calibration data composition — "
-        "%d historical tournament (genuinely OOS) + %d current-year "
+        "%d historical tournament (holdout-year OOS by default) + %d current-year "
         "validation-era = %d total samples.  Historical tournament "
         "predictions are the cleanest calibration signal.",
         _n_historical_tourney_cal, _n_current_year_cal, len(probs),
@@ -267,7 +265,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     # are the cleanest signal because:
     # 1. The model trains on regular-season games only
     # 2. Tournament games are the actual inference domain
-    # 3. No team/feature overlap between training and calibration data
+    # 3. Year-level separation when calibration_years are disjoint from training
     n_cal = len(p_arr)
     _nested_mode = False
 

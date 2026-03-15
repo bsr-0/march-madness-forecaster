@@ -63,6 +63,7 @@ def _build_pipeline_config(args, path_overrides=None):
     path_overrides = path_overrides or {}
     dev_years = _parse_year_list(getattr(args, "dev_years", None))
     holdout_years = _parse_year_list(getattr(args, "holdout_years", None))
+    calibration_years = _parse_year_list(getattr(args, "calibration_years", None))
     config_kwargs = dict(
         year=path_overrides.get("year", args.year),
         num_simulations=args.simulations,
@@ -94,8 +95,10 @@ def _build_pipeline_config(args, path_overrides=None):
         enable_transformer=bool(getattr(args, "enable_transformer", False)),
         enable_embedding_projections=bool(getattr(args, "enable_embedding_projections", False)),
         kaggle_dir=getattr(args, "kaggle_dir", None),
-        model_complexity=getattr(args, "model_complexity", "standard"),
+        model_complexity=getattr(args, "model_complexity", "simple"),
         enable_bracket_portfolio=bool(getattr(args, "enable_bracket_portfolio", False)),
+        probability_profile=getattr(args, "probability_profile", "production"),
+        mode=getattr(args, "mode", "calibration"),
     )
     # Merge any additional path overrides (e.g., from manifest)
     for key in ("preseason_ap_json", "coach_tournament_json", "conf_champions_json",
@@ -107,6 +110,8 @@ def _build_pipeline_config(args, path_overrides=None):
         config_kwargs["dev_years"] = dev_years
     if holdout_years is not None:
         config_kwargs["holdout_years"] = holdout_years
+    if calibration_years is not None:
+        config_kwargs["calibration_years"] = calibration_years
     return SOTAPipelineConfig(**config_kwargs)
 
 
@@ -607,6 +612,8 @@ def audit_rdof(args):
         config_kwargs["dev_years"] = dev_years
     if holdout_years is not None:
         config_kwargs["holdout_years"] = holdout_years
+    if calibration_years is not None:
+        config_kwargs["calibration_years"] = calibration_years
     config = SOTAPipelineConfig(**config_kwargs)
 
     result = run_rdof_audit(
@@ -1323,7 +1330,7 @@ def main():
         help="Player-level injury/noise Monte Carlo samples per matchup (default: 10000)",
     )
     sota_parser.add_argument("--seed", type=int, default=2026, help="Random seed")
-    sota_parser.add_argument("--calibration", choices=["isotonic", "platt", "none"], default="isotonic")
+    sota_parser.add_argument("--calibration", choices=["temperature", "isotonic", "platt", "none"], default="temperature")
     sota_parser.add_argument("--torvik", default=None, help="Optional Torvik JSON")
     sota_parser.add_argument("--historical-games", default=None, help="Historical NCAA game JSON fallback for game flows")
     sota_parser.add_argument("--sports-reference", default=None, help="Sports Reference team stats JSON (backfill)")
@@ -1370,6 +1377,23 @@ def main():
         help="Comma-separated holdout years for evaluation only (default: 2025)",
     )
     sota_parser.add_argument(
+        "--probability-profile",
+        choices=["production", "experimental"],
+        default="production",
+        help="Probability pipeline profile (default: production)",
+    )
+    sota_parser.add_argument(
+        "--mode",
+        choices=["calibration", "ev"],
+        default="calibration",
+        help="Optimization mode (default: calibration)",
+    )
+    sota_parser.add_argument(
+        "--calibration-years",
+        default=None,
+        help="Comma-separated tournament years used for calibrator fitting (default: holdout years)",
+    )
+    sota_parser.add_argument(
         "--require-freeze",
         action="store_true",
         help="Require a verified freeze artifact before running",
@@ -1399,7 +1423,7 @@ def main():
     sota_parser.add_argument(
         "--model-complexity",
         choices=["simple", "standard", "full"],
-        default="standard",
+        default="simple",
         help="Model complexity mode: simple (8 features), standard (22), full (all)",
     )
     sota_parser.add_argument(
@@ -1844,7 +1868,7 @@ def main():
         help="Player-level injury/noise Monte Carlo samples per matchup (default: 10000)",
     )
     manifest_sota_parser.add_argument("--seed", type=int, default=2026, help="Random seed")
-    manifest_sota_parser.add_argument("--calibration", choices=["isotonic", "platt", "none"], default="isotonic")
+    manifest_sota_parser.add_argument("--calibration", choices=["temperature", "isotonic", "platt", "none"], default="temperature")
     manifest_sota_parser.add_argument("--input", default=None, help="Override teams JSON path")
     manifest_sota_parser.add_argument("--torvik", default=None, help="Override Torvik JSON path")
     manifest_sota_parser.add_argument("--historical-games", default=None, help="Override historical games JSON")
@@ -1893,6 +1917,23 @@ def main():
         "--holdout-years",
         default=None,
         help="Comma-separated holdout years for evaluation only (default: 2025)",
+    )
+    manifest_sota_parser.add_argument(
+        "--probability-profile",
+        choices=["production", "experimental"],
+        default="production",
+        help="Probability pipeline profile (default: production)",
+    )
+    manifest_sota_parser.add_argument(
+        "--mode",
+        choices=["calibration", "ev"],
+        default="calibration",
+        help="Optimization mode (default: calibration)",
+    )
+    manifest_sota_parser.add_argument(
+        "--calibration-years",
+        default=None,
+        help="Comma-separated tournament years used for calibrator fitting (default: holdout years)",
     )
     manifest_sota_parser.add_argument(
         "--require-freeze",

@@ -690,7 +690,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             fixed_indices = [name_to_idx[n] for n in active_feature_set if n in name_to_idx]
             fixed_names = [n for n in active_feature_set if n in name_to_idx]
 
-            if len(fixed_indices) >= 10:
+            min_required = 6 if pipeline.config.model_complexity == "simple" else 10
+            if len(fixed_indices) >= min_required:
                 original_dim = train_X.shape[1]
                 train_X = train_X[:, fixed_indices]
                 eval_X = eval_X[:, fixed_indices]
@@ -709,8 +710,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 )
             else:
                 logger.warning(
-                    "Fixed feature set matched only %d features — using all features.",
-                    len(fixed_indices),
+                    "Fixed feature set matched only %d features (required %d) — using all features.",
+                    len(fixed_indices), min_required,
                 )
         else:
             # Learned feature selection (original path, now opt-in)
