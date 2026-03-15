@@ -218,22 +218,27 @@ class FullStubProviderHub(LibraryProviderHub):
         return ProviderResult("cbbdata", [])
 
 
-def test_incremental_fetch_prefers_espn_over_cbbpy():
-    """When since is provided, espn_scoreboard should be tried before cbbpy."""
+def test_default_priority_prefers_espn_over_cbbpy():
+    """espn_scoreboard should be tried before cbbpy by default (faster)."""
     hub = FullStubProviderHub()
-    result = hub.fetch_historical_games(2026, since="2026-03-05")
+    result = hub.fetch_historical_games(2026)
 
     assert result.provider == "espn_scoreboard"
     assert hub.calls == ["sportsdataverse", "espn_scoreboard"]
 
 
-def test_full_season_fetch_keeps_cbbpy_before_espn():
-    """Without since, cbbpy should be tried before espn_scoreboard."""
-    hub = FullStubProviderHub()
+def test_espn_failure_falls_through_to_cbbpy():
+    """If espn_scoreboard returns no data, cbbpy should be tried next."""
+    class EspnFailHub(FullStubProviderHub):
+        def _from_espn_scoreboard_api(self, year, since=None):
+            self.calls.append("espn_scoreboard")
+            return ProviderResult("espn_scoreboard", [])
+
+    hub = EspnFailHub()
     result = hub.fetch_historical_games(2026)
 
     assert result.provider == "cbbpy"
-    assert hub.calls == ["sportsdataverse", "cbbpy"]
+    assert hub.calls == ["sportsdataverse", "espn_scoreboard", "cbbpy"]
 
 
 def test_explicit_priority_overrides_incremental_default():
