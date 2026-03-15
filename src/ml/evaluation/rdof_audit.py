@@ -1251,6 +1251,7 @@ class HoldoutEvaluator:
             _team_id,
         )
         from datetime import date as _dtdate, timedelta as _dttd
+        from ...pipeline.config import TOURNAMENT_START_DATES as _TOURNEY_DATES
 
         base_years = self.dev_years if self.dev_years is not None else self.all_years
         training_years = [y for y in base_years
@@ -1356,7 +1357,9 @@ class HoldoutEvaluator:
 
             # Build training samples with true PIT features.
             seen_gids: set = set()
-            tournament_cutoff = f"{train_year}-03-14"
+            tournament_cutoff = _TOURNEY_DATES.get(
+                train_year, _dtdate(train_year, 3, 14)
+            ).isoformat()
             for g in sorted(game_records, key=lambda r: r.game_date):
                 if g.game_id in seen_gids:
                     continue
@@ -1491,7 +1494,9 @@ class HoldoutEvaluator:
         )
 
         # Compute end-of-regular-season metrics for tournament predictions.
-        tournament_cutoff = f"{holdout_year}-03-14"
+        tournament_cutoff = _TOURNEY_DATES.get(
+            holdout_year, _dtdate(holdout_year, 3, 14)
+        ).isoformat()
         ho_metrics = ho_engine.compute_as_of(tournament_cutoff)
         if not ho_metrics:
             raise ValueError(f"No metrics computed for holdout year {holdout_year}")

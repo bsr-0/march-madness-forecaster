@@ -198,7 +198,10 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # 14-17) and must not appear in feature vectors for regular-season
     # training games.  This matches the guard in
     # _load_year_samples_incremental() at lines 3270-3274.
-    tournament_cutoff = f"{pipeline.config.year}-03-14"
+    _t_start = TOURNAMENT_START_DATES.get(
+        pipeline.config.year, date(pipeline.config.year, 3, 14)
+    )
+    tournament_cutoff = _t_start.isoformat()
 
     for game in all_games:
         game_date = pipeline._coerce_game_date(
