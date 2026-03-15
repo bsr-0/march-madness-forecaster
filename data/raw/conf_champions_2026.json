@@ -1,0 +1,20 @@
+{
+  "champions": {
+    "gonzaga": "West Coast Conference",
+    "northern_iowa": "Missouri Valley Conference",
+    "idaho": "Big Sky Conference",
+    "queens__nc": "Atlantic Sun Conference",
+    "hofstra": "Coastal Athletic Association",
+    "troy": "Sun Belt Conference",
+    "north_dakota_state": "Summit League",
+    "high_point": "Big South Conference",
+    "lehigh": "Patriot League",
+    "mcneese_state": "Southland Conference",
+    "furman": "Southern Conference",
+    "long_island_university": "NEC",
+    "tennessee_state": "Ohio Valley Conference",
+    "wright_state": "Horizon League",
+    "siena": "Metro Atlantic Athletic Conference"
+  },
+  "year": 2026
+}

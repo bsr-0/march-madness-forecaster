@@ -27,7 +27,7 @@ import logging
 import math
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from pathlib import Path
 from datetime import datetime
 
@@ -126,49 +126,6 @@ class TorVikTeam:
         }
 
 
-@dataclass
-class TorVikGame:
-    """Single game data from BartTorvik."""
-    
-    game_id: str
-    date: str
-    team_id: str
-    opponent_id: str
-    
-    # Location
-    is_home: bool
-    is_neutral: bool
-    
-    # Result
-    team_score: int
-    opponent_score: int
-    
-    @property
-    def margin(self) -> int:
-        return self.team_score - self.opponent_score
-    
-    @property
-    def is_win(self) -> bool:
-        return self.margin > 0
-    
-    # Efficiency in this game
-    offensive_efficiency: float = 0.0
-    defensive_efficiency: float = 0.0
-    tempo: float = 0.0
-    
-    # Four Factors for this game
-    effective_fg_pct: float = 0.0
-    turnover_rate: float = 0.0
-    offensive_reb_rate: float = 0.0
-    free_throw_rate: float = 0.0
-    
-    # Opponent quality
-    opponent_rank: int = 0
-    opponent_adj_em: float = 0.0
-    
-    # Game quality metrics
-    game_quality: float = 0.0  # How well team played vs expectation
-
 
 class BartTorvikScraper:
     """
@@ -183,7 +140,7 @@ class BartTorvikScraper:
     Usage:
         scraper = BartTorvikScraper()
         teams = scraper.fetch_current_rankings()
-        games = scraper.fetch_team_games("duke", 2026)
+        ratings = scraper.fetch_four_factors(2026)
     """
     
     BASE_URL = "https://barttorvik.com"
@@ -655,97 +612,6 @@ class BartTorvikScraper:
         )
         return result
 
-    def fetch_team_games(self, team_id: str, year: int = 2026) -> List[TorVikGame]:
-        """
-        Fetch game-by-game data for a team.
-        
-        Args:
-            team_id: Team identifier
-            year: Season year
-            
-        Returns:
-            List of TorVikGame objects
-        """
-        cached = self._load_from_cache(f"torvik_games_{team_id}_{year}.json")
-        if cached:
-            return [self._dict_to_game(g) for g in cached.get('games', [])]
-        
-        try:
-            url = f"{self.BASE_URL}/team.php?team={team_id}&year={year}"
-            response = self.session.get(url, timeout=30)
-            response.raise_for_status()
-            
-            games = self._parse_team_games(response.text, team_id, year)
-            
-            if games:
-                self._save_to_cache(f"torvik_games_{team_id}_{year}.json", {
-                    'games': [self._game_to_dict(g) for g in games],
-                    'timestamp': datetime.now().isoformat()
-                })
-            
-            return games
-            
-        except Exception as e:
-            logger.warning(f"Could not fetch games for {team_id}: {e}")
-            return []
-    
-    def _parse_team_games(self, html: str, team_id: str, year: int) -> List[TorVikGame]:
-        """Parse team game log from HTML."""
-        soup = BeautifulSoup(html, 'lxml')
-        games = []
-        
-        # Find game log table
-        tables = soup.find_all('table')
-        game_table = None
-        
-        for table in tables:
-            header = table.find('tr')
-            if header and 'Date' in header.get_text():
-                game_table = table
-                break
-        
-        if not game_table:
-            return games
-        
-        rows = game_table.find_all('tr')[1:]
-        
-        for idx, row in enumerate(rows):
-            cells = row.find_all('td')
-            if len(cells) < 5:
-                continue
-            
-            try:
-                date_str = cells[0].get_text(strip=True)
-                opponent_cell = cells[1]
-                opponent_text = opponent_cell.get_text(strip=True)
-                
-                # Determine home/away/neutral
-                is_home = '@' not in opponent_text
-                is_neutral = 'N' in opponent_text or '*' in opponent_text
-                
-                # Extract score
-                score_text = cells[2].get_text(strip=True) if len(cells) > 2 else "0-0"
-                team_score, opp_score = self._parse_score(score_text)
-                
-                game = TorVikGame(
-                    game_id=f"{team_id}_{year}_{idx}",
-                    date=date_str,
-                    team_id=team_id,
-                    opponent_id=self._extract_team_id(opponent_cell),
-                    is_home=is_home,
-                    is_neutral=is_neutral,
-                    team_score=team_score,
-                    opponent_score=opp_score,
-                    offensive_efficiency=self._safe_float(cells[3].get_text(strip=True)) if len(cells) > 3 else 0,
-                    defensive_efficiency=self._safe_float(cells[4].get_text(strip=True)) if len(cells) > 4 else 0,
-                )
-                games.append(game)
-            except Exception as e:
-                logger.debug(f"Error parsing game row: {e}")
-                continue
-        
-        return games
-    
     def load_from_json(self, filepath: str) -> List[TorVikTeam]:
         """
         Load Torvik data from JSON file.
@@ -811,65 +677,13 @@ class BartTorvikScraper:
             conf_losses=data.get('conf_losses', 0),
         )
     
-    def _dict_to_game(self, data: dict) -> TorVikGame:
-        """Convert dictionary to TorVikGame."""
-        return TorVikGame(
-            game_id=data.get('game_id', ''),
-            date=data.get('date', ''),
-            team_id=data.get('team_id', ''),
-            opponent_id=data.get('opponent_id', ''),
-            is_home=data.get('is_home', True),
-            is_neutral=data.get('is_neutral', False),
-            team_score=data.get('team_score', 0),
-            opponent_score=data.get('opponent_score', 0),
-            offensive_efficiency=data.get('offensive_efficiency', 0.0),
-            defensive_efficiency=data.get('defensive_efficiency', 0.0),
-        )
-    
-    def _game_to_dict(self, game: TorVikGame) -> dict:
-        """Convert TorVikGame to dictionary."""
-        return {
-            'game_id': game.game_id,
-            'date': game.date,
-            'team_id': game.team_id,
-            'opponent_id': game.opponent_id,
-            'is_home': game.is_home,
-            'is_neutral': game.is_neutral,
-            'team_score': game.team_score,
-            'opponent_score': game.opponent_score,
-            'offensive_efficiency': game.offensive_efficiency,
-            'defensive_efficiency': game.defensive_efficiency,
-        }
-    
-    def _extract_team_id(self, cell) -> str:
-        """Extract team ID from table cell."""
-        link = cell.find('a')
-        if link and 'href' in link.attrs:
-            href = link['href']
-            if 'team=' in href:
-                return href.split('team=')[1].split('&')[0]
-        return cell.get_text(strip=True).lower().replace(' ', '_')
-    
     def _safe_float(self, value: str) -> float:
         """Safely convert string to float."""
         try:
             return float(value.replace('%', '').strip())
         except (ValueError, AttributeError):
             return 0.0
-    
-    def _parse_score(self, score_text: str) -> Tuple[int, int]:
-        """Parse score from text like '85-72' or 'W 85-72'."""
-        # Remove W/L prefix
-        score_text = score_text.replace('W', '').replace('L', '').strip()
-        
-        if '-' in score_text:
-            parts = score_text.split('-')
-            try:
-                return int(parts[0].strip()), int(parts[1].strip())
-            except ValueError:
-                pass
-        return 0, 0
-    
+
     def _load_from_cache(self, filename: str) -> Optional[dict]:
         """Load data from cache if available."""
         if not self.cache_dir:

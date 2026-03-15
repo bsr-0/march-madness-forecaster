@@ -13,6 +13,8 @@ from src.ml.evaluation.loyo_protocol import (
     LOYOFoldResult,
     LOYOResult,
     LOYOValidator,
+    ProspectiveValidator,
+    ProspectiveValidationResult,
 )
 
 
@@ -278,3 +280,49 @@ class TestFeatureAblator:
 
         for info in results.values():
             assert info["baseline_brier"] == 0.25
+
+
+# ---------------------------------------------------------------------------
+# ProspectiveValidator tests
+# ---------------------------------------------------------------------------
+
+
+class TestProspectiveValidator:
+    """Tests for strict season-by-season forward validation."""
+
+    def test_uses_only_prior_years_for_training(self):
+        data = {yr: _make_year_data(yr, n_games=8) for yr in [2021, 2022, 2023]}
+        seen = []
+
+        def tracking_train(X, y, margins, names, weights):
+            seen.append(X.shape[0])
+            return {"mean_y": float(y.mean())}
+
+        validator = ProspectiveValidator(years=[2021, 2022, 2023])
+        result = validator.validate(data, tracking_train, _simple_predict_fn)
+
+        # 2021 skipped (no historical years), then:
+        # 2022 -> train on 2021 (8 rows), 2023 -> train on 2021+2022 (16 rows)
+        assert [f.predicted_year for f in result.fold_results] == [2022, 2023]
+        assert seen == [8, 16]
+
+    def test_skips_first_year_without_history(self):
+        data = {yr: _make_year_data(yr, n_games=6) for yr in [2023, 2024]}
+        validator = ProspectiveValidator(years=[2023, 2024])
+        result = validator.validate(data, _simple_train_fn, _simple_predict_fn)
+
+        assert [f.predicted_year for f in result.fold_results] == [2024]
+        assert result.fold_results[0].train_years == [2023]
+
+    def test_summary_mentions_prospective(self):
+        result = ProspectiveValidationResult(
+            mean_brier=0.21,
+            std_brier=0.01,
+            mean_logloss=0.55,
+            mean_accuracy=0.71,
+            year_briers={2024: 0.2},
+            total_time_seconds=1.0,
+        )
+        s = result.summary()
+        assert "Prospective Forward Validation" in s
+        assert "2024" in s

@@ -14,6 +14,7 @@ from typing import Dict, List, Optional
 
 from ..normalize import normalize_team_id
 from ..scrapers import (
+    BartTorvikScraper,
     CBSPicksScraper,
     CBBpyRosterScraper,
     ESPNPicksScraper,
@@ -75,6 +76,8 @@ class IngestionConfig:
     scrape_public_picks: bool = True
     scrape_sports_reference: bool = True
     scrape_rosters: bool = True
+    scrape_historical_games: bool = True
+    historical_games_since: Optional[str] = None  # ISO date, e.g. "2026-03-08"
 
     historical_games_provider_priority: Optional[List[str]] = None
     team_metrics_provider_priority: Optional[List[str]] = None
@@ -136,6 +139,21 @@ class RealDataCollector:
                 out["torvik_json"] = self._write(f"torvik_{year}.json", payload)
                 provider_lineage["torvik_json"] = tv_provider.provider
 
+            # Fetch Four Factors and shooting stats (separate Torvik endpoints)
+            torvik_scraper = BartTorvikScraper(str(self.cache_dir))
+            four_factors = torvik_scraper.fetch_four_factors(year)
+            if four_factors:
+                out["torvik_four_factors_json"] = self._write(
+                    f"torvik_four_factors_{year}.json", four_factors,
+                )
+                provider_lineage["torvik_four_factors_json"] = "barttorvik"
+            shooting = torvik_scraper.fetch_shooting_stats(year)
+            if shooting:
+                out["torvik_shooting_json"] = self._write(
+                    f"torvik_shooting_{year}.json", shooting,
+                )
+                provider_lineage["torvik_shooting_json"] = "barttorvik"
+
         if self.config.scrape_public_picks:
             espn = ESPNPicksScraper(str(self.cache_dir)).fetch_picks(year)
             yahoo = YahooPicksScraper(str(self.cache_dir)).fetch_picks(year)
@@ -180,7 +198,9 @@ class RealDataCollector:
                 out["public_picks_json"] = self._write(f"public_picks_{year}.json", payload)
                 provider_lineage["public_picks_json"] = ",".join(populated_sources or picks.sources or ["unknown"])
 
-        if self.config.ncaa_games_url:
+        if not self.config.scrape_historical_games:
+            logger.info("Skipping historical games scrape (--skip-historical-games)")
+        elif self.config.ncaa_games_url:
             games = NCAAStatsScraper(str(self.cache_dir)).fetch_historical_games(year, self.config.ncaa_games_url)
             self._ensure_game_dates(games, year)
             payload = {"games": games}
@@ -193,17 +213,23 @@ class RealDataCollector:
             game_provider = self.providers.fetch_historical_games(
                 year,
                 priority=self.config.historical_games_provider_priority,
+                since=self.config.historical_games_since,
             )
-            if game_provider.records:
-                self._ensure_game_dates(game_provider.records, year)
-                historical_team_rows = [g for g in game_provider.records if isinstance(g, dict)]
-                payload = {"games": game_provider.records}
+            new_records = game_provider.records
+            if self.config.historical_games_since and new_records:
+                new_records = self._merge_incremental_games(year, new_records)
+                provider_lineage["historical_games_json"] = f"{game_provider.provider}+incremental"
+            elif new_records:
+                provider_lineage["historical_games_json"] = game_provider.provider
+            if new_records:
+                self._ensure_game_dates(new_records, year)
+                historical_team_rows = [g for g in new_records if isinstance(g, dict)]
+                payload = {"games": new_records}
                 validation_errors["historical_games_json"] = validate_games_payload(payload)
                 self._assert_valid("historical_games_json", validation_errors["historical_games_json"])
                 out["historical_games_json"] = self._write(f"historical_games_{year}.json", payload)
-                provider_lineage["historical_games_json"] = game_provider.provider
 
-                advanced_metrics = self.adv_builder.build(game_provider.records, teams=torvik_teams)
+                advanced_metrics = self.adv_builder.build(new_records, teams=torvik_teams)
                 if "advanced_metrics_json" not in out:
                     validation_errors["advanced_metrics_json"] = validate_ratings_payload(advanced_metrics)
                     self._assert_valid("advanced_metrics_json", validation_errors["advanced_metrics_json"])
@@ -384,6 +410,38 @@ class RealDataCollector:
         with open(p, "w") as f:
             json.dump(payload, f, indent=2)
         return str(p)
+
+    def _merge_incremental_games(self, year: int, new_records: List[Dict]) -> List[Dict]:
+        """Load existing historical games file and merge in new records."""
+        existing_path = self.output_dir / f"historical_games_{year}.json"
+        existing_games: List[Dict] = []
+        if existing_path.exists():
+            with open(existing_path) as f:
+                data = json.load(f)
+            existing_games = data.get("games", [])
+
+        # Deduplicate by (game_id, team_id).  Earlier versions included date
+        # in the key, which caused mismatches when dates were parsed
+        # differently across runs (empty vs populated) — leading to either
+        # duplicates or silent data loss.
+        seen = set()
+        for g in existing_games:
+            key = (g.get("game_id", ""), g.get("team_id", ""))
+            seen.add(key)
+
+        added = 0
+        for g in new_records:
+            key = (g.get("game_id", ""), g.get("team_id", ""))
+            if key not in seen:
+                existing_games.append(g)
+                seen.add(key)
+                added += 1
+
+        logger.info(
+            "Incremental merge: %d existing + %d new records (%d after dedup)",
+            len(existing_games) - added, len(new_records), len(existing_games),
+        )
+        return existing_games
 
     def _assert_valid(self, artifact_name: str, errors: List[str]) -> None:
         if errors and self.config.strict_validation:

@@ -270,7 +270,7 @@ class DeploymentPipeline:
                     trigger.last_triggered = now.isoformat()
                     triggered.append(trigger.name)
                     logger.info("Retraining trigger fired: %s", trigger.name)
-            except Exception as e:
+            except (ValueError, TypeError, KeyError, RuntimeError) as e:
                 logger.debug("Trigger '%s' check failed: %s", trigger.name, e)
 
         return triggered

@@ -11,7 +11,7 @@ from src.data.scrapers.espn_picks import ConsensusData, PublicPicks
 
 
 class _StubProviders:
-    def fetch_historical_games(self, year, priority=None):
+    def fetch_historical_games(self, year, priority=None, since=None):
         return ProviderResult(
             "cbbpy",
             [

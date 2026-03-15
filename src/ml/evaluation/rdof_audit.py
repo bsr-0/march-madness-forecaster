@@ -174,13 +174,15 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
         "Disabled by default unless sensitivity proves value"),
     PipelineConstant("seed_prior_weight", 3, 0.0,
         "SOTAPipelineConfig.seed_prior_weight", (0.0, 0.15),
+        "Experimental-only; excluded from production DoF count. "
         "Disabled by default unless sensitivity proves value"),
     PipelineConstant("consistency_bonus_max", 3, 0.0,
         "SOTAPipelineConfig.consistency_bonus_max", (0.0, 0.06),
+        "Experimental-only; excluded from production DoF count. "
         "Disabled by default unless sensitivity proves value"),
     PipelineConstant("consistency_normalizer", 3, 15.0,
         "SOTAPipelineConfig.consistency_normalizer", (5.0, 30.0),
-        "Paired with consistency_bonus_max; normalizes variance range"),
+        "Experimental-only; paired with consistency_bonus_max"),
     PipelineConstant("mc_noise_std", 3, 0.12,
         "SimulationConfig.noise_std", (0.02, 0.25),
         "Changed 0.04→0.035→0.02→0.12 across fix rounds"),
@@ -1161,15 +1163,15 @@ class HoldoutEvaluator:
         return games
 
     def _is_tournament_game(self, date_str: str, year: int) -> bool:
-        """Detect NCAA Tournament games (mid-March through mid-April)."""
+        """Detect NCAA Tournament games (tournament start through mid-April)."""
+        from ...pipeline.config import TOURNAMENT_START_DATES
         try:
             parts = date_str.split("-")
             game_year = int(parts[0])
             month = int(parts[1])
             day = int(parts[2])
             game_day = date(game_year, month, day)
-            # Tournament runs ~March 14 to April 15
-            start = date(year, 3, 14)
+            start = TOURNAMENT_START_DATES.get(year, date(year, 3, 14))
             end = date(year, 4, 15)
             return start <= game_day <= end
         except (ValueError, IndexError):
@@ -1249,6 +1251,7 @@ class HoldoutEvaluator:
             _team_id,
         )
         from datetime import date as _dtdate, timedelta as _dttd
+        from ...pipeline.config import TOURNAMENT_START_DATES as _TOURNEY_DATES
 
         base_years = self.dev_years if self.dev_years is not None else self.all_years
         training_years = [y for y in base_years
@@ -1354,7 +1357,9 @@ class HoldoutEvaluator:
 
             # Build training samples with true PIT features.
             seen_gids: set = set()
-            tournament_cutoff = f"{train_year}-03-14"
+            tournament_cutoff = _TOURNEY_DATES.get(
+                train_year, _dtdate(train_year, 3, 14)
+            ).isoformat()
             for g in sorted(game_records, key=lambda r: r.game_date):
                 if g.game_id in seen_gids:
                     continue
@@ -1489,7 +1494,9 @@ class HoldoutEvaluator:
         )
 
         # Compute end-of-regular-season metrics for tournament predictions.
-        tournament_cutoff = f"{holdout_year}-03-14"
+        tournament_cutoff = _TOURNEY_DATES.get(
+            holdout_year, _dtdate(holdout_year, 3, 14)
+        ).isoformat()
         ho_metrics = ho_engine.compute_as_of(tournament_cutoff)
         if not ho_metrics:
             raise ValueError(f"No metrics computed for holdout year {holdout_year}")
@@ -1559,15 +1566,56 @@ class HoldoutEvaluator:
                 "outcome": 1 if tg.points > tg.opp_points else 0,
             })
 
-        # ── 4. Calibration: fit temperature scaling on training preds ─
-        # In-sample training predictions for calibration fitting.
-        train_preds_lgb = lgb_model.predict(train_X) if lgb_trained else np.full(len(train_X), 0.5)
-        train_preds_xgb = xgb_model.predict(train_X) if xgb_trained else np.full(len(train_X), 0.5)
-        train_preds_log = logistic.predict_proba(train_X_scaled)[:, 1]
+        # ── 4. Out-of-fold predictions for calibration ──────────────
+        # Temperature scaling must be fit on held-out predictions, not
+        # in-sample training predictions.  In-sample predictions are
+        # over-confident (especially for tree models), so fitting a
+        # calibrator on them produces a temperature that does not
+        # transfer to genuinely unseen data.
+        #
+        # We use 5-fold stratified CV to generate out-of-fold (OOF)
+        # predictions: each sample's prediction comes from a model
+        # that never saw that sample during training.
+        from sklearn.model_selection import StratifiedKFold
+
+        n_folds = 5
+        oof_lgb = np.full(len(train_X), 0.5)
+        oof_xgb = np.full(len(train_X), 0.5)
+        oof_log = np.full(len(train_X), 0.5)
+
+        skf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
+        for fold_train_idx, fold_val_idx in skf.split(train_X, train_y):
+            fX_tr, fX_val = train_X[fold_train_idx], train_X[fold_val_idx]
+            fy_tr = train_y[fold_train_idx]
+            fw_tr = train_w[fold_train_idx]
+            fX_tr_sc = scaler.fit_transform(fX_tr)
+            fX_val_sc = scaler.transform(fX_val)
+
+            if lgb_trained:
+                try:
+                    fold_lgb = LightGBMRanker()
+                    fold_lgb.train(fX_tr, fy_tr, num_rounds=200,
+                                   early_stopping_rounds=None, sample_weight=fw_tr)
+                    oof_lgb[fold_val_idx] = fold_lgb.predict(fX_val)
+                except Exception:
+                    pass
+
+            if xgb_trained:
+                try:
+                    fold_xgb = XGBoostRanker()
+                    fold_xgb.train(fX_tr, fy_tr, num_rounds=200,
+                                   early_stopping_rounds=None, sample_weight=fw_tr)
+                    oof_xgb[fold_val_idx] = fold_xgb.predict(fX_val)
+                except Exception:
+                    pass
+
+            fold_log = LogisticRegression(C=1.0, max_iter=1000, solver="lbfgs")
+            fold_log.fit(fX_tr_sc, fy_tr, sample_weight=fw_tr)
+            oof_log[fold_val_idx] = fold_log.predict_proba(fX_val_sc)[:, 1]
 
         return {
             "per_game": per_game,
-            "train_ensemble_preds": (train_preds_lgb, train_preds_xgb, train_preds_log),
+            "train_ensemble_preds": (oof_lgb, oof_xgb, oof_log),
             "train_y": train_y,
             "holdout_year": holdout_year,
         }
@@ -1584,6 +1632,7 @@ class HoldoutEvaluator:
         These can be swept without retraining.
         """
         from ..calibration.calibration import TemperatureScaling
+        from ...pipeline.probability_pipeline import apply_calibration, apply_final_clip
 
         per_game = cached["per_game"]
         train_lgb, train_xgb, train_log = cached["train_ensemble_preds"]
@@ -1594,7 +1643,7 @@ class HoldoutEvaluator:
         w_xgb = config.ensemble_xgb_weight
         w_log = 1.0 - w_lgb - w_xgb
 
-        # Fit calibration on training ensemble predictions
+        # Fit calibration on out-of-fold ensemble predictions (not in-sample)
         train_ensemble = np.clip(
             w_lgb * train_lgb + w_xgb * train_xgb + w_log * train_log,
             0.03, 0.97,
@@ -1611,11 +1660,11 @@ class HoldoutEvaluator:
             raw = w_lgb * g["lgb_p"] + w_xgb * g["xgb_p"] + w_log * g["log_p"]
             raw = float(np.clip(raw, 0.03, 0.97))
 
-            # Calibration
-            if calibrator.fitted:
-                raw = float(calibrator.calibrate(np.array([raw]))[0])
+            # Calibration (shared helper)
+            raw = apply_calibration(raw, calibrator if calibrator.fitted else None, 0.03, 0.97)
 
-            # Tournament adaptation (full version using available data)
+            # Tournament adaptation (shared helper for production shrinkage,
+            # plus experimental extras when applicable)
             adapted = self._tournament_adapt(
                 raw, g["em_diff"], g["margin_std_diff"], config
             )
@@ -1674,34 +1723,34 @@ class HoldoutEvaluator:
         margin_std_diff: float,
         config,
     ) -> float:
-        """Apply tournament domain adaptation matching sota.py logic.
+        """Apply tournament domain adaptation using shared production helpers.
 
-        Uses AdjEM difference as a seed proxy (em_diff → approximate seed
-        quality gap) and margin std difference for consistency bonus.
-        Historical JSON files lack actual tournament seeds, but AdjEM is
-        more informative than seed anyway — this tests the same adaptation
-        LOGIC with the best available data.
+        Production path: shrinkage toward 0.5 only.
+        Experimental extras (seed prior, consistency bonus) are only applied
+        when probability_profile == "experimental".
         """
-        # 1. Shrinkage toward 0.5
-        shrinkage = config.tournament_shrinkage
-        adapted = shrinkage * 0.5 + (1.0 - shrinkage) * prob
+        from ...pipeline.probability_pipeline import apply_tournament_shrinkage
 
-        # 2. Seed prior: use AdjEM → logistic as seed-quality proxy
-        # em_diff > 0 means team1 is stronger (analogous to lower seed)
-        slope = config.seed_prior_slope
-        seed_prior = 1.0 / (1.0 + math.exp(-slope * em_diff / 2.5))
-        # /2.5 rescales AdjEM to be roughly on the same scale as seed_diff:
-        # a 10-point AdjEM gap ≈ a 4-seed gap (e.g. 1 vs 5 seed)
-        w = config.seed_prior_weight
-        adapted = (1.0 - w) * adapted + w * seed_prior
+        # Production: shrinkage only
+        adapted = apply_tournament_shrinkage(prob, config.tournament_shrinkage)
 
-        # 3. Consistency bonus
-        bonus_max = config.consistency_bonus_max
-        normalizer = config.consistency_normalizer
-        consistency_edge = bonus_max * float(np.clip(
-            margin_std_diff / normalizer, -1.0, 1.0
-        ))
-        adapted += consistency_edge
+        # Experimental-only extras
+        profile = getattr(config, 'probability_profile', 'production')
+        if profile == "experimental":
+            # Seed prior (only when seed_prior_weight > 0)
+            w = getattr(config, 'seed_prior_weight', 0.0)
+            if w > 0:
+                slope = config.seed_prior_slope
+                seed_prior = 1.0 / (1.0 + math.exp(-slope * em_diff / 2.5))
+                adapted = (1.0 - w) * adapted + w * seed_prior
+
+            # Consistency bonus
+            bonus_max = config.consistency_bonus_max
+            normalizer = config.consistency_normalizer
+            consistency_edge = bonus_max * float(np.clip(
+                margin_std_diff / normalizer, -1.0, 1.0
+            ))
+            adapted += consistency_edge
 
         return float(np.clip(adapted, config.pre_calibration_clip_lo,
                              config.pre_calibration_clip_hi))
@@ -2332,7 +2381,7 @@ class MCParameterBacktester:
             em1 = m1["off_rtg"] - m1["def_rtg"]
             em2 = m2["off_rtg"] - m2["def_rtg"]
             em_diff = em1 - em2
-            return 1.0 / (1.0 + math.exp(-0.145 * em_diff))
+            return 1.0 / (1.0 + math.exp(-0.1735 * em_diff))
 
         # Score tournament games: for each game, compute base probability
         # then apply logit-space noise to get MC-adjusted probability.

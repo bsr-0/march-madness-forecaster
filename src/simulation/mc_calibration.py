@@ -30,14 +30,15 @@ FIRST_ROUND_MATCHUPS = {
 
 
 def _is_tournament_game(date_str: str, year: int) -> bool:
+    from datetime import date as _dtdate
+    from ..pipeline.config import TOURNAMENT_START_DATES
     try:
         parts = date_str.split("-")
         game_year = int(parts[0])
         month = int(parts[1])
         day = int(parts[2])
-        from datetime import date as _dtdate
         game_day = _dtdate(game_year, month, day)
-        start = _dtdate(year, 3, 14)
+        start = TOURNAMENT_START_DATES.get(year, _dtdate(year, 3, 14))
         end = _dtdate(year, 4, 15)
         return start <= game_day <= end
     except (ValueError, IndexError):
@@ -270,7 +271,7 @@ def _score_year(
         try:
             hi, lo = k.split("v")
             pair = (int(hi), int(lo))
-        except Exception:
+        except (ValueError, AttributeError):
             continue
         sim_rates[pair] = float(entry.get("simulated", 0.0))
 

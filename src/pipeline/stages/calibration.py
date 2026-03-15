@@ -51,9 +51,9 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     """Fit calibration on validation-era games with nested OOS predictions.
 
     FIX-NESTED-CAL: Uses a nested approach to prevent double-dipping:
-    1. PRIMARY: Historical tournament game predictions (genuinely OOS —
-       the baseline model trains only on regular-season games, so tournament
-       predictions are unseen during training).
+    1. PRIMARY: Historical tournament game predictions from explicitly
+       configured calibration years. By default these are holdout years
+       excluded from model training, so they are season-level OOS.
     2. SECONDARY: Current-year validation-era predictions using the existing
        model (validation era was NOT used for training due to chronological
        split, but the model DID see overlapping teams/features).
@@ -62,14 +62,10 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     signal because they match the inference domain (tournament games) and
     are truly out-of-sample with respect to the trained model.
 
-    NOTE (LEAKAGE-AUDIT): Historical tournament games are semi-OOS: the
-    model trained on regular-season data from those same years, so it saw
-    the same teams' features during training.  This is an acceptable
-    engineering tradeoff — the predictions are for unseen *games* (not
-    unseen *teams*), matching real inference conditions.  For maximum
-    rigor, one could restrict to tournament games from years NOT in the
-    multi-year training pool, at the cost of much smaller calibration
-    samples.
+    NOTE (LEAKAGE-AUDIT): Calibration now defaults to holdout-year
+    tournament games only (via config.resolve_calibration_years()),
+    eliminating year-overlap with training by default. If users override
+    calibration_years, this guarantee no longer automatically holds.
 
     FIX #5: Temporarily restores pre-optimization CFA weights while
     generating calibration probabilities.  This prevents the calibrator
@@ -120,82 +116,98 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
 
     # A1: CFA weight optimization removed — baseline-only prediction.
 
-    # Augment calibration pool with historical TOURNAMENT game data.
+    # Augment calibration pool with historical TOURNAMENT-ONLY game data.
     # Tournament games are genuinely out-of-sample: the baseline model
     # trains only on regular-season games (include_tournament=False),
     # so tournament predictions are unseen during training.
-    # NOTE: Historical regular-season games are NOT included here
-    # because they overlap with the multi-year training pool (2005-2025),
-    # making those predictions in-sample.  Using in-sample predictions
-    # for calibration would bias the temperature T toward in-sample
-    # performance.
+    #
+    # IMPORTANT: We load tournament-only samples by contract via
+    # _load_year_tournament_samples_incremental, which selects games
+    # on or after each year's tournament start date.  Regular-season
+    # games are NEVER loaded — no downstream filtering needed.
     tourney_cal_count = 0
     if (pipeline.config.enable_multi_year_calibration
             and pipeline.config.multi_year_games_dir
             and hasattr(pipeline, "baseline_model")
             and pipeline.baseline_model is not None):
         import os
-        years = pipeline.config.loyo_years or [
-            y for y in range(2015, pipeline.config.year) if y != 2020
-        ]
-        years = pipeline._filter_years(years)
+        years = pipeline.config.resolve_calibration_years()
+        if not years:
+            logger.warning(
+                "No calibration_years resolved (holdout_years/calibration_years empty); "
+                "historical tournament calibration augmentation skipped."
+            )
         # Determine feature dimensionality from current model
         feature_dim = pipeline.baseline_model.feature_dim
 
-        # Load historical TOURNAMENT games for calibration.
-        # These match the inference domain exactly.
-        if pipeline.config.include_tournament_games_in_calibration:
-            for yr in years:
-                try:
-                    games_dir = pipeline.config.multi_year_games_dir
-                    games_path = os.path.join(games_dir, f"historical_games_{yr}.json")
-                    metrics_path = os.path.join(games_dir, f"team_metrics_{yr}.json")
-                    if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
-                        continue
-                    yr_X, yr_y, _yr_margins, _, _yr_rw = pipeline._load_year_samples_incremental(
-                        games_path, metrics_path, feature_dim, yr,
-                        include_tournament=True,
-                    )
-                    if len(yr_y) < 4:
-                        continue
-                    # Apply feature selection if fitted
-                    if pipeline.feature_selector is not None and pipeline.feature_selector.is_fitted:
-                        try:
-                            yr_X = pipeline.feature_selector.transform(yr_X)
-                        except (IndexError, ValueError):
-                            continue
-                    # Apply scaler if available
-                    if pipeline.baseline_model.scaler is not None:
-                        try:
-                            yr_X = pipeline.baseline_model.scaler.transform(yr_X)
-                        except (ValueError, Exception):
-                            continue
-                    # Predict using baseline model in batch
+        # Load historical tournament-only games for calibration.
+        # These match the inference domain exactly.  This is not optional:
+        # calibration must use tournament games (the inference domain), not
+        # regular-season games (the training domain).
+        for yr in years:
+            try:
+                games_dir = pipeline.config.multi_year_games_dir
+                games_path = os.path.join(games_dir, f"historical_games_{yr}.json")
+                metrics_path = os.path.join(games_dir, f"team_metrics_{yr}.json")
+                if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
+                    continue
+                yr_X, yr_y, _yr_margins, _, _yr_rw = pipeline._load_year_tournament_samples_incremental(
+                    games_path, metrics_path, feature_dim, yr,
+                )
+                if len(yr_y) < 4:
+                    continue
+                # Defense-in-depth: the tournament-only loader guarantees
+                # rw >= 2.0 for every sample (asserted internally).
+                # Re-check here so calibration cannot silently ingest
+                # regular-season rows even if the loader is refactored.
+                n_bad = int(np.sum(_yr_rw <= 1.0))
+                assert n_bad == 0, (
+                    f"Tournament-only loader returned {n_bad} "
+                    f"non-tournament rows (rw <= 1.0) for year {yr}. "
+                    f"Calibration must never see regular-season samples."
+                )
+                logger.info(
+                    "Loaded %d tournament-only calibration samples for %d",
+                    len(yr_y), yr,
+                )
+                # Apply feature selection if fitted
+                if pipeline.feature_selector is not None and pipeline.feature_selector.is_fitted:
                     try:
-                        yr_preds = pipeline.baseline_model.predict_proba_batch(yr_X)
-                        yr_preds = np.clip(
-                            yr_preds,
-                            pipeline.config.pre_calibration_clip_lo,
-                            pipeline.config.pre_calibration_clip_hi,
-                        )
-                        probs.extend(yr_preds.tolist())
-                        outcomes.extend(yr_y.tolist())
-                        tourney_cal_count += len(yr_y)
-                    except Exception:
+                        yr_X = pipeline.feature_selector.transform(yr_X)
+                    except (IndexError, ValueError):
                         continue
+                # Apply scaler if available
+                if pipeline.baseline_model.scaler is not None:
+                    try:
+                        yr_X = pipeline.baseline_model.scaler.transform(yr_X)
+                    except (ValueError, Exception):
+                        continue
+                # Predict using baseline model in batch
+                try:
+                    yr_preds = pipeline.baseline_model.predict_proba_batch(yr_X)
+                    yr_preds = np.clip(
+                        yr_preds,
+                        pipeline.config.pre_calibration_clip_lo,
+                        pipeline.config.pre_calibration_clip_hi,
+                    )
+                    probs.extend(yr_preds.tolist())
+                    outcomes.extend(yr_y.tolist())
+                    tourney_cal_count += len(yr_y)
                 except Exception:
                     continue
-            _n_historical_tourney_cal = tourney_cal_count
-            if tourney_cal_count > 0:
-                logger.info(
-                    "Calibration augmented with %d historical tournament game samples.",
-                    tourney_cal_count,
-                )
+            except Exception:
+                continue
+        _n_historical_tourney_cal = tourney_cal_count
+        if tourney_cal_count > 0:
+            logger.info(
+                "Calibration augmented with %d historical tournament-only samples.",
+                tourney_cal_count,
+            )
 
     # FIX-NESTED-CAL: Log calibration data provenance.
     logger.info(
         "FIX-NESTED-CAL: Calibration data composition — "
-        "%d historical tournament (genuinely OOS) + %d current-year "
+        "%d historical tournament (holdout-year OOS by default) + %d current-year "
         "validation-era = %d total samples.  Historical tournament "
         "predictions are the cleanest calibration signal.",
         _n_historical_tourney_cal, _n_current_year_cal, len(probs),
@@ -253,16 +265,18 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     # are the cleanest signal because:
     # 1. The model trains on regular-season games only
     # 2. Tournament games are the actual inference domain
-    # 3. No team/feature overlap between training and calibration data
+    # 3. Year-level separation when calibration_years are disjoint from training
     n_cal = len(p_arr)
     _nested_mode = False
 
     if _n_historical_tourney_cal >= 30 and _n_current_year_cal >= 10:
         # BEST: Fit on historical tournament data, evaluate on current year.
-        # Historical tournament predictions are at the START of the arrays
-        # (they were appended first via calibration_games, but actually
-        # current-year comes first, then historical).  The historical
-        # tournament data was appended AFTER current-year validation data.
+        # Array layout: current-year validation samples are appended first
+        # (lines 104-119), then historical tournament samples (lines 145-188).
+        assert len(p_arr) == _n_current_year_cal + _n_historical_tourney_cal, (
+            f"Calibration split mismatch: {len(p_arr)} != "
+            f"{_n_current_year_cal} + {_n_historical_tourney_cal}"
+        )
         p_fit = p_arr[_n_current_year_cal:]   # Historical tournament
         y_fit = y_arr[_n_current_year_cal:]
         p_eval = p_arr[:_n_current_year_cal]  # Current-year validation

@@ -40,7 +40,7 @@ from ...data.scrapers.torvik import BartTorvikScraper
 from ...data.scrapers.tournament_context import TournamentContextScraper
 from ...exceptions import LeakageError
 from ...models.team import Team
-from ..config import DataRequirementError, SOTAPipelineConfig
+from ..config import DataRequirementError, SOTAPipelineConfig, TOURNAMENT_START_DATES
 from . import LoadedData, PipelineStage
 from .context import PipelineContext
 from .game_utils import (
@@ -646,7 +646,9 @@ def load_team_stat_sources(
         )
 
     # --- Compute proprietary metrics ---
-    pre_tournament_cutoff = f"{config.year}-03-14"
+    from datetime import date as _date
+    _t_start = TOURNAMENT_START_DATES.get(config.year, _date(config.year, 3, 14))
+    pre_tournament_cutoff = _t_start.isoformat()
     game_records = torvik_to_game_records(
         torvik_teams_dicts,
         historical_games,

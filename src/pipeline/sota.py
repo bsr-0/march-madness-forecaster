@@ -273,17 +273,10 @@ class SOTAPipeline:
             except ImportError:
                 pass
 
-        # Tournament domain adapter: blends regular-season model with
-        # tournament-specific historical base rates and round shrinkage.
+        # Tournament domain adapter removed from default path — seed-based
+        # correction is handled by SeedBasedOverrides (via BrierPostProcessor)
+        # when enable_seed_overrides=True.  Keeping the field for backward compat.
         self._tournament_domain_adapter = None
-        try:
-            from ..ml.ensemble.tournament_domain import TournamentDomainAdapter
-            self._tournament_domain_adapter = TournamentDomainAdapter(
-                base_rate_weight=0.15,
-                is_womens=False,
-            )
-        except ImportError:
-            pass
 
         # Tournament-specific sigma calibrator: calibrates per-round sigma
         # from historical tournament data (tighter than regular-season sigma).
@@ -1086,6 +1079,20 @@ class SOTAPipeline:
             include_tournament, prior_elo,
         )
 
+    def _load_year_tournament_samples_incremental(
+        self,
+        games_path: str,
+        metrics_path: str,
+        feature_dim: int,
+        year: int,
+        prior_elo: Optional[Dict[str, float]] = None,
+    ) -> Tuple[np.ndarray, np.ndarray, Dict[str, float]]:
+        """Load ONLY tournament games for a historical year."""
+        return _sl.load_year_tournament_samples_incremental(
+            self.config, games_path, metrics_path, feature_dim, year,
+            prior_elo,
+        )
+
     def _run_gnn(self, graph: ScheduleGraph) -> Dict:
         return _bt._run_gnn(self, graph)
 
@@ -1294,51 +1301,74 @@ class SOTAPipeline:
         return float(np.clip(baseline_prob, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
 
     def predict_probability(self, team1_id: str, team2_id: str) -> float:
-        # SYMMETRY FIX: Average P(A>B) and 1-P(B>A) to enforce the property
-        # P(A>B) + P(B>A) = 1 exactly.  Tree-based models don't guarantee
-        # this because feature engineering (absolute features, interactions)
-        # can break symmetry.  Top Kaggle competitors use this approach to
-        # eliminate ~0.001-0.003 Brier from asymmetry noise.
+        """Route to production or experimental probability path."""
+        if self.config.probability_profile == "experimental":
+            return self.predict_probability_experimental(team1_id, team2_id)
+        return self.predict_probability_production(team1_id, team2_id)
+
+    def predict_probability_production(self, team1_id: str, team2_id: str) -> float:
+        """Production probability: raw → calibration → shrinkage → clip.
+
+        This is the entire production inference path.  No post-processor,
+        no seed overrides, no sharpening, no goto_conversion, no seed prior.
+        """
+        from .probability_pipeline import (
+            apply_calibration,
+            apply_final_clip,
+            apply_tournament_shrinkage,
+        )
+
+        # Stage 1: Raw probability with symmetry enforcement
         raw_forward = self._raw_fusion_probability(team1_id, team2_id)
         raw_reverse = self._raw_fusion_probability(team2_id, team1_id)
         raw = (raw_forward + (1.0 - raw_reverse)) / 2.0
 
-        # F1: Calibrate FIRST on raw ensemble probabilities, then apply
-        # tournament adaptation as a post-hoc adjustment.  This cleanly
-        # separates the ML model's calibration from domain-specific
-        # tournament adjustments, preventing entanglement where the
-        # calibrator learns to undo/amplify post-hoc corrections.
-        if self.calibration_pipeline:
-            calibrated = float(self.calibration_pipeline.calibrate(np.array([raw]))[0])
-            raw = float(np.clip(calibrated, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
+        # Stage 2: Single calibration (CalibrationPipeline temperature scaling)
+        prob = apply_calibration(
+            raw, self.calibration_pipeline,
+            self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi,
+        )
 
-        # FIX #3: Apply round-weighted Brier calibrator if available.
-        # This adjusts calibration toward the Kaggle competition metric
-        # (round-weighted Brier) rather than flat Brier.
+        # Stage 3: Tournament shrinkage toward 0.5
+        if self.config.enable_tournament_adaptation:
+            prob = apply_tournament_shrinkage(prob, self.config.tournament_shrinkage)
+
+        # Stage 4: Final clip
+        return apply_final_clip(prob, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi)
+
+    def predict_probability_experimental(self, team1_id: str, team2_id: str) -> float:
+        """Experimental probability path — preserves all optional layers.
+
+        Includes: round-weighted calibrator, BrierPostProcessor (seed overrides,
+        goto_conversion, sharpening), FLB correction, seed prior, consistency bonus.
+        Only active when probability_profile == "experimental".
+        """
+        # Symmetry enforcement
+        raw_forward = self._raw_fusion_probability(team1_id, team2_id)
+        raw_reverse = self._raw_fusion_probability(team2_id, team1_id)
+        raw = (raw_forward + (1.0 - raw_reverse)) / 2.0
+
+        # Calibration: round-weighted preferred, standard fallback
         if hasattr(self, '_round_weighted_calibrator') and self._round_weighted_calibrator is not None:
             rw_cal = self._round_weighted_calibrator
             logit = np.log(max(raw, 1e-8) / max(1.0 - raw, 1e-8))
             rw_calibrated = 1.0 / (1.0 + np.exp(-logit / max(rw_cal.temperature, 0.01)))
             raw = float(np.clip(rw_calibrated, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
+        elif self.calibration_pipeline:
+            calibrated = float(self.calibration_pipeline.calibrate(np.array([raw]))[0])
+            raw = float(np.clip(calibrated, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi))
 
+        # Tournament adaptation (includes seed prior + consistency bonus)
         if self.config.enable_tournament_adaptation:
-            raw = self._tournament_adapt(raw, team1_id, team2_id)
+            raw = self._tournament_adapt_experimental(raw, team1_id, team2_id)
 
-        # WS2: Brier-optimal post-processing (seed overrides + sharpening).
-        # NOTE: BrierPostProcessor.process() already applies goto_conversion
-        # internally (step 3), so we must NOT apply it directly here when
-        # the post-processor will run — otherwise the correction is applied
-        # twice, over-sharpening toward favourites.
+        # BrierPostProcessor (seed overrides + goto + sharpening + clip)
         _will_use_post_processor = (
             self.config.enable_seed_overrides
             and hasattr(self, '_brier_post_processor')
             and self._brier_post_processor is not None
         )
 
-        # Favourite-longshot bias correction (goto_conversion inspired).
-        # Only applied directly when BrierPostProcessor is disabled;
-        # otherwise BrierPostProcessor handles it in the correct pipeline
-        # order: seed overrides → calibration → goto → sharpening → clip.
         if not _will_use_post_processor:
             if hasattr(self, '_flb_correction') and self._flb_correction is not None and self._flb_correction.fitted:
                 raw = self._flb_correction.correct_single(raw)
@@ -1354,51 +1384,32 @@ class SOTAPipeline:
 
         return raw
 
-    def _tournament_adapt(self, prob: float, team1_id: str, team2_id: str) -> float:
-        """Apply tournament domain adaptation to a regular-season-trained probability.
+    def _tournament_adapt_experimental(self, prob: float, team1_id: str, team2_id: str) -> float:
+        """Experimental tournament adaptation with all optional layers.
 
-        Four adjustments:
-        1. **Tournament domain adapter** — blend with historical seed-matchup
-           base rates (empirical Bayes) when available.
-        2. **Shrinkage toward 0.5** — regular-season models are overconfident
-           because tournament games are played on neutral courts with higher
-           variance.  We apply a small blend toward 0.5.
-        3. **Seed-based Bayesian prior** — incorporate the historical base
-           rate for the seed matchup as a weak prior.  This prevents the model
-           from making extreme predictions that conflict with decades of
-           tournament evidence.
-        4. **Consistency bonus** — teams with low scoring-margin variance
-           (high consistency) perform better in single-elimination.  Give
-           a small bonus to the more consistent team.
+        Includes shrinkage, seed prior, and consistency bonus.
+        Only used when probability_profile == "experimental".
         """
-        # 0. Tournament domain adapter (empirical Bayes from historical matchups)
         t1 = self.feature_engineer.team_features.get(team1_id)
         t2 = self.feature_engineer.team_features.get(team2_id)
-        seed1 = t1.seed if t1 is not None else 0
-        seed2 = t2.seed if t2 is not None else 0
-
-        if self._tournament_domain_adapter is not None and seed1 > 0 and seed2 > 0:
-            prob = self._tournament_domain_adapter.adapt(
-                prob, seed1, seed2, round_label="R64",
-            )
 
         # 1. Shrinkage toward 0.5
         shrinkage = self.config.tournament_shrinkage
         adapted = shrinkage * 0.5 + (1.0 - shrinkage) * prob
 
-        # 2. Seed-based Bayesian prior (weak prior weight from config)
-        if t1 is not None and t2 is not None:
-            # Historical seed win rate approximation:
-            # Based on 1985-2024 tournament data, lower seed wins at rate
-            # approximately = sigmoid(slope * (seed2 - seed1))
-            seed_diff = seed2 - seed1
-            slope = self.config.seed_prior_slope
-            seed_prior = 1.0 / (1.0 + math.exp(-slope * seed_diff))
-            w = self.config.seed_prior_weight
-            adapted = (1.0 - w) * adapted + w * seed_prior
+        # 2. Seed-based Bayesian prior (only when seed_prior_weight > 0)
+        if self.config.seed_prior_weight > 0 and t1 is not None and t2 is not None:
+            seed1 = t1.seed if t1 is not None else 0
+            seed2 = t2.seed if t2 is not None else 0
+            if seed1 > 0 and seed2 > 0:
+                seed_diff = seed2 - seed1
+                slope = self.config.seed_prior_slope
+                seed_prior = 1.0 / (1.0 + math.exp(-slope * seed_diff))
+                w = self.config.seed_prior_weight
+                adapted = (1.0 - w) * adapted + w * seed_prior
 
-            # 3. Consistency bonus: more consistent team gets a small edge
-            # in single-elimination (lower variance = fewer bad games).
+        # 3. Consistency bonus (disabled by default, consistency_bonus_max=0.0)
+        if t1 is not None and t2 is not None:
             pav1 = t1.pace_adjusted_variance
             pav2 = t2.pace_adjusted_variance
             bonus_max = self.config.consistency_bonus_max
@@ -1501,8 +1512,8 @@ class SOTAPipeline:
             end = start + slice_size
         return all_val[start:end]
 
-    def _train_embedding_projections(self) -> Dict[str, float]:
-        return _bt._train_embedding_projections(self)
+    def _train_embedding_projections(self, game_flows: Dict[str, list]) -> Dict[str, float]:
+        return _bt._train_embedding_projections(self, game_flows)
 
     @staticmethod
     def _team_id(name: str) -> str:

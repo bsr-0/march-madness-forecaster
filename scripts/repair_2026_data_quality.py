@@ -25,6 +25,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.data.features.public_advanced_metrics import PublicAdvancedMetricsBuilder
 from src.data.normalize import normalize_team_id, _raw_normalize
 
 logging.basicConfig(
@@ -122,10 +123,21 @@ def _build_game_id_resolver(torvik_data: dict) -> callable:
     return resolve
 
 
-def load_json(filename: str) -> dict | list:
+def load_json(filename: str, required: bool = False) -> dict | list:
     path = DATA_DIR / filename
-    with open(path) as f:
-        return json.load(f)
+    if not path.exists():
+        if required:
+            raise FileNotFoundError(f"Required data file missing: {path}")
+        logger.warning("Data file not found, using empty default: %s", path)
+        return {}
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError) as exc:
+        if required:
+            raise
+        logger.warning("Failed to read %s: %s — using empty default", path, exc)
+        return {}
 
 
 def save_json(filename: str, data: dict | list) -> None:
@@ -279,6 +291,35 @@ def apply_defensive_four_factors(
                     break
 
     return torvik_updated, ff_updated
+
+
+# ---------------------------------------------------------------------------
+# 1b. Rebuild advanced_metrics from historical game box scores
+# ---------------------------------------------------------------------------
+
+def rebuild_advanced_metrics(
+    torvik_data: dict,
+    year: int = DEFAULT_YEAR,
+) -> int:
+    """Regenerate advanced_metrics JSON by re-running PublicAdvancedMetricsBuilder.
+
+    The builder pairs game records by game_id to fill opponent box score stats
+    from the companion row, computes SOS-adjusted efficiency ratings, Four
+    Factors, and Barthag.  Returns the number of teams in the output.
+    """
+    games_data = load_json(f"historical_games_{year}.json")
+    game_records = games_data.get("games", [])
+    if not game_records:
+        logger.warning("No game records found — skipping advanced metrics rebuild")
+        return 0
+
+    torvik_teams = torvik_data.get("teams", [])
+    builder = PublicAdvancedMetricsBuilder()
+    result = builder.build(game_records, teams=torvik_teams)
+
+    team_count = len(result.get("teams", []))
+    save_json(f"advanced_metrics_{year}.json", result)
+    return team_count
 
 
 # ---------------------------------------------------------------------------
@@ -493,8 +534,8 @@ def main() -> None:
 
     logger.info("=== %d Data Quality Repair ===", year)
 
-    # Load data files
-    torvik_data = load_json(f"torvik_{year}.json")
+    # Load data files (torvik is required; others degrade gracefully)
+    torvik_data = load_json(f"torvik_{year}.json", required=True)
     ff_data = load_json(f"torvik_four_factors_{year}.json")
     coach_data = load_json(f"coach_tournament_{year}.json")
     roster_data = load_json(f"rosters_{year}.json")
@@ -510,28 +551,58 @@ def main() -> None:
         torvik_updated, ff_updated,
     )
 
+    # 1b. Rebuild advanced_metrics from historical games
+    logger.info("--- Step 1b: Rebuild Advanced Metrics ---")
+    adv_metrics_updated = rebuild_advanced_metrics(torvik_data, year=year)
+    logger.info("Rebuilt advanced_metrics with %d teams", adv_metrics_updated)
+
     # 2. Fix coach tournament teams
     logger.info("--- Step 2: Coach Tournament Teams ---")
     from src.data.scrapers.tournament_context import TournamentContextScraper
-    team_coach_map = TournamentContextScraper(
-        cache_dir=str(DATA_DIR / "cache"),
-    ).fetch_team_coaches(year)
+    try:
+        team_coach_map = TournamentContextScraper(
+            cache_dir=str(DATA_DIR / "cache"),
+        ).fetch_team_coaches(year)
+    except Exception as exc:
+        logger.warning("Failed to fetch team coaches: %s", exc)
+        team_coach_map = {}
     logger.info("Fetched %d team-coach mappings from Barttorvik", len(team_coach_map))
 
-    roster_coaches_updated, coaches_updated = fix_coach_tournament_teams(
-        coach_data, roster_data, team_coach_map,
-    )
+    # Fallback: if scraper returned empty, try coach fields from torvik data
+    if not team_coach_map:
+        logger.info("Scraper returned empty; trying torvik_data coach fallback")
+        for team in torvik_data.get("teams", []):
+            coach = team.get("coach", "")
+            tid = team.get("team_id", "")
+            if coach and tid:
+                team_coach_map[tid] = coach
+        logger.info("Recovered %d mappings from torvik_data", len(team_coach_map))
+
+    roster_coaches_updated = 0
+    coaches_updated = 0
+    if team_coach_map:
+        roster_coaches_updated, coaches_updated = fix_coach_tournament_teams(
+            coach_data, roster_data, team_coach_map,
+        )
+    else:
+        logger.warning(
+            "No team-coach mappings available — skipping coach team "
+            "population to preserve any existing data"
+        )
 
     # 3. Estimate RAPM from priors
     logger.info("--- Step 3: RAPM Estimation ---")
     rapm_updated = estimate_rapm_from_priors(roster_data)
 
-    # Save updated files
+    # Save updated files (skip empty dicts to avoid overwriting existing data)
     logger.info("--- Saving repaired data ---")
     save_json(f"torvik_{year}.json", torvik_data)
-    save_json(f"torvik_four_factors_{year}.json", ff_data)
-    save_json(f"coach_tournament_{year}.json", coach_data)
-    save_json(f"rosters_{year}.json", roster_data)
+    if ff_data:
+        save_json(f"torvik_four_factors_{year}.json", ff_data)
+    if coach_data:
+        save_json(f"coach_tournament_{year}.json", coach_data)
+    if roster_data:
+        save_json(f"rosters_{year}.json", roster_data)
 
     # 4. Update manifest
     logger.info("--- Step 4: Update Manifest ---")
@@ -548,9 +619,52 @@ def main() -> None:
     logger.info("  Defensive Four Factors computed for %d teams", len(def_ff))
     logger.info("  Torvik teams updated: %d", torvik_updated)
     logger.info("  Four Factors file entries updated: %d", ff_updated)
+    logger.info("  Advanced metrics rebuilt for %d teams", adv_metrics_updated)
     logger.info("  Roster teams with head_coach: %d", roster_coaches_updated)
     logger.info("  Coach entries mapped to teams: %d", coaches_updated)
     logger.info("  Player RAPM estimated: %d", rapm_updated)
+
+    # --- Data Quality Checks ---
+    logger.info("--- Data Quality Checks ---")
+    warnings = []
+
+    adv_data = load_json(f"advanced_metrics_{year}.json")
+    adv_teams = adv_data.get("teams", [])
+    if adv_teams:
+        barthag_ones = sum(
+            1 for t in adv_teams if t.get("barthag", 0) >= 1.0
+        )
+        if barthag_ones > 10:
+            warnings.append(
+                f"{barthag_ones} teams have barthag >= 1.0 (expected <= 10)"
+            )
+        zero_opp_efg = sum(
+            1 for t in adv_teams
+            if t.get("opp_effective_fg_pct", 0) == 0.0
+        )
+        if zero_opp_efg > 5:
+            warnings.append(
+                f"{zero_opp_efg} teams have opp_effective_fg_pct == 0.0 "
+                f"(expected <= 5)"
+            )
+
+    coach_entries = coach_data.get("coaches", {})
+    if coach_entries:
+        coaches_with_teams = sum(
+            1 for c in coach_entries.values() if c.get("teams")
+        )
+        pct = coaches_with_teams / len(coach_entries) if coach_entries else 0
+        if pct < 0.5:
+            warnings.append(
+                f"Only {coaches_with_teams}/{len(coach_entries)} "
+                f"({pct:.0%}) coaches have non-empty teams"
+            )
+
+    if warnings:
+        for w in warnings:
+            logger.warning("DATA QUALITY: %s", w)
+    else:
+        logger.info("All data quality checks passed")
 
 
 if __name__ == "__main__":

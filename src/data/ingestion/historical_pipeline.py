@@ -133,7 +133,7 @@ class HistoricalDataPipeline:
                     if _resolved:
                         self.config.kaggle_dir = _resolved
                         logger.info("Auto-resolved kaggle_dir: %s", _resolved)
-                except Exception as _e:
+                except (ImportError, OSError, ValueError) as _e:
                     logger.debug("kaggle_downloader.ensure_kaggle_data failed: %s", _e)
             if self.config.kaggle_dir:
                 self._collect_kaggle_data(season, manifest)
@@ -442,7 +442,7 @@ class HistoricalDataPipeline:
                     box_df=box_df,
                     pbp_df=pbp_df,
                 )
-            except Exception as exc:
+            except (TypeError, ValueError, AttributeError, RuntimeError, OSError, TimeoutError) as exc:
                 last_exc = exc
                 continue
         if last_exc is not None:
@@ -646,14 +646,15 @@ class HistoricalDataPipeline:
                 manifest["providers"].setdefault(str(season), {})["massey_ordinals"] = "kaggle_csv"
                 manifest["season_counts"].setdefault(str(season), {})["massey_ordinal_systems"] = n_systems
                 logger.info("Cached %d Massey Ordinal systems for season %d", n_systems, season)
-        except Exception as e:
+        except (ValueError, KeyError, OSError, ImportError) as e:
             logger.warning("Massey Ordinals ingestion failed for season %d: %s", season, e)
 
     def _collect_tournament_context(self, season: int) -> Tuple[Dict, str]:
         try:
             teams = self.tournament_seed_scraper.fetch_tournament_seeds(season)
             return {"season": season, "teams": teams}, "sports_reference_tournament_scraper"
-        except Exception:
+        except (ValueError, AttributeError, RuntimeError, OSError) as exc:
+            logger.debug("Tournament seed scraping failed for %d: %s", season, exc)
             return {"season": season, "teams": []}, "none"
 
     _NCAA_SUFFIX_RE = re.compile(r"NCAA$", re.IGNORECASE)

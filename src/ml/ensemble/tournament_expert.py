@@ -114,30 +114,60 @@ class TournamentExpert:
             "num_threads": 1,
         }
 
-        train_data = lgb.Dataset(
-            X, label=margins,
-            feature_name=feature_names,
-            weight=weights,
-        )
-
-        self.spread_model = lgb.train(
-            spread_params,
-            train_data,
-            num_boost_round=150,
-            callbacks=[lgb.log_evaluation(period=0)],
-        )
-
-        # FIX-LEAKAGE: Calibrate sigma on a held-out split to avoid
-        # in-sample sigma optimization.  Use last 30% as calibration holdout.
+        # FIX-LEAKAGE: Sigma must be calibrated on predictions from a
+        # model that never saw the calibration data.  Train the spread
+        # model on only the first 70%, calibrate sigma using the last
+        # 30%'s genuinely OOS predictions, then retrain on ALL data for
+        # production use.
         n_cal = max(20, int(n_samples * 0.3))
         if n_samples >= 80:
-            # Enough data to hold out a calibration split
-            cal_X = X[-n_cal:]
-            cal_margins = margins[-n_cal:]
+            n_train = n_samples - n_cal
+            train_X_split, cal_X = X[:n_train], X[n_train:]
+            train_margins_split, cal_margins = margins[:n_train], margins[n_train:]
+            train_weights_split = weights[:n_train]
+
+            # Train a temporary model on the training split only
+            split_data = lgb.Dataset(
+                train_X_split, label=train_margins_split,
+                feature_name=feature_names,
+                weight=train_weights_split,
+            )
+            split_model = lgb.train(
+                spread_params,
+                split_data,
+                num_boost_round=150,
+                callbacks=[lgb.log_evaluation(period=0)],
+            )
+            # Calibrate sigma using truly OOS predictions
+            self.spread_model = split_model  # temporarily for _calibrate_sigma
             self._calibrate_sigma(cal_X, cal_margins)
+
+            # Now retrain on ALL data for production predictions
+            train_data = lgb.Dataset(
+                X, label=margins,
+                feature_name=feature_names,
+                weight=weights,
+            )
+            self.spread_model = lgb.train(
+                spread_params,
+                train_data,
+                num_boost_round=150,
+                callbacks=[lgb.log_evaluation(period=0)],
+            )
         else:
             # Too little data to split — use conservative default sigma
             self.sigma = 11.0
+            train_data = lgb.Dataset(
+                X, label=margins,
+                feature_name=feature_names,
+                weight=weights,
+            )
+            self.spread_model = lgb.train(
+                spread_params,
+                train_data,
+                num_boost_round=150,
+                callbacks=[lgb.log_evaluation(period=0)],
+            )
 
         # Also train a lightweight classifier for ensemble diversity
         cls_params = {

@@ -42,6 +42,15 @@ except ImportError:
 # to prevent result leakage.
 # ---------------------------------------------------------------------------
 TOURNAMENT_START_DATES: Dict[int, date] = {
+    2008: date(2008, 3, 18),
+    2009: date(2009, 3, 17),
+    2010: date(2010, 3, 16),
+    2011: date(2011, 3, 15),
+    2012: date(2012, 3, 13),
+    2013: date(2013, 3, 19),
+    2014: date(2014, 3, 18),
+    2015: date(2015, 3, 17),
+    2016: date(2016, 3, 15),
     2017: date(2017, 3, 14),
     2018: date(2018, 3, 13),
     2019: date(2019, 3, 19),
@@ -129,12 +138,9 @@ SIMPLE_FEATURE_SET = [
     "diff_adj_off_eff",               # [KP] Core efficiency
     "diff_adj_def_eff",               # [KP] Core defense
     "diff_sos_adj_em",                # [KAG] Schedule strength
-    "diff_external_rating_composite", # Massey composite
     "diff_elo_rating",                # [538] Season trajectory
     "diff_win_pct",                   # Simplest, strongest signal
     "diff_free_throw_pct",            # Most stable shooting metric
-    "seed_interaction",               # Nonlinear upset dynamics
-    "seed_diff",                      # Raw seed difference
     "diff_momentum",
 ]
 
@@ -203,22 +209,39 @@ def compute_year_data_quality(
 
 
 def _infer_tournament_round_weight(game_date: str, year: int) -> float:
-    """Infer tournament round weight from game date."""
+    """Infer tournament round weight from game date.
+
+    Weights are assigned by days-since-tournament-start, using the actual
+    ``TOURNAMENT_START_DATES`` for the year.  This avoids hardcoded
+    day-of-March thresholds that disagree with years where the tournament
+    starts before March 17 (e.g. 2018 starts March 13).
+
+    Any game on or after the tournament start date receives weight >= 2.0.
+    Games before the tournament start date receive weight 1.0.
+    """
     try:
         gd = datetime.strptime(game_date[:10], "%Y-%m-%d").date()
     except (ValueError, TypeError):
         return 1.0
-    day_of_march = (gd - date(year, 3, 1)).days
-    if day_of_march >= 31:
-        return 32.0 if day_of_march >= 33 else 16.0
-    elif day_of_march >= 24:
-        return 8.0
-    elif day_of_march >= 22:
-        return 4.0
-    elif day_of_march >= 17:
-        return 2.0
-    else:
+    t_start = TOURNAMENT_START_DATES.get(year, date(year, 3, 14))
+    if gd < t_start:
         return 1.0
+    days_into = (gd - t_start).days  # 0 = first day of tournament
+    if days_into >= 19:
+        # Championship game / finals (~ 19-20 days after start)
+        return 32.0
+    elif days_into >= 17:
+        # Final Four (~ 17-18 days after start)
+        return 16.0
+    elif days_into >= 10:
+        # Elite 8 (~ 10-12 days)
+        return 8.0
+    elif days_into >= 8:
+        # Sweet 16 (~ 8-9 days)
+        return 4.0
+    else:
+        # First/Second round (days 0-7)
+        return 2.0
 
 
 class DataRequirementError(ValueError):
@@ -233,10 +256,23 @@ class SOTAPipelineConfig:
     num_simulations: int = 50000
     pool_size: int = 100
     random_seed: int = 2026
+
+    # --- Probability profile ---
+    # "production": strict 4-stage pipeline (raw → calibration → shrinkage → clip).
+    #   All experimental post-processing layers are forbidden.
+    # "experimental": allows all optional layers (seed overrides, sharpening,
+    #   goto_conversion, round-weighted calibration, seed prior, etc.)
+    probability_profile: str = "production"
     # Dev/holdout partition for RDoF control.
-    # Default: dev=2016-2024, holdout=2025 (used for evaluation only).
-    dev_years: Optional[List[int]] = field(default_factory=lambda: list(range(2016, 2025)))
+    # Default: dev=2016-2019 and 2021-2024 (exclude 2020 COVID), holdout=2025.
+    dev_years: Optional[List[int]] = field(default_factory=lambda: [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024])
     holdout_years: Optional[List[int]] = field(default_factory=lambda: [2025])
+    # Calibration years are tournament-only years used to fit probability
+    # calibration. By default this is holdout_years, which keeps calibrator
+    # fitting genuinely out-of-sample with respect to model training years.
+    calibration_years: Optional[List[int]] = None
+    # Freeze an explicit production path for tournament runs.
+    enforce_production_path: bool = True
     # Require a verified freeze artifact before running.
     require_freeze_file: bool = False
     freeze_file: Optional[str] = None
@@ -332,7 +368,7 @@ class SOTAPipelineConfig:
     # ID-based rating system with uncertainty.  Orthogonal to feature-based
     # models — captures "who beat whom" without needing engineered features.
     # Uncertainty propagation naturally shrinks predictions for rare teams.
-    enable_bayesian_bt: bool = True
+    enable_bayesian_bt: bool = False  # EXPERIMENTAL: Adds blend complexity; enable with ablation evidence
     bayesian_bt_prior_std: float = 2.0  # Prior std for team ratings
 
     # --- Probability clipping ---
@@ -399,7 +435,7 @@ class SOTAPipelineConfig:
     tournament_shrinkage: float = 0.06  # Increased shrinkage for tournament uncertainty (was 0.02)
     # Gap #3: Seed prior enabled — seed difference is the strongest single predictor.
     # A weak prior (10%) provides regularization without overwhelming the model.
-    seed_prior_weight: float = 0.15  # Increased seed prior weight for tournament domain adaptation (was 0.10)
+    seed_prior_weight: float = 0.0  # DEPRECATED: Redundant with SeedBasedOverrides; set >0 only if seed overrides are disabled
     seed_prior_slope: float = 0.175  # Sigmoid slope for seed-based win rate approximation
     consistency_bonus_max: float = 0.0  # Disabled by default unless sensitivity proves value
     consistency_normalizer: float = 15.0  # Typical pace_adjusted_variance range for normalization
@@ -437,19 +473,15 @@ class SOTAPipelineConfig:
     # Include historical tournament games in training with Kaggle round weights
     # so the model invests more gradient signal in closely-matched elite teams.
     enable_round_weighted_training: bool = True
-    # Use round-weighted Brier calibration instead of flat Brier
-    enable_round_weighted_calibration: bool = True
+    # Use round-weighted Brier calibration instead of flat Brier.
+    # EXPERIMENTAL: Disabled by default — applies a second temperature scaling
+    # on already-calibrated probabilities.  Enable only with OOS evidence.
+    enable_round_weighted_calibration: bool = False
 
     # --- Multi-year calibration (Fix 1: expand calibration sample pool) ---
     enable_multi_year_calibration: bool = True  # Augment calibration with historical years
     min_calibration_samples: int = 100  # Warn and skip calibration below this threshold
     # FIX 8.1: Include historical tournament games in calibration.
-    # The calibration domain should match the inference domain (tournament
-    # games), not the training domain (regular-season games).  Historical
-    # tournament game outcomes are genuinely out-of-sample relative to the
-    # model trained on current-year regular-season data.
-    include_tournament_games_in_calibration: bool = True
-
     # --- LOYO temporal mode (Fix 2: purely temporal CV) ---
     loyo_temporal_mode: str = "rolling_window"  # "rolling_window" (honest) or "leave_one_out" (original)
 
@@ -514,9 +546,9 @@ class SOTAPipelineConfig:
     model_complexity: str = "simple"
 
     # --- Brier-optimal post-processing (WS2) ---
-    enable_brier_sharpening: bool = True  # Power-transform sharpening for Brier score
+    enable_brier_sharpening: bool = False  # EXPERIMENTAL: Power-transform sharpening — fragile on small OOS samples
     brier_sharpening_alpha_bounds: Tuple[float, float] = (0.5, 2.0)
-    enable_seed_overrides: bool = True  # Snap extreme matchups to historical rates
+    enable_seed_overrides: bool = False  # EXPERIMENTAL: Snap extreme matchups to historical rates
     seed_override_threshold: float = 0.08  # Max distance from historical to snap
 
     # --- goto_conversion (favourite-longshot bias correction) ---
@@ -526,7 +558,7 @@ class SOTAPipelineConfig:
     # favourite-longshot bias by reducing all inverse odds by the same
     # number of standard error units.
     # Used by 6 of the top 8 finishers in the 2025 competition.
-    enable_goto_conversion: bool = True  # Enable goto_conversion post-processing
+    enable_goto_conversion: bool = False  # EXPERIMENTAL: FLB correction — enable with OOS ablation evidence
     goto_conversion_margin_init: float = 0.05  # Initial margin (overround) parameter
     goto_conversion_margin_bounds: Tuple[float, float] = (0.0, 0.20)  # Search bounds for margin optimization
 
@@ -586,7 +618,7 @@ class SOTAPipelineConfig:
 
     # --- Betting market integration ---
     betting_odds_json: Optional[str] = None  # Path to cached betting odds JSON
-    enable_market_blend: bool = True  # Blend model predictions with betting market implied probabilities
+    enable_market_blend: bool = False  # Disabled in locked production path; enable explicitly for experiments
     market_blend_weight: float = 0.20  # Weight for market data in blend (0.0-1.0); model gets 1-weight
 
     # Compute budget management (S20)
@@ -595,7 +627,106 @@ class SOTAPipelineConfig:
     # Multi-agent orchestration (S2)
     use_agent_orchestration: bool = False
 
+    def validate_production_profile(self) -> None:
+        """Raise ValueError if production profile has forbidden layers enabled.
+
+        When probability_profile == "production", the pipeline must use only:
+            raw → one calibrator → shrinkage → clip
+        No seed overrides, sharpening, goto_conversion, round-weighted
+        calibration, seed prior, or consistency bonus.
+        """
+        if self.probability_profile != "production":
+            return
+        violations = []
+        if getattr(self, "enable_seed_overrides", False):
+            violations.append("enable_seed_overrides=True")
+        if getattr(self, "enable_brier_sharpening", False):
+            violations.append("enable_brier_sharpening=True")
+        if getattr(self, "enable_goto_conversion", False):
+            violations.append("enable_goto_conversion=True")
+        if getattr(self, "enable_round_weighted_calibration", False):
+            violations.append("enable_round_weighted_calibration=True")
+        if getattr(self, "seed_prior_weight", 0.0) > 0:
+            violations.append(f"seed_prior_weight={self.seed_prior_weight}")
+        if getattr(self, "consistency_bonus_max", 0.0) > 0:
+            violations.append(f"consistency_bonus_max={self.consistency_bonus_max}")
+        if violations:
+            raise ValueError(
+                f"Production probability profile forbids experimental layers. "
+                f"Violations: {', '.join(violations)}. "
+                f"Set probability_profile='experimental' to use these."
+            )
+
+    def resolve_calibration_years(self) -> List[int]:
+        """Return explicit tournament calibration years.
+
+        Production default is holdout years only, which are excluded from
+        training and therefore genuinely out-of-sample at the season level.
+        """
+        if self.calibration_years is not None:
+            years = [int(y) for y in self.calibration_years]
+        elif self.holdout_years:
+            years = [int(y) for y in self.holdout_years]
+        else:
+            years = []
+        return sorted({y for y in years if y != 2020})
+
+    def validate_locked_production_path(self) -> None:
+        """Hard-fail if production config drifts from the shipped path."""
+        if not self.enforce_production_path:
+            return
+        if self.probability_profile != "production":
+            return
+
+        violations = []
+        if self.model_complexity != "simple":
+            violations.append(f"model_complexity={self.model_complexity}")
+        if self.mode != "calibration":
+            violations.append(f"mode={self.mode}")
+        if self.use_agent_orchestration:
+            violations.append("use_agent_orchestration=True")
+        if self.enable_gnn:
+            violations.append("enable_gnn=True")
+        if self.enable_transformer:
+            violations.append("enable_transformer=True")
+        if self.enable_embedding_projections:
+            violations.append("enable_embedding_projections=True")
+        if self.enable_stacking:
+            violations.append("enable_stacking=True")
+        if self.enable_market_blend:
+            violations.append("enable_market_blend=True")
+        if not self.holdout_years:
+            violations.append("holdout_years is empty")
+        elif sorted(set(self.holdout_years)) != [2025]:
+            violations.append(f"holdout_years={self.holdout_years} (expected [2025])")
+        expected_dev_years = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
+        if not self.dev_years:
+            violations.append("dev_years is empty")
+        elif sorted(set(self.dev_years)) != expected_dev_years:
+            violations.append(
+                "dev_years must be 2016-2019 and 2021-2024 for locked production path"
+            )
+        cal_years = self.resolve_calibration_years()
+        if cal_years != [2025]:
+            violations.append(f"calibration_years={cal_years} (expected [2025])")
+
+        if violations:
+            raise ValueError(
+                "Locked production path violation. Expected shipped tournament path: "
+                "simple model, production probability profile, calibrated-only probabilities, "
+                "no agent orchestration, no GNN/transformer/stacking/market blend, "
+                "dev years 2016-2024, holdout/calibration year 2025. "
+                f"Violations: {', '.join(violations)}"
+            )
+
     def __post_init__(self):
+        if self.probability_profile not in ("production", "experimental"):
+            raise ValueError(
+                f"Invalid probability_profile '{self.probability_profile}': "
+                "must be 'production' or 'experimental'"
+            )
+        self.validate_production_profile()
+        self.validate_locked_production_path()
         if self.mode not in ("calibration", "ev"):
             raise ValueError(f"Invalid mode '{self.mode}': must be 'calibration' or 'ev'")
         if self.mode == "ev":

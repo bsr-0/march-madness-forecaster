@@ -281,9 +281,10 @@ class TestLateSeasoncutoff:
             late_season_training_cutoff_days=75,
             random_seed=42,
         ))
-        # Tournament start: March 14, minus 75 days = ~Dec 29
+        # Tournament start for 2026 per TOURNAMENT_START_DATES, minus 75 days
         from datetime import date, timedelta
-        tournament_start = date(2026, 3, 14)
+        from src.pipeline.config import TOURNAMENT_START_DATES
+        tournament_start = TOURNAMENT_START_DATES.get(2026, date(2026, 3, 14))
         cutoff_date = tournament_start - timedelta(days=75)
         cutoff_key = pipeline._game_sort_key(cutoff_date.isoformat())
 
@@ -930,8 +931,8 @@ class TestHardTournamentDateCutoff:
         import inspect
 
         from src.pipeline.stages import sample_loading
-        source = inspect.getsource(sample_loading.load_year_samples_incremental)
+        source = inspect.getsource(sample_loading._load_year_samples_incremental_core)
         assert "TOURNAMENT_START_DATES" in source, (
-            "_load_year_samples_incremental must use TOURNAMENT_START_DATES "
+            "_load_year_samples_incremental_core must use TOURNAMENT_START_DATES "
             "instead of hardcoded 03-14 for accurate per-year cutoffs."
         )

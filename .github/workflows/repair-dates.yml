@@ -1,0 +1,95 @@
+name: Repair Game Dates
+
+on:
+  workflow_dispatch:
+    inputs:
+      seasons:
+        description: "Seasons to repair (e.g. '2025', '2005-2010', '2005,2006,2025')"
+        required: true
+        type: string
+      historical_dir:
+        description: "Directory containing historical_games_YYYY.json files"
+        required: false
+        default: "data/raw/historical"
+        type: string
+      dry_run:
+        description: "Preview changes without writing to disk"
+        required: false
+        default: false
+        type: boolean
+      force_slow:
+        description: "Use slow day-by-day date fetch (fallback if fast path fails)"
+        required: false
+        default: false
+        type: boolean
+      offline:
+        description: "Use offline heuristic repair (no network needed, approximate dates)"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: repair-dates
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    name: Repair Game Dates
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Repair dates (online via cbbpy)
+        if: inputs.offline != true
+        run: |
+          FLAGS="--seasons ${{ inputs.seasons }}"
+          FLAGS="$FLAGS --historical-dir ${{ inputs.historical_dir }}"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            FLAGS="$FLAGS --dry-run"
+          fi
+          if [ "${{ inputs.force_slow }}" = "true" ]; then
+            FLAGS="$FLAGS --force-slow"
+          fi
+          echo "Running: python -m src.main repair-dates $FLAGS"
+          python -m src.main repair-dates $FLAGS
+
+      - name: Repair dates (offline heuristic)
+        if: inputs.offline == true
+        run: |
+          FLAGS="--seasons ${{ inputs.seasons }}"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            FLAGS="$FLAGS --dry-run"
+          fi
+          echo "Running: python scripts/repair_game_dates_offline.py $FLAGS"
+          python scripts/repair_game_dates_offline.py $FLAGS
+
+      - name: Run date integrity tests
+        if: inputs.dry_run != true
+        run: python -m pytest tests/test_date_integrity.py -v --tb=short
+
+      - name: Commit and push repaired data
+        if: inputs.dry_run != true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/raw/
+          if git diff --cached --quiet; then
+            echo "No date changes to commit"
+          else
+            git commit -m "fix: repair game dates for seasons ${{ inputs.seasons }} ($(date -u +%Y-%m-%d))"
+            git push
+          fi
