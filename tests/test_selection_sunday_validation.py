@@ -750,7 +750,8 @@ class TestStep10ExportArtifact:
 
         sample = pd.DataFrame({"ID": ["2026_1_2"], "Pred": [0.5]})
         id_map = {1: "team_a", 2: "team_b"}
-        predict_fn = lambda a, b: 1.5  # Invalid
+        def predict_fn(a, b):
+            return 1.5  # Invalid
 
         result = generate_predictions(sample, id_map, predict_fn, season_filter=2026)
         assert result["Pred"].iloc[0] <= 1.0
