@@ -222,8 +222,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         else:
             s1, s2 = 0, 0
         # Gap #1: Current-year Massey composite for training features
-        _mc1 = pipeline._external_composites.get(game.team1_id, None) if hasattr(self, '_external_composites') and pipeline._external_composites else None
-        _mc2 = pipeline._external_composites.get(game.team2_id, None) if hasattr(self, '_external_composites') and pipeline._external_composites else None
+        _mc1 = pipeline._external_composites.get(game.team1_id, None) if hasattr(pipeline, '_external_composites') and pipeline._external_composites else None
+        _mc2 = pipeline._external_composites.get(game.team2_id, None) if hasattr(pipeline, '_external_composites') and pipeline._external_composites else None
         _erc1 = _mc1.composite_rating if _mc1 is not None else 0.0
         _erc2 = _mc2.composite_rating if _mc2 is not None else 0.0
         _ers1 = _mc1.rating_spread if _mc1 is not None else 0.0
@@ -277,6 +277,16 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     margins_full = np.array([s[3] for s in samples], dtype=np.float64)
     sort_keys_full = np.array([s[0] for s in samples])
     # (PIT metadata no longer needed — features computed incrementally)
+
+    # Symmetric augmentation: double the dataset by adding the reverse-
+    # perspective row for every game.  Historical years already get this
+    # via sample_loading.py; current-year samples need it here.
+    if getattr(pipeline.config, "enable_symmetric_augmentation", True):
+        from ...ml.training.symmetric import symmetric_augment
+
+        X_full, y_full, margins_full, _, sort_keys_full = symmetric_augment(
+            X_full, y_full, margins_full, sort_keys=sort_keys_full,
+        )
 
     # ====================================================================
     # FEATURE MATRIX VALIDATION — catch NaN/inf/constant features that
@@ -388,6 +398,24 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # before current year).  Validation set remains current-year only
     # for honest evaluation.
     # ====================================================================
+    # Build feature names early so they are available for multi-year
+    # data-quality scoring (compute_year_data_quality) below.
+    feature_names = None
+    if train_samples >= 40:
+        from ..data.features.feature_engineering import TeamFeatures
+        base_names = TeamFeatures.get_feature_names(include_embeddings=False)
+        diff_names = [f"diff_{n}" for n in base_names]
+        absolute_names = [f"abs_{n}" for n in ABSOLUTE_LEVEL_FEATURE_NAMES]
+        interaction_names = ["tempo_interaction", "style_mismatch", "h2h_record", "common_opp_margin", "travel_advantage", "seed_interaction", "seed_diff"]
+        feature_names = diff_names + absolute_names + interaction_names
+        if len(feature_names) != train_X.shape[1]:
+            logger.warning(
+                "Feature name count mismatch: %d names vs %d columns. "
+                "Falling back to generic names.",
+                len(feature_names), train_X.shape[1],
+            )
+            feature_names = [f"f_{i}" for i in range(train_X.shape[1])]
+
     historical_training_stats = {}
     n_current_year_train = train_samples  # Track for logging
 
@@ -634,25 +662,10 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # --- Feature selection ---
     # OOS-FIX: Default path uses a fixed domain-knowledge feature set.
     # Learned feature selection can still be enabled via config.
-    feature_names = None
+    # (feature_names already constructed above, before multi-year block)
     fs_stats = {}
 
-    # Build feature names for the full matchup vector
-    if train_samples >= 40:
-        from ..data.features.feature_engineering import TeamFeatures
-        base_names = TeamFeatures.get_feature_names(include_embeddings=False)
-        diff_names = [f"diff_{n}" for n in base_names]
-        absolute_names = [f"abs_{n}" for n in ABSOLUTE_LEVEL_FEATURE_NAMES]
-        interaction_names = ["tempo_interaction", "style_mismatch", "h2h_record", "common_opp_margin", "travel_advantage", "seed_interaction", "seed_diff"]
-        feature_names = diff_names + absolute_names + interaction_names
-        if len(feature_names) != train_X.shape[1]:
-            logger.warning(
-                "Feature name count mismatch: %d names vs %d columns. "
-                "Falling back to generic names.",
-                len(feature_names), train_X.shape[1],
-            )
-            feature_names = [f"f_{i}" for i in range(train_X.shape[1])]
-
+    if train_samples >= 40 and feature_names is not None:
         if not pipeline.config.enable_feature_selection:
             # OOS-FIX: Apply fixed domain-knowledge feature set.
             # No model fitting, no label dependency, no double-dipping.
@@ -837,7 +850,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # When tournament games are included in training (calibration mode),
     # weight them by the Kaggle round-weight schedule so the model
     # optimizes for the competition's actual scoring metric.
-    if hasattr(self, '_round_weights') and pipeline._round_weights is not None and len(pipeline._round_weights) == train_samples:
+    if hasattr(pipeline, '_round_weights') and pipeline._round_weights is not None and len(pipeline._round_weights) == train_samples:
         if train_sample_weight is not None:
             train_sample_weight = train_sample_weight * pipeline._round_weights
         else:
