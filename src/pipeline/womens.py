@@ -87,6 +87,11 @@ class WomensPipelineConfig:
     seed_override_threshold: float = 0.08
     clip_lo: float = 0.005
     clip_hi: float = 0.995
+
+    # --- Probability profile ---
+    # "production": strict 4-stage pipeline (raw → calibration → shrinkage → clip).
+    # "experimental": allows post-processor, sharpening, goto_conversion, seed prior.
+    probability_profile: str = "production"
     # Gap #4: Model ensemble weights — women's bracket is more predictable
     # by seed than men's.  Increase seed weight for better calibration.
     lgb_weight: float = 0.40
@@ -115,6 +120,32 @@ class WomensPipelineConfig:
     goto_conversion_margin_init: float = 0.06  # Slightly higher for women's
     goto_conversion_margin_bounds: Tuple[float, float] = (0.0, 0.25)
 
+    def validate_production_profile(self) -> None:
+        """Raise ValueError if production profile has forbidden layers enabled."""
+        if self.probability_profile != "production":
+            return
+        violations = []
+        if self.enable_brier_sharpening:
+            violations.append("enable_brier_sharpening=True")
+        if self.enable_goto_conversion:
+            violations.append("enable_goto_conversion=True")
+        if self.seed_prior_weight > 0:
+            violations.append(f"seed_prior_weight={self.seed_prior_weight}")
+        if violations:
+            raise ValueError(
+                f"Production probability profile forbids experimental layers. "
+                f"Violations: {', '.join(violations)}. "
+                f"Set probability_profile='experimental' to use these."
+            )
+
+    def __post_init__(self):
+        if self.probability_profile not in ("production", "experimental"):
+            raise ValueError(
+                f"Invalid probability_profile '{self.probability_profile}': "
+                "must be 'production' or 'experimental'"
+            )
+        self.validate_production_profile()
+
 
 class WomensPipeline:
     """End-to-end women's tournament prediction pipeline.
@@ -141,6 +172,7 @@ class WomensPipeline:
         self.model = None
         self.scaler = None
         self.calibrator = None
+        self._calibrator = None  # Production calibrator (BrierCalibrator)
         # goto_conversion for women's bracket
         self._goto_converter = None
         if self.config.enable_goto_conversion:
@@ -201,39 +233,77 @@ class WomensPipeline:
         return report
 
     def predict_probability(self, team1_id: str, team2_id: str) -> float:
-        """Predict probability that team1 beats team2.
+        """Route to production or experimental probability path."""
+        if self.config.probability_profile == "experimental":
+            return self.predict_probability_experimental(team1_id, team2_id)
+        return self.predict_probability_production(team1_id, team2_id)
 
-        Routing logic:
-        1. If both teams have features → use ML model (or seed-based ensemble)
-        2. If teams have seeds → use seed-based probability
-        3. Fallback → 0.5
+    def predict_probability_production(self, team1_id: str, team2_id: str) -> float:
+        """Production probability: raw → calibration → shrinkage → clip.
 
-        Tournament adaptation applied after ensemble (aligned with men's).
+        No BrierPostProcessor, no seed overrides, no sharpening, no goto.
+        """
+        from .probability_pipeline import (
+            apply_calibration,
+            apply_final_clip,
+            apply_tournament_shrinkage,
+        )
 
-        Args:
-            team1_id: Canonical ID for team 1
-            team2_id: Canonical ID for team 2
+        # Stage 1: Raw probability (ML + seed ensemble with symmetry)
+        pred = self._raw_probability(team1_id, team2_id)
 
-        Returns:
-            Probability that team1 wins (0.0 to 1.0)
+        # Stage 2: Single calibration (if fitted)
+        pred = apply_calibration(pred, self._calibrator, self.config.clip_lo, self.config.clip_hi)
+
+        # Stage 3: Tournament shrinkage toward 0.5
+        if self.config.enable_tournament_adaptation:
+            pred = apply_tournament_shrinkage(pred, self.config.tournament_shrinkage)
+
+        # Stage 4: Final clip
+        return apply_final_clip(pred, self.config.clip_lo, self.config.clip_hi)
+
+    def predict_probability_experimental(self, team1_id: str, team2_id: str) -> float:
+        """Experimental probability path — preserves all optional layers.
+
+        Includes: BrierPostProcessor (seed overrides, goto_conversion, sharpening),
+        seed prior blend.  Only active when probability_profile == "experimental".
         """
         f1 = self.feature_engineer.team_features.get(team1_id)
         f2 = self.feature_engineer.team_features.get(team2_id)
 
-        # Get seeds for post-processing
         s1 = f1.seed if f1 else 0
         s2 = f2.seed if f2 else 0
-
-        # Try seed-based from team_stats if features not available
         if s1 == 0 and team1_id in self.team_stats:
             s1 = self.team_stats[team1_id].seed
         if s2 == 0 and team2_id in self.team_stats:
             s2 = self.team_stats[team2_id].seed
 
-        # Get base prediction with SYMMETRY ENFORCEMENT.
-        # Average P(A>B) and 1-P(B>A) to guarantee P(A>B)+P(B>A)=1.
+        pred = self._raw_probability(team1_id, team2_id)
+
+        # Tournament adaptation with seed prior (experimental)
+        if self.config.enable_tournament_adaptation:
+            pred = self._tournament_adapt_experimental(pred, s1, s2)
+
+        # BrierPostProcessor (seed override + calibration + sharpening + clip)
+        pred = self.post_processor.process(
+            pred, seed1=s1, seed2=s2, is_womens=True
+        )
+
+        return pred
+
+    def _raw_probability(self, team1_id: str, team2_id: str) -> float:
+        """Compute raw probability from ML model + seed ensemble with symmetry."""
+        f1 = self.feature_engineer.team_features.get(team1_id)
+        f2 = self.feature_engineer.team_features.get(team2_id)
+
+        s1 = f1.seed if f1 else 0
+        s2 = f2.seed if f2 else 0
+        if s1 == 0 and team1_id in self.team_stats:
+            s1 = self.team_stats[team1_id].seed
+        if s2 == 0 and team2_id in self.team_stats:
+            s2 = self.team_stats[team2_id].seed
+
         if f1 is not None and f2 is not None and self.model is not None:
-            # ML model prediction using full matchup features (both directions)
             features_fwd = self.feature_engineer.get_matchup_features(team1_id, team2_id)
             features_rev = self.feature_engineer.get_matchup_features(team2_id, team1_id)
             if features_fwd is not None and features_rev is not None:
@@ -245,57 +315,25 @@ class WomensPipeline:
             else:
                 ml_pred = 0.5
 
-            # Seed-based prediction
             seed_pred = self._seed_prediction(s1, s2)
-
-            # Weighted ensemble
             w_ml = self.config.lgb_weight
             w_seed = self.config.seed_logistic_weight
             total_w = w_ml + w_seed
-            pred = (w_ml * ml_pred + w_seed * seed_pred) / total_w
+            return (w_ml * ml_pred + w_seed * seed_pred) / total_w
 
         elif s1 > 0 and s2 > 0:
-            # Seed-only prediction
-            pred = self._seed_prediction(s1, s2)
+            return self._seed_prediction(s1, s2)
         else:
-            # Complete fallback
-            pred = 0.5
+            return 0.5
 
-        # Tournament domain adaptation (aligned with men's pipeline)
-        if self.config.enable_tournament_adaptation:
-            pred = self._tournament_adapt(pred, s1, s2)
+    def _tournament_adapt_experimental(self, prob: float, seed1: int, seed2: int) -> float:
+        """Experimental tournament adaptation with seed prior.
 
-        # Apply post-processing (seed override + calibration + sharpening + clip)
-        pred = self.post_processor.process(
-            pred, seed1=s1, seed2=s2, is_womens=True
-        )
-
-        return pred
-
-    def _tournament_adapt(self, prob: float, seed1: int, seed2: int) -> float:
-        """Apply tournament domain adaptation.
-
-        Aligned with men's SOTAPipeline._tournament_adapt():
-        1. Shrinkage toward 0.5 — regular-season models are overconfident
-           because tournament games are played on neutral courts.
-
-        Seed-based corrections are handled downstream by SeedBasedOverrides
-        via BrierPostProcessor when enable_seed_overrides=True.
-
-        Args:
-            prob: Raw probability
-            seed1: Team 1 seed (0 if unknown)
-            seed2: Team 2 seed (0 if unknown)
-
-        Returns:
-            Adapted probability
+        Only used when probability_profile == "experimental".
         """
-        # Shrinkage toward 0.5
         shrinkage = self.config.tournament_shrinkage
         adapted = shrinkage * 0.5 + (1.0 - shrinkage) * prob
 
-        # Seed-based Bayesian prior (only when seed_prior_weight > 0,
-        # disabled by default to avoid stacking with SeedBasedOverrides)
         if self.config.seed_prior_weight > 0 and seed1 > 0 and seed2 > 0:
             seed_diff = seed2 - seed1
             slope = self.config.seed_prior_slope
@@ -418,7 +456,11 @@ class WomensPipeline:
             logger.warning("sklearn not available, using seed-only mode")
 
     def _fit_calibration(self) -> None:
-        """Fit calibration on women's historical tournament data."""
+        """Fit calibration on women's historical tournament data.
+
+        Production mode: fits a single BrierCalibrator (temperature scaling).
+        Experimental mode: additionally fits sharpener and goto_conversion.
+        """
         history = WomensHistoricalResults(cache_dir=self.config.cache_dir)
         games = history.load_cached()
 
@@ -430,19 +472,34 @@ class WomensPipeline:
         preds = np.array(probs)
         actuals = np.array(outcomes, dtype=np.float64)
 
-        # NOTE: BrierCalibrator removed from post-processor to avoid double
-        # calibration.  The post-processor already applies goto_conversion and
-        # sharpening (when enabled) which handle confidence adjustment.
-        # Stacking a separate calibrator on the same small historical dataset
-        # risks overfitting.
+        # Production: fit a single temperature-scaling calibrator
+        try:
+            cal = BrierCalibrator()
+            cal.fit(preds, actuals)
+            self._calibrator = cal
+            logger.info(
+                "Women's production calibrator fitted: T=%.3f",
+                cal.temperature,
+            )
+        except Exception as e:
+            logger.warning("Women's calibrator fitting failed: %s", e)
+            self._calibrator = None
 
-        # Gap #4/#7: Fit round-weighted sharpener for women's bracket.
-        # Women's games have different round distributions — need separate
-        # sharpening from men's to optimize the competition Brier metric.
+        # Experimental layers (only fitted when in experimental profile)
+        if self.config.probability_profile == "experimental":
+            self._fit_calibration_experimental(preds, actuals)
+
+    def _fit_calibration_experimental(
+        self, preds: np.ndarray, actuals: np.ndarray
+    ) -> None:
+        """Fit experimental calibration layers (sharpener, goto_conversion).
+
+        Only called when probability_profile == "experimental".
+        """
+        # Sharpener
         if self.config.enable_brier_sharpening:
             try:
                 rw_sharpener = RoundWeightedSharpener()
-                # Construct synthetic round labels based on position in data
                 n_games = len(preds)
                 round_labels = []
                 for i in range(n_games):
@@ -460,22 +517,36 @@ class WomensPipeline:
                 rw_sharpener.fit_weighted(preds, actuals, round_labels)
                 self.post_processor.sharpener = rw_sharpener
             except Exception:
-                # Fallback to standard sharpener
                 sharpener = BrierOptimalSharpener()
                 sharpener.fit(preds, actuals)
                 self.post_processor.sharpener = sharpener
 
-        # Fit goto_conversion for women's bracket.
-        # Women's tournament has fewer upsets, so goto_conversion should
-        # sharpen toward favourites.  Fit on the same calibration data.
+        # goto_conversion
         if self._goto_converter is not None and len(preds) >= 20:
             try:
-                # Calibrate the predictions first before fitting goto
-                cal_preds = calibrator.calibrate(preds)
+                cal_preds = preds
+                if self._calibrator is not None:
+                    cal_preds = self._calibrator.calibrate(preds)
+                round_labels_arg = None
+                if self.config.enable_brier_sharpening:
+                    n_games = len(preds)
+                    round_labels_arg = []
+                    for i in range(n_games):
+                        frac = i / max(n_games - 1, 1)
+                        if frac > 0.9:
+                            round_labels_arg.append("F4")
+                        elif frac > 0.8:
+                            round_labels_arg.append("E8")
+                        elif frac > 0.6:
+                            round_labels_arg.append("S16")
+                        elif frac > 0.4:
+                            round_labels_arg.append("R32")
+                        else:
+                            round_labels_arg.append("R64")
                 self._goto_converter.fit(
                     cal_preds, actuals,
                     strength_bounds=self.config.goto_conversion_margin_bounds,
-                    round_labels=round_labels if self.config.enable_brier_sharpening else None,
+                    round_labels=round_labels_arg,
                 )
                 self.post_processor.goto_converter = self._goto_converter
                 logger.info(
@@ -486,8 +557,7 @@ class WomensPipeline:
                 logger.warning("Women's goto_conversion fitting failed: %s", e)
 
         logger.info(
-            "Women's calibration fitted: T=%.3f, alpha=%.3f, goto_margin=%.4f",
-            calibrator.temperature,
+            "Women's experimental calibration: alpha=%.3f, goto_margin=%.4f",
             self.post_processor.sharpener.alpha if self.post_processor.sharpener else 1.0,
             self._goto_converter.strength if self._goto_converter and self._goto_converter.fitted else 0.0,
         )
