@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       year:
-        description: "Season year to ingest"
-        required: true
-        default: "2026"
+        description: "Season year to ingest (auto-detected from date or current month if blank)"
+        required: false
         type: string
       skip_torvik:
         description: "Skip Torvik scrape"
@@ -24,12 +23,12 @@ on:
         default: false
         type: boolean
       skip_historical_games:
-        description: "Skip historical games scrape (slow day-by-day fetch)"
+        description: "Skip historical games scrape"
         required: false
         default: false
         type: boolean
       historical_games_since:
-        description: "Only fetch games from this date forward (ISO, e.g. 2026-03-08). Auto-detected on scheduled runs."
+        description: "Only fetch games from this date forward (ISO, e.g. 2026-03-08). Season year is auto-detected from this date. Auto-detected on scheduled runs."
         required: false
         type: string
       repair_only:
@@ -93,17 +92,31 @@ jobs:
       - name: Determine year
         id: year
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            # During scheduled runs, use current year for Jan-Apr, or next year for Nov-Dec
-            MONTH=$(date +%-m)
-            YEAR=$(date +%Y)
+          # If year was explicitly provided, use it
+          if [ -n "${{ inputs.year }}" ]; then
+            echo "value=${{ inputs.year }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Derive from historical_games_since date if provided
+          if [ -n "${{ inputs.historical_games_since }}" ]; then
+            DATE="${{ inputs.historical_games_since }}"
+            MONTH=$(date -d "$DATE" +%-m)
+            YEAR=$(date -d "$DATE" +%Y)
             if [ "$MONTH" -ge 11 ]; then
               YEAR=$((YEAR + 1))
             fi
             echo "value=$YEAR" >> "$GITHUB_OUTPUT"
-          else
-            echo "value=${{ inputs.year }}" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          # Fall back to current date (scheduled runs or manual without either field)
+          MONTH=$(date +%-m)
+          YEAR=$(date +%Y)
+          if [ "$MONTH" -ge 11 ]; then
+            YEAR=$((YEAR + 1))
+          fi
+          echo "value=$YEAR" >> "$GITHUB_OUTPUT"
 
       - name: Build ingestion flags
         id: flags
