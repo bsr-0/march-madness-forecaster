@@ -1,0 +1,5 @@
+# Phase 3 Data Integrity — Critical feature contracts require explicit approval
+# Only critical-tier features (seed_strength, external_rating_composite,
+# external_rating_spread, conf_tourney_champ) trigger this gate.
+contracts/feature_contracts.yaml @data-integrity-reviewers
+schemas/feature_contract.schema.json @data-integrity-reviewers
