@@ -23,6 +23,24 @@ logger = logging.getLogger(__name__)
 # ───────────────────────────────────────────────────────────────────────
 
 
+def compute_raw_probability(raw_prob: float) -> float:
+    """Validate a raw model probability (finite-value guard).
+
+    Args:
+        raw_prob: Raw probability from the model ensemble.
+
+    Returns:
+        The input unchanged if finite, otherwise 0.5.
+    """
+    if not math.isfinite(raw_prob):
+        logger.warning(
+            "Raw probability is not finite (%.6f); falling back to 0.5.",
+            raw_prob,
+        )
+        return 0.5
+    return raw_prob
+
+
 def apply_calibration(
     prob: float,
     calibrator: Any,
@@ -229,7 +247,7 @@ def run_ablation_ladder(
         round_labels: Optional round labels for round-weighted metrics.
 
     Returns:
-        Dict with per-stage metrics: brier, ece, log_loss, mean_movement.
+        Dict with per-stage metrics: brier, ece, log_loss, mean_movement, max_movement.
     """
     raw_probs = np.asarray(raw_probs, dtype=np.float64)
     outcomes = np.asarray(outcomes, dtype=np.float64)
@@ -273,11 +291,14 @@ def run_ablation_ladder(
             -np.mean(outcomes * np.log(clipped) + (1 - outcomes) * np.log(1 - clipped))
         )
 
-        # Mean absolute movement from previous stage
+        # Absolute movement from previous stage
         if prev_probs is not None:
-            metrics["mean_movement"] = float(np.mean(np.abs(probs - prev_probs)))
+            deltas = np.abs(probs - prev_probs)
+            metrics["mean_movement"] = float(np.mean(deltas))
+            metrics["max_movement"] = float(np.max(deltas))
         else:
             metrics["mean_movement"] = 0.0
+            metrics["max_movement"] = 0.0
 
         results[name] = metrics
         prev_probs = probs
