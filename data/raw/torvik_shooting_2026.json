@@ -132,8 +132,8 @@
     "ft_pct": 0.7453
   },
   "uc_irvine": {
-    "three_pt_pct": 0.3365,
-    "ft_pct": 0.6901
+    "three_pt_pct": 0.3389,
+    "ft_pct": 0.6949
   },
   "usc": {
     "three_pt_pct": 0.3166,
@@ -160,8 +160,8 @@
     "ft_pct": 0.7248
   },
   "cal_baptist": {
-    "three_pt_pct": 0.3367,
-    "ft_pct": 0.7155
+    "three_pt_pct": 0.337,
+    "ft_pct": 0.7185
   },
   "butler": {
     "three_pt_pct": 0.3237,
@@ -192,8 +192,8 @@
     "ft_pct": 0.7158
   },
   "hawaii": {
-    "three_pt_pct": 0.3163,
-    "ft_pct": 0.741
+    "three_pt_pct": 0.316,
+    "ft_pct": 0.7382
   },
   "njit": {
     "three_pt_pct": 0.304,
@@ -240,8 +240,8 @@
     "ft_pct": 0.7025
   },
   "louisiana_tech": {
-    "three_pt_pct": 0.296,
-    "ft_pct": 0.6701
+    "three_pt_pct": 0.2855,
+    "ft_pct": 0.6723
   },
   "canisius": {
     "three_pt_pct": 0.3328,
@@ -360,8 +360,8 @@
     "ft_pct": 0.6733
   },
   "virginia": {
-    "three_pt_pct": 0.3601,
-    "ft_pct": 0.7229
+    "three_pt_pct": 0.3595,
+    "ft_pct": 0.7265
   },
   "lsu": {
     "three_pt_pct": 0.3308,
@@ -420,8 +420,8 @@
     "ft_pct": 0.7041
   },
   "duke": {
-    "three_pt_pct": 0.3516,
-    "ft_pct": 0.7219
+    "three_pt_pct": 0.3507,
+    "ft_pct": 0.724
   },
   "maine": {
     "three_pt_pct": 0.3122,
@@ -432,8 +432,8 @@
     "ft_pct": 0.7405
   },
   "utah_valley": {
-    "three_pt_pct": 0.3388,
-    "ft_pct": 0.6868
+    "three_pt_pct": 0.3393,
+    "ft_pct": 0.683
   },
   "washington": {
     "three_pt_pct": 0.3148,
@@ -1172,8 +1172,8 @@
     "ft_pct": 0.741
   },
   "kennesaw_st": {
-    "three_pt_pct": 0.3393,
-    "ft_pct": 0.7002
+    "three_pt_pct": 0.3375,
+    "ft_pct": 0.7001
   },
   "army": {
     "three_pt_pct": 0.3202,
