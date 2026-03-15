@@ -177,7 +177,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # Build IncrementalMetricsEngine for current-year true PIT features.
     # Every training sample uses only data available before its game date,
     # eliminating all temporal leakage from season-end features.
-    from ..data.features.proprietary_metrics import IncrementalMetricsEngine
+    from src.data.features.proprietary_metrics import IncrementalMetricsEngine
     # Use prior-year Elo for cross-season carryover, matching what
     # historical training years get.  This eliminates the distribution
     # shift where historical Elo features are informative early-season
@@ -402,7 +402,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # data-quality scoring (compute_year_data_quality) below.
     feature_names = None
     if train_samples >= 40:
-        from ..data.features.feature_engineering import TeamFeatures
+        from src.data.features.feature_engineering import TeamFeatures
         base_names = TeamFeatures.get_feature_names(include_embeddings=False)
         diff_names = [f"diff_{n}" for n in base_names]
         absolute_names = [f"abs_{n}" for n in ABSOLUTE_LEVEL_FEATURE_NAMES]
@@ -738,7 +738,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     dist_shift_stats = {}
     if valid_samples >= 20 and feature_names is not None:
         try:
-            from ..data.features.feature_selection import detect_distribution_shift
+            from src.data.features.feature_selection import detect_distribution_shift
             shift_results = detect_distribution_shift(
                 train_X, eval_X, feature_names,
                 psi_threshold=0.25, ks_alpha=0.05,
