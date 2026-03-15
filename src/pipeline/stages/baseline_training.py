@@ -1980,9 +1980,10 @@ def _optimize_ensemble_weights_loyo(
     if len(years) < 3:
         return {}
 
-    # Step 1: Load all years' data
+    # Step 1: Load all years' data (including margins for spread model)
     all_X: Dict[int, np.ndarray] = {}
     all_y: Dict[int, np.ndarray] = {}
+    all_margins: Dict[int, np.ndarray] = {}
 
     for yr in years:
         gp = os.path.join(games_dir, f"historical_games_{yr}.json")
@@ -1990,12 +1991,13 @@ def _optimize_ensemble_weights_loyo(
         if not os.path.isfile(gp) or not os.path.isfile(mp):
             continue
         try:
-            yr_X, yr_y, _, _, _ = pipeline._load_year_samples_incremental(
+            yr_X, yr_y, yr_margins, _, _ = pipeline._load_year_samples_incremental(
                 gp, mp, feature_dim, yr
             )
             if len(yr_y) >= 20:
                 all_X[yr] = yr_X
                 all_y[yr] = yr_y
+                all_margins[yr] = yr_margins
         except Exception:
             continue
 
@@ -2013,11 +2015,13 @@ def _optimize_ensemble_weights_loyo(
         # Combine training data from all years except hold_yr
         train_X_parts = [all_X[yr] for yr in valid_years if yr != hold_yr]
         train_y_parts = [all_y[yr] for yr in valid_years if yr != hold_yr]
+        train_margin_parts = [all_margins[yr] for yr in valid_years if yr != hold_yr]
         if not train_X_parts:
             continue
 
         X_train = np.concatenate(train_X_parts, axis=0)
         y_train = np.concatenate(train_y_parts)
+        margins_train = np.concatenate(train_margin_parts)
         X_val = all_X[hold_yr]
         y_val = all_y[hold_yr]
 
@@ -2057,14 +2061,14 @@ def _optimize_ensemble_weights_loyo(
                     fold_preds[name] = np.clip(
                         m.predict_proba(X_val)[:, 1], 0.01, 0.99
                     )
-                elif name == "spread":
-                    from src.ml.models.spread_regressor import SpreadRegressor
+                elif name == "spread" and SpreadRegressor is not None:
                     m = SpreadRegressor(
                         sigma=pipeline.config.spread_sigma_init,
                     )
-                    # SpreadRegressor trains on margins, but we only have
-                    # binary labels here; skip if margins unavailable
-                    fold_preds[name] = np.full(len(y_val), 0.5)
+                    m.train(X_train, margins_train, num_rounds=200)
+                    fold_preds[name] = np.clip(
+                        m.predict_probability(X_val), 0.01, 0.99
+                    )
                 else:
                     fold_preds[name] = np.full(len(y_val), 0.5)
             except Exception:
