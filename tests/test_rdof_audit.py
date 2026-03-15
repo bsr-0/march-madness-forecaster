@@ -559,7 +559,11 @@ class TestConfigNewFields:
 
     def test_filter_years_excludes_holdout(self):
         from src.pipeline.sota import SOTAPipeline
-        config = SOTAPipelineConfig(dev_years=[2016, 2017, 2025], holdout_years=[2025])
+        config = SOTAPipelineConfig(
+            dev_years=[2016, 2017, 2025],
+            holdout_years=[2025],
+            enforce_production_path=False,
+        )
         pipeline = SOTAPipeline(config)
         assert pipeline._filter_years([2016, 2017, 2020, 2025]) == [2016, 2017]
 

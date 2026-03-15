@@ -669,6 +669,15 @@ class LeaveOneYearOutCV:
                 f"got '{temporal_mode}'"
             )
         self.temporal_mode = temporal_mode
+        if temporal_mode == "leave_one_out":
+            import warnings
+            warnings.warn(
+                "LeaveOneYearOutCV(temporal_mode='leave_one_out') includes "
+                "future years in training folds, overstating OOS performance. "
+                "Use temporal_mode='rolling_window' (default) instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
     def split(
         self,
