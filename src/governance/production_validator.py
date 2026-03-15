@@ -2,9 +2,30 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any, Dict
 
 from ..pipeline.config import SOTAPipelineConfig
+
+
+DIRECTORY_PATH_FIELDS = [
+    "multi_year_games_dir",
+    "kaggle_dir",
+    "external_ratings_dir",
+]
+
+FILE_PATH_FIELDS = [
+    "teams_json",
+    "torvik_json",
+    "historical_games_json",
+    "roster_json",
+    "public_picks_json",
+    "scoring_rules_json",
+    "mc_calibration_json",
+    "freeze_file",
+]
+
+ALL_PATH_FIELDS = DIRECTORY_PATH_FIELDS + FILE_PATH_FIELDS
 
 
 REQUIRED_CONFIG_VALUES: Dict[str, Any] = {
@@ -31,6 +52,22 @@ REQUIRED_CONFIG_VALUES: Dict[str, Any] = {
     "calibration_method": "temperature",
     "enable_tournament_adaptation": True,
     "scoring_metric": "brier",
+    # --- Continuous hyperparameters that affect model output ---
+    "random_seed": 2026,
+    "num_simulations": 50000,
+    "tournament_shrinkage": 0.06,
+    "massey_blend_weight": 0.25,
+    "massey_sigma": 4.5,
+    "ensemble_lgb_weight": 0.15,
+    "ensemble_xgb_weight": 0.15,
+    "pre_calibration_clip_lo": 0.001,
+    "pre_calibration_clip_hi": 0.999,
+    "mc_noise_std": 0.12,
+    "enable_spread_model": True,
+    "enable_recency_weighting": True,
+    "enable_symmetric_augmentation": True,
+    "scrape_live": False,
+    "enable_market_blend": False,
 }
 
 EXPECTED_TRAINING_YEARS = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
@@ -95,12 +132,67 @@ def validate_2026_production_config(config: SOTAPipelineConfig) -> None:
     if 2020 in all_years:
         violations.append("2020 appears in training/dev/holdout years")
 
-    if not config.multi_year_games_dir or config.multi_year_games_dir == "auto":
-        violations.append("multi_year_games_dir must be explicit and not 'auto'")
-    if not config.kaggle_dir:
-        violations.append("kaggle_dir must be explicitly set")
+    if config.training_years and 2025 in config.training_years:
+        violations.append("2025 appears in training_years")
+
+    cal_years = getattr(config, "calibration_years", None)
+    if cal_years is not None and list(cal_years) != [2025]:
+        violations.append(
+            f"calibration_years={cal_years} (must be None or [2025] for production)"
+        )
+
+    for field in ALL_PATH_FIELDS:
+        value = getattr(config, field, None)
+        if not value:
+            violations.append(f"{field} must be explicitly set")
+        elif isinstance(value, str) and value.strip().lower() == "auto":
+            violations.append(f"{field}={value!r} must not be 'auto'")
+
+    if not getattr(config, "external_ratings_dir", None):
+        if "external_ratings_dir must be explicitly set" not in violations:
+            violations.append("external_ratings_dir must be explicitly set")
 
     if violations:
         raise ProductionValidationError(
             "2026 production configuration validation failed: " + "; ".join(violations)
+        )
+
+
+def validate_production_2026(
+    config: SOTAPipelineConfig,
+    *,
+    check_paths_on_disk: bool = True,
+    base_dir: str | None = None,
+) -> None:
+    """Canonical production validator entry point.
+
+    Calls the core config validation and, when *check_paths_on_disk* is True,
+    also verifies that every declared directory exists on the filesystem and
+    every declared file exists on disk.
+    """
+    validate_2026_production_config(config)
+
+    if not check_paths_on_disk:
+        return
+
+    root = base_dir or os.getcwd()
+    missing: list[str] = []
+
+    for field in DIRECTORY_PATH_FIELDS:
+        value = getattr(config, field, None)
+        if value:
+            resolved = os.path.join(root, value) if not os.path.isabs(value) else value
+            if not os.path.isdir(resolved):
+                missing.append(f"{field}={value!r} directory not found at {resolved}")
+
+    for field in FILE_PATH_FIELDS:
+        value = getattr(config, field, None)
+        if value:
+            resolved = os.path.join(root, value) if not os.path.isabs(value) else value
+            if not os.path.isfile(resolved):
+                missing.append(f"{field}={value!r} file not found at {resolved}")
+
+    if missing:
+        raise ProductionValidationError(
+            "Production data path verification failed: " + "; ".join(missing)
         )

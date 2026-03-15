@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+import dataclasses
+
 from ..pipeline.config import SOTAPipelineConfig, TOURNAMENT_START_DATES
 from ..pipeline.sota import SOTAPipeline
 from .production_validator import (
@@ -17,11 +19,13 @@ from .production_validator import (
     REQUIRED_CONFIG_VALUES,
     ProductionValidationError,
     validate_2026_production_config,
+    validate_production_2026,
 )
 
 REQUIRED_EXPLICIT_PATH_FIELDS = [
     "multi_year_games_dir",
     "kaggle_dir",
+    "external_ratings_dir",
     "teams_json",
     "torvik_json",
     "historical_games_json",
@@ -37,7 +41,83 @@ REQUIRED_SOURCE_HASH_FILES = [
     "src/pipeline/sota.py",
     "src/pipeline/stages/baseline_training.py",
     "src/pipeline/stages/calibration.py",
+    "src/pipeline/stages/data_loader.py",
+    "src/pipeline/stages/inference.py",
+    "src/pipeline/probability_pipeline.py",
+    "src/governance/production_validator.py",
+    "src/governance/production_runner.py",
 ]
+
+SOURCE_TREE_ROOT = "src"
+PRODUCTION_LOCKFILE = "requirements-production-lock.txt"
+
+FREEZE_ARTIFACT_REQUIRED_FIELDS = [
+    "git_commit_sha",
+    "config_file_hash",
+    "training_years",
+    "holdout_years",
+    "target_year",
+    "source_file_hashes",
+    "source_tree_hash",
+    "data_file_hashes",
+    "dependency_lockfile_hash",
+    "run_timestamp_utc",
+]
+
+
+def _verify_dependency_versions(repo_root: Path) -> str:
+    """Verify installed package versions match the production lockfile.
+
+    Returns the SHA-256 hash of the lockfile for inclusion in the freeze artifact.
+    Raises ProductionValidationError on any version mismatch.
+    """
+    import importlib.metadata as _meta
+
+    lockfile = repo_root / PRODUCTION_LOCKFILE
+    if not lockfile.exists():
+        raise ProductionValidationError(
+            f"Production dependency lockfile not found: {lockfile}"
+        )
+
+    lockfile_hash = _sha256_file(lockfile)
+    mismatches: List[str] = []
+
+    for line in lockfile.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "==" not in line:
+            continue
+        pkg, expected_version = line.split("==", 1)
+        pkg = pkg.strip()
+        expected_version = expected_version.strip()
+        try:
+            installed = _meta.version(pkg)
+        except _meta.PackageNotFoundError:
+            mismatches.append(f"{pkg}: not installed (expected {expected_version})")
+            continue
+        if installed != expected_version:
+            mismatches.append(
+                f"{pkg}: installed={installed} (expected {expected_version})"
+            )
+
+    if mismatches:
+        raise ProductionValidationError(
+            f"Production dependency version mismatch: {mismatches}"
+        )
+
+    return lockfile_hash
+
+
+def _snapshot_config_hash(config: SOTAPipelineConfig) -> str:
+    """Deterministic hash of every field in the config dataclass.
+
+    Used to detect mutation between validation and pipeline execution.
+    """
+    h = hashlib.sha256()
+    for f in dataclasses.fields(config):
+        h.update(f"{f.name}={getattr(config, f.name)!r}".encode("utf-8"))
+    return h.hexdigest()
 
 
 def _sha256_file(path: Path) -> str:
@@ -68,15 +148,136 @@ def _load_raw_config(config_path: Path) -> Dict:
     return payload
 
 
+def _validate_freeze_artifact(
+    freeze_path: Path,
+    config_file: Path,
+    raw_config: Dict,
+    repo_root: Path,
+) -> Dict:
+    """Validate freeze artifact existence AND consistency with current config/source."""
+    if not freeze_path.exists():
+        raise ProductionValidationError(
+            f"Freeze artifact not found: {freeze_path}. "
+            "Run 'freeze-pipeline' first to generate it."
+        )
+
+    with open(freeze_path, "r", encoding="utf-8") as f:
+        freeze = json.load(f)
+
+    missing_fields = [
+        field for field in FREEZE_ARTIFACT_REQUIRED_FIELDS if field not in freeze
+    ]
+    if missing_fields:
+        raise ProductionValidationError(
+            f"Freeze artifact missing required fields: {missing_fields}"
+        )
+
+    current_config_hash = _sha256_file(config_file)
+    if freeze.get("config_file_hash") != current_config_hash:
+        raise ProductionValidationError(
+            f"Freeze artifact config_hash mismatch: freeze={freeze.get('config_file_hash')!r} "
+            f"vs current={current_config_hash!r}. Config has changed since freeze."
+        )
+
+    if freeze.get("training_years") != raw_config.get("training_years"):
+        raise ProductionValidationError(
+            f"Freeze artifact training_years mismatch: freeze={freeze.get('training_years')} "
+            f"vs config={raw_config.get('training_years')}"
+        )
+
+    if freeze.get("holdout_years") != raw_config.get("holdout_years"):
+        raise ProductionValidationError(
+            f"Freeze artifact holdout_years mismatch: freeze={freeze.get('holdout_years')} "
+            f"vs config={raw_config.get('holdout_years')}"
+        )
+
+    freeze_target = freeze.get("target_year")
+    config_target = raw_config.get("year")
+    if freeze_target != config_target:
+        raise ProductionValidationError(
+            f"Freeze artifact target_year mismatch: freeze={freeze_target} vs config={config_target}"
+        )
+
+    freeze_source_hashes = freeze.get("source_file_hashes", {})
+    missing_source = [
+        f for f in REQUIRED_SOURCE_HASH_FILES if f not in freeze_source_hashes
+    ]
+    if missing_source:
+        raise ProductionValidationError(
+            f"Freeze artifact missing source file hashes for: {missing_source}"
+        )
+
+    # Verify freeze data hashes match current data on disk
+    freeze_data_hashes = freeze.get("data_file_hashes", {})
+    stale_data: List[str] = []
+    for data_key, frozen_hash in freeze_data_hashes.items():
+        # Resolve path from raw_config
+        data_value = raw_config.get(data_key)
+        if not data_value:
+            continue
+        data_path = Path(data_value)
+        if not data_path.is_absolute():
+            data_path = repo_root / data_path
+        if not data_path.exists():
+            stale_data.append(f"{data_key} (path not found: {data_path})")
+            continue
+        current_hash = _sha256_path(data_path)
+        if current_hash != frozen_hash:
+            stale_data.append(
+                f"{data_key} (freeze={frozen_hash[:12]}… vs disk={current_hash[:12]}…)"
+            )
+    if stale_data:
+        raise ProductionValidationError(
+            f"Freeze artifact data file hashes do not match current disk: {stale_data}"
+        )
+
+    # Verify freeze source hashes match current files on disk (critical files)
+    stale_sources: List[str] = []
+    for src_file in REQUIRED_SOURCE_HASH_FILES:
+        src_path = repo_root / src_file
+        if not src_path.exists():
+            stale_sources.append(f"{src_file} (file not found on disk)")
+            continue
+        current_hash = _sha256_file(src_path)
+        frozen_hash = freeze_source_hashes.get(src_file)
+        if current_hash != frozen_hash:
+            stale_sources.append(
+                f"{src_file} (freeze={frozen_hash!r} vs disk={current_hash!r})"
+            )
+    if stale_sources:
+        raise ProductionValidationError(
+            f"Freeze artifact source file hashes do not match current disk: {stale_sources}"
+        )
+
+    # Verify whole source tree hash (catches changes to ANY file under src/)
+    frozen_tree_hash = freeze.get("source_tree_hash")
+    if frozen_tree_hash:
+        src_tree = repo_root / SOURCE_TREE_ROOT
+        if src_tree.is_dir():
+            current_tree_hash = _sha256_path(src_tree)
+            if current_tree_hash != frozen_tree_hash:
+                raise ProductionValidationError(
+                    f"Source tree hash mismatch: freeze={frozen_tree_hash[:16]}… "
+                    f"vs disk={current_tree_hash[:16]}…. "
+                    f"A file under {SOURCE_TREE_ROOT}/ was modified since freeze."
+                )
+
+    return freeze
+
+
 def _ensure_required_keys(raw_config: Dict) -> None:
     missing: List[str] = []
-    for key in list(REQUIRED_CONFIG_VALUES.keys()) + [
-        "training_years",
-        "dev_years",
-        "holdout_years",
-        "seed_prior_weight",
-        "consistency_bonus_max",
-    ]:
+    for key in (
+        list(REQUIRED_CONFIG_VALUES.keys())
+        + [
+            "training_years",
+            "dev_years",
+            "holdout_years",
+            "seed_prior_weight",
+            "consistency_bonus_max",
+        ]
+        + REQUIRED_EXPLICIT_PATH_FIELDS
+    ):
         if key not in raw_config:
             missing.append(key)
     if missing:
@@ -151,10 +352,16 @@ def _git_commit_sha(repo_root: Path) -> str:
     return ref
 
 
-def _build_runtime_branch_audit(config: SOTAPipelineConfig) -> Dict:
+def _build_runtime_branch_audit(
+    config: SOTAPipelineConfig,
+    production_calls: Dict,
+    experimental_calls: Dict,
+) -> Dict:
     return {
         "probability_profile": config.probability_profile,
-        "used_experimental_probability_path": False,
+        "used_experimental_probability_path": experimental_calls["n"] > 0,
+        "production_inference_call_count": production_calls["n"],
+        "experimental_inference_call_count": experimental_calls["n"],
         "seed_overrides_enabled": bool(config.enable_seed_overrides),
         "brier_sharpening_enabled": bool(config.enable_brier_sharpening),
         "goto_conversion_enabled": bool(config.enable_goto_conversion),
@@ -171,6 +378,8 @@ def run_production_2026(
     output_report_path: str,
     freeze_manifest_path: str,
     governance_report_path: str,
+    freeze_artifact_path: str | None = None,
+    production_manifest_path: str | None = None,
 ) -> Tuple[Dict, Dict, Dict]:
     repo_root = Path(__file__).resolve().parents[2]
     config_file = Path(config_path)
@@ -189,9 +398,31 @@ def run_production_2026(
     config = SOTAPipelineConfig(**raw_config)
     validate_2026_production_config(config)
 
+    # Verify dependency versions match the production lockfile
+    dep_lockfile_hash = _verify_dependency_versions(repo_root)
+
+    # Snapshot config hash immediately after validation to detect mutation
+    config_snapshot = _snapshot_config_hash(config)
+
+    # --- Freeze artifact pre-run gate (consistency validation) ---
+    freeze_art = Path(freeze_artifact_path) if freeze_artifact_path else (
+        repo_root / "artifacts" / "freeze_manifest_2026.json"
+    )
+    if not freeze_art.is_absolute():
+        freeze_art = repo_root / freeze_art
+    _validate_freeze_artifact(freeze_art, config_file, raw_config, repo_root)
+
     # Runtime branch assertion: production path must never call experimental prediction.
+    # Re-verify config was not mutated between validation and pipeline creation
+    if _snapshot_config_hash(config) != config_snapshot:
+        raise ProductionValidationError(
+            "Config was mutated after validation but before pipeline execution. "
+            "This is a production integrity violation."
+        )
+
     pipeline = SOTAPipeline(config)
     production_calls = {"n": 0}
+    experimental_calls = {"n": 0}
 
     original_prod = pipeline.predict_probability_production
     original_exp = pipeline.predict_probability_experimental
@@ -201,6 +432,7 @@ def run_production_2026(
         return original_prod(*args, **kwargs)
 
     def _exp(*args, **kwargs):
+        experimental_calls["n"] += 1
         raise ProductionValidationError(
             "Experimental probability path was invoked during production run"
         )
@@ -208,7 +440,22 @@ def run_production_2026(
     pipeline.predict_probability_production = _prod
     pipeline.predict_probability_experimental = _exp
 
+    # Final config integrity check immediately before pipeline execution
+    if _snapshot_config_hash(config) != config_snapshot:
+        raise ProductionValidationError(
+            "Config was mutated after validation but before pipeline execution. "
+            "This is a production integrity violation."
+        )
+
     report = pipeline.run()
+
+    # Post-run config integrity check — detect mutation during pipeline execution
+    if _snapshot_config_hash(config) != config_snapshot:
+        raise ProductionValidationError(
+            "Config was mutated during pipeline execution. "
+            "This is a production integrity violation."
+        )
+
     with open(output_report_path, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
 
@@ -235,7 +482,7 @@ def run_production_2026(
         "future_data_detected": False,
     }
 
-    production_path_verification = _build_runtime_branch_audit(config)
+    production_path_verification = _build_runtime_branch_audit(config, production_calls, experimental_calls)
 
     calibration_audit = {
         "method": calibration.get("method", "unknown"),
@@ -260,6 +507,8 @@ def run_production_2026(
         path: _sha256_file(repo_root / path)
         for path in REQUIRED_SOURCE_HASH_FILES
     }
+    src_tree = repo_root / SOURCE_TREE_ROOT
+    source_tree_hash = _sha256_path(src_tree) if src_tree.is_dir() else "missing"
 
     data_hashes = {
         k: _sha256_path(Path(v))
@@ -275,7 +524,9 @@ def run_production_2026(
         "config_file": str(config_file),
         "config_file_hash": config_hash,
         "source_file_hashes": source_hashes,
+        "source_tree_hash": source_tree_hash,
         "data_file_hashes": data_hashes,
+        "dependency_lockfile_hash": dep_lockfile_hash,
         "run_timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "target_year": 2026,
         "training_years": EXPECTED_TRAINING_YEARS,
@@ -295,15 +546,73 @@ def run_production_2026(
     with open(freeze_manifest_path, "w", encoding="utf-8") as f:
         json.dump(freeze_manifest, f, indent=2)
 
+    # --- Production manifest with runtime inference proof ---
+    prod_manifest_path = Path(production_manifest_path) if production_manifest_path else (
+        repo_root / "artifacts" / "production_manifest_2026.json"
+    )
+    inference_verified = production_calls["n"] > 0 and experimental_calls["n"] == 0
+    production_manifest = {
+        "git_commit": _git_commit_sha(repo_root),
+        "config_hash": config_hash,
+        "entrypoint": "src/run_production_2026.py",
+        "source_hashes": source_hashes,
+        "source_tree_hash": source_tree_hash,
+        "data_hashes": data_hashes,
+        "training_years": list(config.training_years) if config.training_years else [],
+        "dev_years": list(config.dev_years) if config.dev_years else [],
+        "holdout_years": list(config.holdout_years) if config.holdout_years else [],
+        "target_year": config.year,
+        "calibration_method": config.calibration_method,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "production_inference_call_count": production_calls["n"],
+        "experimental_inference_call_count": experimental_calls["n"],
+        "inference_path_verified": inference_verified,
+        "production_flags_verified": {
+            "probability_profile": config.probability_profile,
+            "mode": config.mode,
+            "model_complexity": config.model_complexity,
+            "gnn_enabled": bool(config.enable_gnn),
+            "transformer_enabled": bool(config.enable_transformer),
+            "embedding_projections_enabled": bool(config.enable_embedding_projections),
+            "agent_orchestration_enabled": bool(config.use_agent_orchestration),
+            "stacking_enabled": bool(config.enable_stacking),
+            "experimental_postprocessing_enabled": any([
+                bool(config.enable_seed_overrides),
+                bool(config.enable_brier_sharpening),
+                bool(config.enable_goto_conversion),
+                bool(config.enable_round_weighted_calibration),
+            ]),
+        },
+    }
+    prod_manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(prod_manifest_path, "w", encoding="utf-8") as f:
+        json.dump(production_manifest, f, indent=2)
+
+    any_experimental = any([
+        bool(config.enable_seed_overrides),
+        bool(config.enable_brier_sharpening),
+        bool(config.enable_goto_conversion),
+        bool(config.enable_round_weighted_calibration),
+        bool(config.enable_gnn),
+        bool(config.enable_transformer),
+        bool(config.enable_embedding_projections),
+        bool(config.enable_stacking),
+        bool(config.use_agent_orchestration),
+        bool(config.enable_market_blend),
+    ])
     governance_report = {
         "what_exact_predictor_was_shipped": "Frozen 2026 production path (simple model + production probability profile)",
-        "what_exact_years_were_used_for_training": EXPECTED_TRAINING_YEARS,
-        "what_exact_year_was_held_out": 2025,
-        "were_any_experimental_modules_enabled": False,
+        "what_exact_years_were_used_for_training": list(config.training_years) if config.training_years else [],
+        "what_exact_year_was_held_out": list(config.holdout_years) if config.holdout_years else [],
+        "were_any_experimental_modules_enabled": any_experimental,
         "was_calibration_applied": calibration.get("method", "none") != "none",
-        "was_production_probability_path_used": True,
-        "were_any_convenience_fallbacks_triggered": False,
-        "did_any_runtime_assertion_fail": False,
+        "was_production_probability_path_used": production_calls["n"] > 0,
+        "experimental_probability_path_called": experimental_calls["n"] > 0,
+        "production_inference_call_count": production_calls["n"],
+        "experimental_inference_call_count": experimental_calls["n"],
+        "did_any_runtime_assertion_fail": (
+            production_calls["n"] <= 0 or experimental_calls["n"] > 0
+        ),
         "which_code_and_data_hashes_define_this_run": {
             "config_hash": config_hash,
             "source_hashes": source_hashes,

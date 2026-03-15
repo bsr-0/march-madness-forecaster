@@ -5,6 +5,7 @@ from .authority_matrix import AuthorityMatrix, AuthorityRule
 from .compliance import ComplianceGate, ComplianceCheck, CheckpointResult
 from .audit_trail import GovernanceAuditLog
 from .gate import GovernanceGate
+from .production_validator import ProductionValidationError, validate_production_2026
 
 # Backward-compat aliases
 ComplianceRunner = ComplianceGate
@@ -17,4 +18,6 @@ __all__ = [
     "ComplianceRunner", "ComplianceCheckpoint",
     "GovernanceAuditLog",
     "GovernanceGate",
+    "ProductionValidationError",
+    "validate_production_2026",
 ]

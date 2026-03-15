@@ -133,9 +133,22 @@ def _run_pipeline_and_report(config, output_path):
     return 0, report
 
 
+def _guard_production_2026(config):
+    """Raise if generic command is being used as a production 2026 entrypoint."""
+    if (
+        getattr(config, "probability_profile", None) == "production"
+        and getattr(config, "year", None) == 2026
+    ):
+        raise ProductionValidationError(
+            "Production 2026 runs must use the dedicated entrypoint: "
+            "python src/run_production_2026.py or 'march-madness run-production-2026'"
+        )
+
+
 def run_sota(args):
     """Run the full SOTA rubric pipeline."""
     config = _build_pipeline_config(args)
+    _guard_production_2026(config)
 
     if getattr(args, "multi_agent", False):
         print("Running SOTA pipeline (multi-agent mode)...")
@@ -165,6 +178,7 @@ def run_research_loop(args):
     iterations = getattr(args, "iterations", 5)
     strategy = getattr(args, "strategy", "adaptive")
     base_config = _build_pipeline_config(args)
+    _guard_production_2026(base_config)
 
     registry = ExperimentRegistry()
     scheduler = ExperimentScheduler(registry=registry)
@@ -244,12 +258,23 @@ def run_research_loop(args):
 
 def run_production_2026_cmd(args):
     """Run the frozen 2026 production path only."""
+    blessed = Path("configs/production_2026.json").resolve()
+    actual = Path(args.config).resolve()
+    if actual != blessed:
+        print(
+            f"PRODUCTION ERROR: --config must point to the blessed config.\n"
+            f"  Expected: {blessed}\n"
+            f"  Got:      {actual}"
+        )
+        return 1
     try:
         report, freeze_manifest, governance_report = run_production_2026(
             config_path=args.config,
             output_report_path=args.output,
             freeze_manifest_path=args.freeze_manifest,
             governance_report_path=args.governance_report,
+            freeze_artifact_path=getattr(args, "freeze_artifact", None),
+            production_manifest_path=getattr(args, "production_manifest", None),
         )
     except ProductionValidationError as exc:
         print(f"Production validation error: {exc}")
@@ -327,6 +352,7 @@ def run_sota_from_manifest(args):
 
     path_overrides = _resolve_manifest_paths(args, manifest, base_dir)
     config = _build_pipeline_config(args, path_overrides=path_overrides)
+    _guard_production_2026(config)
     exit_code, _ = _run_pipeline_and_report(config, args.output)
     return exit_code
 
@@ -348,6 +374,7 @@ def run_kaggle_export(args):
     path_overrides = _resolve_manifest_paths(args, manifest, base_dir)
     year = path_overrides["year"]
     config = _build_pipeline_config(args, path_overrides=path_overrides)
+    _guard_production_2026(config)
 
     # --- Men's pipeline ---
     pipeline = SOTAPipeline(config)
