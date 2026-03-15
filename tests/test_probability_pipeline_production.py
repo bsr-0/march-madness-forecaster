@@ -200,6 +200,40 @@ class TestProductionConfigValidation:
                 seed_prior_weight=0.1,
             )
 
+
+    def test_locked_path_requires_simple_mode(self):
+        from src.pipeline.config import SOTAPipelineConfig
+
+        with pytest.raises(ValueError, match="model_complexity"):
+            SOTAPipelineConfig(
+                probability_profile="production",
+                model_complexity="standard",
+            )
+
+    def test_locked_path_requires_calibration_mode(self):
+        from src.pipeline.config import SOTAPipelineConfig
+
+        with pytest.raises(ValueError, match="mode=ev"):
+            SOTAPipelineConfig(
+                probability_profile="production",
+                mode="ev",
+            )
+
+    def test_locked_path_requires_calibration_year_alignment(self):
+        from src.pipeline.config import SOTAPipelineConfig
+
+        with pytest.raises(ValueError, match="calibration_years"):
+            SOTAPipelineConfig(
+                probability_profile="production",
+                calibration_years=[2024],
+            )
+
+    def test_resolve_calibration_years_defaults_to_holdout(self):
+        from src.pipeline.config import SOTAPipelineConfig
+
+        cfg = SOTAPipelineConfig()
+        assert cfg.resolve_calibration_years() == [2025]
+
     def test_invalid_profile_raises(self):
         from src.pipeline.config import SOTAPipelineConfig
 
