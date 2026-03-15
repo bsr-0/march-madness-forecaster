@@ -1498,8 +1498,8 @@ class SOTAPipeline:
             end = start + slice_size
         return all_val[start:end]
 
-    def _train_embedding_projections(self) -> Dict[str, float]:
-        return _bt._train_embedding_projections(self)
+    def _train_embedding_projections(self, game_flows: Dict[str, list]) -> Dict[str, float]:
+        return _bt._train_embedding_projections(self, game_flows)
 
     @staticmethod
     def _team_id(name: str) -> str:
