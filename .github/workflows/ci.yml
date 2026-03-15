@@ -100,6 +100,54 @@ jobs:
           print(f'All {len(contracts[\"features\"])} features have test_ids.')
           "
 
+  phase4-snapshot-integrity:
+    name: Phase 4 Snapshot Integrity Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Selection Sunday snapshot tests
+        run: pytest tests/evaluation/test_selection_snapshot.py -v --tb=short -q
+
+      - name: Round segmentation tests
+        run: pytest tests/evaluation/test_round_segmentation.py -v --tb=short -q
+
+      - name: Calibration metrics tests
+        run: pytest tests/evaluation/test_calibration_metrics.py -v --tb=short -q
+
+  phase5-calibration:
+    name: Phase 5 Calibration Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Calibration methods tests
+        run: pytest tests/evaluation/test_calibration_methods.py -v --tb=short -q
+
+      - name: Calibration benchmark tests
+        run: pytest tests/evaluation/test_calibration_benchmark.py -v --tb=short -q
+
+      - name: Reliability tracking tests
+        run: pytest tests/evaluation/test_reliability_tracking.py -v --tb=short -q
+
   audit:
     name: Dependency Audit
     runs-on: ubuntu-latest
