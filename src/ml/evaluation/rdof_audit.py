@@ -1676,24 +1676,22 @@ class HoldoutEvaluator:
     ) -> float:
         """Apply tournament domain adaptation matching sota.py logic.
 
-        Uses AdjEM difference as a seed proxy (em_diff → approximate seed
-        quality gap) and margin std difference for consistency bonus.
-        Historical JSON files lack actual tournament seeds, but AdjEM is
-        more informative than seed anyway — this tests the same adaptation
-        LOGIC with the best available data.
+        Production path: shrinkage toward 0.5 + consistency bonus.
+        Seed-based corrections are handled by SeedBasedOverrides (via
+        BrierPostProcessor) when enabled, not stacked here.
+
+        Uses margin std difference for consistency bonus.
         """
         # 1. Shrinkage toward 0.5
         shrinkage = config.tournament_shrinkage
         adapted = shrinkage * 0.5 + (1.0 - shrinkage) * prob
 
-        # 2. Seed prior: use AdjEM → logistic as seed-quality proxy
-        # em_diff > 0 means team1 is stronger (analogous to lower seed)
-        slope = config.seed_prior_slope
-        seed_prior = 1.0 / (1.0 + math.exp(-slope * em_diff / 2.5))
-        # /2.5 rescales AdjEM to be roughly on the same scale as seed_diff:
-        # a 10-point AdjEM gap ≈ a 4-seed gap (e.g. 1 vs 5 seed)
-        w = config.seed_prior_weight
-        adapted = (1.0 - w) * adapted + w * seed_prior
+        # 2. Seed prior (only when seed_prior_weight > 0, disabled by default)
+        w = getattr(config, 'seed_prior_weight', 0.0)
+        if w > 0:
+            slope = config.seed_prior_slope
+            seed_prior = 1.0 / (1.0 + math.exp(-slope * em_diff / 2.5))
+            adapted = (1.0 - w) * adapted + w * seed_prior
 
         # 3. Consistency bonus
         bonus_max = config.consistency_bonus_max
