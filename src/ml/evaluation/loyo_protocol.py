@@ -30,6 +30,146 @@ LOYO_YEARS = [2018, 2019, 2021, 2022, 2023, 2024, 2025]
 MINIMUM_BRIER_IMPROVEMENT = 0.001
 
 
+# ======================================================================
+# Phase 2: Feature Family Ablation
+# ======================================================================
+
+@dataclass
+class FeatureFamily:
+    """Defines a group of related features for family-level ablation.
+
+    Attributes:
+        name: Human-readable family identifier.
+        family_type: How the family is ablated:
+            - "column_group": zero/mask specific columns in the feature matrix.
+            - "config_toggle": disable via pipeline config flags.
+            - "hybrid": both column masking and config toggling.
+        feature_names: Exact matchup-feature names from FIXED_FEATURE_SET.
+        feature_prefixes: Prefix patterns for matching features (e.g. "diff_efg").
+        config_flags: Config toggle names (e.g. "enable_recency_weighting").
+        masking_policy: How to neutralize columns during masked ablation:
+            - "zero": set to 0.0 (correct for diffs where 0 = no advantage).
+            - "mean": set to training-set column mean (when 0 is not neutral).
+            - "neutral": use a feature-specific semantic neutral value.
+        neutral_values: For masking_policy="neutral", maps feature name -> neutral value.
+    """
+
+    name: str
+    family_type: str  # "column_group", "config_toggle", "hybrid"
+    feature_names: List[str] = field(default_factory=list)
+    feature_prefixes: List[str] = field(default_factory=list)
+    config_flags: List[str] = field(default_factory=list)
+    masking_policy: str = "zero"  # "zero", "mean", "neutral"
+    neutral_values: Dict[str, float] = field(default_factory=dict)
+
+
+# Initial feature families mapped to FIXED_FEATURE_SET matchup features.
+DEFAULT_FEATURE_FAMILIES: List[FeatureFamily] = [
+    FeatureFamily(
+        name="seed_priors",
+        family_type="column_group",
+        feature_names=["seed_interaction", "seed_diff"],
+        masking_policy="neutral",
+        neutral_values={"seed_interaction": 0.0, "seed_diff": 0.0},
+    ),
+    FeatureFamily(
+        name="elo_ratings",
+        family_type="column_group",
+        feature_names=["diff_elo_rating"],
+        masking_policy="zero",
+    ),
+    FeatureFamily(
+        name="four_factors",
+        family_type="column_group",
+        feature_names=[
+            "diff_efg_pct",
+            "diff_to_rate",
+            "diff_orb_rate",
+            "diff_ft_rate",
+            "diff_opp_efg_pct",
+            "diff_opp_to_rate",
+        ],
+        masking_policy="zero",
+    ),
+    FeatureFamily(
+        name="roster_continuity",
+        family_type="column_group",
+        feature_names=["diff_avg_experience", "diff_roster_continuity"],
+        masking_policy="zero",
+    ),
+    FeatureFamily(
+        name="massey_ordinals",
+        family_type="column_group",
+        feature_names=[
+            "diff_external_rating_composite",
+            "diff_external_rating_spread",
+        ],
+        masking_policy="zero",
+    ),
+    FeatureFamily(
+        name="recency_form",
+        family_type="hybrid",
+        feature_names=["diff_momentum"],
+        config_flags=["enable_recency_weighting"],
+        masking_policy="zero",
+    ),
+    FeatureFamily(
+        name="public_picks",
+        family_type="config_toggle",
+        config_flags=["public_picks_json"],
+        masking_policy="zero",
+    ),
+]
+
+
+def validate_family_coverage(
+    feature_names: List[str],
+    families: List[FeatureFamily],
+) -> Dict[str, str]:
+    """Validate that every feature is assigned to a family or marked unassigned.
+
+    Args:
+        feature_names: All active feature names in the pipeline.
+        families: List of FeatureFamily definitions.
+
+    Returns:
+        Dict mapping feature_name -> family_name (or "unassigned").
+    """
+    feature_to_family: Dict[str, str] = {}
+
+    for family in families:
+        for feat in family.feature_names:
+            if feat in feature_to_family:
+                logger.warning(
+                    "Feature '%s' assigned to multiple families: '%s' and '%s'",
+                    feat, feature_to_family[feat], family.name,
+                )
+            feature_to_family[feat] = family.name
+
+        # Prefix matching
+        for prefix in family.feature_prefixes:
+            for feat in feature_names:
+                if feat.startswith(prefix) and feat not in feature_to_family:
+                    feature_to_family[feat] = family.name
+
+    # Mark unassigned features
+    for feat in feature_names:
+        if feat not in feature_to_family:
+            feature_to_family[feat] = "unassigned"
+
+    unassigned = [f for f, fam in feature_to_family.items() if fam == "unassigned"]
+    if unassigned:
+        logger.info(
+            "Feature family coverage: %d/%d assigned, %d unassigned: %s",
+            len(feature_names) - len(unassigned),
+            len(feature_names),
+            len(unassigned),
+            unassigned,
+        )
+
+    return feature_to_family
+
+
 @dataclass
 class LOYOFoldResult:
     """Result from a single LOYO fold (one held-out year)."""
@@ -676,3 +816,216 @@ class FeatureAblator:
             name for name, result in self.ablation_results.items()
             if not result.get("keep", True)
         ]
+
+    def ablate_families(
+        self,
+        loyo_validator: LOYOValidator,
+        data_by_year: Dict[int, Dict],
+        train_fn: Callable,
+        predict_fn: Callable,
+        families: List[FeatureFamily],
+        feature_names: List[str],
+        mode: str = "masked",
+        baseline_brier: Optional[float] = None,
+    ) -> Dict[str, Dict]:
+        """Run family-level ablation with LOYO validation.
+
+        For each feature family:
+        1. Mask all family features according to masking_policy
+        2. Run full LOYO validation
+        3. Compare to baseline Brier
+        4. Report whether family contributes
+
+        Args:
+            loyo_validator: Configured LOYOValidator.
+            data_by_year: Year-keyed data dict.
+            train_fn: Training function.
+            predict_fn: Prediction function.
+            families: List of FeatureFamily definitions to ablate.
+            feature_names: List of feature names matching columns in data X.
+            mode: "masked" (fast screening) or "retrain" (drop columns, retrain).
+                  "retrain" is deferred to Phase 3.
+            baseline_brier: Pre-computed baseline LOYO Brier (optional).
+
+        Returns:
+            Dict of family_name -> {
+                "ablated_brier": float,
+                "baseline_brier": float,
+                "improvement": float,
+                "keep": bool,
+                "reason": str,
+                "n_features_masked": int,
+                "features_masked": list[str],
+                "masking_policy": str,
+                "mode": str,
+            }
+        """
+        if mode == "retrain":
+            raise NotImplementedError(
+                "Retrain-based family ablation is deferred to Phase 3. "
+                "Use mode='masked' for fast screening."
+            )
+
+        # Get baseline if not provided
+        if baseline_brier is None:
+            logger.info("Computing baseline LOYO Brier for family ablation...")
+            baseline_result = loyo_validator.validate(
+                data_by_year, train_fn, predict_fn
+            )
+            baseline_brier = baseline_result.mean_brier
+
+        logger.info("Baseline LOYO Brier: %.6f", baseline_brier)
+        logger.info(
+            "Starting family ablation (%d families, mode=%s)...",
+            len(families), mode,
+        )
+
+        # Build feature name -> index mapping
+        feat_index = {name: idx for idx, name in enumerate(feature_names)}
+
+        results = {}
+
+        for family in families:
+            if family.family_type == "config_toggle":
+                # Config-only families can't be ablated via column masking.
+                # Log and skip — they require pipeline re-run with toggled config.
+                results[family.name] = {
+                    "ablated_brier": None,
+                    "baseline_brier": baseline_brier,
+                    "improvement": None,
+                    "keep": None,
+                    "reason": (
+                        f"Config-toggle family '{family.name}' requires pipeline "
+                        "re-run with config flags toggled. Skipped in masked mode."
+                    ),
+                    "n_features_masked": 0,
+                    "features_masked": [],
+                    "masking_policy": family.masking_policy,
+                    "mode": mode,
+                }
+                logger.info(
+                    "Skipping config-toggle family '%s' (no columns to mask)",
+                    family.name,
+                )
+                continue
+
+            # Resolve column indices for this family
+            family_indices = []
+            matched_names = []
+            for feat in family.feature_names:
+                if feat in feat_index:
+                    family_indices.append(feat_index[feat])
+                    matched_names.append(feat)
+                else:
+                    logger.warning(
+                        "Family '%s': feature '%s' not found in feature_names",
+                        family.name, feat,
+                    )
+
+            # Prefix matching
+            for prefix in family.feature_prefixes:
+                for fname, fidx in feat_index.items():
+                    if fname.startswith(prefix) and fidx not in family_indices:
+                        family_indices.append(fidx)
+                        matched_names.append(fname)
+
+            if not family_indices:
+                results[family.name] = {
+                    "ablated_brier": None,
+                    "baseline_brier": baseline_brier,
+                    "improvement": None,
+                    "keep": None,
+                    "reason": f"No matching features found for family '{family.name}'",
+                    "n_features_masked": 0,
+                    "features_masked": [],
+                    "masking_policy": family.masking_policy,
+                    "mode": mode,
+                }
+                continue
+
+            logger.info(
+                "Ablating family '%s' (%d features: %s, policy=%s)",
+                family.name, len(family_indices), matched_names,
+                family.masking_policy,
+            )
+
+            # Create masked data
+            ablated_data = {}
+            for year, data in data_by_year.items():
+                ablated_X = data["X"].copy()
+                for fidx, fname in zip(family_indices, matched_names):
+                    if fidx < ablated_X.shape[1]:
+                        if family.masking_policy == "zero":
+                            ablated_X[:, fidx] = 0.0
+                        elif family.masking_policy == "mean":
+                            ablated_X[:, fidx] = np.mean(ablated_X[:, fidx])
+                        elif family.masking_policy == "neutral":
+                            neutral_val = family.neutral_values.get(fname, 0.0)
+                            ablated_X[:, fidx] = neutral_val
+                        else:
+                            ablated_X[:, fidx] = 0.0
+                ablated_data[year] = {**data, "X": ablated_X}
+
+            # Run LOYO with masked family
+            try:
+                ablated_result = loyo_validator.validate(
+                    ablated_data, train_fn, predict_fn
+                )
+                ablated_brier = ablated_result.mean_brier
+            except Exception as e:
+                logger.warning(
+                    "Family ablation failed for '%s': %s", family.name, e
+                )
+                ablated_brier = baseline_brier
+
+            # Improvement = ablated - baseline
+            # Positive means removing family HURTS (feature helps)
+            improvement = ablated_brier - baseline_brier
+            keep = improvement >= self.min_improvement
+
+            if keep:
+                reason = (
+                    f"Family improves Brier by {improvement:.6f} "
+                    f"(>= {self.min_improvement})"
+                )
+            elif improvement < 0:
+                reason = (
+                    f"Family HURTS Brier by {abs(improvement):.6f} — DELETE"
+                )
+            else:
+                reason = (
+                    f"Family improvement {improvement:.6f} "
+                    f"< {self.min_improvement} threshold — DELETE"
+                )
+
+            results[family.name] = {
+                "ablated_brier": ablated_brier,
+                "baseline_brier": baseline_brier,
+                "improvement": improvement,
+                "keep": keep,
+                "reason": reason,
+                "n_features_masked": len(family_indices),
+                "features_masked": matched_names,
+                "masking_policy": family.masking_policy,
+                "mode": mode,
+            }
+
+            logger.info(
+                "  %s: ablated=%.6f, improvement=%.6f, %s",
+                family.name, ablated_brier, improvement,
+                "KEEP" if keep else "DELETE",
+            )
+
+        # Summary
+        evaluated = [r for r in results.values() if r["keep"] is not None]
+        keep_count = sum(1 for r in evaluated if r["keep"])
+        delete_count = sum(1 for r in evaluated if not r["keep"])
+        skipped = len(results) - len(evaluated)
+
+        logger.info(
+            "\nFamily ablation summary: KEEP %d, DELETE %d, SKIPPED %d",
+            keep_count, delete_count, skipped,
+        )
+
+        self.family_ablation_results = results
+        return results

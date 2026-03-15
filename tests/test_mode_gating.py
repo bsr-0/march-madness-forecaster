@@ -20,7 +20,7 @@ class TestModeGatingConfig:
         assert config.mode == "calibration"
 
     def test_ev_mode_has_pool_size(self):
-        config = SOTAPipelineConfig(mode="ev", ev_pool_size=200)
+        config = SOTAPipelineConfig(mode="ev", ev_pool_size=200, enforce_production_path=False)
         assert config.ev_pool_size == 200
 
     def test_calibration_ignores_ev_pool_size(self):
@@ -83,7 +83,7 @@ class TestModeGatingDispatch:
         """EV mode should call _run_ev_mode."""
         from src.pipeline.sota import SOTAPipeline
         pipeline = SOTAPipeline.__new__(SOTAPipeline)
-        pipeline.config = SOTAPipelineConfig(mode="ev")
+        pipeline.config = SOTAPipelineConfig(mode="ev", enforce_production_path=False)
 
         pipeline._run_calibration_mode = MagicMock(return_value={"mode": "calibration"})
         pipeline._run_ev_mode = MagicMock(return_value={"mode": "ev"})

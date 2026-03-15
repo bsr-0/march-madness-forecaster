@@ -21,74 +21,75 @@ class TestSOTAPipelineConfigMode:
             ev_pool_size=500,
             ev_scoring_system="standard",
             ev_target_percentile=0.01,
+            enforce_production_path=False,
         )
         assert config.mode == "ev"
         assert config.ev_pool_size == 500
 
     def test_invalid_mode_raises(self):
         with pytest.raises(ValueError, match="Invalid mode"):
-            SOTAPipelineConfig(mode="invalid")
+            SOTAPipelineConfig(mode="invalid", enforce_production_path=False)
 
     def test_ev_mode_invalid_pool_size_raises(self):
         with pytest.raises(ValueError, match="ev_pool_size"):
-            SOTAPipelineConfig(mode="ev", ev_pool_size=0)
+            SOTAPipelineConfig(mode="ev", ev_pool_size=0, enforce_production_path=False)
 
     def test_ev_mode_invalid_target_percentile_low(self):
         with pytest.raises(ValueError, match="ev_target_percentile"):
-            SOTAPipelineConfig(mode="ev", ev_target_percentile=0.0)
+            SOTAPipelineConfig(mode="ev", ev_target_percentile=0.0, enforce_production_path=False)
 
     def test_ev_mode_invalid_target_percentile_high(self):
         with pytest.raises(ValueError, match="ev_target_percentile"):
-            SOTAPipelineConfig(mode="ev", ev_target_percentile=0.6)
+            SOTAPipelineConfig(mode="ev", ev_target_percentile=0.6, enforce_production_path=False)
 
     def test_ev_mode_invalid_scoring_system(self):
         with pytest.raises(ValueError, match="ev_scoring_system"):
-            SOTAPipelineConfig(mode="ev", ev_scoring_system="custom")
+            SOTAPipelineConfig(mode="ev", ev_scoring_system="custom", enforce_production_path=False)
 
     def test_ev_mode_flat_scoring(self):
-        config = SOTAPipelineConfig(mode="ev", ev_scoring_system="flat")
+        config = SOTAPipelineConfig(mode="ev", ev_scoring_system="flat", enforce_production_path=False)
         assert config.ev_scoring_system == "flat"
 
     def test_ev_mode_upset_bonus_scoring(self):
-        config = SOTAPipelineConfig(mode="ev", ev_scoring_system="upset_bonus")
+        config = SOTAPipelineConfig(mode="ev", ev_scoring_system="upset_bonus", enforce_production_path=False)
         assert config.ev_scoring_system == "upset_bonus"
 
     def test_ev_mode_default_pool_size(self):
-        config = SOTAPipelineConfig(mode="ev")
+        config = SOTAPipelineConfig(mode="ev", enforce_production_path=False)
         assert config.ev_pool_size == 100
 
     def test_ev_mode_default_target_percentile(self):
-        config = SOTAPipelineConfig(mode="ev")
+        config = SOTAPipelineConfig(mode="ev", enforce_production_path=False)
         assert config.ev_target_percentile == 0.05
 
     def test_ev_mode_contrarian_strength(self):
-        config = SOTAPipelineConfig(mode="ev", ev_contrarian_strength=2.0)
+        config = SOTAPipelineConfig(mode="ev", ev_contrarian_strength=2.0, enforce_production_path=False)
         assert config.ev_contrarian_strength == 2.0
 
     def test_ev_mode_search_disabled_by_default(self):
-        config = SOTAPipelineConfig(mode="ev")
+        config = SOTAPipelineConfig(mode="ev", enforce_production_path=False)
         assert config.ev_enable_search is False
 
     def test_ev_mode_archetypes_disabled_by_default(self):
-        config = SOTAPipelineConfig(mode="ev")
+        config = SOTAPipelineConfig(mode="ev", enforce_production_path=False)
         assert config.ev_enable_archetypes is False
 
     def test_ev_mode_pool_type_default(self):
-        config = SOTAPipelineConfig(mode="ev")
+        config = SOTAPipelineConfig(mode="ev", enforce_production_path=False)
         assert config.ev_pool_type == "espn_national"
 
     def test_ev_payout_structure_default(self):
-        config = SOTAPipelineConfig(mode="ev")
+        config = SOTAPipelineConfig(mode="ev", enforce_production_path=False)
         assert config.ev_payout_structure == "tiered"
 
     def test_ev_payout_structure_valid_values(self):
         for payout in ["winner_take_all", "top_3", "top_10pct", "top_25pct", "tiered"]:
-            config = SOTAPipelineConfig(mode="ev", ev_payout_structure=payout)
+            config = SOTAPipelineConfig(mode="ev", ev_payout_structure=payout, enforce_production_path=False)
             assert config.ev_payout_structure == payout
 
     def test_ev_payout_structure_invalid_raises(self):
         with pytest.raises(ValueError, match="ev_payout_structure"):
-            SOTAPipelineConfig(mode="ev", ev_payout_structure="bogus")
+            SOTAPipelineConfig(mode="ev", ev_payout_structure="bogus", enforce_production_path=False)
 
     def test_calibration_mode_ignores_ev_params(self):
         """EV params exist but aren't validated in calibration mode."""
@@ -193,6 +194,7 @@ class TestModeDispatch:
             ev_pool_size=1000,
             ev_scoring_system="standard",
             ev_target_percentile=0.01,
+            enforce_production_path=False,
         )
         assert config.mode == "ev"
         assert config.ev_pool_size == 1000
@@ -204,7 +206,7 @@ class TestGetEVScoringSystem:
     def test_standard_scoring(self):
         from src.pipeline.sota import SOTAPipeline
         pipeline = SOTAPipeline.__new__(SOTAPipeline)
-        pipeline.config = SOTAPipelineConfig(mode="ev", ev_scoring_system="standard")
+        pipeline.config = SOTAPipelineConfig(mode="ev", ev_scoring_system="standard", enforce_production_path=False)
         scoring = pipeline._get_ev_scoring_system()
         assert scoring["R64"] == 10
         assert scoring["CHAMP"] == 320
@@ -212,7 +214,7 @@ class TestGetEVScoringSystem:
     def test_flat_scoring(self):
         from src.pipeline.sota import SOTAPipeline
         pipeline = SOTAPipeline.__new__(SOTAPipeline)
-        pipeline.config = SOTAPipelineConfig(mode="ev", ev_scoring_system="flat")
+        pipeline.config = SOTAPipelineConfig(mode="ev", ev_scoring_system="flat", enforce_production_path=False)
         scoring = pipeline._get_ev_scoring_system()
         assert scoring["R64"] == 1
         assert scoring["CHAMP"] == 6
@@ -220,7 +222,7 @@ class TestGetEVScoringSystem:
     def test_upset_bonus_scoring(self):
         from src.pipeline.sota import SOTAPipeline
         pipeline = SOTAPipeline.__new__(SOTAPipeline)
-        pipeline.config = SOTAPipelineConfig(mode="ev", ev_scoring_system="upset_bonus")
+        pipeline.config = SOTAPipelineConfig(mode="ev", ev_scoring_system="upset_bonus", enforce_production_path=False)
         scoring = pipeline._get_ev_scoring_system()
         # Upset bonus uses standard base points
         assert scoring["R64"] == 10

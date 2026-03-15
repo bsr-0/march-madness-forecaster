@@ -342,6 +342,7 @@ class TestPreRunValidation:
             dev_years=[2020, 2021, 2022],
             holdout_years=[2022, 2023],
             strict_leakage_mode=False,
+            enforce_production_path=False,
         )
         pipeline = SOTAPipeline(config)
         result = pipeline._pre_run_validation()

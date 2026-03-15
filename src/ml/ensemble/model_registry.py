@@ -20,6 +20,9 @@ class ModelFamilySpec:
     strengths: str
     when_to_use: str
     min_samples: int = 100
+    # Phase 2: Production status flags
+    production_active: bool = False  # True if allowed in production pipeline
+    experimental_only: bool = False  # True if restricted to experimental mode
 
 
 MODEL_REGISTRY: List[ModelFamilySpec] = [
@@ -32,6 +35,7 @@ MODEL_REGISTRY: List[ModelFamilySpec] = [
         strengths="Interpretable, fast, well-calibrated probabilities",
         when_to_use="Baseline model; probability calibration anchor",
         min_samples=50,
+        production_active=True,
     ),
     ModelFamilySpec(
         name="lightgbm",
@@ -39,8 +43,10 @@ MODEL_REGISTRY: List[ModelFamilySpec] = [
         implemented=True,
         module_path="src.ml.ensemble.cfa",
         strengths="Fast training, handles missing values, strong on tabular data",
-        when_to_use="Primary gradient boosting model; feature importance analysis",
+        when_to_use="Experimental only (Phase 2); was primary gradient boosting model",
         min_samples=200,
+        production_active=False,
+        experimental_only=True,
     ),
     ModelFamilySpec(
         name="xgboost",
@@ -48,8 +54,10 @@ MODEL_REGISTRY: List[ModelFamilySpec] = [
         implemented=True,
         module_path="src.ml.ensemble.cfa",
         strengths="Regularized boosting, good generalization",
-        when_to_use="Secondary tree model for ensemble diversity",
+        when_to_use="Experimental only (Phase 2); was secondary tree model",
         min_samples=200,
+        production_active=False,
+        experimental_only=True,
     ),
     ModelFamilySpec(
         name="spread_regressor",
@@ -57,8 +65,9 @@ MODEL_REGISTRY: List[ModelFamilySpec] = [
         implemented=True,
         module_path="src.ml.ensemble.spread_model",
         strengths="Margin-first prediction, natural spread calibration",
-        when_to_use="Primary model (55% ensemble weight); margin-to-probability conversion",
+        when_to_use="Primary production model; margin-to-probability conversion",
         min_samples=300,
+        production_active=True,
     ),
     ModelFamilySpec(
         name="bayesian_bt",
@@ -139,6 +148,16 @@ MODEL_REGISTRY: List[ModelFamilySpec] = [
 def get_implemented_models() -> List[ModelFamilySpec]:
     """Return all implemented model specs."""
     return [m for m in MODEL_REGISTRY if m.implemented]
+
+
+def get_production_models() -> List[ModelFamilySpec]:
+    """Return models sanctioned for production use (Phase 2)."""
+    return [m for m in MODEL_REGISTRY if m.implemented and m.production_active]
+
+
+def get_experimental_only_models() -> List[ModelFamilySpec]:
+    """Return models restricted to experimental mode (Phase 2)."""
+    return [m for m in MODEL_REGISTRY if m.implemented and m.experimental_only]
 
 
 def get_expansion_candidates() -> List[ModelFamilySpec]:
