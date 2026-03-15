@@ -1425,7 +1425,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # ====================================================================
     complexity_stats = {}
     try:
-        from ..ml.evaluation.rdof_audit import estimate_model_complexity
+        from src.ml.evaluation.rdof_audit import estimate_model_complexity
         complexity_audit = estimate_model_complexity(
             config=pipeline.config,
             n_training_samples=int(train_samples),
@@ -1998,12 +1998,12 @@ def _optimize_ensemble_weights_loyo(
         for name, _, _ in trained_models:
             try:
                 if name == "lgb" and LIGHTGBM_AVAILABLE:
-                    from ..ml.models.lightgbm_ranker import LightGBMRanker
+                    from src.ml.models.lightgbm_ranker import LightGBMRanker
                     m = LightGBMRanker()
                     m.train(X_train, y_train, num_rounds=200)
                     fold_preds[name] = np.clip(m.predict(X_val), 0.01, 0.99)
                 elif name == "xgb":
-                    from ..ml.models.xgboost_ranker import XGBoostRanker
+                    from src.ml.models.xgboost_ranker import XGBoostRanker
                     m = XGBoostRanker()
                     m.train(X_train, y_train, num_rounds=200)
                     fold_preds[name] = np.clip(m.predict(X_val), 0.01, 0.99)
@@ -2017,7 +2017,7 @@ def _optimize_ensemble_weights_loyo(
                         m.predict_proba(X_val)[:, 1], 0.01, 0.99
                     )
                 elif name == "spread":
-                    from ..ml.models.spread_regressor import SpreadRegressor
+                    from src.ml.models.spread_regressor import SpreadRegressor
                     m = SpreadRegressor(
                         sigma=pipeline.config.spread_sigma_init,
                     )
