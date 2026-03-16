@@ -129,6 +129,9 @@ class RealDataCollector:
                         "turnover_rate",
                         "offensive_reb_rate",
                         "free_throw_rate",
+                        "opp_effective_fg_pct",
+                        "opp_turnover_rate",
+                        "opp_free_throw_rate",
                     ],
                     variance_fields=[
                         "barthag", "adj_offensive_efficiency", "adj_defensive_efficiency",

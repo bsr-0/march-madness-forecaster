@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -184,3 +185,75 @@ def _fuzzy_lookup(data: dict, team_id: str) -> Optional[dict]:
         if v in data:
             return data[v]
     return None
+
+
+def compute_defensive_four_factors_from_games(
+    games: List[Dict],
+) -> Dict[str, Dict[str, float]]:
+    """Compute defensive Four Factors from game box scores.
+
+    When the Torvik HTML scraper fails (e.g. JavaScript wall) and the CSV
+    fallback cannot provide defensive metrics, this function reconstructs
+    them from historical game records.  Each game appears as two records
+    (one per team) paired by ``game_id``.
+
+    Returns a dict mapping team_id -> {opp_effective_fg_pct, opp_turnover_rate,
+    opp_free_throw_rate}.
+    """
+    # Pair game records by game_id
+    game_pairs: Dict[str, List[Dict]] = defaultdict(list)
+    for g in games:
+        gid = g.get("game_id")
+        if gid:
+            game_pairs[gid].append(g)
+
+    # Accumulate opponent stats per team
+    team_opp: Dict[str, Dict[str, float]] = defaultdict(
+        lambda: {"fgm": 0, "fga": 0, "fg3m": 0, "fta": 0, "turnovers": 0, "games": 0}
+    )
+
+    for gid, sides in game_pairs.items():
+        if len(sides) != 2:
+            continue
+        for i, my_side in enumerate(sides):
+            opp_side = sides[1 - i]
+            my_id = (
+                my_side.get("team_id")
+                or my_side.get("team_name", "")
+            )
+            if not my_id:
+                continue
+            # Normalize team_id: lowercase, spaces to underscores
+            my_id = str(my_id).lower().replace(" ", "_")
+
+            opp_fga = float(opp_side.get("fga") or 0)
+            if opp_fga < 1:
+                continue
+
+            s = team_opp[my_id]
+            s["fgm"] += float(opp_side.get("fgm") or 0)
+            s["fga"] += opp_fga
+            s["fg3m"] += float(opp_side.get("fg3m") or 0)
+            s["fta"] += float(opp_side.get("fta") or 0)
+            s["turnovers"] += float(opp_side.get("turnovers") or 0)
+            s["games"] += 1
+
+    result: Dict[str, Dict[str, float]] = {}
+    for team_id, s in team_opp.items():
+        if s["fga"] < 10:
+            continue
+        opp_efg = (s["fgm"] + 0.5 * s["fg3m"]) / s["fga"]
+        denom_to = s["fga"] + 0.44 * s["fta"] + s["turnovers"]
+        opp_to_rate = s["turnovers"] / denom_to if denom_to > 0 else 0.0
+        opp_ftr = s["fta"] / s["fga"]
+        result[team_id] = {
+            "opp_effective_fg_pct": round(opp_efg, 4),
+            "opp_turnover_rate": round(opp_to_rate, 4),
+            "opp_free_throw_rate": round(opp_ftr, 4),
+        }
+
+    logger.info(
+        "Computed defensive Four Factors from game box scores for %d teams",
+        len(result),
+    )
+    return result
