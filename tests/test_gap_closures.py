@@ -121,12 +121,12 @@ class TestSimpleFeatureSet:
     def test_simple_feature_set_size(self):
         from src.pipeline.sota import SIMPLE_FEATURE_SET
 
-        assert len(SIMPLE_FEATURE_SET) == 10  # Updated: added seed_diff + diff_momentum
+        assert len(SIMPLE_FEATURE_SET) == 7  # Core features: efficiency, defense, SOS, Elo, win%, FT%, momentum
 
-    def test_simple_has_massey_composite(self):
+    def test_simple_has_momentum(self):
         from src.pipeline.sota import SIMPLE_FEATURE_SET
 
-        assert "diff_external_rating_composite" in SIMPLE_FEATURE_SET
+        assert "diff_momentum" in SIMPLE_FEATURE_SET
 
 
 class TestDataQualityWeights:

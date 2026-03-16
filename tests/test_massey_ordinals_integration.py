@@ -411,13 +411,13 @@ class TestMasseyOrdinalsGuard:
             f"(individual systems + massey_composite)"
         )
 
-    def test_simple_feature_set_includes_composite(self):
-        """The SIMPLE_FEATURE_SET must include diff_external_rating_composite."""
+    def test_simple_feature_set_includes_elo(self):
+        """The SIMPLE_FEATURE_SET must include diff_elo_rating."""
         from src.pipeline.sota import SIMPLE_FEATURE_SET
 
-        assert "diff_external_rating_composite" in SIMPLE_FEATURE_SET, (
-            "SIMPLE_FEATURE_SET missing diff_external_rating_composite — "
-            "this is the highest-signal single feature in the competition"
+        assert "diff_elo_rating" in SIMPLE_FEATURE_SET, (
+            "SIMPLE_FEATURE_SET missing diff_elo_rating — "
+            "Elo is a core signal for tournament predictions"
         )
 
     def test_fixed_feature_set_includes_composite(self):
