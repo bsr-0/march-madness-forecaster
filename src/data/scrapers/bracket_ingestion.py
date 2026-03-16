@@ -167,7 +167,10 @@ class BracketIngestionPipeline:
     ):
         self.season = season
         self.cache_dir = Path(cache_dir)
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+        except (PermissionError, OSError):
+            pass
         self.resolver = resolver or TeamNameResolver()
 
     def fetch(self, source: str = "auto") -> TournamentBracketData:
