@@ -99,6 +99,8 @@ jobs:
             "${BASE_URL}predictions.html"
             "${BASE_URL}results.html"
             "${BASE_URL}methodology.html"
+            "${BASE_URL}style.css"
+            "${BASE_URL}data/dashboard.json"
             "${BASE_URL}data/conference_predictions_2026.json"
           )
 
@@ -120,5 +122,7 @@ jobs:
           done
 
           curl -fsSL "${BASE_URL}predictions.html" | grep -q "2026 Conference Tournament Predictions"
+          curl -fsSL "${BASE_URL}style.css" | grep -q -- "--color-accent"
+          curl -fsSL "${BASE_URL}data/dashboard.json" | python -c "import json,sys; d=json.load(sys.stdin); assert isinstance(d, dict) and len(d) > 0"
           curl -fsSL "${BASE_URL}data/conference_predictions_2026.json" | python -c "import json,sys; d=json.load(sys.stdin); assert isinstance(d, dict) and len(d) > 0"
           echo "Post-deploy smoke test passed."
