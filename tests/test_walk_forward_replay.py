@@ -41,9 +41,13 @@ class TestWalkForwardReplay:
     """Verify LOYO produces identical results across replays."""
 
     def _run_loyo(self, years=None):
-        """Run a full LOYO validation and return the result."""
+        """Run a full LOYO validation and return the result.
+
+        Always provides data for all LOYO_YEARS so that every held-out
+        year has prior training data available in rolling_window mode.
+        """
         years = years or LOYO_YEARS
-        data = {yr: _make_year_data(yr) for yr in years}
+        data = {yr: _make_year_data(yr) for yr in LOYO_YEARS}
         validator = LOYOValidator(years=years)
         return validator.validate(data, _simple_train_fn, _simple_predict_fn)
 
@@ -95,11 +99,17 @@ class TestWalkForwardReplay:
         )
 
     def test_fold_count_matches_years(self):
-        """Every year in the validation set should produce a fold."""
+        """Every year except the earliest should produce a fold.
+
+        In rolling_window mode the earliest year has no prior training
+        data and is skipped.
+        """
         result = self._run_loyo()
-        assert len(result.fold_results) == len(LOYO_YEARS)
+        # The earliest year (2018) is skipped — no prior training data
+        expected_years = set(LOYO_YEARS) - {min(LOYO_YEARS)}
+        assert len(result.fold_results) == len(expected_years)
         held_out_years = {f.held_out_year for f in result.fold_results}
-        assert held_out_years == set(LOYO_YEARS)
+        assert held_out_years == expected_years
 
     def test_frozen_snapshot_consistency(self):
         """Run LOYO on a fixed small dataset and verify metrics are stable.
@@ -118,7 +128,8 @@ class TestWalkForwardReplay:
         result2 = validator.validate(data2, _simple_train_fn, _simple_predict_fn)
 
         assert result.mean_brier == result2.mean_brier
-        for yr in years:
+        # In rolling_window mode the earliest year is skipped (no prior data)
+        for yr in result.year_briers:
             assert result.year_briers[yr] == result2.year_briers[yr], (
                 f"Year {yr} Brier mismatch on frozen data"
             )
