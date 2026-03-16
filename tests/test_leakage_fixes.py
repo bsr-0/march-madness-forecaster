@@ -694,7 +694,15 @@ class TestSeedLeakageFix:
         # Regular-season fix: both seeds = 0
         v1 = IncrementalMetricsEngine.metrics_to_team_vector(m1, seed=0)
         v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, seed=0)
-        matchup = IncrementalMetricsEngine.build_matchup_vector(v1, v2, 0, 0)
+        matchup = IncrementalMetricsEngine.build_matchup_vector(
+            v1,
+            v2,
+            0,
+            0,
+            engine=None,
+            team1_id="",
+            team2_id="",
+        )
 
         # Interactions block: [TEAM_FEATURE_DIM : TEAM_FEATURE_DIM+5] = absolute,
         # then [TEAM_FEATURE_DIM+5 : TEAM_FEATURE_DIM+12] = interactions.

@@ -21,7 +21,6 @@ from src.ml.training.symmetric import (
     INTERACT_START,
     INTERACT_END,
     MATCHUP_DIM,
-    SEED_EM_RESIDUAL_IDX,
     SEED_DIFF_IDX,
     swap_matchup_vector,
     swap_matchup_batch,
@@ -74,9 +73,9 @@ def realistic_matchup():
     # Interaction features
     x[71] = 0.3   # tempo_interaction
     x[72] = 0.1   # style_mismatch
-    x[73] = 0.2   # seed_em_residual_diff
-    x[74] = 0.1   # sos_seed_interaction
-    x[75] = -0.05 # three_pt_seed_interaction
+    x[73] = 0.2   # h2h_record
+    x[74] = 0.1   # common_opp_margin
+    x[75] = -0.05 # travel_advantage
     x[76] = -0.88 # seed_interaction: (1*16)/128 - 1 = -0.875
     x[77] = -1.0  # seed_diff: (1-16)/15 = -1.0
     return x
@@ -107,15 +106,22 @@ class TestSwapMatchupVector:
             atol=1e-15,
         )
 
-    def test_interaction_features_mostly_unchanged(self, random_matchup):
-        """Symmetric interaction features should be unchanged; antisymmetric ones negate."""
+    def test_interaction_features_transform_correctly(self, random_matchup):
+        """Interaction features should transform correctly under swap."""
         swapped = swap_matchup_vector(random_matchup)
-        # Symmetric interactions: [71, 72, 74, 75, 76]
-        for idx in [71, 72, 74, 75, 76]:
+        # Symmetric interactions: [71, 72, 76]
+        for idx in [71, 72, 76]:
             assert swapped[idx] == pytest.approx(random_matchup[idx], abs=1e-15), f"idx {idx}"
-        # Antisymmetric: seed_em_residual_diff [73]
-        assert swapped[SEED_EM_RESIDUAL_IDX] == pytest.approx(
-            -random_matchup[SEED_EM_RESIDUAL_IDX], abs=1e-15
+        # h2h record flips perspective: 1 - x
+        assert swapped[73] == pytest.approx(
+            1.0 - random_matchup[73], abs=1e-15
+        )
+        # Common-opponent and travel are antisymmetric.
+        assert swapped[74] == pytest.approx(-random_matchup[74], abs=1e-15)
+        assert swapped[75] == pytest.approx(-random_matchup[75], abs=1e-15)
+        # seed_diff remains antisymmetric.
+        assert swapped[SEED_DIFF_IDX] == pytest.approx(
+            -random_matchup[SEED_DIFF_IDX], abs=1e-15
         )
 
     def test_seed_diff_negates(self, random_matchup):
@@ -151,15 +157,16 @@ class TestSwapMatchupVector:
         # Seed interaction unchanged (commutative)
         assert swapped[76] == pytest.approx(-0.88, abs=1e-15)
 
-        # seed_em_residual_diff negated
-        assert swapped[73] == pytest.approx(-0.2, abs=1e-15)
+        # h2h_record flips perspective
+        assert swapped[73] == pytest.approx(0.8, abs=1e-15)
 
         # Seed diff negated
         assert swapped[77] == pytest.approx(1.0, abs=1e-15)
 
     def test_zero_vector(self):
-        """Swap of zero vector should be zero."""
+        """Swap of neutral vector should remain unchanged."""
         x = np.zeros(MATCHUP_DIM)
+        x[73] = 0.5  # Neutral h2h prior is the identity under 1 - x transform.
         swapped = swap_matchup_vector(x)
         np.testing.assert_array_equal(swapped, x)
 
@@ -615,8 +622,24 @@ class TestIntegrationWithMatchupVector:
         seed1, seed2 = 3, 14
 
         # Build forward and reverse matchup vectors
-        fwd = IncrementalMetricsEngine.build_matchup_vector(v1, v2, seed1, seed2)
-        rev = IncrementalMetricsEngine.build_matchup_vector(v2, v1, seed2, seed1)
+        fwd = IncrementalMetricsEngine.build_matchup_vector(
+            v1,
+            v2,
+            seed1,
+            seed2,
+            engine=None,
+            team1_id="",
+            team2_id="",
+        )
+        rev = IncrementalMetricsEngine.build_matchup_vector(
+            v2,
+            v1,
+            seed2,
+            seed1,
+            engine=None,
+            team1_id="",
+            team2_id="",
+        )
 
         # Swap the forward vector
         swapped = swap_matchup_vector(fwd)
@@ -663,8 +686,24 @@ class TestIntegrationWithMatchupVector:
         v1 = rng.randn(66).astype(np.float64)
         v2 = rng.randn(66).astype(np.float64)
 
-        fwd = IncrementalMetricsEngine.build_matchup_vector(v1, v2, 0, 0)
-        rev = IncrementalMetricsEngine.build_matchup_vector(v2, v1, 0, 0)
+        fwd = IncrementalMetricsEngine.build_matchup_vector(
+            v1,
+            v2,
+            0,
+            0,
+            engine=None,
+            team1_id="",
+            team2_id="",
+        )
+        rev = IncrementalMetricsEngine.build_matchup_vector(
+            v2,
+            v1,
+            0,
+            0,
+            engine=None,
+            team1_id="",
+            team2_id="",
+        )
 
         swapped = swap_matchup_vector(fwd)
         np.testing.assert_allclose(swapped, rev, atol=1e-12)

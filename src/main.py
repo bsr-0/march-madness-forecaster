@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -581,6 +582,132 @@ def run_calibrate_mc(args):
     print(f"✓ MC calibration written to {args.output}")
     print(f"Best noise_std={best.get('noise_std')}, regional_correlation={best.get('regional_correlation')}")
     print(f"Dev score={result.get('best_dev_score')}, Holdout score={result.get('holdout_score')}")
+    return 0
+
+
+def run_validate_vs_market(args):
+    """Validate model championship probabilities against betting market odds."""
+    from .data.scrapers.betting_markets import american_to_probability, remove_vig
+    from scipy.stats import spearmanr
+
+    def _extract_model_probs(payload):
+        if not isinstance(payload, dict):
+            return {}
+        if isinstance(payload.get("championship_odds"), dict):
+            return {
+                str(k): float(v)
+                for k, v in payload["championship_odds"].items()
+                if isinstance(v, (int, float))
+            }
+        sim = payload.get("simulation")
+        if isinstance(sim, dict) and isinstance(sim.get("championship_odds"), dict):
+            return {
+                str(k): float(v)
+                for k, v in sim["championship_odds"].items()
+                if isinstance(v, (int, float))
+            }
+        round_probs = payload.get("round_probabilities")
+        if isinstance(round_probs, dict):
+            extracted = {}
+            for team_id, team_rounds in round_probs.items():
+                if isinstance(team_rounds, dict):
+                    champ = team_rounds.get("CHAMP")
+                    if isinstance(champ, (int, float)):
+                        extracted[str(team_id)] = float(champ)
+            if extracted:
+                return extracted
+        return {}
+
+    def _extract_market_probs(payload):
+        if not isinstance(payload, dict):
+            return {}
+        teams_payload = payload.get("teams")
+        market_map = teams_payload if isinstance(teams_payload, dict) else payload
+        out = {}
+        for team_id, raw in market_map.items():
+            prob = None
+            if isinstance(raw, (int, float)):
+                prob = float(raw)
+            elif isinstance(raw, dict):
+                for key in ("implied_probability", "implied_prob", "probability"):
+                    if isinstance(raw.get(key), (int, float)):
+                        prob = float(raw[key])
+                        break
+                if prob is None:
+                    odds = raw.get("american_odds")
+                    if not isinstance(odds, (int, float)):
+                        odds = raw.get("championship_odds")
+                    if isinstance(odds, (int, float)):
+                        prob = float(american_to_probability(float(odds)))
+            if prob is not None:
+                out[str(team_id)] = prob
+        return out
+
+    with open(args.model_probs, "r") as f:
+        model_payload = json.load(f)
+    with open(args.market_odds, "r") as f:
+        market_payload = json.load(f)
+
+    model_probs = _extract_model_probs(model_payload)
+    market_probs = _extract_market_probs(market_payload)
+
+    if args.adjust_vig:
+        market_probs = remove_vig(market_probs)
+
+    common = sorted(set(model_probs.keys()) & set(market_probs.keys()))
+    if not common:
+        print("No overlapping teams between model probabilities and market odds.")
+        return 1
+
+    diffs = [model_probs[t] - market_probs[t] for t in common]
+    rmsd = math.sqrt(sum(d * d for d in diffs) / len(diffs))
+
+    model_rank = [model_probs[t] for t in common]
+    market_rank = [market_probs[t] for t in common]
+    rank_corr, rank_p = spearmanr(model_rank, market_rank)
+
+    disagreements = sorted(
+        (
+            {
+                "team_id": t,
+                "model_prob": round(model_probs[t], 6),
+                "market_prob": round(market_probs[t], 6),
+                "diff": round(model_probs[t] - market_probs[t], 6),
+                "abs_diff": round(abs(model_probs[t] - market_probs[t]), 6),
+            }
+            for t in common
+        ),
+        key=lambda r: r["abs_diff"],
+        reverse=True,
+    )
+    top_10 = disagreements[:10]
+
+    output = {
+        "n_common_teams": len(common),
+        "rmsd": round(float(rmsd), 6),
+        "spearman_rank_corr": None if rank_corr is None else round(float(rank_corr), 6),
+        "spearman_p_value": None if rank_p is None else round(float(rank_p), 6),
+        "top_disagreements": top_10,
+        "model_path": args.model_probs,
+        "market_path": args.market_odds,
+        "vig_adjusted_market": bool(args.adjust_vig),
+    }
+
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(output, f, indent=2)
+
+    print(f"Market validation written to {output_path}")
+    print(f"Common teams: {len(common)}")
+    print(f"RMSD: {output['rmsd']:.4f}")
+    print(f"Spearman: {output['spearman_rank_corr']}")
+    print("Top disagreements:")
+    for row in top_10:
+        print(
+            f"  {row['team_id']}: model={row['model_prob']:.3f} "
+            f"market={row['market_prob']:.3f} diff={row['diff']:+.3f}"
+        )
     return 0
 
 
@@ -1823,6 +1950,32 @@ def main():
         help="Output calibration artifact JSON",
     )
 
+    market_validate_parser = subparsers.add_parser(
+        "validate-vs-market",
+        help="Compare model championship probabilities against market odds",
+    )
+    market_validate_parser.add_argument(
+        "--model-probs",
+        required=True,
+        help="Path to model output JSON containing championship probabilities",
+    )
+    market_validate_parser.add_argument(
+        "--market-odds",
+        required=True,
+        help="Path to market odds JSON (implied probs or American odds)",
+    )
+    market_validate_parser.add_argument(
+        "--output",
+        "-o",
+        default="reports/market_validation.json",
+        help="Path to write market validation artifact JSON",
+    )
+    market_validate_parser.add_argument(
+        "--adjust-vig",
+        action="store_true",
+        help="Normalize market implied probabilities to sum to 1.0",
+    )
+
     # research-loop command (S14: autonomous research loop)
     research_parser = subparsers.add_parser(
         "research-loop",
@@ -2452,6 +2605,8 @@ def main():
         return prospective_eval(args)
     elif args.command == "calibrate-mc":
         return run_calibrate_mc(args)
+    elif args.command == "validate-vs-market":
+        return run_validate_vs_market(args)
     elif args.command == "scrape-rosters":
         return scrape_rosters(args)
     elif args.command == "enrich-rosters":

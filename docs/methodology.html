@@ -734,9 +734,32 @@ p' = sigmoid(logit_p')             # Map back to [0,1]
   </footer>
 
   <script>
-    document.querySelector('.nav-toggle').addEventListener('click', function() {
-      document.querySelector('.nav-links').classList.toggle('open');
-    });
+    const navToggle = document.querySelector('.nav-toggle');
+    const navLinks = document.querySelector('.nav-links');
+
+    if (navToggle && navLinks) {
+      if (!navLinks.id) navLinks.id = 'primary-nav';
+      navToggle.setAttribute('aria-controls', navLinks.id);
+      navToggle.setAttribute('aria-expanded', 'false');
+
+      const closeNav = () => {
+        navLinks.classList.remove('open');
+        navToggle.setAttribute('aria-expanded', 'false');
+      };
+
+      navToggle.addEventListener('click', function() {
+        const isOpen = navLinks.classList.toggle('open');
+        navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+
+      document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') closeNav();
+      });
+
+      navLinks.addEventListener('click', function(event) {
+        if (event.target.closest('a')) closeNav();
+      });
+    }
   </script>
 </body>
 </html>

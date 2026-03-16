@@ -12,8 +12,8 @@ The 78-dimensional matchup vector has three blocks:
     [0:66]  Differential features  = v_team1 - v_team2
     [66:71] Absolute features      = (v_team1 + v_team2) / 2
     [71:78] Interaction features    = [tempo_interaction, style_mismatch,
-                                       seed_em_residual_diff, sos_seed_interaction,
-                                       three_pt_seed_interaction, seed_interaction,
+                                       h2h_record, common_opp_margin,
+                                       travel_advantage, seed_interaction,
                                        seed_diff]
 
 When swapping team1 ↔ team2:
@@ -24,9 +24,9 @@ When swapping team1 ↔ team2:
   - tempo_interaction [71]: v1[2]*v2[2] is commutative → unchanged
   - style_mismatch [72]: (Δtempo × Δeff)/600. Both Δs negate, product
     stays positive → unchanged  ((-a)×(-b) = a×b)
-  - seed_em_residual_diff [73]: (r1-r2)/20 → **negate** (antisymmetric)
-  - sos_seed_interaction [74]: product of two negated terms → unchanged
-  - three_pt_seed_interaction [75]: product of two negated terms → unchanged
+  - h2h_record [73]: team1-vs-team2 win rate → **1 - x**
+  - common_opp_margin [74]: margin differential → **negate**
+  - travel_advantage [75]: signed distance advantage → **negate**
   - seed_interaction [76]: seed1×seed2 is commutative → unchanged
   - seed_diff [77]: (seed1-seed2)/15 → **negate**
 
@@ -69,8 +69,10 @@ ABS_END = 71  # exclusive: indices [66, 71)
 INTERACT_START = 71
 INTERACT_END = 78  # exclusive: indices [71, 78)
 
-# Within interactions, antisymmetric features that need negation
-SEED_EM_RESIDUAL_IDX = 73  # seed_em_residual_diff: antisymmetric
+# Within interactions, transformed features
+H2H_RECORD_IDX = 73  # h2h_record: transforms as (1 - x)
+COMMON_OPP_MARGIN_IDX = 74  # common_opp_margin: antisymmetric
+TRAVEL_ADVANTAGE_IDX = 75  # travel_advantage: antisymmetric
 SEED_DIFF_IDX = 77  # seed_diff: antisymmetric
 
 # Full expected dimensionality
@@ -111,12 +113,14 @@ def swap_matchup_vector(x: np.ndarray) -> np.ndarray:
     # 3. Interaction features [71:78]:
     #    - tempo_interaction [71]: commutative → unchanged
     #    - style_mismatch [72]: product of two negated terms → unchanged
-    #    - seed_em_residual_diff [73]: antisymmetric → negate
-    #    - sos_seed_interaction [74]: product of two negated terms → unchanged
-    #    - three_pt_seed_interaction [75]: product of two negated terms → unchanged
+    #    - h2h_record [73]: swap perspective → 1 - x
+    #    - common_opp_margin [74]: antisymmetric → negate
+    #    - travel_advantage [75]: antisymmetric → negate
     #    - seed_interaction [76]: commutative → unchanged
     #    - seed_diff [77]: antisymmetric → negate
-    swapped[SEED_EM_RESIDUAL_IDX] = -x[SEED_EM_RESIDUAL_IDX]
+    swapped[H2H_RECORD_IDX] = 1.0 - x[H2H_RECORD_IDX]
+    swapped[COMMON_OPP_MARGIN_IDX] = -x[COMMON_OPP_MARGIN_IDX]
+    swapped[TRAVEL_ADVANTAGE_IDX] = -x[TRAVEL_ADVANTAGE_IDX]
     swapped[SEED_DIFF_IDX] = -x[SEED_DIFF_IDX]
 
     return swapped
@@ -144,8 +148,10 @@ def swap_matchup_batch(X: np.ndarray) -> np.ndarray:
     # Negate differential features
     swapped[:, DIFF_START:DIFF_END] = -X[:, DIFF_START:DIFF_END]
 
-    # Negate antisymmetric interaction features
-    swapped[:, SEED_EM_RESIDUAL_IDX] = -X[:, SEED_EM_RESIDUAL_IDX]
+    # Transform interaction features under team swap.
+    swapped[:, H2H_RECORD_IDX] = 1.0 - X[:, H2H_RECORD_IDX]
+    swapped[:, COMMON_OPP_MARGIN_IDX] = -X[:, COMMON_OPP_MARGIN_IDX]
+    swapped[:, TRAVEL_ADVANTAGE_IDX] = -X[:, TRAVEL_ADVANTAGE_IDX]
     swapped[:, SEED_DIFF_IDX] = -X[:, SEED_DIFF_IDX]
 
     return swapped

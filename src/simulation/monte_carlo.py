@@ -651,4 +651,56 @@ def validate_upset_rates(
                 matchup[0], matchup[1], sim_rate, hist_rate, delta,
             )
 
-    return {"per_matchup": comparisons, "passed": all_pass}
+    # Champion seed sanity check (1985-2025 historical priors)
+    # Expected ranges from ACTIONABLE_IMPROVEMENTS.md:
+    #  - 1-seed champion share should be roughly [0.45, 0.70]
+    #  - 9+ seeds should remain near zero
+    team_seed_map: Dict[str, int] = {}
+    for region_teams in teams_by_region.values():
+        for team in region_teams:
+            team_seed_map[team.team_id] = int(team.seed)
+
+    seed_bucket_probs = {
+        "seed_1": 0.0,
+        "seed_2": 0.0,
+        "seed_3": 0.0,
+        "seed_4_8": 0.0,
+        "seed_9_plus": 0.0,
+        "unknown": 0.0,
+    }
+    for team_id, p in sim_results.championship_odds.items():
+        seed = team_seed_map.get(team_id, 0)
+        if seed == 1:
+            seed_bucket_probs["seed_1"] += float(p)
+        elif seed == 2:
+            seed_bucket_probs["seed_2"] += float(p)
+        elif seed == 3:
+            seed_bucket_probs["seed_3"] += float(p)
+        elif 4 <= seed <= 8:
+            seed_bucket_probs["seed_4_8"] += float(p)
+        elif seed >= 9:
+            seed_bucket_probs["seed_9_plus"] += float(p)
+        else:
+            seed_bucket_probs["unknown"] += float(p)
+
+    seed1_share = seed_bucket_probs["seed_1"]
+    champion_seed_passed = 0.45 <= seed1_share <= 0.70
+    if not champion_seed_passed:
+        all_pass = False
+        _mc_logger.warning(
+            "Champion seed distribution mismatch: seed-1 champion share=%.3f "
+            "(expected range [0.45, 0.70]).",
+            seed1_share,
+        )
+
+    champion_seed_validation = {
+        "bucket_probabilities": {k: round(v, 4) for k, v in seed_bucket_probs.items()},
+        "seed_1_expected_range": [0.45, 0.70],
+        "seed_1_passed": champion_seed_passed,
+    }
+
+    return {
+        "per_matchup": comparisons,
+        "champion_seed_validation": champion_seed_validation,
+        "passed": all_pass,
+    }
