@@ -635,8 +635,9 @@ class SOTAPipelineConfig:
 
     # --- Betting market integration ---
     betting_odds_json: Optional[str] = None  # Path to cached betting odds JSON
-    enable_market_blend: bool = False  # Disabled in locked production path; enable explicitly for experiments
+    enable_market_blend: bool = True  # Blend market consensus into championship odds post-simulation
     market_blend_weight: float = 0.20  # Weight for market data in blend (0.0-1.0); model gets 1-weight
+    enable_vegas_cross_reference: bool = True  # Always load & validate vs Vegas; warn on major divergence
 
     # Compute budget management (S20)
     compute_budget_seconds: float = 3600.0
@@ -713,8 +714,6 @@ class SOTAPipelineConfig:
             violations.append("enable_embedding_projections=True")
         if self.enable_stacking:
             violations.append("enable_stacking=True")
-        if self.enable_market_blend:
-            violations.append("enable_market_blend=True")
         if not self.holdout_years:
             violations.append("holdout_years is empty")
         elif sorted(set(self.holdout_years)) != [2025]:
