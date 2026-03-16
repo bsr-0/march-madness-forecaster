@@ -319,10 +319,10 @@ def _build_predictions() -> Dict:
                 {
                     "round": "R64",
                     "region": region,
-                    "team1": {"name": t1.get("name"), "seed": seed1},
-                    "team2": {"name": t2.get("name"), "seed": seed2},
+                    "team1": {"name": t1.get("team_name") or t1.get("name"), "seed": seed1},
+                    "team2": {"name": t2.get("team_name") or t2.get("name"), "seed": seed2},
                     "team1_win_prob": win_prob,
-                    "predicted_winner": t1.get("name") if win_prob >= 0.5 else t2.get("name"),
+                    "predicted_winner": (t1.get("team_name") or t1.get("name")) if win_prob >= 0.5 else (t2.get("team_name") or t2.get("name")),
                 }
             )
 
@@ -330,7 +330,7 @@ def _build_predictions() -> Dict:
     for team in teams:
         seed = int(team.get("seed", 0)) or 16
         strength = math.exp(-0.15 * seed)
-        champion_scores.append((team.get("name"), strength))
+        champion_scores.append((team.get("team_name") or team.get("name"), strength))
 
     total = sum(score for _, score in champion_scores) or 1
     champion_probs = [

@@ -1,7 +1,7 @@
 {
   "metadata": {
     "model_name": "SOTA Ensemble (dashboard export)",
-    "generated_at": "2026-03-16 18:43 UTC",
+    "generated_at": "2026-03-16 20:20 UTC",
     "training_seasons": [
       2005,
       2006,
@@ -92,706 +92,706 @@
         "round": "R64",
         "region": "East",
         "team1": {
-          "name": null,
+          "name": "Michigan",
           "seed": 1
         },
         "team2": {
-          "name": null,
+          "name": "Maryland-Baltimore County",
           "seed": 16
         },
         "team1_win_prob": 0.9324533088603709,
-        "predicted_winner": null
+        "predicted_winner": "Michigan"
       },
       {
         "round": "R64",
         "region": "East",
         "team1": {
-          "name": null,
+          "name": "UCF",
           "seed": 8
         },
         "team2": {
-          "name": null,
+          "name": "Kentucky",
           "seed": 9
         },
         "team1_win_prob": 0.5436386872370789,
-        "predicted_winner": null
+        "predicted_winner": "UCF"
       },
       {
         "round": "R64",
         "region": "East",
         "team1": {
-          "name": null,
+          "name": "Arkansas",
           "seed": 5
         },
         "team2": {
-          "name": null,
+          "name": "UNC Wilmington",
           "seed": 12
         },
         "team1_win_prob": 0.7729422593967386,
-        "predicted_winner": null
+        "predicted_winner": "Arkansas"
       },
       {
         "round": "R64",
         "region": "East",
         "team1": {
-          "name": null,
+          "name": "Iowa State",
           "seed": 4
         },
         "team2": {
-          "name": null,
+          "name": "South Florida",
           "seed": 13
         },
         "team1_win_prob": 0.8284952300245991,
-        "predicted_winner": null
+        "predicted_winner": "Iowa State"
       },
       {
         "round": "R64",
         "region": "East",
         "team1": {
-          "name": null,
+          "name": "Tennessee",
           "seed": 6
         },
         "team2": {
-          "name": null,
+          "name": "Ohio State",
           "seed": 11
         },
         "team1_win_prob": 0.7057850278370112,
-        "predicted_winner": null
+        "predicted_winner": "Tennessee"
       },
       {
         "round": "R64",
         "region": "East",
         "team1": {
-          "name": null,
+          "name": "Gonzaga",
           "seed": 3
         },
         "team2": {
-          "name": null,
+          "name": "Cal State Northridge",
           "seed": 14
         },
         "team1_win_prob": 0.8726949619246283,
-        "predicted_winner": null
+        "predicted_winner": "Gonzaga"
       },
       {
         "round": "R64",
         "region": "East",
         "team1": {
-          "name": null,
+          "name": "UCLA",
           "seed": 7
         },
         "team2": {
-          "name": null,
+          "name": "NC State",
           "seed": 10
         },
         "team1_win_prob": 0.6283161882953663,
-        "predicted_winner": null
+        "predicted_winner": "UCLA"
       },
       {
         "round": "R64",
         "region": "East",
         "team1": {
-          "name": null,
+          "name": "St. John's (NY)",
           "seed": 2
         },
         "team2": {
-          "name": null,
+          "name": "Navy",
           "seed": 15
         },
         "team1_win_prob": 0.9067852769181763,
-        "predicted_winner": null
+        "predicted_winner": "St. John's (NY)"
       },
       {
         "round": "R64",
         "region": "West",
         "team1": {
-          "name": null,
+          "name": "Duke",
           "seed": 1
         },
         "team2": {
-          "name": null,
+          "name": "Bethune-Cookman",
           "seed": 16
         },
         "team1_win_prob": 0.9324533088603709,
-        "predicted_winner": null
+        "predicted_winner": "Duke"
       },
       {
         "round": "R64",
         "region": "West",
         "team1": {
-          "name": null,
+          "name": "Vanderbilt",
           "seed": 8
         },
         "team2": {
-          "name": null,
+          "name": "Miami (FL)",
           "seed": 9
         },
         "team1_win_prob": 0.5436386872370789,
-        "predicted_winner": null
+        "predicted_winner": "Vanderbilt"
       },
       {
         "round": "R64",
         "region": "West",
         "team1": {
-          "name": null,
+          "name": "Nebraska",
           "seed": 5
         },
         "team2": {
-          "name": null,
+          "name": "Yale",
           "seed": 12
         },
         "team1_win_prob": 0.7729422593967386,
-        "predicted_winner": null
+        "predicted_winner": "Nebraska"
       },
       {
         "round": "R64",
         "region": "West",
         "team1": {
-          "name": null,
+          "name": "Alabama",
           "seed": 4
         },
         "team2": {
-          "name": null,
+          "name": "Merrimack",
           "seed": 13
         },
         "team1_win_prob": 0.8284952300245991,
-        "predicted_winner": null
+        "predicted_winner": "Alabama"
       },
       {
         "round": "R64",
         "region": "West",
         "team1": {
-          "name": null,
+          "name": "Saint Mary's (CA)",
           "seed": 6
         },
         "team2": {
-          "name": null,
+          "name": "TCU",
           "seed": 11
         },
         "team1_win_prob": 0.7057850278370112,
-        "predicted_winner": null
+        "predicted_winner": "Saint Mary's (CA)"
       },
       {
         "round": "R64",
         "region": "West",
         "team1": {
-          "name": null,
+          "name": "Kansas",
           "seed": 3
         },
         "team2": {
-          "name": null,
+          "name": "Robert Morris",
           "seed": 14
         },
         "team1_win_prob": 0.8726949619246283,
-        "predicted_winner": null
+        "predicted_winner": "Kansas"
       },
       {
         "round": "R64",
         "region": "West",
         "team1": {
-          "name": null,
+          "name": "Villanova",
           "seed": 7
         },
         "team2": {
-          "name": null,
+          "name": "Missouri",
           "seed": 10
         },
         "team1_win_prob": 0.6283161882953663,
-        "predicted_winner": null
+        "predicted_winner": "Villanova"
       },
       {
         "round": "R64",
         "region": "West",
         "team1": {
-          "name": null,
+          "name": "Florida",
           "seed": 2
         },
         "team2": {
-          "name": null,
+          "name": "South Alabama",
           "seed": 15
         },
         "team1_win_prob": 0.9067852769181763,
-        "predicted_winner": null
+        "predicted_winner": "Florida"
       },
       {
         "round": "R64",
         "region": "South",
         "team1": {
-          "name": null,
+          "name": "Arizona",
           "seed": 1
         },
         "team2": {
-          "name": null,
+          "name": "Long Island University",
           "seed": 16
         },
         "team1_win_prob": 0.9324533088603709,
-        "predicted_winner": null
+        "predicted_winner": "Arizona"
       },
       {
         "round": "R64",
         "region": "South",
         "team1": {
-          "name": null,
+          "name": "Belmont",
           "seed": 8
         },
         "team2": {
-          "name": null,
+          "name": "Iowa",
           "seed": 9
         },
         "team1_win_prob": 0.5436386872370789,
-        "predicted_winner": null
+        "predicted_winner": "Belmont"
       },
       {
         "round": "R64",
         "region": "South",
         "team1": {
-          "name": null,
+          "name": "North Carolina",
           "seed": 5
         },
         "team2": {
-          "name": null,
+          "name": "High Point",
           "seed": 12
         },
         "team1_win_prob": 0.7729422593967386,
-        "predicted_winner": null
+        "predicted_winner": "North Carolina"
       },
       {
         "round": "R64",
         "region": "South",
         "team1": {
-          "name": null,
+          "name": "Michigan State",
           "seed": 4
         },
         "team2": {
-          "name": null,
+          "name": "Utah Valley",
           "seed": 13
         },
         "team1_win_prob": 0.8284952300245991,
-        "predicted_winner": null
+        "predicted_winner": "Michigan State"
       },
       {
         "round": "R64",
         "region": "South",
         "team1": {
-          "name": null,
+          "name": "BYU",
           "seed": 6
         },
         "team2": {
-          "name": null,
+          "name": "Liberty",
           "seed": 11
         },
         "team1_win_prob": 0.7057850278370112,
-        "predicted_winner": null
+        "predicted_winner": "BYU"
       },
       {
         "round": "R64",
         "region": "South",
         "team1": {
-          "name": null,
+          "name": "Houston",
           "seed": 3
         },
         "team2": {
-          "name": null,
+          "name": "Austin Peay",
           "seed": 14
         },
         "team1_win_prob": 0.8726949619246283,
-        "predicted_winner": null
+        "predicted_winner": "Houston"
       },
       {
         "round": "R64",
         "region": "South",
         "team1": {
-          "name": null,
+          "name": "Louisville",
           "seed": 7
         },
         "team2": {
-          "name": null,
+          "name": "Virginia Commonwealth",
           "seed": 10
         },
         "team1_win_prob": 0.6283161882953663,
-        "predicted_winner": null
+        "predicted_winner": "Louisville"
       },
       {
         "round": "R64",
         "region": "South",
         "team1": {
-          "name": null,
+          "name": "Purdue",
           "seed": 2
         },
         "team2": {
-          "name": null,
+          "name": "Southeast Missouri State",
           "seed": 15
         },
         "team1_win_prob": 0.9067852769181763,
-        "predicted_winner": null
+        "predicted_winner": "Purdue"
       },
       {
         "round": "R64",
         "region": "Midwest",
         "team1": {
-          "name": null,
+          "name": "Connecticut",
           "seed": 1
         },
         "team2": {
-          "name": null,
+          "name": "Howard",
           "seed": 16
         },
         "team1_win_prob": 0.9324533088603709,
-        "predicted_winner": null
+        "predicted_winner": "Connecticut"
       },
       {
         "round": "R64",
         "region": "Midwest",
         "team1": {
-          "name": null,
+          "name": "Saint Louis",
           "seed": 8
         },
         "team2": {
-          "name": null,
+          "name": "Santa Clara",
           "seed": 9
         },
         "team1_win_prob": 0.5436386872370789,
-        "predicted_winner": null
+        "predicted_winner": "Saint Louis"
       },
       {
         "round": "R64",
         "region": "Midwest",
         "team1": {
-          "name": null,
+          "name": "Wisconsin",
           "seed": 5
         },
         "team2": {
-          "name": null,
+          "name": "McNeese State",
           "seed": 12
         },
         "team1_win_prob": 0.7729422593967386,
-        "predicted_winner": null
+        "predicted_winner": "Wisconsin"
       },
       {
         "round": "R64",
         "region": "Midwest",
         "team1": {
-          "name": null,
+          "name": "Illinois",
           "seed": 4
         },
         "team2": {
-          "name": null,
+          "name": "North Dakota State",
           "seed": 13
         },
         "team1_win_prob": 0.8284952300245991,
-        "predicted_winner": null
+        "predicted_winner": "Illinois"
       },
       {
         "round": "R64",
         "region": "Midwest",
         "team1": {
-          "name": null,
+          "name": "Miami (OH)",
           "seed": 6
         },
         "team2": {
-          "name": null,
+          "name": "Southern Methodist",
           "seed": 11
         },
         "team1_win_prob": 0.7057850278370112,
-        "predicted_winner": null
+        "predicted_winner": "Miami (OH)"
       },
       {
         "round": "R64",
         "region": "Midwest",
         "team1": {
-          "name": null,
+          "name": "Texas Tech",
           "seed": 3
         },
         "team2": {
-          "name": null,
+          "name": "East Tennessee State",
           "seed": 14
         },
         "team1_win_prob": 0.8726949619246283,
-        "predicted_winner": null
+        "predicted_winner": "Texas Tech"
       },
       {
         "round": "R64",
         "region": "Midwest",
         "team1": {
-          "name": null,
+          "name": "Utah State",
           "seed": 7
         },
         "team2": {
-          "name": null,
+          "name": "Texas A&M",
           "seed": 10
         },
         "team1_win_prob": 0.6283161882953663,
-        "predicted_winner": null
+        "predicted_winner": "Utah State"
       },
       {
         "round": "R64",
         "region": "Midwest",
         "team1": {
-          "name": null,
+          "name": "Virginia",
           "seed": 2
         },
         "team2": {
-          "name": null,
+          "name": "Northern Colorado",
           "seed": 15
         },
         "team1_win_prob": 0.9067852769181763,
-        "predicted_winner": null
+        "predicted_winner": "Virginia"
       }
     ],
     "champion_probs": [
       {
-        "team": null,
+        "team": "Michigan",
         "prob": 0.038297254432451446
       },
       {
-        "team": null,
+        "team": "Duke",
         "prob": 0.038297254432451446
       },
       {
-        "team": null,
+        "team": "Arizona",
         "prob": 0.038297254432451446
       },
       {
-        "team": null,
+        "team": "Connecticut",
         "prob": 0.038297254432451446
       },
       {
-        "team": null,
+        "team": "St. John's (NY)",
         "prob": 0.03296275236519086
       },
       {
-        "team": null,
+        "team": "Florida",
         "prob": 0.03296275236519086
       },
       {
-        "team": null,
+        "team": "Purdue",
         "prob": 0.03296275236519086
       },
       {
-        "team": null,
+        "team": "Virginia",
         "prob": 0.03296275236519086
       },
       {
-        "team": null,
+        "team": "Gonzaga",
         "prob": 0.028371303885643715
       },
       {
-        "team": null,
+        "team": "Kansas",
         "prob": 0.028371303885643715
       },
       {
-        "team": null,
+        "team": "Houston",
         "prob": 0.028371303885643715
       },
       {
-        "team": null,
+        "team": "Texas Tech",
         "prob": 0.028371303885643715
       },
       {
-        "team": null,
-        "prob": 0.024419407555952777
+        "team": "Iowa State",
+        "prob": 0.024419407555952784
       },
       {
-        "team": null,
-        "prob": 0.024419407555952777
+        "team": "Alabama",
+        "prob": 0.024419407555952784
       },
       {
-        "team": null,
-        "prob": 0.024419407555952777
+        "team": "Michigan State",
+        "prob": 0.024419407555952784
       },
       {
-        "team": null,
-        "prob": 0.024419407555952777
+        "team": "Illinois",
+        "prob": 0.024419407555952784
       },
       {
-        "team": null,
+        "team": "Arkansas",
         "prob": 0.021017978862982883
       },
       {
-        "team": null,
+        "team": "Nebraska",
         "prob": 0.021017978862982883
       },
       {
-        "team": null,
+        "team": "North Carolina",
         "prob": 0.021017978862982883
       },
       {
-        "team": null,
+        "team": "Wisconsin",
         "prob": 0.021017978862982883
       },
       {
-        "team": null,
+        "team": "Tennessee",
         "prob": 0.01809034205570264
       },
       {
-        "team": null,
+        "team": "Saint Mary's (CA)",
         "prob": 0.01809034205570264
       },
       {
-        "team": null,
+        "team": "BYU",
         "prob": 0.01809034205570264
       },
       {
-        "team": null,
+        "team": "Miami (OH)",
         "prob": 0.01809034205570264
       },
       {
-        "team": null,
+        "team": "UCLA",
         "prob": 0.015570501703600935
       },
       {
-        "team": null,
+        "team": "Villanova",
         "prob": 0.015570501703600935
       },
       {
-        "team": null,
+        "team": "Louisville",
         "prob": 0.015570501703600935
       },
       {
-        "team": null,
+        "team": "Utah State",
         "prob": 0.015570501703600935
       },
       {
-        "team": null,
+        "team": "UCF",
         "prob": 0.013401655013229279
       },
       {
-        "team": null,
+        "team": "Vanderbilt",
         "prob": 0.013401655013229279
       },
       {
-        "team": null,
+        "team": "Belmont",
         "prob": 0.013401655013229279
       },
       {
-        "team": null,
+        "team": "Saint Louis",
         "prob": 0.013401655013229279
       },
       {
-        "team": null,
+        "team": "Kentucky",
         "prob": 0.011534911367183305
       },
       {
-        "team": null,
+        "team": "Miami (FL)",
         "prob": 0.011534911367183305
       },
       {
-        "team": null,
+        "team": "Iowa",
         "prob": 0.011534911367183305
       },
       {
-        "team": null,
+        "team": "Santa Clara",
         "prob": 0.011534911367183305
       },
       {
-        "team": null,
+        "team": "NC State",
         "prob": 0.009928190221090736
       },
       {
-        "team": null,
+        "team": "Missouri",
         "prob": 0.009928190221090736
       },
       {
-        "team": null,
+        "team": "Virginia Commonwealth",
         "prob": 0.009928190221090736
       },
       {
-        "team": null,
+        "team": "Texas A&M",
         "prob": 0.009928190221090736
       },
       {
-        "team": null,
+        "team": "Ohio State",
         "prob": 0.008545272514758057
       },
       {
-        "team": null,
+        "team": "TCU",
         "prob": 0.008545272514758057
       },
       {
-        "team": null,
+        "team": "Liberty",
         "prob": 0.008545272514758057
       },
       {
-        "team": null,
+        "team": "Southern Methodist",
         "prob": 0.008545272514758057
       },
       {
-        "team": null,
+        "team": "UNC Wilmington",
         "prob": 0.007354984214178072
       },
       {
-        "team": null,
+        "team": "Yale",
         "prob": 0.007354984214178072
       },
       {
-        "team": null,
+        "team": "High Point",
         "prob": 0.007354984214178072
       },
       {
-        "team": null,
+        "team": "McNeese State",
         "prob": 0.007354984214178072
       },
       {
-        "team": null,
+        "team": "South Florida",
         "prob": 0.006330493579623452
       },
       {
-        "team": null,
+        "team": "Merrimack",
         "prob": 0.006330493579623452
       },
       {
-        "team": null,
+        "team": "Utah Valley",
         "prob": 0.006330493579623452
       },
       {
-        "team": null,
+        "team": "North Dakota State",
         "prob": 0.006330493579623452
       },
       {
-        "team": null,
+        "team": "Cal State Northridge",
         "prob": 0.005448706318689521
       },
       {
-        "team": null,
+        "team": "Robert Morris",
         "prob": 0.005448706318689521
       },
       {
-        "team": null,
+        "team": "Austin Peay",
         "prob": 0.005448706318689521
       },
       {
-        "team": null,
+        "team": "East Tennessee State",
         "prob": 0.005448706318689521
       },
       {
-        "team": null,
+        "team": "Navy",
         "prob": 0.004689744989693684
       },
       {
-        "team": null,
+        "team": "South Alabama",
         "prob": 0.004689744989693684
       },
       {
-        "team": null,
+        "team": "Southeast Missouri State",
         "prob": 0.004689744989693684
       },
       {
-        "team": null,
+        "team": "Northern Colorado",
         "prob": 0.004689744989693684
       },
       {
-        "team": null,
+        "team": "Maryland-Baltimore County",
         "prob": 0.004036500920028805
       },
       {
-        "team": null,
+        "team": "Bethune-Cookman",
         "prob": 0.004036500920028805
       },
       {
-        "team": null,
+        "team": "Long Island University",
         "prob": 0.004036500920028805
       },
       {
-        "team": null,
+        "team": "Howard",
         "prob": 0.004036500920028805
       }
     ],

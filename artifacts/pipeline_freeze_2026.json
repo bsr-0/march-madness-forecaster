@@ -1,0 +1,944 @@
+{
+  "config_fields": {
+    "adaptive_max_features": true,
+    "admission_max_calibration_degradation": 0.01,
+    "admission_min_fold_improvement_rate": 0.6,
+    "admission_min_mean_brier_improvement": 0.0,
+    "bayesian_bt_prior_std": 2.0,
+    "betting_odds_json": null,
+    "bracket_json": null,
+    "bracket_source": "auto",
+    "brier_sharpening_alpha_bounds": [
+      0.5,
+      2.0
+    ],
+    "calibration_method": "temperature",
+    "calibration_years": null,
+    "coach_data_cutoff_year": null,
+    "coach_tournament_json": null,
+    "compute_budget_seconds": 3600.0,
+    "conf_champions_json": null,
+    "consistency_bonus_max": 0.0,
+    "consistency_normalizer": 15.0,
+    "correlation_threshold": 0.75,
+    "data_cache_dir": "data/raw",
+    "dev_years": [
+      2016,
+      2017,
+      2018,
+      2019,
+      2021,
+      2022,
+      2023,
+      2024
+    ],
+    "dual_deviation_strength": 0.15,
+    "dual_max_deviations": 5,
+    "dual_n_champion_candidates": 5,
+    "dual_strategy": "champion_boost",
+    "enable_ablation_study": false,
+    "enable_bayesian_bt": false,
+    "enable_bracket_portfolio": true,
+    "enable_brier_sharpening": false,
+    "enable_budget_degradation": true,
+    "enable_dual_submission": true,
+    "enable_embedding_projections": false,
+    "enable_external_ratings": true,
+    "enable_feature_scaling": true,
+    "enable_feature_selection": false,
+    "enable_gnn": false,
+    "enable_goto_conversion": false,
+    "enable_hyperparameter_tuning": true,
+    "enable_injury_severity_model": true,
+    "enable_loyo_cv": true,
+    "enable_market_blend": true,
+    "enable_massey_predictor": true,
+    "enable_multi_year_calibration": true,
+    "enable_multi_year_training": true,
+    "enable_positional_depth": true,
+    "enable_recency_weighting": true,
+    "enable_round_weighted_calibration": false,
+    "enable_round_weighted_training": true,
+    "enable_seed_overrides": false,
+    "enable_spread_model": true,
+    "enable_stability_filter": true,
+    "enable_stacking": false,
+    "enable_symmetric_augmentation": true,
+    "enable_tournament_adaptation": true,
+    "enable_transformer": false,
+    "enable_vegas_cross_reference": true,
+    "enable_vif_pruning": true,
+    "enable_womens_pipeline": true,
+    "enforce_feed_freshness": true,
+    "enforce_production_path": true,
+    "ensemble_lgb_weight": 0.15,
+    "ensemble_weight_regularization": 0.1,
+    "ensemble_xgb_weight": 0.15,
+    "ev_archetype_overrides": null,
+    "ev_auto_refresh": false,
+    "ev_contrarian_strength": 1.0,
+    "ev_enable_archetypes": false,
+    "ev_enable_search": false,
+    "ev_payout_structure": "tiered",
+    "ev_pool_size": 100,
+    "ev_pool_type": "espn_national",
+    "ev_scoring_system": "standard",
+    "ev_target_percentile": 0.05,
+    "experimental_enable_lgb_classifier": true,
+    "experimental_enable_xgb_classifier": true,
+    "external_ratings_dir": null,
+    "feature_importance_threshold": 0.03,
+    "fit_massey_on_training": true,
+    "freeze_file": null,
+    "game_level_min_games_per_team": 5,
+    "gnn_temporal_decay": 0.5,
+    "goto_conversion_margin_bounds": [
+      0.0,
+      0.2
+    ],
+    "goto_conversion_margin_init": 0.05,
+    "historical_games_json": null,
+    "holdout_years": [
+      2025
+    ],
+    "injury_noise_samples": 10000,
+    "injury_report_json": null,
+    "kaggle_dir": null,
+    "kaggle_effective_pool_size": 3000,
+    "late_season_training_cutoff_days": 45,
+    "loyo_temporal_mode": "rolling_window",
+    "loyo_years": null,
+    "margin_first_training": false,
+    "market_blend_weight": 0.2,
+    "massey_blend_weight": 0.25,
+    "massey_blend_weight_bounds": [
+      0.05,
+      0.4
+    ],
+    "massey_min_calibration_samples": 30,
+    "massey_sigma": 4.5,
+    "massey_sigma_bounds": [
+      1.0,
+      25.0
+    ],
+    "max_features": 35,
+    "max_feed_age_hours": 168,
+    "mc_calibration_json": null,
+    "mc_noise_std": 0.16,
+    "mc_regional_correlation": 0.0,
+    "min_calibration_samples": 100,
+    "min_calibration_samples_hard": 80,
+    "min_ensemble_samples": 50,
+    "min_features": 15,
+    "min_public_sources": 2,
+    "min_rapm_players_per_team": 5,
+    "mode": "calibration",
+    "model_complexity": "standard",
+    "multi_year_games_dir": "auto",
+    "n_bootstrap": 10,
+    "num_simulations": 50000,
+    "optimize_ensemble_weights": true,
+    "optuna_n_trials": 15,
+    "optuna_timeout": 300,
+    "pipeline_mode": "production",
+    "pool_size": 100,
+    "portfolio_n_brackets": 1000,
+    "portfolio_n_simulations": 50000,
+    "pre_calibration_clip_hi": 0.999,
+    "pre_calibration_clip_lo": 0.001,
+    "preseason_ap_json": null,
+    "probability_profile": "production",
+    "production_calibration": "temperature",
+    "production_model_stack": "spread_logistic",
+    "public_picks_json": null,
+    "random_seed": 2026,
+    "recency_decay_floor": 0.3,
+    "recency_half_life": 0.3,
+    "require_freeze_file": false,
+    "roster_json": null,
+    "scoring_metric": "brier",
+    "scoring_rules_json": null,
+    "scrape_live": false,
+    "seed_override_threshold": 0.08,
+    "seed_prior_slope": 0.175,
+    "seed_prior_weight": 0.0,
+    "sports_reference_json": null,
+    "spread_sigma_init": 11.0,
+    "stability_threshold": 0.8,
+    "stacking_meta_learner": "lightgbm",
+    "stacking_min_samples_for_lgb": 80,
+    "strict_leakage_mode": true,
+    "team_locations_json": null,
+    "teams_json": null,
+    "temporal_cv_splits": 5,
+    "torvik_json": null,
+    "tournament_shrinkage": 0.06,
+    "training_year_decay": 0.85,
+    "training_year_min_weight": 0.15,
+    "training_years": null,
+    "transfer_portal_json": null,
+    "use_agent_orchestration": false,
+    "venue_locations_json": null,
+    "vif_threshold": 10.0,
+    "womens_cache_dir": null,
+    "womens_massey_blend_weight": 0.25,
+    "womens_model_complexity": "simple",
+    "womens_seed_only_mode": false,
+    "womens_seed_prior_weight": 0.4,
+    "womens_teams_csv": null,
+    "year": 2026
+  },
+  "config_hash": "d5ef7d885b872af3",
+  "constant_registry": [
+    {
+      "config_path": "ProprietaryMetrics._four_factors",
+      "current_value": [
+        0.4,
+        0.25,
+        0.2,
+        0.15
+      ],
+      "derivation": "Oliver 2004, Kubatko 2007 \u2014 published D1 regression coefficients",
+      "name": "four_factors_weights",
+      "notes": "",
+      "tier": 1,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "config_path": "SOTAPipelineConfig.vif_threshold",
+      "current_value": 10.0,
+      "derivation": "Belsley 1980 \u2014 standard multicollinearity cutoff",
+      "name": "vif_threshold",
+      "notes": "",
+      "tier": 1,
+      "valid_range": [
+        5.0,
+        20.0
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics.HCA_POINTS",
+      "current_value": 3.75,
+      "derivation": "Meta-analysis consensus: college basketball HCA is 3.5-4.0 points",
+      "name": "hca_points",
+      "notes": "",
+      "tier": 1,
+      "valid_range": [
+        2.5,
+        5.0
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics (derived: HCA_POINTS * 13.3)",
+      "current_value": 13.3,
+      "derivation": "FiveThirtyEight Elo methodology \u2014 published conversion factor",
+      "name": "elo_hca_multiplier",
+      "notes": "",
+      "tier": 1,
+      "valid_range": [
+        10.0,
+        16.0
+      ]
+    },
+    {
+      "config_path": "SOTAPipelineConfig.seed_prior_slope",
+      "current_value": 0.175,
+      "derivation": "Logistic fit on 40 years of public tournament data (1985-2024, N>2500)",
+      "name": "seed_prior_slope",
+      "notes": "",
+      "tier": 1,
+      "valid_range": [
+        0.1,
+        0.25
+      ]
+    },
+    {
+      "config_path": "SOTAPipelineConfig.pre_calibration_clip_lo/hi",
+      "current_value": [
+        0.03,
+        0.97
+      ],
+      "derivation": "Historical 1-vs-16 upset rate ~1.5%; 3% provides safety margin",
+      "name": "pre_calibration_clips",
+      "notes": "",
+      "tier": 1,
+      "valid_range": [
+        0.01,
+        0.1
+      ]
+    },
+    {
+      "config_path": "SOTAPipelineConfig.training_year_decay",
+      "current_value": 0.85,
+      "derivation": "Bounded (0,1), monotonically decreasing importance of older data",
+      "name": "training_year_decay",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        0.7,
+        0.95
+      ]
+    },
+    {
+      "config_path": "SOTAPipelineConfig.training_year_min_weight",
+      "current_value": 0.15,
+      "derivation": "Floor > 0 prevents discarding old data entirely",
+      "name": "training_year_min_weight",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        0.05,
+        0.3
+      ]
+    },
+    {
+      "config_path": "SOTAPipelineConfig.recency_half_life",
+      "current_value": 0.3,
+      "derivation": "Within-season temporal weighting; bounded, monotone effect",
+      "name": "recency_half_life",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        0.1,
+        0.8
+      ]
+    },
+    {
+      "config_path": "SOTAPipelineConfig.recency_decay_floor",
+      "current_value": 0.3,
+      "derivation": "Floor prevents discarding early-season games",
+      "name": "recency_decay_floor",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        0.1,
+        0.6
+      ]
+    },
+    {
+      "config_path": "SOTAPipelineConfig.late_season_training_cutoff_days",
+      "current_value": 45,
+      "derivation": "Bounded, monotone effect on sample size vs feature quality",
+      "name": "late_season_cutoff_days",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        20,
+        90
+      ]
+    },
+    {
+      "config_path": "monte_carlo._run_batch (hardcoded)",
+      "current_value": [
+        1.0,
+        0.6,
+        0.3,
+        0.15,
+        0.0,
+        0.0
+      ],
+      "derivation": "E2: Reclassified Tier 2\u21923. Monotonic structure is constrained but specific values (0.6, 0.3, 0.15) derived from ~160 region-years \u2014 insufficient to distinguish between alternatives. Requires sensitivity analysis",
+      "name": "round_correlation_decay",
+      "notes": "",
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "config_path": "LightGBMRanker default params",
+      "current_value": 8,
+      "derivation": "Lower = more regularized; conservative for small N (~400 samples)",
+      "name": "lgb_num_leaves",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        4,
+        32
+      ]
+    },
+    {
+      "config_path": "LightGBMRanker default params",
+      "current_value": 50,
+      "derivation": "Higher = more regularized; ~12% of training data",
+      "name": "lgb_min_child_samples",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        10,
+        100
+      ]
+    },
+    {
+      "config_path": "XGBoostRanker default params",
+      "current_value": 3,
+      "derivation": "Lower = more regularized; standard shallow-tree choice",
+      "name": "xgb_max_depth",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        2,
+        6
+      ]
+    },
+    {
+      "config_path": "XGBoostRanker default params",
+      "current_value": 10,
+      "derivation": "Higher = more regularized",
+      "name": "xgb_min_child_weight",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        3,
+        30
+      ]
+    },
+    {
+      "config_path": "ensemble weights in _train_baseline_model",
+      "current_value": 0.45,
+      "derivation": "Calibrated from LOYO; 2 free DoF (3 weights sum to 1)",
+      "name": "ensemble_lgb_weight",
+      "notes": "Paired with xgb=0.35, logistic=0.20",
+      "tier": 3,
+      "valid_range": [
+        0.2,
+        0.7
+      ]
+    },
+    {
+      "config_path": "ensemble weights in _train_baseline_model",
+      "current_value": 0.35,
+      "derivation": "Calibrated from LOYO; coupled with lgb weight",
+      "name": "ensemble_xgb_weight",
+      "notes": "",
+      "tier": 3,
+      "valid_range": [
+        0.1,
+        0.6
+      ]
+    },
+    {
+      "config_path": "SOTAPipelineConfig.tournament_shrinkage",
+      "current_value": 0.0,
+      "derivation": "Disabled by default unless sensitivity proves value",
+      "name": "tournament_shrinkage",
+      "notes": "",
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        0.25
+      ]
+    },
+    {
+      "config_path": "SOTAPipelineConfig.seed_prior_weight",
+      "current_value": 0.0,
+      "derivation": "Experimental-only; excluded from production DoF count. Disabled by default unless sensitivity proves value",
+      "name": "seed_prior_weight",
+      "notes": "",
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        0.15
+      ]
+    },
+    {
+      "config_path": "SOTAPipelineConfig.consistency_bonus_max",
+      "current_value": 0.0,
+      "derivation": "Experimental-only; excluded from production DoF count. Disabled by default unless sensitivity proves value",
+      "name": "consistency_bonus_max",
+      "notes": "",
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        0.06
+      ]
+    },
+    {
+      "config_path": "SOTAPipelineConfig.consistency_normalizer",
+      "current_value": 15.0,
+      "derivation": "Experimental-only; paired with consistency_bonus_max",
+      "name": "consistency_normalizer",
+      "notes": "",
+      "tier": 3,
+      "valid_range": [
+        5.0,
+        30.0
+      ]
+    },
+    {
+      "config_path": "SimulationConfig.noise_std",
+      "current_value": 0.16,
+      "derivation": "Changed 0.04\u21920.035\u21920.02\u21920.12\u21920.16; Lopez & Matthews (2015) \u2248 0.16-0.18",
+      "name": "mc_noise_std",
+      "notes": "",
+      "tier": 3,
+      "valid_range": [
+        0.02,
+        0.25
+      ]
+    },
+    {
+      "config_path": "SOTAPipelineConfig.mc_regional_correlation",
+      "current_value": 0.0,
+      "derivation": "Reduced from 0.25 during OOS fix round",
+      "name": "mc_regional_correlation",
+      "notes": "",
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        0.3
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics._pythagorean_win_pct + rdof_audit baselines",
+      "current_value": 0.1735,
+      "derivation": "D1 fix: analytically derived k=ln(17/3)/10=0.1735 so AdjEM=+10 maps to exactly 0.850 win%. Prior value 0.145 gave 0.810, not 0.85 as documented.",
+      "name": "log5_scale",
+      "notes": "",
+      "tier": 1,
+      "valid_range": [
+        0.1,
+        0.25
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics._compute_elo (hardcoded)",
+      "current_value": 2.2,
+      "derivation": "FiveThirtyEight published Elo methodology dampening constant",
+      "name": "elo_dampening_numerator",
+      "notes": "",
+      "tier": 1,
+      "valid_range": [
+        1.5,
+        3.0
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics._compute_elo (hardcoded)",
+      "current_value": 0.001,
+      "derivation": "FiveThirtyEight published Elo methodology elo_diff scaling",
+      "name": "elo_dampening_denom_scale",
+      "notes": "",
+      "tier": 1,
+      "valid_range": [
+        0.0005,
+        0.005
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics._compute_elo_ratings + sota._load_year_samples",
+      "current_value": 0.25,
+      "derivation": "D2 fix: 25% regression toward mean (1500) at each season boundary. Matches FiveThirtyEight NFL Elo methodology (Silver, 2014). Reduces cold-start noise in early-season ratings.",
+      "name": "elo_season_regression",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        0.1,
+        0.5
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics._compute_elo K_BASE",
+      "current_value": 38.0,
+      "derivation": "MOV-adjusted Elo K-factor; bounded, monotone effect on update magnitude",
+      "name": "elo_k_base",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        20.0,
+        60.0
+      ]
+    },
+    {
+      "config_path": "sota.py _load_year_samples _WAB_K",
+      "current_value": 11.5,
+      "derivation": "log5 scaling denominator for WAB; bounded, controls sensitivity to AdjEM gap",
+      "name": "wab_k",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        5.0,
+        20.0
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics.BUBBLE_EM_PRIOR",
+      "current_value": 5.0,
+      "derivation": "Historical average AdjEM of ~45th-ranked team; Bayesian prior for WAB",
+      "name": "bubble_em_prior",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        2.0,
+        10.0
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics.MARGIN_CAP",
+      "current_value": 16.0,
+      "derivation": "Blowout cap; bounded, prevents extreme margins from distorting efficiency",
+      "name": "margin_cap",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        10.0,
+        25.0
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics._iterative_sos_adjust DAMPING",
+      "current_value": 0.7,
+      "derivation": "SOS convergence blend factor; bounded (0,1), higher = faster convergence",
+      "name": "sos_damping",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        0.4,
+        0.9
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics (hardcoded prior_weight=100)",
+      "current_value": 100.0,
+      "derivation": "Bayesian 3PT shrinkage prior strength; ~3 games of 3PA volume",
+      "name": "three_pt_prior_weight",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        30.0,
+        300.0
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics (hardcoded 0.345)",
+      "current_value": 0.345,
+      "derivation": "D1 average 3PT%; slowly drifts year-to-year but structurally bounded",
+      "name": "three_pt_league_avg",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        0.33,
+        0.36
+      ]
+    },
+    {
+      "config_path": "sota.py _train_baseline_model base_noise",
+      "current_value": 0.05,
+      "derivation": "PIT residual noise scale; bounded, proportional to season_remaining",
+      "name": "pit_noise_base",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        0.02,
+        0.1
+      ]
+    },
+    {
+      "config_path": "sota.py (feature_noise_weight = 1.0 - stability * 0.7)",
+      "current_value": 0.7,
+      "derivation": "How much feature stability reduces PIT noise; bounded [0,1]",
+      "name": "pit_stability_scaling",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        0.4,
+        0.9
+      ]
+    },
+    {
+      "config_path": "sota.py (feature_noise_weight *= 0.3 for PIT features)",
+      "current_value": 0.3,
+      "derivation": "Noise reduction multiplier for PIT-adjusted features; bounded (0,1)",
+      "name": "pit_feature_noise_reduction",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        0.1,
+        0.6
+      ]
+    },
+    {
+      "config_path": "sota.py (shrinkage = 0.10 toward league mean)",
+      "current_value": 0.1,
+      "derivation": "Regression toward league mean; bounded, monotone effect",
+      "name": "mean_regression_shrinkage",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        0.0,
+        0.25
+      ]
+    },
+    {
+      "config_path": "sota.py (min(0.9, 0.9 * season_remaining))",
+      "current_value": 0.9,
+      "derivation": "Maximum PIT blend weight; bounded, caps PIT override of end-of-season",
+      "name": "pit_weight_cap",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        0.5,
+        1.0
+      ]
+    },
+    {
+      "config_path": "SimulationConfig.injury_probability",
+      "current_value": 0.02,
+      "derivation": "Per-game injury probability; iteratively adjusted",
+      "name": "mc_injury_probability",
+      "notes": "",
+      "tier": 3,
+      "valid_range": [
+        0.0,
+        0.1
+      ]
+    },
+    {
+      "config_path": "monte_carlo._run_batch rng.uniform(0.05, 0.25)",
+      "current_value": 0.05,
+      "derivation": "Lower bound of injury severity logit shift; iteratively set",
+      "name": "mc_injury_severity_lo",
+      "notes": "",
+      "tier": 3,
+      "valid_range": [
+        0.01,
+        0.15
+      ]
+    },
+    {
+      "config_path": "monte_carlo._run_batch rng.uniform(0.05, 0.25)",
+      "current_value": 0.25,
+      "derivation": "Upper bound of injury severity logit shift; iteratively set",
+      "name": "mc_injury_severity_hi",
+      "notes": "",
+      "tier": 3,
+      "valid_range": [
+        0.1,
+        0.5
+      ]
+    },
+    {
+      "config_path": "monte_carlo._run_batch sigma=0.15 for cross-region",
+      "current_value": 0.15,
+      "derivation": "Cross-region (Final Four) noise lognormal sigma; iteratively set",
+      "name": "mc_lognormal_sigma",
+      "notes": "",
+      "tier": 3,
+      "valid_range": [
+        0.05,
+        0.3
+      ]
+    },
+    {
+      "config_path": "monte_carlo._run_batch max(0.2, ...)",
+      "current_value": 0.2,
+      "derivation": "Floor for regional noise multiplier; prevents zero-variance regions",
+      "name": "mc_region_noise_floor",
+      "notes": "",
+      "tier": 3,
+      "valid_range": [
+        0.05,
+        0.5
+      ]
+    },
+    {
+      "config_path": "monte_carlo.HISTORICAL_UPSET_RATES",
+      "current_value": {
+        "1v16": 0.015,
+        "2v15": 0.06,
+        "3v14": 0.15,
+        "4v13": 0.21,
+        "5v12": 0.36,
+        "6v11": 0.38,
+        "7v10": 0.39,
+        "8v9": 0.49
+      },
+      "derivation": "E1: Published first-round upset rates from ~2500+ tournament games. Used by validate_upset_rates() to calibrate MC simulation noise_std.",
+      "name": "historical_upset_rates",
+      "notes": "",
+      "tier": 1,
+      "valid_range": [
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics.CONSISTENCY_PRIOR_STD",
+      "current_value": 8.0,
+      "derivation": "C8: D1 population scoring-margin stdev for consistency shrinkage. Bounded by D1 data distribution; analogous to pace_adj_variance prior.",
+      "name": "consistency_prior_std",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        5.0,
+        12.0
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics.CONSISTENCY_PRIOR_WEIGHT",
+      "current_value": 8.0,
+      "derivation": "C8: Pseudo-observations (~1/3 season) for consistency shrinkage. Matches pattern of three_pt_variance and pace_adj_variance priors.",
+      "name": "consistency_prior_weight",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        4.0,
+        16.0
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics (0.44 * FTA in True Shooting denominator)",
+      "current_value": 0.44,
+      "derivation": "Hollinger's True Shooting %: 2*(FGA + 0.44*FTA); published formula",
+      "name": "ts_pct_fta_weight",
+      "notes": "",
+      "tier": 1,
+      "valid_range": [
+        0.4,
+        0.48
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics._iterative_sos_adjust N_ITERS",
+      "current_value": 15,
+      "derivation": "Convergence iterations for additive SOS; bounded, monotone convergence",
+      "name": "sos_iterations",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        5,
+        30
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics MIN_GAMES_LUCK",
+      "current_value": 12,
+      "derivation": "Minimum games for luck metric; data quality threshold",
+      "name": "luck_min_games",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        5,
+        20
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics (shrinkage reaches 1.0 at 32 games)",
+      "current_value": 32,
+      "derivation": "Games at which luck shrinkage = 100%; structural ramp",
+      "name": "luck_full_weight_games",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        20,
+        50
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics._momentum(); IncrementalMetricsEngine",
+      "current_value": 8,
+      "derivation": "Rolling game window for momentum calculation; bounded",
+      "name": "momentum_window",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        4,
+        15
+      ]
+    },
+    {
+      "config_path": "ProprietaryMetrics (2.0 * composite to PPP scale)",
+      "current_value": 2.0,
+      "derivation": "Converts Four Factors composite to PPP-like units; structural scaling",
+      "name": "four_factors_composite_scale",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        1.0,
+        4.0
+      ]
+    },
+    {
+      "config_path": "monte_carlo._run_batch np.clip(noisy, 0.01, 0.99)",
+      "current_value": 0.01,
+      "derivation": "Post-noise probability floor in MC simulation; prevents log(0)",
+      "name": "mc_final_clip_lo",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        0.005,
+        0.05
+      ]
+    },
+    {
+      "config_path": "monte_carlo._run_batch np.clip(noisy, 0.01, 0.99)",
+      "current_value": 0.99,
+      "derivation": "Post-noise probability ceiling in MC simulation; structural bound",
+      "name": "mc_final_clip_hi",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        0.95,
+        0.999
+      ]
+    },
+    {
+      "config_path": "sota.py seed_interaction = (seed1*seed2)/128 - 1",
+      "current_value": 128.0,
+      "derivation": "Normalization denominator for seed interaction feature; structural",
+      "name": "seed_interaction_scale",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        64.0,
+        256.0
+      ]
+    },
+    {
+      "config_path": "sota.py adj_em / 30.0 for GNN targets",
+      "current_value": 30.0,
+      "derivation": "AdjEM normalization for GNN training targets; scale parameter",
+      "name": "gnn_target_scale",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        15.0,
+        50.0
+      ]
+    },
+    {
+      "config_path": "sota.py LGB/XGB early stopping patience",
+      "current_value": 30,
+      "derivation": "Early stopping rounds; structural regularization, bounded",
+      "name": "early_stopping_rounds",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        10,
+        50
+      ]
+    },
+    {
+      "config_path": "SOTAPipelineConfig.optuna_n_trials",
+      "current_value": 15,
+      "derivation": "Max Optuna tuning trials; bounded, more trials = more selection bias",
+      "name": "optuna_n_trials",
+      "notes": "",
+      "tier": 2,
+      "valid_range": [
+        5,
+        50
+      ]
+    }
+  ],
+  "feature_set_hash": "1097d739360c2cd4",
+  "freeze_type": "pre-registration",
+  "git_commit": "023001b289b6663a1ca3a59da7e59c7852ed74c9",
+  "git_dirty": true,
+  "n_constants": 60,
+  "timestamp": "2026-03-16T15:19:26"
+}
