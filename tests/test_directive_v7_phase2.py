@@ -328,14 +328,17 @@ class TestExperimentRegistryNewFields:
 class TestPreRunFreshness:
     """S18-1: Data freshness enforcement in pre-run validation."""
 
-    def test_missing_sources_are_critical(self):
+    def test_missing_sources_are_critical(self, tmp_path):
         pd = pytest.importorskip("pandas")
         from src.pipeline.sota import SOTAPipeline, SOTAPipelineConfig
 
+        # Use a subdirectory under tmp_path that doesn't contain any data files.
+        # Avoids PermissionError from trying to mkdir under /nonexistent.
+        empty_cache = tmp_path / "empty_cache"
         config = SOTAPipelineConfig(
             year=2025,
             strict_leakage_mode=False,
-            data_cache_dir="/nonexistent/path",
+            data_cache_dir=str(empty_cache),
         )
         pipeline = SOTAPipeline(config)
         result = pipeline._pre_run_validation()
