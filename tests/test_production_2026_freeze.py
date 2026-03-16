@@ -856,7 +856,6 @@ class TestContinuousHyperparameterPinning:
         ("enable_recency_weighting", False),
         ("enable_symmetric_augmentation", False),
         ("scrape_live", True),
-        ("enable_market_blend", True),
     ])
     def test_boolean_architecture_flag_injection_fails(self, field, bad_value):
         """Injecting non-blessed boolean architecture flags must fail validation."""

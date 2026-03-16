@@ -67,7 +67,7 @@ REQUIRED_CONFIG_VALUES: Dict[str, Any] = {
     "enable_recency_weighting": True,
     "enable_symmetric_augmentation": True,
     "scrape_live": False,
-    "enable_market_blend": False,
+    "enable_market_blend": True,
 }
 
 EXPECTED_TRAINING_YEARS = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]

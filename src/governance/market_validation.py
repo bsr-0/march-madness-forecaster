@@ -159,3 +159,137 @@ def load_market_probs_from_cache(
                 probs[str(team_id)] = prob
 
     return probs if probs else None
+
+
+# ---------------------------------------------------------------------------
+# Per-game spread cross-reference
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class SpreadValidationResult:
+    """Result of comparing model per-game spreads against Vegas lines."""
+
+    n_games: int
+    mean_abs_error: float  # MAE between model spread and Vegas spread
+    rmsd: float
+    correlation: Optional[float]
+    red_flags: List[dict]  # Games where model and Vegas disagree by > threshold
+    interpretation: str
+
+
+def validate_spreads_vs_vegas(
+    model_spreads: Dict[str, float],
+    vegas_spreads: Dict[str, float],
+    flag_threshold: float = 5.0,
+) -> Optional[SpreadValidationResult]:
+    """Compare model predicted spreads against Vegas lines per game.
+
+    Args:
+        model_spreads: matchup_key -> model predicted spread (positive = team1 favored).
+        vegas_spreads: matchup_key -> Vegas spread (same sign convention).
+        flag_threshold: Flag games where |model - vegas| exceeds this (points).
+
+    Returns:
+        SpreadValidationResult, or None if no overlapping matchups.
+    """
+    common = sorted(set(model_spreads.keys()) & set(vegas_spreads.keys()))
+    if not common:
+        return None
+
+    diffs = [model_spreads[k] - vegas_spreads[k] for k in common]
+    abs_diffs = [abs(d) for d in diffs]
+    mae = sum(abs_diffs) / len(abs_diffs)
+    rmsd = math.sqrt(sum(d * d for d in diffs) / len(diffs))
+
+    correlation: Optional[float] = None
+    try:
+        from scipy.stats import pearsonr
+        if len(common) >= 3:
+            model_vals = [model_spreads[k] for k in common]
+            vegas_vals = [vegas_spreads[k] for k in common]
+            corr, _ = pearsonr(model_vals, vegas_vals)
+            correlation = None if corr != corr else round(float(corr), 6)
+    except ImportError:
+        pass
+
+    red_flags = sorted(
+        [
+            {
+                "matchup": k,
+                "model_spread": round(model_spreads[k], 2),
+                "vegas_spread": round(vegas_spreads[k], 2),
+                "diff": round(model_spreads[k] - vegas_spreads[k], 2),
+            }
+            for k in common
+            if abs(model_spreads[k] - vegas_spreads[k]) > flag_threshold
+        ],
+        key=lambda r: abs(r["diff"]),
+        reverse=True,
+    )
+
+    if mae > 6.0:
+        interpretation = "major_disagreement"
+    elif mae > 4.0:
+        interpretation = "significant_divergence"
+    elif mae > 2.5:
+        interpretation = "moderate_divergence"
+    else:
+        interpretation = "strong_agreement"
+
+    return SpreadValidationResult(
+        n_games=len(common),
+        mean_abs_error=round(mae, 4),
+        rmsd=round(rmsd, 4),
+        correlation=correlation,
+        red_flags=red_flags,
+        interpretation=interpretation,
+    )
+
+
+def load_vegas_spreads_from_cache(
+    season: int,
+    cache_dir: Path,
+) -> Optional[Dict[str, float]]:
+    """Load per-game Vegas spreads from a cached JSON file.
+
+    Looks for ``vegas_spreads_{season}.json`` in *cache_dir*.  Returns a
+    ``{matchup_key: spread}`` dict, or ``None`` if unavailable.
+
+    Expected format::
+
+        {
+            "games": {
+                "team1_vs_team2": {"spread": -5.5, "source": "fanduel"},
+                ...
+            }
+        }
+
+    Or flat format::
+
+        {"team1_vs_team2": -5.5, ...}
+    """
+    cache_file = cache_dir / f"vegas_spreads_{season}.json"
+    if not cache_file.exists():
+        return None
+
+    try:
+        with open(cache_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return None
+
+    if not isinstance(data, dict):
+        return None
+
+    games_data = data.get("games", data)
+    spreads: Dict[str, float] = {}
+    for key, val in games_data.items():
+        if isinstance(val, (int, float)):
+            spreads[str(key)] = float(val)
+        elif isinstance(val, dict):
+            spread = val.get("spread")
+            if isinstance(spread, (int, float)):
+                spreads[str(key)] = float(spread)
+
+    return spreads if spreads else None
