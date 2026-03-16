@@ -78,7 +78,9 @@ class TestWalkForwardReplay:
 
         assert result_a.mean_brier == result_b.mean_brier
         assert result_a.year_briers == result_b.year_briers
-        assert len(result_a.fold_results) == len(subset)
+        # In rolling_window mode, the earliest year (2019) has no prior
+        # training data and is skipped, so we expect len(subset) - 1 folds.
+        assert len(result_a.fold_results) == len(subset) - 1
 
     def test_different_data_gives_different_results(self):
         """Sanity check: different data should produce different metrics."""
@@ -95,11 +97,17 @@ class TestWalkForwardReplay:
         )
 
     def test_fold_count_matches_years(self):
-        """Every year in the validation set should produce a fold."""
+        """Every year except the earliest should produce a fold.
+
+        In rolling_window mode the earliest year has no prior training
+        data and is skipped.
+        """
         result = self._run_loyo()
-        assert len(result.fold_results) == len(LOYO_YEARS)
+        # The earliest year (2018) is skipped — no prior training data
+        expected_years = set(LOYO_YEARS) - {min(LOYO_YEARS)}
+        assert len(result.fold_results) == len(expected_years)
         held_out_years = {f.held_out_year for f in result.fold_results}
-        assert held_out_years == set(LOYO_YEARS)
+        assert held_out_years == expected_years
 
     def test_frozen_snapshot_consistency(self):
         """Run LOYO on a fixed small dataset and verify metrics are stable.
@@ -118,7 +126,8 @@ class TestWalkForwardReplay:
         result2 = validator.validate(data2, _simple_train_fn, _simple_predict_fn)
 
         assert result.mean_brier == result2.mean_brier
-        for yr in years:
+        # In rolling_window mode the earliest year is skipped (no prior data)
+        for yr in result.year_briers:
             assert result.year_briers[yr] == result2.year_briers[yr], (
                 f"Year {yr} Brier mismatch on frozen data"
             )
