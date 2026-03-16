@@ -404,8 +404,8 @@
     "ft_pct": 0.7569
   },
   "vanderbilt": {
-    "three_pt_pct": 0.3537,
-    "ft_pct": 0.7887
+    "three_pt_pct": 0.3553,
+    "ft_pct": 0.7927
   },
   "wisconsin": {
     "three_pt_pct": 0.361,
@@ -428,8 +428,8 @@
     "ft_pct": 0.6429
   },
   "vcu": {
-    "three_pt_pct": 0.3643,
-    "ft_pct": 0.7405
+    "three_pt_pct": 0.3669,
+    "ft_pct": 0.7393
   },
   "utah_valley": {
     "three_pt_pct": 0.3393,
@@ -440,16 +440,16 @@
     "ft_pct": 0.7639
   },
   "arkansas": {
-    "three_pt_pct": 0.3807,
-    "ft_pct": 0.7471
+    "three_pt_pct": 0.3887,
+    "ft_pct": 0.7469
   },
   "loyola_chicago": {
     "three_pt_pct": 0.317,
     "ft_pct": 0.6726
   },
   "michigan": {
-    "three_pt_pct": 0.3622,
-    "ft_pct": 0.7464
+    "three_pt_pct": 0.3602,
+    "ft_pct": 0.7471
   },
   "fairfield": {
     "three_pt_pct": 0.3324,
@@ -664,8 +664,8 @@
     "ft_pct": 0.6595
   },
   "purdue": {
-    "three_pt_pct": 0.3808,
-    "ft_pct": 0.7435
+    "three_pt_pct": 0.3792,
+    "ft_pct": 0.7429
   },
   "south_dakota": {
     "three_pt_pct": 0.3235,
@@ -676,8 +676,8 @@
     "ft_pct": 0.7378
   },
   "yale": {
-    "three_pt_pct": 0.4,
-    "ft_pct": 0.7586
+    "three_pt_pct": 0.399,
+    "ft_pct": 0.7587
   },
   "lipscomb": {
     "three_pt_pct": 0.357,
@@ -760,8 +760,8 @@
     "ft_pct": 0.6941
   },
   "wichita_st": {
-    "three_pt_pct": 0.3389,
-    "ft_pct": 0.6886
+    "three_pt_pct": 0.3353,
+    "ft_pct": 0.6875
   },
   "uab": {
     "three_pt_pct": 0.2781,
@@ -944,8 +944,8 @@
     "ft_pct": 0.7275
   },
   "south_florida": {
-    "three_pt_pct": 0.3326,
-    "ft_pct": 0.7423
+    "three_pt_pct": 0.3312,
+    "ft_pct": 0.7434
   },
   "central_arkansas": {
     "three_pt_pct": 0.3547,
@@ -1064,8 +1064,8 @@
     "ft_pct": 0.772
   },
   "dayton": {
-    "three_pt_pct": 0.3415,
-    "ft_pct": 0.7551
+    "three_pt_pct": 0.3413,
+    "ft_pct": 0.7506
   },
   "davidson": {
     "three_pt_pct": 0.3532,
@@ -1080,8 +1080,8 @@
     "ft_pct": 0.6482
   },
   "penn": {
-    "three_pt_pct": 0.3813,
-    "ft_pct": 0.6865
+    "three_pt_pct": 0.387,
+    "ft_pct": 0.6951
   },
   "umkc": {
     "three_pt_pct": 0.2841,
