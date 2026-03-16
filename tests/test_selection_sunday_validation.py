@@ -719,7 +719,9 @@ class TestStep10ExportArtifact:
 
         sample = pd.DataFrame({"ID": ["2026_1_2"], "Pred": [0.5]})
         id_map = {1: "team_a", 2: "team_b"}
-        predict_fn = lambda a, b: 0.65
+
+        def predict_fn(a, b):
+            return 0.65
 
         result = generate_predictions(sample, id_map, predict_fn, season_filter=2026)
         assert "Pred" in result.columns
@@ -732,7 +734,9 @@ class TestStep10ExportArtifact:
 
         sample = pd.DataFrame({"ID": ["2026_999_998"], "Pred": [0.5]})
         id_map = {}  # No mappings
-        predict_fn = lambda a, b: 0.7
+
+        def predict_fn(a, b):
+            return 0.7
 
         result = generate_predictions(sample, id_map, predict_fn, season_filter=2026)
         assert result["Pred"].iloc[0] == 0.5
