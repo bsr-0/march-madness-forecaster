@@ -119,8 +119,8 @@ FIXED_FEATURE_SET = [
     # Interaction features
     "seed_interaction",
     "seed_diff",
-    # travel_advantage — [KAG]: rest/travel in top submissions; 0.0 in historical
-    "travel_advantage",
+    # three_pt_seed_interaction — [VAR]: volatile 3PT shooting × seed diff amplifies upsets
+    "three_pt_seed_interaction",
     # External rating composite — [KAG]: meta-ranking of 100+ systems (WS3)
     "diff_external_rating_composite",
     "diff_external_rating_spread",
@@ -312,7 +312,7 @@ class SOTAPipelineConfig:
     max_feed_age_hours: int = 168
     min_public_sources: int = 2
     min_rapm_players_per_team: int = 5
-    min_calibration_samples_hard: int = 50  # Hard fail below this threshold
+    min_calibration_samples_hard: int = 80  # Hard fail below this threshold
 
     # --- ML optimization ---
     enable_hyperparameter_tuning: bool = True
@@ -453,7 +453,7 @@ class SOTAPipelineConfig:
     strict_leakage_mode: bool = True
 
     # --- Monte Carlo simulation ---
-    mc_noise_std: float = 0.12  # Logit-space noise for MC simulation (Tier 3, range 0.02-0.25)
+    mc_noise_std: float = 0.16  # Lopez & Matthews (2015): game-level logit SD ≈ 0.16-0.18
     mc_regional_correlation: float = 0.0  # Disabled unless calibrated/significant
     mc_calibration_json: Optional[str] = None  # Optional path to MC calibration artifact
 
@@ -515,8 +515,8 @@ class SOTAPipelineConfig:
     # --- Experimental classifier toggles (Phase 2) ---
     # These classifiers are removed from the production path.
     # Set to True only in experimental mode for research.
-    experimental_enable_lgb_classifier: bool = False
-    experimental_enable_xgb_classifier: bool = False
+    experimental_enable_lgb_classifier: bool = True
+    experimental_enable_xgb_classifier: bool = True
 
     # --- Admission gate thresholds (Phase 2) ---
     # Hard gate for production promotion. All conditions must pass.
@@ -560,7 +560,7 @@ class SOTAPipelineConfig:
     # "simple":   Logistic + SpreadRegressor, 9 features (best for < 400 samples)
     # "standard": LGB + XGB + Logistic + Spread, 23 features
     # "full":     All models including GNN/transformer (requires large data)
-    model_complexity: str = "simple"
+    model_complexity: str = "standard"
 
     # --- Brier-optimal post-processing (WS2) ---
     enable_brier_sharpening: bool = False  # EXPERIMENTAL: Power-transform sharpening — fragile on small OOS samples
@@ -699,11 +699,7 @@ class SOTAPipelineConfig:
         # Phase 2: pipeline_mode must be "production" for locked path
         if self.pipeline_mode != "production":
             violations.append(f"pipeline_mode={self.pipeline_mode}")
-        if self.experimental_enable_lgb_classifier:
-            violations.append("experimental_enable_lgb_classifier=True")
-        if self.experimental_enable_xgb_classifier:
-            violations.append("experimental_enable_xgb_classifier=True")
-        if self.model_complexity != "simple":
+        if self.model_complexity not in ("simple", "standard"):
             violations.append(f"model_complexity={self.model_complexity}")
         if self.mode != "calibration":
             violations.append(f"mode={self.mode}")

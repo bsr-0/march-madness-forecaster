@@ -21,6 +21,7 @@ from src.ml.training.symmetric import (
     INTERACT_START,
     INTERACT_END,
     MATCHUP_DIM,
+    SEED_EM_RESIDUAL_IDX,
     SEED_DIFF_IDX,
     swap_matchup_vector,
     swap_matchup_batch,
@@ -73,9 +74,9 @@ def realistic_matchup():
     # Interaction features
     x[71] = 0.3   # tempo_interaction
     x[72] = 0.1   # style_mismatch
-    x[73] = 0.5   # h2h_record
-    x[74] = 0.0   # common_opp_margin
-    x[75] = 0.0   # travel_advantage
+    x[73] = 0.2   # seed_em_residual_diff
+    x[74] = 0.1   # sos_seed_interaction
+    x[75] = -0.05 # three_pt_seed_interaction
     x[76] = -0.88 # seed_interaction: (1*16)/128 - 1 = -0.875
     x[77] = -1.0  # seed_diff: (1-16)/15 = -1.0
     return x
@@ -107,12 +108,14 @@ class TestSwapMatchupVector:
         )
 
     def test_interaction_features_mostly_unchanged(self, random_matchup):
-        """Interaction features [71:77] should be unchanged."""
+        """Symmetric interaction features should be unchanged; antisymmetric ones negate."""
         swapped = swap_matchup_vector(random_matchup)
-        np.testing.assert_allclose(
-            swapped[INTERACT_START:SEED_DIFF_IDX],
-            random_matchup[INTERACT_START:SEED_DIFF_IDX],
-            atol=1e-15,
+        # Symmetric interactions: [71, 72, 74, 75, 76]
+        for idx in [71, 72, 74, 75, 76]:
+            assert swapped[idx] == pytest.approx(random_matchup[idx], abs=1e-15), f"idx {idx}"
+        # Antisymmetric: seed_em_residual_diff [73]
+        assert swapped[SEED_EM_RESIDUAL_IDX] == pytest.approx(
+            -random_matchup[SEED_EM_RESIDUAL_IDX], abs=1e-15
         )
 
     def test_seed_diff_negates(self, random_matchup):
@@ -147,6 +150,9 @@ class TestSwapMatchupVector:
 
         # Seed interaction unchanged (commutative)
         assert swapped[76] == pytest.approx(-0.88, abs=1e-15)
+
+        # seed_em_residual_diff negated
+        assert swapped[73] == pytest.approx(-0.2, abs=1e-15)
 
         # Seed diff negated
         assert swapped[77] == pytest.approx(1.0, abs=1e-15)

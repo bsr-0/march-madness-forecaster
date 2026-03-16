@@ -50,7 +50,7 @@ FEATURE_GROUPS = {
     "abs_adj_def_eff": "Absolute level",
     "abs_sos_adj_em": "Absolute level",
     "seed_interaction": "Interaction",
-    "travel_advantage": "Interaction",
+    "three_pt_seed_interaction": "Interaction",
 }
 
 PAIRINGS = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
