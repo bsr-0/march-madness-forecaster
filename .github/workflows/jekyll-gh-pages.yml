@@ -34,6 +34,7 @@ jobs:
           set -euo pipefail
 
           REQUIRED_FILES=(
+            "docs/index.html"
             "docs/predictions.html"
             "docs/predictions-2026.html"
             "docs/methodology.html"
