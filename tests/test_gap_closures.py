@@ -165,7 +165,7 @@ class TestSOTAConfigNewFields:
         assert config.kaggle_dir is None
         assert config.massey_blend_weight == 0.25  # FIX #5: increased from 0.20 for stronger Massey signal
         assert config.massey_sigma == 4.5  # FIX #5: calibrated via grid search on historical data
-        assert config.model_complexity == "simple"  # Gap #3: default changed to simple
+        assert config.model_complexity == "standard"  # Upgraded to standard for 4-model ensemble
         assert config.ensemble_lgb_weight == 0.15  # Gap #2: further reduced for MOV-first (was 0.25)
         assert config.ensemble_xgb_weight == 0.15  # Gap #2: reduced for MOV-first
         # Women's config

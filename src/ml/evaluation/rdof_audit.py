@@ -183,9 +183,9 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
     PipelineConstant("consistency_normalizer", 3, 15.0,
         "SOTAPipelineConfig.consistency_normalizer", (5.0, 30.0),
         "Experimental-only; paired with consistency_bonus_max"),
-    PipelineConstant("mc_noise_std", 3, 0.12,
+    PipelineConstant("mc_noise_std", 3, 0.16,
         "SimulationConfig.noise_std", (0.02, 0.25),
-        "Changed 0.04→0.035→0.02→0.12 across fix rounds"),
+        "Changed 0.04→0.035→0.02→0.12→0.16; Lopez & Matthews (2015) ≈ 0.16-0.18"),
     PipelineConstant("mc_regional_correlation", 3, 0.0,
         "SOTAPipelineConfig.mc_regional_correlation", (0.0, 0.30),
         "Reduced from 0.25 during OOS fix round"),
@@ -2116,7 +2116,7 @@ class SensitivityAnalyzer:
             raise ValueError(f"Too few tournament games for year {year}")
 
         # Determine the noise_std to use for this evaluation
-        base_noise = 0.12  # Default mc_noise_std
+        base_noise = 0.16  # Default mc_noise_std
         if noise_param == "mc_noise_std":
             noise_std = value
         elif noise_param == "mc_regional_correlation":

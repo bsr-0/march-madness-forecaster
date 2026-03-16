@@ -2,7 +2,7 @@
   "year": 2026,
   "probability_profile": "production",
   "mode": "calibration",
-  "model_complexity": "simple",
+  "model_complexity": "standard",
 
   "use_agent_orchestration": false,
   "enable_gnn": false,
@@ -46,7 +46,7 @@
   "ensemble_xgb_weight": 0.15,
   "pre_calibration_clip_lo": 0.001,
   "pre_calibration_clip_hi": 0.999,
-  "mc_noise_std": 0.12,
+  "mc_noise_std": 0.16,
   "enable_spread_model": true,
   "enable_recency_weighting": true,
   "enable_symmetric_augmentation": true,

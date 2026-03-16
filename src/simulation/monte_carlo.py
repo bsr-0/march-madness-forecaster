@@ -23,7 +23,7 @@ class SimulationConfig:
     # to ~0.15-0.25 in logit space.  0.04 produced overconfident simulation
     # outputs that underweighted Cinderella scenarios.  0.12 is a conservative
     # middle-ground that produces ~5-8% prob shifts near p=0.5.
-    noise_std: float = 0.12  # Logit-space noise std
+    noise_std: float = 0.16  # Logit-space noise std; Lopez & Matthews (2015) ≈ 0.16-0.18
     injury_probability: float = 0.02  # Per-game injury probability
     random_seed: Optional[int] = None
     parallel_workers: int = None  # None = use all CPUs

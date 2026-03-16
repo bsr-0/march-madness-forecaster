@@ -6,15 +6,18 @@ prediction path is:
 2. Convert margin to probability via Logistic CDF
 3. (Optional, experimental only) Calibrate CDF parameter (k, sigma) per tournament round
 
-Phase 2 Production Stack:
-- SpreadRegressor: 100% (sole production tree model)
-- Logistic Regression: 0% default (earns weight via admission gate)
+Production Stack (4-model ensemble):
+- SpreadRegressor: 45% (primary margin-to-probability model)
+- Logistic Regression: 20% (regularization hedge)
+- LightGBM: 20% (gradient boosting, conditional probability learning)
+- XGBoost: 15% (regularized boosting, ensemble diversity)
 - TemperatureScaling: sole final calibration layer
+- TournamentSigmaCalibrator: adjusts spread sigma for tournament context
 
 Experimental Stack (legacy):
 - SpreadRegressor: 55%, LightGBM: 15%, XGBoost: 15%, Logistic: 15%
 - TournamentExpert blend at 0.30 weight
-- RoundSpecificCalibrator / TournamentSigmaCalibrator
+- RoundSpecificCalibrator
 
 Calibration Semantics (Phase 2):
 - Stage 1 (model-internal): SpreadRegressor's sigma converts margin → raw
@@ -36,11 +39,12 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Phase 2: Production default weights (spread-only baseline).
-# Logistic earns weight only via the admission gate.
+# Production default weights: 4-model fixed-weight blend.
 _PRODUCTION_WEIGHTS = {
-    "spread": 1.0,
-    "logistic": 0.0,
+    "spread": 0.45,
+    "logistic": 0.20,
+    "lgb": 0.20,
+    "xgb": 0.15,
 }
 
 # Legacy experimental weights (Margin-First architecture)
@@ -350,17 +354,8 @@ class MarginFirstEnsemble:
         In production mode, only spread and logistic models are allowed.
         Attempting to set lgb or xgb models in production mode raises ValueError.
         """
-        if self.production_mode:
-            if lgb_model is not None:
-                raise ValueError(
-                    "LightGBM classifier is not allowed in production mode. "
-                    "Set production_mode=False for experimental use."
-                )
-            if xgb_model is not None:
-                raise ValueError(
-                    "XGBoost classifier is not allowed in production mode. "
-                    "Set production_mode=False for experimental use."
-                )
+        # All four models (spread, logistic, lgb, xgb) are now allowed in
+        # production mode for ensemble diversity.
         if spread_model is not None:
             self.models["spread"] = spread_model
         if lgb_model is not None:
