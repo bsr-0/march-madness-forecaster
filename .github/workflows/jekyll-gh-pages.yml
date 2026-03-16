@@ -96,9 +96,28 @@ jobs:
           fi
 
           BASE_URL="${PAGE_URL%/}/"
+          echo "Base URL: ${BASE_URL}"
 
-          echo "Waiting 60s for CDN propagation..."
-          sleep 60
+          # Wait for GitHub Pages CDN to propagate the new deployment.
+          # GitHub Pages can take 2-5 minutes after deploy-pages completes.
+          echo "Waiting 120s for CDN propagation..."
+          sleep 120
+
+          # First, do a quick reachability check on the root URL to fail fast
+          # if Pages is fundamentally not configured (persistent 403/404).
+          echo "Checking root URL reachability..."
+          root_status="$(curl -sS -o /dev/null -w "%{http_code}" "${BASE_URL}" || true)"
+          if [ "$root_status" = "403" ]; then
+            echo "::warning::Root URL returned 403. Waiting an additional 120s in case Pages is still provisioning..."
+            sleep 120
+            root_status="$(curl -sS -o /dev/null -w "%{http_code}" "${BASE_URL}" || true)"
+            if [ "$root_status" = "403" ]; then
+              echo "::error::Root URL still returns 403 after extended wait. GitHub Pages may not be enabled or the site is not public."
+              echo "::error::Verify: Settings > Pages > Source is set to 'GitHub Actions' and visibility is 'Public'."
+              exit 1
+            fi
+          fi
+          echo "Root URL returned ${root_status}"
 
           URLS=(
             "${BASE_URL}"
@@ -113,22 +132,29 @@ jobs:
             "${BASE_URL}data/validation_2025.json"
           )
 
+          MAX_ATTEMPTS=45
+          RETRY_INTERVAL=10
+
           for url in "${URLS[@]}"; do
             ok=0
-            for attempt in {1..30}; do
+            for attempt in $(seq 1 $MAX_ATTEMPTS); do
               status="$(curl -sS -H 'Cache-Control: no-cache' -o /tmp/page.out -w "%{http_code}" "$url" || true)"
               if [ "$status" = "200" ]; then
                 ok=1
+                echo "OK: ${url}"
                 break
               fi
-              echo "Attempt ${attempt}/30: ${url} returned ${status}; retrying in 10s..."
-              sleep 10
+              echo "Attempt ${attempt}/${MAX_ATTEMPTS}: ${url} returned ${status}; retrying in ${RETRY_INTERVAL}s..."
+              sleep "$RETRY_INTERVAL"
             done
             if [ "$ok" -ne 1 ]; then
-              echo "::error::Smoke test failed for ${url}"
+              echo "::error::Smoke test failed for ${url} (last status: ${status} after ${MAX_ATTEMPTS} attempts)"
+              cat /tmp/page.out 2>/dev/null || true
               exit 1
             fi
           done
+
+          echo "All URLs reachable. Running content validation..."
 
           curl -fsSL -o /tmp/predictions.html "${BASE_URL}predictions.html"
           grep -q "2026 NCAA Tournament Predictions" /tmp/predictions.html
