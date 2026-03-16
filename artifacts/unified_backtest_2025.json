@@ -1,0 +1,13 @@
+{
+  "modes": [
+    "calibration",
+    "ev"
+  ],
+  "years": [
+    2025
+  ],
+  "pool_sizes": [
+    30
+  ],
+  "results": []
+}

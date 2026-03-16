@@ -261,9 +261,10 @@ def validate_source_coverage(
     Raises:
         ValueError: If coverage is below the minimum ratio.
     """
-    if n_teams == 0:
+    team_count = n_teams if isinstance(n_teams, int) else len(n_teams)
+    if team_count == 0:
         raise ValueError("No tournament teams loaded.")
-    ratio = len(coverage_map) / n_teams
+    ratio = len(coverage_map) / team_count
     if ratio < min_ratio:
         raise ValueError(
             f"{source_name} coverage is too low ({ratio:.1%}). "

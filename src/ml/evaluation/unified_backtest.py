@@ -1135,7 +1135,7 @@ class UnifiedBacktester:
             try:
                 return self.predict_fn_factory(year)
             except Exception as e:
-                logger.warning(
+                logger.exception(
                     "predict_fn_factory failed for %d: %s. Falling back to seed model.",
                     year, e,
                 )

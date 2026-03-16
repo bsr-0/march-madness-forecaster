@@ -1,7 +1,7 @@
 {
   "metadata": {
     "model_name": "SOTA Ensemble (dashboard export)",
-    "generated_at": "2026-02-22 04:32 UTC",
+    "generated_at": "2026-03-16 18:43 UTC",
     "training_seasons": [
       2005,
       2006,
@@ -48,27 +48,27 @@
       2022,
       2023
     ],
-    "total_games": 104003,
+    "total_games": 104116,
     "unique_teams": 1258,
     "feature_count": 0,
     "games_per_season": {
-      "2005": 4221,
-      "2006": 4585,
-      "2007": 5193,
-      "2008": 5540,
+      "2005": 4223,
+      "2006": 4702,
+      "2007": 5195,
+      "2008": 5537,
       "2009": 5501,
-      "2010": 5573,
-      "2011": 5560,
+      "2010": 5568,
+      "2011": 5553,
       "2012": 4891,
-      "2013": 4958,
-      "2014": 5930,
-      "2015": 5925,
-      "2016": 5942,
-      "2017": 5916,
+      "2013": 4960,
+      "2014": 5928,
+      "2015": 5926,
+      "2016": 5940,
+      "2017": 5919,
       "2018": 5995,
-      "2019": 6039,
-      "2020": 5766,
-      "2021": 4282,
+      "2019": 6040,
+      "2020": 5767,
+      "2021": 4285,
       "2022": 5964,
       "2023": 6222
     },
@@ -77,7 +77,7 @@
       "sportsipy",
       "barttorvik"
     ],
-    "notes": "Training window spans 2004-11-12 to 2022-11-01. Holdout season 2024 excluded from training."
+    "notes": "Training window spans 2004-11-12 to 2023-04-08. Holdout season 2024 excluded from training."
   },
   "feature_importance": {
     "method": "domain_prior",
@@ -588,19 +588,19 @@
       },
       {
         "team": null,
-        "prob": 0.024419407555952784
+        "prob": 0.024419407555952777
       },
       {
         "team": null,
-        "prob": 0.024419407555952784
+        "prob": 0.024419407555952777
       },
       {
         "team": null,
-        "prob": 0.024419407555952784
+        "prob": 0.024419407555952777
       },
       {
         "team": null,
-        "prob": 0.024419407555952784
+        "prob": 0.024419407555952777
       },
       {
         "team": null,
@@ -801,12 +801,34 @@
     "season": 2024,
     "status": "PASS",
     "metrics": {
-      "games": 803,
-      "brier": 0.19576,
-      "log_loss": 0.57357,
-      "accuracy": 0.6862,
-      "brier_skill": 0.1689
+      "games": 743,
+      "brier": 0.19811,
+      "round_weighted_brier": null,
+      "log_loss": 0.57702,
+      "accuracy": 0.7066,
+      "brier_skill": 0.1452,
+      "estimated_kaggle_rank": null
     },
-    "notes": "Holdout evaluation summary (most recent available)."
+    "kaggle": {
+      "estimated_rank": "top 1%",
+      "round_weighted_brier": 0.20346676509560702,
+      "brier": 0.16642826681545886,
+      "accuracy": 0.7619047619047619
+    },
+    "espn_pool": {
+      "pool_size": 30,
+      "rank_position": 6,
+      "score": 1320.0
+    },
+    "integrity": {
+      "level": 2,
+      "note": "QUASI-PROSPECTIVE: Pipeline frozen at 2026-03-15T11:56:27 (verified against /var/folders/k6/xgcms1js0pd99_gvsqs84rlh0000gn/T/tmpho8gtpcr.json). Evaluation year 2024 was not available when the pipeline was frozen. Pipeline architecture was informed by prior years' data.",
+      "source": "prospective_eval_2024_20260315_115808.json"
+    },
+    "notes": "Holdout evaluation summary (latest available, prefers 2025 when present). Historical holdout should be interpreted as retrospective unless explicitly pre-registered.",
+    "sources": {
+      "holdout_eval": "prospective_eval_2024_20260315_115808.json",
+      "unified_backtest": "unified_backtest_2024.json"
+    }
   }
 }

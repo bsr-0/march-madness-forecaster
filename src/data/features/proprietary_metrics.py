@@ -1405,23 +1405,25 @@ class ProprietaryMetricsEngine:
                     seen_game_ids.setdefault(pair_key, set()).add(g.game_id)
         all_games.sort(key=lambda g: g.game_date)
 
-        # D2: Initialize from regressed prior if provided; else flat start at mean.
+        # D2: Initialize from regressed prior if provided.
+        # Use defaultdict so out-of-pool opponents in historical rows cannot
+        # trigger KeyError during Elo updates.
+        elo: Dict[str, float] = defaultdict(lambda: _ELO_MEAN)
         if prior_elo:
-            elo: Dict[str, float] = {
-                t: (1.0 - _ELO_REGRESSION) * prior_elo.get(t, _ELO_MEAN) + _ELO_REGRESSION * _ELO_MEAN
-                for t in by_team
-            }
-            # Teams not in prior (new programs, transfers) start at mean
             for t in by_team:
-                if t not in elo:
-                    elo[t] = _ELO_MEAN
-        else:
-            elo = defaultdict(lambda: _ELO_MEAN)
+                elo[t] = (
+                    (1.0 - _ELO_REGRESSION) * prior_elo.get(t, _ELO_MEAN)
+                    + _ELO_REGRESSION * _ELO_MEAN
+                )
         K_BASE = 38.0
 
         for g in all_games:
             t1 = g.team_id
             t2 = g.opponent_id
+            # Some inputs contain opponents that are not represented in by_team
+            # (e.g., out-of-field teams). Ensure they get a sane Elo default.
+            _ = elo[t1]
+            _ = elo[t2]
 
             # B5: Derive Elo HCA from the unified HCA_POINTS constant.
             # 3.75 pts * 13.3 Elo/pt ≈ 50 Elo (consistent with FiveThirtyEight).
@@ -2334,6 +2336,8 @@ class IncrementalMetricsEngine:
 
         # Cache: date → Dict[team_id, ProprietaryTeamMetrics]
         self._cache: Dict[str, Dict[str, ProprietaryTeamMetrics]] = {}
+        # Cache: date → by_team game lists used for point-in-time matchup features.
+        self._by_team_cache: Dict[str, Dict[str, List[GameRecord]]] = {}
 
         # SOS warm-start state REMOVED.  Warm-starting from the previous
         # date's converged SOS values created a train/test distribution shift:
@@ -2434,11 +2438,13 @@ class IncrementalMetricsEngine:
         (insufficient data for meaningful metrics).
         """
         if as_of_date in self._cache:
+            self._by_team = self._by_team_cache.get(as_of_date, {})
             return self._cache[as_of_date]
 
         # Filter to games strictly before as_of_date.
         prefix = [g for g in self._all_records if g.game_date < as_of_date]
         if len(prefix) < 50:
+            self._by_team_cache[as_of_date] = {}
             self._cache[as_of_date] = {}
             return {}
 
@@ -2457,6 +2463,8 @@ class IncrementalMetricsEngine:
             by_team[rec.team_id].append(rec)
         for tid in by_team:
             by_team[tid].sort(key=lambda g: g.game_date)
+        self._by_team = by_team
+        self._by_team_cache[as_of_date] = by_team
 
         # Step 1: Raw efficiency.
         raw_off, raw_def, tempo, names = engine._raw_efficiency(by_team)
@@ -2655,6 +2663,57 @@ class IncrementalMetricsEngine:
 
         self._cache[as_of_date] = results
         return results
+
+    def compute_h2h_record(self, team1_id: str, team2_id: str) -> float:
+        """Compute team1 win rate vs team2 from current point-in-time games."""
+        if not hasattr(self, "_by_team"):
+            return 0.5
+
+        games = self._by_team.get(team1_id, [])
+        h2h_wins = 0
+        h2h_total = 0
+        for g in games:
+            if g.opponent_id == team2_id:
+                h2h_total += 1
+                if g.points > g.opp_points:
+                    h2h_wins += 1
+
+        if h2h_total == 0:
+            return 0.5
+
+        weight = min(1.0, h2h_total / 4.0)
+        raw_rate = h2h_wins / h2h_total
+        return weight * raw_rate + (1.0 - weight) * 0.5
+
+    def compute_common_opponent_margin(self, team1_id: str, team2_id: str) -> float:
+        """Compute normalized margin differential through common opponents."""
+        if not hasattr(self, "_by_team"):
+            return 0.0
+
+        margin_cap = float(getattr(self, "MARGIN_CAP", 30.0))
+
+        def _opp_margins(team_id: str) -> Dict[str, List[float]]:
+            margins: Dict[str, List[float]] = defaultdict(list)
+            for g in self._by_team.get(team_id, []):
+                margin = g.points - g.opp_points
+                margin = float(np.clip(margin, -margin_cap, margin_cap))
+                margins[g.opponent_id].append(margin)
+            return margins
+
+        m1 = _opp_margins(team1_id)
+        m2 = _opp_margins(team2_id)
+        common_opps = set(m1.keys()) & set(m2.keys())
+        if not common_opps:
+            return 0.0
+
+        diffs = []
+        for opp in common_opps:
+            avg1 = float(np.mean(m1[opp]))
+            avg2 = float(np.mean(m2[opp]))
+            diffs.append(avg1 - avg2)
+
+        raw = float(np.mean(diffs))
+        return float(np.clip(raw / 20.0, -1.5, 1.5))
 
     @staticmethod
     def metrics_to_team_vector(

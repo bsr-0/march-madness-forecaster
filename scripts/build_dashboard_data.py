@@ -7,12 +7,14 @@ from typing import Dict, List, Tuple
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DATA_ROOT = REPO_ROOT / "data" / "raw"
 HIST_ROOT = DATA_ROOT / "historical"
+ARTIFACT_ROOT = REPO_ROOT / "artifacts"
 BRACKET_PATH = DATA_ROOT / "bracket_2026.json"
 OUTPUT_PATH = REPO_ROOT / "docs" / "data" / "dashboard.json"
 
 FEATURE_FILE = REPO_ROOT / "src" / "pipeline" / "sota.py"
 
-DEFAULT_HOLDOUT_YEAR = 2024
+DEFAULT_HOLDOUT_YEAR = 2025
+PREFERRED_HOLDOUT_YEAR = 2025
 
 GROUP_WEIGHTS = {
     "Core efficiency": 0.22,
@@ -56,25 +58,146 @@ FEATURE_GROUPS = {
 PAIRINGS = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
 
 
-def _load_holdout_evaluation() -> Tuple[int, Dict[str, float], str]:
-    candidates = sorted(DATA_ROOT.glob("prospective_eval_2024_*.json"))
+def _holdout_candidates() -> List[Path]:
+    return sorted(DATA_ROOT.glob("prospective_eval_*_*.json"))
+
+
+def _extract_holdout_year(payload: Dict) -> int:
+    holdout = payload.get("holdout_evaluation", {})
+    years = holdout.get("holdout_years") or []
+    if years:
+        try:
+            return int(years[0])
+        except Exception:
+            pass
+    return DEFAULT_HOLDOUT_YEAR
+
+
+def _select_best_holdout_file(candidates: List[Path]) -> Path:
+    parsed: List[Tuple[int, float, Path]] = []
+    for path in candidates:
+        try:
+            payload = json.loads(path.read_text())
+            year = _extract_holdout_year(payload)
+            parsed.append((year, path.stat().st_mtime, path))
+        except Exception:
+            continue
+    if not parsed:
+        raise ValueError("No readable holdout evaluation files")
+
+    preferred = [p for p in parsed if p[0] == PREFERRED_HOLDOUT_YEAR]
+    if preferred:
+        preferred.sort(key=lambda x: x[1], reverse=True)
+        return preferred[0][2]
+
+    parsed.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    return parsed[0][2]
+
+
+def _load_holdout_evaluation() -> Tuple[int, Dict[str, float], str, Dict]:
+    candidates = _holdout_candidates()
     if not candidates:
-        return DEFAULT_HOLDOUT_YEAR, {}, "pending"
-    latest = candidates[-1]
+        return (
+            DEFAULT_HOLDOUT_YEAR,
+            {},
+            "pending",
+            {
+                "level": "unknown",
+                "note": "No holdout artifact found.",
+                "source": None,
+            },
+        )
+
+    latest = _select_best_holdout_file(candidates)
     payload = json.loads(latest.read_text())
     holdout = payload.get("holdout_evaluation", {})
-    holdout_years = holdout.get("holdout_years") or [DEFAULT_HOLDOUT_YEAR]
-    holdout_year = holdout_years[0]
+    holdout_year = _extract_holdout_year(payload)
     per_year = holdout.get("per_year", {}).get(str(holdout_year), {})
     metrics = {
         "games": per_year.get("n_games"),
         "brier": per_year.get("brier_score"),
+        "round_weighted_brier": per_year.get("round_weighted_brier"),
         "log_loss": per_year.get("log_loss"),
         "accuracy": per_year.get("accuracy"),
         "brier_skill": per_year.get("brier_skill_score"),
+        "estimated_kaggle_rank": per_year.get("estimated_kaggle_rank"),
     }
     status = holdout.get("verdict", "ok")
-    return holdout_year, metrics, status
+    integrity = {
+        "level": holdout.get("integrity_level", payload.get("integrity_level", "unknown")),
+        "note": holdout.get(
+            "integrity_note",
+            payload.get(
+                "integrity_note",
+                "Retrospective holdout diagnostics, not true prospective pre-registration.",
+            ),
+        ),
+        "source": latest.name,
+    }
+    return holdout_year, metrics, status, integrity
+
+
+def _load_unified_backtest(target_year: int) -> Dict:
+    patterns = [
+        "*unified_backtest*.json",
+        "*backtest_unified*.json",
+        "*unified*backtest*.json",
+    ]
+    candidates: List[Path] = []
+    for root in (ARTIFACT_ROOT, DATA_ROOT, REPO_ROOT):
+        if not root.exists():
+            continue
+        for pattern in patterns:
+            candidates.extend(root.glob(pattern))
+    if not candidates:
+        return {}
+
+    parsed: List[Tuple[float, Dict, Path]] = []
+    for path in candidates:
+        try:
+            payload = json.loads(path.read_text())
+            if isinstance(payload.get("results"), list):
+                parsed.append((path.stat().st_mtime, payload, path))
+        except Exception:
+            continue
+    if not parsed:
+        return {}
+
+    with_target_year = [
+        item for item in parsed
+        if any(r.get("year") == target_year for r in item[1].get("results", []))
+    ]
+    if with_target_year:
+        with_target_year.sort(key=lambda x: x[0], reverse=True)
+        payload, source = with_target_year[0][1], with_target_year[0][2]
+    else:
+        parsed.sort(key=lambda x: x[0], reverse=True)
+        payload, source = parsed[0][1], parsed[0][2]
+
+    year_results = [r for r in payload.get("results", []) if r.get("year") == target_year]
+    if not year_results:
+        return {}
+
+    cal = next((r for r in year_results if r.get("mode") == "calibration"), {})
+    ev_candidates = [r for r in year_results if r.get("mode") == "ev"]
+    ev = next((r for r in ev_candidates if r.get("pool_size") == 30), None)
+    if ev is None and ev_candidates:
+        ev = sorted(ev_candidates, key=lambda r: r.get("pool_size", 10**9))[0]
+
+    return {
+        "source": source.name,
+        "kaggle": {
+            "estimated_rank": cal.get("kaggle_rank"),
+            "round_weighted_brier": cal.get("rw_brier"),
+            "brier": cal.get("brier"),
+            "accuracy": cal.get("accuracy"),
+        } if cal else {},
+        "espn_pool": {
+            "pool_size": ev.get("pool_size"),
+            "rank_position": ev.get("pool_rank"),
+            "score": ev.get("pool_score"),
+        } if ev else {},
+    }
 
 
 def _parse_fixed_feature_set() -> List[str]:
@@ -225,7 +348,8 @@ def _build_predictions() -> Dict:
 
 
 def main() -> None:
-    holdout_year, backtest_metrics, backtest_status = _load_holdout_evaluation()
+    holdout_year, backtest_metrics, backtest_status, integrity = _load_holdout_evaluation()
+    unified = _load_unified_backtest(holdout_year)
     training_summary = _summarize_training(holdout_year)
     feature_names = _parse_fixed_feature_set()
     feature_importance = _build_feature_importance(feature_names)
@@ -250,7 +374,17 @@ def main() -> None:
             "season": holdout_year,
             "status": backtest_status,
             "metrics": backtest_metrics,
-            "notes": "Holdout evaluation summary (most recent available).",
+            "kaggle": unified.get("kaggle", {}),
+            "espn_pool": unified.get("espn_pool", {}),
+            "integrity": integrity,
+            "notes": (
+                "Holdout evaluation summary (latest available, prefers 2025 when present). "
+                "Historical holdout should be interpreted as retrospective unless explicitly pre-registered."
+            ),
+            "sources": {
+                "holdout_eval": integrity.get("source"),
+                "unified_backtest": unified.get("source"),
+            },
         },
     }
 
