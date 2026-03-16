@@ -38,9 +38,14 @@ jobs:
             "docs/methodology.html"
             "docs/results.html"
             "docs/predictions.html"
+            "docs/predictions-2026.html"
             "docs/style.css"
             "docs/data/dashboard.json"
             "docs/data/conference_predictions_2026.json"
+            "docs/data/bracket_2026.json"
+            "docs/data/validation_2025.json"
+            "docs/data/model_metrics.json"
+            "docs/data/team_profiles.json"
           )
           missing=0
           for f in "${REQUIRED_FILES[@]}"; do
@@ -97,11 +102,14 @@ jobs:
           URLS=(
             "${BASE_URL}"
             "${BASE_URL}predictions.html"
+            "${BASE_URL}predictions-2026.html"
             "${BASE_URL}results.html"
             "${BASE_URL}methodology.html"
             "${BASE_URL}style.css"
             "${BASE_URL}data/dashboard.json"
             "${BASE_URL}data/conference_predictions_2026.json"
+            "${BASE_URL}data/bracket_2026.json"
+            "${BASE_URL}data/validation_2025.json"
           )
 
           for url in "${URLS[@]}"; do
