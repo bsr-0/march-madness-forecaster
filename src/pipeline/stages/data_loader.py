@@ -918,8 +918,8 @@ def load_team_stat_sources(
     # Enrich with tournament context data
     enrich_tournament_context(config, torvik_map, proprietary_map, teams)
 
-    validate_source_coverage("Torvik", torvik_map, teams, min_ratio=0.8)
-    validate_source_coverage("Proprietary metrics", proprietary_map, teams, min_ratio=0.8)
+    validate_source_coverage("Torvik", torvik_map, len(teams), min_ratio=0.8)
+    validate_source_coverage("Proprietary metrics", proprietary_map, len(teams), min_ratio=0.8)
 
     return StatSourcesResult(
         torvik_map=torvik_map,
@@ -1048,7 +1048,7 @@ def build_rosters(
             "Roster RAPM quality is too low. Provide richer player RAPM/stint inputs "
             f"(coverage={quality.get('team_coverage_ratio', 0.0):.1%})."
         )
-    validate_source_coverage("Roster", rosters, teams, min_ratio=0.8)
+    validate_source_coverage("Roster", rosters, len(teams), min_ratio=0.8)
     return RosterResult(rosters=rosters, roster_rapm_quality=quality)
 
 
@@ -1193,7 +1193,7 @@ def build_or_load_game_flows(
     validate_source_coverage(
         "Historical games",
         {k: v for k, v in team_to_games.items() if v},
-        teams,
+        len(teams),
         min_ratio=0.6,
     )
     return GameFlowResult(team_to_games=team_to_games, all_game_flows=all_game_flows)
