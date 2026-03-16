@@ -1,0 +1,667 @@
+{
+  "conferences": [
+    {
+      "conference": "Big Ten",
+      "total_teams": 9,
+      "avg_seed": 5.3,
+      "best_seed": 1,
+      "avg_rating": 0.8433,
+      "teams": [
+        {
+          "team_name": "Michigan",
+          "seed": 1,
+          "region": "East",
+          "barthag": 0.9812
+        },
+        {
+          "team_name": "Purdue",
+          "seed": 2,
+          "region": "South",
+          "barthag": 0.9614
+        },
+        {
+          "team_name": "Michigan State",
+          "seed": 4,
+          "region": "South",
+          "barthag": 0.5
+        },
+        {
+          "team_name": "Illinois",
+          "seed": 4,
+          "region": "Midwest",
+          "barthag": 0.9677
+        },
+        {
+          "team_name": "Nebraska",
+          "seed": 5,
+          "region": "West",
+          "barthag": 0.9313
+        },
+        {
+          "team_name": "Wisconsin",
+          "seed": 5,
+          "region": "Midwest",
+          "barthag": 0.9297
+        },
+        {
+          "team_name": "UCLA",
+          "seed": 7,
+          "region": "East",
+          "barthag": 0.9108
+        },
+        {
+          "team_name": "Iowa",
+          "seed": 9,
+          "region": "South",
+          "barthag": 0.9072
+        },
+        {
+          "team_name": "Ohio State",
+          "seed": 11,
+          "region": "East",
+          "barthag": 0.5
+        }
+      ]
+    },
+    {
+      "conference": "Big 12",
+      "total_teams": 8,
+      "avg_seed": 4.9,
+      "best_seed": 1,
+      "avg_rating": 0.8089,
+      "teams": [
+        {
+          "team_name": "Arizona",
+          "seed": 1,
+          "region": "South",
+          "barthag": 0.9777
+        },
+        {
+          "team_name": "Kansas",
+          "seed": 3,
+          "region": "West",
+          "barthag": 0.9283
+        },
+        {
+          "team_name": "Houston",
+          "seed": 3,
+          "region": "South",
+          "barthag": 0.9711
+        },
+        {
+          "team_name": "Texas Tech",
+          "seed": 3,
+          "region": "Midwest",
+          "barthag": 0.9441
+        },
+        {
+          "team_name": "Iowa State",
+          "seed": 4,
+          "region": "East",
+          "barthag": 0.5
+        },
+        {
+          "team_name": "BYU",
+          "seed": 6,
+          "region": "South",
+          "barthag": 0.5
+        },
+        {
+          "team_name": "UCF",
+          "seed": 8,
+          "region": "East",
+          "barthag": 0.8127
+        },
+        {
+          "team_name": "TCU",
+          "seed": 11,
+          "region": "West",
+          "barthag": 0.8372
+        }
+      ]
+    },
+    {
+      "conference": "SEC",
+      "total_teams": 8,
+      "avg_seed": 6.8,
+      "best_seed": 2,
+      "avg_rating": 0.9181,
+      "teams": [
+        {
+          "team_name": "Florida",
+          "seed": 2,
+          "region": "West",
+          "barthag": 0.9734
+        },
+        {
+          "team_name": "Alabama",
+          "seed": 4,
+          "region": "West",
+          "barthag": 0.9346
+        },
+        {
+          "team_name": "Arkansas",
+          "seed": 5,
+          "region": "East",
+          "barthag": 0.9311
+        },
+        {
+          "team_name": "Tennessee",
+          "seed": 6,
+          "region": "East",
+          "barthag": 0.9413
+        },
+        {
+          "team_name": "Vanderbilt",
+          "seed": 8,
+          "region": "West",
+          "barthag": 0.9487
+        },
+        {
+          "team_name": "Kentucky",
+          "seed": 9,
+          "region": "East",
+          "barthag": 0.8905
+        },
+        {
+          "team_name": "Missouri",
+          "seed": 10,
+          "region": "West",
+          "barthag": 0.8518
+        },
+        {
+          "team_name": "Texas A&M",
+          "seed": 10,
+          "region": "Midwest",
+          "barthag": 0.8734
+        }
+      ]
+    },
+    {
+      "conference": "ACC",
+      "total_teams": 7,
+      "avg_seed": 6.4,
+      "best_seed": 1,
+      "avg_rating": 0.7521,
+      "teams": [
+        {
+          "team_name": "Duke",
+          "seed": 1,
+          "region": "West",
+          "barthag": 0.9814
+        },
+        {
+          "team_name": "Virginia",
+          "seed": 2,
+          "region": "Midwest",
+          "barthag": 0.943
+        },
+        {
+          "team_name": "North Carolina",
+          "seed": 5,
+          "region": "South",
+          "barthag": 0.9034
+        },
+        {
+          "team_name": "Louisville",
+          "seed": 7,
+          "region": "South",
+          "barthag": 0.9367
+        },
+        {
+          "team_name": "Miami (FL)",
+          "seed": 9,
+          "region": "West",
+          "barthag": 0.5
+        },
+        {
+          "team_name": "NC State",
+          "seed": 10,
+          "region": "East",
+          "barthag": 0.5
+        },
+        {
+          "team_name": "Southern Methodist",
+          "seed": 11,
+          "region": "Midwest",
+          "barthag": 0.5
+        }
+      ]
+    },
+    {
+      "conference": "Big East",
+      "total_teams": 3,
+      "avg_seed": 3.3,
+      "best_seed": 1,
+      "avg_rating": 0.7777,
+      "teams": [
+        {
+          "team_name": "Connecticut",
+          "seed": 1,
+          "region": "Midwest",
+          "barthag": 0.952
+        },
+        {
+          "team_name": "St. John's (NY)",
+          "seed": 2,
+          "region": "East",
+          "barthag": 0.5
+        },
+        {
+          "team_name": "Villanova",
+          "seed": 7,
+          "region": "West",
+          "barthag": 0.881
+        }
+      ]
+    },
+    {
+      "conference": "West Coast",
+      "total_teams": 3,
+      "avg_seed": 6.0,
+      "best_seed": 3,
+      "avg_rating": 0.7801,
+      "teams": [
+        {
+          "team_name": "Gonzaga",
+          "seed": 3,
+          "region": "East",
+          "barthag": 0.9447
+        },
+        {
+          "team_name": "Saint Mary's (CA)",
+          "seed": 6,
+          "region": "West",
+          "barthag": 0.5
+        },
+        {
+          "team_name": "Santa Clara",
+          "seed": 9,
+          "region": "Midwest",
+          "barthag": 0.8957
+        }
+      ]
+    },
+    {
+      "conference": "Atlantic 10",
+      "total_teams": 2,
+      "avg_seed": 9.0,
+      "best_seed": 8,
+      "avg_rating": 0.6794,
+      "teams": [
+        {
+          "team_name": "Saint Louis",
+          "seed": 8,
+          "region": "Midwest",
+          "barthag": 0.8587
+        },
+        {
+          "team_name": "Virginia Commonwealth",
+          "seed": 10,
+          "region": "South",
+          "barthag": 0.5
+        }
+      ]
+    },
+    {
+      "conference": "Mid-American",
+      "total_teams": 1,
+      "avg_seed": 6.0,
+      "best_seed": 6,
+      "avg_rating": 0.5,
+      "teams": [
+        {
+          "team_name": "Miami (OH)",
+          "seed": 6,
+          "region": "Midwest",
+          "barthag": 0.5
+        }
+      ]
+    },
+    {
+      "conference": "Mountain West",
+      "total_teams": 1,
+      "avg_seed": 7.0,
+      "best_seed": 7,
+      "avg_rating": 0.5,
+      "teams": [
+        {
+          "team_name": "Utah State",
+          "seed": 7,
+          "region": "Midwest",
+          "barthag": 0.5
+        }
+      ]
+    },
+    {
+      "conference": "Missouri Valley",
+      "total_teams": 1,
+      "avg_seed": 8.0,
+      "best_seed": 8,
+      "avg_rating": 0.7535,
+      "teams": [
+        {
+          "team_name": "Belmont",
+          "seed": 8,
+          "region": "South",
+          "barthag": 0.7535
+        }
+      ]
+    },
+    {
+      "conference": "Conference USA",
+      "total_teams": 1,
+      "avg_seed": 11.0,
+      "best_seed": 11,
+      "avg_rating": 0.6145,
+      "teams": [
+        {
+          "team_name": "Liberty",
+          "seed": 11,
+          "region": "South",
+          "barthag": 0.6145
+        }
+      ]
+    },
+    {
+      "conference": "Coastal Athletic",
+      "total_teams": 1,
+      "avg_seed": 12.0,
+      "best_seed": 12,
+      "avg_rating": 0.5989,
+      "teams": [
+        {
+          "team_name": "UNC Wilmington",
+          "seed": 12,
+          "region": "East",
+          "barthag": 0.5989
+        }
+      ]
+    },
+    {
+      "conference": "Ivy League",
+      "total_teams": 1,
+      "avg_seed": 12.0,
+      "best_seed": 12,
+      "avg_rating": 0.7079,
+      "teams": [
+        {
+          "team_name": "Yale",
+          "seed": 12,
+          "region": "West",
+          "barthag": 0.7079
+        }
+      ]
+    },
+    {
+      "conference": "Big South",
+      "total_teams": 1,
+      "avg_seed": 12.0,
+      "best_seed": 12,
+      "avg_rating": 0.6983,
+      "teams": [
+        {
+          "team_name": "High Point",
+          "seed": 12,
+          "region": "South",
+          "barthag": 0.6983
+        }
+      ]
+    },
+    {
+      "conference": "Southland",
+      "total_teams": 1,
+      "avg_seed": 12.0,
+      "best_seed": 12,
+      "avg_rating": 0.5,
+      "teams": [
+        {
+          "team_name": "McNeese State",
+          "seed": 12,
+          "region": "Midwest",
+          "barthag": 0.5
+        }
+      ]
+    },
+    {
+      "conference": "American",
+      "total_teams": 1,
+      "avg_seed": 13.0,
+      "best_seed": 13,
+      "avg_rating": 0.8278,
+      "teams": [
+        {
+          "team_name": "South Florida",
+          "seed": 13,
+          "region": "East",
+          "barthag": 0.8278
+        }
+      ]
+    },
+    {
+      "conference": "MAAC",
+      "total_teams": 1,
+      "avg_seed": 13.0,
+      "best_seed": 13,
+      "avg_rating": 0.4934,
+      "teams": [
+        {
+          "team_name": "Merrimack",
+          "seed": 13,
+          "region": "West",
+          "barthag": 0.4934
+        }
+      ]
+    },
+    {
+      "conference": "Western Athletic",
+      "total_teams": 1,
+      "avg_seed": 13.0,
+      "best_seed": 13,
+      "avg_rating": 0.7169,
+      "teams": [
+        {
+          "team_name": "Utah Valley",
+          "seed": 13,
+          "region": "South",
+          "barthag": 0.7169
+        }
+      ]
+    },
+    {
+      "conference": "The Summit League",
+      "total_teams": 1,
+      "avg_seed": 13.0,
+      "best_seed": 13,
+      "avg_rating": 0.5,
+      "teams": [
+        {
+          "team_name": "North Dakota State",
+          "seed": 13,
+          "region": "Midwest",
+          "barthag": 0.5
+        }
+      ]
+    },
+    {
+      "conference": "Big West",
+      "total_teams": 1,
+      "avg_seed": 14.0,
+      "best_seed": 14,
+      "avg_rating": 0.5,
+      "teams": [
+        {
+          "team_name": "Cal State Northridge",
+          "seed": 14,
+          "region": "East",
+          "barthag": 0.5
+        }
+      ]
+    },
+    {
+      "conference": "Horizon League",
+      "total_teams": 1,
+      "avg_seed": 14.0,
+      "best_seed": 14,
+      "avg_rating": 0.5262,
+      "teams": [
+        {
+          "team_name": "Robert Morris",
+          "seed": 14,
+          "region": "West",
+          "barthag": 0.5262
+        }
+      ]
+    },
+    {
+      "conference": "ASUN",
+      "total_teams": 1,
+      "avg_seed": 14.0,
+      "best_seed": 14,
+      "avg_rating": 0.5123,
+      "teams": [
+        {
+          "team_name": "Austin Peay",
+          "seed": 14,
+          "region": "South",
+          "barthag": 0.5123
+        }
+      ]
+    },
+    {
+      "conference": "Southern",
+      "total_teams": 1,
+      "avg_seed": 14.0,
+      "best_seed": 14,
+      "avg_rating": 0.5,
+      "teams": [
+        {
+          "team_name": "East Tennessee State",
+          "seed": 14,
+          "region": "Midwest",
+          "barthag": 0.5
+        }
+      ]
+    },
+    {
+      "conference": "Patriot League",
+      "total_teams": 1,
+      "avg_seed": 15.0,
+      "best_seed": 15,
+      "avg_rating": 0.5275,
+      "teams": [
+        {
+          "team_name": "Navy",
+          "seed": 15,
+          "region": "East",
+          "barthag": 0.5275
+        }
+      ]
+    },
+    {
+      "conference": "Sun Belt",
+      "total_teams": 1,
+      "avg_seed": 15.0,
+      "best_seed": 15,
+      "avg_rating": 0.4423,
+      "teams": [
+        {
+          "team_name": "South Alabama",
+          "seed": 15,
+          "region": "West",
+          "barthag": 0.4423
+        }
+      ]
+    },
+    {
+      "conference": "Ohio Valley",
+      "total_teams": 1,
+      "avg_seed": 15.0,
+      "best_seed": 15,
+      "avg_rating": 0.5,
+      "teams": [
+        {
+          "team_name": "Southeast Missouri State",
+          "seed": 15,
+          "region": "South",
+          "barthag": 0.5
+        }
+      ]
+    },
+    {
+      "conference": "Big Sky",
+      "total_teams": 1,
+      "avg_seed": 15.0,
+      "best_seed": 15,
+      "avg_rating": 0.5632,
+      "teams": [
+        {
+          "team_name": "Northern Colorado",
+          "seed": 15,
+          "region": "Midwest",
+          "barthag": 0.5632
+        }
+      ]
+    },
+    {
+      "conference": "America East",
+      "total_teams": 1,
+      "avg_seed": 16.0,
+      "best_seed": 16,
+      "avg_rating": 0.5,
+      "teams": [
+        {
+          "team_name": "Maryland-Baltimore County",
+          "seed": 16,
+          "region": "East",
+          "barthag": 0.5
+        }
+      ]
+    },
+    {
+      "conference": "SWAC",
+      "total_teams": 1,
+      "avg_seed": 16.0,
+      "best_seed": 16,
+      "avg_rating": 0.3819,
+      "teams": [
+        {
+          "team_name": "Bethune-Cookman",
+          "seed": 16,
+          "region": "West",
+          "barthag": 0.3819
+        }
+      ]
+    },
+    {
+      "conference": "NEC",
+      "total_teams": 1,
+      "avg_seed": 16.0,
+      "best_seed": 16,
+      "avg_rating": 0.5,
+      "teams": [
+        {
+          "team_name": "Long Island University",
+          "seed": 16,
+          "region": "South",
+          "barthag": 0.5
+        }
+      ]
+    },
+    {
+      "conference": "MEAC",
+      "total_teams": 1,
+      "avg_seed": 16.0,
+      "best_seed": 16,
+      "avg_rating": 0.4238,
+      "teams": [
+        {
+          "team_name": "Howard",
+          "seed": 16,
+          "region": "Midwest",
+          "barthag": 0.4238
+        }
+      ]
+    }
+  ]
+}

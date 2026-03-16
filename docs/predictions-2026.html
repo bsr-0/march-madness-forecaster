@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 March Madness Predictions</title>
+<meta name="description" content="2026 NCAA Tournament predictions with full bracket, Monte Carlo simulation, and model validation on 2018-2024 data.">
+<style>
+:root {
+  --bg: #0f172a;
+  --bg2: #1e293b;
+  --bg3: #334155;
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --accent: #f97316;
+  --accent2: #3b82f6;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #eab308;
+  --border: #475569;
+  --card: #1e293b;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
+
+/* Header */
+header {
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+  border-bottom: 3px solid var(--accent);
+  padding: 24px 0;
+  text-align: center;
+}
+header h1 { font-size: 2rem; font-weight: 800; }
+header h1 span { color: var(--accent); }
+header .subtitle { color: var(--text-dim); margin-top: 4px; font-size: 0.95rem; }
+header .back-link { color: var(--accent2); text-decoration: none; font-size: 0.85rem; display: inline-block; margin-bottom: 8px; }
+header .back-link:hover { text-decoration: underline; }
+
+/* Navigation */
+nav {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+}
+nav .container { display: flex; gap: 0; overflow-x: auto; }
+nav button {
+  background: none; border: none; color: var(--text-dim);
+  padding: 14px 20px; cursor: pointer; font-size: 0.9rem;
+  font-weight: 600; white-space: nowrap; transition: all 0.2s;
+  border-bottom: 3px solid transparent;
+}
+nav button:hover { color: var(--text); background: var(--bg3); }
+nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Sections */
+section { display: none; padding: 30px 0; }
+section.active { display: block; }
+
+/* Cards */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.card h2 { font-size: 1.3rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+/* Stats grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--bg3);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+.stat-card .value { font-size: 2rem; font-weight: 800; color: var(--accent); }
+.stat-card .label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th { background: var(--bg3); padding: 10px 12px; text-align: left; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); position: sticky; top: 52px; z-index: 10; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--bg3); }
+tr:hover td { background: rgba(59, 130, 246, 0.05); }
+
+/* Game rows */
+.game-row {
+  display: flex; align-items: center; padding: 6px 0;
+  border-bottom: 1px solid var(--bg3);
+  font-size: 0.88rem;
+}
+.game-row .seed { width: 30px; text-align: center; font-weight: 700; color: var(--text-dim); }
+.game-row .team { flex: 1; }
+.game-row .vs { width: 40px; text-align: center; color: var(--text-dim); font-size: 0.75rem; }
+.game-row .prob { width: 70px; text-align: right; font-weight: 700; }
+.game-row .winner-name { color: var(--green); font-weight: 600; }
+.game-row .loser-name { color: var(--text-dim); }
+.game-row.upset .winner-name { color: var(--yellow); }
+.game-row .prob-bar {
+  width: 80px; height: 6px; background: var(--bg3); border-radius: 3px; margin-left: 8px;
+  overflow: hidden; display: inline-block; vertical-align: middle;
+}
+.game-row .prob-bar .fill { height: 100%; border-radius: 3px; }
+
+/* Probability bars */
+.prob-cell { display: flex; align-items: center; gap: 6px; }
+.mini-bar { width: 80px; height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; flex-shrink: 0; }
+.mini-bar .fill { height: 100%; border-radius: 4px; background: var(--accent); }
+
+/* Calibration chart */
+.cal-chart { position: relative; width: 100%; max-width: 500px; height: 300px; margin: 20px auto; }
+canvas { width: 100% !important; height: 100% !important; }
+
+/* Filters */
+.filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.filters select, .filters input {
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 0.85rem;
+}
+
+/* Badge */
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 0.75rem; font-weight: 600;
+}
+.badge-green { background: rgba(34,197,94,0.2); color: var(--green); }
+.badge-red { background: rgba(239,68,68,0.2); color: var(--red); }
+.badge-yellow { background: rgba(234,179,8,0.2); color: var(--yellow); }
+.badge-blue { background: rgba(59,130,246,0.2); color: var(--accent2); }
+
+/* Round tabs */
+.round-tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+.round-tabs button {
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text-dim); padding: 6px 14px; border-radius: 6px;
+  cursor: pointer; font-size: 0.82rem; font-weight: 500; transition: all 0.2s;
+}
+.round-tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Seed colors */
+.seed-1 { color: #fbbf24; } .seed-2 { color: #a78bfa; }
+.seed-3 { color: #34d399; } .seed-4 { color: #60a5fa; }
+.seed-5 { color: #f472b6; }
+
+/* Conference bar chart */
+.conf-bar-container { margin: 8px 0; }
+.conf-bar-row { display: flex; align-items: center; margin: 4px 0; }
+.conf-bar-label { width: 120px; font-size: 0.82rem; text-align: right; padding-right: 10px; flex-shrink: 0; }
+.conf-bar-track { flex: 1; height: 22px; background: var(--bg); border-radius: 4px; overflow: hidden; position: relative; }
+.conf-bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 8px; font-size: 0.75rem; font-weight: 600; min-width: 60px; }
+.conf-bar-value { position: absolute; right: 8px; top: 2px; font-size: 0.75rem; color: var(--text-dim); }
+
+/* Upset grid */
+.upset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.upset-cell {
+  background: var(--bg3); border-radius: 8px; padding: 10px; text-align: center;
+}
+.upset-cell .matchup { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+.upset-cell .rate { font-size: 1.3rem; font-weight: 800; }
+.upset-cell .count { font-size: 0.75rem; color: var(--text-dim); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  header h1 { font-size: 1.4rem; }
+  nav button { padding: 10px 14px; font-size: 0.8rem; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .card { padding: 16px; }
+  table { font-size: 0.8rem; }
+  th, td { padding: 8px; }
+}
+
+footer {
+  text-align: center; padding: 30px; color: var(--text-dim);
+  font-size: 0.8rem; border-top: 1px solid var(--border); margin-top: 40px;
+}
+footer a { color: var(--accent2); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a href="index.html" class="back-link">&larr; Back to Home</a>
+    <h1>2026 <span>March Madness</span> Predictions</h1>
+    <div class="subtitle">Blended Barthag-Elo Model &bull; 10,000 Monte Carlo Simulations &bull; Validated on 2018&ndash;2024 Tournaments</div>
+  </div>
+</header>
+
+<nav>
+  <div class="container">
+    <button class="active" onclick="showTab('overview')">Overview</button>
+    <button onclick="showTab('bracket')">Full Bracket</button>
+    <button onclick="showTab('teams')">Team Profiles</button>
+    <button onclick="showTab('validation')">Model Validation</button>
+    <button onclick="showTab('calibration')">Calibration</button>
+    <button onclick="showTab('upsets')">Upset Analysis</button>
+    <button onclick="showTab('conferences')">Conferences</button>
+  </div>
+</nav>
+
+<main class="container">
+
+<!-- OVERVIEW -->
+<section id="overview" class="active">
+  <div class="stats-grid" id="overview-stats"></div>
+
+  <div class="card">
+    <h2>Championship Probabilities</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Team</th><th>Seed</th><th>Region</th><th>Championship</th><th>Final Four</th><th>Elite Eight</th>
+        </tr>
+      </thead>
+      <tbody id="champ-table"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Predicted Final Four &amp; Championship</h2>
+    <div id="final-four-display"></div>
+  </div>
+</section>
+
+<!-- BRACKET -->
+<section id="bracket">
+  <div class="card">
+    <h2>2026 NCAA Tournament Bracket</h2>
+    <div class="round-tabs" id="round-filter"></div>
+    <div id="bracket-display"></div>
+  </div>
+</section>
+
+<!-- TEAMS -->
+<section id="teams">
+  <div class="card">
+    <h2>Tournament Team Profiles</h2>
+    <div class="filters">
+      <select id="team-region-filter" onchange="renderTeams()">
+        <option value="">All Regions</option>
+        <option value="East">East</option>
+        <option value="West">West</option>
+        <option value="South">South</option>
+        <option value="Midwest">Midwest</option>
+      </select>
+      <select id="team-sort" onchange="renderTeams()">
+        <option value="t_rank">T-Rank</option>
+        <option value="seed">Seed</option>
+        <option value="championship_prob">Championship Prob</option>
+        <option value="net_efficiency">Net Efficiency</option>
+        <option value="adj_offensive_efficiency">Offense</option>
+        <option value="adj_defensive_efficiency">Defense (low is better)</option>
+      </select>
+      <input type="text" id="team-search" placeholder="Search teams..." oninput="renderTeams()">
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th><th>Team</th><th>Seed</th><th>Region</th><th>Conf</th>
+          <th>Net Eff</th><th>Off Eff</th><th>Def Eff</th><th>Champ %</th><th>FF %</th>
+        </tr>
+      </thead>
+      <tbody id="teams-table"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- VALIDATION -->
+<section id="validation">
+  <div class="stats-grid" id="validation-stats"></div>
+
+  <div class="card">
+    <h2>Year-by-Year Backtest Results</h2>
+    <p style="color:var(--text-dim);margin-bottom:12px;font-size:0.85rem;">
+      Model trained using each year's pre-tournament Barthag ratings. No future data leakage &mdash; each year is evaluated using only data available before that year's tournament.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Year</th><th>Games</th><th>Accuracy</th><th>Brier Score</th><th>Seed Baseline</th><th>Skill Score</th><th>Upsets (Actual)</th><th>Upsets (Predicted)</th>
+        </tr>
+      </thead>
+      <tbody id="validation-table"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Accuracy by Round</h2>
+    <p style="color:var(--text-dim);margin-bottom:12px;font-size:0.85rem;">
+      Aggregated across all backtest years. Later rounds are harder to predict as matchups become less seed-determined.
+    </p>
+    <div id="round-accuracy"></div>
+  </div>
+
+  <div class="card" id="prospective-card" style="display:none;">
+    <h2>Prospective Evaluation (Repository Pipeline)</h2>
+    <p style="color:var(--text-dim);margin-bottom:12px;font-size:0.85rem;">
+      Results from the repo's full SOTA pipeline evaluated on 2024 holdout data under quasi-prospective conditions.
+    </p>
+    <div id="prospective-eval"></div>
+  </div>
+
+  <div class="card">
+    <h2>Detailed Game Predictions</h2>
+    <div class="filters">
+      <select id="val-year-filter" onchange="renderValidationGames()">
+        <option value="">All Years</option>
+      </select>
+      <select id="val-round-filter" onchange="renderValidationGames()">
+        <option value="">All Rounds</option>
+        <option value="R64">Round of 64</option>
+        <option value="R32">Round of 32</option>
+        <option value="S16">Sweet 16</option>
+        <option value="E8">Elite 8</option>
+        <option value="F4">Final Four</option>
+        <option value="NCG">Championship</option>
+      </select>
+      <select id="val-result-filter" onchange="renderValidationGames()">
+        <option value="">All Results</option>
+        <option value="correct">Correct</option>
+        <option value="wrong">Wrong</option>
+      </select>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Year</th><th>Round</th><th>Matchup</th><th>Predicted</th><th>Actual</th><th>Prob</th><th>Result</th>
+        </tr>
+      </thead>
+      <tbody id="val-games-table"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- CALIBRATION -->
+<section id="calibration">
+  <div class="card">
+    <h2>Calibration Curve</h2>
+    <p style="color:var(--text-dim);margin-bottom:12px;font-size:0.85rem;">
+      A well-calibrated model's predicted probabilities should match actual win rates. Points near the diagonal indicate good calibration.
+    </p>
+    <div class="cal-chart">
+      <canvas id="cal-canvas"></canvas>
+    </div>
+    <table style="max-width:500px;margin:0 auto;">
+      <thead><tr><th>Predicted Range</th><th>Predicted Avg</th><th>Actual Win Rate</th><th>Games</th></tr></thead>
+      <tbody id="cal-table"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Brier Score Decomposition</h2>
+    <p style="color:var(--text-dim);margin-bottom:12px;font-size:0.85rem;">
+      Brier Score = mean squared error of probability forecasts. Lower is better. 0.25 = coin flip baseline.
+    </p>
+    <div id="brier-decomposition"></div>
+  </div>
+</section>
+
+<!-- UPSETS -->
+<section id="upsets">
+  <div class="card">
+    <h2>Historical Upset Rates by Seed Matchup</h2>
+    <p style="color:var(--text-dim);margin-bottom:12px;font-size:0.85rem;">
+      Upset rate = how often the higher-seeded (worse) team wins. Based on 2018&ndash;2024 tournaments (6 years).
+    </p>
+    <div class="upset-grid" id="upset-grid"></div>
+  </div>
+
+  <div class="card">
+    <h2>2026 Predicted Upsets &amp; Toss-ups</h2>
+    <p style="color:var(--text-dim);margin-bottom:12px;font-size:0.85rem;">
+      Games where the model predicts the higher seed to win (upsets) or the win probability is below 60% (toss-ups).
+    </p>
+    <div id="predicted-upsets"></div>
+  </div>
+</section>
+
+<!-- CONFERENCES -->
+<section id="conferences">
+  <div class="card">
+    <h2>Conference Tournament Representation</h2>
+    <div id="conf-chart"></div>
+  </div>
+
+  <div class="card">
+    <h2>Conference Details</h2>
+    <div id="conf-details"></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>March Madness Forecaster &bull; Model validated on 2018&ndash;2024 tournament data (no 2025/2026 leakage)</p>
+  <p><a href="index.html">Home</a> &bull; <a href="methodology.html">Methodology</a> &bull; <a href="results.html">Results</a></p>
+</footer>
+
+<script>
+// ── Data loading ─────────────────────────────────────────────────
+let bracketData, validationData, metricsData, teamData, upsetData, confData;
+
+async function loadData() {
+  const base = './data/';
+  try {
+    [bracketData, validationData, metricsData, teamData, upsetData, confData] = await Promise.all([
+      fetch(base + 'bracket_2026.json').then(r => r.json()),
+      fetch(base + 'validation_2025.json').then(r => r.json()),
+      fetch(base + 'model_metrics.json').then(r => r.json()),
+      fetch(base + 'team_profiles.json').then(r => r.json()),
+      fetch(base + 'historical_upsets.json').then(r => r.json()),
+      fetch(base + 'conference_strength.json').then(r => r.json()),
+    ]);
+    initApp();
+  } catch (e) {
+    document.querySelector('main').innerHTML =
+      '<div style="text-align:center;padding:60px 20px;color:var(--text-dim);font-size:1.1rem;">Error loading data: ' + e.message + '</div>';
+  }
+}
+
+// ── Tab Navigation ───────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('section').forEach(function(s) { s.classList.remove('active'); });
+  document.querySelectorAll('nav button').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+  var btns = document.querySelectorAll('nav button');
+  for (var i = 0; i < btns.length; i++) {
+    if (btns[i].getAttribute('onclick') === "showTab('" + id + "')") {
+      btns[i].classList.add('active');
+    }
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────
+function pct(v, d) { d = d === undefined ? 1 : d; return (v * 100).toFixed(d) + '%'; }
+function fmt(v, d) { d = d === undefined ? 4 : d; return v.toFixed(d); }
+function seedClass(s) { return s <= 5 ? 'seed-' + s : ''; }
+
+function probColor(p) {
+  if (p >= 0.8) return 'var(--green)';
+  if (p >= 0.65) return 'var(--accent2)';
+  if (p >= 0.55) return 'var(--yellow)';
+  return 'var(--red)';
+}
+
+function makeProbBar(prob, maxProb) {
+  maxProb = maxProb || 1;
+  var w = (prob / maxProb * 100).toFixed(0);
+  return '<div class="prob-cell"><span>' + pct(prob) + '</span><div class="mini-bar"><div class="fill" style="width:' + w + '%;background:' + probColor(prob) + '"></div></div></div>';
+}
+
+function teamName(id) {
+  return id.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+}
+
+function stripSeed(s) { return s.replace(/^\(\d+\)\s*/, ''); }
+
+// ── Initialize App ───────────────────────────────────────────────
+function initApp() {
+  renderOverview();
+  renderBracket();
+  renderTeams();
+  renderValidation();
+  renderCalibration();
+  renderUpsets();
+  renderConferences();
+}
+
+// ── OVERVIEW TAB ─────────────────────────────────────────────────
+function renderOverview() {
+  var champ = bracketData.championship_probabilities[0];
+  var overall = validationData.overall;
+  var ncgRound = bracketData.rounds.find(function(r) { return r.round_name === 'Championship'; });
+  var champion = ncgRound ? ncgRound.games[0] : null;
+
+  document.getElementById('overview-stats').innerHTML =
+    '<div class="stat-card"><div class="value">' + (champion ? champion.winner : 'TBD') + '</div><div class="label">Predicted Champion</div></div>' +
+    '<div class="stat-card"><div class="value">' + pct(champ.championship_prob, 0) + '</div><div class="label">' + champ.team_name + ' Title Prob</div></div>' +
+    '<div class="stat-card"><div class="value">' + pct(overall.accuracy, 0) + '</div><div class="label">Backtest Accuracy (6 yrs)</div></div>' +
+    '<div class="stat-card"><div class="value">' + fmt(overall.brier_score) + '</div><div class="label">Brier Score</div></div>';
+
+  // Championship table
+  var maxChamp = bracketData.championship_probabilities[0].championship_prob;
+  var rows = '';
+  var probs = bracketData.championship_probabilities.filter(function(t) { return t.championship_prob > 0.005; });
+  for (var i = 0; i < probs.length; i++) {
+    var t = probs[i];
+    rows += '<tr>' +
+      '<td>' + (i + 1) + '</td>' +
+      '<td><strong class="' + seedClass(t.seed) + '">' + t.team_name + '</strong></td>' +
+      '<td><span class="' + seedClass(t.seed) + '">' + t.seed + '</span></td>' +
+      '<td>' + t.region + '</td>' +
+      '<td>' + makeProbBar(t.championship_prob, maxChamp) + '</td>' +
+      '<td>' + makeProbBar(t.final_four_prob, 0.3) + '</td>' +
+      '<td>' + makeProbBar(t.elite_eight_prob, 0.4) + '</td>' +
+      '</tr>';
+  }
+  document.getElementById('champ-table').innerHTML = rows;
+
+  // Final Four display
+  var f4Round = bracketData.rounds.find(function(r) { return r.round_name === 'Final Four'; });
+  var e8Round = bracketData.rounds.find(function(r) { return r.round_name === 'Elite 8'; });
+  if (f4Round && e8Round) {
+    var e8Winners = e8Round.games.map(function(g) {
+      return { name: g.winner, seed: g.winner_seed, region: g.region, prob: g.win_prob };
+    });
+    var html = '<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">';
+    for (var i = 0; i < e8Winners.length; i++) {
+      var w = e8Winners[i];
+      html += '<div class="stat-card">' +
+        '<div class="value" style="font-size:1.3rem;color:var(--green)">' + w.name + '</div>' +
+        '<div class="label">' + w.region + ' Region</div>' +
+        '<div style="margin-top:6px;font-size:0.85rem;color:var(--text-dim)">Seed: ' + w.seed + '</div></div>';
+    }
+    html += '</div>';
+
+    html += '<div style="margin-top:16px;"><div class="region-header" style="border-color:var(--accent2)">Semifinal Matchups</div>';
+    for (var i = 0; i < f4Round.games.length; i++) {
+      var g = f4Round.games[i];
+      html += '<div class="game-row">' +
+        '<span class="seed">' + g.team1_seed + '</span>' +
+        '<span class="team ' + (g.winner_id === g.team1_id ? 'winner-name' : 'loser-name') + '">' + stripSeed(g.team1) + '</span>' +
+        '<span class="vs">vs</span>' +
+        '<span class="seed">' + g.team2_seed + '</span>' +
+        '<span class="team ' + (g.winner_id === g.team2_id ? 'winner-name' : 'loser-name') + '">' + stripSeed(g.team2) + '</span>' +
+        '<span class="prob" style="color:' + probColor(g.win_prob) + '">' + pct(g.win_prob) + '</span></div>';
+    }
+
+    if (champion) {
+      html += '<div class="region-header" style="border-color:var(--yellow)">Championship Game</div>';
+      html += '<div class="game-row">' +
+        '<span class="seed">' + champion.team1_seed + '</span>' +
+        '<span class="team ' + (champion.winner_id === champion.team1_id ? 'winner-name' : 'loser-name') + '">' + stripSeed(champion.team1) + '</span>' +
+        '<span class="vs">vs</span>' +
+        '<span class="seed">' + champion.team2_seed + '</span>' +
+        '<span class="team ' + (champion.winner_id === champion.team2_id ? 'winner-name' : 'loser-name') + '">' + stripSeed(champion.team2) + '</span>' +
+        '<span class="prob" style="color:' + probColor(champion.win_prob) + '">' + pct(champion.win_prob) + '</span></div>';
+    }
+    html += '</div>';
+    document.getElementById('final-four-display').innerHTML = html;
+  }
+}
+
+// ── BRACKET TAB ──────────────────────────────────────────────────
+function renderBracket() {
+  var rounds = bracketData.rounds;
+  var html = '<button class="active" onclick="filterRound(this, \'\')">All Rounds</button>';
+  for (var i = 0; i < rounds.length; i++) {
+    html += '<button onclick="filterRound(this, \'' + rounds[i].round_name + '\')">' + rounds[i].round_name + '</button>';
+  }
+  document.getElementById('round-filter').innerHTML = html;
+  renderBracketGames('');
+}
+
+function filterRound(btn, round) {
+  var btns = document.querySelectorAll('#round-filter button');
+  for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+  btn.classList.add('active');
+  renderBracketGames(round);
+}
+
+function renderBracketGames(filterRound) {
+  var rounds = filterRound
+    ? bracketData.rounds.filter(function(r) { return r.round_name === filterRound; })
+    : bracketData.rounds;
+
+  var html = '';
+  for (var ri = 0; ri < rounds.length; ri++) {
+    var round = rounds[ri];
+    html += '<div class="region-header">' + round.round_name + '</div>';
+
+    // Group by region
+    var byRegion = {};
+    for (var gi = 0; gi < round.games.length; gi++) {
+      var g = round.games[gi];
+      var region = g.region || 'Final';
+      if (!byRegion[region]) byRegion[region] = [];
+      byRegion[region].push(g);
+    }
+
+    var regionKeys = Object.keys(byRegion);
+    for (var rki = 0; rki < regionKeys.length; rki++) {
+      var region = regionKeys[rki];
+      var games = byRegion[region];
+      if (regionKeys.length > 1 && round.round_name !== 'Final Four' && round.round_name !== 'Championship') {
+        html += '<div style="margin:10px 0 6px;font-size:0.85rem;font-weight:600;color:var(--accent2)">' + region + '</div>';
+      }
+      for (var gi = 0; gi < games.length; gi++) {
+        var g = games[gi];
+        html += '<div class="game-row ' + (g.is_upset ? 'upset' : '') + '">' +
+          '<span class="seed ' + seedClass(g.team1_seed) + '">' + g.team1_seed + '</span>' +
+          '<span class="team ' + (g.winner_id === g.team1_id ? 'winner-name' : 'loser-name') + '">' + stripSeed(g.team1) + '</span>' +
+          '<span class="vs">vs</span>' +
+          '<span class="seed ' + seedClass(g.team2_seed) + '">' + g.team2_seed + '</span>' +
+          '<span class="team ' + (g.winner_id === g.team2_id ? 'winner-name' : 'loser-name') + '">' + stripSeed(g.team2) + '</span>' +
+          '<span class="prob" style="color:' + probColor(g.win_prob) + '">' + pct(g.win_prob) + '</span>' +
+          '<div class="prob-bar"><div class="fill" style="width:' + (g.win_prob * 100).toFixed(0) + '%;background:' + probColor(g.win_prob) + '"></div></div>' +
+          (g.is_upset ? '<span class="badge badge-yellow" style="margin-left:6px">UPSET</span>' : '') +
+          '</div>';
+      }
+    }
+  }
+  document.getElementById('bracket-display').innerHTML = html;
+}
+
+// ── TEAMS TAB ────────────────────────────────────────────────────
+function renderTeams() {
+  var region = document.getElementById('team-region-filter').value;
+  var sortBy = document.getElementById('team-sort').value;
+  var search = document.getElementById('team-search').value.toLowerCase();
+
+  var teams = teamData.teams.filter(function(t) {
+    if (region && t.region !== region) return false;
+    if (search && t.team_name.toLowerCase().indexOf(search) === -1) return false;
+    return true;
+  });
+
+  var ascending = sortBy === 'adj_defensive_efficiency' || sortBy === 'seed' || sortBy === 't_rank';
+  teams.sort(function(a, b) { return ascending ? a[sortBy] - b[sortBy] : b[sortBy] - a[sortBy]; });
+
+  var html = '';
+  for (var i = 0; i < teams.length; i++) {
+    var t = teams[i];
+    var netColor = t.net_efficiency > 20 ? 'var(--green)' : t.net_efficiency > 10 ? 'var(--accent2)' : 'var(--text)';
+    html += '<tr>' +
+      '<td>' + t.t_rank + '</td>' +
+      '<td><strong class="' + seedClass(t.seed) + '">' + t.team_name + '</strong></td>' +
+      '<td><span class="' + seedClass(t.seed) + '">' + t.seed + '</span></td>' +
+      '<td>' + t.region + '</td>' +
+      '<td>' + t.conference + '</td>' +
+      '<td><strong style="color:' + netColor + '">' + (t.net_efficiency > 0 ? '+' : '') + t.net_efficiency + '</strong></td>' +
+      '<td>' + t.adj_offensive_efficiency + '</td>' +
+      '<td>' + t.adj_defensive_efficiency + '</td>' +
+      '<td>' + (t.championship_prob > 0 ? makeProbBar(t.championship_prob, 0.15) : '-') + '</td>' +
+      '<td>' + (t.final_four_prob > 0 ? pct(t.final_four_prob) : '-') + '</td>' +
+      '</tr>';
+  }
+  document.getElementById('teams-table').innerHTML = html;
+}
+
+// ── VALIDATION TAB ───────────────────────────────────────────────
+function renderValidation() {
+  var overall = validationData.overall;
+
+  document.getElementById('validation-stats').innerHTML =
+    '<div class="stat-card"><div class="value">' + pct(overall.accuracy, 1) + '</div><div class="label">Overall Accuracy</div></div>' +
+    '<div class="stat-card"><div class="value">' + fmt(overall.brier_score) + '</div><div class="label">Brier Score</div></div>' +
+    '<div class="stat-card"><div class="value">' + fmt(overall.log_loss) + '</div><div class="label">Log Loss</div></div>' +
+    '<div class="stat-card"><div class="value">' + overall.n_games + '</div><div class="label">Total Games Tested</div></div>';
+
+  // Year-by-year table
+  var rows = '';
+  for (var i = 0; i < validationData.per_year.length; i++) {
+    var y = validationData.per_year[i];
+    var accColor = y.accuracy >= 0.75 ? 'var(--green)' : y.accuracy >= 0.65 ? 'var(--yellow)' : 'var(--red)';
+    var skillBadge = y.skill_score > 0 ? 'badge-green' : 'badge-red';
+    rows += '<tr>' +
+      '<td><strong>' + y.year + '</strong></td>' +
+      '<td>' + y.n_games + '</td>' +
+      '<td><strong style="color:' + accColor + '">' + pct(y.accuracy) + '</strong></td>' +
+      '<td>' + fmt(y.brier_score) + '</td>' +
+      '<td>' + fmt(y.seed_baseline_brier) + '</td>' +
+      '<td><span class="badge ' + skillBadge + '">' + fmt(y.skill_score) + '</span></td>' +
+      '<td>' + y.upsets_actual + '</td>' +
+      '<td>' + y.upsets_predicted + '</td>' +
+      '</tr>';
+  }
+  document.getElementById('validation-table').innerHTML = rows;
+
+  // Round accuracy
+  if (metricsData.round_accuracy) {
+    var rounds = Object.keys(metricsData.round_accuracy);
+    var html = '<div class="conf-bar-container">';
+    for (var i = 0; i < rounds.length; i++) {
+      var rn = rounds[i];
+      var stats = metricsData.round_accuracy[rn];
+      html += '<div class="conf-bar-row">' +
+        '<div class="conf-bar-label">' + rn + '</div>' +
+        '<div class="conf-bar-track">' +
+        '<div class="conf-bar-fill" style="width:' + (stats.accuracy * 100).toFixed(0) + '%;background:' + probColor(stats.accuracy) + '">' + pct(stats.accuracy) + '</div>' +
+        '<div class="conf-bar-value">' + stats.correct + '/' + stats.total + '</div>' +
+        '</div></div>';
+    }
+    html += '</div>';
+    document.getElementById('round-accuracy').innerHTML = html;
+  }
+
+  // Prospective eval
+  if (metricsData.prospective_evaluation) {
+    var pe = metricsData.prospective_evaluation;
+    document.getElementById('prospective-card').style.display = 'block';
+    document.getElementById('prospective-eval').innerHTML =
+      '<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">' +
+      '<div class="stat-card"><div class="value">' + pct(pe.accuracy, 1) + '</div><div class="label">Accuracy (2024)</div></div>' +
+      '<div class="stat-card"><div class="value">' + fmt(pe.brier_score) + '</div><div class="label">Brier Score</div></div>' +
+      '<div class="stat-card"><div class="value">' + fmt(pe.skill_vs_seed) + '</div><div class="label">Skill vs Seed</div></div>' +
+      '<div class="stat-card"><div class="value">' + pe.n_games + '</div><div class="label">Games Evaluated</div></div>' +
+      '</div>' +
+      '<p style="margin-top:12px;font-size:0.82rem;color:var(--text-dim);">' +
+      'Integrity Level: ' + pe.integrity_level + ' &mdash; ' + pe.integrity_note + '</p>';
+  }
+
+  // Populate year filter
+  var opts = '<option value="">All Years</option>';
+  for (var i = 0; i < validationData.per_year.length; i++) {
+    opts += '<option value="' + validationData.per_year[i].year + '">' + validationData.per_year[i].year + '</option>';
+  }
+  document.getElementById('val-year-filter').innerHTML = opts;
+
+  renderValidationGames();
+}
+
+function renderValidationGames() {
+  var yearFilter = document.getElementById('val-year-filter').value;
+  var roundFilter = document.getElementById('val-round-filter').value;
+  var resultFilter = document.getElementById('val-result-filter').value;
+
+  var games = [];
+  for (var yi = 0; yi < validationData.per_year.length; yi++) {
+    var yr = validationData.per_year[yi];
+    if (yearFilter && yr.year != yearFilter) continue;
+    for (var gi = 0; gi < yr.games.length; gi++) {
+      var g = yr.games[gi];
+      if (roundFilter && g.round !== roundFilter) continue;
+      if (resultFilter === 'correct' && !g.correct) continue;
+      if (resultFilter === 'wrong' && g.correct) continue;
+      games.push({ year: yr.year, team1: g.team1, team2: g.team2, team1_seed: g.team1_seed, team2_seed: g.team2_seed, predicted_prob: g.predicted_prob, predicted_winner: g.predicted_winner, actual_winner: g.actual_winner, correct: g.correct, round: g.round });
+    }
+  }
+
+  var html = '';
+  var limit = Math.min(games.length, 200);
+  for (var i = 0; i < limit; i++) {
+    var g = games[i];
+    var winProb = Math.max(g.predicted_prob, 1 - g.predicted_prob);
+    html += '<tr>' +
+      '<td>' + g.year + '</td>' +
+      '<td>' + g.round + '</td>' +
+      '<td>(' + g.team1_seed + ') ' + teamName(g.team1) + ' vs (' + g.team2_seed + ') ' + teamName(g.team2) + '</td>' +
+      '<td>' + teamName(g.predicted_winner) + '</td>' +
+      '<td>' + teamName(g.actual_winner) + '</td>' +
+      '<td style="color:' + probColor(winProb) + '">' + pct(winProb) + '</td>' +
+      '<td><span class="badge ' + (g.correct ? 'badge-green' : 'badge-red') + '">' + (g.correct ? 'Correct' : 'Wrong') + '</span></td>' +
+      '</tr>';
+  }
+  document.getElementById('val-games-table').innerHTML = html;
+}
+
+// ── CALIBRATION TAB ──────────────────────────────────────────────
+function renderCalibration() {
+  var cal = validationData.calibration;
+
+  // Draw calibration chart on canvas
+  var canvas = document.getElementById('cal-canvas');
+  var ctx = canvas.getContext('2d');
+  var dpr = window.devicePixelRatio || 1;
+  var rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 300 * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = '300px';
+  ctx.scale(dpr, dpr);
+
+  var W = rect.width, H = 300;
+  var pad = { top: 20, right: 20, bottom: 40, left: 50 };
+  var plotW = W - pad.left - pad.right;
+  var plotH = H - pad.top - pad.bottom;
+
+  // Background
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid lines
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  for (var i = 0; i <= 10; i++) {
+    var x = pad.left + (i / 10) * plotW;
+    var y = pad.top + (i / 10) * plotH;
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + plotH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + plotW, y); ctx.stroke();
+  }
+
+  // Perfect calibration diagonal (dashed)
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(pad.left, pad.top + plotH);
+  ctx.lineTo(pad.left + plotW, pad.top);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Plot calibration curve
+  ctx.fillStyle = '#f97316';
+  ctx.strokeStyle = '#f97316';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  var first = true;
+  for (var i = 0; i < cal.length; i++) {
+    var bin = cal[i];
+    var x = pad.left + bin.predicted_avg * plotW;
+    var y = pad.top + (1 - bin.actual_avg) * plotH;
+    if (first) { ctx.moveTo(x, y); first = false; }
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Plot points (sized by count)
+  for (var i = 0; i < cal.length; i++) {
+    var bin = cal[i];
+    var x = pad.left + bin.predicted_avg * plotW;
+    var y = pad.top + (1 - bin.actual_avg) * plotH;
+    var r = Math.min(8, Math.max(4, Math.sqrt(bin.count / 5)));
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '11px system-ui';
+  ctx.textAlign = 'center';
+  for (var i = 0; i <= 10; i += 2) {
+    ctx.fillText((i * 10) + '%', pad.left + (i / 10) * plotW, H - 8);
+  }
+  ctx.textAlign = 'right';
+  for (var i = 0; i <= 10; i += 2) {
+    ctx.fillText((i * 10) + '%', pad.left - 8, pad.top + (1 - i / 10) * plotH + 4);
+  }
+
+  ctx.save();
+  ctx.translate(14, pad.top + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText('Actual Win Rate', 0, 0);
+  ctx.restore();
+
+  ctx.textAlign = 'center';
+  ctx.fillText('Predicted Probability', pad.left + plotW / 2, H - 2);
+
+  // Calibration table
+  var rows = '';
+  for (var i = 0; i < cal.length; i++) {
+    var bin = cal[i];
+    var diff = Math.abs(bin.predicted_avg - bin.actual_avg);
+    var diffColor = diff < 0.05 ? 'var(--green)' : diff < 0.1 ? 'var(--yellow)' : 'var(--red)';
+    rows += '<tr>' +
+      '<td>' + pct(bin.bin_center - 0.05) + ' - ' + pct(bin.bin_center + 0.05) + '</td>' +
+      '<td>' + pct(bin.predicted_avg) + '</td>' +
+      '<td style="color:' + diffColor + '">' + pct(bin.actual_avg) + '</td>' +
+      '<td>' + bin.count + '</td>' +
+      '</tr>';
+  }
+  document.getElementById('cal-table').innerHTML = rows;
+
+  // Brier decomposition
+  var overall = validationData.overall;
+  var skillPct = pct(1 - overall.brier_score / 0.25);
+  document.getElementById('brier-decomposition').innerHTML =
+    '<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));">' +
+    '<div class="stat-card"><div class="value" style="color:' + (overall.brier_score < 0.2 ? 'var(--green)' : 'var(--yellow)') + '">' + fmt(overall.brier_score) + '</div><div class="label">Model Brier Score</div></div>' +
+    '<div class="stat-card"><div class="value">0.2500</div><div class="label">Coin Flip Baseline</div></div>' +
+    '<div class="stat-card"><div class="value" style="color:var(--green)">' + skillPct + '</div><div class="label">Skill vs Coin Flip</div></div>' +
+    '<div class="stat-card"><div class="value">' + fmt(overall.log_loss) + '</div><div class="label">Log Loss</div></div>' +
+    '</div>' +
+    '<p style="margin-top:16px;color:var(--text-dim);font-size:0.85rem;">' +
+    'The model achieves a Brier Score of <strong>' + fmt(overall.brier_score) + '</strong> vs the coin-flip baseline of 0.25, ' +
+    'representing a <strong>' + skillPct + '</strong> improvement. ' +
+    'Across ' + overall.n_games + ' tournament games from 2018&ndash;2024, the model correctly predicts the winner ' +
+    '<strong>' + pct(overall.accuracy) + '</strong> of the time.</p>';
+}
+
+// ── UPSETS TAB ───────────────────────────────────────────────────
+function renderUpsets() {
+  var allMatchups = upsetData.matchups.filter(function(m) { return m.games >= 4; });
+  allMatchups.sort(function(a, b) { return b.upset_rate - a.upset_rate; });
+
+  var html = '';
+  var limit = Math.min(allMatchups.length, 20);
+  for (var i = 0; i < limit; i++) {
+    var m = allMatchups[i];
+    var rate = m.upset_rate;
+    var color = rate > 0.4 ? 'var(--red)' : rate > 0.25 ? 'var(--yellow)' : 'var(--green)';
+    html += '<div class="upset-cell">' +
+      '<div class="matchup">' + m.matchup + '</div>' +
+      '<div class="rate" style="color:' + color + '">' + pct(rate, 0) + '</div>' +
+      '<div class="count">' + m.upsets + '/' + m.games + ' games</div></div>';
+  }
+  document.getElementById('upset-grid').innerHTML = html;
+
+  // 2026 predicted close games / upsets
+  var closeGames = [];
+  for (var ri = 0; ri < bracketData.rounds.length; ri++) {
+    var round = bracketData.rounds[ri];
+    for (var gi = 0; gi < round.games.length; gi++) {
+      var g = round.games[gi];
+      if (g.is_upset || g.win_prob < 0.6) {
+        closeGames.push({ team1: g.team1, team2: g.team2, winner: g.winner, win_prob: g.win_prob, is_upset: g.is_upset, round_name: round.round_name });
+      }
+    }
+  }
+  closeGames.sort(function(a, b) { return a.win_prob - b.win_prob; });
+
+  var tbl = '<table><thead><tr><th>Round</th><th>Matchup</th><th>Predicted Winner</th><th>Win Prob</th><th>Type</th></tr></thead><tbody>';
+  for (var i = 0; i < closeGames.length; i++) {
+    var g = closeGames[i];
+    tbl += '<tr>' +
+      '<td>' + g.round_name + '</td>' +
+      '<td>' + g.team1 + ' vs ' + g.team2 + '</td>' +
+      '<td><strong style="color:' + (g.is_upset ? 'var(--yellow)' : 'var(--green)') + '">' + g.winner + '</strong></td>' +
+      '<td style="color:' + probColor(g.win_prob) + '">' + pct(g.win_prob) + '</td>' +
+      '<td>' + (g.is_upset ? '<span class="badge badge-yellow">Upset</span>' : '<span class="badge badge-blue">Toss-up</span>') + '</td>' +
+      '</tr>';
+  }
+  tbl += '</tbody></table>';
+  document.getElementById('predicted-upsets').innerHTML = tbl;
+}
+
+// ── CONFERENCES TAB ──────────────────────────────────────────────
+function renderConferences() {
+  var confs = confData.conferences;
+  var maxTeams = 0;
+  for (var i = 0; i < confs.length; i++) {
+    if (confs[i].total_teams > maxTeams) maxTeams = confs[i].total_teams;
+  }
+  var colors = ['#f97316', '#3b82f6', '#22c55e', '#a78bfa', '#f472b6', '#eab308', '#14b8a6', '#ef4444', '#6366f1', '#ec4899', '#06b6d4', '#84cc16'];
+
+  var html = '<div class="conf-bar-container">';
+  for (var i = 0; i < confs.length; i++) {
+    var c = confs[i];
+    html += '<div class="conf-bar-row">' +
+      '<div class="conf-bar-label">' + c.conference + '</div>' +
+      '<div class="conf-bar-track">' +
+      '<div class="conf-bar-fill" style="width:' + (c.total_teams / maxTeams * 100).toFixed(0) + '%;background:' + colors[i % colors.length] + '">' + c.total_teams + ' teams</div>' +
+      '<div class="conf-bar-value">Avg Seed: ' + c.avg_seed + '</div>' +
+      '</div></div>';
+  }
+  html += '</div>';
+  document.getElementById('conf-chart').innerHTML = html;
+
+  var details = '';
+  for (var i = 0; i < confs.length; i++) {
+    var c = confs[i];
+    details += '<div class="card" style="margin-bottom:12px;">' +
+      '<h2 style="font-size:1rem;">' + c.conference + ' <span style="font-size:0.8rem;color:var(--text-dim);font-weight:400;">(' + c.total_teams + ' teams, avg rating: ' + c.avg_rating.toFixed(3) + ')</span></h2>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+    for (var j = 0; j < c.teams.length; j++) {
+      var t = c.teams[j];
+      details += '<span class="badge badge-blue" style="font-size:0.8rem;padding:4px 10px;">' +
+        '<span class="' + seedClass(t.seed) + '">' + t.seed + '</span> ' + t.team_name +
+        ' <span style="color:var(--text-dim)">(' + t.region + ')</span></span>';
+    }
+    details += '</div></div>';
+  }
+  document.getElementById('conf-details').innerHTML = details;
+}
+
+// ── Boot ─────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
