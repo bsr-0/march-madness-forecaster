@@ -1,0 +1,81 @@
+name: Nightly Deep Validation
+
+on:
+  schedule:
+    # Run nightly at 03:00 UTC
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-validation
+  cancel-in-progress: true
+
+jobs:
+  # ─── Backtest Regression Tests ─────────────────────────────────────
+  backtest-regression-tests:
+    name: "Backtest Regression Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run backtest regression tests
+        run: pytest tests/ -m "backtest_regression" -v --tb=short -q
+
+  # ─── Freeze / Reproducibility Tests ────────────────────────────────
+  freeze-reproducibility-tests:
+    name: "Freeze / Reproducibility Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run freeze and reproducibility tests
+        run: pytest tests/ -m "freeze or production" -v --tb=short -q
+
+  # ─── Calibration Tests ─────────────────────────────────────────────
+  calibration-tests:
+    name: "Calibration Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run calibration tests
+        run: pytest tests/ -m "calibration" -v --tb=short -q
+
+  # ─── All Nightly Gates Must Pass ────────────────────────────────────
+  all-nightly-gates:
+    name: "All Nightly Gates Green"
+    needs:
+      - backtest-regression-tests
+      - freeze-reproducibility-tests
+      - calibration-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: All nightly gates passed
+        run: echo "All nightly validation gates passed"
