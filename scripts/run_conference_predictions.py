@@ -1027,7 +1027,7 @@ def main():
     logger.info("  All %d conferences passed output validation", len(json_output))
 
     # Step 5: Generate dashboard
-    dashboard_path = str(PROJECT_ROOT / "conference_tournament_predictions_2026.html")
+    dashboard_path = str(PROJECT_ROOT / "outputs" / "conference_tournament_predictions_2026.html")
     generate_dashboard(all_results, dashboard_path)
     logger.info("  Dashboard: %s", dashboard_path)
 
