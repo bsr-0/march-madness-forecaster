@@ -66,29 +66,25 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Contract schema validation
-        run: |
-          python -c "
-          from src.data.contract_validator import ContractValidator
-          v = ContractValidator()
-          r = v.validate()
-          print(r.summary())
-          assert r.passed, 'Contract validation FAILED'
-          "
-
-      - name: Data-contract marker tests
-        run: pytest tests/ -m "data_contract" -v --tb=short -q
-
-      - name: No untested features check
+      - name: Contract governance checks
         run: |
           python -c "
           import yaml
-          from pathlib import Path
+          from src.data.contract_validator import ContractValidator
+
+          validator = ContractValidator()
+          result = validator.validate()
+          print(result.summary())
+          assert result.passed, 'Contract validation FAILED'
+
           contracts = yaml.safe_load(open('contracts/feature_contracts.yaml'))
           untested = [f['feature_name'] for f in contracts['features'] if not f.get('test_ids')]
           assert not untested, f'Untested features: {untested}'
           print(f'All {len(contracts[\"features\"])} features have test_ids.')
           "
+
+      - name: Data-contract marker tests
+        run: pytest tests/ -m "data_contract" -v --tb=short -q
 
   # ─── Gate 3: Leakage Tests (statistical, not just mechanical) ────
   leakage-tests:

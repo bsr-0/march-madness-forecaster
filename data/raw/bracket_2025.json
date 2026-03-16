@@ -1,0 +1,648 @@
+{
+  "season": 2025,
+  "source": "bigdance",
+  "fetched_at": "2026-03-16T20:40:52.309196+00:00",
+  "teams": [
+    {
+      "season": 2025,
+      "team_name": "Florida",
+      "team_id": "florida",
+      "seed": 1,
+      "region": "East",
+      "rating": 1974.28,
+      "conference": "SEC",
+      "school_slug": "florida"
+    },
+    {
+      "season": 2025,
+      "team_name": "Houston",
+      "team_id": "houston",
+      "seed": 1,
+      "region": "West",
+      "rating": 1941.54,
+      "conference": "Big 12",
+      "school_slug": "houston"
+    },
+    {
+      "season": 2025,
+      "team_name": "Duke",
+      "team_id": "duke",
+      "seed": 1,
+      "region": "South",
+      "rating": 1891.65,
+      "conference": "ACC",
+      "school_slug": "duke"
+    },
+    {
+      "season": 2025,
+      "team_name": "Auburn",
+      "team_id": "auburn",
+      "seed": 1,
+      "region": "Midwest",
+      "rating": 1858.3,
+      "conference": "SEC",
+      "school_slug": "auburn"
+    },
+    {
+      "season": 2025,
+      "team_name": "Alabama",
+      "team_id": "alabama",
+      "seed": 2,
+      "region": "East",
+      "rating": 1818.74,
+      "conference": "SEC",
+      "school_slug": "alabama"
+    },
+    {
+      "season": 2025,
+      "team_name": "Tennessee",
+      "team_id": "tennessee",
+      "seed": 2,
+      "region": "West",
+      "rating": 1814.46,
+      "conference": "SEC",
+      "school_slug": "tennessee"
+    },
+    {
+      "season": 2025,
+      "team_name": "Michigan State",
+      "team_id": "michigan_state",
+      "seed": 2,
+      "region": "South",
+      "rating": 1809.31,
+      "conference": "Big Ten",
+      "school_slug": "michigan-state"
+    },
+    {
+      "season": 2025,
+      "team_name": "St. John's (NY)",
+      "team_id": "st__john_s__ny",
+      "seed": 2,
+      "region": "Midwest",
+      "rating": 1786.77,
+      "conference": "Big East",
+      "school_slug": "st--john-s--ny"
+    },
+    {
+      "season": 2025,
+      "team_name": "Michigan",
+      "team_id": "michigan",
+      "seed": 3,
+      "region": "East",
+      "rating": 1761.41,
+      "conference": "Big Ten",
+      "school_slug": "michigan"
+    },
+    {
+      "season": 2025,
+      "team_name": "BYU",
+      "team_id": "brigham_young",
+      "seed": 3,
+      "region": "West",
+      "rating": 1756.51,
+      "conference": "Big 12",
+      "school_slug": "brigham-young"
+    },
+    {
+      "season": 2025,
+      "team_name": "Texas Tech",
+      "team_id": "texas_tech",
+      "seed": 3,
+      "region": "South",
+      "rating": 1750.61,
+      "conference": "Big 12",
+      "school_slug": "texas-tech"
+    },
+    {
+      "season": 2025,
+      "team_name": "Maryland",
+      "team_id": "maryland",
+      "seed": 3,
+      "region": "Midwest",
+      "rating": 1735.15,
+      "conference": "Big Ten",
+      "school_slug": "maryland"
+    },
+    {
+      "season": 2025,
+      "team_name": "Arizona",
+      "team_id": "arizona",
+      "seed": 4,
+      "region": "East",
+      "rating": 1718.78,
+      "conference": "Big 12",
+      "school_slug": "arizona"
+    },
+    {
+      "season": 2025,
+      "team_name": "Louisville",
+      "team_id": "louisville",
+      "seed": 4,
+      "region": "West",
+      "rating": 1717.14,
+      "conference": "ACC",
+      "school_slug": "louisville"
+    },
+    {
+      "season": 2025,
+      "team_name": "Gonzaga",
+      "team_id": "gonzaga",
+      "seed": 4,
+      "region": "South",
+      "rating": 1715.88,
+      "conference": "West Coast",
+      "school_slug": "gonzaga"
+    },
+    {
+      "season": 2025,
+      "team_name": "Kentucky",
+      "team_id": "kentucky",
+      "seed": 4,
+      "region": "Midwest",
+      "rating": 1697.84,
+      "conference": "SEC",
+      "school_slug": "kentucky"
+    },
+    {
+      "season": 2025,
+      "team_name": "Mississippi",
+      "team_id": "mississippi",
+      "seed": 5,
+      "region": "East",
+      "rating": 1696.93,
+      "conference": "SEC",
+      "school_slug": "mississippi"
+    },
+    {
+      "season": 2025,
+      "team_name": "Colorado State",
+      "team_id": "colorado_state",
+      "seed": 5,
+      "region": "West",
+      "rating": 1696.17,
+      "conference": "Mountain West",
+      "school_slug": "colorado-state"
+    },
+    {
+      "season": 2025,
+      "team_name": "Saint Mary's (CA)",
+      "team_id": "saint_mary_s__ca",
+      "seed": 5,
+      "region": "South",
+      "rating": 1691.89,
+      "conference": "West Coast",
+      "school_slug": "saint-mary-s--ca"
+    },
+    {
+      "season": 2025,
+      "team_name": "Wisconsin",
+      "team_id": "wisconsin",
+      "seed": 5,
+      "region": "Midwest",
+      "rating": 1690.7,
+      "conference": "Big Ten",
+      "school_slug": "wisconsin"
+    },
+    {
+      "season": 2025,
+      "team_name": "Creighton",
+      "team_id": "creighton",
+      "seed": 6,
+      "region": "East",
+      "rating": 1690.16,
+      "conference": "Big East",
+      "school_slug": "creighton"
+    },
+    {
+      "season": 2025,
+      "team_name": "Clemson",
+      "team_id": "clemson",
+      "seed": 6,
+      "region": "West",
+      "rating": 1689.58,
+      "conference": "ACC",
+      "school_slug": "clemson"
+    },
+    {
+      "season": 2025,
+      "team_name": "Drake",
+      "team_id": "drake",
+      "seed": 6,
+      "region": "South",
+      "rating": 1684.25,
+      "conference": "Missouri Valley",
+      "school_slug": "drake"
+    },
+    {
+      "season": 2025,
+      "team_name": "Memphis",
+      "team_id": "memphis",
+      "seed": 6,
+      "region": "Midwest",
+      "rating": 1680.98,
+      "conference": "American Athletic",
+      "school_slug": "memphis"
+    },
+    {
+      "season": 2025,
+      "team_name": "Oregon",
+      "team_id": "oregon",
+      "seed": 7,
+      "region": "East",
+      "rating": 1679.0,
+      "conference": "Big Ten",
+      "school_slug": "oregon"
+    },
+    {
+      "season": 2025,
+      "team_name": "Virginia Commonwealth",
+      "team_id": "virginia_commonwealth",
+      "seed": 7,
+      "region": "West",
+      "rating": 1674.93,
+      "conference": "Atlantic 10",
+      "school_slug": "virginia-commonwealth"
+    },
+    {
+      "season": 2025,
+      "team_name": "Purdue",
+      "team_id": "purdue",
+      "seed": 7,
+      "region": "South",
+      "rating": 1674.75,
+      "conference": "Big Ten",
+      "school_slug": "purdue"
+    },
+    {
+      "season": 2025,
+      "team_name": "Arkansas",
+      "team_id": "arkansas",
+      "seed": 7,
+      "region": "Midwest",
+      "rating": 1672.21,
+      "conference": "SEC",
+      "school_slug": "arkansas"
+    },
+    {
+      "season": 2025,
+      "team_name": "Connecticut",
+      "team_id": "connecticut",
+      "seed": 8,
+      "region": "East",
+      "rating": 1670.2,
+      "conference": "Big East",
+      "school_slug": "connecticut"
+    },
+    {
+      "season": 2025,
+      "team_name": "Texas A&M",
+      "team_id": "texas_a_m",
+      "seed": 8,
+      "region": "West",
+      "rating": 1669.65,
+      "conference": "SEC",
+      "school_slug": "texas-a-m"
+    },
+    {
+      "season": 2025,
+      "team_name": "Iowa State",
+      "team_id": "iowa_state",
+      "seed": 8,
+      "region": "South",
+      "rating": 1661.25,
+      "conference": "Big 12",
+      "school_slug": "iowa-state"
+    },
+    {
+      "season": 2025,
+      "team_name": "Illinois",
+      "team_id": "illinois",
+      "seed": 8,
+      "region": "Midwest",
+      "rating": 1656.49,
+      "conference": "Big Ten",
+      "school_slug": "illinois"
+    },
+    {
+      "season": 2025,
+      "team_name": "UCLA",
+      "team_id": "ucla",
+      "seed": 9,
+      "region": "East",
+      "rating": 1650.76,
+      "conference": "Big Ten",
+      "school_slug": "ucla"
+    },
+    {
+      "season": 2025,
+      "team_name": "New Mexico",
+      "team_id": "new_mexico",
+      "seed": 9,
+      "region": "West",
+      "rating": 1640.42,
+      "conference": "Mountain West",
+      "school_slug": "new-mexico"
+    },
+    {
+      "season": 2025,
+      "team_name": "Chattanooga",
+      "team_id": "chattanooga",
+      "seed": 9,
+      "region": "South",
+      "rating": 1636.02,
+      "conference": "Southern",
+      "school_slug": "chattanooga"
+    },
+    {
+      "season": 2025,
+      "team_name": "North Carolina",
+      "team_id": "north_carolina",
+      "seed": 9,
+      "region": "Midwest",
+      "rating": 1635.16,
+      "conference": "ACC",
+      "school_slug": "north-carolina"
+    },
+    {
+      "season": 2025,
+      "team_name": "UC San Diego",
+      "team_id": "uc_san_diego",
+      "seed": 10,
+      "region": "East",
+      "rating": 1629.43,
+      "conference": "Big West",
+      "school_slug": "uc-san-diego"
+    },
+    {
+      "season": 2025,
+      "team_name": "Boise State",
+      "team_id": "boise_state",
+      "seed": 10,
+      "region": "West",
+      "rating": 1614.38,
+      "conference": "Mountain West",
+      "school_slug": "boise-state"
+    },
+    {
+      "season": 2025,
+      "team_name": "Xavier",
+      "team_id": "xavier",
+      "seed": 10,
+      "region": "South",
+      "rating": 1609.83,
+      "conference": "Big East",
+      "school_slug": "xavier"
+    },
+    {
+      "season": 2025,
+      "team_name": "Baylor",
+      "team_id": "baylor",
+      "seed": 10,
+      "region": "Midwest",
+      "rating": 1604.98,
+      "conference": "Big 12",
+      "school_slug": "baylor"
+    },
+    {
+      "season": 2025,
+      "team_name": "UC Irvine",
+      "team_id": "uc_irvine",
+      "seed": 11,
+      "region": "East",
+      "rating": 1601.83,
+      "conference": "Big West",
+      "school_slug": "uc-irvine"
+    },
+    {
+      "season": 2025,
+      "team_name": "Kansas",
+      "team_id": "kansas",
+      "seed": 11,
+      "region": "West",
+      "rating": 1599.93,
+      "conference": "Big 12",
+      "school_slug": "kansas"
+    },
+    {
+      "season": 2025,
+      "team_name": "McNeese State",
+      "team_id": "mcneese_state",
+      "seed": 11,
+      "region": "South",
+      "rating": 1595.21,
+      "conference": "Southland",
+      "school_slug": "mcneese-state"
+    },
+    {
+      "season": 2025,
+      "team_name": "Indiana",
+      "team_id": "indiana",
+      "seed": 11,
+      "region": "Midwest",
+      "rating": 1592.48,
+      "conference": "Big Ten",
+      "school_slug": "indiana"
+    },
+    {
+      "season": 2025,
+      "team_name": "Marquette",
+      "team_id": "marquette",
+      "seed": 12,
+      "region": "East",
+      "rating": 1586.99,
+      "conference": "Big East",
+      "school_slug": "marquette"
+    },
+    {
+      "season": 2025,
+      "team_name": "George Mason",
+      "team_id": "george_mason",
+      "seed": 12,
+      "region": "West",
+      "rating": 1581.72,
+      "conference": "Atlantic 10",
+      "school_slug": "george-mason"
+    },
+    {
+      "season": 2025,
+      "team_name": "High Point",
+      "team_id": "high_point",
+      "seed": 12,
+      "region": "South",
+      "rating": 1571.62,
+      "conference": "Big South",
+      "school_slug": "high-point"
+    },
+    {
+      "season": 2025,
+      "team_name": "Liberty",
+      "team_id": "liberty",
+      "seed": 12,
+      "region": "Midwest",
+      "rating": 1561.38,
+      "conference": "Conference USA",
+      "school_slug": "liberty"
+    },
+    {
+      "season": 2025,
+      "team_name": "Yale",
+      "team_id": "yale",
+      "seed": 13,
+      "region": "East",
+      "rating": 1558.27,
+      "conference": "Ivy League",
+      "school_slug": "yale"
+    },
+    {
+      "season": 2025,
+      "team_name": "Akron",
+      "team_id": "akron",
+      "seed": 13,
+      "region": "West",
+      "rating": 1553.26,
+      "conference": "Mid-American",
+      "school_slug": "akron"
+    },
+    {
+      "season": 2025,
+      "team_name": "Grand Canyon",
+      "team_id": "grand_canyon",
+      "seed": 13,
+      "region": "South",
+      "rating": 1552.66,
+      "conference": "Western Athletic",
+      "school_slug": "grand-canyon"
+    },
+    {
+      "season": 2025,
+      "team_name": "UNC Wilmington",
+      "team_id": "unc_wilmington",
+      "seed": 13,
+      "region": "Midwest",
+      "rating": 1522.69,
+      "conference": "Coastal Athletic",
+      "school_slug": "unc-wilmington"
+    },
+    {
+      "season": 2025,
+      "team_name": "Robert Morris",
+      "team_id": "robert_morris",
+      "seed": 14,
+      "region": "East",
+      "rating": 1499.75,
+      "conference": "Horizon League",
+      "school_slug": "robert-morris"
+    },
+    {
+      "season": 2025,
+      "team_name": "Montana",
+      "team_id": "montana",
+      "seed": 14,
+      "region": "West",
+      "rating": 1468.39,
+      "conference": "Big Sky",
+      "school_slug": "montana"
+    },
+    {
+      "season": 2025,
+      "team_name": "Troy",
+      "team_id": "troy",
+      "seed": 14,
+      "region": "South",
+      "rating": 1459.75,
+      "conference": "Sun Belt",
+      "school_slug": "troy"
+    },
+    {
+      "season": 2025,
+      "team_name": "Lipscomb",
+      "team_id": "lipscomb",
+      "seed": 14,
+      "region": "Midwest",
+      "rating": 1450.24,
+      "conference": "ASUN",
+      "school_slug": "lipscomb"
+    },
+    {
+      "season": 2025,
+      "team_name": "Bryant",
+      "team_id": "bryant",
+      "seed": 15,
+      "region": "East",
+      "rating": 1426.35,
+      "conference": "America East",
+      "school_slug": "bryant"
+    },
+    {
+      "season": 2025,
+      "team_name": "Omaha",
+      "team_id": "omaha",
+      "seed": 15,
+      "region": "West",
+      "rating": 1407.37,
+      "conference": "The Summit League",
+      "school_slug": "omaha"
+    },
+    {
+      "season": 2025,
+      "team_name": "Mount St. Mary's",
+      "team_id": "mount_st__mary_s",
+      "seed": 15,
+      "region": "South",
+      "rating": 1399.89,
+      "conference": "MAAC",
+      "school_slug": "mount-st--mary-s"
+    },
+    {
+      "season": 2025,
+      "team_name": "Norfolk State",
+      "team_id": "norfolk_state",
+      "seed": 15,
+      "region": "Midwest",
+      "rating": 1390.92,
+      "conference": "MEAC",
+      "school_slug": "norfolk-state"
+    },
+    {
+      "season": 2025,
+      "team_name": "Central Connecticut State",
+      "team_id": "central_connecticut_state",
+      "seed": 16,
+      "region": "East",
+      "rating": 1386.68,
+      "conference": "Northeast",
+      "school_slug": "central-connecticut-state"
+    },
+    {
+      "season": 2025,
+      "team_name": "American",
+      "team_id": "american",
+      "seed": 16,
+      "region": "West",
+      "rating": 1322.2,
+      "conference": "Patriot League",
+      "school_slug": "american"
+    },
+    {
+      "season": 2025,
+      "team_name": "SIU Edwardsville",
+      "team_id": "siu_edwardsville",
+      "seed": 16,
+      "region": "South",
+      "rating": 1319.74,
+      "conference": "Ohio Valley",
+      "school_slug": "siu-edwardsville"
+    },
+    {
+      "season": 2025,
+      "team_name": "Alabama State",
+      "team_id": "alabama_state",
+      "seed": 16,
+      "region": "Midwest",
+      "rating": 1315.74,
+      "conference": "SWAC",
+      "school_slug": "alabama-state"
+    }
+  ],
+  "resolution_warnings": []
+}
