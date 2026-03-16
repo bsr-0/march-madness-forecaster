@@ -58,41 +58,66 @@ FOUR_FACTORS = [
 ]
 
 
+def _load_four_factors_teams(data_dir: Path, filename: str) -> List[Dict]:
+    """Load teams from a Torvik JSON file, handling both flat-dict and array schemas."""
+    path = data_dir / filename
+    if not path.exists():
+        return []
+    payload = _load_json(path)
+    if isinstance(payload, dict) and "teams" in payload:
+        return payload["teams"]
+    if isinstance(payload, list):
+        return payload
+    # Flat-dict format: keys are team IDs
+    if isinstance(payload, dict) and not any(
+        k in payload for k in ("year", "generated_at")
+    ):
+        return list(payload.values())
+    return []
+
+
 def check_torvik_four_factors(data_dir: Path, year: int) -> List[Tuple[str, str]]:
-    """Check current-year Torvik ratings for all-zero Four Factors."""
+    """Check Four Factors across main Torvik file AND the separate four_factors file.
+
+    The pipeline enriches torvik_{year}.json with values from
+    torvik_four_factors_{year}.json at runtime.  This check mirrors that
+    logic: a field is only flagged as missing if it is zero in BOTH files.
+    """
     issues: List[Tuple[str, str]] = []
-    torvik_path = data_dir / f"torvik_{year}.json"
-    if not torvik_path.exists():
-        issues.append(("CRITICAL", f"Torvik ratings file missing: {torvik_path}"))
+
+    main_teams = _load_four_factors_teams(data_dir, f"torvik_{year}.json")
+    ff_teams = _load_four_factors_teams(data_dir, f"torvik_four_factors_{year}.json")
+
+    if not main_teams and not ff_teams:
+        issues.append(("CRITICAL", "No Torvik team data found in either file"))
         return issues
 
-    payload = _load_json(torvik_path)
-    teams = payload.get("teams", [])
-    if not teams:
-        # Try flat-dict format
-        if isinstance(payload, dict) and not any(
-            k in payload for k in ("teams", "year", "generated_at")
-        ):
-            teams = list(payload.values())
-
-    if not teams:
-        issues.append(("CRITICAL", f"No teams found in {torvik_path}"))
-        return issues
-
+    # For each field, check if *either* source provides nonzero values
     for field in FOUR_FACTORS:
-        vals = [_to_float(t.get(field)) for t in teams if isinstance(t, dict)]
-        nonzero = [v for v in vals if v is not None and abs(v) > 1e-6]
-        if vals and not nonzero:
+        main_vals = [_to_float(t.get(field)) for t in main_teams if isinstance(t, dict)]
+        ff_vals = [_to_float(t.get(field)) for t in ff_teams if isinstance(t, dict)]
+
+        main_nonzero = sum(1 for v in main_vals if v is not None and abs(v) > 1e-6)
+        ff_nonzero = sum(1 for v in ff_vals if v is not None and abs(v) > 1e-6)
+
+        best_source = max(main_nonzero, ff_nonzero)
+        best_total = len(main_vals) if main_nonzero >= ff_nonzero else len(ff_vals)
+
+        if best_total == 0:
+            continue
+
+        if best_source == 0:
             issues.append((
                 "CRITICAL",
-                f"'{field}' is zero/missing for ALL {len(vals)} teams in {torvik_path.name} "
-                f"— pipeline will use hardcoded average, destroying team differentiation",
+                f"'{field}' is zero in BOTH torvik_{year}.json and "
+                f"torvik_four_factors_{year}.json for all teams "
+                f"— no source provides this metric (scraper CSV fallback "
+                f"cannot compute defensive factors)",
             ))
-        elif vals and len(nonzero) < len(vals) * 0.5:
+        elif best_source < best_total * 0.5:
             issues.append((
                 "WARNING",
-                f"'{field}' is zero/missing for {len(vals) - len(nonzero)}/{len(vals)} "
-                f"teams in {torvik_path.name}",
+                f"'{field}' has data for only {best_source}/{best_total} teams",
             ))
 
     return issues
