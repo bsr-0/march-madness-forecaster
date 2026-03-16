@@ -406,36 +406,45 @@ class SOTAPipeline:
         critical_failures: list = []
 
         # 1. Data freshness check (S18-1/R8: enforce freshness SLA)
-        monitor = PipelineMonitor()
-        freshness = monitor.check_data_freshness(self.config.data_cache_dir)
-        stale_sources = [c for c in freshness if c.status == "stale"]
-        missing_sources = [c for c in freshness if c.status == "missing"]
+        if self.config.enforce_feed_freshness:
+            monitor = PipelineMonitor()
+            freshness = monitor.check_data_freshness(self.config.data_cache_dir)
+            stale_sources = [c for c in freshness if c.status == "stale"]
+            missing_sources = [c for c in freshness if c.status == "missing"]
 
-        freshness_status = "pass"
-        if missing_sources:
-            freshness_status = "CRITICAL"
-            critical_failures.append(
-                f"Missing data sources ({len(missing_sources)}): "
-                + ", ".join(c.source for c in missing_sources)
-            )
-        elif stale_sources:
-            freshness_status = "warn"
-            logger.warning(
-                "Stale data sources (%d): %s",
-                len(stale_sources),
-                [(c.source, f"{c.staleness_hours:.0f}h > {c.sla_hours:.0f}h SLA")
-                 for c in stale_sources],
-            )
-        checks.append({
-            "check": "data_freshness",
-            "status": freshness_status,
-            "stale_count": len(stale_sources),
-            "missing_count": len(missing_sources),
-            "stale_details": [
-                {"source": c.source, "hours": c.staleness_hours, "sla": c.sla_hours}
-                for c in stale_sources
-            ],
-        })
+            freshness_status = "pass"
+            if missing_sources:
+                freshness_status = "CRITICAL"
+                critical_failures.append(
+                    f"Missing data sources ({len(missing_sources)}): "
+                    + ", ".join(c.source for c in missing_sources)
+                )
+            elif stale_sources:
+                freshness_status = "warn"
+                logger.warning(
+                    "Stale data sources (%d): %s",
+                    len(stale_sources),
+                    [(c.source, f"{c.staleness_hours:.0f}h > {c.sla_hours:.0f}h SLA")
+                     for c in stale_sources],
+                )
+            checks.append({
+                "check": "data_freshness",
+                "status": freshness_status,
+                "stale_count": len(stale_sources),
+                "missing_count": len(missing_sources),
+                "stale_details": [
+                    {"source": c.source, "hours": c.staleness_hours, "sla": c.sla_hours}
+                    for c in stale_sources
+                ],
+            })
+        else:
+            checks.append({
+                "check": "data_freshness",
+                "status": "skipped",
+                "stale_count": 0,
+                "missing_count": 0,
+                "stale_details": [],
+            })
 
         # 2. Required input files
         required_files = []

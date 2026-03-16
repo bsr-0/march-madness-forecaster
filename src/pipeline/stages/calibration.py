@@ -31,7 +31,7 @@ from ..config import (
 
 # Optional imports — accessed via pipeline._optional_imports pattern
 try:
-    from ..._optional_imports import (
+    from .._optional_imports import (
         TOURNAMENT_SIGMA_AVAILABLE,
         TournamentSigmaCalibrator,
     )
@@ -40,7 +40,7 @@ except ImportError:
     TournamentSigmaCalibrator = None
 
 try:
-    from ..._optional_imports import load_tournament_sigma_data
+    from .._optional_imports import load_tournament_sigma_data
 except ImportError:
     load_tournament_sigma_data = None  # type: ignore[assignment]
 
