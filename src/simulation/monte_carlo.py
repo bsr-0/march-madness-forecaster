@@ -586,7 +586,7 @@ _mc_logger = _logging.getLogger(__name__)
 def validate_upset_rates(
     sim_results: AggregatedResults,
     teams_by_region: Dict[str, List[TournamentTeam]],
-    tolerance: float = 0.15,
+    tolerance: float = 0.08,
 ) -> Dict:
     """Validate simulated first-round upset rates against historical actuals.
 
@@ -645,8 +645,8 @@ def validate_upset_rates(
                 "Upset rate mismatch %dv%d: simulated=%.3f, historical=%.3f (delta=%.3f > %.3f)",
                 matchup[0], matchup[1], sim_rate, hist_rate, delta, tolerance,
             )
-        elif delta > 0.10:
-            _mc_logger.info(
+        elif delta > 0.05:
+            _mc_logger.warning(
                 "Upset rate near threshold %dv%d: simulated=%.3f, historical=%.3f (delta=%.3f)",
                 matchup[0], matchup[1], sim_rate, hist_rate, delta,
             )

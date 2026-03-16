@@ -5,12 +5,13 @@ All production pipeline decisions (models, calibration, ensemble policy,
 admission thresholds) are defined here and referenced by the pipeline,
 tests, and governance layers.
 
-Phase 2: Production simplification.
-- SpreadRegressor is the sole tree-based production model.
-- Logistic Regression is the sole linear production model.
+Phase 2 → Phase 3: Multi-model ensemble.
+- SpreadRegressor is the primary tree-based production model.
+- LightGBM and XGBoost classifiers provide ensemble diversity.
+- Logistic Regression provides regularization hedge.
 - TemperatureScaling is the only production calibration layer.
-- Default ensemble policy: spread-only until logistic earns weight
-  via the admission gate.
+- TournamentSigmaCalibrator adjusts spread model for tournament context.
+- Default ensemble policy: 4-model fixed-weight blend.
 """
 
 from __future__ import annotations
@@ -39,23 +40,22 @@ class ProductionBaselineSpec:
     """Immutable specification for the sanctioned production stack."""
 
     name: str = PRODUCTION_BASELINE_VERSION
-    models: tuple = ("spread_regressor", "logistic_regression")
+    models: tuple = ("spread_regressor", "logistic_regression", "lightgbm_classifier", "xgboost_classifier")
     calibration: str = "temperature"
-    ensemble_policy: str = "spread_only_until_logistic_earns_weight"
+    ensemble_policy: str = "four_model_fixed_weight_blend"
     default_weights: Dict[str, float] = field(
-        default_factory=lambda: {"spread": 1.0, "logistic": 0.0}
+        default_factory=lambda: {"spread": 0.45, "logistic": 0.20, "lgb": 0.20, "xgb": 0.15}
     )
     admission_gate: AdmissionGateThresholds = field(
         default_factory=AdmissionGateThresholds
     )
 
     # Models that are explicitly NOT allowed in production
-    deprecated_production_models: tuple = ("lightgbm_classifier", "xgboost_classifier")
+    deprecated_production_models: tuple = ()
 
     # Calibrators that are explicitly NOT allowed in production
     deprecated_production_calibrators: tuple = (
         "round_specific_calibrator",
-        "tournament_sigma_calibrator",
     )
 
     def is_model_sanctioned(self, model_name: str) -> bool:
@@ -79,7 +79,7 @@ class ProductionBaselineSpec:
                 f"Default weights sum to {weight_sum:.4f}, expected 1.0"
             )
         for model in self.default_weights:
-            if model not in ("spread", "logistic"):
+            if model not in ("spread", "logistic", "lgb", "xgb"):
                 violations.append(
                     f"Weight key '{model}' not in sanctioned model set"
                 )

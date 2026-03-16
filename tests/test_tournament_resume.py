@@ -323,8 +323,8 @@ class TestFixedFeatureSetIntegration:
         diff_names = [f"diff_{n}" for n in base_names]
         abs_names = [f"abs_{n}" for n in ABSOLUTE_LEVEL_FEATURE_NAMES]
         interaction_names = [
-            "tempo_interaction", "style_mismatch", "h2h_record",
-            "common_opp_margin", "travel_advantage", "seed_interaction",
+            "tempo_interaction", "style_mismatch", "seed_em_residual_diff",
+            "sos_seed_interaction", "three_pt_seed_interaction", "seed_interaction",
             "seed_diff",
         ]
         all_names = set(diff_names + abs_names + interaction_names)

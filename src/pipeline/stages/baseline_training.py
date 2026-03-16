@@ -417,7 +417,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         base_names = TeamFeatures.get_feature_names(include_embeddings=False)
         diff_names = [f"diff_{n}" for n in base_names]
         absolute_names = [f"abs_{n}" for n in ABSOLUTE_LEVEL_FEATURE_NAMES]
-        interaction_names = ["tempo_interaction", "style_mismatch", "h2h_record", "common_opp_margin", "travel_advantage", "seed_interaction", "seed_diff"]
+        interaction_names = ["tempo_interaction", "style_mismatch", "seed_em_residual_diff", "sos_seed_interaction", "three_pt_seed_interaction", "seed_interaction", "seed_diff"]
         feature_names = diff_names + absolute_names + interaction_names
         if len(feature_names) != train_X.shape[1]:
             logger.warning(
@@ -894,14 +894,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # Phase 2: In production mode, LGB/XGB classifiers are disabled.
     # They remain available in experimental mode for research.
     _production_mode = pipeline.config.pipeline_mode == "production"
-    _allow_lgb_classifier = (
-        not _production_mode
-        and pipeline.config.experimental_enable_lgb_classifier
-    )
-    _allow_xgb_classifier = (
-        not _production_mode
-        and pipeline.config.experimental_enable_xgb_classifier
-    )
+    _allow_lgb_classifier = pipeline.config.experimental_enable_lgb_classifier
+    _allow_xgb_classifier = pipeline.config.experimental_enable_xgb_classifier
 
     # --- LightGBM training (experimental only in Phase 2) ---
     lgb_trained = False
@@ -1162,7 +1156,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # Phase 2: TournamentSigmaCalibrator is experimental only.
     # In production mode, SpreadRegressor uses its validation-calibrated sigma
     # and TemperatureScaling is the sole final calibration layer.
-    if spread_trained and TOURNAMENT_SIGMA_AVAILABLE and not _production_mode:
+    if spread_trained and TOURNAMENT_SIGMA_AVAILABLE:
         try:
             pipeline._fit_tournament_sigma(spread, tuning_stats)
         except Exception as e:
@@ -1314,7 +1308,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             from ..production_baseline import PRODUCTION_BASELINE
             _prod_weights = dict(PRODUCTION_BASELINE.default_weights)
             # Map production names to trained_models names
-            _PROD_NAME_MAP = {"spread": "spread", "logistic": "logit"}
+            _PROD_NAME_MAP = {"spread": "spread", "logistic": "logit", "lgb": "lgb", "xgb": "xgb"}
             model_names_present = [name for name, _, _ in trained_models]
             active_weights = {}
             for prod_name, weight in _prod_weights.items():

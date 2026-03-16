@@ -12,8 +12,8 @@ The 78-dimensional matchup vector has three blocks:
     [0:66]  Differential features  = v_team1 - v_team2
     [66:71] Absolute features      = (v_team1 + v_team2) / 2
     [71:78] Interaction features    = [tempo_interaction, style_mismatch,
-                                       h2h_record, common_opp_margin,
-                                       travel_advantage, seed_interaction,
+                                       seed_em_residual_diff, sos_seed_interaction,
+                                       three_pt_seed_interaction, seed_interaction,
                                        seed_diff]
 
 When swapping team1 ↔ team2:
@@ -24,9 +24,9 @@ When swapping team1 ↔ team2:
   - tempo_interaction [71]: v1[2]*v2[2] is commutative → unchanged
   - style_mismatch [72]: (Δtempo × Δeff)/600. Both Δs negate, product
     stays positive → unchanged  ((-a)×(-b) = a×b)
-  - h2h_record [73]: 0.5 constant → unchanged
-  - common_opp_margin [74]: 0.0 constant → unchanged
-  - travel_advantage [75]: 0.0 constant → unchanged
+  - seed_em_residual_diff [73]: (r1-r2)/20 → **negate** (antisymmetric)
+  - sos_seed_interaction [74]: product of two negated terms → unchanged
+  - three_pt_seed_interaction [75]: product of two negated terms → unchanged
   - seed_interaction [76]: seed1×seed2 is commutative → unchanged
   - seed_diff [77]: (seed1-seed2)/15 → **negate**
 
@@ -69,8 +69,9 @@ ABS_END = 71  # exclusive: indices [66, 71)
 INTERACT_START = 71
 INTERACT_END = 78  # exclusive: indices [71, 78)
 
-# Within interactions, seed_diff is the last element
-SEED_DIFF_IDX = 77  # absolute index in the 78-dim vector
+# Within interactions, antisymmetric features that need negation
+SEED_EM_RESIDUAL_IDX = 73  # seed_em_residual_diff: antisymmetric
+SEED_DIFF_IDX = 77  # seed_diff: antisymmetric
 
 # Full expected dimensionality
 MATCHUP_DIM = 78
@@ -110,11 +111,12 @@ def swap_matchup_vector(x: np.ndarray) -> np.ndarray:
     # 3. Interaction features [71:78]:
     #    - tempo_interaction [71]: commutative → unchanged
     #    - style_mismatch [72]: product of two negated terms → unchanged
-    #    - h2h_record [73]: constant → unchanged
-    #    - common_opp_margin [74]: constant → unchanged
-    #    - travel_advantage [75]: constant → unchanged
+    #    - seed_em_residual_diff [73]: antisymmetric → negate
+    #    - sos_seed_interaction [74]: product of two negated terms → unchanged
+    #    - three_pt_seed_interaction [75]: product of two negated terms → unchanged
     #    - seed_interaction [76]: commutative → unchanged
     #    - seed_diff [77]: antisymmetric → negate
+    swapped[SEED_EM_RESIDUAL_IDX] = -x[SEED_EM_RESIDUAL_IDX]
     swapped[SEED_DIFF_IDX] = -x[SEED_DIFF_IDX]
 
     return swapped
@@ -142,7 +144,8 @@ def swap_matchup_batch(X: np.ndarray) -> np.ndarray:
     # Negate differential features
     swapped[:, DIFF_START:DIFF_END] = -X[:, DIFF_START:DIFF_END]
 
-    # Negate seed_diff
+    # Negate antisymmetric interaction features
+    swapped[:, SEED_EM_RESIDUAL_IDX] = -X[:, SEED_EM_RESIDUAL_IDX]
     swapped[:, SEED_DIFF_IDX] = -X[:, SEED_DIFF_IDX]
 
     return swapped
