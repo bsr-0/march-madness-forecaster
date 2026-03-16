@@ -499,8 +499,61 @@ def run_production_2026(
     report["year_partition_audit"] = year_partition_audit
     report["calibration_audit"] = calibration_audit
 
+    # --- Optional market cross-reference (advisory only, never blocks pipeline) ---
+    market_validation_result = None
+    market_validation_dict = {"status": "skipped", "reason": "not attempted"}
+    try:
+        from .market_validation import validate_model_vs_market, load_market_probs_from_cache
+        import dataclasses as _dc
+
+        sim_artifact = report.get("artifacts", {}).get("simulation", {})
+        model_champ_odds = sim_artifact.get("championship_odds", {})
+        model_probs_map = {
+            str(k): float(v)
+            for k, v in model_champ_odds.items()
+            if isinstance(v, (int, float))
+        }
+
+        cache_dir = repo_root / "data" / "raw" / "betting_odds"
+        market_probs_map = load_market_probs_from_cache(season=2026, cache_dir=cache_dir)
+
+        if not model_probs_map:
+            market_validation_dict = {"status": "skipped", "reason": "no model championship odds in report"}
+        elif not market_probs_map:
+            market_validation_dict = {"status": "skipped", "reason": "no cached market odds available"}
+        else:
+            market_validation_result = validate_model_vs_market(
+                model_probs=model_probs_map,
+                market_probs=market_probs_map,
+                adjust_vig=True,
+            )
+            if market_validation_result is None:
+                market_validation_dict = {"status": "skipped", "reason": "no overlapping teams between model and market"}
+            else:
+                market_validation_dict = _dc.asdict(market_validation_result)
+                market_validation_dict["status"] = "completed"
+    except Exception as exc:
+        market_validation_dict = {"status": "skipped", "reason": f"validation failed: {exc}"}
+
+    report["market_cross_reference"] = (
+        {
+            "rmsd": market_validation_result.rmsd,
+            "spearman_rank_corr": market_validation_result.spearman_rank_corr,
+            "interpretation": market_validation_result.interpretation,
+            "n_common_teams": market_validation_result.n_common_teams,
+        }
+        if market_validation_result
+        else {"status": "skipped"}
+    )
+
     with open(output_report_path, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
+
+    # Write standalone market validation artifact
+    market_validation_artifact_path = repo_root / "artifacts" / "market_validation_2026.json"
+    market_validation_artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(market_validation_artifact_path, "w", encoding="utf-8") as f:
+        json.dump(market_validation_dict, f, indent=2)
 
     config_hash = _sha256_file(config_file)
     source_hashes = {
@@ -619,6 +672,7 @@ def run_production_2026(
             "data_hashes": data_hashes,
             "output_hashes": output_hashes,
         },
+        "market_cross_reference": market_validation_dict,
     }
 
     with open(governance_report_path, "w", encoding="utf-8") as f:

@@ -87,9 +87,10 @@ def main(argv: list[str] | None = None) -> int:
         )
 
         print("Production 2026 pipeline completed successfully.")
-        print(f"  Production manifest: artifacts/production_manifest_2026.json")
-        print(f"  Freeze manifest:     artifacts/production_freeze_2026.json")
-        print(f"  Governance report:   artifacts/production_governance_report_2026.json")
+        print(f"  Production manifest:  artifacts/production_manifest_2026.json")
+        print(f"  Freeze manifest:      artifacts/production_freeze_2026.json")
+        print(f"  Governance report:    artifacts/production_governance_report_2026.json")
+        print(f"  Market validation:    artifacts/market_validation_2026.json")
         return 0
 
     except ProductionValidationError as exc:

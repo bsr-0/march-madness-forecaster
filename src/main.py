@@ -587,8 +587,8 @@ def run_calibrate_mc(args):
 
 def run_validate_vs_market(args):
     """Validate model championship probabilities against betting market odds."""
-    from .data.scrapers.betting_markets import american_to_probability, remove_vig
-    from scipy.stats import spearmanr
+    from .data.scrapers.betting_markets import american_to_probability
+    from .governance.market_validation import validate_model_vs_market
 
     def _extract_model_probs(payload):
         if not isinstance(payload, dict):
@@ -651,46 +651,26 @@ def run_validate_vs_market(args):
     model_probs = _extract_model_probs(model_payload)
     market_probs = _extract_market_probs(market_payload)
 
-    if args.adjust_vig:
-        market_probs = remove_vig(market_probs)
+    result = validate_model_vs_market(
+        model_probs=model_probs,
+        market_probs=market_probs,
+        adjust_vig=bool(args.adjust_vig),
+    )
 
-    common = sorted(set(model_probs.keys()) & set(market_probs.keys()))
-    if not common:
+    if result is None:
         print("No overlapping teams between model probabilities and market odds.")
         return 1
 
-    diffs = [model_probs[t] - market_probs[t] for t in common]
-    rmsd = math.sqrt(sum(d * d for d in diffs) / len(diffs))
-
-    model_rank = [model_probs[t] for t in common]
-    market_rank = [market_probs[t] for t in common]
-    rank_corr, rank_p = spearmanr(model_rank, market_rank)
-
-    disagreements = sorted(
-        (
-            {
-                "team_id": t,
-                "model_prob": round(model_probs[t], 6),
-                "market_prob": round(market_probs[t], 6),
-                "diff": round(model_probs[t] - market_probs[t], 6),
-                "abs_diff": round(abs(model_probs[t] - market_probs[t]), 6),
-            }
-            for t in common
-        ),
-        key=lambda r: r["abs_diff"],
-        reverse=True,
-    )
-    top_10 = disagreements[:10]
-
     output = {
-        "n_common_teams": len(common),
-        "rmsd": round(float(rmsd), 6),
-        "spearman_rank_corr": None if rank_corr is None else round(float(rank_corr), 6),
-        "spearman_p_value": None if rank_p is None else round(float(rank_p), 6),
-        "top_disagreements": top_10,
+        "n_common_teams": result.n_common_teams,
+        "rmsd": result.rmsd,
+        "spearman_rank_corr": result.spearman_rank_corr,
+        "spearman_p_value": result.spearman_p_value,
+        "top_disagreements": result.top_disagreements,
         "model_path": args.model_probs,
         "market_path": args.market_odds,
-        "vig_adjusted_market": bool(args.adjust_vig),
+        "vig_adjusted_market": result.vig_adjusted,
+        "interpretation": result.interpretation,
     }
 
     output_path = Path(args.output)
@@ -699,11 +679,12 @@ def run_validate_vs_market(args):
         json.dump(output, f, indent=2)
 
     print(f"Market validation written to {output_path}")
-    print(f"Common teams: {len(common)}")
-    print(f"RMSD: {output['rmsd']:.4f}")
-    print(f"Spearman: {output['spearman_rank_corr']}")
+    print(f"Common teams: {result.n_common_teams}")
+    print(f"RMSD: {result.rmsd:.4f}")
+    print(f"Spearman: {result.spearman_rank_corr}")
+    print(f"Interpretation: {result.interpretation}")
     print("Top disagreements:")
-    for row in top_10:
+    for row in result.top_disagreements:
         print(
             f"  {row['team_id']}: model={row['model_prob']:.3f} "
             f"market={row['market_prob']:.3f} diff={row['diff']:+.3f}"
