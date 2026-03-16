@@ -645,18 +645,44 @@ class SOTAPipeline:
         → calibration.  Skips: Monte Carlo simulation, bracket optimization,
         Kaggle export, pool analysis.
         """
+        import time
+
+        total_stages = 4
+        stage_idx = 0
+
+        def _progress(msg: str) -> None:
+            pct = int((stage_idx / total_stages) * 100)
+            print(
+                f"[train_for_predictions] {pct:>3}% ({stage_idx}/{total_stages}) {msg}",
+                flush=True,
+            )
+
+        t0 = time.time()
         # Pre-run checks (light)
+        _progress("pre-run checks")
         _orch.run_pre_checks(self)
 
         # 1. Data loading
+        stage_idx = 1
+        _progress("data loading: start")
+        t_stage = time.time()
         teams = self._load_teams()
         torvik_map, proprietary_map = self._load_team_stat_sources(teams)
         rosters = self._build_rosters(teams)
         self._apply_injury_reports(rosters)
         game_flows = self._build_or_load_game_flows(teams)
         self._external_composites = self._load_external_ratings(teams)
+        _progress(
+            "data loading: done "
+            f"({time.time() - t_stage:.1f}s, teams={len(teams)})"
+        )
 
         # 2. Feature engineering
+        stage_idx = 2
+        _progress("feature engineering: start")
+        t_stage = time.time()
+        total_teams = max(len(teams), 1)
+        feature_report_step = max(1, len(teams) // 10)
         for team in teams:
             team_id = self._team_id(team.name)
             self.team_struct[team_id] = team
@@ -680,14 +706,33 @@ class SOTAPipeline:
                 features.external_rating_spread = comp.rating_spread
 
             self.team_features[team_id] = features.to_vector(include_embeddings=False)
+            idx = len(self.team_features)
+            if idx % feature_report_step == 0 or idx == len(teams):
+                team_pct = int((idx / total_teams) * 100)
+                print(
+                    f"[train_for_predictions] team-features {team_pct:>3}% "
+                    f"({idx}/{len(teams)})",
+                    flush=True,
+                )
 
         self._compute_train_val_boundary(game_flows)
         self._construct_schedule_graph(teams)
+        _progress(
+            "feature engineering: done "
+            f"({time.time() - t_stage:.1f}s, team_features={len(self.team_features)})"
+        )
 
         # 3. Model training
+        stage_idx = 3
+        _progress("model training: start")
+        t_stage = time.time()
         self._train_baseline_model(game_flows)
+        _progress(f"model training: done ({time.time() - t_stage:.1f}s)")
 
         # 4. Calibration (best-effort)
+        stage_idx = 4
+        _progress("calibration: start")
+        t_stage = time.time()
         try:
             self._fit_calibration(game_flows)
         except Exception as e:
@@ -698,10 +743,16 @@ class SOTAPipeline:
         except Exception as e:
             logger.debug("Massey predictor fitting skipped: %s", e)
 
+        _progress(f"calibration: done ({time.time() - t_stage:.1f}s)")
         logger.info(
             "Pipeline trained for predictions (%d teams, %d features)",
             len(self.team_features),
             next(iter(self.team_features.values())).shape[0] if self.team_features else 0,
+        )
+        print(
+            f"[train_for_predictions] 100% complete in {time.time() - t0:.1f}s "
+            f"(teams={len(self.team_features)})",
+            flush=True,
         )
 
     def _run_calibration_mode(self) -> Dict:

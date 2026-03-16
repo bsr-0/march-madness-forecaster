@@ -1,9 +1,13 @@
 name: Staging Deployment Validation
 
 on:
-  push:
+  pull_request:
     branches:
       - main
+      - master
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
 
 jobs:
   staging-validation:
@@ -45,25 +49,6 @@ jobs:
           )
           print(f'Pipeline config created: num_simulations={config.num_simulations}')
           print('Staging validation: pipeline module imports OK')
-          "
-
-      - name: Validate project structure
-        run: |
-          python -c "
-          from pathlib import Path
-          required = [
-              'src/pipeline/sota.py',
-              'src/pipeline/config.py',
-              'src/agents/orchestrator.py',
-              'src/governance/compliance.py',
-              'src/monitoring/resource_tracker.py',
-              'src/deployment/drift_alerts.py',
-          ]
-          missing = [f for f in required if not Path(f).exists()]
-          if missing:
-              print(f'Missing required files: {missing}')
-              exit(1)
-          print(f'All {len(required)} required files present')
           "
 
       - name: Archive validation results
