@@ -1,4 +1,4 @@
-"""Tests for Selection Sunday bracket ingestion pipeline."""
+"""Tests for Selection Sunday bracket ingestion pipeline and seed scraping."""
 
 import json
 import tempfile
@@ -13,6 +13,7 @@ from src.data.scrapers.bracket_ingestion import (
     TournamentBracketData,
     BIGDANCE_AVAILABLE,
 )
+from src.data.scrapers.tournament_bracket import TournamentSeedScraper
 
 
 # ---------------------------------------------------------------------------
@@ -433,3 +434,37 @@ class TestEndToEndPipelineJSON:
                 reloaded = json.load(f)
             assert reloaded["season"] == 2026
             assert len(reloaded["teams"]) == 64
+
+
+# ---------------------------------------------------------------------------
+# Tournament seed scraper test (merged from test_tournament_seed_scraper)
+# ---------------------------------------------------------------------------
+
+
+class TestTournamentSeedScraper:
+    def test_parse_seed_teams_from_bracket_html(self):
+        html = """
+        <div id="brackets">
+          <div id="east">
+            <div class="round">
+              <div>
+                <span>1</span>
+                <a href="/cbb/schools/duke/men/2025.html">Duke</a>
+                <a href="/cbb/boxscores/2025-03-21-14-duke.html">93</a>
+              </div>
+              <div>
+                <span>16</span>
+                <a href="/cbb/schools/mount-st-marys/men/2025.html">Mount St. Mary's</a>
+                <a href="/cbb/boxscores/2025-03-21-14-duke.html">49</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        """
+        scraper = TournamentSeedScraper()
+        teams = scraper._parse_seed_teams(html, 2025)
+
+        assert len(teams) == 2
+        assert teams[0]["region"] == "East"
+        assert {t["school_slug"] for t in teams} == {"duke", "mount-st-marys"}
+        assert {t["seed"] for t in teams} == {1, 16}
