@@ -124,7 +124,10 @@ class PipelineMonitor:
         data_path = Path(data_dir)
 
         for pattern, sla_hours in self.freshness_sla.items():
-            matches = sorted(glob.glob(str(data_path / pattern)))
+            try:
+                matches = sorted(glob.glob(str(data_path / pattern)))
+            except (PermissionError, OSError):
+                matches = []
             if not matches:
                 checks.append(DataFreshnessCheck(
                     source=pattern,
