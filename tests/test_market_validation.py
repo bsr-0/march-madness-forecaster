@@ -9,9 +9,12 @@ import pytest
 
 from src.governance.market_validation import (
     MarketValidationResult,
+    SpreadValidationResult,
     _classify_divergence,
     load_market_probs_from_cache,
+    load_vegas_spreads_from_cache,
     validate_model_vs_market,
+    validate_spreads_vs_vegas,
 )
 
 
@@ -158,3 +161,87 @@ class TestLoadMarketProbsFromCache:
         result = load_market_probs_from_cache(season=2026, cache_dir=tmp_path)
         assert result is not None
         assert abs(result["houston"] - 0.20) < 0.01
+
+
+class TestValidateSpreadsVsVegas:
+    def test_no_overlap_returns_none(self):
+        result = validate_spreads_vs_vegas({"a_vs_b": 5.0}, {"c_vs_d": 3.0})
+        assert result is None
+
+    def test_identical_spreads(self):
+        spreads = {"a_vs_b": -5.5, "c_vs_d": 3.0}
+        result = validate_spreads_vs_vegas(spreads, dict(spreads))
+        assert result is not None
+        assert result.mean_abs_error == 0.0
+        assert result.rmsd == 0.0
+        assert result.interpretation == "strong_agreement"
+        assert len(result.red_flags) == 0
+
+    def test_mae_computation(self):
+        model = {"g1": 5.0, "g2": -3.0}
+        vegas = {"g1": 3.0, "g2": -5.0}
+        result = validate_spreads_vs_vegas(model, vegas)
+        assert result is not None
+        assert abs(result.mean_abs_error - 2.0) < 0.01
+
+    def test_red_flags_threshold(self):
+        model = {"g1": 10.0, "g2": 1.0}
+        vegas = {"g1": 3.0, "g2": 0.5}
+        result = validate_spreads_vs_vegas(model, vegas, flag_threshold=5.0)
+        assert result is not None
+        assert len(result.red_flags) == 1
+        assert result.red_flags[0]["matchup"] == "g1"
+
+    def test_major_disagreement(self):
+        model = {"g1": 10.0, "g2": -8.0}
+        vegas = {"g1": 2.0, "g2": 1.0}
+        result = validate_spreads_vs_vegas(model, vegas)
+        assert result is not None
+        assert result.interpretation == "major_disagreement"
+
+    def test_partial_overlap(self):
+        model = {"g1": 5.0, "g2": 3.0, "g3": -1.0}
+        vegas = {"g2": 2.0, "g3": -2.0, "g4": 1.0}
+        result = validate_spreads_vs_vegas(model, vegas)
+        assert result is not None
+        assert result.n_games == 2
+
+
+class TestLoadVegaSpreadsFromCache:
+    def test_missing_file_returns_none(self, tmp_path):
+        result = load_vegas_spreads_from_cache(season=2026, cache_dir=tmp_path)
+        assert result is None
+
+    def test_nested_format(self, tmp_path):
+        data = {
+            "games": {
+                "houston_vs_duke": {"spread": -5.5, "source": "fanduel"},
+                "auburn_vs_unc": {"spread": 3.0, "source": "fanduel"},
+            }
+        }
+        cache_file = tmp_path / "vegas_spreads_2026.json"
+        cache_file.write_text(json.dumps(data))
+        result = load_vegas_spreads_from_cache(season=2026, cache_dir=tmp_path)
+        assert result is not None
+        assert abs(result["houston_vs_duke"] - (-5.5)) < 0.01
+
+    def test_flat_format(self, tmp_path):
+        data = {"houston_vs_duke": -5.5, "auburn_vs_unc": 3.0}
+        cache_file = tmp_path / "vegas_spreads_2026.json"
+        cache_file.write_text(json.dumps(data))
+        result = load_vegas_spreads_from_cache(season=2026, cache_dir=tmp_path)
+        assert result is not None
+        assert len(result) == 2
+
+    def test_invalid_json_returns_none(self, tmp_path):
+        cache_file = tmp_path / "vegas_spreads_2026.json"
+        cache_file.write_text("invalid{{{")
+        result = load_vegas_spreads_from_cache(season=2026, cache_dir=tmp_path)
+        assert result is None
+
+    def test_empty_games_returns_none(self, tmp_path):
+        data = {"games": {}}
+        cache_file = tmp_path / "vegas_spreads_2026.json"
+        cache_file.write_text(json.dumps(data))
+        result = load_vegas_spreads_from_cache(season=2026, cache_dir=tmp_path)
+        assert result is None

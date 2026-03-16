@@ -148,6 +148,7 @@ class SimulationResults:
     model_round_probs: Dict[str, Dict[str, float]] = field(default_factory=dict)
     championship_odds: Dict[str, float] = field(default_factory=dict)
     market_consensus: Optional[Dict[str, float]] = None
+    market_validation: Optional[Dict[str, Any]] = None  # Vegas cross-reference result
     public_picks: Optional[Dict[str, Any]] = None
     num_simulations: int = 0
 
