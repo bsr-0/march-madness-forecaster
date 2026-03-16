@@ -51,7 +51,7 @@ from .sample_loading import load_year_samples_incremental
 
 # Optional imports — accessed via pipeline._optional_imports pattern
 try:
-    from ..._optional_imports import (
+    from .._optional_imports import (
         BAYESIAN_BT_AVAILABLE,
         OPTUNA_AVAILABLE,
         SCALER_AVAILABLE,

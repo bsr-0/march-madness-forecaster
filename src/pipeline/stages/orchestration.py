@@ -360,7 +360,7 @@ def run_mode_gated_sections(
         )
 
     # Ablation study
-    from ..._optional_imports import ABLATION_AVAILABLE, AblationStudy
+    from .._optional_imports import ABLATION_AVAILABLE, AblationStudy
     if pipeline.config.enable_ablation_study and ABLATION_AVAILABLE:
         result.ablation_stats = _run_ablation(pipeline, game_flows)
 
@@ -448,7 +448,7 @@ def _generate_bracket_portfolio(
 
 def _run_ablation(pipeline, game_flows) -> Dict:
     """Run ablation study on validation games."""
-    from ..._optional_imports import AblationStudy
+    from .._optional_imports import AblationStudy
     try:
         val_games = []
         for g in pipeline._unique_games(game_flows):
