@@ -18,6 +18,8 @@ concurrency:
 
 jobs:
   deploy:
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -27,6 +29,45 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
+      - name: Validate docs artifact inputs
+        run: |
+          set -euo pipefail
+
+          REQUIRED_FILES=(
+            "docs/index.html"
+            "docs/methodology.html"
+            "docs/results.html"
+            "docs/predictions.html"
+            "docs/style.css"
+            "docs/data/dashboard.json"
+            "docs/data/conference_predictions_2026.json"
+          )
+          missing=0
+          for f in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Missing required file: $f"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          dashboard = json.loads(Path("docs/data/dashboard.json").read_text(encoding="utf-8"))
+          preds = json.loads(Path("docs/data/conference_predictions_2026.json").read_text(encoding="utf-8"))
+
+          if not isinstance(dashboard, dict) or not dashboard:
+              raise SystemExit("dashboard.json is empty or invalid object")
+          if not isinstance(preds, dict) or not preds:
+              raise SystemExit("conference_predictions_2026.json is empty or invalid object")
+          print("JSON payload validation passed.")
+          PY
+
+          echo "Docs artifact validation passed."
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -34,3 +75,50 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  smoke-test:
+    name: Post-deploy smoke test
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Verify deployed pages and data
+        env:
+          PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${PAGE_URL:-}" ]; then
+            echo "::error::Missing page URL output from deploy job."
+            exit 1
+          fi
+
+          BASE_URL="${PAGE_URL%/}/"
+
+          URLS=(
+            "${BASE_URL}"
+            "${BASE_URL}predictions.html"
+            "${BASE_URL}results.html"
+            "${BASE_URL}methodology.html"
+            "${BASE_URL}data/conference_predictions_2026.json"
+          )
+
+          for url in "${URLS[@]}"; do
+            ok=0
+            for attempt in {1..10}; do
+              status="$(curl -sS -o /tmp/page.out -w "%{http_code}" "$url" || true)"
+              if [ "$status" = "200" ]; then
+                ok=1
+                break
+              fi
+              echo "Attempt ${attempt}/10: ${url} returned ${status}; retrying in 10s..."
+              sleep 10
+            done
+            if [ "$ok" -ne 1 ]; then
+              echo "::error::Smoke test failed for ${url}"
+              exit 1
+            fi
+          done
+
+          curl -fsSL "${BASE_URL}predictions.html" | grep -q "2026 Conference Tournament Predictions"
+          curl -fsSL "${BASE_URL}data/conference_predictions_2026.json" | python -c "import json,sys; d=json.load(sys.stdin); assert isinstance(d, dict) and len(d) > 0"
+          echo "Post-deploy smoke test passed."

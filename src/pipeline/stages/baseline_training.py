@@ -249,7 +249,15 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             external_rating_composite=_erc2,
             external_rating_spread=_ers2,
         )
-        vec = IncrementalMetricsEngine.build_matchup_vector(v1, v2, s1, s2)
+        vec = IncrementalMetricsEngine.build_matchup_vector(
+            v1,
+            v2,
+            s1,
+            s2,
+            engine=inc_engine,
+            team1_id=game.team1_id,
+            team2_id=game.team2_id,
+        )
 
         # S5 FIX: Use score-based label as primary (reliable), with
         # lead_history as fallback only if scores unavailable.
@@ -417,7 +425,15 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         base_names = TeamFeatures.get_feature_names(include_embeddings=False)
         diff_names = [f"diff_{n}" for n in base_names]
         absolute_names = [f"abs_{n}" for n in ABSOLUTE_LEVEL_FEATURE_NAMES]
-        interaction_names = ["tempo_interaction", "style_mismatch", "seed_em_residual_diff", "sos_seed_interaction", "three_pt_seed_interaction", "seed_interaction", "seed_diff"]
+        interaction_names = [
+            "tempo_interaction",
+            "style_mismatch",
+            "h2h_record",
+            "common_opp_margin",
+            "travel_advantage",
+            "seed_interaction",
+            "seed_diff",
+        ]
         feature_names = diff_names + absolute_names + interaction_names
         if len(feature_names) != train_X.shape[1]:
             logger.warning(

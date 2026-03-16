@@ -1382,7 +1382,15 @@ class HoldoutEvaluator:
                 s1, s2 = 0, 0
                 v1 = IncrementalMetricsEngine.metrics_to_team_vector(m1, s1)
                 v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, s2)
-                vec = IncrementalMetricsEngine.build_matchup_vector(v1, v2, s1, s2)
+                vec = IncrementalMetricsEngine.build_matchup_vector(
+                    v1,
+                    v2,
+                    s1,
+                    s2,
+                    engine=inc_engine,
+                    team1_id=g.team_id,
+                    team2_id=g.opponent_id,
+                )
 
                 if len(vec) < feature_dim:
                     padded = np.zeros(feature_dim, dtype=np.float64)
@@ -1532,7 +1540,15 @@ class HoldoutEvaluator:
             s2 = ho_seeds.get(t2, 0)
             v1 = IncrementalMetricsEngine.metrics_to_team_vector(m1, s1)
             v2 = IncrementalMetricsEngine.metrics_to_team_vector(m2, s2)
-            vec = IncrementalMetricsEngine.build_matchup_vector(v1, v2, s1, s2)
+            vec = IncrementalMetricsEngine.build_matchup_vector(
+                v1,
+                v2,
+                s1,
+                s2,
+                engine=ho_engine,
+                team1_id=t1,
+                team2_id=t2,
+            )
 
             if len(vec) < feature_dim:
                 padded = np.zeros(feature_dim, dtype=np.float64)

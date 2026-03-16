@@ -134,6 +134,15 @@ def run_monte_carlo(
                 "from historical. Consider adjusting mc_noise_std (currently %.3f).",
                 pipeline.config.mc_noise_std,
             )
+        champion_check = upset_validation.get("champion_seed_validation", {})
+        if champion_check and not champion_check.get("seed_1_passed", True):
+            logger.warning(
+                "MC champion-seed validation flagged: seed-1 champion share %.3f "
+                "outside expected range [%.2f, %.2f].",
+                champion_check.get("bucket_probabilities", {}).get("seed_1", 0.0),
+                champion_check.get("seed_1_expected_range", [0.45, 0.70])[0],
+                champion_check.get("seed_1_expected_range", [0.45, 0.70])[1],
+            )
     except Exception as e:
         logger.debug("Upset rate validation skipped: %s", e)
 

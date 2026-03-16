@@ -2815,6 +2815,9 @@ class IncrementalMetricsEngine:
         v2: np.ndarray,
         seed1: int = 0,
         seed2: int = 0,
+        engine: Optional["IncrementalMetricsEngine"] = None,
+        team1_id: str = "",
+        team2_id: str = "",
     ) -> np.ndarray:
         """Build matchup vector from two TEAM_FEATURE_DIM team vectors.
 
@@ -2834,19 +2837,13 @@ class IncrementalMetricsEngine:
         tempo_diff = v1[2] - v2[2]
         eff_diff = (v1[0] - v1[1]) - (v2[0] - v2[1])
         style_mismatch = (tempo_diff * eff_diff) / 600.0
-        # Seed-adjusted efficiency margin residual: how much does each team
-        # over/underperform their seed expectation?  Positive = dangerous.
-        _seed_expected_em = {1: 28, 2: 21, 3: 16, 4: 12, 5: 9, 6: 6, 7: 4, 8: 2,
-                            9: 0, 10: -2, 11: -4, 12: -6, 13: -9, 14: -12, 15: -16, 16: -21}
-        _r1 = (v1[0] - v1[1]) - _seed_expected_em.get(seed1, 0)
-        _r2 = (v2[0] - v2[1]) - _seed_expected_em.get(seed2, 0)
-        seed_em_residual_diff = (_r1 - _r2) / 20.0
+        h2h_record = 0.5
+        common_opp_margin = 0.0
+        travel_advantage = 0.0
+        if engine is not None and team1_id and team2_id:
+            h2h_record = engine.compute_h2h_record(team1_id, team2_id)
+            common_opp_margin = engine.compute_common_opponent_margin(team1_id, team2_id)
 
-        # SOS × seed interaction: high seed + weak schedule = upset risk
-        sos_seed_interaction = ((v1[26] - v2[26]) * (seed1 - seed2)) / 200.0
-
-        # 3PT variance × seed interaction: volatile shooting + low seed = upset amplifier
-        three_pt_seed_interaction = (v1[35] - v2[35]) * (seed1 - seed2) / 15.0
         if seed1 > 0 and seed2 > 0:
             seed_interaction = (seed1 * seed2) / 128.0 - 1.0
             # Gap #3: Raw seed difference — strongest single predictor
@@ -2856,8 +2853,8 @@ class IncrementalMetricsEngine:
             seed_diff = 0.0
 
         interactions = np.array([
-            tempo_interaction, style_mismatch, seed_em_residual_diff,
-            sos_seed_interaction, three_pt_seed_interaction, seed_interaction,
+            tempo_interaction, style_mismatch, h2h_record,
+            common_opp_margin, travel_advantage, seed_interaction,
             seed_diff,
         ])
 

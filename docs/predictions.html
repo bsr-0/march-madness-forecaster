@@ -97,12 +97,17 @@
     }
     .conf-card:hover { transform: translateY(-2px); border-color: var(--color-accent); }
     .card-header {
+      width: 100%;
       padding: 16px 20px;
       cursor: pointer;
+      background: transparent;
+      border: 0;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       user-select: none;
+      text-align: left;
+      color: inherit;
     }
     .card-header:hover { background: rgba(255,107,53,0.04); }
     .conf-name { font-size: 1.1em; font-weight: 600; }
@@ -345,9 +350,22 @@
     // ── Load & render ──
     let DATA = {};
 
+    function showDataError(message) {
+      document.getElementById('confContainer').innerHTML =
+        `<p style="text-align:center;color:var(--color-danger);padding:40px;">${message}</p>`;
+    }
+
     fetch('data/conference_predictions_2026.json')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) {
+          throw new Error(`HTTP ${r.status}`);
+        }
+        return r.json();
+      })
       .then(data => {
+        if (!data || typeof data !== 'object' || Array.isArray(data)) {
+          throw new Error('Invalid predictions payload');
+        }
         DATA = data;
         renderSummary(data);
         renderAll(data);
@@ -356,15 +374,24 @@
         });
       })
       .catch(err => {
-        document.getElementById('confContainer').innerHTML =
-          '<p style="text-align:center;color:var(--color-danger);padding:40px;">Failed to load prediction data. Please check that data/conference_predictions_2026.json exists.</p>';
+        const detail = err?.message ? ` (${err.message})` : '';
+        showDataError(`Failed to load prediction data${detail}. Please check data/conference_predictions_2026.json.`);
       });
 
     function renderSummary(data) {
       const confs = Object.keys(data).length;
-      const totalGames = Object.values(data).reduce((s, c) => s + c.rounds.reduce((s2, r) => s2 + r.games.length, 0), 0);
-      const upsets = Object.values(data).reduce((s, c) => s + c.rounds.reduce((s2, r) => s2 + r.games.filter(g => g.is_upset).length, 0), 0);
-      const oneSeedWins = Object.values(data).filter(c => c.predicted_champion.seed === 1).length;
+      const totalGames = Object.values(data).reduce((s, c) => {
+        const rounds = Array.isArray(c?.rounds) ? c.rounds : [];
+        return s + rounds.reduce((s2, r) => s2 + (Array.isArray(r?.games) ? r.games.length : 0), 0);
+      }, 0);
+      const upsets = Object.values(data).reduce((s, c) => {
+        const rounds = Array.isArray(c?.rounds) ? c.rounds : [];
+        return s + rounds.reduce((s2, r) => {
+          const games = Array.isArray(r?.games) ? r.games : [];
+          return s2 + games.filter(g => g?.is_upset).length;
+        }, 0);
+      }, 0);
+      const oneSeedWins = Object.values(data).filter(c => c?.predicted_champion?.seed === 1).length;
 
       document.getElementById('summaryStats').innerHTML = `
         <div class="pred-stat"><div class="pred-stat-value">${confs}</div><div class="pred-stat-label">Conferences</div></div>
@@ -377,6 +404,7 @@
     function renderAll(data, filter = 'all', searchTerm = '') {
       const container = document.getElementById('confContainer');
       container.innerHTML = '';
+      let renderedCount = 0;
 
       // Sort conferences into tiers
       const entries = Object.entries(data);
@@ -397,16 +425,20 @@
         if (filter !== 'all' && filter !== tier.key && filter !== 'upsets') continue;
 
         if (filter === 'upsets') {
-          items = items.filter(([_, c]) => c.rounds.some(r => r.games.some(g => g.is_upset)));
+          items = items.filter(([_, c]) => {
+            const rounds = Array.isArray(c?.rounds) ? c.rounds : [];
+            return rounds.some(r => (Array.isArray(r?.games) ? r.games : []).some(g => g?.is_upset));
+          });
         }
 
         if (searchTerm) {
           const q = searchTerm.toLowerCase();
           items = items.filter(([_, c]) => {
-            if (c.conference_name.toLowerCase().includes(q)) return true;
-            if (c.predicted_champion.name && c.predicted_champion.name.toLowerCase().includes(q)) return true;
-            return c.rounds.some(r => r.games.some(g =>
-              g.team1.toLowerCase().includes(q) || g.team2.toLowerCase().includes(q)
+            if ((c?.conference_name || '').toLowerCase().includes(q)) return true;
+            if ((c?.predicted_champion?.name || '').toLowerCase().includes(q)) return true;
+            const rounds = Array.isArray(c?.rounds) ? c.rounds : [];
+            return rounds.some(r => (Array.isArray(r?.games) ? r.games : []).some(g =>
+              (g?.team1 || '').toLowerCase().includes(q) || (g?.team2 || '').toLowerCase().includes(q)
             ));
           });
         }
@@ -423,9 +455,19 @@
 
         items.forEach(([confId, conf]) => {
           grid.appendChild(createCard(confId, conf));
+          renderedCount += 1;
         });
 
         container.appendChild(grid);
+      }
+
+      if (renderedCount === 0) {
+        const empty = document.createElement('p');
+        empty.style.textAlign = 'center';
+        empty.style.color = 'var(--color-text-muted)';
+        empty.style.padding = '32px 12px';
+        empty.textContent = 'No conferences match this filter/search.';
+        container.appendChild(empty);
       }
     }
 
@@ -507,27 +549,40 @@
       card.className = 'conf-card';
       card.dataset.conf = confId;
 
-      const upsetCount = conf.rounds.reduce((s, r) => s + r.games.filter(g => g.is_upset).length, 0);
-      const champ = conf.predicted_champion;
-      const mc = conf.mc_favorite;
+      const rounds = Array.isArray(conf?.rounds) ? conf.rounds : [];
+      const upsetCount = rounds.reduce((s, r) => {
+        const games = Array.isArray(r?.games) ? r.games : [];
+        return s + games.filter(g => g?.is_upset).length;
+      }, 0);
+      const champ = conf?.predicted_champion || {};
+      const mc = conf?.mc_favorite || {};
+      const champName = champ?.name || '—';
+      const champSeed = Number.isFinite(champ?.seed) ? champ.seed : '—';
+      const champTRank = Number.isFinite(champ?.t_rank) ? champ.t_rank : '—';
+      const mcProbDisplay = Number.isFinite(mc?.prob) ? `${(mc.prob * 100).toFixed(1)}% to win` : 'N/A';
+      const bodyId = `conf-body-${confId}`;
 
       // Header
-      const header = document.createElement('div');
+      const header = document.createElement('button');
+      header.type = 'button';
       header.className = 'card-header';
+      header.setAttribute('aria-expanded', 'false');
+      header.setAttribute('aria-controls', bodyId);
       header.innerHTML = `
         <div>
           <div class="conf-name">${conf.conference_name}${upsetCount > 0 ? `<span class="upset-badge">${upsetCount} upset${upsetCount>1?'s':''}</span>` : ''}<span class="expand-icon">&#9660;</span></div>
-          <div class="conf-meta">${conf.num_teams} teams &middot; ${conf.rounds.length} rounds</div>
+          <div class="conf-meta">${conf.num_teams} teams &middot; ${rounds.length} rounds</div>
         </div>
         <div class="champ-block">
           <div class="champ-label">Predicted Champion</div>
-          <div class="champ-name">${champ.name || '—'}</div>
-          <div class="champ-detail">Seed #${champ.seed} &middot; T-Rank ${champ.t_rank}</div>
-          <div class="mc-prob">MC: ${(mc.prob * 100).toFixed(1)}% to win</div>
+          <div class="champ-name">${champName}</div>
+          <div class="champ-detail">Seed #${champSeed} &middot; T-Rank ${champTRank}</div>
+          <div class="mc-prob">MC: ${mcProbDisplay}</div>
         </div>
       `;
       header.addEventListener('click', () => {
         card.classList.toggle('open');
+        header.setAttribute('aria-expanded', card.classList.contains('open') ? 'true' : 'false');
         // Create MC chart on first open when canvas is visible
         if (card.classList.contains('open') && card._pendingChart) {
           const { chartId, convergence } = card._pendingChart;
@@ -540,6 +595,7 @@
       // Body
       const body = document.createElement('div');
       body.className = 'card-body';
+      body.id = bodyId;
 
       // Championship probability contenders
       if (conf.championship_probabilities) {
@@ -567,12 +623,12 @@
       }
 
       // Bracket rounds
-      if (conf.rounds && conf.rounds.length > 0) {
+      if (rounds.length > 0) {
         let bracketHTML = '<div class="bracket-section"><div class="section-label">Full Bracket</div><div class="bracket-scroll">';
 
-        conf.rounds.forEach(round => {
+        rounds.forEach(round => {
           bracketHTML += `<div class="bracket-round"><div class="round-header">${round.round_name}</div>`;
-          round.games.forEach(game => {
+          (Array.isArray(round?.games) ? round.games : []).forEach(game => {
             const cls = game.is_upset ? 'bracket-game upset' : 'bracket-game';
             const t1cls = game.winner === game.team1.replace(/^\(\d+\)\s*/, '') ? 'matchup-line winner' : 'matchup-line';
             const t2cls = game.winner === game.team2.replace(/^\(\d+\)\s*/, '') ? 'matchup-line winner' : 'matchup-line';
@@ -635,10 +691,32 @@
       }, 200);
     });
 
-    // Mobile nav toggle
-    document.querySelector('.nav-toggle')?.addEventListener('click', function() {
-      document.querySelector('.nav-links').classList.toggle('open');
-    });
+    const navToggle = document.querySelector('.nav-toggle');
+    const navLinks = document.querySelector('.nav-links');
+
+    if (navToggle && navLinks) {
+      if (!navLinks.id) navLinks.id = 'primary-nav';
+      navToggle.setAttribute('aria-controls', navLinks.id);
+      navToggle.setAttribute('aria-expanded', 'false');
+
+      const closeNav = () => {
+        navLinks.classList.remove('open');
+        navToggle.setAttribute('aria-expanded', 'false');
+      };
+
+      navToggle.addEventListener('click', function() {
+        const isOpen = navLinks.classList.toggle('open');
+        navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+
+      document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') closeNav();
+      });
+
+      navLinks.addEventListener('click', function(event) {
+        if (event.target.closest('a')) closeNav();
+      });
+    }
   </script>
 </body>
 </html>

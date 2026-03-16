@@ -444,7 +444,15 @@ def _load_year_samples_incremental_core(
             v2[15] = rf2.get("roster_continuity", 0.0)
             v2[17] = rf2.get("avg_experience", 0.0)
 
-        matchup = IncrementalMetricsEngine.build_matchup_vector(v1, v2, seed1, seed2)
+        matchup = IncrementalMetricsEngine.build_matchup_vector(
+            v1,
+            v2,
+            seed1,
+            seed2,
+            engine=inc_engine,
+            team1_id=g.team_id,
+            team2_id=g.opponent_id,
+        )
 
         if len(matchup) < feature_dim:
             padded = np.zeros(feature_dim, dtype=np.float64)
