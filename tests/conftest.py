@@ -9,6 +9,60 @@ import pytest
 
 
 # ---------------------------------------------------------------------------
+# Phase 7.2: Auto-apply test gate markers based on file path / name
+# ---------------------------------------------------------------------------
+
+# Mapping from filename substrings to pytest markers.
+# Tests can also opt-in to markers explicitly via @pytest.mark.<name>.
+_AUTO_MARKER_RULES = [
+    # data-contract tests
+    ("data_integrity/test_leakage_rules", "leakage"),
+    ("data_integrity/test_point_in_time_contracts", "data_contract"),
+    ("data_integrity/test_training_row_assembly", "data_contract"),
+    ("data_integrity/test_lineage_manifests", "data_contract"),
+    ("data_integrity/test_provider_robustness", "data_contract"),
+    # leakage tests
+    ("test_leakage", "leakage"),
+    ("test_date_integrity", "leakage"),
+    ("test_elo_temporal", "leakage"),
+    # calibration tests
+    ("evaluation/test_calibration", "calibration"),
+    ("evaluation/test_reliability", "calibration"),
+    ("evaluation/test_selection_snapshot", "calibration"),
+    ("evaluation/test_round_segmentation", "calibration"),
+    # freeze / reproducibility tests
+    ("test_production_2026_freeze", "freeze"),
+    ("test_deterministic_replay", "freeze"),
+    ("test_production_2026_freeze", "production"),
+    # backtest regression tests
+    ("test_sota_pipeline", "backtest_regression"),
+    ("test_e2e_pipeline", "backtest_regression"),
+    # live protocol
+    ("test_live_protocol", "live_protocol"),
+]
+
+
+def pytest_collection_modifyitems(items):
+    """Auto-apply gate markers to collected test items based on file path."""
+    for item in items:
+        rel_path = str(item.fspath)
+        for pattern, marker_name in _AUTO_MARKER_RULES:
+            if pattern in rel_path:
+                item.add_marker(getattr(pytest.mark, marker_name))
+
+        # Auto-mark anything under tests/ that doesn't already have a gate
+        # marker as 'unit' (the default gate).
+        gate_markers = {
+            "unit", "data_contract", "leakage", "backtest_regression",
+            "freeze", "production", "calibration", "live_protocol",
+            "integration",
+        }
+        item_markers = {m.name for m in item.iter_markers()}
+        if not item_markers & gate_markers:
+            item.add_marker(pytest.mark.unit)
+
+
+# ---------------------------------------------------------------------------
 # Prediction / outcome fixtures
 # ---------------------------------------------------------------------------
 
