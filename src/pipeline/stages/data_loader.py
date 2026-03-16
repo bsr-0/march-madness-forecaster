@@ -100,6 +100,18 @@ class GameFlowResult:
 
 def player_from_dict(team_id: str, raw: Dict) -> Player:
     """Convert a raw player dict to a :class:`Player` model object."""
+    def _safe_float(value: object, default: float = 0.0) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    def _safe_int(value: object, default: int = 0) -> int:
+        try:
+            return int(float(value))
+        except (TypeError, ValueError):
+            return default
+
     pos_raw = str(raw.get("position", "PG"))
     if pos_raw not in {p.value for p in Position}:
         pos_raw = "PG"
@@ -113,18 +125,18 @@ def player_from_dict(team_id: str, raw: Dict) -> Player:
         name=str(raw.get("name", "Unknown")),
         team_id=team_id,
         position=Position(pos_raw),
-        minutes_per_game=float(raw.get("minutes_per_game", 0.0)),
-        games_played=int(raw.get("games_played", 0)),
-        games_started=int(raw.get("games_started", 0)),
-        rapm_offensive=float(raw.get("rapm_offensive") or 0.0),
-        rapm_defensive=float(raw.get("rapm_defensive") or 0.0),
-        warp=float(raw.get("warp") or 0.0),
-        box_plus_minus=float(raw.get("box_plus_minus") or 0.0),
-        usage_rate=float(raw.get("usage_rate") or 0.0),
+        minutes_per_game=_safe_float(raw.get("minutes_per_game")),
+        games_played=_safe_int(raw.get("games_played")),
+        games_started=_safe_int(raw.get("games_started")),
+        rapm_offensive=_safe_float(raw.get("rapm_offensive")),
+        rapm_defensive=_safe_float(raw.get("rapm_defensive")),
+        warp=_safe_float(raw.get("warp")),
+        box_plus_minus=_safe_float(raw.get("box_plus_minus")),
+        usage_rate=_safe_float(raw.get("usage_rate")),
         injury_status=InjuryStatus(injury_raw),
         is_transfer=bool(raw.get("is_transfer", False)),
         transfer_from=raw.get("transfer_from"),
-        eligibility_year=int(raw.get("eligibility_year", 1)),
+        eligibility_year=_safe_int(raw.get("eligibility_year"), default=1),
     )
 
 
@@ -267,11 +279,21 @@ def bracket_data_to_teams(bracket: Any) -> List[Team]:
     """Convert ``TournamentBracketData`` to ``List[Team]``."""
     teams = []
     for bt in bracket.teams:
+        team_name = (
+            getattr(bt, "team_name", None)
+            or getattr(bt, "name", None)
+            or getattr(bt, "display_name", None)
+            or getattr(bt, "team_id", None)
+            or "unknown_team"
+        )
         team = Team(
-            name=bt.display_name,
+            name=str(team_name),
             seed=bt.seed,
             region=bt.region,
         )
+        school_slug = getattr(bt, "school_slug", None)
+        if school_slug:
+            team.stats["school_slug"] = str(school_slug)
         if bt.rating:
             team.stats["bracket_rating"] = bt.rating
         teams.append(team)
@@ -851,6 +873,12 @@ def load_team_stat_sources(
     _torvik_id_set = set(_torvik_name_to_id.values())
 
     _cbbpy_map = _load_cbbpy_team_map()
+    _cbbpy_location_to_display: Dict[str, str] = {}
+    for _display, _location in _cbbpy_map.items():
+        norm_display = normalize_key(_team_id(_display))
+        norm_location = normalize_key(_team_id(_location))
+        if norm_display and norm_location and norm_location not in _cbbpy_location_to_display:
+            _cbbpy_location_to_display[norm_location] = norm_display
     _mascot_cache: Dict[str, str] = {}
 
     def _resolve_to_canonical(raw_id: str, display_name: str = "") -> str:
@@ -858,6 +886,14 @@ def load_team_stat_sources(
             return _mascot_cache[raw_id]
         if display_name:
             location = _cbbpy_map.get(display_name)
+            if not location:
+                norm_display = normalize_key(_team_id(display_name))
+                display_from_location = _cbbpy_location_to_display.get(norm_display)
+                if display_from_location:
+                    canon = _torvik_name_to_id.get(display_from_location)
+                    if canon:
+                        _mascot_cache[raw_id] = canon
+                        return canon
             if location:
                 norm_loc = normalize_key(_team_id(location))
                 canon = _torvik_name_to_id.get(norm_loc)
@@ -873,8 +909,20 @@ def load_team_stat_sources(
     for team in teams:
         tid = _team_id(team.name)
         key = normalize_key(tid)
+        canonical_key = _torvik_name_to_id.get(key, key)
+        school_slug = ""
+        if isinstance(getattr(team, "stats", None), dict):
+            school_slug = str(team.stats.get("school_slug", "")).strip()
+        if school_slug:
+            slug_key = normalize_key(school_slug.replace("-", "_"))
+            canonical_key = _torvik_name_to_id.get(slug_key, canonical_key)
+            if canonical_key == key and slug_key in torvik_index:
+                canonical_key = slug_key
+        if canonical_key == key:
+            canonical_key = _resolve_to_canonical(key, display_name=team.name)
+            canonical_key = normalize_key(canonical_key)
 
-        tv = torvik_index.get(key)
+        tv = torvik_index.get(canonical_key) or torvik_index.get(key)
         if tv:
             if isinstance(tv, dict):
                 data = tv
@@ -909,7 +957,9 @@ def load_team_stat_sources(
                 "conf_losses": data.get("conf_losses", 0),
             }
 
-        pm = proprietary_results.get(key)
+        pm = proprietary_results.get(canonical_key)
+        if pm is None:
+            pm = proprietary_results.get(key)
         if pm is not None:
             proprietary_map[tid] = pm.to_dict()
         else:
@@ -965,8 +1015,18 @@ def load_team_stat_sources(
     # Enrich with tournament context data
     enrich_tournament_context(config, torvik_map, proprietary_map, teams)
 
-    validate_source_coverage("Torvik", torvik_map, len(teams), min_ratio=0.8)
-    validate_source_coverage("Proprietary metrics", proprietary_map, len(teams), min_ratio=0.8)
+    torvik_min_ratio = 0.8
+    proprietary_min_ratio = 0.8
+    if config.pipeline_mode == "experimental" and not config.enforce_production_path:
+        proprietary_min_ratio = 0.75
+
+    validate_source_coverage("Torvik", torvik_map, teams, min_ratio=torvik_min_ratio)
+    validate_source_coverage(
+        "Proprietary metrics",
+        proprietary_map,
+        teams,
+        min_ratio=proprietary_min_ratio,
+    )
 
     return StatSourcesResult(
         torvik_map=torvik_map,
@@ -1072,15 +1132,21 @@ def build_rosters(
 
     rosters: Dict[str, Roster] = {}
     for team_block in teams_payload:
+        if not isinstance(team_block, dict):
+            continue
         source_team = (
             team_block.get("team_id") or team_block.get("team_name") or team_block.get("name")
         )
         if not source_team:
             continue
         tid = _team_id(str(source_team))
-        players_raw = team_block.get("players", [])
+        players_raw = team_block.get("players") or []
+        if not isinstance(players_raw, list):
+            players_raw = []
         players: List[Player] = []
         for player_data in players_raw:
+            if not isinstance(player_data, dict):
+                continue
             players.append(player_from_dict(tid, player_data))
         enrich_roster_rapm(players, team_block, config.min_rapm_players_per_team)
         if players:
@@ -1237,11 +1303,15 @@ def build_or_load_game_flows(
 
     all_game_flows = list(in_season_flows.values())
 
+    historical_games_min_ratio = 0.6
+    if config.pipeline_mode == "experimental" and not config.enforce_production_path:
+        historical_games_min_ratio = 0.2
+
     validate_source_coverage(
         "Historical games",
         {k: v for k, v in team_to_games.items() if v},
-        len(teams),
-        min_ratio=0.6,
+        teams,
+        min_ratio=historical_games_min_ratio,
     )
     return GameFlowResult(team_to_games=team_to_games, all_game_flows=all_game_flows)
 

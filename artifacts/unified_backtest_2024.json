@@ -1,0 +1,82 @@
+{
+  "modes": [
+    "calibration",
+    "ev"
+  ],
+  "years": [
+    2024
+  ],
+  "pool_sizes": [
+    30
+  ],
+  "results": [
+    {
+      "year": 2024,
+      "mode": "calibration",
+      "brier": 0.16642826681545886,
+      "rw_brier": 0.20346676509560702,
+      "accuracy": 0.7619047619047619,
+      "kaggle_rank": "top 1%",
+      "n_games": 63
+    },
+    {
+      "year": 2024,
+      "mode": "ev",
+      "brier": 0.0,
+      "rw_brier": 0.0,
+      "accuracy": 0.0,
+      "kaggle_rank": "",
+      "n_games": 0,
+      "pool_rank": 6,
+      "pool_percentile": 0.2,
+      "pool_size": 30,
+      "pool_score": 1320.0
+    },
+    {
+      "year": 2024,
+      "mode": "ev",
+      "brier": 0.0,
+      "rw_brier": 0.0,
+      "accuracy": 0.0,
+      "kaggle_rank": "",
+      "n_games": 0,
+      "pool_rank": 6,
+      "pool_percentile": 0.2,
+      "pool_size": 30,
+      "pool_score": 1320.0
+    }
+  ],
+  "summary_by_mode": {
+    "calibration": {
+      "mean_brier": 0.16642826681545886,
+      "std_brier": 0.0,
+      "mean_rw_brier": 0.20346676509560702,
+      "std_rw_brier": 0.0,
+      "mean_accuracy": 0.7619047619047619,
+      "n_years": 1.0
+    },
+    "ev": {
+      "mean_percentile": 0.2,
+      "std_percentile": 0.0,
+      "n_wins": 0.0,
+      "n_configs": 2.0,
+      "win_rate": 0.0
+    },
+    "ev_by_payout": {
+      "winner_take_all": {
+        "mean_percentile": 0.2,
+        "n_configs": 1.0,
+        "win_rate": 0.0,
+        "best_percentile": 0.2,
+        "worst_percentile": 0.2
+      },
+      "top_10pct": {
+        "mean_percentile": 0.2,
+        "n_configs": 1.0,
+        "win_rate": 0.0,
+        "best_percentile": 0.2,
+        "worst_percentile": 0.2
+      }
+    }
+  }
+}

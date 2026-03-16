@@ -227,6 +227,12 @@ a:hover {
   flex-wrap: wrap;
 }
 
+.hero-metric-note {
+  margin-top: 1rem;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
 /* ===========================
    PAGE HEADER (for sub-pages)
    =========================== */

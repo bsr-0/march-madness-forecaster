@@ -71,6 +71,11 @@ def _build_pipeline_config(args, path_overrides=None):
         year=path_overrides.get("year", args.year),
         num_simulations=args.simulations,
         pool_size=getattr(args, "pool_size", 100),
+        ev_pool_size=getattr(args, "ev_pool_size", getattr(args, "pool_size", 100)),
+        ev_scoring_system=getattr(args, "ev_scoring_system", "standard"),
+        ev_payout_structure=getattr(args, "ev_payout_structure", "tiered"),
+        ev_target_percentile=getattr(args, "ev_target_percentile", 0.05),
+        ev_contrarian_strength=getattr(args, "ev_contrarian_strength", 1.0),
         teams_json=path_overrides.get("teams_json", getattr(args, "input", None)),
         torvik_json=path_overrides.get("torvik_json", getattr(args, "torvik", None)),
         historical_games_json=path_overrides.get("historical_games_json", getattr(args, "historical_games", None)),
@@ -485,7 +490,7 @@ def run_kaggle_export(args):
             )
 
     # --- Dual submission: 0-1 trick / champion boost (Slot 2) ---
-    if pipeline.config.enable_dual_submission:
+    if pipeline.config.enable_dual_submission and getattr(args, "enable_hedge", False):
         try:
             from .optimization.dual_submission import KaggleDualSubmissionGenerator
             from .exports.kaggle import parse_kaggle_id
@@ -547,7 +552,61 @@ def run_kaggle_export(args):
                 print("\n⚠ Dual submission skipped: insufficient matchup data or seeds")
         except Exception as e:
             print(f"\n⚠ Dual submission generation failed: {e}")
+    elif pipeline.config.enable_dual_submission:
+        print(
+            "\nℹ Hedge submission skipped (validity-first default). "
+            "Use --enable-hedge to export the optional high-variance slot."
+        )
 
+    return 0
+
+
+def run_espn_bracket_export(args):
+    """Generate a concise ESPN-pool bracket artifact (default pool size: 30)."""
+    manifest, base_dir = _load_manifest(args.manifest)
+    if manifest is None:
+        return 1
+
+    path_overrides = _resolve_manifest_paths(args, manifest, base_dir)
+    config = _build_pipeline_config(args, path_overrides=path_overrides)
+    # Hard guardrails: this command is intentionally low-tunable and
+    # should not become an overfit post-processing surface.
+    config.probability_profile = "experimental"
+    config.scrape_live = False
+    config.mode = "ev"
+    config.ev_pool_size = int(getattr(args, "pool_size", 30))
+    config.ev_scoring_system = "standard"
+    config.ev_payout_structure = "tiered"
+    config.ev_enable_search = False
+    config.ev_enable_archetypes = False
+    config.enable_bracket_portfolio = False
+    config.ev_target_percentile = max(1.0 / max(config.ev_pool_size, 1), 0.01)
+    config.ev_contrarian_strength = 1.0
+    config.enable_dual_submission = False
+
+    _guard_production_2026(config)
+    exit_code, report = _run_pipeline_and_report(config, args.output_report)
+    if exit_code != 0 or report is None:
+        return exit_code
+
+    ev = report.get("ev_analysis", {}) if isinstance(report, dict) else {}
+    pareto = ev.get("pareto_brackets", []) if isinstance(ev, dict) else []
+    primary_bracket = pareto[0] if pareto else {}
+
+    output = {
+        "mode": "ev",
+        "pool_size": config.ev_pool_size,
+        "recommended_strategy": ev.get("recommended_strategy", ""),
+        "primary_bracket": primary_bracket,
+        "source_report": args.output_report,
+    }
+
+    with open(args.output, "w") as f:
+        json.dump(output, f, indent=2)
+
+    print(f"✓ ESPN pool bracket artifact written to {args.output}")
+    print(f"  Pool size: {config.ev_pool_size}")
+    print(f"  Strategy: {output['recommended_strategy'] or 'N/A'}")
     return 0
 
 
@@ -1242,8 +1301,8 @@ def run_backtest_unified(args):
 
     Evaluates both calibration mode (Kaggle round-weighted Brier score)
     and EV mode (pool rank percentile) on historical tournament data.
-    Uses seed-based predictions as baseline; supply --kaggle-dir for
-    full pipeline predictions via Kaggle CSV data.
+    Uses seed-based predictions as baseline; supply --kaggle-dir and
+    bracket/team inputs (--input or --bracket-json) for pipeline predictions.
     """
     import json as _json
     from .ml.evaluation.loyo_protocol import LOYO_YEARS
@@ -1252,6 +1311,12 @@ def run_backtest_unified(args):
     modes = [m.strip() for m in args.modes.split(",")]
     pool_sizes = [int(s) for s in args.pool_sizes.split(",")]
     kaggle_dir = args.kaggle_dir
+    teams_json = getattr(args, "input", None)
+    bracket_json = getattr(args, "bracket_json", None)
+    bracket_source = getattr(args, "bracket_source", "auto")
+    torvik_json = getattr(args, "torvik", None)
+    historical_games_json = getattr(args, "historical_games", None)
+    rosters_json = getattr(args, "rosters", None)
 
     # kaggle_dir is optional for seed-baseline mode
     if kaggle_dir and not Path(kaggle_dir).exists():
@@ -1273,11 +1338,59 @@ def run_backtest_unified(args):
         pool_sizes=pool_sizes,
     )
 
-    # Create backtester with seed-based predictions as baseline.
-    # The UnifiedBacktester falls back to seed-based logistic model
-    # when no predict_fn_factory is provided.
+    use_seed_baseline = bool(getattr(args, "seed_baseline", False))
+    predict_fn_factory = None
+    if not use_seed_baseline:
+        def _resolve_rosters_json(eval_year: int):
+            if rosters_json:
+                return rosters_json
+            candidate = Path(f"data/raw/historical/cbbpy_rosters_{eval_year}.json")
+            if candidate.exists():
+                return str(candidate)
+            return None
+
+        def _pipeline_predict_fn_factory(eval_year: int):
+            # Strict year-level holdout split for backtest:
+            # train on non-holdout historical years, evaluate on held-out year.
+            base_years = sorted(set(list(LOYO_YEARS) + years))
+            dev_years = [y for y in base_years if y != eval_year and y != 2020]
+            eval_rosters_json = _resolve_rosters_json(eval_year)
+            config = SOTAPipelineConfig(
+                year=eval_year,
+                mode="calibration",
+                probability_profile="experimental",
+                pipeline_mode="experimental",
+                enforce_production_path=False,
+                require_freeze_file=False,
+                enable_multi_year_training=True,
+                enable_multi_year_calibration=False,
+                enable_loyo_cv=False,
+                multi_year_games_dir="data/raw/historical",
+                dev_years=dev_years,
+                holdout_years=[eval_year],
+                calibration_years=[],
+                enforce_feed_freshness=False,
+                kaggle_dir=kaggle_dir,
+                teams_json=teams_json,
+                torvik_json=torvik_json,
+                historical_games_json=historical_games_json,
+                roster_json=eval_rosters_json,
+                bracket_json=bracket_json,
+                bracket_source=bracket_source,
+            )
+            pipeline = SOTAPipeline(config)
+            pipeline.train_for_predictions()
+            return pipeline.predict_probability
+
+        predict_fn_factory = _pipeline_predict_fn_factory
+        print("Unified backtest prediction source: pipeline (year-specific holdout training).")
+    else:
+        print("Unified backtest prediction source: seed baseline (--seed-baseline enabled).")
+
+    # UnifiedBacktester falls back to seed-based logistic predictions if
+    # predict_fn_factory fails for any year.
     backtester = UnifiedBacktester(
-        predict_fn_factory=None,  # Uses seed baseline
+        predict_fn_factory=predict_fn_factory,
         kaggle_dir=kaggle_dir,
         historical_results_dir="data/raw/historical",
     )
@@ -1303,8 +1416,9 @@ def run_backtest_unified(args):
                 "kaggle_rank": yr.kaggle_rank_estimate,
                 "n_games": yr.n_games,
             }
-            if yr.pool_rank is not None:
-                entry["pool_rank"] = yr.pool_rank
+            if getattr(yr, "pool_rank_position", 0):
+                entry["pool_rank"] = yr.pool_rank_position
+                entry["pool_percentile"] = yr.pool_rank_percentile
                 entry["pool_size"] = yr.pool_size
                 entry["pool_score"] = yr.pool_score
             out["results"].append(entry)
@@ -2188,6 +2302,47 @@ def main():
     kaggle_parser.add_argument("--simulations", type=int, default=1, help="Monte Carlo simulations (default: 1)")
     kaggle_parser.add_argument("--scrape-live", action="store_true", help="Allow live scraping for missing inputs")
     kaggle_parser.add_argument("--womens-teams", default=None, help="Path to Kaggle WTeams.csv for women's tournament predictions")
+    kaggle_parser.add_argument(
+        "--enable-hedge",
+        action="store_true",
+        help="Also export optional hedge submission (high variance)",
+    )
+
+    espn_export_parser = subparsers.add_parser(
+        "espn-bracket-export",
+        help="Generate an ESPN-style pool bracket artifact (EV mode)",
+    )
+    espn_export_parser.add_argument("--manifest", required=True, help="Path to ingestion manifest JSON")
+    espn_export_parser.add_argument(
+        "--output",
+        "-o",
+        default="artifacts/espn_pool_bracket.json",
+        help="Output ESPN bracket artifact JSON",
+    )
+    espn_export_parser.add_argument(
+        "--output-report",
+        default="artifacts/espn_ev_report.json",
+        help="Full EV pipeline report output JSON",
+    )
+    espn_export_parser.add_argument("--year", type=int, default=None, help="Season year override (default: manifest year)")
+    espn_export_parser.add_argument("--simulations", type=int, default=50000, help="Monte Carlo simulations")
+    espn_export_parser.add_argument("--pool-size", type=int, default=30, help="Pool size for ESPN-style optimization")
+    espn_export_parser.add_argument("--seed", type=int, default=2026, help="Random seed")
+    espn_export_parser.add_argument(
+        "--require-freeze",
+        action="store_true",
+        help="Require a verified freeze artifact before running",
+    )
+    espn_export_parser.add_argument(
+        "--freeze-file",
+        default="pipeline_freeze.json",
+        help="Freeze artifact JSON path (used when --require-freeze)",
+    )
+    espn_export_parser.add_argument(
+        "--mc-calibration",
+        default=None,
+        help="Path to MC calibration artifact JSON (optional)",
+    )
 
     # --- loyo-validate ---
     loyo_parser = subparsers.add_parser(
@@ -2213,9 +2368,45 @@ def main():
         help="Run unified backtest (Kaggle calibration + ESPN bracket pool)",
     )
     bt_unified_parser.add_argument("--kaggle-dir", default=None, help="Directory with Kaggle CSV data (optional; falls back to JSON tournament results)")
+    bt_unified_parser.add_argument(
+        "--input",
+        "-i",
+        default=None,
+        help="Teams JSON for pipeline predictor (maps to SOTAPipeline --input)",
+    )
+    bt_unified_parser.add_argument(
+        "--bracket-json",
+        default=None,
+        help="Pre-fetched bracket JSON for pipeline predictor",
+    )
+    bt_unified_parser.add_argument(
+        "--bracket-source",
+        default="auto",
+        help="Bracket source for pipeline predictor (auto, bigdance, sports_reference, or path)",
+    )
+    bt_unified_parser.add_argument(
+        "--torvik",
+        default=None,
+        help="Torvik JSON for pipeline predictor",
+    )
+    bt_unified_parser.add_argument(
+        "--historical-games",
+        default=None,
+        help="Historical games JSON for pipeline predictor",
+    )
+    bt_unified_parser.add_argument(
+        "--rosters",
+        default=None,
+        help="Roster/player metrics JSON for pipeline predictor",
+    )
     bt_unified_parser.add_argument("--years", default=None, help="Comma-separated years (default: LOYO_YEARS)")
     bt_unified_parser.add_argument("--modes", default="calibration,ev", help="Backtest modes (calibration, ev)")
     bt_unified_parser.add_argument("--pool-sizes", default="100,500", help="Comma-separated pool sizes for EV mode")
+    bt_unified_parser.add_argument(
+        "--seed-baseline",
+        action="store_true",
+        help="Use seed-based baseline predictor instead of year-specific pipeline training",
+    )
     bt_unified_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
 
     # --- validate-metrics ---
@@ -2576,6 +2767,8 @@ def main():
         return run_sota_from_manifest(args)
     elif args.command == "kaggle-export":
         return run_kaggle_export(args)
+    elif args.command == "espn-bracket-export":
+        return run_espn_bracket_export(args)
     elif args.command == "audit-rdof":
         return audit_rdof(args)
     elif args.command == "freeze-pipeline":

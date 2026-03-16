@@ -3,19 +3,287 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2026 NCAA Tournament Predictions - March Madness Forecaster</title>
-  <meta name="description" content="2026 NCAA Tournament predictions with championship probabilities, full bracket, and 2025 holdout backtest validation.">
+  <title>2026 Conference Tournament Predictions - March Madness Forecaster</title>
+  <meta name="description" content="Live 2026 NCAA conference tournament predictions with round-by-round matchups, win probabilities, and Monte Carlo championship odds for all 31 conferences.">
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── Predictions-specific styles ── */
+    .pred-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+      max-width: 700px;
+      margin: 24px auto 0;
+    }
+    .pred-stat {
+      text-align: center;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      padding: 16px 12px;
+    }
+    .pred-stat-value {
+      font-size: 2em;
+      font-weight: 700;
+      color: var(--color-accent);
+      line-height: 1.1;
+    }
+    .pred-stat-label {
+      font-size: 0.8em;
+      color: var(--color-text-muted);
+      margin-top: 4px;
+    }
+
+    /* Filter */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 24px 0 20px;
+      justify-content: center;
+    }
+    .filter-btn {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-muted);
+      padding: 6px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.85em;
+      transition: all 0.2s;
+      font-family: var(--font-sans);
+    }
+    .filter-btn:hover, .filter-btn.active {
+      background: var(--color-accent);
+      color: #fff;
+      border-color: var(--color-accent);
+    }
+
+    /* Tier header */
+    .tier-title {
+      font-size: 1.3em;
+      font-weight: 700;
+      margin: 32px 0 14px;
+      padding-left: 12px;
+      border-left: 4px solid var(--color-accent);
+      color: var(--color-text);
+    }
+    .tier-title.mid { border-color: var(--color-success); }
+    .tier-title.small { border-color: var(--color-warning); }
+
+    /* Conference cards grid */
+    .conf-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 520px) {
+      .conf-grid { grid-template-columns: 1fr; }
+      .mc-chart-wrap { height: 180px; }
+      .mc-convergence { padding: 12px; }
+      .bracket-round { min-width: 180px; }
+      .card-header { padding: 12px 14px; flex-wrap: wrap; gap: 8px; }
+      .champ-block { text-align: left; }
+    }
+
+    /* Card */
+    .conf-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .conf-card:hover { transform: translateY(-2px); border-color: var(--color-accent); }
+    .card-header {
+      width: 100%;
+      padding: 16px 20px;
+      cursor: pointer;
+      background: transparent;
+      border: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      user-select: none;
+      text-align: left;
+      color: inherit;
+    }
+    .card-header:hover { background: rgba(255,107,53,0.04); }
+    .conf-name { font-size: 1.1em; font-weight: 600; }
+    .conf-meta { font-size: 0.78em; color: var(--color-text-muted); margin-top: 2px; }
+    .upset-badge {
+      display: inline-block;
+      background: var(--color-danger);
+      color: #fff;
+      font-size: 0.7em;
+      padding: 1px 8px;
+      border-radius: 10px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .champ-block { text-align: right; }
+    .champ-label { font-size: 0.65em; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .champ-name { font-size: 1.15em; font-weight: 700; color: var(--color-success); }
+    .champ-detail { font-size: 0.72em; color: var(--color-text-muted); }
+    .mc-prob { font-size: 0.72em; color: var(--color-accent); margin-top: 2px; }
+    .champ-explainer {
+      font-size: 0.66em;
+      color: var(--color-text-muted);
+      margin-top: 6px;
+      max-width: 240px;
+      line-height: 1.35;
+    }
+    .expand-icon { font-size: 0.8em; color: var(--color-text-muted); transition: transform 0.2s; margin-left: 4px; }
+    .conf-card.open .expand-icon { transform: rotate(180deg); }
+
+    /* Contenders */
+    .card-body { display: none; padding: 0 20px 16px; }
+    .conf-card.open .card-body { display: block; }
+    .section-label { font-size: 0.7em; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .contender-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 0.85em; }
+    .seed-badge {
+      background: var(--color-border);
+      color: var(--color-text-muted);
+      font-size: 0.75em;
+      padding: 1px 6px;
+      border-radius: 4px;
+      min-width: 28px;
+      text-align: center;
+    }
+    .team-name-col { min-width: 130px; }
+    .prob-bar-bg { flex: 1; height: 8px; background: #1c2128; border-radius: 4px; overflow: hidden; }
+    .prob-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--color-accent), #7c5cfc); }
+    .prob-pct { font-weight: 600; min-width: 45px; text-align: right; font-size: 0.85em; }
+
+    /* Bracket rounds */
+    .bracket-section { margin-top: 16px; }
+    .bracket-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 8px 0 12px; }
+    .bracket-round { min-width: 210px; flex-shrink: 0; }
+    .round-header {
+      font-size: 0.78em;
+      font-weight: 600;
+      color: var(--color-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .bracket-game {
+      background: var(--color-code-bg);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      font-size: 0.82em;
+      position: relative;
+      border-left: 3px solid transparent;
+    }
+    .bracket-game.upset { border-left-color: var(--color-danger); }
+    .matchup-line { padding: 2px 0; color: var(--color-text-muted); }
+    .matchup-line.winner { color: var(--color-success); font-weight: 600; }
+    .game-prob {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      font-size: 0.72em;
+      color: var(--color-text-muted);
+    }
+
+    /* MC Convergence chart */
+    .mc-convergence {
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--color-code-bg);
+      border-radius: 10px;
+      border: 1px solid var(--color-border);
+    }
+    .mc-convergence-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .mc-convergence-title {
+      font-size: 0.78em;
+      font-weight: 600;
+      color: var(--color-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .mc-convergence-subtitle {
+      font-size: 0.7em;
+      color: var(--color-text-muted);
+    }
+    .mc-chart-wrap {
+      position: relative;
+      width: 100%;
+      height: 220px;
+    }
+    .mc-toggle-btn {
+      background: linear-gradient(135deg, var(--color-accent), #7c5cfc);
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.78em;
+      font-family: var(--font-sans);
+      transition: opacity 0.2s;
+      margin-top: 12px;
+    }
+    .mc-toggle-btn:hover { opacity: 0.85; }
+
+    /* Data note */
+    .data-note {
+      text-align: center;
+      color: var(--color-text-muted);
+      font-size: 0.82em;
+      margin-top: 40px;
+      padding: 20px;
+      border-top: 1px solid var(--color-border);
+    }
+    .data-note a { color: var(--color-accent); }
+
+    /* Search */
+    .search-container {
+      max-width: 400px;
+      margin: 16px auto 0;
+      position: relative;
+    }
+    .search-input {
+      width: 100%;
+      padding: 10px 16px 10px 38px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      color: var(--color-text);
+      font-size: 0.9em;
+      font-family: var(--font-sans);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: var(--color-accent); }
+    .search-input::placeholder { color: var(--color-text-muted); }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--color-text-muted);
+      font-size: 0.9em;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
+  <!-- Navigation -->
   <nav class="nav">
     <div class="container nav-inner">
-      <a href="predictions.html" class="nav-brand">MM Forecaster</a>
+      <a href="index.html" class="nav-brand">MM Forecaster</a>
       <div class="nav-links">
-        <a href="predictions.html" class="nav-link active">Predictions</a>
-        <a href="predictions-2026.html" class="nav-link">Interactive Bracket</a>
-        <a href="results.html" class="nav-link">Results</a>
+        <a href="index.html" class="nav-link">Home</a>
         <a href="methodology.html" class="nav-link">Methodology</a>
+        <a href="results.html" class="nav-link">Results</a>
+        <a href="predictions.html" class="nav-link active">Predictions</a>
         <a href="https://github.com/bsr-0/march-madness-forecaster" class="nav-link nav-link-ext">GitHub</a>
       </div>
       <button class="nav-toggle" aria-label="Toggle menu">
@@ -26,89 +294,41 @@
 
   <header class="page-header">
     <div class="container">
-      <h1>2026 NCAA Tournament Predictions</h1>
-      <p class="subtitle">Championship probabilities, bracket predictions, and model validation on 2025 holdout data</p>
+      <h1>2026 Conference Tournament Predictions</h1>
+      <p class="subtitle">Round-by-round matchups &middot; Monte Carlo championship odds &middot; 50,000 simulations per conference</p>
+
+      <div class="pred-summary" id="summaryStats">
+        <!-- Filled by JS -->
+      </div>
+
+      <div class="search-container">
+        <span class="search-icon">&#128269;</span>
+        <input type="text" class="search-input" id="searchInput" placeholder="Search teams or conferences...">
+      </div>
     </div>
   </header>
 
-  <div class="toc-bar">
-    <div class="container">
-      <nav class="toc">
-        <a href="#championship">Championship Odds</a>
-        <a href="#bracket">Bracket Preview</a>
-        <a href="#backtest">2025 Backtest</a>
-        <a href="#calibration">Calibration</a>
-      </nav>
-    </div>
-  </div>
-
   <main>
-    <!-- Championship Probabilities -->
-    <section id="championship" class="section">
+    <section class="section">
       <div class="container">
-        <h2>Championship Probabilities</h2>
-        <p class="section-subtitle">Top contenders based on 50,000 Monte Carlo bracket simulations</p>
-        <div id="champ-table-wrapper" class="perf-table-wrapper">
-          <table class="perf-table" id="champ-table">
-            <thead>
-              <tr>
-                <th>Team</th>
-                <th>Seed</th>
-                <th>Region</th>
-                <th>Championship</th>
-                <th>Final Four</th>
-                <th>Elite Eight</th>
-              </tr>
-            </thead>
-            <tbody id="champ-body"></tbody>
-          </table>
+
+        <!-- Tier filters -->
+        <div class="filter-bar" id="filterBar">
+          <button class="filter-btn active" data-filter="all">All Conferences</button>
+          <button class="filter-btn" data-filter="power">Power Conferences</button>
+          <button class="filter-btn" data-filter="mid">Mid-Majors</button>
+          <button class="filter-btn" data-filter="small">Small Conferences</button>
+          <button class="filter-btn" data-filter="upsets">Upsets Only</button>
         </div>
-      </div>
-    </section>
 
-    <!-- Bracket Preview -->
-    <section id="bracket" class="section section-alt">
-      <div class="container">
-        <h2>Bracket Preview</h2>
-        <p class="section-subtitle">Predicted winners by round &mdash; <a href="predictions-2026.html">view full interactive bracket</a></p>
-        <div id="bracket-rounds"></div>
-      </div>
-    </section>
+        <!-- Conference cards rendered here -->
+        <div id="confContainer"></div>
 
-    <!-- 2025 Backtest Validation -->
-    <section id="backtest" class="section">
-      <div class="container">
-        <h2>Model Validation: 2018&ndash;2024 Backtest</h2>
-        <p class="section-subtitle">Leave-one-year-out evaluation on 6 historical tournaments (2025 holdout year)</p>
-
-        <div id="backtest-summary" class="stat-cards"></div>
-
-        <h3 style="margin-top:2rem;">Year-by-Year Performance</h3>
-        <div class="perf-table-wrapper">
-          <table class="perf-table" id="year-table">
-            <thead>
-              <tr>
-                <th>Year</th>
-                <th>Accuracy</th>
-                <th>Brier Score</th>
-                <th>Log Loss</th>
-              </tr>
-            </thead>
-            <tbody id="year-body"></tbody>
-          </table>
+        <div class="data-note">
+          Data sourced from <a href="https://barttorvik.com" target="_blank" rel="noopener">BartTorvik</a> (2025-26 season stats).<br>
+          Model uses literature-derived coefficients (Oliver 2004, Lopez &amp; Matthews 2015) with Four Factors, AdjO/AdjD, and shooting splits.<br>
+          Last updated: <span id="lastUpdated"></span>
         </div>
-      </div>
-    </section>
-
-    <!-- Calibration -->
-    <section id="calibration" class="section section-alt">
-      <div class="container">
-        <h2>Calibration Curve</h2>
-        <p class="section-subtitle">How well predicted probabilities match actual outcomes</p>
-        <div id="cal-chart" style="max-width:600px;margin:0 auto;">
-          <canvas id="cal-canvas" width="560" height="400" style="width:100%;height:auto;"></canvas>
-        </div>
-        <p id="cal-note" class="section-subtitle" style="margin-top:1rem;text-align:center;"></p>
       </div>
     </section>
   </main>
@@ -123,208 +343,389 @@
   </footer>
 
   <script>
-    /* --- Nav toggle --- */
-    (function() {
-      var toggle = document.querySelector('.nav-toggle');
-      var links = document.querySelector('.nav-links');
-      if (toggle && links) {
-        toggle.addEventListener('click', function() {
-          var open = links.classList.toggle('open');
-          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        });
-        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') links.classList.remove('open'); });
-      }
-    })();
+    // ── Conference tier classification ──
+    const POWER = ['ACC','B10','B12','BE','SEC'];
+    const MID = ['A10','Amer','MWC','MVC','WCC','CUSA','MAC','SB','BSky','BW','Horz','CAA','ASUN','BSth','SC','Ivy','Pat','SL','Slnd','Sum','WAC','OVC'];
+    const SMALL = ['MEAC','SWAC','NEC','AE','MAAC'];
 
-    /* --- Data loading --- */
-    function fetchJSON(url) {
-      return fetch(url).then(function(r) { return r.json(); });
+    function getTier(confId) {
+      if (POWER.includes(confId)) return 'power';
+      if (SMALL.includes(confId)) return 'small';
+      return 'mid';
     }
 
-    Promise.all([
-      fetchJSON('data/bracket_2026.json'),
-      fetchJSON('data/validation_2025.json')
-    ]).then(function(results) {
-      var bracket = results[0];
-      var validation = results[1];
-      renderChampionship(bracket);
-      renderBracket(bracket);
-      renderBacktest(validation);
-      renderCalibration(validation);
-    }).catch(function(err) {
-      console.error('Failed to load data:', err);
+    // ── Load & render ──
+    let DATA = {};
+
+    function showDataError(message) {
+      document.getElementById('confContainer').innerHTML =
+        `<p style="text-align:center;color:var(--color-danger);padding:40px;">${message}</p>`;
+    }
+
+    fetch('data/conference_predictions_2026.json')
+      .then(r => {
+        if (!r.ok) {
+          throw new Error(`HTTP ${r.status}`);
+        }
+        return r.json();
+      })
+      .then(data => {
+        if (!data || typeof data !== 'object' || Array.isArray(data)) {
+          throw new Error('Invalid predictions payload');
+        }
+        DATA = data;
+        renderSummary(data);
+        renderAll(data);
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString('en-US', {
+          year: 'numeric', month: 'long', day: 'numeric'
+        });
+      })
+      .catch(err => {
+        const detail = err?.message ? ` (${err.message})` : '';
+        showDataError(`Failed to load prediction data${detail}. Please check data/conference_predictions_2026.json.`);
+      });
+
+    function renderSummary(data) {
+      const confs = Object.keys(data).length;
+      const totalGames = Object.values(data).reduce((s, c) => {
+        const rounds = Array.isArray(c?.rounds) ? c.rounds : [];
+        return s + rounds.reduce((s2, r) => s2 + (Array.isArray(r?.games) ? r.games.length : 0), 0);
+      }, 0);
+      const upsets = Object.values(data).reduce((s, c) => {
+        const rounds = Array.isArray(c?.rounds) ? c.rounds : [];
+        return s + rounds.reduce((s2, r) => {
+          const games = Array.isArray(r?.games) ? r.games : [];
+          return s2 + games.filter(g => g?.is_upset).length;
+        }, 0);
+      }, 0);
+      const oneSeedWins = Object.values(data).filter(c => c?.predicted_champion?.seed === 1).length;
+
+      document.getElementById('summaryStats').innerHTML = `
+        <div class="pred-stat"><div class="pred-stat-value">${confs}</div><div class="pred-stat-label">Conferences</div></div>
+        <div class="pred-stat"><div class="pred-stat-value">${totalGames}</div><div class="pred-stat-label">Game Predictions</div></div>
+        <div class="pred-stat"><div class="pred-stat-value">${oneSeedWins}/${confs}</div><div class="pred-stat-label">#1 Seeds Win</div></div>
+        <div class="pred-stat"><div class="pred-stat-value">${upsets}</div><div class="pred-stat-label">Predicted Upsets</div></div>
+      `;
+    }
+
+    function renderAll(data, filter = 'all', searchTerm = '') {
+      const container = document.getElementById('confContainer');
+      container.innerHTML = '';
+      let renderedCount = 0;
+
+      // Sort conferences into tiers
+      const entries = Object.entries(data);
+      const tiers = { power: [], mid: [], small: [] };
+      entries.forEach(([id, conf]) => tiers[getTier(id)].push([id, conf]));
+
+      // Sort within each tier by conference name
+      Object.values(tiers).forEach(arr => arr.sort((a, b) => a[1].conference_name.localeCompare(b[1].conference_name)));
+
+      const tierConfig = [
+        { key: 'power', label: 'Power Conferences', cls: '' },
+        { key: 'mid', label: 'Mid-Major Conferences', cls: 'mid' },
+        { key: 'small', label: 'Small Conferences', cls: 'small' },
+      ];
+
+      for (const tier of tierConfig) {
+        let items = tiers[tier.key];
+        if (filter !== 'all' && filter !== tier.key && filter !== 'upsets') continue;
+
+        if (filter === 'upsets') {
+          items = items.filter(([_, c]) => {
+            const rounds = Array.isArray(c?.rounds) ? c.rounds : [];
+            return rounds.some(r => (Array.isArray(r?.games) ? r.games : []).some(g => g?.is_upset));
+          });
+        }
+
+        if (searchTerm) {
+          const q = searchTerm.toLowerCase();
+          items = items.filter(([_, c]) => {
+            if ((c?.conference_name || '').toLowerCase().includes(q)) return true;
+            if ((c?.predicted_champion?.name || '').toLowerCase().includes(q)) return true;
+            const rounds = Array.isArray(c?.rounds) ? c.rounds : [];
+            return rounds.some(r => (Array.isArray(r?.games) ? r.games : []).some(g =>
+              (g?.team1 || '').toLowerCase().includes(q) || (g?.team2 || '').toLowerCase().includes(q)
+            ));
+          });
+        }
+
+        if (items.length === 0) continue;
+
+        const title = document.createElement('div');
+        title.className = `tier-title ${tier.cls}`;
+        title.textContent = tier.label;
+        container.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'conf-grid';
+
+        items.forEach(([confId, conf]) => {
+          grid.appendChild(createCard(confId, conf));
+          renderedCount += 1;
+        });
+
+        container.appendChild(grid);
+      }
+
+      if (renderedCount === 0) {
+        const empty = document.createElement('p');
+        empty.style.textAlign = 'center';
+        empty.style.color = 'var(--color-text-muted)';
+        empty.style.padding = '32px 12px';
+        empty.textContent = 'No conferences match this filter/search.';
+        container.appendChild(empty);
+      }
+    }
+
+    function createMCChart(chartId, conv) {
+      const canvas = document.getElementById(chartId);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const teamIds = Object.keys(conv.teams);
+      const colors = ['#ff6b35','#7c5cfc','#2ed573','#ffa502','#ff4757','#1e90ff'];
+
+      const datasets = teamIds.map((tid, i) => {
+        const name = conv.team_names[tid] || tid.replace(/_/g, ' ');
+        return {
+          label: name,
+          data: conv.teams[tid].map(v => (v * 100)),
+          borderColor: colors[i % colors.length],
+          backgroundColor: 'transparent',
+          borderWidth: 1.8,
+          pointRadius: 0,
+          tension: 0.3,
+        };
+      });
+
+      new Chart(ctx, {
+        type: 'line',
+        data: { labels: conv.x, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: { color: '#8b8fa3', font: { size: 10 }, boxWidth: 10, padding: 6 }
+            },
+            tooltip: {
+              backgroundColor: '#1a1d27',
+              borderColor: '#2a2d3a',
+              borderWidth: 1,
+              titleColor: '#e8eaed',
+              bodyColor: '#8b8fa3',
+              callbacks: {
+                title: (items) => `After ${Number(items[0].label).toLocaleString()} simulations`,
+                label: (item) => ` ${item.dataset.label}: ${item.raw.toFixed(1)}%`
+              }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Simulations', color: '#5a5e72', font: { size: 10 } },
+              ticks: {
+                color: '#5a5e72',
+                font: { size: 9 },
+                maxTicksLimit: 6,
+                callback: function(val) {
+                  const v = this.getLabelForValue(val);
+                  return v >= 1000 ? (v/1000) + 'k' : v;
+                }
+              },
+              grid: { color: 'rgba(42,45,58,0.5)' }
+            },
+            y: {
+              title: { display: true, text: 'Win Prob (%)', color: '#5a5e72', font: { size: 10 } },
+              ticks: {
+                color: '#5a5e72',
+                font: { size: 9 },
+                callback: (v) => v + '%'
+              },
+              grid: { color: 'rgba(42,45,58,0.5)' },
+              min: 0
+            }
+          }
+        }
+      });
+    }
+
+    function createCard(confId, conf) {
+      const card = document.createElement('div');
+      card.className = 'conf-card';
+      card.dataset.conf = confId;
+
+      const rounds = Array.isArray(conf?.rounds) ? conf.rounds : [];
+      const upsetCount = rounds.reduce((s, r) => {
+        const games = Array.isArray(r?.games) ? r.games : [];
+        return s + games.filter(g => g?.is_upset).length;
+      }, 0);
+      const champ = conf?.predicted_champion || {};
+      const mc = conf?.mc_favorite || {};
+      const champName = champ?.name || '—';
+      const champSeed = Number.isFinite(champ?.seed) ? champ.seed : '—';
+      const champTRank = Number.isFinite(champ?.t_rank) ? champ.t_rank : '—';
+      const mcName = mc?.name || '—';
+      const mcProbDisplay = Number.isFinite(mc?.prob) ? `${mcName} ${(mc.prob * 100).toFixed(1)}%` : 'N/A';
+      const bodyId = `conf-body-${confId}`;
+
+      // Header
+      const header = document.createElement('button');
+      header.type = 'button';
+      header.className = 'card-header';
+      header.setAttribute('aria-expanded', 'false');
+      header.setAttribute('aria-controls', bodyId);
+      header.innerHTML = `
+        <div>
+          <div class="conf-name">${conf.conference_name}${upsetCount > 0 ? `<span class="upset-badge">${upsetCount} upset${upsetCount>1?'s':''}</span>` : ''}<span class="expand-icon">&#9660;</span></div>
+          <div class="conf-meta">${conf.num_teams} teams &middot; ${rounds.length} rounds</div>
+        </div>
+        <div class="champ-block">
+          <div class="champ-label">Single-Path Champion</div>
+          <div class="champ-name">${champName}</div>
+          <div class="champ-detail">Seed #${champSeed} &middot; T-Rank ${champTRank}</div>
+          <div class="mc-prob">Highest Monte Carlo title odds: ${mcProbDisplay}</div>
+          <div class="champ-explainer" title="Single-Path Champion is the deterministic bracket winner. Highest Monte Carlo title odds are the team with the largest marginal championship probability from simulations.">Single-path = deterministic bracket winner; Monte Carlo odds = simulated title frequency.</div>
+        </div>
+      `;
+      header.addEventListener('click', () => {
+        card.classList.toggle('open');
+        header.setAttribute('aria-expanded', card.classList.contains('open') ? 'true' : 'false');
+        // Create MC chart on first open when canvas is visible
+        if (card.classList.contains('open') && card._pendingChart) {
+          const { chartId, convergence } = card._pendingChart;
+          delete card._pendingChart;
+          requestAnimationFrame(() => createMCChart(chartId, convergence));
+        }
+      });
+      card.appendChild(header);
+
+      // Body
+      const body = document.createElement('div');
+      body.className = 'card-body';
+      body.id = bodyId;
+
+      // Championship probability contenders
+      if (conf.championship_probabilities) {
+        const probs = Object.entries(conf.championship_probabilities)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 6);
+
+        if (probs.length > 0) {
+          const maxProb = probs[0][1];
+          let html = '<div class="section-label">Championship Probabilities (Monte Carlo marginal odds)</div>';
+          probs.forEach(([tid, prob]) => {
+            const name = tid.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+              .replace(/\bSt\b/g, 'St.').replace(/\bMt\b/g, 'Mt.');
+            const pct = (prob * 100).toFixed(1);
+            const width = (prob / maxProb * 100).toFixed(0);
+            html += `
+              <div class="contender-row">
+                <span class="team-name-col">${name}</span>
+                <div class="prob-bar-bg"><div class="prob-bar-fill" style="width:${width}%"></div></div>
+                <span class="prob-pct">${pct}%</span>
+              </div>`;
+          });
+          body.innerHTML += html;
+        }
+      }
+
+      // Bracket rounds
+      if (rounds.length > 0) {
+        let bracketHTML = '<div class="bracket-section"><div class="section-label">Full Bracket</div><div class="bracket-scroll">';
+
+        rounds.forEach(round => {
+          bracketHTML += `<div class="bracket-round"><div class="round-header">${round.round_name}</div>`;
+          (Array.isArray(round?.games) ? round.games : []).forEach(game => {
+            const cls = game.is_upset ? 'bracket-game upset' : 'bracket-game';
+            const t1cls = game.winner === game.team1.replace(/^\(\d+\)\s*/, '') ? 'matchup-line winner' : 'matchup-line';
+            const t2cls = game.winner === game.team2.replace(/^\(\d+\)\s*/, '') ? 'matchup-line winner' : 'matchup-line';
+            bracketHTML += `
+              <div class="${cls}">
+                <div class="${t1cls}">${game.team1}</div>
+                <div class="${t2cls}">${game.team2}</div>
+                <div class="game-prob">${(game.win_prob * 100).toFixed(0)}%</div>
+              </div>`;
+          });
+          bracketHTML += '</div>';
+        });
+
+        bracketHTML += '</div></div>';
+        body.innerHTML += bracketHTML;
+      }
+
+      // MC Convergence chart
+      if (conf.convergence && conf.convergence.x && conf.convergence.teams) {
+        const chartId = `mc-chart-${confId}`;
+        let mcHTML = `
+          <div class="mc-convergence">
+            <div class="mc-convergence-header">
+              <div>
+                <div class="mc-convergence-title">Monte Carlo Convergence</div>
+                <div class="mc-convergence-subtitle">Championship probability vs. simulation count — watch uncertainty narrow</div>
+              </div>
+            </div>
+            <div class="mc-chart-wrap">
+              <canvas id="${chartId}"></canvas>
+            </div>
+          </div>`;
+        body.innerHTML += mcHTML;
+
+        // Defer chart creation until card is opened (canvas needs visible dimensions)
+        card.dataset.chartConf = confId;
+        card._pendingChart = { chartId, convergence: conf.convergence };
+      }
+
+      card.appendChild(body);
+      return card;
+    }
+
+    // ── Filter buttons ──
+    document.getElementById('filterBar').addEventListener('click', e => {
+      if (!e.target.classList.contains('filter-btn')) return;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      const filter = e.target.dataset.filter;
+      renderAll(DATA, filter, document.getElementById('searchInput').value);
     });
 
-    /* --- Championship table --- */
-    function renderChampionship(data) {
-      var probs = (data.championship_probabilities || []).slice();
-      probs.sort(function(a, b) { return b.championship_prob - a.championship_prob; });
-      var body = document.getElementById('champ-body');
-      var top = probs.slice(0, 16);
-      for (var i = 0; i < top.length; i++) {
-        var t = top[i];
-        var tr = document.createElement('tr');
-        if (i < 4) tr.className = 'perf-highlight';
-        tr.innerHTML =
-          '<td class="model-name">' + esc(t.team_name) + '</td>' +
-          '<td>' + t.seed + '</td>' +
-          '<td>' + esc(t.region) + '</td>' +
-          '<td><strong>' + pct(t.championship_prob) + '</strong></td>' +
-          '<td>' + pct(t.final_four_prob) + '</td>' +
-          '<td>' + pct(t.elite_eight_prob) + '</td>';
-        body.appendChild(tr);
-      }
+    // ── Search ──
+    let searchTimeout;
+    document.getElementById('searchInput').addEventListener('input', e => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        const activeFilter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
+        renderAll(DATA, activeFilter, e.target.value);
+      }, 200);
+    });
+
+    const navToggle = document.querySelector('.nav-toggle');
+    const navLinks = document.querySelector('.nav-links');
+
+    if (navToggle && navLinks) {
+      if (!navLinks.id) navLinks.id = 'primary-nav';
+      navToggle.setAttribute('aria-controls', navLinks.id);
+      navToggle.setAttribute('aria-expanded', 'false');
+
+      const closeNav = () => {
+        navLinks.classList.remove('open');
+        navToggle.setAttribute('aria-expanded', 'false');
+      };
+
+      navToggle.addEventListener('click', function() {
+        const isOpen = navLinks.classList.toggle('open');
+        navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+
+      document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') closeNav();
+      });
+
+      navLinks.addEventListener('click', function(event) {
+        if (event.target.closest('a')) closeNav();
+      });
     }
-
-    /* --- Bracket preview --- */
-    function renderBracket(data) {
-      var container = document.getElementById('bracket-rounds');
-      var rounds = data.rounds || [];
-      for (var r = 0; r < rounds.length; r++) {
-        var round = rounds[r];
-        var sec = document.createElement('div');
-        sec.style.marginBottom = '2rem';
-        var h = document.createElement('h3');
-        h.textContent = round.round_name;
-        h.style.marginBottom = '0.75rem';
-        sec.appendChild(h);
-
-        var grid = document.createElement('div');
-        grid.style.display = 'grid';
-        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
-        grid.style.gap = '0.5rem';
-
-        var games = round.games || [];
-        for (var g = 0; g < games.length; g++) {
-          var gm = games[g];
-          var card = document.createElement('div');
-          card.className = 'game-card';
-          card.style.cssText = 'background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.85rem;';
-          if (gm.is_upset) card.style.borderLeftColor = 'var(--color-warning)';
-          card.innerHTML =
-            '<span style="color:' + (gm.winner_id === gm.team1_id ? 'var(--color-success)' : 'var(--color-text-muted)') + '">' + esc(gm.team1) + '</span>' +
-            ' vs ' +
-            '<span style="color:' + (gm.winner_id === gm.team2_id ? 'var(--color-success)' : 'var(--color-text-muted)') + '">' + esc(gm.team2) + '</span>' +
-            ' <span style="color:var(--color-text-muted);font-size:0.8em;">(' + (gm.win_prob * 100).toFixed(0) + '%)</span>' +
-            (gm.is_upset ? ' <span style="color:var(--color-warning);font-size:0.75em;">UPSET</span>' : '');
-          grid.appendChild(card);
-        }
-        sec.appendChild(grid);
-        container.appendChild(sec);
-      }
-    }
-
-    /* --- Backtest --- */
-    function renderBacktest(data) {
-      var o = data.overall || {};
-      var summary = document.getElementById('backtest-summary');
-      var cards = [
-        { label: 'Games Tested', value: o.n_games || '—' },
-        { label: 'Accuracy', value: o.accuracy ? (o.accuracy * 100).toFixed(1) + '%' : '—' },
-        { label: 'Brier Score', value: o.brier_score ? o.brier_score.toFixed(4) : '—' },
-        { label: 'Log Loss', value: o.log_loss ? o.log_loss.toFixed(4) : '—' }
-      ];
-      summary.innerHTML = cards.map(function(c) {
-        return '<div class="stat-card" style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:10px;padding:1.2rem;text-align:center;">' +
-          '<div style="font-size:1.6rem;font-weight:700;color:var(--color-accent);">' + c.value + '</div>' +
-          '<div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:0.3rem;">' + c.label + '</div></div>';
-      }).join('');
-      summary.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-top:1rem;';
-
-      var years = data.per_year || [];
-      var tbody = document.getElementById('year-body');
-      for (var i = 0; i < years.length; i++) {
-        var y = years[i];
-        var tr = document.createElement('tr');
-        tr.innerHTML =
-          '<td>' + y.year + '</td>' +
-          '<td>' + (y.accuracy * 100).toFixed(1) + '%</td>' +
-          '<td>' + y.brier_score.toFixed(4) + '</td>' +
-          '<td>' + (y.log_loss ? y.log_loss.toFixed(4) : '—') + '</td>';
-        tbody.appendChild(tr);
-      }
-    }
-
-    /* --- Calibration chart --- */
-    function renderCalibration(data) {
-      var bins = data.calibration || [];
-      if (!bins.length) return;
-      var canvas = document.getElementById('cal-canvas');
-      var ctx = canvas.getContext('2d');
-      var W = canvas.width, H = canvas.height;
-      var pad = { top: 30, right: 30, bottom: 50, left: 60 };
-      var pw = W - pad.left - pad.right, ph = H - pad.top - pad.bottom;
-
-      ctx.fillStyle = '#161b22';
-      ctx.fillRect(0, 0, W, H);
-
-      // Grid
-      ctx.strokeStyle = '#30363d';
-      ctx.lineWidth = 0.5;
-      for (var i = 0; i <= 10; i++) {
-        var x = pad.left + (i / 10) * pw;
-        var y = pad.top + (1 - i / 10) * ph;
-        ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + ph); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + pw, y); ctx.stroke();
-      }
-
-      // Perfect calibration line
-      ctx.strokeStyle = '#8b949e';
-      ctx.setLineDash([5, 5]);
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(pad.left, pad.top + ph);
-      ctx.lineTo(pad.left + pw, pad.top);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Calibration points + line
-      ctx.strokeStyle = '#ff6b35';
-      ctx.fillStyle = '#ff6b35';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      for (var i = 0; i < bins.length; i++) {
-        var bx = pad.left + bins[i].predicted_avg * pw;
-        var by = pad.top + (1 - bins[i].actual_avg) * ph;
-        if (i === 0) ctx.moveTo(bx, by); else ctx.lineTo(bx, by);
-      }
-      ctx.stroke();
-      for (var i = 0; i < bins.length; i++) {
-        var bx = pad.left + bins[i].predicted_avg * pw;
-        var by = pad.top + (1 - bins[i].actual_avg) * ph;
-        ctx.beginPath();
-        ctx.arc(bx, by, Math.max(3, Math.min(8, bins[i].count / 5)), 0, 2 * Math.PI);
-        ctx.fill();
-      }
-
-      // Axis labels
-      ctx.fillStyle = '#8b949e';
-      ctx.font = '12px -apple-system, sans-serif';
-      ctx.textAlign = 'center';
-      for (var i = 0; i <= 10; i += 2) {
-        ctx.fillText((i * 10) + '%', pad.left + (i / 10) * pw, pad.top + ph + 20);
-      }
-      ctx.textAlign = 'right';
-      for (var i = 0; i <= 10; i += 2) {
-        ctx.fillText((i * 10) + '%', pad.left - 8, pad.top + (1 - i / 10) * ph + 4);
-      }
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#e6edf3';
-      ctx.font = '13px -apple-system, sans-serif';
-      ctx.fillText('Predicted Probability', pad.left + pw / 2, H - 8);
-      ctx.save();
-      ctx.translate(15, pad.top + ph / 2);
-      ctx.rotate(-Math.PI / 2);
-      ctx.fillText('Actual Win Rate', 0, 0);
-      ctx.restore();
-
-      var note = document.getElementById('cal-note');
-      note.textContent = 'Orange line = model calibration. Dashed line = perfect calibration. Dot size = number of predictions in bin.';
-    }
-
-    /* --- Helpers --- */
-    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-    function pct(v) { return (v * 100).toFixed(1) + '%'; }
   </script>
 </body>
 </html>
