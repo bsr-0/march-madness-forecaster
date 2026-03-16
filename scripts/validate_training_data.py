@@ -149,11 +149,31 @@ def check_roster_rapm(data_dir: Path, year: int) -> List[Tuple[str, str]]:
             teams_with_rapm += 1
 
     if teams_with_rapm == 0:
-        issues.append((
-            "CRITICAL",
-            f"RAPM is null/zero for ALL {total_teams} teams in {roster_path.name} "
-            f"— player-level impact signal entirely absent",
-        ))
+        # Check if BPM/WARP proxy data is available — the pipeline
+        # auto-repairs RAPM from these via enrich_roster_rapm() at runtime.
+        has_proxy = False
+        for team in teams[:10]:
+            for p in team.get("players", []):
+                bpm = _to_float(p.get("box_plus_minus"))
+                if bpm is not None and abs(bpm) > 1e-6:
+                    has_proxy = True
+                    break
+            if has_proxy:
+                break
+
+        if has_proxy:
+            issues.append((
+                "WARNING",
+                f"RAPM is null/zero for ALL {total_teams} teams in {roster_path.name} "
+                f"— but BPM/WARP proxy data is available; pipeline auto-repairs "
+                f"via enrich_roster_rapm()",
+            ))
+        else:
+            issues.append((
+                "CRITICAL",
+                f"RAPM is null/zero for ALL {total_teams} teams in {roster_path.name} "
+                f"and no BPM/WARP proxy data available for auto-repair",
+            ))
     elif teams_with_rapm < total_teams * 0.5:
         issues.append((
             "WARNING",
