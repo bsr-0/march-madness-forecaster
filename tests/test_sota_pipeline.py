@@ -629,6 +629,7 @@ def test_run_sota_from_manifest_resolves_paths_and_runs(tmp_path, monkeypatch):
         }
 
     monkeypatch.setattr(main_mod, "run_sota_pipeline_to_file", fake_run)
+    monkeypatch.setattr(main_mod, "_guard_production_2026", lambda config: None)
 
     args = SimpleNamespace(
         manifest=str(manifest_file),
