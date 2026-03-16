@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2026 NCAA Tournament Predictions - March Madness Forecaster</title>
+  <meta name="description" content="2026 NCAA Tournament predictions with championship probabilities, full bracket, and 2025 holdout backtest validation.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a href="predictions.html" class="nav-brand">MM Forecaster</a>
+      <div class="nav-links">
+        <a href="predictions.html" class="nav-link active">Predictions</a>
+        <a href="predictions-2026.html" class="nav-link">Interactive Bracket</a>
+        <a href="results.html" class="nav-link">Results</a>
+        <a href="methodology.html" class="nav-link">Methodology</a>
+        <a href="https://github.com/bsr-0/march-madness-forecaster" class="nav-link nav-link-ext">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <header class="page-header">
+    <div class="container">
+      <h1>2026 NCAA Tournament Predictions</h1>
+      <p class="subtitle">Championship probabilities, bracket predictions, and model validation on 2025 holdout data</p>
+    </div>
+  </header>
+
+  <div class="toc-bar">
+    <div class="container">
+      <nav class="toc">
+        <a href="#championship">Championship Odds</a>
+        <a href="#bracket">Bracket Preview</a>
+        <a href="#backtest">2025 Backtest</a>
+        <a href="#calibration">Calibration</a>
+      </nav>
+    </div>
+  </div>
+
+  <main>
+    <!-- Championship Probabilities -->
+    <section id="championship" class="section">
+      <div class="container">
+        <h2>Championship Probabilities</h2>
+        <p class="section-subtitle">Top contenders based on 50,000 Monte Carlo bracket simulations</p>
+        <div id="champ-table-wrapper" class="perf-table-wrapper">
+          <table class="perf-table" id="champ-table">
+            <thead>
+              <tr>
+                <th>Team</th>
+                <th>Seed</th>
+                <th>Region</th>
+                <th>Championship</th>
+                <th>Final Four</th>
+                <th>Elite Eight</th>
+              </tr>
+            </thead>
+            <tbody id="champ-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bracket Preview -->
+    <section id="bracket" class="section section-alt">
+      <div class="container">
+        <h2>Bracket Preview</h2>
+        <p class="section-subtitle">Predicted winners by round &mdash; <a href="predictions-2026.html">view full interactive bracket</a></p>
+        <div id="bracket-rounds"></div>
+      </div>
+    </section>
+
+    <!-- 2025 Backtest Validation -->
+    <section id="backtest" class="section">
+      <div class="container">
+        <h2>Model Validation: 2018&ndash;2024 Backtest</h2>
+        <p class="section-subtitle">Leave-one-year-out evaluation on 6 historical tournaments (2025 holdout year)</p>
+
+        <div id="backtest-summary" class="stat-cards"></div>
+
+        <h3 style="margin-top:2rem;">Year-by-Year Performance</h3>
+        <div class="perf-table-wrapper">
+          <table class="perf-table" id="year-table">
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th>Accuracy</th>
+                <th>Brier Score</th>
+                <th>Log Loss</th>
+              </tr>
+            </thead>
+            <tbody id="year-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Calibration -->
+    <section id="calibration" class="section section-alt">
+      <div class="container">
+        <h2>Calibration Curve</h2>
+        <p class="section-subtitle">How well predicted probabilities match actual outcomes</p>
+        <div id="cal-chart" style="max-width:600px;margin:0 auto;">
+          <canvas id="cal-canvas" width="560" height="400" style="width:100%;height:auto;"></canvas>
+        </div>
+        <p id="cal-note" class="section-subtitle" style="margin-top:1rem;text-align:center;"></p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <p>March Madness Forecaster &middot; MIT License &middot; <a href="https://github.com/bsr-0/march-madness-forecaster">GitHub</a></p>
+        <p class="footer-sub">Built with PyTorch, Graph Neural Networks, and Combinatorial Fusion Analysis</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    /* --- Nav toggle --- */
+    (function() {
+      var toggle = document.querySelector('.nav-toggle');
+      var links = document.querySelector('.nav-links');
+      if (toggle && links) {
+        toggle.addEventListener('click', function() {
+          var open = links.classList.toggle('open');
+          toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') links.classList.remove('open'); });
+      }
+    })();
+
+    /* --- Data loading --- */
+    function fetchJSON(url) {
+      return fetch(url).then(function(r) { return r.json(); });
+    }
+
+    Promise.all([
+      fetchJSON('data/bracket_2026.json'),
+      fetchJSON('data/validation_2025.json')
+    ]).then(function(results) {
+      var bracket = results[0];
+      var validation = results[1];
+      renderChampionship(bracket);
+      renderBracket(bracket);
+      renderBacktest(validation);
+      renderCalibration(validation);
+    }).catch(function(err) {
+      console.error('Failed to load data:', err);
+    });
+
+    /* --- Championship table --- */
+    function renderChampionship(data) {
+      var probs = (data.championship_probabilities || []).slice();
+      probs.sort(function(a, b) { return b.championship_prob - a.championship_prob; });
+      var body = document.getElementById('champ-body');
+      var top = probs.slice(0, 16);
+      for (var i = 0; i < top.length; i++) {
+        var t = top[i];
+        var tr = document.createElement('tr');
+        if (i < 4) tr.className = 'perf-highlight';
+        tr.innerHTML =
+          '<td class="model-name">' + esc(t.team_name) + '</td>' +
+          '<td>' + t.seed + '</td>' +
+          '<td>' + esc(t.region) + '</td>' +
+          '<td><strong>' + pct(t.championship_prob) + '</strong></td>' +
+          '<td>' + pct(t.final_four_prob) + '</td>' +
+          '<td>' + pct(t.elite_eight_prob) + '</td>';
+        body.appendChild(tr);
+      }
+    }
+
+    /* --- Bracket preview --- */
+    function renderBracket(data) {
+      var container = document.getElementById('bracket-rounds');
+      var rounds = data.rounds || [];
+      for (var r = 0; r < rounds.length; r++) {
+        var round = rounds[r];
+        var sec = document.createElement('div');
+        sec.style.marginBottom = '2rem';
+        var h = document.createElement('h3');
+        h.textContent = round.round_name;
+        h.style.marginBottom = '0.75rem';
+        sec.appendChild(h);
+
+        var grid = document.createElement('div');
+        grid.style.display = 'grid';
+        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+        grid.style.gap = '0.5rem';
+
+        var games = round.games || [];
+        for (var g = 0; g < games.length; g++) {
+          var gm = games[g];
+          var card = document.createElement('div');
+          card.className = 'game-card';
+          card.style.cssText = 'background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;padding:0.6rem 0.8rem;font-size:0.85rem;';
+          if (gm.is_upset) card.style.borderLeftColor = 'var(--color-warning)';
+          card.innerHTML =
+            '<span style="color:' + (gm.winner_id === gm.team1_id ? 'var(--color-success)' : 'var(--color-text-muted)') + '">' + esc(gm.team1) + '</span>' +
+            ' vs ' +
+            '<span style="color:' + (gm.winner_id === gm.team2_id ? 'var(--color-success)' : 'var(--color-text-muted)') + '">' + esc(gm.team2) + '</span>' +
+            ' <span style="color:var(--color-text-muted);font-size:0.8em;">(' + (gm.win_prob * 100).toFixed(0) + '%)</span>' +
+            (gm.is_upset ? ' <span style="color:var(--color-warning);font-size:0.75em;">UPSET</span>' : '');
+          grid.appendChild(card);
+        }
+        sec.appendChild(grid);
+        container.appendChild(sec);
+      }
+    }
+
+    /* --- Backtest --- */
+    function renderBacktest(data) {
+      var o = data.overall || {};
+      var summary = document.getElementById('backtest-summary');
+      var cards = [
+        { label: 'Games Tested', value: o.n_games || '—' },
+        { label: 'Accuracy', value: o.accuracy ? (o.accuracy * 100).toFixed(1) + '%' : '—' },
+        { label: 'Brier Score', value: o.brier_score ? o.brier_score.toFixed(4) : '—' },
+        { label: 'Log Loss', value: o.log_loss ? o.log_loss.toFixed(4) : '—' }
+      ];
+      summary.innerHTML = cards.map(function(c) {
+        return '<div class="stat-card" style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:10px;padding:1.2rem;text-align:center;">' +
+          '<div style="font-size:1.6rem;font-weight:700;color:var(--color-accent);">' + c.value + '</div>' +
+          '<div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:0.3rem;">' + c.label + '</div></div>';
+      }).join('');
+      summary.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-top:1rem;';
+
+      var years = data.per_year || [];
+      var tbody = document.getElementById('year-body');
+      for (var i = 0; i < years.length; i++) {
+        var y = years[i];
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + y.year + '</td>' +
+          '<td>' + (y.accuracy * 100).toFixed(1) + '%</td>' +
+          '<td>' + y.brier_score.toFixed(4) + '</td>' +
+          '<td>' + (y.log_loss ? y.log_loss.toFixed(4) : '—') + '</td>';
+        tbody.appendChild(tr);
+      }
+    }
+
+    /* --- Calibration chart --- */
+    function renderCalibration(data) {
+      var bins = data.calibration || [];
+      if (!bins.length) return;
+      var canvas = document.getElementById('cal-canvas');
+      var ctx = canvas.getContext('2d');
+      var W = canvas.width, H = canvas.height;
+      var pad = { top: 30, right: 30, bottom: 50, left: 60 };
+      var pw = W - pad.left - pad.right, ph = H - pad.top - pad.bottom;
+
+      ctx.fillStyle = '#161b22';
+      ctx.fillRect(0, 0, W, H);
+
+      // Grid
+      ctx.strokeStyle = '#30363d';
+      ctx.lineWidth = 0.5;
+      for (var i = 0; i <= 10; i++) {
+        var x = pad.left + (i / 10) * pw;
+        var y = pad.top + (1 - i / 10) * ph;
+        ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + ph); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + pw, y); ctx.stroke();
+      }
+
+      // Perfect calibration line
+      ctx.strokeStyle = '#8b949e';
+      ctx.setLineDash([5, 5]);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, pad.top + ph);
+      ctx.lineTo(pad.left + pw, pad.top);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Calibration points + line
+      ctx.strokeStyle = '#ff6b35';
+      ctx.fillStyle = '#ff6b35';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (var i = 0; i < bins.length; i++) {
+        var bx = pad.left + bins[i].predicted_avg * pw;
+        var by = pad.top + (1 - bins[i].actual_avg) * ph;
+        if (i === 0) ctx.moveTo(bx, by); else ctx.lineTo(bx, by);
+      }
+      ctx.stroke();
+      for (var i = 0; i < bins.length; i++) {
+        var bx = pad.left + bins[i].predicted_avg * pw;
+        var by = pad.top + (1 - bins[i].actual_avg) * ph;
+        ctx.beginPath();
+        ctx.arc(bx, by, Math.max(3, Math.min(8, bins[i].count / 5)), 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
+      // Axis labels
+      ctx.fillStyle = '#8b949e';
+      ctx.font = '12px -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      for (var i = 0; i <= 10; i += 2) {
+        ctx.fillText((i * 10) + '%', pad.left + (i / 10) * pw, pad.top + ph + 20);
+      }
+      ctx.textAlign = 'right';
+      for (var i = 0; i <= 10; i += 2) {
+        ctx.fillText((i * 10) + '%', pad.left - 8, pad.top + (1 - i / 10) * ph + 4);
+      }
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#e6edf3';
+      ctx.font = '13px -apple-system, sans-serif';
+      ctx.fillText('Predicted Probability', pad.left + pw / 2, H - 8);
+      ctx.save();
+      ctx.translate(15, pad.top + ph / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText('Actual Win Rate', 0, 0);
+      ctx.restore();
+
+      var note = document.getElementById('cal-note');
+      note.textContent = 'Orange line = model calibration. Dashed line = perfect calibration. Dot size = number of predictions in bin.';
+    }
+
+    /* --- Helpers --- */
+    function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+    function pct(v) { return (v * 100).toFixed(1) + '%'; }
+  </script>
+</body>
+</html>
