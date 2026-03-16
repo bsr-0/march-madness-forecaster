@@ -201,13 +201,13 @@ class TestProductionConfigValidation:
             )
 
 
-    def test_locked_path_requires_simple_mode(self):
+    def test_locked_path_rejects_unsanctioned_complexity(self):
         from src.pipeline.config import SOTAPipelineConfig
 
         with pytest.raises(ValueError, match="model_complexity"):
             SOTAPipelineConfig(
                 probability_profile="production",
-                model_complexity="standard",
+                model_complexity="experimental",
             )
 
     def test_locked_path_requires_calibration_mode(self):

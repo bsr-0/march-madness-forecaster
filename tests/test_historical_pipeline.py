@@ -8,6 +8,11 @@ from src.data.ingestion.historical_pipeline import HistoricalDataPipeline, Histo
 from src.data.ingestion.providers import ProviderResult
 
 
+def _mock_scrape_game_ids(day_str, http_timeout=15, session=None):
+    """Mock ESPN game ID scraper — returns a single game on 2021-11-01."""
+    return ["401"] if day_str == "2021-11-01" else []
+
+
 def test_historical_pipeline_writes_season_artifacts(tmp_path):
     class DummyCBBpy:
         @staticmethod
@@ -37,6 +42,7 @@ def test_historical_pipeline_writes_season_artifacts(tmp_path):
     )
     pipeline = HistoricalDataPipeline(config)
     pipeline.providers._import_module = lambda module: DummyCBBpy if module == "cbbpy.mens_scraper" else None
+    pipeline._scrape_game_ids_for_date = _mock_scrape_game_ids
     pipeline.providers.fetch_team_box_metrics = lambda season, priority=None: ProviderResult(
         "sportsipy",
         [{"team_id": "duke", "team_name": "Duke", "adj_offensive_efficiency": 112.0, "adj_defensive_efficiency": 96.0, "adj_tempo": 68.0}],
@@ -78,6 +84,7 @@ def test_historical_pipeline_falls_back_to_sports_reference(tmp_path):
     )
     pipeline = HistoricalDataPipeline(config)
     pipeline.providers._import_module = lambda module: DummyCBBpy if module == "cbbpy.mens_scraper" else None
+    pipeline._scrape_game_ids_for_date = _mock_scrape_game_ids
     pipeline.providers.fetch_team_box_metrics = lambda season, priority=None: ProviderResult("sportsipy", [])
     pipeline.sports_reference.fetch_team_season_stats = lambda season, **kwargs: [
         {"team_name": "A", "pace": 68.0, "off_rtg": 102.0, "def_rtg": 99.0, "wins": 20, "losses": 10}
@@ -115,6 +122,7 @@ def test_historical_pipeline_includes_tournament_context_when_available(tmp_path
     )
     pipeline = HistoricalDataPipeline(config)
     pipeline.providers._import_module = lambda module: DummyCBBpy if module == "cbbpy.mens_scraper" else None
+    pipeline._scrape_game_ids_for_date = _mock_scrape_game_ids
     pipeline.providers.fetch_team_box_metrics = lambda season, priority=None: ProviderResult(
         "sportsipy",
         [{"team_id": "a", "team_name": "A", "adj_offensive_efficiency": 101.0, "adj_defensive_efficiency": 99.0, "adj_tempo": 68.0}],
@@ -166,6 +174,7 @@ def test_historical_pipeline_ignores_capped_cache_when_running_uncapped(tmp_path
         )
     )
     pipeline.providers._import_module = lambda module: DummyCBBpy if module == "cbbpy.mens_scraper" else None
+    pipeline._scrape_game_ids_for_date = _mock_scrape_game_ids
     pipeline.providers.fetch_team_box_metrics = lambda season, priority=None: ProviderResult(
         "sportsipy",
         [{"team_id": "a", "team_name": "A", "adj_offensive_efficiency": 101.0, "adj_defensive_efficiency": 99.0, "adj_tempo": 68.0}],
