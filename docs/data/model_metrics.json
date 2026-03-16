@@ -1,0 +1,124 @@
+{
+  "model_name": "March Madness Forecaster",
+  "model_description": "Blended Barthag/Elo rating model with seed-based priors and temperature calibration",
+  "backtest_summary": {
+    "years_tested": [
+      2018,
+      2019,
+      2021,
+      2022,
+      2023,
+      2024
+    ],
+    "overall_accuracy": 0.7302,
+    "overall_brier": 0.1921,
+    "best_year": 2019,
+    "worst_year": 2021
+  },
+  "prospective_evaluation": {
+    "holdout_year": 2024,
+    "n_games": 427,
+    "brier_score": 0.2125,
+    "seed_baseline_brier": 0.2478,
+    "elo_baseline_brier": 0.2182,
+    "skill_vs_seed": 0.1423,
+    "skill_vs_elo": 0.0258,
+    "accuracy": 0.6698,
+    "integrity_level": 2,
+    "integrity_note": "QUASI-PROSPECTIVE: Pipeline frozen at 2026-03-03T20:16:14 (verified against /var/folders/k6/xgcms1js0pd99_gvsqs84rlh0000gn/T/tmpfln2g0ik.json). Evaluation year 2024 was not available when the pipeline was frozen. Pipeline architecture was informed by prior years' data."
+  },
+  "calibration": [
+    {
+      "bin_center": 0.05,
+      "predicted_avg": 0.0762,
+      "actual_avg": 0.5,
+      "count": 6
+    },
+    {
+      "bin_center": 0.15,
+      "predicted_avg": 0.1673,
+      "actual_avg": 0.619,
+      "count": 21
+    },
+    {
+      "bin_center": 0.25,
+      "predicted_avg": 0.2498,
+      "actual_avg": 0.7,
+      "count": 20
+    },
+    {
+      "bin_center": 0.35,
+      "predicted_avg": 0.3444,
+      "actual_avg": 0.75,
+      "count": 16
+    },
+    {
+      "bin_center": 0.45,
+      "predicted_avg": 0.4505,
+      "actual_avg": 0.6957,
+      "count": 23
+    },
+    {
+      "bin_center": 0.55,
+      "predicted_avg": 0.5533,
+      "actual_avg": 0.7636,
+      "count": 55
+    },
+    {
+      "bin_center": 0.65,
+      "predicted_avg": 0.6526,
+      "actual_avg": 0.7447,
+      "count": 47
+    },
+    {
+      "bin_center": 0.75,
+      "predicted_avg": 0.7514,
+      "actual_avg": 0.9512,
+      "count": 41
+    },
+    {
+      "bin_center": 0.85,
+      "predicted_avg": 0.8598,
+      "actual_avg": 0.8833,
+      "count": 60
+    },
+    {
+      "bin_center": 0.95,
+      "predicted_avg": 0.9434,
+      "actual_avg": 0.8876,
+      "count": 89
+    }
+  ],
+  "round_accuracy": {
+    "Round of 64": {
+      "accuracy": 0.75,
+      "correct": 144,
+      "total": 192
+    },
+    "Round of 32": {
+      "accuracy": 0.7292,
+      "correct": 70,
+      "total": 96
+    },
+    "Sweet 16": {
+      "accuracy": 0.6458,
+      "correct": 31,
+      "total": 48
+    },
+    "Elite 8": {
+      "accuracy": 0.6667,
+      "correct": 16,
+      "total": 24
+    },
+    "Final Four": {
+      "accuracy": 0.8333,
+      "correct": 10,
+      "total": 12
+    },
+    "Championship": {
+      "accuracy": 0.8333,
+      "correct": 5,
+      "total": 6
+    }
+  }
+}
