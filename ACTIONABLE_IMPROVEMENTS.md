@@ -481,11 +481,14 @@ If your model gives a 1-seed 55% championship odds but Vegas implies 35%, that's
 **Step 1: Scrape current market lines.** The infrastructure exists at `src/data/scrapers/betting_markets.py`. Use:
 
 ```python
-from src.data.scrapers.betting_markets import BettingMarketScraper
+from src.data.scrapers.betting_markets import FanDuelScraper, DraftKingsScraper, compute_market_consensus
 
-scraper = BettingMarketScraper()
-odds = scraper.fetch_championship_odds(year=2026)
-# Returns List[BettingMarketOdds] with team_id, implied_probability per sportsbook
+fanduel = FanDuelScraper()
+dk = DraftKingsScraper()
+fd_odds = fanduel.scrape(season=2026)   # Returns Dict[str, BettingMarketOdds]
+dk_odds = dk.scrape(season=2026)
+consensus = compute_market_consensus([fd_odds, dk_odds], adjust_vig=True)
+# consensus.team_probabilities: Dict[str, float] — team_id -> implied P(championship)
 ```
 
 Or fetch manually from FanDuel/DraftKings and create a JSON file:
