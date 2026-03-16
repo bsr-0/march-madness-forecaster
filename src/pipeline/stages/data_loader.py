@@ -35,7 +35,10 @@ from ...data.scrapers.injury_report import (
     InjuryReportScraper,
     apply_injury_reports_to_roster,
 )
-from ...conference_tournament.data_enrichment import enrich_torvik_teams
+from ...conference_tournament.data_enrichment import (
+    compute_defensive_four_factors_from_games,
+    enrich_torvik_teams,
+)
 from ...data.scrapers.torvik import BartTorvikScraper
 from ...data.scrapers.tournament_context import TournamentContextScraper
 from ...exceptions import LeakageError
@@ -113,11 +116,11 @@ def player_from_dict(team_id: str, raw: Dict) -> Player:
         minutes_per_game=float(raw.get("minutes_per_game", 0.0)),
         games_played=int(raw.get("games_played", 0)),
         games_started=int(raw.get("games_started", 0)),
-        rapm_offensive=float(raw.get("rapm_offensive", 0.0)),
-        rapm_defensive=float(raw.get("rapm_defensive", 0.0)),
-        warp=float(raw.get("warp", 0.0)),
-        box_plus_minus=float(raw.get("box_plus_minus", 0.0)),
-        usage_rate=float(raw.get("usage_rate", 0.0)),
+        rapm_offensive=float(raw.get("rapm_offensive") or 0.0),
+        rapm_defensive=float(raw.get("rapm_defensive") or 0.0),
+        warp=float(raw.get("warp") or 0.0),
+        box_plus_minus=float(raw.get("box_plus_minus") or 0.0),
+        usage_rate=float(raw.get("usage_rate") or 0.0),
         injury_status=InjuryStatus(injury_raw),
         is_transfer=bool(raw.get("is_transfer", False)),
         transfer_from=raw.get("transfer_from"),
@@ -623,6 +626,50 @@ def load_team_stat_sources(
         raise DataRequirementError(
             "Missing historical game data. Provide --historical-games JSON with box-score rows."
         )
+
+    # --- Auto-repair defensive Four Factors from game box scores ---
+    # If the Torvik scraper fell back to CSV (JS wall), defensive FF will
+    # be zero even after enrichment.  Recompute from historical games.
+    _sample_opp_efg = [
+        getattr(t, "opp_effective_fg_pct", 0.0) or 0.0 for t in torvik_teams[:20]
+    ]
+    if all(abs(v) < 1e-6 for v in _sample_opp_efg):
+        logger.warning(
+            "Defensive Four Factors are all zero after enrichment — "
+            "computing from %d historical game box scores",
+            len(historical_games),
+        )
+        def_ff = compute_defensive_four_factors_from_games(historical_games)
+        _def_ff_applied = 0
+        for team in torvik_teams:
+            tid = team.team_id
+            d = def_ff.get(tid)
+            if d is None:
+                # Try collapsed lookup
+                collapsed = tid.replace("_", "")
+                for k, v in def_ff.items():
+                    if k.replace("_", "") == collapsed:
+                        d = v
+                        break
+            if d is not None:
+                team.opp_effective_fg_pct = d["opp_effective_fg_pct"]
+                team.opp_turnover_rate = d["opp_turnover_rate"]
+                team.opp_free_throw_rate = d["opp_free_throw_rate"]
+                _def_ff_applied += 1
+        logger.info(
+            "Defensive FF auto-repair: applied to %d/%d teams from game box scores",
+            _def_ff_applied, len(torvik_teams),
+        )
+        # Hard-fail if still all zero
+        _sample_after = [
+            getattr(t, "opp_effective_fg_pct", 0.0) or 0.0 for t in torvik_teams[:20]
+        ]
+        if all(abs(v) < 1e-6 for v in _sample_after):
+            raise DataRequirementError(
+                "Defensive Four Factors (opp_eFG%, opp_TO%, opp_FTR) are ALL ZERO "
+                "for every team after enrichment AND game-based computation. "
+                f"Ensure historical_games_{config.year}.json has valid box score data."
+            )
 
     # --- Build conference map from Torvik data ---
     torvik_teams_dicts = []

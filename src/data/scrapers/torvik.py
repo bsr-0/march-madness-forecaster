@@ -277,7 +277,7 @@ class BartTorvikScraper:
             response.raise_for_status()
             four_factors = self._parse_four_factors_page(response.text)
         except Exception as e:
-            logger.debug("HTML Four Factors scrape failed: %s", e)
+            logger.warning("HTML Four Factors scrape failed: %s", e)
 
         # --- Strategy 2: CSV player-stats fallback ---
         if not four_factors:
