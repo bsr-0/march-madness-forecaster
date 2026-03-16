@@ -428,9 +428,9 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         interaction_names = [
             "tempo_interaction",
             "style_mismatch",
-            "h2h_record",
-            "common_opp_margin",
-            "travel_advantage",
+            "seed_em_residual",
+            "sos_seed_interaction",
+            "three_pt_var_seed_interaction",
             "seed_interaction",
             "seed_diff",
         ]
@@ -891,6 +891,14 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 "FIX #3: Applied round-weighted training: %d tournament "
                 "games with Kaggle round weights (max=%.0f).",
                 n_rw, float(np.max(pipeline._round_weights)),
+            )
+        else:
+            logger.warning(
+                "Round-weight verification: 0/%d training samples have "
+                "weight > 1.0. No tournament games are receiving elevated "
+                "weights — check that historical game files contain "
+                "tournament games.",
+                train_samples,
             )
 
     tuning_stats = {}
