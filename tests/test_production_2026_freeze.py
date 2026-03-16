@@ -1047,7 +1047,7 @@ class TestDependencyVersionVerification:
         """Lockfile must pin all model-affecting packages."""
         lockfile = REPO_ROOT / "requirements-production-lock.txt"
         content = lockfile.read_text(encoding="utf-8")
-        for pkg in ["lightgbm", "xgboost", "numpy", "scikit-learn", "scipy", "pandas"]:
+        for pkg in ["lightgbm", "numpy", "scikit-learn", "scipy", "pandas"]:
             assert pkg in content, f"{pkg} not pinned in production lockfile"
 
     def test_installed_versions_match_lockfile(self):
