@@ -73,9 +73,9 @@ def realistic_matchup():
     # Interaction features
     x[71] = 0.3   # tempo_interaction
     x[72] = 0.1   # style_mismatch
-    x[73] = 0.2   # h2h_record
-    x[74] = 0.1   # common_opp_margin
-    x[75] = -0.05 # travel_advantage
+    x[73] = 0.15  # seed_em_residual
+    x[74] = 0.08  # sos_seed_interaction
+    x[75] = -0.05 # three_pt_var_seed_interaction
     x[76] = -0.88 # seed_interaction: (1*16)/128 - 1 = -0.875
     x[77] = -1.0  # seed_diff: (1-16)/15 = -1.0
     return x
@@ -112,11 +112,8 @@ class TestSwapMatchupVector:
         # Symmetric interactions: [71, 72, 76]
         for idx in [71, 72, 76]:
             assert swapped[idx] == pytest.approx(random_matchup[idx], abs=1e-15), f"idx {idx}"
-        # h2h record flips perspective: 1 - x
-        assert swapped[73] == pytest.approx(
-            1.0 - random_matchup[73], abs=1e-15
-        )
-        # Common-opponent and travel are antisymmetric.
+        # All three seed-based interactions are antisymmetric.
+        assert swapped[73] == pytest.approx(-random_matchup[73], abs=1e-15)
         assert swapped[74] == pytest.approx(-random_matchup[74], abs=1e-15)
         assert swapped[75] == pytest.approx(-random_matchup[75], abs=1e-15)
         # seed_diff remains antisymmetric.
@@ -157,8 +154,8 @@ class TestSwapMatchupVector:
         # Seed interaction unchanged (commutative)
         assert swapped[76] == pytest.approx(-0.88, abs=1e-15)
 
-        # h2h_record flips perspective
-        assert swapped[73] == pytest.approx(0.8, abs=1e-15)
+        # seed_em_residual negates
+        assert swapped[73] == pytest.approx(-0.15, abs=1e-15)
 
         # Seed diff negated
         assert swapped[77] == pytest.approx(1.0, abs=1e-15)
@@ -166,7 +163,7 @@ class TestSwapMatchupVector:
     def test_zero_vector(self):
         """Swap of neutral vector should remain unchanged."""
         x = np.zeros(MATCHUP_DIM)
-        x[73] = 0.5  # Neutral h2h prior is the identity under 1 - x transform.
+        # All zeros is the identity for antisymmetric features (negate of 0 = 0).
         swapped = swap_matchup_vector(x)
         np.testing.assert_array_equal(swapped, x)
 
