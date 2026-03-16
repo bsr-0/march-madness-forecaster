@@ -97,8 +97,8 @@ jobs:
 
           BASE_URL="${PAGE_URL%/}/"
 
-          echo "Waiting 30s for CDN propagation..."
-          sleep 30
+          echo "Waiting 60s for CDN propagation..."
+          sleep 60
 
           URLS=(
             "${BASE_URL}"
@@ -115,13 +115,13 @@ jobs:
 
           for url in "${URLS[@]}"; do
             ok=0
-            for attempt in {1..15}; do
-              status="$(curl -sS -o /tmp/page.out -w "%{http_code}" "$url" || true)"
+            for attempt in {1..30}; do
+              status="$(curl -sS -H 'Cache-Control: no-cache' -o /tmp/page.out -w "%{http_code}" "$url" || true)"
               if [ "$status" = "200" ]; then
                 ok=1
                 break
               fi
-              echo "Attempt ${attempt}/15: ${url} returned ${status}; retrying in 10s..."
+              echo "Attempt ${attempt}/30: ${url} returned ${status}; retrying in 10s..."
               sleep 10
             done
             if [ "$ok" -ne 1 ]; then
