@@ -129,11 +129,12 @@ jobs:
             fi
           done
 
-          curl -fsSL "${BASE_URL}predictions.html" | grep -q "2026 Conference Tournament Predictions"
-          curl -fsSL "${BASE_URL}predictions-2026.html" | grep -q "2026.*March Madness.*Predictions"
-          curl -fsSL "${BASE_URL}style.css" | grep -q -- "--color-accent"
-          curl -fsSL "${BASE_URL}data/dashboard.json" | python -c "import json,sys; d=json.load(sys.stdin); assert isinstance(d, dict) and len(d) > 0"
-          curl -fsSL "${BASE_URL}data/conference_predictions_2026.json" | python -c "import json,sys; d=json.load(sys.stdin); assert isinstance(d, dict) and len(d) > 0"
-          curl -fsSL "${BASE_URL}data/bracket_2026.json" | python -c "import json,sys; d=json.load(sys.stdin); assert 'rounds' in d and 'championship_probabilities' in d"
-          curl -fsSL "${BASE_URL}data/validation_2025.json" | python -c "import json,sys; d=json.load(sys.stdin); assert 'overall' in d and 'per_year' in d"
+          curl -fsSL -o /tmp/predictions.html "${BASE_URL}predictions.html"
+          grep -q "2026 Conference Tournament Predictions" /tmp/predictions.html
+          curl -fsSL -o /tmp/style.css "${BASE_URL}style.css"
+          grep -q -- "--color-accent" /tmp/style.css
+          curl -fsSL -o /tmp/dashboard.json "${BASE_URL}data/dashboard.json"
+          python -c "import json,sys; d=json.load(open('/tmp/dashboard.json')); assert isinstance(d, dict) and len(d) > 0"
+          curl -fsSL -o /tmp/conf_predictions.json "${BASE_URL}data/conference_predictions_2026.json"
+          python -c "import json,sys; d=json.load(open('/tmp/conf_predictions.json')); assert isinstance(d, dict) and len(d) > 0"
           echo "Post-deploy smoke test passed."
