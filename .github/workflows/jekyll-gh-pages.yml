@@ -34,8 +34,10 @@ jobs:
           set -euo pipefail
 
           REQUIRED_FILES=(
-            "docs/results.html"
+            "docs/predictions.html"
             "docs/predictions-2026.html"
+            "docs/methodology.html"
+            "docs/results.html"
             "docs/style.css"
             "docs/data/bracket_2026.json"
             "docs/data/validation_2025.json"
@@ -128,7 +130,7 @@ jobs:
           done
 
           curl -fsSL -o /tmp/predictions.html "${BASE_URL}predictions.html"
-          grep -q "2026 Conference Tournament Predictions" /tmp/predictions.html
+          grep -q "2026 NCAA Tournament Predictions" /tmp/predictions.html
           curl -fsSL -o /tmp/style.css "${BASE_URL}style.css"
           grep -q -- "--color-accent" /tmp/style.css
           curl -fsSL -o /tmp/dashboard.json "${BASE_URL}data/dashboard.json"
