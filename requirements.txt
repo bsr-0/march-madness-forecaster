@@ -29,6 +29,9 @@ tqdm>=4.66.0
 # Visualization (for reliability diagrams)
 matplotlib>=3.7.0
 
+# YAML parsing
+PyYAML>=6.0.0
+
 # Testing
 pytest>=7.4.0
 pytest-cov>=4.1.0
