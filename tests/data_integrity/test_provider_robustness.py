@@ -53,7 +53,7 @@ def get_thresholds(baseline_path: Path = BASELINE_PATH) -> Dict[str, float]:
     If historical baseline stats exist, use mean + 2*std from previous
     runs. Otherwise fall back to conservative guardrail defaults.
     """
-    if baseline_path.exists():
+    if baseline_path.is_file():
         try:
             with open(baseline_path) as f:
                 baseline = json.load(f)
@@ -61,7 +61,7 @@ def get_thresholds(baseline_path: Path = BASELINE_PATH) -> Dict[str, float]:
                 k: baseline["mean"][k] + 2 * baseline["std"][k]
                 for k in DEFAULT_THRESHOLDS
             }
-        except (KeyError, json.JSONDecodeError, TypeError):
+        except (KeyError, json.JSONDecodeError, TypeError, OSError):
             logger.warning("Could not parse robustness baseline, using defaults")
     return DEFAULT_THRESHOLDS.copy()
 

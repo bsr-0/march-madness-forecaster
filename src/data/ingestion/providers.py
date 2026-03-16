@@ -218,7 +218,11 @@ class LibraryProviderHub:
         # CBBpy function names have changed across releases; probe common names.
         # Wrap in thread-based timeout — cbbpy's internal requests.get()
         # has no timeout and can hang indefinitely on ESPN.
-        for fn_name in ("get_games_season", "get_games_range"):
+        # When doing incremental fetches (since is set), ONLY use get_games_range
+        # to avoid scraping the full season from November onwards.  If
+        # get_games_range fails, return empty so the next provider can handle it.
+        fn_order = ("get_games_range",) if since else ("get_games_season", "get_games_range")
+        for fn_name in fn_order:
             fn = getattr(scraper, fn_name, None)
             if fn is None:
                 continue
@@ -246,7 +250,7 @@ class LibraryProviderHub:
                         )
                 except Exception:
                     continue
-            except (TypeError, ValueError, AttributeError, RuntimeError, OSError) as exc:
+            except Exception as exc:
                 logger.debug("cbbpy %s failed: %s", fn_name, exc)
                 continue
 
