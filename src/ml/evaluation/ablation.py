@@ -449,18 +449,9 @@ class AblationStudy:
                 self.pipeline._stacking_meta_model = None
 
         elif component == "travel_distance":
-            # We cannot easily zero a single feature at the pipeline level,
-            # so we temporarily patch the feature engineering to always return
-            # 0.0 for travel advantage.  This is handled by saving/patching
-            # the travel module.
-            try:
-                from ...data.features import travel_distance as td_mod
-                state = getattr(self, "_td_original_fn", None)
-                if state is None:
-                    self._td_original_fn = td_mod.compute_travel_advantage
-                td_mod.compute_travel_advantage = lambda *a, **kw: 0.0
-            except (ImportError, AttributeError):
-                pass
+            # travel_advantage feature was replaced with seed-based interactions;
+            # this ablation is now a no-op.
+            pass
 
         elif component == "injury_model":
             # Disable injury severity model
@@ -481,13 +472,7 @@ class AblationStudy:
                 self.pipeline._stacking_meta_model = saved["stacking_model"]
 
         elif component == "travel_distance":
-            try:
-                from ...data.features import travel_distance as td_mod
-                if hasattr(self, "_td_original_fn"):
-                    td_mod.compute_travel_advantage = self._td_original_fn
-                    del self._td_original_fn
-            except (ImportError, AttributeError):
-                pass
+            pass  # No-op: travel_advantage feature was replaced
 
         elif component == "injury_model":
             self.pipeline.config.enable_injury_severity_model = True

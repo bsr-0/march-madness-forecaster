@@ -818,14 +818,14 @@ class MatchupFeatures:
     tempo_interaction: float = 0.0  # How pace matchup affects game
     style_mismatch: float = 0.0  # Pace-efficiency interaction
 
-    # Head-to-head signal (team1 win rate vs team2, shrinkage-adjusted)
-    h2h_record: float = 0.5
+    # Seed-adjusted EM residual: how much team over/underperforms seed expectation
+    seed_em_residual: float = 0.0
 
-    # Common-opponent margin differential
-    common_opp_margin: float = 0.0
+    # SOS x seed interaction: high seed + weak schedule = upset risk
+    sos_seed_interaction: float = 0.0
 
-    # Travel advantage (kept at 0.0 for neutral-site parity)
-    travel_advantage: float = 0.0
+    # 3PT variance x seed interaction: high variance + low seed = upset amplifier
+    three_pt_var_seed_interaction: float = 0.0
 
     # Seed matchup interaction
     seed_interaction: float = 0.0
@@ -856,9 +856,9 @@ class MatchupFeatures:
         interaction = np.array([
             self.tempo_interaction,
             self.style_mismatch,
-            self.h2h_record,
-            self.common_opp_margin,
-            self.travel_advantage,
+            self.seed_em_residual,
+            self.sos_seed_interaction,
+            self.three_pt_var_seed_interaction,
             self.seed_interaction,
             self.seed_diff,
         ])
@@ -1244,26 +1244,24 @@ class FeatureEngineer:
         # Gap #3: Raw seed difference — strongest single tournament predictor
         seed_diff = (t1.seed - t2.seed) / 15.0 if (t1.seed > 0 and t2.seed > 0) else 0.0
 
-        h2h_record = 0.5
-        common_opp_margin = 0.0
-        travel_advantage = 0.0
+        # Seed-based interaction features (always computable)
+        _SEED_EXPECTED_EM = {
+            1: 28, 2: 21, 3: 16, 4: 12, 5: 9, 6: 6, 7: 4, 8: 2,
+            9: 0, 10: -2, 11: -4, 12: -6, 13: -9, 14: -12, 15: -16, 16: -21,
+        }
+        em1 = t1.adj_offensive_efficiency - t1.adj_defensive_efficiency
+        em2 = t2.adj_offensive_efficiency - t2.adj_defensive_efficiency
+        residual1 = em1 - _SEED_EXPECTED_EM.get(t1.seed, 0)
+        residual2 = em2 - _SEED_EXPECTED_EM.get(t2.seed, 0)
+        seed_em_residual = (residual1 - residual2) / 20.0
+
+        sos_seed_interaction = ((t1.sos_adj_em - t2.sos_adj_em) * (t1.seed - t2.seed)) / 200.0
+
+        var_diff = t1.three_pt_variance - t2.three_pt_variance
+        three_pt_var_seed_interaction = var_diff * (t1.seed - t2.seed) / 15.0
+
         has_h2h = 0.0
         has_common_opp = 0.0
-        if proprietary_engine is not None:
-            try:
-                h2h_record = float(
-                    proprietary_engine.compute_h2h_record(team1_id, team2_id)
-                )
-                has_h2h = 1.0
-            except Exception:
-                h2h_record = 0.5
-            try:
-                common_opp_margin = float(
-                    proprietary_engine.compute_common_opponent_margin(team1_id, team2_id)
-                )
-                has_common_opp = 1.0
-            except Exception:
-                common_opp_margin = 0.0
 
         # FIX #8: Missing-data indicators for sparse features
         has_ap_t1 = 1.0 if t1.preseason_ap_rank > 0 else 0.0
@@ -1278,9 +1276,9 @@ class FeatureEngineer:
             absolute_features=abs_features,
             tempo_interaction=tempo_interaction,
             style_mismatch=pace_efficiency_interaction,
-            h2h_record=h2h_record,
-            common_opp_margin=common_opp_margin,
-            travel_advantage=travel_advantage,
+            seed_em_residual=seed_em_residual,
+            sos_seed_interaction=sos_seed_interaction,
+            three_pt_var_seed_interaction=three_pt_var_seed_interaction,
             seed_interaction=seed_interaction,
             seed_diff=seed_diff,
             has_h2h_data=has_h2h,
