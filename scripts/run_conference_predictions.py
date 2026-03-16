@@ -278,7 +278,7 @@ CONF_FULL_NAMES = {
 
 
 def simulate_bracket(predictor: EnhancedPredictor, conf: str,
-                     num_sims: int = 50000, noise_std: float = 0.12,
+                     num_sims: int = 50000, noise_std: float = 0.16,
                      seed: int = 2026) -> dict:
     """
     Simulate a conference tournament bracket via Monte Carlo.
@@ -381,7 +381,7 @@ def simulate_bracket(predictor: EnhancedPredictor, conf: str,
 
 
 def _run_bracket(predictor, teams, deterministic=True,
-                 rng=None, noise_std=0.12, base_probs=None,
+                 rng=None, noise_std=0.16, base_probs=None,
                  bracket_format=None):
     """Run a single bracket simulation using BracketFormat definitions.
 
