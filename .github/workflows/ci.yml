@@ -31,8 +31,9 @@ jobs:
       - name: Run ruff linter
         run: ruff check src/ tests/ --output-format=github
 
-  test:
-    name: Test
+  # ─── Gate 1: Unit Tests ───────────────────────────────────────────
+  unit-tests:
+    name: "Gate 1: Unit Tests"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,11 +47,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run tests with coverage
-        run: pytest tests/ --cov=src --cov-report=term-missing --tb=short -q
+      - name: Run unit tests
+        run: pytest tests/ -m "unit" --cov=src --cov-report=term-missing --tb=short -q
 
-  phase3-data-integrity:
-    name: Phase 3 Data Integrity Gate
+  # ─── Gate 2: Data-Contract Tests ──────────────────────────────────
+  data-contract-tests:
+    name: "Gate 2: Data-Contract Tests"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -74,20 +76,8 @@ jobs:
           assert r.passed, 'Contract validation FAILED'
           "
 
-      - name: Leakage rules tests
-        run: pytest tests/data_integrity/test_leakage_rules.py -v --tb=short -q
-
-      - name: Training row assembly tests
-        run: pytest tests/data_integrity/test_training_row_assembly.py -v --tb=short -q
-
-      - name: Point-in-time contract tests
-        run: pytest tests/data_integrity/test_point_in_time_contracts.py -v --tb=short -q
-
-      - name: Lineage manifest tests
-        run: pytest tests/data_integrity/test_lineage_manifests.py -v --tb=short -q
-
-      - name: Provider robustness tests
-        run: pytest tests/data_integrity/test_provider_robustness.py -v --tb=short -q
+      - name: Data-contract marker tests
+        run: pytest tests/ -m "data_contract" -v --tb=short -q
 
       - name: No untested features check
         run: |
@@ -100,8 +90,9 @@ jobs:
           print(f'All {len(contracts[\"features\"])} features have test_ids.')
           "
 
-  phase4-snapshot-integrity:
-    name: Phase 4 Snapshot Integrity Gate
+  # ─── Gate 3: Leakage Tests (statistical, not just mechanical) ────
+  leakage-tests:
+    name: "Gate 3: Leakage Tests"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -115,17 +106,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Selection Sunday snapshot tests
-        run: pytest tests/evaluation/test_selection_snapshot.py -v --tb=short -q
+      - name: Run leakage tests
+        run: pytest tests/ -m "leakage" -v --tb=short -q
 
-      - name: Round segmentation tests
-        run: pytest tests/evaluation/test_round_segmentation.py -v --tb=short -q
-
-      - name: Calibration metrics tests
-        run: pytest tests/evaluation/test_calibration_metrics.py -v --tb=short -q
-
-  phase5-calibration:
-    name: Phase 5 Calibration Gate
+  # ─── Gate 4: Backtest Regression Tests ────────────────────────────
+  backtest-regression-tests:
+    name: "Gate 4: Backtest Regression Tests"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -139,15 +125,48 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Calibration methods tests
-        run: pytest tests/evaluation/test_calibration_methods.py -v --tb=short -q
+      - name: Run backtest regression tests
+        run: pytest tests/ -m "backtest_regression" -v --tb=short -q
 
-      - name: Calibration benchmark tests
-        run: pytest tests/evaluation/test_calibration_benchmark.py -v --tb=short -q
+  # ─── Gate 5: Freeze / Reproducibility Tests ───────────────────────
+  freeze-reproducibility-tests:
+    name: "Gate 5: Freeze / Reproducibility Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Reliability tracking tests
-        run: pytest tests/evaluation/test_reliability_tracking.py -v --tb=short -q
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
 
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run freeze and reproducibility tests
+        run: pytest tests/ -m "freeze or production" -v --tb=short -q
+
+  # ─── Gate 6: Calibration Tests ────────────────────────────────────
+  calibration-tests:
+    name: "Gate 6: Calibration Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run calibration tests
+        run: pytest tests/ -m "calibration" -v --tb=short -q
+
+  # ─── Dependency Audit ─────────────────────────────────────────────
   audit:
     name: Dependency Audit
     runs-on: ubuntu-latest
@@ -167,3 +186,20 @@ jobs:
 
       - name: Run pip audit
         run: pip-audit --strict
+
+  # ─── All Gates Must Pass ──────────────────────────────────────────
+  all-gates:
+    name: "All Gates Green"
+    needs:
+      - lint
+      - unit-tests
+      - data-contract-tests
+      - leakage-tests
+      - backtest-regression-tests
+      - freeze-reproducibility-tests
+      - calibration-tests
+      - audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: All gates passed
+        run: echo "All CI gates passed — safe for production use"
