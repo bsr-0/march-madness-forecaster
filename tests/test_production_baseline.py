@@ -43,33 +43,36 @@ class TestProductionBaselineSpec:
     def test_sanctioned_models(self):
         assert "spread_regressor" in PRODUCTION_BASELINE.models
         assert "logistic_regression" in PRODUCTION_BASELINE.models
-        assert len(PRODUCTION_BASELINE.models) == 2
+        assert "lightgbm_classifier" in PRODUCTION_BASELINE.models
+        assert "xgboost_classifier" in PRODUCTION_BASELINE.models
+        assert len(PRODUCTION_BASELINE.models) == 4
 
     def test_sanctioned_calibration(self):
         assert PRODUCTION_BASELINE.calibration == "temperature"
 
-    def test_default_weights_spread_only(self):
-        """Default production policy is spread-only."""
-        assert PRODUCTION_BASELINE.default_weights["spread"] == 1.0
-        assert PRODUCTION_BASELINE.default_weights["logistic"] == 0.0
+    def test_default_weights_four_model(self):
+        """Default production policy is 4-model fixed-weight blend."""
+        assert PRODUCTION_BASELINE.default_weights["spread"] == pytest.approx(0.45)
+        assert PRODUCTION_BASELINE.default_weights["logistic"] == pytest.approx(0.20)
+        assert PRODUCTION_BASELINE.default_weights["lgb"] == pytest.approx(0.20)
+        assert PRODUCTION_BASELINE.default_weights["xgb"] == pytest.approx(0.15)
 
     def test_default_weights_sum_to_one(self):
         total = sum(PRODUCTION_BASELINE.default_weights.values())
         assert total == pytest.approx(1.0)
 
-    def test_deprecated_models_listed(self):
-        assert "lightgbm_classifier" in PRODUCTION_BASELINE.deprecated_production_models
-        assert "xgboost_classifier" in PRODUCTION_BASELINE.deprecated_production_models
+    def test_deprecated_models_empty(self):
+        assert len(PRODUCTION_BASELINE.deprecated_production_models) == 0
 
     def test_deprecated_calibrators_listed(self):
         assert "round_specific_calibrator" in PRODUCTION_BASELINE.deprecated_production_calibrators
-        assert "tournament_sigma_calibrator" in PRODUCTION_BASELINE.deprecated_production_calibrators
+        assert "tournament_sigma_calibrator" not in PRODUCTION_BASELINE.deprecated_production_calibrators
 
     def test_model_sanctioned_check(self):
         assert PRODUCTION_BASELINE.is_model_sanctioned("spread_regressor")
         assert PRODUCTION_BASELINE.is_model_sanctioned("logistic_regression")
-        assert not PRODUCTION_BASELINE.is_model_sanctioned("lightgbm_classifier")
-        assert not PRODUCTION_BASELINE.is_model_sanctioned("xgboost_classifier")
+        assert PRODUCTION_BASELINE.is_model_sanctioned("lightgbm_classifier")
+        assert PRODUCTION_BASELINE.is_model_sanctioned("xgboost_classifier")
 
     def test_calibrator_sanctioned_check(self):
         assert PRODUCTION_BASELINE.is_calibrator_sanctioned("temperature")
@@ -110,25 +113,12 @@ class TestPipelineModeConfig:
                 enforce_production_path=False,
             )
 
-    def test_production_path_blocks_experimental_classifiers(self):
-        """Locked production path rejects experimental classifier toggles."""
-        with pytest.raises(ValueError, match="experimental_enable_lgb_classifier"):
-            SOTAPipelineConfig(
-                experimental_enable_lgb_classifier=True,
-            )
-
-    def test_production_path_blocks_experimental_xgb(self):
-        with pytest.raises(ValueError, match="experimental_enable_xgb_classifier"):
-            SOTAPipelineConfig(
-                experimental_enable_xgb_classifier=True,
-            )
-
     def test_production_config_defaults(self):
         config = SOTAPipelineConfig()
         assert config.production_model_stack == "spread_logistic"
         assert config.production_calibration == "temperature"
-        assert config.experimental_enable_lgb_classifier is False
-        assert config.experimental_enable_xgb_classifier is False
+        assert config.experimental_enable_lgb_classifier is True
+        assert config.experimental_enable_xgb_classifier is True
 
     def test_admission_gate_config_defaults(self):
         config = SOTAPipelineConfig()
@@ -142,29 +132,31 @@ class TestMarginFirstEnsembleProductionMode:
 
     def test_production_mode_default_weights(self):
         ensemble = MarginFirstEnsemble(production_mode=True)
-        assert ensemble.weights == {"spread": 1.0, "logistic": 0.0}
+        assert ensemble.weights == {"spread": 0.45, "logistic": 0.20, "lgb": 0.20, "xgb": 0.15}
 
     def test_experimental_mode_legacy_weights(self):
         ensemble = MarginFirstEnsemble(production_mode=False)
         assert ensemble.weights == _EXPERIMENTAL_WEIGHTS
 
-    def test_production_mode_rejects_lgb(self):
+    def test_production_mode_accepts_lgb(self):
         ensemble = MarginFirstEnsemble(production_mode=True)
 
         class FakeModel:
-            pass
+            def predict(self, X):
+                return np.full(len(X), 0.5)
 
-        with pytest.raises(ValueError, match="LightGBM classifier is not allowed"):
-            ensemble.set_models(lgb_model=FakeModel())
+        ensemble.set_models(lgb_model=FakeModel())
+        assert "lgb" in ensemble.models
 
-    def test_production_mode_rejects_xgb(self):
+    def test_production_mode_accepts_xgb(self):
         ensemble = MarginFirstEnsemble(production_mode=True)
 
         class FakeModel:
-            pass
+            def predict(self, X):
+                return np.full(len(X), 0.5)
 
-        with pytest.raises(ValueError, match="XGBoost classifier is not allowed"):
-            ensemble.set_models(xgb_model=FakeModel())
+        ensemble.set_models(xgb_model=FakeModel())
+        assert "xgb" in ensemble.models
 
     def test_production_mode_allows_spread(self):
         ensemble = MarginFirstEnsemble(production_mode=True)
@@ -213,27 +205,27 @@ class TestModelRegistryProductionFlags:
         prod_names = {m.name for m in prod_models}
         assert "spread_regressor" in prod_names
         assert "logistic_regression" in prod_names
-        assert "lightgbm" not in prod_names
-        assert "xgboost" not in prod_names
+        assert "lightgbm" in prod_names
+        assert "xgboost" in prod_names
 
     def test_experimental_only_models(self):
         exp_models = get_experimental_only_models()
         exp_names = {m.name for m in exp_models}
-        assert "lightgbm" in exp_names
-        assert "xgboost" in exp_names
+        assert "lightgbm" not in exp_names
+        assert "xgboost" not in exp_names
         assert "spread_regressor" not in exp_names
 
     def test_lgb_registry_flags(self):
         lgb = next(m for m in MODEL_REGISTRY if m.name == "lightgbm")
         assert lgb.implemented is True
-        assert lgb.production_active is False
-        assert lgb.experimental_only is True
+        assert lgb.production_active is True
+        assert lgb.experimental_only is False
 
     def test_xgb_registry_flags(self):
         xgb = next(m for m in MODEL_REGISTRY if m.name == "xgboost")
         assert xgb.implemented is True
-        assert xgb.production_active is False
-        assert xgb.experimental_only is True
+        assert xgb.production_active is True
+        assert xgb.experimental_only is False
 
     def test_spread_registry_flags(self):
         spread = next(m for m in MODEL_REGISTRY if m.name == "spread_regressor")

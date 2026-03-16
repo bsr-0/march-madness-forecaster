@@ -86,7 +86,7 @@ class PoolSimulationConfig:
 
     n_tournaments: int = 1000
     n_opponents: int = 200
-    noise_std: float = 0.12
+    noise_std: float = 0.16
     random_seed: int = 42
     scoring_system: Dict[str, int] = field(default_factory=lambda: {
         "R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320,
@@ -904,7 +904,7 @@ def run_pool_simulation(
     scoring_system: Optional[Dict[str, int]] = None,
     target_percentiles: Optional[List[float]] = None,
     n_tournaments: int = 1000,
-    noise_std: float = 0.12,
+    noise_std: float = 0.16,
     random_seed: int = 42,
     upset_bonus_enabled: bool = False,
 ) -> PoolSimulationResult:

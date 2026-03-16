@@ -652,7 +652,7 @@ def test_manifest_has_runtime_flags(tmp_path, monkeypatch):
     flags = manifest.get("production_flags_verified", {})
     assert flags["probability_profile"] == "production"
     assert flags["mode"] == "calibration"
-    assert flags["model_complexity"] == "simple"
+    assert flags["model_complexity"] == "standard"
     assert flags["gnn_enabled"] is False
     assert flags["transformer_enabled"] is False
     assert flags["experimental_postprocessing_enabled"] is False
