@@ -30,10 +30,8 @@ When swapping team1 ↔ team2:
   - seed_interaction [76]: seed1×seed2 is commutative → unchanged
   - seed_diff [77]: (seed1-seed2)/15 → **negate**
 
-Previous concern (TRAINING_DATA_AUDIT.md)
------------------------------------------
-Symmetric augmentation was removed because "tree models with bagging would
-overfit to the correlated duplicates."  This concern is addressed by:
+Symmetric augmentation was previously removed because "tree models with bagging
+would overfit to the correlated duplicates."  This concern is addressed by:
 
 1. **Temporal split integrity**: Both perspectives of a game share the same
    game_date / sort_key, so they always land on the same side of any

@@ -555,7 +555,7 @@ def run_calibrate_mc(args):
     """Calibrate Monte Carlo noise parameters against historical upset rates."""
     from .simulation.mc_calibration import calibrate_mc_parameters
 
-    dev_years = _parse_year_list(args.dev_years) or list(range(2016, 2025))
+    dev_years = _parse_year_list(args.dev_years) or list(range(2016, 2026))
     holdout_years = _parse_year_list(args.holdout_years) or [2025]
     noise_grid = _parse_float_list(args.noise_grid)
     corr_grid = _parse_float_list(args.corr_grid)
@@ -1352,7 +1352,7 @@ def scrape_tournament_results(args):
     elif args.years:
         years = [int(y.strip()) for y in args.years.split(",")]
     else:
-        years = [2018, 2019, 2021, 2022, 2023, 2024, 2025]
+        years = [2018, 2019, 2021, 2022, 2023, 2024, 2025, 2026]
 
     scraper = TournamentResultsScraper(cache_dir=args.cache_dir)
     output_dir = Path(args.output_dir)
