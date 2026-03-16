@@ -41,9 +41,13 @@ class TestWalkForwardReplay:
     """Verify LOYO produces identical results across replays."""
 
     def _run_loyo(self, years=None):
-        """Run a full LOYO validation and return the result."""
+        """Run a full LOYO validation and return the result.
+
+        Always provides data for all LOYO_YEARS so that every held-out
+        year has prior training data available in rolling_window mode.
+        """
         years = years or LOYO_YEARS
-        data = {yr: _make_year_data(yr) for yr in years}
+        data = {yr: _make_year_data(yr) for yr in LOYO_YEARS}
         validator = LOYOValidator(years=years)
         return validator.validate(data, _simple_train_fn, _simple_predict_fn)
 
@@ -78,9 +82,7 @@ class TestWalkForwardReplay:
 
         assert result_a.mean_brier == result_b.mean_brier
         assert result_a.year_briers == result_b.year_briers
-        # In rolling_window mode, the earliest year (2019) has no prior
-        # training data and is skipped, so we expect len(subset) - 1 folds.
-        assert len(result_a.fold_results) == len(subset) - 1
+        assert len(result_a.fold_results) == len(subset)
 
     def test_different_data_gives_different_results(self):
         """Sanity check: different data should produce different metrics."""
