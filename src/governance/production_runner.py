@@ -499,11 +499,17 @@ def run_production_2026(
     report["year_partition_audit"] = year_partition_audit
     report["calibration_audit"] = calibration_audit
 
-    # --- Optional market cross-reference (advisory only, never blocks pipeline) ---
+    # --- Market cross-reference (integrated into production pipeline) ---
     market_validation_result = None
+    spread_validation_result = None
     market_validation_dict = {"status": "skipped", "reason": "not attempted"}
     try:
-        from .market_validation import validate_model_vs_market, load_market_probs_from_cache
+        from .market_validation import (
+            validate_model_vs_market,
+            load_market_probs_from_cache,
+            validate_spreads_vs_vegas,
+            load_vegas_spreads_from_cache,
+        )
         import dataclasses as _dc
 
         sim_artifact = report.get("artifacts", {}).get("simulation", {})
@@ -532,6 +538,22 @@ def run_production_2026(
             else:
                 market_validation_dict = _dc.asdict(market_validation_result)
                 market_validation_dict["status"] = "completed"
+
+        # Per-game spread validation
+        vegas_spreads = load_vegas_spreads_from_cache(season=2026, cache_dir=cache_dir)
+        model_spreads = sim_artifact.get("predicted_spreads", {})
+        if vegas_spreads and model_spreads:
+            spread_validation_result = validate_spreads_vs_vegas(
+                model_spreads={str(k): float(v) for k, v in model_spreads.items()},
+                vegas_spreads=vegas_spreads,
+            )
+            if spread_validation_result is not None:
+                market_validation_dict["spread_validation"] = _dc.asdict(spread_validation_result)
+                logging.getLogger(__name__).info(
+                    "Vegas spread cross-reference: MAE=%.2f, interpretation=%s",
+                    spread_validation_result.mean_abs_error,
+                    spread_validation_result.interpretation,
+                )
     except Exception as exc:
         market_validation_dict = {"status": "skipped", "reason": f"validation failed: {exc}"}
 
@@ -541,6 +563,16 @@ def run_production_2026(
             "spearman_rank_corr": market_validation_result.spearman_rank_corr,
             "interpretation": market_validation_result.interpretation,
             "n_common_teams": market_validation_result.n_common_teams,
+            "spread_validation": (
+                {
+                    "n_games": spread_validation_result.n_games,
+                    "mean_abs_error": spread_validation_result.mean_abs_error,
+                    "interpretation": spread_validation_result.interpretation,
+                    "n_red_flags": len(spread_validation_result.red_flags),
+                }
+                if spread_validation_result
+                else {"status": "no_data"}
+            ),
         }
         if market_validation_result
         else {"status": "skipped"}
@@ -651,7 +683,6 @@ def run_production_2026(
         bool(config.enable_embedding_projections),
         bool(config.enable_stacking),
         bool(config.use_agent_orchestration),
-        bool(config.enable_market_blend),
     ])
     governance_report = {
         "what_exact_predictor_was_shipped": "Frozen 2026 production path (simple model + production probability profile)",

@@ -925,8 +925,37 @@ class SOTAPipeline:
             bracket_sim = self._run_monte_carlo(teams, rosters)
 
         market_consensus = self._load_betting_markets()
-        if market_consensus is not None and self.config.enable_market_blend:
-            self._apply_market_blend(bracket_sim, market_consensus)
+        if market_consensus is not None:
+            # Cross-reference validation (always when data available)
+            if getattr(self.config, "enable_vegas_cross_reference", True):
+                try:
+                    from ..governance.market_validation import validate_model_vs_market
+                    model_champ = dict(bracket_sim.championship_odds) if hasattr(bracket_sim, "championship_odds") else {}
+                    if model_champ:
+                        validation = validate_model_vs_market(
+                            model_probs=model_champ,
+                            market_probs=market_consensus.team_probabilities,
+                            adjust_vig=True,
+                        )
+                        if validation is not None:
+                            logger.info(
+                                "Vegas cross-reference: RMSD=%.4f, Spearman=%.4f, "
+                                "interpretation=%s (%d teams)",
+                                validation.rmsd,
+                                validation.spearman_rank_corr or 0.0,
+                                validation.interpretation,
+                                validation.n_common_teams,
+                            )
+                            if validation.interpretation in ("significant_divergence", "major_disagreement"):
+                                logger.warning(
+                                    "Vegas cross-reference flagged %s (RMSD=%.4f)",
+                                    validation.interpretation, validation.rmsd,
+                                )
+                except Exception as exc:
+                    logger.debug("Vegas cross-reference skipped: %s", exc)
+            # Market blend
+            if self.config.enable_market_blend:
+                self._apply_market_blend(bracket_sim, market_consensus)
 
         model_round_probs = self._to_round_probabilities(bracket_sim)
 

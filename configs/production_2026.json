@@ -51,7 +51,8 @@
   "enable_recency_weighting": true,
   "enable_symmetric_augmentation": true,
   "scrape_live": false,
-  "enable_market_blend": false,
+  "enable_market_blend": true,
+  "enable_vegas_cross_reference": true,
 
   "external_ratings_dir": "data/external_ratings",
   "multi_year_games_dir": "data/raw/historical",
