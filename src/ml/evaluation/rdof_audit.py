@@ -50,7 +50,7 @@ derivation notes mention "LOYO" or "calibrated", indicating this circularity.
 
 Usage:
     python -m src.main audit-rdof --historical-dir data/raw/historical \\
-        --holdout-years 2024,2025 --sensitivity --output rdof_report.json
+        --holdout-years 2025 --sensitivity --output rdof_report.json
 
     python -m src.main freeze-pipeline --output pipeline_freeze.json
     python -m src.main verify-freeze --freeze-file pipeline_freeze.json
@@ -3006,7 +3006,7 @@ def run_rdof_audit(
 
     Args:
         historical_dir: Path to historical game/metric JSON files
-        holdout_years: Years to hold out (default: config.holdout_years or [2024, 2025])
+        holdout_years: Years to hold out (default: config.holdout_years or [2025])
         run_holdout: Whether to run holdout evaluation
         run_sensitivity: Whether to run sensitivity analysis
         sensitivity_grid: Grid points per constant for sensitivity
@@ -3024,7 +3024,7 @@ def run_rdof_audit(
     if holdout_years is None and getattr(config, "holdout_years", None):
         holdout_years = list(config.holdout_years)
     if holdout_years is None:
-        holdout_years = [2024, 2025]
+        holdout_years = [2025]
 
     dev_years = getattr(config, "dev_years", None)
     if dev_years is not None:

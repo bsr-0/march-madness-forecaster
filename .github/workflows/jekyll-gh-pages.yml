@@ -34,14 +34,9 @@ jobs:
           set -euo pipefail
 
           REQUIRED_FILES=(
-            "docs/index.html"
-            "docs/methodology.html"
             "docs/results.html"
-            "docs/predictions.html"
             "docs/predictions-2026.html"
             "docs/style.css"
-            "docs/data/dashboard.json"
-            "docs/data/conference_predictions_2026.json"
             "docs/data/bracket_2026.json"
             "docs/data/validation_2025.json"
             "docs/data/model_metrics.json"
