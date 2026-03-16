@@ -64,7 +64,7 @@ class ConferenceTournamentSimulator:
     """Monte Carlo simulator for conference tournament brackets.
 
     Uses the same logit-space noise approach as the main tournament
-    simulator (noise_std=0.12 by default, calibrated from Lopez &
+    simulator (noise_std=0.16 by default, calibrated from Lopez &
     Matthews, JQAS 2015).
     """
 
@@ -72,7 +72,7 @@ class ConferenceTournamentSimulator:
         self,
         predictor: "ConferenceTournamentPredictor",
         num_simulations: int = 50000,
-        noise_std: float = 0.12,
+        noise_std: float = 0.16,
         random_seed: int = 2026,
     ):
         self.predictor = predictor
