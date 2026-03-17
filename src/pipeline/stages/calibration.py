@@ -746,7 +746,7 @@ def _fit_tournament_sigma(pipeline, spread_model, tuning_stats: Dict) -> None:
 
     After fitting, overrides the SpreadRegressor's sigma with the global
     tournament sigma, and attaches the calibrator for per-round use by
-    the MarginFirstEnsemble.
+    the _TrainedBaselineModel.
     """
     import os
 
