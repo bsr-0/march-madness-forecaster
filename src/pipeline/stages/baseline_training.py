@@ -1357,13 +1357,17 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             baseline_name = pipeline._select_best_single_model(trained_models, eval_y)
 
     elif len(trained_models) >= 2:
-        # --- Fixed-weight average (default path) ---
+        # --- Fixed-weight average (default/fallback path) ---
+        # Both production and experimental modes start with fallback weights.
+        # In production mode, these may be overridden by LOYO-optimized
+        # weights later (see FIX-CV-ENSEMBLE block below).
         if _production_mode:
-            # Phase 2: Production weights from PRODUCTION_BASELINE.
-            # Default: spread=1.0, logistic=0.0 (spread-only baseline).
-            # Logistic earns weight only via the admission gate.
+            # Production: fallback weights from PRODUCTION_BASELINE spec.
+            # These are literature-based priors, NOT fitted values.
+            # The LOYO optimizer (below) may replace them with CV-derived
+            # weights if it finds improvement over this fallback.
             from ..production_baseline import PRODUCTION_BASELINE
-            _prod_weights = dict(PRODUCTION_BASELINE.default_weights)
+            _prod_weights = dict(PRODUCTION_BASELINE.fallback_weights)
             # Map production names to trained_models names
             _PROD_NAME_MAP = {"spread": "spread", "logistic": "logit", "lgb": "lgb", "xgb": "xgb"}
             model_names_present = [name for name, _, _ in trained_models]
@@ -1447,6 +1451,12 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # Uses LOYO (leave-one-year-out) predictions to find weights that
     # generalize across tournament years, avoiding double-dipping.
     # Each year's weights are evaluated on data never used for training.
+    #
+    # Design: freeze the procedure, not the parameter values.
+    # The optimizer runs with simplex bounds from PRODUCTION_BASELINE to
+    # prevent overfitting (7 folds × ~63 games = ~440 OOS samples for
+    # ~3 free parameters).  If LOYO improves over fallback, the derived
+    # weights replace the fallback.  Otherwise, fallback weights stand.
     ensemble_weight_stats = {}
     if (
         pipeline.config.optimize_ensemble_weights
@@ -1462,7 +1472,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         )
         if cv_weights:
             ensemble_weight_stats = cv_weights
-            # Apply CV-optimized weights if they improve over fixed weights
+            # Apply CV-optimized weights if they improve over fallback weights
             optimized_w = cv_weights.get("optimized_weights", {})
             if optimized_w and cv_weights.get("improvement_over_fixed", 0) > 0:
                 model_names_present = [name for name, _, _ in trained_models]
@@ -1476,12 +1486,21 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                     w_sum = sum(filtered_w.values())
                     filtered_w = {n: w / w_sum for n, w in filtered_w.items()}
                     pipeline.baseline_model.fixed_weights = filtered_w
+                    _weight_source = "loyo_optimized"
                     logger.info(
                         "FIX-CV-ENSEMBLE: Applied LOYO-optimized weights: %s "
-                        "(Brier improvement: %.5f)",
+                        "(Brier improvement: %.5f over fallback)",
                         {n: round(w, 3) for n, w in filtered_w.items()},
                         cv_weights.get("improvement_over_fixed", 0),
                     )
+            else:
+                _weight_source = "fallback"
+                logger.info(
+                    "FIX-CV-ENSEMBLE: LOYO optimization did not improve over "
+                    "fallback weights. Keeping fallback: %s",
+                    {n: round(w, 3) for n, w in
+                     pipeline.baseline_model.fixed_weights.items()},
+                )
 
     # ====================================================================
     # P0: LEAVE-ONE-YEAR-OUT CROSS-VALIDATION — validates that the trained
@@ -2173,6 +2192,19 @@ def _optimize_ensemble_weights_loyo(
         name: np.array(preds) for name, preds in all_oos_preds.items()
     }
 
+    # Build per-model weight bounds from PRODUCTION_BASELINE spec.
+    # These simplex constraints prevent overfitting the weight optimization
+    # on small LOYO samples (~440 OOS games, ~3 free DoF).
+    _opt_weight_bounds = None
+    try:
+        from src.pipeline.production_baseline import PRODUCTION_BASELINE
+        _bounds_spec = PRODUCTION_BASELINE.weight_bounds
+        _opt_weight_bounds = {
+            name: _bounds_spec.bounds_for(name) for name in model_names
+        }
+    except Exception:
+        pass  # Graceful fallback: no bounds if import fails
+
     optimizer = EnsembleWeightOptimizer(
         step=0.05, min_weight=0.05, n_bootstrap=200,
         random_seed=pipeline.config.random_seed,
@@ -2181,14 +2213,27 @@ def _optimize_ensemble_weights_loyo(
         pred_arrays, oos_y,
         min_samples=20,
         regularization_lambda=pipeline.config.ensemble_weight_regularization,
+        weight_bounds=_opt_weight_bounds,
     )
 
-    # Also compute fixed-weight Brier for comparison
-    w_lgb = pipeline.config.ensemble_lgb_weight
-    w_xgb = pipeline.config.ensemble_xgb_weight
-    w_logit = max(0.05, 1.0 - w_lgb - w_xgb)
-    fixed_w = {"lgb": w_lgb, "xgb": w_xgb, "logit": w_logit, "spread": 0.40}
-    active_fixed = {n: fixed_w.get(n, 0.25) for n in model_names if n in fixed_w}
+    # Also compute fallback-weight Brier for comparison.
+    # Use PRODUCTION_BASELINE fallback weights as the comparison baseline.
+    try:
+        from src.pipeline.production_baseline import PRODUCTION_BASELINE
+        _fallback_w = dict(PRODUCTION_BASELINE.fallback_weights)
+        _PROD_NAME_MAP = {"spread": "spread", "logistic": "logit", "lgb": "lgb", "xgb": "xgb"}
+        active_fixed = {}
+        for prod_name, weight in _fallback_w.items():
+            internal_name = _PROD_NAME_MAP.get(prod_name, prod_name)
+            if internal_name in model_names:
+                active_fixed[internal_name] = weight
+    except Exception:
+        # Legacy fallback if import fails
+        w_lgb = pipeline.config.ensemble_lgb_weight
+        w_xgb = pipeline.config.ensemble_xgb_weight
+        w_logit = max(0.05, 1.0 - w_lgb - w_xgb)
+        active_fixed = {"lgb": w_lgb, "xgb": w_xgb, "logit": w_logit, "spread": 0.40}
+        active_fixed = {n: w for n, w in active_fixed.items() if n in model_names}
     w_sum = sum(active_fixed.values())
     active_fixed = {n: w / w_sum for n, w in active_fixed.items()}
 

@@ -813,6 +813,7 @@ class EnsembleWeightOptimizer:
         model_confidences: Optional[Dict[str, float]] = None,
         min_samples: int = 50,
         regularization_lambda: float = 0.1,
+        weight_bounds: Optional[Dict[str, tuple]] = None,
     ) -> Tuple[Dict[str, float], float]:
         """
         Find optimal weights by bootstrap-aggregated grid search over Brier score.
@@ -835,6 +836,12 @@ class EnsembleWeightOptimizer:
             model_confidences: Per-model confidence scores (unused, kept for API compat)
             min_samples: Minimum samples required; returns uniform below this.
             regularization_lambda: L2 regularization toward uniform weights.
+            weight_bounds: Optional per-model (min, max) weight constraints.
+                Dict mapping model_name -> (min_weight, max_weight).
+                Constrains the optimizer's search space to a neighborhood
+                around literature-based priors, preventing overfitting
+                when the number of LOYO folds is small (~7 folds, ~440 OOS
+                samples, ~3 free parameters from sum-to-1 constraint).
 
         Returns:
             Tuple of (best_weights, best_brier_score)
@@ -868,6 +875,19 @@ class EnsembleWeightOptimizer:
         weight_grid = self._generate_weight_grid(len(model_names), steps)
         # Pre-filter: each weight must be >= min_weight
         weight_grid = [combo for combo in weight_grid if all(w >= self.min_weight for w in combo)]
+
+        # Apply per-model weight bounds if provided.  This constrains
+        # the search to a simplex neighborhood, preventing the optimizer
+        # from drifting too far from the literature-based prior.
+        if weight_bounds:
+            def _combo_in_bounds(combo: tuple) -> bool:
+                for name, w in zip(model_names, combo):
+                    if name in weight_bounds:
+                        lo, hi = weight_bounds[name]
+                        if w < lo - 1e-9 or w > hi + 1e-9:
+                            return False
+                return True
+            weight_grid = [c for c in weight_grid if _combo_in_bounds(c)]
 
         if not weight_grid:
             uniform = {name: 1.0 / len(model_names) for name in model_names}

@@ -162,13 +162,15 @@ CONSTANT_REGISTRY: List[PipelineConstant] = [
         "Higher = more regularized"),
 
     # ── Tier 3: Freely Tuned (MUST be cross-validated) ──────────────
-    PipelineConstant("ensemble_lgb_weight", 3, 0.45,
-        "ensemble weights in _train_baseline_model", (0.20, 0.70),
-        "Calibrated from LOYO; 2 free DoF (3 weights sum to 1)",
-        notes="Paired with xgb=0.35, logistic=0.20"),
-    PipelineConstant("ensemble_xgb_weight", 3, 0.35,
-        "ensemble weights in _train_baseline_model", (0.10, 0.60),
-        "Calibrated from LOYO; coupled with lgb weight"),
+    PipelineConstant("ensemble_lgb_weight", 3, 0.20,
+        "ensemble weights in _train_baseline_model", (0.05, 0.35),
+        "LOYO-derived at training time; bounds from PRODUCTION_BASELINE.weight_bounds. "
+        "2 free DoF (4 weights sum to 1). Fallback prior is 0.20",
+        notes="Paired with xgb, logistic, spread; optimizer constrains search space"),
+    PipelineConstant("ensemble_xgb_weight", 3, 0.15,
+        "ensemble weights in _train_baseline_model", (0.05, 0.35),
+        "LOYO-derived at training time; bounds from PRODUCTION_BASELINE.weight_bounds. "
+        "Fallback prior is 0.15. Coupled with lgb weight"),
     PipelineConstant("tournament_shrinkage", 3, 0.0,
         "SOTAPipelineConfig.tournament_shrinkage", (0.0, 0.25),
         "Disabled by default unless sensitivity proves value"),
