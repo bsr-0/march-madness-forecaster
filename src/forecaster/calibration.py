@@ -25,8 +25,8 @@ try:
 except ImportError:
     ISOTONIC_AVAILABLE = False
 
-# Years for LOYO (exclude 2020 - COVID)
-CALIBRATION_YEARS = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+# Years for LOYO (exclude 2020 - COVID, exclude 2025 - holdout)
+CALIBRATION_YEARS = [2018, 2019, 2021, 2022, 2023, 2024]
 
 
 @dataclass
