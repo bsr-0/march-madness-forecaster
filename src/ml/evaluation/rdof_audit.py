@@ -355,6 +355,69 @@ def get_tier3_constants() -> List[PipelineConstant]:
     return [c for c in CONSTANT_REGISTRY if c.tier == 3]
 
 
+def tier3_reduction_candidates() -> Dict[str, Any]:
+    """Identify Tier 3 constants that could be eliminated or promoted.
+
+    The DoF/sample ratio (58/440 ≈ 0.13) far exceeds the 0.01 target.
+    Reducing Tier 3 count is the most direct path to improving this ratio.
+
+    Returns a report of:
+    - Constants with current_value == 0 (disabled, can be removed)
+    - Constants that could be promoted to Tier 2 with structural constraints
+    - Constants that are coupled (e.g., ensemble weights summing to 1)
+    - Target Tier 3 count for various sample size scenarios
+    """
+    tier3 = get_tier3_constants()
+
+    disabled = [c for c in tier3
+                if isinstance(c.current_value, (int, float))
+                and c.current_value == 0]
+    coupled_groups = {
+        "ensemble_weights": [c for c in tier3
+                             if "ensemble" in c.name and "weight" in c.name],
+        "mc_injury_bounds": [c for c in tier3
+                             if "mc_injury_severity" in c.name],
+    }
+    # Count effective DoF for coupled groups (sum-to-1 means n-1 free params)
+    effective_dof_reduction = 0
+    for group_name, group in coupled_groups.items():
+        if len(group) > 1:
+            effective_dof_reduction += 1  # one constraint per group
+
+    n_total = len(CONSTANT_REGISTRY)
+    n_tier3 = len(tier3)
+    n_disabled = len(disabled)
+    n_effective = n_tier3 - n_disabled - effective_dof_reduction
+
+    return {
+        "n_total_constants": n_total,
+        "n_tier3": n_tier3,
+        "n_disabled_tier3": n_disabled,
+        "disabled_names": [c.name for c in disabled],
+        "n_coupled_constraints": effective_dof_reduction,
+        "coupled_groups": {
+            name: [c.name for c in group]
+            for name, group in coupled_groups.items()
+        },
+        "n_effective_tier3_dof": n_effective,
+        "current_dof_per_440_games": round(n_effective / 440, 4),
+        "target_tier3_for_440_games": 4,  # 4/440 ≈ 0.009 < 0.01
+        "reduction_needed": max(0, n_effective - 4),
+        "recommendations": [
+            f"Remove {n_disabled} disabled constants (value=0): "
+            f"{[c.name for c in disabled]}"
+            if disabled else "No disabled constants to remove",
+            f"Promote structurally-constrained Tier 3 to Tier 2 where possible "
+            f"(reduces effective DoF by making range bounds the constraint, "
+            f"not the specific value)",
+            f"Target: reduce effective Tier 3 DoF from {n_effective} to ~4 "
+            f"for 440-game evaluation sets (ratio = 0.009)",
+            f"Alternative: extend evaluation to 2026+ (prospective data) to "
+            f"increase denominator",
+        ],
+    }
+
+
 def get_constants_by_tier(tier: int) -> List[PipelineConstant]:
     return [c for c in CONSTANT_REGISTRY if c.tier == tier]
 
@@ -2477,17 +2540,36 @@ class MCParameterBacktester:
 # ───────────────────────────────────────────────────────────────────────
 
 class RDOFAuditReport:
-    """Formats and outputs the full RDoF audit report."""
+    """Formats and outputs the full RDoF audit report.
+
+    STATISTICAL LIMITATIONS (honest disclosure)
+    =============================================
+    All backtest results in this report are Level 3 (retrospective
+    diagnostic).  The pipeline's 58 tuned constants were optimized on
+    the same 2005-2025 data used for evaluation.  Key limitations:
+
+    - **Circular validation**: LOYO folds evaluate on data that informed
+      the pipeline's design.  This inflates apparent performance.
+    - **Small effective N**: 7 LOYO folds × ~63 games ≈ 440 total games.
+      DoF/sample ratio ≈ 58/440 ≈ 0.13 (target: < 0.01).
+    - **Underpowered ablation**: SE(mean Brier) across 7 folds ≈ 0.009.
+      The legacy 0.001 threshold is ~0.11× SE — within noise.
+      The powered threshold (t_crit × SE ≈ 0.018) should be used instead.
+    - **No prospective evaluation**: The 2026 tournament is the first
+      candidate for Level 1 (true prospective) validation.
+    """
 
     def __init__(
         self,
         holdout_report: Optional[HoldoutReport] = None,
         sensitivity_results: Optional[Dict[str, ConstantSensitivityResult]] = None,
         complexity_audit: Optional[ModelComplexityAudit] = None,
+        validation_diagnostics: Optional[Dict[str, Any]] = None,
     ):
         self.holdout_report = holdout_report
         self.sensitivity_results = sensitivity_results or {}
         self.complexity_audit = complexity_audit
+        self.validation_diagnostics = validation_diagnostics
 
     def to_dict(self) -> Dict[str, Any]:
         result: Dict[str, Any] = {
@@ -2520,6 +2602,9 @@ class RDOFAuditReport:
 
         if self.complexity_audit:
             result["model_complexity_audit"] = self.complexity_audit.to_dict()
+
+        if self.validation_diagnostics:
+            result["validation_diagnostics"] = self.validation_diagnostics
 
         result["recommendations"] = self._generate_recommendations()
         return result
@@ -2589,6 +2674,26 @@ class RDOFAuditReport:
                     f"gap={sr.brier_gap:.4f}.{circ_tag}"
                 )
 
+        # Validation diagnostics
+        if self.validation_diagnostics:
+            diag = self.validation_diagnostics
+            recs.append(
+                f"VALIDATION STATS: {diag.get('n_folds', '?')} folds, "
+                f"{diag.get('total_eval_games', '?')} eval games, "
+                f"SE(mean Brier)={diag.get('se_mean_brier', '?')}, "
+                f"powered threshold={diag.get('powered_threshold', '?')}"
+            )
+            legacy_frac = diag.get("legacy_threshold_as_fraction_of_se", 0)
+            if legacy_frac < 1.0:
+                recs.append(
+                    f"ABLATION WARNING: Legacy 0.001 threshold is only "
+                    f"{legacy_frac:.2f}x SE — within noise. "
+                    f"Use powered threshold ({diag.get('powered_threshold', '?')}) "
+                    f"for ablation decisions."
+                )
+            for w in diag.get("warnings", []):
+                recs.append(f"DIAGNOSTIC: {w}")
+
         # DoF ratio warning
         n_tier3 = len(get_tier3_constants())
         n_games = self.holdout_report.total_games if self.holdout_report else 0
@@ -2599,6 +2704,14 @@ class RDOFAuditReport:
                 f"{n_games} holdout games = {ratio:.3f} "
                 f"(target < 0.01)"
             )
+            if ratio > 0.10:
+                recs.append(
+                    f"DoF CRITICAL: Ratio {ratio:.3f} far exceeds 0.01 target. "
+                    f"Need {n_tier3 * 100} eval games for reliable validation "
+                    f"(currently have {n_games}). Consider: (1) reducing Tier 3 "
+                    f"constants, (2) extending historical data, or (3) accepting "
+                    f"that results are exploratory, not confirmatory."
+                )
 
         # Complexity audit warnings
         if self.complexity_audit:

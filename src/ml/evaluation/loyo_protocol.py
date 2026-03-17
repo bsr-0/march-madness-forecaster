@@ -6,9 +6,27 @@ Rigorous backtesting framework:
 3. Repeat for each year in {2018, 2019, 2021, 2022, 2023, 2024, 2025}
    (2020 excluded: COVID cancellation)
 
-The "0.001 Rule": Any feature or sub-model that does not improve
-the mean LOYO Brier score by at least 0.001 is deleted.
-No exceptions for "cool" features.
+STATISTICAL LIMITATIONS (honest disclosure)
+============================================
+- **Circular validation**: The 58 tuned pipeline constants were optimized
+  using the same 2005-2025 data that LOYO evaluates on.  All backtest
+  results are therefore Level 3 (retrospective diagnostic) — they measure
+  in-distribution fit, not true out-of-sample performance.
+- **Small-sample uncertainty**: With only 7 LOYO folds of ~63 games each
+  (~440 total evaluation games), the standard error of the mean Brier
+  score across folds is approximately 0.009.  Any ablation threshold
+  smaller than ~2× SE (i.e., < ~0.018) is statistically indistinguishable
+  from noise at conventional significance levels.
+- **DoF/sample ratio**: 58 tuned constants / 440 evaluation games ≈ 0.13.
+  The target for reliable generalization is < 0.01 (Harrell's rule of
+  thumb: ≤1 parameter per 10-20 events).  This ratio indicates substantial
+  risk of overfitting to the evaluation data.
+
+The "0.001 Rule" was originally intended as a feature ablation gate.
+It has been SUPERSEDED by a statistically-powered threshold that accounts
+for fold-level variance (see ``compute_ablation_threshold``).  The legacy
+constant is preserved for backward compatibility but should not be used
+for new ablation decisions.
 """
 
 from __future__ import annotations
@@ -26,8 +44,490 @@ logger = logging.getLogger(__name__)
 # 2020 excluded (COVID: tournament cancelled)
 LOYO_YEARS = [2018, 2019, 2021, 2022, 2023, 2024, 2025]
 
-# The 0.001 Rule: minimum Brier improvement to keep a feature/model
+# Legacy "0.001 Rule" threshold — DEPRECATED.
+# With 7 folds of ~63 games, SE(mean Brier) ≈ 0.009, so a 0.001 threshold
+# is ~0.11 SE — well within noise.  Retained only for backward compatibility.
+# Use compute_ablation_threshold() for statistically valid thresholds.
 MINIMUM_BRIER_IMPROVEMENT = 0.001
+
+# Number of tuned pipeline constants (from rdof_audit.CONSTANT_REGISTRY)
+# Used to compute DoF/sample ratios for validation diagnostics.
+_N_TUNED_CONSTANTS = 58
+
+
+def compute_ablation_threshold(
+    fold_briers: "list[float]",
+    significance_level: float = 0.05,
+) -> float:
+    """Compute a statistically-powered ablation threshold from fold-level Brier scores.
+
+    The threshold is set at the one-sided critical value of a paired t-test:
+    threshold = t_{alpha, n-1} * SE(mean Brier), where SE = std / sqrt(n).
+
+    This ensures that only improvements detectable above noise (at the given
+    significance level) are treated as meaningful.
+
+    Args:
+        fold_briers: Per-fold Brier scores from LOYO validation.
+        significance_level: Alpha for the one-sided test (default 0.05).
+
+    Returns:
+        Minimum Brier improvement that would be statistically significant.
+        Returns MINIMUM_BRIER_IMPROVEMENT as a floor if computation fails.
+    """
+    n = len(fold_briers)
+    if n < 3:
+        logger.warning(
+            "Too few folds (%d) for powered threshold; "
+            "falling back to legacy %.4f",
+            n, MINIMUM_BRIER_IMPROVEMENT,
+        )
+        return MINIMUM_BRIER_IMPROVEMENT
+
+    arr = np.array(fold_briers, dtype=float)
+    se = float(np.std(arr, ddof=1) / np.sqrt(n))
+
+    # One-sided t critical value
+    try:
+        from scipy.stats import t as t_dist
+        t_crit = float(t_dist.ppf(1.0 - significance_level, df=n - 1))
+    except ImportError:
+        # Approximate: for df=6 (7 folds), t_0.05 ≈ 1.943
+        t_crit = 1.943 if n == 7 else 2.0
+
+    threshold = t_crit * se
+    logger.info(
+        "Powered ablation threshold: %.4f "
+        "(SE=%.4f, t_crit=%.3f, n_folds=%d, alpha=%.3f)",
+        threshold, se, t_crit, n, significance_level,
+    )
+    return max(threshold, MINIMUM_BRIER_IMPROVEMENT)
+
+
+def compute_validation_diagnostics(
+    fold_results: "list[LOYOFoldResult]",
+    n_tuned_constants: int = _N_TUNED_CONSTANTS,
+) -> "dict[str, object]":
+    """Compute statistical diagnostics for a LOYO validation run.
+
+    Reports DoF/sample ratio, standard error, powered ablation threshold,
+    and flags potential issues with the validation methodology.
+
+    Args:
+        fold_results: Results from LOYOValidator.validate().
+        n_tuned_constants: Number of researcher-tuned constants.
+
+    Returns:
+        Dict with diagnostic metrics and warnings.
+    """
+    n_folds = len(fold_results)
+    if n_folds == 0:
+        return {"error": "No fold results to diagnose"}
+
+    briers = [f.brier_score for f in fold_results]
+    total_eval_games = sum(f.n_test_games for f in fold_results)
+    mean_brier = float(np.mean(briers))
+    std_brier = float(np.std(briers, ddof=1)) if n_folds > 1 else 0.0
+    se_mean_brier = std_brier / np.sqrt(n_folds) if n_folds > 1 else 0.0
+    dof_sample_ratio = n_tuned_constants / max(total_eval_games, 1)
+
+    powered_threshold = compute_ablation_threshold(briers)
+
+    warnings = []
+    if dof_sample_ratio > 0.10:
+        warnings.append(
+            f"CRITICAL: DoF/sample ratio {dof_sample_ratio:.3f} >> 0.01 target. "
+            f"{n_tuned_constants} constants / {total_eval_games} eval games. "
+            f"Results are likely overfit to evaluation data."
+        )
+    elif dof_sample_ratio > 0.01:
+        warnings.append(
+            f"WARNING: DoF/sample ratio {dof_sample_ratio:.3f} > 0.01 target. "
+            f"Results may overstate true OOS performance."
+        )
+
+    if MINIMUM_BRIER_IMPROVEMENT < se_mean_brier:
+        warnings.append(
+            f"Legacy 0.001 threshold ({MINIMUM_BRIER_IMPROVEMENT}) < SE(mean Brier) "
+            f"({se_mean_brier:.4f}). Use powered threshold ({powered_threshold:.4f}) "
+            f"for ablation decisions."
+        )
+
+    if n_folds < 10:
+        warnings.append(
+            f"Only {n_folds} folds — bootstrap or permutation tests recommended "
+            f"to supplement fold-level inference."
+        )
+
+    return {
+        "n_folds": n_folds,
+        "total_eval_games": total_eval_games,
+        "mean_brier": round(mean_brier, 6),
+        "std_brier": round(std_brier, 6),
+        "se_mean_brier": round(se_mean_brier, 6),
+        "n_tuned_constants": n_tuned_constants,
+        "dof_sample_ratio": round(dof_sample_ratio, 4),
+        "dof_sample_target": 0.01,
+        "legacy_threshold": MINIMUM_BRIER_IMPROVEMENT,
+        "powered_threshold": round(powered_threshold, 6),
+        "legacy_threshold_as_fraction_of_se": round(
+            MINIMUM_BRIER_IMPROVEMENT / max(se_mean_brier, 1e-12), 3
+        ),
+        "integrity_level": 3,
+        "integrity_note": (
+            "RETROSPECTIVE: All 58 constants were tuned on the same 2005-2025 "
+            "data used for LOYO evaluation. No prospective evaluation has been "
+            "completed. Results overstate true OOS performance."
+        ),
+        "warnings": warnings,
+    }
+
+
+# ======================================================================
+# Dev/Eval Year Split (breaks circular validation)
+# ======================================================================
+
+
+@dataclass
+class DevEvalSplit:
+    """Enforces separation between constant-tuning (dev) and evaluation years.
+
+    The core circularity problem: all 58 constants were tuned using LOYO
+    on years 2005-2025, then LOYO on those same years is used to evaluate
+    the pipeline.  This makes all reported metrics retrospective (Level 3).
+
+    To break the circularity, this class partitions available years into:
+    - **dev_years**: Used for LOYO-based constant tuning, feature selection,
+      and sensitivity analysis.  All Tier 3 constants should be derived
+      from dev_years only.
+    - **eval_years**: Held out from ALL tuning decisions.  Touched only
+      once for final evaluation.  Results on these years are Level 2
+      (quasi-prospective) if the pipeline was frozen before evaluation.
+
+    Usage::
+
+        split = DevEvalSplit.recommended_split()
+        # Tune constants using only dev_years:
+        dev_validator = LOYOValidator(years=split.dev_years)
+        # Final evaluation on eval_years:
+        eval_validator = ProspectiveValidator(years=split.eval_years)
+
+    The split must be declared BEFORE any tuning begins and not changed
+    afterward.  The ``validate_no_leakage`` method checks that evaluation
+    years were not used during tuning.
+    """
+
+    dev_years: List[int]
+    eval_years: List[int]
+    split_rationale: str = ""
+
+    def __post_init__(self):
+        overlap = set(self.dev_years) & set(self.eval_years)
+        if overlap:
+            raise ValueError(
+                f"Dev/eval year overlap detected: {overlap}. "
+                f"Evaluation years must be completely separate from "
+                f"constant-tuning years to break circularity."
+            )
+
+    @classmethod
+    def recommended_split(cls) -> "DevEvalSplit":
+        """Recommended split preserving maximum dev data.
+
+        Dev: 2018, 2019, 2021, 2022, 2023 (5 years, ~315 games)
+        Eval: 2024, 2025 (2 years, ~126 games)
+
+        With 5 dev folds, SE(mean Brier) ≈ 0.011 for dev-set LOYO.
+        58 constants / 315 dev games = 0.18 DoF/sample (still high,
+        but at least eval is uncontaminated).
+        58 constants / 126 eval games = 0.46 DoF/sample for eval
+        (very high — the fundamental sample size problem remains).
+        """
+        return cls(
+            dev_years=[2018, 2019, 2021, 2022, 2023],
+            eval_years=[2024, 2025],
+            split_rationale=(
+                "Chronological split: most recent 2 years held for eval. "
+                "Dev set has 5 folds for LOYO tuning. Eval years were "
+                "observed during original pipeline development (Level 3) "
+                "but this split enables quasi-prospective (Level 2) "
+                "evaluation for FUTURE tuning rounds."
+            ),
+        )
+
+    def validate_no_leakage(
+        self,
+        tuning_years_used: List[int],
+    ) -> "dict[str, object]":
+        """Check that no eval years were used during constant tuning.
+
+        Args:
+            tuning_years_used: Years that were actually used for any
+                tuning decision (LOYO folds, sensitivity grids, etc.)
+
+        Returns:
+            Dict with 'clean' (bool) and 'leaked_years' (list).
+        """
+        leaked = sorted(set(tuning_years_used) & set(self.eval_years))
+        return {
+            "clean": len(leaked) == 0,
+            "leaked_years": leaked,
+            "dev_years": self.dev_years,
+            "eval_years": self.eval_years,
+            "warning": (
+                f"LEAKAGE: Eval years {leaked} were used during tuning. "
+                f"Eval results are now Level 3 (retrospective), not Level 2."
+                if leaked else
+                "No leakage detected. Eval results are Level 2 "
+                "(quasi-prospective, assuming pipeline was frozen before eval)."
+            ),
+        }
+
+    def get_dev_validator(self) -> "LOYOValidator":
+        """Create a LOYOValidator that uses only dev years."""
+        return LOYOValidator(years=self.dev_years, temporal_mode="rolling_window")
+
+    def get_eval_validator(self) -> "ProspectiveValidator":
+        """Create a ProspectiveValidator that evaluates only on eval years."""
+        return ProspectiveValidator(years=self.eval_years)
+
+    def dof_diagnostics(
+        self,
+        n_tuned_constants: int = _N_TUNED_CONSTANTS,
+        games_per_year: int = 63,
+    ) -> "dict[str, object]":
+        """Report DoF/sample ratios for both dev and eval partitions."""
+        dev_games = len(self.dev_years) * games_per_year
+        eval_games = len(self.eval_years) * games_per_year
+        dev_ratio = n_tuned_constants / max(dev_games, 1)
+        eval_ratio = n_tuned_constants / max(eval_games, 1)
+
+        warnings = []
+        if dev_ratio > 0.10:
+            warnings.append(
+                f"Dev DoF/sample = {dev_ratio:.3f} >> 0.01. "
+                f"Consider reducing Tier 3 constants or extending dev data."
+            )
+        if eval_ratio > 0.10:
+            warnings.append(
+                f"Eval DoF/sample = {eval_ratio:.3f} >> 0.01. "
+                f"Eval set too small for reliable generalization estimates. "
+                f"Consider pooling with prospective 2026+ data when available."
+            )
+
+        # Minimum detectable effect (MDE) for eval set
+        # Rough MDE ≈ 2.8 * sigma / sqrt(N) for 80% power, alpha=0.05
+        # Assuming sigma ≈ 0.15 for per-game Brier variance
+        mde_eval = 2.8 * 0.15 / max(eval_games ** 0.5, 1)
+
+        return {
+            "dev_years": self.dev_years,
+            "eval_years": self.eval_years,
+            "dev_games_approx": dev_games,
+            "eval_games_approx": eval_games,
+            "n_tuned_constants": n_tuned_constants,
+            "dev_dof_ratio": round(dev_ratio, 4),
+            "eval_dof_ratio": round(eval_ratio, 4),
+            "target_dof_ratio": 0.01,
+            "eval_mde_brier": round(mde_eval, 4),
+            "eval_mde_note": (
+                f"Minimum detectable Brier improvement on eval set: "
+                f"{mde_eval:.4f} (80% power, alpha=0.05). Improvements "
+                f"smaller than this cannot be reliably detected."
+            ),
+            "warnings": warnings,
+        }
+
+
+# ======================================================================
+# Parametric Decontamination Protocol
+# ======================================================================
+
+
+@dataclass
+class ContaminationLayer:
+    """Describes one layer of data contamination and its decontamination status."""
+
+    name: str
+    description: str
+    decontaminable: bool
+    decontamination_method: str
+    status: str  # "contaminated", "decontaminated", "inherently_clean"
+    affected_constants: List[str] = field(default_factory=list)
+    notes: str = ""
+
+
+def assess_contamination(
+    dev_eval_split: Optional[DevEvalSplit] = None,
+    constants_retuned_on_dev_only: Optional[List[str]] = None,
+) -> "dict[str, object]":
+    """Assess the current contamination state of the pipeline.
+
+    Contamination has two distinct layers:
+
+    **Layer 1 — Architectural (NOT decontaminable):**
+    Which features to include, which models to use, which pipeline stages
+    exist.  These choices were shaped by observing all 2005-2025 outcomes.
+    This is a sunk cost — the only remedy is prospective evaluation on
+    genuinely unseen data (2026+).
+
+    **Layer 2 — Parametric (decontaminable):**
+    The specific VALUES of Tier 3 constants (ensemble weights, MC noise,
+    etc.).  These can be re-derived from scratch using only dev years via
+    the SensitivityAnalyzer, then evaluated on eval years with genuinely
+    untouched parameter values.
+
+    Running the decontamination protocol upgrades eval-year results from
+    Level 3 (retrospective) to Level 2.5 (architecture-contaminated but
+    parameter-clean).
+
+    Args:
+        dev_eval_split: If provided, uses this split to assess status.
+        constants_retuned_on_dev_only: Names of Tier 3 constants that
+            have been re-tuned using only dev years.
+
+    Returns:
+        Dict with per-layer contamination assessment and overall status.
+    """
+    constants_retuned = set(constants_retuned_on_dev_only or [])
+
+    # Import the registry to identify which constants matter
+    try:
+        from .rdof_audit import get_tier3_constants
+        tier3 = get_tier3_constants()
+        tier3_names = [c.name for c in tier3]
+        # Identify constants that are active (non-zero value)
+        active_tier3 = [
+            c.name for c in tier3
+            if isinstance(c.current_value, (int, float))
+            and c.current_value != 0
+        ]
+        disabled_tier3 = [
+            c.name for c in tier3
+            if isinstance(c.current_value, (int, float))
+            and c.current_value == 0
+        ]
+    except ImportError:
+        tier3_names = []
+        active_tier3 = []
+        disabled_tier3 = []
+
+    # Layer 1: Architectural
+    arch_layer = ContaminationLayer(
+        name="architectural",
+        description=(
+            "Feature set selection, model architecture, pipeline stages. "
+            "FIXED_FEATURE_SET claims literature-based selection but was "
+            "iteratively refined with knowledge of 2005-2025 outcomes."
+        ),
+        decontaminable=False,
+        decontamination_method=(
+            "Cannot be decontaminated retrospectively. Requires prospective "
+            "evaluation on genuinely unseen data (2026+ tournaments). "
+            "Accept as sunk cost for current evaluation."
+        ),
+        status="contaminated",
+        affected_constants=[],
+        notes=(
+            "Affected decisions: FIXED_FEATURE_SET (27 features), "
+            "4-model ensemble architecture, symmetric augmentation, "
+            "tournament adaptation, Bayesian shrinkage priors. "
+            "The feature set cites published sources ([KP], [OL], [538]) "
+            "but the specific COMBINATION was validated on 2005-2025 data."
+        ),
+    )
+
+    # Layer 2: Parametric
+    still_contaminated = [n for n in active_tier3 if n not in constants_retuned]
+    retuned = [n for n in active_tier3 if n in constants_retuned]
+    parametric_status = (
+        "decontaminated" if not still_contaminated
+        else "partially_decontaminated" if retuned
+        else "contaminated"
+    )
+
+    param_layer = ContaminationLayer(
+        name="parametric",
+        description=(
+            "Specific values of Tier 3 freely-tuned constants. "
+            "These were originally calibrated via LOYO on all 2005-2025 "
+            "data, creating circular validation."
+        ),
+        decontaminable=True,
+        decontamination_method=(
+            "Re-tune each active Tier 3 constant using SensitivityAnalyzer "
+            "with dev_years ONLY (excluding eval years). Use the optimal "
+            "value from the dev-only grid search. Then evaluate on eval "
+            "years exactly once."
+        ),
+        status=parametric_status,
+        affected_constants=active_tier3,
+        notes=(
+            f"{len(retuned)}/{len(active_tier3)} active Tier 3 constants "
+            f"have been re-tuned on dev-only data. "
+            f"{len(disabled_tier3)} constants are disabled (value=0) and "
+            f"consume no effective DoF. "
+            f"Still contaminated: {still_contaminated}"
+        ),
+    )
+
+    # Overall integrity level
+    if parametric_status == "decontaminated" and dev_eval_split is not None:
+        integrity_level = 2.5
+        integrity_note = (
+            "QUASI-PROSPECTIVE (parametric): All Tier 3 constants were "
+            "re-tuned on dev years only. Eval-year results reflect "
+            "genuinely untouched parameter values, though the pipeline "
+            "architecture was still shaped by knowledge of eval years."
+        )
+    elif parametric_status == "partially_decontaminated":
+        integrity_level = 2.75
+        integrity_note = (
+            f"PARTIALLY DECONTAMINATED: {len(retuned)}/{len(active_tier3)} "
+            f"constants re-tuned on dev-only data. Remaining {len(still_contaminated)} "
+            f"are still contaminated: {still_contaminated}"
+        )
+    else:
+        integrity_level = 3
+        integrity_note = (
+            "RETROSPECTIVE: All constants were tuned on the same data used "
+            "for evaluation. Results overstate true OOS performance."
+        )
+
+    return {
+        "layers": [
+            {
+                "name": arch_layer.name,
+                "decontaminable": arch_layer.decontaminable,
+                "status": arch_layer.status,
+                "method": arch_layer.decontamination_method,
+                "notes": arch_layer.notes,
+            },
+            {
+                "name": param_layer.name,
+                "decontaminable": param_layer.decontaminable,
+                "status": param_layer.status,
+                "method": param_layer.decontamination_method,
+                "affected_constants": param_layer.affected_constants,
+                "retuned_on_dev_only": retuned,
+                "still_contaminated": still_contaminated,
+                "disabled": disabled_tier3,
+                "notes": param_layer.notes,
+            },
+        ],
+        "integrity_level": integrity_level,
+        "integrity_note": integrity_note,
+        "decontamination_protocol": [
+            "1. Declare DevEvalSplit BEFORE any re-tuning begins",
+            "2. Run SensitivityAnalyzer with dev_years only for each active Tier 3 constant",
+            "3. Record the dev-optimal value for each constant",
+            "4. Apply dev-optimal values to the pipeline config",
+            "5. Freeze pipeline (freeze_pipeline())",
+            "6. Evaluate on eval years EXACTLY ONCE (ProspectiveValidator)",
+            "7. Report results as Level 2.5 (architecture-contaminated, parameter-clean)",
+            "8. For Level 1: wait for 2026+ tournament with pre-registered freeze",
+        ],
+    }
 
 
 # ======================================================================
@@ -214,16 +714,38 @@ class LOYOResult:
     config_snapshot: Dict[str, Any] = field(default_factory=dict)
 
     def summary(self) -> str:
-        """Human-readable summary."""
+        """Human-readable summary with statistical diagnostics."""
+        n_folds = len(self.fold_results)
+        total_games = sum(f.n_test_games for f in self.fold_results)
+
+        # Compute SE of mean Brier
+        if n_folds > 1:
+            brier_arr = np.array([f.brier_score for f in self.fold_results])
+            se_mean = float(np.std(brier_arr, ddof=1) / np.sqrt(n_folds))
+        else:
+            se_mean = 0.0
+
+        dof_ratio = _N_TUNED_CONSTANTS / max(total_games, 1)
+
         lines = [
-            f"LOYO Validation ({len(self.fold_results)} folds):",
+            f"LOYO Validation ({n_folds} folds, {total_games} total games):",
             f"  Mean Brier:  {self.mean_brier:.6f} (+/- {self.std_brier:.6f})",
+            f"  SE(mean):    {se_mean:.6f}",
             f"  Mean LogLoss: {self.mean_logloss:.6f}",
             f"  Mean Accuracy: {self.mean_accuracy:.4f}",
             f"  Total time: {self.total_time_seconds:.1f}s",
             "",
-            "  Per-year breakdown:",
+            f"  DoF/sample ratio: {_N_TUNED_CONSTANTS}/{total_games} = {dof_ratio:.3f}"
+            f" (target < 0.01)",
         ]
+        if dof_ratio > 0.01:
+            lines.append(
+                "  ** WARNING: DoF/sample ratio exceeds target. "
+                "Results may overstate OOS performance."
+            )
+        lines.append(f"  Integrity level: 3 (retrospective diagnostic)")
+        lines.append("")
+        lines.append("  Per-year breakdown:")
         for year, brier in sorted(self.year_briers.items()):
             lines.append(f"    {year}: Brier={brier:.6f}")
         return "\n".join(lines)
@@ -643,6 +1165,13 @@ class LOYOValidator:
             result = LOYOResult(total_time_seconds=total_time)
 
         logger.info("\n%s", result.summary())
+
+        # Log statistical diagnostics
+        if fold_results:
+            diagnostics = compute_validation_diagnostics(fold_results)
+            for warning in diagnostics.get("warnings", []):
+                logger.warning(warning)
+
         return result
 
     def _compute_ece(
@@ -667,15 +1196,18 @@ class LOYOValidator:
 
 
 class FeatureAblator:
-    """The "0.001 Rule" enforcer.
+    """Statistically-powered feature ablation.
 
-    Systematically tests each feature and sub-model to verify it
-    improves mean LOYO Brier by >= 0.001. Features/models that
-    don't meet this threshold are flagged for removal.
+    Tests each feature/sub-model by measuring the LOYO Brier impact of
+    removing it.  Features whose removal does not produce a statistically
+    significant degradation (paired t-test across folds) are flagged for
+    deletion.
 
-    "Delete any feature or sub-model that does not improve the
-    mean LOYO Brier score by at least 0.001. No exceptions for
-    'cool' features."
+    The legacy "0.001 Rule" has been superseded by a powered threshold
+    derived from fold-level variance.  With 7 folds of ~63 games,
+    SE(mean Brier) ≈ 0.009, making 0.001 indistinguishable from noise.
+    The powered threshold is typically ~0.018-0.025 (depending on fold
+    variance), ensuring ablation decisions have real statistical backing.
 
     TEMPORAL INTEGRITY NOTE: The ``loyo_validator`` passed to
     ``ablate_features`` must use ``temporal_mode='rolling_window'``
@@ -683,14 +1215,23 @@ class FeatureAblator:
     temporally honest evaluation.  Using ``leave_one_out`` mode
     would overstate feature value by including future years in
     training folds.
+
+    CIRCULARITY WARNING: Even with a powered threshold, ablation
+    decisions are circular because the pipeline's constants were
+    tuned on the same data.  A feature may appear to "help" simply
+    because the pipeline was optimized with it present.  True feature
+    value can only be confirmed via prospective (Level 1/2) evaluation.
     """
 
     def __init__(
         self,
         min_improvement: float = MINIMUM_BRIER_IMPROVEMENT,
+        use_powered_threshold: bool = True,
     ):
         self.min_improvement = min_improvement
+        self.use_powered_threshold = use_powered_threshold
         self.ablation_results: Dict[str, Dict] = {}
+        self._powered_threshold: Optional[float] = None
 
     def ablate_features(
         self,
@@ -700,14 +1241,22 @@ class FeatureAblator:
         predict_fn: Callable,
         feature_names: List[str],
         baseline_brier: Optional[float] = None,
+        dev_eval_split: Optional[DevEvalSplit] = None,
     ) -> Dict[str, Dict]:
         """Run leave-one-feature-out ablation with LOYO validation.
 
         For each feature:
         1. Remove it from the feature matrix
         2. Run full LOYO validation
-        3. Compare to baseline Brier
-        4. If removal IMPROVES Brier (or hurts by < 0.001), flag for deletion
+        3. Compare per-fold Brier scores via paired t-test
+        4. If removal does not cause a statistically significant
+           degradation, flag for deletion
+
+        The effective threshold is computed from fold-level variance
+        when ``use_powered_threshold=True`` (default).  This replaces
+        the legacy 0.001 fixed threshold, which is ~0.11× the SE of
+        the mean Brier across 7 folds and therefore statistically
+        meaningless.
 
         Args:
             loyo_validator: Configured LOYOValidator
@@ -724,15 +1273,53 @@ class FeatureAblator:
                 "improvement": float (positive = feature helps),
                 "keep": bool,
                 "reason": str,
+                "per_fold_baseline": list (per-fold Brier scores),
+                "per_fold_ablated": list (per-fold Brier scores),
+                "powered_threshold": float,
+                "paired_t_p_value": float or None,
             }
         """
-        # Get baseline if not provided
-        if baseline_brier is None:
-            logger.info("Computing baseline LOYO Brier...")
-            baseline_result = loyo_validator.validate(
-                data_by_year, train_fn, predict_fn
+        # Guard: if a dev/eval split is provided, verify ablation only
+        # uses dev years.  This prevents the circular validation problem
+        # where features are evaluated on the same data used to tune
+        # the pipeline constants.
+        if dev_eval_split is not None:
+            validator_years = set(loyo_validator.years)
+            data_years = set(data_by_year.keys())
+            ablation_years = validator_years & data_years
+            leakage = dev_eval_split.validate_no_leakage(
+                list(ablation_years)
             )
+            if not leakage["clean"]:
+                logger.error(
+                    "ABLATION LEAKAGE: %s — ablation is using eval years %s. "
+                    "Results will be circular (Level 3). Pass a validator "
+                    "restricted to dev_years to fix this.",
+                    leakage["warning"],
+                    leakage["leaked_years"],
+                )
+
+        # Get baseline with per-fold detail
+        logger.info("Computing baseline LOYO Brier...")
+        baseline_result = loyo_validator.validate(
+            data_by_year, train_fn, predict_fn
+        )
+        baseline_fold_briers = [f.brier_score for f in baseline_result.fold_results]
+
+        if baseline_brier is None:
             baseline_brier = baseline_result.mean_brier
+
+        # Compute powered threshold from baseline fold variance
+        if self.use_powered_threshold and len(baseline_fold_briers) >= 3:
+            effective_threshold = compute_ablation_threshold(baseline_fold_briers)
+            self._powered_threshold = effective_threshold
+            logger.info(
+                "Using powered threshold: %.4f (vs legacy %.4f)",
+                effective_threshold, self.min_improvement,
+            )
+        else:
+            effective_threshold = self.min_improvement
+            self._powered_threshold = effective_threshold
 
         logger.info("Baseline LOYO Brier: %.6f", baseline_brier)
         logger.info("Starting feature ablation (%d features)...", len(feature_names))
@@ -759,23 +1346,75 @@ class FeatureAblator:
                     ablated_data, train_fn, predict_fn
                 )
                 ablated_brier = ablated_result.mean_brier
+                ablated_fold_briers = [
+                    f.brier_score for f in ablated_result.fold_results
+                ]
             except Exception as e:
                 logger.warning("Ablation failed for %s: %s", feat_name, e)
                 ablated_brier = baseline_brier
+                ablated_fold_briers = list(baseline_fold_briers)
 
-            # Improvement = baseline - ablated (positive = feature helps)
+            # Improvement = ablated - baseline (positive = feature helps)
             improvement = ablated_brier - baseline_brier
 
-            keep = improvement >= self.min_improvement
+            # Paired t-test across folds for statistical significance
+            p_value = None
+            if (
+                len(baseline_fold_briers) == len(ablated_fold_briers)
+                and len(baseline_fold_briers) >= 3
+            ):
+                fold_diffs = np.array(ablated_fold_briers) - np.array(
+                    baseline_fold_briers
+                )
+                n = len(fold_diffs)
+                mean_diff = float(np.mean(fold_diffs))
+                std_diff = float(np.std(fold_diffs, ddof=1))
+                if std_diff > 1e-12:
+                    import math
+
+                    t_stat = mean_diff / (std_diff / math.sqrt(n))
+                    # One-sided: is ablation significantly worse?
+                    try:
+                        from scipy.stats import t as t_dist
+
+                        p_value = float(1.0 - t_dist.cdf(t_stat, df=n - 1))
+                    except ImportError:
+                        # Approximate for small df
+                        from .statistical_tests import _t_survival
+
+                        p_value = float(_t_survival(t_stat, n - 1))
+                elif mean_diff > 0:
+                    p_value = 0.0
+                else:
+                    p_value = 1.0
+
+            keep = improvement >= effective_threshold
+            # If we have a p-value, also require statistical significance
+            if p_value is not None and self.use_powered_threshold:
+                keep = keep and p_value < 0.05
 
             reason = ""
             if keep:
-                reason = f"Feature improves Brier by {improvement:.6f} (>= {self.min_improvement})"
+                p_str = f", p={p_value:.4f}" if p_value is not None else ""
+                reason = (
+                    f"Feature improves Brier by {improvement:.6f} "
+                    f"(>= {effective_threshold:.4f}{p_str})"
+                )
             else:
                 if improvement < 0:
-                    reason = f"Feature HURTS Brier by {abs(improvement):.6f} — DELETE"
+                    reason = (
+                        f"Feature HURTS Brier by {abs(improvement):.6f} — DELETE"
+                    )
+                elif p_value is not None and p_value >= 0.05:
+                    reason = (
+                        f"Feature improvement {improvement:.6f} not significant "
+                        f"(p={p_value:.4f} >= 0.05) — DELETE"
+                    )
                 else:
-                    reason = f"Feature improvement {improvement:.6f} < {self.min_improvement} threshold — DELETE"
+                    reason = (
+                        f"Feature improvement {improvement:.6f} "
+                        f"< {effective_threshold:.4f} threshold — DELETE"
+                    )
 
             results[feat_name] = {
                 "ablated_brier": ablated_brier,
@@ -783,11 +1422,18 @@ class FeatureAblator:
                 "improvement": improvement,
                 "keep": keep,
                 "reason": reason,
+                "per_fold_baseline": baseline_fold_briers,
+                "per_fold_ablated": ablated_fold_briers,
+                "powered_threshold": effective_threshold,
+                "paired_t_p_value": p_value,
             }
 
             logger.info(
-                "  %s: ablated=%.6f, improvement=%.6f, %s",
-                feat_name, ablated_brier, improvement,
+                "  %s: ablated=%.6f, improvement=%.6f, p=%s, %s",
+                feat_name,
+                ablated_brier,
+                improvement,
+                f"{p_value:.4f}" if p_value is not None else "N/A",
                 "KEEP" if keep else "DELETE",
             )
 
@@ -796,8 +1442,12 @@ class FeatureAblator:
         delete_count = len(results) - keep_count
 
         logger.info(
-            "\nAblation summary: KEEP %d features, DELETE %d features",
-            keep_count, delete_count,
+            "\nAblation summary: KEEP %d features, DELETE %d features "
+            "(threshold=%.4f, method=%s)",
+            keep_count,
+            delete_count,
+            effective_threshold,
+            "powered_t_test" if self.use_powered_threshold else "legacy_0.001",
         )
 
         self.ablation_results = results
@@ -866,18 +1516,26 @@ class FeatureAblator:
                 "Use mode='masked' for fast screening."
             )
 
-        # Get baseline if not provided
+        # Get baseline with per-fold detail
+        logger.info("Computing baseline LOYO Brier for family ablation...")
+        baseline_result = loyo_validator.validate(
+            data_by_year, train_fn, predict_fn
+        )
+        baseline_fold_briers = [f.brier_score for f in baseline_result.fold_results]
+
         if baseline_brier is None:
-            logger.info("Computing baseline LOYO Brier for family ablation...")
-            baseline_result = loyo_validator.validate(
-                data_by_year, train_fn, predict_fn
-            )
             baseline_brier = baseline_result.mean_brier
+
+        # Compute powered threshold
+        if self.use_powered_threshold and len(baseline_fold_briers) >= 3:
+            effective_threshold = compute_ablation_threshold(baseline_fold_briers)
+        else:
+            effective_threshold = self.min_improvement
 
         logger.info("Baseline LOYO Brier: %.6f", baseline_brier)
         logger.info(
-            "Starting family ablation (%d families, mode=%s)...",
-            len(families), mode,
+            "Starting family ablation (%d families, mode=%s, threshold=%.4f)...",
+            len(families), mode, effective_threshold,
         )
 
         # Build feature name -> index mapping
@@ -981,12 +1639,12 @@ class FeatureAblator:
             # Improvement = ablated - baseline
             # Positive means removing family HURTS (feature helps)
             improvement = ablated_brier - baseline_brier
-            keep = improvement >= self.min_improvement
+            keep = improvement >= effective_threshold
 
             if keep:
                 reason = (
                     f"Family improves Brier by {improvement:.6f} "
-                    f"(>= {self.min_improvement})"
+                    f"(>= {effective_threshold:.4f})"
                 )
             elif improvement < 0:
                 reason = (
@@ -995,7 +1653,7 @@ class FeatureAblator:
             else:
                 reason = (
                     f"Family improvement {improvement:.6f} "
-                    f"< {self.min_improvement} threshold — DELETE"
+                    f"< {effective_threshold:.4f} threshold — DELETE"
                 )
 
             results[family.name] = {
