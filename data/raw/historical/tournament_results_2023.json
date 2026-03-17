@@ -33,7 +33,7 @@
       "team1_seed": 5,
       "team1_score": 63,
       "team2_id": "college_of_charleston",
-      "team2_seed": 13,
+      "team2_seed": 12,
       "team2_score": 57,
       "team1_won": true
     },
@@ -68,7 +68,7 @@
       "team1_id": "baylor",
       "team1_seed": 3,
       "team1_score": 74,
-      "team2_id": "uc_santa_barbara",
+      "team2_id": "ucsb",
       "team2_seed": 14,
       "team2_score": 56,
       "team1_won": true
@@ -389,7 +389,7 @@
       "year": 2023,
       "round_name": "R64",
       "region": "Midwest",
-      "team1_id": "miami_fl",
+      "team1_id": "miami__fl",
       "team1_seed": 5,
       "team1_score": 63,
       "team2_id": "drake",
@@ -473,7 +473,7 @@
       "year": 2023,
       "round_name": "R32",
       "region": "Midwest",
-      "team1_id": "miami_fl",
+      "team1_id": "miami__fl",
       "team1_seed": 5,
       "team1_score": 69,
       "team2_id": "indiana",
@@ -512,7 +512,7 @@
       "team1_id": "houston",
       "team1_seed": 1,
       "team1_score": 56,
-      "team2_id": "miami_fl",
+      "team2_id": "miami__fl",
       "team2_seed": 5,
       "team2_score": 55,
       "team1_won": true
@@ -536,7 +536,7 @@
       "team1_id": "houston",
       "team1_seed": 1,
       "team1_score": 59,
-      "team2_id": "miami_fl",
+      "team2_id": "miami__fl",
       "team2_seed": 5,
       "team2_score": 47,
       "team1_won": true
@@ -728,7 +728,7 @@
       "team1_id": "connecticut",
       "team1_seed": 4,
       "team1_score": 72,
-      "team2_id": "miami_fl",
+      "team2_id": "miami__fl",
       "team2_seed": 5,
       "team2_score": 59,
       "team1_won": true

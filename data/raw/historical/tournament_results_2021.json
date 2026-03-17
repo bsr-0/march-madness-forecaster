@@ -32,7 +32,7 @@
       "team1_id": "creighton",
       "team1_seed": 5,
       "team1_score": 63,
-      "team2_id": "uc_santa_barbara",
+      "team2_id": "ucsb",
       "team2_seed": 12,
       "team2_score": 62,
       "team1_won": true
@@ -557,7 +557,7 @@
       "year": 2021,
       "round_name": "R64",
       "region": "Midwest",
-      "team1_id": "loyola_chicago",
+      "team1_id": "loyola_il",
       "team1_seed": 8,
       "team1_score": 71,
       "team2_id": "georgia_tech",
@@ -644,7 +644,7 @@
       "team1_id": "illinois",
       "team1_seed": 1,
       "team1_score": 71,
-      "team2_id": "loyola_chicago",
+      "team2_id": "loyola_il",
       "team2_seed": 8,
       "team2_score": 58,
       "team1_won": true
