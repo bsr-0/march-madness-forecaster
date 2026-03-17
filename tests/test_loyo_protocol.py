@@ -11,6 +11,7 @@ from src.ml.evaluation.loyo_protocol import (
     DEFAULT_FEATURE_FAMILIES,
     LOYO_YEARS,
     MINIMUM_BRIER_IMPROVEMENT,
+    ContaminationLayer,
     DevEvalSplit,
     FeatureAblator,
     FeatureFamily,
@@ -19,6 +20,7 @@ from src.ml.evaluation.loyo_protocol import (
     LOYOValidator,
     ProspectiveValidator,
     ProspectiveValidationResult,
+    assess_contamination,
     compute_ablation_threshold,
     compute_validation_diagnostics,
     validate_family_coverage,
@@ -955,3 +957,149 @@ class TestDevEvalSplit:
         diag = split.dof_diagnostics()
         assert diag["eval_mde_brier"] > 0
         assert "Minimum detectable" in diag["eval_mde_note"]
+
+
+# ---------------------------------------------------------------------------
+# ContaminationLayer dataclass
+# ---------------------------------------------------------------------------
+
+
+class TestContaminationLayer:
+    """Tests for the ContaminationLayer dataclass."""
+
+    def test_basic_construction(self):
+        layer = ContaminationLayer(
+            name="test_layer",
+            description="A test contamination layer",
+            decontaminable=True,
+            decontamination_method="Re-tune on dev only",
+            status="contaminated",
+        )
+        assert layer.name == "test_layer"
+        assert layer.decontaminable is True
+        assert layer.status == "contaminated"
+        assert layer.affected_constants == []
+        assert layer.notes == ""
+
+    def test_with_affected_constants(self):
+        layer = ContaminationLayer(
+            name="parametric",
+            description="Parametric contamination",
+            decontaminable=True,
+            decontamination_method="Re-tune",
+            status="partially_decontaminated",
+            affected_constants=["mc_noise_std", "ensemble_lr_weight"],
+            notes="2 of 8 retuned",
+        )
+        assert len(layer.affected_constants) == 2
+        assert "mc_noise_std" in layer.affected_constants
+        assert layer.notes == "2 of 8 retuned"
+
+
+# ---------------------------------------------------------------------------
+# assess_contamination
+# ---------------------------------------------------------------------------
+
+
+class TestAssessContamination:
+    """Tests for the assess_contamination() function."""
+
+    def test_default_returns_level3(self):
+        """With no decontamination effort, integrity level should be 3."""
+        result = assess_contamination()
+        assert result["integrity_level"] == 3
+        assert "RETROSPECTIVE" in result["integrity_note"]
+        assert len(result["layers"]) == 2
+
+    def test_layers_structure(self):
+        """Should return architectural and parametric layers."""
+        result = assess_contamination()
+        layer_names = [layer["name"] for layer in result["layers"]]
+        assert "architectural" in layer_names
+        assert "parametric" in layer_names
+
+    def test_architectural_not_decontaminable(self):
+        """Architectural layer should never be decontaminable."""
+        result = assess_contamination()
+        arch = [l for l in result["layers"] if l["name"] == "architectural"][0]
+        assert arch["decontaminable"] is False
+        assert arch["status"] == "contaminated"
+
+    def test_parametric_decontaminable(self):
+        """Parametric layer should be flagged as decontaminable."""
+        result = assess_contamination()
+        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        assert param["decontaminable"] is True
+
+    def test_decontamination_protocol_present(self):
+        """Should include the 8-step decontamination protocol."""
+        result = assess_contamination()
+        protocol = result["decontamination_protocol"]
+        assert len(protocol) == 8
+        assert any("DevEvalSplit" in step for step in protocol)
+        assert any("SensitivityAnalyzer" in step for step in protocol)
+        assert any("Level 2.5" in step for step in protocol)
+
+    def test_partial_decontamination(self):
+        """Retuning some constants should give partially_decontaminated."""
+        result = assess_contamination()
+        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        if not param["affected_constants"]:
+            pytest.skip("No Tier 3 constants found (rdof_audit import may fail)")
+
+        # Retune just one constant
+        one_constant = param["affected_constants"][0]
+        result2 = assess_contamination(
+            constants_retuned_on_dev_only=[one_constant],
+        )
+        param2 = [l for l in result2["layers"] if l["name"] == "parametric"][0]
+        assert one_constant in param2["retuned_on_dev_only"]
+        # If there were more than one, should be partial
+        if len(param["affected_constants"]) > 1:
+            assert param2["status"] == "partially_decontaminated"
+            assert result2["integrity_level"] == 2.75
+
+    def test_full_decontamination_with_split(self):
+        """Retuning ALL active Tier 3 constants with a split => Level 2.5."""
+        result = assess_contamination()
+        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        all_active = param["affected_constants"]
+        if not all_active:
+            pytest.skip("No Tier 3 constants found (rdof_audit import may fail)")
+
+        split = DevEvalSplit.recommended_split()
+        result2 = assess_contamination(
+            dev_eval_split=split,
+            constants_retuned_on_dev_only=all_active,
+        )
+        assert result2["integrity_level"] == 2.5
+        assert "QUASI-PROSPECTIVE" in result2["integrity_note"]
+        param2 = [l for l in result2["layers"] if l["name"] == "parametric"][0]
+        assert param2["status"] == "decontaminated"
+        assert len(param2["still_contaminated"]) == 0
+
+    def test_full_decontamination_without_split_stays_level3(self):
+        """Retuning all constants but without DevEvalSplit should stay Level 3."""
+        result = assess_contamination()
+        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        all_active = param["affected_constants"]
+        if not all_active:
+            pytest.skip("No Tier 3 constants found")
+
+        # No dev_eval_split provided
+        result2 = assess_contamination(
+            constants_retuned_on_dev_only=all_active,
+        )
+        # Without a split, parametric is decontaminated but integrity stays 3
+        # because dev_eval_split is None
+        param2 = [l for l in result2["layers"] if l["name"] == "parametric"][0]
+        assert param2["status"] == "decontaminated"
+        # integrity_level remains 3 when no split is provided
+        assert result2["integrity_level"] == 3
+
+    def test_disabled_constants_reported(self):
+        """Disabled Tier 3 constants should be listed in the parametric layer."""
+        result = assess_contamination()
+        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        # disabled list should exist even if empty
+        assert "disabled" in param

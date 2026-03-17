@@ -340,6 +340,197 @@ class DevEvalSplit:
 
 
 # ======================================================================
+# Parametric Decontamination Protocol
+# ======================================================================
+
+
+@dataclass
+class ContaminationLayer:
+    """Describes one layer of data contamination and its decontamination status."""
+
+    name: str
+    description: str
+    decontaminable: bool
+    decontamination_method: str
+    status: str  # "contaminated", "decontaminated", "inherently_clean"
+    affected_constants: List[str] = field(default_factory=list)
+    notes: str = ""
+
+
+def assess_contamination(
+    dev_eval_split: Optional[DevEvalSplit] = None,
+    constants_retuned_on_dev_only: Optional[List[str]] = None,
+) -> "dict[str, object]":
+    """Assess the current contamination state of the pipeline.
+
+    Contamination has two distinct layers:
+
+    **Layer 1 — Architectural (NOT decontaminable):**
+    Which features to include, which models to use, which pipeline stages
+    exist.  These choices were shaped by observing all 2005-2025 outcomes.
+    This is a sunk cost — the only remedy is prospective evaluation on
+    genuinely unseen data (2026+).
+
+    **Layer 2 — Parametric (decontaminable):**
+    The specific VALUES of Tier 3 constants (ensemble weights, MC noise,
+    etc.).  These can be re-derived from scratch using only dev years via
+    the SensitivityAnalyzer, then evaluated on eval years with genuinely
+    untouched parameter values.
+
+    Running the decontamination protocol upgrades eval-year results from
+    Level 3 (retrospective) to Level 2.5 (architecture-contaminated but
+    parameter-clean).
+
+    Args:
+        dev_eval_split: If provided, uses this split to assess status.
+        constants_retuned_on_dev_only: Names of Tier 3 constants that
+            have been re-tuned using only dev years.
+
+    Returns:
+        Dict with per-layer contamination assessment and overall status.
+    """
+    constants_retuned = set(constants_retuned_on_dev_only or [])
+
+    # Import the registry to identify which constants matter
+    try:
+        from .rdof_audit import get_tier3_constants
+        tier3 = get_tier3_constants()
+        tier3_names = [c.name for c in tier3]
+        # Identify constants that are active (non-zero value)
+        active_tier3 = [
+            c.name for c in tier3
+            if isinstance(c.current_value, (int, float))
+            and c.current_value != 0
+        ]
+        disabled_tier3 = [
+            c.name for c in tier3
+            if isinstance(c.current_value, (int, float))
+            and c.current_value == 0
+        ]
+    except ImportError:
+        tier3_names = []
+        active_tier3 = []
+        disabled_tier3 = []
+
+    # Layer 1: Architectural
+    arch_layer = ContaminationLayer(
+        name="architectural",
+        description=(
+            "Feature set selection, model architecture, pipeline stages. "
+            "FIXED_FEATURE_SET claims literature-based selection but was "
+            "iteratively refined with knowledge of 2005-2025 outcomes."
+        ),
+        decontaminable=False,
+        decontamination_method=(
+            "Cannot be decontaminated retrospectively. Requires prospective "
+            "evaluation on genuinely unseen data (2026+ tournaments). "
+            "Accept as sunk cost for current evaluation."
+        ),
+        status="contaminated",
+        affected_constants=[],
+        notes=(
+            "Affected decisions: FIXED_FEATURE_SET (27 features), "
+            "4-model ensemble architecture, symmetric augmentation, "
+            "tournament adaptation, Bayesian shrinkage priors. "
+            "The feature set cites published sources ([KP], [OL], [538]) "
+            "but the specific COMBINATION was validated on 2005-2025 data."
+        ),
+    )
+
+    # Layer 2: Parametric
+    still_contaminated = [n for n in active_tier3 if n not in constants_retuned]
+    retuned = [n for n in active_tier3 if n in constants_retuned]
+    parametric_status = (
+        "decontaminated" if not still_contaminated
+        else "partially_decontaminated" if retuned
+        else "contaminated"
+    )
+
+    param_layer = ContaminationLayer(
+        name="parametric",
+        description=(
+            "Specific values of Tier 3 freely-tuned constants. "
+            "These were originally calibrated via LOYO on all 2005-2025 "
+            "data, creating circular validation."
+        ),
+        decontaminable=True,
+        decontamination_method=(
+            "Re-tune each active Tier 3 constant using SensitivityAnalyzer "
+            "with dev_years ONLY (excluding eval years). Use the optimal "
+            "value from the dev-only grid search. Then evaluate on eval "
+            "years exactly once."
+        ),
+        status=parametric_status,
+        affected_constants=active_tier3,
+        notes=(
+            f"{len(retuned)}/{len(active_tier3)} active Tier 3 constants "
+            f"have been re-tuned on dev-only data. "
+            f"{len(disabled_tier3)} constants are disabled (value=0) and "
+            f"consume no effective DoF. "
+            f"Still contaminated: {still_contaminated}"
+        ),
+    )
+
+    # Overall integrity level
+    if parametric_status == "decontaminated" and dev_eval_split is not None:
+        integrity_level = 2.5
+        integrity_note = (
+            "QUASI-PROSPECTIVE (parametric): All Tier 3 constants were "
+            "re-tuned on dev years only. Eval-year results reflect "
+            "genuinely untouched parameter values, though the pipeline "
+            "architecture was still shaped by knowledge of eval years."
+        )
+    elif parametric_status == "partially_decontaminated":
+        integrity_level = 2.75
+        integrity_note = (
+            f"PARTIALLY DECONTAMINATED: {len(retuned)}/{len(active_tier3)} "
+            f"constants re-tuned on dev-only data. Remaining {len(still_contaminated)} "
+            f"are still contaminated: {still_contaminated}"
+        )
+    else:
+        integrity_level = 3
+        integrity_note = (
+            "RETROSPECTIVE: All constants were tuned on the same data used "
+            "for evaluation. Results overstate true OOS performance."
+        )
+
+    return {
+        "layers": [
+            {
+                "name": arch_layer.name,
+                "decontaminable": arch_layer.decontaminable,
+                "status": arch_layer.status,
+                "method": arch_layer.decontamination_method,
+                "notes": arch_layer.notes,
+            },
+            {
+                "name": param_layer.name,
+                "decontaminable": param_layer.decontaminable,
+                "status": param_layer.status,
+                "method": param_layer.decontamination_method,
+                "affected_constants": param_layer.affected_constants,
+                "retuned_on_dev_only": retuned,
+                "still_contaminated": still_contaminated,
+                "disabled": disabled_tier3,
+                "notes": param_layer.notes,
+            },
+        ],
+        "integrity_level": integrity_level,
+        "integrity_note": integrity_note,
+        "decontamination_protocol": [
+            "1. Declare DevEvalSplit BEFORE any re-tuning begins",
+            "2. Run SensitivityAnalyzer with dev_years only for each active Tier 3 constant",
+            "3. Record the dev-optimal value for each constant",
+            "4. Apply dev-optimal values to the pipeline config",
+            "5. Freeze pipeline (freeze_pipeline())",
+            "6. Evaluate on eval years EXACTLY ONCE (ProspectiveValidator)",
+            "7. Report results as Level 2.5 (architecture-contaminated, parameter-clean)",
+            "8. For Level 1: wait for 2026+ tournament with pre-registered freeze",
+        ],
+    }
+
+
+# ======================================================================
 # Phase 2: Feature Family Ablation
 # ======================================================================
 
