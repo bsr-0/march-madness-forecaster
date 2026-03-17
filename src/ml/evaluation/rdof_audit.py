@@ -355,6 +355,69 @@ def get_tier3_constants() -> List[PipelineConstant]:
     return [c for c in CONSTANT_REGISTRY if c.tier == 3]
 
 
+def tier3_reduction_candidates() -> Dict[str, Any]:
+    """Identify Tier 3 constants that could be eliminated or promoted.
+
+    The DoF/sample ratio (58/440 ≈ 0.13) far exceeds the 0.01 target.
+    Reducing Tier 3 count is the most direct path to improving this ratio.
+
+    Returns a report of:
+    - Constants with current_value == 0 (disabled, can be removed)
+    - Constants that could be promoted to Tier 2 with structural constraints
+    - Constants that are coupled (e.g., ensemble weights summing to 1)
+    - Target Tier 3 count for various sample size scenarios
+    """
+    tier3 = get_tier3_constants()
+
+    disabled = [c for c in tier3
+                if isinstance(c.current_value, (int, float))
+                and c.current_value == 0]
+    coupled_groups = {
+        "ensemble_weights": [c for c in tier3
+                             if "ensemble" in c.name and "weight" in c.name],
+        "mc_injury_bounds": [c for c in tier3
+                             if "mc_injury_severity" in c.name],
+    }
+    # Count effective DoF for coupled groups (sum-to-1 means n-1 free params)
+    effective_dof_reduction = 0
+    for group_name, group in coupled_groups.items():
+        if len(group) > 1:
+            effective_dof_reduction += 1  # one constraint per group
+
+    n_total = len(CONSTANT_REGISTRY)
+    n_tier3 = len(tier3)
+    n_disabled = len(disabled)
+    n_effective = n_tier3 - n_disabled - effective_dof_reduction
+
+    return {
+        "n_total_constants": n_total,
+        "n_tier3": n_tier3,
+        "n_disabled_tier3": n_disabled,
+        "disabled_names": [c.name for c in disabled],
+        "n_coupled_constraints": effective_dof_reduction,
+        "coupled_groups": {
+            name: [c.name for c in group]
+            for name, group in coupled_groups.items()
+        },
+        "n_effective_tier3_dof": n_effective,
+        "current_dof_per_440_games": round(n_effective / 440, 4),
+        "target_tier3_for_440_games": 4,  # 4/440 ≈ 0.009 < 0.01
+        "reduction_needed": max(0, n_effective - 4),
+        "recommendations": [
+            f"Remove {n_disabled} disabled constants (value=0): "
+            f"{[c.name for c in disabled]}"
+            if disabled else "No disabled constants to remove",
+            f"Promote structurally-constrained Tier 3 to Tier 2 where possible "
+            f"(reduces effective DoF by making range bounds the constraint, "
+            f"not the specific value)",
+            f"Target: reduce effective Tier 3 DoF from {n_effective} to ~4 "
+            f"for 440-game evaluation sets (ratio = 0.009)",
+            f"Alternative: extend evaluation to 2026+ (prospective data) to "
+            f"increase denominator",
+        ],
+    }
+
+
 def get_constants_by_tier(tier: int) -> List[PipelineConstant]:
     return [c for c in CONSTANT_REGISTRY if c.tier == tier]
 
