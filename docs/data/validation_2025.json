@@ -4,9 +4,9 @@
   "method": "Leave-year-out: for each year, use that year's pre-tournament ratings to predict tournament outcomes",
   "overall": {
     "n_games": 0,
-    "accuracy": NaN,
-    "brier_score": NaN,
-    "log_loss": NaN
+    "accuracy": 0,
+    "brier_score": 0,
+    "log_loss": 0
   },
   "calibration": [],
   "per_year": [
