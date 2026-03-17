@@ -644,6 +644,102 @@ def _results_2018(nm):
 # ──────────────────────────────────────────────────────────────────────
 # Main: generate all files
 # ──────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
+# 2025 NCAA Tournament Results (Florida champion)
+# ──────────────────────────────────────────────────────────────────────
+def _results_2025(nm):
+    r = _resolve_id
+    Y = 2025
+    g = []
+    # EAST R64
+    g.append(_make_game(Y,"R64","East", r("duke",nm),1,93, r("mount_st_mary_s",nm),16,49))
+    g.append(_make_game(Y,"R64","East", r("mississippi_state",nm),8,67, r("baylor",nm),9,72))
+    g.append(_make_game(Y,"R64","East", r("oregon",nm),5,81, r("liberty",nm),12,52))
+    g.append(_make_game(Y,"R64","East", r("arizona",nm),4,93, r("akron",nm),13,65))
+    g.append(_make_game(Y,"R64","East", r("brigham_young",nm),6,62, r("virginia_commonwealth",nm),11,58))
+    g.append(_make_game(Y,"R64","East", r("wisconsin",nm),3,85, r("montana",nm),14,66))
+    g.append(_make_game(Y,"R64","East", r("saint_mary_s__ca",nm),7,68, r("vanderbilt",nm),10,55))
+    g.append(_make_game(Y,"R64","East", r("alabama",nm),2,90, r("robert_morris",nm),15,81))
+    # EAST R32
+    g.append(_make_game(Y,"R32","East", r("duke",nm),1,89, r("baylor",nm),9,66))
+    g.append(_make_game(Y,"R32","East", r("arizona",nm),4,87, r("oregon",nm),5,83))
+    g.append(_make_game(Y,"R32","East", r("wisconsin",nm),3,65, r("brigham_young",nm),6,60))
+    g.append(_make_game(Y,"R32","East", r("alabama",nm),2,82, r("saint_mary_s__ca",nm),7,67))
+    # EAST S16
+    g.append(_make_game(Y,"S16","East", r("duke",nm),1,100, r("arizona",nm),4,93))
+    g.append(_make_game(Y,"S16","East", r("alabama",nm),2,72, r("wisconsin",nm),3,64))
+    # EAST E8
+    g.append(_make_game(Y,"E8","East", r("duke",nm),1,85, r("alabama",nm),2,65))
+
+    # MIDWEST R64
+    g.append(_make_game(Y,"R64","Midwest", r("houston",nm),1,78, r("siu_edwardsville",nm),16,40))
+    g.append(_make_game(Y,"R64","Midwest", r("gonzaga",nm),8,89, r("georgia",nm),9,68))
+    g.append(_make_game(Y,"R64","Midwest", r("clemson",nm),5,67, r("mcneese_state",nm),12,69))
+    g.append(_make_game(Y,"R64","Midwest", r("purdue",nm),4,75, r("high_point",nm),13,63))
+    g.append(_make_game(Y,"R64","Midwest", r("illinois",nm),6,86, r("xavier",nm),11,73))
+    g.append(_make_game(Y,"R64","Midwest", r("kentucky",nm),3,76, r("troy",nm),14,57))
+    g.append(_make_game(Y,"R64","Midwest", r("ucla",nm),7,72, r("utah_state",nm),10,47))
+    g.append(_make_game(Y,"R64","Midwest", r("tennessee",nm),2,77, r("wofford",nm),15,62))
+    # MIDWEST R32
+    g.append(_make_game(Y,"R32","Midwest", r("houston",nm),1,81, r("gonzaga",nm),8,76))
+    g.append(_make_game(Y,"R32","Midwest", r("purdue",nm),4,71, r("mcneese_state",nm),12,63))
+    g.append(_make_game(Y,"R32","Midwest", r("kentucky",nm),3,84, r("illinois",nm),6,75))
+    g.append(_make_game(Y,"R32","Midwest", r("tennessee",nm),2,67, r("ucla",nm),7,56))
+    # MIDWEST S16
+    g.append(_make_game(Y,"S16","Midwest", r("houston",nm),1,62, r("purdue",nm),4,60))
+    g.append(_make_game(Y,"S16","Midwest", r("tennessee",nm),2,78, r("kentucky",nm),3,65))
+    # MIDWEST E8
+    g.append(_make_game(Y,"E8","Midwest", r("houston",nm),1,69, r("tennessee",nm),2,50))
+
+    # SOUTH R64
+    g.append(_make_game(Y,"R64","South", r("auburn",nm),1,83, r("alabama_state",nm),16,63))
+    g.append(_make_game(Y,"R64","South", r("louisville",nm),8,75, r("creighton",nm),9,89))
+    g.append(_make_game(Y,"R64","South", r("michigan",nm),5,68, r("uc_san_diego",nm),12,65))
+    g.append(_make_game(Y,"R64","South", r("texas_a_m",nm),4,74, r("yale",nm),13,68))
+    g.append(_make_game(Y,"R64","South", r("mississippi",nm),6,72, r("san_diego_state",nm),11,65))
+    g.append(_make_game(Y,"R64","South", r("iowa_state",nm),3,82, r("lipscomb",nm),14,55))
+    g.append(_make_game(Y,"R64","South", r("marquette",nm),7,66, r("new_mexico",nm),10,75))
+    g.append(_make_game(Y,"R64","South", r("michigan_state",nm),2,87, r("bryant",nm),15,62))
+    # SOUTH R32
+    g.append(_make_game(Y,"R32","South", r("auburn",nm),1,82, r("creighton",nm),9,70))
+    g.append(_make_game(Y,"R32","South", r("michigan",nm),5,73, r("texas_a_m",nm),4,65))
+    g.append(_make_game(Y,"R32","South", r("iowa_state",nm),3,68, r("mississippi",nm),6,60))
+    g.append(_make_game(Y,"R32","South", r("michigan_state",nm),2,71, r("new_mexico",nm),10,63))
+    # SOUTH S16
+    g.append(_make_game(Y,"S16","South", r("auburn",nm),1,78, r("michigan",nm),5,65))
+    g.append(_make_game(Y,"S16","South", r("michigan_state",nm),2,68, r("iowa_state",nm),3,62))
+    # SOUTH E8
+    g.append(_make_game(Y,"E8","South", r("auburn",nm),1,70, r("michigan_state",nm),2,64))
+
+    # WEST R64
+    g.append(_make_game(Y,"R64","West", r("florida",nm),1,95, r("norfolk_state",nm),16,69))
+    g.append(_make_game(Y,"R64","West", r("connecticut",nm),8,68, r("oklahoma",nm),9,62))
+    g.append(_make_game(Y,"R64","West", r("memphis",nm),5,70, r("colorado_state",nm),12,78))
+    g.append(_make_game(Y,"R64","West", r("maryland",nm),4,81, r("grand_canyon",nm),13,49))
+    g.append(_make_game(Y,"R64","West", r("missouri",nm),6,57, r("drake",nm),11,67))
+    g.append(_make_game(Y,"R64","West", r("texas_tech",nm),3,72, r("unc_wilmington",nm),14,61))
+    g.append(_make_game(Y,"R64","West", r("kansas",nm),7,72, r("arkansas",nm),10,79))
+    g.append(_make_game(Y,"R64","West", r("st_john_s_ny",nm),2,79, r("omaha",nm),15,55))
+    # WEST R32
+    g.append(_make_game(Y,"R32","West", r("florida",nm),1,78, r("connecticut",nm),8,65))
+    g.append(_make_game(Y,"R32","West", r("maryland",nm),4,72, r("colorado_state",nm),12,71))
+    g.append(_make_game(Y,"R32","West", r("texas_tech",nm),3,66, r("drake",nm),11,63))
+    g.append(_make_game(Y,"R32","West", r("st_john_s_ny",nm),2,71, r("arkansas",nm),10,68))
+    # WEST S16
+    g.append(_make_game(Y,"S16","West", r("florida",nm),1,87, r("maryland",nm),4,71))
+    g.append(_make_game(Y,"S16","West", r("texas_tech",nm),3,63, r("st_john_s_ny",nm),2,55))
+    # WEST E8
+    g.append(_make_game(Y,"E8","West", r("florida",nm),1,84, r("texas_tech",nm),3,79))
+
+    # FINAL FOUR
+    g.append(_make_game(Y,"F4","National", r("florida",nm),1,79, r("auburn",nm),1,73))
+    g.append(_make_game(Y,"F4","National", r("houston",nm),1,70, r("duke",nm),1,67))
+    # NCG
+    g.append(_make_game(Y,"NCG","National", r("florida",nm),1,65, r("houston",nm),1,63))
+
+    return g
+
+
 _YEAR_FUNCS = {
     2018: _results_2018,
     2019: _results_2019,
@@ -651,6 +747,7 @@ _YEAR_FUNCS = {
     2022: _results_2022,
     2023: _results_2023,
     2024: _results_2024,
+    2025: _results_2025,
 }
 
 
