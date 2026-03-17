@@ -168,9 +168,9 @@ class StateMachineForecaster:
         self.lr_C: float = 1.0
         self.gbm_max_depth: int = 5
         self.gbm_lr: float = 0.05
-        self.gbm_n_estimators: int = 500
-        self.meta_C: float = 1.0
-        self.calibration_preference: Optional[str] = None
+        self.gbm_n_estimators: int = 300
+        self.meta_C: float = 0.5
+        self.calibration_preference: Optional[str] = "isotonic"
 
     def run(self) -> ForecasterOutput:
         """Execute the state machine to completion."""
@@ -592,7 +592,7 @@ class StateMachineForecaster:
         probs_by_year = {k: np.array(v) for k, v in probs_by_year.items()}
         outcomes_by_year = {k: np.array(v) for k, v in outcomes_by_year.items()}
 
-        self.calibrator = LOYOCalibrator()
+        self.calibrator = LOYOCalibrator(preference=self.calibration_preference)
         self.calibration_result = self.calibrator.fit_and_select(
             probs_by_year, outcomes_by_year
         )
