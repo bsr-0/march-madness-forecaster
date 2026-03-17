@@ -458,11 +458,14 @@ class SOTAPipelineConfig:
     mc_calibration_json: Optional[str] = None  # Optional path to MC calibration artifact
 
     # --- Ensemble weights (fixed-weight average, no stacking) ---
-    # Phase 2: In production mode, weights come from PRODUCTION_BASELINE.
-    # These weights are only used when pipeline_mode == "experimental".
-    # DEPRECATED for production use — retained for experimental mode only.
-    ensemble_lgb_weight: float = 0.15  # LightGBM classifier weight (experimental only)
-    ensemble_xgb_weight: float = 0.15  # XGBoost classifier weight (experimental only)
+    # Production mode: weights are derived at training time via LOYO
+    # cross-validation (optimize_ensemble_weights=True + enable_loyo_cv=True).
+    # PRODUCTION_BASELINE.fallback_weights provides the prior; the LOYO
+    # optimizer searches within PRODUCTION_BASELINE.weight_bounds.
+    # These config fields are only used when pipeline_mode == "experimental"
+    # or as a legacy fallback if LOYO data is unavailable.
+    ensemble_lgb_weight: float = 0.15  # LightGBM classifier weight (experimental/fallback)
+    ensemble_xgb_weight: float = 0.15  # XGBoost classifier weight (experimental/fallback)
 
     # --- Symmetric training augmentation ---
     # For every game A vs B, create two training rows: one from A's perspective
