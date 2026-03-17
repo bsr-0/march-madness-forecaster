@@ -184,6 +184,162 @@ def compute_validation_diagnostics(
 
 
 # ======================================================================
+# Dev/Eval Year Split (breaks circular validation)
+# ======================================================================
+
+
+@dataclass
+class DevEvalSplit:
+    """Enforces separation between constant-tuning (dev) and evaluation years.
+
+    The core circularity problem: all 58 constants were tuned using LOYO
+    on years 2005-2025, then LOYO on those same years is used to evaluate
+    the pipeline.  This makes all reported metrics retrospective (Level 3).
+
+    To break the circularity, this class partitions available years into:
+    - **dev_years**: Used for LOYO-based constant tuning, feature selection,
+      and sensitivity analysis.  All Tier 3 constants should be derived
+      from dev_years only.
+    - **eval_years**: Held out from ALL tuning decisions.  Touched only
+      once for final evaluation.  Results on these years are Level 2
+      (quasi-prospective) if the pipeline was frozen before evaluation.
+
+    Usage::
+
+        split = DevEvalSplit.recommended_split()
+        # Tune constants using only dev_years:
+        dev_validator = LOYOValidator(years=split.dev_years)
+        # Final evaluation on eval_years:
+        eval_validator = ProspectiveValidator(years=split.eval_years)
+
+    The split must be declared BEFORE any tuning begins and not changed
+    afterward.  The ``validate_no_leakage`` method checks that evaluation
+    years were not used during tuning.
+    """
+
+    dev_years: List[int]
+    eval_years: List[int]
+    split_rationale: str = ""
+
+    def __post_init__(self):
+        overlap = set(self.dev_years) & set(self.eval_years)
+        if overlap:
+            raise ValueError(
+                f"Dev/eval year overlap detected: {overlap}. "
+                f"Evaluation years must be completely separate from "
+                f"constant-tuning years to break circularity."
+            )
+
+    @classmethod
+    def recommended_split(cls) -> "DevEvalSplit":
+        """Recommended split preserving maximum dev data.
+
+        Dev: 2018, 2019, 2021, 2022, 2023 (5 years, ~315 games)
+        Eval: 2024, 2025 (2 years, ~126 games)
+
+        With 5 dev folds, SE(mean Brier) ≈ 0.011 for dev-set LOYO.
+        58 constants / 315 dev games = 0.18 DoF/sample (still high,
+        but at least eval is uncontaminated).
+        58 constants / 126 eval games = 0.46 DoF/sample for eval
+        (very high — the fundamental sample size problem remains).
+        """
+        return cls(
+            dev_years=[2018, 2019, 2021, 2022, 2023],
+            eval_years=[2024, 2025],
+            split_rationale=(
+                "Chronological split: most recent 2 years held for eval. "
+                "Dev set has 5 folds for LOYO tuning. Eval years were "
+                "observed during original pipeline development (Level 3) "
+                "but this split enables quasi-prospective (Level 2) "
+                "evaluation for FUTURE tuning rounds."
+            ),
+        )
+
+    def validate_no_leakage(
+        self,
+        tuning_years_used: List[int],
+    ) -> "dict[str, object]":
+        """Check that no eval years were used during constant tuning.
+
+        Args:
+            tuning_years_used: Years that were actually used for any
+                tuning decision (LOYO folds, sensitivity grids, etc.)
+
+        Returns:
+            Dict with 'clean' (bool) and 'leaked_years' (list).
+        """
+        leaked = sorted(set(tuning_years_used) & set(self.eval_years))
+        return {
+            "clean": len(leaked) == 0,
+            "leaked_years": leaked,
+            "dev_years": self.dev_years,
+            "eval_years": self.eval_years,
+            "warning": (
+                f"LEAKAGE: Eval years {leaked} were used during tuning. "
+                f"Eval results are now Level 3 (retrospective), not Level 2."
+                if leaked else
+                "No leakage detected. Eval results are Level 2 "
+                "(quasi-prospective, assuming pipeline was frozen before eval)."
+            ),
+        }
+
+    def get_dev_validator(self) -> "LOYOValidator":
+        """Create a LOYOValidator that uses only dev years."""
+        return LOYOValidator(years=self.dev_years, temporal_mode="rolling_window")
+
+    def get_eval_validator(self) -> "ProspectiveValidator":
+        """Create a ProspectiveValidator that evaluates only on eval years."""
+        return ProspectiveValidator(years=self.eval_years)
+
+    def dof_diagnostics(
+        self,
+        n_tuned_constants: int = _N_TUNED_CONSTANTS,
+        games_per_year: int = 63,
+    ) -> "dict[str, object]":
+        """Report DoF/sample ratios for both dev and eval partitions."""
+        dev_games = len(self.dev_years) * games_per_year
+        eval_games = len(self.eval_years) * games_per_year
+        dev_ratio = n_tuned_constants / max(dev_games, 1)
+        eval_ratio = n_tuned_constants / max(eval_games, 1)
+
+        warnings = []
+        if dev_ratio > 0.10:
+            warnings.append(
+                f"Dev DoF/sample = {dev_ratio:.3f} >> 0.01. "
+                f"Consider reducing Tier 3 constants or extending dev data."
+            )
+        if eval_ratio > 0.10:
+            warnings.append(
+                f"Eval DoF/sample = {eval_ratio:.3f} >> 0.01. "
+                f"Eval set too small for reliable generalization estimates. "
+                f"Consider pooling with prospective 2026+ data when available."
+            )
+
+        # Minimum detectable effect (MDE) for eval set
+        # Rough MDE ≈ 2.8 * sigma / sqrt(N) for 80% power, alpha=0.05
+        # Assuming sigma ≈ 0.15 for per-game Brier variance
+        mde_eval = 2.8 * 0.15 / max(eval_games ** 0.5, 1)
+
+        return {
+            "dev_years": self.dev_years,
+            "eval_years": self.eval_years,
+            "dev_games_approx": dev_games,
+            "eval_games_approx": eval_games,
+            "n_tuned_constants": n_tuned_constants,
+            "dev_dof_ratio": round(dev_ratio, 4),
+            "eval_dof_ratio": round(eval_ratio, 4),
+            "target_dof_ratio": 0.01,
+            "eval_mde_brier": round(mde_eval, 4),
+            "eval_mde_note": (
+                f"Minimum detectable Brier improvement on eval set: "
+                f"{mde_eval:.4f} (80% power, alpha=0.05). Improvements "
+                f"smaller than this cannot be reliably detected."
+            ),
+            "warnings": warnings,
+        }
+
+
+# ======================================================================
 # Phase 2: Feature Family Ablation
 # ======================================================================
 
@@ -894,6 +1050,7 @@ class FeatureAblator:
         predict_fn: Callable,
         feature_names: List[str],
         baseline_brier: Optional[float] = None,
+        dev_eval_split: Optional[DevEvalSplit] = None,
     ) -> Dict[str, Dict]:
         """Run leave-one-feature-out ablation with LOYO validation.
 
@@ -931,6 +1088,26 @@ class FeatureAblator:
                 "paired_t_p_value": float or None,
             }
         """
+        # Guard: if a dev/eval split is provided, verify ablation only
+        # uses dev years.  This prevents the circular validation problem
+        # where features are evaluated on the same data used to tune
+        # the pipeline constants.
+        if dev_eval_split is not None:
+            validator_years = set(loyo_validator.years)
+            data_years = set(data_by_year.keys())
+            ablation_years = validator_years & data_years
+            leakage = dev_eval_split.validate_no_leakage(
+                list(ablation_years)
+            )
+            if not leakage["clean"]:
+                logger.error(
+                    "ABLATION LEAKAGE: %s — ablation is using eval years %s. "
+                    "Results will be circular (Level 3). Pass a validator "
+                    "restricted to dev_years to fix this.",
+                    leakage["warning"],
+                    leakage["leaked_years"],
+                )
+
         # Get baseline with per-fold detail
         logger.info("Computing baseline LOYO Brier...")
         baseline_result = loyo_validator.validate(

@@ -11,6 +11,7 @@ from src.ml.evaluation.loyo_protocol import (
     DEFAULT_FEATURE_FAMILIES,
     LOYO_YEARS,
     MINIMUM_BRIER_IMPROVEMENT,
+    DevEvalSplit,
     FeatureAblator,
     FeatureFamily,
     LOYOFoldResult,
@@ -855,3 +856,102 @@ class TestLOYOResultSummary:
         )
         s = result.summary()
         assert "Integrity level: 3" in s
+
+
+# ---------------------------------------------------------------------------
+# DevEvalSplit Tests (breaking circular validation)
+# ---------------------------------------------------------------------------
+
+
+class TestDevEvalSplit:
+    """Tests for the dev/eval year split that breaks circular validation."""
+
+    def test_overlap_raises(self):
+        """Dev and eval years must not overlap."""
+        with pytest.raises(ValueError, match="overlap"):
+            DevEvalSplit(
+                dev_years=[2021, 2022, 2023],
+                eval_years=[2023, 2024],
+            )
+
+    def test_no_overlap_succeeds(self):
+        """Non-overlapping years should construct successfully."""
+        split = DevEvalSplit(
+            dev_years=[2021, 2022, 2023],
+            eval_years=[2024, 2025],
+        )
+        assert split.dev_years == [2021, 2022, 2023]
+        assert split.eval_years == [2024, 2025]
+
+    def test_recommended_split(self):
+        """Recommended split should have no overlap and cover LOYO years."""
+        split = DevEvalSplit.recommended_split()
+        assert set(split.dev_years) & set(split.eval_years) == set()
+        # Dev + eval should cover most LOYO years
+        all_years = set(split.dev_years) | set(split.eval_years)
+        assert all_years.issubset(set(LOYO_YEARS))
+
+    def test_validate_no_leakage_clean(self):
+        """No leakage when tuning uses only dev years."""
+        split = DevEvalSplit(
+            dev_years=[2021, 2022, 2023],
+            eval_years=[2024, 2025],
+        )
+        result = split.validate_no_leakage([2021, 2022, 2023])
+        assert result["clean"] is True
+        assert result["leaked_years"] == []
+
+    def test_validate_no_leakage_detected(self):
+        """Leakage detected when tuning uses eval years."""
+        split = DevEvalSplit(
+            dev_years=[2021, 2022, 2023],
+            eval_years=[2024, 2025],
+        )
+        result = split.validate_no_leakage([2021, 2022, 2023, 2024])
+        assert result["clean"] is False
+        assert 2024 in result["leaked_years"]
+        assert "LEAKAGE" in result["warning"]
+
+    def test_get_dev_validator(self):
+        """Dev validator should use only dev years."""
+        split = DevEvalSplit(
+            dev_years=[2021, 2022, 2023],
+            eval_years=[2024, 2025],
+        )
+        validator = split.get_dev_validator()
+        assert validator.years == [2021, 2022, 2023]
+        assert validator.temporal_mode == "rolling_window"
+
+    def test_get_eval_validator(self):
+        """Eval validator should use only eval years."""
+        split = DevEvalSplit(
+            dev_years=[2021, 2022, 2023],
+            eval_years=[2024, 2025],
+        )
+        validator = split.get_eval_validator()
+        assert validator.years == [2024, 2025]
+
+    def test_dof_diagnostics(self):
+        """DoF diagnostics should report ratios for both partitions."""
+        split = DevEvalSplit(
+            dev_years=[2018, 2019, 2021, 2022, 2023],
+            eval_years=[2024, 2025],
+        )
+        diag = split.dof_diagnostics(n_tuned_constants=58)
+        assert "dev_dof_ratio" in diag
+        assert "eval_dof_ratio" in diag
+        assert "eval_mde_brier" in diag
+        # Both ratios should be > 0.01 (that's the problem)
+        assert diag["dev_dof_ratio"] > 0.01
+        assert diag["eval_dof_ratio"] > 0.01
+        assert len(diag["warnings"]) > 0
+
+    def test_dof_diagnostics_mde(self):
+        """MDE should be reported for eval set."""
+        split = DevEvalSplit(
+            dev_years=[2021, 2022, 2023],
+            eval_years=[2024, 2025],
+        )
+        diag = split.dof_diagnostics()
+        assert diag["eval_mde_brier"] > 0
+        assert "Minimum detectable" in diag["eval_mde_note"]
