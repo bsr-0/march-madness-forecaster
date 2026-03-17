@@ -40,17 +40,20 @@ def _build_meta_features(
     oof_lr: np.ndarray,
     oof_gbm: np.ndarray,
     market_probs: Optional[np.ndarray] = None,
+    use_interaction: bool = True,
 ) -> np.ndarray:
-    """Build meta features: logit-transformed base OOF + interaction.
+    """Build meta features: logit-transformed inputs + optional interaction.
 
-    Features: [logit(lr), logit(gbm), logit(lr)*logit(gbm), market_prob?]
+    Features: [logit(lr), logit(gbm), logit(market), lr_logit*gbm_logit?]
+    All inputs transformed to log-odds space for linear separability.
     """
     lr_logit = _to_logit(oof_lr)
     gbm_logit = _to_logit(oof_gbm)
-    interaction = lr_logit * gbm_logit
-    cols = [lr_logit, gbm_logit, interaction]
+    cols = [lr_logit, gbm_logit]
     if market_probs is not None:
-        cols.append(market_probs)
+        cols.append(_to_logit(market_probs))
+    if use_interaction:
+        cols.append(lr_logit * gbm_logit)
     return np.column_stack(cols)
 
 
@@ -222,14 +225,15 @@ class StackingEnsemble:
         # from being trained on the same data it evaluates.
         #
         # Meta features use logit transform + interaction:
-        #   [logit(lr), logit(gbm), logit(lr)*logit(gbm), market_prob?]
-
-        # Tune meta_C via nested LOYO grid search
-        meta_C_grid = [0.1, 0.5, 1.0, 2.0]
+        #   [logit(lr), logit(gbm), logit(market), lr_logit*gbm_logit]
+        #
+        # Meta-C tuning: test 3 values via nested LOYO, pick best Brier.
+        # This is minimal and controlled — no large grid, no nested CV.
+        meta_C_candidates = [0.1, 0.5, 1.0]
         best_meta_C = self.meta_C
         best_meta_brier = float("inf")
 
-        for candidate_C in meta_C_grid:
+        for candidate_C in meta_C_candidates:
             oof_meta_candidate = np.full(n_samples, np.nan)
             for hold_year in unique_years:
                 train_mask = year_labels != hold_year
