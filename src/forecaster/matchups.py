@@ -44,6 +44,7 @@ class TeamStats:
 
     # Shooting
     three_pt_pct: float = 0.33
+    opp_three_pt_pct: float = 0.33  # Opponent 3PT% (3PT defense)
     ft_pct: float = 0.72
 
     # Derived
@@ -99,12 +100,18 @@ MATCHUP_FEATURE_NAMES = [
 N_MATCHUP_FEATURES = len(MATCHUP_FEATURE_NAMES)
 
 
-def compute_matchup_features(a: TeamStats, b: TeamStats) -> np.ndarray:
+def compute_matchup_features(
+    a: TeamStats,
+    b: TeamStats,
+    upset_weights: Optional[Dict[str, float]] = None,
+) -> np.ndarray:
     """Compute matchup feature vector for team A vs team B.
 
     Args:
         a: Team A statistics.
         b: Team B statistics.
+        upset_weights: Learned upset score weights (CV-learned).
+            If None, uses literature-based defaults.
 
     Returns:
         Feature vector of length N_MATCHUP_FEATURES.
@@ -124,9 +131,13 @@ def compute_matchup_features(a: TeamStats, b: TeamStats) -> np.ndarray:
     features[5] = a.adj_tempo * b.adj_tempo / 1000.0  # Scale down
     features[6] = (a.adj_tempo + b.adj_tempo) / 2.0
 
-    # Shooting matchup
-    features[7] = a.three_pt_pct - b.opp_efg_pct  # A's 3P attack vs B's defense
-    features[8] = b.three_pt_pct - a.opp_efg_pct
+    # Shooting matchup: 3PT offense vs 3PT defense
+    # Use opp_three_pt_pct (opponent 3P%) as the 3PT defense metric.
+    # If unavailable, approximate from opp_efg_pct (weaker proxy).
+    b_three_def = b.opp_three_pt_pct if b.opp_three_pt_pct != 0.33 else b.opp_efg_pct
+    a_three_def = a.opp_three_pt_pct if a.opp_three_pt_pct != 0.33 else a.opp_efg_pct
+    features[7] = a.three_pt_pct - b_three_def  # A's 3P attack vs B's 3P defense
+    features[8] = b.three_pt_pct - a_three_def
     features[9] = a.ft_pct - b.ft_pct
     features[10] = a.efg_pct - b.efg_pct
 
@@ -145,8 +156,8 @@ def compute_matchup_features(a: TeamStats, b: TeamStats) -> np.ndarray:
     features[18] = a.win_pct - b.win_pct
 
     # Upset score: weighted composite indicating upset potential
-    # Positive values = conditions favor an upset (lower seed winning)
-    features[19] = compute_upset_score(a, b)
+    # Uses CV-learned weights when available, otherwise literature defaults
+    features[19] = compute_upset_score(a, b, weights=upset_weights)
 
     # Absolute level context
     features[20] = (a.net_efficiency() + b.net_efficiency()) / 2.0
