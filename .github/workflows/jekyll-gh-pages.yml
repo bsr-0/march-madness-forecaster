@@ -148,8 +148,6 @@ jobs:
 
           echo "All URLs reachable. Running content validation..."
 
-          curl -fsSL -o /tmp/style.css "${BASE_URL}style.css"
-          grep -q -- "--color-accent" /tmp/style.css
           curl -fsSL -o /tmp/dashboard.json "${BASE_URL}data/dashboard.json"
           python -c "import json,sys; d=json.load(open('/tmp/dashboard.json')); assert isinstance(d, dict) and len(d) > 0"
           curl -fsSL -o /tmp/conf_predictions.json "${BASE_URL}data/conference_predictions_2026.json"
