@@ -7,6 +7,8 @@ Validates all components against invariants:
 4. Stacking (OOF, no leakage)
 5. Metrics reproducibility
 6. Invariant satisfaction (data, features, models, generalization)
+7. Feature stability across folds (Rule 7)
+8. Market anchor constraint (Rule 10)
 
 Also includes anti-cheating checks and overfitting detection.
 """
@@ -69,27 +71,9 @@ def run_audit(
     prev_holdout_brier: Optional[float] = None,
     prev_per_year_brier: Optional[Dict[int, float]] = None,
     blend_weight: Optional[float] = None,
+    market_probs: Optional[np.ndarray] = None,
 ) -> AuditResult:
-    """Run full audit suite.
-
-    Args:
-        stacking_result: Output from stacking ensemble.
-        calibration_result: Output from calibration.
-        feature_importances: Feature importance dict from base models.
-        metrics: Current iteration metrics (brier, log_loss).
-        n_features: Number of features used.
-        prev_predictions: Predictions from previous iteration (anti-cheat).
-        curr_predictions: Current predictions (anti-cheat).
-        prev_metrics: Previous iteration metrics (for improvement check).
-        per_year_brier: Per-year Brier scores from LOYO.
-        holdout_brier: Holdout (2025) Brier score.
-        prev_holdout_brier: Previous holdout Brier.
-        prev_per_year_brier: Previous per-year Brier scores.
-        blend_weight: Market blend weight.
-
-    Returns:
-        AuditResult.
-    """
+    """Run full audit suite."""
     result = AuditResult(passed=True)
 
     # 1. Market correctness
@@ -110,12 +94,18 @@ def run_audit(
     # 6. Feature count invariant
     _check_feature_count(result, n_features)
 
-    # 7. Anti-cheating
+    # 7. Anti-cheating (Rule 11: strengthened prediction change validation)
     _check_anti_cheat(result, prev_predictions, curr_predictions, prev_metrics, metrics)
 
     # 8. Overfitting detection
     _check_overfitting(result, per_year_brier, holdout_brier,
                        prev_holdout_brier, prev_per_year_brier, stacking_result)
+
+    # 9. Feature stability across folds (Rule 7)
+    _check_feature_stability(result, stacking_result)
+
+    # 10. Market anchor constraint (Rule 10)
+    _check_market_anchor(result, curr_predictions, market_probs)
 
     # Set overall status
     errors = [v for v in result.violations if v.severity == "error"]
@@ -148,12 +138,11 @@ def _check_matchups(
                              "No feature importances available")
         return
 
-    # Check that required matchup feature categories are present
     required_categories = {
-        "efficiency": [0, 1, 2],    # eff_edge_a, eff_edge_b, net_eff_diff
-        "tempo": [4, 5],            # tempo_diff, tempo_product
-        "shooting": [7, 8],         # three_pt_edge_a, three_pt_edge_b
-        "possession": [11, 12],     # reb_diff, tov_edge
+        "efficiency": [0, 1, 2],
+        "tempo": [4, 5],
+        "shooting": [7, 8],
+        "possession": [11, 12],
     }
 
     for imp_key, imp_values in feature_importances.items():
@@ -191,7 +180,6 @@ def _check_calibration(result: AuditResult, cal: Optional[CalibrationResult]):
                              f"Only {cal.n_samples} calibration samples (need >= 50)")
         return
 
-    # Check that calibration didn't make things significantly worse
     if cal.brier_after > cal.brier_before * 1.05:
         result.add_violation("calibration", "degradation",
                              f"Calibration degraded Brier: {cal.brier_before:.4f} -> {cal.brier_after:.4f}",
@@ -209,19 +197,16 @@ def _check_stacking(result: AuditResult, stack: Optional[StackingResult]):
                              "No stacking result available")
         return
 
-    # Check for NaN in OOF predictions (would indicate leakage/missing folds)
     if np.any(np.isnan(stack.oof_lr)) or np.any(np.isnan(stack.oof_gbm)):
         result.add_violation("stacking", "nan_oof",
                              "NaN values in OOF predictions (possible leakage)")
         return
 
-    # Check that OOF predictions vary (not constant)
     if np.std(stack.oof_preds) < 0.01:
         result.add_violation("stacking", "constant_preds",
                              "OOF predictions have near-zero variance")
         return
 
-    # Check meta model doesn't over-weight single base model
     if len(stack.meta_weights) >= 2:
         max_weight = np.max(np.abs(stack.meta_weights))
         total_weight = np.sum(np.abs(stack.meta_weights))
@@ -270,7 +255,12 @@ def _check_anti_cheat(
     prev_metrics: Optional[Dict[str, float]],
     curr_metrics: Dict[str, float],
 ):
-    """Anti-cheating checks."""
+    """Anti-cheating checks (Rule 11: strengthened prediction change validation).
+
+    Rejects if:
+    - Predictions identical to previous iteration
+    - Metrics improved but predictions barely changed (mean|delta| < 0.005)
+    """
     result.checks_run += 1
 
     if prev_preds is not None and curr_preds is not None:
@@ -280,13 +270,15 @@ def _check_anti_cheat(
                                  "Predictions identical to previous iteration")
             return
 
-        # Check for metric improvement without prediction change
+        # Rule 11: material prediction change required when metrics improve
         if prev_metrics is not None:
             pred_change = float(np.mean(np.abs(curr_preds - prev_preds)))
-            brier_change = abs(curr_metrics.get("brier", 0) - prev_metrics.get("brier", 0))
-            if brier_change > 0.01 and pred_change < 1e-6:
-                result.add_violation("anti_cheat", "metric_without_change",
-                                     "Metric improved but predictions unchanged")
+            brier_improved = curr_metrics.get("brier", 1) < prev_metrics.get("brier", 1)
+
+            if brier_improved and pred_change < 0.005:
+                result.add_violation("anti_cheat", "immaterial_change",
+                                     f"Metrics improved but predictions barely changed "
+                                     f"(mean|Δp|={pred_change:.6f} < 0.005)")
                 return
 
     result.checks_passed += 1
@@ -300,7 +292,7 @@ def _check_overfitting(
     prev_per_year_brier: Optional[Dict[int, float]],
     stacking_result: Optional[StackingResult],
 ):
-    """Overfitting detection."""
+    """Overfitting detection (Rule 8: variance constraint enforced here)."""
     result.checks_run += 1
 
     signals = []
@@ -313,12 +305,15 @@ def _check_overfitting(
         if cv_brier < prev_cv_brier and holdout_brier > prev_holdout_brier:
             signals.append("cv_improves_holdout_declines")
 
-    # Variance increase in per-year Brier
+    # Rule 8: Variance increase in per-year Brier (ERROR, not warning)
     if per_year_brier and prev_per_year_brier:
-        curr_var = np.var(list(per_year_brier.values()))
-        prev_var = np.var(list(prev_per_year_brier.values()))
-        if curr_var > prev_var * 1.5:
-            signals.append("variance_increase")
+        curr_std = float(np.std(list(per_year_brier.values())))
+        prev_std = float(np.std(list(prev_per_year_brier.values())))
+        if curr_std > prev_std:
+            result.add_violation("overfitting", "variance_increase",
+                                 f"Per-year Brier std increased: {prev_std:.4f} -> {curr_std:.4f} "
+                                 f"(Rule 8 violation)")
+            return
 
     # Single model weight > 80% in stacking
     if stacking_result and len(stacking_result.meta_weights) >= 2:
@@ -334,22 +329,111 @@ def _check_overfitting(
         result.checks_passed += 1
 
 
+def _check_feature_stability(
+    result: AuditResult,
+    stacking_result: Optional[StackingResult],
+):
+    """Rule 7: Feature stability across LOYO folds.
+
+    Checks that per-fold LR coefficients have consistent signs and
+    stable magnitudes. Unstable features suggest spurious historical fits.
+    """
+    result.checks_run += 1
+
+    if stacking_result is None or not stacking_result.lr_models:
+        result.checks_passed += 1
+        return
+
+    try:
+        coefs = np.array([m.coef_[0] for m in stacking_result.lr_models])
+    except (AttributeError, IndexError):
+        result.checks_passed += 1
+        return
+
+    if coefs.shape[0] < 3:
+        result.checks_passed += 1
+        return
+
+    n_features = coefs.shape[1]
+    unstable_features = []
+
+    # Check sign consistency across folds
+    for i in range(n_features):
+        signs = np.sign(coefs[:, i])
+        nonzero = signs[signs != 0]
+        if len(nonzero) >= 3:
+            consistency = abs(float(np.mean(nonzero)))
+            if consistency < 0.5:
+                feat_name = (MATCHUP_FEATURE_NAMES[i]
+                             if i < len(MATCHUP_FEATURE_NAMES) else f"feature_{i}")
+                unstable_features.append(feat_name)
+
+    if unstable_features:
+        result.add_violation("features", "unstable_sign",
+                             f"Features with inconsistent sign across folds: {unstable_features}",
+                             severity="warning")
+
+    # Check coefficient of variation across folds
+    mean_abs = np.mean(np.abs(coefs), axis=0)
+    std_abs = np.std(np.abs(coefs), axis=0)
+    cv = std_abs / (mean_abs + 1e-10)
+    high_cv_count = int(np.sum(cv > 2.0))
+
+    if high_cv_count > n_features // 3:
+        result.add_violation("features", "high_importance_variance",
+                             f"{high_cv_count}/{n_features} features have high importance "
+                             f"variance across folds (CV > 2.0)",
+                             severity="warning")
+    else:
+        result.checks_passed += 1
+
+
+def _check_market_anchor(
+    result: AuditResult,
+    curr_predictions: Optional[np.ndarray],
+    market_probs: Optional[np.ndarray],
+):
+    """Rule 10: Market anchor constraint.
+
+    Final predictions must satisfy corr(final_prob, market_prob) >= 0.7.
+    Prevents model from deviating too far from efficient market signal.
+    """
+    result.checks_run += 1
+
+    if curr_predictions is None or market_probs is None:
+        result.checks_passed += 1
+        return
+
+    if len(curr_predictions) < 10 or len(market_probs) < 10:
+        result.checks_passed += 1
+        return
+
+    if len(curr_predictions) != len(market_probs):
+        result.checks_passed += 1
+        return
+
+    corr = float(np.corrcoef(curr_predictions, market_probs)[0, 1])
+    if np.isnan(corr):
+        result.add_violation("market", "anchor_nan",
+                             "Cannot compute market correlation (NaN)",
+                             severity="warning")
+        return
+
+    if corr < 0.7:
+        result.add_violation("market", "anchor_violation",
+                             f"Market correlation {corr:.3f} < 0.7 — "
+                             f"model deviates too far from market signal")
+    else:
+        result.checks_passed += 1
+        logger.info("Market anchor: corr(pred, market) = %.3f (>= 0.7 OK)", corr)
+
+
 def analyze_failure(
     audit_result: AuditResult,
     metrics: Dict[str, float],
     best_metrics: Optional[Dict[str, float]],
 ) -> List[Dict[str, str]]:
-    """Analyze failures and generate fix specifications.
-
-    Args:
-        audit_result: The failed audit result.
-        metrics: Current metrics.
-        best_metrics: Best metrics seen so far.
-
-    Returns:
-        List of failure analysis dicts with component, failure_type,
-        root_cause, and fix_spec.
-    """
+    """Analyze failures and generate fix specifications."""
     analyses = []
 
     for violation in audit_result.violations:

@@ -31,8 +31,8 @@ def main():
                         help="Path to raw data directory")
     parser.add_argument("--output", "-o", default="data/forecaster_output.json",
                         help="Output file for predictions and report")
-    parser.add_argument("--seed", type=int, default=2026,
-                        help="Random seed")
+    parser.add_argument("--seed", type=int, default=42,
+                        help="Random seed (Rule 1: locked)")
     parser.add_argument("--verbose", "-v", action="store_true",
                         help="Verbose logging")
     args = parser.parse_args()
@@ -55,8 +55,10 @@ def main():
     output = {
         "status": result.status,
         "metrics": {
-            "brier": result.brier,
-            "log_loss": result.log_loss,
+            "cv_brier": result.cv_brier,
+            "cv_log_loss": result.cv_log_loss,
+            "holdout_brier": result.holdout_brier,
+            "holdout_log_loss": result.holdout_log_loss,
             "brier_improvement_pct": result.brier_improvement_pct,
             "log_loss_improvement_pct": result.log_loss_improvement_pct,
         },
@@ -80,8 +82,10 @@ def main():
     print("=" * 60)
     print(f"Status: {result.status}")
     print(f"Iterations: {result.iterations}")
-    print(f"Brier Score: {result.brier:.4f}")
-    print(f"Log Loss: {result.log_loss:.4f}")
+    print(f"CV Brier: {result.cv_brier:.4f}")
+    print(f"CV LogLoss: {result.cv_log_loss:.4f}")
+    print(f"Holdout (2025) Brier: {result.holdout_brier:.4f}")
+    print(f"Holdout (2025) LogLoss: {result.holdout_log_loss:.4f}")
     print(f"Brier Improvement: {result.brier_improvement_pct:.1f}%")
     print(f"LogLoss Improvement: {result.log_loss_improvement_pct:.1f}%")
     print(f"Calibration: {result.calibration_method}")
@@ -90,7 +94,7 @@ def main():
     print(f"Output: {args.output}")
 
     if result.per_year_brier:
-        print("\nPer-Year Brier Scores:")
+        print("\nPer-Year CV Brier Scores:")
         for year, brier in sorted(result.per_year_brier.items()):
             print(f"  {year}: {brier:.4f}")
 
