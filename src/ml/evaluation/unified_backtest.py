@@ -50,6 +50,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from ...data.normalize import normalize_team_id
 from .kaggle_backtest import (
     KaggleBacktester,
     YearBacktestResult,
@@ -78,6 +79,25 @@ _ESPN_SCORING = {
     "R64": 10, "R32": 20, "S16": 40,
     "E8": 80, "F4": 160, "CHAMP": 320,
 }
+
+_BACKTEST_TEAM_ID_ALIAS = {
+    "alabama_st": "alabama_state",
+    "st_francis_pa": "saint_francis_pa",
+    "san_diego_st": "san_diego_state",
+    "mt_st_mary_s": "mount_st_mary_s",
+    "american_univ": "american",
+    "ne_omaha": "omaha",
+    "siue": "siu_edwardsville",
+    "st_john_s__ny": "st_john_s_ny",
+    "mississippi_st": "mississippi_state",
+    "colorado_st": "colorado_state",
+    "iowa_st": "iowa_state",
+}
+
+
+def _canonical_backtest_team_id(team_id: str) -> str:
+    norm = normalize_team_id(team_id)
+    return _BACKTEST_TEAM_ID_ALIAS.get(norm, norm)
 
 
 # ---------------------------------------------------------------------------
@@ -212,7 +232,7 @@ def load_tournament_history_from_kaggle(
     regions: Dict[str, str] = {}
     region_map = {"W": "West", "X": "East", "Y": "South", "Z": "Midwest"}
     for entry in seed_entries:
-        tid = entry["team_id"]
+        tid = _canonical_backtest_team_id(entry["team_id"])
         seeds[tid] = entry["seed"]
         raw_region = entry.get("region", "")
         regions[tid] = region_map.get(raw_region, raw_region)
@@ -247,8 +267,8 @@ def load_tournament_history_from_kaggle(
 
     games: List[TournamentGame] = []
     for g in unique_games:
-        t1 = g["team_id"]
-        t2 = g["opponent_id"]
+        t1 = _canonical_backtest_team_id(g["team_id"])
+        t2 = _canonical_backtest_team_id(g["opponent_id"])
         round_name = day_to_round.get(g["day_num"], "R64")
         games.append(TournamentGame(
             team1_id=t1,
@@ -274,7 +294,7 @@ def load_tournament_history_from_kaggle(
     champion_id = ""
     if unique_games:
         last_game = max(unique_games, key=lambda g: g["day_num"])
-        champion_id = last_game["team_id"]
+        champion_id = _canonical_backtest_team_id(last_game["team_id"])
 
     history = TournamentHistory(
         year=year,
@@ -327,7 +347,7 @@ def load_tournament_history_from_json(
     seeds: Dict[str, int] = {}
     regions: Dict[str, str] = {}
     for t in teams:
-        tid = t.get("team_id", "")
+        tid = _canonical_backtest_team_id(t.get("team_id", ""))
         seeds[tid] = t.get("seed", 8)
         regions[tid] = t.get("region", "")
 
@@ -343,11 +363,13 @@ def load_tournament_history_from_json(
                 results_data = json.load(f)
             raw_games = results_data if isinstance(results_data, list) else results_data.get("games", [])
             for g in raw_games:
+                t1 = _canonical_backtest_team_id(g["team1_id"])
+                t2 = _canonical_backtest_team_id(g["team2_id"])
                 games.append(TournamentGame(
-                    team1_id=g["team1_id"],
-                    team2_id=g["team2_id"],
-                    team1_seed=g.get("team1_seed", seeds.get(g["team1_id"], 8)),
-                    team2_seed=g.get("team2_seed", seeds.get(g["team2_id"], 8)),
+                    team1_id=t1,
+                    team2_id=t2,
+                    team1_seed=g.get("team1_seed", seeds.get(t1, 8)),
+                    team2_seed=g.get("team2_seed", seeds.get(t2, 8)),
                     team1_won=g["team1_won"],
                     round_name=g.get("round_name", "R64"),
                     team1_score=g.get("team1_score", 0),
@@ -1172,9 +1194,35 @@ class UnifiedBacktester:
 
         # Generate predictions for all actual tournament matchups
         predictions: Dict[Tuple[str, str], float] = {}
+        seeds = history.seeds
+        per_game_seed_fallbacks = 0
         for game in history.games:
-            pred = predict_fn(game.team1_id, game.team2_id)
+            try:
+                pred = predict_fn(game.team1_id, game.team2_id)
+            except Exception as e:
+                s1 = seeds.get(game.team1_id, game.team1_seed or 8)
+                s2 = seeds.get(game.team2_id, game.team2_seed or 8)
+                if s1 == s2:
+                    pred = 0.5
+                else:
+                    diff = s2 - s1  # Positive means team1 is favored (lower seed)
+                    pred = 1.0 / (1.0 + math.exp(-0.175 * diff))
+                per_game_seed_fallbacks += 1
+                logger.warning(
+                    "Calibration backtest %d game-level fallback for %s vs %s: %s",
+                    year,
+                    game.team1_id,
+                    game.team2_id,
+                    e,
+                )
             predictions[(game.team1_id, game.team2_id)] = pred
+        if per_game_seed_fallbacks:
+            logger.warning(
+                "Calibration backtest %d used game-level seed fallback for %d/%d games.",
+                year,
+                per_game_seed_fallbacks,
+                len(history.games),
+            )
 
         # Evaluate using KaggleBacktester
         eval_games = [g.to_eval_dict() for g in history.games]

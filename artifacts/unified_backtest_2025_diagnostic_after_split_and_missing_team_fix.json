@@ -1,0 +1,33 @@
+{
+  "modes": [
+    "calibration"
+  ],
+  "years": [
+    2025
+  ],
+  "pool_sizes": [
+    100,
+    500
+  ],
+  "results": [
+    {
+      "year": 2025,
+      "mode": "calibration",
+      "brier": 0.21987536247096623,
+      "rw_brier": 0.22217163995295036,
+      "accuracy": 0.6716417910447762,
+      "kaggle_rank": "top 1%",
+      "n_games": 67
+    }
+  ],
+  "summary_by_mode": {
+    "calibration": {
+      "mean_brier": 0.21987536247096623,
+      "std_brier": 0.0,
+      "mean_rw_brier": 0.22217163995295036,
+      "std_rw_brier": 0.0,
+      "mean_accuracy": 0.6716417910447762,
+      "n_years": 1.0
+    }
+  }
+}
