@@ -30,6 +30,30 @@ except ImportError:
     LIGHTGBM_AVAILABLE = False
 
 
+def _to_logit(p: np.ndarray) -> np.ndarray:
+    """Transform probabilities to log-odds (logit) space."""
+    p = np.clip(p, 1e-6, 1 - 1e-6)
+    return np.log(p / (1 - p))
+
+
+def _build_meta_features(
+    oof_lr: np.ndarray,
+    oof_gbm: np.ndarray,
+    market_probs: Optional[np.ndarray] = None,
+) -> np.ndarray:
+    """Build meta features: logit-transformed base OOF + interaction.
+
+    Features: [logit(lr), logit(gbm), logit(lr)*logit(gbm), market_prob?]
+    """
+    lr_logit = _to_logit(oof_lr)
+    gbm_logit = _to_logit(oof_gbm)
+    interaction = lr_logit * gbm_logit
+    cols = [lr_logit, gbm_logit, interaction]
+    if market_probs is not None:
+        cols.append(market_probs)
+    return np.column_stack(cols)
+
+
 @dataclass
 class StackingResult:
     """Results from stacking ensemble training."""
@@ -196,47 +220,70 @@ class StackingEnsemble:
         # For each year Y, train meta on base OOF from all years except Y,
         # then predict meta-OOF for year Y. This prevents the meta model
         # from being trained on the same data it evaluates.
-        for hold_year in unique_years:
-            train_mask = year_labels != hold_year
-            val_mask = year_labels == hold_year
+        #
+        # Meta features use logit transform + interaction:
+        #   [logit(lr), logit(gbm), logit(lr)*logit(gbm), market_prob?]
 
-            if train_mask.sum() < 20 or val_mask.sum() < 5:
-                oof_meta[val_mask] = 0.5
-                continue
+        # Tune meta_C via nested LOYO grid search
+        meta_C_grid = [0.1, 0.5, 1.0, 2.0]
+        best_meta_C = self.meta_C
+        best_meta_brier = float("inf")
 
-            # Build meta features from base OOF
-            meta_train = np.column_stack([oof_lr[train_mask], oof_gbm[train_mask]])
-            meta_val = np.column_stack([oof_lr[val_mask], oof_gbm[val_mask]])
+        for candidate_C in meta_C_grid:
+            oof_meta_candidate = np.full(n_samples, np.nan)
+            for hold_year in unique_years:
+                train_mask = year_labels != hold_year
+                val_mask = year_labels == hold_year
 
-            if market_probs is not None:
-                meta_train = np.column_stack([meta_train, market_probs[train_mask]])
-                meta_val = np.column_stack([meta_val, market_probs[val_mask]])
+                if train_mask.sum() < 20 or val_mask.sum() < 5:
+                    oof_meta_candidate[val_mask] = 0.5
+                    continue
 
-            # Skip if base OOF has NaN (shouldn't happen with LOYO)
-            if np.any(np.isnan(meta_train)):
-                oof_meta[val_mask] = 0.5
-                continue
+                meta_train = _build_meta_features(
+                    oof_lr[train_mask], oof_gbm[train_mask],
+                    market_probs[train_mask] if market_probs is not None else None,
+                )
+                meta_val = _build_meta_features(
+                    oof_lr[val_mask], oof_gbm[val_mask],
+                    market_probs[val_mask] if market_probs is not None else None,
+                )
 
-            meta_lr = LogisticRegression(
-                C=self.meta_C, penalty="l2", solver="lbfgs",
-                max_iter=1000, random_state=self.random_seed,
-            )
-            meta_lr.fit(meta_train, y[train_mask])
-            oof_meta[val_mask] = meta_lr.predict_proba(meta_val)[:, 1]
+                if np.any(np.isnan(meta_train)):
+                    oof_meta_candidate[val_mask] = 0.5
+                    continue
+
+                meta_lr = LogisticRegression(
+                    C=candidate_C, penalty="l2", solver="lbfgs",
+                    max_iter=1000, random_state=self.random_seed,
+                )
+                meta_lr.fit(meta_train, y[train_mask])
+                oof_meta_candidate[val_mask] = meta_lr.predict_proba(meta_val)[:, 1]
+
+            valid = ~np.isnan(oof_meta_candidate)
+            if valid.sum() > 0:
+                candidate_brier = float(np.mean((oof_meta_candidate[valid] - y[valid]) ** 2))
+                logger.info("  meta_C=%.2f -> nested LOYO Brier=%.4f", candidate_C, candidate_brier)
+                if candidate_brier < best_meta_brier:
+                    best_meta_brier = candidate_brier
+                    best_meta_C = candidate_C
+                    oof_meta = oof_meta_candidate.copy()
+
+        logger.info("Selected meta_C=%.2f (Brier=%.4f)", best_meta_C, best_meta_brier)
 
         # --- Final meta model (for inference on new data) ---
         # Trained on ALL base OOF (acceptable: used only for 2026 prediction,
         # NOT for metric computation).
-        meta_features_all = np.column_stack([oof_lr, oof_gbm])
-        if market_probs is not None:
-            meta_features_all = np.column_stack([meta_features_all, market_probs])
+        valid_mask = ~np.isnan(oof_lr) & ~np.isnan(oof_gbm)
+        meta_features_all = _build_meta_features(
+            oof_lr[valid_mask], oof_gbm[valid_mask],
+            market_probs[valid_mask] if market_probs is not None else None,
+        )
 
         self.meta_model = LogisticRegression(
-            C=self.meta_C, penalty="l2", solver="lbfgs",
+            C=best_meta_C, penalty="l2", solver="lbfgs",
             max_iter=1000, random_state=self.random_seed,
         )
-        valid_mask = ~np.isnan(oof_lr) & ~np.isnan(oof_gbm)
-        self.meta_model.fit(meta_features_all[valid_mask], y[valid_mask])
+        self.meta_model.fit(meta_features_all, y[valid_mask])
 
         self.is_fitted = True
 
@@ -330,9 +377,9 @@ class StackingEnsemble:
                 oof_gbm[val_idx] = lr2.predict_proba(X_val)[:, 1]
                 self.gbm_models.append(lr2)
 
-        meta_features = np.column_stack([oof_lr, oof_gbm])
-        if market_probs is not None:
-            meta_features = np.column_stack([meta_features, market_probs])
+        meta_features = _build_meta_features(
+            oof_lr, oof_gbm, market_probs,
+        )
 
         self.meta_model = LogisticRegression(
             C=self.meta_C, penalty="l2", solver="lbfgs",
@@ -389,9 +436,7 @@ class StackingEnsemble:
                 m.predict_proba(X_scaled)[:, 1] for m in self.gbm_models
             ], axis=0)
 
-        meta_features = np.column_stack([lr_preds, gbm_preds])
-        if market_prob is not None:
-            meta_features = np.column_stack([meta_features, market_prob])
+        meta_features = _build_meta_features(lr_preds, gbm_preds, market_prob)
 
         return self.meta_model.predict_proba(meta_features)[:, 1]
 
