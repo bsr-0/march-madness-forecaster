@@ -1,6 +1,7 @@
 """Tests for the Leave-One-Year-Out (LOYO) validation protocol.
 
-Covers LOYOValidator, FeatureAblator, and the 0.001 Rule enforcement.
+Covers LOYOValidator, FeatureAblator, powered ablation thresholds,
+validation diagnostics, and statistical power analysis.
 """
 
 import numpy as np
@@ -10,6 +11,8 @@ from src.ml.evaluation.loyo_protocol import (
     DEFAULT_FEATURE_FAMILIES,
     LOYO_YEARS,
     MINIMUM_BRIER_IMPROVEMENT,
+    ContaminationLayer,
+    DevEvalSplit,
     FeatureAblator,
     FeatureFamily,
     LOYOFoldResult,
@@ -17,6 +20,9 @@ from src.ml.evaluation.loyo_protocol import (
     LOYOValidator,
     ProspectiveValidator,
     ProspectiveValidationResult,
+    assess_contamination,
+    compute_ablation_threshold,
+    compute_validation_diagnostics,
     validate_family_coverage,
 )
 
@@ -66,7 +72,8 @@ class TestLOYOYears:
         expected = {2018, 2019, 2021, 2022, 2023, 2024, 2025}
         assert set(LOYO_YEARS) == expected
 
-    def test_minimum_brier_improvement(self):
+    def test_minimum_brier_improvement_legacy(self):
+        """Legacy constant preserved for backward compatibility."""
         assert MINIMUM_BRIER_IMPROVEMENT == 0.001
 
 
@@ -616,3 +623,483 @@ class TestFeatureAblatorFamilies:
         assert "fam_b" in results
         assert results["fam_a"]["n_features_masked"] == 1
         assert results["fam_b"]["n_features_masked"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Powered Ablation Threshold Tests
+# ---------------------------------------------------------------------------
+
+
+class TestComputeAblationThreshold:
+    """Tests for the statistically-powered ablation threshold."""
+
+    def test_threshold_exceeds_legacy(self):
+        """Powered threshold should be >= legacy 0.001 for realistic fold variance."""
+        fold_briers = [0.18, 0.22, 0.19, 0.25, 0.20, 0.21, 0.17]
+        threshold = compute_ablation_threshold(fold_briers)
+        assert threshold >= MINIMUM_BRIER_IMPROVEMENT
+
+    def test_threshold_scales_with_variance(self):
+        """Higher fold variance should produce a larger threshold."""
+        low_var = [0.200, 0.201, 0.199, 0.200, 0.201, 0.199, 0.200]
+        high_var = [0.15, 0.25, 0.18, 0.28, 0.16, 0.24, 0.20]
+        t_low = compute_ablation_threshold(low_var)
+        t_high = compute_ablation_threshold(high_var)
+        assert t_high > t_low
+
+    def test_threshold_with_few_folds_uses_legacy(self):
+        """With < 3 folds, should fall back to legacy threshold."""
+        threshold = compute_ablation_threshold([0.20, 0.21])
+        assert threshold == MINIMUM_BRIER_IMPROVEMENT
+
+    def test_threshold_positive(self):
+        """Threshold must always be positive."""
+        fold_briers = [0.20] * 7
+        threshold = compute_ablation_threshold(fold_briers)
+        assert threshold >= MINIMUM_BRIER_IMPROVEMENT
+
+    def test_typical_ncaa_se(self):
+        """With realistic NCAA tournament fold variance, threshold should be ~0.01-0.03."""
+        # Simulating typical LOYO variance: std ≈ 0.02-0.03 across 7 folds
+        rng = np.random.RandomState(42)
+        fold_briers = 0.20 + rng.normal(0, 0.025, size=7)
+        threshold = compute_ablation_threshold(fold_briers.tolist())
+        # Should be well above 0.001 and roughly in the 0.01-0.04 range
+        assert threshold > 0.005
+        assert threshold < 0.10  # sanity upper bound
+
+
+class TestComputeValidationDiagnostics:
+    """Tests for validation diagnostic reporting."""
+
+    def test_basic_diagnostics(self):
+        """Should compute all expected diagnostic fields."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=yr, n_train_games=300, n_test_games=63,
+                brier_score=0.20 + i * 0.01, log_loss=0.5, accuracy=0.75,
+            )
+            for i, yr in enumerate([2018, 2019, 2021, 2022, 2023, 2024, 2025])
+        ]
+        diag = compute_validation_diagnostics(folds)
+
+        assert "n_folds" in diag
+        assert diag["n_folds"] == 7
+        assert "total_eval_games" in diag
+        assert diag["total_eval_games"] == 7 * 63
+        assert "se_mean_brier" in diag
+        assert diag["se_mean_brier"] > 0
+        assert "dof_sample_ratio" in diag
+        assert "powered_threshold" in diag
+        assert "integrity_level" in diag
+        assert diag["integrity_level"] == 3
+
+    def test_dof_ratio_warning(self):
+        """Should warn when DoF/sample ratio exceeds target."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=2023, n_train_games=300, n_test_games=63,
+                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+            )
+        ]
+        diag = compute_validation_diagnostics(folds, n_tuned_constants=58)
+        # 58/63 ≈ 0.92, way above 0.01 target
+        assert diag["dof_sample_ratio"] > 0.01
+        assert any("DoF/sample" in w for w in diag["warnings"])
+
+    def test_legacy_threshold_warning(self):
+        """Should warn that legacy 0.001 is within noise."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=yr, n_train_games=300, n_test_games=63,
+                brier_score=0.20 + i * 0.01, log_loss=0.5, accuracy=0.75,
+            )
+            for i, yr in enumerate([2018, 2019, 2021, 2022, 2023, 2024, 2025])
+        ]
+        diag = compute_validation_diagnostics(folds)
+        # SE should be > 0.001, triggering the warning
+        assert diag["se_mean_brier"] > MINIMUM_BRIER_IMPROVEMENT
+        assert any("0.001" in w for w in diag["warnings"])
+
+    def test_empty_folds(self):
+        """Should handle empty fold list gracefully."""
+        diag = compute_validation_diagnostics([])
+        assert "error" in diag
+
+    def test_integrity_note_mentions_retrospective(self):
+        """Integrity note should clearly state retrospective nature."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=2023, n_train_games=300, n_test_games=63,
+                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+            )
+        ]
+        diag = compute_validation_diagnostics(folds)
+        assert "RETROSPECTIVE" in diag["integrity_note"]
+        assert "prospective" in diag["integrity_note"].lower()
+
+
+class TestFeatureAblatorPoweredThreshold:
+    """Tests for the powered threshold in FeatureAblator."""
+
+    def test_powered_threshold_used_by_default(self):
+        """FeatureAblator should use powered threshold by default."""
+        ablator = FeatureAblator()
+        assert ablator.use_powered_threshold is True
+
+    def test_legacy_mode_available(self):
+        """Can disable powered threshold for backward compatibility."""
+        ablator = FeatureAblator(use_powered_threshold=False)
+        assert ablator.use_powered_threshold is False
+
+    def test_ablation_results_include_powered_threshold(self):
+        """Ablation results should include the powered threshold value."""
+        data = {yr: _make_year_data(yr, n_features=3) for yr in [2022, 2023, 2024]}
+        validator = LOYOValidator(years=[2023, 2024])
+        ablator = FeatureAblator()
+
+        results = ablator.ablate_features(
+            validator, data, _simple_train_fn, _simple_predict_fn,
+            feature_names=["a", "b", "c"],
+        )
+
+        for info in results.values():
+            assert "powered_threshold" in info
+            assert "paired_t_p_value" in info
+            assert "per_fold_baseline" in info
+            assert "per_fold_ablated" in info
+
+    def test_ablation_results_include_p_value(self):
+        """Each ablated feature should have a paired t-test p-value."""
+        data = {yr: _make_year_data(yr, n_features=2) for yr in [2021, 2022, 2023, 2024]}
+        validator = LOYOValidator(years=[2022, 2023, 2024])
+        ablator = FeatureAblator()
+
+        results = ablator.ablate_features(
+            validator, data, _simple_train_fn, _simple_predict_fn,
+            feature_names=["a", "b"],
+        )
+
+        for info in results.values():
+            # p-value should be computed for 3+ folds
+            assert info["paired_t_p_value"] is not None
+            assert 0.0 <= info["paired_t_p_value"] <= 1.0
+
+
+class TestLOYOResultSummary:
+    """Tests for the enhanced summary with statistical diagnostics."""
+
+    def test_summary_includes_se(self):
+        """Summary should report standard error of mean Brier."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=yr, n_train_games=300, n_test_games=63,
+                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+            )
+            for yr in [2023, 2024]
+        ]
+        result = LOYOResult(
+            fold_results=folds,
+            mean_brier=0.20, std_brier=0.0,
+            mean_logloss=0.5, mean_accuracy=0.75,
+            year_briers={2023: 0.20, 2024: 0.20},
+        )
+        s = result.summary()
+        assert "SE(mean)" in s
+
+    def test_summary_includes_dof_ratio(self):
+        """Summary should report DoF/sample ratio."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=2023, n_train_games=300, n_test_games=63,
+                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+            )
+        ]
+        result = LOYOResult(
+            fold_results=folds,
+            mean_brier=0.20, std_brier=0.0,
+            mean_logloss=0.5, mean_accuracy=0.75,
+            year_briers={2023: 0.20},
+        )
+        s = result.summary()
+        assert "DoF/sample ratio" in s
+        assert "target < 0.01" in s
+
+    def test_summary_warns_on_high_dof_ratio(self):
+        """Summary should warn when DoF/sample ratio is too high."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=2023, n_train_games=300, n_test_games=10,
+                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+            )
+        ]
+        result = LOYOResult(
+            fold_results=folds,
+            mean_brier=0.20, std_brier=0.0,
+            mean_logloss=0.5, mean_accuracy=0.75,
+            year_briers={2023: 0.20},
+        )
+        s = result.summary()
+        assert "WARNING" in s
+
+    def test_summary_includes_integrity_level(self):
+        """Summary should state integrity level 3 (retrospective)."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=2023, n_train_games=300, n_test_games=63,
+                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+            )
+        ]
+        result = LOYOResult(
+            fold_results=folds,
+            mean_brier=0.20, std_brier=0.0,
+            mean_logloss=0.5, mean_accuracy=0.75,
+            year_briers={2023: 0.20},
+        )
+        s = result.summary()
+        assert "Integrity level: 3" in s
+
+
+# ---------------------------------------------------------------------------
+# DevEvalSplit Tests (breaking circular validation)
+# ---------------------------------------------------------------------------
+
+
+class TestDevEvalSplit:
+    """Tests for the dev/eval year split that breaks circular validation."""
+
+    def test_overlap_raises(self):
+        """Dev and eval years must not overlap."""
+        with pytest.raises(ValueError, match="overlap"):
+            DevEvalSplit(
+                dev_years=[2021, 2022, 2023],
+                eval_years=[2023, 2024],
+            )
+
+    def test_no_overlap_succeeds(self):
+        """Non-overlapping years should construct successfully."""
+        split = DevEvalSplit(
+            dev_years=[2021, 2022, 2023],
+            eval_years=[2024, 2025],
+        )
+        assert split.dev_years == [2021, 2022, 2023]
+        assert split.eval_years == [2024, 2025]
+
+    def test_recommended_split(self):
+        """Recommended split should have no overlap and cover LOYO years."""
+        split = DevEvalSplit.recommended_split()
+        assert set(split.dev_years) & set(split.eval_years) == set()
+        # Dev + eval should cover most LOYO years
+        all_years = set(split.dev_years) | set(split.eval_years)
+        assert all_years.issubset(set(LOYO_YEARS))
+
+    def test_validate_no_leakage_clean(self):
+        """No leakage when tuning uses only dev years."""
+        split = DevEvalSplit(
+            dev_years=[2021, 2022, 2023],
+            eval_years=[2024, 2025],
+        )
+        result = split.validate_no_leakage([2021, 2022, 2023])
+        assert result["clean"] is True
+        assert result["leaked_years"] == []
+
+    def test_validate_no_leakage_detected(self):
+        """Leakage detected when tuning uses eval years."""
+        split = DevEvalSplit(
+            dev_years=[2021, 2022, 2023],
+            eval_years=[2024, 2025],
+        )
+        result = split.validate_no_leakage([2021, 2022, 2023, 2024])
+        assert result["clean"] is False
+        assert 2024 in result["leaked_years"]
+        assert "LEAKAGE" in result["warning"]
+
+    def test_get_dev_validator(self):
+        """Dev validator should use only dev years."""
+        split = DevEvalSplit(
+            dev_years=[2021, 2022, 2023],
+            eval_years=[2024, 2025],
+        )
+        validator = split.get_dev_validator()
+        assert validator.years == [2021, 2022, 2023]
+        assert validator.temporal_mode == "rolling_window"
+
+    def test_get_eval_validator(self):
+        """Eval validator should use only eval years."""
+        split = DevEvalSplit(
+            dev_years=[2021, 2022, 2023],
+            eval_years=[2024, 2025],
+        )
+        validator = split.get_eval_validator()
+        assert validator.years == [2024, 2025]
+
+    def test_dof_diagnostics(self):
+        """DoF diagnostics should report ratios for both partitions."""
+        split = DevEvalSplit(
+            dev_years=[2018, 2019, 2021, 2022, 2023],
+            eval_years=[2024, 2025],
+        )
+        diag = split.dof_diagnostics(n_tuned_constants=58)
+        assert "dev_dof_ratio" in diag
+        assert "eval_dof_ratio" in diag
+        assert "eval_mde_brier" in diag
+        # Both ratios should be > 0.01 (that's the problem)
+        assert diag["dev_dof_ratio"] > 0.01
+        assert diag["eval_dof_ratio"] > 0.01
+        assert len(diag["warnings"]) > 0
+
+    def test_dof_diagnostics_mde(self):
+        """MDE should be reported for eval set."""
+        split = DevEvalSplit(
+            dev_years=[2021, 2022, 2023],
+            eval_years=[2024, 2025],
+        )
+        diag = split.dof_diagnostics()
+        assert diag["eval_mde_brier"] > 0
+        assert "Minimum detectable" in diag["eval_mde_note"]
+
+
+# ---------------------------------------------------------------------------
+# ContaminationLayer dataclass
+# ---------------------------------------------------------------------------
+
+
+class TestContaminationLayer:
+    """Tests for the ContaminationLayer dataclass."""
+
+    def test_basic_construction(self):
+        layer = ContaminationLayer(
+            name="test_layer",
+            description="A test contamination layer",
+            decontaminable=True,
+            decontamination_method="Re-tune on dev only",
+            status="contaminated",
+        )
+        assert layer.name == "test_layer"
+        assert layer.decontaminable is True
+        assert layer.status == "contaminated"
+        assert layer.affected_constants == []
+        assert layer.notes == ""
+
+    def test_with_affected_constants(self):
+        layer = ContaminationLayer(
+            name="parametric",
+            description="Parametric contamination",
+            decontaminable=True,
+            decontamination_method="Re-tune",
+            status="partially_decontaminated",
+            affected_constants=["mc_noise_std", "ensemble_lr_weight"],
+            notes="2 of 8 retuned",
+        )
+        assert len(layer.affected_constants) == 2
+        assert "mc_noise_std" in layer.affected_constants
+        assert layer.notes == "2 of 8 retuned"
+
+
+# ---------------------------------------------------------------------------
+# assess_contamination
+# ---------------------------------------------------------------------------
+
+
+class TestAssessContamination:
+    """Tests for the assess_contamination() function."""
+
+    def test_default_returns_level3(self):
+        """With no decontamination effort, integrity level should be 3."""
+        result = assess_contamination()
+        assert result["integrity_level"] == 3
+        assert "RETROSPECTIVE" in result["integrity_note"]
+        assert len(result["layers"]) == 2
+
+    def test_layers_structure(self):
+        """Should return architectural and parametric layers."""
+        result = assess_contamination()
+        layer_names = [layer["name"] for layer in result["layers"]]
+        assert "architectural" in layer_names
+        assert "parametric" in layer_names
+
+    def test_architectural_not_decontaminable(self):
+        """Architectural layer should never be decontaminable."""
+        result = assess_contamination()
+        arch = [l for l in result["layers"] if l["name"] == "architectural"][0]
+        assert arch["decontaminable"] is False
+        assert arch["status"] == "contaminated"
+
+    def test_parametric_decontaminable(self):
+        """Parametric layer should be flagged as decontaminable."""
+        result = assess_contamination()
+        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        assert param["decontaminable"] is True
+
+    def test_decontamination_protocol_present(self):
+        """Should include the 8-step decontamination protocol."""
+        result = assess_contamination()
+        protocol = result["decontamination_protocol"]
+        assert len(protocol) == 8
+        assert any("DevEvalSplit" in step for step in protocol)
+        assert any("SensitivityAnalyzer" in step for step in protocol)
+        assert any("Level 2.5" in step for step in protocol)
+
+    def test_partial_decontamination(self):
+        """Retuning some constants should give partially_decontaminated."""
+        result = assess_contamination()
+        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        if not param["affected_constants"]:
+            pytest.skip("No Tier 3 constants found (rdof_audit import may fail)")
+
+        # Retune just one constant
+        one_constant = param["affected_constants"][0]
+        result2 = assess_contamination(
+            constants_retuned_on_dev_only=[one_constant],
+        )
+        param2 = [l for l in result2["layers"] if l["name"] == "parametric"][0]
+        assert one_constant in param2["retuned_on_dev_only"]
+        # If there were more than one, should be partial
+        if len(param["affected_constants"]) > 1:
+            assert param2["status"] == "partially_decontaminated"
+            assert result2["integrity_level"] == 2.75
+
+    def test_full_decontamination_with_split(self):
+        """Retuning ALL active Tier 3 constants with a split => Level 2.5."""
+        result = assess_contamination()
+        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        all_active = param["affected_constants"]
+        if not all_active:
+            pytest.skip("No Tier 3 constants found (rdof_audit import may fail)")
+
+        split = DevEvalSplit.recommended_split()
+        result2 = assess_contamination(
+            dev_eval_split=split,
+            constants_retuned_on_dev_only=all_active,
+        )
+        assert result2["integrity_level"] == 2.5
+        assert "QUASI-PROSPECTIVE" in result2["integrity_note"]
+        param2 = [l for l in result2["layers"] if l["name"] == "parametric"][0]
+        assert param2["status"] == "decontaminated"
+        assert len(param2["still_contaminated"]) == 0
+
+    def test_full_decontamination_without_split_stays_level3(self):
+        """Retuning all constants but without DevEvalSplit should stay Level 3."""
+        result = assess_contamination()
+        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        all_active = param["affected_constants"]
+        if not all_active:
+            pytest.skip("No Tier 3 constants found")
+
+        # No dev_eval_split provided
+        result2 = assess_contamination(
+            constants_retuned_on_dev_only=all_active,
+        )
+        # Without a split, parametric is decontaminated but integrity stays 3
+        # because dev_eval_split is None
+        param2 = [l for l in result2["layers"] if l["name"] == "parametric"][0]
+        assert param2["status"] == "decontaminated"
+        # integrity_level remains 3 when no split is provided
+        assert result2["integrity_level"] == 3
+
+    def test_disabled_constants_reported(self):
+        """Disabled Tier 3 constants should be listed in the parametric layer."""
+        result = assess_contamination()
+        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        # disabled list should exist even if empty
+        assert "disabled" in param
