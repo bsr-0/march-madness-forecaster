@@ -1,0 +1,22 @@
+{
+  "generated_at": "/Users/benrosen/march-madness-forecaster",
+  "cleaning_performed": {
+    "tbd_games_removed": 0
+  },
+  "issues_found": {
+    "failed_game_ids_2026": 42,
+    "trank_zeros_2026": 756
+  },
+  "recommendations": [
+    {
+      "issue": "Failed game IDs",
+      "action": "Investigate scrape failures and attempt to re-fetch missing games",
+      "count": 42
+    },
+    {
+      "issue": "t_rank zeros",
+      "action": "Compute t_rank from other ranking metrics or investigate data source",
+      "count": 756
+    }
+  ]
+}

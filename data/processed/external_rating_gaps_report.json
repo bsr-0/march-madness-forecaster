@@ -1,0 +1,137 @@
+{
+  "generated_at": "/Users/benrosen/march-madness-forecaster",
+  "summary": {
+    "total_issues": 16,
+    "critical": 8,
+    "warning": 8,
+    "error": 0
+  },
+  "issues": [
+    {
+      "file": "data/raw/historical/external_FSH_2018.json",
+      "team_count": 65,
+      "file_size": 8214,
+      "severity": "critical"
+    },
+    {
+      "file": "data/raw/historical/external_D1A_2015.json",
+      "team_count": 50,
+      "file_size": 6558,
+      "severity": "critical"
+    },
+    {
+      "file": "data/raw/historical/external_D1A_2014.json",
+      "team_count": 50,
+      "file_size": 6611,
+      "severity": "critical"
+    },
+    {
+      "file": "data/raw/historical/external_D1A_2013.json",
+      "team_count": 50,
+      "file_size": 6555,
+      "severity": "critical"
+    },
+    {
+      "file": "data/raw/historical/external_ACU_2007.json",
+      "team_count": 128,
+      "file_size": 16980,
+      "severity": "warning"
+    },
+    {
+      "file": "data/raw/historical/external_LYN_2005.json",
+      "team_count": 170,
+      "file_size": 22650,
+      "severity": "warning"
+    },
+    {
+      "file": "data/raw/historical/external_ACU_2006.json",
+      "team_count": 128,
+      "file_size": 16980,
+      "severity": "warning"
+    },
+    {
+      "file": "data/raw/historical/external_LYN_2008.json",
+      "team_count": 221,
+      "file_size": 29550,
+      "severity": "warning"
+    },
+    {
+      "file": "data/raw/historical/external_ACU_2005.json",
+      "team_count": 112,
+      "file_size": 14832,
+      "severity": "warning"
+    },
+    {
+      "file": "data/raw/historical/external_LYN_2007.json",
+      "team_count": 206,
+      "file_size": 27552,
+      "severity": "warning"
+    },
+    {
+      "file": "data/raw/historical/external_LYN_2006.json",
+      "team_count": 188,
+      "file_size": 25130,
+      "severity": "warning"
+    },
+    {
+      "file": "data/raw/historical/external_JNG_2017.json",
+      "team_count": 109,
+      "file_size": 14452,
+      "severity": "warning"
+    },
+    {
+      "file": "data/raw/historical/external_BNT_2018.json",
+      "team_count": 90,
+      "file_size": 11890,
+      "severity": "critical"
+    },
+    {
+      "file": "data/raw/historical/external_D1A_2017.json",
+      "team_count": 68,
+      "file_size": 8958,
+      "severity": "critical"
+    },
+    {
+      "file": "data/raw/historical/external_ESR_2023.json",
+      "team_count": 50,
+      "file_size": 6561,
+      "severity": "critical"
+    },
+    {
+      "file": "data/raw/historical/external_D1A_2016.json",
+      "team_count": 50,
+      "file_size": 6644,
+      "severity": "critical"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "high",
+      "action": "Re-download or investigate critical files",
+      "files": [
+        "data/raw/historical/external_FSH_2018.json",
+        "data/raw/historical/external_D1A_2015.json",
+        "data/raw/historical/external_D1A_2014.json",
+        "data/raw/historical/external_D1A_2013.json",
+        "data/raw/historical/external_BNT_2018.json",
+        "data/raw/historical/external_D1A_2017.json",
+        "data/raw/historical/external_ESR_2023.json",
+        "data/raw/historical/external_D1A_2016.json"
+      ]
+    },
+    {
+      "priority": "medium",
+      "action": "Verify data sources for warning files",
+      "files": [
+        "data/raw/historical/external_ACU_2007.json",
+        "data/raw/historical/external_LYN_2005.json",
+        "data/raw/historical/external_ACU_2006.json",
+        "data/raw/historical/external_LYN_2008.json",
+        "data/raw/historical/external_ACU_2005.json",
+        "data/raw/historical/external_LYN_2007.json",
+        "data/raw/historical/external_LYN_2006.json",
+        "data/raw/historical/external_JNG_2017.json"
+      ]
+    }
+  ]
+}

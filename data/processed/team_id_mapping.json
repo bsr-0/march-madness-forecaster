@@ -1,0 +1,2303 @@
+{
+  "Abilene Chr": {
+    "massey": "abilene_chr"
+  },
+  "Abilene Christian": {
+    "team_metrics": "abilene_christian",
+    "torvik": "abilene_christian"
+  },
+  "Air Force": {
+    "massey": "air_force",
+    "team_metrics": "air_force",
+    "torvik": "air_force"
+  },
+  "Akron": {
+    "massey": "akron",
+    "team_metrics": "akron",
+    "torvik": "akron"
+  },
+  "Alabama": {
+    "massey": "alabama",
+    "team_metrics": "alabama",
+    "torvik": "alabama"
+  },
+  "Alabama A&M": {
+    "massey": "alabama_a_m",
+    "team_metrics": "alabama_a_m",
+    "torvik": "alabama_a_m"
+  },
+  "Alabama St": {
+    "massey": "alabama_st"
+  },
+  "Alabama St.": {
+    "torvik": "alabama_st"
+  },
+  "Alabama State": {
+    "team_metrics": "alabama_state"
+  },
+  "Albany": {
+    "torvik": "albany"
+  },
+  "Albany (NY)": {
+    "team_metrics": "albany_ny"
+  },
+  "Alcorn St": {
+    "massey": "alcorn_st"
+  },
+  "Alcorn St.": {
+    "torvik": "alcorn_st"
+  },
+  "Alcorn State": {
+    "team_metrics": "alcorn_state"
+  },
+  "American": {
+    "team_metrics": "american",
+    "torvik": "american"
+  },
+  "American Univ": {
+    "massey": "american_univ"
+  },
+  "Appalachian St": {
+    "massey": "appalachian_st"
+  },
+  "Appalachian St.": {
+    "torvik": "appalachian_st"
+  },
+  "Appalachian State": {
+    "team_metrics": "appalachian_state"
+  },
+  "Arizona": {
+    "massey": "arizona",
+    "team_metrics": "arizona",
+    "torvik": "arizona"
+  },
+  "Arizona St": {
+    "massey": "arizona_st"
+  },
+  "Arizona St.": {
+    "torvik": "arizona_st"
+  },
+  "Arizona State": {
+    "team_metrics": "arizona_state"
+  },
+  "Ark Little Rock": {
+    "massey": "ark_little_rock"
+  },
+  "Ark Pine Bluff": {
+    "massey": "ark_pine_bluff"
+  },
+  "Arkansas": {
+    "massey": "arkansas",
+    "team_metrics": "arkansas",
+    "torvik": "arkansas"
+  },
+  "Arkansas Pine Bluff": {
+    "torvik": "arkansas_pine_bluff"
+  },
+  "Arkansas St": {
+    "massey": "arkansas_st"
+  },
+  "Arkansas St.": {
+    "torvik": "arkansas_st"
+  },
+  "Arkansas State": {
+    "team_metrics": "arkansas_state"
+  },
+  "Arkansas-Pine Bluff": {
+    "team_metrics": "arkansas_pine_bluff"
+  },
+  "Army": {
+    "massey": "army",
+    "team_metrics": "army",
+    "torvik": "army"
+  },
+  "Auburn": {
+    "massey": "auburn",
+    "team_metrics": "auburn",
+    "torvik": "auburn"
+  },
+  "Austin Peay": {
+    "massey": "austin_peay",
+    "team_metrics": "austin_peay",
+    "torvik": "austin_peay"
+  },
+  "BYU": {
+    "massey": "brigham_young",
+    "torvik": "byu"
+  },
+  "Ball St": {
+    "massey": "ball_st"
+  },
+  "Ball St.": {
+    "torvik": "ball_st"
+  },
+  "Ball State": {
+    "team_metrics": "ball_state"
+  },
+  "Baylor": {
+    "massey": "baylor",
+    "team_metrics": "baylor",
+    "torvik": "baylor"
+  },
+  "Bellarmine": {
+    "massey": "bellarmine",
+    "team_metrics": "bellarmine",
+    "torvik": "bellarmine"
+  },
+  "Belmont": {
+    "massey": "belmont",
+    "team_metrics": "belmont",
+    "torvik": "belmont"
+  },
+  "Bethune Cookman": {
+    "torvik": "bethune_cookman"
+  },
+  "Bethune-Cookman": {
+    "massey": "bethune_cookman",
+    "team_metrics": "bethune_cookman"
+  },
+  "Binghamton": {
+    "massey": "binghamton",
+    "team_metrics": "binghamton",
+    "torvik": "binghamton"
+  },
+  "Boise St": {
+    "massey": "boise_st"
+  },
+  "Boise St.": {
+    "torvik": "boise_st"
+  },
+  "Boise State": {
+    "team_metrics": "boise_state"
+  },
+  "Boston College": {
+    "massey": "boston_college",
+    "team_metrics": "boston_college",
+    "torvik": "boston_college"
+  },
+  "Boston Univ": {
+    "massey": "boston_univ"
+  },
+  "Boston University": {
+    "team_metrics": "boston_university",
+    "torvik": "boston_university"
+  },
+  "Bowling Green": {
+    "massey": "bowling_green",
+    "team_metrics": "bowling_green",
+    "torvik": "bowling_green"
+  },
+  "Bradley": {
+    "massey": "bradley",
+    "team_metrics": "bradley",
+    "torvik": "bradley"
+  },
+  "Brigham Young": {
+    "team_metrics": "brigham_young"
+  },
+  "Brown": {
+    "massey": "brown",
+    "team_metrics": "brown",
+    "torvik": "brown"
+  },
+  "Bryant": {
+    "massey": "bryant",
+    "team_metrics": "bryant",
+    "torvik": "bryant"
+  },
+  "Bucknell": {
+    "massey": "bucknell",
+    "team_metrics": "bucknell",
+    "torvik": "bucknell"
+  },
+  "Buffalo": {
+    "massey": "buffalo",
+    "team_metrics": "buffalo",
+    "torvik": "buffalo"
+  },
+  "Butler": {
+    "massey": "butler",
+    "team_metrics": "butler",
+    "torvik": "butler"
+  },
+  "C Michigan": {
+    "massey": "c_michigan"
+  },
+  "CS Bakersfield": {
+    "massey": "cs_bakersfield"
+  },
+  "CS Fullerton": {
+    "massey": "cs_fullerton"
+  },
+  "CS Northridge": {
+    "massey": "cs_northridge"
+  },
+  "CS Sacramento": {
+    "massey": "cs_sacramento"
+  },
+  "Cal Baptist": {
+    "massey": "cal_baptist",
+    "torvik": "cal_baptist"
+  },
+  "Cal Poly": {
+    "massey": "cal_poly",
+    "team_metrics": "cal_poly",
+    "torvik": "cal_poly"
+  },
+  "Cal St. Bakersfield": {
+    "torvik": "cal_st__bakersfield"
+  },
+  "Cal St. Fullerton": {
+    "torvik": "cal_st__fullerton"
+  },
+  "Cal St. Northridge": {
+    "torvik": "cal_st__northridge"
+  },
+  "Cal State Bakersfield": {
+    "team_metrics": "cal_state_bakersfield"
+  },
+  "Cal State Fullerton": {
+    "team_metrics": "cal_state_fullerton"
+  },
+  "Cal State Northridge": {
+    "team_metrics": "cal_state_northridge"
+  },
+  "California": {
+    "massey": "california",
+    "team_metrics": "california",
+    "torvik": "california"
+  },
+  "California Baptist": {
+    "team_metrics": "california_baptist"
+  },
+  "Campbell": {
+    "massey": "campbell",
+    "team_metrics": "campbell",
+    "torvik": "campbell"
+  },
+  "Canisius": {
+    "massey": "canisius",
+    "team_metrics": "canisius",
+    "torvik": "canisius"
+  },
+  "Cent Arkansas": {
+    "massey": "cent_arkansas"
+  },
+  "Central Arkansas": {
+    "team_metrics": "central_arkansas",
+    "torvik": "central_arkansas"
+  },
+  "Central Conn": {
+    "massey": "central_conn"
+  },
+  "Central Connecticut": {
+    "torvik": "central_connecticut"
+  },
+  "Central Connecticut State": {
+    "team_metrics": "central_connecticut_state"
+  },
+  "Central Michigan": {
+    "team_metrics": "central_michigan",
+    "torvik": "central_michigan"
+  },
+  "Charleston": {
+    "torvik": "charleston"
+  },
+  "Charleston So": {
+    "massey": "charleston_so"
+  },
+  "Charleston Southern": {
+    "team_metrics": "charleston_southern",
+    "torvik": "charleston_southern"
+  },
+  "Charlotte": {
+    "massey": "charlotte",
+    "team_metrics": "charlotte",
+    "torvik": "charlotte"
+  },
+  "Chattanooga": {
+    "massey": "chattanooga",
+    "team_metrics": "chattanooga",
+    "torvik": "chattanooga"
+  },
+  "Chicago St": {
+    "massey": "chicago_st"
+  },
+  "Chicago St.": {
+    "torvik": "chicago_st"
+  },
+  "Chicago State": {
+    "team_metrics": "chicago_state"
+  },
+  "Cincinnati": {
+    "massey": "cincinnati",
+    "team_metrics": "cincinnati",
+    "torvik": "cincinnati"
+  },
+  "Citadel": {
+    "massey": "citadel"
+  },
+  "Clemson": {
+    "massey": "clemson",
+    "team_metrics": "clemson",
+    "torvik": "clemson"
+  },
+  "Cleveland St": {
+    "massey": "cleveland_st"
+  },
+  "Cleveland St.": {
+    "torvik": "cleveland_st"
+  },
+  "Cleveland State": {
+    "team_metrics": "cleveland_state"
+  },
+  "Coastal Car": {
+    "massey": "coastal_car"
+  },
+  "Coastal Carolina": {
+    "team_metrics": "coastal_carolina",
+    "torvik": "coastal_carolina"
+  },
+  "Col Charleston": {
+    "massey": "col_charleston"
+  },
+  "Colgate": {
+    "massey": "colgate",
+    "team_metrics": "colgate",
+    "torvik": "colgate"
+  },
+  "College of Charleston": {
+    "team_metrics": "college_of_charleston"
+  },
+  "Colorado": {
+    "massey": "colorado",
+    "team_metrics": "colorado",
+    "torvik": "colorado"
+  },
+  "Colorado St": {
+    "massey": "colorado_st"
+  },
+  "Colorado St.": {
+    "torvik": "colorado_st"
+  },
+  "Colorado State": {
+    "team_metrics": "colorado_state"
+  },
+  "Columbia": {
+    "massey": "columbia",
+    "team_metrics": "columbia",
+    "torvik": "columbia"
+  },
+  "Connecticut": {
+    "massey": "connecticut",
+    "team_metrics": "connecticut",
+    "torvik": "connecticut"
+  },
+  "Coppin St": {
+    "massey": "coppin_st"
+  },
+  "Coppin St.": {
+    "torvik": "coppin_st"
+  },
+  "Coppin State": {
+    "team_metrics": "coppin_state"
+  },
+  "Cornell": {
+    "massey": "cornell",
+    "team_metrics": "cornell",
+    "torvik": "cornell"
+  },
+  "Creighton": {
+    "massey": "creighton",
+    "team_metrics": "creighton",
+    "torvik": "creighton"
+  },
+  "Dartmouth": {
+    "massey": "dartmouth",
+    "team_metrics": "dartmouth",
+    "torvik": "dartmouth"
+  },
+  "Davidson": {
+    "massey": "davidson",
+    "team_metrics": "davidson",
+    "torvik": "davidson"
+  },
+  "Dayton": {
+    "massey": "dayton",
+    "team_metrics": "dayton",
+    "torvik": "dayton"
+  },
+  "DePaul": {
+    "massey": "depaul",
+    "team_metrics": "depaul",
+    "torvik": "depaul"
+  },
+  "Delaware": {
+    "massey": "delaware",
+    "team_metrics": "delaware",
+    "torvik": "delaware"
+  },
+  "Delaware St": {
+    "massey": "delaware_st"
+  },
+  "Delaware St.": {
+    "torvik": "delaware_st"
+  },
+  "Delaware State": {
+    "team_metrics": "delaware_state"
+  },
+  "Denver": {
+    "massey": "denver",
+    "team_metrics": "denver",
+    "torvik": "denver"
+  },
+  "Detroit": {
+    "massey": "detroit"
+  },
+  "Detroit Mercy": {
+    "team_metrics": "detroit_mercy",
+    "torvik": "detroit_mercy"
+  },
+  "Drake": {
+    "massey": "drake",
+    "team_metrics": "drake",
+    "torvik": "drake"
+  },
+  "Drexel": {
+    "massey": "drexel",
+    "team_metrics": "drexel",
+    "torvik": "drexel"
+  },
+  "Duke": {
+    "massey": "duke",
+    "team_metrics": "duke",
+    "torvik": "duke"
+  },
+  "Duquesne": {
+    "massey": "duquesne",
+    "team_metrics": "duquesne",
+    "torvik": "duquesne"
+  },
+  "E Illinois": {
+    "massey": "e_illinois"
+  },
+  "E Kentucky": {
+    "massey": "e_kentucky"
+  },
+  "E Michigan": {
+    "massey": "e_michigan"
+  },
+  "E Washington": {
+    "massey": "e_washington"
+  },
+  "ETSU": {
+    "massey": "etsu"
+  },
+  "East Carolina": {
+    "massey": "east_carolina",
+    "team_metrics": "east_carolina",
+    "torvik": "east_carolina"
+  },
+  "East Tennessee St.": {
+    "torvik": "east_tennessee_st"
+  },
+  "East Tennessee State": {
+    "team_metrics": "east_tennessee_state"
+  },
+  "East Texas A&M": {
+    "massey": "east_texas_a_m",
+    "team_metrics": "east_texas_a_m",
+    "torvik": "east_texas_a_m"
+  },
+  "Eastern Illinois": {
+    "team_metrics": "eastern_illinois",
+    "torvik": "eastern_illinois"
+  },
+  "Eastern Kentucky": {
+    "team_metrics": "eastern_kentucky",
+    "torvik": "eastern_kentucky"
+  },
+  "Eastern Michigan": {
+    "team_metrics": "eastern_michigan",
+    "torvik": "eastern_michigan"
+  },
+  "Eastern Washington": {
+    "team_metrics": "eastern_washington",
+    "torvik": "eastern_washington"
+  },
+  "Elon": {
+    "massey": "elon",
+    "team_metrics": "elon",
+    "torvik": "elon"
+  },
+  "Evansville": {
+    "massey": "evansville",
+    "team_metrics": "evansville",
+    "torvik": "evansville"
+  },
+  "F Dickinson": {
+    "massey": "f_dickinson"
+  },
+  "FDU": {
+    "team_metrics": "fairleigh_dickinson"
+  },
+  "FGCU": {
+    "massey": "fgcu"
+  },
+  "FIU": {
+    "torvik": "fiu"
+  },
+  "FL Atlantic": {
+    "massey": "fl_atlantic"
+  },
+  "Fairfield": {
+    "massey": "fairfield",
+    "team_metrics": "fairfield",
+    "torvik": "fairfield"
+  },
+  "Fairleigh Dickinson": {
+    "torvik": "fairleigh_dickinson"
+  },
+  "Florida": {
+    "massey": "florida",
+    "team_metrics": "florida",
+    "torvik": "florida"
+  },
+  "Florida A&M": {
+    "massey": "florida_a_m",
+    "team_metrics": "florida_a_m",
+    "torvik": "florida_a_m"
+  },
+  "Florida Atlantic": {
+    "team_metrics": "florida_atlantic",
+    "torvik": "florida_atlantic"
+  },
+  "Florida Gulf Coast": {
+    "team_metrics": "florida_gulf_coast",
+    "torvik": "florida_gulf_coast"
+  },
+  "Florida International": {
+    "team_metrics": "florida_international"
+  },
+  "Florida Intl": {
+    "massey": "florida_intl"
+  },
+  "Florida St": {
+    "massey": "florida_st"
+  },
+  "Florida St.": {
+    "torvik": "florida_st"
+  },
+  "Florida State": {
+    "team_metrics": "florida_state"
+  },
+  "Fordham": {
+    "massey": "fordham",
+    "team_metrics": "fordham",
+    "torvik": "fordham"
+  },
+  "Fresno St": {
+    "massey": "fresno_st"
+  },
+  "Fresno St.": {
+    "torvik": "fresno_st"
+  },
+  "Fresno State": {
+    "team_metrics": "fresno_state"
+  },
+  "Furman": {
+    "massey": "furman",
+    "team_metrics": "furman",
+    "torvik": "furman"
+  },
+  "G Washington": {
+    "massey": "g_washington"
+  },
+  "Ga Southern": {
+    "massey": "ga_southern"
+  },
+  "Gardner Webb": {
+    "massey": "gardner_webb",
+    "torvik": "gardner_webb"
+  },
+  "Gardner-Webb": {
+    "team_metrics": "gardner_webb"
+  },
+  "George Mason": {
+    "massey": "george_mason",
+    "team_metrics": "george_mason",
+    "torvik": "george_mason"
+  },
+  "George Washington": {
+    "team_metrics": "george_washington",
+    "torvik": "george_washington"
+  },
+  "Georgetown": {
+    "massey": "georgetown",
+    "team_metrics": "georgetown",
+    "torvik": "georgetown"
+  },
+  "Georgia": {
+    "massey": "georgia",
+    "team_metrics": "georgia",
+    "torvik": "georgia"
+  },
+  "Georgia Southern": {
+    "team_metrics": "georgia_southern",
+    "torvik": "georgia_southern"
+  },
+  "Georgia St": {
+    "massey": "georgia_st"
+  },
+  "Georgia St.": {
+    "torvik": "georgia_st"
+  },
+  "Georgia State": {
+    "team_metrics": "georgia_state"
+  },
+  "Georgia Tech": {
+    "massey": "georgia_tech",
+    "team_metrics": "georgia_tech",
+    "torvik": "georgia_tech"
+  },
+  "Gonzaga": {
+    "massey": "gonzaga",
+    "team_metrics": "gonzaga",
+    "torvik": "gonzaga"
+  },
+  "Grambling": {
+    "massey": "grambling",
+    "team_metrics": "grambling"
+  },
+  "Grambling St.": {
+    "torvik": "grambling_st"
+  },
+  "Grand Canyon": {
+    "massey": "grand_canyon",
+    "team_metrics": "grand_canyon",
+    "torvik": "grand_canyon"
+  },
+  "Green Bay": {
+    "team_metrics": "green_bay",
+    "torvik": "green_bay"
+  },
+  "Hampton": {
+    "massey": "hampton",
+    "team_metrics": "hampton",
+    "torvik": "hampton"
+  },
+  "Harvard": {
+    "massey": "harvard",
+    "team_metrics": "harvard",
+    "torvik": "harvard"
+  },
+  "Hawaii": {
+    "massey": "hawaii",
+    "team_metrics": "hawaii",
+    "torvik": "hawaii"
+  },
+  "High Point": {
+    "massey": "high_point",
+    "team_metrics": "high_point",
+    "torvik": "high_point"
+  },
+  "Hofstra": {
+    "massey": "hofstra",
+    "team_metrics": "hofstra",
+    "torvik": "hofstra"
+  },
+  "Holy Cross": {
+    "massey": "holy_cross",
+    "team_metrics": "holy_cross",
+    "torvik": "holy_cross"
+  },
+  "Houston": {
+    "massey": "houston",
+    "team_metrics": "houston",
+    "torvik": "houston"
+  },
+  "Houston Chr": {
+    "massey": "houston_chr"
+  },
+  "Houston Christian": {
+    "team_metrics": "houston_christian",
+    "torvik": "houston_christian"
+  },
+  "Howard": {
+    "massey": "howard",
+    "team_metrics": "howard",
+    "torvik": "howard"
+  },
+  "IL Chicago": {
+    "massey": "il_chicago"
+  },
+  "IU Indy": {
+    "team_metrics": "iu_indy",
+    "torvik": "iu_indy"
+  },
+  "IUPUI": {
+    "massey": "iupui"
+  },
+  "Idaho": {
+    "massey": "idaho",
+    "team_metrics": "idaho",
+    "torvik": "idaho"
+  },
+  "Idaho St": {
+    "massey": "idaho_st"
+  },
+  "Idaho St.": {
+    "torvik": "idaho_st"
+  },
+  "Idaho State": {
+    "team_metrics": "idaho_state"
+  },
+  "Illinois": {
+    "massey": "illinois",
+    "team_metrics": "illinois",
+    "torvik": "illinois"
+  },
+  "Illinois Chicago": {
+    "torvik": "illinois_chicago"
+  },
+  "Illinois St": {
+    "massey": "illinois_st"
+  },
+  "Illinois St.": {
+    "torvik": "illinois_st"
+  },
+  "Illinois State": {
+    "team_metrics": "illinois_state"
+  },
+  "Illinois-Chicago": {
+    "team_metrics": "illinois_chicago"
+  },
+  "Incarnate Word": {
+    "massey": "incarnate_word",
+    "team_metrics": "incarnate_word",
+    "torvik": "incarnate_word"
+  },
+  "Indiana": {
+    "massey": "indiana",
+    "team_metrics": "indiana",
+    "torvik": "indiana"
+  },
+  "Indiana St": {
+    "massey": "indiana_st"
+  },
+  "Indiana St.": {
+    "torvik": "indiana_st"
+  },
+  "Indiana State": {
+    "team_metrics": "indiana_state"
+  },
+  "Iona": {
+    "massey": "iona",
+    "team_metrics": "iona",
+    "torvik": "iona"
+  },
+  "Iowa": {
+    "massey": "iowa",
+    "team_metrics": "iowa",
+    "torvik": "iowa"
+  },
+  "Iowa St": {
+    "massey": "iowa_st"
+  },
+  "Iowa St.": {
+    "torvik": "iowa_st"
+  },
+  "Iowa State": {
+    "team_metrics": "iowa_state"
+  },
+  "Jackson St": {
+    "massey": "jackson_st"
+  },
+  "Jackson St.": {
+    "torvik": "jackson_st"
+  },
+  "Jackson State": {
+    "team_metrics": "jackson_state"
+  },
+  "Jacksonville": {
+    "massey": "jacksonville",
+    "team_metrics": "jacksonville",
+    "torvik": "jacksonville"
+  },
+  "Jacksonville St": {
+    "massey": "jacksonville_st"
+  },
+  "Jacksonville St.": {
+    "torvik": "jacksonville_st"
+  },
+  "Jacksonville State": {
+    "team_metrics": "jacksonville_state"
+  },
+  "James Madison": {
+    "massey": "james_madison",
+    "team_metrics": "james_madison",
+    "torvik": "james_madison"
+  },
+  "Kansas": {
+    "massey": "kansas",
+    "team_metrics": "kansas",
+    "torvik": "kansas"
+  },
+  "Kansas City": {
+    "team_metrics": "kansas_city"
+  },
+  "Kansas St": {
+    "massey": "kansas_st"
+  },
+  "Kansas St.": {
+    "torvik": "kansas_st"
+  },
+  "Kansas State": {
+    "team_metrics": "kansas_state"
+  },
+  "Kennesaw": {
+    "massey": "kennesaw"
+  },
+  "Kennesaw St.": {
+    "torvik": "kennesaw_st"
+  },
+  "Kennesaw State": {
+    "team_metrics": "kennesaw_state"
+  },
+  "Kent": {
+    "massey": "kent"
+  },
+  "Kent St.": {
+    "torvik": "kent_st"
+  },
+  "Kent State": {
+    "team_metrics": "kent_state"
+  },
+  "Kentucky": {
+    "massey": "kentucky",
+    "team_metrics": "kentucky",
+    "torvik": "kentucky"
+  },
+  "LIU": {
+    "torvik": "liu"
+  },
+  "LIU Brooklyn": {
+    "massey": "liu_brooklyn"
+  },
+  "LSU": {
+    "massey": "louisiana_state",
+    "torvik": "lsu"
+  },
+  "La Salle": {
+    "massey": "la_salle",
+    "team_metrics": "la_salle",
+    "torvik": "la_salle"
+  },
+  "Lafayette": {
+    "massey": "lafayette",
+    "team_metrics": "lafayette",
+    "torvik": "lafayette"
+  },
+  "Lamar": {
+    "massey": "lamar",
+    "team_metrics": "lamar",
+    "torvik": "lamar"
+  },
+  "Le Moyne": {
+    "massey": "le_moyne",
+    "team_metrics": "le_moyne",
+    "torvik": "le_moyne"
+  },
+  "Lehigh": {
+    "massey": "lehigh",
+    "team_metrics": "lehigh",
+    "torvik": "lehigh"
+  },
+  "Liberty": {
+    "massey": "liberty",
+    "team_metrics": "liberty",
+    "torvik": "liberty"
+  },
+  "Lindenwood": {
+    "massey": "lindenwood",
+    "team_metrics": "lindenwood",
+    "torvik": "lindenwood"
+  },
+  "Lipscomb": {
+    "massey": "lipscomb",
+    "team_metrics": "lipscomb",
+    "torvik": "lipscomb"
+  },
+  "Little Rock": {
+    "team_metrics": "little_rock",
+    "torvik": "little_rock"
+  },
+  "Long Beach St": {
+    "massey": "long_beach_st"
+  },
+  "Long Beach St.": {
+    "torvik": "long_beach_st"
+  },
+  "Long Beach State": {
+    "team_metrics": "long_beach_state"
+  },
+  "Long Island University": {
+    "team_metrics": "long_island_university"
+  },
+  "Longwood": {
+    "massey": "longwood",
+    "team_metrics": "longwood",
+    "torvik": "longwood"
+  },
+  "Louisiana": {
+    "massey": "louisiana",
+    "team_metrics": "louisiana",
+    "torvik": "louisiana"
+  },
+  "Louisiana Monroe": {
+    "torvik": "louisiana_monroe"
+  },
+  "Louisiana State": {
+    "team_metrics": "louisiana_state"
+  },
+  "Louisiana Tech": {
+    "massey": "louisiana_tech",
+    "team_metrics": "louisiana_tech",
+    "torvik": "louisiana_tech"
+  },
+  "Louisiana-Monroe": {
+    "team_metrics": "louisiana_monroe"
+  },
+  "Louisville": {
+    "massey": "louisville",
+    "team_metrics": "louisville",
+    "torvik": "louisville"
+  },
+  "Loy Marymount": {
+    "massey": "loy_marymount"
+  },
+  "Loyola (IL)": {
+    "team_metrics": "loyola_il"
+  },
+  "Loyola (MD)": {
+    "team_metrics": "loyola_md"
+  },
+  "Loyola Chicago": {
+    "torvik": "loyola_chicago"
+  },
+  "Loyola MD": {
+    "massey": "loyola_md",
+    "torvik": "loyola_md"
+  },
+  "Loyola Marymount": {
+    "team_metrics": "loyola_marymount",
+    "torvik": "loyola_marymount"
+  },
+  "Loyola-Chicago": {
+    "massey": "loyola_chicago"
+  },
+  "MA Lowell": {
+    "massey": "ma_lowell"
+  },
+  "MD E Shore": {
+    "massey": "md_e_shore"
+  },
+  "MS Valley St": {
+    "massey": "ms_valley_st"
+  },
+  "MTSU": {
+    "massey": "mtsu"
+  },
+  "Maine": {
+    "massey": "maine",
+    "team_metrics": "maine",
+    "torvik": "maine"
+  },
+  "Manhattan": {
+    "massey": "manhattan",
+    "team_metrics": "manhattan",
+    "torvik": "manhattan"
+  },
+  "Marist": {
+    "massey": "marist",
+    "team_metrics": "marist",
+    "torvik": "marist"
+  },
+  "Marquette": {
+    "massey": "marquette",
+    "team_metrics": "marquette",
+    "torvik": "marquette"
+  },
+  "Marshall": {
+    "massey": "marshall",
+    "team_metrics": "marshall",
+    "torvik": "marshall"
+  },
+  "Maryland": {
+    "massey": "maryland",
+    "team_metrics": "maryland",
+    "torvik": "maryland"
+  },
+  "Maryland Eastern Shore": {
+    "torvik": "maryland_eastern_shore"
+  },
+  "Maryland-Baltimore County": {
+    "team_metrics": "maryland_baltimore_county"
+  },
+  "Maryland-Eastern Shore": {
+    "team_metrics": "maryland_eastern_shore"
+  },
+  "Massachusetts": {
+    "massey": "massachusetts",
+    "team_metrics": "massachusetts",
+    "torvik": "massachusetts"
+  },
+  "Massachusetts-Lowell": {
+    "team_metrics": "massachusetts_lowell"
+  },
+  "McNeese St": {
+    "massey": "mcneese_st"
+  },
+  "McNeese St.": {
+    "torvik": "mcneese_st"
+  },
+  "McNeese State": {
+    "team_metrics": "mcneese_state"
+  },
+  "Memphis": {
+    "massey": "memphis",
+    "team_metrics": "memphis",
+    "torvik": "memphis"
+  },
+  "Mercer": {
+    "massey": "mercer",
+    "team_metrics": "mercer",
+    "torvik": "mercer"
+  },
+  "Mercyhurst": {
+    "massey": "mercyhurst",
+    "team_metrics": "mercyhurst",
+    "torvik": "mercyhurst"
+  },
+  "Merrimack": {
+    "massey": "merrimack",
+    "team_metrics": "merrimack",
+    "torvik": "merrimack"
+  },
+  "Miami (FL)": {
+    "team_metrics": "miami__fl"
+  },
+  "Miami (OH)": {
+    "team_metrics": "miami__oh"
+  },
+  "Miami FL": {
+    "massey": "miami__fl",
+    "torvik": "miami_fl"
+  },
+  "Miami OH": {
+    "massey": "miami__oh",
+    "torvik": "miami_oh"
+  },
+  "Michigan": {
+    "massey": "michigan",
+    "team_metrics": "michigan",
+    "torvik": "michigan"
+  },
+  "Michigan St": {
+    "massey": "michigan_st"
+  },
+  "Michigan St.": {
+    "torvik": "michigan_st"
+  },
+  "Michigan State": {
+    "team_metrics": "michigan_state"
+  },
+  "Middle Tennessee": {
+    "team_metrics": "middle_tennessee",
+    "torvik": "middle_tennessee"
+  },
+  "Milwaukee": {
+    "team_metrics": "milwaukee",
+    "torvik": "milwaukee"
+  },
+  "Minnesota": {
+    "massey": "minnesota",
+    "team_metrics": "minnesota",
+    "torvik": "minnesota"
+  },
+  "Mississippi": {
+    "massey": "mississippi",
+    "team_metrics": "mississippi",
+    "torvik": "mississippi"
+  },
+  "Mississippi St": {
+    "massey": "mississippi_st"
+  },
+  "Mississippi St.": {
+    "torvik": "mississippi_st"
+  },
+  "Mississippi State": {
+    "team_metrics": "mississippi_state"
+  },
+  "Mississippi Valley St.": {
+    "torvik": "mississippi_valley_st"
+  },
+  "Mississippi Valley State": {
+    "team_metrics": "mississippi_valley_state"
+  },
+  "Missouri": {
+    "massey": "missouri",
+    "team_metrics": "missouri",
+    "torvik": "missouri"
+  },
+  "Missouri KC": {
+    "massey": "missouri_kc"
+  },
+  "Missouri St": {
+    "massey": "missouri_st"
+  },
+  "Missouri St.": {
+    "torvik": "missouri_st"
+  },
+  "Missouri State": {
+    "team_metrics": "missouri_state"
+  },
+  "Monmouth": {
+    "team_metrics": "monmouth",
+    "torvik": "monmouth"
+  },
+  "Monmouth NJ": {
+    "massey": "monmouth_nj"
+  },
+  "Montana": {
+    "massey": "montana",
+    "team_metrics": "montana",
+    "torvik": "montana"
+  },
+  "Montana St": {
+    "massey": "montana_st"
+  },
+  "Montana St.": {
+    "torvik": "montana_st"
+  },
+  "Montana State": {
+    "team_metrics": "montana_state"
+  },
+  "Morehead St": {
+    "massey": "morehead_st"
+  },
+  "Morehead St.": {
+    "torvik": "morehead_st"
+  },
+  "Morehead State": {
+    "team_metrics": "morehead_state"
+  },
+  "Morgan St": {
+    "massey": "morgan_st"
+  },
+  "Morgan St.": {
+    "torvik": "morgan_st"
+  },
+  "Morgan State": {
+    "team_metrics": "morgan_state"
+  },
+  "Mount St. Mary's": {
+    "team_metrics": "mount_st_mary_s",
+    "torvik": "mount_st__mary_s"
+  },
+  "Mt St Mary's": {
+    "massey": "mt_st_mary_s"
+  },
+  "Murray St": {
+    "massey": "murray_st"
+  },
+  "Murray St.": {
+    "torvik": "murray_st"
+  },
+  "Murray State": {
+    "team_metrics": "murray_state"
+  },
+  "N Colorado": {
+    "massey": "n_colorado"
+  },
+  "N Dakota St": {
+    "massey": "n_dakota_st"
+  },
+  "N Illinois": {
+    "massey": "n_illinois"
+  },
+  "N Kentucky": {
+    "massey": "n_kentucky"
+  },
+  "N.C. State": {
+    "torvik": "n_c__state"
+  },
+  "NC A&T": {
+    "massey": "nc_a_t"
+  },
+  "NC Central": {
+    "massey": "nc_central"
+  },
+  "NC State": {
+    "massey": "nc_state",
+    "team_metrics": "nc_state"
+  },
+  "NE Omaha": {
+    "massey": "ne_omaha"
+  },
+  "NJIT": {
+    "massey": "njit",
+    "team_metrics": "njit",
+    "torvik": "njit"
+  },
+  "Navy": {
+    "massey": "navy",
+    "team_metrics": "navy",
+    "torvik": "navy"
+  },
+  "Nebraska": {
+    "massey": "nebraska",
+    "team_metrics": "nebraska",
+    "torvik": "nebraska"
+  },
+  "Nebraska Omaha": {
+    "torvik": "nebraska_omaha"
+  },
+  "Nevada": {
+    "massey": "nevada",
+    "team_metrics": "nevada",
+    "torvik": "nevada"
+  },
+  "Nevada-Las Vegas": {
+    "team_metrics": "nevada_las_vegas"
+  },
+  "New Hampshire": {
+    "massey": "new_hampshire",
+    "team_metrics": "new_hampshire",
+    "torvik": "new_hampshire"
+  },
+  "New Haven": {
+    "massey": "new_haven",
+    "team_metrics": "new_haven",
+    "torvik": "new_haven"
+  },
+  "New Mexico": {
+    "massey": "new_mexico",
+    "team_metrics": "new_mexico",
+    "torvik": "new_mexico"
+  },
+  "New Mexico St": {
+    "massey": "new_mexico_st"
+  },
+  "New Mexico St.": {
+    "torvik": "new_mexico_st"
+  },
+  "New Mexico State": {
+    "team_metrics": "new_mexico_state"
+  },
+  "New Orleans": {
+    "massey": "new_orleans",
+    "team_metrics": "new_orleans",
+    "torvik": "new_orleans"
+  },
+  "Niagara": {
+    "massey": "niagara",
+    "team_metrics": "niagara",
+    "torvik": "niagara"
+  },
+  "Nicholls St": {
+    "massey": "nicholls_st"
+  },
+  "Nicholls St.": {
+    "torvik": "nicholls_st"
+  },
+  "Nicholls State": {
+    "team_metrics": "nicholls_state"
+  },
+  "Norfolk St": {
+    "massey": "norfolk_st"
+  },
+  "Norfolk St.": {
+    "torvik": "norfolk_st"
+  },
+  "Norfolk State": {
+    "team_metrics": "norfolk_state"
+  },
+  "North Alabama": {
+    "massey": "north_alabama",
+    "team_metrics": "north_alabama",
+    "torvik": "north_alabama"
+  },
+  "North Carolina": {
+    "massey": "north_carolina",
+    "team_metrics": "north_carolina",
+    "torvik": "north_carolina"
+  },
+  "North Carolina A&T": {
+    "team_metrics": "north_carolina_a_t",
+    "torvik": "north_carolina_a_t"
+  },
+  "North Carolina Central": {
+    "team_metrics": "north_carolina_central",
+    "torvik": "north_carolina_central"
+  },
+  "North Dakota": {
+    "massey": "north_dakota",
+    "team_metrics": "north_dakota",
+    "torvik": "north_dakota"
+  },
+  "North Dakota St.": {
+    "torvik": "north_dakota_st"
+  },
+  "North Dakota State": {
+    "team_metrics": "north_dakota_state"
+  },
+  "North Florida": {
+    "massey": "north_florida",
+    "team_metrics": "north_florida",
+    "torvik": "north_florida"
+  },
+  "North Texas": {
+    "massey": "north_texas",
+    "team_metrics": "north_texas",
+    "torvik": "north_texas"
+  },
+  "Northeastern": {
+    "massey": "northeastern",
+    "team_metrics": "northeastern",
+    "torvik": "northeastern"
+  },
+  "Northern Arizona": {
+    "massey": "northern_arizona",
+    "team_metrics": "northern_arizona",
+    "torvik": "northern_arizona"
+  },
+  "Northern Colorado": {
+    "team_metrics": "northern_colorado",
+    "torvik": "northern_colorado"
+  },
+  "Northern Illinois": {
+    "team_metrics": "northern_illinois",
+    "torvik": "northern_illinois"
+  },
+  "Northern Iowa": {
+    "massey": "northern_iowa",
+    "team_metrics": "northern_iowa",
+    "torvik": "northern_iowa"
+  },
+  "Northern Kentucky": {
+    "team_metrics": "northern_kentucky",
+    "torvik": "northern_kentucky"
+  },
+  "Northwestern": {
+    "massey": "northwestern",
+    "team_metrics": "northwestern",
+    "torvik": "northwestern"
+  },
+  "Northwestern LA": {
+    "massey": "northwestern_la"
+  },
+  "Northwestern St.": {
+    "torvik": "northwestern_st"
+  },
+  "Northwestern State": {
+    "team_metrics": "northwestern_state"
+  },
+  "Notre Dame": {
+    "massey": "notre_dame",
+    "team_metrics": "notre_dame",
+    "torvik": "notre_dame"
+  },
+  "Oakland": {
+    "massey": "oakland",
+    "team_metrics": "oakland",
+    "torvik": "oakland"
+  },
+  "Ohio": {
+    "massey": "ohio",
+    "team_metrics": "ohio",
+    "torvik": "ohio"
+  },
+  "Ohio St": {
+    "massey": "ohio_st"
+  },
+  "Ohio St.": {
+    "torvik": "ohio_st"
+  },
+  "Ohio State": {
+    "team_metrics": "ohio_state"
+  },
+  "Oklahoma": {
+    "massey": "oklahoma",
+    "team_metrics": "oklahoma",
+    "torvik": "oklahoma"
+  },
+  "Oklahoma St": {
+    "massey": "oklahoma_st"
+  },
+  "Oklahoma St.": {
+    "torvik": "oklahoma_st"
+  },
+  "Oklahoma State": {
+    "team_metrics": "oklahoma_state"
+  },
+  "Old Dominion": {
+    "massey": "old_dominion",
+    "team_metrics": "old_dominion",
+    "torvik": "old_dominion"
+  },
+  "Omaha": {
+    "team_metrics": "omaha"
+  },
+  "Oral Roberts": {
+    "massey": "oral_roberts",
+    "team_metrics": "oral_roberts",
+    "torvik": "oral_roberts"
+  },
+  "Oregon": {
+    "massey": "oregon",
+    "team_metrics": "oregon",
+    "torvik": "oregon"
+  },
+  "Oregon St": {
+    "massey": "oregon_st"
+  },
+  "Oregon St.": {
+    "torvik": "oregon_st"
+  },
+  "Oregon State": {
+    "team_metrics": "oregon_state"
+  },
+  "PFW": {
+    "massey": "pfw"
+  },
+  "Pacific": {
+    "massey": "pacific",
+    "team_metrics": "pacific",
+    "torvik": "pacific"
+  },
+  "Penn": {
+    "massey": "penn",
+    "torvik": "penn"
+  },
+  "Penn St": {
+    "massey": "penn_st"
+  },
+  "Penn St.": {
+    "torvik": "penn_st"
+  },
+  "Penn State": {
+    "team_metrics": "penn_state"
+  },
+  "Pennsylvania": {
+    "team_metrics": "pennsylvania"
+  },
+  "Pepperdine": {
+    "massey": "pepperdine",
+    "team_metrics": "pepperdine",
+    "torvik": "pepperdine"
+  },
+  "Pittsburgh": {
+    "massey": "pittsburgh",
+    "team_metrics": "pittsburgh",
+    "torvik": "pittsburgh"
+  },
+  "Portland": {
+    "massey": "portland",
+    "team_metrics": "portland",
+    "torvik": "portland"
+  },
+  "Portland St": {
+    "massey": "portland_st"
+  },
+  "Portland St.": {
+    "torvik": "portland_st"
+  },
+  "Portland State": {
+    "team_metrics": "portland_state"
+  },
+  "Prairie View": {
+    "massey": "prairie_view",
+    "team_metrics": "prairie_view"
+  },
+  "Prairie View A&M": {
+    "torvik": "prairie_view_a_m"
+  },
+  "Presbyterian": {
+    "massey": "presbyterian",
+    "team_metrics": "presbyterian",
+    "torvik": "presbyterian"
+  },
+  "Princeton": {
+    "massey": "princeton",
+    "team_metrics": "princeton",
+    "torvik": "princeton"
+  },
+  "Providence": {
+    "massey": "providence",
+    "team_metrics": "providence",
+    "torvik": "providence"
+  },
+  "Purdue": {
+    "massey": "purdue",
+    "team_metrics": "purdue",
+    "torvik": "purdue"
+  },
+  "Purdue Fort Wayne": {
+    "team_metrics": "purdue_fort_wayne",
+    "torvik": "purdue_fort_wayne"
+  },
+  "Queens": {
+    "torvik": "queens"
+  },
+  "Queens (NC)": {
+    "team_metrics": "queens_nc"
+  },
+  "Queens NC": {
+    "massey": "queens_nc"
+  },
+  "Quinnipiac": {
+    "massey": "quinnipiac",
+    "team_metrics": "quinnipiac",
+    "torvik": "quinnipiac"
+  },
+  "Radford": {
+    "massey": "radford",
+    "team_metrics": "radford",
+    "torvik": "radford"
+  },
+  "Rhode Island": {
+    "massey": "rhode_island",
+    "team_metrics": "rhode_island",
+    "torvik": "rhode_island"
+  },
+  "Rice": {
+    "massey": "rice",
+    "team_metrics": "rice",
+    "torvik": "rice"
+  },
+  "Richmond": {
+    "massey": "richmond",
+    "team_metrics": "richmond",
+    "torvik": "richmond"
+  },
+  "Rider": {
+    "massey": "rider",
+    "team_metrics": "rider",
+    "torvik": "rider"
+  },
+  "Robert Morris": {
+    "massey": "robert_morris",
+    "team_metrics": "robert_morris",
+    "torvik": "robert_morris"
+  },
+  "Rutgers": {
+    "massey": "rutgers",
+    "team_metrics": "rutgers",
+    "torvik": "rutgers"
+  },
+  "S Carolina St": {
+    "massey": "s_carolina_st"
+  },
+  "S Dakota St": {
+    "massey": "s_dakota_st"
+  },
+  "S Illinois": {
+    "massey": "s_illinois"
+  },
+  "SC Upstate": {
+    "massey": "sc_upstate"
+  },
+  "SE Louisiana": {
+    "massey": "se_louisiana"
+  },
+  "SE Missouri St": {
+    "massey": "se_missouri_st"
+  },
+  "SF Austin": {
+    "massey": "sf_austin"
+  },
+  "SIU Edwardsville": {
+    "team_metrics": "siu_edwardsville",
+    "torvik": "siu_edwardsville"
+  },
+  "SIUE": {
+    "massey": "siue"
+  },
+  "SMU": {
+    "massey": "southern_methodist",
+    "torvik": "smu"
+  },
+  "SUNY Albany": {
+    "massey": "suny_albany"
+  },
+  "Sacramento St.": {
+    "torvik": "sacramento_st"
+  },
+  "Sacramento State": {
+    "team_metrics": "sacramento_state"
+  },
+  "Sacred Heart": {
+    "massey": "sacred_heart",
+    "team_metrics": "sacred_heart",
+    "torvik": "sacred_heart"
+  },
+  "Saint Francis": {
+    "torvik": "saint_francis"
+  },
+  "Saint Francis (PA)": {
+    "team_metrics": "saint_francis_pa"
+  },
+  "Saint Joseph's": {
+    "team_metrics": "saint_joseph_s",
+    "torvik": "saint_joseph_s"
+  },
+  "Saint Louis": {
+    "team_metrics": "saint_louis",
+    "torvik": "saint_louis"
+  },
+  "Saint Mary's": {
+    "torvik": "saint_mary_s"
+  },
+  "Saint Mary's (CA)": {
+    "team_metrics": "saint_mary_s_ca"
+  },
+  "Saint Peter's": {
+    "team_metrics": "saint_peter_s",
+    "torvik": "saint_peter_s"
+  },
+  "Sam Houston": {
+    "team_metrics": "sam_houston"
+  },
+  "Sam Houston St": {
+    "massey": "sam_houston_st"
+  },
+  "Sam Houston St.": {
+    "torvik": "sam_houston_st"
+  },
+  "Samford": {
+    "massey": "samford",
+    "team_metrics": "samford",
+    "torvik": "samford"
+  },
+  "San Diego": {
+    "massey": "san_diego",
+    "team_metrics": "san_diego",
+    "torvik": "san_diego"
+  },
+  "San Diego St": {
+    "massey": "san_diego_st"
+  },
+  "San Diego St.": {
+    "torvik": "san_diego_st"
+  },
+  "San Diego State": {
+    "team_metrics": "san_diego_state"
+  },
+  "San Francisco": {
+    "massey": "san_francisco",
+    "team_metrics": "san_francisco",
+    "torvik": "san_francisco"
+  },
+  "San Jose St": {
+    "massey": "san_jose_st"
+  },
+  "San Jose St.": {
+    "torvik": "san_jose_st"
+  },
+  "San Jose State": {
+    "team_metrics": "san_jose_state"
+  },
+  "Santa Clara": {
+    "massey": "santa_clara",
+    "team_metrics": "santa_clara",
+    "torvik": "santa_clara"
+  },
+  "Seattle": {
+    "massey": "seattle",
+    "team_metrics": "seattle",
+    "torvik": "seattle"
+  },
+  "Seton Hall": {
+    "massey": "seton_hall",
+    "team_metrics": "seton_hall",
+    "torvik": "seton_hall"
+  },
+  "Siena": {
+    "massey": "siena",
+    "team_metrics": "siena",
+    "torvik": "siena"
+  },
+  "South Alabama": {
+    "massey": "south_alabama",
+    "team_metrics": "south_alabama",
+    "torvik": "south_alabama"
+  },
+  "South Carolina": {
+    "massey": "south_carolina",
+    "team_metrics": "south_carolina",
+    "torvik": "south_carolina"
+  },
+  "South Carolina St.": {
+    "torvik": "south_carolina_st"
+  },
+  "South Carolina State": {
+    "team_metrics": "south_carolina_state"
+  },
+  "South Carolina Upstate": {
+    "team_metrics": "south_carolina_upstate"
+  },
+  "South Dakota": {
+    "massey": "south_dakota",
+    "team_metrics": "south_dakota",
+    "torvik": "south_dakota"
+  },
+  "South Dakota St.": {
+    "torvik": "south_dakota_st"
+  },
+  "South Dakota State": {
+    "team_metrics": "south_dakota_state"
+  },
+  "South Florida": {
+    "massey": "south_florida",
+    "team_metrics": "south_florida",
+    "torvik": "south_florida"
+  },
+  "Southeast Missouri St.": {
+    "torvik": "southeast_missouri_st"
+  },
+  "Southeast Missouri State": {
+    "team_metrics": "southeast_missouri_state"
+  },
+  "Southeastern Louisiana": {
+    "team_metrics": "southeastern_louisiana",
+    "torvik": "southeastern_louisiana"
+  },
+  "Southern": {
+    "team_metrics": "southern",
+    "torvik": "southern"
+  },
+  "Southern California": {
+    "team_metrics": "southern_california"
+  },
+  "Southern Illinois": {
+    "team_metrics": "southern_illinois",
+    "torvik": "southern_illinois"
+  },
+  "Southern Indiana": {
+    "massey": "southern_indiana",
+    "team_metrics": "southern_indiana",
+    "torvik": "southern_indiana"
+  },
+  "Southern Methodist": {
+    "team_metrics": "southern_methodist"
+  },
+  "Southern Miss": {
+    "massey": "southern_miss",
+    "torvik": "southern_miss"
+  },
+  "Southern Mississippi": {
+    "team_metrics": "southern_mississippi"
+  },
+  "Southern Univ": {
+    "massey": "southern_univ"
+  },
+  "Southern Utah": {
+    "massey": "southern_utah",
+    "team_metrics": "southern_utah",
+    "torvik": "southern_utah"
+  },
+  "St Bonaventure": {
+    "massey": "st_bonaventure"
+  },
+  "St Francis PA": {
+    "massey": "st_francis_pa"
+  },
+  "St John's": {
+    "massey": "st_john_s__ny"
+  },
+  "St Joseph's PA": {
+    "massey": "st_joseph_s_pa"
+  },
+  "St Louis": {
+    "massey": "st_louis"
+  },
+  "St Mary's CA": {
+    "massey": "st_mary_s_ca"
+  },
+  "St Peter's": {
+    "massey": "st_peter_s"
+  },
+  "St Thomas MN": {
+    "massey": "st_thomas_mn"
+  },
+  "St. Bonaventure": {
+    "team_metrics": "st_bonaventure",
+    "torvik": "st__bonaventure"
+  },
+  "St. John's": {
+    "torvik": "st__john_s"
+  },
+  "St. John's (NY)": {
+    "team_metrics": "st_john_s_ny"
+  },
+  "St. Thomas": {
+    "team_metrics": "st_thomas",
+    "torvik": "st__thomas"
+  },
+  "Stanford": {
+    "massey": "stanford",
+    "team_metrics": "stanford",
+    "torvik": "stanford"
+  },
+  "Stephen F. Austin": {
+    "team_metrics": "stephen_f_austin",
+    "torvik": "stephen_f__austin"
+  },
+  "Stetson": {
+    "massey": "stetson",
+    "team_metrics": "stetson",
+    "torvik": "stetson"
+  },
+  "Stonehill": {
+    "massey": "stonehill",
+    "team_metrics": "stonehill",
+    "torvik": "stonehill"
+  },
+  "Stony Brook": {
+    "massey": "stony_brook",
+    "team_metrics": "stony_brook",
+    "torvik": "stony_brook"
+  },
+  "Syracuse": {
+    "massey": "syracuse",
+    "team_metrics": "syracuse",
+    "torvik": "syracuse"
+  },
+  "TAM C. Christi": {
+    "massey": "tam_c_christi"
+  },
+  "TCU": {
+    "massey": "tcu",
+    "team_metrics": "tcu",
+    "torvik": "tcu"
+  },
+  "TN Martin": {
+    "massey": "tn_martin"
+  },
+  "TX Southern": {
+    "massey": "tx_southern"
+  },
+  "Tarleton St": {
+    "massey": "tarleton_st"
+  },
+  "Tarleton St.": {
+    "torvik": "tarleton_st"
+  },
+  "Tarleton State": {
+    "team_metrics": "tarleton_state"
+  },
+  "Temple": {
+    "massey": "temple",
+    "team_metrics": "temple",
+    "torvik": "temple"
+  },
+  "Tennessee": {
+    "massey": "tennessee",
+    "team_metrics": "tennessee",
+    "torvik": "tennessee"
+  },
+  "Tennessee Martin": {
+    "torvik": "tennessee_martin"
+  },
+  "Tennessee St": {
+    "massey": "tennessee_st"
+  },
+  "Tennessee St.": {
+    "torvik": "tennessee_st"
+  },
+  "Tennessee State": {
+    "team_metrics": "tennessee_state"
+  },
+  "Tennessee Tech": {
+    "massey": "tennessee_tech",
+    "team_metrics": "tennessee_tech",
+    "torvik": "tennessee_tech"
+  },
+  "Tennessee-Martin": {
+    "team_metrics": "tennessee_martin"
+  },
+  "Texas": {
+    "massey": "texas",
+    "team_metrics": "texas",
+    "torvik": "texas"
+  },
+  "Texas A&M": {
+    "massey": "texas_a_m",
+    "team_metrics": "texas_a_m",
+    "torvik": "texas_a_m"
+  },
+  "Texas A&M Corpus Chris": {
+    "torvik": "texas_a_m_corpus_chris"
+  },
+  "Texas A&M-Corpus Christi": {
+    "team_metrics": "texas_a_m_corpus_christi"
+  },
+  "Texas Southern": {
+    "team_metrics": "texas_southern",
+    "torvik": "texas_southern"
+  },
+  "Texas St": {
+    "massey": "texas_st"
+  },
+  "Texas St.": {
+    "torvik": "texas_st"
+  },
+  "Texas State": {
+    "team_metrics": "texas_state"
+  },
+  "Texas Tech": {
+    "massey": "texas_tech",
+    "team_metrics": "texas_tech",
+    "torvik": "texas_tech"
+  },
+  "Texas-Rio Grande Valley": {
+    "team_metrics": "texas_rio_grande_valley"
+  },
+  "The Citadel": {
+    "team_metrics": "the_citadel",
+    "torvik": "the_citadel"
+  },
+  "Toledo": {
+    "massey": "toledo",
+    "team_metrics": "toledo",
+    "torvik": "toledo"
+  },
+  "Towson": {
+    "massey": "towson",
+    "team_metrics": "towson",
+    "torvik": "towson"
+  },
+  "Troy": {
+    "massey": "troy",
+    "team_metrics": "troy",
+    "torvik": "troy"
+  },
+  "Tulane": {
+    "massey": "tulane",
+    "team_metrics": "tulane",
+    "torvik": "tulane"
+  },
+  "Tulsa": {
+    "massey": "tulsa",
+    "team_metrics": "tulsa",
+    "torvik": "tulsa"
+  },
+  "UAB": {
+    "massey": "uab",
+    "team_metrics": "uab",
+    "torvik": "uab"
+  },
+  "UC Davis": {
+    "massey": "uc_davis",
+    "team_metrics": "uc_davis",
+    "torvik": "uc_davis"
+  },
+  "UC Irvine": {
+    "massey": "uc_irvine",
+    "team_metrics": "uc_irvine",
+    "torvik": "uc_irvine"
+  },
+  "UC Riverside": {
+    "massey": "uc_riverside",
+    "team_metrics": "uc_riverside",
+    "torvik": "uc_riverside"
+  },
+  "UC San Diego": {
+    "massey": "uc_san_diego",
+    "team_metrics": "uc_san_diego",
+    "torvik": "uc_san_diego"
+  },
+  "UC Santa Barbara": {
+    "massey": "uc_santa_barbara",
+    "team_metrics": "uc_santa_barbara",
+    "torvik": "uc_santa_barbara"
+  },
+  "UCF": {
+    "massey": "ucf",
+    "team_metrics": "ucf",
+    "torvik": "ucf"
+  },
+  "UCLA": {
+    "massey": "ucla",
+    "team_metrics": "ucla",
+    "torvik": "ucla"
+  },
+  "ULM": {
+    "massey": "ulm"
+  },
+  "UMBC": {
+    "massey": "umbc",
+    "torvik": "umbc"
+  },
+  "UMKC": {
+    "torvik": "umkc"
+  },
+  "UMass Lowell": {
+    "torvik": "umass_lowell"
+  },
+  "UNC Asheville": {
+    "massey": "unc_asheville",
+    "team_metrics": "unc_asheville",
+    "torvik": "unc_asheville"
+  },
+  "UNC Greensboro": {
+    "massey": "unc_greensboro",
+    "team_metrics": "unc_greensboro",
+    "torvik": "unc_greensboro"
+  },
+  "UNC Wilmington": {
+    "massey": "unc_wilmington",
+    "team_metrics": "unc_wilmington",
+    "torvik": "unc_wilmington"
+  },
+  "UNLV": {
+    "massey": "unlv",
+    "torvik": "unlv"
+  },
+  "USC": {
+    "massey": "southern_california",
+    "torvik": "usc"
+  },
+  "USC Upstate": {
+    "torvik": "usc_upstate"
+  },
+  "UT Arlington": {
+    "massey": "ut_arlington",
+    "team_metrics": "ut_arlington",
+    "torvik": "ut_arlington"
+  },
+  "UT Rio Grande Valley": {
+    "torvik": "ut_rio_grande_valley"
+  },
+  "UT San Antonio": {
+    "massey": "ut_san_antonio"
+  },
+  "UTEP": {
+    "massey": "utep",
+    "team_metrics": "utep",
+    "torvik": "utep"
+  },
+  "UTRGV": {
+    "massey": "utrgv"
+  },
+  "UTSA": {
+    "team_metrics": "utsa",
+    "torvik": "utsa"
+  },
+  "Utah": {
+    "massey": "utah",
+    "team_metrics": "utah",
+    "torvik": "utah"
+  },
+  "Utah St": {
+    "massey": "utah_st"
+  },
+  "Utah St.": {
+    "torvik": "utah_st"
+  },
+  "Utah State": {
+    "team_metrics": "utah_state"
+  },
+  "Utah Tech": {
+    "massey": "utah_tech",
+    "team_metrics": "utah_tech",
+    "torvik": "utah_tech"
+  },
+  "Utah Valley": {
+    "massey": "utah_valley",
+    "team_metrics": "utah_valley",
+    "torvik": "utah_valley"
+  },
+  "VCU": {
+    "massey": "virginia_commonwealth",
+    "torvik": "vcu"
+  },
+  "VMI": {
+    "massey": "vmi",
+    "team_metrics": "vmi",
+    "torvik": "vmi"
+  },
+  "Valparaiso": {
+    "massey": "valparaiso",
+    "team_metrics": "valparaiso",
+    "torvik": "valparaiso"
+  },
+  "Vanderbilt": {
+    "massey": "vanderbilt",
+    "team_metrics": "vanderbilt",
+    "torvik": "vanderbilt"
+  },
+  "Vermont": {
+    "massey": "vermont",
+    "team_metrics": "vermont",
+    "torvik": "vermont"
+  },
+  "Villanova": {
+    "massey": "villanova",
+    "team_metrics": "villanova",
+    "torvik": "villanova"
+  },
+  "Virginia": {
+    "massey": "virginia",
+    "team_metrics": "virginia",
+    "torvik": "virginia"
+  },
+  "Virginia Commonwealth": {
+    "team_metrics": "virginia_commonwealth"
+  },
+  "Virginia Tech": {
+    "massey": "virginia_tech",
+    "team_metrics": "virginia_tech",
+    "torvik": "virginia_tech"
+  },
+  "W Carolina": {
+    "massey": "w_carolina"
+  },
+  "W Illinois": {
+    "massey": "w_illinois"
+  },
+  "W Michigan": {
+    "massey": "w_michigan"
+  },
+  "WI Green Bay": {
+    "massey": "wi_green_bay"
+  },
+  "WI Milwaukee": {
+    "massey": "wi_milwaukee"
+  },
+  "WKU": {
+    "massey": "wku"
+  },
+  "Wagner": {
+    "massey": "wagner",
+    "team_metrics": "wagner",
+    "torvik": "wagner"
+  },
+  "Wake Forest": {
+    "massey": "wake_forest",
+    "team_metrics": "wake_forest",
+    "torvik": "wake_forest"
+  },
+  "Washington": {
+    "massey": "washington",
+    "team_metrics": "washington",
+    "torvik": "washington"
+  },
+  "Washington St": {
+    "massey": "washington_st"
+  },
+  "Washington St.": {
+    "torvik": "washington_st"
+  },
+  "Washington State": {
+    "team_metrics": "washington_state"
+  },
+  "Weber St": {
+    "massey": "weber_st"
+  },
+  "Weber St.": {
+    "torvik": "weber_st"
+  },
+  "Weber State": {
+    "team_metrics": "weber_state"
+  },
+  "West Georgia": {
+    "massey": "west_georgia",
+    "team_metrics": "west_georgia",
+    "torvik": "west_georgia"
+  },
+  "West Virginia": {
+    "massey": "west_virginia",
+    "team_metrics": "west_virginia",
+    "torvik": "west_virginia"
+  },
+  "Western Carolina": {
+    "team_metrics": "western_carolina",
+    "torvik": "western_carolina"
+  },
+  "Western Illinois": {
+    "team_metrics": "western_illinois",
+    "torvik": "western_illinois"
+  },
+  "Western Kentucky": {
+    "team_metrics": "western_kentucky",
+    "torvik": "western_kentucky"
+  },
+  "Western Michigan": {
+    "team_metrics": "western_michigan",
+    "torvik": "western_michigan"
+  },
+  "Wichita St": {
+    "massey": "wichita_st"
+  },
+  "Wichita St.": {
+    "torvik": "wichita_st"
+  },
+  "Wichita State": {
+    "team_metrics": "wichita_state"
+  },
+  "William & Mary": {
+    "massey": "william_mary",
+    "team_metrics": "william_mary",
+    "torvik": "william___mary"
+  },
+  "Winthrop": {
+    "massey": "winthrop",
+    "team_metrics": "winthrop",
+    "torvik": "winthrop"
+  },
+  "Wisconsin": {
+    "massey": "wisconsin",
+    "team_metrics": "wisconsin",
+    "torvik": "wisconsin"
+  },
+  "Wofford": {
+    "massey": "wofford",
+    "team_metrics": "wofford",
+    "torvik": "wofford"
+  },
+  "Wright St": {
+    "massey": "wright_st"
+  },
+  "Wright St.": {
+    "torvik": "wright_st"
+  },
+  "Wright State": {
+    "team_metrics": "wright_state"
+  },
+  "Wyoming": {
+    "massey": "wyoming",
+    "team_metrics": "wyoming",
+    "torvik": "wyoming"
+  },
+  "Xavier": {
+    "massey": "xavier",
+    "team_metrics": "xavier",
+    "torvik": "xavier"
+  },
+  "Yale": {
+    "massey": "yale",
+    "team_metrics": "yale",
+    "torvik": "yale"
+  },
+  "Youngstown St": {
+    "massey": "youngstown_st"
+  },
+  "Youngstown St.": {
+    "torvik": "youngstown_st"
+  },
+  "Youngstown State": {
+    "team_metrics": "youngstown_state"
+  }
+}
