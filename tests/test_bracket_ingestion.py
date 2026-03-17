@@ -335,16 +335,26 @@ class TestBracketIngestionPipelineAuto:
     """Tests for auto-source selection."""
 
     def test_auto_raises_when_no_source_and_bigdance_unavailable(self):
-        """When bigdance is not installed and no fallback, should raise."""
-        pipeline = BracketIngestionPipeline(
-            season=2026, cache_dir=tempfile.mkdtemp()
-        )
-        if not BIGDANCE_AVAILABLE:
+        """When neither bigdance nor sports_reference is available, should raise."""
+        from unittest.mock import patch
+
+        with patch(
+            "src.data.scrapers.bracket_ingestion.BIGDANCE_AVAILABLE", False
+        ), patch(
+            "src.data.scrapers.bracket_ingestion.SPORTS_REF_AVAILABLE", False
+        ):
+            pipeline = BracketIngestionPipeline(
+                season=2026, cache_dir=tempfile.mkdtemp()
+            )
             with pytest.raises(RuntimeError, match="No bracket source available"):
                 pipeline.fetch(source="auto")
 
     def test_bigdance_source_raises_when_unavailable(self):
-        if not BIGDANCE_AVAILABLE:
+        from unittest.mock import patch
+
+        with patch(
+            "src.data.scrapers.bracket_ingestion.BIGDANCE_AVAILABLE", False
+        ):
             pipeline = BracketIngestionPipeline(
                 season=2026, cache_dir=tempfile.mkdtemp()
             )
