@@ -519,7 +519,7 @@ class TestConfigNewFields:
 
     def test_default_values(self):
         config = SOTAPipelineConfig()
-        assert config.seed_prior_weight == 0.0  # Deprecated: redundant with SeedBasedOverrides
+        assert config.seed_prior_weight == 0.10  # Weak seed prior for regularization
         assert config.seed_prior_slope == 0.175
         assert config.consistency_bonus_max == 0.0
         assert config.consistency_normalizer == 15.0
