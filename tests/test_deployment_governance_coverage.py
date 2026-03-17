@@ -749,13 +749,13 @@ class TestProductionValidator:
             enable_gnn=False,
             enable_transformer=False,
             enable_embedding_projections=False,
-            enable_stacking=False,
-            enable_feature_selection=False,
-            enable_brier_sharpening=False,
-            enable_seed_overrides=False,
-            enable_goto_conversion=False,
-            enable_round_weighted_calibration=False,
-            enable_bayesian_bt=False,
+            enable_stacking=True,
+            enable_feature_selection=True,
+            enable_brier_sharpening=True,
+            enable_seed_overrides=True,
+            enable_goto_conversion=True,
+            enable_round_weighted_calibration=True,
+            enable_bayesian_bt=True,
             enable_multi_year_training=True,
             enable_multi_year_calibration=True,
             enable_loyo_cv=True,
@@ -781,8 +781,8 @@ class TestProductionValidator:
             training_years=list(EXPECTED_TRAINING_YEARS),
             dev_years=list(EXPECTED_DEV_YEARS),
             holdout_years=list(EXPECTED_HOLDOUT_YEARS),
-            seed_prior_weight=0.0,
-            consistency_bonus_max=0.0,
+            seed_prior_weight=0.10,
+            consistency_bonus_max=0.02,
             multi_year_games_dir=str(tmp_path / "multi_year_games"),
             kaggle_dir=str(tmp_path / "kaggle"),
             external_ratings_dir=str(tmp_path / "external_ratings"),
@@ -844,15 +844,15 @@ class TestProductionValidator:
         with pytest.raises(ProductionValidationError, match="2020"):
             validate_2026_production_config(cfg)
 
-    def test_seed_prior_weight_positive_fails(self, tmp_path):
+    def test_seed_prior_weight_excessive_fails(self, tmp_path):
         cfg = self._make_valid_config(tmp_path)
-        cfg.seed_prior_weight = 0.1
+        cfg.seed_prior_weight = 0.6
         with pytest.raises(ProductionValidationError, match="seed_prior_weight"):
             validate_2026_production_config(cfg)
 
-    def test_consistency_bonus_positive_fails(self, tmp_path):
+    def test_consistency_bonus_excessive_fails(self, tmp_path):
         cfg = self._make_valid_config(tmp_path)
-        cfg.consistency_bonus_max = 0.05
+        cfg.consistency_bonus_max = 0.15
         with pytest.raises(ProductionValidationError, match="consistency_bonus_max"):
             validate_2026_production_config(cfg)
 

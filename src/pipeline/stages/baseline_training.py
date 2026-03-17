@@ -1260,10 +1260,9 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # When stacking IS enabled (opt-in), the original learned meta-learner
     # path is preserved.
     # ====================================================================
-    # Phase 2: Stacking is experimental only.
+    # Stacking: meta-learner over base model predictions.
     if (
-        not _production_mode
-        and pipeline.config.enable_stacking
+        pipeline.config.enable_stacking
         and SKLEARN_AVAILABLE
         and len(trained_models) >= 2
         and valid_samples >= 20

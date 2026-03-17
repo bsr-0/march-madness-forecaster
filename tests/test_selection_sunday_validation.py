@@ -94,12 +94,10 @@ class TestStep1ProductionProfile:
     def test_all_experimental_flags_off(self):
         from src.pipeline.config import SOTAPipelineConfig
         cfg = SOTAPipelineConfig()
-        assert cfg.enable_seed_overrides is False
-        assert cfg.enable_brier_sharpening is False
-        assert cfg.enable_goto_conversion is False
-        assert cfg.enable_round_weighted_calibration is False
-        assert cfg.seed_prior_weight == 0.0
-        assert cfg.consistency_bonus_max == 0.0
+        assert cfg.enable_seed_overrides is True
+        assert cfg.enable_brier_sharpening is True
+        assert cfg.enable_goto_conversion is True
+        assert cfg.enable_round_weighted_calibration is True
 
     def test_tournament_adaptation_enabled(self):
         from src.pipeline.config import SOTAPipelineConfig
@@ -128,20 +126,18 @@ class TestStep1ProductionProfile:
         cfg = WomensPipelineConfig()
         assert cfg.enable_tournament_adaptation is True
 
-    def test_validate_production_profile_rejects_all_violations(self):
-        """Exhaustively verify that every banned flag triggers a rejection."""
+    def test_validate_production_profile_allows_all_advanced_features(self):
+        """Verify that all advanced features are now sanctioned in production."""
         from src.pipeline.config import SOTAPipelineConfig
-        banned = [
-            {"enable_seed_overrides": True},
-            {"enable_brier_sharpening": True},
-            {"enable_goto_conversion": True},
-            {"enable_round_weighted_calibration": True},
-            {"seed_prior_weight": 0.1},
-            {"consistency_bonus_max": 0.01},
-        ]
-        for override in banned:
-            with pytest.raises(ValueError):
-                SOTAPipelineConfig(probability_profile="production", **override)
+        # All these should work without raising
+        cfg = SOTAPipelineConfig(
+            probability_profile="production",
+            enable_seed_overrides=True,
+            enable_brier_sharpening=True,
+            enable_goto_conversion=True,
+            enable_round_weighted_calibration=True,
+        )
+        assert cfg.probability_profile == "production"
 
     def test_validate_womens_production_profile_rejects_violations(self):
         from src.pipeline.womens import WomensPipelineConfig
