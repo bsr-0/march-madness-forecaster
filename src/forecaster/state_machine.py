@@ -168,8 +168,8 @@ class StateMachineForecaster:
         self.lr_C: float = 1.0
         self.gbm_max_depth: int = 5
         self.gbm_lr: float = 0.05
-        self.gbm_n_estimators: int = 500
-        self.meta_C: float = 1.0
+        self.gbm_n_estimators: int = 300
+        self.meta_C: float = 0.5
         self.calibration_preference: Optional[str] = None
 
     def run(self) -> ForecasterOutput:
