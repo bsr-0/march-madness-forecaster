@@ -1209,7 +1209,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # Solution: fit a TournamentSigmaCalibrator from historical tournament
     # data (Kaggle CSVs), then override the SpreadRegressor's sigma with the
     # tournament-calibrated value.  Per-round sigmas flow through the
-    # MarginFirstEnsemble's RoundSpecificCalibrator.
+    # _TrainedBaselineModel's tournament_sigma_calibrator.
     # Phase 2: TournamentSigmaCalibrator is experimental only.
     # In production mode, SpreadRegressor uses its validation-calibrated sigma
     # and TemperatureScaling is the sole final calibration layer.
@@ -1330,7 +1330,11 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 oof_counts[split.val_indices] += 1
 
         oof_mask = oof_counts > 0
-        if np.sum(oof_mask) >= 20:
+        # Require >=100 OOF samples for stacking (was 20).  With 4 base
+        # models the enriched meta-feature matrix has ~13 dimensions;
+        # 100 samples gives a ~8:1 sample-to-feature ratio and avoids
+        # overfitting the meta-learner on noisy OOF predictions.
+        if np.sum(oof_mask) >= 100:
             base_meta_X = np.column_stack([oof_preds[name][oof_mask] for name, _, _ in trained_models])
             meta_y = train_y[oof_mask]
             meta_X = pipeline._build_enriched_meta(base_meta_X)
@@ -1342,16 +1346,40 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             meta_learner.fit(meta_X, meta_y)
             meta_learner_type = "logistic"
 
-            pipeline.baseline_model.stacking_meta = meta_learner
-            pipeline.baseline_model.stacking_meta_type = meta_learner_type
-            pipeline.baseline_model.stacking_models = [(name, model) for name, model, _ in trained_models]
+            # Brier validation gate: only use stacking if it improves over
+            # equal-weight baseline on the same OOF samples.
+            stacking_preds = meta_learner.predict_proba(meta_X)[:, 1]
+            stacking_brier = float(np.mean((stacking_preds - meta_y) ** 2))
+            n_models = base_meta_X.shape[1]
+            ew_preds = np.mean(base_meta_X, axis=1)  # equal-weight baseline
+            ew_brier = float(np.mean((ew_preds - meta_y) ** 2))
 
-            stacking_stats = {
-                "enabled": True,
-                "meta_learner": meta_learner_type,
-                "base_models": [name for name, _, _ in trained_models],
-            }
-            baseline_name = "stacking_ensemble"
+            if stacking_brier < ew_brier:
+                pipeline.baseline_model.stacking_meta = meta_learner
+                pipeline.baseline_model.stacking_meta_type = meta_learner_type
+                pipeline.baseline_model.stacking_models = [(name, model) for name, model, _ in trained_models]
+
+                stacking_stats = {
+                    "enabled": True,
+                    "meta_learner": meta_learner_type,
+                    "base_models": [name for name, _, _ in trained_models],
+                    "stacking_brier": round(stacking_brier, 5),
+                    "equal_weight_brier": round(ew_brier, 5),
+                }
+                baseline_name = "stacking_ensemble"
+            else:
+                logger.info(
+                    "Stacking meta-learner (Brier=%.5f) does not improve over "
+                    "equal-weight baseline (Brier=%.5f). Falling back.",
+                    stacking_brier, ew_brier,
+                )
+                stacking_stats = {
+                    "enabled": False,
+                    "reason": "no_improvement_over_equal_weight",
+                    "stacking_brier": round(stacking_brier, 5),
+                    "equal_weight_brier": round(ew_brier, 5),
+                }
+                baseline_name = pipeline._select_best_single_model(trained_models, eval_y)
         else:
             stacking_stats = {"enabled": False, "reason": "insufficient_oof_samples"}
             baseline_name = pipeline._select_best_single_model(trained_models, eval_y)
@@ -1501,6 +1529,16 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                     {n: round(w, 3) for n, w in
                      pipeline.baseline_model.fixed_weights.items()},
                 )
+
+    # Propagate tournament sigma calibrator to _TrainedBaselineModel so that
+    # SpreadRegressor uses tournament-calibrated sigma at inference time.
+    if hasattr(pipeline, '_tournament_sigma_calibrator') and pipeline._tournament_sigma_calibrator is not None:
+        pipeline.baseline_model.tournament_sigma_calibrator = pipeline._tournament_sigma_calibrator
+        logger.info(
+            "Propagated TournamentSigmaCalibrator to baseline_model "
+            "(global_sigma=%.2f)",
+            pipeline._tournament_sigma_calibrator.global_tournament_sigma,
+        )
 
     # ====================================================================
     # P0: LEAVE-ONE-YEAR-OUT CROSS-VALIDATION — validates that the trained
