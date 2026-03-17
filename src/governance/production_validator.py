@@ -52,14 +52,18 @@ REQUIRED_CONFIG_VALUES: Dict[str, Any] = {
     "calibration_method": "temperature",
     "enable_tournament_adaptation": True,
     "scoring_metric": "brier",
-    # --- Continuous hyperparameters that affect model output ---
+    # --- Frozen procedure parameters (not fitted values) ---
+    # Ensemble weights are NOT frozen here.  They are Tier 3 constants
+    # derived at training time via LOYO cross-validation.  What we freeze
+    # is the *procedure*: optimize_ensemble_weights must be True, and
+    # enable_loyo_cv must be True (see above).  The weight_bounds in
+    # PRODUCTION_BASELINE constrain the optimizer's search space.
+    "optimize_ensemble_weights": True,
     "random_seed": 2026,
     "num_simulations": 50000,
     "tournament_shrinkage": 0.06,
     "massey_blend_weight": 0.25,
     "massey_sigma": 4.5,
-    "ensemble_lgb_weight": 0.15,
-    "ensemble_xgb_weight": 0.15,
     "pre_calibration_clip_lo": 0.001,
     "pre_calibration_clip_hi": 0.999,
     "mc_noise_std": 0.16,
