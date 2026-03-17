@@ -274,6 +274,15 @@ class SOTAPipelineConfig:
     # Default: dev=2016-2019 and 2021-2024 (exclude 2020 COVID), holdout=2025.
     dev_years: Optional[List[int]] = field(default_factory=lambda: [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024])
     holdout_years: Optional[List[int]] = field(default_factory=lambda: [2025])
+    prospective_years: Optional[List[int]] = None
+    prospective_targets: Optional[Dict[str, float]] = field(default_factory=lambda: {
+        "brier_max": 0.185,
+        "accuracy_min": 0.70,
+    })
+    prospective_alert_thresholds: Optional[Dict[str, float]] = field(default_factory=lambda: {
+        "brier_gap": 0.010,
+        "accuracy_gap": 0.02,
+    })
     # Calibration years are tournament-only years used to fit probability
     # calibration. By default this is holdout_years, which keeps calibrator
     # fitting genuinely out-of-sample with respect to model training years.
@@ -313,6 +322,13 @@ class SOTAPipelineConfig:
     min_public_sources: int = 2
     min_rapm_players_per_team: int = 5
     min_calibration_samples_hard: int = 80  # Hard fail below this threshold
+    max_dof_ratio: float = 0.10
+    auto_disable_components: bool = True
+    min_samples_for_component: Dict[str, int] = field(default_factory=lambda: {
+        "stacking": 400,
+        "bayesian_bt": 300,
+        "spread_model": 250,
+    })
 
     # --- ML optimization ---
     enable_hyperparameter_tuning: bool = True
@@ -377,6 +393,9 @@ class SOTAPipelineConfig:
     # Uncertainty propagation naturally shrinks predictions for rare teams.
     enable_bayesian_bt: bool = True  # Pairwise comparison model for ensemble diversity
     bayesian_bt_prior_std: float = 2.0  # Prior std for team ratings
+
+    baseline_guard_required_delta: float = 0.010
+    baseline_guard_alpha: float = 0.10
 
     # --- Probability clipping ---
     # Widened to [0.005, 0.995] for Brier-score optimization.

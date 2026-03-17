@@ -34,6 +34,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from .baseline_guard import evaluate_seed_baseline_guard
+
 from .loyo_protocol import (
     LOYO_YEARS,
     LOYOValidator,
@@ -92,6 +94,7 @@ class BacktestReport:
     # Prospective forward validation
     prospective_mean_brier: float = 0.0
     prospective_year_briers: Dict[int, float] = field(default_factory=dict)
+    prospective_alerts: List[str] = field(default_factory=list)
 
     # Leakage verification
     leakage_checks: List[LeakageCheckResult] = field(default_factory=list)
@@ -101,6 +104,7 @@ class BacktestReport:
 
     # Seed baseline comparison
     seed_baseline_brier: float = 0.0
+    baseline_guard: Dict[str, Any] = field(default_factory=dict)
 
     def passed_all_checks(self) -> bool:
         """Return True if all validation checks passed."""
@@ -142,8 +146,17 @@ class BacktestReport:
             f"  Model Brier:         {self.brier_score:.6f}",
             f"  Improvement:         {self.seed_baseline_brier - self.brier_score:+.6f}",
             f"  Beats Baseline:      {'YES' if self.beats_seed_baseline() else 'NO'}",
-            "",
         ])
+        if self.baseline_guard:
+            lines.extend([
+                f"  Baseline Guard Δ:    {self.baseline_guard.get('delta_brier', 0):+.6f}",
+                f"  Baseline Guard p:    {self.baseline_guard.get('p_value', 1.0):.4f}",
+                f"  Baseline Guard pass: {'YES' if self.baseline_guard.get('passed') else 'NO'}",
+                f"  Guard note:          {self.baseline_guard.get('note', '')}",
+                "",
+            ])
+        else:
+            lines.append("")
 
         if self.loyo_year_briers:
             lines.append("--- LOYO Cross-Validation ---")
@@ -172,11 +185,12 @@ class BacktestReport:
                 all_passed = False
         lines.append("")
 
-        verdict = "PASSED" if all_passed and self.beats_seed_baseline() else "FAILED"
+        guard_pass = self.baseline_guard.get("passed", self.beats_seed_baseline()) if self.baseline_guard else self.beats_seed_baseline()
+        verdict = "PASSED" if all_passed and guard_pass else "FAILED"
         lines.extend([
             "--- VERDICT ---",
             f"  All leakage checks:    {'PASSED' if all_passed else 'FAILED'}",
-            f"  Beats seed baseline:   {'YES' if self.beats_seed_baseline() else 'NO'}",
+            f"  Baseline guard pass:   {'YES' if guard_pass else 'NO'}",
             f"  Brier in range {EXPECTED_BRIER_RANGE}: "
             f"{'YES' if EXPECTED_BRIER_RANGE[0] <= self.brier_score <= EXPECTED_BRIER_RANGE[1] else 'NO'}",
             f"  Overall:               {verdict}",
@@ -244,12 +258,14 @@ class BacktestValidationRunner:
         data_by_year: Dict[int, Dict],
         run_loyo: bool = True,
         run_prospective: bool = True,
+        config=None,
     ):
         self.train_fn = train_fn
         self.predict_fn = predict_fn
         self.data_by_year = data_by_year
         self.run_loyo = run_loyo
         self.run_prospective = run_prospective
+        self.config = config
 
     def run(self) -> BacktestReport:
         """Execute the complete 2025 backtest validation."""
@@ -264,6 +280,7 @@ class BacktestValidationRunner:
 
         # Step 3: Compute seed baseline for comparison
         self._compute_seed_baseline(report)
+        self._run_baseline_guard(report)
 
         # Step 4: Run LOYO cross-validation (optional)
         if self.run_loyo:
@@ -472,13 +489,14 @@ class BacktestValidationRunner:
             logger.warning("Insufficient years for prospective validation")
             return
 
-        validator = ProspectiveValidator(years=available_years)
+        validator = ProspectiveValidator(years=self._resolve_prospective_years(available_years))
         result = validator.validate(
             self.data_by_year, self.train_fn, self.predict_fn
         )
 
         report.prospective_mean_brier = result.mean_brier
         report.prospective_year_briers = dict(result.year_briers)
+        report.prospective_alerts = self._evaluate_prospective_targets(result)
 
     @staticmethod
     def _compute_ece(
@@ -499,6 +517,64 @@ class BacktestValidationRunner:
             bin_conf = predictions[mask].mean()
             ece += mask.sum() * abs(bin_acc - bin_conf)
         return ece / len(predictions) if len(predictions) > 0 else 0.0
+
+    def _resolve_prospective_years(self, available_years: List[int]) -> List[int]:
+        if not self.config or not getattr(self.config, "prospective_years", None):
+            return available_years
+        filtered = [y for y in self.config.prospective_years if y in available_years]
+        return filtered or available_years
+
+    def _evaluate_prospective_targets(self, result: ProspectiveValidationResult) -> List[str]:
+        alerts: List[str] = []
+        targets = getattr(self.config, "prospective_targets", None) if self.config else None
+        thresholds = getattr(self.config, "prospective_alert_thresholds", None) if self.config else None
+        if not targets and not thresholds:
+            return alerts
+        if targets:
+            if result.mean_brier > targets.get("brier_max", float("inf")):
+                alerts.append(
+                    f"Mean Brier {result.mean_brier:.4f} exceeds prospective max {targets['brier_max']:.4f}"
+                )
+            if result.mean_accuracy < targets.get("accuracy_min", 0.0):
+                alerts.append(
+                    f"Mean accuracy {result.mean_accuracy:.3f} below prospective min {targets['accuracy_min']:.3f}"
+                )
+        if thresholds and result.year_briers and len(result.year_briers) >= 2:
+            years = sorted(result.year_briers)
+            for prev, curr in zip(years[:-1], years[1:]):
+                gap = result.year_briers[curr] - result.year_briers[prev]
+                if gap > thresholds.get("brier_gap", float("inf")):
+                    alerts.append(
+                        f"Prospective Brier worsened by {gap:+.4f} from {prev} to {curr}"
+                    )
+        return alerts
+
+    def _run_baseline_guard(self, report: BacktestReport) -> None:
+        if not self.config:
+            return
+        holdout = self.data_by_year.get(HOLDOUT_YEAR, {})
+        model_probs = getattr(self, "_last_holdout_predictions", None)
+        if model_probs is None:
+            return
+        y_test = holdout.get("y")
+        seeds_t1 = holdout.get("seeds_t1")
+        seeds_t2 = holdout.get("seeds_t2")
+        if y_test is None or seeds_t1 is None or seeds_t2 is None:
+            return
+        # Compute per-game briers for guard
+        model_briers = (model_probs - y_test) ** 2
+        seed_probs = np.array([
+            1.0 / (1.0 + np.exp((s1 - s2) * 0.15)) for s1, s2 in zip(seeds_t1, seeds_t2)
+        ])
+        seed_briers = (seed_probs - y_test) ** 2
+        guard = evaluate_seed_baseline_guard(
+            model_briers,
+            seed_briers,
+            threshold=getattr(self.config, "baseline_guard_required_delta", 0.0),
+            alpha=getattr(self.config, "baseline_guard_alpha", 0.10),
+        )
+        report.baseline_guard = guard.to_dict()
+
 
 
 def run_quick_validation(
