@@ -16,6 +16,7 @@ from src.pipeline.production_baseline import (
     PRODUCTION_BASELINE_VERSION,
     ProductionBaselineSpec,
     AdmissionGateThresholds,
+    EnsembleWeightBounds,
 )
 from src.pipeline.config import SOTAPipelineConfig
 from src.ml.ensemble.margin_first_ensemble import (
@@ -50,16 +51,49 @@ class TestProductionBaselineSpec:
     def test_sanctioned_calibration(self):
         assert PRODUCTION_BASELINE.calibration == "temperature"
 
-    def test_default_weights_four_model(self):
-        """Default production policy is 4-model fixed-weight blend."""
-        assert PRODUCTION_BASELINE.default_weights["spread"] == pytest.approx(0.45)
-        assert PRODUCTION_BASELINE.default_weights["logistic"] == pytest.approx(0.20)
-        assert PRODUCTION_BASELINE.default_weights["lgb"] == pytest.approx(0.20)
-        assert PRODUCTION_BASELINE.default_weights["xgb"] == pytest.approx(0.15)
+    def test_ensemble_policy_is_loyo_optimized(self):
+        """Production policy uses LOYO-optimized weights with fixed fallback."""
+        assert PRODUCTION_BASELINE.ensemble_policy == "loyo_optimized_with_fixed_fallback"
 
-    def test_default_weights_sum_to_one(self):
-        total = sum(PRODUCTION_BASELINE.default_weights.values())
+    def test_fallback_weights_four_model(self):
+        """Fallback weights are literature-based priors for the 4-model ensemble."""
+        assert PRODUCTION_BASELINE.fallback_weights["spread"] == pytest.approx(0.45)
+        assert PRODUCTION_BASELINE.fallback_weights["logistic"] == pytest.approx(0.20)
+        assert PRODUCTION_BASELINE.fallback_weights["lgb"] == pytest.approx(0.20)
+        assert PRODUCTION_BASELINE.fallback_weights["xgb"] == pytest.approx(0.15)
+
+    def test_default_weights_backward_compat(self):
+        """default_weights property aliases fallback_weights for backward compat."""
+        assert PRODUCTION_BASELINE.default_weights == PRODUCTION_BASELINE.fallback_weights
+
+    def test_fallback_weights_sum_to_one(self):
+        total = sum(PRODUCTION_BASELINE.fallback_weights.values())
         assert total == pytest.approx(1.0)
+
+    def test_weight_bounds_well_formed(self):
+        """Weight bounds are self-consistent and feasible."""
+        violations = PRODUCTION_BASELINE.weight_bounds.validate()
+        assert violations == [], f"Weight bounds have violations: {violations}"
+
+    def test_weight_bounds_spread_dominant(self):
+        """Spread model has highest upper bound (primary model)."""
+        bounds = PRODUCTION_BASELINE.weight_bounds
+        assert bounds.spread[1] >= bounds.lgb[1]
+        assert bounds.spread[1] >= bounds.xgb[1]
+        assert bounds.spread[1] >= bounds.logistic[1]
+
+    def test_weight_bounds_global_min(self):
+        """Every model must receive at least global_min_weight."""
+        bounds = PRODUCTION_BASELINE.weight_bounds
+        assert bounds.global_min_weight == 0.05
+        for name, (lo, _) in bounds.as_dict().items():
+            assert lo >= bounds.global_min_weight, f"{name} min {lo} < global min"
+
+    def test_weight_bounds_feasible_sum(self):
+        """Minimum weights must sum to <= 1.0 for a feasible solution to exist."""
+        bounds = PRODUCTION_BASELINE.weight_bounds
+        min_sum = sum(lo for lo, _ in bounds.as_dict().values())
+        assert min_sum <= 1.0, f"Minimum weights sum to {min_sum} > 1.0"
 
     def test_deprecated_models_empty(self):
         assert len(PRODUCTION_BASELINE.deprecated_production_models) == 0
