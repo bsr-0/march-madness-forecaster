@@ -5,6 +5,7 @@ backtesting across historical tournament data, including champion boost
 evaluation and multi-year aggregation.
 """
 
+import json
 import math
 
 import numpy as np
@@ -19,10 +20,12 @@ from src.ml.evaluation.unified_backtest import (
     UnifiedBacktestResult,
     UnifiedBacktester,
     YearModeResult,
+    _canonical_backtest_team_id,
     _build_first_round_matchups,
     _compute_round_weighted_brier,
     _generate_model_bracket,
     _generate_seed_based_bracket,
+    load_tournament_history_from_json,
     _score_bracket_against_actual,
 )
 
@@ -282,6 +285,51 @@ class TestTournamentHistory:
         # Each region should have 16 teams
         for r in ["East", "West", "South", "Midwest"]:
             assert region_counts.get(r, 0) == 16
+
+
+class TestBacktestTeamIdCanonicalization:
+
+    def test_alias_mappings(self):
+        assert _canonical_backtest_team_id("alabama_st") == "alabama_state"
+        assert _canonical_backtest_team_id("st_francis_pa") == "saint_francis_pa"
+        assert _canonical_backtest_team_id("san_diego_st") == "san_diego_state"
+        assert _canonical_backtest_team_id("mt_st_mary_s") == "mount_st_mary_s"
+        assert _canonical_backtest_team_id("ne_omaha") == "omaha"
+        assert _canonical_backtest_team_id("siue") == "siu_edwardsville"
+        assert _canonical_backtest_team_id("iowa_st") == "iowa_state"
+
+    def test_json_loader_normalizes_seed_and_result_ids(self, tmp_path):
+        year = 2025
+        seeds_path = tmp_path / f"tournament_seeds_{year}.json"
+        results_path = tmp_path / f"tournament_results_{year}.json"
+
+        seeds_payload = {
+            "season": year,
+            "teams": [
+                {"team_id": "alabama_state", "seed": 16, "region": "South"},
+                {"team_id": "saint_francis_pa", "seed": 16, "region": "South"},
+            ],
+        }
+        results_payload = {
+            "games": [
+                {
+                    "team1_id": "alabama_st",
+                    "team2_id": "st_francis_pa",
+                    "team1_won": True,
+                    "round_name": "R64",
+                },
+            ],
+        }
+
+        seeds_path.write_text(json.dumps(seeds_payload))
+        results_path.write_text(json.dumps(results_payload))
+
+        history = load_tournament_history_from_json(str(tmp_path), year)
+        assert history is not None
+        assert history.games[0].team1_id == "alabama_state"
+        assert history.games[0].team2_id == "saint_francis_pa"
+        assert history.games[0].team1_seed == 16
+        assert history.games[0].team2_seed == 16
 
 
 # ---------------------------------------------------------------------------

@@ -366,11 +366,29 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             if sort_keys_full[i] >= boundary:
                 split_idx = i
                 break
-        train_samples = split_idx
-        valid_samples = n - split_idx
-        if train_samples < 20:
-            train_samples = n
-            valid_samples = 0
+        # Option 2 fix: if the boundary split is degenerate (all samples
+        # on one side), fall back to a local 80/20 chronological split on
+        # the *current* filtered sample set rather than forcing empty eval.
+        if split_idx <= 0 or split_idx >= n:
+            logger.warning(
+                "Boundary split degenerate (n=%d, split_idx=%d, boundary=%s); "
+                "falling back to local 80/20 chronological split.",
+                n,
+                split_idx,
+                str(boundary),
+            )
+            valid_count = max(5, int(0.2 * n))
+            train_samples = n - valid_count
+            valid_samples = valid_count
+            if train_samples < 10:
+                train_samples = n
+                valid_samples = 0
+        else:
+            train_samples = split_idx
+            valid_samples = n - split_idx
+            if train_samples < 20:
+                train_samples = n
+                valid_samples = 0
     elif n >= 50:
         # Fallback: 80/20 chronological split
         valid_count = max(5, int(0.2 * n))
@@ -395,6 +413,14 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         eval_X = np.empty((0, X_full.shape[1]))
         eval_y = np.array([], dtype=int)
         eval_margins = np.array([], dtype=np.float64)
+        logger.warning(
+            "Baseline split produced empty eval set: n=%d, train_samples=%d, "
+            "valid_samples=%d, boundary=%s",
+            n,
+            train_samples,
+            valid_samples,
+            str(getattr(pipeline, "_validation_sort_key_boundary", None)),
+        )
 
     # ====================================================================
     # MULTI-YEAR TRAINING POOL: Augment current-year training data with
@@ -797,7 +823,14 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     if pipeline.config.enable_feature_scaling and SCALER_AVAILABLE:
         scaler = StandardScaler()
         train_X = scaler.fit_transform(train_X)
-        eval_X = scaler.transform(eval_X)
+        if eval_X.shape[0] > 0:
+            eval_X = scaler.transform(eval_X)
+        else:
+            logger.warning(
+                "Skipping scaler.transform(eval_X) because eval split is empty "
+                "(shape=%s).",
+                eval_X.shape,
+            )
         pipeline.baseline_model.scaler = scaler
 
     # Store the pre-selection feature dimensionality for historical
