@@ -42,6 +42,11 @@ class BracketSearchConfig:
     robustness_weight: float = 0.3  # Weight on path survival probability
     diversity_weight: float = 0.1  # Weight on deviation from chalk
 
+    # EV optimization mode: when True, uses pool-winning EV objective
+    # that incorporates round weights, pick popularity, and opponent modeling
+    ev_mode: bool = False
+    pool_size: int = 100  # Used in EV mode for opponent duplication penalty
+
 
 @dataclass
 class SAConfig(BracketSearchConfig):
@@ -117,6 +122,7 @@ class BracketSearchOptimizer(ABC):
         config: BracketSearchConfig,
         public_picks: Optional[Dict[str, float]] = None,
         scoring_system: Optional[Dict[str, int]] = None,
+        round_public_picks: Optional[Dict[str, Dict[str, float]]] = None,
     ):
         """
         Args:
@@ -124,11 +130,16 @@ class BracketSearchOptimizer(ABC):
             config: Search configuration.
             public_picks: team_id -> championship pick percentage.
             scoring_system: Round -> points mapping.
+            round_public_picks: team_id -> {round_name: pick_pct} for
+                per-round leverage.  When provided and ev_mode is enabled,
+                the fitness function uses per-round pick rates instead of
+                championship-only public_picks.
         """
         self.predict_fn = predict_fn
         self.config = config
         self.public_picks = public_picks or {}
         self.scoring = scoring_system or ROUND_POINTS
+        self.round_public_picks = round_public_picks or {}
 
     @abstractmethod
     def optimize(
@@ -149,24 +160,91 @@ class BracketSearchOptimizer(ABC):
     def evaluate_bracket(self, bracket: SearchBracket) -> float:
         """Compute composite fitness score for a bracket.
 
-        Fitness = leverage_score * w1 + robustness * w2 + diversity * w3
+        When ``config.ev_mode`` is True, uses the pool-winning EV objective:
+            value = round_weight × win_prob × (1 - pick_rate)
+        This maximizes expected edge over the field by rewarding picks that
+        are both likely to be correct AND underrepresented in opponent brackets.
 
-        Higher is better.
+        When ``config.ev_mode`` is False (default), uses the legacy composite:
+            fitness = leverage_weight × leverage + robustness_weight × robustness
+                    + diversity_weight × diversity
+
+        Higher is better in both modes.
         """
         if not bracket.picks:
             return 0.0
 
+        if self.config.ev_mode:
+            return self._evaluate_ev_mode(bracket)
+        return self._evaluate_legacy(bracket)
+
+    def _evaluate_ev_mode(self, bracket: SearchBracket) -> float:
+        """Pool-winning EV objective function.
+
+        For each pick, computes:
+            game_ev = round_weight × win_prob × (1 - pick_rate)
+
+        This captures the core game-theory insight: in pools, you compete
+        against other brackets. A pick's value is proportional to its
+        probability of being correct AND inversely proportional to how
+        many opponents also made that pick.
+
+        The (1 - pick_rate) term means:
+        - A favorite picked by 85% of the field: value × 0.15
+        - An underdog picked by 10% of the field: value × 0.90
+
+        Additionally applies a duplication penalty based on pool_size:
+        larger pools make popular picks less valuable because more
+        opponents share the same points.
+        """
+        n_picks = len(bracket.picks)
+        ev_score = 0.0
+        robustness_score = 0.0
+
+        for pick in bracket.picks:
+            round_name = ROUND_NAMES[pick.round_num] if pick.round_num < 6 else "CHAMP"
+            points = self.scoring.get(round_name, 10)
+
+            # Get per-round pick rate if available, fall back to championship-level
+            pick_rate = self._get_pick_rate(pick.winner_id, round_name)
+
+            # Core EV formula: value when you're right AND others are wrong
+            # Pool duplication penalty: in a pool of N, ~N*pick_rate others
+            # share your points when correct. Scale (1-pick_rate) further
+            # for large pools.
+            uniqueness = 1.0 - pick_rate
+            pool_factor = 1.0
+            if self.config.pool_size > 50:
+                # In large pools, popular picks are even less valuable because
+                # many more opponents share the same correct pick.
+                expected_duplicates = self.config.pool_size * pick_rate
+                pool_factor = 1.0 / max(1.0, math.log2(max(expected_duplicates, 1.0)))
+
+            ev_score += points * pick.win_probability * uniqueness * pool_factor
+
+            # Robustness: path survival (log probability) prevents absurd brackets
+            robustness_score += math.log(max(pick.win_probability, 1e-10))
+
+        # Normalize
+        ev_score /= max(n_picks, 1)
+        robustness_score /= max(n_picks, 1)
+
+        # EV mode: 85% EV, 15% robustness (prevent degenerate low-probability brackets)
+        return 0.85 * ev_score + 0.15 * robustness_score
+
+    def _evaluate_legacy(self, bracket: SearchBracket) -> float:
+        """Legacy composite fitness function."""
+        n_picks = len(bracket.picks)
         leverage_score = 0.0
         robustness_score = 0.0
         diversity_score = 0.0
-        n_picks = len(bracket.picks)
 
         for pick in bracket.picks:
             round_name = ROUND_NAMES[pick.round_num] if pick.round_num < 6 else "CHAMP"
             points = self.scoring.get(round_name, 10)
 
             # Leverage: model_prob * points / max(public ownership, epsilon)
-            pub_pct = self.public_picks.get(pick.winner_id, 0.01)
+            pub_pct = self._get_pick_rate(pick.winner_id, round_name)
             leverage_score += pick.win_probability * points / max(pub_pct, 0.001)
 
             # Robustness: sum of log-probabilities (path survival)
@@ -188,6 +266,21 @@ class BracketSearchOptimizer(ABC):
             + self.config.diversity_weight * diversity_score
         )
         return fitness
+
+    def _get_pick_rate(self, team_id: str, round_name: str) -> float:
+        """Get public pick rate for a team in a specific round.
+
+        Priority:
+        1. Per-round public picks (most accurate)
+        2. Championship-level public picks (fallback)
+        3. Default 0.01 epsilon
+        """
+        if self.round_public_picks:
+            team_rounds = self.round_public_picks.get(team_id, {})
+            if round_name in team_rounds:
+                return team_rounds[round_name]
+
+        return self.public_picks.get(team_id, 0.01)
 
     def swap_pick(
         self,
@@ -330,8 +423,9 @@ class SimulatedAnnealingOptimizer(BracketSearchOptimizer):
         config: SAConfig,
         public_picks: Optional[Dict[str, float]] = None,
         scoring_system: Optional[Dict[str, int]] = None,
+        round_public_picks: Optional[Dict[str, Dict[str, float]]] = None,
     ):
-        super().__init__(predict_fn, config, public_picks, scoring_system)
+        super().__init__(predict_fn, config, public_picks, scoring_system, round_public_picks)
         self.sa_config = config
 
     def optimize(

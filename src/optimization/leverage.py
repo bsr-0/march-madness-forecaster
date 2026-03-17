@@ -14,6 +14,74 @@ import numpy as np
 _BranchPick = namedtuple('_BranchPick', ['p_win', 'survival', 'pts'])
 
 
+# ---------------------------------------------------------------------------
+# Seed-Based Public Pick Rate Approximation
+# ---------------------------------------------------------------------------
+# When real ESPN/public pick data is unavailable, these priors approximate
+# what fraction of the public picks each seed to advance to each round.
+# Derived from historical ESPN Tournament Challenge aggregate data (2015-2024).
+
+SEED_PICK_RATES: Dict[int, Dict[str, float]] = {
+    1:  {"R64": 0.97, "R32": 0.90, "S16": 0.75, "E8": 0.55, "F4": 0.35, "CHAMP": 0.18},
+    2:  {"R64": 0.94, "R32": 0.82, "S16": 0.58, "E8": 0.35, "F4": 0.18, "CHAMP": 0.08},
+    3:  {"R64": 0.85, "R32": 0.65, "S16": 0.38, "E8": 0.18, "F4": 0.08, "CHAMP": 0.03},
+    4:  {"R64": 0.80, "R32": 0.55, "S16": 0.28, "E8": 0.12, "F4": 0.05, "CHAMP": 0.02},
+    5:  {"R64": 0.65, "R32": 0.38, "S16": 0.18, "E8": 0.07, "F4": 0.03, "CHAMP": 0.01},
+    6:  {"R64": 0.63, "R32": 0.35, "S16": 0.15, "E8": 0.06, "F4": 0.02, "CHAMP": 0.008},
+    7:  {"R64": 0.60, "R32": 0.30, "S16": 0.12, "E8": 0.05, "F4": 0.02, "CHAMP": 0.006},
+    8:  {"R64": 0.50, "R32": 0.22, "S16": 0.08, "E8": 0.03, "F4": 0.01, "CHAMP": 0.003},
+    9:  {"R64": 0.50, "R32": 0.20, "S16": 0.07, "E8": 0.02, "F4": 0.008, "CHAMP": 0.002},
+    10: {"R64": 0.40, "R32": 0.15, "S16": 0.05, "E8": 0.02, "F4": 0.006, "CHAMP": 0.001},
+    11: {"R64": 0.37, "R32": 0.15, "S16": 0.06, "E8": 0.02, "F4": 0.007, "CHAMP": 0.001},
+    12: {"R64": 0.35, "R32": 0.15, "S16": 0.05, "E8": 0.02, "F4": 0.005, "CHAMP": 0.001},
+    13: {"R64": 0.20, "R32": 0.06, "S16": 0.02, "E8": 0.005, "F4": 0.001, "CHAMP": 0.0003},
+    14: {"R64": 0.15, "R32": 0.04, "S16": 0.01, "E8": 0.003, "F4": 0.0005, "CHAMP": 0.0001},
+    15: {"R64": 0.06, "R32": 0.02, "S16": 0.005, "E8": 0.001, "F4": 0.0002, "CHAMP": 0.00005},
+    16: {"R64": 0.03, "R32": 0.005, "S16": 0.001, "E8": 0.0002, "F4": 0.00003, "CHAMP": 0.00001},
+}
+
+
+def get_seed_based_pick_rates(
+    seed: int,
+) -> Dict[str, float]:
+    """Return approximate public pick rates for a given seed.
+
+    When real public pick data (e.g. ESPN Tournament Challenge percentages)
+    is unavailable, this provides a reasonable prior based on historical
+    aggregate behavior.  These priors are crude but effective — they
+    capture the essential chalk bias of the public.
+
+    Args:
+        seed: Tournament seed (1-16).
+
+    Returns:
+        Dict mapping round name to approximate public pick percentage.
+    """
+    return SEED_PICK_RATES.get(seed, SEED_PICK_RATES[8]).copy()
+
+
+def build_seed_based_public_picks(
+    team_seeds: Dict[str, int],
+) -> Dict[str, Dict[str, float]]:
+    """Build a complete public pick distribution from seed data alone.
+
+    This is the fallback when no ESPN/public pick data is available.
+    It provides a reasonable approximation of public behavior for
+    leverage calculations.
+
+    Args:
+        team_seeds: team_id -> seed (1-16).
+
+    Returns:
+        team_id -> {round_name: pick_rate} dict suitable for
+        LeverageCalculator or BracketPortfolioGenerator.
+    """
+    result: Dict[str, Dict[str, float]] = {}
+    for team_id, seed in team_seeds.items():
+        result[team_id] = get_seed_based_pick_rates(seed)
+    return result
+
+
 @dataclass
 class LeveragePick:
     """A pick with leverage analysis."""
