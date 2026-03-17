@@ -834,6 +834,7 @@ class _TrainedBaselineModel:
         self.stacking_meta_type: str = "logistic"
         self.stacking_models: List = []
         self.spread_model: Optional[object] = None
+        self.tournament_sigma_calibrator: Optional[object] = None
 
     def predict_proba(self, x: np.ndarray) -> float:
         x_scaled = self._scale(x)
@@ -864,9 +865,18 @@ class _TrainedBaselineModel:
             return self.logit_model.predict_proba(X_scaled)[:, 1]
         return np.full(len(X_scaled), 0.5)
 
+    def _get_spread_sigma_override(self) -> Optional[float]:
+        """Get tournament-calibrated sigma for SpreadRegressor, if available."""
+        tsc = getattr(self, 'tournament_sigma_calibrator', None)
+        if tsc is not None and getattr(tsc, 'fitted', False):
+            return tsc.global_tournament_sigma
+        return None
+
     def _fixed_weight_predict(self, x: np.ndarray) -> float:
         x_2d = x.reshape(1, -1)
         total = 0.0
+        total_weight = 0.0
+        sigma = self._get_spread_sigma_override()
         for name, model in self.fixed_weight_models:
             w = self.fixed_weights.get(name, 0.33)
             if isinstance(model, LightGBMRanker):
@@ -874,13 +884,18 @@ class _TrainedBaselineModel:
             elif isinstance(model, XGBoostRanker):
                 total += w * float(model.predict(x_2d)[0])
             elif SpreadRegressor is not None and isinstance(model, SpreadRegressor):
-                total += w * float(model.predict_probability(x_2d)[0])
+                total += w * float(model.predict_probability(x_2d, sigma_override=sigma)[0])
             else:
                 total += w * float(model.predict_proba(x_2d)[0][1])
+            total_weight += w
+        if total_weight > 0:
+            total /= total_weight
         return total
 
     def _fixed_weight_predict_batch(self, X: np.ndarray) -> np.ndarray:
         result = np.zeros(len(X))
+        total_weight = 0.0
+        sigma = self._get_spread_sigma_override()
         for name, model in self.fixed_weight_models:
             w = self.fixed_weights.get(name, 0.33)
             if isinstance(model, LightGBMRanker):
@@ -888,10 +903,50 @@ class _TrainedBaselineModel:
             elif isinstance(model, XGBoostRanker):
                 result += w * model.predict(X)
             elif SpreadRegressor is not None and isinstance(model, SpreadRegressor):
-                result += w * model.predict_probability(X)
+                result += w * model.predict_probability(X, sigma_override=sigma)
             else:
                 result += w * model.predict_proba(X)[:, 1]
+            total_weight += w
+        if total_weight > 0:
+            result /= total_weight
         return result
+
+    def ensemble_disagreement(self, x: np.ndarray) -> float:
+        """Return std dev of individual model predictions as a disagreement signal."""
+        if not self.fixed_weight_models:
+            return 0.0
+        x_scaled = self._scale(x)
+        x_2d = x_scaled.reshape(1, -1)
+        preds = []
+        sigma = self._get_spread_sigma_override()
+        for name, model in self.fixed_weight_models:
+            if isinstance(model, LightGBMRanker):
+                preds.append(float(model.predict(x_2d)[0]))
+            elif isinstance(model, XGBoostRanker):
+                preds.append(float(model.predict(x_2d)[0]))
+            elif SpreadRegressor is not None and isinstance(model, SpreadRegressor):
+                preds.append(float(model.predict_probability(x_2d, sigma_override=sigma)[0]))
+            else:
+                preds.append(float(model.predict_proba(x_2d)[0][1]))
+        return float(np.std(preds))
+
+    def ensemble_disagreement_batch(self, X: np.ndarray) -> np.ndarray:
+        """Batch version: return per-sample std dev across ensemble models."""
+        if not self.fixed_weight_models:
+            return np.zeros(len(X))
+        X_scaled = self._scale_batch(X)
+        all_preds = []
+        sigma = self._get_spread_sigma_override()
+        for name, model in self.fixed_weight_models:
+            if isinstance(model, LightGBMRanker):
+                all_preds.append(model.predict(X_scaled))
+            elif isinstance(model, XGBoostRanker):
+                all_preds.append(model.predict(X_scaled))
+            elif SpreadRegressor is not None and isinstance(model, SpreadRegressor):
+                all_preds.append(model.predict_probability(X_scaled, sigma_override=sigma))
+            else:
+                all_preds.append(model.predict_proba(X_scaled)[:, 1])
+        return np.std(np.column_stack(all_preds), axis=1)
 
     def _select_features(self, x: np.ndarray) -> np.ndarray:
         if self.fixed_feature_indices is not None:

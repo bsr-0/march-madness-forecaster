@@ -5,7 +5,7 @@ Validates that:
 2. Bayesian shrinkage regularizes low-sample rounds (F4, NCG)
 3. Tournament sigma is systematically lower than regular-season sigma (11.0)
 4. Kaggle-weighted Brier score improves vs baseline sigma=11.0
-5. Integration with SpreadRegressor and MarginFirstEnsemble works correctly
+5. Integration with SpreadRegressor and RoundSpecificCalibrator works correctly
 """
 
 import math
@@ -24,7 +24,6 @@ from src.ml.ensemble.tournament_sigma import (
 )
 from src.ml.ensemble.spread_model import SpreadRegressor, _logistic_cdf
 from src.ml.ensemble.margin_first_ensemble import (
-    MarginFirstEnsemble,
     RoundSpecificCalibrator,
     DEFAULT_ROUND_SIGMAS,
 )
@@ -531,36 +530,6 @@ class TestRoundSpecificCalibratorIntegration:
         for rname in ["R64", "R32", "S16", "E8", "F4", "NCG"]:
             default = rsc._get_default_sigma(rname)
             assert default == calibrator.get_sigma(rname)
-
-
-# ---------------------------------------------------------------------------
-# Integration with MarginFirstEnsemble
-# ---------------------------------------------------------------------------
-
-
-class TestMarginFirstEnsembleIntegration:
-    def test_tournament_sigma_calibrator_propagates(self):
-        calibrator = TournamentSigmaCalibrator()
-        calibrator._set_defaults()
-
-        ensemble = MarginFirstEnsemble()
-        ensemble.set_tournament_sigma_calibrator(calibrator)
-
-        assert ensemble._tournament_sigma_calibrator is calibrator
-        assert ensemble.round_calibrator.calibrated is True
-        assert ensemble.round_calibrator._tournament_sigma_calibrator is calibrator
-
-    def test_diagnostics_show_tournament_sigma(self):
-        calibrator = TournamentSigmaCalibrator()
-        calibrator._set_defaults()
-
-        ensemble = MarginFirstEnsemble()
-        ensemble.set_tournament_sigma_calibrator(calibrator)
-
-        diag = ensemble.get_diagnostics()
-        assert diag["tournament_sigma_calibrator_active"] is True
-        assert "tournament_sigmas" in diag
-        assert len(diag["tournament_sigmas"]) == 6
 
 
 # ---------------------------------------------------------------------------

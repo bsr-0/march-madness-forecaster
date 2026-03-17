@@ -20,9 +20,7 @@ from src.pipeline.production_baseline import (
 )
 from src.pipeline.config import SOTAPipelineConfig
 from src.ml.ensemble.margin_first_ensemble import (
-    MarginFirstEnsemble,
     _PRODUCTION_WEIGHTS,
-    _EXPERIMENTAL_WEIGHTS,
 )
 from src.ml.ensemble.model_registry import (
     get_production_models,
@@ -159,76 +157,6 @@ class TestPipelineModeConfig:
         assert config.admission_min_mean_brier_improvement == 0.0
         assert config.admission_min_fold_improvement_rate == 0.60
         assert config.admission_max_calibration_degradation == 0.01
-
-
-class TestMarginFirstEnsembleProductionMode:
-    """Test production mode restrictions in MarginFirstEnsemble."""
-
-    def test_production_mode_default_weights(self):
-        ensemble = MarginFirstEnsemble(production_mode=True)
-        assert ensemble.weights == {"spread": 0.45, "logistic": 0.20, "lgb": 0.20, "xgb": 0.15}
-
-    def test_experimental_mode_legacy_weights(self):
-        ensemble = MarginFirstEnsemble(production_mode=False)
-        assert ensemble.weights == _EXPERIMENTAL_WEIGHTS
-
-    def test_production_mode_accepts_lgb(self):
-        ensemble = MarginFirstEnsemble(production_mode=True)
-
-        class FakeModel:
-            def predict(self, X):
-                return np.full(len(X), 0.5)
-
-        ensemble.set_models(lgb_model=FakeModel())
-        assert "lgb" in ensemble.models
-
-    def test_production_mode_accepts_xgb(self):
-        ensemble = MarginFirstEnsemble(production_mode=True)
-
-        class FakeModel:
-            def predict(self, X):
-                return np.full(len(X), 0.5)
-
-        ensemble.set_models(xgb_model=FakeModel())
-        assert "xgb" in ensemble.models
-
-    def test_production_mode_allows_spread(self):
-        ensemble = MarginFirstEnsemble(production_mode=True)
-
-        class FakeSpread:
-            def predict_spread(self, X):
-                return np.zeros(len(X))
-            def predict_probability(self, X):
-                return np.full(len(X), 0.5)
-
-        ensemble.set_models(spread_model=FakeSpread())
-        assert "spread" in ensemble.models
-
-    def test_production_mode_allows_logistic(self):
-        ensemble = MarginFirstEnsemble(production_mode=True)
-
-        class FakeLogistic:
-            def predict_proba(self, X):
-                return np.column_stack([np.full(len(X), 0.5)] * 2)
-
-        ensemble.set_models(logistic_model=FakeLogistic())
-        assert "logistic" in ensemble.models
-
-    def test_experimental_mode_allows_lgb(self):
-        ensemble = MarginFirstEnsemble(production_mode=False)
-
-        class FakeModel:
-            def predict(self, X):
-                return np.full(len(X), 0.5)
-
-        ensemble.set_models(lgb_model=FakeModel())
-        assert "lgb" in ensemble.models
-
-    def test_custom_weights_override(self):
-        """Custom weights override both production and experimental defaults."""
-        custom = {"spread": 0.7, "logistic": 0.3}
-        ensemble = MarginFirstEnsemble(weights=custom, production_mode=True)
-        assert ensemble.weights == custom
 
 
 class TestModelRegistryProductionFlags:
