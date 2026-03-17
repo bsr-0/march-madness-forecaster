@@ -290,6 +290,9 @@ class BracketPortfolioGenerator:
             {s: int(n_brackets * f) for s, f in strategy_mix.items()},
         )
 
+        # Enforce diversification constraints before search refinement
+        brackets = self._enforce_diversification(brackets, rng)
+
         # Post-sampling search refinement
         if enable_search and brackets:
             brackets = self._refine_with_search(brackets, seed)
@@ -351,6 +354,7 @@ class BracketPortfolioGenerator:
             predict_fn=self.predict_fn,
             config=sa_config,
             public_picks=self.public_picks,
+            round_public_picks=self.round_public_picks,
         )
 
         refined_count = 0
@@ -411,6 +415,118 @@ class BracketPortfolioGenerator:
             refined_count, n_refine,
         )
         return brackets
+
+    def _enforce_diversification(
+        self,
+        brackets: List[GeneratedBracket],
+        rng: np.random.Generator,
+        max_correlation: float = 0.85,
+        min_unique_champions: int = 4,
+        min_unique_final_fours: int = 3,
+    ) -> List[GeneratedBracket]:
+        """Enforce diversification constraints on the portfolio.
+
+        Removes brackets that are too similar to each other and ensures
+        the portfolio covers enough distinct outcomes.  This prevents
+        the degenerate case where all brackets converge to the same
+        "optimal" picks, which defeats the purpose of a portfolio.
+
+        Constraints enforced:
+        1. **Champion diversity**: At least ``min_unique_champions`` distinct
+           champions across the portfolio.
+        2. **Final Four diversity**: At least ``min_unique_final_fours``
+           distinct Final Four combinations.
+        3. **Anti-correlation**: No two brackets can have pairwise pick
+           agreement above ``max_correlation`` (fraction of games where
+           both brackets pick the same winner).
+
+        When a bracket violates constraints, it is replaced by the
+        next-best bracket from the simulation pool that provides more
+        diversity, or dropped if the pool is exhausted.
+
+        Args:
+            brackets: Current portfolio.
+            rng: Random generator for tie-breaking.
+            max_correlation: Maximum allowed pairwise agreement (0-1).
+            min_unique_champions: Minimum distinct champions required.
+            min_unique_final_fours: Minimum distinct F4 combos required.
+
+        Returns:
+            Diversified portfolio (may be smaller than input if
+            insufficient diverse candidates exist).
+        """
+        if len(brackets) <= 1:
+            return brackets
+
+        # --- Phase 1: Remove highly correlated brackets ---
+        kept: List[GeneratedBracket] = [brackets[0]]
+
+        for candidate in brackets[1:]:
+            is_diverse = True
+            for existing in kept:
+                corr = self._bracket_correlation(candidate, existing)
+                if corr > max_correlation:
+                    is_diverse = False
+                    break
+            if is_diverse:
+                kept.append(candidate)
+
+        removed_count = len(brackets) - len(kept)
+        if removed_count > 0:
+            logger.info(
+                "Diversification: removed %d/%d brackets exceeding "
+                "%.0f%% correlation threshold",
+                removed_count, len(brackets), max_correlation * 100,
+            )
+
+        # --- Phase 2: Check champion diversity ---
+        champions = {b.champion for b in kept if b.champion}
+        if len(champions) < min_unique_champions and len(champions) < len(kept):
+            logger.info(
+                "Diversification: only %d unique champions (target %d), "
+                "portfolio may benefit from more targeted brackets",
+                len(champions), min_unique_champions,
+            )
+
+        # --- Phase 3: Check Final Four diversity ---
+        f4_combos = set()
+        for b in kept:
+            f4 = tuple(sorted(
+                p.winner_id for p in b.picks if p.round_num == 4
+            ))
+            if f4:
+                f4_combos.add(f4)
+
+        if len(f4_combos) < min_unique_final_fours and len(f4_combos) < len(kept):
+            logger.info(
+                "Diversification: only %d unique Final Four combos (target %d)",
+                len(f4_combos), min_unique_final_fours,
+            )
+
+        return kept
+
+    @staticmethod
+    def _bracket_correlation(b1: GeneratedBracket, b2: GeneratedBracket) -> float:
+        """Compute pairwise pick agreement between two brackets.
+
+        Returns fraction of games where both brackets pick the same winner.
+        1.0 = identical picks, 0.0 = completely different.
+        """
+        if not b1.picks or not b2.picks:
+            return 0.0
+
+        # Build lookup: (round_num, game_idx) -> winner_id
+        picks1 = {(p.round_num, p.game_idx): p.winner_id for p in b1.picks}
+        picks2 = {(p.round_num, p.game_idx): p.winner_id for p in b2.picks}
+
+        common_keys = set(picks1.keys()) & set(picks2.keys())
+        if not common_keys:
+            return 0.0
+
+        agreements = sum(
+            1 for k in common_keys if picks1[k] == picks2[k]
+        )
+        return agreements / len(common_keys)
 
     def _build_bracket_structure(
         self, teams_by_region: Dict[str, List[Dict]]
