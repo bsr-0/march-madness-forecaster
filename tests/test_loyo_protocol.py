@@ -1021,14 +1021,14 @@ class TestAssessContamination:
     def test_architectural_not_decontaminable(self):
         """Architectural layer should never be decontaminable."""
         result = assess_contamination()
-        arch = [l for l in result["layers"] if l["name"] == "architectural"][0]
+        arch = [layer for layer in result["layers"] if layer["name"] == "architectural"][0]
         assert arch["decontaminable"] is False
         assert arch["status"] == "contaminated"
 
     def test_parametric_decontaminable(self):
         """Parametric layer should be flagged as decontaminable."""
         result = assess_contamination()
-        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        param = [layer for layer in result["layers"] if layer["name"] == "parametric"][0]
         assert param["decontaminable"] is True
 
     def test_decontamination_protocol_present(self):
@@ -1043,7 +1043,7 @@ class TestAssessContamination:
     def test_partial_decontamination(self):
         """Retuning some constants should give partially_decontaminated."""
         result = assess_contamination()
-        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        param = [layer for layer in result["layers"] if layer["name"] == "parametric"][0]
         if not param["affected_constants"]:
             pytest.skip("No Tier 3 constants found (rdof_audit import may fail)")
 
@@ -1052,7 +1052,7 @@ class TestAssessContamination:
         result2 = assess_contamination(
             constants_retuned_on_dev_only=[one_constant],
         )
-        param2 = [l for l in result2["layers"] if l["name"] == "parametric"][0]
+        param2 = [layer for layer in result2["layers"] if layer["name"] == "parametric"][0]
         assert one_constant in param2["retuned_on_dev_only"]
         # If there were more than one, should be partial
         if len(param["affected_constants"]) > 1:
@@ -1062,7 +1062,7 @@ class TestAssessContamination:
     def test_full_decontamination_with_split(self):
         """Retuning ALL active Tier 3 constants with a split => Level 2.5."""
         result = assess_contamination()
-        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        param = [layer for layer in result["layers"] if layer["name"] == "parametric"][0]
         all_active = param["affected_constants"]
         if not all_active:
             pytest.skip("No Tier 3 constants found (rdof_audit import may fail)")
@@ -1074,14 +1074,14 @@ class TestAssessContamination:
         )
         assert result2["integrity_level"] == 2.5
         assert "QUASI-PROSPECTIVE" in result2["integrity_note"]
-        param2 = [l for l in result2["layers"] if l["name"] == "parametric"][0]
+        param2 = [layer for layer in result2["layers"] if layer["name"] == "parametric"][0]
         assert param2["status"] == "decontaminated"
         assert len(param2["still_contaminated"]) == 0
 
     def test_full_decontamination_without_split_stays_level3(self):
         """Retuning all constants but without DevEvalSplit should stay Level 3."""
         result = assess_contamination()
-        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        param = [layer for layer in result["layers"] if layer["name"] == "parametric"][0]
         all_active = param["affected_constants"]
         if not all_active:
             pytest.skip("No Tier 3 constants found")
@@ -1092,7 +1092,7 @@ class TestAssessContamination:
         )
         # Without a split, parametric is decontaminated but integrity stays 3
         # because dev_eval_split is None
-        param2 = [l for l in result2["layers"] if l["name"] == "parametric"][0]
+        param2 = [layer for layer in result2["layers"] if layer["name"] == "parametric"][0]
         assert param2["status"] == "decontaminated"
         # integrity_level remains 3 when no split is provided
         assert result2["integrity_level"] == 3
@@ -1100,6 +1100,6 @@ class TestAssessContamination:
     def test_disabled_constants_reported(self):
         """Disabled Tier 3 constants should be listed in the parametric layer."""
         result = assess_contamination()
-        param = [l for l in result["layers"] if l["name"] == "parametric"][0]
+        param = [layer for layer in result["layers"] if layer["name"] == "parametric"][0]
         # disabled list should exist even if empty
         assert "disabled" in param
