@@ -9,17 +9,17 @@
   "enable_transformer": false,
   "enable_embedding_projections": false,
 
-  "enable_stacking": false,
-  "enable_feature_selection": false,
+  "enable_stacking": true,
+  "enable_feature_selection": true,
 
-  "enable_brier_sharpening": false,
-  "enable_seed_overrides": false,
-  "enable_goto_conversion": false,
-  "enable_round_weighted_calibration": false,
-  "seed_prior_weight": 0.0,
-  "consistency_bonus_max": 0.0,
+  "enable_brier_sharpening": true,
+  "enable_seed_overrides": true,
+  "enable_goto_conversion": true,
+  "enable_round_weighted_calibration": true,
+  "seed_prior_weight": 0.10,
+  "consistency_bonus_max": 0.02,
 
-  "enable_bayesian_bt": false,
+  "enable_bayesian_bt": true,
 
   "enable_multi_year_training": true,
   "enable_multi_year_calibration": true,

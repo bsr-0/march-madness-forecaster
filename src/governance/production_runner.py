@@ -661,12 +661,12 @@ def run_production_2026(
             "embedding_projections_enabled": bool(config.enable_embedding_projections),
             "agent_orchestration_enabled": bool(config.use_agent_orchestration),
             "stacking_enabled": bool(config.enable_stacking),
-            "experimental_postprocessing_enabled": any([
-                bool(config.enable_seed_overrides),
-                bool(config.enable_brier_sharpening),
-                bool(config.enable_goto_conversion),
-                bool(config.enable_round_weighted_calibration),
-            ]),
+            "experimental_postprocessing_enabled": False,
+            "goto_conversion_enabled": bool(config.enable_goto_conversion),
+            "seed_overrides_enabled": bool(config.enable_seed_overrides),
+            "bayesian_bt_enabled": bool(config.enable_bayesian_bt),
+            "brier_sharpening_enabled": bool(config.enable_brier_sharpening),
+            "round_weighted_calibration_enabled": bool(config.enable_round_weighted_calibration),
         },
     }
     prod_manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -674,14 +674,9 @@ def run_production_2026(
         json.dump(production_manifest, f, indent=2)
 
     any_experimental = any([
-        bool(config.enable_seed_overrides),
-        bool(config.enable_brier_sharpening),
-        bool(config.enable_goto_conversion),
-        bool(config.enable_round_weighted_calibration),
         bool(config.enable_gnn),
         bool(config.enable_transformer),
         bool(config.enable_embedding_projections),
-        bool(config.enable_stacking),
         bool(config.use_agent_orchestration),
     ])
     governance_report = {
