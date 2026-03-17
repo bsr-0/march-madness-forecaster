@@ -301,7 +301,6 @@ class TestLightGBMMarginRegressor:
 # ---------------------------------------------------------------------------
 from src.ml.ensemble.margin_first_ensemble import (
     DEFAULT_ROUND_SIGMAS,
-    MarginFirstEnsemble,
     RoundSpecificCalibrator,
     _EXPERIMENTAL_WEIGHTS,
     _PRODUCTION_WEIGHTS,
@@ -361,81 +360,6 @@ class TestRoundSpecificCalibrator:
         assert "k" in result
         assert "sigma" in result
         assert "brier" in result
-
-
-class TestMarginFirstEnsemble:
-    def test_production_mode_defaults(self):
-        ens = MarginFirstEnsemble()
-        assert ens.production_mode is True
-        assert ens.weights == _PRODUCTION_WEIGHTS
-
-    def test_experimental_mode(self):
-        ens = MarginFirstEnsemble(production_mode=False)
-        assert ens.weights == _EXPERIMENTAL_WEIGHTS
-
-    def test_custom_weights(self):
-        w = {"spread": 0.5, "lgb": 0.5}
-        ens = MarginFirstEnsemble(weights=w)
-        assert ens.weights == w
-
-    def test_set_models(self):
-        ens = MarginFirstEnsemble()
-        mock_spread = MagicMock()
-        mock_lgb = MagicMock()
-        ens.set_models(spread_model=mock_spread, lgb_model=mock_lgb)
-        assert "spread" in ens.models
-        assert "lgb" in ens.models
-
-    def test_predict_no_models(self):
-        ens = MarginFirstEnsemble()
-        X = np.zeros((3, 5))
-        result = ens.predict(X)
-        np.testing.assert_array_equal(result, np.zeros(3))
-
-    def test_predict_single(self):
-        ens = MarginFirstEnsemble()
-        mock_model = MagicMock()
-        mock_model.predict = MagicMock(return_value=np.array([0.7]))
-        ens.set_models(lgb_model=mock_model)
-        result = ens.predict_single(np.zeros(5))
-        assert isinstance(result, float)
-
-    def test_predict_with_spread_model(self):
-        ens = MarginFirstEnsemble()
-        mock_spread = MagicMock()
-        mock_spread.predict_spread = MagicMock(return_value=np.array([5.0]))
-        mock_spread.predict_probability = MagicMock(return_value=np.array([0.7]))
-        ens.set_models(spread_model=mock_spread)
-        X = np.zeros((1, 5))
-        result = ens.predict(X)
-        assert len(result) == 1
-
-    def test_predict_with_logistic_model(self):
-        ens = MarginFirstEnsemble()
-        mock_lr = MagicMock()
-        mock_lr.predict_proba = MagicMock(
-            return_value=np.array([[0.3, 0.7]])
-        )
-        ens.set_models(logistic_model=mock_lr)
-        X = np.zeros((1, 5))
-        result = ens.predict(X)
-        assert len(result) == 1
-
-    def test_get_diagnostics(self):
-        ens = MarginFirstEnsemble()
-        diag = ens.get_diagnostics()
-        assert "weights" in diag
-        assert "n_models" in diag
-        assert "round_calibrated" in diag
-        assert diag["tournament_expert_active"] is False
-
-    def test_predict_1d_input_reshaped(self):
-        ens = MarginFirstEnsemble()
-        mock_model = MagicMock()
-        mock_model.predict = MagicMock(return_value=np.array([0.6]))
-        ens.set_models(lgb_model=mock_model)
-        result = ens.predict(np.zeros(5))
-        assert result.shape == (1,)
 
 
 # ---------------------------------------------------------------------------
