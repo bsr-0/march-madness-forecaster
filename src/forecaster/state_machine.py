@@ -9,17 +9,23 @@ Targets: ΔBrier ≤ -10%, ΔLogLoss ≤ -5%.
 
 Overfitting-safe rules enforced:
 1.  Locked evaluation protocol (deterministic seed + LOYO folds)
-2.  Dual-gate acceptance (CV AND 2025 holdout must both improve)
+2.  CV-only acceptance gate (CV Brier + CV LogLoss must both improve)
 3.  Single-change per iteration
 4.  No CV feedback loops
-5.  2025 holdout is untouchable (never trained on)
-6.  Calibration is global only (fitted on 2016-2024 LOYO OOS)
+5.  2025 holdout is untouchable (never trained on, never gates acceptance)
+6.  Calibration is global only (fitted on training LOYO OOS)
 7.  Feature stability check (audit)
 8.  Variance constraint (per-year Brier std must not increase)
 9.  Model simplicity prior (LR+GBM ceiling, no escalation)
 10. Market anchor constraint (corr >= 0.7)
 11. Prediction change validation (audit)
 12. Iteration limit + rollback after 2 consecutive failures
+
+CRITICAL: Holdout (2025) is evaluated every iteration for monitoring/logging
+only. It is NEVER used in _decide() to gate acceptance. This prevents
+adaptive selection bias (a.k.a. "hyperparameter tuning on the test set").
+The holdout score reported at the end is the honest result of the final
+accepted model, not the best of N evaluations.
 """
 
 from __future__ import annotations
@@ -733,15 +739,16 @@ class StateMachineForecaster:
         predictions: np.ndarray,
         per_year_brier: Dict[int, float],
     ) -> bool:
-        """DECIDE state: dual-gate acceptance (Rule 2).
+        """DECIDE state: CV-only acceptance gate (Rule 2).
 
         Accept ONLY if ALL of:
         1. Audit passed
         2. CV Brier improved
         3. CV LogLoss improved
-        4. Holdout Brier improved
-        5. Holdout LogLoss improved
-        6. Per-year variance did not increase (Rule 8)
+        4. Per-year variance did not increase (Rule 8)
+
+        CRITICAL: Holdout metrics are logged for monitoring but NEVER gate
+        acceptance. This prevents adaptive selection bias against the holdout.
         """
         logger.info("DECIDE iteration %d", self.iteration)
 
@@ -762,7 +769,7 @@ class StateMachineForecaster:
             logger.info("First iteration accepted as baseline")
             logger.info("  CV:      Brier=%.4f, LogLoss=%.4f",
                         cv_metrics["brier"], cv_metrics["log_loss"])
-            logger.info("  Holdout: Brier=%.4f, LogLoss=%.4f",
+            logger.info("  Holdout: Brier=%.4f, LogLoss=%.4f (monitoring only, not gated)",
                         holdout_metrics["brier"], holdout_metrics["log_loss"])
 
             # Check if baseline already meets targets
@@ -776,21 +783,23 @@ class StateMachineForecaster:
 
             return True
 
-        # Rule 2: Dual-gate — ALL four metrics must improve
+        # Rule 2: CV-only gate — both CV metrics must improve
         cv_brier_ok = cv_metrics["brier"] < self.best_cv_metrics["brier"]
         cv_ll_ok = cv_metrics["log_loss"] < self.best_cv_metrics["log_loss"]
-        ho_brier_ok = holdout_metrics["brier"] < self.best_holdout_metrics["brier"]
-        ho_ll_ok = holdout_metrics["log_loss"] < self.best_holdout_metrics["log_loss"]
 
         gate_status = {
             "cv_brier": cv_brier_ok, "cv_logloss": cv_ll_ok,
-            "holdout_brier": ho_brier_ok, "holdout_logloss": ho_ll_ok,
         }
-        logger.info("Dual-gate check: %s", gate_status)
+        logger.info("CV-gate check: %s", gate_status)
+
+        # Log holdout for monitoring (NOT gating)
+        if self.best_holdout_metrics:
+            ho_brier_delta = holdout_metrics["brier"] - self.best_holdout_metrics["brier"]
+            logger.info("  Holdout monitoring: Brier delta=%.4f (not gated)", ho_brier_delta)
 
         if not all(gate_status.values()):
             failed_gates = [k for k, v in gate_status.items() if not v]
-            logger.info("Dual-gate FAILED on: %s — proceeding to FAIL_ANALYSIS",
+            logger.info("CV-gate FAILED on: %s — proceeding to FAIL_ANALYSIS",
                         failed_gates)
             self.consecutive_no_improvement += 1
             return False
@@ -812,10 +821,10 @@ class StateMachineForecaster:
         self.consecutive_no_improvement = 0
         self.history[-1].accepted = True
 
-        logger.info("ACCEPTED — all gates passed")
+        logger.info("ACCEPTED — CV gates passed")
         logger.info("  CV:      Brier=%.4f, LogLoss=%.4f",
                     cv_metrics["brier"], cv_metrics["log_loss"])
-        logger.info("  Holdout: Brier=%.4f, LogLoss=%.4f",
+        logger.info("  Holdout: Brier=%.4f, LogLoss=%.4f (monitoring only)",
                     holdout_metrics["brier"], holdout_metrics["log_loss"])
         logger.info("  Per-year std: %.4f (was %.4f)", curr_std, prev_std)
 
@@ -937,10 +946,10 @@ class StateMachineForecaster:
             "random_seed": self.random_seed,
             "rules_enforced": [
                 "locked_eval_protocol",
-                "dual_gate_acceptance",
+                "cv_only_acceptance_gate",
                 "single_change_per_iter",
                 "no_cv_feedback_loops",
-                "2025_holdout_untouchable",
+                "2025_holdout_untouchable_no_gating",
                 "global_calibration_only",
                 "feature_stability_check",
                 "variance_constraint",

@@ -3,14 +3,14 @@
   "metrics": {
     "cv_brier": 0.1377512851954983,
     "cv_log_loss": 0.4289712558301677,
-    "holdout_brier": 0.17104263342952092,
-    "holdout_log_loss": 0.49384951459043896,
-    "brier_improvement_pct": 24.11547425262426,
-    "log_loss_improvement_pct": 25.37793884453287
+    "holdout_brier": 0.10362846824706749,
+    "holdout_log_loss": 0.3342417586862921,
+    "brier_improvement_pct": 22.76840907184908,
+    "log_loss_improvement_pct": 24.272555925286664
   },
   "iterations": 1,
   "changelog": [
-    "iter=0: CV_Brier=0.1378, CV_LL=0.4290, HO_Brier=0.1710, HO_LL=0.4938, std=0.0191, audit=PASS, accepted=YES"
+    "iter=0: CV_Brier=0.1378, CV_LL=0.4290, HO_Brier=0.1036, HO_LL=0.3342, std=0.0191, audit=PASS, accepted=YES"
   ],
   "model_summary": {
     "features": [
@@ -60,10 +60,10 @@
     "random_seed": 42,
     "rules_enforced": [
       "locked_eval_protocol",
-      "dual_gate_acceptance",
+      "cv_only_acceptance_gate",
       "single_change_per_iter",
       "no_cv_feedback_loops",
-      "2025_holdout_untouchable",
+      "2025_holdout_untouchable_no_gating",
       "global_calibration_only",
       "feature_stability_check",
       "variance_constraint",
