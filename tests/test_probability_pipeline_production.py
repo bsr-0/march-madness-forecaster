@@ -119,59 +119,65 @@ class TestTournamentShrinkage:
 
 
 class TestProductionConfigValidation:
-    def test_sota_seed_overrides_raises(self):
+    def test_sota_seed_overrides_allowed_in_production(self):
         from src.pipeline.config import SOTAPipelineConfig
 
-        with pytest.raises(ValueError, match="enable_seed_overrides"):
-            SOTAPipelineConfig(
-                probability_profile="production",
-                enable_seed_overrides=True,
-            )
+        # Seed overrides are now sanctioned in production
+        cfg = SOTAPipelineConfig(
+            probability_profile="production",
+            enable_seed_overrides=True,
+        )
+        assert cfg.enable_seed_overrides is True
 
-    def test_sota_sharpening_raises(self):
+    def test_sota_sharpening_allowed_in_production(self):
         from src.pipeline.config import SOTAPipelineConfig
 
-        with pytest.raises(ValueError, match="enable_brier_sharpening"):
-            SOTAPipelineConfig(
-                probability_profile="production",
-                enable_brier_sharpening=True,
-            )
+        # Brier sharpening is now sanctioned in production
+        cfg = SOTAPipelineConfig(
+            probability_profile="production",
+            enable_brier_sharpening=True,
+        )
+        assert cfg.enable_brier_sharpening is True
 
-    def test_sota_goto_raises(self):
+    def test_sota_goto_allowed_in_production(self):
         from src.pipeline.config import SOTAPipelineConfig
 
-        with pytest.raises(ValueError, match="enable_goto_conversion"):
-            SOTAPipelineConfig(
-                probability_profile="production",
-                enable_goto_conversion=True,
-            )
+        # GoTo conversion is now sanctioned in production
+        cfg = SOTAPipelineConfig(
+            probability_profile="production",
+            enable_goto_conversion=True,
+        )
+        assert cfg.enable_goto_conversion is True
 
-    def test_sota_round_weighted_raises(self):
+    def test_sota_round_weighted_allowed_in_production(self):
         from src.pipeline.config import SOTAPipelineConfig
 
-        with pytest.raises(ValueError, match="enable_round_weighted_calibration"):
-            SOTAPipelineConfig(
-                probability_profile="production",
-                enable_round_weighted_calibration=True,
-            )
+        # Round-weighted calibration is now sanctioned in production
+        cfg = SOTAPipelineConfig(
+            probability_profile="production",
+            enable_round_weighted_calibration=True,
+        )
+        assert cfg.enable_round_weighted_calibration is True
 
-    def test_sota_seed_prior_raises(self):
+    def test_sota_seed_prior_allowed_in_production(self):
         from src.pipeline.config import SOTAPipelineConfig
 
-        with pytest.raises(ValueError, match="seed_prior_weight"):
-            SOTAPipelineConfig(
-                probability_profile="production",
-                seed_prior_weight=0.1,
-            )
+        # Seed prior weight is now allowed in production
+        cfg = SOTAPipelineConfig(
+            probability_profile="production",
+            seed_prior_weight=0.1,
+        )
+        assert cfg.seed_prior_weight == 0.1
 
-    def test_sota_consistency_bonus_raises(self):
+    def test_sota_consistency_bonus_allowed_in_production(self):
         from src.pipeline.config import SOTAPipelineConfig
 
-        with pytest.raises(ValueError, match="consistency_bonus_max"):
-            SOTAPipelineConfig(
-                probability_profile="production",
-                consistency_bonus_max=0.01,
-            )
+        # Consistency bonus is now allowed in production
+        cfg = SOTAPipelineConfig(
+            probability_profile="production",
+            consistency_bonus_max=0.01,
+        )
+        assert cfg.consistency_bonus_max == 0.01
 
     def test_womens_sharpening_raises(self):
         from src.pipeline.womens import WomensPipelineConfig

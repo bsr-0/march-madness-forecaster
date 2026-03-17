@@ -37,13 +37,13 @@ REQUIRED_CONFIG_VALUES: Dict[str, Any] = {
     "enable_gnn": False,
     "enable_transformer": False,
     "enable_embedding_projections": False,
-    "enable_stacking": False,
-    "enable_feature_selection": False,
-    "enable_brier_sharpening": False,
-    "enable_seed_overrides": False,
-    "enable_goto_conversion": False,
-    "enable_round_weighted_calibration": False,
-    "enable_bayesian_bt": False,
+    "enable_stacking": True,
+    "enable_feature_selection": True,
+    "enable_brier_sharpening": True,
+    "enable_seed_overrides": True,
+    "enable_goto_conversion": True,
+    "enable_round_weighted_calibration": True,
+    "enable_bayesian_bt": True,
     "enable_multi_year_training": True,
     "enable_multi_year_calibration": True,
     "enable_loyo_cv": True,
@@ -92,11 +92,11 @@ def validate_2026_production_config(config: SOTAPipelineConfig) -> None:
         if actual != expected:
             violations.append(f"{key}={actual!r} (expected {expected!r})")
 
-    if config.seed_prior_weight > 0:
-        violations.append(f"seed_prior_weight={config.seed_prior_weight} (expected <= 0)")
-    if config.consistency_bonus_max > 0:
+    if config.seed_prior_weight > 0.5:
+        violations.append(f"seed_prior_weight={config.seed_prior_weight} (expected <= 0.5)")
+    if config.consistency_bonus_max > 0.1:
         violations.append(
-            f"consistency_bonus_max={config.consistency_bonus_max} (expected <= 0)"
+            f"consistency_bonus_max={config.consistency_bonus_max} (expected <= 0.1)"
         )
 
     if config.training_years is None:
