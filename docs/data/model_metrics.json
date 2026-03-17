@@ -10,8 +10,8 @@
       2023,
       2024
     ],
-    "overall_accuracy": NaN,
-    "overall_brier": NaN,
+    "overall_accuracy": 0,
+    "overall_brier": 0,
     "best_year": 2018,
     "worst_year": 2018
   },

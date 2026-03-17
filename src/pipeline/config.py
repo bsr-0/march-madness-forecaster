@@ -444,7 +444,7 @@ class SOTAPipelineConfig:
     # A weak prior (10%) provides regularization without overwhelming the model.
     seed_prior_weight: float = 0.10  # Weak seed prior for regularization
     seed_prior_slope: float = 0.175  # Sigmoid slope for seed-based win rate approximation
-    consistency_bonus_max: float = 0.02  # Small consistency bonus for teams with low variance
+    consistency_bonus_max: float = 0.0  # Disabled by default; experimental only
     consistency_normalizer: float = 15.0  # Typical pace_adjusted_variance range for normalization
 
     # --- Leakage safety ---

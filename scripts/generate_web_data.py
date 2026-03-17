@@ -34,10 +34,28 @@ def load(path):
         return json.load(f)
 
 
+class SafeEncoder(json.JSONEncoder):
+    """Replace NaN/Infinity with None to produce valid JSON."""
+    def default(self, o):
+        return super().default(o)
+
+    def encode(self, o):
+        return super().encode(self._sanitize(o))
+
+    def _sanitize(self, o):
+        if isinstance(o, float) and (math.isnan(o) or math.isinf(o)):
+            return None
+        if isinstance(o, dict):
+            return {k: self._sanitize(v) for k, v in o.items()}
+        if isinstance(o, (list, tuple)):
+            return [self._sanitize(v) for v in o]
+        return o
+
+
 def save(obj, name):
     path = OUT / name
     with open(path, "w") as f:
-        json.dump(obj, f, indent=2)
+        json.dump(obj, f, indent=2, cls=SafeEncoder)
     print(f"  wrote {path} ({path.stat().st_size:,} bytes)")
 
 
@@ -529,8 +547,17 @@ for i in range(n_bins):
             "count": int(mask.sum()),
         })
 
-overall_brier = float(np.mean((all_predictions - all_actuals) ** 2))
-overall_acc = float(np.mean((all_predictions >= 0.5) == all_actuals))
+if len(all_predictions) > 0:
+    overall_brier = float(np.mean((all_predictions - all_actuals) ** 2))
+    overall_acc = float(np.mean((all_predictions >= 0.5) == all_actuals))
+    overall_logloss = float(-np.mean(
+        all_actuals * np.log(np.clip(all_predictions, 1e-6, 1)) +
+        (1 - all_actuals) * np.log(np.clip(1 - all_predictions, 1e-6, 1))
+    ))
+else:
+    overall_brier = 0
+    overall_acc = 0
+    overall_logloss = 0
 
 validation_output = {
     "description": "Backtest validation using tournament data from 2018-2024 (no 2025/2026 leakage)",
@@ -540,10 +567,7 @@ validation_output = {
         "n_games": len(all_predictions),
         "accuracy": round(overall_acc, 4),
         "brier_score": round(overall_brier, 4),
-        "log_loss": round(float(-np.mean(
-            all_actuals * np.log(np.clip(all_predictions, 1e-6, 1)) +
-            (1 - all_actuals) * np.log(np.clip(1 - all_predictions, 1e-6, 1))
-        )), 4),
+        "log_loss": round(overall_logloss, 4),
     },
     "calibration": calibration_data,
     "per_year": validation_years,
@@ -582,8 +606,8 @@ model_metrics = {
         "years_tested": [v["year"] for v in validation_years],
         "overall_accuracy": round(overall_acc, 4),
         "overall_brier": round(overall_brier, 4),
-        "best_year": min(validation_years, key=lambda x: x["brier_score"])["year"],
-        "worst_year": max(validation_years, key=lambda x: x["brier_score"])["year"],
+        "best_year": min(validation_years, key=lambda x: x["brier_score"])["year"] if validation_years else None,
+        "worst_year": max(validation_years, key=lambda x: x["brier_score"])["year"] if validation_years else None,
     },
     "prospective_evaluation": prospective_eval,
     "calibration": calibration_data,
