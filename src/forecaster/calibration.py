@@ -119,9 +119,11 @@ class LOYOCalibrator:
         self,
         years: Optional[List[int]] = None,
         min_isotonic_bins: int = 50,
+        preference: Optional[str] = None,
     ):
         self.years = years or CALIBRATION_YEARS
         self.min_isotonic_bins = min_isotonic_bins
+        self.preference = preference  # "isotonic" or "temperature" to override auto-selection
         self.frozen_calibrator: Optional[CalibrationResult] = None
 
     def fit_and_select(
@@ -170,9 +172,17 @@ class LOYOCalibrator:
                 all_probs_arr, all_outcomes_arr, all_years_arr
             )
 
-        # Select best by log loss
+        # Select best by log loss (or preference override)
         best = temp_result
-        if iso_result is not None and iso_result.log_loss_after < temp_result.log_loss_after:
+        if self.preference == "isotonic" and iso_result is not None:
+            best = iso_result
+            logger.info("Using preferred isotonic calibration (LogLoss=%.4f)",
+                        iso_result.log_loss_after)
+        elif self.preference == "temperature":
+            best = temp_result
+            logger.info("Using preferred temperature calibration (T=%.4f, LogLoss=%.4f)",
+                        temp_result.temperature, temp_result.log_loss_after)
+        elif iso_result is not None and iso_result.log_loss_after < temp_result.log_loss_after:
             best = iso_result
             logger.info("Selected isotonic calibration (LogLoss=%.4f < %.4f)",
                         iso_result.log_loss_after, temp_result.log_loss_after)
