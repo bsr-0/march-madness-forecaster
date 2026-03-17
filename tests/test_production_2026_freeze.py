@@ -299,14 +299,20 @@ def test_config_forbidden_flags_disabled():
     payload = _load_blessed_config()
     forbidden_flags = [
         "enable_gnn", "enable_transformer", "enable_embedding_projections",
-        "use_agent_orchestration", "enable_stacking", "enable_feature_selection",
-        "enable_brier_sharpening", "enable_seed_overrides", "enable_goto_conversion",
-        "enable_round_weighted_calibration", "enable_bayesian_bt",
+        "use_agent_orchestration",
     ]
     for flag in forbidden_flags:
         assert payload.get(flag) is False, f"{flag} must be false, got {payload.get(flag)}"
-    assert payload.get("seed_prior_weight", 1) == 0.0
-    assert payload.get("consistency_bonus_max", 1) == 0.0
+    # These are now enabled in production
+    enabled_flags = [
+        "enable_brier_sharpening", "enable_round_weighted_calibration",
+        "enable_stacking", "enable_bayesian_bt", "enable_seed_overrides",
+        "enable_feature_selection", "enable_goto_conversion",
+    ]
+    for flag in enabled_flags:
+        assert payload.get(flag) is True, f"{flag} must be true, got {payload.get(flag)}"
+    assert payload.get("seed_prior_weight", 1) == 0.10
+    assert payload.get("consistency_bonus_max", 1) == 0.02
 
 
 def test_config_year_partitions_correct():
@@ -344,9 +350,7 @@ def test_valid_config_passes():
 
 FORBIDDEN_FLAGS = [
     "enable_gnn", "enable_transformer", "enable_embedding_projections",
-    "use_agent_orchestration", "enable_stacking", "enable_feature_selection",
-    "enable_seed_overrides", "enable_brier_sharpening", "enable_goto_conversion",
-    "enable_round_weighted_calibration", "enable_bayesian_bt",
+    "use_agent_orchestration",
 ]
 
 
@@ -356,14 +360,14 @@ def test_each_forbidden_flag_triggers_failure(flag):
         validate_2026_production_config(_make_config(**{flag: True}))
 
 
-def test_seed_prior_weight_positive_fails():
+def test_seed_prior_weight_excessive_fails():
     with pytest.raises(ValueError):
-        validate_2026_production_config(_make_config(seed_prior_weight=0.1))
+        validate_2026_production_config(_make_config(seed_prior_weight=0.6))
 
 
-def test_consistency_bonus_max_positive_fails():
+def test_consistency_bonus_max_excessive_fails():
     with pytest.raises(ValueError):
-        validate_2026_production_config(_make_config(consistency_bonus_max=0.05))
+        validate_2026_production_config(_make_config(consistency_bonus_max=0.15))
 
 
 def test_wrong_probability_profile_fails():

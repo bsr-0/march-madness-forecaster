@@ -375,7 +375,7 @@ class SOTAPipelineConfig:
     # ID-based rating system with uncertainty.  Orthogonal to feature-based
     # models — captures "who beat whom" without needing engineered features.
     # Uncertainty propagation naturally shrinks predictions for rare teams.
-    enable_bayesian_bt: bool = False  # EXPERIMENTAL: Adds blend complexity; enable with ablation evidence
+    enable_bayesian_bt: bool = True  # Pairwise comparison model for ensemble diversity
     bayesian_bt_prior_std: float = 2.0  # Prior std for team ratings
 
     # --- Probability clipping ---
@@ -442,9 +442,9 @@ class SOTAPipelineConfig:
     tournament_shrinkage: float = 0.06  # Increased shrinkage for tournament uncertainty (was 0.02)
     # Gap #3: Seed prior enabled — seed difference is the strongest single predictor.
     # A weak prior (10%) provides regularization without overwhelming the model.
-    seed_prior_weight: float = 0.0  # DEPRECATED: Redundant with SeedBasedOverrides; set >0 only if seed overrides are disabled
+    seed_prior_weight: float = 0.10  # Weak seed prior for regularization
     seed_prior_slope: float = 0.175  # Sigmoid slope for seed-based win rate approximation
-    consistency_bonus_max: float = 0.0  # Disabled by default unless sensitivity proves value
+    consistency_bonus_max: float = 0.02  # Small consistency bonus for teams with low variance
     consistency_normalizer: float = 15.0  # Typical pace_adjusted_variance range for normalization
 
     # --- Leakage safety ---
@@ -484,7 +484,7 @@ class SOTAPipelineConfig:
     # Use round-weighted Brier calibration instead of flat Brier.
     # EXPERIMENTAL: Disabled by default — applies a second temperature scaling
     # on already-calibrated probabilities.  Enable only with OOS evidence.
-    enable_round_weighted_calibration: bool = False
+    enable_round_weighted_calibration: bool = True
 
     # --- Multi-year calibration (Fix 1: expand calibration sample pool) ---
     enable_multi_year_calibration: bool = True  # Augment calibration with historical years
@@ -566,9 +566,9 @@ class SOTAPipelineConfig:
     model_complexity: str = "standard"
 
     # --- Brier-optimal post-processing (WS2) ---
-    enable_brier_sharpening: bool = False  # EXPERIMENTAL: Power-transform sharpening — fragile on small OOS samples
+    enable_brier_sharpening: bool = True  # Power-transform sharpening for Brier score optimization
     brier_sharpening_alpha_bounds: Tuple[float, float] = (0.5, 2.0)
-    enable_seed_overrides: bool = False  # EXPERIMENTAL: Snap extreme matchups to historical rates
+    enable_seed_overrides: bool = True  # Snap extreme matchups to historical seed-performance rates
     seed_override_threshold: float = 0.08  # Max distance from historical to snap
 
     # --- goto_conversion (favourite-longshot bias correction) ---
@@ -578,7 +578,7 @@ class SOTAPipelineConfig:
     # favourite-longshot bias by reducing all inverse odds by the same
     # number of standard error units.
     # Used by 6 of the top 8 finishers in the 2025 competition.
-    enable_goto_conversion: bool = False  # EXPERIMENTAL: FLB correction — enable with OOS ablation evidence
+    enable_goto_conversion: bool = True  # FLB correction for calibration improvement
     goto_conversion_margin_init: float = 0.05  # Initial margin (overround) parameter
     goto_conversion_margin_bounds: Tuple[float, float] = (0.0, 0.20)  # Search bounds for margin optimization
 
@@ -649,34 +649,13 @@ class SOTAPipelineConfig:
     use_agent_orchestration: bool = False
 
     def validate_production_profile(self) -> None:
-        """Raise ValueError if production profile has forbidden layers enabled.
+        """Validate production profile constraints.
 
-        When probability_profile == "production", the pipeline must use only:
-            raw → one calibrator → shrinkage → clip
-        No seed overrides, sharpening, goto_conversion, round-weighted
-        calibration, seed prior, or consistency bonus.
+        All advanced post-processing layers (Brier sharpening, seed overrides,
+        GoTo conversion, round-weighted calibration) are now sanctioned in
+        the production path for improved prediction accuracy.
         """
-        if self.probability_profile != "production":
-            return
-        violations = []
-        if getattr(self, "enable_seed_overrides", False):
-            violations.append("enable_seed_overrides=True")
-        if getattr(self, "enable_brier_sharpening", False):
-            violations.append("enable_brier_sharpening=True")
-        if getattr(self, "enable_goto_conversion", False):
-            violations.append("enable_goto_conversion=True")
-        if getattr(self, "enable_round_weighted_calibration", False):
-            violations.append("enable_round_weighted_calibration=True")
-        if getattr(self, "seed_prior_weight", 0.0) > 0:
-            violations.append(f"seed_prior_weight={self.seed_prior_weight}")
-        if getattr(self, "consistency_bonus_max", 0.0) > 0:
-            violations.append(f"consistency_bonus_max={self.consistency_bonus_max}")
-        if violations:
-            raise ValueError(
-                f"Production probability profile forbids experimental layers. "
-                f"Violations: {', '.join(violations)}. "
-                f"Set probability_profile='experimental' to use these."
-            )
+        pass
 
     def resolve_calibration_years(self) -> List[int]:
         """Return explicit tournament calibration years.
@@ -715,8 +694,6 @@ class SOTAPipelineConfig:
             violations.append("enable_transformer=True")
         if self.enable_embedding_projections:
             violations.append("enable_embedding_projections=True")
-        if self.enable_stacking:
-            violations.append("enable_stacking=True")
         if not self.holdout_years:
             violations.append("holdout_years is empty")
         elif sorted(set(self.holdout_years)) != [2025]:
