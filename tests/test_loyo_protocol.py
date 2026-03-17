@@ -1,6 +1,7 @@
 """Tests for the Leave-One-Year-Out (LOYO) validation protocol.
 
-Covers LOYOValidator, FeatureAblator, and the 0.001 Rule enforcement.
+Covers LOYOValidator, FeatureAblator, powered ablation thresholds,
+validation diagnostics, and statistical power analysis.
 """
 
 import numpy as np
@@ -17,6 +18,8 @@ from src.ml.evaluation.loyo_protocol import (
     LOYOValidator,
     ProspectiveValidator,
     ProspectiveValidationResult,
+    compute_ablation_threshold,
+    compute_validation_diagnostics,
     validate_family_coverage,
 )
 
@@ -66,7 +69,8 @@ class TestLOYOYears:
         expected = {2018, 2019, 2021, 2022, 2023, 2024, 2025}
         assert set(LOYO_YEARS) == expected
 
-    def test_minimum_brier_improvement(self):
+    def test_minimum_brier_improvement_legacy(self):
+        """Legacy constant preserved for backward compatibility."""
         assert MINIMUM_BRIER_IMPROVEMENT == 0.001
 
 
@@ -616,3 +620,238 @@ class TestFeatureAblatorFamilies:
         assert "fam_b" in results
         assert results["fam_a"]["n_features_masked"] == 1
         assert results["fam_b"]["n_features_masked"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Powered Ablation Threshold Tests
+# ---------------------------------------------------------------------------
+
+
+class TestComputeAblationThreshold:
+    """Tests for the statistically-powered ablation threshold."""
+
+    def test_threshold_exceeds_legacy(self):
+        """Powered threshold should be >= legacy 0.001 for realistic fold variance."""
+        fold_briers = [0.18, 0.22, 0.19, 0.25, 0.20, 0.21, 0.17]
+        threshold = compute_ablation_threshold(fold_briers)
+        assert threshold >= MINIMUM_BRIER_IMPROVEMENT
+
+    def test_threshold_scales_with_variance(self):
+        """Higher fold variance should produce a larger threshold."""
+        low_var = [0.200, 0.201, 0.199, 0.200, 0.201, 0.199, 0.200]
+        high_var = [0.15, 0.25, 0.18, 0.28, 0.16, 0.24, 0.20]
+        t_low = compute_ablation_threshold(low_var)
+        t_high = compute_ablation_threshold(high_var)
+        assert t_high > t_low
+
+    def test_threshold_with_few_folds_uses_legacy(self):
+        """With < 3 folds, should fall back to legacy threshold."""
+        threshold = compute_ablation_threshold([0.20, 0.21])
+        assert threshold == MINIMUM_BRIER_IMPROVEMENT
+
+    def test_threshold_positive(self):
+        """Threshold must always be positive."""
+        fold_briers = [0.20] * 7
+        threshold = compute_ablation_threshold(fold_briers)
+        assert threshold >= MINIMUM_BRIER_IMPROVEMENT
+
+    def test_typical_ncaa_se(self):
+        """With realistic NCAA tournament fold variance, threshold should be ~0.01-0.03."""
+        # Simulating typical LOYO variance: std ≈ 0.02-0.03 across 7 folds
+        rng = np.random.RandomState(42)
+        fold_briers = 0.20 + rng.normal(0, 0.025, size=7)
+        threshold = compute_ablation_threshold(fold_briers.tolist())
+        # Should be well above 0.001 and roughly in the 0.01-0.04 range
+        assert threshold > 0.005
+        assert threshold < 0.10  # sanity upper bound
+
+
+class TestComputeValidationDiagnostics:
+    """Tests for validation diagnostic reporting."""
+
+    def test_basic_diagnostics(self):
+        """Should compute all expected diagnostic fields."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=yr, n_train_games=300, n_test_games=63,
+                brier_score=0.20 + i * 0.01, log_loss=0.5, accuracy=0.75,
+            )
+            for i, yr in enumerate([2018, 2019, 2021, 2022, 2023, 2024, 2025])
+        ]
+        diag = compute_validation_diagnostics(folds)
+
+        assert "n_folds" in diag
+        assert diag["n_folds"] == 7
+        assert "total_eval_games" in diag
+        assert diag["total_eval_games"] == 7 * 63
+        assert "se_mean_brier" in diag
+        assert diag["se_mean_brier"] > 0
+        assert "dof_sample_ratio" in diag
+        assert "powered_threshold" in diag
+        assert "integrity_level" in diag
+        assert diag["integrity_level"] == 3
+
+    def test_dof_ratio_warning(self):
+        """Should warn when DoF/sample ratio exceeds target."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=2023, n_train_games=300, n_test_games=63,
+                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+            )
+        ]
+        diag = compute_validation_diagnostics(folds, n_tuned_constants=58)
+        # 58/63 ≈ 0.92, way above 0.01 target
+        assert diag["dof_sample_ratio"] > 0.01
+        assert any("DoF/sample" in w for w in diag["warnings"])
+
+    def test_legacy_threshold_warning(self):
+        """Should warn that legacy 0.001 is within noise."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=yr, n_train_games=300, n_test_games=63,
+                brier_score=0.20 + i * 0.01, log_loss=0.5, accuracy=0.75,
+            )
+            for i, yr in enumerate([2018, 2019, 2021, 2022, 2023, 2024, 2025])
+        ]
+        diag = compute_validation_diagnostics(folds)
+        # SE should be > 0.001, triggering the warning
+        assert diag["se_mean_brier"] > MINIMUM_BRIER_IMPROVEMENT
+        assert any("0.001" in w for w in diag["warnings"])
+
+    def test_empty_folds(self):
+        """Should handle empty fold list gracefully."""
+        diag = compute_validation_diagnostics([])
+        assert "error" in diag
+
+    def test_integrity_note_mentions_retrospective(self):
+        """Integrity note should clearly state retrospective nature."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=2023, n_train_games=300, n_test_games=63,
+                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+            )
+        ]
+        diag = compute_validation_diagnostics(folds)
+        assert "RETROSPECTIVE" in diag["integrity_note"]
+        assert "prospective" in diag["integrity_note"].lower()
+
+
+class TestFeatureAblatorPoweredThreshold:
+    """Tests for the powered threshold in FeatureAblator."""
+
+    def test_powered_threshold_used_by_default(self):
+        """FeatureAblator should use powered threshold by default."""
+        ablator = FeatureAblator()
+        assert ablator.use_powered_threshold is True
+
+    def test_legacy_mode_available(self):
+        """Can disable powered threshold for backward compatibility."""
+        ablator = FeatureAblator(use_powered_threshold=False)
+        assert ablator.use_powered_threshold is False
+
+    def test_ablation_results_include_powered_threshold(self):
+        """Ablation results should include the powered threshold value."""
+        data = {yr: _make_year_data(yr, n_features=3) for yr in [2022, 2023, 2024]}
+        validator = LOYOValidator(years=[2023, 2024])
+        ablator = FeatureAblator()
+
+        results = ablator.ablate_features(
+            validator, data, _simple_train_fn, _simple_predict_fn,
+            feature_names=["a", "b", "c"],
+        )
+
+        for info in results.values():
+            assert "powered_threshold" in info
+            assert "paired_t_p_value" in info
+            assert "per_fold_baseline" in info
+            assert "per_fold_ablated" in info
+
+    def test_ablation_results_include_p_value(self):
+        """Each ablated feature should have a paired t-test p-value."""
+        data = {yr: _make_year_data(yr, n_features=2) for yr in [2021, 2022, 2023, 2024]}
+        validator = LOYOValidator(years=[2022, 2023, 2024])
+        ablator = FeatureAblator()
+
+        results = ablator.ablate_features(
+            validator, data, _simple_train_fn, _simple_predict_fn,
+            feature_names=["a", "b"],
+        )
+
+        for info in results.values():
+            # p-value should be computed for 3+ folds
+            assert info["paired_t_p_value"] is not None
+            assert 0.0 <= info["paired_t_p_value"] <= 1.0
+
+
+class TestLOYOResultSummary:
+    """Tests for the enhanced summary with statistical diagnostics."""
+
+    def test_summary_includes_se(self):
+        """Summary should report standard error of mean Brier."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=yr, n_train_games=300, n_test_games=63,
+                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+            )
+            for yr in [2023, 2024]
+        ]
+        result = LOYOResult(
+            fold_results=folds,
+            mean_brier=0.20, std_brier=0.0,
+            mean_logloss=0.5, mean_accuracy=0.75,
+            year_briers={2023: 0.20, 2024: 0.20},
+        )
+        s = result.summary()
+        assert "SE(mean)" in s
+
+    def test_summary_includes_dof_ratio(self):
+        """Summary should report DoF/sample ratio."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=2023, n_train_games=300, n_test_games=63,
+                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+            )
+        ]
+        result = LOYOResult(
+            fold_results=folds,
+            mean_brier=0.20, std_brier=0.0,
+            mean_logloss=0.5, mean_accuracy=0.75,
+            year_briers={2023: 0.20},
+        )
+        s = result.summary()
+        assert "DoF/sample ratio" in s
+        assert "target < 0.01" in s
+
+    def test_summary_warns_on_high_dof_ratio(self):
+        """Summary should warn when DoF/sample ratio is too high."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=2023, n_train_games=300, n_test_games=10,
+                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+            )
+        ]
+        result = LOYOResult(
+            fold_results=folds,
+            mean_brier=0.20, std_brier=0.0,
+            mean_logloss=0.5, mean_accuracy=0.75,
+            year_briers={2023: 0.20},
+        )
+        s = result.summary()
+        assert "WARNING" in s
+
+    def test_summary_includes_integrity_level(self):
+        """Summary should state integrity level 3 (retrospective)."""
+        folds = [
+            LOYOFoldResult(
+                held_out_year=2023, n_train_games=300, n_test_games=63,
+                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+            )
+        ]
+        result = LOYOResult(
+            fold_results=folds,
+            mean_brier=0.20, std_brier=0.0,
+            mean_logloss=0.5, mean_accuracy=0.75,
+            year_briers={2023: 0.20},
+        )
+        s = result.summary()
+        assert "Integrity level: 3" in s
