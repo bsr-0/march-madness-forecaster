@@ -29,6 +29,9 @@ from ..scrapers import (
 )
 from ..features.public_advanced_metrics import PublicAdvancedMetricsBuilder
 from .providers import LibraryProviderHub
+from ...conference_tournament.data_enrichment import (
+    compute_defensive_four_factors_from_games,
+)
 logger = logging.getLogger(__name__)
 
 from .validators import (
@@ -113,13 +116,18 @@ class RealDataCollector:
             self._assert_valid("teams_json", validation_errors["teams_json"])
             out["teams_json"] = self._write(f"teams_{year}.json", payload)
 
+        torvik_payload: Optional[Dict] = None
+        four_factors: Dict = {}
         if self.config.scrape_torvik:
             tv_provider = self.providers.fetch_torvik_ratings(year, priority=self.config.torvik_provider_priority)
             if tv_provider.records:
                 torvik_teams = tv_provider.records
-                payload = {"teams": tv_provider.records}
+                torvik_payload = {"teams": tv_provider.records}
+                # Validate only the fields that the T-Rank CSV can provide.
+                # Defensive four factors (opp_*) are NOT available from the
+                # CSV source — they are enriched from game box scores below.
                 validation_errors["torvik_json"] = validate_ratings_payload(
-                    payload,
+                    torvik_payload,
                     required_numeric_fields=[
                         "barthag",
                         "adj_offensive_efficiency",
@@ -129,9 +137,6 @@ class RealDataCollector:
                         "turnover_rate",
                         "offensive_reb_rate",
                         "free_throw_rate",
-                        "opp_effective_fg_pct",
-                        "opp_turnover_rate",
-                        "opp_free_throw_rate",
                     ],
                     variance_fields=[
                         "barthag", "adj_offensive_efficiency", "adj_defensive_efficiency",
@@ -139,7 +144,7 @@ class RealDataCollector:
                     ],
                 )
                 self._assert_valid("torvik_json", validation_errors["torvik_json"])
-                out["torvik_json"] = self._write(f"torvik_{year}.json", payload)
+                out["torvik_json"] = self._write(f"torvik_{year}.json", torvik_payload)
                 provider_lineage["torvik_json"] = tv_provider.provider
 
             # Fetch Four Factors and shooting stats (separate Torvik endpoints)
@@ -238,6 +243,17 @@ class RealDataCollector:
                     self._assert_valid("advanced_metrics_json", validation_errors["advanced_metrics_json"])
                     out["advanced_metrics_json"] = self._write(f"advanced_metrics_{year}.json", advanced_metrics)
                     provider_lineage["advanced_metrics_json"] = game_provider.provider
+
+        # --- Enrich Torvik data with defensive Four Factors from game box scores ---
+        # The T-Rank CSV and player-stats CSV fallback only provide offensive
+        # metrics.  Now that historical games are available, compute defensive
+        # Four Factors (opp_effective_fg_pct, opp_turnover_rate,
+        # opp_free_throw_rate) from opponent box scores and merge them in.
+        if torvik_payload and historical_team_rows:
+            self._enrich_defensive_four_factors(
+                torvik_payload, four_factors, historical_team_rows,
+                year, out, validation_errors, provider_lineage,
+            )
 
         if self.config.scrape_rosters:
             roster_payload = CBBpyRosterScraper(str(self.cache_dir)).fetch_rosters(year)
@@ -503,6 +519,101 @@ class RealDataCollector:
                 row["team_id"] = team_id[:-4].rstrip("_")
             result.append(row)
         return result
+
+    def _enrich_defensive_four_factors(
+        self,
+        torvik_payload: Dict,
+        four_factors: Dict,
+        game_records: List[Dict],
+        year: int,
+        out: Dict[str, str],
+        validation_errors: Dict[str, List[str]],
+        provider_lineage: Dict[str, str],
+    ) -> None:
+        """Compute defensive Four Factors from game box scores and merge into Torvik data.
+
+        The T-Rank CSV and player-stats CSV only provide offensive metrics.
+        This method reconstructs defensive metrics (opp_effective_fg_pct,
+        opp_turnover_rate, opp_free_throw_rate) from opponent box scores and
+        merges them into both the main torvik payload and the four_factors dict.
+        """
+        def_ff = compute_defensive_four_factors_from_games(game_records)
+        if not def_ff:
+            logger.warning(
+                "Could not compute defensive Four Factors from game records "
+                "(no paired box scores with shooting data)"
+            )
+            return
+
+        # Build collapsed-ID lookup for fuzzy matching
+        collapsed_def_ff: Dict[str, Dict] = {}
+        for k, v in def_ff.items():
+            collapsed_def_ff[k.replace("_", "")] = v
+
+        torvik_updated = 0
+        for team in torvik_payload.get("teams", []):
+            team_id = team.get("team_id", "")
+            d = def_ff.get(team_id) or collapsed_def_ff.get(team_id.replace("_", ""))
+            if d is None:
+                continue
+            changed = False
+            for field in ("opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate"):
+                current = team.get(field, 0.0)
+                new_val = d.get(field, 0.0)
+                if (current is None or abs(float(current)) < 1e-6) and abs(new_val) > 1e-6:
+                    team[field] = new_val
+                    changed = True
+            if changed:
+                torvik_updated += 1
+
+        # Also merge into the separate four_factors dict
+        ff_updated = 0
+        for team_id, d in def_ff.items():
+            ff_entry = four_factors.get(team_id)
+            if ff_entry is None:
+                # Try collapsed lookup
+                for key in four_factors:
+                    if key.replace("_", "") == team_id.replace("_", ""):
+                        ff_entry = four_factors[key]
+                        break
+            if ff_entry is not None:
+                for field in ("opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate"):
+                    current = ff_entry.get(field, 0.0)
+                    new_val = d.get(field, 0.0)
+                    if abs(float(current or 0)) < 1e-6 and abs(new_val) > 1e-6:
+                        ff_entry[field] = new_val
+                ff_updated += 1
+
+        logger.info(
+            "Defensive Four Factors enrichment: %d/%d torvik teams updated, "
+            "%d four_factors entries updated (from %d game-derived teams)",
+            torvik_updated, len(torvik_payload.get("teams", [])),
+            ff_updated, len(def_ff),
+        )
+
+        # Re-write enriched files
+        out["torvik_json"] = self._write(f"torvik_{year}.json", torvik_payload)
+        if four_factors:
+            out["torvik_four_factors_json"] = self._write(
+                f"torvik_four_factors_{year}.json", four_factors,
+            )
+
+        # Post-enrichment validation: now check that defensive fields are populated
+        post_errors = validate_ratings_payload(
+            torvik_payload,
+            required_numeric_fields=[
+                "opp_effective_fg_pct",
+                "opp_turnover_rate",
+                "opp_free_throw_rate",
+            ],
+        )
+        if post_errors:
+            validation_errors.setdefault("torvik_json", []).extend(post_errors)
+            logger.warning(
+                "Post-enrichment validation: %d defensive FF issues remain",
+                len(post_errors),
+            )
+        provider_lineage["torvik_defensive_ff"] = "game_box_scores"
 
     def _merge_roster_payloads(self, base_payload: Dict, overlay_payload: Dict) -> Dict:
         merged = copy.deepcopy(base_payload)

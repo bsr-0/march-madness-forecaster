@@ -292,6 +292,92 @@ def test_collector_writes_odds_artifact_when_feed_provided(tmp_path, monkeypatch
     assert "odds_json" in manifest["artifacts"]
 
 
+def test_collector_enriches_defensive_four_factors_from_games(tmp_path):
+    """Defensive Four Factors are computed from game box scores when Torvik
+    CSV can only provide offensive metrics (opp_* fields are zero)."""
+
+    class _TorVikStubProviders(_StubProviders):
+        def fetch_torvik_ratings(self, year, priority=None):
+            # Simulate T-Rank CSV output: offensive metrics present,
+            # defensive four factors missing (zero).
+            return ProviderResult(
+                "barttorvik",
+                [
+                    {
+                        "team_id": "duke",
+                        "name": "Duke",
+                        "conference": "ACC",
+                        "barthag": 0.95,
+                        "adj_offensive_efficiency": 120.0,
+                        "adj_defensive_efficiency": 92.0,
+                        "adj_tempo": 70.0,
+                        "effective_fg_pct": 0.55,
+                        "turnover_rate": 0.16,
+                        "offensive_reb_rate": 0.32,
+                        "free_throw_rate": 0.35,
+                        "opp_effective_fg_pct": 0.0,
+                        "opp_turnover_rate": 0.0,
+                        "opp_free_throw_rate": 0.0,
+                        "t_rank": 3,
+                    },
+                    {
+                        "team_id": "unc",
+                        "name": "UNC",
+                        "conference": "ACC",
+                        "barthag": 0.90,
+                        "adj_offensive_efficiency": 115.0,
+                        "adj_defensive_efficiency": 95.0,
+                        "adj_tempo": 72.0,
+                        "effective_fg_pct": 0.52,
+                        "turnover_rate": 0.18,
+                        "offensive_reb_rate": 0.30,
+                        "free_throw_rate": 0.32,
+                        "opp_effective_fg_pct": 0.0,
+                        "opp_turnover_rate": 0.0,
+                        "opp_free_throw_rate": 0.0,
+                        "t_rank": 8,
+                    },
+                ],
+            )
+
+    config = IngestionConfig(
+        year=2025,
+        output_dir=str(tmp_path),
+        cache_dir=str(tmp_path / "cache"),
+        scrape_torvik=True,
+        scrape_public_picks=False,
+        scrape_sports_reference=False,
+        scrape_rosters=False,
+    )
+    collector = RealDataCollector(config)
+    collector.providers = _TorVikStubProviders()
+
+    manifest = collector.run()
+    artifacts = manifest["artifacts"]
+
+    assert "torvik_json" in artifacts
+    with open(artifacts["torvik_json"], "r") as f:
+        torvik = json.load(f)
+
+    # Defensive Four Factors should now be populated from game box scores
+    duke = next(t for t in torvik["teams"] if t["team_id"] == "duke")
+    unc = next(t for t in torvik["teams"] if t["team_id"] == "unc")
+
+    # Duke's opponent in the game was UNC: opp_fga=54, opp_fgm=24, opp_fg3m=6,
+    # opp_fta=15, opp_turnovers=12
+    # opp_efg = (24 + 0.5*6) / 54 = 27/54 = 0.5
+    assert duke["opp_effective_fg_pct"] > 0, "Duke defensive eFG% should be populated"
+    assert duke["opp_turnover_rate"] > 0, "Duke forced TO% should be populated"
+    assert duke["opp_free_throw_rate"] > 0, "Duke opponent FTR should be populated"
+
+    assert unc["opp_effective_fg_pct"] > 0, "UNC defensive eFG% should be populated"
+    assert unc["opp_turnover_rate"] > 0, "UNC forced TO% should be populated"
+    assert unc["opp_free_throw_rate"] > 0, "UNC opponent FTR should be populated"
+
+    # Verify provenance tracking
+    assert manifest["providers"].get("torvik_defensive_ff") == "game_box_scores"
+
+
 def test_collector_rejects_all_zero_rapm_payload(tmp_path, monkeypatch):
     monkeypatch.setattr(
         collector_mod.CBBpyRosterScraper,
