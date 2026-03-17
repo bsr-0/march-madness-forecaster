@@ -356,9 +356,31 @@ function renderPerYearTable() {
 
 // ── Round Accuracy Chart ──
 function renderRoundAccuracyChart() {
-  const ctx = document.getElementById('round-accuracy-chart').getContext('2d');
-  const ra = modelMetrics.round_accuracy;
+  const canvas = document.getElementById('round-accuracy-chart');
+  const ctx = canvas.getContext('2d');
+
+  // Try model_metrics first, then aggregate from per-year round_breakdowns
+  let ra = modelMetrics.round_accuracy || {};
+  if (Object.keys(ra).length === 0 && validationData.per_year) {
+    const agg = {};
+    validationData.per_year.forEach(y => {
+      const rb = y.round_breakdown || {};
+      Object.entries(rb).forEach(([round, stats]) => {
+        if (!agg[round]) agg[round] = { correct: 0, total: 0 };
+        agg[round].correct += stats.correct || 0;
+        agg[round].total += stats.total || 0;
+      });
+    });
+    Object.entries(agg).forEach(([round, s]) => {
+      if (s.total > 0) ra[round] = { accuracy: s.correct / s.total, total: s.total };
+    });
+  }
+
   const labels = Object.keys(ra);
+  if (labels.length === 0) {
+    canvas.parentElement.innerHTML = '<p class="text-gray-500 text-center py-8">No round-level accuracy data available yet. Run the backtest pipeline to generate this data.</p>';
+    return;
+  }
   const accs = labels.map(l => ra[l].accuracy);
   const totals = labels.map(l => ra[l].total);
 
