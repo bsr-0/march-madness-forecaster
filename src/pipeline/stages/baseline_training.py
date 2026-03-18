@@ -59,6 +59,7 @@ try:
         SPREAD_MODEL_AVAILABLE,
         TOURNAMENT_SIGMA_AVAILABLE,
         BayesianBradleyTerry,
+        BrierLightGBMTuner,
         EnsembleWeightOptimizer,
         LeaveOneYearOutCV,
         LightGBMTuner,
@@ -985,12 +986,29 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 and LightGBMTuner is not None
                 and train_samples >= 60
             ):
-                tuner = LightGBMTuner(
-                    n_trials=pipeline.config.optuna_n_trials,
-                    n_cv_splits=pipeline.config.temporal_cv_splits,
-                    timeout=pipeline.config.optuna_timeout,
-                    random_seed=pipeline.config.random_seed,
-                )
+                _use_brier = pipeline.config.use_brier_objective and BRIER_LGB_AVAILABLE
+                # Use BrierLightGBMTuner when Brier objective is active so
+                # hyperparams are selected under the same loss surface.
+                if _use_brier and BrierLightGBMTuner is not None:
+                    tuner = BrierLightGBMTuner(
+                        n_trials=pipeline.config.optuna_n_trials,
+                        n_cv_splits=pipeline.config.temporal_cv_splits,
+                        timeout=pipeline.config.optuna_timeout,
+                        random_seed=pipeline.config.random_seed,
+                    )
+                else:
+                    tuner = LightGBMTuner(
+                        n_trials=pipeline.config.optuna_n_trials,
+                        n_cv_splits=pipeline.config.temporal_cv_splits,
+                        timeout=pipeline.config.optuna_timeout,
+                        random_seed=pipeline.config.random_seed,
+                    )
+                    if _use_brier:
+                        logger.warning(
+                            "BrierLightGBMTuner unavailable; hyperparams tuned "
+                            "under log-loss objective.  Regularisation params "
+                            "may be suboptimal for Brier training.",
+                        )
                 tuning_result = tuner.tune(
                     train_X, train_y, train_sort_keys,
                     feature_names=feature_names,
@@ -1005,17 +1023,6 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                     if k not in _exclude_keys
                 }
                 best_num_rounds = tuning_result.best_params.get("num_rounds", 200)
-
-                _use_brier = pipeline.config.use_brier_objective and BRIER_LGB_AVAILABLE
-                if _use_brier:
-                    # Optuna tuned hyperparams under log loss; Brier objective
-                    # has a flatter loss surface so optimal regularisation may
-                    # differ.  Log the mismatch so operators can assess.
-                    logger.warning(
-                        "BrierLightGBMRanker: hyperparams were tuned under "
-                        "log-loss objective.  Regularisation params (lambda, "
-                        "num_leaves) may be suboptimal for Brier training.",
-                    )
                 _LGBClass = BrierLightGBMRanker if _use_brier else LightGBMRanker
                 lgb_ranker = _LGBClass(params=best_params)
                 lgb_ranker.train(
@@ -1076,7 +1083,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         and LIGHTGBM_AVAILABLE
         and valid_set is not None
         and train_samples >= 60
-        and valid_samples >= 30  # Need enough eval left after carving cal fold
+        and valid_samples >= 80  # Need enough eval left after carving cal fold (40 cal + 40 eval)
     ):
         try:
             # Carve a calibration fold from the eval set (first half).

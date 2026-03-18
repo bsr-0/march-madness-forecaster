@@ -392,6 +392,128 @@ class LightGBMTuner:
         )
 
 
+class BrierLightGBMTuner(LightGBMTuner):
+    """LightGBMTuner variant that optimizes Brier score with a custom objective.
+
+    When ``use_brier_objective`` is enabled in the pipeline config,
+    hyperparameters should be selected under the same loss surface that
+    BrierLightGBMRanker uses for final training.  This subclass:
+
+    1. Uses ``brier_objective`` as the LightGBM objective during CV trials.
+    2. Minimises mean Brier score (not log-loss) as the Optuna metric.
+    3. Strips ``objective``/``metric`` from returned best_params because
+       BrierLightGBMRanker force-sets these at training time.
+    """
+
+    def tune(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        sort_keys: np.ndarray,
+        feature_names: Optional[List[str]] = None,
+        sample_weight: np.ndarray = None,
+    ) -> TuningResult:
+        from ...ml.ensemble.brier_objective import brier_objective
+
+        cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=1)
+
+        def objective(trial: optuna.Trial) -> float:
+            params = {
+                "boosting_type": "gbdt",
+                "num_leaves": trial.suggest_int("num_leaves", 4, 16),
+                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.15, log=True),
+                "feature_fraction": trial.suggest_float("feature_fraction", 0.5, 0.9),
+                "bagging_fraction": trial.suggest_float("bagging_fraction", 0.5, 0.9),
+                "bagging_freq": 5,
+                "min_child_samples": trial.suggest_int("min_child_samples", 30, 100),
+                "lambda_l1": trial.suggest_float("lambda_l1", 0.1, 10.0, log=True),
+                "lambda_l2": trial.suggest_float("lambda_l2", 0.1, 10.0, log=True),
+                "verbose": -1,
+                "num_threads": 1,
+            }
+            num_rounds = trial.suggest_int("num_rounds", 50, 200)
+
+            def train_fn(X_tr, y_tr, X_v, y_v, w_tr):
+                train_data = lgb.Dataset(
+                    X_tr, label=y_tr, feature_name=feature_names,
+                    weight=w_tr,
+                )
+                callbacks = [lgb.log_evaluation(period=0)]
+                return lgb.train(
+                    params,
+                    train_data,
+                    num_boost_round=num_rounds,
+                    fobj=brier_objective,
+                    callbacks=callbacks,
+                )
+
+            def predict_fn(model, X_pred):
+                raw = model.predict(X_pred)
+                # brier_objective trains on raw logits; convert to probabilities
+                return 1.0 / (1.0 + np.exp(-np.clip(raw, -500, 500)))
+
+            cv_results = cv.cross_validate(
+                X, y, sort_keys, train_fn, predict_fn,
+                sample_weight=sample_weight,
+            )
+            return float(np.mean([r.brier_score for r in cv_results]))
+
+        study = optuna.create_study(
+            direction="minimize",
+            study_name="brier_lgbm_tuning",
+            sampler=optuna.samplers.TPESampler(seed=self.random_seed),
+        )
+        study.optimize(objective, n_trials=self.n_trials, timeout=self.timeout)
+
+        best = study.best_params
+        best_num_rounds = best.get("num_rounds", 200)
+        # Strip objective/metric — BrierLightGBMRanker force-sets these.
+        best_params = {
+            "boosting_type": "gbdt",
+            "num_leaves": best["num_leaves"],
+            "learning_rate": best["learning_rate"],
+            "feature_fraction": best["feature_fraction"],
+            "bagging_fraction": best["bagging_fraction"],
+            "bagging_freq": 5,
+            "min_child_samples": best["min_child_samples"],
+            "lambda_l1": best["lambda_l1"],
+            "lambda_l2": best["lambda_l2"],
+            "verbose": -1,
+            "num_threads": 1,
+        }
+
+        # Final CV with best params under Brier objective
+        def final_train(X_tr, y_tr, X_v, y_v, w_tr):
+            td = lgb.Dataset(
+                X_tr, label=y_tr, feature_name=feature_names,
+                weight=w_tr,
+            )
+            callbacks = [lgb.log_evaluation(period=0)]
+            return lgb.train(
+                best_params, td,
+                num_boost_round=best_num_rounds,
+                fobj=brier_objective,
+                callbacks=callbacks,
+            )
+
+        def final_predict(model, X_pred):
+            raw = model.predict(X_pred)
+            return 1.0 / (1.0 + np.exp(-np.clip(raw, -500, 500)))
+
+        final_cv = cv.cross_validate(
+            X, y, sort_keys, final_train, final_predict,
+            sample_weight=sample_weight,
+        )
+
+        return TuningResult(
+            best_params={**best_params, "num_rounds": best_num_rounds},
+            best_score=study.best_value,
+            cv_results=final_cv,
+            n_trials=len(study.trials),
+            study_name="brier_lgbm_tuning",
+        )
+
+
 class XGBoostTuner:
     """
     Optuna-based hyperparameter optimization for XGBoost.
