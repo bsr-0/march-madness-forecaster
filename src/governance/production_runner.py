@@ -557,6 +557,15 @@ def run_production_2026(
     except Exception as exc:
         market_validation_dict = {"status": "skipped", "reason": f"validation failed: {exc}"}
 
+    if market_validation_dict.get("status") == "skipped":
+        _reason = market_validation_dict.get("reason", "unknown")
+        logging.getLogger(__name__).warning(
+            "Market validation SKIPPED: %s. "
+            "Ensure betting_odds_2026.json exists in data/raw/betting_odds/ "
+            "and that the simulation report contains championship_odds.",
+            _reason,
+        )
+
     report["market_cross_reference"] = (
         {
             "rmsd": market_validation_result.rmsd,
