@@ -104,6 +104,136 @@ def compute_ablation_threshold(
     return max(threshold, MINIMUM_BRIER_IMPROVEMENT)
 
 
+def brier_decomposition(
+    predictions: np.ndarray,
+    outcomes: np.ndarray,
+    n_bins: int = 10,
+) -> Dict[str, float]:
+    """Murphy (1973) Brier score decomposition into reliability, resolution, uncertainty.
+
+    Brier = Reliability - Resolution + Uncertainty
+
+    - Reliability: how close predicted probs are to observed frequencies (lower = better)
+    - Resolution: how much the observed frequencies differ from the base rate (higher = better)
+    - Uncertainty: base rate entropy, independent of the model (constant for given data)
+
+    Protocol Section 3.4: Track reliability and resolution as diagnostics.
+    Red flag: Resolution decreasing while Brier improves (gaming via hedging).
+    """
+    base_rate = float(np.mean(outcomes))
+    uncertainty = base_rate * (1 - base_rate)
+
+    bin_boundaries = np.linspace(0, 1, n_bins + 1)
+    reliability = 0.0
+    resolution = 0.0
+
+    for i in range(n_bins):
+        mask = (predictions >= bin_boundaries[i]) & (predictions < bin_boundaries[i + 1])
+        n_k = int(mask.sum())
+        if n_k == 0:
+            continue
+        avg_pred = float(np.mean(predictions[mask]))
+        avg_outcome = float(np.mean(outcomes[mask]))
+        reliability += n_k * (avg_pred - avg_outcome) ** 2
+        resolution += n_k * (avg_outcome - base_rate) ** 2
+
+    n = len(predictions)
+    if n > 0:
+        reliability /= n
+        resolution /= n
+
+    return {
+        "reliability": reliability,
+        "resolution": resolution,
+        "uncertainty": uncertainty,
+    }
+
+
+def compute_seed_baseline_probs(
+    seeds1: np.ndarray,
+    seeds2: np.ndarray,
+) -> np.ndarray:
+    """Compute seed-based baseline probabilities from historical seed win rates.
+
+    Uses the logistic-fitted seed model from evaluation/baselines.py:
+    P(team1 wins) = sigmoid(0.15 * (seed2 - seed1)) for non-first-round,
+    or exact historical rates for canonical first-round matchups.
+
+    Args:
+        seeds1: Array of seed values for team 1 (1-16).
+        seeds2: Array of seed values for team 2 (1-16).
+
+    Returns:
+        Array of seed-based probabilities for team 1 winning.
+    """
+    # Historical first-round upset rates (canonical matchups)
+    _SEED_WIN_RATES = {
+        (1, 16): 0.985, (2, 15): 0.940, (3, 14): 0.850, (4, 13): 0.790,
+        (5, 12): 0.640, (6, 11): 0.620, (7, 10): 0.610, (8, 9): 0.510,
+    }
+
+    probs = np.full(len(seeds1), 0.5)
+    for i in range(len(seeds1)):
+        s1, s2 = int(seeds1[i]), int(seeds2[i])
+        if s1 == s2:
+            probs[i] = 0.5
+            continue
+        fav, dog = min(s1, s2), max(s1, s2)
+        key = (fav, dog)
+        if key in _SEED_WIN_RATES:
+            p_fav = _SEED_WIN_RATES[key]
+        else:
+            diff = dog - fav
+            p_fav = 1.0 / (1.0 + np.exp(-0.15 * diff))
+        probs[i] = p_fav if s1 <= s2 else 1.0 - p_fav
+    return probs
+
+
+def brier_skill_score_vs_seeds(
+    predictions: np.ndarray,
+    outcomes: np.ndarray,
+    seed_probs: Optional[np.ndarray] = None,
+    seeds1: Optional[np.ndarray] = None,
+    seeds2: Optional[np.ndarray] = None,
+) -> float:
+    """Brier Skill Score vs seed-based baseline.
+
+    BSS = 1 - Brier(model) / Brier(baseline)
+    BSS > 0 means model adds value over seeds; BSS ≈ 0 means ML adds nothing.
+
+    Protocol Section 3.4: Red flag if BSS < 0.05.
+
+    If seed_probs is not provided but seeds1/seeds2 are, computes the
+    seed baseline from historical seed-matchup win rates.  If none are
+    available, falls back to uninformed baseline (always 0.5).
+
+    Args:
+        predictions: Model predicted probabilities.
+        outcomes: Actual binary outcomes (0 or 1).
+        seed_probs: Pre-computed seed-based baseline probabilities.
+        seeds1: Seed values for team 1 (used if seed_probs is None).
+        seeds2: Seed values for team 2 (used if seed_probs is None).
+    """
+    brier_model = float(np.mean((predictions - outcomes) ** 2))
+
+    if seed_probs is not None:
+        brier_baseline = float(np.mean((seed_probs - outcomes) ** 2))
+    elif seeds1 is not None and seeds2 is not None:
+        seed_probs = compute_seed_baseline_probs(seeds1, seeds2)
+        brier_baseline = float(np.mean((seed_probs - outcomes) ** 2))
+    else:
+        # Uninformed baseline: always predict 0.5
+        brier_baseline = 0.25
+        logger.info(
+            "BSS: No seed data available — using uninformed baseline (Brier=0.25). "
+            "Provide 'seeds1'/'seeds2' or 'seed_probs' in LOYO data for proper BSS."
+        )
+
+    if brier_baseline < 1e-12:
+        return 0.0
+    return 1.0 - brier_model / brier_baseline
+
+
 def compute_validation_diagnostics(
     fold_results: "list[LOYOFoldResult]",
     n_tuned_constants: int = _N_TUNED_CONSTANTS,
@@ -682,6 +812,14 @@ class LOYOFoldResult:
     accuracy: float
     calibration_error: float = 0.0
 
+    # Brier decomposition (Murphy 1973) — Protocol Section 3.4
+    brier_reliability: float = 0.0
+    brier_resolution: float = 0.0
+    brier_uncertainty: float = 0.0
+
+    # Brier Skill Score vs seed baseline — Protocol Section 3.4
+    brier_skill_score: float = 0.0
+
     # Per-round Brier scores
     round_briers: Dict[str, float] = field(default_factory=dict)
 
@@ -703,6 +841,13 @@ class LOYOResult:
     std_brier: float = 0.0
     mean_logloss: float = 0.0
     mean_accuracy: float = 0.0
+
+    # Protocol Section 3.4 — diagnostic metrics
+    mean_brier_reliability: float = 0.0
+    mean_brier_resolution: float = 0.0
+    mean_brier_uncertainty: float = 0.0
+    mean_brier_skill_score: float = 0.0
+    brier_log_divergence: float = 0.0  # |Brier_rank - LogLoss_rank| across folds
 
     # Per-year Brier breakdown
     year_briers: Dict[int, float] = field(default_factory=dict)
@@ -733,6 +878,16 @@ class LOYOResult:
             f"  SE(mean):    {se_mean:.6f}",
             f"  Mean LogLoss: {self.mean_logloss:.6f}",
             f"  Mean Accuracy: {self.mean_accuracy:.4f}",
+            "",
+            "  Brier Decomposition (Murphy 1973):",
+            f"    Reliability: {self.mean_brier_reliability:.6f}"
+            f"  {'** RED FLAG' if self.mean_brier_reliability > 0.015 else '(OK)'}",
+            f"    Resolution:  {self.mean_brier_resolution:.6f}",
+            f"    Uncertainty: {self.mean_brier_uncertainty:.6f}",
+            f"  Brier Skill Score vs seeds: {self.mean_brier_skill_score:.4f}"
+            f"  {'** RED FLAG: BSS < 0.05' if self.mean_brier_skill_score < 0.05 else '(OK)'}",
+            f"  Brier-Log Divergence: {self.brier_log_divergence:.4f}",
+            "",
             f"  Total time: {self.total_time_seconds:.1f}s",
             "",
             f"  DoF/sample ratio: {_N_TUNED_CONSTANTS}/{total_games} = {dof_ratio:.3f}"
@@ -747,7 +902,14 @@ class LOYOResult:
         lines.append("")
         lines.append("  Per-year breakdown:")
         for year, brier in sorted(self.year_briers.items()):
-            lines.append(f"    {year}: Brier={brier:.6f}")
+            fold = next((f for f in self.fold_results if f.held_out_year == year), None)
+            if fold:
+                lines.append(
+                    f"    {year}: Brier={brier:.6f}, LogLoss={fold.log_loss:.6f}, "
+                    f"BSS={fold.brier_skill_score:.4f}, ECE={fold.calibration_error:.4f}"
+                )
+            else:
+                lines.append(f"    {year}: Brier={brier:.6f}")
         return "\n".join(lines)
 
 
@@ -978,6 +1140,7 @@ class LOYOValidator:
         years: Optional[List[int]] = None,
         round_weights: Optional[Dict[str, float]] = None,
         temporal_mode: str = "rolling_window",
+        enforce_pit: bool = True,
     ):
         """
         Args:
@@ -985,10 +1148,22 @@ class LOYOValidator:
             round_weights: Optional Kaggle round weights for weighted Brier
             temporal_mode: "rolling_window" (honest, default) or
                 "leave_one_out" (deprecated, includes future years)
+            enforce_pit: If True, run Point-in-Time validation before each fold.
+                Protocol v2, Section 2: every feature must be a PIT snapshot.
         """
         self.years = years or list(LOYO_YEARS)
         self.round_weights = round_weights
         self.temporal_mode = temporal_mode
+        self.enforce_pit = enforce_pit
+        self._pit_validator = None
+
+        if self.enforce_pit:
+            try:
+                from ...pipeline.stages.pit_validation import PITValidator
+                self._pit_validator = PITValidator()
+            except Exception as e:
+                logger.warning("PIT validation unavailable: %s", e)
+                self._pit_validator = None
         if temporal_mode == "leave_one_out":
             import warnings
             warnings.warn(
@@ -1039,6 +1214,25 @@ class LOYOValidator:
             logger.info("=" * 60)
             logger.info("LOYO: Holding out year %d", held_out_year)
             logger.info("=" * 60)
+
+            # PIT validation (Protocol v2, Section 2)
+            if self._pit_validator is not None:
+                test_data_pit = data_by_year[held_out_year]
+                feature_names_pit = test_data_pit.get("feature_names", [])
+                feature_metadata_pit = test_data_pit.get("feature_metadata")
+                try:
+                    self._pit_validator.validate_fold(
+                        year=held_out_year,
+                        feature_names=feature_names_pit,
+                        feature_metadata=feature_metadata_pit,
+                        strict=True,
+                    )
+                except Exception as e:
+                    logger.error(
+                        "PIT validation failed for fold %d: %s",
+                        held_out_year, e,
+                    )
+                    raise
 
             fold_start = time.time()
 
@@ -1112,6 +1306,22 @@ class LOYOValidator:
             # Calibration error (ECE)
             calibration_error = self._compute_ece(predictions, y_test)
 
+            # Brier decomposition (Murphy 1973) — Protocol Section 3.4
+            decomp = brier_decomposition(predictions, y_test)
+
+            # Brier Skill Score vs seed baseline — Protocol Section 3.4
+            # Use actual seed-matchup probabilities when available; fall back to
+            # uninformed baseline (0.5) only if no seed data is provided.
+            seed_probs = test_data.get("seed_probs", None)
+            seeds1 = test_data.get("seeds1", None)
+            seeds2 = test_data.get("seeds2", None)
+            bss = brier_skill_score_vs_seeds(
+                predictions, y_test,
+                seed_probs=seed_probs,
+                seeds1=seeds1,
+                seeds2=seeds2,
+            )
+
             # Per-round Brier scores
             round_briers = {}
             if "rounds" in test_data:
@@ -1134,6 +1344,10 @@ class LOYOValidator:
                 log_loss=logloss,
                 accuracy=accuracy,
                 calibration_error=calibration_error,
+                brier_reliability=decomp["reliability"],
+                brier_resolution=decomp["resolution"],
+                brier_uncertainty=decomp["uncertainty"],
+                brier_skill_score=bss,
                 round_briers=round_briers,
                 train_time_seconds=fold_time,
             )
@@ -1152,12 +1366,33 @@ class LOYOValidator:
 
         if fold_results:
             briers = [f.brier_score for f in fold_results]
+            loglosses = [f.log_loss for f in fold_results]
+
+            # Brier-Log Divergence (per-fold consistency diagnostic).
+            # Measures whether Brier and LogLoss agree on fold difficulty.
+            # High divergence = the two scoring rules disagree about which
+            # years are hard, suggesting the model may exploit the gap
+            # between squared-error and logarithmic scoring.
+            # Computed as mean |z_brier - z_logloss| where z = (x - mean)/std.
+            b_arr = np.array(briers)
+            l_arr = np.array(loglosses)
+            b_std = float(np.std(b_arr, ddof=1)) if len(b_arr) > 1 else 1.0
+            l_std = float(np.std(l_arr, ddof=1)) if len(l_arr) > 1 else 1.0
+            z_brier = (b_arr - np.mean(b_arr)) / max(b_std, 1e-12)
+            z_logloss = (l_arr - np.mean(l_arr)) / max(l_std, 1e-12)
+            brier_log_div = float(np.mean(np.abs(z_brier - z_logloss)))
+
             result = LOYOResult(
                 fold_results=fold_results,
                 mean_brier=float(np.mean(briers)),
                 std_brier=float(np.std(briers)),
-                mean_logloss=float(np.mean([f.log_loss for f in fold_results])),
+                mean_logloss=float(np.mean(loglosses)),
                 mean_accuracy=float(np.mean([f.accuracy for f in fold_results])),
+                mean_brier_reliability=float(np.mean([f.brier_reliability for f in fold_results])),
+                mean_brier_resolution=float(np.mean([f.brier_resolution for f in fold_results])),
+                mean_brier_uncertainty=float(np.mean([f.brier_uncertainty for f in fold_results])),
+                mean_brier_skill_score=float(np.mean([f.brier_skill_score for f in fold_results])),
+                brier_log_divergence=brier_log_div,
                 year_briers={f.held_out_year: f.brier_score for f in fold_results},
                 total_time_seconds=total_time,
             )

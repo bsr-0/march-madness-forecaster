@@ -936,3 +936,195 @@ class BracketPortfolioGenerator:
             selected.extend(brackets[:n_for_champ])
 
         return selected[:n_brackets]
+
+
+# ---------------------------------------------------------------------------
+# ESPN Pool Portfolio with Risk Profiles (Protocol Section 4.5)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class RiskProfile:
+    """Configuration for a named ESPN bracket strategy."""
+
+    name: str
+    description: str
+    leverage_weight: float
+    robustness_weight: float
+    path_protection_weight: float
+    diversity_weight: float
+    champion_seed_max: int  # Maximum seed for champion pick
+    max_upsets_r64: int  # Maximum R64 upset picks
+    payout_target: str  # "winner_take_all", "top_10pct", "top_25pct"
+
+
+# Pre-defined risk profiles per Protocol Section 4.5
+CONSERVATIVE_PROFILE = RiskProfile(
+    name="conservative",
+    description="Chalk-heavy. Let others make mistakes.",
+    leverage_weight=0.2,
+    robustness_weight=0.6,
+    path_protection_weight=0.1,
+    diversity_weight=0.1,
+    champion_seed_max=2,
+    max_upsets_r64=2,
+    payout_target="top_25pct",
+)
+
+BALANCED_PROFILE = RiskProfile(
+    name="balanced",
+    description="Moderate contrarian. Find 1-2 leverage points.",
+    leverage_weight=0.5,
+    robustness_weight=0.25,
+    path_protection_weight=0.15,
+    diversity_weight=0.1,
+    champion_seed_max=4,
+    max_upsets_r64=4,
+    payout_target="top_10pct",
+)
+
+AGGRESSIVE_PROFILE = RiskProfile(
+    name="aggressive",
+    description="Heavy contrarian. Differentiate or lose.",
+    leverage_weight=0.7,
+    robustness_weight=0.1,
+    path_protection_weight=0.1,
+    diversity_weight=0.1,
+    champion_seed_max=5,
+    max_upsets_r64=6,
+    payout_target="winner_take_all",
+)
+
+RISK_PROFILES: Dict[str, RiskProfile] = {
+    "conservative": CONSERVATIVE_PROFILE,
+    "balanced": BALANCED_PROFILE,
+    "aggressive": AGGRESSIVE_PROFILE,
+}
+
+
+class ESPNPoolPortfolio:
+    """Generate 3-5 brackets with named risk profiles for ESPN pool play.
+
+    Each profile uses different search weights to produce a portfolio
+    covering multiple pool-winning scenarios.
+
+    Protocol Section 4.5 strategic tilt:
+        - Small pools (N < 50): Favor conservative
+        - Medium pools (50-500): Favor balanced
+        - Large pools (N > 500): Favor aggressive
+    """
+
+    def __init__(
+        self,
+        predict_fn,
+        public_picks: Optional[Dict[str, Dict[str, float]]] = None,
+        team_seeds: Optional[Dict[str, int]] = None,
+        team_regions: Optional[Dict[str, str]] = None,
+        scoring_system: Optional[Dict[str, int]] = None,
+    ):
+        self.predict_fn = predict_fn
+        self.public_picks = public_picks or {}
+        self.team_seeds = team_seeds or {}
+        self.team_regions = team_regions or {}
+        self.scoring_system = scoring_system or {
+            "R64": 10, "R32": 20, "S16": 40,
+            "E8": 80, "F4": 160, "CHAMP": 320,
+        }
+
+    def generate(
+        self,
+        profile_names: Optional[List[str]] = None,
+        pool_size: int = 100,
+        base_bracket=None,
+    ) -> List[Tuple[str, "GeneratedBracket"]]:
+        """Generate one bracket per risk profile.
+
+        Args:
+            profile_names: List of profile names.
+                Defaults to ["conservative", "balanced", "aggressive"].
+            pool_size: Pool size for strategy calibration.
+            base_bracket: Starting bracket for optimization.
+
+        Returns:
+            List of (profile_name, GeneratedBracket) tuples.
+        """
+        from .bracket_search import (
+            SAConfig,
+            SimulatedAnnealingOptimizer,
+            SearchBracket,
+        )
+
+        if profile_names is None:
+            profile_names = ["conservative", "balanced", "aggressive"]
+
+        results: List[Tuple[str, GeneratedBracket]] = []
+        for name in profile_names:
+            profile = RISK_PROFILES.get(name)
+            if profile is None:
+                logger.warning("Unknown risk profile: %s, skipping", name)
+                continue
+
+            config = SAConfig(
+                max_iterations=2000,
+                max_no_improve=200,
+                random_seed=42 + hash(name) % 1000,
+                leverage_weight=profile.leverage_weight,
+                robustness_weight=profile.robustness_weight,
+                diversity_weight=profile.diversity_weight,
+                ev_mode=True,
+                pool_size=pool_size,
+                path_protection_weight=profile.path_protection_weight,
+                min_path_protection=0.85,
+                enable_path_protection=True,
+            )
+
+            champ_picks = {
+                tid: rounds.get("CHAMP", 0.01)
+                for tid, rounds in self.public_picks.items()
+            }
+
+            optimizer = SimulatedAnnealingOptimizer(
+                predict_fn=self.predict_fn,
+                config=config,
+                public_picks=champ_picks,
+                scoring_system=self.scoring_system,
+                round_public_picks=self.public_picks,
+                team_regions=self.team_regions,
+                team_seeds=self.team_seeds,
+            )
+
+            if base_bracket is not None:
+                initial = SearchBracket(
+                    picks=list(base_bracket.picks),
+                    champion=base_bracket.champion,
+                )
+            else:
+                initial = SearchBracket()
+
+            if initial.picks:
+                optimized = optimizer.optimize(initial)
+                bracket = GeneratedBracket(
+                    bracket_id=hash(name) % 10000,
+                    picks=optimized.picks,
+                    champion=optimized.champion,
+                    final_four=[],
+                    expected_score=optimized.expected_points,
+                    log_probability=optimized.log_probability,
+                )
+                results.append((name, bracket))
+
+            logger.info(
+                "ESPN portfolio: %s bracket (max_seed=%d, max_upsets=%d)",
+                name, profile.champion_seed_max, profile.max_upsets_r64,
+            )
+
+        return results
+
+    @staticmethod
+    def recommend_profiles(pool_size: int) -> List[str]:
+        """Recommend risk profile mix based on pool size (Protocol Section 4.5)."""
+        if pool_size < 50:
+            return ["conservative", "balanced"]
+        elif pool_size <= 500:
+            return ["conservative", "balanced", "aggressive"]
+        else:
+            return ["balanced", "aggressive", "aggressive"]
