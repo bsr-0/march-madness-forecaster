@@ -12,12 +12,18 @@
   "enable_stacking": true,
   "enable_feature_selection": true,
 
-  "enable_brier_sharpening": true,
-  "enable_seed_overrides": true,
+  "enable_brier_sharpening": false,
+  "enable_espn_sharpening": false,
+  "enable_seed_overrides": false,
   "enable_goto_conversion": true,
   "enable_round_weighted_calibration": true,
   "seed_prior_weight": 0.10,
   "consistency_bonus_max": 0.02,
+
+  "brier_gate_threshold": 0.190,
+  "log_loss_gate_threshold": 0.560,
+  "brier_log_divergence_threshold": 0.015,
+  "use_unweighted_brier": true,
 
   "enable_bayesian_bt": true,
 

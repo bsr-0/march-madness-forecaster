@@ -72,6 +72,13 @@ try:
 except ImportError:
     pass
 
+# BMA ensemble (Protocol v2, Section 3.2)
+try:
+    from ...ml.ensemble.bma import BayesianModelAveraging, BMAResult
+    BMA_AVAILABLE = True
+except ImportError:
+    BMA_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -1485,13 +1492,83 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # ~3 free parameters).  If LOYO improves over fallback, the derived
     # weights replace the fallback.  Otherwise, fallback weights stand.
     ensemble_weight_stats = {}
-    if (
-        pipeline.config.optimize_ensemble_weights
+
+    # Protocol v2, Section 3.2: Prefer BMA over grid-search for ensemble weights.
+    # BMA naturally hedges against model uncertainty and produces proper posterior
+    # predictive distributions. Grid-search is retained as deprecated fallback.
+    _use_bma = BMA_AVAILABLE and len(trained_models) >= 2
+    _use_grid_search = (
+        not _use_bma
+        and pipeline.config.optimize_ensemble_weights
         and pipeline.config.enable_loyo_cv
         and pipeline.config.multi_year_games_dir
         and len(trained_models) >= 2
         and EnsembleWeightOptimizer is not None
-    ):
+    )
+
+    if _use_bma and eval_y is not None and len(eval_y) > 0:
+        # BMA ensemble (Protocol v2, Section 3.2):
+        # "After the multi-metric gate, collect all passing models..."
+        # Only include models that pass the multi-metric gate.
+        config = getattr(pipeline, "config", None)
+        _brier_thresh = getattr(config, "brier_gate_threshold", 0.190)
+        _ll_thresh = getattr(config, "log_loss_gate_threshold", 0.560)
+
+        bma_preds = {}
+        for name, _, preds in trained_models:
+            if preds is None or len(preds) != len(eval_y):
+                continue
+            p_clip = np.clip(preds, 1e-7, 1 - 1e-7)
+            _b = float(np.mean((p_clip - eval_y) ** 2))
+            _ll = float(-np.mean(
+                eval_y * np.log(p_clip) + (1 - eval_y) * np.log(1 - p_clip)
+            ))
+            if _b < _brier_thresh and _ll < _ll_thresh:
+                bma_preds[name] = p_clip
+            else:
+                logger.info(
+                    "BMA gate: model '%s' excluded (Brier=%.4f, LogLoss=%.4f)",
+                    name, _b, _ll,
+                )
+
+        # Fallback: if no models pass the gate, include all for robustness
+        if len(bma_preds) < 2:
+            logger.warning(
+                "BMA: Fewer than 2 models passed gate (%d). "
+                "Including all models as fallback.",
+                len(bma_preds),
+            )
+            bma_preds = {
+                name: np.clip(preds, 1e-7, 1 - 1e-7)
+                for name, _, preds in trained_models
+                if preds is not None and len(preds) == len(eval_y)
+            }
+
+        bma = BayesianModelAveraging()
+        if len(bma_preds) >= 2:
+            bma_result = bma.fit(bma_preds, eval_y)
+            if bma_result.weights:
+                pipeline.baseline_model.fixed_weights = bma_result.weights
+                ensemble_weight_stats = {
+                    "method": "bayesian_model_averaging",
+                    "optimized_weights": {
+                        k: round(v, 4) for k, v in bma_result.weights.items()
+                    },
+                    "effective_model_count": round(bma_result.effective_model_count, 2),
+                    "converged": bma_result.converged,
+                    "n_iterations": bma_result.n_iterations,
+                }
+                logger.info(
+                    "BMA ensemble weights applied: %s (effective count: %.2f)",
+                    bma_result.weights, bma_result.effective_model_count,
+                )
+
+    if not ensemble_weight_stats and _use_grid_search:
+        # Deprecated fallback: grid-search ensemble weight optimization
+        logger.info(
+            "BMA unavailable, falling back to grid-search ensemble weights. "
+            "Protocol v2 recommends BMA (Section 3.2)."
+        )
         cv_weights = pipeline._optimize_ensemble_weights_loyo(
             trained_models=trained_models,
             feature_dim=train_X.shape[1],
@@ -1684,12 +1761,20 @@ def _select_best_single_model(
     trained_models: List[Tuple],
     eval_y: np.ndarray,
 ) -> str:
-    """Select the best single model by validation Brier score and set it as primary."""
+    """Select best model using multi-metric gate (Protocol v2, Section 3.1).
+
+    Gate thresholds (all must pass):
+      - Brier Score < brier_gate_threshold (default 0.190)
+      - Log Loss < log_loss_gate_threshold (default 0.560)
+      - Brier-Log Divergence < brier_log_divergence_threshold (default 0.015)
+
+    Among passing models, rank by unweighted Brier (Protocol Section 3.3).
+    Fallback: if no model passes all gates, use best Brier with a warning.
+    """
     if not trained_models:
         return "none"
 
-    best_name = "none"
-    best_brier = float("inf")
+    name_map = {"lgb": "lightgbm", "xgb": "xgboost", "logit": "logistic_regression", "spread": "spread_regressor"}
 
     # FIX #6 (cont.): When eval_y is empty (no validation split), we
     # cannot evaluate models.  Default to the first trained model rather
@@ -1697,18 +1782,88 @@ def _select_best_single_model(
     if len(eval_y) == 0:
         name, model, _ = trained_models[0]
         pipeline._set_primary_model(name, model)
-        name_map = {"lgb": "lightgbm", "xgb": "xgboost", "logit": "logistic_regression", "spread": "spread_regressor"}
         return name_map.get(name, name)
 
-    for name, model, eval_preds in trained_models:
-        brier = float(np.mean((eval_preds - eval_y) ** 2))
-        if brier < best_brier:
-            best_brier = brier
-            best_name = name
-            pipeline._set_primary_model(name, model)
+    # Read gate thresholds from config (Protocol Section 3.1)
+    config = getattr(pipeline, "config", None)
+    try:
+        brier_threshold = float(config.brier_gate_threshold)
+    except (AttributeError, TypeError, ValueError):
+        brier_threshold = 0.190
+    try:
+        logloss_threshold = float(config.log_loss_gate_threshold)
+    except (AttributeError, TypeError, ValueError):
+        logloss_threshold = 0.560
+    try:
+        divergence_threshold = float(config.brier_log_divergence_threshold)
+    except (AttributeError, TypeError, ValueError):
+        divergence_threshold = 0.015
 
-    name_map = {"lgb": "lightgbm", "xgb": "xgboost", "logit": "logistic_regression", "spread": "spread_regressor"}
-    return name_map.get(best_name, best_name)
+    # Compute metrics for all models
+    model_metrics = []
+    for name, model, eval_preds in trained_models:
+        preds_clipped = np.clip(eval_preds, 1e-7, 1 - 1e-7)
+        brier = float(np.mean((preds_clipped - eval_y) ** 2))
+        logloss = float(-np.mean(
+            eval_y * np.log(preds_clipped) + (1 - eval_y) * np.log(1 - preds_clipped)
+        ))
+        model_metrics.append({
+            "name": name, "model": model, "preds": eval_preds,
+            "brier": brier, "logloss": logloss,
+        })
+
+    # Compute Brier-Log Divergence (Protocol Section 3.1).
+    #
+    # Detects metric gaming: if a model's Brier and LogLoss give very
+    # different signals about prediction quality, the model may be
+    # exploiting the gap between squared-error and log scoring rules.
+    #
+    # Implementation: normalize each metric to [0, 1] within the candidate
+    # set, then measure per-model absolute difference.  A divergence of
+    # 0 means both metrics agree on the model's relative standing; values
+    # near 1 mean the model looks good on one metric but poor on the other.
+    if len(model_metrics) > 1:
+        brier_vals = np.array([m["brier"] for m in model_metrics])
+        ll_vals = np.array([m["logloss"] for m in model_metrics])
+        # Min-max normalize within candidate set (avoid div-by-zero)
+        b_range = brier_vals.max() - brier_vals.min()
+        l_range = ll_vals.max() - ll_vals.min()
+        b_norm = (brier_vals - brier_vals.min()) / max(b_range, 1e-12)
+        l_norm = (ll_vals - ll_vals.min()) / max(l_range, 1e-12)
+        for i, m in enumerate(model_metrics):
+            m["divergence"] = float(abs(b_norm[i] - l_norm[i]))
+    else:
+        for m in model_metrics:
+            m["divergence"] = 0.0
+
+    # Apply multi-metric gate
+    passing = [
+        m for m in model_metrics
+        if (m["brier"] < brier_threshold
+            and m["logloss"] < logloss_threshold
+            and m["divergence"] < divergence_threshold)
+    ]
+
+    if passing:
+        # Among passing models, select by unweighted Brier (Protocol Section 3.3)
+        best = min(passing, key=lambda m: m["brier"])
+        logger.info(
+            "Multi-metric gate: %d/%d models passed. Best: %s (Brier=%.6f, LogLoss=%.6f)",
+            len(passing), len(model_metrics), best["name"], best["brier"], best["logloss"],
+        )
+    else:
+        # Fallback: no model passes all gates — use best Brier with warning
+        best = min(model_metrics, key=lambda m: m["brier"])
+        logger.warning(
+            "Multi-metric gate: NO models passed all thresholds "
+            "(Brier<%.3f, LogLoss<%.3f, Divergence<%.3f). "
+            "Falling back to best Brier: %s (Brier=%.6f, LogLoss=%.6f).",
+            brier_threshold, logloss_threshold, divergence_threshold,
+            best["name"], best["brier"], best["logloss"],
+        )
+
+    pipeline._set_primary_model(best["name"], best["model"])
+    return name_map.get(best["name"], best["name"])
 
 def _set_primary_model(pipeline, name: str, model) -> None:
     """Set a single model as the primary baseline predictor."""
