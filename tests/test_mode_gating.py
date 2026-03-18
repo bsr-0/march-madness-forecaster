@@ -237,5 +237,6 @@ class TestEVModeReportStructure:
             "competition_simulation",
             "pareto_brackets",
             "pool_ev_analysis",
+            "espn_portfolio",
         }
         assert set(d.keys()) == required_keys
