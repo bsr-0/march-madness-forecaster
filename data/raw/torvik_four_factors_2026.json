@@ -339,7 +339,7 @@
     "defensive_reb_rate": 0.1297,
     "opp_free_throw_rate": 0.2707
   },
-  "usc": {
+  "southern_california": {
     "effective_fg_pct": 0.5036,
     "turnover_rate": 0.1724,
     "offensive_reb_rate": 0.0554,
@@ -349,7 +349,7 @@
     "defensive_reb_rate": 0.1263,
     "opp_free_throw_rate": 0.3245
   },
-  "tennessee_st": {
+  "tennessee_state": {
     "effective_fg_pct": 0.5011,
     "turnover_rate": 0.1615,
     "offensive_reb_rate": 0.0577,
@@ -399,7 +399,7 @@
     "defensive_reb_rate": 0.1251,
     "opp_free_throw_rate": 0.3554
   },
-  "cal_baptist": {
+  "california_baptist": {
     "effective_fg_pct": 0.4859,
     "turnover_rate": 0.1793,
     "offensive_reb_rate": 0.0644,
@@ -429,7 +429,7 @@
     "defensive_reb_rate": 0.1288,
     "opp_free_throw_rate": 0.3079
   },
-  "mississippi_st": {
+  "mississippi_state": {
     "effective_fg_pct": 0.5149,
     "turnover_rate": 0.162,
     "offensive_reb_rate": 0.0509,
@@ -469,7 +469,7 @@
     "defensive_reb_rate": 0.1392,
     "opp_free_throw_rate": 0.42
   },
-  "north_dakota_st": {
+  "north_dakota_state": {
     "effective_fg_pct": 0.5336,
     "turnover_rate": 0.1526,
     "offensive_reb_rate": 0.0585,
@@ -519,7 +519,7 @@
     "defensive_reb_rate": 0.13,
     "opp_free_throw_rate": 0.311
   },
-  "prairie_view_a_m": {
+  "prairie_view": {
     "effective_fg_pct": 0.4788,
     "turnover_rate": 0.1584,
     "offensive_reb_rate": 0.0441,
@@ -549,7 +549,7 @@
     "defensive_reb_rate": 0.1156,
     "opp_free_throw_rate": 0.3626
   },
-  "iowa_st": {
+  "iowa_state": {
     "effective_fg_pct": 0.5647,
     "turnover_rate": 0.1439,
     "offensive_reb_rate": 0.0601,
@@ -629,7 +629,7 @@
     "defensive_reb_rate": 0.1326,
     "opp_free_throw_rate": 0.3893
   },
-  "ohio_st": {
+  "ohio_state": {
     "effective_fg_pct": 0.5651,
     "turnover_rate": 0.1545,
     "offensive_reb_rate": 0.0498,
@@ -659,7 +659,7 @@
     "defensive_reb_rate": 0.1363,
     "opp_free_throw_rate": 0.3655
   },
-  "byu": {
+  "brigham_young": {
     "effective_fg_pct": 0.5465,
     "turnover_rate": 0.1543,
     "offensive_reb_rate": 0.0585,
@@ -729,7 +729,7 @@
     "defensive_reb_rate": 0.1345,
     "opp_free_throw_rate": 0.394
   },
-  "san_diego_st": {
+  "san_diego_state": {
     "effective_fg_pct": 0.5269,
     "turnover_rate": 0.1687,
     "offensive_reb_rate": 0.0521,
@@ -759,7 +759,7 @@
     "defensive_reb_rate": 0.1301,
     "opp_free_throw_rate": 0.3042
   },
-  "smu": {
+  "southern_methodist": {
     "effective_fg_pct": 0.5575,
     "turnover_rate": 0.1543,
     "offensive_reb_rate": 0.0596,
@@ -829,7 +829,7 @@
     "defensive_reb_rate": 0.1345,
     "opp_free_throw_rate": 0.3785
   },
-  "michigan_st": {
+  "michigan_state": {
     "effective_fg_pct": 0.536,
     "turnover_rate": 0.1658,
     "offensive_reb_rate": 0.0675,
@@ -909,7 +909,7 @@
     "defensive_reb_rate": 0.1316,
     "opp_free_throw_rate": 0.2016
   },
-  "lsu": {
+  "louisiana_state": {
     "effective_fg_pct": 0.5281,
     "turnover_rate": 0.1524,
     "offensive_reb_rate": 0.0596,
@@ -1069,7 +1069,7 @@
     "defensive_reb_rate": 0.1193,
     "opp_free_throw_rate": 0.3352
   },
-  "vcu": {
+  "virginia_commonwealth": {
     "effective_fg_pct": 0.5408,
     "turnover_rate": 0.1469,
     "offensive_reb_rate": 0.0564,
@@ -1149,7 +1149,7 @@
     "defensive_reb_rate": 0.1266,
     "opp_free_throw_rate": 0.3389
   },
-  "mcneese_st": {
+  "mcneese_state": {
     "effective_fg_pct": 0.5096,
     "turnover_rate": 0.1413,
     "offensive_reb_rate": 0.0603,
@@ -1159,7 +1159,7 @@
     "defensive_reb_rate": 0.1226,
     "opp_free_throw_rate": 0.404
   },
-  "boise_st": {
+  "boise_state": {
     "effective_fg_pct": 0.522,
     "turnover_rate": 0.1641,
     "offensive_reb_rate": 0.0581,
@@ -1449,7 +1449,7 @@
     "defensive_reb_rate": 0.1212,
     "opp_free_throw_rate": 0.3121
   },
-  "william___mary": {
+  "william_mary": {
     "effective_fg_pct": 0.5339,
     "turnover_rate": 0.1623,
     "offensive_reb_rate": 0.0423,
@@ -1479,7 +1479,7 @@
     "defensive_reb_rate": 0.1221,
     "opp_free_throw_rate": 0.3656
   },
-  "kansas_st": {
+  "kansas_state": {
     "effective_fg_pct": 0.5331,
     "turnover_rate": 0.1737,
     "offensive_reb_rate": 0.0491,
@@ -1619,7 +1619,7 @@
     "defensive_reb_rate": 0.1286,
     "opp_free_throw_rate": 0.3823
   },
-  "queens": {
+  "queens__nc": {
     "effective_fg_pct": 0.5659,
     "turnover_rate": 0.1427,
     "offensive_reb_rate": 0.0516,
@@ -1719,7 +1719,7 @@
     "defensive_reb_rate": 0.1274,
     "opp_free_throw_rate": 0.4035
   },
-  "umbc": {
+  "maryland_baltimore_county": {
     "effective_fg_pct": 0.5393,
     "turnover_rate": 0.1327,
     "offensive_reb_rate": 0.0425,
@@ -1769,7 +1769,7 @@
     "defensive_reb_rate": 0.1162,
     "opp_free_throw_rate": 0.252
   },
-  "liu": {
+  "long_island_university": {
     "effective_fg_pct": 0.533,
     "turnover_rate": 0.1859,
     "offensive_reb_rate": 0.0613,
@@ -1899,7 +1899,7 @@
     "defensive_reb_rate": 0.1212,
     "opp_free_throw_rate": 0.3488
   },
-  "wichita_st": {
+  "wichita_state": {
     "effective_fg_pct": 0.4947,
     "turnover_rate": 0.1465,
     "offensive_reb_rate": 0.0674,
@@ -2269,7 +2269,7 @@
     "defensive_reb_rate": 0.1275,
     "opp_free_throw_rate": 0.3129
   },
-  "wright_st": {
+  "wright_state": {
     "effective_fg_pct": 0.5442,
     "turnover_rate": 0.1578,
     "offensive_reb_rate": 0.0553,
@@ -2349,7 +2349,7 @@
     "defensive_reb_rate": 0.1306,
     "opp_free_throw_rate": 0.2716
   },
-  "st_john_s": {
+  "st__john_s__ny": {
     "effective_fg_pct": 0.51,
     "turnover_rate": 0.1405,
     "offensive_reb_rate": 0.0598,
@@ -2469,7 +2469,7 @@
     "defensive_reb_rate": 0.1176,
     "opp_free_throw_rate": 0.5008
   },
-  "fresno_st": {
+  "fresno_state": {
     "effective_fg_pct": 0.5062,
     "turnover_rate": 0.1747,
     "offensive_reb_rate": 0.046,
@@ -2529,7 +2529,7 @@
     "defensive_reb_rate": 0.1246,
     "opp_free_throw_rate": 0.313
   },
-  "utah_st": {
+  "utah_state": {
     "effective_fg_pct": 0.566,
     "turnover_rate": 0.1496,
     "offensive_reb_rate": 0.0555,
@@ -2609,7 +2609,7 @@
     "defensive_reb_rate": 0.137,
     "opp_free_throw_rate": 0.314
   },
-  "miami_oh": {
+  "miami__oh": {
     "effective_fg_pct": 0.5916,
     "turnover_rate": 0.1382,
     "offensive_reb_rate": 0.0409,
@@ -2699,7 +2699,7 @@
     "defensive_reb_rate": 0.1257,
     "opp_free_throw_rate": 0.4139
   },
-  "penn": {
+  "pennsylvania": {
     "effective_fg_pct": 0.5033,
     "turnover_rate": 0.1468,
     "offensive_reb_rate": 0.0519,
@@ -2719,7 +2719,7 @@
     "defensive_reb_rate": 0.1177,
     "opp_free_throw_rate": 0.2988
   },
-  "saint_mary_s": {
+  "saint_mary_s__ca": {
     "effective_fg_pct": 0.5294,
     "turnover_rate": 0.1635,
     "offensive_reb_rate": 0.0671,
@@ -2769,7 +2769,7 @@
     "defensive_reb_rate": 0.1237,
     "opp_free_throw_rate": 0.3578
   },
-  "miami_fl": {
+  "miami__fl": {
     "effective_fg_pct": 0.5567,
     "turnover_rate": 0.1536,
     "offensive_reb_rate": 0.0622,
@@ -2789,7 +2789,7 @@
     "defensive_reb_rate": 0.1342,
     "opp_free_throw_rate": 0.2889
   },
-  "oregon_st": {
+  "oregon_state": {
     "effective_fg_pct": 0.5046,
     "turnover_rate": 0.1709,
     "offensive_reb_rate": 0.0451,
@@ -2829,7 +2829,7 @@
     "defensive_reb_rate": 0.1318,
     "opp_free_throw_rate": 0.3439
   },
-  "san_jose_st": {
+  "san_jose_state": {
     "effective_fg_pct": 0.4967,
     "turnover_rate": 0.1474,
     "offensive_reb_rate": 0.0503,
@@ -2929,7 +2929,7 @@
     "defensive_reb_rate": 0.1256,
     "opp_free_throw_rate": 0.3127
   },
-  "kennesaw_st": {
+  "kennesaw_state": {
     "effective_fg_pct": 0.5072,
     "turnover_rate": 0.1656,
     "offensive_reb_rate": 0.0602,
@@ -2989,7 +2989,7 @@
     "defensive_reb_rate": 0.1245,
     "opp_free_throw_rate": 0.282
   },
-  "penn_st": {
+  "penn_state": {
     "effective_fg_pct": 0.5301,
     "turnover_rate": 0.1511,
     "offensive_reb_rate": 0.0432,
@@ -3079,7 +3079,7 @@
     "defensive_reb_rate": 0.1265,
     "opp_free_throw_rate": 0.3746
   },
-  "arizona_st": {
+  "arizona_state": {
     "effective_fg_pct": 0.511,
     "turnover_rate": 0.164,
     "offensive_reb_rate": 0.0485,
@@ -3189,7 +3189,7 @@
     "defensive_reb_rate": 0.129,
     "opp_free_throw_rate": 0.3448
   },
-  "ball_st": {
+  "ball_state": {
     "effective_fg_pct": 0.4705,
     "turnover_rate": 0.154,
     "offensive_reb_rate": 0.0426,
@@ -3229,7 +3229,7 @@
     "defensive_reb_rate": 0.1263,
     "opp_free_throw_rate": 0.3163
   },
-  "colorado_st": {
+  "colorado_state": {
     "effective_fg_pct": 0.5801,
     "turnover_rate": 0.1738,
     "offensive_reb_rate": 0.0515,
