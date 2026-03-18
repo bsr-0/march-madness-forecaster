@@ -67,7 +67,11 @@ def main(argv: list[str] | None = None) -> int:
         config = SOTAPipelineConfig(**merged)
         validate_production_2026(config, check_paths_on_disk=True, base_dir=str(repo_root))
 
-        freeze_art = repo_root / "artifacts" / "freeze_manifest_2026.json"
+        # Derive freeze artifact path from config (freeze_file field).
+        _freeze_rel = raw_config.get("freeze_file", "artifacts/freeze_manifest_2026.json")
+        freeze_art = Path(_freeze_rel)
+        if not freeze_art.is_absolute():
+            freeze_art = config_base_dir / freeze_art
         _validate_freeze_artifact(freeze_art, config_path, raw_config, repo_root)
 
         if args.dry_run:
