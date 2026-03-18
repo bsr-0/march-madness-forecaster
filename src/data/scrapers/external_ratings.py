@@ -313,12 +313,38 @@ class ExternalRatingsLoader:
             return 0
 
         cached = 0
+        skipped_low_coverage = 0
+        skipped_corrupted = 0
         for system_name, entries in all_systems.items():
             if systems and system_name not in systems:
                 continue
             # Only cache systems with meaningful coverage (50+ teams)
             if len(entries) < 50:
+                skipped_low_coverage += 1
                 continue
+            # Detect corrupted data: if >80% of entries share the same
+            # rank, the source data is degenerate and should not be cached.
+            if len(entries) > 10:
+                rank_counts: Dict[int, int] = {}
+                for e in entries:
+                    r = e.get("ranking", 0)
+                    rank_counts[r] = rank_counts.get(r, 0) + 1
+                max_rank_freq = max(rank_counts.values())
+                if max_rank_freq > len(entries) * 0.8:
+                    logger.warning(
+                        "Skipping corrupted %s for %d: %d/%d entries share "
+                        "the same rank (degenerate source data)",
+                        system_name, year, max_rank_freq, len(entries),
+                    )
+                    skipped_corrupted += 1
+                    continue
+            # Warn on suspiciously low coverage (likely truncated source)
+            if len(entries) < 200:
+                logger.warning(
+                    "System %s for %d has only %d teams (expected ~350); "
+                    "possible truncated source data",
+                    system_name, year, len(entries),
+                )
             ratings: Dict[str, ExternalRating] = {}
             for e in entries:
                 r = ExternalRating(
@@ -332,6 +358,12 @@ class ExternalRatingsLoader:
                 ratings[r.team_id] = r
             self.save_system(system_name, year, ratings)
             cached += 1
+
+        if skipped_corrupted:
+            logger.warning(
+                "Skipped %d corrupted systems for %d (degenerate rank data)",
+                skipped_corrupted, year,
+            )
 
         # Also create a "massey_composite" meta-system by averaging
         # all available ordinal systems.
