@@ -132,6 +132,9 @@ class RefreshResult:
     old_ev_report: Optional[Dict] = None
     updated_ev_report: Optional[Dict] = None
 
+    # Path protection score of the recommended bracket after refresh (0–1; higher = more coherent)
+    path_protection_score: float = 0.0
+
     # Whether any re-optimization actually happened
     was_refreshed: bool = False
     skip_reason: Optional[str] = None
@@ -235,6 +238,8 @@ class RefreshResult:
         if self.strategy_changed:
             d["old_strategy"] = self.old_strategy
             d["new_strategy"] = self.new_strategy
+        if self.path_protection_score:
+            d["path_protection_score"] = round(self.path_protection_score, 4)
         if self.updated_ev_report:
             d["updated_ev_report"] = self.updated_ev_report
         return d
@@ -469,6 +474,34 @@ class LivePicksRefreshWorkflow:
             for b in pool_analysis.pareto_brackets[:5]
         ]
 
+        # Compute path protection score for the primary Pareto bracket so that
+        # RefreshResult.path_protection_score reflects bracket coherence after refresh.
+        primary_path_protection = 0.0
+        if pool_analysis.pareto_brackets:
+            try:
+                from .leverage import _bracket_config_to_pick_list
+                from .path_protection import PathProtectionScorer
+
+                team_strength: Dict[str, float] = {}
+                for tid, probs in model_round_probs.items():
+                    vals = [v for v in probs.values() if isinstance(v, (int, float))]
+                    team_strength[tid] = sum(vals) / len(vals) if vals else 0.01
+
+                def _approx_predict_fn(t1: str, t2: str) -> float:
+                    s1 = team_strength.get(t1, 0.01)
+                    s2 = team_strength.get(t2, 0.01)
+                    return s1 / max(s1 + s2, 1e-10)
+
+                picks_list = _bracket_config_to_pick_list(
+                    pool_analysis.pareto_brackets[0], model_round_probs, _approx_predict_fn
+                )
+                if picks_list:
+                    primary_path_protection = PathProtectionScorer().compute_path_protection_score(
+                        picks_list, _approx_predict_fn, {}, None
+                    )
+            except Exception:
+                pass  # Non-critical; falls back to 0.0
+
         return {
             "mode": "ev",
             "pool_size": pool_size,
@@ -478,6 +511,7 @@ class LivePicksRefreshWorkflow:
             "fade_picks": fade_picks,
             "pareto_brackets": pareto_brackets,
             "pool_ev_analysis": pool_analysis.strategy_evs,
+            "primary_bracket_path_protection": primary_path_protection,
             "refresh_timestamp": time.time(),
         }
 
@@ -556,6 +590,7 @@ class LivePicksRefreshWorkflow:
         result.updated_ev_report = new_ev_report
         result.new_strategy = new_ev_report.get("recommended_strategy", "")
         result.strategy_changed = result.old_strategy != result.new_strategy
+        result.path_protection_score = new_ev_report.get("primary_bracket_path_protection", 0.0)
 
         # Compute leverage shifts
         result.leverage_shifts = self._compute_leverage_shifts(
