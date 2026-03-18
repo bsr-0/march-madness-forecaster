@@ -291,7 +291,9 @@ class BracketPortfolioGenerator:
         )
 
         # Enforce diversification constraints before search refinement
-        brackets = self._enforce_diversification(brackets, rng)
+        brackets = self._enforce_diversification(
+            brackets, rng, min_brackets=n_brackets,
+        )
 
         # Post-sampling search refinement
         if enable_search and brackets:
@@ -423,6 +425,7 @@ class BracketPortfolioGenerator:
         max_correlation: float = 0.85,
         min_unique_champions: int = 4,
         min_unique_final_fours: int = 3,
+        min_brackets: int = 0,
     ) -> List[GeneratedBracket]:
         """Enforce diversification constraints on the portfolio.
 
@@ -450,6 +453,10 @@ class BracketPortfolioGenerator:
             max_correlation: Maximum allowed pairwise agreement (0-1).
             min_unique_champions: Minimum distinct champions required.
             min_unique_final_fours: Minimum distinct F4 combos required.
+            min_brackets: Never remove brackets below this count.  When
+                the correlation filter would drop the portfolio below
+                ``min_brackets``, remaining candidates are kept even if
+                they exceed the correlation threshold.
 
         Returns:
             Diversified portfolio (may be smaller than input if
@@ -470,6 +477,12 @@ class BracketPortfolioGenerator:
                     break
             if is_diverse:
                 kept.append(candidate)
+
+        # Never drop below the requested portfolio size.  Brackets may
+        # share underlying objects (same sim result selected by multiple
+        # strategies), so backfill by list position, not object identity.
+        if min_brackets and len(kept) < min_brackets:
+            kept = list(brackets[:min_brackets]) if len(brackets) >= min_brackets else list(brackets)
 
         removed_count = len(brackets) - len(kept)
         if removed_count > 0:
