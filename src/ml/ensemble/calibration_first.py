@@ -36,6 +36,28 @@ logger = logging.getLogger(__name__)
 CAL_WEIGHT_SCALE = 5.0
 
 
+def _make_bin_boundaries(predictions: np.ndarray, n_bins: int) -> np.ndarray:
+    """Build bin boundaries for ECE / calibration weight computation.
+
+    Uses equal-frequency (quantile) bins when ``N >= n_bins * 5`` for
+    stable tail estimates.  Falls back to equal-width bins otherwise.
+    Duplicate boundaries from quantile computation are collapsed via
+    ``np.unique`` so every bin spans a non-degenerate interval.
+    """
+    n = len(predictions)
+    if n >= n_bins * 5:
+        quantiles = np.linspace(0, 1, n_bins + 1)
+        boundaries = np.quantile(predictions, quantiles)
+        boundaries[0] = 0.0
+        boundaries[-1] = 1.0
+        # Collapse duplicate boundaries that arise when many predictions
+        # share the same value (e.g. heavy mode at 0.5).
+        boundaries = np.unique(boundaries)
+    else:
+        boundaries = np.linspace(0, 1, n_bins + 1)
+    return boundaries
+
+
 @dataclass
 class CalibrationFirstResult:
     """Output from the calibration-first pipeline."""
@@ -187,26 +209,20 @@ class CalibrationFirstPipeline:
 
         Uses equal-frequency (quantile) bins when N >= n_bins * 5 for
         stable tail estimates.  Falls back to equal-width bins otherwise.
+        Duplicate quantile boundaries are collapsed automatically.
         """
         n = len(predictions)
         if n == 0:
             return 0.0
 
-        if n >= n_bins * 5:
-            # Equal-frequency: quantile-based bin boundaries
-            quantiles = np.linspace(0, 1, n_bins + 1)
-            bin_boundaries = np.quantile(predictions, quantiles)
-            # Ensure first and last boundaries span [0, 1]
-            bin_boundaries[0] = 0.0
-            bin_boundaries[-1] = 1.0
-        else:
-            bin_boundaries = np.linspace(0, 1, n_bins + 1)
+        bin_boundaries = _make_bin_boundaries(predictions, n_bins)
+        actual_bins = len(bin_boundaries) - 1
 
         ece = 0.0
-        for i in range(n_bins):
+        for i in range(actual_bins):
             lo, hi = bin_boundaries[i], bin_boundaries[i + 1]
             mask = (predictions >= lo) & (predictions < hi)
-            if i == n_bins - 1:
+            if i == actual_bins - 1:
                 mask = (predictions >= lo) & (predictions <= hi)
 
             n_bin = mask.sum()
@@ -273,24 +289,19 @@ class CalibrationFirstPipeline:
         the next training pass, encouraging the model to improve
         calibration in those regions.
 
-        Uses equal-frequency bins when N >= n_bins * 5 (matches
-        ``_compute_ece`` binning strategy).
+        Uses the same binning strategy as ``_compute_ece`` (equal-frequency
+        when N >= n_bins * 5, with duplicate-boundary deduplication).
         """
         n = len(predictions)
         weights = np.ones(n)
 
-        if n >= n_bins * 5:
-            quantiles = np.linspace(0, 1, n_bins + 1)
-            bin_boundaries = np.quantile(predictions, quantiles)
-            bin_boundaries[0] = 0.0
-            bin_boundaries[-1] = 1.0
-        else:
-            bin_boundaries = np.linspace(0, 1, n_bins + 1)
+        bin_boundaries = _make_bin_boundaries(predictions, n_bins)
+        actual_bins = len(bin_boundaries) - 1
 
-        for i in range(n_bins):
+        for i in range(actual_bins):
             lo, hi = bin_boundaries[i], bin_boundaries[i + 1]
             mask = (predictions >= lo) & (predictions < hi)
-            if i == n_bins - 1:
+            if i == actual_bins - 1:
                 mask = (predictions >= lo) & (predictions <= hi)
 
             n_bin = mask.sum()

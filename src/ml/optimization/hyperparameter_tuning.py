@@ -413,7 +413,7 @@ class BrierLightGBMTuner(LightGBMTuner):
         feature_names: Optional[List[str]] = None,
         sample_weight: np.ndarray = None,
     ) -> TuningResult:
-        from ...ml.ensemble.brier_objective import brier_objective, brier_eval
+        from ...ml.ensemble.brier_objective import brier_objective
 
         cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=1)
 
@@ -461,7 +461,7 @@ class BrierLightGBMTuner(LightGBMTuner):
         study = optuna.create_study(
             direction="minimize",
             study_name="brier_lgbm_tuning",
-            sampler=optuna.samplers.TPESampler(seed=42),
+            sampler=optuna.samplers.TPESampler(seed=self.random_seed),
         )
         study.optimize(objective, n_trials=self.n_trials, timeout=self.timeout)
 

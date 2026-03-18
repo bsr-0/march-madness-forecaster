@@ -59,6 +59,7 @@ try:
         SPREAD_MODEL_AVAILABLE,
         TOURNAMENT_SIGMA_AVAILABLE,
         BayesianBradleyTerry,
+        BrierLightGBMTuner,
         EnsembleWeightOptimizer,
         LeaveOneYearOutCV,
         LightGBMTuner,
@@ -85,13 +86,6 @@ try:
     BRIER_LGB_AVAILABLE = True
 except ImportError:
     BRIER_LGB_AVAILABLE = False
-
-# Brier-objective tuner — selects hyperparams under Brier loss surface
-try:
-    from ...ml.optimization.hyperparameter_tuning import BrierLightGBMTuner
-    BRIER_TUNER_AVAILABLE = True
-except ImportError:
-    BRIER_TUNER_AVAILABLE = False
 
 # Calibration-first pipeline (Phase 4 research)
 try:
@@ -995,7 +989,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 _use_brier = pipeline.config.use_brier_objective and BRIER_LGB_AVAILABLE
                 # Use BrierLightGBMTuner when Brier objective is active so
                 # hyperparams are selected under the same loss surface.
-                if _use_brier and BRIER_TUNER_AVAILABLE:
+                if _use_brier and BrierLightGBMTuner is not None:
                     tuner = BrierLightGBMTuner(
                         n_trials=pipeline.config.optuna_n_trials,
                         n_cv_splits=pipeline.config.temporal_cv_splits,
