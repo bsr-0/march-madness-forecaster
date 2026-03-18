@@ -115,8 +115,7 @@ _QUICK_ALIAS: dict[str, str] = {
     # Kaggle team ID forms (Kaggle uses integer IDs mapped to these names)
     "miami_fl": "miami__fl",
     "miami_oh": "miami__oh",
-    "st_john_s": "st__john_s__ny",
-    "saint_john_s": "st__john_s__ny",
+    "saint_john_s": "st_john_s",
     "saint_joseph_s": "saint_joseph_s",
     "saint_peter_s": "saint_peter_s",
     "texas_a_m": "texas_a_m",
