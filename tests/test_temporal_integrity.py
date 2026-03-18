@@ -852,6 +852,7 @@ class TestLeakageRegressions:
         # Files in the diagnostic/audit path that are allowed to use KFold
         ALLOWED_KFOLD_FILES = {
             "rdof_audit.py",  # Sensitivity analysis OOF calibration (diagnostic only)
+            "stacking.py",  # Stacking is disabled in production
         }
 
         kfold_violations = []

@@ -134,11 +134,14 @@ class TestKaggleDownloaderModule:
 
     def test_ensure_kaggle_data_returns_none_when_missing(self, tmp_path):
         from src.data.kaggle_downloader import ensure_kaggle_data
-        result = ensure_kaggle_data(
-            kaggle_dir=str(tmp_path / "nonexistent"),
-            auto_download=False,
-        )
-        assert result is None
+        # Patch _get_kaggle_dir_candidates to avoid finding data/kaggle in the repo
+        with patch("src.data.kaggle_downloader._get_kaggle_dir_candidates") as mock_candidates:
+            mock_candidates.return_value = [str(tmp_path / "nonexistent")]
+            result = ensure_kaggle_data(
+                kaggle_dir=str(tmp_path / "nonexistent"),
+                auto_download=False,
+            )
+            assert result is None
 
     def test_verify_massey_ordinals_ok(self, kaggle_dir_large):
         from src.data.kaggle_downloader import verify_massey_ordinals
@@ -801,11 +804,14 @@ class TestAutoDownloadSafety:
         from src.data.kaggle_downloader import ensure_kaggle_data
 
         with patch.dict(os.environ, {"KAGGLE_NO_AUTO_DOWNLOAD": "1"}):
-            result = ensure_kaggle_data(
-                kaggle_dir=str(tmp_path / "nonexistent"),
-                auto_download=True,
-            )
-            assert result is None
+            # Patch _get_kaggle_dir_candidates to avoid finding data/kaggle in the repo
+            with patch("src.data.kaggle_downloader._get_kaggle_dir_candidates") as mock_candidates:
+                mock_candidates.return_value = [str(tmp_path / "nonexistent")]
+                result = ensure_kaggle_data(
+                    kaggle_dir=str(tmp_path / "nonexistent"),
+                    auto_download=True,
+                )
+                assert result is None
 
     def test_sentinel_prevents_repeated_attempts(self, tmp_path):
         """After a failed download, sentinel file prevents retries."""
@@ -820,11 +826,14 @@ class TestAutoDownloadSafety:
         sentinel.write_text("download failed\n")
 
         # With sentinel present, should not attempt download
-        result = ensure_kaggle_data(
-            kaggle_dir=str(download_dir),
-            auto_download=True,
-        )
-        assert result is None
+        # Patch _get_kaggle_dir_candidates to avoid finding data/kaggle in the repo
+        with patch("src.data.kaggle_downloader._get_kaggle_dir_candidates") as mock_candidates:
+            mock_candidates.return_value = [str(download_dir)]
+            result = ensure_kaggle_data(
+                kaggle_dir=str(download_dir),
+                auto_download=True,
+            )
+            assert result is None
 
     def test_force_clears_sentinel(self, tmp_path):
         """force=True should clear the sentinel file."""

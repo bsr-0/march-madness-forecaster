@@ -107,8 +107,8 @@ class TestStep1ProductionProfile:
     def test_all_experimental_flags_off(self):
         from src.pipeline.config import SOTAPipelineConfig
         cfg = SOTAPipelineConfig()
-        assert cfg.enable_seed_overrides is True
-        assert cfg.enable_brier_sharpening is True
+        assert cfg.enable_seed_overrides is False
+        assert cfg.enable_brier_sharpening is False
         assert cfg.enable_goto_conversion is True
         assert cfg.enable_round_weighted_calibration is True
 
