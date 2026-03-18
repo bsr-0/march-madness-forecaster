@@ -231,9 +231,12 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
     ]
 
     # Model vs public divergence for championship
-    champ_public = public_picks.get("championship", {})
+    championship_odds = {
+        team_id: probs.get("CHAMP", 0.0)
+        for team_id, probs in model_round_probs.items()
+    }
     for team_id, model_prob in championship_odds.items():
-        pub_prob = champ_public.get(team_id, 0.0)
+        pub_prob = public_picks.get(team_id, {}).get("CHAMP", 0.0)
         if pub_prob > 0.01 or model_prob > 0.01:
             ev.model_vs_public_divergence[team_id] = round(
                 model_prob - pub_prob, 4
