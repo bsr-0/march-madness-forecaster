@@ -25,7 +25,7 @@ import math
 import os
 from collections import Counter
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -47,15 +47,15 @@ EXPECTED_REGIONS = {"East", "Midwest", "South", "West"}
 EXPECTED_SEEDS = set(range(1, 17))
 
 # Known 1-seeds from the bracket
-EXPECTED_1_SEEDS = {"michigan", "duke", "arizona", "connecticut"}
+EXPECTED_1_SEEDS = {"michigan", "duke", "arizona", "florida"}
 
 # Sample teams for smoke tests
 SAMPLE_1_SEED = "michigan"
-SAMPLE_16_SEED = "maryland_baltimore_county"
-SAMPLE_8_SEED = "ucf"
-SAMPLE_9_SEED = "kentucky"
-SAMPLE_5_SEED = "arkansas"
-SAMPLE_12_SEED = "unc_wilmington"
+SAMPLE_16_SEED = "siena"
+SAMPLE_8_SEED = "ohio_state"
+SAMPLE_9_SEED = "tcu"
+SAMPLE_5_SEED = "st__john_s__ny"
+SAMPLE_12_SEED = "northern_iowa"
 SAMPLE_ELITE = "duke"
 
 
@@ -65,7 +65,20 @@ SAMPLE_ELITE = "duke"
 
 def _load_bracket() -> Dict:
     with open(BRACKET_PATH) as f:
-        return json.load(f)
+        raw = json.load(f)
+    # Collapse First Four play-in pairs into one slot each (68 -> 64).
+    # For each pair sharing the same seed+region with first_four=True,
+    # keep the higher-rated team as the slot placeholder.
+    play_in = [t for t in raw["teams"] if t.get("first_four", False)]
+    non_play_in = [t for t in raw["teams"] if not t.get("first_four", False)]
+    seen_slots: Dict[Tuple, Dict] = {}
+    for t in play_in:
+        slot = (t["seed"], t["region"])
+        prev = seen_slots.get(slot)
+        if prev is None or t.get("rating", 0) > prev.get("rating", 0):
+            seen_slots[slot] = t
+    raw["teams"] = non_play_in + list(seen_slots.values())
+    return raw
 
 
 def _load_torvik() -> Dict:
@@ -409,12 +422,12 @@ class TestStep5BracketIngestion:
             assert t["team_id"], f"Empty team_id for {t.get('team_name', '?')}"
 
     def test_1_seed_spot_check(self):
-        """Spot check: Michigan is a 1-seed in the East."""
+        """Spot check: Michigan is a 1-seed in the Midwest."""
         b = _load_bracket()
         michigan = [t for t in b["teams"] if t["team_id"] == "michigan"]
         assert len(michigan) == 1
         assert michigan[0]["seed"] == 1
-        assert michigan[0]["region"] == "East"
+        assert michigan[0]["region"] == "Midwest"
 
     def test_mid_major_present(self):
         """Spot check: a mid-major conference champion is present."""
