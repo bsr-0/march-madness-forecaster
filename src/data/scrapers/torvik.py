@@ -34,6 +34,8 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 
+from ..normalize import normalize_team_id as _canonical_team_id
+
 logger = logging.getLogger(__name__)
 
 
@@ -454,11 +456,13 @@ class BartTorvikScraper:
 
     @staticmethod
     def _normalize_team_name_to_id(name: str) -> str:
-        """Convert display team name to a snake_case team_id."""
-        tid = name.strip().lower()
-        tid = tid.replace("'", "_").replace("&", "_").replace(".", "").replace("-", "_")
-        tid = tid.replace("  ", " ").replace(" ", "_")
-        return tid
+        """Convert display team name to a canonical snake_case team_id.
+
+        Delegates to the shared ``normalize_team_id`` function so that
+        Torvik keys match the canonical IDs used elsewhere in the pipeline
+        (bracket, Kaggle, Sports Reference).
+        """
+        return _canonical_team_id(name)
 
     def _aggregate_player_csv(self, csv_text: str) -> Dict[str, Dict]:
         """Aggregate player-level CSV rows into per-team shooting totals.
