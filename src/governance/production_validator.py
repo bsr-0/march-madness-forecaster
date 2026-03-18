@@ -39,8 +39,8 @@ REQUIRED_CONFIG_VALUES: Dict[str, Any] = {
     "enable_embedding_projections": False,
     "enable_stacking": True,
     "enable_feature_selection": True,
-    "enable_brier_sharpening": True,
-    "enable_seed_overrides": True,
+    "enable_brier_sharpening": False,
+    "enable_seed_overrides": False,
     "enable_goto_conversion": True,
     "enable_round_weighted_calibration": True,
     "enable_bayesian_bt": True,
@@ -199,4 +199,53 @@ def validate_production_2026(
     if missing:
         raise ProductionValidationError(
             "Production data path verification failed: " + "; ".join(missing)
+        )
+
+
+# ---------------------------------------------------------------------------
+# ESPN pathway governance (Protocol Section 4.4 / 4.7)
+# ---------------------------------------------------------------------------
+
+# Expected ESPN-pathway config values for production
+ESPN_REQUIRED_CONFIG_VALUES: dict[str, object] = {
+    "enable_quadrant_constraints": True,
+    "min_path_protection_score": 0.85,
+    "max_path_disruption_cost": 0.03,
+}
+
+
+def validate_espn_pathway_config(config: SOTAPipelineConfig) -> None:
+    """Validate ESPN pathway configuration against protocol requirements.
+
+    Checks that path protection and quadrant correlation constraints are
+    properly configured when EV mode is enabled.  This is a soft validation
+    (warnings, not errors) unless explicitly called.
+
+    Raises:
+        ProductionValidationError: If EV mode is enabled but ESPN config
+            fields violate protocol constraints.
+    """
+    ev_mode = getattr(config, "ev_mode", False)
+    if not ev_mode:
+        return  # ESPN validation only applies when EV mode is active
+
+    violations: list[str] = []
+
+    for key, expected in ESPN_REQUIRED_CONFIG_VALUES.items():
+        actual = getattr(config, key, None)
+        if actual is None:
+            violations.append(f"ESPN config {key} is not set (expected {expected!r})")
+        elif actual != expected:
+            violations.append(f"ESPN config {key}={actual!r} (expected {expected!r})")
+
+    # Path protection weight must be positive
+    ppw = getattr(config, "path_protection_weight", 0.0)
+    if ppw <= 0:
+        violations.append(
+            f"path_protection_weight={ppw} must be > 0 for ESPN pathway"
+        )
+
+    if violations:
+        raise ProductionValidationError(
+            "ESPN pathway configuration validation failed: " + "; ".join(violations)
         )

@@ -786,6 +786,11 @@ class EnsembleWeightOptimizer:
     """
     Bootstrap-aggregated grid search over CFA base weights.
 
+    .. deprecated::
+        Protocol v2, Section 3.2 replaces fixed grid-search weights with
+        Bayesian Model Averaging (BMA). Use ``src.ml.ensemble.bma.BayesianModelAveraging``
+        instead. This class is retained for backward compatibility only.
+
     Tests weight combinations for (gnn, transformer, baseline) in increments
     of 0.05 that sum to 1.0.  To prevent overfitting on small validation sets,
     the grid search is run on multiple bootstrap resamples and the selected
