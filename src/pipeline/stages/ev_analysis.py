@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 
 from ..config import (
     EVModeReport,
@@ -27,6 +27,9 @@ from ...optimization.leverage import TeamMetadata, analyze_pool, get_strategy_pr
 from ...simulation.monte_carlo import SimulationConfig, TournamentBracket, TournamentTeam
 
 logger = logging.getLogger(__name__)
+
+_REGIONS = ("East", "West", "South", "Midwest")
+_SEED_ORDER = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
 
 
 def refresh_ev_analysis(
@@ -182,6 +185,20 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
         ev_scoring_system=ev_scoring_name,
         strategy_profile=strategy_profile,
         archetype_picks=archetype_pick_dist,
+    )
+
+    # Wire bracket search optimizer as the primary bracket refinement strategy.
+    # The Pareto brackets from analyze_pool() provide good starting seeds;
+    # SimulatedAnnealingOptimizer navigates the 2^63 space from those seeds
+    # to find higher-EV configurations that pure sampling misses.
+    effective_public_for_search = (
+        archetype_pick_dist if archetype_pick_dist is not None else public_picks
+    )
+    pool_analysis.pareto_brackets = _optimize_pareto_brackets_with_search(
+        pipeline=pipeline,
+        pool_analysis=pool_analysis,
+        public_picks=effective_public_for_search,
+        scoring_system=ev_scoring,
     )
 
     ev.recommended_strategy = pool_analysis.recommended_strategy
@@ -594,3 +611,354 @@ def _load_scoring_rules(pipeline) -> Optional[Dict[str, int]]:
         "CHAMP": int(rules.get("CHAMP", 320)),
     }
     return parsed
+
+
+# ------------------------------------------------------------------
+# Bracket search optimizer wiring (Phase 3)
+# ------------------------------------------------------------------
+
+
+def _optimize_pareto_brackets_with_search(
+    pipeline,
+    pool_analysis,
+    public_picks: Dict[str, Dict[str, float]],
+    scoring_system: Dict[str, int],
+) -> List:
+    """Refine Pareto brackets using the SimulatedAnnealingOptimizer.
+
+    Converts each BracketConfiguration to a SearchBracket, runs the
+    SA optimizer in EV mode (maximising per-pick uniqueness-weighted
+    expected value), then converts the result back.
+
+    Args:
+        pipeline: SOTAPipeline instance with predict_probability and team_struct.
+        pool_analysis: PoolAnalysis whose pareto_brackets are used as seeds.
+        public_picks: Per-round public pick rates (team_id -> {round: pct}).
+        scoring_system: Round -> points mapping.
+
+    Returns:
+        List of refined BracketConfiguration objects (same length as input).
+    """
+    from ...optimization.bracket_search import SAConfig, SimulatedAnnealingOptimizer
+
+    if not pool_analysis.pareto_brackets:
+        return pool_analysis.pareto_brackets
+
+    # Build seed map: region -> {seed: team_id}
+    teams_by_region: Dict[str, Dict[int, str]] = {r: {} for r in _REGIONS}
+    team_regions: Dict[str, str] = {}
+    team_seeds: Dict[str, int] = {}
+    for team_id, team in pipeline.team_struct.items():
+        if team.region not in teams_by_region:
+            continue
+        teams_by_region[team.region][team.seed] = team_id
+        team_regions[team_id] = team.region
+        team_seeds[team_id] = team.seed
+
+    # Championship-level public picks summary for optimizer fallback
+    champ_public = {
+        tid: probs.get("CHAMP", 0.01)
+        for tid, probs in public_picks.items()
+    }
+
+    predict_fn = pipeline.predict_probability
+    sa_config = SAConfig(
+        max_iterations=500,
+        max_no_improve=100,
+        random_seed=getattr(pipeline.config, "random_seed", 42),
+        ev_mode=True,
+        pool_size=getattr(pipeline.config, "ev_pool_size", 100),
+        enable_path_protection=bool(team_regions),
+    )
+    optimizer = SimulatedAnnealingOptimizer(
+        predict_fn=predict_fn,
+        config=sa_config,
+        public_picks=champ_public,
+        scoring_system=scoring_system,
+        round_public_picks=public_picks,
+        team_regions=team_regions,
+        team_seeds=team_seeds,
+    )
+
+    refined: List = []
+    for bracket_config in pool_analysis.pareto_brackets:
+        try:
+            search_bracket = _bracket_config_to_search_bracket(
+                bracket_config, teams_by_region, predict_fn,
+            )
+            optimized = optimizer.optimize(search_bracket)
+            new_config = _search_bracket_to_bracket_config(
+                optimized, bracket_config, teams_by_region,
+            )
+            refined.append(new_config)
+        except Exception as exc:
+            logger.warning(
+                "Bracket search optimizer failed for '%s' bracket: %s",
+                getattr(bracket_config, "strategy", "unknown"), exc,
+            )
+            refined.append(bracket_config)
+
+    logger.info(
+        "Bracket search optimizer: refined %d/%d Pareto brackets via SA",
+        sum(1 for b in refined if getattr(b, "strategy", "") == "search_optimized"),
+        len(refined),
+    )
+    return refined
+
+
+def _bracket_config_to_search_bracket(
+    bracket_config,
+    teams_by_region: Dict[str, Dict[int, str]],
+    predict_fn: Callable[[str, str], float],
+):
+    """Convert a BracketConfiguration to a SearchBracket for SA optimization.
+
+    Replays the bracket structure game-by-game, looking up each game's
+    winner from the BracketConfiguration.picks dict.  Games missing from
+    the dict fall back to the model's favourite (higher predict_fn result).
+
+    The picks list is built in the canonical region-then-round order so
+    that the position index in SearchBracket.picks can be mapped back to
+    game IDs in _search_bracket_to_bracket_config.
+    """
+    from ...optimization.bracket_search import BracketPick, SearchBracket
+
+    picks_dict = getattr(bracket_config, "picks", {}) or {}
+    picks_list: List = []
+    game_idx = 0
+
+    # --- R64 ---
+    region_r64: Dict[str, List[str]] = {}
+    for region in _REGIONS:
+        r64: List[str] = []
+        seed_map = teams_by_region.get(region, {})
+        for high_seed, low_seed in _SEED_ORDER:
+            t1 = seed_map.get(high_seed, "")
+            t2 = seed_map.get(low_seed, "")
+            if not t1 or not t2:
+                continue
+            winner = picks_dict.get(f"R64_{region}_{high_seed}v{low_seed}")
+            if winner not in (t1, t2):
+                p = predict_fn(t1, t2)
+                winner, loser = (t1, t2) if p >= 0.5 else (t2, t1)
+            else:
+                loser = t2 if winner == t1 else t1
+            p_val = predict_fn(winner, loser)
+            picks_list.append(BracketPick(
+                round_num=0, game_idx=game_idx,
+                winner_id=winner, loser_id=loser, win_probability=p_val,
+            ))
+            r64.append(winner)
+            game_idx += 1
+        region_r64[region] = r64
+
+    # --- R32 ---
+    region_r32: Dict[str, List[str]] = {}
+    for region in _REGIONS:
+        r32: List[str] = []
+        prev = region_r64.get(region, [])
+        for idx in range(0, len(prev), 2):
+            if idx + 1 >= len(prev):
+                break
+            t1, t2 = prev[idx], prev[idx + 1]
+            winner = picks_dict.get(f"R32_{region}_{idx // 2 + 1}")
+            if winner not in (t1, t2):
+                p = predict_fn(t1, t2)
+                winner, loser = (t1, t2) if p >= 0.5 else (t2, t1)
+            else:
+                loser = t2 if winner == t1 else t1
+            p_val = predict_fn(winner, loser)
+            picks_list.append(BracketPick(
+                round_num=1, game_idx=game_idx,
+                winner_id=winner, loser_id=loser, win_probability=p_val,
+            ))
+            r32.append(winner)
+            game_idx += 1
+        region_r32[region] = r32
+
+    # --- S16 ---
+    region_s16: Dict[str, List[str]] = {}
+    for region in _REGIONS:
+        s16: List[str] = []
+        prev = region_r32.get(region, [])
+        for idx in range(0, len(prev), 2):
+            if idx + 1 >= len(prev):
+                break
+            t1, t2 = prev[idx], prev[idx + 1]
+            winner = picks_dict.get(f"S16_{region}_{idx // 2 + 1}")
+            if winner not in (t1, t2):
+                p = predict_fn(t1, t2)
+                winner, loser = (t1, t2) if p >= 0.5 else (t2, t1)
+            else:
+                loser = t2 if winner == t1 else t1
+            p_val = predict_fn(winner, loser)
+            picks_list.append(BracketPick(
+                round_num=2, game_idx=game_idx,
+                winner_id=winner, loser_id=loser, win_probability=p_val,
+            ))
+            s16.append(winner)
+            game_idx += 1
+        region_s16[region] = s16
+
+    # --- E8 ---
+    region_e8: Dict[str, str] = {}
+    for region in _REGIONS:
+        prev = region_s16.get(region, [])
+        if len(prev) < 2:
+            continue
+        t1, t2 = prev[0], prev[1]
+        winner = picks_dict.get(f"E8_{region}") or picks_dict.get(f"E8_{region}_1")
+        if winner not in (t1, t2):
+            p = predict_fn(t1, t2)
+            winner, loser = (t1, t2) if p >= 0.5 else (t2, t1)
+        else:
+            loser = t2 if winner == t1 else t1
+        p_val = predict_fn(winner, loser)
+        picks_list.append(BracketPick(
+            round_num=3, game_idx=game_idx,
+            winner_id=winner, loser_id=loser, win_probability=p_val,
+        ))
+        region_e8[region] = winner
+        game_idx += 1
+
+    # --- F4 (East vs West, South vs Midwest) ---
+    f4_winners: List[str] = []
+    for r1, r2, key1, key2 in [
+        ("East", "West", "F4_East_West", "F4_1"),
+        ("South", "Midwest", "F4_South_Midwest", "F4_2"),
+    ]:
+        t1 = region_e8.get(r1, "")
+        t2 = region_e8.get(r2, "")
+        if not t1 or not t2:
+            continue
+        winner = picks_dict.get(key1) or picks_dict.get(key2)
+        if winner not in (t1, t2):
+            p = predict_fn(t1, t2)
+            winner, loser = (t1, t2) if p >= 0.5 else (t2, t1)
+        else:
+            loser = t2 if winner == t1 else t1
+        p_val = predict_fn(winner, loser)
+        picks_list.append(BracketPick(
+            round_num=4, game_idx=game_idx,
+            winner_id=winner, loser_id=loser, win_probability=p_val,
+        ))
+        f4_winners.append(winner)
+        game_idx += 1
+
+    # --- CHAMP ---
+    champion = getattr(bracket_config, "champion", "")
+    if len(f4_winners) >= 2:
+        t1, t2 = f4_winners[0], f4_winners[1]
+        winner = picks_dict.get("CHAMP") or picks_dict.get("CHAMP_1")
+        if winner not in (t1, t2):
+            p = predict_fn(t1, t2)
+            winner, loser = (t1, t2) if p >= 0.5 else (t2, t1)
+        else:
+            loser = t2 if winner == t1 else t1
+        p_val = predict_fn(winner, loser)
+        picks_list.append(BracketPick(
+            round_num=5, game_idx=game_idx,
+            winner_id=winner, loser_id=loser, win_probability=p_val,
+        ))
+        champion = winner
+
+    from ...optimization.bracket_search import SearchBracket
+    return SearchBracket(picks=picks_list, champion=champion)
+
+
+def _search_bracket_to_bracket_config(
+    search_bracket,
+    original_config,
+    teams_by_region: Dict[str, Dict[int, str]],
+):
+    """Convert an optimized SearchBracket back to BracketConfiguration.
+
+    Uses the same canonical ordering as _bracket_config_to_search_bracket
+    (R64 East→West→South→Midwest, then R32, …) so that
+    picks_list[pos] maps unambiguously to a game ID.
+    """
+    from ...optimization.leverage import BracketConfiguration
+
+    picks_list = search_bracket.picks
+    picks_dict: Dict[str, str] = {}
+    pos = 0
+
+    # R64
+    region_r64: Dict[str, List[str]] = {}
+    for region in _REGIONS:
+        r64: List[str] = []
+        for high_seed, low_seed in _SEED_ORDER:
+            if pos >= len(picks_list):
+                break
+            pick = picks_list[pos]
+            picks_dict[f"R64_{region}_{high_seed}v{low_seed}"] = pick.winner_id
+            r64.append(pick.winner_id)
+            pos += 1
+        region_r64[region] = r64
+
+    # R32
+    region_r32: Dict[str, List[str]] = {}
+    for region in _REGIONS:
+        r32: List[str] = []
+        prev = region_r64.get(region, [])
+        for idx in range(0, len(prev), 2):
+            if pos >= len(picks_list):
+                break
+            pick = picks_list[pos]
+            picks_dict[f"R32_{region}_{idx // 2 + 1}"] = pick.winner_id
+            r32.append(pick.winner_id)
+            pos += 1
+        region_r32[region] = r32
+
+    # S16
+    region_s16: Dict[str, List[str]] = {}
+    for region in _REGIONS:
+        s16: List[str] = []
+        prev = region_r32.get(region, [])
+        for idx in range(0, len(prev), 2):
+            if pos >= len(picks_list):
+                break
+            pick = picks_list[pos]
+            picks_dict[f"S16_{region}_{idx // 2 + 1}"] = pick.winner_id
+            s16.append(pick.winner_id)
+            pos += 1
+        region_s16[region] = s16
+
+    # E8
+    region_e8: Dict[str, str] = {}
+    for region in _REGIONS:
+        if pos >= len(picks_list):
+            break
+        pick = picks_list[pos]
+        picks_dict[f"E8_{region}"] = pick.winner_id
+        region_e8[region] = pick.winner_id
+        pos += 1
+
+    # F4
+    f4_winners: List[str] = []
+    for key in ("F4_East_West", "F4_South_Midwest"):
+        if pos >= len(picks_list):
+            break
+        pick = picks_list[pos]
+        picks_dict[key] = pick.winner_id
+        f4_winners.append(pick.winner_id)
+        pos += 1
+
+    # CHAMP
+    champion = search_bracket.champion
+    if pos < len(picks_list):
+        pick = picks_list[pos]
+        picks_dict["CHAMP"] = pick.winner_id
+        champion = pick.winner_id
+    else:
+        picks_dict["CHAMP"] = champion
+
+    final_four = [region_e8.get(r, "") for r in _REGIONS]
+    return BracketConfiguration(
+        picks=picks_dict,
+        champion=champion,
+        final_four=final_four,
+        strategy="search_optimized",
+        expected_points=getattr(search_bracket, "fitness", 0.0),
+        variance=getattr(original_config, "variance", 0.0),
+    )

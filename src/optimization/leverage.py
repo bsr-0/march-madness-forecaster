@@ -715,6 +715,244 @@ class LeverageCalculator:
         return fade_picks
 
 
+# ---------------------------------------------------------------------------
+# Path protection filtering for Pareto brackets (Protocol Section 4.4)
+# ---------------------------------------------------------------------------
+
+_PP_SEED_ORDER = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
+_PP_REGIONS = ("East", "West", "South", "Midwest")
+
+
+def _filter_brackets_by_path_protection(
+    brackets: List["BracketConfiguration"],
+    model_probs: Dict[str, Dict[str, float]],
+    scoring_system: Dict[str, int],
+    min_score: float = 0.85,
+) -> List["BracketConfiguration"]:
+    """Return only brackets whose path protection score meets the threshold.
+
+    Builds an approximate pairwise predict_fn from per-round model_probs,
+    converts each BracketConfiguration into a list of BracketPick objects,
+    then scores via PathProtectionScorer.  Brackets scoring >= min_score
+    are kept; the rest are discarded.
+
+    Args:
+        brackets: Candidate BracketConfiguration objects.
+        model_probs: team_id -> {round_name: probability}.
+        scoring_system: Round -> points mapping.
+        min_score: Minimum acceptable path protection score (default 0.85).
+
+    Returns:
+        Filtered list; may be empty if all brackets fail.
+    """
+    try:
+        from .path_protection import PathProtectionScorer
+        from .bracket_search import BracketPick
+    except Exception:
+        return brackets  # graceful fallback if imports unavailable
+
+    # Build an approximate predict_fn from aggregate model strength.
+    # For each team we use the mean across all rounds as a proxy for strength.
+    team_strength: Dict[str, float] = {}
+    for tid, probs in model_probs.items():
+        vals = [v for v in probs.values() if isinstance(v, (int, float))]
+        team_strength[tid] = sum(vals) / len(vals) if vals else 0.01
+
+    def _approx_predict_fn(t1: str, t2: str) -> float:
+        s1 = team_strength.get(t1, 0.01)
+        s2 = team_strength.get(t2, 0.01)
+        return s1 / max(s1 + s2, 1e-10)
+
+    # Build seed→team_id lookup per region from model_probs + team_metadata.
+    # We rely on metadata being embedded in model_probs keys only if the
+    # LeverageCalculator has team_metadata; otherwise skip filtering.
+    scorer = PathProtectionScorer()
+    filtered: List["BracketConfiguration"] = []
+
+    for bracket in brackets:
+        picks_list = _bracket_config_to_pick_list(
+            bracket, model_probs, _approx_predict_fn,
+        )
+        if not picks_list:
+            # Can't score — keep bracket as-is
+            filtered.append(bracket)
+            continue
+        score = scorer.compute_path_protection_score(
+            picks_list, _approx_predict_fn, {}, scoring_system,
+        )
+        if score >= min_score:
+            filtered.append(bracket)
+
+    return filtered
+
+
+def _bracket_config_to_pick_list(
+    bracket: "BracketConfiguration",
+    model_probs: Dict[str, Dict[str, float]],
+    predict_fn,
+) -> List:
+    """Convert a BracketConfiguration's picks dict to a BracketPick list.
+
+    Replays the bracket round-by-round using the picks dict (falling back
+    to the highest-strength team when a game is missing).  Returns a flat
+    list of BracketPick objects suitable for PathProtectionScorer.
+
+    The region-based bracket structure is inferred from team_metadata
+    embedded in model_probs; if regional data is unavailable the function
+    returns an empty list so callers can skip scoring gracefully.
+    """
+    try:
+        from .bracket_search import BracketPick
+    except Exception:
+        return []
+
+    picks_dict = getattr(bracket, "picks", {}) or {}
+
+    # Build seed map from the picks dict keys.  R64 keys encode region and
+    # seed pair: "R64_{region}_{high}v{low}".  Extract all teams this way.
+    seed_map_by_region: Dict[str, Dict[int, str]] = {r: {} for r in _PP_REGIONS}
+    for key, winner in picks_dict.items():
+        if not key.startswith("R64_"):
+            continue
+        # key = "R64_East_1v16"
+        parts = key.split("_")
+        if len(parts) < 4:
+            continue
+        region = parts[1]
+        seed_part = parts[2]  # e.g. "1v16"
+        if "v" not in seed_part:
+            continue
+        hs, ls = seed_part.split("v", 1)
+        try:
+            high_seed, low_seed = int(hs), int(ls)
+        except ValueError:
+            continue
+        # Identify which team is which seed from model_probs by finding both
+        # teams in the picks_dict for this game — winner is known; loser is
+        # the other team in the R64 matchup.
+        loser = None
+        for t in model_probs:
+            if t != winner:
+                # Check if this team could be the low or high seed opponent
+                # (we don't store loser explicitly, so accept any team that
+                # appears in at least one other R64 key for same region)
+                pass
+        # Simpler: just record winner's seed based on which side they're on.
+        if region in seed_map_by_region:
+            seed_map_by_region[region][high_seed] = winner  # best guess
+
+    if not any(seed_map_by_region.values()):
+        return []
+
+    picks_list: List = []
+    game_idx = 0
+
+    # R64
+    region_r64: Dict[str, List[str]] = {}
+    for region in _PP_REGIONS:
+        r64: List[str] = []
+        for high_seed, low_seed in _PP_SEED_ORDER:
+            key = f"R64_{region}_{high_seed}v{low_seed}"
+            winner = picks_dict.get(key, "")
+            if not winner:
+                continue
+            p_val = 0.6  # placeholder — winner was explicitly picked
+            picks_list.append(BracketPick(
+                round_num=0, game_idx=game_idx,
+                winner_id=winner, loser_id="",
+                win_probability=p_val,
+            ))
+            r64.append(winner)
+            game_idx += 1
+        region_r64[region] = r64
+
+    # R32
+    region_r32: Dict[str, List[str]] = {}
+    for region in _PP_REGIONS:
+        r32: List[str] = []
+        prev = region_r64.get(region, [])
+        for idx in range(0, len(prev), 2):
+            if idx + 1 >= len(prev):
+                break
+            key = f"R32_{region}_{idx // 2 + 1}"
+            winner = picks_dict.get(key, "")
+            if not winner:
+                winner = prev[idx]  # fallback to first team
+            p_val = predict_fn(winner, prev[idx + 1] if winner == prev[idx] else prev[idx])
+            picks_list.append(BracketPick(
+                round_num=1, game_idx=game_idx,
+                winner_id=winner, loser_id="",
+                win_probability=p_val,
+            ))
+            r32.append(winner)
+            game_idx += 1
+        region_r32[region] = r32
+
+    # S16
+    region_s16: Dict[str, List[str]] = {}
+    for region in _PP_REGIONS:
+        s16: List[str] = []
+        prev = region_r32.get(region, [])
+        for idx in range(0, len(prev), 2):
+            if idx + 1 >= len(prev):
+                break
+            key = f"S16_{region}_{idx // 2 + 1}"
+            winner = picks_dict.get(key, "")
+            if not winner:
+                winner = prev[idx]
+            picks_list.append(BracketPick(
+                round_num=2, game_idx=game_idx,
+                winner_id=winner, loser_id="",
+                win_probability=0.6,
+            ))
+            s16.append(winner)
+            game_idx += 1
+        region_s16[region] = s16
+
+    # E8
+    region_e8: Dict[str, str] = {}
+    for region in _PP_REGIONS:
+        prev = region_s16.get(region, [])
+        if len(prev) < 2:
+            continue
+        winner = picks_dict.get(f"E8_{region}") or picks_dict.get(f"E8_{region}_1") or prev[0]
+        picks_list.append(BracketPick(
+            round_num=3, game_idx=game_idx,
+            winner_id=winner, loser_id="",
+            win_probability=0.6,
+        ))
+        region_e8[region] = winner
+        game_idx += 1
+
+    # F4
+    f4_winners: List[str] = []
+    for r1, r2, key1, key2 in [
+        ("East", "West", "F4_East_West", "F4_1"),
+        ("South", "Midwest", "F4_South_Midwest", "F4_2"),
+    ]:
+        t1 = region_e8.get(r1, "")
+        winner = picks_dict.get(key1) or picks_dict.get(key2) or t1
+        if winner:
+            picks_list.append(BracketPick(
+                round_num=4, game_idx=game_idx,
+                winner_id=winner, loser_id="",
+                win_probability=0.6,
+            ))
+            f4_winners.append(winner)
+            game_idx += 1
+
+    # CHAMP
+    champion = picks_dict.get("CHAMP") or picks_dict.get("CHAMP_1") or getattr(bracket, "champion", "")
+    if champion:
+        picks_list.append(BracketPick(
+            round_num=5, game_idx=game_idx,
+            winner_id=champion, loser_id="",
+            win_probability=0.6,
+        ))
+
+    return picks_list
+
+
 class ParetoOptimizer:
     """
     Generates Pareto-optimal brackets along risk/reward frontier.
@@ -744,19 +982,25 @@ class ParetoOptimizer:
         num_brackets: int = 5
     ) -> List[BracketConfiguration]:
         """
-        Generate brackets along Pareto frontier.
-        
+        Generate brackets along Pareto frontier with path protection filtering.
+
+        Generates candidate brackets at evenly-spaced risk levels, scores each
+        for internal path consistency using PathProtectionScorer, and filters
+        out brackets that score below the 0.85 protocol threshold.  If all
+        candidates fail the filter, the full unfiltered list is returned so
+        that downstream optimizers always have seeds to work from.
+
         Args:
             num_brackets: Number of brackets to generate
-            
+
         Returns:
             List of bracket configurations from conservative to aggressive
         """
         brackets = []
-        
+
         # Risk levels from 0 (chalk) to 1 (max contrarian)
         risk_levels = np.linspace(0, 1, num_brackets)
-        
+
         for risk in risk_levels:
             if risk < 0.2:
                 strategy = "chalk"
@@ -764,11 +1008,20 @@ class ParetoOptimizer:
                 strategy = "balanced"
             else:
                 strategy = "contrarian"
-            
+
             bracket = self._generate_bracket(risk, strategy)
             brackets.append(bracket)
-        
-        return brackets
+
+        # Path protection filtering (Protocol Section 4.4).
+        # Build an approximate predict_fn from model_probs so we can use
+        # PathProtectionScorer without requiring a real pairwise model.
+        filtered = _filter_brackets_by_path_protection(
+            brackets,
+            model_probs=self.calculator.model_probs,
+            scoring_system=self.calculator.scoring_system,
+            min_score=0.85,
+        )
+        return filtered if filtered else brackets
     
     def _generate_bracket(
         self,
