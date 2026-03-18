@@ -585,10 +585,19 @@ class SOTAPipelineConfig:
     model_complexity: str = "standard"
 
     # --- Brier-optimal post-processing (WS2) ---
-    enable_brier_sharpening: bool = True  # Power-transform sharpening for Brier score optimization
+    # Protocol v2: Sharpening is PROHIBITED for Kaggle submissions.
+    # ESPN pathway may opt-in via enable_espn_sharpening.
+    enable_brier_sharpening: bool = False  # OFF for Kaggle (Protocol Section 3.3)
+    enable_espn_sharpening: bool = False  # Separate ESPN flag — opt-in per pool
     brier_sharpening_alpha_bounds: Tuple[float, float] = (0.5, 2.0)
-    enable_seed_overrides: bool = True  # Snap extreme matchups to historical seed-performance rates
+    enable_seed_overrides: bool = False  # OFF for Kaggle (Protocol Section 3.3)
     seed_override_threshold: float = 0.08  # Max distance from historical to snap
+
+    # --- Multi-metric selection gate (Protocol Section 3.1) ---
+    brier_gate_threshold: float = 0.190
+    log_loss_gate_threshold: float = 0.560
+    brier_log_divergence_threshold: float = 0.015
+    use_unweighted_brier: bool = True  # Protocol: unweighted Brier for model selection
 
     # --- goto_conversion (favourite-longshot bias correction) ---
     # The goto_conversion method (gotoConversion/goto_conversion on GitHub)

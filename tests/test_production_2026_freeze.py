@@ -300,13 +300,15 @@ def test_config_forbidden_flags_disabled():
     forbidden_flags = [
         "enable_gnn", "enable_transformer", "enable_embedding_projections",
         "use_agent_orchestration",
+        # Protocol v2: sharpening and seed overrides OFF for Kaggle
+        "enable_brier_sharpening", "enable_seed_overrides",
     ]
     for flag in forbidden_flags:
         assert payload.get(flag) is False, f"{flag} must be false, got {payload.get(flag)}"
     # These are now enabled in production
     enabled_flags = [
-        "enable_brier_sharpening", "enable_round_weighted_calibration",
-        "enable_stacking", "enable_bayesian_bt", "enable_seed_overrides",
+        "enable_round_weighted_calibration",
+        "enable_stacking", "enable_bayesian_bt",
         "enable_feature_selection", "enable_goto_conversion",
     ]
     for flag in enabled_flags:

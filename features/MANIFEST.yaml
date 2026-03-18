@@ -1,0 +1,256 @@
+# Feature Tier Classification for Point-in-Time (PIT) Protocol
+# Protocol v2, Section 2: Data Integrity
+#
+# Tier 1 (Static):    Does not change within a season (seed, conference, preseason)
+# Tier 2 (Cumulative): Computed from game-by-game data we control.
+#                       LOYO rule: use only games played before tournament start date.
+# Tier 3 (External):  Sourced from third-party systems that update continuously.
+#                       LOYO rule: use Selection Sunday snapshot for that year.
+#
+# TEAM_FEATURE_DIM = 79 (71 base + 2 graph SOS + 3 win quality + 3 coaching metrics)
+
+---
+version: "2.0"
+total_features: 79
+
+tier_1_static:
+  description: "Immutable at tournament time. No PIT restriction needed."
+  features:
+    - name: seed_strength
+      description: "Tournament seed (1-16) mapped to strength category"
+    - name: preseason_ap_rank
+      description: "Preseason AP ranking (0 = unranked)"
+      sparse: true
+      missing_default: 0
+    - name: conf_tourney_champ
+      description: "Conference tournament champion flag (1.0 or 0.0)"
+
+tier_2_cumulative:
+  description: >
+    Computed from game-by-game data we control. For LOYO, must use only
+    games played before tournament start date for that year.
+  features:
+    # Core Efficiency (3)
+    - name: adj_off_eff
+      description: "Adjusted offensive efficiency"
+    - name: adj_def_eff
+      description: "Adjusted defensive efficiency"
+    - name: adj_tempo
+      description: "Adjusted pace of play"
+
+    # Four Factors - Offense (4)
+    - name: efg_pct
+      description: "Effective field goal percentage"
+    - name: to_rate
+      description: "Turnover rate"
+    - name: orb_rate
+      description: "Offensive rebound rate"
+    - name: ft_rate
+      description: "Free throw rate"
+
+    # Four Factors - Defense (4)
+    - name: opp_efg_pct
+      description: "Opponent effective field goal percentage"
+    - name: opp_to_rate
+      description: "Opponent turnover rate"
+    - name: drb_rate
+      description: "Defensive rebound rate"
+    - name: opp_ft_rate
+      description: "Opponent free throw rate"
+
+    # Player Metrics (6)
+    - name: total_rapm
+      description: "Total Regularized Adjusted Plus-Minus"
+    - name: top5_rapm
+      description: "Top-5 players RAPM"
+    - name: bench_rapm
+      description: "Bench RAPM"
+    - name: total_warp
+      description: "Wins Above Replacement Player"
+    - name: roster_continuity
+      description: "Percentage of minutes returning from prior season"
+    - name: transfer_impact
+      description: "Impact of transfers on roster"
+
+    # Experience/Depth (3)
+    - name: avg_experience
+      description: "Average years of experience"
+    - name: bench_depth
+      description: "Bench depth score"
+    - name: injury_risk
+      description: "Current injury risk assessment"
+
+    # Volatility/Entropy (4)
+    - name: lead_volatility
+      description: "Average lead volatility in games"
+    - name: entropy
+      description: "Game flow entropy (clustering)"
+    - name: lead_sustainability
+      description: "Ability to maintain leads"
+    - name: comeback_factor
+      description: "Comeback propensity from deficits"
+
+    # Shot Quality (2)
+    - name: xp_per_poss
+      description: "Expected points per possession"
+    - name: shot_distribution
+      description: "Shot distribution quality score"
+
+    # Schedule Strength (4)
+    - name: sos_adj_em
+      description: "Schedule of opponents (AdjEM average)"
+    - name: sos_opp_o
+      description: "Schedule opponent offensive efficiency average"
+    - name: sos_opp_d
+      description: "Schedule opponent defensive efficiency average"
+    - name: ncsos_adj_em
+      description: "Non-conference schedule strength"
+
+    # Win Quality (5)
+    - name: sor
+      description: "Strength of Record (Poisson Binomial)"
+    - name: wab
+      description: "Wins Above Bubble"
+    - name: wab_poisson
+      description: "WAB via Poisson Binomial"
+    - name: q1_win_pct
+      description: "Quad 1 win percentage"
+    - name: elite_sos
+      description: "Elite schedule strength (top-30 opponents only)"
+
+    # Momentum (1)
+    - name: momentum
+      description: "Last-10-game rolling AdjEM delta"
+
+    # Variance/Risk (2)
+    - name: three_pt_variance
+      description: "Game-to-game 3P% standard deviation (upset risk proxy)"
+    - name: pace_adj_variance
+      description: "Pace-adjusted margin variance"
+
+    # Shooting/Offensive (4)
+    - name: free_throw_pct
+      description: "Free throw percentage"
+    - name: three_pt_pct
+      description: "Three-point percentage"
+    - name: three_pt_rate
+      description: "Three-point attempt rate"
+    - name: three_pt_regression
+      description: "3P% above/below expected"
+
+    # Ball Movement (2)
+    - name: assist_to_turnover
+      description: "Assist-to-turnover ratio"
+    - name: assist_rate
+      description: "Assist rate (AST/FGM)"
+
+    # Defensive Control (2)
+    - name: steal_rate
+      description: "Steal rate per possession"
+    - name: block_rate
+      description: "Block rate per possession"
+
+    # Opponent Shot Selection (2)
+    - name: opp_two_pt_pct
+      description: "Opponent 2-point percentage allowed"
+    - name: opp_three_pt_attempt_rate
+      description: "Opponent 3-point attempt rate (forcing)"
+
+    # Conference Context (1)
+    - name: conference_adj_em
+      description: "Conference average AdjEM"
+
+    # Defensive Quality (1)
+    - name: def_xp_per_poss
+      description: "Defensive expected points per possession"
+
+    # Foul/Risk (1)
+    - name: foul_rate
+      description: "Fouls per possession (tournament foul trouble risk)"
+
+    # Luck Factor (1)
+    - name: luck
+      description: "Luck factor (actual% - expected%)"
+
+    # Win Percentage (1)
+    - name: win_pct
+      description: "Straight winning percentage"
+
+    # Elo (1)
+    - name: elo_rating
+      description: "Elo rating (MOV-adjusted, K=38)"
+
+    # Tournament Context (3)
+    - name: rest_days
+      description: "Days since last game before tournament"
+    - name: top5_minutes_share
+      description: "Top-5 players minute share (roster dependency)"
+    - name: neutral_site_win_pct
+      description: "Neutral site winning percentage"
+
+    # Home Court (1)
+    - name: home_court_dependence
+      description: "Home AdjEM advantage (location sensitivity)"
+
+    # Win Quality Advanced (3)
+    - name: best_win_percentile
+      description: "Percentile rank of best win opponent"
+    - name: paper_tiger_score
+      description: "Record inflation vs schedule difficulty"
+    - name: dominance_ratio
+      description: "Quality-adjusted margin wins/losses"
+
+    # Pace Variance (1)
+    - name: pace_variance
+      description: "Game-to-game pace variance"
+
+    # Tournament Resume (1)
+    - name: tournament_resume
+      description: "Bayesian-shrunk composite of Q1%, road/neutral%, SOR, elite SOS"
+
+    # Position-Specific Depth (2)
+    - name: backcourt_rapm
+      description: "Backcourt RAPM split"
+    - name: frontcourt_rapm
+      description: "Frontcourt RAPM split"
+
+    # Coach Tournament Experience (4)
+    - name: coach_tournament_exp
+      description: "Coach tournament appearances"
+      sparse: true
+      missing_default: 0
+    - name: coach_tournament_win_rate
+      description: "Coach tournament win percentage"
+      sparse: true
+      missing_default: 0.5
+    - name: coach_deep_run_rate
+      description: "Coach fraction of tournament appearances reaching F4+"
+    - name: coach_stage_consistency
+      description: "Weighted measure of reaching late rounds"
+
+    # Per-Stage Coaching (3)
+    - name: coach_f4_appearances
+      description: "Final Four appearances (log-scaled)"
+    - name: coach_e8_appearances
+      description: "Elite Eight appearances (log-scaled)"
+    - name: coach_s16_appearances
+      description: "Sweet Sixteen appearances (log-scaled)"
+
+    # Graph-Theoretic SOS (2)
+    - name: pagerank_sos
+      description: "PageRank-derived schedule strength"
+    - name: multi_hop_sos
+      description: "Multi-hop propagated schedule strength"
+
+tier_3_external:
+  description: >
+    Sourced from third-party systems that update continuously. For LOYO,
+    must use Selection Sunday snapshot (or latest pre-tournament date) for that year.
+    Store snapshots in features/snapshots/ as dated CSVs (e.g., kenpom_2019-03-17.csv).
+  features:
+    - name: external_rating_composite
+      description: "WS3 meta-ranking of 100+ systems (KenPom, NET, Sagarin, BPI, Torvik)"
+      sources: ["kenpom", "net", "sagarin", "bpi", "torvik", "massey"]
+    - name: external_rating_spread
+      description: "Disagreement across external rating systems"
+      sources: ["kenpom", "net", "sagarin", "bpi", "torvik", "massey"]
