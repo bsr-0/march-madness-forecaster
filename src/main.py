@@ -1398,6 +1398,13 @@ def run_backtest_unified(args):
     result = backtester.run_backtest(config)
     print(f"\n{result.summary()}")
 
+    if not result.year_mode_results:
+        print(
+            "\nWARNING: Backtest produced ZERO results. "
+            "All requested years were skipped (no historical data found). "
+            "Check that tournament result files exist in data/raw/historical/."
+        )
+
     if args.output:
         # Serialize results
         out = {
@@ -1425,6 +1432,12 @@ def run_backtest_unified(args):
 
         if result.summary_by_mode:
             out["summary_by_mode"] = result.summary_by_mode
+
+        if not out["results"]:
+            print(
+                f"\nWARNING: Writing empty results to {args.output}. "
+                "This artifact will not be useful for downstream consumers."
+            )
 
         with open(args.output, "w") as f:
             _json.dump(out, f, indent=2)
