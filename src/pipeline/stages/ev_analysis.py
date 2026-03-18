@@ -251,6 +251,48 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
     # Pool EV analysis by strategy
     ev.pool_ev_analysis = pool_analysis.strategy_evs if hasattr(pool_analysis, "strategy_evs") else {}
 
+    # --- ESPN multi-bracket portfolio (Protocol Section 4.5) ---
+    # Generate risk-profiled brackets via ESPNPoolPortfolio when the pool
+    # has Pareto seed brackets to optimize from.
+    if pipeline.config.espn_n_brackets >= 1 and pool_analysis.pareto_brackets:
+        try:
+            from ...optimization.bracket_portfolio import ESPNPoolPortfolio
+
+            # Build seed/region lookups from team metadata
+            team_seeds = {tid: tm.seed for tid, tm in team_metadata.items()}
+            team_regions = {tid: tm.region for tid, tm in team_metadata.items()}
+
+            portfolio = ESPNPoolPortfolio(
+                predict_fn=pipeline.predict,
+                public_picks=public_picks,
+                team_seeds=team_seeds,
+                team_regions=team_regions,
+                scoring_system=ev_scoring,
+            )
+            profile_names = [
+                p.strip()
+                for p in pipeline.config.espn_risk_profiles.split(",")
+            ]
+            espn_results = portfolio.generate(
+                profile_names=profile_names,
+                pool_size=pipeline.config.ev_pool_size,
+                base_bracket=pool_analysis.pareto_brackets[0],
+            )
+            ev.espn_portfolio = [
+                {
+                    "profile": name,
+                    "bracket": bracket.to_dict() if hasattr(bracket, "to_dict") else {},
+                }
+                for name, bracket in espn_results
+            ]
+            logger.info(
+                "ESPN portfolio: generated %d brackets (%s)",
+                len(espn_results),
+                ", ".join(name for name, _ in espn_results),
+            )
+        except Exception as exc:
+            logger.warning("ESPNPoolPortfolio generation failed: %s", exc)
+
     # Bracket portfolio summary from base report
     ev.bracket_portfolio_summary = artifacts.get("bracket_portfolio", {})
 
