@@ -79,6 +79,20 @@ try:
 except ImportError:
     BMA_AVAILABLE = False
 
+# Brier-objective LightGBM (Protocol Section 3.3, Phase 4)
+try:
+    from ...ml.ensemble.brier_objective import BrierLightGBMRanker
+    BRIER_LGB_AVAILABLE = True
+except ImportError:
+    BRIER_LGB_AVAILABLE = False
+
+# Calibration-first pipeline (Phase 4 research)
+try:
+    from ...ml.ensemble.calibration_first import CalibrationFirstPipeline
+    CALIBRATION_FIRST_AVAILABLE = True
+except ImportError:
+    CALIBRATION_FIRST_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -986,7 +1000,12 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 best_params = {k: v for k, v in tuning_result.best_params.items() if k != "num_rounds"}
                 best_num_rounds = tuning_result.best_params.get("num_rounds", 200)
 
-                lgb_ranker = LightGBMRanker(params=best_params)
+                _LGBClass = (
+                    BrierLightGBMRanker
+                    if pipeline.config.use_brier_objective and BRIER_LGB_AVAILABLE
+                    else LightGBMRanker
+                )
+                lgb_ranker = _LGBClass(params=best_params)
                 lgb_ranker.train(
                     train_X, train_y,
                     feature_names=feature_names,
@@ -1008,7 +1027,12 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                     "cv_brier_scores": [round(r.brier_score, 5) for r in tuning_result.cv_results],
                 }
             else:
-                lgb_ranker = LightGBMRanker()
+                _LGBClass = (
+                    BrierLightGBMRanker
+                    if pipeline.config.use_brier_objective and BRIER_LGB_AVAILABLE
+                    else LightGBMRanker
+                )
+                lgb_ranker = _LGBClass()
                 lgb_ranker.train(
                     train_X, train_y,
                     feature_names=feature_names,
@@ -1022,6 +1046,57 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 lgb_trained = True
         except Exception as e:
             tuning_stats["lightgbm_error"] = str(e)
+
+    # --- Calibration-first pipeline (Phase 4 research) ---
+    # When enabled, runs a 4-pass training loop that uses calibration error
+    # as a regularization signal.  Requires a calibration fold (uses the
+    # dev split already carved out above) and enough training data.
+    calfirst_trained = False
+    if (
+        pipeline.config.enable_calibration_first
+        and CALIBRATION_FIRST_AVAILABLE
+        and LIGHTGBM_AVAILABLE
+        and valid_set is not None
+        and train_samples >= 60
+    ):
+        try:
+            cal_X, cal_y = valid_set  # dev split serves as calibration fold
+            calfirst = CalibrationFirstPipeline(
+                alpha=pipeline.config.calibration_first_alpha,
+                fallback_on_regression=pipeline.config.calibration_first_fallback,
+            )
+
+            def _lgb_factory():
+                _Cls = (
+                    BrierLightGBMRanker
+                    if pipeline.config.use_brier_objective and BRIER_LGB_AVAILABLE
+                    else LightGBMRanker
+                )
+                return _Cls()
+
+            calfirst_result = calfirst.fit(
+                train_X, train_y, cal_X, cal_y,
+                base_model_factory=_lgb_factory,
+            )
+            tuning_stats["calibration_first"] = {
+                "ece_before": round(calfirst_result.ece_before, 5),
+                "ece_after": round(calfirst_result.ece_after, 5),
+                "brier_before": round(calfirst_result.brier_before, 5),
+                "brier_after": round(calfirst_result.brier_after, 5),
+                "temperature": round(calfirst_result.temperature, 4),
+                "n_passes": calfirst_result.n_passes,
+                "fell_back": calfirst_result.fell_back,
+            }
+            calfirst_trained = True
+            logger.info(
+                "CalibrationFirst: ECE %.4f→%.4f, Brier %.4f→%.4f, fell_back=%s",
+                calfirst_result.ece_before, calfirst_result.ece_after,
+                calfirst_result.brier_before, calfirst_result.brier_after,
+                calfirst_result.fell_back,
+            )
+        except Exception as e:
+            tuning_stats["calibration_first_error"] = str(e)
+            logger.warning("CalibrationFirstPipeline failed: %s", e)
 
     # --- XGBoost training (experimental only in Phase 2) ---
     xgb_trained = False
