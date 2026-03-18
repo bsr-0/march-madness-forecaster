@@ -997,14 +997,26 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                     sample_weight=train_sample_weight,
                 )
 
-                best_params = {k: v for k, v in tuning_result.best_params.items() if k != "num_rounds"}
+                # Filter out non-hyperparameter keys to avoid silently
+                # overriding the objective that BrierLightGBMRanker sets.
+                _exclude_keys = {"num_rounds", "objective", "metric"}
+                best_params = {
+                    k: v for k, v in tuning_result.best_params.items()
+                    if k not in _exclude_keys
+                }
                 best_num_rounds = tuning_result.best_params.get("num_rounds", 200)
 
-                _LGBClass = (
-                    BrierLightGBMRanker
-                    if pipeline.config.use_brier_objective and BRIER_LGB_AVAILABLE
-                    else LightGBMRanker
-                )
+                _use_brier = pipeline.config.use_brier_objective and BRIER_LGB_AVAILABLE
+                if _use_brier:
+                    # Optuna tuned hyperparams under log loss; Brier objective
+                    # has a flatter loss surface so optimal regularisation may
+                    # differ.  Log the mismatch so operators can assess.
+                    logger.warning(
+                        "BrierLightGBMRanker: hyperparams were tuned under "
+                        "log-loss objective.  Regularisation params (lambda, "
+                        "num_leaves) may be suboptimal for Brier training.",
+                    )
+                _LGBClass = BrierLightGBMRanker if _use_brier else LightGBMRanker
                 lgb_ranker = _LGBClass(params=best_params)
                 lgb_ranker.train(
                     train_X, train_y,
@@ -1049,8 +1061,14 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
 
     # --- Calibration-first pipeline (Phase 4 research) ---
     # When enabled, runs a 4-pass training loop that uses calibration error
-    # as a regularization signal.  Requires a calibration fold (uses the
-    # dev split already carved out above) and enough training data.
+    # as a regularization signal.  Requires a dedicated calibration fold
+    # that is statistically independent from the dev fold (used for early
+    # stopping) to avoid data leakage (Walsh & Joshi 2024, Section 3).
+    #
+    # Data layout when calibration-first is active:
+    #   eval_X was already split into dev (40%) and eval (60%) above.
+    #   We further split eval into cal (first half) and eval (second half)
+    #   so that: dev → early stopping, cal → calibration pipeline, eval → final eval.
     calfirst_trained = False
     if (
         pipeline.config.enable_calibration_first
@@ -1058,9 +1076,19 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         and LIGHTGBM_AVAILABLE
         and valid_set is not None
         and train_samples >= 60
+        and valid_samples >= 30  # Need enough eval left after carving cal fold
     ):
         try:
-            cal_X, cal_y = valid_set  # dev split serves as calibration fold
+            # Carve a calibration fold from the eval set (first half).
+            # This is independent of the dev fold used for early stopping.
+            cal_count = valid_samples // 2
+            cal_X = eval_X[:cal_count]
+            cal_y = eval_y[:cal_count]
+            # Shrink eval to the remaining samples for unbiased evaluation
+            eval_X = eval_X[cal_count:]
+            eval_y = eval_y[cal_count:]
+            valid_samples = len(eval_y)
+
             calfirst = CalibrationFirstPipeline(
                 alpha=pipeline.config.calibration_first_alpha,
                 fallback_on_regression=pipeline.config.calibration_first_fallback,
@@ -1087,6 +1115,14 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 "n_passes": calfirst_result.n_passes,
                 "fell_back": calfirst_result.fell_back,
             }
+
+            # Add the calibration-first model to the ensemble candidates.
+            # Generate eval predictions on the (now independent) eval fold.
+            calfirst_model = calfirst_result.model
+            if valid_samples > 0 and calfirst_model is not None:
+                calfirst_eval_preds = calfirst_model.predict(eval_X)
+                trained_models.append(("calfirst", calfirst_model, calfirst_eval_preds))
+
             calfirst_trained = True
             logger.info(
                 "CalibrationFirst: ECE %.4f→%.4f, Brier %.4f→%.4f, fell_back=%s",

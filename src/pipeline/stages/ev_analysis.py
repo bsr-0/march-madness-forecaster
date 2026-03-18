@@ -254,16 +254,30 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
     # --- ESPN multi-bracket portfolio (Protocol Section 4.5) ---
     # Generate risk-profiled brackets via ESPNPoolPortfolio when the pool
     # has Pareto seed brackets to optimize from.
+    #
+    # ESPNPoolPortfolio.generate() needs a SearchBracket (List[BracketPick]),
+    # but pareto_brackets contain BracketConfiguration (Dict[str,str] picks).
+    # We reuse _bracket_config_to_search_bracket for the conversion — the
+    # same helper that _optimize_pareto_brackets_with_search uses.
     if pipeline.config.espn_n_brackets >= 1 and pool_analysis.pareto_brackets:
         try:
             from ...optimization.bracket_portfolio import ESPNPoolPortfolio
 
-            # Build seed/region lookups from team metadata
-            team_seeds = {tid: tm.seed for tid, tm in team_metadata.items()}
-            team_regions = {tid: tm.region for tid, tm in team_metadata.items()}
+            # Build seed/region lookups from team struct (same as bracket search)
+            _teams_by_region: Dict[str, Dict[int, str]] = {r: {} for r in _REGIONS}
+            team_seeds: Dict[str, int] = {}
+            team_regions: Dict[str, str] = {}
+            for tid, team in pipeline.team_struct.items():
+                if team.region not in _teams_by_region:
+                    continue
+                _teams_by_region[team.region][team.seed] = tid
+                team_seeds[tid] = team.seed
+                team_regions[tid] = team.region
+
+            predict_fn = pipeline.predict_probability
 
             portfolio = ESPNPoolPortfolio(
-                predict_fn=pipeline.predict,
+                predict_fn=predict_fn,
                 public_picks=public_picks,
                 team_seeds=team_seeds,
                 team_regions=team_regions,
@@ -273,15 +287,24 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
                 p.strip()
                 for p in pipeline.config.espn_risk_profiles.split(",")
             ]
+
+            # Convert the top Pareto bracket (BracketConfiguration) to a
+            # SearchBracket so the SA optimizer inside generate() can work.
+            seed_bracket = _bracket_config_to_search_bracket(
+                pool_analysis.pareto_brackets[0], _teams_by_region, predict_fn,
+            )
+
             espn_results = portfolio.generate(
                 profile_names=profile_names,
                 pool_size=pipeline.config.ev_pool_size,
-                base_bracket=pool_analysis.pareto_brackets[0],
+                base_bracket=seed_bracket,
             )
             ev.espn_portfolio = [
                 {
                     "profile": name,
-                    "bracket": bracket.to_dict() if hasattr(bracket, "to_dict") else {},
+                    "bracket": bracket.to_submission_dict()
+                    if hasattr(bracket, "to_submission_dict")
+                    else {},
                 }
                 for name, bracket in espn_results
             ]
