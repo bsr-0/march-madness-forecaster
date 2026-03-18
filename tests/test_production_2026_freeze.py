@@ -59,7 +59,7 @@ REQUIRED_PATH_STUBS = [
     "data/raw/teams_2026.json",
     "data/raw/torvik_2026.json",
     "data/raw/historical_games_2026.json",
-    "data/raw/cbbpy_rosters_2026.json",
+    "data/raw/rosters_2026.json",
     "data/raw/public_picks_2026.json",
     "data/raw/scoring_rules_2026.json",
     "artifacts/mc_calibration_2026.json",

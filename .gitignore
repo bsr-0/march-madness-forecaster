@@ -45,6 +45,10 @@ data/governance/
 
 # Pytest
 .pytest_cache/
+pytest-cache-files-*/
+
+# Backups
+data/raw/backups/
 
 # Coverage
 htmlcov/

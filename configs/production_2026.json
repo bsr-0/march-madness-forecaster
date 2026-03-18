@@ -65,7 +65,7 @@
   "teams_json": "data/raw/teams_2026.json",
   "torvik_json": "data/raw/torvik_2026.json",
   "historical_games_json": "data/raw/historical_games_2026.json",
-  "roster_json": "data/raw/cbbpy_rosters_2026.json",
+  "roster_json": "data/raw/rosters_2026.json",
   "public_picks_json": "data/raw/public_picks_2026.json",
   "scoring_rules_json": "data/raw/scoring_rules_2026.json",
   "mc_calibration_json": "artifacts/mc_calibration_2026.json",
