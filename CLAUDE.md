@@ -78,7 +78,8 @@ src/
    - `model_complexity: "standard"`, `probability_profile: "production"`, `mode: "calibration"`
    - `calibration_method: "temperature"`, `use_agent_orchestration: false`
    - `enable_gnn: false`, `enable_transformer: false`
-4. All experimental post-processing is disabled in production
+4. Disabled modules: `enable_gnn`, `enable_transformer`, `enable_seed_overrides`, `enable_brier_sharpening`, `enable_embedding_projections`
+   - Enabled modules: `enable_stacking`, `enable_feature_selection`, `enable_goto_conversion`, `enable_round_weighted_calibration`, `enable_bayesian_bt`
 5. Training years: 2016–2024 (no 2020, no 2025). Holdout: 2025. Target: 2026
 
 ## Data Integrity

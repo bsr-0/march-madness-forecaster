@@ -16,7 +16,7 @@ march-madness run-production-2026             # CLI alias
 
 **Production constraints (hard-fail on violation):**
 
-- **Model complexity:** `simple` — fixed-weight ensemble, no stacking, no learned feature selection
+- **Model complexity:** `standard` — ensemble with stacking, learned feature selection, and optimized weights via LOYO cross-validation
 - **Probability profile:** `production` — raw → temperature calibration → tournament shrinkage → clip
 - **Mode:** `calibration`
 - **Calibration method:** `temperature` (holdout-year tournament games only)
@@ -24,13 +24,19 @@ march-madness run-production-2026             # CLI alias
 - **Dev years:** 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024
 - **Holdout year:** 2025
 - **Target year:** 2026
+- **Stacking:** enabled (`enable_stacking = true`) — meta-learner ensemble stacking
+- **Feature selection:** enabled (`enable_feature_selection = true`) — automated feature importance pruning
+- **Goto conversion:** enabled (`enable_goto_conversion = true`) — favourite-longshot bias correction
+- **Round-weighted calibration:** enabled (`enable_round_weighted_calibration = true`) — per-round calibrator weighting
+- **Bayesian Bradley-Terry:** enabled (`enable_bayesian_bt = true`) — Bayesian pairwise comparison model
 - **GNN:** disabled (`enable_gnn = false`)
 - **Transformer:** disabled (`enable_transformer = false`)
 - **Agent orchestration:** disabled (`use_agent_orchestration = false`)
 - **Embedding projections:** disabled (`enable_embedding_projections = false`)
-- **All experimental post-processing:** disabled (seed overrides, Brier sharpening, goto conversion, round-weighted calibration, Bayesian Bradley-Terry)
+- **Seed overrides:** disabled (`enable_seed_overrides = false`)
+- **Brier sharpening:** disabled (`enable_brier_sharpening = false`)
 - **Strict leakage mode:** enabled
-- **Freeze file required:** enabled — `artifacts/freeze_manifest_2026.json` must exist and be consistent with config (hash, years, source file coverage)
+- **Freeze file required:** enabled — freeze manifest must exist and be consistent with config (hash, years, source file coverage)
 - **No "auto" paths:** every data path must be explicit; no runtime path resolution
 - **No CLI overrides:** the production entrypoint exposes no flags for model complexity, calibration method, training years, or experimental modules
 
@@ -49,36 +55,50 @@ The following modules exist in the codebase for research purposes and are **expl
 - **Agent orchestration** (`use_agent_orchestration`) — multi-agent pipeline coordination
 - **Seed overrides** (`enable_seed_overrides`) — manual seed-matchup probability adjustments
 - **Brier sharpening** (`enable_brier_sharpening`) — power-transform probability sharpening
+- **Embedding projections** (`enable_embedding_projections`) — dimensionality-reduced team embeddings
+
+Each of these is validated to be `false` by the production validator. Enabling any one of them causes an immediate `ProductionValidationError` and run termination.
+
+## Production Modules Enabled by Default
+
+The following modules are **required to be enabled** in the production validator and are part of the shipped 2026 predictor:
+
+- **Stacking** (`enable_stacking`) — meta-learner ensemble stacking
+- **Learned feature selection** (`enable_feature_selection`) — automated feature importance pruning
 - **Goto conversion** (`enable_goto_conversion`) — favourite-longshot bias correction
 - **Round-weighted calibration** (`enable_round_weighted_calibration`) — per-round calibrator weighting
 - **Bayesian Bradley-Terry** (`enable_bayesian_bt`) — Bayesian pairwise comparison model
-- **Stacking** (`enable_stacking`) — meta-learner ensemble stacking
-- **Learned feature selection** (`enable_feature_selection`) — automated feature importance pruning
-- **Embedding projections** (`enable_embedding_projections`) — dimensionality-reduced team embeddings
+- **Market blend** (`enable_market_blend`) — Vegas cross-reference integration
+- **Spread model** (`enable_spread_model`) — point spread modeling
+- **Recency weighting** (`enable_recency_weighting`) — recent game weighting
+- **Symmetric augmentation** (`enable_symmetric_augmentation`) — matchup symmetry data augmentation
+- **Multi-year training** (`enable_multi_year_training`) — cross-season training data
+- **LOYO cross-validation** (`enable_loyo_cv`) — Leave-One-Year-Out validation
+- **Optimized ensemble weights** (`optimize_ensemble_weights`) — LOYO-derived weight optimization
 
-Each of these is validated to be `false` / `0` by the production validator. Enabling any one of them causes an immediate `ProductionValidationError` and run termination.
+Setting any of these to `false` causes a `ProductionValidationError`.
 
 ## Architecture
 
 ```
-Data Ingestion        Feature Engineering       ML Ensemble            Probability Path
-──────────────        ───────────────────       ───────────            ───────────────
-cbbpy/sportsipy  ──►  fixed tabular features ─► simple fixed-weight ─► raw → calibrate → shrink → clip
-Torvik scraper        PIT-safe aggregates       ensemble (no stacking)   (production profile)
-ESPN public picks     no learned feature sel.   no GNN/transformer       calibrated probabilities only
-Kaggle Massey         domain checks + guards    no agent orchestration   holdout-year calibration
+Data Ingestion        Feature Engineering       ML Ensemble              Probability Path
+──────────────        ───────────────────       ───────────              ───────────────
+cbbpy/sportsipy  ──►  tabular features with  ─► standard ensemble with ─► raw → calibrate → shrink → clip
+Torvik scraper        learned feature sel.      stacking + LOYO weights    (production profile)
+ESPN public picks     PIT-safe aggregates       Bayesian Bradley-Terry     goto + round-weighted cal.
+Kaggle Massey         domain checks + guards    no GNN/transformer         holdout-year calibration
 ```
 
 
 **Key design principles:**
-- **Locked production path**: strict config validation hard-fails drift from the shipped setup (simple mode, production profile, calibration mode, no GNN/transformer/stacking/agent/market blending).
+- **Locked production path**: strict config validation hard-fails drift from the shipped setup (standard mode, production profile, calibration mode, no GNN/transformer/agent orchestration).
 - **Explicit year partition**: dev years are 2016-2024; holdout year is 2025; calibration years default to holdout years only.
 - **Calibration integrity**: calibrator fitting uses tournament-only rows from calibration years (season-level OOS by default).
-- **Distribution-shift mitigation**: production simple feature set excludes tournament-only and coverage-volatile terms (seed/travel/external blend) and applies fixed-feature selection with train/eval drift checks.
+- **Distribution-shift mitigation**: learned feature selection with train/eval drift checks prunes volatile features automatically.
 - **Point-in-time features**: every training sample uses only data available before game date, with per-year tournament cutoff dates.
 
 
-**What the production path does not use:** experimental post-processing, agent orchestration, GNN/transformer embeddings, stacking, and market blending are all disabled in locked production mode.
+**What the production path does not use:** agent orchestration, GNN/transformer embeddings, seed overrides, Brier sharpening, and embedding projections are all disabled in locked production mode.
 
 ## Installation
 
@@ -155,7 +175,7 @@ Key flags:
 - `--pool-size 100` — bracket pool size for strategy optimization
 - `--kaggle-dir data/kaggle` — for Massey Ordinals and seeds
 - `--enable-bracket-portfolio` — generate diverse bracket set for Kaggle
-- `--model-complexity simple|standard|full` — default is `simple` in production
+- `--model-complexity simple|standard|full` — default is `standard` in production
 - `--calibration temperature|isotonic|platt|none` — default is `temperature`
 - `--probability-profile production|experimental` — default is `production`
 - `--mode calibration|ev` — default is `calibration`
@@ -268,8 +288,8 @@ pytest tests/ --cov=src
 
 ## Technical Details
 
-- **Production simple features:** 8 fixed, stable features (efficiency/SOS/Elo/win%/FT%/momentum)
-- **Production ensemble:** simple fixed-weight tabular ensemble with no stacking, no GNN, no transformer
+- **Production features:** 79-dim team feature vector with learned feature selection (automated importance pruning)
+- **Production ensemble:** standard ensemble with stacking, LOYO-optimized weights, Bayesian Bradley-Terry, no GNN, no transformer
 - **Calibration:** temperature scaling on tournament-only calibration years (default holdout year 2025)
 - **Monte Carlo:** 50k simulations with configurable noise injection
 - **Training partition:** dev years 2016-2024, holdout year 2025 (production-locked defaults)
