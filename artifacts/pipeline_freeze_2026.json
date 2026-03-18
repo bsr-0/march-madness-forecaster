@@ -1,944 +1,275 @@
 {
-  "config_fields": {
-    "adaptive_max_features": true,
-    "admission_max_calibration_degradation": 0.01,
-    "admission_min_fold_improvement_rate": 0.6,
-    "admission_min_mean_brier_improvement": 0.0,
-    "bayesian_bt_prior_std": 2.0,
-    "betting_odds_json": null,
-    "bracket_json": null,
-    "bracket_source": "auto",
-    "brier_sharpening_alpha_bounds": [
-      0.5,
-      2.0
-    ],
-    "calibration_method": "temperature",
-    "calibration_years": null,
-    "coach_data_cutoff_year": null,
-    "coach_tournament_json": null,
-    "compute_budget_seconds": 3600.0,
-    "conf_champions_json": null,
-    "consistency_bonus_max": 0.0,
-    "consistency_normalizer": 15.0,
-    "correlation_threshold": 0.75,
-    "data_cache_dir": "data/raw",
-    "dev_years": [
-      2016,
-      2017,
-      2018,
-      2019,
-      2021,
-      2022,
-      2023,
-      2024
-    ],
-    "dual_deviation_strength": 0.15,
-    "dual_max_deviations": 5,
-    "dual_n_champion_candidates": 5,
-    "dual_strategy": "champion_boost",
-    "enable_ablation_study": false,
-    "enable_bayesian_bt": false,
-    "enable_bracket_portfolio": true,
-    "enable_brier_sharpening": false,
-    "enable_budget_degradation": true,
-    "enable_dual_submission": true,
-    "enable_embedding_projections": false,
-    "enable_external_ratings": true,
-    "enable_feature_scaling": true,
-    "enable_feature_selection": false,
-    "enable_gnn": false,
-    "enable_goto_conversion": false,
-    "enable_hyperparameter_tuning": true,
-    "enable_injury_severity_model": true,
-    "enable_loyo_cv": true,
-    "enable_market_blend": true,
-    "enable_massey_predictor": true,
-    "enable_multi_year_calibration": true,
-    "enable_multi_year_training": true,
-    "enable_positional_depth": true,
-    "enable_recency_weighting": true,
-    "enable_round_weighted_calibration": false,
-    "enable_round_weighted_training": true,
-    "enable_seed_overrides": false,
-    "enable_spread_model": true,
-    "enable_stability_filter": true,
-    "enable_stacking": false,
-    "enable_symmetric_augmentation": true,
-    "enable_tournament_adaptation": true,
-    "enable_transformer": false,
-    "enable_vegas_cross_reference": true,
-    "enable_vif_pruning": true,
-    "enable_womens_pipeline": true,
-    "enforce_feed_freshness": true,
-    "enforce_production_path": true,
-    "ensemble_lgb_weight": 0.15,
-    "ensemble_weight_regularization": 0.1,
-    "ensemble_xgb_weight": 0.15,
-    "ev_archetype_overrides": null,
-    "ev_auto_refresh": false,
-    "ev_contrarian_strength": 1.0,
-    "ev_enable_archetypes": false,
-    "ev_enable_search": false,
-    "ev_payout_structure": "tiered",
-    "ev_pool_size": 100,
-    "ev_pool_type": "espn_national",
-    "ev_scoring_system": "standard",
-    "ev_target_percentile": 0.05,
-    "experimental_enable_lgb_classifier": true,
-    "experimental_enable_xgb_classifier": true,
-    "external_ratings_dir": null,
-    "feature_importance_threshold": 0.03,
-    "fit_massey_on_training": true,
-    "freeze_file": null,
-    "game_level_min_games_per_team": 5,
-    "gnn_temporal_decay": 0.5,
-    "goto_conversion_margin_bounds": [
-      0.0,
-      0.2
-    ],
-    "goto_conversion_margin_init": 0.05,
-    "historical_games_json": null,
-    "holdout_years": [
-      2025
-    ],
-    "injury_noise_samples": 10000,
-    "injury_report_json": null,
-    "kaggle_dir": null,
-    "kaggle_effective_pool_size": 3000,
-    "late_season_training_cutoff_days": 45,
-    "loyo_temporal_mode": "rolling_window",
-    "loyo_years": null,
-    "margin_first_training": false,
-    "market_blend_weight": 0.2,
-    "massey_blend_weight": 0.25,
-    "massey_blend_weight_bounds": [
-      0.05,
-      0.4
-    ],
-    "massey_min_calibration_samples": 30,
-    "massey_sigma": 4.5,
-    "massey_sigma_bounds": [
-      1.0,
-      25.0
-    ],
-    "max_features": 35,
-    "max_feed_age_hours": 168,
-    "mc_calibration_json": null,
-    "mc_noise_std": 0.16,
-    "mc_regional_correlation": 0.0,
-    "min_calibration_samples": 100,
-    "min_calibration_samples_hard": 80,
-    "min_ensemble_samples": 50,
-    "min_features": 15,
-    "min_public_sources": 2,
-    "min_rapm_players_per_team": 5,
-    "mode": "calibration",
-    "model_complexity": "standard",
-    "multi_year_games_dir": "auto",
-    "n_bootstrap": 10,
-    "num_simulations": 50000,
-    "optimize_ensemble_weights": true,
-    "optuna_n_trials": 15,
-    "optuna_timeout": 300,
-    "pipeline_mode": "production",
-    "pool_size": 100,
-    "portfolio_n_brackets": 1000,
-    "portfolio_n_simulations": 50000,
-    "pre_calibration_clip_hi": 0.999,
-    "pre_calibration_clip_lo": 0.001,
-    "preseason_ap_json": null,
-    "probability_profile": "production",
-    "production_calibration": "temperature",
-    "production_model_stack": "spread_logistic",
-    "public_picks_json": null,
-    "random_seed": 2026,
-    "recency_decay_floor": 0.3,
-    "recency_half_life": 0.3,
-    "require_freeze_file": false,
-    "roster_json": null,
-    "scoring_metric": "brier",
-    "scoring_rules_json": null,
-    "scrape_live": false,
-    "seed_override_threshold": 0.08,
-    "seed_prior_slope": 0.175,
-    "seed_prior_weight": 0.0,
-    "sports_reference_json": null,
-    "spread_sigma_init": 11.0,
-    "stability_threshold": 0.8,
-    "stacking_meta_learner": "lightgbm",
-    "stacking_min_samples_for_lgb": 80,
-    "strict_leakage_mode": true,
-    "team_locations_json": null,
-    "teams_json": null,
-    "temporal_cv_splits": 5,
-    "torvik_json": null,
-    "tournament_shrinkage": 0.06,
-    "training_year_decay": 0.85,
-    "training_year_min_weight": 0.15,
-    "training_years": null,
-    "transfer_portal_json": null,
-    "use_agent_orchestration": false,
-    "venue_locations_json": null,
-    "vif_threshold": 10.0,
-    "womens_cache_dir": null,
-    "womens_massey_blend_weight": 0.25,
-    "womens_model_complexity": "simple",
-    "womens_seed_only_mode": false,
-    "womens_seed_prior_weight": 0.4,
-    "womens_teams_csv": null,
-    "year": 2026
-  },
-  "config_hash": "d5ef7d885b872af3",
-  "constant_registry": [
-    {
-      "config_path": "ProprietaryMetrics._four_factors",
-      "current_value": [
-        0.4,
-        0.25,
-        0.2,
-        0.15
-      ],
-      "derivation": "Oliver 2004, Kubatko 2007 \u2014 published D1 regression coefficients",
-      "name": "four_factors_weights",
-      "notes": "",
-      "tier": 1,
-      "valid_range": [
-        0.0,
-        1.0
-      ]
-    },
-    {
-      "config_path": "SOTAPipelineConfig.vif_threshold",
-      "current_value": 10.0,
-      "derivation": "Belsley 1980 \u2014 standard multicollinearity cutoff",
-      "name": "vif_threshold",
-      "notes": "",
-      "tier": 1,
-      "valid_range": [
-        5.0,
-        20.0
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics.HCA_POINTS",
-      "current_value": 3.75,
-      "derivation": "Meta-analysis consensus: college basketball HCA is 3.5-4.0 points",
-      "name": "hca_points",
-      "notes": "",
-      "tier": 1,
-      "valid_range": [
-        2.5,
-        5.0
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics (derived: HCA_POINTS * 13.3)",
-      "current_value": 13.3,
-      "derivation": "FiveThirtyEight Elo methodology \u2014 published conversion factor",
-      "name": "elo_hca_multiplier",
-      "notes": "",
-      "tier": 1,
-      "valid_range": [
-        10.0,
-        16.0
-      ]
-    },
-    {
-      "config_path": "SOTAPipelineConfig.seed_prior_slope",
-      "current_value": 0.175,
-      "derivation": "Logistic fit on 40 years of public tournament data (1985-2024, N>2500)",
-      "name": "seed_prior_slope",
-      "notes": "",
-      "tier": 1,
-      "valid_range": [
-        0.1,
-        0.25
-      ]
-    },
-    {
-      "config_path": "SOTAPipelineConfig.pre_calibration_clip_lo/hi",
-      "current_value": [
-        0.03,
-        0.97
-      ],
-      "derivation": "Historical 1-vs-16 upset rate ~1.5%; 3% provides safety margin",
-      "name": "pre_calibration_clips",
-      "notes": "",
-      "tier": 1,
-      "valid_range": [
-        0.01,
-        0.1
-      ]
-    },
-    {
-      "config_path": "SOTAPipelineConfig.training_year_decay",
-      "current_value": 0.85,
-      "derivation": "Bounded (0,1), monotonically decreasing importance of older data",
-      "name": "training_year_decay",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        0.7,
-        0.95
-      ]
-    },
-    {
-      "config_path": "SOTAPipelineConfig.training_year_min_weight",
-      "current_value": 0.15,
-      "derivation": "Floor > 0 prevents discarding old data entirely",
-      "name": "training_year_min_weight",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        0.05,
-        0.3
-      ]
-    },
-    {
-      "config_path": "SOTAPipelineConfig.recency_half_life",
-      "current_value": 0.3,
-      "derivation": "Within-season temporal weighting; bounded, monotone effect",
-      "name": "recency_half_life",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        0.1,
-        0.8
-      ]
-    },
-    {
-      "config_path": "SOTAPipelineConfig.recency_decay_floor",
-      "current_value": 0.3,
-      "derivation": "Floor prevents discarding early-season games",
-      "name": "recency_decay_floor",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        0.1,
-        0.6
-      ]
-    },
-    {
-      "config_path": "SOTAPipelineConfig.late_season_training_cutoff_days",
-      "current_value": 45,
-      "derivation": "Bounded, monotone effect on sample size vs feature quality",
-      "name": "late_season_cutoff_days",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        20,
-        90
-      ]
-    },
-    {
-      "config_path": "monte_carlo._run_batch (hardcoded)",
-      "current_value": [
-        1.0,
-        0.6,
-        0.3,
-        0.15,
-        0.0,
-        0.0
-      ],
-      "derivation": "E2: Reclassified Tier 2\u21923. Monotonic structure is constrained but specific values (0.6, 0.3, 0.15) derived from ~160 region-years \u2014 insufficient to distinguish between alternatives. Requires sensitivity analysis",
-      "name": "round_correlation_decay",
-      "notes": "",
-      "tier": 3,
-      "valid_range": [
-        0.0,
-        1.0
-      ]
-    },
-    {
-      "config_path": "LightGBMRanker default params",
-      "current_value": 8,
-      "derivation": "Lower = more regularized; conservative for small N (~400 samples)",
-      "name": "lgb_num_leaves",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        4,
-        32
-      ]
-    },
-    {
-      "config_path": "LightGBMRanker default params",
-      "current_value": 50,
-      "derivation": "Higher = more regularized; ~12% of training data",
-      "name": "lgb_min_child_samples",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        10,
-        100
-      ]
-    },
-    {
-      "config_path": "XGBoostRanker default params",
-      "current_value": 3,
-      "derivation": "Lower = more regularized; standard shallow-tree choice",
-      "name": "xgb_max_depth",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        2,
-        6
-      ]
-    },
-    {
-      "config_path": "XGBoostRanker default params",
-      "current_value": 10,
-      "derivation": "Higher = more regularized",
-      "name": "xgb_min_child_weight",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        3,
-        30
-      ]
-    },
-    {
-      "config_path": "ensemble weights in _train_baseline_model",
-      "current_value": 0.45,
-      "derivation": "Calibrated from LOYO; 2 free DoF (3 weights sum to 1)",
-      "name": "ensemble_lgb_weight",
-      "notes": "Paired with xgb=0.35, logistic=0.20",
-      "tier": 3,
-      "valid_range": [
-        0.2,
-        0.7
-      ]
-    },
-    {
-      "config_path": "ensemble weights in _train_baseline_model",
-      "current_value": 0.35,
-      "derivation": "Calibrated from LOYO; coupled with lgb weight",
-      "name": "ensemble_xgb_weight",
-      "notes": "",
-      "tier": 3,
-      "valid_range": [
-        0.1,
-        0.6
-      ]
-    },
-    {
-      "config_path": "SOTAPipelineConfig.tournament_shrinkage",
-      "current_value": 0.0,
-      "derivation": "Disabled by default unless sensitivity proves value",
-      "name": "tournament_shrinkage",
-      "notes": "",
-      "tier": 3,
-      "valid_range": [
-        0.0,
-        0.25
-      ]
-    },
-    {
-      "config_path": "SOTAPipelineConfig.seed_prior_weight",
-      "current_value": 0.0,
-      "derivation": "Experimental-only; excluded from production DoF count. Disabled by default unless sensitivity proves value",
-      "name": "seed_prior_weight",
-      "notes": "",
-      "tier": 3,
-      "valid_range": [
-        0.0,
-        0.15
-      ]
-    },
-    {
-      "config_path": "SOTAPipelineConfig.consistency_bonus_max",
-      "current_value": 0.0,
-      "derivation": "Experimental-only; excluded from production DoF count. Disabled by default unless sensitivity proves value",
-      "name": "consistency_bonus_max",
-      "notes": "",
-      "tier": 3,
-      "valid_range": [
-        0.0,
-        0.06
-      ]
-    },
-    {
-      "config_path": "SOTAPipelineConfig.consistency_normalizer",
-      "current_value": 15.0,
-      "derivation": "Experimental-only; paired with consistency_bonus_max",
-      "name": "consistency_normalizer",
-      "notes": "",
-      "tier": 3,
-      "valid_range": [
-        5.0,
-        30.0
-      ]
-    },
-    {
-      "config_path": "SimulationConfig.noise_std",
-      "current_value": 0.16,
-      "derivation": "Changed 0.04\u21920.035\u21920.02\u21920.12\u21920.16; Lopez & Matthews (2015) \u2248 0.16-0.18",
-      "name": "mc_noise_std",
-      "notes": "",
-      "tier": 3,
-      "valid_range": [
-        0.02,
-        0.25
-      ]
-    },
-    {
-      "config_path": "SOTAPipelineConfig.mc_regional_correlation",
-      "current_value": 0.0,
-      "derivation": "Reduced from 0.25 during OOS fix round",
-      "name": "mc_regional_correlation",
-      "notes": "",
-      "tier": 3,
-      "valid_range": [
-        0.0,
-        0.3
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics._pythagorean_win_pct + rdof_audit baselines",
-      "current_value": 0.1735,
-      "derivation": "D1 fix: analytically derived k=ln(17/3)/10=0.1735 so AdjEM=+10 maps to exactly 0.850 win%. Prior value 0.145 gave 0.810, not 0.85 as documented.",
-      "name": "log5_scale",
-      "notes": "",
-      "tier": 1,
-      "valid_range": [
-        0.1,
-        0.25
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics._compute_elo (hardcoded)",
-      "current_value": 2.2,
-      "derivation": "FiveThirtyEight published Elo methodology dampening constant",
-      "name": "elo_dampening_numerator",
-      "notes": "",
-      "tier": 1,
-      "valid_range": [
-        1.5,
-        3.0
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics._compute_elo (hardcoded)",
-      "current_value": 0.001,
-      "derivation": "FiveThirtyEight published Elo methodology elo_diff scaling",
-      "name": "elo_dampening_denom_scale",
-      "notes": "",
-      "tier": 1,
-      "valid_range": [
-        0.0005,
-        0.005
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics._compute_elo_ratings + sota._load_year_samples",
-      "current_value": 0.25,
-      "derivation": "D2 fix: 25% regression toward mean (1500) at each season boundary. Matches FiveThirtyEight NFL Elo methodology (Silver, 2014). Reduces cold-start noise in early-season ratings.",
-      "name": "elo_season_regression",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        0.1,
-        0.5
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics._compute_elo K_BASE",
-      "current_value": 38.0,
-      "derivation": "MOV-adjusted Elo K-factor; bounded, monotone effect on update magnitude",
-      "name": "elo_k_base",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        20.0,
-        60.0
-      ]
-    },
-    {
-      "config_path": "sota.py _load_year_samples _WAB_K",
-      "current_value": 11.5,
-      "derivation": "log5 scaling denominator for WAB; bounded, controls sensitivity to AdjEM gap",
-      "name": "wab_k",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        5.0,
-        20.0
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics.BUBBLE_EM_PRIOR",
-      "current_value": 5.0,
-      "derivation": "Historical average AdjEM of ~45th-ranked team; Bayesian prior for WAB",
-      "name": "bubble_em_prior",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        2.0,
-        10.0
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics.MARGIN_CAP",
-      "current_value": 16.0,
-      "derivation": "Blowout cap; bounded, prevents extreme margins from distorting efficiency",
-      "name": "margin_cap",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        10.0,
-        25.0
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics._iterative_sos_adjust DAMPING",
-      "current_value": 0.7,
-      "derivation": "SOS convergence blend factor; bounded (0,1), higher = faster convergence",
-      "name": "sos_damping",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        0.4,
-        0.9
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics (hardcoded prior_weight=100)",
-      "current_value": 100.0,
-      "derivation": "Bayesian 3PT shrinkage prior strength; ~3 games of 3PA volume",
-      "name": "three_pt_prior_weight",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        30.0,
-        300.0
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics (hardcoded 0.345)",
-      "current_value": 0.345,
-      "derivation": "D1 average 3PT%; slowly drifts year-to-year but structurally bounded",
-      "name": "three_pt_league_avg",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        0.33,
-        0.36
-      ]
-    },
-    {
-      "config_path": "sota.py _train_baseline_model base_noise",
-      "current_value": 0.05,
-      "derivation": "PIT residual noise scale; bounded, proportional to season_remaining",
-      "name": "pit_noise_base",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        0.02,
-        0.1
-      ]
-    },
-    {
-      "config_path": "sota.py (feature_noise_weight = 1.0 - stability * 0.7)",
-      "current_value": 0.7,
-      "derivation": "How much feature stability reduces PIT noise; bounded [0,1]",
-      "name": "pit_stability_scaling",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        0.4,
-        0.9
-      ]
-    },
-    {
-      "config_path": "sota.py (feature_noise_weight *= 0.3 for PIT features)",
-      "current_value": 0.3,
-      "derivation": "Noise reduction multiplier for PIT-adjusted features; bounded (0,1)",
-      "name": "pit_feature_noise_reduction",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        0.1,
-        0.6
-      ]
-    },
-    {
-      "config_path": "sota.py (shrinkage = 0.10 toward league mean)",
-      "current_value": 0.1,
-      "derivation": "Regression toward league mean; bounded, monotone effect",
-      "name": "mean_regression_shrinkage",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        0.0,
-        0.25
-      ]
-    },
-    {
-      "config_path": "sota.py (min(0.9, 0.9 * season_remaining))",
-      "current_value": 0.9,
-      "derivation": "Maximum PIT blend weight; bounded, caps PIT override of end-of-season",
-      "name": "pit_weight_cap",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        0.5,
-        1.0
-      ]
-    },
-    {
-      "config_path": "SimulationConfig.injury_probability",
-      "current_value": 0.02,
-      "derivation": "Per-game injury probability; iteratively adjusted",
-      "name": "mc_injury_probability",
-      "notes": "",
-      "tier": 3,
-      "valid_range": [
-        0.0,
-        0.1
-      ]
-    },
-    {
-      "config_path": "monte_carlo._run_batch rng.uniform(0.05, 0.25)",
-      "current_value": 0.05,
-      "derivation": "Lower bound of injury severity logit shift; iteratively set",
-      "name": "mc_injury_severity_lo",
-      "notes": "",
-      "tier": 3,
-      "valid_range": [
-        0.01,
-        0.15
-      ]
-    },
-    {
-      "config_path": "monte_carlo._run_batch rng.uniform(0.05, 0.25)",
-      "current_value": 0.25,
-      "derivation": "Upper bound of injury severity logit shift; iteratively set",
-      "name": "mc_injury_severity_hi",
-      "notes": "",
-      "tier": 3,
-      "valid_range": [
-        0.1,
-        0.5
-      ]
-    },
-    {
-      "config_path": "monte_carlo._run_batch sigma=0.15 for cross-region",
-      "current_value": 0.15,
-      "derivation": "Cross-region (Final Four) noise lognormal sigma; iteratively set",
-      "name": "mc_lognormal_sigma",
-      "notes": "",
-      "tier": 3,
-      "valid_range": [
-        0.05,
-        0.3
-      ]
-    },
-    {
-      "config_path": "monte_carlo._run_batch max(0.2, ...)",
-      "current_value": 0.2,
-      "derivation": "Floor for regional noise multiplier; prevents zero-variance regions",
-      "name": "mc_region_noise_floor",
-      "notes": "",
-      "tier": 3,
-      "valid_range": [
-        0.05,
-        0.5
-      ]
-    },
-    {
-      "config_path": "monte_carlo.HISTORICAL_UPSET_RATES",
-      "current_value": {
-        "1v16": 0.015,
-        "2v15": 0.06,
-        "3v14": 0.15,
-        "4v13": 0.21,
-        "5v12": 0.36,
-        "6v11": 0.38,
-        "7v10": 0.39,
-        "8v9": 0.49
-      },
-      "derivation": "E1: Published first-round upset rates from ~2500+ tournament games. Used by validate_upset_rates() to calibrate MC simulation noise_std.",
-      "name": "historical_upset_rates",
-      "notes": "",
-      "tier": 1,
-      "valid_range": [
-        0.0,
-        1.0
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics.CONSISTENCY_PRIOR_STD",
-      "current_value": 8.0,
-      "derivation": "C8: D1 population scoring-margin stdev for consistency shrinkage. Bounded by D1 data distribution; analogous to pace_adj_variance prior.",
-      "name": "consistency_prior_std",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        5.0,
-        12.0
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics.CONSISTENCY_PRIOR_WEIGHT",
-      "current_value": 8.0,
-      "derivation": "C8: Pseudo-observations (~1/3 season) for consistency shrinkage. Matches pattern of three_pt_variance and pace_adj_variance priors.",
-      "name": "consistency_prior_weight",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        4.0,
-        16.0
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics (0.44 * FTA in True Shooting denominator)",
-      "current_value": 0.44,
-      "derivation": "Hollinger's True Shooting %: 2*(FGA + 0.44*FTA); published formula",
-      "name": "ts_pct_fta_weight",
-      "notes": "",
-      "tier": 1,
-      "valid_range": [
-        0.4,
-        0.48
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics._iterative_sos_adjust N_ITERS",
-      "current_value": 15,
-      "derivation": "Convergence iterations for additive SOS; bounded, monotone convergence",
-      "name": "sos_iterations",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        5,
-        30
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics MIN_GAMES_LUCK",
-      "current_value": 12,
-      "derivation": "Minimum games for luck metric; data quality threshold",
-      "name": "luck_min_games",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        5,
-        20
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics (shrinkage reaches 1.0 at 32 games)",
-      "current_value": 32,
-      "derivation": "Games at which luck shrinkage = 100%; structural ramp",
-      "name": "luck_full_weight_games",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        20,
-        50
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics._momentum(); IncrementalMetricsEngine",
-      "current_value": 8,
-      "derivation": "Rolling game window for momentum calculation; bounded",
-      "name": "momentum_window",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        4,
-        15
-      ]
-    },
-    {
-      "config_path": "ProprietaryMetrics (2.0 * composite to PPP scale)",
-      "current_value": 2.0,
-      "derivation": "Converts Four Factors composite to PPP-like units; structural scaling",
-      "name": "four_factors_composite_scale",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        1.0,
-        4.0
-      ]
-    },
-    {
-      "config_path": "monte_carlo._run_batch np.clip(noisy, 0.01, 0.99)",
-      "current_value": 0.01,
-      "derivation": "Post-noise probability floor in MC simulation; prevents log(0)",
-      "name": "mc_final_clip_lo",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        0.005,
-        0.05
-      ]
-    },
-    {
-      "config_path": "monte_carlo._run_batch np.clip(noisy, 0.01, 0.99)",
-      "current_value": 0.99,
-      "derivation": "Post-noise probability ceiling in MC simulation; structural bound",
-      "name": "mc_final_clip_hi",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        0.95,
-        0.999
-      ]
-    },
-    {
-      "config_path": "sota.py seed_interaction = (seed1*seed2)/128 - 1",
-      "current_value": 128.0,
-      "derivation": "Normalization denominator for seed interaction feature; structural",
-      "name": "seed_interaction_scale",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        64.0,
-        256.0
-      ]
-    },
-    {
-      "config_path": "sota.py adj_em / 30.0 for GNN targets",
-      "current_value": 30.0,
-      "derivation": "AdjEM normalization for GNN training targets; scale parameter",
-      "name": "gnn_target_scale",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        15.0,
-        50.0
-      ]
-    },
-    {
-      "config_path": "sota.py LGB/XGB early stopping patience",
-      "current_value": 30,
-      "derivation": "Early stopping rounds; structural regularization, bounded",
-      "name": "early_stopping_rounds",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        10,
-        50
-      ]
-    },
-    {
-      "config_path": "SOTAPipelineConfig.optuna_n_trials",
-      "current_value": 15,
-      "derivation": "Max Optuna tuning trials; bounded, more trials = more selection bias",
-      "name": "optuna_n_trials",
-      "notes": "",
-      "tier": 2,
-      "valid_range": [
-        5,
-        50
-      ]
-    }
+  "git_commit_sha": "2316108f7c28b97a6eca0cd935e22259060008ad",
+  "config_file_hash": "286efb0aa3e46cd1faa3995e5693cd0488f1abec47f4381682211208c97281dc",
+  "training_years": [
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024
   ],
-  "feature_set_hash": "1097d739360c2cd4",
-  "freeze_type": "pre-registration",
-  "git_commit": "023001b289b6663a1ca3a59da7e59c7852ed74c9",
-  "git_dirty": true,
-  "n_constants": 60,
-  "timestamp": "2026-03-16T15:19:26"
+  "holdout_years": [
+    2025
+  ],
+  "target_year": 2026,
+  "source_file_hashes": {
+    "src/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/__main__.py": "591b0ed50463473aec7a7c0c6d6208728314737bc875019b6b0c088864d26d75",
+    "src/agents/__init__.py": "e91cf81f915b8ece6d7be66b1a6f103ec0cdaf62436d4f7bd264d13aacb7c00f",
+    "src/agents/audit_agent.py": "762ffc05a2465d09509ac2e0e24179922003e7ed2d1a533ccb0338df73476c05",
+    "src/agents/base.py": "217e43ac1624f7509417a80519bf3a14e1c2acd36be917df2533ad9c7a3d1269",
+    "src/agents/concrete.py": "7f961cce7994628ab15fc1a82123c8d793714a40ef19b1fa736b266026eaba38",
+    "src/agents/conflict.py": "4527770081714caf9746ad97e72f02e80b2b7b7b50f64c835318a2ae6b07fe97",
+    "src/agents/data_agent.py": "50286d3a4d40703811d55f32ab17d9d3504e6ebe1ba8ae8b7c89bc14d3036bd6",
+    "src/agents/feature_agent.py": "b502e705be2c02236a1909a24e63a53b960ba30147ff899dfc04d6b3c1b88c5f",
+    "src/agents/model_agent.py": "0c70172a2b81230a1d00f83e687ae0e4862557427ed140b54bf90d8d1d03f08c",
+    "src/agents/orchestrator.py": "1b2f10a91592275f403323a99fbf8ed7b0af67763bbf2f1d65921c6f51cdcc8b",
+    "src/agents/registry.py": "b4036872a2a542ad243920e9de9f13848fc67282c62f00b31868a40c824ed499",
+    "src/agents/scheduler.py": "575d76aedbad1360d5aeb23a37cf7fd8135a9d923c3628e710bea724094922c4",
+    "src/conference_tournament/__init__.py": "ef611ddb60b51f11310600c9baf9b3fed8a8a59a54727a027ac56f42c09cbd3c",
+    "src/conference_tournament/bracket_formats.py": "99829faa3cb81ead3e549a9150e4351ca2920b487a07c6c86620a8589625b1a9",
+    "src/conference_tournament/data_enrichment.py": "ecfc799ecbf9cde37baa648fb08800f91222632657839b5d64048aa7f87408ca",
+    "src/conference_tournament/predictor.py": "0eb689357badc7592ef7d385abf47ecda57bb73fab2ad834fd9af123db1e6089",
+    "src/conference_tournament/seeding.py": "a201cc0fd1efb4e16519bf5094161bc9929e4cba621f0e46f4163ee415abe955",
+    "src/conference_tournament/simulator.py": "ca4670009d376a8440d0ef8bcae6475f01d8fb60d20f5005ae66ffdd55213301",
+    "src/data/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/data/availability.py": "6a67708f79dd6fdf73ea70c32c5dc966a4f5078ce0aa9c7ae3a26d77523eb786",
+    "src/data/contract_validator.py": "efeb3996cc9398961522384c4bc4cff993819c4d0b0f56929a4c621163984692",
+    "src/data/coverage_audit.py": "4c21f16c2ceaad841696df76716104223c2b89c3938a3312a5aa7c53b153dcb3",
+    "src/data/features/__init__.py": "37653ce663c0c5a83888d63af13d33c38eb45f2bfe9620d5b3da443fa187e57d",
+    "src/data/features/feature_engineering.py": "a81626e5c735253d5ef76e56dea44b50f22c8d3e2bf1f598c2c592618b6d9d37",
+    "src/data/features/feature_selection.py": "8766379cb705d1a83f3b8d9400e23a1898502fb204122922eaeeb211794ee0c7",
+    "src/data/features/materialization.py": "5d24016b399e140313eb82a2c07da651b0abf6e5f46bd88ce327c189b501a1e7",
+    "src/data/features/proprietary_metrics.py": "bee3488072570651469510fb3f7bc0028aedacb1968167b2d67528830588ac71",
+    "src/data/features/public_advanced_metrics.py": "270ad96b30d7c70e4c6ce77acaa754ff16d103fcd3e750eef90dca23f8ede35c",
+    "src/data/features/tournament_features.py": "112527305ffbc7371cb30a9af967741b84842bde91afe32863e2578008e9156c",
+    "src/data/features/travel_distance.py": "3a2848ba47b7cc99210060cb67ee5fb6e35058a07453a0fcd3165f1d82cc3147",
+    "src/data/features/womens_feature_engineering.py": "53c4e016f220e7d215ef5c0ec97043aaf4807fdd04b9b75b2ef3064b2622cd8d",
+    "src/data/historical_picks.py": "427546acee8e4cd20330807d07f509f46b8368bd855deeca9d474594bf179cd6",
+    "src/data/historical_tournament_results.py": "1e759267167fb130640fbd837549bad1f61bae586246d4a8b1bb25dbc1ab1ac2",
+    "src/data/ingestion/__init__.py": "ab2b8a98163f014eb0a90cb7bb5764371f2528940f676cb33489b36fcf05bd89",
+    "src/data/ingestion/collector.py": "ed5c55344017036d66457a02a4f2c71ec6d1a953c181fff58008b3787873a760",
+    "src/data/ingestion/dag.py": "5a1eb87aa780db6dc0b31e6976ffb5475763b05cf63e67fb7c74065e1b264e08",
+    "src/data/ingestion/historical_pipeline.py": "73e1855e1cfa36e65da46df10f6145679b1ad420229dd6e7def9c3332443503b",
+    "src/data/ingestion/providers.py": "623d8bfe4c9338447664907ee1f83bafe71d01dede231a13df5008933288f1b1",
+    "src/data/ingestion/validators.py": "2298ca2003ccb9b0efe3146d6a9c1cedd58de8856661eb0b27efef0c1985de39",
+    "src/data/kaggle_downloader.py": "1ff02c24b30843241d6ab4b187ce43cea6c47a04c9dc8391c742ae37b7c0869d",
+    "src/data/kaggle_loader.py": "2a8d05a12869e13be7aab2207edbba7f6e2dc0870f33b4a244f0b0af73393191",
+    "src/data/loader.py": "123167a893e9ab35ff593a0813a7a87598301d5ebc8a7b028e3474da5f0f5820",
+    "src/data/manifest_generator.py": "fb9d82455e6b361b1aadd69b05a06453cfa49b5c4ef054c5b75a56162ca49f96",
+    "src/data/models/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/data/models/game_flow.py": "8b25a688441bea65e879fc4b5ed75d3bce3af104b173d8520ff0ffac7208ffa1",
+    "src/data/models/player.py": "7db4b776577a7afd0097a0d9e401d313b9eb586b2b1862b567821f414b49bb2e",
+    "src/data/normalize.py": "3c9c1598821a240e15680df432f8fa93d492763040d400bcb6bd77a1a4c198d0",
+    "src/data/schemas.py": "7ec591777ab44776688b46f9d60a97faf8824ffdc3d831c12ef943cc22683f55",
+    "src/data/scrapers/__init__.py": "7c7eef7f021a8c52b2b23fcd7c8e8712f9b3931bdf88f5e77313b1680f214840",
+    "src/data/scrapers/_retry.py": "fe23717f34508e3f55b422cf62093f409548b1da2ac274c943377a3c485f1890",
+    "src/data/scrapers/betting_markets.py": "19f46aefb8d6d28238ac1aa912e1e737651e00649b857a468fd56f9297184c51",
+    "src/data/scrapers/bracket_ingestion.py": "e70e86fa77e2176577b51da8eb394d0c227c8790acc98dccd2dd989a55cb48bc",
+    "src/data/scrapers/cbbpy_rosters.py": "6e4bcd053e4036a632a793b462321de364eec27f5ca9c723abff576ddf6fc786",
+    "src/data/scrapers/circuit_breaker.py": "acfa823487f86f27111fd7835f38a90f88f5ee1644d63e9084796b1c08fabf88",
+    "src/data/scrapers/conference_bracket_validator.py": "80b34029001b34c04a76ad9b26a1f5e15f1879ad52b5157ac74856402918f637",
+    "src/data/scrapers/conference_seeds.py": "c3185a1191cf97a46c00880bcd752cf5c55c55fee5d32dc5c98bcb0e49439280",
+    "src/data/scrapers/espn_picks.py": "23acf5d461c6ed2604a018d35f33ce0e5e88346b5317e27a1c1c9e61a859612e",
+    "src/data/scrapers/external_ratings.py": "028bb8bedf36f7cfc2484160144307add25cf237f7d9d1cc2c85e27237d91290",
+    "src/data/scrapers/injury_report.py": "20372cb3cacacd94fc4bebaadbf3c3b7db34dd80e1f9c8daadd15d02112d2944",
+    "src/data/scrapers/ncaa_stats.py": "bbbb833c4602c3dab7b851633494a77013680e203b79bac0cd7a5c1424b403de",
+    "src/data/scrapers/open_data_feed.py": "92a3031baad3da4abbf4fe2cb146242dffbc2646d84c063e44758eae10d0fa9f",
+    "src/data/scrapers/player_metrics.py": "48fd63cd8a6286c335e8384bfe332feda6e7e9a27d908b425248566a4b2db77b",
+    "src/data/scrapers/roster_enrichment.py": "52e9681610d1b399d5fcc13e28099a099c06718ec99311d4fa1b954ae08d74d9",
+    "src/data/scrapers/sports_reference.py": "11c28f8ea71d7f89717cee8fe3eb204968cd33d5c89f70073c6d13784cd61594",
+    "src/data/scrapers/torvik.py": "8064c650d12956f5217fa911b4c272dad6ea64aa5654ca991aabfc59cc14c6ec",
+    "src/data/scrapers/tournament_bracket.py": "a70416cd4cc7041b883eb0c98e1fe9ea03565a381e0d9b731575ccc7bfa09681",
+    "src/data/scrapers/tournament_context.py": "be76f820b5b5e7c6ceb0a347b62af535d0187d51226c16042e3a32048e3e454c",
+    "src/data/scrapers/tournament_results.py": "02a8bbe68b808be7543a2a6427999f97459b4c32697e8d627b10495e97a768f5",
+    "src/data/scrapers/transfer_portal.py": "269fad8f560ae57ce20884423869b10f7659b9d5decbc11311ca9377074e9c68",
+    "src/data/scrapers/womens/__init__.py": "19478bf2b476b6199ebff569732764625229c8b097e74a8201df640724ba0d20",
+    "src/data/scrapers/womens/herhoopstats.py": "ffd3660a91d02abe15d96483ce2123ee20dcd425edbacac2b68b397bed38e4a2",
+    "src/data/scrapers/womens/historical_results.py": "34a1008b6ab09de83032c23f761f89d6574f972ea2b95500702d7163c268e08f",
+    "src/data/scrapers/womens/ncaa_net.py": "7d913c0f1449c814617ff65d3fb13cda4f2800f0812945360b590b16c6afde91",
+    "src/data/team_name_resolver.py": "54027352e8b373c22e862609c0cc1c6c1f2c5a9ff88945c2cd995619c3439e7c",
+    "src/data/versioning.py": "bf513130e00a50ec670d813256a8a057fc53113e77937ea7e0003f104e747d00",
+    "src/deployment/__init__.py": "5a7e24b2ee5fe72c9958dbd2b9b9b8d207e8335bf4cd3d3b3ca15dcfb540399b",
+    "src/deployment/ab_framework.py": "f5d2b6196329c57f3a756189012af7d6627c13b34ddd3e87adb711d8bfd72e0a",
+    "src/deployment/canary.py": "6bda1541e14db72095ce293c4e05c7a3ca49a4392374ea4090db2bbe271fc9c2",
+    "src/deployment/drift_alerts.py": "75171d4148541f8fbac65f5058a29086945519d27832579d8eb58918fbbc4a5a",
+    "src/deployment/model_store.py": "13d0f85d9262afd88b96f81bc51a885c3d011096e81661a65520b9eebb7a3d17",
+    "src/deployment/orchestrator.py": "bf3f39f4cf0418cf24ddb6ca0b0de879ec50b3c34d7623586e17b88a31992ba8",
+    "src/deployment/pipeline.py": "e30d59ce2655a1f1c47c37b7c98e5161cca345532fc6f2a6e48a919cfc391404",
+    "src/deployment/shadow_mode.py": "79b0ce0c6d2bcf01958f1ace007084932ddc5d973d33f27f876552dedf872dff",
+    "src/evaluation/__init__.py": "2bb1a271b93ff25fd390834eed98c50aa514854a0df8da13dcaf0c8802a6d28f",
+    "src/evaluation/baselines.py": "b2eb6eb9d07e746839d52b140bb21c76666e979f427ad18d6f1fd57fe5a5613f",
+    "src/evaluation/bootstrap_metrics.py": "2f2feddd0cc5de2fc69d699aaaeea741c9473ed89babd0862d18e0d9a499269d",
+    "src/evaluation/bracket_snapshot.py": "46cc68ea6e50868142c4826e6c72f4b7fe54f0065515f6e44cd2e660a777b7a1",
+    "src/evaluation/calibration_benchmark.py": "048100257fb09156beebd46753b0ff8f08394327c2d7e2ac00f908ca2c6b4349",
+    "src/evaluation/calibration_diagnostics.py": "3324e00e84985a7c16ed43e10a3884fdd6e4138196f473aeef89ce19e622a4b5",
+    "src/evaluation/calibration_gate.py": "293c5847588a1be6925138c01e62a56378fbdefcb97cb22fd67fa710781205d6",
+    "src/evaluation/calibration_methods.py": "b55725671e147ec5b712aecf1d4277b206a8b436cf32cba20cf830fbd5b47e5c",
+    "src/evaluation/calibration_regimes.py": "632a0e1ffa0ffda410a1b5f04fc996e97f48f80d8f6f5819a61c54f76f084294",
+    "src/evaluation/evaluation_report.py": "9d478621d4d0442d9e7d47a03e5fe66a18c8f7005fe25a3d57ed334d9e7057ce",
+    "src/evaluation/reliability_tracking.py": "47c8cfec071df72f880b9d6c3945e48fdfed8318752ed0e0a2dfb013eef6ce0c",
+    "src/evaluation/round_analysis.py": "f5bbc9f629a3c2fcef4da03737aade140cea4cf8e386c6dbf1eeeb964fc1c34d",
+    "src/evaluation/seed_gap_calibration.py": "a63ba26baef4893594dced97a3035e80023eaffc9fb9844cffea421e353ef2da",
+    "src/evaluation/selection_sunday_backtest.py": "6580e20e9b28fbda778015a1e16823791ad5ac338cf9df0acaa55fafa9112a48",
+    "src/evaluation/snapshot_integrity.py": "41847179434ccf2e9a92b7cd5ea6475d2173ca8302e351104a3e244588602139",
+    "src/exceptions.py": "f9136b0471e4832d79fb9aa04381b68786ffe720c186157ce981470cdf8310be",
+    "src/exports/__init__.py": "b5ddd570e28075bf338bfd6e01ea27448189b411c91fb0b0f6f1403950691833",
+    "src/exports/deliverables_manager.py": "1f2db094dbf0ef8dfba46f00800f0aae5ddb2b52d75870be351652fdc529cb96",
+    "src/exports/kaggle.py": "2b7c88d0e06bbe83d1b27dcf5e8cdb99d772d8a4638b9c167b5147af463d4869",
+    "src/forecaster/__init__.py": "93b75e16df470a7d8845acd4936f8cbe9a09d5fa74112487be227437f8ea8497",
+    "src/forecaster/__main__.py": "de73a2eb7f844faf2c96273d2c5a9fb5d8212e24265e91415a4cc25af2a08cb6",
+    "src/forecaster/audit.py": "21584653f4015873e83247407c48c690c32de586db3ae7b496ff2e12ac60ee4b",
+    "src/forecaster/calibration.py": "d5e57aa1a8329d25b65a2b2a1c05ba885ac7338bc297364bd45ba8c6805910db",
+    "src/forecaster/market.py": "41a103ac307a71e80d2c955666675ebaeb23dcf9b62eef5af35604e67e893cc4",
+    "src/forecaster/matchups.py": "ed95f5ac8ad4ecb2f4438ae71aaaa625564d2109fcbd7e026ff8552a9820488f",
+    "src/forecaster/run.py": "2de48c6a6e5e5b2f2b4c796993429cb6685f127c027c04c9aa7358b64b0e4ace",
+    "src/forecaster/stacking.py": "b5bc735ff5028014dd733362d8d421246e521d271c06c547d4649c2ba3a3f308",
+    "src/forecaster/state_machine.py": "cdc8a8ad2dc08447f973207d399c76f2b22d6c166b34e8570b5060986a0c5de6",
+    "src/forecasting/__init__.py": "0e8e662a9bdd407c1b7e43eeda2bf2e255fe605e74b573a4c40d809474eb0ac6",
+    "src/forecasting/engine.py": "04dde6f1fd476787853ccf5d2bc538a14159e265b50966e5207f9315b32e7386",
+    "src/governance/__init__.py": "9315b8ef4de218d3581a4048a595dfb4099cbcd2f65da7c89aa62545e057d59f",
+    "src/governance/approval_gate.py": "dac8729aed33942cf6ae771b45c2d9694cfd8608ae26a26d3051b75ed204f619",
+    "src/governance/audit_trail.py": "0f006fab0f156e91728df39a2dd4f12b3120040567f55844c6b9befb9fdbee14",
+    "src/governance/authority_matrix.py": "8413a97571376cb7153a85e0fa0929cacabdb7e48bcabaae18f191310de46045",
+    "src/governance/compliance.py": "ef4c01cd755095d9e7d94708a280382cbad5e1886bd8471f88c32e10326d8115",
+    "src/governance/decision_authority.py": "4630f9e09dfdab285404d69a7fa999b9cb34488f4979c519369ac3b248a83e7c",
+    "src/governance/escalation.py": "a5fb9b03b944b5291f2b028fe05002ff5ac06eeb6b36a244946ea89a1e733d31",
+    "src/governance/gate.py": "dd81785e0f62eddee527a49688244458c8c52572e90cb3b2f8349e83a9a3a724",
+    "src/governance/market_validation.py": "de73c51ab4ece61a54607324cfa97b0b95de6cb430152e50c61541203b0b0849",
+    "src/governance/production_runner.py": "533e93cbca628c793dbff20c26135f8594fa9631be94f781d628526a18564b2a",
+    "src/governance/production_validator.py": "7168e638fd04d505f3f18fdde5b7fe7f1c97c6b28695afef33073e79008a4929",
+    "src/main.py": "ea3b265dd3fb76ff98c3ecc83101b158495f0e18cafeadd9cb65b63c0c62ba74",
+    "src/ml/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/ml/calibration/__init__.py": "8e468f54755e56d766b8399b8bae662f289dfffae5cee8d10cc2a3ef2d11c10c",
+    "src/ml/calibration/brier_optimal.py": "48d56f0e40c5dfde7bbd171cee8ac3f34af12041368c11685ec3c8c83ead51d5",
+    "src/ml/calibration/calibration.py": "4903cc04812da9634c8b1ddf5540b03c89d645bc5458ae7bdad310e84bd23aa0",
+    "src/ml/calibration/post_processing.py": "a6f5a6e87b2d4c2bc036470c77838338f50e2b8d17348cd495d7c3609af466a8",
+    "src/ml/ensemble/__init__.py": "4e5654bb8acdca40b4a1cd82b17dd6683200941ebf2ec39c45d34a6f224f71eb",
+    "src/ml/ensemble/bayesian_bt.py": "17f1f65b1e70bc9d0fb7d4ed58611f40f4a4656203ce669bd1f0e884729d69f0",
+    "src/ml/ensemble/bma.py": "43b62c3045dc71c9827042a1fd36f04b2475936b7d3921c70cd884a24be1637c",
+    "src/ml/ensemble/brier_objective.py": "00290733fb75bfbff09c8243b4f826fb53657fc0461c9aa4a3c6317ba4e71877",
+    "src/ml/ensemble/calibration_first.py": "c12aaad6426dd7f6cef826b6073a0c8ec1a2ec042bd38c763376cf47ced22cfd",
+    "src/ml/ensemble/cfa.py": "30f6fe7e94cb83ad0d933c2f948eb4c08e70e2934ab6e8fea6b1e9040816977f",
+    "src/ml/ensemble/margin_first_ensemble.py": "dada0fca479a83e45d97dde1145d097442448f9a0099208c47cf13b607ba5b63",
+    "src/ml/ensemble/model_registry.py": "0a4af7874a2abeaebb36be72ed9df0b58e02014fc69ca0217ef1194a5c7a3536",
+    "src/ml/ensemble/spread_model.py": "7409610090132bdb537648a46c653fe8cfca7709b5e9a5835173a1eb9360f662",
+    "src/ml/ensemble/tournament_domain.py": "1c4cc0db12e1a9245ab5b5f8d7ed32c04595788cd0056ee3ac58f8c65b1ad34d",
+    "src/ml/ensemble/tournament_expert.py": "e8e1e07f46856a53d9dd5b40dac7e617e811e3529ace1df976cc9438107cfd5b",
+    "src/ml/ensemble/tournament_sigma.py": "a76a594c80c8916ef2baad46aa29dc38153bf268c053bdda96e23cf44b55af40",
+    "src/ml/evaluation/__init__.py": "e585e14608577e161250feb20bb6d4e8ed803b04691d184b661440e88484d8b7",
+    "src/ml/evaluation/ablation.py": "cedfd2c73c5e925279c22af958096e3bae20249634e205222b1b7a9fa694f474",
+    "src/ml/evaluation/admission_gate.py": "080d15ed31ab9f1d94cee0cc508bbb0bdc92ebbd563edad1a2dc6ff6c63f038d",
+    "src/ml/evaluation/backtest_2025.py": "787e7a9890379fd7d4bd2f887b5fc8a50f22722bff44121b7f2be387032f6b18",
+    "src/ml/evaluation/baseline_guard.py": "d0d48bf8a5c735a27a657f9cf722a70efbec6414fb6a9332ab00d258e23726c6",
+    "src/ml/evaluation/evaluation_integrity.py": "ca1c90323762f66c864a6082be59b1d0b0b3a1f797eb4748197d98df373a89ba",
+    "src/ml/evaluation/experiment_registry.py": "84dc0c7e27f3e8a07e1f10fd67015c47e288dde4a44e5656ad68b923f23533a1",
+    "src/ml/evaluation/kaggle_backtest.py": "a84c603f28f2c6582dd5cd00de3b81b07ed3c115a399e25b218a2739567a69a1",
+    "src/ml/evaluation/loyo_protocol.py": "fa5c3f7f9298e31d86b6520186404ee7052c1e6e797a9c6a3a278d89931e7d9d",
+    "src/ml/evaluation/metrics_validation.py": "7f1f6e0c304e0e038cd989e31ac170720c52b53effe16184b4e62f9a148215d2",
+    "src/ml/evaluation/model_card.py": "5b1fbc6b7701ad6da8438ea0da7795b7ffa2187e4115606a91b15a6158af2d91",
+    "src/ml/evaluation/model_comparison.py": "81f2d656fa47482e5a08ad7a34841dc4c1161b1a575e5c78c6d495f9cefe5bb4",
+    "src/ml/evaluation/phase4_integration.py": "76b07e9a5f0f29c875307e067788cea29f2644b121b11eee093e5b2ff3408b89",
+    "src/ml/evaluation/promotion_gate.py": "1981b7e200b329cf07c49315cb885e0d58ad807ea9eceaf72c971bd4a6fba541",
+    "src/ml/evaluation/rdof_audit.py": "5927ec2af9b968bde7a3d9ca4b49c4d9900f56267a179dc9f7b100535b0f1e5f",
+    "src/ml/evaluation/risk_report.py": "6bc1d7dda076662044c781dff27d1e6f227e25c992e67be57d484be53df4b9f0",
+    "src/ml/evaluation/robustness.py": "1de897a1ccacb7d43da7ebe7c07f97f38f452bf6ebfd50ce8ba8fadb77442122",
+    "src/ml/evaluation/robustness_suite.py": "e123fc6ffc807bace474490ab195040b9d47449331c8ef99eace6355afa1dd27",
+    "src/ml/evaluation/statistical_tests.py": "1ae883ac4e7e1519090113446747cd19808767b00d78ae4e78b0fe40f6af572b",
+    "src/ml/evaluation/tournament_metrics.py": "69f40a293622d3aa32ca7164bbe8d0228350b2c647c9ef5da3902b8dce3b2b3a",
+    "src/ml/evaluation/unified_backtest.py": "133fdf1273a8a4ff45228993aacde994c8a4bea28e68cf89d68e5f7dd14e2bf0",
+    "src/ml/gnn/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/ml/gnn/schedule_graph.py": "f1fedb4297eb369d23f63c1ee2084e0f05071650052b85660ae7f4f9d11e4157",
+    "src/ml/meta_learning.py": "2ea1333866d2c5c6bee7e251a6ad78656a2fe387ceab2b1117ba992ee9e49f99",
+    "src/ml/optimization/__init__.py": "34c998d03d407b85166fe6189aaab72bc8178179d0119f0e2764f78e00b819d0",
+    "src/ml/optimization/hyperparameter_tuning.py": "430d22899bbfc9a980405b8d05c270d13967a88cc0f10906c2004b5fad0faac4",
+    "src/ml/ranking/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/ml/ranking/lambdamart.py": "4954ca50bed68d4151caea9b53bb58e67f69929d6def52f175ceee42845cecc2",
+    "src/ml/research/__init__.py": "9714213d0fe1abfd3274dec7e075779caa08bd11a10b1a456d2eaa7ece13f027",
+    "src/ml/research/hypothesis_registry.py": "803ab4b3b41fcf91feb883d094c1dd565851a5c20eb73bbdf668c51a98ddb288",
+    "src/ml/research/research_loop.py": "52e7675dde074bb3a1f5ab702af54a2e644c48b4dc9d23bfa3f8a5bb62eb1422",
+    "src/ml/time_series/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/ml/time_series/elo_temporal.py": "248cda1fb8566dd8d9d6c41488de111691f55f8da7b35de6778e9526e6a5dd26",
+    "src/ml/training/__init__.py": "dc54df811266f0708384cc6fb6be969b448affc4dfe7819089d1d968c3f275f7",
+    "src/ml/training/symmetric.py": "ec9abdc5751640df0d34caf9203c19a38a64e5826a56b099ce79e138b719c30e",
+    "src/ml/transformer/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/ml/transformer/game_sequence.py": "731a9bad019a23d5cede836f8383c66782b8f53c97602aa7ca71baa95a1e6c7d",
+    "src/models/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/models/bracket.py": "8907bccf75f41c66d1ccc5d5da41bbdb91e415a0a6e504ca13219e68a067dc19",
+    "src/models/conference_tournament.py": "aa03d5f805cf63790d8651f19e121b444e9caf0d02d77dcf210bcc3de6fd3e85",
+    "src/models/game.py": "982128daa80f4e5bdfce8ac6404776ae60541f5b3231379a33baca9578698e01",
+    "src/models/team.py": "1c16cea0d480f77838126cd6255a9ad862730f89a445a5a570923656123565a9",
+    "src/monitoring/__init__.py": "f85d6495689431dc342404546860a0a22dbbb70fb551ecd2cbffa5589d361dc4",
+    "src/monitoring/budget_manager.py": "a42d8a0c87852e94893d8427bfc3b56da296d34e0ca70ac69c2d3538ee3fb940",
+    "src/monitoring/cost_tracker.py": "fd7e83bb3d6382b4d750d8ae0ef7e5a152482a2f4e7ef80dfffae0def2f7e3a0",
+    "src/monitoring/phase_timer.py": "a26ba89a7a515767f727f2d1b302fde8cc0e5c15cc20440c7c12c36b501d1eff",
+    "src/monitoring/pipeline_monitor.py": "1203f43abf728085f4a814ecc5b4d9a74a52d8cc72ed1f74dcc305d62c2ab790",
+    "src/monitoring/pre_tournament_checklist.py": "4787655e9b430345362d061a3514e7927a245b31924d25307285d756fd937e76",
+    "src/monitoring/resource_tracker.py": "1be5db1aef50cf9cb1c2bdfb1ede5e51d41dfc2690328a3c566da152423bc416",
+    "src/monitoring/run_history.py": "cd5c9652e2980c472ce358b885f419e79e5ca651080c13859739157ff44cf3b8",
+    "src/optimization/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/optimization/bracket_portfolio.py": "46fb4084039b440003e9ddd87bcaad5b026f322f4dc1be160b8fdbc657472b45",
+    "src/optimization/bracket_search.py": "585e850f8b80a1018bbb914bb999b492fbd9aac31f4f7cce520d12311fe13068",
+    "src/optimization/dual_submission.py": "ffea08f53000e689c6e15b218486122a6f272b35f35044d6540f8f4b49adb16b",
+    "src/optimization/leverage.py": "b4048a339d2c8fc296c25e0194dec3c5e83bbb5108942e2e9224b6da8ed3a29d",
+    "src/optimization/live_refresh.py": "a1f912559fe5820d420b331f7f212c46ad9f7c8047d4ca66654b439b696daeb8",
+    "src/optimization/path_protection.py": "ed0d04d7a643baa151b40501bb9f16d5543576d9ebb4db5c7340b82c81d9503e",
+    "src/optimization/pool_optimizer.py": "1d7cdf22a506e40d40e2d7967053b728752948a938106ab4a3c8512096f9c412",
+    "src/optimization/portfolio_diversification.py": "0ebc9c76c67c62e4c16a6f8ad7ecadd3fcf1030330072bc25486c623185ebd10",
+    "src/pipeline/__init__.py": "d953ad67b0831172ee892ff95c606857508eb155eef07c82dd20150128c77531",
+    "src/pipeline/_optional_imports.py": "2fdf7e2eb457b1daac7452b17244670ec457bcb68908a3d6392f5baf5bc0e161",
+    "src/pipeline/config.py": "a6cc41a6d903c4da6313b49a1f40eb5c6c9158fbb7d58f34d3c472c04810fcae",
+    "src/pipeline/probability_pipeline.py": "b11825b1b5592bc6effd2eb053231c6846d0f0c5b106909c259e5268985c0e48",
+    "src/pipeline/production_baseline.py": "4265d09925780e0b3b330e25bb036c35fb12a6ddad779ae77ca83b9e73d504c9",
+    "src/pipeline/sota.py": "b240cd9364c2a9c433eb1a5d0a7681be3d7ec5f7a7189c8e3f8241c483c9c1d9",
+    "src/pipeline/stage_registry.py": "7d112c5b2b2a15d6383f745d0c6db041c1395e98f49dc9e36e8fd5bf12793288",
+    "src/pipeline/stages/__init__.py": "4cb17e8ad610e17dfd8e38411a05a8826a711d27eca03955f17104628159ce6d",
+    "src/pipeline/stages/baseline_training.py": "4e81d73657bdb3d4f54ddd69a8f5dafb3848cfb717417fa16bd60c518b2c8178",
+    "src/pipeline/stages/calibration.py": "8c9b0a0d5b9cbbe2af07a6d36c9f27f5e5fb67705f52f73d70db2fb9271fcff5",
+    "src/pipeline/stages/calibrator.py": "a08ba82ad4c2dbb6f71bdabd1825788fecc12c8a767b91e2d257d01184f8f35f",
+    "src/pipeline/stages/context.py": "576211f5793d2e0a9b22b7e29c196f132cd2bb1d14f051717072190a06fcbb90",
+    "src/pipeline/stages/data_loader.py": "0ca9dca67af265f30479050961a3d67b1297076a2025501291a295e7a747367e",
+    "src/pipeline/stages/ev_analysis.py": "79f307537bc72f0042b2b72299abed380b9145841918030402e66483e79534c7",
+    "src/pipeline/stages/ev_mode.py": "b5e190494589c965ba19d567d7d5d0597788fd173eed7547a2133d89f828be80",
+    "src/pipeline/stages/game_utils.py": "5d4825d48608c6a26eeacdbe8ebfc64b449cb3214a91e6a362ce242fde9f0e90",
+    "src/pipeline/stages/inference.py": "14d610aad913b9e7b8441670768eadd0bc8e2887bbfd15f1473a2b2c95c283e0",
+    "src/pipeline/stages/model_trainer.py": "f382f2d5d30cc5ff455d0bf84ec9f056dadc641d53b2bcb05c686265f8ba6959",
+    "src/pipeline/stages/orchestration.py": "b81ab7fa619f26d27ccdcae17b91619175c7fd27c206d4c8c771c99a14e892d6",
+    "src/pipeline/stages/pit_validation.py": "6537e642b6a7b41b4f4fbc84bd3d37269d89807dd22ec7773376adc4bf8b7812",
+    "src/pipeline/stages/reporter.py": "a5dadd55be9c2dc9b07ff957189b116d2f46b8d7d4bc1485a81f060317ffad2f",
+    "src/pipeline/stages/robustness_stage.py": "649c92e979088800ab547b64aad9054c4654bd3a896cb929a7ced9f66a16dc47",
+    "src/pipeline/stages/sample_loading.py": "35b902b72596bd0eb6ea1ddfec03f506e70fe127fc4fe48ad23b7472f1e1eaae",
+    "src/pipeline/stages/simulation.py": "aacce7e1f67c09c029b0c3ae42e285da4821c2d5c8ec096c6482458f10981ff5",
+    "src/pipeline/stages/simulator.py": "0bb1fbc33f4a4a3596fbe754d192175cd22c1b3ccfa28499fbfd3aff2561a39d",
+    "src/pipeline/womens.py": "a8f7d0b31abe778c6bd518aa389a6c2e4c00124463bf1cd057ef3409b83f3744",
+    "src/reproducibility/__init__.py": "62e935c1fbc3137f1d4f56319eaeea777e615fc1c6b09d5c07f809bfdc12c14e",
+    "src/reproducibility/artifact_store.py": "34426c94c82058c5c6207d9f44b650496cb135b4f49c5956bd1c42661e8ab9c4",
+    "src/reproducibility/frozen_config.py": "ab1e3b6612ae4266d0967a55e03ffd767845006742e53436a6a205029671c8bd",
+    "src/reproducibility/run_hasher.py": "535864f95172de94c65891496bb34c4e6f44597e6ef501139e33c72b63fdca20",
+    "src/research/__init__.py": "4c447e1e899a8369d7467dfd3a4fbb11a63bf6317a9863c72632874c881be125",
+    "src/research/experiment_scheduler.py": "99a1a727d20ef2a18916eec8b4a2ac1d13ff6f2f577d2368789504282f76018d",
+    "src/research/knowledge_store.py": "03241e0324a6b1a617dbd889f050bc618c7927d75ff6708bdadd0253cefda374",
+    "src/run_production_2026.py": "dbb067ff0645a858eb780cc9901bf256a48300259b106068faae56662b2c58f3",
+    "src/simulation/__init__.py": "05eb5ca2e8331a357a41813d0b75ab1290b807ffee8da425da1f167a51dc476b",
+    "src/simulation/competition_simulation.py": "1df969bfaec3afbd2368a97956b43b18154cd31eb9a9166c32cd40f439295101",
+    "src/simulation/competitor_archetypes.py": "34d87e174e83aa843aeb8338172bc4807c01220d0f17b1247d83ba1b0fad2835",
+    "src/simulation/mc_calibration.py": "47f1330cdb4aac17ad67f1afb52a8ce0ff12e7a0d2efe4681b2e632be5f92086",
+    "src/simulation/monte_carlo.py": "df9a8b15199cf4277e127687bd7c755089d7b58a1a3e840bc8efca6ca304c511",
+    "src/simulation/pool_competition.py": "fcc993057794b8ceb95b5c82164a1229271c49afea05c5bd9857389066ea128f",
+    "src/workflows/__init__.py": "afc1ca7c0ed15d501f1601c56c12c4497ff3747767279b1627e7f43745278357",
+    "src/workflows/live_protocol.py": "2ed1f3df040a4d434f795e7b15166ff807e6b3948ad1062532414f85a0e5747d",
+    "src/workflows/reproducible.py": "d9071661cee5d0a88087f8448bd2487337da74ebc0e380beefd43dcdc1f72d02"
+  },
+  "source_tree_hash": "a28c01de16d2bc7e08485f056d0dafd521e522bfb4dbdd1226fe939668aa41f0",
+  "data_file_hashes": {
+    "data/raw/torvik_2026.json": "16c06508f79d87c845a01ba00ad6e48cc2f625c5776b1c987d0778b7dc56c213",
+    "data/raw/teams_2026.json": "c782bca34f52ea1aa911dcdd828b5cd3e8387088d7b0194b26dc47f7a4e4ee4e",
+    "data/raw/historical_games_2026.json": "640fe1c3ae356d72ed9512c2c08c0c0d66b61b59594162efa21fed8fe5838c4d",
+    "data/raw/rosters_2026.json": "d9665ee87b309464d7258edc9f67413a75fee5e20cec985360b501d0bf1ec12a",
+    "data/raw/bracket_2026.json": "27ee96fcbde3ca2ec228fa89d355e8e5dedd202f73129638fee386aab9a510f5"
+  },
+  "dependency_lockfile_hash": "220fd362643042108b7c5f255540877a1b41d270bdf6c3685e43785072a3e345",
+  "run_timestamp_utc": "2026-03-18T22:46:12.834724Z"
 }
