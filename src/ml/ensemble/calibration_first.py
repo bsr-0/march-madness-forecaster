@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 class CalibrationFirstResult:
     """Output from the calibration-first pipeline."""
 
+    model: object  # Trained model with .predict() / .predict_proba_batch()
     predictions: np.ndarray
     temperature: float
     ece_before: float
@@ -145,6 +146,7 @@ class CalibrationFirstPipeline:
 
         # Fallback check: if Brier got worse, revert
         fell_back = False
+        best_model = model_p3
         if self.fallback_on_regression and brier_final > brier_p2:
             logger.warning(
                 "CalibrationFirst: Brier regressed (%.4f > %.4f), "
@@ -156,8 +158,10 @@ class CalibrationFirstPipeline:
             brier_final = brier_p2
             ece_final = ece_p2
             temperature_final = temperature
+            best_model = model_p1
 
         return CalibrationFirstResult(
+            model=best_model,
             predictions=preds_final_cal,
             temperature=temperature_final,
             ece_before=ece_p1,

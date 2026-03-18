@@ -818,6 +818,7 @@ class EVModeReport:
     competition_simulation: Dict = field(default_factory=dict)
     pareto_brackets: List[Dict] = field(default_factory=list)
     pool_ev_analysis: Dict[str, float] = field(default_factory=dict)
+    espn_portfolio: List[Dict] = field(default_factory=list)
     picks_staleness_warning: Optional[str] = None
 
     def to_dict(self) -> Dict:
@@ -835,6 +836,7 @@ class EVModeReport:
             "competition_simulation": self.competition_simulation,
             "pareto_brackets": self.pareto_brackets,
             "pool_ev_analysis": self.pool_ev_analysis,
+            "espn_portfolio": self.espn_portfolio,
         }
         if self.picks_staleness_warning:
             d["picks_staleness_warning"] = self.picks_staleness_warning
