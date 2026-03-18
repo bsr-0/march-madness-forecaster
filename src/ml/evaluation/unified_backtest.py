@@ -753,6 +753,7 @@ def _generate_archetype_opponent_brackets(
     predict_fn: Callable[[str, str], float],
     rng: np.random.Generator,
     random_seed: int = 42,
+    public_picks: Optional[Dict[str, Dict[str, float]]] = None,
 ) -> List[List[str]]:
     """Generate opponent brackets using the behavioral archetype engine.
 
@@ -772,6 +773,9 @@ def _generate_archetype_opponent_brackets(
         predict_fn: (team1, team2) -> P(team1 wins) for model probs.
         rng: NumPy random generator.
         random_seed: Base seed for per-bracket RNG.
+        public_picks: Historical public pick distribution
+            (team_id -> {round_name: pick_pct}).  When provided, replaces
+            the seed-based proxy for opponent archetype modeling.
 
     Returns:
         List of 63-element winner lists (one per opponent).
@@ -781,7 +785,7 @@ def _generate_archetype_opponent_brackets(
         create_archetypes,
     )
 
-    # Build model probs and synthetic public picks from seeds for the archetypes
+    # Build model probs from seeds for the archetypes
     model_probs: Dict[str, Dict[str, float]] = {}
     for tid in set(first_round_matchups):
         # Build approximate round probabilities from seed
@@ -796,8 +800,11 @@ def _generate_archetype_opponent_brackets(
             "CHAMP": min(0.4, seed_strength * 0.08),
         }
 
-    # Use model probs as proxy for public picks (they correlate highly)
-    public_picks = model_probs
+    # Use real historical public picks when available (Fix 4); fall back to
+    # seed-based proxy when not.  Real picks give more realistic opponent
+    # behavior because public chalk bias is team-specific, not just seed-based.
+    if public_picks is None:
+        public_picks = model_probs
 
     mix = get_archetype_mix("espn_national")
     archetypes = create_archetypes(mix)
@@ -866,6 +873,169 @@ def _generate_archetype_opponent_brackets(
         opponent_brackets.append(winners)
 
     return opponent_brackets
+
+
+# ---------------------------------------------------------------------------
+# ESPN Protocol Section 4.7 metric helpers (Fix 2)
+# ---------------------------------------------------------------------------
+
+
+def _compute_path_protection_for_bracket(
+    winners: List[str],
+    first_round_matchups: List[str],
+    predict_fn: Callable[[str, str], float],
+    team_regions: Dict[str, str],
+    scoring: Dict[str, int],
+) -> float:
+    """Compute path protection score for a bracket (list of 63 winners).
+
+    Converts the flat winner list to BracketPick objects, then delegates
+    to PathProtectionScorer to compute the ratio of conditional EV to
+    independent EV.  Target: > 0.85 (Protocol Section 4.4).
+
+    Args:
+        winners: 63 winner team IDs in standard game order.
+        first_round_matchups: 64 team IDs in bracket order.
+        predict_fn: (team1, team2) -> P(team1 wins).
+        team_regions: team_id -> region name.
+        scoring: Round -> points mapping.
+
+    Returns:
+        Path protection score in [0, 1].
+    """
+    from ...optimization.bracket_search import BracketPick
+    from ...optimization.path_protection import PathProtectionScorer
+
+    picks: List = []
+    current_teams = list(first_round_matchups)
+    winner_idx = 0
+    game_idx = 0
+
+    for round_num in range(6):
+        next_teams: List[str] = []
+        for g in range(0, len(current_teams), 2):
+            if g + 1 >= len(current_teams):
+                next_teams.append(current_teams[g])
+                continue
+            t1, t2 = current_teams[g], current_teams[g + 1]
+            if winner_idx < len(winners):
+                winner = winners[winner_idx]
+                loser = t2 if winner == t1 else t1
+            else:
+                p = predict_fn(t1, t2)
+                winner, loser = (t1, t2) if p >= 0.5 else (t2, t1)
+            p_val = predict_fn(winner, loser)
+            picks.append(BracketPick(
+                round_num=round_num,
+                game_idx=game_idx,
+                winner_id=winner,
+                loser_id=loser,
+                win_probability=p_val,
+            ))
+            next_teams.append(winner)
+            winner_idx += 1
+            game_idx += 1
+        current_teams = next_teams
+
+    if not picks:
+        return 1.0
+
+    return PathProtectionScorer().compute_path_protection_score(
+        picks, predict_fn, team_regions, scoring,
+    )
+
+
+def _compute_leverage_accuracy_for_year(
+    first_round_matchups: List[str],
+    predict_fn: Callable[[str, str], float],
+    public_picks: Dict[str, Dict[str, float]],
+    games: List,
+    scoring: Dict[str, int],
+    rng: np.random.Generator,
+    n_sims: int = 150,
+) -> Tuple[float, int]:
+    """Estimate leverage accuracy for a historical backtest year.
+
+    Approximates per-round model probabilities via a Monte Carlo bracket
+    simulation (n_sims runs), then builds leverage picks as teams where
+    model_prob exceeds public_pick_pct by > 5 pp.  Returns the hit rate
+    among those qualifying picks against the actual tournament outcomes.
+
+    Args:
+        first_round_matchups: 64 team IDs in bracket order.
+        predict_fn: (team1, team2) -> P(team1 wins).
+        public_picks: team_id -> {round_name: pick_pct} from historical data.
+        games: List of TournamentGame objects (actual results).
+        scoring: Round -> points mapping.
+        rng: NumPy generator for reproducibility.
+        n_sims: Monte Carlo simulations for round-prob estimation.
+
+    Returns:
+        Tuple of (leverage_accuracy, n_qualifying_picks).
+    """
+    from ...optimization.leverage import LeverageCalculator, evaluate_leverage_accuracy
+
+    round_names = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
+
+    # Estimate round probabilities via Monte Carlo simulation of the bracket.
+    # For each simulation, replay the bracket using predict_fn and track which
+    # team advances to each round.
+    advance_counts: Dict[str, Dict[str, int]] = {
+        tid: {rn: 0 for rn in round_names}
+        for tid in set(first_round_matchups)
+    }
+
+    for _ in range(n_sims):
+        current = list(first_round_matchups)
+        for round_idx, round_name in enumerate(round_names):
+            nxt: List[str] = []
+            for g in range(0, len(current), 2):
+                if g + 1 >= len(current):
+                    nxt.append(current[g])
+                    continue
+                t1, t2 = current[g], current[g + 1]
+                p = predict_fn(t1, t2)
+                winner = t1 if rng.random() < p else t2
+                advance_counts[winner][round_name] += 1
+                nxt.append(winner)
+            current = nxt
+
+    model_probs: Dict[str, Dict[str, float]] = {
+        tid: {rn: advance_counts[tid][rn] / n_sims for rn in round_names}
+        for tid in advance_counts
+    }
+
+    # Build team metadata for LeverageCalculator (seed not strictly required)
+    from ...optimization.leverage import LeverageCalculator, TeamMetadata, evaluate_leverage_accuracy
+    team_meta = {}  # minimal — leverage calc works without it
+
+    calculator = LeverageCalculator(
+        model_probs=model_probs,
+        public_picks=public_picks,
+        scoring_system=scoring,
+    )
+    leverage_picks = calculator.find_leverage_picks()
+
+    # Build actual_outcomes: team_id -> {round_name: True/False}
+    # True = team actually reached/won this round.
+    # Map TournamentGame.round_name "NCG" to "CHAMP" for consistency.
+    _round_alias = {"NCG": "CHAMP"}
+    actual_winners: Dict[str, set] = {}
+    for game in games:
+        rn = _round_alias.get(game.round_name, game.round_name)
+        wid = game.winner_id
+        actual_winners.setdefault(wid, set()).add(rn)
+
+    actual_outcomes: Dict[str, Dict[str, bool]] = {}
+    for tid in set(first_round_matchups):
+        won_rounds = actual_winners.get(tid, set())
+        actual_outcomes[tid] = {rn: (rn in won_rounds) for rn in round_names}
+
+    accuracy = evaluate_leverage_accuracy(leverage_picks, actual_outcomes)
+    return accuracy, len([
+        p for p in leverage_picks
+        if p.model_probability - p.public_pick_percentage >= 0.05
+    ])
 
 
 # ---------------------------------------------------------------------------
@@ -1328,10 +1498,23 @@ class UnifiedBacktester:
             )
             model_brackets.append(bracket)
 
+        # Load historical public picks (Fix 4): use real ESPN "Who Picked Whom"
+        # data when available; fall back to seed-based approximation seamlessly.
+        from ...data.historical_picks import load_historical_public_picks
+        from pathlib import Path as _Path
+        hist_picks_dir = _Path(config.historical_picks_dir)
+        historical_public_picks = load_historical_public_picks(
+            year=year,
+            bracket_teams=history.seeds,
+            picks_dir=hist_picks_dir,
+        )
+
         # Generate opponent brackets using the archetype engine for realistic
         # field modeling.  Each archetype produces brackets with distinct
         # behavioral patterns (chalk, expert, chaos, homer) — much more
         # realistic than uniform upset-propensity noise.
+        # Pass historical public picks so opponent archetypes reflect real
+        # year-specific chalk bias rather than generic seed-based priors.
         n_opponents = max(1, pool_size - config.n_model_brackets)
         opponent_brackets = _generate_archetype_opponent_brackets(
             n_opponents=n_opponents,
@@ -1340,6 +1523,7 @@ class UnifiedBacktester:
             predict_fn=predict_fn,
             rng=rng,
             random_seed=config.random_seed + year * 10000,
+            public_picks=historical_public_picks,
         )
 
         # Score all brackets against actual outcome
@@ -1371,6 +1555,34 @@ class UnifiedBacktester:
         total = len(all_scores)
         percentile = rank / total
 
+        # ESPN Protocol Section 4.7 metrics (Fix 2): compute path_protection_score
+        # and leverage_accuracy which were previously always left at 0.0.
+        path_protection_score = 0.0
+        leverage_accuracy = 0.0
+        n_leverage_picks = 0
+        if config.compute_espn_metrics:
+            try:
+                best_bracket_winners = model_brackets[best_model_idx]
+                path_protection_score = _compute_path_protection_for_bracket(
+                    winners=best_bracket_winners,
+                    first_round_matchups=history.first_round_matchups,
+                    predict_fn=predict_fn,
+                    team_regions=history.regions,
+                    scoring=scoring,
+                )
+                leverage_accuracy, n_leverage_picks = _compute_leverage_accuracy_for_year(
+                    first_round_matchups=history.first_round_matchups,
+                    predict_fn=predict_fn,
+                    public_picks=historical_public_picks,
+                    games=history.games,
+                    scoring=scoring,
+                    rng=np.random.default_rng(config.random_seed + year * 999),
+                )
+            except Exception as exc:
+                logger.warning(
+                    "ESPN metrics computation failed for year %d: %s", year, exc,
+                )
+
         result = YearModeResult(
             year=year,
             mode="ev",
@@ -1380,20 +1592,24 @@ class UnifiedBacktester:
             pool_rank_percentile=percentile,
             pool_score=best_model_score,
             opponent_mean_score=float(np.mean(opponent_scores)),
+            path_protection_score=path_protection_score,
+            leverage_accuracy=leverage_accuracy,
+            n_leverage_picks=n_leverage_picks,
         )
 
         logger.info(
             "EV backtest %d (pool=%d, %s): rank=%d/%d (%.1f%%), "
-            "score=%.0f, opp_mean=%.0f",
+            "score=%.0f, opp_mean=%.0f, path_prot=%.3f, lev_acc=%.3f",
             year, total, payout_structure, rank, total,
             percentile * 100, best_model_score, result.opponent_mean_score,
+            path_protection_score, leverage_accuracy,
         )
         return result
 
     def _compute_summary(
         self,
         results: List[YearModeResult],
-    ) -> Dict[str, Dict[str, float]]:
+    ) -> Dict[str, Dict[str, float]]:  # noqa: E301
         """Compute aggregate summary statistics per mode."""
         summary: Dict[str, Dict[str, float]] = {}
 
