@@ -1107,11 +1107,13 @@ class UnifiedBacktester:
             aggregate summary statistics.
         """
         results: List[YearModeResult] = []
+        skipped_years: List[int] = []
 
         for year in config.years:
             history = self.load_history(year)
             if history is None:
                 logger.warning("No historical data for %d, skipping", year)
+                skipped_years.append(year)
                 continue
 
             # Build predict_fn for this year
@@ -1133,6 +1135,19 @@ class UnifiedBacktester:
                         )
                         if ev_result is not None:
                             results.append(ev_result)
+
+        if skipped_years:
+            logger.warning(
+                "Backtest skipped %d of %d requested years due to missing "
+                "historical data: %s",
+                len(skipped_years), len(config.years), skipped_years,
+            )
+        if not results:
+            logger.error(
+                "Backtest produced ZERO results across all %d requested years. "
+                "Output artifact will be empty. Check historical data availability.",
+                len(config.years),
+            )
 
         # Compute summary statistics
         summary = self._compute_summary(results)
