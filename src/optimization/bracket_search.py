@@ -47,6 +47,11 @@ class BracketSearchConfig:
     ev_mode: bool = False
     pool_size: int = 100  # Used in EV mode for opponent duplication penalty
 
+    # Path protection (Protocol Section 4.4)
+    path_protection_weight: float = 0.15
+    min_path_protection: float = 0.85  # Minimum acceptable score
+    enable_path_protection: bool = True
+
 
 @dataclass
 class SAConfig(BracketSearchConfig):
@@ -123,6 +128,8 @@ class BracketSearchOptimizer(ABC):
         public_picks: Optional[Dict[str, float]] = None,
         scoring_system: Optional[Dict[str, int]] = None,
         round_public_picks: Optional[Dict[str, Dict[str, float]]] = None,
+        team_regions: Optional[Dict[str, str]] = None,
+        team_seeds: Optional[Dict[str, int]] = None,
     ):
         """
         Args:
@@ -134,12 +141,24 @@ class BracketSearchOptimizer(ABC):
                 per-round leverage.  When provided and ev_mode is enabled,
                 the fitness function uses per-round pick rates instead of
                 championship-only public_picks.
+            team_regions: team_id -> region name (East/West/South/Midwest).
+                Required for path protection scoring.
+            team_seeds: team_id -> seed (1-16).  Required for quadrant
+                correlation constraints.
         """
         self.predict_fn = predict_fn
         self.config = config
         self.public_picks = public_picks or {}
         self.scoring = scoring_system or ROUND_POINTS
         self.round_public_picks = round_public_picks or {}
+        self.team_regions = team_regions or {}
+        self.team_seeds = team_seeds or {}
+
+        # Path protection scorer (Protocol Section 4.4)
+        self._path_scorer = None
+        if config.enable_path_protection and self.team_regions:
+            from .path_protection import PathProtectionScorer
+            self._path_scorer = PathProtectionScorer()
 
     @abstractmethod
     def optimize(
@@ -230,7 +249,17 @@ class BracketSearchOptimizer(ABC):
         robustness_score /= max(n_picks, 1)
 
         # EV mode: 85% EV, 15% robustness (prevent degenerate low-probability brackets)
-        return 0.85 * ev_score + 0.15 * robustness_score
+        fitness = 0.85 * ev_score + 0.15 * robustness_score
+
+        # Path protection penalty (Protocol Section 4.4)
+        if self._path_scorer is not None and bracket.picks:
+            path_score = self._path_scorer.compute_path_protection_score(
+                bracket.picks, self.predict_fn, self.team_regions, self.scoring,
+            )
+            if path_score < self.config.min_path_protection:
+                fitness *= (path_score / self.config.min_path_protection)
+
+        return fitness
 
     def _evaluate_legacy(self, bracket: SearchBracket) -> float:
         """Legacy composite fitness function."""
@@ -259,12 +288,34 @@ class BracketSearchOptimizer(ABC):
         robustness_score /= max(n_picks, 1)
         diversity_score /= max(n_picks, 1)
 
-        # Composite fitness
-        fitness = (
-            self.config.leverage_weight * leverage_score
-            + self.config.robustness_weight * robustness_score
-            + self.config.diversity_weight * diversity_score
-        )
+        # Path protection score (Protocol Section 4.4)
+        path_score = 0.0
+        if self._path_scorer is not None and bracket.picks:
+            path_score = self._path_scorer.compute_path_protection_score(
+                bracket.picks, self.predict_fn, self.team_regions, self.scoring,
+            )
+
+        # Composite fitness with optional path protection
+        if self._path_scorer is not None:
+            # Renormalize weights to include path protection
+            total_w = (
+                self.config.leverage_weight
+                + self.config.robustness_weight
+                + self.config.diversity_weight
+                + self.config.path_protection_weight
+            )
+            fitness = (
+                self.config.leverage_weight * leverage_score
+                + self.config.robustness_weight * robustness_score
+                + self.config.diversity_weight * diversity_score
+                + self.config.path_protection_weight * path_score
+            ) / max(total_w, 1e-6)
+        else:
+            fitness = (
+                self.config.leverage_weight * leverage_score
+                + self.config.robustness_weight * robustness_score
+                + self.config.diversity_weight * diversity_score
+            )
         return fitness
 
     def _get_pick_rate(self, team_id: str, round_name: str) -> float:
@@ -424,8 +475,13 @@ class SimulatedAnnealingOptimizer(BracketSearchOptimizer):
         public_picks: Optional[Dict[str, float]] = None,
         scoring_system: Optional[Dict[str, int]] = None,
         round_public_picks: Optional[Dict[str, Dict[str, float]]] = None,
+        team_regions: Optional[Dict[str, str]] = None,
+        team_seeds: Optional[Dict[str, int]] = None,
     ):
-        super().__init__(predict_fn, config, public_picks, scoring_system, round_public_picks)
+        super().__init__(
+            predict_fn, config, public_picks, scoring_system,
+            round_public_picks, team_regions, team_seeds,
+        )
         self.sa_config = config
 
     def optimize(

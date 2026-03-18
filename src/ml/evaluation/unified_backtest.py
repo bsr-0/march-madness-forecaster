@@ -895,6 +895,9 @@ class UnifiedBacktestConfig:
     # Number of model brackets to sample for EV mode (diverse bracket portfolio)
     n_model_brackets: int = 5
     random_seed: int = 42
+    # ESPN Protocol Section 4.7 metrics
+    compute_espn_metrics: bool = True
+    historical_picks_dir: str = "data/raw/historical_public_picks"
 
     def __post_init__(self):
         valid_modes = {"calibration", "ev"}
@@ -927,6 +930,11 @@ class YearModeResult:
     pool_rank_position: int = 0  # Absolute rank in simulated pool
     pool_score: float = 0.0  # Our bracket's score
     opponent_mean_score: float = 0.0  # Mean opponent score
+    # ESPN Protocol Section 4.7 metrics
+    path_protection_score: float = 0.0  # Target: > 0.85 of unconditional P
+    leverage_accuracy: float = 0.0  # Target: > 0.55 among leverage > +5%
+    p_top_10_pct: float = 0.0  # Target: > 0.30
+    n_leverage_picks: int = 0
 
 
 @dataclass
@@ -1411,12 +1419,29 @@ class UnifiedBacktester:
         if ev_results:
             pcts = [r.pool_rank_percentile for r in ev_results]
             wins = sum(1 for r in ev_results if r.pool_rank_position == 1)
+            # ESPN Protocol Section 4.7 metrics
+            path_scores = [r.path_protection_score for r in ev_results if r.path_protection_score > 0]
+            lev_accs = [r.leverage_accuracy for r in ev_results if r.n_leverage_picks > 0]
+            top10_rates = [r.p_top_10_pct for r in ev_results if r.p_top_10_pct > 0]
+            n_folds = len(ev_results)
+            se_pct = float(np.std(pcts) / max(1, n_folds ** 0.5)) if n_folds > 1 else 0.0
+
             summary["ev"] = {
                 "mean_percentile": float(np.mean(pcts)),
                 "std_percentile": float(np.std(pcts)),
+                "se_percentile": se_pct,
                 "n_wins": float(wins),
                 "n_configs": float(len(ev_results)),
                 "win_rate": float(wins / len(ev_results)) if ev_results else 0.0,
+                # ESPN Protocol Section 4.7 compliance
+                "mean_path_protection": float(np.mean(path_scores)) if path_scores else 0.0,
+                "mean_leverage_accuracy": float(np.mean(lev_accs)) if lev_accs else 0.0,
+                "mean_p_top_10_pct": float(np.mean(top10_rates)) if top10_rates else 0.0,
+                # Protocol compliance flags
+                "protocol_pool_rank_pass": float(np.mean(pcts)) <= 0.20,  # 80th %ile = top 20%
+                "protocol_path_protection_pass": (float(np.mean(path_scores)) >= 0.85) if path_scores else False,
+                "protocol_leverage_accuracy_pass": (float(np.mean(lev_accs)) >= 0.55) if lev_accs else False,
+                "protocol_p_top_10_pass": (float(np.mean(top10_rates)) >= 0.30) if top10_rates else False,
             }
 
             # Per-payout-structure breakdown
