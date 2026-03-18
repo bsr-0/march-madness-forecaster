@@ -87,13 +87,15 @@ On fallback, return model_p1 with temperature=1.0 (identity scaling).
 
 ---
 
-## Implementation Order
+## Implementation Status
 
-1. **predict_proba_batch → predict** (blocker, 3 line changes)
-2. **Raise calibration fold minimum to 80** (1 line change)
-3. **Temperature grid → linspace** (1 line change)
-4. **Equal-frequency ECE bins** (~15 lines)
-5. **Fallback: compare vs Pass 1 baseline** (~5 lines)
-6. **Extract CAL_WEIGHT_SCALE constant** (2 lines)
-7. **BrierLightGBMTuner subclass** (~60 lines in hyperparameter_tuning.py)
-8. **Wire BrierLightGBMTuner in baseline_training.py** (~10 lines)
+All 8 issues have been resolved:
+
+1. ~~**predict_proba_batch → predict**~~ ✅ (blocker, 3 calls + docstring)
+2. ~~**Raise calibration fold minimum to 80**~~ ✅ (baseline_training.py:1079)
+3. ~~**Temperature grid → linspace**~~ ✅ (calibration_first.py:222)
+4. ~~**Equal-frequency ECE bins**~~ ✅ (_compute_ece + _compute_calibration_weights)
+5. ~~**Fallback: compare vs Pass 1 baseline**~~ ✅ (compare brier_final > brier_p1, fallback T=1.0)
+6. ~~**Extract CAL_WEIGHT_SCALE constant**~~ ✅ (module-level constant with docstring)
+7. ~~**BrierLightGBMTuner subclass**~~ ✅ (~110 lines in hyperparameter_tuning.py)
+8. ~~**Wire BrierLightGBMTuner in baseline_training.py**~~ ✅ (conditional on use_brier_objective + BRIER_TUNER_AVAILABLE)

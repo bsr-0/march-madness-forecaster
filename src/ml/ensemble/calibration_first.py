@@ -30,12 +30,39 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+# Scaling factor for calibration-aware sample weights.  Maps typical ECE
+# range [0, ~0.2] to a meaningful weight range [1.0, ~1.3] given the
+# default alpha=0.7.  Maximum boost: 1 + (1 - 0.7) * 0.5 * 5.0 = 1.75x.
+CAL_WEIGHT_SCALE = 5.0
+
+
+def _make_bin_boundaries(predictions: np.ndarray, n_bins: int) -> np.ndarray:
+    """Build bin boundaries for ECE / calibration weight computation.
+
+    Uses equal-frequency (quantile) bins when ``N >= n_bins * 5`` for
+    stable tail estimates.  Falls back to equal-width bins otherwise.
+    Duplicate boundaries from quantile computation are collapsed via
+    ``np.unique`` so every bin spans a non-degenerate interval.
+    """
+    n = len(predictions)
+    if n >= n_bins * 5:
+        quantiles = np.linspace(0, 1, n_bins + 1)
+        boundaries = np.quantile(predictions, quantiles)
+        boundaries[0] = 0.0
+        boundaries[-1] = 1.0
+        # Collapse duplicate boundaries that arise when many predictions
+        # share the same value (e.g. heavy mode at 0.5).
+        boundaries = np.unique(boundaries)
+    else:
+        boundaries = np.linspace(0, 1, n_bins + 1)
+    return boundaries
+
 
 @dataclass
 class CalibrationFirstResult:
     """Output from the calibration-first pipeline."""
 
-    model: object  # Trained model with .predict() / .predict_proba_batch()
+    model: object  # Trained model with .predict()
     predictions: np.ndarray
     temperature: float
     ece_before: float
@@ -98,7 +125,7 @@ class CalibrationFirstPipeline:
         model_p1 = base_model_factory()
         model_p1.train(X_train, y_train)
 
-        preds_p1_cal = model_p1.predict_proba_batch(X_cal)
+        preds_p1_cal = model_p1.predict(X_cal)
         brier_p1 = float(np.mean((preds_p1_cal - y_cal) ** 2))
         ece_p1 = self._compute_ece(preds_p1_cal, y_cal)
 
@@ -122,7 +149,7 @@ class CalibrationFirstPipeline:
         logger.info("CalibrationFirst Pass 3: Calibration-weighted retraining")
         # Weight training samples by their calibration contribution
         # Samples in poorly-calibrated bins get higher weight
-        preds_p1_train = model_p1.predict_proba_batch(X_train)
+        preds_p1_train = model_p1.predict(X_train)
         sample_weights = self._compute_calibration_weights(
             preds_p1_train, y_train, self.alpha,
         )
@@ -130,7 +157,7 @@ class CalibrationFirstPipeline:
         model_p3 = base_model_factory()
         model_p3.train(X_train, y_train, sample_weight=sample_weights)
 
-        preds_p3_cal = model_p3.predict_proba_batch(X_cal)
+        preds_p3_cal = model_p3.predict(X_cal)
 
         # --- Pass 4: Final temperature scaling ---
         logger.info("CalibrationFirst Pass 4: Final temperature scaling")
@@ -144,20 +171,20 @@ class CalibrationFirstPipeline:
             temperature_final, brier_final, ece_final,
         )
 
-        # Fallback check: if Brier got worse, revert
+        # Fallback check: if Brier got worse than Pass 1 baseline, revert
         fell_back = False
         best_model = model_p3
-        if self.fallback_on_regression and brier_final > brier_p2:
+        if self.fallback_on_regression and brier_final > brier_p1:
             logger.warning(
-                "CalibrationFirst: Brier regressed (%.4f > %.4f), "
-                "falling back to standard pipeline",
-                brier_final, brier_p2,
+                "CalibrationFirst: Brier regressed (%.4f > %.4f baseline), "
+                "falling back to Pass 1 with identity temperature",
+                brier_final, brier_p1,
             )
             fell_back = True
-            preds_final_cal = preds_p2_cal
-            brier_final = brier_p2
-            ece_final = ece_p2
-            temperature_final = temperature
+            preds_final_cal = preds_p1_cal
+            brier_final = brier_p1
+            ece_final = ece_p1
+            temperature_final = 1.0
             best_model = model_p1
 
         return CalibrationFirstResult(
@@ -178,17 +205,24 @@ class CalibrationFirstPipeline:
         labels: np.ndarray,
         n_bins: int = 10,
     ) -> float:
-        """Compute Expected Calibration Error (ECE) with equal-width bins."""
-        bin_boundaries = np.linspace(0, 1, n_bins + 1)
-        ece = 0.0
+        """Compute Expected Calibration Error (ECE).
+
+        Uses equal-frequency (quantile) bins when N >= n_bins * 5 for
+        stable tail estimates.  Falls back to equal-width bins otherwise.
+        Duplicate quantile boundaries are collapsed automatically.
+        """
         n = len(predictions)
         if n == 0:
             return 0.0
 
-        for i in range(n_bins):
+        bin_boundaries = _make_bin_boundaries(predictions, n_bins)
+        actual_bins = len(bin_boundaries) - 1
+
+        ece = 0.0
+        for i in range(actual_bins):
             lo, hi = bin_boundaries[i], bin_boundaries[i + 1]
             mask = (predictions >= lo) & (predictions < hi)
-            if i == n_bins - 1:
+            if i == actual_bins - 1:
                 mask = (predictions >= lo) & (predictions <= hi)
 
             n_bin = mask.sum()
@@ -219,7 +253,7 @@ class CalibrationFirstPipeline:
         best_t = 1.0
         best_nll = float("inf")
 
-        for t in np.arange(0.5, 3.0, 0.01):
+        for t in np.linspace(0.5, 3.0, 251):
             scaled = 1.0 / (1.0 + np.exp(-logits / t))
             scaled = np.clip(scaled, eps, 1 - eps)
             nll = -np.mean(
@@ -254,14 +288,20 @@ class CalibrationFirstPipeline:
         Samples in poorly-calibrated bins receive higher weight in
         the next training pass, encouraging the model to improve
         calibration in those regions.
-        """
-        weights = np.ones(len(predictions))
-        bin_boundaries = np.linspace(0, 1, n_bins + 1)
 
-        for i in range(n_bins):
+        Uses the same binning strategy as ``_compute_ece`` (equal-frequency
+        when N >= n_bins * 5, with duplicate-boundary deduplication).
+        """
+        n = len(predictions)
+        weights = np.ones(n)
+
+        bin_boundaries = _make_bin_boundaries(predictions, n_bins)
+        actual_bins = len(bin_boundaries) - 1
+
+        for i in range(actual_bins):
             lo, hi = bin_boundaries[i], bin_boundaries[i + 1]
             mask = (predictions >= lo) & (predictions < hi)
-            if i == n_bins - 1:
+            if i == actual_bins - 1:
                 mask = (predictions >= lo) & (predictions <= hi)
 
             n_bin = mask.sum()
@@ -274,7 +314,7 @@ class CalibrationFirstPipeline:
 
             # Higher calibration error → higher weight (up-weight poorly calibrated regions)
             # alpha controls how much discrimination vs calibration matters
-            boost = 1.0 + (1.0 - alpha) * cal_error * 5.0
+            boost = 1.0 + (1.0 - alpha) * cal_error * CAL_WEIGHT_SCALE
             weights[mask] = boost
 
         # Normalize so mean weight = 1.0
