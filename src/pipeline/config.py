@@ -599,6 +599,24 @@ class SOTAPipelineConfig:
     brier_log_divergence_threshold: float = 0.015
     use_unweighted_brier: bool = True  # Protocol: unweighted Brier for model selection
 
+    # --- Path protection & quadrant correlation (Protocol Section 4.4) ---
+    path_protection_weight: float = 0.15
+    min_path_protection_score: float = 0.85  # Minimum acceptable path protection score
+    max_path_disruption_cost: float = 0.03  # Max disruption cost for within-region upsets
+    enable_quadrant_constraints: bool = True
+
+    # --- ESPN multi-bracket strategy (Protocol Section 4.5) ---
+    espn_n_brackets: int = 3
+    espn_risk_profiles: str = "conservative,balanced,aggressive"
+
+    # --- Custom Brier objective (Protocol Section 3.3) ---
+    use_brier_objective: bool = False  # LightGBM custom Brier loss (Phase 4 research)
+
+    # --- Calibration-first pipeline (Phase 4 research) ---
+    enable_calibration_first: bool = False
+    calibration_first_alpha: float = 0.7  # Discrimination vs calibration balance
+    calibration_first_fallback: bool = True  # Auto-fallback if Brier worsens
+
     # --- goto_conversion (favourite-longshot bias correction) ---
     # The goto_conversion method (gotoConversion/goto_conversion on GitHub)
     # has powered 10+ Kaggle gold medals and 100+ medals in March Madness

@@ -137,6 +137,7 @@ class BracketPerformance:
     median_rank: float
     percentile_estimates: List[PercentileEstimate] = field(default_factory=list)
     rank_distribution: Dict[str, float] = field(default_factory=dict)
+    path_protection_score: float = 0.0  # Protocol Section 4.7: target > 0.85
 
     def to_dict(self) -> Dict:
         return {
@@ -605,7 +606,7 @@ class PoolCompetitionSimulator:
             PoolSimulationResult with per-bracket performance summaries.
         """
         if target_percentiles is None:
-            target_percentiles = [0.01, 0.05, 0.10, 0.25]
+            target_percentiles = [0.01, 0.05, 0.10, 0.20, 0.25]
 
         rng = np.random.default_rng(self.config.random_seed)
         scoring_vector = build_scoring_vector(self.config.scoring_system)
