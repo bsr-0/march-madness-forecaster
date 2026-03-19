@@ -260,6 +260,7 @@ class ModeGatedResult:
     ev_leverage_preview: List[Dict] = field(default_factory=list)
     bracket_portfolio_stats: Dict = field(default_factory=dict)
     ablation_stats: Dict = field(default_factory=dict)
+    espn_optimization: Optional[Dict] = None
 
 
 def run_mode_gated_sections(
@@ -302,6 +303,61 @@ def run_mode_gated_sections(
             }
             for p in result.pool_analysis.leverage_picks[:15]
         ]
+
+    # ESPN bracket optimization (calibration mode)
+    # When espn_mode is enabled, run the ESPN bracket optimizer to produce
+    # rank percentile, top-10% rate, and path protection diagnostics.
+    if is_calibration and pipeline.config.espn_mode and len(pipeline.team_struct) == 64:
+        try:
+            from ...espn.bracket_optimizer import ESPNBracketOptimizer, ESPNOptimizationConfig
+
+            # Build first-round matchup list from team structure
+            first_round_matchups = _build_espn_first_round_matchups(pipeline)
+            if first_round_matchups and len(first_round_matchups) == 64:
+                # Build pairwise matchup probabilities
+                matchup_probs = {}
+                for i, t1 in enumerate(first_round_matchups):
+                    for j, t2 in enumerate(first_round_matchups):
+                        if i < j and (t1, t2) not in matchup_probs:
+                            p = pipeline.predict_probability(t1, t2)
+                            matchup_probs[(t1, t2)] = float(p)
+
+                optimizer = ESPNBracketOptimizer(
+                    first_round_matchups=first_round_matchups,
+                    matchup_probs=matchup_probs,
+                    model_round_probs=model_round_probs,
+                    public_pick_distribution=result.public_picks,
+                    scoring_system=result.scoring_system,
+                )
+                espn_config = ESPNOptimizationConfig(
+                    num_simulations=max(10000, pipeline.config.espn_n_brackets * 3000),
+                    pool_size=pipeline.config.pool_size,
+                    n_candidates=max(6, pipeline.config.espn_n_brackets * 3),
+                    random_seed=pipeline.config.random_seed,
+                )
+                espn_result = optimizer.optimize(espn_config)
+                result.espn_optimization = {
+                    "selected_champion": espn_result.selected_champion,
+                    "simulated_rank_percentile": round(espn_result.simulated_rank_percentile, 2),
+                    "top_10_rate": round(espn_result.top_10_rate, 4),
+                    "top_money_rate": round(espn_result.top_money_rate, 4),
+                    "path_protection_score": round(espn_result.path_protection_score, 4),
+                    "n_candidates_evaluated": len(espn_result.diagnostics),
+                    "selected_bracket_rounds": {
+                        k: len(v) for k, v in espn_result.selected_bracket.items()
+                    },
+                }
+                logger.info(
+                    "ESPN optimization: champion=%s, rank_pct=%.1f%%, top10=%.3f, "
+                    "path_protection=%.3f",
+                    espn_result.selected_champion,
+                    espn_result.simulated_rank_percentile,
+                    espn_result.top_10_rate,
+                    espn_result.path_protection_score,
+                )
+        except Exception as espn_exc:
+            logger.warning("ESPN bracket optimization failed: %s", espn_exc)
+            result.espn_optimization = {"error": str(espn_exc)}
 
     # EV mode: preliminary pool analysis for bracket portfolio
     if pipeline.config.enable_bracket_portfolio and is_ev:
@@ -587,6 +643,17 @@ def assemble_report(
             "calibration_method": calibration_stats.get("method", "unknown"),
             "calibration_enabled": bool(pipeline.calibration_pipeline),
             "massey_coverage": getattr(pipeline, "_massey_coverage_stats", {}),
+            "calibration_comparison": {
+                "brier_before": calibration_stats.get("brier_before"),
+                "brier_after": calibration_stats.get("brier_after"),
+                "ece_before": calibration_stats.get("ece_before"),
+                "ece_after": calibration_stats.get("ece_after"),
+                "reliability_pre": calibration_stats.get("reliability_pre"),
+                "reliability_post": calibration_stats.get("reliability_post"),
+                "sharpening_disabled": not pipeline.config.enable_brier_sharpening,
+                "goto_conversion_enabled": pipeline.config.enable_goto_conversion,
+            },
+            "bma_diagnostics": baseline_stats.get("ensemble_weight_optimization", {}),
         },
         "rubric_evaluation": {
             "phase_1_data_engineering": {
@@ -630,8 +697,32 @@ def assemble_report(
         "phase_timings": pipeline._phase_timer.get_timings(),
     }
 
-    # Risk report
+    # Promote key LOYO diagnostics to top-level for easy access
     loyo_cv = baseline_stats.get("loyo_cv", {})
+    if loyo_cv.get("enabled"):
+        report["pipeline_diagnostics"] = {
+            "loyo_mean_brier": loyo_cv.get("mean_brier"),
+            "loyo_mean_log_loss": loyo_cv.get("mean_log_loss"),
+            "loyo_mean_ece": loyo_cv.get("mean_ece"),
+            "loyo_brier_skill_score": loyo_cv.get("mean_brier_skill_score"),
+            "loyo_brier_decomposition": loyo_cv.get("brier_decomposition", {}),
+            "admission_gate": loyo_cv.get("admission_gate", {}),
+            "pit_validation": loyo_cv.get("pit_validation", {}),
+            "bma_diagnostics": baseline_stats.get("ensemble_weight_optimization", {}),
+            "calibration_comparison": {
+                "brier_before": calibration_stats.get("brier_before"),
+                "brier_after": calibration_stats.get("brier_after"),
+                "ece_before": calibration_stats.get("ece_before"),
+                "ece_after": calibration_stats.get("ece_after"),
+            },
+        }
+
+    # ESPN optimization results (from mode_result if available)
+    espn_result = getattr(mode_result, "espn_optimization", None)
+    if espn_result:
+        report["espn_optimization"] = espn_result
+
+    # Risk report
     if loyo_cv.get("enabled") and loyo_cv.get("per_year"):
         try:
             year_briers = {int(yr): info["brier"] for yr, info in loyo_cv["per_year"].items()}
@@ -648,6 +739,34 @@ def assemble_report(
             logger.debug("Risk report generation failed: %s", exc)
 
     return report
+
+
+def _build_espn_first_round_matchups(pipeline) -> List[str]:
+    """Build 64-team first-round matchup list from pipeline team structure.
+
+    Orders teams by region and seed to produce the standard NCAA bracket
+    matchup order: (1v16, 8v9, 5v12, 4v13, 6v11, 3v14, 7v10, 2v15) per region.
+    """
+    SEED_ORDER = [1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15]
+    by_region: Dict[str, Dict[int, str]] = {}
+
+    for tid, team in pipeline.team_struct.items():
+        region = getattr(team, "region", None) or "Unknown"
+        seed = getattr(team, "seed", None)
+        if seed is not None:
+            by_region.setdefault(region, {})[int(seed)] = tid
+
+    matchups: List[str] = []
+    for region in sorted(by_region.keys()):
+        seed_map = by_region[region]
+        for s in SEED_ORDER:
+            if s in seed_map:
+                matchups.append(seed_map[s])
+            else:
+                # Placeholder if seed missing
+                matchups.append(f"UNKNOWN_{region}_{s}")
+
+    return matchups[:64]
 
 
 def _build_feature_selection_artifact(pipeline) -> Dict:
