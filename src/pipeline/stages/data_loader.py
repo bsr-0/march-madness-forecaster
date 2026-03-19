@@ -1014,6 +1014,28 @@ def load_team_stat_sources(
                     "luck": 0.0,
                 }
 
+    # Backfill proprietary_map from Torvik data for remaining gaps
+    for team in teams:
+        tid = _team_id(team.name)
+        if tid not in proprietary_map and tid in torvik_map:
+            tv = torvik_map[tid]
+            off = float(tv.get("adj_offensive_efficiency", 0))
+            deff = float(tv.get("adj_defensive_efficiency", 0))
+            tempo = float(tv.get("adj_tempo", 0))
+            if off < 1e-6 or deff < 1e-6:
+                continue
+            proprietary_map[tid] = {
+                "adj_offensive_efficiency": off,
+                "adj_defensive_efficiency": deff,
+                "adj_tempo": tempo if tempo > 1e-6 else 68.0,
+                "adj_efficiency_margin": off - deff,
+                "sos_adj_em": 0.0,
+                "sos_opp_o": 100.0,
+                "sos_opp_d": 100.0,
+                "ncsos_adj_em": 0.0,
+                "luck": 0.0,
+            }
+
     # Enrich with tournament context data
     enrich_tournament_context(config, torvik_map, proprietary_map, teams)
 
