@@ -49,6 +49,47 @@ class ESPNOptimizationConfig:
     max_upsets_per_bracket: int = 4
     enable_quadrant_correlation: bool = True
     max_final_four_sets: int = 8
+    # Objective function weights (configurable)
+    objective_top_money_weight: float = 0.55
+    objective_top_10_weight: float = 0.35
+    objective_rank_weight: float = 0.10
+    # Set True to auto-adapt thresholds based on pool_size
+    adaptive_thresholds: bool = True
+
+    def __post_init__(self) -> None:
+        if self.adaptive_thresholds:
+            self._apply_pool_adaptive_thresholds()
+
+    def _apply_pool_adaptive_thresholds(self) -> None:
+        """Scale upset thresholds and objective weights by pool size.
+
+        Small pools reward accuracy (higher upset thresholds, favor top-money).
+        Large pools reward differentiation (lower thresholds, favor top-10%).
+        """
+        import math as _math
+        # Upset leverage threshold: smaller pools need higher leverage
+        # to justify contrarian picks; larger pools need less.
+        # Base: 0.05 at pool_size=100, scales with 1/sqrt(pool_size/100).
+        scale = _math.sqrt(100.0 / max(self.pool_size, 10))
+        self.min_upset_leverage = round(0.05 * scale, 3)
+        # Clamp to reasonable range
+        self.min_upset_leverage = max(0.02, min(0.15, self.min_upset_leverage))
+
+        # More upsets allowed in larger pools
+        if self.pool_size >= 500:
+            self.max_upsets_per_bracket = max(self.max_upsets_per_bracket, 6)
+        elif self.pool_size >= 200:
+            self.max_upsets_per_bracket = max(self.max_upsets_per_bracket, 5)
+
+        # Objective weights: large pools shift emphasis toward top-10
+        if self.pool_size >= 500:
+            self.objective_top_money_weight = 0.40
+            self.objective_top_10_weight = 0.45
+            self.objective_rank_weight = 0.15
+        elif self.pool_size >= 200:
+            self.objective_top_money_weight = 0.45
+            self.objective_top_10_weight = 0.40
+            self.objective_rank_weight = 0.15
 
 
 @dataclass
@@ -196,7 +237,7 @@ class ESPNBracketOptimizer:
                     first_round_matchups=self.first_round_matchups,
                 )
 
-                objective = self._objective(sim_result, path_diag.protection_score)
+                objective = self._objective(sim_result, path_diag.protection_score, config=config)
                 f4_label = "+".join(sorted(f4_set))
                 diag = CandidateDiagnostics(
                     champion_id=champion_id,
@@ -317,12 +358,12 @@ class ESPNBracketOptimizer:
         # Generate combinations (1 per region)
         region_lists = [per_region_top.get(r, []) for r in range(4)]
 
-        # Handle empty regions
-        for i, rl in enumerate(region_lists):
-            if not rl:
-                region_lists[i] = [f"UNKNOWN_R{i}"]
+        # Skip regions with no candidates instead of injecting invalid tokens
+        non_empty = [rl for rl in region_lists if rl]
+        if not non_empty:
+            return [[champion_id]]
 
-        all_combos = list(itertools.product(*region_lists))
+        all_combos = list(itertools.product(*non_empty))
 
         # Deduplicate and limit
         seen = set()
@@ -388,11 +429,13 @@ class ESPNBracketOptimizer:
                         winner = compute_ev_pick(
                             t1, t2, round_name,
                             self.matchup_probs, self.public_pick_distribution,
+                            scoring_system=self.scoring,
                         )
                 else:
                     winner = compute_ev_pick(
                         t1, t2, round_name,
                         self.matchup_probs, self.public_pick_distribution,
+                        scoring_system=self.scoring,
                     )
 
                 # Path-protection guardrail on sibling games
@@ -511,7 +554,17 @@ class ESPNBracketOptimizer:
     def _compute_upset_disruption(
         self, champion_id: str, favorite: str, underdog: str,
     ) -> float:
-        """Compute how much picking underdog over favorite hurts champion path."""
+        """Compute how much picking underdog over favorite hurts champion path.
+
+        Only returns nonzero disruption when the upset is in the champion's
+        region (i.e., it could actually affect the champion's bracket path).
+        Cross-region upsets have zero disruption by definition.
+        """
+        champ_region = self._team_regions.get(champion_id, -1)
+        fav_region = self._team_regions.get(favorite, -2)
+        # Cross-region upsets cannot disrupt the champion's path
+        if champ_region != fav_region:
+            return 0.0
         p_vs_fav = lookup_matchup_probability(self.matchup_probs, champion_id, favorite)
         p_vs_dog = lookup_matchup_probability(self.matchup_probs, champion_id, underdog)
         return max(0.0, p_vs_fav - p_vs_dog)
@@ -549,10 +602,23 @@ class ESPNBracketOptimizer:
     # Scoring and helpers
     # ------------------------------------------------------------------
 
-    def _objective(self, sim_result: ESPNMCSimResult, path_protection_score: float) -> float:
-        """Composite objective for candidate ranking."""
+    def _objective(
+        self,
+        sim_result: ESPNMCSimResult,
+        path_protection_score: float,
+        config: Optional[ESPNOptimizationConfig] = None,
+    ) -> float:
+        """Composite objective for candidate ranking.
+
+        Weights are drawn from config when available, allowing pool-size-
+        adaptive tuning. Falls back to standard weights otherwise.
+        """
+        w_money = config.objective_top_money_weight if config else 0.55
+        w_top10 = config.objective_top_10_weight if config else 0.35
+        w_rank = config.objective_rank_weight if config else 0.10
+
         rank_term = sim_result.mean_rank_percentile / 100.0
-        base = 0.55 * sim_result.top_money_rate + 0.35 * sim_result.top_10_rate + 0.10 * rank_term
+        base = w_money * sim_result.top_money_rate + w_top10 * sim_result.top_10_rate + w_rank * rank_term
         return float(base * max(0.5, path_protection_score))
 
     def _find_team_first_round_game(self, team_id: str) -> int:
