@@ -173,12 +173,15 @@ def compute_ev_pick(
     round_name: str,
     matchup_probs: Dict[Tuple[str, str], float],
     public_picks: Dict[str, Dict[str, float]],
+    scoring_system: Optional[Dict[str, int]] = None,
 ) -> str:
     """Pick the team maximizing expected relative gain vs the field.
 
     Instead of picking the most probable winner, picks the team whose
     ``leverage × probability`` product is highest — the EV-optimal choice
-    for pool differentiation.
+    for pool differentiation. When a scoring system is provided, the
+    round's point value is incorporated so that high-value late-round
+    upsets require proportionally higher leverage to justify.
 
     Args:
         team1_id: First team.
@@ -186,6 +189,7 @@ def compute_ev_pick(
         round_name: Round name (e.g., "R64").
         matchup_probs: Pairwise win probabilities.
         public_picks: Public pick distribution per team per round.
+        scoring_system: Optional round -> points mapping for round weighting.
 
     Returns:
         Team ID of the EV-optimal pick.
@@ -208,6 +212,16 @@ def compute_ev_pick(
     # EV = leverage × probability  (expected relative gain vs field)
     ev1 = (p1 - pub1) * p1
     ev2 = (p2 - pub2) * p2
+
+    # Scale by round points when scoring system is provided — upsets in
+    # high-value rounds (F4/CHAMP) get amplified leverage signal while
+    # R64 upsets are down-weighted using log scaling to avoid over-bias.
+    if scoring_system:
+        round_pts = float(scoring_system.get(round_name, 10))
+        import math as _math
+        weight = _math.log2(max(round_pts / 10.0, 1.0)) + 1.0
+        ev1 *= weight
+        ev2 *= weight
 
     return team1_id if ev1 >= ev2 else team2_id
 
