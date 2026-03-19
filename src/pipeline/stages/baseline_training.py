@@ -875,6 +875,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         dev_y = eval_y[:dev_count]
         eval_X = eval_X[dev_count:]
         eval_y = eval_y[dev_count:]
+        eval_margins = eval_margins[dev_count:]
         valid_samples = len(eval_y)
         valid_set = (dev_X, dev_y)
         logger.info(
@@ -1707,7 +1708,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         and LeaveOneYearOutCV is not None
     ):
         loyo_stats = pipeline._run_loyo_validation(
-            feature_dim=train_X.shape[1],
+            feature_dim=X_full.shape[1],
             feature_names=feature_names,
         )
 
