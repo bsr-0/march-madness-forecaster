@@ -1021,7 +1021,7 @@
   "data_file_hashes": {
     "data/raw/torvik_2026.json": "214cec3364a8ade6d63b185063ffd53d7f9b2cc0d79f03e2876b1d9583d0f817",
     "data/raw/teams_2026.json": "18713882c27372ad9ad9cf0c5034ea3d14d36f61d0ea33b0cac59ff7b619ee68",
-    "data/raw/historical_games_2026.json": "99c539a7dd90c0cadf19fbfc4a43326fcd8fc39c48de01cad265482c2bf4a561",
+    "data/raw/historical_games_2026.json": "ce484b85ebfcc94aa1cb1989bd49cdf027746565a412f9eb9371b9d6ad17efbe",
     "data/raw/rosters_2026.json": "d9665ee87b309464d7258edc9f67413a75fee5e20cec985360b501d0bf1ec12a",
     "data/raw/bracket_2026.json": "27ee96fcbde3ca2ec228fa89d355e8e5dedd202f73129638fee386aab9a510f5"
   },
