@@ -95,6 +95,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  Freeze manifest:      artifacts/production_freeze_2026.json")
         print(f"  Governance report:    artifacts/production_governance_report_2026.json")
         print(f"  Market validation:    artifacts/market_validation_2026.json")
+        kaggle_export = report.get("kaggle_export", {})
+        if kaggle_export.get("status") == "completed":
+            print(f"  Kaggle submission:    artifacts/kaggle_submission_2026.csv")
+        else:
+            print(f"  Kaggle submission:    skipped ({kaggle_export.get('reason', 'unknown')})")
         return 0
 
     except ProductionValidationError as exc:
