@@ -13,10 +13,12 @@ from .bracket_optimizer import (
 )
 from .leverage import LeverageSignal, compute_leverage_table
 from .mc_simulator import ESPNMCSimConfig, ESPNMCSimResult, ESPNMonteCarloSimulator
+from .public_pick_scraper import load_public_picks  # noqa: F401
 
 __all__ = [
     "LeverageSignal",
     "compute_leverage_table",
+    "load_public_picks",
     "ESPNMCSimConfig",
     "ESPNMCSimResult",
     "ESPNMonteCarloSimulator",

@@ -1,5 +1,5 @@
 {
-  "description": "Backtest validation using tournament data from 2018-2024 (no 2025/2026 leakage)",
+  "description": "LOYO backtest validation using tournament data from 2018-2024 (2025 fold pending pipeline re-run, no 2026 leakage)",
   "model": "Blended Barthag-Elo + Seed Prior (70/30)",
   "method": "Leave-year-out: for each year, use that year's pre-tournament ratings to predict tournament outcomes",
   "overall": {

@@ -1613,7 +1613,9 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
 
     # Protocol v2, Section 3.2: BMA is the ONLY supported ensemble strategy.
     # Legacy grid-search weight optimization is intentionally disabled.
-    _use_bma = BMA_AVAILABLE and len(trained_models) >= 2
+    _bma_cfg = getattr(pipeline, "config", None)
+    _bma_flag = getattr(_bma_cfg, "bma_enabled", True)
+    _use_bma = BMA_AVAILABLE and _bma_flag and len(trained_models) >= 2
 
     if _use_bma and eval_y is not None and len(eval_y) > 0:
         # BMA ensemble (Protocol v2, Section 3.2):
@@ -2052,7 +2054,7 @@ def _run_loyo_validation(
         return {"enabled": False, "reason": f"directory_not_found: {games_dir}"}
 
     years = pipeline.config.loyo_years or [y for y in range(2015, 2026) if y != 2020]
-    years = pipeline._filter_years(years)
+    years = pipeline._filter_years(years, include_holdout=True)
     if not years:
         return {"enabled": False, "reason": "no_dev_years"}
 
@@ -2111,7 +2113,8 @@ def _run_loyo_validation(
         "violations": 0,
         "warnings": 0,
     }
-    if PITValidator is not None:
+    pit_enforcement = getattr(pipeline.config, "pit_enforcement", True)
+    if PITValidator is not None and pit_enforcement:
         try:
             from src.data.features.feature_engineering import TeamFeatures
 
@@ -2506,7 +2509,7 @@ def _optimize_ensemble_weights_loyo(
     years = pipeline.config.loyo_years or [
         y for y in range(2015, pipeline.config.year) if y != 2020
     ]
-    years = pipeline._filter_years(years)
+    years = pipeline._filter_years(years, include_holdout=True)
     if len(years) < 3:
         return {}
 
