@@ -725,6 +725,8 @@ class ImportanceCalculator:
                 """Minimal sklearn-compatible wrapper for LightGBM Booster."""
                 def __init__(self, booster):
                     self._booster = booster
+                def fit(self, X_input, y_input=None, **kwargs):
+                    return self  # Already trained; no-op for sklearn compat
                 def predict(self, X_input):
                     return self._booster.predict(X_input)
 
