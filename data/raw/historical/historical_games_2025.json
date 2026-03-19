@@ -320848,5 +320848,6 @@
   ],
   "failed_game_ids": [],
   "complete": true,
-  "max_games_per_season": null
+  "max_games_per_season": null,
+  "generated_at": "2026-03-18T17:00:00+00:00"
 }

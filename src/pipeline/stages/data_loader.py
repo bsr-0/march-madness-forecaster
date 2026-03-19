@@ -635,6 +635,19 @@ def load_team_stat_sources(
             hist_payload = json.load(f)
         validate_feed_freshness(config, "Historical games", hist_payload)
         historical_games = hist_payload.get("games", [])
+        # Detect skeleton/stub files where game_id exists but all other fields are null
+        if historical_games:
+            _sample = historical_games[:min(20, len(historical_games))]
+            _null_count = sum(
+                1 for g in _sample
+                if g.get("team1_name") is None and g.get("team1_score") is None
+            )
+            if _null_count == len(_sample):
+                raise DataRequirementError(
+                    f"Historical games file {config.historical_games_json} is a skeleton "
+                    f"with {len(historical_games)} entries but all team/score fields are null. "
+                    f"Re-run data ingestion or check that the file points to fully populated data."
+                )
         _fallback_date = f"{config.year - 1}-11-01"
         _fb_count = sum(1 for _g in historical_games if _g.get("date") == _fallback_date)
         if _fb_count > len(historical_games) * 0.5 and len(historical_games) > 50:
