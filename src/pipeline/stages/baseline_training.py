@@ -468,6 +468,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # Build feature names early so they are available for multi-year
     # data-quality scoring (compute_year_data_quality) below.
     feature_names = None
+    feature_names_full = None  # pre-selection names (91-dim) for LOYO
     if train_samples >= 40:
         from src.data.features.feature_engineering import TeamFeatures
         base_names = TeamFeatures.get_feature_names(include_embeddings=False)
@@ -483,6 +484,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             "seed_diff",
         ]
         feature_names = diff_names + absolute_names + interaction_names
+        feature_names_full = list(feature_names)  # preserve pre-selection names for LOYO
         if len(feature_names) != train_X.shape[1]:
             logger.warning(
                 "Feature name count mismatch: %d names vs %d columns. "
@@ -1707,9 +1709,12 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         and pipeline.config.multi_year_games_dir
         and LeaveOneYearOutCV is not None
     ):
+        # Use pre-selection feature names (full 91-dim) since LOYO loads
+        # raw historical data at the original feature dimension.
+        _loyo_names = feature_names_full if feature_names_full is not None else feature_names
         loyo_stats = pipeline._run_loyo_validation(
             feature_dim=X_full.shape[1],
-            feature_names=feature_names,
+            feature_names=_loyo_names,
         )
 
     # ====================================================================
