@@ -129,7 +129,7 @@ jobs:
             echo "Found submission: $SUBMISSION"
             wc -l "$SUBMISSION"
             kaggle competitions submit \
-              -c march-machine-learning-mania-2025 \
+              -c march-machine-learning-mania-2026 \
               -f "$SUBMISSION" \
               -m "Automated submission from pipeline run (triggered by ${{ github.actor }})"
             echo "Kaggle submission uploaded."
