@@ -128,6 +128,15 @@ def _load_env_file(path: Path) -> None:
         pass
 
 
+def _kaggle_api_exception():
+    """Return the Kaggle ApiException class, or None if unavailable."""
+    try:
+        from kaggle.rest import ApiException
+        return ApiException
+    except ImportError:
+        return None
+
+
 def _get_kaggle_api():
     """Get an authenticated Kaggle API instance."""
     try:
@@ -197,6 +206,10 @@ def download_competition_data(
 
     output_path.mkdir(parents=True, exist_ok=True)
 
+    # Build exception tuple — include Kaggle ApiException when available
+    _api_exc = _kaggle_api_exception()
+    _catch = (OSError, ValueError, RuntimeError) + ((_api_exc,) if _api_exc else ())
+
     # Try competition slugs in order
     slugs = [competition] if competition else COMPETITION_SLUGS
     for slug in slugs:
@@ -212,7 +225,7 @@ def download_competition_data(
                 )
                 return str(output_path)
             logger.info("Downloaded %s but no MMasseyOrdinals found", slug)
-        except (OSError, ValueError, RuntimeError) as e:
+        except _catch as e:
             logger.debug("Competition %s download failed: %s", slug, e)
             continue
 
@@ -222,7 +235,7 @@ def download_competition_data(
             result = _download_individual_files(api, slug, output_path)
             if result:
                 return result
-        except (OSError, ValueError, RuntimeError) as e:
+        except _catch as e:
             logger.debug("Individual file download from %s failed: %s", slug, e)
             continue
 
@@ -238,6 +251,8 @@ def _download_individual_files(
     api, competition: str, output_path: Path
 ) -> Optional[str]:
     """Try downloading critical files individually."""
+    _api_exc = _kaggle_api_exception()
+    _catch = (OSError, ValueError, RuntimeError, zipfile.BadZipFile) + ((_api_exc,) if _api_exc else ())
     downloaded_any = False
     for filename in REQUIRED_FILES + OPTIONAL_FILES:
         try:
@@ -254,7 +269,7 @@ def _download_individual_files(
                     zf.extractall(output_path)
                 zip_path.unlink()
             downloaded_any = True
-        except (OSError, ValueError, RuntimeError, zipfile.BadZipFile):
+        except _catch:
             continue
 
     if downloaded_any and _has_massey_ordinals(output_path):
