@@ -181,7 +181,7 @@ function renderUpsetAlerts() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// SECTION 2: 2025 BACKTEST VALIDATION
+// SECTION 2: LOYO BACKTEST VALIDATION (2018-2024)
 // ═══════════════════════════════════════════════════════════════════
 
 function renderBacktest() {
