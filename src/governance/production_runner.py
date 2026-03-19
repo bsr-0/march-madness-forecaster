@@ -137,6 +137,9 @@ def _sha256_path(path: Path) -> str:
     if path.is_dir():
         parts = []
         for child in sorted([c for c in path.rglob('*') if c.is_file()]):
+            # Skip __pycache__ and .pyc files — they vary by Python version
+            if '__pycache__' in child.parts or child.suffix == '.pyc':
+                continue
             parts.append(f"{child.relative_to(path)}={_sha256_file(child)}")
         return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()
     raise FileNotFoundError(path)

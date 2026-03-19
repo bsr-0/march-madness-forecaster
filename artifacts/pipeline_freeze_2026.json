@@ -1008,10 +1008,10 @@
     "src/pipeline/stages/inference.py": "14d610aad913b9e7b8441670768eadd0bc8e2887bbfd15f1473a2b2c95c283e0",
     "src/pipeline/probability_pipeline.py": "b11825b1b5592bc6effd2eb053231c6846d0f0c5b106909c259e5268985c0e48",
     "src/governance/production_validator.py": "7168e638fd04d505f3f18fdde5b7fe7f1c97c6b28695afef33073e79008a4929",
-    "src/governance/production_runner.py": "533e93cbca628c793dbff20c26135f8594fa9631be94f781d628526a18564b2a",
+    "src/governance/production_runner.py": "cbf8eceea066f2a80223111a4a9b1ddeaa58718a7228b33acb47d33f6bc22376",
     "src/run_production_2026.py": "dbb067ff0645a858eb780cc9901bf256a48300259b106068faae56662b2c58f3"
   },
-  "source_tree_hash": "38e2ead16660e98625d29987eab2dd6068687e18f0754cd0544872baf510e68e",
+  "source_tree_hash": "a6babfee1a4e99361bd6e99751c9f43cf633646b99c1c3ec6bd4509f37577ae6",
   "data_file_hashes": {
     "data/raw/torvik_2026.json": "16c06508f79d87c845a01ba00ad6e48cc2f625c5776b1c987d0778b7dc56c213",
     "data/raw/teams_2026.json": "c782bca34f52ea1aa911dcdd828b5cd3e8387088d7b0194b26dc47f7a4e4ee4e",
