@@ -600,6 +600,69 @@ def run_production_2026(
     with open(market_validation_artifact_path, "w", encoding="utf-8") as f:
         json.dump(market_validation_dict, f, indent=2)
 
+    # --- Kaggle submission export (best-effort) ---
+    kaggle_export_result: Dict = {"status": "skipped", "reason": "not attempted"}
+    kaggle_submission_path = None
+    try:
+        kaggle_dir = Path(config.kaggle_dir) if config.kaggle_dir else None
+        if kaggle_dir and not kaggle_dir.is_absolute():
+            kaggle_dir = repo_root / kaggle_dir
+
+        mteams_path = kaggle_dir / "MTeams.csv" if kaggle_dir else None
+        sample_sub_path = None
+        if kaggle_dir and kaggle_dir.is_dir():
+            candidates = sorted(kaggle_dir.glob("*ampleSubmission*.csv"))
+            if candidates:
+                sample_sub_path = candidates[0]
+
+        if mteams_path is None or not mteams_path.is_file():
+            kaggle_export_result = {"status": "skipped", "reason": f"MTeams.csv not found in {kaggle_dir}"}
+        elif sample_sub_path is None or not sample_sub_path.is_file():
+            kaggle_export_result = {"status": "skipped", "reason": f"SampleSubmission CSV not found in {kaggle_dir}"}
+        else:
+            import pandas as pd
+            from ..exports.kaggle import load_kaggle_teams as _lkt, build_team_id_map as _bim, generate_predictions as _gp
+            from ..data.team_name_resolver import TeamNameResolver as _TNR
+
+            _team_id_to_name = _lkt(str(mteams_path))
+            _resolver = _TNR()
+            _id_map = _bim(_team_id_to_name, _resolver)
+
+            _allowed = set(pipeline.feature_engineer.team_features.keys())
+            _id_map = {k: v for k, v in _id_map.items() if v in _allowed}
+
+            _sample_df = pd.read_csv(str(sample_sub_path))
+            _pred_df = _gp(
+                sample_df=_sample_df,
+                id_map=_id_map,
+                predict_fn=pipeline.predict_probability,
+                season_filter=config.year,
+            )
+
+            kaggle_submission_path = str(repo_root / "artifacts" / "kaggle_submission_2026.csv")
+            _pred_df.to_csv(kaggle_submission_path, index=False)
+
+            _stats = _pred_df.attrs.get("kaggle_export_stats", {})
+            if hasattr(_stats, "to_dict"):
+                _stats = _stats.to_dict()
+            kaggle_export_result = {
+                "status": "completed",
+                "output": kaggle_submission_path,
+                "sample_submission": str(sample_sub_path),
+                "total_rows": len(_pred_df),
+                "teams_mapped": len(_id_map),
+                "stats": _stats,
+            }
+            logger.info(
+                "Kaggle submission written: %s (%d rows, %d teams mapped)",
+                kaggle_submission_path, len(_pred_df), len(_id_map),
+            )
+    except Exception as exc:
+        kaggle_export_result = {"status": "skipped", "reason": f"export failed: {exc}"}
+        logger.warning("Kaggle submission export failed (non-fatal): %s", exc)
+
+    report["kaggle_export"] = kaggle_export_result
+
     config_hash = _sha256_file(config_file)
     source_hashes = {
         path: _sha256_file(repo_root / path)
@@ -616,6 +679,8 @@ def run_production_2026(
     output_hashes = {
         "output_report": _sha256_file(Path(output_report_path)),
     }
+    if kaggle_submission_path:
+        output_hashes["kaggle_submission"] = _sha256_file(Path(kaggle_submission_path))
 
     freeze_manifest = {
         "git_commit_sha": _git_commit_sha(repo_root),
