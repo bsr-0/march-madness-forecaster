@@ -167,6 +167,143 @@ def champion_path_probability(
     return float(max(0.0, min(1.0, prob)))
 
 
+def compute_ev_pick(
+    team1_id: str,
+    team2_id: str,
+    round_name: str,
+    matchup_probs: Dict[Tuple[str, str], float],
+    public_picks: Dict[str, Dict[str, float]],
+    scoring_system: Optional[Dict[str, int]] = None,
+) -> str:
+    """Pick the team maximizing expected relative gain vs the field.
+
+    Instead of picking the most probable winner, picks the team whose
+    ``leverage × probability`` product is highest — the EV-optimal choice
+    for pool differentiation. When a scoring system is provided, the
+    round's point value is incorporated so that high-value late-round
+    upsets require proportionally higher leverage to justify.
+
+    Args:
+        team1_id: First team.
+        team2_id: Second team.
+        round_name: Round name (e.g., "R64").
+        matchup_probs: Pairwise win probabilities.
+        public_picks: Public pick distribution per team per round.
+        scoring_system: Optional round -> points mapping for round weighting.
+
+    Returns:
+        Team ID of the EV-optimal pick.
+    """
+    p1 = lookup_matchup_probability(matchup_probs, team1_id, team2_id)
+    p2 = 1.0 - p1
+
+    pub1 = float(public_picks.get(team1_id, {}).get(round_name, 0.0))
+    pub2 = float(public_picks.get(team2_id, {}).get(round_name, 0.0))
+
+    # Normalize public picks to sum to 1 for this matchup
+    pub_total = pub1 + pub2
+    if pub_total > 1e-8:
+        pub1 = pub1 / pub_total
+        pub2 = pub2 / pub_total
+    else:
+        pub1 = 0.5
+        pub2 = 0.5
+
+    # EV = leverage × probability  (expected relative gain vs field)
+    ev1 = (p1 - pub1) * p1
+    ev2 = (p2 - pub2) * p2
+
+    # Scale by round points when scoring system is provided — upsets in
+    # high-value rounds (F4/CHAMP) get amplified leverage signal while
+    # R64 upsets are down-weighted using log scaling to avoid over-bias.
+    if scoring_system:
+        round_pts = float(scoring_system.get(round_name, 10))
+        import math as _math
+        weight = _math.log2(max(round_pts / 10.0, 1.0)) + 1.0
+        ev1 *= weight
+        ev2 *= weight
+
+    return team1_id if ev1 >= ev2 else team2_id
+
+
+def get_region_game_ranges(first_round_game_idx: int) -> Dict[int, List[int]]:
+    """Return game index ranges for the region containing the given first-round game.
+
+    A 64-team bracket has 4 regions of 16 teams each. This identifies which
+    games (by index within each round) belong to the same region.
+
+    Args:
+        first_round_game_idx: First-round game index (0-31).
+
+    Returns:
+        Dict mapping round_idx -> list of game indexes in that region for that round.
+    """
+    # Each region has 8 R64 games, 4 R32, 2 S16, 1 E8
+    region_idx = first_round_game_idx // 8  # 0-3
+    return {
+        0: list(range(region_idx * 8, (region_idx + 1) * 8)),      # R64: 8 games
+        1: list(range(region_idx * 4, (region_idx + 1) * 4)),      # R32: 4 games
+        2: list(range(region_idx * 2, (region_idx + 1) * 2)),      # S16: 2 games
+        3: [region_idx],                                             # E8:  1 game
+    }
+
+
+def enforce_quadrant_correlation(
+    bracket_winners: List[str],
+    champion_id: str,
+    first_round_game_idx: int,
+    matchup_probs: Dict[Tuple[str, str], float],
+    first_round_matchups: List[str],
+) -> List[str]:
+    """Force chalk picks in champion's region for R64 and R32.
+
+    When a contrarian champion is selected, upsets in the champion's own
+    region early rounds risk eliminating teams the champion needs to beat
+    on their path. This function replaces any upset picks in R64/R32 of
+    the champion's region with the favorite, preserving champion path integrity.
+
+    Args:
+        bracket_winners: Current bracket picks (63 entries).
+        champion_id: The selected champion.
+        first_round_game_idx: Champion's first-round game index.
+        matchup_probs: Pairwise win probabilities.
+        first_round_matchups: 64-team first-round list.
+
+    Returns:
+        Updated bracket_winners with chalk enforced in champion's region.
+    """
+    region_games = get_region_game_ranges(first_round_game_idx)
+    result = list(bracket_winners)
+
+    # Build round-by-round team lists to identify matchups
+    current_round = list(first_round_matchups)
+    cursor = 0
+
+    for round_idx in range(2):  # Only R64 and R32
+        n_games = ROUND_GAME_COUNTS[round_idx]
+        region_game_idxs = set(region_games.get(round_idx, []))
+        next_round: List[str] = []
+
+        for game_idx in range(n_games):
+            t1 = current_round[2 * game_idx]
+            t2 = current_round[2 * game_idx + 1]
+
+            if game_idx in region_game_idxs:
+                # Force favorite in champion's region
+                p1 = lookup_matchup_probability(matchup_probs, t1, t2)
+                favorite = t1 if p1 >= 0.5 else t2
+                result[cursor] = favorite
+                next_round.append(favorite)
+            else:
+                next_round.append(result[cursor])
+
+            cursor += 1
+
+        current_round = next_round
+
+    return result
+
+
 def compute_path_dependency_diagnostics(
     champion_id: str,
     first_round_game_idx: int,

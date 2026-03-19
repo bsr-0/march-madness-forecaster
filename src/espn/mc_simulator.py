@@ -11,6 +11,16 @@ import numpy as np
 from .leverage import ROUND_GAME_COUNTS, ROUND_NAMES, ROUND_OFFSETS, ROUND_POINTS, lookup_matchup_probability
 
 
+ROUND_NOISE_DEFAULTS: Dict[str, float] = {
+    "R64": 0.14,
+    "R32": 0.12,
+    "S16": 0.10,
+    "E8": 0.08,
+    "F4": 0.06,
+    "CHAMP": 0.04,
+}
+
+
 @dataclass
 class ESPNMCSimConfig:
     """Simulation config for ESPN pool evaluation."""
@@ -20,6 +30,7 @@ class ESPNMCSimConfig:
     top_money_pct: float = 0.10
     noise_std: float = 0.08
     random_seed: int = 42
+    per_round_noise: Optional[Dict[str, float]] = None
 
     def __post_init__(self) -> None:
         if self.num_simulations < 10000:
@@ -28,6 +39,12 @@ class ESPNMCSimConfig:
             raise ValueError("n_opponents must be >= 1")
         if not (0.0 < self.top_money_pct <= 1.0):
             raise ValueError("top_money_pct must be in (0, 1]")
+
+    def get_round_noise(self, round_name: str) -> float:
+        """Return noise std for a specific round, falling back to defaults."""
+        if self.per_round_noise and round_name in self.per_round_noise:
+            return self.per_round_noise[round_name]
+        return ROUND_NOISE_DEFAULTS.get(round_name, self.noise_std)
 
 
 @dataclass
@@ -64,6 +81,7 @@ class ESPNMonteCarloSimulator:
         self._team_to_idx: Dict[str, int] = {}
         self._idx_to_team: List[str] = []
         self._points_by_game = self._build_points_by_game()
+        self._cached_opponents: Optional[Tuple[int, int, np.ndarray]] = None
 
         for team_id in self.first_round_matchups:
             self._team_index(team_id)
@@ -91,7 +109,7 @@ class ESPNMonteCarloSimulator:
         top10_cutoff = int(math.ceil((config.n_opponents + 1) * 0.10))
 
         for sim_idx in range(config.num_simulations):
-            outcomes_idx = self._simulate_one_tournament(rng, noise_std=config.noise_std)
+            outcomes_idx = self._simulate_one_tournament(rng, noise_std=config.noise_std, config=config)
 
             target_score = float(np.sum(self._points_by_game[target_bracket_idx == outcomes_idx]))
             opponent_scores = np.sum(
@@ -123,7 +141,17 @@ class ESPNMonteCarloSimulator:
         )
 
     def _generate_opponent_brackets(self, n_opponents: int, rng: np.random.Generator) -> np.ndarray:
-        """Generate opponent brackets from public pick distribution with path consistency."""
+        """Generate opponent brackets from public pick distribution with path consistency.
+
+        Caches the result keyed by (n_opponents, seed) so that evaluating
+        multiple candidate brackets against the same pool avoids regenerating
+        the entire opponent field.
+        """
+        seed_state = rng.bit_generator.state["state"]["state"] if hasattr(rng.bit_generator, "state") else 0
+        cache_key = (n_opponents, seed_state)
+        if self._cached_opponents is not None and (self._cached_opponents[0], self._cached_opponents[1]) == cache_key:
+            return self._cached_opponents[2]
+
         brackets = np.zeros((n_opponents, 63), dtype=np.int32)
 
         for opp_idx in range(n_opponents):
@@ -145,15 +173,24 @@ class ESPNMonteCarloSimulator:
 
                 current_round = next_round
 
+        self._cached_opponents = (cache_key[0], cache_key[1], brackets)
         return brackets
 
-    def _simulate_one_tournament(self, rng: np.random.Generator, noise_std: float) -> np.ndarray:
-        """Sample one tournament outcome from matchup probabilities."""
+    def _simulate_one_tournament(
+        self, rng: np.random.Generator, noise_std: float, config: Optional[ESPNMCSimConfig] = None,
+    ) -> np.ndarray:
+        """Sample one tournament outcome from matchup probabilities.
+
+        Uses per-round noise calibration when available via config, falling
+        back to the flat noise_std parameter.
+        """
         winners = np.zeros(63, dtype=np.int32)
         current_round = list(self.first_round_matchups)
         winner_cursor = 0
 
         for round_idx, n_games in enumerate(ROUND_GAME_COUNTS):
+            round_name = ROUND_NAMES[round_idx]
+            round_noise = config.get_round_noise(round_name) if config else noise_std
             next_round: List[str] = []
 
             for game_idx in range(n_games):
@@ -162,10 +199,10 @@ class ESPNMonteCarloSimulator:
                 base_prob = lookup_matchup_probability(self.matchup_probs, t1, t2)
 
                 # Add symmetric logit-space noise to reflect tournament variance.
-                safe = min(0.999, max(0.001, base_prob))
-                logit = float(np.log(safe / (1.0 - safe)))
-                noisy_logit = logit + float(rng.normal(0.0, noise_std))
-                noisy_prob = 1.0 / (1.0 + np.exp(-noisy_logit))
+                safe = min(0.9999, max(0.0001, base_prob))
+                logit = float(np.log(safe) - np.log(1.0 - safe))
+                noisy_logit = max(-15.0, min(15.0, logit + float(rng.normal(0.0, round_noise))))
+                noisy_prob = 1.0 / (1.0 + math.exp(-noisy_logit))
                 winner = t1 if rng.random() < noisy_prob else t2
 
                 winners[winner_cursor] = self._team_index(winner)
