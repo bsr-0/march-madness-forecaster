@@ -596,8 +596,16 @@ class SOTAPipelineConfig:
     # --- Multi-metric selection gate (Protocol Section 3.1) ---
     brier_gate_threshold: float = 0.190
     log_loss_gate_threshold: float = 0.560
+    log_loss_max: float = 0.560  # Alias for log_loss_gate_threshold (Protocol v2 naming)
     brier_log_divergence_threshold: float = 0.015
+    brier_log_divergence_max: float = 0.015  # Alias for brier_log_divergence_threshold (Protocol v2 naming)
     use_unweighted_brier: bool = True  # Protocol: unweighted Brier for model selection
+
+    # --- Protocol v2 required flags ---
+    bma_enabled: bool = True  # Use Bayesian Model Averaging for ensemble (Protocol Section 3.2)
+    pit_enforcement: bool = True  # Enforce Point-in-Time validation (Protocol Section 1)
+    espn_mode: bool = False  # Enable ESPN bracket optimization pathway (Protocol Section 4)
+    simulation_count: int = 10000  # Number of Monte Carlo simulations for ESPN pool eval
 
     # --- Path protection & quadrant correlation (Protocol Section 4.4) ---
     path_protection_weight: float = 0.15
