@@ -735,7 +735,7 @@ class ImportanceCalculator:
             from sklearn.metrics import make_scorer, brier_score_loss
             def _neg_brier(y_true, y_pred):
                 return -brier_score_loss(y_true, y_pred)
-            scorer = make_scorer(_neg_brier, needs_proba=False, greater_is_better=True)
+            scorer = make_scorer(_neg_brier, greater_is_better=True, response_method="predict")
 
             result = permutation_importance(
                 wrapper, X[val_idx], y[val_idx],
