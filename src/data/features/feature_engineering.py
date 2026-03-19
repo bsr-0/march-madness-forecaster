@@ -1349,6 +1349,13 @@ def validate_population_stats(
         obs_mean = float(np.mean(vectors[:, idx]))
         obs_std = float(np.std(vectors[:, idx]))
 
+        # FIX-DQ: Skip features that are architecturally zero (e.g.
+        # roster/player metrics unavailable in incremental engine).
+        # These always diverge from population stats but the divergence
+        # is expected and not actionable.
+        if obs_std < 1e-8 and abs(obs_mean) < 1e-8:
+            continue
+
         # Check if observed mean is far from population mean
         mean_z = abs(obs_mean - pop_mean) / pop_std
         if mean_z > tolerance_std:

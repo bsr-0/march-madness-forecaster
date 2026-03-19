@@ -557,6 +557,12 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         # so the model invests more gradient signal in elite matchups.
         _include_tourney = pipeline.config.enable_round_weighted_training
 
+        # FIX-DQ: Pre-scan current-year data to identify architecturally-
+        # zero features (e.g. roster/player metrics unavailable in the
+        # incremental engine).  These features are zero across ALL years
+        # and should not penalize per-year data quality scores.
+        _arch_zero_cols = np.all(np.abs(X_full) < 1e-8, axis=0)
+
         for yr in hist_years:
             gp = os.path.join(games_dir, f"historical_games_{yr}.json")
             mp = os.path.join(games_dir, f"team_metrics_{yr}.json")
@@ -601,7 +607,11 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
 
             # FIX-DQ: Compute per-year data quality metrics using actual
             # feature matrix characteristics, not just hard-coded era weights.
-            _dq = compute_year_data_quality(hX, yr, feature_names)
+            # Exclude architecturally-zero columns so they don't penalize
+            # quality scores for features that are always unavailable.
+            _dq = compute_year_data_quality(
+                hX, yr, feature_names, exclude_cols=_arch_zero_cols,
+            )
             quality_mult = _dq["combined_weight"]
 
             # Log quality diagnostics for years with issues
@@ -735,6 +745,37 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             pipeline._historical_year_weights = None
     else:
         pipeline._historical_year_weights = None
+
+    # --- Early zero-variance pruning ---
+    # FIX-DQ: Remove columns that are all-zero across the entire training
+    # set BEFORE feature selection and LOYO.  These are architecturally
+    # zero features (roster/player metrics unavailable in incremental
+    # engine) that inflate dimensionality and slow downstream steps
+    # (VIF, bootstrap stability, LOYO re-fitting) without adding signal.
+    _pre_fs_zero_mask = None
+    if train_samples >= 40 and feature_names is not None:
+        _combined_vars = np.var(train_X, axis=0)
+        _zero_mask = _combined_vars < 1e-10
+        _n_zero = int(np.sum(_zero_mask))
+        if _n_zero > 0:
+            _keep_mask = ~_zero_mask
+            _dropped = [feature_names[i] for i in range(len(feature_names))
+                        if i < len(_zero_mask) and _zero_mask[i]]
+            logger.info(
+                "FIX-DQ: Early zero-variance pruning removed %d/%d features "
+                "before feature selection: %s",
+                _n_zero, len(feature_names), _dropped[:15],
+            )
+            train_X = train_X[:, _keep_mask]
+            eval_X = eval_X[:, _keep_mask]
+            X_full = X_full[:, _keep_mask]
+            feature_names = [feature_names[i] for i in range(len(feature_names))
+                             if i < len(_keep_mask) and _keep_mask[i]]
+            if feature_names_full is not None:
+                feature_names_full = list(feature_names)
+            _pre_fs_zero_mask = _keep_mask
+            # Store for LOYO to apply the same pruning
+            pipeline._pre_fs_keep_mask = _keep_mask
 
     # --- Feature selection ---
     # OOS-FIX: Default path uses a fixed domain-knowledge feature set.
@@ -2096,6 +2137,13 @@ def _run_loyo_validation(
         if len(year_y) < 10:
             logger.info("LOYO: skipping year %d (only %d samples)", year, len(year_y))
             continue
+
+        # FIX-DQ: Apply the same early zero-variance pruning used in
+        # the primary training path so LOYO folds operate on the same
+        # reduced feature space.
+        _loyo_keep_mask = getattr(pipeline, "_pre_fs_keep_mask", None)
+        if _loyo_keep_mask is not None and year_X.shape[1] == len(_loyo_keep_mask):
+            year_X = year_X[:, _loyo_keep_mask]
 
         data_by_year[year] = {
             "X": year_X,

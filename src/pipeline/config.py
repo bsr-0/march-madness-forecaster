@@ -166,22 +166,48 @@ MIN_SEASON_FEATURE_COMPLETENESS = 0.20
 
 def compute_year_data_quality(
     X: np.ndarray, year: int, feature_names: Optional[List[str]] = None,
+    exclude_cols: Optional[np.ndarray] = None,
 ) -> Dict:
-    """Compute per-year data quality metrics for adaptive weighting."""
+    """Compute per-year data quality metrics for adaptive weighting.
+
+    Args:
+        exclude_cols: Optional boolean mask (True = exclude) for columns
+            known to be architecturally zero (e.g. roster features not
+            available in incremental engine).  Excluded columns are not
+            counted against completeness or feature_activity, preventing
+            misleading data-quality penalties.
+    """
     n_samples, n_features = X.shape
-    completeness = float(np.mean(np.abs(X) > 1e-8))
-    col_vars = np.var(X, axis=0)
+
+    # FIX-DQ: When exclude_cols is provided, compute quality metrics
+    # only on the active (non-excluded) features.
+    if exclude_cols is not None and len(exclude_cols) == n_features:
+        keep = ~exclude_cols
+        X_active = X[:, keep]
+        n_features_active = int(np.sum(keep))
+    else:
+        X_active = X
+        n_features_active = n_features
+
+    completeness = float(np.mean(np.abs(X_active) > 1e-8))
+    col_vars = np.var(X_active, axis=0)
     n_active_features = int(np.sum(col_vars > 1e-8))
-    feature_activity = n_active_features / max(n_features, 1)
-    zero_cols = int(np.sum(np.all(np.abs(X) < 1e-8, axis=0)))
+    feature_activity = n_active_features / max(n_features_active, 1)
+    zero_cols = int(np.sum(np.all(np.abs(X_active) < 1e-8, axis=0)))
     zero_col_names: List[str] = []
     if feature_names and zero_cols > 0:
-        for i, name in enumerate(feature_names):
-            if i < n_features and np.all(np.abs(X[:, i]) < 1e-8):
-                zero_col_names.append(name)
-    n_nan = int(np.isnan(X).sum())
-    n_inf = int(np.isinf(X).sum())
-    bad_rate = (n_nan + n_inf) / max(X.size, 1)
+        # Map active column indices back to original feature names
+        if exclude_cols is not None and len(exclude_cols) == X.shape[1]:
+            active_indices = [i for i in range(X.shape[1]) if not exclude_cols[i]]
+        else:
+            active_indices = list(range(n_features_active))
+        for j, orig_i in enumerate(active_indices):
+            if j < X_active.shape[1] and orig_i < len(feature_names):
+                if np.all(np.abs(X_active[:, j]) < 1e-8):
+                    zero_col_names.append(feature_names[orig_i])
+    n_nan = int(np.isnan(X_active).sum())
+    n_inf = int(np.isinf(X_active).sum())
+    bad_rate = (n_nan + n_inf) / max(X_active.size, 1)
     era_weight = DATA_QUALITY_ERA_WEIGHTS.get(year, 1.0)
     adaptive_weight = (
         0.3 * completeness
@@ -193,7 +219,7 @@ def compute_year_data_quality(
     return {
         "year": year,
         "n_samples": n_samples,
-        "n_features": n_features,
+        "n_features": n_features_active,
         "completeness": round(completeness, 3),
         "feature_activity": round(feature_activity, 3),
         "n_active_features": n_active_features,
