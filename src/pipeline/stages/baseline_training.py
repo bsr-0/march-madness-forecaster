@@ -2302,6 +2302,60 @@ def _run_loyo_validation(
         "per_year": per_year_brier,
     }
 
+    # ----------------------------------------------------------
+    # Step 3: AdmissionGate — formal model selection gate
+    # ----------------------------------------------------------
+    try:
+        from ...ml.evaluation.admission_gate import (
+            AdmissionGate,
+            FoldMetrics as GateFoldMetrics,
+            LOYOEvaluation,
+        )
+
+        baseline_folds = [
+            GateFoldMetrics(
+                year=r.held_out_year,
+                brier_score=0.25,  # seed-only uninformed baseline
+                calibration_error=0.0,
+                n_games=r.n_test_games,
+            )
+            for r in cv_results
+        ]
+        candidate_folds = [
+            GateFoldMetrics(
+                year=r.held_out_year,
+                brier_score=r.brier_score,
+                calibration_error=r.calibration_error,
+                n_games=r.n_test_games,
+            )
+            for r in cv_results
+        ]
+
+        # Use relaxed calibration threshold when comparing vs seed baseline
+        # (seeds have ECE=0 by definition, so any model "degrades" calibration).
+        # The 0.05 threshold ensures the model is reasonably well-calibrated
+        # while still meaningfully gating on Brier improvement and fold rate.
+        gate = AdmissionGate(
+            min_mean_brier_improvement=0.0,
+            min_fold_improvement_rate=0.60,
+            max_calibration_degradation=0.05,
+        )
+        admission_result = gate.evaluate(
+            "production_model",
+            LOYOEvaluation("seed_baseline", baseline_folds),
+            LOYOEvaluation("model", candidate_folds),
+        )
+        loyo_result["admission_gate"] = admission_result.to_dict()
+        logger.info(
+            "AdmissionGate: %s (Brier improvement=%.5f, fold rate=%.2f)",
+            "PASSED" if admission_result.passed else "FAILED",
+            admission_result.brier_improvement,
+            admission_result.fold_improvement_rate,
+        )
+    except Exception as gate_exc:
+        logger.warning("AdmissionGate evaluation failed: %s", gate_exc)
+        loyo_result["admission_gate"] = {"error": str(gate_exc)}
+
     return loyo_result
 
 def _run_gnn(pipeline, graph: ScheduleGraph) -> Dict:
