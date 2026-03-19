@@ -255,6 +255,17 @@ class PITValidator:
                         result.passed = False
                         logger.error(violation)
 
+                    # 48-hour warning (Protocol Section 2.3)
+                    elif snapshot_date > selection_sunday - timedelta(days=2):
+                        warning = (
+                            f"PIT WARNING: Tier 3 feature '{fname}' uses snapshot from "
+                            f"{snapshot_date}, within 48h of Selection Sunday "
+                            f"{selection_sunday} for year {year}. "
+                            f"Verify rating was not updated with tournament data."
+                        )
+                        result.warnings.append(warning)
+                        logger.warning(warning)
+
         if not result.passed and strict:
             raise PITViolationError(
                 f"PIT validation failed for year {year}: "
