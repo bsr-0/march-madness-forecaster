@@ -118,6 +118,25 @@ jobs:
           print("All files validated.")
           PY
 
+      - name: Upload Kaggle submission
+        if: ${{ !inputs.dry_run && !inputs.skip_production }}
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          SUBMISSION="artifacts/kaggle_submission_2026.csv"
+          if [ -f "$SUBMISSION" ]; then
+            echo "Found submission: $SUBMISSION"
+            wc -l "$SUBMISSION"
+            kaggle competitions submit \
+              -c march-machine-learning-mania-2026 \
+              -f "$SUBMISSION" \
+              -m "Automated submission from pipeline run (triggered by ${{ github.actor }})"
+            echo "Kaggle submission uploaded."
+          else
+            echo "::warning::No Kaggle submission CSV found at $SUBMISSION — skipping upload."
+          fi
+
       - name: Commit updated web data
         if: ${{ !inputs.dry_run }}
         run: |
