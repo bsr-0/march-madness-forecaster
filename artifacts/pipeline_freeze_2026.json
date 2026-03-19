@@ -10,8 +10,10 @@
     "bayesian_bt_prior_std": 2.0,
     "betting_odds_json": null,
     "bracket_json": null,
+    "bma_enabled": true,
     "bracket_source": "auto",
     "brier_gate_threshold": 0.19,
+    "brier_log_divergence_max": 0.015,
     "brier_log_divergence_threshold": 0.015,
     "brier_sharpening_alpha_bounds": [
       0.5,
@@ -84,6 +86,7 @@
     "ensemble_lgb_weight": 0.15,
     "ensemble_weight_regularization": 0.1,
     "ensemble_xgb_weight": 0.15,
+    "espn_mode": false,
     "espn_n_brackets": 3,
     "espn_risk_profiles": "conservative,balanced,aggressive",
     "ev_archetype_overrides": null,
@@ -119,6 +122,7 @@
     "kaggle_effective_pool_size": 3000,
     "late_season_training_cutoff_days": 45,
     "log_loss_gate_threshold": 0.56,
+    "log_loss_max": 0.56,
     "loyo_temporal_mode": "rolling_window",
     "loyo_years": null,
     "margin_first_training": false,
@@ -159,6 +163,7 @@
     "optuna_timeout": 300,
     "path_protection_weight": 0.15,
     "pipeline_mode": "production",
+    "pit_enforcement": true,
     "pool_size": 100,
     "portfolio_n_brackets": 1000,
     "portfolio_n_simulations": 50000,
@@ -180,6 +185,7 @@
     "scoring_metric": "brier",
     "scoring_rules_json": "data/raw/scoring_rules_2026.json",
     "scrape_live": false,
+    "simulation_count": 10000,
     "seed_override_threshold": 0.08,
     "seed_prior_slope": 0.175,
     "seed_prior_weight": 0.1,
@@ -220,7 +226,7 @@
     "womens_teams_csv": null,
     "year": 2026
   },
-  "config_hash": "0ace99dba5393f9e",
+  "config_hash": "0ffeeb36f6701c7e",
   "constant_registry": [
     {
       "config_path": "ProprietaryMetrics._four_factors",
