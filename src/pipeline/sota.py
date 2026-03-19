@@ -317,15 +317,24 @@ class SOTAPipeline:
         self._forecast_engine: Optional[ForecastEngine] = None
         self._pool_optimizer: Optional[PoolOptimizer] = None
 
-    def _filter_years(self, years: List[int]) -> List[int]:
-        """Filter years by dev/holdout constraints and remove COVID year."""
+    def _filter_years(self, years: List[int], include_holdout: bool = False) -> List[int]:
+        """Filter years by dev/holdout constraints and remove COVID year.
+
+        Args:
+            years: Candidate years to filter.
+            include_holdout: If True, do not exclude holdout_years. Used for
+                LOYO cross-validation where holdout years should participate
+                as validation folds.
+        """
         if not years:
             return []
         year_set = sorted({y for y in years if y != 2020})
         if self.config.dev_years:
             dev_set = set(self.config.dev_years)
+            if include_holdout and self.config.holdout_years:
+                dev_set = dev_set | set(self.config.holdout_years)
             year_set = [y for y in year_set if y in dev_set]
-        if self.config.holdout_years:
+        if self.config.holdout_years and not include_holdout:
             holdout_set = set(self.config.holdout_years)
             year_set = [y for y in year_set if y not in holdout_set]
         return year_set
