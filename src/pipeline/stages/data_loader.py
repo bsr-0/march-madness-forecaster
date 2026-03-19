@@ -257,6 +257,8 @@ def validate_feed_freshness(
         or payload.get("generated_at")
         or payload.get("updated_at")
         or payload.get("last_updated")
+        or payload.get("fetched_at")
+        or payload.get("scraped_at")
     )
     if not ts:
         raise DataRequirementError(

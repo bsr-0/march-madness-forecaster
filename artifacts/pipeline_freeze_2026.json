@@ -1010,18 +1010,18 @@
     "src/pipeline/sota.py": "9e0af6a878f0f9502271a8a4e7f18c08e4c96dae90c3b70466ccb696b3147266",
     "src/pipeline/stages/baseline_training.py": "83f6dd2e57a3fdec87ee83f87562eabf38c886b0d4e3826db6912221e64eb105",
     "src/pipeline/stages/calibration.py": "54975c5649532cf251240d72a4c10e176a7c9a36d8c85b0976e7fb99120d53f9",
-    "src/pipeline/stages/data_loader.py": "0ca9dca67af265f30479050961a3d67b1297076a2025501291a295e7a747367e",
+    "src/pipeline/stages/data_loader.py": "dd67f039077b1fde9fb5c681c9785e3e8e83a3789b0889229fae4f94959067a4",
     "src/pipeline/stages/inference.py": "14d610aad913b9e7b8441670768eadd0bc8e2887bbfd15f1473a2b2c95c283e0",
     "src/pipeline/probability_pipeline.py": "b11825b1b5592bc6effd2eb053231c6846d0f0c5b106909c259e5268985c0e48",
     "src/governance/production_validator.py": "7168e638fd04d505f3f18fdde5b7fe7f1c97c6b28695afef33073e79008a4929",
     "src/governance/production_runner.py": "cbf8eceea066f2a80223111a4a9b1ddeaa58718a7228b33acb47d33f6bc22376",
     "src/run_production_2026.py": "dbb067ff0645a858eb780cc9901bf256a48300259b106068faae56662b2c58f3"
   },
-  "source_tree_hash": "8dcad0fb8dce83969322afeef5ae0b743ce6b2b6cb4ee682e45a631a70637284",
+  "source_tree_hash": "86e9d602462625821901ade3bea4895fb942670bd44403e66d1852504b1a6815",
   "data_file_hashes": {
-    "data/raw/torvik_2026.json": "16c06508f79d87c845a01ba00ad6e48cc2f625c5776b1c987d0778b7dc56c213",
-    "data/raw/teams_2026.json": "c782bca34f52ea1aa911dcdd828b5cd3e8387088d7b0194b26dc47f7a4e4ee4e",
-    "data/raw/historical_games_2026.json": "640fe1c3ae356d72ed9512c2c08c0c0d66b61b59594162efa21fed8fe5838c4d",
+    "data/raw/torvik_2026.json": "214cec3364a8ade6d63b185063ffd53d7f9b2cc0d79f03e2876b1d9583d0f817",
+    "data/raw/teams_2026.json": "18713882c27372ad9ad9cf0c5034ea3d14d36f61d0ea33b0cac59ff7b619ee68",
+    "data/raw/historical_games_2026.json": "99c539a7dd90c0cadf19fbfc4a43326fcd8fc39c48de01cad265482c2bf4a561",
     "data/raw/rosters_2026.json": "d9665ee87b309464d7258edc9f67413a75fee5e20cec985360b501d0bf1ec12a",
     "data/raw/bracket_2026.json": "27ee96fcbde3ca2ec228fa89d355e8e5dedd202f73129638fee386aab9a510f5"
   },
