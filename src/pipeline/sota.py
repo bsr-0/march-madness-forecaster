@@ -1159,10 +1159,10 @@ class SOTAPipeline:
 
     def _run_loyo_validation(
         self,
-        baseline_model: Any,
-        feature_selector: Optional[Any] = None,
+        feature_dim: int,
+        feature_names: Optional[List[str]] = None,
     ) -> Dict:
-        return _bt._run_loyo_validation(self, baseline_model, feature_selector)
+        return _bt._run_loyo_validation(self, feature_dim, feature_names)
 
     def _load_year_samples(
         self,
