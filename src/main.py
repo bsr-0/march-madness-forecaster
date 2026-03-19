@@ -2764,6 +2764,28 @@ def main():
     prc_parser.add_argument("--predictions-report", default="artifacts/predictions_2026_latest.json", help="Predictions")
     prc_parser.add_argument("--output-dir", default="artifacts", help="Output directory")
 
+    # Rubric validation (multi-pass)
+    vr_parser = subparsers.add_parser(
+        "validate-rubric",
+        help="Run multi-pass rubric validation (PIT, metrics, BMA, ESPN)",
+    )
+    vr_parser.add_argument(
+        "--passes", default="1,2,3,4",
+        help="Comma-separated pass numbers to run (default: 1,2,3,4)",
+    )
+    vr_parser.add_argument(
+        "--config", default="configs/production_2026.json",
+        help="Production config path",
+    )
+    vr_parser.add_argument("--json", action="store_true", help="Output JSON instead of text")
+
+    # Static rubric audit
+    ar_parser = subparsers.add_parser(
+        "audit-rubric",
+        help="Static rubric audit — score codebase structure against grading criteria",
+    )
+    ar_parser.add_argument("--json", action="store_true", help="Output JSON instead of text")
+
     args = parser.parse_args()
 
     if args.command == "sota":
@@ -3110,6 +3132,56 @@ def main():
             output_dir=args.output_dir,
         )
         return 0 if result.get("all_green") else 1
+    elif args.command == "validate-rubric":
+        from .validation.rubric_validator import run_validation
+        pass_nums = [int(p.strip()) for p in args.passes.split(",") if p.strip()]
+        result = run_validation(
+            pass_numbers=pass_nums,
+            config_path=args.config,
+        )
+        if getattr(args, "json", False):
+            import json as _json
+            print(_json.dumps({
+                "total_score": result.total_score,
+                "max_total": result.max_total,
+                "all_passed": result.all_passed,
+                "passes": [
+                    {
+                        "pass": p.pass_number,
+                        "name": p.name,
+                        "passed": p.passed,
+                        "score": p.score,
+                        "max_score": p.max_score,
+                        "details": p.details,
+                        "failures": p.failures,
+                    }
+                    for p in result.passes
+                ],
+            }, indent=2, default=str))
+        else:
+            print(result.report())
+        return 0 if result.all_passed else 1
+    elif args.command == "audit-rubric":
+        from .validation.rubric_audit import run_static_audit
+        result = run_static_audit()
+        if getattr(args, "json", False):
+            import json as _json
+            print(_json.dumps({
+                "score": result.score,
+                "max_score": result.max_score,
+                "passed": result.passed,
+                "details": result.details,
+                "failures": result.failures,
+            }, indent=2, default=str))
+        else:
+            print(f"Rubric Audit Score: {result.score:.0f}/{result.max_score:.0f}")
+            for k, v in result.details.items():
+                print(f"  {k}: {v}")
+            if result.failures:
+                print(f"\nFailures ({len(result.failures)}):")
+                for f in result.failures:
+                    print(f"  !! {f}")
+        return 0 if result.passed else 1
     else:
         parser.print_help()
         return 1
