@@ -167,6 +167,88 @@ class TestEnrichedMetaFeatures:
         np.testing.assert_allclose(enriched[:, 8], np.std(base_X, axis=1))
 
 
+class TestStackingMetaFeatureConsistency:
+    """Verify _get_meta_features produces same column count as training builds.
+
+    This catches bugs where a model type is included during stacking training
+    (via OOF predictions) but silently dropped during prediction (in
+    _get_meta_features), causing a feature mismatch in the stacking
+    meta-learner.
+    """
+
+    def test_all_model_types_handled_in_get_meta_features(self):
+        """Every model type in stacking_models must produce a column in _get_meta_features."""
+        from unittest.mock import MagicMock, patch
+        from src.pipeline.config import _TrainedBaselineModel
+        from src.ml.ensemble.cfa import LightGBMRanker, XGBoostRanker
+
+        try:
+            from src.ml.ensemble.spread_model import SpreadRegressor
+            spread_available = True
+        except ImportError:
+            spread_available = False
+
+        n_samples = 10
+        X_dummy = np.random.rand(n_samples, 5)
+
+        # Create real instances with mocked internals
+        lgb = MagicMock(spec=LightGBMRanker)
+        lgb.predict.return_value = np.full(n_samples, 0.5)
+
+        xgb = MagicMock(spec=XGBoostRanker)
+        xgb.predict.return_value = np.full(n_samples, 0.5)
+
+        logit = MagicMock()
+        logit.predict_proba.return_value = np.column_stack([
+            np.full(n_samples, 0.5), np.full(n_samples, 0.5)
+        ])
+
+        stacking_models = [("lgb", lgb), ("xgb", xgb), ("logit", logit)]
+
+        if spread_available:
+            spread = MagicMock(spec=SpreadRegressor)
+            spread.predict_probability.return_value = np.full(n_samples, 0.5)
+            stacking_models.append(("spread", spread))
+
+        model = _TrainedBaselineModel()
+        model.stacking_models = stacking_models
+        n_models = len(stacking_models)
+
+        # Training path: _build_enriched_meta with n_models columns
+        from src.pipeline.stages.baseline_training import _build_enriched_meta
+        training_base = np.random.rand(n_samples, n_models)
+        training_meta = _build_enriched_meta(training_base)
+
+        # Prediction path: _get_meta_features
+        prediction_meta = model._get_meta_features(X_dummy)
+
+        assert prediction_meta.shape[1] == training_meta.shape[1], (
+            f"Stacking meta-feature mismatch: training produced {training_meta.shape[1]} "
+            f"columns but _get_meta_features produced {prediction_meta.shape[1]}. "
+            f"A model type in stacking_models is likely not handled in _get_meta_features."
+        )
+
+    def test_get_meta_features_model_count_matches_stacking_models(self):
+        """_get_meta_features should produce one base column per stacking model."""
+        from src.pipeline.config import _TrainedBaselineModel
+
+        model = _TrainedBaselineModel()
+
+        class MockLogit:
+            def predict_proba(self, X):
+                return np.column_stack([1 - X[:, 0], X[:, 0]])
+
+        model.stacking_models = [
+            ("logit", MockLogit()),
+            ("logit", MockLogit()),
+        ]
+
+        X = np.random.rand(5, 3)
+        meta = model._get_meta_features(X)
+        # 2 base + 1 interaction + 3 aggregates = 6
+        assert meta.shape[1] == 6
+
+
 class TestVIFPrunerIntegration:
     """Test VIF pruner via FeatureSelector integration."""
 
