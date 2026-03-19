@@ -1020,11 +1020,14 @@ class _TrainedBaselineModel:
 
     def _get_meta_features(self, X: np.ndarray) -> np.ndarray:
         base_cols = []
+        sigma = self._get_spread_sigma_override()
         for name, model in self.stacking_models:
             if name == "lgb" and isinstance(model, LightGBMRanker):
                 base_cols.append(model.predict(X))
             elif name == "xgb" and isinstance(model, XGBoostRanker):
                 base_cols.append(model.predict(X))
+            elif name == "spread" and SpreadRegressor is not None and isinstance(model, SpreadRegressor):
+                base_cols.append(model.predict_probability(X, sigma_override=sigma))
             elif name == "logit" and hasattr(model, "predict_proba"):
                 base_cols.append(model.predict_proba(X)[:, 1])
         if not base_cols:
