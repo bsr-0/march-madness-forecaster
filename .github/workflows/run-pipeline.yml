@@ -41,6 +41,15 @@ jobs:
           pip install -r requirements.txt
           pip install -e .
 
+      - name: Setup Kaggle data
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          march-madness download-kaggle --output-dir data/kaggle
+          echo "Kaggle data downloaded to data/kaggle:"
+          ls -la data/kaggle/
+
       - name: Validate production config (dry run)
         run: python src/run_production_2026.py --dry-run
 
