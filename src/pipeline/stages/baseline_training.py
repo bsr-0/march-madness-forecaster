@@ -1611,18 +1611,9 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # weights replace the fallback.  Otherwise, fallback weights stand.
     ensemble_weight_stats = {}
 
-    # Protocol v2, Section 3.2: Prefer BMA over grid-search for ensemble weights.
-    # BMA naturally hedges against model uncertainty and produces proper posterior
-    # predictive distributions. Grid-search is retained as deprecated fallback.
+    # Protocol v2, Section 3.2: BMA is the ONLY supported ensemble strategy.
+    # Legacy grid-search weight optimization is intentionally disabled.
     _use_bma = BMA_AVAILABLE and len(trained_models) >= 2
-    _use_grid_search = (
-        not _use_bma
-        and pipeline.config.optimize_ensemble_weights
-        and pipeline.config.enable_loyo_cv
-        and pipeline.config.multi_year_games_dir
-        and len(trained_models) >= 2
-        and EnsembleWeightOptimizer is not None
-    )
 
     if _use_bma and eval_y is not None and len(eval_y) > 0:
         # BMA ensemble (Protocol v2, Section 3.2):
@@ -1680,49 +1671,15 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                     "BMA ensemble weights applied: %s (effective count: %.2f)",
                     bma_result.weights, bma_result.effective_model_count,
                 )
-
-    if not ensemble_weight_stats and _use_grid_search:
-        # Deprecated fallback: grid-search ensemble weight optimization
-        logger.info(
-            "BMA unavailable, falling back to grid-search ensemble weights. "
-            "Protocol v2 recommends BMA (Section 3.2)."
+    elif (
+        pipeline.config.optimize_ensemble_weights
+        and len(trained_models) >= 2
+        and not BMA_AVAILABLE
+    ):
+        logger.warning(
+            "Ensemble weight optimization requested but BMA is unavailable. "
+            "Keeping fixed baseline weights and skipping legacy optimizers."
         )
-        cv_weights = pipeline._optimize_ensemble_weights_loyo(
-            trained_models=trained_models,
-            feature_dim=train_X.shape[1],
-            feature_names=feature_names,
-        )
-        if cv_weights:
-            ensemble_weight_stats = cv_weights
-            # Apply CV-optimized weights if they improve over fallback weights
-            optimized_w = cv_weights.get("optimized_weights", {})
-            if optimized_w and cv_weights.get("improvement_over_fixed", 0) > 0:
-                model_names_present = [name for name, _, _ in trained_models]
-                # Only apply weights for models we actually have
-                filtered_w = {
-                    n: optimized_w.get(n, 0.25)
-                    for n in model_names_present
-                    if n in optimized_w
-                }
-                if filtered_w:
-                    w_sum = sum(filtered_w.values())
-                    filtered_w = {n: w / w_sum for n, w in filtered_w.items()}
-                    pipeline.baseline_model.fixed_weights = filtered_w
-                    _weight_source = "loyo_optimized"
-                    logger.info(
-                        "FIX-CV-ENSEMBLE: Applied LOYO-optimized weights: %s "
-                        "(Brier improvement: %.5f over fallback)",
-                        {n: round(w, 3) for n, w in filtered_w.items()},
-                        cv_weights.get("improvement_over_fixed", 0),
-                    )
-            else:
-                _weight_source = "fallback"
-                logger.info(
-                    "FIX-CV-ENSEMBLE: LOYO optimization did not improve over "
-                    "fallback weights. Keeping fallback: %s",
-                    {n: round(w, 3) for n, w in
-                     pipeline.baseline_model.fixed_weights.items()},
-                )
 
     # Propagate tournament sigma calibrator to _TrainedBaselineModel so that
     # SpreadRegressor uses tournament-calibrated sigma at inference time.
@@ -2023,10 +1980,72 @@ def _run_loyo_validation(
     Returns:
         Dict with per-year Brier scores, mean Brier, and sample counts.
     """
-    import os
+    import json
     import logging
+    import os
 
     logger = logging.getLogger(__name__)
+
+    try:
+        from ...ml.evaluation.loyo_protocol import LOYOValidator
+    except Exception as e:
+        logger.warning("LOYO validator unavailable: %s", e)
+        return {"enabled": False, "reason": f"loyo_validator_unavailable: {e}"}
+
+    try:
+        from .pit_validation import PITValidator, SELECTION_SUNDAY_DATES
+    except Exception as e:
+        logger.warning("PIT validator unavailable in LOYO path: %s", e)
+        PITValidator = None
+        SELECTION_SUNDAY_DATES = {}
+
+    def _parse_game_date(value) -> Optional[date]:
+        if value is None:
+            return None
+        raw = str(value).strip()
+        if not raw:
+            return None
+        if "T" in raw:
+            raw = raw.split("T", 1)[0]
+        try:
+            return date.fromisoformat(raw)
+        except ValueError:
+            m = re.match(r"^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$", raw)
+            if not m:
+                return None
+            try:
+                return date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+            except ValueError:
+                return None
+
+    def _latest_regular_season_game_date(games_path: str, year: int) -> Optional[date]:
+        try:
+            with open(games_path, "r") as f:
+                payload = json.load(f)
+        except Exception as exc:
+            logger.debug("LOYO PIT metadata: failed reading %s: %s", games_path, exc)
+            return None
+
+        if isinstance(payload, dict):
+            team_games = payload.get("team_games", [])
+        elif isinstance(payload, list):
+            team_games = payload
+        else:
+            team_games = []
+
+        tourney_start = TOURNAMENT_START_DATES.get(year)
+        latest = None
+        for game in team_games:
+            if not isinstance(game, dict):
+                continue
+            gd = _parse_game_date(game.get("game_date") or game.get("date"))
+            if gd is None:
+                continue
+            if tourney_start is not None and gd >= tourney_start:
+                continue
+            if latest is None or gd > latest:
+                latest = gd
+        return latest
 
     games_dir = pipeline.config.multi_year_games_dir
     if not os.path.isdir(games_dir):
@@ -2038,11 +2057,22 @@ def _run_loyo_validation(
         return {"enabled": False, "reason": "no_dev_years"}
 
     # ----------------------------------------------------------
-    # Step 1: Load multi-year samples
+    # Step 1: Load multi-year samples (year-keyed for LOYOValidator)
     # ----------------------------------------------------------
-    all_X = []
-    all_y = []
-    all_years = []
+    data_by_year: Dict[int, Dict[str, np.ndarray]] = {}
+    latest_game_date_by_year: Dict[int, Optional[date]] = {}
+
+    # Training-time feature names must align with X column count.
+    if feature_names is not None and len(feature_names) == feature_dim:
+        model_feature_names = list(feature_names)
+    else:
+        model_feature_names = [f"f_{i}" for i in range(feature_dim)]
+        if feature_names is not None and len(feature_names) != feature_dim:
+            logger.warning(
+                "LOYO: feature name mismatch (%d names vs %d columns). "
+                "Using generic names for CV.",
+                len(feature_names), feature_dim,
+            )
 
     for year in years:
         games_path = os.path.join(games_dir, f"historical_games_{year}.json")
@@ -2059,16 +2089,87 @@ def _run_loyo_validation(
             logger.info("LOYO: skipping year %d (only %d samples)", year, len(year_y))
             continue
 
-        all_X.append(year_X)
-        all_y.append(year_y)
-        all_years.append(np.full(len(year_y), year))
+        data_by_year[year] = {
+            "X": year_X,
+            "y": year_y,
+            "margins": _year_margins,
+            "feature_names": model_feature_names,
+            "sample_weights": np.ones(len(year_y), dtype=np.float64),
+        }
+        latest_game_date_by_year[year] = _latest_regular_season_game_date(games_path, year)
 
-    if not all_X:
+    if not data_by_year:
         return {"enabled": False, "reason": "no_valid_year_data"}
 
-    X = np.vstack(all_X)
-    y = np.concatenate(all_y)
-    game_years = np.concatenate(all_years)
+    # ----------------------------------------------------------
+    # Step 1.5: PIT validation (Protocol v2 Section 2)
+    # ----------------------------------------------------------
+    pit_summary = {
+        "enabled": False,
+        "folds_checked": 0,
+        "folds_passed": 0,
+        "violations": 0,
+        "warnings": 0,
+    }
+    if PITValidator is not None:
+        try:
+            from src.data.features.feature_engineering import TeamFeatures
+
+            pit_validator = PITValidator()
+            team_feature_names = TeamFeatures.get_feature_names(include_embeddings=False)
+
+            feature_metadata_by_year = {}
+            for year in sorted(data_by_year):
+                selection_sunday = SELECTION_SUNDAY_DATES.get(year)
+                latest_game = latest_game_date_by_year.get(year)
+                if selection_sunday is None:
+                    continue
+                if latest_game is None:
+                    latest_game = selection_sunday - timedelta(days=1)
+                elif latest_game > selection_sunday:
+                    # Protocol v2 PIT rule: Tier 2 features must be frozen by
+                    # Selection Sunday. If source files contain later games
+                    # (e.g., play-in/postseason spillover), cap metadata at the
+                    # protocol boundary and surface a warning.
+                    logger.warning(
+                        "LOYO PIT metadata: year %d latest regular-season date %s "
+                        "is after Selection Sunday %s; capping at Selection Sunday.",
+                        year, latest_game, selection_sunday,
+                    )
+                    latest_game = selection_sunday
+
+                year_meta = {}
+                for fname in pit_validator.get_tier2_features():
+                    year_meta[fname] = {"latest_game_date": latest_game.isoformat()}
+                for fname in pit_validator.get_tier3_features():
+                    year_meta[fname] = {"snapshot_date": selection_sunday.isoformat()}
+                feature_metadata_by_year[year] = year_meta
+
+            pit_results = pit_validator.validate_loyo_folds(
+                years=sorted(data_by_year.keys()),
+                feature_names=team_feature_names,
+                feature_metadata_by_year=feature_metadata_by_year,
+                strict=True,
+            )
+
+            n_folds = len(pit_results)
+            n_passed = sum(1 for r in pit_results if r.passed)
+            n_violations = sum(len(r.violations) for r in pit_results)
+            n_warnings = sum(len(r.warnings) for r in pit_results)
+            pit_summary = {
+                "enabled": True,
+                "folds_checked": n_folds,
+                "folds_passed": n_passed,
+                "violations": n_violations,
+                "warnings": n_warnings,
+            }
+            logger.info(
+                "LOYO PIT summary: %d/%d folds passed, %d violations, %d warnings",
+                n_passed, n_folds, n_violations, n_warnings,
+            )
+        except Exception as pit_exc:
+            logger.error("LOYO PIT validation failed: %s", pit_exc)
+            raise
 
     # FIX-LEAKAGE-LOYO: Do NOT apply the primary model's feature
     # selector or scaler here.  Both were fitted on training data that
@@ -2080,21 +2181,23 @@ def _run_loyo_validation(
     # pipeline's preprocessing stack.
 
     # ----------------------------------------------------------
-    # Step 2: Run LeaveOneYearOutCV
+    # Step 2: Run LOYOValidator (metrics: Brier, LogLoss, ECE, decomposition)
     # ----------------------------------------------------------
-    loyo_cv = LeaveOneYearOutCV(
-        years=[y for y in years if y in set(game_years)],
+    loyo_validator = LOYOValidator(
+        years=sorted(data_by_year.keys()),
         temporal_mode=pipeline.config.loyo_temporal_mode,
+        enforce_pit=False,  # PIT is enforced above with explicit fold summaries.
     )
 
     # Per-fold state: scaler and feature selector re-fit each fold.
     # Stored in a mutable container so predict_fn can access them.
-    _fold_transforms = {"scaler": None, "selector": None}
+    _fold_transforms = {"scaler": None, "selector": None, "selected_names": model_feature_names}
 
-    def train_fn(X_tr, y_tr, X_v, y_v, w_tr):
+    def train_fn(X_tr, y_tr, _margins_tr, fold_feature_names, w_tr):
         # Reset per-fold transforms
         _fold_transforms["scaler"] = None
         _fold_transforms["selector"] = None
+        _fold_transforms["selected_names"] = list(fold_feature_names)
 
         # Re-fit feature selector per fold (mirrors production pipeline)
         if pipeline.config.enable_feature_selection:
@@ -2104,11 +2207,10 @@ def _run_loyo_validation(
                     min_features=pipeline.config.min_features,
                     max_features=pipeline.config.max_features,
                 )
-                fold_selector.fit(X_tr, y_tr, feature_names)
+                fold_selector.fit(X_tr, y_tr, fold_feature_names)
                 X_tr = fold_selector.transform(X_tr)
-                if X_v is not None and len(X_v) > 0:
-                    X_v = fold_selector.transform(X_v)
                 _fold_transforms["selector"] = fold_selector
+                _fold_transforms["selected_names"] = fold_selector.get_selected_names()
             except Exception as _fs_exc:
                 logger.debug("LOYO fold feature selection failed: %s", _fs_exc)
 
@@ -2116,15 +2218,19 @@ def _run_loyo_validation(
         if pipeline.config.enable_feature_scaling and SCALER_AVAILABLE:
             fold_scaler = StandardScaler()
             X_tr = fold_scaler.fit_transform(X_tr)
-            if X_v is not None and len(X_v) > 0:
-                X_v = fold_scaler.transform(X_v)
             _fold_transforms["scaler"] = fold_scaler
 
         if LIGHTGBM_AVAILABLE:
             ranker = LightGBMRanker()
-            vs = (X_v, y_v) if X_v is not None and len(y_v) >= 10 else None
-            ranker.train(X_tr, y_tr, num_rounds=200, early_stopping_rounds=30 if vs else None,
-                         valid_set=vs, sample_weight=w_tr)
+            ranker.train(
+                X_tr,
+                y_tr,
+                feature_names=_fold_transforms["selected_names"],
+                num_rounds=200,
+                early_stopping_rounds=None,
+                valid_set=None,
+                sample_weight=w_tr,
+            )
             return ranker
         elif SKLEARN_AVAILABLE:
             logit = LogisticRegression(C=1.0, max_iter=2000, random_state=pipeline.config.random_seed)
@@ -2147,41 +2253,51 @@ def _run_loyo_validation(
             return model.predict(X_pred)
         return model.predict_proba(X_pred)[:, 1]
 
-    cv_results = loyo_cv.cross_validate(X, y, game_years, train_fn, predict_fn)
-
+    loyo_result_obj = loyo_validator.validate(data_by_year, train_fn, predict_fn)
+    cv_results = loyo_result_obj.fold_results
     if not cv_results:
         return {"enabled": False, "reason": "no_cv_folds_completed"}
 
     per_year_brier = {}
-    for i, result in enumerate(cv_results):
-        held_out_year = loyo_cv.years[i] if i < len(loyo_cv.years) else i
+    for result in cv_results:
+        held_out_year = result.held_out_year
         year_entry = {
             "brier": round(result.brier_score, 5),
             "log_loss": round(result.log_loss, 5),
             "accuracy": round(result.accuracy, 4),
-            "train_size": result.train_size,
-            "val_size": result.val_size,
+            "ece": round(result.calibration_error, 5),
+            "brier_reliability": round(result.brier_reliability, 6),
+            "brier_resolution": round(result.brier_resolution, 6),
+            "brier_uncertainty": round(result.brier_uncertainty, 6),
+            "brier_skill_score": round(result.brier_skill_score, 5),
+            "train_size": result.n_train_games,
+            "val_size": result.n_test_games,
         }
-        # Add ROC-AUC if available
-        if hasattr(result, 'roc_auc') and result.roc_auc is not None:
-            year_entry["roc_auc"] = round(result.roc_auc, 4)
         per_year_brier[str(held_out_year)] = year_entry
 
-    mean_brier = float(np.mean([r.brier_score for r in cv_results]))
-    mean_accuracy = float(np.mean([r.accuracy for r in cv_results]))
-
-    # Compute ROC-AUC across all CV folds if available
-    roc_aucs = [r.roc_auc for r in cv_results if hasattr(r, 'roc_auc') and r.roc_auc is not None]
+    mean_brier = float(loyo_result_obj.mean_brier)
+    mean_accuracy = float(loyo_result_obj.mean_accuracy)
+    mean_logloss = float(loyo_result_obj.mean_logloss)
+    mean_ece = float(np.mean([r.calibration_error for r in cv_results]))
     loyo_result = {
         "enabled": True,
         "years_evaluated": len(cv_results),
-        "total_samples": int(len(y)),
+        "total_samples": int(sum(r.n_test_games for r in cv_results)),
         "mean_brier": round(mean_brier, 5),
+        "mean_log_loss": round(mean_logloss, 5),
+        "mean_logloss": round(mean_logloss, 5),
         "mean_accuracy": round(mean_accuracy, 4),
+        "mean_ece": round(mean_ece, 5),
+        "brier_decomposition": {
+            "reliability": round(loyo_result_obj.mean_brier_reliability, 6),
+            "resolution": round(loyo_result_obj.mean_brier_resolution, 6),
+            "uncertainty": round(loyo_result_obj.mean_brier_uncertainty, 6),
+        },
+        "mean_brier_skill_score": round(loyo_result_obj.mean_brier_skill_score, 5),
+        "brier_log_divergence": round(loyo_result_obj.brier_log_divergence, 5),
+        "pit_validation": pit_summary,
         "per_year": per_year_brier,
     }
-    if roc_aucs:
-        loyo_result["mean_roc_auc"] = round(float(np.mean(roc_aucs)), 4)
 
     return loyo_result
 

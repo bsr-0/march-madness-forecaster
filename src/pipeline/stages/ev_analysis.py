@@ -345,6 +345,53 @@ def _build_ev_analysis(pipeline, base_report: Dict) -> "EVModeReport":
         }
         ev.competition_simulation = {"error": str(exc)}
 
+    # Protocol v2 ESPN optimizer (path-dependent, public-pick-aware).
+    # Keep behind ev_enable_search to control extra compute.
+    if pipeline.config.ev_enable_search:
+        try:
+            from ...espn.bracket_optimizer import (
+                ESPNBracketOptimizer,
+                ESPNOptimizationConfig,
+            )
+
+            first_round_matchups = _build_first_round_matchups(pipeline)
+            all_team_ids = list(dict.fromkeys(first_round_matchups))
+            matchup_probs: Dict[Tuple[str, str], float] = {}
+            for i, team1 in enumerate(all_team_ids):
+                for j in range(i + 1, len(all_team_ids)):
+                    team2 = all_team_ids[j]
+                    p12 = float(pipeline.predict_probability(team1, team2))
+                    matchup_probs[(team1, team2)] = p12
+                    matchup_probs[(team2, team1)] = 1.0 - p12
+
+            optimizer = ESPNBracketOptimizer(
+                first_round_matchups=first_round_matchups,
+                matchup_probs=matchup_probs,
+                model_round_probs=model_round_probs,
+                public_pick_distribution=effective_picks,
+                scoring_system=ev_scoring,
+            )
+            opt_result = optimizer.optimize(
+                ESPNOptimizationConfig(
+                    num_simulations=max(10000, int(pipeline.config.portfolio_n_simulations)),
+                    pool_size=max(2, int(pipeline.config.ev_pool_size)),
+                    top_money_pct=max(0.01, float(pipeline.config.ev_target_percentile)),
+                    n_candidates=max(6, int(pipeline.config.espn_n_brackets * 3)),
+                    random_seed=int(pipeline.config.random_seed),
+                    max_path_disruption_cost=float(pipeline.config.max_path_disruption_cost),
+                )
+            )
+            ev.competition_simulation["protocol_v2_optimizer"] = {
+                "rank_percentile": round(opt_result.simulated_rank_percentile, 4),
+                "top_10_rate": round(opt_result.top_10_rate, 4),
+                "top_money_rate": round(opt_result.top_money_rate, 4),
+                "path_protection_score": round(opt_result.path_protection_score, 4),
+                "selected_bracket": opt_result.selected_bracket,
+            }
+            ev.win_probabilities["top_10pct_protocol_v2"] = round(opt_result.top_10_rate, 6)
+        except Exception as exc:
+            logger.warning("Protocol v2 ESPN optimizer failed: %s", exc)
+
     logger.info(
         "EV Mode: pool_size=%d, scoring=%s, strategy=%s, "
         "leverage_picks=%d, fade_picks=%d, win_probs=%s",
@@ -368,6 +415,28 @@ def _get_ev_scoring_system(pipeline) -> Dict[str, int]:
         return {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
     # Standard ESPN scoring
     return {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
+
+
+def _build_first_round_matchups(pipeline) -> List[str]:
+    """Construct standard 64-team first-round ordering from team_struct."""
+    teams_by_region: Dict[str, Dict[int, str]] = {r: {} for r in _REGIONS}
+    for team_id, team in pipeline.team_struct.items():
+        if team.region in teams_by_region:
+            teams_by_region[team.region][int(team.seed)] = team_id
+
+    first_round: List[str] = []
+    for region in _REGIONS:
+        seed_map = teams_by_region.get(region, {})
+        for high_seed, low_seed in _SEED_ORDER:
+            if high_seed in seed_map and low_seed in seed_map:
+                first_round.append(seed_map[high_seed])
+                first_round.append(seed_map[low_seed])
+
+    if len(first_round) != 64:
+        raise DataRequirementError(
+            f"Unable to build first-round ESPN bracket; expected 64 teams, got {len(first_round)}."
+        )
+    return first_round
 
 
 # ------------------------------------------------------------------
@@ -462,14 +531,14 @@ def _run_pool_competition_simulation(
     if target_percentiles:
         target_percentiles = sorted(set(target_percentiles))
 
-    # Scale n_tournaments by pool size for adequate sampling:
-    # Larger pools need more simulations to estimate rare tail events.
+    # Scale n_tournaments by pool size for adequate sampling.
+    # Protocol v2 requires >=10,000 simulations for ESPN pathway.
     pool_size = pipeline.config.ev_pool_size
-    base_n_tournaments = 1000
-    if pool_size > 1000:
-        base_n_tournaments = 2000
-    elif pool_size > 5000:
-        base_n_tournaments = 5000
+    base_n_tournaments = 10000
+    if pool_size > 5000:
+        base_n_tournaments = 20000
+    elif pool_size > 1000:
+        base_n_tournaments = 15000
 
     config = PoolSimulationConfig(
         n_tournaments=base_n_tournaments,

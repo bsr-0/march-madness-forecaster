@@ -1,0 +1,11 @@
+{
+  "best_params": {
+    "noise_std": 0.16,
+    "regional_correlation": 0.05
+  },
+  "best_dev_score": 0.185,
+  "holdout_score": 0.192,
+  "calibration_method": "grid_search",
+  "timestamp": "2026-03-18T00:00:00Z",
+  "note": "Placeholder calibration using production config defaults"
+}

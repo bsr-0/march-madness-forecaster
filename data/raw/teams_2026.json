@@ -1,0 +1,605 @@
+{
+  "teams": [
+    {
+      "name": "Duke",
+      "team_id": "duke",
+      "seed": 1,
+      "region": "East",
+      "conference": "ACC",
+      "rating": 1835.87,
+      "school_slug": "duke"
+    },
+    {
+      "name": "Connecticut",
+      "team_id": "connecticut",
+      "seed": 2,
+      "region": "East",
+      "conference": "Big East",
+      "rating": 1769.34,
+      "school_slug": "connecticut"
+    },
+    {
+      "name": "Michigan State",
+      "team_id": "michigan_state",
+      "seed": 3,
+      "region": "East",
+      "conference": "Big Ten",
+      "rating": 1706.15,
+      "school_slug": "michigan-state"
+    },
+    {
+      "name": "Kansas",
+      "team_id": "kansas",
+      "seed": 4,
+      "region": "East",
+      "conference": "Big 12",
+      "rating": 1733.95,
+      "school_slug": "kansas"
+    },
+    {
+      "name": "St. John's (NY)",
+      "team_id": "st__john_s__ny",
+      "seed": 5,
+      "region": "East",
+      "conference": "Big East",
+      "rating": 1759.7,
+      "school_slug": "st--john-s--ny"
+    },
+    {
+      "name": "Louisville",
+      "team_id": "louisville",
+      "seed": 6,
+      "region": "East",
+      "conference": "ACC",
+      "rating": 1635.14,
+      "school_slug": "louisville"
+    },
+    {
+      "name": "UCLA",
+      "team_id": "ucla",
+      "seed": 7,
+      "region": "East",
+      "conference": "Big Ten",
+      "rating": 1638.5,
+      "school_slug": "ucla"
+    },
+    {
+      "name": "Ohio State",
+      "team_id": "ohio_state",
+      "seed": 8,
+      "region": "East",
+      "conference": "Big Ten",
+      "rating": 1578.9,
+      "school_slug": "ohio-state"
+    },
+    {
+      "name": "TCU",
+      "team_id": "tcu",
+      "seed": 9,
+      "region": "East",
+      "conference": "Big 12",
+      "rating": 1577.59,
+      "school_slug": "tcu"
+    },
+    {
+      "name": "UCF",
+      "team_id": "ucf",
+      "seed": 10,
+      "region": "East",
+      "conference": "Big 12",
+      "rating": 1626.88,
+      "school_slug": "ucf"
+    },
+    {
+      "name": "South Florida",
+      "team_id": "south_florida",
+      "seed": 11,
+      "region": "East",
+      "conference": "American",
+      "rating": 1534.3,
+      "school_slug": "south-florida"
+    },
+    {
+      "name": "Northern Iowa",
+      "team_id": "northern_iowa",
+      "seed": 12,
+      "region": "East",
+      "conference": "Missouri Valley",
+      "school_slug": "northern-iowa"
+    },
+    {
+      "name": "California Baptist",
+      "team_id": "california_baptist",
+      "seed": 13,
+      "region": "East",
+      "conference": "Western Athletic",
+      "school_slug": "california-baptist"
+    },
+    {
+      "name": "North Dakota State",
+      "team_id": "north_dakota_state",
+      "seed": 14,
+      "region": "East",
+      "conference": "The Summit League",
+      "rating": 1460.73,
+      "school_slug": "north-dakota-state"
+    },
+    {
+      "name": "Furman",
+      "team_id": "furman",
+      "seed": 15,
+      "region": "East",
+      "conference": "Southern",
+      "school_slug": "furman"
+    },
+    {
+      "name": "Siena",
+      "team_id": "siena",
+      "seed": 16,
+      "region": "East",
+      "conference": "MAAC",
+      "school_slug": "siena"
+    },
+    {
+      "name": "Arizona",
+      "team_id": "arizona",
+      "seed": 1,
+      "region": "West",
+      "conference": "Big 12",
+      "rating": 1822.77,
+      "school_slug": "arizona"
+    },
+    {
+      "name": "Purdue",
+      "team_id": "purdue",
+      "seed": 2,
+      "region": "West",
+      "conference": "Big Ten",
+      "rating": 1752.87,
+      "school_slug": "purdue"
+    },
+    {
+      "name": "Gonzaga",
+      "team_id": "gonzaga",
+      "seed": 3,
+      "region": "West",
+      "conference": "West Coast",
+      "rating": 1749.86,
+      "school_slug": "gonzaga"
+    },
+    {
+      "name": "Arkansas",
+      "team_id": "arkansas",
+      "seed": 4,
+      "region": "West",
+      "conference": "SEC",
+      "rating": 1675.09,
+      "school_slug": "arkansas"
+    },
+    {
+      "name": "Wisconsin",
+      "team_id": "wisconsin",
+      "seed": 5,
+      "region": "West",
+      "conference": "Big Ten",
+      "rating": 1659.1,
+      "school_slug": "wisconsin"
+    },
+    {
+      "name": "BYU",
+      "team_id": "brigham_young",
+      "seed": 6,
+      "region": "West",
+      "conference": "Big 12",
+      "rating": 1639.91,
+      "school_slug": "brigham-young"
+    },
+    {
+      "name": "Miami (FL)",
+      "team_id": "miami__fl",
+      "seed": 7,
+      "region": "West",
+      "conference": "ACC",
+      "rating": 1604.33,
+      "school_slug": "miami--fl"
+    },
+    {
+      "name": "Villanova",
+      "team_id": "villanova",
+      "seed": 8,
+      "region": "West",
+      "conference": "Big East",
+      "rating": 1636.67,
+      "school_slug": "villanova"
+    },
+    {
+      "name": "Utah State",
+      "team_id": "utah_state",
+      "seed": 9,
+      "region": "West",
+      "conference": "Mountain West",
+      "rating": 1634.59,
+      "school_slug": "utah-state"
+    },
+    {
+      "name": "Missouri",
+      "team_id": "missouri",
+      "seed": 10,
+      "region": "West",
+      "conference": "SEC",
+      "rating": 1597.44,
+      "school_slug": "missouri"
+    },
+    {
+      "name": "NC State",
+      "team_id": "nc_state",
+      "seed": 11,
+      "region": "West",
+      "conference": "ACC",
+      "rating": 1600.35,
+      "school_slug": "nc-state",
+      "first_four": true
+    },
+    {
+      "name": "Texas",
+      "team_id": "texas",
+      "seed": 11,
+      "region": "West",
+      "conference": "SEC",
+      "school_slug": "texas",
+      "first_four": true
+    },
+    {
+      "name": "High Point",
+      "team_id": "high_point",
+      "seed": 12,
+      "region": "West",
+      "conference": "Big South",
+      "rating": 1543.71,
+      "school_slug": "high-point"
+    },
+    {
+      "name": "Hawaii",
+      "team_id": "hawaii",
+      "seed": 13,
+      "region": "West",
+      "conference": "Big West",
+      "school_slug": "hawaii"
+    },
+    {
+      "name": "Kennesaw State",
+      "team_id": "kennesaw_state",
+      "seed": 14,
+      "region": "West",
+      "conference": "ASUN",
+      "school_slug": "kennesaw-state"
+    },
+    {
+      "name": "Queens (NC)",
+      "team_id": "queens__nc",
+      "seed": 15,
+      "region": "West",
+      "conference": "ASUN",
+      "school_slug": "queens--nc"
+    },
+    {
+      "name": "Long Island University",
+      "team_id": "long_island_university",
+      "seed": 16,
+      "region": "West",
+      "conference": "NEC",
+      "rating": 1283.03,
+      "school_slug": "long-island-university"
+    },
+    {
+      "name": "Florida",
+      "team_id": "florida",
+      "seed": 1,
+      "region": "South",
+      "conference": "SEC",
+      "rating": 1758.28,
+      "school_slug": "florida"
+    },
+    {
+      "name": "Houston",
+      "team_id": "houston",
+      "seed": 2,
+      "region": "South",
+      "conference": "Big 12",
+      "rating": 1731.46,
+      "school_slug": "houston"
+    },
+    {
+      "name": "Illinois",
+      "team_id": "illinois",
+      "seed": 3,
+      "region": "South",
+      "conference": "Big Ten",
+      "rating": 1699.51,
+      "school_slug": "illinois"
+    },
+    {
+      "name": "Nebraska",
+      "team_id": "nebraska",
+      "seed": 4,
+      "region": "South",
+      "conference": "Big Ten",
+      "rating": 1662.33,
+      "school_slug": "nebraska"
+    },
+    {
+      "name": "Vanderbilt",
+      "team_id": "vanderbilt",
+      "seed": 5,
+      "region": "South",
+      "conference": "SEC",
+      "rating": 1618.32,
+      "school_slug": "vanderbilt"
+    },
+    {
+      "name": "North Carolina",
+      "team_id": "north_carolina",
+      "seed": 6,
+      "region": "South",
+      "conference": "ACC",
+      "rating": 1660.6,
+      "school_slug": "north-carolina"
+    },
+    {
+      "name": "Saint Mary's (CA)",
+      "team_id": "saint_mary_s__ca",
+      "seed": 7,
+      "region": "South",
+      "conference": "West Coast",
+      "rating": 1656.66,
+      "school_slug": "saint-mary-s--ca"
+    },
+    {
+      "name": "Clemson",
+      "team_id": "clemson",
+      "seed": 8,
+      "region": "South",
+      "conference": "ACC",
+      "school_slug": "clemson"
+    },
+    {
+      "name": "Iowa",
+      "team_id": "iowa",
+      "seed": 9,
+      "region": "South",
+      "conference": "Big Ten",
+      "rating": 1603.92,
+      "school_slug": "iowa"
+    },
+    {
+      "name": "Texas A&M",
+      "team_id": "texas_a_m",
+      "seed": 10,
+      "region": "South",
+      "conference": "SEC",
+      "rating": 1581.9,
+      "school_slug": "texas-a-m"
+    },
+    {
+      "name": "Virginia Commonwealth",
+      "team_id": "virginia_commonwealth",
+      "seed": 11,
+      "region": "South",
+      "conference": "Atlantic 10",
+      "rating": 1588.08,
+      "school_slug": "virginia-commonwealth"
+    },
+    {
+      "name": "McNeese State",
+      "team_id": "mcneese_state",
+      "seed": 12,
+      "region": "South",
+      "conference": "Southland",
+      "rating": 1537.15,
+      "school_slug": "mcneese-state"
+    },
+    {
+      "name": "Troy",
+      "team_id": "troy",
+      "seed": 13,
+      "region": "South",
+      "conference": "Sun Belt",
+      "school_slug": "troy"
+    },
+    {
+      "name": "Pennsylvania",
+      "team_id": "pennsylvania",
+      "seed": 14,
+      "region": "South",
+      "conference": "Ivy League",
+      "school_slug": "pennsylvania"
+    },
+    {
+      "name": "Idaho",
+      "team_id": "idaho",
+      "seed": 15,
+      "region": "South",
+      "conference": "Big Sky",
+      "school_slug": "idaho"
+    },
+    {
+      "name": "Prairie View A&M",
+      "team_id": "prairie_view",
+      "seed": 16,
+      "region": "South",
+      "conference": "SWAC",
+      "school_slug": "prairie-view",
+      "first_four": true
+    },
+    {
+      "name": "Lehigh",
+      "team_id": "lehigh",
+      "seed": 16,
+      "region": "South",
+      "conference": "Patriot League",
+      "school_slug": "lehigh",
+      "first_four": true
+    },
+    {
+      "name": "Michigan",
+      "team_id": "michigan",
+      "seed": 1,
+      "region": "Midwest",
+      "conference": "Big Ten",
+      "rating": 1845.83,
+      "school_slug": "michigan"
+    },
+    {
+      "name": "Iowa State",
+      "team_id": "iowa_state",
+      "seed": 2,
+      "region": "Midwest",
+      "conference": "Big 12",
+      "rating": 1725.91,
+      "school_slug": "iowa-state"
+    },
+    {
+      "name": "Virginia",
+      "team_id": "virginia",
+      "seed": 3,
+      "region": "Midwest",
+      "conference": "ACC",
+      "rating": 1751.13,
+      "school_slug": "virginia"
+    },
+    {
+      "name": "Alabama",
+      "team_id": "alabama",
+      "seed": 4,
+      "region": "Midwest",
+      "conference": "SEC",
+      "rating": 1716.39,
+      "school_slug": "alabama"
+    },
+    {
+      "name": "Texas Tech",
+      "team_id": "texas_tech",
+      "seed": 5,
+      "region": "Midwest",
+      "conference": "Big 12",
+      "rating": 1728.48,
+      "school_slug": "texas-tech"
+    },
+    {
+      "name": "Tennessee",
+      "team_id": "tennessee",
+      "seed": 6,
+      "region": "Midwest",
+      "conference": "SEC",
+      "rating": 1658.06,
+      "school_slug": "tennessee"
+    },
+    {
+      "name": "Kentucky",
+      "team_id": "kentucky",
+      "seed": 7,
+      "region": "Midwest",
+      "conference": "SEC",
+      "rating": 1610.52,
+      "school_slug": "kentucky"
+    },
+    {
+      "name": "Georgia",
+      "team_id": "georgia",
+      "seed": 8,
+      "region": "Midwest",
+      "conference": "SEC",
+      "school_slug": "georgia"
+    },
+    {
+      "name": "Saint Louis",
+      "team_id": "saint_louis",
+      "seed": 9,
+      "region": "Midwest",
+      "conference": "Atlantic 10",
+      "rating": 1612.37,
+      "school_slug": "saint-louis"
+    },
+    {
+      "name": "Santa Clara",
+      "team_id": "santa_clara",
+      "seed": 10,
+      "region": "Midwest",
+      "conference": "West Coast",
+      "rating": 1602.53,
+      "school_slug": "santa-clara"
+    },
+    {
+      "name": "Southern Methodist",
+      "team_id": "southern_methodist",
+      "seed": 11,
+      "region": "Midwest",
+      "conference": "ACC",
+      "rating": 1571.62,
+      "school_slug": "southern-methodist",
+      "first_four": true
+    },
+    {
+      "name": "Miami (OH)",
+      "team_id": "miami__oh",
+      "seed": 11,
+      "region": "Midwest",
+      "conference": "Mid-American",
+      "rating": 1639.12,
+      "school_slug": "miami--oh",
+      "first_four": true
+    },
+    {
+      "name": "Akron",
+      "team_id": "akron",
+      "seed": 12,
+      "region": "Midwest",
+      "conference": "Mid-American",
+      "school_slug": "akron"
+    },
+    {
+      "name": "Hofstra",
+      "team_id": "hofstra",
+      "seed": 13,
+      "region": "Midwest",
+      "conference": "Coastal Athletic",
+      "school_slug": "hofstra"
+    },
+    {
+      "name": "Wright State",
+      "team_id": "wright_state",
+      "seed": 14,
+      "region": "Midwest",
+      "conference": "Horizon League",
+      "school_slug": "wright-state"
+    },
+    {
+      "name": "Tennessee State",
+      "team_id": "tennessee_state",
+      "seed": 15,
+      "region": "Midwest",
+      "conference": "Ohio Valley",
+      "school_slug": "tennessee-state"
+    },
+    {
+      "name": "Maryland-Baltimore County",
+      "team_id": "maryland_baltimore_county",
+      "seed": 16,
+      "region": "Midwest",
+      "conference": "America East",
+      "rating": 1305.96,
+      "school_slug": "maryland-baltimore-county",
+      "first_four": true
+    },
+    {
+      "name": "Howard",
+      "team_id": "howard",
+      "seed": 16,
+      "region": "Midwest",
+      "conference": "MEAC",
+      "rating": 1248.39,
+      "school_slug": "howard",
+      "first_four": true
+    }
+  ]
+}

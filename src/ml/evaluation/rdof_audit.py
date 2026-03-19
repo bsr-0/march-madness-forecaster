@@ -468,10 +468,38 @@ def _apply_mc_calibration_to_config(config) -> Optional[Dict[str, Any]]:
     return payload
 
 
+_PATH_FIELD_SUFFIXES = ("_json", "_dir", "_file", "_path")
+
+
+def _normalize_path_field(field_name: str, value):
+    """Normalize path-like config fields to relative form for stable hashing.
+
+    Absolute paths depend on the machine/checkout directory, so two configs
+    that differ only in prefix (e.g. ``/home/a/repo/data/raw`` vs
+    ``data/raw``) should hash identically.  We strip any leading path
+    components up to and including common repo-root markers.
+    """
+    if value is None or not isinstance(value, str):
+        return value
+    if not any(field_name.endswith(s) for s in _PATH_FIELD_SUFFIXES):
+        return value
+    # Convert to a relative-ish form by stripping everything up to the
+    # repo-relative portion.  Heuristic: look for known top-level dirs.
+    import os
+    for marker in ("data/", "artifacts/", "configs/", "src/"):
+        idx = value.find(marker)
+        if idx != -1:
+            return value[idx:]
+    # Fallback: use basename only
+    return os.path.basename(value)
+
+
 def config_hash(config) -> str:
     """SHA-256 hash of all pipeline config fields for audit trail.
 
     Ensures the pipeline is frozen before holdout evaluation.
+    Path-like fields are normalized to relative form so the hash is
+    stable across different checkout directories.
     """
     # Serialize all dataclass fields to a canonical JSON string
     d = {}
@@ -484,6 +512,8 @@ def config_hash(config) -> str:
             pass
         else:
             val = str(val)
+        # Normalize path fields so absolute vs relative doesn't affect hash
+        val = _normalize_path_field(f, val)
         d[f] = val
     canonical = json.dumps(d, sort_keys=True, default=str)
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
@@ -628,7 +658,11 @@ def verify_freeze(
             frozen_val = frozen_fields.get(field_name)
             if isinstance(current_val, (list, tuple)):
                 current_val = list(current_val)
-            if str(current_val) != str(frozen_val):
+            # Normalize path fields before comparison so absolute vs
+            # relative paths don't cause spurious mismatches.
+            current_cmp = str(_normalize_path_field(field_name, str(current_val) if current_val is not None else current_val))
+            frozen_cmp = str(_normalize_path_field(field_name, str(frozen_val) if frozen_val is not None else frozen_val))
+            if current_cmp != frozen_cmp:
                 mismatches.append(
                     f"  Field '{field_name}': "
                     f"frozen={frozen_val}, current={current_val}"
