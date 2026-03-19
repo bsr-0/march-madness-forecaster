@@ -373,3 +373,292 @@ class TestFullValidationRunner:
         report = result.report()
         assert isinstance(report, str)
         assert "RUBRIC VALIDATION REPORT" in report
+
+
+# ---------------------------------------------------------------------------
+# Enhanced ESPN: EV picks, quadrant correlation, upset injection
+# ---------------------------------------------------------------------------
+
+class TestEVPickSelection:
+    """Test EV-based pick selection (leverage × probability)."""
+
+    def test_ev_pick_favors_leverage_over_pure_probability(self):
+        """EV pick should prefer a team with lower probability but higher leverage."""
+        from src.espn.leverage import compute_ev_pick
+
+        # Team A: 60% to win, but public picks A at 70% → negative leverage
+        # Team B: 40% to win, but public picks B at 20% → positive leverage
+        # EV_A = (0.6 - 0.7) * 0.6 = -0.06
+        # EV_B = (0.4 - 0.2) * 0.4 = 0.08 → B wins
+        matchup_probs = {("A", "B"): 0.6}
+        public_picks = {
+            "A": {"R64": 0.70},
+            "B": {"R64": 0.20},  # intentionally don't sum to 1 pre-normalization
+        }
+        result = compute_ev_pick("A", "B", "R64", matchup_probs, public_picks)
+        assert result == "B", "EV pick should favor leverage, not raw probability"
+
+    def test_ev_pick_favors_high_probability_with_positive_leverage(self):
+        """Team with both higher probability and positive leverage should win."""
+        from src.espn.leverage import compute_ev_pick
+
+        # Team A: 70% prob, public 60% → leverage = 0.10, EV = 0.10 * 0.70 = 0.07
+        # Team B: 30% prob, public 40% → leverage = -0.10, EV = -0.10 * 0.30 = -0.03
+        matchup_probs = {("A", "B"): 0.7}
+        public_picks = {
+            "A": {"R64": 0.60},
+            "B": {"R64": 0.40},
+        }
+        result = compute_ev_pick("A", "B", "R64", matchup_probs, public_picks)
+        assert result == "A"
+
+    def test_ev_pick_handles_missing_public_data(self):
+        """EV pick should default to 50/50 public when no data available."""
+        from src.espn.leverage import compute_ev_pick
+
+        matchup_probs = {("A", "B"): 0.6}
+        public_picks = {}  # No public data
+        result = compute_ev_pick("A", "B", "R64", matchup_probs, public_picks)
+        # With equal public picks, higher model prob should win
+        assert result == "A"
+
+
+class TestQuadrantCorrelation:
+    """Test quadrant correlation enforcement."""
+
+    def test_enforces_chalk_in_champion_region(self):
+        """Chalk should be forced in R64/R32 of champion's region."""
+        from src.espn.leverage import (
+            enforce_quadrant_correlation,
+            ROUND_GAME_COUNTS,
+            lookup_matchup_probability,
+        )
+
+        team_ids = [f"T{i:03d}" for i in range(64)]
+        matchup_probs = {}
+        for i in range(64):
+            for j in range(i + 1, 64):
+                matchup_probs[(team_ids[i], team_ids[j])] = 0.5 + 0.3 * (j - i) / 63
+
+        # Build a bracket with some upsets
+        winners = []
+        current = list(team_ids)
+        for _, n_games in enumerate(ROUND_GAME_COUNTS):
+            nxt = []
+            for g in range(n_games):
+                t1, t2 = current[2 * g], current[2 * g + 1]
+                # Intentionally pick upsets (pick t2, the underdog)
+                winners.append(t2)
+                nxt.append(t2)
+            current = nxt
+
+        # Champion is T000 (game 0, region 0)
+        result = enforce_quadrant_correlation(
+            bracket_winners=winners,
+            champion_id="T000",
+            first_round_game_idx=0,
+            matchup_probs=matchup_probs,
+            first_round_matchups=team_ids,
+        )
+
+        # Region 0 = games 0-7 in R64 — should now be favorites (lower index)
+        for g in range(8):
+            t1 = team_ids[2 * g]
+            t2 = team_ids[2 * g + 1]
+            p = lookup_matchup_probability(matchup_probs, t1, t2)
+            expected_fav = t1 if p >= 0.5 else t2
+            assert result[g] == expected_fav, (
+                f"R64 game {g} in champion region should be chalk ({expected_fav}), "
+                f"got {result[g]}"
+            )
+
+    def test_does_not_modify_other_regions(self):
+        """Non-champion regions should not be modified."""
+        from src.espn.leverage import enforce_quadrant_correlation, ROUND_GAME_COUNTS
+
+        team_ids = [f"T{i:03d}" for i in range(64)]
+        matchup_probs = {}
+        for i in range(64):
+            for j in range(i + 1, 64):
+                matchup_probs[(team_ids[i], team_ids[j])] = 0.5 + 0.3 * (j - i) / 63
+
+        # Original bracket: pick underdogs everywhere
+        winners = []
+        current = list(team_ids)
+        for _, n_games in enumerate(ROUND_GAME_COUNTS):
+            nxt = []
+            for g in range(n_games):
+                winners.append(current[2 * g + 1])
+                nxt.append(current[2 * g + 1])
+            current = nxt
+
+        original = list(winners)
+        result = enforce_quadrant_correlation(
+            winners, "T000", 0, matchup_probs, team_ids,
+        )
+
+        # Region 1-3 R64 games (8-31) should be unchanged
+        for g in range(8, 32):
+            assert result[g] == original[g], f"R64 game {g} (other region) was modified"
+
+
+class TestUpsetInjection:
+    """Test controlled upset injection."""
+
+    @pytest.fixture
+    def optimizer_with_bracket(self):
+        """Create optimizer and favorite bracket for upset testing."""
+        from src.espn.bracket_optimizer import ESPNBracketOptimizer
+        team_ids = [f"T{i:03d}" for i in range(64)]
+        matchup_probs = {}
+        for i in range(64):
+            for j in range(i + 1, 64):
+                matchup_probs[(team_ids[i], team_ids[j])] = 0.5 + 0.3 * (j - i) / 63
+
+        model_round_probs = {}
+        public_picks = {}
+        for t in team_ids:
+            idx = int(t[1:])
+            base = max(0.01, 1.0 - idx / 64)
+            model_round_probs[t] = {
+                "R64": min(0.99, base), "R32": min(0.95, base * 0.7),
+                "S16": min(0.90, base * 0.4), "E8": min(0.80, base * 0.2),
+                "F4": min(0.60, base * 0.1), "CHAMP": min(0.40, base * 0.05),
+            }
+            # Public underestimates mid-tier teams → creates leverage
+            public_picks[t] = {
+                "R64": min(0.99, base * 0.8), "R32": min(0.95, base * 0.5),
+                "S16": min(0.85, base * 0.25), "E8": min(0.70, base * 0.1),
+                "F4": min(0.50, base * 0.05), "CHAMP": min(0.30, base * 0.02),
+            }
+
+        opt = ESPNBracketOptimizer(
+            first_round_matchups=team_ids,
+            matchup_probs=matchup_probs,
+            model_round_probs=model_round_probs,
+            public_pick_distribution=public_picks,
+        )
+        return opt, team_ids, matchup_probs
+
+    def test_identify_upset_candidates_filters_by_thresholds(self, optimizer_with_bracket):
+        """Upset candidates must meet model_prob and leverage thresholds."""
+        opt, team_ids, matchup_probs = optimizer_with_bracket
+        from src.espn.leverage import ROUND_GAME_COUNTS, lookup_matchup_probability
+
+        # Build favorite bracket
+        winners = []
+        current = list(team_ids)
+        for _, n_games in enumerate(ROUND_GAME_COUNTS):
+            nxt = []
+            for g in range(n_games):
+                t1, t2 = current[2 * g], current[2 * g + 1]
+                p = lookup_matchup_probability(matchup_probs, t1, t2)
+                w = t1 if p >= 0.5 else t2
+                winners.append(w)
+                nxt.append(w)
+            current = nxt
+
+        candidates = opt._identify_upset_candidates(
+            winners, min_prob=0.35, min_leverage=0.05,
+        )
+        # All candidates must meet thresholds
+        for _, _, _, prob, ev in candidates:
+            assert prob >= 0.35, f"Upset candidate has prob {prob} < 0.35"
+            assert ev > 0, "EV score must be positive"
+
+    def test_inject_upsets_respects_max_count(self, optimizer_with_bracket):
+        """Should not inject more upsets than max_upsets."""
+        opt, team_ids, matchup_probs = optimizer_with_bracket
+        from src.espn.leverage import ROUND_GAME_COUNTS, lookup_matchup_probability
+
+        winners = []
+        current = list(team_ids)
+        for _, n_games in enumerate(ROUND_GAME_COUNTS):
+            nxt = []
+            for g in range(n_games):
+                t1, t2 = current[2 * g], current[2 * g + 1]
+                p = lookup_matchup_probability(matchup_probs, t1, t2)
+                winners.append(t1 if p >= 0.5 else t2)
+                nxt.append(t1 if p >= 0.5 else t2)
+            current = nxt
+
+        original = list(winners)
+        candidates = opt._identify_upset_candidates(winners)
+        result = opt._inject_controlled_upsets(
+            winners, candidates, "T000", max_upsets=2, max_disruption=1.0,
+        )
+        diffs = sum(1 for a, b in zip(original, result) if a != b)
+        assert diffs <= 2, f"Injected {diffs} upsets, max was 2"
+
+
+class TestFinalFourExpansion:
+    """Test Final Four set generation."""
+
+    @pytest.fixture
+    def optimizer(self):
+        from src.espn.bracket_optimizer import ESPNBracketOptimizer
+        team_ids = [f"T{i:03d}" for i in range(64)]
+        matchup_probs = {}
+        for i in range(64):
+            for j in range(i + 1, 64):
+                matchup_probs[(team_ids[i], team_ids[j])] = 0.5 + 0.3 * (j - i) / 63
+        model_round_probs = {}
+        public_picks = {}
+        for t in team_ids:
+            idx = int(t[1:])
+            base = max(0.01, 1.0 - idx / 64)
+            model_round_probs[t] = {
+                "R64": min(0.99, base), "R32": min(0.95, base * 0.7),
+                "S16": min(0.90, base * 0.4), "E8": min(0.80, base * 0.2),
+                "F4": min(0.60, base * 0.1), "CHAMP": min(0.40, base * 0.05),
+            }
+            public_picks[t] = {
+                "R64": min(0.99, base * 0.9), "R32": min(0.95, base * 0.6),
+                "S16": min(0.85, base * 0.3), "E8": min(0.70, base * 0.15),
+                "F4": min(0.50, base * 0.07), "CHAMP": min(0.30, base * 0.03),
+            }
+        return ESPNBracketOptimizer(
+            first_round_matchups=team_ids,
+            matchup_probs=matchup_probs,
+            model_round_probs=model_round_probs,
+            public_pick_distribution=public_picks,
+        )
+
+    def test_f4_sets_have_four_teams(self, optimizer):
+        """Each F4 set should have exactly 4 teams."""
+        f4_sets = optimizer._generate_final_four_sets("T000", max_sets=8)
+        assert len(f4_sets) > 0
+        for f4 in f4_sets:
+            assert len(f4) == 4, f"F4 set has {len(f4)} teams, expected 4"
+
+    def test_f4_sets_include_champion(self, optimizer):
+        """Champion must appear in every F4 set."""
+        f4_sets = optimizer._generate_final_four_sets("T000", max_sets=8)
+        for f4 in f4_sets:
+            assert "T000" in f4, f"Champion T000 missing from F4 set: {f4}"
+
+    def test_f4_sets_one_per_region(self, optimizer):
+        """Each F4 set should have one team per region."""
+        f4_sets = optimizer._generate_final_four_sets("T000", max_sets=8)
+        for f4 in f4_sets:
+            regions = set()
+            for tid in f4:
+                region = optimizer._team_regions.get(tid, -1)
+                if region >= 0:
+                    regions.add(region)
+            assert len(regions) == 4, f"F4 set spans {len(regions)} regions, expected 4"
+
+    def test_structured_search_produces_more_candidates(self, optimizer):
+        """Enhanced optimizer should produce more candidate diagnostics."""
+        from src.espn.bracket_optimizer import ESPNOptimizationConfig
+        config = ESPNOptimizationConfig(
+            num_simulations=10000, pool_size=50,
+            n_candidates=12, random_seed=42,
+            max_final_four_sets=4,
+        )
+        result = optimizer.optimize(config)
+        # Structured search should produce more than old 12-bracket grid
+        assert len(result.diagnostics) > 0
+        assert result.selected_champion in [f"T{i:03d}" for i in range(64)]
+        assert 0 <= result.top_10_rate <= 1
+        assert 0 <= result.path_protection_score <= 1
