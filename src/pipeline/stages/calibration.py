@@ -238,7 +238,10 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             "brier_after": float(metrics.brier_score),
         }
 
-    if pipeline.config.calibration_method == "none":
+    if (
+        pipeline.config.calibration_method == "none"
+        and pipeline.config.probability_profile == "production"
+    ):
         pipeline.calibration_pipeline = None
         metrics = calculate_calibration_metrics(np.array(probs), np.array(outcomes))
         return {
@@ -417,6 +420,29 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                 e,
             )
 
+    # Pass 2 calibration enforcement:
+    # In non-production profiles, only isotonic/platt are permitted.
+    # Keep production-profile behavior unchanged (locked production path
+    # currently uses temperature scaling by design).
+    if pipeline.config.probability_profile != "production":
+        allowed_methods = {"isotonic", "platt"}
+        if effective_calibration_method not in allowed_methods:
+            # Isotonic is preferred when enough data is available.
+            # Otherwise default to Platt as the lower-variance fallback.
+            fallback_method = "isotonic" if len(p_fit) >= 200 else "platt"
+            _auto_selection_info.update({
+                "calibration_enforcement": "isotonic_platt_only",
+                "calibration_method_requested": str(effective_calibration_method),
+                "calibration_method_enforced": fallback_method,
+            })
+            logger.info(
+                "Calibration enforcement: requested '%s' is not permitted in "
+                "non-production profile. Using '%s' instead.",
+                effective_calibration_method,
+                fallback_method,
+            )
+            effective_calibration_method = fallback_method
+
     # Fit calibration on the fitting portion (70% or all).
     pipeline.calibration_pipeline = CalibrationPipeline(method=effective_calibration_method)
     pipeline.calibration_pipeline.fit(p_fit, y_fit)
@@ -491,7 +517,22 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     # when available, or skip sharpening when no separate eval data exists.
     sharpener_info = {}
     synthetic_round_labels = []  # May be populated by sharpener, used by FLB
-    if pipeline.config.enable_brier_sharpening and pipeline._brier_post_processor is not None:
+    sharpening_enabled = bool(pipeline.config.enable_brier_sharpening)
+    if pipeline.config.mode == "calibration" and sharpening_enabled:
+        # Protocol guardrail: sharpening is prohibited for Kaggle probability
+        # submissions (mode="calibration"), regardless of config flag state.
+        logger.info(
+            "Sharpening disabled for calibration mode (Kaggle pathway guardrail)."
+        )
+        sharpening_enabled = False
+        sharpener_info = {
+            "sharpener_method": "disabled_for_kaggle",
+            "sharpener_alpha": 1.0,
+            "sharpener_fitted_on_eval_only": False,
+            "sharpener_used_default": True,
+        }
+
+    if sharpening_enabled and pipeline._brier_post_processor is not None:
         try:
             from ...ml.calibration.brier_optimal import RoundWeightedSharpener
             rw_sharpener = RoundWeightedSharpener()
@@ -605,7 +646,8 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             logger.warning("goto_conversion fitting failed: %s", e)
 
     calibration_info = {
-        "method": pipeline.config.calibration_method,
+        "method": effective_calibration_method,
+        "requested_method": pipeline.config.calibration_method,
         "samples": len(probs),
         "historical_tournament_samples": tourney_cal_count,
         "current_year_calibration_samples": _n_current_year_cal,
@@ -618,6 +660,14 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         "ece_before": float(pre_metrics.expected_calibration_error),
         "ece_after": ece_after,
         "pre_calibration_clip": [pipeline.config.pre_calibration_clip_lo, pipeline.config.pre_calibration_clip_hi],
+        "reliability_pre": {
+            "prob_pred": [round(float(x), 6) for x in np.asarray(pre_metrics.prob_pred).tolist()],
+            "prob_true": [round(float(x), 6) for x in np.asarray(pre_metrics.prob_true).tolist()],
+        },
+        "reliability_post": {
+            "prob_pred": [round(float(x), 6) for x in np.asarray(insample_metrics.prob_pred).tolist()],
+            "prob_true": [round(float(x), 6) for x in np.asarray(insample_metrics.prob_true).tolist()],
+        },
         **sharpener_info,
         **flb_info,
     }
