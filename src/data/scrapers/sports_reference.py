@@ -74,6 +74,15 @@ class SportsReferenceScraper:
         if not teams:
             raise ValueError("Sports Reference returned no team rows")
 
+        # Build a pace lookup from the successfully parsed advanced table so
+        # that fallback def_rtg computations use per-team pace instead of a
+        # hardcoded 70 possessions/game average.
+        team_paces: Dict[str, float] = {}
+        for t in teams:
+            tid = self._normalize_id(t["team_name"])
+            if t["pace"] > 0:
+                team_paces[tid] = t["pace"]
+
         # --- Fallback: compute def_rtg from game records when HTML is empty ---
         zero_def_count = sum(1 for t in teams if t["def_rtg"] <= 0)
         if zero_def_count > len(teams) * 0.5 and game_records:
@@ -82,7 +91,7 @@ class SportsReferenceScraper:
                 zero_def_count,
                 len(teams),
             )
-            game_def_rtg = self._compute_def_rtg_from_games(game_records)
+            game_def_rtg = self._compute_def_rtg_from_games(game_records, team_paces=team_paces)
             for team in teams:
                 if team["def_rtg"] <= 0:
                     tid = self._normalize_id(team["team_name"])
@@ -98,7 +107,7 @@ class SportsReferenceScraper:
                 zero_def_count,
                 len(teams),
             )
-            basic_def_rtg = self._fetch_basic_def_rtg(year)
+            basic_def_rtg = self._fetch_basic_def_rtg(year, team_paces=team_paces)
             for team in teams:
                 if team["def_rtg"] <= 0:
                     tid = self._normalize_id(team["team_name"])
@@ -163,12 +172,16 @@ class SportsReferenceScraper:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _compute_def_rtg_from_games(game_records: List[Dict]) -> Dict[str, float]:
+    def _compute_def_rtg_from_games(
+        game_records: List[Dict],
+        team_paces: Optional[Dict[str, float]] = None,
+    ) -> Dict[str, float]:
         """Compute simple defensive rating from game-level opponent scoring.
 
         def_rtg ≈ 100 * (total opponent points) / (total possessions allowed).
-        If possessions aren't available, uses total opponent points / games
-        normalised to per-100-possession assuming 70 avg possessions.
+        If possessions aren't available, uses each team's known *pace* (from
+        ``team_paces``) to estimate possessions.  Falls back to 70 only when
+        pace is also unknown.
         """
         stats: Dict[str, Dict] = {}  # team_id -> {opp_pts, poss, games}
         for game in game_records:
@@ -203,12 +216,18 @@ class SportsReferenceScraper:
                 continue
             if s["poss"] > 0:
                 result[tid] = 100.0 * s["opp_pts"] / s["poss"]
+            elif team_paces and tid in team_paces and team_paces[tid] > 0:
+                result[tid] = 100.0 * s["opp_pts"] / (team_paces[tid] * s["games"])
             else:
-                # Approximate: assume ~70 possessions per game
+                # Last resort: assume ~70 possessions per game
                 result[tid] = 100.0 * s["opp_pts"] / (70.0 * s["games"])
         return result
 
-    def _fetch_basic_def_rtg(self, year: int) -> Dict[str, float]:
+    def _fetch_basic_def_rtg(
+        self,
+        year: int,
+        team_paces: Optional[Dict[str, float]] = None,
+    ) -> Dict[str, float]:
         """Fetch opponent points from the basic school stats page as a
         last-resort fallback for computing def_rtg."""
         try:
@@ -246,6 +265,8 @@ class SportsReferenceScraper:
             if games > 0 and opp_pts > 0:
                 if pace > 0:
                     result[tid] = 100.0 * opp_pts / (pace * games)
+                elif team_paces and tid in team_paces and team_paces[tid] > 0:
+                    result[tid] = 100.0 * opp_pts / (team_paces[tid] * games)
                 else:
                     result[tid] = 100.0 * opp_pts / (70.0 * games)
         return result
