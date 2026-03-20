@@ -617,8 +617,13 @@ class HistoricalDataPipeline:
             zero_count = sum(1 for r in rows if (r.get("def_rtg") or 0) <= 0)
             if zero_count > len(rows) * 0.5:
                 from ..scrapers.sports_reference import SportsReferenceScraper
+                team_paces = {
+                    SportsReferenceScraper._normalize_id(r.get("team_name", "")): float(r.get("pace", 0))
+                    for r in rows
+                    if float(r.get("pace", 0)) > 0
+                }
                 game_def_rtg = SportsReferenceScraper._compute_def_rtg_from_games(
-                    game_records,
+                    game_records, team_paces=team_paces,
                 )
                 for row in rows:
                     if (row.get("def_rtg") or 0) <= 0:
