@@ -1008,7 +1008,7 @@
   "source_file_hashes": {
     "src/pipeline/config.py": "a8fac26fd78004ce80a74f49e00000206408e92ac7bde10fcdd319064ef75c68",
     "src/pipeline/sota.py": "3dbeff43dc150d415da0dac34d597264b234e27dc0e00b7994cdf4f5445c733d",
-    "src/pipeline/stages/baseline_training.py": "57b709f52ff18540f40ae9796af8663bff34ed35720d2cd45c4b8f97fc1ec295",
+    "src/pipeline/stages/baseline_training.py": "7141af035b7db35479dca539dcacaf00d4e47a64016178ed4da812f83d3cab32",
     "src/pipeline/stages/calibration.py": "54975c5649532cf251240d72a4c10e176a7c9a36d8c85b0976e7fb99120d53f9",
     "src/pipeline/stages/data_loader.py": "92ea44f6ab06ff867fe2a429882cff9dbc1e735795daab2c58ac4a43a988d564",
     "src/pipeline/stages/inference.py": "14d610aad913b9e7b8441670768eadd0bc8e2887bbfd15f1473a2b2c95c283e0",
@@ -1017,7 +1017,7 @@
     "src/governance/production_runner.py": "42af409122d6a5039728b7444839545ef1b70fe7b2ad9823aef62ef9909a617d",
     "src/run_production_2026.py": "e5c7dde0211feb896d2db7d26fa28a5b7d8be8c1763c3f6ae448847a067cf29e"
   },
-  "source_tree_hash": "a5ea2cbad6766ec5e40b44a68f06748b4a93377151d3e880e1fe6d6a2d7c5fe9",
+  "source_tree_hash": "01aa58f419dd742510affc95e63003813c2c6722bbe667f2edd1073a7ba214e9",
   "data_file_hashes": {
     "data/raw/torvik_2026.json": "214cec3364a8ade6d63b185063ffd53d7f9b2cc0d79f03e2876b1d9583d0f817",
     "data/raw/teams_2026.json": "18713882c27372ad9ad9cf0c5034ea3d14d36f61d0ea33b0cac59ff7b619ee68",
