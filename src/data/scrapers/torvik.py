@@ -248,17 +248,25 @@ class BartTorvikScraper:
         
         return teams
     
+    # cbbstat.com API — the same backend that powers the toRvik / cbbdata
+    # R packages.  Free, no auth required, returns clean JSON with complete
+    # Four Factors (offense + defense), T-Rank ratings, and more.
+    CBBSTAT_API = "https://api.cbbstat.com"
+
     def fetch_four_factors(self, year: int = 2026) -> Dict[str, Dict]:
         """
         Fetch Four Factors data for all teams.
 
-        Attempts three sources in order:
+        Attempts four sources in order:
           1. Local cache file.
-          2. HTML scrape of ``fourfactors.php`` (fails if JS wall is up).
-          3. **CSV fallback**: aggregates player-level stats from
+          2. **cbbstat API** — ``api.cbbstat.com/ratings/factors/splits``
+             (same backend as the toRvik / cbbdata R packages).  Returns all
+             8 Four Factors (offense + defense) as clean JSON.
+          3. HTML scrape of ``fourfactors.php`` (fails if JS wall is up).
+          4. **CSV fallback**: aggregates player-level stats from
              ``getadvstats.php?year={year}&csv=1`` to compute team-level
-             offensive Four Factors (eFG%, TO%, ORB%, FTR) plus shooting
-             splits (3P%, FT%).  This endpoint is NOT behind the JS wall.
+             offensive eFG% and FTR only (ORB%/TO% left at 0 for downstream
+             enrichment from game box scores).
 
         Args:
             year: Season year
@@ -272,19 +280,24 @@ class BartTorvikScraper:
 
         four_factors: Dict[str, Dict] = {}
 
-        # --- Strategy 1: HTML scrape (original approach) ---
-        try:
-            url = f"{self.BASE_URL}/fourfactors.php?year={year}"
-            response = self.session.get(url, timeout=30)
-            response.raise_for_status()
-            four_factors = self._parse_four_factors_page(response.text)
-        except Exception as e:
-            logger.warning("HTML Four Factors scrape failed: %s", e)
+        # --- Strategy 1: cbbstat API (preferred — complete data) ---
+        if not four_factors:
+            four_factors = self._four_factors_from_cbbstat_api(year)
 
-        # --- Strategy 2: CSV player-stats fallback ---
+        # --- Strategy 2: HTML scrape (original approach) ---
+        if not four_factors:
+            try:
+                url = f"{self.BASE_URL}/fourfactors.php?year={year}"
+                response = self.session.get(url, timeout=30)
+                response.raise_for_status()
+                four_factors = self._parse_four_factors_page(response.text)
+            except Exception as e:
+                logger.warning("HTML Four Factors scrape failed: %s", e)
+
+        # --- Strategy 3: CSV player-stats fallback ---
         if not four_factors:
             logger.info(
-                "HTML Four Factors page blocked (JS wall); "
+                "cbbstat API and HTML Four Factors both failed; "
                 "falling back to player-stats CSV aggregation."
             )
             four_factors = self._four_factors_from_player_csv(year)
@@ -294,6 +307,68 @@ class BartTorvikScraper:
 
         return four_factors
     
+    def _four_factors_from_cbbstat_api(self, year: int) -> Dict[str, Dict]:
+        """Fetch complete Four Factors from the cbbstat.com API.
+
+        This is the same backend that powers the toRvik / cbbdata R packages.
+        Returns all 8 Four Factors (offense + defense) as JSON, with no
+        JS wall or browser verification.
+
+        Endpoint: ``GET /ratings/factors/splits?year={year}``
+
+        Response fields used:
+            team, off_efg, off_to, off_or, off_ftr,
+            def_efg, def_to, def_or, def_ftr
+        """
+        url = f"{self.CBBSTAT_API}/ratings/factors/splits"
+        try:
+            resp = self.session.get(url, params={"year": year}, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.warning("cbbstat API Four Factors fetch failed: %s", e)
+            return {}
+
+        if not data:
+            return {}
+
+        # Normalize to list if needed
+        rows = data if isinstance(data, list) else data.get("data", data.get("results", []))
+        if not isinstance(rows, list) or not rows:
+            logger.warning("cbbstat API returned unexpected format: %s", type(data))
+            return {}
+
+        result: Dict[str, Dict] = {}
+        for row in rows:
+            team_name = row.get("team", "")
+            if not team_name:
+                continue
+            tid = self._normalize_team_name_to_id(team_name)
+
+            def _rate(key: str) -> float:
+                """Convert cbbstat value to fraction (0-1).
+                cbbstat may return percentage (>1.5) or fraction."""
+                v = float(row.get(key, 0) or 0)
+                return v / 100.0 if v > 1.5 else v
+
+            result[tid] = {
+                'effective_fg_pct': _rate("off_efg"),
+                'turnover_rate': _rate("off_to"),
+                'offensive_reb_rate': _rate("off_or"),
+                'free_throw_rate': _rate("off_ftr"),
+                'opp_effective_fg_pct': _rate("def_efg"),
+                'opp_turnover_rate': _rate("def_to"),
+                'defensive_reb_rate': _rate("def_or"),
+                'opp_free_throw_rate': _rate("def_ftr"),
+            }
+
+        logger.info(
+            "Four Factors from cbbstat API (%d): fetched complete offense + "
+            "defense for %d teams",
+            year, len(result),
+        )
+        return result
+
     def _parse_four_factors_page(self, html: str) -> Dict[str, Dict]:
         """Parse Four Factors from HTML."""
         soup = BeautifulSoup(html, 'lxml')
