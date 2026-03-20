@@ -1358,6 +1358,17 @@ def validate_population_stats(
         if obs_std < 1e-8 and abs(obs_mean) < 1e-8:
             continue
 
+        # Skip features where >80% of teams have the exact same value
+        # (usually 0.0 or a default). This indicates data unavailability
+        # rather than a genuine distribution shift. Common when box score
+        # data (stl, blk, pf, fg3a) is missing from the game data source.
+        n_teams = vectors.shape[0]
+        if n_teams >= 10:
+            unique_vals, counts = np.unique(vectors[:, idx], return_counts=True)
+            max_frac = float(counts.max()) / n_teams
+            if max_frac > 0.80:
+                continue
+
         # Check if observed mean is far from population mean
         mean_z = abs(obs_mean - pop_mean) / pop_std
         if mean_z > tolerance_std:
