@@ -23,6 +23,8 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
+from ..normalize import normalize_team_id as _shared_normalize_team_id
+
 logger = logging.getLogger(__name__)
 
 
@@ -211,6 +213,159 @@ class BettingMarketScraper(ABC):
             json.dump(data, f, indent=2)
 
 
+class TheOddsAPIScraper(BettingMarketScraper):
+    """Aggregated odds from The Odds API (https://the-odds-api.com).
+
+    This is the recommended approach for retrieving sportsbook odds.  A
+    single API call returns odds from 40+ bookmakers (FanDuel, DraftKings,
+    BetMGM, Pinnacle, etc.) as clean JSON.
+
+    Free tier: 500 requests/month (no credit card required).
+    Sport key: ``basketball_ncaab``
+
+    Set the ``THE_ODDS_API_KEY`` environment variable to your API key.
+    Register at https://the-odds-api.com to get one.
+    """
+
+    BASE_URL = "https://api.the-odds-api.com/v4"
+    SPORT_KEY = "basketball_ncaab"
+    ENV_API_KEY = "THE_ODDS_API_KEY"
+
+    def scrape(self, season: int) -> Dict[str, BettingMarketOdds]:
+        # Try JSON cache first
+        cached = self._load_cached(season)
+        if cached:
+            return self.load_from_json(
+                os.path.join(self.cache_dir, f"betting_odds_{season}.json")
+            )
+
+        api_key = os.getenv(self.ENV_API_KEY, "")
+        if not api_key:
+            logger.debug("THE_ODDS_API_KEY not set; skipping The Odds API")
+            return {}
+
+        live_result = self._scrape_live(season, api_key)
+        if live_result:
+            return live_result
+
+        logger.info("The Odds API: no data available for season %d", season)
+        return {}
+
+    def _scrape_live(
+        self, season: int, api_key: str
+    ) -> Dict[str, BettingMarketOdds]:
+        """Fetch championship futures (outrights) from The Odds API."""
+        import requests
+        from datetime import datetime, timezone
+
+        # Try outrights (championship futures) first, then fall back to
+        # game-level h2h odds.
+        for markets in ("outrights", "h2h"):
+            url = f"{self.BASE_URL}/sports/{self.SPORT_KEY}/odds"
+            params = {
+                "apiKey": api_key,
+                "regions": "us",
+                "markets": markets,
+                "oddsFormat": "american",
+            }
+            try:
+                resp = requests.get(url, params=params, timeout=30)
+                if resp.status_code == 401:
+                    logger.warning("The Odds API: invalid API key")
+                    return {}
+                if resp.status_code == 429:
+                    logger.warning("The Odds API: rate limit exceeded")
+                    return {}
+                resp.raise_for_status()
+                data = resp.json()
+            except Exception as e:
+                logger.debug("The Odds API (%s) fetch failed: %s", markets, e)
+                continue
+
+            if not data:
+                continue
+
+            odds_map = self._parse_response(data, season, markets)
+            if odds_map:
+                timestamp = datetime.now(timezone.utc).isoformat()
+                cache_data = {
+                    "source": "the_odds_api",
+                    "season": season,
+                    "timestamp": timestamp,
+                    "teams": {
+                        tid: {
+                            "team_name": o.team_name,
+                            "championship_odds": o.championship_odds,
+                            "implied_probability": o.implied_probability,
+                            "source": "the_odds_api",
+                        }
+                        for tid, o in odds_map.items()
+                    },
+                }
+                self._save_cached(season, cache_data)
+                logger.info(
+                    "The Odds API: scraped %d teams (%s market) from %d bookmakers",
+                    len(odds_map), markets,
+                    len({o.source for o in odds_map.values()}),
+                )
+                return odds_map
+
+        return {}
+
+    def _parse_response(
+        self, data: list, season: int, markets: str
+    ) -> Dict[str, BettingMarketOdds]:
+        """Parse The Odds API JSON response.
+
+        For outrights, each element in ``data`` represents a futures market
+        with ``bookmakers[].markets[].outcomes[]`` containing team odds.
+
+        For h2h, each element is a game with two-outcome moneylines per
+        bookmaker.  We aggregate the best available odds per team.
+        """
+        from datetime import datetime, timezone
+
+        odds_map: Dict[str, BettingMarketOdds] = {}
+        timestamp = datetime.now(timezone.utc).isoformat()
+
+        if not isinstance(data, list):
+            return odds_map
+
+        for event in data:
+            bookmakers = event.get("bookmakers", [])
+            for bk in bookmakers:
+                for market in bk.get("markets", []):
+                    for outcome in market.get("outcomes", []):
+                        team_name = outcome.get("name", "")
+                        if not team_name:
+                            continue
+
+                        price = outcome.get("price")
+                        if price is None:
+                            continue
+
+                        american_odds = float(price)
+                        imp_prob = american_to_probability(american_odds)
+                        team_id = _shared_normalize_team_id(team_name)
+
+                        # Keep best (highest implied prob) odds per team
+                        existing = odds_map.get(team_id)
+                        if existing and existing.implied_probability >= imp_prob:
+                            continue
+
+                        odds_map[team_id] = BettingMarketOdds(
+                            team_id=team_id,
+                            team_name=team_name,
+                            season=season,
+                            source="the_odds_api",
+                            championship_odds=american_odds,
+                            implied_probability=imp_prob,
+                            timestamp=timestamp,
+                        )
+
+        return odds_map
+
+
 class FanDuelScraper(BettingMarketScraper):
     """FanDuel sportsbook odds scraper.
 
@@ -229,7 +384,9 @@ class FanDuelScraper(BettingMarketScraper):
       structured JSON with American odds per team.
     """
 
-    # FanDuel public API for NCAA tournament futures
+    # FanDuel public API for NCAA tournament futures.
+    # NOTE: This URL is not year-parameterised and may be stale or blocked.
+    # Prefer setting FANDUEL_ODDS_URL env var to a known-good endpoint.
     LIVE_API_URL = "https://sportsbook.fanduel.com/cache/psmg/US/69420.3.json"
     # Fallback: environment variable for custom endpoint
     ENV_URL_KEY = "FANDUEL_ODDS_URL"
@@ -340,7 +497,7 @@ class FanDuelScraper(BettingMarketScraper):
                         imp_prob = american_to_probability(american_odds)
 
                     # Normalize team name to ID
-                    team_id = self._normalize_team_name(team_name)
+                    team_id = _shared_normalize_team_id(team_name)
 
                     odds_map[team_id] = BettingMarketOdds(
                         team_id=team_id,
@@ -359,13 +516,7 @@ class FanDuelScraper(BettingMarketScraper):
     @staticmethod
     def _normalize_team_name(name: str) -> str:
         """Normalize a sportsbook team name to a standard team_id."""
-        # Remove common suffixes and normalize
-        name = name.strip()
-        for suffix in (" Wildcats", " Blue Devils", " Tar Heels", " Tigers",
-                       " Bulldogs", " Cardinals", " Bears", " Jayhawks"):
-            if name.endswith(suffix):
-                name = name[:-len(suffix)].strip()
-        return name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+        return _shared_normalize_team_id(name)
 
 
 class DraftKingsScraper(BettingMarketScraper):
@@ -476,7 +627,7 @@ class DraftKingsScraper(BettingMarketScraper):
                                     continue
 
                                 imp_prob = american_to_probability(american_float)
-                                team_id = FanDuelScraper._normalize_team_name(team_name)
+                                team_id = _shared_normalize_team_id(team_name)
 
                                 odds_map[team_id] = BettingMarketOdds(
                                     team_id=team_id,

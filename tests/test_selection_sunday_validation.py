@@ -82,6 +82,8 @@ def _load_bracket() -> Dict:
 
 
 def _load_torvik() -> Dict:
+    if not os.path.exists(TORVIK_PATH):
+        pytest.skip(f"Torvik Four Factors file not found: {TORVIK_PATH}")
     with open(TORVIK_PATH) as f:
         return json.load(f)
 

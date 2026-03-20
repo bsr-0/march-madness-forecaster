@@ -618,6 +618,7 @@ def load_betting_markets(pipeline) -> Optional["MarketConsensus"]:  # noqa: F821
     """
     try:
         from ...data.scrapers.betting_markets import (
+            TheOddsAPIScraper,
             FanDuelScraper,
             DraftKingsScraper,
             MarketConsensus,
@@ -654,7 +655,7 @@ def load_betting_markets(pipeline) -> Optional["MarketConsensus"]:  # noqa: F821
             logger.warning("Failed to load betting odds cache: %s", e)
 
     # Try live scrapers
-    for ScraperCls in [FanDuelScraper, DraftKingsScraper]:
+    for ScraperCls in [TheOddsAPIScraper, FanDuelScraper, DraftKingsScraper]:
         try:
             scraper = ScraperCls(cache_dir=cache_dir)
             odds = scraper.scrape(pipeline.config.year)

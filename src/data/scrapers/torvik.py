@@ -166,10 +166,16 @@ class BartTorvikScraper:
     def fetch_current_rankings(self, year: int = 2026) -> List[TorVikTeam]:
         """
         Fetch current T-Rank ratings for all teams.
-        
+
+        Attempts three sources in order:
+          1. Local cache file.
+          2. **cbbstat API** — ``api.cbbstat.com/ratings/factors/splits``
+             returns T-Rank ratings AND complete Four Factors in one call.
+          3. HTML scrape of ``trank.php`` (fails if JS wall is up).
+
         Args:
             year: Season year (e.g., 2026 for 2025-26 season)
-            
+
         Returns:
             List of TorVikTeam objects
         """
@@ -177,27 +183,30 @@ class BartTorvikScraper:
         cached = self._load_from_cache(f"torvik_rankings_{year}.json")
         if cached:
             return [self._dict_to_team(t) for t in cached.get('teams', [])]
-        
-        try:
-            # Attempt to scrape the rankings page
-            url = f"{self.BASE_URL}/trank.php?year={year}"
-            response = self.session.get(url, timeout=30)
-            response.raise_for_status()
-            
-            teams = self._parse_rankings_page(response.text)
-            
-            if teams:
-                self._save_to_cache(f"torvik_rankings_{year}.json", {
-                    'teams': [t.to_dict() for t in teams],
-                    'timestamp': datetime.now().isoformat()
-                })
-            
-            return teams
-            
-        except Exception as e:
-            logger.warning(f"Could not fetch Torvik rankings: {e}")
-            logger.info("Use load_from_json() to load data from file.")
-            return []
+
+        teams: List[TorVikTeam] = []
+
+        # --- Strategy 1: cbbstat API (preferred — ratings + Four Factors) ---
+        if not teams:
+            teams = self._rankings_from_cbbstat_api(year)
+
+        # --- Strategy 2: HTML scrape (original approach) ---
+        if not teams:
+            try:
+                url = f"{self.BASE_URL}/trank.php?year={year}"
+                response = self.session.get(url, timeout=30)
+                response.raise_for_status()
+                teams = self._parse_rankings_page(response.text)
+            except Exception as e:
+                logger.warning("Could not fetch Torvik rankings: %s", e)
+
+        if teams:
+            self._save_to_cache(f"torvik_rankings_{year}.json", {
+                'teams': [t.to_dict() for t in teams],
+                'timestamp': datetime.now().isoformat()
+            })
+
+        return teams
     
     def _parse_rankings_page(self, html: str) -> List[TorVikTeam]:
         """Parse rankings from HTML."""
@@ -248,17 +257,95 @@ class BartTorvikScraper:
         
         return teams
     
+    # cbbstat.com API — the same backend that powers the toRvik / cbbdata
+    # R packages.  Free, no auth required, returns clean JSON with complete
+    # Four Factors (offense + defense), T-Rank ratings, and more.
+    CBBSTAT_API = "https://api.cbbstat.com"
+
+    def _rankings_from_cbbstat_api(self, year: int) -> List[TorVikTeam]:
+        """Fetch T-Rank ratings + Four Factors from the cbbstat.com API.
+
+        The ``/ratings/factors/splits`` endpoint returns both T-Rank
+        efficiency ratings AND complete Four Factors in a single call,
+        eliminating the need for separate HTML scrapes.
+
+        Response fields used:
+            team, conf, rank, adj_o, adj_d, adj_t, barthag,
+            off_efg, off_to, off_or, off_ftr,
+            def_efg, def_to, def_or, def_ftr
+        """
+        url = f"{self.CBBSTAT_API}/ratings/factors/splits"
+        try:
+            resp = self.session.get(url, params={"year": year}, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.warning("cbbstat API rankings fetch failed: %s", e)
+            return []
+
+        if not data:
+            return []
+
+        rows = data if isinstance(data, list) else data.get("data", data.get("results", []))
+        if not isinstance(rows, list) or not rows:
+            logger.warning("cbbstat API returned unexpected format for rankings")
+            return []
+
+        def _rate(row: dict, key: str) -> float:
+            v = float(row.get(key, 0) or 0)
+            return v / 100.0 if v > 1.5 else v
+
+        teams: List[TorVikTeam] = []
+        for row in rows:
+            team_name = row.get("team", "")
+            if not team_name:
+                continue
+            tid = self._normalize_team_name_to_id(team_name)
+            try:
+                team = TorVikTeam(
+                    team_id=tid,
+                    name=team_name,
+                    conference=row.get("conf", ""),
+                    t_rank=int(row.get("rank", 999) or 999),
+                    barthag=float(row.get("barthag", 0.5) or 0.5),
+                    adj_offensive_efficiency=float(row.get("adj_o", 100.0) or 100.0),
+                    adj_defensive_efficiency=float(row.get("adj_d", 100.0) or 100.0),
+                    adj_tempo=float(row.get("adj_t", row.get("tempo", 68.0)) or 68.0),
+                    effective_fg_pct=_rate(row, "off_efg"),
+                    turnover_rate=_rate(row, "off_to"),
+                    offensive_reb_rate=_rate(row, "off_or"),
+                    free_throw_rate=_rate(row, "off_ftr"),
+                    opp_effective_fg_pct=_rate(row, "def_efg"),
+                    opp_turnover_rate=_rate(row, "def_to"),
+                    defensive_reb_rate=_rate(row, "def_or"),
+                    opp_free_throw_rate=_rate(row, "def_ftr"),
+                )
+                teams.append(team)
+            except (ValueError, TypeError) as e:
+                logger.debug("Error parsing cbbstat row for %s: %s", team_name, e)
+                continue
+
+        logger.info(
+            "Rankings from cbbstat API (%d): fetched %d teams with complete "
+            "ratings + Four Factors",
+            year, len(teams),
+        )
+        return teams
+
     def fetch_four_factors(self, year: int = 2026) -> Dict[str, Dict]:
         """
         Fetch Four Factors data for all teams.
 
-        Attempts three sources in order:
+        Attempts four sources in order:
           1. Local cache file.
-          2. HTML scrape of ``fourfactors.php`` (fails if JS wall is up).
-          3. **CSV fallback**: aggregates player-level stats from
+          2. **cbbstat API** — ``api.cbbstat.com/ratings/factors/splits``
+             (same backend as the toRvik / cbbdata R packages).  Returns all
+             8 Four Factors (offense + defense) as clean JSON.
+          3. HTML scrape of ``fourfactors.php`` (fails if JS wall is up).
+          4. **CSV fallback**: aggregates player-level stats from
              ``getadvstats.php?year={year}&csv=1`` to compute team-level
-             offensive Four Factors (eFG%, TO%, ORB%, FTR) plus shooting
-             splits (3P%, FT%).  This endpoint is NOT behind the JS wall.
+             offensive eFG% and FTR only (ORB%/TO% left at 0 for downstream
+             enrichment from game box scores).
 
         Args:
             year: Season year
@@ -267,24 +354,29 @@ class BartTorvikScraper:
             Dict of team_id -> four factors dict
         """
         cached = self._load_from_cache(f"torvik_four_factors_{year}.json")
-        if cached:
+        if cached and self._cache_has_valid_four_factors(cached):
             return cached
 
         four_factors: Dict[str, Dict] = {}
 
-        # --- Strategy 1: HTML scrape (original approach) ---
-        try:
-            url = f"{self.BASE_URL}/fourfactors.php?year={year}"
-            response = self.session.get(url, timeout=30)
-            response.raise_for_status()
-            four_factors = self._parse_four_factors_page(response.text)
-        except Exception as e:
-            logger.warning("HTML Four Factors scrape failed: %s", e)
+        # --- Strategy 1: cbbstat API (preferred — complete data) ---
+        if not four_factors:
+            four_factors = self._four_factors_from_cbbstat_api(year)
 
-        # --- Strategy 2: CSV player-stats fallback ---
+        # --- Strategy 2: HTML scrape (original approach) ---
+        if not four_factors:
+            try:
+                url = f"{self.BASE_URL}/fourfactors.php?year={year}"
+                response = self.session.get(url, timeout=30)
+                response.raise_for_status()
+                four_factors = self._parse_four_factors_page(response.text)
+            except Exception as e:
+                logger.warning("HTML Four Factors scrape failed: %s", e)
+
+        # --- Strategy 3: CSV player-stats fallback ---
         if not four_factors:
             logger.info(
-                "HTML Four Factors page blocked (JS wall); "
+                "cbbstat API and HTML Four Factors both failed; "
                 "falling back to player-stats CSV aggregation."
             )
             four_factors = self._four_factors_from_player_csv(year)
@@ -294,6 +386,68 @@ class BartTorvikScraper:
 
         return four_factors
     
+    def _four_factors_from_cbbstat_api(self, year: int) -> Dict[str, Dict]:
+        """Fetch complete Four Factors from the cbbstat.com API.
+
+        This is the same backend that powers the toRvik / cbbdata R packages.
+        Returns all 8 Four Factors (offense + defense) as JSON, with no
+        JS wall or browser verification.
+
+        Endpoint: ``GET /ratings/factors/splits?year={year}``
+
+        Response fields used:
+            team, off_efg, off_to, off_or, off_ftr,
+            def_efg, def_to, def_or, def_ftr
+        """
+        url = f"{self.CBBSTAT_API}/ratings/factors/splits"
+        try:
+            resp = self.session.get(url, params={"year": year}, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            logger.warning("cbbstat API Four Factors fetch failed: %s", e)
+            return {}
+
+        if not data:
+            return {}
+
+        # Normalize to list if needed
+        rows = data if isinstance(data, list) else data.get("data", data.get("results", []))
+        if not isinstance(rows, list) or not rows:
+            logger.warning("cbbstat API returned unexpected format: %s", type(data))
+            return {}
+
+        result: Dict[str, Dict] = {}
+        for row in rows:
+            team_name = row.get("team", "")
+            if not team_name:
+                continue
+            tid = self._normalize_team_name_to_id(team_name)
+
+            def _rate(key: str) -> float:
+                """Convert cbbstat value to fraction (0-1).
+                cbbstat may return percentage (>1.5) or fraction."""
+                v = float(row.get(key, 0) or 0)
+                return v / 100.0 if v > 1.5 else v
+
+            result[tid] = {
+                'effective_fg_pct': _rate("off_efg"),
+                'turnover_rate': _rate("off_to"),
+                'offensive_reb_rate': _rate("off_or"),
+                'free_throw_rate': _rate("off_ftr"),
+                'opp_effective_fg_pct': _rate("def_efg"),
+                'opp_turnover_rate': _rate("def_to"),
+                'defensive_reb_rate': _rate("def_or"),
+                'opp_free_throw_rate': _rate("def_ftr"),
+            }
+
+        logger.info(
+            "Four Factors from cbbstat API (%d): fetched complete offense + "
+            "defense for %d teams",
+            year, len(result),
+        )
+        return result
+
     def _parse_four_factors_page(self, html: str) -> Dict[str, Dict]:
         """Parse Four Factors from HTML."""
         soup = BeautifulSoup(html, 'lxml')
@@ -538,6 +692,12 @@ class BartTorvikScraper:
                 'offensive_reb_rate': float,
                 'free_throw_rate': float,
             }}
+
+        Note: eFG% and FTR are computed from counting stats (FGM/FGA/FTA)
+        and are accurate.  ORB%, DRB%, and TO% CANNOT be accurately derived
+        from the player CSV because individual player rebound/turnover rates
+        are not additive to team-level rates.  These are left at 0.0 so
+        downstream code falls back to population defaults.
         """
         try:
             csv_text = self._fetch_player_csv(year)
@@ -555,27 +715,28 @@ class BartTorvikScraper:
 
             efg = (t['fgm'] + 0.5 * t['fg3m']) / fga
             ftr = t['fta'] / fga
-            min_total = t['min_pct_total'] or 1.0
-            orb = (t['orb_pct_weighted'] / min_total) / 100.0
-            drb = (t['drb_pct_weighted'] / min_total) / 100.0
-            to_rate = (t['to_pct_weighted'] / min_total) / 100.0
+
+            # Individual player ORB%/DRB%/TO% from Barttorvik measure what
+            # fraction of available rebounds/possessions THAT PLAYER claims.
+            # These are NOT additive: averaging them across players gives a
+            # value ~0.04 for ORB% vs the true team rate of ~0.30.  Leave
+            # at 0.0 so downstream enrichment uses population defaults or
+            # computes team rates from game box scores.
 
             result[tid] = {
                 'effective_fg_pct': round(efg, 4),
-                'turnover_rate': round(to_rate, 4),
-                'offensive_reb_rate': round(orb, 4),
+                'turnover_rate': 0.0,
+                'offensive_reb_rate': 0.0,
                 'free_throw_rate': round(ftr, 4),
-                # Defensive Four Factors are not available from offensive
-                # player stats alone.  Set to 0 so downstream code knows
-                # they are unavailable.
                 'opp_effective_fg_pct': 0.0,
                 'opp_turnover_rate': 0.0,
-                'defensive_reb_rate': round(drb, 4),
+                'defensive_reb_rate': 0.0,
                 'opp_free_throw_rate': 0.0,
             }
 
         logger.info(
-            "Four Factors from player CSV (%d): computed for %d teams",
+            "Four Factors from player CSV (%d): computed eFG%%/FTR for %d teams "
+            "(ORB%%/DRB%%/TO%% left at 0 for downstream enrichment)",
             year, len(result),
         )
         return result
@@ -688,11 +849,41 @@ class BartTorvikScraper:
         except (ValueError, AttributeError):
             return 0.0
 
+    @staticmethod
+    def _cache_has_valid_four_factors(cached: dict) -> bool:
+        """Check whether cached Four Factors data looks plausible.
+
+        Rejects cache entries where key defensive/offensive rates are all
+        zero — a telltale sign of the old CSV-fallback bug that produced
+        individual-player averages instead of team-level rates.
+        """
+        if not cached or not isinstance(cached, dict):
+            return False
+        sample = list(cached.values())[:20]
+        if not sample:
+            return False
+        # If all sampled teams have zero ORB% AND zero TO%, the cache is bad
+        all_orb_zero = all(
+            abs(float(t.get("offensive_reb_rate", 0) or 0)) < 1e-6
+            for t in sample if isinstance(t, dict)
+        )
+        all_to_zero = all(
+            abs(float(t.get("turnover_rate", 0) or 0)) < 1e-6
+            for t in sample if isinstance(t, dict)
+        )
+        if all_orb_zero and all_to_zero:
+            logger.warning(
+                "Cached Four Factors have zero ORB%%/TO%% for all sampled "
+                "teams — discarding stale cache"
+            )
+            return False
+        return True
+
     def _load_from_cache(self, filename: str) -> Optional[dict]:
         """Load data from cache if available."""
         if not self.cache_dir:
             return None
-        
+
         cache_path = self.cache_dir / filename
         if cache_path.exists():
             try:

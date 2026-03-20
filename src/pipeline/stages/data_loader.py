@@ -37,6 +37,7 @@ from ...data.scrapers.injury_report import (
 )
 from ...conference_tournament.data_enrichment import (
     compute_defensive_four_factors_from_games,
+    compute_offensive_four_factors_from_games,
     enrich_torvik_teams,
 )
 from ...data.scrapers.torvik import BartTorvikScraper
@@ -707,6 +708,43 @@ def load_team_stat_sources(
                 "for every team after enrichment AND game-based computation. "
                 f"Ensure historical_games_{config.year}.json has valid box score data."
             )
+
+    # --- Auto-repair offensive ORB%/TO%/DRB% from game box scores ---
+    # When the Torvik CSV fallback is used, individual player ORB%/TO% cannot
+    # be converted to team-level rates (they are not additive).  Compute from
+    # game box scores instead.
+    _sample_orb = [
+        getattr(t, "offensive_reb_rate", 0.0) or 0.0 for t in torvik_teams[:20]
+    ]
+    if all(abs(v) < 1e-6 for v in _sample_orb):
+        logger.warning(
+            "Offensive ORB%%/TO%%/DRB%% are all zero — computing from "
+            "%d historical game box scores",
+            len(historical_games),
+        )
+        off_ff = compute_offensive_four_factors_from_games(historical_games)
+        _off_ff_applied = 0
+        for team in torvik_teams:
+            tid = team.team_id
+            d = off_ff.get(tid)
+            if d is None:
+                collapsed = tid.replace("_", "")
+                for k, v in off_ff.items():
+                    if k.replace("_", "") == collapsed:
+                        d = v
+                        break
+            if d is not None:
+                if abs(getattr(team, "offensive_reb_rate", 0.0) or 0.0) < 1e-6:
+                    team.offensive_reb_rate = d["offensive_reb_rate"]
+                if abs(getattr(team, "turnover_rate", 0.0) or 0.0) < 1e-6:
+                    team.turnover_rate = d["turnover_rate"]
+                if abs(getattr(team, "defensive_reb_rate", 0.0) or 0.0) < 1e-6:
+                    team.defensive_reb_rate = d["defensive_reb_rate"]
+                _off_ff_applied += 1
+        logger.info(
+            "Offensive FF auto-repair: applied to %d/%d teams from game box scores",
+            _off_ff_applied, len(torvik_teams),
+        )
 
     # --- Build conference map from Torvik data ---
     torvik_teams_dicts = []

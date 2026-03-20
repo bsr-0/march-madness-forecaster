@@ -961,7 +961,12 @@ class TestBartTorvikScraper:
     def test_fetch_four_factors_from_cache(self, tmp_path):
         from src.data.scrapers.torvik import BartTorvikScraper
         scraper = BartTorvikScraper(cache_dir=str(tmp_path))
-        cached = {"duke": {"effective_fg_pct": 0.55}}
+        cached = {"duke": {
+            "effective_fg_pct": 0.55, "turnover_rate": 0.18,
+            "offensive_reb_rate": 0.30, "free_throw_rate": 0.32,
+            "opp_effective_fg_pct": 0.49, "opp_turnover_rate": 0.17,
+            "defensive_reb_rate": 0.71, "opp_free_throw_rate": 0.28,
+        }}
         scraper._save_to_cache("torvik_four_factors_2026.json", cached)
         result = scraper.fetch_four_factors(year=2026)
         assert result == cached

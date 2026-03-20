@@ -68,8 +68,10 @@ jobs:
     #   ESPN_PUBLIC_PICKS_URL   - JSON endpoint for ESPN bracket pick percentages
     #   YAHOO_PUBLIC_PICKS_URL  - JSON endpoint for Yahoo bracket pick percentages (discontinued)
     #   CBS_PUBLIC_PICKS_URL    - JSON endpoint for CBS bracket pick percentages
+    #   THE_ODDS_API_KEY        - API key for The Odds API (aggregated sportsbook odds)
     env:
       CBBDATA_API_KEY: ${{ secrets.CBBDATA_API_KEY }}
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
       CBBDATA_BASE_URL: ${{ vars.CBBDATA_BASE_URL }}
       CBBPY_ROSTER_ENABLE_PBP: ${{ vars.CBBPY_ROSTER_ENABLE_PBP }}
       PLAYER_METRICS_URL: ${{ vars.PLAYER_METRICS_URL }}
