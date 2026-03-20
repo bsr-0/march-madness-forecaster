@@ -257,3 +257,87 @@ def compute_defensive_four_factors_from_games(
         len(result),
     )
     return result
+
+
+def compute_offensive_four_factors_from_games(
+    games: List[Dict],
+) -> Dict[str, Dict[str, float]]:
+    """Compute offensive rebound/turnover rates from game box scores.
+
+    When the Torvik CSV fallback is used, individual player ORB%/DRB%/TO%
+    cannot be converted to team-level rates (they are not additive).  This
+    function reconstructs team-level offensive Four Factors from paired
+    game records that contain counting stats (fga, fta, turnovers, orb, drb).
+
+    Returns a dict mapping team_id -> {turnover_rate, offensive_reb_rate,
+    defensive_reb_rate}.
+    """
+    game_pairs: Dict[str, List[Dict]] = defaultdict(list)
+    for g in games:
+        gid = g.get("game_id")
+        if gid:
+            game_pairs[gid].append(g)
+
+    team_stats: Dict[str, Dict[str, float]] = defaultdict(
+        lambda: {"fga": 0, "fta": 0, "turnovers": 0, "orb": 0, "drb": 0,
+                 "opp_orb": 0, "opp_drb": 0, "games": 0}
+    )
+
+    for gid, sides in game_pairs.items():
+        if len(sides) != 2:
+            continue
+        for i, my_side in enumerate(sides):
+            opp_side = sides[1 - i]
+            my_id = str(my_side.get("team_id") or my_side.get("team_name", "")).lower().replace(" ", "_")
+            if not my_id:
+                continue
+
+            my_fga = float(my_side.get("fga") or 0)
+            my_orb = float(my_side.get("orb") or 0)
+            my_drb = float(my_side.get("drb") or 0)
+            my_to = float(my_side.get("turnovers") or 0)
+            my_fta = float(my_side.get("fta") or 0)
+            opp_orb = float(opp_side.get("orb") or 0)
+            opp_drb = float(opp_side.get("drb") or 0)
+
+            if my_fga < 1:
+                continue
+
+            s = team_stats[my_id]
+            s["fga"] += my_fga
+            s["fta"] += my_fta
+            s["turnovers"] += my_to
+            s["orb"] += my_orb
+            s["drb"] += my_drb
+            s["opp_orb"] += opp_orb
+            s["opp_drb"] += opp_drb
+            s["games"] += 1
+
+    result: Dict[str, Dict[str, float]] = {}
+    for team_id, s in team_stats.items():
+        if s["games"] < 3 or s["fga"] < 30:
+            continue
+
+        # TO% = turnovers / (FGA + 0.44*FTA + turnovers)
+        denom_to = s["fga"] + 0.44 * s["fta"] + s["turnovers"]
+        to_rate = s["turnovers"] / denom_to if denom_to > 0 else 0.0
+
+        # ORB% = team ORB / (team ORB + opponent DRB)
+        orb_chances = s["orb"] + s["opp_drb"]
+        orb_rate = s["orb"] / orb_chances if orb_chances > 0 else 0.0
+
+        # DRB% = team DRB / (team DRB + opponent ORB)
+        drb_chances = s["drb"] + s["opp_orb"]
+        drb_rate = s["drb"] / drb_chances if drb_chances > 0 else 0.0
+
+        result[team_id] = {
+            "turnover_rate": round(to_rate, 4),
+            "offensive_reb_rate": round(orb_rate, 4),
+            "defensive_reb_rate": round(drb_rate, 4),
+        }
+
+    logger.info(
+        "Computed offensive Four Factors (TO%%/ORB%%/DRB%%) from game box scores for %d teams",
+        len(result),
+    )
+    return result

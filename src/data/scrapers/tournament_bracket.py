@@ -8,10 +8,13 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
+import logging
 import requests
 from bs4 import BeautifulSoup
 
 from ..normalize import normalize_team_id
+
+logger = logging.getLogger(__name__)
 
 
 class TournamentSeedScraper:
@@ -39,8 +42,12 @@ class TournamentSeedScraper:
                 return teams
 
         url = f"{self.BASE_URL}/{season}-ncaa.html"
-        response = self.session.get(url, timeout=30)
-        response.raise_for_status()
+        try:
+            response = self.session.get(url, timeout=30)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as exc:
+            logger.warning("Tournament bracket request failed for %s: %s", url, exc)
+            return []
         teams = self._parse_seed_teams(response.text, season)
         if not teams:
             raise ValueError(f"No tournament seed rows found for season {season}")

@@ -1009,16 +1009,18 @@ class FeatureEngineer:
             features.backcourt_rapm = pm.get('backcourt_rapm', 0.0)
             features.frontcourt_rapm = pm.get('frontcourt_rapm', 0.0)
 
-        # Extract from Torvik data (Four Factors + shooting splits + context)
+        # Extract from Torvik data (Four Factors + shooting splits + context).
+        # Use population defaults when values are zero (e.g. CSV fallback
+        # cannot derive team-level ORB%/TO% from individual player data).
         if torvik_data:
-            features.effective_fg_pct = torvik_data.get('effective_fg_pct', 0.5)
-            features.turnover_rate = torvik_data.get('turnover_rate', 0.18)
-            features.offensive_reb_rate = torvik_data.get('offensive_reb_rate', 0.30)
-            features.free_throw_rate = torvik_data.get('free_throw_rate', 0.30)
-            features.opp_effective_fg_pct = torvik_data.get('opp_effective_fg_pct', 0.5)
-            features.opp_turnover_rate = torvik_data.get('opp_turnover_rate', 0.18)
-            features.defensive_reb_rate = torvik_data.get('defensive_reb_rate', 0.70)
-            features.opp_free_throw_rate = torvik_data.get('opp_free_throw_rate', 0.30)
+            features.effective_fg_pct = torvik_data.get('effective_fg_pct') or 0.5
+            features.turnover_rate = torvik_data.get('turnover_rate') or 0.18
+            features.offensive_reb_rate = torvik_data.get('offensive_reb_rate') or 0.30
+            features.free_throw_rate = torvik_data.get('free_throw_rate') or 0.30
+            features.opp_effective_fg_pct = torvik_data.get('opp_effective_fg_pct') or 0.5
+            features.opp_turnover_rate = torvik_data.get('opp_turnover_rate') or 0.18
+            features.defensive_reb_rate = torvik_data.get('defensive_reb_rate') or 0.70
+            features.opp_free_throw_rate = torvik_data.get('opp_free_throw_rate') or 0.30
 
             # Context features from Torvik/open data feeds (if present)
             if 'preseason_ap_rank' in torvik_data:
