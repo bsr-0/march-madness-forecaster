@@ -752,6 +752,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # zero features (roster/player metrics unavailable in incremental
     # engine) that inflate dimensionality and slow downstream steps
     # (VIF, bootstrap stability, LOYO re-fitting) without adding signal.
+    _loyo_raw_feature_dim = X_full.shape[1]  # Pre-pruning dim for LOYO data loading
     _pre_fs_zero_mask = None
     if train_samples >= 40 and feature_names is not None:
         _combined_vars = np.var(train_X, axis=0)
@@ -771,8 +772,10 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             X_full = X_full[:, _keep_mask]
             feature_names = [feature_names[i] for i in range(len(feature_names))
                              if i < len(_keep_mask) and _keep_mask[i]]
-            if feature_names_full is not None:
-                feature_names_full = list(feature_names)
+            # NOTE: Do NOT overwrite feature_names_full here — it must
+            # preserve the original (pre-pruning) names so that LOYO can
+            # load raw historical data at the full matchup dimension and
+            # then apply _pre_fs_keep_mask post-hoc.
             _pre_fs_zero_mask = _keep_mask
             # Store for LOYO to apply the same pruning
             pipeline._pre_fs_keep_mask = _keep_mask
@@ -1750,11 +1753,12 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         and pipeline.config.multi_year_games_dir
         and LeaveOneYearOutCV is not None
     ):
-        # Use pre-selection feature names (full 91-dim) since LOYO loads
-        # raw historical data at the original feature dimension.
+        # Use pre-pruning feature dimension and names since LOYO loads
+        # raw historical data at the original matchup dimension, then
+        # applies _pre_fs_keep_mask post-hoc for zero-variance pruning.
         _loyo_names = feature_names_full if feature_names_full is not None else feature_names
         loyo_stats = pipeline._run_loyo_validation(
-            feature_dim=X_full.shape[1],
+            feature_dim=_loyo_raw_feature_dim,
             feature_names=_loyo_names,
         )
 
@@ -2142,14 +2146,22 @@ def _run_loyo_validation(
         # the primary training path so LOYO folds operate on the same
         # reduced feature space.
         _loyo_keep_mask = getattr(pipeline, "_pre_fs_keep_mask", None)
+        _year_feature_names = model_feature_names
         if _loyo_keep_mask is not None and year_X.shape[1] == len(_loyo_keep_mask):
             year_X = year_X[:, _loyo_keep_mask]
+            # Slice feature names to match pruned dimension
+            if len(model_feature_names) == len(_loyo_keep_mask):
+                _year_feature_names = [
+                    model_feature_names[i]
+                    for i in range(len(_loyo_keep_mask))
+                    if _loyo_keep_mask[i]
+                ]
 
         data_by_year[year] = {
             "X": year_X,
             "y": year_y,
             "margins": _year_margins,
-            "feature_names": model_feature_names,
+            "feature_names": _year_feature_names,
             "sample_weights": np.ones(len(year_y), dtype=np.float64),
         }
         latest_game_date_by_year[year] = _latest_regular_season_game_date(games_path, year)
