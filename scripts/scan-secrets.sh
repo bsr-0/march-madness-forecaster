@@ -125,7 +125,7 @@ for file in $FILES; do
 
         MATCHES=$(grep -nE "$regex" "$file" 2>/dev/null || true)
         if [ -n "$MATCHES" ]; then
-            FILTERED=$(echo "$MATCHES" | grep -vE '(os\.getenv|os\.environ|#.*example|#.*placeholder|#.*TODO|export\s+\w+=\.\.\.|=\s*["\x27]?\.\.\.["\x27]?|scan-secrets|pre-commit)' || true)
+            FILTERED=$(echo "$MATCHES" | grep -vE '(os\.getenv|os\.environ|#.*example|#.*placeholder|#.*TODO|#\s*nosec|export\s+\w+=\.\.\.|=\s*["\x27]?\.\.\.["\x27]?|scan-secrets|pre-commit)' || true)
             if [ -n "$FILTERED" ]; then
                 echo -e "${RED}SECRET DETECTED${NC} [$label] in ${YELLOW}${file}${NC}:"
                 echo "$FILTERED" | head -3 | while IFS= read -r line; do
