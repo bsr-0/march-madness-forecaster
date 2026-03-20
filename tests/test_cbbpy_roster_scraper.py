@@ -131,7 +131,7 @@ _UNC_PLAYERS = [
 _ALL_BOX_ROWS = _DUKE_PLAYERS + _UNC_PLAYERS
 
 
-def test_cbbpy_roster_scraper_builds_rosters_and_stints(monkeypatch, tmp_path):
+def test_cbbpy_roster_scraper_builds_rosters_with_rapm(monkeypatch, tmp_path):
     class DummyCBBpy:
         @staticmethod
         def get_games_season(year, info=False, box=True, pbp=False):
@@ -152,114 +152,12 @@ def test_cbbpy_roster_scraper_builds_rosters_and_stints(monkeypatch, tmp_path):
 
     duke = next(t for t in payload["teams"] if t["team_id"] == "duke")
     assert duke["players"]
-    assert duke["stints"]
     guard = next(p for p in duke["players"] if p["player_id"] == "1001")
     assert guard["position"] == "SG"
     assert guard["eligibility_year"] == 3
-
-
-def test_pbp_stint_builder_creates_stints_from_substitutions(monkeypatch, tmp_path):
-    """When PBP data contains substitution events, real lineup stints are built."""
-    pbp_events = [
-        # Game starts with starters on court.  Score: 0-0
-        {"game_id": "g1", "play_desc": "C Guard made Jumper", "play_team": "UNC",
-         "play_type": "made shot", "scoring_play": True, "home_score": 2, "away_score": 0,
-         "half": 1, "secs_left_half": 1180},
-        {"game_id": "g1", "play_desc": "A Guard made Three Point Jumper", "play_team": "Duke",
-         "play_type": "made shot", "scoring_play": True, "home_score": 2, "away_score": 3,
-         "half": 1, "secs_left_half": 1150},
-        {"game_id": "g1", "play_desc": "D Big Turnover", "play_team": "UNC",
-         "play_type": "turnover", "scoring_play": False, "home_score": 2, "away_score": 3,
-         "half": 1, "secs_left_half": 1130},
-        # Substitution: Duke subs out B Wing, subs in E Bench.
-        {"game_id": "g1", "play_desc": "E Bench enters the game for B Wing",
-         "play_team": "Duke", "play_type": "", "scoring_play": False,
-         "home_score": 2, "away_score": 3, "half": 1, "secs_left_half": 1100},
-        # More plays with new lineup.
-        {"game_id": "g1", "play_desc": "A Guard made Jumper", "play_team": "Duke",
-         "play_type": "made shot", "scoring_play": True, "home_score": 2, "away_score": 5,
-         "half": 1, "secs_left_half": 1070},
-        {"game_id": "g1", "play_desc": "C Guard Turnover", "play_team": "UNC",
-         "play_type": "turnover", "scoring_play": False, "home_score": 2, "away_score": 5,
-         "half": 1, "secs_left_half": 1050},
-        {"game_id": "g1", "play_desc": "A Guard made Jumper", "play_team": "Duke",
-         "play_type": "made shot", "scoring_play": True, "home_score": 2, "away_score": 7,
-         "half": 1, "secs_left_half": 1020},
-    ]
-
-    class DummyCBBpy:
-        @staticmethod
-        def get_games_season(year, info=False, box=True, pbp=False):
-            box_df = pd.DataFrame(_ALL_BOX_ROWS)
-            pbp_df = pd.DataFrame(pbp_events) if pbp else pd.DataFrame()
-            return (pd.DataFrame(), box_df, pbp_df)
-
-        @staticmethod
-        def get_player_info(player_id):
-            return pd.DataFrame([{"position": "SG", "class": "JR"}])
-
-    scraper = CBBpyRosterScraper(cache_dir=str(tmp_path))
-    monkeypatch.setattr(scraper, "_import_module", lambda module_name: DummyCBBpy if module_name == "cbbpy.mens_scraper" else None)
-    monkeypatch.setenv("CBBPY_ROSTER_ENABLE_PBP", "1")
-
-    payload = scraper.fetch_rosters(2026)
-    assert payload
-    assert payload["metadata"]["pbp_enabled"] is True
-    assert payload["metadata"]["raw_pbp_rows"] == len(pbp_events)
-
-    duke = next(t for t in payload["teams"] if t["team_id"] == "duke")
-    stints = duke["stints"]
-    # Should have at least 2 stints (before and after the substitution).
-    assert len(stints) >= 2, f"Expected >=2 stints, got {len(stints)}: {stints}"
-
-    # First stint should have B Wing (1002), second should have E Bench (1003).
-    first_stint = stints[0]
-    second_stint = stints[1]
-    assert "1002" in first_stint["players"], "B Wing should be in first stint"
-    assert "1003" not in first_stint["players"], "E Bench should NOT be in first stint"
-    assert "1003" in second_stint["players"], "E Bench should be in second stint"
-    assert "1002" not in second_stint["players"], "B Wing should NOT be in second stint"
-    # A Guard should be in both stints.
-    assert "1001" in first_stint["players"]
-    assert "1001" in second_stint["players"]
-
-    # Stints should have possessions > 0.
-    for stint in stints:
-        assert stint["possessions"] >= 1.0
-
-
-def test_pbp_fallback_to_synthetic_stints_when_no_subs(monkeypatch, tmp_path):
-    """When PBP lacks substitution events, falls back to synthetic stints."""
-    pbp_events = [
-        {"game_id": "g1", "play_desc": "C Guard made Jumper", "play_team": "UNC",
-         "play_type": "made shot", "scoring_play": True, "home_score": 2, "away_score": 0,
-         "half": 1, "secs_left_half": 1180},
-        {"game_id": "g1", "play_desc": "A Guard made Three Point Jumper", "play_team": "Duke",
-         "play_type": "made shot", "scoring_play": True, "home_score": 2, "away_score": 3,
-         "half": 1, "secs_left_half": 1150},
-    ]
-
-    class DummyCBBpy:
-        @staticmethod
-        def get_games_season(year, info=False, box=True, pbp=False):
-            box_df = pd.DataFrame(_ALL_BOX_ROWS)
-            pbp_df = pd.DataFrame(pbp_events) if pbp else pd.DataFrame()
-            return (pd.DataFrame(), box_df, pbp_df)
-
-        @staticmethod
-        def get_player_info(player_id):
-            return pd.DataFrame([{"position": "SG", "class": "JR"}])
-
-    scraper = CBBpyRosterScraper(cache_dir=str(tmp_path))
-    monkeypatch.setattr(scraper, "_import_module", lambda module_name: DummyCBBpy if module_name == "cbbpy.mens_scraper" else None)
-    monkeypatch.setenv("CBBPY_ROSTER_ENABLE_PBP", "1")
-
-    payload = scraper.fetch_rosters(2026)
-    assert payload
-
-    duke = next(t for t in payload["teams"] if t["team_id"] == "duke")
-    # Should still have stints (synthetic fallback).
-    assert duke["stints"], "Should have synthetic fallback stints"
+    # RAPM should be computed from box-score stats (not None)
+    assert guard["rapm_offensive"] is not None
+    assert guard["rapm_defensive"] is not None
 
 
 def test_pbp_disabled_by_default(monkeypatch, tmp_path):

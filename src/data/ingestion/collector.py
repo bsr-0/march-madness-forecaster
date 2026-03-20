@@ -689,9 +689,6 @@ class RealDataCollector:
                 if key:
                     base_index[key] = len(base_players) - 1
 
-        if not isinstance(base_team.get("stints"), list) and isinstance(overlay_team.get("stints"), list):
-            base_team["stints"] = copy.deepcopy(overlay_team["stints"])
-
     def _team_key(self, team: Dict) -> str:
         return self._normalize_team_id(
             str(team.get("team_id") or team.get("team_name") or team.get("name") or "")

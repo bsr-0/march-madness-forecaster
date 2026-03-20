@@ -92,7 +92,6 @@ def _make_roster_json(year, teams):
             "team_id": team_id,
             "team_name": team_name,
             "players": player_list,
-            "stints": [],
         })
     return {"year": year, "teams": team_list}
 

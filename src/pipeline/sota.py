@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 # --- Required imports ---
 from ..data.features.feature_engineering import (
     FeatureEngineer,
-    compute_rapm,
     TEAM_FEATURE_DIM,
     ABSOLUTE_LEVEL_FEATURE_NAMES,
     validate_population_stats,
