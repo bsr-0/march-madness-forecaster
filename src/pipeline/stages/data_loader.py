@@ -1063,6 +1063,19 @@ def load_team_stat_sources(
                     "sos_opp_d": 100.0,
                     "ncsos_adj_em": 0.0,
                     "luck": 0.0,
+                    # Explicitly zero extended stats so from_proprietary_metrics
+                    # doesn't fall back to nonzero defaults (steal_rate=0.08 etc.)
+                    # when box score data is unavailable. Prevents bimodal
+                    # distribution where some teams get 0.0 (from engine) and
+                    # others get defaults, causing FIX#9 population stat warnings.
+                    "steal_rate": 0.0,
+                    "block_rate": 0.0,
+                    "foul_rate": 0.0,
+                    "three_pt_pct": 0.0,
+                    "three_pt_rate": 0.0,
+                    "free_throw_pct": 0.0,
+                    "assist_to_turnover_ratio": 0.0,
+                    "assist_rate": 0.0,
                 }
 
     # Backfill proprietary_map from Torvik data for remaining gaps
@@ -1085,6 +1098,14 @@ def load_team_stat_sources(
                 "sos_opp_d": 100.0,
                 "ncsos_adj_em": 0.0,
                 "luck": 0.0,
+                "steal_rate": 0.0,
+                "block_rate": 0.0,
+                "foul_rate": 0.0,
+                "three_pt_pct": 0.0,
+                "three_pt_rate": 0.0,
+                "free_throw_pct": 0.0,
+                "assist_to_turnover_ratio": 0.0,
+                "assist_rate": 0.0,
             }
 
     # Enrich with tournament context data
