@@ -298,9 +298,13 @@ class RealDataCollector:
                 provider_lineage["sports_reference_json"] = sr_provider.provider
                 sr = []
             else:
-                sr = SportsReferenceScraper(str(self.cache_dir)).fetch_team_season_stats(
-                    year, game_records=historical_team_rows,
-                )
+                try:
+                    sr = SportsReferenceScraper(str(self.cache_dir)).fetch_team_season_stats(
+                        year, game_records=historical_team_rows,
+                    )
+                except (ValueError, Exception) as exc:
+                    logger.warning("SportsReference scraper fallback failed: %s", exc)
+                    sr = []
             if sr:
                 payload = {"teams": self._ensure_ids(sr)}
                 validation_errors["sports_reference_json"] = validate_ratings_payload(

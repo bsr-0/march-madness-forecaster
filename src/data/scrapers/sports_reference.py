@@ -65,7 +65,11 @@ class SportsReferenceScraper:
 
         # Advanced table contains pace/off/def ratings and is stable across seasons.
         url = f"{self.BASE_URL}/{year}-advanced-school-stats.html"
-        response = retry_request(self.session.get, url, timeout=30)
+        try:
+            response = retry_request(self.session.get, url, timeout=30)
+        except requests.exceptions.RequestException as exc:
+            logger.warning("Sports Reference request failed for %s: %s", url, exc)
+            return []
         teams = self._parse_team_table(response.text)
         if not teams:
             raise ValueError("Sports Reference returned no team rows")
