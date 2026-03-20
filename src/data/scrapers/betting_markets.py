@@ -23,6 +23,8 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
+from ..normalize import normalize_team_id as _shared_normalize_team_id
+
 logger = logging.getLogger(__name__)
 
 
@@ -229,7 +231,9 @@ class FanDuelScraper(BettingMarketScraper):
       structured JSON with American odds per team.
     """
 
-    # FanDuel public API for NCAA tournament futures
+    # FanDuel public API for NCAA tournament futures.
+    # NOTE: This URL is not year-parameterised and may be stale or blocked.
+    # Prefer setting FANDUEL_ODDS_URL env var to a known-good endpoint.
     LIVE_API_URL = "https://sportsbook.fanduel.com/cache/psmg/US/69420.3.json"
     # Fallback: environment variable for custom endpoint
     ENV_URL_KEY = "FANDUEL_ODDS_URL"
@@ -340,7 +344,7 @@ class FanDuelScraper(BettingMarketScraper):
                         imp_prob = american_to_probability(american_odds)
 
                     # Normalize team name to ID
-                    team_id = self._normalize_team_name(team_name)
+                    team_id = _shared_normalize_team_id(team_name)
 
                     odds_map[team_id] = BettingMarketOdds(
                         team_id=team_id,
@@ -359,13 +363,7 @@ class FanDuelScraper(BettingMarketScraper):
     @staticmethod
     def _normalize_team_name(name: str) -> str:
         """Normalize a sportsbook team name to a standard team_id."""
-        # Remove common suffixes and normalize
-        name = name.strip()
-        for suffix in (" Wildcats", " Blue Devils", " Tar Heels", " Tigers",
-                       " Bulldogs", " Cardinals", " Bears", " Jayhawks"):
-            if name.endswith(suffix):
-                name = name[:-len(suffix)].strip()
-        return name.lower().replace(" ", "_").replace(".", "").replace("'", "")
+        return _shared_normalize_team_id(name)
 
 
 class DraftKingsScraper(BettingMarketScraper):
@@ -476,7 +474,7 @@ class DraftKingsScraper(BettingMarketScraper):
                                     continue
 
                                 imp_prob = american_to_probability(american_float)
-                                team_id = FanDuelScraper._normalize_team_name(team_name)
+                                team_id = _shared_normalize_team_id(team_name)
 
                                 odds_map[team_id] = BettingMarketOdds(
                                     team_id=team_id,

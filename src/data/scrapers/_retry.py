@@ -25,6 +25,8 @@ def retry_request(
     max_retries: int = DEFAULT_MAX_RETRIES,
     backoff_base: float = DEFAULT_BACKOFF_BASE,
     retry_on: Tuple[Type[Exception], ...] = (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.Timeout,
         requests.exceptions.RequestException,
     ),
     **kwargs,

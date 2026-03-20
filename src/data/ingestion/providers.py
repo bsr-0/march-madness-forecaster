@@ -461,7 +461,14 @@ class LibraryProviderHub:
     def _from_barttorvik_csv(self, year: int) -> ProviderResult:
         url_template = os.getenv("BARTTORVIK_TORVIK_URL")
         if url_template:
-            url = url_template.format(year=year)
+            if "{year}" in url_template:
+                url = url_template.format(year=year)
+            else:
+                logger.warning(
+                    "BARTTORVIK_TORVIK_URL does not contain {year} placeholder; "
+                    "using URL as-is (data may not match requested year %d)", year,
+                )
+                url = url_template
         else:
             url = f"https://barttorvik.com/{year}_team_results.csv"
 
