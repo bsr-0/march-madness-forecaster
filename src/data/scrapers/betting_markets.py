@@ -229,7 +229,7 @@ class TheOddsAPIScraper(BettingMarketScraper):
 
     BASE_URL = "https://api.the-odds-api.com/v4"
     SPORT_KEY = "basketball_ncaab"
-    ENV_API_KEY = "THE_ODDS_API_KEY"
+    ENV_API_KEY = "THE_ODDS_API_KEY"  # nosec: env var name, not a secret
 
     def scrape(self, season: int) -> Dict[str, BettingMarketOdds]:
         # Try JSON cache first
