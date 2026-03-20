@@ -354,9 +354,9 @@ class TeamFeatures:
         "opp_to_rate":          (0.185,  0.025),
         "drb_rate":             (0.705,  0.035),
         "opp_ft_rate":          (0.315,  0.055),
-        "total_rapm":           (0.0,    5.0),
-        "top5_rapm":            (0.0,    4.5),
-        "bench_rapm":           (0.0,    2.5),
+        "total_rapm":           (5.0,    12.0),
+        "top5_rapm":            (8.0,    8.0),
+        "bench_rapm":           (-3.0,   4.0),
         "total_warp":           (2.0,    2.0),
         "roster_continuity":    (0.65,   0.20),
         "transfer_impact":      (0.0,    2.0),
@@ -406,8 +406,8 @@ class TeamFeatures:
         "home_court_dep":       (6.0,    5.0),
         "transition_eff":       (0.0,    0.10),
         "def_transition_vuln":  (0.0,    0.10),
-        "backcourt_rapm":       (0.0,    3.0),
-        "frontcourt_rapm":      (0.0,    3.0),
+        "backcourt_rapm":       (2.0,    6.0),
+        "frontcourt_rapm":      (2.0,    6.0),
     }
 
     def to_vector(self, include_embeddings: bool = False) -> np.ndarray:
@@ -1380,70 +1380,6 @@ def validate_population_stats(
         )
 
     return warnings
-
-
-def compute_rapm(
-    players: List[Player],
-    stints: List[Dict],
-    regularization: float = 0.01
-) -> Dict[str, Tuple[float, float]]:
-    """
-    Compute Regularized Adjusted Plus-Minus for players.
-
-    Uses ridge regression to solve for player contributions.
-
-    Args:
-        players: List of Player objects
-        stints: List of stint dictionaries
-        regularization: Ridge regression lambda
-
-    Returns:
-        Dict of player_id -> (offensive_rapm, defensive_rapm)
-    """
-    if not stints:
-        return {}
-
-    player_ids = [p.player_id for p in players]
-    player_to_idx = {pid: i for i, pid in enumerate(player_ids)}
-    n_players = len(player_ids)
-
-    X = np.zeros((len(stints), n_players))
-    y = np.zeros(len(stints))
-    weights = np.zeros(len(stints))
-
-    for i, stint in enumerate(stints):
-        stint_players = stint.get('players', [])
-        possessions = stint.get('possessions', 1)
-        plus_minus = stint.get('plus_minus', 0)
-
-        for pid in stint_players:
-            if pid in player_to_idx:
-                X[i, player_to_idx[pid]] = 1.0
-
-        y[i] = (plus_minus / possessions) * 100 if possessions > 0 else 0
-        weights[i] = possessions
-
-    W = np.diag(weights)
-    XtWX = X.T @ W @ X
-    XtWy = X.T @ W @ y
-
-    reg_matrix = regularization * np.eye(n_players)
-
-    try:
-        rapm_values = np.linalg.solve(XtWX + reg_matrix, XtWy)
-    except np.linalg.LinAlgError:
-        rapm_values = np.linalg.lstsq(XtWX + reg_matrix, XtWy, rcond=None)[0]
-
-    result = {}
-    for pid, rapm in zip(player_ids, rapm_values):
-        player = next((p for p in players if p.player_id == pid), None)
-        if player:
-            off_ratio = 0.6 if player.usage_rate > 20 else 0.4
-            result[pid] = (rapm * off_ratio, rapm * (1 - off_ratio))
-        else:
-            result[pid] = (rapm * 0.5, rapm * 0.5)
-
-    return result
 
 
 def calculate_continuity_score(

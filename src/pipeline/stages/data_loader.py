@@ -18,7 +18,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from ...data.features.feature_engineering import compute_rapm
 from ...data.features.proprietary_metrics import (
     IncrementalMetricsEngine,
     ProprietaryMetricsEngine,
@@ -179,7 +178,11 @@ def enrich_roster_rapm(
     team_block: Dict,
     min_rapm_players: int,
 ) -> None:
-    """Enrich player RAPM from stint data or BPM/WARP priors (in-place)."""
+    """Backfill missing RAPM from BPM/usage priors (in-place).
+
+    RAPM is now computed at scraper level from box-score stats.  This
+    function only fills in any remaining zero-RAPM players as a safety net.
+    """
     if not players:
         return
 
@@ -187,18 +190,6 @@ def enrich_roster_rapm(
     if non_zero >= min_rapm_players:
         return
 
-    stints = team_block.get("stints", [])
-    if isinstance(stints, list) and stints:
-        rapm_map = compute_rapm(players, stints, regularization=0.05)
-        for player in players:
-            rapm_pair = rapm_map.get(player.player_id)
-            if rapm_pair is None:
-                continue
-            if abs(player.rapm_total) <= 1e-8:
-                player.rapm_offensive = float(rapm_pair[0])
-                player.rapm_defensive = float(rapm_pair[1])
-
-    # Backfill remaining missing RAPM from BPM/WARP/usage priors.
     for player in players:
         if abs(player.rapm_total) > 1e-8:
             continue
