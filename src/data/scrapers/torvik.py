@@ -538,6 +538,12 @@ class BartTorvikScraper:
                 'offensive_reb_rate': float,
                 'free_throw_rate': float,
             }}
+
+        Note: eFG% and FTR are computed from counting stats (FGM/FGA/FTA)
+        and are accurate.  ORB%, DRB%, and TO% CANNOT be accurately derived
+        from the player CSV because individual player rebound/turnover rates
+        are not additive to team-level rates.  These are left at 0.0 so
+        downstream code falls back to population defaults.
         """
         try:
             csv_text = self._fetch_player_csv(year)
@@ -555,27 +561,28 @@ class BartTorvikScraper:
 
             efg = (t['fgm'] + 0.5 * t['fg3m']) / fga
             ftr = t['fta'] / fga
-            min_total = t['min_pct_total'] or 1.0
-            orb = (t['orb_pct_weighted'] / min_total) / 100.0
-            drb = (t['drb_pct_weighted'] / min_total) / 100.0
-            to_rate = (t['to_pct_weighted'] / min_total) / 100.0
+
+            # Individual player ORB%/DRB%/TO% from Barttorvik measure what
+            # fraction of available rebounds/possessions THAT PLAYER claims.
+            # These are NOT additive: averaging them across players gives a
+            # value ~0.04 for ORB% vs the true team rate of ~0.30.  Leave
+            # at 0.0 so downstream enrichment uses population defaults or
+            # computes team rates from game box scores.
 
             result[tid] = {
                 'effective_fg_pct': round(efg, 4),
-                'turnover_rate': round(to_rate, 4),
-                'offensive_reb_rate': round(orb, 4),
+                'turnover_rate': 0.0,
+                'offensive_reb_rate': 0.0,
                 'free_throw_rate': round(ftr, 4),
-                # Defensive Four Factors are not available from offensive
-                # player stats alone.  Set to 0 so downstream code knows
-                # they are unavailable.
                 'opp_effective_fg_pct': 0.0,
                 'opp_turnover_rate': 0.0,
-                'defensive_reb_rate': round(drb, 4),
+                'defensive_reb_rate': 0.0,
                 'opp_free_throw_rate': 0.0,
             }
 
         logger.info(
-            "Four Factors from player CSV (%d): computed for %d teams",
+            "Four Factors from player CSV (%d): computed eFG%%/FTR for %d teams "
+            "(ORB%%/DRB%%/TO%% left at 0 for downstream enrichment)",
             year, len(result),
         )
         return result
