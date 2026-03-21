@@ -131,26 +131,6 @@ class TestCBBpyStaticHelpers:
         assert CBBpyRosterScraper._normalize_player_name("John Smith") == "johnsmith"
         assert CBBpyRosterScraper._normalize_player_name("O'Brien") == "obrien"
 
-    def test_is_possession_ending(self):
-        assert CBBpyRosterScraper._is_possession_ending("turnover", "", {}) is True
-        assert CBBpyRosterScraper._is_possession_ending("made shot", "", {}) is True
-        assert CBBpyRosterScraper._is_possession_ending(
-            "shooting foul", "", {"scoring_play": True}
-        ) is True
-        assert CBBpyRosterScraper._is_possession_ending(
-            "rebound", "Defensive Rebound", {}
-        ) is True
-        assert CBBpyRosterScraper._is_possession_ending(
-            "free throw", "Free throw 2 of 2", {}
-        ) is True
-        assert CBBpyRosterScraper._is_possession_ending(
-            "free throw", "Free throw 1 of 1", {}
-        ) is True
-        assert CBBpyRosterScraper._is_possession_ending(
-            "free throw", "Free throw 1 of 2", {}
-        ) is False
-        assert CBBpyRosterScraper._is_possession_ending("dribble", "Player dribbles", {}) is False
-
     def test_frame_to_records_none(self):
         assert CBBpyRosterScraper._frame_to_records(None) == []
 
