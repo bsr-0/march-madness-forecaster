@@ -190,7 +190,11 @@ class BartTorvikScraper:
         if not teams:
             teams = self._rankings_from_cbbstat_api(year)
 
-        # --- Strategy 2: HTML scrape (original approach) ---
+        # --- Strategy 2: toRvik R package (requires R + toRvik installed) ---
+        if not teams:
+            teams = self._rankings_from_torvik_r(year)
+
+        # --- Strategy 3: HTML scrape (original approach) ---
         if not teams:
             try:
                 url = f"{self.BASE_URL}/trank.php?year={year}"
@@ -330,6 +334,54 @@ class BartTorvikScraper:
             "ratings + Four Factors",
             year, len(teams),
         )
+        return teams
+
+    def _rankings_from_torvik_r(self, year: int) -> List[TorVikTeam]:
+        """Fetch T-Rank ratings via the toRvik R package.
+
+        Falls back transparently if R or toRvik is not installed.
+        """
+        try:
+            from .torvik_r import TorvikRWrapper
+        except ImportError:
+            return []
+
+        try:
+            records = TorvikRWrapper().fetch_ratings(year)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("toRvik R fetch failed: %s", exc)
+            return []
+
+        teams: List[TorVikTeam] = []
+        for rec in records:
+            try:
+                team = TorVikTeam(
+                    team_id=rec["team_id"],
+                    name=rec.get("team_name", rec.get("name", "")),
+                    conference=rec.get("conference", ""),
+                    t_rank=int(rec.get("t_rank", 999)),
+                    barthag=float(rec.get("barthag", 0.5)),
+                    adj_offensive_efficiency=float(rec.get("adj_offensive_efficiency", 100.0)),
+                    adj_defensive_efficiency=float(rec.get("adj_defensive_efficiency", 100.0)),
+                    adj_tempo=float(rec.get("adj_tempo", 68.0)),
+                    effective_fg_pct=float(rec.get("effective_fg_pct", 0.0)),
+                    turnover_rate=float(rec.get("turnover_rate", 0.0)),
+                    offensive_reb_rate=float(rec.get("offensive_reb_rate", 0.0)),
+                    free_throw_rate=float(rec.get("free_throw_rate", 0.0)),
+                    opp_effective_fg_pct=float(rec.get("opp_effective_fg_pct", 0.0)),
+                    opp_turnover_rate=float(rec.get("opp_turnover_rate", 0.0)),
+                    defensive_reb_rate=float(rec.get("defensive_reb_rate", 0.0)),
+                    opp_free_throw_rate=float(rec.get("opp_free_throw_rate", 0.0)),
+                    wab=float(rec.get("wab", 0.0)),
+                    wins=int(rec.get("wins", 0)),
+                    losses=int(rec.get("losses", 0)),
+                )
+                teams.append(team)
+            except (KeyError, TypeError, ValueError) as exc:
+                logger.debug("toRvik: skipping malformed record: %s", exc)
+
+        if teams:
+            logger.info("Rankings from toRvik R (%d): fetched %d teams", year, len(teams))
         return teams
 
     def fetch_four_factors(self, year: int = 2026) -> Dict[str, Dict]:
