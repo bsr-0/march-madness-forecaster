@@ -132,41 +132,53 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             and hasattr(pipeline, "baseline_model")
             and pipeline.baseline_model is not None):
         import os
-        years = pipeline.config.resolve_calibration_years()
-        if not years:
+
+        # Resolve "auto" multi_year_games_dir if not yet resolved
+        if pipeline.config.multi_year_games_dir == "auto":
+            candidate = os.path.join(os.getcwd(), "data", "raw", "historical")
+            if os.path.isdir(candidate):
+                pipeline.config.multi_year_games_dir = candidate
+            else:
+                pipeline.config.multi_year_games_dir = None
+
+        games_dir = pipeline.config.multi_year_games_dir
+        if not games_dir:
             logger.warning(
-                "No calibration_years resolved (holdout_years/calibration_years empty); "
+                "multi_year_games_dir is None after resolution; "
                 "historical tournament calibration augmentation skipped."
             )
-        # Determine feature dimensionality from current model
-        feature_dim = pipeline.baseline_model.feature_dim
+        else:
+            years = pipeline.config.resolve_calibration_years()
+            if not years:
+                logger.warning(
+                    "No calibration_years resolved (holdout_years/calibration_years empty); "
+                    "historical tournament calibration augmentation skipped."
+                )
+            # Determine feature dimensionality from current model
+            feature_dim = pipeline.baseline_model.feature_dim
 
-        # Load historical tournament-only games for calibration.
-        # These match the inference domain exactly.  This is not optional:
-        # calibration must use tournament games (the inference domain), not
-        # regular-season games (the training domain).
-        for yr in years:
-            try:
-                games_dir = pipeline.config.multi_year_games_dir
+            def _load_tournament_cal_year(yr, games_dir, feature_dim):
+                """Load tournament calibration samples for a single year.
+                Returns (count_added, error_msg_or_None)."""
+                nonlocal probs, outcomes, tourney_cal_count
                 games_path = os.path.join(games_dir, f"historical_games_{yr}.json")
                 metrics_path = os.path.join(games_dir, f"team_metrics_{yr}.json")
                 if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
-                    continue
-                yr_X, yr_y, _yr_margins, _, _yr_rw = pipeline._load_year_tournament_samples_incremental(
-                    games_path, metrics_path, feature_dim, yr,
-                )
+                    return 0, f"files missing (games={os.path.isfile(games_path)}, metrics={os.path.isfile(metrics_path)})"
+                try:
+                    yr_X, yr_y, _yr_margins, _, _yr_rw = pipeline._load_year_tournament_samples_incremental(
+                        games_path, metrics_path, feature_dim, yr,
+                    )
+                except Exception as e:
+                    return 0, f"loader error: {e}"
                 if len(yr_y) < 4:
-                    continue
+                    return 0, f"only {len(yr_y)} tournament samples (need >= 4)"
                 # Defense-in-depth: the tournament-only loader guarantees
                 # rw >= 2.0 for every sample (asserted internally).
-                # Re-check here so calibration cannot silently ingest
-                # regular-season rows even if the loader is refactored.
-                n_bad = int(np.sum(_yr_rw <= 1.0))
-                assert n_bad == 0, (
-                    f"Tournament-only loader returned {n_bad} "
-                    f"non-tournament rows (rw <= 1.0) for year {yr}. "
-                    f"Calibration must never see regular-season samples."
-                )
+                if len(_yr_rw) > 0:
+                    n_bad = int(np.sum(_yr_rw <= 1.0))
+                    if n_bad > 0:
+                        return 0, f"{n_bad} non-tournament rows (rw <= 1.0)"
                 logger.info(
                     "Loaded %d tournament-only calibration samples for %d",
                     len(yr_y), yr,
@@ -175,14 +187,14 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                 if pipeline.feature_selector is not None and pipeline.feature_selector.is_fitted:
                     try:
                         yr_X = pipeline.feature_selector.transform(yr_X)
-                    except (IndexError, ValueError):
-                        continue
+                    except (IndexError, ValueError) as e:
+                        return 0, f"feature selector error: {e}"
                 # Apply scaler if available
                 if pipeline.baseline_model.scaler is not None:
                     try:
                         yr_X = pipeline.baseline_model.scaler.transform(yr_X)
-                    except (ValueError, Exception):
-                        continue
+                    except (ValueError, Exception) as e:
+                        return 0, f"scaler error: {e}"
                 # Predict using baseline model in batch
                 try:
                     yr_preds = pipeline.baseline_model.predict_proba_batch(yr_X)
@@ -194,10 +206,39 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                     probs.extend(yr_preds.tolist())
                     outcomes.extend(yr_y.tolist())
                     tourney_cal_count += len(yr_y)
-                except Exception:
-                    continue
-            except Exception:
-                continue
+                    return len(yr_y), None
+                except Exception as e:
+                    return 0, f"prediction error: {e}"
+
+            # Load historical tournament-only games for calibration.
+            # These match the inference domain exactly.
+            for yr in years:
+                n_added, err = _load_tournament_cal_year(yr, games_dir, feature_dim)
+                if err:
+                    logger.warning("Calibration year %d skipped: %s", yr, err)
+
+            # Fallback: if configured calibration years didn't provide enough
+            # samples, expand to dev_years. Tournament games are out-of-sample
+            # (model trains only on regular-season games), so this is safe.
+            if (len(probs) < pipeline.config.min_calibration_samples_hard
+                    and pipeline.config.dev_years):
+                fallback_years = sorted(
+                    y for y in pipeline.config.dev_years
+                    if y not in set(years) and y != 2020
+                )
+                if fallback_years:
+                    logger.info(
+                        "Calibration pool (%d) below hard minimum (%d). "
+                        "Expanding to dev_years tournament games: %s",
+                        len(probs), pipeline.config.min_calibration_samples_hard,
+                        fallback_years,
+                    )
+                    for yr in fallback_years:
+                        n_added, err = _load_tournament_cal_year(yr, games_dir, feature_dim)
+                        if err:
+                            logger.debug("Fallback calibration year %d skipped: %s", yr, err)
+                        if len(probs) >= pipeline.config.min_calibration_samples_hard:
+                            break
         _n_historical_tourney_cal = tourney_cal_count
         if tourney_cal_count > 0:
             logger.info(

@@ -154,12 +154,12 @@ def _load_year_samples_incremental_core(
             "season-end data leakage.",
             year,
         )
-        return np.empty((0, feature_dim)), np.array([]), {}
+        return np.empty((0, feature_dim)), np.array([]), np.array([]), {}, np.array([])
 
     game_records = team_games_to_game_records(team_games_raw, year)
     if len(game_records) < 100:
         logger.warning("Year %d: only %d GameRecords — skipping.", year, len(game_records))
-        return np.empty((0, feature_dim)), np.array([]), {}
+        return np.empty((0, feature_dim)), np.array([]), np.array([]), {}, np.array([])
 
     # ── 2. Load auxiliary data (conference map, seeds, rosters) ────────
     conference_map = None
@@ -376,6 +376,7 @@ def _load_year_samples_incremental_core(
             np.array([]),
             np.array([]),
             inc_engine.get_end_of_season_elo(),
+            np.array([]),
         )
 
     # ── 5. Build feature vectors ──────────────────────────────────────
