@@ -7,7 +7,7 @@ import importlib
 import io
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Callable, Dict, List, Optional
 
@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 class ProviderResult:
     provider: str
     records: List[Dict]
+    strategy_used: str = ""
+    metadata: Dict = field(default_factory=dict)
 
 
 class LibraryProviderHub:
@@ -175,11 +177,33 @@ class LibraryProviderHub:
                     utils = self._import_module("cbbpy.utils.cbbpy_utils")
                     if utils and hasattr(utils, "MENS_SCOREBOARD_URL"):
                         original_url = utils.MENS_SCOREBOARD_URL
-                        utils.MENS_SCOREBOARD_URL = (
+                        new_url = (
                             "https://www.espn.com/mens-college-basketball/"
                             f"scoreboard/_/date/{{}}/seasontype/{season_type}/group/50"
                         )
-                        patched = True
+                        utils.MENS_SCOREBOARD_URL = new_url
+                        # Verify the patch took effect — cbbpy may have changed internals
+                        actual = getattr(utils, "MENS_SCOREBOARD_URL", None)
+                        if actual != new_url:
+                            logger.warning(
+                                "cbbpy URL patch did not take effect (attribute reads back '%s'). "
+                                "cbbpy may have changed its internals. "
+                                "Postseason games (seasontype=%d) may be missing.",
+                                actual,
+                                season_type,
+                            )
+                        elif original_url == new_url:
+                            logger.warning(
+                                "cbbpy URL patch is a no-op (URL already matches target). "
+                                "seasontype=%d games may already be included or URL format changed.",
+                                season_type,
+                            )
+                        else:
+                            logger.debug(
+                                "cbbpy URL patched for seasontype=%d: '%s' → '%s'",
+                                season_type, original_url, new_url,
+                            )
+                            patched = True
                 except (TypeError, ValueError, AttributeError, ImportError) as exc:
                     logger.debug("cbbpy URL patch failed: %s", exc)
 
@@ -456,7 +480,7 @@ class LibraryProviderHub:
     def _from_cbbdata_torvik_api(self, year: int) -> ProviderResult:
         payload = self._fetch_cbbdata_endpoint("CBBDATA_TORVIK_URL", year)
         records = payload.get("teams") or payload.get("records") or []
-        return ProviderResult("cbbdata", records if isinstance(records, list) else [])
+        return ProviderResult("cbbdata", records if isinstance(records, list) else [], strategy_used="cbbdata_api")
 
     def _from_barttorvik_csv(self, year: int) -> ProviderResult:
         url_template = os.getenv("BARTTORVIK_TORVIK_URL")
@@ -506,7 +530,7 @@ class LibraryProviderHub:
             record = self._map_barttorvik_row(row)
             if record:
                 records.append(record)
-        return ProviderResult("barttorvik", records)
+        return ProviderResult("barttorvik", records, strategy_used="barttorvik_csv")
 
     @staticmethod
     def _map_barttorvik_row(row: Dict[str, str]) -> Optional[Dict]:
