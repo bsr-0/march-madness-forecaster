@@ -1,11 +1,13 @@
 """Tests for the 2022-2025 historical ingestion pipeline."""
 
 import json
+from unittest.mock import patch
 
 import pandas as pd
 
 from src.data.ingestion.historical_pipeline import HistoricalDataPipeline, HistoricalIngestionConfig
 from src.data.ingestion.providers import ProviderResult
+from src.data.ingestion.schemas import IngestionGameRecord
 
 
 def _mock_scrape_game_ids(day_str, http_timeout=15, session=None):
@@ -138,8 +140,12 @@ def test_historical_pipeline_includes_tournament_context_when_available(tmp_path
 
 
 def test_historical_pipeline_ignores_capped_cache_when_running_uncapped(tmp_path):
+    """Old cbbpy-format capped cache must be ignored; new ESPN-primary fetcher prevails."""
     cache_dir = tmp_path / "cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
+    # Write the old cbbpy-format cache that used max_games_per_season.
+    # The new HistoricalGameFetcher uses espn_historical_{season}.json — a different
+    # filename — so this file must never influence the result.
     capped_cache = cache_dir / "cbbpy_historical_games_2022.json"
     with open(capped_cache, "w") as f:
         f.write(
@@ -147,20 +153,14 @@ def test_historical_pipeline_ignores_capped_cache_when_running_uncapped(tmp_path
             '"failed_game_ids": [], "complete": true, "max_games_per_season": 1}'
         )
 
-    class DummyCBBpy:
-        @staticmethod
-        def get_game_ids(day):
-            return ["401"] if day == "2021-11-01" else []
-
-        @staticmethod
-        def get_game(game_id, info=False, box=True, pbp=False):
-            box_df = pd.DataFrame(
-                [
-                    {"game_id": game_id, "team": "A", "pts": 1, "fgm": 1, "fga": 2, "3pm": 0, "3pa": 0, "fta": 0, "to": 1, "oreb": 0, "dreb": 1},
-                    {"game_id": game_id, "team": "B", "pts": 2, "fgm": 1, "fga": 3, "3pm": 0, "3pa": 1, "fta": 0, "to": 1, "oreb": 1, "dreb": 1},
-                ]
-            )
-            return (pd.DataFrame(), box_df, pd.DataFrame())
+    controlled = [
+        IngestionGameRecord(
+            game_id="401", date="2021-11-06", season=2022,
+            home_team_id="a", home_team_name="A",
+            away_team_id="b", away_team_name="B",
+            home_score=70, away_score=65, provider="espn_scoreboard",
+        )
+    ]
 
     pipeline = HistoricalDataPipeline(
         HistoricalIngestionConfig(
@@ -173,20 +173,22 @@ def test_historical_pipeline_ignores_capped_cache_when_running_uncapped(tmp_path
             strict_validation=True,
         )
     )
-    pipeline.providers._import_module = lambda module: DummyCBBpy if module == "cbbpy.mens_scraper" else None
-    pipeline._scrape_game_ids_for_date = _mock_scrape_game_ids
     pipeline.providers.fetch_team_box_metrics = lambda season, priority=None: ProviderResult(
         "sportsipy",
         [{"team_id": "a", "team_name": "A", "adj_offensive_efficiency": 101.0, "adj_defensive_efficiency": 99.0, "adj_tempo": 68.0}],
     )
 
-    manifest = pipeline.run()
-    games_path = manifest["artifacts"]["2022"]["historical_games_json"]
+    with patch.object(pipeline.game_fetcher, "fetch_season", return_value=controlled):
+        manifest = pipeline.run()
+        games_path = manifest["artifacts"]["2022"]["historical_games_json"]
+
     with open(games_path, "r") as f:
         payload = json.load(f)
 
     assert payload["games"]
     assert payload["games"][0]["game_id"] == "401"
+    # Old stale cache must not have been used
+    assert all(g["game_id"] != "old" for g in payload["games"])
 
 
 def test_historical_pipeline_fast_path_uses_get_games_season(tmp_path):
