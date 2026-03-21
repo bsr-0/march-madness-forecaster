@@ -717,7 +717,7 @@ class TeamFeatures:
             # Defensive disruption (2)
             'steal_rate', 'block_rate',
             # Opponent shot selection (2)
-            'opp_two_pt_pct', 'opp_three_pt_attempt_rate',
+            'opp_two_pt_pct_allowed', 'opp_three_pt_attempt_rate',
             # Conference quality (1)
             'conference_adj_em',
             # Shooting splits (2)
@@ -951,7 +951,7 @@ class FeatureEngineer:
             features.assist_rate = pm.get('assist_rate', 0.50)
             features.steal_rate = pm.get('steal_rate', 0.08)
             features.block_rate = pm.get('block_rate', 0.05)
-            features.opp_two_pt_pct_allowed = pm.get('opp_two_pt_pct_allowed', 0.48)
+            # opp_two_pt_pct_allowed: three-way precedence handled after Torvik block
             features.opp_three_pt_attempt_rate = pm.get('opp_three_pt_attempt_rate', 0.35)
             features.conference_adj_em = pm.get('conference_adj_em', 0.0)
 
@@ -1035,6 +1035,29 @@ class FeatureEngineer:
                 features.coach_s16_appearances = int(torvik_data['coach_s16_appearances'])
             if 'conf_tourney_champion' in torvik_data:
                 features.conf_tourney_champion = float(torvik_data['conf_tourney_champion'])
+
+        # opp_two_pt_pct_allowed: three-way precedence.
+        # 1. Box-score-derived via ProprietaryMetricsEngine (primary — scraper-independent).
+        # 2. Torvik's opp_two_pt_pct (fallback when box scores not available).
+        # 3. Population average 0.48 (last resort).
+        if pm and 'opp_two_pt_pct_allowed' in pm:
+            features.opp_two_pt_pct_allowed = pm['opp_two_pt_pct_allowed']
+            logger.debug(
+                "opp_two_pt_pct_allowed [box_scores]: %.4f (team %s)",
+                features.opp_two_pt_pct_allowed, team_id,
+            )
+        elif torvik_data and torvik_data.get('opp_two_pt_pct'):
+            features.opp_two_pt_pct_allowed = torvik_data['opp_two_pt_pct']
+            logger.debug(
+                "opp_two_pt_pct_allowed [torvik_fallback]: %.4f (team %s)",
+                features.opp_two_pt_pct_allowed, team_id,
+            )
+        else:
+            features.opp_two_pt_pct_allowed = 0.48
+            logger.debug(
+                "opp_two_pt_pct_allowed [default_0.48]: no box scores or Torvik data (team %s)",
+                team_id,
+            )
 
         # Extract from roster
         if roster:

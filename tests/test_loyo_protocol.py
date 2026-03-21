@@ -7,6 +7,7 @@ validation diagnostics, and statistical power analysis.
 import numpy as np
 import pytest
 
+from src.ml.evaluation.evaluation_integrity import HoldoutContaminationError
 from src.ml.evaluation.loyo_protocol import (
     DEFAULT_FEATURE_FAMILIES,
     LOYO_YEARS,
@@ -784,6 +785,19 @@ class TestFeatureAblatorPoweredThreshold:
             # p-value should be computed for 3+ folds
             assert info["paired_t_p_value"] is not None
             assert 0.0 <= info["paired_t_p_value"] <= 1.0
+
+    def test_ablation_raises_when_eval_years_leak_into_dev_ablation(self):
+        data = {yr: _make_year_data(yr, n_games=20, n_features=3) for yr in [2024, 2025]}
+        validator = LOYOValidator(years=[2024, 2025], temporal_mode="rolling_window")
+        ablator = FeatureAblator()
+        split = DevEvalSplit(dev_years=[2024], eval_years=[2025])
+
+        with pytest.raises(HoldoutContaminationError, match="ABLATION LEAKAGE"):
+            ablator.ablate_features(
+                validator, data, _simple_train_fn, _simple_predict_fn,
+                feature_names=["a", "b", "c"],
+                dev_eval_split=split,
+            )
 
 
 class TestLOYOResultSummary:

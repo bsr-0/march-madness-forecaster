@@ -189,7 +189,13 @@ class TestFeatureSelector:
         y = rng.randint(0, 2, 100)
         names = [f"f{i}" for i in range(30)]
 
-        selector = FeatureSelector(min_features=25, max_features=30, random_seed=42)
+        # Disable DoF budget, MI screening, and adaptive threshold to test min_features in isolation
+        selector = FeatureSelector(
+            min_features=25, max_features=30, random_seed=42,
+            enable_dof_budget=False,
+            enable_mi_screening=False,
+            adaptive_threshold=False,
+        )
         _, result = selector.fit_transform(X, y, names)
 
         assert result.reduced_dim >= 25
@@ -214,7 +220,11 @@ class TestFeatureSelector:
         y = rng.randint(0, 2, 100)
         names = [f"f{i}" for i in range(8)]
 
-        selector = FeatureSelector(min_features=3, max_features=6, random_seed=42)
+        # Disable MI screening so all features reach importance calculation
+        selector = FeatureSelector(
+            min_features=3, max_features=6, random_seed=42,
+            enable_mi_screening=False,
+        )
         _, result = selector.fit_transform(X, y, names)
 
         assert len(result.importance_scores) == 8  # All features scored

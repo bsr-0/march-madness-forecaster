@@ -30,7 +30,8 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, Optional, TypeVar
+from datetime import datetime
+from typing import Any, Callable, Dict, Generator, List, Optional, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -313,3 +314,62 @@ class CircuitBreakerRegistry:
                     )
         except (json.JSONDecodeError, TypeError):
             pass
+
+
+def get_circuit_breaker_report(state_file: Optional[str] = None) -> Dict[str, Any]:
+    """Generate a governance report of all circuit breaker states.
+
+    OPEN breakers are logged as WARNING. Intended for inclusion in
+    the pipeline governance manifest.
+
+    Returns:
+        Dict with keys:
+            - ``summary``: overall health (``"healthy"`` / ``"degraded"``)
+            - ``open_count``: number of OPEN breakers
+            - ``breakers``: per-breaker status dicts
+    """
+    registry = CircuitBreakerRegistry(state_file=state_file)
+    registry.load_all_from_file()
+
+    statuses = registry.status_report()
+    open_names = [
+        name for name, s in statuses.items()
+        if s.get("state") == CircuitState.OPEN.value
+    ]
+
+    for name in open_names:
+        s = statuses[name]
+        last_fail_ts = s.get("last_failure_time", 0)
+        last_fail_str = (
+            datetime.utcfromtimestamp(last_fail_ts).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if last_fail_ts else "unknown"
+        )
+        logger.warning(
+            "Circuit breaker OPEN: '%s' — %d consecutive failures, "
+            "last failure at %s, total failures=%d",
+            name,
+            s.get("failure_count", 0),
+            last_fail_str,
+            s.get("total_failures", 0),
+        )
+
+    summary = "degraded" if open_names else "healthy"
+    report = {
+        "summary": summary,
+        "open_count": len(open_names),
+        "open_breakers": open_names,
+        "breakers": statuses,
+    }
+
+    if open_names:
+        logger.warning(
+            "Circuit breaker health: %s (%d OPEN: %s)",
+            summary.upper(), len(open_names), ", ".join(open_names),
+        )
+    else:
+        logger.info(
+            "Circuit breaker health: HEALTHY (%d breakers tracked)",
+            len(statuses),
+        )
+
+    return report
