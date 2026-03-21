@@ -38,6 +38,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from .evaluation_integrity import HoldoutContaminationError
+
 logger = logging.getLogger(__name__)
 
 # Validation years for LOYO protocol
@@ -1526,12 +1528,11 @@ class FeatureAblator:
                 list(ablation_years)
             )
             if not leakage["clean"]:
-                logger.error(
-                    "ABLATION LEAKAGE: %s — ablation is using eval years %s. "
-                    "Results will be circular (Level 3). Pass a validator "
-                    "restricted to dev_years to fix this.",
-                    leakage["warning"],
-                    leakage["leaked_years"],
+                raise HoldoutContaminationError(
+                    "ABLATION LEAKAGE: "
+                    f"{leakage['warning']} Eval years {leakage['leaked_years']} "
+                    "were included in feature ablation. Restrict the validator "
+                    "to dev_years before using ablation results for selection."
                 )
 
         # Get baseline with per-fold detail

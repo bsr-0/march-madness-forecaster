@@ -154,6 +154,10 @@ class YearSplitPolicy:
                 f"prospective years.  Allowed: {sorted(allowed)}."
             )
 
+    def assert_dev_artifact_years(self, years: List[int], context: str = "") -> None:
+        """Explicit alias for dev-only artifact/tuning/ablation enforcement."""
+        self.assert_dev_only(years, context=context or "development artifact generation")
+
     def evidence_level(self, year: int, has_freeze: bool = False) -> int:
         """Return the evidence level (1-3) for an evaluation year.
 
