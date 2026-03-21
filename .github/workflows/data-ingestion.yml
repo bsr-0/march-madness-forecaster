@@ -91,6 +91,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Install R and toRvik (optional — enables primary Torvik data source)
+        # toRvik R package calls the same cbbstat API as our Python fallback.
+        # If installation fails the pipeline degrades gracefully to the Python path.
+        continue-on-error: true
+        run: |
+          sudo apt-get install -y --no-install-recommends r-base r-cran-jsonlite 2>/dev/null || true
+          Rscript -e "install.packages('toRvik', repos='https://cloud.r-project.org', quiet=TRUE)" || true
+
       - name: Determine year
         id: year
         run: |
