@@ -376,6 +376,33 @@ class LibraryProviderHub:
 
     # ── Torvik provider ────────────────────────────────────────────────────
 
+    def _from_torvik_r(self, year: int) -> ProviderResult:
+        """Fetch Torvik ratings via the toRvik R package wrapper."""
+        try:
+            from ..scrapers.torvik_r import TorvikRWrapper
+        except ImportError:
+            logger.debug("torvik_r module not available")
+            return ProviderResult("torvik_r", [])
+
+        try:
+            wrapper = TorvikRWrapper()
+            if not wrapper.is_available():
+                return ProviderResult("torvik_r", [])
+            raw_records = wrapper.fetch_team_stats(year)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("torvik_r fetch failed: %s", exc)
+            return ProviderResult("torvik_r", [])
+
+        if not raw_records:
+            return ProviderResult("torvik_r", [])
+
+        records = []
+        for rec in raw_records:
+            mapped = self._map_barttorvik_row(rec)
+            if mapped:
+                records.append(mapped)
+        return ProviderResult("torvik_r", records, strategy_used="torvik_r")
+
     def _from_barttorvik_csv(self, year: int) -> ProviderResult:
         url_template = os.getenv("BARTTORVIK_TORVIK_URL")
         if url_template:
