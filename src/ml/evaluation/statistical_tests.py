@@ -323,3 +323,229 @@ def _normal_survival(z: float) -> float:
     """
     # erfc-based formula: P(Z > z) = erfc(z / sqrt(2)) / 2
     return 0.5 * math.erfc(z / math.sqrt(2.0))
+
+
+# ---------------------------------------------------------------------------
+# Solution 10: Multiple comparison correction & Diebold-Mariano test
+# ---------------------------------------------------------------------------
+
+def holm_bonferroni_correction(
+    p_values: List[float],
+    alpha: float = 0.05,
+) -> List[Dict[str, float]]:
+    """Holm-Bonferroni step-down correction for multiple comparisons.
+
+    Controls the family-wise error rate (FWER) when testing K hypotheses.
+    More powerful than Bonferroni: rejects more hypotheses while maintaining
+    the same FWER guarantee.
+
+    Algorithm:
+    1. Sort p-values ascending
+    2. For i-th smallest p-value, reject if p_i < alpha / (K - i + 1)
+    3. Stop rejecting at first non-rejection
+
+    Args:
+        p_values: Raw p-values from K tests
+        alpha: Family-wise error rate target
+
+    Returns:
+        List of dicts with: original_p, adjusted_p, rejected
+    """
+    n = len(p_values)
+    if n == 0:
+        return []
+
+    # Sort by p-value, keeping original indices
+    indexed = sorted(enumerate(p_values), key=lambda x: x[1])
+
+    results = [None] * n
+    rejected_so_far = True
+
+    for rank, (orig_idx, p) in enumerate(indexed):
+        adjusted_p = min(p * (n - rank), 1.0)
+        # Enforce monotonicity: adjusted p-values must be non-decreasing
+        if rank > 0:
+            prev_adjusted = results[indexed[rank - 1][0]]["adjusted_p"]
+            adjusted_p = max(adjusted_p, prev_adjusted)
+
+        rejected = rejected_so_far and (p < alpha / (n - rank))
+        if not rejected:
+            rejected_so_far = False
+
+        results[orig_idx] = {
+            "original_p": float(p),
+            "adjusted_p": float(adjusted_p),
+            "rejected": rejected,
+        }
+
+    return results
+
+
+def diebold_mariano_test(
+    losses_a: np.ndarray,
+    losses_b: np.ndarray,
+    horizon: int = 1,
+) -> Dict[str, float]:
+    """Diebold-Mariano test for equal predictive accuracy.
+
+    More appropriate than paired t-test for comparing probabilistic forecasts
+    because it accounts for serial correlation in forecast errors (relevant
+    when games within the same tournament round are correlated).
+
+    H0: E[L_A - L_B] = 0 (equal predictive accuracy)
+    H1: E[L_A - L_B] != 0
+
+    Uses HAC (Newey-West) standard errors to handle autocorrelation.
+
+    Args:
+        losses_a: Per-observation losses from model A (e.g., squared errors)
+        losses_b: Per-observation losses from model B
+        horizon: Forecast horizon for HAC truncation (default 1)
+
+    Returns:
+        Dict with: dm_statistic, p_value, mean_loss_diff, n
+    """
+    losses_a = np.asarray(losses_a, dtype=float)
+    losses_b = np.asarray(losses_b, dtype=float)
+
+    n = len(losses_a)
+    if n < 3:
+        return {"dm_statistic": 0.0, "p_value": 1.0, "mean_loss_diff": 0.0, "n": n}
+
+    d = losses_a - losses_b
+    d_mean = float(np.mean(d))
+    d_centered = d - d_mean
+
+    # HAC variance estimator (Newey-West)
+    gamma_0 = float(np.mean(d_centered ** 2))
+    hac_var = gamma_0
+
+    for h in range(1, horizon + 1):
+        if h >= n:
+            break
+        gamma_h = float(np.mean(d_centered[h:] * d_centered[:-h]))
+        # Bartlett kernel weight
+        weight = 1.0 - h / (horizon + 1)
+        hac_var += 2 * weight * gamma_h
+
+    # Ensure positive variance
+    hac_var = max(hac_var, 1e-12)
+    hac_se = math.sqrt(hac_var / n)
+
+    if hac_se < 1e-12:
+        if abs(d_mean) < 1e-12:
+            return {"dm_statistic": 0.0, "p_value": 1.0, "mean_loss_diff": 0.0, "n": n}
+        sign = 1.0 if d_mean > 0 else -1.0
+        return {"dm_statistic": sign * float("inf"), "p_value": 0.0,
+                "mean_loss_diff": float(d_mean), "n": n}
+
+    dm_stat = d_mean / hac_se
+    # Two-sided p-value (normal approximation, valid for n > 20)
+    p_value = 2.0 * _normal_survival(abs(dm_stat))
+
+    return {
+        "dm_statistic": float(dm_stat),
+        "p_value": float(min(p_value, 1.0)),
+        "mean_loss_diff": float(d_mean),
+        "n": n,
+    }
+
+
+class MultiModelComparison:
+    """Run all pairwise tests with Holm-Bonferroni correction.
+
+    Solution 10: When comparing K models, K(K-1)/2 pairwise tests inflate
+    false positive rate. This wraps paired_brier_test and diebold_mariano_test
+    with proper multiple comparison correction.
+    """
+
+    def __init__(
+        self,
+        alpha: float = 0.05,
+        n_permutations: int = 5000,
+        n_bootstrap: int = 1000,
+    ):
+        self.alpha = alpha
+        self.n_permutations = n_permutations
+        self.n_bootstrap = n_bootstrap
+
+    def compare_all(
+        self,
+        model_predictions: Dict[str, np.ndarray],
+        outcomes: np.ndarray,
+        rng: Optional[np.random.Generator] = None,
+    ) -> Dict:
+        """Run all pairwise comparisons with multiple testing correction.
+
+        Args:
+            model_predictions: Dict mapping model_name → predicted probs
+            outcomes: Actual binary outcomes
+
+        Returns:
+            Dict with per_model_brier, pairwise (with corrected p-values),
+            n_significant_corrected, summary
+        """
+        if rng is None:
+            rng = np.random.default_rng(42)
+
+        outcomes = np.asarray(outcomes, dtype=float)
+        names = sorted(model_predictions.keys())
+
+        # Per-model Brier
+        per_model_brier = {}
+        for name in names:
+            preds = np.asarray(model_predictions[name], dtype=float)
+            per_model_brier[name] = float(np.mean((preds - outcomes) ** 2))
+
+        # Pairwise tests
+        pairwise = {}
+        all_p_values = []
+        pair_keys = []
+
+        for name_a, name_b in combinations(names, 2):
+            pa = np.asarray(model_predictions[name_a], dtype=float)
+            pb = np.asarray(model_predictions[name_b], dtype=float)
+
+            t_result = paired_brier_test(pa, pb, outcomes)
+
+            # Diebold-Mariano test
+            sq_err_a = (pa - outcomes) ** 2
+            sq_err_b = (pb - outcomes) ** 2
+            dm_result = diebold_mariano_test(sq_err_a, sq_err_b)
+
+            # Bootstrap
+            boot_result = bootstrap_model_comparison(
+                pa, pb, outcomes, n_bootstrap=self.n_bootstrap, rng=rng,
+            )
+
+            pair_key = f"{name_a}_vs_{name_b}"
+            pairwise[pair_key] = {
+                "paired_t_test": t_result,
+                "diebold_mariano": dm_result,
+                "bootstrap_comparison": boot_result,
+            }
+            all_p_values.append(t_result["p_value"])
+            pair_keys.append(pair_key)
+
+        # Apply Holm-Bonferroni correction
+        corrected = holm_bonferroni_correction(all_p_values, alpha=self.alpha)
+        for i, pair_key in enumerate(pair_keys):
+            pairwise[pair_key]["holm_corrected"] = corrected[i]
+
+        n_sig_raw = sum(1 for p in all_p_values if p < self.alpha)
+        n_sig_corrected = sum(1 for c in corrected if c["rejected"])
+
+        best_model = min(per_model_brier, key=per_model_brier.get)
+        summary = (
+            f"Best model: {best_model} (Brier={per_model_brier[best_model]:.4f}). "
+            f"Significant pairs: {n_sig_raw}/{len(pair_keys)} uncorrected, "
+            f"{n_sig_corrected}/{len(pair_keys)} Holm-corrected (alpha={self.alpha})."
+        )
+
+        return {
+            "per_model_brier": per_model_brier,
+            "pairwise": pairwise,
+            "n_significant_raw": n_sig_raw,
+            "n_significant_corrected": n_sig_corrected,
+            "summary": summary,
+        }
