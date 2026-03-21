@@ -55,6 +55,10 @@ class ESPNOptimizationConfig:
     objective_rank_weight: float = 0.10
     # Set True to auto-adapt thresholds based on pool_size
     adaptive_thresholds: bool = True
+    # Contrarian formula parameters: P(pick) ~ model_prob^alpha * (1-ownership)^beta
+    alpha: float = 1.0
+    beta: float = 1.0
+    use_contrarian_formula: bool = False
 
     def __post_init__(self) -> None:
         if self.adaptive_thresholds:
@@ -192,6 +196,9 @@ class ESPNBracketOptimizer:
                     champion_id=champion_id,
                     final_four=f4_set,
                     max_disruption_cost=config.max_path_disruption_cost,
+                    alpha=config.alpha,
+                    beta=config.beta,
+                    use_contrarian=config.use_contrarian_formula,
                 )
 
                 # Enforce quadrant correlation (chalk in champion's region)
@@ -382,17 +389,52 @@ class ESPNBracketOptimizer:
     # EV-based bracket building
     # ------------------------------------------------------------------
 
+    def _pick_team(
+        self,
+        t1: str,
+        t2: str,
+        round_name: str,
+        alpha: float = 1.0,
+        beta: float = 1.0,
+        use_contrarian: bool = False,
+    ) -> str:
+        """Pick a team using either the EV formula or the contrarian formula.
+
+        EV formula (default): leverage * probability (additive)
+        Contrarian formula: model_prob^alpha * (1 - ownership)^beta (multiplicative)
+        """
+        if use_contrarian:
+            from ..quant.espn_layer import contrarian_ev_pick
+            return contrarian_ev_pick(
+                t1, t2, round_name,
+                self.matchup_probs,
+                self.public_pick_distribution,
+                alpha=alpha,
+                beta=beta,
+            )
+        return compute_ev_pick(
+            t1, t2, round_name,
+            self.matchup_probs, self.public_pick_distribution,
+            scoring_system=self.scoring,
+        )
+
     def _build_ev_bracket(
         self,
         champion_id: str,
         final_four: List[str],
         max_disruption_cost: float,
+        alpha: float = 1.0,
+        beta: float = 1.0,
+        use_contrarian: bool = False,
     ) -> List[str]:
         """Build a bracket using EV-optimal pick selection with F4 constraints.
 
         Each game pick maximizes ``leverage × probability`` rather than just
         picking the most probable winner. The champion and F4 teams are
         guaranteed to advance to their respective rounds.
+
+        When use_contrarian is True, uses the multiplicative formula:
+        P(pick) ~ model_prob^alpha * (1 - ownership)^beta
         """
         champion_game = self._find_team_first_round_game(champion_id)
         path_games = get_champion_path_indexes(champion_game)
@@ -426,16 +468,16 @@ class ESPNBracketOptimizer:
                     if f4_team and f4_team in (t1, t2):
                         winner = f4_team
                     else:
-                        winner = compute_ev_pick(
+                        winner = self._pick_team(
                             t1, t2, round_name,
-                            self.matchup_probs, self.public_pick_distribution,
-                            scoring_system=self.scoring,
+                            alpha=alpha, beta=beta,
+                            use_contrarian=use_contrarian,
                         )
                 else:
-                    winner = compute_ev_pick(
+                    winner = self._pick_team(
                         t1, t2, round_name,
-                        self.matchup_probs, self.public_pick_distribution,
-                        scoring_system=self.scoring,
+                        alpha=alpha, beta=beta,
+                        use_contrarian=use_contrarian,
                     )
 
                 # Path-protection guardrail on sibling games
