@@ -48,6 +48,21 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def _enforce_dev_only_years(
+    *,
+    year_split_policy=None,
+    development_years: Optional[List[int]] = None,
+    context: str,
+) -> None:
+    """Enforce that tuning/selection years stay inside the dev partition."""
+    if year_split_policy is None or development_years is None:
+        return
+    year_split_policy.assert_dev_artifact_years(
+        list(development_years),
+        context=context,
+    )
+
+
 @dataclass
 class TemporalSplit:
     """A single temporal train/validation split."""
@@ -267,6 +282,8 @@ class LightGBMTuner:
         sort_keys: np.ndarray,
         feature_names: Optional[List[str]] = None,
         sample_weight: np.ndarray = None,
+        development_years: Optional[List[int]] = None,
+        year_split_policy=None,
     ) -> TuningResult:
         """
         Run Optuna hyperparameter search with temporal CV.
@@ -283,6 +300,12 @@ class LightGBMTuner:
         Returns:
             TuningResult with best params and CV scores
         """
+        _enforce_dev_only_years(
+            year_split_policy=year_split_policy,
+            development_years=development_years,
+            context="LightGBM hyperparameter tuning",
+        )
+
         # B3: pair_size=1 — symmetric augmentation was removed, so each game
         # is a single sample. pair_size=2 was vestigial.
         cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=1)
@@ -412,8 +435,16 @@ class BrierLightGBMTuner(LightGBMTuner):
         sort_keys: np.ndarray,
         feature_names: Optional[List[str]] = None,
         sample_weight: np.ndarray = None,
+        development_years: Optional[List[int]] = None,
+        year_split_policy=None,
     ) -> TuningResult:
         from ...ml.ensemble.brier_objective import brier_objective
+
+        _enforce_dev_only_years(
+            year_split_policy=year_split_policy,
+            development_years=development_years,
+            context="Brier LightGBM hyperparameter tuning",
+        )
 
         cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=1)
 
@@ -555,6 +586,8 @@ class XGBoostTuner:
         sort_keys: np.ndarray,
         feature_names: Optional[List[str]] = None,
         sample_weight: np.ndarray = None,
+        development_years: Optional[List[int]] = None,
+        year_split_policy=None,
     ) -> TuningResult:
         """
         Run Optuna hyperparameter search with temporal CV.
@@ -569,6 +602,12 @@ class XGBoostTuner:
         Returns:
             TuningResult with best params and CV scores
         """
+        _enforce_dev_only_years(
+            year_split_policy=year_split_policy,
+            development_years=development_years,
+            context="XGBoost hyperparameter tuning",
+        )
+
         # B3: pair_size=1 — symmetric augmentation was removed.
         cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=1)
 
@@ -702,7 +741,15 @@ class LogisticTuner:
         y: np.ndarray,
         sort_keys: np.ndarray,
         sample_weight: np.ndarray = None,
+        development_years: Optional[List[int]] = None,
+        year_split_policy=None,
     ) -> TuningResult:
+        _enforce_dev_only_years(
+            year_split_policy=year_split_policy,
+            development_years=development_years,
+            context="logistic hyperparameter tuning",
+        )
+
         # B3: pair_size=1 — symmetric augmentation was removed.
         cv = TemporalCrossValidator(n_splits=self.n_cv_splits, pair_size=1)
 

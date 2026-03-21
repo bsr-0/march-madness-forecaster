@@ -122,7 +122,31 @@ class ArtifactStore:
         self, predictions: Dict[str, float], experiment_id: str
     ) -> str:
         """Serialize and store a predictions dict as JSON.  Returns the artifact_id."""
-        raw = json.dumps(predictions, sort_keys=True).encode("utf-8")
+        return self._save_json_artifact(
+            predictions,
+            experiment_id=experiment_id,
+            artifact_type="predictions",
+        )
+
+    def save_feature_manifest(
+        self, manifest: Dict[str, Any], experiment_id: str
+    ) -> str:
+        """Serialize and store a feature manifest as a dedicated artifact."""
+        return self._save_json_artifact(
+            manifest,
+            experiment_id=experiment_id,
+            artifact_type="features",
+        )
+
+    def _save_json_artifact(
+        self,
+        payload: Dict[str, Any],
+        *,
+        experiment_id: str,
+        artifact_type: str,
+    ) -> str:
+        """Serialize and store a JSON artifact.  Returns the artifact_id."""
+        raw = json.dumps(payload, sort_keys=True).encode("utf-8")
         sha = hashlib.sha256(raw).hexdigest()
         artifact_id = sha[:8]
 
@@ -130,14 +154,14 @@ class ArtifactStore:
         if existing is not None:
             return artifact_id
 
-        rel_path = Path("predictions") / f"{artifact_id}.json"
+        rel_path = Path(artifact_type) / f"{artifact_id}.json"
         abs_path = self.store_dir / rel_path
         abs_path.parent.mkdir(parents=True, exist_ok=True)
         abs_path.write_bytes(raw)
 
         manifest = ArtifactManifest(
             artifact_id=artifact_id,
-            artifact_type="predictions",
+            artifact_type=artifact_type,
             created_at=datetime.now(timezone.utc).isoformat(),
             experiment_id=experiment_id,
             file_path=str(rel_path),

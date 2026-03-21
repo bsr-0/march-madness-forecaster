@@ -34,6 +34,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
+from ...governance.cache_hygiene import CACHE_PROTOCOL_VERSION, fingerprint_context
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_CACHE_DIR = "data/cache/dag"
@@ -190,15 +192,16 @@ class DagExecutor:
                 and task.should_skip(context, self._cache_dir)
             ):
                 cached_output = self._load_cached(task, context)
-                results[name] = TaskResult(
-                    task_name=name,
-                    success=True,
-                    output=cached_output,
-                    cached=True,
-                )
-                outputs[name] = cached_output
-                logger.info("Skipped (cached): %s", name)
-                continue
+                if cached_output is not None:
+                    results[name] = TaskResult(
+                        task_name=name,
+                        success=True,
+                        output=cached_output,
+                        cached=True,
+                    )
+                    outputs[name] = cached_output
+                    logger.info("Skipped (cached): %s", name)
+                    continue
 
             # Collect upstream outputs
             upstream = {
@@ -293,14 +296,17 @@ class DagExecutor:
         """Write an idempotency marker for a completed task."""
         key = task.output_key(context)
         marker = self._cache_dir / f"{key}.marker"
+        context_fingerprint = fingerprint_context(context)
 
         # Hash the output for change detection
         output_str = json.dumps(output, sort_keys=True, default=str)
         output_hash = hashlib.sha256(output_str.encode()).hexdigest()[:16]
 
         marker_data = {
+            "protocol_version": CACHE_PROTOCOL_VERSION,
             "task": task.name,
             "key": key,
+            "context_fingerprint": context_fingerprint,
             "output_hash": output_hash,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
@@ -316,7 +322,30 @@ class DagExecutor:
         if marker.exists():
             try:
                 with open(marker) as f:
-                    return json.load(f)
+                    payload = json.load(f)
+                if not self._marker_matches(payload, task, context, key):
+                    marker.unlink(missing_ok=True)
+                    return None
+                return payload
             except (json.JSONDecodeError, OSError):
                 return None
         return None
+
+    def _marker_matches(
+        self,
+        payload: Dict[str, Any],
+        task: DagTask,
+        context: Dict[str, Any],
+        key: str,
+    ) -> bool:
+        """Validate that a cache marker belongs to this exact execution context."""
+        if not isinstance(payload, dict):
+            return False
+        if payload.get("protocol_version") != CACHE_PROTOCOL_VERSION:
+            return False
+        if payload.get("task") != task.name:
+            return False
+        if payload.get("key") != key:
+            return False
+        expected_context = fingerprint_context(context)
+        return payload.get("context_fingerprint") == expected_context

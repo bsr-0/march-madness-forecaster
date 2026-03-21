@@ -13,6 +13,8 @@ import dataclasses
 
 from ..pipeline.config import SOTAPipelineConfig, TOURNAMENT_START_DATES
 from ..pipeline.sota import SOTAPipeline
+from .artifact_provenance import build_artifact_provenance
+from .feature_manifest import write_feature_manifest
 from .production_validator import (
     EXPECTED_DEV_YEARS,
     EXPECTED_HOLDOUT_YEARS,
@@ -143,6 +145,25 @@ def _sha256_path(path: Path) -> str:
             parts.append(f"{child.relative_to(path)}={_sha256_file(child)}")
         return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()
     raise FileNotFoundError(path)
+
+
+def _write_feature_manifest_artifact(
+    feature_manifest: Dict,
+    output_dir: Path,
+    *,
+    year: int,
+) -> Dict[str, str]:
+    """Write a stable feature-manifest artifact for production outputs."""
+    if not feature_manifest:
+        return {}
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = output_dir / f"feature_manifest_{year}.json"
+    write_feature_manifest(feature_manifest, str(manifest_path))
+    return {
+        "path": str(manifest_path),
+        "hash": _sha256_file(manifest_path),
+    }
 
 def _load_raw_config(config_path: Path) -> Dict:
     with open(config_path, "r", encoding="utf-8") as f:
@@ -682,6 +703,14 @@ def run_production_2026(
     if kaggle_submission_path:
         output_hashes["kaggle_submission"] = _sha256_file(Path(kaggle_submission_path))
 
+    feature_manifest_info = _write_feature_manifest_artifact(
+        report.get("artifacts", {}).get("feature_manifest", {}),
+        Path(output_report_path).resolve().parent,
+        year=config.year,
+    )
+    if feature_manifest_info:
+        output_hashes["feature_manifest"] = feature_manifest_info["hash"]
+
     freeze_manifest = {
         "git_commit_sha": _git_commit_sha(repo_root),
         "config_file": str(config_file),
@@ -703,7 +732,13 @@ def run_production_2026(
             "samples": calibration.get("samples"),
             "temperature": calibration.get("temperature"),
         },
+        "feature_manifest_artifact": feature_manifest_info,
         "output_artifact_hashes": output_hashes,
+        "provenance": build_artifact_provenance(
+            pipeline=pipeline,
+            artifact_kind="freeze_manifest",
+            extra={"entrypoint": "src/run_production_2026.py"},
+        ),
     }
 
     with open(freeze_manifest_path, "w", encoding="utf-8") as f:
@@ -746,6 +781,15 @@ def run_production_2026(
             "brier_sharpening_enabled": bool(config.enable_brier_sharpening),
             "round_weighted_calibration_enabled": bool(config.enable_round_weighted_calibration),
         },
+        "feature_manifest_hash": (
+            report.get("artifacts", {}).get("feature_manifest", {}).get("manifest_hash")
+        ),
+        "feature_manifest_artifact": feature_manifest_info,
+        "provenance": build_artifact_provenance(
+            pipeline=pipeline,
+            artifact_kind="production_manifest",
+            extra={"entrypoint": "src/run_production_2026.py"},
+        ),
     }
     prod_manifest_path.parent.mkdir(parents=True, exist_ok=True)
     with open(prod_manifest_path, "w", encoding="utf-8") as f:
@@ -777,6 +821,15 @@ def run_production_2026(
             "output_hashes": output_hashes,
         },
         "market_cross_reference": market_validation_dict,
+        "feature_manifest_hash": (
+            report.get("artifacts", {}).get("feature_manifest", {}).get("manifest_hash")
+        ),
+        "feature_manifest_artifact": feature_manifest_info,
+        "provenance": build_artifact_provenance(
+            pipeline=pipeline,
+            artifact_kind="governance_report",
+            extra={"entrypoint": "src/run_production_2026.py"},
+        ),
     }
 
     with open(governance_report_path, "w", encoding="utf-8") as f:
