@@ -372,23 +372,23 @@ class TestCBBpyFetchRosters:
             assert result == {}
 
 
-class TestCBBpyComputeStintPlusMinus:
-    def test_first_team_is_home(self):
-        s = CBBpyRosterScraper()
-        box = {"TeamA": [{}], "TeamB": [{}]}
-        result = s._compute_stint_plus_minus("TeamA", box, 5.0, 3.0)
-        assert result == 2.0  # home - away
+class TestCBBpyEstimateRapmFromBoxScore:
+    def test_starter_produces_nonzero_rapm(self):
+        p = {"pts": 450, "ast": 90, "oreb": 60, "reb": 180, "stl": 45,
+             "blk": 30, "to": 60, "pf": 60}
+        off, dfn = CBBpyRosterScraper._estimate_rapm_from_box_score(
+            p, games_played=30, minutes_per_game=30.0, true_shooting=0.55,
+        )
+        assert off != 0.0
+        assert dfn != 0.0
 
-    def test_second_team_is_away(self):
-        s = CBBpyRosterScraper()
-        box = {"TeamA": [{}], "TeamB": [{}]}
-        result = s._compute_stint_plus_minus("TeamB", box, 5.0, 3.0)
-        assert result == -2.0  # away - home
-
-    def test_empty_box(self):
-        s = CBBpyRosterScraper()
-        result = s._compute_stint_plus_minus("X", {}, 5.0, 3.0)
-        assert result == 2.0
+    def test_low_minutes_returns_zero(self):
+        p = {"pts": 10, "ast": 5, "oreb": 3, "reb": 10, "stl": 2,
+             "blk": 1, "to": 3, "pf": 5}
+        off, dfn = CBBpyRosterScraper._estimate_rapm_from_box_score(
+            p, games_played=5, minutes_per_game=3.0, true_shooting=0.40,
+        )
+        assert off == 0.0 and dfn == 0.0
 
 
 class TestCBBpyScrapeGameIds:
