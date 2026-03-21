@@ -20,6 +20,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from ...data.models.game_flow import GameFlow
+from ...governance.artifact_provenance import build_artifact_provenance
 from ...ml.calibration.calibration import (
     CalibrationPipeline,
     calculate_calibration_metrics,
@@ -236,6 +237,18 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             "samples": len(probs),
             "brier_before": float(metrics.brier_score),
             "brier_after": float(metrics.brier_score),
+            "feature_manifest_hash": (
+                (getattr(pipeline, "_feature_manifest", {}) or {}).get("manifest_hash")
+            ),
+            "provenance": build_artifact_provenance(
+                pipeline=pipeline,
+                artifact_kind="calibration_report",
+                extra={
+                    "fit_data_source": "insufficient_samples",
+                    "historical_tournament_samples": _n_historical_tourney_cal,
+                    "current_year_validation_samples": _n_current_year_cal,
+                },
+            ),
         }
 
     if (
@@ -251,6 +264,18 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             "brier_after": float(metrics.brier_score),
             "ece_before": float(metrics.expected_calibration_error),
             "ece_after": float(metrics.expected_calibration_error),
+            "feature_manifest_hash": (
+                (getattr(pipeline, "_feature_manifest", {}) or {}).get("manifest_hash")
+            ),
+            "provenance": build_artifact_provenance(
+                pipeline=pipeline,
+                artifact_kind="calibration_report",
+                extra={
+                    "fit_data_source": "disabled_by_config",
+                    "historical_tournament_samples": _n_historical_tourney_cal,
+                    "current_year_validation_samples": _n_current_year_cal,
+                },
+            ),
         }
 
     p_arr = np.array(probs)
@@ -340,8 +365,22 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                 "ece_before": float(pre_metrics.expected_calibration_error),
                 "ece_after": float(pre_metrics.expected_calibration_error),
                 "pre_calibration_clip": [pipeline.config.pre_calibration_clip_lo, pipeline.config.pre_calibration_clip_hi],
+                "fit_years": pipeline.config.resolve_calibration_years(),
+                "feature_manifest_hash": (
+                    (getattr(pipeline, "_feature_manifest", {}) or {}).get("manifest_hash")
+                ),
                 **bootstrap_info,
             }
+            calibration_info["provenance"] = build_artifact_provenance(
+                pipeline=pipeline,
+                artifact_kind="calibration_report",
+                extra={
+                    "fit_data_source": "bootstrap_identity_skip",
+                    "historical_tournament_samples": _n_historical_tourney_cal,
+                    "current_year_validation_samples": _n_current_year_cal,
+                    "nested_calibration": _nested_mode,
+                },
+            )
             return calibration_info
 
     # Phase 5: Auto-select best calibration method via temporal benchmarking.
@@ -651,6 +690,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         "samples": len(probs),
         "historical_tournament_samples": tourney_cal_count,
         "current_year_calibration_samples": _n_current_year_cal,
+        "fit_years": pipeline.config.resolve_calibration_years(),
         "nested_calibration": _nested_mode,
         "tournament_games_filtered": len(unique_games) - len(regular_season_games),
         "brier_before": float(pre_metrics.brier_score),
@@ -670,6 +710,9 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         },
         **sharpener_info,
         **flb_info,
+        "feature_manifest_hash": (
+            (getattr(pipeline, "_feature_manifest", {}) or {}).get("manifest_hash")
+        ),
     }
     if bootstrap_info:
         calibration_info.update(bootstrap_info)
@@ -679,6 +722,22 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     # Add temperature value if using temperature scaling
     if effective_calibration_method == "temperature" and hasattr(pipeline.calibration_pipeline.calibrator, "temperature"):
         calibration_info["temperature"] = round(pipeline.calibration_pipeline.calibrator.temperature, 4)
+
+    calibration_info["provenance"] = build_artifact_provenance(
+        pipeline=pipeline,
+        artifact_kind="calibration_report",
+        extra={
+            "fit_data_source": (
+                "historical_tournament_only" if _nested_mode else "mixed_or_temporal_split"
+            ),
+            "evaluation_data_source": (
+                "current_year_validation_only" if _nested_mode else eval_mode
+            ),
+            "historical_tournament_samples": _n_historical_tourney_cal,
+            "current_year_validation_samples": _n_current_year_cal,
+            "nested_calibration": _nested_mode,
+        },
+    )
 
     return calibration_info
 

@@ -221,6 +221,12 @@ class _FakePipeline:
                     "evaluation_data_source": "current_year_validation",
                     "ci_includes_identity": False,
                 },
+                "feature_manifest": {
+                    "target_year": 2026,
+                    "selection_method": "fixed_domain_knowledge",
+                    "selected_features": ["diff_adj_off_eff", "diff_adj_def_eff"],
+                    "manifest_hash": "manifest-123",
+                },
             }
         }
 
@@ -269,6 +275,21 @@ def test_config_file_exists():
 def test_config_loads_valid_json():
     payload = _load_blessed_config()
     assert isinstance(payload, dict)
+
+
+def test_run_production_writes_feature_manifest_artifact(tmp_path, monkeypatch):
+    _report, freeze, governance, manifest_path = _run_with_fake_pipeline(tmp_path, monkeypatch)
+
+    feature_manifest_path = tmp_path / "artifacts" / "feature_manifest_2026.json"
+    assert feature_manifest_path.exists()
+
+    payload = json.loads(feature_manifest_path.read_text())
+    assert payload["manifest_hash"] == "manifest-123"
+    assert freeze["feature_manifest_artifact"]["path"] == str(feature_manifest_path)
+    assert governance["feature_manifest_artifact"]["path"] == str(feature_manifest_path)
+
+    manifest = json.loads(manifest_path.read_text())
+    assert manifest["feature_manifest_hash"] == "manifest-123"
 
 
 def test_config_required_keys_present():
