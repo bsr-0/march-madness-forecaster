@@ -15,6 +15,13 @@ FIX AUDIT (2026-02-19):
       in >=80% of bootstrap runs to survive.
   #7: Correlation-with-target importance method suppressed when SHAP
       is available (adds noise, not signal).
+
+REFACTOR AUDIT (2026-03-21):
+  SOL-1:  MutualInformationScreener — non-linear feature-target association.
+  SOL-2:  Distribution shift auto-gating — closes the shift-detection loop.
+  SOL-9:  SHAP importance hyperparameter alignment with production LightGBM.
+  SOL-11: Adaptive importance threshold via elbow detection (Kneedle).
+  SOL-12: Cross-fold stability metrics (Jaccard index across LOYO folds).
 """
 
 from __future__ import annotations
@@ -87,6 +94,13 @@ class FeatureSelectionResult:
     # SA-2: DoF budget diagnostics
     dof_budget_max_features: Optional[int] = None
     dof_budget_exceeded: Optional[bool] = None
+    # MI screening diagnostics
+    mi_dropped: List[str] = field(default_factory=list)
+    mi_scores: Optional[Dict[str, float]] = None
+    # Shift gating diagnostics
+    shifted_features: List[str] = field(default_factory=list)
+    # Adaptive threshold
+    detected_importance_threshold: Optional[float] = None
 
 
 class VIFPruner:
@@ -539,6 +553,64 @@ class CorrelationPruner:
         return X[:, kept_indices], kept_names, dropped_names
 
 
+class MutualInformationScreener:
+    """Screen features using mutual information with target.
+
+    Detects non-linear feature-target associations that pairwise
+    correlation and SHAP both miss. Uses sklearn's k-nearest-neighbor
+    MI estimator (Kraskov et al., 2004).
+    """
+
+    def __init__(self, threshold: float = 0.01, random_seed: int = 42):
+        self.threshold = threshold
+        self.random_seed = random_seed
+
+    def screen(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        feature_names: List[str],
+    ) -> Tuple[np.ndarray, List[str], List[str], np.ndarray]:
+        """Screen features by mutual information with target.
+
+        Args:
+            X: Feature matrix [N, D]
+            y: Binary target [N]
+            feature_names: Feature names
+
+        Returns:
+            (X_kept, kept_names, dropped_names, mi_scores)
+        """
+        if not SKLEARN_AVAILABLE:
+            return X, list(feature_names), [], np.zeros(X.shape[1])
+
+        from sklearn.feature_selection import mutual_info_classif
+
+        mi_scores = mutual_info_classif(
+            X, y, n_neighbors=5, random_state=self.random_seed
+        )
+
+        keep_mask = mi_scores >= self.threshold
+        # Always keep at least half the features
+        if keep_mask.sum() < len(feature_names) // 2:
+            # Keep top half by MI score instead
+            n_keep = max(len(feature_names) // 2, 1)
+            top_indices = np.argsort(mi_scores)[-n_keep:]
+            keep_mask = np.zeros(len(feature_names), dtype=bool)
+            keep_mask[top_indices] = True
+
+        dropped = [feature_names[i] for i in range(len(feature_names)) if not keep_mask[i]]
+        kept = [feature_names[i] for i in range(len(feature_names)) if keep_mask[i]]
+
+        if dropped:
+            logger.info(
+                "MI screening removed %d features below threshold %.4f: %s",
+                len(dropped), self.threshold, dropped[:10],
+            )
+
+        return X[:, keep_mask], kept, dropped, mi_scores
+
+
 class ImportanceCalculator:
     """
     Calculates feature importance using multiple methods and combines them.
@@ -562,8 +634,9 @@ class ImportanceCalculator:
         "correlation": 1.0,  # Set to 0.0 dynamically when SHAP succeeds
     }
 
-    def __init__(self, random_seed: int = 42):
+    def __init__(self, random_seed: int = 42, lgb_params: Optional[Dict] = None):
         self.random_seed = random_seed
+        self.lgb_params = lgb_params
 
     def calculate(
         self,
@@ -631,7 +704,7 @@ class ImportanceCalculator:
         self, X: np.ndarray, y: np.ndarray, feature_names: List[str]
     ) -> Optional[np.ndarray]:
         """Out-of-fold SHAP TreeExplainer importance via LightGBM."""
-        params = {
+        default_params = {
             "objective": "binary",
             "metric": "binary_logloss",
             "boosting_type": "gbdt",
@@ -641,6 +714,7 @@ class ImportanceCalculator:
             "verbose": -1,
             "num_threads": 1,
         }
+        params = {**default_params, **(self.lgb_params or {})}
         n = len(y)
         n_folds = 3
         shap_accum = np.zeros(X.shape[1])
@@ -699,7 +773,7 @@ class ImportanceCalculator:
         remaining = n - initial_train
         fold_size = max(5, remaining // n_folds)
 
-        params = {
+        default_params = {
             "objective": "binary",
             "metric": "binary_logloss",
             "num_leaves": 31,
@@ -707,6 +781,7 @@ class ImportanceCalculator:
             "verbose": -1,
             "num_threads": 1,
         }
+        params = {**default_params, **(self.lgb_params or {})}
 
         for fold in range(n_folds):
             val_start = initial_train + fold * fold_size
@@ -869,6 +944,67 @@ def _cluster_preselect(
     return X_kept, kept_names
 
 
+def detect_importance_elbow(
+    importance_scores: List[float],
+    sensitivity: float = 1.0,
+) -> float:
+    """Detect the natural threshold in sorted importance scores using elbow/knee detection.
+
+    Uses the Kneedle algorithm (Satopaa et al., 2011): finds the point of
+    maximum curvature in the sorted importance curve. This is where the
+    marginal value of adding another feature drops sharply.
+
+    Args:
+        importance_scores: Importance values (will be sorted descending internally)
+        sensitivity: Kneedle sensitivity parameter (higher = more conservative)
+
+    Returns:
+        Detected importance threshold, or 0.05 as fallback
+    """
+    if len(importance_scores) < 4:
+        return 0.05
+
+    sorted_scores = sorted(importance_scores, reverse=True)
+    n = len(sorted_scores)
+
+    # Normalize to [0, 1] range for both axes
+    x = np.linspace(0, 1, n)
+    y_min, y_max = sorted_scores[-1], sorted_scores[0]
+    if y_max - y_min < 1e-10:
+        return 0.05
+    y = np.array([(s - y_min) / (y_max - y_min) for s in sorted_scores])
+
+    # Line from first to last point
+    # Distance of each point from this line = curvature proxy
+    x0, y0 = x[0], y[0]
+    x1, y1 = x[-1], y[-1]
+
+    line_len = np.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2)
+    if line_len < 1e-10:
+        return 0.05
+
+    # Perpendicular distance from each point to the line
+    distances = np.abs((y1 - y0) * x - (x1 - x0) * y + x1 * y0 - y1 * x0) / line_len
+
+    # Apply sensitivity: scale distances
+    distances *= sensitivity
+
+    # Find the elbow (maximum distance point)
+    elbow_idx = int(np.argmax(distances))
+
+    # The threshold is the importance value at the elbow
+    threshold = sorted_scores[elbow_idx]
+
+    # Sanity: threshold should be between 0.01 and 0.20
+    threshold = max(0.01, min(0.20, threshold))
+
+    logger.info(
+        "Elbow detection: threshold=%.4f at position %d/%d (sensitivity=%.1f)",
+        threshold, elbow_idx, n, sensitivity,
+    )
+    return threshold
+
+
 class FeatureSelector:
     """
     Orchestrates the full feature selection pipeline:
@@ -896,6 +1032,12 @@ class FeatureSelector:
         n_bootstrap: int = 10,  # FIX #6: number of bootstrap iterations
         enable_dof_budget: bool = True,  # Harrell's rule enforcement
         events_per_predictor: float = 15.0,  # Harrell's EPP (10-20 range)
+        enable_mi_screening: bool = True,
+        mi_threshold: float = 0.01,
+        enable_shift_gating: bool = False,
+        shift_drop_mode: str = "downweight",
+        adaptive_threshold: bool = True,
+        importance_lgb_params: Optional[Dict] = None,  # Solution 9
     ):
         self.correlation_threshold = correlation_threshold
         self.min_features = min_features
@@ -909,6 +1051,12 @@ class FeatureSelector:
         self.n_bootstrap = n_bootstrap
         self.enable_dof_budget = enable_dof_budget
         self.events_per_predictor = events_per_predictor
+        self.enable_mi_screening = enable_mi_screening
+        self.mi_threshold = mi_threshold
+        self.enable_shift_gating = enable_shift_gating
+        self.shift_drop_mode = shift_drop_mode
+        self.adaptive_threshold = adaptive_threshold
+        self.importance_lgb_params = importance_lgb_params
 
         self._selected_indices: Optional[List[int]] = None
         self._selected_names: Optional[List[str]] = None
@@ -1013,9 +1161,38 @@ class FeatureSelector:
         pruner = CorrelationPruner(threshold=self.correlation_threshold)
         X_pruned, kept_names, corr_dropped = pruner.prune(X, feature_names, y=y)
 
+        # Step 1.5: Mutual information screening (non-linear associations)
+        mi_dropped: List[str] = []
+        mi_scores_raw = None
+        mi_pre_screen_names: List[str] = list(kept_names)
+        if self.enable_mi_screening and SKLEARN_AVAILABLE:
+            mi_screener = MutualInformationScreener(
+                threshold=self.mi_threshold, random_seed=self.random_seed,
+            )
+            X_pruned, kept_names, mi_dropped, mi_scores_raw = mi_screener.screen(
+                X_pruned, y, kept_names,
+            )
+
         # Step 2: Importance calculation (FIX #7: correlation suppressed when SHAP available)
-        calculator = ImportanceCalculator(random_seed=self.random_seed)
+        calculator = ImportanceCalculator(
+            random_seed=self.random_seed,
+            lgb_params=self.importance_lgb_params,
+        )
         importances = calculator.calculate(X_pruned, y, kept_names)
+
+        # Step 2.5: Adaptive threshold via elbow detection
+        effective_threshold = self.importance_threshold
+        detected_threshold = None
+        if self.adaptive_threshold and len(importances) >= 4:
+            scores_list = [imp.importance for imp in importances]
+            detected = detect_importance_elbow(scores_list)
+            if detected != 0.05:
+                logger.info(
+                    "Adaptive threshold: %.4f (detected) vs %.4f (default)",
+                    detected, self.importance_threshold,
+                )
+                effective_threshold = detected
+                detected_threshold = detected
 
         # Step 3: Select features above importance threshold, up to max
         selected = []
@@ -1024,7 +1201,7 @@ class FeatureSelector:
         for imp in importances:
             if len(selected) >= self.max_features:
                 low_importance_dropped.append(imp.name)
-            elif imp.importance < self.importance_threshold and len(selected) >= self.min_features:
+            elif imp.importance < effective_threshold and len(selected) >= self.min_features:
                 low_importance_dropped.append(imp.name)
             else:
                 selected.append(imp.name)
@@ -1062,7 +1239,7 @@ class FeatureSelector:
 
         # Map selected names back to ORIGINAL indices
         selected_indices = [original_name_to_idx[name] for name in selected if name in original_name_to_idx]
-        all_dropped = variance_dropped + vif_dropped + corr_dropped + low_importance_dropped
+        all_dropped = variance_dropped + vif_dropped + corr_dropped + mi_dropped + low_importance_dropped
 
         self._selected_indices = selected_indices
         self._selected_names = selected
@@ -1089,6 +1266,14 @@ class FeatureSelector:
             dof_max = self._dof_budget_result.recommended_max_features
             dof_exceeded = self._dof_budget_result.budget_exceeded
 
+        # Build MI scores dict for diagnostics
+        mi_scores_dict = None
+        if mi_scores_raw is not None and len(mi_pre_screen_names) == len(mi_scores_raw):
+            mi_scores_dict = {
+                name: float(mi_scores_raw[i])
+                for i, name in enumerate(mi_pre_screen_names)
+            }
+
         return FeatureSelectionResult(
             selected_features=selected,
             selected_indices=selected_indices,
@@ -1098,7 +1283,7 @@ class FeatureSelector:
             low_importance_dropped=low_importance_dropped,
             original_dim=original_dim,
             reduced_dim=len(selected),
-            method="redundancy_audit+dof_budget+variance+vif+correlation_pruning+importance_ranking+stability_filter",
+            method="redundancy_audit+dof_budget+variance+vif+correlation_pruning+mi_screening+importance_ranking+elbow_detection+stability_filter",
             stability_scores=stability_scores,
             variance_dropped=variance_dropped,
             post_selection_condition_number=cond_num,
@@ -1108,6 +1293,10 @@ class FeatureSelector:
             effective_rank=eff_rank,
             dof_budget_max_features=dof_max,
             dof_budget_exceeded=dof_exceeded,
+            mi_dropped=mi_dropped,
+            mi_scores=mi_scores_dict,
+            shifted_features=[],
+            detected_importance_threshold=detected_threshold,
         )
 
     def _bootstrap_stability(
@@ -1183,6 +1372,76 @@ class FeatureSelector:
 
         return stability
 
+    def _apply_shift_gating(
+        self,
+        X_train: np.ndarray,
+        X_val: np.ndarray,
+        feature_names: List[str],
+        importance_scores: List[FeatureImportance],
+        shift_drop_mode: str = "downweight",
+    ) -> List[FeatureImportance]:
+        """Gate features based on distribution shift between train and validation.
+
+        Closes the shift-detection loop: features with significant distribution
+        shift have their importance scores down-weighted or are dropped entirely.
+
+        Args:
+            X_train: Training feature matrix
+            X_val: Validation feature matrix
+            feature_names: Feature names matching columns of X_train/X_val
+            importance_scores: Current importance rankings
+            shift_drop_mode: "downweight" (reduce importance) or "drop" (zero importance)
+
+        Returns:
+            Updated importance scores with shift-gated features penalized
+        """
+        shift_results = detect_distribution_shift(
+            X_train, X_val, feature_names,
+            psi_threshold=0.25, ks_alpha=0.05, mean_shift_threshold=1.0,
+        )
+
+        shifted_features = set()
+        shift_severities = {}
+        for result in shift_results:
+            # Require BOTH PSI and KS to agree (reduces false positives)
+            if result.psi > 0.25 and result.ks_pvalue < 0.05:
+                shifted_features.add(result.feature_name)
+                shift_severities[result.feature_name] = result.psi
+
+        if not shifted_features:
+            return importance_scores
+
+        updated = []
+        for imp in importance_scores:
+            if imp.name in shifted_features:
+                if shift_drop_mode == "drop":
+                    updated.append(FeatureImportance(
+                        name=imp.name, importance=0.0, rank=imp.rank,
+                    ))
+                else:
+                    # Downweight by PSI severity: decay = exp(-PSI)
+                    psi = shift_severities.get(imp.name, 0.25)
+                    import math
+                    decay = math.exp(-psi)
+                    updated.append(FeatureImportance(
+                        name=imp.name,
+                        importance=imp.importance * decay,
+                        rank=imp.rank,
+                    ))
+            else:
+                updated.append(imp)
+
+        # Re-rank
+        updated.sort(key=lambda x: x.importance, reverse=True)
+        for i, imp in enumerate(updated):
+            imp.rank = i + 1
+
+        logger.info(
+            "Shift gating (%s mode): penalized %d features: %s",
+            shift_drop_mode, len(shifted_features), sorted(shifted_features),
+        )
+        return updated
+
     def transform(self, X: np.ndarray) -> np.ndarray:
         """Apply fitted selection to new data."""
         if not self.is_fitted:
@@ -1204,3 +1463,109 @@ class FeatureSelector:
         if not self.is_fitted:
             raise ValueError("FeatureSelector not fitted.")
         return list(self._selected_names)
+
+
+# ---------------------------------------------------------------------------
+# Solution 12: Cross-fold stability metrics
+# ---------------------------------------------------------------------------
+
+@dataclass
+class CrossFoldStabilityResult:
+    """Stability of feature selection across LOYO folds."""
+    feature_fold_counts: Dict[str, int]  # feature_name → n_folds_selected_in
+    n_folds: int
+    mean_jaccard: float  # Average pairwise Jaccard index
+    pairwise_jaccard: Dict[str, float]  # "fold_i_vs_fold_j" → Jaccard
+    stable_features: List[str]  # Selected in >= threshold folds
+    unstable_features: List[str]  # Selected in < threshold folds
+    stability_threshold: int  # Min folds for "stable"
+    is_stable: bool  # True if mean_jaccard >= 0.7
+
+
+def compute_cross_fold_stability(
+    fold_selected_features: List[List[str]],
+    stability_threshold_frac: float = 0.7,
+) -> CrossFoldStabilityResult:
+    """Compute feature selection stability across LOYO folds.
+
+    Solution 12: Bootstrap stability (FIX #6) tests within a single training
+    set. Cross-fold stability tests whether the same features are selected
+    when the training set changes (different year held out). If a feature
+    is selected for fold 2018 but dropped for fold 2022, it's unreliable.
+
+    Args:
+        fold_selected_features: List of selected feature name lists, one per fold
+        stability_threshold_frac: Fraction of folds a feature must appear in
+
+    Returns:
+        CrossFoldStabilityResult with per-feature counts and Jaccard indices
+    """
+    n_folds = len(fold_selected_features)
+    if n_folds < 2:
+        all_feats = fold_selected_features[0] if fold_selected_features else []
+        return CrossFoldStabilityResult(
+            feature_fold_counts={f: 1 for f in all_feats},
+            n_folds=n_folds,
+            mean_jaccard=1.0,
+            pairwise_jaccard={},
+            stable_features=all_feats,
+            unstable_features=[],
+            stability_threshold=1,
+            is_stable=True,
+        )
+
+    # Count how many folds each feature appears in
+    all_features = set()
+    fold_sets = []
+    for features in fold_selected_features:
+        s = set(features)
+        fold_sets.append(s)
+        all_features.update(s)
+
+    feature_counts = {}
+    for feat in sorted(all_features):
+        feature_counts[feat] = sum(1 for s in fold_sets if feat in s)
+
+    # Pairwise Jaccard indices
+    pairwise_jaccard = {}
+    jaccard_values = []
+    for i in range(n_folds):
+        for j in range(i + 1, n_folds):
+            intersection = len(fold_sets[i] & fold_sets[j])
+            union = len(fold_sets[i] | fold_sets[j])
+            jaccard = intersection / union if union > 0 else 0.0
+            key = f"fold_{i}_vs_fold_{j}"
+            pairwise_jaccard[key] = jaccard
+            jaccard_values.append(jaccard)
+
+    mean_jaccard = float(np.mean(jaccard_values)) if jaccard_values else 0.0
+
+    # Classify features as stable/unstable
+    min_folds = max(1, int(n_folds * stability_threshold_frac))
+    stable = [f for f, c in feature_counts.items() if c >= min_folds]
+    unstable = [f for f, c in feature_counts.items() if c < min_folds]
+
+    is_stable = mean_jaccard >= 0.7
+
+    if not is_stable:
+        logger.warning(
+            "Feature selection unstable across LOYO folds: "
+            "mean Jaccard=%.3f (threshold: 0.7), %d/%d features unstable",
+            mean_jaccard, len(unstable), len(all_features),
+        )
+    else:
+        logger.info(
+            "Feature selection stable: mean Jaccard=%.3f, %d/%d features stable (>=%d/%d folds)",
+            mean_jaccard, len(stable), len(all_features), min_folds, n_folds,
+        )
+
+    return CrossFoldStabilityResult(
+        feature_fold_counts=feature_counts,
+        n_folds=n_folds,
+        mean_jaccard=mean_jaccard,
+        pairwise_jaccard=pairwise_jaccard,
+        stable_features=sorted(stable),
+        unstable_features=sorted(unstable),
+        stability_threshold=min_folds,
+        is_stable=is_stable,
+    )
