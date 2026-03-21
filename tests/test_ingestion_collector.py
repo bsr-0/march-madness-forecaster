@@ -200,7 +200,6 @@ def test_collector_merges_cbbpy_rosters_with_external_metrics(tmp_path, monkeypa
                             "box_plus_minus": 1.0,
                         }
                     ],
-                    "stints": [{"players": ["duke_1"], "plus_minus": 2.0, "possessions": 10.0}],
                 }
             ],
         },
@@ -259,7 +258,7 @@ def test_collector_merges_cbbpy_rosters_with_external_metrics(tmp_path, monkeypa
     assert abs(player1["rapm_offensive"] - 1.5) < 1e-9
     assert player1["injury_status"] == "questionable"
     assert any(p["player_id"] == "duke_2" for p in duke["players"])
-    assert isinstance(duke.get("stints"), list) and duke["stints"]
+    assert duke["players"]
 
 
 def test_collector_writes_odds_artifact_when_feed_provided(tmp_path, monkeypatch):

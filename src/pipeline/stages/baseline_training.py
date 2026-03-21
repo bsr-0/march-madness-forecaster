@@ -216,8 +216,22 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
 
     # Seed map for absolute features in matchup vector
     _seed_map: Dict[str, int] = {}
+    # Roster overlay from current-year FeatureEngineer (RAPM, WARP, depth, etc.)
+    _roster_overlay: Dict[str, Dict[int, float]] = {}
     for _tid, _tf in pipeline.feature_engineer.team_features.items():
         _seed_map[_tid] = _tf.seed if hasattr(_tf, "seed") and _tf.seed else 0
+        _roster_overlay[_tid] = {
+            11: _tf.total_rapm,
+            12: _tf.top5_rapm,
+            13: _tf.bench_rapm,
+            14: _tf.total_warp,
+            15: _tf.roster_continuity,
+            17: _tf.avg_experience,
+            18: _tf.bench_depth_score,
+            55: _tf.top5_minutes_share,
+            74: _tf.backcourt_rapm,
+            75: _tf.frontcourt_rapm,
+        }
 
     # SEED LEAKAGE FIX: Seeds are assigned on Selection Sunday (~March
     # 14-17) and must not appear in feature vectors for regular-season
@@ -272,6 +286,11 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             external_rating_composite=_erc2,
             external_rating_spread=_ers2,
         )
+        # Overlay roster features (RAPM, WARP, depth, experience, etc.)
+        for _v, _tid in ((v1, game.team1_id), (v2, game.team2_id)):
+            _ov = _roster_overlay.get(_tid, {})
+            for _idx, _val in _ov.items():
+                _v[_idx] = _val
         vec = IncrementalMetricsEngine.build_matchup_vector(
             v1,
             v2,

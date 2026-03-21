@@ -189,9 +189,9 @@ def validate_rosters_payload(payload: Dict) -> List[str]:
             ):
                 rapm_like_count += 1
 
-        if rapm_like_count == 0 and not isinstance(team.get("stints"), list):
+        if rapm_like_count == 0:
             errors.append(
-                f"teams[{idx}] has no RAPM-like player fields and no stint data for RAPM derivation"
+                f"teams[{idx}] has no RAPM-like player fields for RAPM derivation"
             )
         if rapm_like_count > 0 and nonzero_rapm_count == 0:
             errors.append(f"teams[{idx}] has RAPM fields but all RAPM values are zero")

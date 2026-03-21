@@ -245,7 +245,7 @@ def test_sota_pipeline_rejects_stale_public_feed(tmp_path):
         assert True
 
 
-def test_rapm_enrichment_from_stints_backfills_missing_player_rapm():
+def test_rapm_enrichment_from_bpm_backfills_missing_player_rapm():
     pipeline = SOTAPipeline(
         SOTAPipelineConfig(
             enforce_feed_freshness=False,
@@ -262,18 +262,13 @@ def test_rapm_enrichment_from_stints_backfills_missing_player_rapm():
                 "minutes_per_game": 30 - i,
                 "games_played": 30,
                 "usage_rate": 20,
+                "box_plus_minus": 5.0 + i,
+                "warp": 0.5,
             },
         )
         for i in range(5)
     ]
-    team_block = {
-        "stints": [
-            {"players": ["duke_p0", "duke_p1", "duke_p2"], "plus_minus": 4, "possessions": 10},
-            {"players": ["duke_p1", "duke_p2", "duke_p3"], "plus_minus": -2, "possessions": 8},
-            {"players": ["duke_p0", "duke_p3", "duke_p4"], "plus_minus": 3, "possessions": 9},
-            {"players": ["duke_p2", "duke_p3", "duke_p4"], "plus_minus": -1, "possessions": 7},
-        ]
-    }
+    team_block = {}
 
     pipeline._enrich_roster_rapm(players, team_block)
     non_zero = sum(1 for p in players if abs(p.rapm_total) > 1e-8)

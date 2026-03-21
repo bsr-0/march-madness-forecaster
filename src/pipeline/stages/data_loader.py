@@ -18,7 +18,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from ...data.features.feature_engineering import compute_rapm
 from ...data.features.proprietary_metrics import (
     IncrementalMetricsEngine,
     ProprietaryMetricsEngine,
@@ -134,6 +133,14 @@ def player_from_dict(team_id: str, raw: Dict) -> Player:
         warp=_safe_float(raw.get("warp")),
         box_plus_minus=_safe_float(raw.get("box_plus_minus")),
         usage_rate=_safe_float(raw.get("usage_rate")),
+        true_shooting_pct=_safe_float(raw.get("true_shooting_pct")),
+        effective_fg_pct=_safe_float(raw.get("effective_fg_pct")),
+        points_per_game=_safe_float(raw.get("points_per_game")),
+        rebounds_per_game=_safe_float(raw.get("rebounds_per_game")),
+        assists_per_game=_safe_float(raw.get("assists_per_game")),
+        steals_per_game=_safe_float(raw.get("steals_per_game")),
+        blocks_per_game=_safe_float(raw.get("blocks_per_game")),
+        turnovers_per_game=_safe_float(raw.get("turnovers_per_game")),
         injury_status=InjuryStatus(injury_raw),
         is_transfer=bool(raw.get("is_transfer", False)),
         transfer_from=raw.get("transfer_from"),
@@ -175,12 +182,49 @@ def apply_transfer_portal_updates(
                 break
 
 
+def _box_score_bpm(player: Player) -> float:
+    """Compute centered BPM from a Player's per-game stats.
+
+    D1 rotation-player averages (≥5 mpg, ≥3 games from 2024 cbbpy data):
+    7.1 ppg, 1.3 apg, 3.2 rpg, 0.65 spg, 0.33 bpg, 1.15 topg.
+    Returns a value in roughly [-5, +10].
+    """
+    mpg = float(player.minutes_per_game or 0.0)
+    gp = int(player.games_played or 0)
+    if mpg < 5.0 or gp < 3:
+        return 0.0
+
+    ppg = float(player.points_per_game or 0.0)
+    apg = float(player.assists_per_game or 0.0)
+    rpg = float(player.rebounds_per_game or 0.0)
+    spg = float(player.steals_per_game or 0.0)
+    bpg = float(player.blocks_per_game or 0.0)
+    topg = float(player.turnovers_per_game or 0.0)
+    ts = float(player.true_shooting_pct or 0.0) or 0.52
+
+    bpm = (
+        (ppg - 7.1) * 0.25
+        + (apg - 1.3) * 0.55
+        + (rpg - 3.2) * 0.30
+        + (spg - 0.65) * 1.2
+        + (bpg - 0.33) * 0.9
+        - (topg - 1.15) * 0.45
+        + (ts - 0.52) * 12.0
+    )
+    min_weight = min(mpg / 32.0, 1.0)
+    return bpm * min_weight
+
+
 def enrich_roster_rapm(
     players: List[Player],
     team_block: Dict,
     min_rapm_players: int,
 ) -> None:
-    """Enrich player RAPM from stint data or BPM/WARP priors (in-place)."""
+    """Backfill missing RAPM from box-score per-game stats (in-place).
+
+    Computes a centered BPM proxy from per-game stats and splits into
+    offensive/defensive RAPM estimates.
+    """
     if not players:
         return
 
@@ -188,28 +232,148 @@ def enrich_roster_rapm(
     if non_zero >= min_rapm_players:
         return
 
-    stints = team_block.get("stints", [])
-    if isinstance(stints, list) and stints:
-        rapm_map = compute_rapm(players, stints, regularization=0.05)
-        for player in players:
-            rapm_pair = rapm_map.get(player.player_id)
-            if rapm_pair is None:
-                continue
-            if abs(player.rapm_total) <= 1e-8:
-                player.rapm_offensive = float(rapm_pair[0])
-                player.rapm_defensive = float(rapm_pair[1])
-
-    # Backfill remaining missing RAPM from BPM/WARP/usage priors.
     for player in players:
         if abs(player.rapm_total) > 1e-8:
             continue
-        bpm = float(player.box_plus_minus or 0.0)
-        warp_signal = 4.0 * float(player.warp or 0.0)
-        usage_signal = (float(player.usage_rate or 0.0) - 20.0) / 25.0
-        proxy = 0.6 * bpm + 0.3 * warp_signal + 0.1 * usage_signal
+        bpm = _box_score_bpm(player)
         off_share = 0.6 if float(player.usage_rate or 0.0) >= 20.0 else 0.45
-        player.rapm_offensive = proxy * off_share
-        player.rapm_defensive = proxy * (1.0 - off_share)
+        player.rapm_offensive = bpm * off_share
+        player.rapm_defensive = bpm * (1.0 - off_share)
+        # Also fix BPM/WARP if they were stored with inflated values
+        player.box_plus_minus = bpm
+        mpg = float(player.minutes_per_game or 0.0)
+        gp = int(player.games_played or 0)
+        player.warp = max(0.0, bpm * mpg * gp / (40.0 * 300.0)) if mpg > 0 and gp > 0 else 0.0
+
+
+def compute_roster_feature_overlay(players_raw: List[Dict], team_id: str = "") -> Dict[str, float]:
+    """Compute player-level feature values from a roster JSON player list.
+
+    Returns a dict keyed by feature index (int) → float value, suitable for
+    overlaying onto a team vector produced by ``metrics_to_team_vector()``.
+
+    Covers indices: 11-14, 15, 17-18, 55, 74-75.
+    """
+    from ...data.models.player import Position
+
+    if not players_raw:
+        return {}
+
+    players: List[Player] = []
+    for pd_raw in players_raw:
+        if not isinstance(pd_raw, dict):
+            continue
+        players.append(player_from_dict(team_id or "unknown", pd_raw))
+
+    # Backfill missing RAPM from BPM proxy (for historical data with null RAPM).
+    enrich_roster_rapm(players, {}, min_rapm_players=3)
+
+    if not players:
+        return {}
+
+    # Sort by contribution score (same as _extract_roster_features).
+    sorted_players = sorted(players, key=lambda p: p.contribution_score, reverse=True)
+
+    # RAPM features
+    total_rapm = sum(p.rapm_total for p in players)
+    top5_rapm = sum(p.rapm_total for p in sorted_players[:5])
+    bench_rapm = sum(p.rapm_total for p in sorted_players[5:10])
+
+    # WARP
+    total_warp = sum(p.warp for p in players)
+
+    # Roster continuity
+    total_minutes = sum(p.minutes_per_game * p.games_played for p in players)
+    returning_minutes = sum(
+        p.minutes_per_game * p.games_played for p in players if not p.is_transfer
+    )
+    roster_continuity = returning_minutes / max(total_minutes, 1)
+
+    # Experience
+    total_weight = sum(p.contribution_score for p in players)
+    if total_weight > 0:
+        avg_experience = sum(p.eligibility_year * p.contribution_score for p in players) / total_weight
+    else:
+        avg_experience = 0.0
+
+    # Bench depth (contribution scores of players 5-10)
+    bench_depth = sum(p.contribution_score for p in sorted_players[5:10])
+
+    # Top-5 minutes share
+    if total_minutes > 0:
+        sorted_by_minutes = sorted(players, key=lambda p: p.minutes_per_game * p.games_played, reverse=True)
+        top5_minutes = sum(p.minutes_per_game * p.games_played for p in sorted_by_minutes[:5])
+        top5_minutes_share = top5_minutes / total_minutes
+    else:
+        top5_minutes_share = 0.0
+
+    # Position-specific RAPM
+    backcourt_rapm = 0.0
+    frontcourt_rapm = 0.0
+    for p in players:
+        rapm = p.rapm_total
+        if p.position in (Position.POINT_GUARD, Position.SHOOTING_GUARD):
+            backcourt_rapm += rapm
+        elif p.position in (Position.POWER_FORWARD, Position.CENTER):
+            frontcourt_rapm += rapm
+        elif p.position == Position.SMALL_FORWARD:
+            backcourt_rapm += 0.5 * rapm
+            frontcourt_rapm += 0.5 * rapm
+
+    return {
+        11: total_rapm,
+        12: top5_rapm,
+        13: bench_rapm,
+        14: total_warp,
+        15: roster_continuity,
+        17: avg_experience,
+        18: bench_depth,
+        55: top5_minutes_share,
+        74: backcourt_rapm,
+        75: frontcourt_rapm,
+    }
+
+
+def load_roster_overlay(roster_path: str) -> Dict[str, Dict[str, float]]:
+    """Load cbbpy roster JSON and compute per-team feature overlays.
+
+    Handles the cbbpy format: ``{"year": ..., "teams": [{"team_id": ..., "players": [...]}]}``.
+
+    Returns ``{team_id: {feature_index: value, ...}}``.
+    """
+    if not os.path.isfile(roster_path):
+        return {}
+
+    try:
+        with open(roster_path, "r") as f:
+            data = json.load(f)
+    except Exception:
+        return {}
+
+    teams_list: list = []
+    if isinstance(data, dict):
+        teams_list = data.get("teams", [])
+        if not isinstance(teams_list, list):
+            teams_list = []
+    elif isinstance(data, list):
+        teams_list = data
+
+    result: Dict[str, Dict[str, float]] = {}
+    for team in teams_list:
+        if not isinstance(team, dict):
+            continue
+        tid = str(team.get("team_id") or team.get("team_name") or "").strip().lower()
+        tid = re.sub(r"[^a-z0-9]", "_", tid).strip("_")
+        if not tid:
+            continue
+        players_raw = team.get("players", [])
+        if not isinstance(players_raw, list) or not players_raw:
+            continue
+        overlay = compute_roster_feature_overlay(players_raw, tid)
+        if overlay:
+            result[tid] = overlay
+
+    return result
 
 
 def assess_roster_rapm_quality(
