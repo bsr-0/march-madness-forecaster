@@ -21,10 +21,13 @@ from .sports_reference import SportsReferenceScraper
 from .tournament_bracket import TournamentSeedScraper
 from .tournament_context import TournamentContextScraper
 from .torvik import BartTorvikScraper
+from .torvik_r import TorvikRWrapper, is_available as torvik_r_available
 from .transfer_portal import TransferPortalScraper
 
 __all__ = [
     "BartTorvikScraper",
+    "TorvikRWrapper",
+    "torvik_r_available",
     "BettingMarketOdds",
     "BettingMarketScraper",
     "BracketIngestionPipeline",
