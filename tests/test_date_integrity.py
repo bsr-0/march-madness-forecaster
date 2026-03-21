@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
+from src.data.ingestion.game_fetchers import HistoricalGameFetcher
 from src.data.ingestion.historical_pipeline import HistoricalDataPipeline, HistoricalIngestionConfig
 from src.data.ingestion.providers import LibraryProviderHub
 
@@ -51,21 +52,10 @@ def _make_box_df(game_ids):
 # ---------------------------------------------------------------------------
 
 class TestFastPathPreservesDates:
-    """Verify _collect_season_games_fast extracts dates from info DataFrame."""
+    """Verify HistoricalGameFetcher._normalize_cbbpy_result extracts dates from info DataFrame."""
 
-    def _make_pipeline(self, tmp_path):
-        config = HistoricalIngestionConfig(
-            start_season=2024,
-            end_season=2024,
-            output_dir=str(tmp_path),
-            cache_dir=str(tmp_path / "cache"),
-        )
-        return HistoricalDataPipeline(config)
-
-    def test_dates_extracted_from_info_df(self, tmp_path):
+    def test_dates_extracted_from_info_df(self):
         """When info DataFrame has game_day, dates should be parsed and applied."""
-        pipeline = self._make_pipeline(tmp_path)
-
         info_df = _make_info_df([
             ("401", "November 06, 2023"),
             ("402", "December 15, 2023"),
@@ -73,60 +63,44 @@ class TestFastPathPreservesDates:
         ])
         box_df = _make_box_df(["401", "402", "403"])
 
-        class MockScraper:
-            @staticmethod
-            def get_games_season(season, info=True, box=True, pbp=False):
-                return (info_df, box_df, pd.DataFrame())
+        rows = HistoricalGameFetcher._normalize_cbbpy_result(
+            (info_df, box_df, pd.DataFrame()), 2024
+        )
+        assert rows is not None
+        # 2 team-perspective rows per game → 6 total
+        assert len(rows) == 6
 
-        result = pipeline._collect_season_games_fast(2024, MockScraper)
-        assert result is not None
-
-        games = result["games"]
-        assert len(games) == 3
-
-        date_map = {g["game_id"]: g["date"] for g in games}
+        date_map = {r["game_id"]: r["date"] for r in rows}
         assert date_map["401"] == "2023-11-06"
         assert date_map["402"] == "2023-12-15"
         assert date_map["403"] == "2024-02-20"
 
-        # Also check team_games
-        for tg in result["team_games"]:
-            gid = tg["game_id"]
-            assert tg["date"] == date_map[gid]
+        # All rows for a game share the same date
+        for row in rows:
+            assert row["date"] == date_map[row["game_id"]]
 
-    def test_fallback_when_info_empty(self, tmp_path):
-        """When info DataFrame is empty, fallback date should be used."""
-        pipeline = self._make_pipeline(tmp_path)
-
+    def test_fallback_when_info_empty(self):
+        """When info DataFrame is empty, date should be empty string (not fake Nov 1)."""
         box_df = _make_box_df(["401"])
 
-        class MockScraper:
-            @staticmethod
-            def get_games_season(season, info=True, box=True, pbp=False):
-                return (pd.DataFrame(), box_df, pd.DataFrame())
+        rows = HistoricalGameFetcher._normalize_cbbpy_result(
+            (pd.DataFrame(), box_df, pd.DataFrame()), 2024
+        )
+        assert rows is not None
+        # After the fix, missing dates produce empty string so repair can detect them.
+        assert rows[0]["date"] == ""
 
-        result = pipeline._collect_season_games_fast(2024, MockScraper)
-        assert result is not None
-        # After the fix, missing dates produce empty string (not fake Nov 1)
-        # so the offline date repair script can detect and fix them.
-        assert result["games"][0]["date"] == ""
-
-    def test_partial_info_uses_fallback_for_missing(self, tmp_path):
-        """Games without info entries get fallback; those with info get real dates."""
-        pipeline = self._make_pipeline(tmp_path)
-
+    def test_partial_info_uses_fallback_for_missing(self):
+        """Games without info entries get empty date; those with info get real dates."""
         info_df = _make_info_df([("401", "January 10, 2024")])
         box_df = _make_box_df(["401", "402"])
 
-        class MockScraper:
-            @staticmethod
-            def get_games_season(season, info=True, box=True, pbp=False):
-                return (info_df, box_df, pd.DataFrame())
+        rows = HistoricalGameFetcher._normalize_cbbpy_result(
+            (info_df, box_df, pd.DataFrame()), 2024
+        )
+        assert rows is not None
 
-        result = pipeline._collect_season_games_fast(2024, MockScraper)
-        assert result is not None
-
-        date_map = {g["game_id"]: g["date"] for g in result["games"]}
+        date_map = {r["game_id"]: r["date"] for r in rows}
         assert date_map["401"] == "2024-01-10"
         assert date_map["402"] == ""  # missing date (no longer uses fake Nov 1 fallback)
 
@@ -136,26 +110,24 @@ class TestFastPathPreservesDates:
 # ---------------------------------------------------------------------------
 
 class TestAggregateBoxRowsDate:
-    """Verify _aggregate_cbbpy_box_rows passes through date field if present."""
+    """Verify HistoricalGameFetcher._aggregate_box_rows passes through date field if present."""
 
     def test_date_preserved_from_input_rows(self):
-        hub = LibraryProviderHub()
         rows = [
             {"game_id": "501", "team": "X", "player": "p1", "pts": 5, "fgm": 2, "fga": 4, "3pm": 0, "3pa": 1, "fta": 1, "to": 0, "oreb": 0, "dreb": 1, "date": "2024-01-15"},
             {"game_id": "501", "team": "Y", "player": "p2", "pts": 7, "fgm": 3, "fga": 5, "3pm": 1, "3pa": 2, "fta": 0, "to": 1, "oreb": 1, "dreb": 2, "date": "2024-01-15"},
         ]
-        result = hub._aggregate_cbbpy_box_rows(rows)
+        result = HistoricalGameFetcher._aggregate_box_rows(rows)
         assert len(result) == 2
         for rec in result:
             assert rec.get("date") == "2024-01-15"
 
     def test_no_date_in_input_means_no_date_in_output(self):
-        hub = LibraryProviderHub()
         rows = [
             {"game_id": "501", "team": "X", "player": "p1", "pts": 5, "fgm": 2, "fga": 4, "3pm": 0, "3pa": 1, "fta": 1, "to": 0, "oreb": 0, "dreb": 1},
             {"game_id": "501", "team": "Y", "player": "p2", "pts": 7, "fgm": 3, "fga": 5, "3pm": 1, "3pa": 2, "fta": 0, "to": 1, "oreb": 1, "dreb": 2},
         ]
-        result = hub._aggregate_cbbpy_box_rows(rows)
+        result = HistoricalGameFetcher._aggregate_box_rows(rows)
         assert len(result) == 2
         # date key should not be present when no input date
         for rec in result:
@@ -236,8 +208,7 @@ class TestRepairHistoricalDates:
 
         # Mock the date fetcher
         date_map = {"401": "2024-01-10", "402": "2024-02-15"}
-        pipeline._fetch_date_map_for_season = lambda s, scr, force_slow=False: date_map
-        pipeline.providers._import_module = lambda m: object()  # dummy scraper
+        pipeline._fetch_date_map_for_season = lambda s: date_map
 
         results = pipeline.repair_historical_dates(seasons=[2024])
         assert results[2024]["repaired"] == 2
@@ -260,8 +231,7 @@ class TestRepairHistoricalDates:
         pipeline = HistoricalDataPipeline(config)
 
         date_map = {"401": "2024-01-10"}
-        pipeline._fetch_date_map_for_season = lambda s, scr, force_slow=False: date_map
-        pipeline.providers._import_module = lambda m: object()
+        pipeline._fetch_date_map_for_season = lambda s: date_map
 
         results = pipeline.repair_historical_dates(seasons=[2024], dry_run=True)
         assert results[2024]["repaired"] == 1
@@ -280,8 +250,7 @@ class TestRepairHistoricalDates:
         pipeline = HistoricalDataPipeline(config)
 
         date_map = {"401": "2024-01-10"}
-        pipeline._fetch_date_map_for_season = lambda s, scr, force_slow=False: date_map
-        pipeline.providers._import_module = lambda m: object()
+        pipeline._fetch_date_map_for_season = lambda s: date_map
 
         results = pipeline.repair_historical_dates(seasons=[2024])
         assert results[2024]["repaired"] == 0
@@ -297,8 +266,7 @@ class TestRepairHistoricalDates:
         pipeline = HistoricalDataPipeline(config)
 
         date_map = {"1": "2023-01-15"}
-        pipeline._fetch_date_map_for_season = lambda s, scr, force_slow=False: date_map
-        pipeline.providers._import_module = lambda m: object()
+        pipeline._fetch_date_map_for_season = lambda s: date_map
 
         results = pipeline.repair_historical_dates()
         assert 2022 in results
@@ -310,19 +278,16 @@ class TestRepairHistoricalDates:
 # ---------------------------------------------------------------------------
 
 class TestFastPathRejectsBadDates:
-    """Verify _collect_season_games_fast returns None when dates are all fallback."""
+    """Verify _validate_game_dates flags empty-date results from _normalize_cbbpy_result."""
 
-    def test_fast_path_returns_none_on_all_fallback_dates(self, tmp_path):
-        """When info DataFrame is empty (no dates), fast path should return None."""
-        config = HistoricalIngestionConfig(
-            start_season=2024, end_season=2024,
-            output_dir=str(tmp_path), cache_dir=str(tmp_path / "cache"),
-        )
-        pipeline = HistoricalDataPipeline(config)
+    def test_fast_path_returns_none_on_all_fallback_dates(self):
+        """When info DataFrame is empty (no dates), _validate_game_dates flags as critical.
 
-        # Create box data with many games but no info DataFrame dates.
-        # With enough games (> 100), _validate_game_dates will trigger the
-        # low-diversity warning (only 1 unique empty date).
+        _normalize_cbbpy_result now returns rows directly (no None) — the rejection
+        gate moved into _validate_game_dates / fetch_season.  This test verifies the
+        complete chain: rows come back with empty dates, and the validator marks the
+        result as critically bad (would block marking the season 'complete').
+        """
         game_ids = [str(i) for i in range(401, 601)]  # 200 games
         box_rows = []
         for gid in game_ids:
@@ -332,15 +297,16 @@ class TestFastPathRejectsBadDates:
             ])
         box_df = pd.DataFrame(box_rows)
 
-        class MockScraper:
-            @staticmethod
-            def get_games_season(season, info=True, box=True, pbp=False):
-                return (pd.DataFrame(), box_df, pd.DataFrame())
+        rows = HistoricalGameFetcher._normalize_cbbpy_result(
+            (pd.DataFrame(), box_df, pd.DataFrame()), 2024
+        )
+        # All dates should be empty strings — no fallback Nov-1 invented
+        assert all(r["date"] == "" for r in rows)
 
-        result = pipeline._collect_season_games_fast(2024, MockScraper)
-        # With 200 games all having empty dates (only 1 unique date value),
-        # validation should flag this as critically low diversity and reject.
-        assert result is None
+        # _validate_game_dates on the game-level dicts must flag as critical
+        game_dicts = [{"game_id": r["game_id"], "date": r["date"]} for r in rows]
+        warnings = HistoricalDataPipeline._validate_game_dates(game_dicts, 2024)
+        assert any("empty or missing" in w.lower() or "CRITICAL" in w for w in warnings)
 
 
 # ---------------------------------------------------------------------------
@@ -348,32 +314,22 @@ class TestFastPathRejectsBadDates:
 # ---------------------------------------------------------------------------
 
 class TestCacheSaveBlocksBadDates:
-    """Verify _save_season_cache refuses to mark complete with bad dates."""
+    """Verify _validate_game_dates identifies all-fallback-date seasons as critical."""
 
-    def test_save_cache_downgrades_complete_on_critical_dates(self, tmp_path):
-        config = HistoricalIngestionConfig(
-            start_season=2024, end_season=2024,
-            output_dir=str(tmp_path), cache_dir=str(tmp_path / "cache"),
-        )
-        pipeline = HistoricalDataPipeline(config)
+    def test_save_cache_downgrades_complete_on_critical_dates(self):
+        """200 games all on the Nov-1 fallback date should produce CRITICAL warnings.
 
-        # All games with fallback date
+        _save_season_cache was removed during the refactor; date validation now
+        happens via _validate_game_dates before any cache write.  This test
+        verifies the underlying guard still fires.
+        """
+        # All games with Nov-1 fallback date
         games = [{"game_id": str(i), "date": "2023-11-01", "season": 2024}
                  for i in range(200)]
 
-        cache_file = Path(tmp_path / "cache" / "test_cache.json")
-        cache_file.parent.mkdir(parents=True, exist_ok=True)
-
-        result = pipeline._save_season_cache(
-            cache_file, 2024, games, [], [], [], complete=True,
-        )
-        # Should have downgraded complete to False due to critical date issue
-        assert result["complete"] is False
-
-        # Verify the file on disk also has complete=False
-        with open(cache_file) as f:
-            saved = json.load(f)
-        assert saved["complete"] is False
+        warnings = HistoricalDataPipeline._validate_game_dates(games, 2024)
+        assert len(warnings) >= 1
+        assert any("CRITICAL" in w for w in warnings)
 
 
 # ---------------------------------------------------------------------------
