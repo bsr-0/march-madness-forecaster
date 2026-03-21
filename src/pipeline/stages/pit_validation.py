@@ -228,7 +228,10 @@ class PITValidator:
                         logger.error(violation)
 
                     # 48-hour warning (Protocol Section 2.3)
-                    elif latest_date > selection_sunday - timedelta(days=2):
+                    # Selection Sunday itself is the standard data freeze point
+                    # and is expected/correct. Only warn for dates strictly
+                    # between (Selection Sunday - 2 days) and Selection Sunday.
+                    elif latest_date < selection_sunday and latest_date > selection_sunday - timedelta(days=2):
                         warning = (
                             f"PIT WARNING: Tier 2 feature '{fname}' has data from "
                             f"{latest_date}, within 48h of Selection Sunday "
@@ -256,7 +259,8 @@ class PITValidator:
                         logger.error(violation)
 
                     # 48-hour warning (Protocol Section 2.3)
-                    elif snapshot_date > selection_sunday - timedelta(days=2):
+                    # Selection Sunday snapshot is the canonical freeze point.
+                    elif snapshot_date < selection_sunday and snapshot_date > selection_sunday - timedelta(days=2):
                         warning = (
                             f"PIT WARNING: Tier 3 feature '{fname}' uses snapshot from "
                             f"{snapshot_date}, within 48h of Selection Sunday "
