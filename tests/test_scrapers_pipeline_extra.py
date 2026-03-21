@@ -131,26 +131,6 @@ class TestCBBpyStaticHelpers:
         assert CBBpyRosterScraper._normalize_player_name("John Smith") == "johnsmith"
         assert CBBpyRosterScraper._normalize_player_name("O'Brien") == "obrien"
 
-    def test_is_possession_ending(self):
-        assert CBBpyRosterScraper._is_possession_ending("turnover", "", {}) is True
-        assert CBBpyRosterScraper._is_possession_ending("made shot", "", {}) is True
-        assert CBBpyRosterScraper._is_possession_ending(
-            "shooting foul", "", {"scoring_play": True}
-        ) is True
-        assert CBBpyRosterScraper._is_possession_ending(
-            "rebound", "Defensive Rebound", {}
-        ) is True
-        assert CBBpyRosterScraper._is_possession_ending(
-            "free throw", "Free throw 2 of 2", {}
-        ) is True
-        assert CBBpyRosterScraper._is_possession_ending(
-            "free throw", "Free throw 1 of 1", {}
-        ) is True
-        assert CBBpyRosterScraper._is_possession_ending(
-            "free throw", "Free throw 1 of 2", {}
-        ) is False
-        assert CBBpyRosterScraper._is_possession_ending("dribble", "Player dribbles", {}) is False
-
     def test_frame_to_records_none(self):
         assert CBBpyRosterScraper._frame_to_records(None) == []
 
@@ -372,23 +352,23 @@ class TestCBBpyFetchRosters:
             assert result == {}
 
 
-class TestCBBpyComputeStintPlusMinus:
-    def test_first_team_is_home(self):
-        s = CBBpyRosterScraper()
-        box = {"TeamA": [{}], "TeamB": [{}]}
-        result = s._compute_stint_plus_minus("TeamA", box, 5.0, 3.0)
-        assert result == 2.0  # home - away
+class TestCBBpyEstimateRapmFromBoxScore:
+    def test_starter_produces_nonzero_rapm(self):
+        p = {"pts": 450, "ast": 90, "oreb": 60, "reb": 180, "stl": 45,
+             "blk": 30, "to": 60, "pf": 60}
+        off, dfn = CBBpyRosterScraper._estimate_rapm_from_box_score(
+            p, games_played=30, minutes_per_game=30.0, true_shooting=0.55,
+        )
+        assert off != 0.0
+        assert dfn != 0.0
 
-    def test_second_team_is_away(self):
-        s = CBBpyRosterScraper()
-        box = {"TeamA": [{}], "TeamB": [{}]}
-        result = s._compute_stint_plus_minus("TeamB", box, 5.0, 3.0)
-        assert result == -2.0  # away - home
-
-    def test_empty_box(self):
-        s = CBBpyRosterScraper()
-        result = s._compute_stint_plus_minus("X", {}, 5.0, 3.0)
-        assert result == 2.0
+    def test_low_minutes_returns_zero(self):
+        p = {"pts": 10, "ast": 5, "oreb": 3, "reb": 10, "stl": 2,
+             "blk": 1, "to": 3, "pf": 5}
+        off, dfn = CBBpyRosterScraper._estimate_rapm_from_box_score(
+            p, games_played=5, minutes_per_game=3.0, true_shooting=0.40,
+        )
+        assert off == 0.0 and dfn == 0.0
 
 
 class TestCBBpyScrapeGameIds:

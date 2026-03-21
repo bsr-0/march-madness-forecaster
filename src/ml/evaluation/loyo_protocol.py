@@ -1265,6 +1265,17 @@ class LOYOValidator:
                     w_trains.append(np.ones(len(data["y"])))
 
             if not X_trains:
+                if self.temporal_mode == "rolling_window":
+                    min_available = min(
+                        (y for y in data_by_year if y != held_out_year), default=None
+                    )
+                    if min_available is None or min_available >= held_out_year:
+                        logger.info(
+                            "LOYO: Skipping fold %d — no prior years available "
+                            "in rolling_window mode (earliest available: %s).",
+                            held_out_year, min_available,
+                        )
+                        continue
                 logger.warning("LOYO: No training data for fold %d", held_out_year)
                 continue
 

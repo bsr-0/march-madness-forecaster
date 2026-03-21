@@ -21,6 +21,7 @@ from ...data.features.proprietary_metrics import (
     _team_id,
     team_games_to_game_records,
 )
+from .data_loader import load_roster_overlay
 from ..config import (
     MIN_SEASON_FEATURE_COMPLETENESS,
     SOTAPipelineConfig,
@@ -154,12 +155,12 @@ def _load_year_samples_incremental_core(
             "season-end data leakage.",
             year,
         )
-        return np.empty((0, feature_dim)), np.array([]), {}
+        return np.empty((0, feature_dim)), np.array([]), np.array([]), {}, np.array([])
 
     game_records = team_games_to_game_records(team_games_raw, year)
     if len(game_records) < 100:
         logger.warning("Year %d: only %d GameRecords — skipping.", year, len(game_records))
-        return np.empty((0, feature_dim)), np.array([]), {}
+        return np.empty((0, feature_dim)), np.array([]), np.array([]), {}, np.array([])
 
     # ── 2. Load auxiliary data (conference map, seeds, rosters) ────────
     conference_map = None
@@ -298,23 +299,13 @@ def _load_year_samples_incremental_core(
             year,
         )
 
-    # Roster features
-    team_roster_features: Dict[str, Dict] = {}
+    # Roster features — compute player-level overlays from cbbpy roster JSON.
     roster_path = os.path.join(
         os.path.dirname(games_path), "historical", f"cbbpy_rosters_{year}.json"
     )
     if not os.path.isfile(roster_path):
         roster_path = os.path.join(os.path.dirname(games_path), f"cbbpy_rosters_{year}.json")
-    if os.path.isfile(roster_path):
-        try:
-            with open(roster_path, "r") as f:
-                roster_data = json.load(f)
-            if isinstance(roster_data, dict):
-                for tid, info in roster_data.items():
-                    if isinstance(info, dict):
-                        team_roster_features[tid] = info
-        except Exception as _roster_exc:
-            logger.debug("Roster features loading failed for year %d: %s", year, _roster_exc)
+    team_roster_overlay = load_roster_overlay(roster_path)
 
     # ── 3. Create incremental engine ──────────────────────────────────
     inc_engine = IncrementalMetricsEngine(
@@ -376,6 +367,7 @@ def _load_year_samples_incremental_core(
             np.array([]),
             np.array([]),
             inc_engine.get_end_of_season_elo(),
+            np.array([]),
         )
 
     # ── 5. Build feature vectors ──────────────────────────────────────
@@ -435,14 +427,11 @@ def _load_year_samples_incremental_core(
             external_rating_spread=_ms2,
         )
 
-        # Overlay roster features
-        rf1 = team_roster_features.get(g.team_id, {})
-        rf2 = team_roster_features.get(g.opponent_id, {})
-        if rf1 or rf2:
-            v1[15] = rf1.get("roster_continuity", 0.0)
-            v1[17] = rf1.get("avg_experience", 0.0)
-            v2[15] = rf2.get("roster_continuity", 0.0)
-            v2[17] = rf2.get("avg_experience", 0.0)
+        # Overlay roster features (RAPM, WARP, depth, experience, etc.)
+        for _v, _tid in ((v1, g.team_id), (v2, g.opponent_id)):
+            _overlay = team_roster_overlay.get(_tid, {})
+            for _idx, _val in _overlay.items():
+                _v[_idx] = _val
 
         matchup = IncrementalMetricsEngine.build_matchup_vector(
             v1,

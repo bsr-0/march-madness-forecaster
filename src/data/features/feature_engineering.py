@@ -342,23 +342,23 @@ class TeamFeatures:
     # They are NO LONGER used for z-scoring in to_vector() (FIX #2).
     # StandardScaler handles all normalization from training data.
     _POPULATION_STATS = {
-        # (mean, std) — derived from 10 years of D1 data
+        # (mean, std) — derived from D1 tournament-field data (updated 2026)
         "adj_off_eff":          (103.5,  7.5),
         "adj_def_eff":          (103.5,  7.5),
-        "adj_tempo":            (68.2,   3.8),
+        "adj_tempo":            (72.0,   4.5),
         "efg_pct":              (0.498,  0.030),
         "to_rate":              (0.185,  0.025),
         "orb_rate":             (0.295,  0.035),
         "ft_rate":              (0.315,  0.055),
         "opp_efg_pct":          (0.498,  0.030),
-        "opp_to_rate":          (0.185,  0.025),
+        "opp_to_rate":          (0.165,  0.030),
         "drb_rate":             (0.705,  0.035),
         "opp_ft_rate":          (0.315,  0.055),
-        "total_rapm":           (0.0,    5.0),
-        "top5_rapm":            (0.0,    4.5),
-        "bench_rapm":           (0.0,    2.5),
-        "total_warp":           (2.0,    2.0),
-        "roster_continuity":    (0.65,   0.20),
+        "total_rapm":           (15.0,   25.0),
+        "top5_rapm":            (10.0,   18.0),
+        "bench_rapm":           (4.0,    8.0),
+        "total_warp":           (1.5,    1.0),
+        "roster_continuity":    (0.45,   0.25),
         "transfer_impact":      (0.0,    2.0),
         "avg_experience":       (2.0,    0.6),
         "bench_depth":          (1.5,    1.5),
@@ -368,13 +368,13 @@ class TeamFeatures:
         "lead_sustainability":  (0.5,    0.15),
         "comeback_factor":      (0.0,    0.2),
         # close_game_record: REMOVED (FIX 2.4 — pure noise)
-        "xp_per_poss":          (1.0,    0.08),
+        "xp_per_poss":          (0.85,   0.10),
         "shot_distribution":    (0.45,   0.10),
         "sos_adj_em":           (0.0,    6.5),
-        "sos_opp_o":            (103.5,  3.0),
+        "sos_opp_o":            (100.0,  4.0),
         "sos_opp_d":            (103.5,  3.0),
-        "ncsos_adj_em":         (0.0,    5.0),
-        "luck":                 (0.0,    0.045),
+        "ncsos_adj_em":         (-4.0,   6.0),
+        "luck":                 (0.0,    0.025),
         "wab":                  (0.0,    4.5),
         "sor":                  (0.50,   0.25),
         "wab_poisson":          (0.0,    4.5),
@@ -398,16 +398,16 @@ class TeamFeatures:
         "q1_win_pct":           (0.35,   0.25),
         "foul_rate":            (0.18,   0.025),
         "three_pt_regression":  (0.0,    0.025),
-        "rest_days":            (5.0,    2.5),
+        "rest_days":            (7.0,    3.5),
         "top5_minutes_share":   (0.70,   0.06),
-        "pace_variance":        (3.5,    1.5),
+        "pace_variance":        (5.0,    2.0),
         "coach_tourn_win_rate": (0.45,   0.20),
         "neutral_site_win":     (0.50,   0.22),
         "home_court_dep":       (6.0,    5.0),
         "transition_eff":       (0.0,    0.10),
         "def_transition_vuln":  (0.0,    0.10),
-        "backcourt_rapm":       (0.0,    3.0),
-        "frontcourt_rapm":      (0.0,    3.0),
+        "backcourt_rapm":       (10.0,   18.0),
+        "frontcourt_rapm":      (4.0,    8.0),
     }
 
     def to_vector(self, include_embeddings: bool = False) -> np.ndarray:
@@ -1423,70 +1423,6 @@ def validate_population_stats(
         )
 
     return warnings
-
-
-def compute_rapm(
-    players: List[Player],
-    stints: List[Dict],
-    regularization: float = 0.01
-) -> Dict[str, Tuple[float, float]]:
-    """
-    Compute Regularized Adjusted Plus-Minus for players.
-
-    Uses ridge regression to solve for player contributions.
-
-    Args:
-        players: List of Player objects
-        stints: List of stint dictionaries
-        regularization: Ridge regression lambda
-
-    Returns:
-        Dict of player_id -> (offensive_rapm, defensive_rapm)
-    """
-    if not stints:
-        return {}
-
-    player_ids = [p.player_id for p in players]
-    player_to_idx = {pid: i for i, pid in enumerate(player_ids)}
-    n_players = len(player_ids)
-
-    X = np.zeros((len(stints), n_players))
-    y = np.zeros(len(stints))
-    weights = np.zeros(len(stints))
-
-    for i, stint in enumerate(stints):
-        stint_players = stint.get('players', [])
-        possessions = stint.get('possessions', 1)
-        plus_minus = stint.get('plus_minus', 0)
-
-        for pid in stint_players:
-            if pid in player_to_idx:
-                X[i, player_to_idx[pid]] = 1.0
-
-        y[i] = (plus_minus / possessions) * 100 if possessions > 0 else 0
-        weights[i] = possessions
-
-    W = np.diag(weights)
-    XtWX = X.T @ W @ X
-    XtWy = X.T @ W @ y
-
-    reg_matrix = regularization * np.eye(n_players)
-
-    try:
-        rapm_values = np.linalg.solve(XtWX + reg_matrix, XtWy)
-    except np.linalg.LinAlgError:
-        rapm_values = np.linalg.lstsq(XtWX + reg_matrix, XtWy, rcond=None)[0]
-
-    result = {}
-    for pid, rapm in zip(player_ids, rapm_values):
-        player = next((p for p in players if p.player_id == pid), None)
-        if player:
-            off_ratio = 0.6 if player.usage_rate > 20 else 0.4
-            result[pid] = (rapm * off_ratio, rapm * (1 - off_ratio))
-        else:
-            result[pid] = (rapm * 0.5, rapm * 0.5)
-
-    return result
 
 
 def calculate_continuity_score(
