@@ -338,6 +338,15 @@ class CBBpyRosterScraper:
                 turnovers = p["to"]
                 usage_num = fga + 0.44 * fta + turnovers
                 usage_rate = 100.0 * usage_num / max(team_usage_denom, 1.0)
+                # Box Plus-Minus: weighted per-game stats CENTERED on D1 averages
+                # so an average rotation player produces BPM ≈ 0.
+                # D1 rotation-player averages (≥5 mpg, ≥3 gp, from cbbpy 2024):
+                # 7.1 ppg, 1.3 apg, 1.0 oreb/g, 2.2 dreb/g, 0.65 stl/g, 0.33 blk/g,
+                # 1.15 tov/g, 1.7 pf/g.
+                _AVG_IMPACT = (
+                    7.1 + 0.7 * 1.3 + 0.8 * 1.0 + 0.6 * 2.2
+                    + 1.2 * 0.65 + 1.0 * 0.33 - 0.9 * 1.15 - 0.35 * 1.7
+                )  # ≈ 9.30
                 raw_impact = (
                     p["pts"]
                     + 0.7 * p["ast"]
@@ -348,9 +357,9 @@ class CBBpyRosterScraper:
                     - 0.9 * turnovers
                     - 0.35 * p["pf"]
                 )
-                bpm = raw_impact / games_played
+                bpm = raw_impact / games_played - _AVG_IMPACT
                 minute_share = minutes / team_minutes
-                warp = max(0.0, bpm * minute_share / 12.0)
+                warp = max(0.0, bpm * minute_share * games_played / 300.0)
                 true_shooting = p["pts"] / max(2.0 * (fga + 0.44 * fta), 1e-6)
                 efg = (p["fgm"] + 0.5 * p["fg3m"]) / max(fga, 1e-6)
 
@@ -445,22 +454,23 @@ class CBBpyRosterScraper:
         pfpg = p["pf"] / gp
 
         # --- Offensive RAPM ---
-        # D1 averages (approximate): 11 ppg, 2.5 apg, 1.5 orpg, 2.0 topg, 0.52 TS%
+        # D1 rotation-player averages (≥5 mpg, ≥3 gp, from cbbpy 2024):
+        # 7.1 ppg, 1.3 apg, 1.0 oreb/g, 1.15 tov/g, 0.52 TS%
         o_rapm = (
-            (ppg - 11.0) * 0.25
-            + (apg - 2.5) * 0.55
-            + (orpg - 1.5) * 0.35
-            - (topg - 2.0) * 0.45
+            (ppg - 7.1) * 0.25
+            + (apg - 1.3) * 0.55
+            + (orpg - 1.0) * 0.35
+            - (topg - 1.15) * 0.45
             + (true_shooting - 0.52) * 12.0
         )
 
         # --- Defensive RAPM ---
-        # D1 averages: 3.5 drpg, 0.8 spg, 0.5 bpg, 2.0 pfpg
+        # D1 averages: 2.2 dreb/g, 0.65 stl/g, 0.33 blk/g, 1.7 pf/g
         d_rapm = (
-            (drpg - 3.5) * 0.20
-            + (spg - 0.8) * 1.2
-            + (bpg - 0.5) * 0.9
-            - (pfpg - 2.0) * 0.20
+            (drpg - 2.2) * 0.20
+            + (spg - 0.65) * 1.2
+            + (bpg - 0.33) * 0.9
+            - (pfpg - 1.7) * 0.20
         )
 
         # Weight by minutes share: a 32+ mpg player gets full value;
