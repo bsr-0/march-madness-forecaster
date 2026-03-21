@@ -722,10 +722,14 @@ class TestEnrichRosterRapm:
         players = [
             Player(player_id="p1", name="A", team_id="duke", position=Position.POINT_GUARD,
                    rapm_offensive=0.0, rapm_defensive=0.0,
-                   box_plus_minus=5.0, warp=1.0, usage_rate=25.0),
+                   box_plus_minus=5.0, warp=1.0, usage_rate=25.0,
+                   minutes_per_game=30.0, games_played=25,
+                   points_per_game=15.0, assists_per_game=4.0,
+                   rebounds_per_game=5.0, steals_per_game=1.2,
+                   blocks_per_game=0.5, turnovers_per_game=2.0),
         ]
         enrich_roster_rapm(players, {}, min_rapm_players=3)
-        # BPM backfill should set non-zero RAPM
+        # BPM backfill should set non-zero RAPM from box-score stats
         assert abs(players[0].rapm_offensive) > 0 or abs(players[0].rapm_defensive) > 0
 
 

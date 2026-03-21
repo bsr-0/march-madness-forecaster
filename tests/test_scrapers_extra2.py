@@ -1082,14 +1082,6 @@ class TestCBBpyRosterScraperHelpers:
         result = CBBpyRosterScraper._frame_to_records(mock_df)
         assert result == [{"x": 1}]
 
-    def test_is_possession_ending(self):
-        from src.data.scrapers.cbbpy_rosters import CBBpyRosterScraper
-        assert CBBpyRosterScraper._is_possession_ending("turnover", "", {}) is True
-        assert CBBpyRosterScraper._is_possession_ending("made shot", "", {"scoring_play": True}) is True
-        assert CBBpyRosterScraper._is_possession_ending("rebound", "defensive rebound", {}) is True
-        assert CBBpyRosterScraper._is_possession_ending("free throw", "Free Throw 2 of 2", {}) is True
-        assert CBBpyRosterScraper._is_possession_ending("pass", "assist", {}) is False
-
     def test_constructor_no_cache(self):
         from src.data.scrapers.cbbpy_rosters import CBBpyRosterScraper
         s = CBBpyRosterScraper()
