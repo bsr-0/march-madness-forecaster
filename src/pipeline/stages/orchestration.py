@@ -22,6 +22,7 @@ from ..config import (
     SOTAPipelineConfig,
 )
 from ...exceptions import LeakageError
+from ...governance.artifact_provenance import build_artifact_provenance
 from ...governance.cache_hygiene import purge_ephemeral_cache_paths
 
 logger = logging.getLogger(__name__)
@@ -603,6 +604,7 @@ def assemble_report(
         "injury_integration": injury_stats,
         "hyperparameter_tuning": pipeline.tuning_result or {},
         "feature_selection": _build_feature_selection_artifact(pipeline),
+        "feature_manifest": getattr(pipeline, "_feature_manifest", {}),
         "ablation_study": mode_result.ablation_stats,
     }
 
@@ -715,6 +717,10 @@ def assemble_report(
         },
         "artifacts": shared_artifacts,
         "phase_timings": pipeline._phase_timer.get_timings(),
+        "artifact_provenance": build_artifact_provenance(
+            pipeline=pipeline,
+            artifact_kind="pipeline_report",
+        ),
     }
 
     # Promote key LOYO diagnostics to top-level for easy access
@@ -791,10 +797,11 @@ def _build_espn_first_round_matchups(pipeline) -> List[str]:
 
 def _build_feature_selection_artifact(pipeline) -> Dict:
     """Build feature selection artifact for report."""
+    result = dict(getattr(pipeline, "_feature_manifest", {}) or {})
     if not pipeline.feature_selection_result:
-        return {}
+        return result
     fsr = pipeline.feature_selection_result
-    result = {
+    result.update({
         "original_dim": fsr.original_dim,
         "reduced_dim": fsr.reduced_dim,
         "correlation_dropped": len(fsr.correlation_dropped),
@@ -803,7 +810,7 @@ def _build_feature_selection_artifact(pipeline) -> Dict:
             {"name": f.name, "importance": round(f.importance, 4)}
             for f in fsr.importance_scores[:15]
         ],
-    }
+    })
     if fsr.stability_scores:
         result["stability_scores"] = {
             k: round(v, 3) for k, v in sorted(
@@ -978,6 +985,13 @@ def _store_artifacts(pipeline, report, baseline_stats, experiment_id, loyo_cv) -
             )
 
         artifact_store.save_config(pipeline.config, exp_id)
+
+        feature_manifest = getattr(pipeline, "_feature_manifest", None)
+        if feature_manifest:
+            artifact_store.save_feature_manifest(
+                feature_manifest,
+                f"{exp_id}_feature_manifest",
+            )
 
         if hasattr(pipeline, "_model") and pipeline._model is not None:
             feat_importance = {}

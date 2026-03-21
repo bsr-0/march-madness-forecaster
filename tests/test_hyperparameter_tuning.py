@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 
+from src.ml.evaluation.evaluation_integrity import HoldoutContaminationError, YearSplitPolicy
 from src.ml.optimization.hyperparameter_tuning import (
     TemporalCrossValidator,
     TemporalSplit,
@@ -196,6 +197,35 @@ class TestOptunaTuning:
         mean_brier = np.mean([r.brier_score for r in results])
         # A logistic regression on linearly separable data should do better than coin flip
         assert mean_brier < 0.25
+
+
+class TestDevOnlyTuningGuards:
+    def test_logistic_tuner_rejects_holdout_years_before_running_optuna(self):
+        from src.ml.optimization.hyperparameter_tuning import LogisticTuner
+
+        if not OPTUNA_AVAILABLE:
+            pytest.skip("Optuna not installed")
+
+        rng = np.random.RandomState(42)
+        X = rng.randn(40, 4)
+        y = (X[:, 0] > 0).astype(int)
+        sort_keys = np.arange(40)
+
+        tuner = LogisticTuner(n_trials=1, n_cv_splits=2, timeout=1)
+        policy = YearSplitPolicy(
+            dev_years=(2016, 2017),
+            holdout_years=(2025,),
+            prospective_years=(2026,),
+        )
+
+        with pytest.raises(HoldoutContaminationError, match="NOT in the dev set"):
+            tuner.tune(
+                X,
+                y,
+                sort_keys,
+                development_years=[2016, 2025],
+                year_split_policy=policy,
+            )
 
 
 # ---------------------------------------------------------------------------
