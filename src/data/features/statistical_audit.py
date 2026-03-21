@@ -135,6 +135,9 @@ class SystematicRedundancyAuditor:
         try:
             # Compute eigenvalues of the correlation/covariance matrix
             cov = np.dot(X_normed.T, X_normed) / max(n_samples - 1, 1)
+            # Guard against NaN/inf from degenerate inputs
+            if not np.all(np.isfinite(cov)):
+                cov = np.nan_to_num(cov, nan=0.0, posinf=0.0, neginf=0.0)
             eigenvalues = np.linalg.eigvalsh(cov)
             eigenvalues = np.sort(eigenvalues)[::-1]  # descending
 
@@ -150,7 +153,7 @@ class SystematicRedundancyAuditor:
                     n_collapsed, n_features,
                     self.eigenvalue_threshold, effective_rank,
                 )
-        except np.linalg.LinAlgError:
+        except (np.linalg.LinAlgError, ValueError, FloatingPointError):
             eigenvalues = None
             effective_rank = n_features
             logger.warning("Eigenvalue computation failed; skipping eigenvalue analysis.")

@@ -949,6 +949,9 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # year loading (multi-year calibration needs to reconstruct vectors
     # of the same width as the original matchup features).
     pipeline.baseline_model.feature_dim = X_full.shape[1]
+    # Also store the raw (pre-zero-variance-pruning) matchup dimension
+    # so calibration can load data at full width then prune post-hoc.
+    pipeline.baseline_model.raw_feature_dim = _loyo_raw_feature_dim
 
     # FIX M1: Split eval into dev (early stopping) and eval (final
     # evaluation).  Using the same data for both inflates eval metrics.

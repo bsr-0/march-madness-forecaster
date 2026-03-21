@@ -1008,8 +1008,8 @@
   "source_file_hashes": {
     "src/pipeline/config.py": "a8fac26fd78004ce80a74f49e00000206408e92ac7bde10fcdd319064ef75c68",
     "src/pipeline/sota.py": "da02e031a666d5470161b7e2459ca799bda33606e69d0ed492d6b2766147cac4",
-    "src/pipeline/stages/baseline_training.py": "204ccef0fe9d2d60798f5fa008e04f0f4759182d92ed90c6f1ad131f9b21ee10",
-    "src/pipeline/stages/calibration.py": "ec3745850eea3fa3dd48bd0264eec84bac1e7687612e0639df1ad78d90cd7d7a",
+    "src/pipeline/stages/baseline_training.py": "b2d034033f5fd190f2e5cdc32973e6fa6e842a3f6bc5fb3170d890b299a8fec2",
+    "src/pipeline/stages/calibration.py": "9abe19ef9b0e16e3310eaf9e84016f66583eaad5ea2e8ab990a25e0e4776204a",
     "src/pipeline/stages/data_loader.py": "122bb861d1e6bfd8cecf19e282ce295efdc1832864083a7b42cbdeb74e157db9",
     "src/pipeline/stages/inference.py": "14d610aad913b9e7b8441670768eadd0bc8e2887bbfd15f1473a2b2c95c283e0",
     "src/pipeline/probability_pipeline.py": "b11825b1b5592bc6effd2eb053231c6846d0f0c5b106909c259e5268985c0e48",
@@ -1017,7 +1017,7 @@
     "src/governance/production_runner.py": "60cd189ac09b0a527800f06f96b0af40d04578c412188b20a6ba4012a205cff2",
     "src/run_production_2026.py": "e5c7dde0211feb896d2db7d26fa28a5b7d8be8c1763c3f6ae448847a067cf29e"
   },
-  "source_tree_hash": "e23cb9cfd1f9c2ed055dc56228a6fa879d508f9f82dace80d91ac231dde3bc68",
+  "source_tree_hash": "641314aff4fd21dc10383cac0e9c24c99623140bf7601a7ab5d16c2efdd76aba",
   "data_file_hashes": {
     "data/raw/torvik_2026.json": "214cec3364a8ade6d63b185063ffd53d7f9b2cc0d79f03e2876b1d9583d0f817",
     "data/raw/teams_2026.json": "18713882c27372ad9ad9cf0c5034ea3d14d36f61d0ea33b0cac59ff7b619ee68",
