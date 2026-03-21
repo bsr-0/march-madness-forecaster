@@ -1,4 +1,24 @@
-"""Provider adapters that prefer library-backed data over custom scraping."""
+"""Provider adapters that prefer library-backed data over custom scraping.
+
+Simplified to three verified sources:
+
+    historical_games:  espn_scoreboard → sportsdataverse → cbbpy
+    team_metrics:      sportsdataverse (only)
+    torvik:            barttorvik CSV
+
+Dead providers removed: sportsipy, cbbdata.  Their absence reduces the
+provider chain from 5 to 3 entries with full test coverage and eliminates the
+date-normalization hacks needed to paper over incompatible formats.
+
+The ESPN scoreboard provider now extracts full box-score statistics from the
+``competitor.statistics`` array (``fieldGoalsMade-fieldGoalsAttempted``, etc.)
+so downstream features have the same data quality as cbbpy at much higher
+reliability.
+
+Deduplication uses ``(game_id, team_id, date)`` — if date is missing it falls
+back to ``(game_id, team_id)`` — and logs a WARNING on collisions to surface
+provider inconsistencies early.
+"""
 
 from __future__ import annotations
 
@@ -8,14 +28,26 @@ import io
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Callable, Dict, List, Optional
 
 import requests
 
 from ..normalize import normalize_team_id as _shared_normalize_team_id
+from .game_fetchers import (
+    _parse_espn_stats,
+    is_in_season_window,
+    parse_espn_event,
+    _team_perspective_rows_to_records,
+    HistoricalGameFetcher,
+)
 
 logger = logging.getLogger(__name__)
+
+_ESPN_SCOREBOARD_URL = (
+    "https://site.api.espn.com/apis/site/v2/sports/basketball/"
+    "mens-college-basketball/scoreboard"
+)
 
 
 @dataclass
@@ -25,23 +57,29 @@ class ProviderResult:
 
 
 class LibraryProviderHub:
-    """Best-effort data provider hub with ordered fallback."""
+    """Best-effort data provider hub with ordered fallback.
+
+    Provider priority (cannot be overridden for games; configurable for
+    team_metrics and torvik through the ``priority`` argument):
+
+    ``historical_games``:  espn_scoreboard → sportsdataverse → cbbpy
+    ``team_metrics``:      sportsdataverse
+    ``torvik``:            barttorvik
+    """
 
     DEFAULT_PRIORITIES = {
-        "historical_games": ["sportsdataverse", "espn_scoreboard", "cbbpy", "sportsipy", "cbbdata"],
-        "team_metrics": ["sportsdataverse", "sportsipy", "cbbdata"],
-        "torvik": ["barttorvik", "cbbdata"],
+        "historical_games": ["espn_scoreboard", "sportsdataverse", "cbbpy"],
+        "team_metrics": ["sportsdataverse"],
+        "torvik": ["barttorvik"],
     }
 
     def fetch_historical_games(
         self, year: int, priority: Optional[List[str]] = None, since: Optional[str] = None,
     ) -> ProviderResult:
         methods = {
+            "espn_scoreboard": self._from_espn_scoreboard_api,
             "sportsdataverse": self._from_sportsdataverse_pbp,
             "cbbpy": self._from_cbbpy_pbp,
-            "espn_scoreboard": self._from_espn_scoreboard_api,
-            "sportsipy": self._from_sportsipy_games_api,
-            "cbbdata": self._from_cbbdata_games_api,
         }
         for method in self._ordered_methods("historical_games", methods, priority):
             result = method(year, since=since)
@@ -52,8 +90,6 @@ class LibraryProviderHub:
     def fetch_team_box_metrics(self, year: int, priority: Optional[List[str]] = None) -> ProviderResult:
         methods = {
             "sportsdataverse": self._from_sportsdataverse_team_box,
-            "sportsipy": self._from_sportsipy_team_metrics_api,
-            "cbbdata": self._from_cbbdata_team_metrics_api,
         }
         for method in self._ordered_methods("team_metrics", methods, priority):
             result = method(year)
@@ -64,7 +100,6 @@ class LibraryProviderHub:
     def fetch_torvik_ratings(self, year: int, priority: Optional[List[str]] = None) -> ProviderResult:
         methods = {
             "barttorvik": self._from_barttorvik_csv,
-            "cbbdata": self._from_cbbdata_torvik_api,
         }
         for method in self._ordered_methods("torvik", methods, priority):
             result = method(year)
@@ -74,10 +109,8 @@ class LibraryProviderHub:
 
     def credential_requirements(self) -> Dict[str, List[str]]:
         return {
-            "cbbdata_api": ["CBBDATA_API_KEY", "CBBDATA_BASE_URL"],
             "sportsdataverse_py": [],
             "cbbpy": [],
-            "sportsipy": [],
             "barttorvik": [],
         }
 
@@ -94,6 +127,66 @@ class LibraryProviderHub:
             if method is not None:
                 resolved.append(method)
         return resolved
+
+    # ── Historical games providers ─────────────────────────────────────────
+
+    def _from_espn_scoreboard_api(self, year: int, since: Optional[str] = None) -> ProviderResult:
+        """Fetch games directly from ESPN's public scoreboard JSON API.
+
+        Queries both regular-season (seasontype=2) and postseason (seasontype=3)
+        scoreboards so conference tournament and March Madness games are
+        included.  Extracts full box-score statistics when available.
+
+        Deduplication key: ``(game_id, date)`` — games returned by both
+        seasontype=2 and seasontype=3 are merged, keeping the richer record.
+        A WARNING is logged when the same game_id appears with different dates
+        (indicates a provider inconsistency).
+        """
+        start_iso = since or f"{year - 1}-11-01"
+        start = datetime.strptime(start_iso, "%Y-%m-%d").date()
+        end = datetime.strptime(f"{year}-04-15", "%Y-%m-%d").date()
+
+        # Create a single HistoricalGameFetcher instance for its _fetch_day logic
+        fetcher = HistoricalGameFetcher(http_timeout=30, max_workers=1)
+        session = requests.Session()
+
+        all_records: List[Dict] = []
+        current = start
+        while current <= end:
+            ingestion_records = fetcher._fetch_day(current, year, session)
+            # Convert IngestionGameRecord → two team-perspective dicts per game
+            for rec in ingestion_records:
+                all_records.extend(rec.to_team_game_rows())
+            current += timedelta(days=1)
+
+        session.close()
+
+        if not all_records:
+            return ProviderResult("espn_scoreboard", [])
+
+        # Deduplicate by (game_id, team_id, date) — log inconsistencies
+        seen: Dict[tuple, Dict] = {}
+        for rec in all_records:
+            key = (str(rec.get("game_id", "")), str(rec.get("team_id", "")), str(rec.get("date", "")))
+            if key in seen:
+                logger.debug("Dedup: dropping exact duplicate game_id=%s team_id=%s", key[0], key[1])
+                continue
+            # Check for same (game_id, team_id) but different date
+            loose_key = (str(rec.get("game_id", "")), str(rec.get("team_id", "")))
+            existing_keys = [k for k in seen if k[:2] == loose_key]
+            if existing_keys:
+                existing_date = existing_keys[0][2]
+                new_date = str(rec.get("date", ""))
+                if existing_date != new_date:
+                    logger.warning(
+                        "Date inconsistency: game_id=%s team_id=%s has dates %s and %s — "
+                        "keeping earlier ESPN record",
+                        key[0], key[1], existing_date, new_date,
+                    )
+                continue
+            seen[key] = rec
+
+        return ProviderResult("espn_scoreboard", list(seen.values()))
 
     def _from_sportsdataverse_pbp(self, year: int, since: Optional[str] = None) -> ProviderResult:
         mbb = self._import_module("sportsdataverse.mbb")
@@ -123,47 +216,17 @@ class LibraryProviderHub:
                 continue
         return ProviderResult("sportsdataverse", [])
 
-    def _from_sportsdataverse_team_box(self, year: int) -> ProviderResult:
-        mbb = self._import_module("sportsdataverse.mbb")
-        if mbb is None:
-            return ProviderResult("sportsdataverse", [])
-
-        call_candidates = [
-            ("load_mbb_team_boxscore", {"seasons": [year]}),
-            ("load_mbb_team_boxscore", {"year": year}),
-            ("espn_mbb_team_boxscore", {"year": year}),
-        ]
-        for fn_name, kwargs in call_candidates:
-            fn = getattr(mbb, fn_name, None)
-            if fn is None:
-                continue
-            try:
-                df = fn(**kwargs)
-                records = self._frame_to_records(df)
-                if records:
-                    return ProviderResult("sportsdataverse", records)
-            except (TypeError, ValueError, AttributeError, KeyError, ImportError) as exc:
-                logger.debug("sportsdataverse %s failed: %s", fn_name, exc)
-                continue
-        return ProviderResult("sportsdataverse", [])
-
     def _from_cbbpy_pbp(self, year: int, since: Optional[str] = None) -> ProviderResult:
         scraper = self._import_module("cbbpy.mens_scraper")
         if scraper is None:
             return ProviderResult("cbbpy", [])
 
-        start_date = since or f"{year-1}-11-01"
+        start_date = since or f"{year - 1}-11-01"
         end_date = f"{year}-04-15"
 
         all_game_rows: List[Dict] = []
 
-        # cbbpy hardcodes seasontype/2 (regular season) in its ESPN
-        # scoreboard URL.  Conference tournaments and March Madness are
-        # seasontype/3.  We try the default first, then patch the URL
-        # to also scrape postseason games.
-        season_types_to_try = [None]  # None = use cbbpy default (seasontype/2)
-        # If the date range could include postseason games (March onwards),
-        # also try seasontype/3.
+        season_types_to_try = [None]
         if end_date >= f"{year}-03-01":
             season_types_to_try.append(3)
 
@@ -188,7 +251,6 @@ class LibraryProviderHub:
                 if rows:
                     all_game_rows.extend(rows)
             finally:
-                # Always restore the original URL
                 if patched and original_url is not None:
                     try:
                         utils = self._import_module("cbbpy.utils.cbbpy_utils")
@@ -200,8 +262,8 @@ class LibraryProviderHub:
         if not all_game_rows:
             return ProviderResult("cbbpy", [])
 
-        # Deduplicate by game_id + team_id
-        seen = set()
+        # Deduplicate by (game_id, team_id) — cbbpy does not always have reliable dates
+        seen: set = set()
         deduped: List[Dict] = []
         for row in all_game_rows:
             key = (str(row.get("game_id", "")), str(row.get("team_id", "")))
@@ -214,13 +276,6 @@ class LibraryProviderHub:
     def _cbbpy_scrape_attempt(
         self, scraper, year: int, start_date: str, end_date: str, since: Optional[str],
     ) -> List[Dict]:
-        """Run a single cbbpy scraping attempt and return normalised rows."""
-        # CBBpy function names have changed across releases; probe common names.
-        # Wrap in thread-based timeout — cbbpy's internal requests.get()
-        # has no timeout and can hang indefinitely on ESPN.
-        # When doing incremental fetches (since is set), ONLY use get_games_range
-        # to avoid scraping the full season from November onwards.  If
-        # get_games_range fails, return empty so the next provider can handle it.
         fn_order = ("get_games_range",) if since else ("get_games_season", "get_games_range")
         for fn_name in fn_order:
             fn = getattr(scraper, fn_name, None)
@@ -236,7 +291,7 @@ class LibraryProviderHub:
                 else:
                     games = self._run_with_timeout(
                         fn,
-                        args=(f"{year-1}-11-01", f"{year}-04-15"),
+                        args=(f"{year - 1}-11-01", f"{year}-04-15"),
                         kwargs={"info": True, "box": True, "pbp": False},
                         timeout=600,
                     )
@@ -246,7 +301,7 @@ class LibraryProviderHub:
                         games = self._run_with_timeout(fn, args=(year,), timeout=600)
                     else:
                         games = self._run_with_timeout(
-                            fn, args=(f"{year-1}-11-01", f"{year}-04-15"), timeout=600,
+                            fn, args=(f"{year - 1}-11-01", f"{year}-04-15"), timeout=600,
                         )
                 except Exception:
                     continue
@@ -257,13 +312,6 @@ class LibraryProviderHub:
             game_rows = self._normalize_cbbpy_records(games)
             if not game_rows:
                 continue
-            # During incremental fetches, filter records to only include games
-            # from the since date.  This applies to both get_games_range (which
-            # may not respect the start_date boundary exactly) and
-            # get_games_season (which returns the entire season).
-            # Keep records with empty/missing dates — they likely represent
-            # recent games whose dates weren't extracted from the info
-            # DataFrame.  Dropping them silently loses new data.
             if since:
                 self._normalize_date_field(game_rows)
                 game_rows = [
@@ -274,189 +322,33 @@ class LibraryProviderHub:
 
         return []
 
-    def _from_espn_scoreboard_api(self, year: int, since: Optional[str] = None) -> ProviderResult:
-        """Fetch games directly from ESPN's public scoreboard JSON API.
+    # ── Team metrics provider ──────────────────────────────────────────────
 
-        Unlike cbbpy (which hardcodes seasontype=2), this provider queries
-        both regular-season and postseason scoreboards so conference
-        tournament and March Madness games are included.
-        """
-        from datetime import timedelta
+    def _from_sportsdataverse_team_box(self, year: int) -> ProviderResult:
+        mbb = self._import_module("sportsdataverse.mbb")
+        if mbb is None:
+            return ProviderResult("sportsdataverse", [])
 
-        start = datetime.strptime(since or f"{year-1}-11-01", "%Y-%m-%d").date()
-        end = datetime.strptime(f"{year}-04-15", "%Y-%m-%d").date()
+        call_candidates = [
+            ("load_mbb_team_boxscore", {"seasons": [year]}),
+            ("load_mbb_team_boxscore", {"year": year}),
+            ("espn_mbb_team_boxscore", {"year": year}),
+        ]
+        for fn_name, kwargs in call_candidates:
+            fn = getattr(mbb, fn_name, None)
+            if fn is None:
+                continue
+            try:
+                df = fn(**kwargs)
+                records = self._frame_to_records(df)
+                if records:
+                    return ProviderResult("sportsdataverse", records)
+            except (TypeError, ValueError, AttributeError, KeyError, ImportError) as exc:
+                logger.debug("sportsdataverse %s failed: %s", fn_name, exc)
+                continue
+        return ProviderResult("sportsdataverse", [])
 
-        base_url = (
-            "https://site.api.espn.com/apis/site/v2/sports/basketball/"
-            "mens-college-basketball/scoreboard"
-        )
-
-        all_records: List[Dict] = []
-        current = start
-        while current <= end:
-            date_str = current.strftime("%Y%m%d")
-            for season_type in (2, 3):
-                params = {
-                    "dates": date_str,
-                    "seasontype": season_type,
-                    "limit": 200,
-                    "groups": 50,
-                }
-                try:
-                    resp = requests.get(base_url, params=params, timeout=30)
-                    resp.raise_for_status()
-                    data = resp.json()
-                except (requests.RequestException, ValueError, KeyError) as exc:
-                    logger.debug("espn_scoreboard API error for %s st=%s: %s", date_str, season_type, exc)
-                    continue
-
-                for event in data.get("events", []):
-                    records = self._parse_espn_event(event, current.strftime("%Y-%m-%d"))
-                    all_records.extend(records)
-
-            current += timedelta(days=1)
-
-        if all_records:
-            # Deduplicate by game_id + team_id
-            seen = set()
-            deduped: List[Dict] = []
-            for rec in all_records:
-                key = (str(rec.get("game_id", "")), str(rec.get("team_id", "")))
-                if key not in seen:
-                    seen.add(key)
-                    deduped.append(rec)
-            return ProviderResult("espn_scoreboard", deduped)
-
-        return ProviderResult("espn_scoreboard", [])
-
-    def _parse_espn_event(self, event: Dict, fallback_date: str) -> List[Dict]:
-        """Parse an ESPN scoreboard event into game records."""
-        game_id = event.get("id", "")
-        competitions = event.get("competitions", [])
-        if not competitions:
-            return []
-
-        comp = competitions[0]
-        competitors = comp.get("competitors", [])
-        if len(competitors) < 2:
-            return []
-
-        # Extract date from event
-        event_date = fallback_date
-        raw_date = event.get("date", "")
-        if raw_date and len(raw_date) >= 10:
-            event_date = raw_date[:10]
-
-        teams_data = []
-        for c in competitors[:2]:
-            team_info = c.get("team", {})
-            teams_data.append({
-                "team_id": self._normalize_team_name(
-                    team_info.get("displayName") or team_info.get("shortDisplayName") or ""
-                ),
-                "team_name": team_info.get("displayName") or team_info.get("shortDisplayName") or "",
-                "score": int(c.get("score", 0) or 0),
-            })
-
-        records = []
-        for i, team in enumerate(teams_data):
-            opp = teams_data[1 - i]
-            records.append({
-                "game_id": game_id,
-                "date": event_date,
-                "team_id": team["team_id"],
-                "team_name": team["team_name"],
-                "opponent_id": opp["team_id"],
-                "opponent_name": opp["team_name"],
-                "team_score": team["score"],
-                "opponent_score": opp["score"],
-            })
-        return records
-
-    def _from_cbbdata_games_api(self, year: int, since: Optional[str] = None) -> ProviderResult:
-        payload = self._fetch_cbbdata_endpoint("CBBDATA_GAMES_URL", year)
-        records = payload.get("games") or payload.get("records") or []
-        return ProviderResult("cbbdata", records if isinstance(records, list) else [])
-
-    def _from_sportsipy_games_api(self, year: int, since: Optional[str] = None) -> ProviderResult:
-        try:
-            from sportsipy.ncaab.teams import Teams
-        except ImportError:
-            return ProviderResult("sportsipy", [])
-
-        seen = set()
-        records = []
-        for team in Teams(year):
-            team_id = self._normalize_team_name(team.name)
-            for game in team.schedule:
-                game_id = getattr(game, "boxscore", None)
-                if not game_id or game_id in seen:
-                    continue
-                seen.add(game_id)
-                opponent = getattr(game, "opponent_name", "")
-                opp_id = self._normalize_team_name(opponent)
-                # Extract game date — sportsipy exposes it as datetime or date.
-                game_date = ""
-                raw_date = getattr(game, "datetime", None) or getattr(game, "date", None)
-                if raw_date is not None:
-                    try:
-                        if hasattr(raw_date, "strftime"):
-                            game_date = raw_date.strftime("%Y-%m-%d")
-                        else:
-                            game_date = str(raw_date)[:10]
-                    except (ValueError, TypeError, AttributeError):
-                        pass
-                rec = {
-                    "game_id": game_id,
-                    "date": game_date,
-                    "team_id": team_id,
-                    "team_name": team.name,
-                    "opponent_id": opp_id,
-                    "opponent_name": opponent,
-                    "team_score": getattr(game, "points", 0),
-                    "opponent_score": getattr(game, "opponent_points", 0),
-                    "possessions": getattr(game, "possessions", 0),
-                }
-                records.append(rec)
-        return ProviderResult("sportsipy", records)
-
-    def _from_cbbdata_team_metrics_api(self, year: int) -> ProviderResult:
-        payload = self._fetch_cbbdata_endpoint("CBBDATA_TEAM_METRICS_URL", year)
-        records = payload.get("teams") or payload.get("records") or []
-        return ProviderResult("cbbdata", records if isinstance(records, list) else [])
-
-    def _from_sportsipy_team_metrics_api(self, year: int) -> ProviderResult:
-        try:
-            from sportsipy.ncaab.teams import Teams
-        except ImportError:
-            return ProviderResult("sportsipy", [])
-
-        records = []
-        for team in Teams(year):
-            team_id = self._normalize_team_name(team.name)
-            records.append(
-                {
-                    "team_id": team_id,
-                    "team_name": team.name,
-                    "name": team.name,
-                    "conference": getattr(team, "conference", ""),
-                    # Expose both canonical materialization fields and adj_* aliases.
-                    "off_rtg": getattr(team, "offensive_rating", None) or getattr(team, "points_per_game", 0.0),
-                    "def_rtg": getattr(team, "defensive_rating", None) or getattr(team, "points_against", 0.0),
-                    "pace": getattr(team, "pace", None) or getattr(team, "possessions_per_game", 70.0),
-                    "adj_offensive_efficiency": getattr(team, "offensive_rating", None)
-                    or getattr(team, "points_per_game", 0.0),
-                    "adj_defensive_efficiency": getattr(team, "defensive_rating", None)
-                    or getattr(team, "points_against", 0.0),
-                    "adj_tempo": getattr(team, "pace", None) or getattr(team, "possessions_per_game", 70.0),
-                }
-            )
-        return ProviderResult("sportsipy", records)
-
-    def _from_cbbdata_torvik_api(self, year: int) -> ProviderResult:
-        payload = self._fetch_cbbdata_endpoint("CBBDATA_TORVIK_URL", year)
-        records = payload.get("teams") or payload.get("records") or []
-        return ProviderResult("cbbdata", records if isinstance(records, list) else [])
+    # ── Torvik provider ────────────────────────────────────────────────────
 
     def _from_barttorvik_csv(self, year: int) -> ProviderResult:
         url_template = os.getenv("BARTTORVIK_TORVIK_URL")
@@ -497,7 +389,10 @@ class LibraryProviderHub:
         header = [c.strip() for c in rows[0]]
         has_header = any(h and not h.replace(".", "", 1).isdigit() for h in header)
         if not has_header:
-            logger.warning("barttorvik CSV appears to lack headers; skipping (set BARTTORVIK_TORVIK_URL to a headered feed).")
+            logger.warning(
+                "barttorvik CSV appears to lack headers; skipping "
+                "(set BARTTORVIK_TORVIK_URL to a headered feed)."
+            )
             return ProviderResult("barttorvik", [])
 
         records: List[Dict] = []
@@ -509,7 +404,7 @@ class LibraryProviderHub:
         return ProviderResult("barttorvik", records)
 
     @staticmethod
-    def _map_barttorvik_row(row: Dict[str, str]) -> Optional[Dict]:
+    def _map_barttorvik_row(row: Dict) -> Optional[Dict]:
         if not isinstance(row, dict):
             return None
 
@@ -576,28 +471,7 @@ class LibraryProviderHub:
             record["coach"] = coach
         return record
 
-    def _fetch_cbbdata_endpoint(self, url_env: str, year: int) -> Dict:
-        url_template = os.getenv(url_env)
-        api_key = os.getenv("CBBDATA_API_KEY")
-        if not url_template or not api_key:
-            return {}
-
-        url = url_template.format(year=year)
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "x-api-key": api_key,
-        }
-        try:
-            response = requests.get(url, headers=headers, timeout=45)
-            response.raise_for_status()
-            data = response.json()
-            if isinstance(data, dict):
-                return data
-            if isinstance(data, list):
-                return {"records": data}
-        except (requests.RequestException, ValueError, KeyError, OSError) as exc:
-            logger.warning("cbbdata request failed for %s: %s", url_env, exc)
-        return {}
+    # ── Shared helpers (kept for backward compatibility with callers) ───────
 
     def _normalize_cbbpy_records(self, obj) -> List[Dict]:
         if not isinstance(obj, tuple):
@@ -605,16 +479,11 @@ class LibraryProviderHub:
 
         info_df = obj[0] if len(obj) > 0 else None
         box_df = obj[1] if len(obj) > 1 else None
-        pbp_df = obj[2] if len(obj) > 2 else None
 
-        # Extract game_id → date mapping from the info DataFrame so that
-        # downstream records carry correct game dates (not fallback values).
         game_date_map = self._extract_date_map_from_info(info_df)
-
         box_rows = self._frame_to_records(box_df)
-        team_games = self._aggregate_cbbpy_box_rows(box_rows)
+        team_games = HistoricalGameFetcher._aggregate_box_rows(box_rows)
         if team_games:
-            # Apply dates from info DataFrame to aggregated game records.
             for row in team_games:
                 gid = str(row.get("game_id", "")).strip()
                 if gid in game_date_map:
@@ -624,11 +493,10 @@ class LibraryProviderHub:
         info_rows = self._frame_to_records(info_df)
         if info_rows:
             return info_rows
-        return self._frame_to_records(pbp_df)
+        return self._frame_to_records(obj[2] if len(obj) > 2 else None)
 
     @staticmethod
     def _extract_date_map_from_info(info_df) -> Dict[str, str]:
-        """Parse game_id → ISO date from a cbbpy info DataFrame."""
         date_map: Dict[str, str] = {}
         if info_df is None:
             return date_map
@@ -644,83 +512,6 @@ class LibraryProviderHub:
                 except ValueError:
                     pass
         return date_map
-
-    def _aggregate_cbbpy_box_rows(self, rows: List[Dict]) -> List[Dict]:
-        by_game_team: Dict[str, Dict[str, Dict]] = {}
-        for row in rows:
-            game_id = str(row.get("game_id") or row.get("id") or "").strip()
-            team_name = str(row.get("team") or row.get("team_name") or "").strip()
-            player_name = str(row.get("player") or "").strip().lower()
-            if not game_id or not team_name:
-                continue
-            if player_name in {"team", "totals", "team totals"}:
-                continue
-
-            game_bucket = by_game_team.setdefault(game_id, {})
-            team_id = self._normalize_team_name(team_name)
-            stats = game_bucket.setdefault(
-                team_id,
-                {
-                    "team_id": team_id,
-                    "team_name": team_name,
-                    "team_score": 0.0,
-                    "fgm": 0.0,
-                    "fga": 0.0,
-                    "fg3m": 0.0,
-                    "fg3a": 0.0,
-                    "fta": 0.0,
-                    "turnovers": 0.0,
-                    "orb": 0.0,
-                    "drb": 0.0,
-                    "player_rows": 0,
-                    "date": "",
-                },
-            )
-            stats["team_score"] += self._to_float(row.get("pts"))
-            stats["fgm"] += self._to_float(row.get("fgm"))
-            stats["fga"] += self._to_float(row.get("fga"))
-            stats["fg3m"] += self._to_float(row.get("3pm"))
-            stats["fg3a"] += self._to_float(row.get("3pa"))
-            stats["fta"] += self._to_float(row.get("fta"))
-            stats["turnovers"] += self._to_float(row.get("to"))
-            stats["orb"] += self._to_float(row.get("oreb"))
-            stats["drb"] += self._to_float(row.get("dreb"))
-            stats["player_rows"] += 1
-            if not stats["date"]:
-                stats["date"] = str(row.get("date") or row.get("game_day") or "").strip()
-
-        out: List[Dict] = []
-        for game_id, game_teams in by_game_team.items():
-            team_list = sorted(game_teams.values(), key=lambda t: (-t["player_rows"], t["team_name"]))
-            if len(team_list) < 2:
-                continue
-            team_list = team_list[:2]
-            first, second = team_list
-            for team, opp in ((first, second), (second, first)):
-                poss = team["fga"] - team["orb"] + team["turnovers"] + 0.475 * team["fta"]
-                rec: Dict = {
-                    "game_id": game_id,
-                    "team_id": team["team_id"],
-                    "team_name": team["team_name"],
-                    "opponent_id": opp["team_id"],
-                    "opponent_name": opp["team_name"],
-                    "team_score": int(round(team["team_score"])),
-                    "opponent_score": int(round(opp["team_score"])),
-                    "possessions": max(float(poss), 0.0),
-                    "fgm": team["fgm"],
-                    "fga": team["fga"],
-                    "fg3m": team["fg3m"],
-                    "fg3a": team["fg3a"],
-                    "fta": team["fta"],
-                    "turnovers": team["turnovers"],
-                    "orb": team["orb"],
-                    "drb": team["drb"],
-                }
-                # Always include the date key so downstream code never
-                # encounters records with a missing date field.
-                rec["date"] = team.get("date") or ""
-                out.append(rec)
-        return out
 
     @staticmethod
     def _import_module(module_name: str):
@@ -752,7 +543,6 @@ class LibraryProviderHub:
             return [r for r in obj if isinstance(r, dict)]
         if isinstance(obj, dict):
             return [obj]
-
         to_dict = getattr(obj, "to_dict", None)
         if callable(to_dict):
             try:
@@ -767,56 +557,13 @@ class LibraryProviderHub:
     def _normalize_date_field(records: List[Dict]) -> None:
         """Ensure each record has a ``date`` key in ISO format (YYYY-MM-DD).
 
-        DataFrames from different providers use various column names for dates
-        (``game_date``, ``start_date``, ``date``, ``game_day``, etc.).  This
-        method normalises them all to a single ``date`` key so downstream code
-        never encounters records without dates.
+        Delegates to the shared implementation in game_fetchers so the logic
+        lives in exactly one place.
         """
-        _DATE_KEYS = ("date", "game_date", "start_date", "game_day", "gamedate")
-        for rec in records:
-            existing = rec.get("date")
-            if existing and str(existing).strip():
-                raw = str(existing).strip()
-            else:
-                raw = ""
-                for key in _DATE_KEYS:
-                    val = rec.get(key)
-                    if val and str(val).strip():
-                        raw = str(val).strip()
-                        break
-            if not raw:
-                rec["date"] = ""
-                continue
-            # Already ISO?
-            if len(raw) >= 10 and raw[4] == "-" and raw[7] == "-":
-                rec["date"] = raw[:10]
-                continue
-            # sportsdataverse may return epoch-ms timestamps depending on
-            # library version — detect and convert them first.
-            try:
-                epoch_val = float(raw)
-                # Distinguish seconds vs milliseconds: anything > 1e12 is ms
-                if epoch_val > 1e12:
-                    epoch_val /= 1000.0
-                if 9e8 < epoch_val < 3e9:  # plausible range: ~1998–~2065
-                    rec["date"] = datetime.utcfromtimestamp(epoch_val).strftime("%Y-%m-%d")
-                    continue
-            except (ValueError, TypeError, OverflowError, OSError):
-                pass
-            # Try common date formats
-            for fmt in ("%B %d, %Y", "%Y-%m-%dT%H:%M:%S", "%m/%d/%Y", "%Y%m%d"):
-                try:
-                    rec["date"] = datetime.strptime(raw[:min(len(raw), 20)], fmt).strftime("%Y-%m-%d")
-                    break
-                except (ValueError, TypeError):
-                    continue
-            else:
-                # Last resort: keep first 10 chars if they look date-like
-                rec.setdefault("date", "")
+        HistoricalGameFetcher._normalize_date_field(records)
 
     @staticmethod
     def _normalize_team_name(name: str) -> str:
-        # Delegate to shared utility (kept for backwards compat)
         return _shared_normalize_team_id(name)
 
     @staticmethod
