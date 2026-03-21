@@ -702,3 +702,293 @@ class PerRoundFeatureImportance:
             return np.array(model.feature_importances_, dtype=float)
 
         return None
+
+    def compute_with_bootstrap(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        rounds: np.ndarray,
+        model: Any = None,
+        train_fn: Optional[Callable] = None,
+        n_bootstrap: int = 200,
+        random_seed: int = 42,
+    ) -> Dict[str, PerRoundImportance]:
+        """Compute per-round feature importance with bootstrap confidence intervals.
+
+        Solution 6: Adds uncertainty estimates to per-round importance. With
+        only ~16 games per round per year, single-point estimates are noisy.
+        Bootstrap CIs reveal which features are reliably important in late
+        rounds vs. just noise.
+
+        Args:
+            X: Feature matrix, shape (N, D).
+            y: Binary labels, shape (N,).
+            rounds: Round labels for each sample, shape (N,).
+            model: Pre-trained model.
+            train_fn: Training function (used if model is None).
+            n_bootstrap: Number of bootstrap resamples.
+            random_seed: For reproducibility.
+
+        Returns:
+            Dict[round_name, PerRoundImportance] with bootstrap CIs populated.
+        """
+        if model is None and train_fn is not None:
+            model = train_fn(X, y)
+
+        rng = np.random.default_rng(random_seed)
+        unique_rounds = np.unique(rounds)
+        results = {}
+
+        for r in unique_rounds:
+            mask = rounds == r
+            n_games = int(np.sum(mask))
+            if n_games < 5:
+                continue
+
+            round_name = ROUND_NAMES.get(r, str(r)) if isinstance(r, (int, np.integer)) else str(r)
+            X_round = X[mask]
+
+            # Point estimate
+            base_imp = self._compute_round_importance(model, X_round)
+            if base_imp is None:
+                continue
+
+            n_features = min(len(self.feature_names), len(base_imp))
+            total = np.sum(base_imp[:n_features])
+            if total > 0:
+                base_norm = base_imp[:n_features] / total
+            else:
+                base_norm = base_imp[:n_features]
+
+            # Bootstrap
+            boot_importances = np.zeros((n_bootstrap, n_features))
+            successful_boots = 0
+            for b in range(n_bootstrap):
+                boot_idx = rng.choice(len(X_round), size=len(X_round), replace=True)
+                boot_imp = self._compute_round_importance(model, X_round[boot_idx])
+                if boot_imp is not None:
+                    bt = boot_imp[:n_features]
+                    bt_total = np.sum(bt)
+                    if bt_total > 0:
+                        bt = bt / bt_total
+                    boot_importances[successful_boots] = bt
+                    successful_boots += 1
+
+            if successful_boots < 10:
+                # Not enough bootstrap samples; fall back to point estimate
+                order = np.argsort(-base_norm)
+                summaries = [
+                    FeatureImportanceSummary(
+                        name=self.feature_names[idx],
+                        mean_importance=float(base_norm[idx]),
+                        std_importance=0.0,
+                        stability=1.0,
+                        rank=rank + 1,
+                    )
+                    for rank, idx in enumerate(order)
+                ]
+                results[round_name] = PerRoundImportance(
+                    round_name=round_name, n_games=n_games, importances=summaries,
+                )
+                continue
+
+            boot_importances = boot_importances[:successful_boots]
+            boot_means = np.mean(boot_importances, axis=0)
+            boot_stds = np.std(boot_importances, axis=0)
+
+            order = np.argsort(-boot_means)
+            summaries = []
+            for rank, idx in enumerate(order):
+                ci_lower = float(np.percentile(boot_importances[:, idx], 2.5))
+                ci_upper = float(np.percentile(boot_importances[:, idx], 97.5))
+                # Feature is significant if CI excludes zero
+                is_significant = ci_lower > 0
+                summaries.append(FeatureImportanceSummary(
+                    name=self.feature_names[idx],
+                    mean_importance=float(boot_means[idx]),
+                    std_importance=float(boot_stds[idx]),
+                    stability=1.0 if is_significant else 0.0,
+                    rank=rank + 1,
+                ))
+
+            results[round_name] = PerRoundImportance(
+                round_name=round_name, n_games=n_games, importances=summaries,
+            )
+            n_sig = sum(1 for s in summaries if s.stability > 0)
+            logger.info(
+                "Round %s: %d/%d features significant (bootstrap CI excludes 0)",
+                round_name, n_sig, len(summaries),
+            )
+
+        return results
+
+
+# ---------------------------------------------------------------------------
+# Solution 13: SHAP interaction effects
+# ---------------------------------------------------------------------------
+
+@dataclass
+class InteractionEffect:
+    """A detected feature interaction."""
+    feature_a: str
+    feature_b: str
+    interaction_strength: float
+    direction: str  # "synergistic" or "antagonistic"
+
+
+@dataclass
+class InteractionEffects:
+    """Results of SHAP interaction analysis."""
+    interaction_matrix: Dict[str, Dict[str, float]]
+    top_interactions: List[InteractionEffect]
+    n_features_analyzed: int
+    method: str
+
+
+class InteractionAnalyzer:
+    """Compute SHAP interaction values for top-K features.
+
+    Solution 13: SHAP main effects miss interaction effects. This reveals
+    whether feature pairs have synergistic effects (e.g., does three_pt_variance
+    only matter when seed_diff is large?).
+
+    Uses SHAP TreeExplainer with interaction_values for tree-based models.
+    """
+
+    def __init__(self, feature_names: List[str]):
+        self.feature_names = feature_names
+
+    def compute_interaction_effects(
+        self,
+        model: Any,
+        X: np.ndarray,
+        top_k: int = 10,
+        max_samples: int = 200,
+    ) -> InteractionEffects:
+        """Compute SHAP interaction values for top-K features.
+
+        Args:
+            model: Trained tree model (LightGBM or XGBoost).
+            X: Feature matrix [N, D].
+            top_k: Number of top features to analyze interactions for.
+            max_samples: Max samples to compute interactions on (O(n*k^2)).
+
+        Returns:
+            InteractionEffects with interaction matrix and top interactions.
+        """
+        n_features = min(len(self.feature_names), X.shape[1])
+        top_k = min(top_k, n_features)
+
+        # First get main SHAP values to identify top-K features
+        if not SHAP_AVAILABLE:
+            return InteractionEffects(
+                interaction_matrix={}, top_interactions=[],
+                n_features_analyzed=0, method="unavailable",
+            )
+
+        try:
+            explainer = shap.TreeExplainer(model)
+        except Exception:
+            return InteractionEffects(
+                interaction_matrix={}, top_interactions=[],
+                n_features_analyzed=0, method="tree_explainer_failed",
+            )
+
+        # Subsample for performance
+        n_explain = min(max_samples, len(X))
+        if n_explain < len(X):
+            rng = np.random.default_rng(42)
+            sample_idx = rng.choice(len(X), size=n_explain, replace=False)
+            X_sample = X[sample_idx]
+        else:
+            X_sample = X
+
+        # Get main effects to find top-K features
+        try:
+            shap_values = explainer.shap_values(X_sample)
+            if isinstance(shap_values, list):
+                shap_values = shap_values[1] if len(shap_values) > 1 else shap_values[0]
+            mean_abs_shap = np.mean(np.abs(shap_values), axis=0)
+            top_indices = np.argsort(-mean_abs_shap)[:top_k]
+        except Exception as e:
+            logger.warning("SHAP main effects failed: %s", e)
+            return InteractionEffects(
+                interaction_matrix={}, top_interactions=[],
+                n_features_analyzed=0, method="shap_failed",
+            )
+
+        # Try SHAP interaction values
+        try:
+            interaction_values = explainer.shap_interaction_values(X_sample)
+            if isinstance(interaction_values, list):
+                interaction_values = interaction_values[1] if len(interaction_values) > 1 else interaction_values[0]
+            # interaction_values shape: (n_samples, n_features, n_features)
+            method = "shap_interaction"
+        except Exception:
+            # Fallback: estimate interactions from correlation of SHAP values
+            interaction_values = None
+            method = "shap_correlation_proxy"
+
+        # Build interaction matrix for top-K features
+        interaction_matrix = {}
+        top_interactions = []
+
+        if interaction_values is not None:
+            # Use actual SHAP interaction values
+            for i in range(len(top_indices)):
+                fi = int(top_indices[i])
+                name_a = self.feature_names[fi]
+                interaction_matrix[name_a] = {}
+                for j in range(len(top_indices)):
+                    fj = int(top_indices[j])
+                    name_b = self.feature_names[fj]
+                    # Mean absolute interaction value
+                    strength = float(np.mean(np.abs(interaction_values[:, fi, fj])))
+                    interaction_matrix[name_a][name_b] = strength
+
+                    if i < j:  # Avoid duplicates
+                        # Direction: correlation of interaction with prediction
+                        mean_interaction = float(np.mean(interaction_values[:, fi, fj]))
+                        direction = "synergistic" if mean_interaction > 0 else "antagonistic"
+                        top_interactions.append(InteractionEffect(
+                            feature_a=name_a, feature_b=name_b,
+                            interaction_strength=strength, direction=direction,
+                        ))
+        else:
+            # Proxy: correlation of SHAP values
+            for i in range(len(top_indices)):
+                fi = int(top_indices[i])
+                name_a = self.feature_names[fi]
+                interaction_matrix[name_a] = {}
+                for j in range(len(top_indices)):
+                    fj = int(top_indices[j])
+                    name_b = self.feature_names[fj]
+                    if i == j:
+                        interaction_matrix[name_a][name_b] = 1.0
+                    else:
+                        r = np.corrcoef(shap_values[:, fi], shap_values[:, fj])[0, 1]
+                        r = 0.0 if np.isnan(r) else float(r)
+                        interaction_matrix[name_a][name_b] = abs(r)
+
+                        if i < j:
+                            direction = "synergistic" if r > 0 else "antagonistic"
+                            top_interactions.append(InteractionEffect(
+                                feature_a=name_a, feature_b=name_b,
+                                interaction_strength=abs(r), direction=direction,
+                            ))
+
+        # Sort by strength
+        top_interactions.sort(key=lambda x: x.interaction_strength, reverse=True)
+
+        logger.info(
+            "Interaction analysis (%s): top 3 interactions: %s",
+            method,
+            [(x.feature_a, x.feature_b, f"{x.interaction_strength:.4f}") for x in top_interactions[:3]],
+        )
+
+        return InteractionEffects(
+            interaction_matrix=interaction_matrix,
+            top_interactions=top_interactions,
+            n_features_analyzed=top_k,
+            method=method,
+        )

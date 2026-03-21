@@ -448,3 +448,170 @@ def validate_absolute_features(
         absolute_feature_names=absolute_feature_names,
         message=message,
     )
+
+
+# ---------------------------------------------------------------------------
+# 4. Interaction Feature Validation (Solution 8)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class InteractionValidationResult:
+    """Result of interaction feature marginal Brier validation."""
+
+    brier_with_interactions: float
+    brier_without_interactions: float
+    marginal_improvement: float  # positive = interactions help
+    bootstrap_ci_lower: float
+    bootstrap_ci_upper: float
+    n_bootstrap: int
+    significant: bool  # True if CI excludes zero
+    per_feature_mi: Dict[str, float]  # Mutual information per interaction feature
+    interaction_names: List[str]
+    message: str
+
+
+def validate_interaction_features(
+    X_base: np.ndarray,
+    X_interactions: np.ndarray,
+    y: np.ndarray,
+    interaction_names: List[str],
+    n_bootstrap: int = 200,
+    confidence_level: float = 0.95,
+    random_seed: int = 42,
+) -> InteractionValidationResult:
+    """Validate that interaction features provide significant Brier improvement.
+
+    Solution 8: The 7 interaction features (tempo_interaction, style_mismatch,
+    seed_em_residual, etc.) add 7 dimensions but have no marginal validation.
+    This computes bootstrap CI on Brier improvement and MI per interaction.
+
+    Args:
+        X_base: Base features (diff + absolute) [N, D_base]
+        X_interactions: Interaction features [N, D_int]
+        y: Binary outcome labels [N]
+        interaction_names: Names of interaction features
+        n_bootstrap: Number of bootstrap iterations
+        confidence_level: CI confidence level
+        random_seed: Random seed
+
+    Returns:
+        InteractionValidationResult with Brier improvement and per-feature MI
+    """
+    try:
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.preprocessing import StandardScaler
+    except ImportError:
+        return InteractionValidationResult(
+            brier_with_interactions=0.0, brier_without_interactions=0.0,
+            marginal_improvement=0.0, bootstrap_ci_lower=0.0,
+            bootstrap_ci_upper=0.0, n_bootstrap=0, significant=False,
+            per_feature_mi={}, interaction_names=interaction_names,
+            message="sklearn not available; skipping interaction validation.",
+        )
+
+    n_samples = len(y)
+    rng = np.random.default_rng(random_seed)
+
+    X_without = X_base
+    X_with = np.column_stack([X_base, X_interactions])
+
+    def _brier(y_true, y_prob):
+        return float(np.mean((y_true - y_prob) ** 2))
+
+    def _cv_brier(X_full):
+        """3-fold CV Brier score."""
+        fold_size = n_samples // 3
+        briers = []
+        indices = np.arange(n_samples)
+        rng_cv = np.random.default_rng(random_seed)
+        rng_cv.shuffle(indices)
+        for fold in range(3):
+            val_start = fold * fold_size
+            val_end = val_start + fold_size if fold < 2 else n_samples
+            val_idx = indices[val_start:val_end]
+            train_idx = np.concatenate([indices[:val_start], indices[val_end:]])
+            if len(train_idx) < 20 or len(val_idx) < 5:
+                continue
+            scaler = StandardScaler()
+            X_tr = scaler.fit_transform(X_full[train_idx])
+            X_va = scaler.transform(X_full[val_idx])
+            model = LogisticRegression(C=1.0, max_iter=1000, random_state=random_seed, solver="lbfgs")
+            model.fit(X_tr, y[train_idx])
+            probs = model.predict_proba(X_va)[:, 1]
+            briers.append(_brier(y[val_idx], probs))
+        return float(np.mean(briers)) if briers else 0.25
+
+    brier_without = _cv_brier(X_without)
+    brier_with = _cv_brier(X_with)
+    point_improvement = brier_without - brier_with
+
+    # Bootstrap CI
+    bootstrap_improvements = []
+    for _ in range(n_bootstrap):
+        boot_idx = rng.choice(n_samples, size=n_samples, replace=True)
+        try:
+            b_without = _cv_brier(X_without[boot_idx])
+            b_with = _cv_brier(X_with[boot_idx])
+            bootstrap_improvements.append(b_without - b_with)
+        except Exception:
+            continue
+
+    # Per-feature MI
+    per_feature_mi = {}
+    try:
+        from sklearn.feature_selection import mutual_info_classif
+        mi_scores = mutual_info_classif(
+            X_interactions, y, n_neighbors=5, random_state=random_seed
+        )
+        for i, name in enumerate(interaction_names):
+            if i < len(mi_scores):
+                per_feature_mi[name] = float(mi_scores[i])
+    except Exception:
+        pass
+
+    if len(bootstrap_improvements) < 10:
+        return InteractionValidationResult(
+            brier_with_interactions=brier_with,
+            brier_without_interactions=brier_without,
+            marginal_improvement=point_improvement,
+            bootstrap_ci_lower=0.0, bootstrap_ci_upper=0.0,
+            n_bootstrap=len(bootstrap_improvements), significant=False,
+            per_feature_mi=per_feature_mi, interaction_names=interaction_names,
+            message="Too few bootstrap iterations for CI estimation.",
+        )
+
+    improvements = np.array(bootstrap_improvements)
+    alpha = 1.0 - confidence_level
+    ci_lower = float(np.percentile(improvements, 100 * alpha / 2))
+    ci_upper = float(np.percentile(improvements, 100 * (1 - alpha / 2)))
+    significant = ci_lower > 0
+
+    if significant:
+        message = (
+            f"Interaction features VALIDATED: Brier improvement = "
+            f"{point_improvement:.5f} [{ci_lower:.5f}, {ci_upper:.5f}] 95% CI. "
+            f"CI excludes zero — the {len(interaction_names)} interactions "
+            f"earn their dimensionality cost."
+        )
+        logger.info(message)
+    else:
+        message = (
+            f"Interaction features NOT significant: Brier improvement = "
+            f"{point_improvement:.5f} [{ci_lower:.5f}, {ci_upper:.5f}] 95% CI. "
+            f"CI includes zero — consider removing interaction features."
+        )
+        logger.warning(message)
+
+    return InteractionValidationResult(
+        brier_with_interactions=brier_with,
+        brier_without_interactions=brier_without,
+        marginal_improvement=point_improvement,
+        bootstrap_ci_lower=ci_lower,
+        bootstrap_ci_upper=ci_upper,
+        n_bootstrap=len(bootstrap_improvements),
+        significant=significant,
+        per_feature_mi=per_feature_mi,
+        interaction_names=interaction_names,
+        message=message,
+    )
