@@ -154,8 +154,18 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                     "No calibration_years resolved (holdout_years/calibration_years empty); "
                     "historical tournament calibration augmentation skipped."
                 )
-            # Determine feature dimensionality from current model
+            # Determine feature dimensionality from current model.
+            # Use the raw (pre-zero-variance-pruning) dimension for the
+            # sample loader so that symmetric_augment / swap_matchup_batch
+            # receives vectors with >= MATCHUP_DIM (78) columns.  After
+            # loading, apply zero-variance pruning to match the model's
+            # expected input width.
+            raw_feature_dim = getattr(
+                pipeline.baseline_model, "raw_feature_dim",
+                pipeline.baseline_model.feature_dim,
+            )
             feature_dim = pipeline.baseline_model.feature_dim
+            _pre_fs_keep_mask = getattr(pipeline, "_pre_fs_keep_mask", None)
 
             def _load_tournament_cal_year(yr, games_dir, feature_dim):
                 """Load tournament calibration samples for a single year.
@@ -167,7 +177,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                     return 0, f"files missing (games={os.path.isfile(games_path)}, metrics={os.path.isfile(metrics_path)})"
                 try:
                     yr_X, yr_y, _yr_margins, _, _yr_rw = pipeline._load_year_tournament_samples_incremental(
-                        games_path, metrics_path, feature_dim, yr,
+                        games_path, metrics_path, raw_feature_dim, yr,
                     )
                 except Exception as e:
                     return 0, f"loader error: {e}"
@@ -183,6 +193,12 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
                     "Loaded %d tournament-only calibration samples for %d",
                     len(yr_y), yr,
                 )
+                # Apply zero-variance pruning (same mask used during training)
+                if _pre_fs_keep_mask is not None and yr_X.shape[1] > feature_dim:
+                    try:
+                        yr_X = yr_X[:, _pre_fs_keep_mask]
+                    except (IndexError, ValueError) as e:
+                        return 0, f"zero-variance pruning error: {e}"
                 # Apply feature selection if fitted
                 if pipeline.feature_selector is not None and pipeline.feature_selector.is_fitted:
                     try:

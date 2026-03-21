@@ -151,8 +151,8 @@ tier_2_cumulative:
       description: "Block rate per possession"
 
     # Opponent Shot Selection (2)
-    - name: opp_two_pt_pct
-      description: "Opponent 2-point percentage allowed"
+    - name: opp_two_pt_pct_allowed
+      description: "Opponent 2-point FG% allowed (box-score derived, fallback to Torvik opp_two_pt_pct)"
     - name: opp_three_pt_attempt_rate
       description: "Opponent 3-point attempt rate (forcing)"
 
