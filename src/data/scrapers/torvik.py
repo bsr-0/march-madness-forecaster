@@ -129,6 +129,139 @@ class TorVikTeam:
 
 
 
+class TorVikValidator:
+    """Soft validation of Torvik data with range checks.
+
+    Logs warnings for out-of-range values but never rejects data.
+    Completeness and consistency checks are also performed.
+
+    Expected ranges (D1 college basketball, historical):
+        AdjOE:  60–140 (typical 85–130)
+        AdjDE:  60–140 (typical 85–115)
+        Barthag: 0.0–1.0
+        tempo:  55–90 possessions/40 min
+        eFG%:   0.30–0.75
+        TO%:    0.05–0.40
+        ORB%:   0.0–0.60
+        FTR:    0.0–0.80
+        t_rank: 1–400
+        wins+losses: 0–40 (reasonable season)
+    """
+
+    RANGES = {
+        "adj_offensive_efficiency": (60.0, 140.0),
+        "adj_defensive_efficiency": (60.0, 140.0),
+        "barthag": (0.0, 1.0),
+        "adj_tempo": (55.0, 90.0),
+        "effective_fg_pct": (0.30, 0.75),
+        "turnover_rate": (0.05, 0.40),
+        "offensive_reb_rate": (0.0, 0.60),
+        "free_throw_rate": (0.0, 0.80),
+        "opp_effective_fg_pct": (0.30, 0.75),
+        "opp_turnover_rate": (0.05, 0.40),
+        "defensive_reb_rate": (0.0, 1.0),
+        "opp_free_throw_rate": (0.0, 0.80),
+        "three_pt_pct": (0.0, 0.60),
+        "ft_pct": (0.50, 0.90),
+        "t_rank": (1, 400),
+    }
+
+    _logger = logging.getLogger(__name__ + ".TorVikValidator")
+
+    @classmethod
+    def validate_team(cls, team: "TorVikTeam") -> List[str]:
+        """Validate a single TorVikTeam. Returns list of warning messages."""
+        warnings_out: List[str] = []
+
+        for field_name, (lo, hi) in cls.RANGES.items():
+            val = getattr(team, field_name, None)
+            if val is None:
+                continue
+            if isinstance(val, float) and math.isnan(val):
+                continue  # NaN means "not scraped"; skip range check
+            try:
+                fval = float(val)
+            except (TypeError, ValueError):
+                continue
+            if fval != 0.0 and not (lo <= fval <= hi):
+                msg = (
+                    f"{team.team_id}: {field_name}={fval:.4f} "
+                    f"outside expected range [{lo}, {hi}]"
+                )
+                warnings_out.append(msg)
+                cls._logger.warning("[torvik:validate] %s", msg)
+
+        # Completeness: conference should not be blank
+        if not team.conference.strip():
+            msg = f"{team.team_id}: conference field is empty"
+            warnings_out.append(msg)
+            cls._logger.warning("[torvik:validate] %s", msg)
+
+        # Consistency: wins + losses should be reasonable
+        total_games = team.wins + team.losses
+        if total_games > 0 and not (10 <= total_games <= 45):
+            msg = f"{team.team_id}: wins+losses={total_games} looks unreasonable"
+            warnings_out.append(msg)
+            cls._logger.warning("[torvik:validate] %s", msg)
+
+        return warnings_out
+
+    @classmethod
+    def validate_teams(cls, teams: List["TorVikTeam"]) -> Dict[str, List[str]]:
+        """Validate a list of teams. Returns {team_id: [warnings]}."""
+        result: Dict[str, List[str]] = {}
+        for team in teams:
+            w = cls.validate_team(team)
+            if w:
+                result[team.team_id] = w
+        total_warnings = sum(len(v) for v in result.values())
+        if total_warnings > 0:
+            cls._logger.warning(
+                "[torvik:validate] %d validation warnings across %d/%d teams",
+                total_warnings, len(result), len(teams),
+            )
+        else:
+            cls._logger.info(
+                "[torvik:validate] All %d teams passed validation", len(teams)
+            )
+        return result
+
+    @classmethod
+    def validate_four_factors(cls, data: Dict[str, Dict]) -> Dict[str, List[str]]:
+        """Validate Four Factors dict {team_id -> {field -> value}}."""
+        result: Dict[str, List[str]] = {}
+        ff_fields = [
+            ("effective_fg_pct", 0.30, 0.75),
+            ("turnover_rate", 0.05, 0.40),
+            ("offensive_reb_rate", 0.0, 0.60),
+            ("free_throw_rate", 0.0, 0.80),
+            ("opp_effective_fg_pct", 0.30, 0.75),
+            ("opp_turnover_rate", 0.05, 0.40),
+            ("defensive_reb_rate", 0.0, 1.0),
+            ("opp_free_throw_rate", 0.0, 0.80),
+        ]
+        for team_id, ff in data.items():
+            team_warnings: List[str] = []
+            for field_name, lo, hi in ff_fields:
+                val = ff.get(field_name)
+                if val is None or val == 0.0:
+                    continue  # 0.0 means "not available from this source"
+                try:
+                    fval = float(val)
+                except (TypeError, ValueError):
+                    continue
+                if not (lo <= fval <= hi):
+                    msg = (
+                        f"{team_id}: four_factors.{field_name}={fval:.4f} "
+                        f"outside [{lo}, {hi}]"
+                    )
+                    team_warnings.append(msg)
+                    cls._logger.warning("[torvik:validate] %s", msg)
+            if team_warnings:
+                result[team_id] = team_warnings
+        return result
+
+
 class BartTorvikScraper:
     """
     Scraper for BartTorvik T-Rank data.
@@ -159,9 +292,12 @@ class BartTorvikScraper:
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
         })
         self.cache_dir = Path(cache_dir) if cache_dir else None
-        
+
         if self.cache_dir:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+        # Telemetry: records which strategy was used for each data type
+        self._fetch_strategy: Dict[str, str] = {}
     
     def fetch_current_rankings(self, year: int = 2026) -> List[TorVikTeam]:
         """
@@ -189,18 +325,35 @@ class BartTorvikScraper:
         # --- Strategy 1: cbbstat API (preferred — ratings + Four Factors) ---
         if not teams:
             teams = self._rankings_from_cbbstat_api(year)
+            if teams:
+                self._fetch_strategy["rankings"] = "cbbstat_api"
+                logger.info(
+                    "[torvik] rankings strategy=%s year=%d teams=%d",
+                    "cbbstat_api", year, len(teams),
+                )
 
-        # --- Strategy 2: HTML scrape (original approach) ---
+        # --- Strategy 2: toRvik R package (requires R + toRvik installed) ---
+        if not teams:
+            teams = self._rankings_from_torvik_r(year)
+
+        # --- Strategy 3: HTML scrape (original approach) ---
         if not teams:
             try:
                 url = f"{self.BASE_URL}/trank.php?year={year}"
                 response = self.session.get(url, timeout=30)
                 response.raise_for_status()
                 teams = self._parse_rankings_page(response.text)
+                if teams:
+                    self._fetch_strategy["rankings"] = "html_scrape"
+                    logger.info(
+                        "[torvik] rankings strategy=%s year=%d teams=%d",
+                        "html_scrape", year, len(teams),
+                    )
             except Exception as e:
                 logger.warning("Could not fetch Torvik rankings: %s", e)
 
         if teams:
+            TorVikValidator.validate_teams(teams)
             self._save_to_cache(f"torvik_rankings_{year}.json", {
                 'teams': [t.to_dict() for t in teams],
                 'timestamp': datetime.now().isoformat()
@@ -332,6 +485,57 @@ class BartTorvikScraper:
         )
         return teams
 
+    def _rankings_from_torvik_r(self, year: int) -> List[TorVikTeam]:
+        """Fetch T-Rank ratings via the toRvik R package.
+
+        Falls back transparently if R or toRvik is not installed.
+        """
+        try:
+            from .torvik_r import TorvikRWrapper
+        except ImportError:
+            return []
+
+        try:
+            wrapper = TorvikRWrapper()
+            if not wrapper.is_available():
+                return []
+            records = wrapper.fetch_team_stats(year)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("toRvik R fetch failed: %s", exc)
+            return []
+
+        teams: List[TorVikTeam] = []
+        for rec in records:
+            try:
+                team = TorVikTeam(
+                    team_id=rec["team_id"],
+                    name=rec.get("team_name", rec.get("name", "")),
+                    conference=rec.get("conference", ""),
+                    t_rank=int(rec.get("t_rank", 999)),
+                    barthag=float(rec.get("barthag", 0.5)),
+                    adj_offensive_efficiency=float(rec.get("adj_offensive_efficiency", 100.0)),
+                    adj_defensive_efficiency=float(rec.get("adj_defensive_efficiency", 100.0)),
+                    adj_tempo=float(rec.get("adj_tempo", 68.0)),
+                    effective_fg_pct=float(rec.get("effective_fg_pct", 0.0)),
+                    turnover_rate=float(rec.get("turnover_rate", 0.0)),
+                    offensive_reb_rate=float(rec.get("offensive_reb_rate", 0.0)),
+                    free_throw_rate=float(rec.get("free_throw_rate", 0.0)),
+                    opp_effective_fg_pct=float(rec.get("opp_effective_fg_pct", 0.0)),
+                    opp_turnover_rate=float(rec.get("opp_turnover_rate", 0.0)),
+                    defensive_reb_rate=float(rec.get("defensive_reb_rate", 0.0)),
+                    opp_free_throw_rate=float(rec.get("opp_free_throw_rate", 0.0)),
+                    wab=float(rec.get("wab", 0.0)),
+                    wins=int(rec.get("wins", 0)),
+                    losses=int(rec.get("losses", 0)),
+                )
+                teams.append(team)
+            except (KeyError, TypeError, ValueError) as exc:
+                logger.debug("toRvik: skipping malformed record: %s", exc)
+
+        if teams:
+            logger.info("Rankings from toRvik R (%d): fetched %d teams", year, len(teams))
+        return teams
+
     def fetch_four_factors(self, year: int = 2026) -> Dict[str, Dict]:
         """
         Fetch Four Factors data for all teams.
@@ -362,6 +566,12 @@ class BartTorvikScraper:
         # --- Strategy 1: cbbstat API (preferred — complete data) ---
         if not four_factors:
             four_factors = self._four_factors_from_cbbstat_api(year)
+            if four_factors:
+                self._fetch_strategy["four_factors"] = "cbbstat_api"
+                logger.info(
+                    "[torvik] four_factors strategy=%s year=%d teams=%d",
+                    "cbbstat_api", year, len(four_factors),
+                )
 
         # --- Strategy 2: HTML scrape (original approach) ---
         if not four_factors:
@@ -370,6 +580,12 @@ class BartTorvikScraper:
                 response = self.session.get(url, timeout=30)
                 response.raise_for_status()
                 four_factors = self._parse_four_factors_page(response.text)
+                if four_factors:
+                    self._fetch_strategy["four_factors"] = "html_scrape"
+                    logger.info(
+                        "[torvik] four_factors strategy=%s year=%d teams=%d",
+                        "html_scrape", year, len(four_factors),
+                    )
             except Exception as e:
                 logger.warning("HTML Four Factors scrape failed: %s", e)
 
@@ -380,8 +596,15 @@ class BartTorvikScraper:
                 "falling back to player-stats CSV aggregation."
             )
             four_factors = self._four_factors_from_player_csv(year)
+            if four_factors:
+                self._fetch_strategy["four_factors"] = "csv_fallback"
+                logger.info(
+                    "[torvik] four_factors strategy=%s year=%d teams=%d",
+                    "csv_fallback", year, len(four_factors),
+                )
 
         if four_factors:
+            TorVikValidator.validate_four_factors(four_factors)
             self._save_to_cache(f"torvik_four_factors_{year}.json", four_factors)
 
         return four_factors
@@ -507,6 +730,12 @@ class BartTorvikScraper:
             response = self.session.get(url, timeout=30)
             response.raise_for_status()
             shooting = self._parse_shooting_page(response.text)
+            if shooting:
+                self._fetch_strategy["shooting"] = "html_scrape"
+                logger.info(
+                    "[torvik] shooting strategy=%s year=%d teams=%d",
+                    "html_scrape", year, len(shooting),
+                )
         except Exception as e:
             logger.debug("HTML shooting scrape failed: %s", e)
 
@@ -517,6 +746,12 @@ class BartTorvikScraper:
                 "falling back to player-stats CSV aggregation."
             )
             shooting = self._shooting_from_player_csv(year)
+            if shooting:
+                self._fetch_strategy["shooting"] = "csv_fallback"
+                logger.info(
+                    "[torvik] shooting strategy=%s year=%d teams=%d",
+                    "csv_fallback", year, len(shooting),
+                )
 
         if shooting:
             self._save_to_cache(f"torvik_shooting_{year}.json", shooting)
@@ -617,6 +852,26 @@ class BartTorvikScraper:
         (bracket, Kaggle, Sports Reference).
         """
         return _canonical_team_id(name)
+
+    def _extract_team_id(self, cell) -> str:
+        """Extract canonical team ID from a BeautifulSoup table cell.
+
+        Tries the anchor href first (BartTorvik uses ?team= query params),
+        then falls back to normalizing the visible text.
+        """
+        link = cell.find('a')
+        if link is not None:
+            href = link.get('href', '')
+            if 'team=' in href:
+                raw = href.split('team=')[-1].split('&')[0]
+                if raw:
+                    return self._normalize_team_name_to_id(raw)
+        return self._normalize_team_name_to_id(cell.get_text(strip=True))
+
+    @property
+    def fetch_strategy(self) -> Dict[str, str]:
+        """Return a copy of the fetch strategy telemetry dict."""
+        return dict(self._fetch_strategy)
 
     def _aggregate_player_csv(self, csv_text: str) -> Dict[str, Dict]:
         """Aggregate player-level CSV rows into per-team shooting totals.

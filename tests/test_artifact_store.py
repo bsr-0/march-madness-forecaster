@@ -53,6 +53,23 @@ class TestSaveLoadPredictionsRoundtrip:
 
         assert loaded == preds
 
+    def test_feature_manifest_roundtrip(self, tmp_path: Path) -> None:
+        store = ArtifactStore(store_dir=str(tmp_path / "artifacts"))
+        manifest = {
+            "selected_features": ["a", "b"],
+            "manifest_hash": "abc123",
+            "target_year": 2026,
+        }
+
+        artifact_id = store.save_feature_manifest(manifest, experiment_id="exp-feature")
+        loaded = store.load_artifact(artifact_id)
+
+        assert loaded == manifest
+
+        manifests = store.list_artifacts(artifact_type="features")
+        assert len(manifests) == 1
+        assert manifests[0].artifact_type == "features"
+
 
 class TestSaveLoadModelRoundtrip:
     """save_model -> load_artifact should return the same object."""

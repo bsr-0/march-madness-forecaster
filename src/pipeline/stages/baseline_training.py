@@ -39,6 +39,7 @@ from ...ml.ensemble.cfa import (
 from ...ml.gnn.schedule_graph import ScheduleEdge, ScheduleGraph, compute_multi_hop_sos
 from ...ml.transformer.game_sequence import GameEmbedding, SeasonSequence
 from ...models.team import Team
+from ...governance.feature_manifest import build_feature_manifest
 from ..config import (
     DATA_QUALITY_ERA_WEIGHTS,
     FIXED_FEATURE_SET,
@@ -785,6 +786,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # Learned feature selection can still be enabled via config.
     # (feature_names already constructed above, before multi-year block)
     fs_stats = {}
+    feature_selection_method = "all_features"
 
     if train_samples >= 40 and feature_names is not None:
         if not pipeline.config.enable_feature_selection:
@@ -814,6 +816,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                     "reduced_dim": len(fixed_indices),
                     "selected_features": fixed_names,
                 }
+                feature_selection_method = "fixed_domain_knowledge"
                 logger.info(
                     "Fixed feature selection: %d/%d features retained (domain knowledge).",
                     len(fixed_indices), original_dim,
@@ -825,6 +828,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 )
         else:
             # Learned feature selection (original path, now opt-in)
+            feature_selection_method = "learned"
             effective_max_features = pipeline.config.max_features
             if pipeline.config.adaptive_max_features:
                 samples_based_cap = max(pipeline.config.min_features, train_samples // 8)
@@ -851,6 +855,27 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 "original_dim": pipeline.feature_selection_result.original_dim,
                 "reduced_dim": pipeline.feature_selection_result.reduced_dim,
             }
+
+    manifest_original_features = list(feature_names_full or feature_names or [])
+    manifest_selected_features = list(feature_names or [])
+    if manifest_original_features and manifest_selected_features:
+        pipeline._feature_manifest = build_feature_manifest(
+            target_year=pipeline.config.year,
+            model_complexity=pipeline.config.model_complexity,
+            selection_method=fs_stats.get("method", feature_selection_method),
+            original_features=manifest_original_features,
+            selected_features=manifest_selected_features,
+            training_years=list(pipeline.config.training_years or []),
+            dev_years=list(pipeline.config.dev_years or []),
+            holdout_years=list(pipeline.config.holdout_years or []),
+            metadata={
+                "enable_feature_selection": bool(pipeline.config.enable_feature_selection),
+                "strict_leakage_mode": bool(pipeline.config.strict_leakage_mode),
+                "original_pre_selection_dim": len(manifest_original_features),
+                "final_selected_dim": len(manifest_selected_features),
+            },
+        ).to_dict()
+        fs_stats["feature_manifest_hash"] = pipeline._feature_manifest["manifest_hash"]
 
     # ====================================================================
     # DISTRIBUTION SHIFT DETECTION — compare train vs validation feature
@@ -1060,6 +1085,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                     train_X, train_y, train_sort_keys,
                     feature_names=feature_names,
                     sample_weight=train_sample_weight,
+                    development_years=list(pipeline.config.training_years or []),
+                    year_split_policy=getattr(pipeline, "_year_split_policy", None),
                 )
 
                 # Filter out non-hyperparameter keys to avoid silently
@@ -1208,6 +1235,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                     train_X, train_y, train_sort_keys,
                     feature_names=feature_names,
                     sample_weight=train_sample_weight,
+                    development_years=list(pipeline.config.training_years or []),
+                    year_split_policy=getattr(pipeline, "_year_split_policy", None),
                 )
 
                 xgb_best_params = {k: v for k, v in xgb_tuning_result.best_params.items() if k != "num_rounds"}
@@ -1269,6 +1298,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 logit_tuning_result = logit_tuner.tune(
                     train_X, train_y, train_sort_keys,
                     sample_weight=train_sample_weight,
+                    development_years=list(pipeline.config.training_years or []),
+                    year_split_policy=getattr(pipeline, "_year_split_policy", None),
                 )
                 best_logit = logit_tuning_result.best_params
                 logit = LogisticRegression(
@@ -2629,7 +2660,13 @@ def _optimize_ensemble_weights_loyo(
     years = pipeline.config.loyo_years or [
         y for y in range(2015, pipeline.config.year) if y != 2020
     ]
-    years = pipeline._filter_years(years, include_holdout=True)
+    years = pipeline._filter_years(years, include_holdout=False)
+    year_split_policy = getattr(pipeline, "_year_split_policy", None)
+    if year_split_policy is not None:
+        year_split_policy.assert_dev_artifact_years(
+            list(years),
+            context="LOYO ensemble weight optimization",
+        )
     if len(years) < 3:
         return {}
 

@@ -20,6 +20,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from ..governance.artifact_provenance import classify_artifact_role
+
 logger = logging.getLogger(__name__)
 
 
@@ -150,6 +152,7 @@ def freeze_2026(
             "git_clean": not git_dirty,
             "lockfile_present": lockfile.exists(),
         },
+        "artifact_role": classify_artifact_role(str(Path(output_dir) / "freeze_manifest_2026.json")),
     }
 
     if mc_calibration:
@@ -229,6 +232,8 @@ def generate_predictions_2026(
         production_manifest_path=manifest_path,
     )
 
+    feature_manifest_path = out_dir / "feature_manifest_2026.json"
+
     # Also write a stable-name copy
     stable_report = out_dir / "predictions_2026_latest.json"
     with open(stable_report, "w") as f:
@@ -244,6 +249,7 @@ def generate_predictions_2026(
         "report_path": report_path,
         "manifest_path": manifest_path,
         "governance_path": gov_path,
+        "feature_manifest_path": str(feature_manifest_path) if feature_manifest_path.exists() else "",
     }
 
 

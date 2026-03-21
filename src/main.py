@@ -2786,6 +2786,32 @@ def main():
     )
     ar_parser.add_argument("--json", action="store_true", help="Output JSON instead of text")
 
+    # Quant decision system command
+    quant_parser = subparsers.add_parser(
+        "quant",
+        help="Run the quant decision system (shared core + Kaggle + ESPN optimization)",
+    )
+    quant_parser.add_argument("--year", type=int, default=2026, help="Season year")
+    quant_parser.add_argument(
+        "--pool-sizes",
+        default="20,100,1000",
+        help="Comma-separated pool sizes for ESPN optimization (default: 20,100,1000)",
+    )
+    quant_parser.add_argument("--simulations", type=int, default=50000, help="Monte Carlo simulations")
+    quant_parser.add_argument("--alpha", type=float, default=1.0, help="Model probability exponent")
+    quant_parser.add_argument("--beta", type=float, default=1.0, help="Contrarianism exponent")
+    quant_parser.add_argument(
+        "--calibration",
+        choices=["isotonic", "temperature", "platt", "none"],
+        default="isotonic",
+        help="Calibration method (default: isotonic)",
+    )
+    quant_parser.add_argument("--seed", type=int, default=42, help="Random seed")
+    quant_parser.add_argument("--output-dir", default=None, help="Output directory for report")
+    quant_parser.add_argument("--scrape-live", action="store_true", help="Allow live scraping")
+    quant_parser.add_argument("--cache-dir", default="data/raw/cache", help="Cache directory")
+    quant_parser.add_argument("--json", action="store_true", help="Output JSON instead of summary")
+
     args = parser.parse_args()
 
     if args.command == "sota":
@@ -3161,6 +3187,8 @@ def main():
         else:
             print(result.report())
         return 0 if result.all_passed else 1
+    elif args.command == "quant":
+        return run_quant(args)
     elif args.command == "audit-rubric":
         from .validation.rubric_audit import run_static_audit
         result = run_static_audit()
@@ -3262,6 +3290,38 @@ def run_conference_tournaments(args):
         print(f"Predictions written to {args.output}")
     else:
         print(predictor.generate_report(conferences, simulation_results))
+
+    return 0
+
+
+def run_quant(args):
+    """Run the quant decision system."""
+    from .quant.config import QuantConfig
+    from .quant.engine import QuantEngine
+
+    pool_sizes = [int(x.strip()) for x in args.pool_sizes.split(",")]
+
+    config = QuantConfig(
+        year=args.year,
+        pool_sizes=pool_sizes,
+        simulations=args.simulations,
+        calibration_method=args.calibration,
+        random_seed=args.seed,
+        alpha=args.alpha,
+        beta=args.beta,
+        scrape_live=getattr(args, "scrape_live", False),
+        cache_dir=getattr(args, "cache_dir", "data/raw/cache"),
+        output_dir=getattr(args, "output_dir", None),
+    )
+
+    engine = QuantEngine(config)
+    report = engine.run()
+
+    if getattr(args, "json", False):
+        import json as _json
+        print(_json.dumps(report.to_dict(), indent=2, default=str))
+    else:
+        print(report.summary())
 
     return 0
 
