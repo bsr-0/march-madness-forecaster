@@ -81,6 +81,12 @@ class FeatureSelectionResult:
     post_selection_condition_number: Optional[float] = None
     post_selection_max_vif: Optional[float] = None
     multicollinearity_warning: Optional[str] = None
+    # SA-1: Redundancy audit diagnostics
+    redundancy_pairs_found: int = 0
+    effective_rank: Optional[int] = None
+    # SA-2: DoF budget diagnostics
+    dof_budget_max_features: Optional[int] = None
+    dof_budget_exceeded: Optional[bool] = None
 
 
 class VIFPruner:
@@ -867,11 +873,13 @@ class FeatureSelector:
     """
     Orchestrates the full feature selection pipeline:
 
-    1. VIF pruning (FIX #3: enabled by default)
-    2. Correlation pruning (FIX #5: target-correlation tie-breaking)
-    3. Importance calculation (FIX #7: no correlation method when SHAP available)
-    4. Keep top-k features by importance
-    5. Bootstrap stability filter (FIX #6: features must survive 80% of runs)
+    0. Redundancy audit (diagnostic — reports all |r| > threshold pairs)
+    1. DoF budget enforcement (Harrell's rule caps max_features)
+    2. VIF pruning (FIX #3: enabled by default)
+    3. Correlation pruning (FIX #5: target-correlation tie-breaking)
+    4. Importance calculation (FIX #7: no correlation method when SHAP available)
+    5. Keep top-k features by importance (capped by DoF budget)
+    6. Bootstrap stability filter (FIX #6: features must survive 80% of runs)
     """
 
     def __init__(
@@ -886,6 +894,8 @@ class FeatureSelector:
         enable_stability_filter: bool = True,  # FIX #6
         stability_threshold: float = 0.80,  # FIX #6: must be selected in 80% of runs
         n_bootstrap: int = 10,  # FIX #6: number of bootstrap iterations
+        enable_dof_budget: bool = True,  # Harrell's rule enforcement
+        events_per_predictor: float = 15.0,  # Harrell's EPP (10-20 range)
     ):
         self.correlation_threshold = correlation_threshold
         self.min_features = min_features
@@ -897,9 +907,13 @@ class FeatureSelector:
         self.enable_stability_filter = enable_stability_filter
         self.stability_threshold = stability_threshold
         self.n_bootstrap = n_bootstrap
+        self.enable_dof_budget = enable_dof_budget
+        self.events_per_predictor = events_per_predictor
 
         self._selected_indices: Optional[List[int]] = None
         self._selected_names: Optional[List[str]] = None
+        self._dof_budget_result = None
+        self._redundancy_audit_result = None
 
     @property
     def is_fitted(self) -> bool:
@@ -919,11 +933,59 @@ class FeatureSelector:
         FIX #6: Bootstrap stability filter removes unstable features.
         FIX #7: Correlation importance suppressed when SHAP available.
         FIX 2.2: Cluster pre-selection collapses known correlated groups.
+        SA-1: Systematic redundancy audit (diagnostic, all |r| > threshold).
+        SA-2: DoF budget enforcement (Harrell's rule caps max_features).
 
         LEAKAGE NOTE: This method must be called with TRAINING data only.
         """
         original_dim = X.shape[1]
         original_name_to_idx = {name: i for i, name in enumerate(feature_names)}
+
+        # Step SA-0: Systematic redundancy audit (diagnostic only).
+        # Reports all pairwise correlations above threshold and eigenvalue
+        # analysis.  Does NOT modify the feature matrix — downstream
+        # pruners (VIF, correlation) handle the actual removal.
+        try:
+            from .statistical_audit import SystematicRedundancyAuditor
+            auditor = SystematicRedundancyAuditor(
+                correlation_threshold=self.correlation_threshold,
+            )
+            self._redundancy_audit_result = auditor.audit(X, feature_names)
+        except Exception as e:
+            logger.warning("Redundancy audit failed (non-fatal): %s", e)
+            self._redundancy_audit_result = None
+
+        # Step SA-1: DoF budget enforcement (Harrell's rule).
+        # Caps max_features to what the sample size can support.
+        if self.enable_dof_budget:
+            try:
+                from .statistical_audit import compute_dof_budget
+                n_positive = int(np.sum(y > 0))
+                budget = compute_dof_budget(
+                    n_samples=len(y),
+                    n_positive=n_positive,
+                    n_features=original_dim,
+                    events_per_predictor=self.events_per_predictor,
+                )
+                self._dof_budget_result = budget
+                if budget.recommended_max_features < self.max_features:
+                    logger.info(
+                        "DoF budget capping max_features: %d -> %d "
+                        "(Harrell's rule: %d events / %.0f EPP)",
+                        self.max_features, budget.recommended_max_features,
+                        budget.n_events, self.events_per_predictor,
+                    )
+                    self.max_features = budget.recommended_max_features
+                    # Ensure min_features doesn't exceed max_features
+                    if self.min_features > self.max_features:
+                        logger.info(
+                            "DoF budget also capping min_features: %d -> %d",
+                            self.min_features, self.max_features,
+                        )
+                        self.min_features = self.max_features
+            except Exception as e:
+                logger.warning("DoF budget computation failed (non-fatal): %s", e)
+                self._dof_budget_result = None
 
         # Step -2 (FIX 2.2): Cluster pre-selection.
         # Known feature clusters that are highly correlated within the
@@ -1014,6 +1076,19 @@ class FeatureSelector:
             vif_threshold=self.vif_threshold,
         )
 
+        # Populate redundancy/DoF diagnostics
+        redundancy_pairs = 0
+        eff_rank = None
+        if self._redundancy_audit_result is not None:
+            redundancy_pairs = self._redundancy_audit_result.n_above_threshold
+            eff_rank = self._redundancy_audit_result.effective_rank
+
+        dof_max = None
+        dof_exceeded = None
+        if self._dof_budget_result is not None:
+            dof_max = self._dof_budget_result.recommended_max_features
+            dof_exceeded = self._dof_budget_result.budget_exceeded
+
         return FeatureSelectionResult(
             selected_features=selected,
             selected_indices=selected_indices,
@@ -1023,12 +1098,16 @@ class FeatureSelector:
             low_importance_dropped=low_importance_dropped,
             original_dim=original_dim,
             reduced_dim=len(selected),
-            method="variance+vif+correlation_pruning+importance_ranking+stability_filter",
+            method="redundancy_audit+dof_budget+variance+vif+correlation_pruning+importance_ranking+stability_filter",
             stability_scores=stability_scores,
             variance_dropped=variance_dropped,
             post_selection_condition_number=cond_num,
             post_selection_max_vif=max_vif,
             multicollinearity_warning=mc_warning,
+            redundancy_pairs_found=redundancy_pairs,
+            effective_rank=eff_rank,
+            dof_budget_max_features=dof_max,
+            dof_budget_exceeded=dof_exceeded,
         )
 
     def _bootstrap_stability(
