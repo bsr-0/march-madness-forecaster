@@ -161,6 +161,7 @@ jobs:
     needs: run-pipeline
     if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
+    timeout-minutes: 300
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
