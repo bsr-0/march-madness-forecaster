@@ -32,7 +32,11 @@ class LibraryProviderHub:
     DEFAULT_PRIORITIES = {
         "historical_games": ["sportsdataverse", "espn_scoreboard", "cbbpy", "sportsipy", "cbbdata"],
         "team_metrics": ["sportsdataverse", "sportsipy", "cbbdata"],
-        "torvik": ["barttorvik", "cbbdata"],
+        # torvik_r is first: it calls the toRvik R package which returns ratings
+        # + complete four factors in one shot.  Falls back gracefully if R / toRvik
+        # is not installed.  barttorvik hits the same cbbstat API directly from
+        # Python.  cbbdata is last resort (requires API key).
+        "torvik": ["torvik_r", "barttorvik", "cbbdata"],
     }
 
     def fetch_historical_games(
@@ -65,6 +69,7 @@ class LibraryProviderHub:
 
     def fetch_torvik_ratings(self, year: int, priority: Optional[List[str]] = None) -> ProviderResult:
         methods = {
+            "torvik_r": self._from_torvik_r,
             "barttorvik": self._from_barttorvik_csv,
             "cbbdata": self._from_cbbdata_torvik_api,
         }
@@ -81,6 +86,7 @@ class LibraryProviderHub:
             "cbbpy": [],
             "sportsipy": [],
             "barttorvik": [],
+            "torvik_r": [],  # No credentials required; needs R + toRvik package
         }
 
     def _ordered_methods(
@@ -481,6 +487,34 @@ class LibraryProviderHub:
         payload = self._fetch_cbbdata_endpoint("CBBDATA_TORVIK_URL", year)
         records = payload.get("teams") or payload.get("records") or []
         return ProviderResult("cbbdata", records if isinstance(records, list) else [], strategy_used="cbbdata_api")
+
+    def _from_torvik_r(self, year: int) -> ProviderResult:
+        """Fetch Torvik ratings via the toRvik R package.
+
+        Calls ``torvik_ratings(year=<year>)`` through a Rscript subprocess.
+        Returns an empty result if R or toRvik is not installed so the
+        fallback chain continues transparently.
+        """
+        try:
+            from ..scrapers.torvik_r import TorvikRWrapper
+        except ImportError as exc:
+            logger.debug("torvik_r import failed: %s", exc)
+            return ProviderResult("torvik_r", [])
+
+        try:
+            wrapper = TorvikRWrapper()
+            if not wrapper.is_available():
+                return ProviderResult("torvik_r", [])
+            records = wrapper.fetch_team_stats(year)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("torvik_r fetch_team_stats failed: %s", exc)
+            return ProviderResult("torvik_r", [])
+
+        if not records:
+            return ProviderResult("torvik_r", [])
+
+        logger.info("torvik_r: loaded %d team records for %d", len(records), year)
+        return ProviderResult("torvik_r", records)
 
     def _from_barttorvik_csv(self, year: int) -> ProviderResult:
         url_template = os.getenv("BARTTORVIK_TORVIK_URL")
