@@ -584,3 +584,81 @@ def test_pythagorean_win_pct_calibration():
     # Symmetry: P(A>B) + P(B>A) == 1
     p_rev = engine._pythagorean_win_pct(100.0, 110.0)
     assert abs(p10 + p_rev - 1.0) < 1e-9
+
+
+# ---------------------------------------------------------------------------
+# opp_two_pt_pct_allowed: three-way precedence in FeatureEngineer
+# ---------------------------------------------------------------------------
+
+def _make_pm_dict(opp_two_pt_pct_allowed=None):
+    """Minimal proprietary-metrics dict for extract_team_features."""
+    from src.data.features.proprietary_metrics import ProprietaryTeamMetrics
+    m = ProprietaryTeamMetrics(team_id="duke", team_name="Duke")
+    d = m.to_dict()
+    if opp_two_pt_pct_allowed is not None:
+        d['opp_two_pt_pct_allowed'] = opp_two_pt_pct_allowed
+    else:
+        d.pop('opp_two_pt_pct_allowed', None)
+    return d
+
+
+def test_opp_two_pt_pct_box_score_primary():
+    """Box-score-derived value from proprietary metrics is used when available."""
+    from src.data.features.feature_engineering import FeatureEngineer
+    fe = FeatureEngineer()
+    pm = _make_pm_dict(opp_two_pt_pct_allowed=0.44)
+    result = fe.extract_team_features(
+        team_id="duke", team_name="Duke", seed=1, region="East",
+        proprietary_metrics=pm, torvik_data=None,
+    )
+    assert abs(result.opp_two_pt_pct_allowed - 0.44) < 1e-9
+
+
+def test_opp_two_pt_pct_torvik_fallback():
+    """Torvik's opp_two_pt_pct is used when proprietary metrics lack the field."""
+    from src.data.features.feature_engineering import FeatureEngineer
+    fe = FeatureEngineer()
+    pm = _make_pm_dict(opp_two_pt_pct_allowed=None)  # key absent
+    torvik_data = {'opp_two_pt_pct': 0.51}
+    result = fe.extract_team_features(
+        team_id="duke", team_name="Duke", seed=1, region="East",
+        proprietary_metrics=pm, torvik_data=torvik_data,
+    )
+    assert abs(result.opp_two_pt_pct_allowed - 0.51) < 1e-9
+
+
+def test_opp_two_pt_pct_default_fallback():
+    """Population default 0.48 is used when neither pm nor Torvik provides the value."""
+    from src.data.features.feature_engineering import FeatureEngineer
+    fe = FeatureEngineer()
+    result = fe.extract_team_features(
+        team_id="duke", team_name="Duke", seed=1, region="East",
+        proprietary_metrics=None, torvik_data=None,
+    )
+    assert abs(result.opp_two_pt_pct_allowed - 0.48) < 1e-9
+
+
+def test_opp_two_pt_pct_box_score_beats_torvik():
+    """Box-score source takes precedence over Torvik when both are present."""
+    from src.data.features.feature_engineering import FeatureEngineer
+    fe = FeatureEngineer()
+    pm = _make_pm_dict(opp_two_pt_pct_allowed=0.44)
+    torvik_data = {'opp_two_pt_pct': 0.55}  # should NOT override box-score value
+    result = fe.extract_team_features(
+        team_id="duke", team_name="Duke", seed=1, region="East",
+        proprietary_metrics=pm, torvik_data=torvik_data,
+    )
+    assert abs(result.opp_two_pt_pct_allowed - 0.44) < 1e-9
+
+
+def test_feature_names_list_uses_allowed_suffix():
+    """Feature names list should use 'opp_two_pt_pct_allowed', not the Torvik alias."""
+    from src.data.features.feature_engineering import TeamFeatures
+    names = TeamFeatures.get_feature_names()
+    assert 'opp_two_pt_pct_allowed' in names, (
+        "Feature names should use 'opp_two_pt_pct_allowed' (box-score name), "
+        "not 'opp_two_pt_pct' (Torvik alias)"
+    )
+    assert 'opp_two_pt_pct' not in names, (
+        "Torvik alias 'opp_two_pt_pct' should not appear in feature names list"
+    )
