@@ -234,6 +234,53 @@ class TestDagExecutor:
         assert not results["fetch"].cached
         assert task.executed
 
+    def test_cache_marker_rejected_when_context_changes(self, tmp_path):
+        from src.data.ingestion.dag import DagExecutor, DagTask
+
+        class ConstantKeyTask(DagTask):
+            name = "fetch"
+            depends_on = []
+
+            def __init__(self):
+                self.executions = 0
+
+            def run(self, context, **upstream):
+                self.executions += 1
+                return {"season": context["season"]}
+
+            def output_key(self, context):
+                return "shared_key"
+
+        dag = DagExecutor(cache_dir=str(tmp_path / "cache"), skip_cached=True)
+        task = ConstantKeyTask()
+        dag.add_task(task)
+
+        first = dag.execute({"season": 2026})
+        assert not first["fetch"].cached
+        assert task.executions == 1
+
+        second = dag.execute({"season": 2027})
+        assert not second["fetch"].cached
+        assert task.executions == 2
+
+    def test_legacy_marker_without_context_fingerprint_is_invalidated(self, tmp_path):
+        import json
+
+        from src.data.ingestion.dag import DagExecutor
+
+        dag = DagExecutor(cache_dir=str(tmp_path / "cache"), skip_cached=True)
+        task = self._make_task("fetch", output="data")
+        dag.add_task(task)
+
+        marker = tmp_path / "cache" / "fetch_2026.marker"
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(json.dumps({"task": "fetch", "key": "fetch_2026"}))
+
+        results = dag.execute({"season": 2026})
+        assert not results["fetch"].cached
+        assert task.executed
+        assert marker.exists()
+
     def test_circular_dependency_detected(self, tmp_path):
         from src.data.ingestion.dag import DagExecutor
 
