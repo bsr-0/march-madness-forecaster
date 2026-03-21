@@ -12,6 +12,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -21,6 +22,7 @@ from ..config import (
     SOTAPipelineConfig,
 )
 from ...exceptions import LeakageError
+from ...governance.cache_hygiene import purge_ephemeral_cache_paths
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,7 @@ def run_pre_checks(pipeline) -> Optional[Dict]:
     Sets pipeline._run_hasher, pipeline._dataset_hashes, pipeline._mc_calibration.
     Also validates year-split policy and freeze-before-predict discipline.
     """
+    _purge_ephemeral_repo_caches(pipeline)
     _check_dataset_hashes(pipeline)
     _check_holdout_contamination(pipeline)
     _validate_year_split_policy(pipeline)
@@ -63,6 +66,23 @@ def run_pre_checks(pipeline) -> Optional[Dict]:
     _auto_detect_kaggle_dir(pipeline)
 
     return freeze_verification
+
+
+def _purge_ephemeral_repo_caches(pipeline) -> None:
+    """Remove repo-local runtime caches before leakage-sensitive checks.
+
+    Root cause addressed in first-pass hardening:
+    transient Python and pytest caches were being left inside the repo tree,
+    which made it harder to distinguish durable artifacts from throwaway local
+    state during leakage investigations.
+    """
+    repo_root = Path(os.getcwd()).resolve()
+    removed = purge_ephemeral_cache_paths(repo_root)
+    if removed:
+        logger.info(
+            "Removed %d ephemeral runtime cache paths before pre-run checks.",
+            len(removed),
+        )
 
 
 def _check_dataset_hashes(pipeline) -> None:
