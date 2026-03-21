@@ -28,6 +28,7 @@ from ..scrapers import (
     aggregate_consensus,
 )
 from ..features.public_advanced_metrics import PublicAdvancedMetricsBuilder
+from .game_fetchers import IncrementalGameFetcher
 from .providers import LibraryProviderHub
 from ...conference_tournament.data_enrichment import (
     compute_defensive_four_factors_from_games,
@@ -98,6 +99,7 @@ class RealDataCollector:
         self.cache_dir = Path(config.cache_dir)
         self.providers = LibraryProviderHub()
         self.adv_builder = PublicAdvancedMetricsBuilder()
+        self.incremental_fetcher = IncrementalGameFetcher()
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -218,17 +220,32 @@ class RealDataCollector:
             provider_lineage["historical_games_json"] = "ncaa_stats_scraper"
             historical_team_rows = [g for g in games if isinstance(g, dict)]
         else:
-            game_provider = self.providers.fetch_historical_games(
-                year,
-                priority=self.config.historical_games_provider_priority,
-                since=self.config.historical_games_since,
-            )
-            new_records = game_provider.records
-            if self.config.historical_games_since and new_records:
-                new_records = self._merge_incremental_games(year, new_records)
-                provider_lineage["historical_games_json"] = f"{game_provider.provider}+incremental"
-            elif new_records:
-                provider_lineage["historical_games_json"] = game_provider.provider
+            # Incremental path: use IncrementalGameFetcher (ESPN primary) when
+            # a since-date is provided, then merge with existing data.
+            # Full-season path: fall back to LibraryProviderHub (ESPN → sdv → cbbpy).
+            if self.config.historical_games_since:
+                ingestion_records = self.incremental_fetcher.fetch_since(
+                    year=year,
+                    since=self.config.historical_games_since,
+                )
+                # Convert to team-perspective dicts
+                new_records: List[Dict] = []
+                for rec in ingestion_records:
+                    new_records.extend(rec.to_team_game_rows())
+                if new_records:
+                    new_records = self._merge_incremental_games(year, new_records)
+                    provider_lineage["historical_games_json"] = "espn_scoreboard+incremental"
+                game_provider_name = "espn_scoreboard"
+            else:
+                game_provider = self.providers.fetch_historical_games(
+                    year,
+                    priority=self.config.historical_games_provider_priority,
+                )
+                new_records = game_provider.records
+                if new_records:
+                    provider_lineage["historical_games_json"] = game_provider.provider
+                game_provider_name = game_provider.provider if not self.config.historical_games_since else "espn_scoreboard"
+
             if new_records:
                 self._ensure_game_dates(new_records, year)
                 historical_team_rows = [g for g in new_records if isinstance(g, dict)]
@@ -242,7 +259,7 @@ class RealDataCollector:
                     validation_errors["advanced_metrics_json"] = validate_ratings_payload(advanced_metrics)
                     self._assert_valid("advanced_metrics_json", validation_errors["advanced_metrics_json"])
                     out["advanced_metrics_json"] = self._write(f"advanced_metrics_{year}.json", advanced_metrics)
-                    provider_lineage["advanced_metrics_json"] = game_provider.provider
+                    provider_lineage["advanced_metrics_json"] = game_provider_name
 
         # --- Enrich Torvik data with defensive Four Factors from game box scores ---
         # The T-Rank CSV and player-stats CSV fallback only provide offensive
