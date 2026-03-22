@@ -823,6 +823,107 @@ def ingest_historical(args):
     return 0
 
 
+def ingest_extended_historical(args):
+    """Run extended historical ingestion across all available sources."""
+    import logging
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
+    from .data.ingestion.extended_historical_ingest import (
+        ExtendedHistoricalIngestor,
+        ExtendedIngestionConfig,
+    )
+
+    config = ExtendedIngestionConfig(
+        start_season=args.start_season,
+        end_season=args.end_season,
+        output_dir=args.output_dir,
+        cache_dir=args.cache_dir,
+        skip_existing=not args.no_skip_existing,
+        include_tournament_results=not args.skip_tournament_results,
+        include_team_stats=not args.skip_team_stats,
+        include_game_data=not args.skip_game_data,
+        include_torvik=not args.skip_torvik,
+        include_external_ratings=not args.skip_external_ratings,
+        kaggle_dir=args.kaggle_dir,
+        scraper_delay=args.scraper_delay,
+    )
+    manifest = ExtendedHistoricalIngestor(config).run()
+    print(f"✓ Extended historical ingestion complete. Manifest: {manifest.get('manifest_path', 'N/A')}")
+    return 0
+
+
+def optimize_training_window(args):
+    """Run training window optimization analysis."""
+    import logging
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
+    from .ml.evaluation.training_window_optimizer import (
+        TrainingWindowOptimizer,
+        DEFAULT_EVAL_YEARS,
+    )
+
+    eval_years = (
+        [int(y) for y in args.eval_years.split(",")]
+        if args.eval_years
+        else list(DEFAULT_EVAL_YEARS)
+    )
+
+    windows = None
+    if args.windows:
+        windows = []
+        for w in args.windows.split(","):
+            w = w.strip()
+            windows.append(None if w.lower() == "all" else int(w))
+
+    model_types = None
+    if args.model_types:
+        model_types = [m.strip() for m in args.model_types.split(",")]
+
+    optimizer = TrainingWindowOptimizer(
+        windows=windows,
+        eval_years=eval_years,
+        include_regime_windows=not args.no_regime_windows,
+    )
+
+    print("Training window optimization requires a train/predict function.")
+    print("Use this module programmatically via:")
+    print("  from src.ml.evaluation.training_window_optimizer import TrainingWindowOptimizer")
+    print(f"  optimizer = TrainingWindowOptimizer(eval_years={eval_years})")
+    print(f"  report = optimizer.evaluate_windows(data_by_year, train_predict_fn)")
+    print(f"  optimizer.save_report(report, '{args.output}')")
+    return 0
+
+
+def data_availability(args):
+    """Report per-year data availability across all sources."""
+    from .data.ingestion.extended_historical_ingest import get_data_availability_summary
+
+    summary = get_data_availability_summary(args.output_dir)
+    if not summary:
+        print(f"No historical data found in {args.output_dir}")
+        return 1
+
+    print(f"{'Year':<6} {'Tournament':>12} {'Games':>8} {'Metrics':>10} {'Torvik':>8}")
+    print("-" * 48)
+    for year in sorted(summary.keys()):
+        data = summary[year]
+        print(
+            f"{year:<6} "
+            f"{'YES' if data['tournament_results'] else '---':>12} "
+            f"{'YES' if data['game_data'] else '---':>8} "
+            f"{'YES' if data['team_metrics'] else '---':>10} "
+            f"{'YES' if data['torvik'] else '---':>8}"
+        )
+
+    total = len(summary)
+    complete = sum(
+        1 for d in summary.values()
+        if all(d.values())
+    )
+    print(f"\n{complete}/{total} years fully complete")
+    return 0
+
+
 def audit_rdof(args):
     """Run researcher degrees of freedom audit."""
     import logging
@@ -2812,6 +2913,43 @@ def main():
     quant_parser.add_argument("--cache-dir", default="data/raw/cache", help="Cache directory")
     quant_parser.add_argument("--json", action="store_true", help="Output JSON instead of summary")
 
+    # --- ingest-extended-historical ---
+    ext_hist_parser = subparsers.add_parser(
+        "ingest-extended-historical",
+        help="Extended historical ingestion across all sources (1996-2025)",
+    )
+    ext_hist_parser.add_argument("--start-season", type=int, default=2003, help="Starting season (inclusive)")
+    ext_hist_parser.add_argument("--end-season", type=int, default=2025, help="Ending season (inclusive)")
+    ext_hist_parser.add_argument("--output-dir", default="data/raw/historical", help="Output directory")
+    ext_hist_parser.add_argument("--cache-dir", default="data/raw/cache", help="Cache directory")
+    ext_hist_parser.add_argument("--no-skip-existing", action="store_true", help="Re-collect even if files exist")
+    ext_hist_parser.add_argument("--skip-tournament-results", action="store_true", help="Skip tournament results")
+    ext_hist_parser.add_argument("--skip-team-stats", action="store_true", help="Skip team stats")
+    ext_hist_parser.add_argument("--skip-game-data", action="store_true", help="Skip game-level data")
+    ext_hist_parser.add_argument("--skip-torvik", action="store_true", help="Skip Torvik ratings")
+    ext_hist_parser.add_argument("--skip-external-ratings", action="store_true", help="Skip external ratings")
+    ext_hist_parser.add_argument("--kaggle-dir", default=None, help="Path to Kaggle CSV directory")
+    ext_hist_parser.add_argument("--scraper-delay", type=float, default=3.5, help="Delay between scraper requests (seconds)")
+
+    # --- optimize-training-window ---
+    tw_parser = subparsers.add_parser(
+        "optimize-training-window",
+        help="Evaluate optimal training window depth per model type via LOYO",
+    )
+    tw_parser.add_argument("--historical-dir", default="data/raw/historical", help="Directory with historical data")
+    tw_parser.add_argument("--eval-years", default=None, help="Comma-separated eval years (default: 2018,2019,2021-2025)")
+    tw_parser.add_argument("--windows", default=None, help="Comma-separated window sizes (e.g. 3,5,7,10,15,all)")
+    tw_parser.add_argument("--model-types", default=None, help="Comma-separated model types (default: lightgbm,xgboost,logistic)")
+    tw_parser.add_argument("--output", "-o", default="artifacts/training_window_report.json", help="Output JSON report path")
+    tw_parser.add_argument("--no-regime-windows", action="store_true", help="Skip regime-aligned window analysis")
+
+    # --- data-availability ---
+    da_parser = subparsers.add_parser(
+        "data-availability",
+        help="Report per-year data availability across all sources",
+    )
+    da_parser.add_argument("--output-dir", default="data/raw/historical", help="Historical data directory")
+
     args = parser.parse_args()
 
     if args.command == "sota":
@@ -2822,6 +2960,12 @@ def main():
         return ingest_data(args)
     elif args.command == "ingest-historical":
         return ingest_historical(args)
+    elif args.command == "ingest-extended-historical":
+        return ingest_extended_historical(args)
+    elif args.command == "optimize-training-window":
+        return optimize_training_window(args)
+    elif args.command == "data-availability":
+        return data_availability(args)
     elif args.command == "materialize-features":
         return materialize_features(args)
     elif args.command == "sota-from-manifest":
