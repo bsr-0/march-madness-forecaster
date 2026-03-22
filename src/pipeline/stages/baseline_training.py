@@ -518,23 +518,26 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
 
     import os
 
-    # Resolve "auto" multi_year_games_dir: check for data/raw/historical
-    # relative to the working directory.
-    if pipeline.config.multi_year_games_dir == "auto":
+    # Resolve "auto" multi_year_games_dir via runtime state (never mutate config).
+    _rs = getattr(pipeline, "_runtime_state", {})
+    _resolved_games_dir = _rs.get("multi_year_games_dir", pipeline.config.multi_year_games_dir)
+    if _resolved_games_dir == "auto":
         candidate = os.path.join(os.getcwd(), "data", "raw", "historical")
         if os.path.isdir(candidate):
-            pipeline.config.multi_year_games_dir = candidate
+            _resolved_games_dir = candidate
+            _rs["multi_year_games_dir"] = candidate
             logger.info("Auto-detected multi-year training directory: %s", candidate)
         else:
-            pipeline.config.multi_year_games_dir = None
+            _resolved_games_dir = None
+            _rs["multi_year_games_dir"] = None
             logger.info("No historical directory found; multi-year training disabled")
 
     if (
         pipeline.config.enable_multi_year_training
-        and pipeline.config.multi_year_games_dir
-        and os.path.isdir(pipeline.config.multi_year_games_dir)
+        and _resolved_games_dir
+        and os.path.isdir(_resolved_games_dir)
     ):
-        games_dir = pipeline.config.multi_year_games_dir
+        games_dir = _resolved_games_dir
         feature_dim_full = X_full.shape[1]
 
         # Determine which years to load
@@ -1801,9 +1804,12 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # is a validation diagnostic only.
     # ====================================================================
     loyo_stats = {}
+    _loyo_games_dir = getattr(pipeline, "_runtime_state", {}).get(
+        "multi_year_games_dir", pipeline.config.multi_year_games_dir
+    )
     if (
         pipeline.config.enable_loyo_cv
-        and pipeline.config.multi_year_games_dir
+        and _loyo_games_dir
         and LeaveOneYearOutCV is not None
     ):
         # Use pre-pruning feature dimension and names since LOYO loads
@@ -2153,8 +2159,10 @@ def _run_loyo_validation(
                 latest = gd
         return latest
 
-    games_dir = pipeline.config.multi_year_games_dir
-    if not os.path.isdir(games_dir):
+    games_dir = getattr(pipeline, "_runtime_state", {}).get(
+        "multi_year_games_dir", pipeline.config.multi_year_games_dir
+    )
+    if not games_dir or not os.path.isdir(games_dir):
         return {"enabled": False, "reason": f"directory_not_found: {games_dir}"}
 
     years = pipeline.config.loyo_years or [y for y in range(2015, 2026) if y != 2020]
@@ -2675,7 +2683,9 @@ def _optimize_ensemble_weights_loyo(
     import logging as _logging
     logger = _logging.getLogger(__name__)
 
-    games_dir = pipeline.config.multi_year_games_dir
+    games_dir = getattr(pipeline, "_runtime_state", {}).get(
+        "multi_year_games_dir", pipeline.config.multi_year_games_dir
+    )
     if not games_dir or not os.path.isdir(games_dir):
         return {}
 

@@ -127,21 +127,25 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     # on or after each year's tournament start date.  Regular-season
     # games are NEVER loaded — no downstream filtering needed.
     tourney_cal_count = 0
+    _rs = getattr(pipeline, "_runtime_state", {})
+    _resolved_games_dir = _rs.get("multi_year_games_dir", pipeline.config.multi_year_games_dir)
     if (pipeline.config.enable_multi_year_calibration
-            and pipeline.config.multi_year_games_dir
+            and _resolved_games_dir
             and hasattr(pipeline, "baseline_model")
             and pipeline.baseline_model is not None):
         import os
 
-        # Resolve "auto" multi_year_games_dir if not yet resolved
-        if pipeline.config.multi_year_games_dir == "auto":
+        # Resolve "auto" multi_year_games_dir via runtime state (never mutate config)
+        if _resolved_games_dir == "auto":
             candidate = os.path.join(os.getcwd(), "data", "raw", "historical")
             if os.path.isdir(candidate):
-                pipeline.config.multi_year_games_dir = candidate
+                _resolved_games_dir = candidate
+                _rs["multi_year_games_dir"] = candidate
             else:
-                pipeline.config.multi_year_games_dir = None
+                _resolved_games_dir = None
+                _rs["multi_year_games_dir"] = None
 
-        games_dir = pipeline.config.multi_year_games_dir
+        games_dir = _resolved_games_dir
         if not games_dir:
             logger.warning(
                 "multi_year_games_dir is None after resolution; "

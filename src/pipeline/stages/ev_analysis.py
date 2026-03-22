@@ -543,7 +543,7 @@ def _run_pool_competition_simulation(
     config = PoolSimulationConfig(
         n_tournaments=base_n_tournaments,
         n_opponents=max(1, pool_size - len(model_brackets)),
-        noise_std=pipeline.config.mc_noise_std,
+        noise_std=float(getattr(pipeline, "_runtime_state", {}).get("mc_noise_std", pipeline.config.mc_noise_std)),
         random_seed=pipeline.config.random_seed,
         scoring_system=scoring_system,
         upset_bonus_enabled=(pipeline.config.ev_scoring_system == "upset_bonus"),
