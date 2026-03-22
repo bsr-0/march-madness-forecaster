@@ -861,32 +861,9 @@ features:
     revision_behavior: latest_forbidden
     late_arrival_policy: exclude_if_available_after_prediction_time
 
-  - feature_name: wab
-    owner: data-platform
-    source:
-      system: proprietary_metrics
-      dataset: game_records
-      field: wab
-    event_timestamp_field: game_end_time
-    available_at_logic:
-      type: offset_from_event
-      event_timestamp_field: game_end_time
-      offset_hours: 0.5
-    transformation_logic_ref: "src/data/features/proprietary_metrics.py::ProprietaryMetricsEngine.compute"
-    prediction_time_reference: scheduled_tipoff_time_utc
-    allowed_lag: ">=0h"
-    null_handling_policy: "use_default_0.0"
-    leakage_checks:
-      same_game_outcome_leakage: false
-      future_opponent_outcome_leakage: false
-      post_game_aggregate_leakage: false
-      tournament_info_leakage_pre_tournament: false
-    contract_version: "1.0.0"
-    test_ids: ["PIT-001", "LEAK-R1-001", "LEAK-R3-001", "HIST-001"]
-    risk_tier: high
-    snapshot_policy: point_in_time_snapshot_required
-    revision_behavior: latest_forbidden
-    late_arrival_policy: exclude_if_available_after_prediction_time
+  # FIX C4: wab REMOVED from feature vector (near-redundant with wab_poisson).
+  # The ProprietaryMetricsEngine still computes wab for backward compat but
+  # it is no longer included in to_vector().  wab_poisson is canonical.
 
   - feature_name: sor
     owner: data-platform
@@ -1571,7 +1548,7 @@ features:
     late_arrival_policy: accept_with_staleness_flag
 
   # ==========================================================================
-  # Coach Features (7 features) — source: coach_tournament
+  # Coach Features (3 features, FIX C3: consolidated from 7) — source: coach_tournament
   # ==========================================================================
   - feature_name: coach_tournament_exp
     owner: data-platform
@@ -1625,17 +1602,20 @@ features:
     revision_behavior: latest_forbidden
     late_arrival_policy: exclude_if_available_after_prediction_time
 
-  - feature_name: coach_deep_run_rate
+  # FIX C3: coach_deep_run_rate, coach_stage_consistency, coach_f4_appearances,
+  # coach_e8_appearances, coach_s16_appearances CONSOLIDATED into
+  # coach_postseason_score (weighted composite).
+  - feature_name: coach_postseason_score
     owner: data-platform
     source:
       system: coach_tournament
       dataset: coach_career_stats
-      field: coach_deep_run_rate
+      field: "composite(deep_run_rate, f4, e8, stage_consistency)"
     event_timestamp_field: career_total_snapshot
     available_at_logic:
       type: function_ref
       ref: "src/data/availability.py::coach_data_available_at"
-    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer.extract_team_features"
+    transformation_logic_ref: "src/data/features/feature_engineering.py::TeamFeatures.to_vector"
     prediction_time_reference: scheduled_tipoff_time_utc
     allowed_lag: ">=0h"
     null_handling_policy: "use_default_0.0"
@@ -1644,111 +1624,7 @@ features:
       future_opponent_outcome_leakage: false
       post_game_aggregate_leakage: false
       tournament_info_leakage_pre_tournament: true
-    contract_version: "1.0.0"
-    test_ids: ["PIT-006", "LEAK-R4-001", "HIST-002"]
-    risk_tier: high
-    snapshot_policy: point_in_time_snapshot_required
-    revision_behavior: latest_forbidden
-    late_arrival_policy: exclude_if_available_after_prediction_time
-
-  - feature_name: coach_stage_consistency
-    owner: data-platform
-    source:
-      system: coach_tournament
-      dataset: coach_career_stats
-      field: coach_stage_consistency
-    event_timestamp_field: career_total_snapshot
-    available_at_logic:
-      type: function_ref
-      ref: "src/data/availability.py::coach_data_available_at"
-    transformation_logic_ref: "src/data/features/feature_engineering.py::FeatureEngineer.extract_team_features"
-    prediction_time_reference: scheduled_tipoff_time_utc
-    allowed_lag: ">=0h"
-    null_handling_policy: "use_default_0.0"
-    leakage_checks:
-      same_game_outcome_leakage: false
-      future_opponent_outcome_leakage: false
-      post_game_aggregate_leakage: false
-      tournament_info_leakage_pre_tournament: true
-    contract_version: "1.0.0"
-    test_ids: ["PIT-006", "LEAK-R4-001", "HIST-002"]
-    risk_tier: high
-    snapshot_policy: point_in_time_snapshot_required
-    revision_behavior: latest_forbidden
-    late_arrival_policy: exclude_if_available_after_prediction_time
-
-  - feature_name: coach_f4_appearances
-    owner: data-platform
-    source:
-      system: coach_tournament
-      dataset: coach_career_stats
-      field: coach_f4_appearances
-    event_timestamp_field: career_total_snapshot
-    available_at_logic:
-      type: function_ref
-      ref: "src/data/availability.py::coach_data_available_at"
-    transformation_logic_ref: "src/data/features/feature_engineering.py::TeamFeatures.to_vector"
-    prediction_time_reference: scheduled_tipoff_time_utc
-    allowed_lag: ">=0h"
-    null_handling_policy: "use_default_0_log_scaled"
-    leakage_checks:
-      same_game_outcome_leakage: false
-      future_opponent_outcome_leakage: false
-      post_game_aggregate_leakage: false
-      tournament_info_leakage_pre_tournament: true
-    contract_version: "1.0.0"
-    test_ids: ["PIT-006", "LEAK-R4-001", "HIST-002"]
-    risk_tier: high
-    snapshot_policy: point_in_time_snapshot_required
-    revision_behavior: latest_forbidden
-    late_arrival_policy: exclude_if_available_after_prediction_time
-
-  - feature_name: coach_e8_appearances
-    owner: data-platform
-    source:
-      system: coach_tournament
-      dataset: coach_career_stats
-      field: coach_e8_appearances
-    event_timestamp_field: career_total_snapshot
-    available_at_logic:
-      type: function_ref
-      ref: "src/data/availability.py::coach_data_available_at"
-    transformation_logic_ref: "src/data/features/feature_engineering.py::TeamFeatures.to_vector"
-    prediction_time_reference: scheduled_tipoff_time_utc
-    allowed_lag: ">=0h"
-    null_handling_policy: "use_default_0_log_scaled"
-    leakage_checks:
-      same_game_outcome_leakage: false
-      future_opponent_outcome_leakage: false
-      post_game_aggregate_leakage: false
-      tournament_info_leakage_pre_tournament: true
-    contract_version: "1.0.0"
-    test_ids: ["PIT-006", "LEAK-R4-001", "HIST-002"]
-    risk_tier: high
-    snapshot_policy: point_in_time_snapshot_required
-    revision_behavior: latest_forbidden
-    late_arrival_policy: exclude_if_available_after_prediction_time
-
-  - feature_name: coach_s16_appearances
-    owner: data-platform
-    source:
-      system: coach_tournament
-      dataset: coach_career_stats
-      field: coach_s16_appearances
-    event_timestamp_field: career_total_snapshot
-    available_at_logic:
-      type: function_ref
-      ref: "src/data/availability.py::coach_data_available_at"
-    transformation_logic_ref: "src/data/features/feature_engineering.py::TeamFeatures.to_vector"
-    prediction_time_reference: scheduled_tipoff_time_utc
-    allowed_lag: ">=0h"
-    null_handling_policy: "use_default_0_log_scaled"
-    leakage_checks:
-      same_game_outcome_leakage: false
-      future_opponent_outcome_leakage: false
-      post_game_aggregate_leakage: false
-      tournament_info_leakage_pre_tournament: true
-    contract_version: "1.0.0"
+    contract_version: "2.0.0"
     test_ids: ["PIT-006", "LEAK-R4-001", "HIST-002"]
     risk_tier: high
     snapshot_policy: point_in_time_snapshot_required

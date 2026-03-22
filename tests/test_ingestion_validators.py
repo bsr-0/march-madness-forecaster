@@ -138,3 +138,85 @@ def test_validate_odds_payload_requires_probability_or_odds():
     errors = validate_odds_payload(payload)
     assert errors
     assert "implied_win_probability/title_odds" in errors[0]
+
+
+# ---------------------------------------------------------------------------
+# validate_season_quality
+# ---------------------------------------------------------------------------
+
+from src.data.ingestion.schemas import IngestionGameRecord
+from src.data.ingestion.validators import validate_season_quality
+
+
+def _make_quality_records(n, n_teams=250, n_dates=60, fga=60.0):
+    """Build diverse IngestionGameRecords for quality validation tests."""
+    teams = [f"team_{i}" for i in range(n_teams)]
+    records = []
+    for i in range(n):
+        home = teams[i % n_teams]
+        away = teams[(i + 1) % n_teams]
+        day = (i % n_dates) + 1
+        month = 1 if day <= 28 else 2
+        day_of_month = day if day <= 28 else day - 28
+        records.append(IngestionGameRecord(
+            game_id=f"g{i}", date=f"2024-{month:02d}-{day_of_month:02d}",
+            season=2024,
+            home_team_id=home, home_team_name=home,
+            away_team_id=away, away_team_name=away,
+            home_score=80, away_score=75,
+            home_fga=fga, away_fga=fga,
+        ))
+    return records
+
+
+def test_validate_season_quality_pass():
+    records = _make_quality_records(600)
+    assert validate_season_quality(records) == []
+
+
+def test_validate_season_quality_too_few_games():
+    records = _make_quality_records(10, n_teams=10, n_dates=10)
+    errors = validate_season_quality(records)
+    assert any("insufficient games" in e for e in errors)
+
+
+def test_validate_season_quality_too_few_teams():
+    records = _make_quality_records(600, n_teams=4, n_dates=60)
+    errors = validate_season_quality(records)
+    assert any("team coverage" in e for e in errors)
+
+
+def test_validate_season_quality_too_few_dates():
+    # All games on same date
+    records = []
+    teams = [f"team_{i}" for i in range(250)]
+    for i in range(600):
+        records.append(IngestionGameRecord(
+            game_id=f"g{i}", date="2024-01-01", season=2024,
+            home_team_id=teams[i % 250], home_team_name=teams[i % 250],
+            away_team_id=teams[(i + 1) % 250], away_team_name=teams[(i + 1) % 250],
+            home_score=80, away_score=75, home_fga=60.0, away_fga=60.0,
+        ))
+    errors = validate_season_quality(records)
+    assert any("temporal spread" in e for e in errors)
+
+
+def test_validate_season_quality_low_box_scores():
+    records = _make_quality_records(600, fga=0.0)
+    errors = validate_season_quality(records)
+    assert any("box-score coverage" in e for e in errors)
+
+
+def test_validate_season_quality_team_concentration():
+    # 600 games where team_0 appears in every single game
+    records = []
+    for i in range(600):
+        records.append(IngestionGameRecord(
+            game_id=f"g{i}", date=f"2024-{(i % 2) + 1:02d}-{(i % 28) + 1:02d}",
+            season=2024,
+            home_team_id="team_0", home_team_name="team_0",
+            away_team_id=f"team_{i + 1}", away_team_name=f"team_{i + 1}",
+            home_score=80, away_score=75, home_fga=60.0, away_fga=60.0,
+        ))
+    errors = validate_season_quality(records)
+    assert any("concentration" in e for e in errors)

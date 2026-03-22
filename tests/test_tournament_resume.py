@@ -222,8 +222,8 @@ class TestTeamFeaturesIntegration:
     """Tests that tournament_resume is properly wired into TeamFeatures."""
 
     def test_team_feature_dim_includes_resume(self):
-        """TEAM_FEATURE_DIM should be 79 (71 base + 2 graph SOS + 3 win quality + 3 per-stage coaching)."""
-        assert TEAM_FEATURE_DIM == 79
+        """TEAM_FEATURE_DIM should be 74 (66 base + 2 graph SOS + 3 win quality + 3 coaching)."""
+        assert TEAM_FEATURE_DIM == 74
 
     def test_to_vector_length_matches_dim(self):
         """to_vector() output length should equal TEAM_FEATURE_DIM."""

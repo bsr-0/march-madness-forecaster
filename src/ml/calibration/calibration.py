@@ -203,11 +203,15 @@ class IsotonicCalibrator:
     def fit(self, predictions: np.ndarray, outcomes: np.ndarray) -> None:
         """
         Fit calibrator on historical data.
-        
+
         Args:
             predictions: Raw predicted probabilities
             outcomes: Actual outcomes (0 or 1)
         """
+        if len(predictions) != len(outcomes):
+            raise ValueError(f"Length mismatch: {len(predictions)} predictions vs {len(outcomes)} outcomes")
+        if np.any(np.isnan(predictions)):
+            raise ValueError("Predictions contain NaN values")
         self.isotonic.fit(predictions, outcomes)
         self.fitted = True
     
@@ -403,6 +407,10 @@ class TemperatureScaling:
             max_iter: Maximum iterations (used for fallback GD only)
             lr: Learning rate (used for fallback GD only)
         """
+        if len(predictions) != len(outcomes):
+            raise ValueError(f"Length mismatch: {len(predictions)} predictions vs {len(outcomes)} outcomes")
+        if np.any(np.isnan(predictions)):
+            raise ValueError("Predictions contain NaN values")
         predictions = np.clip(predictions, 1e-7, 1 - 1e-7)
         logits = np.log(predictions / (1 - predictions))
         outcomes = outcomes.astype(float)

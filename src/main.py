@@ -931,6 +931,7 @@ def audit_rdof(args):
 
     holdout_years = _parse_year_list(args.holdout_years)
     dev_years = _parse_year_list(getattr(args, "dev_years", None))
+    calibration_years = _parse_year_list(getattr(args, "calibration_years", None))
     config_kwargs = {}
     if dev_years is not None:
         config_kwargs["dev_years"] = dev_years

@@ -354,14 +354,23 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # indicate upstream data construction failures before they silently
     # degrade model quality.
     # ====================================================================
+    # FIX C1: Preserve NaN for tree models (LightGBM/XGBoost) which
+    # natively route missing values to the optimal split direction.
+    # Only replace inf with NaN (inf is never valid).  The LR path
+    # gets its own NaN imputation before fitting.
     _n_nan = int(np.isnan(X_full).sum())
     _n_inf = int(np.isinf(X_full).sum())
-    if _n_nan > 0 or _n_inf > 0:
+    if _n_inf > 0:
         logger.warning(
-            "Feature matrix has %d NaN and %d inf values. Replacing with 0.0.",
-            _n_nan, _n_inf,
+            "Feature matrix has %d inf values. Replacing inf with NaN.",
+            _n_inf,
         )
-        X_full = np.where(np.isnan(X_full) | np.isinf(X_full), 0.0, X_full)
+        X_full = np.where(np.isinf(X_full), np.nan, X_full)
+    if _n_nan > 0:
+        logger.info(
+            "Feature matrix has %d NaN values; preserved for tree-native handling.",
+            _n_nan,
+        )
 
     # Detect constant features (zero variance) that provide no signal
     _col_vars = np.var(X_full, axis=0)
@@ -698,11 +707,10 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             hist_weights = np.concatenate(hist_weight_parts)
             hist_sort_keys = np.concatenate(hist_sortkey_parts)
 
-            # Clean NaN/inf in historical data
-            _h_nan = int(np.isnan(hist_X).sum())
+            # FIX C1: Clean inf→NaN only; preserve NaN for tree-native handling
             _h_inf = int(np.isinf(hist_X).sum())
-            if _h_nan > 0 or _h_inf > 0:
-                hist_X = np.where(np.isnan(hist_X) | np.isinf(hist_X), 0.0, hist_X)
+            if _h_inf > 0:
+                hist_X = np.where(np.isinf(hist_X), np.nan, hist_X)
 
             # Prepend historical data to training set (chronologically first)
             train_X = np.concatenate([hist_X, train_X], axis=0)
@@ -936,10 +944,31 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # scaling for consistency in the stacking pipeline.
     # ====================================================================
     if pipeline.config.enable_feature_scaling and SCALER_AVAILABLE:
-        scaler = StandardScaler()
-        train_X = scaler.fit_transform(train_X)
+        # FIX C1: Compute scaling stats ignoring NaN, then scale non-NaN
+        # values while preserving NaN for tree-native handling.
+        _has_nans = int(np.isnan(train_X).sum()) > 0
+        if _has_nans:
+            _means = np.nanmean(train_X, axis=0)
+            _stds = np.nanstd(train_X, axis=0)
+            _stds[_stds < 1e-10] = 1.0  # Avoid division by zero
+            scaler = StandardScaler()
+            scaler.mean_ = _means
+            scaler.scale_ = _stds
+            scaler.var_ = _stds ** 2
+            scaler.n_features_in_ = train_X.shape[1]
+            scaler.n_samples_seen_ = np.sum(~np.isnan(train_X), axis=0)
+            # Scale non-NaN values, preserve NaN
+            train_X = np.where(np.isnan(train_X), np.nan,
+                               (train_X - _means) / _stds)
+        else:
+            scaler = StandardScaler()
+            train_X = scaler.fit_transform(train_X)
         if eval_X.shape[0] > 0:
-            eval_X = scaler.transform(eval_X)
+            if _has_nans and int(np.isnan(eval_X).sum()) > 0:
+                eval_X = np.where(np.isnan(eval_X), np.nan,
+                                  (eval_X - scaler.mean_) / scaler.scale_)
+            else:
+                eval_X = scaler.transform(eval_X)
         else:
             logger.warning(
                 "Skipping scaler.transform(eval_X) because eval split is empty "
@@ -1344,7 +1373,20 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                     C=1.0, penalty="l2", max_iter=2000,
                     random_state=pipeline.config.random_seed,
                 )
-            logit.fit(train_X, train_y, sample_weight=train_sample_weight)
+            # FIX C1: LR cannot handle NaN — impute with column median
+            # (training data only) before fitting.  Tree models see the
+            # original NaN-preserving train_X; only LR gets imputed copy.
+            _lr_train_X = train_X
+            _lr_eval_X = eval_X if eval_X.shape[0] > 0 else None
+            if int(np.isnan(train_X).sum()) > 0:
+                from sklearn.impute import SimpleImputer
+                _lr_imputer = SimpleImputer(strategy='median')
+                _lr_train_X = _lr_imputer.fit_transform(train_X)
+                if _lr_eval_X is not None:
+                    _lr_eval_X = _lr_imputer.transform(eval_X)
+                logger.debug("LR path: imputed %d NaN values with median.",
+                             int(np.isnan(train_X).sum()))
+            logit.fit(_lr_train_X, train_y, sample_weight=train_sample_weight)
 
             # Coefficient stability diagnostic: large coefficient magnitudes
             # signal multicollinearity inflating LogisticRegression estimates.
@@ -1370,7 +1412,11 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                                 "ratio_to_median": round(ratio, 1),
                             }
 
-            logit_eval_preds = logit.predict_proba(eval_X)[:, 1]
+            # FIX C1: Use imputed eval_X for LR predictions
+            _lr_pred_X = _lr_eval_X if _lr_eval_X is not None else eval_X
+            logit_eval_preds = logit.predict_proba(_lr_pred_X)[:, 1]
+            # Store imputer on model object so prediction path can use it
+            logit._nan_imputer = _lr_imputer if int(np.isnan(train_X).sum()) > 0 else None
             trained_models.append(("logit", logit, logit_eval_preds))
             logit_trained = True
         except Exception as e:

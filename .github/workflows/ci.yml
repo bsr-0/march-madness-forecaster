@@ -124,6 +124,33 @@ jobs:
       - name: Run pip audit
         run: pip-audit --strict
 
+  # ─── Gate 4: Performance Regression ──────────────────────────────
+  performance-check:
+    name: "Gate 4: Performance Check"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest-timeout
+
+      - name: Run unit tests with timeout
+        run: pytest tests/ -m "unit" --timeout=120 --tb=short -q
+
+      - name: Track test count for regression detection
+        run: |
+          TEST_COUNT=$(pytest tests/ --co -q 2>/dev/null | tail -1 | grep -oP '^\d+')
+          echo "Total tests collected: ${TEST_COUNT}"
+          echo "test_count=${TEST_COUNT}" >> $GITHUB_ENV
+
   # ─── All Gates Must Pass ──────────────────────────────────────────
   all-gates:
     name: "All Gates Green"
@@ -133,6 +160,7 @@ jobs:
       - data-contract-tests
       - leakage-tests
       - audit
+      - performance-check
     runs-on: ubuntu-latest
     steps:
       - name: All gates passed

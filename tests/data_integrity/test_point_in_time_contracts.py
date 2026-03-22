@@ -66,8 +66,8 @@ class TestSchemaValid:
         assert "features" in contracts
 
     def test_minimum_feature_count(self, feature_list):
-        assert len(feature_list) >= 79, (
-            f"Expected >= 79 features in contracts, got {len(feature_list)}"
+        assert len(feature_list) >= 74, (
+            f"Expected >= 74 features in contracts, got {len(feature_list)}"
         )
 
 
