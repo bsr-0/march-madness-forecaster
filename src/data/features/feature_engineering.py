@@ -74,6 +74,10 @@ REMOVED_REDUNDANCIES = [
 # Down from 67 → 66 team features.
 TEAM_FEATURE_DIM = 79  # 71 base + 2 graph SOS (PageRank, multi-hop) + 3 win quality (best_win, paper_tiger, dominance) + 3 per-stage coaching (F4/E8/S16 appearances)
 
+# Normalization constants for interaction features in create_matchup_features()
+TEMPO_NORMALIZATION = 4624.0  # 68^2 — square of median college basketball tempo (~68 possessions/game)
+SOS_SEED_NORMALIZATION = 200.0  # Scale factor for SOS-seed interaction term
+
 # FIX #4: Indices (into the team feature vector) of the top features used
 # for absolute-level matchup context.  These are the features where the
 # *average level* of both teams matters (not just the difference).
@@ -1255,7 +1259,7 @@ class FeatureEngineer:
             abs_features = np.array([])
 
         # Interaction features
-        tempo_interaction = (t1.adj_tempo * t2.adj_tempo) / 4624.0
+        tempo_interaction = (t1.adj_tempo * t2.adj_tempo) / TEMPO_NORMALIZATION
 
         tempo_diff = t1.adj_tempo - t2.adj_tempo
         efficiency_diff = (
@@ -1280,7 +1284,7 @@ class FeatureEngineer:
         residual2 = em2 - _SEED_EXPECTED_EM.get(t2.seed, 0)
         seed_em_residual = (residual1 - residual2) / 20.0
 
-        sos_seed_interaction = ((t1.sos_adj_em - t2.sos_adj_em) * (t1.seed - t2.seed)) / 200.0
+        sos_seed_interaction = ((t1.sos_adj_em - t2.sos_adj_em) * (t1.seed - t2.seed)) / SOS_SEED_NORMALIZATION
 
         var_diff = t1.three_pt_variance - t2.three_pt_variance
         three_pt_var_seed_interaction = var_diff * (t1.seed - t2.seed) / 15.0

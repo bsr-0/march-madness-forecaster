@@ -88,6 +88,8 @@ class LibraryProviderHub:
             result = method(year, since=since)
             if result.records:
                 return result
+            logger.warning("Provider %s returned no historical game records for %d", result.provider, year)
+        logger.warning("All historical_games providers exhausted for year %d — returning empty", year)
         return ProviderResult(provider="none", records=[])
 
     def fetch_team_box_metrics(self, year: int, priority: Optional[List[str]] = None) -> ProviderResult:
@@ -98,6 +100,8 @@ class LibraryProviderHub:
             result = method(year)
             if result.records:
                 return result
+            logger.warning("Provider %s returned no team box metrics for %d", result.provider, year)
+        logger.warning("All team_metrics providers exhausted for year %d — returning empty", year)
         return ProviderResult(provider="none", records=[])
 
     def fetch_torvik_ratings(self, year: int, priority: Optional[List[str]] = None) -> ProviderResult:
@@ -109,6 +113,8 @@ class LibraryProviderHub:
             result = method(year)
             if result.records:
                 return result
+            logger.warning("Provider %s returned no torvik ratings for %d", result.provider, year)
+        logger.warning("All torvik providers exhausted for year %d — returning empty", year)
         return ProviderResult(provider="none", records=[])
 
     def credential_requirements(self) -> Dict[str, List[str]]:
