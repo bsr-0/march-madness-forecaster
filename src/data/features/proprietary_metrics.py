@@ -1118,6 +1118,12 @@ class ProprietaryMetricsEngine:
         """
         Wins Above Bubble — adopted by NCAA selection committee in 2024.
 
+        FIX C4: This field is still computed and stored on the dataclass for
+        backward compatibility and reporting, but is NO LONGER included in
+        the ML feature vector (to_vector()).  wab_poisson is the canonical
+        feature — algebraically identical but uses the Poisson Binomial
+        formulation which is more principled.
+
         For each game, compute P(bubble_team_wins), then:
           Win  → WAB_game = 1.0 − P(bubble_wins)
           Loss → WAB_game = 0.0 − P(bubble_wins)
