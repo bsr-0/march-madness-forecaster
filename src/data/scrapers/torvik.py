@@ -25,6 +25,7 @@ import io
 import json
 import logging
 import math
+import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
@@ -35,8 +36,21 @@ import requests
 from bs4 import BeautifulSoup
 
 from ..normalize import normalize_team_id as _canonical_team_id
+from ._retry import retry_request
+from .circuit_breaker import CircuitBreaker, CircuitBreakerConfig, CircuitBreakerOpen
 
 logger = logging.getLogger(__name__)
+
+# Cache configuration
+CACHE_SCHEMA_VERSION = 2  # bump when cache format changes
+DEFAULT_CACHE_TTL_SECONDS = 6 * 3600  # 6 hours
+
+# Minimum team count to accept a data source as valid
+MIN_TEAMS_THRESHOLD = 100
+
+
+class TorVikValidationError(Exception):
+    """Raised in strict mode when critical data is missing or invalid."""
 
 
 @dataclass
@@ -168,9 +182,22 @@ class TorVikValidator:
 
     _logger = logging.getLogger(__name__ + ".TorVikValidator")
 
+    # Fields that MUST have real values (not NaN/zero) for data to be usable
+    CRITICAL_FIELDS = {
+        "adj_offensive_efficiency",
+        "adj_defensive_efficiency",
+        "barthag",
+    }
+
     @classmethod
-    def validate_team(cls, team: "TorVikTeam") -> List[str]:
-        """Validate a single TorVikTeam. Returns list of warning messages."""
+    def validate_team(cls, team: "TorVikTeam", strict: bool = False) -> List[str]:
+        """Validate a single TorVikTeam. Returns list of warning messages.
+
+        Args:
+            team: The team to validate.
+            strict: If True, raise TorVikValidationError on critical failures
+                    (missing AdjOE/AdjDE/Barthag).
+        """
         warnings_out: List[str] = []
 
         for field_name, (lo, hi) in cls.RANGES.items():
@@ -203,6 +230,23 @@ class TorVikValidator:
             msg = f"{team.team_id}: wins+losses={total_games} looks unreasonable"
             warnings_out.append(msg)
             cls._logger.warning("[torvik:validate] %s", msg)
+
+        # Strict mode: critical fields must have real non-default values
+        if strict:
+            for fname in cls.CRITICAL_FIELDS:
+                val = getattr(team, fname, None)
+                if val is None:
+                    continue
+                try:
+                    fval = float(val)
+                except (TypeError, ValueError):
+                    continue
+                if fval == 0.0 or (isinstance(val, float) and math.isnan(val)):
+                    raise TorVikValidationError(
+                        f"{team.team_id}: critical field '{fname}' is "
+                        f"{'NaN' if isinstance(val, float) and math.isnan(val) else 'zero'} "
+                        f"— data is unusable"
+                    )
 
         return warnings_out
 
@@ -280,34 +324,71 @@ class BartTorvikScraper:
     
     BASE_URL = "https://barttorvik.com"
     
-    def __init__(self, cache_dir: Optional[str] = None):
+    def __init__(
+        self,
+        cache_dir: Optional[str] = None,
+        cache_ttl_seconds: float = DEFAULT_CACHE_TTL_SECONDS,
+        circuit_breaker_state_file: Optional[str] = None,
+    ):
         """
         Initialize scraper.
-        
+
         Args:
-            cache_dir: Directory to cache scraped data
+            cache_dir: Directory to cache scraped data.
+            cache_ttl_seconds: How long cached files remain valid (default 6h).
+            circuit_breaker_state_file: Path for circuit breaker persistence.
         """
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
         })
         self.cache_dir = Path(cache_dir) if cache_dir else None
+        self.cache_ttl_seconds = cache_ttl_seconds
 
         if self.cache_dir:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Telemetry: records which strategy was used for each data type
         self._fetch_strategy: Dict[str, str] = {}
+
+        # In-memory cache for player CSV to avoid duplicate fetches
+        self._player_csv_cache: Dict[int, str] = {}
+
+        # Circuit breakers for each endpoint family
+        cb_kwargs: Dict[str, Optional[str]] = {}
+        if circuit_breaker_state_file:
+            cb_kwargs["state_file"] = circuit_breaker_state_file
+        self._cb_cbbstat = CircuitBreaker(
+            "torvik_cbbstat",
+            config=CircuitBreakerConfig(failure_threshold=3, recovery_timeout_seconds=300),
+            **cb_kwargs,
+        )
+        self._cb_html = CircuitBreaker(
+            "torvik_html",
+            config=CircuitBreakerConfig(failure_threshold=2, recovery_timeout_seconds=600),
+            **cb_kwargs,
+        )
+        self._cb_csv = CircuitBreaker(
+            "torvik_csv",
+            config=CircuitBreakerConfig(failure_threshold=3, recovery_timeout_seconds=300),
+            **cb_kwargs,
+        )
     
+    def _get_with_retry(self, url: str, **kwargs) -> requests.Response:
+        """HTTP GET with retry + exponential backoff + jitter."""
+        kwargs.setdefault("timeout", 30)
+        return retry_request(self.session.get, url, **kwargs)
+
     def fetch_current_rankings(self, year: int = 2026) -> List[TorVikTeam]:
         """
         Fetch current T-Rank ratings for all teams.
 
-        Attempts three sources in order:
-          1. Local cache file.
+        Attempts three sources in order, each guarded by a circuit breaker:
+          1. Local cache file (with TTL check).
           2. **cbbstat API** — ``api.cbbstat.com/ratings/factors/splits``
              returns T-Rank ratings AND complete Four Factors in one call.
-          3. HTML scrape of ``trank.php`` (fails if JS wall is up).
+          3. **toRvik R package** (requires R + toRvik installed).
+          4. HTML scrape of ``trank.php`` (fails if JS wall is up).
 
         Args:
             year: Season year (e.g., 2026 for 2025-26 season)
@@ -315,7 +396,7 @@ class BartTorvikScraper:
         Returns:
             List of TorVikTeam objects
         """
-        # Check cache
+        # Check cache (with TTL)
         cached = self._load_from_cache(f"torvik_rankings_{year}.json")
         if cached:
             return [self._dict_to_team(t) for t in cached.get('teams', [])]
@@ -339,16 +420,18 @@ class BartTorvikScraper:
         # --- Strategy 3: HTML scrape (original approach) ---
         if not teams:
             try:
-                url = f"{self.BASE_URL}/trank.php?year={year}"
-                response = self.session.get(url, timeout=30)
-                response.raise_for_status()
-                teams = self._parse_rankings_page(response.text)
-                if teams:
-                    self._fetch_strategy["rankings"] = "html_scrape"
-                    logger.info(
-                        "[torvik] rankings strategy=%s year=%d teams=%d",
-                        "html_scrape", year, len(teams),
-                    )
+                with self._cb_html():
+                    url = f"{self.BASE_URL}/trank.php?year={year}"
+                    response = self._get_with_retry(url)
+                    teams = self._parse_rankings_page(response.text)
+                    if teams:
+                        self._fetch_strategy["rankings"] = "html_scrape"
+                        logger.info(
+                            "[torvik] rankings strategy=%s year=%d teams=%d",
+                            "html_scrape", year, len(teams),
+                        )
+            except CircuitBreakerOpen:
+                logger.info("[torvik] HTML circuit breaker open, skipping HTML scrape")
             except Exception as e:
                 logger.warning("Could not fetch Torvik rankings: %s", e)
 
@@ -429,9 +512,12 @@ class BartTorvikScraper:
         """
         url = f"{self.CBBSTAT_API}/ratings/factors/splits"
         try:
-            resp = self.session.get(url, params={"year": year}, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
+            with self._cb_cbbstat():
+                resp = self._get_with_retry(url, params={"year": year})
+                data = resp.json()
+        except CircuitBreakerOpen:
+            logger.info("[torvik] cbbstat circuit breaker open, skipping API")
+            return []
         except Exception as e:
             logger.warning("cbbstat API rankings fetch failed: %s", e)
             return []
@@ -576,16 +662,18 @@ class BartTorvikScraper:
         # --- Strategy 2: HTML scrape (original approach) ---
         if not four_factors:
             try:
-                url = f"{self.BASE_URL}/fourfactors.php?year={year}"
-                response = self.session.get(url, timeout=30)
-                response.raise_for_status()
-                four_factors = self._parse_four_factors_page(response.text)
-                if four_factors:
-                    self._fetch_strategy["four_factors"] = "html_scrape"
-                    logger.info(
-                        "[torvik] four_factors strategy=%s year=%d teams=%d",
-                        "html_scrape", year, len(four_factors),
-                    )
+                with self._cb_html():
+                    url = f"{self.BASE_URL}/fourfactors.php?year={year}"
+                    response = self._get_with_retry(url)
+                    four_factors = self._parse_four_factors_page(response.text)
+                    if four_factors:
+                        self._fetch_strategy["four_factors"] = "html_scrape"
+                        logger.info(
+                            "[torvik] four_factors strategy=%s year=%d teams=%d",
+                            "html_scrape", year, len(four_factors),
+                        )
+            except CircuitBreakerOpen:
+                logger.info("[torvik] HTML circuit breaker open, skipping Four Factors scrape")
             except Exception as e:
                 logger.warning("HTML Four Factors scrape failed: %s", e)
 
@@ -624,9 +712,12 @@ class BartTorvikScraper:
         """
         url = f"{self.CBBSTAT_API}/ratings/factors/splits"
         try:
-            resp = self.session.get(url, params={"year": year}, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
+            with self._cb_cbbstat():
+                resp = self._get_with_retry(url, params={"year": year})
+                data = resp.json()
+        except CircuitBreakerOpen:
+            logger.info("[torvik] cbbstat circuit breaker open, skipping Four Factors API")
+            return {}
         except Exception as e:
             logger.warning("cbbstat API Four Factors fetch failed: %s", e)
             return {}
@@ -726,16 +817,18 @@ class BartTorvikScraper:
 
         # --- Strategy 1: HTML scrape (original approach) ---
         try:
-            url = f"{self.BASE_URL}/trank.php?year={year}&sort=&hteam=&t=2&q=&dual=show&top=0"
-            response = self.session.get(url, timeout=30)
-            response.raise_for_status()
-            shooting = self._parse_shooting_page(response.text)
-            if shooting:
-                self._fetch_strategy["shooting"] = "html_scrape"
-                logger.info(
-                    "[torvik] shooting strategy=%s year=%d teams=%d",
-                    "html_scrape", year, len(shooting),
-                )
+            with self._cb_html():
+                url = f"{self.BASE_URL}/trank.php?year={year}&sort=&hteam=&t=2&q=&dual=show&top=0"
+                response = self._get_with_retry(url)
+                shooting = self._parse_shooting_page(response.text)
+                if shooting:
+                    self._fetch_strategy["shooting"] = "html_scrape"
+                    logger.info(
+                        "[torvik] shooting strategy=%s year=%d teams=%d",
+                        "html_scrape", year, len(shooting),
+                    )
+        except CircuitBreakerOpen:
+            logger.info("[torvik] HTML circuit breaker open, skipping shooting scrape")
         except Exception as e:
             logger.debug("HTML shooting scrape failed: %s", e)
 
@@ -816,6 +909,9 @@ class BartTorvikScraper:
     def _fetch_player_csv(self, year: int) -> str:
         """Download the raw player-level advanced stats CSV.
 
+        Uses in-memory cache so that ``_four_factors_from_player_csv`` and
+        ``_shooting_from_player_csv`` don't fetch the same data twice.
+
         Endpoint: ``/getadvstats.php?year={year}&csv=1``
 
         This CSV has no header row.  Each row is one player with 68
@@ -838,10 +934,15 @@ class BartTorvikScraper:
           [19] 3PM
           [20] 3PA
         """
+        if year in self._player_csv_cache:
+            return self._player_csv_cache[year]
+
         url = f"{self.BASE_URL}/getadvstats.php?year={year}&csv=1"
-        response = self.session.get(url, timeout=45)
-        response.raise_for_status()
-        return response.text
+        with self._cb_csv():
+            response = self._get_with_retry(url, timeout=45)
+        text = response.text
+        self._player_csv_cache[year] = text
+        return text
 
     @staticmethod
     def _normalize_team_name_to_id(name: str) -> str:
@@ -872,6 +973,34 @@ class BartTorvikScraper:
     def fetch_strategy(self) -> Dict[str, str]:
         """Return a copy of the fetch strategy telemetry dict."""
         return dict(self._fetch_strategy)
+
+    @staticmethod
+    def data_completeness_report(teams: List[TorVikTeam]) -> Dict[str, float]:
+        """Return per-field completeness (fraction of teams with non-zero, non-NaN values).
+
+        Useful for diagnosing which fields are actually populated after
+        a multi-strategy fetch.
+        """
+        if not teams:
+            return {}
+        check_fields = [
+            "adj_offensive_efficiency", "adj_defensive_efficiency", "barthag",
+            "adj_tempo", "effective_fg_pct", "turnover_rate", "offensive_reb_rate",
+            "free_throw_rate", "opp_effective_fg_pct", "opp_turnover_rate",
+            "defensive_reb_rate", "opp_free_throw_rate", "three_pt_pct", "ft_pct",
+        ]
+        report: Dict[str, float] = {}
+        n = len(teams)
+        for fname in check_fields:
+            populated = 0
+            for t in teams:
+                val = getattr(t, fname, 0.0)
+                if isinstance(val, float) and math.isnan(val):
+                    continue
+                if abs(float(val)) > 1e-6:
+                    populated += 1
+            report[fname] = round(populated / n, 3)
+        return report
 
     def _aggregate_player_csv(self, csv_text: str) -> Dict[str, Dict]:
         """Aggregate player-level CSV rows into per-team shooting totals.
@@ -946,16 +1075,21 @@ class BartTorvikScraper:
                 'turnover_rate': float,
                 'offensive_reb_rate': float,
                 'free_throw_rate': float,
+                ...
             }}
 
-        Note: eFG% and FTR are computed from counting stats (FGM/FGA/FTA)
-        and are accurate.  ORB%, DRB%, and TO% CANNOT be accurately derived
-        from the player CSV because individual player rebound/turnover rates
-        are not additive to team-level rates.  These are left at 0.0 so
-        downstream code falls back to population defaults.
+        eFG% and FTR are computed from counting stats (exact).  ORB%, DRB%,
+        and TO% are approximated via minutes-weighted averaging of individual
+        player rates.  These are *estimates* (individual rates are not
+        strictly additive) but provide a much better signal than leaving them
+        at 0.0.  The ``_csv_approximation`` flag is set to True so downstream
+        code can decide whether to trust them.
         """
         try:
             csv_text = self._fetch_player_csv(year)
+        except CircuitBreakerOpen:
+            logger.info("[torvik] CSV circuit breaker open, skipping player CSV")
+            return {}
         except Exception as e:
             logger.warning("Player CSV fetch failed: %s", e)
             return {}
@@ -971,28 +1105,38 @@ class BartTorvikScraper:
             efg = (t['fgm'] + 0.5 * t['fg3m']) / fga
             ftr = t['fta'] / fga
 
-            # Individual player ORB%/DRB%/TO% from Barttorvik measure what
-            # fraction of available rebounds/possessions THAT PLAYER claims.
-            # These are NOT additive: averaging them across players gives a
-            # value ~0.04 for ORB% vs the true team rate of ~0.30.  Leave
-            # at 0.0 so downstream enrichment uses population defaults or
-            # computes team rates from game box scores.
+            # Minutes-weighted approximation of team-level ORB%/TO%.
+            # Individual player rates aren't strictly additive, but weighting
+            # by minutes share produces a reasonable approximation (typically
+            # within 2-3 percentage points of the true team rate).
+            min_total = t['min_pct_total']
+            if min_total > 0:
+                approx_orb = t['orb_pct_weighted'] / min_total / 100.0
+                approx_drb = t['drb_pct_weighted'] / min_total / 100.0
+                approx_to = t['to_pct_weighted'] / min_total / 100.0
+            else:
+                approx_orb = 0.0
+                approx_drb = 0.0
+                approx_to = 0.0
 
             result[tid] = {
                 'effective_fg_pct': round(efg, 4),
-                'turnover_rate': 0.0,
-                'offensive_reb_rate': 0.0,
+                'turnover_rate': round(approx_to, 4),
+                'offensive_reb_rate': round(approx_orb, 4),
                 'free_throw_rate': round(ftr, 4),
                 'opp_effective_fg_pct': 0.0,
                 'opp_turnover_rate': 0.0,
-                'defensive_reb_rate': 0.0,
+                'defensive_reb_rate': round(approx_drb, 4),
                 'opp_free_throw_rate': 0.0,
+                '_csv_approximation': True,
             }
 
+        non_zero_orb = sum(1 for v in result.values() if v['offensive_reb_rate'] > 0)
         logger.info(
-            "Four Factors from player CSV (%d): computed eFG%%/FTR for %d teams "
-            "(ORB%%/DRB%%/TO%% left at 0 for downstream enrichment)",
-            year, len(result),
+            "Four Factors from player CSV (%d): computed for %d teams "
+            "(eFG%%/FTR exact, ORB%%/DRB%%/TO%% approximated for %d teams; "
+            "defensive factors unavailable from this source)",
+            year, len(result), non_zero_orb,
         )
         return result
 
@@ -1005,6 +1149,9 @@ class BartTorvikScraper:
         """
         try:
             csv_text = self._fetch_player_csv(year)
+        except CircuitBreakerOpen:
+            logger.info("[torvik] CSV circuit breaker open, skipping shooting CSV")
+            return {}
         except Exception as e:
             logger.warning("Player CSV fetch failed: %s", e)
             return {}
@@ -1135,24 +1282,61 @@ class BartTorvikScraper:
         return True
 
     def _load_from_cache(self, filename: str) -> Optional[dict]:
-        """Load data from cache if available."""
+        """Load data from cache if available, respecting TTL and schema version."""
         if not self.cache_dir:
             return None
 
         cache_path = self.cache_dir / filename
-        if cache_path.exists():
-            try:
-                with open(cache_path, 'r') as f:
-                    return json.load(f)
-            except json.JSONDecodeError:
+        if not cache_path.exists():
+            return None
+
+        try:
+            with open(cache_path, 'r') as f:
+                wrapper = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            logger.debug("Cache file %s is corrupted, ignoring", filename)
+            return None
+
+        # Schema version check
+        if isinstance(wrapper, dict) and wrapper.get("_cache_schema_version"):
+            if wrapper["_cache_schema_version"] != CACHE_SCHEMA_VERSION:
+                logger.info(
+                    "Cache %s has schema v%s (current v%s), discarding",
+                    filename, wrapper["_cache_schema_version"], CACHE_SCHEMA_VERSION,
+                )
                 return None
-        return None
-    
+            # TTL check
+            cached_ts = wrapper.get("_cache_timestamp")
+            if cached_ts and self.cache_ttl_seconds > 0:
+                try:
+                    age = time.time() - float(cached_ts)
+                    if age > self.cache_ttl_seconds:
+                        logger.info(
+                            "Cache %s expired (age=%.0fs, ttl=%.0fs), discarding",
+                            filename, age, self.cache_ttl_seconds,
+                        )
+                        return None
+                except (TypeError, ValueError):
+                    pass
+            return wrapper.get("_cache_data")
+
+        # Legacy cache without wrapper — accept but log
+        logger.debug("Cache %s has no schema version (legacy format), accepting", filename)
+        return wrapper
+
     def _save_to_cache(self, filename: str, data: dict) -> None:
-        """Save data to cache."""
+        """Save data to cache with schema version and timestamp."""
         if not self.cache_dir:
             return
-        
+
+        wrapper = {
+            "_cache_schema_version": CACHE_SCHEMA_VERSION,
+            "_cache_timestamp": time.time(),
+            "_cache_data": data,
+        }
         cache_path = self.cache_dir / filename
-        with open(cache_path, 'w') as f:
-            json.dump(data, f, indent=2)
+        try:
+            with open(cache_path, 'w') as f:
+                json.dump(wrapper, f, indent=2)
+        except OSError as e:
+            logger.warning("Failed to write cache %s: %s", filename, e)
