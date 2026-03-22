@@ -72,7 +72,11 @@ REMOVED_REDUNDANCIES = [
 # games with stability=0.1, near-zero predictive power per academic lit).
 # FIX 2.3: preseason_ap_rank encoding smoothed (was cliff at #25→unranked).
 # Down from 67 → 66 team features.
-TEAM_FEATURE_DIM = 79  # 71 base + 2 graph SOS (PageRank, multi-hop) + 3 win quality (best_win, paper_tiger, dominance) + 3 per-stage coaching (F4/E8/S16 appearances)
+TEAM_FEATURE_DIM = 74  # 66 base + 2 graph SOS + 3 win quality + 3 coaching (FIX C3: 7→3 coach, FIX C4: wab dedup)
+
+# Normalization constants for interaction features in create_matchup_features()
+TEMPO_NORMALIZATION = 4624.0  # 68^2 — square of median college basketball tempo (~68 possessions/game)
+SOS_SEED_NORMALIZATION = 200.0  # Scale factor for SOS-seed interaction term
 
 # FIX #4: Indices (into the team feature vector) of the top features used
 # for absolute-level matchup context.  These are the features where the
@@ -375,7 +379,7 @@ class TeamFeatures:
         "sos_opp_d":            (103.5,  3.0),
         "ncsos_adj_em":         (-4.0,   6.0),
         "luck":                 (0.0,    0.025),
-        "wab":                  (0.0,    4.5),
+        # FIX C4: 'wab' removed from feature vector (near-redundant with wab_poisson)
         "sor":                  (0.50,   0.25),
         "wab_poisson":          (0.0,    4.5),
         "momentum":             (0.0,    4.0),
@@ -402,6 +406,9 @@ class TeamFeatures:
         "top5_minutes_share":   (0.70,   0.06),
         "pace_variance":        (5.0,    2.0),
         "coach_tourn_win_rate": (0.45,   0.20),
+        # FIX C3: coach_postseason_score = weighted blend of deep_run_rate,
+        # f4/e8 appearances, and stage_consistency.  Estimated from historical data.
+        "coach_postseason_score": (0.15,  0.12),
         "neutral_site_win":     (0.50,   0.22),
         "home_court_dep":       (6.0,    5.0),
         "transition_eff":       (0.0,    0.10),
@@ -482,13 +489,15 @@ class TeamFeatures:
             # Luck (1) — consistency REMOVED (near-inverse of pace_adj_var)
             self.luck,
 
-            # WAB (1)
-            self.wab,
+            # FIX C4: wab REMOVED — algebraically identical to wab_poisson
+            # (same log5 formula, same bubble EM prior, same HCA adjustment;
+            # differ only in clip bounds [0.01,0.99] vs [0.005,0.995]).
+            # Keep the more principled Poisson Binomial formulation.
 
             # Poisson Binomial resume metrics (2)
             # SOR: schedule-aware record impressiveness [0,1]
             self.sor,
-            # WAB via Poisson Binomial expected wins
+            # WAB via Poisson Binomial expected wins (canonical)
             self.wab_poisson,
 
             # Momentum (1) — momentum_5g REMOVED (~r=0.85 with momentum)
@@ -559,25 +568,26 @@ class TeamFeatures:
             # unranked.  Preserves ordinal information without discontinuity.
             1.0 / (1.0 + self.preseason_ap_rank / 10.0) if self.preseason_ap_rank > 0 else 0.25,
 
+            # FIX C3: Coach features consolidated from 7 → 3 (were 9% of dims).
+            # Academic lit shows coaching signal is weak/noisy for tournament
+            # prediction.  Per-stage features (F4/E8/S16) were highly correlated
+            # with each other and with deep_run_rate.
+
             # Coach tournament experience (1) — log-scaled appearances
             float(np.log1p(self.coach_tournament_appearances) / np.log1p(30)),
 
-            # Coach tournament win rate (1)
+            # Coach tournament win rate (1) — strongest coaching predictor
             self.coach_tournament_win_rate,
 
-            # Coach deep run rate (1) — F4+/appearances ratio
-            self.coach_deep_run_rate,
-
-            # Coach stage consistency (1) — weighted late-round consistency
-            self.coach_stage_consistency,
-
-            # Per-stage coaching (3) — log-scaled appearance counts
-            # Rationale: A coach with 5 Final Fours is fundamentally different
-            # from one with 5 Sweet Sixteens.  Aggregate "appearances" hides this.
-            # Log-scaled because marginal value of 10th F4 < 2nd F4.
-            float(np.log1p(self.coach_f4_appearances) / np.log1p(15)),
-            float(np.log1p(self.coach_e8_appearances) / np.log1p(20)),
-            float(np.log1p(self.coach_s16_appearances) / np.log1p(25)),
+            # Coach postseason composite (1) — weighted blend of deep-run rate,
+            # F4/E8 appearances, and stage consistency.  Replaces 4 separate
+            # features (deep_run_rate, stage_consistency, f4/e8/s16_appearances).
+            float(
+                0.50 * self.coach_deep_run_rate
+                + 0.30 * (np.log1p(self.coach_f4_appearances) / np.log1p(15))
+                + 0.15 * (np.log1p(self.coach_e8_appearances) / np.log1p(20))
+                + 0.05 * self.coach_stage_consistency
+            ),
 
             # Graph-theoretic SOS (2) — standalone PageRank and multi-hop
             # Previously baked into sos_adj_em via hardcoded weights; now
@@ -640,21 +650,28 @@ class TeamFeatures:
 
         # Feature validation: detect NaN/inf values that indicate upstream
         # data construction failures (e.g. missing team stats, division by
-        # zero in metric computation).  Replace with safe defaults and log.
+        # zero in metric computation).
+        # FIX C1: Preserve NaN for tree models (LightGBM/XGBoost) which
+        # natively route missing values to the optimal split direction.
+        # Only convert inf→NaN (inf is never valid; NaN signals "missing").
+        # The pipeline handles NaN imputation for LR separately.
         nan_mask = np.isnan(result)
         inf_mask = np.isinf(result)
         if nan_mask.any() or inf_mask.any():
-            n_bad = int(nan_mask.sum() + inf_mask.sum())
+            n_nan = int(nan_mask.sum())
+            n_inf = int(inf_mask.sum())
             feature_names_list = TeamFeatures.get_feature_names(include_embeddings=False)
             bad_names = [
                 feature_names_list[i] for i in range(len(result))
                 if nan_mask[i] or inf_mask[i]
             ]
             logger.warning(
-                "Team '%s' has %d NaN/inf features: %s. Replacing with 0.0.",
-                self.team_id, n_bad, bad_names,
+                "Team '%s' has %d NaN + %d inf features: %s. "
+                "Inf replaced with NaN; NaN preserved for tree-native handling.",
+                self.team_id, n_nan, n_inf, bad_names,
             )
-            result = np.where(nan_mask | inf_mask, 0.0, result)
+            # Convert inf→NaN but preserve existing NaN for tree models
+            result = np.where(inf_mask, np.nan, result)
 
         # FIX #2: Soft clip at [-6σ, 6σ] equivalent.  This is a safety net
         # against truly extreme outliers (data errors), not a normalization
@@ -700,8 +717,7 @@ class TeamFeatures:
             'sos_adj_em', 'sos_opp_o', 'sos_opp_d', 'ncsos_adj_em',
             # Luck (1)
             'luck',
-            # WAB (1)
-            'wab',
+            # FIX C4: 'wab' REMOVED (near-redundant with wab_poisson)
             # Poisson Binomial resume metrics (2)
             'sor', 'wab_poisson',
             # Momentum (1)
@@ -738,12 +754,10 @@ class TeamFeatures:
             'rest_days',
             'top5_minutes_share',
             'preseason_ap_rank',
+            # FIX C3: coach features consolidated 7→3
             'coach_tournament_exp',
             'coach_tournament_win_rate',
-            'coach_deep_run_rate',
-            'coach_stage_consistency',
-            # Per-stage coaching (3)
-            'coach_f4_appearances', 'coach_e8_appearances', 'coach_s16_appearances',
+            'coach_postseason_score',
             # Graph-theoretic SOS (2)
             'pagerank_sos', 'multi_hop_sos',
             # Win quality metrics (3)
@@ -930,30 +944,39 @@ class MatchupFeatures:
     has_coach_data_t1: float = 0.0
     has_coach_data_t2: float = 0.0
 
-    def to_vector(self) -> np.ndarray:
+    def to_vector(self, include_optional_interactions: bool = True) -> np.ndarray:
         """Convert to feature vector.
 
-        Layout: [diff_features | absolute_features | interactions]
+        Layout: [diff_features | absolute_features | always_interactions | optional_interactions]
+
+        FIX C5: Interactions split into "always" (seed_diff, seed_em_residual —
+        encode domain knowledge trees can't easily discover) and "optional"
+        (product terms trees can learn natively).  Configurable via
+        include_optional_interactions flag.
 
         OOS-FIX: Missing-data indicator features REMOVED.  These 6 binary
         flags encoded scraper availability artifacts, not basketball signal.
-        With ~400 training samples, the model learned to exploit the specific
-        pattern of which teams had H2H/AP/coach data in the training set,
-        which doesn't generalize out-of-sample.
         """
-        interaction = np.array([
+        # Always included: encode domain knowledge beyond simple splits
+        always_interaction = np.array([
+            self.seed_diff,           # Strongest single tournament predictor
+            self.seed_em_residual,    # Over/underperformance vs seed expectation
+        ])
+
+        # Optional: product terms that trees can learn natively
+        optional_interaction = np.array([
             self.tempo_interaction,
             self.style_mismatch,
-            self.seed_em_residual,
             self.sos_seed_interaction,
             self.three_pt_var_seed_interaction,
             self.seed_interaction,
-            self.seed_diff,
         ])
         parts = [self.diff_features]
         if len(self.absolute_features) > 0:
             parts.append(self.absolute_features)
-        parts.append(interaction)
+        parts.append(always_interaction)
+        if include_optional_interactions:
+            parts.append(optional_interaction)
         return np.concatenate(parts)
 
 
@@ -1343,7 +1366,7 @@ class FeatureEngineer:
             abs_features = np.array([])
 
         # Interaction features
-        tempo_interaction = (t1.adj_tempo * t2.adj_tempo) / 4624.0
+        tempo_interaction = (t1.adj_tempo * t2.adj_tempo) / TEMPO_NORMALIZATION
 
         tempo_diff = t1.adj_tempo - t2.adj_tempo
         efficiency_diff = (
@@ -1368,7 +1391,7 @@ class FeatureEngineer:
         residual2 = em2 - _SEED_EXPECTED_EM.get(t2.seed, 0)
         seed_em_residual = (residual1 - residual2) / 20.0
 
-        sos_seed_interaction = ((t1.sos_adj_em - t2.sos_adj_em) * (t1.seed - t2.seed)) / 200.0
+        sos_seed_interaction = ((t1.sos_adj_em - t2.sos_adj_em) * (t1.seed - t2.seed)) / SOS_SEED_NORMALIZATION
 
         var_diff = t1.three_pt_variance - t2.three_pt_variance
         three_pt_var_seed_interaction = var_diff * (t1.seed - t2.seed) / 15.0
@@ -1511,6 +1534,74 @@ def validate_population_stats(
         )
 
     return warnings
+
+
+def compute_population_stats_from_data(
+    team_features: Dict[str, TeamFeatures],
+) -> Dict[str, tuple]:
+    """
+    Compute (mean, std) for all features from actual team data.
+
+    FIX C2: Automated refresh tool — produces a candidate _POPULATION_STATS
+    dict from current training data.  This is a dev-time tool; the output
+    should be reviewed by a human before updating the hardcoded dict.
+
+    Args:
+        team_features: Dict of team_id -> TeamFeatures (minimum 30 teams)
+
+    Returns:
+        Dict mapping feature_name -> (mean, std) computed from the data.
+        Also logs a structured diff against the current _POPULATION_STATS.
+    """
+    if len(team_features) < 30:
+        logger.warning(
+            "compute_population_stats_from_data: only %d teams (need ≥30). "
+            "Stats may be unreliable.", len(team_features),
+        )
+
+    vectors = np.stack([tf.to_vector() for tf in team_features.values()])
+    names = TeamFeatures.get_feature_names()
+    pop_stats = TeamFeatures._POPULATION_STATS
+
+    computed = {}
+    drifted = []
+    for idx, name in enumerate(names):
+        col = vectors[:, idx]
+        # Use nanmean/nanstd to handle NaN-preserved features (FIX C1)
+        obs_mean = float(np.nanmean(col))
+        obs_std = float(np.nanstd(col))
+        computed[name] = (round(obs_mean, 4), round(obs_std, 4))
+
+        # Report drift vs current hardcoded stats
+        if name in pop_stats:
+            old_mean, old_std = pop_stats[name]
+            if old_std > 1e-10:
+                mean_z = abs(obs_mean - old_mean) / old_std
+                std_ratio = obs_std / old_std if old_std > 1e-10 else float('inf')
+                if mean_z > 1.0 or std_ratio < 0.5 or std_ratio > 2.0:
+                    drifted.append({
+                        "feature": name,
+                        "old": (old_mean, old_std),
+                        "new": (round(obs_mean, 4), round(obs_std, 4)),
+                        "mean_z": round(mean_z, 2),
+                        "std_ratio": round(std_ratio, 2),
+                    })
+
+    if drifted:
+        logger.info(
+            "FIX C2: %d features drifted from hardcoded _POPULATION_STATS:\n%s",
+            len(drifted),
+            "\n".join(
+                f"  {d['feature']}: ({d['old'][0]}, {d['old'][1]}) → "
+                f"({d['new'][0]}, {d['new'][1]}) [mean_z={d['mean_z']}, "
+                f"std_ratio={d['std_ratio']}]"
+                for d in drifted
+            ),
+        )
+    else:
+        logger.info("FIX C2: All features within tolerance of _POPULATION_STATS.")
+
+    return computed
 
 
 def calculate_continuity_score(

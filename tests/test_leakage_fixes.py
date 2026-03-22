@@ -705,11 +705,13 @@ class TestSeedLeakageFix:
         )
 
         # Interactions block: [TEAM_FEATURE_DIM : TEAM_FEATURE_DIM+5] = absolute,
-        # then [TEAM_FEATURE_DIM+5 : TEAM_FEATURE_DIM+12] = interactions.
-        # Within interactions: seed_interaction is at offset 5 (6th element).
+        # then always_interactions (seed_diff, seed_em_residual),
+        # then optional_interactions (tempo, style, sos_seed, 3pt_var_seed, seed_interaction).
+        # seed_interaction is last in the optional block.
         from src.data.features.feature_engineering import TEAM_FEATURE_DIM
         n_abs = 5  # len(ABSOLUTE_LEVEL_FEATURE_NAMES)
-        seed_interaction_idx = TEAM_FEATURE_DIM + n_abs + 5  # tempo, style, h2h, common_opp, travel, then seed_interaction
+        # always(2) + optional offset 4 = seed_interaction
+        seed_interaction_idx = TEAM_FEATURE_DIM + n_abs + 2 + 4  # FIX C5: updated layout
         seed_interaction = matchup[seed_interaction_idx]
         assert seed_interaction == 0.0, (
             f"seed_interaction must be 0.0 when seeds are zeroed out, got {seed_interaction}"

@@ -22,6 +22,10 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+# Bayesian Bradley-Terry blend weight (15% max contribution).
+# Adds diversity to ensemble without overwhelming the baseline.
+BT_BLEND_WEIGHT = 0.15
+
 # --- Required imports ---
 from ..data.features.feature_engineering import (
     FeatureEngineer,
@@ -185,8 +189,10 @@ class SOTAPipeline:
         # Governance (S21) — unified gate + compliance checks
         from ..governance.gate import GovernanceGate
         from ..governance.compliance import ComplianceGate
+        from ..governance.audit_trail import GovernanceAuditLog
         self._governance_gate = GovernanceGate()
         self._compliance_gate = ComplianceGate()
+        self._audit_log = GovernanceAuditLog()
         # Base ensemble weights (previously managed by CombinatorialFusionAnalysis)
         self.ensemble_base_weights: Dict[str, float] = {}
 
@@ -271,7 +277,7 @@ class SOTAPipeline:
                     clip_hi=self.config.pre_calibration_clip_hi,
                 )
             except ImportError:
-                pass
+                logger.info("Optional module not available: BrierPostProcessor")
 
         # goto_conversion — the actual algorithm from gotoConversion/goto_conversion
         # (GitHub).  Powered 10+ Kaggle gold medals in March Madness (2019-2025).
@@ -285,7 +291,7 @@ class SOTAPipeline:
                     strength=self.config.goto_conversion_margin_init,
                 )
             except ImportError:
-                pass
+                logger.info("Optional module not available: FavouriteLongshotCorrection")
 
         # FIX #5: Massey standalone predictor (calibrated sigma + blend weight)
         self._massey_predictor = None
@@ -294,7 +300,7 @@ class SOTAPipeline:
                 from ..ml.calibration.brier_optimal import MasseyStandalonePredictor
                 self._massey_predictor = MasseyStandalonePredictor(sigma=self.config.massey_sigma)
             except ImportError:
-                pass
+                logger.info("Optional module not available: MasseyStandalonePredictor")
 
         # Tournament domain adapter removed from default path — seed-based
         # correction is handled by SeedBasedOverrides (via BrierPostProcessor)
@@ -365,7 +371,8 @@ class SOTAPipeline:
         try:
             with open(path, "r") as f:
                 payload = _json.load(f)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Failed to load MC calibration from %s: %s", path, exc)
             return None
         best = payload.get("best_params", {})
         if isinstance(best, dict):
@@ -886,6 +893,11 @@ class SOTAPipeline:
 
     def _run_shared_pipeline(self) -> Dict:
         """Shared predictive pipeline used by both calibration and EV modes."""
+        self._audit_log.log_action("pipeline_start", "system", {
+            "year": self.config.year,
+            "mode": self.config.mode,
+            "num_simulations": self.config.num_simulations,
+        })
         # Pre-run checks (dataset hashing, freeze verification, kaggle_dir)
         freeze_verification = _orch.run_pre_checks(self)
 
@@ -972,6 +984,11 @@ class SOTAPipeline:
             self.feature_engineer.attach_gnn_embeddings(self.gnn_embeddings)
             self.feature_engineer.attach_transformer_embeddings(self.transformer_embeddings)
 
+        self._audit_log.log_action("training_complete", "system", {
+            "gnn_enabled": self.config.enable_gnn,
+            "transformer_enabled": self.config.enable_transformer,
+        })
+
         # Governance: post-training compliance checks
         if hasattr(self, "_compliance_runner"):
             self._compliance_runner.run_stage_checks("post_training", ctx=self)
@@ -997,6 +1014,10 @@ class SOTAPipeline:
 
         with self._resource_tracker.phase("simulation"):
             bracket_sim = self._run_monte_carlo(teams, rosters)
+
+        self._audit_log.log_action("simulation_complete", "system", {
+            "num_simulations": self.config.num_simulations,
+        })
 
         market_consensus = self._load_betting_markets()
         if market_consensus is not None:
@@ -1265,7 +1286,6 @@ class SOTAPipeline:
         return _sim.normalize_public_pick_row(row)
 
     @staticmethod
-    @staticmethod
     def _normalize_pick_probability(value: float) -> float:
         """Normalize a pick probability value."""
         return _sim.normalize_pick_probability(value)
@@ -1396,7 +1416,7 @@ class SOTAPipeline:
             bt_prob, bt_unc = self.bayesian_bt_model.predict_probability(team1_id, team2_id)
             # Weight BT contribution inversely with uncertainty:
             # high uncertainty → less weight → closer to baseline
-            bt_weight = 0.15 * max(0.0, 1.0 - bt_unc)
+            bt_weight = BT_BLEND_WEIGHT * max(0.0, 1.0 - bt_unc)
             baseline_prob = (1.0 - bt_weight) * baseline_prob + bt_weight * bt_prob
 
         # Gap #1 + FIX #5: Post-hoc Massey composite blend.
@@ -1461,6 +1481,7 @@ class SOTAPipeline:
         self,
         environment: PoolEnvironment,
         team_ids: Optional[List[str]] = None,
+        model_round_probs: Optional[Dict[str, Dict[str, float]]] = None,
     ) -> PoolOptimizer:
         """Create a PoolOptimizer from this pipeline's forecast probabilities.
 
@@ -1472,6 +1493,10 @@ class SOTAPipeline:
             environment: Pool environmental parameters (pool_size,
                 scoring_rules, payout_structure, public_pick_distribution).
             team_ids: Team IDs to include.  Defaults to all teams.
+            model_round_probs: Pre-computed per-team per-round advancement
+                probabilities from Monte Carlo simulation.  When provided,
+                the optimizer uses these directly instead of the heuristic
+                fallback.
 
         Returns:
             PoolOptimizer instance ready for optimize() or
@@ -1480,14 +1505,16 @@ class SOTAPipeline:
         if team_ids is None:
             team_ids = list(self.team_struct.keys())
         probs = self.forecast_engine.predict_all_matchups(team_ids)
-        optimizer = PoolOptimizer(probs, environment)
+        optimizer = PoolOptimizer(probs, environment, model_round_probs=model_round_probs)
         self._pool_optimizer = optimizer
         return optimizer
 
     def predict_probability(self, team1_id: str, team2_id: str) -> float:
-        """Route to production or experimental probability path."""
+        """Route to production, pool, or experimental probability path."""
         if self.config.probability_profile == "experimental":
             return self.predict_probability_experimental(team1_id, team2_id)
+        if self.config.probability_profile == "pool":
+            return self.predict_probability_pool(team1_id, team2_id)
         return self.predict_probability_production(team1_id, team2_id)
 
     def predict_probability_production(self, team1_id: str, team2_id: str) -> float:
@@ -1516,6 +1543,39 @@ class SOTAPipeline:
         # Stage 3: Tournament shrinkage toward 0.5
         if self.config.enable_tournament_adaptation:
             prob = apply_tournament_shrinkage(prob, self.config.tournament_shrinkage)
+
+        # Stage 4: Final clip
+        return apply_final_clip(prob, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi)
+
+    def predict_probability_pool(self, team1_id: str, team2_id: str) -> float:
+        """Pool probability: raw → calibration → clip.  No shrinkage.
+
+        Designed for ESPN/bracket pool optimization where decisive
+        probabilities are needed to identify contrarian value.  Tournament
+        shrinkage toward 0.5 flattens the signals that pool strategy
+        depends on, so this profile skips Stage 3 entirely.
+
+        The calibration stage is kept because well-calibrated base
+        probabilities are still the correct input to the Monte Carlo
+        simulation that produces round advancement frequencies.
+        """
+        from .probability_pipeline import (
+            apply_calibration,
+            apply_final_clip,
+        )
+
+        # Stage 1: Raw probability with symmetry enforcement
+        raw_forward = self._raw_fusion_probability(team1_id, team2_id)
+        raw_reverse = self._raw_fusion_probability(team2_id, team1_id)
+        raw = (raw_forward + (1.0 - raw_reverse)) / 2.0
+
+        # Stage 2: Calibration (temperature scaling)
+        prob = apply_calibration(
+            raw, self.calibration_pipeline,
+            self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi,
+        )
+
+        # Stage 3: SKIPPED — no tournament shrinkage for pool optimization.
 
         # Stage 4: Final clip
         return apply_final_clip(prob, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi)

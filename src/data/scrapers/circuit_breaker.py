@@ -67,6 +67,8 @@ class CircuitBreakerState:
     total_failures: int = 0
     total_successes: int = 0
     half_open_calls: int = 0
+    last_transition_time: float = 0.0
+    total_transitions: int = 0
 
 
 class CircuitBreakerOpen(RuntimeError):
@@ -159,6 +161,8 @@ class CircuitBreaker:
                 self.name,
                 self.state.value,
             )
+            self._state.total_transitions += 1
+            self._state.last_transition_time = time.time()
         self._state.state = CircuitState.CLOSED.value
         self._state.failure_count = 0
         self._state.half_open_calls = 0
@@ -177,6 +181,8 @@ class CircuitBreaker:
                 exc,
             )
             self._state.state = CircuitState.OPEN.value
+            self._state.total_transitions += 1
+            self._state.last_transition_time = time.time()
         elif self._state.failure_count >= self.config.failure_threshold:
             logger.warning(
                 "Circuit breaker '%s': CLOSED → OPEN (%d consecutive failures)",
@@ -184,6 +190,8 @@ class CircuitBreaker:
                 self._state.failure_count,
             )
             self._state.state = CircuitState.OPEN.value
+            self._state.total_transitions += 1
+            self._state.last_transition_time = time.time()
 
         self._save_state()
 
@@ -205,6 +213,23 @@ class CircuitBreaker:
             "total_successes": self._state.total_successes,
             "last_failure_time": self._state.last_failure_time,
             "last_success_time": self._state.last_success_time,
+        }
+
+    def metrics(self) -> Dict[str, Any]:
+        """Return observability metrics for monitoring/alerting."""
+        now = time.time()
+        last_transition = self._state.last_transition_time
+        return {
+            "name": self.name,
+            "current_state": self._state.state,
+            "total_transitions": self._state.total_transitions,
+            "total_failures": self._state.total_failures,
+            "total_successes": self._state.total_successes,
+            "failure_rate": (
+                self._state.total_failures / max(1, self._state.total_failures + self._state.total_successes)
+            ),
+            "time_in_current_state_seconds": now - last_transition if last_transition > 0 else 0.0,
+            "last_transition_time": last_transition,
         }
 
     def _load_state(self) -> CircuitBreakerState:
