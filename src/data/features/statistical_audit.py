@@ -485,9 +485,10 @@ def validate_interaction_features(
 ) -> InteractionValidationResult:
     """Validate that interaction features provide significant Brier improvement.
 
-    Solution 8: The 7 interaction features (tempo_interaction, style_mismatch,
-    seed_em_residual, etc.) add 7 dimensions but have no marginal validation.
-    This computes bootstrap CI on Brier improvement and MI per interaction.
+    Solution 8 + FIX C5: Interaction features split into "always" (seed_diff,
+    seed_em_residual — domain knowledge) and "optional" (5 product terms trees
+    can learn natively).  This validates the optional interactions earn their
+    dimensionality cost via bootstrap CI on marginal Brier improvement.
 
     Args:
         X_base: Base features (diff + absolute) [N, D_base]

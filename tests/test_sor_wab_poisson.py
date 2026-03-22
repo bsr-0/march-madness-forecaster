@@ -351,8 +351,8 @@ class TestFeatureVectorIntegration:
     """Ensure SOR and WAB_pb are in the feature vector at correct positions."""
 
     def test_feature_dim_updated(self):
-        """TEAM_FEATURE_DIM should be 79 (71 base + 2 graph SOS + 3 win quality + 3 per-stage coaching)."""
-        assert TEAM_FEATURE_DIM == 79
+        """TEAM_FEATURE_DIM should be 74 (66 base + 2 graph SOS + 3 win quality + 3 coaching)."""
+        assert TEAM_FEATURE_DIM == 74
 
     def test_to_vector_length(self):
         """to_vector() output length should match TEAM_FEATURE_DIM."""
@@ -397,11 +397,10 @@ class TestFeatureVectorIntegration:
         vec = tf.to_vector()
         names = TeamFeatures.get_feature_names()
 
-        # Check wab, sor, wab_poisson are consecutive (sor/wab_pb right after wab)
-        wab_idx = names.index('wab')
+        # FIX C4: wab removed from feature vector (near-redundant with wab_poisson)
+        assert 'wab' not in names, "wab should be removed (FIX C4)"
         sor_idx = names.index('sor')
         wab_pb_idx = names.index('wab_poisson')
-        assert sor_idx == wab_idx + 1, "SOR should immediately follow WAB"
         assert wab_pb_idx == sor_idx + 1, "WAB_poisson should immediately follow SOR"
 
 
