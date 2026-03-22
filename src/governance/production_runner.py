@@ -420,6 +420,15 @@ def run_production_2026(
     resolved_paths = _require_explicit_paths(raw_config, config_base_dir)
     raw_config.update(resolved_paths)
 
+    # Filter out unknown keys that aren't valid SOTAPipelineConfig fields.
+    # The production JSON may contain documentation-only or deprecated keys.
+    valid_fields = {f.name for f in dataclasses.fields(SOTAPipelineConfig)}
+    unknown_keys = set(raw_config) - valid_fields
+    if unknown_keys:
+        logger.warning("Ignoring unknown config keys: %s", sorted(unknown_keys))
+        for key in unknown_keys:
+            del raw_config[key]
+
     config = SOTAPipelineConfig(**raw_config)
     validate_2026_production_config(config)
 
