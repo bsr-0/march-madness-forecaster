@@ -1,0 +1,58 @@
+name: Deploy to GitHub Pages
+
+on:
+  workflow_call:
+
+permissions:
+  pages: write
+  id-token: write
+
+concurrency:
+  group: deploy-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download web data artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-data
+          path: docs/
+
+      - name: Validate docs artifacts
+        run: |
+          set -euo pipefail
+          REQUIRED_FILES=(
+            "docs/index.html"
+            "docs/style.css"
+            "docs/data/bracket_2026.json"
+            "docs/data/validation_2025.json"
+            "docs/data/model_metrics.json"
+            "docs/data/team_profiles.json"
+          )
+          for f in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Missing required file: $f"
+              exit 1
+            fi
+          done
+          echo "All required files present."
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
