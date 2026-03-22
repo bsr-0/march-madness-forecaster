@@ -155,14 +155,18 @@ class PoolOptimizer:
     Typical usage::
 
         probs = engine.predict_all_matchups(team_ids)
+        mc_round_probs = to_round_probabilities(pipeline, sim_results)
         env = PoolEnvironment(pool_size=500, scoring_rules=..., ...)
-        optimizer = PoolOptimizer(probs, env)
+        optimizer = PoolOptimizer(probs, env, model_round_probs=mc_round_probs)
         result = optimizer.optimize()
         print(result.manifest)  # Non-null AssumptionsManifest
 
     Args:
         probabilities: Deep-copied dict of (team1, team2) -> P(team1 wins).
         environment: Pool environmental parameters.
+        model_round_probs: Pre-computed per-team per-round advancement
+            probabilities from Monte Carlo simulation.  When provided,
+            bypasses the heuristic fallback.
     """
 
     def __init__(
