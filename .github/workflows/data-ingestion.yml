@@ -80,16 +80,8 @@ jobs:
       CBS_PUBLIC_PICKS_URL: ${{ vars.CBS_PUBLIC_PICKS_URL }}
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
 
       - name: Install R and toRvik (optional — enables primary Torvik data source)
         # toRvik R package calls the same cbbstat API as our Python fallback.
@@ -102,6 +94,7 @@ jobs:
       - name: Determine year
         id: year
         run: |
+          set -euo pipefail
           # If year was explicitly provided, use it
           if [ -n "${{ inputs.year }}" ]; then
             echo "value=${{ inputs.year }}" >> "$GITHUB_OUTPUT"
@@ -131,6 +124,7 @@ jobs:
       - name: Build ingestion flags
         id: flags
         run: |
+          set -euo pipefail
           FLAGS="--year ${{ steps.year.outputs.value }} --allow-invalid-payloads"
           if [ "${{ inputs.skip_torvik }}" = "true" ]; then
             FLAGS="$FLAGS --skip-torvik"
@@ -149,6 +143,7 @@ jobs:
       - name: Detect incremental games window
         id: incremental
         run: |
+          set -euo pipefail
           YEAR="${{ steps.year.outputs.value }}"
           FILE="data/raw/historical_games_${YEAR}.json"
 
@@ -160,7 +155,20 @@ jobs:
 
           # For scheduled runs: if data exists, do incremental from last game date
           if [ -f "$FILE" ]; then
-            LAST_DATE=$(python3 -c "import json; games=json.load(open('$FILE')).get('games',[]); dates=[g['date'] for g in games if g.get('date')]; print(max(dates) if dates else '')")
+            LAST_DATE=$(python3 -c "
+          import json, sys
+          try:
+              data = json.load(open('$FILE'))
+              games = data.get('games', [])
+              dates = [g['date'] for g in games if g.get('date')]
+              if dates:
+                  print(max(dates))
+              else:
+                  print('')
+          except (json.JSONDecodeError, KeyError, TypeError) as e:
+              print(f'::warning::Failed to parse {\"$FILE\"}: {e}', file=sys.stderr)
+              print('')
+          ")
             if [ -n "$LAST_DATE" ]; then
               NEXT_DATE=$(date -d "$LAST_DATE + 1 day" +%Y-%m-%d)
               echo "Existing data through $LAST_DATE, fetching incrementally from $NEXT_DATE"
@@ -175,23 +183,28 @@ jobs:
 
       - name: Run data ingestion
         if: inputs.repair_only != true
-        run: python -m src.main ingest ${{ steps.flags.outputs.flags }} ${{ steps.incremental.outputs.flag }}
+        run: |
+          set -euo pipefail
+          python -m src.main ingest ${{ steps.flags.outputs.flags }} ${{ steps.incremental.outputs.flag }}
 
       - name: Run data quality repair
         if: inputs.repair_only == true || inputs.run_repair != false
         run: |
+          set -euo pipefail
           YEAR="${{ steps.year.outputs.value }}"
           SCRIPT="scripts/repair_${YEAR}_data_quality.py"
           if [ -f "$SCRIPT" ]; then
+            echo "Using year-specific repair script: $SCRIPT"
             python "$SCRIPT" --year "$YEAR"
           else
             # Fall back to the most recent year-specific repair script
             LATEST=$(ls scripts/repair_*_data_quality.py 2>/dev/null | sort -t_ -k2 -n | tail -1)
             if [ -n "$LATEST" ]; then
-              echo "No repair script for $YEAR; using latest available: $LATEST"
+              echo "::warning::No repair script for year $YEAR. Using latest available: $LATEST"
+              echo "::warning::The fallback script may not handle year-specific data correctly."
               python "$LATEST" --year "$YEAR"
             else
-              echo "No repair scripts found, skipping"
+              echo "::warning::No repair scripts found in scripts/ directory, skipping repair step."
             fi
           fi
 

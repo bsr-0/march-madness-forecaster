@@ -42,20 +42,13 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
 
       - name: Repair dates (online via cbbpy)
         if: inputs.offline != true
         run: |
+          set -euo pipefail
           FLAGS="--seasons ${{ inputs.seasons }}"
           FLAGS="$FLAGS --historical-dir ${{ inputs.historical_dir }}"
           if [ "${{ inputs.dry_run }}" = "true" ]; then
@@ -70,6 +63,7 @@ jobs:
       - name: Repair dates (offline heuristic)
         if: inputs.offline == true
         run: |
+          set -euo pipefail
           FLAGS="--seasons ${{ inputs.seasons }}"
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             FLAGS="$FLAGS --dry-run"

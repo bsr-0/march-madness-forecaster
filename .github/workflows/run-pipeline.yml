@@ -11,9 +11,13 @@ on:
         description: "Skip production pipeline (only regenerate web data from existing artifacts)"
         type: boolean
         default: false
+      skip_conference_predictions:
+        description: "Skip conference predictions (reduces web data generation time)"
+        type: boolean
+        default: false
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -22,109 +26,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  run-pipeline:
-    name: Run Production Pipeline
+  # ─── Stage 1: Run the ML production pipeline ─────────────────────
+  production-pipeline:
+    name: Production Pipeline
+    uses: ./.github/workflows/run-production-pipeline.yml
+    with:
+      dry_run: ${{ inputs.dry_run }}
+      skip_production: ${{ inputs.skip_production }}
+    secrets:
+      KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+
+  # ─── Stage 2: Generate web data from pipeline artifacts ──────────
+  web-data:
+    name: Generate Web Data
+    needs: production-pipeline
+    if: ${{ !inputs.dry_run }}
+    uses: ./.github/workflows/generate-web-data.yml
+    with:
+      skip_conference_predictions: ${{ inputs.skip_conference_predictions }}
+
+  # ─── Stage 3: Upload Kaggle submission ───────────────────────────
+  kaggle-upload:
+    name: Upload Kaggle Submission
+    needs: production-pipeline
+    if: ${{ !inputs.dry_run && !inputs.skip_production }}
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Download pipeline artifacts
+        uses: actions/download-artifact@v4
         with:
-          python-version: "3.10"
-          cache: pip
+          name: pipeline-artifacts
+          path: artifacts/
 
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install -e .
-
-      - name: Setup Kaggle data
+      - name: Upload to Kaggle
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
-        run: |
-          # Ensure directory exists so production validation passes
-          mkdir -p data/kaggle
-          # Download competition CSVs (MMasseyOrdinals, MTeams, etc.)
-          if march-madness download-kaggle --output-dir data/kaggle; then
-            echo "Kaggle data downloaded successfully:"
-            ls -la data/kaggle/
-          else
-            echo "::warning::Kaggle download failed. Full pipeline run will attempt auto-download."
-          fi
-
-      - name: Validate production config (dry run)
-        run: python src/run_production_2026.py --dry-run
-
-      - name: Run production pipeline
-        if: ${{ !inputs.dry_run && !inputs.skip_production }}
-        env:
-          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
-          THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
-        run: |
-          echo "Running production pipeline..."
-          python src/run_production_2026.py
-          echo "Pipeline completed."
-
-      - name: Generate web app data
-        if: ${{ !inputs.dry_run }}
-        run: |
-          echo "=== Generating web data ==="
-          python scripts/generate_web_data.py
-
-          echo "=== Building dashboard data ==="
-          python scripts/build_dashboard_data.py
-
-          echo "=== Running conference predictions ==="
-          python scripts/run_conference_predictions.py || echo "Conference predictions failed (non-fatal)"
-
-          echo "=== Web data generation complete ==="
-          ls -la docs/data/
-
-      - name: Validate generated files
-        if: ${{ !inputs.dry_run }}
         run: |
           set -euo pipefail
-          echo "Validating generated JSON files..."
-
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          required = [
-              "docs/data/bracket_2026.json",
-              "docs/data/validation_2025.json",
-              "docs/data/model_metrics.json",
-              "docs/data/team_profiles.json",
-              "docs/data/dashboard.json",
-          ]
-
-          for f in required:
-              p = Path(f)
-              if not p.exists():
-                  raise SystemExit(f"MISSING: {f}")
-              data = json.loads(p.read_text())
-              if not data:
-                  raise SystemExit(f"EMPTY: {f}")
-              print(f"  OK: {f} ({p.stat().st_size:,} bytes)")
-
-          # Check validation data has per-year entries
-          val = json.loads(Path("docs/data/validation_2025.json").read_text())
-          years = [e["year"] for e in val.get("per_year", [])]
-          print(f"  Validation years: {years}")
-          print("All files validated.")
-          PY
-
-      - name: Upload Kaggle submission
-        if: ${{ !inputs.dry_run && !inputs.skip_production }}
-        env:
-          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
-        run: |
+          pip install kaggle
           SUBMISSION="artifacts/kaggle_submission_2026.csv"
           if [ -f "$SUBMISSION" ]; then
             echo "Found submission: $SUBMISSION"
@@ -138,61 +81,9 @@ jobs:
             echo "::warning::No Kaggle submission CSV found at $SUBMISSION — skipping upload."
           fi
 
-      - name: Commit updated web data
-        if: ${{ !inputs.dry_run }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add docs/data/ artifacts/
-          if git diff --cached --quiet; then
-            echo "No changes to commit."
-          else
-            git commit -m "Update web app data from pipeline run
-
-          Regenerated docs/data/ from latest pipeline artifacts.
-          Triggered by: ${{ github.actor }} via workflow_dispatch"
-            git push
-            echo "Changes pushed."
-          fi
-
-  deploy-pages:
-    name: Deploy to GitHub Pages
-    needs: run-pipeline
+  # ─── Stage 4: Deploy to GitHub Pages ─────────────────────────────
+  deploy:
+    name: Deploy Pages
+    needs: web-data
     if: ${{ !inputs.dry_run }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 300
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Checkout (with pipeline updates)
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref }}
-
-      - name: Pull latest (includes pipeline commit)
-        run: git pull origin ${{ github.ref_name }}
-
-      - name: Validate docs artifacts
-        run: |
-          set -euo pipefail
-          for f in docs/index.html docs/style.css docs/data/bracket_2026.json docs/data/validation_2025.json docs/data/model_metrics.json docs/data/team_profiles.json; do
-            if [ ! -f "$f" ]; then
-              echo "::error::Missing: $f"
-              exit 1
-            fi
-          done
-          echo "All required files present."
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./docs
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+    uses: ./.github/workflows/deploy-pages.yml
