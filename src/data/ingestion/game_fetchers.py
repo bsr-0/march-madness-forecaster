@@ -381,6 +381,16 @@ class HistoricalGameFetcher:
         self.max_workers = max_workers
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
+    # ── Module import (mockable for tests) ──────────────────────────────
+
+    @staticmethod
+    def _import_module(module_name: str):
+        """Import *module_name*, returning ``None`` on failure."""
+        try:
+            return importlib.import_module(module_name)
+        except (ImportError, ModuleNotFoundError):
+            return None
+
     # ── Public API ─────────────────────────────────────────────────────────
 
     def fetch_season(self, season: int) -> List[IngestionGameRecord]:
@@ -536,9 +546,8 @@ class HistoricalGameFetcher:
 
     def _fetch_via_sportsdataverse(self, season: int) -> List[IngestionGameRecord]:
         """Load games from sportsdataverse (ESPN PBP aggregation)."""
-        try:
-            mbb = importlib.import_module("sportsdataverse.mbb")
-        except (ImportError, ModuleNotFoundError):
+        mbb = self._import_module("sportsdataverse.mbb")
+        if mbb is None:
             logger.debug("sportsdataverse not installed; skipping")
             return []
 
@@ -568,9 +577,8 @@ class HistoricalGameFetcher:
 
     def _fetch_via_cbbpy(self, season: int) -> List[IngestionGameRecord]:
         """Fetch games via cbbpy (legacy fallback)."""
-        try:
-            scraper = importlib.import_module("cbbpy.mens_scraper")
-        except (ImportError, ModuleNotFoundError):
+        scraper = self._import_module("cbbpy.mens_scraper")
+        if scraper is None:
             logger.debug("cbbpy not installed; skipping")
             return []
 
