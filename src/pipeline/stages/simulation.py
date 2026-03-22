@@ -129,13 +129,15 @@ def run_monte_carlo(
     # noise_std from config (default 0.12) controls bracket diversity.
     # injury_probability=0.0: injuries handled pre-simulation via
     # _injury_adjusted_probability().
+    # Read mutable runtime state (MC calibration may override config defaults)
+    _rs = getattr(pipeline, "_runtime_state", {})
     cfg = SimulationConfig(
-        num_simulations=pipeline.config.num_simulations,
-        noise_std=pipeline.config.mc_noise_std,
+        num_simulations=int(_rs.get("num_simulations", pipeline.config.num_simulations)),
+        noise_std=float(_rs.get("mc_noise_std", pipeline.config.mc_noise_std)),
         injury_probability=0.0,
         random_seed=pipeline.config.random_seed,
         batch_size=500,
-        regional_correlation=pipeline.config.mc_regional_correlation,
+        regional_correlation=float(_rs.get("mc_regional_correlation", pipeline.config.mc_regional_correlation)),
     )
 
     bracket = TournamentBracket.create_standard_bracket(teams_by_region)
@@ -174,7 +176,7 @@ def run_monte_carlo(
             logger.warning(
                 "MC upset rate validation FAILED — simulated rates deviate "
                 "from historical. Consider adjusting mc_noise_std (currently %.3f).",
-                pipeline.config.mc_noise_std,
+                float(_rs.get("mc_noise_std", pipeline.config.mc_noise_std)),
             )
         champion_check = upset_validation.get("champion_seed_validation", {})
         if champion_check and not champion_check.get("seed_1_passed", True):

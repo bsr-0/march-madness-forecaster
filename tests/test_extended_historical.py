@@ -286,3 +286,103 @@ class TestHistoricalIngestionConfigDefaults:
         from src.data.ingestion.historical_pipeline import HistoricalIngestionConfig
         config = HistoricalIngestionConfig()
         assert config.start_season == 2003
+
+
+class TestRuntimeStateConfigImmutability:
+    """Verify that _runtime_state pattern prevents config mutation.
+
+    The production runner hashes config before and after pipeline.run().
+    If any code mutates self.config during execution, the production
+    run fails with a hash mismatch.  The _runtime_state dict on
+    SOTAPipeline holds mutable overrides (MC calibration, budget
+    degradation, path auto-resolution) so self.config stays frozen.
+    """
+
+    def test_pipeline_has_runtime_state(self):
+        """SOTAPipeline initializes _runtime_state from config."""
+        from src.pipeline.config import SOTAPipelineConfig
+        from src.pipeline.sota import SOTAPipeline
+
+        config = SOTAPipelineConfig()
+        pipeline = SOTAPipeline(config)
+        assert hasattr(pipeline, "_runtime_state")
+        assert pipeline._runtime_state["mc_noise_std"] == config.mc_noise_std
+        assert pipeline._runtime_state["num_simulations"] == config.num_simulations
+
+    def test_mc_calibration_does_not_mutate_config(self):
+        """_load_mc_calibration writes to _runtime_state, not config."""
+        import json
+        import tempfile
+        import os
+        from src.pipeline.config import SOTAPipelineConfig
+        from src.pipeline.sota import SOTAPipeline
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump({"best_params": {"noise_std": 0.12, "regional_correlation": 0.05}}, f)
+            mc_path = f.name
+
+        try:
+            config = SOTAPipelineConfig(mc_calibration_json=mc_path)
+            original_noise = config.mc_noise_std
+            original_corr = config.mc_regional_correlation
+            pipeline = SOTAPipeline(config)
+
+            pipeline._load_mc_calibration()
+
+            # Config must be unchanged
+            assert config.mc_noise_std == original_noise
+            assert config.mc_regional_correlation == original_corr
+            # Runtime state must have the calibrated values
+            assert pipeline._runtime_state["mc_noise_std"] == 0.12
+            assert pipeline._runtime_state["mc_regional_correlation"] == 0.05
+        finally:
+            os.unlink(mc_path)
+
+    def test_budget_degradation_does_not_mutate_config(self):
+        """Budget degradation writes to _runtime_state, not config."""
+        from src.pipeline.config import SOTAPipelineConfig
+        from src.pipeline.sota import SOTAPipeline
+
+        config = SOTAPipelineConfig(
+            num_simulations=50000,
+            enable_gnn=False,
+            enable_transformer=False,
+        )
+        pipeline = SOTAPipeline(config)
+
+        # Simulate budget degradation logic
+        pipeline._runtime_state["num_simulations"] = max(
+            1000, int(pipeline._runtime_state["num_simulations"]) // 2
+        )
+        pipeline._runtime_state["enable_gnn"] = False
+        pipeline._runtime_state["enable_transformer"] = False
+
+        # Config must be unchanged
+        assert config.num_simulations == 50000
+        assert pipeline._runtime_state["num_simulations"] == 25000
+
+    def test_config_hash_stable_after_runtime_state_changes(self):
+        """Config hash remains identical after _runtime_state mutations."""
+        import hashlib
+        import dataclasses
+        from src.pipeline.config import SOTAPipelineConfig
+        from src.pipeline.sota import SOTAPipeline
+
+        config = SOTAPipelineConfig()
+        pipeline = SOTAPipeline(config)
+
+        def _hash_config(c):
+            h = hashlib.sha256()
+            for f in dataclasses.fields(c):
+                h.update(f"{f.name}={getattr(c, f.name)!r}".encode("utf-8"))
+            return h.hexdigest()
+
+        hash_before = _hash_config(config)
+
+        # Simulate all runtime state changes
+        pipeline._runtime_state["mc_noise_std"] = 0.12
+        pipeline._runtime_state["num_simulations"] = 25000
+        pipeline._runtime_state["multi_year_games_dir"] = "/tmp/resolved"
+
+        hash_after = _hash_config(config)
+        assert hash_before == hash_after, "Config hash must not change when _runtime_state is mutated"

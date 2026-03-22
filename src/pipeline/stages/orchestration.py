@@ -124,7 +124,9 @@ def _check_holdout_contamination(pipeline) -> None:
     """Check for holdout contamination from config drift."""
     try:
         from ...ml.evaluation.rdof_audit import check_holdout_contamination
-        hist_dir = pipeline.config.multi_year_games_dir or "data/raw/historical"
+        hist_dir = getattr(pipeline, "_runtime_state", {}).get(
+            "multi_year_games_dir", pipeline.config.multi_year_games_dir
+        ) or "data/raw/historical"
         contamination = check_holdout_contamination(hist_dir, pipeline.config)
         if contamination:
             msg = f"HOLDOUT CONTAMINATION: {contamination['message']}"
@@ -234,14 +236,19 @@ def _check_freeze_requirement(pipeline) -> Optional[Dict]:
 
 
 def _auto_detect_kaggle_dir(pipeline) -> None:
-    """FIX #1: Auto-detect kaggle_dir if not explicitly set."""
+    """FIX #1: Auto-detect kaggle_dir if not explicitly set.
+
+    Writes resolved path to pipeline._runtime_state to avoid
+    mutating the immutable config object.
+    """
+    _rs = getattr(pipeline, "_runtime_state", {})
     if pipeline.config.kaggle_dir:
         return
     try:
         from ...data.kaggle_downloader import ensure_kaggle_data
         _resolved = ensure_kaggle_data(kaggle_dir=None, auto_download=True)
         if _resolved:
-            pipeline.config.kaggle_dir = _resolved
+            _rs["kaggle_dir"] = _resolved
             logger.info("FIX #1: Resolved kaggle_dir via ensure_kaggle_data: %s", _resolved)
             return
     except Exception as _e:
@@ -261,7 +268,7 @@ def _auto_detect_kaggle_dir(pipeline) -> None:
                 if "massey" in f.lower() or "MTeams" in f
             ]
             if _massey_files:
-                pipeline.config.kaggle_dir = _kd
+                _rs["kaggle_dir"] = _kd
                 logger.info("FIX #1: Auto-detected kaggle_dir: %s", _kd)
                 break
 
@@ -711,7 +718,7 @@ def assemble_report(
                 "step_3_stacking_meta": baseline_stats["model"] == "stacking_ensemble",
                 "step_3_loyo_cv": bool(baseline_stats.get("loyo_cv", {}).get("enabled")),
                 "step_4_pyg_gcn": gnn_stats["framework"] == "pytorch_geometric",
-                "step_5_50k_monte_carlo": pipeline.config.num_simulations >= 50000,
+                "step_5_50k_monte_carlo": int(getattr(pipeline, "_runtime_state", {}).get("num_simulations", pipeline.config.num_simulations)) >= 50000,
                 "step_6_ev_max_output": is_calibration,
             },
         },
