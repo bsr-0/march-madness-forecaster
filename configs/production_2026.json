@@ -11,6 +11,7 @@
 
   "enable_stacking": true,
   "enable_feature_selection": true,
+  "enable_matchup_interactions": true,
 
   "enable_brier_sharpening": false,
   "enable_espn_sharpening": false,
