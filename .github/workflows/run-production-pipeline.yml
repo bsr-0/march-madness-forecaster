@@ -45,6 +45,8 @@ jobs:
 
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
+        with:
+          requirements-file: requirements-production-lock.txt
 
       - name: Setup Kaggle data
         env:
