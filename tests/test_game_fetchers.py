@@ -429,7 +429,7 @@ class TestHistoricalGameFetcherFallback:
         sdv_called = []
         monkeypatch.setattr(fetcher, "_fetch_via_sportsdataverse", lambda s: sdv_called.append(s) or [])
 
-        result = fetcher.fetch_season(2024)
+        result = fetcher.fetch_season(2024, strict=False)
         assert len(result) >= 500
         assert sdv_called == []  # sportsdataverse NOT called when ESPN is sufficient
 
@@ -449,7 +449,7 @@ class TestHistoricalGameFetcherFallback:
         cbbpy_called = []
         monkeypatch.setattr(fetcher, "_fetch_via_cbbpy", lambda s: cbbpy_called.append(s) or [])
 
-        result = fetcher.fetch_season(2024)
+        result = fetcher.fetch_season(2024, strict=False)
         assert len(result) >= 500
         assert all(r.provider == "sportsdataverse" for r in result)
         assert cbbpy_called == []
@@ -469,7 +469,7 @@ class TestHistoricalGameFetcherFallback:
         ]
         monkeypatch.setattr(fetcher, "_fetch_via_cbbpy", lambda s: cbbpy_records)
 
-        result = fetcher.fetch_season(2024)
+        result = fetcher.fetch_season(2024, strict=False)
         assert len(result) >= 500
         assert all(r.provider == "cbbpy" for r in result)
 
@@ -494,11 +494,11 @@ class TestHistoricalGameFetcherFallback:
         monkeypatch.setattr(fetcher, "_fetch_via_espn_scoreboard", mock_espn)
 
         # First call — fetches and caches
-        result1 = fetcher.fetch_season(2024)
+        result1 = fetcher.fetch_season(2024, strict=False)
         assert fetch_count["n"] == 1
 
         # Second call — from cache
-        result2 = fetcher.fetch_season(2024)
+        result2 = fetcher.fetch_season(2024, strict=False)
         assert fetch_count["n"] == 1  # NOT called again
         assert len(result2) == len(result1)
 
@@ -710,3 +710,72 @@ class TestFullPipelineIntegration:
         assert duke_rec.opp_fgm == pytest.approx(25.0)
         assert duke_rec.opp_fga == pytest.approx(58.0)
         assert duke_rec.opp_tov == pytest.approx(13.0)
+
+
+# ---------------------------------------------------------------------------
+# HistoricalGameFetcher — quality gate tests
+# ---------------------------------------------------------------------------
+
+class TestHistoricalGameFetcherQualityGate:
+    """Tests that fetch_season raises IngestionQualityError on bad data."""
+
+    @staticmethod
+    def _make_records(n, home_id="a", away_id="b", fga=60.0, provider="espn"):
+        return [
+            IngestionGameRecord(
+                game_id=f"g{i}", date=f"2024-01-{(i % 28) + 1:02d}", season=2024,
+                home_team_id=home_id, home_team_name=home_id.upper(),
+                away_team_id=away_id, away_team_name=away_id.upper(),
+                home_score=80, away_score=75,
+                home_fga=fga, away_fga=fga,
+                provider=provider,
+            )
+            for i in range(n)
+        ]
+
+    def test_raises_on_insufficient_games(self, tmp_path, monkeypatch):
+        from src.data.ingestion.game_fetchers import IngestionQualityError
+
+        fetcher = HistoricalGameFetcher(cache_dir=str(tmp_path))
+        monkeypatch.setattr(fetcher, "_fetch_via_espn_scoreboard", lambda s: self._make_records(10))
+        monkeypatch.setattr(fetcher, "_fetch_via_sportsdataverse", lambda s: [])
+        monkeypatch.setattr(fetcher, "_fetch_via_cbbpy", lambda s: [])
+
+        with pytest.raises(IngestionQualityError, match="insufficient games"):
+            fetcher.fetch_season(2024)
+
+    def test_raises_on_insufficient_teams(self, tmp_path, monkeypatch):
+        from src.data.ingestion.game_fetchers import IngestionQualityError
+
+        fetcher = HistoricalGameFetcher(cache_dir=str(tmp_path))
+        # 600 games but only 2 teams — fails team coverage gate
+        records = self._make_records(600, home_id="duke", away_id="unc")
+        monkeypatch.setattr(fetcher, "_fetch_via_espn_scoreboard", lambda s: records)
+
+        with pytest.raises(IngestionQualityError, match="team coverage"):
+            fetcher.fetch_season(2024)
+
+    def test_strict_false_allows_insufficient(self, tmp_path, monkeypatch):
+        fetcher = HistoricalGameFetcher(cache_dir=str(tmp_path))
+        monkeypatch.setattr(fetcher, "_fetch_via_espn_scoreboard", lambda s: self._make_records(10))
+        monkeypatch.setattr(fetcher, "_fetch_via_sportsdataverse", lambda s: [])
+        monkeypatch.setattr(fetcher, "_fetch_via_cbbpy", lambda s: [])
+
+        result = fetcher.fetch_season(2024, strict=False)
+        assert len(result) == 10
+
+    def test_provider_contributions_logged(self, tmp_path, monkeypatch, caplog):
+        fetcher = HistoricalGameFetcher(cache_dir=str(tmp_path))
+        espn = self._make_records(5, provider="espn_scoreboard")
+        sdv = self._make_records(5, provider="sportsdataverse")
+        # Use different game_ids to avoid dedup
+        for i, r in enumerate(sdv):
+            r.game_id = f"sdv_{i}"
+        monkeypatch.setattr(fetcher, "_fetch_via_espn_scoreboard", lambda s: espn)
+        monkeypatch.setattr(fetcher, "_fetch_via_sportsdataverse", lambda s: sdv)
+        monkeypatch.setattr(fetcher, "_fetch_via_cbbpy", lambda s: [])
+
+        with caplog.at_level(logging.INFO):
+            fetcher.fetch_season(2024, strict=False)
+
+        assert any("provider contributions" in m for m in caplog.messages)

@@ -231,3 +231,92 @@ def validate_odds_payload(payload: Dict) -> List[str]:
         if implied is None and title is None:
             errors.append(f"teams[{idx}] missing implied_win_probability/title_odds")
     return errors
+
+
+def validate_season_quality(
+    records,
+    min_games: int = 500,
+    min_unique_teams: int = 200,
+    min_unique_dates: int = 30,
+    min_box_score_pct: float = 0.5,
+    max_single_team_pct: float = 0.05,
+) -> List[str]:
+    """Validate statistical quality of ingested game records.
+
+    Checks coverage, temporal spread, box-score availability, and team
+    concentration.  Returns a list of error strings (empty = pass).
+
+    Parameters
+    ----------
+    records : list of IngestionGameRecord
+        Game-level records to validate.
+    min_games : int
+        Minimum number of games required.  NCAA D1 has ~5,500 per season;
+        500 is a ~9 % coverage floor for stable Elo / SOS computation.
+    min_unique_teams : int
+        Minimum unique team IDs across all games.  D1 has ~360 teams;
+        200 ensures multi-conference representation.
+    min_unique_dates : int
+        Minimum unique game dates.  A season spans ~160 days; 30 ensures
+        point-in-time features capture season progression.
+    min_box_score_pct : float
+        Fraction of games that must have FGA > 0 for Four Factors
+        (eFG%%, TOV%%, ORB%%, FTR) computation.
+    max_single_team_pct : float
+        Maximum fraction of games any single team may appear in.  Detects
+        scraper bias returning team-specific rather than league-wide data.
+    """
+    errors: List[str] = []
+    n = len(records)
+
+    if n < min_games:
+        errors.append(
+            f"insufficient games: {n} < {min_games} minimum for stable "
+            f"Elo/SOS computation"
+        )
+        # Further checks are unreliable with very few records.
+        if n == 0:
+            return errors
+
+    # Team coverage
+    team_ids: Dict[str, int] = {}
+    for r in records:
+        team_ids[r.home_team_id] = team_ids.get(r.home_team_id, 0) + 1
+        team_ids[r.away_team_id] = team_ids.get(r.away_team_id, 0) + 1
+    n_teams = len(team_ids)
+    if n_teams < min_unique_teams:
+        errors.append(
+            f"insufficient team coverage: {n_teams} unique teams < "
+            f"{min_unique_teams} minimum for conference representation"
+        )
+
+    # Temporal spread
+    unique_dates = {r.date for r in records if r.date}
+    if len(unique_dates) < min_unique_dates:
+        errors.append(
+            f"insufficient temporal spread: {len(unique_dates)} unique dates "
+            f"< {min_unique_dates} minimum for point-in-time features"
+        )
+
+    # Box-score coverage
+    if n > 0:
+        has_box = sum(1 for r in records if r.home_fga > 0 or r.away_fga > 0)
+        pct = has_box / n
+        if pct < min_box_score_pct:
+            errors.append(
+                f"insufficient box-score coverage: {pct:.1%} of games have "
+                f"FGA > 0 vs {min_box_score_pct:.0%} required for Four Factors"
+            )
+
+    # Team concentration (detect scraper returning one team's games only)
+    if n > 0 and team_ids:
+        max_appearances = max(team_ids.values())
+        max_team = max(team_ids, key=team_ids.get)
+        if max_appearances / n > max_single_team_pct:
+            errors.append(
+                f"team concentration too high: {max_team} appears in "
+                f"{max_appearances}/{n} games ({max_appearances / n:.1%}), "
+                f"exceeding {max_single_team_pct:.0%} threshold"
+            )
+
+    return errors
