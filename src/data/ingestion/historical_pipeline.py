@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 class HistoricalIngestionConfig:
     """Configuration for multi-season historical data pulls."""
 
-    start_season: int = 2022
+    start_season: int = 2003
     end_season: int = 2025
     output_dir: str = "data/raw/historical"
     cache_dir: str = "data/raw/cache"

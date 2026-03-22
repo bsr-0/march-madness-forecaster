@@ -193,6 +193,19 @@ class SOTAPipeline:
         self.team_id_to_name: Dict[str, str] = {}
         self.team_name_to_id: Dict[str, str] = {}
         self.team_features: Dict[str, np.ndarray] = {}
+
+        # Runtime state: mutable overrides derived from config at execution
+        # time.  These values may be updated by MC calibration loading, budget
+        # degradation, or path auto-resolution WITHOUT mutating self.config,
+        # which must remain immutable for production hash verification.
+        self._runtime_state: Dict[str, object] = {
+            "mc_noise_std": self.config.mc_noise_std,
+            "mc_regional_correlation": self.config.mc_regional_correlation,
+            "num_simulations": self.config.num_simulations,
+            "enable_gnn": self.config.enable_gnn,
+            "enable_transformer": self.config.enable_transformer,
+            "multi_year_games_dir": self.config.multi_year_games_dir,
+        }
         self.team_struct: Dict[str, Team] = {}
 
         self.baseline_model = _TrainedBaselineModel()
@@ -357,9 +370,9 @@ class SOTAPipeline:
         best = payload.get("best_params", {})
         if isinstance(best, dict):
             if "noise_std" in best:
-                self.config.mc_noise_std = float(best["noise_std"])
+                self._runtime_state["mc_noise_std"] = float(best["noise_std"])
             if "regional_correlation" in best:
-                self.config.mc_regional_correlation = float(best["regional_correlation"])
+                self._runtime_state["mc_regional_correlation"] = float(best["regional_correlation"])
         payload["_source_path"] = path
         return payload
 
@@ -972,9 +985,11 @@ class SOTAPipeline:
                 logger.warning(
                     "BUDGET DEGRADATION: %.0f%% budget consumed", utilization * 100,
                 )
-                self.config.num_simulations = max(1000, self.config.num_simulations // 2)
-                self.config.enable_gnn = False
-                self.config.enable_transformer = False
+                self._runtime_state["num_simulations"] = max(
+                    1000, int(self._runtime_state["num_simulations"]) // 2
+                )
+                self._runtime_state["enable_gnn"] = False
+                self._runtime_state["enable_transformer"] = False
 
         with self._resource_tracker.phase("calibration"):
             calibration_stats = self._fit_calibration(game_flows)

@@ -42,6 +42,21 @@ except ImportError:
 # to prevent result leakage.
 # ---------------------------------------------------------------------------
 TOURNAMENT_START_DATES: Dict[int, date] = {
+    # Historical years (1996-2007) — first round dates sourced from
+    # sports-reference.com bracket pages.
+    1996: date(1996, 3, 14),
+    1997: date(1997, 3, 13),
+    1998: date(1998, 3, 12),
+    1999: date(1999, 3, 11),
+    2000: date(2000, 3, 16),
+    2001: date(2001, 3, 15),
+    2002: date(2002, 3, 14),
+    2003: date(2003, 3, 18),
+    2004: date(2004, 3, 16),
+    2005: date(2005, 3, 17),
+    2006: date(2006, 3, 16),
+    2007: date(2007, 3, 15),
+    # Modern era (2008+)
     2008: date(2008, 3, 18),
     2009: date(2009, 3, 17),
     2010: date(2010, 3, 16),
@@ -60,6 +75,19 @@ TOURNAMENT_START_DATES: Dict[int, date] = {
     2024: date(2024, 3, 19),
     2025: date(2025, 3, 18),
     2026: date(2026, 3, 17),
+}
+
+
+# ---------------------------------------------------------------------------
+# NCAA rule regime breaks.  Major rule changes that affect feature
+# comparability across eras.  Used by the training window optimizer
+# to test regime-aligned training windows.
+# ---------------------------------------------------------------------------
+RULE_REGIME_BREAKS: Dict[int, str] = {
+    2001: "tournament_65",     # Play-in game added (65 teams)
+    2011: "tournament_68",     # First Four added (68 teams)
+    2016: "shot_clock_30s",    # Shot clock reduced 35s → 30s
+    2020: "3pt_line_moved",    # 3-point line moved 20'9" → 22'1¾" (also COVID)
 }
 
 
@@ -156,7 +184,13 @@ KAGGLE_ROUND_WEIGHTS = {
 
 
 DATA_QUALITY_ERA_WEIGHTS = {
+    # Pre-digital era — very limited advanced stats availability
+    1996: 0.0, 1997: 0.0, 1998: 0.0, 1999: 0.0,
+    # Early digital era — basic stats only, sparse feature coverage
+    2000: 0.0, 2001: 0.0, 2002: 0.0, 2003: 0.0, 2004: 0.0,
+    # Transition era — some advanced stats becoming available
     2005: 0.0, 2006: 0.0, 2007: 0.10, 2008: 0.20, 2009: 0.30,
+    # Modern era — most features available
     2010: 0.55, 2011: 0.65, 2012: 0.75, 2013: 0.80, 2014: 0.85,
 }
 
