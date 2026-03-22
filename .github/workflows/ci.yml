@@ -13,18 +13,10 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
         with:
-          python-version: "3.10"
-          cache: pip
-
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install ruff
+          extra-packages: ruff
 
       - name: Run ruff linter
         run: ruff check src/ tests/ --output-format=github
@@ -34,16 +26,8 @@ jobs:
     name: "Gate 1: Unit Tests"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
 
       - name: Run unit tests
         run: pytest tests/ -m "unit" --cov=src --cov-report=term-missing --tb=short -q
@@ -53,16 +37,8 @@ jobs:
     name: "Gate 2: Data-Contract Tests"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
 
       - name: Contract governance checks
         run: |
@@ -89,16 +65,8 @@ jobs:
     name: "Gate 3: Leakage Tests"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
 
       - name: Run leakage tests
         run: pytest tests/ -m "leakage" -v --tb=short -q
@@ -108,18 +76,10 @@ jobs:
     name: Dependency Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
         with:
-          python-version: "3.10"
-          cache: pip
-
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install pip-audit
+          extra-packages: pip-audit
 
       - name: Run pip audit
         run: pip-audit --strict

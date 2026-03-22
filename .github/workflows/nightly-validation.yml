@@ -16,16 +16,8 @@ jobs:
     name: "Backtest Regression Tests"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
 
       - name: Run backtest regression tests
         run: pytest tests/ -m "backtest_regression" -v --tb=short -q
@@ -35,16 +27,8 @@ jobs:
     name: "Freeze / Reproducibility Tests"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
 
       - name: Run freeze and reproducibility tests
         run: pytest tests/ -m "freeze or production" -v --tb=short -q
@@ -54,16 +38,8 @@ jobs:
     name: "Calibration Tests"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
 
       - name: Run calibration tests
         run: pytest tests/ -m "calibration" -v --tb=short -q

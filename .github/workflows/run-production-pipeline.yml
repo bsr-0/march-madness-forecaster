@@ -1,0 +1,85 @@
+name: Run Production Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      dry_run:
+        description: "Dry run (validate only, skip full pipeline)"
+        type: boolean
+        default: false
+      skip_production:
+        description: "Skip production pipeline (only regenerate web data from existing artifacts)"
+        type: boolean
+        default: false
+    secrets:
+      KAGGLE_USERNAME:
+        required: false
+      KAGGLE_KEY:
+        required: false
+      THE_ODDS_API_KEY:
+        required: false
+
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (validate only, skip full pipeline)"
+        type: boolean
+        default: false
+      skip_production:
+        description: "Skip production pipeline"
+        type: boolean
+        default: false
+
+concurrency:
+  group: production-pipeline
+  cancel-in-progress: false
+
+jobs:
+  run-pipeline:
+    name: Run Production Pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Setup Kaggle data
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p data/kaggle
+          if march-madness download-kaggle --output-dir data/kaggle; then
+            echo "Kaggle data downloaded successfully:"
+            ls -la data/kaggle/
+          else
+            echo "::warning::Kaggle download failed. Full pipeline run will attempt auto-download."
+          fi
+
+      - name: Validate production config (dry run)
+        if: ${{ !inputs.dry_run && !inputs.skip_production }}
+        run: |
+          set -euo pipefail
+          python src/run_production_2026.py --dry-run
+
+      - name: Run production pipeline
+        if: ${{ !inputs.dry_run && !inputs.skip_production }}
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+          THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+        run: |
+          set -euo pipefail
+          echo "Running production pipeline..."
+          python src/run_production_2026.py
+          echo "Pipeline completed."
+
+      - name: Upload pipeline artifacts
+        if: ${{ !inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-artifacts
+          path: artifacts/
+          retention-days: 7
+          if-no-files-found: warn
