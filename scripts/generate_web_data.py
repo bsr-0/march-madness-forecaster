@@ -21,7 +21,11 @@ from pathlib import Path
 
 import numpy as np
 
+# Add src/ to path for normalize imports
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "src"))
+from data.normalize import normalize_team_id
+
 DATA = ROOT / "data"
 HIST = DATA / "raw" / "historical"
 OUT = ROOT / "docs" / "data"
@@ -64,6 +68,13 @@ def team_display_name(tid: str) -> str:
     return tid.replace("_", " ").replace("  ", "'").title()
 
 
+def rating_lookup(lookup, tid):
+    """Look up a team in the rating dict, trying normalized form as fallback."""
+    if tid in lookup:
+        return lookup[tid]
+    return lookup.get(normalize_team_id(tid), {})
+
+
 def elo_win_prob(rating_a: float, rating_b: float, hfa: float = 0) -> float:
     """Expected score for A given Elo-like ratings."""
     return 1.0 / (1.0 + 10 ** ((rating_b - rating_a - hfa) / 400))
@@ -97,15 +108,21 @@ def build_rating_lookup(torvik_data):
     lookup = {}
     teams = torvik_data if isinstance(torvik_data, list) else torvik_data.get("teams", [])
     for t in teams:
-        tid = t.get("team_id", "")
-        lookup[tid] = {
+        raw_tid = t.get("team_id", "")
+        entry = {
             "t_rank": t.get("t_rank", 999),
             "barthag": t.get("barthag", 0.5),
             "adj_oe": t.get("adj_offensive_efficiency", 100),
             "adj_de": t.get("adj_defensive_efficiency", 100),
             "adj_tempo": t.get("adj_tempo", 67),
-            "name": t.get("team_name", tid),
+            "name": t.get("team_name", raw_tid),
         }
+        # Index by both the raw torvik ID and its normalized canonical form
+        # so bracket lookups (which use canonical IDs) find the right entry.
+        lookup[raw_tid] = entry
+        canonical = normalize_team_id(raw_tid)
+        if canonical != raw_tid:
+            lookup[canonical] = entry
     return lookup
 
 ratings_2026 = build_rating_lookup(torvik_2026)
@@ -140,8 +157,8 @@ def predict_game(team_a, team_b):
     seed_a = team_a["seed"]
     seed_b = team_b["seed"]
 
-    ra = ratings_2026.get(tid_a, {})
-    rb = ratings_2026.get(tid_b, {})
+    ra = rating_lookup(ratings_2026, tid_a)
+    rb = rating_lookup(ratings_2026, tid_b)
 
     # Use barthag as Elo-like rating (scale to ~1500 range)
     elo_a = ra.get("barthag", 0.5) * 2000
@@ -289,8 +306,8 @@ elite_eight_counts = Counter()
 
 def mc_predict(team_a, team_b):
     """Single stochastic prediction."""
-    ra = ratings_2026.get(team_a["team_id"], {})
-    rb = ratings_2026.get(team_b["team_id"], {})
+    ra = rating_lookup(ratings_2026, team_a["team_id"])
+    rb = rating_lookup(ratings_2026, team_b["team_id"])
     elo_a = ra.get("barthag", 0.5) * 2000
     elo_b = rb.get("barthag", 0.5) * 2000
     ep = elo_win_prob(elo_a, elo_b)
@@ -369,8 +386,8 @@ for tid, count in championship_counts.most_common():
         "championship_prob": round(count / N_SIMS, 4),
         "final_four_prob": round(final_four_counts.get(tid, 0) / N_SIMS, 4),
         "elite_eight_prob": round(elite_eight_counts.get(tid, 0) / N_SIMS, 4),
-        "rating": round(ratings_2026.get(tid, {}).get("barthag", 0), 4),
-        "t_rank": ratings_2026.get(tid, {}).get("t_rank", 999),
+        "rating": round(rating_lookup(ratings_2026, tid).get("barthag", 0), 4),
+        "t_rank": rating_lookup(ratings_2026, tid).get("t_rank", 999),
     })
 
 bracket_output = {
@@ -440,8 +457,8 @@ for year in range(2018, 2025):
         actual_t1_won = g["team1_won"]
         round_name = g.get("round_name", "R64")
 
-        r1 = torvik.get(t1_id, {})
-        r2 = torvik.get(t2_id, {})
+        r1 = rating_lookup(torvik, t1_id)
+        r2 = rating_lookup(torvik, t2_id)
 
         elo_a = r1.get("barthag", 0.5) * 2000
         elo_b = r2.get("barthag", 0.5) * 2000
@@ -641,7 +658,7 @@ print("\n4. Generating team profiles...")
 team_profiles = []
 for t in bracket_teams:
     tid = t["team_id"]
-    r = ratings_2026.get(tid, {})
+    r = rating_lookup(ratings_2026, tid)
 
     profile = {
         "team_id": tid,
@@ -727,7 +744,7 @@ conf_data = defaultdict(lambda: {
 
 for t in bracket_teams:
     conf = t["conference"]
-    r = ratings_2026.get(t["team_id"], {})
+    r = rating_lookup(ratings_2026, t["team_id"])
     conf_data[conf]["teams"].append({
         "team_name": t["team_name"],
         "seed": t["seed"],
