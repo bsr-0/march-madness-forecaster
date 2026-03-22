@@ -214,7 +214,14 @@ def test_historical_pipeline_fast_path_uses_get_games_season(tmp_path):
             strict_validation=True,
         )
     )
-    pipeline.providers._import_module = lambda module: DummyCBBpy if module == "cbbpy.mens_scraper" else None
+    def _mock_import(module):
+        return DummyCBBpy if module == "cbbpy.mens_scraper" else None
+
+    pipeline.providers._import_module = _mock_import
+    pipeline.game_fetcher._import_module = _mock_import
+    # Bypass ESPN/sportsdataverse HTTP calls so test reaches cbbpy fast path
+    pipeline.game_fetcher._fetch_via_espn_scoreboard = lambda season: []
+    pipeline.game_fetcher._fetch_via_sportsdataverse = lambda season: []
     pipeline.providers.fetch_team_box_metrics = lambda season, priority=None: ProviderResult(
         "sportsipy",
         [{"team_id": "a", "team_name": "A", "adj_offensive_efficiency": 101.0, "adj_defensive_efficiency": 99.0, "adj_tempo": 68.0}],
@@ -253,7 +260,15 @@ def test_historical_pipeline_uses_configured_team_metric_priority(tmp_path):
             team_metrics_provider_priority=["sportsdataverse", "sportsipy"],
         )
     )
-    pipeline.providers._import_module = lambda module: DummyCBBpy if module == "cbbpy.mens_scraper" else None
+
+    def _mock_import(module):
+        return DummyCBBpy if module == "cbbpy.mens_scraper" else None
+
+    pipeline.providers._import_module = _mock_import
+    pipeline.game_fetcher._import_module = _mock_import
+    # Bypass ESPN/sportsdataverse HTTP calls so test reaches cbbpy fast path
+    pipeline.game_fetcher._fetch_via_espn_scoreboard = lambda season: []
+    pipeline.game_fetcher._fetch_via_sportsdataverse = lambda season: []
 
     def _provider(season, priority=None):
         captured["priority"] = priority

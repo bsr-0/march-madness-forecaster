@@ -1017,7 +1017,7 @@
     "src/governance/production_runner.py": "60cd189ac09b0a527800f06f96b0af40d04578c412188b20a6ba4012a205cff2",
     "src/run_production_2026.py": "e5c7dde0211feb896d2db7d26fa28a5b7d8be8c1763c3f6ae448847a067cf29e"
   },
-  "source_tree_hash": "780ca1e8e0b8a3a37c091f92fe1dc7d9eaf26ba085a3975d554bdb7533e8032c",
+  "source_tree_hash": "7686c7780c94f0f5a01d13f540c7ae48a749a24d15532758381da99838729e47",
   "data_file_hashes": {
     "data/raw/torvik_2026.json": "214cec3364a8ade6d63b185063ffd53d7f9b2cc0d79f03e2876b1d9583d0f817",
     "data/raw/teams_2026.json": "18713882c27372ad9ad9cf0c5034ea3d14d36f61d0ea33b0cac59ff7b619ee68",
