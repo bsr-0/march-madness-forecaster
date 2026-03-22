@@ -278,6 +278,7 @@ def test_historical_pipeline_uses_configured_team_metric_priority(tmp_path):
         )
 
     pipeline.providers.fetch_team_box_metrics = _provider
-    pipeline.run()
+    with patch("src.data.ingestion.validators.validate_season_quality", return_value=[]):
+        pipeline.run()
 
     assert captured["priority"] == ["sportsdataverse", "sportsipy"]
