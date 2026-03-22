@@ -97,6 +97,12 @@ class LightGBMRanker:
             valid_set: Validation set (X_val, y_val)
             sample_weight: Per-sample weights [N] for recency weighting
         """
+        if X.shape[0] == 0:
+            raise ValueError("Empty training set")
+        if np.any(np.isnan(X)) or np.any(np.isinf(X)):
+            raise ValueError("Training data contains NaN/Inf values")
+        if X.shape[0] < 10:
+            logger.warning("Very small training set (%d samples) for LightGBM", X.shape[0])
         self.feature_names = feature_names
 
         train_data = lgb.Dataset(X, label=y, feature_name=feature_names,
@@ -253,6 +259,12 @@ class XGBoostRanker:
             valid_set: Validation set (X_val, y_val)
             sample_weight: Per-sample weights [N] for recency weighting
         """
+        if X.shape[0] == 0:
+            raise ValueError("Empty training set")
+        if np.any(np.isnan(X)) or np.any(np.isinf(X)):
+            raise ValueError("Training data contains NaN/Inf values")
+        if X.shape[0] < 10:
+            logger.warning("Very small training set (%d samples) for XGBoost", X.shape[0])
         self.feature_names = feature_names
 
         dtrain = xgb.DMatrix(X, label=y, feature_names=feature_names,

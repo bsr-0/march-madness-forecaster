@@ -44,6 +44,7 @@ def retry_request(
     Retries on network errors and 429/5xx status codes.
     """
     last_exc: Exception | None = None
+    all_exceptions: list[Exception] = []
     for attempt in range(max_retries + 1):
         try:
             response = func(*args, **kwargs)
@@ -67,6 +68,7 @@ def retry_request(
             return response
         except retry_on as exc:
             last_exc = exc
+            all_exceptions.append(exc)
             if attempt < max_retries:
                 wait = _jittered_wait(backoff_base * (2 ** attempt))
                 logger.warning(
@@ -75,6 +77,12 @@ def retry_request(
                 )
                 time.sleep(wait)
             else:
+                if len(all_exceptions) > 1:
+                    logger.error(
+                        "All %d attempts failed: %s",
+                        len(all_exceptions),
+                        [str(e) for e in all_exceptions],
+                    )
                 raise
     # Should not reach here, but just in case
     raise last_exc  # type: ignore[misc]
@@ -94,14 +102,19 @@ def rate_limited_call(
     hit external APIs internally.
     """
     last_exc: Exception | None = None
+    all_exceptions: list[Exception] = []
     for attempt in range(max_retries + 1):
         try:
+            # Rate-limit delay before each call (skip first attempt)
+            if attempt > 0:
+                time.sleep(delay)
             result = func(*args, **kwargs)
-            # Pause after successful call to stay under rate limits
+            # Pause after successful call to stay under rate limits for next caller
             time.sleep(delay)
             return result
         except Exception as exc:
             last_exc = exc
+            all_exceptions.append(exc)
             if attempt < max_retries:
                 wait = _jittered_wait(backoff_base * (2 ** attempt))
                 logger.warning(
@@ -111,5 +124,12 @@ def rate_limited_call(
                 )
                 time.sleep(wait)
             else:
+                if len(all_exceptions) > 1:
+                    logger.error(
+                        "All %d attempts failed for %s: %s",
+                        len(all_exceptions),
+                        func.__name__ if hasattr(func, '__name__') else str(func),
+                        [str(e) for e in all_exceptions],
+                    )
                 raise
     raise last_exc  # type: ignore[misc]
