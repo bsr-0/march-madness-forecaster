@@ -313,22 +313,22 @@ class LibraryProviderHub:
                     games = self._run_with_timeout(
                         fn, args=(year,),
                         kwargs={"info": True, "box": True, "pbp": False},
-                        timeout=600,
+                        timeout=120,
                     )
                 else:
                     games = self._run_with_timeout(
                         fn,
                         args=(f"{year - 1}-11-01", f"{year}-04-15"),
                         kwargs={"info": True, "box": True, "pbp": False},
-                        timeout=600,
+                        timeout=120,
                     )
             except TypeError:
                 try:
                     if fn_name == "get_games_season":
-                        games = self._run_with_timeout(fn, args=(year,), timeout=600)
+                        games = self._run_with_timeout(fn, args=(year,), timeout=120)
                     else:
                         games = self._run_with_timeout(
-                            fn, args=(f"{year - 1}-11-01", f"{year}-04-15"), timeout=600,
+                            fn, args=(f"{year - 1}-11-01", f"{year}-04-15"), timeout=120,
                         )
                 except Exception:
                     continue
