@@ -12,6 +12,14 @@ import numpy as np
 import multiprocessing
 import math
 
+# Named constants for Monte Carlo simulation parameters.
+# Derived from ~160 region-years of tournament data (see comments at usage sites).
+ROUND_CORRELATION_DECAY = [1.0, 0.6, 0.3, 0.15, 0.0, 0.0]
+CROSS_REGION_LOGNORMAL_SIGMA = 0.15  # F4+ cross-region noise (lognormal sigma)
+INJURY_SEVERITY_RANGE = (0.05, 0.25)  # Uniform draw range for injury impact
+PROB_CLIP_RANGE = (0.01, 0.99)  # Final probability clipping bounds
+NUMERICAL_SAFETY_CLIP = (0.001, 0.999)  # Pre-logit clip to prevent log(0)
+
 
 @dataclass
 class SimulationConfig:
@@ -181,7 +189,7 @@ def _run_batch(
     # of tournament data, which produces wide CIs that cannot distinguish
     # between e.g. 0.6 and 0.3.  The monotonic decay STRUCTURE is
     # well-justified, but the individual coefficients are not.
-    round_correlation_decay = [1.0, 0.6, 0.3, 0.15, 0.0, 0.0]
+    round_correlation_decay = ROUND_CORRELATION_DECAY
 
     for _ in range(batch_size):
         # Draw per-region, per-round latent variance multipliers.
@@ -210,7 +218,7 @@ def _run_batch(
         team_injury_shift = {}
         for team_id in team_data:
             if rng.random() < injury_probability:
-                severity = rng.uniform(0.05, 0.25)
+                severity = rng.uniform(*INJURY_SEVERITY_RANGE)
                 team_injury_shift[team_id] = -severity
             else:
                 team_injury_shift[team_id] = 0.0
@@ -245,7 +253,7 @@ def _run_batch(
                     # clip to [0.01, 0.99] happens ONCE after all noise is
                     # applied, so the noise distribution isn't truncated and
                     # strong favorites aren't systematically biased downward.
-                    safe_prob = np.clip(base_prob, 0.001, 0.999)
+                    safe_prob = np.clip(base_prob, *NUMERICAL_SAFETY_CLIP)
                     logit = np.log(safe_prob / (1.0 - safe_prob))
 
                     # Regional correlation (round-dependent): modulates noise variance.
@@ -258,7 +266,7 @@ def _run_batch(
                         # Cross-region (Final Four+): extra variance drawn
                         # symmetrically around 1.0.  Use lognormal so the
                         # multiplier is always positive with E[mult]=1.0.
-                        noise_mult = float(rng.lognormal(mean=0.0, sigma=0.15))
+                        noise_mult = float(rng.lognormal(mean=0.0, sigma=CROSS_REGION_LOGNORMAL_SIGMA))
                     else:
                         noise_mult = 1.0
 
@@ -273,7 +281,7 @@ def _run_batch(
 
                     # Convert back to probability
                     final_prob = 1.0 / (1.0 + np.exp(-logit))
-                    final_prob = np.clip(final_prob, 0.01, 0.99)
+                    final_prob = np.clip(final_prob, *PROB_CLIP_RANGE)
 
                     if rng.random() < final_prob:
                         round_winners.append(team1)
