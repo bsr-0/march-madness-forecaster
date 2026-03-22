@@ -1,5 +1,5 @@
 name: "Setup Python Environment"
-description: "Checkout, install Python 3.10, install dependencies, and optionally install extra packages"
+description: "Install Python 3.10, install dependencies, and optionally install extra packages. Requires actions/checkout to have run first."
 
 inputs:
   extra-packages:
@@ -14,9 +14,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
