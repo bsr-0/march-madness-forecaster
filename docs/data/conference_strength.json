@@ -74,7 +74,7 @@
       "total_teams": 9,
       "avg_seed": 4.7,
       "best_seed": 1,
-      "avg_rating": 0.8432,
+      "avg_rating": 0.9389,
       "teams": [
         {
           "team_name": "Michigan",
@@ -92,7 +92,7 @@
           "team_name": "Michigan State",
           "seed": 3,
           "region": "East",
-          "barthag": 0.5
+          "barthag": 0.9437
         },
         {
           "team_name": "Illinois",
@@ -122,7 +122,7 @@
           "team_name": "Ohio State",
           "seed": 8,
           "region": "East",
-          "barthag": 0.5
+          "barthag": 0.9171
         },
         {
           "team_name": "Iowa",
@@ -137,7 +137,7 @@
       "total_teams": 8,
       "avg_seed": 6.6,
       "best_seed": 1,
-      "avg_rating": 0.7695,
+      "avg_rating": 0.9097,
       "teams": [
         {
           "team_name": "Duke",
@@ -167,7 +167,7 @@
           "team_name": "Miami (FL)",
           "seed": 7,
           "region": "West",
-          "barthag": 0.5
+          "barthag": 0.8843
         },
         {
           "team_name": "Clemson",
@@ -179,13 +179,13 @@
           "team_name": "NC State",
           "seed": 11,
           "region": "West",
-          "barthag": 0.5
+          "barthag": 0.8763
         },
         {
           "team_name": "Southern Methodist",
           "seed": 11,
           "region": "Midwest",
-          "barthag": 0.5
+          "barthag": 0.8611
         }
       ]
     },
@@ -194,7 +194,7 @@
       "total_teams": 8,
       "avg_seed": 4.9,
       "best_seed": 1,
-      "avg_rating": 0.8086,
+      "avg_rating": 0.9151,
       "teams": [
         {
           "team_name": "Arizona",
@@ -212,7 +212,7 @@
           "team_name": "Iowa State",
           "seed": 2,
           "region": "Midwest",
-          "barthag": 0.5
+          "barthag": 0.9655
         },
         {
           "team_name": "Kansas",
@@ -230,7 +230,7 @@
           "team_name": "BYU",
           "seed": 6,
           "region": "West",
-          "barthag": 0.5
+          "barthag": 0.8865
         },
         {
           "team_name": "TCU",
@@ -251,7 +251,7 @@
       "total_teams": 3,
       "avg_seed": 5.0,
       "best_seed": 2,
-      "avg_rating": 0.7774,
+      "avg_rating": 0.9246,
       "teams": [
         {
           "team_name": "Connecticut",
@@ -263,7 +263,7 @@
           "team_name": "St. John's (NY)",
           "seed": 5,
           "region": "East",
-          "barthag": 0.5
+          "barthag": 0.9415
         },
         {
           "team_name": "Villanova",
@@ -278,7 +278,7 @@
       "total_teams": 3,
       "avg_seed": 6.7,
       "best_seed": 3,
-      "avg_rating": 0.7799,
+      "avg_rating": 0.9167,
       "teams": [
         {
           "team_name": "Gonzaga",
@@ -290,7 +290,7 @@
           "team_name": "Saint Mary's (CA)",
           "seed": 7,
           "region": "South",
-          "barthag": 0.5
+          "barthag": 0.9105
         },
         {
           "team_name": "Santa Clara",
@@ -305,19 +305,19 @@
       "total_teams": 2,
       "avg_seed": 14.5,
       "best_seed": 14,
-      "avg_rating": 0.5,
+      "avg_rating": 0.4868,
       "teams": [
         {
           "team_name": "Kennesaw State",
           "seed": 14,
           "region": "West",
-          "barthag": 0.5
+          "barthag": 0.5338
         },
         {
           "team_name": "Queens (NC)",
           "seed": 15,
           "region": "West",
-          "barthag": 0.5
+          "barthag": 0.4397
         }
       ]
     },
@@ -326,7 +326,7 @@
       "total_teams": 2,
       "avg_seed": 10.0,
       "best_seed": 9,
-      "avg_rating": 0.6789,
+      "avg_rating": 0.8504,
       "teams": [
         {
           "team_name": "Saint Louis",
@@ -338,7 +338,7 @@
           "team_name": "Virginia Commonwealth",
           "seed": 11,
           "region": "South",
-          "barthag": 0.5
+          "barthag": 0.843
         }
       ]
     },
@@ -347,13 +347,13 @@
       "total_teams": 2,
       "avg_seed": 11.5,
       "best_seed": 11,
-      "avg_rating": 0.6363,
+      "avg_rating": 0.7451,
       "teams": [
         {
           "team_name": "Miami (OH)",
           "seed": 11,
           "region": "Midwest",
-          "barthag": 0.5
+          "barthag": 0.7177
         },
         {
           "team_name": "Akron",
@@ -398,13 +398,13 @@
       "total_teams": 1,
       "avg_seed": 13.0,
       "best_seed": 13,
-      "avg_rating": 0.5,
+      "avg_rating": 0.6889,
       "teams": [
         {
           "team_name": "California Baptist",
           "seed": 13,
           "region": "East",
-          "barthag": 0.5
+          "barthag": 0.6889
         }
       ]
     },
@@ -413,13 +413,13 @@
       "total_teams": 1,
       "avg_seed": 14.0,
       "best_seed": 14,
-      "avg_rating": 0.5,
+      "avg_rating": 0.6392,
       "teams": [
         {
           "team_name": "North Dakota State",
           "seed": 14,
           "region": "East",
-          "barthag": 0.5
+          "barthag": 0.6392
         }
       ]
     },
@@ -458,13 +458,13 @@
       "total_teams": 1,
       "avg_seed": 9.0,
       "best_seed": 9,
-      "avg_rating": 0.5,
+      "avg_rating": 0.8953,
       "teams": [
         {
           "team_name": "Utah State",
           "seed": 9,
           "region": "West",
-          "barthag": 0.5
+          "barthag": 0.8953
         }
       ]
     },
@@ -503,13 +503,13 @@
       "total_teams": 1,
       "avg_seed": 16.0,
       "best_seed": 16,
-      "avg_rating": 0.5,
+      "avg_rating": 0.3407,
       "teams": [
         {
           "team_name": "Long Island University",
           "seed": 16,
           "region": "West",
-          "barthag": 0.5
+          "barthag": 0.3407
         }
       ]
     },
@@ -518,13 +518,13 @@
       "total_teams": 1,
       "avg_seed": 12.0,
       "best_seed": 12,
-      "avg_rating": 0.5,
+      "avg_rating": 0.7644,
       "teams": [
         {
           "team_name": "McNeese State",
           "seed": 12,
           "region": "South",
-          "barthag": 0.5
+          "barthag": 0.7644
         }
       ]
     },
@@ -548,13 +548,13 @@
       "total_teams": 1,
       "avg_seed": 14.0,
       "best_seed": 14,
-      "avg_rating": 0.5,
+      "avg_rating": 0.5315,
       "teams": [
         {
           "team_name": "Pennsylvania",
           "seed": 14,
           "region": "South",
-          "barthag": 0.5
+          "barthag": 0.5315
         }
       ]
     },
@@ -578,13 +578,13 @@
       "total_teams": 1,
       "avg_seed": 16.0,
       "best_seed": 16,
-      "avg_rating": 0.5,
+      "avg_rating": 0.2544,
       "teams": [
         {
           "team_name": "Prairie View A&M",
           "seed": 16,
           "region": "South",
-          "barthag": 0.5
+          "barthag": 0.2544
         }
       ]
     },
@@ -623,13 +623,13 @@
       "total_teams": 1,
       "avg_seed": 14.0,
       "best_seed": 14,
-      "avg_rating": 0.5,
+      "avg_rating": 0.5864,
       "teams": [
         {
           "team_name": "Wright State",
           "seed": 14,
           "region": "Midwest",
-          "barthag": 0.5
+          "barthag": 0.5864
         }
       ]
     },
@@ -638,13 +638,13 @@
       "total_teams": 1,
       "avg_seed": 15.0,
       "best_seed": 15,
-      "avg_rating": 0.5,
+      "avg_rating": 0.3944,
       "teams": [
         {
           "team_name": "Tennessee State",
           "seed": 15,
           "region": "Midwest",
-          "barthag": 0.5
+          "barthag": 0.3944
         }
       ]
     },
@@ -653,13 +653,13 @@
       "total_teams": 1,
       "avg_seed": 16.0,
       "best_seed": 16,
-      "avg_rating": 0.5,
+      "avg_rating": 0.456,
       "teams": [
         {
           "team_name": "Maryland-Baltimore County",
           "seed": 16,
           "region": "Midwest",
-          "barthag": 0.5
+          "barthag": 0.456
         }
       ]
     },
