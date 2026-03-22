@@ -79,6 +79,7 @@ def load_kaggle_teams(path: str) -> Dict[int, str]:
             try:
                 team_id = int(row.get("TeamID", "").strip())
             except (TypeError, ValueError):
+                logger.warning("Skipping invalid TeamID row: %s", row)
                 continue
             name = (row.get("TeamName") or "").strip()
             if not name:
@@ -184,6 +185,17 @@ def generate_predictions(
 
     out["Pred"] = preds
     out.attrs["kaggle_export_stats"] = stats.to_dict()
+
+    # Post-export validation: log warnings for suspicious outputs
+    if stats.bad_id_rows > 0:
+        logger.warning("Kaggle export: %d rows with invalid IDs", stats.bad_id_rows)
+    if stats.unmapped_rows > 0:
+        logger.warning("Kaggle export: %d rows with unmapped teams (defaulting to 0.5)", stats.unmapped_rows)
+    if stats.predict_failures > 0:
+        logger.warning("Kaggle export: %d prediction failures", stats.predict_failures)
+    if stats.mapped_rows == 0 and stats.total_rows > 0:
+        logger.error("Kaggle export: zero successful predictions out of %d rows", stats.total_rows)
+
     return out
 
 

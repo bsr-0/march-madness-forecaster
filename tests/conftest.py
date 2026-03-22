@@ -167,6 +167,21 @@ def minimal_pipeline_config():
     )
 
 
+@pytest.fixture
+def strict_pipeline_config():
+    """Pipeline config with strict leakage mode for leakage-tagged tests."""
+    from src.pipeline.sota import SOTAPipelineConfig
+    return SOTAPipelineConfig(
+        year=2025,
+        num_simulations=100,
+        pool_size=10,
+        random_seed=42,
+        enable_multi_year_training=False,
+        enable_hyperparameter_tuning=False,
+        strict_leakage_mode=True,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Temporary directory fixtures
 # ---------------------------------------------------------------------------

@@ -22,6 +22,10 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+# Bayesian Bradley-Terry blend weight (15% max contribution).
+# Adds diversity to ensemble without overwhelming the baseline.
+BT_BLEND_WEIGHT = 0.15
+
 # --- Required imports ---
 from ..data.features.feature_engineering import (
     FeatureEngineer,
@@ -185,8 +189,10 @@ class SOTAPipeline:
         # Governance (S21) — unified gate + compliance checks
         from ..governance.gate import GovernanceGate
         from ..governance.compliance import ComplianceGate
+        from ..governance.audit_trail import GovernanceAuditLog
         self._governance_gate = GovernanceGate()
         self._compliance_gate = ComplianceGate()
+        self._audit_log = GovernanceAuditLog()
         # Base ensemble weights (previously managed by CombinatorialFusionAnalysis)
         self.ensemble_base_weights: Dict[str, float] = {}
 
@@ -258,7 +264,7 @@ class SOTAPipeline:
                     clip_hi=self.config.pre_calibration_clip_hi,
                 )
             except ImportError:
-                pass
+                logger.info("Optional module not available: BrierPostProcessor")
 
         # goto_conversion — the actual algorithm from gotoConversion/goto_conversion
         # (GitHub).  Powered 10+ Kaggle gold medals in March Madness (2019-2025).
@@ -272,7 +278,7 @@ class SOTAPipeline:
                     strength=self.config.goto_conversion_margin_init,
                 )
             except ImportError:
-                pass
+                logger.info("Optional module not available: FavouriteLongshotCorrection")
 
         # FIX #5: Massey standalone predictor (calibrated sigma + blend weight)
         self._massey_predictor = None
@@ -281,7 +287,7 @@ class SOTAPipeline:
                 from ..ml.calibration.brier_optimal import MasseyStandalonePredictor
                 self._massey_predictor = MasseyStandalonePredictor(sigma=self.config.massey_sigma)
             except ImportError:
-                pass
+                logger.info("Optional module not available: MasseyStandalonePredictor")
 
         # Tournament domain adapter removed from default path — seed-based
         # correction is handled by SeedBasedOverrides (via BrierPostProcessor)
@@ -352,7 +358,8 @@ class SOTAPipeline:
         try:
             with open(path, "r") as f:
                 payload = _json.load(f)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Failed to load MC calibration from %s: %s", path, exc)
             return None
         best = payload.get("best_params", {})
         if isinstance(best, dict):
@@ -873,6 +880,11 @@ class SOTAPipeline:
 
     def _run_shared_pipeline(self) -> Dict:
         """Shared predictive pipeline used by both calibration and EV modes."""
+        self._audit_log.log_action("pipeline_start", "system", {
+            "year": self.config.year,
+            "mode": self.config.mode,
+            "num_simulations": self.config.num_simulations,
+        })
         # Pre-run checks (dataset hashing, freeze verification, kaggle_dir)
         freeze_verification = _orch.run_pre_checks(self)
 
@@ -959,6 +971,11 @@ class SOTAPipeline:
             self.feature_engineer.attach_gnn_embeddings(self.gnn_embeddings)
             self.feature_engineer.attach_transformer_embeddings(self.transformer_embeddings)
 
+        self._audit_log.log_action("training_complete", "system", {
+            "gnn_enabled": self.config.enable_gnn,
+            "transformer_enabled": self.config.enable_transformer,
+        })
+
         # Governance: post-training compliance checks
         if hasattr(self, "_compliance_runner"):
             self._compliance_runner.run_stage_checks("post_training", ctx=self)
@@ -982,6 +999,10 @@ class SOTAPipeline:
 
         with self._resource_tracker.phase("simulation"):
             bracket_sim = self._run_monte_carlo(teams, rosters)
+
+        self._audit_log.log_action("simulation_complete", "system", {
+            "num_simulations": self.config.num_simulations,
+        })
 
         market_consensus = self._load_betting_markets()
         if market_consensus is not None:
@@ -1250,7 +1271,6 @@ class SOTAPipeline:
         return _sim.normalize_public_pick_row(row)
 
     @staticmethod
-    @staticmethod
     def _normalize_pick_probability(value: float) -> float:
         """Normalize a pick probability value."""
         return _sim.normalize_pick_probability(value)
@@ -1381,7 +1401,7 @@ class SOTAPipeline:
             bt_prob, bt_unc = self.bayesian_bt_model.predict_probability(team1_id, team2_id)
             # Weight BT contribution inversely with uncertainty:
             # high uncertainty → less weight → closer to baseline
-            bt_weight = 0.15 * max(0.0, 1.0 - bt_unc)
+            bt_weight = BT_BLEND_WEIGHT * max(0.0, 1.0 - bt_unc)
             baseline_prob = (1.0 - bt_weight) * baseline_prob + bt_weight * bt_prob
 
         # Gap #1 + FIX #5: Post-hoc Massey composite blend.
