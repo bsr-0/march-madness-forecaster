@@ -13,6 +13,9 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
         with:
@@ -26,6 +29,9 @@ jobs:
     name: "Gate 1: Unit Tests"
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
 
@@ -37,6 +43,9 @@ jobs:
     name: "Gate 2: Data-Contract Tests"
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
 
@@ -65,6 +74,9 @@ jobs:
     name: "Gate 3: Leakage Tests"
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
 
@@ -76,6 +88,9 @@ jobs:
     name: Dependency Audit
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
         with:
