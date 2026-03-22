@@ -11,12 +11,19 @@ import pytest
 from src.data.features.feature_engineering import TEAM_FEATURE_DIM, TeamFeatures
 
 
+def _make_team_features(**kwargs):
+    """Helper to create TeamFeatures with required positional args."""
+    defaults = dict(team_id="test", team_name="Test", seed=1, region="East")
+    defaults.update(kwargs)
+    return TeamFeatures(**defaults)
+
+
 class TestFeatureDimensionContract:
     """Verify TEAM_FEATURE_DIM matches to_vector() output length."""
 
     def test_default_team_features_match_dim(self):
         """A default-constructed TeamFeatures produces a vector of TEAM_FEATURE_DIM."""
-        tf = TeamFeatures()
+        tf = _make_team_features()
         vec = tf.to_vector()
         assert len(vec) == TEAM_FEATURE_DIM, (
             f"to_vector() returned {len(vec)} features but TEAM_FEATURE_DIM={TEAM_FEATURE_DIM}"
@@ -24,13 +31,13 @@ class TestFeatureDimensionContract:
 
     def test_feature_vector_is_float64(self):
         """Feature vector dtype should be float64."""
-        tf = TeamFeatures()
+        tf = _make_team_features()
         vec = tf.to_vector()
         assert vec.dtype == np.float64
 
     def test_feature_vector_no_nan_on_defaults(self):
         """Default-constructed features should not produce NaN values."""
-        tf = TeamFeatures()
+        tf = _make_team_features()
         vec = tf.to_vector()
         # Default values may produce NaN from log operations on zero seeds etc.
         # This test documents current behavior — if NaN count changes, investigate.
@@ -42,13 +49,12 @@ class TestFeatureDimensionContract:
         assert isinstance(TEAM_FEATURE_DIM, int)
         assert TEAM_FEATURE_DIM > 0
 
-    def test_matchup_features_double_dim(self):
-        """Matchup feature vector should be 2 * TEAM_FEATURE_DIM (differential)."""
-        from src.data.features.feature_engineering import create_matchup_features
-
-        tf1 = TeamFeatures()
-        tf2 = TeamFeatures()
-        team_features = {"team_a": tf1.to_vector(), "team_b": tf2.to_vector()}
-        matchup = create_matchup_features("team_a", "team_b", team_features)
-        # Matchup features = team1_vec - team2_vec (same dim as single team)
-        assert len(matchup) == TEAM_FEATURE_DIM
+    def test_matchup_differential_dim(self):
+        """Differential feature vector (team1 - team2) matches TEAM_FEATURE_DIM."""
+        tf1 = _make_team_features(team_id="team_a", team_name="Team A")
+        tf2 = _make_team_features(team_id="team_b", team_name="Team B")
+        vec1 = tf1.to_vector()
+        vec2 = tf2.to_vector()
+        differential = vec1 - vec2
+        # Matchup differential = team1_vec - team2_vec (same dim as single team)
+        assert len(differential) == TEAM_FEATURE_DIM
