@@ -204,10 +204,19 @@ class HistoricalDataPipeline:
         for r in ingestion_records:
             team_games.extend(r.to_team_game_rows())
 
-        # Validate dates
+        # Validate dates — raise on CRITICAL issues instead of just logging
         date_warnings = self._validate_game_dates(games, season)
+        critical_warnings = []
         for warning in date_warnings:
             logger.warning("Season %d date check: %s", season, warning)
+            if warning.startswith("CRITICAL"):
+                critical_warnings.append(warning)
+        if critical_warnings:
+            from .game_fetchers import IngestionQualityError
+            raise IngestionQualityError(
+                f"Season {season} date validation failed: "
+                + "; ".join(critical_warnings)
+            )
 
         payload = {
             "season": season,

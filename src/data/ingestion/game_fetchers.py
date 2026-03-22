@@ -39,6 +39,11 @@ from .schemas import IngestionGameRecord
 
 logger = logging.getLogger(__name__)
 
+
+class IngestionQualityError(RuntimeError):
+    """Raised when ingested game data fails production quality gates."""
+
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -393,11 +398,23 @@ class HistoricalGameFetcher:
 
     # ── Public API ─────────────────────────────────────────────────────────
 
-    def fetch_season(self, season: int) -> List[IngestionGameRecord]:
+    def fetch_season(
+        self, season: int, *, strict: bool = True,
+    ) -> List[IngestionGameRecord]:
         """Fetch all games for a complete NCAA season.
 
         Returns a deduplicated list sorted by date then game_id.
+
+        Parameters
+        ----------
+        strict : bool
+            When ``True`` (default), raise ``IngestionQualityError`` if the
+            final result fails statistical quality gates (game count, team
+            coverage, temporal spread, box-score availability).  Set to
+            ``False`` for partial-season or exploratory fetches.
         """
+        from .validators import validate_season_quality
+
         cache_path = self.cache_dir / f"espn_historical_{season}.json"
 
         cached = self._load_cache(cache_path, season)
@@ -411,6 +428,16 @@ class HistoricalGameFetcher:
 
         if len(espn_records) >= _MIN_GAMES_FOR_COMPLETE_SEASON:
             final = dedup_records(espn_records)
+            self._log_provider_contributions(season, final)
+            quality_errors = validate_season_quality(final)
+            if quality_errors:
+                if strict:
+                    raise IngestionQualityError(
+                        f"Season {season} quality gate failed: "
+                        + "; ".join(quality_errors)
+                    )
+                for err in quality_errors:
+                    logger.warning("Season %d quality: %s", season, err)
             self._save_cache(cache_path, season, final)
             return final
 
@@ -425,6 +452,16 @@ class HistoricalGameFetcher:
 
         merged = dedup_records(espn_records + sdv_records)
         if len(merged) >= _MIN_GAMES_FOR_COMPLETE_SEASON:
+            self._log_provider_contributions(season, merged)
+            quality_errors = validate_season_quality(merged)
+            if quality_errors:
+                if strict:
+                    raise IngestionQualityError(
+                        f"Season {season} quality gate failed: "
+                        + "; ".join(quality_errors)
+                    )
+                for err in quality_errors:
+                    logger.warning("Season %d quality: %s", season, err)
             self._save_cache(cache_path, season, merged)
             return merged
 
@@ -437,9 +474,34 @@ class HistoricalGameFetcher:
         logger.info("Season %d: cbbpy returned %d games", season, len(cbbpy_records))
 
         all_records = dedup_records(merged + cbbpy_records)
+        self._log_provider_contributions(season, all_records)
+
+        # ── Quality gate ────────────────────────────────────────────────────
+        quality_errors = validate_season_quality(all_records)
+        if quality_errors:
+            if strict:
+                raise IngestionQualityError(
+                    f"Season {season} quality gate failed after all providers: "
+                    + "; ".join(quality_errors)
+                )
+            for err in quality_errors:
+                logger.warning("Season %d quality: %s", season, err)
+
         if all_records:
             self._save_cache(cache_path, season, all_records)
         return all_records
+
+    @staticmethod
+    def _log_provider_contributions(
+        season: int, records: List[IngestionGameRecord],
+    ) -> None:
+        provider_counts: Dict[str, int] = {}
+        for r in records:
+            provider_counts[r.provider] = provider_counts.get(r.provider, 0) + 1
+        logger.info(
+            "Season %d: %d total games — provider contributions: %s",
+            season, len(records), provider_counts,
+        )
 
     # ── Provider implementations ───────────────────────────────────────────
 
