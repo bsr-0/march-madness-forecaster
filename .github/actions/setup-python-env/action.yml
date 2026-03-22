@@ -2,6 +2,10 @@ name: "Setup Python Environment"
 description: "Install Python 3.10, install dependencies, and optionally install extra packages. Requires actions/checkout to have run first."
 
 inputs:
+  requirements-file:
+    description: "Path to the requirements file to install from (default: requirements.txt)"
+    required: false
+    default: "requirements.txt"
   extra-packages:
     description: "Space-separated list of extra pip packages to install (e.g. 'ruff pip-audit')"
     required: false
@@ -23,7 +27,7 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        pip install -r requirements.txt
+        pip install -r ${{ inputs.requirements-file }}
         if [ "${{ inputs.skip-editable-install }}" != "true" ]; then
           pip install -e .
         fi
