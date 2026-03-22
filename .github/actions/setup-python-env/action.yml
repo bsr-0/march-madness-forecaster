@@ -1,0 +1,35 @@
+name: "Setup Python Environment"
+description: "Checkout, install Python 3.10, install dependencies, and optionally install extra packages"
+
+inputs:
+  extra-packages:
+    description: "Space-separated list of extra pip packages to install (e.g. 'ruff pip-audit')"
+    required: false
+    default: ""
+  skip-editable-install:
+    description: "Skip pip install -e . (set to 'true' for jobs that don't need the package entry points)"
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+        cache: pip
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        pip install -r requirements.txt
+        if [ "${{ inputs.skip-editable-install }}" != "true" ]; then
+          pip install -e .
+        fi
+        if [ -n "${{ inputs.extra-packages }}" ]; then
+          pip install ${{ inputs.extra-packages }}
+        fi

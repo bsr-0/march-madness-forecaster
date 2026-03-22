@@ -1,0 +1,80 @@
+name: Generate Web Data
+
+on:
+  workflow_call:
+    inputs:
+      skip_conference_predictions:
+        description: "Skip conference predictions (reduces runtime by ~20 min)"
+        type: boolean
+        default: false
+
+  workflow_dispatch:
+    inputs:
+      skip_conference_predictions:
+        description: "Skip conference predictions"
+        type: boolean
+        default: false
+
+concurrency:
+  group: generate-web-data
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    name: Generate Web Data
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Download pipeline artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: pipeline-artifacts
+          path: artifacts/
+        continue-on-error: true
+
+      - name: Pre-flight check
+        run: |
+          set -euo pipefail
+          echo "Checking for required pipeline outputs..."
+          if [ -d "artifacts" ] && [ "$(ls -A artifacts/ 2>/dev/null)" ]; then
+            echo "Pipeline artifacts found:"
+            ls -la artifacts/
+          else
+            echo "::warning::No pipeline artifacts found. Web data scripts will use existing data."
+          fi
+
+      - name: Generate web data
+        run: |
+          set -euo pipefail
+          echo "=== Generating web data ==="
+          python scripts/generate_web_data.py
+
+      - name: Build dashboard data
+        run: |
+          set -euo pipefail
+          echo "=== Building dashboard data ==="
+          python scripts/build_dashboard_data.py
+
+      - name: Run conference predictions
+        if: ${{ !inputs.skip_conference_predictions }}
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          echo "=== Running conference predictions ==="
+          python scripts/run_conference_predictions.py
+
+      - name: Validate generated files
+        run: |
+          set -euo pipefail
+          python scripts/validate_web_data.py
+
+      - name: Upload web data artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-data
+          path: docs/
+          retention-days: 3
+          if-no-files-found: error
