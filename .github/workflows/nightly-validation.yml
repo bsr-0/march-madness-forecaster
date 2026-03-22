@@ -16,6 +16,9 @@ jobs:
     name: "Backtest Regression Tests"
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
 
@@ -27,6 +30,9 @@ jobs:
     name: "Freeze / Reproducibility Tests"
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
 
@@ -38,6 +44,9 @@ jobs:
     name: "Calibration Tests"
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
 
