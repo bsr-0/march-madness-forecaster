@@ -1461,6 +1461,7 @@ class SOTAPipeline:
         self,
         environment: PoolEnvironment,
         team_ids: Optional[List[str]] = None,
+        model_round_probs: Optional[Dict[str, Dict[str, float]]] = None,
     ) -> PoolOptimizer:
         """Create a PoolOptimizer from this pipeline's forecast probabilities.
 
@@ -1472,6 +1473,10 @@ class SOTAPipeline:
             environment: Pool environmental parameters (pool_size,
                 scoring_rules, payout_structure, public_pick_distribution).
             team_ids: Team IDs to include.  Defaults to all teams.
+            model_round_probs: Pre-computed per-team per-round advancement
+                probabilities from Monte Carlo simulation.  When provided,
+                the optimizer uses these directly instead of the heuristic
+                fallback.
 
         Returns:
             PoolOptimizer instance ready for optimize() or
@@ -1480,14 +1485,16 @@ class SOTAPipeline:
         if team_ids is None:
             team_ids = list(self.team_struct.keys())
         probs = self.forecast_engine.predict_all_matchups(team_ids)
-        optimizer = PoolOptimizer(probs, environment)
+        optimizer = PoolOptimizer(probs, environment, model_round_probs=model_round_probs)
         self._pool_optimizer = optimizer
         return optimizer
 
     def predict_probability(self, team1_id: str, team2_id: str) -> float:
-        """Route to production or experimental probability path."""
+        """Route to production, pool, or experimental probability path."""
         if self.config.probability_profile == "experimental":
             return self.predict_probability_experimental(team1_id, team2_id)
+        if self.config.probability_profile == "pool":
+            return self.predict_probability_pool(team1_id, team2_id)
         return self.predict_probability_production(team1_id, team2_id)
 
     def predict_probability_production(self, team1_id: str, team2_id: str) -> float:
@@ -1516,6 +1523,39 @@ class SOTAPipeline:
         # Stage 3: Tournament shrinkage toward 0.5
         if self.config.enable_tournament_adaptation:
             prob = apply_tournament_shrinkage(prob, self.config.tournament_shrinkage)
+
+        # Stage 4: Final clip
+        return apply_final_clip(prob, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi)
+
+    def predict_probability_pool(self, team1_id: str, team2_id: str) -> float:
+        """Pool probability: raw → calibration → clip.  No shrinkage.
+
+        Designed for ESPN/bracket pool optimization where decisive
+        probabilities are needed to identify contrarian value.  Tournament
+        shrinkage toward 0.5 flattens the signals that pool strategy
+        depends on, so this profile skips Stage 3 entirely.
+
+        The calibration stage is kept because well-calibrated base
+        probabilities are still the correct input to the Monte Carlo
+        simulation that produces round advancement frequencies.
+        """
+        from .probability_pipeline import (
+            apply_calibration,
+            apply_final_clip,
+        )
+
+        # Stage 1: Raw probability with symmetry enforcement
+        raw_forward = self._raw_fusion_probability(team1_id, team2_id)
+        raw_reverse = self._raw_fusion_probability(team2_id, team1_id)
+        raw = (raw_forward + (1.0 - raw_reverse)) / 2.0
+
+        # Stage 2: Calibration (temperature scaling)
+        prob = apply_calibration(
+            raw, self.calibration_pipeline,
+            self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi,
+        )
+
+        # Stage 3: SKIPPED — no tournament shrinkage for pool optimization.
 
         # Stage 4: Final clip
         return apply_final_clip(prob, self.config.pre_calibration_clip_lo, self.config.pre_calibration_clip_hi)
