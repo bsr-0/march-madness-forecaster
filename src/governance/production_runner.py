@@ -11,6 +11,8 @@ from typing import Dict, List, Tuple
 
 import dataclasses
 
+logger = logging.getLogger(__name__)
+
 from ..pipeline.config import SOTAPipelineConfig, TOURNAMENT_START_DATES
 from ..pipeline.sota import SOTAPipeline
 from .artifact_provenance import build_artifact_provenance
