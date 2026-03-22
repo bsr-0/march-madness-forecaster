@@ -19,21 +19,50 @@ class DataLoader:
     def load_teams_from_json(file_path: str) -> List[Team]:
         """
         Load teams from a JSON file.
-        
+
+        Handles First Four play-in pairs: when multiple teams share the
+        same (seed, region) and are marked ``first_four: true``, only the
+        highest-rated team is kept, reducing 68 tournament teams to 64.
+
         Args:
             file_path: Path to JSON file
-            
+
         Returns:
-            List of Team objects
+            List of Team objects (64 for a standard bracket)
         """
         with open(file_path, 'r') as f:
             data = json.load(f)
-        
+
+        raw_teams = data.get('teams', [])
+
+        # Collapse First Four play-in pairs: for each (seed, region) slot
+        # with multiple first_four entries, keep the highest-rated team.
+        play_in = [t for t in raw_teams if t.get("first_four", False)]
+        non_play_in = [t for t in raw_teams if not t.get("first_four", False)]
+
+        if play_in:
+            seen_slots: Dict[Tuple[int, str], dict] = {}
+            for t in play_in:
+                slot = (t["seed"], t["region"])
+                prev = seen_slots.get(slot)
+                if prev is None or t.get("rating", 0) > prev.get("rating", 0):
+                    seen_slots[slot] = t
+            resolved = non_play_in + list(seen_slots.values())
+            n_removed = len(raw_teams) - len(resolved)
+            if n_removed:
+                logger.info(
+                    "First Four resolution: collapsed %d play-in teams "
+                    "into %d slots (%d teams removed)",
+                    len(play_in), len(seen_slots), n_removed,
+                )
+        else:
+            resolved = raw_teams
+
         teams = []
-        for team_data in data.get('teams', []):
+        for team_data in resolved:
             team = Team.from_dict(team_data)
             teams.append(team)
-        
+
         return teams
     
     @staticmethod
