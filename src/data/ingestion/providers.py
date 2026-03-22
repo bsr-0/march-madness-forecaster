@@ -64,13 +64,13 @@ class LibraryProviderHub:
     Provider priority (cannot be overridden for games; configurable for
     team_metrics and torvik through the ``priority`` argument):
 
-    ``historical_games``:  espn_scoreboard → sportsdataverse → cbbpy
+    ``historical_games``:  sportsdataverse → espn_scoreboard → cbbpy
     ``team_metrics``:      sportsdataverse
     ``torvik``:            barttorvik
     """
 
     DEFAULT_PRIORITIES = {
-        "historical_games": ["espn_scoreboard", "sportsdataverse", "cbbpy"],
+        "historical_games": ["sportsdataverse", "espn_scoreboard", "cbbpy"],
         "team_metrics": ["sportsdataverse"],
         "torvik": ["barttorvik"],
     }
@@ -82,6 +82,7 @@ class LibraryProviderHub:
             "espn_scoreboard": self._from_espn_scoreboard_api,
             "sportsdataverse": self._from_sportsdataverse_pbp,
             "cbbpy": self._from_cbbpy_pbp,
+            "cbbdata": self._from_cbbdata_games_api,
         }
         for method in self._ordered_methods("historical_games", methods, priority):
             result = method(year, since=since)
@@ -347,6 +348,17 @@ class LibraryProviderHub:
             return game_rows
 
         return []
+
+    def _from_cbbdata_games_api(self, year: int, since: Optional[str] = None) -> ProviderResult:
+        """Fetch games from the cbbdata package (R-based API wrapper).
+
+        Returns empty by default — subclasses or monkey-patches can provide
+        a real implementation.
+        """
+        cbbdata = self._import_module("cbbdata")
+        if cbbdata is None:
+            return ProviderResult("cbbdata", [])
+        return ProviderResult("cbbdata", [])
 
     # ── Team metrics provider ──────────────────────────────────────────────
 
