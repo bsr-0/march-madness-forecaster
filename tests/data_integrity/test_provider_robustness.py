@@ -111,13 +111,13 @@ def _compute_brier_degradation(
     return (brier_pert - brier_base) / brier_base
 
 
-def _synthetic_feature_matrix(n_samples: int = 200, n_features: int = 79, seed: int = 42):
+def _synthetic_feature_matrix(n_samples: int = 200, n_features: int = 74, seed: int = 42):
     """Generate synthetic feature matrix and labels for robustness testing."""
     rng = np.random.RandomState(seed)
     X = rng.randn(n_samples, n_features)
     # Deterministic weights matching _simple_predict defaults
     w = np.zeros(n_features)
-    for idx in [1, 5, 14, 22, 28, 38, 51, 60, 70, 75]:
+    for idx in [1, 5, 14, 22, 28, 38, 51, 60, 66, 70]:
         w[idx] = 0.06
     logits = X @ w
     probs = 1.0 / (1.0 + np.exp(-logits))
@@ -143,9 +143,9 @@ def _simple_predict(X: np.ndarray, weights: Optional[np.ndarray] = None) -> np.n
         weights[28] = 0.06   # schedule_strength group [26-29]
         weights[38] = 0.06   # elo (extended metrics)
         weights[51] = 0.06   # elite_sos area
-        weights[60] = 0.06   # coach group [57-63]
-        weights[70] = 0.06   # misc (ungrouped)
-        weights[75] = 0.06   # ungrouped
+        weights[58] = 0.06   # coach group [56-58]
+        weights[66] = 0.06   # misc (ungrouped)
+        weights[70] = 0.06   # ungrouped
     logits = X @ weights
     return 1.0 / (1.0 + np.exp(-logits))
 
@@ -159,10 +159,10 @@ FEATURE_GROUPS = {
     "efficiency": list(range(0, 3)),     # adj_off_eff, adj_def_eff, adj_tempo
     "roster": list(range(11, 20)),       # rapm, warp, continuity, etc.
     "game_flows": list(range(20, 24)),   # volatility, entropy, etc.
-    "schedule_strength": list(range(26, 30)),  # sos features
-    "coach": list(range(57, 64)),        # coach features
-    "external_ratings": [76, 77],        # external composites
-    "seed": [78],                        # seed_strength
+    "schedule_strength": list(range(25, 29)),  # sos features (shifted: wab removed)
+    "coach": list(range(56, 59)),        # FIX C3: coach features consolidated 7→3
+    "external_ratings": [71, 72],        # external composites
+    "seed": [73],                        # seed_strength
 }
 
 

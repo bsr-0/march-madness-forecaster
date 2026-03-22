@@ -7,11 +7,13 @@
 # Tier 3 (External):  Sourced from third-party systems that update continuously.
 #                       LOYO rule: use Selection Sunday snapshot for that year.
 #
-# TEAM_FEATURE_DIM = 79 (71 base + 2 graph SOS + 3 win quality + 3 coaching metrics)
+# TEAM_FEATURE_DIM = 74 (66 base + 2 graph SOS + 3 win quality + 3 coaching)
+# FIX C3: coach features consolidated 7→3
+# FIX C4: wab removed (near-redundant with wab_poisson)
 
 ---
-version: "2.0"
-total_features: 79
+version: "3.0"
+total_features: 74
 
 tier_1_static:
   description: "Immutable at tournament time. No PIT restriction needed."
@@ -109,10 +111,10 @@ tier_2_cumulative:
     # Win Quality (5)
     - name: sor
       description: "Strength of Record (Poisson Binomial)"
-    - name: wab
-      description: "Wins Above Bubble"
+    # FIX C4: wab REMOVED (near-redundant with wab_poisson — algebraically
+    # identical, differ only in clip bounds). wab_poisson is canonical.
     - name: wab_poisson
-      description: "WAB via Poisson Binomial"
+      description: "WAB via Poisson Binomial (canonical; replaces per-game wab)"
     - name: q1_win_pct
       description: "Quad 1 win percentage"
     - name: elite_sos
@@ -214,27 +216,18 @@ tier_2_cumulative:
     - name: frontcourt_rapm
       description: "Frontcourt RAPM split"
 
-    # Coach Tournament Experience (4)
+    # FIX C3: Coach features consolidated from 7→3 (were 9% of dims).
+    # Per-stage features (F4/E8/S16) merged into postseason composite.
     - name: coach_tournament_exp
-      description: "Coach tournament appearances"
+      description: "Coach tournament appearances (log-scaled)"
       sparse: true
       missing_default: 0
     - name: coach_tournament_win_rate
       description: "Coach tournament win percentage"
       sparse: true
       missing_default: 0.5
-    - name: coach_deep_run_rate
-      description: "Coach fraction of tournament appearances reaching F4+"
-    - name: coach_stage_consistency
-      description: "Weighted measure of reaching late rounds"
-
-    # Per-Stage Coaching (3)
-    - name: coach_f4_appearances
-      description: "Final Four appearances (log-scaled)"
-    - name: coach_e8_appearances
-      description: "Elite Eight appearances (log-scaled)"
-    - name: coach_s16_appearances
-      description: "Sweet Sixteen appearances (log-scaled)"
+    - name: coach_postseason_score
+      description: "Weighted composite of deep-run rate, F4/E8 appearances, stage consistency"
 
     # Graph-Theoretic SOS (2)
     - name: pagerank_sos
