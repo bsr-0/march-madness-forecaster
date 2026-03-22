@@ -76,7 +76,7 @@ class TestSelectionSundayDates:
     def test_get_selection_sunday_unknown_year_raises(self):
         """Unknown year without fallback raises ValueError."""
         with pytest.raises(ValueError, match="No Selection Sunday date"):
-            get_selection_sunday(1999)
+            get_selection_sunday(1980)
 
     def test_selection_sunday_as_datetime(self):
         """selection_sunday_as_datetime returns end-of-day datetime."""

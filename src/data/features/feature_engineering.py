@@ -783,6 +783,94 @@ assert len(_names_check) == TEAM_FEATURE_DIM, (
 )
 
 
+# ---------------------------------------------------------------------------
+# Era-aware feature availability.
+# Not all 79 features are meaningfully available in early years.  Features
+# from data sources that didn't exist (e.g. Torvik before 2008, player RAPM
+# before roster data ~2003) should be marked as unavailable so the pipeline
+# can set them to NaN (handled natively by LightGBM/XGBoost) rather than
+# zero-filling, which would create informative zeros (MNAR bias).
+# ---------------------------------------------------------------------------
+
+# Features requiring specific data sources with known start years.
+_TORVIK_FEATURES = {
+    'adj_off_eff', 'adj_def_eff', 'adj_tempo', 'wab', 'luck', 'sor',
+    'wab_poisson', 'elite_sos', 'sos_adj_em', 'sos_opp_o', 'sos_opp_d',
+    'ncsos_adj_em',
+}
+
+_PLAYER_FEATURES = {
+    'total_rapm', 'top5_rapm', 'bench_rapm', 'total_warp',
+    'roster_continuity', 'transfer_impact', 'avg_experience',
+    'bench_depth', 'injury_risk', 'top5_minutes_share',
+    'backcourt_rapm', 'frontcourt_rapm',
+}
+
+_ADVANCED_METRICS_FEATURES = {
+    'lead_volatility', 'entropy', 'lead_sustainability', 'comeback_factor',
+    'xp_per_poss', 'shot_distribution', 'def_xp_per_poss', 'pace_variance',
+}
+
+_GRAPH_FEATURES = {
+    'pagerank_sos', 'multi_hop_sos', 'best_win_percentile',
+    'paper_tiger_score', 'dominance_ratio',
+}
+
+_EXTERNAL_RATING_FEATURES = {
+    'external_rating_composite', 'external_rating_spread',
+}
+
+# Source availability thresholds (inclusive start year)
+_SOURCE_START_YEARS = {
+    'torvik': 2008,
+    'player_metrics': 2003,
+    'advanced_metrics': 2008,
+    'graph_features': 2008,
+    'external_ratings': 2003,
+}
+
+
+def era_available_features(year: int) -> List[str]:
+    """Return the subset of the 79 features available for a given year.
+
+    Features from data sources that didn't exist for the given year are
+    excluded.  Callers should set excluded features to NaN (not zero)
+    so tree models treat them as missing rather than as zero-valued.
+
+    Args:
+        year: The season year (e.g. 2005 for the 2004-05 season).
+
+    Returns:
+        List of feature names meaningfully available for this year.
+    """
+    all_names = TeamFeatures.get_feature_names(include_embeddings=False)
+    unavailable: set = set()
+
+    if year < _SOURCE_START_YEARS['torvik']:
+        unavailable |= _TORVIK_FEATURES
+    if year < _SOURCE_START_YEARS['player_metrics']:
+        unavailable |= _PLAYER_FEATURES
+    if year < _SOURCE_START_YEARS['advanced_metrics']:
+        unavailable |= _ADVANCED_METRICS_FEATURES
+    if year < _SOURCE_START_YEARS['graph_features']:
+        unavailable |= _GRAPH_FEATURES
+    if year < _SOURCE_START_YEARS['external_ratings']:
+        unavailable |= _EXTERNAL_RATING_FEATURES
+
+    return [n for n in all_names if n not in unavailable]
+
+
+def era_exclude_mask(year: int) -> List[bool]:
+    """Return a boolean mask (length TEAM_FEATURE_DIM) where True = exclude.
+
+    This mask can be passed to ``compute_year_data_quality(exclude_cols=...)``
+    so that architecturally-missing features don't penalize data quality scores.
+    """
+    all_names = TeamFeatures.get_feature_names(include_embeddings=False)
+    available = set(era_available_features(year))
+    return [name not in available for name in all_names]
+
+
 # FIX #4 + #8: Precompute absolute-level and sparse feature indices
 def _resolve_feature_indices(feature_names_list: List[str], target_names: List[str]) -> List[int]:
     """Map feature names to their indices, skipping missing names."""
