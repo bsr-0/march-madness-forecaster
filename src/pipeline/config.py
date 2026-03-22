@@ -320,6 +320,10 @@ class SOTAPipelineConfig:
     # --- Probability profile ---
     # "production": strict 4-stage pipeline (raw → calibration → shrinkage → clip).
     #   All experimental post-processing layers are forbidden.
+    #   Optimized for Kaggle Brier score.
+    # "pool": calibrated but NOT shrunk toward 0.5.  Designed for ESPN/bracket
+    #   pool optimization where decisive probabilities (away from 0.5) are
+    #   needed to identify contrarian value.  Skips tournament shrinkage.
     # "experimental": allows all optional layers (seed overrides, sharpening,
     #   goto_conversion, round-weighted calibration, seed prior, etc.)
     probability_profile: str = "production"
@@ -832,19 +836,37 @@ class SOTAPipelineConfig:
                 f"Violations: {', '.join(violations)}"
             )
 
+    def _validate_espn_profile_compatibility(self) -> None:
+        """Guard against using production probability profile with ESPN pool optimization.
+
+        The production profile applies tournament shrinkage toward 0.5 which
+        flattens the probability signals that pool optimization depends on.
+        ESPN pool mode should use probability_profile="pool" which keeps
+        calibration but skips shrinkage.
+        """
+        if self.espn_mode and self.probability_profile == "production":
+            raise ValueError(
+                "ESPN pool optimization (espn_mode=True) is incompatible with "
+                "probability_profile='production'. The production profile applies "
+                "tournament shrinkage toward 0.5, which degrades pool leverage "
+                "calculations. Use probability_profile='pool' for ESPN bracket "
+                "generation — it preserves calibration but skips shrinkage."
+            )
+
     def __post_init__(self):
         if self.pipeline_mode not in ("production", "experimental"):
             raise ValueError(
                 f"Invalid pipeline_mode '{self.pipeline_mode}': "
                 "must be 'production' or 'experimental'"
             )
-        if self.probability_profile not in ("production", "experimental"):
+        if self.probability_profile not in ("production", "pool", "experimental"):
             raise ValueError(
                 f"Invalid probability_profile '{self.probability_profile}': "
-                "must be 'production' or 'experimental'"
+                "must be 'production', 'pool', or 'experimental'"
             )
         self.validate_production_profile()
         self.validate_locked_production_path()
+        self._validate_espn_profile_compatibility()
         if self.mode not in ("calibration", "ev"):
             raise ValueError(f"Invalid mode '{self.mode}': must be 'calibration' or 'ev'")
         if self.mode == "ev":

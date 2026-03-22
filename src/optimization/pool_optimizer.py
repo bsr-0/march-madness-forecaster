@@ -155,26 +155,36 @@ class PoolOptimizer:
     Typical usage::
 
         probs = engine.predict_all_matchups(team_ids)
+        mc_round_probs = to_round_probabilities(pipeline, sim_results)
         env = PoolEnvironment(pool_size=500, scoring_rules=..., ...)
-        optimizer = PoolOptimizer(probs, env)
+        optimizer = PoolOptimizer(probs, env, model_round_probs=mc_round_probs)
         result = optimizer.optimize()
         print(result.manifest)  # Non-null AssumptionsManifest
 
     Args:
         probabilities: Deep-copied dict of (team1, team2) -> P(team1 wins).
         environment: Pool environmental parameters.
+        model_round_probs: Pre-computed per-team per-round advancement
+            probabilities from Monte Carlo simulation.  When provided,
+            bypasses the heuristic fallback.
     """
 
     def __init__(
         self,
         probabilities: Dict[Tuple[str, str], float],
         environment: PoolEnvironment,
+        model_round_probs: Optional[Dict[str, Dict[str, float]]] = None,
     ):
         environment.validate()
         # Deep-copy: mutations of the original dict are invisible.
         self._probabilities: Dict[Tuple[str, str], float] = copy.deepcopy(probabilities)
         self._environment = environment
         self._frozen_prob_hash = self._hash_probabilities(self._probabilities)
+        # When MC-derived round advancement probabilities are available,
+        # use them directly instead of the heuristic approximation.
+        self._mc_round_probs: Optional[Dict[str, Dict[str, float]]] = (
+            copy.deepcopy(model_round_probs) if model_round_probs is not None else None
+        )
 
     @property
     def probabilities(self) -> Dict[Tuple[str, str], float]:
@@ -206,8 +216,11 @@ class PoolOptimizer:
         # Build expected chalk (championship pick distribution)
         expected_chalk = self._extract_championship_picks(env.public_pick_distribution)
 
-        # Build model round probabilities from pairwise matchup probs
-        model_round_probs = self._build_round_probabilities()
+        # Use MC-derived round probabilities when available; fall back to heuristic.
+        if self._mc_round_probs is not None:
+            model_round_probs = self._mc_round_probs
+        else:
+            model_round_probs = self._build_round_probabilities()
 
         # Run leverage analysis via existing infrastructure
         leverage_picks, fade_picks, pareto_brackets, strategy_evs, recommended = (
@@ -262,7 +275,7 @@ class PoolOptimizer:
             payout_structure=env.payout_structure,
             public_pick_distribution=shifted_up_picks,
         )
-        shifted_up_opt = PoolOptimizer(self._probabilities, shifted_up_env)
+        shifted_up_opt = PoolOptimizer(self._probabilities, shifted_up_env, self._mc_round_probs)
         shifted_up_result = shifted_up_opt.optimize()
         shifted_up_champion = self._extract_champion(shifted_up_result)
         shifted_up_f4 = self._extract_final_four(shifted_up_result)
@@ -275,7 +288,7 @@ class PoolOptimizer:
             payout_structure=env.payout_structure,
             public_pick_distribution=shifted_down_picks,
         )
-        shifted_down_opt = PoolOptimizer(self._probabilities, shifted_down_env)
+        shifted_down_opt = PoolOptimizer(self._probabilities, shifted_down_env, self._mc_round_probs)
         shifted_down_result = shifted_down_opt.optimize()
         shifted_down_champion = self._extract_champion(shifted_down_result)
         shifted_down_f4 = self._extract_final_four(shifted_down_result)
@@ -337,25 +350,32 @@ class PoolOptimizer:
         return chalk
 
     def _build_round_probabilities(self) -> Dict[str, Dict[str, float]]:
-        """Derive per-team per-round advancement probabilities from matchup probs.
+        """DEPRECATED fallback: approximate round probs from pairwise matchup averages.
 
-        For pool optimization, we use the championship pick from public
-        data as the primary lever.  The full round probability computation
-        requires bracket structure and MC simulation — when available,
-        delegates to the existing infrastructure.
+        This heuristic scales average pairwise win rate by hand-tuned
+        per-round multipliers.  It ignores bracket structure, opponent
+        paths, and correlation — producing round advancement probabilities
+        that diverge significantly from Monte Carlo simulation.
 
-        For the structural contract, we derive championship-level signal
-        from pairwise probabilities using a simplistic strength proxy.
+        Prefer passing ``model_round_probs`` (from ``to_round_probabilities``
+        on MC ``AggregatedResults``) to the PoolOptimizer constructor.
         """
-        team_strengths: Dict[str, float] = {}
-        for (t1, t2), p in self._probabilities.items():
+        import warnings
+        warnings.warn(
+            "PoolOptimizer._build_round_probabilities is using a heuristic "
+            "fallback. Pass model_round_probs from MC simulation to the "
+            "constructor for accurate round advancement probabilities.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        team_strengths: Dict[str, List[float]] = {}
+        for (t1, _t2), p in self._probabilities.items():
             team_strengths.setdefault(t1, [])
-            team_strengths[t1].append(p)  # type: ignore[arg-type]
+            team_strengths[t1].append(p)
 
         model_probs: Dict[str, Dict[str, float]] = {}
         for team_id, probs_list in team_strengths.items():
-            avg_win = np.mean(probs_list) if probs_list else 0.5
-            # Approximate round advancement from average pairwise win rate
+            avg_win = float(np.mean(probs_list)) if probs_list else 0.5
             model_probs[team_id] = {
                 "R64": min(0.99, avg_win * 1.1),
                 "R32": min(0.95, avg_win * 0.95),
