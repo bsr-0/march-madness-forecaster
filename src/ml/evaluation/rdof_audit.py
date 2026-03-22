@@ -438,8 +438,13 @@ def _feature_set_hash() -> Optional[str]:
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
 
-def _apply_mc_calibration_to_config(config) -> Optional[Dict[str, Any]]:
-    """Apply MC calibration artifact to config (if present)."""
+def _apply_mc_calibration_to_config(config, *, runtime_state: Optional[Dict[str, object]] = None) -> Optional[Dict[str, Any]]:
+    """Load MC calibration artifact and apply best params.
+
+    When *runtime_state* is provided, best params are written there instead
+    of mutating *config* directly.  This is required for the production path
+    where config must remain immutable for hash verification.
+    """
     mc_path = getattr(config, "mc_calibration_json", None)
     if mc_path is None:
         default_path = os.path.join(os.getcwd(), "data", "raw", "mc_calibration.json")
@@ -454,14 +459,23 @@ def _apply_mc_calibration_to_config(config) -> Optional[Dict[str, Any]]:
         return None
     best = payload.get("best_params", {})
     if isinstance(best, dict):
+        target = runtime_state if runtime_state is not None else None
         if "noise_std" in best:
             try:
-                config.mc_noise_std = float(best["noise_std"])
+                val = float(best["noise_std"])
+                if target is not None:
+                    target["mc_noise_std"] = val
+                else:
+                    config.mc_noise_std = val
             except Exception:
                 pass
         if "regional_correlation" in best:
             try:
-                config.mc_regional_correlation = float(best["regional_correlation"])
+                val = float(best["regional_correlation"])
+                if target is not None:
+                    target["mc_regional_correlation"] = val
+                else:
+                    config.mc_regional_correlation = val
             except Exception:
                 pass
     payload["_source_path"] = mc_path
@@ -534,8 +548,10 @@ def freeze_pipeline(
     """
     import subprocess
 
-    mc_payload = _apply_mc_calibration_to_config(config)
-    cfg_hash = config_hash(config)
+    import copy
+    config_for_hash = copy.deepcopy(config)
+    mc_payload = _apply_mc_calibration_to_config(config_for_hash)
+    cfg_hash = config_hash(config_for_hash)
     timestamp = time.strftime("%Y-%m-%dT%H:%M:%S")
     date_str = time.strftime("%Y-%m-%d")
 
@@ -641,8 +657,10 @@ def verify_freeze(
     with open(freeze_path, "r") as f:
         freeze = json.load(f)
 
-    _apply_mc_calibration_to_config(config)
-    current_hash = config_hash(config)
+    import copy
+    config_for_hash = copy.deepcopy(config)
+    _apply_mc_calibration_to_config(config_for_hash)
+    current_hash = config_hash(config_for_hash)
     frozen_hash = freeze.get("config_hash", "")
 
     mismatches: List[str] = []
@@ -653,8 +671,8 @@ def verify_freeze(
         )
         # Detail which fields changed
         frozen_fields = freeze.get("config_fields", {})
-        for field_name in config.__dataclass_fields__:
-            current_val = getattr(config, field_name)
+        for field_name in config_for_hash.__dataclass_fields__:
+            current_val = getattr(config_for_hash, field_name)
             frozen_val = frozen_fields.get(field_name)
             if isinstance(current_val, (list, tuple)):
                 current_val = list(current_val)
@@ -694,18 +712,23 @@ def verify_freeze(
                 f"frozen={frozen_c['current_value']}, current={c.current_value}"
             )
 
-    # MC calibration consistency (if freeze captured it)
+    # MC calibration consistency (if freeze captured it).
+    # Compare against the MC-calibrated config copy (config_for_hash) so that
+    # runtime-applied overrides are included in the comparison.  Previously
+    # this compared against the raw config, which always showed a mismatch
+    # for mc_regional_correlation since the raw config has 0.0 while the
+    # MC calibration artifact provides 0.05.
     frozen_mc = freeze.get("mc_calibration", {})
     if isinstance(frozen_mc, dict) and frozen_mc.get("best_params"):
         best = frozen_mc.get("best_params", {})
         try:
-            if "noise_std" in best and abs(float(best["noise_std"]) - float(getattr(config, "mc_noise_std", 0.0))) > 1e-6:
+            if "noise_std" in best and abs(float(best["noise_std"]) - float(getattr(config_for_hash, "mc_noise_std", 0.0))) > 1e-6:
                 mismatches.append(
-                    f"MC noise_std mismatch: frozen={best['noise_std']}, current={getattr(config, 'mc_noise_std', 0.0)}"
+                    f"MC noise_std mismatch: frozen={best['noise_std']}, current={getattr(config_for_hash, 'mc_noise_std', 0.0)}"
                 )
-            if "regional_correlation" in best and abs(float(best["regional_correlation"]) - float(getattr(config, "mc_regional_correlation", 0.0))) > 1e-6:
+            if "regional_correlation" in best and abs(float(best["regional_correlation"]) - float(getattr(config_for_hash, "mc_regional_correlation", 0.0))) > 1e-6:
                 mismatches.append(
-                    f"MC regional_correlation mismatch: frozen={best['regional_correlation']}, current={getattr(config, 'mc_regional_correlation', 0.0)}"
+                    f"MC regional_correlation mismatch: frozen={best['regional_correlation']}, current={getattr(config_for_hash, 'mc_regional_correlation', 0.0)}"
                 )
         except Exception:
             warnings.append("Could not verify MC calibration parameters against freeze artifact.")
