@@ -54,6 +54,7 @@ def main(argv: list[str] | None = None) -> int:
         validate_production_2026,
     )
     from src.pipeline.config import SOTAPipelineConfig
+    import dataclasses
 
     try:
         raw_config = _load_raw_config(config_path)
@@ -64,6 +65,11 @@ def main(argv: list[str] | None = None) -> int:
 
         merged = dict(raw_config)
         merged.update(resolved_paths)
+        # Filter out unknown keys not in the dataclass definition
+        valid_fields = {f.name for f in dataclasses.fields(SOTAPipelineConfig)}
+        for key in list(merged):
+            if key not in valid_fields:
+                del merged[key]
         config = SOTAPipelineConfig(**merged)
         validate_production_2026(config, check_paths_on_disk=True, base_dir=str(repo_root))
 
