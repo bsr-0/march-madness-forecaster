@@ -47,6 +47,45 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
+def _resolve_play_in_teams(
+    teams_by_region: Dict[str, List[TournamentTeam]],
+) -> Dict[str, List[TournamentTeam]]:
+    """Resolve First Four play-in matchups within each region.
+
+    The NCAA tournament starts with 68 teams: 64 in the main bracket plus
+    4 First Four play-in games. Each play-in game features two teams sharing
+    the same seed in the same region.  This function detects those duplicate
+    seeds and keeps only the stronger team (higher AdjEM), reducing each
+    region to exactly 16 teams for the 63-game bracket simulation.
+    """
+    resolved: Dict[str, List[TournamentTeam]] = {}
+    for region, region_teams in teams_by_region.items():
+        # Group teams by seed to find play-in duplicates
+        by_seed: Dict[int, List[TournamentTeam]] = {}
+        for t in region_teams:
+            by_seed.setdefault(t.seed, []).append(t)
+
+        kept: List[TournamentTeam] = []
+        for seed, seed_teams in by_seed.items():
+            if len(seed_teams) == 1:
+                kept.append(seed_teams[0])
+            else:
+                # Play-in pair: keep the team with higher strength (AdjEM)
+                winner = max(seed_teams, key=lambda t: t.strength)
+                eliminated = [t for t in seed_teams if t.team_id != winner.team_id]
+                logger.info(
+                    "First Four resolved: %s (strength=%.2f) advances over %s in %s region (seed %d)",
+                    winner.team_id,
+                    winner.strength,
+                    ", ".join(t.team_id for t in eliminated),
+                    region,
+                    seed,
+                )
+                kept.append(winner)
+        resolved[region] = kept
+    return resolved
+
+
 def run_monte_carlo(
     pipeline,
     teams: List[Team],
@@ -69,6 +108,9 @@ def run_monte_carlo(
         teams_by_region[team.region].append(
             TournamentTeam(team_id=team_id, seed=team.seed, region=team.region, strength=strength)
         )
+
+    # Resolve First Four play-in games (68 teams -> 64 teams)
+    teams_by_region = _resolve_play_in_teams(teams_by_region)
 
     for region in teams_by_region:
         teams_by_region[region] = sorted(teams_by_region[region], key=lambda t: t.seed)
