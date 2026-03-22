@@ -1254,8 +1254,8 @@ class TestMetricsToTeamVector:
             assert v[0] == 110.0
             assert v[1] == 95.0
             assert v[2] == 68.0
-            # seed > 0 → non-zero seed strength
-            assert v[78] > 0
+            # seed > 0 → non-zero seed strength (index 73)
+            assert v[73] > 0
         except (ImportError, ModuleNotFoundError):
             pytest.skip("feature_engineering or tournament_features not importable")
 
@@ -1263,7 +1263,7 @@ class TestMetricsToTeamVector:
         m = ProprietaryTeamMetrics(team_id="t1", team_name="T1")
         try:
             v = IncrementalMetricsEngine.metrics_to_team_vector(m, seed=0)
-            assert v[78] == 0.0
+            assert v[73] == 0.0
         except (ImportError, ModuleNotFoundError):
             pytest.skip("feature_engineering not importable")
 
