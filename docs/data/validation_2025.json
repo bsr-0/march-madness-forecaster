@@ -1,109 +1,109 @@
 {
-  "description": "LOYO backtest validation using tournament data from 2018-2024 (2025 fold pending pipeline re-run, no 2026 leakage)",
+  "description": "Backtest validation using tournament data from 2018-2024 (no 2025/2026 leakage)",
   "model": "Blended Barthag-Elo + Seed Prior (70/30)",
   "method": "Leave-year-out: for each year, use that year's pre-tournament ratings to predict tournament outcomes",
   "overall": {
     "n_games": 378,
-    "accuracy": 0.7302,
-    "brier_score": 0.1921,
-    "log_loss": 0.5737
+    "accuracy": 0.7725,
+    "brier_score": 0.163,
+    "log_loss": 0.4944
   },
   "calibration": [
     {
       "bin_center": 0.05,
-      "predicted_avg": 0.0762,
-      "actual_avg": 0.5,
-      "count": 6
+      "predicted_avg": 0.0827,
+      "actual_avg": 0.3333,
+      "count": 3
     },
     {
       "bin_center": 0.15,
-      "predicted_avg": 0.1673,
-      "actual_avg": 0.619,
-      "count": 21
+      "predicted_avg": 0.1565,
+      "actual_avg": 0.6667,
+      "count": 3
     },
     {
       "bin_center": 0.25,
-      "predicted_avg": 0.2498,
-      "actual_avg": 0.7,
-      "count": 20
+      "predicted_avg": 0.2597,
+      "actual_avg": 0.6,
+      "count": 10
     },
     {
       "bin_center": 0.35,
-      "predicted_avg": 0.3444,
-      "actual_avg": 0.75,
+      "predicted_avg": 0.3614,
+      "actual_avg": 0.625,
       "count": 16
     },
     {
       "bin_center": 0.45,
-      "predicted_avg": 0.4505,
-      "actual_avg": 0.6957,
-      "count": 23
+      "predicted_avg": 0.4534,
+      "actual_avg": 0.6333,
+      "count": 30
     },
     {
       "bin_center": 0.55,
-      "predicted_avg": 0.5533,
-      "actual_avg": 0.7636,
-      "count": 55
+      "predicted_avg": 0.5555,
+      "actual_avg": 0.7576,
+      "count": 66
     },
     {
       "bin_center": 0.65,
-      "predicted_avg": 0.6526,
-      "actual_avg": 0.7447,
-      "count": 47
+      "predicted_avg": 0.65,
+      "actual_avg": 0.7246,
+      "count": 69
     },
     {
       "bin_center": 0.75,
-      "predicted_avg": 0.7514,
-      "actual_avg": 0.9512,
-      "count": 41
+      "predicted_avg": 0.7535,
+      "actual_avg": 0.9286,
+      "count": 56
     },
     {
       "bin_center": 0.85,
-      "predicted_avg": 0.8598,
-      "actual_avg": 0.8833,
-      "count": 60
+      "predicted_avg": 0.845,
+      "actual_avg": 0.8824,
+      "count": 51
     },
     {
       "bin_center": 0.95,
-      "predicted_avg": 0.9434,
-      "actual_avg": 0.8876,
-      "count": 89
+      "predicted_avg": 0.9464,
+      "actual_avg": 0.9595,
+      "count": 74
     }
   ],
   "per_year": [
     {
       "year": 2018,
       "n_games": 63,
-      "accuracy": 0.7143,
-      "brier_score": 0.202,
+      "accuracy": 0.7302,
+      "brier_score": 0.1732,
       "seed_baseline_brier": 0.1899,
-      "skill_score": -0.0638,
+      "skill_score": 0.088,
       "upsets_actual": 13,
-      "upsets_predicted": 8,
-      "upsets_correctly_predicted": 3,
+      "upsets_predicted": 5,
+      "upsets_correctly_predicted": 1,
       "round_breakdown": {
         "R64": {
-          "accuracy": 0.6875,
-          "brier_score": 0.1917,
-          "correct": 22,
+          "accuracy": 0.7812,
+          "brier_score": 0.1418,
+          "correct": 25,
           "total": 32
         },
         "R32": {
-          "accuracy": 0.8125,
-          "brier_score": 0.1927,
-          "correct": 13,
+          "accuracy": 0.75,
+          "brier_score": 0.2047,
+          "correct": 12,
           "total": 16
         },
         "S16": {
           "accuracy": 0.5,
-          "brier_score": 0.3298,
+          "brier_score": 0.2351,
           "correct": 4,
           "total": 8
         },
         "E8": {
-          "accuracy": 0.75,
-          "brier_score": 0.1149,
-          "correct": 3,
+          "accuracy": 0.5,
+          "brier_score": 0.2015,
+          "correct": 2,
           "total": 4
         },
         "F4": {
@@ -137,11 +137,11 @@
           "team2": "kansas_state",
           "team1_seed": 8,
           "team2_seed": 9,
-          "predicted_prob": 0.8529,
+          "predicted_prob": 0.5652,
           "predicted_winner": "creighton",
           "actual_winner": "kansas_state",
           "correct": false,
-          "brier": 0.7274,
+          "brier": 0.3195,
           "round": "R64"
         },
         {
@@ -185,11 +185,11 @@
           "team2": "wright_state",
           "team1_seed": 3,
           "team2_seed": 14,
-          "predicted_prob": 0.9463,
+          "predicted_prob": 0.9405,
           "predicted_winner": "tennessee",
           "actual_winner": "tennessee",
           "correct": true,
-          "brier": 0.0029,
+          "brier": 0.0035,
           "round": "R64"
         },
         {
@@ -209,11 +209,11 @@
           "team2": "georgia_state",
           "team1_seed": 2,
           "team2_seed": 15,
-          "predicted_prob": 0.9584,
+          "predicted_prob": 0.9269,
           "predicted_winner": "cincinnati",
           "actual_winner": "cincinnati",
           "correct": true,
-          "brier": 0.0017,
+          "brier": 0.0053,
           "round": "R64"
         },
         {
@@ -221,11 +221,11 @@
           "team2": "kansas_state",
           "team1_seed": 16,
           "team2_seed": 9,
-          "predicted_prob": 0.4239,
+          "predicted_prob": 0.0889,
           "predicted_winner": "kansas_state",
           "actual_winner": "kansas_state",
           "correct": true,
-          "brier": 0.1797,
+          "brier": 0.0079,
           "round": "R32"
         },
         {
@@ -269,11 +269,11 @@
           "team2": "kentucky",
           "team1_seed": 9,
           "team2_seed": 5,
-          "predicted_prob": 0.1133,
+          "predicted_prob": 0.3714,
           "predicted_winner": "kentucky",
           "actual_winner": "kansas_state",
           "correct": false,
-          "brier": 0.7863,
+          "brier": 0.3952,
           "round": "S16"
         },
         {
@@ -293,11 +293,11 @@
           "team2": "loyola_chicago",
           "team1_seed": 9,
           "team2_seed": 11,
-          "predicted_prob": 0.1856,
-          "predicted_winner": "loyola_chicago",
+          "predicted_prob": 0.5496,
+          "predicted_winner": "kansas_state",
           "actual_winner": "loyola_chicago",
-          "correct": true,
-          "brier": 0.0344,
+          "correct": false,
+          "brier": 0.3021,
           "round": "E8"
         },
         {
@@ -317,11 +317,11 @@
           "team2": "florida_state",
           "team1_seed": 8,
           "team2_seed": 9,
-          "predicted_prob": 0.8477,
-          "predicted_winner": "missouri",
+          "predicted_prob": 0.4684,
+          "predicted_winner": "florida_state",
           "actual_winner": "florida_state",
-          "correct": false,
-          "brier": 0.7186,
+          "correct": true,
+          "brier": 0.2194,
           "round": "R64"
         },
         {
@@ -329,11 +329,11 @@
           "team2": "south_dakota_state",
           "team1_seed": 5,
           "team2_seed": 12,
-          "predicted_prob": 0.5722,
+          "predicted_prob": 0.7765,
           "predicted_winner": "ohio_state",
           "actual_winner": "ohio_state",
           "correct": true,
-          "brier": 0.183,
+          "brier": 0.05,
           "round": "R64"
         },
         {
@@ -353,11 +353,11 @@
           "team2": "san_diego_state",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.8975,
+          "predicted_prob": 0.6724,
           "predicted_winner": "houston",
           "actual_winner": "houston",
           "correct": true,
-          "brier": 0.0105,
+          "brier": 0.1073,
           "round": "R64"
         },
         {
@@ -401,11 +401,11 @@
           "team2": "florida_state",
           "team1_seed": 1,
           "team2_seed": 9,
-          "predicted_prob": 0.9253,
+          "predicted_prob": 0.6991,
           "predicted_winner": "xavier",
           "actual_winner": "florida_state",
           "correct": false,
-          "brier": 0.8561,
+          "brier": 0.4888,
           "round": "R32"
         },
         {
@@ -413,11 +413,11 @@
           "team2": "ohio_state",
           "team1_seed": 4,
           "team2_seed": 5,
-          "predicted_prob": 0.8556,
+          "predicted_prob": 0.5198,
           "predicted_winner": "gonzaga",
           "actual_winner": "gonzaga",
           "correct": true,
-          "brier": 0.0208,
+          "brier": 0.2306,
           "round": "R32"
         },
         {
@@ -449,11 +449,11 @@
           "team2": "gonzaga",
           "team1_seed": 9,
           "team2_seed": 4,
-          "predicted_prob": 0.1018,
+          "predicted_prob": 0.3368,
           "predicted_winner": "gonzaga",
           "actual_winner": "florida_state",
           "correct": false,
-          "brier": 0.8067,
+          "brier": 0.4399,
           "round": "S16"
         },
         {
@@ -473,11 +473,11 @@
           "team2": "michigan",
           "team1_seed": 9,
           "team2_seed": 3,
-          "predicted_prob": 0.0912,
+          "predicted_prob": 0.295,
           "predicted_winner": "michigan",
           "actual_winner": "michigan",
           "correct": true,
-          "brier": 0.0083,
+          "brier": 0.087,
           "round": "E8"
         },
         {
@@ -509,11 +509,11 @@
           "team2": "murray_state",
           "team1_seed": 5,
           "team2_seed": 12,
-          "predicted_prob": 0.9176,
+          "predicted_prob": 0.8511,
           "predicted_winner": "west_virginia",
           "actual_winner": "west_virginia",
           "correct": true,
-          "brier": 0.0068,
+          "brier": 0.0222,
           "round": "R64"
         },
         {
@@ -521,11 +521,11 @@
           "team2": "marshall",
           "team1_seed": 4,
           "team2_seed": 13,
-          "predicted_prob": 0.3423,
-          "predicted_winner": "marshall",
+          "predicted_prob": 0.8841,
+          "predicted_winner": "wichita_state",
           "actual_winner": "wichita_state",
-          "correct": false,
-          "brier": 0.4325,
+          "correct": true,
+          "brier": 0.0134,
           "round": "R64"
         },
         {
@@ -533,11 +533,11 @@
           "team2": "st_bonaventure",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.8978,
+          "predicted_prob": 0.8131,
           "predicted_winner": "florida",
           "actual_winner": "florida",
           "correct": true,
-          "brier": 0.0105,
+          "brier": 0.0349,
           "round": "R64"
         },
         {
@@ -545,11 +545,11 @@
           "team2": "stephen_f_austin",
           "team1_seed": 3,
           "team2_seed": 14,
-          "predicted_prob": 0.9459,
+          "predicted_prob": 0.9027,
           "predicted_winner": "texas_tech",
           "actual_winner": "texas_tech",
           "correct": true,
-          "brier": 0.0029,
+          "brier": 0.0095,
           "round": "R64"
         },
         {
@@ -569,11 +569,11 @@
           "team2": "cal_state_fullerton",
           "team1_seed": 2,
           "team2_seed": 15,
-          "predicted_prob": 0.9586,
+          "predicted_prob": 0.9595,
           "predicted_winner": "purdue",
           "actual_winner": "purdue",
           "correct": true,
-          "brier": 0.0017,
+          "brier": 0.0016,
           "round": "R64"
         },
         {
@@ -677,11 +677,11 @@
           "team2": "nc_state",
           "team1_seed": 8,
           "team2_seed": 9,
-          "predicted_prob": 0.8535,
+          "predicted_prob": 0.6463,
           "predicted_winner": "seton_hall",
           "actual_winner": "seton_hall",
           "correct": true,
-          "brier": 0.0215,
+          "brier": 0.1251,
           "round": "R64"
         },
         {
@@ -689,11 +689,11 @@
           "team2": "new_mexico_state",
           "team1_seed": 5,
           "team2_seed": 12,
-          "predicted_prob": 0.9151,
+          "predicted_prob": 0.7636,
           "predicted_winner": "clemson",
           "actual_winner": "clemson",
           "correct": true,
-          "brier": 0.0072,
+          "brier": 0.0559,
           "round": "R64"
         },
         {
@@ -701,11 +701,11 @@
           "team2": "college_of_charleston",
           "team1_seed": 4,
           "team2_seed": 13,
-          "predicted_prob": 0.9279,
+          "predicted_prob": 0.9162,
           "predicted_winner": "auburn",
           "actual_winner": "auburn",
           "correct": true,
-          "brier": 0.0052,
+          "brier": 0.007,
           "round": "R64"
         },
         {
@@ -725,11 +725,11 @@
           "team2": "bucknell",
           "team1_seed": 3,
           "team2_seed": 14,
-          "predicted_prob": 0.3324,
-          "predicted_winner": "bucknell",
+          "predicted_prob": 0.9171,
+          "predicted_winner": "michigan_state",
           "actual_winner": "michigan_state",
-          "correct": false,
-          "brier": 0.4457,
+          "correct": true,
+          "brier": 0.0069,
           "round": "R64"
         },
         {
@@ -785,11 +785,11 @@
           "team2": "michigan_state",
           "team1_seed": 11,
           "team2_seed": 3,
-          "predicted_prob": 0.7547,
-          "predicted_winner": "syracuse",
+          "predicted_prob": 0.2371,
+          "predicted_winner": "michigan_state",
           "actual_winner": "syracuse",
-          "correct": true,
-          "brier": 0.0602,
+          "correct": false,
+          "brier": 0.582,
           "round": "R32"
         },
         {
@@ -881,41 +881,41 @@
     {
       "year": 2019,
       "n_games": 63,
-      "accuracy": 0.7143,
-      "brier_score": 0.1734,
+      "accuracy": 0.7619,
+      "brier_score": 0.1425,
       "seed_baseline_brier": 0.1563,
-      "skill_score": -0.1093,
+      "skill_score": 0.0884,
       "upsets_actual": 8,
-      "upsets_predicted": 12,
-      "upsets_correctly_predicted": 1,
+      "upsets_predicted": 5,
+      "upsets_correctly_predicted": 0,
       "round_breakdown": {
         "R64": {
-          "accuracy": 0.6875,
-          "brier_score": 0.1825,
-          "correct": 22,
+          "accuracy": 0.7188,
+          "brier_score": 0.1426,
+          "correct": 23,
           "total": 32
         },
         "R32": {
-          "accuracy": 0.875,
-          "brier_score": 0.1427,
-          "correct": 14,
+          "accuracy": 1.0,
+          "brier_score": 0.074,
+          "correct": 16,
           "total": 16
         },
         "S16": {
           "accuracy": 0.5,
-          "brier_score": 0.1985,
+          "brier_score": 0.1999,
           "correct": 4,
           "total": 8
         },
         "E8": {
           "accuracy": 0.5,
-          "brier_score": 0.2036,
+          "brier_score": 0.2555,
           "correct": 2,
           "total": 4
         },
         "F4": {
           "accuracy": 1.0,
-          "brier_score": 0.0892,
+          "brier_score": 0.1953,
           "correct": 2,
           "total": 2
         },
@@ -968,11 +968,11 @@
           "team2": "uc_irvine",
           "team1_seed": 4,
           "team2_seed": 13,
-          "predicted_prob": 0.2774,
-          "predicted_winner": "uc_irvine",
+          "predicted_prob": 0.8464,
+          "predicted_winner": "kansas_state",
           "actual_winner": "uc_irvine",
-          "correct": true,
-          "brier": 0.0769,
+          "correct": false,
+          "brier": 0.7165,
           "round": "R64"
         },
         {
@@ -980,11 +980,11 @@
           "team2": "saint_mary_s__ca",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.8898,
+          "predicted_prob": 0.5091,
           "predicted_winner": "villanova",
           "actual_winner": "villanova",
           "correct": true,
-          "brier": 0.0121,
+          "brier": 0.2409,
           "round": "R64"
         },
         {
@@ -1136,11 +1136,11 @@
           "team2": "murray_state",
           "team1_seed": 5,
           "team2_seed": 12,
-          "predicted_prob": 0.9095,
+          "predicted_prob": 0.6923,
           "predicted_winner": "marquette",
           "actual_winner": "murray_state",
           "correct": false,
-          "brier": 0.8272,
+          "brier": 0.4793,
           "round": "R64"
         },
         {
@@ -1148,11 +1148,11 @@
           "team2": "vermont",
           "team1_seed": 4,
           "team2_seed": 13,
-          "predicted_prob": 0.282,
-          "predicted_winner": "vermont",
+          "predicted_prob": 0.8552,
+          "predicted_winner": "florida_state",
           "actual_winner": "florida_state",
-          "correct": false,
-          "brier": 0.5156,
+          "correct": true,
+          "brier": 0.021,
           "round": "R64"
         },
         {
@@ -1160,11 +1160,11 @@
           "team2": "arizona_state",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.895,
+          "predicted_prob": 0.7497,
           "predicted_winner": "buffalo",
           "actual_winner": "buffalo",
           "correct": true,
-          "brier": 0.011,
+          "brier": 0.0626,
           "round": "R64"
         },
         {
@@ -1220,11 +1220,11 @@
           "team2": "murray_state",
           "team1_seed": 4,
           "team2_seed": 12,
-          "predicted_prob": 0.5806,
+          "predicted_prob": 0.7965,
           "predicted_winner": "florida_state",
           "actual_winner": "florida_state",
           "correct": true,
-          "brier": 0.1759,
+          "brier": 0.0414,
           "round": "R32"
         },
         {
@@ -1256,11 +1256,11 @@
           "team2": "florida_state",
           "team1_seed": 1,
           "team2_seed": 4,
-          "predicted_prob": 0.8802,
+          "predicted_prob": 0.6561,
           "predicted_winner": "gonzaga",
           "actual_winner": "gonzaga",
           "correct": true,
-          "brier": 0.0144,
+          "brier": 0.1183,
           "round": "S16"
         },
         {
@@ -1292,11 +1292,11 @@
           "team2": "north_dakota_state",
           "team1_seed": 1,
           "team2_seed": 16,
-          "predicted_prob": 0.968,
+          "predicted_prob": 0.9697,
           "predicted_winner": "duke",
           "actual_winner": "duke",
           "correct": true,
-          "brier": 0.001,
+          "brier": 0.0009,
           "round": "R64"
         },
         {
@@ -1304,11 +1304,11 @@
           "team2": "ucf",
           "team1_seed": 8,
           "team2_seed": 9,
-          "predicted_prob": 0.1687,
+          "predicted_prob": 0.4861,
           "predicted_winner": "ucf",
           "actual_winner": "virginia_commonwealth",
           "correct": false,
-          "brier": 0.6911,
+          "brier": 0.2641,
           "round": "R64"
         },
         {
@@ -1316,11 +1316,11 @@
           "team2": "liberty",
           "team1_seed": 5,
           "team2_seed": 12,
-          "predicted_prob": 0.2634,
-          "predicted_winner": "liberty",
+          "predicted_prob": 0.8172,
+          "predicted_winner": "mississippi_state",
           "actual_winner": "mississippi_state",
-          "correct": false,
-          "brier": 0.5426,
+          "correct": true,
+          "brier": 0.0334,
           "round": "R64"
         },
         {
@@ -1352,11 +1352,11 @@
           "team2": "yale",
           "team1_seed": 3,
           "team2_seed": 14,
-          "predicted_prob": 0.3135,
-          "predicted_winner": "yale",
+          "predicted_prob": 0.8875,
+          "predicted_winner": "louisiana_state",
           "actual_winner": "louisiana_state",
-          "correct": false,
-          "brier": 0.4713,
+          "correct": true,
+          "brier": 0.0126,
           "round": "R64"
         },
         {
@@ -1376,11 +1376,11 @@
           "team2": "bradley",
           "team1_seed": 2,
           "team2_seed": 15,
-          "predicted_prob": 0.579,
+          "predicted_prob": 0.9582,
           "predicted_winner": "michigan_state",
           "actual_winner": "michigan_state",
           "correct": true,
-          "brier": 0.1772,
+          "brier": 0.0017,
           "round": "R64"
         },
         {
@@ -1412,11 +1412,11 @@
           "team2": "maryland",
           "team1_seed": 3,
           "team2_seed": 6,
-          "predicted_prob": 0.1919,
-          "predicted_winner": "maryland",
+          "predicted_prob": 0.5772,
+          "predicted_winner": "louisiana_state",
           "actual_winner": "louisiana_state",
-          "correct": false,
-          "brier": 0.653,
+          "correct": true,
+          "brier": 0.1788,
           "round": "R32"
         },
         {
@@ -1424,11 +1424,11 @@
           "team2": "minnesota",
           "team1_seed": 2,
           "team2_seed": 10,
-          "predicted_prob": 0.2481,
-          "predicted_winner": "minnesota",
+          "predicted_prob": 0.8122,
+          "predicted_winner": "michigan_state",
           "actual_winner": "michigan_state",
-          "correct": false,
-          "brier": 0.5653,
+          "correct": true,
+          "brier": 0.0353,
           "round": "R32"
         },
         {
@@ -1448,11 +1448,11 @@
           "team2": "louisiana_state",
           "team1_seed": 2,
           "team2_seed": 3,
-          "predicted_prob": 0.5112,
+          "predicted_prob": 0.6168,
           "predicted_winner": "michigan_state",
           "actual_winner": "michigan_state",
           "correct": true,
-          "brier": 0.2389,
+          "brier": 0.1469,
           "round": "S16"
         },
         {
@@ -1460,11 +1460,11 @@
           "team2": "michigan_state",
           "team1_seed": 1,
           "team2_seed": 2,
-          "predicted_prob": 0.8578,
+          "predicted_prob": 0.5226,
           "predicted_winner": "duke",
           "actual_winner": "duke",
           "correct": true,
-          "brier": 0.0202,
+          "brier": 0.2279,
           "round": "E8"
         },
         {
@@ -1484,11 +1484,11 @@
           "team2": "washington",
           "team1_seed": 8,
           "team2_seed": 9,
-          "predicted_prob": 0.1818,
-          "predicted_winner": "washington",
+          "predicted_prob": 0.5659,
+          "predicted_winner": "utah_state",
           "actual_winner": "washington",
-          "correct": true,
-          "brier": 0.033,
+          "correct": false,
+          "brier": 0.3203,
           "round": "R64"
         },
         {
@@ -1496,11 +1496,11 @@
           "team2": "new_mexico_state",
           "team1_seed": 5,
           "team2_seed": 12,
-          "predicted_prob": 0.9177,
+          "predicted_prob": 0.7846,
           "predicted_winner": "auburn",
           "actual_winner": "auburn",
           "correct": true,
-          "brier": 0.0068,
+          "brier": 0.0464,
           "round": "R64"
         },
         {
@@ -1520,11 +1520,11 @@
           "team2": "ohio_state",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.5538,
+          "predicted_prob": 0.7101,
           "predicted_winner": "iowa_state",
           "actual_winner": "iowa_state",
           "correct": true,
-          "brier": 0.1991,
+          "brier": 0.084,
           "round": "R64"
         },
         {
@@ -1532,11 +1532,11 @@
           "team2": "georgia_state",
           "team1_seed": 3,
           "team2_seed": 14,
-          "predicted_prob": 0.9473,
+          "predicted_prob": 0.9289,
           "predicted_winner": "houston",
           "actual_winner": "houston",
           "correct": true,
-          "brier": 0.0028,
+          "brier": 0.0051,
           "round": "R64"
         },
         {
@@ -1592,11 +1592,11 @@
           "team2": "ohio_state",
           "team1_seed": 3,
           "team2_seed": 11,
-          "predicted_prob": 0.9262,
+          "predicted_prob": 0.788,
           "predicted_winner": "houston",
           "actual_winner": "houston",
           "correct": true,
-          "brier": 0.0054,
+          "brier": 0.0449,
           "round": "R32"
         },
         {
@@ -1664,11 +1664,11 @@
           "team2": "michigan_state",
           "team1_seed": 3,
           "team2_seed": 2,
-          "predicted_prob": 0.8356,
+          "predicted_prob": 0.5107,
           "predicted_winner": "texas_tech",
           "actual_winner": "texas_tech",
           "correct": true,
-          "brier": 0.027,
+          "brier": 0.2394,
           "round": "F4"
         },
         {
@@ -1688,35 +1688,35 @@
     {
       "year": 2021,
       "n_games": 63,
-      "accuracy": 0.6984,
-      "brier_score": 0.2124,
+      "accuracy": 0.7937,
+      "brier_score": 0.1608,
       "seed_baseline_brier": 0.1754,
-      "skill_score": -0.2111,
+      "skill_score": 0.0831,
       "upsets_actual": 12,
-      "upsets_predicted": 9,
+      "upsets_predicted": 3,
       "upsets_correctly_predicted": 1,
       "round_breakdown": {
         "R64": {
-          "accuracy": 0.7188,
-          "brier_score": 0.1872,
-          "correct": 23,
+          "accuracy": 0.8438,
+          "brier_score": 0.1267,
+          "correct": 27,
           "total": 32
         },
         "R32": {
-          "accuracy": 0.625,
-          "brier_score": 0.2653,
-          "correct": 10,
+          "accuracy": 0.6875,
+          "brier_score": 0.2128,
+          "correct": 11,
           "total": 16
         },
         "S16": {
-          "accuracy": 0.75,
-          "brier_score": 0.2502,
-          "correct": 6,
+          "accuracy": 0.875,
+          "brier_score": 0.1715,
+          "correct": 7,
           "total": 8
         },
         "E8": {
           "accuracy": 0.75,
-          "brier_score": 0.1482,
+          "brier_score": 0.1871,
           "correct": 3,
           "total": 4
         },
@@ -1739,11 +1739,11 @@
           "team2": "norfolk_state",
           "team1_seed": 1,
           "team2_seed": 16,
-          "predicted_prob": 0.9685,
+          "predicted_prob": 0.9706,
           "predicted_winner": "gonzaga",
           "actual_winner": "gonzaga",
           "correct": true,
-          "brier": 0.001,
+          "brier": 0.0009,
           "round": "R64"
         },
         {
@@ -1787,11 +1787,11 @@
           "team2": "drake",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.2405,
-          "predicted_winner": "drake",
+          "predicted_prob": 0.8292,
+          "predicted_winner": "southern_california",
           "actual_winner": "southern_california",
-          "correct": false,
-          "brier": 0.5769,
+          "correct": true,
+          "brier": 0.0292,
           "round": "R64"
         },
         {
@@ -1811,11 +1811,11 @@
           "team2": "virginia_commonwealth",
           "team1_seed": 7,
           "team2_seed": 10,
-          "predicted_prob": 0.8745,
+          "predicted_prob": 0.6083,
           "predicted_winner": "oregon",
           "actual_winner": "oregon",
           "correct": true,
-          "brier": 0.0158,
+          "brier": 0.1534,
           "round": "R64"
         },
         {
@@ -1859,11 +1859,11 @@
           "team2": "kansas",
           "team1_seed": 6,
           "team2_seed": 3,
-          "predicted_prob": 0.1257,
-          "predicted_winner": "kansas",
+          "predicted_prob": 0.5792,
+          "predicted_winner": "southern_california",
           "actual_winner": "southern_california",
-          "correct": false,
-          "brier": 0.7644,
+          "correct": true,
+          "brier": 0.1771,
           "round": "R32"
         },
         {
@@ -1895,11 +1895,11 @@
           "team2": "oregon",
           "team1_seed": 6,
           "team2_seed": 7,
-          "predicted_prob": 0.1699,
-          "predicted_winner": "oregon",
+          "predicted_prob": 0.6206,
+          "predicted_winner": "southern_california",
           "actual_winner": "southern_california",
-          "correct": false,
-          "brier": 0.689,
+          "correct": true,
+          "brier": 0.144,
           "round": "S16"
         },
         {
@@ -1907,11 +1907,11 @@
           "team2": "southern_california",
           "team1_seed": 1,
           "team2_seed": 6,
-          "predicted_prob": 0.9009,
+          "predicted_prob": 0.6344,
           "predicted_winner": "gonzaga",
           "actual_winner": "gonzaga",
           "correct": true,
-          "brier": 0.0098,
+          "brier": 0.1337,
           "round": "E8"
         },
         {
@@ -1967,11 +1967,11 @@
           "team2": "utah_state",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.8973,
+          "predicted_prob": 0.6825,
           "predicted_winner": "texas_tech",
           "actual_winner": "texas_tech",
           "correct": true,
-          "brier": 0.0105,
+          "brier": 0.1008,
           "round": "R64"
         },
         {
@@ -2003,11 +2003,11 @@
           "team2": "oral_roberts",
           "team1_seed": 2,
           "team2_seed": 15,
-          "predicted_prob": 0.4395,
-          "predicted_winner": "oral_roberts",
+          "predicted_prob": 0.9466,
+          "predicted_winner": "ohio_state",
           "actual_winner": "ohio_state",
-          "correct": false,
-          "brier": 0.3142,
+          "correct": true,
+          "brier": 0.0028,
           "round": "R64"
         },
         {
@@ -2111,11 +2111,11 @@
           "team2": "st_bonaventure",
           "team1_seed": 8,
           "team2_seed": 9,
-          "predicted_prob": 0.5112,
+          "predicted_prob": 0.5651,
           "predicted_winner": "louisiana_state",
           "actual_winner": "louisiana_state",
           "correct": true,
-          "brier": 0.2389,
+          "brier": 0.1891,
           "round": "R64"
         },
         {
@@ -2135,11 +2135,11 @@
           "team2": "unc_greensboro",
           "team1_seed": 4,
           "team2_seed": 13,
-          "predicted_prob": 0.3745,
-          "predicted_winner": "unc_greensboro",
+          "predicted_prob": 0.9162,
+          "predicted_winner": "florida_state",
           "actual_winner": "florida_state",
-          "correct": false,
-          "brier": 0.3913,
+          "correct": true,
+          "brier": 0.007,
           "round": "R64"
         },
         {
@@ -2147,11 +2147,11 @@
           "team2": "ucla",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.2105,
-          "predicted_winner": "ucla",
+          "predicted_prob": 0.5336,
+          "predicted_winner": "brigham_young",
           "actual_winner": "brigham_young",
-          "correct": false,
-          "brier": 0.6233,
+          "correct": true,
+          "brier": 0.2175,
           "round": "R64"
         },
         {
@@ -2195,11 +2195,11 @@
           "team2": "louisiana_state",
           "team1_seed": 1,
           "team2_seed": 8,
-          "predicted_prob": 0.9182,
+          "predicted_prob": 0.6773,
           "predicted_winner": "michigan",
           "actual_winner": "michigan",
           "correct": true,
-          "brier": 0.0067,
+          "brier": 0.1042,
           "round": "R32"
         },
         {
@@ -2207,11 +2207,11 @@
           "team2": "colorado",
           "team1_seed": 4,
           "team2_seed": 5,
-          "predicted_prob": 0.1662,
+          "predicted_prob": 0.4951,
           "predicted_winner": "colorado",
           "actual_winner": "florida_state",
           "correct": false,
-          "brier": 0.6952,
+          "brier": 0.255,
           "round": "R32"
         },
         {
@@ -2243,11 +2243,11 @@
           "team2": "florida_state",
           "team1_seed": 1,
           "team2_seed": 4,
-          "predicted_prob": 0.8792,
+          "predicted_prob": 0.5864,
           "predicted_winner": "michigan",
           "actual_winner": "michigan",
           "correct": true,
-          "brier": 0.0146,
+          "brier": 0.1711,
           "round": "S16"
         },
         {
@@ -2303,11 +2303,11 @@
           "team2": "oregon_state",
           "team1_seed": 5,
           "team2_seed": 12,
-          "predicted_prob": 0.9142,
+          "predicted_prob": 0.6849,
           "predicted_winner": "tennessee",
           "actual_winner": "oregon_state",
           "correct": false,
-          "brier": 0.8358,
+          "brier": 0.4691,
           "round": "R64"
         },
         {
@@ -2315,11 +2315,11 @@
           "team2": "liberty",
           "team1_seed": 4,
           "team2_seed": 13,
-          "predicted_prob": 0.3008,
-          "predicted_winner": "liberty",
+          "predicted_prob": 0.8464,
+          "predicted_winner": "oklahoma_state",
           "actual_winner": "oklahoma_state",
-          "correct": false,
-          "brier": 0.4889,
+          "correct": true,
+          "brier": 0.0236,
           "round": "R64"
         },
         {
@@ -2327,11 +2327,11 @@
           "team2": "syracuse",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.2146,
-          "predicted_winner": "syracuse",
+          "predicted_prob": 0.6407,
+          "predicted_winner": "san_diego_state",
           "actual_winner": "syracuse",
-          "correct": true,
-          "brier": 0.0461,
+          "correct": false,
+          "brier": 0.4105,
           "round": "R64"
         },
         {
@@ -2339,11 +2339,11 @@
           "team2": "morehead_state",
           "team1_seed": 3,
           "team2_seed": 14,
-          "predicted_prob": 0.9443,
+          "predicted_prob": 0.9367,
           "predicted_winner": "west_virginia",
           "actual_winner": "west_virginia",
           "correct": true,
-          "brier": 0.0031,
+          "brier": 0.004,
           "round": "R64"
         },
         {
@@ -2363,11 +2363,11 @@
           "team2": "cleveland_state",
           "team1_seed": 2,
           "team2_seed": 15,
-          "predicted_prob": 0.959,
+          "predicted_prob": 0.9602,
           "predicted_winner": "houston",
           "actual_winner": "houston",
           "correct": true,
-          "brier": 0.0017,
+          "brier": 0.0016,
           "round": "R64"
         },
         {
@@ -2387,11 +2387,11 @@
           "team2": "oklahoma_state",
           "team1_seed": 12,
           "team2_seed": 4,
-          "predicted_prob": 0.4194,
+          "predicted_prob": 0.3467,
           "predicted_winner": "oklahoma_state",
           "actual_winner": "oregon_state",
           "correct": false,
-          "brier": 0.337,
+          "brier": 0.4268,
           "round": "R32"
         },
         {
@@ -2423,11 +2423,11 @@
           "team2": "oregon_state",
           "team1_seed": 1,
           "team2_seed": 12,
-          "predicted_prob": 0.9477,
+          "predicted_prob": 0.811,
           "predicted_winner": "illinois",
           "actual_winner": "oregon_state",
           "correct": false,
-          "brier": 0.8982,
+          "brier": 0.6578,
           "round": "S16"
         },
         {
@@ -2447,11 +2447,11 @@
           "team2": "houston",
           "team1_seed": 12,
           "team2_seed": 2,
-          "predicted_prob": 0.0584,
+          "predicted_prob": 0.1875,
           "predicted_winner": "houston",
           "actual_winner": "houston",
           "correct": true,
-          "brier": 0.0034,
+          "brier": 0.0351,
           "round": "E8"
         },
         {
@@ -2495,29 +2495,29 @@
     {
       "year": 2022,
       "n_games": 63,
-      "accuracy": 0.746,
-      "brier_score": 0.1819,
+      "accuracy": 0.7302,
+      "brier_score": 0.1839,
       "seed_baseline_brier": 0.2027,
-      "skill_score": 0.1027,
+      "skill_score": 0.0928,
       "upsets_actual": 15,
-      "upsets_predicted": 15,
-      "upsets_correctly_predicted": 5,
+      "upsets_predicted": 10,
+      "upsets_correctly_predicted": 3,
       "round_breakdown": {
         "R64": {
           "accuracy": 0.8438,
-          "brier_score": 0.1471,
+          "brier_score": 0.1337,
           "correct": 27,
           "total": 32
         },
         "R32": {
-          "accuracy": 0.625,
-          "brier_score": 0.2256,
-          "correct": 10,
+          "accuracy": 0.5625,
+          "brier_score": 0.2482,
+          "correct": 9,
           "total": 16
         },
         "S16": {
           "accuracy": 0.625,
-          "brier_score": 0.2469,
+          "brier_score": 0.271,
           "correct": 5,
           "total": 8
         },
@@ -2546,11 +2546,11 @@
           "team2": "georgia_state",
           "team1_seed": 1,
           "team2_seed": 16,
-          "predicted_prob": 0.9681,
+          "predicted_prob": 0.9613,
           "predicted_winner": "gonzaga",
           "actual_winner": "gonzaga",
           "correct": true,
-          "brier": 0.001,
+          "brier": 0.0015,
           "round": "R64"
         },
         {
@@ -2558,11 +2558,11 @@
           "team2": "memphis",
           "team1_seed": 8,
           "team2_seed": 9,
-          "predicted_prob": 0.1679,
+          "predicted_prob": 0.3958,
           "predicted_winner": "memphis",
           "actual_winner": "memphis",
           "correct": true,
-          "brier": 0.0282,
+          "brier": 0.1567,
           "round": "R64"
         },
         {
@@ -2570,11 +2570,11 @@
           "team2": "new_mexico_state",
           "team1_seed": 5,
           "team2_seed": 12,
-          "predicted_prob": 0.9126,
+          "predicted_prob": 0.7731,
           "predicted_winner": "connecticut",
           "actual_winner": "new_mexico_state",
           "correct": false,
-          "brier": 0.8328,
+          "brier": 0.5977,
           "round": "R64"
         },
         {
@@ -2606,11 +2606,11 @@
           "team2": "montana_state",
           "team1_seed": 3,
           "team2_seed": 14,
-          "predicted_prob": 0.9478,
+          "predicted_prob": 0.9462,
           "predicted_winner": "texas_tech",
           "actual_winner": "texas_tech",
           "correct": true,
-          "brier": 0.0027,
+          "brier": 0.0029,
           "round": "R64"
         },
         {
@@ -2618,11 +2618,11 @@
           "team2": "davidson",
           "team1_seed": 7,
           "team2_seed": 10,
-          "predicted_prob": 0.1992,
-          "predicted_winner": "davidson",
+          "predicted_prob": 0.5619,
+          "predicted_winner": "michigan_state",
           "actual_winner": "michigan_state",
-          "correct": false,
-          "brier": 0.6413,
+          "correct": true,
+          "brier": 0.192,
           "round": "R64"
         },
         {
@@ -2630,11 +2630,11 @@
           "team2": "cal_state_fullerton",
           "team1_seed": 2,
           "team2_seed": 15,
-          "predicted_prob": 0.9584,
+          "predicted_prob": 0.9597,
           "predicted_winner": "duke",
           "actual_winner": "duke",
           "correct": true,
-          "brier": 0.0017,
+          "brier": 0.0016,
           "round": "R64"
         },
         {
@@ -2654,11 +2654,11 @@
           "team2": "new_mexico_state",
           "team1_seed": 4,
           "team2_seed": 12,
-          "predicted_prob": 0.9227,
+          "predicted_prob": 0.805,
           "predicted_winner": "arkansas",
           "actual_winner": "arkansas",
           "correct": true,
-          "brier": 0.006,
+          "brier": 0.038,
           "round": "R32"
         },
         {
@@ -2678,11 +2678,11 @@
           "team2": "michigan_state",
           "team1_seed": 2,
           "team2_seed": 7,
-          "predicted_prob": 0.8996,
+          "predicted_prob": 0.7408,
           "predicted_winner": "duke",
           "actual_winner": "duke",
           "correct": true,
-          "brier": 0.0101,
+          "brier": 0.0672,
           "round": "R32"
         },
         {
@@ -2726,11 +2726,11 @@
           "team2": "norfolk_state",
           "team1_seed": 1,
           "team2_seed": 16,
-          "predicted_prob": 0.9674,
+          "predicted_prob": 0.9695,
           "predicted_winner": "baylor",
           "actual_winner": "baylor",
           "correct": true,
-          "brier": 0.0011,
+          "brier": 0.0009,
           "round": "R64"
         },
         {
@@ -2750,11 +2750,11 @@
           "team2": "indiana",
           "team1_seed": 5,
           "team2_seed": 12,
-          "predicted_prob": 0.2325,
-          "predicted_winner": "indiana",
+          "predicted_prob": 0.6463,
+          "predicted_winner": "saint_mary_s__ca",
           "actual_winner": "saint_mary_s__ca",
-          "correct": false,
-          "brier": 0.589,
+          "correct": true,
+          "brier": 0.1251,
           "round": "R64"
         },
         {
@@ -2798,11 +2798,11 @@
           "team2": "san_francisco",
           "team1_seed": 7,
           "team2_seed": 10,
-          "predicted_prob": 0.1924,
+          "predicted_prob": 0.4339,
           "predicted_winner": "san_francisco",
           "actual_winner": "murray_state",
           "correct": false,
-          "brier": 0.6522,
+          "brier": 0.3205,
           "round": "R64"
         },
         {
@@ -2834,11 +2834,11 @@
           "team2": "saint_mary_s__ca",
           "team1_seed": 4,
           "team2_seed": 5,
-          "predicted_prob": 0.8564,
+          "predicted_prob": 0.5704,
           "predicted_winner": "ucla",
           "actual_winner": "ucla",
           "correct": true,
-          "brier": 0.0206,
+          "brier": 0.1846,
           "round": "R32"
         },
         {
@@ -2858,11 +2858,11 @@
           "team2": "murray_state",
           "team1_seed": 15,
           "team2_seed": 7,
-          "predicted_prob": 0.69,
-          "predicted_winner": "saint_peter_s",
+          "predicted_prob": 0.1797,
+          "predicted_winner": "murray_state",
           "actual_winner": "saint_peter_s",
-          "correct": true,
-          "brier": 0.0961,
+          "correct": false,
+          "brier": 0.6728,
           "round": "R32"
         },
         {
@@ -2906,11 +2906,11 @@
           "team2": "wright_state",
           "team1_seed": 1,
           "team2_seed": 16,
-          "predicted_prob": 0.9667,
+          "predicted_prob": 0.9684,
           "predicted_winner": "arizona",
           "actual_winner": "arizona",
           "correct": true,
-          "brier": 0.0011,
+          "brier": 0.001,
           "round": "R64"
         },
         {
@@ -2954,11 +2954,11 @@
           "team2": "michigan",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.2131,
+          "predicted_prob": 0.4465,
           "predicted_winner": "michigan",
           "actual_winner": "michigan",
           "correct": true,
-          "brier": 0.0454,
+          "brier": 0.1994,
           "round": "R64"
         },
         {
@@ -2978,11 +2978,11 @@
           "team2": "loyola_chicago",
           "team1_seed": 7,
           "team2_seed": 10,
-          "predicted_prob": 0.1963,
-          "predicted_winner": "loyola_chicago",
+          "predicted_prob": 0.5676,
+          "predicted_winner": "ohio_state",
           "actual_winner": "loyola_chicago",
-          "correct": true,
-          "brier": 0.0385,
+          "correct": false,
+          "brier": 0.3222,
           "round": "R64"
         },
         {
@@ -3098,11 +3098,11 @@
           "team2": "creighton",
           "team1_seed": 8,
           "team2_seed": 9,
-          "predicted_prob": 0.1794,
-          "predicted_winner": "creighton",
+          "predicted_prob": 0.614,
+          "predicted_winner": "san_diego_state",
           "actual_winner": "creighton",
-          "correct": true,
-          "brier": 0.0322,
+          "correct": false,
+          "brier": 0.377,
           "round": "R64"
         },
         {
@@ -3122,11 +3122,11 @@
           "team2": "south_dakota_state",
           "team1_seed": 4,
           "team2_seed": 13,
-          "predicted_prob": 0.9267,
+          "predicted_prob": 0.7717,
           "predicted_winner": "providence",
           "actual_winner": "providence",
           "correct": true,
-          "brier": 0.0054,
+          "brier": 0.0521,
           "round": "R64"
         },
         {
@@ -3134,11 +3134,11 @@
           "team2": "iowa_state",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.5538,
+          "predicted_prob": 0.6367,
           "predicted_winner": "louisiana_state",
           "actual_winner": "louisiana_state",
           "correct": true,
-          "brier": 0.1991,
+          "brier": 0.132,
           "round": "R64"
         },
         {
@@ -3158,11 +3158,11 @@
           "team2": "miami_fl",
           "team1_seed": 7,
           "team2_seed": 10,
-          "predicted_prob": 0.1959,
+          "predicted_prob": 0.4451,
           "predicted_winner": "miami_fl",
           "actual_winner": "miami_fl",
           "correct": true,
-          "brier": 0.0384,
+          "brier": 0.1981,
           "round": "R64"
         },
         {
@@ -3170,11 +3170,11 @@
           "team2": "jacksonville_state",
           "team1_seed": 2,
           "team2_seed": 15,
-          "predicted_prob": 0.9573,
+          "predicted_prob": 0.9516,
           "predicted_winner": "auburn",
           "actual_winner": "auburn",
           "correct": true,
-          "brier": 0.0018,
+          "brier": 0.0023,
           "round": "R64"
         },
         {
@@ -3206,11 +3206,11 @@
           "team2": "wisconsin",
           "team1_seed": 11,
           "team2_seed": 3,
-          "predicted_prob": 0.0815,
+          "predicted_prob": 0.3864,
           "predicted_winner": "wisconsin",
           "actual_winner": "iowa_state",
           "correct": false,
-          "brier": 0.8436,
+          "brier": 0.3765,
           "round": "R32"
         },
         {
@@ -3242,11 +3242,11 @@
           "team2": "iowa_state",
           "team1_seed": 10,
           "team2_seed": 11,
-          "predicted_prob": 0.8485,
+          "predicted_prob": 0.5358,
           "predicted_winner": "miami_fl",
           "actual_winner": "miami_fl",
           "correct": true,
-          "brier": 0.0229,
+          "brier": 0.2155,
           "round": "S16"
         },
         {
@@ -3302,47 +3302,47 @@
     {
       "year": 2023,
       "n_games": 63,
-      "accuracy": 0.746,
-      "brier_score": 0.1981,
+      "accuracy": 0.7937,
+      "brier_score": 0.1668,
       "seed_baseline_brier": 0.1788,
-      "skill_score": -0.108,
+      "skill_score": 0.0672,
       "upsets_actual": 10,
-      "upsets_predicted": 11,
-      "upsets_correctly_predicted": 2,
+      "upsets_predicted": 6,
+      "upsets_correctly_predicted": 1,
       "round_breakdown": {
         "R64": {
           "accuracy": 0.8125,
-          "brier_score": 0.1431,
+          "brier_score": 0.1294,
           "correct": 26,
           "total": 32
         },
         "R32": {
-          "accuracy": 0.625,
-          "brier_score": 0.2591,
-          "correct": 10,
+          "accuracy": 0.75,
+          "brier_score": 0.189,
+          "correct": 12,
           "total": 16
         },
         "S16": {
           "accuracy": 0.75,
-          "brier_score": 0.2469,
+          "brier_score": 0.2635,
           "correct": 6,
           "total": 8
         },
         "E8": {
           "accuracy": 0.75,
-          "brier_score": 0.2558,
+          "brier_score": 0.207,
           "correct": 3,
           "total": 4
         },
         "F4": {
-          "accuracy": 0.5,
-          "brier_score": 0.3687,
-          "correct": 1,
+          "accuracy": 1.0,
+          "brier_score": 0.1223,
+          "correct": 2,
           "total": 2
         },
         "NCG": {
           "accuracy": 1.0,
-          "brier_score": 0.0202,
+          "brier_score": 0.1619,
           "correct": 1,
           "total": 1
         }
@@ -3353,7 +3353,7 @@
           "team2": "texas_a_m_corpus_christi",
           "team1_seed": 1,
           "team2_seed": 16,
-          "predicted_prob": 0.9677,
+          "predicted_prob": 0.9691,
           "predicted_winner": "alabama",
           "actual_winner": "alabama",
           "correct": true,
@@ -3377,11 +3377,11 @@
           "team2": "college_of_charleston",
           "team1_seed": 5,
           "team2_seed": 13,
-          "predicted_prob": 0.5806,
+          "predicted_prob": 0.8073,
           "predicted_winner": "san_diego_state",
           "actual_winner": "san_diego_state",
           "correct": true,
-          "brier": 0.1759,
+          "brier": 0.0371,
           "round": "R64"
         },
         {
@@ -3401,11 +3401,11 @@
           "team2": "nc_state",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.8981,
+          "predicted_prob": 0.7212,
           "predicted_winner": "creighton",
           "actual_winner": "creighton",
           "correct": true,
-          "brier": 0.0104,
+          "brier": 0.0777,
           "round": "R64"
         },
         {
@@ -3425,11 +3425,11 @@
           "team2": "utah_state",
           "team1_seed": 7,
           "team2_seed": 10,
-          "predicted_prob": 0.8602,
-          "predicted_winner": "missouri",
+          "predicted_prob": 0.394,
+          "predicted_winner": "utah_state",
           "actual_winner": "missouri",
-          "correct": true,
-          "brier": 0.0195,
+          "correct": false,
+          "brier": 0.3673,
           "round": "R64"
         },
         {
@@ -3461,11 +3461,11 @@
           "team2": "furman",
           "team1_seed": 5,
           "team2_seed": 13,
-          "predicted_prob": 0.2953,
-          "predicted_winner": "furman",
+          "predicted_prob": 0.8802,
+          "predicted_winner": "san_diego_state",
           "actual_winner": "san_diego_state",
-          "correct": false,
-          "brier": 0.4967,
+          "correct": true,
+          "brier": 0.0144,
           "round": "R32"
         },
         {
@@ -3497,11 +3497,11 @@
           "team2": "san_diego_state",
           "team1_seed": 1,
           "team2_seed": 5,
-          "predicted_prob": 0.89,
+          "predicted_prob": 0.612,
           "predicted_winner": "alabama",
           "actual_winner": "alabama",
           "correct": true,
-          "brier": 0.0121,
+          "brier": 0.1505,
           "round": "S16"
         },
         {
@@ -3521,11 +3521,11 @@
           "team2": "creighton",
           "team1_seed": 5,
           "team2_seed": 6,
-          "predicted_prob": 0.1669,
-          "predicted_winner": "creighton",
+          "predicted_prob": 0.5168,
+          "predicted_winner": "san_diego_state",
           "actual_winner": "san_diego_state",
-          "correct": false,
-          "brier": 0.6941,
+          "correct": true,
+          "brier": 0.2335,
           "round": "E8"
         },
         {
@@ -3593,11 +3593,11 @@
           "team2": "montana_state",
           "team1_seed": 3,
           "team2_seed": 14,
-          "predicted_prob": 0.6017,
+          "predicted_prob": 0.8834,
           "predicted_winner": "kansas_state",
           "actual_winner": "kansas_state",
           "correct": true,
-          "brier": 0.1587,
+          "brier": 0.0136,
           "round": "R64"
         },
         {
@@ -3605,11 +3605,11 @@
           "team2": "southern_california",
           "team1_seed": 7,
           "team2_seed": 10,
-          "predicted_prob": 0.5332,
+          "predicted_prob": 0.6263,
           "predicted_winner": "michigan_state",
           "actual_winner": "michigan_state",
           "correct": true,
-          "brier": 0.2179,
+          "brier": 0.1396,
           "round": "R64"
         },
         {
@@ -3653,11 +3653,11 @@
           "team2": "kentucky",
           "team1_seed": 3,
           "team2_seed": 6,
-          "predicted_prob": 0.1925,
-          "predicted_winner": "kentucky",
+          "predicted_prob": 0.5464,
+          "predicted_winner": "kansas_state",
           "actual_winner": "kansas_state",
-          "correct": false,
-          "brier": 0.652,
+          "correct": true,
+          "brier": 0.2057,
           "round": "R32"
         },
         {
@@ -3665,11 +3665,11 @@
           "team2": "michigan_state",
           "team1_seed": 2,
           "team2_seed": 7,
-          "predicted_prob": 0.8982,
+          "predicted_prob": 0.6378,
           "predicted_winner": "marquette",
           "actual_winner": "michigan_state",
           "correct": false,
-          "brier": 0.8068,
+          "brier": 0.4068,
           "round": "R32"
         },
         {
@@ -3689,11 +3689,11 @@
           "team2": "michigan_state",
           "team1_seed": 3,
           "team2_seed": 7,
-          "predicted_prob": 0.5437,
+          "predicted_prob": 0.5502,
           "predicted_winner": "kansas_state",
           "actual_winner": "kansas_state",
           "correct": true,
-          "brier": 0.2082,
+          "brier": 0.2023,
           "round": "S16"
         },
         {
@@ -3701,11 +3701,11 @@
           "team2": "kansas_state",
           "team1_seed": 9,
           "team2_seed": 3,
-          "predicted_prob": 0.7782,
-          "predicted_winner": "florida_atlantic",
+          "predicted_prob": 0.4391,
+          "predicted_winner": "kansas_state",
           "actual_winner": "florida_atlantic",
-          "correct": true,
-          "brier": 0.0492,
+          "correct": false,
+          "brier": 0.3147,
           "round": "E8"
         },
         {
@@ -3749,11 +3749,11 @@
           "team2": "kent_state",
           "team1_seed": 4,
           "team2_seed": 13,
-          "predicted_prob": 0.9268,
+          "predicted_prob": 0.7696,
           "predicted_winner": "indiana",
           "actual_winner": "kent_state",
           "correct": false,
-          "brier": 0.8589,
+          "brier": 0.5922,
           "round": "R64"
         },
         {
@@ -3761,11 +3761,11 @@
           "team2": "pittsburgh",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.2323,
-          "predicted_winner": "pittsburgh",
+          "predicted_prob": 0.726,
+          "predicted_winner": "iowa_state",
           "actual_winner": "iowa_state",
-          "correct": false,
-          "brier": 0.5894,
+          "correct": true,
+          "brier": 0.0751,
           "round": "R64"
         },
         {
@@ -3773,11 +3773,11 @@
           "team2": "kennesaw_state",
           "team1_seed": 3,
           "team2_seed": 14,
-          "predicted_prob": 0.9438,
+          "predicted_prob": 0.9128,
           "predicted_winner": "xavier",
           "actual_winner": "xavier",
           "correct": true,
-          "brier": 0.0032,
+          "brier": 0.0076,
           "round": "R64"
         },
         {
@@ -3785,11 +3785,11 @@
           "team2": "penn_state",
           "team1_seed": 7,
           "team2_seed": 10,
-          "predicted_prob": 0.8746,
+          "predicted_prob": 0.5853,
           "predicted_winner": "texas_a_m",
           "actual_winner": "texas_a_m",
           "correct": true,
-          "brier": 0.0157,
+          "brier": 0.172,
           "round": "R64"
         },
         {
@@ -3845,11 +3845,11 @@
           "team2": "penn_state",
           "team1_seed": 2,
           "team2_seed": 10,
-          "predicted_prob": 0.926,
+          "predicted_prob": 0.7351,
           "predicted_winner": "texas",
           "actual_winner": "texas",
           "correct": true,
-          "brier": 0.0055,
+          "brier": 0.0702,
           "round": "R32"
         },
         {
@@ -3917,11 +3917,11 @@
           "team2": "virginia_commonwealth",
           "team1_seed": 5,
           "team2_seed": 12,
-          "predicted_prob": 0.5722,
+          "predicted_prob": 0.78,
           "predicted_winner": "saint_mary_s__ca",
           "actual_winner": "saint_mary_s__ca",
           "correct": true,
-          "brier": 0.183,
+          "brier": 0.0484,
           "round": "R64"
         },
         {
@@ -3941,11 +3941,11 @@
           "team2": "arizona_state",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.8941,
+          "predicted_prob": 0.6514,
           "predicted_winner": "tcu",
           "actual_winner": "tcu",
           "correct": true,
-          "brier": 0.0112,
+          "brier": 0.1215,
           "round": "R64"
         },
         {
@@ -3965,11 +3965,11 @@
           "team2": "boise_state",
           "team1_seed": 7,
           "team2_seed": 10,
-          "predicted_prob": 0.8728,
+          "predicted_prob": 0.5892,
           "predicted_winner": "northwestern",
           "actual_winner": "northwestern",
           "correct": true,
-          "brier": 0.0162,
+          "brier": 0.1687,
           "round": "R64"
         },
         {
@@ -4001,11 +4001,11 @@
           "team2": "saint_mary_s__ca",
           "team1_seed": 4,
           "team2_seed": 5,
-          "predicted_prob": 0.8579,
+          "predicted_prob": 0.5962,
           "predicted_winner": "connecticut",
           "actual_winner": "connecticut",
           "correct": true,
-          "brier": 0.0202,
+          "brier": 0.1631,
           "round": "R32"
         },
         {
@@ -4085,11 +4085,11 @@
           "team2": "florida_atlantic",
           "team1_seed": 5,
           "team2_seed": 9,
-          "predicted_prob": 0.2023,
-          "predicted_winner": "florida_atlantic",
+          "predicted_prob": 0.6209,
+          "predicted_winner": "san_diego_state",
           "actual_winner": "san_diego_state",
-          "correct": false,
-          "brier": 0.6364,
+          "correct": true,
+          "brier": 0.1437,
           "round": "F4"
         },
         {
@@ -4097,11 +4097,11 @@
           "team2": "san_diego_state",
           "team1_seed": 4,
           "team2_seed": 5,
-          "predicted_prob": 0.8579,
+          "predicted_prob": 0.5977,
           "predicted_winner": "connecticut",
           "actual_winner": "connecticut",
           "correct": true,
-          "brier": 0.0202,
+          "brier": 0.1619,
           "round": "NCG"
         }
       ]
@@ -4109,41 +4109,41 @@
     {
       "year": 2024,
       "n_games": 63,
-      "accuracy": 0.7619,
-      "brier_score": 0.1845,
+      "accuracy": 0.8254,
+      "brier_score": 0.151,
       "seed_baseline_brier": 0.1688,
-      "skill_score": -0.0934,
+      "skill_score": 0.1055,
       "upsets_actual": 9,
-      "upsets_predicted": 10,
-      "upsets_correctly_predicted": 1,
+      "upsets_predicted": 4,
+      "upsets_correctly_predicted": 0,
       "round_breakdown": {
         "R64": {
-          "accuracy": 0.75,
-          "brier_score": 0.1626,
-          "correct": 24,
+          "accuracy": 0.8438,
+          "brier_score": 0.1284,
+          "correct": 27,
           "total": 32
         },
         "R32": {
-          "accuracy": 0.8125,
-          "brier_score": 0.1566,
-          "correct": 13,
+          "accuracy": 0.9375,
+          "brier_score": 0.1037,
+          "correct": 15,
           "total": 16
         },
         "S16": {
-          "accuracy": 0.75,
-          "brier_score": 0.2548,
-          "correct": 6,
+          "accuracy": 0.625,
+          "brier_score": 0.2543,
+          "correct": 5,
           "total": 8
         },
         "E8": {
           "accuracy": 0.5,
-          "brier_score": 0.3846,
+          "brier_score": 0.3343,
           "correct": 2,
           "total": 4
         },
         "F4": {
           "accuracy": 1.0,
-          "brier_score": 0.0603,
+          "brier_score": 0.0757,
           "correct": 2,
           "total": 2
         },
@@ -4184,11 +4184,11 @@
           "team2": "uab",
           "team1_seed": 5,
           "team2_seed": 12,
-          "predicted_prob": 0.3117,
-          "predicted_winner": "uab",
+          "predicted_prob": 0.867,
+          "predicted_winner": "san_diego_state",
           "actual_winner": "san_diego_state",
-          "correct": false,
-          "brier": 0.4737,
+          "correct": true,
+          "brier": 0.0177,
           "round": "R64"
         },
         {
@@ -4208,11 +4208,11 @@
           "team2": "duquesne",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.2391,
-          "predicted_winner": "duquesne",
+          "predicted_prob": 0.7814,
+          "predicted_winner": "brigham_young",
           "actual_winner": "duquesne",
-          "correct": true,
-          "brier": 0.0572,
+          "correct": false,
+          "brier": 0.6106,
           "round": "R64"
         },
         {
@@ -4220,11 +4220,11 @@
           "team2": "morehead_state",
           "team1_seed": 3,
           "team2_seed": 14,
-          "predicted_prob": 0.9464,
+          "predicted_prob": 0.936,
           "predicted_winner": "illinois",
           "actual_winner": "illinois",
           "correct": true,
-          "brier": 0.0029,
+          "brier": 0.0041,
           "round": "R64"
         },
         {
@@ -4232,11 +4232,11 @@
           "team2": "drake",
           "team1_seed": 7,
           "team2_seed": 10,
-          "predicted_prob": 0.1988,
-          "predicted_winner": "drake",
+          "predicted_prob": 0.5865,
+          "predicted_winner": "washington_state",
           "actual_winner": "washington_state",
-          "correct": false,
-          "brier": 0.6419,
+          "correct": true,
+          "brier": 0.171,
           "round": "R64"
         },
         {
@@ -4244,11 +4244,11 @@
           "team2": "south_dakota_state",
           "team1_seed": 2,
           "team2_seed": 15,
-          "predicted_prob": 0.6126,
+          "predicted_prob": 0.9529,
           "predicted_winner": "iowa_state",
           "actual_winner": "iowa_state",
           "correct": true,
-          "brier": 0.1501,
+          "brier": 0.0022,
           "round": "R64"
         },
         {
@@ -4268,11 +4268,11 @@
           "team2": "auburn",
           "team1_seed": 5,
           "team2_seed": 4,
-          "predicted_prob": 0.1425,
+          "predicted_prob": 0.3494,
           "predicted_winner": "auburn",
           "actual_winner": "auburn",
           "correct": true,
-          "brier": 0.0203,
+          "brier": 0.1221,
           "round": "R32"
         },
         {
@@ -4292,11 +4292,11 @@
           "team2": "washington_state",
           "team1_seed": 2,
           "team2_seed": 7,
-          "predicted_prob": 0.5538,
+          "predicted_prob": 0.7309,
           "predicted_winner": "iowa_state",
           "actual_winner": "iowa_state",
           "correct": true,
-          "brier": 0.1991,
+          "brier": 0.0724,
           "round": "R32"
         },
         {
@@ -4316,11 +4316,11 @@
           "team2": "iowa_state",
           "team1_seed": 3,
           "team2_seed": 2,
-          "predicted_prob": 0.8335,
-          "predicted_winner": "illinois",
+          "predicted_prob": 0.4348,
+          "predicted_winner": "iowa_state",
           "actual_winner": "illinois",
-          "correct": true,
-          "brier": 0.0277,
+          "correct": false,
+          "brier": 0.3195,
           "round": "S16"
         },
         {
@@ -4352,11 +4352,11 @@
           "team2": "michigan_state",
           "team1_seed": 8,
           "team2_seed": 9,
-          "predicted_prob": 0.5112,
-          "predicted_winner": "mississippi_state",
+          "predicted_prob": 0.4391,
+          "predicted_winner": "michigan_state",
           "actual_winner": "michigan_state",
-          "correct": false,
-          "brier": 0.2614,
+          "correct": true,
+          "brier": 0.1928,
           "round": "R64"
         },
         {
@@ -4364,11 +4364,11 @@
           "team2": "grand_canyon",
           "team1_seed": 5,
           "team2_seed": 12,
-          "predicted_prob": 0.2448,
-          "predicted_winner": "grand_canyon",
+          "predicted_prob": 0.7778,
+          "predicted_winner": "saint_mary_s__ca",
           "actual_winner": "saint_mary_s__ca",
-          "correct": false,
-          "brier": 0.5703,
+          "correct": true,
+          "brier": 0.0494,
           "round": "R64"
         },
         {
@@ -4376,11 +4376,11 @@
           "team2": "college_of_charleston",
           "team1_seed": 4,
           "team2_seed": 13,
-          "predicted_prob": 0.9324,
+          "predicted_prob": 0.8815,
           "predicted_winner": "alabama",
           "actual_winner": "alabama",
           "correct": true,
-          "brier": 0.0046,
+          "brier": 0.014,
           "round": "R64"
         },
         {
@@ -4424,11 +4424,11 @@
           "team2": "long_beach_state",
           "team1_seed": 2,
           "team2_seed": 15,
-          "predicted_prob": 0.9587,
+          "predicted_prob": 0.9608,
           "predicted_winner": "arizona",
           "actual_winner": "arizona",
           "correct": true,
-          "brier": 0.0017,
+          "brier": 0.0015,
           "round": "R64"
         },
         {
@@ -4436,11 +4436,11 @@
           "team2": "michigan_state",
           "team1_seed": 1,
           "team2_seed": 9,
-          "predicted_prob": 0.926,
+          "predicted_prob": 0.6509,
           "predicted_winner": "north_carolina",
           "actual_winner": "north_carolina",
           "correct": true,
-          "brier": 0.0055,
+          "brier": 0.1219,
           "round": "R32"
         },
         {
@@ -4460,11 +4460,11 @@
           "team2": "saint_mary_s__ca",
           "team1_seed": 12,
           "team2_seed": 5,
-          "predicted_prob": 0.7552,
-          "predicted_winner": "grand_canyon",
+          "predicted_prob": 0.2222,
+          "predicted_winner": "saint_mary_s__ca",
           "actual_winner": "saint_mary_s__ca",
-          "correct": false,
-          "brier": 0.5703,
+          "correct": true,
+          "brier": 0.0494,
           "round": "R32"
         },
         {
@@ -4568,11 +4568,11 @@
           "team2": "nc_state",
           "team1_seed": 6,
           "team2_seed": 11,
-          "predicted_prob": 0.8937,
+          "predicted_prob": 0.6142,
           "predicted_winner": "texas_tech",
           "actual_winner": "nc_state",
           "correct": false,
-          "brier": 0.7986,
+          "brier": 0.3772,
           "round": "R64"
         },
         {
@@ -4592,11 +4592,11 @@
           "team2": "boise_state",
           "team1_seed": 7,
           "team2_seed": 10,
-          "predicted_prob": 0.8757,
+          "predicted_prob": 0.6198,
           "predicted_winner": "florida",
           "actual_winner": "florida",
           "correct": true,
-          "brier": 0.0154,
+          "brier": 0.1445,
           "round": "R64"
         },
         {
@@ -4640,11 +4640,11 @@
           "team2": "oakland",
           "team1_seed": 11,
           "team2_seed": 14,
-          "predicted_prob": 0.3328,
-          "predicted_winner": "oakland",
+          "predicted_prob": 0.8335,
+          "predicted_winner": "nc_state",
           "actual_winner": "nc_state",
-          "correct": false,
-          "brier": 0.4452,
+          "correct": true,
+          "brier": 0.0277,
           "round": "R32"
         },
         {
@@ -4676,11 +4676,11 @@
           "team2": "marquette",
           "team1_seed": 11,
           "team2_seed": 2,
-          "predicted_prob": 0.0667,
+          "predicted_prob": 0.2415,
           "predicted_winner": "marquette",
           "actual_winner": "nc_state",
           "correct": false,
-          "brier": 0.871,
+          "brier": 0.5753,
           "round": "S16"
         },
         {
@@ -4688,11 +4688,11 @@
           "team2": "nc_state",
           "team1_seed": 1,
           "team2_seed": 11,
-          "predicted_prob": 0.9424,
+          "predicted_prob": 0.8289,
           "predicted_winner": "houston",
           "actual_winner": "nc_state",
           "correct": false,
-          "brier": 0.8881,
+          "brier": 0.6871,
           "round": "E8"
         },
         {
@@ -4700,11 +4700,11 @@
           "team2": "grambling",
           "team1_seed": 1,
           "team2_seed": 16,
-          "predicted_prob": 0.9681,
+          "predicted_prob": 0.9711,
           "predicted_winner": "purdue",
           "actual_winner": "purdue",
           "correct": true,
-          "brier": 0.001,
+          "brier": 0.0008,
           "round": "R64"
         },
         {
@@ -4712,11 +4712,11 @@
           "team2": "tcu",
           "team1_seed": 8,
           "team2_seed": 9,
-          "predicted_prob": 0.1737,
+          "predicted_prob": 0.4339,
           "predicted_winner": "tcu",
           "actual_winner": "tcu",
           "correct": true,
-          "brier": 0.0302,
+          "brier": 0.1883,
           "round": "R64"
         },
         {
@@ -4724,11 +4724,11 @@
           "team2": "mcneese_state",
           "team1_seed": 5,
           "team2_seed": 12,
-          "predicted_prob": 0.9171,
+          "predicted_prob": 0.8541,
           "predicted_winner": "gonzaga",
           "actual_winner": "gonzaga",
           "correct": true,
-          "brier": 0.0069,
+          "brier": 0.0213,
           "round": "R64"
         },
         {
@@ -4772,11 +4772,11 @@
           "team2": "colorado_state",
           "team1_seed": 7,
           "team2_seed": 10,
-          "predicted_prob": 0.8761,
+          "predicted_prob": 0.6232,
           "predicted_winner": "texas",
           "actual_winner": "texas",
           "correct": true,
-          "brier": 0.0154,
+          "brier": 0.142,
           "round": "R64"
         },
         {
@@ -4784,11 +4784,11 @@
           "team2": "st_peter_s",
           "team1_seed": 2,
           "team2_seed": 15,
-          "predicted_prob": 0.9585,
+          "predicted_prob": 0.9616,
           "predicted_winner": "tennessee",
           "actual_winner": "tennessee",
           "correct": true,
-          "brier": 0.0017,
+          "brier": 0.0015,
           "round": "R64"
         },
         {
@@ -4892,11 +4892,11 @@
           "team2": "nc_state",
           "team1_seed": 1,
           "team2_seed": 11,
-          "predicted_prob": 0.942,
+          "predicted_prob": 0.8152,
           "predicted_winner": "purdue",
           "actual_winner": "purdue",
           "correct": true,
-          "brier": 0.0034,
+          "brier": 0.0341,
           "round": "F4"
         },
         {
