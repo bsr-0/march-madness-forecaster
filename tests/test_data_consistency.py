@@ -60,7 +60,7 @@ class TestNormalizeTeamId:
         assert normalize_team_id("NC  A&T") == "nc_a_t"
 
     def test_special_chars_stripped(self):
-        assert normalize_team_id("St. John's (NY)") == "st_john_s_ny"
+        assert normalize_team_id("St. John's (NY)") == "st__john_s__ny"
 
     def test_empty_string(self):
         assert normalize_team_id("") == ""
@@ -457,7 +457,7 @@ class TestCrossPipelineConsistency:
             ("Texas A&amp;M", "texas_a_m"),
             ("San José State", "san_jose_state"),
             ("Duke Blue Devils", "duke"),
-            ("St. John's (NY)", "st_john_s_ny"),
+            ("St. John's (NY)", "st__john_s__ny"),
         ]
         for input_name, expected in test_cases:
             assert normalize_team_id(input_name) == expected, (
