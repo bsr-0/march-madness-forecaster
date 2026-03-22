@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
+from ..optimization.leverage import compute_ev_edge  # noqa: F401
+
 ROUND_NAMES = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
 ROUND_POINTS = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
 ROUND_GAME_COUNTS = [32, 16, 8, 4, 2, 1]
@@ -62,7 +64,8 @@ def compute_leverage_table(
                 continue
             public_p = float(public_probs.get(round_name, 0.0))
             gap = model_p - public_p
-            leverage_points = gap * float(points.get(round_name, 0))
+            round_pts = int(points.get(round_name, 0))
+            ev_edge = compute_ev_edge(model_p, public_p, round_pts)
             rows.append(
                 LeverageSignal(
                     team_id=team_id,
@@ -70,7 +73,7 @@ def compute_leverage_table(
                     model_probability=model_p,
                     public_pick_rate=public_p,
                     leverage_gap=gap,
-                    expected_leverage_points=leverage_points,
+                    expected_leverage_points=ev_edge,
                 )
             )
 

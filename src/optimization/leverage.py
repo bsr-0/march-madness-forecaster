@@ -2,7 +2,15 @@
 Game theory optimization for bracket pools.
 
 Maximizes Expected Value (EV) relative to competitors by finding
-high-leverage picks with favorable Win Probability / Pick Percentage ratios.
+high-leverage picks — measured by EV-edge: the expected points gained
+versus the field per pick.
+
+    EV-edge(team, round) = (model_prob - public_pct) × round_points
+
+Positive EV-edge means the model sees the team as under-picked by the
+public relative to its true advancement probability.  This is the
+canonical leverage metric used by both the pool optimizer and the ESPN
+bracket optimizer.
 """
 
 from typing import Dict, List, Optional, Tuple
@@ -12,6 +20,28 @@ import numpy as np
 
 
 _BranchPick = namedtuple('_BranchPick', ['p_win', 'survival', 'pts'])
+
+
+def compute_ev_edge(
+    model_prob: float,
+    public_pct: float,
+    round_points: int,
+) -> float:
+    """Canonical leverage metric: expected points gained vs the field.
+
+    ``EV-edge = (model_prob - public_pct) × round_points``
+
+    This single number answers "how many points per pick do I expect to
+    gain over a random opponent by picking this team in this round?"
+
+    Positive → under-owned value (pick).
+    Negative → over-owned trap (fade).
+
+    All leverage-based sorting and filtering across the codebase should
+    use this function (or its equivalent property on LeveragePick) as
+    the primary ranking signal.
+    """
+    return (model_prob - public_pct) * round_points
 
 
 # ---------------------------------------------------------------------------
@@ -667,9 +697,12 @@ class LeverageCalculator:
                         points_value=self.scoring_system.get(round_name, 0),
                     ))
         
-        # Sort by leverage ratio
-        leverage_picks.sort(key=lambda x: x.leverage_ratio, reverse=True)
-        
+        # Sort by expected value differential (EV-edge):
+        # (model_prob - public_pct) × round_points
+        # This ranks picks by expected points gained vs the field,
+        # incorporating both probability edge and scoring weight.
+        leverage_picks.sort(key=lambda x: x.expected_value_differential, reverse=True)
+
         return leverage_picks
     
     def find_fade_picks(
@@ -709,8 +742,8 @@ class LeverageCalculator:
                         points_value=self.scoring_system.get(round_name, 0),
                     ))
         
-        # Sort by leverage (lowest first = most over-picked)
-        fade_picks.sort(key=lambda x: x.leverage_ratio)
+        # Sort by EV differential (most negative first = most over-picked)
+        fade_picks.sort(key=lambda x: x.expected_value_differential)
         
         return fade_picks
 

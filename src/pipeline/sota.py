@@ -1446,6 +1446,7 @@ class SOTAPipeline:
         self,
         environment: PoolEnvironment,
         team_ids: Optional[List[str]] = None,
+        model_round_probs: Optional[Dict[str, Dict[str, float]]] = None,
     ) -> PoolOptimizer:
         """Create a PoolOptimizer from this pipeline's forecast probabilities.
 
@@ -1457,6 +1458,10 @@ class SOTAPipeline:
             environment: Pool environmental parameters (pool_size,
                 scoring_rules, payout_structure, public_pick_distribution).
             team_ids: Team IDs to include.  Defaults to all teams.
+            model_round_probs: Pre-computed per-team per-round advancement
+                probabilities from Monte Carlo simulation.  When provided,
+                the optimizer uses these directly instead of the heuristic
+                fallback.
 
         Returns:
             PoolOptimizer instance ready for optimize() or
@@ -1465,7 +1470,7 @@ class SOTAPipeline:
         if team_ids is None:
             team_ids = list(self.team_struct.keys())
         probs = self.forecast_engine.predict_all_matchups(team_ids)
-        optimizer = PoolOptimizer(probs, environment)
+        optimizer = PoolOptimizer(probs, environment, model_round_probs=model_round_probs)
         self._pool_optimizer = optimizer
         return optimizer
 
