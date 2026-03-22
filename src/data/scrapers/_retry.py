@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import random
 import time
 from functools import wraps
 from typing import Callable, Tuple, Type, TypeVar
@@ -17,6 +18,13 @@ T = TypeVar("T")
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_BACKOFF_BASE = 2.0  # seconds
 DEFAULT_RATE_LIMIT_DELAY = 3.0  # seconds between requests
+DEFAULT_JITTER_FRACTION = 0.5  # add 0–50% random jitter to wait times
+
+
+def _jittered_wait(base_wait: float, jitter_fraction: float = DEFAULT_JITTER_FRACTION) -> float:
+    """Add random jitter to a wait time to avoid thundering herd."""
+    jitter = random.uniform(0, jitter_fraction * base_wait)
+    return base_wait + jitter
 
 
 def retry_request(
@@ -31,7 +39,7 @@ def retry_request(
     ),
     **kwargs,
 ) -> requests.Response:
-    """Execute an HTTP request function with exponential backoff.
+    """Execute an HTTP request function with exponential backoff and jitter.
 
     Retries on network errors and 429/5xx status codes.
     """
@@ -41,7 +49,7 @@ def retry_request(
             response = func(*args, **kwargs)
             if response.status_code == 429 or response.status_code >= 500:
                 if attempt < max_retries:
-                    wait = backoff_base * (2 ** attempt)
+                    wait = _jittered_wait(backoff_base * (2 ** attempt))
                     # Respect Retry-After header if present
                     retry_after = response.headers.get("Retry-After")
                     if retry_after:
@@ -60,7 +68,7 @@ def retry_request(
         except retry_on as exc:
             last_exc = exc
             if attempt < max_retries:
-                wait = backoff_base * (2 ** attempt)
+                wait = _jittered_wait(backoff_base * (2 ** attempt))
                 logger.warning(
                     "%s on attempt %d/%d — retrying in %.1fs",
                     type(exc).__name__, attempt + 1, max_retries + 1, wait,
@@ -95,7 +103,7 @@ def rate_limited_call(
         except Exception as exc:
             last_exc = exc
             if attempt < max_retries:
-                wait = backoff_base * (2 ** attempt)
+                wait = _jittered_wait(backoff_base * (2 ** attempt))
                 logger.warning(
                     "%s in %s on attempt %d/%d — retrying in %.1fs",
                     type(exc).__name__, func.__name__ if hasattr(func, '__name__') else str(func),
