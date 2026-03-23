@@ -249,7 +249,7 @@ def _load_year_samples_incremental_core(
             for entry in massey_data:
                 tid = entry.get("team_id", "")
                 if tid:
-                    team_massey_composite[_team_id(tid)] = entry.get("normalized", 0.0)
+                    team_massey_composite[_team_id(tid)] = entry.get("normalized", float('nan'))
             _massey_loaded = True
             logger.info(
                 "Gap #1: Loaded Massey composite cache for year %d (%d teams)",
@@ -422,14 +422,14 @@ def _load_year_samples_incremental_core(
 
         # Massey: only attach after selection cutoff (end-of-season aggregate).
         if g.game_date > tournament_cutoff:
-            _mc1 = team_massey_composite.get(g.team_id, 0.0)
-            _mc2 = team_massey_composite.get(g.opponent_id, 0.0)
-            _ms1 = team_massey_spread.get(g.team_id, 0.0)
-            _ms2 = team_massey_spread.get(g.opponent_id, 0.0)
+            _mc1 = team_massey_composite.get(g.team_id, float('nan'))
+            _mc2 = team_massey_composite.get(g.opponent_id, float('nan'))
+            _ms1 = team_massey_spread.get(g.team_id, float('nan'))
+            _ms2 = team_massey_spread.get(g.opponent_id, float('nan'))
             _mm1 = team_massey_multi.get(g.team_id)
             _mm2 = team_massey_multi.get(g.opponent_id)
         else:
-            _mc1 = _mc2 = _ms1 = _ms2 = 0.0
+            _mc1 = _mc2 = _ms1 = _ms2 = float('nan')
             _mm1 = _mm2 = None
 
         v1 = IncrementalMetricsEngine.metrics_to_team_vector(

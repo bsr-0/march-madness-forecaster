@@ -895,7 +895,7 @@ class TestHistoricalMasseyInTraining:
         for entry in massey_data:
             tid = entry.get("team_id", "")
             if tid:
-                team_massey_composite[tid] = entry.get("normalized", 0.0)
+                team_massey_composite[tid] = entry.get("normalized", float('nan'))
 
         assert len(team_massey_composite) >= 50, (
             f"Only {len(team_massey_composite)} teams in massey composite cache"

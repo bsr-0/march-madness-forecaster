@@ -2725,8 +2725,8 @@ class IncrementalMetricsEngine:
     def metrics_to_team_vector(
         m: ProprietaryTeamMetrics,
         seed: int = 0,
-        external_rating_composite: float = 0.0,
-        external_rating_spread: float = 0.0,
+        external_rating_composite: float = float('nan'),
+        external_rating_spread: float = float('nan'),
         massey_features=None,
     ) -> np.ndarray:
         """Convert ProprietaryTeamMetrics to a 66-dim team feature vector.

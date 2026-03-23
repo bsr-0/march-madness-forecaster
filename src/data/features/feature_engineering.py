@@ -356,10 +356,10 @@ class TeamFeatures:
     frontcourt_rapm: float = 0.0
 
     # External rating composite (WS3: meta-ranking of 100+ systems)
-    # 0.0 when no external ratings are available (historical training)
-    external_rating_composite: float = 0.0
+    # NaN when no external ratings available (tree models handle natively)
+    external_rating_composite: float = float('nan')
     # External rating spread (disagreement across rating systems)
-    external_rating_spread: float = 0.0
+    external_rating_spread: float = float('nan')
 
     # Massey multi-system individual ratings (10) — individual system-level
     # normalized ratings from MMasseyOrdinals.csv top predictive systems.
@@ -705,7 +705,7 @@ class TeamFeatures:
             self.frontcourt_rapm,
 
             # External ratings (2) — WS3: orthogonal signal from rating systems
-            # 0.0 when no external data available; tree models handle gracefully
+            # NaN when no external data available; tree models handle natively
             self.external_rating_composite,
             self.external_rating_spread,
 
