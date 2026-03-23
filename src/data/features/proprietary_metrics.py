@@ -3033,14 +3033,11 @@ def torvik_to_game_records(
                 if stripped_clean != stripped:
                     _torvik_name_to_id[_team_id(stripped_clean)] = canon
 
-    # CBBpy→Torvik alias overrides for known naming mismatches.
-    # CBBpy/ESPN uses modern branding; Torvik may lag behind.
-    _CBBPY_TO_TORVIK_ALIASES: Dict[str, str] = {
-        "mcneese": "mcneese_state",         # rebranded from McNeese State
-        "american_university": "american",   # Torvik uses short name
-    }
-    for alias, target in _CBBPY_TO_TORVIK_ALIASES.items():
-        if target in _torvik_name_to_id:
+    # CBBpy→Torvik alias overrides: use shared alias config from normalize.py
+    # instead of maintaining a separate inline dict.
+    from src.data.normalize import _QUICK_ALIAS as _shared_aliases
+    for alias, target in _shared_aliases.items():
+        if target in _torvik_name_to_id and alias not in _torvik_name_to_id:
             _torvik_name_to_id[alias] = _torvik_name_to_id[target]
 
     # Load CBBpy team map CSV: maps display names (with mascot) to

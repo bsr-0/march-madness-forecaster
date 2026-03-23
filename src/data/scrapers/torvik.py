@@ -251,11 +251,17 @@ class TorVikValidator:
         return warnings_out
 
     @classmethod
-    def validate_teams(cls, teams: List["TorVikTeam"]) -> Dict[str, List[str]]:
-        """Validate a list of teams. Returns {team_id: [warnings]}."""
+    def validate_teams(cls, teams: List["TorVikTeam"], strict: bool = False) -> Dict[str, List[str]]:
+        """Validate a list of teams. Returns {team_id: [warnings]}.
+
+        Args:
+            teams: The teams to validate.
+            strict: If True, raise TorVikValidationError when any team has
+                    zero/NaN critical fields (AdjOE, AdjDE, barthag).
+        """
         result: Dict[str, List[str]] = {}
         for team in teams:
-            w = cls.validate_team(team)
+            w = cls.validate_team(team, strict=strict)
             if w:
                 result[team.team_id] = w
         total_warnings = sum(len(v) for v in result.values())
@@ -379,7 +385,7 @@ class BartTorvikScraper:
         kwargs.setdefault("timeout", 30)
         return retry_request(self.session.get, url, **kwargs)
 
-    def fetch_current_rankings(self, year: int = 2026) -> List[TorVikTeam]:
+    def fetch_current_rankings(self, year: int = 2026, strict: bool = False) -> List[TorVikTeam]:
         """
         Fetch current T-Rank ratings for all teams.
 
@@ -392,6 +398,8 @@ class BartTorvikScraper:
 
         Args:
             year: Season year (e.g., 2026 for 2025-26 season)
+            strict: If True, raise TorVikValidationError when any team has
+                    zero/NaN critical fields (AdjOE, AdjDE, barthag).
 
         Returns:
             List of TorVikTeam objects
@@ -436,7 +444,7 @@ class BartTorvikScraper:
                 logger.warning("Could not fetch Torvik rankings: %s", e)
 
         if teams:
-            TorVikValidator.validate_teams(teams)
+            TorVikValidator.validate_teams(teams, strict=strict)
             self._save_to_cache(f"torvik_rankings_{year}.json", {
                 'teams': [t.to_dict() for t in teams],
                 'timestamp': datetime.now().isoformat()
@@ -1065,6 +1073,30 @@ class BartTorvikScraper:
 
         return dict(teams)
 
+    # Empirical D1 population priors for Bayesian shrinkage of CSV-approximated rates.
+    # These match _POPULATION_STATS in feature_engineering.py.
+    _POP_PRIORS = {
+        'orb': 0.295,
+        'drb': 0.705,
+        'to': 0.185,
+    }
+    # Effective sample size of the prior (how many "pseudo-minutes" the prior is worth).
+    # Calibrated so a team with ~500 total player-minutes (typical full roster)
+    # gets ~10% shrinkage, while a team with only 100 minutes gets ~35% shrinkage.
+    _PRIOR_STRENGTH = 60.0
+
+    @staticmethod
+    def _shrink_csv_rate(raw_rate: float, min_pct_total: float, pop_mean: float) -> float:
+        """Bayesian shrinkage: blend CSV approximation toward population mean.
+
+        weight_data = min_pct_total / (min_pct_total + prior_strength)
+        Result = weight_data * raw_rate + (1 - weight_data) * pop_mean
+        """
+        if min_pct_total <= 0:
+            return pop_mean
+        w = min_pct_total / (min_pct_total + BartTorvikScraper._PRIOR_STRENGTH)
+        return w * raw_rate + (1.0 - w) * pop_mean
+
     def _four_factors_from_player_csv(self, year: int) -> Dict[str, Dict]:
         """Compute team-level Four Factors from the player CSV endpoint.
 
@@ -1080,10 +1112,9 @@ class BartTorvikScraper:
 
         eFG% and FTR are computed from counting stats (exact).  ORB%, DRB%,
         and TO% are approximated via minutes-weighted averaging of individual
-        player rates.  These are *estimates* (individual rates are not
-        strictly additive) but provide a much better signal than leaving them
-        at 0.0.  The ``_csv_approximation`` flag is set to True so downstream
-        code can decide whether to trust them.
+        player rates, then Bayesian-shrunk toward population means to mitigate
+        the non-additivity bias (~2-3pp).  The ``_csv_approximation`` flag is
+        set to True so downstream code can decide whether to trust them.
         """
         try:
             csv_text = self._fetch_player_csv(year)
@@ -1106,18 +1137,21 @@ class BartTorvikScraper:
             ftr = t['fta'] / fga
 
             # Minutes-weighted approximation of team-level ORB%/TO%.
-            # Individual player rates aren't strictly additive, but weighting
-            # by minutes share produces a reasonable approximation (typically
-            # within 2-3 percentage points of the true team rate).
+            # Individual player rates aren't strictly additive, so we compute
+            # a raw estimate and then Bayesian-shrink toward the D1 population
+            # mean.  Shrinkage is inversely proportional to total minutes data.
             min_total = t['min_pct_total']
             if min_total > 0:
-                approx_orb = t['orb_pct_weighted'] / min_total / 100.0
-                approx_drb = t['drb_pct_weighted'] / min_total / 100.0
-                approx_to = t['to_pct_weighted'] / min_total / 100.0
+                raw_orb = t['orb_pct_weighted'] / min_total / 100.0
+                raw_drb = t['drb_pct_weighted'] / min_total / 100.0
+                raw_to = t['to_pct_weighted'] / min_total / 100.0
+                approx_orb = self._shrink_csv_rate(raw_orb, min_total, self._POP_PRIORS['orb'])
+                approx_drb = self._shrink_csv_rate(raw_drb, min_total, self._POP_PRIORS['drb'])
+                approx_to = self._shrink_csv_rate(raw_to, min_total, self._POP_PRIORS['to'])
             else:
-                approx_orb = 0.0
-                approx_drb = 0.0
-                approx_to = 0.0
+                approx_orb = self._POP_PRIORS['orb']
+                approx_drb = self._POP_PRIORS['drb']
+                approx_to = self._POP_PRIORS['to']
 
             result[tid] = {
                 'effective_fg_pct': round(efg, 4),
@@ -1134,8 +1168,8 @@ class BartTorvikScraper:
         non_zero_orb = sum(1 for v in result.values() if v['offensive_reb_rate'] > 0)
         logger.info(
             "Four Factors from player CSV (%d): computed for %d teams "
-            "(eFG%%/FTR exact, ORB%%/DRB%%/TO%% approximated for %d teams; "
-            "defensive factors unavailable from this source)",
+            "(eFG%%/FTR exact, ORB%%/DRB%%/TO%% Bayesian-shrunk toward population mean "
+            "for %d teams; defensive factors unavailable from this source)",
             year, len(result), non_zero_orb,
         )
         return result
