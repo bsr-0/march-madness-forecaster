@@ -2923,7 +2923,14 @@ class IncrementalMetricsEngine:
             seed_diff,
         ])
 
-        return np.concatenate([diff, absolute, interactions])
+        result = np.concatenate([diff, absolute, interactions])
+        from .feature_engineering import MATCHUP_DIM
+        assert result.shape[0] == MATCHUP_DIM, (
+            f"build_matchup_vector produced {result.shape[0]}-dim vector, "
+            f"expected MATCHUP_DIM={MATCHUP_DIM}. Update MATCHUP_DIM in "
+            f"feature_engineering.py if the layout has changed."
+        )
+        return result
 
 
 # ---------------------------------------------------------------------------

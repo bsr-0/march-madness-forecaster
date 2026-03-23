@@ -112,7 +112,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"PRODUCTION VALIDATION FAILED: {exc}")
         return 1
     except Exception as exc:
+        import traceback
         print(f"FATAL ERROR: {exc}")
+        traceback.print_exc()
         return 1
 
 
