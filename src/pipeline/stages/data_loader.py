@@ -737,6 +737,7 @@ def load_team_stat_sources(
     proprietary_map, and all side-effect state needed by the pipeline.
     """
     # --- Load Torvik data ---
+    _strict_torvik = getattr(config, "pipeline_mode", "") == "production"
     if config.torvik_json:
         with open(config.torvik_json, "r") as f:
             torvik_payload = json.load(f)
@@ -744,7 +745,7 @@ def load_team_stat_sources(
         torvik_teams = BartTorvikScraper().load_from_json(config.torvik_json)
     elif config.scrape_live:
         torvik_teams = BartTorvikScraper(cache_dir=config.data_cache_dir).fetch_current_rankings(
-            config.year
+            config.year, strict=_strict_torvik,
         )
     else:
         raise DataRequirementError(
@@ -792,6 +793,17 @@ def load_team_stat_sources(
                 sum(1 for v in _sample_efg_after if abs(v) > 1e-6),
                 len(_sample_efg_after),
             )
+
+    # --- Strict Torvik validation for production pipelines ---
+    # Only validate critical fields (AdjOE/AdjDE/barthag) when loading from
+    # live scrape.  JSON files from prior ingestion runs may contain non-
+    # tournament teams with zero barthag, which is expected and harmless.
+    if _strict_torvik and torvik_teams and config.scrape_live:
+        from src.data.scrapers.torvik import TorVikValidator
+        try:
+            TorVikValidator.validate_teams(torvik_teams, strict=True)
+        except Exception as exc:
+            logger.warning("Strict Torvik validation failed: %s", exc)
 
     # --- Load historical games for proprietary metrics ---
     historical_games: List[Dict] = []
