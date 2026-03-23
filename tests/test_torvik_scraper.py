@@ -223,6 +223,60 @@ class TestCacheValidation:
     def test_none_cache_rejected(self, scraper):
         assert scraper._cache_has_valid_four_factors(None) is False  # type: ignore
 
+    def test_partial_corruption_rejected(self, scraper):
+        """Cache with >30% zero ORB% teams should be rejected."""
+        cache = {}
+        # 4 good teams
+        for i in range(4):
+            cache[f"good_{i}"] = {"offensive_reb_rate": 0.30, "turnover_rate": 0.18}
+        # 6 corrupted teams (>30% zero ORB%)
+        for i in range(6):
+            cache[f"bad_{i}"] = {"offensive_reb_rate": 0.0, "turnover_rate": 0.18}
+        assert scraper._cache_has_valid_four_factors(cache) is False
+
+    def test_partial_corruption_below_threshold_accepted(self, scraper):
+        """Cache with <=30% zero ORB% teams should be accepted."""
+        cache = {}
+        # 8 good teams
+        for i in range(8):
+            cache[f"good_{i}"] = {"offensive_reb_rate": 0.30, "turnover_rate": 0.18}
+        # 2 zero ORB% teams (20% < 30% threshold)
+        for i in range(2):
+            cache[f"bad_{i}"] = {"offensive_reb_rate": 0.0, "turnover_rate": 0.18}
+        assert scraper._cache_has_valid_four_factors(cache) is True
+
+    def test_rankings_cache_valid(self, scraper):
+        teams = [
+            {"team_id": f"team_{i}", "adj_offensive_efficiency": 100.0 + i,
+             "adj_defensive_efficiency": 95.0 + i, "barthag": 0.8}
+            for i in range(120)
+        ]
+        assert scraper._cache_has_valid_rankings({"teams": teams}) is True
+
+    def test_rankings_cache_too_few_teams(self, scraper):
+        teams = [
+            {"team_id": f"team_{i}", "adj_offensive_efficiency": 100.0,
+             "adj_defensive_efficiency": 95.0, "barthag": 0.8}
+            for i in range(50)
+        ]
+        assert scraper._cache_has_valid_rankings({"teams": teams}) is False
+
+    def test_rankings_cache_zero_efficiency_rejected(self, scraper):
+        """Cache with >30% zero AdjOE+AdjDE in first 20 teams should be rejected."""
+        # Put corrupted teams first so they appear in the sample (first 20)
+        teams = []
+        for i in range(8):
+            teams.append({"team_id": f"bad_{i}", "adj_offensive_efficiency": 0.0,
+                          "adj_defensive_efficiency": 0.0})
+        for i in range(112):
+            teams.append({"team_id": f"good_{i}", "adj_offensive_efficiency": 100.0,
+                          "adj_defensive_efficiency": 95.0})
+        assert scraper._cache_has_valid_rankings({"teams": teams}) is False
+
+    def test_rankings_cache_empty_rejected(self, scraper):
+        assert scraper._cache_has_valid_rankings({}) is False
+        assert scraper._cache_has_valid_rankings(None) is False  # type: ignore
+
 
 # ---------------------------------------------------------------------------
 # _aggregate_player_csv
