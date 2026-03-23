@@ -90,6 +90,32 @@ ABSOLUTE_LEVEL_FEATURE_NAMES = [
     'win_pct',          # Win percentage
 ]
 
+# ---------------------------------------------------------------------------
+# Matchup vector layout — SINGLE SOURCE OF TRUTH.
+# build_matchup_vector() in proprietary_metrics.py and symmetric.py MUST
+# use these constants.  Never hardcode matchup dimensions elsewhere.
+#
+# Layout: [diff(TEAM_FEATURE_DIM) | absolute(N_ABS) | interactions(N_INTERACT)]
+# ---------------------------------------------------------------------------
+N_ABSOLUTE_FEATURES = len(ABSOLUTE_LEVEL_FEATURE_NAMES)  # 5
+N_MATCHUP_INTERACTIONS = 7  # tempo, style, seed_em_residual, sos_seed, 3pt_var_seed, seed_interaction, seed_diff
+MATCHUP_DIM = TEAM_FEATURE_DIM + N_ABSOLUTE_FEATURES + N_MATCHUP_INTERACTIONS
+
+# Block boundaries within the matchup vector
+MATCHUP_DIFF_END = TEAM_FEATURE_DIM
+MATCHUP_ABS_START = TEAM_FEATURE_DIM
+MATCHUP_ABS_END = MATCHUP_ABS_START + N_ABSOLUTE_FEATURES
+MATCHUP_INTERACT_START = MATCHUP_ABS_END
+
+# Antisymmetric interaction indices (must be negated when swapping team1/team2).
+# Interaction order: [tempo(0), style(1), seed_em_residual(2), sos_seed(3),
+#                     3pt_var_seed(4), seed_interaction(5), seed_diff(6)]
+# Antisymmetric: offsets 2, 3, 4, 6
+MATCHUP_SEED_EM_RESIDUAL_IDX = MATCHUP_INTERACT_START + 2
+MATCHUP_SOS_SEED_IDX = MATCHUP_INTERACT_START + 3
+MATCHUP_3PT_VAR_SEED_IDX = MATCHUP_INTERACT_START + 4
+MATCHUP_SEED_DIFF_IDX = MATCHUP_INTERACT_START + 6
+
 # FIX #8: Features that are frequently missing/default and get a companion
 # binary indicator.  The indicator lets the model discount the default value.
 SPARSE_FEATURE_NAMES = [
@@ -824,6 +850,12 @@ class TeamFeatures:
 _names_check = TeamFeatures.get_feature_names(include_embeddings=False)
 assert len(_names_check) == TEAM_FEATURE_DIM, (
     f"TEAM_FEATURE_DIM={TEAM_FEATURE_DIM} but get_feature_names() has {len(_names_check)} entries"
+)
+
+# Matchup layout consistency assertion
+assert MATCHUP_DIM == TEAM_FEATURE_DIM + N_ABSOLUTE_FEATURES + N_MATCHUP_INTERACTIONS, (
+    f"MATCHUP_DIM={MATCHUP_DIM} != TEAM_FEATURE_DIM({TEAM_FEATURE_DIM}) + "
+    f"N_ABSOLUTE({N_ABSOLUTE_FEATURES}) + N_INTERACTIONS({N_MATCHUP_INTERACTIONS})"
 )
 
 

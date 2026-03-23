@@ -7,28 +7,27 @@ and eliminates team-order bias in the feature representation.
 
 Background
 ----------
-The 78-dimensional matchup vector has three blocks:
+The matchup vector (MATCHUP_DIM dimensions) has three blocks.
+All layout constants are defined in feature_engineering.py (single source of truth).
 
-    [0:66]  Differential features  = v_team1 - v_team2
-    [66:71] Absolute features      = (v_team1 + v_team2) / 2
-    [71:78] Interaction features    = [tempo_interaction, style_mismatch,
-                                       seed_em_residual, sos_seed_interaction,
-                                       three_pt_var_seed_interaction,
-                                       seed_interaction, seed_diff]
+    [0:TEAM_FEATURE_DIM]           Differential = v_team1 - v_team2
+    [TEAM_FEATURE_DIM:+N_ABS]     Absolute     = (v_team1 + v_team2) / 2
+    [+N_ABS:+N_INTERACT]          Interactions  = [tempo, style, seed_em_residual,
+                                                    sos_seed, 3pt_var_seed,
+                                                    seed_interaction, seed_diff]
 
 When swapping team1 ↔ team2:
 
-- **Differential [0:66]**: Negate.  (v2 - v1) = -(v1 - v2)
-- **Absolute [66:71]**: Unchanged.  (v1 + v2)/2 is symmetric.
-- **Interaction [71:78]**:
-  - tempo_interaction [71]: v1[2]*v2[2] is commutative → unchanged
-  - style_mismatch [72]: (Δtempo × Δeff)/600. Both Δs negate, product
-    stays positive → unchanged  ((-a)×(-b) = a×b)
-  - seed_em_residual [73]: (residual1 - residual2)/20 → **negate**
-  - sos_seed_interaction [74]: (Δsos × Δseed)/200 → **negate**
-  - three_pt_var_seed_interaction [75]: (Δvar × Δseed)/15 → **negate**
-  - seed_interaction [76]: seed1×seed2 is commutative → unchanged
-  - seed_diff [77]: (seed1-seed2)/15 → **negate**
+- **Differential [0:DIFF_END]**: Negate all.  (v2 - v1) = -(v1 - v2)
+- **Absolute**: Unchanged.  (v1 + v2)/2 is symmetric.
+- **Interactions**:
+  - tempo_interaction: v1[2]*v2[2] is commutative → unchanged
+  - style_mismatch: (Δtempo × Δeff)/600 → unchanged ((-a)×(-b) = a×b)
+  - seed_em_residual: (residual1 - residual2)/20 → **negate**
+  - sos_seed_interaction: (Δsos × Δseed)/200 → **negate**
+  - three_pt_var_seed_interaction: (Δvar × Δseed)/15 → **negate**
+  - seed_interaction: seed1×seed2 is commutative → unchanged
+  - seed_diff: (seed1-seed2)/15 → **negate**
 
 Symmetric augmentation was previously removed because "tree models with bagging
 would overfit to the correlated duplicates."  This concern is addressed by:
@@ -59,22 +58,36 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Layout constants matching proprietary_metrics.build_matchup_vector()
+# Layout constants — imported from the single source of truth in feature_engineering.
+# NEVER hardcode matchup dimensions here; update feature_engineering.py instead.
+from ...data.features.feature_engineering import (
+    MATCHUP_DIM,
+    MATCHUP_DIFF_END,
+    MATCHUP_ABS_START,
+    MATCHUP_ABS_END,
+    MATCHUP_INTERACT_START,
+    MATCHUP_SEED_EM_RESIDUAL_IDX,
+    MATCHUP_SOS_SEED_IDX,
+    MATCHUP_3PT_VAR_SEED_IDX,
+    MATCHUP_SEED_DIFF_IDX,
+    TEAM_FEATURE_DIM,
+)
+
 DIFF_START = 0
-DIFF_END = 66  # exclusive: indices [0, 66)
-ABS_START = 66
-ABS_END = 71  # exclusive: indices [66, 71)
-INTERACT_START = 71
-INTERACT_END = 78  # exclusive: indices [71, 78)
+DIFF_END = MATCHUP_DIFF_END
+ABS_START = MATCHUP_ABS_START
+ABS_END = MATCHUP_ABS_END
+INTERACT_START = MATCHUP_INTERACT_START
+INTERACT_END = MATCHUP_DIM
+SEED_EM_RESIDUAL_IDX = MATCHUP_SEED_EM_RESIDUAL_IDX
+SOS_SEED_INTERACTION_IDX = MATCHUP_SOS_SEED_IDX
+THREE_PT_VAR_SEED_IDX = MATCHUP_3PT_VAR_SEED_IDX
+SEED_DIFF_IDX = MATCHUP_SEED_DIFF_IDX
 
-# Within interactions, transformed features
-SEED_EM_RESIDUAL_IDX = 73  # seed_em_residual: antisymmetric
-SOS_SEED_INTERACTION_IDX = 74  # sos_seed_interaction: antisymmetric
-THREE_PT_VAR_SEED_IDX = 75  # three_pt_var_seed_interaction: antisymmetric
-SEED_DIFF_IDX = 77  # seed_diff: antisymmetric
-
-# Full expected dimensionality
-MATCHUP_DIM = 78
+# Import-time assertion: catch dimension drift immediately
+assert DIFF_END == TEAM_FEATURE_DIM, (
+    f"DIFF_END={DIFF_END} != TEAM_FEATURE_DIM={TEAM_FEATURE_DIM}"
+)
 
 
 def swap_matchup_vector(x: np.ndarray) -> np.ndarray:
