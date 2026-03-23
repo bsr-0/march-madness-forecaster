@@ -1167,14 +1167,12 @@ class LOYOValidator:
                 logger.warning("PIT validation unavailable: %s", e)
                 self._pit_validator = None
         if temporal_mode == "leave_one_out":
-            import warnings
-            warnings.warn(
-                "LOYOValidator(temporal_mode='leave_one_out') includes future "
-                "years in training folds, which overstates OOS performance. "
+            raise ValueError(
+                "LOYOValidator(temporal_mode='leave_one_out') is no longer supported. "
+                "This mode includes future years in training folds, which overstates "
+                "OOS performance and constitutes data leakage. "
                 "Use temporal_mode='rolling_window' (default) or "
-                "ProspectiveValidator instead.",
-                DeprecationWarning,
-                stacklevel=2,
+                "ProspectiveValidator instead."
             )
 
     def validate(

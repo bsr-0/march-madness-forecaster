@@ -30,7 +30,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from pathlib import Path
-from datetime import datetime
+from datetime import date, datetime
 
 import requests
 from bs4 import BeautifulSoup
@@ -335,6 +335,7 @@ class BartTorvikScraper:
         cache_dir: Optional[str] = None,
         cache_ttl_seconds: float = DEFAULT_CACHE_TTL_SECONDS,
         circuit_breaker_state_file: Optional[str] = None,
+        strict_leakage: bool = False,
     ):
         """
         Initialize scraper.
@@ -343,7 +344,10 @@ class BartTorvikScraper:
             cache_dir: Directory to cache scraped data.
             cache_ttl_seconds: How long cached files remain valid (default 6h).
             circuit_breaker_state_file: Path for circuit breaker persistence.
+            strict_leakage: If True, raise LeakageError when scraping after
+                tournament start date.  Used in production pipelines.
         """
+        self._strict_leakage = strict_leakage
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
@@ -385,6 +389,32 @@ class BartTorvikScraper:
         kwargs.setdefault("timeout", 30)
         return retry_request(self.session.get, url, **kwargs)
 
+    def _check_tournament_date_guard(self, year: int, strict: bool = False) -> None:
+        """Warn or raise if scraping after tournament start date.
+
+        Post-tournament Torvik data includes tournament game results in
+        efficiency metrics, which would contaminate pre-tournament predictions.
+        """
+        try:
+            from ...pipeline.config import TOURNAMENT_START_DATES
+        except ImportError:
+            return  # Scraper used standalone, can't guard
+        cutoff = TOURNAMENT_START_DATES.get(year)
+        if cutoff is None:
+            return
+        today = date.today()
+        if today >= cutoff:
+            msg = (
+                f"Live Torvik scrape for {year} requested on {today}, "
+                f"but tournament started {cutoff}. Post-tournament efficiency "
+                f"metrics include tournament game results — DATA LEAKAGE RISK. "
+                f"Use pre-tournament cached data instead."
+            )
+            if strict or self._strict_leakage:
+                from ...exceptions import LeakageError
+                raise LeakageError(msg)
+            logger.warning(msg)
+
     def fetch_current_rankings(self, year: int = 2026, strict: bool = False) -> List[TorVikTeam]:
         """
         Fetch current T-Rank ratings for all teams.
@@ -404,6 +434,8 @@ class BartTorvikScraper:
         Returns:
             List of TorVikTeam objects
         """
+        self._check_tournament_date_guard(year, strict=strict)
+
         # Check cache (with TTL)
         cached = self._load_from_cache(f"torvik_rankings_{year}.json")
         if cached:
@@ -651,6 +683,8 @@ class BartTorvikScraper:
         Returns:
             Dict of team_id -> four factors dict
         """
+        self._check_tournament_date_guard(year)
+
         cached = self._load_from_cache(f"torvik_four_factors_{year}.json")
         if cached and self._cache_has_valid_four_factors(cached):
             return cached
@@ -817,6 +851,8 @@ class BartTorvikScraper:
         Returns:
             Dict of team_id -> {'three_pt_pct': float, 'ft_pct': float}
         """
+        self._check_tournament_date_guard(year)
+
         cached = self._load_from_cache(f"torvik_shooting_{year}.json")
         if cached:
             return cached

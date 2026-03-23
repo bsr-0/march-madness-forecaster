@@ -25,9 +25,42 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from datetime import date
+
 from .normalize import normalize_team_id
 
 logger = logging.getLogger(__name__)
+
+
+# Selection Sunday dates — duplicated from pit_validation.py to avoid
+# cross-layer import (data module should not import from pipeline).
+# These are fixed historical dates that change only when new seasons are added.
+_SELECTION_SUNDAY_DATES: Dict[int, date] = {
+    2016: date(2016, 3, 13), 2017: date(2017, 3, 12), 2018: date(2018, 3, 11),
+    2019: date(2019, 3, 17), 2021: date(2021, 3, 14), 2022: date(2022, 3, 13),
+    2023: date(2023, 3, 12), 2024: date(2024, 3, 17), 2025: date(2025, 3, 16),
+    2026: date(2026, 3, 15),
+}
+
+
+def _compute_max_ranking_day(season: int, day_zero_str: Optional[str] = None) -> int:
+    """Compute the maximum safe ranking day number for a season.
+
+    Returns the day number corresponding to Selection Sunday (the last day
+    before the NCAA tournament bracket is finalized), or 133 as a conservative
+    fallback when dates are unavailable.
+
+    This prevents accidentally loading Massey Ordinal rankings from post-
+    tournament dates, which would leak tournament outcomes into features.
+    """
+    sel_sun = _SELECTION_SUNDAY_DATES.get(season)
+    if sel_sun is None or not day_zero_str:
+        return 133  # Conservative fallback (~Feb 24 from Oct 14 DayZero)
+    try:
+        day_zero = date.fromisoformat(str(day_zero_str))
+        return (sel_sun - day_zero).days
+    except (ValueError, TypeError):
+        return 133
 
 
 class KaggleDataLoader:
@@ -150,11 +183,20 @@ class KaggleDataLoader:
         season: int,
         *,
         ranking_day_num: Optional[int] = None,
+        max_day: Optional[int] = None,
     ) -> Dict[str, Dict[str, "MasseyOrdinalEntry"]]:
         """Load MMasseyOrdinals.csv for a given season.
 
         Returns a dict of {system_name: {canonical_team_id: MasseyOrdinalEntry}}.
-        When ``ranking_day_num`` is None, uses the latest available day per system.
+        When ``ranking_day_num`` is None, uses the latest available day per system,
+        capped at ``max_day`` to prevent loading post-Selection-Sunday rankings
+        that could leak tournament outcomes.
+
+        Args:
+            season: Season year (e.g. 2026 for 2025-26).
+            ranking_day_num: Specific day number (overrides auto-selection).
+            max_day: Maximum day number to consider when auto-selecting.
+                If None, dynamically computed from Selection Sunday + DayZero.
         """
         path = self._find_csv("MMasseyOrdinals")
         if path is None:
@@ -182,17 +224,47 @@ class KaggleDataLoader:
                 "rank": ordinal_rank,
             })
 
+        # Auto-compute max_day from Selection Sunday + DayZero if not provided
+        if max_day is None and ranking_day_num is None:
+            seasons = self.load_seasons()
+            dz = next((s["day_zero"] for s in seasons if s["season"] == season), None)
+            max_day = _compute_max_ranking_day(season, dz)
+            logger.debug(
+                "Massey Ordinals for %d: auto-computed max_day=%d from Selection Sunday",
+                season, max_day,
+            )
+
         # Pass 2: for each system, pick the target day (latest or specified)
         result: Dict[str, Dict[str, MasseyOrdinalEntry]] = {}
         for system, days in by_system.items():
             if ranking_day_num is not None:
                 target_day = ranking_day_num
             else:
-                target_day = max(days.keys())
+                # Cap at max_day to prevent loading post-Selection-Sunday rankings
+                available_days = sorted(days.keys())
+                if max_day is not None:
+                    safe_days = [d for d in available_days if d <= max_day]
+                    excluded = [d for d in available_days if d > max_day]
+                    if excluded and system == next(iter(by_system)):  # Log once
+                        logger.info(
+                            "Massey Ordinals for %d: excluded %d post-ceiling days "
+                            "(max_day=%d, excluded max=%d)",
+                            season, len(excluded), max_day, max(excluded),
+                        )
+                    if safe_days:
+                        available_days = safe_days
+                    else:
+                        logger.warning(
+                            "Massey Ordinals for %d system '%s': no days <= max_day=%d; "
+                            "using day %d (POTENTIAL LEAKAGE RISK)",
+                            season, system, max_day, max(available_days),
+                        )
+                target_day = max(available_days)
             entries = days.get(target_day, [])
             if not entries:
                 # Fall back to closest earlier day
-                earlier = [d for d in days.keys() if d <= (ranking_day_num or 999)]
+                ceiling = ranking_day_num or max_day or 999
+                earlier = [d for d in days.keys() if d <= ceiling]
                 if earlier:
                     target_day = max(earlier)
                     entries = days[target_day]
@@ -225,13 +297,16 @@ class KaggleDataLoader:
         season: int,
         *,
         ranking_day_num: Optional[int] = None,
+        max_day: Optional[int] = None,
     ) -> Dict[str, List[Dict]]:
         """Load Massey Ordinals and convert to ExternalRatingsLoader cache format.
 
         Returns {system_name: [{"team_name", "team_id", "rating", "ranking", "normalized"}]}
         suitable for saving via ExternalRatingsLoader.save_system().
         """
-        ordinals = self.load_massey_ordinals(season, ranking_day_num=ranking_day_num)
+        ordinals = self.load_massey_ordinals(
+            season, ranking_day_num=ranking_day_num, max_day=max_day,
+        )
         if not ordinals:
             return {}
 
