@@ -54,7 +54,7 @@ This codebase has been hardened against overfitting through multiple `OOS-FIX` c
 
 Sports-specific values that should not be changed without strong justification:
 
-- `TEAM_FEATURE_DIM = 79` — Fixed feature vector dimensionality
+- `TEAM_FEATURE_DIM = 86` — Fixed feature vector dimensionality
 - `TOURNAMENT_START_DATES` — Per-year tournament start dates for PIT enforcement
 - `SELECTION_SUNDAY_DATES` — Per-year Selection Sunday dates (PIT tier enforcement)
 - `KAGGLE_ROUND_WEIGHTS` — Round-wise weighting reflecting Kaggle scoring

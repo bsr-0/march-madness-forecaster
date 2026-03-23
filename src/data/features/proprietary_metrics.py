@@ -2727,6 +2727,7 @@ class IncrementalMetricsEngine:
         seed: int = 0,
         external_rating_composite: float = 0.0,
         external_rating_spread: float = 0.0,
+        massey_features=None,
     ) -> np.ndarray:
         """Convert ProprietaryTeamMetrics to a 66-dim team feature vector.
 
@@ -2862,10 +2863,21 @@ class IncrementalMetricsEngine:
         else:
             v[73] = 0.0
 
-        # NaN/inf guard
-        bad = np.isnan(v) | np.isinf(v)
-        if bad.any():
-            v[bad] = 0.0
+        # Massey multi-system features (12) — indices 74-85
+        # NaN is preserved for tree models (LightGBM/XGBoost handle natively)
+        if massey_features is not None:
+            from .massey_systems import MASSEY_TOP_SYSTEMS, features_to_vector
+            massey_vals = features_to_vector(massey_features)
+            for i, val in enumerate(massey_vals):
+                v[74 + i] = val
+        else:
+            # Leave as NaN so tree models treat as missing
+            v[74:86] = float('nan')
+
+        # NaN/inf guard — convert inf→NaN but preserve NaN for tree models
+        inf_mask = np.isinf(v)
+        if inf_mask.any():
+            v[inf_mask] = np.nan
         return v
 
     @staticmethod

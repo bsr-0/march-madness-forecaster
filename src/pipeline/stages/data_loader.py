@@ -1613,6 +1613,41 @@ def build_or_load_game_flows(
     return GameFlowResult(team_to_games=team_to_games, all_game_flows=all_game_flows)
 
 
+def load_massey_multi_system(
+    config: SOTAPipelineConfig,
+) -> Dict:
+    """Load Massey Ordinals multi-system features for all teams.
+
+    Returns dict of {team_id: MasseyMultiSystemFeatures} or empty dict.
+    """
+    if not config.enable_external_ratings or not config.kaggle_dir:
+        return {}
+
+    try:
+        from ...data.scrapers.external_ratings import ExternalRatingsLoader
+    except ImportError:
+        return {}
+
+    cache_dir = config.external_ratings_dir or config.data_cache_dir
+    loader = ExternalRatingsLoader(cache_dir=cache_dir)
+
+    try:
+        result = loader.load_massey_multi_system(config.kaggle_dir, config.year)
+        if result:
+            logger.info(
+                "Massey multi-system: loaded features for %d teams (year=%d)",
+                len(result), config.year,
+            )
+        return result
+    except Exception as e:
+        logger.warning(
+            "Massey multi-system extraction failed: %s. "
+            "Multi-system features will be NaN (tree models handle gracefully).",
+            e,
+        )
+        return {}
+
+
 def load_external_ratings(
     config: SOTAPipelineConfig,
     teams: List[Team],
