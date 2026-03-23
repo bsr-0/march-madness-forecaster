@@ -27,6 +27,7 @@ FIX AUDIT (2026-02-19):
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 import logging
+import math
 import numpy as np
 
 from ..models.player import Player, Roster, InjuryStatus
@@ -1194,7 +1195,7 @@ class FeatureEngineer:
             _defaults_used = []
             for i, field in enumerate(TeamFeatures._FF_FIELD_ORDER):
                 val = torvik_data.get(field)
-                if not val:  # None, 0, 0.0 all trigger imputation
+                if not val or (isinstance(val, float) and math.isnan(val)):
                     setattr(features, field, _priors[i])
                     _defaults_used.append(field)
                 else:
