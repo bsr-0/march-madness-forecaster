@@ -283,6 +283,7 @@ class ExternalRatingsLoader:
         year: int,
         *,
         ranking_day_num: Optional[int] = None,
+        max_day: Optional[int] = None,
         systems: Optional[List[str]] = None,
     ) -> int:
         """Populate the external ratings cache from Kaggle MMasseyOrdinals CSV.
@@ -296,6 +297,8 @@ class ExternalRatingsLoader:
             kaggle_dir: Path to directory containing Kaggle CSV files.
             year: Season year (e.g. 2025 for the 2024-25 season).
             ranking_day_num: Specific day number to use (None = latest).
+            max_day: Maximum ranking day number to consider (None = auto-compute
+                from Selection Sunday).  Prevents loading post-tournament data.
             systems: Restrict to these system names.  If None, loads the
                 top systems by coverage (those with rankings for 300+ teams).
 
@@ -306,7 +309,7 @@ class ExternalRatingsLoader:
 
         loader = KaggleDataLoader(kaggle_dir)
         all_systems = loader.load_massey_ordinals_as_external_ratings(
-            year, ranking_day_num=ranking_day_num,
+            year, ranking_day_num=ranking_day_num, max_day=max_day,
         )
         if not all_systems:
             logger.warning("No Massey Ordinals found for %d in %s", year, kaggle_dir)

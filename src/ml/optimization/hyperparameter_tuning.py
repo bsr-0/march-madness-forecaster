@@ -832,21 +832,18 @@ class LeaveOneYearOutCV:
                 ``"leave_one_out"`` (train on all other years).
         """
         self.years = years or [y for y in range(2017, 2026) if y != 2020]
-        if temporal_mode not in ("rolling_window", "leave_one_out"):
+        if temporal_mode == "leave_one_out":
             raise ValueError(
-                f"temporal_mode must be 'rolling_window' or 'leave_one_out', "
-                f"got '{temporal_mode}'"
+                "LeaveOneYearOutCV(temporal_mode='leave_one_out') is no longer "
+                "supported. This mode includes future years in training folds, "
+                "which constitutes data leakage. "
+                "Use temporal_mode='rolling_window' (default) instead."
+            )
+        if temporal_mode != "rolling_window":
+            raise ValueError(
+                f"temporal_mode must be 'rolling_window', got '{temporal_mode}'"
             )
         self.temporal_mode = temporal_mode
-        if temporal_mode == "leave_one_out":
-            import warnings
-            warnings.warn(
-                "LeaveOneYearOutCV(temporal_mode='leave_one_out') includes "
-                "future years in training folds, overstating OOS performance. "
-                "Use temporal_mode='rolling_window' (default) instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
 
     def split(
         self,
