@@ -300,19 +300,10 @@ class TestBrierLightGBMTuner:
 
 
 class TestLeaveOneYearOutCV:
-    def test_basic_splits_leave_one_out(self):
-        """Original leave-one-out mode: all years get a fold."""
-        loyo = LeaveOneYearOutCV(years=[2021, 2022, 2023], temporal_mode="leave_one_out")
-        game_years = np.array([2021]*30 + [2022]*30 + [2023]*30)
-        splits = loyo.split(game_years)
-        assert len(splits) == 3
-        for train_idx, test_idx, year in splits:
-            assert len(train_idx) > 0
-            assert len(test_idx) > 0
-            # All test samples should be from the held-out year
-            assert all(game_years[i] == year for i in test_idx)
-            # No test samples in training set
-            assert all(game_years[i] != year for i in train_idx)
+    def test_basic_splits_leave_one_out_raises(self):
+        """leave_one_out mode is no longer supported (leakage risk)."""
+        with pytest.raises(ValueError, match="no longer supported"):
+            LeaveOneYearOutCV(years=[2021, 2022, 2023], temporal_mode="leave_one_out")
 
     def test_basic_splits_rolling_window(self):
         """Rolling window mode: first year skipped (no prior training data)."""

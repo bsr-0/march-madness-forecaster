@@ -33,9 +33,19 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
-def load(path):
-    with open(path) as f:
-        return json.load(f)
+def load(path, required=True):
+    """Load JSON file with clear GitHub Actions error annotations."""
+    if not Path(path).exists():
+        if required:
+            print(f"::error::Required file not found: {path}")
+            sys.exit(1)
+        return None
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"::error::Corrupt JSON in {path}: {e}")
+        sys.exit(1)
 
 
 class SafeEncoder(json.JSONEncoder):
@@ -101,7 +111,7 @@ torvik_2026 = load(DATA / "raw" / "torvik_2026.json")
 torvik_2025 = load(HIST / "torvik_2025.json")
 seeds_2025 = load(HIST / "tournament_seeds_2025.json")
 metrics_2025 = load(HIST / "team_metrics_2025.json")
-metrics_2026_raw = load(DATA / "raw" / "team_metrics_2026.json") if (DATA / "raw" / "team_metrics_2026.json").exists() else None
+metrics_2026_raw = load(DATA / "raw" / "team_metrics_2026.json", required=False)
 
 # Build rating lookups
 def build_rating_lookup(torvik_data):
