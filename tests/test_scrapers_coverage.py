@@ -922,12 +922,6 @@ class TestBartTorvikScraper:
         result = scraper.fetch_current_rankings(year=2026)
         assert result == []
 
-    def test_parse_rankings_page_no_table(self):
-        from src.data.scrapers.torvik import BartTorvikScraper
-        scraper = BartTorvikScraper()
-        result = scraper._parse_rankings_page("<html><body><p>No table</p></body></html>")
-        assert result == []
-
     def test_aggregate_player_csv_empty(self):
         from src.data.scrapers.torvik import BartTorvikScraper
         scraper = BartTorvikScraper()
@@ -998,14 +992,3 @@ class TestBartTorvikScraper:
         assert len(result) == 1
         assert result[0].name == "Duke"
 
-    def test_parse_four_factors_page_no_table(self):
-        from src.data.scrapers.torvik import BartTorvikScraper
-        scraper = BartTorvikScraper()
-        result = scraper._parse_four_factors_page("<html><body></body></html>")
-        assert result == {}
-
-    def test_parse_shooting_page_no_table(self):
-        from src.data.scrapers.torvik import BartTorvikScraper
-        scraper = BartTorvikScraper()
-        result = scraper._parse_shooting_page("<html><body></body></html>")
-        assert result == {}
