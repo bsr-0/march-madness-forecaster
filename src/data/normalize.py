@@ -17,14 +17,22 @@ without the overhead of fuzzy matching.
 from __future__ import annotations
 
 import html as _html
+import json
+import logging
 import re
 import unicodedata
+from pathlib import Path
+
+_logger = logging.getLogger(__name__)
 
 # FIX #2: Quick alias table for the most common cross-source mismatches.
 # These are the 7 known tournament-team misresolution risks from the audit
 # plus additional high-frequency mismatches found in historical data.
 # Maps raw normalized form → canonical ID.
-_QUICK_ALIAS: dict[str, str] = {
+#
+# Primary source: configs/team_aliases.json (versioned, easy to update).
+# Inline fallback below is used when the config file is missing.
+_QUICK_ALIAS_INLINE: dict[str, str] = {
     # Audit-identified critical mismatches
     "unc": "north_carolina",
     "byu": "brigham_young",
@@ -169,8 +177,29 @@ _QUICK_ALIAS: dict[str, str] = {
     "arizonancaa": "arizona",
     "texasncaa": "texas",
     "iowa_statencaa": "iowa_state",
+    # From proprietary_metrics.py inline aliases
+    "mcneese": "mcneese_state",
+    "american_university": "american",
 }
 
+
+def _load_aliases() -> dict[str, str]:
+    """Load alias map from configs/team_aliases.json, falling back to inline dict."""
+    config_path = Path(__file__).resolve().parents[2] / "configs" / "team_aliases.json"
+    try:
+        with open(config_path) as f:
+            data = json.load(f)
+        aliases = data.get("aliases", {})
+        if aliases:
+            _logger.debug("Loaded %d team aliases from %s (version %s)",
+                          len(aliases), config_path, data.get("version", "?"))
+            return aliases
+    except (FileNotFoundError, json.JSONDecodeError, OSError) as exc:
+        _logger.debug("Could not load team aliases config (%s), using inline fallback", exc)
+    return _QUICK_ALIAS_INLINE
+
+
+_QUICK_ALIAS: dict[str, str] = _load_aliases()
 
 _NCAA_SUFFIX_RE = re.compile(r"ncaa$", re.IGNORECASE)
 
