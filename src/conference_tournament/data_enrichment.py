@@ -13,6 +13,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from src.data.normalize import normalize_team_id as _canonical_id
+
 logger = logging.getLogger(__name__)
 
 
@@ -157,33 +159,44 @@ def _merge_if_zero(team: dict, source: dict, field: str):
 def _fuzzy_lookup(data: dict, team_id: str) -> Optional[dict]:
     """Try common team ID variations to find a match.
 
-    Handles cases like:
-    - "miami_fl" vs "miami__fl" (double underscore)
-    - "n_c_state" vs "nc_state"
-    - "st_john_s" vs "st_johns"
+    Uses canonical normalization to bridge different ID schemes:
+    - "michigan_st" vs "michigan_state" (abbreviation vs full)
+    - "miami_fl" vs "miami__fl" (single vs double underscore)
+    - "smu" vs "southern_methodist" (abbreviation expansion)
+    - "queens" vs "queens__nc" (with/without state qualifier)
+    - "prairie_view_a_m" vs "prairie_view" (with/without A&M suffix)
     """
-    # Strip trailing state qualifiers and retry
-    variations = [
-        team_id,
-        team_id.replace("__", "_"),
-        team_id.replace("_", ""),
-        # Also try expanding single underscores to double (reverse of collapse)
-    ]
-    # Check if any data keys with collapsed underscores match
+    # Strategy 1: Normalize the lookup key and try to find a match
+    # in a canonicalized index of the data keys.
+    canonical_id = _canonical_id(team_id)
+    if canonical_id in data:
+        return data[canonical_id]
+
+    # Strategy 2: Build reverse index — normalize each data key and match.
+    # This handles the case where *data* keys use non-canonical IDs.
+    for key in data:
+        if _canonical_id(key) == canonical_id:
+            return data[key]
+
+    # Strategy 3: Legacy heuristics for edge cases the normalizer might miss.
     collapsed_id = team_id.replace("_", "")
     for key in data:
         if key.replace("_", "") == collapsed_id:
             return data[key]
-    # Handle "n_c_" -> "nc_" pattern
-    if "_c_" in team_id:
-        variations.append(team_id.replace("_c_", "c_"))
-    # Handle apostrophe stripping: "st_john_s" -> "st_johns"
-    if team_id.endswith("_s"):
-        variations.append(team_id[:-2] + "s")
 
-    for v in variations:
-        if v in data:
-            return data[v]
+    # Strategy 4: Disambiguation — match keys that start with our ID
+    # (e.g. "miami" matches "miami__fl" or "miami__oh").  Only use
+    # if there's exactly one such match to avoid ambiguity.
+    prefix_matches = [k for k in data if k.startswith(team_id + "_") or k.startswith(team_id + "__")]
+    if len(prefix_matches) == 1:
+        return data[prefix_matches[0]]
+
+    # Strategy 5: Reverse prefix — our ID starts with a data key
+    # (e.g. "miami__fl" matches data key "miami")
+    for key in data:
+        if team_id.startswith(key + "_") or team_id.startswith(key + "__"):
+            return data[key]
+
     return None
 
 
