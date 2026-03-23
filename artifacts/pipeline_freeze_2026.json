@@ -1006,18 +1006,18 @@
   "git_commit_sha": "128c6e8e4887539471e4273753b0d21e33bb6264",
   "run_timestamp_utc": "",
   "source_file_hashes": {
-    "src/pipeline/config.py": "fc02b0d03a37b9b7162df234152a6bcb801def0426793833945f617e2d458c13",
+    "src/pipeline/config.py": "54397713c20efafc4cd562b529c450dbc4816f8f3a425ac5f2a27d776bdcd326",
     "src/pipeline/sota.py": "af01c408a6f36af9212b37a10ae7fb5a37f41a2ea8657b1511d858a228f15a3d",
     "src/pipeline/stages/baseline_training.py": "6b12de2016cf2cb6c273612bf321c6c4d409ce6004cad123f7291ab1e768cccc",
     "src/pipeline/stages/calibration.py": "02452fbbca443990b21019767c40813ff542464cc798911f1de3172d10d96b79",
-    "src/pipeline/stages/data_loader.py": "cc203127ea493458fbb286944a9ed17a9ff5eac568c106b73e7bfaa0606be83b",
+    "src/pipeline/stages/data_loader.py": "0b0d01eebd594e752a3e90d7764ebc5e0d378fb277267bfc10591f8e0ebdbced",
     "src/pipeline/stages/inference.py": "14d610aad913b9e7b8441670768eadd0bc8e2887bbfd15f1473a2b2c95c283e0",
     "src/pipeline/probability_pipeline.py": "b11825b1b5592bc6effd2eb053231c6846d0f0c5b106909c259e5268985c0e48",
     "src/governance/production_validator.py": "7168e638fd04d505f3f18fdde5b7fe7f1c97c6b28695afef33073e79008a4929",
     "src/governance/production_runner.py": "b2e47776786aa308b06584292c64ae3a515ab2c722581674e910d172f29501a2",
-    "src/run_production_2026.py": "e5c7dde0211feb896d2db7d26fa28a5b7d8be8c1763c3f6ae448847a067cf29e"
+    "src/run_production_2026.py": "b88b55aa86c2dfa7377a3fb262827da9d7ec55a555cee906fc930bd1c40306e8"
   },
-  "source_tree_hash": "737420fa2cdb2af793021b4b8810ff6095ad84e5783e84a19f432d420d4d33c9",
+  "source_tree_hash": "a43ecf4778431b87714d786213c1fd8eb81772c46f5af032a7cdcacbe8aad2a9",
   "data_file_hashes": {
     "data/raw/torvik_2026.json": "214cec3364a8ade6d63b185063ffd53d7f9b2cc0d79f03e2876b1d9583d0f817",
     "data/raw/teams_2026.json": "18713882c27372ad9ad9cf0c5034ea3d14d36f61d0ea33b0cac59ff7b619ee68",
