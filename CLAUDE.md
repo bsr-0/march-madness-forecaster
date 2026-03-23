@@ -87,7 +87,7 @@ src/
 - **Leakage detection** is enforced — `LeakageError` raised on violations
 - **Point-in-time features** use tournament cutoff dates per season
 - **Temporal cross-validation** via Leave-One-Year-Out (LOYO)
-- Feature dimension is fixed: `TEAM_FEATURE_DIM = 79`
+- Feature dimension is fixed: `TEAM_FEATURE_DIM = 86`
 
 ## Key Files
 

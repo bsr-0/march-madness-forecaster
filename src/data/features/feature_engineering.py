@@ -73,7 +73,7 @@ REMOVED_REDUNDANCIES = [
 # games with stability=0.1, near-zero predictive power per academic lit).
 # FIX 2.3: preseason_ap_rank encoding smoothed (was cliff at #25→unranked).
 # Down from 67 → 66 team features.
-TEAM_FEATURE_DIM = 74  # 66 base + 2 graph SOS + 3 win quality + 3 coaching (FIX C3: 7→3 coach, FIX C4: wab dedup)
+TEAM_FEATURE_DIM = 86  # 74 base + 12 Massey multi-system (10 systems + rank_mean + rank_std)
 
 # Normalization constants for interaction features in create_matchup_features()
 TEMPO_NORMALIZATION = 4624.0  # 68^2 — square of median college basketball tempo (~68 possessions/game)
@@ -357,10 +357,27 @@ class TeamFeatures:
     frontcourt_rapm: float = 0.0
 
     # External rating composite (WS3: meta-ranking of 100+ systems)
-    # 0.0 when no external ratings are available (historical training)
-    external_rating_composite: float = 0.0
+    # NaN when no external ratings available (tree models handle natively)
+    external_rating_composite: float = float('nan')
     # External rating spread (disagreement across rating systems)
-    external_rating_spread: float = 0.0
+    external_rating_spread: float = float('nan')
+
+    # Massey multi-system individual ratings (10) — individual system-level
+    # normalized ratings from MMasseyOrdinals.csv top predictive systems.
+    # NaN when a system didn't rate this team or is unavailable for the season.
+    massey_pom: float = float('nan')     # KenPom — efficiency-based
+    massey_sag: float = float('nan')     # Sagarin — Elo/Bayesian hybrid
+    massey_mor: float = float('nan')     # Massey — mathematical composite
+    massey_dol: float = float('nan')     # Dolchini — reliability-adjusted
+    massey_col: float = float('nan')     # Colley — bias-free linear algebra
+    massey_wol: float = float('nan')     # Wolfe — schedule-adjusted
+    massey_rth: float = float('nan')     # Rothman — Bayesian approach
+    massey_ap: float = float('nan')      # AP Poll — sports writer consensus
+    massey_usa: float = float('nan')     # Coaches Poll — insider perspective
+    massey_rpi: float = float('nan')     # RPI — NCAA historical selection metric
+    # Derived agreement/disagreement metrics across all available systems
+    massey_rank_mean: float = float('nan')   # Mean normalized rating
+    massey_rank_std: float = float('nan')    # Inter-system disagreement
 
     # GNN embedding (if available)
     gnn_embedding: Optional[np.ndarray] = None
@@ -689,12 +706,27 @@ class TeamFeatures:
             self.frontcourt_rapm,
 
             # External ratings (2) — WS3: orthogonal signal from rating systems
-            # 0.0 when no external data available; tree models handle gracefully
+            # NaN when no external data available; tree models handle natively
             self.external_rating_composite,
             self.external_rating_spread,
 
             # Seed (1) - log-transformed per rubric
             float(np.log1p(17 - self.seed) / np.log1p(16)),
+
+            # Massey multi-system individual ratings (10) — NaN when unavailable
+            self.massey_pom,
+            self.massey_sag,
+            self.massey_mor,
+            self.massey_dol,
+            self.massey_col,
+            self.massey_wol,
+            self.massey_rth,
+            self.massey_ap,
+            self.massey_usa,
+            self.massey_rpi,
+            # Massey derived agreement metrics (2)
+            self.massey_rank_mean,
+            self.massey_rank_std,
         ]
 
         result = np.array(features, dtype=np.float64)
@@ -832,6 +864,12 @@ class TeamFeatures:
             'external_rating_composite', 'external_rating_spread',
             # Seed (1)
             'seed_strength',
+            # Massey multi-system individual ratings (10)
+            'massey_pom', 'massey_sag', 'massey_mor', 'massey_dol',
+            'massey_col', 'massey_wol', 'massey_rth', 'massey_ap',
+            'massey_usa', 'massey_rpi',
+            # Massey derived agreement metrics (2)
+            'massey_rank_mean', 'massey_rank_std',
         ]
 
         # FIX #10: Static assertion at call time
@@ -897,6 +935,12 @@ _EXTERNAL_RATING_FEATURES = {
     'external_rating_composite', 'external_rating_spread',
 }
 
+_MASSEY_MULTI_SYSTEM_FEATURES = {
+    'massey_pom', 'massey_sag', 'massey_mor', 'massey_dol',
+    'massey_col', 'massey_wol', 'massey_rth', 'massey_ap',
+    'massey_usa', 'massey_rpi', 'massey_rank_mean', 'massey_rank_std',
+}
+
 # Source availability thresholds (inclusive start year)
 _SOURCE_START_YEARS = {
     'torvik': 2008,
@@ -904,6 +948,7 @@ _SOURCE_START_YEARS = {
     'advanced_metrics': 2008,
     'graph_features': 2008,
     'external_ratings': 2003,
+    'massey_multi_system': 2003,
 }
 
 
@@ -933,6 +978,8 @@ def era_available_features(year: int) -> List[str]:
         unavailable |= _GRAPH_FEATURES
     if year < _SOURCE_START_YEARS['external_ratings']:
         unavailable |= _EXTERNAL_RATING_FEATURES
+    if year < _SOURCE_START_YEARS['massey_multi_system']:
+        unavailable |= _MASSEY_MULTI_SYSTEM_FEATURES
 
     return [n for n in all_names if n not in unavailable]
 
