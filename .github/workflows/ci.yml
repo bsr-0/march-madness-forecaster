@@ -97,7 +97,7 @@ jobs:
           extra-packages: pip-audit
 
       - name: Run pip audit
-        run: pip-audit --strict --exclude march-madness-forecaster
+        run: pip-audit --strict --skip-editable
 
   # ─── Gate 4: Performance Regression ──────────────────────────────
   performance-check:
