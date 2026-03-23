@@ -138,9 +138,10 @@ class RealDataCollector:
             if tv_provider.records:
                 torvik_teams = tv_provider.records
                 torvik_payload = {"teams": tv_provider.records}
-                # Validate only the fields that the T-Rank CSV can provide.
-                # Defensive four factors (opp_*) are NOT available from the
-                # CSV source — they are enriched from game box scores below.
+                # Validate only the core efficiency fields available from the
+                # T-Rank CSV.  Four Factors (eFG%, TO%, ORB%, FTR) are fetched
+                # separately via fetch_four_factors() below and enriched into
+                # the team data — they should NOT block ratings validation.
                 validation_errors["torvik_json"] = validate_ratings_payload(
                     torvik_payload,
                     required_numeric_fields=[
@@ -148,20 +149,14 @@ class RealDataCollector:
                         "adj_offensive_efficiency",
                         "adj_defensive_efficiency",
                         "adj_tempo",
-                        "effective_fg_pct",
-                        "turnover_rate",
-                        "offensive_reb_rate",
-                        "free_throw_rate",
                     ],
                     variance_fields=[
                         "barthag", "adj_offensive_efficiency", "adj_defensive_efficiency",
-                        "effective_fg_pct", "turnover_rate",
                     ],
                     stddev_thresholds={
                         "adj_offensive_efficiency": 5.0,
                         "adj_defensive_efficiency": 5.0,
                         "barthag": 0.05,
-                        "effective_fg_pct": 0.01,
                     },
                 )
                 self._assert_valid("torvik_json", validation_errors["torvik_json"])
