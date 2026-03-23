@@ -121,6 +121,19 @@ class RealDataCollector:
         torvik_payload: Optional[Dict] = None
         four_factors: Dict = {}
         if self.config.scrape_torvik:
+            # Leakage guard: warn if collecting Torvik data after tournament start
+            try:
+                from ...pipeline.config import TOURNAMENT_START_DATES
+                from datetime import date as _date
+                _cutoff = TOURNAMENT_START_DATES.get(year)
+                if _cutoff and _date.today() >= _cutoff:
+                    logger.warning(
+                        "Torvik data collection for %d on %s (tournament started %s). "
+                        "Efficiency metrics may include tournament games — LEAKAGE RISK.",
+                        year, _date.today(), _cutoff,
+                    )
+            except ImportError:
+                pass
             tv_provider = self.providers.fetch_torvik_ratings(year, priority=self.config.torvik_provider_priority)
             if tv_provider.records:
                 torvik_teams = tv_provider.records

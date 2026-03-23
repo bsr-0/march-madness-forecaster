@@ -310,18 +310,12 @@ class TestTrainTestBoundary:
                     f"got {fold.n_train_games} — future years leaked"
                 )
 
-    def test_loyo_validator_leave_one_out_warns(self):
-        """LOYOValidator(temporal_mode='leave_one_out') should emit DeprecationWarning."""
-        import warnings
+    def test_loyo_validator_leave_one_out_raises(self):
+        """LOYOValidator(temporal_mode='leave_one_out') must raise ValueError (leakage risk)."""
         from src.ml.evaluation.loyo_protocol import LOYOValidator
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with pytest.raises(ValueError, match="no longer supported"):
             LOYOValidator(years=[2022, 2023], temporal_mode="leave_one_out")
-            deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
-            assert len(deprecation_warnings) >= 1, (
-                "LOYOValidator(temporal_mode='leave_one_out') should emit DeprecationWarning"
-            )
 
     def test_prospective_validator_trains_on_past_only(self):
         """ProspectiveValidator: train years < predicted year."""

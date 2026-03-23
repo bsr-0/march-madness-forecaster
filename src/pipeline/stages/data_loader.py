@@ -741,10 +741,35 @@ def load_team_stat_sources(
     if config.torvik_json:
         with open(config.torvik_json, "r") as f:
             torvik_payload = json.load(f)
+        # Check for post-tournament data contamination via file timestamp
+        if _strict_torvik:
+            _ts_fields = ["timestamp", "generated_at", "fetched_at", "scraped_at"]
+            _ts_str = next((torvik_payload.get(f) for f in _ts_fields if torvik_payload.get(f)), None)
+            if _ts_str:
+                try:
+                    from datetime import date as _date
+                    _ts_date = _date.fromisoformat(_ts_str[:10])
+                    _cutoff = TOURNAMENT_START_DATES.get(config.year)
+                    if _cutoff and _ts_date >= _cutoff:
+                        raise LeakageError(
+                            f"Torvik JSON {config.torvik_json} has timestamp {_ts_str} "
+                            f"which is on/after tournament start {_cutoff}. "
+                            f"Post-tournament data contaminates efficiency metrics."
+                        )
+                except (ValueError, TypeError):
+                    pass
+            else:
+                logger.warning(
+                    "Torvik JSON %s has no timestamp field — cannot verify "
+                    "pre-tournament provenance.",
+                    config.torvik_json,
+                )
         validate_feed_freshness(config, "Torvik", torvik_payload)
         torvik_teams = BartTorvikScraper().load_from_json(config.torvik_json)
     elif config.scrape_live:
-        torvik_teams = BartTorvikScraper(cache_dir=config.data_cache_dir).fetch_current_rankings(
+        torvik_teams = BartTorvikScraper(
+            cache_dir=config.data_cache_dir, strict_leakage=_strict_torvik,
+        ).fetch_current_rankings(
             config.year, strict=_strict_torvik,
         )
     else:

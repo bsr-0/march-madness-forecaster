@@ -867,6 +867,12 @@ class SOTAPipelineConfig:
         self.validate_production_profile()
         self.validate_locked_production_path()
         self._validate_espn_profile_compatibility()
+        if self.loyo_temporal_mode == "leave_one_out":
+            raise ValueError(
+                "loyo_temporal_mode='leave_one_out' is no longer supported. "
+                "This mode includes future years in training folds, constituting "
+                "data leakage. Use 'rolling_window' (default) instead."
+            )
         if self.mode not in ("calibration", "ev"):
             raise ValueError(f"Invalid mode '{self.mode}': must be 'calibration' or 'ev'")
         if self.mode == "ev":
