@@ -13,8 +13,8 @@ import pytest
 class TestFeatureValidation:
     """Tests for NaN/inf detection in feature engineering and pipeline."""
 
-    def test_team_features_nan_replaced_with_zero(self):
-        """TeamFeatures.to_vector() should replace NaN values with 0.0."""
+    def test_team_features_nan_preserved_for_tree_models(self):
+        """TeamFeatures.to_vector() preserves NaN for tree-native handling."""
         from src.data.features.feature_engineering import TeamFeatures
 
         tf = TeamFeatures(team_id="test", team_name="Test", seed=1, region="East")
@@ -22,12 +22,12 @@ class TestFeatureValidation:
         tf.steal_rate = float("nan")
 
         vec = tf.to_vector()
-        assert np.all(np.isfinite(vec)), "Feature vector should have no NaN/inf"
-        # NaN features should be replaced with 0.0
-        assert vec[0] == 0.0  # adj_off_eff is first feature
+        # NaN is preserved for tree-based models (LightGBM/XGBoost handle natively)
+        assert np.isnan(vec[0]), "adj_off_eff NaN should be preserved"
+        assert not np.any(np.isinf(vec)), "No inf values should remain"
 
-    def test_team_features_inf_replaced_with_zero(self):
-        """TeamFeatures.to_vector() should replace inf values with 0.0."""
+    def test_team_features_inf_replaced_with_nan(self):
+        """TeamFeatures.to_vector() should replace inf values with NaN."""
         from src.data.features.feature_engineering import TeamFeatures
 
         tf = TeamFeatures(team_id="test", team_name="Test", seed=5, region="West")
@@ -35,7 +35,9 @@ class TestFeatureValidation:
         tf.elo_rating = float("-inf")
 
         vec = tf.to_vector()
-        assert np.all(np.isfinite(vec)), "Feature vector should have no NaN/inf"
+        assert not np.any(np.isinf(vec)), "No inf values should remain"
+        # inf is converted to NaN for tree-native handling
+        assert np.isnan(vec[1]), "inf adj_def_eff should become NaN"
 
     def test_clean_features_unchanged(self):
         """Normal feature values should pass through unchanged."""
