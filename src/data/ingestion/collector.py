@@ -144,6 +144,12 @@ class RealDataCollector:
                         "barthag", "adj_offensive_efficiency", "adj_defensive_efficiency",
                         "effective_fg_pct", "turnover_rate",
                     ],
+                    stddev_thresholds={
+                        "adj_offensive_efficiency": 5.0,
+                        "adj_defensive_efficiency": 5.0,
+                        "barthag": 0.05,
+                        "effective_fg_pct": 0.01,
+                    },
                 )
                 self._assert_valid("torvik_json", validation_errors["torvik_json"])
                 out["torvik_json"] = self._write(f"torvik_{year}.json", torvik_payload)
@@ -157,6 +163,17 @@ class RealDataCollector:
                     f"torvik_four_factors_{year}.json", four_factors,
                 )
                 provider_lineage["torvik_four_factors_json"] = "barttorvik"
+
+                # Cross-source consistency check (advisory only — never blocks)
+                if torvik_teams:
+                    from src.data.ingestion.validators import cross_validate_torvik_sources
+                    cross_warnings = cross_validate_torvik_sources(
+                        torvik_teams,
+                        [{"team_id": k, **v} for k, v in four_factors.items()],
+                        thresholds={"effective_fg_pct": 0.03, "turnover_rate": 0.03},
+                    )
+                    for w in cross_warnings:
+                        logger.warning("[cross-validate] %s", w)
             shooting = torvik_scraper.fetch_shooting_stats(year)
             if shooting:
                 out["torvik_shooting_json"] = self._write(

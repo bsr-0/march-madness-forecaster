@@ -417,6 +417,36 @@ class TeamFeatures:
         "frontcourt_rapm":      (4.0,    8.0),
     }
 
+    # --- Seed-conditional Four Factor priors (historical tournament field averages). ---
+    # Used when Torvik data is missing/zero for a team.  Better than unconditional
+    # league-average defaults because a missing 1-seed should be imputed differently
+    # than a missing 16-seed.  Derived from 2016-2024 tournament field data.
+    _SEED_CONDITIONAL_PRIORS = {
+        # seed: (efg, to_rate, orb_rate, ft_rate, opp_efg, opp_to, drb_rate, opp_ft_rate)
+        1:  (0.535, 0.170, 0.320, 0.340, 0.470, 0.200, 0.740, 0.290),
+        2:  (0.530, 0.172, 0.315, 0.335, 0.475, 0.195, 0.735, 0.295),
+        3:  (0.525, 0.175, 0.310, 0.330, 0.480, 0.192, 0.730, 0.298),
+        4:  (0.520, 0.177, 0.308, 0.325, 0.483, 0.190, 0.725, 0.300),
+        5:  (0.515, 0.178, 0.305, 0.322, 0.485, 0.188, 0.722, 0.302),
+        6:  (0.512, 0.180, 0.302, 0.320, 0.488, 0.186, 0.718, 0.305),
+        7:  (0.508, 0.182, 0.300, 0.318, 0.490, 0.185, 0.715, 0.307),
+        8:  (0.505, 0.183, 0.298, 0.316, 0.492, 0.184, 0.712, 0.308),
+        9:  (0.503, 0.184, 0.296, 0.314, 0.494, 0.183, 0.710, 0.310),
+        10: (0.500, 0.185, 0.295, 0.312, 0.496, 0.182, 0.708, 0.312),
+        11: (0.498, 0.186, 0.293, 0.310, 0.498, 0.181, 0.705, 0.313),
+        12: (0.495, 0.188, 0.292, 0.308, 0.500, 0.180, 0.702, 0.315),
+        13: (0.490, 0.190, 0.290, 0.305, 0.505, 0.178, 0.698, 0.318),
+        14: (0.485, 0.192, 0.288, 0.302, 0.510, 0.176, 0.695, 0.320),
+        15: (0.478, 0.195, 0.285, 0.298, 0.515, 0.174, 0.690, 0.323),
+        16: (0.470, 0.200, 0.280, 0.295, 0.525, 0.170, 0.680, 0.328),
+    }
+    _FF_FIELD_ORDER = [
+        'effective_fg_pct', 'turnover_rate', 'offensive_reb_rate', 'free_throw_rate',
+        'opp_effective_fg_pct', 'opp_turnover_rate', 'defensive_reb_rate', 'opp_free_throw_rate',
+    ]
+    # Unconditional fallbacks (used when seed is unknown or out of range 1-16)
+    _UNCONDITIONAL_DEFAULTS = (0.50, 0.18, 0.30, 0.30, 0.50, 0.18, 0.70, 0.30)
+
     def to_vector(self, include_embeddings: bool = False) -> np.ndarray:
         """
         Convert to raw feature vector for ML models.
@@ -1121,17 +1151,27 @@ class FeatureEngineer:
             features.frontcourt_rapm = pm.get('frontcourt_rapm', 0.0)
 
         # Extract from Torvik data (Four Factors + shooting splits + context).
-        # Use population defaults when values are zero (e.g. CSV fallback
-        # cannot derive team-level ORB%/TO% from individual player data).
+        # When values are zero/missing, impute using seed-conditional population
+        # priors (a 1-seed's defaults differ from a 16-seed's).
         if torvik_data:
-            features.effective_fg_pct = torvik_data.get('effective_fg_pct') or 0.5
-            features.turnover_rate = torvik_data.get('turnover_rate') or 0.18
-            features.offensive_reb_rate = torvik_data.get('offensive_reb_rate') or 0.30
-            features.free_throw_rate = torvik_data.get('free_throw_rate') or 0.30
-            features.opp_effective_fg_pct = torvik_data.get('opp_effective_fg_pct') or 0.5
-            features.opp_turnover_rate = torvik_data.get('opp_turnover_rate') or 0.18
-            features.defensive_reb_rate = torvik_data.get('defensive_reb_rate') or 0.70
-            features.opp_free_throw_rate = torvik_data.get('opp_free_throw_rate') or 0.30
+            _priors = TeamFeatures._SEED_CONDITIONAL_PRIORS.get(
+                features.seed, None
+            )
+            if _priors is None:
+                _priors = TeamFeatures._UNCONDITIONAL_DEFAULTS
+            _defaults_used = []
+            for i, field in enumerate(TeamFeatures._FF_FIELD_ORDER):
+                val = torvik_data.get(field)
+                if not val:  # None, 0, 0.0 all trigger imputation
+                    setattr(features, field, _priors[i])
+                    _defaults_used.append(field)
+                else:
+                    setattr(features, field, val)
+            if _defaults_used:
+                logger.warning(
+                    "Torvik seed-conditional defaults for %s (seed %d): %d/8 fields imputed (%s)",
+                    team_id, features.seed, len(_defaults_used), ", ".join(_defaults_used),
+                )
 
             # Context features from Torvik/open data feeds (if present)
             if 'preseason_ap_rank' in torvik_data:

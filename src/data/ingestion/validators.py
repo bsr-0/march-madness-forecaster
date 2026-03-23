@@ -37,6 +37,7 @@ def validate_ratings_payload(
     required_numeric_fields: Optional[List[str]] = None,
     min_unique_team_ids: int = 1,
     variance_fields: Optional[List[str]] = None,
+    stddev_thresholds: Optional[Dict[str, float]] = None,
 ) -> List[str]:
     errors: List[str] = []
     teams = payload.get("teams")
@@ -77,6 +78,22 @@ def validate_ratings_payload(
         if len(uniques) <= 1:
             errors.append(f"ratings field '{field}' has insufficient variance")
 
+    # Standard deviation minimum thresholds — catches near-constant distributions
+    # that pass the unique-count check (e.g. all AdjOE within ±0.5 of mean).
+    if stddev_thresholds and field_values:
+        for field, min_std in stddev_thresholds.items():
+            values = field_values.get(field, [])
+            if len(values) >= 10:
+                mean = sum(values) / len(values)
+                variance = sum((v - mean) ** 2 for v in values) / (len(values) - 1)
+                std = variance ** 0.5
+                if std < min_std:
+                    errors.append(
+                        f"ratings field '{field}' std dev too low: "
+                        f"{std:.4f} < {min_std} across {len(values)} teams "
+                        f"— likely data corruption or scraper bug"
+                    )
+
     # Reject payloads where critical numeric fields are all-zero/default.
     # This catches silent upstream failures where the HTML column is absent
     # and the scraper falls through to 0.0 for every team.
@@ -92,6 +109,56 @@ def validate_ratings_payload(
                 )
 
     return errors
+
+
+_CROSS_SOURCE_THRESHOLDS = {
+    "adj_offensive_efficiency": 3.0,
+    "adj_defensive_efficiency": 3.0,
+    "barthag": 0.03,
+}
+
+
+def cross_validate_torvik_sources(
+    primary: List[Dict],
+    secondary: List[Dict],
+    thresholds: Optional[Dict[str, float]] = None,
+) -> List[str]:
+    """Compare key metrics between two Torvik-source payloads.
+
+    Advisory only — returns warnings, never blocks.  Compares up to 30 teams
+    (by position in primary) on fields specified in *thresholds*.
+    """
+    thresholds = thresholds or _CROSS_SOURCE_THRESHOLDS
+    warnings: List[str] = []
+    sec_map: Dict[str, Dict] = {}
+    for r in secondary:
+        tid = r.get("team_id") or r.get("name", "")
+        if tid:
+            sec_map[tid] = r
+    compared = 0
+    for row in primary[:30]:
+        tid = row.get("team_id") or row.get("name", "")
+        sec_row = sec_map.get(tid)
+        if sec_row is None:
+            continue
+        compared += 1
+        for field, threshold in thresholds.items():
+            p_val = _to_float(row.get(field))
+            s_val = _to_float(sec_row.get(field))
+            if p_val is not None and s_val is not None:
+                diff = abs(p_val - s_val)
+                if diff > threshold:
+                    warnings.append(
+                        f"Cross-source divergence: {tid}.{field} "
+                        f"primary={p_val:.4f} secondary={s_val:.4f} "
+                        f"diff={diff:.4f} (threshold={threshold})"
+                    )
+    if compared < 5:
+        warnings.append(
+            f"Cross-source comparison: only {compared}/30 teams matched — "
+            f"name resolution may be inconsistent between sources"
+        )
+    return warnings
 
 
 def validate_games_payload(payload: Dict) -> List[str]:
