@@ -36,19 +36,21 @@ class TestFeatureDimensionContract:
         assert vec.dtype == np.float64
 
     def test_feature_vector_nan_count_on_defaults(self):
-        """Default-constructed features produce NaN only for massey multi-system.
+        """Default-constructed features produce NaN for external ratings + massey.
 
-        The 12 massey multi-system features default to NaN because they
-        require Kaggle MMasseyOrdinals data.  Tree models (LightGBM/XGBoost)
-        handle NaN natively as missing values.
+        The 14 NaN features are:
+        - 2 external rating features (composite + spread) — NaN when no
+          external ratings available; tree models handle natively.
+        - 12 massey multi-system features — NaN when Kaggle MMasseyOrdinals
+          data is unavailable.
         """
         tf = _make_team_features()
         vec = tf.to_vector()
         nan_count = int(np.isnan(vec).sum())
-        # Exactly 12 NaN values from the massey multi-system features
-        assert nan_count == 12, (
-            f"Default TeamFeatures produced {nan_count} NaN values, expected 12 "
-            f"(massey multi-system features)"
+        # 2 external ratings + 12 massey multi-system = 14 NaN
+        assert nan_count == 14, (
+            f"Default TeamFeatures produced {nan_count} NaN values, expected 14 "
+            f"(2 external ratings + 12 massey multi-system features)"
         )
 
     def test_team_feature_dim_is_positive(self):
