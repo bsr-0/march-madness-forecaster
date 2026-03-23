@@ -141,13 +141,12 @@ class TestRetryRequestJitter:
 class TestCircuitBreakerIntegration:
     def test_scraper_has_circuit_breakers(self, scraper):
         assert hasattr(scraper, "_cb_cbbstat")
-        assert hasattr(scraper, "_cb_html")
         assert hasattr(scraper, "_cb_csv")
 
     def test_cbbstat_circuit_breaker_opens_after_failures(self, scraper):
-        """After 3 consecutive cbbstat failures, the circuit breaker opens."""
-        # Simulate 3 failures
-        for _ in range(3):
+        """After 5 consecutive cbbstat failures, the circuit breaker opens."""
+        # Simulate 5 failures (threshold is now 5)
+        for _ in range(5):
             try:
                 with scraper._cb_cbbstat():
                     raise ConnectionError("API down")
@@ -156,21 +155,10 @@ class TestCircuitBreakerIntegration:
 
         assert scraper._cb_cbbstat.is_open
 
-    def test_html_circuit_breaker_opens_after_failures(self, scraper):
-        """After 2 consecutive HTML failures, the circuit breaker opens."""
-        for _ in range(2):
-            try:
-                with scraper._cb_html():
-                    raise ConnectionError("JS wall")
-            except ConnectionError:
-                pass
-
-        assert scraper._cb_html.is_open
-
     def test_rankings_skips_cbbstat_when_breaker_open(self, scraper):
-        """When cbbstat breaker is open, rankings should skip to next strategy."""
+        """When cbbstat breaker is open, rankings should skip to CSV fallback."""
         # Force cbbstat breaker open
-        for _ in range(3):
+        for _ in range(5):
             try:
                 with scraper._cb_cbbstat():
                     raise ConnectionError("down")
@@ -178,17 +166,17 @@ class TestCircuitBreakerIntegration:
                 pass
 
         fake_team = _make_team()
-        with patch.object(scraper, "_rankings_from_torvik_r", return_value=[fake_team]):
+        with patch.object(scraper, "_rankings_from_csv", return_value=[fake_team]):
             with patch.object(scraper, "_save_to_cache"):
                 teams = scraper.fetch_current_rankings(year=2024)
 
         assert len(teams) == 1
-        # cbbstat was never tried (breaker open), went straight to R
+        # cbbstat was never tried (breaker open), went straight to CSV
         assert scraper._fetch_strategy.get("rankings") != "cbbstat_api"
 
     def test_four_factors_skips_cbbstat_when_breaker_open(self, scraper):
-        """When cbbstat breaker is open, four factors should fallback."""
-        for _ in range(3):
+        """When cbbstat breaker is open, four factors should fallback to CSV."""
+        for _ in range(5):
             try:
                 with scraper._cb_cbbstat():
                     raise ConnectionError("down")
@@ -201,11 +189,9 @@ class TestCircuitBreakerIntegration:
             "opp_effective_fg_pct": 0.45, "opp_turnover_rate": 0.18,
             "defensive_reb_rate": 0.72, "opp_free_throw_rate": 0.31,
         }}
-        with patch.object(scraper, "session") as mock_session:
-            mock_session.get.side_effect = Exception("HTML blocked")
-            with patch.object(scraper, "_four_factors_from_player_csv", return_value=fake_ff):
-                with patch.object(scraper, "_save_to_cache"):
-                    ff = scraper.fetch_four_factors(year=2024)
+        with patch.object(scraper, "_four_factors_from_player_csv", return_value=fake_ff):
+            with patch.object(scraper, "_save_to_cache"):
+                ff = scraper.fetch_four_factors(year=2024)
 
         assert ff == fake_ff
         assert scraper._fetch_strategy.get("four_factors") == "csv_fallback"
@@ -393,15 +379,18 @@ class TestCSVFallbackFix:
         # eFG% should be exact (from counting stats)
         assert ff["effective_fg_pct"] > 0
 
-        # ORB% should be non-zero (minutes-weighted average of 10.0 and 8.0)
-        # Expected: (10.0*60.0 + 8.0*40.0) / (60.0+40.0) / 100 = 9.2 / 100 = 0.092
+        # ORB% after Bayesian shrinkage toward population prior (0.295):
+        # raw = (10.0*60 + 8.0*40) / 100 / 100 = 0.092
+        # w = 100 / (100 + 60) = 0.625
+        # shrunk = 0.625 * 0.092 + 0.375 * 0.295 = 0.1681
         assert ff["offensive_reb_rate"] > 0, "ORB% should no longer be zero in CSV fallback"
-        assert abs(ff["offensive_reb_rate"] - 0.092) < 0.01
+        assert abs(ff["offensive_reb_rate"] - 0.168) < 0.01
 
-        # TO% should be non-zero
-        # Expected: (15.0*60.0 + 12.0*40.0) / (60.0+40.0) / 100 = 13.8 / 100 = 0.138
+        # TO% after Bayesian shrinkage toward population prior (0.185):
+        # raw = (15.0*60 + 12.0*40) / 100 / 100 = 0.138
+        # shrunk = 0.625 * 0.138 + 0.375 * 0.185 = 0.1556
         assert ff["turnover_rate"] > 0, "TO% should no longer be zero in CSV fallback"
-        assert abs(ff["turnover_rate"] - 0.138) < 0.01
+        assert abs(ff["turnover_rate"] - 0.156) < 0.01
 
         # DRB% should be non-zero
         assert ff["defensive_reb_rate"] > 0
@@ -559,5 +548,4 @@ class TestConstructorDefaults:
             circuit_breaker_state_file=str(tmp_path / ".cb.json")
         )
         assert scraper._cb_cbbstat.is_closed
-        assert scraper._cb_html.is_closed
         assert scraper._cb_csv.is_closed

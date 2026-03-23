@@ -1,7 +1,6 @@
 """Unit tests for the BartTorvik scraper hardening (Part 1–5).
 
 Covers:
-- _extract_team_id (bug fix)
 - TorVikValidator range checks
 - strategy_used telemetry
 - _cache_has_valid_four_factors
@@ -58,47 +57,6 @@ def _make_team(**kwargs) -> TorVikTeam:
     )
     defaults.update(kwargs)
     return TorVikTeam(**defaults)
-
-
-# ---------------------------------------------------------------------------
-# _extract_team_id
-# ---------------------------------------------------------------------------
-
-
-class TestExtractTeamId:
-    def test_plain_text_cell(self, scraper):
-        """Cell with text only → normalized team id."""
-        from bs4 import BeautifulSoup
-        html = "<td>Duke Blue Devils</td>"
-        cell = BeautifulSoup(html, "lxml").find("td")
-        tid = scraper._extract_team_id(cell)
-        assert isinstance(tid, str)
-        assert len(tid) > 0
-        assert "duke" in tid.lower() or "blue" in tid.lower()
-
-    def test_cell_with_link_href(self, scraper):
-        """Cell with <a href='?team=Duke'> → extracts 'Duke' from href."""
-        from bs4 import BeautifulSoup
-        html = "<td><a href='?team=Duke&year=2026'>Duke</a></td>"
-        cell = BeautifulSoup(html, "lxml").find("td")
-        tid = scraper._extract_team_id(cell)
-        assert "duke" in tid.lower()
-
-    def test_empty_cell_returns_string(self, scraper):
-        """Empty cell should return a string (possibly empty)."""
-        from bs4 import BeautifulSoup
-        html = "<td></td>"
-        cell = BeautifulSoup(html, "lxml").find("td")
-        tid = scraper._extract_team_id(cell)
-        assert isinstance(tid, str)
-
-    def test_cell_with_link_no_team_param(self, scraper):
-        """Href without team= param → falls back to text."""
-        from bs4 import BeautifulSoup
-        html = "<td><a href='/stats?year=2026'>Kansas</a></td>"
-        cell = BeautifulSoup(html, "lxml").find("td")
-        tid = scraper._extract_team_id(cell)
-        assert "kansas" in tid.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -232,11 +190,9 @@ class TestStrategyTelemetry:
                             "opp_effective_fg_pct": 0.45, "opp_turnover_rate": 0.18,
                             "defensive_reb_rate": 0.72, "opp_free_throw_rate": 0.31}}
         with patch.object(scraper, "_four_factors_from_cbbstat_api", return_value={}):
-            with patch.object(scraper, "session") as mock_session:
-                mock_session.get.side_effect = Exception("HTML blocked")
-                with patch.object(scraper, "_four_factors_from_player_csv", return_value=fake_ff):
-                    with patch.object(scraper, "_save_to_cache"):
-                        ff = scraper.fetch_four_factors(year=2024)
+            with patch.object(scraper, "_four_factors_from_player_csv", return_value=fake_ff):
+                with patch.object(scraper, "_save_to_cache"):
+                    ff = scraper.fetch_four_factors(year=2024)
         assert ff == fake_ff
         assert scraper._fetch_strategy.get("four_factors") == "csv_fallback"
 
@@ -266,6 +222,60 @@ class TestCacheValidation:
 
     def test_none_cache_rejected(self, scraper):
         assert scraper._cache_has_valid_four_factors(None) is False  # type: ignore
+
+    def test_partial_corruption_rejected(self, scraper):
+        """Cache with >30% zero ORB% teams should be rejected."""
+        cache = {}
+        # 4 good teams
+        for i in range(4):
+            cache[f"good_{i}"] = {"offensive_reb_rate": 0.30, "turnover_rate": 0.18}
+        # 6 corrupted teams (>30% zero ORB%)
+        for i in range(6):
+            cache[f"bad_{i}"] = {"offensive_reb_rate": 0.0, "turnover_rate": 0.18}
+        assert scraper._cache_has_valid_four_factors(cache) is False
+
+    def test_partial_corruption_below_threshold_accepted(self, scraper):
+        """Cache with <=30% zero ORB% teams should be accepted."""
+        cache = {}
+        # 8 good teams
+        for i in range(8):
+            cache[f"good_{i}"] = {"offensive_reb_rate": 0.30, "turnover_rate": 0.18}
+        # 2 zero ORB% teams (20% < 30% threshold)
+        for i in range(2):
+            cache[f"bad_{i}"] = {"offensive_reb_rate": 0.0, "turnover_rate": 0.18}
+        assert scraper._cache_has_valid_four_factors(cache) is True
+
+    def test_rankings_cache_valid(self, scraper):
+        teams = [
+            {"team_id": f"team_{i}", "adj_offensive_efficiency": 100.0 + i,
+             "adj_defensive_efficiency": 95.0 + i, "barthag": 0.8}
+            for i in range(120)
+        ]
+        assert scraper._cache_has_valid_rankings({"teams": teams}) is True
+
+    def test_rankings_cache_too_few_teams(self, scraper):
+        teams = [
+            {"team_id": f"team_{i}", "adj_offensive_efficiency": 100.0,
+             "adj_defensive_efficiency": 95.0, "barthag": 0.8}
+            for i in range(50)
+        ]
+        assert scraper._cache_has_valid_rankings({"teams": teams}) is False
+
+    def test_rankings_cache_zero_efficiency_rejected(self, scraper):
+        """Cache with >30% zero AdjOE+AdjDE in first 20 teams should be rejected."""
+        # Put corrupted teams first so they appear in the sample (first 20)
+        teams = []
+        for i in range(8):
+            teams.append({"team_id": f"bad_{i}", "adj_offensive_efficiency": 0.0,
+                          "adj_defensive_efficiency": 0.0})
+        for i in range(112):
+            teams.append({"team_id": f"good_{i}", "adj_offensive_efficiency": 100.0,
+                          "adj_defensive_efficiency": 95.0})
+        assert scraper._cache_has_valid_rankings({"teams": teams}) is False
+
+    def test_rankings_cache_empty_rejected(self, scraper):
+        assert scraper._cache_has_valid_rankings({}) is False
+        assert scraper._cache_has_valid_rankings(None) is False  # type: ignore
 
 
 # ---------------------------------------------------------------------------
@@ -349,3 +359,56 @@ class TestDictToTeam:
         assert team.t_rank == 999
         assert team.barthag == 0.5
         assert team.adj_offensive_efficiency == 100.0
+
+
+# ---------------------------------------------------------------------------
+# Rankings CSV fallback
+# ---------------------------------------------------------------------------
+
+
+class TestRankingsCsvFallback:
+    def test_rankings_csv_fallback_parses_teams(self, scraper):
+        """When cbbstat fails, _rankings_from_csv returns valid TorVikTeam objects."""
+        csv_content = (
+            "rank,team,conf,adj_o,adj_d,barthag,adj_t,wab,wins,losses\n"
+            "1,Duke,ACC,122.0,93.0,0.97,70.0,8.5,30,5\n"
+            "2,Kansas,B12,118.0,95.0,0.94,68.5,7.2,28,7\n"
+        )
+        fake_resp = MagicMock()
+        fake_resp.text = csv_content
+
+        with patch.object(scraper, "_get_with_retry", return_value=fake_resp):
+            teams = scraper._rankings_from_csv(2026)
+
+        assert len(teams) == 2
+        assert any("duke" in t.team_id.lower() for t in teams)
+        # Four Factors should be NaN
+        duke = next(t for t in teams if "duke" in t.team_id.lower())
+        assert math.isnan(duke.effective_fg_pct)
+        assert math.isnan(duke.turnover_rate)
+
+    def test_rankings_csv_fallback_strategy_recorded(self, scraper):
+        """When cbbstat API fails, rankings should fall through to CSV."""
+        fake_team = _make_team()
+        with patch.object(scraper, "_rankings_from_cbbstat_api", return_value=[]):
+            with patch.object(scraper, "_rankings_from_csv", return_value=[fake_team]):
+                with patch.object(scraper, "_save_to_cache"):
+                    teams = scraper.fetch_current_rankings(year=2024)
+
+        assert len(teams) == 1
+        assert scraper._fetch_strategy.get("rankings") == "csv_fallback"
+
+
+# ---------------------------------------------------------------------------
+# Structural: HTML methods removed
+# ---------------------------------------------------------------------------
+
+
+class TestNoHtmlMethods:
+    def test_no_html_parse_methods_exist(self):
+        """HTML parsing methods should not exist after refactor."""
+        scraper = BartTorvikScraper()
+        assert not hasattr(scraper, "_parse_rankings_page")
+        assert not hasattr(scraper, "_parse_four_factors_page")
+        assert not hasattr(scraper, "_parse_shooting_page")
+        assert not hasattr(scraper, "_extract_team_id")
