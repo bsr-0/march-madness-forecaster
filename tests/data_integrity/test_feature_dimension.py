@@ -35,14 +35,23 @@ class TestFeatureDimensionContract:
         vec = tf.to_vector()
         assert vec.dtype == np.float64
 
-    def test_feature_vector_no_nan_on_defaults(self):
-        """Default-constructed features should not produce NaN values."""
+    def test_feature_vector_nan_count_on_defaults(self):
+        """Default-constructed features produce NaN for external ratings + massey.
+
+        The 14 NaN features are:
+        - 2 external rating features (composite + spread) — NaN when no
+          external ratings available; tree models handle natively.
+        - 12 massey multi-system features — NaN when Kaggle MMasseyOrdinals
+          data is unavailable.
+        """
         tf = _make_team_features()
         vec = tf.to_vector()
-        # Default values may produce NaN from log operations on zero seeds etc.
-        # This test documents current behavior — if NaN count changes, investigate.
         nan_count = int(np.isnan(vec).sum())
-        assert nan_count == 0, f"Default TeamFeatures produced {nan_count} NaN values"
+        # 2 external ratings + 12 massey multi-system = 14 NaN
+        assert nan_count == 14, (
+            f"Default TeamFeatures produced {nan_count} NaN values, expected 14 "
+            f"(2 external ratings + 12 massey multi-system features)"
+        )
 
     def test_team_feature_dim_is_positive(self):
         """TEAM_FEATURE_DIM should be a positive integer."""

@@ -249,7 +249,7 @@ def _load_year_samples_incremental_core(
             for entry in massey_data:
                 tid = entry.get("team_id", "")
                 if tid:
-                    team_massey_composite[_team_id(tid)] = entry.get("normalized", 0.0)
+                    team_massey_composite[_team_id(tid)] = entry.get("normalized", float('nan'))
             _massey_loaded = True
             logger.info(
                 "Gap #1: Loaded Massey composite cache for year %d (%d teams)",
@@ -298,6 +298,21 @@ def _load_year_samples_incremental_core(
             year,
             year,
         )
+
+    # Massey multi-system features (individual top-system ratings)
+    team_massey_multi: Dict = {}
+    if config.kaggle_dir:
+        try:
+            from ...data.scrapers.external_ratings import ExternalRatingsLoader as _MLoader
+            _ml = _MLoader(cache_dir=os.path.dirname(games_path))
+            team_massey_multi = _ml.load_massey_multi_system(config.kaggle_dir, year)
+            if team_massey_multi:
+                logger.info(
+                    "Massey multi-system: %d teams for year %d",
+                    len(team_massey_multi), year,
+                )
+        except Exception as _mme:
+            logger.debug("Massey multi-system not available for year %d: %s", year, _mme)
 
     # Roster features — compute player-level overlays from cbbpy roster JSON.
     roster_path = os.path.join(
@@ -407,24 +422,29 @@ def _load_year_samples_incremental_core(
 
         # Massey: only attach after selection cutoff (end-of-season aggregate).
         if g.game_date > tournament_cutoff:
-            _mc1 = team_massey_composite.get(g.team_id, 0.0)
-            _mc2 = team_massey_composite.get(g.opponent_id, 0.0)
-            _ms1 = team_massey_spread.get(g.team_id, 0.0)
-            _ms2 = team_massey_spread.get(g.opponent_id, 0.0)
+            _mc1 = team_massey_composite.get(g.team_id, float('nan'))
+            _mc2 = team_massey_composite.get(g.opponent_id, float('nan'))
+            _ms1 = team_massey_spread.get(g.team_id, float('nan'))
+            _ms2 = team_massey_spread.get(g.opponent_id, float('nan'))
+            _mm1 = team_massey_multi.get(g.team_id)
+            _mm2 = team_massey_multi.get(g.opponent_id)
         else:
-            _mc1 = _mc2 = _ms1 = _ms2 = 0.0
+            _mc1 = _mc2 = _ms1 = _ms2 = float('nan')
+            _mm1 = _mm2 = None
 
         v1 = IncrementalMetricsEngine.metrics_to_team_vector(
             m1,
             seed=seed1,
             external_rating_composite=_mc1,
             external_rating_spread=_ms1,
+            massey_features=_mm1,
         )
         v2 = IncrementalMetricsEngine.metrics_to_team_vector(
             m2,
             seed=seed2,
             external_rating_composite=_mc2,
             external_rating_spread=_ms2,
+            massey_features=_mm2,
         )
 
         # Overlay roster features (RAPM, WARP, depth, experience, etc.)

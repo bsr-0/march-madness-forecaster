@@ -276,15 +276,22 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         _erc2 = _mc2.composite_rating if _mc2 is not None else 0.0
         _ers1 = _mc1.rating_spread if _mc1 is not None else 0.0
         _ers2 = _mc2.rating_spread if _mc2 is not None else 0.0
+        # Massey multi-system features (individual system ratings)
+        _mm1 = _mm2 = None
+        if game_date > tournament_cutoff and hasattr(pipeline, '_massey_multi') and pipeline._massey_multi:
+            _mm1 = pipeline._massey_multi.get(game.team1_id)
+            _mm2 = pipeline._massey_multi.get(game.team2_id)
         v1 = IncrementalMetricsEngine.metrics_to_team_vector(
             m1, s1,
             external_rating_composite=_erc1,
             external_rating_spread=_ers1,
+            massey_features=_mm1,
         )
         v2 = IncrementalMetricsEngine.metrics_to_team_vector(
             m2, s2,
             external_rating_composite=_erc2,
             external_rating_spread=_ers2,
+            massey_features=_mm2,
         )
         # Overlay roster features (RAPM, WARP, depth, experience, etc.)
         for _v, _tid in ((v1, game.team1_id), (v2, game.team2_id)):
