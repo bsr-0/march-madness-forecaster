@@ -388,12 +388,14 @@ class TestRankingsCsvFallback:
         assert math.isnan(duke.turnover_rate)
 
     def test_rankings_csv_fallback_strategy_recorded(self, scraper):
-        """When cbbstat API fails, rankings should fall through to CSV."""
+        """When all earlier strategies fail, rankings should fall through to CSV."""
         fake_team = _make_team()
-        with patch.object(scraper, "_rankings_from_cbbstat_api", return_value=[]):
-            with patch.object(scraper, "_rankings_from_csv", return_value=[fake_team]):
-                with patch.object(scraper, "_save_to_cache"):
-                    teams = scraper.fetch_current_rankings(year=2024)
+        with patch.object(scraper, "_rankings_from_cbbdata_api", return_value=[]):
+            with patch.object(scraper, "_rankings_from_trank_csv", return_value=[]):
+                with patch.object(scraper, "_rankings_from_cbbstat_api", return_value=[]):
+                    with patch.object(scraper, "_rankings_from_csv", return_value=[fake_team]):
+                        with patch.object(scraper, "_save_to_cache"):
+                            teams = scraper.fetch_current_rankings(year=2024)
 
         assert len(teams) == 1
         assert scraper._fetch_strategy.get("rankings") == "csv_fallback"
