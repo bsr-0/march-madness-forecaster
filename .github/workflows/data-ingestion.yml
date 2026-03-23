@@ -61,7 +61,8 @@ jobs:
     timeout-minutes: 45
 
     # Optional env vars (set in repo Settings > Secrets and variables > Actions):
-    #   CBBDATA_API_KEY         - API key for cbbdata.com Torvik endpoint
+    #   CBBDATA_API_KEY         - Pre-existing cbbdata.com API token (if you have one)
+    #   CBD_USER + CBD_PASSWORD  - cbbdata.com login credentials (auto-obtains token)
     #   CBBDATA_BASE_URL        - Base URL override for cbbdata API (default: built-in)
     #   CBBPY_ROSTER_ENABLE_PBP - "true" to collect play-by-play stint data via cbbpy
     #   PLAYER_METRICS_URL      - URL to a player-metrics JSON feed (manual-provide)
@@ -71,6 +72,8 @@ jobs:
     #   THE_ODDS_API_KEY        - API key for The Odds API (aggregated sportsbook odds)
     env:
       CBBDATA_API_KEY: ${{ secrets.CBBDATA_API_KEY }}
+      CBD_USER: ${{ secrets.CBD_USER }}
+      CBD_PASSWORD: ${{ secrets.CBD_PASSWORD }}
       THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
       CBBDATA_BASE_URL: ${{ vars.CBBDATA_BASE_URL }}
       CBBPY_ROSTER_ENABLE_PBP: ${{ vars.CBBPY_ROSTER_ENABLE_PBP }}
