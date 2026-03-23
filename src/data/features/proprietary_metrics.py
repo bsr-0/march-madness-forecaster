@@ -2771,82 +2771,76 @@ class IncrementalMetricsEngine:
         v[29] = m.ncsos_adj_em
         # Luck (1)
         v[30] = m.luck
-        # WAB (1)
-        v[31] = m.wab
+        # FIX C4: wab REMOVED (near-redundant with wab_poisson)
         # Poisson Binomial resume metrics (2) — SOR + WAB_poisson
-        v[32] = m.sor
-        v[33] = m.wab_poisson
+        v[31] = m.sor
+        v[32] = m.wab_poisson
         # Momentum (1)
-        v[34] = m.momentum
+        v[33] = m.momentum
         # Variance (2)
-        v[35] = m.three_pt_variance
-        v[36] = m.pace_adjusted_variance
+        v[34] = m.three_pt_variance
+        v[35] = m.pace_adjusted_variance
         # Elo (1)
-        v[37] = m.elo_rating
+        v[36] = m.elo_rating
         # Free throw % (1)
-        v[38] = m.free_throw_pct
+        v[37] = m.free_throw_pct
         # Ball movement (2)
-        v[39] = m.assist_to_turnover_ratio
-        v[40] = m.assist_rate
+        v[38] = m.assist_to_turnover_ratio
+        v[39] = m.assist_rate
         # Defensive disruption (2)
-        v[41] = m.steal_rate
-        v[42] = m.block_rate
+        v[40] = m.steal_rate
+        v[41] = m.block_rate
         # Opponent shot selection (2)
-        v[43] = m.opp_two_pt_pct_allowed
-        v[44] = m.opp_three_pt_attempt_rate
+        v[42] = m.opp_two_pt_pct_allowed
+        v[43] = m.opp_three_pt_attempt_rate
         # Conference quality (1)
-        v[45] = m.conference_adj_em
+        v[44] = m.conference_adj_em
         # Shooting splits (2)
-        v[46] = m.three_pt_pct
-        v[47] = m.three_pt_rate
+        v[45] = m.three_pt_pct
+        v[46] = m.three_pt_rate
         # Defensive xP (1)
-        v[48] = m.defensive_xp_per_possession
+        v[47] = m.defensive_xp_per_possession
         # Win % (1)
-        v[49] = m.win_pct
+        v[48] = m.win_pct
         # Elite SOS (1)
-        v[50] = m.elite_sos
+        v[49] = m.elite_sos
         # Q1 win % (1)
-        v[51] = m.q1_win_pct
+        v[50] = m.q1_win_pct
         # Foul rate (1)
-        v[52] = m.foul_rate
+        v[51] = m.foul_rate
         # 3PT regression (1)
-        v[53] = m.three_pt_regression_signal
+        v[52] = m.three_pt_regression_signal
         # Rest days (1) — capped at 14
-        v[54] = min(m.rest_days, 14.0)
+        v[53] = min(m.rest_days, 14.0)
         # Top5 minutes share (1) — zero (no roster)
-        v[55] = 0.0
+        v[54] = 0.0
         # Preseason AP rank (1) — default unranked: 0.25
-        v[56] = 0.25
+        v[55] = 0.25
+        # FIX C3: Coach features consolidated 7→3
         # Coach tournament exp (1) — default 0
-        v[57] = 0.0
+        v[56] = 0.0
         # Coach tournament win rate (1) — default 0
+        v[57] = 0.0
+        # Coach postseason composite (1) — default 0
         v[58] = 0.0
-        # Coach deep run rate (1) — default 0
-        v[59] = 0.0
-        # Coach stage consistency (1) — default 0
-        v[60] = 0.0
-        # Per-stage coaching (3) — default 0 (no coach data incrementally)
-        v[61] = 0.0  # coach_f4_appearances
-        v[62] = 0.0  # coach_e8_appearances
-        v[63] = 0.0  # coach_s16_appearances
         # Graph-theoretic SOS (2) — default 0 (no graph data incrementally)
-        v[64] = 0.0  # pagerank_sos
-        v[65] = 0.0  # multi_hop_sos
+        v[59] = 0.0  # pagerank_sos
+        v[60] = 0.0  # multi_hop_sos
         # Win quality metrics (3) — default 0 (no graph data incrementally)
-        v[66] = 0.0  # best_win_percentile
-        v[67] = 0.0  # paper_tiger_score
-        v[68] = 0.0  # dominance_ratio
+        v[61] = 0.0  # best_win_percentile
+        v[62] = 0.0  # paper_tiger_score
+        v[63] = 0.0  # dominance_ratio
         # Pace variance (1)
-        v[69] = m.pace_variance
+        v[64] = m.pace_variance
         # Conf tourney champion (1) — 0 (not known incrementally)
-        v[70] = 0.0
+        v[65] = 0.0
         # Neutral-site win % (1)
-        v[71] = m.neutral_site_win_pct
+        v[66] = m.neutral_site_win_pct
         # Home court dependence (1)
-        v[72] = m.home_court_dependence
+        v[67] = m.home_court_dependence
         # Tournament resume composite (1) — Bayesian-shrunk opponent quality
         from .tournament_features import compute_tournament_resume_composite
-        v[73] = compute_tournament_resume_composite(
+        v[68] = compute_tournament_resume_composite(
             q1_win_pct=m.q1_win_pct,
             q1_games=m.q1_wins + m.q1_losses,
             road_neutral_win_pct=m.road_neutral_win_pct,
@@ -2855,18 +2849,18 @@ class IncrementalMetricsEngine:
             sor=m.sor,
         )
         # Position RAPM (2) — zero (no roster)
-        v[74] = 0.0
-        v[75] = 0.0
+        v[69] = 0.0
+        v[70] = 0.0
 
         # External rating composite + spread (2)
-        v[76] = external_rating_composite
-        v[77] = external_rating_spread
+        v[71] = external_rating_composite
+        v[72] = external_rating_spread
 
         # Seed strength (1)
         if seed > 0:
-            v[78] = float(np.log1p(17 - seed) / np.log1p(16))
+            v[73] = float(np.log1p(17 - seed) / np.log1p(16))
         else:
-            v[78] = 0.0
+            v[73] = 0.0
 
         # NaN/inf guard
         bad = np.isnan(v) | np.isinf(v)
