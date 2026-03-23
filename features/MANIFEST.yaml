@@ -7,13 +7,13 @@
 # Tier 3 (External):  Sourced from third-party systems that update continuously.
 #                       LOYO rule: use Selection Sunday snapshot for that year.
 #
-# TEAM_FEATURE_DIM = 74 (66 base + 2 graph SOS + 3 win quality + 3 coaching)
+# TEAM_FEATURE_DIM = 86 (74 base + 12 Massey multi-system)
 # FIX C3: coach features consolidated 7→3
 # FIX C4: wab removed (near-redundant with wab_poisson)
 
 ---
 version: "3.0"
-total_features: 74
+total_features: 86
 
 tier_1_static:
   description: "Immutable at tournament time. No PIT restriction needed."
@@ -247,3 +247,43 @@ tier_3_external:
     - name: external_rating_spread
       description: "Disagreement across external rating systems"
       sources: ["kenpom", "net", "sagarin", "bpi", "torvik", "massey"]
+
+    # Massey Multi-System Individual Ratings (10)
+    - name: massey_pom
+      description: "KenPom rating from Massey Ordinals (normalized [0,1])"
+      sources: ["kaggle_massey_ordinals"]
+    - name: massey_sag
+      description: "Sagarin rating from Massey Ordinals (normalized [0,1])"
+      sources: ["kaggle_massey_ordinals"]
+    - name: massey_mor
+      description: "Massey rating from Massey Ordinals (normalized [0,1])"
+      sources: ["kaggle_massey_ordinals"]
+    - name: massey_dol
+      description: "Dolchini rating from Massey Ordinals (normalized [0,1])"
+      sources: ["kaggle_massey_ordinals"]
+    - name: massey_col
+      description: "Colley rating from Massey Ordinals (normalized [0,1])"
+      sources: ["kaggle_massey_ordinals"]
+    - name: massey_wol
+      description: "Wolfe rating from Massey Ordinals (normalized [0,1])"
+      sources: ["kaggle_massey_ordinals"]
+    - name: massey_rth
+      description: "Rothman rating from Massey Ordinals (normalized [0,1])"
+      sources: ["kaggle_massey_ordinals"]
+    - name: massey_ap
+      description: "AP Poll from Massey Ordinals (normalized [0,1])"
+      sources: ["kaggle_massey_ordinals"]
+    - name: massey_usa
+      description: "Coaches Poll from Massey Ordinals (normalized [0,1])"
+      sources: ["kaggle_massey_ordinals"]
+    - name: massey_rpi
+      description: "RPI from Massey Ordinals (normalized [0,1])"
+      sources: ["kaggle_massey_ordinals"]
+
+    # Massey Multi-System Derived Metrics (2)
+    - name: massey_rank_mean
+      description: "Mean normalized rating across top-10 ranking systems"
+      sources: ["kaggle_massey_ordinals"]
+    - name: massey_rank_std
+      description: "Inter-system disagreement (std dev of normalized ratings)"
+      sources: ["kaggle_massey_ordinals"]

@@ -299,6 +299,21 @@ def _load_year_samples_incremental_core(
             year,
         )
 
+    # Massey multi-system features (individual top-system ratings)
+    team_massey_multi: Dict = {}
+    if config.kaggle_dir:
+        try:
+            from ...data.scrapers.external_ratings import ExternalRatingsLoader as _MLoader
+            _ml = _MLoader(cache_dir=os.path.dirname(games_path))
+            team_massey_multi = _ml.load_massey_multi_system(config.kaggle_dir, year)
+            if team_massey_multi:
+                logger.info(
+                    "Massey multi-system: %d teams for year %d",
+                    len(team_massey_multi), year,
+                )
+        except Exception as _mme:
+            logger.debug("Massey multi-system not available for year %d: %s", year, _mme)
+
     # Roster features — compute player-level overlays from cbbpy roster JSON.
     roster_path = os.path.join(
         os.path.dirname(games_path), "historical", f"cbbpy_rosters_{year}.json"
@@ -411,20 +426,25 @@ def _load_year_samples_incremental_core(
             _mc2 = team_massey_composite.get(g.opponent_id, 0.0)
             _ms1 = team_massey_spread.get(g.team_id, 0.0)
             _ms2 = team_massey_spread.get(g.opponent_id, 0.0)
+            _mm1 = team_massey_multi.get(g.team_id)
+            _mm2 = team_massey_multi.get(g.opponent_id)
         else:
             _mc1 = _mc2 = _ms1 = _ms2 = 0.0
+            _mm1 = _mm2 = None
 
         v1 = IncrementalMetricsEngine.metrics_to_team_vector(
             m1,
             seed=seed1,
             external_rating_composite=_mc1,
             external_rating_spread=_ms1,
+            massey_features=_mm1,
         )
         v2 = IncrementalMetricsEngine.metrics_to_team_vector(
             m2,
             seed=seed2,
             external_rating_composite=_mc2,
             external_rating_spread=_ms2,
+            massey_features=_mm2,
         )
 
         # Overlay roster features (RAPM, WARP, depth, experience, etc.)

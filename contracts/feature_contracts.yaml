@@ -2051,3 +2051,257 @@ features:
     snapshot_policy: point_in_time_snapshot_required
     revision_behavior: latest_forbidden
     late_arrival_policy: exclude_if_available_after_prediction_time
+
+  # ==========================================================================
+  # Massey Multi-System Ratings (12 features) — Tier 3 External
+  # Individual system ratings from MMasseyOrdinals.csv + derived metrics.
+  # Uses Selection Sunday snapshot via _compute_max_ranking_day() to prevent leakage.
+  # ==========================================================================
+  - feature_name: massey_pom
+    owner: data-platform
+    source:
+      system: kaggle_massey_ordinals
+      dataset: MMasseyOrdinals
+      field: POM_normalized
+    event_timestamp_field: ranking_day
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/kaggle_loader.py::_compute_max_ranking_day"
+    transformation_logic_ref: "src/data/features/massey_systems.py::extract_multi_system_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "nan_for_tree_models"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-011"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: massey_sag
+    owner: data-platform
+    source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: SAG_normalized}
+    event_timestamp_field: ranking_day
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/kaggle_loader.py::_compute_max_ranking_day"
+    transformation_logic_ref: "src/data/features/massey_systems.py::extract_multi_system_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "nan_for_tree_models"
+    leakage_checks: {same_game_outcome_leakage: false, future_opponent_outcome_leakage: false, post_game_aggregate_leakage: false, tournament_info_leakage_pre_tournament: false}
+    contract_version: "1.0.0"
+    test_ids: ["PIT-011"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: massey_mor
+    owner: data-platform
+    source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: MOR_normalized}
+    event_timestamp_field: ranking_day
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/kaggle_loader.py::_compute_max_ranking_day"
+    transformation_logic_ref: "src/data/features/massey_systems.py::extract_multi_system_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "nan_for_tree_models"
+    leakage_checks: {same_game_outcome_leakage: false, future_opponent_outcome_leakage: false, post_game_aggregate_leakage: false, tournament_info_leakage_pre_tournament: false}
+    contract_version: "1.0.0"
+    test_ids: ["PIT-011"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: massey_dol
+    owner: data-platform
+    source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: DOL_normalized}
+    event_timestamp_field: ranking_day
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/kaggle_loader.py::_compute_max_ranking_day"
+    transformation_logic_ref: "src/data/features/massey_systems.py::extract_multi_system_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "nan_for_tree_models"
+    leakage_checks: {same_game_outcome_leakage: false, future_opponent_outcome_leakage: false, post_game_aggregate_leakage: false, tournament_info_leakage_pre_tournament: false}
+    contract_version: "1.0.0"
+    test_ids: ["PIT-011"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: massey_col
+    owner: data-platform
+    source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: COL_normalized}
+    event_timestamp_field: ranking_day
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/kaggle_loader.py::_compute_max_ranking_day"
+    transformation_logic_ref: "src/data/features/massey_systems.py::extract_multi_system_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "nan_for_tree_models"
+    leakage_checks: {same_game_outcome_leakage: false, future_opponent_outcome_leakage: false, post_game_aggregate_leakage: false, tournament_info_leakage_pre_tournament: false}
+    contract_version: "1.0.0"
+    test_ids: ["PIT-011"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: massey_wol
+    owner: data-platform
+    source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: WOL_normalized}
+    event_timestamp_field: ranking_day
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/kaggle_loader.py::_compute_max_ranking_day"
+    transformation_logic_ref: "src/data/features/massey_systems.py::extract_multi_system_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "nan_for_tree_models"
+    leakage_checks: {same_game_outcome_leakage: false, future_opponent_outcome_leakage: false, post_game_aggregate_leakage: false, tournament_info_leakage_pre_tournament: false}
+    contract_version: "1.0.0"
+    test_ids: ["PIT-011"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: massey_rth
+    owner: data-platform
+    source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: RTH_normalized}
+    event_timestamp_field: ranking_day
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/kaggle_loader.py::_compute_max_ranking_day"
+    transformation_logic_ref: "src/data/features/massey_systems.py::extract_multi_system_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "nan_for_tree_models"
+    leakage_checks: {same_game_outcome_leakage: false, future_opponent_outcome_leakage: false, post_game_aggregate_leakage: false, tournament_info_leakage_pre_tournament: false}
+    contract_version: "1.0.0"
+    test_ids: ["PIT-011"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: massey_ap
+    owner: data-platform
+    source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: AP_normalized}
+    event_timestamp_field: ranking_day
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/kaggle_loader.py::_compute_max_ranking_day"
+    transformation_logic_ref: "src/data/features/massey_systems.py::extract_multi_system_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "nan_for_tree_models"
+    leakage_checks: {same_game_outcome_leakage: false, future_opponent_outcome_leakage: false, post_game_aggregate_leakage: false, tournament_info_leakage_pre_tournament: false}
+    contract_version: "1.0.0"
+    test_ids: ["PIT-011"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: massey_usa
+    owner: data-platform
+    source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: USA_normalized}
+    event_timestamp_field: ranking_day
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/kaggle_loader.py::_compute_max_ranking_day"
+    transformation_logic_ref: "src/data/features/massey_systems.py::extract_multi_system_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "nan_for_tree_models"
+    leakage_checks: {same_game_outcome_leakage: false, future_opponent_outcome_leakage: false, post_game_aggregate_leakage: false, tournament_info_leakage_pre_tournament: false}
+    contract_version: "1.0.0"
+    test_ids: ["PIT-011"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: massey_rpi
+    owner: data-platform
+    source: {system: kaggle_massey_ordinals, dataset: MMasseyOrdinals, field: RPI_normalized}
+    event_timestamp_field: ranking_day
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/kaggle_loader.py::_compute_max_ranking_day"
+    transformation_logic_ref: "src/data/features/massey_systems.py::extract_multi_system_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "nan_for_tree_models"
+    leakage_checks: {same_game_outcome_leakage: false, future_opponent_outcome_leakage: false, post_game_aggregate_leakage: false, tournament_info_leakage_pre_tournament: false}
+    contract_version: "1.0.0"
+    test_ids: ["PIT-011"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: massey_rank_mean
+    owner: data-platform
+    source:
+      system: kaggle_massey_ordinals
+      dataset: MMasseyOrdinals
+      field: rank_mean_derived
+    event_timestamp_field: ranking_day
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/kaggle_loader.py::_compute_max_ranking_day"
+    transformation_logic_ref: "src/data/features/massey_systems.py::extract_multi_system_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "nan_for_tree_models"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-011"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time
+
+  - feature_name: massey_rank_std
+    owner: data-platform
+    source:
+      system: kaggle_massey_ordinals
+      dataset: MMasseyOrdinals
+      field: rank_std_derived
+    event_timestamp_field: ranking_day
+    available_at_logic:
+      type: function_ref
+      ref: "src/data/kaggle_loader.py::_compute_max_ranking_day"
+    transformation_logic_ref: "src/data/features/massey_systems.py::extract_multi_system_features"
+    prediction_time_reference: scheduled_tipoff_time_utc
+    allowed_lag: ">=0h"
+    null_handling_policy: "nan_for_tree_models"
+    leakage_checks:
+      same_game_outcome_leakage: false
+      future_opponent_outcome_leakage: false
+      post_game_aggregate_leakage: false
+      tournament_info_leakage_pre_tournament: false
+    contract_version: "1.0.0"
+    test_ids: ["PIT-011"]
+    risk_tier: medium
+    snapshot_policy: point_in_time_snapshot_required
+    revision_behavior: latest_forbidden
+    late_arrival_policy: exclude_if_available_after_prediction_time

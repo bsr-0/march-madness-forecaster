@@ -428,3 +428,29 @@ class ExternalRatingsLoader:
             r.ranking = rank
 
         self.save_system("massey_composite", year, composite_ratings)
+
+    def load_massey_multi_system(
+        self,
+        kaggle_dir: str,
+        year: int,
+        *,
+        ranking_day_num: Optional[int] = None,
+        max_day: Optional[int] = None,
+    ) -> Dict:
+        """Load Massey Ordinals and extract multi-system features for all teams.
+
+        Returns dict of {canonical_team_id: MasseyMultiSystemFeatures}.
+        Uses the same temporal safety as populate_from_massey_ordinals().
+        """
+        from ..kaggle_loader import KaggleDataLoader
+        from ..features.massey_systems import extract_all_teams
+
+        loader = KaggleDataLoader(kaggle_dir)
+        ordinals = loader.load_massey_ordinals(
+            year, ranking_day_num=ranking_day_num, max_day=max_day,
+        )
+        if not ordinals:
+            logger.info("No Massey Ordinals for multi-system extraction (year=%d)", year)
+            return {}
+
+        return extract_all_teams(ordinals)

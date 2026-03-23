@@ -700,6 +700,7 @@ class SOTAPipeline:
         self._apply_injury_reports(rosters)
         game_flows = self._build_or_load_game_flows(teams)
         self._external_composites = self._load_external_ratings(teams)
+        self._massey_multi = self._load_massey_multi_system()
         _progress(
             "data loading: done "
             f"({time.time() - t_stage:.1f}s, teams={len(teams)})"
@@ -732,6 +733,16 @@ class SOTAPipeline:
             if comp is not None:
                 features.external_rating_composite = comp.composite_rating
                 features.external_rating_spread = comp.rating_spread
+
+            # Massey multi-system features
+            massey_feat = self._massey_multi.get(team_id)
+            if massey_feat is not None:
+                for sys_code, rating in massey_feat.system_ratings.items():
+                    attr = f"massey_{sys_code.lower()}"
+                    if hasattr(features, attr):
+                        setattr(features, attr, rating)
+                features.massey_rank_mean = massey_feat.rank_mean
+                features.massey_rank_std = massey_feat.rank_std
 
             self.team_features[team_id] = features.to_vector(include_embeddings=False)
             idx = len(self.team_features)
@@ -913,6 +924,7 @@ class SOTAPipeline:
             game_flows = self._build_or_load_game_flows(teams)
             self._external_composites = self._load_external_ratings(teams)
             external_composites = self._external_composites
+            self._massey_multi = self._load_massey_multi_system()
 
         # Governance: post-data-load compliance checks
         if hasattr(self, "_compliance_runner"):
@@ -942,6 +954,16 @@ class SOTAPipeline:
                 if comp is not None:
                     features.external_rating_composite = comp.composite_rating
                     features.external_rating_spread = comp.rating_spread
+
+                # Massey multi-system features
+                massey_feat = self._massey_multi.get(team_id)
+                if massey_feat is not None:
+                    for sys_code, rating in massey_feat.system_ratings.items():
+                        attr = f"massey_{sys_code.lower()}"
+                        if hasattr(features, attr):
+                            setattr(features, attr, rating)
+                    features.massey_rank_mean = massey_feat.rank_mean
+                    features.massey_rank_std = massey_feat.rank_std
 
                 self.team_features[team_id] = features.to_vector(include_embeddings=False)
 
@@ -1135,6 +1157,10 @@ class SOTAPipeline:
     def _load_external_ratings(self, teams: List[Team]) -> Dict:
         """Load external rating composites (Massey Ordinals, etc.)."""
         return _dl.load_external_ratings(self.config, teams)
+
+    def _load_massey_multi_system(self) -> Dict:
+        """Load Massey Ordinals multi-system features for all teams."""
+        return _dl.load_massey_multi_system(self.config)
 
     def _verify_massey_coverage(
         self,
