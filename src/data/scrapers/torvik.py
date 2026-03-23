@@ -593,9 +593,63 @@ class BartTorvikScraper:
     # cbbdata.com API methods (primary strategy)
     # ------------------------------------------------------------------
 
+    # Cached token so we only login once per scraper lifetime.
+    _cbbdata_token: Optional[str] = None
+
     def _get_cbbdata_api_key(self) -> Optional[str]:
-        """Return CBD_API_KEY from env, or None if not set."""
-        return os.environ.get("CBD_API_KEY")
+        """Return a cbbdata.com API token.
+
+        Resolution order:
+          1. ``CBD_API_KEY`` env var (pre-existing token)
+          2. Login via ``CBD_USER`` + ``CBD_PASSWORD`` env vars
+             (POSTs to ``/api/auth/login``, caches the returned token)
+          3. None — caller should skip the cbbdata strategy
+        """
+        # Fast path: already resolved
+        if self._cbbdata_token:
+            return self._cbbdata_token
+
+        # Check for pre-set token
+        token = os.environ.get("CBD_API_KEY")
+        if token:
+            self._cbbdata_token = token
+            return token
+
+        # Login with username/password
+        user = os.environ.get("CBD_USER")
+        password = os.environ.get("CBD_PASSWORD")
+        if not user or not password:
+            return None
+
+        try:
+            resp = requests.post(
+                f"{self.CBBDATA_API}/auth/login",
+                json={"username": user, "password": password},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            # The API returns the token — may be a bare string or in a wrapper
+            if isinstance(data, str):
+                token = data
+            elif isinstance(data, list) and data:
+                token = str(data[0])
+            elif isinstance(data, dict):
+                token = data.get("token", data.get("key", data.get("api_key", "")))
+            else:
+                token = ""
+
+            if token:
+                self._cbbdata_token = token
+                os.environ["CBD_API_KEY"] = token  # cache for subprocess use
+                logger.info("[torvik] cbbdata login successful, token acquired")
+                return token
+            else:
+                logger.warning("[torvik] cbbdata login returned empty token")
+                return None
+        except Exception as e:
+            logger.warning("[torvik] cbbdata login failed: %s", e)
+            return None
 
     def _rankings_from_cbbdata_api(self, year: int) -> List[TorVikTeam]:
         """Fetch T-Rank ratings + Four Factors from the cbbdata.com API.
