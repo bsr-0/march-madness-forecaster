@@ -329,8 +329,8 @@ def compute_roster_feature_overlay(players_raw: List[Dict], team_id: str = "") -
         17: avg_experience,
         18: bench_depth,
         55: top5_minutes_share,
-        74: backcourt_rapm,
-        75: frontcourt_rapm,
+        69: backcourt_rapm,
+        70: frontcourt_rapm,
     }
 
 
