@@ -609,15 +609,15 @@ class BartTorvikScraper:
         if self._cbbdata_token:
             return self._cbbdata_token
 
-        # Check for pre-set token
-        token = os.environ.get("CBD_API_KEY")
+        # Check for pre-set token (support both env var names)
+        token = os.environ.get("CBD_API_KEY") or os.environ.get("CBBDATA_API_KEY")
         if token:
             self._cbbdata_token = token
             return token
 
         # Login with username/password
-        user = os.environ.get("CBD_USER")
-        password = os.environ.get("CBD_PASSWORD")
+        user = os.environ.get("CBD_USER") or os.environ.get("CBBDATA_USER")
+        password = os.environ.get("CBD_PASSWORD") or os.environ.get("CBBDATA_PASSWORD")
         if not user or not password:
             return None
 
