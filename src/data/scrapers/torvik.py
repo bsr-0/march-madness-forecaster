@@ -431,9 +431,9 @@ class BartTorvikScraper:
         """
         self._check_tournament_date_guard(year, strict=strict)
 
-        # Check cache (with TTL)
+        # Check cache (with TTL + content validation)
         cached = self._load_from_cache(f"torvik_rankings_{year}.json")
-        if cached:
+        if cached and self._cache_has_valid_rankings(cached):
             return [self._dict_to_team(t) for t in cached.get('teams', [])]
 
         teams: List[TorVikTeam] = []
@@ -1145,28 +1145,65 @@ class BartTorvikScraper:
     def _cache_has_valid_four_factors(cached: dict) -> bool:
         """Check whether cached Four Factors data looks plausible.
 
-        Rejects cache entries where key defensive/offensive rates are all
-        zero — a telltale sign of the old CSV-fallback bug that produced
-        individual-player averages instead of team-level rates.
+        Rejects cache entries where key defensive/offensive rates are zero
+        for too many teams — catches both total corruption (old CSV-fallback
+        bug) and partial corruption (botched fetch, truncated response).
+        Threshold: >30% zero ORB% or >30% zero TO% triggers rejection.
         """
         if not cached or not isinstance(cached, dict):
             return False
-        sample = list(cached.values())[:20]
+        sample = [t for t in list(cached.values())[:20] if isinstance(t, dict)]
         if not sample:
             return False
-        # If all sampled teams have zero ORB% AND zero TO%, the cache is bad
-        all_orb_zero = all(
-            abs(float(t.get("offensive_reb_rate", 0) or 0)) < 1e-6
-            for t in sample if isinstance(t, dict)
+        zero_orb = sum(
+            1 for t in sample
+            if abs(float(t.get("offensive_reb_rate", 0) or 0)) < 1e-6
         )
-        all_to_zero = all(
-            abs(float(t.get("turnover_rate", 0) or 0)) < 1e-6
-            for t in sample if isinstance(t, dict)
+        zero_to = sum(
+            1 for t in sample
+            if abs(float(t.get("turnover_rate", 0) or 0)) < 1e-6
         )
-        if all_orb_zero and all_to_zero:
+        zero_orb_frac = zero_orb / len(sample)
+        zero_to_frac = zero_to / len(sample)
+        if zero_orb_frac > 0.3 or zero_to_frac > 0.3:
             logger.warning(
-                "Cached Four Factors have zero ORB%%/TO%% for all sampled "
-                "teams — discarding stale cache"
+                "Cached Four Factors have %.0f%% zero ORB / %.0f%% zero TO "
+                "(threshold 30%%) — discarding stale cache",
+                zero_orb_frac * 100, zero_to_frac * 100,
+            )
+            return False
+        return True
+
+    @staticmethod
+    def _cache_has_valid_rankings(cached: dict) -> bool:
+        """Check whether cached rankings data looks plausible.
+
+        Verifies minimum team count and that sampled teams have non-zero
+        core efficiency metrics (AdjOE, AdjDE, Barthag).
+        """
+        if not cached or not isinstance(cached, dict):
+            return False
+        teams = cached.get("teams", [])
+        if not isinstance(teams, list) or len(teams) < MIN_TEAMS_THRESHOLD:
+            logger.warning(
+                "Cached rankings have %d teams (minimum %d) — discarding",
+                len(teams) if isinstance(teams, list) else 0,
+                MIN_TEAMS_THRESHOLD,
+            )
+            return False
+        sample = [t for t in teams[:20] if isinstance(t, dict)]
+        if not sample:
+            return False
+        zero_core = sum(
+            1 for t in sample
+            if (abs(float(t.get("adj_offensive_efficiency", 0) or 0)) < 1e-6
+                and abs(float(t.get("adj_defensive_efficiency", 0) or 0)) < 1e-6)
+        )
+        if zero_core > len(sample) * 0.3:
+            logger.warning(
+                "Cached rankings have %.0f%% teams with zero AdjOE+AdjDE "
+                "— discarding stale cache",
+                zero_core / len(sample) * 100,
             )
             return False
         return True

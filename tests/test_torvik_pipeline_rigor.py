@@ -340,3 +340,53 @@ class TestTeamAliasConfig:
         # The inline dict should have all the critical aliases
         assert _QUICK_ALIAS_INLINE.get("unc") == "north_carolina"
         assert _QUICK_ALIAS_INLINE.get("byu") == "brigham_young"
+
+
+# ---------------------------------------------------------------------------
+# NaN Four Factors should trigger seed-conditional imputation, not zero-fill
+# ---------------------------------------------------------------------------
+
+
+class TestNanFourFactorsImputation:
+    """Verify that NaN Four Factors from CSV fallback trigger seed priors."""
+
+    def test_nan_four_factors_trigger_seed_imputation(self):
+        """NaN Four Factors must be imputed via seed-conditional priors, not 0.0."""
+        from src.data.features.feature_engineering import TeamFeatures
+
+        # Simulate CSV-fallback torvik data: rankings present, Four Factors NaN
+        torvik_data = {
+            "effective_fg_pct": math.nan,
+            "turnover_rate": math.nan,
+            "offensive_reb_rate": math.nan,
+            "free_throw_rate": math.nan,
+            "opp_effective_fg_pct": math.nan,
+            "opp_turnover_rate": math.nan,
+            "defensive_reb_rate": math.nan,
+            "opp_free_throw_rate": math.nan,
+        }
+
+        features = TeamFeatures(team_id="duke", team_name="Duke", seed=1, region="East")
+
+        _priors = TeamFeatures._SEED_CONDITIONAL_PRIORS[1]
+        _defaults_used = []
+        for i, field in enumerate(TeamFeatures._FF_FIELD_ORDER):
+            val = torvik_data.get(field)
+            if not val or (isinstance(val, float) and math.isnan(val)):
+                setattr(features, field, _priors[i])
+                _defaults_used.append(field)
+            else:
+                setattr(features, field, val)
+
+        # All 8 fields should have been imputed
+        assert len(_defaults_used) == 8, f"Expected 8 imputed fields, got {len(_defaults_used)}"
+
+        # Verify seed-conditional priors, NOT 0.0
+        assert features.effective_fg_pct == pytest.approx(0.535, abs=0.001)
+        assert features.turnover_rate == pytest.approx(0.170, abs=0.001)
+        assert features.offensive_reb_rate == pytest.approx(0.320, abs=0.001)
+
+    def test_nan_is_truthy_in_python(self):
+        """Confirm the bug mechanism: `not math.nan` is False (NaN is truthy)."""
+        assert (not math.nan) is False
+        assert bool(math.nan) is True

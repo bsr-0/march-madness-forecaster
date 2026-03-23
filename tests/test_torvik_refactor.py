@@ -379,15 +379,18 @@ class TestCSVFallbackFix:
         # eFG% should be exact (from counting stats)
         assert ff["effective_fg_pct"] > 0
 
-        # ORB% should be non-zero (minutes-weighted average of 10.0 and 8.0)
-        # Expected: (10.0*60.0 + 8.0*40.0) / (60.0+40.0) / 100 = 9.2 / 100 = 0.092
+        # ORB% after Bayesian shrinkage toward population prior (0.295):
+        # raw = (10.0*60 + 8.0*40) / 100 / 100 = 0.092
+        # w = 100 / (100 + 60) = 0.625
+        # shrunk = 0.625 * 0.092 + 0.375 * 0.295 = 0.1681
         assert ff["offensive_reb_rate"] > 0, "ORB% should no longer be zero in CSV fallback"
-        assert abs(ff["offensive_reb_rate"] - 0.092) < 0.01
+        assert abs(ff["offensive_reb_rate"] - 0.168) < 0.01
 
-        # TO% should be non-zero
-        # Expected: (15.0*60.0 + 12.0*40.0) / (60.0+40.0) / 100 = 13.8 / 100 = 0.138
+        # TO% after Bayesian shrinkage toward population prior (0.185):
+        # raw = (15.0*60 + 12.0*40) / 100 / 100 = 0.138
+        # shrunk = 0.625 * 0.138 + 0.375 * 0.185 = 0.1556
         assert ff["turnover_rate"] > 0, "TO% should no longer be zero in CSV fallback"
-        assert abs(ff["turnover_rate"] - 0.138) < 0.01
+        assert abs(ff["turnover_rate"] - 0.156) < 0.01
 
         # DRB% should be non-zero
         assert ff["defensive_reb_rate"] > 0
