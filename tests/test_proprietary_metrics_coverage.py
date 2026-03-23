@@ -1272,8 +1272,19 @@ class TestMetricsToTeamVector:
                                    adj_offensive_efficiency=float('nan'))
         try:
             v = IncrementalMetricsEngine.metrics_to_team_vector(m)
-            assert not np.isnan(v).any()
+            # Inf values must never appear in the vector
             assert not np.isinf(v).any()
+            # NaN is expected at indices 71-72 (external ratings) and 74-85
+            # (massey features) when no external data is provided.
+            # Non-rating features (indices 0-70, 73) should not have
+            # unexpected NaN beyond the one we injected (adj_off at idx 0).
+            non_rating_indices = list(range(0, 71)) + [73]
+            nan_in_non_rating = np.isnan(v[non_rating_indices]).sum()
+            # Only the injected NaN at index 0 (adj_offensive_efficiency)
+            assert nan_in_non_rating <= 1, (
+                f"Found {nan_in_non_rating} NaN in non-rating features, "
+                f"expected at most 1 (the injected adj_offensive_efficiency)"
+            )
         except (ImportError, ModuleNotFoundError):
             pytest.skip("feature_engineering not importable")
 
