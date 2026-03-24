@@ -113,6 +113,39 @@ def _spearman_p_value(rho: float, n: int) -> float:
     return max(0.0, min(1.0, 2.0 * one_tail))
 
 
+def _chi2_sf(chi2: float, df: int) -> float:
+    """Survival function (1 - CDF) for chi-squared distribution.
+
+    Uses scipy when available; otherwise the Wilson-Hilferty (1931)
+    normal approximation, which is accurate for df ≥ 4.
+    """
+    if chi2 <= 0 or df <= 0:
+        return 1.0
+
+    if _HAS_SCIPY:
+        from scipy.stats import chi2 as chi2_dist
+        return float(chi2_dist.sf(chi2, df))
+
+    # Wilson-Hilferty normal approximation:
+    # Z = ((χ²/df)^(1/3) - (1 - 2/(9df))) / sqrt(2/(9df))
+    ratio = chi2 / df
+    a = 2.0 / (9.0 * df)
+    z = (ratio ** (1.0 / 3.0) - (1.0 - a)) / math.sqrt(a)
+    # Standard normal survival function (same Abramowitz & Stegun approx).
+    z = abs(z)
+    p = 0.3275911
+    a1, a2, a3, a4, a5 = (
+        0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429,
+    )
+    t_val = 1.0 / (1.0 + p * z)
+    poly = ((((a5 * t_val + a4) * t_val + a3) * t_val + a2) * t_val + a1) * t_val
+    one_tail = poly * math.exp(-z * z / 2.0) / math.sqrt(2.0 * math.pi)
+    # If the original Z was negative (chi2 < df), survival function > 0.5.
+    if ratio ** (1.0 / 3.0) < (1.0 - a):
+        return 1.0 - one_tail
+    return max(0.0, min(1.0, one_tail))
+
+
 # ---------------------------------------------------------------------------
 # Public data structures
 # ---------------------------------------------------------------------------
@@ -341,41 +374,56 @@ def assess_source_agreement(
 
     recommended: Dict[str, float] = {}
 
-    # Pre-compute average p-values per source for weight adjustment.
-    # p-value-based weighting is more principled than ρ²: it accounts
-    # for sample size (a ρ=0.7 with n=50 is much more trustworthy than
-    # ρ=0.7 with n=10), whereas ρ² ignores sample size entirely.
-    source_avg_p: Dict[str, float] = {s: 1.0 for s in source_names}
-    source_p_count: Dict[str, int] = {s: 0 for s in source_names}
-    for (src_a, src_b), n in pair_n_shared.items():
-        rho = report.pairwise_rank_correlations.get((src_a, src_b), {}).get("CHAMP")
-        if rho is None:
-            continue
-        p = _spearman_p_value(rho, n)
-        for src in (src_a, src_b):
-            source_avg_p[src] += p
-            source_p_count[src] += 1
+    # Combine p-values per source using Fisher's method (Fisher, 1932).
+    #
+    # For each source, we collect the p-values from its CHAMP-round
+    # Spearman tests against every other source.  Fisher's combined
+    # statistic is: X² = -2 × Σ ln(pᵢ), which follows χ²(2k) under
+    # the null hypothesis of no correlation.
+    #
+    # This is strictly more principled than averaging p-values:
+    # - Averaging p-values violates probability theory (p-values are
+    #   not means of independent tests).
+    # - Fisher's method correctly accounts for the number of tests (k)
+    #   and is sensitive to ANY strong signal (one low p pulls the
+    #   combined statistic up).
+    #
+    # We convert the combined χ² back to a single p-value for
+    # interpretability, then use (1 - combined_p) as the weight factor.
+    source_combined_p: Dict[str, float] = {s: 1.0 for s in source_names}
     for s in source_names:
-        if source_p_count[s] > 0:
-            # Average including the initial 1.0 prior (Bayesian shrinkage
-            # toward uninformative — a source with no pairings gets p=1.0).
-            source_avg_p[s] /= (source_p_count[s] + 1)
+        p_values: List[float] = []
+        for (src_a, src_b), n in pair_n_shared.items():
+            if s not in (src_a, src_b):
+                continue
+            rho = report.pairwise_rank_correlations.get((src_a, src_b), {}).get("CHAMP")
+            if rho is None:
+                continue
+            p = _spearman_p_value(rho, n)
+            p_values.append(max(p, 1e-300))  # avoid log(0)
+
+        if p_values:
+            # Fisher's combined test: X² = -2 Σ ln(pᵢ), df = 2k
+            chi2 = -2.0 * sum(math.log(p) for p in p_values)
+            df = 2 * len(p_values)
+            # Convert χ² to p-value.  Use scipy if available, otherwise
+            # use the normal approximation (Wilson-Hilferty, 1931) for
+            # χ²/df when df ≥ 4.
+            combined_p = _chi2_sf(chi2, df)
+            source_combined_p[s] = combined_p
 
     for s in source_names:
         base_w = configured_weights.get(s, 0.0)
 
         if s in report.flagged_sources and source_pair_count[s] > 0:
-            # Down-weight flagged sources using 1 - avg_p_value.
+            # Down-weight flagged sources using 1 - combined_p.
             #
-            # Rationale: p-value captures BOTH effect size (ρ) AND
-            # sample size (n).  A source with ρ=0.7 and n=50 has
-            # p < 0.0001 → factor ≈ 1.0 (trustworthy despite low ρ).
-            # A source with ρ=0.7 and n=10 has p ≈ 0.02 → factor ≈ 0.98.
-            # A source with ρ=0.3 and n=10 has p ≈ 0.40 → factor ≈ 0.60.
+            # Low combined_p (correlations are significant) → factor ≈ 1.0
+            # High combined_p (correlations are NOT significant) → factor → 0
             #
             # Floor at 0.05 to prevent total exclusion from one snapshot.
-            avg_p = source_avg_p[s]
-            factor = max(0.05, 1.0 - avg_p)
+            combined_p = source_combined_p[s]
+            factor = max(0.05, 1.0 - combined_p)
             recommended[s] = base_w * factor
         else:
             recommended[s] = base_w

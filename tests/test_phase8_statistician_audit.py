@@ -520,3 +520,76 @@ class TestHistoricalWinRateCrossValidation:
                     f"({lower},{higher}): model={model_rate:.3f}, "
                     f"brier={rate:.3f}"
                 )
+
+    def test_logistic_beta_consistent_with_codebase(self):
+        """The logistic fallback uses β=0.175, matching tournament_features.py."""
+        from src.data.seed_pick_model import _win_rate
+        # β=0.175: P(1 beats 16) = 1/(1+exp(-0.175*15)) ≈ 0.932
+        # This is the fallback, only used for unseen matchups.
+        # The direct lookup should be used for (1,16) since it's in the table.
+        # Test an unseen matchup instead.
+        p = _win_rate(1, 7)  # Not in the direct table (only later-round)
+        # With β=0.175, diff=6: 1/(1+exp(-0.175*6)) ≈ 0.741
+        assert p == pytest.approx(0.741, abs=0.01)
+
+
+# ============================================================================
+# 9. Phase 8b: Fixes from self-audit
+# ============================================================================
+
+
+class TestNaNHandling:
+    """Verify NaN is handled safely throughout the pipeline."""
+
+    def test_normalize_nan_returns_floor(self):
+        from src.pipeline.stages.simulation import normalize_pick_probability
+        assert normalize_pick_probability(float('nan')) == pytest.approx(0.0001)
+
+    def test_normalize_nan_string_returns_floor(self):
+        from src.pipeline.stages.simulation import normalize_pick_probability
+        assert normalize_pick_probability('nan') == pytest.approx(0.0001)
+
+    def test_normalize_inf_treated_as_percentage(self):
+        from src.pipeline.stages.simulation import normalize_pick_probability
+        # inf > 1.0, so divided by 100 → still inf → clipped to 0.9999
+        result = normalize_pick_probability(float('inf'))
+        assert result == pytest.approx(0.9999)
+
+
+class TestFallbackAuditClearing:
+    """Verify fallback_audit is cleared between calls."""
+
+    def test_audit_cleared_on_reuse(self):
+        from src.optimization.leverage import LeverageCalculator, TeamMetadata
+        calc = LeverageCalculator(
+            model_probs={"duke": {"CHAMP": 0.10}},
+            public_picks={},
+            team_metadata={"duke": TeamMetadata("Duke", 1, "East")},
+        )
+        # First call — populates audit
+        calc.find_leverage_picks(min_leverage=0.0, min_probability=0.0)
+        assert len(calc.fallback_audit) > 0
+
+        # Provide real data for second call
+        calc.public_picks = {"duke": {"CHAMP": 0.05}}
+        calc.find_leverage_picks(min_leverage=0.0, min_probability=0.0)
+        # Audit should be cleared — duke now has real data
+        assert "duke" not in calc.fallback_audit
+
+
+class TestFisherCombinedPValue:
+    """Verify Fisher's method is used for p-value combination."""
+
+    def test_chi2_sf_known_values(self):
+        from src.data.scrapers.source_agreement import _chi2_sf
+        # χ²(0, df=2) → p = 1.0
+        assert _chi2_sf(0, 2) == pytest.approx(1.0, abs=0.01)
+        # χ²(10, df=2) → p ≈ 0.0067
+        assert _chi2_sf(10, 2) == pytest.approx(0.0067, abs=0.005)
+        # χ²(1, df=2) → p ≈ 0.607
+        assert _chi2_sf(1, 2) == pytest.approx(0.607, abs=0.05)
+
+    def test_chi2_sf_negative_returns_1(self):
+        from src.data.scrapers.source_agreement import _chi2_sf
+        assert _chi2_sf(-1, 2) == 1.0
+        assert _chi2_sf(0, 0) == 1.0

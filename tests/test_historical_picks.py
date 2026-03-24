@@ -8,8 +8,8 @@ from src.data.historical_picks import (
     load_historical_public_picks,
     _build_seed_based_picks,
     get_available_years,
-    _SEED_PICK_RATES,
 )
+from src.data.seed_pick_model import SEED_PICK_RATES as _SEED_PICK_RATES
 
 
 @pytest.fixture
