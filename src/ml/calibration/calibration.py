@@ -231,22 +231,42 @@ class IsotonicCalibrator:
         return self.isotonic.predict(predictions)
     
     def fit_calibrate(
-        self, 
-        predictions: np.ndarray, 
+        self,
+        predictions: np.ndarray,
         outcomes: np.ndarray
     ) -> np.ndarray:
         """
-        Fit and transform in one step.
-        
+        Fit calibrator and return **leave-one-out cross-validated** predictions.
+
+        Each sample's calibrated prediction is produced by a model fit on all
+        *other* samples, preventing in-sample leakage.  The final calibrator
+        is then refit on all data so that subsequent ``calibrate()`` calls use
+        the full dataset.
+
         Args:
             predictions: Raw predictions
             outcomes: Actual outcomes
-            
+
         Returns:
-            Calibrated predictions
+            LOO-calibrated predictions (honest, out-of-sample)
         """
+        n = len(predictions)
+        if n < 3:
+            # Too few for LOO — fit on all and return identity (no calibration)
+            self.fit(predictions, outcomes)
+            return predictions.copy()
+
+        loo_calibrated = np.empty(n)
+        for i in range(n):
+            mask = np.ones(n, dtype=bool)
+            mask[i] = False
+            fold_cal = IsotonicCalibrator()
+            fold_cal.fit(predictions[mask], outcomes[mask])
+            loo_calibrated[i] = fold_cal.calibrate(predictions[i:i + 1])[0]
+
+        # Refit on all data for future calibrate() calls
         self.fit(predictions, outcomes)
-        return self.calibrate(predictions)
+        return loo_calibrated
 
 
 class PlattScaling:
