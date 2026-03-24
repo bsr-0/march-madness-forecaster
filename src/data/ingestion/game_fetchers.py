@@ -192,6 +192,11 @@ def parse_espn_event(event: Dict, season: int, fallback_date: str) -> Optional[I
     home_stats = _parse_espn_stats(home_comp.get("statistics", []))
     away_stats = _parse_espn_stats(away_comp.get("statistics", []))
 
+    # Determine whether real box-score data was returned by the provider.
+    # FGA is the minimum viable stat — if neither side has it the rest of the
+    # box-score fields are meaningless zeros, not real observations.
+    _has_box = bool(home_stats.get("fga") or away_stats.get("fga"))
+
     neutral = bool(comp.get("neutralSite", False))
     conference = comp.get("conferenceCompetition")
     status_name = (
@@ -236,6 +241,7 @@ def parse_espn_event(event: Dict, season: int, fallback_date: str) -> Optional[I
         away_blk=away_stats.get("blk", 0.0),
         away_tov=away_stats.get("tov", 0.0),
         away_pf=away_stats.get("pf", 0.0),
+        has_box_score=_has_box,
         overtime=overtime,
         neutral_site=neutral,
         conference_game=bool(conference) if conference is not None else None,
@@ -360,6 +366,9 @@ def _team_perspective_rows_to_records(
 
         overtime = _infer_overtime(t1, t2)
 
+        # Detect whether real box-score data exists for this game.
+        _has_box = bool(_f(t1, "fga") > 0 or _f(t2, "fga") > 0)
+
         records.append(IngestionGameRecord(
             game_id=gid,
             date=raw_date,
@@ -386,6 +395,7 @@ def _team_perspective_rows_to_records(
             away_tov=_f(t2, "turnovers") or _f(t2, "tov"),
             away_orb=_f(t2, "orb"),
             away_drb=_f(t2, "drb"),
+            has_box_score=_has_box,
             overtime=overtime,
             neutral_site=True,
             provider=provider,
@@ -416,8 +426,15 @@ def dedup_records(records: List[IngestionGameRecord]) -> List[IngestionGameRecor
                 rec.provider, rec.date,
             )
 
-        # Prefer the record with more box-score content (higher total FGA)
-        if (rec.home_fga + rec.away_fga) > (existing.home_fga + existing.away_fga):
+        # Prefer the record with more box-score content (higher total FGA).
+        # Also prefer has_box_score=True over has_box_score=False when FGA
+        # totals are equal (e.g. both zero — one may have correctly flagged
+        # the absence while the other hasn't).
+        new_is_richer = (
+            (rec.home_fga + rec.away_fga) > (existing.home_fga + existing.away_fga)
+            or (rec.has_box_score and not existing.has_box_score)
+        )
+        if new_is_richer:
             logger.debug(
                 "Dedup game_id=%s: replacing '%s' record with richer '%s' record",
                 rec.game_id, existing.provider, rec.provider,
@@ -425,11 +442,17 @@ def dedup_records(records: List[IngestionGameRecord]) -> List[IngestionGameRecor
             # Preserve overtime=True if either provider detected it
             if existing.overtime and not rec.overtime:
                 rec.overtime = True
+            # Preserve has_box_score=True if either provider had box scores
+            if existing.has_box_score and not rec.has_box_score:
+                rec.has_box_score = True
             seen[rec.game_id] = rec
         else:
             # Preserve overtime=True from the discarded record
             if rec.overtime and not existing.overtime:
                 existing.overtime = True
+            # Preserve has_box_score=True from the discarded record
+            if rec.has_box_score and not existing.has_box_score:
+                existing.has_box_score = True
             logger.debug(
                 "Dedup game_id=%s: discarding duplicate from '%s' (kept '%s')",
                 rec.game_id, rec.provider, existing.provider,
