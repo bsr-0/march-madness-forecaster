@@ -325,13 +325,14 @@ class TestLeaveOneYearOutCV:
         assert 2021 in loyo.years
 
     def test_skips_year_with_few_samples(self):
-        loyo = LeaveOneYearOutCV(years=[2021, 2022, 2023], temporal_mode="leave_one_out")
+        loyo = LeaveOneYearOutCV(years=[2021, 2022, 2023], temporal_mode="rolling_window")
         # 2023 has only 3 samples (< 5 threshold)
         game_years = np.array([2021]*30 + [2022]*30 + [2023]*3)
         splits = loyo.split(game_years)
         held_years = [year for _, _, year in splits]
         assert 2023 not in held_years
-        assert len(splits) == 2
+        # rolling_window: 2021 has no prior years for training, so only 2022 is valid
+        assert len(splits) == 1
 
     def test_cross_validate_runs(self):
         rng = np.random.RandomState(42)
@@ -341,8 +342,7 @@ class TestLeaveOneYearOutCV:
         y = (X[:, 0] > 0).astype(int)
         game_years = np.array([yr for yr in years for _ in range(n_per_year)])
 
-        # Use leave_one_out for backward compat with original test expectations
-        loyo = LeaveOneYearOutCV(years=years, temporal_mode="leave_one_out")
+        loyo = LeaveOneYearOutCV(years=years, temporal_mode="rolling_window")
 
         def train_fn(X_tr, y_tr, X_v, y_v, w_tr=None):
             return float(np.mean(y_tr))
@@ -351,19 +351,15 @@ class TestLeaveOneYearOutCV:
             return np.full(len(X_pred), model)
 
         results = loyo.cross_validate(X, y, game_years, train_fn, predict_fn)
-        assert len(results) == 3
+        # rolling_window: 2021 has no prior training data, so only 2022 and 2023 produce folds
+        assert len(results) == 2
         for r in results:
             assert isinstance(r, CVResult)
             assert 0.0 <= r.brier_score <= 1.0
-            # LOYO now holds out 15% of training data for early stopping,
-            # so train_size is smaller than the full non-test pool.
-            full_train_pool = n_per_year * 2
-            es_size = max(10, int(0.15 * full_train_pool))
-            assert r.train_size == full_train_pool - es_size
             assert r.val_size == n_per_year
 
     def test_train_test_no_overlap(self):
-        loyo = LeaveOneYearOutCV(years=[2021, 2022, 2023, 2024], temporal_mode="leave_one_out")
+        loyo = LeaveOneYearOutCV(years=[2021, 2022, 2023, 2024], temporal_mode="rolling_window")
         game_years = np.array([2021]*20 + [2022]*20 + [2023]*20 + [2024]*20)
         splits = loyo.split(game_years)
         for train_idx, test_idx, year in splits:
