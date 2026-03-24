@@ -530,11 +530,20 @@ class BartTorvikScraper:
         teams: List[TorVikTeam] = []
         reader = csv.reader(io.StringIO(response.text))
         header = None
+        # Known team_results CSV headers. Require ≥3 matches to treat row
+        # as header (prevents team names like "Franklin" triggering detection).
+        _KNOWN_HEADERS = frozenset({
+            'team', 'rank', 'rk', 'conf', 'conference',
+            'barthag', 'adj_o', 'adjoe', 'adj_d', 'adjde', 'adj_t', 'tempo',
+            'wab', 'wins', 'losses',
+        })
+        _MIN_HEADER_MATCHES = 3
         for row_num, row in enumerate(reader):
             if row_num == 0:
-                # Try to detect header row
-                if row and any(h.lower() in ('team', 'rank', 'barthag') for h in row):
-                    header = {h.strip().lower(): i for i, h in enumerate(row)}
+                normalized_cells = [h.strip().lower().replace(' ', '_') for h in row]
+                header_matches = sum(1 for c in normalized_cells if c in _KNOWN_HEADERS)
+                if row and header_matches >= _MIN_HEADER_MATCHES:
+                    header = {c: i for i, c in enumerate(normalized_cells)}
                     continue
                 # No header — use positional defaults
                 header = {}

@@ -15,7 +15,7 @@
 ## Conflict Analysis
 
 ### Overlap: condescending-cori ↔ elastic-lederberg
-Both create `src/data/scrapers/torvik_r.py` and modify `providers.py` + `torvik.py`.
+Both created `src/data/scrapers/torvik_r.py` (now deleted — Phase 4 cleanup) and modified `providers.py` + `torvik.py`.
 **Resolution:** elastic-lederberg is a strict superset — it adds TorVikValidator, CSV fallback strategies, circuit breaker reporting, and ProviderResult metadata on top of the R wrapper. We merge elastic-lederberg only, then cherry-pick any unique condescending-cori bits (CI workflow R install step, `__init__.py` exports, `fetch_schedule()` method).
 
 ### All Other Branches: No File Conflicts

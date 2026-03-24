@@ -378,7 +378,8 @@ class TestRankingsCsvFallback:
         fake_resp.text = csv_content
 
         with patch.object(scraper, "_get_with_retry", return_value=fake_resp):
-            teams = scraper._rankings_from_csv(2026)
+            with patch.object(scraper, "_cb_csv", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())):
+                teams = scraper._rankings_from_csv(2026)
 
         assert len(teams) == 2
         assert any("duke" in t.team_id.lower() for t in teams)
