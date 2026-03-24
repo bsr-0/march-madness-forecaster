@@ -180,8 +180,8 @@ class SportsReferenceScraper:
 
         def_rtg ≈ 100 * (total opponent points) / (total possessions allowed).
         If possessions aren't available, uses each team's known *pace* (from
-        ``team_paces``) to estimate possessions.  Falls back to 70 only when
-        pace is also unknown.
+        ``team_paces``) to estimate possessions.  Falls back to the league-
+        average pace when a team's individual pace is unknown.
         """
         stats: Dict[str, Dict] = {}  # team_id -> {opp_pts, poss, games}
         for game in game_records:
@@ -210,6 +210,15 @@ class SportsReferenceScraper:
                 entry["poss"] += poss
                 entry["games"] += 1
 
+        # Compute league-average pace for last-resort fallback instead of
+        # hardcoding 70.  NCAA pace typically ranges 60-80; a hardcoded 70
+        # can introduce 7-8% error in defensive rating.
+        if team_paces:
+            valid_paces = [p for p in team_paces.values() if p > 0]
+            league_avg_pace = sum(valid_paces) / len(valid_paces) if valid_paces else 70.0
+        else:
+            league_avg_pace = 70.0
+
         result: Dict[str, float] = {}
         for tid, s in stats.items():
             if s["games"] == 0:
@@ -219,8 +228,7 @@ class SportsReferenceScraper:
             elif team_paces and tid in team_paces and team_paces[tid] > 0:
                 result[tid] = 100.0 * s["opp_pts"] / (team_paces[tid] * s["games"])
             else:
-                # Last resort: assume ~70 possessions per game
-                result[tid] = 100.0 * s["opp_pts"] / (70.0 * s["games"])
+                result[tid] = 100.0 * s["opp_pts"] / (league_avg_pace * s["games"])
         return result
 
     def _fetch_basic_def_rtg(

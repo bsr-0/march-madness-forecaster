@@ -535,8 +535,31 @@ class TestSportsReferenceScraper:
             },
         ]
         result = SportsReferenceScraper._compute_def_rtg_from_games(games)
-        # Uses approximate 70 possessions per game
+        # Uses league-average pace (defaults to 70 when no team_paces provided)
         assert len(result) >= 1
+
+    def test_compute_def_rtg_uses_league_avg_pace(self):
+        """When a team has no possessions and no individual pace, use league-avg pace."""
+        from src.data.scrapers.sports_reference import SportsReferenceScraper
+        games = [
+            {
+                "team1_id": "Duke",
+                "team2_id": "UNC",
+                "team1_score": 80,
+                "team2_score": 70,
+                "possessions": 0,
+            },
+        ]
+        # Provide paces for other teams to set league average to 65
+        team_paces = {"other-team": 65.0}
+        result = SportsReferenceScraper._compute_def_rtg_from_games(games, team_paces=team_paces)
+        # Should have 2 teams
+        assert len(result) == 2
+        values = sorted(result.values())
+        # Duke allowed 70 pts in 1 game; def_rtg = 100 * 70 / (65 * 1) ≈ 107.69
+        assert abs(values[0] - 100.0 * 70 / 65.0) < 0.01
+        # UNC allowed 80 pts; def_rtg = 100 * 80 / (65 * 1) ≈ 123.08
+        assert abs(values[1] - 100.0 * 80 / 65.0) < 0.01
 
     def test_compute_def_rtg_non_dict_games_skipped(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
