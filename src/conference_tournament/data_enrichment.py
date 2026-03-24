@@ -13,6 +13,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from src.data.normalize import normalize_team_id as _canonical_id
+
 logger = logging.getLogger(__name__)
 
 
@@ -157,33 +159,44 @@ def _merge_if_zero(team: dict, source: dict, field: str):
 def _fuzzy_lookup(data: dict, team_id: str) -> Optional[dict]:
     """Try common team ID variations to find a match.
 
-    Handles cases like:
-    - "miami_fl" vs "miami__fl" (double underscore)
-    - "n_c_state" vs "nc_state"
-    - "st_john_s" vs "st_johns"
+    Uses canonical normalization to bridge different ID schemes:
+    - "michigan_st" vs "michigan_state" (abbreviation vs full)
+    - "miami_fl" vs "miami__fl" (single vs double underscore)
+    - "smu" vs "southern_methodist" (abbreviation expansion)
+    - "queens" vs "queens__nc" (with/without state qualifier)
+    - "prairie_view_a_m" vs "prairie_view" (with/without A&M suffix)
     """
-    # Strip trailing state qualifiers and retry
-    variations = [
-        team_id,
-        team_id.replace("__", "_"),
-        team_id.replace("_", ""),
-        # Also try expanding single underscores to double (reverse of collapse)
-    ]
-    # Check if any data keys with collapsed underscores match
+    # Strategy 1: Normalize the lookup key and try to find a match
+    # in a canonicalized index of the data keys.
+    canonical_id = _canonical_id(team_id)
+    if canonical_id in data:
+        return data[canonical_id]
+
+    # Strategy 2: Build reverse index — normalize each data key and match.
+    # This handles the case where *data* keys use non-canonical IDs.
+    for key in data:
+        if _canonical_id(key) == canonical_id:
+            return data[key]
+
+    # Strategy 3: Legacy heuristics for edge cases the normalizer might miss.
     collapsed_id = team_id.replace("_", "")
     for key in data:
         if key.replace("_", "") == collapsed_id:
             return data[key]
-    # Handle "n_c_" -> "nc_" pattern
-    if "_c_" in team_id:
-        variations.append(team_id.replace("_c_", "c_"))
-    # Handle apostrophe stripping: "st_john_s" -> "st_johns"
-    if team_id.endswith("_s"):
-        variations.append(team_id[:-2] + "s")
 
-    for v in variations:
-        if v in data:
-            return data[v]
+    # Strategy 4: Disambiguation — match keys that start with our ID
+    # (e.g. "miami" matches "miami__fl" or "miami__oh").  Only use
+    # if there's exactly one such match to avoid ambiguity.
+    prefix_matches = [k for k in data if k.startswith(team_id + "_") or k.startswith(team_id + "__")]
+    if len(prefix_matches) == 1:
+        return data[prefix_matches[0]]
+
+    # Strategy 5: Reverse prefix — our ID starts with a data key
+    # (e.g. "miami__fl" matches data key "miami")
+    for key in data:
+        if team_id.startswith(key + "_") or team_id.startswith(key + "__"):
+            return data[key]
+
     return None
 
 
@@ -198,7 +211,7 @@ def compute_defensive_four_factors_from_games(
     (one per team) paired by ``game_id``.
 
     Returns a dict mapping team_id -> {opp_effective_fg_pct, opp_turnover_rate,
-    opp_free_throw_rate}.
+    opp_free_throw_rate, defensive_reb_rate}.
     """
     # Pair game records by game_id
     game_pairs: Dict[str, List[Dict]] = defaultdict(list)
@@ -209,7 +222,8 @@ def compute_defensive_four_factors_from_games(
 
     # Accumulate opponent stats per team
     team_opp: Dict[str, Dict[str, float]] = defaultdict(
-        lambda: {"fgm": 0, "fga": 0, "fg3m": 0, "fta": 0, "turnovers": 0, "games": 0}
+        lambda: {"fgm": 0, "fga": 0, "fg3m": 0, "fta": 0, "turnovers": 0, "games": 0,
+                 "my_drb": 0, "opp_orb": 0}
     )
 
     for gid, sides in game_pairs.items():
@@ -236,6 +250,8 @@ def compute_defensive_four_factors_from_games(
             s["fg3m"] += float(opp_side.get("fg3m") or 0)
             s["fta"] += float(opp_side.get("fta") or 0)
             s["turnovers"] += float(opp_side.get("turnovers") or 0)
+            s["my_drb"] += float(my_side.get("drb") or 0)
+            s["opp_orb"] += float(opp_side.get("orb") or 0)
             s["games"] += 1
 
     result: Dict[str, Dict[str, float]] = {}
@@ -246,10 +262,13 @@ def compute_defensive_four_factors_from_games(
         denom_to = s["fga"] + 0.44 * s["fta"] + s["turnovers"]
         opp_to_rate = s["turnovers"] / denom_to if denom_to > 0 else 0.0
         opp_ftr = s["fta"] / s["fga"]
+        drb_denom = s["my_drb"] + s["opp_orb"]
+        def_reb_rate = s["my_drb"] / drb_denom if drb_denom > 0 else 0.0
         result[team_id] = {
             "opp_effective_fg_pct": round(opp_efg, 4),
             "opp_turnover_rate": round(opp_to_rate, 4),
             "opp_free_throw_rate": round(opp_ftr, 4),
+            "defensive_reb_rate": round(def_reb_rate, 4),
         }
 
     logger.info(

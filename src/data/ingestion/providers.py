@@ -72,7 +72,7 @@ class LibraryProviderHub:
     DEFAULT_PRIORITIES = {
         "historical_games": ["sportsdataverse", "espn_scoreboard", "cbbpy"],
         "team_metrics": ["sportsdataverse"],
-        "torvik": ["barttorvik"],
+        "torvik": ["cbbdata", "barttorvik"],
     }
 
     def fetch_historical_games(
@@ -106,6 +106,7 @@ class LibraryProviderHub:
 
     def fetch_torvik_ratings(self, year: int, priority: Optional[List[str]] = None) -> ProviderResult:
         methods = {
+            "cbbdata": self._from_cbbdata_api,
             "torvik_r": self._from_torvik_r,
             "barttorvik": self._from_barttorvik_csv,
         }
@@ -393,6 +394,56 @@ class LibraryProviderHub:
         return ProviderResult("sportsdataverse", [])
 
     # ── Torvik provider ────────────────────────────────────────────────────
+
+    def _from_cbbdata_api(self, year: int) -> ProviderResult:
+        """Fetch Torvik ratings + Four Factors from the cbbdata.com API.
+
+        Uses BartTorvikScraper._rankings_from_cbbdata_api which handles
+        authentication, circuit breaking, and field mapping.  Converts
+        TorVikTeam objects to dicts for the provider framework.
+        """
+        try:
+            from ..scrapers.torvik import BartTorvikScraper
+        except ImportError:
+            logger.debug("torvik scraper module not available")
+            return ProviderResult("cbbdata", [])
+
+        try:
+            scraper = BartTorvikScraper()
+            teams = scraper._rankings_from_cbbdata_api(year)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("cbbdata API fetch failed: %s", exc)
+            return ProviderResult("cbbdata", [])
+
+        if not teams:
+            return ProviderResult("cbbdata", [])
+
+        records = []
+        for t in teams:
+            record = {
+                "team_id": t.team_id,
+                "team_name": t.name,
+                "name": t.name,
+                "conference": t.conference,
+                "t_rank": t.t_rank,
+                "barthag": t.barthag,
+                "adj_offensive_efficiency": t.adj_offensive_efficiency,
+                "adj_defensive_efficiency": t.adj_defensive_efficiency,
+                "adj_tempo": t.adj_tempo,
+                "effective_fg_pct": t.effective_fg_pct,
+                "turnover_rate": t.turnover_rate,
+                "offensive_reb_rate": t.offensive_reb_rate,
+                "free_throw_rate": t.free_throw_rate,
+                "opp_effective_fg_pct": t.opp_effective_fg_pct,
+                "opp_turnover_rate": t.opp_turnover_rate,
+                "defensive_reb_rate": t.defensive_reb_rate,
+                "opp_free_throw_rate": t.opp_free_throw_rate,
+                "wins": t.wins,
+                "losses": t.losses,
+            }
+            records.append(record)
+
+        return ProviderResult("cbbdata", records, strategy_used="cbbdata_api")
 
     def _from_torvik_r(self, year: int) -> ProviderResult:
         """Fetch Torvik ratings via the toRvik R package wrapper."""

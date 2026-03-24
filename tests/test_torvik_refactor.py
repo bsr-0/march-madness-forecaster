@@ -144,9 +144,9 @@ class TestCircuitBreakerIntegration:
         assert hasattr(scraper, "_cb_csv")
 
     def test_cbbstat_circuit_breaker_opens_after_failures(self, scraper):
-        """After 5 consecutive cbbstat failures, the circuit breaker opens."""
-        # Simulate 5 failures (threshold is now 5)
-        for _ in range(5):
+        """After 2 consecutive cbbstat failures, the circuit breaker opens."""
+        # Simulate 2 failures (threshold is 2 for deprecated cbbstat)
+        for _ in range(2):
             try:
                 with scraper._cb_cbbstat():
                     raise ConnectionError("API down")
@@ -158,7 +158,7 @@ class TestCircuitBreakerIntegration:
     def test_rankings_skips_cbbstat_when_breaker_open(self, scraper):
         """When cbbstat breaker is open, rankings should skip to CSV fallback."""
         # Force cbbstat breaker open
-        for _ in range(5):
+        for _ in range(2):
             try:
                 with scraper._cb_cbbstat():
                     raise ConnectionError("down")
@@ -166,9 +166,11 @@ class TestCircuitBreakerIntegration:
                 pass
 
         fake_team = _make_team()
-        with patch.object(scraper, "_rankings_from_csv", return_value=[fake_team]):
-            with patch.object(scraper, "_save_to_cache"):
-                teams = scraper.fetch_current_rankings(year=2024)
+        with patch.object(scraper, "_rankings_from_cbbdata_api", return_value=[]):
+            with patch.object(scraper, "_rankings_from_trank_csv", return_value=[]):
+                with patch.object(scraper, "_rankings_from_csv", return_value=[fake_team]):
+                    with patch.object(scraper, "_save_to_cache"):
+                        teams = scraper.fetch_current_rankings(year=2024)
 
         assert len(teams) == 1
         # cbbstat was never tried (breaker open), went straight to CSV
@@ -176,7 +178,7 @@ class TestCircuitBreakerIntegration:
 
     def test_four_factors_skips_cbbstat_when_breaker_open(self, scraper):
         """When cbbstat breaker is open, four factors should fallback to CSV."""
-        for _ in range(5):
+        for _ in range(2):
             try:
                 with scraper._cb_cbbstat():
                     raise ConnectionError("down")
@@ -189,9 +191,11 @@ class TestCircuitBreakerIntegration:
             "opp_effective_fg_pct": 0.45, "opp_turnover_rate": 0.18,
             "defensive_reb_rate": 0.72, "opp_free_throw_rate": 0.31,
         }}
-        with patch.object(scraper, "_four_factors_from_player_csv", return_value=fake_ff):
-            with patch.object(scraper, "_save_to_cache"):
-                ff = scraper.fetch_four_factors(year=2024)
+        with patch.object(scraper, "_four_factors_from_cbbdata_api", return_value={}):
+            with patch.object(scraper, "_four_factors_from_trank_csv", return_value={}):
+                with patch.object(scraper, "_four_factors_from_player_csv", return_value=fake_ff):
+                    with patch.object(scraper, "_save_to_cache"):
+                        ff = scraper.fetch_four_factors(year=2024)
 
         assert ff == fake_ff
         assert scraper._fetch_strategy.get("four_factors") == "csv_fallback"
@@ -395,8 +399,10 @@ class TestCSVFallbackFix:
         # DRB% should be non-zero
         assert ff["defensive_reb_rate"] > 0
 
-        # Defensive opponent stats still can't be derived from this source
-        assert ff["opp_effective_fg_pct"] == 0.0
+        # Defensive opponent stats can't be derived from player-level CSV — returned as None
+        assert ff["opp_effective_fg_pct"] is None
+        assert ff["opp_turnover_rate"] is None
+        assert ff["opp_free_throw_rate"] is None
 
         # Should be flagged as approximation
         assert ff.get("_csv_approximation") is True
