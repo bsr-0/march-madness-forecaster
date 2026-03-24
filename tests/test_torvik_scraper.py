@@ -472,6 +472,41 @@ class TestCsvHeaderDetection:
         # "team" alone shouldn't trigger header detection; all 110 rows parsed as data
         assert len(teams) == 110
 
+    def test_bom_in_csv_does_not_break_header_detection(self, scraper):
+        """A UTF-8 BOM (\\ufeff) before the first header should be stripped."""
+        header = (
+            "\ufeffrank,team,conf,adj_o,adj_d,barthag,adj_t,wab,wins,losses,"
+            "off_efg,off_to,off_or,off_ftr,def_efg,def_to,def_or,def_ftr"
+        )
+        csv_content = header + "\n" + self._make_csv_rows(110) + "\n"
+        fake_resp = MagicMock()
+        fake_resp.text = csv_content
+        with patch.object(scraper, "_get_with_retry", return_value=fake_resp):
+            with patch.object(scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())):
+                teams = scraper._rankings_from_trank_csv(2026)
+        # BOM should be stripped; header detected; 110 data rows parsed
+        assert len(teams) == 110
+
+    def test_rate_col_returns_nan_for_missing_column(self, scraper):
+        """Missing rate columns should produce NaN, not 0.0."""
+        # CSV with headers but NO Four Factors columns
+        header = "rank,team,conf,adj_o,adj_d,barthag,adj_t,wab"
+        rows = []
+        for i in range(110):
+            rows.append(f"{i+1},Team_{i},Conf,{100+i:.1f},{95+i:.1f},0.50,68.0,0.0")
+        csv_content = header + "\n" + "\n".join(rows) + "\n"
+        fake_resp = MagicMock()
+        fake_resp.text = csv_content
+        with patch.object(scraper, "_get_with_retry", return_value=fake_resp):
+            with patch.object(scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())):
+                teams = scraper._rankings_from_trank_csv(2026)
+        assert len(teams) == 110
+        # Four Factors should be NaN (not 0.0) since columns are absent
+        import math
+        for t in teams[:5]:
+            assert math.isnan(t.effective_fg_pct), f"Expected NaN for eFG%, got {t.effective_fg_pct}"
+            assert math.isnan(t.turnover_rate), f"Expected NaN for TO%, got {t.turnover_rate}"
+
 
 # ---------------------------------------------------------------------------
 # Structural: HTML methods removed
