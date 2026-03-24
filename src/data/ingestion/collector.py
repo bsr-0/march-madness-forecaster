@@ -93,6 +93,48 @@ class IngestionConfig:
     min_nonzero_rapm_players_per_team: int = 3
 
 
+_FF_FIELDS = (
+    "effective_fg_pct", "turnover_rate", "offensive_reb_rate", "free_throw_rate",
+    "opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate", "defensive_reb_rate",
+)
+
+
+def _merge_four_factors_into_torvik(torvik_payload: dict, four_factors: dict) -> int:
+    """Merge four_factors entries into torvik team dicts, filling zero fields.
+
+    Uses normalize_team_id to resolve _st/_state and alias mismatches.
+    Returns count of teams updated.
+    """
+    teams = torvik_payload.get("teams", [])
+    if not teams:
+        return 0
+
+    # Build normalized lookup: normalize_team_id(ff_key) -> ff_entry
+    normalized_ff: dict = {}
+    for key, entry in four_factors.items():
+        if isinstance(entry, dict):
+            normalized_ff[normalize_team_id(key)] = entry
+
+    updated = 0
+    for team in teams:
+        tid = team.get("team_id", "")
+        ff = four_factors.get(tid)
+        if ff is None:
+            ff = normalized_ff.get(normalize_team_id(tid))
+        if ff is None or not isinstance(ff, dict):
+            continue
+        changed = False
+        for field in _FF_FIELDS:
+            current = float(team.get(field, 0) or 0)
+            source = float(ff.get(field, 0) or 0)
+            if abs(current) < 1e-6 and abs(source) > 1e-6:
+                team[field] = ff[field]
+                changed = True
+        if changed:
+            updated += 1
+    return updated
+
+
 class RealDataCollector:
     """Collects real-world data and writes canonical JSON artifacts."""
 
@@ -224,6 +266,18 @@ class RealDataCollector:
                     )
                     for w in cross_warnings:
                         logger.warning("[cross-validate] %s", w)
+            # Merge four_factors back into torvik_payload so the main file
+            # has non-zero Four Factors from the start (prevents the
+            # all-zeros corruption that required post-hoc repair scripts).
+            if four_factors and torvik_payload:
+                _merged = _merge_four_factors_into_torvik(torvik_payload, four_factors)
+                if _merged:
+                    out["torvik_json"] = self._write(f"torvik_{year}.json", torvik_payload)
+                    logger.info(
+                        "Merged Four Factors into torvik_%d.json for %d teams",
+                        year, _merged,
+                    )
+
             shooting = torvik_scraper.fetch_shooting_stats(year)
             if shooting:
                 out["torvik_shooting_json"] = self._write(
