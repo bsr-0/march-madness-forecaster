@@ -211,7 +211,7 @@ def compute_defensive_four_factors_from_games(
     (one per team) paired by ``game_id``.
 
     Returns a dict mapping team_id -> {opp_effective_fg_pct, opp_turnover_rate,
-    opp_free_throw_rate}.
+    opp_free_throw_rate, defensive_reb_rate}.
     """
     # Pair game records by game_id
     game_pairs: Dict[str, List[Dict]] = defaultdict(list)
@@ -222,7 +222,8 @@ def compute_defensive_four_factors_from_games(
 
     # Accumulate opponent stats per team
     team_opp: Dict[str, Dict[str, float]] = defaultdict(
-        lambda: {"fgm": 0, "fga": 0, "fg3m": 0, "fta": 0, "turnovers": 0, "games": 0}
+        lambda: {"fgm": 0, "fga": 0, "fg3m": 0, "fta": 0, "turnovers": 0, "games": 0,
+                 "my_drb": 0, "opp_orb": 0}
     )
 
     for gid, sides in game_pairs.items():
@@ -249,6 +250,8 @@ def compute_defensive_four_factors_from_games(
             s["fg3m"] += float(opp_side.get("fg3m") or 0)
             s["fta"] += float(opp_side.get("fta") or 0)
             s["turnovers"] += float(opp_side.get("turnovers") or 0)
+            s["my_drb"] += float(my_side.get("drb") or 0)
+            s["opp_orb"] += float(opp_side.get("orb") or 0)
             s["games"] += 1
 
     result: Dict[str, Dict[str, float]] = {}
@@ -259,10 +262,13 @@ def compute_defensive_four_factors_from_games(
         denom_to = s["fga"] + 0.44 * s["fta"] + s["turnovers"]
         opp_to_rate = s["turnovers"] / denom_to if denom_to > 0 else 0.0
         opp_ftr = s["fta"] / s["fga"]
+        drb_denom = s["my_drb"] + s["opp_orb"]
+        def_reb_rate = s["my_drb"] / drb_denom if drb_denom > 0 else 0.0
         result[team_id] = {
             "opp_effective_fg_pct": round(opp_efg, 4),
             "opp_turnover_rate": round(opp_to_rate, 4),
             "opp_free_throw_rate": round(opp_ftr, 4),
+            "defensive_reb_rate": round(def_reb_rate, 4),
         }
 
     logger.info(

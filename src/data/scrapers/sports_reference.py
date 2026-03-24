@@ -21,6 +21,10 @@ class SportsReferenceScraper:
 
     BASE_URL = "https://www.sports-reference.com/cbb/seasons/men"
 
+    # NCAA D1 average possessions per game (2005-2025 range: 60-80, median ~70).
+    # Used as last-resort fallback when neither pace nor possession data is available.
+    _FALLBACK_POSSESSIONS_PER_GAME = 70.0
+
     # Teams whose Sports Reference names get "NCAA" appended for tourney
     # qualifiers.  Strip the suffix so IDs stay canonical.
     _NCAA_SUFFIX_RE = re.compile(r"NCAA$", re.IGNORECASE)
@@ -219,8 +223,8 @@ class SportsReferenceScraper:
             elif team_paces and tid in team_paces and team_paces[tid] > 0:
                 result[tid] = 100.0 * s["opp_pts"] / (team_paces[tid] * s["games"])
             else:
-                # Last resort: assume ~70 possessions per game
-                result[tid] = 100.0 * s["opp_pts"] / (70.0 * s["games"])
+                # Last resort: assume average possessions per game
+                result[tid] = 100.0 * s["opp_pts"] / (self._FALLBACK_POSSESSIONS_PER_GAME * s["games"])
         return result
 
     def _fetch_basic_def_rtg(
@@ -268,7 +272,7 @@ class SportsReferenceScraper:
                 elif team_paces and tid in team_paces and team_paces[tid] > 0:
                     result[tid] = 100.0 * opp_pts / (team_paces[tid] * games)
                 else:
-                    result[tid] = 100.0 * opp_pts / (70.0 * games)
+                    result[tid] = 100.0 * opp_pts / (self._FALLBACK_POSSESSIONS_PER_GAME * games)
         return result
 
     # Required fields for a valid team metrics record.  If any are missing
