@@ -837,15 +837,25 @@ class ScraperOrchestrator:
                 elapsed_ms = (time.monotonic() - start) * 1000
 
                 if result and result.teams:
-                    # Success
-                    status.health = SourceHealth.HEALTHY
+                    # Validate plausibility before accepting
+                    plaus_warnings = validate_consensus_plausibility(result)
+                    if plaus_warnings:
+                        logger.warning(
+                            "%s: plausibility issues on attempt %d/%d: %s",
+                            source_name, attempt + 1, self.MAX_RETRIES,
+                            "; ".join(plaus_warnings),
+                        )
+                        status.health = SourceHealth.DEGRADED
+                    else:
+                        status.health = SourceHealth.HEALTHY
                     status.last_success = time.time()
                     status.consecutive_failures = 0
                     status.latency_ms = elapsed_ms
                     status.last_error = None
                     logger.info(
-                        "%s: fetched %d teams in %.0fms (attempt %d)",
+                        "%s: fetched %d teams in %.0fms (attempt %d)%s",
                         source_name, len(result.teams), elapsed_ms, attempt + 1,
+                        " [DEGRADED]" if plaus_warnings else "",
                     )
                     return result
                 else:

@@ -381,18 +381,22 @@ def extract_public_pick_rows(
         return {}
 
     rows: Dict[str, Dict[str, float]] = {}
+    _round_keys = [
+        ("R64", "round_of_64_pct"),
+        ("R32", "round_of_32_pct"),
+        ("S16", "sweet_16_pct"),
+        ("E8", "elite_8_pct"),
+        ("F4", "final_four_pct"),
+        ("CHAMP", "champion_pct"),
+    ]
     for raw_team_id, row in teams.items():
         if not isinstance(row, dict):
             continue
         row_team_id = row.get("team_id") or raw_team_id
         team_id = pipeline._team_id(str(row_team_id))
         rows[team_id] = {
-            "R64": float(row.get("R64", row.get("round_of_64_pct", 0.0))),
-            "R32": float(row.get("R32", row.get("round_of_32_pct", 0.0))),
-            "S16": float(row.get("S16", row.get("sweet_16_pct", 0.0))),
-            "E8": float(row.get("E8", row.get("elite_8_pct", 0.0))),
-            "F4": float(row.get("F4", row.get("final_four_pct", 0.0))),
-            "CHAMP": float(row.get("CHAMP", row.get("champion_pct", 0.0))),
+            rnd: normalize_pick_probability(row.get(rnd, row.get(alt)))
+            for rnd, alt in _round_keys
         }
     return rows
 
@@ -412,12 +416,26 @@ def normalize_public_pick_row(row: Dict[str, float]) -> Dict[str, float]:
     }
 
 
-def normalize_pick_probability(value: float) -> float:
+def normalize_pick_probability(value) -> float:
     """Clamp and normalize a pick probability value.
 
-    Translated from ``SOTAPipeline._normalize_pick_probability`` (static method).
+    Handles various input formats:
+    - float/int: 0.452 or 45.2
+    - str: "45.2%", "45.2", ".452"
+
+    Values > 1.0 are interpreted as percentages and divided by 100.
+    Result is always in [0.0001, 0.9999].
     """
-    v = float(value or 0.0)
+    if value is None:
+        return 0.0001
+    if isinstance(value, str):
+        value = value.strip().rstrip("%")
+        if not value:
+            return 0.0001
+    try:
+        v = float(value)
+    except (ValueError, TypeError):
+        return 0.0001
     if v > 1.0:
         v = v / 100.0
     return float(np.clip(v, 0.0001, 0.9999))
