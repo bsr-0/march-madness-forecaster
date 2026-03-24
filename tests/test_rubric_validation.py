@@ -39,17 +39,17 @@ def sample_seed_probs():
 
 class TestPass1PITAndMetrics:
 
-    def test_manifest_exists_and_has_79_features(self):
-        """MANIFEST.yaml should declare exactly 79 features."""
+    def test_manifest_exists_and_has_86_features(self):
+        """MANIFEST.yaml should declare exactly 86 features."""
         import yaml
         manifest_path = Path(__file__).resolve().parents[1] / "features" / "MANIFEST.yaml"
         assert manifest_path.exists(), "features/MANIFEST.yaml not found"
         with open(manifest_path) as f:
             manifest = yaml.safe_load(f)
-        assert manifest["total_features"] == 74
+        assert manifest["total_features"] == 86
 
     def test_manifest_tier_classification(self):
-        """All 74 features must be classified into tiers 1, 2, or 3."""
+        """All 86 features must be classified into tiers 1, 2, or 3."""
         import yaml
         manifest_path = Path(__file__).resolve().parents[1] / "features" / "MANIFEST.yaml"
         with open(manifest_path) as f:
@@ -57,7 +57,7 @@ class TestPass1PITAndMetrics:
         t1 = len(manifest.get("tier_1_static", {}).get("features", []))
         t2 = len(manifest.get("tier_2_cumulative", {}).get("features", []))
         t3 = len(manifest.get("tier_3_external", {}).get("features", []))
-        assert t1 + t2 + t3 == 74, f"Tier sum {t1+t2+t3} != 74"
+        assert t1 + t2 + t3 == 86, f"Tier sum {t1+t2+t3} != 86"
         assert t1 > 0 and t2 > 0 and t3 > 0
 
     def test_pit_validator_importable(self):
