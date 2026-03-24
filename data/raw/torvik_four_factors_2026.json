@@ -13,11 +13,11 @@
   "new_mexico_state": {
     "effective_fg_pct": 0.4854,
     "turnover_rate": 0.1543,
-    "offensive_reb_rate": 0.0812,
+    "offensive_reb_rate": 0.3195,
     "free_throw_rate": 0.3486,
     "opp_effective_fg_pct": 0.4783,
     "opp_turnover_rate": 0.1305,
-    "defensive_reb_rate": 0.1915,
+    "defensive_reb_rate": 0.7312,
     "opp_free_throw_rate": 0.4338,
     "_csv_approximation": true
   },
@@ -178,11 +178,11 @@
   "kent_state": {
     "effective_fg_pct": 0.5141,
     "turnover_rate": 0.1749,
-    "offensive_reb_rate": 0.0845,
+    "offensive_reb_rate": 0.3427,
     "free_throw_rate": 0.435,
     "opp_effective_fg_pct": 0.5115,
     "opp_turnover_rate": 0.139,
-    "defensive_reb_rate": 0.194,
+    "defensive_reb_rate": 0.7421,
     "opp_free_throw_rate": 0.3776,
     "_csv_approximation": true
   },
@@ -387,11 +387,11 @@
   "tennessee_state": {
     "effective_fg_pct": 0.5,
     "turnover_rate": 0.1668,
-    "offensive_reb_rate": 0.0831,
+    "offensive_reb_rate": 0.3299,
     "free_throw_rate": 0.3335,
     "opp_effective_fg_pct": 0.5044,
     "opp_turnover_rate": 0.1744,
-    "defensive_reb_rate": 0.1921,
+    "defensive_reb_rate": 0.7406,
     "opp_free_throw_rate": 0.3895,
     "_csv_approximation": true
   },
@@ -420,11 +420,11 @@
   "texas_a_m_corpus_christi": {
     "effective_fg_pct": 0.4946,
     "turnover_rate": 0.1838,
-    "offensive_reb_rate": 0.0771,
+    "offensive_reb_rate": 0.3077,
     "free_throw_rate": 0.4111,
     "opp_effective_fg_pct": 0.4816,
     "opp_turnover_rate": 0.1727,
-    "defensive_reb_rate": 0.192,
+    "defensive_reb_rate": 0.7518,
     "opp_free_throw_rate": 0.4649,
     "_csv_approximation": true
   },
@@ -442,11 +442,11 @@
   "california_baptist": {
     "effective_fg_pct": 0.4829,
     "turnover_rate": 0.179,
-    "offensive_reb_rate": 0.0885,
+    "offensive_reb_rate": 0.3631,
     "free_throw_rate": 0.3592,
     "opp_effective_fg_pct": 0.4614,
     "opp_turnover_rate": 0.1445,
-    "defensive_reb_rate": 0.1951,
+    "defensive_reb_rate": 0.7428,
     "opp_free_throw_rate": 0.3716,
     "_csv_approximation": true
   },
@@ -464,22 +464,22 @@
   "oklahoma_state": {
     "effective_fg_pct": 0.52,
     "turnover_rate": 0.1584,
-    "offensive_reb_rate": 0.0767,
+    "offensive_reb_rate": 0.2811,
     "free_throw_rate": 0.3939,
     "opp_effective_fg_pct": 0.5269,
     "opp_turnover_rate": 0.14,
-    "defensive_reb_rate": 0.1911,
+    "defensive_reb_rate": 0.7118,
     "opp_free_throw_rate": 0.3253,
     "_csv_approximation": true
   },
   "mississippi_state": {
     "effective_fg_pct": 0.5149,
     "turnover_rate": 0.1644,
-    "offensive_reb_rate": 0.077,
+    "offensive_reb_rate": 0.2797,
     "free_throw_rate": 0.3065,
     "opp_effective_fg_pct": 0.5097,
     "opp_turnover_rate": 0.1087,
-    "defensive_reb_rate": 0.1931,
+    "defensive_reb_rate": 0.7107,
     "opp_free_throw_rate": 0.3224,
     "_csv_approximation": true
   },
@@ -519,11 +519,11 @@
   "north_dakota_state": {
     "effective_fg_pct": 0.5324,
     "turnover_rate": 0.1565,
-    "offensive_reb_rate": 0.0823,
+    "offensive_reb_rate": 0.3189,
     "free_throw_rate": 0.3063,
     "opp_effective_fg_pct": 0.5114,
     "opp_turnover_rate": 0.1714,
-    "defensive_reb_rate": 0.1989,
+    "defensive_reb_rate": 0.7687,
     "opp_free_throw_rate": 0.2791,
     "_csv_approximation": true
   },
@@ -574,11 +574,11 @@
   "prairie_view": {
     "effective_fg_pct": 0.4742,
     "turnover_rate": 0.1578,
-    "offensive_reb_rate": 0.0702,
+    "offensive_reb_rate": 0.2587,
     "free_throw_rate": 0.4162,
     "opp_effective_fg_pct": 0.5041,
     "opp_turnover_rate": 0.1745,
-    "defensive_reb_rate": 0.184,
+    "defensive_reb_rate": 0.677,
     "opp_free_throw_rate": 0.4159,
     "_csv_approximation": true
   },
@@ -607,11 +607,11 @@
   "iowa_state": {
     "effective_fg_pct": 0.5651,
     "turnover_rate": 0.1466,
-    "offensive_reb_rate": 0.0857,
+    "offensive_reb_rate": 0.3316,
     "free_throw_rate": 0.3425,
     "opp_effective_fg_pct": 0.4979,
     "opp_turnover_rate": 0.1894,
-    "defensive_reb_rate": 0.1954,
+    "defensive_reb_rate": 0.7393,
     "opp_free_throw_rate": 0.2828,
     "_csv_approximation": true
   },
@@ -695,11 +695,11 @@
   "ohio_state": {
     "effective_fg_pct": 0.5624,
     "turnover_rate": 0.1567,
-    "offensive_reb_rate": 0.0752,
+    "offensive_reb_rate": 0.2809,
     "free_throw_rate": 0.3723,
     "opp_effective_fg_pct": 0.5006,
     "opp_turnover_rate": 0.1305,
-    "defensive_reb_rate": 0.192,
+    "defensive_reb_rate": 0.7143,
     "opp_free_throw_rate": 0.3457,
     "_csv_approximation": true
   },
@@ -805,11 +805,11 @@
   "san_diego_state": {
     "effective_fg_pct": 0.5269,
     "turnover_rate": 0.1704,
-    "offensive_reb_rate": 0.0781,
+    "offensive_reb_rate": 0.2954,
     "free_throw_rate": 0.3898,
     "opp_effective_fg_pct": 0.4827,
     "opp_turnover_rate": 0.1672,
-    "defensive_reb_rate": 0.1904,
+    "defensive_reb_rate": 0.7134,
     "opp_free_throw_rate": 0.3931,
     "_csv_approximation": true
   },
@@ -904,22 +904,22 @@
   "jacksonville_state": {
     "effective_fg_pct": 0.4971,
     "turnover_rate": 0.1632,
-    "offensive_reb_rate": 0.0753,
+    "offensive_reb_rate": 0.3011,
     "free_throw_rate": 0.431,
     "opp_effective_fg_pct": 0.477,
     "opp_turnover_rate": 0.1375,
-    "defensive_reb_rate": 0.1957,
+    "defensive_reb_rate": 0.7628,
     "opp_free_throw_rate": 0.3785,
     "_csv_approximation": true
   },
   "michigan_state": {
     "effective_fg_pct": 0.5411,
     "turnover_rate": 0.169,
-    "offensive_reb_rate": 0.0907,
+    "offensive_reb_rate": 0.3696,
     "free_throw_rate": 0.3602,
     "opp_effective_fg_pct": 0.4802,
     "opp_turnover_rate": 0.1269,
-    "defensive_reb_rate": 0.2072,
+    "defensive_reb_rate": 0.798,
     "opp_free_throw_rate": 0.3078,
     "_csv_approximation": true
   },
@@ -937,11 +937,11 @@
   "grambling": {
     "effective_fg_pct": 0.4878,
     "turnover_rate": 0.2031,
-    "offensive_reb_rate": 0.0775,
+    "offensive_reb_rate": 0.2931,
     "free_throw_rate": 0.4112,
     "opp_effective_fg_pct": 0.4949,
     "opp_turnover_rate": 0.1764,
-    "defensive_reb_rate": 0.1862,
+    "defensive_reb_rate": 0.7088,
     "opp_free_throw_rate": 0.3928,
     "_csv_approximation": true
   },
@@ -1102,11 +1102,11 @@
   "murray_state": {
     "effective_fg_pct": 0.5384,
     "turnover_rate": 0.1609,
-    "offensive_reb_rate": 0.0833,
+    "offensive_reb_rate": 0.323,
     "free_throw_rate": 0.3862,
     "opp_effective_fg_pct": 0.5228,
     "opp_turnover_rate": 0.1331,
-    "defensive_reb_rate": 0.1919,
+    "defensive_reb_rate": 0.7143,
     "opp_free_throw_rate": 0.329,
     "_csv_approximation": true
   },
@@ -1278,11 +1278,11 @@
   "boise_state": {
     "effective_fg_pct": 0.522,
     "turnover_rate": 0.1663,
-    "offensive_reb_rate": 0.0835,
+    "offensive_reb_rate": 0.3217,
     "free_throw_rate": 0.4266,
     "opp_effective_fg_pct": 0.5253,
     "opp_turnover_rate": 0.1234,
-    "defensive_reb_rate": 0.2028,
+    "defensive_reb_rate": 0.7873,
     "opp_free_throw_rate": 0.3118,
     "_csv_approximation": true
   },
@@ -1388,11 +1388,11 @@
   "morehead_state": {
     "effective_fg_pct": 0.4915,
     "turnover_rate": 0.1728,
-    "offensive_reb_rate": 0.0884,
+    "offensive_reb_rate": 0.3528,
     "free_throw_rate": 0.3772,
     "opp_effective_fg_pct": 0.503,
     "opp_turnover_rate": 0.1308,
-    "defensive_reb_rate": 0.1827,
+    "defensive_reb_rate": 0.6821,
     "opp_free_throw_rate": 0.3375,
     "_csv_approximation": true
   },
@@ -1619,11 +1619,11 @@
   "kansas_state": {
     "effective_fg_pct": 0.5331,
     "turnover_rate": 0.1749,
-    "offensive_reb_rate": 0.0754,
+    "offensive_reb_rate": 0.271,
     "free_throw_rate": 0.2685,
     "opp_effective_fg_pct": 0.5209,
     "opp_turnover_rate": 0.1424,
-    "defensive_reb_rate": 0.1836,
+    "defensive_reb_rate": 0.6747,
     "opp_free_throw_rate": 0.3557,
     "_csv_approximation": true
   },
@@ -1938,11 +1938,11 @@
   "long_island_university": {
     "effective_fg_pct": 0.5279,
     "turnover_rate": 0.1848,
-    "offensive_reb_rate": 0.0856,
+    "offensive_reb_rate": 0.34,
     "free_throw_rate": 0.3405,
     "opp_effective_fg_pct": 0.4971,
     "opp_turnover_rate": 0.1568,
-    "defensive_reb_rate": 0.1868,
+    "defensive_reb_rate": 0.698,
     "opp_free_throw_rate": 0.3454,
     "_csv_approximation": true
   },
@@ -2048,11 +2048,11 @@
   "florida_state": {
     "effective_fg_pct": 0.5232,
     "turnover_rate": 0.1468,
-    "offensive_reb_rate": 0.0792,
+    "offensive_reb_rate": 0.2979,
     "free_throw_rate": 0.3468,
     "opp_effective_fg_pct": 0.5201,
     "opp_turnover_rate": 0.1602,
-    "defensive_reb_rate": 0.1852,
+    "defensive_reb_rate": 0.6801,
     "opp_free_throw_rate": 0.3238,
     "_csv_approximation": true
   },
@@ -2081,11 +2081,11 @@
   "wichita_state": {
     "effective_fg_pct": 0.4972,
     "turnover_rate": 0.151,
-    "offensive_reb_rate": 0.0911,
+    "offensive_reb_rate": 0.3843,
     "free_throw_rate": 0.3562,
     "opp_effective_fg_pct": 0.4765,
     "opp_turnover_rate": 0.1351,
-    "defensive_reb_rate": 0.1946,
+    "defensive_reb_rate": 0.7488,
     "opp_free_throw_rate": 0.3408,
     "_csv_approximation": true
   },
@@ -2213,11 +2213,11 @@
   "cleveland_state": {
     "effective_fg_pct": 0.5416,
     "turnover_rate": 0.168,
-    "offensive_reb_rate": 0.0696,
+    "offensive_reb_rate": 0.2615,
     "free_throw_rate": 0.3789,
     "opp_effective_fg_pct": 0.5569,
     "opp_turnover_rate": 0.1314,
-    "defensive_reb_rate": 0.179,
+    "defensive_reb_rate": 0.6628,
     "opp_free_throw_rate": 0.3523,
     "_csv_approximation": true
   },
@@ -2367,11 +2367,11 @@
   "long_beach_state": {
     "effective_fg_pct": 0.5062,
     "turnover_rate": 0.1841,
-    "offensive_reb_rate": 0.0688,
+    "offensive_reb_rate": 0.242,
     "free_throw_rate": 0.3071,
     "opp_effective_fg_pct": 0.5303,
     "opp_turnover_rate": 0.1558,
-    "defensive_reb_rate": 0.194,
+    "defensive_reb_rate": 0.756,
     "opp_free_throw_rate": 0.413,
     "_csv_approximation": true
   },
@@ -2422,22 +2422,22 @@
   "montana_state": {
     "effective_fg_pct": 0.536,
     "turnover_rate": 0.1497,
-    "offensive_reb_rate": 0.0731,
+    "offensive_reb_rate": 0.2613,
     "free_throw_rate": 0.3024,
     "opp_effective_fg_pct": 0.5064,
     "opp_turnover_rate": 0.1435,
-    "defensive_reb_rate": 0.1968,
+    "defensive_reb_rate": 0.744,
     "opp_free_throw_rate": 0.2769,
     "_csv_approximation": true
   },
   "south_dakota_state": {
     "effective_fg_pct": 0.5201,
     "turnover_rate": 0.1624,
-    "offensive_reb_rate": 0.077,
+    "offensive_reb_rate": 0.2946,
     "free_throw_rate": 0.2971,
     "opp_effective_fg_pct": 0.5119,
     "opp_turnover_rate": 0.1282,
-    "defensive_reb_rate": 0.2015,
+    "defensive_reb_rate": 0.7733,
     "opp_free_throw_rate": 0.3272,
     "_csv_approximation": true
   },
@@ -2488,11 +2488,11 @@
   "wright_state": {
     "effective_fg_pct": 0.5433,
     "turnover_rate": 0.1595,
-    "offensive_reb_rate": 0.0802,
+    "offensive_reb_rate": 0.3246,
     "free_throw_rate": 0.3736,
     "opp_effective_fg_pct": 0.5181,
     "opp_turnover_rate": 0.1499,
-    "defensive_reb_rate": 0.1925,
+    "defensive_reb_rate": 0.7332,
     "opp_free_throw_rate": 0.3358,
     "_csv_approximation": true
   },
@@ -2708,22 +2708,22 @@
   "fresno_state": {
     "effective_fg_pct": 0.5062,
     "turnover_rate": 0.1758,
-    "offensive_reb_rate": 0.0727,
+    "offensive_reb_rate": 0.2591,
     "free_throw_rate": 0.3382,
     "opp_effective_fg_pct": 0.5098,
     "opp_turnover_rate": 0.1499,
-    "defensive_reb_rate": 0.1921,
+    "defensive_reb_rate": 0.7095,
     "opp_free_throw_rate": 0.2876,
     "_csv_approximation": true
   },
   "georgia_state": {
     "effective_fg_pct": 0.4419,
     "turnover_rate": 0.1535,
-    "offensive_reb_rate": 0.0723,
+    "offensive_reb_rate": 0.2577,
     "free_throw_rate": 0.3717,
     "opp_effective_fg_pct": 0.5024,
     "opp_turnover_rate": 0.1382,
-    "defensive_reb_rate": 0.1842,
+    "defensive_reb_rate": 0.6912,
     "opp_free_throw_rate": 0.3527,
     "_csv_approximation": true
   },
@@ -2774,11 +2774,11 @@
   "utah_state": {
     "effective_fg_pct": 0.5625,
     "turnover_rate": 0.1506,
-    "offensive_reb_rate": 0.0807,
+    "offensive_reb_rate": 0.3181,
     "free_throw_rate": 0.3883,
     "opp_effective_fg_pct": 0.4951,
     "opp_turnover_rate": 0.1673,
-    "defensive_reb_rate": 0.1853,
+    "defensive_reb_rate": 0.7023,
     "opp_free_throw_rate": 0.3888,
     "_csv_approximation": true
   },
@@ -2961,11 +2961,11 @@
   "pennsylvania": {
     "effective_fg_pct": 0.5037,
     "turnover_rate": 0.1495,
-    "offensive_reb_rate": 0.0777,
+    "offensive_reb_rate": 0.2988,
     "free_throw_rate": 0.3393,
     "opp_effective_fg_pct": 0.0,
     "opp_turnover_rate": 0.0,
-    "defensive_reb_rate": 0.1882,
+    "defensive_reb_rate": 0.723,
     "opp_free_throw_rate": 0.0,
     "_csv_approximation": true
   },
@@ -3060,11 +3060,11 @@
   "oregon_state": {
     "effective_fg_pct": 0.5046,
     "turnover_rate": 0.1724,
-    "offensive_reb_rate": 0.0719,
+    "offensive_reb_rate": 0.2484,
     "free_throw_rate": 0.4311,
     "opp_effective_fg_pct": 0.5034,
     "opp_turnover_rate": 0.1262,
-    "defensive_reb_rate": 0.1888,
+    "defensive_reb_rate": 0.693,
     "opp_free_throw_rate": 0.3511,
     "_csv_approximation": true
   },
@@ -3093,22 +3093,22 @@
   "cal_state_fullerton": {
     "effective_fg_pct": 0.5136,
     "turnover_rate": 0.1494,
-    "offensive_reb_rate": 0.067,
+    "offensive_reb_rate": 0.2264,
     "free_throw_rate": 0.3783,
     "opp_effective_fg_pct": 0.5425,
     "opp_turnover_rate": 0.1694,
-    "defensive_reb_rate": 0.1932,
+    "defensive_reb_rate": 0.747,
     "opp_free_throw_rate": 0.3439,
     "_csv_approximation": true
   },
   "san_jose_state": {
     "effective_fg_pct": 0.4967,
     "turnover_rate": 0.1514,
-    "offensive_reb_rate": 0.0765,
+    "offensive_reb_rate": 0.2835,
     "free_throw_rate": 0.3344,
     "opp_effective_fg_pct": 0.5655,
     "opp_turnover_rate": 0.1443,
-    "defensive_reb_rate": 0.1812,
+    "defensive_reb_rate": 0.6667,
     "opp_free_throw_rate": 0.3517,
     "_csv_approximation": true
   },
@@ -3192,11 +3192,11 @@
   "norfolk_state": {
     "effective_fg_pct": 0.493,
     "turnover_rate": 0.1843,
-    "offensive_reb_rate": 0.0786,
+    "offensive_reb_rate": 0.3102,
     "free_throw_rate": 0.4354,
     "opp_effective_fg_pct": 0.5096,
     "opp_turnover_rate": 0.1616,
-    "defensive_reb_rate": 0.1862,
+    "defensive_reb_rate": 0.7131,
     "opp_free_throw_rate": 0.4304,
     "_csv_approximation": true
   },
@@ -3214,11 +3214,11 @@
   "kennesaw_state": {
     "effective_fg_pct": 0.5036,
     "turnover_rate": 0.1674,
-    "offensive_reb_rate": 0.0852,
+    "offensive_reb_rate": 0.3488,
     "free_throw_rate": 0.4512,
     "opp_effective_fg_pct": 0.4733,
     "opp_turnover_rate": 0.1386,
-    "defensive_reb_rate": 0.1884,
+    "defensive_reb_rate": 0.7569,
     "opp_free_throw_rate": 0.4592,
     "_csv_approximation": true
   },
@@ -3280,11 +3280,11 @@
   "penn_state": {
     "effective_fg_pct": 0.5301,
     "turnover_rate": 0.1547,
-    "offensive_reb_rate": 0.0702,
+    "offensive_reb_rate": 0.2178,
     "free_throw_rate": 0.3382,
     "opp_effective_fg_pct": 0.5908,
     "opp_turnover_rate": 0.1354,
-    "defensive_reb_rate": 0.1902,
+    "defensive_reb_rate": 0.6745,
     "opp_free_throw_rate": 0.2574,
     "_csv_approximation": true
   },
@@ -3379,11 +3379,11 @@
   "arizona_state": {
     "effective_fg_pct": 0.511,
     "turnover_rate": 0.1663,
-    "offensive_reb_rate": 0.075,
+    "offensive_reb_rate": 0.2718,
     "free_throw_rate": 0.395,
     "opp_effective_fg_pct": 0.5232,
     "opp_turnover_rate": 0.1552,
-    "defensive_reb_rate": 0.1838,
+    "defensive_reb_rate": 0.6807,
     "opp_free_throw_rate": 0.345,
     "_csv_approximation": true
   },
@@ -3500,11 +3500,11 @@
   "ball_state": {
     "effective_fg_pct": 0.4705,
     "turnover_rate": 0.1573,
-    "offensive_reb_rate": 0.0697,
+    "offensive_reb_rate": 0.2389,
     "free_throw_rate": 0.3163,
     "opp_effective_fg_pct": 0.5139,
     "opp_turnover_rate": 0.1611,
-    "defensive_reb_rate": 0.1872,
+    "defensive_reb_rate": 0.7203,
     "opp_free_throw_rate": 0.3229,
     "_csv_approximation": true
   },
@@ -3544,11 +3544,11 @@
   "colorado_state": {
     "effective_fg_pct": 0.5747,
     "turnover_rate": 0.1742,
-    "offensive_reb_rate": 0.0775,
+    "offensive_reb_rate": 0.2795,
     "free_throw_rate": 0.3941,
     "opp_effective_fg_pct": 0.5279,
     "opp_turnover_rate": 0.1276,
-    "defensive_reb_rate": 0.1927,
+    "defensive_reb_rate": 0.7226,
     "opp_free_throw_rate": 0.3283,
     "_csv_approximation": true
   },
@@ -3786,11 +3786,11 @@
   "washington_state": {
     "effective_fg_pct": 0.5467,
     "turnover_rate": 0.1825,
-    "offensive_reb_rate": 0.0752,
+    "offensive_reb_rate": 0.2785,
     "free_throw_rate": 0.3019,
     "opp_effective_fg_pct": 0.5273,
     "opp_turnover_rate": 0.123,
-    "defensive_reb_rate": 0.1967,
+    "defensive_reb_rate": 0.7445,
     "opp_free_throw_rate": 0.3326,
     "_csv_approximation": true
   },

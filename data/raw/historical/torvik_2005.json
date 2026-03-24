@@ -17,7 +17,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7197,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 57.9
     },
     {
       "team_id": "akron",
@@ -35,7 +36,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6746,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.92
     },
     {
       "team_id": "alabama",
@@ -53,7 +55,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7363,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.01
     },
     {
       "team_id": "alabama_a_m",
@@ -71,7 +74,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6131,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 75.26
     },
     {
       "team_id": "alabama_state",
@@ -89,7 +93,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6493,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.4
     },
     {
       "team_id": "albany__ny",
@@ -125,7 +130,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6003,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.93
     },
     {
       "team_id": "american",
@@ -143,7 +149,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7131,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.57
     },
     {
       "team_id": "appalachian_state",
@@ -179,7 +186,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7762,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.73
     },
     {
       "team_id": "arizona_state",
@@ -197,7 +205,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7156,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.23
     },
     {
       "team_id": "arkansas",
@@ -215,7 +224,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.663,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.39
     },
     {
       "team_id": "arkansas_state",
@@ -233,7 +243,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6698,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.47
     },
     {
       "team_id": "arkansas_pine_bluff",
@@ -251,7 +262,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6496,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.59
     },
     {
       "team_id": "army",
@@ -269,7 +281,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7688,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 64.66
     },
     {
       "team_id": "auburn",
@@ -287,7 +300,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7257,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.12
     },
     {
       "team_id": "austin_peay",
@@ -305,7 +319,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6797,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.93
     },
     {
       "team_id": "ball_state",
@@ -323,7 +338,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6871,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.13
     },
     {
       "team_id": "baylor",
@@ -341,7 +357,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6985,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.46
     },
     {
       "team_id": "belmont",
@@ -359,7 +376,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6761,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.94
     },
     {
       "team_id": "bethune_cookman",
@@ -377,7 +395,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6008,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.87
     },
     {
       "team_id": "binghamton",
@@ -395,7 +414,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6564,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 65.81
     },
     {
       "team_id": "birmingham_southern",
@@ -413,7 +433,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7214,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 62.68
     },
     {
       "team_id": "boise_state",
@@ -431,7 +452,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6852,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.91
     },
     {
       "team_id": "boston_college",
@@ -449,7 +471,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7119,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.05
     },
     {
       "team_id": "boston_university",
@@ -467,7 +490,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6727,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 63.47
     },
     {
       "team_id": "bowling_green",
@@ -485,7 +509,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7477,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.28
     },
     {
       "team_id": "bradley",
@@ -503,7 +528,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7106,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.38
     },
     {
       "team_id": "brigham_young",
@@ -539,7 +565,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6962,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.65
     },
     {
       "team_id": "bucknell",
@@ -557,7 +584,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7009,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 65.4
     },
     {
       "team_id": "buffalo",
@@ -575,7 +603,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6834,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.64
     },
     {
       "team_id": "butler",
@@ -593,7 +622,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7386,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 60.83
     },
     {
       "team_id": "cal_poly",
@@ -611,7 +641,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7412,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.52
     },
     {
       "team_id": "cal_state_fullerton",
@@ -629,7 +660,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6893,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.13
     },
     {
       "team_id": "cal_state_northridge",
@@ -647,7 +679,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7088,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.17
     },
     {
       "team_id": "california",
@@ -665,7 +698,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6271,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.98
     },
     {
       "team_id": "campbell",
@@ -683,7 +717,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6223,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.78
     },
     {
       "team_id": "canisius",
@@ -701,7 +736,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6889,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.36
     },
     {
       "team_id": "centenary__la",
@@ -719,7 +755,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7118,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.82
     },
     {
       "team_id": "central_connecticut_state",
@@ -755,7 +792,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.697,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.8
     },
     {
       "team_id": "charleston_southern",
@@ -773,7 +811,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6394,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 64.27
     },
     {
       "team_id": "charlotte",
@@ -791,7 +830,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6836,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.43
     },
     {
       "team_id": "chattanooga",
@@ -809,7 +849,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.679,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.42
     },
     {
       "team_id": "chicago_state",
@@ -827,7 +868,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6226,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.05
     },
     {
       "team_id": "cincinnati",
@@ -845,7 +887,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6902,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.95
     },
     {
       "team_id": "clemson",
@@ -863,7 +906,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6008,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 74.06
     },
     {
       "team_id": "cleveland_state",
@@ -881,7 +925,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6944,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.59
     },
     {
       "team_id": "coastal_carolina",
@@ -899,7 +944,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6419,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.29
     },
     {
       "team_id": "colgate",
@@ -917,7 +963,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7075,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.06
     },
     {
       "team_id": "college_of_charleston",
@@ -953,7 +1000,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6293,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.66
     },
     {
       "team_id": "colorado_state",
@@ -971,7 +1019,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7304,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.59
     },
     {
       "team_id": "columbia",
@@ -989,7 +1038,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6988,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.71
     },
     {
       "team_id": "connecticut",
@@ -1007,7 +1057,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6999,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.76
     },
     {
       "team_id": "coppin_state",
@@ -1025,7 +1076,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6908,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.0
     },
     {
       "team_id": "cornell",
@@ -1043,7 +1095,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.75,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 64.45
     },
     {
       "team_id": "creighton",
@@ -1061,7 +1114,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7303,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 65.86
     },
     {
       "team_id": "dartmouth",
@@ -1079,7 +1133,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6466,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 63.13
     },
     {
       "team_id": "davidson",
@@ -1097,7 +1152,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7382,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.42
     },
     {
       "team_id": "dayton",
@@ -1115,7 +1171,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7225,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 65.28
     },
     {
       "team_id": "delaware",
@@ -1133,7 +1190,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6549,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.91
     },
     {
       "team_id": "delaware_state",
@@ -1151,7 +1209,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7425,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 61.69
     },
     {
       "team_id": "denver",
@@ -1169,7 +1228,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6993,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.92
     },
     {
       "team_id": "depaul",
@@ -1187,7 +1247,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.683,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 65.48
     },
     {
       "team_id": "detroit_mercy",
@@ -1205,7 +1266,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6538,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 61.83
     },
     {
       "team_id": "drake",
@@ -1223,7 +1285,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7228,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.87
     },
     {
       "team_id": "drexel",
@@ -1241,7 +1304,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6747,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.74
     },
     {
       "team_id": "duke",
@@ -1259,7 +1323,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7125,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.75
     },
     {
       "team_id": "duquesne",
@@ -1277,7 +1342,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7643,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.45
     },
     {
       "team_id": "east_carolina",
@@ -1295,7 +1361,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6306,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.12
     },
     {
       "team_id": "east_tennessee_state",
@@ -1313,7 +1380,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.679,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 76.11
     },
     {
       "team_id": "eastern_illinois",
@@ -1331,7 +1399,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7303,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.96
     },
     {
       "team_id": "eastern_kentucky",
@@ -1349,7 +1418,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6703,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.54
     },
     {
       "team_id": "eastern_michigan",
@@ -1367,7 +1437,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6931,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.84
     },
     {
       "team_id": "eastern_washington",
@@ -1385,7 +1456,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6607,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.54
     },
     {
       "team_id": "elon",
@@ -1403,7 +1475,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6178,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.24
     },
     {
       "team_id": "evansville",
@@ -1421,7 +1494,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6697,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.12
     },
     {
       "team_id": "fairfield",
@@ -1439,7 +1513,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7231,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.5
     },
     {
       "team_id": "fdu",
@@ -1475,7 +1550,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7067,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.13
     },
     {
       "team_id": "florida_a_m",
@@ -1493,7 +1569,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6571,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.13
     },
     {
       "team_id": "florida_atlantic",
@@ -1511,7 +1588,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6423,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 77.84
     },
     {
       "team_id": "florida_international",
@@ -1529,7 +1607,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6479,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.38
     },
     {
       "team_id": "florida_state",
@@ -1547,7 +1626,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6645,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.23
     },
     {
       "team_id": "fordham",
@@ -1565,7 +1645,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6418,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.67
     },
     {
       "team_id": "fresno_state",
@@ -1583,7 +1664,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6544,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.57
     },
     {
       "team_id": "furman",
@@ -1601,7 +1683,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7012,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.96
     },
     {
       "team_id": "gardner_webb",
@@ -1619,7 +1702,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7061,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.19
     },
     {
       "team_id": "george_mason",
@@ -1637,7 +1721,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6948,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.74
     },
     {
       "team_id": "george_washington",
@@ -1655,7 +1740,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6926,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.12
     },
     {
       "team_id": "georgetown",
@@ -1673,7 +1759,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7043,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 61.91
     },
     {
       "team_id": "georgia",
@@ -1691,7 +1778,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6338,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.03
     },
     {
       "team_id": "georgia_southern",
@@ -1709,7 +1797,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7154,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 80.04
     },
     {
       "team_id": "georgia_state",
@@ -1727,7 +1816,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7016,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.55
     },
     {
       "team_id": "georgia_tech",
@@ -1745,7 +1835,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.691,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.9
     },
     {
       "team_id": "gonzaga",
@@ -1763,7 +1854,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.739,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.15
     },
     {
       "team_id": "grambling",
@@ -1781,7 +1873,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6162,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.37
     },
     {
       "team_id": "green_bay",
@@ -1799,7 +1892,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7361,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.7
     },
     {
       "team_id": "hampton",
@@ -1817,7 +1911,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.613,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.54
     },
     {
       "team_id": "hartford",
@@ -1835,7 +1930,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6294,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.38
     },
     {
       "team_id": "harvard",
@@ -1853,7 +1949,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7049,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.01
     },
     {
       "team_id": "hawaii",
@@ -1871,7 +1968,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6611,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.59
     },
     {
       "team_id": "high_point",
@@ -1889,7 +1987,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6502,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 75.95
     },
     {
       "team_id": "hofstra",
@@ -1907,7 +2006,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6529,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.5
     },
     {
       "team_id": "holy_cross",
@@ -1925,7 +2025,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6572,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 64.79
     },
     {
       "team_id": "houston",
@@ -1943,7 +2044,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6336,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.23
     },
     {
       "team_id": "howard",
@@ -1961,7 +2063,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6736,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.09
     },
     {
       "team_id": "idaho",
@@ -1979,7 +2082,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6389,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 65.41
     },
     {
       "team_id": "idaho_state",
@@ -1997,7 +2101,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6945,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.76
     },
     {
       "team_id": "illinois",
@@ -2015,7 +2120,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7281,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.83
     },
     {
       "team_id": "illinois_state",
@@ -2033,7 +2139,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6556,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.0
     },
     {
       "team_id": "illinois_chicago",
@@ -2051,7 +2158,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6884,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.88
     },
     {
       "team_id": "indiana",
@@ -2069,7 +2177,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7143,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 63.84
     },
     {
       "team_id": "indiana_state",
@@ -2087,7 +2196,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6987,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.64
     },
     {
       "team_id": "iona",
@@ -2105,7 +2215,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7076,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.2
     },
     {
       "team_id": "iowa",
@@ -2123,7 +2234,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6913,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.4
     },
     {
       "team_id": "iowa_state",
@@ -2141,7 +2253,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.682,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.24
     },
     {
       "team_id": "iu_indy",
@@ -2159,7 +2272,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6957,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 64.96
     },
     {
       "team_id": "jackson_state",
@@ -2177,7 +2291,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6778,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 74.54
     },
     {
       "team_id": "jacksonville",
@@ -2195,7 +2310,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6458,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.93
     },
     {
       "team_id": "jacksonville_state",
@@ -2213,7 +2329,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7208,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.31
     },
     {
       "team_id": "james_madison",
@@ -2231,7 +2348,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6557,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.18
     },
     {
       "team_id": "kansas",
@@ -2249,7 +2367,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6949,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.98
     },
     {
       "team_id": "kansas_city",
@@ -2267,7 +2386,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6912,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.63
     },
     {
       "team_id": "kansas_state",
@@ -2285,7 +2405,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6844,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.06
     },
     {
       "team_id": "kent_state",
@@ -2303,7 +2424,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6857,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.21
     },
     {
       "team_id": "kentucky",
@@ -2321,7 +2443,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6635,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.34
     },
     {
       "team_id": "la_salle",
@@ -2339,7 +2462,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7278,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.87
     },
     {
       "team_id": "lafayette",
@@ -2357,7 +2481,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7348,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 75.02
     },
     {
       "team_id": "lamar",
@@ -2375,7 +2500,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6734,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 78.23
     },
     {
       "team_id": "lehigh",
@@ -2393,7 +2519,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7079,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.01
     },
     {
       "team_id": "liberty",
@@ -2411,7 +2538,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6414,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.79
     },
     {
       "team_id": "lipscomb",
@@ -2429,7 +2557,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6568,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.73
     },
     {
       "team_id": "little_rock",
@@ -2447,7 +2576,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7271,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.41
     },
     {
       "team_id": "long_beach_state",
@@ -2465,7 +2595,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6595,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.78
     },
     {
       "team_id": "long_island_university",
@@ -2483,7 +2614,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6621,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.98
     },
     {
       "team_id": "longwood",
@@ -2501,7 +2633,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6296,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 74.62
     },
     {
       "team_id": "louisiana",
@@ -2519,7 +2652,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.659,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.75
     },
     {
       "team_id": "louisiana_state",
@@ -2555,7 +2689,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6213,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.39
     },
     {
       "team_id": "louisiana_monroe",
@@ -2573,7 +2708,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6333,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.09
     },
     {
       "team_id": "louisville",
@@ -2591,7 +2727,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7228,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.38
     },
     {
       "team_id": "loyola__il",
@@ -2645,7 +2782,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7335,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.08
     },
     {
       "team_id": "maine",
@@ -2663,7 +2801,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7152,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.21
     },
     {
       "team_id": "manhattan",
@@ -2681,7 +2820,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6855,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.96
     },
     {
       "team_id": "marist",
@@ -2699,7 +2839,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6775,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.49
     },
     {
       "team_id": "marquette",
@@ -2717,7 +2858,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7102,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 64.86
     },
     {
       "team_id": "marshall",
@@ -2735,7 +2877,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.711,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.45
     },
     {
       "team_id": "maryland",
@@ -2753,7 +2896,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7264,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 80.3
     },
     {
       "team_id": "maryland_baltimore_county",
@@ -2789,7 +2933,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6078,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.82
     },
     {
       "team_id": "massachusetts",
@@ -2807,7 +2952,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6743,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.2
     },
     {
       "team_id": "mcneese_state",
@@ -2843,7 +2989,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6837,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.35
     },
     {
       "team_id": "mercer",
@@ -2861,7 +3008,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6575,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 75.94
     },
     {
       "team_id": "miami__fl",
@@ -2897,7 +3045,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6808,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 63.93
     },
     {
       "team_id": "michigan",
@@ -2915,7 +3064,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7217,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 64.24
     },
     {
       "team_id": "michigan_state",
@@ -2933,7 +3083,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7768,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.72
     },
     {
       "team_id": "middle_tennessee",
@@ -2951,7 +3102,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6997,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.03
     },
     {
       "team_id": "milwaukee",
@@ -2969,7 +3121,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7031,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.7
     },
     {
       "team_id": "minnesota",
@@ -2987,7 +3140,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7058,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.53
     },
     {
       "team_id": "mississippi",
@@ -3023,7 +3177,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6654,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.47
     },
     {
       "team_id": "mississippi_valley_state",
@@ -3041,7 +3196,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6796,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.23
     },
     {
       "team_id": "missouri",
@@ -3059,7 +3215,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6825,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.98
     },
     {
       "team_id": "missouri_state",
@@ -3077,7 +3234,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7344,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.16
     },
     {
       "team_id": "monmouth",
@@ -3095,7 +3253,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7706,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 65.65
     },
     {
       "team_id": "montana",
@@ -3113,7 +3272,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6766,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.02
     },
     {
       "team_id": "montana_state",
@@ -3131,7 +3291,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6652,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.21
     },
     {
       "team_id": "morehead_state",
@@ -3149,7 +3310,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7613,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.75
     },
     {
       "team_id": "morgan_state",
@@ -3167,7 +3329,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6171,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.41
     },
     {
       "team_id": "mount_st__mary_s",
@@ -3185,7 +3348,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6631,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.02
     },
     {
       "team_id": "murray_state",
@@ -3203,7 +3367,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6472,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.65
     },
     {
       "team_id": "navy",
@@ -3221,7 +3386,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6506,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 76.29
     },
     {
       "team_id": "nc_state",
@@ -3239,7 +3405,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7049,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.42
     },
     {
       "team_id": "nebraska",
@@ -3257,7 +3424,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6597,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.36
     },
     {
       "team_id": "nevada",
@@ -3275,7 +3443,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7074,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.44
     },
     {
       "team_id": "nevada_las_vegas",
@@ -3311,7 +3480,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6746,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.39
     },
     {
       "team_id": "new_mexico",
@@ -3329,7 +3499,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6795,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.45
     },
     {
       "team_id": "new_mexico_state",
@@ -3347,7 +3518,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6667,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.79
     },
     {
       "team_id": "new_orleans",
@@ -3365,7 +3537,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6358,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.36
     },
     {
       "team_id": "niagara",
@@ -3383,7 +3556,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7598,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 75.76
     },
     {
       "team_id": "nicholls_state",
@@ -3419,7 +3593,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6292,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.25
     },
     {
       "team_id": "north_carolina",
@@ -3437,7 +3612,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7255,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 77.88
     },
     {
       "team_id": "north_carolina_a_t",
@@ -3455,7 +3631,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6159,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 80.62
     },
     {
       "team_id": "north_texas",
@@ -3473,7 +3650,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7022,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 75.01
     },
     {
       "team_id": "northeastern",
@@ -3491,7 +3669,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7096,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.47
     },
     {
       "team_id": "northern_arizona",
@@ -3509,7 +3688,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7125,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 76.08
     },
     {
       "team_id": "northern_colorado",
@@ -3527,7 +3707,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6567,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.12
     },
     {
       "team_id": "northern_illinois",
@@ -3545,7 +3726,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.748,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 65.72
     },
     {
       "team_id": "northern_iowa",
@@ -3563,7 +3745,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6982,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.31
     },
     {
       "team_id": "northwestern",
@@ -3581,7 +3764,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.61,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 62.44
     },
     {
       "team_id": "northwestern_state",
@@ -3599,7 +3783,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6999,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.03
     },
     {
       "team_id": "notre_dame",
@@ -3617,7 +3802,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7232,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 65.94
     },
     {
       "team_id": "oakland",
@@ -3635,7 +3821,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6647,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.93
     },
     {
       "team_id": "ohio",
@@ -3653,7 +3840,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6983,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.81
     },
     {
       "team_id": "ohio_state",
@@ -3671,7 +3859,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6557,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.06
     },
     {
       "team_id": "oklahoma",
@@ -3689,7 +3878,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6902,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.16
     },
     {
       "team_id": "oklahoma_state",
@@ -3707,7 +3897,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7799,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.84
     },
     {
       "team_id": "old_dominion",
@@ -3725,7 +3916,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6986,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.78
     },
     {
       "team_id": "oral_roberts",
@@ -3743,7 +3935,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7254,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.81
     },
     {
       "team_id": "oregon",
@@ -3761,7 +3954,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6549,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.1
     },
     {
       "team_id": "oregon_state",
@@ -3779,7 +3973,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7239,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.99
     },
     {
       "team_id": "pacific",
@@ -3797,7 +3992,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7433,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.01
     },
     {
       "team_id": "penn_state",
@@ -3815,7 +4011,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6954,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 65.99
     },
     {
       "team_id": "pennsylvania",
@@ -3833,7 +4030,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6594,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.0
     },
     {
       "team_id": "pepperdine",
@@ -3851,7 +4049,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6621,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.13
     },
     {
       "team_id": "pittsburgh",
@@ -3869,7 +4068,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6588,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.42
     },
     {
       "team_id": "portland",
@@ -3887,7 +4087,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6916,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.59
     },
     {
       "team_id": "portland_state",
@@ -3905,7 +4106,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6456,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.68
     },
     {
       "team_id": "prairie_view",
@@ -3923,7 +4125,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.5805,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.12
     },
     {
       "team_id": "princeton",
@@ -3941,7 +4144,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7463,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 55.96
     },
     {
       "team_id": "providence",
@@ -3959,7 +4163,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7084,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.71
     },
     {
       "team_id": "purdue",
@@ -3977,7 +4182,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6803,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.05
     },
     {
       "team_id": "purdue_fort_wayne",
@@ -3995,7 +4201,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6436,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.26
     },
     {
       "team_id": "quinnipiac",
@@ -4013,7 +4220,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7304,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.15
     },
     {
       "team_id": "radford",
@@ -4031,7 +4239,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7073,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.35
     },
     {
       "team_id": "rhode_island",
@@ -4049,7 +4258,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6483,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 64.64
     },
     {
       "team_id": "rice",
@@ -4067,7 +4277,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7243,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.11
     },
     {
       "team_id": "richmond",
@@ -4085,7 +4296,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6353,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.16
     },
     {
       "team_id": "rider",
@@ -4103,7 +4315,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7544,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.45
     },
     {
       "team_id": "robert_morris",
@@ -4121,7 +4334,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6977,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.92
     },
     {
       "team_id": "rutgers",
@@ -4139,7 +4353,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7083,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.46
     },
     {
       "team_id": "sacramento_state",
@@ -4157,7 +4372,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6766,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 74.11
     },
     {
       "team_id": "sacred_heart",
@@ -4175,7 +4391,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6331,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.74
     },
     {
       "team_id": "saint_francis__pa",
@@ -4211,7 +4428,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6594,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 62.49
     },
     {
       "team_id": "saint_louis",
@@ -4229,7 +4447,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6673,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 62.96
     },
     {
       "team_id": "saint_mary_s__ca",
@@ -4265,7 +4484,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6931,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 76.66
     },
     {
       "team_id": "sam_houston",
@@ -4283,7 +4503,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6255,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.94
     },
     {
       "team_id": "samford",
@@ -4301,7 +4522,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7454,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 58.6
     },
     {
       "team_id": "san_diego",
@@ -4319,7 +4541,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7504,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 74.5
     },
     {
       "team_id": "san_diego_state",
@@ -4337,7 +4560,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6943,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.52
     },
     {
       "team_id": "san_francisco",
@@ -4355,7 +4579,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6886,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.07
     },
     {
       "team_id": "san_jose_state",
@@ -4373,7 +4598,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7266,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.63
     },
     {
       "team_id": "santa_clara",
@@ -4391,7 +4617,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7199,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.33
     },
     {
       "team_id": "savannah_state",
@@ -4409,7 +4636,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.5785,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 75.82
     },
     {
       "team_id": "seton_hall",
@@ -4427,7 +4655,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7113,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.61
     },
     {
       "team_id": "siena",
@@ -4445,7 +4674,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6983,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.54
     },
     {
       "team_id": "south_alabama",
@@ -4463,7 +4693,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6464,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.66
     },
     {
       "team_id": "south_carolina",
@@ -4481,7 +4712,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6134,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.11
     },
     {
       "team_id": "south_carolina_state",
@@ -4499,7 +4731,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7017,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.53
     },
     {
       "team_id": "south_florida",
@@ -4517,7 +4750,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.697,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.67
     },
     {
       "team_id": "southeast_missouri_state",
@@ -4535,7 +4769,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6961,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.97
     },
     {
       "team_id": "southeastern_louisiana",
@@ -4553,7 +4788,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6467,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 64.34
     },
     {
       "team_id": "southern",
@@ -4571,7 +4807,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6274,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.0
     },
     {
       "team_id": "southern_california",
@@ -4607,7 +4844,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7481,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 65.55
     },
     {
       "team_id": "southern_methodist",
@@ -4661,7 +4899,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6397,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.17
     },
     {
       "team_id": "st__bonaventure",
@@ -4679,7 +4918,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6533,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.46
     },
     {
       "team_id": "st__francis__ny",
@@ -4733,7 +4973,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7368,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.51
     },
     {
       "team_id": "stephen_f__austin",
@@ -4751,7 +4992,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7135,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 64.95
     },
     {
       "team_id": "stetson",
@@ -4769,7 +5011,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7088,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.21
     },
     {
       "team_id": "stony_brook",
@@ -4787,7 +5030,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7049,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.59
     },
     {
       "team_id": "syracuse",
@@ -4805,7 +5049,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6667,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.64
     },
     {
       "team_id": "tcu",
@@ -4823,7 +5068,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.5929,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.94
     },
     {
       "team_id": "temple",
@@ -4841,7 +5087,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6639,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 63.02
     },
     {
       "team_id": "tennessee",
@@ -4859,7 +5106,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.689,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.38
     },
     {
       "team_id": "tennessee_state",
@@ -4877,7 +5125,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6885,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.68
     },
     {
       "team_id": "tennessee_tech",
@@ -4895,7 +5144,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7141,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.82
     },
     {
       "team_id": "tennessee_martin",
@@ -4913,7 +5163,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6715,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.37
     },
     {
       "team_id": "texas",
@@ -4931,7 +5182,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6973,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.44
     },
     {
       "team_id": "texas_a_m",
@@ -4949,7 +5201,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.683,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.09
     },
     {
       "team_id": "texas_a_m_corpus_christi",
@@ -4967,7 +5220,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7491,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.61
     },
     {
       "team_id": "texas_southern",
@@ -4985,7 +5239,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6562,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.38
     },
     {
       "team_id": "texas_state",
@@ -5003,7 +5258,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7088,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.42
     },
     {
       "team_id": "texas_tech",
@@ -5021,7 +5277,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7557,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.44
     },
     {
       "team_id": "texas_rio_grande_valley",
@@ -5057,7 +5314,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6454,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.82
     },
     {
       "team_id": "toledo",
@@ -5075,7 +5333,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.704,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.19
     },
     {
       "team_id": "towson",
@@ -5093,7 +5352,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6579,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.01
     },
     {
       "team_id": "troy",
@@ -5111,7 +5371,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6798,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.63
     },
     {
       "team_id": "tulane",
@@ -5129,7 +5390,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7198,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.28
     },
     {
       "team_id": "tulsa",
@@ -5147,7 +5409,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6904,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.83
     },
     {
       "team_id": "uab",
@@ -5165,7 +5428,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6959,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 74.29
     },
     {
       "team_id": "uc_davis",
@@ -5183,7 +5447,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7455,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.84
     },
     {
       "team_id": "uc_irvine",
@@ -5201,7 +5466,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7007,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.08
     },
     {
       "team_id": "uc_riverside",
@@ -5219,7 +5485,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6898,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.34
     },
     {
       "team_id": "uc_santa_barbara",
@@ -5237,7 +5504,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6558,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 62.27
     },
     {
       "team_id": "ucf",
@@ -5255,7 +5523,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6959,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 64.22
     },
     {
       "team_id": "ucla",
@@ -5273,7 +5542,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7192,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.54
     },
     {
       "team_id": "unc_asheville",
@@ -5291,7 +5561,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6823,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 73.16
     },
     {
       "team_id": "unc_greensboro",
@@ -5309,7 +5580,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6909,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 74.94
     },
     {
       "team_id": "unc_wilmington",
@@ -5327,7 +5599,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7132,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.52
     },
     {
       "team_id": "ut_arlington",
@@ -5345,7 +5618,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6961,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.1
     },
     {
       "team_id": "utah",
@@ -5363,7 +5637,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7152,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 61.27
     },
     {
       "team_id": "utah_state",
@@ -5381,7 +5656,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6914,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 64.36
     },
     {
       "team_id": "utah_valley",
@@ -5399,7 +5675,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7171,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.18
     },
     {
       "team_id": "utep",
@@ -5417,7 +5694,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7922,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.93
     },
     {
       "team_id": "utsa",
@@ -5435,7 +5713,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.616,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 77.08
     },
     {
       "team_id": "valparaiso",
@@ -5453,7 +5732,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7317,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.0
     },
     {
       "team_id": "vanderbilt",
@@ -5471,7 +5751,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6775,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.37
     },
     {
       "team_id": "vermont",
@@ -5489,7 +5770,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7216,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.0
     },
     {
       "team_id": "villanova",
@@ -5507,7 +5789,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7355,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.9
     },
     {
       "team_id": "virginia",
@@ -5525,7 +5808,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6895,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 74.18
     },
     {
       "team_id": "virginia_commonwealth",
@@ -5561,7 +5845,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6723,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.51
     },
     {
       "team_id": "virginia_tech",
@@ -5579,7 +5864,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6417,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.89
     },
     {
       "team_id": "wagner",
@@ -5597,7 +5883,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6134,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.35
     },
     {
       "team_id": "wake_forest",
@@ -5615,7 +5902,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6843,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 74.28
     },
     {
       "team_id": "washington",
@@ -5633,7 +5921,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7328,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 77.06
     },
     {
       "team_id": "washington_state",
@@ -5651,7 +5940,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6208,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 64.71
     },
     {
       "team_id": "weber_state",
@@ -5669,7 +5959,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7278,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 65.32
     },
     {
       "team_id": "west_virginia",
@@ -5687,7 +5978,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7421,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.84
     },
     {
       "team_id": "western_carolina",
@@ -5705,7 +5997,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6212,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 75.16
     },
     {
       "team_id": "western_illinois",
@@ -5723,7 +6016,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6711,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 67.62
     },
     {
       "team_id": "western_kentucky",
@@ -5741,7 +6035,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7111,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.56
     },
     {
       "team_id": "western_michigan",
@@ -5759,7 +6054,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7076,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 68.12
     },
     {
       "team_id": "wichita_state",
@@ -5777,7 +6073,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7174,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.03
     },
     {
       "team_id": "william___mary",
@@ -5795,7 +6092,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7255,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 70.52
     },
     {
       "team_id": "winthrop",
@@ -5813,7 +6111,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6772,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 65.87
     },
     {
       "team_id": "wisconsin",
@@ -5831,7 +6130,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6774,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 64.96
     },
     {
       "team_id": "wofford",
@@ -5849,7 +6149,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6407,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 71.85
     },
     {
       "team_id": "wright_state",
@@ -5867,7 +6168,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6689,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 63.09
     },
     {
       "team_id": "wyoming",
@@ -5885,7 +6187,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6681,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 72.55
     },
     {
       "team_id": "xavier",
@@ -5903,7 +6206,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.7318,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 65.53
     },
     {
       "team_id": "yale",
@@ -5921,7 +6225,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.6568,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 69.95
     },
     {
       "team_id": "youngstown_state",
@@ -5939,7 +6244,8 @@
       "fg3_pct": 0.0,
       "ft_pct": 0.654,
       "fg3_rate": 0.0,
-      "ft_rate": 0.0
+      "ft_rate": 0.0,
+      "adj_tempo": 66.07
     }
   ],
   "source": "synthetic_from_components",
