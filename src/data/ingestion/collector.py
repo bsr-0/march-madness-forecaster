@@ -596,17 +596,31 @@ class RealDataCollector:
         for k, v in def_ff.items():
             collapsed_def_ff[k.replace("_", "")] = v
 
+        _DEF_FF_FIELDS = (
+            "opp_effective_fg_pct", "opp_turnover_rate",
+            "opp_free_throw_rate", "defensive_reb_rate",
+        )
+
         torvik_updated = 0
         for team in torvik_payload.get("teams", []):
             team_id = team.get("team_id", "")
             d = def_ff.get(team_id) or collapsed_def_ff.get(team_id.replace("_", ""))
             if d is None:
                 continue
+            # Trigger repair if _csv_approximation flag is set or values are missing/zero
+            is_csv_approx = team.get("_csv_approximation", False)
             changed = False
-            for field in ("opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate"):
+            for field in _DEF_FF_FIELDS:
                 current = team.get(field, 0.0)
-                new_val = d.get(field, 0.0)
-                if (current is None or abs(float(current)) < 1e-6) and abs(new_val) > 1e-6:
+                new_val = d.get(field)
+                if new_val is None:
+                    continue
+                needs_repair = (
+                    is_csv_approx
+                    or current is None
+                    or abs(float(current or 0)) < 1e-6
+                )
+                if needs_repair and abs(float(new_val)) > 1e-6:
                     team[field] = new_val
                     changed = True
             if changed:
@@ -623,10 +637,18 @@ class RealDataCollector:
                         ff_entry = four_factors[key]
                         break
             if ff_entry is not None:
-                for field in ("opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate"):
+                is_csv_approx = ff_entry.get("_csv_approximation", False)
+                for field in _DEF_FF_FIELDS:
                     current = ff_entry.get(field, 0.0)
-                    new_val = d.get(field, 0.0)
-                    if abs(float(current or 0)) < 1e-6 and abs(new_val) > 1e-6:
+                    new_val = d.get(field)
+                    if new_val is None:
+                        continue
+                    needs_repair = (
+                        is_csv_approx
+                        or current is None
+                        or abs(float(current or 0)) < 1e-6
+                    )
+                    if needs_repair and abs(float(new_val)) > 1e-6:
                         ff_entry[field] = new_val
                 ff_updated += 1
 

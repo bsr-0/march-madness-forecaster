@@ -399,8 +399,10 @@ class TestCSVFallbackFix:
         # DRB% should be non-zero
         assert ff["defensive_reb_rate"] > 0
 
-        # Defensive opponent stats still can't be derived from this source
-        assert ff["opp_effective_fg_pct"] == 0.0
+        # Defensive opponent stats can't be derived from player-level CSV — returned as None
+        assert ff["opp_effective_fg_pct"] is None
+        assert ff["opp_turnover_rate"] is None
+        assert ff["opp_free_throw_rate"] is None
 
         # Should be flagged as approximation
         assert ff.get("_csv_approximation") is True
