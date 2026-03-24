@@ -148,7 +148,67 @@ class TestRankRangeValidation:
 
 
 # ===========================================================================
-# Issue 3: Composite corruption check
+# Issue 3a: _is_corrupted_system unit tests
+# ===========================================================================
+
+class TestIsCorruptedSystem:
+    """Direct unit tests for the _is_corrupted_system helper."""
+
+    def test_all_same_rank_is_corrupted(self):
+        from src.data.scrapers.external_ratings import _is_corrupted_system
+
+        entries = [{"ranking": 1} for _ in range(100)]
+        assert _is_corrupted_system(entries) is True
+
+    def test_unique_ranks_not_corrupted(self):
+        from src.data.scrapers.external_ratings import _is_corrupted_system
+
+        entries = [{"ranking": i + 1} for i in range(100)]
+        assert _is_corrupted_system(entries) is False
+
+    def test_small_system_never_corrupted(self):
+        """Systems with <=10 entries bypass corruption check."""
+        from src.data.scrapers.external_ratings import _is_corrupted_system
+
+        entries = [{"ranking": 1} for _ in range(10)]
+        assert _is_corrupted_system(entries) is False
+
+    def test_missing_ranking_keys_skipped(self):
+        """Entries without 'ranking' should not count toward corruption."""
+        from src.data.scrapers.external_ratings import _is_corrupted_system
+
+        # 50 entries with valid unique ranks + 50 missing "ranking"
+        entries = [{"ranking": i + 1} for i in range(50)]
+        entries += [{"team_name": f"T{i}"} for i in range(50)]
+        assert _is_corrupted_system(entries) is False
+
+    def test_all_ranking_keys_missing_not_corrupted(self):
+        """If no entries have 'ranking', returns False (can't detect corruption)."""
+        from src.data.scrapers.external_ratings import _is_corrupted_system
+
+        entries = [{"team_name": f"T{i}"} for i in range(100)]
+        assert _is_corrupted_system(entries) is False
+
+    def test_exactly_at_threshold_not_corrupted(self):
+        """80% duplicate is the boundary — not strictly greater, so 80% passes."""
+        from src.data.scrapers.external_ratings import _is_corrupted_system
+
+        # 80 same rank + 20 unique = exactly 80% → should NOT be flagged
+        entries = [{"ranking": 1} for _ in range(80)]
+        entries += [{"ranking": i + 100} for i in range(20)]
+        assert _is_corrupted_system(entries) is False
+
+    def test_just_over_threshold_is_corrupted(self):
+        """81% duplicate should be flagged."""
+        from src.data.scrapers.external_ratings import _is_corrupted_system
+
+        entries = [{"ranking": 1} for _ in range(81)]
+        entries += [{"ranking": i + 100} for i in range(19)]
+        assert _is_corrupted_system(entries) is True
+
+
+# ===========================================================================
+# Issue 3b: Composite corruption check
 # ===========================================================================
 
 class TestCompositeCorruptionFilter:
@@ -335,6 +395,61 @@ class TestLeakageHardening:
         assert len(skip_warnings) == 3, (
             f"Expected 3 skip warnings (one per system), got {len(skip_warnings)}: "
             f"{skip_warnings}"
+        )
+
+    def test_ranking_day_num_clamped_to_max_day(self, tmp_path, caplog):
+        """ranking_day_num exceeding max_day should be clamped, not bypass safety."""
+        from src.data.kaggle_loader import KaggleDataLoader
+
+        # Data on days 100 and 200
+        kaggle_dir = _make_kaggle_dir(tmp_path, n_teams=80, day=100)
+        # Add data on day 200 (post-tournament)
+        csv_path = kaggle_dir / "MMasseyOrdinals.csv"
+        with open(csv_path, "a", newline="") as f:
+            writer = csv.writer(f)
+            for i in range(80):
+                writer.writerow(["2025", "200", "POM", str(1100 + i), str(i + 1)])
+
+        loader = KaggleDataLoader(str(kaggle_dir))
+
+        with caplog.at_level(logging.WARNING):
+            result = loader.load_massey_ordinals(
+                2025, ranking_day_num=200, max_day=150
+            )
+
+        # ranking_day_num=200 should be clamped to 150, and since day 150
+        # doesn't exist, it should fall back to day 100
+        assert any("clamping to max_day" in msg.lower() for msg in caplog.messages), (
+            "Should warn about clamping ranking_day_num"
+        )
+        # Should still get data (from day 100 fallback), not day 200
+        if "POM" in result:
+            for entry in result["POM"].values():
+                assert entry.ranking_day_num <= 150, (
+                    f"Loaded data from day {entry.ranking_day_num} which exceeds max_day=150"
+                )
+
+    def test_ranking_day_num_auto_clamped_by_selection_sunday(self, tmp_path, caplog):
+        """ranking_day_num without explicit max_day should be clamped by auto-computed max."""
+        from src.data.kaggle_loader import KaggleDataLoader
+
+        # Data on day 100 and day 250 (way past any Selection Sunday)
+        kaggle_dir = _make_kaggle_dir(tmp_path, n_teams=80, day=100)
+        csv_path = kaggle_dir / "MMasseyOrdinals.csv"
+        with open(csv_path, "a", newline="") as f:
+            writer = csv.writer(f)
+            for i in range(80):
+                writer.writerow(["2025", "250", "POM", str(1100 + i), str(i + 1)])
+
+        loader = KaggleDataLoader(str(kaggle_dir))
+
+        with caplog.at_level(logging.WARNING):
+            # ranking_day_num=250, no explicit max_day → auto-computed from Selection Sunday
+            result = loader.load_massey_ordinals(2025, ranking_day_num=250)
+
+        # Should be clamped to the auto-computed max_day
+        assert any("clamping" in msg.lower() for msg in caplog.messages), (
+            "ranking_day_num=250 should trigger clamping against auto-computed max_day"
         )
 
 
