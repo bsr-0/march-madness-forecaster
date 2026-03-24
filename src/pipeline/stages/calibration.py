@@ -387,8 +387,9 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             use_oos_eval = True
         else:
             # Too few samples for a meaningful split; fit on all
-            p_fit, p_eval = p_arr, p_arr
-            y_fit, y_eval = y_arr, y_arr
+            # but do NOT evaluate on the same data (prevents inflated metrics).
+            p_fit, p_eval = p_arr, None
+            y_fit, y_eval = y_arr, None
             use_oos_eval = False
 
     # Bootstrap CI for temperature scaling: if the 95% CI for T includes
@@ -588,11 +589,7 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     # Evaluate calibration quality.
     pre_metrics = calculate_calibration_metrics(p_arr, y_arr)
 
-    # In-sample evaluation (all data)
-    cal_preds_all = pipeline.calibration_pipeline.calibrate(p_arr)
-    insample_metrics = calculate_calibration_metrics(cal_preds_all, y_arr)
-
-    # OOS evaluation (held-out 30%) when split is available
+    # OOS evaluation (held-out portion) when split is available
     if use_oos_eval:
         cal_preds_eval = pipeline.calibration_pipeline.calibrate(p_eval)
         oos_metrics = calculate_calibration_metrics(cal_preds_eval, y_eval)
@@ -600,9 +597,20 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         ece_after = float(oos_metrics.expected_calibration_error)
         eval_mode = "nested_historical_tourney_vs_current" if _nested_mode else "oos_70_30"
     else:
-        brier_after = float(insample_metrics.brier_score)
-        ece_after = float(insample_metrics.expected_calibration_error)
-        eval_mode = "insample_1param"
+        # FIX-LEAKAGE-CAL: No held-out data available.  Report pre-calibration
+        # metrics as post-calibration metrics (no improvement claim) instead of
+        # evaluating on the same data used for fitting, which would produce
+        # artificially inflated improvement numbers.
+        brier_after = float(pre_metrics.brier_score)
+        ece_after = float(pre_metrics.expected_calibration_error)
+        eval_mode = "insample_no_eval"
+        logger.warning(
+            "FIX-LEAKAGE-CAL: Too few calibration samples for train/eval split. "
+            "Reporting pre-calibration metrics as post-calibration (no improvement "
+            "claim). Calibrator is fitted on all %d samples but evaluation is skipped "
+            "to prevent in-sample leakage.",
+            len(p_fit),
+        )
 
     # Gap #7: Fit round-weighted Brier sharpener.
     # Kaggle uses round-weighted Brier (finals weighted 32x vs R64).
