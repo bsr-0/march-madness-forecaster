@@ -324,6 +324,7 @@ class TheOddsAPIScraper(BettingMarketScraper):
         bookmaker.  We aggregate the best available odds per team.
         """
         from datetime import datetime, timezone
+        from .schemas import BettingOddsSchema
 
         odds_map: Dict[str, BettingMarketOdds] = {}
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -344,9 +345,29 @@ class TheOddsAPIScraper(BettingMarketScraper):
                         if price is None:
                             continue
 
-                        american_odds = float(price)
+                        try:
+                            american_odds = float(price)
+                        except (ValueError, TypeError):
+                            logger.debug("Invalid price value: %s", price)
+                            continue
+
                         imp_prob = american_to_probability(american_odds)
                         team_id = _shared_normalize_team_id(team_name)
+
+                        # Validate with schema
+                        try:
+                            BettingOddsSchema(
+                                team_id=team_id,
+                                team_name=team_name,
+                                season=season,
+                                source="the_odds_api",
+                                championship_odds=american_odds,
+                                implied_probability=imp_prob,
+                                timestamp=timestamp,
+                            )
+                        except Exception as e:
+                            logger.debug("Skipping invalid odds for %s: %s", team_name, e)
+                            continue
 
                         # Keep best (highest implied prob) odds per team
                         existing = odds_map.get(team_id)
@@ -461,6 +482,7 @@ class FanDuelScraper(BettingMarketScraper):
         from the 'runners' array in each market.
         """
         from datetime import datetime, timezone
+        from .schemas import BettingOddsSchema
 
         odds_map = {}
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -468,36 +490,78 @@ class FanDuelScraper(BettingMarketScraper):
         # Navigate the nested structure — FanDuel uses
         # attachments > markets > runners pattern
         try:
-            markets = data.get("attachments", {}).get("markets", {})
+            attachments = data.get("attachments")
+            if not isinstance(attachments, dict):
+                logger.warning("FanDuel: missing or invalid 'attachments' key")
+                return odds_map
+
+            markets = attachments.get("markets")
+            if not isinstance(markets, dict):
+                logger.warning("FanDuel: missing or invalid 'markets' key")
+                return odds_map
+
             for market_id, market in markets.items():
+                if not isinstance(market, dict):
+                    continue
                 market_name = market.get("marketName", "").lower()
                 # Look for "ncaa tournament winner" or "national championship" markets
                 if not any(kw in market_name for kw in ("champion", "winner", "ncaa", "march madness")):
                     continue
 
                 runners = market.get("runners", [])
+                if not isinstance(runners, list):
+                    logger.warning("FanDuel: 'runners' is not a list for market %s", market_id)
+                    continue
+
                 for runner in runners:
+                    if not isinstance(runner, dict):
+                        continue
                     team_name = runner.get("runnerName", "")
                     if not team_name:
                         continue
 
                     # Extract American odds from the runner's price info
-                    win_odds = runner.get("winRunnerOdds", {})
+                    win_odds = runner.get("winRunnerOdds")
+                    if not isinstance(win_odds, dict):
+                        continue
+
                     american_odds = win_odds.get("americanOdds")
                     if american_odds is None:
                         # Try decimal odds conversion
                         decimal_odds = win_odds.get("decimalOdds")
                         if decimal_odds:
-                            imp_prob = decimal_to_probability(float(decimal_odds))
+                            try:
+                                imp_prob = decimal_to_probability(float(decimal_odds))
+                            except (ValueError, TypeError):
+                                continue
                             american_odds = 0  # Placeholder
                         else:
                             continue
                     else:
-                        american_odds = float(american_odds.replace("+", "")) if isinstance(american_odds, str) else float(american_odds)
+                        try:
+                            american_odds = float(str(american_odds).replace("+", ""))
+                        except (ValueError, TypeError):
+                            logger.debug("FanDuel: invalid odds value: %s", american_odds)
+                            continue
                         imp_prob = american_to_probability(american_odds)
 
                     # Normalize team name to ID
                     team_id = _shared_normalize_team_id(team_name)
+
+                    # Validate with schema
+                    try:
+                        BettingOddsSchema(
+                            team_id=team_id,
+                            team_name=team_name,
+                            season=season,
+                            source="fanduel",
+                            championship_odds=american_odds,
+                            implied_probability=imp_prob,
+                            timestamp=timestamp,
+                        )
+                    except Exception as e:
+                        logger.debug("Skipping invalid FanDuel odds for %s: %s", team_name, e)
+                        continue
 
                     odds_map[team_id] = BettingMarketOdds(
                         team_id=team_id,
@@ -601,18 +665,38 @@ class DraftKingsScraper(BettingMarketScraper):
         → 'offerSubcategory' → 'offers' nested structure.
         """
         from datetime import datetime, timezone
+        from .schemas import BettingOddsSchema
 
         odds_map = {}
         timestamp = datetime.now(timezone.utc).isoformat()
 
         try:
             categories = data.get("offerCategories", [])
+            if not isinstance(categories, list):
+                logger.warning("DraftKings: 'offerCategories' is not a list")
+                return odds_map
+
             for cat in categories:
+                if not isinstance(cat, dict):
+                    continue
                 for sub in cat.get("offerSubcategoryDescriptors", []):
+                    if not isinstance(sub, dict):
+                        continue
                     sub_cat = sub.get("offerSubcategory", {})
-                    for offer_group in sub_cat.get("offers", []):
+                    if not isinstance(sub_cat, dict):
+                        continue
+                    offers = sub_cat.get("offers", [])
+                    if not isinstance(offers, list):
+                        continue
+                    for offer_group in offers:
+                        if not isinstance(offer_group, list):
+                            continue
                         for offer in offer_group:
+                            if not isinstance(offer, dict):
+                                continue
                             for outcome in offer.get("outcomes", []):
+                                if not isinstance(outcome, dict):
+                                    continue
                                 team_name = outcome.get("label", "")
                                 if not team_name:
                                     continue
@@ -628,6 +712,21 @@ class DraftKingsScraper(BettingMarketScraper):
 
                                 imp_prob = american_to_probability(american_float)
                                 team_id = _shared_normalize_team_id(team_name)
+
+                                # Validate with schema
+                                try:
+                                    BettingOddsSchema(
+                                        team_id=team_id,
+                                        team_name=team_name,
+                                        season=season,
+                                        source="draftkings",
+                                        championship_odds=american_float,
+                                        implied_probability=imp_prob,
+                                        timestamp=timestamp,
+                                    )
+                                except Exception as e:
+                                    logger.debug("Skipping invalid DK odds for %s: %s", team_name, e)
+                                    continue
 
                                 odds_map[team_id] = BettingMarketOdds(
                                     team_id=team_id,

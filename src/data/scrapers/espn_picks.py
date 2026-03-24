@@ -229,10 +229,17 @@ class ESPNPicksScraper:
         return self._dict_to_consensus(data)
     
     def _dict_to_consensus(self, data: dict) -> ConsensusData:
-        """Convert dictionary to ConsensusData."""
+        """Convert dictionary to ConsensusData with schema validation."""
+        from .schemas import validate_consensus_data, SchemaValidationError
+
+        try:
+            validated = validate_consensus_data(data)
+        except SchemaValidationError:
+            logger.warning("ESPN picks schema validation failed; using raw data")
+            validated = data
+
         teams = {}
-        
-        for team_id, team_data in data.get("teams", {}).items():
+        for team_id, team_data in validated.get("teams", {}).items():
             teams[team_id] = PublicPicks(
                 team_id=team_id,
                 team_name=team_data.get("team_name", ""),
@@ -245,11 +252,11 @@ class ESPNPicksScraper:
                 final_four_pct=team_data.get("final_four_pct", 0.0),
                 champion_pct=team_data.get("champion_pct", 0.0),
             )
-        
+
         return ConsensusData(
             teams=teams,
-            sources=data.get("sources", []),
-            timestamp=data.get("timestamp"),
+            sources=validated.get("sources", []),
+            timestamp=validated.get("timestamp"),
         )
     
     def _load_from_cache(self, filename: str) -> Optional[dict]:

@@ -5,10 +5,13 @@ from __future__ import annotations
 import csv
 import io
 import json
+import logging
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 class TransferPortalScraper:
@@ -44,6 +47,16 @@ class TransferPortalScraper:
 
         if not isinstance(entries, list) or not entries:
             raise ValueError("Transfer portal source returned no entries")
+
+        # Validate through pydantic schema (log warnings but don't drop
+        # entries that simply have non-standard field names)
+        try:
+            from .schemas import validate_transfer_entries
+            validated = validate_transfer_entries(entries)
+            if validated:
+                entries = validated
+        except Exception as e:
+            logger.warning("Transfer portal schema validation failed: %s", e)
 
         self._save_cache(cache_name, {"entries": entries})
         return entries
