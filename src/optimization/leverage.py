@@ -1158,7 +1158,7 @@ class ParetoOptimizer:
 
     def _risk_adjusted_score(self, team_id: str, round_name: str, risk_level: float) -> float:
         model_prob = float(self.calculator.model_probs.get(team_id, {}).get(round_name, 0.0))
-        public_prob = float(self.calculator.public_picks.get(team_id, {}).get(round_name, 0.01))
+        public_prob, _ = self.calculator._public_pct_with_fallback(team_id, round_name)
         leverage = min(model_prob / max(public_prob, 0.01), self.calculator.MAX_LEVERAGE)
         seed = max(1, self.calculator._team_meta(team_id).seed or 16)
 
@@ -1365,7 +1365,7 @@ class ParetoOptimizer:
         champion_scores: Dict[str, float] = {}
         for team_id, probs in self.calculator.model_probs.items():
             champ_prob = probs.get("CHAMP", 0.0)
-            public_prob = self.calculator.public_picks.get(team_id, {}).get("CHAMP", 0.01)
+            public_prob, _ = self.calculator._public_pct_with_fallback(team_id, "CHAMP")
             leverage = min(champ_prob / max(public_prob, 0.01), self.calculator.MAX_LEVERAGE)
             champion_scores[team_id] = champ_prob * (leverage ** risk_level)
 
@@ -1374,7 +1374,7 @@ class ParetoOptimizer:
         f4_candidates = []
         for team_id, probs in self.calculator.model_probs.items():
             f4_prob = probs.get("F4", 0.0)
-            public_prob = self.calculator.public_picks.get(team_id, {}).get("F4", 0.01)
+            public_prob, _ = self.calculator._public_pct_with_fallback(team_id, "F4")
             leverage = min(f4_prob / max(public_prob, 0.01), self.calculator.MAX_LEVERAGE)
             f4_candidates.append((team_id, f4_prob * (leverage ** risk_level), f4_prob))
         f4_candidates.sort(key=lambda x: x[1], reverse=True)
@@ -1704,14 +1704,16 @@ def analyze_pool(
     else:
         profile = strategy_profile
 
-    # Calculate strategy EVs
+    # Calculate strategy EVs — build both dicts keyed on model_probs so
+    # that teams present in the model but absent from public picks still
+    # get seed-based prior coverage via _public_pct_with_fallback().
     championship_model = {
         tid: probs.get("CHAMP", 0)
         for tid, probs in model_probs.items()
     }
     championship_public = {
-        tid: probs.get("CHAMP", 0.01)
-        for tid, probs in effective_picks.items()
+        tid: calculator._public_pct_with_fallback(tid, "CHAMP")[0]
+        for tid in model_probs
     }
 
     dynamics = calculate_pool_dynamics(
