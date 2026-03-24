@@ -479,10 +479,6 @@
     "three_pt_pct": 0.317,
     "ft_pct": 0.7433
   },
-  "jr": {
-    "three_pt_pct": 0.0156,
-    "ft_pct": 0.3368
-  },
   "south_alabama": {
     "three_pt_pct": 0.3449,
     "ft_pct": 0.6552
@@ -1462,9 +1458,5 @@
   "west_georgia": {
     "three_pt_pct": 0.3312,
     "ft_pct": 0.7042
-  },
-  "ii": {
-    "three_pt_pct": 0.0618,
-    "ft_pct": 2.2143
   }
 }

@@ -1809,8 +1809,8 @@
       "adj_defensive_efficiency": 101.89650188980542,
       "adj_tempo": 66.1482717973424,
       "effective_fg_pct": 0.5045,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
+      "turnover_rate": 0.1417,
+      "offensive_reb_rate": 0.0727,
       "free_throw_rate": 0.3302,
       "opp_effective_fg_pct": 0.5929,
       "enriched_stats": {
@@ -1818,10 +1818,14 @@
         "opp_turnover_rate": 0.1592,
         "opp_free_throw_rate": 0.3,
         "effective_fg_pct": 0.5045,
-        "free_throw_rate": 0.3302
+        "free_throw_rate": 0.3302,
+        "turnover_rate": 0.1417,
+        "offensive_reb_rate": 0.0727,
+        "defensive_reb_rate": 0.187
       },
       "opp_turnover_rate": 0.1592,
-      "opp_free_throw_rate": 0.3
+      "opp_free_throw_rate": 0.3,
+      "defensive_reb_rate": 0.187
     },
     {
       "team_id": "tulsa",
@@ -4183,13 +4187,17 @@
       "adj_defensive_efficiency": 106.21450070544405,
       "adj_tempo": 69.03017067204249,
       "effective_fg_pct": 0.5037,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
+      "turnover_rate": 0.1495,
+      "offensive_reb_rate": 0.0777,
       "free_throw_rate": 0.3393,
       "enriched_stats": {
         "effective_fg_pct": 0.5037,
-        "free_throw_rate": 0.3393
-      }
+        "free_throw_rate": 0.3393,
+        "turnover_rate": 0.1495,
+        "offensive_reb_rate": 0.0777,
+        "defensive_reb_rate": 0.1882
+      },
+      "defensive_reb_rate": 0.1882
     },
     {
       "team_id": "robert_morris",
@@ -9219,8 +9227,8 @@
       "adj_defensive_efficiency": 118.046563799062,
       "adj_tempo": 65.29900365826897,
       "effective_fg_pct": 0.5135,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
+      "turnover_rate": 0.1803,
+      "offensive_reb_rate": 0.0792,
       "free_throw_rate": 0.2494,
       "opp_effective_fg_pct": 0.6695,
       "enriched_stats": {
@@ -9228,10 +9236,14 @@
         "opp_turnover_rate": 0.1285,
         "opp_free_throw_rate": 0.339,
         "effective_fg_pct": 0.5135,
-        "free_throw_rate": 0.2494
+        "free_throw_rate": 0.2494,
+        "turnover_rate": 0.1803,
+        "offensive_reb_rate": 0.0792,
+        "defensive_reb_rate": 0.1868
       },
       "opp_turnover_rate": 0.1285,
-      "opp_free_throw_rate": 0.339
+      "opp_free_throw_rate": 0.339,
+      "defensive_reb_rate": 0.1868
     },
     {
       "team_id": "umass_lowell",
