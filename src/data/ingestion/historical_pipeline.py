@@ -102,7 +102,11 @@ class HistoricalDataPipeline:
             self._assert_valid(f"historical_games_{season}", game_errors)
             games_path = self._write_json(f"historical_games_{season}.json", game_payload)
 
-            all_game_rows = game_payload.get("games", []) + game_payload.get("team_games", [])
+            # Use only team_games (team-perspective dicts with possessions).
+            # Mixing in game-level dicts causes 3x counting per game (1 game-
+            # level + 2 team-perspective), which inflates the game count in
+            # pace-based fallback paths of _compute_def_rtg_from_games.
+            all_game_rows = game_payload.get("team_games", [])
             team_payload, team_provider = self._collect_team_metrics(
                 season, game_records=all_game_rows,
             )
