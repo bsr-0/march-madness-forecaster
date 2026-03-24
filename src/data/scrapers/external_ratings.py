@@ -26,6 +26,30 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
+def _is_corrupted_system(entries: List[Dict], threshold: float = 0.8) -> bool:
+    """Check if a ranking system has degenerate data.
+
+    Returns True if more than ``threshold`` fraction of entries share the
+    same rank value.  Entries with missing or None ``ranking`` keys are
+    excluded from the count so that malformed data does not trigger false
+    positives.
+    """
+    if len(entries) <= 10:
+        return False
+    rank_counts: Dict[int, int] = {}
+    n_valid = 0
+    for e in entries:
+        r = e.get("ranking")
+        if r is None:
+            continue
+        n_valid += 1
+        rank_counts[r] = rank_counts.get(r, 0) + 1
+    if n_valid == 0:
+        return False
+    max_rank_freq = max(rank_counts.values())
+    return max_rank_freq > n_valid * threshold
+
+
 @dataclass
 class ExternalRating:
     """A single external rating for a team."""
@@ -343,20 +367,13 @@ class ExternalRatingsLoader:
                 continue
             # Detect corrupted data: if >80% of entries share the same
             # rank, the source data is degenerate and should not be cached.
-            if len(entries) > 10:
-                rank_counts: Dict[int, int] = {}
-                for e in entries:
-                    r = e.get("ranking", 0)
-                    rank_counts[r] = rank_counts.get(r, 0) + 1
-                max_rank_freq = max(rank_counts.values())
-                if max_rank_freq > len(entries) * 0.8:
-                    logger.warning(
-                        "Skipping corrupted %s for %d: %d/%d entries share "
-                        "the same rank (degenerate source data)",
-                        system_name, year, max_rank_freq, len(entries),
-                    )
-                    skipped_corrupted += 1
-                    continue
+            if _is_corrupted_system(entries):
+                logger.warning(
+                    "Skipping corrupted %s for %d: degenerate rank data",
+                    system_name, year,
+                )
+                skipped_corrupted += 1
+                continue
             # Warn on suspiciously low coverage (likely truncated source)
             if len(entries) < 200:
                 logger.warning(
@@ -412,20 +429,12 @@ class ExternalRatingsLoader:
         for system_name, entries in all_systems.items():
             if len(entries) < 50:
                 continue
-            # Apply same corruption check as populate_from_massey_ordinals
-            if len(entries) > 10:
-                rank_counts: Dict[int, int] = {}
-                for e in entries:
-                    r = e.get("ranking", 0)
-                    rank_counts[r] = rank_counts.get(r, 0) + 1
-                max_rank_freq = max(rank_counts.values())
-                if max_rank_freq > len(entries) * 0.8:
-                    logger.debug(
-                        "Skipping corrupted %s from composite: %d/%d "
-                        "entries share the same rank",
-                        system_name, max_rank_freq, len(entries),
-                    )
-                    continue
+            if _is_corrupted_system(entries):
+                logger.warning(
+                    "Skipping corrupted %s from composite: degenerate rank data",
+                    system_name,
+                )
+                continue
             for e in entries:
                 tid = e["team_id"]
                 team_scores.setdefault(tid, []).append(e["normalized"])
