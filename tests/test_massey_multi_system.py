@@ -56,7 +56,7 @@ class TestExtractMultiSystemFeatures:
             "SAG": {"duke": 2, "unc": 3, "kansas": 8},
             "MOR": {"duke": 1, "unc": 6, "kansas": 12},
         })
-        features = extract_multi_system_features(ordinals, "duke", n_teams_approx=3)
+        features = extract_multi_system_features(ordinals, "duke", n_teams_approx=3, min_system_coverage=0)
         assert features.n_systems == 3
         assert "POM" in features.system_ratings
         assert "SAG" in features.system_ratings
@@ -71,7 +71,7 @@ class TestExtractMultiSystemFeatures:
         ordinals = _build_ordinals({
             "POM": {"duke": 1},
         })
-        features = extract_multi_system_features(ordinals, "unknown_team")
+        features = extract_multi_system_features(ordinals, "unknown_team", min_system_coverage=0)
         assert features.n_systems == 0
         assert len(features.system_ratings) == 0
         assert math.isnan(features.rank_mean)
@@ -83,7 +83,7 @@ class TestExtractMultiSystemFeatures:
             "POM": {"duke": 1},
             # SAG, MOR, etc. not present
         })
-        features = extract_multi_system_features(ordinals, "duke")
+        features = extract_multi_system_features(ordinals, "duke", min_system_coverage=0)
         assert features.n_systems == 1
         assert "POM" in features.system_ratings
         assert "SAG" not in features.system_ratings
@@ -112,7 +112,7 @@ class TestExtractMultiSystemFeatures:
             "SAG": {"duke": 1, "unc": 2},
             "MOR": {"duke": 1, "unc": 2},
         })
-        features = extract_multi_system_features(ordinals, "duke", n_teams_approx=2)
+        features = extract_multi_system_features(ordinals, "duke", n_teams_approx=2, min_system_coverage=0)
         assert features.rank_std == 0.0
 
     def test_rank_std_disagreement(self):
@@ -121,7 +121,7 @@ class TestExtractMultiSystemFeatures:
             "POM": {"duke": 1, "unc": 100},
             "SAG": {"duke": 50, "unc": 100},
         })
-        features = extract_multi_system_features(ordinals, "duke", n_teams_approx=100)
+        features = extract_multi_system_features(ordinals, "duke", n_teams_approx=100, min_system_coverage=0)
         assert features.rank_std > 0.0
 
     def test_dict_entries_supported(self):
@@ -130,7 +130,7 @@ class TestExtractMultiSystemFeatures:
             "POM": {"duke": {"ordinal_rank": 5}},
             "SAG": {"duke": {"ordinal_rank": 3}},
         }
-        features = extract_multi_system_features(ordinals, "duke", n_teams_approx=50)
+        features = extract_multi_system_features(ordinals, "duke", n_teams_approx=50, min_system_coverage=0)
         assert features.n_systems == 2
         assert "POM" in features.system_ratings
 
@@ -148,7 +148,7 @@ class TestExtractAllTeams:
             "POM": {"duke": 1, "unc": 2, "kansas": 3},
             "SAG": {"duke": 1, "unc": 3, "kentucky": 5},
         })
-        result = extract_all_teams(ordinals)
+        result = extract_all_teams(ordinals, min_system_coverage=0)
         # duke, unc, kansas, kentucky — 4 unique teams
         assert len(result) == 4
         assert "duke" in result
