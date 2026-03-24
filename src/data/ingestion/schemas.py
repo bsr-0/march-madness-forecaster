@@ -82,6 +82,14 @@ class IngestionGameRecord:
     away_tov: float = 0.0
     away_pf: float = 0.0
 
+    # ── Box-score availability ────────────────────────────────────────────
+    # True when the provider supplied real box-score statistics (FGA > 0).
+    # When False, the box-score fields above are zeros that represent
+    # *missing data*, NOT actual zero performance.  Downstream consumers
+    # MUST check this flag before using box-score fields in any
+    # computation (Four Factors, shooting splits, possession estimates).
+    has_box_score: bool = False
+
     # ── Game context ───────────────────────────────────────────────────────
     overtime: bool = False
     neutral_site: bool = False
@@ -117,30 +125,46 @@ class IngestionGameRecord:
         Output schema is compatible with ``team_games_to_game_records()``::
 
             {
-                "game_id", "date", "season",
+                "game_id", "date", "season", "has_box_score",
                 "team_id", "team_name", "opponent_id", "opponent_name",
                 "team_score", "opponent_score", "possessions",
                 "fgm", "fga", "fg3m", "fg3a", "fta",
                 "turnovers", "orb", "drb",
             }
 
-        Possessions are estimated via the standard Dean Oliver formula:
+        When ``has_box_score`` is True, possessions are estimated via the
+        standard Dean Oliver formula:
         ``poss ≈ FGA - ORB + TOV + 0.475 × FTA``.
-        If that yields zero (box scores unavailable), a score-average fallback
-        is used so downstream calculations are never starved of a possession
-        estimate.
+
+        When ``has_box_score`` is False the box-score fields are zeros that
+        represent *missing data*.  In that case possessions fall back to a
+        score-average heuristic so that score-only metrics (Elo, adjusted
+        efficiency) still work, but the ``has_box_score=False`` flag tells
+        downstream consumers to **exclude** this game from any box-score-
+        dependent computation (Four Factors, shooting splits, etc.).
         """
         def _poss(fga: float, orb: float, tov: float, fta: float) -> float:
             p = fga - orb + tov + 0.475 * fta
             return max(p, 0.0)
 
-        home_poss = _poss(self.home_fga, self.home_orb, self.home_tov, self.home_fta)
-        away_poss = _poss(self.away_fga, self.away_orb, self.away_tov, self.away_fta)
-        if home_poss <= 0 and away_poss <= 0:
+        if self.has_box_score:
+            home_poss = _poss(self.home_fga, self.home_orb, self.home_tov, self.home_fta)
+            away_poss = _poss(self.away_fga, self.away_orb, self.away_tov, self.away_fta)
+            # Even with box scores the formula can underflow for unusual stat
+            # lines; fall back to score average only in that edge case.
+            if home_poss <= 0 and away_poss <= 0:
+                fallback = max((self.home_score + self.away_score) / 2.0, 30.0)
+                home_poss = away_poss = fallback
+        else:
+            # No box-score data — use score-average heuristic for possession
+            # estimate.  This is ONLY suitable for score-based metrics.
             fallback = max((self.home_score + self.away_score) / 2.0, 30.0)
             home_poss = away_poss = fallback
 
-        base = {"game_id": self.game_id, "date": self.date, "season": self.season, "overtime": self.overtime}
+        base = {
+            "game_id": self.game_id, "date": self.date, "season": self.season,
+            "overtime": self.overtime, "has_box_score": self.has_box_score,
+        }
 
         home_row = {
             **base,

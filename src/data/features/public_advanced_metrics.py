@@ -31,6 +31,14 @@ class TeamGameRow:
     opp_tov: float = 0.0
     opp_orb: float = 0.0
     drb: float = 0.0
+    # True when real box-score data exists; when False the box-score zeros
+    # represent missing data and must not be used in Four Factors etc.
+    # Defaults to None which triggers auto-detection from FGA in __post_init__.
+    has_box_score: Optional[bool] = None
+
+    def __post_init__(self):
+        if self.has_box_score is None:
+            self.has_box_score = self.fga > 0
 
 
 class PublicAdvancedMetricsBuilder:
@@ -106,7 +114,10 @@ class PublicAdvancedMetricsBuilder:
 
         teams_out = []
         for tid, games in by_team.items():
-            ff = self._four_factors(games)
+            # Four Factors require real box-score data — exclude games
+            # where box-score fields are zeros representing missing data.
+            box_games = [g for g in games if g.has_box_score]
+            ff = self._four_factors(box_games)
             wins = sum(1 for g in games if g.points > g.opp_points)
             losses = len(games) - wins
             adj_em = adj_off[tid] - adj_def[tid]
@@ -246,6 +257,13 @@ class PublicAdvancedMetricsBuilder:
             if poss <= 0:
                 continue
 
+            # Determine box-score availability from upstream flag or FGA.
+            rec_has_box = rec.get("has_box_score")
+            if rec_has_box is None:
+                rec_has_box = fga > 0
+            else:
+                rec_has_box = bool(rec_has_box)
+
             rows.append(
                 TeamGameRow(
                     team_id=team_id,
@@ -270,6 +288,7 @@ class PublicAdvancedMetricsBuilder:
                     opp_tov=opp_tov,
                     opp_orb=opp_orb,
                     drb=drb,
+                    has_box_score=rec_has_box,
                 )
             )
         return rows
