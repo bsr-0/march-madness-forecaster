@@ -39,6 +39,7 @@ from ...conference_tournament.data_enrichment import (
     compute_offensive_four_factors_from_games,
     enrich_torvik_teams,
 )
+from ...data.team_id_resolver import GameToTorvikResolver
 from ...data.scrapers.torvik import BartTorvikScraper
 from ...data.scrapers.tournament_context import TournamentContextScraper
 from ...exceptions import LeakageError
@@ -870,63 +871,10 @@ def load_team_stat_sources(
             "Missing historical game data. Provide --historical-games JSON with box-score rows."
         )
 
-    # --- Build game-ID → Torvik-ID mapping for Four Factors repair ---
+    # --- Build game-ID → Torvik-ID resolver for Four Factors repair ---
     # Game data uses mascot-suffixed IDs (e.g. "michigan_wolverines") while
-    # Torvik uses short canonical IDs (e.g. "michigan").  Build a map so the
-    # repair functions' output can be matched to Torvik teams.
-    _torvik_id_set = {t.team_id for t in torvik_teams}
-
-    # Build reverse lookup: expand game IDs to Torvik IDs using common
-    # abbreviation variants (st↔state, etc.) and longest-prefix matching.
-    _game_id_to_torvik: Dict[str, str] = {}
-
-    def _build_game_to_torvik_map(game_ids_set: set) -> None:
-        """Populate _game_id_to_torvik mapping once for all repair passes."""
-        if _game_id_to_torvik:
-            return
-        # Torvik IDs sorted longest-first so longest prefix wins
-        torvik_sorted = sorted(_torvik_id_set, key=len, reverse=True)
-        # Also build expanded forms: "alabama_st" -> "alabama_state"
-        _torvik_expanded: Dict[str, str] = {}
-        for tid in _torvik_id_set:
-            _torvik_expanded[tid] = tid
-            # Normalize double underscores to single (cal_st__fullerton -> cal_st_fullerton)
-            norm = tid.replace("__", "_")
-            if norm != tid:
-                _torvik_expanded[norm] = tid
-            # Expand _st to _state for matching against game data
-            for variant in (tid, norm):
-                if "_st_" in variant or variant.endswith("_st"):
-                    expanded = variant.replace("_st_", "_state_")
-                    if expanded == variant:
-                        expanded = variant + "ate"
-                    _torvik_expanded[expanded] = tid
-        expanded_sorted = sorted(_torvik_expanded.keys(), key=len, reverse=True)
-
-        for game_id in game_ids_set:
-            if game_id in _torvik_id_set:
-                _game_id_to_torvik[game_id] = game_id
-                continue
-            for expanded_id in expanded_sorted:
-                if game_id.startswith(expanded_id + "_") or game_id == expanded_id:
-                    _game_id_to_torvik[game_id] = _torvik_expanded[expanded_id]
-                    break
-
-    def _remap_ff_keys(ff_dict: Dict[str, Dict]) -> Dict[str, Dict]:
-        """Re-key a Four Factors dict from game IDs to Torvik canonical IDs."""
-        if not ff_dict:
-            return ff_dict
-        _build_game_to_torvik_map(set(ff_dict.keys()))
-        remapped: Dict[str, Dict] = {}
-        for game_id, vals in ff_dict.items():
-            torvik_id = _game_id_to_torvik.get(game_id)
-            if torvik_id:
-                if torvik_id not in remapped:
-                    remapped[torvik_id] = vals
-            else:
-                # Keep original key as fallback for collapsed matching
-                remapped[game_id] = vals
-        return remapped
+    # Torvik uses short canonical IDs (e.g. "michigan").
+    _ff_resolver = GameToTorvikResolver({t.team_id for t in torvik_teams})
 
     # --- Auto-repair defensive Four Factors from game box scores ---
     # If the Torvik scraper fell back to CSV (JS wall), defensive FF will
@@ -959,12 +907,16 @@ def load_team_stat_sources(
         # Prefer team_games (per-team box-score records with fga/fta/turnovers/orb/drb)
         # over games (only has scores). The compute functions need paired box-score records.
         _box_score_games = historical_team_games if historical_team_games else historical_games
+        logger.info(
+            "Pipeline-time defensive FF repair triggered — ingestion-time "
+            "enrichment was skipped or did not fully resolve zeros."
+        )
         logger.warning(
             "Defensive Four Factors are all zero after enrichment — "
             "computing from %d historical game box scores",
             len(_box_score_games),
         )
-        def_ff = _remap_ff_keys(compute_defensive_four_factors_from_games(_box_score_games))
+        def_ff = _ff_resolver.remap_dict(compute_defensive_four_factors_from_games(_box_score_games))
         _def_ff_applied = 0
         for team in torvik_teams:
             tid = team.team_id
@@ -1041,7 +993,7 @@ def load_team_stat_sources(
             "%d historical game box scores",
             _reason, len(_box_score_games),
         )
-        off_ff = _remap_ff_keys(compute_offensive_four_factors_from_games(_box_score_games))
+        off_ff = _ff_resolver.remap_dict(compute_offensive_four_factors_from_games(_box_score_games))
         _off_ff_applied = 0
         for team in torvik_teams:
             tid = team.team_id
@@ -1062,6 +1014,24 @@ def load_team_stat_sources(
                 if _csv_orb_bias or abs(getattr(team, "defensive_reb_rate", 0.0) or 0.0) < 1e-6:
                     team.defensive_reb_rate = d["defensive_reb_rate"]
                 _off_ff_applied += 1
+        # Bayesian fallback for teams below game-data compute threshold:
+        # shrink toward D1 population mean rather than keeping biased CSV values.
+        if _csv_orb_bias:
+            _bayesian_applied = 0
+            for team in torvik_teams:
+                tid = team.team_id
+                if tid in off_ff:
+                    continue
+                orb = getattr(team, "offensive_reb_rate", 0.0) or 0.0
+                if 0 < orb < 0.15:
+                    team.offensive_reb_rate = 0.29  # D1 population mean
+                    team.defensive_reb_rate = 0.72
+                    _bayesian_applied += 1
+            if _bayesian_applied:
+                logger.info(
+                    "Applied D1 population mean ORB%%/DRB%% to %d teams "
+                    "below compute threshold", _bayesian_applied,
+                )
         logger.info(
             "Offensive FF auto-repair: applied to %d/%d teams from game box scores",
             _off_ff_applied, len(torvik_teams),

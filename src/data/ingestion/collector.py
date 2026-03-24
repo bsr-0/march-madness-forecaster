@@ -32,10 +32,13 @@ from .game_fetchers import IncrementalGameFetcher
 from .providers import LibraryProviderHub
 from ...conference_tournament.data_enrichment import (
     compute_defensive_four_factors_from_games,
+    compute_offensive_four_factors_from_games,
 )
+from ..team_id_resolver import GameToTorvikResolver
 logger = logging.getLogger(__name__)
 
 from .validators import (
+    validate_four_factors,
     validate_games_payload,
     validate_public_picks_payload,
     validate_ratings_payload,
@@ -167,6 +170,45 @@ class RealDataCollector:
             torvik_scraper = BartTorvikScraper(str(self.cache_dir))
             four_factors = torvik_scraper.fetch_four_factors(year)
             if four_factors:
+                # Overwrite protection: if new data has zeros for defensive FF
+                # but an existing file has non-zero values (from a previous
+                # repair), preserve the existing defensive FF values.
+                ff_path = Path(self.cache_dir) / f"torvik_four_factors_{year}.json"
+                if ff_path.exists():
+                    try:
+                        with open(ff_path, "r") as f:
+                            existing_ff = json.load(f)
+                        _DEF_FIELDS = ("opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate")
+                        _preserved = 0
+                        for team_id, existing_entry in existing_ff.items():
+                            if not isinstance(existing_entry, dict):
+                                continue
+                            new_entry = four_factors.get(team_id)
+                            if new_entry is None:
+                                continue
+                            # Check if existing has non-zero def FF but new has zeros
+                            existing_has_def = any(
+                                abs(float(existing_entry.get(f, 0) or 0)) > 1e-6
+                                for f in _DEF_FIELDS
+                            )
+                            new_has_zeros = all(
+                                abs(float(new_entry.get(f, 0) or 0)) < 1e-6
+                                for f in _DEF_FIELDS
+                            )
+                            if existing_has_def and new_has_zeros:
+                                for f in _DEF_FIELDS:
+                                    val = existing_entry.get(f)
+                                    if val is not None and abs(float(val)) > 1e-6:
+                                        new_entry[f] = val
+                                _preserved += 1
+                        if _preserved:
+                            logger.info(
+                                "Preserved existing defensive FF for %d teams "
+                                "(new data had zeros from CSV fallback)",
+                                _preserved,
+                            )
+                    except (json.JSONDecodeError, OSError):
+                        pass
                 out["torvik_four_factors_json"] = self._write(
                     f"torvik_four_factors_{year}.json", four_factors,
                 )
@@ -296,6 +338,16 @@ class RealDataCollector:
                 torvik_payload, four_factors, historical_team_rows,
                 year, out, validation_errors, provider_lineage,
             )
+            self._enrich_offensive_four_factors(
+                torvik_payload, four_factors, historical_team_rows,
+                year, out, validation_errors, provider_lineage,
+            )
+            # Post-enrichment validation gate
+            ff_errors = validate_four_factors(torvik_payload)
+            if ff_errors:
+                for err in ff_errors:
+                    logger.warning("Four Factors validation: %s", err)
+                validation_errors.setdefault("torvik_json", []).extend(ff_errors)
 
         if self.config.scrape_rosters:
             roster_payload = CBBpyRosterScraper(str(self.cache_dir)).fetch_rosters(year)
@@ -583,18 +635,18 @@ class RealDataCollector:
         opp_turnover_rate, opp_free_throw_rate) from opponent box scores and
         merges them into both the main torvik payload and the four_factors dict.
         """
-        def_ff = compute_defensive_four_factors_from_games(game_records)
-        if not def_ff:
+        def_ff_raw = compute_defensive_four_factors_from_games(game_records)
+        if not def_ff_raw:
             logger.warning(
                 "Could not compute defensive Four Factors from game records "
                 "(no paired box scores with shooting data)"
             )
             return
 
-        # Build collapsed-ID lookup for fuzzy matching
-        collapsed_def_ff: Dict[str, Dict] = {}
-        for k, v in def_ff.items():
-            collapsed_def_ff[k.replace("_", "")] = v
+        # Remap game-data IDs to Torvik canonical IDs using shared resolver
+        torvik_ids = {t.get("team_id", "") for t in torvik_payload.get("teams", [])}
+        resolver = GameToTorvikResolver(torvik_ids)
+        def_ff = resolver.remap_dict(def_ff_raw)
 
         _DEF_FF_FIELDS = (
             "opp_effective_fg_pct", "opp_turnover_rate",
@@ -604,7 +656,7 @@ class RealDataCollector:
         torvik_updated = 0
         for team in torvik_payload.get("teams", []):
             team_id = team.get("team_id", "")
-            d = def_ff.get(team_id) or collapsed_def_ff.get(team_id.replace("_", ""))
+            d = def_ff.get(team_id)
             if d is None:
                 continue
             # Trigger repair if _csv_approximation flag is set or values are missing/zero
@@ -659,6 +711,108 @@ class RealDataCollector:
             ff_updated, len(def_ff),
         )
 
+        # Re-write enriched files (defensive only — offensive writes separately)
+        out["torvik_json"] = self._write(f"torvik_{year}.json", torvik_payload)
+        if four_factors:
+            out["torvik_four_factors_json"] = self._write(
+                f"torvik_four_factors_{year}.json", four_factors,
+            )
+        provider_lineage["torvik_defensive_ff"] = "game_box_scores"
+
+    def _enrich_offensive_four_factors(
+        self,
+        torvik_payload: Dict,
+        four_factors: Dict,
+        game_records: List[Dict],
+        year: int,
+        out: Dict[str, str],
+        validation_errors: Dict[str, List[str]],
+        provider_lineage: Dict[str, str],
+    ) -> None:
+        """Compute offensive Four Factors from game box scores and merge.
+
+        When the CSV fallback produces biased ORB%/DRB% (player-level averages
+        instead of team-level rates), this recomputes from game box scores.
+        """
+        off_ff_raw = compute_offensive_four_factors_from_games(game_records)
+        if not off_ff_raw:
+            logger.warning(
+                "Could not compute offensive Four Factors from game records"
+            )
+            return
+
+        # Remap game-data IDs to Torvik canonical IDs
+        torvik_ids = {t.get("team_id", "") for t in torvik_payload.get("teams", [])}
+        resolver = GameToTorvikResolver(torvik_ids)
+        off_ff = resolver.remap_dict(off_ff_raw)
+
+        _OFF_FF_FIELDS = ("turnover_rate", "offensive_reb_rate", "defensive_reb_rate")
+
+        # Detect CSV bias: median ORB% < 0.15 indicates player-level values
+        teams = torvik_payload.get("teams", [])
+        orb_sample = [float(t.get("offensive_reb_rate", 0) or 0) for t in teams[:20]]
+        csv_bias = (
+            len(orb_sample) >= 10
+            and sorted(orb_sample)[len(orb_sample) // 2] < 0.15
+        )
+
+        torvik_updated = 0
+        for team in teams:
+            team_id = team.get("team_id", "")
+            d = off_ff.get(team_id)
+            if d is None:
+                continue
+            is_csv_approx = team.get("_csv_approximation", False)
+            changed = False
+            for field in _OFF_FF_FIELDS:
+                current = team.get(field, 0.0)
+                new_val = d.get(field)
+                if new_val is None:
+                    continue
+                needs_repair = (
+                    csv_bias
+                    or is_csv_approx
+                    or current is None
+                    or abs(float(current or 0)) < 1e-6
+                )
+                if needs_repair and abs(float(new_val)) > 1e-6:
+                    team[field] = new_val
+                    changed = True
+            if changed:
+                torvik_updated += 1
+
+        # Also merge into four_factors dict
+        ff_updated = 0
+        for team_id, d in off_ff.items():
+            ff_entry = four_factors.get(team_id)
+            if ff_entry is None:
+                for key in four_factors:
+                    if key.replace("_", "") == team_id.replace("_", ""):
+                        ff_entry = four_factors[key]
+                        break
+            if ff_entry is not None:
+                is_csv_approx = ff_entry.get("_csv_approximation", False)
+                for field in _OFF_FF_FIELDS:
+                    current = ff_entry.get(field, 0.0)
+                    new_val = d.get(field)
+                    if new_val is None:
+                        continue
+                    needs_repair = (
+                        csv_bias
+                        or is_csv_approx
+                        or current is None
+                        or abs(float(current or 0)) < 1e-6
+                    )
+                    if needs_repair and abs(float(new_val)) > 1e-6:
+                        ff_entry[field] = new_val
+                ff_updated += 1
+
+        logger.info(
+            "Offensive Four Factors enrichment: %d/%d torvik teams updated, "
+            "%d four_factors entries updated (from %d game-derived teams)",
+            torvik_updated, len(teams), ff_updated, len(off_ff),
+        )
+
         # Re-write enriched files
         out["torvik_json"] = self._write(f"torvik_{year}.json", torvik_payload)
         if four_factors:
@@ -666,22 +820,7 @@ class RealDataCollector:
                 f"torvik_four_factors_{year}.json", four_factors,
             )
 
-        # Post-enrichment validation: now check that defensive fields are populated
-        post_errors = validate_ratings_payload(
-            torvik_payload,
-            required_numeric_fields=[
-                "opp_effective_fg_pct",
-                "opp_turnover_rate",
-                "opp_free_throw_rate",
-            ],
-        )
-        if post_errors:
-            validation_errors.setdefault("torvik_json", []).extend(post_errors)
-            logger.warning(
-                "Post-enrichment validation: %d defensive FF issues remain",
-                len(post_errors),
-            )
-        provider_lineage["torvik_defensive_ff"] = "game_box_scores"
+        provider_lineage["torvik_offensive_ff"] = "game_box_scores"
 
     def _merge_roster_payloads(self, base_payload: Dict, overlay_payload: Dict) -> Dict:
         merged = copy.deepcopy(base_payload)

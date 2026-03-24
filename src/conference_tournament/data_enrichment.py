@@ -18,6 +18,30 @@ from src.data.normalize import normalize_team_id as _canonical_id
 logger = logging.getLogger(__name__)
 
 
+def _is_plausible_box_score(side: dict) -> bool:
+    """Check if a game side has physically plausible box-score values.
+
+    Rejects games with corrupt or implausible counting stats to prevent
+    them from corrupting Four Factors aggregation.
+    """
+    fga = float(side.get("fga") or 0)
+    orb = float(side.get("orb") or 0)
+    drb = float(side.get("drb") or 0)
+    fta = float(side.get("fta") or 0)
+    turnovers = float(side.get("turnovers") or 0)
+    if fga < 0 or fga > 120:
+        return False
+    if orb < 0 or orb > 40:
+        return False
+    if drb < 0 or drb > 60:
+        return False
+    if fta < 0 or fta > 60:
+        return False
+    if turnovers < 0 or turnovers > 40:
+        return False
+    return True
+
+
 def _try_load_json(path: str) -> Optional[dict]:
     """Load a JSON file, returning None if it doesn't exist."""
     p = Path(path)
@@ -243,6 +267,8 @@ def compute_defensive_four_factors_from_games(
             opp_fga = float(opp_side.get("fga") or 0)
             if opp_fga < 1:
                 continue
+            if not _is_plausible_box_score(opp_side) or not _is_plausible_box_score(my_side):
+                continue
 
             s = team_opp[my_id]
             s["fgm"] += float(opp_side.get("fgm") or 0)
@@ -320,6 +346,8 @@ def compute_offensive_four_factors_from_games(
             opp_drb = float(opp_side.get("drb") or 0)
 
             if my_fga < 1:
+                continue
+            if not _is_plausible_box_score(my_side) or not _is_plausible_box_score(opp_side):
                 continue
 
             s = team_stats[my_id]
