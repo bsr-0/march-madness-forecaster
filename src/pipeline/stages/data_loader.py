@@ -832,11 +832,15 @@ def load_team_stat_sources(
 
     # --- Load historical games for proprietary metrics ---
     historical_games: List[Dict] = []
+    historical_team_games: List[Dict] = []
     if config.historical_games_json:
         with open(config.historical_games_json, "r") as f:
             hist_payload = json.load(f)
         validate_feed_freshness(config, "Historical games", hist_payload)
         historical_games = hist_payload.get("games", [])
+        # team_games contains per-team box-score records (fga, fta, turnovers,
+        # orb, drb etc.) paired by game_id — needed for Four Factors repair.
+        historical_team_games = hist_payload.get("team_games", [])
         # Detect skeleton/stub files where game_id exists but all other fields are null
         if historical_games:
             _sample = historical_games[:min(20, len(historical_games))]
@@ -866,6 +870,64 @@ def load_team_stat_sources(
             "Missing historical game data. Provide --historical-games JSON with box-score rows."
         )
 
+    # --- Build game-ID → Torvik-ID mapping for Four Factors repair ---
+    # Game data uses mascot-suffixed IDs (e.g. "michigan_wolverines") while
+    # Torvik uses short canonical IDs (e.g. "michigan").  Build a map so the
+    # repair functions' output can be matched to Torvik teams.
+    _torvik_id_set = {t.team_id for t in torvik_teams}
+
+    # Build reverse lookup: expand game IDs to Torvik IDs using common
+    # abbreviation variants (st↔state, etc.) and longest-prefix matching.
+    _game_id_to_torvik: Dict[str, str] = {}
+
+    def _build_game_to_torvik_map(game_ids_set: set) -> None:
+        """Populate _game_id_to_torvik mapping once for all repair passes."""
+        if _game_id_to_torvik:
+            return
+        # Torvik IDs sorted longest-first so longest prefix wins
+        torvik_sorted = sorted(_torvik_id_set, key=len, reverse=True)
+        # Also build expanded forms: "alabama_st" -> "alabama_state"
+        _torvik_expanded: Dict[str, str] = {}
+        for tid in _torvik_id_set:
+            _torvik_expanded[tid] = tid
+            # Normalize double underscores to single (cal_st__fullerton -> cal_st_fullerton)
+            norm = tid.replace("__", "_")
+            if norm != tid:
+                _torvik_expanded[norm] = tid
+            # Expand _st to _state for matching against game data
+            for variant in (tid, norm):
+                if "_st_" in variant or variant.endswith("_st"):
+                    expanded = variant.replace("_st_", "_state_")
+                    if expanded == variant:
+                        expanded = variant + "ate"
+                    _torvik_expanded[expanded] = tid
+        expanded_sorted = sorted(_torvik_expanded.keys(), key=len, reverse=True)
+
+        for game_id in game_ids_set:
+            if game_id in _torvik_id_set:
+                _game_id_to_torvik[game_id] = game_id
+                continue
+            for expanded_id in expanded_sorted:
+                if game_id.startswith(expanded_id + "_") or game_id == expanded_id:
+                    _game_id_to_torvik[game_id] = _torvik_expanded[expanded_id]
+                    break
+
+    def _remap_ff_keys(ff_dict: Dict[str, Dict]) -> Dict[str, Dict]:
+        """Re-key a Four Factors dict from game IDs to Torvik canonical IDs."""
+        if not ff_dict:
+            return ff_dict
+        _build_game_to_torvik_map(set(ff_dict.keys()))
+        remapped: Dict[str, Dict] = {}
+        for game_id, vals in ff_dict.items():
+            torvik_id = _game_id_to_torvik.get(game_id)
+            if torvik_id:
+                if torvik_id not in remapped:
+                    remapped[torvik_id] = vals
+            else:
+                # Keep original key as fallback for collapsed matching
+                remapped[game_id] = vals
+        return remapped
+
     # --- Auto-repair defensive Four Factors from game box scores ---
     # If the Torvik scraper fell back to CSV (JS wall), defensive FF will
     # be zero/None even after enrichment.  Recompute from historical games.
@@ -894,12 +956,15 @@ def load_team_stat_sources(
             except (json.JSONDecodeError, OSError):
                 pass
     if _needs_def_ff_repair:
+        # Prefer team_games (per-team box-score records with fga/fta/turnovers/orb/drb)
+        # over games (only has scores). The compute functions need paired box-score records.
+        _box_score_games = historical_team_games if historical_team_games else historical_games
         logger.warning(
             "Defensive Four Factors are all zero after enrichment — "
             "computing from %d historical game box scores",
-            len(historical_games),
+            len(_box_score_games),
         )
-        def_ff = compute_defensive_four_factors_from_games(historical_games)
+        def_ff = _remap_ff_keys(compute_defensive_four_factors_from_games(_box_score_games))
         _def_ff_applied = 0
         for team in torvik_teams:
             tid = team.team_id
@@ -970,12 +1035,13 @@ def load_team_stat_sources(
     )
     if _all_zero_orb or _csv_orb_bias:
         _reason = "all zero" if _all_zero_orb else "CSV player-level bias (median < 0.15)"
+        _box_score_games = historical_team_games if historical_team_games else historical_games
         logger.warning(
             "Offensive ORB%%/DRB%% need repair (%s) — computing from "
             "%d historical game box scores",
-            _reason, len(historical_games),
+            _reason, len(_box_score_games),
         )
-        off_ff = compute_offensive_four_factors_from_games(historical_games)
+        off_ff = _remap_ff_keys(compute_offensive_four_factors_from_games(_box_score_games))
         _off_ff_applied = 0
         for team in torvik_teams:
             tid = team.team_id
