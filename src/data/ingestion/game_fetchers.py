@@ -243,6 +243,83 @@ def parse_espn_event(event: Dict, season: int, fallback_date: str) -> Optional[I
     )
 
 
+def _inject_overtime_from_periods(rows: List[Dict]) -> None:
+    """Scan rows for period/num_periods fields and set ``overtime`` per game.
+
+    sportsdataverse PBP data may include a ``period_number`` or
+    ``period`` column.  NCAA basketball has 2 halves, so any value > 2
+    indicates overtime.  This injects an ``overtime`` key into each row
+    so that ``_infer_overtime`` can pick it up downstream.
+    """
+    _PERIOD_KEYS = ("period_number", "period", "num_periods", "half")
+    game_ot: Dict[str, bool] = {}
+    for row in rows:
+        gid = str(row.get("game_id", "")).strip()
+        if not gid:
+            continue
+        for key in _PERIOD_KEYS:
+            val = row.get(key)
+            if val is not None:
+                try:
+                    if int(float(val)) > 2:
+                        game_ot[gid] = True
+                        break
+                except (TypeError, ValueError):
+                    pass
+    if game_ot:
+        for row in rows:
+            gid = str(row.get("game_id", "")).strip()
+            if gid in game_ot:
+                row["overtime"] = True
+
+
+def _infer_overtime(t1: Dict, t2: Dict) -> bool:
+    """Detect overtime from raw provider rows.
+
+    Checks explicit OT fields first (provider-dependent), then falls back to a
+    possession-count heuristic.  NCAA regulation is 40 minutes with ~60-75
+    possessions per team; each 5-minute OT adds ~8-10.  A per-team estimate
+    above 82 is a strong OT signal (< 0.5 % of regulation games reach this).
+    """
+    # 1. Explicit fields —  works when provider data preserves them
+    for row in (t1, t2):
+        for key in ("overtime", "ot", "is_overtime"):
+            val = row.get(key)
+            if val is True or (isinstance(val, str) and val.strip().lower() in ("true", "1", "yes")):
+                return True
+        # num_periods / period_number > 2 → OT  (NCAA basketball = 2 halves)
+        for key in ("num_periods", "period_number", "period"):
+            val = row.get(key)
+            if val is not None:
+                try:
+                    if int(float(val)) > 2:
+                        return True
+                except (TypeError, ValueError):
+                    pass
+
+    # 2. Possession heuristic — estimate from box scores
+    def _poss_est(row: Dict) -> float:
+        try:
+            fga = float(row.get("fga") or 0)
+            orb = float(row.get("orb") or 0)
+            tov = float(row.get("turnovers") or row.get("tov") or 0)
+            fta = float(row.get("fta") or 0)
+            return fga - orb + tov + 0.475 * fta
+        except (TypeError, ValueError):
+            return 0.0
+
+    # 82 possessions is an aggressive pace for 40-min regulation (~2.05/min).
+    # In practice < 0.5 % of D1 regulation games exceed this, while ~85 %
+    # of single-OT games do.
+    _OT_POSS_THRESHOLD = 82.0
+    poss_t1 = _poss_est(t1)
+    poss_t2 = _poss_est(t2)
+    if poss_t1 > _OT_POSS_THRESHOLD or poss_t2 > _OT_POSS_THRESHOLD:
+        return True
+
+    return False
+
+
 def _team_perspective_rows_to_records(
     rows: List[Dict],
     season: int,
@@ -281,6 +358,8 @@ def _team_perspective_rows_to_records(
         def _f(row: Dict, key: str) -> float:
             return float(row.get(key) or 0.0)
 
+        overtime = _infer_overtime(t1, t2)
+
         records.append(IngestionGameRecord(
             game_id=gid,
             date=raw_date,
@@ -307,6 +386,7 @@ def _team_perspective_rows_to_records(
             away_tov=_f(t2, "turnovers") or _f(t2, "tov"),
             away_orb=_f(t2, "orb"),
             away_drb=_f(t2, "drb"),
+            overtime=overtime,
             neutral_site=True,
             provider=provider,
         ))
@@ -631,6 +711,7 @@ class HistoricalGameFetcher:
                         season, fn_name, len(rows),
                     )
                     self._normalize_date_field(rows)
+                    _inject_overtime_from_periods(rows)
                     return _team_perspective_rows_to_records(rows, season, "sportsdataverse")
             except Exception as exc:
                 logger.debug("sportsdataverse %s failed: %s", fn_name, exc)
@@ -787,8 +868,9 @@ class HistoricalGameFetcher:
         info_df = obj[0] if len(obj) > 0 else None
         box_df = obj[1] if len(obj) > 1 else None
 
-        # Build game_id → date mapping from info DataFrame
+        # Build game_id → date and overtime mappings from info DataFrame
         game_date_map: Dict[str, str] = {}
+        game_ot_map: Dict[str, bool] = {}
         if info_df is not None and hasattr(info_df, "iterrows") and not getattr(info_df, "empty", True):
             for _, row in info_df.iterrows():
                 gid = str(row.get("game_id", "")).strip()
@@ -798,6 +880,23 @@ class HistoricalGameFetcher:
                         game_date_map[gid] = datetime.strptime(raw_day, "%B %d, %Y").strftime("%Y-%m-%d")
                     except ValueError:
                         pass
+                # Extract OT from info_df — check common column names
+                if gid:
+                    for col in ("overtime", "ot", "is_overtime"):
+                        val = row.get(col)
+                        if val is True or (isinstance(val, str) and val.strip().lower() in ("true", "1", "yes")):
+                            game_ot_map[gid] = True
+                            break
+                    # Also check num_periods > 2 (NCAA basketball = 2 halves)
+                    for col in ("num_periods", "period_number"):
+                        val = row.get(col)
+                        if val is not None:
+                            try:
+                                if int(float(val)) > 2:
+                                    game_ot_map[gid] = True
+                                    break
+                            except (TypeError, ValueError):
+                                pass
 
         rows = HistoricalGameFetcher._frame_to_records(box_df)
         HistoricalGameFetcher._normalize_date_field(rows)
@@ -808,6 +907,8 @@ class HistoricalGameFetcher:
             gid = str(row.get("game_id", "")).strip()
             if gid in game_date_map:
                 row["date"] = game_date_map[gid]
+            if gid in game_ot_map:
+                row["overtime"] = game_ot_map[gid]
             row.setdefault("season", season)
         return aggregated
 
