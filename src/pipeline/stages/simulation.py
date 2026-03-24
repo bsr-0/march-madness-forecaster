@@ -423,7 +423,17 @@ def normalize_pick_probability(value) -> float:
     - float/int: 0.452 or 45.2
     - str: "45.2%", "45.2", ".452"
 
-    Values > 1.0 are interpreted as percentages and divided by 100.
+    **Decision boundary at 1.0**: Values > 1.0 are interpreted as
+    percentages (0-100 scale) and divided by 100.  Values in [0, 1.0]
+    are treated as probabilities.  The boundary is exclusive (>1.0) so
+    that a true probability of 1.0 (100% certainty) is not divided.
+
+    This boundary is unambiguous in practice: real public pick
+    percentages are either in [0, 1] (probability) or [0, 100]
+    (percentage).  The ambiguous zone [0.95, 1.05] is vanishingly
+    rare — a true probability of 0.98 for R64 is realistic, and 0.98%
+    would be expressed as 0.0098 or "0.98%", not 0.98.
+
     Result is always in [0.0001, 0.9999].
     """
     if value is None:
@@ -435,6 +445,8 @@ def normalize_pick_probability(value) -> float:
     try:
         v = float(value)
     except (ValueError, TypeError):
+        return 0.0001
+    if v < 0:
         return 0.0001
     if v > 1.0:
         v = v / 100.0

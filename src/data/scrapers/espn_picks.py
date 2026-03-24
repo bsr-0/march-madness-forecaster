@@ -479,25 +479,40 @@ class CBSPicksScraper:
 
 def validate_consensus_plausibility(
     consensus: ConsensusData,
-    min_teams: int = 16,
-    max_single_champ_pct: float = 45.0,
-    min_champ_sum: float = 80.0,
-    max_champ_sum: float = 120.0,
+    min_teams: int = 32,
+    max_single_champ_pct: float = 40.0,
+    min_champ_sum: float = 90.0,
+    max_champ_sum: float = 110.0,
 ) -> List[str]:
     """Validate that an aggregated consensus has a plausible distribution.
 
     Returns a list of warning strings (empty if everything looks OK).
     These are advisory — the caller decides whether to raise or log.
 
-    Threshold justification (ESPN BTC data, 2015–2024):
-        - max_single_champ_pct=45%: Kentucky 2015 peaked at ~39%.
-          45% provides headroom while catching clear corruption.
-        - min/max_champ_sum: True sum is exactly 100% by definition
-          (each bracket picks one champion).  Small scraping rounding
-          errors produce 98–102%.  80–120% catches real problems while
-          tolerating imprecision from sources that round to integers.
-        - min_teams=16: A bracket has 64+ teams; even partial data
-          should include at least all 16 seeds × 1 region.
+    Threshold justification:
+
+        min_teams=32:
+            A bracket has 64 teams.  Requiring ≥32 (half the field)
+            ensures the consensus is representative enough for
+            leverage analysis.  A consensus with only 16 teams
+            is biased toward the teams that happened to be present,
+            making leverage calculations unreliable.
+
+        max_single_champ_pct=40%:
+            The highest single-team championship pick share in ESPN
+            BTC history (2015-2024) was Kentucky 2015 at ~39%.
+            A threshold of 40% catches corruption while accommodating
+            the most dominant historical favorite.
+
+        min/max_champ_sum (90-110%):
+            Championship picks must sum to exactly 100% by definition
+            (each bracket picks one champion).  Scraping rounding
+            errors (sources that round to integers) typically produce
+            98-102%.  The ±10% band catches systematic corruption
+            (deflated/inflated distributions) while tolerating normal
+            rounding imprecision.  The previous 80-120% band was too
+            wide — a 20pp deflation represents severe data quality
+            issues that should be flagged.
 
     Checks:
         1. Enough teams present (at least *min_teams*).
@@ -631,6 +646,26 @@ def aggregate_consensus(
                 **weighted_picks
             )
     
+    # Coverage-bias detection: flag teams present in only one source.
+    # A team that only appeared in one source gets 100% of that source's
+    # weight, unmoderated by other sources.  This introduces systematic
+    # bias — the single source's noise is fully reflected in the consensus.
+    n_active = sum(1 for s in [espn, yahoo, cbs] if s.teams)
+    if n_active >= 2:
+        single_source_teams = [
+            norm_id for norm_id, entries in norm_map.items()
+            if len(entries) == 1
+        ]
+        if single_source_teams:
+            logger.warning(
+                "Coverage bias: %d teams present in only 1 of %d sources: %s. "
+                "Their consensus values are unmoderated.",
+                len(single_source_teams), n_active,
+                ", ".join(sorted(single_source_teams)[:10])
+                + (f" (+{len(single_source_teams) - 10} more)"
+                   if len(single_source_teams) > 10 else ""),
+            )
+
     active_sources = [
         name for name, src in [("espn", espn), ("yahoo", yahoo), ("cbs", cbs)]
         if src.teams and weights.get(name, 0.0) > 0

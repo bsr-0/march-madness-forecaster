@@ -40,8 +40,10 @@ class TestSeedBasedFallback:
 
         assert len(picks) == 1
         pick = picks[0]
-        # Should use seed-1 CHAMP prior (0.18), not 0.001
-        assert pick.public_pick_percentage == pytest.approx(0.18, abs=0.01)
+        # Should use seed-1 CHAMP prior from empirical model, not 0.001
+        # Seed-1 CHAMP prior from the empirical model (not hardcoded)
+        seed_1_champ = get_seed_based_pick_rates(1)["CHAMP"]
+        assert pick.public_pick_percentage == pytest.approx(seed_1_champ, rel=0.01)
 
     def test_missing_round_uses_seed_prior(self):
         """Team exists in public_picks but missing a specific round."""
@@ -56,7 +58,8 @@ class TestSeedBasedFallback:
         f4_pick = [p for p in picks if p.round_name == "F4"][0]
 
         # CHAMP should use seed prior, F4 should use real data
-        assert champ_pick.public_pick_percentage == pytest.approx(0.18, abs=0.01)
+        seed_1_champ = get_seed_based_pick_rates(1)["CHAMP"]
+        assert champ_pick.public_pick_percentage == pytest.approx(seed_1_champ, rel=0.01)
         assert f4_pick.public_pick_percentage == pytest.approx(0.30)
 
     def test_zero_public_pct_uses_seed_prior(self):
