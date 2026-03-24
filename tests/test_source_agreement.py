@@ -336,6 +336,21 @@ class TestDetectTeamOutliers:
         assert "team_1" not in outliers["espn"]
         assert "team_1" not in outliers["yahoo"]
 
+    def test_small_deviation_not_flagged(self):
+        """Teams within 10pp of median are not flagged."""
+        teams_a = _realistic_teams()
+        teams_b = dict(_realistic_teams())
+        # team_1 CHAMP: 22% in source a, 28% in source b → median=25, deviation=3pp
+        teams_b["team_1"] = _make_team("team_1", 1, "East", champ=28.0)
+
+        sources = {
+            "espn": _make_consensus(teams_a, "espn"),
+            "yahoo": _make_consensus(teams_b, "yahoo"),
+        }
+        outliers = _detect_team_outliers(sources)
+        assert "team_1" not in outliers["espn"]
+        assert "team_1" not in outliers["yahoo"]
+
     def test_single_source_returns_empty(self):
         """With only one source, no outlier detection is possible."""
         teams = _realistic_teams()
