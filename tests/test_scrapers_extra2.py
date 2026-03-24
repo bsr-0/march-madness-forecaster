@@ -223,7 +223,9 @@ class TestESPNPicksScraper:
             "teams": {
                 "duke": {
                     "team_name": "Duke", "seed": 1, "region": "East",
-                    "round_of_64_pct": 98.0, "champion_pct": 22.0,
+                    "round_of_64_pct": 98.0, "round_of_32_pct": 85.0,
+                    "sweet_16_pct": 60.0, "elite_8_pct": 45.0,
+                    "final_four_pct": 30.0, "champion_pct": 22.0,
                 }
             },
             "sources": ["espn"],
@@ -238,7 +240,12 @@ class TestESPNPicksScraper:
     def test_load_from_json(self, tmp_path):
         from src.data.scrapers.espn_picks import ESPNPicksScraper
         s = ESPNPicksScraper()
-        data = {"teams": {"a": {"team_name": "A", "seed": 1, "region": "E", "champion_pct": 5.0}}}
+        data = {"teams": {"a": {
+            "team_name": "A", "seed": 1, "region": "E",
+            "round_of_64_pct": 50.0, "round_of_32_pct": 30.0,
+            "sweet_16_pct": 18.0, "elite_8_pct": 12.0,
+            "final_four_pct": 8.0, "champion_pct": 5.0,
+        }}}
         fp = tmp_path / "picks.json"
         fp.write_text(json.dumps(data))
         cd = s.load_from_json(str(fp))

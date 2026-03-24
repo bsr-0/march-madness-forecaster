@@ -7,6 +7,7 @@ Scrapes public pick percentages for game-theory bracket optimization.
 import json
 import logging
 import os
+import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
@@ -283,17 +284,44 @@ class ESPNPicksScraper:
             timestamp=validated.get("timestamp"),
         )
     
-    def _load_from_cache(self, filename: str) -> Optional[dict]:
-        """Load from cache."""
+    # Maximum age (in seconds) before cached picks are considered stale.
+    # Default 7 days — pick distributions shift meaningfully over a week
+    # during March, but a week-old cache is better than no data at all.
+    CACHE_MAX_AGE_SECONDS = 7 * 24 * 3600
+
+    def _load_from_cache(
+        self, filename: str, max_age_seconds: Optional[int] = None,
+    ) -> Optional[dict]:
+        """Load from cache, rejecting stale files.
+
+        Args:
+            filename: Cache filename.
+            max_age_seconds: Maximum file age in seconds.  Defaults to
+                ``CACHE_MAX_AGE_SECONDS`` (7 days).
+
+        Returns:
+            Parsed JSON dict, or *None* if missing/stale.
+        """
         if not self.cache_dir:
             return None
-        
+
         cache_path = self.cache_dir / filename
-        if cache_path.exists():
-            with open(cache_path, 'r') as f:
-                return json.load(f)
-        
-        return None
+        if not cache_path.exists():
+            return None
+
+        if max_age_seconds is None:
+            max_age_seconds = self.CACHE_MAX_AGE_SECONDS
+
+        age = time.time() - cache_path.stat().st_mtime
+        if age > max_age_seconds:
+            logger.warning(
+                "Cache file %s is %.1f days old (max %.1f days). Ignoring stale cache.",
+                cache_path, age / 86400, max_age_seconds / 86400,
+            )
+            return None
+
+        with open(cache_path, "r") as f:
+            return json.load(f)
 
     def _save_to_cache(self, filename: str, data: dict) -> None:
         if not self.cache_dir:
@@ -351,11 +379,19 @@ class YahooPicksScraper:
         )
         return ConsensusData(sources=["yahoo"])
 
+    CACHE_MAX_AGE_SECONDS = 7 * 24 * 3600
+
     def _load_cache(self, filename: str) -> Optional[dict]:
         if not self.cache_dir:
             return None
         p = self.cache_dir / filename
         if not p.exists():
+            return None
+        age = time.time() - p.stat().st_mtime
+        if age > self.CACHE_MAX_AGE_SECONDS:
+            logger.warning(
+                "Cache file %s is %.1f days old. Ignoring stale cache.", p, age / 86400,
+            )
             return None
         with open(p, "r") as f:
             return json.load(f)
@@ -416,11 +452,19 @@ class CBSPicksScraper:
         )
         return ConsensusData(sources=["cbs"])
 
+    CACHE_MAX_AGE_SECONDS = 7 * 24 * 3600
+
     def _load_cache(self, filename: str) -> Optional[dict]:
         if not self.cache_dir:
             return None
         p = self.cache_dir / filename
         if not p.exists():
+            return None
+        age = time.time() - p.stat().st_mtime
+        if age > self.CACHE_MAX_AGE_SECONDS:
+            logger.warning(
+                "Cache file %s is %.1f days old. Ignoring stale cache.", p, age / 86400,
+            )
             return None
         with open(p, "r") as f:
             return json.load(f)
@@ -431,6 +475,72 @@ class CBSPicksScraper:
         p = self.cache_dir / filename
         with open(p, "w") as f:
             json.dump(data, f, indent=2)
+
+
+def validate_consensus_plausibility(
+    consensus: ConsensusData,
+    min_teams: int = 16,
+    max_single_champ_pct: float = 60.0,
+    min_champ_sum: float = 50.0,
+    max_champ_sum: float = 150.0,
+) -> List[str]:
+    """Validate that an aggregated consensus has a plausible distribution.
+
+    Returns a list of warning strings (empty if everything looks OK).
+    These are advisory — the caller decides whether to raise or log.
+
+    Checks:
+        1. Enough teams present (at least *min_teams*).
+        2. No single team has > *max_single_champ_pct* championship pick %.
+        3. Championship picks across all teams sum to a reasonable range
+           (*min_champ_sum* – *max_champ_sum*).  For 64 teams the true
+           sum should be ~100%; outside 50–150 signals data corruption.
+        4. Every team with seed ≤ 4 should have champion_pct > 0.
+    """
+    warnings: List[str] = []
+
+    if not consensus.teams:
+        warnings.append("Empty consensus — no teams present.")
+        return warnings
+
+    n_teams = len(consensus.teams)
+    if n_teams < min_teams:
+        warnings.append(
+            f"Only {n_teams} teams in consensus (expected ≥{min_teams})."
+        )
+
+    champ_pcts = {tid: t.champion_pct for tid, t in consensus.teams.items()}
+    champ_sum = sum(champ_pcts.values())
+
+    # Single-team concentration check.
+    max_team = max(champ_pcts, key=champ_pcts.get)
+    if champ_pcts[max_team] > max_single_champ_pct:
+        warnings.append(
+            f"{max_team} has {champ_pcts[max_team]:.1f}% championship pick share "
+            f"(threshold: {max_single_champ_pct}%). Possible data corruption."
+        )
+
+    # Sum plausibility.
+    if champ_sum < min_champ_sum:
+        warnings.append(
+            f"Championship picks sum to {champ_sum:.1f}% "
+            f"(expected ≥{min_champ_sum}%). Distribution looks deflated."
+        )
+    elif champ_sum > max_champ_sum:
+        warnings.append(
+            f"Championship picks sum to {champ_sum:.1f}% "
+            f"(expected ≤{max_champ_sum}%). Distribution looks inflated."
+        )
+
+    # Top-seed sanity: seeds 1-4 should have nonzero championship picks.
+    for tid, team in consensus.teams.items():
+        if team.seed <= 4 and team.champion_pct <= 0.0:
+            warnings.append(
+                f"{tid} (seed {team.seed}) has 0% championship picks — "
+                "likely missing data."
+            )
+
+    return warnings
 
 
 def aggregate_consensus(
@@ -506,10 +616,17 @@ def aggregate_consensus(
         name for name, src in [("espn", espn), ("yahoo", yahoo), ("cbs", cbs)]
         if src.teams and weights.get(name, 0.0) > 0
     ]
-    return ConsensusData(
+    consensus = ConsensusData(
         teams=aggregated,
         sources=active_sources or ["espn", "yahoo", "cbs"],
     )
+
+    # Post-aggregation plausibility check.
+    warnings = validate_consensus_plausibility(consensus)
+    for w in warnings:
+        logger.warning("Plausibility: %s", w)
+
+    return consensus
 
 
 # ---------------------------------------------------------------------------
@@ -644,9 +761,11 @@ class ScraperOrchestrator:
         # Check minimum source requirement
         successful_sources = list(results.keys())
         if len(successful_sources) < min_sources:
-            logger.error(
-                "Only %d/%d sources succeeded: %s. Minimum required: %d.",
-                len(successful_sources), len(scrapers), successful_sources, min_sources,
+            from src.exceptions import DataRequirementError
+
+            raise DataRequirementError(
+                f"Only {len(successful_sources)}/{len(scrapers)} sources succeeded "
+                f"({successful_sources}). Minimum required: {min_sources}."
             )
 
         # Build aggregated consensus from successful sources

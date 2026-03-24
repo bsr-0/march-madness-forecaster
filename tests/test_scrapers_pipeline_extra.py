@@ -644,7 +644,9 @@ class TestESPNPicksScraper:
             "teams": {
                 "duke": {
                     "team_name": "Duke", "seed": 1, "region": "East",
-                    "round_of_64_pct": 99.0, "champion_pct": 22.0,
+                    "round_of_64_pct": 99.0, "round_of_32_pct": 85.0,
+                    "sweet_16_pct": 60.0, "elite_8_pct": 45.0,
+                    "final_four_pct": 30.0, "champion_pct": 22.0,
                 }
             },
             "sources": ["espn"],
