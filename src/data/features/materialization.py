@@ -310,13 +310,21 @@ class HistoricalFeatureMaterializer:
 
             # C1: Detect and warn about mostly-zeroed metric years.
             # Attempt to backfill off_rtg/def_rtg from game data when >50%
-            # of teams have zero values.
+            # of teams have zero values.  Also detect zeroed SRS/SOS.
             if season_rows:
+                total = len(season_rows)
+                for field in ("srs", "sos"):
+                    field_zero = sum(1 for r in season_rows if abs(r.get(field, 0)) < 1e-6)
+                    if field_zero > total * 0.5:
+                        logger.warning(
+                            "Season %d: %d/%d teams have zeroed %s — likely missing "
+                            "from source data.  No game-level backfill available.",
+                            season, field_zero, total, field,
+                        )
                 zero_count = sum(
                     1 for r in season_rows
                     if abs(r.get("off_rtg", 0)) < 1e-6 and abs(r.get("def_rtg", 0)) < 1e-6
                 )
-                total = len(season_rows)
                 if zero_count > total * 0.5:
                     logger.warning(
                         "Season %d: %d/%d teams have zeroed off_rtg/def_rtg. "
@@ -361,6 +369,20 @@ class HistoricalFeatureMaterializer:
                 pace = r.get("pace", 0)
                 if pace > 0 and (pace < 40 or pace > 100):
                     r["pace"] = max(40.0, min(100.0, pace))
+                srs = r.get("srs", 0)
+                if abs(srs) > 1e-6 and (srs < -30 or srs > 30):
+                    logger.debug(
+                        "Season %d team %s: srs=%.1f outside [-30,30], clamping.",
+                        season, r.get("team_id", "?"), srs,
+                    )
+                    r["srs"] = max(-30.0, min(30.0, srs))
+                sos = r.get("sos", 0)
+                if abs(sos) > 1e-6 and (sos < -20 or sos > 20):
+                    logger.debug(
+                        "Season %d team %s: sos=%.1f outside [-20,20], clamping.",
+                        season, r.get("team_id", "?"), sos,
+                    )
+                    r["sos"] = max(-20.0, min(20.0, sos))
 
             # De-duplicate: if both NCAA-suffixed and base entries exist, keep
             # the one with non-zero metrics.
