@@ -662,7 +662,7 @@ class ScraperOrchestrator:
         # When ≥2 sources returned data, verify they agree before averaging.
         agreement_report = None
         if len(results) >= 2:
-            from src.data.scrapers.source_agreement import assess_source_agreement
+            from .source_agreement import assess_source_agreement
 
             agreement_report = assess_source_agreement(
                 results,

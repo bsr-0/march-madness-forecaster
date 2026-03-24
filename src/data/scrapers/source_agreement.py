@@ -35,6 +35,23 @@ except ImportError:  # pragma: no cover
     _HAS_SCIPY = False
 
 
+def _rank(vals: List[float]) -> List[float]:
+    """Assign average ranks to values (1-based), handling ties."""
+    n = len(vals)
+    indexed = sorted(range(n), key=lambda i: vals[i])
+    ranks = [0.0] * n
+    i = 0
+    while i < n:
+        j = i
+        while j < n - 1 and vals[indexed[j + 1]] == vals[indexed[j]]:
+            j += 1
+        avg_rank = (i + j) / 2.0 + 1.0
+        for k in range(i, j + 1):
+            ranks[indexed[k]] = avg_rank
+        i = j + 1
+    return ranks
+
+
 def _spearmanr(x: List[float], y: List[float]) -> float:
     """Spearman rank correlation between two equal-length sequences.
 
@@ -46,21 +63,6 @@ def _spearmanr(x: List[float], y: List[float]) -> float:
         return float(rho) if not math.isnan(rho) else 0.0
 
     # Pure-Python fallback: rank-transform then compute Pearson on ranks.
-    def _rank(vals: List[float]) -> List[float]:
-        n = len(vals)
-        indexed = sorted(range(n), key=lambda i: vals[i])
-        ranks = [0.0] * n
-        i = 0
-        while i < n:
-            j = i
-            while j < n - 1 and vals[indexed[j + 1]] == vals[indexed[j]]:
-                j += 1
-            avg_rank = (i + j) / 2.0 + 1.0  # 1-based average rank
-            for k in range(i, j + 1):
-                ranks[indexed[k]] = avg_rank
-            i = j + 1
-        return ranks
-
     rx, ry = _rank(x), _rank(y)
     n = len(rx)
     if n < 2:
@@ -73,6 +75,42 @@ def _spearmanr(x: List[float], y: List[float]) -> float:
     if den_x == 0 or den_y == 0:
         return 0.0
     return num / (den_x * den_y)
+
+
+def _spearman_p_value(rho: float, n: int) -> float:
+    """Approximate two-tailed p-value for Spearman ρ.
+
+    Uses the t-distribution approximation: t = ρ * sqrt((n-2)/(1-ρ²))
+    with n-2 degrees of freedom.  For small n this is the standard
+    approach (Zar, *Biostatistical Analysis*, 5th ed., §19.6).
+
+    Falls back to scipy.stats.t if available; otherwise uses a normal
+    approximation (reasonable for df ≥ 10).
+    """
+    if n < 3:
+        return 1.0
+    if abs(rho) >= 1.0:
+        return 0.0
+
+    t_stat = rho * math.sqrt((n - 2) / (1.0 - rho * rho))
+    df = n - 2
+
+    if _HAS_SCIPY:
+        from scipy.stats import t as t_dist
+        return float(2.0 * t_dist.sf(abs(t_stat), df))
+
+    # Normal approximation (conservative for small df).
+    # Using the survival function of the standard normal.
+    z = abs(t_stat)
+    # Abramowitz & Stegun approximation 26.2.17
+    p = 0.3275911
+    a1, a2, a3, a4, a5 = (
+        0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429,
+    )
+    t_val = 1.0 / (1.0 + p * z)
+    poly = ((((a5 * t_val + a4) * t_val + a3) * t_val + a2) * t_val + a1) * t_val
+    one_tail = poly * math.exp(-z * z / 2.0) / math.sqrt(2.0 * math.pi)
+    return max(0.0, min(1.0, 2.0 * one_tail))
 
 
 # ---------------------------------------------------------------------------
@@ -114,15 +152,27 @@ _ROUND_ATTR = {
 def assess_source_agreement(
     sources: Dict[str, "ConsensusData"],
     min_correlation: float = 0.85,
+    significance_level: float = 0.05,
     critical_rounds: Tuple[str, ...] = ("CHAMP", "F4", "E8"),
     configured_weights: Optional[Dict[str, float]] = None,
 ) -> SourceAgreementReport:
     """Test whether multiple pick sources statistically agree.
 
+    A source pair is considered "in agreement" when:
+      1. Their Spearman ρ on CHAMP picks is ≥ *min_correlation*, **and**
+      2. The correlation is statistically significant at *significance_level*
+         (two-tailed t-test on ρ).
+
+    Condition (2) prevents small-sample false confidence: with n=6
+    shared teams, ρ=0.85 has p ≈ 0.03 and might pass, but ρ=0.70 with
+    n=6 has p ≈ 0.12 and would not.
+
     Args:
         sources: Mapping of source name → ConsensusData.
         min_correlation: Spearman ρ threshold below which a source pair
             is considered in disagreement.
+        significance_level: Two-tailed p-value threshold for the ρ
+            significance test.  Default 0.05.
         critical_rounds: Rounds to focus on for agreement testing.
         configured_weights: Starting weights (e.g. {"espn": 0.5, ...}).
             If *None*, uses equal weights.
@@ -148,6 +198,9 @@ def assess_source_agreement(
     # ------------------------------------------------------------------
     # 1. Pairwise rank correlations for each critical round
     # ------------------------------------------------------------------
+    # Track sample sizes so the significance test in step 2 is valid.
+    pair_n_shared: Dict[Tuple[str, str], int] = {}
+
     for i, src_a in enumerate(source_names):
         for src_b in source_names[i + 1:]:
             shared_teams = sorted(
@@ -160,6 +213,7 @@ def assess_source_agreement(
                 continue
 
             pair_key = (src_a, src_b)
+            pair_n_shared[pair_key] = len(shared_teams)
             report.pairwise_rank_correlations[pair_key] = {}
 
             for rnd in critical_rounds:
@@ -174,7 +228,18 @@ def assess_source_agreement(
     # ------------------------------------------------------------------
     # 2. Identify flagged sources (majority-voting on CHAMP round)
     # ------------------------------------------------------------------
-    # Build a {(src_a, src_b): champ_rho} lookup.
+    # A pair "agrees" iff ρ ≥ min_correlation AND the correlation is
+    # statistically significant at the chosen level.  This prevents
+    # small-sample false confidence (e.g. n=6, ρ=0.7, p=0.12).
+    def _pair_agrees(pair_key: Tuple[str, str]) -> bool:
+        rho = report.pairwise_rank_correlations.get(pair_key, {}).get("CHAMP")
+        if rho is None or rho < min_correlation:
+            return False
+        n = pair_n_shared.get(pair_key, 0)
+        p = _spearman_p_value(rho, n)
+        return p < significance_level
+
+    # Build a symmetric {(src_a, src_b): champ_rho} lookup.
     champ_rhos: Dict[Tuple[str, str], float] = {}
     for (src_a, src_b), rounds in report.pairwise_rank_correlations.items():
         rho = rounds.get("CHAMP")
@@ -198,26 +263,25 @@ def assess_source_agreement(
             source_avg_rho[s] /= source_pair_count[s]
 
     # Majority-voting: find the largest "agreeing clique" — the maximal
-    # subset of sources where every pairwise CHAMP ρ ≥ min_correlation.
+    # subset of sources where every pairwise CHAMP ρ ≥ min_correlation
+    # AND the correlation is statistically significant.
     # Sources outside the clique are flagged.
     agreeing_clique: List[str] = []
     for i, src_a in enumerate(source_names):
         for src_b in source_names[i + 1:]:
-            rho = champ_rhos.get((src_a, src_b))
-            if rho is not None and rho >= min_correlation:
-                # This pair agrees — build the clique around them.
-                clique = [src_a, src_b]
-                for src_c in source_names:
-                    if src_c in clique:
-                        continue
-                    # src_c joins if it agrees with every existing member.
-                    if all(
-                        champ_rhos.get((src_c, m), -1.0) >= min_correlation
-                        for m in clique
-                    ):
-                        clique.append(src_c)
-                if len(clique) > len(agreeing_clique):
-                    agreeing_clique = clique
+            pair_key = (src_a, src_b)
+            if not _pair_agrees(pair_key):
+                continue
+            # This pair agrees — build the clique around them.
+            clique = [src_a, src_b]
+            for src_c in source_names:
+                if src_c in clique:
+                    continue
+                # src_c joins if it agrees with every existing member.
+                if all(_pair_agrees((min(src_c, m), max(src_c, m))) for m in clique):
+                    clique.append(src_c)
+            if len(clique) > len(agreeing_clique):
+                agreeing_clique = clique
 
     flagged = [s for s in source_names if s not in agreeing_clique]
 
@@ -292,13 +356,27 @@ def assess_source_agreement(
 
 def _detect_team_outliers(
     sources: Dict[str, "ConsensusData"],
-    z_threshold: float = 3.0,
+    abs_deviation_pp: float = 10.0,
 ) -> Dict[str, List[str]]:
     """Detect individual team-level CHAMP outliers across sources.
 
-    For each team, compute mean and std of CHAMP pick % across sources.
-    Flag (source, team) pairs where the value deviates by more than
-    *z_threshold* standard deviations from the mean.
+    With only 2-3 sources, standard z-scores are mathematically bounded
+    (z ≤ 1.15 for n=3) making a z-threshold approach useless.  Instead
+    we use a simple, robust criterion:
+
+        A (source, team) pair is an outlier when its CHAMP pick %
+        deviates from the *median* of all sources by more than
+        ``abs_deviation_pp`` percentage points.
+
+    The median (not mean) is used so a single corrupted source cannot
+    shift the reference point.  The default 10 pp threshold is generous
+    — real cross-source variation for any individual team is typically
+    < 5 pp (ESPN vs Yahoo vs CBS, 2015-2024).
+
+    Args:
+        sources: Mapping of source name → ConsensusData.
+        abs_deviation_pp: Maximum acceptable absolute deviation (in
+            percentage points) from the cross-source median.
 
     Returns:
         {source_name: [list of flagged team_ids]}
@@ -323,17 +401,16 @@ def _detect_team_outliers(
         if len(vals) < 2:
             continue
 
-        values = list(vals.values())
-        mean = sum(values) / len(values)
-        variance = sum((v - mean) ** 2 for v in values) / len(values)
-        std = math.sqrt(variance) if variance > 0 else 0.0
-
-        if std == 0:
-            continue
+        sorted_vals = sorted(vals.values())
+        n = len(sorted_vals)
+        median = (
+            sorted_vals[n // 2]
+            if n % 2 == 1
+            else (sorted_vals[n // 2 - 1] + sorted_vals[n // 2]) / 2.0
+        )
 
         for s, v in vals.items():
-            z = abs(v - mean) / std
-            if z > z_threshold:
+            if abs(v - median) > abs_deviation_pp:
                 outliers[s].append(team_id)
 
     return outliers
