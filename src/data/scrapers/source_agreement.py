@@ -336,7 +336,13 @@ def assess_source_agreement(
     for s in source_names:
         base_w = configured_weights.get(s, 0.0)
         if s in report.flagged_sources and source_pair_count[s] > 0:
-            # Down-weight flagged source: multiply by max(0.1, avg_rho)
+            # Down-weight flagged source by its average agreement.
+            # Floor at 0.1 so a near-zero or negative ρ source still
+            # contributes ~10% of its configured weight — this prevents
+            # complete exclusion from a single noisy tournament snapshot.
+            # (ESPN/Yahoo/CBS historically agree at ρ ≥ 0.90; transient
+            # dips below 0.3 are rare enough that the floor has no
+            # practical effect in normal operation.)
             factor = max(0.1, source_avg_rho[s])
             recommended[s] = base_w * factor
         else:
@@ -372,6 +378,11 @@ def _detect_team_outliers(
     shift the reference point.  The default 10 pp threshold is generous
     — real cross-source variation for any individual team is typically
     < 5 pp (ESPN vs Yahoo vs CBS, 2015-2024).
+
+    **Two-source note:** With n=2 sources, the median equals the midpoint,
+    so both sources deviate equally.  A large disagreement flags *both*
+    sources (symmetric).  This is intentional — with only two sources we
+    cannot determine which is wrong, so both are flagged for review.
 
     Args:
         sources: Mapping of source name → ConsensusData.

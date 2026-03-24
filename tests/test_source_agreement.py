@@ -2,10 +2,11 @@
 
 import math
 import random
+from unittest.mock import patch
 
 import pytest
 
-from src.data.scrapers.espn_picks import ConsensusData, PublicPicks
+from src.data.scrapers.espn_picks import ConsensusData, PublicPicks, ScraperOrchestrator
 from src.data.scrapers.source_agreement import (
     SourceAgreementReport,
     assess_source_agreement,
@@ -357,3 +358,102 @@ class TestDetectTeamOutliers:
         sources = {"espn": _make_consensus(teams, "espn")}
         outliers = _detect_team_outliers(sources)
         assert outliers == {"espn": []}
+
+
+# ---------------------------------------------------------------------------
+# Integration: ScraperOrchestrator → source_agreement → aggregate_consensus
+# ---------------------------------------------------------------------------
+
+class TestOrchestratorAgreementIntegration:
+    """End-to-end tests for the orchestrator → agreement → aggregation path.
+
+    These mock _fetch_with_retry so no network I/O occurs, but exercise
+    the real agreement testing and weight-adjustment logic.
+    """
+
+    def _mock_fetch(self, source_data):
+        """Return a side_effect function that maps source name → data."""
+        def _side_effect(source_name, scraper, year):
+            return source_data.get(source_name)
+        return _side_effect
+
+    def test_three_agreeing_sources_high_agreement(self):
+        """All three sources return identical data → high agreement."""
+        teams = _realistic_teams()
+        data = {
+            "espn": _make_consensus(teams, "espn"),
+            "yahoo": _make_consensus(teams, "yahoo"),
+            "cbs": _make_consensus(teams, "cbs"),
+        }
+
+        orch = ScraperOrchestrator()
+        with patch.object(orch, "_fetch_with_retry", side_effect=self._mock_fetch(data)):
+            result = orch.fetch_all_picks(year=2026, min_sources=1)
+
+        assert result.source_agreement is not None
+        assert result.source_agreement.agreement_level == "high"
+        assert result.source_agreement.flagged_sources == []
+        assert len(result.consensus.teams) == 16
+        assert set(result.successful_sources) == {"espn", "yahoo", "cbs"}
+
+    def test_one_corrupted_source_downweighted(self):
+        """CBS has shuffled data → flagged and downweighted."""
+        good_teams = _realistic_teams(noise_std=0.0)
+
+        rng = random.Random(77)
+        cbs_teams = {}
+        team_ids = sorted(good_teams.keys())
+        champ_values = [good_teams[t].champion_pct for t in team_ids]
+        rng.shuffle(champ_values)
+        for tid, champ in zip(team_ids, champ_values):
+            orig = good_teams[tid]
+            cbs_teams[tid] = _make_team(tid, orig.seed, orig.region, champ=champ)
+
+        data = {
+            "espn": _make_consensus(good_teams, "espn"),
+            "yahoo": _make_consensus(good_teams, "yahoo"),
+            "cbs": _make_consensus(cbs_teams, "cbs"),
+        }
+
+        orch = ScraperOrchestrator()
+        with patch.object(orch, "_fetch_with_retry", side_effect=self._mock_fetch(data)):
+            result = orch.fetch_all_picks(year=2026, min_sources=1)
+
+        assert result.source_agreement is not None
+        assert "cbs" in result.source_agreement.flagged_sources
+        # CBS weight should be less than its default 0.2
+        assert result.source_agreement.recommended_weights["cbs"] < 0.2
+        # Weights must sum to 1
+        total = sum(result.source_agreement.recommended_weights.values())
+        assert total == pytest.approx(1.0, abs=1e-9)
+
+    def test_one_source_fails_no_crash(self):
+        """CBS fails entirely → two-source agreement, no KeyError."""
+        teams = _realistic_teams()
+        data = {
+            "espn": _make_consensus(teams, "espn"),
+            "yahoo": _make_consensus(teams, "yahoo"),
+            # CBS missing — simulates scraper failure
+        }
+
+        orch = ScraperOrchestrator()
+        with patch.object(orch, "_fetch_with_retry", side_effect=self._mock_fetch(data)):
+            result = orch.fetch_all_picks(year=2026, min_sources=1)
+
+        assert result.source_agreement is not None
+        assert set(result.successful_sources) == {"espn", "yahoo"}
+        assert len(result.consensus.teams) == 16
+        # No crash — the bug we fixed
+
+    def test_single_source_skips_agreement(self):
+        """Only ESPN returns → agreement_report is None."""
+        teams = _realistic_teams()
+        data = {"espn": _make_consensus(teams, "espn")}
+
+        orch = ScraperOrchestrator()
+        with patch.object(orch, "_fetch_with_retry", side_effect=self._mock_fetch(data)):
+            result = orch.fetch_all_picks(year=2026, min_sources=1)
+
+        assert result.source_agreement is None
+        assert result.successful_sources == ["espn"]
+        assert len(result.consensus.teams) == 16
