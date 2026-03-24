@@ -21,6 +21,10 @@ class SportsReferenceScraper:
 
     BASE_URL = "https://www.sports-reference.com/cbb/seasons/men"
 
+    # Cache version — bump when parse logic changes (e.g. range validation,
+    # OT filtering) so stale caches with unvalidated data are invalidated.
+    _CACHE_VERSION = "v2_range_validated"
+
     # Teams whose Sports Reference names get "NCAA" appended for tourney
     # qualifiers.  Strip the suffix so IDs stay canonical.
     _NCAA_SUFFIX_RE = re.compile(r"NCAA$", re.IGNORECASE)
@@ -52,8 +56,13 @@ class SportsReferenceScraper:
         cache_name = f"sports_reference_{year}.json"
         cached = self._load_cache(cache_name)
         if cached:
-            teams = cached.get("teams", [])
-            if teams and not self._has_critical_zeros(teams) and not self._has_degraded_schema(teams):
+            cache_ver = cached.get("cache_version", "")
+            if cache_ver != self._CACHE_VERSION:
+                logger.info(
+                    "SR cache for %d has stale version '%s' (current: '%s') — forcing re-fetch.",
+                    year, cache_ver, self._CACHE_VERSION,
+                )
+            elif (teams := cached.get("teams", [])) and not self._has_critical_zeros(teams) and not self._has_degraded_schema(teams):
                 return teams
             elif teams and self._has_degraded_schema(teams):
                 logger.info(
@@ -114,7 +123,7 @@ class SportsReferenceScraper:
                     if tid in basic_def_rtg:
                         team["def_rtg"] = basic_def_rtg[tid]
 
-        self._save_cache(cache_name, {"teams": teams})
+        self._save_cache(cache_name, {"teams": teams, "cache_version": self._CACHE_VERSION})
         return teams
 
     def _parse_team_table(self, html: str) -> List[Dict]:
