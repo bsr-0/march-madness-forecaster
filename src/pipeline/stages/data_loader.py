@@ -957,11 +957,23 @@ def load_team_stat_sources(
     _sample_orb = [
         getattr(t, "offensive_reb_rate", 0.0) or 0.0 for t in torvik_teams[:20]
     ]
-    if all(abs(v) < 1e-6 for v in _sample_orb):
+    _all_zero_orb = all(abs(v) < 1e-6 for v in _sample_orb)
+    # Also detect CSV-approximation bias: player-level ORB% (1-15%) is
+    # fundamentally different from team-level ORB% (25-35%).  The CSV fallback
+    # averages player ORB% weighted by minutes, producing values ~3.8x too low.
+    # Detect by checking if the sample median is below 0.15 — no real D1 team
+    # has a team-level ORB% that low (floor is ~0.18).
+    _csv_orb_bias = (
+        not _all_zero_orb
+        and len(_sample_orb) >= 10
+        and sorted(_sample_orb)[len(_sample_orb) // 2] < 0.15
+    )
+    if _all_zero_orb or _csv_orb_bias:
+        _reason = "all zero" if _all_zero_orb else "CSV player-level bias (median < 0.15)"
         logger.warning(
-            "Offensive ORB%%/TO%%/DRB%% are all zero — computing from "
+            "Offensive ORB%%/DRB%% need repair (%s) — computing from "
             "%d historical game box scores",
-            len(historical_games),
+            _reason, len(historical_games),
         )
         off_ff = compute_offensive_four_factors_from_games(historical_games)
         _off_ff_applied = 0
@@ -975,11 +987,13 @@ def load_team_stat_sources(
                         d = v
                         break
             if d is not None:
-                if abs(getattr(team, "offensive_reb_rate", 0.0) or 0.0) < 1e-6:
+                # Always replace ORB%/DRB% when CSV bias detected (values are
+                # non-zero but systematically wrong); replace TO% only if zero.
+                if _csv_orb_bias or abs(getattr(team, "offensive_reb_rate", 0.0) or 0.0) < 1e-6:
                     team.offensive_reb_rate = d["offensive_reb_rate"]
                 if abs(getattr(team, "turnover_rate", 0.0) or 0.0) < 1e-6:
                     team.turnover_rate = d["turnover_rate"]
-                if abs(getattr(team, "defensive_reb_rate", 0.0) or 0.0) < 1e-6:
+                if _csv_orb_bias or abs(getattr(team, "defensive_reb_rate", 0.0) or 0.0) < 1e-6:
                     team.defensive_reb_rate = d["defensive_reb_rate"]
                 _off_ff_applied += 1
         logger.info(
