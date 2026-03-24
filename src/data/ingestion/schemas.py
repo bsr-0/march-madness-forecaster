@@ -140,7 +140,7 @@ class IngestionGameRecord:
             fallback = max((self.home_score + self.away_score) / 2.0, 30.0)
             home_poss = away_poss = fallback
 
-        base = {"game_id": self.game_id, "date": self.date, "season": self.season}
+        base = {"game_id": self.game_id, "date": self.date, "season": self.season, "overtime": self.overtime}
 
         home_row = {
             **base,
@@ -196,4 +196,5 @@ class IngestionGameRecord:
             "team2_name": self.away_team_name,
             "team1_score": self.home_score,
             "team2_score": self.away_score,
+            "overtime": self.overtime,
         }
