@@ -144,20 +144,36 @@ class ExternalRatingsLoader:
         if not all_teams:
             return {}
 
-        # Normalize each system to [0, 1]
+        # Normalize each system to [0, 1] using IQR-based robust scaling.
+        # Unlike naive min-max, this prevents a single outlier from
+        # compressing all legitimate ratings into a narrow band.
+        # Uses Tukey fences (Q1 - 1.5*IQR, Q3 + 1.5*IQR) to winsorize
+        # extremes before scaling.
         normalized_systems: Dict[str, Dict[str, float]] = {}
         for system, ratings in all_ratings.items():
             if not ratings:
                 continue
-            max_rating = max(r.rating for r in ratings.values())
-            min_rating = min(r.rating for r in ratings.values())
-            range_r = max_rating - min_rating
-            if range_r < 1e-6:
-                range_r = 1.0
+            values = np.array([r.rating for r in ratings.values()])
+            q1 = float(np.percentile(values, 25))
+            q3 = float(np.percentile(values, 75))
+            iqr = q3 - q1
+            if iqr < 1e-6:
+                # All ratings nearly identical — fall back to min-max
+                lo = float(values.min())
+                hi = float(values.max())
+            else:
+                # Tukey fences: winsorize beyond 1.5 * IQR from quartiles
+                lo = q1 - 1.5 * iqr
+                hi = q3 + 1.5 * iqr
+            span = hi - lo
+            if span < 1e-6:
+                span = 1.0
 
             norm = {}
             for team_id, r in ratings.items():
-                norm[team_id] = (r.rating - min_rating) / range_r
+                # Winsorize then scale to [0, 1]
+                clamped = float(np.clip(r.rating, lo, hi))
+                norm[team_id] = (clamped - lo) / span
             normalized_systems[system] = norm
 
         # Compute weighted composite per team

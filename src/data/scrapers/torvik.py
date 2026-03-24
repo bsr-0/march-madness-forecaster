@@ -860,10 +860,23 @@ class BartTorvikScraper:
         teams: List[TorVikTeam] = []
         reader = csv.reader(io.StringIO(text))
         header = None
+        # Known trank CSV headers (normalized). Used to distinguish a genuine
+        # header row from a data row whose team name happens to contain a
+        # keyword like "rank" (e.g. "Frank" contains "rank").
+        _KNOWN_HEADERS = frozenset({
+            'team', 'rank', 'rk', 'conf', 'conference',
+            'barthag', 'adj_oe', 'adj_o', 'adj_de', 'adj_d', 'adj_t',
+            'off_efg', 'off_to', 'off_or', 'off_ftr',
+            'def_efg', 'def_to', 'def_or', 'def_ftr',
+            'wab', 'tempo',
+        })
+        _MIN_HEADER_MATCHES = 3  # require ≥3 known headers to accept as header row
         for row_num, row in enumerate(reader):
             if row_num == 0:
-                if row and any(h.lower() in ('team', 'rank', 'barthag', 'adj oe', 'adj_o') for h in row):
-                    header = {h.strip().lower().replace(' ', '_'): i for i, h in enumerate(row)}
+                normalized_cells = [h.strip().lower().replace(' ', '_') for h in row]
+                header_matches = sum(1 for c in normalized_cells if c in _KNOWN_HEADERS)
+                if row and header_matches >= _MIN_HEADER_MATCHES:
+                    header = {c: i for i, c in enumerate(normalized_cells)}
                     continue
                 header = {}
             if len(row) < 8:
