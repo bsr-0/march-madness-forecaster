@@ -62,7 +62,7 @@ class GameRecord:
     opp_points: float
     possessions: float  # estimated or observed
 
-    # Box-score fields (0 when unavailable)
+    # Box-score fields (0 when unavailable — check ``has_box_score`` first)
     fga: float = 0.0
     fgm: float = 0.0
     fg3a: float = 0.0
@@ -95,6 +95,17 @@ class GameRecord:
 
     is_home: bool = False
     is_neutral: bool = True
+
+    # True when real box-score data exists.  When False the box-score fields
+    # above are zeros representing *missing data* and MUST NOT be used in
+    # box-score-dependent computations (Four Factors, shooting splits, etc.).
+    # Defaults to None which triggers auto-detection from FGA in __post_init__.
+    has_box_score: Optional[bool] = None
+
+    def __post_init__(self):
+        # Auto-detect box-score availability when not explicitly provided.
+        if self.has_box_score is None:
+            self.has_box_score = self.fga > 0
 
 
 @dataclass
@@ -403,16 +414,20 @@ class ProprietaryMetricsEngine:
         results: Dict[str, ProprietaryTeamMetrics] = {}
         for tid in all_team_ids:
             games = by_team[tid]
+            # Filter to only games with real box-score data for any
+            # computation that depends on FGA / FGM / FTA / etc.
+            # Score-based metrics (Elo, efficiency, W/L) use all games.
+            box_games = [g for g in games if g.has_box_score]
             adj_em = adj_off[tid] - adj_def[tid]
 
-            ff = self._four_factors(games)
-            shooting = self._supplementary_shooting(games)
+            ff = self._four_factors(box_games)
+            shooting = self._supplementary_shooting(box_games)
             sos = self._strength_of_schedule(games, adj_off, adj_def, conference_map or {})
             luck = self._correlated_gaussian_luck(games)
             barthag = self._pythagorean_win_pct(adj_off[tid], adj_def[tid])
 
             # --- New Tier 1-2 metrics ---
-            extended = self._extended_box_score_metrics(games)
+            extended = self._extended_box_score_metrics(box_games)
 
             off_xp = self._box_score_xp(ff, side="offense", ft_pct=extended["free_throw_pct"])
             def_xp = self._box_score_xp(
@@ -426,15 +441,15 @@ class ProprietaryMetricsEngine:
                 ft_pct=extended["opp_free_throw_pct"],
             )
 
-            shot_dist = self._shot_distribution_score(games)
-            three_var = self._three_point_variance(games)
+            shot_dist = self._shot_distribution_score(box_games)
+            three_var = self._three_point_variance(box_games)
             momentum, recent_em = self._momentum(games, adj_off, adj_def)
             pace_var = self._pace_adjusted_variance(games)
             consistency = self._consistency(games)
             sos_consistency = self._sos_adjusted_consistency(games, adj_off, adj_def)
 
-            opp_shot_selection = self._opponent_shot_selection(games)
-            foul_rate = self._foul_rate(games)
+            opp_shot_selection = self._opponent_shot_selection(box_games)
+            foul_rate = self._foul_rate(box_games)
 
             wins = sum(1 for g in games if g.points > g.opp_points)
             losses = len(games) - wins
@@ -2037,6 +2052,11 @@ class ProprietaryMetricsEngine:
                 if opp_game is None:
                     continue
 
+                # Skip games without real box-score data — Four Factors
+                # would be computed from zeros (missing data).
+                if not g.has_box_score or not opp_game.has_box_score:
+                    continue
+
                 # Per-game four-factor differentials
                 ff_team = self._four_factors([g])
                 ff_opp = self._four_factors([opp_game])
@@ -2191,6 +2211,14 @@ def team_games_to_game_records(
         orb = _to_float(row.get("orb", 0))
         drb = _to_float(row.get("drb", 0))
 
+        # Determine box-score availability: either explicitly provided by
+        # the upstream ingestion layer, or inferred from FGA > 0.
+        row_has_box = row.get("has_box_score")
+        if row_has_box is None:
+            row_has_box = fga > 0
+        else:
+            row_has_box = bool(row_has_box)
+
         # Derive FTM: points = 2*(fgm - fg3m) + 3*fg3m + ftm
         #           → ftm = points - 2*fgm - fg3m
         ftm = max(points - 2.0 * fgm - fg3m, 0.0) if fgm > 0 else 0.0
@@ -2235,6 +2263,7 @@ def team_games_to_game_records(
             opp_fga=opp_fga, opp_fgm=opp_fgm, opp_fg3a=opp_fg3a, opp_fg3m=opp_fg3m,
             opp_fta=opp_fta, opp_ftm=opp_ftm, opp_tov=opp_tov, opp_orb=opp_orb, opp_drb=opp_drb,
             is_home=False, is_neutral=True,
+            has_box_score=row_has_box,
         ))
 
     # ── Date inference ──────────────────────────────────────────────────
@@ -2492,6 +2521,9 @@ class IncrementalMetricsEngine:
         results: Dict[str, ProprietaryTeamMetrics] = {}
         for tid in all_team_ids:
             games = by_team[tid]
+            # Filter to games with real box-score data for box-score-dependent
+            # metrics.  Score-based metrics use all games.
+            box_games = [g for g in games if g.has_box_score]
             adj_o = adj_off[tid]
             adj_d = adj_def[tid]
             em = adj_o - adj_d
@@ -2499,10 +2531,10 @@ class IncrementalMetricsEngine:
             n_games = len(games)
 
             # Four Factors
-            ff = engine._four_factors(games)
+            ff = engine._four_factors(box_games)
 
             # Shooting
-            shooting = engine._supplementary_shooting(games)
+            shooting = engine._supplementary_shooting(box_games)
 
             # SOS
             sos = engine._strength_of_schedule(games, adj_off, adj_def, self._conference_map)
@@ -2516,10 +2548,10 @@ class IncrementalMetricsEngine:
             # xP / shot distribution
             xp_o = engine._box_score_xp(ff, side="offense", ft_pct=shooting.get("free_throw_pct", 0.72))
             xp_d = engine._box_score_xp(ff, side="defense", ft_pct=shooting.get("opp_free_throw_pct", 0.72))
-            shot_dist = engine._shot_distribution_score(games)
+            shot_dist = engine._shot_distribution_score(box_games)
 
             # Variance metrics
-            tpv = engine._three_point_variance(games)
+            tpv = engine._three_point_variance(box_games)
             pav = engine._pace_adjusted_variance(games)
 
             # Consistency
@@ -2531,13 +2563,13 @@ class IncrementalMetricsEngine:
             mom5_delta = engine._momentum_5g(games, adj_off, adj_def)
 
             # Extended box score
-            ext = engine._extended_box_score_metrics(games)
+            ext = engine._extended_box_score_metrics(box_games)
 
             # Opponent shot selection
-            opp_shots = engine._opponent_shot_selection(games)
+            opp_shots = engine._opponent_shot_selection(box_games)
 
             # True shooting (returns tuple: team_ts, opp_ts)
-            ts_pct, opp_ts_pct = engine._true_shooting_pct(games)
+            ts_pct, opp_ts_pct = engine._true_shooting_pct(box_games)
 
             # Home/away splits
             home_em, away_em, hc_dep = engine._home_away_splits(games, adj_off, adj_def)
@@ -3132,6 +3164,13 @@ def torvik_to_game_records(
         orb = _to_float(game.get("orb") or game.get("offensive_rebounds", 0))
         drb = _to_float(game.get("drb") or game.get("defensive_rebounds", 0))
 
+        # Determine box-score availability from upstream flag or FGA presence.
+        game_has_box = game.get("has_box_score")
+        if game_has_box is None:
+            game_has_box = fga > 0
+        else:
+            game_has_box = bool(game_has_box)
+
         opp_fga = _to_float(game.get("opp_fga", 0))
         opp_fgm = _to_float(game.get("opp_fgm", 0))
         opp_fg3a = _to_float(game.get("opp_fg3a", 0))
@@ -3191,6 +3230,7 @@ def torvik_to_game_records(
             opp_fta=opp_fta, opp_ftm=opp_ftm, opp_tov=opp_tov, opp_orb=opp_orb, opp_drb=opp_drb,
             opp_ast=opp_ast, opp_stl=opp_stl, opp_blk=opp_blk, opp_pf=opp_pf,
             is_home=is_home, is_neutral=is_neutral,
+            has_box_score=game_has_box,
         ))
 
     return records

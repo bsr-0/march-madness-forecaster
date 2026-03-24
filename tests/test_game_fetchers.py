@@ -193,6 +193,20 @@ class TestParseEspnEvent:
         rec = parse_espn_event(event_no_date, season=2024, fallback_date="2024-03-15")
         assert rec.date == "2024-03-15"
 
+    def test_has_box_score_true_when_stats_present(self):
+        rec = parse_espn_event(ESPN_EVENT, season=2024, fallback_date="2024-03-20")
+        assert rec.has_box_score is True
+
+    def test_has_box_score_false_when_no_statistics(self):
+        """Games without statistics arrays should have has_box_score=False."""
+        event = json.loads(json.dumps(ESPN_EVENT))
+        # Remove statistics from both competitors
+        event["competitions"][0]["competitors"][0]["statistics"] = []
+        event["competitions"][0]["competitors"][1]["statistics"] = []
+        rec = parse_espn_event(event, season=2024, fallback_date="2024-03-20")
+        assert rec is not None
+        assert rec.has_box_score is False
+
     def test_returns_none_when_no_competitors(self):
         bad_event = {**ESPN_EVENT, "competitions": [{"competitors": []}]}
         rec = parse_espn_event(bad_event, season=2024, fallback_date="2024-03-20")
@@ -222,6 +236,7 @@ class TestIngestionGameRecord:
             home_fta=15, home_tov=11, home_orb=8, home_drb=27,
             away_fgm=25, away_fga=58, away_fg3m=6, away_fg3a=18,
             away_fta=20, away_tov=13, away_orb=6, away_drb=25,
+            has_box_score=True,
         )
         defaults.update(kwargs)
         return IngestionGameRecord(**defaults)
@@ -301,15 +316,39 @@ class TestIngestionGameRecord:
         rec = self._make_record(
             home_fga=0, home_orb=0, home_tov=0, home_fta=0,
             away_fga=0, away_orb=0, away_tov=0, away_fta=0,
+            has_box_score=False,
         )
         rows = rec.to_team_game_rows()
         assert all(r["possessions"] > 0 for r in rows)
+        assert all(r["has_box_score"] is False for r in rows)
 
     def test_to_team_game_rows_date_and_season_present(self):
         rec = self._make_record()
         rows = rec.to_team_game_rows()
         assert all(r["date"] == "2024-01-15" for r in rows)
         assert all(r["season"] == 2024 for r in rows)
+
+    def test_has_box_score_propagated_to_team_game_rows(self):
+        """has_box_score flag must appear in team-perspective output."""
+        rec = self._make_record(has_box_score=True)
+        rows = rec.to_team_game_rows()
+        assert all(r["has_box_score"] is True for r in rows)
+
+    def test_has_box_score_false_uses_score_fallback_possessions(self):
+        """Games without box-score data use score-average possessions."""
+        rec = self._make_record(has_box_score=False)
+        rows = rec.to_team_game_rows()
+        # Score fallback: max((82 + 79) / 2, 30) = 80.5
+        assert all(r["possessions"] == pytest.approx(80.5) for r in rows)
+        assert all(r["has_box_score"] is False for r in rows)
+
+    def test_has_box_score_true_uses_dean_oliver_possessions(self):
+        """Games with box-score data compute possessions from FGA/ORB/TOV/FTA."""
+        rec = self._make_record(has_box_score=True)
+        rows = rec.to_team_game_rows()
+        home_row = next(r for r in rows if r["team_id"] == "duke")
+        # Dean Oliver: 60 - 8 + 11 + 0.475*15 = 70.125
+        assert home_row["possessions"] == pytest.approx(70.125, rel=1e-3)
 
     def test_to_game_row(self):
         rec = self._make_record()
@@ -449,6 +488,7 @@ class TestDedupRecords:
             away_team_id="b", away_team_name="B",
             home_score=80, away_score=75,
             home_fga=fga, away_fga=fga,
+            has_box_score=fga > 0,
             provider=provider,
         )
 
@@ -520,6 +560,24 @@ class TestDedupRecords:
         assert len(result) == 1
         assert result[0].overtime is True
         assert result[0].provider == "espn"
+
+    def test_dedup_preserves_has_box_score_when_replacing(self):
+        """has_box_score=True should be preserved when replacing with richer record."""
+        espn = self._make_record("g1", "2024-01-01", fga=60, provider="espn")
+        espn.has_box_score = True
+        sdv = self._make_record("g1", "2024-01-01", fga=70, provider="sportsdataverse")
+        sdv.has_box_score = True
+        result = dedup_records([espn, sdv])
+        assert result[0].has_box_score is True
+
+    def test_dedup_preserves_has_box_score_from_discarded(self):
+        """has_box_score=True should be inherited from the discarded record."""
+        espn = self._make_record("g1", "2024-01-01", fga=70, provider="espn")
+        espn.has_box_score = True
+        sdv = self._make_record("g1", "2024-01-01", fga=60, provider="sportsdataverse")
+        sdv.has_box_score = False
+        result = dedup_records([espn, sdv])
+        assert result[0].has_box_score is True
 
 
 # ---------------------------------------------------------------------------
@@ -773,6 +831,7 @@ class TestFullPipelineIntegration:
                 home_fta=15, home_tov=11, home_orb=8, home_drb=27,
                 away_fgm=25, away_fga=58, away_fg3m=6, away_fg3a=18,
                 away_fta=20, away_tov=13, away_orb=6, away_drb=25,
+                has_box_score=True,
             )
             for i in range(1, 10)
         ]
@@ -816,6 +875,7 @@ class TestFullPipelineIntegration:
             home_fta=15, home_tov=11, home_orb=8, home_drb=27,
             away_fgm=25, away_fga=58, away_fg3m=6, away_fg3a=18,
             away_fta=20, away_tov=13, away_orb=6, away_drb=25,
+            has_box_score=True,
         )
         team_games = rec.to_team_game_rows()
         game_records = team_games_to_game_records(team_games, 2024)
@@ -825,6 +885,40 @@ class TestFullPipelineIntegration:
         assert duke_rec.opp_fgm == pytest.approx(25.0)
         assert duke_rec.opp_fga == pytest.approx(58.0)
         assert duke_rec.opp_tov == pytest.approx(13.0)
+
+    def test_has_box_score_propagated_to_game_record(self):
+        """has_box_score flag should flow: IngestionGameRecord → team_games → GameRecord."""
+        from src.data.features.proprietary_metrics import team_games_to_game_records
+
+        rec_with_box = IngestionGameRecord(
+            game_id="g1", date="2024-01-15", season=2024,
+            home_team_id="duke", home_team_name="Duke",
+            away_team_id="unc", away_team_name="UNC",
+            home_score=82, away_score=79,
+            home_fgm=28, home_fga=60, home_fg3m=8, home_fg3a=22,
+            home_fta=15, home_tov=11, home_orb=8, home_drb=27,
+            away_fgm=25, away_fga=58, away_fg3m=6, away_fg3a=18,
+            away_fta=20, away_tov=13, away_orb=6, away_drb=25,
+            has_box_score=True,
+        )
+        rec_without_box = IngestionGameRecord(
+            game_id="g2", date="2024-01-16", season=2024,
+            home_team_id="duke", home_team_name="Duke",
+            away_team_id="unc", away_team_name="UNC",
+            home_score=70, away_score=65,
+            has_box_score=False,
+        )
+
+        team_games = []
+        for r in [rec_with_box, rec_without_box]:
+            team_games.extend(r.to_team_game_rows())
+
+        game_records = team_games_to_game_records(team_games, 2024)
+
+        g1_records = [g for g in game_records if g.game_id == "g1"]
+        g2_records = [g for g in game_records if g.game_id == "g2"]
+        assert all(g.has_box_score is True for g in g1_records)
+        assert all(g.has_box_score is False for g in g2_records)
 
 
 # ---------------------------------------------------------------------------
@@ -843,6 +937,7 @@ class TestHistoricalGameFetcherQualityGate:
                 away_team_id=away_id, away_team_name=away_id.upper(),
                 home_score=80, away_score=75,
                 home_fga=fga, away_fga=fga,
+                has_box_score=fga > 0,
                 provider=provider,
             )
             for i in range(n)

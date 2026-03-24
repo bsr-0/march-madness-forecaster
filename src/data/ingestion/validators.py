@@ -365,9 +365,10 @@ def validate_season_quality(
             f"< {min_unique_dates} minimum for point-in-time features"
         )
 
-    # Box-score coverage
+    # Box-score coverage — use the explicit has_box_score flag when
+    # available (set by the ingestion layer), falling back to FGA > 0.
     if n > 0:
-        has_box = sum(1 for r in records if r.home_fga > 0 or r.away_fga > 0)
+        has_box = sum(1 for r in records if getattr(r, 'has_box_score', False) or r.home_fga > 0 or r.away_fga > 0)
         pct = has_box / n
         if pct < min_box_score_pct:
             errors.append(
