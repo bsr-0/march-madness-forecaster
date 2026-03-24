@@ -560,27 +560,42 @@ def aggregate_consensus(
 ) -> ConsensusData:
     """
     Aggregate pick percentages from multiple sources.
-    
+
+    Team IDs are normalized before aggregation so that different
+    representations of the same team (e.g., ``"unc"`` vs
+    ``"north_carolina"``) are merged correctly.
+
     Args:
         espn: ESPN consensus data
         yahoo: Yahoo consensus data
         cbs: CBS consensus data
         weights: Source weights (default: equal)
-        
+
     Returns:
         Aggregated ConsensusData
     """
+    from src.data.normalize import normalize_team_id
+
     if weights is None:
         weights = {"espn": 0.5, "yahoo": 0.3, "cbs": 0.2}
-    
-    # Collect all team IDs
-    all_teams = set()
-    for source in [espn, yahoo, cbs]:
-        all_teams.update(source.teams.keys())
-    
+
+    # Build normalized-ID → {source_name: (weight, PublicPicks)} mapping.
+    # This merges teams that have different raw IDs across sources.
+    sources_by_name = [("espn", espn), ("yahoo", yahoo), ("cbs", cbs)]
+    norm_map: Dict[str, Dict[str, Tuple[float, "PublicPicks"]]] = {}
+    for source_name, source in sources_by_name:
+        w = weights.get(source_name, 0.0)
+        for raw_id, team in source.teams.items():
+            nid = normalize_team_id(raw_id)
+            if not nid:
+                nid = raw_id
+            if nid not in norm_map:
+                norm_map[nid] = {}
+            norm_map[nid][source_name] = (w, team)
+
     aggregated = {}
-    
-    for team_id in all_teams:
+
+    for norm_id, source_entries in norm_map.items():
         total_weight = 0.0
         weighted_picks = {
             "round_of_64_pct": 0.0,
@@ -590,35 +605,26 @@ def aggregate_consensus(
             "final_four_pct": 0.0,
             "champion_pct": 0.0,
         }
-        
+
         # Get team info from first available source
         team_info = None
-        
-        for source, weight in [(espn, weights.get("espn", 0.0)),
-                                (yahoo, weights.get("yahoo", 0.0)),
-                                (cbs, weights.get("cbs", 0.0))]:
-            if team_id in source.teams:
-                team = source.teams[team_id]
-                
-                if team_info is None:
-                    team_info = team
-                
-                total_weight += weight
-                
-                for key in weighted_picks:
-                    weighted_picks[key] += weight * getattr(team, key)
-        
+
+        for _src_name, (weight, team) in source_entries.items():
+            if team_info is None:
+                team_info = team
+
+            total_weight += weight
+
+            for key in weighted_picks:
+                weighted_picks[key] += weight * getattr(team, key)
+
         if total_weight > 0 and team_info:
             # Normalize by total weight of sources that had this team.
-            # This preserves the *relative* weight ratios from the
-            # agreement-adjusted weights while handling missing teams
-            # correctly (a team in 2/3 sources is averaged over those
-            # two, not diluted by the absent third).
             for key in weighted_picks:
                 weighted_picks[key] /= total_weight
-            
-            aggregated[team_id] = PublicPicks(
-                team_id=team_id,
+
+            aggregated[norm_id] = PublicPicks(
+                team_id=norm_id,
                 team_name=team_info.team_name,
                 seed=team_info.seed,
                 region=team_info.region,
