@@ -1159,7 +1159,7 @@ class ParetoOptimizer:
     def _risk_adjusted_score(self, team_id: str, round_name: str, risk_level: float) -> float:
         model_prob = float(self.calculator.model_probs.get(team_id, {}).get(round_name, 0.0))
         public_prob = float(self.calculator.public_picks.get(team_id, {}).get(round_name, 0.01))
-        leverage = model_prob / max(public_prob, 0.001)
+        leverage = min(model_prob / max(public_prob, 0.01), self.calculator.MAX_LEVERAGE)
         seed = max(1, self.calculator._team_meta(team_id).seed or 16)
 
         # Low-risk brackets favor strong seeds; high-risk brackets reward leverage.
@@ -1366,7 +1366,7 @@ class ParetoOptimizer:
         for team_id, probs in self.calculator.model_probs.items():
             champ_prob = probs.get("CHAMP", 0.0)
             public_prob = self.calculator.public_picks.get(team_id, {}).get("CHAMP", 0.01)
-            leverage = champ_prob / max(public_prob, 0.001)
+            leverage = min(champ_prob / max(public_prob, 0.01), self.calculator.MAX_LEVERAGE)
             champion_scores[team_id] = champ_prob * (leverage ** risk_level)
 
         champion = max(champion_scores, key=champion_scores.get) if champion_scores else ""
@@ -1375,7 +1375,7 @@ class ParetoOptimizer:
         for team_id, probs in self.calculator.model_probs.items():
             f4_prob = probs.get("F4", 0.0)
             public_prob = self.calculator.public_picks.get(team_id, {}).get("F4", 0.01)
-            leverage = f4_prob / max(public_prob, 0.001)
+            leverage = min(f4_prob / max(public_prob, 0.01), self.calculator.MAX_LEVERAGE)
             f4_candidates.append((team_id, f4_prob * (leverage ** risk_level), f4_prob))
         f4_candidates.sort(key=lambda x: x[1], reverse=True)
 

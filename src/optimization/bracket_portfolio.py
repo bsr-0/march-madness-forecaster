@@ -794,7 +794,7 @@ class BracketPortfolioGenerator:
         for champ, brackets in by_champion.items():
             model_p = len(brackets) / total_sims
             public_p = self.public_picks.get(champ, 0.01)
-            raw_leverage = model_p / max(public_p, 0.001)
+            raw_leverage = model_p / max(public_p, 0.01)
             # Apply contrarian_strength: raise leverage to the power of strength.
             # strength=1 is neutral; >1 amplifies high-leverage champions;
             # <1 dampens, pulling allocation back toward model probabilities.
@@ -903,7 +903,7 @@ class BracketPortfolioGenerator:
             for champ in viable:
                 model_p = len(viable[champ]) / total
                 public_p = self.public_picks.get(champ, model_p)
-                leverage = model_p / max(public_p, 0.001)
+                leverage = model_p / max(public_p, 0.01)
                 # Blend leverage with model probability to avoid allocating
                 # brackets to champions with high leverage but negligible
                 # probability.  Weight: 60% leverage, 40% model probability.
