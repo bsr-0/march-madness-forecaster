@@ -480,21 +480,30 @@ class CBSPicksScraper:
 def validate_consensus_plausibility(
     consensus: ConsensusData,
     min_teams: int = 16,
-    max_single_champ_pct: float = 60.0,
-    min_champ_sum: float = 50.0,
-    max_champ_sum: float = 150.0,
+    max_single_champ_pct: float = 45.0,
+    min_champ_sum: float = 80.0,
+    max_champ_sum: float = 120.0,
 ) -> List[str]:
     """Validate that an aggregated consensus has a plausible distribution.
 
     Returns a list of warning strings (empty if everything looks OK).
     These are advisory — the caller decides whether to raise or log.
 
+    Threshold justification (ESPN BTC data, 2015–2024):
+        - max_single_champ_pct=45%: Kentucky 2015 peaked at ~39%.
+          45% provides headroom while catching clear corruption.
+        - min/max_champ_sum: True sum is exactly 100% by definition
+          (each bracket picks one champion).  Small scraping rounding
+          errors produce 98–102%.  80–120% catches real problems while
+          tolerating imprecision from sources that round to integers.
+        - min_teams=16: A bracket has 64+ teams; even partial data
+          should include at least all 16 seeds × 1 region.
+
     Checks:
         1. Enough teams present (at least *min_teams*).
         2. No single team has > *max_single_champ_pct* championship pick %.
         3. Championship picks across all teams sum to a reasonable range
-           (*min_champ_sum* – *max_champ_sum*).  For 64 teams the true
-           sum should be ~100%; outside 50–150 signals data corruption.
+           (*min_champ_sum* – *max_champ_sum*).
         4. Every team with seed ≤ 4 should have champion_pct > 0.
     """
     warnings: List[str] = []
@@ -600,7 +609,11 @@ def aggregate_consensus(
                     weighted_picks[key] += weight * getattr(team, key)
         
         if total_weight > 0 and team_info:
-            # Normalize by total weight
+            # Normalize by total weight of sources that had this team.
+            # This preserves the *relative* weight ratios from the
+            # agreement-adjusted weights while handling missing teams
+            # correctly (a team in 2/3 sources is averaged over those
+            # two, not diluted by the absent third).
             for key in weighted_picks:
                 weighted_picks[key] /= total_weight
             
