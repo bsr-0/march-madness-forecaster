@@ -454,10 +454,39 @@ class TestSportsReferenceScraper:
         scraper = SportsReferenceScraper(cache_dir=str(tmp_path))
         assert scraper.cache_dir.exists()
 
+    def test_try_float_valid(self):
+        from src.data.scrapers.sports_reference import SportsReferenceScraper
+        assert SportsReferenceScraper._try_float("3.14") == 3.14
+        assert SportsReferenceScraper._try_float("0") == 0.0
+        assert SportsReferenceScraper._try_float("-5.5") == -5.5
+
+    def test_try_float_invalid(self):
+        from src.data.scrapers.sports_reference import SportsReferenceScraper
+        assert SportsReferenceScraper._try_float("bad") is None
+        assert SportsReferenceScraper._try_float("") is None
+        assert SportsReferenceScraper._try_float(None) is None
+
     def test_to_float(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
         assert SportsReferenceScraper._to_float("3.14") == 3.14
         assert SportsReferenceScraper._to_float("bad") == 0.0
+
+    def test_validate_range_valid(self):
+        from src.data.scrapers.sports_reference import SportsReferenceScraper
+        assert SportsReferenceScraper._validate_range("pace", 68.5, "Duke") == 68.5
+        assert SportsReferenceScraper._validate_range("off_rtg", 115.0, "Duke") == 115.0
+        assert SportsReferenceScraper._validate_range("srs", -25.0, "Duke") == -25.0
+
+    def test_validate_range_out_of_bounds(self):
+        from src.data.scrapers.sports_reference import SportsReferenceScraper
+        assert SportsReferenceScraper._validate_range("off_rtg", 500.0, "Duke") == 0.0
+        assert SportsReferenceScraper._validate_range("sos", -50.0, "Duke") == 0.0
+        assert SportsReferenceScraper._validate_range("pace", 10.0, "Duke") == 0.0
+
+    def test_validate_range_none(self):
+        from src.data.scrapers.sports_reference import SportsReferenceScraper
+        assert SportsReferenceScraper._validate_range("pace", None, "Duke") == 0.0
+        assert SportsReferenceScraper._validate_range("off_rtg", None, "Duke") == 0.0
 
     def test_to_int(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
@@ -564,6 +593,51 @@ class TestSportsReferenceScraper:
     def test_compute_def_rtg_non_dict_games_skipped(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
         games = ["not a dict", 42, None]
+        result = SportsReferenceScraper._compute_def_rtg_from_games(games)
+        assert result == {}
+
+    def test_compute_def_rtg_skips_overtime_games(self):
+        """OT games are excluded so extra possessions/points don't inflate def_rtg."""
+        from src.data.scrapers.sports_reference import SportsReferenceScraper
+        games = [
+            # Regulation game: Duke allows 70 pts in 70 possessions -> def_rtg = 100
+            {
+                "team1_id": "Duke",
+                "team2_id": "UNC",
+                "team1_score": 80,
+                "team2_score": 70,
+                "possessions": 70,
+                "overtime": False,
+            },
+            # OT game: should be excluded entirely
+            {
+                "team1_id": "Duke",
+                "team2_id": "UVA",
+                "team1_score": 95,
+                "team2_score": 90,
+                "possessions": 85,
+                "overtime": True,
+            },
+        ]
+        result = SportsReferenceScraper._compute_def_rtg_from_games(games)
+        duke_tid = SportsReferenceScraper._normalize_id("Duke")
+        assert duke_tid in result
+        # Duke only has the regulation game: 70 pts in 70 poss -> 100.0
+        assert abs(result[duke_tid] - 100.0) < 0.01
+
+    def test_compute_def_rtg_all_overtime(self):
+        """When all games are OT, no data remains and result should be empty."""
+        from src.data.scrapers.sports_reference import SportsReferenceScraper
+        games = [
+            {
+                "team1_id": "Duke",
+                "team2_id": "UNC",
+                "team1_score": 95,
+                "team2_score": 90,
+                "possessions": 85,
+                "overtime": True,
+            },
+        ]
         result = SportsReferenceScraper._compute_def_rtg_from_games(games)
         assert result == {}
 

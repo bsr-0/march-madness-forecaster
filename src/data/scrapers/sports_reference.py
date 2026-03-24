@@ -146,11 +146,25 @@ class SportsReferenceScraper:
                 continue
             raw_name = name_cell.get_text(strip=True)
             clean_name = self._NCAA_SUFFIX_RE.sub("", raw_name).rstrip()
-            pace = self._to_float(pace_cell.get_text(strip=True) if pace_cell else "0")
             games = self._to_float(g_cell.get_text(strip=True) if g_cell else "0")
             opp_pts = self._to_float(opp_pts_cell.get_text(strip=True) if opp_pts_cell else "0")
-            off_rtg = self._to_float(off_cell.get_text(strip=True) if off_cell else "0")
-            def_rtg = self._to_float(def_cell.get_text(strip=True) if def_cell else "0")
+
+            pace = self._validate_range(
+                "pace", self._try_float(pace_cell.get_text(strip=True) if pace_cell else None), clean_name,
+            )
+            off_rtg = self._validate_range(
+                "off_rtg", self._try_float(off_cell.get_text(strip=True) if off_cell else None), clean_name,
+            )
+            def_rtg = self._validate_range(
+                "def_rtg", self._try_float(def_cell.get_text(strip=True) if def_cell else None), clean_name,
+            )
+            srs = self._validate_range(
+                "srs", self._try_float(srs_cell.get_text(strip=True) if srs_cell else None), clean_name,
+            )
+            sos = self._validate_range(
+                "sos", self._try_float(sos_cell.get_text(strip=True) if sos_cell else None), clean_name,
+            )
+
             if def_rtg <= 0 and pace > 0 and games > 0 and opp_pts > 0:
                 def_rtg = 100.0 * opp_pts / (pace * games)
             teams.append(
@@ -161,8 +175,8 @@ class SportsReferenceScraper:
                     "def_rtg": def_rtg,
                     "wins": self._to_int(wins_cell.get_text(strip=True) if wins_cell else "0"),
                     "losses": self._to_int(losses_cell.get_text(strip=True) if losses_cell else "0"),
-                    "srs": self._to_float(srs_cell.get_text(strip=True) if srs_cell else "0"),
-                    "sos": self._to_float(sos_cell.get_text(strip=True) if sos_cell else "0"),
+                    "srs": srs,
+                    "sos": sos,
                 }
             )
         return teams
@@ -184,8 +198,14 @@ class SportsReferenceScraper:
         average pace when a team's individual pace is unknown.
         """
         stats: Dict[str, Dict] = {}  # team_id -> {opp_pts, poss, games}
+        ot_skipped = 0
         for game in game_records:
             if not isinstance(game, dict):
+                continue
+            # Skip overtime games — extra possessions and points inflate
+            # per-possession efficiency metrics.
+            if game.get("overtime", False):
+                ot_skipped += 1
                 continue
             # Support both team1/team2 format and team/opponent format
             t1 = game.get("team1_id") or game.get("team_id") or ""
@@ -209,6 +229,12 @@ class SportsReferenceScraper:
                 entry["opp_pts"] += opp_score
                 entry["poss"] += poss
                 entry["games"] += 1
+
+        if ot_skipped:
+            logger.info(
+                "Skipped %d OT game(s) from def_rtg computation (%d total records)",
+                ot_skipped, len(game_records),
+            )
 
         # Compute league-average pace for last-resort fallback instead of
         # hardcoding 70.  NCAA pace typically ranges 60-80; a hardcoded 70
@@ -267,9 +293,15 @@ class SportsReferenceScraper:
             raw_name = name_cell.get_text(strip=True)
             clean_name = self._NCAA_SUFFIX_RE.sub("", raw_name).rstrip()
             tid = self._normalize_id(clean_name)
-            games = self._to_float(g_cell.get_text(strip=True))
-            opp_pts = self._to_float(opp_pts_cell.get_text(strip=True))
-            pace = self._to_float(pace_cell.get_text(strip=True) if pace_cell else "0")
+            games_val = self._try_float(g_cell.get_text(strip=True))
+            opp_pts_val = self._try_float(opp_pts_cell.get_text(strip=True))
+            if games_val is None or opp_pts_val is None:
+                continue
+            games = games_val
+            opp_pts = opp_pts_val
+            pace = self._validate_range(
+                "pace", self._try_float(pace_cell.get_text(strip=True) if pace_cell else None), clean_name,
+            )
             if games > 0 and opp_pts > 0:
                 if pace > 0:
                     result[tid] = 100.0 * opp_pts / (pace * games)
@@ -329,12 +361,54 @@ class SportsReferenceScraper:
         cleaned = strip_ncaa_suffix_name(name)
         return normalize_team_id(cleaned)
 
+    # Valid ranges for key metrics.  Values outside these bounds are treated
+    # as scrape artefacts and replaced with the 0.0 sentinel so downstream
+    # fallback / backfill logic kicks in.
+    _VALID_RANGES = {
+        "pace": (50.0, 90.0),
+        "off_rtg": (60.0, 140.0),
+        "def_rtg": (60.0, 140.0),
+        "srs": (-30.0, 30.0),
+        "sos": (-20.0, 20.0),
+    }
+
     @staticmethod
-    def _to_float(value: str) -> float:
+    def _try_float(value) -> Optional[float]:
+        """Parse *value* as float, returning ``None`` on failure.
+
+        Unlike ``_to_float`` this makes parse failures explicit so callers
+        can distinguish "genuinely zero" from "unparseable / missing".
+        """
+        if value is None:
+            return None
         try:
             return float(value)
-        except ValueError:
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _to_float(value: str) -> float:
+        result = SportsReferenceScraper._try_float(value)
+        return result if result is not None else 0.0
+
+    @classmethod
+    def _validate_range(cls, field: str, value: Optional[float], team_name: str) -> float:
+        """Return *value* if within expected bounds, else 0.0 with a warning.
+
+        Returning 0.0 preserves the downstream sentinel contract (def_rtg <= 0
+        triggers fallback, materialization detects >50 % zeros for backfill).
+        """
+        if value is None:
+            logger.warning("SR parse failure: %s is unparseable for team '%s'", field, team_name)
             return 0.0
+        bounds = cls._VALID_RANGES.get(field)
+        if bounds and (value < bounds[0] or value > bounds[1]):
+            logger.warning(
+                "SR range violation: %s=%.2f outside [%.0f, %.0f] for team '%s'; treating as missing",
+                field, value, bounds[0], bounds[1], team_name,
+            )
+            return 0.0
+        return value
 
     @staticmethod
     def _to_int(value: str) -> int:
