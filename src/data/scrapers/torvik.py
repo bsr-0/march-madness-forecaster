@@ -5,9 +5,9 @@ Scrapes T-Rank efficiency ratings, Four Factors, and game-by-game data
 for temporal modeling.
 
 Data acquisition strategy (March 2026, updated):
-  Primary: cbbdata.com API (``www.cbbdata.com/api/``) — the successor to
-  the deprecated cbbstat API.  Requires ``CBD_API_KEY`` env var.  Returns
-  T-Rank ratings AND complete Four Factors as clean JSON.
+  Primary: cbbdata.com API (``www.cbbdata.com/api/``).
+  Requires ``CBD_API_KEY`` env var.  Returns T-Rank ratings AND complete
+  Four Factors as clean JSON.
 
   Secondary: barttorvik.com trank.php CSV (``trank.php?year=Y&csv=1``) —
   requires browser-like headers to bypass Cloudflare verification.
@@ -18,8 +18,7 @@ Data acquisition strategy (March 2026, updated):
   Quaternary: barttorvik.com player CSV (``/getadvstats.php?year=Y&csv=1``)
   — player-level stats aggregated to team-level Four Factors + shooting.
 
-  Legacy: cbbstat API (``api.cbbstat.com``) — DEPRECATED, returns 403 as
-  of early 2026.  Retained as last-resort fallback.
+  (cbbstat API removed — returned 403 since early 2026.)
 """
 
 import csv
@@ -383,11 +382,7 @@ class BartTorvikScraper:
             config=CircuitBreakerConfig(failure_threshold=3, recovery_timeout_seconds=600),
             **cb_kwargs,
         )
-        self._cb_cbbstat = CircuitBreaker(
-            "torvik_cbbstat",
-            config=CircuitBreakerConfig(failure_threshold=2, recovery_timeout_seconds=900),
-            **cb_kwargs,
-        )
+        # cbbstat API removed — returned 403 since early 2026.
         self._cb_trank = CircuitBreaker(
             "torvik_trank",
             config=CircuitBreakerConfig(failure_threshold=3, recovery_timeout_seconds=300),
@@ -434,12 +429,11 @@ class BartTorvikScraper:
         """
         Fetch current T-Rank ratings for all teams.
 
-        Attempts two sources in order, each guarded by a circuit breaker:
+        Attempts sources in order, each guarded by a circuit breaker:
           1. Local cache file (with TTL check).
-          2. **cbbstat API** — ``api.cbbstat.com/ratings/factors/splits``
-             returns T-Rank ratings AND complete Four Factors in one call.
-          3. **CSV fallback** — ``/{year}_team_results.csv`` provides
-             T-Rank ratings without Four Factors.
+          2. **cbbdata.com API** — returns T-Rank ratings + Four Factors.
+          3. **trank.php CSV** — T-Rank CSV with Four Factors columns.
+          4. **team_results CSV fallback** — T-Rank ratings without Four Factors.
 
         Args:
             year: Season year (e.g., 2026 for 2025-26 season)
@@ -486,16 +480,6 @@ class BartTorvikScraper:
                 logger.info(
                     "[torvik] rankings strategy=%s year=%d teams=%d",
                     "csv_fallback", year, len(teams),
-                )
-
-        # --- Strategy 4: legacy cbbstat API (deprecated, last resort) ---
-        if not teams:
-            teams = self._rankings_from_cbbstat_api(year)
-            if teams:
-                self._fetch_strategy["rankings"] = "cbbstat_api"
-                logger.info(
-                    "[torvik] rankings strategy=%s year=%d teams=%d",
-                    "cbbstat_api", year, len(teams),
                 )
 
         if teams:
@@ -598,13 +582,10 @@ class BartTorvikScraper:
         )
         return teams
     
-    # cbbdata.com API — successor to the deprecated cbbstat API.
-    # Requires CBD_API_KEY env var.  Returns clean JSON.
+    # cbbdata.com API — primary data source.  Requires CBD_API_KEY env var.
     CBBDATA_API = "https://www.cbbdata.com/api"
 
-    # Legacy cbbstat.com API — DEPRECATED as of early 2026 (returns 403).
-    # Retained as last-resort fallback in case it comes back online.
-    CBBSTAT_API = "https://api.cbbstat.com"
+    # cbbstat.com API was removed — returned 403 since early 2026.
 
     # ------------------------------------------------------------------
     # cbbdata.com API methods (primary strategy)
@@ -991,95 +972,17 @@ class BartTorvikScraper:
         )
         return result
 
-    # ------------------------------------------------------------------
-    # Legacy cbbstat API methods (deprecated — kept as last resort)
-    # ------------------------------------------------------------------
-
-    def _rankings_from_cbbstat_api(self, year: int) -> List[TorVikTeam]:
-        """Fetch T-Rank ratings + Four Factors from the cbbstat.com API.
-
-        The ``/ratings/factors/splits`` endpoint returns both T-Rank
-        efficiency ratings AND complete Four Factors in a single call,
-        eliminating the need for separate HTML scrapes.
-
-        Response fields used:
-            team, conf, rank, adj_o, adj_d, adj_t, barthag,
-            off_efg, off_to, off_or, off_ftr,
-            def_efg, def_to, def_or, def_ftr
-        """
-        url = f"{self.CBBSTAT_API}/ratings/factors/splits"
-        try:
-            with self._cb_cbbstat():
-                resp = self._get_with_retry(url, params={"year": year})
-                data = resp.json()
-        except CircuitBreakerOpen:
-            logger.info("[torvik] cbbstat circuit breaker open, skipping API")
-            return []
-        except Exception as e:
-            logger.warning("cbbstat API rankings fetch failed: %s", e)
-            return []
-
-        if not data:
-            return []
-
-        rows = data if isinstance(data, list) else data.get("data", data.get("results", []))
-        if not isinstance(rows, list) or not rows:
-            logger.warning("cbbstat API returned unexpected format for rankings")
-            return []
-
-        def _rate(row: dict, key: str) -> float:
-            v = float(row.get(key, 0) or 0)
-            if 1.0 < v <= 2.0:
-                logger.debug("Rate %.4f for '%s' near fraction/percentage boundary", v, key)
-            return v / 100.0 if v > BartTorvikScraper._RATE_PERCENTAGE_THRESHOLD else v
-
-        teams: List[TorVikTeam] = []
-        for row in rows:
-            team_name = row.get("team", "")
-            if not team_name:
-                continue
-            tid = self._normalize_team_name_to_id(team_name)
-            try:
-                team = TorVikTeam(
-                    team_id=tid,
-                    name=team_name,
-                    conference=row.get("conf", ""),
-                    t_rank=int(row.get("rank", 999) or 999),
-                    barthag=float(row.get("barthag", 0.5) or 0.5),
-                    adj_offensive_efficiency=float(row.get("adj_o", 100.0) or 100.0),
-                    adj_defensive_efficiency=float(row.get("adj_d", 100.0) or 100.0),
-                    adj_tempo=float(row.get("adj_t", row.get("tempo", 68.0)) or 68.0),
-                    effective_fg_pct=_rate(row, "off_efg"),
-                    turnover_rate=_rate(row, "off_to"),
-                    offensive_reb_rate=_rate(row, "off_or"),
-                    free_throw_rate=_rate(row, "off_ftr"),
-                    opp_effective_fg_pct=_rate(row, "def_efg"),
-                    opp_turnover_rate=_rate(row, "def_to"),
-                    defensive_reb_rate=_rate(row, "def_or"),
-                    opp_free_throw_rate=_rate(row, "def_ftr"),
-                )
-                teams.append(team)
-            except (ValueError, TypeError) as e:
-                logger.debug("Error parsing cbbstat row for %s: %s", team_name, e)
-                continue
-
-        logger.info(
-            "Rankings from cbbstat API (%d): fetched %d teams with complete "
-            "ratings + Four Factors",
-            year, len(teams),
-        )
-        return teams
+    # cbbstat API methods removed — API returned 403 since early 2026.
 
     def fetch_four_factors(self, year: int = 2026) -> Dict[str, Dict]:
         """
         Fetch Four Factors data for all teams.
 
-        Attempts two sources in order:
+        Attempts sources in order:
           1. Local cache file.
-          2. **cbbstat API** — ``api.cbbstat.com/ratings/factors/splits``
-             (same backend as the toRvik / cbbdata R packages).  Returns all
-             8 Four Factors (offense + defense) as clean JSON.
-          3. **CSV fallback**: aggregates player-level stats from
+          2. **cbbdata.com API** — returns complete Four Factors as JSON.
+          3. **trank.php CSV** — T-Rank CSV with Four Factors columns.
+          4. **CSV fallback**: aggregates player-level stats from
              ``getadvstats.php?year={year}&csv=1`` to compute team-level
              offensive eFG% and FTR, with ORB%/TO% Bayesian-shrunk.
 
@@ -1117,20 +1020,10 @@ class BartTorvikScraper:
                     "trank_csv", year, len(four_factors),
                 )
 
-        # --- Strategy 3: legacy cbbstat API (deprecated) ---
-        if not four_factors:
-            four_factors = self._four_factors_from_cbbstat_api(year)
-            if four_factors:
-                self._fetch_strategy["four_factors"] = "cbbstat_api"
-                logger.info(
-                    "[torvik] four_factors strategy=%s year=%d teams=%d",
-                    "cbbstat_api", year, len(four_factors),
-                )
-
-        # --- Strategy 4: CSV player-stats fallback ---
+        # --- Strategy 3: CSV player-stats fallback ---
         if not four_factors:
             logger.info(
-                "cbbstat API failed; falling back to player-stats CSV aggregation."
+                "API/CSV strategies exhausted; falling back to player-stats CSV aggregation."
             )
             four_factors = self._four_factors_from_player_csv(year)
             if four_factors:
@@ -1141,77 +1034,17 @@ class BartTorvikScraper:
                 )
 
         if four_factors:
+            # Remove junk entries (non-team IDs like "ii", "jr", etc.)
+            junk_keys = [k for k in four_factors if len(k) <= 2 or not any(c.isalpha() for c in k)]
+            for k in junk_keys:
+                del four_factors[k]
+                logger.debug("Removed junk four_factors entry: %s", k)
             TorVikValidator.validate_four_factors(four_factors)
             self._save_to_cache(f"torvik_four_factors_{year}.json", four_factors)
 
         return four_factors
     
-    def _four_factors_from_cbbstat_api(self, year: int) -> Dict[str, Dict]:
-        """Fetch complete Four Factors from the cbbstat.com API.
-
-        This is the same backend that powers the toRvik / cbbdata R packages.
-        Returns all 8 Four Factors (offense + defense) as JSON, with no
-        JS wall or browser verification.
-
-        Endpoint: ``GET /ratings/factors/splits?year={year}``
-
-        Response fields used:
-            team, off_efg, off_to, off_or, off_ftr,
-            def_efg, def_to, def_or, def_ftr
-        """
-        url = f"{self.CBBSTAT_API}/ratings/factors/splits"
-        try:
-            with self._cb_cbbstat():
-                resp = self._get_with_retry(url, params={"year": year})
-                data = resp.json()
-        except CircuitBreakerOpen:
-            logger.info("[torvik] cbbstat circuit breaker open, skipping Four Factors API")
-            return {}
-        except Exception as e:
-            logger.warning("cbbstat API Four Factors fetch failed: %s", e)
-            return {}
-
-        if not data:
-            return {}
-
-        # Normalize to list if needed
-        rows = data if isinstance(data, list) else data.get("data", data.get("results", []))
-        if not isinstance(rows, list) or not rows:
-            logger.warning("cbbstat API returned unexpected format: %s", type(data))
-            return {}
-
-        result: Dict[str, Dict] = {}
-        for row in rows:
-            team_name = row.get("team", "")
-            if not team_name:
-                continue
-            tid = self._normalize_team_name_to_id(team_name)
-
-            def _rate(key: str) -> float:
-                """Convert cbbstat value to fraction (0-1).
-                cbbstat may return percentage (>1.5) or fraction."""
-                v = float(row.get(key, 0) or 0)
-                if 1.0 < v <= 2.0:
-                    logger.debug("Rate %.4f for '%s' near fraction/percentage boundary", v, key)
-                return v / 100.0 if v > BartTorvikScraper._RATE_PERCENTAGE_THRESHOLD else v
-
-            result[tid] = {
-                'effective_fg_pct': _rate("off_efg"),
-                'turnover_rate': _rate("off_to"),
-                'offensive_reb_rate': _rate("off_or"),
-                'free_throw_rate': _rate("off_ftr"),
-                'opp_effective_fg_pct': _rate("def_efg"),
-                'opp_turnover_rate': _rate("def_to"),
-                'defensive_reb_rate': _rate("def_or"),
-                'opp_free_throw_rate': _rate("def_ftr"),
-            }
-
-        logger.info(
-            "Four Factors from cbbstat API (%d): fetched complete offense + "
-            "defense for %d teams",
-            year, len(result),
-        )
-        return result
+    # _four_factors_from_cbbstat_api removed — API returned 403 since early 2026.
 
     def fetch_shooting_stats(self, year: int = 2026) -> Dict[str, Dict]:
         """
@@ -1244,6 +1077,11 @@ class BartTorvikScraper:
                 )
 
         if shooting:
+            # Remove junk entries (non-team IDs like "ii", "jr", etc.)
+            junk_keys = [k for k in shooting if len(k) <= 2 or not any(c.isalpha() for c in k)]
+            for k in junk_keys:
+                del shooting[k]
+                logger.debug("Removed junk shooting entry: %s", k)
             self._save_to_cache(f"torvik_shooting_{year}.json", shooting)
         return shooting
 
