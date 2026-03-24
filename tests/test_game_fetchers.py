@@ -323,6 +323,96 @@ class TestIngestionGameRecord:
 
 
 # ---------------------------------------------------------------------------
+# Overtime inference
+# ---------------------------------------------------------------------------
+
+class TestOvertimeInference:
+    """Tests for _infer_overtime and _inject_overtime_from_periods."""
+
+    def test_infer_overtime_explicit_field(self):
+        from src.data.ingestion.game_fetchers import _infer_overtime
+        t1 = {"overtime": True, "fga": 60, "orb": 8, "turnovers": 11, "fta": 15}
+        t2 = {"fga": 58, "orb": 6, "turnovers": 13, "fta": 20}
+        assert _infer_overtime(t1, t2) is True
+
+    def test_infer_overtime_explicit_string(self):
+        from src.data.ingestion.game_fetchers import _infer_overtime
+        t1 = {"ot": "true", "fga": 60, "orb": 8, "turnovers": 11, "fta": 15}
+        t2 = {"fga": 58, "orb": 6, "turnovers": 13, "fta": 20}
+        assert _infer_overtime(t1, t2) is True
+
+    def test_infer_overtime_num_periods(self):
+        from src.data.ingestion.game_fetchers import _infer_overtime
+        t1 = {"num_periods": 3, "fga": 60, "orb": 8, "turnovers": 11, "fta": 15}
+        t2 = {"fga": 58, "orb": 6, "turnovers": 13, "fta": 20}
+        assert _infer_overtime(t1, t2) is True
+
+    def test_infer_overtime_regulation(self):
+        """Regulation game with normal possessions → False."""
+        from src.data.ingestion.game_fetchers import _infer_overtime
+        t1 = {"fga": 60, "orb": 8, "turnovers": 11, "fta": 15}
+        t2 = {"fga": 58, "orb": 6, "turnovers": 13, "fta": 20}
+        # t1 poss est: 60 - 8 + 11 + 0.475*15 = 70.125 (< 82)
+        assert _infer_overtime(t1, t2) is False
+
+    def test_infer_overtime_high_possessions(self):
+        """Very high possessions → heuristic triggers."""
+        from src.data.ingestion.game_fetchers import _infer_overtime
+        t1 = {"fga": 80, "orb": 8, "turnovers": 15, "fta": 20}
+        t2 = {"fga": 58, "orb": 6, "turnovers": 13, "fta": 20}
+        # t1 poss est: 80 - 8 + 15 + 0.475*20 = 96.5 (> 82)
+        assert _infer_overtime(t1, t2) is True
+
+    def test_inject_overtime_from_periods(self):
+        from src.data.ingestion.game_fetchers import _inject_overtime_from_periods
+        rows = [
+            {"game_id": "g1", "period_number": 2, "team_id": "duke"},
+            {"game_id": "g2", "period_number": 3, "team_id": "unc"},
+        ]
+        _inject_overtime_from_periods(rows)
+        assert rows[0].get("overtime") is None  # g1 only has period 2 (regulation)
+        assert rows[1].get("overtime") is True   # g2 has period 3 (OT)
+
+    def test_overtime_propagated_to_team_game_rows(self):
+        """overtime field is included in to_team_game_rows() output."""
+        rec = IngestionGameRecord(
+            game_id="g1", date="2024-01-15", season=2024,
+            home_team_id="duke", home_team_name="Duke",
+            away_team_id="unc", away_team_name="North Carolina",
+            home_score=95, away_score=90,
+            home_fgm=32, home_fga=68, home_fg3m=8, home_fg3a=22,
+            home_fta=18, home_tov=12, home_orb=8, home_drb=27,
+            away_fgm=30, away_fga=65, away_fg3m=6, away_fg3a=18,
+            away_fta=22, away_tov=14, away_orb=6, away_drb=25,
+            overtime=True,
+        )
+        rows = rec.to_team_game_rows()
+        assert all(r["overtime"] is True for r in rows)
+
+    def test_overtime_propagated_to_game_row(self):
+        """overtime field is included in to_game_row() output."""
+        rec = IngestionGameRecord(
+            game_id="g1", date="2024-01-15", season=2024,
+            home_team_id="duke", home_team_name="Duke",
+            away_team_id="unc", away_team_name="North Carolina",
+            home_score=95, away_score=90,
+            overtime=True,
+        )
+        game_row = rec.to_game_row()
+        assert game_row["overtime"] is True
+
+    def test_overtime_default_false_in_game_row(self):
+        rec = IngestionGameRecord(
+            game_id="g1", date="2024-01-15", season=2024,
+            home_team_id="duke", home_team_name="Duke",
+            away_team_id="unc", away_team_name="North Carolina",
+            home_score=82, away_score=79,
+        )
+        game_row = rec.to_game_row()
+        assert game_row["overtime"] is False
+
+
+# ---------------------------------------------------------------------------
 # season_window and is_in_season_window
 # ---------------------------------------------------------------------------
 
