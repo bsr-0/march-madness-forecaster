@@ -85,6 +85,7 @@ def extract_multi_system_features(
     ordinals: Dict[str, Dict[str, Any]],
     team_id: str,
     n_teams_approx: int = 363,
+    min_system_coverage: int = 50,
 ) -> MasseyMultiSystemFeatures:
     """Extract individual system ratings + derived features for one team.
 
@@ -94,6 +95,11 @@ def extract_multi_system_features(
         team_id: The canonical team ID to extract features for.
         n_teams_approx: Approximate number of teams rated (used for
             normalization when a system's team count is unavailable).
+        min_system_coverage: Minimum teams a system must cover to be
+            included.  Systems like AP/USA polls rank only ~25 teams;
+            using them with n_teams_approx=363 would compress all ranked
+            teams into [0.93, 1.0], producing misleadingly narrow
+            normalized values.  Default 50.
 
     Returns:
         MasseyMultiSystemFeatures with individual ratings and derived metrics.
@@ -104,6 +110,10 @@ def extract_multi_system_features(
     for system_code in MASSEY_TOP_SYSTEMS:
         system_data = ordinals.get(system_code)
         if system_data is None:
+            continue
+
+        # Skip systems with very low coverage to avoid normalization skew
+        if len(system_data) < min_system_coverage:
             continue
 
         entry = system_data.get(team_id)
@@ -148,11 +158,14 @@ def extract_multi_system_features(
 
 def extract_all_teams(
     ordinals: Dict[str, Dict[str, Any]],
+    min_system_coverage: int = 50,
 ) -> Dict[str, MasseyMultiSystemFeatures]:
     """Extract multi-system features for all teams found in ordinals.
 
     Args:
         ordinals: Dict of {system_name: {canonical_team_id: entry}}.
+        min_system_coverage: Minimum teams a system must cover to be
+            included.  Passed through to ``extract_multi_system_features``.
 
     Returns:
         Dict of {canonical_team_id: MasseyMultiSystemFeatures}.
@@ -169,7 +182,10 @@ def extract_all_teams(
 
     result: Dict[str, MasseyMultiSystemFeatures] = {}
     for team_id in all_team_ids:
-        features = extract_multi_system_features(ordinals, team_id, n_teams_approx)
+        features = extract_multi_system_features(
+            ordinals, team_id, n_teams_approx,
+            min_system_coverage=min_system_coverage,
+        )
         if features.n_systems > 0:
             result[team_id] = features
 

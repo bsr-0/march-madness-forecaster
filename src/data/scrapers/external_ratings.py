@@ -412,6 +412,20 @@ class ExternalRatingsLoader:
         for system_name, entries in all_systems.items():
             if len(entries) < 50:
                 continue
+            # Apply same corruption check as populate_from_massey_ordinals
+            if len(entries) > 10:
+                rank_counts: Dict[int, int] = {}
+                for e in entries:
+                    r = e.get("ranking", 0)
+                    rank_counts[r] = rank_counts.get(r, 0) + 1
+                max_rank_freq = max(rank_counts.values())
+                if max_rank_freq > len(entries) * 0.8:
+                    logger.debug(
+                        "Skipping corrupted %s from composite: %d/%d "
+                        "entries share the same rank",
+                        system_name, max_rank_freq, len(entries),
+                    )
+                    continue
             for e in entries:
                 tid = e["team_id"]
                 team_scores.setdefault(tid, []).append(e["normalized"])
