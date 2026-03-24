@@ -658,6 +658,25 @@ class ScraperOrchestrator:
         else:
             active_weights = {"espn": 1.0}  # Fallback
 
+        # Cross-source statistical agreement testing (Phase 2).
+        # When ≥2 sources returned data, verify they agree before averaging.
+        agreement_report = None
+        if len(results) >= 2:
+            from src.data.scrapers.source_agreement import assess_source_agreement
+
+            agreement_report = assess_source_agreement(
+                results,
+                configured_weights=active_weights,
+            )
+            if agreement_report.flagged_sources:
+                logger.warning(
+                    "Source agreement check flagged %s: %s",
+                    agreement_report.flagged_sources,
+                    "; ".join(agreement_report.details),
+                )
+            # Use agreement-adjusted weights for aggregation
+            active_weights = agreement_report.recommended_weights
+
         consensus = aggregate_consensus(
             espn_data, yahoo_data, cbs_data, weights=active_weights
         )
@@ -666,6 +685,7 @@ class ScraperOrchestrator:
             consensus=consensus,
             successful_sources=successful_sources,
             source_statuses=dict(self.source_statuses),
+            source_agreement=agreement_report,
         )
 
     def _fetch_with_retry(
@@ -725,6 +745,7 @@ class OrchestratorResult:
     consensus: ConsensusData
     successful_sources: List[str]
     source_statuses: Dict[str, SourceStatus]
+    source_agreement: Optional["SourceAgreementReport"] = None
 
     @property
     def is_degraded(self) -> bool:
