@@ -275,6 +275,10 @@ class SportsReferenceScraper:
                     result[tid] = 100.0 * opp_pts / (pace * games)
                 elif team_paces and tid in team_paces and team_paces[tid] > 0:
                     result[tid] = 100.0 * opp_pts / (team_paces[tid] * games)
+                elif team_paces:
+                    valid_paces = [p for p in team_paces.values() if p > 0]
+                    avg_pace = sum(valid_paces) / len(valid_paces) if valid_paces else 70.0
+                    result[tid] = 100.0 * opp_pts / (avg_pace * games)
                 else:
                     result[tid] = 100.0 * opp_pts / (70.0 * games)
         return result
