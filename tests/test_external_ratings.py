@@ -143,18 +143,20 @@ class TestExternalRatingsLoader:
         composites = loader.compute_composite({"sys": teams})
 
         # Under naive min-max, team_9 (rating=19) would get (19-10)/(1000-10)=0.009
-        # Under robust scaling, team_9 should retain meaningful spread
+        # Percentile-rank normalization preserves full ordering regardless of outlier
         normal_ratings = [
             composites[f"team_{i}"].composite_rating for i in range(10)
         ]
         spread = max(normal_ratings) - min(normal_ratings)
-        # Robust scaling should preserve spread among normal teams (>0.3)
         assert spread > 0.3, f"Normal team spread too compressed: {spread}"
-        # Outlier should be clipped to 1.0
+        # Outlier gets highest rank, all normal teams retain distinct ranks
         assert composites["outlier"].composite_rating == 1.0
+        # Every adjacent pair is distinguishable
+        for i in range(9):
+            assert composites[f"team_{i}"].composite_rating < composites[f"team_{i+1}"].composite_rating
 
     def test_compute_composite_no_outlier_still_works(self, tmp_path):
-        """Normal distributions without outliers should preserve ordering."""
+        """Normal distributions without outliers should preserve full ordering."""
         loader = ExternalRatingsLoader(cache_dir=str(tmp_path))
         all_ratings = {
             "kenpom": {
@@ -166,10 +168,59 @@ class TestExternalRatingsLoader:
         composites = loader.compute_composite(all_ratings)
         assert composites["best"].composite_rating > composites["mid"].composite_rating
         assert composites["mid"].composite_rating > composites["worst"].composite_rating
-        # All ratings should be in [0, 1] with meaningful spread
-        spread = composites["best"].composite_rating - composites["worst"].composite_rating
-        assert spread > 0.3
+        # Percentile-rank: best=1.0, mid=0.5, worst=0.0 for 3 distinct teams
+        assert composites["best"].composite_rating == 1.0
+        assert composites["worst"].composite_rating == 0.0
         assert all(0.0 <= composites[t].composite_rating <= 1.0 for t in ["best", "mid", "worst"])
+
+    def test_compute_composite_negative_ratings(self, tmp_path):
+        """Sagarin-style negative ratings should normalize correctly."""
+        loader = ExternalRatingsLoader(cache_dir=str(tmp_path))
+        all_ratings = {
+            "sagarin": {
+                "best": ExternalRating("sagarin", "Best", "best", 25.0, 1, 0.0),
+                "good": ExternalRating("sagarin", "Good", "good", 10.0, 2, 0.0),
+                "avg": ExternalRating("sagarin", "Avg", "avg", 0.0, 3, 0.0),
+                "bad": ExternalRating("sagarin", "Bad", "bad", -5.0, 4, 0.0),
+                "worst": ExternalRating("sagarin", "Worst", "worst", -10.0, 5, 0.0),
+            }
+        }
+        composites = loader.compute_composite(all_ratings)
+        # Ordering must be preserved even with negative input ratings
+        assert composites["best"].composite_rating > composites["good"].composite_rating
+        assert composites["good"].composite_rating > composites["avg"].composite_rating
+        assert composites["avg"].composite_rating > composites["bad"].composite_rating
+        assert composites["bad"].composite_rating > composites["worst"].composite_rating
+        # All normalized to [0, 1]
+        for t in ["best", "good", "avg", "bad", "worst"]:
+            assert 0.0 <= composites[t].composite_rating <= 1.0
+
+    def test_compute_composite_single_team(self, tmp_path):
+        """Single team should not crash and should get a valid rating."""
+        loader = ExternalRatingsLoader(cache_dir=str(tmp_path))
+        all_ratings = {
+            "kenpom": {
+                "only": ExternalRating("kenpom", "Only", "only", 20.0, 1, 0.0),
+            }
+        }
+        composites = loader.compute_composite(all_ratings)
+        assert len(composites) == 1
+        assert 0.0 <= composites["only"].composite_rating <= 1.0
+
+    def test_compute_composite_identical_ratings(self, tmp_path):
+        """All teams with the same rating should get equal composites."""
+        loader = ExternalRatingsLoader(cache_dir=str(tmp_path))
+        all_ratings = {
+            "kenpom": {
+                "a": ExternalRating("kenpom", "A", "a", 20.0, 1, 0.0),
+                "b": ExternalRating("kenpom", "B", "b", 20.0, 1, 0.0),
+                "c": ExternalRating("kenpom", "C", "c", 20.0, 1, 0.0),
+            }
+        }
+        composites = loader.compute_composite(all_ratings)
+        ratings = [composites[t].composite_rating for t in ["a", "b", "c"]]
+        # All should be identical
+        assert ratings[0] == ratings[1] == ratings[2]
 
     def test_save_and_load_roundtrip(self, tmp_path):
         """Save ratings then load them back."""

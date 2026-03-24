@@ -9,9 +9,9 @@
 
 | File | Lines | Exports | Risk |
 |------|-------|---------|------|
-| `src/data/scrapers/torvik.py` | 1269 | `BartTorvikScraper`, `TorVikTeam`, `TorVikValidator`, `TorVikValidationError` | **HIGH** — 30+ consumers |
-| `src/data/scrapers/torvik_r.py` | 313 | `TorvikRWrapper`, `_find_rscript`, `_check_r_package` | LOW — optional R wrapper, 1 consumer |
-| `scripts/create_missing_torvik.py` | ~70 | Utility script | LOW — standalone |
+| `src/data/scrapers/torvik.py` | 1708 | `BartTorvikScraper`, `TorVikTeam`, `TorVikValidator`, `TorVikValidationError` | **HIGH** — 30+ consumers |
+| ~~`src/data/scrapers/torvik_r.py`~~ | ~~313~~ | ~~`TorvikRWrapper`~~ | **DELETED** — replaced by cbbdata API strategy in `BartTorvikScraper` |
+| ~~`scripts/create_missing_torvik.py`~~ | ~~70~~ | ~~Utility script~~ | **DELETED** — zero callers |
 
 ---
 
@@ -30,7 +30,7 @@
 | File | Import/Usage | How Used |
 |------|--------------|----------|
 | `src/data/ingestion/collector.py:17` | `from ... import BartTorvikScraper` | Creates `BartTorvikScraper(cache_dir)`, calls `fetch_four_factors()`, `fetch_shooting_stats()` |
-| `src/data/ingestion/providers.py:109-110` | `_from_torvik_r`, `_from_barttorvik_csv` | Two provider methods in `MultiSourceProvider.fetch_torvik_ratings()` |
+| `src/data/ingestion/providers.py:107-108` | `_from_cbbdata_api`, `_from_barttorvik_csv` | Two provider methods in `MultiSourceProvider.fetch_torvik_ratings()` (`_from_torvik_r` removed) |
 | `src/data/ingestion/validators.py:121` | `cross_validate_torvik_sources()` | Compares metrics between two Torvik-source payloads |
 | `src/data/ingestion/historical_pipeline.py:55,293` | `include_torvik`, `_collect_torvik_ratings()` | Historical data collection for years 2008+ |
 | `src/data/ingestion/extended_historical_ingest.py:34` | `TORVIK_START = 2008` | Controls which years get torvik data |
@@ -50,7 +50,7 @@
 
 | File | Import/Usage | How Used |
 |------|--------------|----------|
-| `src/data/scrapers/__init__.py:23-24` | Re-exports `BartTorvikScraper`, `TorvikRWrapper` | Public API of scrapers package |
+| `src/data/scrapers/__init__.py:23` | Re-exports `BartTorvikScraper` | Public API of scrapers package (`TorvikRWrapper` removed) |
 | `src/data/scrapers/tournament_context.py:208+` | References Barttorvik | Coach data scraping from barttorvik.com |
 
 ### 2e. Governance & Monitoring
@@ -97,7 +97,7 @@
 | `tests/test_torvik_scraper.py` | `TorVikValidator`, `BartTorvikScraper` cbbstat/CSV parsing |
 | `tests/test_torvik_refactor.py` | `TorVikTeam`, `TorVikValidator`, `BartTorvikScraper` construction/caching |
 | `tests/test_torvik_pipeline_rigor.py` | Strict validation, Bayesian shrinkage, CSV aggregation |
-| `tests/test_torvik_r.py` | `TorvikRWrapper`, R package checks |
+| ~~`tests/test_torvik_r.py`~~ | **DELETED** — `TorvikRWrapper` removed |
 | `tests/test_shotquality_proxy.py:307` | `TorVikTeam.to_dict()` roundtrip |
 
 ### 3b. Tests With Torvik References (10+ files — MODIFY candidates)
@@ -183,7 +183,7 @@ Features contracted to torvik:
 
 | File | Usage |
 |------|-------|
-| `scripts/create_missing_torvik.py` | Generates torvik JSON from four_factors + shooting |
+| ~~`scripts/create_missing_torvik.py`~~ | **DELETED** — zero callers |
 | `scripts/run_conference_predictions.py:37-65` | Scrapes torvik Four Factors + Shooting |
 | `scripts/repair_2026_data_quality.py:8,336,569-579` | Populates coach data from Barttorvik |
 | `scripts/create_team_id_mapping.py:63` | Loads team IDs from torvik |

@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+from scipy.stats import rankdata
 
 logger = logging.getLogger(__name__)
 
@@ -168,36 +169,28 @@ class ExternalRatingsLoader:
         if not all_teams:
             return {}
 
-        # Normalize each system to [0, 1] using IQR-based robust scaling.
-        # Unlike naive min-max, this prevents a single outlier from
-        # compressing all legitimate ratings into a narrow band.
-        # Uses Tukey fences (Q1 - 1.5*IQR, Q3 + 1.5*IQR) to winsorize
-        # extremes before scaling.
+        # Normalize each system to [0, 1] using percentile-rank normalization.
+        # This maps each team's rating to its rank position within the system,
+        # scaled to [0, 1].  Unlike min-max or Tukey-fence approaches:
+        #   - A single outlier cannot compress all other ratings
+        #   - ALL ordering is preserved (no clipping at extremes)
+        #   - Works with any distribution shape (skewed, heavy-tailed)
+        #   - No hyperparameters (no "1.5 * IQR" decision)
+        # This is critical for March Madness: the best (1-seeds) and worst
+        # (16-seeds) teams must remain distinguishable after normalization.
         normalized_systems: Dict[str, Dict[str, float]] = {}
         for system, ratings in all_ratings.items():
             if not ratings:
                 continue
-            values = np.array([r.rating for r in ratings.values()])
-            q1 = float(np.percentile(values, 25))
-            q3 = float(np.percentile(values, 75))
-            iqr = q3 - q1
-            if iqr < 1e-6:
-                # All ratings nearly identical — fall back to min-max
-                lo = float(values.min())
-                hi = float(values.max())
+            team_ids = list(ratings.keys())
+            values = np.array([ratings[tid].rating for tid in team_ids])
+            n = len(values)
+            if n == 1:
+                norm = {team_ids[0]: 0.5}
             else:
-                # Tukey fences: winsorize beyond 1.5 * IQR from quartiles
-                lo = q1 - 1.5 * iqr
-                hi = q3 + 1.5 * iqr
-            span = hi - lo
-            if span < 1e-6:
-                span = 1.0
-
-            norm = {}
-            for team_id, r in ratings.items():
-                # Winsorize then scale to [0, 1]
-                clamped = float(np.clip(r.rating, lo, hi))
-                norm[team_id] = (clamped - lo) / span
+                # rankdata uses average rank for ties; scale to (0, 1]
+                ranks = rankdata(values, method='average')
+                norm = {tid: float((r - 1) / (n - 1)) for tid, r in zip(team_ids, ranks)}
             normalized_systems[system] = norm
 
         # Compute weighted composite per team
