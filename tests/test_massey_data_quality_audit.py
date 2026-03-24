@@ -200,6 +200,81 @@ class TestCompositeCorruptionFilter:
                 "corrupted system may have leaked into composite"
             )
 
+    def test_malformed_entries_missing_ranking_key(self, tmp_path):
+        """Entries without a 'ranking' key should not falsely trigger corruption."""
+        from src.data.scrapers.external_ratings import ExternalRatingsLoader
+
+        n_teams = 100
+        # Entries missing "ranking" entirely — should NOT be treated as corrupted
+        malformed_entries = [
+            {"team_name": f"Team{i}", "team_id": f"team_{i}",
+             "rating": float(n_teams - i), "normalized": round(1.0 - i / max(n_teams - 1, 1), 6)}
+            for i in range(n_teams)
+        ]
+
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+        loader = ExternalRatingsLoader(cache_dir=str(cache_dir))
+
+        # Should not crash and should include the system in composite
+        # (missing ranking means we can't detect corruption, so we allow it)
+        all_systems = {"MALFORMED_SYS": malformed_entries}
+        loader._build_massey_composite_cache(2025, all_systems)
+
+        all_loaded = loader.load_all(2025)
+        ratings = all_loaded.get("massey_composite", {})
+        assert len(ratings) == n_teams, (
+            "System with missing ranking keys should still contribute to composite"
+        )
+
+    def test_mixed_corrupted_and_clean_composite_values(self, tmp_path):
+        """Composite with 2 clean + 1 corrupted: only clean systems contribute."""
+        from src.data.scrapers.external_ratings import ExternalRatingsLoader
+
+        n_teams = 100
+        # Two clean systems with different orderings
+        clean_a = [
+            {"team_name": f"Team{i}", "team_id": f"team_{i}",
+             "rating": float(n_teams - i), "ranking": i + 1,
+             "normalized": round(1.0 - i / max(n_teams - 1, 1), 6)}
+            for i in range(n_teams)
+        ]
+        clean_b = [
+            {"team_name": f"Team{i}", "team_id": f"team_{i}",
+             "rating": float(n_teams - i), "ranking": i + 1,
+             "normalized": round(1.0 - i / max(n_teams - 1, 1), 6)}
+            for i in range(n_teams)
+        ]
+        # Corrupted: all rank 1
+        corrupted = [
+            {"team_name": f"Team{i}", "team_id": f"team_{i}",
+             "rating": 100.0, "ranking": 1, "normalized": 1.0}
+            for i in range(n_teams)
+        ]
+
+        cache_dir = tmp_path / "cache"
+        cache_dir.mkdir()
+        loader = ExternalRatingsLoader(cache_dir=str(cache_dir))
+
+        all_systems = {"CLEAN_A": clean_a, "CLEAN_B": clean_b, "CORRUPT": corrupted}
+        loader._build_massey_composite_cache(2025, all_systems)
+
+        all_loaded = loader.load_all(2025)
+        ratings = all_loaded.get("massey_composite", {})
+        assert len(ratings) == n_teams
+
+        # Verify top-ranked team has highest composite, last has lowest
+        top = ratings.get("team_0")
+        bottom = ratings.get(f"team_{n_teams - 1}")
+        assert top is not None and bottom is not None
+        assert top.normalized > bottom.normalized
+
+        # Mean should be ~0.5 (two clean systems averaging out)
+        mean_norm = sum(r.normalized for r in ratings.values()) / len(ratings)
+        assert 0.45 < mean_norm < 0.55, (
+            f"Composite mean {mean_norm:.3f} should be ~0.5 from clean systems only"
+        )
+
 
 # ===========================================================================
 # Issue 4: Leakage hardening
@@ -222,6 +297,44 @@ class TestLeakageHardening:
         # Systems should be empty (skipped) rather than using unsafe data
         assert len(result) == 0, (
             f"Expected 0 systems when all data is post-ceiling, got {len(result)}"
+        )
+
+    def test_leakage_protection_through_external_ratings_wrapper(self, tmp_path):
+        """load_massey_ordinals_as_external_ratings with max_day filters properly."""
+        from src.data.kaggle_loader import KaggleDataLoader
+
+        # All data on day 200, max_day=150 — should return empty
+        kaggle_dir = _make_kaggle_dir(tmp_path, n_teams=80, day=200)
+        loader = KaggleDataLoader(str(kaggle_dir))
+
+        result = loader.load_massey_ordinals_as_external_ratings(2025, max_day=150)
+        assert result == {}, (
+            "External ratings wrapper should return empty when all data is post-ceiling"
+        )
+
+    def test_multiple_systems_skipped_all_logged(self, tmp_path, caplog):
+        """Each system skipped for leakage should generate its own warning."""
+        from src.data.kaggle_loader import KaggleDataLoader
+
+        # Create 3 systems all with data only on day 200
+        kaggle_dir = _make_kaggle_dir(
+            tmp_path, n_teams=80, day=200,
+            systems=["POM", "SAG", "MOR"],
+        )
+        loader = KaggleDataLoader(str(kaggle_dir))
+
+        with caplog.at_level(logging.WARNING):
+            result = loader.load_massey_ordinals(2025, max_day=150)
+
+        assert len(result) == 0
+        # Each system should have its own skip warning
+        skip_warnings = [
+            msg for msg in caplog.messages
+            if "skipping system to prevent leakage" in msg.lower()
+        ]
+        assert len(skip_warnings) == 3, (
+            f"Expected 3 skip warnings (one per system), got {len(skip_warnings)}: "
+            f"{skip_warnings}"
         )
 
 
