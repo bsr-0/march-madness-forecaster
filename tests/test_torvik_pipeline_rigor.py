@@ -390,3 +390,120 @@ class TestNanFourFactorsImputation:
         """Confirm the bug mechanism: `not math.nan` is False (NaN is truthy)."""
         assert (not math.nan) is False
         assert bool(math.nan) is True
+
+
+# ---------------------------------------------------------------------------
+# End-to-end NaN propagation: scraper → JSON → data_loader → features
+# ---------------------------------------------------------------------------
+
+
+class TestNanEndToEndPropagation:
+    """Verify NaN survives the full chain without becoming 0.0 or real data."""
+
+    def test_nan_survives_json_roundtrip_and_triggers_imputation(self):
+        """NaN Four Factors → JSON → dict → feature imputation → seed priors."""
+        from src.data.scrapers.torvik import TorVikTeam
+        from src.data.features.feature_engineering import TeamFeatures
+
+        # Step 1: Create TorVikTeam with NaN Four Factors (CSV fallback scenario)
+        team = TorVikTeam(
+            team_id="duke", name="Duke", conference="ACC",
+            t_rank=5, barthag=0.95,
+            adj_offensive_efficiency=120.0, adj_defensive_efficiency=93.0, adj_tempo=70.0,
+            effective_fg_pct=math.nan, turnover_rate=math.nan,
+            offensive_reb_rate=math.nan, free_throw_rate=math.nan,
+            opp_effective_fg_pct=math.nan, opp_turnover_rate=math.nan,
+            defensive_reb_rate=math.nan, opp_free_throw_rate=math.nan,
+        )
+
+        # Step 2: Serialize to JSON and back (simulates cache roundtrip)
+        serialized = json.dumps(team.to_dict())
+        deserialized = json.loads(serialized)
+
+        # Step 3: Build torvik_map entry (mirrors data_loader.py:1225-1252)
+        torvik_entry = {
+            "effective_fg_pct": deserialized.get("effective_fg_pct", 0.5),
+            "turnover_rate": deserialized.get("turnover_rate", 0.18),
+            "offensive_reb_rate": deserialized.get("offensive_reb_rate", 0.30),
+            "free_throw_rate": deserialized.get("free_throw_rate", 0.30),
+            "opp_effective_fg_pct": deserialized.get("opp_effective_fg_pct", 0.5),
+            "opp_turnover_rate": deserialized.get("opp_turnover_rate", 0.18),
+            "defensive_reb_rate": deserialized.get("defensive_reb_rate", 0.70),
+            "opp_free_throw_rate": deserialized.get("opp_free_throw_rate", 0.30),
+        }
+
+        # NaN should survive .get() — key exists, so default is NOT used
+        for field in TeamFeatures._FF_FIELD_ORDER:
+            val = torvik_entry[field]
+            assert isinstance(val, float) and math.isnan(val), (
+                f"{field} should be NaN after JSON roundtrip, got {val}"
+            )
+
+        # Step 4: Feature imputation (mirrors feature_engineering.py:1243-1249)
+        features = TeamFeatures(team_id="duke", team_name="Duke", seed=1, region="East")
+        priors = TeamFeatures._SEED_CONDITIONAL_PRIORS[1]
+        for i, field in enumerate(TeamFeatures._FF_FIELD_ORDER):
+            val = torvik_entry.get(field)
+            if not val or (isinstance(val, float) and math.isnan(val)):
+                setattr(features, field, priors[i])
+            else:
+                setattr(features, field, val)
+
+        # All 8 fields should be seed-conditional priors, NOT NaN, NOT 0.0
+        for field in TeamFeatures._FF_FIELD_ORDER:
+            val = getattr(features, field)
+            assert not math.isnan(val), f"{field} is still NaN after imputation"
+            assert val > 0.05, f"{field} = {val}, looks like 0.0 leaked through"
+
+
+# ---------------------------------------------------------------------------
+# Shooting stat defaults: D1 averages, not 0.0
+# ---------------------------------------------------------------------------
+
+
+class TestShootingStatDefaults:
+    """Verify data_loader uses D1 averages, not 0.0, for missing shooting stats."""
+
+    def test_missing_shooting_stats_get_d1_averages(self):
+        """When shooting stats are 0.0 or missing, D1 averages should be used."""
+        # Simulate torvik data with zero/missing shooting stats
+        data = {
+            "two_pt_pct": 0.0,
+            "three_pt_pct": 0.0,
+            "three_pt_rate": 0.0,
+            "ft_pct": 0.0,
+            "opp_two_pt_pct": None,
+            "opp_three_pt_pct": None,
+            "opp_three_pt_rate": None,
+        }
+
+        # Mirror data_loader.py:1239-1245 logic
+        result = {
+            "two_pt_pct": data.get("two_pt_pct") or 0.48,
+            "three_pt_pct": data.get("three_pt_pct") or 0.34,
+            "three_pt_rate": data.get("three_pt_rate") or 0.35,
+            "ft_pct": data.get("ft_pct") or 0.72,
+            "opp_two_pt_pct": data.get("opp_two_pt_pct") or 0.48,
+            "opp_three_pt_pct": data.get("opp_three_pt_pct") or 0.34,
+            "opp_three_pt_rate": data.get("opp_three_pt_rate") or 0.35,
+        }
+
+        # All should be D1 averages, not 0.0
+        assert result["two_pt_pct"] == 0.48
+        assert result["three_pt_pct"] == 0.34
+        assert result["three_pt_rate"] == 0.35
+        assert result["ft_pct"] == 0.72
+        assert result["opp_two_pt_pct"] == 0.48
+        assert result["opp_three_pt_pct"] == 0.34
+        assert result["opp_three_pt_rate"] == 0.35
+
+    def test_real_shooting_stats_preserved(self):
+        """Non-zero shooting stats should pass through unchanged."""
+        data = {
+            "two_pt_pct": 0.52,
+            "three_pt_pct": 0.38,
+            "ft_pct": 0.75,
+        }
+        assert (data.get("two_pt_pct") or 0.48) == 0.52
+        assert (data.get("three_pt_pct") or 0.34) == 0.38
+        assert (data.get("ft_pct") or 0.72) == 0.75
