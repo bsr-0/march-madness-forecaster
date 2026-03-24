@@ -942,7 +942,7 @@ class TestBartTorvikScraper:
         from src.data.scrapers.torvik import BartTorvikScraper
         assert BartTorvikScraper._normalize_team_name_to_id("Duke") == "duke"
         assert BartTorvikScraper._normalize_team_name_to_id("North Carolina") == "north_carolina"
-        assert BartTorvikScraper._normalize_team_name_to_id("St. John's") == "st_john_s"
+        assert BartTorvikScraper._normalize_team_name_to_id("St. John's") == "st__john_s__ny"
         assert BartTorvikScraper._normalize_team_name_to_id("Texas A&M") == "texas_a_m"
 
     def test_dict_to_team(self):
