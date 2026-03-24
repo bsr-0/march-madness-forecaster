@@ -25,6 +25,10 @@ class SportsReferenceScraper:
     # OT filtering) so stale caches with unvalidated data are invalidated.
     _CACHE_VERSION = "v2_range_validated"
 
+    # NCAA D1 average possessions per game (2005-2025 range: 60-80, median ~70).
+    # Used as last-resort fallback when neither pace nor possession data is available.
+    _FALLBACK_POSSESSIONS_PER_GAME = 70.0
+
     # Teams whose Sports Reference names get "NCAA" appended for tourney
     # qualifiers.  Strip the suffix so IDs stay canonical.
     _NCAA_SUFFIX_RE = re.compile(r"NCAA$", re.IGNORECASE)
@@ -250,9 +254,9 @@ class SportsReferenceScraper:
         # can introduce 7-8% error in defensive rating.
         if team_paces:
             valid_paces = [p for p in team_paces.values() if p > 0]
-            league_avg_pace = sum(valid_paces) / len(valid_paces) if valid_paces else 70.0
+            league_avg_pace = sum(valid_paces) / len(valid_paces) if valid_paces else SportsReferenceScraper._FALLBACK_POSSESSIONS_PER_GAME
         else:
-            league_avg_pace = 70.0
+            league_avg_pace = SportsReferenceScraper._FALLBACK_POSSESSIONS_PER_GAME
 
         result: Dict[str, float] = {}
         for tid, s in stats.items():
@@ -320,9 +324,9 @@ class SportsReferenceScraper:
             league_avg_pace = sum(page_paces) / len(page_paces)
         elif team_paces:
             valid_paces = [p for p in team_paces.values() if p > 0]
-            league_avg_pace = sum(valid_paces) / len(valid_paces) if valid_paces else 70.0
+            league_avg_pace = sum(valid_paces) / len(valid_paces) if valid_paces else self._FALLBACK_POSSESSIONS_PER_GAME
         else:
-            league_avg_pace = 70.0
+            league_avg_pace = self._FALLBACK_POSSESSIONS_PER_GAME
 
         # Second pass: compute def_rtg for each team
         result: Dict[str, float] = {}
