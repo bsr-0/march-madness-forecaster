@@ -229,14 +229,38 @@ class ESPNPicksScraper:
         return self._dict_to_consensus(data)
     
     def _dict_to_consensus(self, data: dict) -> ConsensusData:
-        """Convert dictionary to ConsensusData with schema validation."""
-        from .schemas import validate_consensus_data, SchemaValidationError
+        """Convert dictionary to ConsensusData with fail-closed schema validation.
+
+        If schema validation fails, returns an empty ConsensusData rather than
+        silently using unvalidated data.  An empty result triggers the downstream
+        fallback chain (cache → seed-based prior), which is strictly safer than
+        ingesting potentially corrupt pick percentages.
+        """
+        from .schemas import (
+            validate_consensus_data,
+            validate_bracket_structure,
+            BracketStructureError,
+            SchemaValidationError,
+        )
 
         try:
             validated = validate_consensus_data(data)
-        except SchemaValidationError:
-            logger.warning("ESPN picks schema validation failed; using raw data")
-            validated = data
+        except SchemaValidationError as exc:
+            logger.error(
+                "ESPN picks schema validation FAILED — rejecting payload: %s", exc,
+            )
+            return ConsensusData(sources=data.get("sources", []))
+
+        # Cross-team bracket-structure check (round sums, matchup pairs)
+        try:
+            warnings = validate_bracket_structure(validated.get("teams", {}))
+            for w in warnings:
+                logger.warning("Bracket structure: %s", w)
+        except BracketStructureError as exc:
+            logger.error(
+                "Bracket structure validation FAILED — rejecting payload: %s", exc,
+            )
+            return ConsensusData(sources=data.get("sources", []))
 
         teams = {}
         for team_id, team_data in validated.get("teams", {}).items():
