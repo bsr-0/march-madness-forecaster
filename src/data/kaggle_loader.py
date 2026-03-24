@@ -233,7 +233,7 @@ class KaggleDataLoader:
             })
 
         # Auto-compute max_day from Selection Sunday + DayZero if not provided
-        if max_day is None and ranking_day_num is None:
+        if max_day is None:
             seasons = self.load_seasons()
             dz = next((s["day_zero"] for s in seasons if s["season"] == season), None)
             max_day = _compute_max_ranking_day(season, dz)
@@ -241,6 +241,17 @@ class KaggleDataLoader:
                 "Massey Ordinals for %d: auto-computed max_day=%d from Selection Sunday",
                 season, max_day,
             )
+
+        # Guard: if ranking_day_num is explicitly provided, validate it
+        # against max_day to prevent accidentally loading post-tournament data.
+        if ranking_day_num is not None and max_day is not None:
+            if ranking_day_num > max_day:
+                logger.warning(
+                    "Massey Ordinals for %d: ranking_day_num=%d exceeds max_day=%d; "
+                    "clamping to max_day to prevent leakage",
+                    season, ranking_day_num, max_day,
+                )
+                ranking_day_num = max_day
 
         # Pass 2: for each system, pick the target day (latest or specified)
         result: Dict[str, Dict[str, MasseyOrdinalEntry]] = {}
