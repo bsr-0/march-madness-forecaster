@@ -496,6 +496,31 @@ class TestDedupRecords:
         dates = [r.date for r in result]
         assert dates == sorted(dates)
 
+    def test_dedup_preserves_overtime_when_replacing(self):
+        """When the kept record has overtime=True but the richer record doesn't,
+        the overtime flag should be preserved."""
+        espn = self._make_record("g1", "2024-01-01", fga=60, provider="espn")
+        espn.overtime = True
+        sdv = self._make_record("g1", "2024-01-01", fga=70, provider="sportsdataverse")
+        sdv.overtime = False
+        result = dedup_records([espn, sdv])
+        assert len(result) == 1
+        # sdv wins on FGA, but should inherit ESPN's overtime=True
+        assert result[0].overtime is True
+        assert result[0].provider == "sportsdataverse"
+
+    def test_dedup_preserves_overtime_when_keeping(self):
+        """When the discarded record has overtime=True, the kept record
+        should inherit the flag."""
+        espn = self._make_record("g1", "2024-01-01", fga=70, provider="espn")
+        espn.overtime = False
+        sdv = self._make_record("g1", "2024-01-01", fga=60, provider="sportsdataverse")
+        sdv.overtime = True
+        result = dedup_records([espn, sdv])
+        assert len(result) == 1
+        assert result[0].overtime is True
+        assert result[0].provider == "espn"
+
 
 # ---------------------------------------------------------------------------
 # HistoricalGameFetcher — provider fallback

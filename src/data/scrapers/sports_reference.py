@@ -280,7 +280,9 @@ class SportsReferenceScraper:
         if not tbody:
             return {}
 
-        result: Dict[str, float] = {}
+        # First pass: collect parsed rows and page-level paces
+        parsed_rows: list = []
+        page_paces: list = []
         for row in tbody.find_all("tr"):
             if "class" in row.attrs and "thead" in row.attrs["class"]:
                 continue
@@ -297,22 +299,33 @@ class SportsReferenceScraper:
             opp_pts_val = self._try_float(opp_pts_cell.get_text(strip=True))
             if games_val is None or opp_pts_val is None:
                 continue
-            games = games_val
-            opp_pts = opp_pts_val
             pace = self._validate_range(
                 "pace", self._try_float(pace_cell.get_text(strip=True) if pace_cell else None), clean_name,
             )
-            if games > 0 and opp_pts > 0:
-                if pace > 0:
-                    result[tid] = 100.0 * opp_pts / (pace * games)
-                elif team_paces and tid in team_paces and team_paces[tid] > 0:
-                    result[tid] = 100.0 * opp_pts / (team_paces[tid] * games)
-                elif team_paces:
-                    valid_paces = [p for p in team_paces.values() if p > 0]
-                    avg_pace = sum(valid_paces) / len(valid_paces) if valid_paces else 70.0
-                    result[tid] = 100.0 * opp_pts / (avg_pace * games)
-                else:
-                    result[tid] = 100.0 * opp_pts / (70.0 * games)
+            if pace > 0:
+                page_paces.append(pace)
+            parsed_rows.append((tid, opp_pts_val, games_val, pace))
+
+        # Compute league-average pace from this page, then team_paces, then 70.0
+        if page_paces:
+            league_avg_pace = sum(page_paces) / len(page_paces)
+        elif team_paces:
+            valid_paces = [p for p in team_paces.values() if p > 0]
+            league_avg_pace = sum(valid_paces) / len(valid_paces) if valid_paces else 70.0
+        else:
+            league_avg_pace = 70.0
+
+        # Second pass: compute def_rtg for each team
+        result: Dict[str, float] = {}
+        for tid, opp_pts, games, pace in parsed_rows:
+            if games <= 0 or opp_pts <= 0:
+                continue
+            if pace > 0:
+                result[tid] = 100.0 * opp_pts / (pace * games)
+            elif team_paces and tid in team_paces and team_paces[tid] > 0:
+                result[tid] = 100.0 * opp_pts / (team_paces[tid] * games)
+            else:
+                result[tid] = 100.0 * opp_pts / (league_avg_pace * games)
         return result
 
     # Required fields for a valid team metrics record.  If any are missing

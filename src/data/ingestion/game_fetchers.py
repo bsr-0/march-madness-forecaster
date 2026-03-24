@@ -422,8 +422,14 @@ def dedup_records(records: List[IngestionGameRecord]) -> List[IngestionGameRecor
                 "Dedup game_id=%s: replacing '%s' record with richer '%s' record",
                 rec.game_id, existing.provider, rec.provider,
             )
+            # Preserve overtime=True if either provider detected it
+            if existing.overtime and not rec.overtime:
+                rec.overtime = True
             seen[rec.game_id] = rec
         else:
+            # Preserve overtime=True from the discarded record
+            if rec.overtime and not existing.overtime:
+                existing.overtime = True
             logger.debug(
                 "Dedup game_id=%s: discarding duplicate from '%s' (kept '%s')",
                 rec.game_id, rec.provider, existing.provider,
