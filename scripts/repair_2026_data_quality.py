@@ -211,25 +211,36 @@ def apply_defensive_four_factors(
             torvik_updated += 1
 
     # Update four factors file too
+    # Build normalized lookup: normalize_team_id(ff_key) -> ff_key
+    normalized_to_ff_key: dict[str, str] = {}
+    for key in ff_data:
+        normalized_to_ff_key[normalize_team_id(key)] = key
+
     ff_updated = 0
     for team_id, d in def_ff.items():
+        entry = None
         if team_id in ff_data:
             entry = ff_data[team_id]
-            for field in ("opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate"):
-                if entry.get(field, 0.0) == 0.0 and d.get(field, 0.0) != 0.0:
-                    entry[field] = d[field]
-            ff_updated += 1
         else:
-            # Try fuzzy lookup by collapsing underscores
+            # Try collapsed-underscore lookup
             collapsed = team_id.replace("_", "")
             for key in ff_data:
                 if key.replace("_", "") == collapsed:
                     entry = ff_data[key]
-                    for field in ("opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate"):
-                        if entry.get(field, 0.0) == 0.0 and d.get(field, 0.0) != 0.0:
-                            entry[field] = d[field]
-                    ff_updated += 1
                     break
+            # Try normalize_team_id lookup (_st -> _state, aliases, etc.)
+            if entry is None:
+                norm_id = normalize_team_id(team_id)
+                ff_key = normalized_to_ff_key.get(norm_id)
+                if ff_key:
+                    entry = ff_data[ff_key]
+
+        if entry is None:
+            continue
+        for field in ("opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate"):
+            if entry.get(field, 0.0) == 0.0 and d.get(field, 0.0) != 0.0:
+                entry[field] = d[field]
+        ff_updated += 1
 
     return torvik_updated, ff_updated
 
