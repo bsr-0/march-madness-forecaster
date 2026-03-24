@@ -140,31 +140,10 @@ class TestRetryRequestJitter:
 
 class TestCircuitBreakerIntegration:
     def test_scraper_has_circuit_breakers(self, scraper):
-        assert hasattr(scraper, "_cb_cbbstat")
         assert hasattr(scraper, "_cb_csv")
 
-    def test_cbbstat_circuit_breaker_opens_after_failures(self, scraper):
-        """After 2 consecutive cbbstat failures, the circuit breaker opens."""
-        # Simulate 2 failures (threshold is 2 for deprecated cbbstat)
-        for _ in range(2):
-            try:
-                with scraper._cb_cbbstat():
-                    raise ConnectionError("API down")
-            except ConnectionError:
-                pass
-
-        assert scraper._cb_cbbstat.is_open
-
-    def test_rankings_skips_cbbstat_when_breaker_open(self, scraper):
-        """When cbbstat breaker is open, rankings should skip to CSV fallback."""
-        # Force cbbstat breaker open
-        for _ in range(2):
-            try:
-                with scraper._cb_cbbstat():
-                    raise ConnectionError("down")
-            except ConnectionError:
-                pass
-
+    def test_rankings_fallback_to_csv(self, scraper):
+        """When API strategies fail, rankings should fall back to CSV."""
         fake_team = _make_team()
         with patch.object(scraper, "_rankings_from_cbbdata_api", return_value=[]):
             with patch.object(scraper, "_rankings_from_trank_csv", return_value=[]):
@@ -173,18 +152,10 @@ class TestCircuitBreakerIntegration:
                         teams = scraper.fetch_current_rankings(year=2024)
 
         assert len(teams) == 1
-        # cbbstat was never tried (breaker open), went straight to CSV
-        assert scraper._fetch_strategy.get("rankings") != "cbbstat_api"
+        assert scraper._fetch_strategy.get("rankings") == "csv_fallback"
 
-    def test_four_factors_skips_cbbstat_when_breaker_open(self, scraper):
-        """When cbbstat breaker is open, four factors should fallback to CSV."""
-        for _ in range(2):
-            try:
-                with scraper._cb_cbbstat():
-                    raise ConnectionError("down")
-            except ConnectionError:
-                pass
-
+    def test_four_factors_fallback_to_player_csv(self, scraper):
+        """When API/trank strategies fail, four factors should fall back to player CSV."""
         fake_ff = {"duke": {
             "effective_fg_pct": 0.57, "turnover_rate": 0.15,
             "offensive_reb_rate": 0.32, "free_throw_rate": 0.35,
@@ -553,5 +524,4 @@ class TestConstructorDefaults:
         scraper = BartTorvikScraper(
             circuit_breaker_state_file=str(tmp_path / ".cb.json")
         )
-        assert scraper._cb_cbbstat.is_closed
         assert scraper._cb_csv.is_closed

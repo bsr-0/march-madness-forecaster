@@ -174,25 +174,17 @@ class TestStrategyTelemetry:
         prop["test"] = "value"
         assert "test" not in scraper._fetch_strategy
 
-    def test_cbbstat_api_strategy_recorded(self, scraper):
-        """When cbbstat API succeeds, strategy_used is 'cbbstat_api'."""
-        fake_team = _make_team()
-        with patch.object(scraper, "_rankings_from_cbbstat_api", return_value=[fake_team]):
-            with patch.object(scraper, "_save_to_cache"):
-                teams = scraper.fetch_current_rankings(year=2024)
-        assert len(teams) == 1
-        assert scraper._fetch_strategy.get("rankings") == "cbbstat_api"
-
     def test_csv_fallback_strategy_recorded(self, scraper):
         """When CSV fallback is used for four factors, strategy is recorded."""
         fake_ff = {"duke": {"effective_fg_pct": 0.57, "turnover_rate": 0.15,
                             "offensive_reb_rate": 0.32, "free_throw_rate": 0.35,
                             "opp_effective_fg_pct": 0.45, "opp_turnover_rate": 0.18,
                             "defensive_reb_rate": 0.72, "opp_free_throw_rate": 0.31}}
-        with patch.object(scraper, "_four_factors_from_cbbstat_api", return_value={}):
-            with patch.object(scraper, "_four_factors_from_player_csv", return_value=fake_ff):
-                with patch.object(scraper, "_save_to_cache"):
-                    ff = scraper.fetch_four_factors(year=2024)
+        with patch.object(scraper, "_four_factors_from_cbbdata_api", return_value={}):
+            with patch.object(scraper, "_four_factors_from_trank_csv", return_value={}):
+                with patch.object(scraper, "_four_factors_from_player_csv", return_value=fake_ff):
+                    with patch.object(scraper, "_save_to_cache"):
+                        ff = scraper.fetch_four_factors(year=2024)
         assert ff == fake_ff
         assert scraper._fetch_strategy.get("four_factors") == "csv_fallback"
 
@@ -368,7 +360,7 @@ class TestDictToTeam:
 
 class TestRankingsCsvFallback:
     def test_rankings_csv_fallback_parses_teams(self, scraper):
-        """When cbbstat fails, _rankings_from_csv returns valid TorVikTeam objects."""
+        """_rankings_from_csv returns valid TorVikTeam objects with NaN Four Factors."""
         csv_content = (
             "rank,team,conf,adj_o,adj_d,barthag,adj_t,wab,wins,losses\n"
             "1,Duke,ACC,122.0,93.0,0.97,70.0,8.5,30,5\n"
@@ -393,10 +385,9 @@ class TestRankingsCsvFallback:
         fake_team = _make_team()
         with patch.object(scraper, "_rankings_from_cbbdata_api", return_value=[]):
             with patch.object(scraper, "_rankings_from_trank_csv", return_value=[]):
-                with patch.object(scraper, "_rankings_from_cbbstat_api", return_value=[]):
-                    with patch.object(scraper, "_rankings_from_csv", return_value=[fake_team]):
-                        with patch.object(scraper, "_save_to_cache"):
-                            teams = scraper.fetch_current_rankings(year=2024)
+                with patch.object(scraper, "_rankings_from_csv", return_value=[fake_team]):
+                    with patch.object(scraper, "_save_to_cache"):
+                        teams = scraper.fetch_current_rankings(year=2024)
 
         assert len(teams) == 1
         assert scraper._fetch_strategy.get("rankings") == "csv_fallback"

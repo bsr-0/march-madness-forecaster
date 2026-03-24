@@ -1319,17 +1319,6 @@
     "opp_free_throw_rate": 0.5006,
     "_csv_approximation": true
   },
-  "jr": {
-    "effective_fg_pct": 0.017,
-    "turnover_rate": 0.1049,
-    "offensive_reb_rate": 0.5082,
-    "free_throw_rate": 0.5578,
-    "opp_effective_fg_pct": 0.0,
-    "opp_turnover_rate": 0.0,
-    "defensive_reb_rate": 0.1121,
-    "opp_free_throw_rate": 0.0,
-    "_csv_approximation": true
-  },
   "south_alabama": {
     "effective_fg_pct": 0.5265,
     "turnover_rate": 0.1111,
@@ -4023,17 +4012,6 @@
     "opp_turnover_rate": 0.1252,
     "defensive_reb_rate": 0.7443,
     "opp_free_throw_rate": 0.3516,
-    "_csv_approximation": true
-  },
-  "ii": {
-    "effective_fg_pct": 0.0199,
-    "turnover_rate": 0.1726,
-    "offensive_reb_rate": 0.3647,
-    "free_throw_rate": 0.2258,
-    "opp_effective_fg_pct": 0.0,
-    "opp_turnover_rate": 0.0,
-    "defensive_reb_rate": 0.4584,
-    "opp_free_throw_rate": 0.0,
     "_csv_approximation": true
   }
 }
