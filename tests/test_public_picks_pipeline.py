@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-from src.data.scrapers.espn_picks import ESPNPicksScraper, aggregate_consensus
+from src.data.scrapers.espn_picks import ConsensusData, ESPNPicksScraper, aggregate_consensus
 from src.optimization.leverage import analyze_pool, TeamMetadata
 from src.pipeline.sota import SOTAPipeline, SOTAPipelineConfig
 
@@ -41,6 +41,15 @@ def test_public_picks_end_to_end_aggregate_and_leverage():
 
     consensus = aggregate_consensus(espn, yahoo, cbs)
     assert set(consensus.sources) == {"espn", "yahoo", "cbs"}
+
+    # Regression: aggregate_consensus must handle subset weights
+    # (e.g., when CBS scraper fails, only ESPN and Yahoo have weight).
+    subset_weights = {"espn": 0.625, "yahoo": 0.375}
+    empty_cbs = ConsensusData(sources=["cbs"])
+    consensus_partial = aggregate_consensus(espn, yahoo, empty_cbs, weights=subset_weights)
+    assert "espn" in consensus_partial.sources
+    assert "yahoo" in consensus_partial.sources
+    assert len(consensus_partial.teams) > 0
 
     public_picks = _normalize_public(consensus)
 

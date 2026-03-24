@@ -475,9 +475,9 @@ def aggregate_consensus(
         # Get team info from first available source
         team_info = None
         
-        for source, weight in [(espn, weights["espn"]), 
-                                (yahoo, weights["yahoo"]), 
-                                (cbs, weights["cbs"])]:
+        for source, weight in [(espn, weights.get("espn", 0.0)),
+                                (yahoo, weights.get("yahoo", 0.0)),
+                                (cbs, weights.get("cbs", 0.0))]:
             if team_id in source.teams:
                 team = source.teams[team_id]
                 
@@ -502,9 +502,13 @@ def aggregate_consensus(
                 **weighted_picks
             )
     
+    active_sources = [
+        name for name, src in [("espn", espn), ("yahoo", yahoo), ("cbs", cbs)]
+        if src.teams and weights.get(name, 0.0) > 0
+    ]
     return ConsensusData(
         teams=aggregated,
-        sources=["espn", "yahoo", "cbs"],
+        sources=active_sources or ["espn", "yahoo", "cbs"],
     )
 
 
