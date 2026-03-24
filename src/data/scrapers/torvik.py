@@ -530,11 +530,21 @@ class BartTorvikScraper:
         teams: List[TorVikTeam] = []
         reader = csv.reader(io.StringIO(response.text))
         header = None
+        # Known team_results CSV headers. Require ≥3 matches to treat row
+        # as header (prevents team names like "Franklin" triggering detection).
+        _KNOWN_HEADERS = frozenset({
+            'team', 'rank', 'rk', 'conf', 'conference',
+            'barthag', 'adj_o', 'adjoe', 'adj_d', 'adjde', 'adj_t', 'tempo',
+            'wab', 'wins', 'losses',
+        })
+        _MIN_HEADER_MATCHES = 3
         for row_num, row in enumerate(reader):
             if row_num == 0:
-                # Try to detect header row
-                if row and any(h.lower() in ('team', 'rank', 'barthag') for h in row):
-                    header = {h.strip().lower(): i for i, h in enumerate(row)}
+                # Strip BOM if present (common in Windows-exported CSVs)
+                normalized_cells = [h.strip().lstrip('\ufeff').lower().replace(' ', '_') for h in row]
+                header_matches = sum(1 for c in normalized_cells if c in _KNOWN_HEADERS)
+                if row and header_matches >= _MIN_HEADER_MATCHES:
+                    header = {c: i for i, c in enumerate(normalized_cells)}
                     continue
                 # No header — use positional defaults
                 header = {}
@@ -865,15 +875,17 @@ class BartTorvikScraper:
         # keyword like "rank" (e.g. "Frank" contains "rank").
         _KNOWN_HEADERS = frozenset({
             'team', 'rank', 'rk', 'conf', 'conference',
-            'barthag', 'adj_oe', 'adj_o', 'adj_de', 'adj_d', 'adj_t',
-            'off_efg', 'off_to', 'off_or', 'off_ftr',
-            'def_efg', 'def_to', 'def_or', 'def_ftr',
+            'barthag', 'adj_oe', 'adj_o', 'adjoe', 'adj_de', 'adj_d', 'adjde', 'adj_t',
+            'off_efg', 'off_efg%', 'off_to', 'off_to%', 'off_or', 'off_or%', 'off_ftr', 'off_ftr%',
+            'def_efg', 'def_efg%', 'def_to', 'def_to%', 'def_or', 'def_or%', 'def_ftr', 'def_ftr%',
+            'efg_o', 'efg_d', 'tor_o', 'tor_d', 'orb_o', 'orb_d', 'ftr_o', 'ftr_d',
             'wab', 'tempo',
         })
         _MIN_HEADER_MATCHES = 3  # require ≥3 known headers to accept as header row
         for row_num, row in enumerate(reader):
             if row_num == 0:
-                normalized_cells = [h.strip().lower().replace(' ', '_') for h in row]
+                # Strip BOM if present (common in Windows-exported CSVs)
+                normalized_cells = [h.strip().lstrip('\ufeff').lower().replace(' ', '_') for h in row]
                 header_matches = sum(1 for c in normalized_cells if c in _KNOWN_HEADERS)
                 if row and header_matches >= _MIN_HEADER_MATCHES:
                     header = {c: i for i, c in enumerate(normalized_cells)}
@@ -892,8 +904,16 @@ class BartTorvikScraper:
                     return float(row[default_idx].strip()) if len(row) > default_idx and row[default_idx].strip() else default_val
 
                 def _rate_col(names, default_idx):
-                    """Read a rate column, converting from percentage if needed."""
-                    v = _col(names, default_idx, 0.0)
+                    """Read a rate column, converting from percentage if needed.
+
+                    Returns math.nan (not 0.0) when the column is missing or
+                    empty so downstream code can distinguish "not scraped" from
+                    a real measurement.  A 0.0 basketball rate (eFG%, TO%, etc.)
+                    is physically impossible and would poison models.
+                    """
+                    v = _col(names, default_idx, math.nan)
+                    if isinstance(v, float) and math.isnan(v):
+                        return v
                     if 1.0 < v <= 2.0:
                         logger.debug("Rate %.4f near fraction/percentage boundary", v)
                     return v / 100.0 if v > BartTorvikScraper._RATE_PERCENTAGE_THRESHOLD else v
