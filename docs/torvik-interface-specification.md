@@ -589,7 +589,9 @@ Production pipeline (`src/governance/`) requires:
 - Logging messages
 - `_fetch_strategy` telemetry dict
 
+### Removed (Phase 4 cleanup):
+- ~~`src/data/scrapers/torvik_r.py`~~ — R wrapper, replaced by cbbdata API strategy
+- ~~`scripts/create_missing_torvik.py`~~ — one-off utility with zero callers
+
 ### CAN remove (optional/isolated):
-- `src/data/scrapers/torvik_r.py` — R wrapper, gracefully degraded everywhere
-- `scripts/create_missing_torvik.py` — one-off utility
 - Internal methods not referenced externally
