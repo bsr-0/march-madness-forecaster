@@ -49,6 +49,14 @@ class CBBpyRosterScraper:
             return {}
 
         enrichment = self._enrich_from_player_endpoint(scraper, payload)
+
+        # Validate payload through pydantic schemas
+        try:
+            from .schemas import validate_roster_payload
+            payload = validate_roster_payload(payload)
+        except Exception as e:
+            logger.warning("Roster payload schema validation failed: %s", e)
+
         payload["timestamp"] = datetime.now(timezone.utc).isoformat()
         payload["source"] = "cbbpy_schedule_boxscore"
         payload["metadata"] = {

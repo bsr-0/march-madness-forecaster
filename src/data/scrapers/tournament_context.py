@@ -71,6 +71,11 @@ class TournamentContextScraper:
 
         rankings = self._scrape_preseason_ap(year)
         if rankings:
+            try:
+                from .schemas import validate_preseason_ap
+                rankings = validate_preseason_ap(rankings)
+            except Exception as e:
+                logger.warning("Preseason AP schema validation failed: %s", e)
             self._save_cache(cache_name, {"rankings": rankings, "year": year})
         return rankings
 
@@ -199,6 +204,11 @@ class TournamentContextScraper:
 
         coaches = self._scrape_coach_tournament_data(year)
         if coaches:
+            try:
+                from .schemas import validate_coach_tournament_data
+                coaches = validate_coach_tournament_data(coaches)
+            except Exception as e:
+                logger.warning("Coach tournament data schema validation failed: %s", e)
             self._save_cache(cache_name, {"coaches": coaches, "year": year})
         return coaches
 

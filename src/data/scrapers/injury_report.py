@@ -115,6 +115,13 @@ class InjuryReportScraper:
                 )
                 reports[team_id] = team_report
 
+        # Validate through pydantic schemas
+        try:
+            from .schemas import validate_injury_reports
+            validate_injury_reports(reports)
+        except Exception as e:
+            logger.warning("Injury report schema validation failed: %s", e)
+
         return reports
 
     def _parse_team_block(
