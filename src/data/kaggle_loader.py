@@ -219,13 +219,21 @@ class KaggleDataLoader:
             ordinal_rank = self._int(row.get("OrdinalRank"))
             if not system or not kaggle_id:
                 continue
+            if ordinal_rank is not None and ordinal_rank <= 0:
+                continue
+            if ordinal_rank is not None and ordinal_rank > 500:
+                logger.debug(
+                    "Massey Ordinals: unusually high rank %d for team %d "
+                    "in system '%s' day %d (season %d)",
+                    ordinal_rank, kaggle_id, system, day_num, season,
+                )
             by_system[system][day_num].append({
                 "kaggle_id": kaggle_id,
                 "rank": ordinal_rank,
             })
 
         # Auto-compute max_day from Selection Sunday + DayZero if not provided
-        if max_day is None and ranking_day_num is None:
+        if max_day is None:
             seasons = self.load_seasons()
             dz = next((s["day_zero"] for s in seasons if s["season"] == season), None)
             max_day = _compute_max_ranking_day(season, dz)
@@ -233,6 +241,17 @@ class KaggleDataLoader:
                 "Massey Ordinals for %d: auto-computed max_day=%d from Selection Sunday",
                 season, max_day,
             )
+
+        # Guard: if ranking_day_num is explicitly provided, validate it
+        # against max_day to prevent accidentally loading post-tournament data.
+        if ranking_day_num is not None and max_day is not None:
+            if ranking_day_num > max_day:
+                logger.warning(
+                    "Massey Ordinals for %d: ranking_day_num=%d exceeds max_day=%d; "
+                    "clamping to max_day to prevent leakage",
+                    season, ranking_day_num, max_day,
+                )
+                ranking_day_num = max_day
 
         # Pass 2: for each system, pick the target day (latest or specified)
         result: Dict[str, Dict[str, MasseyOrdinalEntry]] = {}
@@ -256,9 +275,11 @@ class KaggleDataLoader:
                     else:
                         logger.warning(
                             "Massey Ordinals for %d system '%s': no days <= max_day=%d; "
-                            "using day %d (POTENTIAL LEAKAGE RISK)",
-                            season, system, max_day, max(available_days),
+                            "skipping system to prevent leakage (available days: %s)",
+                            season, system, max_day,
+                            sorted(available_days)[:5],
                         )
+                        continue
                 target_day = max(available_days)
             entries = days.get(target_day, [])
             if not entries:
@@ -272,8 +293,11 @@ class KaggleDataLoader:
                 continue
 
             team_map: Dict[str, MasseyOrdinalEntry] = {}
+            n_duplicates = 0
             for e in entries:
                 cid = self._canonical_id(e["kaggle_id"])
+                if cid in team_map:
+                    n_duplicates += 1
                 team_map[cid] = MasseyOrdinalEntry(
                     system_name=system,
                     team_id=cid,
@@ -281,6 +305,12 @@ class KaggleDataLoader:
                     kaggle_team_id=e["kaggle_id"],
                     ordinal_rank=e["rank"],
                     ranking_day_num=target_day,
+                )
+            if n_duplicates > 0:
+                logger.warning(
+                    "Massey Ordinals for %d system '%s' day %d: "
+                    "%d duplicate team entries (last entry wins)",
+                    season, system, target_day, n_duplicates,
                 )
             result[system] = team_map
 
