@@ -402,6 +402,77 @@ class TestRankingsCsvFallback:
 
 
 # ---------------------------------------------------------------------------
+# CSV header detection robustness
+# ---------------------------------------------------------------------------
+
+
+class TestCsvHeaderDetection:
+    """Verify that the trank CSV parser correctly distinguishes header rows
+    from data rows, even when team names contain header-like substrings."""
+
+    @staticmethod
+    def _make_csv_rows(n, start_rank=1):
+        """Generate n CSV data rows with unique team names."""
+        rows = []
+        for i in range(n):
+            rank = start_rank + i
+            rows.append(
+                f"{rank},Team_{rank},Conf,{100 + i:.1f},{95 + i:.1f},0.50,68.0,0.0,15,15,"
+                f"50.0,18.0,30.0,32.0,48.0,19.0,26.0,30.0"
+            )
+        return "\n".join(rows)
+
+    def test_header_row_detected_with_standard_headers(self, scraper):
+        """Standard trank CSV with a proper header row should be parsed via header names."""
+        header = (
+            "rank,team,conf,adj_o,adj_d,barthag,adj_t,wab,wins,losses,"
+            "off_efg,off_to,off_or,off_ftr,def_efg,def_to,def_or,def_ftr"
+        )
+        csv_content = header + "\n" + self._make_csv_rows(110) + "\n"
+        fake_resp = MagicMock()
+        fake_resp.text = csv_content
+        with patch.object(scraper, "_get_with_retry", return_value=fake_resp):
+            with patch.object(scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())):
+                teams = scraper._rankings_from_trank_csv(2026)
+        # Header row consumed, 110 data rows parsed
+        assert len(teams) == 110
+
+    def test_team_named_frank_not_treated_as_header(self, scraper):
+        """A team named 'Frank' contains 'rank' — should NOT trigger header detection."""
+        # No real header row; first row is data. With <3 header matches,
+        # the parser should fall back to positional indexing.
+        first_row = (
+            "1,Franklin Pierce,NEC,100.0,105.0,0.40,68.0,0.0,10,20,"
+            "45.0,20.0,28.0,30.0,50.0,18.0,27.0,32.0"
+        )
+        csv_content = first_row + "\n" + self._make_csv_rows(109, start_rank=2) + "\n"
+        fake_resp = MagicMock()
+        fake_resp.text = csv_content
+        with patch.object(scraper, "_get_with_retry", return_value=fake_resp):
+            with patch.object(scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())):
+                teams = scraper._rankings_from_trank_csv(2026)
+        # All 110 rows should be parsed as data (first row not skipped as header)
+        assert len(teams) == 110
+        assert any("franklin" in t.team_id.lower() for t in teams)
+
+    def test_single_keyword_match_not_enough_for_header(self, scraper):
+        """A row with only 1 header keyword match should not be treated as header."""
+        # Row 0 has "team" in one cell but nothing else header-like
+        first_row = (
+            "1,team,foo,100.0,105.0,0.40,68.0,0.0,10,20,"
+            "45.0,20.0,28.0,30.0,50.0,18.0,27.0,32.0"
+        )
+        csv_content = first_row + "\n" + self._make_csv_rows(109, start_rank=2) + "\n"
+        fake_resp = MagicMock()
+        fake_resp.text = csv_content
+        with patch.object(scraper, "_get_with_retry", return_value=fake_resp):
+            with patch.object(scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())):
+                teams = scraper._rankings_from_trank_csv(2026)
+        # "team" alone shouldn't trigger header detection; all 110 rows parsed as data
+        assert len(teams) == 110
+
+
+# ---------------------------------------------------------------------------
 # Structural: HTML methods removed
 # ---------------------------------------------------------------------------
 

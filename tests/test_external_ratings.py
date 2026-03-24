@@ -130,6 +130,47 @@ class TestExternalRatingsLoader:
         assert composites["a"].composite_ranking == 1
         assert composites["c"].composite_ranking == 3
 
+    def test_compute_composite_outlier_robust(self, tmp_path):
+        """A single extreme outlier should not compress all other ratings."""
+        loader = ExternalRatingsLoader(cache_dir=str(tmp_path))
+        # 10 normal teams rated 10–19, plus one extreme outlier at 1000
+        teams = {}
+        for i in range(10):
+            tid = f"team_{i}"
+            teams[tid] = ExternalRating("sys", f"Team {i}", tid, 10.0 + i, i + 1, 0.0)
+        teams["outlier"] = ExternalRating("sys", "Outlier", "outlier", 1000.0, 0, 0.0)
+
+        composites = loader.compute_composite({"sys": teams})
+
+        # Under naive min-max, team_9 (rating=19) would get (19-10)/(1000-10)=0.009
+        # Under robust scaling, team_9 should retain meaningful spread
+        normal_ratings = [
+            composites[f"team_{i}"].composite_rating for i in range(10)
+        ]
+        spread = max(normal_ratings) - min(normal_ratings)
+        # Robust scaling should preserve spread among normal teams (>0.3)
+        assert spread > 0.3, f"Normal team spread too compressed: {spread}"
+        # Outlier should be clipped to 1.0
+        assert composites["outlier"].composite_rating == 1.0
+
+    def test_compute_composite_no_outlier_still_works(self, tmp_path):
+        """Normal distributions without outliers should preserve ordering."""
+        loader = ExternalRatingsLoader(cache_dir=str(tmp_path))
+        all_ratings = {
+            "kenpom": {
+                "best": ExternalRating("kenpom", "Best", "best", 30.0, 1, 0.0),
+                "mid": ExternalRating("kenpom", "Mid", "mid", 20.0, 2, 0.0),
+                "worst": ExternalRating("kenpom", "Worst", "worst", 10.0, 3, 0.0),
+            }
+        }
+        composites = loader.compute_composite(all_ratings)
+        assert composites["best"].composite_rating > composites["mid"].composite_rating
+        assert composites["mid"].composite_rating > composites["worst"].composite_rating
+        # All ratings should be in [0, 1] with meaningful spread
+        spread = composites["best"].composite_rating - composites["worst"].composite_rating
+        assert spread > 0.3
+        assert all(0.0 <= composites[t].composite_rating <= 1.0 for t in ["best", "mid", "worst"])
+
     def test_save_and_load_roundtrip(self, tmp_path):
         """Save ratings then load them back."""
         loader = ExternalRatingsLoader(cache_dir=str(tmp_path))
