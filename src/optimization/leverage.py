@@ -721,6 +721,10 @@ class LeverageCalculator:
         Returns:
             List of LeveragePick sorted by leverage
         """
+        # Clear the audit log so repeated calls don't accumulate stale
+        # entries (e.g., when the same calculator is reused across scenarios).
+        self.fallback_audit.clear()
+
         leverage_picks = []
         _fallback_teams = set()
 

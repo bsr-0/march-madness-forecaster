@@ -446,7 +446,9 @@ def normalize_pick_probability(value) -> float:
         v = float(value)
     except (ValueError, TypeError):
         return 0.0001
-    if v < 0:
+    # Guard against NaN (float('nan') passes float() but fails all
+    # comparisons).  np.clip(NaN) returns NaN, violating our contract.
+    if math.isnan(v) or v < 0:
         return 0.0001
     if v > 1.0:
         v = v / 100.0
