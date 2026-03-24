@@ -13,10 +13,13 @@ canonical leverage metric used by both the pool optimizer and the ESPN
 bracket optimizer.
 """
 
+import logging
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from collections import namedtuple
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 _BranchPick = namedtuple('_BranchPick', ['p_win', 'survival', 'pts'])
@@ -651,11 +654,37 @@ class LeverageCalculator:
             "CHAMP": 320,
         }
 
+    # Maximum leverage ratio.  Empirically, leverage > 20x in a real
+    # bracket pool is almost always a data artifact (missing public pick
+    # data), not genuine edge.  The highest real leverage observed in
+    # ESPN BTC data (2015-2024) is ~12x for 16-seeds in R64.
+    MAX_LEVERAGE = 20.0
+
     def _team_meta(self, team_id: str) -> TeamMetadata:
         return self.team_metadata.get(
             team_id,
             TeamMetadata(team_name=team_id, seed=0, region=""),
         )
+
+    def _public_pct_with_fallback(
+        self, team_id: str, round_name: str,
+    ) -> Tuple[float, bool]:
+        """Get public pick percentage, falling back to seed-based prior.
+
+        Returns:
+            (public_pct, is_fallback) — is_fallback is True when no real
+            public data existed for this team/round.
+        """
+        public = self.public_picks.get(team_id, {})
+        pct = public.get(round_name)
+        if pct is not None and pct > 0:
+            return pct, False
+
+        # Fall back to seed-based prior.
+        meta = self._team_meta(team_id)
+        seed = meta.seed if meta.seed > 0 else 8  # default to 8-seed prior
+        prior = get_seed_based_pick_rates(seed)
+        return prior.get(round_name, 0.01), True
     
     def find_leverage_picks(
         self,
@@ -673,17 +702,21 @@ class LeverageCalculator:
             List of LeveragePick sorted by leverage
         """
         leverage_picks = []
-        
+        _fallback_teams = set()
+
         for team_id, probs in self.model_probs.items():
-            public = self.public_picks.get(team_id, {})
-            
             for round_name, model_prob in probs.items():
                 if model_prob < min_probability:
                     continue
-                
-                public_pct = public.get(round_name, 0.001)  # Avoid div by 0
-                leverage = model_prob / public_pct
-                
+
+                public_pct, is_fallback = self._public_pct_with_fallback(
+                    team_id, round_name,
+                )
+                if is_fallback:
+                    _fallback_teams.add(team_id)
+
+                leverage = min(model_prob / public_pct, self.MAX_LEVERAGE)
+
                 if leverage >= min_leverage:
                     meta = self._team_meta(team_id)
                     leverage_picks.append(LeveragePick(
@@ -696,11 +729,18 @@ class LeverageCalculator:
                         round_name=round_name,
                         points_value=self.scoring_system.get(round_name, 0),
                     ))
-        
+
+        if _fallback_teams:
+            logger.warning(
+                "Used seed-based prior for %d teams missing public pick data: %s",
+                len(_fallback_teams),
+                ", ".join(sorted(_fallback_teams)[:5])
+                + (f" (+{len(_fallback_teams) - 5} more)"
+                   if len(_fallback_teams) > 5 else ""),
+            )
+
         # Sort by expected value differential (EV-edge):
         # (model_prob - public_pct) × round_points
-        # This ranks picks by expected points gained vs the field,
-        # incorporating both probability edge and scoring weight.
         leverage_picks.sort(key=lambda x: x.expected_value_differential, reverse=True)
 
         return leverage_picks
@@ -721,14 +761,20 @@ class LeverageCalculator:
             List of teams to avoid
         """
         fade_picks = []
-        
+
         for team_id, probs in self.model_probs.items():
-            public = self.public_picks.get(team_id, {})
-            
             for round_name, model_prob in probs.items():
-                public_pct = public.get(round_name, 0.001)
+                public_pct, is_fallback = self._public_pct_with_fallback(
+                    team_id, round_name,
+                )
+                # Don't recommend fading a team based on seed prior —
+                # only fade when we have real public pick data showing
+                # the team is over-picked.
+                if is_fallback:
+                    continue
+
                 leverage = model_prob / public_pct
-                
+
                 if leverage <= max_leverage and public_pct > 0.1:
                     meta = self._team_meta(team_id)
                     fade_picks.append(LeveragePick(
