@@ -851,10 +851,24 @@
       "adj_offensive_efficiency": 105.86570690053581,
       "adj_defensive_efficiency": 89.80380146040363,
       "adj_tempo": 69.94,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4923,
+      "turnover_rate": 0.1728,
+      "offensive_reb_rate": 0.3376,
+      "free_throw_rate": 0.3731,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4923,
+        "turnover_rate": 0.1728,
+        "offensive_reb_rate": 0.3376,
+        "free_throw_rate": 0.3731,
+        "opp_effective_fg_pct": 0.4392,
+        "opp_turnover_rate": 0.1647,
+        "opp_free_throw_rate": 0.2938,
+        "defensive_reb_rate": 0.7051
+      },
+      "opp_effective_fg_pct": 0.4392,
+      "opp_turnover_rate": 0.1647,
+      "opp_free_throw_rate": 0.2938,
+      "defensive_reb_rate": 0.7051
     },
     {
       "team_id": "colorado_st",
@@ -1809,10 +1823,24 @@
       "adj_offensive_efficiency": 109.55816220466549,
       "adj_defensive_efficiency": 97.69885088027172,
       "adj_tempo": 70.74,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.5183,
+      "turnover_rate": 0.1636,
+      "offensive_reb_rate": 0.2951,
+      "free_throw_rate": 0.3438,
+      "enriched_stats": {
+        "effective_fg_pct": 0.5183,
+        "turnover_rate": 0.1636,
+        "offensive_reb_rate": 0.2951,
+        "free_throw_rate": 0.3438,
+        "opp_effective_fg_pct": 0.4835,
+        "opp_turnover_rate": 0.1831,
+        "opp_free_throw_rate": 0.3395,
+        "defensive_reb_rate": 0.6615
+      },
+      "opp_effective_fg_pct": 0.4835,
+      "opp_turnover_rate": 0.1831,
+      "opp_free_throw_rate": 0.3395,
+      "defensive_reb_rate": 0.6615
     },
     {
       "team_id": "purdue",
@@ -2143,10 +2171,24 @@
       "adj_offensive_efficiency": 108.7779777717997,
       "adj_defensive_efficiency": 98.68630230460022,
       "adj_tempo": 67.25,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.5738,
+      "turnover_rate": 0.1661,
+      "offensive_reb_rate": 0.3076,
+      "free_throw_rate": 0.3924,
+      "enriched_stats": {
+        "effective_fg_pct": 0.5738,
+        "turnover_rate": 0.1661,
+        "offensive_reb_rate": 0.3076,
+        "free_throw_rate": 0.3924,
+        "opp_effective_fg_pct": 0.4362,
+        "opp_turnover_rate": 0.1516,
+        "opp_free_throw_rate": 0.3239,
+        "defensive_reb_rate": 0.7302
+      },
+      "opp_effective_fg_pct": 0.4362,
+      "opp_turnover_rate": 0.1516,
+      "opp_free_throw_rate": 0.3239,
+      "defensive_reb_rate": 0.7302
     },
     {
       "team_id": "washington",
@@ -3086,10 +3128,24 @@
       "adj_offensive_efficiency": 101.62911034320143,
       "adj_defensive_efficiency": 96.13121542247913,
       "adj_tempo": 67.04,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4833,
+      "turnover_rate": 0.1742,
+      "offensive_reb_rate": 0.269,
+      "free_throw_rate": 0.4195,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4833,
+        "turnover_rate": 0.1742,
+        "offensive_reb_rate": 0.269,
+        "free_throw_rate": 0.4195,
+        "opp_effective_fg_pct": 0.4656,
+        "opp_turnover_rate": 0.1594,
+        "opp_free_throw_rate": 0.3873,
+        "defensive_reb_rate": 0.6739
+      },
+      "opp_effective_fg_pct": 0.4656,
+      "opp_turnover_rate": 0.1594,
+      "opp_free_throw_rate": 0.3873,
+      "defensive_reb_rate": 0.6739
     },
     {
       "team_id": "fresno_st",
@@ -3884,10 +3940,24 @@
       "adj_offensive_efficiency": 106.23332723412231,
       "adj_defensive_efficiency": 103.34101919227567,
       "adj_tempo": 76.73,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.505,
+      "turnover_rate": 0.1602,
+      "offensive_reb_rate": 0.3534,
+      "free_throw_rate": 0.3861,
+      "enriched_stats": {
+        "effective_fg_pct": 0.505,
+        "turnover_rate": 0.1602,
+        "offensive_reb_rate": 0.3534,
+        "free_throw_rate": 0.3861,
+        "opp_effective_fg_pct": 0.4692,
+        "opp_turnover_rate": 0.1911,
+        "opp_free_throw_rate": 0.3878,
+        "defensive_reb_rate": 0.6064
+      },
+      "opp_effective_fg_pct": 0.4692,
+      "opp_turnover_rate": 0.1911,
+      "opp_free_throw_rate": 0.3878,
+      "defensive_reb_rate": 0.6064
     },
     {
       "team_id": "san_francisco",
@@ -4262,10 +4332,24 @@
       "adj_offensive_efficiency": 98.2994421505427,
       "adj_defensive_efficiency": 97.0053886374669,
       "adj_tempo": 69.48,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4626,
+      "turnover_rate": 0.1645,
+      "offensive_reb_rate": 0.3394,
+      "free_throw_rate": 0.4387,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4626,
+        "turnover_rate": 0.1645,
+        "offensive_reb_rate": 0.3394,
+        "free_throw_rate": 0.4387,
+        "opp_effective_fg_pct": 0.4637,
+        "opp_turnover_rate": 0.2043,
+        "opp_free_throw_rate": 0.3523,
+        "defensive_reb_rate": 0.6629
+      },
+      "opp_effective_fg_pct": 0.4637,
+      "opp_turnover_rate": 0.2043,
+      "opp_free_throw_rate": 0.3523,
+      "defensive_reb_rate": 0.6629
     },
     {
       "team_id": "murray_st",
@@ -4799,10 +4883,24 @@
       "adj_offensive_efficiency": 103.49389286265983,
       "adj_defensive_efficiency": 103.76273054747378,
       "adj_tempo": 70.1,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4929,
+      "turnover_rate": 0.1486,
+      "offensive_reb_rate": 0.2833,
+      "free_throw_rate": 0.3466,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4929,
+        "turnover_rate": 0.1486,
+        "offensive_reb_rate": 0.2833,
+        "free_throw_rate": 0.3466,
+        "opp_effective_fg_pct": 0.477,
+        "opp_turnover_rate": 0.1661,
+        "opp_free_throw_rate": 0.3323,
+        "defensive_reb_rate": 0.6575
+      },
+      "opp_effective_fg_pct": 0.477,
+      "opp_turnover_rate": 0.1661,
+      "opp_free_throw_rate": 0.3323,
+      "defensive_reb_rate": 0.6575
     },
     {
       "team_id": "rider",
@@ -5467,10 +5565,24 @@
       "adj_offensive_efficiency": 100.31294468746219,
       "adj_defensive_efficiency": 102.97864473270745,
       "adj_tempo": 71.61,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4894,
+      "turnover_rate": 0.189,
+      "offensive_reb_rate": 0.3129,
+      "free_throw_rate": 0.3579,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4894,
+        "turnover_rate": 0.189,
+        "offensive_reb_rate": 0.3129,
+        "free_throw_rate": 0.3579,
+        "opp_effective_fg_pct": 0.5107,
+        "opp_turnover_rate": 0.2197,
+        "opp_free_throw_rate": 0.3708,
+        "defensive_reb_rate": 0.6022
+      },
+      "opp_effective_fg_pct": 0.5107,
+      "opp_turnover_rate": 0.2197,
+      "opp_free_throw_rate": 0.3708,
+      "defensive_reb_rate": 0.6022
     },
     {
       "team_id": "liu",
@@ -5555,10 +5667,24 @@
       "adj_offensive_efficiency": 101.16523388863736,
       "adj_defensive_efficiency": 104.1130487083714,
       "adj_tempo": 61.88,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4576,
+      "turnover_rate": 0.1452,
+      "offensive_reb_rate": 0.2652,
+      "free_throw_rate": 0.3393,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4576,
+        "turnover_rate": 0.1452,
+        "offensive_reb_rate": 0.2652,
+        "free_throw_rate": 0.3393,
+        "opp_effective_fg_pct": 0.5103,
+        "opp_turnover_rate": 0.1722,
+        "opp_free_throw_rate": 0.3856,
+        "defensive_reb_rate": 0.6667
+      },
+      "opp_effective_fg_pct": 0.5103,
+      "opp_turnover_rate": 0.1722,
+      "opp_free_throw_rate": 0.3856,
+      "defensive_reb_rate": 0.6667
     },
     {
       "team_id": "gardner_webb",
@@ -5904,10 +6030,24 @@
       "adj_offensive_efficiency": 98.93920826482854,
       "adj_defensive_efficiency": 102.48087515488105,
       "adj_tempo": 70.72,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4828,
+      "turnover_rate": 0.1869,
+      "offensive_reb_rate": 0.3797,
+      "free_throw_rate": 0.3918,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4828,
+        "turnover_rate": 0.1869,
+        "offensive_reb_rate": 0.3797,
+        "free_throw_rate": 0.3918,
+        "opp_effective_fg_pct": 0.4531,
+        "opp_turnover_rate": 0.1846,
+        "opp_free_throw_rate": 0.3822,
+        "defensive_reb_rate": 0.6027
+      },
+      "opp_effective_fg_pct": 0.4531,
+      "opp_turnover_rate": 0.1846,
+      "opp_free_throw_rate": 0.3822,
+      "defensive_reb_rate": 0.6027
     },
     {
       "team_id": "jacksonville_st",
@@ -6485,10 +6625,24 @@
       "adj_offensive_efficiency": 102.62222630421545,
       "adj_defensive_efficiency": 108.7306323634386,
       "adj_tempo": 73.46,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4795,
+      "turnover_rate": 0.1615,
+      "offensive_reb_rate": 0.3663,
+      "free_throw_rate": 0.3886,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4795,
+        "turnover_rate": 0.1615,
+        "offensive_reb_rate": 0.3663,
+        "free_throw_rate": 0.3886,
+        "opp_effective_fg_pct": 0.535,
+        "opp_turnover_rate": 0.1954,
+        "opp_free_throw_rate": 0.3833,
+        "defensive_reb_rate": 0.6649
+      },
+      "opp_effective_fg_pct": 0.535,
+      "opp_turnover_rate": 0.1954,
+      "opp_free_throw_rate": 0.3833,
+      "defensive_reb_rate": 0.6649
     },
     {
       "team_id": "holy_cross",
@@ -7008,10 +7162,24 @@
       "adj_offensive_efficiency": 97.00439911849513,
       "adj_defensive_efficiency": 104.4113060195047,
       "adj_tempo": 70.58,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.477,
+      "turnover_rate": 0.1777,
+      "offensive_reb_rate": 0.3164,
+      "free_throw_rate": 0.3553,
+      "enriched_stats": {
+        "effective_fg_pct": 0.477,
+        "turnover_rate": 0.1777,
+        "offensive_reb_rate": 0.3164,
+        "free_throw_rate": 0.3553,
+        "opp_effective_fg_pct": 0.5095,
+        "opp_turnover_rate": 0.1997,
+        "opp_free_throw_rate": 0.4872,
+        "defensive_reb_rate": 0.6706
+      },
+      "opp_effective_fg_pct": 0.5095,
+      "opp_turnover_rate": 0.1997,
+      "opp_free_throw_rate": 0.4872,
+      "defensive_reb_rate": 0.6706
     },
     {
       "team_id": "maine",
@@ -7067,10 +7235,24 @@
       "adj_offensive_efficiency": 99.13451119063599,
       "adj_defensive_efficiency": 107.0867931671752,
       "adj_tempo": 72.12,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4927,
+      "turnover_rate": 0.1685,
+      "offensive_reb_rate": 0.316,
+      "free_throw_rate": 0.3717,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4927,
+        "turnover_rate": 0.1685,
+        "offensive_reb_rate": 0.316,
+        "free_throw_rate": 0.3717,
+        "opp_effective_fg_pct": 0.5053,
+        "opp_turnover_rate": 0.1711,
+        "opp_free_throw_rate": 0.3414,
+        "defensive_reb_rate": 0.6632
+      },
+      "opp_effective_fg_pct": 0.5053,
+      "opp_turnover_rate": 0.1711,
+      "opp_free_throw_rate": 0.3414,
+      "defensive_reb_rate": 0.6632
     },
     {
       "team_id": "portland",
@@ -7140,10 +7322,24 @@
       "adj_offensive_efficiency": 100.19947473417903,
       "adj_defensive_efficiency": 108.65272285301589,
       "adj_tempo": 74.07,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4775,
+      "turnover_rate": 0.1698,
+      "offensive_reb_rate": 0.2734,
+      "free_throw_rate": 0.3683,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4775,
+        "turnover_rate": 0.1698,
+        "offensive_reb_rate": 0.2734,
+        "free_throw_rate": 0.3683,
+        "opp_effective_fg_pct": 0.5101,
+        "opp_turnover_rate": 0.1795,
+        "opp_free_throw_rate": 0.3736,
+        "defensive_reb_rate": 0.6256
+      },
+      "opp_effective_fg_pct": 0.5101,
+      "opp_turnover_rate": 0.1795,
+      "opp_free_throw_rate": 0.3736,
+      "defensive_reb_rate": 0.6256
     },
     {
       "team_id": "north_dakota",
@@ -7996,10 +8192,24 @@
       "adj_offensive_efficiency": 96.11489640880808,
       "adj_defensive_efficiency": 107.47452604702929,
       "adj_tempo": 65.06,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4657,
+      "turnover_rate": 0.1523,
+      "offensive_reb_rate": 0.3049,
+      "free_throw_rate": 0.3875,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4657,
+        "turnover_rate": 0.1523,
+        "offensive_reb_rate": 0.3049,
+        "free_throw_rate": 0.3875,
+        "opp_effective_fg_pct": 0.4975,
+        "opp_turnover_rate": 0.1628,
+        "opp_free_throw_rate": 0.2791,
+        "defensive_reb_rate": 0.6469
+      },
+      "opp_effective_fg_pct": 0.4975,
+      "opp_turnover_rate": 0.1628,
+      "opp_free_throw_rate": 0.2791,
+      "defensive_reb_rate": 0.6469
     },
     {
       "team_id": "southeastern_louisiana",
@@ -8331,10 +8541,24 @@
       "adj_offensive_efficiency": 95.13689249775658,
       "adj_defensive_efficiency": 108.00331615880143,
       "adj_tempo": 71.55,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4445,
+      "turnover_rate": 0.1602,
+      "offensive_reb_rate": 0.2747,
+      "free_throw_rate": 0.384,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4445,
+        "turnover_rate": 0.1602,
+        "offensive_reb_rate": 0.2747,
+        "free_throw_rate": 0.384,
+        "opp_effective_fg_pct": 0.5003,
+        "opp_turnover_rate": 0.1807,
+        "opp_free_throw_rate": 0.3928,
+        "defensive_reb_rate": 0.6192
+      },
+      "opp_effective_fg_pct": 0.5003,
+      "opp_turnover_rate": 0.1807,
+      "opp_free_throw_rate": 0.3928,
+      "defensive_reb_rate": 0.6192
     },
     {
       "team_id": "monmouth",
@@ -8549,10 +8773,24 @@
       "adj_offensive_efficiency": 95.4562974702886,
       "adj_defensive_efficiency": 109.79187184392231,
       "adj_tempo": 64.45,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4624,
+      "turnover_rate": 0.1859,
+      "offensive_reb_rate": 0.3303,
+      "free_throw_rate": 0.3316,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4624,
+        "turnover_rate": 0.1859,
+        "offensive_reb_rate": 0.3303,
+        "free_throw_rate": 0.3316,
+        "opp_effective_fg_pct": 0.4819,
+        "opp_turnover_rate": 0.1834,
+        "opp_free_throw_rate": 0.3205,
+        "defensive_reb_rate": 0.5923
+      },
+      "opp_effective_fg_pct": 0.4819,
+      "opp_turnover_rate": 0.1834,
+      "opp_free_throw_rate": 0.3205,
+      "defensive_reb_rate": 0.5923
     },
     {
       "team_id": "texas_a_m_corpus_chris",
@@ -8593,10 +8831,24 @@
       "adj_offensive_efficiency": 93.1470762792298,
       "adj_defensive_efficiency": 107.47474968810995,
       "adj_tempo": 70.78,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4305,
+      "turnover_rate": 0.1805,
+      "offensive_reb_rate": 0.2929,
+      "free_throw_rate": 0.32,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4305,
+        "turnover_rate": 0.1805,
+        "offensive_reb_rate": 0.2929,
+        "free_throw_rate": 0.32,
+        "opp_effective_fg_pct": 0.4989,
+        "opp_turnover_rate": 0.1987,
+        "opp_free_throw_rate": 0.3755,
+        "defensive_reb_rate": 0.5639
+      },
+      "opp_effective_fg_pct": 0.4989,
+      "opp_turnover_rate": 0.1987,
+      "opp_free_throw_rate": 0.3755,
+      "defensive_reb_rate": 0.5639
     },
     {
       "team_id": "mcneese_st",
@@ -8637,10 +8889,24 @@
       "adj_offensive_efficiency": 92.98463925289946,
       "adj_defensive_efficiency": 107.56584786448062,
       "adj_tempo": 66.18,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4814,
+      "turnover_rate": 0.203,
+      "offensive_reb_rate": 0.2984,
+      "free_throw_rate": 0.3071,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4814,
+        "turnover_rate": 0.203,
+        "offensive_reb_rate": 0.2984,
+        "free_throw_rate": 0.3071,
+        "opp_effective_fg_pct": 0.5399,
+        "opp_turnover_rate": 0.1701,
+        "opp_free_throw_rate": 0.416,
+        "defensive_reb_rate": 0.667
+      },
+      "opp_effective_fg_pct": 0.5399,
+      "opp_turnover_rate": 0.1701,
+      "opp_free_throw_rate": 0.416,
+      "defensive_reb_rate": 0.667
     },
     {
       "team_id": "uc_riverside",
@@ -8739,10 +9005,24 @@
       "adj_offensive_efficiency": 102.15513824145386,
       "adj_defensive_efficiency": 118.79144826693911,
       "adj_tempo": 66.87,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.5036,
+      "turnover_rate": 0.1596,
+      "offensive_reb_rate": 0.3101,
+      "free_throw_rate": 0.3281,
+      "enriched_stats": {
+        "effective_fg_pct": 0.5036,
+        "turnover_rate": 0.1596,
+        "offensive_reb_rate": 0.3101,
+        "free_throw_rate": 0.3281,
+        "opp_effective_fg_pct": 0.5403,
+        "opp_turnover_rate": 0.156,
+        "opp_free_throw_rate": 0.3275,
+        "defensive_reb_rate": 0.6349
+      },
+      "opp_effective_fg_pct": 0.5403,
+      "opp_turnover_rate": 0.156,
+      "opp_free_throw_rate": 0.3275,
+      "defensive_reb_rate": 0.6349
     },
     {
       "team_id": "navy",
@@ -8827,10 +9107,24 @@
       "adj_offensive_efficiency": 91.94421242025714,
       "adj_defensive_efficiency": 108.25238984187197,
       "adj_tempo": 63.15,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.463,
+      "turnover_rate": 0.1764,
+      "offensive_reb_rate": 0.2505,
+      "free_throw_rate": 0.3795,
+      "enriched_stats": {
+        "effective_fg_pct": 0.463,
+        "turnover_rate": 0.1764,
+        "offensive_reb_rate": 0.2505,
+        "free_throw_rate": 0.3795,
+        "opp_effective_fg_pct": 0.5174,
+        "opp_turnover_rate": 0.18,
+        "opp_free_throw_rate": 0.3366,
+        "defensive_reb_rate": 0.6197
+      },
+      "opp_effective_fg_pct": 0.5174,
+      "opp_turnover_rate": 0.18,
+      "opp_free_throw_rate": 0.3366,
+      "defensive_reb_rate": 0.6197
     },
     {
       "team_id": "east_tennessee_st",
@@ -8842,10 +9136,24 @@
       "adj_offensive_efficiency": 93.78916541470895,
       "adj_defensive_efficiency": 110.59702419144473,
       "adj_tempo": 67.86,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4637,
+      "turnover_rate": 0.175,
+      "offensive_reb_rate": 0.2771,
+      "free_throw_rate": 0.3164,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4637,
+        "turnover_rate": 0.175,
+        "offensive_reb_rate": 0.2771,
+        "free_throw_rate": 0.3164,
+        "opp_effective_fg_pct": 0.5375,
+        "opp_turnover_rate": 0.1841,
+        "opp_free_throw_rate": 0.3242,
+        "defensive_reb_rate": 0.6177
+      },
+      "opp_effective_fg_pct": 0.5375,
+      "opp_turnover_rate": 0.1841,
+      "opp_free_throw_rate": 0.3242,
+      "defensive_reb_rate": 0.6177
     },
     {
       "team_id": "alcorn_st",
@@ -8857,10 +9165,24 @@
       "adj_offensive_efficiency": 86.79216751274733,
       "adj_defensive_efficiency": 102.39000715435176,
       "adj_tempo": 70.23,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4282,
+      "turnover_rate": 0.1889,
+      "offensive_reb_rate": 0.2956,
+      "free_throw_rate": 0.3734,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4282,
+        "turnover_rate": 0.1889,
+        "offensive_reb_rate": 0.2956,
+        "free_throw_rate": 0.3734,
+        "opp_effective_fg_pct": 0.4448,
+        "opp_turnover_rate": 0.165,
+        "opp_free_throw_rate": 0.468,
+        "defensive_reb_rate": 0.6187
+      },
+      "opp_effective_fg_pct": 0.4448,
+      "opp_turnover_rate": 0.165,
+      "opp_free_throw_rate": 0.468,
+      "defensive_reb_rate": 0.6187
     },
     {
       "team_id": "prairie_view_a_m",
@@ -8901,10 +9223,24 @@
       "adj_offensive_efficiency": 99.81297816358571,
       "adj_defensive_efficiency": 118.10989376640599,
       "adj_tempo": 73.71,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.5154,
+      "turnover_rate": 0.183,
+      "offensive_reb_rate": 0.2522,
+      "free_throw_rate": 0.3001,
+      "enriched_stats": {
+        "effective_fg_pct": 0.5154,
+        "turnover_rate": 0.183,
+        "offensive_reb_rate": 0.2522,
+        "free_throw_rate": 0.3001,
+        "opp_effective_fg_pct": 0.5558,
+        "opp_turnover_rate": 0.1542,
+        "opp_free_throw_rate": 0.291,
+        "defensive_reb_rate": 0.6048
+      },
+      "opp_effective_fg_pct": 0.5558,
+      "opp_turnover_rate": 0.1542,
+      "opp_free_throw_rate": 0.291,
+      "defensive_reb_rate": 0.6048
     },
     {
       "team_id": "houston_christian",
@@ -8974,10 +9310,24 @@
       "adj_offensive_efficiency": 92.53758230456296,
       "adj_defensive_efficiency": 111.18598174498705,
       "adj_tempo": 68.84,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4544,
+      "turnover_rate": 0.1892,
+      "offensive_reb_rate": 0.3384,
+      "free_throw_rate": 0.3194,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4544,
+        "turnover_rate": 0.1892,
+        "offensive_reb_rate": 0.3384,
+        "free_throw_rate": 0.3194,
+        "opp_effective_fg_pct": 0.4909,
+        "opp_turnover_rate": 0.1687,
+        "opp_free_throw_rate": 0.3789,
+        "defensive_reb_rate": 0.6153
+      },
+      "opp_effective_fg_pct": 0.4909,
+      "opp_turnover_rate": 0.1687,
+      "opp_free_throw_rate": 0.3789,
+      "defensive_reb_rate": 0.6153
     },
     {
       "team_id": "saint_francis",
@@ -9236,10 +9586,24 @@
       "adj_offensive_efficiency": 91.74159316736501,
       "adj_defensive_efficiency": 112.69672174290562,
       "adj_tempo": 68.27,
-      "effective_fg_pct": 0.0,
-      "turnover_rate": 0.0,
-      "offensive_reb_rate": 0.0,
-      "free_throw_rate": 0.0
+      "effective_fg_pct": 0.4313,
+      "turnover_rate": 0.1875,
+      "offensive_reb_rate": 0.3623,
+      "free_throw_rate": 0.2813,
+      "enriched_stats": {
+        "effective_fg_pct": 0.4313,
+        "turnover_rate": 0.1875,
+        "offensive_reb_rate": 0.3623,
+        "free_throw_rate": 0.2813,
+        "opp_effective_fg_pct": 0.4948,
+        "opp_turnover_rate": 0.1567,
+        "opp_free_throw_rate": 0.3521,
+        "defensive_reb_rate": 0.588
+      },
+      "opp_effective_fg_pct": 0.4948,
+      "opp_turnover_rate": 0.1567,
+      "opp_free_throw_rate": 0.3521,
+      "defensive_reb_rate": 0.588
     },
     {
       "team_id": "howard",
