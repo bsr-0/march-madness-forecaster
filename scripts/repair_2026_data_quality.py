@@ -211,25 +211,36 @@ def apply_defensive_four_factors(
             torvik_updated += 1
 
     # Update four factors file too
+    # Build normalized lookup: normalize_team_id(ff_key) -> ff_key
+    normalized_to_ff_key: dict[str, str] = {}
+    for key in ff_data:
+        normalized_to_ff_key[normalize_team_id(key)] = key
+
     ff_updated = 0
     for team_id, d in def_ff.items():
+        entry = None
         if team_id in ff_data:
             entry = ff_data[team_id]
-            for field in ("opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate"):
-                if entry.get(field, 0.0) == 0.0 and d.get(field, 0.0) != 0.0:
-                    entry[field] = d[field]
-            ff_updated += 1
         else:
-            # Try fuzzy lookup by collapsing underscores
+            # Try collapsed-underscore lookup
             collapsed = team_id.replace("_", "")
             for key in ff_data:
                 if key.replace("_", "") == collapsed:
                     entry = ff_data[key]
-                    for field in ("opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate"):
-                        if entry.get(field, 0.0) == 0.0 and d.get(field, 0.0) != 0.0:
-                            entry[field] = d[field]
-                    ff_updated += 1
                     break
+            # Try normalize_team_id lookup (_st -> _state, aliases, etc.)
+            if entry is None:
+                norm_id = normalize_team_id(team_id)
+                ff_key = normalized_to_ff_key.get(norm_id)
+                if ff_key:
+                    entry = ff_data[ff_key]
+
+        if entry is None:
+            continue
+        for field in ("opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate"):
+            if entry.get(field, 0.0) == 0.0 and d.get(field, 0.0) != 0.0:
+                entry[field] = d[field]
+        ff_updated += 1
 
     return torvik_updated, ff_updated
 
@@ -394,6 +405,76 @@ def compute_and_apply_offensive_four_factors(
             ff_updated += 1
 
     return torvik_updated, ff_updated
+
+
+# ---------------------------------------------------------------------------
+# 1d. Backfill offensive eFG% and FT rate from four_factors into torvik teams
+# ---------------------------------------------------------------------------
+
+def backfill_offensive_ff_from_four_factors(
+    torvik_data: dict,
+    ff_data: dict,
+) -> int:
+    """Backfill effective_fg_pct and free_throw_rate from four_factors file.
+
+    The Torvik scraper may leave these fields as zero on the team entries
+    while the four_factors file (computed from game box scores) has correct
+    values.  This patches the torvik team entries from the authoritative
+    four_factors source.
+
+    Uses normalize_team_id to resolve _st/_state, abbreviation, and alias
+    mismatches between torvik team IDs and four_factors keys.
+
+    Returns count of torvik teams updated.
+    """
+    if not ff_data:
+        return 0
+
+    # Build multiple lookup indices for four_factors entries
+    # 1. Direct key lookup
+    # 2. Collapsed (no underscores) lookup
+    # 3. Normalized ID lookup (handles _st -> _state, byu -> brigham_young, etc.)
+    collapsed_ff: dict[str, dict] = {}
+    normalized_ff: dict[str, dict] = {}
+    for k, v in ff_data.items():
+        if isinstance(v, dict):
+            collapsed_ff[k.replace("_", "")] = v
+            norm_k = normalize_team_id(k)
+            normalized_ff[norm_k] = v
+
+    teams = torvik_data.get("teams", [])
+    updated = 0
+    fields = ("effective_fg_pct", "free_throw_rate")
+
+    for team in teams:
+        tid = team.get("team_id", "")
+        ff_entry = ff_data.get(tid)
+        if ff_entry is None:
+            ff_entry = collapsed_ff.get(tid.replace("_", ""))
+        if ff_entry is None:
+            # Use normalize_team_id to resolve aliases (_st -> _state, etc.)
+            norm_tid = normalize_team_id(tid)
+            ff_entry = normalized_ff.get(norm_tid)
+        if ff_entry is None or not isinstance(ff_entry, dict):
+            continue
+
+        changed = False
+        for field in fields:
+            current = float(team.get(field, 0) or 0)
+            source = float(ff_entry.get(field, 0) or 0)
+            if abs(current) < 1e-6 and abs(source) > 1e-6:
+                team[field] = ff_entry[field]
+                changed = True
+                # Also update enriched_stats
+                enriched = team.get("enriched_stats", {})
+                if abs(float(enriched.get(field, 0) or 0)) < 1e-6:
+                    enriched[field] = ff_entry[field]
+                    team["enriched_stats"] = enriched
+        if changed:
+            updated += 1
+
+    logger.info("Backfilled effective_fg_pct/free_throw_rate for %d torvik teams from four_factors", updated)
+    return updated
 
 
 # ---------------------------------------------------------------------------
@@ -664,6 +745,10 @@ def main() -> None:
         off_torvik_updated, off_ff_updated,
     )
 
+    # 1d. Backfill offensive eFG% and FT rate from four_factors
+    logger.info("--- Step 1d: Backfill eFG%%/FTR from Four Factors ---")
+    efg_ftr_updated = backfill_offensive_ff_from_four_factors(torvik_data, ff_data)
+
     # 1b. Rebuild advanced_metrics from historical games
     logger.info("--- Step 1b: Rebuild Advanced Metrics ---")
     adv_metrics_updated = rebuild_advanced_metrics(torvik_data, year=year)
@@ -732,6 +817,7 @@ def main() -> None:
     logger.info("  Defensive Four Factors computed for %d teams", len(def_ff))
     logger.info("  Defensive: torvik teams updated: %d, ff entries: %d", torvik_updated, ff_updated)
     logger.info("  Offensive: torvik teams updated: %d, ff entries: %d", off_torvik_updated, off_ff_updated)
+    logger.info("  Offensive eFG%%/FTR backfilled: %d torvik teams", efg_ftr_updated)
     logger.info("  Advanced metrics rebuilt for %d teams", adv_metrics_updated)
     logger.info("  Roster teams with head_coach: %d", roster_coaches_updated)
     logger.info("  Coach entries mapped to teams: %d", coaches_updated)
@@ -782,6 +868,26 @@ def main() -> None:
             )
         else:
             logger.info("Torvik ORB%% median = %.4f (within [0.18, 0.40] range)", median_orb)
+
+    efg_zero_count = sum(
+        1 for t in torvik_teams
+        if abs(float(t.get("effective_fg_pct", 0) or 0)) < 1e-6
+    )
+    if efg_zero_count > 5:
+        warnings.append(
+            f"{efg_zero_count}/{len(torvik_teams)} torvik teams still have "
+            f"effective_fg_pct == 0.0 after repair (expected <= 5)"
+        )
+
+    ftr_zero_count = sum(
+        1 for t in torvik_teams
+        if abs(float(t.get("free_throw_rate", 0) or 0)) < 1e-6
+    )
+    if ftr_zero_count > 5:
+        warnings.append(
+            f"{ftr_zero_count}/{len(torvik_teams)} torvik teams still have "
+            f"free_throw_rate == 0.0 after repair (expected <= 5)"
+        )
 
     def_zero_count = sum(
         1 for t in torvik_teams
