@@ -388,3 +388,80 @@ def validate_season_quality(
             )
 
     return errors
+
+
+# ---------------------------------------------------------------------------
+# Four Factors quality gate
+# ---------------------------------------------------------------------------
+
+# Physically plausible bounds for NCAA D1 Four Factors.
+_FF_RANGES = {
+    "opp_effective_fg_pct": (0.30, 0.65),
+    "opp_turnover_rate": (0.10, 0.35),
+    "opp_free_throw_rate": (0.15, 0.55),
+    "offensive_reb_rate": (0.15, 0.45),
+    "defensive_reb_rate": (0.55, 0.85),
+}
+
+
+def validate_four_factors(
+    torvik_payload: Dict,
+    max_def_ff_zeros: int = 5,
+    orb_median_range: tuple = (0.18, 0.40),
+) -> List[str]:
+    """Validate Four Factors quality after enrichment.
+
+    Checks that defensive FF zeros are eliminated and offensive ORB%/DRB%
+    are at team-level (not player-level).
+
+    Parameters
+    ----------
+    torvik_payload : dict
+        Torvik data dict with ``teams`` list.
+    max_def_ff_zeros : int
+        Maximum teams allowed with all defensive FF = 0.0.
+    orb_median_range : tuple
+        Expected (min, max) for median team-level ORB%.
+
+    Returns
+    -------
+    list of str
+        Error messages (empty = all checks pass).
+    """
+    errors: List[str] = []
+    teams = torvik_payload.get("teams", [])
+    if not teams:
+        return ["torvik payload has no teams"]
+
+    # Check defensive FF zeros
+    def_ff_fields = ("opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate")
+    def_zero_count = sum(
+        1 for t in teams
+        if all(abs(_to_float(t.get(f, 0)) or 0) < 1e-6 for f in def_ff_fields)
+    )
+    if def_zero_count > max_def_ff_zeros:
+        errors.append(
+            f"{def_zero_count}/{len(teams)} teams have ALL defensive FF = 0.0 "
+            f"(max allowed: {max_def_ff_zeros})"
+        )
+
+    # Check offensive ORB% for player-level bias
+    orb_vals = sorted(
+        _to_float(t.get("offensive_reb_rate", 0)) or 0
+        for t in teams
+        if (_to_float(t.get("offensive_reb_rate", 0)) or 0) > 1e-6
+    )
+    if orb_vals:
+        median_orb = orb_vals[len(orb_vals) // 2]
+        lo, hi = orb_median_range
+        if median_orb < lo:
+            errors.append(
+                f"ORB% median = {median_orb:.4f} is below {lo} — "
+                f"likely CSV player-level bias (not team-level)"
+            )
+        elif median_orb > hi:
+            errors.append(
+                f"ORB% median = {median_orb:.4f} is above {hi} — suspiciously high"
+            )
+
+    return errors

@@ -5,6 +5,8 @@ Addresses the following gaps in scraped season data:
 
 1. Defensive Four Factors (opp_effective_fg_pct, opp_turnover_rate,
    opp_free_throw_rate) are all zero — computed from historical game box scores.
+1c. Offensive Four Factors (offensive_reb_rate, defensive_reb_rate) are biased
+   from CSV player-level aggregation — recomputed from game box scores.
 2. Coach tournament teams arrays are empty — populated from Barttorvik
    team-coach mappings, and head_coach injected into roster data.
 3. Player RAPM values are null — estimated from BPM/WARP/usage priors.
@@ -27,6 +29,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.data.features.public_advanced_metrics import PublicAdvancedMetricsBuilder
 from src.data.normalize import normalize_team_id, _raw_normalize
+from src.data.team_id_resolver import GameToTorvikResolver
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,86 +44,15 @@ DEFAULT_YEAR = 2026
 _TORVIK_IDS: set[str] = set()
 
 
-def _build_game_id_resolver(torvik_data: dict) -> callable:
-    """Build a function that maps CBBpy game team names to Torvik team IDs.
+def _build_game_id_resolver(torvik_data: dict) -> GameToTorvikResolver:
+    """Build a resolver that maps game team IDs to Torvik canonical IDs.
 
-    CBBpy uses "Houston Cougars" format while Torvik uses "houston".
-    This resolver strips mascots and handles state/st abbreviations,
-    double-underscore IDs, and other Torvik naming quirks.
+    Returns a GameToTorvikResolver instance (shared implementation).
     """
     teams = torvik_data.get("teams", [])
     torvik_ids = set(t["team_id"] for t in teams)
     _TORVIK_IDS.update(torvik_ids)
-
-    import re
-
-    # Build reverse lookup: collapsed form -> torvik_id
-    # This handles double-underscore IDs like cal_st__bakersfield
-    collapsed_to_torvik: dict[str, str] = {}
-    for tid in torvik_ids:
-        collapsed = tid.replace("_", "")
-        collapsed_to_torvik[collapsed] = tid
-
-    # Explicit aliases for CBBpy game names that don't match Torvik IDs
-    # through mascot stripping or standard normalization
-    _GAME_NAME_ALIASES: dict[str, str] = {
-        "App State Mountaineers": "appalachian_st",
-        "Cal Baptist Lancers": "cal_baptist",
-        "California Baptist Lancers": "cal_baptist",
-        "Cal State Bakersfield Roadrunners": "cal_st__bakersfield",
-        "Cal State Fullerton Titans": "cal_st__fullerton",
-        "Cal State Northridge Matadors": "cal_st__northridge",
-        "UConn Huskies": "connecticut",
-        "Florida International Panthers": "fiu",
-        "Grambling Tigers": "grambling_st",
-        "UIC Flames": "illinois_chicago",
-        "IU Indianapolis Jaguars": "iu_indy",
-        "Long Island University Sharks": "liu",
-        "UL Monroe Warhawks": "louisiana_monroe",
-        "Loyola Maryland Greyhounds": "loyola_md",
-        "McNeese Cowboys": "mcneese_st",
-        "Miami Hurricanes": "miami_fl",
-        "Miami (OH) RedHawks": "miami_oh",
-        "Omaha Mavericks": "nebraska_omaha",
-        "Nicholls Colonels": "nicholls_st",
-        "Sam Houston Bearkats": "sam_houston_st",
-        "San Jose State Spartans": "san_jose_st",
-        "SE Louisiana Lions": "southeastern_louisiana",
-        "UT Martin Skyhawks": "tennessee_martin",
-        "Texas A&M-Corpus Christi Islanders": "texas_a_m_corpus_chris",
-        "Kansas City Roos": "umkc",
-        "South Carolina Upstate Spartans": "usc_upstate",
-    }
-
-    def resolve(team_name: str) -> str:
-        # Check explicit aliases first
-        if team_name in _GAME_NAME_ALIASES:
-            return _GAME_NAME_ALIASES[team_name]
-        # First try the standard normalize_team_id (handles known aliases)
-        normalized = normalize_team_id(team_name)
-        if normalized in torvik_ids:
-            return normalized
-
-        # Strip mascot: try progressively shorter word prefixes
-        parts = team_name.split()
-        for i in range(len(parts) - 1, 0, -1):
-            candidate = "_".join(parts[:i]).lower()
-            candidate = re.sub(r"[^a-z0-9_]", "_", candidate)
-            candidate = re.sub(r"_+", "_", candidate).strip("_")
-            if candidate in torvik_ids:
-                return candidate
-            # Try state -> st abbreviation (Torvik convention)
-            st_version = re.sub(r"_state$", "_st", candidate)
-            if st_version in torvik_ids:
-                return st_version
-            # Try collapsed form (handles double underscores)
-            collapsed = candidate.replace("_", "")
-            if collapsed in collapsed_to_torvik:
-                return collapsed_to_torvik[collapsed]
-
-        return normalized  # Return best-effort even if not in torvik
-
-    return resolve
+    return GameToTorvikResolver(torvik_ids)
 
 
 def load_json(filename: str, required: bool = False) -> dict | list:
@@ -157,23 +89,28 @@ def compute_defensive_four_factors(
 ) -> dict[str, dict[str, float]]:
     """Aggregate opponent box score stats into defensive Four Factors per team.
 
-    Uses historical game box scores. For each team, we aggregate opponent
-    shooting/turnover/rebounding across all games they played, giving us:
+    Uses historical game box scores (``team_games`` key which has per-team
+    box-score records paired by ``game_id``). Computes:
       - opp_effective_fg_pct: opponents' eFG% against this team
       - opp_turnover_rate: opponents' turnover rate against this team
       - opp_free_throw_rate: opponents' FTA/FGA against this team
     """
-    resolve = _build_game_id_resolver(torvik_data)
+    resolver = _build_game_id_resolver(torvik_data)
 
     games_data = load_json(f"historical_games_{year}.json")
-    games = games_data.get("games", [])
-    logger.info("Loaded %d game records for defensive Four Factors", len(games))
+    # Use team_games (per-team box-score records) not games (scores only)
+    team_game_records = games_data.get("team_games", [])
+    if not team_game_records:
+        # Fallback to games key for backwards compatibility
+        team_game_records = games_data.get("games", [])
+    logger.info("Loaded %d team-game records for defensive Four Factors", len(team_game_records))
 
     # Build a mapping: for each game_id, collect both sides
-    # Games appear as one row per team, so game_id appears twice
     game_pairs: dict[str, list[dict]] = defaultdict(list)
-    for g in games:
-        game_pairs[g["game_id"]].append(g)
+    for g in team_game_records:
+        gid = g.get("game_id")
+        if gid:
+            game_pairs[gid].append(g)
 
     # Accumulate opponent stats per team (using torvik-style team IDs)
     team_opp_stats: dict[str, dict[str, float]] = defaultdict(
@@ -186,7 +123,11 @@ def compute_defensive_four_factors(
             continue
         for i, my_side in enumerate(sides):
             opp_side = sides[1 - i]
-            my_id = resolve(my_side["team_name"])
+            # Resolve team ID: try team_id first (lowercased), then team_name
+            raw_id = str(my_side.get("team_id") or my_side.get("team_name", "")).lower().replace(" ", "_")
+            my_id = resolver.resolve(raw_id)
+            if not my_id:
+                my_id = resolver.resolve_display_name(my_side.get("team_name", "")) or raw_id
 
             # Opponent's box score stats = what the opponent did against us
             opp_fgm = float(opp_side.get("fgm") or 0)
@@ -289,6 +230,168 @@ def apply_defensive_four_factors(
                             entry[field] = d[field]
                     ff_updated += 1
                     break
+
+    return torvik_updated, ff_updated
+
+
+# ---------------------------------------------------------------------------
+# 1c. Compute and apply offensive Four Factors (ORB%/DRB%/TO%) from games
+# ---------------------------------------------------------------------------
+
+# D1 population means for Bayesian shrinkage when game data is insufficient
+_D1_ORB_MEAN = 0.29
+_D1_DRB_MEAN = 0.72
+_D1_TO_MEAN = 0.17
+
+
+def compute_and_apply_offensive_four_factors(
+    torvik_data: dict,
+    ff_data: dict,
+    year: int = DEFAULT_YEAR,
+) -> tuple[int, int]:
+    """Compute team-level ORB%/DRB%/TO% from game box scores and apply.
+
+    The CSV player-level fallback produces ORB%/DRB% that are ~3.8x too low
+    because it averages player-level percentages (1-15%) instead of computing
+    the team-level rate (25-35%).  This recomputes from game box scores.
+
+    For teams below the compute threshold (< 3 games), applies Bayesian
+    shrinkage toward D1 population means.
+
+    Returns (torvik_updated, ff_updated) counts.
+    """
+    resolver = _build_game_id_resolver(torvik_data)
+
+    games_data = load_json(f"historical_games_{year}.json")
+    team_game_records = games_data.get("team_games", [])
+    if not team_game_records:
+        team_game_records = games_data.get("games", [])
+    logger.info("Loaded %d team-game records for offensive Four Factors", len(team_game_records))
+
+    # Pair games by game_id
+    game_pairs: dict[str, list[dict]] = defaultdict(list)
+    for g in team_game_records:
+        gid = g.get("game_id")
+        if gid:
+            game_pairs[gid].append(g)
+
+    # Accumulate per-team stats
+    team_stats: dict[str, dict[str, float]] = defaultdict(
+        lambda: {"fga": 0, "fta": 0, "turnovers": 0, "orb": 0, "drb": 0,
+                 "opp_orb": 0, "opp_drb": 0, "games": 0}
+    )
+
+    for game_id, sides in game_pairs.items():
+        if len(sides) != 2:
+            continue
+        for i, my_side in enumerate(sides):
+            opp_side = sides[1 - i]
+            raw_id = str(my_side.get("team_id") or my_side.get("team_name", "")).lower().replace(" ", "_")
+            my_id = resolver.resolve(raw_id)
+            if not my_id:
+                my_id = resolver.resolve_display_name(my_side.get("team_name", "")) or raw_id
+
+            my_fga = float(my_side.get("fga") or 0)
+            if my_fga < 1:
+                continue
+
+            s = team_stats[my_id]
+            s["fga"] += my_fga
+            s["fta"] += float(my_side.get("fta") or 0)
+            s["turnovers"] += float(my_side.get("turnovers") or 0)
+            s["orb"] += float(my_side.get("orb") or 0)
+            s["drb"] += float(my_side.get("drb") or 0)
+            s["opp_orb"] += float(opp_side.get("orb") or 0)
+            s["opp_drb"] += float(opp_side.get("drb") or 0)
+            s["games"] += 1
+
+    # Compute offensive Four Factors
+    off_ff: dict[str, dict[str, float]] = {}
+    for team_id, s in team_stats.items():
+        if s["games"] < 3 or s["fga"] < 30:
+            continue
+        denom_to = s["fga"] + 0.44 * s["fta"] + s["turnovers"]
+        to_rate = s["turnovers"] / denom_to if denom_to > 0 else 0.0
+        orb_chances = s["orb"] + s["opp_drb"]
+        orb_rate = s["orb"] / orb_chances if orb_chances > 0 else 0.0
+        drb_chances = s["drb"] + s["opp_orb"]
+        drb_rate = s["drb"] / drb_chances if drb_chances > 0 else 0.0
+        off_ff[team_id] = {
+            "turnover_rate": round(to_rate, 4),
+            "offensive_reb_rate": round(orb_rate, 4),
+            "defensive_reb_rate": round(drb_rate, 4),
+        }
+    logger.info("Computed offensive Four Factors for %d teams", len(off_ff))
+
+    # Detect CSV bias: if median ORB% < 0.15, values are from player-level CSV
+    teams = torvik_data.get("teams", [])
+    orb_vals = [float(t.get("offensive_reb_rate", 0) or 0) for t in teams[:20]]
+    csv_bias = (
+        len(orb_vals) >= 10
+        and sorted(orb_vals)[len(orb_vals) // 2] < 0.15
+    )
+    if csv_bias:
+        logger.info("CSV player-level bias detected (median ORB%% = %.4f) — will replace all ORB%%/DRB%%",
+                     sorted(orb_vals)[len(orb_vals) // 2])
+
+    # Apply to torvik teams
+    torvik_updated = 0
+    for team in teams:
+        tid = team.get("team_id", "")
+        d = off_ff.get(tid)
+        if d is None:
+            continue
+        changed = False
+        # Always replace ORB%/DRB% when CSV bias detected; only replace TO% if zero
+        if csv_bias or abs(float(team.get("offensive_reb_rate", 0) or 0)) < 1e-6:
+            team["offensive_reb_rate"] = d["offensive_reb_rate"]
+            changed = True
+        if abs(float(team.get("turnover_rate", 0) or 0)) < 1e-6:
+            team["turnover_rate"] = d["turnover_rate"]
+            changed = True
+        if csv_bias or abs(float(team.get("defensive_reb_rate", 0) or 0)) < 1e-6:
+            team["defensive_reb_rate"] = d["defensive_reb_rate"]
+            changed = True
+        # Also update enriched_stats
+        enriched = team.get("enriched_stats", {})
+        for field in ("offensive_reb_rate", "defensive_reb_rate", "turnover_rate"):
+            if d.get(field) and changed:
+                enriched[field] = d[field]
+                team["enriched_stats"] = enriched
+        if changed:
+            torvik_updated += 1
+
+    # Bayesian shrinkage for teams below compute threshold
+    _bayesian_applied = 0
+    if csv_bias:
+        for team in teams:
+            tid = team.get("team_id", "")
+            if tid in off_ff:
+                continue  # Already repaired from game data
+            orb = float(team.get("offensive_reb_rate", 0) or 0)
+            if 0 < orb < 0.15:
+                team["offensive_reb_rate"] = round(_D1_ORB_MEAN, 4)
+                team["defensive_reb_rate"] = round(_D1_DRB_MEAN, 4)
+                _bayesian_applied += 1
+        if _bayesian_applied:
+            logger.info("Applied D1 population mean ORB%%/DRB%% to %d teams below compute threshold",
+                         _bayesian_applied)
+
+    # Apply to four_factors file
+    ff_updated = 0
+    for team_id, d in off_ff.items():
+        ff_entry = ff_data.get(team_id)
+        if ff_entry is None:
+            for key in ff_data:
+                if key.replace("_", "") == team_id.replace("_", ""):
+                    ff_entry = ff_data[key]
+                    break
+        if ff_entry is not None:
+            for field in ("turnover_rate", "offensive_reb_rate", "defensive_reb_rate"):
+                current = ff_entry.get(field, 0.0)
+                if csv_bias or abs(float(current or 0)) < 1e-6:
+                    ff_entry[field] = d[field]
+            ff_updated += 1
 
     return torvik_updated, ff_updated
 
@@ -551,6 +654,16 @@ def main() -> None:
         torvik_updated, ff_updated,
     )
 
+    # 1c. Compute and apply offensive Four Factors (ORB%/DRB%/TO%)
+    logger.info("--- Step 1c: Offensive Four Factors ---")
+    off_torvik_updated, off_ff_updated = compute_and_apply_offensive_four_factors(
+        torvik_data, ff_data, year=year,
+    )
+    logger.info(
+        "Applied offensive FF: %d torvik teams, %d four_factors entries",
+        off_torvik_updated, off_ff_updated,
+    )
+
     # 1b. Rebuild advanced_metrics from historical games
     logger.info("--- Step 1b: Rebuild Advanced Metrics ---")
     adv_metrics_updated = rebuild_advanced_metrics(torvik_data, year=year)
@@ -617,8 +730,8 @@ def main() -> None:
     # Summary
     logger.info("=== Repair Complete ===")
     logger.info("  Defensive Four Factors computed for %d teams", len(def_ff))
-    logger.info("  Torvik teams updated: %d", torvik_updated)
-    logger.info("  Four Factors file entries updated: %d", ff_updated)
+    logger.info("  Defensive: torvik teams updated: %d, ff entries: %d", torvik_updated, ff_updated)
+    logger.info("  Offensive: torvik teams updated: %d, ff entries: %d", off_torvik_updated, off_ff_updated)
     logger.info("  Advanced metrics rebuilt for %d teams", adv_metrics_updated)
     logger.info("  Roster teams with head_coach: %d", roster_coaches_updated)
     logger.info("  Coach entries mapped to teams: %d", coaches_updated)
@@ -647,6 +760,38 @@ def main() -> None:
                 f"{zero_opp_efg} teams have opp_effective_fg_pct == 0.0 "
                 f"(expected <= 5)"
             )
+
+    # Check torvik offensive FF after repair
+    torvik_teams = torvik_data.get("teams", [])
+    orb_vals = sorted(
+        float(t.get("offensive_reb_rate", 0) or 0)
+        for t in torvik_teams
+        if float(t.get("offensive_reb_rate", 0) or 0) > 1e-6
+    )
+    if orb_vals:
+        median_orb = orb_vals[len(orb_vals) // 2]
+        if median_orb < 0.18:
+            warnings.append(
+                f"Torvik ORB% median = {median_orb:.4f} (expected >= 0.18) — "
+                f"CSV player-level bias may persist"
+            )
+        elif median_orb > 0.40:
+            warnings.append(
+                f"Torvik ORB% median = {median_orb:.4f} (expected <= 0.40) — "
+                f"suspiciously high"
+            )
+        else:
+            logger.info("Torvik ORB%% median = %.4f (within [0.18, 0.40] range)", median_orb)
+
+    def_zero_count = sum(
+        1 for t in torvik_teams
+        if abs(float(t.get("opp_effective_fg_pct", 0) or 0)) < 1e-6
+    )
+    if def_zero_count > 5:
+        warnings.append(
+            f"{def_zero_count}/{len(torvik_teams)} torvik teams still have "
+            f"opp_effective_fg_pct == 0.0 after repair (expected <= 5)"
+        )
 
     coach_entries = coach_data.get("coaches", {})
     if coach_entries:

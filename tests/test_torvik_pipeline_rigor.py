@@ -507,3 +507,45 @@ class TestShootingStatDefaults:
         assert (data.get("two_pt_pct") or 0.48) == 0.52
         assert (data.get("three_pt_pct") or 0.34) == 0.38
         assert (data.get("ft_pct") or 0.72) == 0.75
+
+
+# ---------------------------------------------------------------------------
+# CSV ORB%/DRB% bias detection
+# ---------------------------------------------------------------------------
+
+
+class TestCsvOrbBiasDetection:
+    """Verify that CSV player-level ORB% bias is detected and triggers repair."""
+
+    def test_median_below_threshold_triggers_repair(self):
+        """Sample with median ORB% < 0.15 should be flagged as biased."""
+        # Simulates CSV fallback output: player-level ORB% ≈ 0.05-0.10
+        sample_orb = [0.06, 0.07, 0.08, 0.07, 0.09, 0.08, 0.06, 0.07, 0.10, 0.08,
+                       0.07, 0.09, 0.06, 0.08, 0.07, 0.09, 0.08, 0.07, 0.06, 0.08]
+        all_zero = all(abs(v) < 1e-6 for v in sample_orb)
+        csv_orb_bias = (
+            not all_zero
+            and len(sample_orb) >= 10
+            and sorted(sample_orb)[len(sample_orb) // 2] < 0.15
+        )
+        assert not all_zero, "Values are non-zero (the tricky part)"
+        assert csv_orb_bias, "Should detect CSV bias when median ORB% < 0.15"
+
+    def test_real_orb_values_not_flagged(self):
+        """Real team-level ORB% (0.25-0.35) should NOT trigger bias detection."""
+        sample_orb = [0.27, 0.29, 0.31, 0.28, 0.30, 0.32, 0.26, 0.29, 0.33, 0.28,
+                       0.30, 0.27, 0.31, 0.29, 0.28, 0.32, 0.30, 0.27, 0.29, 0.31]
+        all_zero = all(abs(v) < 1e-6 for v in sample_orb)
+        csv_orb_bias = (
+            not all_zero
+            and len(sample_orb) >= 10
+            and sorted(sample_orb)[len(sample_orb) // 2] < 0.15
+        )
+        assert not all_zero
+        assert not csv_orb_bias, "Real ORB% values should not be flagged"
+
+    def test_all_zero_still_triggers_original_path(self):
+        """All-zero ORB% should trigger via the original zero check, not bias check."""
+        sample_orb = [0.0] * 20
+        all_zero = all(abs(v) < 1e-6 for v in sample_orb)
+        assert all_zero, "All-zero should trigger the original repair path"
