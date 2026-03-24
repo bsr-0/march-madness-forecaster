@@ -154,6 +154,14 @@ class ConferenceSeedsScraper:
             # Be polite to ESPN API
             time.sleep(0.5)
 
+        # Validate through pydantic schema
+        if all_seeds:
+            try:
+                from .schemas import validate_conference_seeds
+                all_seeds = validate_conference_seeds(all_seeds)
+            except Exception as e:
+                logger.warning("Conference seeds schema validation failed: %s", e)
+
         if all_seeds and not conferences:
             self._save_cache(cache_name, {"seeds": all_seeds, "year": year})
 

@@ -85,6 +85,14 @@ class TournamentResultsScraper:
 
         games = self._parse_bracket(response.text, season)
 
+        # Validate through pydantic schema
+        if games:
+            try:
+                from .schemas import validate_tournament_games
+                games = validate_tournament_games(games)
+            except Exception as e:
+                logger.warning("Tournament games schema validation failed: %s", e)
+
         if games:
             self._save_cache(cache_name, {"year": season, "games": games})
             logger.info("Scraped %d tournament games for %d", len(games), season)
