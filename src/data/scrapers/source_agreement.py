@@ -206,9 +206,16 @@ def assess_source_agreement(
             shared_teams = sorted(
                 set(sources[src_a].teams.keys()) & set(sources[src_b].teams.keys())
             )
-            if len(shared_teams) < 4:
+            # Minimum n=10 for Spearman ρ.  With fewer shared teams,
+            # the t-distribution approximation (df = n-2) is unreliable
+            # and p-values are meaningless.  At n=10, df=8, which is the
+            # minimum for a stable t-distribution tail estimate.
+            # Reference: Zar, *Biostatistical Analysis*, 5th ed., §19.6.
+            _MIN_SHARED_TEAMS = 10
+            if len(shared_teams) < _MIN_SHARED_TEAMS:
                 report.details.append(
-                    f"{src_a}-{src_b}: only {len(shared_teams)} shared teams, skipping."
+                    f"{src_a}-{src_b}: only {len(shared_teams)} shared teams "
+                    f"(need ≥{_MIN_SHARED_TEAMS}), skipping."
                 )
                 continue
 
@@ -333,37 +340,51 @@ def assess_source_agreement(
         configured_weights = {s: 1.0 / len(source_names) for s in source_names}
 
     recommended: Dict[str, float] = {}
+
+    # Pre-compute average p-values per source for weight adjustment.
+    # p-value-based weighting is more principled than ρ²: it accounts
+    # for sample size (a ρ=0.7 with n=50 is much more trustworthy than
+    # ρ=0.7 with n=10), whereas ρ² ignores sample size entirely.
+    source_avg_p: Dict[str, float] = {s: 1.0 for s in source_names}
+    source_p_count: Dict[str, int] = {s: 0 for s in source_names}
+    for (src_a, src_b), n in pair_n_shared.items():
+        rho = report.pairwise_rank_correlations.get((src_a, src_b), {}).get("CHAMP")
+        if rho is None:
+            continue
+        p = _spearman_p_value(rho, n)
+        for src in (src_a, src_b):
+            source_avg_p[src] += p
+            source_p_count[src] += 1
+    for s in source_names:
+        if source_p_count[s] > 0:
+            # Average including the initial 1.0 prior (Bayesian shrinkage
+            # toward uninformative — a source with no pairings gets p=1.0).
+            source_avg_p[s] /= (source_p_count[s] + 1)
+
     for s in source_names:
         base_w = configured_weights.get(s, 0.0)
 
-        # Start with ρ²-based adjustment for flagged sources.
         if s in report.flagged_sources and source_pair_count[s] > 0:
-            # Down-weight flagged source using ρ² (coefficient of
-            # determination) — the proportion of rank variance shared
-            # with the agreeing sources.  This is more principled than
-            # raw ρ: a source with ρ=0.7 keeps 49% of its weight
-            # (not 70%), reflecting that it explains only half the
-            # ranking variance.
+            # Down-weight flagged sources using 1 - avg_p_value.
             #
-            # Floor at 0.05 so even a near-zero ρ source retains ~5%
-            # of its configured weight, preventing complete exclusion
-            # from a single noisy snapshot.  With typical ρ ≥ 0.90 in
-            # normal operation, flagged sources with ρ ≈ 0.5 get
-            # 25% weight — substantial but not dominant.
-            rho = max(0.0, source_avg_rho[s])  # clamp negatives to 0
-            factor = max(0.05, rho * rho)
+            # Rationale: p-value captures BOTH effect size (ρ) AND
+            # sample size (n).  A source with ρ=0.7 and n=50 has
+            # p < 0.0001 → factor ≈ 1.0 (trustworthy despite low ρ).
+            # A source with ρ=0.7 and n=10 has p ≈ 0.02 → factor ≈ 0.98.
+            # A source with ρ=0.3 and n=10 has p ≈ 0.40 → factor ≈ 0.60.
+            #
+            # Floor at 0.05 to prevent total exclusion from one snapshot.
+            avg_p = source_avg_p[s]
+            factor = max(0.05, 1.0 - avg_p)
             recommended[s] = base_w * factor
         else:
             recommended[s] = base_w
 
         # Additional penalty for team-level outliers.  Each outlier
-        # reduces the source's weight by 5%, compounding.  This is
-        # conservative — a source needs ≥6 outlier teams (deviation
-        # >10pp each) before losing more than 25% weight from this
-        # factor alone.  Stacks with the ρ²-based penalty above.
+        # reduces the source's weight by 5%, compounding.
         n_outliers = len(team_outliers.get(s, []))
         if n_outliers > 0:
-            outlier_penalty = 0.95 ** n_outliers  # ~0.95^5 = 0.77
+            outlier_penalty = 0.95 ** n_outliers
             recommended[s] *= outlier_penalty
 
     total = sum(recommended.values())

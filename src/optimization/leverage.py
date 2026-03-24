@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from collections import namedtuple
 import numpy as np
 
+from src.data.seed_pick_model import SEED_PICK_RATES
+
 logger = logging.getLogger(__name__)
 
 
@@ -48,30 +50,18 @@ def compute_ev_edge(
 
 
 # ---------------------------------------------------------------------------
-# Seed-Based Public Pick Rate Approximation
+# Seed-Based Public Pick Rate Priors
 # ---------------------------------------------------------------------------
-# When real ESPN/public pick data is unavailable, these priors approximate
-# what fraction of the public picks each seed to advance to each round.
-# Derived from historical ESPN Tournament Challenge aggregate data (2015-2024).
+# Derived from a first-principles model combining:
+#   1. Historical seed advancement rates (NCAA 1985-2025, ~160 games/matchup)
+#   2. Chalk bias power-law transformation calibrated against ESPN BTC
+#      aggregate distributions (2015-2024).
+#
+# Methodology documented in src/data/seed_pick_model.py.
+# Championship column renormalized so 4 × Σ(seed rates) = 100%.
+#
+# To regenerate or audit: python -m src.data.seed_pick_model
 
-SEED_PICK_RATES: Dict[int, Dict[str, float]] = {
-    1:  {"R64": 0.97, "R32": 0.90, "S16": 0.75, "E8": 0.55, "F4": 0.35, "CHAMP": 0.18},
-    2:  {"R64": 0.94, "R32": 0.82, "S16": 0.58, "E8": 0.35, "F4": 0.18, "CHAMP": 0.08},
-    3:  {"R64": 0.85, "R32": 0.65, "S16": 0.38, "E8": 0.18, "F4": 0.08, "CHAMP": 0.03},
-    4:  {"R64": 0.80, "R32": 0.55, "S16": 0.28, "E8": 0.12, "F4": 0.05, "CHAMP": 0.02},
-    5:  {"R64": 0.65, "R32": 0.38, "S16": 0.18, "E8": 0.07, "F4": 0.03, "CHAMP": 0.01},
-    6:  {"R64": 0.63, "R32": 0.35, "S16": 0.15, "E8": 0.06, "F4": 0.02, "CHAMP": 0.008},
-    7:  {"R64": 0.60, "R32": 0.30, "S16": 0.12, "E8": 0.05, "F4": 0.02, "CHAMP": 0.006},
-    8:  {"R64": 0.50, "R32": 0.22, "S16": 0.08, "E8": 0.03, "F4": 0.01, "CHAMP": 0.003},
-    9:  {"R64": 0.50, "R32": 0.20, "S16": 0.07, "E8": 0.02, "F4": 0.008, "CHAMP": 0.002},
-    10: {"R64": 0.40, "R32": 0.15, "S16": 0.05, "E8": 0.02, "F4": 0.006, "CHAMP": 0.001},
-    11: {"R64": 0.37, "R32": 0.15, "S16": 0.06, "E8": 0.02, "F4": 0.007, "CHAMP": 0.001},
-    12: {"R64": 0.35, "R32": 0.15, "S16": 0.05, "E8": 0.02, "F4": 0.005, "CHAMP": 0.001},
-    13: {"R64": 0.20, "R32": 0.06, "S16": 0.02, "E8": 0.005, "F4": 0.001, "CHAMP": 0.0003},
-    14: {"R64": 0.15, "R32": 0.04, "S16": 0.01, "E8": 0.003, "F4": 0.0005, "CHAMP": 0.0001},
-    15: {"R64": 0.06, "R32": 0.02, "S16": 0.005, "E8": 0.001, "F4": 0.0002, "CHAMP": 0.00005},
-    16: {"R64": 0.03, "R32": 0.005, "S16": 0.001, "E8": 0.0002, "F4": 0.00003, "CHAMP": 0.00001},
-}
 
 
 def get_seed_based_pick_rates(
@@ -80,9 +70,10 @@ def get_seed_based_pick_rates(
     """Return approximate public pick rates for a given seed.
 
     When real public pick data (e.g. ESPN Tournament Challenge percentages)
-    is unavailable, this provides a reasonable prior based on historical
-    aggregate behavior.  These priors are crude but effective — they
-    capture the essential chalk bias of the public.
+    is unavailable, this provides a principled prior derived from
+    historical advancement rates and a chalk bias model.
+
+    See ``src/data/seed_pick_model.py`` for the full derivation.
 
     Args:
         seed: Tournament seed (1-16).
@@ -118,19 +109,25 @@ def build_seed_based_public_picks(
 @dataclass
 class LeveragePick:
     """A pick with leverage analysis."""
-    
+
     team_id: str
     team_name: str
     seed: int
     region: str
-    
+
     # Probabilities
     model_probability: float  # Our model's probability
     public_pick_percentage: float  # % of public picking this team
-    
+
     # Round
     round_name: str  # "Champion", "Final Four", etc.
     points_value: int  # Points for picking correctly
+
+    # Provenance: True when public_pick_percentage is a synthetic
+    # seed-based prior (no real ESPN/Yahoo/CBS data available for
+    # this team/round).  Leverage calculations using synthetic data
+    # should be treated with lower confidence.
+    is_synthetic: bool = False
     
     @property
     def leverage_ratio(self) -> float:
@@ -643,7 +640,14 @@ class LeverageCalculator:
         self.model_probs = model_probs
         self.public_picks = public_picks
         self.team_metadata = team_metadata or {}
-        
+
+        # Fallback provenance audit log.
+        # Records every (team_id, round) where synthetic seed-based
+        # priors were substituted for missing real public pick data.
+        # Downstream consumers can inspect this to assess data quality
+        # and flag leverage calculations that depend on priors.
+        self.fallback_audit: Dict[str, List[str]] = {}  # team_id -> [rounds]
+
         # Standard NCAA bracket scoring
         self.scoring_system = scoring_system or {
             "R64": 10,
@@ -654,11 +658,15 @@ class LeverageCalculator:
             "CHAMP": 320,
         }
 
-    # Maximum leverage ratio.  Empirically, leverage > 20x in a real
-    # bracket pool is almost always a data artifact (missing public pick
-    # data), not genuine edge.  The highest real leverage observed in
-    # ESPN BTC data (2015-2024) is ~12x for 16-seeds in R64.
-    MAX_LEVERAGE = 20.0
+    # Maximum leverage ratio.  The cap should be understood as a data
+    # quality guard, not an analytical choice.  When real ESPN/public
+    # pick data is present, leverage rarely exceeds 12x (observed
+    # maximum in ESPN BTC 2015-2024 is ~12x for 16-seeds in R64).
+    # The 15x cap provides modest headroom while preventing synthetic
+    # seed-prior-derived leverage from dominating recommendations.
+    # With the new empirical seed pick model, the cap binds less often
+    # because priors are more realistic.
+    MAX_LEVERAGE = 15.0
 
     def _team_meta(self, team_id: str) -> TeamMetadata:
         return self.team_metadata.get(
@@ -671,9 +679,14 @@ class LeverageCalculator:
     ) -> Tuple[float, bool]:
         """Get public pick percentage, falling back to seed-based prior.
 
+        When a fallback is used, the event is recorded in
+        ``self.fallback_audit`` so downstream code can distinguish
+        real market data from synthetic priors.
+
         Returns:
             (public_pct, is_fallback) — is_fallback is True when no real
-            public data existed for this team/round.
+            public data existed for this team/round and a seed-based
+            prior was substituted.
         """
         public = self.public_picks.get(team_id, {})
         pct = public.get(round_name)
@@ -684,7 +697,14 @@ class LeverageCalculator:
         meta = self._team_meta(team_id)
         seed = meta.seed if meta.seed > 0 else 8  # default to 8-seed prior
         prior = get_seed_based_pick_rates(seed)
-        return prior.get(round_name, 0.01), True
+        fallback_pct = prior.get(round_name, 0.01)
+
+        # Record in audit log.
+        if team_id not in self.fallback_audit:
+            self.fallback_audit[team_id] = []
+        self.fallback_audit[team_id].append(round_name)
+
+        return fallback_pct, True
     
     def find_leverage_picks(
         self,
@@ -728,6 +748,7 @@ class LeverageCalculator:
                         public_pick_percentage=public_pct,
                         round_name=round_name,
                         points_value=self.scoring_system.get(round_name, 0),
+                        is_synthetic=is_fallback,
                     ))
 
         if _fallback_teams:
@@ -792,6 +813,30 @@ class LeverageCalculator:
         fade_picks.sort(key=lambda x: x.expected_value_differential)
         
         return fade_picks
+
+    def get_fallback_summary(self) -> Dict[str, object]:
+        """Return a summary of synthetic data usage for audit/reporting.
+
+        Returns:
+            Dict with keys:
+              - n_teams_with_fallback: int
+              - n_total_fallbacks: int (team×round pairs)
+              - teams: list of team_ids that used fallbacks
+              - synthetic_fraction: fraction of all model teams that
+                required at least one fallback
+        """
+        n_model_teams = len(self.model_probs)
+        teams_with_fallback = sorted(self.fallback_audit.keys())
+        total_pairs = sum(len(rounds) for rounds in self.fallback_audit.values())
+        return {
+            "n_teams_with_fallback": len(teams_with_fallback),
+            "n_total_fallbacks": total_pairs,
+            "teams": teams_with_fallback[:20],
+            "synthetic_fraction": (
+                len(teams_with_fallback) / n_model_teams
+                if n_model_teams > 0 else 0.0
+            ),
+        }
 
 
 # ---------------------------------------------------------------------------

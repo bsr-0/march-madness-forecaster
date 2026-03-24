@@ -255,25 +255,38 @@ class TestAssessSourceAgreement:
         assert report.flagged_sources == []
         assert report.recommended_weights == {"espn": 1.0}
 
-    def test_small_sample_not_fooled_by_high_rho(self):
-        """With very few shared teams, even high ρ isn't significant."""
-        # Only 5 teams shared — ρ can be high by chance.
-        small_teams_a = {
+    def test_small_sample_below_minimum_skipped(self):
+        """With fewer than 10 shared teams, the pair is skipped entirely."""
+        # Only 5 teams shared — below the n≥10 minimum for Spearman.
+        small_teams = {
             f"team_{i}": _make_team(f"team_{i}", i, "East", champ=20.0 - i * 3)
             for i in range(1, 6)
         }
-        # Slightly shuffled — still correlated but from tiny sample.
-        small_teams_b = dict(small_teams_a)
-
         sources = {
-            "espn": _make_consensus(small_teams_a, "espn"),
-            "yahoo": _make_consensus(small_teams_b, "yahoo"),
+            "espn": _make_consensus(small_teams, "espn"),
+            "yahoo": _make_consensus(dict(small_teams), "yahoo"),
         }
         report = assess_source_agreement(
             sources, min_correlation=0.85, significance_level=0.01,
         )
-        # With identical data ρ=1.0, n=5 → p ≈ 0.0, so this should pass.
-        # But the key point is the p-value machinery is exercised.
+        # With n=5 < 10, the pair is skipped and no agreement can be assessed.
+        assert report.agreement_level == "conflicting"
+        assert any("need ≥10" in d for d in report.details)
+
+    def test_marginal_sample_size_uses_significance(self):
+        """With n=12 shared teams, p-value significance is properly tested."""
+        teams_a = {
+            f"team_{i}": _make_team(f"team_{i}", i, "East", champ=25.0 - i * 1.5)
+            for i in range(1, 13)
+        }
+        # Identical data → ρ=1.0, which is significant at any n.
+        sources = {
+            "espn": _make_consensus(teams_a, "espn"),
+            "yahoo": _make_consensus(dict(teams_a), "yahoo"),
+        }
+        report = assess_source_agreement(
+            sources, min_correlation=0.85, significance_level=0.01,
+        )
         assert report.agreement_level in ("high", "moderate")
 
     def test_weights_sum_to_one(self):
