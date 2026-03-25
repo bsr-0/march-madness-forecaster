@@ -362,15 +362,18 @@ class ESPNBracketOptimizer:
             else:
                 per_region_top[region] = [c[0] for c in candidates[:3]]
 
-        # Generate combinations (1 per region)
-        region_lists = [per_region_top.get(r, []) for r in range(4)]
+        # Fall back to top seed for any region with no candidates
+        for region in range(4):
+            if not per_region_top.get(region):
+                per_region_top[region] = [self.first_round_matchups[region * 16]]
 
-        # Skip regions with no candidates instead of injecting invalid tokens
-        non_empty = [rl for rl in region_lists if rl]
-        if not non_empty:
+        # Generate combinations (1 per region)
+        region_lists = [per_region_top[r] for r in range(4)]
+
+        if not any(region_lists):
             return [[champion_id]]
 
-        all_combos = list(itertools.product(*non_empty))
+        all_combos = list(itertools.product(*region_lists))
 
         # Deduplicate and limit
         seen = set()

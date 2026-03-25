@@ -97,7 +97,12 @@ class ESPNMonteCarloSimulator:
 
         rng = np.random.default_rng(config.random_seed)
         target_bracket_idx = np.array([self._team_index(t) for t in bracket_winners], dtype=np.int32)
-        opponent_brackets_idx = self._generate_opponent_brackets(config.n_opponents, rng)
+
+        # Use a fixed sub-seed for opponent generation so the opponent field
+        # stays consistent across calls with different random_seed values
+        # (the optimizer passes a unique seed per candidate evaluation).
+        opp_seed = config.random_seed + 1_000_000_000
+        opponent_brackets_idx = self._generate_opponent_brackets(config.n_opponents, opp_seed)
 
         money_rank_cutoff = int(math.ceil((config.n_opponents + 1) * config.top_money_pct))
         top10_cutoff = int(math.ceil((config.n_opponents + 1) * 0.10))
@@ -141,18 +146,25 @@ class ESPNMonteCarloSimulator:
             mean_opponent_score=float(np.mean(opponent_mean_scores)),
         )
 
-    def _generate_opponent_brackets(self, n_opponents: int, rng: np.random.Generator) -> np.ndarray:
+    def _generate_opponent_brackets(self, n_opponents: int, seed: int) -> np.ndarray:
         """Generate opponent brackets from public pick distribution with path consistency.
 
         Caches the result keyed by (n_opponents, seed) so that evaluating
         multiple candidate brackets against the same pool avoids regenerating
         the entire opponent field.
+
+        Parameters
+        ----------
+        n_opponents : int
+            Number of opponent brackets to generate.
+        seed : int
+            Deterministic seed used for opponent generation RNG and cache key.
         """
-        seed_state = rng.bit_generator.state["state"]["state"] if hasattr(rng.bit_generator, "state") else 0
-        cache_key = (n_opponents, seed_state)
+        cache_key = (n_opponents, seed)
         if self._cached_opponents is not None and (self._cached_opponents[0], self._cached_opponents[1]) == cache_key:
             return self._cached_opponents[2]
 
+        opp_rng = np.random.default_rng(seed)
         brackets = np.zeros((n_opponents, 63), dtype=np.int32)
 
         for opp_idx in range(n_opponents):
@@ -167,7 +179,7 @@ class ESPNMonteCarloSimulator:
                     t1 = current_round[2 * game_idx]
                     t2 = current_round[2 * game_idx + 1]
                     pick_t1 = self._opponent_pick_probability(t1, t2, round_name)
-                    winner = t1 if rng.random() < pick_t1 else t2
+                    winner = t1 if opp_rng.random() < pick_t1 else t2
                     brackets[opp_idx, winner_cursor] = self._team_index(winner)
                     winner_cursor += 1
                     next_round.append(winner)
