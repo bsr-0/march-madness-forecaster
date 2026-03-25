@@ -589,6 +589,10 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     # Evaluate calibration quality.
     pre_metrics = calculate_calibration_metrics(p_arr, y_arr)
 
+    # In-sample evaluation: apply calibrator to fitting data for diagnostic reporting
+    cal_preds_insample = pipeline.calibration_pipeline.calibrate(p_fit)
+    insample_metrics = calculate_calibration_metrics(cal_preds_insample, y_fit)
+
     # OOS evaluation (held-out portion) when split is available
     if use_oos_eval:
         cal_preds_eval = pipeline.calibration_pipeline.calibrate(p_eval)
