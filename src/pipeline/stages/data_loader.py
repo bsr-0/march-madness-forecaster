@@ -409,8 +409,15 @@ def validate_feed_freshness(
     source_name: str,
     payload: Dict,
 ) -> None:
-    """Raise if payload timestamp exceeds max feed age."""
+    """Raise if payload timestamp exceeds max feed age.
+
+    Freshness checks are skipped when ``scrape_live`` is disabled because
+    pre-committed JSON data files have fixed timestamps that grow stale
+    over time and cannot be refreshed automatically.
+    """
     if not config.enforce_feed_freshness:
+        return
+    if not getattr(config, "scrape_live", False):
         return
     if not isinstance(payload, dict):
         return
