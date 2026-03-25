@@ -988,7 +988,7 @@
   },
   "n_constants": 60,
   "timestamp": "2026-03-18T17:53:30",
-  "config_file_hash": "e45dac2906ea1d9e4027fbe6560da9f5d1ce5613f5b7bca1753705c734280833",
+  "config_file_hash": "286efb0aa3e46cd1faa3995e5693cd0488f1abec47f4381682211208c97281dc",
   "training_years": [
     2016,
     2017,
@@ -1010,14 +1010,14 @@
     "src/pipeline/sota.py": "0f146238823c422c7b158efb03912096e3d2d864d64052c5d4e29b4845761c5b",
     "src/pipeline/stages/baseline_training.py": "537d00109e2852b0f4f5245e68fad90de2877362ccdf4854a1427e6a8ed53d01",
     "src/pipeline/stages/calibration.py": "45a584ca8d4f1bccd57838686abdb5699d50c2a617bc0ab7429302489319c37b",
-    "src/pipeline/stages/data_loader.py": "6a28fc4d474391a17c9366ee52b7730a7def4c6c7c046c4e50b9305f5da6cde2",
+    "src/pipeline/stages/data_loader.py": "e4b437802ecd9c2a8d0519e457bbb1bfd2a349d9b2448a2e396c03e3b000e85c",
     "src/pipeline/stages/inference.py": "14d610aad913b9e7b8441670768eadd0bc8e2887bbfd15f1473a2b2c95c283e0",
     "src/pipeline/probability_pipeline.py": "b11825b1b5592bc6effd2eb053231c6846d0f0c5b106909c259e5268985c0e48",
     "src/governance/production_validator.py": "7168e638fd04d505f3f18fdde5b7fe7f1c97c6b28695afef33073e79008a4929",
     "src/governance/production_runner.py": "b2e47776786aa308b06584292c64ae3a515ab2c722581674e910d172f29501a2",
     "src/run_production_2026.py": "b88b55aa86c2dfa7377a3fb262827da9d7ec55a555cee906fc930bd1c40306e8"
   },
-  "source_tree_hash": "396dc6c5cfe04c9691e2a006ac6d195bd360b6000ed4952e97227b4a9a851e8b",
+  "source_tree_hash": "dca1d96653fbb5b55cd97aa04e8fc6d4534e693a22ff0a16eaa86c43849bc832",
   "data_file_hashes": {
     "data/raw/torvik_2026.json": "214cec3364a8ade6d63b185063ffd53d7f9b2cc0d79f03e2876b1d9583d0f817",
     "data/raw/teams_2026.json": "18713882c27372ad9ad9cf0c5034ea3d14d36f61d0ea33b0cac59ff7b619ee68",
