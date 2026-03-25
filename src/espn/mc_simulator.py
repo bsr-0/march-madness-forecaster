@@ -110,10 +110,16 @@ class ESPNMonteCarloSimulator:
         target_match = (all_outcomes == target_bracket_idx[None, :])  # (N, 63)
         target_scores = np.sum(self._points_by_game[None, :] * target_match, axis=1)  # (N,)
 
-        # Opponent scores: (N, n_opponents)
-        # opponent_brackets_idx is (n_opponents, 63), all_outcomes is (N, 63)
-        opp_match = (opponent_brackets_idx[None, :, :] == all_outcomes[:, None, :])  # (N, n_opp, 63)
-        opponent_scores = np.sum(self._points_by_game[None, None, :] * opp_match, axis=2)  # (N, n_opp)
+        # Opponent scores: compute per-opponent score vectors without
+        # materializing the full (N, n_opponents, 63) array which can OOM
+        # for large pools. Instead, compute (n_opponents, 63) match per sim
+        # in a chunked loop, accumulating (N, n_opponents) scores.
+        n_opp = opponent_brackets_idx.shape[0]
+        N = config.num_simulations
+        opponent_scores = np.zeros((N, n_opp), dtype=np.float64)
+        for oi in range(n_opp):
+            opp_match_i = (all_outcomes == opponent_brackets_idx[oi, :])  # (N, 63)
+            opponent_scores[:, oi] = np.sum(self._points_by_game[None, :] * opp_match_i, axis=1)
 
         # Vectorized ranking
         better = np.sum(opponent_scores > target_scores[:, None], axis=1)  # (N,)

@@ -573,9 +573,13 @@ class ESPNBracketOptimizer:
         1. Check path disruption cost against champion
         2. If cost <= threshold, apply the upset
         3. Stop after max_upsets
+
+        After injecting upsets, propagates changes through later rounds
+        to maintain bracket consistency.
         """
         result = list(bracket_winners)
         injected = 0
+        modified = False
 
         for game_idx, underdog, favorite, _prob, _ev in upset_candidates:
             if injected >= max_upsets:
@@ -590,6 +594,42 @@ class ESPNBracketOptimizer:
 
             result[game_idx] = underdog
             injected += 1
+            modified = True
+
+        # Propagate: rebuild later rounds to ensure consistency
+        if modified:
+            result = self._propagate_bracket_consistency(result)
+
+        return result
+
+    def _propagate_bracket_consistency(self, bracket_winners: List[str]) -> List[str]:
+        """Rebuild later rounds so every pick is a valid advancing team.
+
+        Walks the bracket round-by-round. For each game, if the current
+        pick is not one of the two teams that actually advanced from the
+        feeder games, replaces it with the favorite.
+        """
+        result = list(bracket_winners)
+        current_round = list(self.first_round_matchups)
+        cursor = 0
+
+        for round_idx, n_games in enumerate(ROUND_GAME_COUNTS):
+            next_round: List[str] = []
+            for game_idx in range(n_games):
+                t1 = current_round[2 * game_idx]
+                t2 = current_round[2 * game_idx + 1]
+                pick = result[cursor]
+
+                if pick not in (t1, t2):
+                    # Inconsistent — replace with favorite
+                    p1 = lookup_matchup_probability(self.matchup_probs, t1, t2)
+                    pick = t1 if p1 >= 0.5 else t2
+                    result[cursor] = pick
+
+                next_round.append(pick)
+                cursor += 1
+
+            current_round = next_round
 
         return result
 
