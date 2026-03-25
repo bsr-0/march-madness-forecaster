@@ -7,6 +7,7 @@ Scrapes public pick percentages for game-theory bracket optimization.
 import json
 import logging
 import os
+import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
@@ -229,14 +230,38 @@ class ESPNPicksScraper:
         return self._dict_to_consensus(data)
     
     def _dict_to_consensus(self, data: dict) -> ConsensusData:
-        """Convert dictionary to ConsensusData with schema validation."""
-        from .schemas import validate_consensus_data, SchemaValidationError
+        """Convert dictionary to ConsensusData with fail-closed schema validation.
+
+        If schema validation fails, returns an empty ConsensusData rather than
+        silently using unvalidated data.  An empty result triggers the downstream
+        fallback chain (cache → seed-based prior), which is strictly safer than
+        ingesting potentially corrupt pick percentages.
+        """
+        from .schemas import (
+            validate_consensus_data,
+            validate_bracket_structure,
+            BracketStructureError,
+            SchemaValidationError,
+        )
 
         try:
             validated = validate_consensus_data(data)
-        except SchemaValidationError:
-            logger.warning("ESPN picks schema validation failed; using raw data")
-            validated = data
+        except SchemaValidationError as exc:
+            logger.error(
+                "ESPN picks schema validation FAILED — rejecting payload: %s", exc,
+            )
+            return ConsensusData(sources=data.get("sources", []))
+
+        # Cross-team bracket-structure check (round sums, matchup pairs)
+        try:
+            warnings = validate_bracket_structure(validated.get("teams", {}))
+            for w in warnings:
+                logger.warning("Bracket structure: %s", w)
+        except BracketStructureError as exc:
+            logger.error(
+                "Bracket structure validation FAILED — rejecting payload: %s", exc,
+            )
+            return ConsensusData(sources=data.get("sources", []))
 
         teams = {}
         for team_id, team_data in validated.get("teams", {}).items():
@@ -259,17 +284,44 @@ class ESPNPicksScraper:
             timestamp=validated.get("timestamp"),
         )
     
-    def _load_from_cache(self, filename: str) -> Optional[dict]:
-        """Load from cache."""
+    # Maximum age (in seconds) before cached picks are considered stale.
+    # Default 7 days — pick distributions shift meaningfully over a week
+    # during March, but a week-old cache is better than no data at all.
+    CACHE_MAX_AGE_SECONDS = 7 * 24 * 3600
+
+    def _load_from_cache(
+        self, filename: str, max_age_seconds: Optional[int] = None,
+    ) -> Optional[dict]:
+        """Load from cache, rejecting stale files.
+
+        Args:
+            filename: Cache filename.
+            max_age_seconds: Maximum file age in seconds.  Defaults to
+                ``CACHE_MAX_AGE_SECONDS`` (7 days).
+
+        Returns:
+            Parsed JSON dict, or *None* if missing/stale.
+        """
         if not self.cache_dir:
             return None
-        
+
         cache_path = self.cache_dir / filename
-        if cache_path.exists():
-            with open(cache_path, 'r') as f:
-                return json.load(f)
-        
-        return None
+        if not cache_path.exists():
+            return None
+
+        if max_age_seconds is None:
+            max_age_seconds = self.CACHE_MAX_AGE_SECONDS
+
+        age = time.time() - cache_path.stat().st_mtime
+        if age > max_age_seconds:
+            logger.warning(
+                "Cache file %s is %.1f days old (max %.1f days). Ignoring stale cache.",
+                cache_path, age / 86400, max_age_seconds / 86400,
+            )
+            return None
+
+        with open(cache_path, "r") as f:
+            return json.load(f)
 
     def _save_to_cache(self, filename: str, data: dict) -> None:
         if not self.cache_dir:
@@ -327,11 +379,19 @@ class YahooPicksScraper:
         )
         return ConsensusData(sources=["yahoo"])
 
+    CACHE_MAX_AGE_SECONDS = 7 * 24 * 3600
+
     def _load_cache(self, filename: str) -> Optional[dict]:
         if not self.cache_dir:
             return None
         p = self.cache_dir / filename
         if not p.exists():
+            return None
+        age = time.time() - p.stat().st_mtime
+        if age > self.CACHE_MAX_AGE_SECONDS:
+            logger.warning(
+                "Cache file %s is %.1f days old. Ignoring stale cache.", p, age / 86400,
+            )
             return None
         with open(p, "r") as f:
             return json.load(f)
@@ -392,11 +452,19 @@ class CBSPicksScraper:
         )
         return ConsensusData(sources=["cbs"])
 
+    CACHE_MAX_AGE_SECONDS = 7 * 24 * 3600
+
     def _load_cache(self, filename: str) -> Optional[dict]:
         if not self.cache_dir:
             return None
         p = self.cache_dir / filename
         if not p.exists():
+            return None
+        age = time.time() - p.stat().st_mtime
+        if age > self.CACHE_MAX_AGE_SECONDS:
+            logger.warning(
+                "Cache file %s is %.1f days old. Ignoring stale cache.", p, age / 86400,
+            )
             return None
         with open(p, "r") as f:
             return json.load(f)
@@ -409,6 +477,96 @@ class CBSPicksScraper:
             json.dump(data, f, indent=2)
 
 
+def validate_consensus_plausibility(
+    consensus: ConsensusData,
+    min_teams: int = 32,
+    max_single_champ_pct: float = 40.0,
+    min_champ_sum: float = 90.0,
+    max_champ_sum: float = 110.0,
+) -> List[str]:
+    """Validate that an aggregated consensus has a plausible distribution.
+
+    Returns a list of warning strings (empty if everything looks OK).
+    These are advisory — the caller decides whether to raise or log.
+
+    Threshold justification:
+
+        min_teams=32:
+            A bracket has 64 teams.  Requiring ≥32 (half the field)
+            ensures the consensus is representative enough for
+            leverage analysis.  A consensus with only 16 teams
+            is biased toward the teams that happened to be present,
+            making leverage calculations unreliable.
+
+        max_single_champ_pct=40%:
+            The highest single-team championship pick share in ESPN
+            BTC history (2015-2024) was Kentucky 2015 at ~39%.
+            A threshold of 40% catches corruption while accommodating
+            the most dominant historical favorite.
+
+        min/max_champ_sum (90-110%):
+            Championship picks must sum to exactly 100% by definition
+            (each bracket picks one champion).  Scraping rounding
+            errors (sources that round to integers) typically produce
+            98-102%.  The ±10% band catches systematic corruption
+            (deflated/inflated distributions) while tolerating normal
+            rounding imprecision.  The previous 80-120% band was too
+            wide — a 20pp deflation represents severe data quality
+            issues that should be flagged.
+
+    Checks:
+        1. Enough teams present (at least *min_teams*).
+        2. No single team has > *max_single_champ_pct* championship pick %.
+        3. Championship picks across all teams sum to a reasonable range
+           (*min_champ_sum* – *max_champ_sum*).
+        4. Every team with seed ≤ 4 should have champion_pct > 0.
+    """
+    warnings: List[str] = []
+
+    if not consensus.teams:
+        warnings.append("Empty consensus — no teams present.")
+        return warnings
+
+    n_teams = len(consensus.teams)
+    if n_teams < min_teams:
+        warnings.append(
+            f"Only {n_teams} teams in consensus (expected ≥{min_teams})."
+        )
+
+    champ_pcts = {tid: t.champion_pct for tid, t in consensus.teams.items()}
+    champ_sum = sum(champ_pcts.values())
+
+    # Single-team concentration check.
+    max_team = max(champ_pcts, key=champ_pcts.get)
+    if champ_pcts[max_team] > max_single_champ_pct:
+        warnings.append(
+            f"{max_team} has {champ_pcts[max_team]:.1f}% championship pick share "
+            f"(threshold: {max_single_champ_pct}%). Possible data corruption."
+        )
+
+    # Sum plausibility.
+    if champ_sum < min_champ_sum:
+        warnings.append(
+            f"Championship picks sum to {champ_sum:.1f}% "
+            f"(expected ≥{min_champ_sum}%). Distribution looks deflated."
+        )
+    elif champ_sum > max_champ_sum:
+        warnings.append(
+            f"Championship picks sum to {champ_sum:.1f}% "
+            f"(expected ≤{max_champ_sum}%). Distribution looks inflated."
+        )
+
+    # Top-seed sanity: seeds 1-4 should have nonzero championship picks.
+    for tid, team in consensus.teams.items():
+        if team.seed <= 4 and team.champion_pct <= 0.0:
+            warnings.append(
+                f"{tid} (seed {team.seed}) has 0% championship picks — "
+                "likely missing data."
+            )
+
+    return warnings
+
+
 def aggregate_consensus(
     espn: ConsensusData,
     yahoo: ConsensusData,
@@ -417,27 +575,42 @@ def aggregate_consensus(
 ) -> ConsensusData:
     """
     Aggregate pick percentages from multiple sources.
-    
+
+    Team IDs are normalized before aggregation so that different
+    representations of the same team (e.g., ``"unc"`` vs
+    ``"north_carolina"``) are merged correctly.
+
     Args:
         espn: ESPN consensus data
         yahoo: Yahoo consensus data
         cbs: CBS consensus data
         weights: Source weights (default: equal)
-        
+
     Returns:
         Aggregated ConsensusData
     """
+    from src.data.normalize import normalize_team_id
+
     if weights is None:
         weights = {"espn": 0.5, "yahoo": 0.3, "cbs": 0.2}
-    
-    # Collect all team IDs
-    all_teams = set()
-    for source in [espn, yahoo, cbs]:
-        all_teams.update(source.teams.keys())
-    
+
+    # Build normalized-ID → {source_name: (weight, PublicPicks)} mapping.
+    # This merges teams that have different raw IDs across sources.
+    sources_by_name = [("espn", espn), ("yahoo", yahoo), ("cbs", cbs)]
+    norm_map: Dict[str, Dict[str, Tuple[float, "PublicPicks"]]] = {}
+    for source_name, source in sources_by_name:
+        w = weights.get(source_name, 0.0)
+        for raw_id, team in source.teams.items():
+            nid = normalize_team_id(raw_id)
+            if not nid:
+                nid = raw_id
+            if nid not in norm_map:
+                norm_map[nid] = {}
+            norm_map[nid][source_name] = (w, team)
+
     aggregated = {}
-    
-    for team_id in all_teams:
+
+    for norm_id, source_entries in norm_map.items():
         total_weight = 0.0
         weighted_picks = {
             "round_of_64_pct": 0.0,
@@ -447,41 +620,67 @@ def aggregate_consensus(
             "final_four_pct": 0.0,
             "champion_pct": 0.0,
         }
-        
+
         # Get team info from first available source
         team_info = None
-        
-        for source, weight in [(espn, weights["espn"]), 
-                                (yahoo, weights["yahoo"]), 
-                                (cbs, weights["cbs"])]:
-            if team_id in source.teams:
-                team = source.teams[team_id]
-                
-                if team_info is None:
-                    team_info = team
-                
-                total_weight += weight
-                
-                for key in weighted_picks:
-                    weighted_picks[key] += weight * getattr(team, key)
-        
+
+        for _src_name, (weight, team) in source_entries.items():
+            if team_info is None:
+                team_info = team
+
+            total_weight += weight
+
+            for key in weighted_picks:
+                weighted_picks[key] += weight * getattr(team, key)
+
         if total_weight > 0 and team_info:
-            # Normalize by total weight
+            # Normalize by total weight of sources that had this team.
             for key in weighted_picks:
                 weighted_picks[key] /= total_weight
-            
-            aggregated[team_id] = PublicPicks(
-                team_id=team_id,
+
+            aggregated[norm_id] = PublicPicks(
+                team_id=norm_id,
                 team_name=team_info.team_name,
                 seed=team_info.seed,
                 region=team_info.region,
                 **weighted_picks
             )
     
-    return ConsensusData(
+    # Coverage-bias detection: flag teams present in only one source.
+    # A team that only appeared in one source gets 100% of that source's
+    # weight, unmoderated by other sources.  This introduces systematic
+    # bias — the single source's noise is fully reflected in the consensus.
+    n_active = sum(1 for s in [espn, yahoo, cbs] if s.teams)
+    if n_active >= 2:
+        single_source_teams = [
+            norm_id for norm_id, entries in norm_map.items()
+            if len(entries) == 1
+        ]
+        if single_source_teams:
+            logger.warning(
+                "Coverage bias: %d teams present in only 1 of %d sources: %s. "
+                "Their consensus values are unmoderated.",
+                len(single_source_teams), n_active,
+                ", ".join(sorted(single_source_teams)[:10])
+                + (f" (+{len(single_source_teams) - 10} more)"
+                   if len(single_source_teams) > 10 else ""),
+            )
+
+    active_sources = [
+        name for name, src in [("espn", espn), ("yahoo", yahoo), ("cbs", cbs)]
+        if src.teams and weights.get(name, 0.0) > 0
+    ]
+    consensus = ConsensusData(
         teams=aggregated,
-        sources=["espn", "yahoo", "cbs"],
+        sources=active_sources or ["espn", "yahoo", "cbs"],
     )
+
+    # Post-aggregation plausibility check.
+    warnings = validate_consensus_plausibility(consensus)
+    for w in warnings:
+        logger.warning("Plausibility: %s", w)
+
+    return consensus
 
 
 # ---------------------------------------------------------------------------
@@ -616,9 +815,11 @@ class ScraperOrchestrator:
         # Check minimum source requirement
         successful_sources = list(results.keys())
         if len(successful_sources) < min_sources:
-            logger.error(
-                "Only %d/%d sources succeeded: %s. Minimum required: %d.",
-                len(successful_sources), len(scrapers), successful_sources, min_sources,
+            from src.exceptions import DataRequirementError
+
+            raise DataRequirementError(
+                f"Only {len(successful_sources)}/{len(scrapers)} sources succeeded "
+                f"({successful_sources}). Minimum required: {min_sources}."
             )
 
         # Build aggregated consensus from successful sources
@@ -634,6 +835,25 @@ class ScraperOrchestrator:
         else:
             active_weights = {"espn": 1.0}  # Fallback
 
+        # Cross-source statistical agreement testing (Phase 2).
+        # When ≥2 sources returned data, verify they agree before averaging.
+        agreement_report = None
+        if len(results) >= 2:
+            from .source_agreement import assess_source_agreement
+
+            agreement_report = assess_source_agreement(
+                results,
+                configured_weights=active_weights,
+            )
+            if agreement_report.flagged_sources:
+                logger.warning(
+                    "Source agreement check flagged %s: %s",
+                    agreement_report.flagged_sources,
+                    "; ".join(agreement_report.details),
+                )
+            # Use agreement-adjusted weights for aggregation
+            active_weights = agreement_report.recommended_weights
+
         consensus = aggregate_consensus(
             espn_data, yahoo_data, cbs_data, weights=active_weights
         )
@@ -642,6 +862,7 @@ class ScraperOrchestrator:
             consensus=consensus,
             successful_sources=successful_sources,
             source_statuses=dict(self.source_statuses),
+            source_agreement=agreement_report,
         )
 
     def _fetch_with_retry(
@@ -657,15 +878,25 @@ class ScraperOrchestrator:
                 elapsed_ms = (time.monotonic() - start) * 1000
 
                 if result and result.teams:
-                    # Success
-                    status.health = SourceHealth.HEALTHY
+                    # Validate plausibility before accepting
+                    plaus_warnings = validate_consensus_plausibility(result)
+                    if plaus_warnings:
+                        logger.warning(
+                            "%s: plausibility issues on attempt %d/%d: %s",
+                            source_name, attempt + 1, self.MAX_RETRIES,
+                            "; ".join(plaus_warnings),
+                        )
+                        status.health = SourceHealth.DEGRADED
+                    else:
+                        status.health = SourceHealth.HEALTHY
                     status.last_success = time.time()
                     status.consecutive_failures = 0
                     status.latency_ms = elapsed_ms
                     status.last_error = None
                     logger.info(
-                        "%s: fetched %d teams in %.0fms (attempt %d)",
+                        "%s: fetched %d teams in %.0fms (attempt %d)%s",
                         source_name, len(result.teams), elapsed_ms, attempt + 1,
+                        " [DEGRADED]" if plaus_warnings else "",
                     )
                     return result
                 else:
@@ -701,6 +932,7 @@ class OrchestratorResult:
     consensus: ConsensusData
     successful_sources: List[str]
     source_statuses: Dict[str, SourceStatus]
+    source_agreement: Optional["SourceAgreementReport"] = None
 
     @property
     def is_degraded(self) -> bool:

@@ -274,7 +274,7 @@ class BracketSearchOptimizer(ABC):
 
             # Leverage: model_prob * points / max(public ownership, epsilon)
             pub_pct = self._get_pick_rate(pick.winner_id, round_name)
-            leverage_score += pick.win_probability * points / max(pub_pct, 0.001)
+            leverage_score += pick.win_probability * points / max(pub_pct, 0.01)
 
             # Robustness: sum of log-probabilities (path survival)
             robustness_score += math.log(max(pick.win_probability, 1e-10))
