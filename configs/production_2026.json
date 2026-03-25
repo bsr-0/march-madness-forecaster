@@ -69,5 +69,6 @@
   "public_picks_json": "data/raw/public_picks_2026.json",
   "scoring_rules_json": "data/raw/scoring_rules_2026.json",
   "mc_calibration_json": "artifacts/mc_calibration_2026.json",
-  "freeze_file": "artifacts/pipeline_freeze_2026.json"
+  "freeze_file": "artifacts/pipeline_freeze_2026.json",
+  "max_feed_age_hours": 336
 }
