@@ -99,36 +99,31 @@ class ESPNMonteCarloSimulator:
         target_bracket_idx = np.array([self._team_index(t) for t in bracket_winners], dtype=np.int32)
         opponent_brackets_idx = self._generate_opponent_brackets(config.n_opponents, rng)
 
-        rank_percentiles = np.zeros(config.num_simulations, dtype=np.float64)
-        is_top10 = np.zeros(config.num_simulations, dtype=np.float64)
-        is_money = np.zeros(config.num_simulations, dtype=np.float64)
-        target_scores = np.zeros(config.num_simulations, dtype=np.float64)
-        opponent_mean_scores = np.zeros(config.num_simulations, dtype=np.float64)
-
         money_rank_cutoff = int(math.ceil((config.n_opponents + 1) * config.top_money_pct))
         top10_cutoff = int(math.ceil((config.n_opponents + 1) * 0.10))
+        pool_size = config.n_opponents + 1
 
-        for sim_idx in range(config.num_simulations):
-            outcomes_idx = self._simulate_one_tournament(rng, noise_std=config.noise_std, config=config)
+        # Batch-simulate all tournaments at once: (num_simulations, 63)
+        all_outcomes = self._simulate_tournaments_batch(rng, config)
 
-            target_score = float(np.sum(self._points_by_game[target_bracket_idx == outcomes_idx]))
-            opponent_scores = np.sum(
-                self._points_by_game[None, :] * (opponent_brackets_idx == outcomes_idx[None, :]),
-                axis=1,
-            )
+        # Vectorized scoring: (num_simulations, 63) boolean match matrices
+        target_match = (all_outcomes == target_bracket_idx[None, :])  # (N, 63)
+        target_scores = np.sum(self._points_by_game[None, :] * target_match, axis=1)  # (N,)
 
-            better = int(np.sum(opponent_scores > target_score))
-            ties = int(np.sum(opponent_scores == target_score))
-            rank = 1.0 + better + 0.5 * ties
+        # Opponent scores: (N, n_opponents)
+        # opponent_brackets_idx is (n_opponents, 63), all_outcomes is (N, 63)
+        opp_match = (opponent_brackets_idx[None, :, :] == all_outcomes[:, None, :])  # (N, n_opp, 63)
+        opponent_scores = np.sum(self._points_by_game[None, None, :] * opp_match, axis=2)  # (N, n_opp)
 
-            pool_size = config.n_opponents + 1
-            rank_percentile = 100.0 * (1.0 - (rank - 1.0) / max(pool_size - 1, 1))
+        # Vectorized ranking
+        better = np.sum(opponent_scores > target_scores[:, None], axis=1)  # (N,)
+        ties = np.sum(opponent_scores == target_scores[:, None], axis=1)  # (N,)
+        ranks = 1.0 + better + 0.5 * ties
 
-            rank_percentiles[sim_idx] = rank_percentile
-            is_top10[sim_idx] = 1.0 if rank <= top10_cutoff else 0.0
-            is_money[sim_idx] = 1.0 if rank <= money_rank_cutoff else 0.0
-            target_scores[sim_idx] = target_score
-            opponent_mean_scores[sim_idx] = float(np.mean(opponent_scores))
+        rank_percentiles = 100.0 * (1.0 - (ranks - 1.0) / max(pool_size - 1, 1))
+        is_top10 = (ranks <= top10_cutoff).astype(np.float64)
+        is_money = (ranks <= money_rank_cutoff).astype(np.float64)
+        opponent_mean_scores = np.mean(opponent_scores, axis=1)
 
         return ESPNMCSimResult(
             num_simulations=config.num_simulations,
@@ -175,6 +170,74 @@ class ESPNMonteCarloSimulator:
 
         self._cached_opponents = (cache_key[0], cache_key[1], brackets)
         return brackets
+
+    def _simulate_tournaments_batch(
+        self, rng: np.random.Generator, config: ESPNMCSimConfig,
+    ) -> np.ndarray:
+        """Simulate N tournaments in a vectorized batch.
+
+        Returns array of shape (num_simulations, 63) with team indices.
+        Processes each game across all simulations simultaneously using numpy.
+        """
+        N = config.num_simulations
+        all_winners = np.zeros((N, 63), dtype=np.int32)
+
+        # Track team indices per slot across sims: shape (num_slots, N)
+        # For round 1, each slot has the same team for all sims
+        team_idx_lookup = self._team_to_idx
+        first_round_indices = np.array([team_idx_lookup[t] for t in self.first_round_matchups], dtype=np.int32)
+        current_round_idx = np.tile(first_round_indices[:, None], (1, N))  # (64, N)
+
+        # Build a team_id array for index->id reverse lookup (for matchup probability lookups)
+        idx_to_team = self._idx_to_team
+
+        winner_cursor = 0
+
+        for round_idx, n_games in enumerate(ROUND_GAME_COUNTS):
+            round_name = ROUND_NAMES[round_idx]
+            round_noise = config.get_round_noise(round_name)
+            next_round_idx = np.zeros((n_games, N), dtype=np.int32)
+
+            for game_idx in range(n_games):
+                t1_idx_per_sim = current_round_idx[2 * game_idx]   # (N,)
+                t2_idx_per_sim = current_round_idx[2 * game_idx + 1]  # (N,)
+
+                # Find unique matchup pairs (by team index pairs)
+                # Encode pair as single int for fast grouping
+                max_idx = len(idx_to_team)
+                pair_keys = t1_idx_per_sim.astype(np.int64) * max_idx + t2_idx_per_sim.astype(np.int64)
+                unique_keys = np.unique(pair_keys)
+
+                # Pre-generate all random values for this game
+                noise_vals = rng.normal(0.0, round_noise, size=N)
+                rand_vals = rng.random(size=N)
+
+                winner_indices = np.empty(N, dtype=np.int32)
+
+                for uk in unique_keys:
+                    t1i = int(uk // max_idx)
+                    t2i = int(uk % max_idx)
+                    mask = pair_keys == uk
+
+                    t1 = idx_to_team[t1i]
+                    t2 = idx_to_team[t2i]
+                    base_prob = lookup_matchup_probability(self.matchup_probs, t1, t2)
+                    safe = min(0.9999, max(0.0001, base_prob))
+                    logit = math.log(safe) - math.log(1.0 - safe)
+
+                    noisy_logits = np.clip(logit + noise_vals[mask], -15.0, 15.0)
+                    noisy_probs = 1.0 / (1.0 + np.exp(-noisy_logits))
+                    picks_t1 = rand_vals[mask] < noisy_probs
+
+                    winner_indices[mask] = np.where(picks_t1, t1i, t2i)
+
+                all_winners[:, winner_cursor] = winner_indices
+                winner_cursor += 1
+                next_round_idx[game_idx] = winner_indices
+
+            current_round_idx = next_round_idx
+
+        return all_winners
 
     def _simulate_one_tournament(
         self, rng: np.random.Generator, noise_std: float, config: Optional[ESPNMCSimConfig] = None,
