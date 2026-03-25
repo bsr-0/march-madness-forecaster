@@ -624,7 +624,7 @@ class ChampionBoostStrategy:
         - 4-seeds: ~5%
         - Other: ~10%
         """
-        # Historical championship win rates by seed
+        # Historical championship win rates by seed (1985-2024)
         seed_champ_rates = {
             1: 0.135,   # Per 1-seed (4 per year, ~54% total)
             2: 0.050,   # Per 2-seed (~20% total)
@@ -634,11 +634,19 @@ class ChampionBoostStrategy:
             6: 0.004,
             7: 0.003,
             8: 0.002,
+            9: 0.001,
+            10: 0.0005,
+            11: 0.0005,  # 11-seeds: VCU 2011, Loyola-Chicago 2018 F4
+            12: 0.0003,
+            13: 0.0001,
+            14: 0.00005,
+            15: 0.00002,
+            16: 0.00001,  # FDU 2023 R32 appearance; UMBC 2018 R64 win
         }
 
         probs = {}
         for team_id, seed in team_seeds.items():
-            probs[team_id] = seed_champ_rates.get(seed, 0.001)
+            probs[team_id] = seed_champ_rates.get(seed, seed_champ_rates[8])
 
         # Normalize to sum to 1.0
         total = sum(probs.values())
@@ -731,8 +739,10 @@ class ChampionBoostStrategy:
         crowd_rates = {
             1: 0.15, 2: 0.06, 3: 0.03, 4: 0.015,
             5: 0.005, 6: 0.004, 7: 0.003, 8: 0.002,
+            9: 0.001, 10: 0.0005, 11: 0.0005, 12: 0.0003,
+            13: 0.0001, 14: 0.00005, 15: 0.00002, 16: 0.00001,
         }
-        return crowd_rates.get(seed, 0.001)
+        return crowd_rates.get(seed, crowd_rates[8])
 
 
 class KaggleDualSubmissionGenerator:

@@ -1538,6 +1538,12 @@ class HoldoutEvaluator:
         from sklearn.preprocessing import StandardScaler
         from sklearn.linear_model import LogisticRegression
 
+        # Replace NaN with 0 — matchup vectors are differentials, so 0
+        # means "no advantage" which is the correct neutral value when
+        # a metric is unavailable.  This avoids injecting spurious
+        # signal (median imputation) and avoids cross-fold leakage.
+        train_X = np.nan_to_num(train_X, nan=0.0)
+
         scaler = StandardScaler()
         train_X_scaled = scaler.fit_transform(train_X)
 
@@ -1679,7 +1685,8 @@ class HoldoutEvaluator:
             elif len(vec) > feature_dim:
                 vec = vec[:feature_dim]
 
-            vec_scaled = scaler.transform(vec.reshape(1, -1))
+            vec_clean = np.nan_to_num(vec.reshape(1, -1), nan=0.0)
+            vec_scaled = scaler.transform(vec_clean)
 
             lgb_p = float(lgb_model.predict(vec.reshape(1, -1))[0]) if lgb_trained else 0.5
             xgb_p = float(xgb_model.predict(vec.reshape(1, -1))[0]) if xgb_trained else 0.5

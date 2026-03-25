@@ -106,6 +106,13 @@ class AggregatedResults:
     ci_lower: Dict[str, Dict[str, float]] = field(default_factory=dict)
     ci_upper: Dict[str, Dict[str, float]] = field(default_factory=dict)
 
+    # Maximum leverage ratio — caps prevent data-artifact leverage.
+    _MAX_LEVERAGE = 20.0
+    # Minimum public odds floor — used only when a team has no public
+    # pick data at all.  1% is a conservative floor (a 16-seed in
+    # ESPN BTC averages ~0.5% of brackets; 1% is generous).
+    _MIN_PUBLIC_ODDS = 0.01
+
     def get_leverage_picks(
         self,
         public_odds: Dict[str, float],
@@ -124,8 +131,10 @@ class AggregatedResults:
         leverage_picks = []
 
         for team_id, model_odds in self.championship_odds.items():
-            public = public_odds.get(team_id, 0.001)
-            leverage = model_odds / public
+            public = public_odds.get(team_id)
+            if public is None or public <= 0:
+                public = self._MIN_PUBLIC_ODDS
+            leverage = min(model_odds / public, self._MAX_LEVERAGE)
 
             if leverage >= min_leverage:
                 leverage_picks.append((team_id, model_odds, public, leverage))

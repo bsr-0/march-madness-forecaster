@@ -81,7 +81,13 @@ class PublicPicksSchema(BaseModel):
 
     @model_validator(mode="after")
     def round_percentages_are_monotonic(self) -> "PublicPicksSchema":
-        """Each subsequent round should have equal or lower pick %."""
+        """Each subsequent round should have equal or lower pick %.
+
+        Hard-fails when a later round exceeds the prior by >2pp (clearly
+        invalid data, not a rounding artifact).  Warns for 0.5–2pp
+        violations which can arise from legitimate rounding.
+        """
+        round_labels = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
         pcts = [
             self.round_of_64_pct,
             self.round_of_32_pct,
@@ -91,10 +97,17 @@ class PublicPicksSchema(BaseModel):
             self.champion_pct,
         ]
         for i in range(len(pcts) - 1):
-            if pcts[i + 1] > pcts[i] + 0.5:  # small tolerance
+            if pcts[i + 1] > pcts[i] + 2.0:
+                raise ValueError(
+                    f"Non-monotonic pick pcts for {self.team_id}: "
+                    f"{round_labels[i + 1]}={pcts[i + 1]:.1f} > "
+                    f"{round_labels[i]}={pcts[i]:.1f} (exceeds 2pp tolerance)"
+                )
+            elif pcts[i + 1] > pcts[i] + 0.5:
                 logger.warning(
-                    "Non-monotonic pick pcts for %s: R%d=%.1f > R%d=%.1f",
-                    self.team_id, i + 2, pcts[i + 1], i + 1, pcts[i],
+                    "Non-monotonic pick pcts for %s: %s=%.1f > %s=%.1f",
+                    self.team_id, round_labels[i + 1], pcts[i + 1],
+                    round_labels[i], pcts[i],
                 )
         return self
 
@@ -105,6 +118,163 @@ class ConsensusDataSchema(BaseModel):
     teams: Dict[str, PublicPicksSchema] = Field(default_factory=dict)
     sources: List[str] = Field(default_factory=list)
     timestamp: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Bracket Structure Validation (cross-team constraints)
+# ---------------------------------------------------------------------------
+
+
+class BracketStructureError(Exception):
+    """Raised when public picks violate hard bracket-math constraints.
+
+    Individual team validation (monotonicity, range) is handled by
+    ``PublicPicksSchema``.  This error covers *cross-team* invariants
+    that only make sense when looking at the full 64-team bracket:
+    championship picks summing to ~100%, first-round matchup
+    complementarity, etc.
+    """
+
+
+def validate_bracket_structure(
+    teams: Dict[str, Any],
+    bracket_matchups: Optional[Dict[str, str]] = None,
+    hard_tolerance_pct: float = 1.0,
+    soft_tolerance_pct: float = 0.50,
+) -> List[str]:
+    """Validate cross-team bracket-structural constraints on public picks.
+
+    These are constraints that ``PublicPicksSchema`` *cannot* enforce
+    because they span multiple teams:
+
+    * **Round-sum constraints** — if 64 teams enter R64 and 32 advance,
+      the sum of R64 pick percentages should be ~3200% (each advancing
+      slot = 100%, 32 slots).  Similarly R32→S16 yields sum ~1600%,
+      and so on through CHAMP ~100%.
+    * **First-round complementarity** — two teams that meet in R64
+      should have R64 picks summing to ~100% (one of them advances).
+
+    Tolerances are *relative* to the expected sum (not fixed pp) because
+    expected sums range from 100% (CHAMP) to 3200% (R64).
+
+    Args:
+        teams: Validated team dict from ``validate_consensus_data``,
+            keyed by team_id.  Each value has ``round_of_64_pct`` … ``champion_pct``.
+        bracket_matchups: Optional mapping of team_id → opponent_team_id
+            for first-round games.  When provided, enables the
+            complementarity check.
+        hard_tolerance_pct: Fraction of expected sum that triggers a
+            hard failure (default 1.0 = 100%, i.e. sum must be within
+            [0, 2×expected]).
+        soft_tolerance_pct: Fraction of expected sum that triggers a
+            soft warning (default 0.50 = 50%).
+
+    Returns:
+        List of human-readable warning strings for soft violations.
+
+    Raises:
+        BracketStructureError: When a hard constraint is violated
+            (sum is so far off that the data is structurally broken).
+    """
+    warnings: List[str] = []
+    if not teams:
+        return warnings
+
+    n_teams = len(teams)
+
+    # Round-sum constraints only make statistical sense with a
+    # representative portion of the bracket.  With < 32 teams the
+    # per-seed distribution is too sparse for the sums to be meaningful.
+    if n_teams < 32:
+        return warnings
+
+    # -- Collect per-round sums -------------------------------------------
+    round_attrs = [
+        ("R64", "round_of_64_pct"),
+        ("R32", "round_of_32_pct"),
+        ("S16", "sweet_16_pct"),
+        ("E8", "elite_8_pct"),
+        ("F4", "final_four_pct"),
+        ("CHAMP", "champion_pct"),
+    ]
+
+    # Expected sums for a 64-team bracket (percentages, not fractions):
+    #   R64: 32 teams advance  → sum ≈ 3200%
+    #   R32: 16 advance        → sum ≈ 1600%
+    #   S16: 8 advance         → sum ≈ 800%
+    #   E8:  4 advance         → sum ≈ 400%
+    #   F4:  2 advance         → sum ≈ 200%   (reach championship game)
+    #   CHAMP: 1 wins          → sum ≈ 100%
+    expected_sums = {
+        "R64": 3200.0,
+        "R32": 1600.0,
+        "S16": 800.0,
+        "E8": 400.0,
+        "F4": 200.0,
+        "CHAMP": 100.0,
+    }
+
+    # Scale expectations if we have fewer teams (e.g. partial data)
+    scale = n_teams / 64.0
+
+    for round_name, attr in round_attrs:
+        total = 0.0
+        for team_data in teams.values():
+            if isinstance(team_data, dict):
+                total += float(team_data.get(attr, 0.0))
+            else:
+                total += float(getattr(team_data, attr, 0.0))
+
+        expected = expected_sums[round_name] * scale
+        if expected <= 0:
+            continue
+
+        deviation = abs(total - expected)
+        hard_threshold = expected * hard_tolerance_pct
+        soft_threshold = expected * soft_tolerance_pct
+
+        if deviation >= hard_threshold:
+            raise BracketStructureError(
+                f"{round_name} picks sum to {total:.1f}% "
+                f"(expected ~{expected:.0f}% for {n_teams} teams, "
+                f"deviation {deviation:.1f}pp exceeds "
+                f"{hard_tolerance_pct:.0%} tolerance)"
+            )
+        elif deviation > soft_threshold:
+            warnings.append(
+                f"{round_name} picks sum to {total:.1f}% "
+                f"(expected ~{expected:.0f}%, deviation {deviation:.1f}pp)"
+            )
+
+    # -- First-round matchup complementarity ------------------------------
+    if bracket_matchups:
+        checked = set()
+        for team_a, team_b in bracket_matchups.items():
+            pair = tuple(sorted([team_a, team_b]))
+            if pair in checked:
+                continue
+            checked.add(pair)
+
+            if team_a not in teams or team_b not in teams:
+                continue
+
+            data_a = teams[team_a]
+            data_b = teams[team_b]
+            if isinstance(data_a, dict):
+                pct_a = float(data_a.get("round_of_64_pct", 0.0))
+                pct_b = float(data_b.get("round_of_64_pct", 0.0))
+            else:
+                pct_a = float(getattr(data_a, "round_of_64_pct", 0.0))
+                pct_b = float(getattr(data_b, "round_of_64_pct", 0.0))
+
+            pair_sum = pct_a + pct_b
+            if abs(pair_sum - 100.0) > 10.0:
+                warnings.append(
+                    f"R64 matchup {team_a} vs {team_b}: "
+                    f"pick sum {pair_sum:.1f}% (expected ~100%)"
+                )
+
+    return warnings
 
 
 # ---------------------------------------------------------------------------
