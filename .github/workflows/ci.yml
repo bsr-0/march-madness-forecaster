@@ -95,6 +95,7 @@ jobs:
         uses: ./.github/actions/setup-python-env
         with:
           extra-packages: pip-audit
+          skip-editable-install: "true"
 
       - name: Run pip audit
         run: pip-audit --strict --skip-editable
