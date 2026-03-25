@@ -952,25 +952,50 @@ class TestProspectiveEvaluation:
 
     def test_prospective_passes_matching_config(self):
         """Prospective eval proceeds when config matches freeze."""
+        from unittest.mock import patch, MagicMock
+
         config = SOTAPipelineConfig()
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
             tmppath = f.name
         try:
             freeze_pipeline(config, tmppath)
-            # Will fail with missing data, but should get past the freeze check
-            if not os.path.exists("data/raw/historical"):
-                pytest.skip("Historical data not available")
-            try:
-                run_prospective_evaluation(
-                    freeze_path=tmppath,
-                    evaluation_year=2024,
-                    historical_dir="data/raw/historical",
-                    config=config,
+            # Mock HoldoutEvaluator to avoid running the full ML pipeline;
+            # we only need to verify that freeze verification passes.
+            mock_report = HoldoutReport(holdout_years=[2024])
+            mock_report.per_year[2024] = YearMetrics(
+                year=2024, n_games=63, brier_score=0.190,
+                log_loss=0.55, accuracy=0.70, ece=0.04,
+                seed_baseline_brier=0.200,
+            )
+            with patch(
+                "src.ml.evaluation.rdof_audit.HoldoutEvaluator"
+            ) as MockEval:
+                mock_instance = MagicMock()
+                mock_instance.run_holdout_protocol.return_value = mock_report
+                MockEval.return_value = mock_instance
+
+                with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as out_f:
+                    out_path = out_f.name
+                try:
+                    run_prospective_evaluation(
+                        freeze_path=tmppath,
+                        evaluation_year=2024,
+                        historical_dir="data/raw/historical",
+                        output_path=out_path,
+                        config=config,
+                    )
+                except ValueError as e:
+                    if "does not match" in str(e):
+                        pytest.fail(f"Should have passed freeze verification: {e}")
+                finally:
+                    if os.path.exists(out_path):
+                        os.unlink(out_path)
+
+                # Verify the evaluator was called with correct args
+                MockEval.assert_called_once_with("data/raw/historical")
+                mock_instance.run_holdout_protocol.assert_called_once_with(
+                    [2024], config
                 )
-            except ValueError as e:
-                # Data missing is OK — we're testing the freeze verification path
-                if "does not match" in str(e):
-                    pytest.fail(f"Should have passed freeze verification: {e}")
         finally:
             os.unlink(tmppath)
 
