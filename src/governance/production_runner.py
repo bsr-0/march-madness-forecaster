@@ -420,6 +420,13 @@ def run_production_2026(
     _assert_year_partition(raw_config)
     config_base_dir = config_file.parent.parent
     resolved_paths = _require_explicit_paths(raw_config, config_base_dir)
+
+    # Keep an unmodified copy of the raw JSON for freeze artifact validation,
+    # which needs all original keys (including documentation-only keys that
+    # may be referenced in the freeze artifact's data_file_hashes).
+    raw_config_for_freeze = dict(raw_config)
+    raw_config_for_freeze.update(resolved_paths)
+
     raw_config.update(resolved_paths)
 
     # Filter out unknown keys that aren't valid SOTAPipelineConfig fields.
@@ -446,7 +453,7 @@ def run_production_2026(
     )
     if not freeze_art.is_absolute():
         freeze_art = repo_root / freeze_art
-    _validate_freeze_artifact(freeze_art, config_file, raw_config, repo_root)
+    _validate_freeze_artifact(freeze_art, config_file, raw_config_for_freeze, repo_root)
 
     # Runtime branch assertion: production path must never call experimental prediction.
     # Re-verify config was not mutated between validation and pipeline creation

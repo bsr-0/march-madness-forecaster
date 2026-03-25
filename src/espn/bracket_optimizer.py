@@ -464,8 +464,8 @@ class ESPNBracketOptimizer:
                 # Champion always wins their path games
                 if game_idx == path_games.get(round_idx, -1) and champion_id in (t1, t2):
                     winner = champion_id
-                # F4 teams win their E8 games (round_idx=3 is E8)
-                elif round_idx <= 3:
+                # F4 teams win through E8 and into F4 (rounds 0-4)
+                elif round_idx <= 4:
                     region = self._game_region(game_idx, round_idx)
                     f4_team = f4_by_region.get(region)
                     if f4_team and f4_team in (t1, t2):
@@ -715,11 +715,22 @@ class ESPNBracketOptimizer:
         return -1
 
     def _game_region(self, game_idx: int, round_idx: int) -> int:
-        """Determine which region (0-3) a game belongs to."""
+        """Determine which region (0-3) a game belongs to.
+
+        For rounds with fewer than 4 games (F4 has 2, CHAMP has 1),
+        map each game to the correct region pair:
+        - F4 game 0: regions 0-1 semifinal → returns region of the winner
+        - F4 game 1: regions 2-3 semifinal → returns region of the winner
+        - CHAMP (1 game): cross-region, return -1 (no single region)
+        """
         games_per_region = ROUND_GAME_COUNTS[round_idx] // 4
-        if games_per_region < 1:
-            return 0
-        return game_idx // games_per_region
+        if games_per_region >= 1:
+            return game_idx // games_per_region
+        # F4: 2 games — game 0 is regions 0 vs 1, game 1 is regions 2 vs 3
+        if round_idx == 4:  # F4
+            return game_idx * 2  # game 0 → 0, game 1 → 2 (approximate)
+        # CHAMP: single game across regions
+        return -1
 
     def _to_round_dict(self, winners: List[str]) -> Dict[str, List[str]]:
         out: Dict[str, List[str]] = {}
