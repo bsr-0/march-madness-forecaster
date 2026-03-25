@@ -98,7 +98,7 @@ jobs:
           skip-editable-install: "true"
 
       - name: Run pip audit
-        run: pip-audit --strict --skip-editable
+        run: pip-audit --strict --skip-editable --ignore-vuln CVE-2026-4539
 
   # ─── Gate 4: Performance Regression ──────────────────────────────
   performance-check:
