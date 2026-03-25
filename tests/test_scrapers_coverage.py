@@ -998,19 +998,21 @@ class TestBartTorvikScraper:
     def test_fetch_current_rankings_from_cache(self, tmp_path):
         from src.data.scrapers.torvik import BartTorvikScraper
         scraper = BartTorvikScraper(cache_dir=str(tmp_path))
-        cached = {
-            "teams": [{
-                "team_id": "duke", "name": "Duke", "conference": "ACC",
-                "t_rank": 1, "barthag": 0.97,
-                "adj_offensive_efficiency": 122.0,
-                "adj_defensive_efficiency": 93.0,
+        # Cache validation requires >= 100 teams with non-zero efficiency metrics
+        teams = []
+        for i in range(120):
+            teams.append({
+                "team_id": f"team_{i}", "name": f"Team {i}", "conference": "Conf",
+                "t_rank": i + 1, "barthag": round(0.97 - i * 0.005, 4),
+                "adj_offensive_efficiency": round(122.0 - i * 0.2, 1),
+                "adj_defensive_efficiency": round(93.0 + i * 0.1, 1),
                 "adj_tempo": 70.0,
-            }]
-        }
+            })
+        cached = {"teams": teams}
         scraper._save_to_cache("torvik_rankings_2026.json", cached)
         result = scraper.fetch_current_rankings(year=2026)
-        assert len(result) == 1
-        assert result[0].team_id == "duke"
+        assert len(result) == 120
+        assert result[0].team_id == "team_0"
 
     def test_fetch_current_rankings_network_failure(self):
         from src.data.scrapers.torvik import BartTorvikScraper

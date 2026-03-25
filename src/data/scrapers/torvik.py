@@ -6,7 +6,7 @@ for temporal modeling.
 
 Data acquisition strategy (March 2026, updated):
   Primary: cbbdata.com API (``www.cbbdata.com/api/``).
-  Requires ``CBD_API_KEY`` env var.  Returns T-Rank ratings AND complete
+  Requires ``CBD_USER``/``CBD_PASSWORD`` env vars (or ``CBD_API_KEY``).  Returns T-Rank ratings AND complete
   Four Factors as clean JSON.
 
   Secondary: barttorvik.com trank.php CSV (``trank.php?year=Y&csv=1``) —
@@ -582,7 +582,7 @@ class BartTorvikScraper:
         )
         return teams
     
-    # cbbdata.com API — primary data source.  Requires CBD_API_KEY env var.
+    # cbbdata.com API — primary data source.  Auth via CBD_USER/CBD_PASSWORD or CBD_API_KEY.
     CBBDATA_API = "https://www.cbbdata.com/api"
 
     # cbbstat.com API was removed — returned 403 since early 2026.
@@ -639,7 +639,6 @@ class BartTorvikScraper:
 
             if token:
                 self._cbbdata_token = token
-                os.environ["CBD_API_KEY"] = token  # cache for subprocess use
                 logger.info("[torvik] cbbdata login successful, token acquired")
                 return token
             else:
@@ -654,8 +653,8 @@ class BartTorvikScraper:
 
         Endpoint: ``GET /torvik/ratings?year={year}``
 
-        Requires ``CBD_API_KEY`` environment variable.  Returns all teams
-        with ratings and Four Factors in one call.
+        Authenticates via Bearer token (from login or ``CBD_API_KEY`` env var).
+        Returns all teams with ratings and Four Factors in one call.
         """
         api_key = self._get_cbbdata_api_key()
         if not api_key:
@@ -667,7 +666,8 @@ class BartTorvikScraper:
             with self._cb_cbbdata():
                 resp = self._get_with_retry(
                     url,
-                    params={"year": year, "key": api_key},
+                    params={"year": year},
+                    headers={"Authorization": f"Bearer {api_key}"},
                     timeout=45,
                 )
                 data = resp.json()
@@ -747,7 +747,8 @@ class BartTorvikScraper:
             with self._cb_cbbdata():
                 resp = self._get_with_retry(
                     url,
-                    params={"year": year, "key": api_key},
+                    params={"year": year},
+                    headers={"Authorization": f"Bearer {api_key}"},
                     timeout=45,
                 )
                 data = resp.json()

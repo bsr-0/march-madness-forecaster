@@ -362,15 +362,18 @@ class ESPNBracketOptimizer:
             else:
                 per_region_top[region] = [c[0] for c in candidates[:3]]
 
-        # Generate combinations (1 per region)
-        region_lists = [per_region_top.get(r, []) for r in range(4)]
+        # Fall back to top seed for any region with no candidates
+        for region in range(4):
+            if not per_region_top.get(region):
+                per_region_top[region] = [self.first_round_matchups[region * 16]]
 
-        # Skip regions with no candidates instead of injecting invalid tokens
-        non_empty = [rl for rl in region_lists if rl]
-        if not non_empty:
+        # Generate combinations (1 per region)
+        region_lists = [per_region_top[r] for r in range(4)]
+
+        if not any(region_lists):
             return [[champion_id]]
 
-        all_combos = list(itertools.product(*non_empty))
+        all_combos = list(itertools.product(*region_lists))
 
         # Deduplicate and limit
         seen = set()
@@ -461,8 +464,8 @@ class ESPNBracketOptimizer:
                 # Champion always wins their path games
                 if game_idx == path_games.get(round_idx, -1) and champion_id in (t1, t2):
                     winner = champion_id
-                # F4 teams win their E8 games (round_idx=3 is E8)
-                elif round_idx <= 3:
+                # F4 teams win through E8 and into F4 (rounds 0-4)
+                elif round_idx <= 4:
                     region = self._game_region(game_idx, round_idx)
                     f4_team = f4_by_region.get(region)
                     if f4_team and f4_team in (t1, t2):
@@ -573,9 +576,13 @@ class ESPNBracketOptimizer:
         1. Check path disruption cost against champion
         2. If cost <= threshold, apply the upset
         3. Stop after max_upsets
+
+        After injecting upsets, propagates changes through later rounds
+        to maintain bracket consistency.
         """
         result = list(bracket_winners)
         injected = 0
+        modified = False
 
         for game_idx, underdog, favorite, _prob, _ev in upset_candidates:
             if injected >= max_upsets:
@@ -590,6 +597,42 @@ class ESPNBracketOptimizer:
 
             result[game_idx] = underdog
             injected += 1
+            modified = True
+
+        # Propagate: rebuild later rounds to ensure consistency
+        if modified:
+            result = self._propagate_bracket_consistency(result)
+
+        return result
+
+    def _propagate_bracket_consistency(self, bracket_winners: List[str]) -> List[str]:
+        """Rebuild later rounds so every pick is a valid advancing team.
+
+        Walks the bracket round-by-round. For each game, if the current
+        pick is not one of the two teams that actually advanced from the
+        feeder games, replaces it with the favorite.
+        """
+        result = list(bracket_winners)
+        current_round = list(self.first_round_matchups)
+        cursor = 0
+
+        for round_idx, n_games in enumerate(ROUND_GAME_COUNTS):
+            next_round: List[str] = []
+            for game_idx in range(n_games):
+                t1 = current_round[2 * game_idx]
+                t2 = current_round[2 * game_idx + 1]
+                pick = result[cursor]
+
+                if pick not in (t1, t2):
+                    # Inconsistent — replace with favorite
+                    p1 = lookup_matchup_probability(self.matchup_probs, t1, t2)
+                    pick = t1 if p1 >= 0.5 else t2
+                    result[cursor] = pick
+
+                next_round.append(pick)
+                cursor += 1
+
+            current_round = next_round
 
         return result
 
@@ -672,11 +715,22 @@ class ESPNBracketOptimizer:
         return -1
 
     def _game_region(self, game_idx: int, round_idx: int) -> int:
-        """Determine which region (0-3) a game belongs to."""
+        """Determine which region (0-3) a game belongs to.
+
+        For rounds with fewer than 4 games (F4 has 2, CHAMP has 1),
+        map each game to the correct region pair:
+        - F4 game 0: regions 0-1 semifinal → returns region of the winner
+        - F4 game 1: regions 2-3 semifinal → returns region of the winner
+        - CHAMP (1 game): cross-region, return -1 (no single region)
+        """
         games_per_region = ROUND_GAME_COUNTS[round_idx] // 4
-        if games_per_region < 1:
-            return 0
-        return game_idx // games_per_region
+        if games_per_region >= 1:
+            return game_idx // games_per_region
+        # F4: 2 games — game 0 is regions 0 vs 1, game 1 is regions 2 vs 3
+        if round_idx == 4:  # F4
+            return game_idx * 2  # game 0 → 0, game 1 → 2 (approximate)
+        # CHAMP: single game across regions
+        return -1
 
     def _to_round_dict(self, winners: List[str]) -> Dict[str, List[str]]:
         out: Dict[str, List[str]] = {}
