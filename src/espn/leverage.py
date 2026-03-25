@@ -265,6 +265,11 @@ def enforce_quadrant_correlation(
     on their path. This function replaces any upset picks in R64/R32 of
     the champion's region with the favorite, preserving champion path integrity.
 
+    After forcing chalk in R64/R32, later rounds (S16+) are rebuilt to
+    ensure bracket consistency: any pick that references a team eliminated
+    by chalk forcing is replaced with the EV-optimal pick from the actual
+    advancing teams.
+
     Args:
         bracket_winners: Current bracket picks (63 entries).
         champion_id: The selected champion.
@@ -273,7 +278,8 @@ def enforce_quadrant_correlation(
         first_round_matchups: 64-team first-round list.
 
     Returns:
-        Updated bracket_winners with chalk enforced in champion's region.
+        Updated bracket_winners with chalk enforced in champion's region
+        and later rounds re-derived for consistency.
     """
     region_games = get_region_game_ranges(first_round_game_idx)
     result = list(bracket_winners)
@@ -303,6 +309,30 @@ def enforce_quadrant_correlation(
             cursor += 1
 
         current_round = next_round
+
+    # Propagate: rebuild S16+ to ensure consistency with modified R64/R32.
+    # For each game in rounds 2+, if the current pick is not one of the
+    # two teams that actually advance from the feeder games, replace it
+    # with the favorite of the actual matchup.
+    for round_idx in range(2, len(ROUND_GAME_COUNTS)):
+        n_games = ROUND_GAME_COUNTS[round_idx]
+        next_round_teams: List[str] = []
+
+        for game_idx in range(n_games):
+            t1 = current_round[2 * game_idx]
+            t2 = current_round[2 * game_idx + 1]
+            current_pick = result[cursor]
+
+            if current_pick not in (t1, t2):
+                # Pick is inconsistent — replace with favorite
+                p1 = lookup_matchup_probability(matchup_probs, t1, t2)
+                current_pick = t1 if p1 >= 0.5 else t2
+                result[cursor] = current_pick
+
+            next_round_teams.append(current_pick)
+            cursor += 1
+
+        current_round = next_round_teams
 
     return result
 
