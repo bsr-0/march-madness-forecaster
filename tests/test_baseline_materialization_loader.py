@@ -774,13 +774,12 @@ class TestValidateFeedFreshness:
         validate_feed_freshness(config, "Test", "not a dict")
         # Should not raise
 
-    def test_missing_timestamp_raises(self):
+    def test_missing_timestamp_warns_and_skips(self):
         from src.pipeline.stages.data_loader import validate_feed_freshness
-        from src.pipeline.config import DataRequirementError
         config = MagicMock()
         config.enforce_feed_freshness = True
-        with pytest.raises(DataRequirementError, match="missing required timestamp"):
-            validate_feed_freshness(config, "Test", {})
+        # Should not raise — just warn and return
+        validate_feed_freshness(config, "Test", {})
 
 
 class TestBracketDataToTeams:

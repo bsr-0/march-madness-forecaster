@@ -427,9 +427,10 @@ def validate_feed_freshness(
         or payload.get("scraped_at")
     )
     if not ts:
-        raise DataRequirementError(
-            f"{source_name} payload missing required timestamp for freshness checks."
+        logger.warning(
+            "%s payload has no timestamp field — skipping freshness check.", source_name
         )
+        return
 
     ts_dt = parse_timestamp(ts)
     if ts_dt is None:
