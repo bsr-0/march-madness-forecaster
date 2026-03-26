@@ -227,6 +227,13 @@ _QUICK_ALIAS_INLINE: dict[str, str] = {
     # Collapsed double-underscore forms that need round-trip stability
     "albany_ny": "albany__ny",
     "mount_st_mary_s": "mount_st__mary_s",
+    # Torvik Four Factors ↔ main Torvik team ID mismatches (data audit 2026-03)
+    "sam_houston": "sam_houston_state",
+    "southern_miss": "southern_mississippi",
+    "central_connecticut": "central_connecticut_state",
+    "umass_lowell": "massachusetts_lowell",
+    "ut_rio_grande_valley": "texas_rio_grande_valley",
+    "usc_upstate": "south_carolina_upstate",
 }
 
 
