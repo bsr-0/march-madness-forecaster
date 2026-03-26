@@ -563,6 +563,21 @@ class RealDataCollector:
         if self.config.kaggle_dir:
             self._ingest_kaggle_data(year, out, provider_lineage, validation_errors)
 
+        # --- Cross-source team ID consistency check ---
+        try:
+            from .validators import validate_team_id_consistency
+            _seeds_path = self.output_dir / f"tournament_seeds_{year}.json"
+            if _seeds_path.exists() and torvik_payload:
+                with open(_seeds_path) as _sf:
+                    _seeds_data = json.load(_sf)
+                _tid_errors = validate_team_id_consistency(_seeds_data, torvik_payload, year=year)
+                if _tid_errors:
+                    validation_errors["team_id_consistency"] = _tid_errors
+                    for _e in _tid_errors:
+                        logger.warning("Team ID consistency: %s", _e)
+        except Exception as _exc:
+            logger.debug("Team ID consistency check skipped: %s", _exc)
+
         manifest = {
             "year": year,
             "generated_at": datetime.now(timezone.utc).isoformat(),

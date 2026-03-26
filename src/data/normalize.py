@@ -216,6 +216,17 @@ _QUICK_ALIAS_INLINE: dict[str, str] = {
     # From proprietary_metrics.py inline aliases
     "mcneese": "mcneese_state",
     "american_university": "american",
+    # Cross-source aliases found during data audit (2026-03)
+    "loyola_il": "loyola__il",
+    "ucsb": "uc_santa_barbara",
+    "nicholls": "nicholls_state",
+    "southeast_missouri": "southeast_missouri_state",
+    "st_joseph_s": "saint_joseph_s",
+    "etsu": "east_tennessee_state",
+    "saint_francis_pa": "saint_francis",
+    # Collapsed double-underscore forms that need round-trip stability
+    "albany_ny": "albany__ny",
+    "mount_st_mary_s": "mount_st__mary_s",
 }
 
 
@@ -288,7 +299,14 @@ def normalize_team_id(name: str) -> str:
     stripped = _NCAA_SUFFIX_RE.sub("", raw).rstrip("_") if _NCAA_SUFFIX_RE.search(raw) else raw
     if stripped != raw and stripped in _QUICK_ALIAS:
         return _QUICK_ALIAS[stripped]
-    return stripped if stripped != raw else raw
+    # Generic _st -> _state suffix expansion.  All 62+ Torvik teams ending
+    # in "_st" are State schools (verified via audit).  The alias table is
+    # checked first so explicit overrides (e.g. grambling_st -> grambling)
+    # still take priority.
+    target = stripped if stripped != raw else raw
+    if target.endswith("_st"):
+        return target + "ate"  # _st -> _state
+    return target
 
 
 def normalize_team_name(name: str) -> str:

@@ -133,7 +133,7 @@
       "season": 2018,
       "team_name": "LIU",
       "school_slug": "long-island-university",
-      "team_id": "liu",
+      "team_id": "long_island_university",
       "seed": 16,
       "region": "East"
     },
@@ -277,7 +277,7 @@
       "season": 2018,
       "team_name": "Penn",
       "school_slug": "pennsylvania",
-      "team_id": "penn",
+      "team_id": "pennsylvania",
       "seed": 16,
       "region": "Midwest"
     },
@@ -365,7 +365,7 @@
       "season": 2018,
       "team_name": "Loyola (IL)",
       "school_slug": "loyola-il",
-      "team_id": "loyola_il",
+      "team_id": "loyola__il",
       "seed": 11,
       "region": "South"
     },
@@ -405,7 +405,7 @@
       "season": 2018,
       "team_name": "UMBC",
       "school_slug": "maryland-baltimore-county",
-      "team_id": "umbc",
+      "team_id": "maryland_baltimore_county",
       "seed": 16,
       "region": "South"
     },

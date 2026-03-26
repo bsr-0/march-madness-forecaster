@@ -557,7 +557,7 @@
       "year": 2021,
       "round_name": "R64",
       "region": "Midwest",
-      "team1_id": "loyola_chicago",
+      "team1_id": "loyola__il",
       "team1_seed": 8,
       "team1_score": 71,
       "team2_id": "georgia_tech",
@@ -644,7 +644,7 @@
       "team1_id": "illinois",
       "team1_seed": 1,
       "team1_score": 71,
-      "team2_id": "loyola_chicago",
+      "team2_id": "loyola__il",
       "team2_seed": 8,
       "team2_score": 58,
       "team1_won": true

@@ -125,7 +125,7 @@
       "season": 2010,
       "team_name": "ETSU",
       "school_slug": "east-tennessee-state",
-      "team_id": "etsu",
+      "team_id": "east_tennessee_state",
       "seed": 16,
       "region": "East"
     },
@@ -189,7 +189,7 @@
       "season": 2010,
       "team_name": "UNLV",
       "school_slug": "nevada-las-vegas",
-      "team_id": "unlv",
+      "team_id": "nevada_las_vegas",
       "seed": 8,
       "region": "Midwest"
     },
@@ -245,7 +245,7 @@
       "season": 2010,
       "team_name": "UCSB",
       "school_slug": "california-santa-barbara",
-      "team_id": "ucsb",
+      "team_id": "uc_santa_barbara",
       "seed": 15,
       "region": "Midwest"
     },

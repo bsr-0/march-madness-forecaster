@@ -109,7 +109,7 @@
       "season": 2017,
       "team_name": "ETSU",
       "school_slug": "east-tennessee-state",
-      "team_id": "etsu",
+      "team_id": "east_tennessee_state",
       "seed": 13,
       "region": "East"
     },
@@ -133,7 +133,7 @@
       "season": 2017,
       "team_name": "Mount St. Mary's",
       "school_slug": "mount-st-marys",
-      "team_id": "mount_st_mary_s",
+      "team_id": "mount_st__mary_s",
       "seed": 16,
       "region": "East"
     },

@@ -3362,7 +3362,7 @@
       ]
     },
     {
-      "team_id": "alabama_crimson_tide",
+      "team_id": "alabama",
       "team_name": "Alabama Crimson Tide",
       "players": [
         {
@@ -5090,7 +5090,7 @@
       ]
     },
     {
-      "team_id": "albany_st__ga__golden_rams",
+      "team_id": "albany_st_ga_golden_rams",
       "team_name": "Albany St (GA) Golden Rams",
       "players": [
         {
@@ -9911,7 +9911,7 @@
         },
         {
           "player_id": "5311900",
-          "name": "A. Grbovi\u0107",
+          "name": "A. Grbović",
           "position": "SF",
           "minutes_per_game": 19.846,
           "games_played": 26,
@@ -10370,7 +10370,7 @@
       ]
     },
     {
-      "team_id": "arizona_wildcats",
+      "team_id": "arizona",
       "team_name": "Arizona Wildcats",
       "players": [
         {
@@ -11699,7 +11699,7 @@
         },
         {
           "player_id": "5311500",
-          "name": "E. D\u017eafi\u0107",
+          "name": "E. Džafić",
           "position": "C",
           "minutes_per_game": 2.286,
           "games_played": 7,
@@ -15018,7 +15018,7 @@
       ]
     },
     {
-      "team_id": "auburn_tigers",
+      "team_id": "auburn",
       "team_name": "Auburn Tigers",
       "players": [
         {
@@ -15167,7 +15167,7 @@
         },
         {
           "player_id": "5311506",
-          "name": "F. Jovi\u0107",
+          "name": "F. Jović",
           "position": "SF",
           "minutes_per_game": 17.36,
           "games_played": 25,
@@ -17251,7 +17251,7 @@
         },
         {
           "player_id": "5243211",
-          "name": "M. Bo\u0161kovi\u0107",
+          "name": "M. Bošković",
           "position": "SF",
           "minutes_per_game": 12.24,
           "games_played": 25,
@@ -17299,7 +17299,7 @@
         },
         {
           "player_id": "5311908",
-          "name": "A. Kosti\u0107",
+          "name": "A. Kostić",
           "position": "PG",
           "minutes_per_game": 8.0,
           "games_played": 18,
@@ -18378,7 +18378,7 @@
       ]
     },
     {
-      "team_id": "baptist__fl__eagles",
+      "team_id": "baptist_fl_eagles",
       "team_name": "Baptist (Fl) Eagles",
       "players": [
         {
@@ -18758,7 +18758,7 @@
       ]
     },
     {
-      "team_id": "baylor_bears",
+      "team_id": "baylor",
       "team_name": "Baylor Bears",
       "players": [
         {
@@ -21118,7 +21118,7 @@
       ]
     },
     {
-      "team_id": "benedictine__az__redhawks",
+      "team_id": "benedictine_az_redhawks",
       "team_name": "Benedictine (AZ) Redhawks",
       "players": [
         {
@@ -21522,7 +21522,7 @@
       ]
     },
     {
-      "team_id": "benedictine_university__il__eagles",
+      "team_id": "benedictine_university_il_eagles",
       "team_name": "Benedictine University (IL) Eagles",
       "players": [
         {
@@ -22354,7 +22354,7 @@
       ]
     },
     {
-      "team_id": "bethany__wv__bison",
+      "team_id": "bethany_wv_bison",
       "team_name": "Bethany (WV) Bison",
       "players": [
         {
@@ -22914,7 +22914,7 @@
       ]
     },
     {
-      "team_id": "bethel__tn__wildcats",
+      "team_id": "bethel_tn_wildcats",
       "team_name": "Bethel (TN) Wildcats",
       "players": [
         {
@@ -27066,7 +27066,7 @@
       ]
     },
     {
-      "team_id": "bluefield_university_ramblin__rams",
+      "team_id": "bluefield_university_ramblin_rams",
       "team_name": "Bluefield University Ramblin' Rams",
       "players": [
         {
@@ -33658,7 +33658,7 @@
       ]
     },
     {
-      "team_id": "bryan__tn__lions",
+      "team_id": "bryan_tn_lions",
       "team_name": "Bryan (TN) Lions",
       "players": [
         {
@@ -34074,7 +34074,7 @@
       ]
     },
     {
-      "team_id": "bryant___stratton__ohio__bobcats",
+      "team_id": "bryant_stratton_ohio_bobcats",
       "team_name": "Bryant & Stratton (Ohio) Bobcats",
       "players": [
         {
@@ -35483,7 +35483,7 @@
         },
         {
           "player_id": "5314477",
-          "name": "A. D\u00f6rries",
+          "name": "A. Dörries",
           "position": "C",
           "minutes_per_game": 31.643,
           "games_played": 28,
@@ -45826,7 +45826,7 @@
       ]
     },
     {
-      "team_id": "centenary__la__gentlemen",
+      "team_id": "centenary_la_gentlemen",
       "team_name": "Centenary (LA) Gentlemen",
       "players": [
         {
@@ -46062,7 +46062,7 @@
       ]
     },
     {
-      "team_id": "centenary__nj__cyclones",
+      "team_id": "centenary_nj_cyclones",
       "team_name": "Centenary (NJ) Cyclones",
       "players": [
         {
@@ -48742,7 +48742,7 @@
       ]
     },
     {
-      "team_id": "central_state__oh__marauders",
+      "team_id": "central_state_oh_marauders",
       "team_name": "Central State (OH) Marauders",
       "players": [
         {
@@ -52818,7 +52818,7 @@
       ]
     },
     {
-      "team_id": "cheyney__pa__wolves",
+      "team_id": "cheyney_pa_wolves",
       "team_name": "Cheyney (PA) Wolves",
       "players": [
         {
@@ -56050,7 +56050,7 @@
       ]
     },
     {
-      "team_id": "clemson_tigers",
+      "team_id": "clemson",
       "team_name": "Clemson Tigers",
       "players": [
         {
@@ -61670,7 +61670,7 @@
       ]
     },
     {
-      "team_id": "colorado_state_rams",
+      "team_id": "colorado_state",
       "team_name": "Colorado State Rams",
       "players": [
         {
@@ -62682,7 +62682,7 @@
       ]
     },
     {
-      "team_id": "columbia_college__sc__fighting_koalas",
+      "team_id": "columbia_college_sc_fighting_koalas",
       "team_name": "Columbia College (SC) Fighting Koalas",
       "players": [
         {
@@ -66478,7 +66478,7 @@
       ]
     },
     {
-      "team_id": "creighton_bluejays",
+      "team_id": "creighton",
       "team_name": "Creighton Bluejays",
       "players": [
         {
@@ -67954,7 +67954,7 @@
       ]
     },
     {
-      "team_id": "cumberland__ky__patriots",
+      "team_id": "cumberland_ky_patriots",
       "team_name": "Cumberland (KY) Patriots",
       "players": [
         {
@@ -68310,7 +68310,7 @@
       ]
     },
     {
-      "team_id": "cumberland__tn__phoenix",
+      "team_id": "cumberland_tn_phoenix",
       "team_name": "Cumberland (TN) Phoenix",
       "players": [
         {
@@ -72755,7 +72755,7 @@
         },
         {
           "player_id": "5312299",
-          "name": "I. Milija\u0161evi\u0107",
+          "name": "I. Milijašević",
           "position": "PG",
           "minutes_per_game": 7.4,
           "games_played": 15,
@@ -76538,7 +76538,7 @@
       ]
     },
     {
-      "team_id": "dickinson__pa__red_devils",
+      "team_id": "dickinson_pa_red_devils",
       "team_name": "Dickinson (PA) Red Devils",
       "players": [
         {
@@ -77390,7 +77390,7 @@
       ]
     },
     {
-      "team_id": "dominican__ca__penguins",
+      "team_id": "dominican_ca_penguins",
       "team_name": "Dominican (CA) Penguins",
       "players": [
         {
@@ -77806,7 +77806,7 @@
       ]
     },
     {
-      "team_id": "dominican__il__dominican",
+      "team_id": "dominican_il_dominican",
       "team_name": "Dominican (IL) Dominican",
       "players": [
         {
@@ -78246,7 +78246,7 @@
       ]
     },
     {
-      "team_id": "drake_bulldogs",
+      "team_id": "drake",
       "team_name": "Drake Bulldogs",
       "players": [
         {
@@ -79498,7 +79498,7 @@
       ]
     },
     {
-      "team_id": "duke_blue_devils",
+      "team_id": "duke",
       "team_name": "Duke Blue Devils",
       "players": [
         {
@@ -86054,7 +86054,7 @@
       ]
     },
     {
-      "team_id": "eastern_university__pa__eagles",
+      "team_id": "eastern_university_pa_eagles",
       "team_name": "Eastern University (PA) Eagles",
       "players": [
         {
@@ -89434,7 +89434,7 @@
       ]
     },
     {
-      "team_id": "embry_riddle__az__eagles",
+      "team_id": "embry_riddle_az_eagles",
       "team_name": "Embry-Riddle (AZ) Eagles",
       "players": [
         {
@@ -90074,7 +90074,7 @@
       ]
     },
     {
-      "team_id": "emmanuel__ma__lions",
+      "team_id": "emmanuel_ma_lions",
       "team_name": "Emmanuel (MA) Lions",
       "players": [
         {
@@ -95834,7 +95834,7 @@
       ]
     },
     {
-      "team_id": "florida_atlantic_owls",
+      "team_id": "florida_atlantic",
       "team_name": "Florida Atlantic Owls",
       "players": [
         {
@@ -96502,7 +96502,7 @@
       ]
     },
     {
-      "team_id": "florida_gators",
+      "team_id": "florida",
       "team_name": "Florida Gators",
       "players": [
         {
@@ -104598,7 +104598,7 @@
       ]
     },
     {
-      "team_id": "gardner_webb_runnin__bulldogs",
+      "team_id": "gardner_webb_runnin_bulldogs",
       "team_name": "Gardner-Webb Runnin' Bulldogs",
       "players": [
         {
@@ -111402,7 +111402,7 @@
       ]
     },
     {
-      "team_id": "gonzaga_bulldogs",
+      "team_id": "gonzaga",
       "team_name": "Gonzaga Bulldogs",
       "players": [
         {
@@ -116599,7 +116599,7 @@
         },
         {
           "player_id": "4902967",
-          "name": "C. Pigg\u00e9",
+          "name": "C. Piggé",
           "position": "PG",
           "minutes_per_game": 32.833,
           "games_played": 24,
@@ -118299,7 +118299,7 @@
         },
         {
           "player_id": "5175369",
-          "name": "G. Nemeik\u0161a",
+          "name": "G. Nemeikša",
           "position": "SF",
           "minutes_per_game": 24.16,
           "games_played": 25,
@@ -118794,7 +118794,7 @@
       ]
     },
     {
-      "team_id": "health_sciences___pharmacy_eutectics",
+      "team_id": "health_sciences_pharmacy_eutectics",
       "team_name": "Health Sciences & Pharmacy Eutectics",
       "players": [
         {
@@ -120498,7 +120498,7 @@
       ]
     },
     {
-      "team_id": "holy_cross_college__in__saints",
+      "team_id": "holy_cross_college_in_saints",
       "team_name": "Holy Cross College (IN) Saints",
       "players": [
         {
@@ -122818,7 +122818,7 @@
       ]
     },
     {
-      "team_id": "houston_cougars",
+      "team_id": "houston",
       "team_name": "Houston Cougars",
       "players": [
         {
@@ -124986,7 +124986,7 @@
       ]
     },
     {
-      "team_id": "huntingdon_college__al__hawks",
+      "team_id": "huntingdon_college_al_hawks",
       "team_name": "Huntingdon College (AL) Hawks",
       "players": [
         {
@@ -130538,7 +130538,7 @@
       ]
     },
     {
-      "team_id": "indiana_hoosiers",
+      "team_id": "indiana",
       "team_name": "Indiana Hoosiers",
       "players": [
         {
@@ -133518,7 +133518,7 @@
       ]
     },
     {
-      "team_id": "iowa_state_cyclones",
+      "team_id": "iowa_state",
       "team_name": "Iowa State Cyclones",
       "players": [
         {
@@ -138542,7 +138542,7 @@
       ]
     },
     {
-      "team_id": "johnson___wales__nc__johnson___wales_charlotte",
+      "team_id": "johnson_wales_nc_johnson_wales_charlotte",
       "team_name": "Johnson & Wales (NC) JOHNSON & WALES-CHARLOTTE",
       "players": [
         {
@@ -138850,7 +138850,7 @@
       ]
     },
     {
-      "team_id": "johnson___wales__ri__griffins",
+      "team_id": "johnson_wales_ri_griffins",
       "team_name": "Johnson & Wales (RI) Griffins",
       "players": [
         {
@@ -140834,7 +140834,7 @@
       ]
     },
     {
-      "team_id": "kansas_jayhawks",
+      "team_id": "kansas",
       "team_name": "Kansas Jayhawks",
       "players": [
         {
@@ -144550,7 +144550,7 @@
       ]
     },
     {
-      "team_id": "kentucky_wildcats",
+      "team_id": "kentucky",
       "team_name": "Kentucky Wildcats",
       "players": [
         {
@@ -144747,7 +144747,7 @@
         },
         {
           "player_id": "5281347",
-          "name": "A. Jelavi\u0107",
+          "name": "A. Jelavić",
           "position": "SF",
           "minutes_per_game": 15.955,
           "games_played": 22,
@@ -152014,7 +152014,7 @@
       ]
     },
     {
-      "team_id": "lewis___clark_pioneers",
+      "team_id": "lewis_clark_pioneers",
       "team_name": "Lewis & Clark Pioneers",
       "players": [
         {
@@ -153394,7 +153394,7 @@
       ]
     },
     {
-      "team_id": "lincoln_university__ca__oaklanders",
+      "team_id": "lincoln_university_ca_oaklanders",
       "team_name": "Lincoln University (CA) Oaklanders",
       "players": [
         {
@@ -158302,7 +158302,7 @@
       ]
     },
     {
-      "team_id": "louisiana_ragin__cajuns",
+      "team_id": "louisiana_ragin_cajuns",
       "team_name": "Louisiana Ragin' Cajuns",
       "players": [
         {
@@ -167682,7 +167682,7 @@
       ]
     },
     {
-      "team_id": "marquette_golden_eagles",
+      "team_id": "marquette",
       "team_name": "Marquette Golden Eagles",
       "players": [
         {
@@ -172607,7 +172607,7 @@
         },
         {
           "player_id": "5316166",
-          "name": "J. Sch\u00f6nb\u00e4ck",
+          "name": "J. Schönbäck",
           "position": "SF",
           "minutes_per_game": 20.0,
           "games_played": 1,
@@ -174026,7 +174026,7 @@
       ]
     },
     {
-      "team_id": "memphis_tigers",
+      "team_id": "memphis",
       "team_name": "Memphis Tigers",
       "players": [
         {
@@ -177622,7 +177622,7 @@
       ]
     },
     {
-      "team_id": "miami__oh__redhawks",
+      "team_id": "miami_oh_redhawks",
       "team_name": "Miami (OH) RedHawks",
       "players": [
         {
@@ -178314,7 +178314,7 @@
       ]
     },
     {
-      "team_id": "miami__oh__hamilton_harriers",
+      "team_id": "miami_oh_hamilton_harriers",
       "team_name": "Miami (OH)-Hamilton Harriers",
       "players": [
         {
@@ -178598,7 +178598,7 @@
       ]
     },
     {
-      "team_id": "miami__oh__middletown_thunderhawks",
+      "team_id": "miami_oh_middletown_thunderhawks",
       "team_name": "Miami (OH)-Middletown ThunderHawks",
       "players": [
         {
@@ -179418,7 +179418,7 @@
       ]
     },
     {
-      "team_id": "michigan_state_spartans",
+      "team_id": "michigan_state",
       "team_name": "Michigan State Spartans",
       "players": [
         {
@@ -195314,7 +195314,7 @@
       ]
     },
     {
-      "team_id": "mount_saint_mary__ny__knights",
+      "team_id": "mount_saint_mary_ny_knights",
       "team_name": "Mount Saint Mary (NY) Knights",
       "players": [
         {
@@ -195670,7 +195670,7 @@
       ]
     },
     {
-      "team_id": "mount_st__mary_s_mountaineers",
+      "team_id": "mount_st_mary_s_mountaineers",
       "team_name": "Mount St. Mary's Mountaineers",
       "players": [
         {
@@ -200310,7 +200310,7 @@
       ]
     },
     {
-      "team_id": "new_college__fl__mighty_banyans",
+      "team_id": "new_college_fl_mighty_banyans",
       "team_name": "New College (FL) Mighty Banyans",
       "players": [
         {
@@ -208882,7 +208882,7 @@
       ]
     },
     {
-      "team_id": "north_carolina_tar_heels",
+      "team_id": "north_carolina",
       "team_name": "North Carolina Tar Heels",
       "players": [
         {
@@ -209586,7 +209586,7 @@
       ]
     },
     {
-      "team_id": "north_central__mn__rams",
+      "team_id": "north_central_mn_rams",
       "team_name": "North Central (MN) Rams",
       "players": [
         {
@@ -219970,7 +219970,7 @@
       ]
     },
     {
-      "team_id": "northwestern_wildcats",
+      "team_id": "northwestern",
       "team_name": "Northwestern Wildcats",
       "players": [
         {
@@ -220614,7 +220614,7 @@
       ]
     },
     {
-      "team_id": "northwood__mi__timberwolves",
+      "team_id": "northwood_mi_timberwolves",
       "team_name": "Northwood (MI) Timberwolves",
       "players": [
         {
@@ -220874,7 +220874,7 @@
       ]
     },
     {
-      "team_id": "notre_dame__md__gators",
+      "team_id": "notre_dame_md_gators",
       "team_name": "Notre Dame (MD) Gators",
       "players": [
         {
@@ -228735,7 +228735,7 @@
         },
         {
           "player_id": "5175354",
-          "name": "A. Cassi\u00e1",
+          "name": "A. Cassiá",
           "position": "SF",
           "minutes_per_game": 11.038,
           "games_played": 26,
@@ -230826,7 +230826,7 @@
       ]
     },
     {
-      "team_id": "oregon_ducks",
+      "team_id": "oregon",
       "team_name": "Oregon Ducks",
       "players": [
         {
@@ -232186,7 +232186,7 @@
       ]
     },
     {
-      "team_id": "ottawa__az__spirit",
+      "team_id": "ottawa_az_spirit",
       "team_name": "Ottawa (AZ) Spirit",
       "players": [
         {
@@ -236378,7 +236378,7 @@
       ]
     },
     {
-      "team_id": "penn_state__brandywine__lions",
+      "team_id": "penn_state_brandywine_lions",
       "team_name": "Penn State (Brandywine) Lions",
       "players": [
         {
@@ -237155,7 +237155,7 @@
         },
         {
           "player_id": "5312025",
-          "name": "I. Juri\u0107",
+          "name": "I. Jurić",
           "position": "SF",
           "minutes_per_game": 26.08,
           "games_played": 25,
@@ -237251,7 +237251,7 @@
         },
         {
           "player_id": "5312028",
-          "name": "T. Mirti\u0107",
+          "name": "T. Mirtić",
           "position": "SF",
           "minutes_per_game": 14.2,
           "games_played": 15,
@@ -240067,7 +240067,7 @@
         },
         {
           "player_id": "5240937",
-          "name": "D. Do\u017eic",
+          "name": "D. Dožic",
           "position": "C",
           "minutes_per_game": 31.296,
           "games_played": 27,
@@ -240139,7 +240139,7 @@
         },
         {
           "player_id": "5176260",
-          "name": "P. Sto\u0161ic",
+          "name": "P. Stošic",
           "position": "SF",
           "minutes_per_game": 16.074,
           "games_played": 27,
@@ -241750,7 +241750,7 @@
       ]
     },
     {
-      "team_id": "pittsburgh___greensburg_bobcats",
+      "team_id": "pittsburgh_greensburg_bobcats",
       "team_name": "Pittsburgh - Greensburg Bobcats",
       "players": [
         {
@@ -243479,7 +243479,7 @@
         },
         {
           "player_id": "5105883",
-          "name": "M. Hronsk\u00fd",
+          "name": "M. Hronský",
           "position": "SF",
           "minutes_per_game": 19.52,
           "games_played": 25,
@@ -248146,7 +248146,7 @@
       ]
     },
     {
-      "team_id": "purdue_boilermakers",
+      "team_id": "purdue",
       "team_name": "Purdue Boilermakers",
       "players": [
         {
@@ -252862,7 +252862,7 @@
       ]
     },
     {
-      "team_id": "regis__co__regis_university",
+      "team_id": "regis_co_regis_university",
       "team_name": "Regis (CO) REGIS UNIVERSITY",
       "players": [
         {
@@ -256343,7 +256343,7 @@
         },
         {
           "player_id": "5314468",
-          "name": "K. Kepe\u017einskas",
+          "name": "K. Kepežinskas",
           "position": "PG",
           "minutes_per_game": 10.0,
           "games_played": 16,
@@ -266666,7 +266666,7 @@
       ]
     },
     {
-      "team_id": "saint_john_s__mn__johnnies",
+      "team_id": "saint_john_s_mn_johnnies",
       "team_name": "Saint John's (MN) Johnnies",
       "players": [
         {
@@ -272642,7 +272642,7 @@
       ]
     },
     {
-      "team_id": "san_diego_state_aztecs",
+      "team_id": "san_diego_state",
       "team_name": "San Diego State Aztecs",
       "players": [
         {
@@ -275098,8 +275098,8 @@
       ]
     },
     {
-      "team_id": "san_jos\u00e9_state_spartans",
-      "team_name": "San Jos\u00e9 State Spartans",
+      "team_id": "san_jose_state_spartans",
+      "team_name": "San José State Spartans",
       "players": [
         {
           "player_id": "5176315",
@@ -277146,7 +277146,7 @@
       ]
     },
     {
-      "team_id": "science___arts__ok__drovers",
+      "team_id": "science_arts_ok_drovers",
       "team_name": "Science & Arts (OK) Drovers",
       "players": [
         {
@@ -280418,7 +280418,7 @@
       ]
     },
     {
-      "team_id": "simpson_college__ia__storm",
+      "team_id": "simpson_college_ia_storm",
       "team_name": "Simpson College (IA) Storm",
       "players": [
         {
@@ -280870,7 +280870,7 @@
       ]
     },
     {
-      "team_id": "simpson_university__ca__red_hawks",
+      "team_id": "simpson_university_ca_red_hawks",
       "team_name": "Simpson University (CA) Red Hawks",
       "players": [
         {
@@ -292710,7 +292710,7 @@
       ]
     },
     {
-      "team_id": "st__ambrose_fighting_bees",
+      "team_id": "st_ambrose_fighting_bees",
       "team_name": "St. Ambrose Fighting Bees",
       "players": [
         {
@@ -293042,7 +293042,7 @@
       ]
     },
     {
-      "team_id": "st__bonaventure_bonnies",
+      "team_id": "st_bonaventure_bonnies",
       "team_name": "St. Bonaventure Bonnies",
       "players": [
         {
@@ -293674,7 +293674,7 @@
       ]
     },
     {
-      "team_id": "st__elizabeth_eagles",
+      "team_id": "st_elizabeth_eagles",
       "team_name": "St. Elizabeth Eagles",
       "players": [
         {
@@ -294126,7 +294126,7 @@
       ]
     },
     {
-      "team_id": "st__francis__il__fighting_saints",
+      "team_id": "st_francis_il_fighting_saints",
       "team_name": "St. Francis (IL) Fighting Saints",
       "players": [
         {
@@ -294482,7 +294482,7 @@
       ]
     },
     {
-      "team_id": "st__john_fisher_cardinals",
+      "team_id": "st_john_fisher_cardinals",
       "team_name": "St. John Fisher Cardinals",
       "players": [
         {
@@ -294862,7 +294862,7 @@
       ]
     },
     {
-      "team_id": "st__john_s_red_storm",
+      "team_id": "st_john_s_red_storm",
       "team_name": "St. John's Red Storm",
       "players": [
         {
@@ -295518,7 +295518,7 @@
       ]
     },
     {
-      "team_id": "st__joseph_s__ny__bears",
+      "team_id": "st_joseph_s_ny_bears",
       "team_name": "St. Joseph's (NY) Bears",
       "players": [
         {
@@ -295898,7 +295898,7 @@
       ]
     },
     {
-      "team_id": "st__mary_s__md__seahawks",
+      "team_id": "st_mary_s_md_seahawks",
       "team_name": "St. Mary's (MD) Seahawks",
       "players": [
         {
@@ -296290,7 +296290,7 @@
       ]
     },
     {
-      "team_id": "st__scholastica_saints",
+      "team_id": "st_scholastica_saints",
       "team_name": "St. Scholastica Saints",
       "players": [
         {
@@ -296670,7 +296670,7 @@
       ]
     },
     {
-      "team_id": "st__thomas__tx__celts",
+      "team_id": "st_thomas_tx_celts",
       "team_name": "St. Thomas (TX) Celts",
       "players": [
         {
@@ -296954,7 +296954,7 @@
       ]
     },
     {
-      "team_id": "st__thomas_minnesota_tommies",
+      "team_id": "st_thomas_minnesota_tommies",
       "team_name": "St. Thomas-Minnesota Tommies",
       "players": [
         {
@@ -297658,7 +297658,7 @@
       ]
     },
     {
-      "team_id": "st__xavier___il__cougars",
+      "team_id": "st_xavier_il_cougars",
       "team_name": "St. Xavier  (IL) Cougars",
       "players": [
         {
@@ -298978,7 +298978,7 @@
       ]
     },
     {
-      "team_id": "stephen_f__austin_lumberjacks",
+      "team_id": "stephen_f_austin_lumberjacks",
       "team_name": "Stephen F. Austin Lumberjacks",
       "players": [
         {
@@ -306242,7 +306242,7 @@
       ]
     },
     {
-      "team_id": "tennessee_volunteers",
+      "team_id": "tennessee",
       "team_name": "Tennessee Volunteers",
       "players": [
         {
@@ -309078,7 +309078,7 @@
       ]
     },
     {
-      "team_id": "texas_longhorns",
+      "team_id": "texas",
       "team_name": "Texas Longhorns",
       "players": [
         {
@@ -313250,7 +313250,7 @@
       ]
     },
     {
-      "team_id": "thomas__me__terriers",
+      "team_id": "thomas_me_terriers",
       "team_name": "Thomas (ME) Terriers",
       "players": [
         {
@@ -315950,7 +315950,7 @@
       ]
     },
     {
-      "team_id": "trinity__fl__tigers",
+      "team_id": "trinity_fl_tigers",
       "team_name": "Trinity (FL) Tigers",
       "players": [
         {
@@ -316210,7 +316210,7 @@
       ]
     },
     {
-      "team_id": "trinity__tx__tigers",
+      "team_id": "trinity_tx_tigers",
       "team_name": "Trinity (TX) Tigers",
       "players": [
         {
@@ -316614,7 +316614,7 @@
       ]
     },
     {
-      "team_id": "trinity_christian__il__trolls",
+      "team_id": "trinity_christian_il_trolls",
       "team_name": "Trinity Christian (IL) Trolls",
       "players": [
         {
@@ -320099,7 +320099,7 @@
         },
         {
           "player_id": "5243010",
-          "name": "D. Vuk\u010devi\u0107",
+          "name": "D. Vukčević",
           "position": "C",
           "minutes_per_game": 13.0,
           "games_played": 2,
@@ -334283,7 +334283,7 @@
       "players": [
         {
           "player_id": "5242999",
-          "name": "A. Bukumirovi\u0107",
+          "name": "A. Bukumirović",
           "position": "SF",
           "minutes_per_game": 29.429,
           "games_played": 28,
@@ -334307,7 +334307,7 @@
         },
         {
           "player_id": "5243012",
-          "name": "F. Radakovi\u0107",
+          "name": "F. Radaković",
           "position": "PG",
           "minutes_per_game": 26.542,
           "games_played": 24,
@@ -337258,7 +337258,7 @@
       ]
     },
     {
-      "team_id": "union__ky__bulldogs",
+      "team_id": "union_ky_bulldogs",
       "team_name": "Union (KY) Bulldogs",
       "players": [
         {
@@ -344598,7 +344598,7 @@
       ]
     },
     {
-      "team_id": "vermont_state___johnson_badgers",
+      "team_id": "vermont_state_johnson_badgers",
       "team_name": "Vermont State - Johnson Badgers",
       "players": [
         {
@@ -344906,7 +344906,7 @@
       ]
     },
     {
-      "team_id": "vermont_state___lyndon_hornets",
+      "team_id": "vermont_state_lyndon_hornets",
       "team_name": "Vermont State - Lyndon Hornets",
       "players": [
         {
@@ -345334,7 +345334,7 @@
       ]
     },
     {
-      "team_id": "villanova_wildcats",
+      "team_id": "villanova",
       "team_name": "Villanova Wildcats",
       "players": [
         {
@@ -345966,7 +345966,7 @@
       ]
     },
     {
-      "team_id": "virginia_cavaliers",
+      "team_id": "virginia",
       "team_name": "Virginia Cavaliers",
       "players": [
         {
@@ -346091,7 +346091,7 @@
         },
         {
           "player_id": "5311844",
-          "name": "J. Gr\u00fcnloh",
+          "name": "J. Grünloh",
           "position": "C",
           "minutes_per_game": 21.692,
           "games_played": 26,
@@ -350998,7 +350998,7 @@
       ]
     },
     {
-      "team_id": "washington_college__md__shoremen",
+      "team_id": "washington_college_md_shoremen",
       "team_name": "Washington College (MD) Shoremen",
       "players": [
         {
@@ -355327,7 +355327,7 @@
         },
         {
           "player_id": "5243003",
-          "name": "M. \u017du\u017ei\u0107",
+          "name": "M. Žužić",
           "position": "PG",
           "minutes_per_game": 15.111,
           "games_played": 18,
@@ -360074,7 +360074,7 @@
       ]
     },
     {
-      "team_id": "westminster__ut__griffins",
+      "team_id": "westminster_ut_griffins",
       "team_name": "Westminster (UT) Griffins",
       "players": [
         {
@@ -362474,7 +362474,7 @@
       ]
     },
     {
-      "team_id": "william___mary_tribe",
+      "team_id": "william_mary_tribe",
       "team_name": "William & Mary Tribe",
       "players": [
         {
@@ -363934,7 +363934,7 @@
       ]
     },
     {
-      "team_id": "wilmington__de__wildcats",
+      "team_id": "wilmington_de_wildcats",
       "team_name": "Wilmington (DE) Wildcats",
       "players": [
         {

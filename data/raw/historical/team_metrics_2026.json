@@ -83,7 +83,7 @@
       "srs": -13.68,
       "sos": -7.85,
       "name": "Albany (NY)",
-      "team_id": "albany_ny"
+      "team_id": "albany__ny"
     },
     {
       "team_name": "Alcorn State",
@@ -1871,7 +1871,7 @@
       "srs": -6.62,
       "sos": 3.02,
       "name": "Loyola (IL)",
-      "team_id": "loyola_il"
+      "team_id": "loyola__il"
     },
     {
       "team_name": "Loyola (MD)",
@@ -2291,7 +2291,7 @@
       "srs": -10.15,
       "sos": -7.03,
       "name": "Mount St. Mary's",
-      "team_id": "mount_st_mary_s"
+      "team_id": "mount_st__mary_s"
     },
     {
       "team_name": "Murray State",
@@ -2963,7 +2963,7 @@
       "srs": -3.12,
       "sos": -4.78,
       "name": "Queens (NC)",
-      "team_id": "queens_nc"
+      "team_id": "queens__nc"
     },
     {
       "team_name": "Quinnipiac",
@@ -3095,7 +3095,7 @@
       "srs": -18.7,
       "sos": -5.67,
       "name": "Saint Francis (PA)",
-      "team_id": "saint_francis_pa"
+      "team_id": "saint_francis"
     },
     {
       "team_name": "Saint Joseph's",
@@ -3131,7 +3131,7 @@
       "srs": 18.39,
       "sos": 5.49,
       "name": "Saint Mary's (CA)",
-      "team_id": "saint_mary_s_ca"
+      "team_id": "saint_mary_s__ca"
     },
     {
       "team_name": "Saint Peter's",
@@ -3491,7 +3491,7 @@
       "srs": 21.82,
       "sos": 10.5,
       "name": "St. John's (NY)",
-      "team_id": "st_john_s_ny"
+      "team_id": "st__john_s__ny"
     },
     {
       "team_name": "St. Thomas",

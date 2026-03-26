@@ -233,7 +233,7 @@
       "defensive_reb_rate": 0.7012
     },
     {
-      "team_id": "michigan_st",
+      "team_id": "michigan_state",
       "team_name": "Michigan St.",
       "name": "Michigan St.",
       "conference": "B10",
@@ -407,7 +407,7 @@
       "defensive_reb_rate": 0.7154
     },
     {
-      "team_id": "ohio_st",
+      "team_id": "ohio_state",
       "team_name": "Ohio St.",
       "name": "Ohio St.",
       "conference": "B10",
@@ -436,7 +436,7 @@
       "defensive_reb_rate": 0.751
     },
     {
-      "team_id": "penn_st",
+      "team_id": "penn_state",
       "team_name": "Penn St.",
       "name": "Penn St.",
       "conference": "B10",
@@ -697,7 +697,7 @@
       "defensive_reb_rate": 0.7411
     },
     {
-      "team_id": "wichita_st",
+      "team_id": "wichita_state",
       "team_name": "Wichita St.",
       "name": "Wichita St.",
       "conference": "Amer",
@@ -784,7 +784,7 @@
       "defensive_reb_rate": 0.7292
     },
     {
-      "team_id": "florida_st",
+      "team_id": "florida_state",
       "team_name": "Florida St.",
       "name": "Florida St.",
       "conference": "ACC",
@@ -813,7 +813,7 @@
       "defensive_reb_rate": 0.707
     },
     {
-      "team_id": "miami_fl",
+      "team_id": "miami__fl",
       "team_name": "Miami FL",
       "name": "Miami FL",
       "conference": "ACC",
@@ -842,7 +842,7 @@
       "defensive_reb_rate": 0.7169
     },
     {
-      "team_id": "kansas_st",
+      "team_id": "kansas_state",
       "team_name": "Kansas St.",
       "name": "Kansas St.",
       "conference": "B12",
@@ -929,7 +929,7 @@
       "defensive_reb_rate": 0.708
     },
     {
-      "team_id": "oklahoma_st",
+      "team_id": "oklahoma_state",
       "team_name": "Oklahoma St.",
       "name": "Oklahoma St.",
       "conference": "B12",
@@ -1016,7 +1016,7 @@
       "defensive_reb_rate": 0.7488
     },
     {
-      "team_id": "san_diego_st",
+      "team_id": "san_diego_state",
       "team_name": "San Diego St.",
       "name": "San Diego St.",
       "conference": "MWC",
@@ -1103,7 +1103,7 @@
       "defensive_reb_rate": 0.6865
     },
     {
-      "team_id": "saint_mary_s",
+      "team_id": "saint_mary_s__ca",
       "team_name": "Saint Mary's",
       "name": "Saint Mary's",
       "conference": "WCC",
@@ -1161,7 +1161,7 @@
       "defensive_reb_rate": 0.7052
     },
     {
-      "team_id": "loyola_chicago",
+      "team_id": "loyola__il",
       "team_name": "Loyola Chicago",
       "name": "Loyola Chicago",
       "conference": "MVC",
@@ -1263,7 +1263,7 @@
       "defensive_reb_rate": 0.7223
     },
     {
-      "team_id": "usc",
+      "team_id": "southern_california",
       "team_name": "USC",
       "name": "USC",
       "conference": "P12",
@@ -1350,7 +1350,7 @@
       "defensive_reb_rate": 0.6999
     },
     {
-      "team_id": "mississippi_st",
+      "team_id": "mississippi_state",
       "team_name": "Mississippi St.",
       "name": "Mississippi St.",
       "conference": "SEC",
@@ -1466,7 +1466,7 @@
       "defensive_reb_rate": 0.7669
     },
     {
-      "team_id": "n_c__state",
+      "team_id": "nc_state",
       "team_name": "N.C. State",
       "name": "N.C. State",
       "conference": "ACC",
@@ -1553,7 +1553,7 @@
       "defensive_reb_rate": 0.7156
     },
     {
-      "team_id": "arizona_st",
+      "team_id": "arizona_state",
       "team_name": "Arizona St.",
       "name": "Arizona St.",
       "conference": "P12",
@@ -1582,7 +1582,7 @@
       "defensive_reb_rate": 0.6943
     },
     {
-      "team_id": "boise_st",
+      "team_id": "boise_state",
       "team_name": "Boise St.",
       "name": "Boise St.",
       "conference": "MWC",
@@ -1727,7 +1727,7 @@
       "defensive_reb_rate": 0.7114
     },
     {
-      "team_id": "south_dakota_st",
+      "team_id": "south_dakota_state",
       "team_name": "South Dakota St.",
       "name": "South Dakota St.",
       "conference": "Sum",
@@ -1814,7 +1814,7 @@
       "defensive_reb_rate": 0.7316
     },
     {
-      "team_id": "new_mexico_st",
+      "team_id": "new_mexico_state",
       "team_name": "New Mexico St.",
       "name": "New Mexico St.",
       "conference": "WAC",
@@ -1901,7 +1901,7 @@
       "defensive_reb_rate": 0.7112
     },
     {
-      "team_id": "st__john_s",
+      "team_id": "st__john_s__ny",
       "team_name": "St. John's",
       "name": "St. John's",
       "conference": "BE",
@@ -1959,7 +1959,7 @@
       "defensive_reb_rate": 0.7301
     },
     {
-      "team_id": "lsu",
+      "team_id": "louisiana_state",
       "team_name": "LSU",
       "name": "LSU",
       "conference": "SEC",
@@ -2075,7 +2075,7 @@
       "defensive_reb_rate": 0.724
     },
     {
-      "team_id": "fresno_st",
+      "team_id": "fresno_state",
       "team_name": "Fresno St.",
       "name": "Fresno St.",
       "conference": "MWC",
@@ -2191,7 +2191,7 @@
       "defensive_reb_rate": 0.7266
     },
     {
-      "team_id": "st__bonaventure",
+      "team_id": "st_bonaventure",
       "team_name": "St. Bonaventure",
       "name": "St. Bonaventure",
       "conference": "A10",
@@ -2220,7 +2220,7 @@
       "defensive_reb_rate": 0.7099
     },
     {
-      "team_id": "murray_st",
+      "team_id": "murray_state",
       "team_name": "Murray St.",
       "name": "Murray St.",
       "conference": "OVC",
@@ -2394,7 +2394,7 @@
       "defensive_reb_rate": 0.7226
     },
     {
-      "team_id": "iowa_st",
+      "team_id": "iowa_state",
       "team_name": "Iowa St.",
       "name": "Iowa St.",
       "conference": "B12",
@@ -2423,7 +2423,7 @@
       "defensive_reb_rate": 0.6928
     },
     {
-      "team_id": "byu",
+      "team_id": "brigham_young",
       "team_name": "BYU",
       "name": "BYU",
       "conference": "WCC",
@@ -2684,7 +2684,7 @@
       "defensive_reb_rate": 0.7406
     },
     {
-      "team_id": "smu",
+      "team_id": "southern_methodist",
       "team_name": "SMU",
       "name": "SMU",
       "conference": "Amer",
@@ -2742,7 +2742,7 @@
       "defensive_reb_rate": 0.7248
     },
     {
-      "team_id": "stephen_f__austin",
+      "team_id": "stephen_f_austin",
       "team_name": "Stephen F. Austin",
       "name": "Stephen F. Austin",
       "conference": "Slnd",
@@ -2771,7 +2771,7 @@
       "defensive_reb_rate": 0.7225
     },
     {
-      "team_id": "georgia_st",
+      "team_id": "georgia_state",
       "team_name": "Georgia St.",
       "name": "Georgia St.",
       "conference": "SB",
@@ -3090,7 +3090,7 @@
       "defensive_reb_rate": 0.7054
     },
     {
-      "team_id": "oregon_st",
+      "team_id": "oregon_state",
       "team_name": "Oregon St.",
       "name": "Oregon St.",
       "conference": "P12",
@@ -3148,7 +3148,7 @@
       "defensive_reb_rate": 0.6943
     },
     {
-      "team_id": "penn",
+      "team_id": "pennsylvania",
       "team_name": "Penn",
       "name": "Penn",
       "conference": "Ivy",
@@ -3177,7 +3177,7 @@
       "defensive_reb_rate": 0.7766
     },
     {
-      "team_id": "east_tennessee_st",
+      "team_id": "east_tennessee_state",
       "team_name": "East Tennessee St.",
       "name": "East Tennessee St.",
       "conference": "SC",
@@ -3206,7 +3206,7 @@
       "defensive_reb_rate": 0.7217
     },
     {
-      "team_id": "unlv",
+      "team_id": "nevada_las_vegas",
       "team_name": "UNLV",
       "name": "UNLV",
       "conference": "MWC",
@@ -3409,7 +3409,7 @@
       "defensive_reb_rate": 0.7404
     },
     {
-      "team_id": "missouri_st",
+      "team_id": "missouri_state",
       "team_name": "Missouri St.",
       "name": "Missouri St.",
       "conference": "MVC",
@@ -3728,7 +3728,7 @@
       "defensive_reb_rate": 0.7687
     },
     {
-      "team_id": "vcu",
+      "team_id": "virginia_commonwealth",
       "team_name": "VCU",
       "name": "VCU",
       "conference": "A10",
@@ -3902,7 +3902,7 @@
       "defensive_reb_rate": 0.7447
     },
     {
-      "team_id": "charleston",
+      "team_id": "college_of_charleston",
       "team_name": "Charleston",
       "name": "Charleston",
       "conference": "CAA",
@@ -3960,7 +3960,7 @@
       "defensive_reb_rate": 0.6799
     },
     {
-      "team_id": "wright_st",
+      "team_id": "wright_state",
       "team_name": "Wright St.",
       "name": "Wright St.",
       "conference": "Horz",
@@ -3989,7 +3989,7 @@
       "defensive_reb_rate": 0.7502
     },
     {
-      "team_id": "utah_st",
+      "team_id": "utah_state",
       "team_name": "Utah St.",
       "name": "Utah St.",
       "conference": "MWC",
@@ -4076,7 +4076,7 @@
       "defensive_reb_rate": 0.7319
     },
     {
-      "team_id": "illinois_st",
+      "team_id": "illinois_state",
       "team_name": "Illinois St.",
       "name": "Illinois St.",
       "conference": "MVC",
@@ -4134,7 +4134,7 @@
       "defensive_reb_rate": 0.7138
     },
     {
-      "team_id": "indiana_st",
+      "team_id": "indiana_state",
       "team_name": "Indiana St.",
       "name": "Indiana St.",
       "conference": "MVC",
@@ -4366,7 +4366,7 @@
       "defensive_reb_rate": 0.6961
     },
     {
-      "team_id": "albany",
+      "team_id": "albany__ny",
       "team_name": "Albany",
       "name": "Albany",
       "conference": "AE",
@@ -4468,7 +4468,7 @@
       "defensive_reb_rate": 0.7142
     },
     {
-      "team_id": "jacksonville_st",
+      "team_id": "jacksonville_state",
       "team_name": "Jacksonville St.",
       "name": "Jacksonville St.",
       "conference": "OVC",
@@ -4700,7 +4700,7 @@
       "defensive_reb_rate": 0.7265
     },
     {
-      "team_id": "umbc",
+      "team_id": "maryland_baltimore_county",
       "team_name": "UMBC",
       "name": "UMBC",
       "conference": "AE",
@@ -4758,7 +4758,7 @@
       "defensive_reb_rate": 0.7
     },
     {
-      "team_id": "portland_st",
+      "team_id": "portland_state",
       "team_name": "Portland St.",
       "name": "Portland St.",
       "conference": "BSky",
@@ -4816,7 +4816,7 @@
       "defensive_reb_rate": 0.7145
     },
     {
-      "team_id": "william___mary",
+      "team_id": "william_mary",
       "team_name": "William & Mary",
       "name": "William & Mary",
       "conference": "CAA",
@@ -4845,7 +4845,7 @@
       "defensive_reb_rate": 0.7461
     },
     {
-      "team_id": "ball_st",
+      "team_id": "ball_state",
       "team_name": "Ball St.",
       "name": "Ball St.",
       "conference": "MAC",
@@ -4903,7 +4903,7 @@
       "defensive_reb_rate": 0.7005
     },
     {
-      "team_id": "cal_st__fullerton",
+      "team_id": "cal_state_fullerton",
       "team_name": "Cal St. Fullerton",
       "name": "Cal St. Fullerton",
       "conference": "BW",
@@ -5019,7 +5019,7 @@
       "defensive_reb_rate": 0.7277
     },
     {
-      "team_id": "weber_st",
+      "team_id": "weber_state",
       "team_name": "Weber St.",
       "name": "Weber St.",
       "conference": "BSky",
@@ -5338,7 +5338,7 @@
       "defensive_reb_rate": 0.672
     },
     {
-      "team_id": "north_dakota_st",
+      "team_id": "north_dakota_state",
       "team_name": "North Dakota St.",
       "name": "North Dakota St.",
       "conference": "Sum",
@@ -5483,7 +5483,7 @@
       "defensive_reb_rate": 0.7112
     },
     {
-      "team_id": "miami_oh",
+      "team_id": "miami__oh",
       "team_name": "Miami OH",
       "name": "Miami OH",
       "conference": "MAC",
@@ -5512,7 +5512,7 @@
       "defensive_reb_rate": 0.7454
     },
     {
-      "team_id": "nicholls_st",
+      "team_id": "nicholls_state",
       "team_name": "Nicholls St.",
       "name": "Nicholls St.",
       "conference": "Slnd",
@@ -5585,7 +5585,7 @@
       "defensive_reb_rate": 0.7586
     },
     {
-      "team_id": "washington_st",
+      "team_id": "washington_state",
       "team_name": "Washington St.",
       "name": "Washington St.",
       "conference": "P12",
@@ -5730,7 +5730,7 @@
       "defensive_reb_rate": 0.7334
     },
     {
-      "team_id": "long_beach_st",
+      "team_id": "long_beach_state",
       "team_name": "Long Beach St.",
       "name": "Long Beach St.",
       "conference": "BW",
@@ -5788,7 +5788,7 @@
       "defensive_reb_rate": 0.7038
     },
     {
-      "team_id": "appalachian_st",
+      "team_id": "appalachian_state",
       "team_name": "Appalachian St.",
       "name": "Appalachian St.",
       "conference": "SB",
@@ -5890,7 +5890,7 @@
       "defensive_reb_rate": 0.7641
     },
     {
-      "team_id": "idaho_st",
+      "team_id": "idaho_state",
       "team_name": "Idaho St.",
       "name": "Idaho St.",
       "conference": "BSky",
@@ -5948,7 +5948,7 @@
       "defensive_reb_rate": 0.7282
     },
     {
-      "team_id": "fiu",
+      "team_id": "florida_international",
       "team_name": "FIU",
       "name": "FIU",
       "conference": "CUSA",
@@ -6006,7 +6006,7 @@
       "defensive_reb_rate": 0.731
     },
     {
-      "team_id": "kent_st",
+      "team_id": "kent_state",
       "team_name": "Kent St.",
       "name": "Kent St.",
       "conference": "MAC",
@@ -6093,7 +6093,7 @@
       "defensive_reb_rate": 0.7088
     },
     {
-      "team_id": "texas_st",
+      "team_id": "texas_state",
       "team_name": "Texas St.",
       "name": "Texas St.",
       "conference": "SB",
@@ -6296,7 +6296,7 @@
       "defensive_reb_rate": 0.7197
     },
     {
-      "team_id": "tennessee_st",
+      "team_id": "tennessee_state",
       "team_name": "Tennessee St.",
       "name": "Tennessee St.",
       "conference": "OVC",
@@ -6325,7 +6325,7 @@
       "defensive_reb_rate": 0.7317
     },
     {
-      "team_id": "colorado_st",
+      "team_id": "colorado_state",
       "team_name": "Colorado St.",
       "name": "Colorado St.",
       "conference": "MWC",
@@ -6354,7 +6354,7 @@
       "defensive_reb_rate": 0.7199
     },
     {
-      "team_id": "sam_houston_st",
+      "team_id": "sam_houston_state",
       "team_name": "Sam Houston St.",
       "name": "Sam Houston St.",
       "conference": "Slnd",
@@ -6819,7 +6819,7 @@
       "defensive_reb_rate": 0.7517
     },
     {
-      "team_id": "cal_st__bakersfield",
+      "team_id": "cal_state_bakersfield",
       "team_name": "Cal St. Bakersfield",
       "name": "Cal St. Bakersfield",
       "conference": "WAC",
@@ -7341,7 +7341,7 @@
       "defensive_reb_rate": 0.7212
     },
     {
-      "team_id": "liu",
+      "team_id": "long_island_university",
       "team_name": "LIU",
       "name": "LIU",
       "conference": "NEC",
@@ -7370,7 +7370,7 @@
       "defensive_reb_rate": 0.7047
     },
     {
-      "team_id": "southeast_missouri_st",
+      "team_id": "southeast_missouri_state",
       "team_name": "Southeast Missouri St.",
       "name": "Southeast Missouri St.",
       "conference": "OVC",
@@ -7501,7 +7501,7 @@
       "defensive_reb_rate": 0.6906
     },
     {
-      "team_id": "montana_st",
+      "team_id": "montana_state",
       "team_name": "Montana St.",
       "name": "Montana St.",
       "conference": "BSky",
@@ -7646,7 +7646,7 @@
       "defensive_reb_rate": 0.652
     },
     {
-      "team_id": "umkc",
+      "team_id": "kansas_city",
       "team_name": "UMKC",
       "name": "UMKC",
       "conference": "WAC",
@@ -7733,7 +7733,7 @@
       "defensive_reb_rate": 0.7329
     },
     {
-      "team_id": "arkansas_st",
+      "team_id": "arkansas_state",
       "team_name": "Arkansas St.",
       "name": "Arkansas St.",
       "conference": "SB",
@@ -7864,7 +7864,7 @@
       "free_throw_rate": 0.0
     },
     {
-      "team_id": "prairie_view_a_m",
+      "team_id": "prairie_view",
       "team_name": "Prairie View A&M",
       "name": "Prairie View A&M",
       "conference": "SWAC",
@@ -8140,7 +8140,7 @@
       "free_throw_rate": 0.0
     },
     {
-      "team_id": "nebraska_omaha",
+      "team_id": "omaha",
       "team_name": "Nebraska Omaha",
       "name": "Nebraska Omaha",
       "conference": "Sum",
@@ -8169,7 +8169,7 @@
       "defensive_reb_rate": 0.7056
     },
     {
-      "team_id": "cleveland_st",
+      "team_id": "cleveland_state",
       "team_name": "Cleveland St.",
       "name": "Cleveland St.",
       "conference": "Horz",
@@ -8227,7 +8227,7 @@
       "defensive_reb_rate": 0.6894
     },
     {
-      "team_id": "morehead_st",
+      "team_id": "morehead_state",
       "team_name": "Morehead St.",
       "name": "Morehead St.",
       "conference": "OVC",
@@ -8372,7 +8372,7 @@
       "defensive_reb_rate": 0.6629
     },
     {
-      "team_id": "sacramento_st",
+      "team_id": "sacramento_state",
       "team_name": "Sacramento St.",
       "name": "Sacramento St.",
       "conference": "BSky",
@@ -8401,7 +8401,7 @@
       "defensive_reb_rate": 0.7079
     },
     {
-      "team_id": "san_jose_st",
+      "team_id": "san_jose_state",
       "team_name": "San Jose St.",
       "name": "San Jose St.",
       "conference": "MWC",
@@ -8488,7 +8488,7 @@
       "defensive_reb_rate": 0.6954
     },
     {
-      "team_id": "mcneese_st",
+      "team_id": "mcneese_state",
       "team_name": "McNeese St.",
       "name": "McNeese St.",
       "conference": "Slnd",
@@ -8677,7 +8677,7 @@
       "defensive_reb_rate": 0.6753
     },
     {
-      "team_id": "youngstown_st",
+      "team_id": "youngstown_state",
       "team_name": "Youngstown St.",
       "name": "Youngstown St.",
       "conference": "Horz",
@@ -8793,7 +8793,7 @@
       "defensive_reb_rate": 0.7026
     },
     {
-      "team_id": "st__francis_ny",
+      "team_id": "st_francis_ny",
       "team_name": "St. Francis NY",
       "name": "St. Francis NY",
       "conference": "NEC",
@@ -8909,7 +8909,7 @@
       "defensive_reb_rate": 0.7321
     },
     {
-      "team_id": "kennesaw_st",
+      "team_id": "kennesaw_state",
       "team_name": "Kennesaw St.",
       "name": "Kennesaw St.",
       "conference": "ASun",
@@ -8938,7 +8938,7 @@
       "defensive_reb_rate": 0.6753
     },
     {
-      "team_id": "grambling_st",
+      "team_id": "grambling",
       "team_name": "Grambling St.",
       "name": "Grambling St.",
       "conference": "SWAC",
@@ -8967,7 +8967,7 @@
       "defensive_reb_rate": 0.6954
     },
     {
-      "team_id": "norfolk_st",
+      "team_id": "norfolk_state",
       "team_name": "Norfolk St.",
       "name": "Norfolk St.",
       "conference": "MEAC",
@@ -8996,7 +8996,7 @@
       "defensive_reb_rate": 0.714
     },
     {
-      "team_id": "savannah_st",
+      "team_id": "savannah_state",
       "team_name": "Savannah St.",
       "name": "Savannah St.",
       "conference": "MEAC",
@@ -9156,7 +9156,7 @@
       "defensive_reb_rate": 0.7131
     },
     {
-      "team_id": "texas_a_m_corpus_chris",
+      "team_id": "texas_a_m_corpus_christi",
       "team_name": "Texas A&M Corpus Chris",
       "name": "Texas A&M Corpus Chris",
       "conference": "Slnd",
@@ -9272,7 +9272,7 @@
       "defensive_reb_rate": 0.7033
     },
     {
-      "team_id": "cal_st__northridge",
+      "team_id": "cal_state_northridge",
       "team_name": "Cal St. Northridge",
       "name": "Cal St. Northridge",
       "conference": "BW",
@@ -9301,7 +9301,7 @@
       "defensive_reb_rate": 0.6821
     },
     {
-      "team_id": "morgan_st",
+      "team_id": "morgan_state",
       "team_name": "Morgan St.",
       "name": "Morgan St.",
       "conference": "MEAC",
@@ -9577,7 +9577,7 @@
       "defensive_reb_rate": 0.656
     },
     {
-      "team_id": "alcorn_st",
+      "team_id": "alcorn_state",
       "team_name": "Alcorn St.",
       "name": "Alcorn St.",
       "conference": "SWAC",
@@ -9606,7 +9606,7 @@
       "defensive_reb_rate": 0.6876
     },
     {
-      "team_id": "jackson_st",
+      "team_id": "jackson_state",
       "team_name": "Jackson St.",
       "name": "Jackson St.",
       "conference": "SWAC",
@@ -9693,7 +9693,7 @@
       "defensive_reb_rate": 0.6603
     },
     {
-      "team_id": "alabama_st",
+      "team_id": "alabama_state",
       "team_name": "Alabama St.",
       "name": "Alabama St.",
       "conference": "SWAC",
@@ -9751,7 +9751,7 @@
       "defensive_reb_rate": 0.69
     },
     {
-      "team_id": "south_carolina_st",
+      "team_id": "south_carolina_state",
       "team_name": "South Carolina St.",
       "name": "South Carolina St.",
       "conference": "MEAC",
@@ -9780,7 +9780,7 @@
       "defensive_reb_rate": 0.6716
     },
     {
-      "team_id": "chicago_st",
+      "team_id": "chicago_state",
       "team_name": "Chicago St.",
       "name": "Chicago St.",
       "conference": "WAC",
@@ -9795,7 +9795,7 @@
       "free_throw_rate": 0.0
     },
     {
-      "team_id": "northwestern_st",
+      "team_id": "northwestern_state",
       "team_name": "Northwestern St.",
       "name": "Northwestern St.",
       "conference": "Slnd",
@@ -9853,7 +9853,7 @@
       "defensive_reb_rate": 0.6365
     },
     {
-      "team_id": "coppin_st",
+      "team_id": "coppin_state",
       "team_name": "Coppin St.",
       "name": "Coppin St.",
       "conference": "MEAC",
@@ -9882,7 +9882,7 @@
       "defensive_reb_rate": 0.681
     },
     {
-      "team_id": "mississippi_valley_st",
+      "team_id": "mississippi_valley_state",
       "team_name": "Mississippi Valley St.",
       "name": "Mississippi Valley St.",
       "conference": "SWAC",
@@ -9955,7 +9955,7 @@
       "defensive_reb_rate": 0.6765
     },
     {
-      "team_id": "delaware_st",
+      "team_id": "delaware_state",
       "team_name": "Delaware St.",
       "name": "Delaware St.",
       "conference": "MEAC",

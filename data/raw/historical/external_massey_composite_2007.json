@@ -22,7 +22,7 @@
   },
   {
     "team_name": "Arizona St",
-    "team_id": "arizona_st",
+    "team_id": "arizona_state",
     "rating": 462.9249250000001,
     "ranking": 179,
     "normalized": 0.462925
@@ -50,7 +50,7 @@
   },
   {
     "team_name": "Boise St",
-    "team_id": "boise_st",
+    "team_id": "boise_state",
     "rating": 639.5147999999999,
     "ranking": 119,
     "normalized": 0.639515
@@ -113,7 +113,7 @@
   },
   {
     "team_name": "Colorado St",
-    "team_id": "colorado_st",
+    "team_id": "colorado_state",
     "rating": 672.1112999999998,
     "ranking": 106,
     "normalized": 0.672111
@@ -190,7 +190,7 @@
   },
   {
     "team_name": "Florida St",
-    "team_id": "florida_st",
+    "team_id": "florida_state",
     "rating": 873.7226000000004,
     "ranking": 40,
     "normalized": 0.873723
@@ -204,7 +204,7 @@
   },
   {
     "team_name": "Fresno St",
-    "team_id": "fresno_st",
+    "team_id": "fresno_state",
     "rating": 739.5917249999999,
     "ranking": 84,
     "normalized": 0.739592
@@ -274,7 +274,7 @@
   },
   {
     "team_name": "Illinois St",
-    "team_id": "illinois_st",
+    "team_id": "illinois_state",
     "rating": 649.3359749999997,
     "ranking": 111,
     "normalized": 0.649336
@@ -288,7 +288,7 @@
   },
   {
     "team_name": "Indiana St",
-    "team_id": "indiana_st",
+    "team_id": "indiana_state",
     "rating": 583.970025,
     "ranking": 135,
     "normalized": 0.58397
@@ -302,7 +302,7 @@
   },
   {
     "team_name": "Iowa St",
-    "team_id": "iowa_st",
+    "team_id": "iowa_state",
     "rating": 617.9790750000001,
     "ranking": 127,
     "normalized": 0.617979
@@ -316,7 +316,7 @@
   },
   {
     "team_name": "Kansas St",
-    "team_id": "kansas_st",
+    "team_id": "kansas_state",
     "rating": 846.8713749999998,
     "ranking": 50,
     "normalized": 0.846871
@@ -407,7 +407,7 @@
   },
   {
     "team_name": "Michigan St",
-    "team_id": "michigan_st",
+    "team_id": "michigan_state",
     "rating": 915.7079000000001,
     "ranking": 25,
     "normalized": 0.915708
@@ -428,7 +428,7 @@
   },
   {
     "team_name": "Mississippi St",
-    "team_id": "mississippi_st",
+    "team_id": "mississippi_state",
     "rating": 835.4901,
     "ranking": 53,
     "normalized": 0.83549
@@ -442,7 +442,7 @@
   },
   {
     "team_name": "Missouri St",
-    "team_id": "missouri_st",
+    "team_id": "missouri_state",
     "rating": 880.6932749999999,
     "ranking": 37,
     "normalized": 0.880693
@@ -477,7 +477,7 @@
   },
   {
     "team_name": "New Mexico St",
-    "team_id": "new_mexico_st",
+    "team_id": "new_mexico_state",
     "rating": 781.032425,
     "ranking": 69,
     "normalized": 0.781032
@@ -512,7 +512,7 @@
   },
   {
     "team_name": "Ohio St",
-    "team_id": "ohio_st",
+    "team_id": "ohio_state",
     "rating": 996.5542249999999,
     "ranking": 1,
     "normalized": 0.996554
@@ -526,7 +526,7 @@
   },
   {
     "team_name": "Oklahoma St",
-    "team_id": "oklahoma_st",
+    "team_id": "oklahoma_state",
     "rating": 810.768775,
     "ranking": 63,
     "normalized": 0.810769
@@ -540,14 +540,14 @@
   },
   {
     "team_name": "Oregon St",
-    "team_id": "oregon_st",
+    "team_id": "oregon_state",
     "rating": 470.68982499999987,
     "ranking": 174,
     "normalized": 0.47069
   },
   {
     "team_name": "Penn St",
-    "team_id": "penn_st",
+    "team_id": "penn_state",
     "rating": 493.7824,
     "ranking": 167,
     "normalized": 0.493782
@@ -610,14 +610,14 @@
   },
   {
     "team_name": "San Diego St",
-    "team_id": "san_diego_st",
+    "team_id": "san_diego_state",
     "rating": 781.2576250000001,
     "ranking": 68,
     "normalized": 0.781258
   },
   {
     "team_name": "San Jose St",
-    "team_id": "san_jose_st",
+    "team_id": "san_jose_state",
     "rating": 236.108025,
     "ranking": 258,
     "normalized": 0.236108
@@ -666,7 +666,7 @@
   },
   {
     "team_name": "St John's",
-    "team_id": "st_john_s__ny",
+    "team_id": "st__john_s__ny",
     "rating": 647.4161249999999,
     "ranking": 113,
     "normalized": 0.647416
@@ -778,7 +778,7 @@
   },
   {
     "team_name": "UNLV",
-    "team_id": "unlv",
+    "team_id": "nevada_las_vegas",
     "rating": 934.6775,
     "ranking": 20,
     "normalized": 0.934678
@@ -799,7 +799,7 @@
   },
   {
     "team_name": "Utah St",
-    "team_id": "utah_st",
+    "team_id": "utah_state",
     "rating": 759.3026,
     "ranking": 77,
     "normalized": 0.759303
@@ -855,7 +855,7 @@
   },
   {
     "team_name": "Washington St",
-    "team_id": "washington_st",
+    "team_id": "washington_state",
     "rating": 944.0513,
     "ranking": 15,
     "normalized": 0.944051
@@ -869,7 +869,7 @@
   },
   {
     "team_name": "Wichita St",
-    "team_id": "wichita_st",
+    "team_id": "wichita_state",
     "rating": 747.7255749999998,
     "ranking": 79,
     "normalized": 0.747726
@@ -911,7 +911,7 @@
   },
   {
     "team_name": "Alabama St",
-    "team_id": "alabama_st",
+    "team_id": "alabama_state",
     "rating": 71.5648157894737,
     "ranking": 313,
     "normalized": 0.071565
@@ -925,7 +925,7 @@
   },
   {
     "team_name": "Alcorn St",
-    "team_id": "alcorn_st",
+    "team_id": "alcorn_state",
     "rating": 54.50626315789473,
     "ranking": 321,
     "normalized": 0.054506
@@ -939,7 +939,7 @@
   },
   {
     "team_name": "Appalachian St",
-    "team_id": "appalachian_st",
+    "team_id": "appalachian_state",
     "rating": 796.5359743589742,
     "ranking": 67,
     "normalized": 0.796536
@@ -960,7 +960,7 @@
   },
   {
     "team_name": "Arkansas St",
-    "team_id": "arkansas_st",
+    "team_id": "arkansas_state",
     "rating": 438.4839473684211,
     "ranking": 188,
     "normalized": 0.438484
@@ -981,7 +981,7 @@
   },
   {
     "team_name": "Ball St",
-    "team_id": "ball_st",
+    "team_id": "ball_state",
     "rating": 281.8236153846154,
     "ranking": 240,
     "normalized": 0.281824
@@ -1114,7 +1114,7 @@
   },
   {
     "team_name": "Chicago St",
-    "team_id": "chicago_st",
+    "team_id": "chicago_state",
     "rating": 310.54889473684204,
     "ranking": 232,
     "normalized": 0.310549
@@ -1128,7 +1128,7 @@
   },
   {
     "team_name": "Cleveland St",
-    "team_id": "cleveland_st",
+    "team_id": "cleveland_state",
     "rating": 280.3652894736842,
     "ranking": 241,
     "normalized": 0.280365
@@ -1163,7 +1163,7 @@
   },
   {
     "team_name": "Coppin St",
-    "team_id": "coppin_st",
+    "team_id": "coppin_state",
     "rating": 177.5086052631579,
     "ranking": 279,
     "normalized": 0.177509
@@ -1219,7 +1219,7 @@
   },
   {
     "team_name": "Delaware St",
-    "team_id": "delaware_st",
+    "team_id": "delaware_state",
     "rating": 502.8245641025642,
     "ranking": 165,
     "normalized": 0.502825
@@ -1282,7 +1282,7 @@
   },
   {
     "team_name": "ETSU",
-    "team_id": "etsu",
+    "team_id": "east_tennessee_state",
     "rating": 572.0054736842105,
     "ranking": 140,
     "normalized": 0.572005
@@ -1352,7 +1352,7 @@
   },
   {
     "team_name": "Georgia St",
-    "team_id": "georgia_st",
+    "team_id": "georgia_state",
     "rating": 326.6247368421054,
     "ranking": 225,
     "normalized": 0.326625
@@ -1415,7 +1415,7 @@
   },
   {
     "team_name": "Idaho St",
-    "team_id": "idaho_st",
+    "team_id": "idaho_state",
     "rating": 421.41936842105275,
     "ranking": 193,
     "normalized": 0.421419
@@ -1450,7 +1450,7 @@
   },
   {
     "team_name": "Jackson St",
-    "team_id": "jackson_st",
+    "team_id": "jackson_state",
     "rating": 376.5871578947369,
     "ranking": 208,
     "normalized": 0.376587
@@ -1464,7 +1464,7 @@
   },
   {
     "team_name": "Jacksonville St",
-    "team_id": "jacksonville_st",
+    "team_id": "jacksonville_state",
     "rating": 103.238,
     "ranking": 305,
     "normalized": 0.103238
@@ -1527,7 +1527,7 @@
   },
   {
     "team_name": "Long Beach St",
-    "team_id": "long_beach_st",
+    "team_id": "long_beach_state",
     "rating": 737.1268717948717,
     "ranking": 85,
     "normalized": 0.737127
@@ -1562,7 +1562,7 @@
   },
   {
     "team_name": "Loyola-Chicago",
-    "team_id": "loyola_chicago",
+    "team_id": "loyola__il",
     "rating": 711.9488974358974,
     "ranking": 95,
     "normalized": 0.711949
@@ -1590,7 +1590,7 @@
   },
   {
     "team_name": "McNeese St",
-    "team_id": "mcneese_st",
+    "team_id": "mcneese_state",
     "rating": 286.6932894736842,
     "ranking": 237,
     "normalized": 0.286693
@@ -1639,28 +1639,28 @@
   },
   {
     "team_name": "Montana St",
-    "team_id": "montana_st",
+    "team_id": "montana_state",
     "rating": 202.73784615384622,
     "ranking": 271,
     "normalized": 0.202738
   },
   {
     "team_name": "Morehead St",
-    "team_id": "morehead_st",
+    "team_id": "morehead_state",
     "rating": 153.61021052631577,
     "ranking": 287,
     "normalized": 0.15361
   },
   {
     "team_name": "Morgan St",
-    "team_id": "morgan_st",
+    "team_id": "morgan_state",
     "rating": 144.065,
     "ranking": 292,
     "normalized": 0.144065
   },
   {
     "team_name": "MS Valley St",
-    "team_id": "ms_valley_st",
+    "team_id": "ms_valley_state",
     "rating": 311.21452631578944,
     "ranking": 231,
     "normalized": 0.311215
@@ -1681,7 +1681,7 @@
   },
   {
     "team_name": "Murray St",
-    "team_id": "murray_st",
+    "team_id": "murray_state",
     "rating": 380.8828974358974,
     "ranking": 205,
     "normalized": 0.380883
@@ -1695,7 +1695,7 @@
   },
   {
     "team_name": "N Dakota St",
-    "team_id": "n_dakota_st",
+    "team_id": "n_dakota_state",
     "rating": 598.7309459459461,
     "ranking": 130,
     "normalized": 0.598731
@@ -1744,7 +1744,7 @@
   },
   {
     "team_name": "Nicholls St",
-    "team_id": "nicholls_st",
+    "team_id": "nicholls_state",
     "rating": 163.82371052631575,
     "ranking": 283,
     "normalized": 0.163824
@@ -1758,7 +1758,7 @@
   },
   {
     "team_name": "Norfolk St",
-    "team_id": "norfolk_st",
+    "team_id": "norfolk_state",
     "rating": 108.07984210526317,
     "ranking": 302,
     "normalized": 0.10808
@@ -1835,7 +1835,7 @@
   },
   {
     "team_name": "Penn",
-    "team_id": "penn",
+    "team_id": "pennsylvania",
     "rating": 712.0999999999998,
     "ranking": 94,
     "normalized": 0.7121
@@ -1856,7 +1856,7 @@
   },
   {
     "team_name": "Portland St",
-    "team_id": "portland_st",
+    "team_id": "portland_state",
     "rating": 481.31823684210525,
     "ranking": 170,
     "normalized": 0.481318
@@ -1905,14 +1905,14 @@
   },
   {
     "team_name": "S Carolina St",
-    "team_id": "s_carolina_st",
+    "team_id": "s_carolina_state",
     "rating": 158.53410526315787,
     "ranking": 285,
     "normalized": 0.158534
   },
   {
     "team_name": "S Dakota St",
-    "team_id": "s_dakota_st",
+    "team_id": "s_dakota_state",
     "rating": 40.55780555555554,
     "ranking": 323,
     "normalized": 0.040558
@@ -1926,7 +1926,7 @@
   },
   {
     "team_name": "Sam Houston St",
-    "team_id": "sam_houston_st",
+    "team_id": "sam_houston_state",
     "rating": 595.3535897435896,
     "ranking": 133,
     "normalized": 0.595354
@@ -1968,7 +1968,7 @@
   },
   {
     "team_name": "Savannah St",
-    "team_id": "savannah_st",
+    "team_id": "savannah_state",
     "rating": 107.33505263157895,
     "ranking": 303,
     "normalized": 0.107335
@@ -1982,7 +1982,7 @@
   },
   {
     "team_name": "SE Missouri St",
-    "team_id": "se_missouri_st",
+    "team_id": "se_missouri_state",
     "rating": 144.18150000000003,
     "ranking": 291,
     "normalized": 0.144182
@@ -2045,7 +2045,7 @@
   },
   {
     "team_name": "St Peter's",
-    "team_id": "st_peter_s",
+    "team_id": "saint_peter_s",
     "rating": 39.371578947368434,
     "ranking": 325,
     "normalized": 0.039372
@@ -2073,7 +2073,7 @@
   },
   {
     "team_name": "Tennessee St",
-    "team_id": "tennessee_st",
+    "team_id": "tennessee_state",
     "rating": 193.47523684210523,
     "ranking": 274,
     "normalized": 0.193475
@@ -2087,7 +2087,7 @@
   },
   {
     "team_name": "Texas St",
-    "team_id": "texas_st",
+    "team_id": "texas_state",
     "rating": 63.62928947368421,
     "ranking": 318,
     "normalized": 0.063629
@@ -2171,7 +2171,7 @@
   },
   {
     "team_name": "UMBC",
-    "team_id": "umbc",
+    "team_id": "maryland_baltimore_county",
     "rating": 249.93676315789483,
     "ranking": 252,
     "normalized": 0.249937
@@ -2276,7 +2276,7 @@
   },
   {
     "team_name": "W Salem St",
-    "team_id": "w_salem_st",
+    "team_id": "w_salem_state",
     "rating": 28.97645945945947,
     "ranking": 328,
     "normalized": 0.028976
@@ -2290,7 +2290,7 @@
   },
   {
     "team_name": "Weber St",
-    "team_id": "weber_st",
+    "team_id": "weber_state",
     "rating": 543.2279736842105,
     "ranking": 148,
     "normalized": 0.543228
@@ -2332,7 +2332,7 @@
   },
   {
     "team_name": "Wright St",
-    "team_id": "wright_st",
+    "team_id": "wright_state",
     "rating": 747.1221538461537,
     "ranking": 80,
     "normalized": 0.747122
@@ -2346,7 +2346,7 @@
   },
   {
     "team_name": "Youngstown St",
-    "team_id": "youngstown_st",
+    "team_id": "youngstown_state",
     "rating": 468.5038421052631,
     "ranking": 176,
     "normalized": 0.468504

@@ -440,7 +440,7 @@
       "team1_id": "ohio_state",
       "team1_seed": 7,
       "team1_score": 54,
-      "team2_id": "loyola_chicago",
+      "team2_id": "loyola__il",
       "team2_seed": 10,
       "team2_score": 65,
       "team1_won": false
@@ -500,7 +500,7 @@
       "team1_id": "villanova",
       "team1_seed": 2,
       "team1_score": 71,
-      "team2_id": "loyola_chicago",
+      "team2_id": "loyola__il",
       "team2_seed": 10,
       "team2_score": 61,
       "team1_won": true
@@ -620,7 +620,7 @@
       "team1_id": "southern_california",
       "team1_seed": 7,
       "team1_score": 66,
-      "team2_id": "miami_fl",
+      "team2_id": "miami__fl",
       "team2_seed": 10,
       "team2_score": 68,
       "team1_won": false
@@ -677,7 +677,7 @@
       "year": 2022,
       "round_name": "R32",
       "region": "Midwest",
-      "team1_id": "miami_fl",
+      "team1_id": "miami__fl",
       "team1_seed": 10,
       "team1_score": 79,
       "team2_id": "auburn",
@@ -701,7 +701,7 @@
       "year": 2022,
       "round_name": "S16",
       "region": "Midwest",
-      "team1_id": "miami_fl",
+      "team1_id": "miami__fl",
       "team1_seed": 10,
       "team1_score": 70,
       "team2_id": "iowa_state",
@@ -716,7 +716,7 @@
       "team1_id": "kansas",
       "team1_seed": 1,
       "team1_score": 76,
-      "team2_id": "miami_fl",
+      "team2_id": "miami__fl",
       "team2_seed": 10,
       "team2_score": 50,
       "team1_won": true

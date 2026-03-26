@@ -125,7 +125,7 @@
       "season": 2022,
       "team_name": "St. Peter's",
       "school_slug": "saint-peters",
-      "team_id": "st_peter_s",
+      "team_id": "saint_peter_s",
       "seed": 15,
       "region": "East"
     },
@@ -349,7 +349,7 @@
       "season": 2022,
       "team_name": "Loyola (IL)",
       "school_slug": "loyola-il",
-      "team_id": "loyola_il",
+      "team_id": "loyola__il",
       "seed": 10,
       "region": "South"
     },

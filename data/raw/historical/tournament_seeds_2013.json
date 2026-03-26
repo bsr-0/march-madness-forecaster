@@ -37,7 +37,7 @@
       "season": 2013,
       "team_name": "UNLV",
       "school_slug": "nevada-las-vegas",
-      "team_id": "unlv",
+      "team_id": "nevada_las_vegas",
       "seed": 5,
       "region": "East"
     },
@@ -133,7 +133,7 @@
       "season": 2013,
       "team_name": "LIU",
       "school_slug": "long-island-university",
-      "team_id": "liu",
+      "team_id": "long_island_university",
       "seed": 16,
       "region": "East"
     },
@@ -261,7 +261,7 @@
       "season": 2013,
       "team_name": "Albany (NY)",
       "school_slug": "albany-ny",
-      "team_id": "albany_ny",
+      "team_id": "albany__ny",
       "seed": 15,
       "region": "Midwest"
     },

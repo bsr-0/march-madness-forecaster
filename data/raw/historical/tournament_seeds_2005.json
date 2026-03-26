@@ -5,7 +5,7 @@
       "season": 2005,
       "team_name": "UNC",
       "school_slug": "north-carolina",
-      "team_id": "unc",
+      "team_id": "north_carolina",
       "seed": 1,
       "region": "East"
     },
@@ -125,7 +125,7 @@
       "season": 2005,
       "team_name": "UConn",
       "school_slug": "connecticut",
-      "team_id": "uconn",
+      "team_id": "connecticut",
       "seed": 2,
       "region": "East"
     },
@@ -325,7 +325,7 @@
       "season": 2005,
       "team_name": "Penn",
       "school_slug": "pennsylvania",
-      "team_id": "penn",
+      "team_id": "pennsylvania",
       "seed": 13,
       "region": "Midwest"
     },
@@ -333,7 +333,7 @@
       "season": 2005,
       "team_name": "LSU",
       "school_slug": "louisiana-state",
-      "team_id": "lsu",
+      "team_id": "louisiana_state",
       "seed": 6,
       "region": "Midwest"
     },
@@ -421,7 +421,7 @@
       "season": 2005,
       "team_name": "Pitt",
       "school_slug": "pittsburgh",
-      "team_id": "pitt",
+      "team_id": "pittsburgh",
       "seed": 9,
       "region": "West"
     },

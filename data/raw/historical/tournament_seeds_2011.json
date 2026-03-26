@@ -125,7 +125,7 @@
       "season": 2011,
       "team_name": "LIU",
       "school_slug": "long-island-university",
-      "team_id": "liu",
+      "team_id": "long_island_university",
       "seed": 15,
       "region": "East"
     },
@@ -189,7 +189,7 @@
       "season": 2011,
       "team_name": "St. John's (NY)",
       "school_slug": "st-johns-ny",
-      "team_id": "st_john_s_ny",
+      "team_id": "st__john_s__ny",
       "seed": 6,
       "region": "Southeast"
     },
@@ -261,7 +261,7 @@
       "season": 2011,
       "team_name": "UCSB",
       "school_slug": "california-santa-barbara",
-      "team_id": "ucsb",
+      "team_id": "uc_santa_barbara",
       "seed": 15,
       "region": "Southeast"
     },
@@ -341,7 +341,7 @@
       "season": 2011,
       "team_name": "UNLV",
       "school_slug": "nevada-las-vegas",
-      "team_id": "unlv",
+      "team_id": "nevada_las_vegas",
       "seed": 8,
       "region": "Southwest"
     },
@@ -397,7 +397,7 @@
       "season": 2011,
       "team_name": "St. Peter's",
       "school_slug": "saint-peters",
-      "team_id": "st_peter_s",
+      "team_id": "saint_peter_s",
       "seed": 14,
       "region": "Southwest"
     },
