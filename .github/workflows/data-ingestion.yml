@@ -71,6 +71,8 @@ jobs:
     #   CBS_PUBLIC_PICKS_URL    - JSON endpoint for CBS bracket pick percentages
     #   THE_ODDS_API_KEY        - API key for The Odds API (aggregated sportsbook odds)
     env:
+      KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME || secrets.KAGGLE_USER }}
+      KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
       CBBDATA_API_KEY: ${{ secrets.CBBDATA_API_KEY }}
       CBD_USER: ${{ secrets.CBD_USER }}
       CBD_PASSWORD: ${{ secrets.CBD_PASSWORD }}
