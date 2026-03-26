@@ -60,7 +60,7 @@ from .kaggle_backtest import (
 logger = logging.getLogger(__name__)
 
 # Historical LOYO years (excludes 2020 — tournament cancelled due to COVID)
-LOYO_YEARS = [2018, 2019, 2021, 2022, 2023, 2024, 2025]
+LOYO_YEARS = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
 
 # Standard NCAA bracket seed pairings per region (R64)
 _SEED_MATCHUP_ORDER = [
