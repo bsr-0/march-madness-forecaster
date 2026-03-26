@@ -70,7 +70,8 @@ def kaggle_api_available() -> bool:
         pass
 
     # Check for credentials even without the package
-    if os.environ.get("KAGGLE_USERNAME") and os.environ.get("KAGGLE_KEY"):
+    username = os.environ.get("KAGGLE_USERNAME") or os.environ.get("KAGGLE_USER")
+    if username and os.environ.get("KAGGLE_KEY"):
         return True
 
     kaggle_json = Path.home() / ".kaggle" / "kaggle.json"
@@ -82,11 +83,16 @@ def _setup_kaggle_credentials() -> bool:
 
     Checks (in order):
     1. KAGGLE_USERNAME + KAGGLE_KEY environment variables
-    2. ~/.kaggle/kaggle.json file
-    3. .env file in the project root (loads KAGGLE_KEY)
+    2. KAGGLE_USER alias (mapped to KAGGLE_USERNAME)
+    3. ~/.kaggle/kaggle.json file
+    4. .env file in the project root (loads KAGGLE_KEY)
 
     Returns True if credentials are available.
     """
+    # Map KAGGLE_USER alias -> KAGGLE_USERNAME for CI environments
+    if not os.environ.get("KAGGLE_USERNAME") and os.environ.get("KAGGLE_USER"):
+        os.environ["KAGGLE_USERNAME"] = os.environ["KAGGLE_USER"]
+
     # Already configured via env vars
     if os.environ.get("KAGGLE_USERNAME") and os.environ.get("KAGGLE_KEY"):
         return True
@@ -101,6 +107,9 @@ def _setup_kaggle_credentials() -> bool:
         env_file = Path(env_path)
         if env_file.exists():
             _load_env_file(env_file)
+            # Re-check KAGGLE_USER alias after .env load
+            if not os.environ.get("KAGGLE_USERNAME") and os.environ.get("KAGGLE_USER"):
+                os.environ["KAGGLE_USERNAME"] = os.environ["KAGGLE_USER"]
             if os.environ.get("KAGGLE_USERNAME") and os.environ.get("KAGGLE_KEY"):
                 return True
 
