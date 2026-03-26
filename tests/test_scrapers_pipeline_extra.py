@@ -47,9 +47,9 @@ class TestCBBpyStaticHelpers:
     """Test all static/class methods on CBBpyRosterScraper."""
 
     def test_team_id(self):
-        assert CBBpyRosterScraper._team_id("Duke Blue Devils") == "duke_blue_devils"
+        assert CBBpyRosterScraper._team_id("Duke Blue Devils") == "duke"
         assert CBBpyRosterScraper._team_id("") == ""
-        assert CBBpyRosterScraper._team_id("UNC") == "unc"
+        assert CBBpyRosterScraper._team_id("UNC") == "north_carolina"
 
     def test_player_id(self):
         pid = CBBpyRosterScraper._player_id("duke", "John Smith")
