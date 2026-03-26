@@ -181,7 +181,7 @@
       "season": 2007,
       "team_name": "UNLV",
       "school_slug": "nevada-las-vegas",
-      "team_id": "unlv",
+      "team_id": "nevada_las_vegas",
       "seed": 7,
       "region": "Midwest"
     },
@@ -357,7 +357,7 @@
       "season": 2007,
       "team_name": "Albany (NY)",
       "school_slug": "albany-ny",
-      "team_id": "albany_ny",
+      "team_id": "albany__ny",
       "seed": 13,
       "region": "South"
     },
@@ -365,7 +365,7 @@
       "season": 2007,
       "team_name": "Penn",
       "school_slug": "pennsylvania",
-      "team_id": "penn",
+      "team_id": "pennsylvania",
       "seed": 14,
       "region": "South"
     },

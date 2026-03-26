@@ -167,10 +167,14 @@ class GameToTorvikResolver:
         return result
 
     def _resolve_uncached(self, game_id: str) -> Optional[str]:
-        # 1. Explicit alias
+        # 1. Explicit alias (normalize target to handle old _st vs new _state conventions)
         alias = _GAME_ID_ALIASES.get(game_id)
-        if alias and alias in self._torvik_ids:
-            return alias
+        if alias:
+            if alias in self._torvik_ids:
+                return alias
+            canonical = normalize_team_id(alias)
+            if canonical in self._torvik_ids:
+                return canonical
 
         # 2. Exact match
         if game_id in self._torvik_ids:
@@ -195,10 +199,14 @@ class GameToTorvikResolver:
         Tries the display-name alias table first, then falls back to
         progressive mascot stripping with ``state`` -> ``st`` normalization.
         """
-        # Display-name alias
+        # Display-name alias (normalize target to handle old _st vs new _state)
         alias = _DISPLAY_NAME_ALIASES.get(display_name)
-        if alias and alias in self._torvik_ids:
-            return alias
+        if alias:
+            if alias in self._torvik_ids:
+                return alias
+            canonical = normalize_team_id(alias)
+            if canonical in self._torvik_ids:
+                return canonical
 
         # normalize_team_id handles many known aliases
         normalized = normalize_team_id(display_name)

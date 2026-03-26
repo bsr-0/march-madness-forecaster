@@ -85,7 +85,7 @@
       "season": 2008,
       "team_name": "St. Joseph's",
       "school_slug": "saint-josephs",
-      "team_id": "st_joseph_s",
+      "team_id": "saint_joseph_s",
       "seed": 11,
       "region": "East"
     },
@@ -133,7 +133,7 @@
       "season": 2008,
       "team_name": "Mount St. Mary's",
       "school_slug": "mount-st-marys",
-      "team_id": "mount_st_mary_s",
+      "team_id": "mount_st__mary_s",
       "seed": 16,
       "region": "East"
     },
@@ -197,7 +197,7 @@
       "season": 2008,
       "team_name": "UNLV",
       "school_slug": "nevada-las-vegas",
-      "team_id": "unlv",
+      "team_id": "nevada_las_vegas",
       "seed": 8,
       "region": "Midwest"
     },
@@ -253,7 +253,7 @@
       "season": 2008,
       "team_name": "UMBC",
       "school_slug": "maryland-baltimore-county",
-      "team_id": "umbc",
+      "team_id": "maryland_baltimore_county",
       "seed": 15,
       "region": "Midwest"
     },

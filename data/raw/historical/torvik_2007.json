@@ -740,7 +740,7 @@
       "adj_tempo": 71.54
     },
     {
-      "team_id": "centenary__la",
+      "team_id": "centenary_la",
       "team_name": "centenary__la",
       "season": 2007,
       "effective_fg_pct": 0.4907,
@@ -1536,7 +1536,7 @@
       "adj_tempo": 64.53
     },
     {
-      "team_id": "fdu",
+      "team_id": "fairleigh_dickinson",
       "team_name": "fdu",
       "season": 2007,
       "effective_fg_pct": 0.4827,
@@ -2787,7 +2787,7 @@
       "ft_rate": 0.0
     },
     {
-      "team_id": "loyola__md",
+      "team_id": "loyola_md",
       "team_name": "loyola__md",
       "season": 2007,
       "effective_fg_pct": 0.5327,
@@ -4490,7 +4490,7 @@
       "adj_tempo": 75.26
     },
     {
-      "team_id": "saint_francis__pa",
+      "team_id": "saint_francis",
       "team_name": "saint_francis__pa",
       "season": 2007,
       "effective_fg_pct": 0.4963,
@@ -5017,7 +5017,7 @@
       "adj_tempo": 65.8
     },
     {
-      "team_id": "st__bonaventure",
+      "team_id": "st_bonaventure",
       "team_name": "st__bonaventure",
       "season": 2007,
       "effective_fg_pct": 0.471,
@@ -5036,7 +5036,7 @@
       "adj_tempo": 70.55
     },
     {
-      "team_id": "st__francis__ny",
+      "team_id": "st_francis_ny",
       "team_name": "st__francis__ny",
       "season": 2007,
       "effective_fg_pct": 0.449,
@@ -5091,7 +5091,7 @@
       "adj_tempo": 68.88
     },
     {
-      "team_id": "stephen_f__austin",
+      "team_id": "stephen_f_austin",
       "team_name": "stephen_f__austin",
       "season": 2007,
       "effective_fg_pct": 0.51,
@@ -6191,7 +6191,7 @@
       "adj_tempo": 64.96
     },
     {
-      "team_id": "william___mary",
+      "team_id": "william_mary",
       "team_name": "william___mary",
       "season": 2007,
       "effective_fg_pct": 0.502,

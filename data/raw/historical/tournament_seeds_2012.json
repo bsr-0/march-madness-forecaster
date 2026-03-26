@@ -317,7 +317,7 @@
       "season": 2012,
       "team_name": "UNLV",
       "school_slug": "nevada-las-vegas",
-      "team_id": "unlv",
+      "team_id": "nevada_las_vegas",
       "seed": 6,
       "region": "South"
     },
@@ -541,7 +541,7 @@
       "season": 2012,
       "team_name": "LIU",
       "school_slug": "long-island-university",
-      "team_id": "liu",
+      "team_id": "long_island_university",
       "seed": 16,
       "region": "West"
     }

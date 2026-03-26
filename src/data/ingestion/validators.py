@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 def _to_float(value) -> Optional[float]:
@@ -463,5 +463,118 @@ def validate_four_factors(
             errors.append(
                 f"ORB% median = {median_orb:.4f} is above {hi} — suspiciously high"
             )
+
+    return errors
+
+
+def validate_team_id_consistency(
+    seeds_payload: Dict[str, Any],
+    torvik_payload: Dict[str, Any],
+    results_payload: Optional[Dict[str, Any]] = None,
+    year: int = 0,
+    max_missing_before_error: int = 3,
+) -> List[str]:
+    """Cross-validate team IDs across seeds, Torvik, and results for a season.
+
+    Normalizes all team IDs through ``normalize_team_id`` and checks that:
+    - All tournament seed teams exist in Torvik data
+    - All tournament result teams exist in seeds data
+
+    Returns a list of error strings.  If the number of missing teams exceeds
+    *max_missing_before_error*, the errors are treated as blocking.
+    """
+    from ..normalize import normalize_team_id
+
+    errors: List[str] = []
+    prefix = f"[{year}] " if year else ""
+
+    # Extract and normalize seed team IDs
+    seed_teams_raw = seeds_payload.get("teams", []) if isinstance(seeds_payload, dict) else seeds_payload
+    if isinstance(seed_teams_raw, list):
+        seed_ids = {normalize_team_id(t["team_id"]) for t in seed_teams_raw
+                    if isinstance(t, dict) and t.get("team_id")}
+    else:
+        seed_ids = set()
+
+    # Extract and normalize Torvik team IDs
+    torvik_teams = torvik_payload.get("teams", []) if isinstance(torvik_payload, dict) else torvik_payload
+    if isinstance(torvik_teams, list):
+        torvik_ids = {normalize_team_id(t["team_id"]) for t in torvik_teams
+                      if isinstance(t, dict) and t.get("team_id")}
+    else:
+        torvik_ids = set()
+
+    # Check seeds vs Torvik
+    missing_in_torvik = seed_ids - torvik_ids
+    if missing_in_torvik:
+        msg = (f"{prefix}{len(missing_in_torvik)} seed team(s) not found in Torvik: "
+               f"{sorted(missing_in_torvik)}")
+        if len(missing_in_torvik) >= max_missing_before_error:
+            errors.append(msg)
+        else:
+            errors.append(f"WARNING: {msg}")
+
+    # Check results vs seeds (if results provided and non-empty)
+    if results_payload:
+        games = results_payload.get("games", [])
+        if games:
+            result_ids = set()
+            for game in games:
+                if not isinstance(game, dict):
+                    continue
+                for key in ("team1_id", "team2_id", "winner_id", "loser_id"):
+                    tid = game.get(key)
+                    if tid:
+                        result_ids.add(normalize_team_id(tid))
+            missing_in_seeds = result_ids - seed_ids
+            # Allow up to 4 missing (First Four losers)
+            if len(missing_in_seeds) > 4:
+                errors.append(
+                    f"{prefix}{len(missing_in_seeds)} result team(s) not in seeds: "
+                    f"{sorted(missing_in_seeds)}"
+                )
+
+    return errors
+
+
+def validate_tournament_results_completeness(
+    year: int,
+    games: List[Dict[str, Any]],
+) -> List[str]:
+    """Validate that tournament results have the expected 67 games with correct round counts.
+
+    Returns a list of error strings (empty if valid).
+    """
+    EXPECTED_ROUNDS = {"FF": 4, "R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "NCG": 1}
+    errors: List[str] = []
+
+    if not games:
+        errors.append(f"{year}: Tournament results are empty (0 games)")
+        return errors
+
+    if len(games) != 67:
+        errors.append(f"{year}: Expected 67 games, got {len(games)}")
+
+    round_counts: Dict[str, int] = {}
+    for g in games:
+        rnd = g.get("round_name", "")
+        round_counts[rnd] = round_counts.get(rnd, 0) + 1
+
+    for rnd, expected in EXPECTED_ROUNDS.items():
+        actual = round_counts.get(rnd, 0)
+        if actual != expected:
+            errors.append(f"{year}: {rnd} has {actual} games, expected {expected}")
+
+    # Check required fields
+    required_fields = {"year", "round_name", "region", "team1_id", "team1_seed",
+                       "team1_score", "team2_id", "team2_seed", "team2_score", "team1_won"}
+    for idx, g in enumerate(games):
+        if not isinstance(g, dict):
+            errors.append(f"{year}: games[{idx}] is not a dict")
+            continue
+        missing = required_fields - set(g.keys())
+        if missing:
+            errors.append(f"{year}: games[{idx}] missing fields: {sorted(missing)}")
+            break  # Only report first missing-field game
 
     return errors

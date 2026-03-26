@@ -166,6 +166,7 @@ class KaggleBacktester:
         weighted_se_sum = 0.0
         weight_sum = 0.0
         _ROUND_WEIGHTS = {
+            "FF": 0.5, "First Four": 0.5, "Play-In": 0.5,
             "R64": 1.0, "Round of 64": 1.0, "First Round": 1.0,
             "R32": 2.0, "Round of 32": 2.0, "Second Round": 2.0,
             "S16": 4.0, "Sweet 16": 4.0, "Sweet Sixteen": 4.0,

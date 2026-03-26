@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 # Validation years for LOYO protocol
 # 2020 excluded (COVID: tournament cancelled)
-LOYO_YEARS = [2018, 2019, 2021, 2022, 2023, 2024, 2025]
+LOYO_YEARS = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
 
 # Legacy "0.001 Rule" threshold — DEPRECATED.
 # With 7 folds of ~63 games, SE(mean Brier) ≈ 0.009, so a 0.001 threshold

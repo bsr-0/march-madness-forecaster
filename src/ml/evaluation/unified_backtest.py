@@ -60,7 +60,7 @@ from .kaggle_backtest import (
 logger = logging.getLogger(__name__)
 
 # Historical LOYO years (excludes 2020 — tournament cancelled due to COVID)
-LOYO_YEARS = [2018, 2019, 2021, 2022, 2023, 2024, 2025]
+LOYO_YEARS = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
 
 # Standard NCAA bracket seed pairings per region (R64)
 _SEED_MATCHUP_ORDER = [
@@ -70,7 +70,7 @@ _SEED_MATCHUP_ORDER = [
 
 # Kaggle round-weight structure (2023+ Brier scoring)
 _KAGGLE_ROUND_WEIGHTS = {
-    "R64": 1.0, "R32": 2.0, "S16": 4.0,
+    "FF": 0.5, "R64": 1.0, "R32": 2.0, "S16": 4.0,
     "E8": 8.0, "F4": 16.0, "NCG": 32.0,
 }
 

@@ -5,7 +5,7 @@
       "season": 2006,
       "team_name": "UConn",
       "school_slug": "connecticut",
-      "team_id": "uconn",
+      "team_id": "connecticut",
       "seed": 1,
       "region": "East"
     },
@@ -85,7 +85,7 @@
       "season": 2006,
       "team_name": "UNC",
       "school_slug": "north-carolina",
-      "team_id": "unc",
+      "team_id": "north_carolina",
       "seed": 3,
       "region": "East"
     },
@@ -181,7 +181,7 @@
       "season": 2006,
       "team_name": "LSU",
       "school_slug": "louisiana-state",
-      "team_id": "lsu",
+      "team_id": "louisiana_state",
       "seed": 4,
       "region": "South"
     },
@@ -253,7 +253,7 @@
       "season": 2006,
       "team_name": "Penn",
       "school_slug": "pennsylvania",
-      "team_id": "penn",
+      "team_id": "pennsylvania",
       "seed": 15,
       "region": "South"
     },
@@ -429,7 +429,7 @@
       "season": 2006,
       "team_name": "Pitt",
       "school_slug": "pittsburgh",
-      "team_id": "pitt",
+      "team_id": "pittsburgh",
       "seed": 5,
       "region": "West"
     },

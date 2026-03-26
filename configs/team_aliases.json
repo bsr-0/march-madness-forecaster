@@ -171,6 +171,15 @@
         "umkc": "kansas_city",
         "loyola_chicago": "loyola__il",
         "albany": "albany__ny",
-        "nebraska_omaha": "omaha"
+        "nebraska_omaha": "omaha",
+        "loyola_il": "loyola__il",
+        "ucsb": "uc_santa_barbara",
+        "nicholls": "nicholls_state",
+        "southeast_missouri": "southeast_missouri_state",
+        "st_joseph_s": "saint_joseph_s",
+        "etsu": "east_tennessee_state",
+        "saint_francis_pa": "saint_francis",
+        "albany_ny": "albany__ny",
+        "mount_st_mary_s": "mount_st__mary_s"
     }
 }

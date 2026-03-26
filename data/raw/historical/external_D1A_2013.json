@@ -15,7 +15,7 @@
   },
   {
     "team_name": "Boise St",
-    "team_id": "boise_st",
+    "team_id": "boise_state",
     "rating": 2.0,
     "ranking": 49,
     "normalized": 0.020408
@@ -43,7 +43,7 @@
   },
   {
     "team_name": "Colorado St",
-    "team_id": "colorado_st",
+    "team_id": "colorado_state",
     "rating": 18.0,
     "ranking": 33,
     "normalized": 0.346939
@@ -78,7 +78,7 @@
   },
   {
     "team_name": "Florida St",
-    "team_id": "florida_st",
+    "team_id": "florida_state",
     "rating": 17.0,
     "ranking": 34,
     "normalized": 0.326531
@@ -120,7 +120,7 @@
   },
   {
     "team_name": "Iowa St",
-    "team_id": "iowa_st",
+    "team_id": "iowa_state",
     "rating": 9.0,
     "ranking": 42,
     "normalized": 0.163265
@@ -134,7 +134,7 @@
   },
   {
     "team_name": "Kansas St",
-    "team_id": "kansas_st",
+    "team_id": "kansas_state",
     "rating": 39.0,
     "ranking": 12,
     "normalized": 0.77551
@@ -176,7 +176,7 @@
   },
   {
     "team_name": "Michigan St",
-    "team_id": "michigan_st",
+    "team_id": "michigan_state",
     "rating": 42.0,
     "ranking": 9,
     "normalized": 0.836735
@@ -246,7 +246,7 @@
   },
   {
     "team_name": "Ohio St",
-    "team_id": "ohio_st",
+    "team_id": "ohio_state",
     "rating": 44.0,
     "ranking": 7,
     "normalized": 0.877551
@@ -260,7 +260,7 @@
   },
   {
     "team_name": "Oklahoma St",
-    "team_id": "oklahoma_st",
+    "team_id": "oklahoma_state",
     "rating": 34.0,
     "ranking": 17,
     "normalized": 0.673469
@@ -281,7 +281,7 @@
   },
   {
     "team_name": "San Diego St",
-    "team_id": "san_diego_st",
+    "team_id": "san_diego_state",
     "rating": 12.0,
     "ranking": 39,
     "normalized": 0.22449
@@ -323,7 +323,7 @@
   },
   {
     "team_name": "UNLV",
-    "team_id": "unlv",
+    "team_id": "nevada_las_vegas",
     "rating": 22.0,
     "ranking": 29,
     "normalized": 0.428571
@@ -337,7 +337,7 @@
   },
   {
     "team_name": "Wichita St",
-    "team_id": "wichita_st",
+    "team_id": "wichita_state",
     "rating": 16.0,
     "ranking": 35,
     "normalized": 0.306122

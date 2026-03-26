@@ -22,7 +22,7 @@
   },
   {
     "team_name": "Boise St",
-    "team_id": "boise_st",
+    "team_id": "boise_state",
     "rating": 7.0,
     "ranking": 44,
     "normalized": 0.122449
@@ -50,7 +50,7 @@
   },
   {
     "team_name": "Colorado St",
-    "team_id": "colorado_st",
+    "team_id": "colorado_state",
     "rating": 2.0,
     "ranking": 49,
     "normalized": 0.020408
@@ -120,7 +120,7 @@
   },
   {
     "team_name": "Iowa St",
-    "team_id": "iowa_st",
+    "team_id": "iowa_state",
     "rating": 42.0,
     "ranking": 9,
     "normalized": 0.836735
@@ -169,7 +169,7 @@
   },
   {
     "team_name": "Michigan St",
-    "team_id": "michigan_st",
+    "team_id": "michigan_state",
     "rating": 31.0,
     "ranking": 20,
     "normalized": 0.612245
@@ -211,7 +211,7 @@
   },
   {
     "team_name": "Ohio St",
-    "team_id": "ohio_st",
+    "team_id": "ohio_state",
     "rating": 30.0,
     "ranking": 21,
     "normalized": 0.591837
@@ -225,7 +225,7 @@
   },
   {
     "team_name": "Oklahoma St",
-    "team_id": "oklahoma_st",
+    "team_id": "oklahoma_state",
     "rating": 15.0,
     "ranking": 36,
     "normalized": 0.285714
@@ -253,7 +253,7 @@
   },
   {
     "team_name": "San Diego St",
-    "team_id": "san_diego_st",
+    "team_id": "san_diego_state",
     "rating": 21.0,
     "ranking": 30,
     "normalized": 0.408163
@@ -274,7 +274,7 @@
   },
   {
     "team_name": "St John's",
-    "team_id": "st_john_s__ny",
+    "team_id": "st__john_s__ny",
     "rating": 14.0,
     "ranking": 37,
     "normalized": 0.265306
@@ -330,7 +330,7 @@
   },
   {
     "team_name": "Wichita St",
-    "team_id": "wichita_st",
+    "team_id": "wichita_state",
     "rating": 35.0,
     "ranking": 16,
     "normalized": 0.693878
