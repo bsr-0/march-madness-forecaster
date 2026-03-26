@@ -70,7 +70,7 @@ _SEED_MATCHUP_ORDER = [
 
 # Kaggle round-weight structure (2023+ Brier scoring)
 _KAGGLE_ROUND_WEIGHTS = {
-    "R64": 1.0, "R32": 2.0, "S16": 4.0,
+    "FF": 0.5, "R64": 1.0, "R32": 2.0, "S16": 4.0,
     "E8": 8.0, "F4": 16.0, "NCG": 32.0,
 }
 

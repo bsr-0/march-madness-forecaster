@@ -541,19 +541,19 @@ def validate_tournament_results_completeness(
     year: int,
     games: List[Dict[str, Any]],
 ) -> List[str]:
-    """Validate that tournament results have the expected 63 games with correct round counts.
+    """Validate that tournament results have the expected 67 games with correct round counts.
 
     Returns a list of error strings (empty if valid).
     """
-    EXPECTED_ROUNDS = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "NCG": 1}
+    EXPECTED_ROUNDS = {"FF": 4, "R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "NCG": 1}
     errors: List[str] = []
 
     if not games:
         errors.append(f"{year}: Tournament results are empty (0 games)")
         return errors
 
-    if len(games) != 63:
-        errors.append(f"{year}: Expected 63 games, got {len(games)}")
+    if len(games) != 67:
+        errors.append(f"{year}: Expected 67 games, got {len(games)}")
 
     round_counts: Dict[str, int] = {}
     for g in games:
