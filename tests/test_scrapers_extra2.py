@@ -1058,7 +1058,7 @@ class TestCBBpyRosterScraperHelpers:
 
     def test_team_id(self):
         from src.data.scrapers.cbbpy_rosters import CBBpyRosterScraper
-        assert CBBpyRosterScraper._team_id("Duke Blue Devils") == "duke_blue_devils"
+        assert CBBpyRosterScraper._team_id("Duke Blue Devils") == "duke"
         assert CBBpyRosterScraper._team_id("North Carolina") == "north_carolina"
 
     def test_player_id(self):
