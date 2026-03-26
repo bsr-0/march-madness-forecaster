@@ -34,7 +34,8 @@ jobs:
       dry_run: ${{ inputs.dry_run }}
       skip_production: ${{ inputs.skip_production }}
     secrets:
-      KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME || secrets.KAGGLE_USER }}
+      KAGGLE_USER: ${{ secrets.KAGGLE_USER }}
       KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
       THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
 

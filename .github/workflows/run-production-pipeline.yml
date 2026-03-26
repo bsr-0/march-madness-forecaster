@@ -14,6 +14,8 @@ on:
     secrets:
       KAGGLE_USERNAME:
         required: false
+      KAGGLE_USER:
+        required: false
       KAGGLE_KEY:
         required: false
       THE_ODDS_API_KEY:
@@ -50,7 +52,7 @@ jobs:
 
       - name: Setup Kaggle data
         env:
-          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME || secrets.KAGGLE_USER }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
         run: |
           set -euo pipefail
@@ -71,7 +73,7 @@ jobs:
       - name: Run production pipeline
         if: ${{ !inputs.dry_run && !inputs.skip_production }}
         env:
-          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME || secrets.KAGGLE_USER }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
           THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
         run: |
