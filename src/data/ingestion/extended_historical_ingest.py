@@ -129,11 +129,23 @@ class ExtendedHistoricalIngestor:
         return max(self.config.start_season, source_start)
 
     def _artifact_exists(self, filename: str) -> bool:
-        """Check if an artifact already exists and should be skipped."""
+        """Check if an artifact already exists and should be skipped.
+
+        For tournament results files, also validates that the file contains
+        actual game data (not just a placeholder with empty games list).
+        """
         if not self.config.skip_existing:
             return False
         path = self.output_dir / filename
-        return path.exists() and path.stat().st_size > 100
+        if not path.exists() or path.stat().st_size <= 100:
+            return False
+        if "tournament_results" in filename:
+            try:
+                data = json.loads(path.read_text())
+                return len(data.get("games", [])) > 0
+            except (json.JSONDecodeError, OSError):
+                return False
+        return True
 
     def _write_json(self, filename: str, data: Dict) -> str:
         """Write JSON artifact and return the path."""
