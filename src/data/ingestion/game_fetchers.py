@@ -704,16 +704,19 @@ class HistoricalGameFetcher:
                             rec.game_id, rec.date, season,
                         )
                         continue
+                    if season_type == 3:
+                        rec.is_tournament = True
                     records.append(rec)
 
-        # Dedup within this day (same game returned by seasontype 2 and 3)
-        seen: Set[str] = set()
-        deduped: List[IngestionGameRecord] = []
+        # Dedup within this day (same game returned by seasontype 2 and 3).
+        # Prefer the tournament-tagged version when a game appears in both.
+        seen: Dict[str, IngestionGameRecord] = {}
         for r in records:
             if r.game_id not in seen:
-                seen.add(r.game_id)
-                deduped.append(r)
-        return deduped
+                seen[r.game_id] = r
+            elif r.is_tournament and not seen[r.game_id].is_tournament:
+                seen[r.game_id] = r
+        return list(seen.values())
 
     def _fetch_via_sportsdataverse(self, season: int) -> List[IngestionGameRecord]:
         """Load games from sportsdataverse (ESPN PBP aggregation)."""

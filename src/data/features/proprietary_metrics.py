@@ -366,7 +366,7 @@ class ProprietaryMetricsEngine:
         Args:
             game_records: list of per-team-game rows (one row per team per game)
             conference_map: optional team_id → conference name
-            cutoff_date: YYYY-MM-DD — only use games on or before this date.
+            cutoff_date: YYYY-MM-DD — only use games strictly before this date.
                          Prevents leakage from tournament games when computing
                          pre-tournament metrics.  **Always required** unless
                          require_cutoff_date=False was passed at construction
@@ -389,7 +389,7 @@ class ProprietaryMetricsEngine:
         # Filter games to prevent temporal leakage
         if cutoff_date:
             logger.info("Filtering games to cutoff_date=%s", cutoff_date)
-            game_records = [g for g in game_records if g.game_date <= cutoff_date]
+            game_records = [g for g in game_records if g.game_date < cutoff_date]
             if not game_records:
                 return {}
 
