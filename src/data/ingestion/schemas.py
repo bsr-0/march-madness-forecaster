@@ -94,6 +94,7 @@ class IngestionGameRecord:
     overtime: bool = False
     neutral_site: bool = False
     conference_game: Optional[bool] = None
+    is_tournament: bool = False  # True for NCAA tournament games (ESPN season_type=3)
 
     # Which provider produced this record (for audit / fallback logging)
     provider: str = ""
@@ -164,6 +165,7 @@ class IngestionGameRecord:
         base = {
             "game_id": self.game_id, "date": self.date, "season": self.season,
             "overtime": self.overtime, "has_box_score": self.has_box_score,
+            "is_tournament": self.is_tournament,
         }
 
         home_row = {
@@ -221,4 +223,5 @@ class IngestionGameRecord:
             "team1_score": self.home_score,
             "team2_score": self.away_score,
             "overtime": self.overtime,
+            "is_tournament": self.is_tournament,
         }

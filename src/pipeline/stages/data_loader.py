@@ -335,10 +335,16 @@ def compute_roster_feature_overlay(players_raw: List[Dict], team_id: str = "") -
     }
 
 
-def load_roster_overlay(roster_path: str) -> Dict[str, Dict[str, float]]:
+def load_roster_overlay(roster_path: str, year: Optional[int] = None) -> Dict[str, Dict[str, float]]:
     """Load cbbpy roster JSON and compute per-team feature overlays.
 
     Handles the cbbpy format: ``{"year": ..., "teams": [{"team_id": ..., "players": [...]}]}``.
+
+    Args:
+        roster_path: Path to cbbpy roster JSON file.
+        year: Season year for tournament date guard.  If provided, logs a
+            warning when the roster file's timestamp is on/after tournament
+            start (box-score stats may include tournament games).
 
     Returns ``{team_id: {feature_index: value, ...}}``.
     """
@@ -350,6 +356,23 @@ def load_roster_overlay(roster_path: str) -> Dict[str, Dict[str, float]]:
             data = json.load(f)
     except Exception:
         return {}
+
+    # Tournament date guard — warn if roster was scraped post-tournament.
+    if year is not None and isinstance(data, dict):
+        ts_str = data.get("timestamp")
+        if ts_str:
+            try:
+                from datetime import date as _date
+                ts_date = _date.fromisoformat(ts_str[:10])
+                cutoff = TOURNAMENT_START_DATES.get(year)
+                if cutoff and ts_date >= cutoff:
+                    logger.warning(
+                        "Roster file %s has timestamp %s on/after tournament start %s "
+                        "for year %d — box-score stats may include tournament games.",
+                        roster_path, ts_str, cutoff, year,
+                    )
+            except (ValueError, TypeError):
+                pass
 
     teams_list: list = []
     if isinstance(data, dict):

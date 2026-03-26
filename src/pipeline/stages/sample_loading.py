@@ -320,7 +320,7 @@ def _load_year_samples_incremental_core(
     )
     if not os.path.isfile(roster_path):
         roster_path = os.path.join(os.path.dirname(games_path), f"cbbpy_rosters_{year}.json")
-    team_roster_overlay = load_roster_overlay(roster_path)
+    team_roster_overlay = load_roster_overlay(roster_path, year=year)
 
     # ── 3. Create incremental engine ──────────────────────────────────
     inc_engine = IncrementalMetricsEngine(
