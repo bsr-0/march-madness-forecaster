@@ -707,7 +707,8 @@ class CBBpyRosterScraper:
 
     @staticmethod
     def _team_id(name: str) -> str:
-        return "".join(ch.lower() if ch.isalnum() else "_" for ch in (name or "")).strip("_")
+        from ..normalize import normalize_team_id
+        return normalize_team_id(name)
 
     @staticmethod
     def _player_id(team_id: str, name: str) -> str:

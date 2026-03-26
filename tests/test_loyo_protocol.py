@@ -70,7 +70,7 @@ class TestLOYOYears:
         assert 2020 not in LOYO_YEARS
 
     def test_expected_years_present(self):
-        expected = {2018, 2019, 2021, 2022, 2023, 2024, 2025}
+        expected = {2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025}
         assert set(LOYO_YEARS) == expected
 
     def test_minimum_brier_improvement_legacy(self):
@@ -83,8 +83,8 @@ class TestLOYOValidator:
 
     def test_runs_all_folds(self):
         """All years with prior data should produce fold results."""
-        # Add years before 2018 so the earliest LOYO year has training data
-        all_years = [2016, 2017] + list(LOYO_YEARS)
+        # Add years before 2016 so the earliest LOYO year has training data
+        all_years = [2014, 2015] + list(LOYO_YEARS)
         data = {yr: _make_year_data(yr) for yr in all_years}
         validator = LOYOValidator(years=list(LOYO_YEARS))
         result = validator.validate(data, _simple_train_fn, _simple_predict_fn)
