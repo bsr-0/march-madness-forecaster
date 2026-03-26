@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate tournament_results_{year}.json files for backtesting.
 
-Embeds actual NCAA tournament outcomes (R64 through NCG) for each LOYO year.
+Embeds actual NCAA tournament outcomes (First Four through NCG) for each LOYO year.
 Team IDs are resolved from the existing tournament_seeds_{year}.json files
 to ensure consistency with the pipeline's ID normalization.
 
@@ -72,6 +72,11 @@ def _results_2024(nm):
     r = _resolve_id
     Y = 2024
     g = []
+    # FIRST FOUR
+    g.append(_make_game(Y,"FF","West", r("wagner",nm),16,71, r("howard",nm),16,68))
+    g.append(_make_game(Y,"FF","Midwest", r("colorado_state",nm),10,67, r("virginia",nm),10,42))
+    g.append(_make_game(Y,"FF","South", r("colorado",nm),10,60, r("boise_state",nm),10,53))
+    g.append(_make_game(Y,"FF","Midwest", r("grambling",nm),16,88, r("montana_state",nm),16,81))
     # EAST R64
     g.append(_make_game(Y,"R64","East", r("connecticut",nm),1,91, r("stetson",nm),16,52))
     g.append(_make_game(Y,"R64","East", r("florida_atlantic",nm),8,62, r("northwestern",nm),9,67))
@@ -168,6 +173,11 @@ def _results_2023(nm):
     r = _resolve_id
     Y = 2023
     g = []
+    # FIRST FOUR
+    g.append(_make_game(Y,"FF","Midwest", r("pittsburgh",nm),11,60, r("mississippi_state",nm),11,59))
+    g.append(_make_game(Y,"FF","East", r("fairleigh_dickinson",nm),16,84, r("texas_southern",nm),16,61))
+    g.append(_make_game(Y,"FF","South", r("texas_a_m_corpus_christi",nm),16,75, r("southeast_missouri_state",nm),16,71))
+    g.append(_make_game(Y,"FF","West", r("arizona_state",nm),11,98, r("nevada",nm),11,73))
     # SOUTH R64
     g.append(_make_game(Y,"R64","South", r("alabama",nm),1,96, r("texas_a_m_corpus_christi",nm),16,75))
     g.append(_make_game(Y,"R64","South", r("maryland",nm),8,67, r("west_virginia",nm),9,65))
@@ -264,6 +274,11 @@ def _results_2022(nm):
     r = _resolve_id
     Y = 2022
     g = []
+    # FIRST FOUR
+    g.append(_make_game(Y,"FF","Midwest", r("texas_southern",nm),16,76, r("texas_a_m_corpus_christi",nm),16,67))
+    g.append(_make_game(Y,"FF","East", r("indiana",nm),12,66, r("wyoming",nm),12,58))
+    g.append(_make_game(Y,"FF","South", r("wright_state",nm),16,93, r("bryant",nm),16,82))
+    g.append(_make_game(Y,"FF","West", r("notre_dame",nm),11,89, r("rutgers",nm),11,87))
     # WEST R64
     g.append(_make_game(Y,"R64","West", r("gonzaga",nm),1,93, r("georgia_state",nm),16,72))
     g.append(_make_game(Y,"R64","West", r("boise_state",nm),8,53, r("memphis",nm),9,64))
@@ -360,6 +375,11 @@ def _results_2021(nm):
     r = _resolve_id
     Y = 2021
     g = []
+    # FIRST FOUR
+    g.append(_make_game(Y,"FF","East", r("texas_southern",nm),16,60, r("mount_st__mary_s",nm),16,52))
+    g.append(_make_game(Y,"FF","West", r("drake",nm),11,53, r("wichita_state",nm),11,52))
+    g.append(_make_game(Y,"FF","West", r("norfolk_state",nm),16,54, r("appalachian_state",nm),16,53))
+    g.append(_make_game(Y,"FF","East", r("ucla",nm),11,86, r("michigan_state",nm),11,80))
     # WEST R64
     g.append(_make_game(Y,"R64","West", r("gonzaga",nm),1,98, r("norfolk_state",nm),16,55))
     g.append(_make_game(Y,"R64","West", r("oklahoma",nm),8,72, r("missouri",nm),9,68))
@@ -456,6 +476,11 @@ def _results_2019(nm):
     r = _resolve_id
     Y = 2019
     g = []
+    # FIRST FOUR
+    g.append(_make_game(Y,"FF","East", r("fairleigh_dickinson",nm),16,82, r("prairie_view",nm),16,76))
+    g.append(_make_game(Y,"FF","East", r("belmont",nm),11,81, r("temple",nm),11,70))
+    g.append(_make_game(Y,"FF","West", r("arizona_state",nm),11,74, r("st__john_s__ny",nm),11,65))
+    g.append(_make_game(Y,"FF","East", r("north_dakota_state",nm),16,78, r("north_carolina_central",nm),16,74))
     # SOUTH R64
     g.append(_make_game(Y,"R64","South", r("virginia",nm),1,71, r("gardner_webb",nm),16,56))
     g.append(_make_game(Y,"R64","South", r("mississippi",nm),8,72, r("oklahoma",nm),9,73))
@@ -552,6 +577,11 @@ def _results_2018(nm):
     r = _resolve_id
     Y = 2018
     g = []
+    # FIRST FOUR
+    g.append(_make_game(Y,"FF","East", r("radford",nm),16,71, r("long_island_university",nm),16,61))
+    g.append(_make_game(Y,"FF","East", r("st_bonaventure",nm),11,65, r("ucla",nm),11,58))
+    g.append(_make_game(Y,"FF","West", r("texas_southern",nm),16,64, r("north_carolina_central",nm),16,46))
+    g.append(_make_game(Y,"FF","Midwest", r("syracuse",nm),11,60, r("arizona_state",nm),11,56))
     # SOUTH R64
     g.append(_make_game(Y,"R64","South", r("virginia",nm),1,54, r("umbc",nm),16,74)) # UMBC historic upset!
     g.append(_make_game(Y,"R64","South", r("creighton",nm),8,59, r("kansas_state",nm),9,69))
@@ -651,6 +681,11 @@ def _results_2025(nm):
     r = _resolve_id
     Y = 2025
     g = []
+    # FIRST FOUR
+    g.append(_make_game(Y,"FF","South", r("alabama_state",nm),16,70, r("saint_francis_pa",nm),16,68))
+    g.append(_make_game(Y,"FF","South", r("north_carolina",nm),11,95, r("san_diego_state",nm),11,68))
+    g.append(_make_game(Y,"FF","Midwest", r("xavier",nm),11,86, r("texas",nm),11,80))
+    g.append(_make_game(Y,"FF","East", r("mount_st__mary_s",nm),16,83, r("american",nm),16,72))
     # EAST R64
     g.append(_make_game(Y,"R64","East", r("duke",nm),1,93, r("mount_st_mary_s",nm),16,49))
     g.append(_make_game(Y,"R64","East", r("mississippi_state",nm),8,67, r("baylor",nm),9,72))
@@ -747,6 +782,11 @@ def _results_2016(nm):
     r = _resolve_id
     Y = 2016
     g = []
+    # FIRST FOUR
+    g.append(_make_game(Y,"FF","East", r("florida_gulf_coast",nm),16,96, r("fairleigh_dickinson",nm),16,65))
+    g.append(_make_game(Y,"FF","South", r("wichita_state",nm),11,70, r("vanderbilt",nm),11,50))
+    g.append(_make_game(Y,"FF","West", r("holy_cross",nm),16,59, r("southern",nm),16,55))
+    g.append(_make_game(Y,"FF","East", r("michigan",nm),11,67, r("tulsa",nm),11,62))
     # EAST R64
     g.append(_make_game(Y,"R64","East", r("north_carolina",nm),1,83, r("florida_gulf_coast",nm),16,67))
     g.append(_make_game(Y,"R64","East", r("southern_california",nm),8,69, r("providence",nm),9,70))
@@ -843,6 +883,11 @@ def _results_2017(nm):
     r = _resolve_id
     Y = 2017
     g = []
+    # FIRST FOUR
+    g.append(_make_game(Y,"FF","East", r("mount_st__mary_s",nm),16,67, r("new_orleans",nm),16,66))
+    g.append(_make_game(Y,"FF","East", r("southern_california",nm),11,75, r("providence",nm),11,71))
+    g.append(_make_game(Y,"FF","Midwest", r("uc_davis",nm),16,67, r("north_carolina_central",nm),16,63))
+    g.append(_make_game(Y,"FF","South", r("kansas_state",nm),11,95, r("wake_forest",nm),11,88))
     # EAST R64
     g.append(_make_game(Y,"R64","East", r("villanova",nm),1,76, r("mount_st__mary_s",nm),16,56))
     g.append(_make_game(Y,"R64","East", r("wisconsin",nm),8,84, r("virginia_tech",nm),9,74))

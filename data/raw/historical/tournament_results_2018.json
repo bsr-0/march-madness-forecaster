@@ -3,6 +3,54 @@
   "games": [
     {
       "year": 2018,
+      "round_name": "FF",
+      "region": "East",
+      "team1_id": "radford",
+      "team1_seed": 16,
+      "team1_score": 71,
+      "team2_id": "long_island_university",
+      "team2_seed": 16,
+      "team2_score": 61,
+      "team1_won": true
+    },
+    {
+      "year": 2018,
+      "round_name": "FF",
+      "region": "East",
+      "team1_id": "st_bonaventure",
+      "team1_seed": 11,
+      "team1_score": 65,
+      "team2_id": "ucla",
+      "team2_seed": 11,
+      "team2_score": 58,
+      "team1_won": true
+    },
+    {
+      "year": 2018,
+      "round_name": "FF",
+      "region": "West",
+      "team1_id": "texas_southern",
+      "team1_seed": 16,
+      "team1_score": 64,
+      "team2_id": "north_carolina_central",
+      "team2_seed": 16,
+      "team2_score": 46,
+      "team1_won": true
+    },
+    {
+      "year": 2018,
+      "round_name": "FF",
+      "region": "Midwest",
+      "team1_id": "syracuse",
+      "team1_seed": 11,
+      "team1_score": 60,
+      "team2_id": "arizona_state",
+      "team2_seed": 11,
+      "team2_score": 56,
+      "team1_won": true
+    },
+    {
+      "year": 2018,
       "round_name": "R64",
       "region": "South",
       "team1_id": "virginia",

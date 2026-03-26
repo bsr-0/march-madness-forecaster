@@ -144,18 +144,18 @@ def test_st_suffix_generic_rule():
 # Test 4: Tournament results completeness (data_contract)
 # ---------------------------------------------------------------------------
 
-EXPECTED_ROUNDS = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "NCG": 1}
+EXPECTED_ROUNDS = {"FF": 4, "R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "NCG": 1}
 
 
 @pytest.mark.parametrize("year", ALL_YEARS)
 def test_tournament_results_completeness(year: int):
-    """Each training/holdout year must have exactly 63 games with correct round distribution."""
+    """Each training/holdout year must have exactly 67 games with correct round distribution."""
     path = HIST_DIR / f"tournament_results_{year}.json"
     if not path.exists():
         pytest.skip(f"No tournament_results file for {year}")
     data = _load_json(path)
     games = data.get("games", [])
-    assert len(games) == 63, f"{year}: Expected 63 games, got {len(games)}"
+    assert len(games) == 67, f"{year}: Expected 67 games, got {len(games)}"
     round_counts: dict[str, int] = {}
     for g in games:
         rnd = g.get("round_name", "")
@@ -172,6 +172,6 @@ def test_2016_2017_results_not_empty(year: int):
     assert path.exists(), f"tournament_results_{year}.json missing"
     data = _load_json(path)
     games = data.get("games", [])
-    assert len(games) == 63, f"{year}: Must have 63 games, got {len(games)} (placeholder regression?)"
+    assert len(games) == 67, f"{year}: Must have 67 games, got {len(games)} (placeholder regression?)"
     ncg = [g for g in games if g.get("round_name") == "NCG"]
     assert len(ncg) == 1, f"{year}: Expected exactly 1 NCG game"
