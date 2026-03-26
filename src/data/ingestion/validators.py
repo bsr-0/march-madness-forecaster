@@ -535,3 +535,46 @@ def validate_team_id_consistency(
                 )
 
     return errors
+
+
+def validate_tournament_results_completeness(
+    year: int,
+    games: List[Dict[str, Any]],
+) -> List[str]:
+    """Validate that tournament results have the expected 63 games with correct round counts.
+
+    Returns a list of error strings (empty if valid).
+    """
+    EXPECTED_ROUNDS = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "NCG": 1}
+    errors: List[str] = []
+
+    if not games:
+        errors.append(f"{year}: Tournament results are empty (0 games)")
+        return errors
+
+    if len(games) != 63:
+        errors.append(f"{year}: Expected 63 games, got {len(games)}")
+
+    round_counts: Dict[str, int] = {}
+    for g in games:
+        rnd = g.get("round_name", "")
+        round_counts[rnd] = round_counts.get(rnd, 0) + 1
+
+    for rnd, expected in EXPECTED_ROUNDS.items():
+        actual = round_counts.get(rnd, 0)
+        if actual != expected:
+            errors.append(f"{year}: {rnd} has {actual} games, expected {expected}")
+
+    # Check required fields
+    required_fields = {"year", "round_name", "region", "team1_id", "team1_seed",
+                       "team1_score", "team2_id", "team2_seed", "team2_score", "team1_won"}
+    for idx, g in enumerate(games):
+        if not isinstance(g, dict):
+            errors.append(f"{year}: games[{idx}] is not a dict")
+            continue
+        missing = required_fields - set(g.keys())
+        if missing:
+            errors.append(f"{year}: games[{idx}] missing fields: {sorted(missing)}")
+            break  # Only report first missing-field game
+
+    return errors
