@@ -1,5 +1,5 @@
 {
-    "version": "2026.2",
+    "version": "2026.3",
     "description": "Cross-source team ID aliases mapping raw normalized forms to canonical IDs. Loaded by src/data/normalize.py at module init.",
     "aliases": {
         "unc": "north_carolina",
@@ -180,6 +180,12 @@
         "etsu": "east_tennessee_state",
         "saint_francis_pa": "saint_francis",
         "albany_ny": "albany__ny",
-        "mount_st_mary_s": "mount_st__mary_s"
+        "mount_st_mary_s": "mount_st__mary_s",
+        "sam_houston": "sam_houston_state",
+        "southern_miss": "southern_mississippi",
+        "central_connecticut": "central_connecticut_state",
+        "umass_lowell": "massachusetts_lowell",
+        "ut_rio_grande_valley": "texas_rio_grande_valley",
+        "usc_upstate": "south_carolina_upstate"
     }
 }
