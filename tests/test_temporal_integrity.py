@@ -414,6 +414,22 @@ class TestGlobalStatisticsLeakage:
             team_name="Test Team",
             seed=1,
             region="East",
+            # Provide non-NaN values for external/massey fields so the NaN check
+            # tests z-scoring behavior, not missing-data handling.
+            external_rating_composite=0.5,
+            external_rating_spread=0.1,
+            massey_pom=0.5,
+            massey_sag=0.5,
+            massey_mor=0.5,
+            massey_dol=0.5,
+            massey_col=0.5,
+            massey_wol=0.5,
+            massey_rth=0.5,
+            massey_ap=0.5,
+            massey_usa=0.5,
+            massey_rpi=0.5,
+            massey_rank_mean=0.5,
+            massey_rank_std=0.1,
         )
         vec = features.to_vector()
         # Vector should contain raw feature values, not z-scored values
