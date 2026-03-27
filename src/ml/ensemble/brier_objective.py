@@ -85,17 +85,41 @@ try:
 
         def __init__(self, params=None):
             super().__init__(params)
-            # Replace standard binary objective with custom Brier
-            self.params["objective"] = brier_objective
+            # Use objective="none" so LightGBM doesn't try to reset it
+            # internally. The custom Brier objective is passed via fobj
+            # in the Booster.update() call (see train() override below).
+            self.params["objective"] = "none"
             self.params.pop("metric", None)  # Use custom feval instead
             self._brier_eval = brier_eval
+            self._brier_objective = brier_objective
 
         def train(self, X, y, **kwargs):
-            """Train with Brier objective and evaluation metric."""
-            # Add custom eval to kwargs if not already specified
+            """Train with Brier objective and evaluation metric.
+
+            Overrides parent to use the Booster API directly, because
+            LightGBM 4.x crashes when a callable is passed in
+            params["objective"] due to an internal reset_parameter bug.
+            """
+            import lightgbm as lgb
+
             if "feval" not in kwargs:
                 kwargs["feval"] = self._brier_eval
-            return super().train(X, y, **kwargs)
+
+            feature_names = kwargs.pop("feature_names", None) or self.feature_names
+            num_rounds = kwargs.pop("num_rounds", 500)
+            sample_weight = kwargs.pop("sample_weight", None)
+            valid_set = kwargs.pop("valid_set", None)
+
+            train_data = lgb.Dataset(
+                X, label=y, feature_name=feature_names,
+                weight=sample_weight, free_raw_data=False,
+            )
+
+            booster = lgb.Booster(self.params, train_data)
+            for _ in range(num_rounds):
+                booster.update(fobj=self._brier_objective)
+
+            self.model = booster
 
 except ImportError:
     # LightGBM not available; BrierLightGBMRanker cannot be created

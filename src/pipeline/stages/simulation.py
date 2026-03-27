@@ -166,10 +166,27 @@ def run_monte_carlo(
         except Exception as e:
             logger.warning("Failed to initialize upset detector: %s", e)
 
-    def predict_fn(team1_id: str, team2_id: str) -> float:
+    # Round buckets for upset detection prior decay.
+    # Bucket 1 = R64 (full prior), 2 = R32, 3 = S16, 4 = E8+ (minimal prior).
+    # The MC engine pre-computes all matchup probabilities before simulation,
+    # so we compute separate probability sets per round bucket and let the
+    # engine select the appropriate one per round.
+    round_aware = (
+        upset_detector is not None
+        and getattr(pipeline.config, 'upset_round_prior_decay', True)
+    )
+    round_buckets = [1, 2, 3, 4] if round_aware else [1]
+
+    matchup_caches: Dict[int, Dict[Tuple[str, str], float]] = {}
+    for rb in round_buckets:
+        cache: Dict[Tuple[str, str], float] = {}
+        matchup_caches[rb] = cache
+
+    def _compute_prob(team1_id: str, team2_id: str, round_bucket: int) -> float:
+        cache = matchup_caches[round_bucket]
         key = (team1_id, team2_id)
-        if key in matchup_cache:
-            return matchup_cache[key]
+        if key in cache:
+            return cache[key]
 
         base_prob = pipeline.predict_probability(team1_id, team2_id)
         adjusted = injury_adjusted_probability(
@@ -179,7 +196,7 @@ def run_monte_carlo(
             injury_noise_table.get(team2_id),
         )
 
-        # Apply upset detection layer
+        # Apply upset detection layer with round-aware prior decay
         if upset_detector is not None:
             s1 = team_seed_lookup.get(team1_id, 0)
             s2 = team_seed_lookup.get(team2_id, 0)
@@ -189,16 +206,37 @@ def run_monte_carlo(
                 signal = upset_detector.detect(
                     team1_id, team2_id, s1, s2, adjusted,
                     team1_features=t1_feats, team2_features=t2_feats,
+                    round_num=round_bucket,
                 )
                 adjusted = signal.adjusted_prob
 
-        matchup_cache[(team1_id, team2_id)] = adjusted
-        matchup_cache[(team2_id, team1_id)] = float(np.clip(1.0 - adjusted, 0.01, 0.99))
+        cache[(team1_id, team2_id)] = adjusted
+        cache[(team2_id, team1_id)] = float(np.clip(1.0 - adjusted, 0.01, 0.99))
         return adjusted
+
+    # Primary predict_fn uses R64 probabilities (round_bucket=1) for backward
+    # compatibility with the MonteCarloEngine interface. The engine pre-computes
+    # matchup_probs via this function, then _run_batch uses round-bucketed probs
+    # when available.
+    def predict_fn(team1_id: str, team2_id: str) -> float:
+        return _compute_prob(team1_id, team2_id, round_bucket=1)
 
     from ...simulation.monte_carlo import MonteCarloEngine, validate_upset_rates
 
     engine = MonteCarloEngine(predict_fn, config=cfg)
+
+    # Pre-compute round-bucketed probabilities for the MC engine.
+    # The engine will use matchup_probs_by_round if available, otherwise
+    # falls back to the default pre-computed probs (R64 bucket).
+    if round_aware:
+        team_ids = [t.team_id for t in teams]
+        for rb in round_buckets:
+            for i, t1 in enumerate(team_ids):
+                for j, t2 in enumerate(team_ids):
+                    if i < j:
+                        _compute_prob(t1, t2, rb)
+        engine._matchup_probs_by_round = matchup_caches
+
     sim_results = engine.simulate_tournament(bracket, show_progress=False)
 
     # E1: Validate simulated upset rates against historical actuals.

@@ -420,6 +420,7 @@ class TestHoldoutEvaluator:
         assert not evaluator._is_tournament_game("2024-02-15", 2024)
         assert not evaluator._is_tournament_game("2024-05-01", 2024)
 
+    @pytest.mark.integration
     @pytest.mark.timeout(300)
     def test_evaluate_single_year(self, evaluator):
         """Evaluate holdout year produces valid metrics."""

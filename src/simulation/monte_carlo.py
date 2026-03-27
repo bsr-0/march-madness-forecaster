@@ -151,6 +151,7 @@ def _run_batch(
     noise_std: float,
     injury_probability: float,
     regional_correlation: float = 0.25,
+    matchup_probs_by_round: "Optional[Dict[int, Dict[Tuple[str, str], float]]]" = None,
 ) -> List[Dict]:
     """
     Run a batch of correlated tournament simulations in a subprocess.
@@ -254,7 +255,15 @@ def _run_batch(
                     team2 = current_teams[i + 1]
 
                     key = (team1, team2)
-                    base_prob = matchup_probs.get(key, 0.5)
+                    # Use round-bucketed probabilities when available.
+                    # Round buckets: 1=R64, 2=R32, 3=S16, 4=E8+.
+                    # round_idx is 0-based, buckets are 1-based, capped at 4.
+                    if matchup_probs_by_round is not None:
+                        rb = min(round_idx + 1, 4)
+                        round_probs = matchup_probs_by_round.get(rb, matchup_probs)
+                        base_prob = round_probs.get(key, matchup_probs.get(key, 0.5))
+                    else:
+                        base_prob = matchup_probs.get(key, 0.5)
 
                     # Convert to logit space.
                     # FIX #B: Use a single wide clip [0.001, 0.999] ONLY for
@@ -377,6 +386,14 @@ class MonteCarloEngine:
                     matchup_probs[(t1, t2)] = p
                     matchup_probs[(t2, t1)] = 1.0 - p
 
+        # Round-bucketed matchup probabilities for round-aware upset detection.
+        # When the simulation stage provides _matchup_probs_by_round, the MC
+        # engine uses round-specific probabilities (R64 priors decay in later
+        # rounds). Otherwise falls back to the single matchup_probs dict.
+        matchup_probs_by_round: Optional[Dict[int, Dict[Tuple[str, str], float]]] = (
+            getattr(self, '_matchup_probs_by_round', None)
+        )
+
         team_data = {
             t.team_id: (t.seed, t.region, t.strength) for t in bracket.teams
         }
@@ -413,6 +430,7 @@ class MonteCarloEngine:
                             self.config.noise_std,
                             self.config.injury_probability,
                             rc,
+                            matchup_probs_by_round,
                         )
                         futures.append(future)
 
@@ -426,6 +444,7 @@ class MonteCarloEngine:
                         team_data, matchup_probs,
                         self.config.noise_std, self.config.injury_probability,
                         rc,
+                        matchup_probs_by_round,
                     )
                     all_raw_results.extend(batch_results)
         else:
@@ -435,6 +454,7 @@ class MonteCarloEngine:
                     team_data, matchup_probs,
                     self.config.noise_std, self.config.injury_probability,
                     rc,
+                    matchup_probs_by_round,
                 )
                 all_raw_results.extend(batch_results)
 

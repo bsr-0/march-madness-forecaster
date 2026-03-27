@@ -83,6 +83,9 @@ _ESPN_SCORING = {
 _BACKTEST_TEAM_ID_ALIAS = {
     "alabama_st": "alabama_state",
     "st_francis_pa": "saint_francis_pa",
+    # normalize_team_id maps "saint_francis_pa" -> "saint_francis" via _QUICK_ALIAS;
+    # re-map here so seed lookups stay consistent with game-result canonicalization.
+    "saint_francis": "saint_francis_pa",
     "san_diego_st": "san_diego_state",
     "mt_st_mary_s": "mount_st_mary_s",
     "american_univ": "american",
