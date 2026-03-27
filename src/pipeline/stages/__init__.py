@@ -101,6 +101,95 @@ class EngineeredFeatures:
 
 
 @dataclass
+class ValidatedFeatures:
+    """Output of the data-integrity validation stage (Phase 4).
+
+    Contains the cleaned feature matrix, surviving feature names, and the
+    full validation report including removed features, drift alerts, and
+    PIT violation details.
+    """
+
+    team_features: Dict[str, np.ndarray] = field(default_factory=dict)
+    feature_names: List[str] = field(default_factory=list)
+    feature_matrix: Optional[np.ndarray] = None  # (n_teams, n_features)
+    team_id_to_name: Dict[str, str] = field(default_factory=dict)
+    team_name_to_id: Dict[str, str] = field(default_factory=dict)
+    validation_report: Optional[Any] = None  # ValidationReport
+    schedule_graph: Optional[Any] = None  # ScheduleGraph (pass-through)
+
+    @property
+    def n_teams(self) -> int:
+        return len(self.team_features)
+
+    @property
+    def feature_dim(self) -> int:
+        return len(self.feature_names)
+
+    def summary(self) -> str:
+        report_status = "n/a"
+        if self.validation_report is not None:
+            report_status = "PASSED" if self.validation_report.passed else "FAILED"
+        return (
+            f"ValidatedFeatures: {self.n_teams} teams, "
+            f"{self.feature_dim} features, "
+            f"integrity={report_status}"
+        )
+
+
+@dataclass
+class BaselineCheckpoint:
+    """Output of the baseline evaluation stage (Phase 5).
+
+    Contains per-model results (Brier, EV, predictions) in a consistent
+    format consumed by Phase 6 hyperparameter tuning and ensembling.
+    """
+
+    model_scores: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    passed: bool = True
+    coin_flip_ev: float = 0.0
+    best_model: str = ""
+    warnings: List[str] = field(default_factory=list)
+
+    def summary(self) -> str:
+        lines = [f"BaselineCheckpoint: {'PASSED' if self.passed else 'FAILED'}"]
+        for name, scores in self.model_scores.items():
+            lines.append(
+                f"  {name}: EV={scores.get('EV', 0):.2f}, "
+                f"Brier={scores.get('Brier', 0):.4f}"
+            )
+        if self.best_model:
+            lines.append(f"  Best baseline: {self.best_model}")
+        return "\n".join(lines)
+
+
+@dataclass
+class SelectedModels:
+    """Output of the model-class selection stage (Phase 6).
+
+    Contains the selected model class names and their evaluation metrics,
+    ready for Phase 7 hyperparameter tuning.
+    """
+
+    selected_models: List[str] = field(default_factory=list)
+    candidate_scores: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    baseline_ev: float = 0.0
+    baseline_brier: float = 0.0
+    passed: bool = True
+
+    def summary(self) -> str:
+        lines = [
+            f"SelectedModels: {self.selected_models}",
+            f"  Baseline EV={self.baseline_ev:.2f}, Brier={self.baseline_brier:.4f}",
+        ]
+        for name, scores in self.candidate_scores.items():
+            lines.append(
+                f"  {name}: EV={scores.get('mean_EV', 0):.2f}, "
+                f"Brier={scores.get('mean_Brier', 0):.4f}"
+            )
+        return "\n".join(lines)
+
+
+@dataclass
 class TrainedModels:
     """Output of the model-training stage.
 
