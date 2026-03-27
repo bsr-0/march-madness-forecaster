@@ -576,6 +576,30 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         # Enforce dev/holdout split for historical training
         hist_years = pipeline._filter_years(hist_years)
 
+        # Phase 3: Apply optimal training window if computed.
+        # Use the broadest (max) window across all model types to ensure
+        # enough data for every model.  Individual models that prefer
+        # shorter windows still benefit from year-decay weighting which
+        # naturally downweights older data.
+        _optimal_windows = getattr(pipeline.config, "optimal_training_windows", None)
+        if _optimal_windows and hist_years:
+            # Collect numeric window sizes (None = all available)
+            _window_sizes = [
+                v for v in _optimal_windows.values()
+                if v is not None
+            ]
+            if _window_sizes:
+                _max_window = max(_window_sizes)
+                _n_before = len(hist_years)
+                hist_years = hist_years[-_max_window:]
+                if len(hist_years) < _n_before:
+                    logger.info(
+                        "Phase 3 window optimization: trimmed historical years "
+                        "from %d to %d (max optimal window=%d across %s).",
+                        _n_before, len(hist_years), _max_window,
+                        _optimal_windows,
+                    )
+
         hist_X_parts = []
         hist_y_parts = []
         hist_margin_parts = []
