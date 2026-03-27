@@ -137,6 +137,32 @@ class ValidatedFeatures:
 
 
 @dataclass
+class BaselineCheckpoint:
+    """Output of the baseline evaluation stage (Phase 5).
+
+    Contains per-model results (Brier, EV, predictions) in a consistent
+    format consumed by Phase 6 hyperparameter tuning and ensembling.
+    """
+
+    model_scores: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    passed: bool = True
+    coin_flip_ev: float = 0.0
+    best_model: str = ""
+    warnings: List[str] = field(default_factory=list)
+
+    def summary(self) -> str:
+        lines = [f"BaselineCheckpoint: {'PASSED' if self.passed else 'FAILED'}"]
+        for name, scores in self.model_scores.items():
+            lines.append(
+                f"  {name}: EV={scores.get('EV', 0):.2f}, "
+                f"Brier={scores.get('Brier', 0):.4f}"
+            )
+        if self.best_model:
+            lines.append(f"  Best baseline: {self.best_model}")
+        return "\n".join(lines)
+
+
+@dataclass
 class TrainedModels:
     """Output of the model-training stage.
 
