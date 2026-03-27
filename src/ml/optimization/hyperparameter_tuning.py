@@ -467,16 +467,17 @@ class BrierLightGBMTuner(LightGBMTuner):
             def train_fn(X_tr, y_tr, X_v, y_v, w_tr):
                 train_data = lgb.Dataset(
                     X_tr, label=y_tr, feature_name=feature_names,
-                    weight=w_tr,
+                    weight=w_tr, free_raw_data=False,
                 )
-                callbacks = [lgb.log_evaluation(period=0)]
-                return lgb.train(
-                    params,
-                    train_data,
-                    num_boost_round=num_rounds,
-                    fobj=brier_objective,
-                    callbacks=callbacks,
-                )
+                # Use objective="none" in params and pass the custom objective
+                # via the Booster API. LightGBM 4.x crashes when a callable is
+                # passed directly in params["objective"] due to an internal
+                # reset_parameter call.
+                train_params = {**params, "objective": "none"}
+                booster = lgb.Booster(train_params, train_data)
+                for _ in range(num_rounds):
+                    booster.update(fobj=brier_objective)
+                return booster
 
             def predict_fn(model, X_pred):
                 raw = model.predict(X_pred)
@@ -517,15 +518,13 @@ class BrierLightGBMTuner(LightGBMTuner):
         def final_train(X_tr, y_tr, X_v, y_v, w_tr):
             td = lgb.Dataset(
                 X_tr, label=y_tr, feature_name=feature_names,
-                weight=w_tr,
+                weight=w_tr, free_raw_data=False,
             )
-            callbacks = [lgb.log_evaluation(period=0)]
-            return lgb.train(
-                best_params, td,
-                num_boost_round=best_num_rounds,
-                fobj=brier_objective,
-                callbacks=callbacks,
-            )
+            final_params = {**best_params, "objective": "none"}
+            booster = lgb.Booster(final_params, td)
+            for _ in range(best_num_rounds):
+                booster.update(fobj=brier_objective)
+            return booster
 
         def final_predict(model, X_pred):
             raw = model.predict(X_pred)
