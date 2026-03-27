@@ -163,6 +163,33 @@ class BaselineCheckpoint:
 
 
 @dataclass
+class SelectedModels:
+    """Output of the model-class selection stage (Phase 6).
+
+    Contains the selected model class names and their evaluation metrics,
+    ready for Phase 7 hyperparameter tuning.
+    """
+
+    selected_models: List[str] = field(default_factory=list)
+    candidate_scores: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    baseline_ev: float = 0.0
+    baseline_brier: float = 0.0
+    passed: bool = True
+
+    def summary(self) -> str:
+        lines = [
+            f"SelectedModels: {self.selected_models}",
+            f"  Baseline EV={self.baseline_ev:.2f}, Brier={self.baseline_brier:.4f}",
+        ]
+        for name, scores in self.candidate_scores.items():
+            lines.append(
+                f"  {name}: EV={scores.get('mean_EV', 0):.2f}, "
+                f"Brier={scores.get('mean_Brier', 0):.4f}"
+            )
+        return "\n".join(lines)
+
+
+@dataclass
 class TrainedModels:
     """Output of the model-training stage.
 
