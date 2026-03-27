@@ -1,304 +1,304 @@
 
-### FAILED JOB: Gate 1: Unit Tests
-2026-03-27T05:05:33.9437824Z env:
-2026-03-27T05:05:33.9438092Z   pythonLocation: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-03-27T05:05:33.9438574Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib/pkgconfig
-2026-03-27T05:05:33.9439036Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-03-27T05:05:33.9439442Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-03-27T05:05:33.9439876Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-03-27T05:05:33.9440480Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib
-2026-03-27T05:05:33.9440828Z ##[endgroup]
-2026-03-27T05:06:02.3980896Z ........................................................................ [  1%]
-2026-03-27T05:06:02.4882327Z ........................................................................ [  2%]
-2026-03-27T05:06:02.6306658Z ........................................................................ [  3%]
-2026-03-27T05:06:02.8355187Z ........................................................................ [  5%]
-2026-03-27T05:06:03.7137703Z ........................................................................ [  6%]
-2026-03-27T05:06:04.1264951Z ........................................................................ [  7%]
-2026-03-27T05:06:04.7027985Z ........................................................................ [  9%]
-2026-03-27T05:06:05.5639774Z ........................................................................ [ 10%]
-2026-03-27T05:06:07.9984906Z ........................................................................ [ 11%]
-2026-03-27T05:06:19.0605724Z ........................................................................ [ 13%]
-2026-03-27T05:06:24.1452565Z ........................................................................ [ 14%]
-2026-03-27T05:06:25.6237309Z ........................................................................ [ 15%]
-2026-03-27T05:06:26.6765787Z ........................................................................ [ 17%]
-2026-03-27T05:06:26.9787847Z ........................................................................ [ 18%]
-2026-03-27T05:06:27.9043931Z ........................................................................ [ 19%]
-2026-03-27T05:06:30.3362600Z ........................................................................ [ 21%]
-2026-03-27T05:06:30.4971987Z ........................................................................ [ 22%]
-2026-03-27T05:06:31.1774226Z ........................................................................ [ 23%]
-2026-03-27T05:06:32.0660279Z ........................................................................ [ 25%]
-2026-03-27T05:06:32.3855114Z ........................................................................ [ 26%]
-2026-03-27T05:06:32.5951870Z ........................................................................ [ 27%]
-2026-03-27T05:06:39.4743232Z ........................................................................ [ 29%]
-2026-03-27T05:07:15.7209191Z ........................................................................ [ 30%]
-2026-03-27T05:07:17.8949472Z ........................................................................ [ 31%]
-2026-03-27T05:07:18.0573612Z ........................................................................ [ 33%]
-2026-03-27T05:07:18.3259689Z ........................................................................ [ 34%]
-2026-03-27T05:07:53.3902854Z ..........................sss.sss....................................... [ 35%]
-2026-03-27T05:07:53.6646002Z ........................................................................ [ 37%]
-2026-03-27T05:07:54.2543104Z ........................................................................ [ 38%]
-2026-03-27T05:07:58.1275057Z ........................................................................ [ 39%]
-2026-03-27T05:07:58.2676168Z ........................................................................ [ 41%]
-2026-03-27T05:07:58.4497130Z ........................................................................ [ 42%]
-2026-03-27T05:07:59.4969504Z ........................................................................ [ 43%]
-2026-03-27T05:08:02.3891089Z ........................................................................ [ 45%]
-2026-03-27T05:08:02.5632073Z ........................................................................ [ 46%]
-2026-03-27T05:08:04.1987774Z ........................................................................ [ 47%]
-2026-03-27T05:08:04.7935209Z ........................................................................ [ 49%]
-2026-03-27T05:08:04.9967558Z ........................................................................ [ 50%]
-2026-03-27T05:08:05.2054684Z .....................................................................s.. [ 51%]
-2026-03-27T05:08:07.2492939Z ........................................................................ [ 53%]
-2026-03-27T05:08:07.4393036Z ........................................................................ [ 54%]
-2026-03-27T05:08:27.2080421Z ........................................................................ [ 55%]
-2026-03-27T05:08:27.4026908Z ........................................................................ [ 57%]
-2026-03-27T05:08:27.5773628Z ........................................................................ [ 58%]
-2026-03-27T05:08:27.7365774Z ........................................................................ [ 59%]
-2026-03-27T05:08:28.3912941Z ........................................................................ [ 61%]
-2026-03-27T05:17:19.1211237Z ........................................................................ [ 62%]
-2026-03-27T05:17:20.0235868Z ........................................................................ [ 63%]
-2026-03-27T05:17:20.2805118Z ........................................................................ [ 65%]
-2026-03-27T05:17:24.8974291Z ........................................................................ [ 66%]
-2026-03-27T05:17:25.3872254Z ........................................................................ [ 67%]
-2026-03-27T05:18:09.4776801Z ........................................................................ [ 69%]
-2026-03-27T05:18:11.1204564Z ........................................................................ [ 70%]
-2026-03-27T05:18:11.3811492Z ........................................................................ [ 71%]
-2026-03-27T05:18:11.5917512Z ........................................................................ [ 73%]
-2026-03-27T05:18:11.8817394Z ........................................................................ [ 74%]
-2026-03-27T05:18:12.2119361Z ........................................................................ [ 75%]
-2026-03-27T05:18:12.4337125Z ........................................................................ [ 77%]
-2026-03-27T05:18:12.6901685Z ........................................................................ [ 78%]
-2026-03-27T05:18:12.8704179Z ........................................................................ [ 79%]
-2026-03-27T05:18:13.1190520Z ........................................................................ [ 81%]
-2026-03-27T05:18:13.8857933Z ........................................................................ [ 82%]
-2026-03-27T05:18:14.4991714Z ........................................................................ [ 83%]
-2026-03-27T05:18:31.0564257Z ........................................................................ [ 85%]
-2026-03-27T05:18:32.0821164Z ........................................................................ [ 86%]
-2026-03-27T05:18:32.8986521Z ........................................................................ [ 87%]
-2026-03-27T05:18:37.4243846Z ......................................................F
-2026-03-27T05:18:37.4245163Z =================================== FAILURES ===================================
-2026-03-27T05:18:37.4246221Z _ TestGlobalStatisticsLeakage.test_population_stats_not_used_for_normalization _
-2026-03-27T05:18:37.4247473Z tests/test_temporal_integrity.py:423: in test_population_stats_not_used_for_normalization
-2026-03-27T05:18:37.4248950Z     assert not np.any(np.isnan(vec)), "Vector contains NaN — possible z-score issue"
-2026-03-27T05:18:37.4250048Z E   AssertionError: Vector contains NaN — possible z-score issue
-2026-03-27T05:18:37.4250729Z E   assert not True
-2026-03-27T05:18:37.4252534Z E    +  where True = <function any at 0x7f32c9d6fbf0>(array([False, False, False, False, False, False, False, False, False,\n       False, False, False, False, False, False,... True,\n        True, False,  True,  True,  True,  True,  True,  True,  True,\n        True,  True,  True,  True,  True]))
-2026-03-27T05:18:37.4254428Z E    +    where <function any at 0x7f32c9d6fbf0> = np.any
-2026-03-27T05:18:37.4256411Z E    +    and   array([False, False, False, False, False, False, False, False, False,\n       False, False, False, False, False, False,... True,\n        True, False,  True,  True,  True,  True,  True,  True,  True,\n        True,  True,  True,  True,  True]) = <ufunc 'isnan'>(array([1.0e+02, 1.0e+02, 6.8e+01, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00,\n       0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+... nan,     nan,     nan,\n           nan,     nan,     nan,     nan,     nan,     nan,     nan,\n           nan,     nan]))
-2026-03-27T05:18:37.4258079Z E    +      where <ufunc 'isnan'> = np.isnan
-2026-03-27T05:18:37.4258450Z ------------------------------ Captured log call -------------------------------
-2026-03-27T05:18:37.4260004Z WARNING  src.data.features.feature_engineering:feature_engineering.py:757 Team 'test' has 14 NaN + 0 inf features: ['external_rating_composite', 'external_rating_spread', 'massey_pom', 'massey_sag', 'massey_mor', 'massey_dol', 'massey_col', 'massey_wol', 'massey_rth', 'massey_ap', 'massey_usa', 'massey_rpi', 'massey_rank_mean', 'massey_rank_std']. Inf replaced with NaN; NaN preserved for tree-native handling.
-2026-03-27T05:18:37.4261457Z =============================== warnings summary ===============================
-2026-03-27T05:18:37.4261787Z tests/test_full_ml_pipeline.py:18
-2026-03-27T05:18:37.4262956Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/tests/test_full_ml_pipeline.py:18: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-2026-03-27T05:18:37.4264295Z     pytestmark = pytest.mark.slow
-2026-03-27T05:18:37.4264465Z 
-2026-03-27T05:18:37.4264561Z tests/test_rdof_audit.py:423
-2026-03-27T05:18:37.4265668Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/tests/test_rdof_audit.py:423: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-2026-03-27T05:18:37.4266806Z     @pytest.mark.timeout(300)
-2026-03-27T05:18:37.4266957Z 
-2026-03-27T05:18:37.4267270Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
-2026-03-27T05:18:37.4267943Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
-2026-03-27T05:18:37.4268626Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_probabilities_not_mutated_by_optimizer
-2026-03-27T05:18:37.4269299Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_has_all_required_fields
-2026-03-27T05:18:37.4269944Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_values_match_environment
-2026-03-27T05:18:37.4270573Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_serialization
-2026-03-27T05:18:37.4272098Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/src/optimization/pool_optimizer.py:223: DeprecationWarning: PoolOptimizer._build_round_probabilities is using a heuristic fallback. Pass model_round_probs from MC simulation to the constructor for accurate round advancement probabilities.
-2026-03-27T05:18:37.4273527Z     model_round_probs = self._build_round_probabilities()
-2026-03-27T05:18:37.4273922Z 
-2026-03-27T05:18:37.4274228Z tests/test_phase8_statistician_audit.py::TestSourceAgreementStatistics::test_p_value_based_weighting
-2026-03-27T05:18:37.4275218Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/scipy/stats/_stats_py.py:5445: ConstantInputWarning: An input array is constant; the correlation coefficient is not defined.
-2026-03-27T05:18:37.4276184Z     warnings.warn(stats.ConstantInputWarning(warn_msg))
-2026-03-27T05:18:37.4276411Z 
-2026-03-27T05:18:37.4276625Z tests/test_schemas.py::TestValidateFeatureMatrix::test_infinite_values_fail
-2026-03-27T05:18:37.4277397Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/numpy/lib/nanfunctions.py:1741: RuntimeWarning: invalid value encountered in subtract
-2026-03-27T05:18:37.4278107Z     np.subtract(arr, avg, out=arr, casting='unsafe', where=where)
-2026-03-27T05:18:37.4278357Z 
-2026-03-27T05:18:37.4278573Z tests/test_schemas.py::TestValidateFeatureMatrix::test_feature_names_in_warnings
-2026-03-27T05:18:37.4279341Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/numpy/lib/nanfunctions.py:1879: RuntimeWarning: Degrees of freedom <= 0 for slice.
-2026-03-27T05:18:37.4280039Z     var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
-2026-03-27T05:18:37.4280274Z 
-2026-03-27T05:18:37.4280490Z tests/test_schemas.py::TestValidatePredictions::test_infinite_predictions_fail
-2026-03-27T05:18:37.4281249Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/numpy/core/_methods.py:173: RuntimeWarning: invalid value encountered in subtract
-2026-03-27T05:18:37.4281891Z     x = asanyarray(arr - arrmean)
-2026-03-27T05:18:37.4282054Z 
-2026-03-27T05:18:37.4282251Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2026-03-27T05:18:37.4282666Z =========================== short test summary info ============================
-2026-03-27T05:18:37.4283950Z FAILED tests/test_temporal_integrity.py::TestGlobalStatisticsLeakage::test_population_stats_not_used_for_normalization - AssertionError: Vector contains NaN — possible z-score issue
-2026-03-27T05:18:37.4284701Z assert not True
-2026-03-27T05:18:37.4285590Z  +  where True = <function any at 0x7f32c9d6fbf0>(array([False, False, False, False, False, False, False, False, False,\n       False, False, False, False, False, False,... True,\n        True, False,  True,  True,  True,  True,  True,  True,  True,\n        True,  True,  True,  True,  True]))
-2026-03-27T05:18:37.4286580Z  +    where <function any at 0x7f32c9d6fbf0> = np.any
-2026-03-27T05:18:37.4287996Z  +    and   array([False, False, False, False, False, False, False, False, False,\n       False, False, False, False, False, False,... True,\n        True, False,  True,  True,  True,  True,  True,  True,  True,\n        True,  True,  True,  True,  True]) = <ufunc 'isnan'>(array([1.0e+02, 1.0e+02, 6.8e+01, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00,\n       0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+... nan,     nan,     nan,\n           nan,     nan,     nan,     nan,     nan,     nan,     nan,\n           nan,     nan]))
-2026-03-27T05:18:37.4289374Z  +      where <ufunc 'isnan'> = np.isnan
-2026-03-27T05:18:37.4289691Z !!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
-2026-03-27T05:18:37.4290126Z 1 failed, 4799 passed, 7 skipped, 511 deselected, 12 warnings in 781.66s (0:13:01)
-2026-03-27T05:18:38.6825999Z ##[error]Process completed with exit code 1.
-2026-03-27T05:18:38.6907455Z Post job cleanup.
-2026-03-27T05:18:38.6991284Z Post job cleanup.
-2026-03-27T05:18:38.7976159Z [command]/usr/bin/git version
-2026-03-27T05:18:38.8017519Z git version 2.53.0
-2026-03-27T05:18:38.8072646Z Temporarily overriding HOME='/home/runner/work/_temp/412ecf69-a1b6-494b-bf16-f3540ff94564' before making global git config changes
-2026-03-27T05:18:38.8074155Z Adding repository directory to the temporary git global config as a safe directory
-2026-03-27T05:18:38.8078762Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/march-madness-forecaster/march-madness-forecaster
-2026-03-27T05:18:38.8115041Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
-2026-03-27T05:18:38.8156325Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
-2026-03-27T05:18:38.8450355Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
-2026-03-27T05:18:38.8478803Z http.https://github.com/.extraheader
-2026-03-27T05:18:38.8494292Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
-2026-03-27T05:18:38.8528999Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
-2026-03-27T05:18:38.8789128Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
-2026-03-27T05:18:38.8824283Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
-2026-03-27T05:18:38.9220098Z Cleaning up orphan processes
-2026-03-27T05:18:38.9552164Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-python@v5. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
-
-
 ### FAILED JOB: Gate 4: Performance Check
-2026-03-27T05:05:36.8140409Z Installing collected packages: pytest-timeout
-2026-03-27T05:05:36.8339610Z Successfully installed pytest-timeout-2.4.0
-2026-03-27T05:05:36.8960074Z ##[group]Run pytest tests/ -m "unit" --timeout=120 --tb=short -q
-2026-03-27T05:05:36.8960567Z [36;1mpytest tests/ -m "unit" --timeout=120 --tb=short -q[0m
-2026-03-27T05:05:36.9030856Z shell: /usr/bin/bash -e {0}
-2026-03-27T05:05:36.9031116Z env:
-2026-03-27T05:05:36.9031393Z   pythonLocation: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-03-27T05:05:36.9031841Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib/pkgconfig
-2026-03-27T05:05:36.9032269Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-03-27T05:05:36.9032843Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-03-27T05:05:36.9033235Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-03-27T05:05:36.9033616Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib
-2026-03-27T05:05:36.9033938Z ##[endgroup]
-2026-03-27T05:05:55.0183152Z ........................................................................ [  1%]
-2026-03-27T05:05:55.0816847Z ........................................................................ [  2%]
-2026-03-27T05:05:55.1886570Z ........................................................................ [  3%]
-2026-03-27T05:05:55.3490324Z ........................................................................ [  5%]
-2026-03-27T05:05:55.8246624Z ........................................................................ [  6%]
-2026-03-27T05:05:56.0998971Z ........................................................................ [  7%]
-2026-03-27T05:05:56.4938502Z ........................................................................ [  9%]
-2026-03-27T05:05:56.9401981Z ........................................................................ [ 10%]
-2026-03-27T05:05:58.9531041Z ........................................................................ [ 11%]
-2026-03-27T05:06:09.8453814Z ........................................................................ [ 13%]
-2026-03-27T05:06:12.4426586Z ........................................................................ [ 14%]
-2026-03-27T05:06:13.2614882Z ........................................................................ [ 15%]
-2026-03-27T05:06:13.9206258Z ........................................................................ [ 17%]
-2026-03-27T05:06:14.1609485Z ........................................................................ [ 18%]
-2026-03-27T05:06:14.9549298Z ........................................................................ [ 19%]
-2026-03-27T05:06:17.0376361Z ........................................................................ [ 21%]
-2026-03-27T05:06:17.1494716Z ........................................................................ [ 22%]
-2026-03-27T05:06:17.7892308Z ........................................................................ [ 23%]
-2026-03-27T05:06:18.7716456Z ........................................................................ [ 25%]
-2026-03-27T05:06:19.0466452Z ........................................................................ [ 26%]
-2026-03-27T05:06:19.2150129Z ........................................................................ [ 27%]
-2026-03-27T05:06:25.0103510Z ........................................................................ [ 29%]
-2026-03-27T05:06:57.2543722Z ........................................................................ [ 30%]
-2026-03-27T05:06:58.3110963Z ........................................................................ [ 31%]
-2026-03-27T05:06:58.4390705Z ........................................................................ [ 33%]
-2026-03-27T05:06:58.6578888Z ........................................................................ [ 34%]
-2026-03-27T05:07:19.8461349Z ..........................sss.sss....................................... [ 35%]
-2026-03-27T05:07:20.0586343Z ........................................................................ [ 37%]
-2026-03-27T05:07:20.4964919Z ........................................................................ [ 38%]
-2026-03-27T05:07:23.7980877Z ........................................................................ [ 39%]
-2026-03-27T05:07:23.9078104Z ........................................................................ [ 41%]
-2026-03-27T05:07:24.0596700Z ........................................................................ [ 42%]
-2026-03-27T05:07:24.9306058Z ........................................................................ [ 43%]
-2026-03-27T05:07:26.5156118Z ........................................................................ [ 45%]
-2026-03-27T05:07:26.6511690Z ........................................................................ [ 46%]
-2026-03-27T05:07:28.0855668Z ........................................................................ [ 47%]
-2026-03-27T05:07:28.6268083Z ........................................................................ [ 49%]
-2026-03-27T05:07:28.7770947Z ........................................................................ [ 50%]
-2026-03-27T05:07:28.9514857Z .....................................................................s.. [ 51%]
-2026-03-27T05:07:30.8404437Z ........................................................................ [ 53%]
-2026-03-27T05:07:30.9960166Z ........................................................................ [ 54%]
-2026-03-27T05:07:42.4142538Z ........................................................................ [ 55%]
-2026-03-27T05:07:42.5644889Z ........................................................................ [ 57%]
-2026-03-27T05:07:42.6996186Z ........................................................................ [ 58%]
-2026-03-27T05:07:42.8230789Z ........................................................................ [ 59%]
-2026-03-27T05:07:43.2323471Z ........................................................................ [ 61%]
-2026-03-27T05:12:28.6929505Z ........................................................................ [ 62%]
-2026-03-27T05:12:29.4819082Z ........................................................................ [ 63%]
-2026-03-27T05:12:29.6738871Z ........................................................................ [ 65%]
-2026-03-27T05:12:33.8104003Z ........................................................................ [ 66%]
-2026-03-27T05:12:34.2495942Z ........................................................................ [ 67%]
-2026-03-27T05:13:12.2123860Z ........................................................................ [ 69%]
-2026-03-27T05:13:13.7849926Z ........................................................................ [ 70%]
-2026-03-27T05:13:14.0037984Z ........................................................................ [ 71%]
-2026-03-27T05:13:14.1663801Z ........................................................................ [ 73%]
-2026-03-27T05:13:14.3830842Z ........................................................................ [ 74%]
-2026-03-27T05:13:14.6068459Z ........................................................................ [ 75%]
-2026-03-27T05:13:14.7788861Z ........................................................................ [ 77%]
-2026-03-27T05:13:14.9756213Z ........................................................................ [ 78%]
-2026-03-27T05:13:15.1200717Z ........................................................................ [ 79%]
-2026-03-27T05:13:15.3218027Z ........................................................................ [ 81%]
-2026-03-27T05:13:15.8439475Z ........................................................................ [ 82%]
-2026-03-27T05:13:16.3402282Z ........................................................................ [ 83%]
-2026-03-27T05:13:30.4061565Z ........................................................................ [ 85%]
-2026-03-27T05:13:31.2130005Z ........................................................................ [ 86%]
-2026-03-27T05:13:31.6120595Z ........................................................................ [ 87%]
-2026-03-27T05:13:34.7707518Z ......................................................F
-2026-03-27T05:13:34.7710494Z =================================== FAILURES ===================================
-2026-03-27T05:13:34.7711444Z _ TestGlobalStatisticsLeakage.test_population_stats_not_used_for_normalization _
-2026-03-27T05:13:34.7712497Z tests/test_temporal_integrity.py:423: in test_population_stats_not_used_for_normalization
-2026-03-27T05:13:34.7713968Z     assert not np.any(np.isnan(vec)), "Vector contains NaN — possible z-score issue"
-2026-03-27T05:13:34.7714793Z E   AssertionError: Vector contains NaN — possible z-score issue
-2026-03-27T05:13:34.7715315Z E   assert not True
-2026-03-27T05:13:34.7716679Z E    +  where True = <function any at 0x7faaebee56f0>(array([False, False, False, False, False, False, False, False, False,\n       False, False, False, False, False, False,... True,\n        True, False,  True,  True,  True,  True,  True,  True,  True,\n        True,  True,  True,  True,  True]))
-2026-03-27T05:13:34.7718305Z E    +    where <function any at 0x7faaebee56f0> = np.any
-2026-03-27T05:13:34.7719761Z E    +    and   array([False, False, False, False, False, False, False, False, False,\n       False, False, False, False, False, False,... True,\n        True, False,  True,  True,  True,  True,  True,  True,  True,\n        True,  True,  True,  True,  True]) = <ufunc 'isnan'>(array([1.0e+02, 1.0e+02, 6.8e+01, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00,\n       0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+... nan,     nan,     nan,\n           nan,     nan,     nan,     nan,     nan,     nan,     nan,\n           nan,     nan]))
-2026-03-27T05:13:34.7721202Z E    +      where <ufunc 'isnan'> = np.isnan
-2026-03-27T05:13:34.7721565Z ------------------------------ Captured log call -------------------------------
-2026-03-27T05:13:34.7723365Z WARNING  src.data.features.feature_engineering:feature_engineering.py:757 Team 'test' has 14 NaN + 0 inf features: ['external_rating_composite', 'external_rating_spread', 'massey_pom', 'massey_sag', 'massey_mor', 'massey_dol', 'massey_col', 'massey_wol', 'massey_rth', 'massey_ap', 'massey_usa', 'massey_rpi', 'massey_rank_mean', 'massey_rank_std']. Inf replaced with NaN; NaN preserved for tree-native handling.
-2026-03-27T05:13:34.7725058Z =============================== warnings summary ===============================
-2026-03-27T05:13:34.7725393Z tests/test_full_ml_pipeline.py:18
-2026-03-27T05:13:34.7726565Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/tests/test_full_ml_pipeline.py:18: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-2026-03-27T05:13:34.7727742Z     pytestmark = pytest.mark.slow
-2026-03-27T05:13:34.7727919Z 
-2026-03-27T05:13:34.7728246Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
-2026-03-27T05:13:34.7728929Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
-2026-03-27T05:13:34.7729618Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_probabilities_not_mutated_by_optimizer
-2026-03-27T05:13:34.7730306Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_has_all_required_fields
-2026-03-27T05:13:34.7730988Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_values_match_environment
-2026-03-27T05:13:34.7731615Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_serialization
-2026-03-27T05:13:34.7733187Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/src/optimization/pool_optimizer.py:223: DeprecationWarning: PoolOptimizer._build_round_probabilities is using a heuristic fallback. Pass model_round_probs from MC simulation to the constructor for accurate round advancement probabilities.
-2026-03-27T05:13:34.7734450Z     model_round_probs = self._build_round_probabilities()
-2026-03-27T05:13:34.7734678Z 
-2026-03-27T05:13:34.7734974Z tests/test_phase8_statistician_audit.py::TestSourceAgreementStatistics::test_p_value_based_weighting
-2026-03-27T05:13:34.7736129Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/scipy/stats/_stats_py.py:5445: ConstantInputWarning: An input array is constant; the correlation coefficient is not defined.
-2026-03-27T05:13:34.7737046Z     warnings.warn(stats.ConstantInputWarning(warn_msg))
-2026-03-27T05:13:34.7737275Z 
-2026-03-27T05:13:34.7737487Z tests/test_schemas.py::TestValidateFeatureMatrix::test_infinite_values_fail
-2026-03-27T05:13:34.7738269Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/numpy/lib/nanfunctions.py:1741: RuntimeWarning: invalid value encountered in subtract
-2026-03-27T05:13:34.7738996Z     np.subtract(arr, avg, out=arr, casting='unsafe', where=where)
-2026-03-27T05:13:34.7739244Z 
-2026-03-27T05:13:34.7739473Z tests/test_schemas.py::TestValidateFeatureMatrix::test_feature_names_in_warnings
-2026-03-27T05:13:34.7740244Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/numpy/lib/nanfunctions.py:1879: RuntimeWarning: Degrees of freedom <= 0 for slice.
-2026-03-27T05:13:34.7740960Z     var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
-2026-03-27T05:13:34.7741203Z 
-2026-03-27T05:13:34.7741418Z tests/test_schemas.py::TestValidatePredictions::test_infinite_predictions_fail
-2026-03-27T05:13:34.7742179Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/numpy/core/_methods.py:173: RuntimeWarning: invalid value encountered in subtract
-2026-03-27T05:13:34.7743087Z     x = asanyarray(arr - arrmean)
-2026-03-27T05:13:34.7743265Z 
-2026-03-27T05:13:34.7743467Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2026-03-27T05:13:34.7743901Z =========================== short test summary info ============================
-2026-03-27T05:13:34.7744905Z FAILED tests/test_temporal_integrity.py::TestGlobalStatisticsLeakage::test_population_stats_not_used_for_normalization - AssertionError: Vector contains NaN — possible z-score issue
-2026-03-27T05:13:34.7745651Z assert not True
-2026-03-27T05:13:34.7746555Z  +  where True = <function any at 0x7faaebee56f0>(array([False, False, False, False, False, False, False, False, False,\n       False, False, False, False, False, False,... True,\n        True, False,  True,  True,  True,  True,  True,  True,  True,\n        True,  True,  True,  True,  True]))
-2026-03-27T05:13:34.7747677Z  +    where <function any at 0x7faaebee56f0> = np.any
-2026-03-27T05:13:34.7749089Z  +    and   array([False, False, False, False, False, False, False, False, False,\n       False, False, False, False, False, False,... True,\n        True, False,  True,  True,  True,  True,  True,  True,  True,\n        True,  True,  True,  True,  True]) = <ufunc 'isnan'>(array([1.0e+02, 1.0e+02, 6.8e+01, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00,\n       0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+... nan,     nan,     nan,\n           nan,     nan,     nan,     nan,     nan,     nan,     nan,\n           nan,     nan]))
-2026-03-27T05:13:34.7750469Z  +      where <ufunc 'isnan'> = np.isnan
-2026-03-27T05:13:34.7750791Z !!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
-2026-03-27T05:13:34.7751245Z 1 failed, 4799 passed, 7 skipped, 511 deselected, 11 warnings in 476.15s (0:07:56)
-2026-03-27T05:13:36.1665441Z ##[error]Process completed with exit code 1.
-2026-03-27T05:13:36.1778242Z Post job cleanup.
-2026-03-27T05:13:36.2786983Z [command]/usr/bin/git version
-2026-03-27T05:13:36.2826889Z git version 2.53.0
-2026-03-27T05:13:36.2881080Z Temporarily overriding HOME='/home/runner/work/_temp/5bb25aef-987d-4be1-a1bb-e2adde5b699f' before making global git config changes
-2026-03-27T05:13:36.2882446Z Adding repository directory to the temporary git global config as a safe directory
-2026-03-27T05:13:36.2888143Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/march-madness-forecaster/march-madness-forecaster
-2026-03-27T05:13:36.2926647Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
-2026-03-27T05:13:36.2963179Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
-2026-03-27T05:13:36.3249870Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
-2026-03-27T05:13:36.3275057Z http.https://github.com/.extraheader
-2026-03-27T05:13:36.3288732Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
-2026-03-27T05:13:36.3325347Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
-2026-03-27T05:13:36.3581323Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
-2026-03-27T05:13:36.3621206Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
-2026-03-27T05:13:36.4039109Z Cleaning up orphan processes
-2026-03-27T05:13:36.4474304Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-python@v5. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-03-27T05:45:44.7487308Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-03-27T05:45:44.7487715Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib
+2026-03-27T05:45:44.7488055Z ##[endgroup]
+2026-03-27T05:46:03.0808192Z ........................................................................ [  1%]
+2026-03-27T05:46:03.1416759Z ........................................................................ [  2%]
+2026-03-27T05:46:03.2452567Z ........................................................................ [  3%]
+2026-03-27T05:46:03.3961761Z ........................................................................ [  5%]
+2026-03-27T05:46:03.8584888Z ........................................................................ [  6%]
+2026-03-27T05:46:04.1204895Z ........................................................................ [  7%]
+2026-03-27T05:46:04.4902967Z ........................................................................ [  9%]
+2026-03-27T05:46:04.9331707Z ........................................................................ [ 10%]
+2026-03-27T05:46:06.9447169Z ........................................................................ [ 11%]
+2026-03-27T05:46:17.8038236Z ........................................................................ [ 13%]
+2026-03-27T05:46:20.3826109Z ........................................................................ [ 14%]
+2026-03-27T05:46:21.1899903Z ........................................................................ [ 15%]
+2026-03-27T05:46:21.7815687Z ........................................................................ [ 16%]
+2026-03-27T05:46:21.9969160Z ........................................................................ [ 18%]
+2026-03-27T05:46:22.9631231Z ........................................................................ [ 19%]
+2026-03-27T05:46:25.0389884Z ........................................................................ [ 20%]
+2026-03-27T05:46:25.1772232Z ........................................................................ [ 22%]
+2026-03-27T05:46:25.8191591Z ........................................................................ [ 23%]
+2026-03-27T05:46:26.2505358Z ........................................................................ [ 24%]
+2026-03-27T05:46:26.8097334Z ........................................................................ [ 26%]
+2026-03-27T05:46:26.9659366Z ........................................................................ [ 27%]
+2026-03-27T05:46:27.3167220Z ........................................................................ [ 28%]
+2026-03-27T05:47:02.5451136Z ........................................................................ [ 30%]
+2026-03-27T05:47:04.6395814Z ........................................................................ [ 31%]
+2026-03-27T05:47:05.6942313Z ........................................................................ [ 32%]
+2026-03-27T05:47:05.8413577Z ........................................................................ [ 33%]
+2026-03-27T05:47:12.6002640Z ..................................................sss.sss............... [ 35%]
+2026-03-27T05:47:28.5148445Z ........................................................................ [ 36%]
+2026-03-27T05:47:28.8792644Z ........................................................................ [ 37%]
+2026-03-27T05:47:31.3231905Z ........................................................................ [ 39%]
+2026-03-27T05:47:31.9023802Z ........................................................................ [ 40%]
+2026-03-27T05:47:32.0065478Z ........................................................................ [ 41%]
+2026-03-27T05:47:32.3334252Z ........................................................................ [ 43%]
+2026-03-27T05:47:34.4556563Z ........................................................................ [ 44%]
+2026-03-27T05:47:34.7182415Z ........................................................................ [ 45%]
+2026-03-27T05:47:35.9981368Z ........................................................................ [ 47%]
+2026-03-27T05:47:36.4922383Z ........................................................................ [ 48%]
+2026-03-27T05:47:36.6464001Z ........................................................................ [ 49%]
+2026-03-27T05:47:36.7768448Z ........................................................................ [ 50%]
+2026-03-27T05:47:38.5387079Z ...........................s............................................ [ 52%]
+2026-03-27T05:47:38.6613669Z ........................................................................ [ 53%]
+2026-03-27T05:47:49.3299421Z ........................................................................ [ 54%]
+2026-03-27T05:47:49.4339977Z ........................................................................ [ 56%]
+2026-03-27T05:47:49.5902330Z ........................................................................ [ 57%]
+2026-03-27T05:47:49.6969397Z ........................................................................ [ 58%]
+2026-03-27T05:47:49.9122470Z ........................................................................ [ 60%]
+2026-03-27T05:47:50.2878875Z ........................................................................ [ 61%]
+2026-03-27T05:52:20.2528244Z ........................................................................ [ 62%]
+2026-03-27T05:52:20.4690852Z ........................................................................ [ 64%]
+2026-03-27T05:52:20.7404725Z ........................................................................ [ 65%]
+2026-03-27T05:52:24.7220252Z ........................................................................ [ 66%]
+2026-03-27T05:52:25.4326945Z ........................................................................ [ 67%]
+2026-03-27T05:53:03.1078232Z ........................................................................ [ 69%]
+2026-03-27T05:53:03.6820595Z ........................................................................ [ 70%]
+2026-03-27T05:53:03.8516195Z ........................................................................ [ 71%]
+2026-03-27T05:53:04.0500885Z ........................................................................ [ 73%]
+2026-03-27T05:53:04.2079615Z ........................................................................ [ 74%]
+2026-03-27T05:53:04.4401525Z ........................................................................ [ 75%]
+2026-03-27T05:53:04.6042131Z ........................................................................ [ 77%]
+2026-03-27T05:53:04.7609974Z ........................................................................ [ 78%]
+2026-03-27T05:53:04.9167259Z ........................................................................ [ 79%]
+2026-03-27T05:53:05.1654126Z ........................................................................ [ 81%]
+2026-03-27T05:53:05.7227053Z ........................................................................ [ 82%]
+2026-03-27T05:53:17.5001436Z ........................................................................ [ 83%]
+2026-03-27T05:53:19.8867202Z ........................................................................ [ 84%]
+2026-03-27T05:53:20.5729122Z ........................................................................ [ 86%]
+2026-03-27T05:53:21.8727255Z ........................................................................ [ 87%]
+2026-03-27T05:53:22.9725330Z ........................................................................ [ 88%]
+2026-03-27T05:53:24.3730484Z .....F
+2026-03-27T05:53:24.3731408Z =================================== FAILURES ===================================
+2026-03-27T05:53:24.3732388Z __________________ TestCacheTTL.test_cache_fresh_returns_data __________________
+2026-03-27T05:53:24.3733501Z tests/test_torvik_refactor.py:215: in test_cache_fresh_returns_data
+2026-03-27T05:53:24.3734358Z     assert loaded == {"foo": "bar"}
+2026-03-27T05:53:24.3735288Z E   AssertionError: assert {'foo': 'bar'...53:23.013384'} == {'foo': 'bar'}
+2026-03-27T05:53:24.3736277Z E     
+2026-03-27T05:53:24.3736778Z E     Omitting 1 identical items, use -vv to show
+2026-03-27T05:53:24.3737403Z E     Left contains 1 more item:
+2026-03-27T05:53:24.3737931Z E     {'scraped_at': '2026-03-27T05:53:23.013384'}
+2026-03-27T05:53:24.3738502Z E     
+2026-03-27T05:53:24.3738825Z E     Full diff:
+2026-03-27T05:53:24.3739134Z E       {
+2026-03-27T05:53:24.3739458Z E           'foo': 'bar',
+2026-03-27T05:53:24.3739840Z E     +     'scraped_at': '2026-03-27T05:53:23.013384',
+2026-03-27T05:53:24.3740371Z E       }
+2026-03-27T05:53:24.3741012Z =============================== warnings summary ===============================
+2026-03-27T05:53:24.3741755Z tests/test_full_ml_pipeline.py:18
+2026-03-27T05:53:24.3743989Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/tests/test_full_ml_pipeline.py:18: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+2026-03-27T05:53:24.3746099Z     pytestmark = pytest.mark.slow
+2026-03-27T05:53:24.3746337Z 
+2026-03-27T05:53:24.3746802Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
+2026-03-27T05:53:24.3747564Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
+2026-03-27T05:53:24.3748254Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_probabilities_not_mutated_by_optimizer
+2026-03-27T05:53:24.3748920Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_has_all_required_fields
+2026-03-27T05:53:24.3749577Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_values_match_environment
+2026-03-27T05:53:24.3750180Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_serialization
+2026-03-27T05:53:24.3752080Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/src/optimization/pool_optimizer.py:223: DeprecationWarning: PoolOptimizer._build_round_probabilities is using a heuristic fallback. Pass model_round_probs from MC simulation to the constructor for accurate round advancement probabilities.
+2026-03-27T05:53:24.3753330Z     model_round_probs = self._build_round_probabilities()
+2026-03-27T05:53:24.3753551Z 
+2026-03-27T05:53:24.3753863Z tests/test_phase8_statistician_audit.py::TestSourceAgreementStatistics::test_p_value_based_weighting
+2026-03-27T05:53:24.3754849Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/scipy/stats/_stats_py.py:5445: ConstantInputWarning: An input array is constant; the correlation coefficient is not defined.
+2026-03-27T05:53:24.3755672Z     warnings.warn(stats.ConstantInputWarning(warn_msg))
+2026-03-27T05:53:24.3755895Z 
+2026-03-27T05:53:24.3756102Z tests/test_schemas.py::TestValidateFeatureMatrix::test_infinite_values_fail
+2026-03-27T05:53:24.3756867Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/numpy/lib/nanfunctions.py:1741: RuntimeWarning: invalid value encountered in subtract
+2026-03-27T05:53:24.3757569Z     np.subtract(arr, avg, out=arr, casting='unsafe', where=where)
+2026-03-27T05:53:24.3757808Z 
+2026-03-27T05:53:24.3758017Z tests/test_schemas.py::TestValidateFeatureMatrix::test_feature_names_in_warnings
+2026-03-27T05:53:24.3758934Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/numpy/lib/nanfunctions.py:1879: RuntimeWarning: Degrees of freedom <= 0 for slice.
+2026-03-27T05:53:24.3759638Z     var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+2026-03-27T05:53:24.3759868Z 
+2026-03-27T05:53:24.3760083Z tests/test_schemas.py::TestValidatePredictions::test_infinite_predictions_fail
+2026-03-27T05:53:24.3761086Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/numpy/core/_methods.py:173: RuntimeWarning: invalid value encountered in subtract
+2026-03-27T05:53:24.3761725Z     x = asanyarray(arr - arrmean)
+2026-03-27T05:53:24.3761886Z 
+2026-03-27T05:53:24.3762079Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2026-03-27T05:53:24.3762503Z =========================== short test summary info ============================
+2026-03-27T05:53:24.3763184Z FAILED tests/test_torvik_refactor.py::TestCacheTTL::test_cache_fresh_returns_data - AssertionError: assert {'foo': 'bar'...53:23.013384'} == {'foo': 'bar'}
+2026-03-27T05:53:24.3763784Z   
+2026-03-27T05:53:24.3763977Z   Omitting 1 identical items, use -vv to show
+2026-03-27T05:53:24.3764246Z   Left contains 1 more item:
+2026-03-27T05:53:24.3764474Z   {'scraped_at': '2026-03-27T05:53:23.013384'}
+2026-03-27T05:53:24.3764709Z   
+2026-03-27T05:53:24.3764855Z   Full diff:
+2026-03-27T05:53:24.3765012Z     {
+2026-03-27T05:53:24.3765169Z         'foo': 'bar',
+2026-03-27T05:53:24.3765379Z   +     'scraped_at': '2026-03-27T05:53:23.013384',
+2026-03-27T05:53:24.3765619Z     }
+2026-03-27T05:53:24.3765847Z !!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+2026-03-27T05:53:24.3766278Z 1 failed, 4894 passed, 7 skipped, 511 deselected, 11 warnings in 457.96s (0:07:37)
+2026-03-27T05:53:25.5428017Z ##[error]Process completed with exit code 1.
+2026-03-27T05:53:25.5545912Z Post job cleanup.
+2026-03-27T05:53:25.6530498Z [command]/usr/bin/git version
+2026-03-27T05:53:25.6576437Z git version 2.53.0
+2026-03-27T05:53:25.6619580Z Temporarily overriding HOME='/home/runner/work/_temp/2d96cd9d-b4cd-47d3-aa6f-f44b20959304' before making global git config changes
+2026-03-27T05:53:25.6621160Z Adding repository directory to the temporary git global config as a safe directory
+2026-03-27T05:53:25.6626355Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/march-madness-forecaster/march-madness-forecaster
+2026-03-27T05:53:25.6662223Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-03-27T05:53:25.6696747Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-03-27T05:53:25.6967679Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-03-27T05:53:25.6989928Z http.https://github.com/.extraheader
+2026-03-27T05:53:25.7003691Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-03-27T05:53:25.7038058Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-03-27T05:53:25.7274937Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-03-27T05:53:25.7308164Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-03-27T05:53:25.7675331Z Cleaning up orphan processes
+2026-03-27T05:53:25.7984368Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-python@v5. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+
+
+### FAILED JOB: Gate 1: Unit Tests
+2026-03-27T05:46:17.7959276Z ........................................................................ [  3%]
+2026-03-27T05:46:18.0023218Z ........................................................................ [  5%]
+2026-03-27T05:46:18.8968899Z ........................................................................ [  6%]
+2026-03-27T05:46:19.3105581Z ........................................................................ [  7%]
+2026-03-27T05:46:19.8926033Z ........................................................................ [  9%]
+2026-03-27T05:46:20.7485059Z ........................................................................ [ 10%]
+2026-03-27T05:46:23.0876683Z ........................................................................ [ 11%]
+2026-03-27T05:46:34.1606749Z ........................................................................ [ 13%]
+2026-03-27T05:46:39.3245367Z ........................................................................ [ 14%]
+2026-03-27T05:46:40.8246772Z ........................................................................ [ 15%]
+2026-03-27T05:46:41.8720215Z ........................................................................ [ 16%]
+2026-03-27T05:46:42.1584099Z ........................................................................ [ 18%]
+2026-03-27T05:46:42.7158422Z ........................................................................ [ 19%]
+2026-03-27T05:46:45.1745728Z ........................................................................ [ 20%]
+2026-03-27T05:46:45.3837073Z ........................................................................ [ 22%]
+2026-03-27T05:46:46.0684646Z ........................................................................ [ 23%]
+2026-03-27T05:46:46.6036230Z ........................................................................ [ 24%]
+2026-03-27T05:46:47.2860325Z ........................................................................ [ 26%]
+2026-03-27T05:46:47.4956617Z ........................................................................ [ 27%]
+2026-03-27T05:46:48.0192916Z ........................................................................ [ 28%]
+2026-03-27T05:47:29.6919439Z ........................................................................ [ 30%]
+2026-03-27T05:47:32.1598055Z ........................................................................ [ 31%]
+2026-03-27T05:47:34.3626729Z ........................................................................ [ 32%]
+2026-03-27T05:47:34.5566824Z ........................................................................ [ 33%]
+2026-03-27T05:47:47.4593308Z ..................................................sss.sss............... [ 35%]
+2026-03-27T05:48:09.2914259Z ........................................................................ [ 36%]
+2026-03-27T05:48:09.7909345Z ........................................................................ [ 37%]
+2026-03-27T05:48:13.1638990Z ........................................................................ [ 39%]
+2026-03-27T05:48:13.9705926Z ........................................................................ [ 40%]
+2026-03-27T05:48:14.1127955Z ........................................................................ [ 41%]
+2026-03-27T05:48:14.6420319Z ........................................................................ [ 43%]
+2026-03-27T05:48:17.8507853Z ........................................................................ [ 44%]
+2026-03-27T05:48:18.3142434Z ........................................................................ [ 45%]
+2026-03-27T05:48:19.9593045Z ........................................................................ [ 47%]
+2026-03-27T05:48:20.5881306Z ........................................................................ [ 48%]
+2026-03-27T05:48:20.8110303Z ........................................................................ [ 49%]
+2026-03-27T05:48:21.0020950Z ........................................................................ [ 50%]
+2026-03-27T05:48:23.2064421Z ...........................s............................................ [ 52%]
+2026-03-27T05:48:23.3769108Z ........................................................................ [ 53%]
+2026-03-27T05:48:43.3722142Z ........................................................................ [ 54%]
+2026-03-27T05:48:43.5264783Z ........................................................................ [ 56%]
+2026-03-27T05:48:43.7447082Z ........................................................................ [ 57%]
+2026-03-27T05:48:43.8932585Z ........................................................................ [ 58%]
+2026-03-27T05:48:44.2651037Z ........................................................................ [ 60%]
+2026-03-27T05:48:44.8614808Z ........................................................................ [ 61%]
+2026-03-27T05:57:40.3113572Z ........................................................................ [ 62%]
+2026-03-27T05:57:40.6311439Z ........................................................................ [ 64%]
+2026-03-27T05:57:41.0105612Z ........................................................................ [ 65%]
+2026-03-27T05:57:46.1102597Z ........................................................................ [ 66%]
+2026-03-27T05:57:47.0574535Z ........................................................................ [ 67%]
+2026-03-27T05:58:31.0016744Z ........................................................................ [ 69%]
+2026-03-27T05:58:31.6272920Z ........................................................................ [ 70%]
+2026-03-27T05:58:31.8514506Z ........................................................................ [ 71%]
+2026-03-27T05:58:32.1266283Z ........................................................................ [ 73%]
+2026-03-27T05:58:32.3432918Z ........................................................................ [ 74%]
+2026-03-27T05:58:32.6934101Z ........................................................................ [ 75%]
+2026-03-27T05:58:32.9156433Z ........................................................................ [ 77%]
+2026-03-27T05:58:33.1292732Z ........................................................................ [ 78%]
+2026-03-27T05:58:33.3262216Z ........................................................................ [ 79%]
+2026-03-27T05:58:33.6676817Z ........................................................................ [ 81%]
+2026-03-27T05:58:34.5180265Z ........................................................................ [ 82%]
+2026-03-27T05:58:48.1969336Z ........................................................................ [ 83%]
+2026-03-27T05:58:51.2555633Z ........................................................................ [ 84%]
+2026-03-27T05:58:52.1667210Z ........................................................................ [ 86%]
+2026-03-27T05:58:54.8125733Z ........................................................................ [ 87%]
+2026-03-27T05:58:56.5418860Z ........................................................................ [ 88%]
+2026-03-27T05:58:57.8472315Z .....F
+2026-03-27T05:58:57.8472915Z =================================== FAILURES ===================================
+2026-03-27T05:58:57.8474221Z __________________ TestCacheTTL.test_cache_fresh_returns_data __________________
+2026-03-27T05:58:57.8475277Z tests/test_torvik_refactor.py:215: in test_cache_fresh_returns_data
+2026-03-27T05:58:57.8476076Z     assert loaded == {"foo": "bar"}
+2026-03-27T05:58:57.8476804Z E   AssertionError: assert {'foo': 'bar'...58:56.596727'} == {'foo': 'bar'}
+2026-03-27T05:58:57.8477558Z E     
+2026-03-27T05:58:57.8478008Z E     Omitting 1 identical items, use -vv to show
+2026-03-27T05:58:57.8478630Z E     Left contains 1 more item:
+2026-03-27T05:58:57.8479606Z E     {'scraped_at': '2026-03-27T05:58:56.596727'}
+2026-03-27T05:58:57.8480162Z E     
+2026-03-27T05:58:57.8480491Z E     Full diff:
+2026-03-27T05:58:57.8480889Z E       {
+2026-03-27T05:58:57.8481101Z E           'foo': 'bar',
+2026-03-27T05:58:57.8481394Z E     +     'scraped_at': '2026-03-27T05:58:56.596727',
+2026-03-27T05:58:57.8481719Z E       }
+2026-03-27T05:58:57.8481965Z =============================== warnings summary ===============================
+2026-03-27T05:58:57.8482299Z tests/test_full_ml_pipeline.py:18
+2026-03-27T05:58:57.8483551Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/tests/test_full_ml_pipeline.py:18: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+2026-03-27T05:58:57.8485096Z     pytestmark = pytest.mark.slow
+2026-03-27T05:58:57.8485276Z 
+2026-03-27T05:58:57.8485365Z tests/test_rdof_audit.py:423
+2026-03-27T05:58:57.8486574Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/tests/test_rdof_audit.py:423: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+2026-03-27T05:58:57.8487862Z     @pytest.mark.timeout(300)
+2026-03-27T05:58:57.8488015Z 
+2026-03-27T05:58:57.8488347Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
+2026-03-27T05:58:57.8489062Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
+2026-03-27T05:58:57.8489791Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_probabilities_not_mutated_by_optimizer
+2026-03-27T05:58:57.8490508Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_has_all_required_fields
+2026-03-27T05:58:57.8491195Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_values_match_environment
+2026-03-27T05:58:57.8491856Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_serialization
+2026-03-27T05:58:57.8493333Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/src/optimization/pool_optimizer.py:223: DeprecationWarning: PoolOptimizer._build_round_probabilities is using a heuristic fallback. Pass model_round_probs from MC simulation to the constructor for accurate round advancement probabilities.
+2026-03-27T05:58:57.8494990Z     model_round_probs = self._build_round_probabilities()
+2026-03-27T05:58:57.8495229Z 
+2026-03-27T05:58:57.8495570Z tests/test_phase8_statistician_audit.py::TestSourceAgreementStatistics::test_p_value_based_weighting
+2026-03-27T05:58:57.8496633Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/scipy/stats/_stats_py.py:5445: ConstantInputWarning: An input array is constant; the correlation coefficient is not defined.
+2026-03-27T05:58:57.8497505Z     warnings.warn(stats.ConstantInputWarning(warn_msg))
+2026-03-27T05:58:57.8497742Z 
+2026-03-27T05:58:57.8497959Z tests/test_schemas.py::TestValidateFeatureMatrix::test_infinite_values_fail
+2026-03-27T05:58:57.8498965Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/numpy/lib/nanfunctions.py:1741: RuntimeWarning: invalid value encountered in subtract
+2026-03-27T05:58:57.8499736Z     np.subtract(arr, avg, out=arr, casting='unsafe', where=where)
+2026-03-27T05:58:57.8499996Z 
+2026-03-27T05:58:57.8500222Z tests/test_schemas.py::TestValidateFeatureMatrix::test_feature_names_in_warnings
+2026-03-27T05:58:57.8501035Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/numpy/lib/nanfunctions.py:1879: RuntimeWarning: Degrees of freedom <= 0 for slice.
+2026-03-27T05:58:57.8501769Z     var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+2026-03-27T05:58:57.8502015Z 
+2026-03-27T05:58:57.8502242Z tests/test_schemas.py::TestValidatePredictions::test_infinite_predictions_fail
+2026-03-27T05:58:57.8503041Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/numpy/core/_methods.py:173: RuntimeWarning: invalid value encountered in subtract
+2026-03-27T05:58:57.8504000Z     x = asanyarray(arr - arrmean)
+2026-03-27T05:58:57.8504200Z 
+2026-03-27T05:58:57.8504405Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2026-03-27T05:58:57.8504844Z =========================== short test summary info ============================
+2026-03-27T05:58:57.8505580Z FAILED tests/test_torvik_refactor.py::TestCacheTTL::test_cache_fresh_returns_data - AssertionError: assert {'foo': 'bar'...58:56.596727'} == {'foo': 'bar'}
+2026-03-27T05:58:57.8506227Z   
+2026-03-27T05:58:57.8506419Z   Omitting 1 identical items, use -vv to show
+2026-03-27T05:58:57.8506705Z   Left contains 1 more item:
+2026-03-27T05:58:57.8506945Z   {'scraped_at': '2026-03-27T05:58:56.596727'}
+2026-03-27T05:58:57.8507185Z   
+2026-03-27T05:58:57.8507338Z   Full diff:
+2026-03-27T05:58:57.8507500Z     {
+2026-03-27T05:58:57.8507656Z         'foo': 'bar',
+2026-03-27T05:58:57.8507884Z   +     'scraped_at': '2026-03-27T05:58:56.596727',
+2026-03-27T05:58:57.8508137Z     }
+2026-03-27T05:58:57.8508372Z !!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+2026-03-27T05:58:57.8508821Z 1 failed, 4894 passed, 7 skipped, 511 deselected, 12 warnings in 788.52s (0:13:08)
+2026-03-27T05:58:59.0109322Z ##[error]Process completed with exit code 1.
+2026-03-27T05:58:59.0181911Z Post job cleanup.
+2026-03-27T05:58:59.0243077Z Post job cleanup.
+2026-03-27T05:58:59.1350957Z [command]/usr/bin/git version
+2026-03-27T05:58:59.1393008Z git version 2.53.0
+2026-03-27T05:58:59.1453595Z Temporarily overriding HOME='/home/runner/work/_temp/60dd228f-3c1b-4411-894d-adb68b5dd7e5' before making global git config changes
+2026-03-27T05:58:59.1455209Z Adding repository directory to the temporary git global config as a safe directory
+2026-03-27T05:58:59.1460145Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/march-madness-forecaster/march-madness-forecaster
+2026-03-27T05:58:59.1497341Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-03-27T05:58:59.1534036Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-03-27T05:58:59.1839001Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-03-27T05:58:59.1861951Z http.https://github.com/.extraheader
+2026-03-27T05:58:59.1874402Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-03-27T05:58:59.1909455Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-03-27T05:58:59.2163598Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-03-27T05:58:59.2205597Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-03-27T05:58:59.2631815Z Cleaning up orphan processes
+2026-03-27T05:58:59.3005721Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-python@v5. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
 
