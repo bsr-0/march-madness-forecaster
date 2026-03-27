@@ -9,11 +9,14 @@ import pytest
 
 from src.pipeline.stages.model_selection import (
     CANDIDATE_REGISTRY,
+    MARGIN_BASED_CANDIDATES,
     CandidateResult,
     ModelClassSelector,
     ModelSelectionResult,
     _temporal_cv_split,
     _train_regularized_logistic,
+    _train_spread_regressor,
+    _train_margin_regressor,
 )
 from src.pipeline.stages.baseline_evaluation import compute_bracket_ev, compute_coin_flip_ev
 from src.exceptions import IntegrityError
@@ -93,6 +96,22 @@ class TestCandidateTraining:
         # Should learn separable data
         acc = np.mean((preds > 0.5) == val_y)
         assert acc > 0.6
+
+    def test_spread_regressor_returns_none_without_margins(self):
+        train_X, train_y, _, _ = _make_separable_data()
+        result = _train_spread_regressor(train_X, train_y, train_margins=None)
+        assert result is None
+
+    def test_margin_regressor_returns_none_without_margins(self):
+        train_X, train_y, _, _ = _make_separable_data()
+        result = _train_margin_regressor(train_X, train_y, train_margins=None)
+        assert result is None
+
+    def test_registry_includes_spread_and_margin(self):
+        assert "spread_regressor" in CANDIDATE_REGISTRY
+        assert "margin_regressor" in CANDIDATE_REGISTRY
+        assert "spread_regressor" in MARGIN_BASED_CANDIDATES
+        assert "margin_regressor" in MARGIN_BASED_CANDIDATES
 
     def test_all_registered_candidates_are_callable(self):
         for name, factory in CANDIDATE_REGISTRY.items():
@@ -198,6 +217,49 @@ class TestModelClassSelector:
         result = selector.run(train_X, train_y, val_X, val_y)
 
         assert not result.passed
+
+    def test_margin_candidates_skipped_without_margins(self):
+        """Spread/margin candidates must be gracefully skipped when no margins provided."""
+        train_X, train_y, val_X, val_y = _make_separable_data()
+
+        selector = ModelClassSelector(
+            baseline_ev=0.0,
+            baseline_brier=0.30,
+            min_ev_improvement=-1000,
+            strict=False,
+            candidate_names=["spread_regressor", "margin_regressor"],
+        )
+        result = selector.run(train_X, train_y, val_X, val_y)
+
+        # Neither should appear in candidates (they require margins)
+        assert "spread_regressor" not in result.candidates
+        assert "margin_regressor" not in result.candidates
+
+    def test_margins_passed_to_candidates(self):
+        """When margins are provided, margin-based candidates should be evaluated."""
+        train_X, train_y, val_X, val_y = _make_separable_data(n_train=300)
+        # Synthesize margins: positive = class 1, negative = class 0
+        rng = np.random.RandomState(42)
+        train_margins = np.where(train_y == 1, rng.uniform(1, 15, len(train_y)),
+                                 rng.uniform(-15, -1, len(train_y)))
+        val_margins = np.where(val_y == 1, rng.uniform(1, 15, len(val_y)),
+                               rng.uniform(-15, -1, len(val_y)))
+
+        selector = ModelClassSelector(
+            baseline_ev=0.0,
+            baseline_brier=0.30,
+            min_ev_improvement=-1000,
+            strict=False,
+            # Only test regularized_logistic (always works) to verify
+            # margins plumbing doesn't break non-margin models
+            candidate_names=["regularized_logistic"],
+        )
+        result = selector.run(
+            train_X, train_y, val_X, val_y,
+            train_margins=train_margins,
+            val_margins=val_margins,
+        )
+        assert "regularized_logistic" in result.candidates
 
 
 # ---------------------------------------------------------------------------

@@ -11,6 +11,7 @@ torch-geometric>=2.4.0,<3.0.0
 
 # Gradient Boosting
 lightgbm>=4.6.0,<5.0.0
+xgboost>=2.0.0,<3.0.0
 
 # Web Scraping
 beautifulsoup4>=4.12.0
