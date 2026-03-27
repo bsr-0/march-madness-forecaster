@@ -419,8 +419,18 @@ class TestGlobalStatisticsLeakage:
         # Vector should contain raw feature values, not z-scored values
         # Seed=1 should appear as raw value (1.0), not z-scored
         assert isinstance(vec, np.ndarray)
-        # The vector should not contain any NaN or inf from bad z-scoring
-        assert not np.any(np.isnan(vec)), "Vector contains NaN — possible z-score issue"
+        # External ratings and Massey multi-system ratings legitimately default to NaN
+        # when no external data is provided — tree models handle these natively.
+        # Only check non-optional features for z-score-induced NaN.
+        _optional_nan_features = {
+            'external_rating_composite', 'external_rating_spread',
+            'massey_pom', 'massey_sag', 'massey_mor', 'massey_dol',
+            'massey_col', 'massey_wol', 'massey_rth', 'massey_ap',
+            'massey_usa', 'massey_rpi', 'massey_rank_mean', 'massey_rank_std',
+        }
+        feature_names = TeamFeatures.get_feature_names()
+        non_optional_mask = np.array([n not in _optional_nan_features for n in feature_names])
+        assert not np.any(np.isnan(vec[non_optional_mask])), "Vector contains NaN — possible z-score issue"
         assert not np.any(np.isinf(vec)), "Vector contains inf — possible z-score issue"
 
     def test_loyo_cv_refits_scaler_per_fold(self):
