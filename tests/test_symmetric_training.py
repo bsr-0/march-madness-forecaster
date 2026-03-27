@@ -13,6 +13,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from src.data.features.feature_engineering import TEAM_FEATURE_DIM
 from src.ml.training.symmetric import (
     DIFF_END,
     DIFF_START,
@@ -40,13 +41,13 @@ def rng():
 
 @pytest.fixture
 def random_matchup(rng):
-    """A single random 78-dim matchup vector."""
+    """A single random MATCHUP_DIM-dim matchup vector."""
     return rng.randn(MATCHUP_DIM)
 
 
 @pytest.fixture
 def random_matchup_batch(rng):
-    """Batch of 50 random 78-dim matchup vectors."""
+    """Batch of 50 random MATCHUP_DIM-dim matchup vectors."""
     return rng.randn(50, MATCHUP_DIM)
 
 
@@ -59,25 +60,25 @@ def realistic_matchup():
     x[1] = -0.3   # diff_adj_def (1-seed has better defense = lower)
     x[2] = 0.05   # diff_tempo
     x[3] = 0.15   # diff_efg
-    x[63] = 0.8   # diff_seed_strength (big difference)
-    x[64] = 0.5   # diff_external_rating_composite
-    x[65] = 0.2   # diff_external_rating_spread
+    x[DIFF_END - 3] = 0.8   # diff_seed_strength (big difference)
+    x[DIFF_END - 2] = 0.5   # diff_external_rating_composite
+    x[DIFF_END - 1] = 0.2   # diff_external_rating_spread
 
     # Absolute features
-    x[66] = 0.8   # avg_adj_off
-    x[67] = 0.3   # avg_adj_def
-    x[68] = 0.5   # avg_sos_adj_em
-    x[69] = 0.6   # avg_momentum
-    x[70] = 0.4   # avg_roster_continuity
+    x[ABS_START] = 0.8       # avg_adj_off
+    x[ABS_START + 1] = 0.3   # avg_adj_def
+    x[ABS_START + 2] = 0.5   # avg_sos_adj_em
+    x[ABS_START + 3] = 0.6   # avg_momentum
+    x[ABS_START + 4] = 0.4   # avg_roster_continuity
 
     # Interaction features
-    x[71] = 0.3   # tempo_interaction
-    x[72] = 0.1   # style_mismatch
-    x[73] = 0.15  # seed_em_residual
-    x[74] = 0.08  # sos_seed_interaction
-    x[75] = -0.05 # three_pt_var_seed_interaction
-    x[76] = -0.88 # seed_interaction: (1*16)/128 - 1 = -0.875
-    x[77] = -1.0  # seed_diff: (1-16)/15 = -1.0
+    x[INTERACT_START] = 0.3      # tempo_interaction
+    x[INTERACT_START + 1] = 0.1  # style_mismatch
+    x[INTERACT_START + 2] = 0.15 # seed_em_residual
+    x[INTERACT_START + 3] = 0.08 # sos_seed_interaction
+    x[INTERACT_START + 4] = -0.05 # three_pt_var_seed_interaction
+    x[INTERACT_START + 5] = -0.88 # seed_interaction: (1*16)/128 - 1 = -0.875
+    x[SEED_DIFF_IDX] = -1.0      # seed_diff: (1-16)/15 = -1.0
     return x
 
 
@@ -89,7 +90,7 @@ class TestSwapMatchupVector:
     """Tests for the single-vector swap operation."""
 
     def test_differential_features_negate(self, random_matchup):
-        """All 66 differential features should negate."""
+        """All TEAM_FEATURE_DIM differential features should negate."""
         swapped = swap_matchup_vector(random_matchup)
         np.testing.assert_allclose(
             swapped[DIFF_START:DIFF_END],
@@ -109,20 +110,20 @@ class TestSwapMatchupVector:
     def test_interaction_features_transform_correctly(self, random_matchup):
         """Interaction features should transform correctly under swap."""
         swapped = swap_matchup_vector(random_matchup)
-        # Symmetric interactions: [71, 72, 76]
-        for idx in [71, 72, 76]:
+        # Symmetric interactions: tempo_interaction, style_mismatch, seed_interaction
+        for idx in [INTERACT_START, INTERACT_START + 1, INTERACT_START + 5]:
             assert swapped[idx] == pytest.approx(random_matchup[idx], abs=1e-15), f"idx {idx}"
         # All three seed-based interactions are antisymmetric.
-        assert swapped[73] == pytest.approx(-random_matchup[73], abs=1e-15)
-        assert swapped[74] == pytest.approx(-random_matchup[74], abs=1e-15)
-        assert swapped[75] == pytest.approx(-random_matchup[75], abs=1e-15)
+        assert swapped[INTERACT_START + 2] == pytest.approx(-random_matchup[INTERACT_START + 2], abs=1e-15)
+        assert swapped[INTERACT_START + 3] == pytest.approx(-random_matchup[INTERACT_START + 3], abs=1e-15)
+        assert swapped[INTERACT_START + 4] == pytest.approx(-random_matchup[INTERACT_START + 4], abs=1e-15)
         # seed_diff remains antisymmetric.
         assert swapped[SEED_DIFF_IDX] == pytest.approx(
             -random_matchup[SEED_DIFF_IDX], abs=1e-15
         )
 
     def test_seed_diff_negates(self, random_matchup):
-        """seed_diff at index 77 should negate."""
+        """seed_diff at SEED_DIFF_IDX should negate."""
         swapped = swap_matchup_vector(random_matchup)
         assert swapped[SEED_DIFF_IDX] == pytest.approx(
             -random_matchup[SEED_DIFF_IDX], abs=1e-15
@@ -146,19 +147,19 @@ class TestSwapMatchupVector:
         # Differential: 16-seed now has "worse" offense from its perspective
         assert swapped[0] == pytest.approx(-0.4, abs=1e-15)  # diff_adj_off
         assert swapped[1] == pytest.approx(0.3, abs=1e-15)   # diff_adj_def
-        assert swapped[63] == pytest.approx(-0.8, abs=1e-15)  # diff_seed_strength
+        assert swapped[DIFF_END - 3] == pytest.approx(-0.8, abs=1e-15)  # diff_seed_strength
 
         # Absolute unchanged
-        assert swapped[66] == pytest.approx(0.8, abs=1e-15)  # avg_adj_off
+        assert swapped[ABS_START] == pytest.approx(0.8, abs=1e-15)  # avg_adj_off
 
         # Seed interaction unchanged (commutative)
-        assert swapped[76] == pytest.approx(-0.88, abs=1e-15)
+        assert swapped[INTERACT_START + 5] == pytest.approx(-0.88, abs=1e-15)
 
         # seed_em_residual negates
-        assert swapped[73] == pytest.approx(-0.15, abs=1e-15)
+        assert swapped[INTERACT_START + 2] == pytest.approx(-0.15, abs=1e-15)
 
         # Seed diff negated
-        assert swapped[77] == pytest.approx(1.0, abs=1e-15)
+        assert swapped[SEED_DIFF_IDX] == pytest.approx(1.0, abs=1e-15)
 
     def test_zero_vector(self):
         """Swap of neutral vector should remain unchanged."""
@@ -168,17 +169,17 @@ class TestSwapMatchupVector:
         np.testing.assert_array_equal(swapped, x)
 
     def test_too_short_raises(self):
-        """Vector shorter than 78 dims should raise ValueError."""
-        with pytest.raises(ValueError, match="78 dimensions"):
+        """Vector shorter than MATCHUP_DIM dims should raise ValueError."""
+        with pytest.raises(ValueError, match=f"{MATCHUP_DIM} dimensions"):
             swap_matchup_vector(np.zeros(50))
 
     def test_padded_vector(self):
-        """Vector longer than 78 dims should keep padding unchanged."""
-        x = np.ones(100)
+        """Vector longer than MATCHUP_DIM dims should keep padding unchanged."""
+        x = np.ones(MATCHUP_DIM + 22)
         swapped = swap_matchup_vector(x)
 
-        # Dims beyond 78 unchanged
-        np.testing.assert_allclose(swapped[78:], x[78:], atol=1e-15)
+        # Dims beyond MATCHUP_DIM unchanged
+        np.testing.assert_allclose(swapped[MATCHUP_DIM:], x[MATCHUP_DIM:], atol=1e-15)
 
         # But diff features still negate
         np.testing.assert_allclose(
@@ -221,11 +222,11 @@ class TestSwapMatchupBatch:
     def test_1d_raises(self):
         """1D array should raise ValueError."""
         with pytest.raises(ValueError, match="2D array"):
-            swap_matchup_batch(np.zeros(78))
+            swap_matchup_batch(np.zeros(MATCHUP_DIM))
 
     def test_too_few_columns_raises(self):
-        """Array with fewer than 78 columns should raise."""
-        with pytest.raises(ValueError, match="78 columns"):
+        """Array with fewer than MATCHUP_DIM columns should raise."""
+        with pytest.raises(ValueError, match=f"{MATCHUP_DIM} columns"):
             swap_matchup_batch(np.zeros((10, 50)))
 
 
@@ -612,8 +613,8 @@ class TestIntegrationWithMatchupVector:
         from src.data.features.proprietary_metrics import IncrementalMetricsEngine
 
         rng = np.random.RandomState(123)
-        v1 = rng.randn(66).astype(np.float64)
-        v2 = rng.randn(66).astype(np.float64)
+        v1 = rng.randn(TEAM_FEATURE_DIM).astype(np.float64)
+        v2 = rng.randn(TEAM_FEATURE_DIM).astype(np.float64)
 
         # Ensure seeds are reasonable
         seed1, seed2 = 3, 14
@@ -660,28 +661,28 @@ class TestIntegrationWithMatchupVector:
 
         # Interaction features
         # tempo_interaction: (v1[2]*v2[2]) = (v2[2]*v1[2]) → same
-        assert swapped[71] == pytest.approx(rev[71], abs=1e-12)
+        assert swapped[INTERACT_START] == pytest.approx(rev[INTERACT_START], abs=1e-12)
 
         # style_mismatch: compare explicitly
         # Forward: ((v1[2]-v2[2]) * ((v1[0]-v1[1])-(v2[0]-v2[1]))) / 600
         # Reverse: ((v2[2]-v1[2]) * ((v2[0]-v2[1])-(v1[0]-v1[1]))) / 600
         # = (-(v1[2]-v2[2])) * (-(v1[0]-v1[1]-(v2[0]-v2[1]))) / 600
         # = same as forward
-        assert swapped[72] == pytest.approx(rev[72], abs=1e-12)
+        assert swapped[INTERACT_START + 1] == pytest.approx(rev[INTERACT_START + 1], abs=1e-12)
 
         # seed_interaction: (s1*s2)/128 - 1 is commutative
-        assert swapped[76] == pytest.approx(rev[76], abs=1e-12)
+        assert swapped[INTERACT_START + 5] == pytest.approx(rev[INTERACT_START + 5], abs=1e-12)
 
         # seed_diff: (s1-s2)/15 vs (s2-s1)/15 — negated
-        assert swapped[77] == pytest.approx(rev[77], abs=1e-12)
+        assert swapped[SEED_DIFF_IDX] == pytest.approx(rev[SEED_DIFF_IDX], abs=1e-12)
 
     def test_swap_with_zero_seeds(self):
         """When seeds are zero, seed features should be zero and swap cleanly."""
         from src.data.features.proprietary_metrics import IncrementalMetricsEngine
 
         rng = np.random.RandomState(456)
-        v1 = rng.randn(66).astype(np.float64)
-        v2 = rng.randn(66).astype(np.float64)
+        v1 = rng.randn(TEAM_FEATURE_DIM).astype(np.float64)
+        v2 = rng.randn(TEAM_FEATURE_DIM).astype(np.float64)
 
         fwd = IncrementalMetricsEngine.build_matchup_vector(
             v1,
@@ -737,15 +738,15 @@ class TestMathematicalEdgeCases:
     def test_all_zeros_differential(self):
         """50-50 matchup: diff=0 → swap is identical."""
         x = np.zeros(MATCHUP_DIM)
-        x[66:71] = [0.5, 0.3, 0.4, 0.6, 0.7]  # non-zero absolute
-        x[71:77] = [0.3, 0.1, 0.5, 0.0, 0.0, -0.8]  # interactions
+        x[ABS_START:ABS_END] = [0.5, 0.3, 0.4, 0.6, 0.7]  # non-zero absolute
+        x[INTERACT_START:INTERACT_START + 6] = [0.3, 0.1, 0.5, 0.0, 0.0, -0.8]  # interactions
 
         swapped = swap_matchup_vector(x)
 
         # Diff is zero → swapped diff is also zero
         np.testing.assert_allclose(swapped[DIFF_START:DIFF_END], 0.0, atol=1e-15)
         # Absolute unchanged
-        np.testing.assert_allclose(swapped[66:71], x[66:71], atol=1e-15)
+        np.testing.assert_allclose(swapped[ABS_START:ABS_END], x[ABS_START:ABS_END], atol=1e-15)
 
     def test_large_values(self):
         """Extreme feature values should swap without overflow."""
