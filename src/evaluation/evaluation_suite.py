@@ -59,7 +59,9 @@ def _ensure_ml_imports():
             from ..ml.calibration.brier_optimal import round_weighted_brier
             _round_weighted_brier = round_weighted_brier
         except ImportError:
-            _round_weighted_brier = lambda p, o, **kw: float(np.mean((p - o) ** 2))
+            def _fallback_rw_brier(p, o, **kw):
+                return float(np.mean((p - o) ** 2))
+            _round_weighted_brier = _fallback_rw_brier
 
 
 # ESPN bracket scoring — canonical constants used across the pipeline.
