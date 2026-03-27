@@ -6,9 +6,11 @@ pipeline stops if no candidate beats the baseline — a signal to revisit
 features or preprocessing.
 
 Candidate pool (aligned with ProductionBaselineSpec):
-    - gradient_boosting  (LightGBM classifier)
-    - xgboost            (XGBoost classifier)
+    - gradient_boosting    (LightGBM classifier)
+    - xgboost              (XGBoost classifier)
     - regularized_logistic (L1/L2 logistic regression with tuned C)
+    - spread_regressor     (Point-spread regression → logistic CDF, primary prod model)
+    - margin_regressor     (LightGBM margin regression → logistic CDF)
 
 Each candidate is evaluated via temporal CV (expanding-window or LOYO).
 Only candidates whose mean CV bracket EV exceeds the baseline EV
@@ -276,12 +278,100 @@ def _train_regularized_logistic(
     return _predict
 
 
-# Registry of candidate model factories.
+def _train_spread_regressor(
+    train_X: np.ndarray,
+    train_y: np.ndarray,
+    feature_names: Optional[List[str]] = None,
+    train_margins: Optional[np.ndarray] = None,
+) -> Optional[Callable[[np.ndarray], np.ndarray]]:
+    """Train SpreadRegressor (point-spread → logistic CDF), return predict function.
+
+    This is the PRIMARY production model (weight=0.45 in the production
+    ensemble).  Trains on actual point margins and converts to
+    probabilities via P(win) = 1 / (1 + exp(-spread / sigma)).
+
+    Requires ``train_margins`` — actual point differentials.  Returns
+    None if margins are not available (binary labels alone are
+    insufficient for a spread model).
+    """
+    if train_margins is None:
+        logger.info(
+            "spread_regressor: skipped (no margins provided). "
+            "Pass train_margins for margin-based models."
+        )
+        return None
+
+    try:
+        from src.ml.ensemble.spread_model import SpreadRegressor
+
+        model = SpreadRegressor(sigma=11.0)
+        names = feature_names or [f"f{i}" for i in range(train_X.shape[1])]
+        model.train(
+            np.nan_to_num(train_X, nan=0.0),
+            train_margins,
+            feature_names=names,
+            num_rounds=200,
+        )
+        return model.predict_probability
+    except (ImportError, Exception) as e:
+        logger.warning("SpreadRegressor training failed: %s", e)
+        return None
+
+
+def _train_margin_regressor(
+    train_X: np.ndarray,
+    train_y: np.ndarray,
+    feature_names: Optional[List[str]] = None,
+    train_margins: Optional[np.ndarray] = None,
+) -> Optional[Callable[[np.ndarray], np.ndarray]]:
+    """Train LightGBMMarginRegressor (margin regression → logistic CDF).
+
+    Like SpreadRegressor but uses a different logistic scale (5.5 vs 11)
+    and shallower trees (8 leaves vs 16), providing ensemble diversity.
+
+    Requires ``train_margins``.
+    """
+    if train_margins is None:
+        logger.info(
+            "margin_regressor: skipped (no margins provided). "
+            "Pass train_margins for margin-based models."
+        )
+        return None
+
+    try:
+        from src.ml.ensemble.cfa import LightGBMMarginRegressor
+
+        model = LightGBMMarginRegressor()
+        names = feature_names or [f"f{i}" for i in range(train_X.shape[1])]
+        model.train(
+            np.nan_to_num(train_X, nan=0.0),
+            train_margins,
+            feature_names=names,
+            num_rounds=200,
+            early_stopping_rounds=30,
+        )
+        return model.predict
+    except (ImportError, Exception) as e:
+        logger.warning("LightGBMMarginRegressor training failed: %s", e)
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Candidate registry
+# ---------------------------------------------------------------------------
+
+# Factories that accept (train_X, train_y, feature_names) — classification.
+# Margin-based factories also accept train_margins as a keyword argument.
 CANDIDATE_REGISTRY: Dict[str, Callable] = {
     "gradient_boosting": _train_gradient_boosting,
     "xgboost": _train_xgboost,
     "regularized_logistic": _train_regularized_logistic,
+    "spread_regressor": _train_spread_regressor,
+    "margin_regressor": _train_margin_regressor,
 }
+
+# Candidates that require point margins (not just binary labels).
+MARGIN_BASED_CANDIDATES = frozenset({"spread_regressor", "margin_regressor"})
 
 
 # ---------------------------------------------------------------------------
@@ -336,6 +426,8 @@ class ModelClassSelector:
         feature_names: Optional[List[str]] = None,
         sort_keys: Optional[np.ndarray] = None,
         round_labels: Optional[np.ndarray] = None,
+        train_margins: Optional[np.ndarray] = None,
+        val_margins: Optional[np.ndarray] = None,
     ) -> ModelSelectionResult:
         """Evaluate all candidates and select top performers.
 
@@ -347,6 +439,10 @@ class ModelClassSelector:
             feature_names: Feature names for model training.
             sort_keys: Temporal sort keys for CV splitting.
             round_labels: Per-validation-game round labels for EV.
+            train_margins: Point margins for margin-based models
+                (team1_score - team2_score).  Required for spread_regressor
+                and margin_regressor candidates.
+            val_margins: Validation set margins (same convention).
 
         Returns:
             ModelSelectionResult with selected models and full evaluation.
@@ -362,6 +458,11 @@ class ModelClassSelector:
         # Combine train+val for CV, then also do held-out eval
         all_X = np.vstack([train_X, val_X])
         all_y = np.concatenate([train_y, val_y])
+        all_margins = None
+        if train_margins is not None:
+            vm = val_margins if val_margins is not None else np.zeros(len(val_y))
+            all_margins = np.concatenate([train_margins, vm])
+
         all_sort_keys = None
         if sort_keys is not None:
             # Validation samples get higher sort keys (later in time)
@@ -379,6 +480,7 @@ class ModelClassSelector:
                 factory=factory,
                 all_X=all_X,
                 all_y=all_y,
+                all_margins=all_margins,
                 all_sort_keys=all_sort_keys,
                 val_X=val_X,
                 val_y=val_y,
@@ -440,6 +542,7 @@ class ModelClassSelector:
         factory: Callable,
         all_X: np.ndarray,
         all_y: np.ndarray,
+        all_margins: Optional[np.ndarray],
         all_sort_keys: Optional[np.ndarray],
         val_X: np.ndarray,
         val_y: np.ndarray,
@@ -447,6 +550,8 @@ class ModelClassSelector:
         round_labels: Optional[np.ndarray],
     ) -> Optional[CandidateResult]:
         """Train and cross-validate a single candidate model class."""
+        is_margin_model = name in MARGIN_BASED_CANDIDATES
+
         try:
             splits = _temporal_cv_split(
                 len(all_X), n_folds=self.n_cv_folds, sort_keys=all_sort_keys
@@ -463,9 +568,16 @@ class ModelClassSelector:
                 fold_val_X = all_X[val_idx]
                 fold_val_y = all_y[val_idx]
 
-                predict_fn = factory(fold_train_X, fold_train_y, feature_names)
+                if is_margin_model:
+                    fold_margins = all_margins[train_idx] if all_margins is not None else None
+                    predict_fn = factory(
+                        fold_train_X, fold_train_y, feature_names,
+                        train_margins=fold_margins,
+                    )
+                else:
+                    predict_fn = factory(fold_train_X, fold_train_y, feature_names)
                 if predict_fn is None:
-                    # Model class unavailable (e.g. xgboost not installed)
+                    # Model class unavailable or missing margins
                     return None
 
                 preds = predict_fn(fold_val_X)
@@ -477,7 +589,15 @@ class ModelClassSelector:
                 fold_evs.append(compute_bracket_ev(preds, scoring_weights=self.scoring_weights))
 
             # Also evaluate on the held-out validation set for final EV
-            predict_fn = factory(all_X[:len(all_X) - len(val_X)], all_y[:len(all_y) - len(val_y)], feature_names)
+            n_train = len(all_X) - len(val_X)
+            if is_margin_model:
+                train_m = all_margins[:n_train] if all_margins is not None else None
+                predict_fn = factory(
+                    all_X[:n_train], all_y[:n_train], feature_names,
+                    train_margins=train_m,
+                )
+            else:
+                predict_fn = factory(all_X[:n_train], all_y[:n_train], feature_names)
             if predict_fn is None:
                 return None
 
