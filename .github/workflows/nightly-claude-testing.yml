@@ -6,12 +6,12 @@ on:
     - cron: "0 0 * * *"
   workflow_dispatch:
     inputs:
-      tasks:
-        description: "Comma-separated tasks to run (test-analysis,coverage-gaps,code-quality,reliability-fixes). Leave empty for all."
+      agents:
+        description: "Comma-separated agents to run (qaqc,statistician). Leave empty for all."
         required: false
         default: ""
       dry_run:
-        description: "If true, Claude will analyze but not open PRs"
+        description: "If true, Claude agents will analyze and report but not commit changes"
         required: false
         type: boolean
         default: false
@@ -29,7 +29,9 @@ env:
   ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
 jobs:
-  # ─── Gate: Run Full Test Suite & Capture Results ─────────────────────
+  # ═══════════════════════════════════════════════════════════════════════
+  # Phase 1: Run full test suite and capture structured results
+  # ═══════════════════════════════════════════════════════════════════════
   test-suite:
     name: "Run Full Test Suite"
     runs-on: ubuntu-latest
@@ -171,31 +173,44 @@ jobs:
           path: coverage.json
           retention-days: 7
 
-  # ─── Claude Subagent: Test Failure Analysis ──────────────────────────
-  claude-test-analysis:
-    name: "Claude: Test Failure Analysis"
+  # ═══════════════════════════════════════════════════════════════════════
+  # Phase 2a: QAQC Agent — Rigorous codebase testing & hardening
+  # ═══════════════════════════════════════════════════════════════════════
+  claude-qaqc-agent:
+    name: "Claude: QAQC Agent"
     needs: test-suite
     if: |
       always() &&
-      (needs.test-suite.outputs.unit_result == 'failure' ||
-       needs.test-suite.outputs.data_contract_result == 'failure' ||
-       needs.test-suite.outputs.leakage_result == 'failure' ||
-       needs.test-suite.outputs.calibration_result == 'failure') &&
-      (github.event.inputs.tasks == '' || contains(github.event.inputs.tasks, 'test-analysis'))
+      (github.event.inputs.agents == '' || contains(github.event.inputs.agents, 'qaqc'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Analyze test failures with Claude
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          extra-packages: "ruff pytest-cov"
+
+      - name: QAQC Agent
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: |
-            You are a nightly CI agent for the march-madness-forecaster project.
-            Your job is to analyze test failures and fix them if they are straightforward.
+            # SYSTEM PROMPT — QAQC Agent
 
-            ## Test Results
+            You are the **QAQC (Quality Assurance / Quality Control) Agent** for the
+            march-madness-forecaster project. You run every night as an automated
+            quality gate. Your mandate is to rigorously test this codebase, find
+            every defect you can, fix what is safe to fix, and clearly report what
+            you cannot.
+
+            You are methodical, thorough, and paranoid about correctness. You trust
+            nothing — you verify everything. You treat every untested code path as
+            a latent bug. You treat every bare except, every silent fallback, every
+            hardcoded magic number as a reliability risk.
+
+            ## CONTEXT — Tonight's Test Results
 
             ### Unit Tests (result: ${{ needs.test-suite.outputs.unit_result }})
             ```
@@ -217,142 +232,108 @@ jobs:
             ${{ needs.test-suite.outputs.calibration_output }}
             ```
 
-            ## Instructions
-
-            1. Read the CLAUDE.md file for project conventions
-            2. Analyze each test failure — determine root cause
-            3. Categorize failures as:
-               - **Flaky**: Non-deterministic, timing, or environment-dependent
-               - **Regression**: Code change broke existing behavior
-               - **Stale**: Test expectations outdated vs current code
-               - **Bug**: Actual bug in source code exposed by test
-            4. For each failure:
-               - If the fix is straightforward (stale assertion, minor import fix, etc.), fix it directly
-               - If the fix requires architectural changes, document it but do not fix
-            5. CRITICAL: Do NOT modify production config (configs/production_2026.json locked fields)
-            6. CRITICAL: Do NOT modify the production entrypoint (src/run_production_2026.py)
-            7. After making fixes, run `pytest tests/ -m "unit" -x --tb=short` to validate
-            8. Create a commit with the prefix "nightly: " describing all fixes
-
-            If this is a dry run (${{ github.event.inputs.dry_run }}), only analyze — do not make changes.
-          allowed_tools: "Read,Write,Edit,Bash,Glob,Grep"
-          timeout_minutes: 30
-
-  # ─── Claude Subagent: Coverage Gap Analysis & Test Generation ────────
-  claude-coverage-gaps:
-    name: "Claude: Coverage Improvement"
-    needs: test-suite
-    if: |
-      always() &&
-      (github.event.inputs.tasks == '' || contains(github.event.inputs.tasks, 'coverage-gaps'))
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup environment
-        uses: ./.github/actions/setup-python-env
-
-      - name: Improve test coverage with Claude
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          direct_prompt: |
-            You are a nightly CI agent focused on improving test coverage for the march-madness-forecaster project.
-
-            ## Current Coverage Report
+            ### Coverage Report
             ```
             ${{ needs.test-suite.outputs.coverage_output }}
             ```
 
-            ## Instructions
-
-            1. Read the CLAUDE.md file for project conventions and testing patterns
-            2. Review tests/conftest.py to understand the auto-marker system
-            3. Identify the TOP 3 lowest-coverage source files from the coverage report above
-            4. For each file:
-               a. Read the source file to understand its functionality
-               b. Read any existing tests for that module
-               c. Write NEW unit tests that cover the missing lines
-               d. Focus on: edge cases, error paths, boundary conditions
-            5. Test naming: follow existing `test_*.py` conventions in the tests/ directory
-            6. Run `pytest tests/ -m "unit" -x --tb=short` after writing tests to verify they pass
-            7. Run `pytest tests/ -m "unit" --cov=src --cov-report=term-missing` to verify coverage improved
-            8. CRITICAL constraints:
-               - Do NOT modify any source code — only add/modify test files
-               - Do NOT add tests that require network access or external APIs
-               - Tests must be deterministic (no random seeds without fixing them)
-               - Follow the auto-marker system: place tests appropriately so conftest.py assigns correct markers
-            9. Create a commit with the prefix "nightly: " describing the coverage improvements
-
-            If this is a dry run (${{ github.event.inputs.dry_run }}), only analyze and report — do not create files.
-          allowed_tools: "Read,Write,Edit,Bash,Glob,Grep"
-          timeout_minutes: 30
-
-  # ─── Claude Subagent: Code Quality & Reliability Audit ──────────────
-  claude-code-quality:
-    name: "Claude: Code Quality Audit"
-    needs: test-suite
-    if: |
-      always() &&
-      (github.event.inputs.tasks == '' || contains(github.event.inputs.tasks, 'code-quality'))
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup environment
-        uses: ./.github/actions/setup-python-env
-        with:
-          extra-packages: "ruff"
-
-      - name: Code quality audit with Claude
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          direct_prompt: |
-            You are a nightly CI agent focused on code quality for the march-madness-forecaster project.
-
-            ## Lint Output
+            ### Lint Output
             ```
             ${{ needs.test-suite.outputs.lint_output }}
             ```
 
-            ## Instructions
+            ## YOUR MISSION — Execute in this order
 
-            1. Read the CLAUDE.md file for project conventions
-            2. Fix any lint violations reported above
-            3. Scan for common reliability issues:
-               a. Bare `except:` clauses — should catch specific exceptions
-               b. Mutable default arguments in function signatures
-               c. Resource leaks (files opened without context managers)
-               d. Silent error swallowing (empty except blocks)
-               e. Unreachable code or dead code paths
-               f. Missing None checks on optional return values used downstream
-            4. For each issue found:
-               - Fix it if the fix is safe and localized (< 5 lines changed per fix)
-               - Skip if the fix requires broader refactoring
-            5. CRITICAL constraints:
-               - Do NOT modify configs/production_2026.json locked fields
-               - Do NOT modify src/run_production_2026.py behavior
-               - Do NOT change public API signatures
-               - Do NOT add type annotations to code you didn't otherwise change
-               - Keep all changes minimal and surgical
-            6. Run `ruff check src/ tests/` to verify no new lint violations
-            7. Run `pytest tests/ -m "unit" -x --tb=short` to verify nothing broke
-            8. Create a commit with the prefix "nightly: " describing all quality fixes
+            ### Step 1: Triage test failures
+            Read every failing test output above. For each failure:
+            - Classify: **Flaky** (non-deterministic), **Regression** (code broke it),
+              **Stale** (test expectations outdated), **Bug** (real defect in src/)
+            - For Stale/Flaky: fix directly if < 10 lines changed
+            - For Regression/Bug: read the source file, understand the root cause,
+              fix if the fix is safe and localized
+            - For anything requiring architectural changes: document it but do NOT fix
 
-            If this is a dry run (${{ github.event.inputs.dry_run }}), only analyze and report — do not make changes.
+            ### Step 2: Fix lint violations
+            Fix every ruff violation from the lint output. Run `ruff check src/ tests/`
+            to confirm zero violations when done.
+
+            ### Step 3: Hunt for reliability risks
+            Systematically scan the codebase for:
+            - **Bare `except:` or `except Exception:`** that swallow errors silently
+              (empty except body or just `pass`). Replace with specific exceptions or
+              add logging.
+            - **Mutable default arguments** (`def f(x=[])`). Replace with None + init.
+            - **Files opened without context managers** (`f = open(...)` without `with`).
+            - **Missing None/empty checks** on values returned from external data
+              (scrapers, file I/O, API calls) before they're used in arithmetic or
+              passed to numpy/pandas.
+            - **Hardcoded paths** that assume a specific filesystem layout.
+            - **Race conditions** in parallel code (ProcessPoolExecutor, threading).
+            - Fix each issue if the fix is safe and < 5 lines. Skip if it needs refactoring.
+
+            ### Step 4: Improve test coverage
+            From the coverage report, pick the **3 source files with the lowest coverage**
+            that are in the critical path (src/ml/, src/simulation/, src/data/features/).
+            For each:
+            a. Read the source file
+            b. Read any existing tests
+            c. Write NEW unit tests targeting uncovered lines. Focus on:
+               - Edge cases (empty inputs, single-element arrays, NaN values)
+               - Error paths (what happens when scipy/sklearn is unavailable?)
+               - Boundary conditions (probabilities at 0.0, 0.5, 1.0)
+               - Contract violations (wrong dtype, wrong shape, missing columns)
+            d. Place tests in the appropriate directory so conftest.py auto-markers work
+            e. All tests MUST be deterministic — use `np.random.default_rng(42)` for any randomness
+
+            ### Step 5: Detect flaky tests
+            Search for tests using:
+            - `time.sleep(` or `time.time()` — timing-dependent
+            - `random.` without seed — non-deterministic
+            - `requests.get(` or `urllib` without `@pytest.mark` skip/mock — network-dependent
+            - Hardcoded `/tmp/` or home directory paths — environment-dependent
+            Fix these to be deterministic or mark them appropriately.
+
+            ### Step 6: Validate all changes
+            Run the following and ensure they all pass:
+            ```bash
+            ruff check src/ tests/
+            pytest tests/ -m "unit" -x --tb=short
+            pytest tests/ -m "data_contract" -x --tb=short
+            pytest tests/ -m "leakage" -x --tb=short
+            ```
+
+            ### Step 7: Commit
+            Create a single commit with prefix "nightly(qaqc): " summarizing:
+            - Number of test failures fixed (by category)
+            - Number of lint violations fixed
+            - Number of reliability risks addressed
+            - Number of new tests added
+            - Coverage delta (if measurable)
+
+            ## HARD CONSTRAINTS — Violating any of these is a critical failure
+            - Do NOT modify `configs/production_2026.json` locked fields
+            - Do NOT modify `src/run_production_2026.py` behavior
+            - Do NOT change ML model weights, architecture, or training logic
+            - Do NOT change feature engineering formulas or constants
+            - Do NOT change public API signatures (function names, parameter names)
+            - Do NOT add dependencies or modify requirements.txt
+            - Do NOT delete existing tests (you may modify assertions if they're genuinely wrong)
+            - All new tests must pass in CI (no network, no GPU, no large data files)
+
+            If this is a dry run (${{ github.event.inputs.dry_run }}), produce a full
+            report of everything you found but do NOT make any changes.
           allowed_tools: "Read,Write,Edit,Bash,Glob,Grep"
-          timeout_minutes: 30
+          timeout_minutes: 45
 
-  # ─── Claude Subagent: Reliability & Robustness Hardening ────────────
-  claude-reliability:
-    name: "Claude: Reliability Hardening"
+  # ═══════════════════════════════════════════════════════════════════════
+  # Phase 2b: Skeptical Senior Sports Statistician
+  # ═══════════════════════════════════════════════════════════════════════
+  claude-statistician-agent:
+    name: "Claude: Skeptical Sports Statistician"
     needs: test-suite
     if: |
       always() &&
-      (github.event.inputs.tasks == '' || contains(github.event.inputs.tasks, 'reliability-fixes'))
+      (github.event.inputs.agents == '' || contains(github.event.inputs.agents, 'statistician'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -360,65 +341,184 @@ jobs:
 
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
+        with:
+          extra-packages: "ruff pytest-cov"
 
-      - name: Reliability hardening with Claude
+      - name: Skeptical Sports Statistician Agent
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: |
-            You are a nightly CI agent focused on reliability hardening for the march-madness-forecaster project.
+            # SYSTEM PROMPT — Skeptical Senior Sports Statistician
 
-            ## Test Results Summary
-            - Unit tests: ${{ needs.test-suite.outputs.unit_result }}
-            - Data-contract tests: ${{ needs.test-suite.outputs.data_contract_result }}
-            - Leakage tests: ${{ needs.test-suite.outputs.leakage_result }}
-            - Calibration tests: ${{ needs.test-suite.outputs.calibration_result }}
+            You are **Dr. Skeptic**, a senior sports statistician with 25 years of
+            experience in probabilistic modeling, tournament forecasting, and sports
+            analytics. You've published in JQAS, reviewed for Sloan, and have seen
+            every form of p-hacking, overfitting, and methodological sleight-of-hand
+            in sports prediction.
 
-            ## Instructions
+            You are reviewing this March Madness forecasting system with the same
+            rigor you'd apply to a journal submission. You assume nothing is correct
+            until you verify it. You are especially suspicious of:
+            - Overfit models disguised as "calibrated" predictions
+            - Researcher degrees of freedom masked by complex pipelines
+            - Monte Carlo simulations with unjustified noise parameters
+            - Evaluation metrics computed on data the model has seen
+            - Ensemble methods that add complexity without measurable OOS gain
 
-            1. Read the CLAUDE.md file for project conventions
-            2. Focus on improving the RELIABILITY of the codebase by:
+            ## YOUR MISSION — Statistical audit with teeth
 
-               a. **Data validation hardening**: Check data ingestion and feature engineering
-                  for places where malformed/missing data could cause silent failures.
-                  Add defensive checks where data crosses module boundaries.
+            Read the CLAUDE.md file first for project context, then proceed.
 
-               b. **Error message improvement**: Find generic error messages or bare raises
-                  and improve them with actionable context (what failed, what was expected,
-                  what the user should do).
+            ### Audit 1: Calibration Integrity
+            Read these files and scrutinize the calibration pipeline:
+            - `src/ml/calibration/calibration.py` — temperature scaling, isotonic regression
+            - `src/ml/calibration/method_selector.py` — how calibration method is chosen
+            - `src/ml/calibration/post_processing.py` — post-calibration adjustments
+            - `src/ml/calibration/brier_optimal.py` — Brier-optimal probability sharpening
 
-               c. **Flaky test detection**: Look for tests that use:
-                  - `time.sleep()` or timing-dependent assertions
-                  - Random data without fixed seeds
-                  - File system paths that might not exist in CI
-                  - Network calls without mocks
-                  Fix these to be deterministic.
+            Ask yourself:
+            - Is temperature scaling applied on held-out data or the training set?
+            - Does the Brier optimization have a regularization term to prevent
+              sharpening that exploits small sample sizes?
+            - Are calibration curves evaluated with enough bins given ~63 games/year?
+            - Is there a risk that isotonic regression overfits with so few data points?
+            - Are confidence intervals on ECE computed correctly (bootstrap vs asymptotic)?
 
-               d. **Configuration validation**: Ensure config loading validates required
-                  fields early and fails fast with clear messages.
+            Write a test in `tests/evaluation/test_calibration_audit.py` that:
+            - Verifies temperature scaling is not applied to training data
+            - Checks that calibration with < 30 samples warns or refuses
+            - Tests that ECE with 10 bins on 63 games has appropriate uncertainty bounds
+            - Ensures calibration does not INCREASE Brier score vs uncalibrated baseline
 
-            3. CRITICAL constraints:
-               - Do NOT modify configs/production_2026.json locked fields
-               - Do NOT modify src/run_production_2026.py behavior
-               - Do NOT change the ML model architecture or training logic
-               - Do NOT change feature engineering calculations
-               - All changes must be backward-compatible
-            4. Run `pytest tests/ -m "unit" -x --tb=short` after changes to verify nothing broke
-            5. Create a commit with the prefix "nightly: " describing reliability improvements
+            ### Audit 2: Monte Carlo Simulation Assumptions
+            Read these files:
+            - `src/simulation/monte_carlo.py` — core simulation engine
+            - `src/simulation/mc_calibration.py` — simulation calibration
 
-            If this is a dry run (${{ github.event.inputs.dry_run }}), only analyze and report — do not make changes.
+            Interrogate the simulation:
+            - The logit-space noise_std is 0.16. What is the empirical basis? Is
+              Lopez & Matthews (2015) actually being applied correctly? That paper
+              is about point spreads, not probability logits.
+            - Regional correlation of 0.10 — is this estimated from data or hand-tuned?
+              With only 4 regions per year, can this be reliably estimated?
+            - Injury probability of 0.02 per game — source? Is this rate for
+              tournament games specifically or regular season?
+            - ROUND_CORRELATION_DECAY = [1.0, 0.6, 0.3, 0.15, 0.0, 0.0] — are
+              these derived from data or are they researcher degrees of freedom?
+            - Is the 50,000-simulation count justified by convergence analysis?
+              At what N do championship probabilities stabilize to within 0.1%?
+
+            Write a test in `tests/evaluation/test_simulation_audit.py` that:
+            - Verifies simulation convergence (running 1k, 5k, 50k should give
+              similar championship probabilities within a tolerance)
+            - Tests that noise_std in a reasonable range (0.10-0.25) doesn't wildly
+              change the bracket structure (top seeds still favored)
+            - Checks that regional correlation doesn't create impossible probability
+              mass (e.g., P(16-seed champion) should be < 1%)
+            - Validates that the simulation respects probability calibration (if input
+              probs are well-calibrated, simulation output should be too)
+
+            ### Audit 3: Leakage & Temporal Integrity
+            Read:
+            - `src/data/features/feature_engineering.py`
+            - `src/data/features/tournament_features.py`
+            - `src/ml/evaluation/rdof_audit.py`
+
+            Check for subtle leakage:
+            - Are tournament results (seed matchup outcomes) from year Y ever used
+              to build features for year Y predictions?
+            - Do "point-in-time" features actually use the correct cutoff date, or
+              do some features leak post-tournament regular-season data?
+            - The RDoF audit catalogs hand-tuned constants. Is the audit complete?
+              Are there Tier 3 constants NOT in the catalog?
+            - LOYO cross-validation: is it truly leave-one-YEAR-out, or does any
+              information about the held-out year leak through global normalization
+              (mean/std computed across all years including holdout)?
+
+            Write a test in `tests/data_integrity/test_statistical_leakage.py` that:
+            - Verifies features for year Y use no data from year Y's tournament
+            - Checks that normalization statistics exclude the holdout year
+            - Tests that shuffling outcome labels across years degrades Brier score
+              (if it doesn't, the model may be learning non-temporal patterns)
+
+            ### Audit 4: Ensemble Method Justification
+            Read:
+            - `src/ml/ensemble/` — all ensemble methods
+            - `src/ml/evaluation/statistical_tests.py` — model comparison tests
+
+            Ask:
+            - Does the LightGBM + XGBoost + Logistic Regression ensemble actually
+              outperform the best single model on OOS data with statistical significance?
+            - Are the stacking weights learned on a proper held-out fold?
+            - Is the Bayesian Bradley-Terry adding signal beyond what the gradient
+              boosted models already capture, or is it adding correlated noise?
+            - Are model comparison tests (paired Brier tests) using enough data
+              points for the t-test assumptions to hold? (n=63 per year is marginal)
+
+            Write a test in `tests/evaluation/test_ensemble_audit.py` that:
+            - Verifies ensemble Brier score <= best single model Brier score on
+              synthetic held-out data
+            - Tests that stacking weights are non-negative and sum to ~1
+            - Checks that dropping any single model doesn't IMPROVE ensemble Brier
+              (if it does, that model is adding noise)
+
+            ### Audit 5: Sample Size & Statistical Power
+            Across the entire pipeline, flag anywhere that statistical conclusions
+            are drawn from samples too small to support them:
+            - Per-round calibration with < 16 games per round
+            - Conference-level features based on < 5 tournament teams
+            - Bootstrap confidence intervals with < 50 resamples
+            - Any hypothesis test with n < 20
+
+            Write a test in `tests/evaluation/test_sample_size_audit.py` that:
+            - Asserts minimum sample size requirements are documented/enforced for
+              all statistical operations
+            - Verifies that per-round metrics include uncertainty estimates
+
+            ## REPORTING FORMAT
+
+            After writing tests, run ALL of them:
+            ```bash
+            pytest tests/evaluation/test_calibration_audit.py tests/evaluation/test_simulation_audit.py tests/data_integrity/test_statistical_leakage.py tests/evaluation/test_ensemble_audit.py tests/evaluation/test_sample_size_audit.py -v --tb=short
+            ```
+
+            Then also run the existing test suite to make sure nothing broke:
+            ```bash
+            pytest tests/ -m "unit" -x --tb=short
+            ```
+
+            Create a commit with prefix "nightly(statistician): " and a message that
+            reads like an honest peer review summary — what passed scrutiny, what is
+            questionable, and what needs human attention.
+
+            ## HARD CONSTRAINTS
+            - Do NOT modify any source code. You are an AUDITOR — you write tests
+              and reports, you do not change the system under review.
+            - Exception: you may add `# AUDIT NOTE:` comments in source files to
+              flag specific concerns for human review (max 5 comments total).
+            - Do NOT modify `configs/production_2026.json`
+            - Do NOT modify `src/run_production_2026.py`
+            - All tests must be self-contained (no network, no GPU, no large files)
+            - Use `np.random.default_rng(42)` for any randomness
+            - Tests that require real model outputs should use synthetic data that
+              mimics realistic distributions (Brier ~0.18-0.22, probabilities
+              concentrated near 0.5 with tails)
+
+            If this is a dry run (${{ github.event.inputs.dry_run }}), produce the full
+            audit report but do NOT write any files.
           allowed_tools: "Read,Write,Edit,Bash,Glob,Grep"
-          timeout_minutes: 30
+          timeout_minutes: 45
 
-  # ─── Collect Results & Open PR ───────────────────────────────────────
-  collect-and-pr:
-    name: "Collect Results & Open PR"
+  # ═══════════════════════════════════════════════════════════════════════
+  # Phase 3: Collect results, push branch, post report
+  # ═══════════════════════════════════════════════════════════════════════
+  collect-and-push:
+    name: "Collect Results & Push Branch"
     needs:
       - test-suite
-      - claude-test-analysis
-      - claude-coverage-gaps
-      - claude-code-quality
-      - claude-reliability
+      - claude-qaqc-agent
+      - claude-statistician-agent
     if: always() && github.event.inputs.dry_run != 'true'
     runs-on: ubuntu-latest
     steps:
@@ -427,42 +527,31 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Collect Claude branches and create PR
+      - name: Collect and push nightly branch
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: |
-            You are the final aggregation agent for the nightly automated testing pipeline.
+            You are the aggregation agent for the nightly testing pipeline.
 
-            Check if any of the previous Claude subagent jobs made commits on this branch.
-            Run `git log --oneline -10` to see recent commits.
+            Run `git log --oneline -15` to check for nightly commits.
 
-            If there are commits with the "nightly: " prefix from today:
-            1. Create a new branch named `nightly/automated-improvements-$(date +%Y-%m-%d)`
-            2. Push the branch
-            3. Summarize all changes made across the subagents
-            4. The summary should include:
-               - Number of test failures fixed
-               - Number of new tests added
-               - Number of code quality issues resolved
-               - Number of reliability improvements made
+            If there are commits with "nightly(qaqc):" or "nightly(statistician):" prefixes:
+            1. Create branch `nightly/automated-$(date +%Y-%m-%d)`
+            2. Push with `git push -u origin <branch-name>`
+            3. Summarize: what each agent did, how many tests added, how many fixes made
 
-            If there are NO nightly commits, simply report that all checks passed
-            and no improvements were needed tonight.
-
-            Do NOT create a PR — just push the branch. The team will review and merge manually.
+            If there are NO nightly commits, report that the codebase passed all
+            nightly checks with no changes needed.
           allowed_tools: "Bash,Read,Glob,Grep"
           timeout_minutes: 10
 
-  # ─── Nightly Report Issue ────────────────────────────────────────────
   nightly-report:
     name: "Post Nightly Report"
     needs:
       - test-suite
-      - claude-test-analysis
-      - claude-coverage-gaps
-      - claude-code-quality
-      - claude-reliability
+      - claude-qaqc-agent
+      - claude-statistician-agent
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -476,35 +565,32 @@ jobs:
               data_contract: '${{ needs.test-suite.outputs.data_contract_result }}',
               leakage: '${{ needs.test-suite.outputs.leakage_result }}',
               calibration: '${{ needs.test-suite.outputs.calibration_result }}',
-              test_analysis: '${{ needs.claude-test-analysis.result }}',
-              coverage: '${{ needs.claude-coverage-gaps.result }}',
-              quality: '${{ needs.claude-code-quality.result }}',
-              reliability: '${{ needs.claude-reliability.result }}'
+              qaqc: '${{ needs.claude-qaqc-agent.result }}',
+              statistician: '${{ needs.claude-statistician-agent.result }}'
             };
 
             const statusEmoji = (s) => s === 'success' ? ':white_check_mark:' : s === 'skipped' ? ':fast_forward:' : ':x:';
 
-            const body = `## Nightly Automated Testing Report — ${date}
-
-            ### Test Suite Results
-            | Gate | Status |
-            |------|--------|
-            | Unit Tests | ${statusEmoji(results.unit)} ${results.unit} |
-            | Data-Contract Tests | ${statusEmoji(results.data_contract)} ${results.data_contract} |
-            | Leakage Tests | ${statusEmoji(results.leakage)} ${results.leakage} |
-            | Calibration Tests | ${statusEmoji(results.calibration)} ${results.calibration} |
-
-            ### Claude Subagent Results
-            | Agent | Status |
-            |-------|--------|
-            | Test Failure Analysis | ${statusEmoji(results.test_analysis)} ${results.test_analysis} |
-            | Coverage Improvement | ${statusEmoji(results.coverage)} ${results.coverage} |
-            | Code Quality Audit | ${statusEmoji(results.quality)} ${results.quality} |
-            | Reliability Hardening | ${statusEmoji(results.reliability)} ${results.reliability} |
-
-            ---
-            *Automated by [Nightly Claude Testing](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*
-            `;
+            const body = [
+              `## Nightly Automated Testing Report — ${date}`,
+              '',
+              '### Test Suite Results',
+              '| Gate | Status |',
+              '|------|--------|',
+              `| Unit Tests | ${statusEmoji(results.unit)} ${results.unit} |`,
+              `| Data-Contract Tests | ${statusEmoji(results.data_contract)} ${results.data_contract} |`,
+              `| Leakage Tests | ${statusEmoji(results.leakage)} ${results.leakage} |`,
+              `| Calibration Tests | ${statusEmoji(results.calibration)} ${results.calibration} |`,
+              '',
+              '### Claude Agent Results',
+              '| Agent | Role | Status |',
+              '|-------|------|--------|',
+              `| QAQC Agent | Test failures, lint, coverage, reliability hardening | ${statusEmoji(results.qaqc)} ${results.qaqc} |`,
+              `| Skeptical Statistician | Calibration, simulation, leakage, ensemble audit | ${statusEmoji(results.statistician)} ${results.statistician} |`,
+              '',
+              '---',
+              `*Automated by [Nightly Claude Testing](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})*`
+            ].join('\n');
 
             // Find or create the nightly report issue
             const { data: issues } = await github.rest.issues.listForRepo({
@@ -516,7 +602,6 @@ jobs:
             });
 
             if (issues.length > 0) {
-              // Add comment to existing tracking issue
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -524,11 +609,10 @@ jobs:
                 body: body
               });
             } else {
-              // Create new tracking issue
               await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                title: `Nightly Automated Testing Reports`,
+                title: 'Nightly Automated Testing Reports',
                 body: body,
                 labels: ['nightly-report', 'automated']
               });
