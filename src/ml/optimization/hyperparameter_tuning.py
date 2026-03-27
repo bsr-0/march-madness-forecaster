@@ -355,8 +355,8 @@ class LightGBMTuner:
                 X, y, sort_keys, train_fn, predict_fn,
                 sample_weight=sample_weight,
             )
-            mean_logloss = float(np.mean([r.log_loss for r in cv_results]))
-            return mean_logloss
+            mean_brier = float(np.mean([r.brier_score for r in cv_results]))
+            return mean_brier
 
         study = optuna.create_study(
             direction="minimize",
@@ -651,8 +651,8 @@ class XGBoostTuner:
                 X, y, sort_keys, train_fn, predict_fn,
                 sample_weight=sample_weight,
             )
-            mean_logloss = float(np.mean([r.log_loss for r in cv_results]))
-            return mean_logloss
+            mean_brier = float(np.mean([r.brier_score for r in cv_results]))
+            return mean_brier
 
         study = optuna.create_study(
             direction="minimize",
@@ -783,7 +783,7 @@ class LogisticTuner:
                 X, y, sort_keys, train_fn, predict_fn,
                 sample_weight=sample_weight,
             )
-            return float(np.mean([r.log_loss for r in results]))
+            return float(np.mean([r.brier_score for r in results]))
 
         study = optuna.create_study(
             direction="minimize",

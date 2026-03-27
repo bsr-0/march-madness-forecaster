@@ -1175,7 +1175,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 tuning_stats["lightgbm"] = {
                     "method": "optuna",
                     "n_trials": tuning_result.n_trials,
-                    "best_brier": round(tuning_result.best_score, 5),
+                    "best_optuna_score": round(tuning_result.best_score, 5),
+                    "optuna_metric": "brier",
                     "best_params": {k: round(v, 5) if isinstance(v, float) else v for k, v in tuning_result.best_params.items()},
                     "cv_folds": len(tuning_result.cv_results),
                     "cv_brier_scores": [round(r.brier_score, 5) for r in tuning_result.cv_results],
@@ -1319,7 +1320,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 tuning_stats["xgboost"] = {
                     "method": "optuna",
                     "n_trials": xgb_tuning_result.n_trials,
-                    "best_brier": round(xgb_tuning_result.best_score, 5),
+                    "best_optuna_score": round(xgb_tuning_result.best_score, 5),
+                    "optuna_metric": "brier",
                     "best_params": {k: round(v, 5) if isinstance(v, float) else v for k, v in xgb_tuning_result.best_params.items()},
                 }
             else:
@@ -1372,7 +1374,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 )
                 tuning_stats["logistic"] = {
                     "method": "optuna",
-                    "best_brier": round(logit_tuning_result.best_score, 5),
+                    "best_optuna_score": round(logit_tuning_result.best_score, 5),
+                    "optuna_metric": "brier",
                     "best_params": best_logit,
                 }
             else:
