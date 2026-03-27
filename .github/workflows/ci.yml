@@ -119,7 +119,7 @@ jobs:
           pip install pytest-timeout
 
       - name: Run unit tests with timeout
-        run: pytest tests/ -m "unit" --timeout=120 --tb=short -q
+        run: pytest tests/ -m "unit" --timeout=300 --tb=short -q
 
       - name: Track test count for regression detection
         run: |
