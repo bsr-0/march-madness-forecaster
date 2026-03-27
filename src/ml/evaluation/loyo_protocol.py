@@ -825,6 +825,9 @@ class LOYOFoldResult:
     # Per-round Brier scores
     round_briers: Dict[str, float] = field(default_factory=dict)
 
+    # Round-weighted Brier (bracket EV proxy — Tier 1 primary metric)
+    round_weighted_brier: float = 0.0
+
     # Training time
     train_time_seconds: float = 0.0
 
@@ -851,6 +854,9 @@ class LOYOResult:
     mean_brier_skill_score: float = 0.0
     brier_log_divergence: float = 0.0  # |Brier_rank - LogLoss_rank| across folds
 
+    # Bracket EV proxy (Tier 1 primary metric)
+    mean_round_weighted_brier: float = 0.0
+
     # Per-year Brier breakdown
     year_briers: Dict[int, float] = field(default_factory=dict)
 
@@ -876,6 +882,7 @@ class LOYOResult:
 
         lines = [
             f"LOYO Validation ({n_folds} folds, {total_games} total games):",
+            f"  Mean RW-Brier (EV proxy): {self.mean_round_weighted_brier:.6f}",
             f"  Mean Brier:  {self.mean_brier:.6f} (+/- {self.std_brier:.6f})",
             f"  SE(mean):    {se_mean:.6f}",
             f"  Mean LogLoss: {self.mean_logloss:.6f}",
@@ -1305,45 +1312,17 @@ class LOYOValidator:
                 logger.error("LOYO: Prediction failed for fold %d: %s", held_out_year, e)
                 continue
 
-            # Compute metrics
-            predictions = np.clip(predictions, 1e-7, 1 - 1e-7)
+            # Compute metrics via unified evaluation suite (all 3 tiers)
+            from ...evaluation.evaluation_suite import evaluate as eval_suite
 
-            brier = float(np.mean((predictions - y_test) ** 2))
-            logloss = float(-np.mean(
-                y_test * np.log(predictions) + (1 - y_test) * np.log(1 - predictions)
-            ))
-            accuracy = float(np.mean((predictions > 0.5) == y_test))
-
-            # Calibration error (ECE)
-            calibration_error = self._compute_ece(predictions, y_test)
-
-            # Brier decomposition (Murphy 1973) — Protocol Section 3.4
-            decomp = brier_decomposition(predictions, y_test)
-
-            # Brier Skill Score vs seed baseline — Protocol Section 3.4
-            # Use actual seed-matchup probabilities when available; fall back to
-            # uninformed baseline (0.5) only if no seed data is provided.
-            seed_probs = test_data.get("seed_probs", None)
-            seeds1 = test_data.get("seeds1", None)
-            seeds2 = test_data.get("seeds2", None)
-            bss = brier_skill_score_vs_seeds(
+            suite = eval_suite(
                 predictions, y_test,
-                seed_probs=seed_probs,
-                seeds1=seeds1,
-                seeds2=seeds2,
+                round_labels=test_data.get("rounds"),
+                seed_probs=test_data.get("seed_probs"),
+                seeds1=test_data.get("seeds1"),
+                seeds2=test_data.get("seeds2"),
+                context=f"loyo_fold_{held_out_year}",
             )
-
-            # Per-round Brier scores
-            round_briers = {}
-            if "rounds" in test_data:
-                rounds = test_data["rounds"]
-                for round_name in set(rounds):
-                    mask = np.array([r == round_name for r in rounds])
-                    if mask.sum() > 0:
-                        round_brier = float(np.mean(
-                            (predictions[mask] - y_test[mask]) ** 2
-                        ))
-                        round_briers[round_name] = round_brier
 
             fold_time = time.time() - fold_start
 
@@ -1351,24 +1330,27 @@ class LOYOValidator:
                 held_out_year=held_out_year,
                 n_train_games=len(y_train),
                 n_test_games=len(y_test),
-                brier_score=brier,
-                log_loss=logloss,
-                accuracy=accuracy,
-                calibration_error=calibration_error,
-                brier_reliability=decomp["reliability"],
-                brier_resolution=decomp["resolution"],
-                brier_uncertainty=decomp["uncertainty"],
-                brier_skill_score=bss,
-                round_briers=round_briers,
+                brier_score=suite.brier.brier_score,
+                log_loss=suite.brier.log_loss,
+                accuracy=suite.brier.accuracy,
+                calibration_error=suite.calibration.ece,
+                brier_reliability=suite.brier.brier_reliability,
+                brier_resolution=suite.brier.brier_resolution,
+                brier_uncertainty=suite.brier.brier_uncertainty,
+                brier_skill_score=suite.brier.brier_skill_score,
+                round_briers=suite.bracket_ev.round_briers,
+                round_weighted_brier=suite.bracket_ev.round_weighted_brier,
                 train_time_seconds=fold_time,
             )
 
             fold_results.append(fold_result)
 
             logger.info(
-                "LOYO %d: Brier=%.6f, LogLoss=%.6f, Accuracy=%.4f, "
+                "LOYO %d: Brier=%.6f, RW-Brier=%.6f, LogLoss=%.6f, Accuracy=%.4f, "
                 "N_train=%d, N_test=%d, Time=%.1fs",
-                held_out_year, brier, logloss, accuracy,
+                held_out_year, suite.brier.brier_score,
+                suite.bracket_ev.round_weighted_brier,
+                suite.brier.log_loss, suite.brier.accuracy,
                 len(y_train), len(y_test), fold_time,
             )
 
@@ -1393,6 +1375,8 @@ class LOYOValidator:
             z_logloss = (l_arr - np.mean(l_arr)) / max(l_std, 1e-12)
             brier_log_div = float(np.mean(np.abs(z_brier - z_logloss)))
 
+            rw_briers = [f.round_weighted_brier for f in fold_results]
+
             result = LOYOResult(
                 fold_results=fold_results,
                 mean_brier=float(np.mean(briers)),
@@ -1404,6 +1388,7 @@ class LOYOValidator:
                 mean_brier_uncertainty=float(np.mean([f.brier_uncertainty for f in fold_results])),
                 mean_brier_skill_score=float(np.mean([f.brier_skill_score for f in fold_results])),
                 brier_log_divergence=brier_log_div,
+                mean_round_weighted_brier=float(np.mean(rw_briers)),
                 year_briers={f.held_out_year: f.brier_score for f in fold_results},
                 total_time_seconds=total_time,
             )
