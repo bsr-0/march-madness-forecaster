@@ -102,7 +102,7 @@ Kaggle Massey         domain checks + guards    no GNN/transformer         holdo
 
 ## Installation
 
-**Requirements:** Python 3.8+
+**Requirements:** Python 3.9+
 
 ```bash
 # Option A: install as package (recommended)
@@ -259,7 +259,7 @@ march-madness-forecaster/
 │   │   └── sota.py                # Main prediction pipeline
 │   ├── data/
 │   │   ├── features/
-│   │   │   ├── feature_engineering.py   # 79-dim team feature vector
+│   │   │   ├── feature_engineering.py   # 86-dim team feature vector
 │   │   │   └── proprietary_metrics.py   # Incremental PIT engine
 │   │   ├── ingestion/             # Data collection & validation
 │   │   └── scrapers/              # Torvik, ESPN, rosters, etc.
@@ -288,7 +288,7 @@ pytest tests/ --cov=src
 
 ## Technical Details
 
-- **Production features:** 79-dim team feature vector with learned feature selection (automated importance pruning)
+- **Production features:** 86-dim team feature vector with learned feature selection (automated importance pruning)
 - **Production ensemble:** standard ensemble with stacking, LOYO-optimized weights, Bayesian Bradley-Terry, no GNN, no transformer
 - **Calibration:** temperature scaling on tournament-only calibration years (default holdout year 2025)
 - **Monte Carlo:** 50k simulations with configurable noise injection
