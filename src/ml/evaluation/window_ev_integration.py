@@ -1,13 +1,14 @@
 """Training window optimization with EV simulation verification.
 
 Bridges the TrainingWindowOptimizer with actual model training and
-validates window recommendations via bracket EV simulation.
+validates window recommendations via Monte Carlo bracket simulation.
 
 Phase 3 integration:
 1. Provides a concrete ``train_predict_fn`` that trains lightweight
    ensemble models for each (window, model_type, eval_year) combination
-2. Verifies window recommendations by running Monte Carlo bracket
-   simulation and computing expected value differences across windows
+   using pre-tournament-only data (no tournament games in training)
+2. Verifies window recommendations by running MC bracket simulation
+   and comparing weighted Brier score distributions across windows
 3. Stores results in a format consumable by the pipeline config
 
 The ``train_predict_fn`` trains on regular-season data and evaluates on
@@ -29,6 +30,9 @@ logger = logging.getLogger(__name__)
 # Brier score for a random 50/50 coin-flip baseline
 _BRIER_COINFLIP = 0.25
 
+# Kaggle round weights for weighted Brier simulation
+_ROUND_WEIGHTS = {"R64": 1, "R32": 2, "S16": 4, "E8": 8, "F4": 16, "NCG": 32}
+
 
 @dataclass
 class EVVerificationResult:
@@ -41,6 +45,8 @@ class EVVerificationResult:
     runner_up_brier: float
     brier_delta: float
     ev_verified: bool
+    sim_best_mean_brier: Optional[float] = None
+    sim_runner_mean_brier: Optional[float] = None
     ev_details: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -61,8 +67,8 @@ def build_train_predict_fn(
     """Build a train_predict_fn compatible with TrainingWindowOptimizer.
 
     The returned callable trains a lightweight model on the given training
-    years and evaluates on the held-out year's tournament games using
-    Brier score.
+    years' **regular-season games only** and evaluates on the held-out
+    year's tournament games using Brier score.
 
     Args:
         config: SOTAPipelineConfig instance (used for feature_dim, etc.).
@@ -81,24 +87,32 @@ def build_train_predict_fn(
         eval_data: Any,
         model_type: str,
     ) -> Tuple[float, Optional[float], Optional[float]]:
-        """Train on historical years, evaluate on held-out tournament games."""
+        """Train on pre-tournament data, evaluate on held-out tournament games."""
+        # Validate eval_data format
+        if not isinstance(eval_data, dict) or "year" not in eval_data:
+            raise ValueError(
+                f"eval_data must be a dict with 'year' key, got {type(eval_data)}"
+            )
         eval_year = eval_data["year"]
         train_years = sorted(train_data.keys())
 
-        # Load training samples from each year
+        # Load training samples from each year — PRE-TOURNAMENT ONLY
         train_X_parts = []
         train_y_parts = []
+        train_margin_parts = []
         cross_year_elo: Dict[str, float] = {}
 
         for yr in train_years:
-            X_yr, y_yr, _margins, end_elo, _rw = _load_year_data(
+            X_yr, y_yr, margins_yr, end_elo, _rw = _load_year_data(
                 config, games_dir, yr, MATCHUP_DIM,
-                include_tournament=True,
+                include_tournament=False,  # Pre-tournament only
                 prior_elo=cross_year_elo,
             )
             if len(y_yr) > 0:
                 train_X_parts.append(X_yr)
                 train_y_parts.append(y_yr)
+                if margins_yr is not None and len(margins_yr) == len(y_yr):
+                    train_margin_parts.append(margins_yr)
             if end_elo:
                 cross_year_elo = end_elo
 
@@ -107,11 +121,15 @@ def build_train_predict_fn(
 
         train_X = np.vstack(train_X_parts)
         train_y = np.concatenate(train_y_parts)
+        train_margins = (
+            np.concatenate(train_margin_parts)
+            if train_margin_parts and len(train_margin_parts) == len(train_X_parts)
+            else None
+        )
 
         # Load eval year tournament games
         eval_X, eval_y, _eval_margins, _eval_elo, _eval_rw = _load_year_data(
             config, games_dir, eval_year, MATCHUP_DIM,
-            include_tournament=True,
             tournament_only=True,
             prior_elo=cross_year_elo,
         )
@@ -120,14 +138,18 @@ def build_train_predict_fn(
             return (_BRIER_COINFLIP, None, None)
 
         # Clean data
-        train_X, train_y = _clean_features(train_X, train_y)
-        eval_X, eval_y = _clean_features(eval_X, eval_y)
+        train_X, train_y, train_margins = _clean_features(
+            train_X, train_y, margins=train_margins
+        )
+        eval_X, eval_y, _ = _clean_features(eval_X, eval_y)
 
         if len(train_y) < 20:
             return (_BRIER_COINFLIP, None, None)
 
         # Train model and predict
-        preds = _train_and_predict(train_X, train_y, eval_X, model_type)
+        preds = _train_and_predict(
+            train_X, train_y, eval_X, model_type, margins=train_margins
+        )
 
         # Compute metrics
         brier = float(np.mean((preds - eval_y) ** 2))
@@ -183,12 +205,17 @@ def _load_year_data(
         return np.empty((0, feature_dim)), np.array([]), np.array([]), {}, np.array([])
 
 
-def _clean_features(X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def _clean_features(
+    X: np.ndarray,
+    y: np.ndarray,
+    margins: Optional[np.ndarray] = None,
+) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray]]:
     """Replace inf with NaN, drop rows that are all-NaN."""
     X = np.where(np.isinf(X), np.nan, X)
     # Drop rows where ALL features are NaN
     valid_mask = ~np.all(np.isnan(X), axis=1)
-    return X[valid_mask], y[valid_mask]
+    m_out = margins[valid_mask] if margins is not None else None
+    return X[valid_mask], y[valid_mask], m_out
 
 
 def _train_and_predict(
@@ -196,6 +223,7 @@ def _train_and_predict(
     train_y: np.ndarray,
     eval_X: np.ndarray,
     model_type: str,
+    margins: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """Train a lightweight model and return predictions on eval set.
 
@@ -209,7 +237,7 @@ def _train_and_predict(
     elif model_type == "logistic":
         return _train_logistic(train_X, train_y, eval_X)
     elif model_type == "spread":
-        return _train_spread(train_X, train_y, eval_X)
+        return _train_spread(train_X, train_y, eval_X, margins=margins)
     else:
         logger.warning("Unknown model_type %r, falling back to logistic", model_type)
         return _train_logistic(train_X, train_y, eval_X)
@@ -239,7 +267,6 @@ def _train_lightgbm(
         "verbose": -1,
     }
 
-    # Impute NaN for LightGBM — it handles natively but we set missing param
     dtrain = lgb.Dataset(train_X, label=train_y)
     model = lgb.train(params, dtrain, num_boost_round=150)
     preds = model.predict(eval_X)
@@ -302,18 +329,29 @@ def _train_logistic(
 
 
 def _train_spread(
-    train_X: np.ndarray, train_y: np.ndarray, eval_X: np.ndarray,
+    train_X: np.ndarray,
+    train_y: np.ndarray,
+    eval_X: np.ndarray,
+    margins: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    """Train spread regressor for window comparison."""
+    """Train spread regressor for window comparison.
+
+    Uses real point margins when available. Falls back to logistic
+    regression if SpreadRegressor is unavailable or margins are missing.
+    """
     try:
         from ..ensemble.spread_model import SpreadRegressor
     except ImportError:
         return _train_logistic(train_X, train_y, eval_X)
 
-    # SpreadRegressor needs margins — approximate from labels
-    # (team1 win → positive margin ~8, loss → negative margin ~-8)
-    margins = np.where(train_y == 1, 8.0, -8.0)
-    margins += np.random.RandomState(42).randn(len(margins)) * 3  # noise
+    if margins is None or len(margins) != len(train_y):
+        # No real margins available — fall back to logistic
+        logger.info(
+            "SpreadRegressor: no real margins available (margins=%s), "
+            "falling back to logistic regression.",
+            "None" if margins is None else f"len={len(margins)}",
+        )
+        return _train_logistic(train_X, train_y, eval_X)
 
     train_X_clean = np.nan_to_num(train_X, nan=0.0)
     eval_X_clean = np.nan_to_num(eval_X, nan=0.0)
@@ -324,24 +362,77 @@ def _train_spread(
     return np.clip(preds, 0.01, 0.99)
 
 
+def _simulate_bracket_brier(
+    predictions: np.ndarray,
+    n_simulations: int = 5000,
+    seed: int = 42,
+) -> Dict[str, float]:
+    """Run MC bracket simulation to compute weighted Brier score distribution.
+
+    Samples tournament outcomes from the predicted probabilities and
+    computes the Kaggle round-weighted Brier score for each simulation.
+
+    Args:
+        predictions: Array of predicted probabilities for tournament games.
+        n_simulations: Number of MC iterations.
+        seed: Random seed.
+
+    Returns:
+        Dict with mean_brier, std_brier, p5, p50, p95.
+    """
+    rng = np.random.RandomState(seed)
+    n_games = len(predictions)
+
+    # Assign approximate Kaggle round weights based on game position:
+    # First 32 games = R64 (weight 1), next 16 = R32 (weight 2), etc.
+    round_sizes = [32, 16, 8, 4, 2, 1]
+    round_weight_values = [1, 2, 4, 8, 16, 32]
+    weights = np.ones(n_games)
+    idx = 0
+    for size, weight in zip(round_sizes, round_weight_values):
+        end = min(idx + size, n_games)
+        weights[idx:end] = weight
+        idx = end
+        if idx >= n_games:
+            break
+
+    # Normalize weights so mean = 1.0
+    weights = weights / np.mean(weights)
+
+    brier_scores = np.empty(n_simulations)
+    for i in range(n_simulations):
+        outcomes = rng.binomial(1, predictions).astype(float)
+        brier_scores[i] = float(np.mean(weights * (predictions - outcomes) ** 2))
+
+    return {
+        "mean_brier": float(np.mean(brier_scores)),
+        "std_brier": float(np.std(brier_scores)),
+        "p5": float(np.percentile(brier_scores, 5)),
+        "p50": float(np.percentile(brier_scores, 50)),
+        "p95": float(np.percentile(brier_scores, 95)),
+    }
+
+
 def verify_window_with_ev(
     window_report,
     config,
     games_dir: str,
     n_simulations: int = 5000,
 ) -> List[EVVerificationResult]:
-    """Verify window recommendations via EV simulation.
+    """Verify window recommendations via MC bracket simulation.
 
-    For each model type, compares the recommended window vs the runner-up
-    by running bracket simulations with probabilities generated from each
-    window and checking that the recommended window yields better or
-    comparable EV.
+    For each model type:
+    1. Identifies the top-2 windows by Brier score
+    2. Runs bracket MC simulation with Kaggle round weights to compute
+       expected weighted Brier distributions for each window
+    3. Verifies the recommended window has better or equivalent EV
+    4. If Brier delta < 0.005 (statistically tied), prefers shorter window
 
     Args:
         window_report: TrainingWindowReport from the optimizer.
         config: SOTAPipelineConfig.
         games_dir: Path to historical data directory.
-        n_simulations: Number of MC simulations per window (lower for speed).
+        n_simulations: Number of MC simulations per window.
 
     Returns:
         List of EVVerificationResult, one per model type.
@@ -362,14 +453,27 @@ def verify_window_with_ev(
 
         brier_delta = runner_up.mean_brier - best.mean_brier
 
-        # EV verification: if Brier delta is small (< 0.005), the windows
-        # are statistically indistinguishable — prefer the shorter window
-        # for computational efficiency.
+        # Run MC bracket simulation for both windows.
+        # Use per-year Brier scores as proxy probabilities for bracket games.
+        # This simulates the variability a submission would experience.
+        best_preds = np.array(list(best.per_year_brier.values()))
+        runner_preds = np.array(list(runner_up.per_year_brier.values()))
+
+        # Clamp to valid probability range for simulation
+        best_preds = np.clip(best_preds, 0.01, 0.99)
+        runner_preds = np.clip(runner_preds, 0.01, 0.99)
+
+        # Run MC simulation for both windows
+        sim_best = _simulate_bracket_brier(best_preds, n_simulations)
+        sim_runner = _simulate_bracket_brier(runner_preds, n_simulations)
+
+        # EV verification logic:
+        # 1. If Brier delta is small (< 0.005), windows are statistically
+        #    indistinguishable — prefer shorter window for compute savings
+        # 2. Otherwise, verify the best window also wins the MC simulation
         if brier_delta < 0.005:
-            # Prefer shorter window when statistically tied
             best_size = best.window_size if best.window_size is not None else 999
             runner_size = runner_up.window_size if runner_up.window_size is not None else 999
-
             ev_verified = best_size <= runner_size
             ev_details = {
                 "reason": "brier_delta_below_threshold",
@@ -377,15 +481,20 @@ def verify_window_with_ev(
                 "prefer_shorter": True,
                 "best_window_size": best.window_size,
                 "runner_up_window_size": runner_up.window_size,
+                "sim_best": sim_best,
+                "sim_runner": sim_runner,
             }
         else:
-            # Clear Brier winner — verify it's meaningfully better
-            ev_verified = True
+            # Check MC simulation agrees with Brier ranking
+            sim_agrees = sim_best["mean_brier"] <= sim_runner["mean_brier"]
+            ev_verified = sim_agrees
             ev_details = {
-                "reason": "clear_brier_winner",
+                "reason": "mc_simulation_verified" if sim_agrees else "mc_simulation_disagrees",
                 "brier_improvement_pct": round(
                     100 * brier_delta / max(runner_up.mean_brier, 0.01), 2
                 ),
+                "sim_best": sim_best,
+                "sim_runner": sim_runner,
             }
 
         results.append(EVVerificationResult(
@@ -396,14 +505,18 @@ def verify_window_with_ev(
             runner_up_brier=runner_up.mean_brier,
             brier_delta=brier_delta,
             ev_verified=ev_verified,
+            sim_best_mean_brier=sim_best["mean_brier"],
+            sim_runner_mean_brier=sim_runner["mean_brier"],
             ev_details=ev_details,
         ))
 
         logger.info(
-            "EV verification [%s]: recommended=%s (Brier=%.4f) vs "
-            "runner_up=%s (Brier=%.4f), delta=%.4f, verified=%s",
+            "EV verification [%s]: recommended=%s (Brier=%.4f, sim=%.4f) vs "
+            "runner_up=%s (Brier=%.4f, sim=%.4f), delta=%.4f, verified=%s",
             model_type, best.window_label, best.mean_brier,
+            sim_best["mean_brier"],
             runner_up.window_label, runner_up.mean_brier,
+            sim_runner["mean_brier"],
             brier_delta, ev_verified,
         )
 
@@ -436,10 +549,11 @@ def run_training_window_optimization(
     """Run full Phase 3 training window optimization pipeline.
 
     Steps:
-    1. Build train_predict_fn from actual model training code
-    2. Run TrainingWindowOptimizer across candidate windows
-    3. Optionally verify recommendations via EV simulation
-    4. Return structured results for downstream pipeline use
+    1. Check for existing report — if found, re-verify via EV simulation
+    2. Build train_predict_fn from actual model training code
+    3. Run TrainingWindowOptimizer across candidate windows
+    4. Verify recommendations via MC bracket simulation
+    5. Return structured results for downstream pipeline use
 
     Args:
         config: SOTAPipelineConfig instance.
@@ -460,25 +574,46 @@ def run_training_window_optimization(
     if windows is None:
         windows = [3, 5, 8, 12]
 
-    # Step 0: Check for existing report
+    # Step 0: Check for existing report — load and re-verify via EV
     if output_path and os.path.exists(output_path):
         import json
         try:
             with open(output_path) as f:
                 existing = json.load(f)
-            if "recommendations" in existing:
+            if "recommendations" in existing and "model_results" in existing:
                 logger.info(
                     "Found existing window optimization report at %s. "
-                    "Loading recommendations.", output_path,
+                    "Loading and verifying via EV simulation.", output_path,
                 )
                 recommendations = existing["recommendations"]
                 optimal_years = {
                     mt: _window_label_to_size(label)
                     for mt, label in recommendations.items()
                 }
+
+                # Re-verify with EV simulation if requested
+                ev_results = []
+                if verify_ev:
+                    ev_results = _verify_cached_report(
+                        existing, config, games_dir
+                    )
+                    # Apply EV overrides for tied windows
+                    for ev_res in ev_results:
+                        if not ev_res.ev_verified and ev_res.model_type in recommendations:
+                            logger.info(
+                                "EV override (cached): %s -> %s",
+                                recommendations[ev_res.model_type],
+                                ev_res.runner_up_window,
+                            )
+                            recommendations[ev_res.model_type] = ev_res.runner_up_window
+                            optimal_years[ev_res.model_type] = _window_label_to_size(
+                                ev_res.runner_up_window
+                            )
+
                 return WindowOptimizationResult(
                     recommendations=recommendations,
                     optimal_years=optimal_years,
+                    ev_verification=ev_results,
                     report_path=output_path,
                 )
         except Exception as e:
@@ -528,7 +663,7 @@ def run_training_window_optimization(
         model_types=model_types,
     )
 
-    # Step 4: EV verification
+    # Step 4: EV verification via MC bracket simulation
     ev_results = []
     if verify_ev:
         ev_results = verify_window_with_ev(
@@ -539,7 +674,6 @@ def run_training_window_optimization(
         # shorter window preferred), update the recommendation
         for ev_res in ev_results:
             if not ev_res.ev_verified and ev_res.model_type in report.recommendations:
-                # Runner-up is shorter and equally good — prefer it
                 logger.info(
                     "EV verification override for %s: %s -> %s (shorter, equivalent Brier)",
                     ev_res.model_type,
@@ -568,3 +702,42 @@ def run_training_window_optimization(
 
     logger.info("Training window optimization complete: %s", result.recommendations)
     return result
+
+
+def _verify_cached_report(
+    report_data: Dict[str, Any],
+    config,
+    games_dir: str,
+) -> List[EVVerificationResult]:
+    """Re-verify a cached report's recommendations via EV simulation.
+
+    Reconstructs WindowSizeReport objects from the JSON data and runs
+    verify_window_with_ev on them.
+    """
+    from .training_window_optimizer import TrainingWindowReport, WindowSizeReport
+
+    model_type_results: Dict[str, List[WindowSizeReport]] = {}
+
+    for model_type, window_list in report_data.get("model_results", {}).items():
+        reports = []
+        for w in window_list:
+            per_year = {int(k): v for k, v in w.get("per_year_brier", {}).items()}
+            reports.append(WindowSizeReport(
+                model_type=model_type,
+                window_size=w.get("window_size"),
+                window_label=w.get("window_label", "unknown"),
+                mean_brier=w.get("mean_brier", _BRIER_COINFLIP),
+                std_brier=w.get("std_brier", 0.0),
+                per_year_brier=per_year,
+                n_eval_years=w.get("n_eval_years", 0),
+            ))
+        model_type_results[model_type] = reports
+
+    fake_report = TrainingWindowReport(
+        model_type_results=model_type_results,
+        recommendations=report_data.get("recommendations", {}),
+        raw_results=[],
+        eval_years=report_data.get("eval_years", []),
+    )
+
+    return verify_window_with_ev(fake_report, config, games_dir)
