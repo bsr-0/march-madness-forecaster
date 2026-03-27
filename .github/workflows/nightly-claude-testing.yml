@@ -1,0 +1,535 @@
+name: "Nightly Claude Code Automated Testing"
+
+on:
+  schedule:
+    # Run nightly at midnight UTC
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      tasks:
+        description: "Comma-separated tasks to run (test-analysis,coverage-gaps,code-quality,reliability-fixes). Leave empty for all."
+        required: false
+        default: ""
+      dry_run:
+        description: "If true, Claude will analyze but not open PRs"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: nightly-claude-testing
+  cancel-in-progress: true
+
+env:
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+jobs:
+  # ─── Gate: Run Full Test Suite & Capture Results ─────────────────────
+  test-suite:
+    name: "Run Full Test Suite"
+    runs-on: ubuntu-latest
+    outputs:
+      unit_result: ${{ steps.unit.outcome }}
+      unit_output: ${{ steps.unit-capture.outputs.output }}
+      data_contract_result: ${{ steps.data-contract.outcome }}
+      data_contract_output: ${{ steps.data-contract-capture.outputs.output }}
+      leakage_result: ${{ steps.leakage.outcome }}
+      leakage_output: ${{ steps.leakage-capture.outputs.output }}
+      calibration_result: ${{ steps.calibration.outcome }}
+      calibration_output: ${{ steps.calibration-capture.outputs.output }}
+      coverage_output: ${{ steps.coverage-capture.outputs.output }}
+      lint_output: ${{ steps.lint-capture.outputs.output }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          extra-packages: "ruff pytest-cov"
+
+      - name: Run unit tests with coverage
+        id: unit
+        continue-on-error: true
+        run: |
+          pytest tests/ -m "unit" \
+            --cov=src --cov-report=term-missing --cov-report=json:coverage.json \
+            --tb=long -v 2>&1 | tee unit-test-output.txt
+
+      - name: Capture unit test output
+        id: unit-capture
+        if: always()
+        run: |
+          OUTPUT=$(cat unit-test-output.txt | tail -200)
+          echo "output<<ENDOFOUTPUT" >> $GITHUB_OUTPUT
+          echo "$OUTPUT" >> $GITHUB_OUTPUT
+          echo "ENDOFOUTPUT" >> $GITHUB_OUTPUT
+
+      - name: Capture coverage report
+        id: coverage-capture
+        if: always()
+        run: |
+          if [ -f coverage.json ]; then
+            COVERAGE=$(python -c "
+          import json
+          with open('coverage.json') as f:
+              data = json.load(f)
+          totals = data.get('totals', {})
+          print(f'Total coverage: {totals.get(\"percent_covered\", 0):.1f}%')
+          print(f'Statements: {totals.get(\"num_statements\", 0)}')
+          print(f'Missing: {totals.get(\"missing_lines\", 0)}')
+          print()
+          # Find lowest-coverage files
+          files = []
+          for fname, fdata in data.get('files', {}).items():
+              pct = fdata['summary']['percent_covered']
+              missing = fdata['summary']['missing_lines']
+              if missing > 0:
+                  files.append((pct, missing, fname))
+          files.sort()
+          print('Lowest coverage files:')
+          for pct, missing, fname in files[:20]:
+              print(f'  {pct:5.1f}% ({missing} missing) {fname}')
+          ")
+            echo "output<<ENDOFOUTPUT" >> $GITHUB_OUTPUT
+            echo "$COVERAGE" >> $GITHUB_OUTPUT
+            echo "ENDOFOUTPUT" >> $GITHUB_OUTPUT
+          else
+            echo "output=No coverage data generated" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run data-contract tests
+        id: data-contract
+        continue-on-error: true
+        run: |
+          pytest tests/ -m "data_contract" -v --tb=long 2>&1 | tee data-contract-output.txt
+
+      - name: Capture data-contract output
+        id: data-contract-capture
+        if: always()
+        run: |
+          OUTPUT=$(cat data-contract-output.txt | tail -100)
+          echo "output<<ENDOFOUTPUT" >> $GITHUB_OUTPUT
+          echo "$OUTPUT" >> $GITHUB_OUTPUT
+          echo "ENDOFOUTPUT" >> $GITHUB_OUTPUT
+
+      - name: Run leakage tests
+        id: leakage
+        continue-on-error: true
+        run: |
+          pytest tests/ -m "leakage" -v --tb=long 2>&1 | tee leakage-output.txt
+
+      - name: Capture leakage output
+        id: leakage-capture
+        if: always()
+        run: |
+          OUTPUT=$(cat leakage-output.txt | tail -100)
+          echo "output<<ENDOFOUTPUT" >> $GITHUB_OUTPUT
+          echo "$OUTPUT" >> $GITHUB_OUTPUT
+          echo "ENDOFOUTPUT" >> $GITHUB_OUTPUT
+
+      - name: Run calibration tests
+        id: calibration
+        continue-on-error: true
+        run: |
+          pytest tests/ -m "calibration" -v --tb=long 2>&1 | tee calibration-output.txt
+
+      - name: Capture calibration output
+        id: calibration-capture
+        if: always()
+        run: |
+          OUTPUT=$(cat calibration-output.txt | tail -100)
+          echo "output<<ENDOFOUTPUT" >> $GITHUB_OUTPUT
+          echo "$OUTPUT" >> $GITHUB_OUTPUT
+          echo "ENDOFOUTPUT" >> $GITHUB_OUTPUT
+
+      - name: Run ruff linter
+        id: lint
+        continue-on-error: true
+        run: |
+          ruff check src/ tests/ 2>&1 | tee lint-output.txt
+
+      - name: Capture lint output
+        id: lint-capture
+        if: always()
+        run: |
+          OUTPUT=$(cat lint-output.txt | tail -100)
+          echo "output<<ENDOFOUTPUT" >> $GITHUB_OUTPUT
+          echo "$OUTPUT" >> $GITHUB_OUTPUT
+          echo "ENDOFOUTPUT" >> $GITHUB_OUTPUT
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.json
+          retention-days: 7
+
+  # ─── Claude Subagent: Test Failure Analysis ──────────────────────────
+  claude-test-analysis:
+    name: "Claude: Test Failure Analysis"
+    needs: test-suite
+    if: |
+      always() &&
+      (needs.test-suite.outputs.unit_result == 'failure' ||
+       needs.test-suite.outputs.data_contract_result == 'failure' ||
+       needs.test-suite.outputs.leakage_result == 'failure' ||
+       needs.test-suite.outputs.calibration_result == 'failure') &&
+      (github.event.inputs.tasks == '' || contains(github.event.inputs.tasks, 'test-analysis'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Analyze test failures with Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            You are a nightly CI agent for the march-madness-forecaster project.
+            Your job is to analyze test failures and fix them if they are straightforward.
+
+            ## Test Results
+
+            ### Unit Tests (result: ${{ needs.test-suite.outputs.unit_result }})
+            ```
+            ${{ needs.test-suite.outputs.unit_output }}
+            ```
+
+            ### Data-Contract Tests (result: ${{ needs.test-suite.outputs.data_contract_result }})
+            ```
+            ${{ needs.test-suite.outputs.data_contract_output }}
+            ```
+
+            ### Leakage Tests (result: ${{ needs.test-suite.outputs.leakage_result }})
+            ```
+            ${{ needs.test-suite.outputs.leakage_output }}
+            ```
+
+            ### Calibration Tests (result: ${{ needs.test-suite.outputs.calibration_result }})
+            ```
+            ${{ needs.test-suite.outputs.calibration_output }}
+            ```
+
+            ## Instructions
+
+            1. Read the CLAUDE.md file for project conventions
+            2. Analyze each test failure — determine root cause
+            3. Categorize failures as:
+               - **Flaky**: Non-deterministic, timing, or environment-dependent
+               - **Regression**: Code change broke existing behavior
+               - **Stale**: Test expectations outdated vs current code
+               - **Bug**: Actual bug in source code exposed by test
+            4. For each failure:
+               - If the fix is straightforward (stale assertion, minor import fix, etc.), fix it directly
+               - If the fix requires architectural changes, document it but do not fix
+            5. CRITICAL: Do NOT modify production config (configs/production_2026.json locked fields)
+            6. CRITICAL: Do NOT modify the production entrypoint (src/run_production_2026.py)
+            7. After making fixes, run `pytest tests/ -m "unit" -x --tb=short` to validate
+            8. Create a commit with the prefix "nightly: " describing all fixes
+
+            If this is a dry run (${{ github.event.inputs.dry_run }}), only analyze — do not make changes.
+          allowed_tools: "Read,Write,Edit,Bash,Glob,Grep"
+          timeout_minutes: 30
+
+  # ─── Claude Subagent: Coverage Gap Analysis & Test Generation ────────
+  claude-coverage-gaps:
+    name: "Claude: Coverage Improvement"
+    needs: test-suite
+    if: |
+      always() &&
+      (github.event.inputs.tasks == '' || contains(github.event.inputs.tasks, 'coverage-gaps'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Improve test coverage with Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            You are a nightly CI agent focused on improving test coverage for the march-madness-forecaster project.
+
+            ## Current Coverage Report
+            ```
+            ${{ needs.test-suite.outputs.coverage_output }}
+            ```
+
+            ## Instructions
+
+            1. Read the CLAUDE.md file for project conventions and testing patterns
+            2. Review tests/conftest.py to understand the auto-marker system
+            3. Identify the TOP 3 lowest-coverage source files from the coverage report above
+            4. For each file:
+               a. Read the source file to understand its functionality
+               b. Read any existing tests for that module
+               c. Write NEW unit tests that cover the missing lines
+               d. Focus on: edge cases, error paths, boundary conditions
+            5. Test naming: follow existing `test_*.py` conventions in the tests/ directory
+            6. Run `pytest tests/ -m "unit" -x --tb=short` after writing tests to verify they pass
+            7. Run `pytest tests/ -m "unit" --cov=src --cov-report=term-missing` to verify coverage improved
+            8. CRITICAL constraints:
+               - Do NOT modify any source code — only add/modify test files
+               - Do NOT add tests that require network access or external APIs
+               - Tests must be deterministic (no random seeds without fixing them)
+               - Follow the auto-marker system: place tests appropriately so conftest.py assigns correct markers
+            9. Create a commit with the prefix "nightly: " describing the coverage improvements
+
+            If this is a dry run (${{ github.event.inputs.dry_run }}), only analyze and report — do not create files.
+          allowed_tools: "Read,Write,Edit,Bash,Glob,Grep"
+          timeout_minutes: 30
+
+  # ─── Claude Subagent: Code Quality & Reliability Audit ──────────────
+  claude-code-quality:
+    name: "Claude: Code Quality Audit"
+    needs: test-suite
+    if: |
+      always() &&
+      (github.event.inputs.tasks == '' || contains(github.event.inputs.tasks, 'code-quality'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+        with:
+          extra-packages: "ruff"
+
+      - name: Code quality audit with Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            You are a nightly CI agent focused on code quality for the march-madness-forecaster project.
+
+            ## Lint Output
+            ```
+            ${{ needs.test-suite.outputs.lint_output }}
+            ```
+
+            ## Instructions
+
+            1. Read the CLAUDE.md file for project conventions
+            2. Fix any lint violations reported above
+            3. Scan for common reliability issues:
+               a. Bare `except:` clauses — should catch specific exceptions
+               b. Mutable default arguments in function signatures
+               c. Resource leaks (files opened without context managers)
+               d. Silent error swallowing (empty except blocks)
+               e. Unreachable code or dead code paths
+               f. Missing None checks on optional return values used downstream
+            4. For each issue found:
+               - Fix it if the fix is safe and localized (< 5 lines changed per fix)
+               - Skip if the fix requires broader refactoring
+            5. CRITICAL constraints:
+               - Do NOT modify configs/production_2026.json locked fields
+               - Do NOT modify src/run_production_2026.py behavior
+               - Do NOT change public API signatures
+               - Do NOT add type annotations to code you didn't otherwise change
+               - Keep all changes minimal and surgical
+            6. Run `ruff check src/ tests/` to verify no new lint violations
+            7. Run `pytest tests/ -m "unit" -x --tb=short` to verify nothing broke
+            8. Create a commit with the prefix "nightly: " describing all quality fixes
+
+            If this is a dry run (${{ github.event.inputs.dry_run }}), only analyze and report — do not make changes.
+          allowed_tools: "Read,Write,Edit,Bash,Glob,Grep"
+          timeout_minutes: 30
+
+  # ─── Claude Subagent: Reliability & Robustness Hardening ────────────
+  claude-reliability:
+    name: "Claude: Reliability Hardening"
+    needs: test-suite
+    if: |
+      always() &&
+      (github.event.inputs.tasks == '' || contains(github.event.inputs.tasks, 'reliability-fixes'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Reliability hardening with Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            You are a nightly CI agent focused on reliability hardening for the march-madness-forecaster project.
+
+            ## Test Results Summary
+            - Unit tests: ${{ needs.test-suite.outputs.unit_result }}
+            - Data-contract tests: ${{ needs.test-suite.outputs.data_contract_result }}
+            - Leakage tests: ${{ needs.test-suite.outputs.leakage_result }}
+            - Calibration tests: ${{ needs.test-suite.outputs.calibration_result }}
+
+            ## Instructions
+
+            1. Read the CLAUDE.md file for project conventions
+            2. Focus on improving the RELIABILITY of the codebase by:
+
+               a. **Data validation hardening**: Check data ingestion and feature engineering
+                  for places where malformed/missing data could cause silent failures.
+                  Add defensive checks where data crosses module boundaries.
+
+               b. **Error message improvement**: Find generic error messages or bare raises
+                  and improve them with actionable context (what failed, what was expected,
+                  what the user should do).
+
+               c. **Flaky test detection**: Look for tests that use:
+                  - `time.sleep()` or timing-dependent assertions
+                  - Random data without fixed seeds
+                  - File system paths that might not exist in CI
+                  - Network calls without mocks
+                  Fix these to be deterministic.
+
+               d. **Configuration validation**: Ensure config loading validates required
+                  fields early and fails fast with clear messages.
+
+            3. CRITICAL constraints:
+               - Do NOT modify configs/production_2026.json locked fields
+               - Do NOT modify src/run_production_2026.py behavior
+               - Do NOT change the ML model architecture or training logic
+               - Do NOT change feature engineering calculations
+               - All changes must be backward-compatible
+            4. Run `pytest tests/ -m "unit" -x --tb=short` after changes to verify nothing broke
+            5. Create a commit with the prefix "nightly: " describing reliability improvements
+
+            If this is a dry run (${{ github.event.inputs.dry_run }}), only analyze and report — do not make changes.
+          allowed_tools: "Read,Write,Edit,Bash,Glob,Grep"
+          timeout_minutes: 30
+
+  # ─── Collect Results & Open PR ───────────────────────────────────────
+  collect-and-pr:
+    name: "Collect Results & Open PR"
+    needs:
+      - test-suite
+      - claude-test-analysis
+      - claude-coverage-gaps
+      - claude-code-quality
+      - claude-reliability
+    if: always() && github.event.inputs.dry_run != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Collect Claude branches and create PR
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            You are the final aggregation agent for the nightly automated testing pipeline.
+
+            Check if any of the previous Claude subagent jobs made commits on this branch.
+            Run `git log --oneline -10` to see recent commits.
+
+            If there are commits with the "nightly: " prefix from today:
+            1. Create a new branch named `nightly/automated-improvements-$(date +%Y-%m-%d)`
+            2. Push the branch
+            3. Summarize all changes made across the subagents
+            4. The summary should include:
+               - Number of test failures fixed
+               - Number of new tests added
+               - Number of code quality issues resolved
+               - Number of reliability improvements made
+
+            If there are NO nightly commits, simply report that all checks passed
+            and no improvements were needed tonight.
+
+            Do NOT create a PR — just push the branch. The team will review and merge manually.
+          allowed_tools: "Bash,Read,Glob,Grep"
+          timeout_minutes: 10
+
+  # ─── Nightly Report Issue ────────────────────────────────────────────
+  nightly-report:
+    name: "Post Nightly Report"
+    needs:
+      - test-suite
+      - claude-test-analysis
+      - claude-coverage-gaps
+      - claude-code-quality
+      - claude-reliability
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate nightly report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0];
+            const results = {
+              unit: '${{ needs.test-suite.outputs.unit_result }}',
+              data_contract: '${{ needs.test-suite.outputs.data_contract_result }}',
+              leakage: '${{ needs.test-suite.outputs.leakage_result }}',
+              calibration: '${{ needs.test-suite.outputs.calibration_result }}',
+              test_analysis: '${{ needs.claude-test-analysis.result }}',
+              coverage: '${{ needs.claude-coverage-gaps.result }}',
+              quality: '${{ needs.claude-code-quality.result }}',
+              reliability: '${{ needs.claude-reliability.result }}'
+            };
+
+            const statusEmoji = (s) => s === 'success' ? ':white_check_mark:' : s === 'skipped' ? ':fast_forward:' : ':x:';
+
+            const body = `## Nightly Automated Testing Report — ${date}
+
+            ### Test Suite Results
+            | Gate | Status |
+            |------|--------|
+            | Unit Tests | ${statusEmoji(results.unit)} ${results.unit} |
+            | Data-Contract Tests | ${statusEmoji(results.data_contract)} ${results.data_contract} |
+            | Leakage Tests | ${statusEmoji(results.leakage)} ${results.leakage} |
+            | Calibration Tests | ${statusEmoji(results.calibration)} ${results.calibration} |
+
+            ### Claude Subagent Results
+            | Agent | Status |
+            |-------|--------|
+            | Test Failure Analysis | ${statusEmoji(results.test_analysis)} ${results.test_analysis} |
+            | Coverage Improvement | ${statusEmoji(results.coverage)} ${results.coverage} |
+            | Code Quality Audit | ${statusEmoji(results.quality)} ${results.quality} |
+            | Reliability Hardening | ${statusEmoji(results.reliability)} ${results.reliability} |
+
+            ---
+            *Automated by [Nightly Claude Testing](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*
+            `;
+
+            // Find or create the nightly report issue
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'nightly-report',
+              state: 'open',
+              per_page: 1
+            });
+
+            if (issues.length > 0) {
+              // Add comment to existing tracking issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues[0].number,
+                body: body
+              });
+            } else {
+              // Create new tracking issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Nightly Automated Testing Reports`,
+                body: body,
+                labels: ['nightly-report', 'automated']
+              });
+            }
