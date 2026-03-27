@@ -101,6 +101,42 @@ class EngineeredFeatures:
 
 
 @dataclass
+class ValidatedFeatures:
+    """Output of the data-integrity validation stage (Phase 4).
+
+    Contains the cleaned feature matrix, surviving feature names, and the
+    full validation report including removed features, drift alerts, and
+    PIT violation details.
+    """
+
+    team_features: Dict[str, np.ndarray] = field(default_factory=dict)
+    feature_names: List[str] = field(default_factory=list)
+    feature_matrix: Optional[np.ndarray] = None  # (n_teams, n_features)
+    team_id_to_name: Dict[str, str] = field(default_factory=dict)
+    team_name_to_id: Dict[str, str] = field(default_factory=dict)
+    validation_report: Optional[Any] = None  # ValidationReport
+    schedule_graph: Optional[Any] = None  # ScheduleGraph (pass-through)
+
+    @property
+    def n_teams(self) -> int:
+        return len(self.team_features)
+
+    @property
+    def feature_dim(self) -> int:
+        return len(self.feature_names)
+
+    def summary(self) -> str:
+        report_status = "n/a"
+        if self.validation_report is not None:
+            report_status = "PASSED" if self.validation_report.passed else "FAILED"
+        return (
+            f"ValidatedFeatures: {self.n_teams} teams, "
+            f"{self.feature_dim} features, "
+            f"integrity={report_status}"
+        )
+
+
+@dataclass
 class TrainedModels:
     """Output of the model-training stage.
 
