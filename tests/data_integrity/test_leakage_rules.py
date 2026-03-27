@@ -62,6 +62,16 @@ class TestRule1SameGameOutcome:
             "compute_as_of must use strict less-than for date filtering"
         )
 
+    @pytest.mark.evidence_structural
+    def test_structural_compute_uses_strict_less_than(self):
+        """ProprietaryMetricsEngine.compute() uses game_date < cutoff_date."""
+        from src.data.features.proprietary_metrics import ProprietaryMetricsEngine
+        source = inspect.getsource(ProprietaryMetricsEngine.compute)
+        assert "game_date < cutoff_date" in source, (
+            "compute() must use strict less-than for cutoff_date filtering "
+            "(games ON tournament start date are tournament games)"
+        )
+
     @pytest.mark.evidence_synthetic
     def test_synthetic_same_game_not_in_features(self):
         """Inject a game and verify its outcome is NOT in features at game_date."""

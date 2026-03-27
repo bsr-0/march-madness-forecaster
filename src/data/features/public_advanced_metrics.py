@@ -164,6 +164,11 @@ class PublicAdvancedMetricsBuilder:
         ranked_def = sorted(teams_out, key=lambda r: r["adj_defensive_efficiency"])
         for i, row in enumerate(ranked_def, start=1):
             row["defensive_rank"] = i
+        # Compute t_rank from barthag (proxy for Torvik ranking when real
+        # T-Rank values are unavailable from game-derived metrics).
+        ranked_barthag = sorted(teams_out, key=lambda r: r["barthag"], reverse=True)
+        for i, row in enumerate(ranked_barthag, start=1):
+            row["t_rank"] = i
 
         return {"teams": teams_out}
 
