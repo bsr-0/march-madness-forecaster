@@ -187,6 +187,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup stable agent branch
+        run: |
+          git checkout -B nightly/qaqc origin/main
+          git config user.name "nightly-qaqc-agent"
+          git config user.email "nightly-qaqc@github-actions.bot"
+
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
         with:
@@ -209,6 +215,14 @@ jobs:
             nothing — you verify everything. You treat every untested code path as
             a latent bug. You treat every bare except, every silent fallback, every
             hardcoded magic number as a reliability risk.
+
+            ## BRANCH PROTOCOL
+            You are on branch `nightly/qaqc`. This is a STABLE branch that persists
+            across nightly runs. Each night you reset it to `main` and apply fresh
+            improvements. After committing, push with:
+            ```bash
+            git push origin nightly/qaqc --force
+            ```
 
             ## CONTEXT — Tonight's Test Results
 
@@ -302,13 +316,15 @@ jobs:
             pytest tests/ -m "leakage" -x --tb=short
             ```
 
-            ### Step 7: Commit
+            ### Step 7: Commit and push
             Create a single commit with prefix "nightly(qaqc): " summarizing:
             - Number of test failures fixed (by category)
             - Number of lint violations fixed
             - Number of reliability risks addressed
             - Number of new tests added
             - Coverage delta (if measurable)
+
+            Then push: `git push origin nightly/qaqc --force`
 
             ## HARD CONSTRAINTS — Violating any of these is a critical failure
             - Do NOT modify `configs/production_2026.json` locked fields
@@ -321,7 +337,7 @@ jobs:
             - All new tests must pass in CI (no network, no GPU, no large data files)
 
             If this is a dry run (${{ github.event.inputs.dry_run }}), produce a full
-            report of everything you found but do NOT make any changes.
+            report of everything you found but do NOT make any changes or push.
           allowed_tools: "Read,Write,Edit,Bash,Glob,Grep"
           timeout_minutes: 45
 
@@ -338,6 +354,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup stable agent branch
+        run: |
+          git checkout -B nightly/statistician origin/main
+          git config user.name "nightly-statistician-agent"
+          git config user.email "nightly-statistician@github-actions.bot"
 
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
@@ -365,6 +387,14 @@ jobs:
             - Monte Carlo simulations with unjustified noise parameters
             - Evaluation metrics computed on data the model has seen
             - Ensemble methods that add complexity without measurable OOS gain
+
+            ## BRANCH PROTOCOL
+            You are on branch `nightly/statistician`. This is a STABLE branch that
+            persists across nightly runs. Each night it resets to `main` and you
+            apply fresh audit tests. After committing, push with:
+            ```bash
+            git push origin nightly/statistician --force
+            ```
 
             ## YOUR MISSION — Statistical audit with teeth
 
@@ -492,6 +522,8 @@ jobs:
             reads like an honest peer review summary — what passed scrutiny, what is
             questionable, and what needs human attention.
 
+            Then push: `git push origin nightly/statistician --force`
+
             ## HARD CONSTRAINTS
             - Do NOT modify any source code. You are an AUDITOR — you write tests
               and reports, you do not change the system under review.
@@ -506,46 +538,13 @@ jobs:
               concentrated near 0.5 with tails)
 
             If this is a dry run (${{ github.event.inputs.dry_run }}), produce the full
-            audit report but do NOT write any files.
+            audit report but do NOT write any files or push.
           allowed_tools: "Read,Write,Edit,Bash,Glob,Grep"
           timeout_minutes: 45
 
   # ═══════════════════════════════════════════════════════════════════════
-  # Phase 3: Collect results, push branch, post report
+  # Phase 3: Post nightly report
   # ═══════════════════════════════════════════════════════════════════════
-  collect-and-push:
-    name: "Collect Results & Push Branch"
-    needs:
-      - test-suite
-      - claude-qaqc-agent
-      - claude-statistician-agent
-    if: always() && github.event.inputs.dry_run != 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Collect and push nightly branch
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          direct_prompt: |
-            You are the aggregation agent for the nightly testing pipeline.
-
-            Run `git log --oneline -15` to check for nightly commits.
-
-            If there are commits with "nightly(qaqc):" or "nightly(statistician):" prefixes:
-            1. Create branch `nightly/automated-$(date +%Y-%m-%d)`
-            2. Push with `git push -u origin <branch-name>`
-            3. Summarize: what each agent did, how many tests added, how many fixes made
-
-            If there are NO nightly commits, report that the codebase passed all
-            nightly checks with no changes needed.
-          allowed_tools: "Bash,Read,Glob,Grep"
-          timeout_minutes: 10
-
   nightly-report:
     name: "Post Nightly Report"
     needs:
