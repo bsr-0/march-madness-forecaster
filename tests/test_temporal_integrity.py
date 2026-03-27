@@ -414,39 +414,29 @@ class TestGlobalStatisticsLeakage:
             team_name="Test Team",
             seed=1,
             region="East",
-            # Provide non-NaN values for external/massey fields so the NaN check
-            # tests z-scoring behavior, not missing-data handling.
-            external_rating_composite=0.5,
-            external_rating_spread=0.1,
-            massey_pom=0.5,
-            massey_sag=0.5,
-            massey_mor=0.5,
-            massey_dol=0.5,
-            massey_col=0.5,
-            massey_wol=0.5,
-            massey_rth=0.5,
-            massey_ap=0.5,
-            massey_usa=0.5,
-            massey_rpi=0.5,
-            massey_rank_mean=0.5,
-            massey_rank_std=0.1,
+            # Provide non-NaN values for fields that default to float('nan')
+            # so the NaN check targets z-scoring artifacts, not missing data.
+            external_rating_composite=75.0,
+            external_rating_spread=5.0,
+            massey_pom=85.0,
+            massey_sag=80.0,
+            massey_mor=82.0,
+            massey_dol=78.0,
+            massey_col=81.0,
+            massey_wol=79.0,
+            massey_rth=83.0,
+            massey_ap=5.0,
+            massey_usa=6.0,
+            massey_rpi=12.0,
+            massey_rank_mean=81.0,
+            massey_rank_std=2.5,
         )
         vec = features.to_vector()
         # Vector should contain raw feature values, not z-scored values
         # Seed=1 should appear as raw value (1.0), not z-scored
         assert isinstance(vec, np.ndarray)
-        # External ratings and Massey multi-system ratings legitimately default to NaN
-        # when no external data is provided — tree models handle these natively.
-        # Only check non-optional features for z-score-induced NaN.
-        _optional_nan_features = {
-            'external_rating_composite', 'external_rating_spread',
-            'massey_pom', 'massey_sag', 'massey_mor', 'massey_dol',
-            'massey_col', 'massey_wol', 'massey_rth', 'massey_ap',
-            'massey_usa', 'massey_rpi', 'massey_rank_mean', 'massey_rank_std',
-        }
-        feature_names = TeamFeatures.get_feature_names()
-        non_optional_mask = np.array([n not in _optional_nan_features for n in feature_names])
-        assert not np.any(np.isnan(vec[non_optional_mask])), "Vector contains NaN — possible z-score issue"
+        # The vector should not contain any NaN or inf from bad z-scoring
+        assert not np.any(np.isnan(vec)), "Vector contains NaN — possible z-score issue"
         assert not np.any(np.isinf(vec)), "Vector contains inf — possible z-score issue"
 
     def test_loyo_cv_refits_scaler_per_fold(self):
