@@ -61,11 +61,24 @@ DEFAULT_MAX_BRIER = 0.220
 # Model complexity → allowed candidate sets.
 # "simple" restricts to low-DF models that won't overfit on 7 features / ~400 samples.
 # "standard" enables the full production ensemble (tree models + regression + logistic).
+# "full" adds all standard candidates plus graph-SOS and momentum-trend feature
+#   enrichment (enable_gnn/enable_transformer).  Despite the names, these are
+#   NumPy-based feature extractors (PageRank SOS, trend/volatility), NOT neural
+#   networks — they add 2-3 auxiliary features to the ensemble input.
+#   Empirically verified 2026-03-27: _run_gnn() returns "statistical_fallback",
+#   _run_transformer() returns "trend_fallback".  No torch dependency required.
 # Aligns with EXPERIMENT_WORKFLOW_PLAN.md Phase 1 structural search and
 # baseline_training.py line 1128: _use_tree_models = model_complexity != "simple".
 COMPLEXITY_CANDIDATES: Dict[str, List[str]] = {
     "simple": ["regularized_logistic", "spread_regressor"],
     "standard": [
+        "gradient_boosting",
+        "xgboost",
+        "regularized_logistic",
+        "spread_regressor",
+        "margin_regressor",
+    ],
+    "full": [
         "gradient_boosting",
         "xgboost",
         "regularized_logistic",

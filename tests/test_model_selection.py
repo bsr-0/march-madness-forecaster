@@ -397,6 +397,25 @@ class TestModelComplexity:
         assert "spread_regressor" in selector.candidate_names
         assert "margin_regressor" in selector.candidate_names
 
+    def test_full_includes_all_standard_candidates(self):
+        """Full mode must include everything standard does (plus feature enrichment)."""
+        selector = ModelClassSelector(
+            baseline_ev=0.0,
+            baseline_brier=0.30,
+            model_complexity="full",
+            strict=False,
+        )
+        # Full mode has the same model candidates as standard
+        # (the "full" difference is enable_gnn/enable_transformer feature enrichment,
+        # which adds input features but doesn't change the model candidate pool)
+        standard_selector = ModelClassSelector(
+            baseline_ev=0.0,
+            baseline_brier=0.30,
+            model_complexity="standard",
+            strict=False,
+        )
+        assert set(selector.candidate_names) == set(standard_selector.candidate_names)
+
     def test_explicit_candidates_override_complexity(self):
         """Explicit candidate_names must override model_complexity."""
         selector = ModelClassSelector(
