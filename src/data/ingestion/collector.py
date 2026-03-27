@@ -261,7 +261,7 @@ class RealDataCollector:
                     from src.data.ingestion.validators import cross_validate_torvik_sources
                     cross_warnings = cross_validate_torvik_sources(
                         torvik_teams,
-                        [{"team_id": k, **v} for k, v in four_factors.items()],
+                        [{"team_id": k, **v} for k, v in four_factors.items() if isinstance(v, dict)],
                         thresholds={"effective_fg_pct": 0.03, "turnover_rate": 0.03},
                     )
                     for w in cross_warnings:
@@ -757,7 +757,7 @@ class RealDataCollector:
                     if key.replace("_", "") == team_id.replace("_", ""):
                         ff_entry = four_factors[key]
                         break
-            if ff_entry is not None:
+            if ff_entry is not None and isinstance(ff_entry, dict):
                 is_csv_approx = ff_entry.get("_csv_approximation", False)
                 for field in _DEF_FF_FIELDS:
                     current = ff_entry.get(field, 0.0)
@@ -859,7 +859,7 @@ class RealDataCollector:
                     if key.replace("_", "") == team_id.replace("_", ""):
                         ff_entry = four_factors[key]
                         break
-            if ff_entry is not None:
+            if ff_entry is not None and isinstance(ff_entry, dict):
                 is_csv_approx = ff_entry.get("_csv_approximation", False)
                 for field in _OFF_FF_FIELDS:
                     current = ff_entry.get(field, 0.0)
