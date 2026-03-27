@@ -857,7 +857,7 @@ class TestUnifiedBacktester:
     def test_loyo_years_exclude_2020(self):
         """2020 should be excluded (COVID cancellation)."""
         assert 2020 not in LOYO_YEARS
-        assert len(LOYO_YEARS) == 7
+        assert len(LOYO_YEARS) == 9  # 2016-2025 minus 2020
 
 
 # ---------------------------------------------------------------------------
