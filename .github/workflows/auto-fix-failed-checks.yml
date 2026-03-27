@@ -1,0 +1,131 @@
+name: Auto-fix Failed Checks
+
+on:
+  # Trigger when a CI workflow run completes with failure
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  actions: read
+
+concurrency:
+  group: auto-fix-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+jobs:
+  auto-fix:
+    name: Auto-fix with Claude
+    # Only run on failed PR checks, never on main/master
+    if: >-
+      github.event.workflow_run.conclusion == 'failure'
+      && github.event.workflow_run.event == 'pull_request'
+      && github.event.workflow_run.head_branch != 'main'
+      && github.event.workflow_run.head_branch != 'master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout failing branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install project dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+          pip install ruff
+
+      - name: Download CI logs
+        uses: actions/github-script@v7
+        id: get-logs
+        with:
+          script: |
+            const run_id = context.payload.workflow_run.id;
+            const jobs = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: run_id,
+            });
+
+            let failureSummary = '';
+            for (const job of jobs.data.jobs) {
+              if (job.conclusion === 'failure') {
+                failureSummary += `\n### FAILED JOB: ${job.name}\n`;
+                try {
+                  const logs = await github.rest.actions.downloadJobLogsForWorkflowRun({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    job_id: job.id,
+                  });
+                  // Grab last 150 lines to capture the failure context
+                  const logLines = logs.data.split('\n');
+                  const tail = logLines.slice(-150).join('\n');
+                  failureSummary += tail + '\n';
+                } catch (e) {
+                  failureSummary += `(Could not fetch logs: ${e.message})\n`;
+                }
+              }
+            }
+
+            const fs = require('fs');
+            fs.writeFileSync('ci-failure-logs.txt', failureSummary);
+            core.setOutput('has_failures', failureSummary.length > 0 ? 'true' : 'false');
+
+      - name: Run Claude Code auto-fix
+        if: steps.get-logs.outputs.has_failures == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          npm install -g @anthropic-ai/claude-code
+
+          FAILURE_LOGS=$(cat ci-failure-logs.txt)
+
+          claude -p "You are fixing CI failures on branch '${{ github.event.workflow_run.head_branch }}'.
+
+          Here are the failed CI job logs:
+
+          ${FAILURE_LOGS}
+
+          Instructions:
+          1. Analyze the failure logs to understand what went wrong.
+          2. Only fix lint errors (ruff) and straightforward test failures.
+          3. Do NOT modify production-locked files (configs/production_2026.json, src/run_production_2026.py).
+          4. Do NOT modify the CI workflow files themselves.
+          5. Run 'ruff check src/ tests/' and 'pytest tests/ -m unit --tb=short -q' to verify your fixes.
+          6. Keep changes minimal — fix only what is broken, do not refactor.
+
+          Fix the issues now." \
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep"
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push fixes
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name "claude-auto-fix[bot]"
+          git config user.email "claude-auto-fix[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: auto-fix CI failures via Claude
+
+          Automated fix for failed CI checks on branch ${{ github.event.workflow_run.head_branch }}.
+          Triggered by workflow run: ${{ github.event.workflow_run.html_url }}"
+          git push origin ${{ github.event.workflow_run.head_branch }}
