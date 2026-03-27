@@ -49,6 +49,10 @@ class ModelTrainingStage:
         phase_ctx = timer.phase(self.name) if timer else _noop_ctx()
 
         with phase_ctx:
+            # Phase 3: Training window optimization (pre-training)
+            if config.enable_training_window_optimization:
+                _run_window_optimization(ctx, pipeline)
+
             # GNN
             if config.enable_gnn:
                 gnn_stats = pipeline._run_gnn(schedule_graph)
@@ -99,3 +103,53 @@ class ModelTrainingStage:
 def _noop_ctx():
     from contextlib import nullcontext
     return nullcontext()
+
+
+def _run_window_optimization(ctx: PipelineContext, pipeline: Any) -> None:
+    """Run training window optimization and store results in config.
+
+    Determines the optimal number of historical training years for each
+    model type before baseline training begins.
+    """
+    import os
+
+    config = ctx.config
+
+    # Resolve historical data directory
+    _rs = getattr(pipeline, "_runtime_state", {})
+    games_dir = _rs.get("multi_year_games_dir", config.multi_year_games_dir)
+    if games_dir == "auto":
+        candidate = os.path.join(os.getcwd(), "data", "raw", "historical")
+        if os.path.isdir(candidate):
+            games_dir = candidate
+        else:
+            logger.info(
+                "Training window optimization: no historical data directory "
+                "found; skipping."
+            )
+            return
+
+    if not games_dir or not os.path.isdir(games_dir):
+        logger.info(
+            "Training window optimization: games_dir=%s not available; skipping.",
+            games_dir,
+        )
+        return
+
+    from ...ml.evaluation.window_ev_integration import run_training_window_optimization
+
+    result = run_training_window_optimization(
+        config=config,
+        games_dir=games_dir,
+        windows=config.training_window_candidates,
+        output_path=config.training_window_report_path,
+        verify_ev=config.training_window_verify_ev,
+    )
+
+    # Store optimal windows in config for downstream use
+    config.optimal_training_windows = result.optimal_years
+
+    logger.info(
+        "Training window optimization complete. Optimal windows: %s",
+        result.recommendations,
+    )
