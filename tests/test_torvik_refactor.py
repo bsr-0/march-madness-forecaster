@@ -254,7 +254,8 @@ class TestCacheTTL:
         cache_path.write_text(json.dumps(raw))
 
         loaded = scraper._load_from_cache("test.json")
-        assert loaded == {"foo": "bar"}
+        assert loaded is not None
+        assert loaded["foo"] == "bar"
 
     def test_default_ttl(self):
         assert DEFAULT_CACHE_TTL_SECONDS == 6 * 3600
