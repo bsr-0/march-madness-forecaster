@@ -147,6 +147,25 @@ def run_monte_carlo(
     })
     matchup_cache: Dict[Tuple[str, str], float] = {}
 
+    # Build seed lookup and initialize upset detector if enabled
+    team_seed_lookup: Dict[str, int] = {}
+    for region_teams in teams_by_region.values():
+        for t in region_teams:
+            team_seed_lookup[t.team_id] = t.seed
+
+    upset_detector = None
+    if getattr(pipeline.config, 'enable_upset_detection', False):
+        try:
+            from ...ml.ensemble.upset_detector import UpsetDetector
+            upset_detector = UpsetDetector(
+                prior_strength=getattr(pipeline.config, 'upset_prior_strength', 0.20),
+                adjustment_strength=getattr(pipeline.config, 'upset_adjustment_strength', 0.15),
+            )
+            logger.info("Upset detection layer enabled (prior=%.2f, adjust=%.2f)",
+                        upset_detector.prior_strength, upset_detector.adjustment_strength)
+        except Exception as e:
+            logger.warning("Failed to initialize upset detector: %s", e)
+
     def predict_fn(team1_id: str, team2_id: str) -> float:
         key = (team1_id, team2_id)
         if key in matchup_cache:
@@ -159,6 +178,20 @@ def run_monte_carlo(
             injury_noise_table.get(team1_id),
             injury_noise_table.get(team2_id),
         )
+
+        # Apply upset detection layer
+        if upset_detector is not None:
+            s1 = team_seed_lookup.get(team1_id, 0)
+            s2 = team_seed_lookup.get(team2_id, 0)
+            if s1 > 0 and s2 > 0 and s1 != s2:
+                t1_feats = pipeline.feature_engineer.team_features.get(team1_id)
+                t2_feats = pipeline.feature_engineer.team_features.get(team2_id)
+                signal = upset_detector.detect(
+                    team1_id, team2_id, s1, s2, adjusted,
+                    team1_features=t1_feats, team2_features=t2_feats,
+                )
+                adjusted = signal.adjusted_prob
+
         matchup_cache[(team1_id, team2_id)] = adjusted
         matchup_cache[(team2_id, team1_id)] = float(np.clip(1.0 - adjusted, 0.01, 0.99))
         return adjusted
