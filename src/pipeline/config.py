@@ -538,6 +538,19 @@ class SOTAPipelineConfig:
     consistency_bonus_max: float = 0.0  # Disabled by default; experimental only
     consistency_normalizer: float = 15.0  # Typical pace_adjusted_variance range for normalization
 
+    # --- Upset detection layer ---
+    # Post-ensemble layer that identifies matchups with elevated upset potential
+    # using historical seed priors, model residuals, and team-level amplifier
+    # signals (volatility, momentum, experience, efficiency).
+    # Output: per-matchup UpsetSignal with adjusted probabilities and risk tiers.
+    enable_upset_detection: bool = True
+    # Weight for historical seed-matchup prior in Bayesian upset update.
+    # Higher = more anchored to historical rates; lower = trust model more.
+    upset_prior_strength: float = 0.20
+    # How much the upset amplifier signals can shift probabilities.
+    # 0.0 = no adjustment from amplifiers; 0.15 = moderate correction.
+    upset_adjustment_strength: float = 0.15
+
     # --- Leakage safety ---
     # When True, leakage check failures raise LeakageError and halt the pipeline
     # instead of logging warnings.  Enabled by default for production runs.
