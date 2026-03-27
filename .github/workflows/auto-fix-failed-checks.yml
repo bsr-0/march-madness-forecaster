@@ -129,3 +129,64 @@ jobs:
           Automated fix for failed CI checks on branch ${{ github.event.workflow_run.head_branch }}.
           Triggered by workflow run: ${{ github.event.workflow_run.html_url }}"
           git push origin ${{ github.event.workflow_run.head_branch }}
+
+      - name: Find associated pull request
+        if: steps.check-changes.outputs.has_changes == 'true'
+        id: find-pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.workflow_run.head_branch;
+            const prs = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${branch}`,
+              state: 'open',
+            });
+            if (prs.data.length > 0) {
+              const pr = prs.data[0];
+              core.setOutput('pr_number', pr.number);
+              core.setOutput('found', 'true');
+              console.log(`Found PR #${pr.number} for branch ${branch}`);
+            } else {
+              core.setOutput('found', 'false');
+              console.log(`No open PR found for branch ${branch}`);
+            }
+
+      - name: Enable auto-merge on PR
+        if: steps.find-pr.outputs.found == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = parseInt('${{ steps.find-pr.outputs.pr_number }}');
+
+            // First, get the PR's node ID for the GraphQL mutation
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+
+            try {
+              // Enable auto-merge via GraphQL (squash merge)
+              await github.graphql(`
+                mutation($pullRequestId: ID!) {
+                  enablePullRequestAutoMerge(input: {
+                    pullRequestId: $pullRequestId,
+                    mergeMethod: SQUASH
+                  }) {
+                    pullRequest {
+                      autoMergeRequest {
+                        enabledAt
+                      }
+                    }
+                  }
+                }
+              `, {
+                pullRequestId: pr.data.node_id,
+              });
+              console.log(`Auto-merge enabled on PR #${prNumber}`);
+            } catch (e) {
+              console.log(`Could not enable auto-merge: ${e.message}`);
+              console.log('Note: Auto-merge requires branch protection rules with required status checks.');
+            }
