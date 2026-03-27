@@ -240,6 +240,7 @@ class SimulationResults:
     market_validation: Optional[Dict[str, Any]] = None  # Vegas cross-reference result
     public_picks: Optional[Dict[str, Any]] = None
     num_simulations: int = 0
+    upset_analysis: Optional[Dict[str, Any]] = None  # UpsetDetector summary
 
 
 @dataclass
