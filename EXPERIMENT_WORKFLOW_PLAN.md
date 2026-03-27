@@ -40,7 +40,7 @@ Coarse grid over categorical/structural choices. Each config runs full LOYO (8 f
 **Search dimensions:**
 | Dimension | Options | Rationale |
 |-----------|---------|-----------|
-| model_complexity | "simple", "standard" | "full" disabled per protocol (GNN/transformer overfit on N=400) |
+| model_complexity | "simple", "standard", "full" | "full" adds graph-SOS and momentum-trend feature enrichment to the ensemble |
 | calibration_method | "temperature", "platt" | Skip "isotonic" (requires N>500 for reliable fit); skip "none" (always worse) |
 | enable_stacking | True, False | Stacking on 3 base models with N=400 is risky; test both |
 | enable_bayesian_bt | True, False | Orthogonal signal source; worth testing |
@@ -50,8 +50,9 @@ Coarse grid over categorical/structural choices. Each config runs full LOYO (8 f
 **Domain-knowledge pruning rules:**
 - "simple" forces: stacking=False, bayesian_bt=False, spread_model=False (only LR available)
 - "simple" + goto_conversion + {temperature, platt} = 4 configs
-- "standard" + all binary combos, but skip spread_model=False AND bayesian_bt=False (degenerates to LGB+XGB only, known weak)
-- **Result: ~36 configs**
+- "standard" + all binary combos, but skip spread_model=False AND bayesian_bt=False (degenerates to LGB+XGB only)
+- "full" = "standard" + enable_gnn=True + enable_transformer=True (adds graph-SOS PageRank features and momentum-trend features as extra inputs to the ensemble; these are NumPy feature extractors, not neural networks)
+- **Result: ~54 configs** (36 standard + 18 full variants)
 
 Feature selection is NOT searched: fixed domain-knowledge features (FIXED_FEATURE_SET) are always used. Learned selection on N=400 is double-dipping (confirmed by existing ablation framework).
 
@@ -113,7 +114,7 @@ For each sweep: paired t-test across 8 folds vs default. Rank params by absolute
 Run full ablation study on best config from Phases 1-3 using existing `AblationStudy`:
 - Test each enabled component: stacking, bayesian_bt, spread_model, tournament_adaptation, goto_conversion, recency_weighting, round_weighted_calibration
 - Paired t-test per component: must pass p < 0.05 to justify inclusion
-- **Embedding gate**: GNN/transformer require p < 0.01 (stricter due to overfitting risk, but these are disabled anyway)
+- **Feature enrichment gate**: graph-SOS and momentum-trend features require p < 0.01 (stricter threshold for auxiliary features that increase dimensionality)
 - Remove any component that doesn't significantly help
 - Re-evaluate stripped config to confirm no regression
 

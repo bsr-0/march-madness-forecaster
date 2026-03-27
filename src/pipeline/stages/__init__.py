@@ -244,6 +244,96 @@ class SimulationResults:
 
 
 @dataclass
+class OptimizedHyperparams:
+    """Output of Phase 7 — optimized hyperparameters for selected models.
+
+    Re-exports the full contract from the hyperparameter optimization stage
+    for convenient access from pipeline orchestrators.
+    """
+
+    model_configs: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    accepted_models: List[str] = field(default_factory=list)
+    baseline_ev: float = 0.0
+    baseline_brier: float = 0.0
+    passed: bool = True
+
+    def summary(self) -> str:
+        return (
+            f"OptimizedHyperparams: {len(self.accepted_models)} models accepted, "
+            f"EV={self.baseline_ev:.2f}"
+        )
+
+
+@dataclass
+class CalibratedModelPredictions:
+    """Output of Phase 8 — calibrated predictions for each model.
+
+    Contains the calibrated probability arrays and calibration metadata.
+    """
+
+    predictions: Dict[str, np.ndarray] = field(default_factory=dict)
+    calibration_methods: Dict[str, str] = field(default_factory=dict)
+    brier_improvements: Dict[str, float] = field(default_factory=dict)
+    passed: bool = True
+
+    @property
+    def model_names(self) -> List[str]:
+        return list(self.predictions.keys())
+
+    def summary(self) -> str:
+        return (
+            f"CalibratedModelPredictions: {len(self.predictions)} models, "
+            f"methods={self.calibration_methods}"
+        )
+
+
+@dataclass
+class EnsemblePredictions:
+    """Output of Phase 9 — ensemble-blended predictions.
+
+    Contains the final blended predictions, weights, and EV metrics.
+    """
+
+    predictions: Optional[np.ndarray] = None
+    weights: Dict[str, float] = field(default_factory=dict)
+    ensemble_ev: float = 0.0
+    ensemble_brier: float = 0.0
+    optimization_method: str = "grid_search"
+    passed: bool = True
+
+    def summary(self) -> str:
+        return (
+            f"EnsemblePredictions: weights={self.weights}, "
+            f"EV={self.ensemble_ev:.2f}, Brier={self.ensemble_brier:.4f}"
+        )
+
+
+@dataclass
+class SimulationLoopOutput:
+    """Output of Phase 10 — closed-loop simulation results.
+
+    Contains the final EV-optimized predictions after simulation-driven
+    refinement.
+    """
+
+    predictions: Optional[np.ndarray] = None
+    final_weights: Dict[str, float] = field(default_factory=dict)
+    final_ev: float = 0.0
+    final_brier: float = 0.0
+    n_iterations: int = 0
+    converged: bool = False
+    round_ev: Dict[str, float] = field(default_factory=dict)
+    passed: bool = True
+
+    def summary(self) -> str:
+        return (
+            f"SimulationLoopOutput: EV={self.final_ev:.2f}, "
+            f"Brier={self.final_brier:.4f}, "
+            f"iterations={self.n_iterations}, converged={self.converged}"
+        )
+
+
+@dataclass
 class PipelineReport:
     """Final pipeline output — the complete report with all artifacts."""
 

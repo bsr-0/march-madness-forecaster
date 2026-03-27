@@ -58,6 +58,35 @@ DEFAULT_MIN_EV_IMPROVEMENT = 0.0
 # Brier score gate — candidates must not be worse than this.
 DEFAULT_MAX_BRIER = 0.220
 
+# Model complexity → allowed candidate sets.
+# "simple" restricts to low-DF models that won't overfit on 7 features / ~400 samples.
+# "standard" enables the full production ensemble (tree models + regression + logistic).
+# "full" adds all standard candidates plus graph-SOS and momentum-trend feature
+#   enrichment (enable_gnn/enable_transformer).  Despite the names, these are
+#   NumPy-based feature extractors (PageRank SOS, trend/volatility), NOT neural
+#   networks — they add 2-3 auxiliary features to the ensemble input.
+#   Empirically verified 2026-03-27: _run_gnn() returns "statistical_fallback",
+#   _run_transformer() returns "trend_fallback".  No torch dependency required.
+# Aligns with EXPERIMENT_WORKFLOW_PLAN.md Phase 1 structural search and
+# baseline_training.py line 1128: _use_tree_models = model_complexity != "simple".
+COMPLEXITY_CANDIDATES: Dict[str, List[str]] = {
+    "simple": ["regularized_logistic", "spread_regressor"],
+    "standard": [
+        "gradient_boosting",
+        "xgboost",
+        "regularized_logistic",
+        "spread_regressor",
+        "margin_regressor",
+    ],
+    "full": [
+        "gradient_boosting",
+        "xgboost",
+        "regularized_logistic",
+        "spread_regressor",
+        "margin_regressor",
+    ],
+}
+
 
 # ---------------------------------------------------------------------------
 # Data contracts
@@ -391,8 +420,12 @@ class ModelClassSelector:
         n_cv_folds: Number of temporal CV folds.
         strict: Raise IntegrityError if no model selected.
         scoring_weights: Round → point mapping for EV.
-        candidate_names: Subset of CANDIDATE_REGISTRY keys to evaluate.
-            Defaults to all registered candidates.
+        model_complexity: Pipeline complexity mode ("simple" or "standard").
+            Controls which candidate models are eligible.  "simple" excludes
+            tree models (LightGBM, XGBoost) that would overfit on 7 features.
+            Aligns with EXPERIMENT_WORKFLOW_PLAN.md Phase 1 structural search.
+        candidate_names: Explicit override of candidate list.  If provided,
+            takes precedence over model_complexity filtering.
     """
 
     def __init__(
@@ -405,6 +438,7 @@ class ModelClassSelector:
         n_cv_folds: int = 5,
         strict: bool = True,
         scoring_weights: Optional[Dict[str, int]] = None,
+        model_complexity: str = "standard",
         candidate_names: Optional[List[str]] = None,
     ):
         self.baseline_ev = baseline_ev
@@ -414,8 +448,16 @@ class ModelClassSelector:
         self.max_models = max_models
         self.n_cv_folds = n_cv_folds
         self.strict = strict
+        self.model_complexity = model_complexity
         self.scoring_weights = scoring_weights or ROUND_SCORING_WEIGHTS
-        self.candidate_names = candidate_names or list(CANDIDATE_REGISTRY.keys())
+
+        # Candidate list priority: explicit override > complexity-based > all
+        if candidate_names is not None:
+            self.candidate_names = candidate_names
+        elif model_complexity in COMPLEXITY_CANDIDATES:
+            self.candidate_names = COMPLEXITY_CANDIDATES[model_complexity]
+        else:
+            self.candidate_names = list(CANDIDATE_REGISTRY.keys())
 
     def run(
         self,

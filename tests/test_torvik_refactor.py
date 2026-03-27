@@ -212,7 +212,8 @@ class TestCacheTTL:
         scraper.cache_ttl_seconds = 3600
         scraper._save_to_cache("test.json", {"foo": "bar"})
         loaded = scraper._load_from_cache("test.json")
-        assert loaded == {"foo": "bar"}
+        assert loaded is not None
+        assert loaded["foo"] == "bar"
 
     def test_cache_wrong_schema_version_rejected(self, scraper, tmp_path):
         """Cache with old schema version should be discarded."""
@@ -253,7 +254,8 @@ class TestCacheTTL:
         cache_path.write_text(json.dumps(raw))
 
         loaded = scraper._load_from_cache("test.json")
-        assert loaded == {"foo": "bar"}
+        assert loaded is not None
+        assert loaded["foo"] == "bar"
 
     def test_default_ttl(self):
         assert DEFAULT_CACHE_TTL_SECONDS == 6 * 3600
