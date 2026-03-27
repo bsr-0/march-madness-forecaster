@@ -60,6 +60,18 @@ Sports-specific values that should not be changed without strong justification:
 - `KAGGLE_ROUND_WEIGHTS` — Round-wise weighting reflecting Kaggle scoring
 - Monte Carlo simulation correlation reduced to 0.10 (from 0.25) — original value overstated inter-game correlation
 
+### Exception Hierarchy
+
+All custom exceptions live in `src/exceptions.py` and inherit from `RuntimeError`. Never change this hierarchy without understanding downstream catch blocks:
+
+- `LeakageError` — temporal/data leakage detected (hard stop, never downgrade)
+- `DataFreshnessError` — required data sources stale or missing
+- `PreRunValidationError` — pre-run validation checks failed
+- `ComputeBudgetExceeded` — compute budget exceeded (strict mode only)
+- `DataRequirementError` — required data artifact missing/invalid
+- `IntegrityError` — model calibration or math integrity failure (production = hard stop, experimental = warning)
+- `GovernanceApprovalRequired` — action requires human approval (has `request_id` attribute for CLI approval flow)
+
 ---
 
 ## Rigorous Code Refactoring
@@ -207,3 +219,32 @@ march-madness audit-rdof         # Audit researcher degrees of freedom
 3. Use fixtures from `conftest.py` (team data, predictions, outcomes, configs)
 4. For data integrity tests, place in `tests/data_integrity/`
 5. Run your new test: `pytest tests/test_<name>.py -v`
+
+## Skill: Debug CI Failures
+
+1. Check the failing workflow in `.github/workflows/`
+2. The shared setup action is at `.github/actions/setup-python-env/action.yml` (Python 3.10, pip cache)
+3. Common failures:
+   - **Lint:** `ruff check src/ tests/` — fix with `ruff check src/ tests/ --fix`
+   - **Tests:** `pytest tests/ -x --tb=short` — check marker-specific failures
+   - **Production validation:** `python src/run_production_2026.py --dry-run`
+4. Key workflows: `ci.yml` (lint+test), `run-production-pipeline.yml`, `data-ingestion.yml`
+
+## Skill: Explore the Codebase
+
+Key entry points for understanding the codebase:
+
+| Starting point | What you'll learn |
+|---------------|-------------------|
+| `src/main.py` | All CLI commands (search for `@cli.command`) |
+| `src/pipeline/sota.py` | End-to-end pipeline flow |
+| `src/pipeline/stages/baseline_training.py` | Training loop and model fitting |
+| `src/data/features/feature_engineering.py` | Feature vector construction |
+| `src/data/features/proprietary_metrics.py` | Temporal-safe metric computation |
+| `src/ml/ensemble/` | Ensemble model architecture |
+| `src/ml/calibration/` | Probability calibration methods |
+| `src/simulation/` | Monte Carlo bracket simulation |
+| `src/governance/` | Production validation and audit |
+| `src/exceptions.py` | All custom exception types |
+| `configs/production_2026.json` | Locked production configuration |
+| `tests/conftest.py` | Test infrastructure and auto-markers |
