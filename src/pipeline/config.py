@@ -438,6 +438,14 @@ class SOTAPipelineConfig:
     training_year_decay: float = 0.85  # Per-year weight decay (0.85 → 5 years ago gets 0.44x)
     training_year_min_weight: float = 0.15  # Floor weight for oldest years
 
+    # --- Training window optimization (Phase 3) ---
+    enable_training_window_optimization: bool = False  # Run window optimization before training
+    training_window_candidates: Optional[List[Optional[int]]] = None  # Candidate windows; None = [3, 5, 8, 12]
+    training_window_report_path: str = "artifacts/training_window_report.json"
+    training_window_verify_ev: bool = True  # Verify recommendations via EV simulation
+    # Per-model optimal windows (populated by optimizer, consumed by training)
+    optimal_training_windows: Optional[Dict[str, Optional[int]]] = None
+
     # --- Game-level training ---
     # Minimum games a team must have played before a given date for that
     # matchup to be included in training.  Filters out early-season games

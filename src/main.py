@@ -857,10 +857,9 @@ def optimize_training_window(args):
     import logging
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-    from .ml.evaluation.training_window_optimizer import (
-        TrainingWindowOptimizer,
-        DEFAULT_EVAL_YEARS,
-    )
+    from .ml.evaluation.training_window_optimizer import DEFAULT_EVAL_YEARS
+    from .ml.evaluation.window_ev_integration import run_training_window_optimization
+    from .pipeline.config import SOTAPipelineConfig
 
     eval_years = (
         [int(y) for y in args.eval_years.split(",")]
@@ -879,18 +878,52 @@ def optimize_training_window(args):
     if args.model_types:
         model_types = [m.strip() for m in args.model_types.split(",")]
 
-    optimizer = TrainingWindowOptimizer(
+    import os
+    games_dir = args.historical_dir
+    if not os.path.isdir(games_dir):
+        print(f"Error: historical data directory not found: {games_dir}")
+        return 1
+
+    config = SOTAPipelineConfig()
+
+    print(f"Running training window optimization...")
+    print(f"  Historical data: {games_dir}")
+    print(f"  Eval years: {eval_years}")
+    print(f"  Windows: {windows or '[3, 5, 8, 12]'}")
+    print(f"  Model types: {model_types or ['lightgbm', 'xgboost', 'logistic']}")
+    print()
+
+    result = run_training_window_optimization(
+        config=config,
+        games_dir=games_dir,
+        model_types=model_types,
         windows=windows,
         eval_years=eval_years,
-        include_regime_windows=not args.no_regime_windows,
+        output_path=args.output,
+        verify_ev=not args.no_regime_windows,  # reuse flag for simplicity
     )
 
-    print("Training window optimization requires a train/predict function.")
-    print("Use this module programmatically via:")
-    print("  from src.ml.evaluation.training_window_optimizer import TrainingWindowOptimizer")
-    print(f"  optimizer = TrainingWindowOptimizer(eval_years={eval_years})")
-    print(f"  report = optimizer.evaluate_windows(data_by_year, train_predict_fn)")
-    print(f"  optimizer.save_report(report, '{args.output}')")
+    print("\n=== Training Window Optimization Results ===")
+    print(f"\nRecommendations:")
+    for model_type, window_label in result.recommendations.items():
+        years = result.optimal_years.get(model_type)
+        years_str = f"{years} years" if years is not None else "all available"
+        print(f"  {model_type:>12s}: {window_label} ({years_str})")
+
+    if result.ev_verification:
+        print(f"\nEV Verification:")
+        for ev in result.ev_verification:
+            status = "VERIFIED" if ev.ev_verified else "OVERRIDE"
+            print(
+                f"  {ev.model_type:>12s}: {status} | "
+                f"best={ev.recommended_window} (Brier={ev.recommended_brier:.4f}) "
+                f"vs {ev.runner_up_window} (Brier={ev.runner_up_brier:.4f}) "
+                f"delta={ev.brier_delta:.4f}"
+            )
+
+    if result.report_path:
+        print(f"\nReport saved to: {result.report_path}")
+
     return 0
 
 
