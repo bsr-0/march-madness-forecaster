@@ -414,22 +414,22 @@ class TestGlobalStatisticsLeakage:
             team_name="Test Team",
             seed=1,
             region="East",
-            # Provide non-NaN values for fields that default to float('nan')
-            # so the NaN check targets z-scoring artifacts, not missing data.
-            external_rating_composite=75.0,
-            external_rating_spread=5.0,
-            massey_pom=85.0,
-            massey_sag=80.0,
-            massey_mor=82.0,
-            massey_dol=78.0,
-            massey_col=81.0,
-            massey_wol=79.0,
-            massey_rth=83.0,
-            massey_ap=5.0,
-            massey_usa=6.0,
-            massey_rpi=12.0,
-            massey_rank_mean=81.0,
-            massey_rank_std=2.5,
+            # Provide non-NaN values for external/massey fields so the NaN check
+            # tests z-scoring behavior, not missing-data handling.
+            external_rating_composite=0.5,
+            external_rating_spread=0.1,
+            massey_pom=0.5,
+            massey_sag=0.5,
+            massey_mor=0.5,
+            massey_dol=0.5,
+            massey_col=0.5,
+            massey_wol=0.5,
+            massey_rth=0.5,
+            massey_ap=0.5,
+            massey_usa=0.5,
+            massey_rpi=0.5,
+            massey_rank_mean=0.5,
+            massey_rank_std=0.1,
         )
         vec = features.to_vector()
         # Vector should contain raw feature values, not z-scored values
