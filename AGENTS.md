@@ -1,107 +1,170 @@
-# AGENTS.md — March Madness Forecaster
+# AGENTS.md — Subagent Guide for March Madness Forecaster
 
-## Project Overview
+This file provides role-specific guidance for Claude subagents working on this codebase. Read this before taking any action.
 
-NCAA March Madness tournament prediction system with a locked production path for calibrated probabilities and bracket simulation. Built on LightGBM/XGBoost/Logistic Regression ensemble with 79-dimensional team feature vectors, temperature-scaling calibration, and Monte Carlo bracket simulation (50k runs).
+## Repo at a Glance
 
-## Quick Reference
+- **What:** NCAA March Madness prediction system (LightGBM/XGBoost/LR ensemble, 86-dim features, temperature calibration, 50k Monte Carlo sims)
+- **Language:** Python 3.9+
+- **Linter:** `ruff check src/ tests/` (line length 120, rules E/F/W)
+- **Tests:** `pytest tests/ -x --tb=short` (67+ test files, auto-markers via `conftest.py`)
+- **Entry points:** `src/main.py` (CLI), `src/run_production_2026.py` (production-locked)
+- **Config:** `configs/production_2026.json` (locked fields — never modify)
+
+## Critical Constraints (All Agents)
+
+1. **Never modify** locked fields in `configs/production_2026.json`
+2. **Never modify** `src/run_production_2026.py` without explicit permission
+3. **Never downgrade** `LeakageError` or `PITViolationError` to warnings
+4. **Never delete** `OOS-FIX` or `S5 FIX` comments — they document hard-won corrections
+5. **Never use random k-fold** on time-series data — use LOYO cross-validation
+6. **Preserve** the custom exception hierarchy in `src/exceptions.py`
+7. **Run tests** after any code change: `pytest tests/ -m "unit" -x --tb=short`
+
+## Role: Code Search / Exploration Agent
+
+**When looking for code:**
+
+| To find... | Look in... |
+|------------|-----------|
+| CLI commands | `src/main.py` (Click-based, ~148k lines — search for `@cli.command`) |
+| Pipeline logic | `src/pipeline/sota.py` (~2600 lines) and `src/pipeline/stages/` |
+| Feature engineering | `src/data/features/feature_engineering.py`, `proprietary_metrics.py` |
+| ML models | `src/ml/ensemble/` (CFA ensemble), `src/ml/calibration/` |
+| Data scrapers | `src/data/scrapers/` (Torvik, ESPN, rosters, sports reference) |
+| Simulation | `src/simulation/monte_carlo.py` |
+| Exceptions | `src/exceptions.py` |
+| Test fixtures | `tests/conftest.py`, `tests/fixtures/` |
+| Production config | `configs/production_2026.json` |
+| Team name aliases | `configs/team_aliases.json` |
+
+**Important constants:**
+- `TEAM_FEATURE_DIM = 86` — fixed feature vector size
+- `TOURNAMENT_START_DATES` — per-year dates for PIT enforcement
+- `SELECTION_SUNDAY_DATES` — per-year Selection Sunday dates
+- `KAGGLE_ROUND_WEIGHTS` — round-wise scoring weights
+
+## Role: Code Editing / Feature Development Agent
+
+**Before editing:**
+1. Read the file and surrounding `OOS-FIX` / `S5 FIX` comments
+2. Run `pytest tests/ -m "unit" -x --tb=short` to establish baseline
+3. Identify blast radius — what pipeline stages and consumers are affected?
+
+**After editing:**
+1. Run `ruff check src/ tests/` to verify lint
+2. Run `pytest tests/ -m "unit" -x --tb=short` for regression check
+3. If touching features or ML code: `pytest tests/ -m "leakage" -x`
+4. If touching calibration: `pytest tests/ -m "calibration" -x`
+5. If touching production path: `python src/run_production_2026.py --dry-run`
+
+**Adding features:**
+1. Implement in `src/data/features/` — must be point-in-time safe
+2. Update `TEAM_FEATURE_DIM` if vector size changes
+3. Register in `FIXED_FEATURE_SET` or `SIMPLE_FEATURE_SET`
+4. Add leakage test in `tests/data_integrity/`
+
+**Adding scrapers:**
+1. Create in `src/data/scrapers/`
+2. Integrate in `src/data/ingestion/`
+3. Add rate limiting and error handling
+4. Test with mocked HTTP — never hit live endpoints in tests
+
+## Role: Test Runner / Validation Agent
 
 ```bash
-# Install
-pip install -e .
+# Fast unit tests (run after every change)
+pytest tests/ -m "unit" -x --tb=short
 
-# Run tests
-pytest tests/ -x --tb=short
-pytest tests/ -m "unit"                    # Unit tests only
-pytest tests/ --cov=src --cov-report=term  # With coverage
+# Full suite with coverage
+pytest tests/ --cov=src --cov-report=term -x --tb=short
+
+# Specific markers
+pytest tests/ -m "leakage"       # Data leakage tests
+pytest tests/ -m "calibration"   # Calibration tests
+pytest tests/ -m "production"    # Production path tests
+pytest tests/ -m "freeze"        # Reproducibility tests
 
 # Lint
 ruff check src/ tests/
 
-# Run production pipeline (2026)
-python src/run_production_2026.py
-python src/run_production_2026.py --dry-run  # Validation only
-
-# Run SOTA pipeline (research/development)
-march-madness sota --year 2026 --scrape-live --simulations 50000
-
-# Data ingestion
-march-madness ingest-historical --start-season 2005 --end-season 2025
-march-madness ingest --year 2026
+# Production dry-run
+python src/run_production_2026.py --dry-run
 ```
 
-## Architecture
+**Coverage minimum:** 20%. Markers are auto-assigned by `tests/conftest.py` based on file path.
+
+## Role: CI / DevOps Agent
+
+**Workflows** in `.github/workflows/`:
+- `ci.yml` — Lint + test on push/PR
+- `run-production-pipeline.yml` — Production pipeline
+- `run-pipeline.yml` — SOTA pipeline
+- `data-ingestion.yml` — Data ingestion
+- `nightly-validation.yml` — Nightly checks
+- `deploy-pages.yml` — GitHub Pages dashboard
+- `generate-web-data.yml` — Web data generation
+- `repair-dates.yml` — Date repair
+
+**Shared action:** `.github/actions/setup-python-env/action.yml` (Python 3.10, pip caching)
+
+## Role: Review / Audit Agent
+
+**What to check in PRs:**
+1. No changes to locked production config fields
+2. No leakage — temporal features use `cutoff_date` parameters
+3. No downgraded exception types (LeakageError must stay RuntimeError subclass)
+4. `OOS-FIX` comments preserved or updated (not deleted)
+5. Magic numbers have documented rationale
+6. Sample size guards maintained (e.g., `valid_samples >= 80`)
+7. Tests pass: unit, leakage, calibration markers as appropriate
+
+**Data integrity signals:**
+- Feature tiers: Tier 1 (Static), Tier 2 (Cumulative w/ cutoff), Tier 3 (External/Selection Sunday)
+- Training: 2016-2024 (no 2020). Holdout: 2025. Target: 2026
+- Calibration: tournament games only, temperature scaling
+
+## Module Map
 
 ```
 src/
-├── main.py                    # CLI entry point (Click-based)
-├── run_production_2026.py     # Frozen 2026 production entrypoint
-├── pipeline/sota.py           # Main SOTA pipeline (~2600 lines)
-├── pipeline/stages/           # Pipeline stages (data, training, calibration, simulation)
-├── data/
-│   ├── features/              # 79-dim feature engineering (point-in-time safe)
-│   ├── ingestion/             # DAG-based data collection
-│   ├── scrapers/              # Torvik, ESPN, rosters, sports reference
-│   └── models/                # Player, Roster, GameFlow data models
-├── ml/
-│   ├── ensemble/              # LightGBM + XGBoost + LogisticRegression
-│   ├── calibration/           # Temperature scaling, isotonic, Platt
-│   └── evaluation/            # RDoF audit, experimentation registry
-├── simulation/                # Monte Carlo bracket simulation
+├── main.py                    # CLI (~148k lines, Click commands)
+├── run_production_2026.py     # Governance-locked production entry
+├── exceptions.py              # LeakageError, GovernanceApprovalRequired, etc.
+├── pipeline/sota.py           # Core pipeline (~2600 lines)
+├── pipeline/stages/           # baseline_training, calibration, data_loader,
+│                              #   simulation, pit_validation, orchestration,
+│                              #   ev_analysis, ev_mode, game_utils, inference
+├── data/features/             # feature_engineering, proprietary_metrics,
+│                              #   feature_selection, materialization,
+│                              #   tournament_features, travel_distance,
+│                              #   public_advanced_metrics, massey_systems
+├── data/ingestion/            # DAG-based data collection
+├── data/scrapers/             # Torvik, ESPN, rosters, sports reference
+├── ml/ensemble/               # CFA: LightGBM + XGBoost + LogisticRegression
+├── ml/calibration/            # Temperature, isotonic, Platt scaling
+├── ml/evaluation/             # RDoF audit, experimentation registry
+├── ml/optimization/           # Optuna hyperparameter search
+├── ml/gnn/                    # Graph neural network (DISABLED in prod)
+├── ml/transformer/            # Transformer model (DISABLED in prod)
+├── simulation/                # Monte Carlo bracket sim (50k runs)
+├── optimization/              # Bracket strategy optimization
 ├── governance/                # Production validators, audit trails
-└── exports/                   # Kaggle submission generation
+├── exports/                   # Kaggle submission generation
+├── reproducibility/           # Freeze/verify framework
+└── agents/                    # Multi-agent coordination (DISABLED in prod)
 ```
 
-## Code Conventions
+## Exception Hierarchy
 
-- **Linter:** ruff (E, F, W rules). Line length: 120. Target: Python 3.9
-- **Naming:** snake_case for functions/modules, UPPER_CASE for constants
-- **Imports:** Conditional imports OK; re-exports use `# noqa: F401`
-- **Type hints:** Minimal (not strictly enforced)
-- **Custom exceptions:** `LeakageError`, `DataFreshnessError`, `PreRunValidationError`, `GovernanceApprovalRequired`
+All exceptions are in `src/exceptions.py` and inherit from `RuntimeError`:
 
-## Testing
-
-- **Framework:** pytest with auto-marker assignment via `tests/conftest.py`
-- **Markers:** `unit`, `integration`, `data_contract`, `leakage`, `freeze`, `production`, `calibration`, `live_protocol`
-- **Coverage minimum:** 20%
-- **Test naming:** `test_*.py` files in `tests/` directory
-- **Run specific markers:** `pytest tests/ -m "unit"` or `pytest tests/ -m "leakage"`
-
-## Production Path Rules
-
-**CRITICAL — do not violate these constraints:**
-
-1. Production runs MUST use `python src/run_production_2026.py` or `march-madness run-production-2026`
-2. Generic commands (`sota`, `sota-from-manifest`) are blocked from acting as production
-3. Production config is locked in `configs/production_2026.json` — do not modify locked fields:
-   - `model_complexity: "standard"`, `probability_profile: "production"`, `mode: "calibration"`
-   - `calibration_method: "temperature"`, `use_agent_orchestration: false`
-   - `enable_gnn: false`, `enable_transformer: false`
-4. Disabled modules: `enable_gnn`, `enable_transformer`, `enable_seed_overrides`, `enable_brier_sharpening`, `enable_embedding_projections`
-   - Enabled modules: `enable_stacking`, `enable_feature_selection`, `enable_goto_conversion`, `enable_round_weighted_calibration`, `enable_bayesian_bt`
-5. Training years: 2016–2024 (no 2020, no 2025). Holdout: 2025. Target: 2026
-
-## Data Integrity
-
-- **Leakage detection** is enforced — `LeakageError` raised on violations
-- **Point-in-time features** use tournament cutoff dates per season
-- **Temporal cross-validation** via Leave-One-Year-Out (LOYO)
-- Feature dimension is fixed: `TEAM_FEATURE_DIM = 86`
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `src/main.py` | CLI entry point (all commands) |
-| `src/pipeline/sota.py` | Core prediction pipeline |
-| `src/run_production_2026.py` | Frozen production entrypoint |
-| `configs/production_2026.json` | Blessed production config (do not change locked fields) |
-| `tests/conftest.py` | Test fixtures and auto-marker logic |
-| `pyproject.toml` | Ruff + pytest configuration |
-
-## Environment
-
-- Kaggle API credentials: set `KAGGLE_USERNAME` and `KAGGLE_KEY` (see `.env.example`)
-- Python dependencies: `requirements.txt` (38 packages)
-- Production lock: `requirements-production-lock.txt`
+| Exception | When raised |
+|-----------|------------|
+| `LeakageError` | Temporal or data leakage detected (hard stop) |
+| `DataFreshnessError` | Required data sources are stale or missing |
+| `PreRunValidationError` | Pre-run validation checks fail |
+| `ComputeBudgetExceeded` | Pipeline exceeds compute budget (strict mode) |
+| `DataRequirementError` | Required data artifact missing/invalid |
+| `IntegrityError` | Model calibration or math integrity failure |
+| `GovernanceApprovalRequired` | Action requires human approval (`request_id` attr) |
