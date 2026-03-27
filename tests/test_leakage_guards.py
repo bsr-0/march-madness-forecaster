@@ -135,3 +135,66 @@ class TestLOYOLeaveOneOutBlocked:
         from src.pipeline.config import SOTAPipelineConfig
         with pytest.raises(ValueError, match="no longer supported"):
             SOTAPipelineConfig(loyo_temporal_mode="leave_one_out")
+
+
+# ---------------------------------------------------------------------------
+# Risk 4: Roster post-tournament timestamp check
+# ---------------------------------------------------------------------------
+
+
+class TestRosterPostTournamentGuard:
+    """load_roster_overlay warns when roster was scraped after tournament start."""
+
+    def test_warns_post_tournament(self, tmp_path, caplog):
+        import json
+        roster = {
+            "year": 2026,
+            "teams": [{"team_id": "duke", "players": [
+                {"player_id": "p1", "name": "Player One", "warp": 2.5, "rapm": 1.0},
+            ]}],
+            "timestamp": "2026-03-20T12:00:00+00:00",
+        }
+        path = tmp_path / "cbbpy_rosters_2026.json"
+        with open(path, "w") as f:
+            json.dump(roster, f)
+
+        from src.pipeline.stages.data_loader import load_roster_overlay
+        with caplog.at_level(logging.WARNING):
+            load_roster_overlay(str(path), year=2026)
+        assert "tournament" in caplog.text.lower()
+
+    def test_no_warn_pre_tournament(self, tmp_path, caplog):
+        import json
+        roster = {
+            "year": 2026,
+            "teams": [{"team_id": "duke", "players": [
+                {"player_id": "p1", "name": "Player One", "warp": 2.5, "rapm": 1.0},
+            ]}],
+            "timestamp": "2026-02-15T12:00:00+00:00",
+        }
+        path = tmp_path / "cbbpy_rosters_2026.json"
+        with open(path, "w") as f:
+            json.dump(roster, f)
+
+        from src.pipeline.stages.data_loader import load_roster_overlay
+        with caplog.at_level(logging.WARNING):
+            load_roster_overlay(str(path), year=2026)
+        assert "tournament" not in caplog.text.lower()
+
+    def test_backward_compatible_no_year(self, tmp_path):
+        import json
+        roster = {
+            "year": 2026,
+            "teams": [{"team_id": "duke", "players": [
+                {"player_id": "p1", "name": "Player One", "warp": 2.5, "rapm": 1.0},
+            ]}],
+            "timestamp": "2026-03-20T12:00:00+00:00",
+        }
+        path = tmp_path / "cbbpy_rosters_2026.json"
+        with open(path, "w") as f:
+            json.dump(roster, f)
+
+        from src.pipeline.stages.data_loader import load_roster_overlay
+        # Should not raise even with post-tournament timestamp when year is not passed
+        result = load_roster_overlay(str(path))
+        assert isinstance(result, dict)

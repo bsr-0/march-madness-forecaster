@@ -1,5 +1,6 @@
 {
   "year": 2026,
   "games": [],
-  "note": "Extracted from historical games - round/region/seed data missing"
+  "note": "Tournament in progress - requires re-scrape via tournament_results scraper",
+  "complete": false
 }

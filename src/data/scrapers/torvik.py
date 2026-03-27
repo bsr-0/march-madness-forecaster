@@ -425,6 +425,37 @@ class BartTorvikScraper:
                 raise LeakageError(msg)
             logger.warning(msg)
 
+    def _validate_cache_timestamp(self, data: dict, year: int, strict: bool = False) -> None:
+        """Warn or raise if cached data was scraped after tournament start.
+
+        Closes the gap where ``_check_tournament_date_guard`` only fires on
+        live scrapes — this method validates **cached** data timestamps.
+        """
+        ts_str = data.get("scraped_at") or data.get("timestamp")
+        if not ts_str:
+            return
+        try:
+            from ...pipeline.config import TOURNAMENT_START_DATES
+        except ImportError:
+            return  # Scraper used standalone, can't guard
+        cutoff = TOURNAMENT_START_DATES.get(year)
+        if cutoff is None:
+            return
+        try:
+            ts_date = date.fromisoformat(ts_str[:10])
+        except (ValueError, TypeError):
+            return
+        if ts_date >= cutoff:
+            msg = (
+                f"Cached Torvik data for {year} has scraped_at={ts_str}, "
+                f"which is on/after tournament start {cutoff}. "
+                f"Post-tournament data includes tournament game results — DATA LEAKAGE RISK."
+            )
+            if strict or self._strict_leakage:
+                from ...exceptions import LeakageError
+                raise LeakageError(msg)
+            logger.warning(msg)
+
     def fetch_current_rankings(self, year: int = 2026, strict: bool = False) -> List[TorVikTeam]:
         """
         Fetch current T-Rank ratings for all teams.
@@ -448,6 +479,7 @@ class BartTorvikScraper:
         # Check cache (with TTL + content validation)
         cached = self._load_from_cache(f"torvik_rankings_{year}.json")
         if cached and self._cache_has_valid_rankings(cached):
+            self._validate_cache_timestamp(cached, year, strict=strict)
             return [self._dict_to_team(t) for t in cached.get('teams', [])]
 
         teams: List[TorVikTeam] = []
@@ -486,7 +518,8 @@ class BartTorvikScraper:
             TorVikValidator.validate_teams(teams, strict=strict)
             self._save_to_cache(f"torvik_rankings_{year}.json", {
                 'teams': [t.to_dict() for t in teams],
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'scraped_at': datetime.now().isoformat(),
             })
 
         return teams
@@ -997,6 +1030,7 @@ class BartTorvikScraper:
 
         cached = self._load_from_cache(f"torvik_four_factors_{year}.json")
         if cached and self._cache_has_valid_four_factors(cached):
+            self._validate_cache_timestamp(cached, year)
             return cached
 
         four_factors: Dict[str, Dict] = {}
@@ -1063,6 +1097,7 @@ class BartTorvikScraper:
 
         cached = self._load_from_cache(f"torvik_shooting_{year}.json")
         if cached:
+            self._validate_cache_timestamp(cached, year)
             return cached
 
         shooting: Dict[str, Dict] = {}
@@ -1556,7 +1591,17 @@ class BartTorvikScraper:
                         return None
                 except (TypeError, ValueError):
                     pass
-            return wrapper.get("_cache_data")
+            cache_data = wrapper.get("_cache_data")
+            # Back-fill scraped_at from wrapper timestamp for caches
+            # written before this field was injected on write.
+            if isinstance(cache_data, dict) and "scraped_at" not in cache_data:
+                cached_ts = wrapper.get("_cache_timestamp")
+                if cached_ts:
+                    try:
+                        cache_data["scraped_at"] = datetime.fromtimestamp(float(cached_ts)).isoformat()
+                    except (TypeError, ValueError, OSError):
+                        pass
+            return cache_data
 
         # Legacy cache without wrapper — accept but log
         logger.debug("Cache %s has no schema version (legacy format), accepting", filename)
@@ -1566,6 +1611,11 @@ class BartTorvikScraper:
         """Save data to cache with schema version and timestamp."""
         if not self.cache_dir:
             return
+
+        # Inject scraped_at for downstream leakage checks (data_loader
+        # validates this field against TOURNAMENT_START_DATES).
+        if isinstance(data, dict) and "scraped_at" not in data:
+            data["scraped_at"] = datetime.now().isoformat()
 
         wrapper = {
             "_cache_schema_version": CACHE_SCHEMA_VERSION,

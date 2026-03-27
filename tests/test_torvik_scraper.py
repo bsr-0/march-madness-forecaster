@@ -512,3 +512,69 @@ class TestNoHtmlMethods:
         assert not hasattr(scraper, "_parse_four_factors_page")
         assert not hasattr(scraper, "_parse_shooting_page")
         assert not hasattr(scraper, "_extract_team_id")
+
+
+# ---------------------------------------------------------------------------
+# scraped_at metadata injection
+# ---------------------------------------------------------------------------
+
+
+class TestScrapedAtMetadata:
+    """Torvik cache injects and validates scraped_at timestamps."""
+
+    def test_save_to_cache_injects_scraped_at(self, tmp_path):
+        scraper = BartTorvikScraper(cache_dir=str(tmp_path))
+        data = {"teams": [{"team_id": "duke"}]}
+        scraper._save_to_cache("test.json", data)
+        # scraped_at should be injected into the data dict
+        assert "scraped_at" in data
+
+        # Verify it's also in the file
+        with open(tmp_path / "test.json") as f:
+            wrapper = json.load(f)
+        assert "scraped_at" in wrapper["_cache_data"]
+
+    def test_save_to_cache_does_not_overwrite_existing_scraped_at(self, tmp_path):
+        scraper = BartTorvikScraper(cache_dir=str(tmp_path))
+        data = {"teams": [], "scraped_at": "2026-01-01T00:00:00"}
+        scraper._save_to_cache("test.json", data)
+        assert data["scraped_at"] == "2026-01-01T00:00:00"
+
+    def test_load_from_cache_backfills_scraped_at(self, tmp_path):
+        scraper = BartTorvikScraper(cache_dir=str(tmp_path))
+        # Write a cache file without scraped_at in the data dict
+        import time as _time
+        wrapper = {
+            "_cache_schema_version": 3,
+            "_cache_timestamp": _time.time(),
+            "_cache_data": {"teams": [{"team_id": "duke"}]},
+        }
+        with open(tmp_path / "test.json", "w") as f:
+            json.dump(wrapper, f)
+        result = scraper._load_from_cache("test.json")
+        assert result is not None
+        assert "scraped_at" in result
+
+    def test_validate_cache_timestamp_raises_on_post_tournament(self):
+        scraper = BartTorvikScraper.__new__(BartTorvikScraper)
+        scraper._strict_leakage = True
+        data = {"scraped_at": "2026-03-20T12:00:00"}
+        from src.exceptions import LeakageError
+        with pytest.raises(LeakageError, match="DATA LEAKAGE RISK"):
+            scraper._validate_cache_timestamp(data, year=2026, strict=True)
+
+    def test_validate_cache_timestamp_warns_non_strict(self, caplog):
+        import logging
+        scraper = BartTorvikScraper.__new__(BartTorvikScraper)
+        scraper._strict_leakage = False
+        data = {"scraped_at": "2026-03-20T12:00:00"}
+        with caplog.at_level(logging.WARNING):
+            scraper._validate_cache_timestamp(data, year=2026, strict=False)
+        assert "DATA LEAKAGE RISK" in caplog.text
+
+    def test_validate_cache_timestamp_no_error_pre_tournament(self):
+        scraper = BartTorvikScraper.__new__(BartTorvikScraper)
+        scraper._strict_leakage = True
+        data = {"scraped_at": "2026-03-10T12:00:00"}
+        # Should not raise — date is before tournament start (2026-03-17)
+        scraper._validate_cache_timestamp(data, year=2026, strict=True)

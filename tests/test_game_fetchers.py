@@ -989,3 +989,57 @@ class TestHistoricalGameFetcherQualityGate:
             fetcher.fetch_season(2024, strict=False)
 
         assert any("provider contributions" in m for m in caplog.messages)
+
+
+# ---------------------------------------------------------------------------
+# is_tournament flag on IngestionGameRecord
+# ---------------------------------------------------------------------------
+
+
+class TestIsTournamentFlag:
+    """IngestionGameRecord carries is_tournament through conversions."""
+
+    def test_default_false(self):
+        from src.data.ingestion.schemas import IngestionGameRecord
+        rec = IngestionGameRecord(
+            game_id="g1", date="2026-01-15", season=2026,
+            home_team_id="duke", home_team_name="Duke",
+            away_team_id="unc", away_team_name="UNC",
+            home_score=75, away_score=70,
+        )
+        assert rec.is_tournament is False
+
+    def test_to_game_row_includes_flag(self):
+        from src.data.ingestion.schemas import IngestionGameRecord
+        rec = IngestionGameRecord(
+            game_id="g1", date="2026-03-20", season=2026,
+            home_team_id="duke", home_team_name="Duke",
+            away_team_id="unc", away_team_name="UNC",
+            home_score=75, away_score=70,
+            is_tournament=True,
+        )
+        row = rec.to_game_row()
+        assert row["is_tournament"] is True
+
+    def test_to_team_game_rows_includes_flag(self):
+        from src.data.ingestion.schemas import IngestionGameRecord
+        rec = IngestionGameRecord(
+            game_id="g1", date="2026-03-20", season=2026,
+            home_team_id="duke", home_team_name="Duke",
+            away_team_id="unc", away_team_name="UNC",
+            home_score=75, away_score=70,
+            is_tournament=True,
+        )
+        rows = rec.to_team_game_rows()
+        assert all(r["is_tournament"] is True for r in rows)
+
+    def test_to_team_game_rows_default_false(self):
+        from src.data.ingestion.schemas import IngestionGameRecord
+        rec = IngestionGameRecord(
+            game_id="g1", date="2026-01-15", season=2026,
+            home_team_id="duke", home_team_name="Duke",
+            away_team_id="unc", away_team_name="UNC",
+            home_score=75, away_score=70,
+        )
+        rows = rec.to_team_game_rows()
+        assert all(r["is_tournament"] is False for r in rows)

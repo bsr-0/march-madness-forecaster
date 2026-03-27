@@ -228,7 +228,7 @@ class HistoricalDataPipeline:
             "games": games,
             "team_games": team_games,
             "failed_game_ids": [],
-            "complete": True,
+            "complete": True,  # Set False downstream if failed_game_ids is populated
         }
         return payload, dominant_provider
 
