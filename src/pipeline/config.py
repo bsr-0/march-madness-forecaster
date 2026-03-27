@@ -550,6 +550,10 @@ class SOTAPipelineConfig:
     # How much the upset amplifier signals can shift probabilities.
     # 0.0 = no adjustment from amplifiers; 0.15 = moderate correction.
     upset_adjustment_strength: float = 0.15
+    # Whether to decay historical priors in later tournament rounds.
+    # R64 committee seeding creates structural biases; by S16+ matchups are
+    # self-selected and seed-based priors become less informative.
+    upset_round_prior_decay: bool = True
 
     # --- Leakage safety ---
     # When True, leakage check failures raise LeakageError and halt the pipeline

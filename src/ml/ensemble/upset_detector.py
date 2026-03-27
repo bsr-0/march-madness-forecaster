@@ -70,6 +70,20 @@ HISTORICAL_UPSET_RATES_EXTENDED: Dict[Tuple[int, int], float] = {
     (1, 2): 0.465,   (1, 3): 0.390,
 }
 
+# Round-aware prior decay factors.
+# R64 has strong structural priors (committee seeding bias); later-round
+# matchups are self-selected (teams that advanced), so seed-based priors
+# become less informative. The decay schedule is conservative: even in
+# later rounds, a weak prior anchor is better than none.
+ROUND_PRIOR_DECAY: Dict[int, float] = {
+    1: 1.00,   # R64:  full prior — committee seeding patterns dominate
+    2: 0.70,   # R32:  still intra-region, some structural signal persists
+    3: 0.40,   # S16:  teams have proven themselves, prior less relevant
+    4: 0.20,   # E8:   minimal structural prior
+    5: 0.10,   # F4:   cross-region, almost pure model
+    6: 0.10,   # Championship: same as F4
+}
+
 # Number of historical observations per matchup (approximate, for
 # computing prior strength in Bayesian updates)
 MATCHUP_SAMPLE_SIZES: Dict[Tuple[int, int], int] = {
@@ -234,6 +248,7 @@ class UpsetDetector:
         model_prob_team1: float,
         team1_features: Optional[object] = None,
         team2_features: Optional[object] = None,
+        round_num: Optional[int] = None,
     ) -> UpsetSignal:
         """Detect upset potential for a single matchup.
 
@@ -245,6 +260,9 @@ class UpsetDetector:
             model_prob_team1: Ensemble model's P(team1 wins)
             team1_features: Optional TeamFeatures for team 1
             team2_features: Optional TeamFeatures for team 2
+            round_num: Optional tournament round (1=R64, 2=R32, ..., 6=Championship).
+                When provided, the historical prior weight decays in later rounds
+                where matchups are self-selected rather than committee-seeded.
 
         Returns:
             UpsetSignal with upset assessment and adjusted probability.
@@ -296,16 +314,31 @@ class UpsetDetector:
         alpha = self.prior_strength * math.log1p(n_obs) / math.log1p(156)
         alpha = min(alpha, 0.40)  # Cap prior influence
 
+        # Round-aware decay: later rounds have less structural prior signal.
+        # R64 committee seeding creates persistent biases (e.g., dangerous
+        # mid-majors placed at 12). By S16+, matchups are self-selected
+        # and seed-based priors become less informative.
+        round_decay = 1.0
+        if round_num is not None:
+            round_decay = ROUND_PRIOR_DECAY.get(round_num, 0.10)
+            alpha *= round_decay
+
         # Posterior upset probability: weighted blend
         posterior_upset = (
             (1.0 - alpha) * model_upset_prob
             + alpha * hist_rate
         )
 
-        # Step 5: Amplifier adjustment — shift toward upset when signals are strong
+        # Step 5: Amplifier adjustment — shift toward upset when signals are strong.
         # The amplifier nudges the posterior when team-specific signals suggest
-        # the underdog is better than its seed implies
-        amplifier_shift = self.adjustment_strength * (amplifier - 0.5) * 2.0
+        # the underdog is better than its seed implies.
+        # Asymmetric: only nudge TOWARD upset (amplifier > 0.5), never away.
+        # When signals don't support an upset, defer to the Bayesian posterior —
+        # the ensemble already captures team quality; this layer's job is to
+        # catch upsets the model underestimates, not to reinforce favorites.
+        amplifier_shift = self.adjustment_strength * max(0.0, amplifier - 0.5) * 2.0
+        # Apply same round decay to amplifier — structural signals weaken in later rounds
+        amplifier_shift *= round_decay
         # Scale shift by seed gap (bigger gaps = smaller absolute shifts)
         gap_damping = min(1.0, 4.0 / max(seed_gap, 1))
         adjusted_upset = posterior_upset + amplifier_shift * gap_damping
@@ -356,13 +389,18 @@ class UpsetDetector:
         self,
         matchups: List[Dict],
         team_features: Optional[Dict[str, object]] = None,
+        round_num: Optional[int] = None,
     ) -> List[UpsetSignal]:
         """Detect upsets for all tournament matchups.
 
         Args:
             matchups: List of dicts with keys:
                 team1_id, team2_id, seed1, seed2, model_prob_team1
+                Optionally include "round_num" per matchup to override
+                the batch-level round_num.
             team_features: Optional dict of team_id -> TeamFeatures
+            round_num: Optional tournament round applied to all matchups.
+                Per-matchup "round_num" key takes precedence if present.
 
         Returns:
             List of UpsetSignal sorted by upset_score descending.
@@ -370,6 +408,7 @@ class UpsetDetector:
         features = team_features or {}
         signals = []
         for m in matchups:
+            m_round = m.get("round_num", round_num)
             signal = self.detect(
                 team1_id=m["team1_id"],
                 team2_id=m["team2_id"],
@@ -378,6 +417,7 @@ class UpsetDetector:
                 model_prob_team1=m["model_prob_team1"],
                 team1_features=features.get(m["team1_id"]),
                 team2_features=features.get(m["team2_id"]),
+                round_num=m_round,
             )
             signals.append(signal)
 
@@ -391,17 +431,24 @@ class UpsetDetector:
         outcomes: np.ndarray,
         seeds1: np.ndarray,
         seeds2: np.ndarray,
+        team1_features: Optional[List] = None,
+        team2_features: Optional[List] = None,
     ) -> Dict:
         """Calibrate detector parameters on historical tournament data.
 
-        Optimizes prior_strength and adjustment_strength to minimize
-        Brier score on the upset subset (games where higher seed won).
+        Optimizes prior_strength (and adjustment_strength when features are
+        provided) to minimize Brier score. When team features are supplied,
+        a joint grid search over both parameters uses the full detect() path
+        including amplifier signals. Without features, falls back to the
+        prior-only search for backward compatibility.
 
         Args:
             model_probs: Model P(team1 wins) [N]
             outcomes: Actual outcomes (1 = team1 won) [N]
             seeds1: Team 1 seeds [N]
             seeds2: Team 2 seeds [N]
+            team1_features: Optional list of feature objects for team 1 [N]
+            team2_features: Optional list of feature objects for team 2 [N]
 
         Returns:
             Dict with fitting statistics.
@@ -425,41 +472,80 @@ class UpsetDetector:
             for s1, s2, o in zip(seeds1, seeds2, outcomes)
         ])
         n_upsets = int(np.sum(is_upset))
+        baseline_brier = float(np.mean((model_probs - outcomes) ** 2))
 
-        # Grid search over prior_strength
+        has_features = (
+            team1_features is not None
+            and team2_features is not None
+            and len(team1_features) == n
+            and len(team2_features) == n
+        )
+
         best_brier = float("inf")
         best_ps = self.prior_strength
+        best_adj = self.adjustment_strength
 
-        for ps in np.linspace(0.05, 0.40, 15):
-            self.prior_strength = ps
-            adjusted = np.array([
-                self._quick_adjust(model_probs[i], seeds1[i], seeds2[i])
-                for i in range(n)
-            ])
-            brier = float(np.mean((adjusted - outcomes) ** 2))
-            if brier < best_brier:
-                best_brier = brier
-                best_ps = ps
+        if has_features:
+            # Joint grid search: prior_strength × adjustment_strength
+            # Coarser grid (8×5=40) to avoid overfitting on small tournament samples
+            ps_grid = np.linspace(0.05, 0.40, 8)
+            adj_grid = np.linspace(0.05, 0.25, 5)
+
+            for ps in ps_grid:
+                for adj_s in adj_grid:
+                    self.prior_strength = ps
+                    self.adjustment_strength = adj_s
+                    adjusted = np.array([
+                        self._quick_adjust_full(
+                            model_probs[i], seeds1[i], seeds2[i],
+                            team1_features[i], team2_features[i],
+                        )
+                        for i in range(n)
+                    ])
+                    brier = float(np.mean((adjusted - outcomes) ** 2))
+                    if brier < best_brier:
+                        best_brier = brier
+                        best_ps = ps
+                        best_adj = adj_s
+
+            fit_method = "joint_grid"
+        else:
+            # Prior-only grid search (backward compatible)
+            for ps in np.linspace(0.05, 0.40, 15):
+                self.prior_strength = ps
+                adjusted = np.array([
+                    self._quick_adjust(model_probs[i], seeds1[i], seeds2[i])
+                    for i in range(n)
+                ])
+                brier = float(np.mean((adjusted - outcomes) ** 2))
+                if brier < best_brier:
+                    best_brier = brier
+                    best_ps = ps
+
+            fit_method = "prior_only"
 
         self.prior_strength = best_ps
+        self.adjustment_strength = best_adj
         self.fitted = True
 
-        # Compute stats
-        baseline_brier = float(np.mean((model_probs - outcomes) ** 2))
         self._fit_stats = {
             "fitted": True,
             "n_samples": n,
             "n_upsets": n_upsets,
             "upset_rate": round(n_upsets / max(n, 1), 4),
             "prior_strength": round(best_ps, 4),
+            "adjustment_strength": round(best_adj, 4),
             "brier_before": round(baseline_brier, 5),
             "brier_after": round(best_brier, 5),
             "brier_delta": round(best_brier - baseline_brier, 5),
+            "method": fit_method,
         }
         logger.info(
-            "UpsetDetector fitted: prior_strength=%.3f, Brier %.5f -> %.5f "
+            "UpsetDetector fitted (%s): prior_strength=%.3f, "
+            "adjustment_strength=%.3f, Brier %.5f -> %.5f "
             "(%d upsets in %d games)",
-            best_ps, baseline_brier, best_brier, n_upsets, n,
+            fit_method, best_ps, best_adj,
+            baseline_brier, best_brier, n_upsets, n,
         )
         return self._fit_stats
 
@@ -647,6 +733,28 @@ class UpsetDetector:
             upset_score=0.0,
             confidence=0.3,
         )
+
+    def _quick_adjust_full(
+        self,
+        model_prob: float,
+        seed1: int,
+        seed2: int,
+        t1_features: Optional[object] = None,
+        t2_features: Optional[object] = None,
+    ) -> float:
+        """Full probability adjustment for joint fitting (with amplifier signals).
+
+        Uses the complete detect() path including amplifier signals when
+        features are provided, then returns the adjusted probability.
+        """
+        signal = self.detect(
+            team1_id="t1", team2_id="t2",
+            seed1=seed1, seed2=seed2,
+            model_prob_team1=model_prob,
+            team1_features=t1_features,
+            team2_features=t2_features,
+        )
+        return signal.adjusted_prob
 
     def _quick_adjust(
         self, model_prob: float, seed1: int, seed2: int,

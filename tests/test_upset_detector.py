@@ -9,6 +9,7 @@ import pytest
 
 from src.ml.ensemble.upset_detector import (
     HISTORICAL_UPSET_RATES,
+    ROUND_PRIOR_DECAY,
     UpsetDetector,
     UpsetRiskTier,
     UpsetSignal,
@@ -270,6 +271,59 @@ class TestUpsetDetectorFit:
         assert stats["fitted"]
         assert stats["method"] == "default"
 
+    def test_fit_joint_with_features(self):
+        """Joint fitting with features should optimize both prior_strength
+        and adjustment_strength."""
+        rng = np.random.default_rng(42)
+        n = 100
+        seeds1 = rng.integers(1, 9, size=n)
+        seeds2 = 17 - seeds1
+        model_probs = np.clip(
+            0.5 + 0.3 * (seeds2 - seeds1) / 15.0 + rng.normal(0, 0.1, n),
+            0.05, 0.95,
+        )
+        outcomes = (rng.random(n) < model_probs).astype(float)
+
+        # Generate mock features for each game
+        t1_feats = [
+            MockTeamFeatures(seed=int(s), adj_efficiency_margin=float(rng.normal(10, 5)))
+            for s in seeds1
+        ]
+        t2_feats = [
+            MockTeamFeatures(seed=int(s), adj_efficiency_margin=float(rng.normal(-5, 5)))
+            for s in seeds2
+        ]
+
+        detector = UpsetDetector()
+        stats = detector.fit(
+            model_probs, outcomes, seeds1, seeds2,
+            team1_features=t1_feats, team2_features=t2_feats,
+        )
+
+        assert stats["fitted"]
+        assert stats["method"] == "joint_grid"
+        assert "adjustment_strength" in stats
+        assert stats["brier_after"] <= stats["brier_before"] + 0.001
+
+    def test_fit_without_features_backward_compat(self):
+        """Without features, fit() should use prior-only search (same as before)."""
+        rng = np.random.default_rng(42)
+        n = 80
+        seeds1 = rng.integers(1, 9, size=n)
+        seeds2 = 17 - seeds1
+        model_probs = np.clip(
+            0.5 + 0.3 * (seeds2 - seeds1) / 15.0 + rng.normal(0, 0.1, n),
+            0.05, 0.95,
+        )
+        outcomes = (rng.random(n) < model_probs).astype(float)
+
+        detector = UpsetDetector()
+        stats = detector.fit(model_probs, outcomes, seeds1, seeds2)
+
+        assert stats["method"] == "prior_only"
+        # adjustment_strength should still be reported but unchanged from default
+        assert "adjustment_strength" in stats
+
 
 class TestUpsetSummary:
     def test_summary_structure(self):
@@ -321,6 +375,73 @@ class TestUpsetSignalSerialization:
         assert isinstance(d, dict)
 
 
+class TestAsymmetricAmplifier:
+    """Test that the amplifier shift is asymmetric (only nudges toward upset)."""
+
+    @pytest.fixture
+    def detector(self):
+        return UpsetDetector(prior_strength=0.20, adjustment_strength=0.15)
+
+    def test_weak_signals_dont_reduce_upset_prob(self, detector):
+        """When amplifier < 0.5, upset prob should equal the Bayesian posterior
+        (no amplifier-driven reduction toward the favorite)."""
+        # Underdog with WEAK features (poor efficiency, no momentum)
+        dog_feats = MockTeamFeatures(
+            seed=12, adj_efficiency_margin=-12.0, momentum=-3.0,
+            avg_experience=1.0, three_pt_variance=0.14,
+        )
+        # Favorite with STRONG features
+        fav_feats = MockTeamFeatures(
+            seed=5, adj_efficiency_margin=12.0, momentum=3.0,
+            avg_experience=3.0, three_pt_variance=0.06,
+        )
+
+        signal_with = detector.detect(
+            "fav", "dog", 5, 12, 0.65,
+            team1_features=fav_feats, team2_features=dog_feats,
+        )
+        signal_without = detector.detect(
+            "fav", "dog", 5, 12, 0.65,
+        )
+        # Weak-signal features should NOT decrease upset prob below no-features baseline.
+        # Without features, amplifier = 0.5, shift = 0.
+        # With weak features, amplifier < 0.5, but shift is still 0 (asymmetric).
+        assert signal_with.upset_prob >= signal_without.upset_prob - 0.005
+
+    def test_strong_signals_still_increase_upset_prob(self, detector):
+        """When amplifier > 0.5, behavior should increase upset probability."""
+        dog_feats = MockTeamFeatures(
+            seed=12, adj_efficiency_margin=8.0, momentum=5.0,
+            avg_experience=3.0, three_pt_variance=0.06,
+        )
+        fav_feats = MockTeamFeatures(
+            seed=5, adj_efficiency_margin=6.0, momentum=-2.0,
+            avg_experience=1.5, three_pt_variance=0.14,
+        )
+
+        signal_no_feats = detector.detect("fav", "dog", 5, 12, 0.65)
+        signal_with_feats = detector.detect(
+            "fav", "dog", 5, 12, 0.65,
+            team1_features=fav_feats, team2_features=dog_feats,
+        )
+        assert signal_with_feats.upset_prob > signal_no_feats.upset_prob
+
+    def test_neutral_features_no_amplifier_effect(self, detector):
+        """When amplifier ≈ 0.5, the asymmetric shift should be near zero.
+        With neutral default features, the amplifier may be slightly above 0.5
+        (efficiency residuals aren't exactly zero for default EM=0.0 vs seed
+        expectations), but the shift should still be small."""
+        neutral = MockTeamFeatures()
+        signal_feats = detector.detect(
+            "fav", "dog", 8, 9, 0.52,  # 8v9: same expected EM (2 vs 0)
+            team1_features=neutral, team2_features=neutral,
+        )
+        signal_none = detector.detect("fav", "dog", 8, 9, 0.52)
+        # The difference should be modest — the asymmetric shift only adds
+        # a small positive nudge when amplifier is slightly above 0.5
+        assert abs(signal_feats.upset_prob - signal_none.upset_prob) < 0.05
+
+
 class TestAmplifierSignals:
     """Test that amplifier signals respond correctly to feature differences."""
 
@@ -364,3 +485,82 @@ class TestAmplifierSignals:
         signal_vet = detector.detect("fav", "dog", 2, 15, 0.92,
                                      team1_features=fav, team2_features=veteran_dog)
         assert signal_vet.experience_signal > signal_young.experience_signal
+
+
+class TestRoundAwarePriorDecay:
+    """Test round-aware decay of historical priors."""
+
+    @pytest.fixture
+    def detector(self):
+        return UpsetDetector(prior_strength=0.20, adjustment_strength=0.15)
+
+    def test_round_decay_constants_valid(self):
+        """ROUND_PRIOR_DECAY should cover rounds 1-6 with monotonic decay."""
+        assert ROUND_PRIOR_DECAY[1] == 1.0
+        for r in range(2, 7):
+            assert 0.0 < ROUND_PRIOR_DECAY[r] <= ROUND_PRIOR_DECAY[r - 1]
+
+    def test_r64_full_prior(self, detector):
+        """round_num=1 (R64) should give same result as round_num=None."""
+        signal_none = detector.detect("fav", "dog", 5, 12, 0.65)
+        signal_r64 = detector.detect("fav", "dog", 5, 12, 0.65, round_num=1)
+        assert signal_r64.upset_prob == pytest.approx(signal_none.upset_prob, abs=0.001)
+
+    def test_later_rounds_weaker_adjustment(self, detector):
+        """Later rounds should have weaker prior adjustment than R64."""
+        signal_r64 = detector.detect("fav", "dog", 5, 12, 0.65, round_num=1)
+        signal_e8 = detector.detect("fav", "dog", 5, 12, 0.65, round_num=4)
+
+        # The model says P(upset) = 0.35, historical prior is 0.356.
+        # With strong prior (R64), the posterior is pulled toward 0.356.
+        # With weak prior (E8), the posterior stays closer to the model's 0.35.
+        # The difference between R64 and E8 upset probs should reflect this.
+        r64_prior_shift = abs(signal_r64.upset_prob - 0.35)
+        e8_prior_shift = abs(signal_e8.upset_prob - 0.35)
+        assert e8_prior_shift < r64_prior_shift
+
+    def test_none_backward_compat(self, detector):
+        """round_num=None should preserve current behavior exactly."""
+        signal = detector.detect("fav", "dog", 3, 14, 0.85, round_num=None)
+        assert 0.0 < signal.upset_prob < 1.0
+        assert signal.adjusted_prob == pytest.approx(1.0 - signal.upset_prob, abs=0.01)
+
+    def test_championship_minimal_prior(self, detector):
+        """round_num=6 (Championship) should have very weak prior influence."""
+        signal_r64 = detector.detect("fav", "dog", 1, 4, 0.75, round_num=1)
+        signal_champ = detector.detect("fav", "dog", 1, 4, 0.75, round_num=6)
+
+        # Championship (decay=0.10) should be much closer to model's raw value
+        # than R64 (decay=1.0)
+        model_upset = 0.25  # 1.0 - 0.75
+        champ_deviation = abs(signal_champ.upset_prob - model_upset)
+        r64_deviation = abs(signal_r64.upset_prob - model_upset)
+        assert champ_deviation < r64_deviation
+
+    def test_detect_all_with_round_num(self):
+        """detect_all should pass through round_num correctly."""
+        detector = UpsetDetector()
+        matchups = [
+            {"team1_id": "a", "team2_id": "b", "seed1": 5, "seed2": 12,
+             "model_prob_team1": 0.65},
+        ]
+        signals_r64 = detector.detect_all(matchups, round_num=1)
+        signals_e8 = detector.detect_all(matchups, round_num=4)
+        assert len(signals_r64) == 1
+        assert len(signals_e8) == 1
+        # R64 and E8 should produce different upset probs due to prior decay.
+        # The effect is subtle when model ≈ prior (0.35 vs 0.356), so verify
+        # the direction: R64 pulls more toward prior (0.356) than E8 does.
+        assert signals_r64[0].upset_prob > signals_e8[0].upset_prob
+
+    def test_detect_all_per_matchup_round(self):
+        """Per-matchup round_num should override batch-level round_num."""
+        detector = UpsetDetector()
+        matchups = [
+            {"team1_id": "a", "team2_id": "b", "seed1": 5, "seed2": 12,
+             "model_prob_team1": 0.65, "round_num": 4},
+        ]
+        # Batch says round 1, but matchup says round 4 — matchup should win
+        signals = detector.detect_all(matchups, round_num=1)
+        signal_e8_direct = detector.detect("a", "b", 5, 12, 0.65, round_num=4)
+        assert signals[0].upset_prob == pytest.approx(signal_e8_direct.upset_prob, abs=0.001)
