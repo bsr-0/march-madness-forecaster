@@ -9,6 +9,7 @@ import pytest
 
 from src.pipeline.stages.model_selection import (
     CANDIDATE_REGISTRY,
+    COMPLEXITY_CANDIDATES,
     MARGIN_BASED_CANDIDATES,
     CandidateResult,
     ModelClassSelector,
@@ -357,3 +358,79 @@ class TestCandidateResult:
         assert d["mean_Brier"] == 0.19
         assert d["selected"] is True
         assert d["n_folds"] == 3
+
+
+# ---------------------------------------------------------------------------
+# Model complexity modes
+# ---------------------------------------------------------------------------
+
+
+class TestModelComplexity:
+    """model_complexity must control which candidates are evaluated."""
+
+    def test_simple_excludes_tree_models(self):
+        """Simple mode must not evaluate gradient_boosting or xgboost."""
+        selector = ModelClassSelector(
+            baseline_ev=0.0,
+            baseline_brier=0.30,
+            model_complexity="simple",
+            strict=False,
+        )
+        assert "gradient_boosting" not in selector.candidate_names
+        assert "xgboost" not in selector.candidate_names
+        assert "margin_regressor" not in selector.candidate_names
+        # Simple mode should include logistic and spread
+        assert "regularized_logistic" in selector.candidate_names
+        assert "spread_regressor" in selector.candidate_names
+
+    def test_standard_includes_all_models(self):
+        """Standard mode must include tree models and margin-based models."""
+        selector = ModelClassSelector(
+            baseline_ev=0.0,
+            baseline_brier=0.30,
+            model_complexity="standard",
+            strict=False,
+        )
+        assert "gradient_boosting" in selector.candidate_names
+        assert "xgboost" in selector.candidate_names
+        assert "regularized_logistic" in selector.candidate_names
+        assert "spread_regressor" in selector.candidate_names
+        assert "margin_regressor" in selector.candidate_names
+
+    def test_explicit_candidates_override_complexity(self):
+        """Explicit candidate_names must override model_complexity."""
+        selector = ModelClassSelector(
+            baseline_ev=0.0,
+            baseline_brier=0.30,
+            model_complexity="simple",
+            candidate_names=["gradient_boosting"],  # override
+            strict=False,
+        )
+        assert selector.candidate_names == ["gradient_boosting"]
+
+    def test_simple_mode_runs_only_eligible_candidates(self):
+        """End-to-end: simple mode must only train logistic + spread."""
+        train_X, train_y, val_X, val_y = _make_separable_data(separability=2.5)
+
+        selector = ModelClassSelector(
+            baseline_ev=0.0,
+            baseline_brier=0.30,
+            min_ev_improvement=-1000,
+            model_complexity="simple",
+            strict=False,
+        )
+        result = selector.run(train_X, train_y, val_X, val_y)
+
+        # Only logistic should be evaluated (spread needs margins)
+        assert "regularized_logistic" in result.candidates
+        assert "gradient_boosting" not in result.candidates
+        assert "xgboost" not in result.candidates
+
+    def test_complexity_candidates_mapping_complete(self):
+        """Both complexity modes must be defined in COMPLEXITY_CANDIDATES."""
+        assert "simple" in COMPLEXITY_CANDIDATES
+        assert "standard" in COMPLEXITY_CANDIDATES
+        # All candidates in each mode must exist in the registry
+        for mode, candidates in COMPLEXITY_CANDIDATES.items():
+            for c in candidates:
+                assert c in CANDIDATE_REGISTRY, f"{c} in {mode} not in registry"
