@@ -90,7 +90,14 @@ def process_file(filepath: Path, dry_run: bool = False) -> tuple[int, list[tuple
             total_changed += changed
             all_changes.extend(changes)
 
-    elif fname.startswith("torvik_") and not fname.startswith("torvik_shooting_"):
+    elif fname.startswith("torvik_shooting_"):
+        # Dict keyed by team IDs (same structure as four_factors)
+        if isinstance(data, dict):
+            data, changed, changes = repair_dict_keys(data)
+            total_changed += changed
+            all_changes.extend(changes)
+
+    elif fname.startswith("torvik_"):
         # {"teams": [{"team_id": ...}, ...]}
         if isinstance(data, dict) and "teams" in data and isinstance(data["teams"], list):
             changed, changes = repair_team_list(data["teams"])
