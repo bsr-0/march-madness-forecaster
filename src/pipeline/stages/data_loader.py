@@ -940,8 +940,11 @@ def load_team_stat_sources(
             try:
                 with open(_ff_path, "r") as f:
                     _ff_data = json.load(f)
-                # If any entry has _csv_approximation and None/zero defensive FF, trigger repair
-                for _tid, _entry in (list(_ff_data.items())[:20] if isinstance(_ff_data, dict) else []):
+                # If any entry has _csv_approximation and None/zero defensive FF, trigger repair.
+                # Scan all entries (not just first 20) to catch single-team corruption.
+                for _tid, _entry in (_ff_data.items() if isinstance(_ff_data, dict) else []):
+                    if not isinstance(_entry, dict):
+                        continue
                     if _entry.get("_csv_approximation") and (
                         _entry.get("opp_effective_fg_pct") is None
                         or abs(float(_entry.get("opp_effective_fg_pct") or 0)) < 1e-6

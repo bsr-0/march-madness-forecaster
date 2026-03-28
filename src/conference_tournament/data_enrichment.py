@@ -81,7 +81,8 @@ def _find_data_file(
                 )
             # Leakage guard: reject data scraped after tournament start
             if strict_leakage and isinstance(data, dict):
-                _ts = data.get("data_as_of") or data.get("scraped_at")
+                _ts_fields = ["data_as_of", "timestamp", "generated_at", "fetched_at", "scraped_at"]
+                _ts = next((data.get(f) for f in _ts_fields if data.get(f)), None)
                 if _ts:
                     try:
                         from datetime import date as _date
@@ -271,7 +272,14 @@ def compute_defensive_four_factors_from_games(
     """
     # Filter out post-tournament games to prevent leakage
     if cutoff_date:
+        _total_before = len(games)
         games = [g for g in games if (g.get("date") or "") < cutoff_date]
+        _excluded = _total_before - len(games)
+        if _excluded:
+            logger.info(
+                "Defensive FF repair: excluded %d/%d games on/after cutoff %s",
+                _excluded, _total_before, cutoff_date,
+            )
 
     # Pair game records by game_id
     game_pairs: Dict[str, List[Dict]] = defaultdict(list)
@@ -361,7 +369,14 @@ def compute_offensive_four_factors_from_games(
     """
     # Filter out post-tournament games to prevent leakage
     if cutoff_date:
+        _total_before = len(games)
         games = [g for g in games if (g.get("date") or "") < cutoff_date]
+        _excluded = _total_before - len(games)
+        if _excluded:
+            logger.info(
+                "Offensive FF repair: excluded %d/%d games on/after cutoff %s",
+                _excluded, _total_before, cutoff_date,
+            )
 
     game_pairs: Dict[str, List[Dict]] = defaultdict(list)
     for g in games:
