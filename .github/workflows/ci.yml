@@ -32,10 +32,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
 
       - name: Check freeze artifact is up-to-date
         run: |
