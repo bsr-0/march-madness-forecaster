@@ -2964,10 +2964,10 @@
     "turnover_rate": 0.1495,
     "offensive_reb_rate": 0.2988,
     "free_throw_rate": 0.3393,
-    "opp_effective_fg_pct": 0.0,
-    "opp_turnover_rate": 0.0,
+    "opp_effective_fg_pct": null,
+    "opp_turnover_rate": null,
     "defensive_reb_rate": 0.723,
-    "opp_free_throw_rate": 0.0,
+    "opp_free_throw_rate": null,
     "_csv_approximation": true
   },
   "kansas_city": {

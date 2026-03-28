@@ -104,6 +104,64 @@ class TestTorVikTournamentDateGuard:
 
 
 # ---------------------------------------------------------------------------
+# Risk 2b: Enrichment timestamp field consistency
+# ---------------------------------------------------------------------------
+
+
+class TestEnrichmentTimestampFieldConsistency:
+    """_find_data_file rejects supplementary files with any timestamp field post-tournament."""
+
+    def test_rejects_timestamp_field_post_tournament(self, tmp_path, caplog):
+        """File with only 'timestamp' field (not data_as_of/scraped_at) should be rejected."""
+        import json
+        ff_data = {
+            "timestamp": "2026-03-20T12:00:00",
+            "team_a": {"effective_fg_pct": 0.50, "turnover_rate": 0.15},
+        }
+        path = tmp_path / "torvik_four_factors_2026.json"
+        with open(path, "w") as f:
+            json.dump(ff_data, f)
+
+        from src.conference_tournament.data_enrichment import _find_data_file
+        with caplog.at_level(logging.WARNING):
+            data, year = _find_data_file(str(tmp_path), "torvik_four_factors", 2026, strict_leakage=True)
+        # Should be rejected (returns None) because timestamp is post-tournament
+        assert data is None
+
+    def test_rejects_generated_at_field_post_tournament(self, tmp_path, caplog):
+        """File with only 'generated_at' field should be rejected."""
+        import json
+        ff_data = {
+            "generated_at": "2026-03-18",
+            "team_a": {"effective_fg_pct": 0.50},
+        }
+        path = tmp_path / "torvik_four_factors_2026.json"
+        with open(path, "w") as f:
+            json.dump(ff_data, f)
+
+        from src.conference_tournament.data_enrichment import _find_data_file
+        with caplog.at_level(logging.WARNING):
+            data, year = _find_data_file(str(tmp_path), "torvik_four_factors", 2026, strict_leakage=True)
+        assert data is None
+
+    def test_accepts_pre_tournament_timestamp(self, tmp_path):
+        """File with timestamp before tournament start should be accepted."""
+        import json
+        ff_data = {
+            "timestamp": "2026-03-10T12:00:00",
+            "team_a": {"effective_fg_pct": 0.50},
+        }
+        path = tmp_path / "torvik_four_factors_2026.json"
+        with open(path, "w") as f:
+            json.dump(ff_data, f)
+
+        from src.conference_tournament.data_enrichment import _find_data_file
+        data, year = _find_data_file(str(tmp_path), "torvik_four_factors", 2026, strict_leakage=True)
+        assert data is not None
+        assert year == 2026
+
+
+# ---------------------------------------------------------------------------
 # Risk 3: leave_one_out LOYO mode blocked
 # ---------------------------------------------------------------------------
 
