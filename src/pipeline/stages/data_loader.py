@@ -820,6 +820,11 @@ def load_team_stat_sources(
     if not torvik_teams:
         raise DataRequirementError("Torvik data source is empty.")
 
+    # --- Pre-tournament cutoff (reused by enrichment, FF repair, proprietary) ---
+    from datetime import date as _date
+    _t_start = TOURNAMENT_START_DATES.get(config.year, _date(config.year, 3, 14))
+    _pre_tourney_cutoff = _t_start.isoformat()
+
     # --- Enrich Torvik data with Four Factors if missing ---
     # The main torvik CSV doesn't include Four Factors; they come from
     # separate files (torvik_four_factors_YYYY.json, torvik_shooting_YYYY.json).
@@ -835,7 +840,10 @@ def load_team_stat_sources(
         )
         with open(config.torvik_json, "r") as f:
             _torvik_payload = json.load(f)
-        _torvik_payload = enrich_torvik_teams(_torvik_payload, data_dir=_data_dir, year=config.year)
+        _torvik_payload = enrich_torvik_teams(
+            _torvik_payload, data_dir=_data_dir, year=config.year,
+            strict_leakage=_strict_torvik,
+        )
         # Re-parse enriched data
         torvik_teams = [
             BartTorvikScraper()._dict_to_team(t)
@@ -955,7 +963,9 @@ def load_team_stat_sources(
             "computing from %d historical game box scores",
             len(_box_score_games),
         )
-        def_ff = _ff_resolver.remap_dict(compute_defensive_four_factors_from_games(_box_score_games))
+        def_ff = _ff_resolver.remap_dict(compute_defensive_four_factors_from_games(
+            _box_score_games, cutoff_date=_pre_tourney_cutoff,
+        ))
         _def_ff_applied = 0
         for team in torvik_teams:
             tid = team.team_id
@@ -1032,7 +1042,9 @@ def load_team_stat_sources(
             "%d historical game box scores",
             _reason, len(_box_score_games),
         )
-        off_ff = _ff_resolver.remap_dict(compute_offensive_four_factors_from_games(_box_score_games))
+        off_ff = _ff_resolver.remap_dict(compute_offensive_four_factors_from_games(
+            _box_score_games, cutoff_date=_pre_tourney_cutoff,
+        ))
         _off_ff_applied = 0
         for team in torvik_teams:
             tid = team.team_id
@@ -1098,9 +1110,7 @@ def load_team_stat_sources(
         )
 
     # --- Compute proprietary metrics ---
-    from datetime import date as _date
-    _t_start = TOURNAMENT_START_DATES.get(config.year, _date(config.year, 3, 14))
-    pre_tournament_cutoff = _t_start.isoformat()
+    pre_tournament_cutoff = _pre_tourney_cutoff
     game_records = torvik_to_game_records(
         torvik_teams_dicts,
         historical_games,

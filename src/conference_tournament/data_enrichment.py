@@ -51,13 +51,20 @@ def _try_load_json(path: str) -> Optional[dict]:
         return json.load(f)
 
 
-def _find_data_file(base_dir: str, prefix: str, year: int) -> Tuple[Optional[dict], int]:
+def _find_data_file(
+    base_dir: str,
+    prefix: str,
+    year: int,
+    strict_leakage: bool = False,
+) -> Tuple[Optional[dict], int]:
     """Find data file for the given year, falling back to most recent prior year.
 
     Args:
         base_dir: Directory containing data files.
         prefix: File prefix (e.g. "torvik_four_factors").
         year: Target year.
+        strict_leakage: When True, reject files whose ``data_as_of`` or
+            ``scraped_at`` is on/after the tournament start date.
 
     Returns:
         (data_dict, actual_year) or (None, 0) if not found.
@@ -72,6 +79,24 @@ def _find_data_file(base_dir: str, prefix: str, year: int) -> Tuple[Optional[dic
                     "No %s_%d.json found; using %d data as fallback",
                     prefix, year, y,
                 )
+            # Leakage guard: reject data scraped after tournament start
+            if strict_leakage and isinstance(data, dict):
+                _ts = data.get("data_as_of") or data.get("scraped_at")
+                if _ts:
+                    try:
+                        from datetime import date as _date
+                        from src.pipeline.config import TOURNAMENT_START_DATES
+                        _ts_date = _date.fromisoformat(str(_ts)[:10])
+                        _cutoff = TOURNAMENT_START_DATES.get(y)
+                        if _cutoff and _ts_date >= _cutoff:
+                            logger.warning(
+                                "%s has timestamp %s on/after tournament start %s "
+                                "— rejecting to prevent leakage.",
+                                path, _ts, _cutoff,
+                            )
+                            continue
+                    except (ValueError, TypeError):
+                        pass
             return data, y
     return None, 0
 
@@ -80,6 +105,7 @@ def enrich_torvik_teams(
     torvik_data: dict,
     data_dir: str = "data/raw",
     year: int = 2026,
+    strict_leakage: bool = False,
 ) -> dict:
     """Enrich Torvik team data with Four Factors and shooting stats.
 
@@ -101,8 +127,8 @@ def enrich_torvik_teams(
         return torvik_data
 
     # Load supplementary data
-    ff_data, ff_year = _find_data_file(data_dir, "torvik_four_factors", year)
-    shooting_data, shooting_year = _find_data_file(data_dir, "torvik_shooting", year)
+    ff_data, ff_year = _find_data_file(data_dir, "torvik_four_factors", year, strict_leakage=strict_leakage)
+    shooting_data, shooting_year = _find_data_file(data_dir, "torvik_shooting", year, strict_leakage=strict_leakage)
 
     ff_matched = 0
     shooting_matched = 0
@@ -226,6 +252,7 @@ def _fuzzy_lookup(data: dict, team_id: str) -> Optional[dict]:
 
 def compute_defensive_four_factors_from_games(
     games: List[Dict],
+    cutoff_date: Optional[str] = None,
 ) -> Dict[str, Dict[str, float]]:
     """Compute defensive Four Factors from game box scores.
 
@@ -234,9 +261,18 @@ def compute_defensive_four_factors_from_games(
     them from historical game records.  Each game appears as two records
     (one per team) paired by ``game_id``.
 
+    Args:
+        games: List of game box-score dicts with ``game_id`` and ``date`` fields.
+        cutoff_date: If provided, exclude games on/after this ISO date string
+            to prevent tournament data from contaminating pre-tournament metrics.
+
     Returns a dict mapping team_id -> {opp_effective_fg_pct, opp_turnover_rate,
     opp_free_throw_rate, defensive_reb_rate}.
     """
+    # Filter out post-tournament games to prevent leakage
+    if cutoff_date:
+        games = [g for g in games if (g.get("date") or "") < cutoff_date]
+
     # Pair game records by game_id
     game_pairs: Dict[str, List[Dict]] = defaultdict(list)
     for g in games:
@@ -306,6 +342,7 @@ def compute_defensive_four_factors_from_games(
 
 def compute_offensive_four_factors_from_games(
     games: List[Dict],
+    cutoff_date: Optional[str] = None,
 ) -> Dict[str, Dict[str, float]]:
     """Compute offensive rebound/turnover rates from game box scores.
 
@@ -314,9 +351,18 @@ def compute_offensive_four_factors_from_games(
     function reconstructs team-level offensive Four Factors from paired
     game records that contain counting stats (fga, fta, turnovers, orb, drb).
 
+    Args:
+        games: List of game box-score dicts with ``game_id`` and ``date`` fields.
+        cutoff_date: If provided, exclude games on/after this ISO date string
+            to prevent tournament data from contaminating pre-tournament metrics.
+
     Returns a dict mapping team_id -> {turnover_rate, offensive_reb_rate,
     defensive_reb_rate}.
     """
+    # Filter out post-tournament games to prevent leakage
+    if cutoff_date:
+        games = [g for g in games if (g.get("date") or "") < cutoff_date]
+
     game_pairs: Dict[str, List[Dict]] = defaultdict(list)
     for g in games:
         gid = g.get("game_id")
