@@ -1465,6 +1465,110 @@ class TestImprovementGate:
         assert "folds" in reason.lower()
 
 
+class TestImprovementGateCohensD:
+    """Tests for Cohen's d effect size check added to ImprovementGate."""
+
+    def test_reject_low_cohens_d(self):
+        """High variance across folds → low Cohen's d → reject."""
+        gate = ImprovementGate(
+            min_brier_improvement=0.001, max_p_value=0.10, min_cohens_d=0.2,
+        )
+        candidate = ImprovementCandidate(
+            name="test", config_key="k", old_value=0.5,
+            new_value=0.6, brier_delta=-0.005, p_value=0.04,
+            source="param_sweep",
+        )
+        # Mean delta = -0.005, but huge variance → Cohen's d ≈ 0.05
+        fold_deltas = [-0.005, -0.10, 0.09, -0.005, -0.08, 0.07, -0.01, 0.03]
+        adopt, reason = gate.should_adopt(candidate, fold_deltas=fold_deltas)
+        assert adopt is False
+        assert "cohen" in reason.lower()
+
+    def test_accept_high_cohens_d(self):
+        """Consistent improvement across folds → high Cohen's d → accept."""
+        gate = ImprovementGate(
+            min_brier_improvement=0.001, max_p_value=0.10, min_cohens_d=0.2,
+        )
+        candidate = ImprovementCandidate(
+            name="test", config_key="k", old_value=0.5,
+            new_value=0.6, brier_delta=-0.01, p_value=0.03,
+            source="param_sweep",
+        )
+        # Consistent negative deltas → high Cohen's d
+        fold_deltas = [-0.012, -0.009, -0.011, -0.010, -0.008, -0.011, -0.010, -0.009]
+        adopt, reason = gate.should_adopt(candidate, fold_deltas=fold_deltas)
+        assert adopt is True
+
+    def test_cohens_d_skipped_without_folds(self):
+        """When no fold_deltas provided, Cohen's d check is skipped."""
+        gate = ImprovementGate(
+            min_brier_improvement=0.001, max_p_value=0.10, min_cohens_d=0.2,
+        )
+        candidate = ImprovementCandidate(
+            name="test", config_key="k", old_value=0.5,
+            new_value=0.6, brier_delta=-0.005, p_value=0.04,
+            source="param_sweep",
+        )
+        adopt, reason = gate.should_adopt(candidate, fold_deltas=None)
+        assert adopt is True
+
+
+class TestParamSweepPairedTTest:
+    """Tests for paired t-test support in ResearchLoop.run_param_sweep."""
+
+    def test_param_sweep_uses_paired_ttest(self):
+        """When eval_folds_fn is provided, p-values come from ttest_rel."""
+        loop = ResearchLoop(log_path="/tmp/test_research_log.jsonl")
+        rng = np.random.default_rng(42)
+
+        # Simulate per-fold Brier scores: baseline vs a clearly better variant
+        baseline_folds = [0.20, 0.22, 0.19, 0.21, 0.20, 0.23, 0.18, 0.21]
+
+        def mock_eval_folds(cfg):
+            sw = getattr(cfg, "spread_weight", 0.5)
+            # Lower spread_weight → better scores
+            offset = (sw - 0.5) * 0.04
+            return [b + offset + rng.normal(0, 0.001) for b in baseline_folds]
+
+        config = MagicMock()
+        config.spread_weight = 0.5
+        # ConfigMutator needs these attributes
+        config.tournament_shrinkage = 0.06
+        config.seed_prior_weight = 0.10
+
+        candidates = loop.run_param_sweep(
+            config, "spread_weight",
+            eval_fn=lambda cfg: float(np.mean(mock_eval_folds(cfg))),
+            eval_folds_fn=mock_eval_folds,
+            n_points=5,
+        )
+        assert len(candidates) > 0
+        for c in candidates:
+            # p-values should not be the old heuristic values
+            assert c.p_value not in (0.05, 0.5) or abs(c.brier_delta) < 1e-6
+            assert len(c.fold_briers) > 0
+
+    def test_param_sweep_falls_back_without_folds(self):
+        """When only eval_fn is provided, fallback heuristic p-values are used."""
+        loop = ResearchLoop(log_path="/tmp/test_research_log.jsonl")
+
+        config = MagicMock()
+        config.spread_weight = 0.5
+        config.tournament_shrinkage = 0.06
+        config.seed_prior_weight = 0.10
+
+        candidates = loop.run_param_sweep(
+            config, "spread_weight",
+            eval_fn=lambda cfg: 0.20 + (getattr(cfg, "spread_weight", 0.5) - 0.5) * 0.1,
+            n_points=5,
+        )
+        assert len(candidates) > 0
+        # Scalar eval_fn → single-element fold_briers, fallback heuristic p-values
+        for c in candidates:
+            assert c.p_value in (0.05, 0.5)
+            assert len(c.fold_briers) == 1
+
+
 class TestResearchLoop:
     def test_init(self):
         loop = ResearchLoop(log_path="/tmp/test_research_log.jsonl")

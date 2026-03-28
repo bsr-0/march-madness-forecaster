@@ -63,6 +63,7 @@ class ImprovementCandidate:
     hypothesis_id: str = ""
     adopted: bool = False
     reason: str = ""
+    fold_briers: List[float] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -207,16 +208,22 @@ class LoopEvaluator:
         self,
         eval_fn: Optional[Callable] = None,
         games: Optional[List[Dict]] = None,
+        eval_folds_fn: Optional[Callable] = None,
     ):
         """
         Args:
             eval_fn: Function(config) -> float (Brier score).
                      If None, uses internal Brier computation.
             games: Validation games with 'team1', 'team2', 'team1_won'.
+            eval_folds_fn: Function(config) -> List[float] returning
+                     per-fold Brier scores (e.g. one per LOYO year).
+                     Enables paired t-tests in param sweeps.
         """
         self.eval_fn = eval_fn
+        self.eval_folds_fn = eval_folds_fn
         self.games = games or []
         self._cache: Dict[str, float] = {}
+        self._folds_cache: Dict[str, List[float]] = {}
 
     def evaluate(self, config: Any, cache_key: str = "") -> float:
         """Evaluate a config variant. Returns Brier score."""
@@ -232,6 +239,25 @@ class LoopEvaluator:
             self._cache[cache_key] = score
         return score
 
+    def evaluate_folds(self, config: Any, cache_key: str = "") -> List[float]:
+        """Evaluate a config variant and return per-fold Brier scores.
+
+        If eval_folds_fn was provided, calls it to get per-fold scores.
+        Otherwise falls back to wrapping the scalar eval result in a
+        single-element list (disabling paired t-tests).
+        """
+        if cache_key and cache_key in self._folds_cache:
+            return self._folds_cache[cache_key]
+
+        if self.eval_folds_fn is not None:
+            scores = list(self.eval_folds_fn(config))
+        else:
+            scores = [self.evaluate(config, cache_key=cache_key)]
+
+        if cache_key:
+            self._folds_cache[cache_key] = scores
+        return scores
+
     def _default_evaluate(self, config: Any) -> float:
         """Default evaluation: return a placeholder Brier score.
 
@@ -242,6 +268,7 @@ class LoopEvaluator:
 
     def clear_cache(self) -> None:
         self._cache.clear()
+        self._folds_cache.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -263,11 +290,13 @@ class ImprovementGate:
         max_p_value: float = 0.10,
         require_multiple_folds: bool = True,
         min_folds_improved: float = 0.6,
+        min_cohens_d: float = 0.2,
     ):
         self.min_brier_improvement = min_brier_improvement
         self.max_p_value = max_p_value
         self.require_multiple_folds = require_multiple_folds
         self.min_folds_improved = min_folds_improved
+        self.min_cohens_d = min_cohens_d
 
     def should_adopt(
         self,
@@ -291,6 +320,20 @@ class ImprovementGate:
                 f"p-value {candidate.p_value:.4f} exceeds threshold "
                 f"{self.max_p_value}"
             )
+
+        # Check effect size (Cohen's d) when per-fold deltas are available.
+        # Required by Experiment Workflow Plan: Cohen's d > 0.2 for adoption.
+        if fold_deltas and len(fold_deltas) >= 2:
+            fold_arr = np.array(fold_deltas, dtype=float)
+            std = float(np.std(fold_arr, ddof=1))
+            if std > 0:
+                cohens_d = abs(float(np.mean(fold_arr))) / std
+                if cohens_d < self.min_cohens_d:
+                    return False, (
+                        f"Cohen's d {cohens_d:.3f} below threshold "
+                        f"{self.min_cohens_d} (effect too small relative "
+                        f"to fold variance)"
+                    )
 
         # Check fold consistency
         if self.require_multiple_folds and fold_deltas:
@@ -494,15 +537,30 @@ class ResearchLoop:
         param_name: str,
         eval_fn: Callable,
         n_points: int = 7,
+        eval_folds_fn: Optional[Callable] = None,
     ) -> List[ImprovementCandidate]:
         """Sweep a single parameter and return improvement candidates.
 
         This is the core experiment type: vary one parameter while
         holding everything else constant, then measure Brier impact.
+
+        When *eval_folds_fn* is provided (returns per-fold Brier scores),
+        a paired t-test (scipy.stats.ttest_rel) is used to compute p-values
+        as required by the Experiment Workflow Plan (Phase 2, Stage 2a).
+        Falls back to the scalar heuristic when per-fold scores are
+        unavailable.
         """
-        evaluator = LoopEvaluator(eval_fn=eval_fn)
-        baseline_brier = evaluator.evaluate(config, cache_key="baseline")
+        evaluator = LoopEvaluator(eval_fn=eval_fn, eval_folds_fn=eval_folds_fn)
+        baseline_folds = evaluator.evaluate_folds(config, cache_key="baseline")
+        baseline_brier = float(np.mean(baseline_folds))
         current_value = getattr(config, param_name, None)
+
+        # Import scipy for paired t-test (optional dependency)
+        try:
+            from scipy.stats import ttest_rel
+            _has_ttest = True
+        except ImportError:
+            _has_ttest = False
 
         variants = ConfigMutator.generate_variants(config, param_name, n_points)
         candidates: List[ImprovementCandidate] = []
@@ -512,8 +570,18 @@ class ResearchLoop:
                 continue  # Skip current value
 
             cache_key = f"{param_name}={param_value}"
-            variant_brier = evaluator.evaluate(variant_config, cache_key=cache_key)
+            variant_folds = evaluator.evaluate_folds(variant_config, cache_key=cache_key)
+            variant_brier = float(np.mean(variant_folds))
             brier_delta = variant_brier - baseline_brier
+
+            # Compute p-value via paired t-test when per-fold scores are
+            # available (>= 2 folds from both baseline and variant).
+            if _has_ttest and len(baseline_folds) >= 2 and len(variant_folds) == len(baseline_folds):
+                _, p_value = ttest_rel(variant_folds, baseline_folds)
+                p_value = float(p_value)
+            else:
+                # Fallback heuristic when folds unavailable or scipy missing
+                p_value = 0.05 if abs(brier_delta) > 0.001 else 0.5
 
             candidates.append(ImprovementCandidate(
                 name=f"{param_name}={param_value}",
@@ -521,8 +589,9 @@ class ResearchLoop:
                 old_value=current_value,
                 new_value=param_value,
                 brier_delta=brier_delta,
-                p_value=0.05 if abs(brier_delta) > 0.001 else 0.5,  # Heuristic
+                p_value=p_value,
                 source="param_sweep",
+                fold_briers=list(variant_folds),
             ))
 
         return candidates
