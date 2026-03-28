@@ -108,6 +108,30 @@ class TestResolverRemapIntegration:
 
 
 @pytest.mark.data_contract
+class TestCutoffDateFilterLogging:
+    def test_defensive_ff_logs_excluded_games(self, caplog):
+        import logging
+        games = _make_mock_games(5)
+        # Add dates: 3 pre-cutoff, 2 post-cutoff
+        for i, g in enumerate(games):
+            day = 10 + (i // 2)  # games at days 10..14
+            g["date"] = f"2026-03-{day:02d}"
+        with caplog.at_level(logging.INFO):
+            compute_defensive_four_factors_from_games(games, cutoff_date="2026-03-13")
+        assert "excluded" in caplog.text.lower()
+
+    def test_offensive_ff_logs_excluded_games(self, caplog):
+        import logging
+        games = _make_mock_games(5)
+        for i, g in enumerate(games):
+            day = 10 + (i // 2)
+            g["date"] = f"2026-03-{day:02d}"
+        with caplog.at_level(logging.INFO):
+            compute_offensive_four_factors_from_games(games, cutoff_date="2026-03-13")
+        assert "excluded" in caplog.text.lower()
+
+
+@pytest.mark.data_contract
 class TestValidateFourFactors:
     def _make_torvik_payload(self, n_teams=20, def_ff_zero=False, orb_bias=False):
         teams = []
