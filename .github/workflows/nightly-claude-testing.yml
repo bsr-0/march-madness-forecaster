@@ -1,20 +1,21 @@
 name: "Nightly Claude Code Automated Testing"
 
 on:
+  # DISABLED — workflow fully disabled until further notice
   # schedule:
-  #   # Run nightly at midnight UTC
   #   - cron: "0 0 * * *"
-  workflow_dispatch:
-    inputs:
-      agents:
-        description: "Comma-separated agents to run (qaqc,statistician). Leave empty for all."
-        required: false
-        default: ""
-      dry_run:
-        description: "If true, Claude agents will analyze and report but not commit changes"
-        required: false
-        type: boolean
-        default: false
+  # workflow_dispatch:
+  #   inputs:
+  #     agents:
+  #       description: "Comma-separated agents to run (qaqc,statistician). Leave empty for all."
+  #       required: false
+  #       default: ""
+  #     dry_run:
+  #       description: "If true, Claude agents will analyze and report but not commit changes"
+  #       required: false
+  #       type: boolean
+  #       default: false
+  workflow_dispatch: # keep minimal trigger so GitHub doesn't reject the file, but no inputs
 
 permissions:
   contents: write
@@ -31,9 +32,21 @@ env:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════
+  # DISABLED — all jobs gated behind false condition until re-enabled
+  # ═══════════════════════════════════════════════════════════════════════
+  disabled-guard:
+    name: "Workflow Disabled"
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::notice::Nightly Claude Code testing workflow is disabled."
+          echo "Remove the 'if: false' guards to re-enable."
+
+  # ═══════════════════════════════════════════════════════════════════════
   # Phase 1: Run full test suite and capture structured results
   # ═══════════════════════════════════════════════════════════════════════
   test-suite:
+    if: false  # DISABLED
     name: "Run Full Test Suite"
     runs-on: ubuntu-latest
     outputs:
@@ -180,9 +193,7 @@ jobs:
   claude-qaqc-agent:
     name: "Claude: QAQC Agent"
     needs: test-suite
-    if: |
-      always() &&
-      (github.event.inputs.agents == '' || contains(github.event.inputs.agents, 'qaqc'))
+    if: false  # DISABLED
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -347,9 +358,7 @@ jobs:
   claude-statistician-agent:
     name: "Claude: Skeptical Sports Statistician"
     needs: test-suite
-    if: |
-      always() &&
-      (github.event.inputs.agents == '' || contains(github.event.inputs.agents, 'statistician'))
+    if: false  # DISABLED
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -550,7 +559,7 @@ jobs:
       - test-suite
       - claude-qaqc-agent
       - claude-statistician-agent
-    if: always()
+    if: false  # DISABLED
     runs-on: ubuntu-latest
     steps:
       - name: Generate nightly report
