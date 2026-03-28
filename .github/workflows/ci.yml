@@ -24,6 +24,101 @@ jobs:
       - name: Run ruff linter
         run: ruff check src/ tests/ --output-format=github
 
+  # ─── Gate 0: Freeze Staleness Check ─────────────────────────────
+  freeze-check:
+    name: "Gate 0: Freeze Staleness Check"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Check freeze artifact is up-to-date
+        run: |
+          python - <<'PYEOF'
+          import hashlib, json, sys
+
+          FREEZE_PATH = "artifacts/pipeline_freeze_2026.json"
+          CONFIG_PATH = "configs/production_2026.json"
+
+          REQUIRED_SOURCE_FILES = [
+              "src/pipeline/config.py",
+              "src/pipeline/sota.py",
+              "src/pipeline/stages/baseline_training.py",
+              "src/pipeline/stages/calibration.py",
+              "src/pipeline/stages/data_loader.py",
+              "src/pipeline/stages/inference.py",
+              "src/pipeline/probability_pipeline.py",
+              "src/governance/production_validator.py",
+              "src/governance/production_runner.py",
+          ]
+
+          def sha256_file(path):
+              h = hashlib.sha256()
+              with open(path, "rb") as f:
+                  for chunk in iter(lambda: f.read(8192), b""):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          # Load freeze artifact
+          try:
+              with open(FREEZE_PATH) as f:
+                  freeze = json.load(f)
+          except FileNotFoundError:
+              print(f"::error::Freeze artifact not found at {FREEZE_PATH}.")
+              print("Run: march-madness freeze-pipeline")
+              sys.exit(1)
+
+          errors = []
+
+          # Check source file hashes
+          frozen_hashes = freeze.get("source_file_hashes", {})
+          for src_file in REQUIRED_SOURCE_FILES:
+              frozen_hash = frozen_hashes.get(src_file)
+              if frozen_hash is None:
+                  errors.append(f"{src_file}: missing from freeze artifact")
+                  continue
+              current_hash = sha256_file(src_file)
+              if current_hash != frozen_hash:
+                  errors.append(f"{src_file}: hash mismatch (source changed since freeze)")
+
+          # Check config fields count matches current config schema
+          frozen_fields = freeze.get("config_fields", {})
+          try:
+              sys.path.insert(0, ".")
+              from src.pipeline.config import SOTAPipelineConfig
+              current_field_names = set(SOTAPipelineConfig.__dataclass_fields__.keys())
+              frozen_field_names = set(frozen_fields.keys())
+              missing_in_freeze = current_field_names - frozen_field_names
+              if missing_in_freeze:
+                  errors.append(
+                      f"Config fields added but not in freeze: {sorted(missing_in_freeze)}"
+                  )
+          except Exception as e:
+              errors.append(f"Could not import SOTAPipelineConfig: {e}")
+
+          if errors:
+              print("::error::Freeze artifact is STALE. Update it before merging.")
+              print()
+              print("Mismatches found:")
+              for e in errors:
+                  print(f"  - {e}")
+              print()
+              print("To fix, run locally:")
+              print("  python -c \"")
+              print("  from src.governance.production_runner import regenerate_freeze")
+              print("  regenerate_freeze()\"")
+              print("or manually update artifacts/pipeline_freeze_2026.json")
+              sys.exit(1)
+          else:
+              print(f"Freeze artifact is up-to-date ({len(frozen_hashes)} source files, "
+                    f"{len(frozen_fields)} config fields verified).")
+          PYEOF
+
   # ─── Gate 1: Unit Tests ───────────────────────────────────────────
   unit-tests:
     name: "Gate 1: Unit Tests"
@@ -126,6 +221,7 @@ jobs:
     name: "All Gates Green"
     needs:
       - lint
+      - freeze-check
       - unit-tests
       - data-contract-tests
       - leakage-tests
