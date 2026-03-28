@@ -773,10 +773,18 @@ def load_team_stat_sources(
     if config.torvik_json:
         with open(config.torvik_json, "r") as f:
             torvik_payload = json.load(f)
-        # Check for post-tournament data contamination via file timestamp
+        # Check for post-tournament data contamination via file timestamp.
+        # ``data_as_of`` is an operator-attested date indicating the stats
+        # only include games through that date, even if the file was scraped
+        # later.  When present it takes precedence over the scrape timestamp.
         if _strict_torvik:
-            _ts_fields = ["timestamp", "generated_at", "fetched_at", "scraped_at"]
-            _ts_str = next((torvik_payload.get(f) for f in _ts_fields if torvik_payload.get(f)), None)
+            _data_as_of = torvik_payload.get("data_as_of")
+            if _data_as_of:
+                # Operator has attested to the data coverage date — use it.
+                _ts_str = _data_as_of
+            else:
+                _ts_fields = ["timestamp", "generated_at", "fetched_at", "scraped_at"]
+                _ts_str = next((torvik_payload.get(f) for f in _ts_fields if torvik_payload.get(f)), None)
             if _ts_str:
                 try:
                     from datetime import date as _date
