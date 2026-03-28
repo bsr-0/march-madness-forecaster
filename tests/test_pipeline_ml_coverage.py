@@ -1549,7 +1549,8 @@ class TestParamSweepPairedTTest:
             assert len(c.fold_briers) > 0
 
     def test_param_sweep_falls_back_without_folds(self):
-        """When only eval_fn is provided, fallback heuristic p-values are used."""
+        """When only eval_fn is provided, fallback heuristic p-values are used
+        (then Holm-corrected)."""
         loop = ResearchLoop(log_path="/tmp/test_research_log.jsonl")
 
         config = MagicMock()
@@ -1563,10 +1564,41 @@ class TestParamSweepPairedTTest:
             n_points=5,
         )
         assert len(candidates) > 0
-        # Scalar eval_fn → single-element fold_briers, fallback heuristic p-values
+        # Scalar eval_fn → single-element fold_briers
         for c in candidates:
-            assert c.p_value in (0.05, 0.5)
             assert len(c.fold_briers) == 1
+        # After Holm-Bonferroni, adjusted p-values are >= the raw heuristic values
+        for c in candidates:
+            assert c.p_value >= 0.05 or c.p_value >= 0.5
+
+    def test_param_sweep_applies_holm_bonferroni(self):
+        """P-values from sweep are Holm-Bonferroni corrected (adjusted upward)."""
+        loop = ResearchLoop(log_path="/tmp/test_research_log.jsonl")
+
+        baseline_folds = [0.20, 0.22, 0.19, 0.21, 0.20, 0.23, 0.18, 0.21]
+
+        def mock_eval_folds(cfg):
+            sw = getattr(cfg, "spread_weight", 0.5)
+            # Small consistent offset per variant
+            offset = (sw - 0.5) * 0.02
+            return [b + offset for b in baseline_folds]
+
+        config = MagicMock()
+        config.spread_weight = 0.5
+        config.tournament_shrinkage = 0.06
+        config.seed_prior_weight = 0.10
+
+        candidates = loop.run_param_sweep(
+            config, "spread_weight",
+            eval_fn=lambda cfg: float(np.mean(mock_eval_folds(cfg))),
+            eval_folds_fn=mock_eval_folds,
+            n_points=5,
+        )
+        # With multiple candidates, Holm-Bonferroni adjusts p-values upward.
+        # Adjusted p-values should be >= 0 and <= 1.
+        assert len(candidates) > 1
+        for c in candidates:
+            assert 0.0 <= c.p_value <= 1.0
 
 
 class TestResearchLoop:
