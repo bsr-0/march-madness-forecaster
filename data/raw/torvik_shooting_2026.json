@@ -12,7 +12,7 @@
     "three_pt_pct": 0.3302,
     "ft_pct": 0.6966
   },
-  "delaware_st": {
+  "delaware_state": {
     "three_pt_pct": 0.284,
     "ft_pct": 0.6892
   },
@@ -36,7 +36,7 @@
     "three_pt_pct": 0.3328,
     "ft_pct": 0.707
   },
-  "northwestern_st": {
+  "northwestern_state": {
     "three_pt_pct": 0.3321,
     "ft_pct": 0.74
   },
@@ -48,7 +48,7 @@
     "three_pt_pct": 0.3105,
     "ft_pct": 0.7213
   },
-  "southern_miss": {
+  "southern_mississippi": {
     "three_pt_pct": 0.2894,
     "ft_pct": 0.7365
   },
@@ -76,7 +76,7 @@
     "three_pt_pct": 0.3677,
     "ft_pct": 0.7302
   },
-  "cal_st_northridge": {
+  "cal_state_northridge": {
     "three_pt_pct": 0.3242,
     "ft_pct": 0.6676
   },
@@ -144,7 +144,7 @@
     "three_pt_pct": 0.3333,
     "ft_pct": 0.7605
   },
-  "central_connecticut": {
+  "central_connecticut_state": {
     "three_pt_pct": 0.3526,
     "ft_pct": 0.6975
   },
@@ -176,7 +176,7 @@
     "three_pt_pct": 0.3239,
     "ft_pct": 0.6602
   },
-  "tarleton_st": {
+  "tarleton_state": {
     "three_pt_pct": 0.3237,
     "ft_pct": 0.7417
   },
@@ -184,7 +184,7 @@
     "three_pt_pct": 0.3566,
     "ft_pct": 0.689
   },
-  "portland_st": {
+  "portland_state": {
     "three_pt_pct": 0.3256,
     "ft_pct": 0.7098
   },
@@ -248,7 +248,7 @@
     "three_pt_pct": 0.3328,
     "ft_pct": 0.7191
   },
-  "texas_st": {
+  "texas_state": {
     "three_pt_pct": 0.3223,
     "ft_pct": 0.7616
   },
@@ -260,7 +260,7 @@
     "three_pt_pct": 0.3609,
     "ft_pct": 0.7401
   },
-  "mount_st_mary_s": {
+  "mount_st__mary_s": {
     "three_pt_pct": 0.3343,
     "ft_pct": 0.6776
   },
@@ -300,7 +300,7 @@
     "three_pt_pct": 0.29,
     "ft_pct": 0.7146
   },
-  "appalachian_st": {
+  "appalachian_state": {
     "three_pt_pct": 0.3041,
     "ft_pct": 0.6452
   },
@@ -336,7 +336,7 @@
     "three_pt_pct": 0.3654,
     "ft_pct": 0.765
   },
-  "illinois_st": {
+  "illinois_state": {
     "three_pt_pct": 0.3471,
     "ft_pct": 0.7129
   },
@@ -356,7 +356,7 @@
     "three_pt_pct": 0.3337,
     "ft_pct": 0.7434
   },
-  "missouri_st": {
+  "missouri_state": {
     "three_pt_pct": 0.3296,
     "ft_pct": 0.6733
   },
@@ -372,7 +372,7 @@
     "three_pt_pct": 0.3563,
     "ft_pct": 0.6966
   },
-  "east_tennessee_st": {
+  "east_tennessee_state": {
     "three_pt_pct": 0.3471,
     "ft_pct": 0.7472
   },
@@ -392,7 +392,7 @@
     "three_pt_pct": 0.3394,
     "ft_pct": 0.6809
   },
-  "unlv": {
+  "nevada_las_vegas": {
     "three_pt_pct": 0.3518,
     "ft_pct": 0.6766
   },
@@ -444,7 +444,7 @@
     "three_pt_pct": 0.3869,
     "ft_pct": 0.7497
   },
-  "loyola_chicago": {
+  "loyola__il": {
     "three_pt_pct": 0.317,
     "ft_pct": 0.6726
   },
@@ -476,7 +476,7 @@
     "three_pt_pct": 0.3581,
     "ft_pct": 0.7576
   },
-  "morgan_st": {
+  "morgan_state": {
     "three_pt_pct": 0.317,
     "ft_pct": 0.7433
   },
@@ -484,7 +484,7 @@
     "three_pt_pct": 0.3449,
     "ft_pct": 0.6552
   },
-  "chicago_st": {
+  "chicago_state": {
     "three_pt_pct": 0.3212,
     "ft_pct": 0.7495
   },
@@ -524,7 +524,7 @@
     "three_pt_pct": 0.2932,
     "ft_pct": 0.6996
   },
-  "jackson_st": {
+  "jackson_state": {
     "three_pt_pct": 0.3138,
     "ft_pct": 0.7583
   },
@@ -600,7 +600,7 @@
     "three_pt_pct": 0.3707,
     "ft_pct": 0.7519
   },
-  "youngstown_st": {
+  "youngstown_state": {
     "three_pt_pct": 0.3378,
     "ft_pct": 0.7333
   },
@@ -620,7 +620,7 @@
     "three_pt_pct": 0.3491,
     "ft_pct": 0.7438
   },
-  "sacramento_st": {
+  "sacramento_state": {
     "three_pt_pct": 0.3189,
     "ft_pct": 0.781
   },
@@ -656,7 +656,7 @@
     "three_pt_pct": 0.3681,
     "ft_pct": 0.7862
   },
-  "albany": {
+  "albany__ny": {
     "three_pt_pct": 0.3259,
     "ft_pct": 0.6595
   },
@@ -708,7 +708,7 @@
     "three_pt_pct": 0.3582,
     "ft_pct": 0.6667
   },
-  "cal_st_bakersfield": {
+  "cal_state_bakersfield": {
     "three_pt_pct": 0.2902,
     "ft_pct": 0.7379
   },
@@ -752,7 +752,7 @@
     "three_pt_pct": 0.2938,
     "ft_pct": 0.6894
   },
-  "fiu": {
+  "florida_international": {
     "three_pt_pct": 0.3466,
     "ft_pct": 0.6941
   },
@@ -796,7 +796,7 @@
     "three_pt_pct": 0.2941,
     "ft_pct": 0.6742
   },
-  "coppin_st": {
+  "coppin_state": {
     "three_pt_pct": 0.3068,
     "ft_pct": 0.6719
   },
@@ -828,7 +828,7 @@
     "three_pt_pct": 0.368,
     "ft_pct": 0.7714
   },
-  "usc_upstate": {
+  "south_carolina_upstate": {
     "three_pt_pct": 0.3144,
     "ft_pct": 0.6813
   },
@@ -864,7 +864,7 @@
     "three_pt_pct": 0.3269,
     "ft_pct": 0.7253
   },
-  "sam_houston_st": {
+  "sam_houston_state": {
     "three_pt_pct": 0.3717,
     "ft_pct": 0.7158
   },
@@ -924,7 +924,7 @@
     "three_pt_pct": 0.3738,
     "ft_pct": 0.7466
   },
-  "nicholls_st": {
+  "nicholls_state": {
     "three_pt_pct": 0.3325,
     "ft_pct": 0.6624
   },
@@ -952,7 +952,7 @@
     "three_pt_pct": 0.3058,
     "ft_pct": 0.7363
   },
-  "alabama_st": {
+  "alabama_state": {
     "three_pt_pct": 0.3175,
     "ft_pct": 0.7051
   },
@@ -980,7 +980,7 @@
     "three_pt_pct": 0.3528,
     "ft_pct": 0.7337
   },
-  "mississippi_valley_st": {
+  "mississippi_valley_state": {
     "three_pt_pct": 0.2946,
     "ft_pct": 0.7157
   },
@@ -996,7 +996,7 @@
     "three_pt_pct": 0.3641,
     "ft_pct": 0.7299
   },
-  "nebraska_omaha": {
+  "omaha": {
     "three_pt_pct": 0.3402,
     "ft_pct": 0.7316
   },
@@ -1080,7 +1080,7 @@
     "three_pt_pct": 0.3827,
     "ft_pct": 0.6944
   },
-  "umkc": {
+  "kansas_city": {
     "three_pt_pct": 0.2841,
     "ft_pct": 0.6619
   },
@@ -1188,7 +1188,7 @@
     "three_pt_pct": 0.3422,
     "ft_pct": 0.6818
   },
-  "indiana_st": {
+  "indiana_state": {
     "three_pt_pct": 0.3155,
     "ft_pct": 0.6779
   },
@@ -1224,7 +1224,7 @@
     "three_pt_pct": 0.3794,
     "ft_pct": 0.7626
   },
-  "ut_rio_grande_valley": {
+  "texas_rio_grande_valley": {
     "three_pt_pct": 0.3676,
     "ft_pct": 0.7629
   },
@@ -1252,7 +1252,7 @@
     "three_pt_pct": 0.312,
     "ft_pct": 0.712
   },
-  "umass_lowell": {
+  "massachusetts_lowell": {
     "three_pt_pct": 0.3224,
     "ft_pct": 0.6574
   },
@@ -1300,7 +1300,7 @@
     "three_pt_pct": 0.3559,
     "ft_pct": 0.7313
   },
-  "southeast_missouri_st": {
+  "southeast_missouri_state": {
     "three_pt_pct": 0.3093,
     "ft_pct": 0.6954
   },
@@ -1316,7 +1316,7 @@
     "three_pt_pct": 0.3341,
     "ft_pct": 0.701
   },
-  "arkansas_st": {
+  "arkansas_state": {
     "three_pt_pct": 0.3285,
     "ft_pct": 0.7331
   },
@@ -1332,7 +1332,7 @@
     "three_pt_pct": 0.3224,
     "ft_pct": 0.727
   },
-  "weber_st": {
+  "weber_state": {
     "three_pt_pct": 0.3452,
     "ft_pct": 0.7293
   },
@@ -1348,7 +1348,7 @@
     "three_pt_pct": 0.3554,
     "ft_pct": 0.7428
   },
-  "idaho_st": {
+  "idaho_state": {
     "three_pt_pct": 0.3362,
     "ft_pct": 0.7406
   },
@@ -1360,7 +1360,7 @@
     "three_pt_pct": 0.3365,
     "ft_pct": 0.704
   },
-  "alcorn_st": {
+  "alcorn_state": {
     "three_pt_pct": 0.3333,
     "ft_pct": 0.7076
   },
@@ -1368,7 +1368,7 @@
     "three_pt_pct": 0.3268,
     "ft_pct": 0.695
   },
-  "south_carolina_st": {
+  "south_carolina_state": {
     "three_pt_pct": 0.3292,
     "ft_pct": 0.6626
   },
