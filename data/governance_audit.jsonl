@@ -24,3 +24,8 @@
 {"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2026, "mode": "calibration", "num_simulations": 20}, "timestamp": "2026-03-26T22:30:00.335427+00:00"}
 {"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2026, "mode": "calibration", "num_simulations": 20}, "timestamp": "2026-03-26T22:36:17.485291+00:00"}
 {"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2026, "mode": "calibration", "num_simulations": 20}, "timestamp": "2026-03-27T03:23:04.231433+00:00"}
+{"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2026, "mode": "calibration", "num_simulations": 20}, "timestamp": "2026-03-28T04:13:54.092159+00:00"}
+{"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2025, "mode": "calibration", "num_simulations": 50}, "timestamp": "2026-03-28T04:13:54.467348+00:00"}
+{"type": "action", "action": "training_complete", "actor": "system", "details": {"gnn_enabled": false, "transformer_enabled": false}, "timestamp": "2026-03-28T04:14:02.994781+00:00"}
+{"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2025, "mode": "calibration", "num_simulations": 50}, "timestamp": "2026-03-28T04:14:13.711016+00:00"}
+{"type": "action", "action": "training_complete", "actor": "system", "details": {"gnn_enabled": false, "transformer_enabled": false}, "timestamp": "2026-03-28T04:14:21.835554+00:00"}
