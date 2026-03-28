@@ -234,6 +234,7 @@ def test_sota_pipeline_rejects_stale_public_feed(tmp_path):
             public_picks_json=str(picks_path),
             max_feed_age_hours=1,
             min_public_sources=2,
+            scrape_live=True,
         )
     )
     pipeline.team_struct["duke"] = Team(name="Duke", seed=1, region="East")
