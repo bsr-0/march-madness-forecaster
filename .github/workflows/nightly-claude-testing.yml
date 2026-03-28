@@ -20,6 +20,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  id-token: write
 
 concurrency:
   group: nightly-claude-testing
@@ -200,9 +201,10 @@ jobs:
 
       - name: QAQC Agent
         uses: anthropics/claude-code-action@v1
+        timeout-minutes: 45
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          direct_prompt: |
+          prompt: |
             # SYSTEM PROMPT — QAQC Agent
 
             You are the **QAQC (Quality Assurance / Quality Control) Agent** for the
@@ -338,8 +340,6 @@ jobs:
 
             If this is a dry run (${{ github.event.inputs.dry_run }}), produce a full
             report of everything you found but do NOT make any changes or push.
-          allowed_tools: "Read,Write,Edit,Bash,Glob,Grep"
-          timeout_minutes: 45
 
   # ═══════════════════════════════════════════════════════════════════════
   # Phase 2b: Skeptical Senior Sports Statistician
@@ -368,9 +368,10 @@ jobs:
 
       - name: Skeptical Sports Statistician Agent
         uses: anthropics/claude-code-action@v1
+        timeout-minutes: 45
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          direct_prompt: |
+          prompt: |
             # SYSTEM PROMPT — Skeptical Senior Sports Statistician
 
             You are **Dr. Skeptic**, a senior sports statistician with 25 years of
@@ -539,8 +540,6 @@ jobs:
 
             If this is a dry run (${{ github.event.inputs.dry_run }}), produce the full
             audit report but do NOT write any files or push.
-          allowed_tools: "Read,Write,Edit,Bash,Glob,Grep"
-          timeout_minutes: 45
 
   # ═══════════════════════════════════════════════════════════════════════
   # Phase 3: Post nightly report
