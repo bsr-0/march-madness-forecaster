@@ -594,6 +594,17 @@ class ResearchLoop:
                 fold_briers=list(variant_folds),
             ))
 
+        # Apply Holm-Bonferroni correction for multiple comparisons.
+        # Required by Experiment Workflow Plan mitigation #1: testing N
+        # variants against the baseline inflates false positive risk.
+        if candidates:
+            from ..evaluation.statistical_tests import holm_bonferroni_correction
+
+            raw_p_values = [c.p_value for c in candidates]
+            corrected = holm_bonferroni_correction(raw_p_values, alpha=0.10)
+            for candidate, correction in zip(candidates, corrected):
+                candidate.p_value = correction["adjusted_p"]
+
         return candidates
 
     def generate_research_report(self) -> Dict[str, Any]:
