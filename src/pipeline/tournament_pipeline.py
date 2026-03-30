@@ -26,14 +26,12 @@ _os.environ.setdefault("MKL_NUM_THREADS", "1")
 
 logger = logging.getLogger(__name__)
 
-# Bayesian BT blend weight re-exported so sota.py facade and predictor agree.
-BT_BLEND_WEIGHT = 0.15
-
 from .config import (  # noqa: F401
     SOTAPipelineConfig,
     EVModeReport,
     _TrainedBaselineModel,
     DataRequirementError,
+    BT_BLEND_WEIGHT,
     TOURNAMENT_START_DATES,
     FIXED_FEATURE_SET,
     SIMPLE_FEATURE_SET,
