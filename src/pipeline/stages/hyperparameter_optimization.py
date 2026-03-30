@@ -261,44 +261,58 @@ def _tune_regularized_logistic(
     n_cv_folds: int,
     sample_weight: Optional[np.ndarray] = None,
 ) -> Dict[str, Any]:
-    """Tune logistic regression C and l1_ratio via grid search."""
+    """Tune logistic regression C and l1_ratio via random search.
+
+    Samples ``n_trials`` random (C, l1_ratio) combinations from log-uniform
+    and uniform distributions respectively, which is substantially faster than
+    the previous 6×6 exhaustive grid search (36 fixed combos) while covering
+    the same parameter space more efficiently at configurable cost.
+
+    C ~ LogUniform(0.01, 5.0), l1_ratio ~ Uniform(0.0, 1.0).
+    Seed is fixed for reproducibility.
+    """
     from sklearn.linear_model import LogisticRegression
     from sklearn.preprocessing import StandardScaler
 
     splits = _temporal_cv_split(len(train_X), n_folds=n_cv_folds, sort_keys=sort_keys)
 
+    rng = np.random.RandomState(seed=42)
+    # Log-uniform C: sample in log space then exponentiate
+    log_c_samples = rng.uniform(np.log(0.01), np.log(5.0), size=n_trials)
+    c_samples = np.exp(log_c_samples)
+    l1_ratio_samples = rng.uniform(0.0, 1.0, size=n_trials)
+
     best_brier = float("inf")
     best_params = {"C": 0.5, "l1_ratio": 0.3}
 
-    for C in [0.01, 0.05, 0.1, 0.5, 1.0, 5.0]:
-        for l1_ratio in [0.0, 0.1, 0.3, 0.5, 0.7, 1.0]:
-            fold_briers = []
-            for train_idx, val_idx in splits:
-                X_tr, y_tr = train_X[train_idx], train_y[train_idx]
-                X_v, y_v = train_X[val_idx], train_y[val_idx]
-                scaler = StandardScaler()
-                X_tr_s = scaler.fit_transform(np.nan_to_num(X_tr, nan=0.0))
-                X_v_s = scaler.transform(np.nan_to_num(X_v, nan=0.0))
-                try:
-                    if l1_ratio == 0.0:
-                        model = LogisticRegression(
-                            penalty="l2", C=C, solver="lbfgs", max_iter=2000,
-                        )
-                    else:
-                        model = LogisticRegression(
-                            penalty="elasticnet", C=C, l1_ratio=l1_ratio,
-                            solver="saga", max_iter=3000,
-                        )
-                    model.fit(X_tr_s, y_tr)
-                    preds = np.clip(model.predict_proba(X_v_s)[:, 1], 1e-7, 1 - 1e-7)
-                    fold_briers.append(float(np.mean((preds - y_v) ** 2)))
-                except Exception:
-                    continue
-            if fold_briers:
-                mean_brier = float(np.mean(fold_briers))
-                if mean_brier < best_brier:
-                    best_brier = mean_brier
-                    best_params = {"C": C, "l1_ratio": l1_ratio}
+    for C, l1_ratio in zip(c_samples, l1_ratio_samples):
+        fold_briers = []
+        for train_idx, val_idx in splits:
+            X_tr, y_tr = train_X[train_idx], train_y[train_idx]
+            X_v, y_v = train_X[val_idx], train_y[val_idx]
+            scaler = StandardScaler()
+            X_tr_s = scaler.fit_transform(np.nan_to_num(X_tr, nan=0.0))
+            X_v_s = scaler.transform(np.nan_to_num(X_v, nan=0.0))
+            try:
+                if l1_ratio < 0.05:
+                    model = LogisticRegression(
+                        penalty="l2", C=float(C), solver="lbfgs", max_iter=2000,
+                    )
+                else:
+                    model = LogisticRegression(
+                        penalty="elasticnet", C=float(C), l1_ratio=float(l1_ratio),
+                        solver="saga", max_iter=3000,
+                    )
+                model.fit(X_tr_s, y_tr)
+                preds = np.clip(model.predict_proba(X_v_s)[:, 1], 1e-7, 1 - 1e-7)
+                fold_briers.append(float(np.mean((preds - y_v) ** 2)))
+            except Exception:
+                continue
+        if fold_briers:
+            mean_brier = float(np.mean(fold_briers))
+            if mean_brier < best_brier:
+                best_brier = mean_brier
+                best_params = {"C": float(C), "l1_ratio": float(l1_ratio)}
 
     return best_params
 
@@ -331,6 +345,30 @@ def _tune_margin_regressor(
     return {"num_leaves": 8, "learning_rate": 0.05, "num_rounds": 200}
 
 
+def _tune_gnn_augmented(
+    train_X: np.ndarray,
+    train_y: np.ndarray,
+    sort_keys: Optional[np.ndarray],
+    feature_names: Optional[List[str]],
+    n_trials: int,
+    timeout: int,
+    n_cv_folds: int,
+    sample_weight: Optional[np.ndarray] = None,
+) -> Dict[str, Any]:
+    """Tune GNN-augmented LightGBM via Optuna with temporal CV.
+
+    The GNN-augmented candidate uses the same LightGBM backend as
+    ``gradient_boosting`` (with PCA-derived SOS features prepended), so we
+    delegate directly to the LightGBM tuner.  Hyperparameters governing tree
+    depth and regularisation are shared; the PCA augmentation is fixed.
+    """
+    return _tune_gradient_boosting(
+        train_X, train_y, sort_keys, feature_names,
+        n_trials, timeout, n_cv_folds,
+        sample_weight=sample_weight,
+    )
+
+
 # Registry of tuning functions keyed by model name.
 TUNER_REGISTRY: Dict[str, Callable] = {
     "gradient_boosting": _tune_gradient_boosting,
@@ -338,6 +376,7 @@ TUNER_REGISTRY: Dict[str, Callable] = {
     "regularized_logistic": _tune_regularized_logistic,
     "spread_regressor": _tune_spread_regressor,
     "margin_regressor": _tune_margin_regressor,
+    "gnn_augmented": _tune_gnn_augmented,
 }
 
 
