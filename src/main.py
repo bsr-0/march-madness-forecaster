@@ -260,6 +260,27 @@ def run_research_loop(args):
     return 0
 
 
+def run_optimize_params(args):
+    """Systematic parameter optimization with LOYO CV and config diff output."""
+    from .research.param_optimizer import ParamOptimizer
+
+    optimizer = ParamOptimizer(
+        production_config_path=getattr(args, "config", "configs/production_2026.json"),
+        output_dir=getattr(args, "output_dir", "data/optimization_reports"),
+        max_evaluations=getattr(args, "max_evaluations", 50),
+        n_points=getattr(args, "n_points", 5),
+    )
+
+    params = getattr(args, "params", None)
+    strategy = getattr(args, "strategy", "full")
+    dry_run = getattr(args, "dry_run", False)
+
+    report = optimizer.run(strategy=strategy, params=params, dry_run=dry_run)
+    optimizer.print_summary(report)
+
+    return 0
+
+
 
 
 def run_production_2026_cmd(args):
@@ -2237,6 +2258,40 @@ def main():
     research_parser.add_argument("--output", "-o", default="data/sota_report.json", help="Output path")
     research_parser.add_argument("--seed", type=int, default=2026, help="Random seed")
 
+    # optimize-params command
+    optim_parser = subparsers.add_parser(
+        "optimize-params",
+        help="Systematic parameter optimization with LOYO CV and config diff output",
+    )
+    optim_parser.add_argument(
+        "--config", default="configs/production_2026.json",
+        help="Production config to optimize against (default: configs/production_2026.json)",
+    )
+    optim_parser.add_argument(
+        "--max-evaluations", type=int, default=50,
+        help="Maximum number of config evaluations (default: 50)",
+    )
+    optim_parser.add_argument(
+        "--strategy", choices=["grid-only", "full"], default="full",
+        help="Optimization strategy (default: full)",
+    )
+    optim_parser.add_argument(
+        "--params", nargs="*", default=None,
+        help="Specific parameters to optimize (default: all tunable)",
+    )
+    optim_parser.add_argument(
+        "--output-dir", default="data/optimization_reports",
+        help="Directory for diff reports (default: data/optimization_reports)",
+    )
+    optim_parser.add_argument(
+        "--n-points", type=int, default=5,
+        help="Grid resolution per parameter (default: 5)",
+    )
+    optim_parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Show search space without running evaluations",
+    )
+
     # scrape-rosters command
     roster_parser = subparsers.add_parser(
         "scrape-rosters",
@@ -2990,6 +3045,8 @@ def main():
         return run_sota(args)
     elif args.command == "research-loop":
         return run_research_loop(args)
+    elif args.command == "optimize-params":
+        return run_optimize_params(args)
     elif args.command == "ingest":
         return ingest_data(args)
     elif args.command == "ingest-historical":
