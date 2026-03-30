@@ -405,20 +405,7 @@ class TournamentPipeline:
         return self._runner._run_ev_mode()
 
     def _filter_years(self, years: List[int], include_holdout: bool = False) -> List[int]:
-        """Filter years by dev/holdout constraints and remove COVID year."""
-        cfg = self.config
-        if not years:
-            return []
-        year_set = sorted({y for y in years if y != 2020})
-        if cfg.dev_years:
-            dev_set = set(cfg.dev_years)
-            if include_holdout and cfg.holdout_years:
-                dev_set = dev_set | set(cfg.holdout_years)
-            year_set = [y for y in year_set if y in dev_set]
-        if cfg.holdout_years and not include_holdout:
-            holdout_set = set(cfg.holdout_years)
-            year_set = [y for y in year_set if y not in holdout_set]
-        return year_set
+        return self._runner._filter_years(years, include_holdout=include_holdout)
 
     def _load_mc_calibration(self):
         if not hasattr(self, "_runner"):
