@@ -4,7 +4,6 @@ This module is a facade — all implementation has moved to:
   src/pipeline/tournament_pipeline.py  (TournamentPipeline, public API)
   src/pipeline/pipeline_runner.py      (_PipelineRunner, orchestration)
   src/pipeline/probability_predictor.py(_ProbabilityPredictor, inference)
-  src/pipeline/pipeline_state.py       (PipelineState, data container)
 """
 
 # noqa: F401

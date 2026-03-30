@@ -36,6 +36,9 @@ except ImportError:
     LogisticRegression = None  # type: ignore[misc,assignment]
 
 
+# Bayesian Bradley-Terry blend weight cap (15% max contribution).
+BT_BLEND_WEIGHT = 0.15
+
 # ---------------------------------------------------------------------------
 # Hard tournament start dates by year.  Games on or after these dates are
 # NCAA tournament games and MUST be excluded from regular-season training
