@@ -253,52 +253,10 @@ class TournamentPipeline:
     def run(self) -> Dict:
         """Run the complete pipeline and return report artifacts.
 
-        Dispatches to calibration mode (Brier-optimal) or EV mode
-        (expected-value pool optimization) based on config.mode.
+        Delegates to _PipelineRunner.run() which handles mode dispatch,
+        error handling, history logging, regression checks, and cost tracking.
         """
-        import time as _run_time
-        self._pre_run_validation()
-
-        _run_start = _run_time.perf_counter()
-        try:
-            if self.config.mode == "ev":
-                result = self._run_ev_mode()
-            else:
-                result = self._run_calibration_mode()
-        except Exception as exc:
-            self._log_run_to_history(
-                status="error", duration=_run_time.perf_counter() - _run_start, error_message=str(exc),
-            )
-            raise
-
-        brier = result.get("loyo_mean_brier") if isinstance(result, dict) else None
-        self._log_run_to_history(status="success", duration=_run_time.perf_counter() - _run_start, brier_score=brier)
-
-        if brier is not None and hasattr(self, "_run_history"):
-            regression_msg = self._run_history.check_regression(brier, mode=self.config.mode)
-            if regression_msg:
-                logger.warning("REGRESSION: %s", regression_msg)
-
-        if hasattr(self, "_resource_tracker"):
-            logger.info(self._resource_tracker.summary())
-            self._resource_tracker.check_budget()
-
-        if hasattr(self, "_cost_tracker") and brier is not None:
-            try:
-                usage = self._resource_tracker.to_dict()
-                phase_costs = self._cost_tracker.compute_phase_costs(usage.get("phases", {}))
-                self._cost_tracker.add_run(
-                    brier_score=brier,
-                    wall_seconds=usage.get("total_wall_seconds", 0),
-                    cpu_seconds=usage.get("total_cpu_seconds", 0),
-                    peak_memory_mb=usage.get("peak_memory_mb", 0),
-                    phase_costs=phase_costs,
-                )
-                logger.info(self._cost_tracker.summary())
-            except Exception as exc:
-                logger.debug("Failed to log cost-performance: %s", exc)
-
-        return result
+        return self._runner.run()
 
     def train_for_predictions(self) -> None:
         """Train data → features → baseline → calibration; skip simulation.
