@@ -20,8 +20,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Bayesian Bradley-Terry blend weight cap (15% max contribution).
-_BT_BLEND_WEIGHT = 0.15
+from .config import BT_BLEND_WEIGHT as _BT_BLEND_WEIGHT
 
 
 class _ProbabilityPredictor:
