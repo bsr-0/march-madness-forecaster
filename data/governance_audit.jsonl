@@ -46,3 +46,9 @@
 {"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2026, "mode": "calibration", "num_simulations": 20}, "timestamp": "2026-03-28T06:00:30.589230+00:00"}
 {"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2025, "mode": "calibration", "num_simulations": 50}, "timestamp": "2026-03-28T06:00:30.870334+00:00"}
 {"type": "action", "action": "training_complete", "actor": "system", "details": {"gnn_enabled": false, "transformer_enabled": false}, "timestamp": "2026-03-28T06:00:38.960556+00:00"}
+{"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2026, "mode": "calibration", "num_simulations": 20}, "timestamp": "2026-03-30T03:35:48.795701+00:00"}
+{"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2025, "mode": "calibration", "num_simulations": 50}, "timestamp": "2026-03-30T03:35:49.106374+00:00"}
+{"type": "action", "action": "training_complete", "actor": "system", "details": {"gnn_enabled": false, "transformer_enabled": false}, "timestamp": "2026-03-30T03:35:57.155706+00:00"}
+{"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2026, "mode": "calibration", "num_simulations": 20}, "timestamp": "2026-03-30T04:44:20.142135+00:00"}
+{"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2025, "mode": "calibration", "num_simulations": 50}, "timestamp": "2026-03-30T04:44:20.403112+00:00"}
+{"type": "action", "action": "training_complete", "actor": "system", "details": {"gnn_enabled": false, "transformer_enabled": false}, "timestamp": "2026-03-30T04:44:27.561954+00:00"}
