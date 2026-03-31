@@ -23,7 +23,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import re
 import sys
 import time
 from pathlib import Path
@@ -119,32 +118,33 @@ def scrape_year(year: int) -> dict | None:
 
 
 def _parse_espn_picks_html(html: str, year: int) -> dict:
-    """Best-effort extraction of pick percentages from ESPN HTML.
+    """Extract pick percentages from ESPN WPW HTML.
 
-    ESPN's page format varies by year. This handles common patterns.
-    Returns dict of team_id -> {round: pick_pct}.
+    Delegates to ESPNPicksScraper.parse_wpw_html() which handles both
+    __NEXT_DATA__ JSON embeds and HTML table formats.
+
+    Returns dict of team_id -> {round: pick_pct (0-1 scale)}.
     """
+    from src.data.scrapers.espn_picks import ESPNPicksScraper
+
+    parsed = ESPNPicksScraper.parse_wpw_html(html)
+    if not parsed:
+        logger.warning("parse_wpw_html returned no data for %d", year)
+        return {}
+
+    # Convert to {team_id: {R64: pct, ...}} format with 0-1 scale
+    round_map = {
+        "round_of_64_pct": "R64", "round_of_32_pct": "R32",
+        "sweet_16_pct": "S16", "elite_8_pct": "E8",
+        "final_four_pct": "F4", "champion_pct": "CHAMP",
+    }
     teams = {}
-
-    # Pattern 1: Look for JSON data embedded in script tags
-    json_pattern = re.compile(r'"picks"\s*:\s*(\{[^}]+\})', re.DOTALL)
-    matches = json_pattern.findall(html)
-    if matches:
-        try:
-            for match in matches:
-                data = json.loads(match)
-                # Process based on data structure
-                for team, pcts in data.items():
-                    if isinstance(pcts, dict):
-                        teams[team] = pcts
-        except (json.JSONDecodeError, TypeError):
-            pass
-
-    # Pattern 2: Look for percentage values in table cells
-    pct_pattern = re.compile(r'(\d{1,3}(?:\.\d+)?)\s*%')
-    if not teams:
-        logger.info("JSON extraction failed, falling back to regex for %d", year)
-
+    for t in parsed:
+        tid = t["name"].lower().replace(" ", "_").replace(".", "").replace("'", "")
+        teams[tid] = {
+            rnd: t.get(field, 0.0) / 100.0
+            for field, rnd in round_map.items()
+        }
     return teams
 
 
