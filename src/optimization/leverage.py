@@ -14,6 +14,7 @@ bracket optimizer.
 """
 
 import logging
+import math
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from collections import namedtuple
@@ -1093,17 +1094,22 @@ class ParetoOptimizer:
     def __init__(
         self,
         leverage_calculator: LeverageCalculator,
-        pool_size: int = 100
+        pool_size: int = 100,
+        ev_mode: bool = True,
     ):
         """
         Initialize optimizer.
-        
+
         Args:
             leverage_calculator: LeverageCalculator instance
             pool_size: Number of entries in bracket pool
+            ev_mode: When True (default), use EV-based scoring that
+                incorporates pool differentiation. When False, use legacy
+                probability × leverage scoring (without seed bonus).
         """
         self.calculator = leverage_calculator
         self.pool_size = pool_size
+        self.ev_mode = ev_mode
     
     def generate_pareto_brackets(
         self,
@@ -1205,27 +1211,54 @@ class ParetoOptimizer:
         var = ex2 - ev ** 2
         return ev, var
 
-    def _risk_adjusted_score(self, team_id: str, round_name: str, risk_level: float) -> float:
+    def _ev_score(self, team_id: str, round_name: str, risk_level: float) -> float:
+        """EV-based pick score: P(win) x points x differentiation.
+
+        risk_level controls differentiation weight:
+          0 = pure probability (chalk-optimal for tiny pools)
+          1 = full differentiation (large pool optimal)
+
+        Differentiation uses the same formula as bracket_search._evaluate_ev_mode():
+          uniqueness = 1 - pick_rate
+          pool_factor = 1 / log2(N * pick_rate)  [for large pools]
+          diff = uniqueness * pool_factor
+
+        This captures the game-theory insight: a pick's value is
+        proportional to P(correct) AND inversely proportional to how
+        many opponents share it.
+        """
         model_prob = float(self.calculator.model_probs.get(team_id, {}).get(round_name, 0.0))
         public_prob, _ = self.calculator._public_pct_with_fallback(team_id, round_name)
-        leverage = min(model_prob / max(public_prob, 0.01), self.calculator.MAX_LEVERAGE)
-        seed = max(1, self.calculator._team_meta(team_id).seed or 16)
 
-        # Low-risk brackets favor strong seeds; high-risk brackets reward leverage.
-        seed_strength = (17 - seed) / 16.0
-        return model_prob * (leverage ** risk_level) + (1.0 - risk_level) * 0.02 * seed_strength
+        if not self.ev_mode:
+            # Legacy: probability x leverage^risk_level (no seed bonus).
+            leverage = min(model_prob / max(public_prob, 0.01), self.calculator.MAX_LEVERAGE)
+            return model_prob * (leverage ** risk_level)
+
+        pts = float(self.calculator.scoring_system.get(round_name, 10))
+
+        # Differentiation: matches bracket_search.py:234-242
+        uniqueness = max(0.0, 1.0 - public_prob)
+        pool_factor = 1.0
+        if self.pool_size > 50:
+            expected_dups = self.pool_size * public_prob
+            pool_factor = 1.0 / max(1.0, math.log2(max(expected_dups, 1.0)))
+        diff = uniqueness * pool_factor
+
+        blended_diff = (1.0 - risk_level) * 1.0 + risk_level * diff
+        return model_prob * pts * blended_diff
+
+    def _risk_adjusted_score(self, team_id: str, round_name: str, risk_level: float) -> float:
+        """Deprecated: use _ev_score instead. Kept for backward compatibility."""
+        return self._ev_score(team_id, round_name, risk_level)
 
     def _pick_winner(self, team1_id: str, team2_id: str, round_name: str, risk_level: float) -> str:
-        score1 = self._risk_adjusted_score(team1_id, round_name, risk_level)
-        score2 = self._risk_adjusted_score(team2_id, round_name, risk_level)
+        score1 = self._ev_score(team1_id, round_name, risk_level)
+        score2 = self._ev_score(team2_id, round_name, risk_level)
         if abs(score1 - score2) > 1e-9:
             return team1_id if score1 > score2 else team2_id
 
-        # Deterministic tie-break: better seed, then lexical order for stability.
-        seed1 = max(1, self.calculator._team_meta(team1_id).seed or 16)
-        seed2 = max(1, self.calculator._team_meta(team2_id).seed or 16)
-        if seed1 != seed2:
-            return team1_id if seed1 < seed2 else team2_id
+        # Deterministic tie-break: lexical order only (no seed preference).
         return team1_id if team1_id < team2_id else team2_id
 
     def _build_seed_map(self) -> Dict[str, Dict[int, str]]:
@@ -1411,21 +1444,19 @@ class ParetoOptimizer:
         return picks, champion, final_four, expected_points, variance
 
     def _generate_summary_bracket(self, risk_level: float) -> Tuple[Dict[str, str], str, List[str], float, float]:
+        # Champion selection using EV score (not raw probability x leverage)
         champion_scores: Dict[str, float] = {}
-        for team_id, probs in self.calculator.model_probs.items():
-            champ_prob = probs.get("CHAMP", 0.0)
-            public_prob, _ = self.calculator._public_pct_with_fallback(team_id, "CHAMP")
-            leverage = min(champ_prob / max(public_prob, 0.01), self.calculator.MAX_LEVERAGE)
-            champion_scores[team_id] = champ_prob * (leverage ** risk_level)
+        for team_id in self.calculator.model_probs:
+            champion_scores[team_id] = self._ev_score(team_id, "CHAMP", risk_level)
 
         champion = max(champion_scores, key=champion_scores.get) if champion_scores else ""
 
+        # F4 selection using EV score (incorporates differentiation value)
         f4_candidates = []
-        for team_id, probs in self.calculator.model_probs.items():
-            f4_prob = probs.get("F4", 0.0)
-            public_prob, _ = self.calculator._public_pct_with_fallback(team_id, "F4")
-            leverage = min(f4_prob / max(public_prob, 0.01), self.calculator.MAX_LEVERAGE)
-            f4_candidates.append((team_id, f4_prob * (leverage ** risk_level), f4_prob))
+        for team_id in self.calculator.model_probs:
+            f4_ev = self._ev_score(team_id, "F4", risk_level)
+            f4_prob = float(self.calculator.model_probs[team_id].get("F4", 0.0))
+            f4_candidates.append((team_id, f4_ev, f4_prob))
         f4_candidates.sort(key=lambda x: x[1], reverse=True)
 
         final_four: List[str] = []
