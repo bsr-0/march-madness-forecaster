@@ -977,8 +977,8 @@ BALANCED_PROFILE = RiskProfile(
     robustness_weight=0.25,
     path_protection_weight=0.15,
     diversity_weight=0.1,
-    champion_seed_max=4,
-    max_upsets_r64=4,
+    champion_seed_max=8,
+    max_upsets_r64=5,
     payout_target="top_10pct",
 )
 
@@ -989,8 +989,8 @@ AGGRESSIVE_PROFILE = RiskProfile(
     robustness_weight=0.1,
     path_protection_weight=0.1,
     diversity_weight=0.1,
-    champion_seed_max=5,
-    max_upsets_r64=6,
+    champion_seed_max=16,
+    max_upsets_r64=8,
     payout_target="winner_take_all",
 )
 

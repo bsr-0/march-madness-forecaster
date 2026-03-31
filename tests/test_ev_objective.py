@@ -385,3 +385,212 @@ class TestPoolSizeAffectsDifferentiation:
             f"Large pool should penalize popular picks more: "
             f"small={score_small}, large={score_large}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Test: Full bracket _generate_full_bracket uses _ev_score for every game
+# ---------------------------------------------------------------------------
+
+
+class TestFullBracketUsesEvScore:
+    """Verify _generate_full_bracket routes through _ev_score, not a hidden
+    chalk formula. We do this by checking that a contrarian bracket at
+    risk_level=1.0 produces different picks than a chalk bracket at
+    risk_level=0.0 when ownership is skewed."""
+
+    def test_contrarian_differs_from_chalk(self):
+        model_probs = {}
+        public_picks = {}
+        metadata = {}
+
+        for region in ("East", "West", "South", "Midwest"):
+            for seed in range(1, 17):
+                tid = f"{region.lower()}_{seed}"
+                base_p = max(0.05, 1.0 - (seed - 1) * 0.055)
+                model_probs[tid] = _round_probs(
+                    champ=base_p * 0.12,
+                    f4=base_p * 0.30,
+                    e8=base_p * 0.50,
+                    s16=base_p * 0.65,
+                    r32=base_p * 0.80,
+                    r64=base_p * 0.92,
+                )
+                if seed <= 2:
+                    pub_mult = 4.0
+                elif seed <= 4:
+                    pub_mult = 2.0
+                elif seed <= 8:
+                    pub_mult = 0.5
+                else:
+                    pub_mult = 0.2
+                public_picks[tid] = _round_probs(
+                    champ=base_p * 0.12 * pub_mult,
+                    f4=base_p * 0.30 * pub_mult,
+                    e8=base_p * 0.50 * pub_mult,
+                    s16=base_p * 0.65 * pub_mult,
+                    r32=base_p * 0.80 * pub_mult,
+                    r64=base_p * 0.92 * pub_mult,
+                )
+                metadata[tid] = TeamMetadata(
+                    team_name=f"{region}{seed}", seed=seed, region=region,
+                )
+
+        calc = _make_calculator(model_probs, public_picks, metadata)
+        opt = ParetoOptimizer(calc, pool_size=500)
+
+        if not opt._can_build_full_bracket():
+            pytest.skip("Cannot build full bracket with test data")
+
+        chalk_picks, _, chalk_f4, _, _ = opt._generate_full_bracket(0.0)
+        contra_picks, _, contra_f4, _, _ = opt._generate_full_bracket(1.0)
+
+        # At least some picks must differ
+        diff_count = sum(
+            1 for k in chalk_picks
+            if chalk_picks[k] != contra_picks.get(k)
+        )
+        assert diff_count > 0, (
+            "risk_level=0 and risk_level=1 produced identical brackets — "
+            "_ev_score differentiation is not working"
+        )
+
+    def test_full_bracket_f4_seed_diversity(self):
+        """At high risk in a large pool, F4 should include non-#1 seeds."""
+        model_probs = {}
+        public_picks = {}
+        metadata = {}
+
+        for region in ("East", "West", "South", "Midwest"):
+            for seed in range(1, 17):
+                tid = f"{region.lower()}_{seed}"
+                # Make 3-4 seeds nearly as strong as 1-2 seeds
+                if seed <= 4:
+                    base_p = 0.90 - (seed - 1) * 0.03
+                else:
+                    base_p = max(0.05, 0.75 - (seed - 4) * 0.06)
+                model_probs[tid] = _round_probs(
+                    champ=base_p * 0.12,
+                    f4=base_p * 0.30,
+                    e8=base_p * 0.50,
+                    s16=base_p * 0.65,
+                    r32=base_p * 0.80,
+                    r64=base_p * 0.92,
+                )
+                # Public heavily concentrates on 1-seeds
+                if seed == 1:
+                    pub_mult = 5.0
+                elif seed == 2:
+                    pub_mult = 3.0
+                elif seed <= 4:
+                    pub_mult = 1.0
+                else:
+                    pub_mult = 0.3
+                public_picks[tid] = _round_probs(
+                    champ=base_p * 0.12 * pub_mult,
+                    f4=base_p * 0.30 * pub_mult,
+                    e8=base_p * 0.50 * pub_mult,
+                    s16=base_p * 0.65 * pub_mult,
+                    r32=base_p * 0.80 * pub_mult,
+                    r64=base_p * 0.92 * pub_mult,
+                )
+                metadata[tid] = TeamMetadata(
+                    team_name=f"{region}{seed}", seed=seed, region=region,
+                )
+
+        calc = _make_calculator(model_probs, public_picks, metadata)
+        opt = ParetoOptimizer(calc, pool_size=1000)
+
+        if not opt._can_build_full_bracket():
+            pytest.skip("Cannot build full bracket with test data")
+
+        _, _, f4, _, _ = opt._generate_full_bracket(risk_level=0.9)
+        f4_seeds = [metadata[tid].seed for tid in f4]
+
+        assert not all(s == 1 for s in f4_seeds), (
+            f"Full bracket F4 all #1 seeds at risk=0.9, pool=1000: {f4_seeds}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test: Edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestEvScoreEdgeCases:
+    def test_zero_model_prob_returns_zero(self):
+        """A team with model_prob=0 should have EV score = 0."""
+        model_probs = {"ghost": _round_probs(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)}
+        public_picks = {"ghost": _round_probs(0.10, 0.20, 0.30, 0.40, 0.50, 0.60)}
+        metadata = {"ghost": TeamMetadata(team_name="Ghost", seed=8, region="East")}
+        calc = _make_calculator(model_probs, public_picks, metadata)
+        opt = ParetoOptimizer(calc, pool_size=100)
+
+        for rn in ("R64", "CHAMP"):
+            assert opt._ev_score("ghost", rn, 0.5) == 0.0
+
+    def test_unknown_team_returns_zero(self):
+        """A team not in model_probs should score 0."""
+        model_probs = {"real": _round_probs(0.10, 0.25, 0.40, 0.55, 0.70, 0.90)}
+        public_picks = {"real": _round_probs(0.08, 0.20, 0.35, 0.50, 0.65, 0.85)}
+        metadata = {"real": TeamMetadata(team_name="Real", seed=1, region="East")}
+        calc = _make_calculator(model_probs, public_picks, metadata)
+        opt = ParetoOptimizer(calc, pool_size=100)
+
+        assert opt._ev_score("nonexistent", "CHAMP", 0.5) == 0.0
+
+    def test_pool_size_one_no_crash(self):
+        """Pool size of 1 should not crash or produce NaN."""
+        model_probs = {"team": _round_probs(0.10, 0.25, 0.40, 0.55, 0.70, 0.90)}
+        public_picks = {"team": _round_probs(0.08, 0.20, 0.35, 0.50, 0.65, 0.85)}
+        metadata = {"team": TeamMetadata(team_name="Solo", seed=3, region="East")}
+        calc = _make_calculator(model_probs, public_picks, metadata)
+        opt = ParetoOptimizer(calc, pool_size=1)
+
+        score = opt._ev_score("team", "CHAMP", 1.0)
+        assert score > 0
+        assert score == score  # not NaN
+
+
+# ---------------------------------------------------------------------------
+# Test: QuadrantCorrelationConstraint defaults
+# ---------------------------------------------------------------------------
+
+
+class TestPathProtectionDefaults:
+    def test_require_safe_f4_defaults_false(self):
+        """require_safe_f4 should default to False to avoid chalk bias."""
+        from src.optimization.path_protection import QuadrantCorrelationConstraint
+        constraint = QuadrantCorrelationConstraint()
+        assert constraint.require_safe_f4 is False, (
+            "require_safe_f4 should default to False"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Test: Chalk fallback uses stochastic sampling
+# ---------------------------------------------------------------------------
+
+
+class TestChalkFallbackStochastic:
+    def test_fallback_not_deterministic_chalk(self):
+        """_generate_chalk_winners should use stochastic sampling,
+        not always pick the favorite (p >= 0.5)."""
+        from src.pipeline.stages.ev_analysis import _generate_chalk_winners
+
+        # Set up 32-team bracket where underdogs have ~45% win prob
+        teams = [f"team_{i}" for i in range(32)]
+        matchup_probs = {}
+        for i in range(0, 32, 2):
+            # Slight favorite: 55% vs 45%
+            matchup_probs[(teams[i], teams[i + 1])] = 0.55
+
+        winners = _generate_chalk_winners(teams, matchup_probs)
+        # With p=0.55 and ~16 first-round games, deterministic chalk would
+        # always pick teams[0], teams[2], etc. Stochastic should sometimes
+        # pick the other team. With seed=42, at least one upset should occur.
+        r64_winners = winners[:16]
+        favorites = {teams[i] for i in range(0, 32, 2)}
+        non_favorites = [w for w in r64_winners if w not in favorites]
+        assert len(non_favorites) > 0, (
+            "Fallback bracket is deterministic chalk — should be stochastic"
+        )
