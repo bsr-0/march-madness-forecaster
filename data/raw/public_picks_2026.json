@@ -1,5 +1,6 @@
 {
   "timestamp": "2026-03-18T12:00:00Z",
+  "_warning": "SYNTHETIC PLACEHOLDER DATA. Pick rates are arithmetic sequences by seed, not real ESPN data. All teams of the same seed have identical rates. Replace with actual ESPN BTC 'Who Picked Whom' data before production use.",
   "sources": [
     "espn",
     "yahoo",
