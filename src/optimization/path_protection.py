@@ -393,13 +393,14 @@ class QuadrantCorrelationConstraint:
        picks in that region must be chalk to protect the path.
     2. Cross-region upsets are unrestricted (no path interference).
     3. Within-region upsets must have disruption cost < max_disruption (3%).
-    4. At least one F4 pick should have seed <= 3 for robustness.
+    4. (Optional, disabled by default) At least one F4 pick should have
+       seed <= 3 for robustness. Disabled by default to avoid chalk bias.
     """
 
     def __init__(
         self,
         max_disruption_cost: float = 0.03,
-        require_safe_f4: bool = True,
+        require_safe_f4: bool = False,
     ):
         self.max_disruption_cost = max_disruption_cost
         self.require_safe_f4 = require_safe_f4

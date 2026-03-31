@@ -96,6 +96,61 @@ class TestLoadHistoricalPicks:
         assert len(result) == 64  # Falls back to seed-based
 
 
+class TestSeedPickRatesEspnAnchors:
+    """Validate SEED_PICK_RATES against known ESPN BTC anchor points.
+
+    These anchors are from ESPN "Who Picked Whom" aggregate data
+    (2015-2024).  The model must stay within tolerance of these
+    empirical values to ensure the leverage/differentiation
+    calculation uses realistic public pick estimates.
+    """
+
+    # (seed, round) -> (espn_value, max_absolute_error)
+    ESPN_ANCHORS = {
+        (1, "R64"):   (0.97,  0.02),
+        (2, "R64"):   (0.93,  0.02),
+        (5, "R64"):   (0.64,  0.02),
+        (8, "R64"):   (0.52,  0.02),
+        (12, "R64"):  (0.36,  0.02),
+        (16, "R64"):  (0.02,  0.02),
+        (1, "F4"):    (0.42,  0.03),
+        (2, "F4"):    (0.22,  0.03),
+        (1, "CHAMP"): (0.18,  0.02),
+        (2, "CHAMP"): (0.06,  0.02),
+    }
+
+    def test_anchors_within_tolerance(self):
+        for (seed, rnd), (target, tol) in self.ESPN_ANCHORS.items():
+            model_val = _SEED_PICK_RATES[seed][rnd]
+            assert abs(model_val - target) <= tol, (
+                f"Seed {seed} {rnd}: model={model_val:.4f}, "
+                f"ESPN={target:.4f}, tolerance={tol}"
+            )
+
+    def test_champ_sums_to_one(self):
+        """Championship picks across all 64 teams must sum to ~100%."""
+        total = sum(_SEED_PICK_RATES[s]["CHAMP"] * 4 for s in range(1, 17))
+        assert 0.98 <= total <= 1.02, f"CHAMP sum = {total:.4f}"
+
+    def test_1_seed_champ_dominates(self):
+        """1-seeds should have highest championship pick rate."""
+        for seed in range(2, 17):
+            assert _SEED_PICK_RATES[1]["CHAMP"] > _SEED_PICK_RATES[seed]["CHAMP"], (
+                f"Seed 1 CHAMP ({_SEED_PICK_RATES[1]['CHAMP']:.4f}) should exceed "
+                f"seed {seed} ({_SEED_PICK_RATES[seed]['CHAMP']:.4f})"
+            )
+
+    def test_f4_concentration_on_top_seeds(self):
+        """F4 pick rates for 1-2 seeds should exceed their advancement rates."""
+        from src.data.seed_pick_model import _compute_advancement_rates
+        adv = _compute_advancement_rates()
+        for seed in (1, 2):
+            assert _SEED_PICK_RATES[seed]["F4"] > adv[seed]["F4"], (
+                f"Seed {seed} F4 pick rate should exceed advancement rate "
+                f"(public over-picks top seeds for F4)"
+            )
+
+
 class TestGetAvailableYears:
     def test_empty_dir(self, tmp_path):
         assert get_available_years(tmp_path) == []
