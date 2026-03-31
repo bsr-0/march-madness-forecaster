@@ -11,46 +11,56 @@
 The March Madness Forecaster codebase implements **robust, multi-layered leakage controls**. The production pipeline (2026) is well-protected with `strict_leakage_mode=true`, mandatory cutoff dates, point-in-time feature engineering, and frozen configuration governance. Two actionable issues were found, along with several areas warranting ongoing vigilance.
 
 **Critical issues found:** 0
-**Moderate issues found:** 2
+**Moderate issues found:** 2 (both resolved — see below)
 **Low-risk observations:** 6
 
 ---
 
-## Issue #1 (MODERATE): Calibration Fallback Fits and Evaluates on Same Data
+## Issue #1 (MODERATE): Calibration Fallback Fits and Evaluates on Same Data — RESOLVED
 
-**File:** `src/pipeline/stages/calibration.py`, lines 384-392
+**File:** `src/pipeline/stages/calibration.py`, lines 388-392
 
-**Description:** When calibration has insufficient samples for a proper train/test split, the code falls back to fitting and evaluating on identical data:
+**Description:** When calibration has insufficient samples for a proper train/test split, the code *previously* fell back to fitting and evaluating on identical data (`p_fit, p_eval = p_arr, p_arr`).
+
+**Resolution (2026-03-31):** The fallback now sets `p_eval = None` and `use_oos_eval = False`, skipping evaluation entirely when samples are too few rather than reporting inflated metrics:
 
 ```python
 else:
     # Too few samples for a meaningful split; fit on all
-    p_fit, p_eval = p_arr, p_arr   # <-- same data for fit and eval
-    y_fit, y_eval = y_arr, y_arr
+    # but do NOT evaluate on the same data (prevents inflated metrics).
+    p_fit, p_eval = p_arr, None
+    y_fit, y_eval = y_arr, None
     use_oos_eval = False
 ```
 
-**Impact:** Reports artificially inflated post-calibration Brier/ECE improvements in the low-sample regime. Downstream decisions (e.g., calibration method selection) based on these metrics would be unreliable.
-
-**Recommendation:** When sample count is too low for a meaningful split, either skip calibration evaluation metrics entirely or use leave-one-out cross-validation within the limited set.
+Additionally, the primary production path (multi-year training with 450+ tournament games) uses nested calibration: fit on historical tournament data, evaluate on current-year validation samples (`calibration.py:361-374`). The fallback is only triggered with very small sample counts.
 
 ---
 
-## Issue #2 (MODERATE): `IsotonicCalibrator.fit_calibrate()` Returns In-Sample Predictions
+## Issue #2 (MODERATE): `IsotonicCalibrator.fit_calibrate()` Returns In-Sample Predictions — RESOLVED
 
-**File:** `src/ml/calibration/calibration.py`, lines 233-249
+**File:** `src/ml/calibration/calibration.py`, lines 233-269
 
-**Description:** The `fit_calibrate()` method fits and then returns predictions on the same data:
+**Description:** The `fit_calibrate()` method *previously* fit and returned predictions on the same data.
+
+**Resolution (2026-03-31):** The method now uses **leave-one-out cross-validation**, producing honest out-of-sample predictions:
 
 ```python
 def fit_calibrate(self, predictions, outcomes):
+    """Fit calibrator and return leave-one-out cross-validated predictions."""
+    loo_calibrated = np.empty(n)
+    for i in range(n):
+        mask = np.ones(n, dtype=bool)
+        mask[i] = False
+        fold_cal = IsotonicCalibrator()
+        fold_cal.fit(predictions[mask], outcomes[mask])
+        loo_calibrated[i] = fold_cal.calibrate(predictions[i:i + 1])[0]
+    # Refit on all data for future calibrate() calls
     self.fit(predictions, outcomes)
-    return self.calibrate(predictions)  # same data used for fit
+    return loo_calibrated
 ```
 
-**Impact:** Any caller using the returned predictions for evaluation would get overfitting-inflated metrics. Currently this method does not appear to be used in the production path, but it is a latent hazard.
-
-**Recommendation:** Add a deprecation warning or docstring caveat. Consider removing the method or renaming it to `fit_transform_insample()` to make the semantics explicit.
+This method is used by the isotonic calibration path in `src/pipeline/stages/probability_calibration.py:185`. Note: the production 2026 config uses temperature scaling, not isotonic.
 
 ---
 
