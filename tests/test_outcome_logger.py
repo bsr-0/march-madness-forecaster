@@ -20,6 +20,8 @@ from src.evaluation.outcome_logger import (
     load_predictions_from_report,
     save_outcome_log,
     _lookup_prediction,
+    _infer_team_ids,
+    _split_matchup_key,
 )
 
 
@@ -330,6 +332,107 @@ class TestLoadPredictionsFromReport:
 
         with pytest.raises(ValueError, match="No predictions_"):
             load_predictions_from_report(str(path))
+
+    def test_multi_word_team_names_with_known_ids(self, tmp_path):
+        """Keys like 'duke_michigan_state' are ambiguous without known IDs."""
+        report = {
+            "predictions_2026": {
+                "duke_michigan_state": 0.65,
+                "duke_ohio_state": 0.70,
+                "michigan_state_ohio_state": 0.55,
+            }
+        }
+        path = tmp_path / "report.json"
+        path.write_text(json.dumps(report))
+
+        known = ["duke", "michigan_state", "ohio_state"]
+        preds = load_predictions_from_report(str(path), known_team_ids=known)
+
+        assert ("duke", "michigan_state") in preds
+        assert preds[("duke", "michigan_state")] == pytest.approx(0.65)
+        assert ("duke", "ohio_state") in preds
+        assert ("michigan_state", "ohio_state") in preds
+
+    def test_multi_word_inferred_ids(self, tmp_path):
+        """Without known IDs, inference should still work for common teams."""
+        # Build enough matchups that "michigan_state" appears many times
+        preds_dict = {}
+        opponents = ["duke", "unc", "kansas", "kentucky", "gonzaga"]
+        for opp in opponents:
+            preds_dict[f"{opp}_michigan_state"] = 0.55
+            preds_dict[f"{opp}_ohio_state"] = 0.60
+        report = {"predictions_2026": preds_dict}
+        path = tmp_path / "report.json"
+        path.write_text(json.dumps(report))
+
+        preds = load_predictions_from_report(str(path))
+        assert ("duke", "michigan_state") in preds
+        assert ("duke", "ohio_state") in preds
+
+    def test_double_underscore_team_names(self, tmp_path):
+        """Team IDs with double underscores like st__john_s__ny."""
+        report = {
+            "predictions_2026": {
+                "duke_st__john_s__ny": 0.77,
+            }
+        }
+        path = tmp_path / "report.json"
+        path.write_text(json.dumps(report))
+
+        known = ["duke", "st__john_s__ny"]
+        preds = load_predictions_from_report(str(path), known_team_ids=known)
+        assert ("duke", "st__john_s__ny") in preds
+
+
+# ---------------------------------------------------------------------------
+# _infer_team_ids tests
+# ---------------------------------------------------------------------------
+
+class TestInferTeamIds:
+    def test_basic_inference(self):
+        keys = [
+            "duke_michigan_state",
+            "duke_ohio_state",
+            "duke_kansas",
+            "michigan_state_ohio_state",
+            "michigan_state_kansas",
+            "ohio_state_kansas",
+        ]
+        ids = _infer_team_ids(keys)
+        assert "duke" in ids
+        assert "michigan_state" in ids
+        assert "ohio_state" in ids
+        assert "kansas" in ids
+
+    def test_empty_input(self):
+        ids = _infer_team_ids([])
+        assert ids == set()
+
+
+# ---------------------------------------------------------------------------
+# _split_matchup_key tests
+# ---------------------------------------------------------------------------
+
+class TestSplitMatchupKey:
+    def test_simple_two_part(self):
+        assert _split_matchup_key("duke_kansas", set()) == ("duke", "kansas")
+
+    def test_known_multi_word(self):
+        team_set = {"duke", "michigan_state"}
+        assert _split_matchup_key("duke_michigan_state", team_set) == ("duke", "michigan_state")
+
+    def test_both_multi_word(self):
+        team_set = {"michigan_state", "ohio_state"}
+        assert _split_matchup_key("michigan_state_ohio_state", team_set) == (
+            "michigan_state", "ohio_state"
+        )
+
+    def test_fallback_one_side_known(self):
+        team_set = {"duke"}
+        result = _split_matchup_key("duke_michigan_state", team_set)
+        assert result is not None
+        assert result[0] == "duke"
+        assert result[1] == "michigan_state"
 
 
 # ---------------------------------------------------------------------------

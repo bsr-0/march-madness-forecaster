@@ -104,40 +104,14 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # --- Load predictions ---
     pred_path = Path(args.predictions)
     if not pred_path.exists():
         logger.error("Predictions file not found: %s", pred_path)
         return 1
 
-    if args.format == "kaggle":
-        mteams = args.mteams
-        if mteams is None:
-            # Try common locations
-            for candidate in [
-                _PROJECT_ROOT / "data" / "kaggle" / "MTeams.csv",
-                _PROJECT_ROOT / "data" / "raw" / "kaggle" / "MTeams.csv",
-            ]:
-                if candidate.exists():
-                    mteams = str(candidate)
-                    break
-        if mteams is None or not Path(mteams).exists():
-            logger.error(
-                "MTeams.csv not found. Provide --mteams path or place it in data/kaggle/."
-            )
-            return 1
-        predictions = load_predictions_from_kaggle_csv(str(pred_path), mteams)
-    else:
-        predictions = load_predictions_from_report(str(pred_path))
-
-    if not predictions:
-        logger.error("No predictions loaded. Check the input file.")
-        return 1
-
-    logger.info("Loaded %d predictions.", len(predictions))
-
-    # --- Load actual results ---
+    # --- Load actual results first (needed for team ID disambiguation) ---
     results_source = ""
+    actual_games = []
     if args.scrape_results:
         try:
             from src.data.scrapers.tournament_results import TournamentResultsScraper
@@ -173,6 +147,34 @@ def main() -> int:
     if not actual_games:
         logger.error("No game results available.")
         return 1
+
+    # --- Load predictions (using team IDs from results for disambiguation) ---
+    known_ids = list({g.team1_id for g in actual_games} | {g.team2_id for g in actual_games})
+
+    if args.format == "kaggle":
+        mteams = args.mteams
+        if mteams is None:
+            for candidate in [
+                _PROJECT_ROOT / "data" / "kaggle" / "MTeams.csv",
+                _PROJECT_ROOT / "data" / "raw" / "kaggle" / "MTeams.csv",
+            ]:
+                if candidate.exists():
+                    mteams = str(candidate)
+                    break
+        if mteams is None or not Path(mteams).exists():
+            logger.error(
+                "MTeams.csv not found. Provide --mteams path or place it in data/kaggle/."
+            )
+            return 1
+        predictions = load_predictions_from_kaggle_csv(str(pred_path), mteams)
+    else:
+        predictions = load_predictions_from_report(str(pred_path), known_team_ids=known_ids)
+
+    if not predictions:
+        logger.error("No predictions loaded. Check the input file.")
+        return 1
+
+    logger.info("Loaded %d predictions.", len(predictions))
 
     # --- Build outcome log ---
     log = build_outcome_log(

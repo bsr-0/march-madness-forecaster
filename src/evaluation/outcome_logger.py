@@ -187,14 +187,74 @@ def load_predictions_from_kaggle_csv(
     return predictions
 
 
-def load_predictions_from_report(report_path: str) -> Dict[Tuple[str, str], float]:
+def _infer_team_ids(matchup_keys: List[str]) -> set[str]:
+    """Infer the set of valid team IDs from ambiguous matchup keys.
+
+    For each key like ``"duke_michigan_state"`` we try every split point
+    and count how often each candidate ID appears.  IDs that appear many
+    times across different matchups are almost certainly real team IDs.
+    """
+    from collections import Counter
+
+    candidate_counts: Counter[str] = Counter()
+    for key in matchup_keys:
+        parts = key.split("_")
+        for split_idx in range(1, len(parts)):
+            left = "_".join(parts[:split_idx])
+            right = "_".join(parts[split_idx:])
+            candidate_counts[left] += 1
+            candidate_counts[right] += 1
+
+    # A real team ID will appear in many matchups (paired with many
+    # different opponents).  Use a threshold: at least 3 appearances.
+    threshold = max(3, len(matchup_keys) // 100)
+    return {cid for cid, count in candidate_counts.items() if count >= threshold}
+
+
+def _split_matchup_key(
+    key: str, team_ids: set[str],
+) -> Optional[Tuple[str, str]]:
+    """Split ``"teamA_teamB"`` into ``(teamA, teamB)`` using known IDs.
+
+    Tries every possible split point and picks the one where both sides
+    are recognized team IDs.  Falls back to the first valid split if
+    only one side matches, or a simple 2-part split as a last resort.
+    """
+    parts = key.split("_")
+    if len(parts) == 2:
+        return (parts[0], parts[1])
+
+    # Try all split points; prefer splits where both sides are known
+    best: Optional[Tuple[str, str]] = None
+    for split_idx in range(1, len(parts)):
+        left = "_".join(parts[:split_idx])
+        right = "_".join(parts[split_idx:])
+        left_known = left in team_ids
+        right_known = right in team_ids
+        if left_known and right_known:
+            return (left, right)
+        if (left_known or right_known) and best is None:
+            best = (left, right)
+
+    return best
+
+
+def load_predictions_from_report(
+    report_path: str,
+    known_team_ids: Optional[List[str]] = None,
+) -> Dict[Tuple[str, str], float]:
     """Load predictions from a production report JSON or forecaster output.
 
-    Expects a ``predictions_{year}`` key with matchup string keys
-    (e.g. ``"duke_vermont": 0.88``).
+    Prediction keys use the format ``"{team1_id}_{team2_id}"`` where team
+    IDs themselves may contain underscores (e.g. ``michigan_state``).  To
+    parse these ambiguous keys we need the set of valid team IDs.  If
+    *known_team_ids* is not supplied the function attempts to infer IDs
+    from the prediction keys by testing every possible split point.
 
     Args:
         report_path: Path to JSON report file.
+        known_team_ids: Optional list of canonical team IDs.  Dramatically
+            improves parse accuracy for multi-word team names.
 
     Returns:
         Dict mapping (team1_id, team2_id) to P(team1 wins).
@@ -215,16 +275,33 @@ def load_predictions_from_report(report_path: str) -> Dict[Tuple[str, str], floa
             f"Available keys: {list(report.keys())}"
         )
 
+    # Build a set of known IDs for disambiguation
+    team_set: set[str] = set(known_team_ids) if known_team_ids else set()
+    if not team_set:
+        # Infer team IDs: collect all keys, try all split points, and
+        # keep IDs that appear on both sides of many matchups.
+        team_set = _infer_team_ids(list(pred_dict.keys()))
+
     predictions: Dict[Tuple[str, str], float] = {}
+    skipped = 0
     for matchup_key, prob in pred_dict.items():
-        parts = matchup_key.split("_")
-        if len(parts) == 2:
-            predictions[(parts[0], parts[1])] = float(prob)
-        elif "__vs__" in matchup_key:
-            t1, t2 = matchup_key.split("__vs__")
+        if "__vs__" in matchup_key:
+            t1, t2 = matchup_key.split("__vs__", 1)
             predictions[(t1, t2)] = float(prob)
+            continue
+
+        parsed = _split_matchup_key(matchup_key, team_set)
+        if parsed is not None:
+            predictions[parsed] = float(prob)
         else:
-            logger.debug("Skipping unrecognized matchup key: %s", matchup_key)
+            skipped += 1
+            logger.debug("Skipping unparseable matchup key: %s", matchup_key)
+
+    if skipped:
+        logger.warning(
+            "Skipped %d/%d unparseable matchup keys in %s",
+            skipped, len(pred_dict), report_path,
+        )
 
     logger.info("Loaded %d predictions from %s", len(predictions), report_path)
     return predictions
