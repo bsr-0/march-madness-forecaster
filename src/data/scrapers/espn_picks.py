@@ -172,7 +172,14 @@ class ESPNPicksScraper:
             if result:
                 return result
 
-        # 3. Fall back to cache from a previous successful fetch
+        # 3. Try HTML scraping of "Who Picked Whom" page.
+        # ESPN serves pick data either as JSON embedded in <script> tags
+        # or in HTML tables.  This handles both formats.
+        result = self._try_html_page(year)
+        if result:
+            return result
+
+        # 4. Fall back to cache from a previous successful fetch
         cached = self._load_from_cache(f"espn_picks_{year}.json")
         if cached:
             logger.info("Using cached ESPN picks for %d", year)
@@ -322,6 +329,215 @@ class ESPNPicksScraper:
 
         with open(cache_path, "r") as f:
             return json.load(f)
+
+    def _try_html_page(self, year: int) -> Optional[ConsensusData]:
+        """Fetch ESPN 'Who Picked Whom' HTML page and extract pick data.
+
+        ESPN serves pick data in two known formats:
+        1. JSON embedded in a ``<script id="__NEXT_DATA__">`` tag (React/Next.js)
+        2. HTML tables with percentage cells (legacy server-rendered page)
+
+        Returns None on any failure so the caller falls through to cache.
+        """
+        for url in (
+            self._WPW_URL.format(year=year),
+            self._PEOPLES_URL.format(year=year),
+        ):
+            try:
+                resp = self.session.get(url, timeout=15)
+                if resp.status_code == 403:
+                    logger.debug("HTML page %s returned 403", url)
+                    continue
+                resp.raise_for_status()
+                parsed = self.parse_wpw_html(resp.text)
+                if parsed:
+                    payload = self._wpw_teams_to_dict(parsed)
+                    if self.cache_dir:
+                        self._save_to_cache(f"espn_picks_{year}.json", payload)
+                    return self._dict_to_consensus(payload)
+            except Exception as exc:
+                logger.debug("HTML scrape of %s failed: %s", url, exc)
+        return None
+
+    # Round key mapping: ESPN uses numeric keys "1"-"6"; we use round names.
+    _ROUND_KEYS = {
+        "1": "round_of_64_pct", "2": "round_of_32_pct",
+        "3": "sweet_16_pct", "4": "elite_8_pct",
+        "5": "final_four_pct", "6": "champion_pct",
+    }
+    _ROUND_NAMES_ORDERED = [
+        "round_of_64_pct", "round_of_32_pct", "sweet_16_pct",
+        "elite_8_pct", "final_four_pct", "champion_pct",
+    ]
+
+    @staticmethod
+    def parse_wpw_html(html: str) -> Optional[List[dict]]:
+        """Parse ESPN 'Who Picked Whom' HTML into a list of team dicts.
+
+        Each returned dict has keys: name, seed, region, and round
+        percentages (round_of_64_pct … champion_pct) as floats (0-100).
+
+        Handles two known ESPN page formats:
+        1. ``__NEXT_DATA__`` script tag containing JSON with team pick data
+        2. HTML tables with ``class="pct"`` cells containing "XX.X%" values
+
+        Returns None if no data could be extracted.
+        """
+        soup = BeautifulSoup(html, "html.parser")
+
+        # Strategy 1: __NEXT_DATA__ JSON embed
+        teams = ESPNPicksScraper._parse_next_data(soup)
+        if teams:
+            return teams
+
+        # Strategy 2: scan all <script type="application/json"> tags for
+        # any JSON object containing team pick data (rounds/picks keys)
+        teams = ESPNPicksScraper._parse_script_json(soup)
+        if teams:
+            return teams
+
+        # Strategy 3: HTML table extraction
+        teams = ESPNPicksScraper._parse_html_tables(soup)
+        if teams:
+            return teams
+
+        return None
+
+    @staticmethod
+    def _parse_next_data(soup: BeautifulSoup) -> Optional[List[dict]]:
+        """Extract teams from __NEXT_DATA__ script tag."""
+        script = soup.find("script", id="__NEXT_DATA__")
+        if not script or not script.string:
+            return None
+        try:
+            data = json.loads(script.string)
+        except (json.JSONDecodeError, TypeError):
+            return None
+        # Navigate: props.pageProps.picks.teams
+        teams_raw = (
+            data.get("props", {})
+            .get("pageProps", {})
+            .get("picks", {})
+            .get("teams", [])
+        )
+        if not teams_raw:
+            return None
+        return ESPNPicksScraper._normalize_team_list(teams_raw)
+
+    @staticmethod
+    def _parse_script_json(soup: BeautifulSoup) -> Optional[List[dict]]:
+        """Scan <script> tags for JSON containing team pick data."""
+        for script in soup.find_all("script"):
+            text = script.string
+            if not text or "{" not in text:
+                continue
+            # Skip __NEXT_DATA__ (already handled)
+            if script.get("id") == "__NEXT_DATA__":
+                continue
+            try:
+                data = json.loads(text)
+            except (json.JSONDecodeError, TypeError):
+                continue
+            teams = ESPNPicksScraper._find_teams_in_json(data)
+            if teams:
+                return teams
+        return None
+
+    @staticmethod
+    def _find_teams_in_json(obj, depth: int = 0) -> Optional[List[dict]]:
+        """Recursively search a JSON object for a list of team pick dicts."""
+        if depth > 10:
+            return None
+        if isinstance(obj, list) and len(obj) >= 4:
+            # Check if this looks like a list of team objects
+            if all(
+                isinstance(item, dict) and "rounds" in item and "name" in item
+                for item in obj[:4]
+            ):
+                return ESPNPicksScraper._normalize_team_list(obj)
+        if isinstance(obj, dict):
+            for key, val in obj.items():
+                result = ESPNPicksScraper._find_teams_in_json(val, depth + 1)
+                if result:
+                    return result
+        return None
+
+    @staticmethod
+    def _normalize_team_list(teams_raw: List[dict]) -> List[dict]:
+        """Convert ESPN JSON team objects to our standard format."""
+        result = []
+        for t in teams_raw:
+            rounds = t.get("rounds", {})
+            team = {
+                "name": t.get("name", ""),
+                "seed": int(t.get("seed", 0)),
+                "region": t.get("region", ""),
+            }
+            for src_key, dst_key in ESPNPicksScraper._ROUND_KEYS.items():
+                team[dst_key] = float(rounds.get(src_key, 0.0))
+            result.append(team)
+        return result if result else None
+
+    @staticmethod
+    def _parse_html_tables(soup: BeautifulSoup) -> Optional[List[dict]]:
+        """Extract team pick data from HTML tables."""
+        teams = []
+        # Look for table rows with pick data
+        for row in soup.find_all("tr", class_="team-row"):
+            seed_td = row.find("td", class_="seed")
+            name_td = row.find("td", class_="team-name")
+            pct_tds = row.find_all("td", class_="pct")
+
+            if not seed_td or not name_td or len(pct_tds) < 6:
+                continue
+
+            # Get region from ancestor div
+            region = ""
+            region_div = row.find_parent(class_="region")
+            if region_div and region_div.get("data-region"):
+                region = region_div["data-region"]
+
+            # Extract team name from link or text
+            link = name_td.find("a")
+            name = link.get_text(strip=True) if link else name_td.get_text(strip=True)
+
+            team = {
+                "name": name,
+                "seed": int(seed_td.get_text(strip=True)),
+                "region": region,
+            }
+            for i, dst_key in enumerate(ESPNPicksScraper._ROUND_NAMES_ORDERED):
+                if i < len(pct_tds):
+                    pct_text = pct_tds[i].get_text(strip=True).rstrip("%")
+                    try:
+                        team[dst_key] = float(pct_text)
+                    except ValueError:
+                        team[dst_key] = 0.0
+                else:
+                    team[dst_key] = 0.0
+            teams.append(team)
+
+        return teams if teams else None
+
+    @staticmethod
+    def _wpw_teams_to_dict(teams: List[dict]) -> dict:
+        """Convert parsed WPW team list to the standard JSON payload format."""
+        teams_dict = {}
+        for t in teams:
+            # Use lowercase name as team_id
+            team_id = t["name"].lower().replace(" ", "_").replace(".", "").replace("'", "")
+            teams_dict[team_id] = {
+                "team_name": t["name"],
+                "seed": t["seed"],
+                "region": t["region"],
+                "round_of_64_pct": t.get("round_of_64_pct", 0.0),
+                "round_of_32_pct": t.get("round_of_32_pct", 0.0),
+                "sweet_16_pct": t.get("sweet_16_pct", 0.0),
+                "elite_8_pct": t.get("elite_8_pct", 0.0),
+                "final_four_pct": t.get("final_four_pct", 0.0),
+                "champion_pct": t.get("champion_pct", 0.0),
+            }
+        return {"teams": teams_dict, "sources": ["espn_wpw"]}
 
     def _save_to_cache(self, filename: str, data: dict) -> None:
         if not self.cache_dir:

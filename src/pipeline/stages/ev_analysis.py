@@ -696,7 +696,15 @@ def _generate_chalk_winners(
     first_round_matchups: List[str],
     matchup_probs: Dict,
 ) -> List[str]:
-    """Generate a chalk bracket (always pick favorite) as fallback."""
+    """Generate a probability-based fallback bracket.
+
+    Uses stochastic sampling (single draw per game) rather than
+    deterministic chalk (p >= 0.5), so the fallback bracket reflects
+    model uncertainty instead of systematically favoring higher seeds.
+    """
+    import random
+
+    rng = random.Random(42)  # deterministic for reproducibility
     current_teams = list(first_round_matchups)
     winners: List[str] = []
 
@@ -708,7 +716,7 @@ def _generate_chalk_winners(
                 continue
             t1, t2 = current_teams[g], current_teams[g + 1]
             p = matchup_probs.get((t1, t2), 0.5)
-            winner = t1 if p >= 0.5 else t2
+            winner = t1 if rng.random() < p else t2
             winners.append(winner)
             next_round.append(winner)
         current_teams = next_round
