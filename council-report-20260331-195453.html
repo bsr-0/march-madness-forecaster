@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Council Report — Biggest Limitation</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #fff; color: #1a1a1a; line-height: 1.6;
+    max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem;
+  }
+  h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+  .subtitle { color: #666; font-size: 0.95rem; margin-bottom: 2rem; }
+  .question-box {
+    background: #f8f9fa; border-left: 4px solid #4a90d9;
+    padding: 1rem 1.25rem; margin-bottom: 2rem; border-radius: 0 6px 6px 0;
+  }
+  .question-box strong { color: #4a90d9; }
+  h2 { font-size: 1.3rem; margin: 2rem 0 0.75rem; padding-bottom: 0.4rem; border-bottom: 2px solid #e8e8e8; }
+  h2.agrees { border-bottom-color: #2ecc71; }
+  h2.clashes { border-bottom-color: #e74c3c; }
+  h2.blindspots { border-bottom-color: #f39c12; }
+  h2.recommendation { border-bottom-color: #4a90d9; }
+  h2.first-thing { border-bottom-color: #9b59b6; }
+  p, li { margin-bottom: 0.75rem; font-size: 0.95rem; }
+  ul, ol { padding-left: 1.5rem; }
+  strong { color: #1a1a1a; }
+
+  /* Agreement grid */
+  .advisor-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem;
+    margin: 1.5rem 0;
+  }
+  .advisor-card {
+    border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.75rem;
+    text-align: center; font-size: 0.85rem;
+  }
+  .advisor-card .name { font-weight: 700; margin-bottom: 0.25rem; font-size: 0.8rem; }
+  .advisor-card .position { font-size: 0.78rem; color: #555; }
+  .advisor-card.validity { border-color: #e74c3c; background: #fdf2f2; }
+  .advisor-card.readability { border-color: #3498db; background: #f0f7fd; }
+  .advisor-card.expansion { border-color: #2ecc71; background: #f0fdf4; }
+
+  .priority-list { counter-reset: priority; list-style: none; padding-left: 0; }
+  .priority-list li {
+    counter-increment: priority; padding: 0.75rem 1rem; margin-bottom: 0.5rem;
+    background: #f8f9fa; border-radius: 6px; border-left: 3px solid #4a90d9;
+  }
+  .priority-list li::before {
+    content: counter(priority) ". "; font-weight: 700; color: #4a90d9;
+  }
+
+  .first-action {
+    background: #f3eef8; border: 2px solid #9b59b6; border-radius: 8px;
+    padding: 1.25rem; margin: 1rem 0;
+  }
+  .first-action strong { color: #9b59b6; }
+
+  /* Collapsible */
+  details { margin: 0.75rem 0; }
+  summary {
+    cursor: pointer; font-weight: 600; padding: 0.6rem 0.8rem;
+    background: #f5f5f5; border-radius: 6px; font-size: 0.9rem;
+    user-select: none; list-style: none;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "\25B6  "; font-size: 0.7rem; }
+  details[open] summary::before { content: "\25BC  "; }
+  .advisor-detail {
+    padding: 0.75rem 1rem; margin-top: 0.5rem;
+    border-left: 3px solid #ddd; font-size: 0.9rem; color: #333;
+  }
+
+  .footer {
+    margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e8e8e8;
+    color: #999; font-size: 0.8rem;
+  }
+</style>
+</head>
+<body>
+
+<h1>LLM Council Verdict</h1>
+<p class="subtitle">5 advisors &middot; 5 peer reviews &middot; chairman synthesis</p>
+
+<div class="question-box">
+  <strong>Question:</strong> What is the single biggest limitation of the March Madness Forecaster repository, and what should be prioritized to fix it?
+</div>
+
+<!-- ===== VERDICT ===== -->
+
+<h2 class="agrees">Where the Council Agrees</h2>
+<p><strong>Stacking weight contamination is a validity crisis, not a code quality issue.</strong> Four of five advisors — and all five peer reviews — converged on this independently: the ensemble stacking layer was optimized on the same LOYO predictions used to evaluate it. Every confidence metric, Brier score, and calibration plot is reporting on a system that has implicitly seen its own holdout signal. The governance system then cryptographically locks in whatever is broken, making the contamination official.</p>
+<p>There was also broad agreement that the 139k-line monolith files are a serious structural problem — but disagreement on whether it is <em>the</em> problem.</p>
+
+<h2 class="clashes">Where the Council Clashes</h2>
+<p><strong>Fix the validity problem first, or fix the readability problem first?</strong></p>
+<ul>
+  <li><strong>Validity camp (Contrarian + First Principles):</strong> The calibration and stacking contamination mean you currently don't know if your model is better than a coin flip. Refactoring a broken model into clean modules gives you a clean, readable system producing invalid predictions.</li>
+  <li><strong>Readability camp (Outsider + Executor):</strong> You cannot safely fix calibration or stacking in a 139k-line file you cannot reason about. Refactoring is a prerequisite for any meaningful repair.</li>
+</ul>
+<p><strong>Resolution:</strong> The stacking fix is narrower than a full refactoring job. You do not need to understand all 139k lines to locate and refit one stacking function.</p>
+<p>The Expansionist's position (activate GNN/transformer research) was identified by <em>all five peer reviews</em> as the weakest — building experiments on a contaminated evaluation harness launders overfit signal, not real gains.</p>
+
+<!-- ===== ADVISOR POSITIONS ===== -->
+<div class="advisor-grid">
+  <div class="advisor-card validity">
+    <div class="name">Contrarian</div>
+    <div class="position">Stacking contamination is the fatal flaw</div>
+  </div>
+  <div class="advisor-card validity">
+    <div class="name">First Principles</div>
+    <div class="position">Epistemic opacity &mdash; probabilities may be meaningless</div>
+  </div>
+  <div class="advisor-card expansion">
+    <div class="name">Expansionist</div>
+    <div class="position">Dormant research infra is buried treasure</div>
+  </div>
+  <div class="advisor-card readability">
+    <div class="name">Outsider</div>
+    <div class="position">139k-line monolith defeats human comprehension</div>
+  </div>
+  <div class="advisor-card readability">
+    <div class="name">Executor</div>
+    <div class="position">Refactor first &mdash; can't fix what you can't read</div>
+  </div>
+</div>
+<p style="font-size:0.8rem;color:#888;text-align:center;">
+  <span style="color:#e74c3c;">&block;</span> Validity crisis &nbsp;
+  <span style="color:#3498db;">&block;</span> Readability crisis &nbsp;
+  <span style="color:#2ecc71;">&block;</span> Expansion opportunity
+</p>
+
+<h2 class="blindspots">Blind Spots the Council Caught</h2>
+<ul>
+  <li><strong>Scraper fragility as silent upstream failure.</strong> Every advisor assumed training data is trustworthy. All five peer reviews flagged this. Fragile web scrapers with no validation layer mean features may be silently corrupted — and a perfectly calibrated model fed bad data is still worthless.</li>
+  <li><strong>No revoke-and-relock protocol.</strong> The governance system has no documented path to invalidate a production lock once contamination is discovered. The system designed to prevent bad predictions from shipping may now be preventing a necessary correction.</li>
+  <li><strong>Cost of delay — the tournament is live right now.</strong> Today is March 31, 2026. Every fix proposed is post-tournament. The immediately actionable question: what monitoring should be running <em>now</em> to capture ground truth?</li>
+</ul>
+
+<h2 class="recommendation">The Recommendation</h2>
+<p>The single biggest limitation is <strong>stacking weight contamination</strong>. It should be fixed before any architectural work. The 139k-line file is a serious operational hazard but a second-order problem — it makes the fix harder, but doesn't change what needs fixing.</p>
+
+<ol class="priority-list">
+  <li><strong>Now (this week, during live tournament):</strong> Instrument outcome capture. Log every prediction against actual game results. This costs almost nothing and gives you clean 2026 ground truth.</li>
+  <li><strong>Post-tournament (April):</strong> Locate and refit the stacking layer using only genuinely out-of-fold predictions from a strict temporal split. Re-run holdout evaluation. Determine if the model actually outperforms a simpler baseline.</li>
+  <li><strong>After validity is confirmed:</strong> Nest calibration inside LOYO folds. Add data quality validation on scraper outputs. Then refactor baseline_training.py.</li>
+  <li><strong>Only after the above:</strong> Consider research infrastructure activation (GNN, transformers).</li>
+</ol>
+
+<p>The governance lock should be reviewed for a <strong>revoke-and-relock protocol</strong>. Locking a contaminated model with cryptographic certainty is not safety — it is false confidence institutionalized.</p>
+
+<h2 class="first-thing">The One Thing to Do First</h2>
+<div class="first-action">
+  <strong>Add outcome logging to the live tournament pipeline today.</strong> Capture every prediction the model makes and the actual game result, stored in a format you can use for post-tournament evaluation. The tournament is live. You cannot fix stacking contamination mid-tournament. But you can ensure that when it ends, you have clean ground truth to validate against. Every other fix requires the tournament to be over. This one doesn't.
+</div>
+
+<!-- ===== COLLAPSIBLE ADVISOR DETAILS ===== -->
+<h2 style="border-bottom-color:#ccc;">Advisor Responses</h2>
+
+<details>
+  <summary>The Contrarian</summary>
+  <div class="advisor-detail">
+    <p>The stacking weights optimized on the same LOYO predictions used for evaluation is not a "moderate" issue — it's a fundamental validity problem that corrupts every confidence metric the system produces.</p>
+    <p>The ensemble weights were tuned on the very predictions being evaluated, meaning the stacking layer has been implicitly fit to your holdout signal. The LOYO CV that should prevent this becomes theater. Your calibration plots, your Brier scores, your confidence intervals — all of them are optimistic by an unknown amount.</p>
+    <p>The massive file sizes (139k line baseline_training.py) aren't just technical debt — they're evidence that nobody can actually audit what's happening inside. The governance system locks in whatever is broken with cryptographic certainty.</p>
+    <p><strong>Priority:</strong> Refit the stacking layer using a strict temporal split where ensemble weights are determined solely on years prior to the evaluation period. Then re-run 2025 holdout evaluation from scratch.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The First Principles Thinker</summary>
+  <div class="advisor-detail">
+    <p>The question assumes there's a single "limitation to fix." That framing is wrong. The core failure mode is epistemic opacity — you cannot trust any output because you cannot verify where signal ends and leakage begins.</p>
+    <p>Calibration isn't nested, stacking weights are optimized on same predictions used to evaluate them. The system's confidence estimates are systematically overfit. Your 50,000 simulations are precision theater. You're multiplying garbage by 50,000 and calling it rigor.</p>
+    <p>The real question isn't "what's the biggest limitation?" It's "do the probabilities coming out of this model mean anything?" Right now, you don't know.</p>
+    <p><strong>Priority:</strong> Nested calibration within LOYO folds, and stacking weights optimized on genuinely out-of-fold predictions only.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Expansionist</summary>
+  <div class="advisor-detail">
+    <p>The disconnected research infrastructure is the most criminally undervalued asset here. GNNs, transformers, and agent orchestration sitting dormant while the production system runs an 8-season ensemble with known leakage.</p>
+    <p>Graph neural networks on tournament brackets capture conference strength, scheduling effects, and team interdependencies in ways that 79-dimensional flat features fundamentally cannot. Agent orchestration that dynamically adjusts priors mid-tournament could be transformative.</p>
+    <p>The leakage issue and massive files are maintenance problems — important, but fixing them doesn't expand what's possible.</p>
+    <p><strong>Priority:</strong> Build a clean activation pathway for the GNN/transformer experiments, wire them into the ensemble, and measure whether they outperform on the 2025 holdout.</p>
+    <p><em>Note: All 5 peer reviews identified this as the weakest position — activating research on a contaminated evaluation harness produces meaningless benchmarks.</em></p>
+  </div>
+</details>
+
+<details>
+  <summary>The Outsider</summary>
+  <div class="advisor-detail">
+    <p>The 139,000-line baseline_training.py file is the single biggest limitation, and it's not close. That's not a file — that's a system that ate its own documentation and swallowed its own boundaries.</p>
+    <p>When something breaks, where do you look? When you want to change something, how do you know what else you're touching? You don't. You guess, you test, you hope.</p>
+    <p>Everything else — calibration leakage, stacking contamination, scraper fragility, disconnected research — those are problems you can fix once you can see the code clearly. You cannot fix what you cannot read.</p>
+    <p><strong>Priority:</strong> Break baseline_training.py into modules with explicit interfaces.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Executor</summary>
+  <div class="advisor-detail">
+    <p>The biggest limitation is baseline_training.py at 139k lines. Full stop.</p>
+    <p>Monday morning: run grep for top-level functions/classes, identify 5-10 clearest functional boundaries (data loading, feature computation, model training, evaluation, serialization), extract one module at a time, regression test against frozen baseline.</p>
+    <p>The calibration and stacking issues require understanding what the code actually does — you cannot safely fix a calibration pipeline you cannot read. The production freeze is helpful — use it as a regression baseline while refactoring.</p>
+    <p><strong>Priority:</strong> Fix the file size problem first. Everything else is downstream of being able to read your own code.</p>
+  </div>
+</details>
+
+<details>
+  <summary>Peer Review Highlights</summary>
+  <div class="advisor-detail">
+    <p><strong>Unanimous strongest:</strong> The Contrarian (Response A) — correctly identifies stacking contamination as a validity crisis with concrete fix and sequenced action plan.</p>
+    <p><strong>Unanimous weakest:</strong> The Expansionist (Response C) — treats disconnected research as buried treasure while waving away leakage as maintenance. GNNs built on a contaminated evaluation harness launder overfit signal.</p>
+    <p><strong>Blind spots flagged by reviewers:</strong></p>
+    <ul>
+      <li>Scraper fragility as silent upstream data corruption (flagged by 4/5 reviews)</li>
+      <li>No governance revoke-and-relock protocol exists (flagged by 2/5 reviews)</li>
+      <li>Tournament is live right now — all proposed fixes are post-tournament (flagged by 1/5 reviews)</li>
+    </ul>
+  </div>
+</details>
+
+<div class="footer">
+  <p>Council session: 2026-03-31 19:54 UTC &middot; Question: "What is the biggest limitation of this repository?" &middot; Full transcript: council-transcript-20260331-195453.md</p>
+</div>
+
+</body>
+</html>
