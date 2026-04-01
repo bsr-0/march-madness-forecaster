@@ -732,11 +732,12 @@ class TestCurrentYearSeedLeakage:
     """
 
     def test_current_year_seed_guard_in_source(self):
-        """_train_baseline_model must define tournament_cutoff and gate seeds."""
+        """Sample construction must define tournament_cutoff and gate seeds."""
         import inspect
 
         from src.pipeline.stages import baseline_training
-        source = inspect.getsource(baseline_training._train_baseline_model)
+        # After refactor, seed guard logic lives in _build_current_year_samples
+        source = inspect.getsource(baseline_training._build_current_year_samples)
 
         # Must contain the tournament_cutoff definition
         assert "tournament_cutoff" in source, (
