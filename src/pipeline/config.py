@@ -339,7 +339,7 @@ class SOTAPipelineConfig:
     production_calibration: str = "temperature"
     # Dev/holdout partition for RDoF control.
     # Default: dev=2016-2019 and 2021-2024 (exclude 2020 COVID), holdout=2025.
-    dev_years: Optional[List[int]] = field(default_factory=lambda: [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024])
+    dev_years: Optional[List[int]] = field(default_factory=lambda: [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024])
     holdout_years: Optional[List[int]] = field(default_factory=lambda: [2025])
     prospective_years: Optional[List[int]] = None
     prospective_targets: Optional[Dict[str, float]] = field(default_factory=lambda: {
@@ -355,7 +355,7 @@ class SOTAPipelineConfig:
     # trains on regular-season games only (enable_round_weighted_training=False),
     # so tournament predictions from dev years are never seen during training.
     calibration_years: Optional[List[int]] = field(
-        default_factory=lambda: [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+        default_factory=lambda: [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
     )
     # Freeze an explicit production path for tournament runs.
     enforce_production_path: bool = True
@@ -872,15 +872,15 @@ class SOTAPipelineConfig:
             violations.append("holdout_years is empty")
         elif sorted(set(self.holdout_years)) != [2025]:
             violations.append(f"holdout_years={self.holdout_years} (expected [2025])")
-        expected_dev_years = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
+        expected_dev_years = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
         if not self.dev_years:
             violations.append("dev_years is empty")
         elif sorted(set(self.dev_years)) != expected_dev_years:
             violations.append(
-                "dev_years must be 2016-2019 and 2021-2024 for locked production path"
+                "dev_years must be 2008-2019 and 2021-2024 for locked production path"
             )
         cal_years = self.resolve_calibration_years()
-        expected_cal_years = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+        expected_cal_years = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
         if cal_years != expected_cal_years:
             violations.append(f"calibration_years={cal_years} (expected {expected_cal_years})")
 
