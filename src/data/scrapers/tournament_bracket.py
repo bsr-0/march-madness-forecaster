@@ -1,4 +1,12 @@
-"""Sports Reference NCAA tournament seed scraper."""
+"""Sports Reference NCAA tournament seed scraper.
+
+.. deprecated::
+    Use :class:`bracket_ingestion.BracketIngestionPipeline` instead, which
+    tries ``bigdance`` (Warren Nolan structured data) first and falls back
+    to this scraper automatically.  Direct use of ``TournamentSeedScraper``
+    is fragile because it parses SR bracket HTML with regex patterns that
+    break when the page layout changes.
+"""
 
 from __future__ import annotations
 

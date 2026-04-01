@@ -29,7 +29,8 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from ..normalize import normalize_team_id
-from ..scrapers import SportsReferenceScraper, TournamentSeedScraper
+from ..scrapers import SportsReferenceScraper
+from ..scrapers.bracket_ingestion import BracketIngestionPipeline
 from .game_fetchers import HistoricalGameFetcher, dedup_records, is_in_season_window, season_window
 from .providers import LibraryProviderHub
 from .validators import validate_games_payload, validate_ratings_payload
@@ -77,7 +78,6 @@ class HistoricalDataPipeline:
         self.cache_dir = Path(self.config.cache_dir)
         self.providers = LibraryProviderHub()
         self.sports_reference = SportsReferenceScraper(str(self.cache_dir))
-        self.tournament_seed_scraper = TournamentSeedScraper(str(self.cache_dir))
         self.game_fetcher = HistoricalGameFetcher(cache_dir=str(self.cache_dir))
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -304,10 +304,24 @@ class HistoricalDataPipeline:
 
     def _collect_tournament_context(self, season: int) -> Tuple[Dict, str]:
         try:
-            teams = self.tournament_seed_scraper.fetch_tournament_seeds(season)
-            return {"season": season, "teams": teams}, "sports_reference_tournament_scraper"
-        except (ValueError, AttributeError, RuntimeError, OSError) as exc:
-            logger.debug("Tournament seed scraping failed for %d: %s", season, exc)
+            pipeline = BracketIngestionPipeline(
+                season=season, cache_dir=str(self.cache_dir),
+            )
+            bracket = pipeline.fetch()
+            teams = [
+                {
+                    "season": season,
+                    "team_name": t.display_name,
+                    "team_id": t.canonical_id,
+                    "seed": t.seed,
+                    "region": t.region,
+                    "school_slug": t.canonical_id.replace("_", "-"),
+                }
+                for t in bracket.teams
+            ]
+            return {"season": season, "teams": teams}, bracket.source
+        except (ValueError, AttributeError, RuntimeError, OSError, ImportError) as exc:
+            logger.debug("Tournament bracket ingestion failed for %d: %s", season, exc)
             return {"season": season, "teams": []}, "none"
 
     # ── Date validation (retained for downstream callers) ──────────────────
