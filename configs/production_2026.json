@@ -8,7 +8,7 @@
   "enable_transformer": false,
   "enable_embedding_projections": false,
 
-  "enable_stacking": true,
+  "enable_stacking": false,
   "enable_feature_selection": true,
 
   "enable_brier_sharpening": false,
