@@ -572,6 +572,56 @@ def handle_audit_rubric(args):
     return 0 if result.passed else 1
 
 
+def run_backtest_harness(args):
+    """Run unified backtesting harness with regression gate."""
+    import logging
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
+    from ..evaluation.backtest_harness import BacktestHarness, save_baseline
+    from ..ml.evaluation.loyo_protocol import LOYO_YEARS
+
+    years = [int(y) for y in args.years.split(",")] if args.years else None
+    overrides = {}
+    if args.config:
+        with open(args.config, "r") as f:
+            cfg = json.load(f)
+        # Pass through relevant config keys as overrides
+        for key in ("enable_stacking", "enable_vegas_calibration_anchor",
+                     "vegas_anchor_sigma"):
+            if key in cfg:
+                overrides[key] = cfg[key]
+
+    harness = BacktestHarness(
+        historical_dir=args.historical_dir,
+        baseline_path=args.baseline if args.baseline else None,
+        years=years,
+        config_overrides=overrides,
+        kaggle_dir=getattr(args, "kaggle_dir", None),
+    )
+
+    result = harness.run()
+    print(result.summary())
+
+    # Save full result
+    output_path = args.output or "artifacts/backtest_result.json"
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(result.to_dict(), f, indent=2, default=str)
+    print(f"\nFull report written to {output_path}")
+
+    # Optionally save as new baseline
+    if args.save_baseline:
+        baseline_path = args.save_baseline
+        Path(baseline_path).parent.mkdir(parents=True, exist_ok=True)
+        save_baseline(result, baseline_path, notes="Saved via backtest-harness CLI")
+        print(f"Baseline saved to {baseline_path}")
+
+    # Exit code: 1 if regression gate failed
+    if result.regression_gate and not result.regression_gate.passed:
+        return 1
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # Argparse registration
 # ---------------------------------------------------------------------------
@@ -727,3 +777,24 @@ def register(subparsers):
     be_parser.add_argument("--output", "-o", default=None,
                            help="Output JSON report path (default: artifacts/baseline_experiment.json)")
     be_parser.set_defaults(func=run_baseline_experiment)
+
+    # --- backtest-harness ---
+    bh_parser = subparsers.add_parser(
+        "backtest-harness",
+        help="Run unified LOYO backtest with structured reports and regression gate",
+    )
+    bh_parser.add_argument("--config", default=None,
+                           help="Production config JSON (for pipeline overrides)")
+    bh_parser.add_argument("--historical-dir", default="data/raw/historical",
+                           help="Directory with historical game/metric JSONs")
+    bh_parser.add_argument("--baseline", default=None,
+                           help="Path to baseline JSON for regression gate")
+    bh_parser.add_argument("--years", default=None,
+                           help="Comma-separated years (default: LOYO_YEARS)")
+    bh_parser.add_argument("--kaggle-dir", default=None,
+                           help="Path to Kaggle CSV directory")
+    bh_parser.add_argument("--output", "-o", default=None,
+                           help="Output JSON report path (default: artifacts/backtest_result.json)")
+    bh_parser.add_argument("--save-baseline", default=None, metavar="PATH",
+                           help="Save this run as the new regression baseline at PATH")
+    bh_parser.set_defaults(func=run_backtest_harness)

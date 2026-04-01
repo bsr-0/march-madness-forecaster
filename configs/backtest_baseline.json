@@ -1,0 +1,8 @@
+{
+  "_comment": "Regression baseline for backtest-harness. Populate by running: python -m src.main backtest-harness --save-baseline configs/backtest_baseline.json",
+  "timestamp": null,
+  "aggregate_brier": null,
+  "per_year_brier": {},
+  "n_years": 0,
+  "notes": "Placeholder — run backtest-harness with --save-baseline to populate"
+}
