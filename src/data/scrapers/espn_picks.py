@@ -151,7 +151,7 @@ class ESPNPicksScraper:
         Fetch public pick percentages from ESPN.
 
         Tries, in order: ESPN_PUBLIC_PICKS_URL env var, ESPN Gambit API,
-        Who Picked Whom page, People's Bracket page, then cache.
+        Who Picked Whom JSON, People's Bracket JSON, then cache.
 
         Note: Data only available after Selection Sunday.
         """
@@ -162,7 +162,7 @@ class ESPNPicksScraper:
             if result:
                 return result
 
-        # 2. Try known ESPN API endpoints (best-effort, often blocked)
+        # 2. Try known ESPN API/JSON endpoints (best-effort, often blocked)
         for url in (
             self._GAMBIT_URL.format(year=year),
             self._WPW_URL.format(year=year),
@@ -172,14 +172,7 @@ class ESPNPicksScraper:
             if result:
                 return result
 
-        # 3. Try HTML scraping of "Who Picked Whom" page.
-        # ESPN serves pick data either as JSON embedded in <script> tags
-        # or in HTML tables.  This handles both formats.
-        result = self._try_html_page(year)
-        if result:
-            return result
-
-        # 4. Fall back to cache from a previous successful fetch
+        # 3. Fall back to cache from a previous successful fetch
         cached = self._load_from_cache(f"espn_picks_{year}.json")
         if cached:
             logger.info("Using cached ESPN picks for %d", year)
@@ -195,20 +188,71 @@ class ESPNPicksScraper:
         return ConsensusData(sources=["espn"])
 
     def _try_json_url(self, url: str, year: int, label: str) -> Optional[ConsensusData]:
-        """Attempt to fetch and parse a JSON picks URL. Returns None on failure."""
+        """Attempt to fetch and parse a JSON picks URL.
+
+        Handles two response formats:
+        1. Pure JSON response (API endpoints)
+        2. HTML response with embedded JSON in ``<script>`` tags
+
+        Returns None on failure so the caller falls through.
+        """
         try:
             response = self.session.get(url, timeout=15)
             if response.status_code == 403:
                 logger.debug("%s returned 403 (blocked/JS-required)", label)
                 return None
             response.raise_for_status()
-            payload = response.json()
+
+            # Try parsing as JSON first (API endpoints)
+            payload = None
+            content_type = response.headers.get("content-type", "")
+            if "json" in content_type or response.text.strip().startswith("{"):
+                try:
+                    payload = response.json()
+                except (json.JSONDecodeError, ValueError):
+                    pass
+
+            # If JSON parse worked and has teams, use it directly
             if isinstance(payload, dict) and payload.get("teams"):
                 if self.cache_dir:
                     self._save_to_cache(f"espn_picks_{year}.json", payload)
                 return self._dict_to_consensus(payload)
+
+            # If response is HTML, try extracting embedded JSON from <script> tags.
+            # This is more resilient than CSS-selector parsing because it looks
+            # for structured data rather than page layout elements.
+            if "html" in content_type or response.text.strip().startswith("<"):
+                teams = self._extract_json_from_html(response.text)
+                if teams:
+                    payload = self._wpw_teams_to_dict(teams)
+                    if self.cache_dir:
+                        self._save_to_cache(f"espn_picks_{year}.json", payload)
+                    return self._dict_to_consensus(payload)
+
         except Exception as exc:
             logger.debug("ESPN picks from %s failed: %s", label, exc)
+        return None
+
+    def _extract_json_from_html(self, html: str) -> Optional[List[dict]]:
+        """Extract team pick data from JSON embedded in HTML <script> tags.
+
+        Searches all ``<script>`` tags for JSON objects containing team
+        pick data (keys like "rounds", "picks", "teams"). This is more
+        robust than CSS selector parsing because JSON structure is stable
+        even when the page layout changes.
+        """
+        soup = BeautifulSoup(html, "html.parser")
+
+        # Strategy 1: __NEXT_DATA__ JSON embed (React/Next.js pages)
+        teams = self._parse_next_data(soup)
+        if teams:
+            return teams
+
+        # Strategy 2: scan all <script> tags for JSON with team pick data
+        teams = self._parse_script_json(soup)
+        if teams:
+            return teams
+
         return None
     
     def load_from_json(self, filepath: str) -> ConsensusData:
@@ -331,32 +375,20 @@ class ESPNPicksScraper:
             return json.load(f)
 
     def _try_html_page(self, year: int) -> Optional[ConsensusData]:
-        """Fetch ESPN 'Who Picked Whom' HTML page and extract pick data.
+        """Deprecated: HTML scraping removed due to fragile CSS selectors.
 
-        ESPN serves pick data in two known formats:
-        1. JSON embedded in a ``<script id="__NEXT_DATA__">`` tag (React/Next.js)
-        2. HTML tables with percentage cells (legacy server-rendered page)
+        The HTML parsing relied on hardcoded CSS classes (``team-row``,
+        ``seed``, ``team-name``, ``pct``), ``__NEXT_DATA__`` script IDs,
+        and recursive JSON extraction from ``<script>`` tags — all of
+        which break when ESPN updates their page layout.
 
-        Returns None on any failure so the caller falls through to cache.
+        Use ``_try_json_url`` with ``ESPN_PUBLIC_PICKS_URL`` env var
+        or the built-in ESPN API endpoints instead.
         """
-        for url in (
-            self._WPW_URL.format(year=year),
-            self._PEOPLES_URL.format(year=year),
-        ):
-            try:
-                resp = self.session.get(url, timeout=15)
-                if resp.status_code == 403:
-                    logger.debug("HTML page %s returned 403", url)
-                    continue
-                resp.raise_for_status()
-                parsed = self.parse_wpw_html(resp.text)
-                if parsed:
-                    payload = self._wpw_teams_to_dict(parsed)
-                    if self.cache_dir:
-                        self._save_to_cache(f"espn_picks_{year}.json", payload)
-                    return self._dict_to_consensus(payload)
-            except Exception as exc:
-                logger.debug("HTML scrape of %s failed: %s", url, exc)
+        logger.debug(
+            "HTML scraping is deprecated; use ESPN_PUBLIC_PICKS_URL env var "
+            "or provide a JSON file via --public-picks"
+        )
         return None
 
     # Round key mapping: ESPN uses numeric keys "1"-"6"; we use round names.
