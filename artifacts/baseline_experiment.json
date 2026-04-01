@@ -1,6 +1,6 @@
 {
   "experiment": "tournament_only_baseline",
-  "timestamp": "2026-04-01T06:46:34.551810",
+  "timestamp": "2026-04-01T16:33:18.394422",
   "years": [
     2008,
     2009,
@@ -546,6 +546,144 @@
       "n_features": 0,
       "features": [
         "seed_lookup_table"
+      ]
+    },
+    "seed_plus": {
+      "per_year": [
+        {
+          "year": 2010,
+          "n_train": 194,
+          "n_test": 92,
+          "beta": -0.2377,
+          "brier": 0.211,
+          "rw_brier": 0.1805,
+          "accuracy": 0.6739
+        },
+        {
+          "year": 2011,
+          "n_train": 286,
+          "n_test": 178,
+          "beta": 0.0386,
+          "brier": 0.2097,
+          "rw_brier": 0.2047,
+          "accuracy": 0.6742
+        },
+        {
+          "year": 2012,
+          "n_train": 464,
+          "n_test": 192,
+          "beta": 0.1946,
+          "brier": 0.2119,
+          "rw_brier": 0.2084,
+          "accuracy": 0.6771
+        },
+        {
+          "year": 2013,
+          "n_train": 656,
+          "n_test": 148,
+          "beta": 0.3183,
+          "brier": 0.2019,
+          "rw_brier": 0.1963,
+          "accuracy": 0.7162
+        },
+        {
+          "year": 2014,
+          "n_train": 804,
+          "n_test": 192,
+          "beta": 0.2599,
+          "brier": 0.2249,
+          "rw_brier": 0.2209,
+          "accuracy": 0.625
+        },
+        {
+          "year": 2015,
+          "n_train": 996,
+          "n_test": 186,
+          "beta": 0.2884,
+          "brier": 0.1912,
+          "rw_brier": 0.1805,
+          "accuracy": 0.7097
+        },
+        {
+          "year": 2016,
+          "n_train": 1182,
+          "n_test": 180,
+          "beta": 0.2654,
+          "brier": 0.2289,
+          "rw_brier": 0.2202,
+          "accuracy": 0.6667
+        },
+        {
+          "year": 2017,
+          "n_train": 1362,
+          "n_test": 194,
+          "beta": 0.3146,
+          "brier": 0.2035,
+          "rw_brier": 0.1966,
+          "accuracy": 0.6907
+        },
+        {
+          "year": 2018,
+          "n_train": 1556,
+          "n_test": 174,
+          "beta": 0.3102,
+          "brier": 0.216,
+          "rw_brier": 0.1966,
+          "accuracy": 0.6667
+        },
+        {
+          "year": 2019,
+          "n_train": 1730,
+          "n_test": 156,
+          "beta": 0.2982,
+          "brier": 0.1984,
+          "rw_brier": 0.1746,
+          "accuracy": 0.6026
+        },
+        {
+          "year": 2021,
+          "n_train": 1886,
+          "n_test": 136,
+          "beta": 0.2763,
+          "brier": 0.2308,
+          "rw_brier": 0.2151,
+          "accuracy": 0.6765
+        },
+        {
+          "year": 2022,
+          "n_train": 2022,
+          "n_test": 190,
+          "beta": 0.3203,
+          "brier": 0.2342,
+          "rw_brier": 0.2406,
+          "accuracy": 0.5895
+        },
+        {
+          "year": 2023,
+          "n_train": 2212,
+          "n_test": 222,
+          "beta": 0.3556,
+          "brier": 0.2355,
+          "rw_brier": 0.2231,
+          "accuracy": 0.5946
+        },
+        {
+          "year": 2024,
+          "n_train": 2434,
+          "n_test": 238,
+          "beta": 0.4048,
+          "brier": 0.2463,
+          "rw_brier": 0.2217,
+          "accuracy": 0.605
+        }
+      ],
+      "mean_brier": 0.2174,
+      "mean_rw_brier": 0.2057,
+      "mean_accuracy": 0.6549,
+      "mean_beta": 0.2434,
+      "n_features": 1,
+      "features": [
+        "seed_lookup + \u03b2*seed_em_residual"
       ]
     }
   },

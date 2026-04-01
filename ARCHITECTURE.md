@@ -37,7 +37,7 @@ The pipeline is orchestrated by `src/pipeline/sota.py` (~2600 lines) for researc
 | `stages/inference.py` | ~3k | Model inference wrapper |
 | `stages/context.py` | ~2k | Pipeline context object (shared state between stages) |
 
-### `src/data/features/` — Feature Engineering (86 dimensions)
+### `src/data/features/` — Feature Engineering (86 dimensions, 7 used in production)
 
 | File | Purpose |
 |------|---------|
@@ -60,24 +60,29 @@ The pipeline is orchestrated by `src/pipeline/sota.py` (~2600 lines) for researc
 
 | Subdirectory | Purpose |
 |-------------|---------|
-| `ensemble/` | CFA ensemble: LightGBM + XGBoost + Logistic Regression with LOYO-optimized weights |
+| `ensemble/` | Model infrastructure. In `simple` mode (default): single logistic regression only |
 | `calibration/` | Probability calibration: temperature scaling (production), isotonic, Platt |
 | `evaluation/` | RDoF (Researcher Degrees of Freedom) audit, experimentation registry |
-| `optimization/` | Optuna hyperparameter search (15 trials, narrow bounds) |
+| `optimization/` | Optuna hyperparameter search (not used in simple mode) |
 | `ranking/` | Ranking models (Elo, BT) |
 | `training/` | Training utilities |
 | `research/` | Experimental models (not used in production) |
 | `time_series/` | Time series models |
 | `gnn/` | Graph neural network (DISABLED in production) |
 | `transformer/` | Transformer model (DISABLED in production) |
-| `meta_learning.py` | Meta-learner for ensemble stacking |
+| `meta_learning.py` | Meta-learner for ensemble stacking (not used in simple mode) |
 
-**Production ensemble:** LightGBM + XGBoost + LogisticRegression with stacking meta-learner, LOYO-optimized weights, and Bayesian Bradley-Terry. GNN and transformer are disabled.
+**Production model (simple mode):** Single regularized logistic regression on 7 features (`SIMPLE_FEATURE_SET`). LightGBM, XGBoost, SpreadRegressor, stacking, and BMA are all skipped. Bayesian Bradley-Terry provides supplementary probability blends.
+
+**Architecture decision:** A tournament-only baseline experiment (LOYO-CV across 16 years) confirmed that the 7-feature logistic regression matches or beats the full 27-feature ensemble with stacking (BSS ≈ 0 vs seed baseline for all configurations). The simple model is the ceiling on this data.
+
+**Two-stage domain adaptation:**
+1. **Train** on regular-season games only (~2,200/year × 8 years = ~17,600 samples). `enable_round_weighted_training=False` excludes tournament games from training.
+2. **Calibrate** on tournament games from ALL dev+holdout years (2016-2025, ~530 samples). These are genuinely OOS since the model never saw them during training. Temperature scaling learns tournament-specific probability adjustments.
 
 **Key constraints:**
-- `num_leaves <= 8`, `max_depth <= 4` for tree models (overfitting prevention)
-- 15 Optuna trials on narrow search spaces
-- Temperature scaling on tournament-only games from holdout year
+- 7 fixed features — no learned feature selection, no importance pruning
+- Temperature scaling on tournament-only games from all available years (not just holdout)
 
 ### `src/simulation/` — Monte Carlo Simulation
 

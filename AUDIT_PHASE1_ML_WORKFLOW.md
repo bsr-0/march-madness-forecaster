@@ -1,5 +1,7 @@
 # Phase 1 Audit: Existing ML Workflow
 
+> **STATUS (2026-04-01): HISTORICAL.** This audit predates the simplification to `model_complexity="simple"` (7-feature logistic regression, no ensemble). The LightGBM/XGBoost/stacking ensemble described below is no longer the production default. See README.md for current architecture.
+
 **Date:** 2026-03-27
 **Scope:** Full parse of repo + EXPERIMENT_WORKFLOW_PLAN.md
 **Verdict:** Substantial infrastructure exists but has critical gaps in objective alignment, loop integration, and leakage surface area.
