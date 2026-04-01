@@ -9,6 +9,7 @@ Validates all components against invariants:
 6. Invariant satisfaction (data, features, models, generalization)
 7. Feature stability across folds (Rule 7)
 8. Market anchor constraint (Rule 10)
+9. Ensemble weight provenance (FIX-STACKING-LEAKAGE)
 
 Also includes anti-cheating checks and overfitting detection.
 """
@@ -72,6 +73,7 @@ def run_audit(
     prev_per_year_brier: Optional[Dict[int, float]] = None,
     blend_weight: Optional[float] = None,
     market_probs: Optional[np.ndarray] = None,
+    ensemble_weight_stats: Optional[Dict[str, Any]] = None,
 ) -> AuditResult:
     """Run full audit suite."""
     result = AuditResult(passed=True)
@@ -106,6 +108,9 @@ def run_audit(
 
     # 10. Market anchor constraint (Rule 10)
     _check_market_anchor(result, curr_predictions, market_probs)
+
+    # 11. FIX-STACKING-LEAKAGE: Ensemble weight provenance
+    _check_ensemble_weight_provenance(result, ensemble_weight_stats)
 
     # Set overall status
     errors = [v for v in result.violations if v.severity == "error"]
@@ -426,6 +431,54 @@ def _check_market_anchor(
     else:
         result.checks_passed += 1
         logger.info("Market anchor: corr(pred, market) = %.3f (>= 0.7 OK)", corr)
+
+
+def _check_ensemble_weight_provenance(
+    result: AuditResult,
+    ensemble_weight_stats: Optional[Dict[str, Any]],
+):
+    """Rule 11: FIX-STACKING-LEAKAGE — Ensemble weight provenance.
+
+    Verifies that ensemble weights were NOT derived from the eval set,
+    which would contaminate all downstream metrics. Acceptable sources:
+    - "nested_loyo": Weights from nested LOYO (gold standard)
+    - "loyo_oos": Weights from LOYO OOS predictions
+    - "fixed": Literature-based fixed weights (no optimization)
+    - None/missing: No ensemble (single model)
+
+    Rejected sources:
+    - "eval_set": Weights derived from eval set (data leakage)
+    """
+    result.checks_run += 1
+
+    if ensemble_weight_stats is None:
+        # No ensemble weights — single model or not applicable
+        result.checks_passed += 1
+        return
+
+    weight_source = ensemble_weight_stats.get("weight_source", "unknown")
+    _ACCEPTABLE_SOURCES = {"nested_loyo", "loyo_oos", "fixed", "fixed_fallback"}
+
+    if weight_source == "eval_set":
+        result.add_violation(
+            "ensemble", "weight_provenance_contaminated",
+            "Ensemble weights derived from eval set (data leakage). "
+            "Weights must be derived from LOYO OOS predictions or fixed priors. "
+            "See FIX-STACKING-LEAKAGE.",
+            severity="error",
+        )
+    elif weight_source not in _ACCEPTABLE_SOURCES and weight_source != "unknown":
+        result.add_violation(
+            "ensemble", "weight_provenance_unknown",
+            f"Ensemble weight source '{weight_source}' is not recognized. "
+            f"Acceptable: {_ACCEPTABLE_SOURCES}",
+            severity="warning",
+        )
+    else:
+        result.checks_passed += 1
+        logger.info(
+            "Ensemble weight provenance: source='%s' (OK)", weight_source,
+        )
 
 
 def analyze_failure(

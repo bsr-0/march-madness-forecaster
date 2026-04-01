@@ -998,7 +998,8 @@ class TestSelectBestSingleModel:
         assert result == "lightgbm"
         pipeline._set_primary_model.assert_called_once_with("lgb", model)
 
-    def test_selects_best_brier(self):
+    def test_selects_by_priority_not_eval_brier(self):
+        """FIX-STACKING-LEAKAGE: selection uses priority, not eval Brier."""
         from src.pipeline.stages.baseline_training import _select_best_single_model
         pipeline = MagicMock()
         eval_y = np.array([1, 0, 1, 0])
@@ -1006,12 +1007,13 @@ class TestSelectBestSingleModel:
         bad_preds = np.array([0.5, 0.5, 0.5, 0.5])    # bad
         model_good = MagicMock()
         model_bad = MagicMock()
+        # logit has higher priority than lgb regardless of eval performance
         result = _select_best_single_model(
             pipeline,
             [("logit", model_bad, bad_preds), ("lgb", model_good, good_preds)],
             eval_y,
         )
-        assert result == "lightgbm"
+        assert result == "logistic_regression"
 
     def test_name_mapping(self):
         from src.pipeline.stages.baseline_training import _select_best_single_model

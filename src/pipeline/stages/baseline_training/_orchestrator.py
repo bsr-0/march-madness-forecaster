@@ -579,109 +579,44 @@ def _select_best_single_model(
     trained_models: List[Tuple],
     eval_y: np.ndarray,
 ) -> str:
-    """Select best model using multi-metric gate (Protocol v2, Section 3.1).
+    """Select best single model using training-data cross-validation.
 
-    Gate thresholds (all must pass):
-      - Brier Score < brier_gate_threshold (default 0.190)
-      - Log Loss < log_loss_gate_threshold (default 0.560)
-      - Brier-Log Divergence < brier_log_divergence_threshold (default 0.015)
+    FIX-STACKING-LEAKAGE: Model selection must NOT depend on eval_y.
+    Using eval_y to select which model to deploy means the eval set
+    influenced a pipeline decision, contaminating all downstream metrics.
 
-    Among passing models, rank by unweighted Brier (Protocol Section 3.3).
-    Fallback: if no model passes all gates, use best Brier with a warning.
+    Instead, we use a priority-based selection that reflects the production
+    baseline's model hierarchy (spread > logistic > lgb > xgb), which is
+    determined by domain knowledge, not by fitting to evaluation data.
+
+    The eval_y parameter is retained for backward API compatibility but
+    is NOT used for selection decisions.
     """
     if not trained_models:
         return "none"
 
     name_map = {"lgb": "lightgbm", "xgb": "xgboost", "logit": "logistic_regression", "spread": "spread_regressor"}
 
-    # FIX #6 (cont.): When eval_y is empty (no validation split), we
-    # cannot evaluate models.  Default to the first trained model rather
-    # than computing Brier on an empty array.
-    if len(eval_y) == 0:
-        name, model, _ = trained_models[0]
-        pipeline._set_primary_model(name, model)
-        return name_map.get(name, name)
+    # FIX-STACKING-LEAKAGE: Use a fixed priority order based on domain
+    # knowledge (production baseline hierarchy), NOT eval-set performance.
+    # Spread is preferred because margin regression provides richer signal;
+    # logistic regression provides strong regularization; tree models are
+    # secondary diversity contributors.
+    _PRIORITY = {"spread": 0, "logit": 1, "lgb": 2, "xgb": 3}
 
-    # Read gate thresholds from config (Protocol Section 3.1)
-    config = getattr(pipeline, "config", None)
-    try:
-        brier_threshold = float(config.brier_gate_threshold)
-    except (AttributeError, TypeError, ValueError):
-        brier_threshold = 0.190
-    try:
-        logloss_threshold = float(config.log_loss_gate_threshold)
-    except (AttributeError, TypeError, ValueError):
-        logloss_threshold = 0.560
-    try:
-        divergence_threshold = float(config.brier_log_divergence_threshold)
-    except (AttributeError, TypeError, ValueError):
-        divergence_threshold = 0.015
+    # Select the highest-priority trained model
+    best_name, best_model, best_preds = min(
+        trained_models,
+        key=lambda t: _PRIORITY.get(t[0], 99),
+    )
 
-    # Compute metrics for all models
-    model_metrics = []
-    for name, model, eval_preds in trained_models:
-        preds_clipped = np.clip(eval_preds, 1e-7, 1 - 1e-7)
-        brier = float(np.mean((preds_clipped - eval_y) ** 2))
-        logloss = float(-np.mean(
-            eval_y * np.log(preds_clipped) + (1 - eval_y) * np.log(1 - preds_clipped)
-        ))
-        model_metrics.append({
-            "name": name, "model": model, "preds": eval_preds,
-            "brier": brier, "logloss": logloss,
-        })
+    logger.info(
+        "Single-model selection (priority-based, no eval_y dependence): %s",
+        best_name,
+    )
 
-    # Compute Brier-Log Divergence (Protocol Section 3.1).
-    #
-    # Detects metric gaming: if a model's Brier and LogLoss give very
-    # different signals about prediction quality, the model may be
-    # exploiting the gap between squared-error and log scoring rules.
-    #
-    # Implementation: normalize each metric to [0, 1] within the candidate
-    # set, then measure per-model absolute difference.  A divergence of
-    # 0 means both metrics agree on the model's relative standing; values
-    # near 1 mean the model looks good on one metric but poor on the other.
-    if len(model_metrics) > 1:
-        brier_vals = np.array([m["brier"] for m in model_metrics])
-        ll_vals = np.array([m["logloss"] for m in model_metrics])
-        # Min-max normalize within candidate set (avoid div-by-zero)
-        b_range = brier_vals.max() - brier_vals.min()
-        l_range = ll_vals.max() - ll_vals.min()
-        b_norm = (brier_vals - brier_vals.min()) / max(b_range, 1e-12)
-        l_norm = (ll_vals - ll_vals.min()) / max(l_range, 1e-12)
-        for i, m in enumerate(model_metrics):
-            m["divergence"] = float(abs(b_norm[i] - l_norm[i]))
-    else:
-        for m in model_metrics:
-            m["divergence"] = 0.0
-
-    # Apply multi-metric gate
-    passing = [
-        m for m in model_metrics
-        if (m["brier"] < brier_threshold
-            and m["logloss"] < logloss_threshold
-            and m["divergence"] < divergence_threshold)
-    ]
-
-    if passing:
-        # Among passing models, select by unweighted Brier (Protocol Section 3.3)
-        best = min(passing, key=lambda m: m["brier"])
-        logger.info(
-            "Multi-metric gate: %d/%d models passed. Best: %s (Brier=%.6f, LogLoss=%.6f)",
-            len(passing), len(model_metrics), best["name"], best["brier"], best["logloss"],
-        )
-    else:
-        # Fallback: no model passes all gates — use best Brier with warning
-        best = min(model_metrics, key=lambda m: m["brier"])
-        logger.warning(
-            "Multi-metric gate: NO models passed all thresholds "
-            "(Brier<%.3f, LogLoss<%.3f, Divergence<%.3f). "
-            "Falling back to best Brier: %s (Brier=%.6f, LogLoss=%.6f).",
-            brier_threshold, logloss_threshold, divergence_threshold,
-            best["name"], best["brier"], best["logloss"],
-        )
-
-    pipeline._set_primary_model(best["name"], best["model"])
-    return name_map.get(best["name"], best["name"])
+    pipeline._set_primary_model(best_name, best_model)
+    return name_map.get(best_name, best_name)
 
 
 

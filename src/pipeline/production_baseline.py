@@ -11,7 +11,7 @@ derived fresh each year via LOYO cross-validation, not hardcoded.
 The production spec freezes:
   - The set of sanctioned models (spread, logistic, lgb, xgb)
   - The calibration method (temperature scaling)
-  - The weight optimization procedure (LOYO + bootstrap-aggregated grid)
+  - The weight optimization procedure (nested LOYO + BMA)
   - The fallback weights (used when LOYO optimization is unavailable)
   - The simplex bounds constraining the optimizer's search space
 The production spec does NOT freeze:
@@ -19,13 +19,21 @@ The production spec does NOT freeze:
   - The fitted model parameters
   - The fitted calibration temperature
 
+FIX-STACKING-LEAKAGE: Ensemble weights are now derived via NESTED LOYO
+(not pooled LOYO or eval-set fitting). For each outer fold, weights are
+optimized on inner folds only. BMA weights are derived from LOYO OOS
+predictions, not the eval set. This eliminates the contamination pathway
+where weights optimized on evaluation data biased all reported metrics.
+See NestedLOYOEnsembleResult in stacking_weights.py.
+
 Phase 2 → Phase 3: Multi-model ensemble.
 - SpreadRegressor is the primary tree-based production model.
 - LightGBM and XGBoost classifiers provide ensemble diversity.
 - Logistic Regression provides regularization hedge.
 - TemperatureScaling is the only production calibration layer.
 - TournamentSigmaCalibrator adjusts spread model for tournament context.
-- Ensemble policy: LOYO-optimized weights with fixed fallback.
+- Ensemble policy: Nested LOYO-derived weights with fixed fallback.
+- Weight derivation: nested_loyo (BMA on LOYO OOS predictions).
 """
 
 from __future__ import annotations

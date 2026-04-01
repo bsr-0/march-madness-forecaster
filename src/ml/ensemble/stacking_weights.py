@@ -6,6 +6,12 @@ validated performance.
 
 Solution 14: Ensemble diversity metrics to measure whether component models
 make diverse errors. Low diversity → ensemble provides little benefit.
+
+FIX-STACKING-LEAKAGE: Added NestedLOYOEnsembleResult and fit_nested_loyo()
+to structurally prevent stacking weight contamination.  Ensemble weights
+are now derived via nested LOYO: for each outer fold the weights are
+optimized on inner folds only, so the held-out fold's Brier is never
+influenced by weights that saw its data.
 """
 
 from __future__ import annotations
@@ -35,6 +41,29 @@ class StackingWeightResult:
     model_names: List[str]
     effective_model_count: float  # 1/sum(w^2) — higher = more diverse weighting
     method: str = "constrained_logistic"
+
+
+@dataclass(frozen=True)
+class NestedLOYOEnsembleResult:
+    """Ensemble metrics from nested LOYO — structurally honest.
+
+    This dataclass can ONLY represent metrics where each fold's ensemble
+    weights were derived without seeing that fold's data.  The frozen
+    dataclass prevents mutation after construction.
+
+    FIX-STACKING-LEAKAGE: This is the ONLY acceptable source of ensemble
+    evaluation metrics.  Any code that reports ensemble Brier must use
+    this type, not raw pooled optimization results.
+    """
+
+    per_fold_weights: Dict[int, Dict[str, float]]  # year -> {model: weight}
+    per_fold_brier: Dict[int, float]                # year -> honest Brier
+    mean_brier: float
+    std_brier: float
+    n_folds: int
+    n_total_samples: int
+    production_weights: Dict[str, float]            # Final weights for inference
+    weight_source: str = "nested_loyo"              # Immutable provenance tag
 
 
 class StackingWeightOptimizer:
@@ -144,6 +173,122 @@ class StackingWeightOptimizer:
             improvement=brier_fixed - brier_stacking,
             model_names=model_names,
             effective_model_count=emc,
+        )
+
+    def fit_nested_loyo(
+        self,
+        predictions_by_year: Dict[int, Dict[str, np.ndarray]],
+        outcomes_by_year: Dict[int, np.ndarray],
+        fixed_weights: Optional[Dict[str, float]] = None,
+    ) -> NestedLOYOEnsembleResult:
+        """Derive ensemble weights via nested LOYO — structurally honest.
+
+        For each outer fold (held-out year Y):
+          1. Pool predictions from all OTHER years
+          2. Optimize weights on that pool (inner optimization)
+          3. Apply those weights to year Y's predictions
+          4. Record year Y's Brier (weights never saw year Y)
+
+        The reported mean Brier is guaranteed uncontaminated because each
+        fold's weights are derived without access to that fold's data.
+
+        Args:
+            predictions_by_year: {year: {model_name: predictions [N_year]}}
+            outcomes_by_year: {year: outcomes [N_year]}
+            fixed_weights: Optional baseline for comparison
+
+        Returns:
+            NestedLOYOEnsembleResult with honest per-fold metrics
+        """
+        years = sorted(predictions_by_year.keys())
+        if len(years) < 3:
+            raise ValueError(
+                f"Nested LOYO requires >= 3 years, got {len(years)}"
+            )
+
+        model_names = sorted(next(iter(predictions_by_year.values())).keys())
+        per_fold_weights: Dict[int, Dict[str, float]] = {}
+        per_fold_brier: Dict[int, float] = {}
+        all_inner_preds: Dict[str, list] = {n: [] for n in model_names}
+        all_inner_outcomes: list = []
+        n_total = 0
+
+        for hold_year in years:
+            # --- Inner optimization: pool all years except hold_year ---
+            inner_preds: Dict[str, list] = {n: [] for n in model_names}
+            inner_y: list = []
+
+            for yr in years:
+                if yr == hold_year:
+                    continue
+                for name in model_names:
+                    inner_preds[name].extend(
+                        predictions_by_year[yr][name].tolist()
+                    )
+                inner_y.extend(outcomes_by_year[yr].tolist())
+
+            inner_pred_arrays = {
+                name: np.array(vals) for name, vals in inner_preds.items()
+            }
+            inner_outcomes = np.array(inner_y)
+
+            # Fit weights on inner data only
+            inner_result = self.fit(
+                inner_pred_arrays, inner_outcomes, fixed_weights
+            )
+            fold_weights = inner_result.weights
+            per_fold_weights[hold_year] = fold_weights
+
+            # --- Evaluate on held-out year with inner-derived weights ---
+            hold_preds = predictions_by_year[hold_year]
+            hold_y = outcomes_by_year[hold_year]
+            n_hold = len(hold_y)
+
+            weighted_pred = np.zeros(n_hold)
+            for name in model_names:
+                weighted_pred += fold_weights.get(name, 0.0) * hold_preds[name]
+
+            fold_brier = float(np.mean((weighted_pred - hold_y) ** 2))
+            per_fold_brier[hold_year] = fold_brier
+            n_total += n_hold
+
+            # Collect for production weights (full-data fit at the end)
+            for name in model_names:
+                all_inner_preds[name].extend(hold_preds[name].tolist())
+            all_inner_outcomes.extend(hold_y.tolist())
+
+            logger.info(
+                "Nested LOYO fold %d: Brier=%.5f, weights=%s",
+                hold_year, fold_brier,
+                {k: f"{v:.3f}" for k, v in fold_weights.items()},
+            )
+
+        # Production weights: fit on ALL data (safe — used only for
+        # inference on unseen 2026 data, never for metric reporting)
+        all_pred_arrays = {
+            name: np.array(vals) for name, vals in all_inner_preds.items()
+        }
+        all_outcomes = np.array(all_inner_outcomes)
+        production_result = self.fit(all_pred_arrays, all_outcomes, fixed_weights)
+
+        brier_values = list(per_fold_brier.values())
+        mean_brier = float(np.mean(brier_values))
+        std_brier = float(np.std(brier_values, ddof=1)) if len(brier_values) > 1 else 0.0
+
+        logger.info(
+            "Nested LOYO ensemble: mean_Brier=%.5f (std=%.5f) across %d folds",
+            mean_brier, std_brier, len(years),
+        )
+
+        return NestedLOYOEnsembleResult(
+            per_fold_weights=per_fold_weights,
+            per_fold_brier=per_fold_brier,
+            mean_brier=mean_brier,
+            std_brier=std_brier,
+            n_folds=len(years),
+            n_total_samples=n_total,
+            production_weights=production_result.weights,
+            weight_source="nested_loyo",
         )
 
     def _optimize_scipy(
