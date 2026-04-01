@@ -30,8 +30,9 @@ Algorithm
 2. Take the model's recommended bracket(s) from the Pareto frontier.
 
 3. Simulate ``n_tournaments`` tournament outcomes using the model's
-   calibrated pairwise probabilities with logit-space noise (matching
-   the main MC engine's noise model for consistency).
+   pairwise win scores with logit-space noise (matching the main MC
+   engine's noise model for consistency). Scores approximate probabilities
+   but carry calibration uncertainty — see calibration report.
 
 4. For each tournament outcome, score every bracket (model + opponents)
    using the configured scoring system (standard ESPN, flat, or upset

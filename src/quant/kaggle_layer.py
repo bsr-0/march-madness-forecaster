@@ -1,7 +1,11 @@
 """Kaggle optimization layer — log loss evaluation and performance tiering.
 
-This layer does NOT modify probabilities. It evaluates the shared core's
-calibrated probabilities against Kaggle competition benchmarks.
+This layer does NOT modify scores. It evaluates the shared core's
+model-derived win scores against Kaggle competition benchmarks.
+
+NOTE: Outputs are scores, not fully calibrated probabilities. Calibration
+is fitted on a small tournament holdout (~60-70 games), so reported values
+carry substantial uncertainty. See calibration_uncertainty_band.
 """
 
 from __future__ import annotations
@@ -22,7 +26,7 @@ TIER_THRESHOLDS = {
 
 @dataclass
 class KaggleResult:
-    """Results from the Kaggle probability optimization layer."""
+    """Results from the Kaggle scoring evaluation layer."""
 
     log_loss: float
     tier: str  # "elite", "strong", "average", "below_average"
@@ -30,6 +34,8 @@ class KaggleResult:
     calibration_ece: float
     n_matchups: int
     brier_skill_score: Optional[float] = None
+    calibration_uncertainty_band: Optional[float] = None
+    calibration_n_samples: Optional[int] = None
 
     def summary(self) -> str:
         lines = [
@@ -41,6 +47,11 @@ class KaggleResult:
         ]
         if self.brier_skill_score is not None:
             lines.append(f"  Brier Skill:  {self.brier_skill_score:.4f}")
+        if self.calibration_uncertainty_band is not None:
+            lines.append(
+                f"  Score uncertainty: \u00b1{self.calibration_uncertainty_band:.3f} "
+                f"(fitted on {self.calibration_n_samples or '?'} games)"
+            )
         return "\n".join(lines)
 
 
@@ -101,10 +112,21 @@ def evaluate_kaggle(pipeline_report: Dict) -> KaggleResult:
 
     tier = assign_tier(log_loss)
 
+    # Extract calibration uncertainty from the calibration report
+    cal_uncertainty = cal.get("uncertainty_band")
+    cal_n_samples = cal.get("samples") or calibration_stats.get("samples") if "calibration_stats" in dir() else None
+    if cal_n_samples is None:
+        cal_n_samples = pipeline_report.get("calibration", {}).get("samples")
+
     logger.info(
         "Kaggle evaluation: log_loss=%.4f tier=%s brier=%.4f ece=%.4f",
         log_loss, tier, brier, ece,
     )
+    if cal_uncertainty is not None:
+        logger.info(
+            "Score uncertainty: \u00b1%.3f (calibration fitted on %s games)",
+            cal_uncertainty, cal_n_samples or "?",
+        )
 
     return KaggleResult(
         log_loss=log_loss,
@@ -113,4 +135,6 @@ def evaluate_kaggle(pipeline_report: Dict) -> KaggleResult:
         calibration_ece=ece,
         n_matchups=n_matchups,
         brier_skill_score=bss,
+        calibration_uncertainty_band=float(cal_uncertainty) if cal_uncertainty is not None else None,
+        calibration_n_samples=int(cal_n_samples) if cal_n_samples is not None else None,
     )

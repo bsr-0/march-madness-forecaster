@@ -671,6 +671,9 @@ def assemble_report(
             "calibration_min_required": pipeline.config.min_calibration_samples_hard,
             "calibration_method": calibration_stats.get("method", "unknown"),
             "calibration_enabled": bool(pipeline.calibration_pipeline),
+            "calibration_uncertainty_band": calibration_stats.get("uncertainty_band"),
+            "calibration_uncertainty_level": calibration_stats.get("uncertainty_level"),
+            "calibration_uncertainty_note": calibration_stats.get("uncertainty_note"),
             "massey_coverage": getattr(pipeline, "_massey_coverage_stats", {}),
             "calibration_comparison": {
                 "brier_before": calibration_stats.get("brier_before"),

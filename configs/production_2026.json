@@ -8,7 +8,7 @@
   "enable_transformer": false,
   "enable_embedding_projections": false,
 
-  "enable_stacking": true,
+  "enable_stacking": false,
   "enable_feature_selection": true,
 
   "enable_brier_sharpening": false,
@@ -57,6 +57,7 @@
   "scrape_live": false,
   "enable_market_blend": true,
   "enable_vegas_cross_reference": true,
+  "enable_vegas_calibration_anchor": true,
 
   "external_ratings_dir": "data/external_ratings",
   "multi_year_games_dir": "data/raw/historical",
