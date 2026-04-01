@@ -224,7 +224,7 @@ def compute_seed_baseline_brier(
     seed_diff_to_prob = {}
     for diff in range(-15, 16):
         # Logistic approximation: P(lower seed wins) increases with seed gap
-        seed_diff_to_prob[diff] = 1.0 / (1.0 + np.exp(diff * 0.15))
+        seed_diff_to_prob[diff] = 1.0 / (1.0 + np.exp(diff * 0.175))
 
     predictions = np.array([
         seed_diff_to_prob.get(
@@ -564,7 +564,7 @@ class BacktestValidationRunner:
         # Compute per-game briers for guard
         model_briers = (model_probs - y_test) ** 2
         seed_probs = np.array([
-            1.0 / (1.0 + np.exp((s1 - s2) * 0.15)) for s1, s2 in zip(seeds_t1, seeds_t2)
+            1.0 / (1.0 + np.exp((s1 - s2) * 0.175)) for s1, s2 in zip(seeds_t1, seeds_t2)
         ])
         seed_briers = (seed_probs - y_test) ** 2
         guard = evaluate_seed_baseline_guard(

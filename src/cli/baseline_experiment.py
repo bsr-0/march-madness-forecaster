@@ -220,9 +220,9 @@ def _run_seed_baseline(data: dict, all_names: list[str]) -> dict:
         # seed_diff in the feature vector is (seed1 - seed2) / 15.0
         raw_seed_diff = _extract_seeds(X, all_names) * 15.0
 
-        # P(team1 wins) = sigmoid(-0.15 * seed_diff)
-        # This matches the logistic fallback in compute_seed_baseline_probs
-        preds = 1.0 / (1.0 + np.exp(0.15 * raw_seed_diff))
+        # P(team1 wins) = sigmoid(-0.175 * seed_diff)
+        # Slope 0.175 fitted to 1985-2025 tournament data
+        preds = 1.0 / (1.0 + np.exp(0.175 * raw_seed_diff))
         preds = np.clip(preds, 0.001, 0.999)
 
         brier = float(np.mean((preds - y_test) ** 2))

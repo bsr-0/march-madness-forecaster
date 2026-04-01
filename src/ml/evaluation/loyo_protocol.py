@@ -167,7 +167,7 @@ def compute_seed_baseline_probs(
     """Compute seed-based baseline probabilities from historical seed win rates.
 
     Uses the logistic-fitted seed model from evaluation/baselines.py:
-    P(team1 wins) = sigmoid(0.15 * (seed2 - seed1)) for non-first-round,
+    P(team1 wins) = sigmoid(0.175 * (seed2 - seed1)) for non-first-round,
     or exact historical rates for canonical first-round matchups.
 
     Args:
@@ -195,7 +195,7 @@ def compute_seed_baseline_probs(
             p_fav = _SEED_WIN_RATES[key]
         else:
             diff = dog - fav
-            p_fav = 1.0 / (1.0 + np.exp(-0.15 * diff))
+            p_fav = 1.0 / (1.0 + np.exp(-0.175 * diff))
         probs[i] = p_fav if s1 <= s2 else 1.0 - p_fav
     return probs
 
