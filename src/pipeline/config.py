@@ -549,7 +549,7 @@ class SOTAPipelineConfig:
     # Base: P(win) from historical seed-vs-seed win rates (27-entry table, 1985-2025).
     # Adjustment: logit(p) = logit(p_base) + β * seed_em_residual_diff
     # β is fitted during training via log-loss minimization (single parameter).
-    enable_seed_plus_model: bool = True
+    enable_seed_plus_model: bool = False  # Validated: logistic_7 beats seed_plus (BSS +3.2% vs -3.1%)
     seed_plus_residual_weight: float = 0.0  # β — fitted during training
 
     # --- Upset detection layer ---
