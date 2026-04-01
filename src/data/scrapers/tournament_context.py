@@ -80,15 +80,33 @@ class TournamentContextScraper:
         return rankings
 
     def _scrape_preseason_ap(self, year: int) -> Dict[str, int]:
-        """Scrape preseason AP rankings from Sports-Reference polls page."""
+        """Fetch preseason AP rankings, trying Massey Ordinals first.
+
+        Primary: Massey Ordinals (pre-cached JSON from Kaggle) which
+        include AP rankings as one of 100+ ranking systems.
+        Fallback: Sports-Reference polls page HTML scraping.
+        """
+        # --- Primary: Massey Ordinals (pre-cached, no scraping) ---
+        rankings = self._ap_from_massey_ordinals(year)
+        if rankings:
+            logger.info(
+                "Loaded %d preseason AP rankings from Massey Ordinals for %d",
+                len(rankings), year,
+            )
+            return rankings
+
+        # --- Fallback: Sports Reference HTML (fragile) ---
+        logger.info(
+            "Massey Ordinals AP data unavailable; falling back to SR HTML for %d", year,
+        )
         url = f"{self.BASE_URL_SR}/seasons/men/{year}-polls.html"
-        rankings: Dict[str, int] = {}
+        rankings = {}
 
         try:
             resp = self.session.get(url, timeout=30)
             resp.raise_for_status()
         except Exception as e:
-            logger.warning(f"Could not fetch AP polls page for {year}: {e}")
+            logger.warning("Could not fetch AP polls page for %d: %s", year, e)
             return rankings
 
         soup = BeautifulSoup(resp.text, "lxml")
@@ -96,7 +114,6 @@ class TournamentContextScraper:
         # Strategy 1: Look for the weekly poll grid table with a "Pre" column
         table = soup.find("table", {"id": "ap-polls"})
         if not table:
-            # Fallback: find any table with a "Pre" header
             for t in soup.find_all("table"):
                 headers = [th.get_text(strip=True) for th in t.find_all("th")]
                 if "Pre" in headers or "Preseason" in headers:
@@ -109,7 +126,6 @@ class TournamentContextScraper:
                 return rankings
 
         # Strategy 2: Parse the standalone "Preseason" AP Top 25 table
-        # (some years have a separate table before the grid)
         for t in soup.find_all("table"):
             caption = t.find("caption")
             if caption and "preseason" in caption.get_text(strip=True).lower():
@@ -117,8 +133,58 @@ class TournamentContextScraper:
                 if rankings:
                     return rankings
 
-        logger.warning(f"Could not parse preseason AP rankings for {year}")
+        logger.warning("Could not parse preseason AP rankings for %d", year)
         return rankings
+
+    def _ap_from_massey_ordinals(self, year: int) -> Dict[str, int]:
+        """Try to extract preseason AP rankings from cached Massey Ordinals.
+
+        Massey Ordinals (Kaggle dataset) include AP rankings as one of
+        100+ systems.  This avoids fragile HTML scraping entirely.
+        """
+        try:
+            from .external_ratings import ExternalRatingsLoader
+
+            cache_dir = str(self.cache_dir) if self.cache_dir else "data/raw"
+            loader = ExternalRatingsLoader(cache_dir=cache_dir)
+
+            # Check if cached ratings exist for this year
+            cache_path = Path(cache_dir) / f"external_ratings_{year}.json"
+            if not cache_path.exists():
+                return {}
+
+            with open(cache_path, "r") as f:
+                data = json.load(f)
+
+            # Look for AP system in the cached ratings
+            systems = data.get("systems", {})
+            ap_entries = systems.get("AP") or systems.get("ap") or systems.get("AP Top 25") or {}
+            if not ap_entries:
+                # Try fuzzy match on system name
+                for sys_name, entries in systems.items():
+                    if "ap" in sys_name.lower() and "top" in sys_name.lower():
+                        ap_entries = entries
+                        break
+
+            if not ap_entries:
+                return {}
+
+            rankings = {}
+            if isinstance(ap_entries, list):
+                for entry in ap_entries:
+                    team = entry.get("team_id") or entry.get("team_name") or ""
+                    rank = entry.get("ranking") or entry.get("rank") or 0
+                    if team and isinstance(rank, (int, float)) and 1 <= rank <= 25:
+                        rankings[self._normalize_name(team)] = int(rank)
+            elif isinstance(ap_entries, dict):
+                for team, rank in ap_entries.items():
+                    if isinstance(rank, (int, float)) and 1 <= rank <= 25:
+                        rankings[self._normalize_name(team)] = int(rank)
+
+            return rankings
+        except Exception as exc:
+            logger.debug("Massey Ordinals AP extraction failed: %s", exc)
+            return {}
 
     def _parse_poll_grid_table(self, table) -> Dict[str, int]:
         """Parse the weekly poll grid and extract the 'Pre' column."""
@@ -215,7 +281,97 @@ class TournamentContextScraper:
     def _scrape_coach_tournament_data(
         self, year: int
     ) -> Dict[str, Dict[str, object]]:
-        """Scrape coach tournament data from Barttorvik."""
+        """Fetch coach tournament data, trying CSV first, HTML as fallback.
+
+        Primary: Barttorvik team_results CSV (structured, not behind JS wall).
+        Fallback: Barttorvik coach tournament HTML page (fragile soup.find("table")).
+        """
+        # --- Primary: CSV-based extraction (structured, reliable) ---
+        coaches = self._coach_data_from_csv(year)
+        if coaches:
+            logger.info("Loaded %d coaches from Barttorvik CSV for %d", len(coaches), year)
+            return coaches
+
+        # --- Fallback: HTML scraping (fragile) ---
+        logger.info("CSV coach data unavailable; falling back to HTML scrape for %d", year)
+        return self._coach_data_from_html(year)
+
+    def _coach_data_from_csv(self, year: int) -> Dict[str, Dict[str, object]]:
+        """Extract coach data from Barttorvik team_results CSV.
+
+        The CSV is not behind Barttorvik's JS verification wall and has
+        structured columns including coach name, wins, losses.
+        """
+        url = f"{self.BASE_URL_TORVIK}/{year}_team_results.csv"
+        coaches: Dict[str, Dict[str, object]] = {}
+
+        try:
+            resp = self.session.get(url, timeout=45)
+            resp.raise_for_status()
+        except Exception as e:
+            logger.debug("Could not fetch Barttorvik team results CSV for %d: %s", year, e)
+            return coaches
+
+        text = resp.text.strip()
+        if not text:
+            return coaches
+
+        try:
+            dialect = csv.Sniffer().sniff(text[:4096])
+        except Exception:
+            dialect = csv.excel
+
+        reader = csv.DictReader(io.StringIO(text), dialect=dialect)
+        if not reader.fieldnames:
+            return coaches
+
+        # Find relevant columns (case-insensitive)
+        lower_fields = {(f or "").strip().lower(): f for f in reader.fieldnames}
+        coach_key = None
+        wins_key = None
+        losses_key = None
+        for alias in ("coach", "head coach", "head_coach"):
+            if alias in lower_fields:
+                coach_key = lower_fields[alias]
+                break
+        for alias in ("w", "wins", "rec_w"):
+            if alias in lower_fields:
+                wins_key = lower_fields[alias]
+                break
+        for alias in ("l", "losses", "rec_l"):
+            if alias in lower_fields:
+                losses_key = lower_fields[alias]
+                break
+
+        if not coach_key:
+            return coaches
+
+        for row in reader:
+            coach_name = (row.get(coach_key) or "").strip()
+            if not coach_name:
+                continue
+            wins = self._safe_int(row.get(wins_key, "0")) if wins_key else 0
+            losses = self._safe_int(row.get(losses_key, "0")) if losses_key else 0
+
+            normalized = self._normalize_name(coach_name)
+            if normalized in coaches:
+                # Accumulate across multiple teams coached
+                coaches[normalized]["appearances"] = int(coaches[normalized]["appearances"]) + 1
+                coaches[normalized]["wins"] = int(coaches[normalized]["wins"]) + wins
+                coaches[normalized]["losses"] = int(coaches[normalized]["losses"]) + losses
+            else:
+                coaches[normalized] = {
+                    "name": coach_name,
+                    "appearances": 1,
+                    "wins": wins,
+                    "losses": losses,
+                    "teams": [],
+                }
+
+        return coaches
+
+    def _coach_data_from_html(self, year: int) -> Dict[str, Dict[str, object]]:
+        """Scrape coach tournament data from Barttorvik HTML (legacy fallback)."""
         url = f"{self.BASE_URL_TORVIK}/cgi-bin/ncaat.cgi?type=coach"
         coaches: Dict[str, Dict[str, object]] = {}
 
@@ -223,12 +379,11 @@ class TournamentContextScraper:
             resp = self.session.get(url, timeout=30)
             resp.raise_for_status()
         except Exception as e:
-            logger.warning(f"Could not fetch coach tournament data: {e}")
+            logger.warning("Could not fetch coach tournament data: %s", e)
             return coaches
 
         soup = BeautifulSoup(resp.text, "lxml")
 
-        # Find the main data table
         table = soup.find("table")
         if not table:
             logger.warning("No table found on Barttorvik coach tournament page")
@@ -238,11 +393,9 @@ class TournamentContextScraper:
         if len(rows) < 2:
             return coaches
 
-        # Parse header to find column indices
         header_cells = rows[0].find_all(["th", "td"])
         headers = [c.get_text(strip=True).lower() for c in header_cells]
 
-        # Map column names to indices
         col_map: Dict[str, int] = {}
         for idx, h in enumerate(headers):
             if "coach" in h:
@@ -251,8 +404,6 @@ class TournamentContextScraper:
                 col_map["wins"] = idx
             elif h in ("l", "losses"):
                 col_map["losses"] = idx
-            elif h in ("pake", "pase", "rank", "rk"):
-                pass  # Skip ranking columns
 
         coach_col = col_map.get("coach", 1)
         wins_col = col_map.get("wins", 4)
@@ -269,9 +420,8 @@ class TournamentContextScraper:
 
             wins = self._safe_int(cells[wins_col].get_text(strip=True))
             losses = self._safe_int(cells[losses_col].get_text(strip=True))
-            appearances = wins + losses  # Each game = 1 appearance entry
+            appearances = wins + losses
 
-            # Try to extract team names from links in coach cell
             teams = []
             for link in cells[coach_col].find_all("a"):
                 team = link.get_text(strip=True)
@@ -287,7 +437,7 @@ class TournamentContextScraper:
                 "teams": teams,
             }
 
-        logger.info(f"Parsed {len(coaches)} coaches from tournament data")
+        logger.info("Parsed %d coaches from tournament HTML data", len(coaches))
         return coaches
 
     def build_team_to_coach_appearances(
@@ -365,8 +515,8 @@ class TournamentContextScraper:
     def fetch_team_coaches(self, year: int) -> Dict[str, str]:
         """Fetch a mapping of team_id -> head coach name from Barttorvik.
 
-        Tries the HTML trank.php page first, then falls back to the team
-        results CSV (which is not behind Barttorvik's JS verification wall).
+        Primary: Team results CSV (structured, not behind JS wall).
+        Fallback: HTML trank.php page (fragile, behind Cloudflare).
 
         Args:
             year: Season end year.
@@ -379,16 +529,16 @@ class TournamentContextScraper:
         if cached and "coaches" in cached:
             return cached["coaches"]
 
-        # Strategy 1: HTML scrape (may fail due to JS wall)
-        coaches = self._scrape_team_coaches(year)
+        # Strategy 1: CSV (reliable, not behind JS wall)
+        coaches = self._team_coaches_from_csv(year)
 
-        # Strategy 2: CSV fallback
+        # Strategy 2: HTML fallback (fragile, behind Cloudflare)
         if not coaches:
             logger.info(
-                "HTML team-coach scrape returned no results; "
-                "falling back to team results CSV."
+                "CSV team-coach mapping returned no results; "
+                "falling back to HTML scrape for %d.", year,
             )
-            coaches = self._team_coaches_from_csv(year)
+            coaches = self._scrape_team_coaches(year)
 
         if coaches:
             self._save_cache(cache_name, {"coaches": coaches, "year": year})
@@ -554,10 +704,64 @@ class TournamentContextScraper:
         return champions
 
     def _scrape_conf_tourney_champions(self, year: int) -> Dict[str, str]:
+        """Fetch conference tournament champions.
+
+        Primary: ESPN conference seeds API (structured JSON).
+        Fallback: Sports-Reference season summary HTML (fragile id="conference-summary").
         """
-        Scrape conference tournament champions from Sports-Reference
-        season summary page.
+        # --- Primary: ESPN conference seeds (structured JSON) ---
+        champions = self._conf_champions_from_espn(year)
+        if champions:
+            logger.info(
+                "Loaded %d conference tournament champions from ESPN for %d",
+                len(champions), year,
+            )
+            return champions
+
+        # --- Fallback: SR HTML (fragile) ---
+        logger.info(
+            "ESPN conference data unavailable; falling back to SR HTML for %d", year,
+        )
+        return self._conf_champions_from_sr_html(year)
+
+    def _conf_champions_from_espn(self, year: int) -> Dict[str, str]:
+        """Try to extract conference tournament champions from ESPN API.
+
+        Uses the conference_seeds module which already implements ESPN
+        scoreboard API integration for conference tournament data.
         """
+        try:
+            from .conference_seeds import ConferenceSeedScraper
+
+            scraper = ConferenceSeedScraper(
+                cache_dir=str(self.cache_dir) if self.cache_dir else None,
+            )
+            seeds_by_conf = scraper.fetch_all_conference_seeds(year)
+            if not seeds_by_conf:
+                return {}
+
+            # The #1 seed in each conference tournament is typically the
+            # tournament champion (for completed tournaments) or regular
+            # season champion. Extract them.
+            champions: Dict[str, str] = {}
+            for conf_name, seeds in seeds_by_conf.items():
+                if not seeds:
+                    continue
+                # Find the team with seed 1
+                for team in seeds:
+                    if isinstance(team, dict) and team.get("seed") == 1:
+                        team_name = team.get("team_name") or team.get("team_id") or ""
+                        if team_name:
+                            champions[self._normalize_name(team_name)] = conf_name
+                        break
+
+            return champions
+        except Exception as exc:
+            logger.debug("ESPN conference champions extraction failed: %s", exc)
+            return {}
+
+    def _conf_champions_from_sr_html(self, year: int) -> Dict[str, str]:
+        """Scrape conference tournament champions from SR HTML (legacy fallback)."""
         url = f"{self.BASE_URL_SR}/seasons/men/{year}.html"
         champions: Dict[str, str] = {}
 
@@ -565,15 +769,13 @@ class TournamentContextScraper:
             resp = self.session.get(url, timeout=30)
             resp.raise_for_status()
         except Exception as e:
-            logger.warning(f"Could not fetch SR season summary for {year}: {e}")
+            logger.warning("Could not fetch SR season summary for %d: %s", year, e)
             return champions
 
         soup = BeautifulSoup(resp.text, "lxml")
 
-        # Find the Conference Summary table
         table = soup.find("table", {"id": "conference-summary"})
         if not table:
-            # Fallback: find table with "Tournament Champ" header
             for t in soup.find_all("table"):
                 headers = [th.get_text(strip=True) for th in t.find_all("th")]
                 if any("tournament" in h.lower() and "champ" in h.lower() for h in headers):
@@ -581,10 +783,9 @@ class TournamentContextScraper:
                     break
 
         if not table:
-            logger.warning(f"Conference summary table not found for {year}")
+            logger.warning("Conference summary table not found for %d", year)
             return champions
 
-        # Find the column index for "Tournament Champ"
         header_row = table.find("thead")
         if not header_row:
             return champions
@@ -599,10 +800,10 @@ class TournamentContextScraper:
             elif h_lower in ("conference", "conf"):
                 conf_col = idx
             elif idx == 0 and conf_col is None:
-                conf_col = idx  # First column is typically the conference
+                conf_col = idx
 
         if champ_col is None:
-            logger.warning(f"Tournament Champ column not found in headers: {headers}")
+            logger.warning("Tournament Champ column not found in headers: %s", headers)
             return champions
 
         body = table.find("tbody")
@@ -619,7 +820,7 @@ class TournamentContextScraper:
             if champ_name:
                 champions[self._normalize_name(champ_name)] = conf_name
 
-        logger.info(f"Found {len(champions)} conference tournament champions for {year}")
+        logger.info("Found %d conference tournament champions from SR HTML for %d", len(champions), year)
         return champions
 
     # ------------------------------------------------------------------
