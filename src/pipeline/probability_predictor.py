@@ -161,11 +161,43 @@ class _ProbabilityPredictor:
     # Core ensemble blend
     # ------------------------------------------------------------------
 
+    def _seed_plus_probability(self, matchup, team1_id: str, team2_id: str) -> float:
+        """Seed lookup table + efficiency residual adjustment.
+
+        Base: historical P(team1 wins | seed1, seed2) from 27-entry table.
+        Adjustment: logit(p) = logit(p_base) + β * seed_em_residual_diff
+        β is fitted during training (single parameter, like temperature scaling).
+        """
+        from ..data.features.tournament_features import get_seed_matchup_prior
+
+        cfg = self._p.config
+        t1 = self._p.feature_engineer.team_features.get(team1_id)
+        t2 = self._p.feature_engineer.team_features.get(team2_id)
+
+        seed1 = t1.seed if t1 is not None else 0
+        seed2 = t2.seed if t2 is not None else 0
+
+        if seed1 > 0 and seed2 > 0:
+            base_prob = get_seed_matchup_prior(seed1, seed2)
+        else:
+            # Fallback: logistic on seed_diff from matchup features
+            raw_diff = matchup.seed_diff * 15.0
+            base_prob = 1.0 / (1.0 + math.exp(0.175 * raw_diff))
+
+        # Apply residual adjustment in logit space
+        beta = cfg.seed_plus_residual_weight
+        if beta != 0.0 and matchup.seed_em_residual != 0.0:
+            base_logit = math.log(max(base_prob, 1e-8) / max(1.0 - base_prob, 1e-8))
+            adj_logit = base_logit + beta * matchup.seed_em_residual
+            return 1.0 / (1.0 + math.exp(-adj_logit))
+
+        return base_prob
+
     def _raw_fusion_probability(self, team1_id: str, team2_id: str) -> float:
         """Compute pre-calibration ensemble probability for team1 beating team2.
 
-        Pipeline: feature matchup → baseline model → optional BT blend →
-        optional Massey blend → pre-calibration clip.
+        Pipeline: feature matchup → baseline model (or seeds+) → optional BT
+        blend → optional Massey blend → pre-calibration clip.
         """
         p = self._p
         cfg = p.config
@@ -173,12 +205,14 @@ class _ProbabilityPredictor:
         matchup = p.feature_engineer.create_matchup_features(
             team1_id, team2_id, proprietary_engine=p.proprietary_engine
         )
-        feat_vec = matchup.to_vector()
 
-        if p.feature_selector is not None and p.feature_selector.is_fitted:
-            feat_vec = p.feature_selector.transform(feat_vec.reshape(1, -1))[0]
-
-        baseline_prob = p.baseline_model.predict_proba(feat_vec)
+        if cfg.enable_seed_plus_model:
+            baseline_prob = self._seed_plus_probability(matchup, team1_id, team2_id)
+        else:
+            feat_vec = matchup.to_vector()
+            if p.feature_selector is not None and p.feature_selector.is_fitted:
+                feat_vec = p.feature_selector.transform(feat_vec.reshape(1, -1))[0]
+            baseline_prob = p.baseline_model.predict_proba(feat_vec)
 
         # Bayesian Bradley-Terry blend (15% max)
         if p.bayesian_bt_model is not None:

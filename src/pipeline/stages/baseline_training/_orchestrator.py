@@ -325,7 +325,51 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 train_samples,
             )
 
-    # Step 4: Train individual models
+    # Step 4a: Fit seeds+ residual weight (β) if enabled.
+    # Uses full-width feature matrix (X_full = current year, pre-selection)
+    # to access seed columns, independent of which feature set was selected.
+    if pipeline.config.enable_seed_plus_model and feature_names_full is not None:
+        _seed_diff_col = None
+        _residual_col = None
+        for i, name in enumerate(feature_names_full):
+            if name == "seed_diff":
+                _seed_diff_col = i
+            elif name == "seed_em_residual":
+                _residual_col = i
+        if _seed_diff_col is not None and _residual_col is not None:
+            # X_full has current-year rows at full width; y_full matches
+            _sp_X = X_full
+            _sp_y = y_full
+            _sp_seed_diff = _sp_X[:, _seed_diff_col]
+            _sp_residual = _sp_X[:, _residual_col]
+            # Base logits from seed lookup (slope 0.175 on raw seed diff)
+            _sp_raw_diff = _sp_seed_diff * 15.0  # denormalize
+            _sp_base_logits = -0.175 * _sp_raw_diff
+            # Fit β: logit(p) = base_logit + β * residual
+            from scipy.optimize import minimize_scalar
+            def _sp_neg_log_loss(beta):
+                logits = _sp_base_logits + beta * _sp_residual
+                probs = 1.0 / (1.0 + np.exp(-np.clip(logits, -30, 30)))
+                probs = np.clip(probs, 1e-8, 1 - 1e-8)
+                return -np.mean(
+                    _sp_y * np.log(probs) + (1 - _sp_y) * np.log(1 - probs)
+                )
+            _sp_result = minimize_scalar(
+                _sp_neg_log_loss, bounds=(-5.0, 5.0), method="bounded"
+            )
+            pipeline.config.seed_plus_residual_weight = _sp_result.x
+            logger.info(
+                "Seeds+ model: fitted β=%.4f (log-loss=%.4f, n=%d training samples).",
+                _sp_result.x, _sp_result.fun, len(_sp_y),
+            )
+        else:
+            logger.warning(
+                "Seeds+ model: could not find seed_diff (%s) or seed_em_residual (%s) "
+                "in feature_names_full — β stays at 0.",
+                _seed_diff_col, _residual_col,
+            )
+
+    # Step 4b: Train individual models
     trained_models, tuning_stats = _train_all_models(
         pipeline, train_X, train_y, train_margins,
         eval_X, eval_y, eval_margins,

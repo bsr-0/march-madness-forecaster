@@ -253,6 +253,90 @@ def _run_seed_baseline(data: dict, all_names: list[str]) -> dict:
     }
 
 
+def _run_seed_plus(data: dict, all_names: list[str]) -> dict:
+    """Seed lookup + residual adjustment (seeds+ model) per year.
+
+    LOYO-temporal: for test year Y, fit β on all years before Y, then
+    predict on Y using seed lookup + β * seed_em_residual.
+    """
+    from scipy.optimize import minimize_scalar
+
+    years = sorted(data.keys())
+    results = []
+    sd_idx = all_names.index("seed_diff")
+    res_idx = all_names.index("seed_em_residual")
+
+    for test_year in years:
+        train_years = [y for y in years if y < test_year]
+        if len(train_years) < 2:
+            continue
+
+        # Assemble training data (raw seed columns, no scaling needed)
+        sd_trains, res_trains, y_trains = [], [], []
+        for ty in train_years:
+            sd_trains.append(data[ty]["X"][:, sd_idx])
+            res_trains.append(data[ty]["X"][:, res_idx])
+            y_trains.append(data[ty]["y"])
+
+        sd_train = np.concatenate(sd_trains) * 15.0  # denormalize
+        res_train = np.concatenate(res_trains)
+        y_train = np.concatenate(y_trains)
+
+        base_logits_train = -0.175 * sd_train
+
+        # Fit β on training data
+        def neg_log_loss(beta):
+            logits = base_logits_train + beta * res_train
+            probs = 1.0 / (1.0 + np.exp(-np.clip(logits, -30, 30)))
+            probs = np.clip(probs, 1e-8, 1 - 1e-8)
+            return -np.mean(y_train * np.log(probs) + (1 - y_train) * np.log(1 - probs))
+
+        result = minimize_scalar(neg_log_loss, bounds=(-5.0, 5.0), method="bounded")
+        beta = result.x
+
+        # Predict on test year
+        sd_test = data[test_year]["X"][:, sd_idx] * 15.0
+        res_test = data[test_year]["X"][:, res_idx]
+        y_test = data[test_year]["y"]
+        rw_test = data[test_year]["round_weights"]
+
+        test_logits = -0.175 * sd_test + beta * res_test
+        preds = 1.0 / (1.0 + np.exp(-test_logits))
+        preds = np.clip(preds, 0.001, 0.999)
+
+        brier = float(np.mean((preds - y_test) ** 2))
+        rw_brier = float(np.sum(rw_test * (preds - y_test) ** 2) / np.sum(rw_test))
+        acc = float(np.mean((preds > 0.5) == y_test))
+
+        results.append({
+            "year": test_year,
+            "n_train": int(len(y_train)),
+            "n_test": int(len(y_test)),
+            "beta": round(beta, 4),
+            "brier": round(brier, 4),
+            "rw_brier": round(rw_brier, 4),
+            "accuracy": round(acc, 4),
+        })
+
+    if results:
+        mean_brier = float(np.mean([r["brier"] for r in results]))
+        mean_rw = float(np.mean([r["rw_brier"] for r in results]))
+        mean_acc = float(np.mean([r["accuracy"] for r in results]))
+        mean_beta = float(np.mean([r["beta"] for r in results]))
+    else:
+        mean_brier = mean_rw = mean_acc = mean_beta = float("nan")
+
+    return {
+        "per_year": results,
+        "mean_brier": round(mean_brier, 4),
+        "mean_rw_brier": round(mean_rw, 4),
+        "mean_accuracy": round(mean_acc, 4),
+        "mean_beta": round(mean_beta, 4),
+        "n_features": 1,
+        "features": ["seed_lookup + β*seed_em_residual"],
+    }
+
+
 def run_baseline_experiment(args):
     """Main entry point for the baseline-experiment CLI command."""
     hist_dir = args.historical_dir
@@ -290,6 +374,14 @@ def run_baseline_experiment(args):
     print(f"  Mean Brier:    {sb['mean_brier']:.4f}")
     print(f"  Mean RW-Brier: {sb['mean_rw_brier']:.4f}")
     print(f"  Mean Accuracy: {sb['mean_accuracy']:.1%}")
+
+    print("\n--- seed_plus (seed lookup + β*residual, 1 fitted param) ---")
+    results["seed_plus"] = _run_seed_plus(data, all_names)
+    sp = results["seed_plus"]
+    print(f"  Mean Brier:    {sp['mean_brier']:.4f}")
+    print(f"  Mean RW-Brier: {sp['mean_rw_brier']:.4f}")
+    print(f"  Mean Accuracy: {sp['mean_accuracy']:.1%}")
+    print(f"  Mean β:        {sp['mean_beta']:.4f}")
 
     # BSS for each ML config vs seed baseline
     seed_brier = sb["mean_brier"]

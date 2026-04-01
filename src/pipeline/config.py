@@ -544,6 +544,14 @@ class SOTAPipelineConfig:
     consistency_bonus_max: float = 0.0  # Disabled by default; experimental only
     consistency_normalizer: float = 15.0  # Typical pace_adjusted_variance range for normalization
 
+    # --- Seeds+ model ---
+    # Replace ML base model with seed-matchup lookup table + residual adjustment.
+    # Base: P(win) from historical seed-vs-seed win rates (27-entry table, 1985-2025).
+    # Adjustment: logit(p) = logit(p_base) + β * seed_em_residual_diff
+    # β is fitted during training via log-loss minimization (single parameter).
+    enable_seed_plus_model: bool = True
+    seed_plus_residual_weight: float = 0.0  # β — fitted during training
+
     # --- Upset detection layer ---
     # Post-ensemble layer that identifies matchups with elevated upset potential
     # using historical seed priors, model residuals, and team-level amplifier
