@@ -57,6 +57,7 @@
   "scrape_live": false,
   "enable_market_blend": true,
   "enable_vegas_cross_reference": true,
+  "enable_vegas_calibration_anchor": true,
 
   "external_ratings_dir": "data/external_ratings",
   "multi_year_games_dir": "data/raw/historical",

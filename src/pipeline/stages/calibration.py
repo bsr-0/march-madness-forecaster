@@ -544,9 +544,121 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
             )
             effective_calibration_method = fallback_method
 
-    # Fit calibration on the fitting portion (70% or all).
-    pipeline.calibration_pipeline = CalibrationPipeline(method=effective_calibration_method)
-    pipeline.calibration_pipeline.fit(p_fit, y_fit)
+    # ── Vegas Anchor Calibration ──────────────────────────────────────
+    # When enabled, calibrate model scores against Vegas closing spread
+    # probabilities using regular-season games (potentially thousands of
+    # samples) instead of binary outcomes on a tiny tournament holdout.
+    # Falls back to the standard calibration path if insufficient data.
+    _vegas_anchor_used = False
+    _vegas_anchor_info = {}
+
+    if pipeline.config.enable_vegas_calibration_anchor:
+        try:
+            from ...ml.calibration.calibration import VegasAnchorCalibrator
+            from ...forecaster.market import spread_to_probability
+            from pathlib import Path
+            import json as _json
+
+            # Resolve Vegas spreads file
+            vegas_path = pipeline.config.vegas_spreads_json
+            if vegas_path is None:
+                cache_dir = getattr(pipeline.config, "data_cache_dir", "data/raw")
+                vegas_path = str(Path(cache_dir) / f"vegas_spreads_{pipeline.config.year}.json")
+
+            vegas_spreads = None
+            if os.path.exists(vegas_path):
+                try:
+                    with open(vegas_path, "r", encoding="utf-8") as _f:
+                        _data = _json.load(_f)
+                    # Support both formats: {"games": {key: {spread: X}}} or {key: X}
+                    games_data = _data.get("games", _data) if isinstance(_data, dict) else {}
+                    vegas_spreads = {}
+                    for key, val in games_data.items():
+                        if isinstance(val, (int, float)):
+                            vegas_spreads[str(key)] = float(val)
+                        elif isinstance(val, dict) and isinstance(val.get("spread"), (int, float)):
+                            vegas_spreads[str(key)] = float(val["spread"])
+                except Exception as _e:
+                    logger.warning("Failed to load Vegas spreads from %s: %s", vegas_path, _e)
+
+            if vegas_spreads and len(vegas_spreads) >= VegasAnchorCalibrator.MIN_GAMES:
+                # Collect (model_pred, vegas_prob) pairs from regular-season games
+                sigma = pipeline.config.vegas_anchor_sigma
+                anchor_model_probs = []
+                anchor_vegas_probs = []
+
+                for g in regular_season_games:
+                    if g.team1_id not in pipeline.feature_engineer.team_features:
+                        continue
+                    if g.team2_id not in pipeline.feature_engineer.team_features:
+                        continue
+
+                    # Try both orderings for matchup key lookup
+                    key_fwd = f"{g.team1_id}_vs_{g.team2_id}"
+                    key_rev = f"{g.team2_id}_vs_{g.team1_id}"
+                    spread = vegas_spreads.get(key_fwd)
+                    if spread is None and key_rev in vegas_spreads:
+                        spread = -vegas_spreads[key_rev]  # flip sign
+                    if spread is None:
+                        continue
+
+                    model_p = pipeline._raw_fusion_probability(g.team1_id, g.team2_id)
+                    model_p = float(np.clip(
+                        model_p,
+                        pipeline.config.pre_calibration_clip_lo,
+                        pipeline.config.pre_calibration_clip_hi,
+                    ))
+                    vegas_p = spread_to_probability(spread, sigma=sigma)
+
+                    anchor_model_probs.append(model_p)
+                    anchor_vegas_probs.append(vegas_p)
+
+                if len(anchor_model_probs) >= VegasAnchorCalibrator.MIN_GAMES:
+                    anchor_cal = VegasAnchorCalibrator()
+                    anchor_cal.fit(
+                        np.array(anchor_model_probs),
+                        np.array(anchor_vegas_probs),
+                    )
+
+                    # Wrap the VegasAnchorCalibrator in a CalibrationPipeline-compatible shell
+                    pipeline.calibration_pipeline = CalibrationPipeline(method="temperature")
+                    pipeline.calibration_pipeline.calibrator = anchor_cal
+                    pipeline.calibration_pipeline.calibrator.fitted = True
+                    pipeline.calibration_pipeline.method = "vegas_anchor"
+
+                    _vegas_anchor_used = True
+                    _vegas_anchor_info = anchor_cal.to_dict()
+                    effective_calibration_method = "vegas_anchor"
+
+                    logger.info(
+                        "Vegas anchor calibration: fitted on %d regular-season games "
+                        "(a=%.4f, b=%.4f, logit MSE=%.4f). Falling back to standard "
+                        "calibration on tournament holdout is NOT needed.",
+                        anchor_cal.n_anchor_games,
+                        anchor_cal.a, anchor_cal.b,
+                        anchor_cal.anchor_mse or 0.0,
+                    )
+                else:
+                    logger.info(
+                        "Vegas anchor: only %d games matched (need %d). "
+                        "Falling back to standard calibration.",
+                        len(anchor_model_probs),
+                        VegasAnchorCalibrator.MIN_GAMES,
+                    )
+            else:
+                logger.info(
+                    "Vegas anchor: spread data unavailable or insufficient at %s. "
+                    "Falling back to standard calibration.",
+                    vegas_path,
+                )
+        except Exception as _e:
+            logger.warning("Vegas anchor calibration failed: %s. Falling back.", _e)
+
+    # ── Standard calibration (fallback or primary) ─────────────────────
+    if not _vegas_anchor_used:
+        # Fit calibration on the fitting portion (70% or all).
+        pipeline.calibration_pipeline = CalibrationPipeline(method=effective_calibration_method)
+        pipeline.calibration_pipeline.fit(p_fit, y_fit)
 
     # FIX #3: Fit round-weighted Brier calibrator as secondary refinement.
     # Kaggle uses round-weighted Brier scoring, so calibration should
@@ -759,7 +871,11 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
 
     # Compute uncertainty band: 95% CI half-width on score estimates
     # Uses worst-case binomial SE: 1.96 * sqrt(0.25 / N)
-    _n_cal = max(len(probs), 1)
+    # For Vegas anchor, N is the number of games with spread data (much larger)
+    if _vegas_anchor_used:
+        _n_cal = max(_vegas_anchor_info.get("n_anchor_games", 1), 1)
+    else:
+        _n_cal = max(len(probs), 1)
     _uncertainty_band = round(1.96 * (0.25 / _n_cal) ** 0.5, 4)
     _uncertainty_level = (
         "high" if _uncertainty_band >= 0.10
@@ -809,6 +925,8 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         calibration_info.update(bootstrap_info)
     if _auto_selection_info:
         calibration_info.update(_auto_selection_info)
+    if _vegas_anchor_info:
+        calibration_info["vegas_anchor"] = _vegas_anchor_info
 
     # Add temperature value if using temperature scaling
     if effective_calibration_method == "temperature" and hasattr(pipeline.calibration_pipeline.calibrator, "temperature"):
@@ -819,7 +937,9 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         artifact_kind="calibration_report",
         extra={
             "fit_data_source": (
-                "historical_tournament_only" if _nested_mode else "mixed_or_temporal_split"
+                "vegas_anchor_regular_season" if _vegas_anchor_used
+                else "historical_tournament_only" if _nested_mode
+                else "mixed_or_temporal_split"
             ),
             "evaluation_data_source": (
                 "current_year_validation_only" if _nested_mode else eval_mode

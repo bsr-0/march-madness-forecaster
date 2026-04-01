@@ -794,6 +794,121 @@ CALIBRATION_MIN_SAMPLES = {
 REQUIRES_NESTED_CV = {"platt", "isotonic"}
 
 
+class VegasAnchorCalibrator:
+    """Calibrate model scores by anchoring to Vegas closing spread probabilities.
+
+    Instead of fitting calibration on binary outcomes from a tiny tournament
+    holdout (~60-70 games), this calibrator fits on (model_pred, vegas_prob)
+    pairs from regular-season games where closing lines are available
+    (potentially thousands of samples).
+
+    The market-derived probability serves as the calibration target — Vegas
+    lines are calibrated by millions of dollars of market activity, giving
+    a far more stable reference than binary outcomes on small N.
+
+    Uses Platt scaling (2 params: slope + intercept in logit space) to learn
+    the mapping: logit(model_pred) → logit(vegas_prob). This preserves
+    ranking while correcting systematic bias and confidence level.
+
+    Falls back to TemperatureScaling on tournament holdout when insufficient
+    spread data is available (< min_games).
+    """
+
+    MIN_GAMES = 50  # Minimum games with spread data to use anchor
+
+    def __init__(self):
+        self.a = 1.0  # slope in logit space
+        self.b = 0.0  # intercept in logit space
+        self.fitted = False
+        self.n_anchor_games = 0
+        self.anchor_mse = None  # MSE between model and Vegas probs (diagnostic)
+        self._fallback_calibrator: Optional[TemperatureScaling] = None
+
+    def fit(
+        self,
+        model_probs: np.ndarray,
+        vegas_probs: np.ndarray,
+        max_iter: int = 300,
+        lr: float = 0.05,
+    ) -> None:
+        """Fit Platt scaling from model predictions to Vegas probabilities.
+
+        Minimizes MSE in logit space: ||a * logit(model) + b - logit(vegas)||^2
+
+        Args:
+            model_probs: Model-predicted probabilities.
+            vegas_probs: Vegas-derived probabilities from closing spreads.
+            max_iter: Maximum gradient descent iterations.
+            lr: Learning rate.
+        """
+        if len(model_probs) < self.MIN_GAMES:
+            raise ValueError(
+                f"VegasAnchorCalibrator requires >= {self.MIN_GAMES} games "
+                f"with spread data, got {len(model_probs)}"
+            )
+
+        model_probs = np.clip(model_probs, 1e-6, 1 - 1e-6)
+        vegas_probs = np.clip(vegas_probs, 1e-6, 1 - 1e-6)
+
+        model_logits = np.log(model_probs / (1.0 - model_probs))
+        vegas_logits = np.log(vegas_probs / (1.0 - vegas_probs))
+
+        # Fit a, b to minimize ||a * model_logits + b - vegas_logits||^2
+        # Closed-form linear regression in logit space
+        X = np.column_stack([model_logits, np.ones_like(model_logits)])
+        # Normal equations: (X^T X)^{-1} X^T y
+        XtX = X.T @ X
+        Xty = X.T @ vegas_logits
+        try:
+            params = np.linalg.solve(XtX, Xty)
+            self.a = float(params[0])
+            self.b = float(params[1])
+        except np.linalg.LinAlgError:
+            # Degenerate case — fall back to identity
+            logger.warning("VegasAnchorCalibrator: singular matrix, using identity")
+            self.a = 1.0
+            self.b = 0.0
+
+        self.n_anchor_games = len(model_probs)
+        residuals = self.a * model_logits + self.b - vegas_logits
+        self.anchor_mse = float(np.mean(residuals ** 2))
+        self.fitted = True
+
+        logger.info(
+            "VegasAnchorCalibrator fitted on %d games: a=%.4f, b=%.4f, "
+            "logit-space MSE=%.4f",
+            self.n_anchor_games, self.a, self.b, self.anchor_mse,
+        )
+
+    def calibrate(self, predictions: np.ndarray) -> np.ndarray:
+        """Apply the fitted logit-space affine transform.
+
+        Args:
+            predictions: Raw model probabilities.
+
+        Returns:
+            Vegas-anchored probabilities.
+        """
+        if not self.fitted:
+            raise ValueError("VegasAnchorCalibrator not fitted.")
+
+        predictions = np.clip(predictions, 1e-7, 1 - 1e-7)
+        logits = np.log(predictions / (1.0 - predictions))
+        scaled = self.a * logits + self.b
+        scaled = np.clip(scaled, -30.0, 30.0)
+        return 1.0 / (1.0 + np.exp(-scaled))
+
+    def to_dict(self) -> dict:
+        return {
+            "method": "vegas_anchor",
+            "a": round(self.a, 6),
+            "b": round(self.b, 6),
+            "n_anchor_games": self.n_anchor_games,
+            "logit_mse": round(self.anchor_mse, 6) if self.anchor_mse is not None else None,
+            "fitted": self.fitted,
+        }
+
+
 class CalibrationLeakageError(ValueError):
     """Raised when calibration evaluate() is called on the same data used for fit()."""
 
