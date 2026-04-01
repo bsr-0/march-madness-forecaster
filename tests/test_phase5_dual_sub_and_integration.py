@@ -179,7 +179,7 @@ class TestEndToEndLeveragePipeline:
 
         result = AggregatedResults(
             championship_odds=champ_odds,
-            num_simulations=50000,
+            num_simulations=10000,
         )
         # Only provide public odds for seeds 1-4
         public = {f"team_{s}": get_seed_based_pick_rates(s)["CHAMP"] for s in range(1, 5)}
@@ -229,7 +229,7 @@ class TestNoHardcodedFallbacks:
         """AggregatedResults uses 0.01 floor, not 0.001."""
         result = AggregatedResults(
             championship_odds={"x": 0.05},
-            num_simulations=50000,
+            num_simulations=10000,
         )
         picks = result.get_leverage_picks({}, min_leverage=0.0)
         assert len(picks) == 1

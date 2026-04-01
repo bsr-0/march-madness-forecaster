@@ -765,7 +765,7 @@ class TestProductionValidator:
             enable_tournament_adaptation=True,
             scoring_metric="brier",
             random_seed=2026,
-            num_simulations=50000,
+            num_simulations=10000,
             tournament_shrinkage=0.06,
             massey_blend_weight=0.25,
             massey_sigma=4.5,

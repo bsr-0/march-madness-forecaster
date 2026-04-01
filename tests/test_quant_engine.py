@@ -15,7 +15,7 @@ class TestQuantConfig:
         config = QuantConfig()
         assert config.year == 2026
         assert config.pool_sizes == [20, 100, 1000]
-        assert config.simulations == 50000
+        assert config.simulations == 10000
         assert config.calibration_method == "isotonic"
         assert config.alpha == 1.0
         assert config.beta == 1.0

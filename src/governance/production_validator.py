@@ -60,7 +60,7 @@ REQUIRED_CONFIG_VALUES: Dict[str, Any] = {
     # PRODUCTION_BASELINE constrain the optimizer's search space.
     "optimize_ensemble_weights": True,
     "random_seed": 2026,
-    "num_simulations": 50000,
+    "num_simulations": 10000,
     "tournament_shrinkage": 0.06,
     "massey_blend_weight": 0.25,
     "massey_sigma": 4.5,

@@ -278,7 +278,7 @@ CONF_FULL_NAMES = {
 
 
 def simulate_bracket(predictor: EnhancedPredictor, conf: str,
-                     num_sims: int = 50000, noise_std: float = 0.16,
+                     num_sims: int = 10000, noise_std: float = 0.16,
                      seed: int = 2026) -> dict:
     """
     Simulate a conference tournament bracket via Monte Carlo.
@@ -831,7 +831,7 @@ body {{ background: var(--bg); color: var(--text); font-family: -apple-system, B
 <body>
 <div class="dashboard-header">
     <h1>2026 Conference Tournament Predictions</h1>
-    <div class="subtitle">Multi-feature logistic model + 50,000 Monte Carlo simulations per conference</div>
+    <div class="subtitle">Multi-feature logistic model + 10,000 Monte Carlo simulations per conference</div>
     <div class="subtitle" style="font-size:0.85em; margin-top:4px; color:#5a5e72;">Generated March 9, 2026 | Tournaments begin March 10</div>
 </div>
 
@@ -949,10 +949,10 @@ def main():
     logger.info("  Four Factors enrichment: %d/%d teams (%.0f%%)", n_ff, n_teams, n_ff/n_teams*100 if n_teams else 0)
 
     # Step 3: Run simulations for all conferences
-    logger.info("\n[STEP 3] Running Monte Carlo Simulations (50,000 per conference)")
+    logger.info("\n[STEP 3] Running Monte Carlo Simulations (10,000 per conference)")
     all_results = {}
     for conf in sorted(predictor.teams_by_conf.keys()):
-        result = simulate_bracket(predictor, conf, num_sims=50000)
+        result = simulate_bracket(predictor, conf, num_sims=10000)
         if result:
             all_results[conf] = result
             mc = result["mc_favorite"]
