@@ -219,14 +219,43 @@ def _load_year_samples_incremental_core(
         try:
             with open(seeds_path, "r") as f:
                 seeds_data = json.load(f)
+            # Handle both formats: list of entries or dict with "teams" key
+            if isinstance(seeds_data, dict):
+                seeds_data = seeds_data.get("teams", [])
             if isinstance(seeds_data, list):
                 for entry in seeds_data:
-                    tid = entry.get("team_id", "")
                     seed = int(entry.get("seed", 0))
-                    if tid and seed:
-                        team_seeds[_team_id(tid)] = seed
+                    if not seed:
+                        continue
+                    # Try team_id first, then school_slug as fallback
+                    for key in ("team_id", "school_slug"):
+                        tid = entry.get(key, "")
+                        if tid:
+                            team_seeds[_team_id(tid)] = seed
         except Exception as _seed_exc:
             logger.debug("Tournament seeds loading failed for year %d: %s", year, _seed_exc)
+
+    # Build prefix aliases: game team_ids like "akron_zips" should match
+    # seed team_ids like "akron". Only create alias when exactly one seed
+    # team_id is a prefix of the game team_id.
+    if team_seeds:
+        _game_tids = set()
+        for row in team_games_raw:
+            _game_tids.add(_team_id(str(row.get("team_id", ""))))
+            _game_tids.add(_team_id(str(row.get("opponent_id", ""))))
+        _aliases: Dict[str, int] = {}
+        for gtid in _game_tids:
+            if gtid in team_seeds:
+                continue
+            matches = [(sid, s) for sid, s in team_seeds.items() if gtid.startswith(sid + "_")]
+            if len(matches) == 1:
+                _aliases[gtid] = matches[0][1]
+        if _aliases:
+            team_seeds.update(_aliases)
+            logger.debug(
+                "Seed prefix aliases for year %d: %d new mappings",
+                year, len(_aliases),
+            )
 
     # Massey Ordinals composite
     team_massey_composite: Dict[str, float] = {}

@@ -715,3 +715,15 @@ def register(subparsers):
     )
     ar_parser.add_argument("--json", action="store_true", help="Output JSON instead of text")
     ar_parser.set_defaults(func=handle_audit_rubric)
+
+    # --- baseline-experiment ---
+    from .baseline_experiment import run_baseline_experiment
+    be_parser = subparsers.add_parser(
+        "baseline-experiment",
+        help="Run tournament-only baseline experiment (logistic vs seeds)",
+    )
+    be_parser.add_argument("--historical-dir", default="data/raw/historical",
+                           help="Directory with historical game/metric JSONs")
+    be_parser.add_argument("--output", "-o", default=None,
+                           help="Output JSON report path (default: artifacts/baseline_experiment.json)")
+    be_parser.set_defaults(func=run_baseline_experiment)
