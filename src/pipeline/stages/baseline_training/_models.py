@@ -432,18 +432,57 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
             spread = SpreadRegressor(
                 sigma=pipeline.config.spread_sigma_init,
             )
-            spread_valid_X = eval_X if valid_samples > 0 else None
-            spread_valid_margins = eval_margins if valid_samples > 0 else None
+            # FIX-STACKING-LEAKAGE: Do NOT pass eval data for sigma
+            # calibration.  calibrate_sigma() optimizes sigma to minimize
+            # Brier on its input — passing eval data here contaminates all
+            # spread probabilities used downstream for ensemble evaluation.
+            # Instead, hold out the last 20% of training data for sigma
+            # calibration.  This keeps sigma derivation strictly within
+            # the training partition.
+            _sigma_split = max(int(len(train_margins) * 0.8), 20)
+            if len(train_margins) >= 40:
+                _sigma_cal_X = train_X[_sigma_split:]
+                _sigma_cal_margins = train_margins[_sigma_split:]
+                _sigma_train_X = train_X[:_sigma_split]
+                _sigma_train_margins = train_margins[:_sigma_split]
+                _sigma_train_weight = (
+                    train_sample_weight[:_sigma_split]
+                    if train_sample_weight is not None else None
+                )
+            else:
+                # Too few samples to split — skip sigma calibration
+                _sigma_cal_X = None
+                _sigma_cal_margins = None
+                _sigma_train_X = train_X
+                _sigma_train_margins = train_margins
+                _sigma_train_weight = train_sample_weight
 
             spread_stats = spread.train(
-                train_X,
-                train_margins,
+                _sigma_train_X,
+                _sigma_train_margins,
                 feature_names=feature_names,
                 num_rounds=200,
-                sample_weight=train_sample_weight,
-                valid_X=spread_valid_X,
-                valid_margins=spread_valid_margins,
+                sample_weight=_sigma_train_weight,
+                valid_X=_sigma_cal_X,
+                valid_margins=_sigma_cal_margins,
             )
+
+            # Retrain on full training data with calibrated sigma
+            if _sigma_cal_X is not None:
+                _calibrated_sigma = spread.sigma
+                spread_full = SpreadRegressor(sigma=_calibrated_sigma)
+                spread_full.train(
+                    train_X,
+                    train_margins,
+                    feature_names=feature_names,
+                    num_rounds=200,
+                    sample_weight=train_sample_weight,
+                    valid_X=None,
+                    valid_margins=None,
+                )
+                # Preserve calibrated sigma (train with no valid data won't recalibrate)
+                spread_full.sigma = _calibrated_sigma
+                spread = spread_full
 
             if spread_stats.get("trained"):
                 pipeline.baseline_model.spread_model = spread

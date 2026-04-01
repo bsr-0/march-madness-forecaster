@@ -378,3 +378,93 @@ class TestOptimizeEnsembleWeightsLoyoNested:
         assert '"nested_loyo"' in source, (
             "Must tag weight_source as 'nested_loyo'"
         )
+
+
+class TestSpreadSigmaNotOnEvalSet:
+    """Verify spread model sigma is NOT calibrated on eval data."""
+
+    def test_spread_sigma_uses_training_data(self):
+        """Spread sigma calibration must NOT use eval_X/eval_margins."""
+        import inspect
+        from src.pipeline.stages.baseline_training._models import (
+            _train_all_models,
+        )
+
+        source = inspect.getsource(_train_all_models)
+
+        # The old contaminated pattern: pass eval data for sigma calibration
+        assert "spread_valid_X = eval_X" not in source, (
+            "_train_all_models still passes eval_X to SpreadRegressor! "
+            "This contaminates sigma calibration with eval data."
+        )
+        assert "spread_valid_margins = eval_margins" not in source, (
+            "_train_all_models still passes eval_margins to SpreadRegressor! "
+            "This contaminates sigma calibration with eval data."
+        )
+
+    def test_spread_sigma_uses_training_split(self):
+        """Spread sigma should be calibrated on held-out training data."""
+        import inspect
+        from src.pipeline.stages.baseline_training._models import (
+            _train_all_models,
+        )
+
+        source = inspect.getsource(_train_all_models)
+
+        # Should use a split of training data for sigma calibration
+        assert "_sigma_split" in source, (
+            "Should split training data for sigma calibration"
+        )
+        assert "_sigma_cal_X" in source, (
+            "Should have a sigma calibration subset from training data"
+        )
+
+    def test_spread_sigma_comment_documents_fix(self):
+        """The fix should be clearly documented in code."""
+        import inspect
+        from src.pipeline.stages.baseline_training._models import (
+            _train_all_models,
+        )
+
+        source = inspect.getsource(_train_all_models)
+        assert "FIX-STACKING-LEAKAGE" in source, (
+            "Spread sigma fix should reference FIX-STACKING-LEAKAGE"
+        )
+
+
+class TestSingleModelSelectionNoEvalDependence:
+    """Verify single-model selection does NOT depend on eval_y."""
+
+    def test_selection_does_not_compute_eval_brier(self):
+        """_select_best_single_model must not compute Brier on eval_y."""
+        import inspect
+        from src.pipeline.stages.baseline_training._orchestrator import (
+            _select_best_single_model,
+        )
+
+        source = inspect.getsource(_select_best_single_model)
+
+        # Old contaminated patterns
+        assert "np.mean((preds_clipped - eval_y)" not in source, (
+            "_select_best_single_model still computes Brier on eval_y! "
+            "This uses eval set for model selection decisions."
+        )
+        assert "eval_y * np.log" not in source, (
+            "_select_best_single_model still computes LogLoss on eval_y!"
+        )
+
+    def test_selection_uses_priority_order(self):
+        """Selection should use fixed priority, not eval-dependent ranking."""
+        import inspect
+        from src.pipeline.stages.baseline_training._orchestrator import (
+            _select_best_single_model,
+        )
+
+        source = inspect.getsource(_select_best_single_model)
+
+        assert "_PRIORITY" in source, (
+            "Should use fixed priority order for model selection"
+        )
+        assert "FIX-STACKING-LEAKAGE" in source, (
+            "Model selection fix should reference FIX-STACKING-LEAKAGE"
+        )
