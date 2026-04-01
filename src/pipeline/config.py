@@ -799,6 +799,9 @@ class SOTAPipelineConfig:
     enable_market_blend: bool = True  # Blend market consensus into championship odds post-simulation
     market_blend_weight: float = 0.20  # Weight for market data in blend (0.0-1.0); model gets 1-weight
     enable_vegas_cross_reference: bool = True  # Always load & validate vs Vegas; warn on major divergence
+    enable_vegas_calibration_anchor: bool = False  # Use Vegas closing spreads as calibration anchor
+    vegas_spreads_json: Optional[str] = None  # Path to per-game Vegas spreads JSON (auto-resolved if None)
+    vegas_anchor_sigma: float = 13.5  # Spread-to-probability sigma for Vegas lines
 
     # Compute budget management (S20)
     compute_budget_seconds: float = 3600.0

@@ -61,6 +61,8 @@ class QuantReport:
                 "calibration_ece": self.kaggle.calibration_ece,
                 "n_matchups": self.kaggle.n_matchups,
                 "brier_skill_score": self.kaggle.brier_skill_score,
+                "calibration_uncertainty_band": self.kaggle.calibration_uncertainty_band,
+                "calibration_n_samples": self.kaggle.calibration_n_samples,
             },
             "espn": {
                 "brackets": [

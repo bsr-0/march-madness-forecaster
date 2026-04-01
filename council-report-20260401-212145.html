@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Council Report - Critical Repository Limitation</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #1a1a1a;
+    background: #f8f9fa;
+    padding: 2rem;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+  .header {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .header h1 { font-size: 1.5rem; color: #1a1a1a; margin-bottom: 0.5rem; }
+  .header .subtitle { color: #666; font-size: 0.9rem; }
+  .question-box {
+    background: #f0f4ff;
+    border-left: 4px solid #4a6cf7;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0 6px 6px 0;
+    font-size: 1.05rem;
+  }
+  .verdict {
+    background: #fff;
+    border: 2px solid #4a6cf7;
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .verdict h2 { font-size: 1.3rem; color: #4a6cf7; margin-bottom: 1rem; }
+  .verdict h3 { font-size: 1.05rem; color: #333; margin-top: 1.25rem; margin-bottom: 0.5rem; }
+  .verdict p, .verdict li { margin-bottom: 0.5rem; }
+  .verdict ol { padding-left: 1.5rem; }
+  .verdict .first-action {
+    background: #f0fff4;
+    border: 1px solid #34d058;
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    margin-top: 1rem;
+  }
+  .verdict .first-action strong { color: #22863a; }
+
+  /* Agreement grid */
+  .agreement-grid {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .agreement-grid h2 { font-size: 1.15rem; color: #333; margin-bottom: 1rem; }
+  .grid-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .grid-table th {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 2px solid #e0e0e0;
+    color: #666;
+    font-weight: 600;
+  }
+  .grid-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .grid-table .advisor-name { font-weight: 600; color: #333; }
+  .position-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  .pos-shrink { background: #e8f5e9; color: #2e7d32; }
+  .pos-expand { background: #fff3e0; color: #e65100; }
+  .pos-reform { background: #e3f2fd; color: #1565c0; }
+  .pos-accept { background: #f3e5f5; color: #7b1fa2; }
+  .check { color: #34d058; font-weight: bold; }
+  .cross { color: #d73a49; font-weight: bold; }
+
+  /* Collapsible sections */
+  details {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+  }
+  summary {
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    font-weight: 600;
+    color: #333;
+    user-select: none;
+  }
+  summary:hover { color: #4a6cf7; }
+  .advisor-content {
+    padding: 0 1.25rem 1.25rem;
+    border-top: 1px solid #f0f0f0;
+  }
+  .advisor-label {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 0.75rem;
+  }
+  .label-contrarian { background: #ffeef0; color: #d73a49; }
+  .label-firstprinciples { background: #f3e5f5; color: #7b1fa2; }
+  .label-expansionist { background: #fff3e0; color: #e65100; }
+  .label-outsider { background: #e3f2fd; color: #1565c0; }
+  .label-executor { background: #e8f5e9; color: #2e7d32; }
+
+  .footer {
+    text-align: center;
+    padding: 1.5rem;
+    color: #999;
+    font-size: 0.8rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>LLM Council Report</h1>
+    <div class="subtitle">5 advisors &middot; 5 peer reviews &middot; Chairman synthesis &middot; April 1, 2026</div>
+  </div>
+
+  <div class="question-box">
+    <strong>Question:</strong> What is the single most critical limitation of this March Madness forecasting repository, and what should be done about it?
+  </div>
+
+  <!-- CHAIRMAN VERDICT -->
+  <div class="verdict">
+    <h2>Council Verdict</h2>
+
+    <h3>Where the Council Agrees</h3>
+    <p><strong>The calibration problem is fatal.</strong> All five advisors independently identified that calibrating on 60-70 tournament games is the central weakness. Temperature scaling on this sample size doesn't produce calibrated probabilities &mdash; it produces noise with decimal places. The Outsider's reframe landed hardest: <em>these aren't probabilities, they're scores.</em></p>
+    <p><strong>Stacking must be disabled.</strong> Four of five advisors called out the stacking meta-learner as indefensible. The code comments admit it overfits on ~400 samples. It was re-enabled as <code>required=true</code> anyway.</p>
+    <p><strong>The Expansionist is wrong.</strong> All five peer reviewers identified adding model complexity as the biggest blind spot. More model complexity on 2,200 samples with 40% cold-start teams is accelerant on an existing fire.</p>
+    <p><strong>Seven-feature logistic regression is the correct ceiling</strong> given the data constraints.</p>
+
+    <h3>Where the Council Clashes</h3>
+    <p><strong>What to calibrate against:</strong> The Contrarian says use Vegas closing spreads &mdash; the market is already better calibrated. The Executor says pool 3-5 years of tournament data with Platt scaling and strong priors. The First Principles Thinker says widen uncertainty intervals and stop pretending calibration is achievable at all.</p>
+    <p><strong>Whether the distribution mismatch is solvable:</strong> The First Principles Thinker says training on regular-season games for tournament prediction is a category error. The Executor disagrees by proposing concrete improvements that assume the approach is viable. The truth likely sits between: the mismatch is real and places a hard ceiling, but useful predictions are possible with honest uncertainty.</p>
+
+    <h3>Blind Spots the Council Caught</h3>
+    <p><strong>No evaluation harness:</strong> Without rolling multi-year out-of-sample evaluation, you cannot measure whether any intervention helps. Every recommendation is advice into a partial vacuum.</p>
+    <p><strong>Non-stationarity of pooled data:</strong> Pooling years spans rule changes, conference realignment, transfer portal, and COVID. Pooling helps sample size but introduces distribution drift.</p>
+    <p><strong>Governance process failure:</strong> Stacking was acknowledged to overfit, then re-enabled as required. A technical fix without a governance fix means stacking gets re-enabled next March.</p>
+    <p><strong>The incentive question:</strong> If competitive scoring rewards aggressive calibration even when epistemically wrong, the team may be rationally choosing to ship overfit probabilities.</p>
+
+    <h3>The Recommendation</h3>
+    <p><strong>Shrink the system to what the data supports and be honest about uncertainty.</strong></p>
+    <ol>
+      <li>Disable stacking (<code>required=false</code>). Ship 7-feature logistic regression as the primary model.</li>
+      <li>Stop labeling outputs as calibrated probabilities. They are model scores. Report with uncertainty bands.</li>
+      <li>Use closing Vegas spreads as the calibration anchor where available, falling back to Platt scaling with informative priors.</li>
+      <li>Build a rolling multi-year out-of-sample evaluation harness before enabling any new complexity.</li>
+      <li>Add a governance gate: configurations contradicting documented findings require explicit override with written justification.</li>
+    </ol>
+
+    <div class="first-action">
+      <strong>The One Thing to Do First:</strong> Set <code>stacking.required = false</code> in the production config and commit it today. The system's own evidence already proves it's wrong, no new analysis is needed, the fix is a single line, and it immediately stops shipping predictions the codebase itself documents as overfit.
+    </div>
+  </div>
+
+  <!-- AGREEMENT/DISAGREEMENT GRID -->
+  <div class="agreement-grid">
+    <h2>Advisor Alignment Matrix</h2>
+    <table class="grid-table">
+      <thead>
+        <tr>
+          <th>Advisor</th>
+          <th>Position</th>
+          <th>Kill Stacking</th>
+          <th>Calibration Fatal</th>
+          <th>Shrink Model</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="advisor-name">The Contrarian</td>
+          <td><span class="position-tag pos-reform">Use Vegas Lines</span></td>
+          <td class="check">&check;</td>
+          <td class="check">&check;</td>
+          <td class="check">&check;</td>
+        </tr>
+        <tr>
+          <td class="advisor-name">First Principles</td>
+          <td><span class="position-tag pos-accept">Accept Ceiling</span></td>
+          <td class="check">&check;</td>
+          <td class="check">&check;</td>
+          <td class="check">&check;</td>
+        </tr>
+        <tr>
+          <td class="advisor-name">The Expansionist</td>
+          <td><span class="position-tag pos-expand">Expand &amp; Activate</span></td>
+          <td class="cross">&cross;</td>
+          <td class="cross">&cross;</td>
+          <td class="cross">&cross;</td>
+        </tr>
+        <tr>
+          <td class="advisor-name">The Outsider</td>
+          <td><span class="position-tag pos-reform">Report as Scores</span></td>
+          <td class="check">&check;</td>
+          <td class="check">&check;</td>
+          <td class="check">&check;</td>
+        </tr>
+        <tr>
+          <td class="advisor-name">The Executor</td>
+          <td><span class="position-tag pos-shrink">Shrink &amp; Pool</span></td>
+          <td class="check">&check;</td>
+          <td class="check">&check;</td>
+          <td class="check">&check;</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top: 0.75rem; font-size: 0.85rem; color: #666;"><strong>Peer review consensus:</strong> All 5 reviewers identified The Expansionist as the biggest blind spot. Strongest responses: The Outsider (2 votes), The Executor (1), The Contrarian (1), First Principles (1).</p>
+  </div>
+
+  <!-- ADVISOR RESPONSES (collapsible) -->
+  <details>
+    <summary>The Contrarian &mdash; Full Response</summary>
+    <div class="advisor-content">
+      <div class="advisor-label label-contrarian">Contrarian</div>
+      <p>The fatal flaw is right there in the numbers and everyone's walking past it: <strong>you're calibrating on 60-70 games and then shipping those calibrated probabilities as if they mean something.</strong></p>
+      <p>Temperature scaling with 60-70 samples doesn't give you calibration. It gives you a random number generator with a veneer of statistical legitimacy. Your confidence intervals on the temperature parameter itself are so wide that your "calibrated" probabilities could be off by 15-20 percentage points and you'd never know. You can't validate calibration on 60 games. You can't even reliably detect miscalibration on 60 games. A reliability diagram with 60 points binned into deciles gives you 6 games per bin. That's not a signal, that's noise you're choosing to trust.</p>
+      <p>And it gets worse. The stacking meta-learner is re-enabled in production despite the code comments literally admitting it overfits on ~400 samples. So now you're stacking models trained on thin data, then calibrating the stacked output on even thinner data. You've built a pipeline that launders uncertainty at every stage.</p>
+      <p><strong>What actually breaks:</strong> In any given year, your probability estimates for 12-5, 11-6, and 10-7 matchups &mdash; the ones that actually matter for bracket differentiation &mdash; are essentially made up.</p>
+      <p><strong>What to do:</strong> Stop pretending you can calibrate in-house. Use Vegas lines. Calibrate against closing spreads. Your market blend feature already acknowledges the market knows more than you do &mdash; commit to that fully.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>The First Principles Thinker &mdash; Full Response</summary>
+    <div class="advisor-content">
+      <div class="advisor-label label-firstprinciples">First Principles</div>
+      <p>The question isn't "what's the single most critical limitation." The question is: <strong>can this system actually learn what it claims to learn?</strong></p>
+      <p>Strip away the governance, the CI/CD, the 198 test files, the GNN modules. What's left? A system trying to predict tournament outcomes by training on regular season games. That's not a limitation to fix. That's a foundational category error.</p>
+      <p>Tournament basketball is a different distribution than regular season basketball. Different pressure, different preparation depth, different game theory (single elimination vs. long season), different officiating patterns, different venue effects. You're training a model on "how do teams perform across 30+ games against mixed competition" and deploying it on "how does this team perform in a single must-win game against an opponent that spent a week preparing specifically for them."</p>
+      <p>The 60-70 calibration samples aren't a tuning problem. They're telling you the truth: you don't have enough tournament signal to learn tournament-specific dynamics. Temperature scaling on 60 samples isn't calibration &mdash; it's a ritual.</p>
+      <p><strong>What to do:</strong> Accept that logistic regression on 7 features is your ceiling. Widen uncertainty intervals dramatically. Invest in finding proxy data that mimics tournament conditions. The governance framework is excellent &mdash; the question it should be governing is whether the predictions deserve the confidence they carry.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>The Expansionist &mdash; Full Response</summary>
+    <div class="advisor-content">
+      <div class="advisor-label label-expansionist">Expansionist</div>
+      <p>The single most critical limitation is that this system is <strong>massively underexploiting its own infrastructure</strong>. You have 86 engineered features, GNN and transformer modules, stacking ensembles, Bayesian Bradley-Terry &mdash; and you're shipping 7-feature logistic regression. That's like owning a Formula 1 car and driving it in first gear because you're nervous about the curves.</p>
+      <p>The real question isn't "what's the biggest risk" &mdash; it's <strong>what's the ceiling if you actually turn everything on?</strong></p>
+      <p>The 2,200 effective samples problem isn't a wall, it's a data engineering problem with known solutions. Transfer learning from the full 17,600 regular-season games as a pretraining step, then fine-tuning on tournament data. The distribution mismatch is a feature, not a bug &mdash; that's exactly what domain adaptation techniques handle.</p>
+      <p><strong>What should be done:</strong> Build a staged activation pipeline. Phase 1: Enable the 86-feature space with proper regularization. Phase 2: Activate stacking with LOSO CV. Phase 3: Pretrain the GNN on conference tournament graphs. Phase 4: Blend with market data. The governance framework, the 198 test files, the CI/CD &mdash; that's your safety net. Use it. You built the runway for a jet and you're taxiing a Cessna.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>The Outsider &mdash; Full Response</summary>
+    <div class="advisor-content">
+      <div class="advisor-label label-outsider">Outsider</div>
+      <p>The number that jumps off the page to someone with no investment in this project: <strong>60-70 holdout tournament games for calibration.</strong></p>
+      <p>Everything else &mdash; the governance framework, the 198 test files, the 9 CI/CD workflows &mdash; is elaborate scaffolding built around a system that calibrates its confidence on roughly the same number of data points as a classroom homework assignment.</p>
+      <p>A user consuming these predictions has no idea that the difference between "72% win probability" and "65% win probability" is essentially noise given the calibration sample size.</p>
+      <p>Worse, you've re-enabled a stacking meta-learner that your own code comments admit overfits on ~400 samples. That's the builder ignoring their own warning label because the number looked better on a backtest. Classic curse of knowledge.</p>
+      <p><strong>What to do:</strong></p>
+      <ol>
+        <li><strong>Stop calling these calibrated probabilities.</strong> They're scores. Report them with honest uncertainty bands.</li>
+        <li><strong>Pool calibration data across years aggressively.</strong> Need 500+ games, not 60.</li>
+        <li><strong>Disable the stacking meta-learner</strong> until you have the sample size to support it.</li>
+      </ol>
+      <p>The governance and testing are impressive, but they're guarding the wrong door. The credibility bottleneck is statistical, not operational.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>The Executor &mdash; Full Response</summary>
+    <div class="advisor-content">
+      <div class="advisor-label label-executor">Executor</div>
+      <p>The single most critical limitation is right there in the numbers: <strong>you're calibrating on 60-70 games and training a stacking meta-learner on ~400 samples, then shipping it as <code>required=true</code> in production.</strong></p>
+      <p><strong>The calibration problem is fatal.</strong> Temperature scaling on 60-70 games gives you confidence intervals so wide they're meaningless. You're tuning a parameter on a dataset where adding or removing 3-4 upsets shifts your calibration curve dramatically.</p>
+      <p><strong>The stacking re-enablement is malpractice.</strong> The code comments literally say it overfits on ~400 samples. Someone turned it back on anyway. A meta-learner with insufficient training data doesn't add signal &mdash; it memorizes noise and launders it as ensemble wisdom.</p>
+      <p><strong>What to do Monday morning:</strong></p>
+      <ol>
+        <li><strong>Kill the stacking meta-learner.</strong> Set <code>required=false</code>. Today.</li>
+        <li><strong>Switch calibration to Platt scaling with strong priors</strong> using regular-season data as a prior distribution, updating with tournament games.</li>
+        <li><strong>Pool 3-5 years of tournament games</strong> for calibration instead of single-year holdout. Go from 60 to 250-300.</li>
+        <li><strong>Ship the 7-feature logistic regression</strong> as your primary model.</li>
+      </ol>
+      <p>Stop building upward on a foundation that can't hold weight. Shrink to what the data actually supports.</p>
+    </div>
+  </details>
+
+  <!-- PEER REVIEWS (collapsible) -->
+  <details>
+    <summary>Peer Review Highlights</summary>
+    <div class="advisor-content">
+      <p><strong>Strongest response votes:</strong> The Outsider (2), The Executor (1), The Contrarian (1), First Principles (1)</p>
+      <p><strong>Biggest blind spot (unanimous):</strong> The Expansionist &mdash; more complexity on insufficient data guarantees overfitting.</p>
+      <p><strong>Key blind spots raised in peer review:</strong></p>
+      <ul>
+        <li><strong>Evaluation methodology gap:</strong> No proper backtesting harness exists. Cannot measure whether interventions help. Multi-year pooled evaluation with temporal splits is prerequisite for all recommendations.</li>
+        <li><strong>Non-stationarity:</strong> Pooled years span rule changes, conference realignment, transfer portal, COVID. Data isn't stationary. Time-weighted pooling may be needed.</li>
+        <li><strong>Governance contradiction:</strong> Stacking was acknowledged to overfit then re-enabled as <code>required=true</code>. This is a process failure. A governance gate should prevent configuration states that contradict documented findings.</li>
+        <li><strong>Incentive misalignment:</strong> If Kaggle/competition scoring rewards aggressive calibration on log-loss, the team may be rationally choosing to ship overfit probabilities. Need to understand the actual deployment objective.</li>
+        <li><strong>Test coverage gap:</strong> The 198+ tests likely validate code mechanics, not prediction quality or calibration correctness.</li>
+      </ul>
+    </div>
+  </details>
+
+  <div class="footer">
+    LLM Council Report &middot; Generated April 1, 2026 &middot; Question: Critical limitation of march-madness-forecaster repository
+  </div>
+
+</div>
+</body>
+</html>

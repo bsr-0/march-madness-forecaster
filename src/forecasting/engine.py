@@ -1,7 +1,11 @@
 """ForecastEngine — the decoupled, honest game-level prediction engine.
 
 Architectural contract:
-    - Produces calibrated win probabilities P(team1 beats team2).
+    - Produces model-derived win scores P(team1 beats team2).
+    - Scores are NOT fully calibrated probabilities: calibration is fitted
+      on a small tournament holdout (~60-70 games), so reported values
+      carry substantial statistical uncertainty (see uncertainty_band in
+      CalibrationReport).
     - Output is strictly INVARIANT to competitor count, point systems,
       crowd behavior, prize distributions, or any other downstream
       optimization parameter.
@@ -123,6 +127,36 @@ class CalibrationReport:
     model_quality: str  # "accepted" | "rejected"
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
+    @property
+    def uncertainty_band(self) -> float:
+        """95% CI half-width on individual score estimates.
+
+        Approximated as 1.96 * sqrt(0.25 / N) — the worst-case (p=0.5)
+        binomial standard error scaled to a 95% interval. With N=60,
+        this is ~0.13, meaning a reported 0.72 is really [0.59, 0.85].
+        """
+        if self.n_samples <= 0:
+            return 0.5
+        return 1.96 * math.sqrt(0.25 / self.n_samples)
+
+    @property
+    def uncertainty_warning(self) -> str:
+        """Human-readable warning about score reliability."""
+        band = self.uncertainty_band
+        if band >= 0.10:
+            return (
+                f"HIGH UNCERTAINTY: Calibration fitted on only {self.n_samples} "
+                f"tournament games. Individual scores carry ~\u00b1{band:.2f} "
+                f"uncertainty. Differences <{2 * band:.2f} between matchups "
+                f"are not statistically meaningful."
+            )
+        if band >= 0.05:
+            return (
+                f"MODERATE UNCERTAINTY: Calibration fitted on {self.n_samples} "
+                f"games (\u00b1{band:.2f} per score)."
+            )
+        return f"Calibration fitted on {self.n_samples} games (\u00b1{band:.2f} per score)."
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "brier_score": round(self.brier_score, 6),
@@ -130,6 +164,8 @@ class CalibrationReport:
             "threshold": self.threshold,
             "passed": self.passed,
             "model_quality": self.model_quality,
+            "uncertainty_band": round(self.uncertainty_band, 4),
+            "uncertainty_warning": self.uncertainty_warning,
             "timestamp": self.timestamp,
         }
 
@@ -137,9 +173,14 @@ class CalibrationReport:
 class ForecastEngine:
     """Isolated game-level prediction engine.
 
-    Produces calibrated win probabilities that are strictly invariant
+    Produces model-derived win scores that are strictly invariant
     to downstream optimization context (number of competitors, point
     systems, crowd behavior, or prize distributions).
+
+    NOTE: Outputs are labeled "scores" rather than "calibrated probabilities"
+    because calibration is fitted on a small tournament holdout (~60-70 games).
+    The uncertainty band on any individual score is substantial (see
+    CalibrationReport.uncertainty_band).
 
     Typical lifecycle::
 
@@ -192,7 +233,11 @@ class ForecastEngine:
         self._predict_fn = fn
 
     def predict_proba(self, team1_id: str, team2_id: str) -> float:
-        """Return calibrated P(team1 beats team2).
+        """Return model-derived win score P(team1 beats team2).
+
+        Scores are derived from calibration on a small tournament holdout.
+        They approximate probabilities but carry uncertainty proportional
+        to 1/sqrt(N_calibration_samples). See CalibrationReport for bands.
 
         This method's signature is intentionally restricted to two team IDs.
         No optional parameters for downstream optimization context
@@ -203,7 +248,7 @@ class ForecastEngine:
             team2_id: Second team identifier.
 
         Returns:
-            Win probability for team1, in [clip_lo, clip_hi].
+            Win score for team1, in [clip_lo, clip_hi].
 
         Raises:
             RuntimeError: If no pipeline or predict function is set.
