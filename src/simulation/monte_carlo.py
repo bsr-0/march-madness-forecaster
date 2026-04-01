@@ -1,7 +1,7 @@
 """
 Monte Carlo simulation engine for bracket prediction.
 
-Runs 50,000+ simulations of the full tournament with noise injection
+Runs 10,000+ simulations of the full tournament with noise injection
 to model uncertainty (injuries, variance, etc.).
 """
 
@@ -25,7 +25,7 @@ NUMERICAL_SAFETY_CLIP = (0.001, 0.999)  # Pre-logit clip to prevent log(0)
 class SimulationConfig:
     """Configuration for Monte Carlo simulation."""
 
-    num_simulations: int = 50000
+    num_simulations: int = 10000
     # FIX 6.1: Increased from 0.04 to 0.12.  Academic work (Lopez & Matthews,
     # JQAS 2015) suggests game-level variance in college basketball corresponds
     # to ~0.15-0.25 in logit space.  0.04 produced overconfident simulation
@@ -578,7 +578,7 @@ class TournamentBracket:
 def run_simulation(
     predict_fn: Callable[[str, str], float],
     teams_by_region: Dict[str, List[TournamentTeam]],
-    num_simulations: int = 50000,
+    num_simulations: int = 10000,
     show_progress: bool = True
 ) -> AggregatedResults:
     """

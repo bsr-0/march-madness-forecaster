@@ -316,7 +316,7 @@ class SOTAPipelineConfig:
     """Pipeline configuration knobs."""
 
     year: int = 2026
-    num_simulations: int = 50000
+    num_simulations: int = 10000
     pool_size: int = 100
     random_seed: int = 2026
 
@@ -764,7 +764,7 @@ class SOTAPipelineConfig:
     # not just probability submission.  This changes the optimal strategy.
     enable_bracket_portfolio: bool = True  # Generate bracket portfolio
     portfolio_n_brackets: int = 1000  # Number of brackets in portfolio
-    portfolio_n_simulations: int = 50000  # MC simulations for portfolio generation
+    portfolio_n_simulations: int = 10000  # MC simulations for portfolio generation
 
     # --- Dual submission meta-strategy (WS5) ---
     # The 0-1 trick / champion boost: Slot 1 = calibrated median,

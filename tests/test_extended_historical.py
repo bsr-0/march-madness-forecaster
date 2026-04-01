@@ -344,7 +344,7 @@ class TestRuntimeStateConfigImmutability:
         from src.pipeline.sota import SOTAPipeline
 
         config = SOTAPipelineConfig(
-            num_simulations=50000,
+            num_simulations=10000,
             enable_gnn=False,
             enable_transformer=False,
         )
@@ -358,8 +358,8 @@ class TestRuntimeStateConfigImmutability:
         pipeline._runtime_state["enable_transformer"] = False
 
         # Config must be unchanged
-        assert config.num_simulations == 50000
-        assert pipeline._runtime_state["num_simulations"] == 25000
+        assert config.num_simulations == 10000
+        assert pipeline._runtime_state["num_simulations"] == 5000
 
     def test_config_hash_stable_after_runtime_state_changes(self):
         """Config hash remains identical after _runtime_state mutations."""

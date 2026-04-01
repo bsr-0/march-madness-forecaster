@@ -2,7 +2,7 @@
 
 Typical use:
 
-    config = ForecastConfig(year=2026, num_simulations=50_000)
+    config = ForecastConfig(year=2026, num_simulations=10_000)
     pipeline = TournamentPipeline(config)
     report = pipeline.run()
 

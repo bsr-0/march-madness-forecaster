@@ -156,7 +156,7 @@ class BracketPortfolioGenerator:
         self,
         teams_by_region: Dict[str, List[Dict]],
         n_brackets: int = 1000,
-        n_simulations: int = 50000,
+        n_simulations: int = 10000,
         seed: int = 42,
         strategy_mix: Optional[Dict[str, float]] = None,
         enable_search: bool = False,

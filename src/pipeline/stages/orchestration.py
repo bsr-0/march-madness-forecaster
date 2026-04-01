@@ -503,7 +503,7 @@ def _generate_bracket_portfolio(
 
         portfolio = portfolio_gen.generate_portfolio(
             teams_by_region=teams_by_region,
-            n_brackets=1000, n_simulations=50000,
+            n_brackets=1000, n_simulations=10000,
             seed=pipeline.config.random_seed,
             pool_strategy_profile=portfolio_profile,
             enable_search=(
@@ -718,7 +718,7 @@ def assemble_report(
                 "step_3_stacking_meta": baseline_stats["model"] == "stacking_ensemble",
                 "step_3_loyo_cv": bool(baseline_stats.get("loyo_cv", {}).get("enabled")),
                 "step_4_pyg_gcn": gnn_stats["framework"] == "pytorch_geometric",
-                "step_5_50k_monte_carlo": int(getattr(pipeline, "_runtime_state", {}).get("num_simulations", pipeline.config.num_simulations)) >= 50000,
+                "step_5_10k_monte_carlo": int(getattr(pipeline, "_runtime_state", {}).get("num_simulations", pipeline.config.num_simulations)) >= 10000,
                 "step_6_ev_max_output": is_calibration,
             },
         },

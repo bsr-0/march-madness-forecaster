@@ -183,7 +183,7 @@ def _resolve_manifest_paths(args, manifest, base_dir):
 def add_common_pipeline_args(parser):
     """Add the CLI arguments shared by sota and sota-from-manifest."""
     parser.add_argument("--year", type=int, default=None, help="Season year (default: 2026)")
-    parser.add_argument("--simulations", type=int, default=50000, help="Monte Carlo simulations")
+    parser.add_argument("--simulations", type=int, default=10000, help="Monte Carlo simulations")
     parser.add_argument("--pool-size", type=int, default=100, help="Bracket pool size")
     parser.add_argument("--injury-noise-samples", type=int, default=10000,
                         help="Player-level injury/noise MC samples per matchup")

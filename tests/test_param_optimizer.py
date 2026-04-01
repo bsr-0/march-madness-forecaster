@@ -405,7 +405,7 @@ def _write_minimal_config(tmp_path):
         "seed_prior_weight": 0.10,
         "consistency_bonus_max": 0.02,
         "mc_noise_std": 0.16,
-        "num_simulations": 50000,
+        "num_simulations": 10000,
         "training_year_decay": 0.85,
         "training_year_min_weight": 0.15,
         "spread_sigma_init": 11.0,

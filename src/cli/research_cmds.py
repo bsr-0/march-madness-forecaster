@@ -286,7 +286,7 @@ def register(subparsers):
         help="Variant generation strategy (default: adaptive)",
     )
     research_parser.add_argument("--year", type=int, default=2026, help="Tournament year")
-    research_parser.add_argument("--simulations", type=int, default=50000, help="Monte Carlo simulations")
+    research_parser.add_argument("--simulations", type=int, default=10000, help="Monte Carlo simulations")
     research_parser.add_argument("--output", "-o", default="data/sota_report.json", help="Output path")
     research_parser.add_argument("--seed", type=int, default=2026, help="Random seed")
     research_parser.set_defaults(func=run_research_loop)
@@ -350,7 +350,7 @@ def register(subparsers):
         default="20,100,1000",
         help="Comma-separated pool sizes for ESPN optimization (default: 20,100,1000)",
     )
-    quant_parser.add_argument("--simulations", type=int, default=50000, help="Monte Carlo simulations")
+    quant_parser.add_argument("--simulations", type=int, default=10000, help="Monte Carlo simulations")
     quant_parser.add_argument("--alpha", type=float, default=1.0, help="Model probability exponent")
     quant_parser.add_argument("--beta", type=float, default=1.0, help="Contrarianism exponent")
     quant_parser.add_argument(

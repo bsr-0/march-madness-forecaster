@@ -1,7 +1,7 @@
 {
   "config_fields": {
     "year": 2026,
-    "num_simulations": 50000,
+    "num_simulations": 10000,
     "pool_size": 100,
     "random_seed": 2026,
     "probability_profile": "production",
@@ -217,7 +217,7 @@
     "womens_massey_blend_weight": 0.25,
     "enable_bracket_portfolio": true,
     "portfolio_n_brackets": 1000,
-    "portfolio_n_simulations": 50000,
+    "portfolio_n_simulations": 10000,
     "enable_dual_submission": true,
     "dual_strategy": "champion_boost",
     "dual_max_deviations": 5,

@@ -282,7 +282,7 @@ def register(subparsers):
         help="Full EV pipeline report output JSON",
     )
     espn_export_parser.add_argument("--year", type=int, default=None, help="Season year override (default: manifest year)")
-    espn_export_parser.add_argument("--simulations", type=int, default=50000, help="Monte Carlo simulations")
+    espn_export_parser.add_argument("--simulations", type=int, default=10000, help="Monte Carlo simulations")
     espn_export_parser.add_argument("--pool-size", type=int, default=30, help="Pool size for ESPN-style optimization")
     espn_export_parser.add_argument("--seed", type=int, default=2026, help="Random seed")
     espn_export_parser.add_argument(

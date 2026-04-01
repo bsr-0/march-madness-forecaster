@@ -64,7 +64,7 @@ DEFAULT_PARAM_RANGES: Dict[str, Dict[str, Any]] = {
     "logistic_weight": {"min": 0.05, "max": 0.35, "step": 0.05, "default": 0.20},
     "seed_prior_weight": {"min": 0.01, "max": 0.15, "step": 0.02, "default": 0.05},
     "temperature": {"min": 0.8, "max": 1.5, "step": 0.1, "default": 1.0},
-    "mc_simulations": {"min": 10000, "max": 100000, "step": 10000, "default": 50000},
+    "mc_simulations": {"min": 10000, "max": 100000, "step": 10000, "default": 10000},
     "lgb_num_leaves": {"min": 8, "max": 64, "step": 8, "default": 31},
     "lgb_learning_rate": {"min": 0.01, "max": 0.3, "step": 0.02, "default": 0.1},
 }
