@@ -164,7 +164,14 @@ def _construct_schedule_graph(pipeline, teams: List[Team]) -> ScheduleGraph:
 
     return graph
 
-def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
+
+def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]]):
+    """Build training samples from current-year games with PIT features.
+
+    Returns:
+        Tuple of (X_full, y_full, margins_full, sort_keys_full,
+                  bt_game_triples, n_unique_games) or None if no samples.
+    """
     samples: List[Tuple[int, np.ndarray, int]] = []
 
     # Exclude tournament games from baseline training to prevent leakage.
@@ -337,7 +344,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
             bt_game_triples.append((game.team1_id, game.team2_id, bt_outcome))
 
     if not samples:
-        return {"model": "none", "samples": 0}
+        return None
 
     samples.sort(key=lambda x: x[0])
     X_full = np.stack([s[1] for s in samples])
@@ -357,152 +364,22 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         )
 
     # ====================================================================
-    # FEATURE MATRIX VALIDATION — catch NaN/inf/constant features that
-    # indicate upstream data construction failures before they silently
-    # degrade model quality.
-    # ====================================================================
-    # FIX C1: Preserve NaN for tree models (LightGBM/XGBoost) which
-    # natively route missing values to the optimal split direction.
-    # Only replace inf with NaN (inf is never valid).  The LR path
-    # gets its own NaN imputation before fitting.
-    _n_nan = int(np.isnan(X_full).sum())
-    _n_inf = int(np.isinf(X_full).sum())
-    if _n_inf > 0:
-        logger.warning(
-            "Feature matrix has %d inf values. Replacing inf with NaN.",
-            _n_inf,
-        )
-        X_full = np.where(np.isinf(X_full), np.nan, X_full)
-    if _n_nan > 0:
-        logger.info(
-            "Feature matrix has %d NaN values; preserved for tree-native handling.",
-            _n_nan,
-        )
 
-    # Detect constant features (zero variance) that provide no signal
-    _col_vars = np.var(X_full, axis=0)
-    _constant_cols = int(np.sum(_col_vars < 1e-10))
-    if _constant_cols > 0:
-        logger.warning(
-            "%d/%d features have near-zero variance in training data.",
-            _constant_cols, X_full.shape[1],
-        )
-
-    # Log class balance for detecting systematic bias
-    _pos_rate = float(np.mean(y_full))
-    if abs(_pos_rate - 0.5) > 0.1:
-        logger.warning(
-            "Class imbalance detected: positive rate = %.3f (expected ~0.5). "
-            "This may indicate systematic labeling bias.", _pos_rate,
-        )
-
-    # ====================================================================
-    # LEAKAGE-SAFE ORDERING: split into train/val FIRST, then fit feature
-    # selection and hyperparameter tuning on TRAINING data only.  This
-    # prevents the validation set from influencing feature selection,
-    # importance ranking, correlation pruning, or Optuna search.
-    #
-    # With symmetric augmentation enabled (default), each game produces
-    # 2 interleaved samples: [orig, swap, orig, swap, ...].  Both
-    # perspectives share the same game date / sort_key, so a simple
-    # chronological split keeps pairs together — no leakage.
-    # ====================================================================
     n = len(y_full)
-    if getattr(pipeline.config, "enable_symmetric_augmentation", True):
-        n_unique_games = n // 2  # Each game produces 2 samples
-    else:
-        n_unique_games = n  # Each game produces 1 sample
-    train_samples = n
-    valid_samples = 0
+    n_unique_games = n // 2 if getattr(pipeline.config, 'enable_symmetric_augmentation', True) else n
+    return X_full, y_full, margins_full, sort_keys_full, bt_game_triples, n_unique_games
 
-    # Reuse the pre-computed train/val boundary from
-    # _compute_train_val_boundary() (called early in run()).
-    if pipeline._validation_sort_key_boundary is not None and n >= 50:
-        boundary = pipeline._validation_sort_key_boundary
-        split_idx = n
-        for i in range(n):
-            if sort_keys_full[i] >= boundary:
-                split_idx = i
-                break
-        # Option 2 fix: if the boundary split is degenerate (all samples
-        # on one side), fall back to a local 80/20 chronological split on
-        # the *current* filtered sample set rather than forcing empty eval.
-        if split_idx <= 0 or split_idx >= n:
-            logger.warning(
-                "Boundary split degenerate (n=%d, split_idx=%d, boundary=%s); "
-                "falling back to local 80/20 chronological split.",
-                n,
-                split_idx,
-                str(boundary),
-            )
-            valid_count = max(5, int(0.2 * n))
-            train_samples = n - valid_count
-            valid_samples = valid_count
-            if train_samples < 10:
-                train_samples = n
-                valid_samples = 0
-        else:
-            train_samples = split_idx
-            valid_samples = n - split_idx
-            if train_samples < 20:
-                train_samples = n
-                valid_samples = 0
-    elif n >= 50:
-        # Fallback: 80/20 chronological split
-        valid_count = max(5, int(0.2 * n))
-        train_samples = n - valid_count
-        valid_samples = valid_count
-        if train_samples < 10:
-            train_samples = n
-            valid_samples = 0
 
-    train_X = X_full[:train_samples]
-    train_y = y_full[:train_samples]
-    train_margins = margins_full[:train_samples]
-    train_sort_keys = sort_keys_full[:train_samples]
-    if valid_samples > 0:
-        eval_X = X_full[train_samples:]
-        eval_y = y_full[train_samples:]
-        eval_margins = margins_full[train_samples:]
-    else:
-        # FIX #6: Never use training data as eval — it inflates
-        # confidence metrics and causes downstream leakage.  When we
-        # can't split, we leave eval empty and skip eval-dependent steps.
-        eval_X = np.empty((0, X_full.shape[1]))
-        eval_y = np.array([], dtype=int)
-        eval_margins = np.array([], dtype=np.float64)
-        logger.warning(
-            "Baseline split produced empty eval set: n=%d, train_samples=%d, "
-            "valid_samples=%d, boundary=%s",
-            n,
-            train_samples,
-            valid_samples,
-            str(getattr(pipeline, "_validation_sort_key_boundary", None)),
-        )
+def _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort_keys,
+                         X_full, n_current_year_train):
+    """Build feature names and load multi-year historical training data.
 
-    # ====================================================================
-    # MULTI-YEAR TRAINING POOL: Augment current-year training data with
-    # historical regular-season games to increase sample size from ~300
-    # to ~3000+.  This addresses the fundamental sample-size problem:
-    # building a 22-feature model from 300 games produces unstable
-    # estimates.  10+ years of data provides the statistical mass needed
-    # for robust gradient boosting and honest hyperparameter tuning.
-    #
-    # Both current-year and historical samples use IncrementalMetricsEngine
-    # to compute true point-in-time features for every training game.
-    # No season-end leakage remains.
-    #
-    # Year-based exponential decay downweights older seasons:
-    #   weight(year) = max(min_weight, decay^(current_year - year - 1))
-    # This ensures current-year data dominates while older seasons
-    # provide regularization and stabilize split points.
-    #
-    # Historical data is prepended to train_X/train_y (chronologically
-    # before current year).  Validation set remains current-year only
-    # for honest evaluation.
-    # ====================================================================
-    # Build feature names early so they are available for multi-year
-    # data-quality scoring (compute_year_data_quality) below.
+    Returns:
+        Tuple of (train_X, train_y, train_margins, train_sort_keys,
+                  train_samples, feature_names, feature_names_full,
+                  historical_training_stats).
+    """
+    train_samples = len(train_y)
     feature_names = None
     feature_names_full = None  # pre-selection names (91-dim) for LOYO
     if train_samples >= 40:
@@ -808,6 +685,20 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     else:
         pipeline._historical_year_weights = None
 
+    return (train_X, train_y, train_margins, train_sort_keys,
+            train_samples, feature_names, feature_names_full,
+            historical_training_stats)
+
+
+def _apply_feature_preprocessing(pipeline, train_X, eval_X, train_y, X_full,
+                                feature_names, feature_names_full,
+                                train_samples, valid_samples):
+    """Apply zero-variance pruning, feature selection, scaling, and distribution shift detection.
+
+    Returns:
+        Tuple of (train_X, eval_X, X_full, feature_names, feature_names_full,
+                  fs_stats, dist_shift_stats, _loyo_raw_feature_dim).
+    """
     # --- Early zero-variance pruning ---
     # FIX-DQ: Remove columns that are all-zero across the entire training
     # set BEFORE feature selection and LOYO.  These are architecturally
@@ -1015,106 +906,21 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # Also store the raw (pre-zero-variance-pruning) matchup dimension
     # so calibration can load data at full width then prune post-hoc.
     pipeline.baseline_model.raw_feature_dim = _loyo_raw_feature_dim
+    return (train_X, eval_X, X_full, feature_names, feature_names_full,
+            fs_stats, dist_shift_stats, _loyo_raw_feature_dim)
 
-    # FIX M1: Split eval into dev (early stopping) and eval (final
-    # evaluation).  Using the same data for both inflates eval metrics.
-    # We use the first 40% of eval for early stopping and the rest for
-    # final model selection / evaluation.  Align to even indices for
-    # pair integrity.
-    # Require >= 50 samples (25 games) so both dev and eval are large
-    # enough: dev gets ~20 samples for early stopping, eval keeps ~30
-    # for meaningful evaluation.
-    if valid_samples >= 50:
-        dev_count = int(valid_samples * 0.4)
-        dev_count = max(dev_count, 10)
-        dev_X = eval_X[:dev_count]
-        dev_y = eval_y[:dev_count]
-        eval_X = eval_X[dev_count:]
-        eval_y = eval_y[dev_count:]
-        eval_margins = eval_margins[dev_count:]
-        valid_samples = len(eval_y)
-        valid_set = (dev_X, dev_y)
-        logger.info(
-            "Eval split: %d dev samples (early stopping), %d eval samples (evaluation).",
-            len(dev_y), valid_samples,
-        )
-    else:
-        # Not enough eval data to split — use Optuna's tuned round
-        # count without early stopping to avoid leakage.
-        valid_set = None
-        if valid_samples > 0:
-            logger.info(
-                "Eval set too small to split (%d samples); "
-                "using fixed num_rounds (no early stopping).", valid_samples,
-            )
 
-    # FIX #3: Initialize round weights (populated during calibration with
-    # tournament games; stays None for base training with regular-season only)
-    pipeline._round_weights = None
+def _train_all_models(pipeline, train_X, train_y, train_margins,
+                     eval_X, eval_y, eval_margins,
+                     feature_names, train_samples, valid_samples,
+                     train_sample_weight, valid_set, train_sort_keys,
+                     bt_game_triples):
+    """Train LightGBM, XGBoost, logistic, spread, BT, and CalFirst models.
 
-    # ====================================================================
-    # RECENCY WEIGHTING: late-season games receive higher sample weight.
-    # Rationale: late-season games are played with settled rosters, against
-    # tournament-caliber opponents, and their features more closely match
-    # the end-of-season snapshot used at inference time.
-    #
-    # When multi-year training is active, year-based decay weights are
-    # combined multiplicatively with intra-season recency weights.
-    # Historical samples get year_weight * intra_weight, ensuring that
-    # recent seasons' late-season games receive the highest overall weight.
-    # ====================================================================
-    train_sample_weight = None
-    if pipeline.config.enable_recency_weighting and train_samples > 0:
-        tk = train_sort_keys
-        t_min, t_max = float(tk[0]), float(tk[-1])
-        t_span = max(t_max - t_min, 1.0)
-        progress = (tk - t_min) / t_span  # 0 = earliest, 1 = latest
-        floor = pipeline.config.recency_decay_floor
-        hl = max(pipeline.config.recency_half_life, 0.01)
-        # Exponential ramp: earliest game → floor, latest game → 1.0
-        raw_weight = floor + (1.0 - floor) * (1.0 - np.exp(-progress / hl))
-        # Normalize so mean weight = 1.0 (preserves effective sample size)
-        train_sample_weight = raw_weight / raw_weight.mean()
-
-    # Combine year-based decay with intra-season recency
-    if pipeline._historical_year_weights is not None and len(pipeline._historical_year_weights) == train_samples:
-        if train_sample_weight is not None:
-            train_sample_weight = train_sample_weight * pipeline._historical_year_weights
-        else:
-            train_sample_weight = pipeline._historical_year_weights.copy()
-        # Re-normalize so mean = 1.0
-        if train_sample_weight.mean() > 0:
-            train_sample_weight = train_sample_weight / train_sample_weight.mean()
-
-    # FIX #3: Apply round-weighted Brier training weights.
-    # When tournament games are included in training (calibration mode),
-    # weight them by the Kaggle round-weight schedule so the model
-    # optimizes for the competition's actual scoring metric.
-    if hasattr(pipeline, '_round_weights') and pipeline._round_weights is not None and len(pipeline._round_weights) == train_samples:
-        if train_sample_weight is not None:
-            train_sample_weight = train_sample_weight * pipeline._round_weights
-        else:
-            train_sample_weight = pipeline._round_weights.copy()
-        if train_sample_weight.mean() > 0:
-            train_sample_weight = train_sample_weight / train_sample_weight.mean()
-        n_rw = int(np.sum(pipeline._round_weights > 1.0))
-        if n_rw > 0:
-            logger.info(
-                "FIX #3: Applied round-weighted training: %d tournament "
-                "games with Kaggle round weights (max=%.0f).",
-                n_rw, float(np.max(pipeline._round_weights)),
-            )
-        else:
-            logger.warning(
-                "Round-weight verification: 0/%d training samples have "
-                "weight > 1.0. No tournament games are receiving elevated "
-                "weights — check that historical game files contain "
-                "tournament games.",
-                train_samples,
-            )
-
+    Returns:
+        Tuple of (trained_models, tuning_stats).
+    """
     tuning_stats = {}
-    stacking_stats = {}
 
     # ====================================================================
     # MODEL TRAINING: Try LightGBM + XGBoost + Logistic, then optionally
@@ -1556,6 +1362,24 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         except Exception as e:
             tuning_stats["bayesian_bt_error"] = str(e)
             logger.warning("BayesianBT fitting failed: %s", e)
+
+    return trained_models, tuning_stats
+
+
+def _select_ensemble_and_evaluate(pipeline, trained_models, tuning_stats,
+                                 train_X, train_y, train_margins, train_sort_keys,
+                                 train_sample_weight, train_samples,
+                                 eval_X, eval_y, eval_margins, valid_samples,
+                                 feature_names, feature_names_full,
+                                 _loyo_raw_feature_dim, n_unique_games, n,
+                                 historical_training_stats, fs_stats, dist_shift_stats):
+    """Select ensemble strategy, evaluate, run LOYO and audits.
+
+    Returns:
+        Result dict with model info, metrics, and diagnostics.
+    """
+    stacking_stats = {}
+    _production_mode = pipeline.config.pipeline_mode == "production"
 
     # ====================================================================
     # MODEL SELECTION / ENSEMBLE
@@ -2004,6 +1828,273 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         "passed": dof_ratio <= 0.10,
     }
     return result
+
+
+
+def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
+    """Train baseline model: sample construction, multi-year augmentation,
+    feature preprocessing, model training, and ensemble selection.
+    """
+    # Step 1: Build training samples from current-year games
+    _sample_result = _build_current_year_samples(pipeline, game_flows)
+    if _sample_result is None:
+        return {"model": "none", "samples": 0}
+    X_full, y_full, margins_full, sort_keys_full, bt_game_triples, n_unique_games = _sample_result
+    n = len(y_full)
+
+    # FEATURE MATRIX VALIDATION — catch NaN/inf/constant features that
+    # indicate upstream data construction failures before they silently
+    # degrade model quality.
+    # ====================================================================
+    # FIX C1: Preserve NaN for tree models (LightGBM/XGBoost) which
+    # natively route missing values to the optimal split direction.
+    # Only replace inf with NaN (inf is never valid).  The LR path
+    # gets its own NaN imputation before fitting.
+    _n_nan = int(np.isnan(X_full).sum())
+    _n_inf = int(np.isinf(X_full).sum())
+    if _n_inf > 0:
+        logger.warning(
+            "Feature matrix has %d inf values. Replacing inf with NaN.",
+            _n_inf,
+        )
+        X_full = np.where(np.isinf(X_full), np.nan, X_full)
+    if _n_nan > 0:
+        logger.info(
+            "Feature matrix has %d NaN values; preserved for tree-native handling.",
+            _n_nan,
+        )
+
+    # Detect constant features (zero variance) that provide no signal
+    _col_vars = np.var(X_full, axis=0)
+    _constant_cols = int(np.sum(_col_vars < 1e-10))
+    if _constant_cols > 0:
+        logger.warning(
+            "%d/%d features have near-zero variance in training data.",
+            _constant_cols, X_full.shape[1],
+        )
+
+    # Log class balance for detecting systematic bias
+    _pos_rate = float(np.mean(y_full))
+    if abs(_pos_rate - 0.5) > 0.1:
+        logger.warning(
+            "Class imbalance detected: positive rate = %.3f (expected ~0.5). "
+            "This may indicate systematic labeling bias.", _pos_rate,
+        )
+
+    # ====================================================================
+    # LEAKAGE-SAFE ORDERING: split into train/val FIRST, then fit feature
+    # selection and hyperparameter tuning on TRAINING data only.  This
+    # prevents the validation set from influencing feature selection,
+    # importance ranking, correlation pruning, or Optuna search.
+    #
+    # With symmetric augmentation enabled (default), each game produces
+    # 2 interleaved samples: [orig, swap, orig, swap, ...].  Both
+    # perspectives share the same game date / sort_key, so a simple
+    # chronological split keeps pairs together — no leakage.
+    # ====================================================================
+    n = len(y_full)
+    if getattr(pipeline.config, "enable_symmetric_augmentation", True):
+        n_unique_games = n // 2  # Each game produces 2 samples
+    else:
+        n_unique_games = n  # Each game produces 1 sample
+    train_samples = n
+    valid_samples = 0
+
+    # Reuse the pre-computed train/val boundary from
+    # _compute_train_val_boundary() (called early in run()).
+    if pipeline._validation_sort_key_boundary is not None and n >= 50:
+        boundary = pipeline._validation_sort_key_boundary
+        split_idx = n
+        for i in range(n):
+            if sort_keys_full[i] >= boundary:
+                split_idx = i
+                break
+        # Option 2 fix: if the boundary split is degenerate (all samples
+        # on one side), fall back to a local 80/20 chronological split on
+        # the *current* filtered sample set rather than forcing empty eval.
+        if split_idx <= 0 or split_idx >= n:
+            logger.warning(
+                "Boundary split degenerate (n=%d, split_idx=%d, boundary=%s); "
+                "falling back to local 80/20 chronological split.",
+                n,
+                split_idx,
+                str(boundary),
+            )
+            valid_count = max(5, int(0.2 * n))
+            train_samples = n - valid_count
+            valid_samples = valid_count
+            if train_samples < 10:
+                train_samples = n
+                valid_samples = 0
+        else:
+            train_samples = split_idx
+            valid_samples = n - split_idx
+            if train_samples < 20:
+                train_samples = n
+                valid_samples = 0
+    elif n >= 50:
+        # Fallback: 80/20 chronological split
+        valid_count = max(5, int(0.2 * n))
+        train_samples = n - valid_count
+        valid_samples = valid_count
+        if train_samples < 10:
+            train_samples = n
+            valid_samples = 0
+
+    train_X = X_full[:train_samples]
+    train_y = y_full[:train_samples]
+    train_margins = margins_full[:train_samples]
+    train_sort_keys = sort_keys_full[:train_samples]
+    if valid_samples > 0:
+        eval_X = X_full[train_samples:]
+        eval_y = y_full[train_samples:]
+        eval_margins = margins_full[train_samples:]
+    else:
+        # FIX #6: Never use training data as eval — it inflates
+        # confidence metrics and causes downstream leakage.  When we
+        # can't split, we leave eval empty and skip eval-dependent steps.
+        eval_X = np.empty((0, X_full.shape[1]))
+        eval_y = np.array([], dtype=int)
+        eval_margins = np.array([], dtype=np.float64)
+        logger.warning(
+            "Baseline split produced empty eval set: n=%d, train_samples=%d, "
+            "valid_samples=%d, boundary=%s",
+            n,
+            train_samples,
+            valid_samples,
+            str(getattr(pipeline, "_validation_sort_key_boundary", None)),
+        )
+
+    # Step 2: Load multi-year historical training data
+    n_current_year_train = train_samples
+    feature_names = None
+    (train_X, train_y, train_margins, train_sort_keys,
+     train_samples, feature_names, feature_names_full,
+     historical_training_stats) = _load_historical_years(
+        pipeline, train_X, train_y, train_margins, train_sort_keys,
+        X_full, n_current_year_train)
+
+    # Step 3: Feature selection, scaling, and distribution shift detection
+    (train_X, eval_X, X_full, feature_names, feature_names_full,
+     fs_stats, dist_shift_stats, _loyo_raw_feature_dim) = _apply_feature_preprocessing(
+        pipeline, train_X, eval_X, train_y, X_full,
+        feature_names, feature_names_full, train_samples, valid_samples)
+
+
+    # FIX M1: Split eval into dev (early stopping) and eval (final
+    # evaluation).  Using the same data for both inflates eval metrics.
+    # We use the first 40% of eval for early stopping and the rest for
+    # final model selection / evaluation.  Align to even indices for
+    # pair integrity.
+    # Require >= 50 samples (25 games) so both dev and eval are large
+    # enough: dev gets ~20 samples for early stopping, eval keeps ~30
+    # for meaningful evaluation.
+    if valid_samples >= 50:
+        dev_count = int(valid_samples * 0.4)
+        dev_count = max(dev_count, 10)
+        dev_X = eval_X[:dev_count]
+        dev_y = eval_y[:dev_count]
+        eval_X = eval_X[dev_count:]
+        eval_y = eval_y[dev_count:]
+        eval_margins = eval_margins[dev_count:]
+        valid_samples = len(eval_y)
+        valid_set = (dev_X, dev_y)
+        logger.info(
+            "Eval split: %d dev samples (early stopping), %d eval samples (evaluation).",
+            len(dev_y), valid_samples,
+        )
+    else:
+        # Not enough eval data to split — use Optuna's tuned round
+        # count without early stopping to avoid leakage.
+        valid_set = None
+        if valid_samples > 0:
+            logger.info(
+                "Eval set too small to split (%d samples); "
+                "using fixed num_rounds (no early stopping).", valid_samples,
+            )
+
+    # FIX #3: Initialize round weights (populated during calibration with
+    # tournament games; stays None for base training with regular-season only)
+    pipeline._round_weights = None
+
+    # ====================================================================
+    # RECENCY WEIGHTING: late-season games receive higher sample weight.
+    # Rationale: late-season games are played with settled rosters, against
+    # tournament-caliber opponents, and their features more closely match
+    # the end-of-season snapshot used at inference time.
+    #
+    # When multi-year training is active, year-based decay weights are
+    # combined multiplicatively with intra-season recency weights.
+    # Historical samples get year_weight * intra_weight, ensuring that
+    # recent seasons' late-season games receive the highest overall weight.
+    # ====================================================================
+    train_sample_weight = None
+    if pipeline.config.enable_recency_weighting and train_samples > 0:
+        tk = train_sort_keys
+        t_min, t_max = float(tk[0]), float(tk[-1])
+        t_span = max(t_max - t_min, 1.0)
+        progress = (tk - t_min) / t_span  # 0 = earliest, 1 = latest
+        floor = pipeline.config.recency_decay_floor
+        hl = max(pipeline.config.recency_half_life, 0.01)
+        # Exponential ramp: earliest game → floor, latest game → 1.0
+        raw_weight = floor + (1.0 - floor) * (1.0 - np.exp(-progress / hl))
+        # Normalize so mean weight = 1.0 (preserves effective sample size)
+        train_sample_weight = raw_weight / raw_weight.mean()
+
+    # Combine year-based decay with intra-season recency
+    if pipeline._historical_year_weights is not None and len(pipeline._historical_year_weights) == train_samples:
+        if train_sample_weight is not None:
+            train_sample_weight = train_sample_weight * pipeline._historical_year_weights
+        else:
+            train_sample_weight = pipeline._historical_year_weights.copy()
+        # Re-normalize so mean = 1.0
+        if train_sample_weight.mean() > 0:
+            train_sample_weight = train_sample_weight / train_sample_weight.mean()
+
+    # FIX #3: Apply round-weighted Brier training weights.
+    # When tournament games are included in training (calibration mode),
+    # weight them by the Kaggle round-weight schedule so the model
+    # optimizes for the competition's actual scoring metric.
+    if hasattr(pipeline, '_round_weights') and pipeline._round_weights is not None and len(pipeline._round_weights) == train_samples:
+        if train_sample_weight is not None:
+            train_sample_weight = train_sample_weight * pipeline._round_weights
+        else:
+            train_sample_weight = pipeline._round_weights.copy()
+        if train_sample_weight.mean() > 0:
+            train_sample_weight = train_sample_weight / train_sample_weight.mean()
+        n_rw = int(np.sum(pipeline._round_weights > 1.0))
+        if n_rw > 0:
+            logger.info(
+                "FIX #3: Applied round-weighted training: %d tournament "
+                "games with Kaggle round weights (max=%.0f).",
+                n_rw, float(np.max(pipeline._round_weights)),
+            )
+        else:
+            logger.warning(
+                "Round-weight verification: 0/%d training samples have "
+                "weight > 1.0. No tournament games are receiving elevated "
+                "weights — check that historical game files contain "
+                "tournament games.",
+                train_samples,
+            )
+
+    # Step 4: Train individual models
+    trained_models, tuning_stats = _train_all_models(
+        pipeline, train_X, train_y, train_margins,
+        eval_X, eval_y, eval_margins,
+        feature_names, train_samples, valid_samples,
+        train_sample_weight, valid_set, train_sort_keys,
+        bt_game_triples)
+
+    # Step 5: Ensemble selection, evaluation, and audits
+    return _select_ensemble_and_evaluate(
+        pipeline, trained_models, tuning_stats,
+        train_X, train_y, train_margins, train_sort_keys,
+        train_sample_weight, train_samples,
+        eval_X, eval_y, eval_margins, valid_samples,
+        feature_names, feature_names_full,
+        _loyo_raw_feature_dim, n_unique_games, n,
+        historical_training_stats, fs_stats, dist_shift_stats)
 
 def _build_enriched_meta(base_X: np.ndarray) -> np.ndarray:
     """Build enriched meta-features from base model predictions.
