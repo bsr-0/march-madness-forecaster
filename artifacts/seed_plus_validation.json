@@ -1,0 +1,82 @@
+{
+  "2022": {
+    "seed_baseline": {
+      "brier": 0.2465,
+      "rw_brier": 0.2509,
+      "accuracy": 0.5684
+    },
+    "seed_plus": {
+      "brier": 0.2351,
+      "rw_brier": 0.2449,
+      "accuracy": 0.5684,
+      "beta": 1.0262
+    },
+    "logistic_7": {
+      "brier": 0.2256,
+      "rw_brier": 0.2321,
+      "accuracy": 0.6105
+    },
+    "n_train": 108968,
+    "n_test": 190
+  },
+  "2023": {
+    "seed_baseline": {
+      "brier": 0.2502,
+      "rw_brier": 0.2367,
+      "accuracy": 0.5856
+    },
+    "seed_plus": {
+      "brier": 0.2281,
+      "rw_brier": 0.2207,
+      "accuracy": 0.6216,
+      "beta": 1.004
+    },
+    "logistic_7": {
+      "brier": 0.2157,
+      "rw_brier": 0.2153,
+      "accuracy": 0.6757
+    },
+    "n_train": 108434,
+    "n_test": 222
+  },
+  "2024": {
+    "seed_baseline": {
+      "brier": 0.2624,
+      "rw_brier": 0.228,
+      "accuracy": 0.5882
+    },
+    "seed_plus": {
+      "brier": 0.245,
+      "rw_brier": 0.2403,
+      "accuracy": 0.5882,
+      "beta": 1.013
+    },
+    "logistic_7": {
+      "brier": 0.2562,
+      "rw_brier": 0.2446,
+      "accuracy": 0.563
+    },
+    "n_train": 108240,
+    "n_test": 238
+  },
+  "2025": {
+    "seed_baseline": {
+      "brier": 0.1321,
+      "rw_brier": 0.1475,
+      "accuracy": 0.8649
+    },
+    "seed_plus": {
+      "brier": 0.2107,
+      "rw_brier": 0.2124,
+      "accuracy": 0.7027,
+      "beta": 0.9946
+    },
+    "logistic_7": {
+      "brier": 0.1653,
+      "rw_brier": 0.1551,
+      "accuracy": 0.7838
+    },
+    "n_train": 105204,
+    "n_test": 74
+  }
+}

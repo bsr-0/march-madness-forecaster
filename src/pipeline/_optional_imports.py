@@ -35,7 +35,6 @@ except ImportError:
 try:
     from ..ml.optimization.hyperparameter_tuning import (
         LightGBMTuner,
-        BrierLightGBMTuner,
         XGBoostTuner,
         LogisticTuner,
         EnsembleWeightOptimizer,
@@ -47,7 +46,6 @@ try:
 except ImportError:
     OPTUNA_AVAILABLE = False
     LightGBMTuner = None
-    BrierLightGBMTuner = None
     XGBoostTuner = None
     LogisticTuner = None
     EnsembleWeightOptimizer = None

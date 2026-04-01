@@ -16,16 +16,16 @@ march-madness run-production-2026             # CLI alias
 
 **Production constraints (hard-fail on violation):**
 
-- **Model complexity:** `standard` — ensemble with stacking, learned feature selection, and optimized weights via LOYO cross-validation
+- **Model complexity:** `simple` — single regularized logistic regression on 7 domain-knowledge features (no ensemble, no tree models)
 - **Probability profile:** `production` — raw → temperature calibration → tournament shrinkage → clip
 - **Mode:** `calibration`
-- **Calibration method:** `temperature` (holdout-year tournament games only)
-- **Training years:** 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024 (no 2020, no 2025)
+- **Calibration method:** `temperature` (tournament games from ALL dev+holdout years 2016-2025)
+- **Training data:** regular-season games only from 2016-2024 (~2,200/year, ~17,600 total). Tournament games excluded from training for clean domain separation.
+- **Calibration data:** tournament games from 2016-2025 (~530 samples). Genuinely out-of-sample since model trains only on regular season.
 - **Dev years:** 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024
 - **Holdout year:** 2025
 - **Target year:** 2026
-- **Stacking:** enabled (`enable_stacking = true`) — meta-learner ensemble stacking
-- **Feature selection:** enabled (`enable_feature_selection = true`) — automated feature importance pruning
+- **Features (7):** `diff_adj_off_eff`, `diff_adj_def_eff`, `diff_sos_adj_em`, `diff_elo_rating`, `diff_win_pct`, `diff_free_throw_pct`, `diff_momentum` (SIMPLE_FEATURE_SET)
 - **Goto conversion:** enabled (`enable_goto_conversion = true`) — favourite-longshot bias correction
 - **Round-weighted calibration:** enabled (`enable_round_weighted_calibration = true`) — per-round calibrator weighting
 - **Bayesian Bradley-Terry:** enabled (`enable_bayesian_bt = true`) — Bayesian pairwise comparison model
@@ -63,38 +63,40 @@ Each of these is validated to be `false` by the production validator. Enabling a
 
 The following modules are **required to be enabled** in the production validator and are part of the shipped 2026 predictor:
 
-- **Stacking** (`enable_stacking`) — meta-learner ensemble stacking
-- **Learned feature selection** (`enable_feature_selection`) — automated feature importance pruning
 - **Goto conversion** (`enable_goto_conversion`) — favourite-longshot bias correction
 - **Round-weighted calibration** (`enable_round_weighted_calibration`) — per-round calibrator weighting
 - **Bayesian Bradley-Terry** (`enable_bayesian_bt`) — Bayesian pairwise comparison model
 - **Market blend** (`enable_market_blend`) — Vegas cross-reference integration
-- **Spread model** (`enable_spread_model`) — point spread modeling
 - **Recency weighting** (`enable_recency_weighting`) — recent game weighting
 - **Symmetric augmentation** (`enable_symmetric_augmentation`) — matchup symmetry data augmentation
 - **Multi-year training** (`enable_multi_year_training`) — cross-season training data
 - **LOYO cross-validation** (`enable_loyo_cv`) — Leave-One-Year-Out validation
-- **Optimized ensemble weights** (`optimize_ensemble_weights`) — LOYO-derived weight optimization
 
 Setting any of these to `false` causes a `ProductionValidationError`.
+
+**Modules disabled by default (simple mode):**
+- **Stacking** — not needed with single model
+- **Learned feature selection** — fixed 7-feature set, no pruning needed
+- **Spread model** — tree-based, skipped in simple mode
+- **Optimized ensemble weights** — no ensemble to weight
 
 ## Architecture
 
 ```
-Data Ingestion        Feature Engineering       ML Ensemble              Probability Path
-──────────────        ───────────────────       ───────────              ───────────────
-cbbpy/sportsipy  ──►  tabular features with  ─► standard ensemble with ─► raw → calibrate → shrink → clip
-Torvik scraper        learned feature sel.      stacking + LOYO weights    (production profile)
-ESPN public picks     PIT-safe aggregates       Bayesian Bradley-Terry     goto + round-weighted cal.
-Kaggle Massey         domain checks + guards    no GNN/transformer         holdout-year calibration
+Data Ingestion        Feature Engineering       Model                    Probability Path
+──────────────        ───────────────────       ─────                    ───────────────
+cbbpy/sportsipy  ──►  7 domain features     ─► logistic regression   ─► raw → calibrate → shrink → clip
+Torvik scraper        (SIMPLE_FEATURE_SET)      (regular season only)    (production profile)
+ESPN public picks     PIT-safe aggregates       + BT/Massey blends       multi-year tournament cal.
+Kaggle Massey         domain checks + guards    no ensemble/trees        goto + round-weighted cal.
 ```
 
 
 **Key design principles:**
-- **Locked production path**: strict config validation hard-fails drift from the shipped setup (standard mode, production profile, calibration mode, no GNN/transformer/agent orchestration).
-- **Explicit year partition**: dev years are 2016-2024; holdout year is 2025; calibration years default to holdout years only.
-- **Calibration integrity**: calibrator fitting uses tournament-only rows from calibration years (season-level OOS by default).
-- **Distribution-shift mitigation**: learned feature selection with train/eval drift checks prunes volatile features automatically.
+- **Locked production path**: strict config validation hard-fails drift from the shipped setup (simple mode, production profile, calibration mode, no GNN/transformer/agent orchestration).
+- **Two-stage domain adaptation**: train on regular-season games (large N, ~17,600), calibrate on tournament games (domain-matched, ~530 across 9 years). Tournament games are genuinely OOS for calibration.
+- **Calibration integrity**: temperature scaling fitted on tournament-only games from ALL dev+holdout years (2016-2025). Much more data than single-year calibration.
+- **Simplicity over complexity**: baseline experiment proved 7-feature logistic regression matches or beats the 27-feature ensemble with stacking. Additional features and tree models add no value on tournament data (BSS ≈ 0).
 - **Point-in-time features**: every training sample uses only data available before game date, with per-year tournament cutoff dates.
 
 
@@ -175,12 +177,12 @@ Key flags:
 - `--pool-size 100` — bracket pool size for strategy optimization
 - `--kaggle-dir data/kaggle` — for Massey Ordinals and seeds
 - `--enable-bracket-portfolio` — generate diverse bracket set for Kaggle
-- `--model-complexity simple|standard|full` — default is `standard` in production
+- `--model-complexity simple|standard|full` — default is `simple` (7-feature logistic regression)
 - `--calibration temperature|isotonic|platt|none` — default is `temperature`
 - `--probability-profile production|experimental` — default is `production`
 - `--mode calibration|ev` — default is `calibration`
 - `--dev-years 2016,...,2024` and `--holdout-years 2025` — locked production split
-- `--calibration-years 2025` — optional override (defaults to holdout years)
+- `--calibration-years 2016,...,2025` — defaults to all dev+holdout years
 
 ### 5. Run from ingest manifest (combines steps 3+4)
 
@@ -212,6 +214,7 @@ march-madness sota-from-manifest \
 | `kaggle-export` | Generate Kaggle submission CSV |
 | `loyo-validate` | Run Leave-One-Year-Out validation across historical years |
 | `backtest-kaggle` | Evaluate predictions against historical Kaggle results |
+| `baseline-experiment` | Tournament-only baseline experiment (LOYO-CV, compares feature sets vs seed baseline) |
 | `backtest-unified` | Run unified backtest (Kaggle calibration + ESPN bracket pool) |
 | `validate-metrics` | Validate proprietary metrics against public data |
 | `scrape-tournament-results` | Scrape historical tournament results from Sports Reference |
@@ -264,7 +267,7 @@ march-madness-forecaster/
 │   │   ├── ingestion/             # Data collection & validation
 │   │   └── scrapers/              # Torvik, ESPN, rosters, etc.
 │   ├── ml/
-│   │   ├── ensemble/cfa.py        # LightGBM/XGBoost/Logistic ensemble
+│   │   ├── ensemble/cfa.py        # Model infrastructure (logistic regression in simple mode)
 │   │   ├── calibration/           # Temperature scaling calibration
 │   │   └── evaluation/rdof_audit.py  # RDoF audit framework
 │   ├── simulation/
@@ -288,9 +291,10 @@ pytest tests/ --cov=src
 
 ## Technical Details
 
-- **Production features:** 86-dim team feature vector with learned feature selection (automated importance pruning)
-- **Production ensemble:** standard ensemble with stacking, LOYO-optimized weights, Bayesian Bradley-Terry, no GNN, no transformer
-- **Calibration:** temperature scaling on tournament-only calibration years (default holdout year 2025)
+- **Production features:** 7 domain-knowledge features (SIMPLE_FEATURE_SET) — fixed, no learned selection
+- **Production model:** single regularized logistic regression (no ensemble, no tree models). Baseline experiment confirmed adding features/models beyond this adds no value (BSS ≈ 0 vs seed baseline).
+- **Training:** regular-season games only (~17,600 samples across 8 years). Tournament games excluded for clean domain separation.
+- **Calibration:** temperature scaling on tournament games from ALL dev+holdout years (2016-2025, ~530 samples)
 - **Monte Carlo:** 50k simulations with configurable noise injection
 - **Training partition:** dev years 2016-2024, holdout year 2025 (production-locked defaults)
 - **Elo:** K=20, cross-season carryover (0.75 * prior + 0.25 * 1500)

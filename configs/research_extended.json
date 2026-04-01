@@ -4,7 +4,6 @@
   "mode": "calibration",
   "model_complexity": "standard",
 
-  "use_agent_orchestration": false,
   "enable_gnn": false,
   "enable_transformer": false,
   "enable_embedding_projections": false,

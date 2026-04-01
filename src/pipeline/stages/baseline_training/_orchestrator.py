@@ -25,7 +25,6 @@ try:
         SPREAD_MODEL_AVAILABLE,
         TOURNAMENT_SIGMA_AVAILABLE,
         BayesianBradleyTerry,
-        BrierLightGBMTuner,
         EnsembleWeightOptimizer,
         LeaveOneYearOutCV,
         LightGBMTuner,
@@ -38,27 +37,6 @@ try:
     )
 except ImportError:
     pass
-
-# BMA ensemble (Protocol v2, Section 3.2)
-try:
-    from ....ml.ensemble.bma import BayesianModelAveraging, BMAResult
-    BMA_AVAILABLE = True
-except ImportError:
-    BMA_AVAILABLE = False
-
-# Brier-objective LightGBM (Protocol Section 3.3, Phase 4)
-try:
-    from ....ml.ensemble.brier_objective import BrierLightGBMRanker
-    BRIER_LGB_AVAILABLE = True
-except ImportError:
-    BRIER_LGB_AVAILABLE = False
-
-# Calibration-first pipeline (Phase 4 research)
-try:
-    from ....ml.ensemble.calibration_first import CalibrationFirstPipeline
-    CALIBRATION_FIRST_AVAILABLE = True
-except ImportError:
-    CALIBRATION_FIRST_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -325,7 +303,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
                 train_samples,
             )
 
-    # Step 4: Train individual models
+    # Step 4b: Train individual models
     trained_models, tuning_stats = _train_all_models(
         pipeline, train_X, train_y, train_margins,
         eval_X, eval_y, eval_margins,

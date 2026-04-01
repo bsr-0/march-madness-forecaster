@@ -280,9 +280,6 @@ class _PipelineRunner:
 
         freeze_verification = _orch.run_pre_checks(p)
 
-        if p.config.use_agent_orchestration:
-            return p._run_agent_orchestrated_pipeline()
-
         teams, game_flows, rosters, injury_stats = self._load_data()
         self._engineer_features(teams, game_flows)
         adjacency, gnn_stats, baseline_stats, transformer_stats, uncertainty_stats, embedding_proj_stats = self._train_models(teams, game_flows)

@@ -10,9 +10,7 @@ from src.ml.optimization.hyperparameter_tuning import (
     CVResult,
     EnsembleWeightOptimizer,
     LeaveOneYearOutCV,
-    BrierLightGBMTuner,
     OPTUNA_AVAILABLE,
-    LIGHTGBM_AVAILABLE,
 )
 
 
@@ -226,72 +224,6 @@ class TestDevOnlyTuningGuards:
                 development_years=[2016, 2025],
                 year_split_policy=policy,
             )
-
-
-# ---------------------------------------------------------------------------
-# BrierLightGBMTuner
-# ---------------------------------------------------------------------------
-
-
-class TestBrierLightGBMTuner:
-    def test_class_exists_and_is_subclass(self):
-        """BrierLightGBMTuner should be a subclass of LightGBMTuner."""
-        from src.ml.optimization.hyperparameter_tuning import LightGBMTuner
-        assert issubclass(BrierLightGBMTuner, LightGBMTuner)
-
-    @pytest.mark.skipif(
-        not OPTUNA_AVAILABLE or not LIGHTGBM_AVAILABLE,
-        reason="Optuna or LightGBM not installed",
-    )
-    def test_constructor_accepts_same_args_as_parent(self):
-        """BrierLightGBMTuner should accept the same constructor args."""
-        tuner = BrierLightGBMTuner(
-            n_trials=5, n_cv_splits=3, timeout=60, random_seed=123,
-        )
-        assert tuner.n_trials == 5
-        assert tuner.n_cv_splits == 3
-        assert tuner.random_seed == 123
-
-    @pytest.mark.skipif(
-        not OPTUNA_AVAILABLE or not LIGHTGBM_AVAILABLE,
-        reason="Optuna or LightGBM not installed",
-    )
-    def test_tune_returns_valid_result(self):
-        """BrierLightGBMTuner.tune() should return a TuningResult without objective/metric."""
-        rng = np.random.default_rng(42)
-        X = rng.standard_normal((200, 5))
-        y = (X[:, 0] + 0.5 * X[:, 1] > 0).astype(float)
-        sort_keys = np.arange(200)
-
-        tuner = BrierLightGBMTuner(n_trials=2, n_cv_splits=2, timeout=30)
-        result = tuner.tune(X, y, sort_keys)
-
-        # best_params should NOT contain objective or metric
-        assert "objective" not in result.best_params
-        assert "metric" not in result.best_params
-        # Should contain num_rounds
-        assert "num_rounds" in result.best_params
-        # best_score should be a valid Brier score (0 to 1)
-        assert 0.0 <= result.best_score <= 1.0
-        # Should have CV results
-        assert len(result.cv_results) > 0
-        for r in result.cv_results:
-            assert 0.0 <= r.brier_score <= 1.0
-
-    @pytest.mark.skipif(
-        not OPTUNA_AVAILABLE or not LIGHTGBM_AVAILABLE,
-        reason="Optuna or LightGBM not installed",
-    )
-    def test_uses_random_seed(self):
-        """Two tuners with same seed should produce identical results."""
-        rng = np.random.default_rng(42)
-        X = rng.standard_normal((200, 5))
-        y = (X[:, 0] > 0).astype(float)
-        sort_keys = np.arange(200)
-
-        r1 = BrierLightGBMTuner(n_trials=2, n_cv_splits=2, random_seed=99).tune(X, y, sort_keys)
-        r2 = BrierLightGBMTuner(n_trials=2, n_cv_splits=2, random_seed=99).tune(X, y, sort_keys)
-        assert r1.best_params == r2.best_params
 
 
 # ---------------------------------------------------------------------------

@@ -8,7 +8,6 @@ from ....data.features.feature_engineering import (
     ABSOLUTE_LEVEL_FEATURE_NAMES,
     FeatureEngineer,
 )
-from ....data.features.feature_selection import FeatureSelector
 from ....governance.feature_manifest import build_feature_manifest
 from ...config import (
     DATA_QUALITY_ERA_WEIGHTS,
@@ -29,7 +28,6 @@ try:
         SPREAD_MODEL_AVAILABLE,
         TOURNAMENT_SIGMA_AVAILABLE,
         BayesianBradleyTerry,
-        BrierLightGBMTuner,
         EnsembleWeightOptimizer,
         LeaveOneYearOutCV,
         LightGBMTuner,
@@ -42,27 +40,6 @@ try:
     )
 except ImportError:
     pass
-
-# BMA ensemble (Protocol v2, Section 3.2)
-try:
-    from ....ml.ensemble.bma import BayesianModelAveraging, BMAResult
-    BMA_AVAILABLE = True
-except ImportError:
-    BMA_AVAILABLE = False
-
-# Brier-objective LightGBM (Protocol Section 3.3, Phase 4)
-try:
-    from ....ml.ensemble.brier_objective import BrierLightGBMRanker
-    BRIER_LGB_AVAILABLE = True
-except ImportError:
-    BRIER_LGB_AVAILABLE = False
-
-# Calibration-first pipeline (Phase 4 research)
-try:
-    from ....ml.ensemble.calibration_first import CalibrationFirstPipeline
-    CALIBRATION_FIRST_AVAILABLE = True
-except ImportError:
-    CALIBRATION_FIRST_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -482,35 +459,6 @@ def _apply_feature_preprocessing(pipeline, train_X, eval_X, train_y, X_full,
                     "Fixed feature set matched only %d features (required %d) — using all features.",
                     len(fixed_indices), min_required,
                 )
-        else:
-            # Learned feature selection (original path, now opt-in)
-            feature_selection_method = "learned"
-            effective_max_features = pipeline.config.max_features
-            if pipeline.config.adaptive_max_features:
-                samples_based_cap = max(pipeline.config.min_features, train_samples // 8)
-                effective_max_features = min(effective_max_features, samples_based_cap)
-
-            pipeline.feature_selector = FeatureSelector(
-                correlation_threshold=pipeline.config.correlation_threshold,
-                min_features=pipeline.config.min_features,
-                max_features=effective_max_features,
-                importance_threshold=pipeline.config.feature_importance_threshold,
-                random_seed=pipeline.config.random_seed,
-                enable_vif_pruning=pipeline.config.enable_vif_pruning,
-                vif_threshold=pipeline.config.vif_threshold,
-                enable_stability_filter=pipeline.config.enable_stability_filter,
-                stability_threshold=pipeline.config.stability_threshold,
-                n_bootstrap=pipeline.config.n_bootstrap,
-            )
-            pipeline.feature_selection_result = pipeline.feature_selector.fit(train_X, train_y, feature_names)
-            train_X = pipeline.feature_selector.transform(train_X)
-            eval_X = pipeline.feature_selector.transform(eval_X)
-            feature_names = pipeline.feature_selector.get_selected_names()
-            fs_stats = {
-                "method": "learned",
-                "original_dim": pipeline.feature_selection_result.original_dim,
-                "reduced_dim": pipeline.feature_selection_result.reduced_dim,
-            }
 
     manifest_original_features = list(feature_names_full or feature_names or [])
     manifest_selected_features = list(feature_names or [])

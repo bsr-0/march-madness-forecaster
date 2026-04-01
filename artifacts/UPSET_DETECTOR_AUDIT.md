@@ -1,5 +1,7 @@
 # Upset Detection Module — Audit Report
 
+> **STATUS (2026-04-01): HISTORICAL.** This module is supplementary and does not affect the core prediction path, which now uses simple logistic regression.
+
 **Date:** 2026-03-31
 **Module:** `src/ml/ensemble/upset_detector.py`
 **Test file:** `tests/test_upset_detector.py`

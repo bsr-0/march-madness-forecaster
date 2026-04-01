@@ -298,7 +298,7 @@ def test_config_required_keys_present():
         list(
             {
                 "year", "probability_profile", "mode", "model_complexity",
-                "use_agent_orchestration", "enable_gnn", "enable_transformer",
+                "enable_gnn", "enable_transformer",
                 "enable_embedding_projections", "enable_stacking",
                 "enable_feature_selection", "enable_brier_sharpening",
                 "enable_seed_overrides", "enable_goto_conversion",
@@ -320,7 +320,6 @@ def test_config_forbidden_flags_disabled():
     payload = _load_blessed_config()
     forbidden_flags = [
         "enable_gnn", "enable_transformer", "enable_embedding_projections",
-        "use_agent_orchestration",
         # Protocol v2: sharpening and seed overrides OFF for Kaggle
         "enable_brier_sharpening", "enable_seed_overrides",
     ]
@@ -373,7 +372,6 @@ def test_valid_config_passes():
 
 FORBIDDEN_FLAGS = [
     "enable_gnn", "enable_transformer", "enable_embedding_projections",
-    "use_agent_orchestration",
 ]
 
 

@@ -4,7 +4,7 @@ This file provides role-specific guidance for Claude subagents working on this c
 
 ## Repo at a Glance
 
-- **What:** NCAA March Madness prediction system (LightGBM/XGBoost/LR ensemble, 86-dim features, temperature calibration, 50k Monte Carlo sims)
+- **What:** NCAA March Madness prediction system (single logistic regression on 7 features, two-stage domain adaptation, temperature calibration, 50k Monte Carlo sims)
 - **Language:** Python 3.9+
 - **Linter:** `ruff check src/ tests/` (line length 120, rules E/F/W)
 - **Tests:** `pytest tests/ -x --tb=short` (67+ test files, auto-markers via `conftest.py`)
@@ -30,7 +30,7 @@ This file provides role-specific guidance for Claude subagents working on this c
 | CLI commands | `src/main.py` (Click-based, ~148k lines — search for `@cli.command`) |
 | Pipeline logic | `src/pipeline/sota.py` (~2600 lines) and `src/pipeline/stages/` |
 | Feature engineering | `src/data/features/feature_engineering.py`, `proprietary_metrics.py` |
-| ML models | `src/ml/ensemble/` (CFA ensemble), `src/ml/calibration/` |
+| ML models | `src/ml/ensemble/` (logistic regression in simple mode), `src/ml/calibration/` |
 | Data scrapers | `src/data/scrapers/` (Torvik, ESPN, rosters, sports reference) |
 | Simulation | `src/simulation/monte_carlo.py` |
 | Exceptions | `src/exceptions.py` |
@@ -39,7 +39,7 @@ This file provides role-specific guidance for Claude subagents working on this c
 | Team name aliases | `configs/team_aliases.json` |
 
 **Important constants:**
-- `TEAM_FEATURE_DIM = 86` — fixed feature vector size
+- `TEAM_FEATURE_DIM = 86` — full feature vector size (only 7 used in production via `SIMPLE_FEATURE_SET`)
 - `TOURNAMENT_START_DATES` — per-year dates for PIT enforcement
 - `SELECTION_SUNDAY_DATES` — per-year Selection Sunday dates
 - `KAGGLE_ROUND_WEIGHTS` — round-wise scoring weights
@@ -121,8 +121,10 @@ python src/run_production_2026.py --dry-run
 
 **Data integrity signals:**
 - Feature tiers: Tier 1 (Static), Tier 2 (Cumulative w/ cutoff), Tier 3 (External/Selection Sunday)
-- Training: 2016-2024 (no 2020). Holdout: 2025. Target: 2026
-- Calibration: tournament games only, temperature scaling
+- Training: regular-season games from 2016-2024 (no 2020). Tournament games excluded (`enable_round_weighted_training=False`).
+- Calibration: tournament games from ALL years 2016-2025 (~530 samples), temperature scaling
+- Model: `model_complexity="simple"` — 7-feature logistic regression, no ensemble/tree models
+- Holdout: 2025. Target: 2026
 
 ## Module Map
 
@@ -141,7 +143,7 @@ src/
 │                              #   public_advanced_metrics, massey_systems
 ├── data/ingestion/            # DAG-based data collection
 ├── data/scrapers/             # Torvik, ESPN, rosters, sports reference
-├── ml/ensemble/               # CFA: LightGBM + XGBoost + LogisticRegression
+├── ml/ensemble/               # Model infra (logistic regression only in simple mode)
 ├── ml/calibration/            # Temperature, isotonic, Platt scaling
 ├── ml/evaluation/             # RDoF audit, experimentation registry
 ├── ml/optimization/           # Optuna hyperparameter search

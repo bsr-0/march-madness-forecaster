@@ -173,11 +173,10 @@ class _ProbabilityPredictor:
         matchup = p.feature_engineer.create_matchup_features(
             team1_id, team2_id, proprietary_engine=p.proprietary_engine
         )
-        feat_vec = matchup.to_vector()
 
+        feat_vec = matchup.to_vector()
         if p.feature_selector is not None and p.feature_selector.is_fitted:
             feat_vec = p.feature_selector.transform(feat_vec.reshape(1, -1))[0]
-
         baseline_prob = p.baseline_model.predict_proba(feat_vec)
 
         # Bayesian Bradley-Terry blend (15% max)

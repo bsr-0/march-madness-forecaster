@@ -745,7 +745,6 @@ class TestProductionValidator:
             probability_profile="production",
             mode="calibration",
             model_complexity="standard",
-            use_agent_orchestration=False,
             enable_gnn=False,
             enable_transformer=False,
             enable_embedding_projections=False,

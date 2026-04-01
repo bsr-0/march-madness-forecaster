@@ -393,7 +393,6 @@ def _build_runtime_branch_audit(
         "brier_sharpening_enabled": bool(config.enable_brier_sharpening),
         "goto_conversion_enabled": bool(config.enable_goto_conversion),
         "round_weighted_calibration_enabled": bool(config.enable_round_weighted_calibration),
-        "agent_orchestration_enabled": bool(config.use_agent_orchestration),
         "gnn_enabled": bool(config.enable_gnn),
         "transformer_enabled": bool(config.enable_transformer),
     }
@@ -790,7 +789,6 @@ def run_production_2026(
             "gnn_enabled": bool(config.enable_gnn),
             "transformer_enabled": bool(config.enable_transformer),
             "embedding_projections_enabled": bool(config.enable_embedding_projections),
-            "agent_orchestration_enabled": bool(config.use_agent_orchestration),
             "stacking_enabled": bool(config.enable_stacking),
             "experimental_postprocessing_enabled": False,
             "goto_conversion_enabled": bool(config.enable_goto_conversion),
@@ -817,7 +815,6 @@ def run_production_2026(
         bool(config.enable_gnn),
         bool(config.enable_transformer),
         bool(config.enable_embedding_projections),
-        bool(config.use_agent_orchestration),
     ])
     governance_report = {
         "what_exact_predictor_was_shipped": "Frozen 2026 production path (simple model + production probability profile)",

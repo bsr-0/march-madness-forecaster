@@ -68,9 +68,9 @@ def seed_baseline_probability(seed1: int, seed2: int) -> float:
     if key in SEED_WIN_RATES:
         p_fav = SEED_WIN_RATES[key]
     else:
-        # Logistic approximation: P(lower seed wins) = sigmoid(0.15 * seed_diff)
+        # Logistic approximation: P(lower seed wins) = sigmoid(0.175 * seed_diff)
         diff = dog_seed - fav_seed
-        p_fav = 1.0 / (1.0 + math.exp(-0.15 * diff))
+        p_fav = 1.0 / (1.0 + math.exp(-0.175 * diff))
 
     if seed1 <= seed2:
         return p_fav

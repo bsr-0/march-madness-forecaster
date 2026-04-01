@@ -245,7 +245,7 @@ class TestProductionConfigUnmodified:
         with open(config_path) as f:
             config = json.load(f)
 
-        expected_training = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
+        expected_training = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
         assert config["training_years"] == expected_training
         assert config["holdout_years"] == [2025]
         assert config["strict_leakage_mode"] is True
@@ -256,7 +256,7 @@ class TestProductionConfigUnmodified:
             EXPECTED_TRAINING_YEARS,
             EXPECTED_HOLDOUT_YEARS,
         )
-        assert EXPECTED_TRAINING_YEARS == [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
+        assert EXPECTED_TRAINING_YEARS == [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
         assert EXPECTED_HOLDOUT_YEARS == [2025]
 
 

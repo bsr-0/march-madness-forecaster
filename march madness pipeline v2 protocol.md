@@ -1,6 +1,9 @@
 **March Madness Pipeline**
 Metric Optimization & Evaluation Strategy v2.0
 System Prompt & Protocol for Complete Repository Refactor
+
+> **STATUS (2026-04-01): SUPERSEDED.** This protocol describes the old ensemble architecture (LightGBM/XGBoost/stacking, 86-dim features, learned selection). The production pipeline has since been simplified to a 7-feature logistic regression with two-stage domain adaptation (regular-season training + multi-year tournament calibration). A baseline experiment confirmed the complex ensemble adds no value over the simple model. See README.md for current architecture. This document is retained for historical context only.
+
 This repository builds a machine learning pipeline to predict the outcomes of NCAA March Madness tournament games by producing calibrated win probabilities for every possible matchup. Those probabilities serve two distinct downstream goals: submitting optimized predictions to the Kaggle March Machine Learning Mania competition, and constructing high-value brackets for ESPN and other bracket pool contests.
 **This document serves as the authoritative system prompt and refactoring protocol. **Every architectural decision, metric choice, and implementation step is specified here. An AI assistant or developer should be able to refactor the entire repository by following this document section by section.
 

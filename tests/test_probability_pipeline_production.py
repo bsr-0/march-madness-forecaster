@@ -238,7 +238,8 @@ class TestProductionConfigValidation:
         from src.pipeline.config import SOTAPipelineConfig
 
         cfg = SOTAPipelineConfig()
-        assert cfg.resolve_calibration_years() == [2025]
+        expected = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+        assert cfg.resolve_calibration_years() == expected
 
     def test_invalid_profile_raises(self):
         from src.pipeline.config import SOTAPipelineConfig

@@ -249,41 +249,6 @@ class TestStackingMetaFeatureConsistency:
         assert meta.shape[1] == 6
 
 
-class TestVIFPrunerIntegration:
-    """Test VIF pruner via FeatureSelector integration."""
-
-    def test_vif_pruner_drops_collinear_feature(self):
-        """A perfectly collinear feature should be dropped."""
-        from src.data.features.feature_selection import VIFPruner
-
-        rng = np.random.default_rng(42)
-        n = 100
-        X = rng.standard_normal((n, 4))
-        # Add a perfect linear combination: col4 = col0 + col1
-        X_with_collinear = np.column_stack([X, X[:, 0] + X[:, 1]])
-        names = ["a", "b", "c", "d", "ab_sum"]
-
-        pruner = VIFPruner(threshold=10.0)
-        X_pruned, kept_names, dropped_names = pruner.prune(X_with_collinear, names)
-
-        assert "ab_sum" in dropped_names or "a" in dropped_names or "b" in dropped_names
-        assert X_pruned.shape[1] < 5
-
-    def test_vif_pruner_keeps_independent_features(self):
-        """Independent features should not be dropped."""
-        from src.data.features.feature_selection import VIFPruner
-
-        rng = np.random.default_rng(42)
-        X = rng.standard_normal((200, 4))  # Independent columns
-        names = ["a", "b", "c", "d"]
-
-        pruner = VIFPruner(threshold=10.0)
-        X_pruned, kept_names, dropped_names = pruner.prune(X, names)
-
-        assert len(dropped_names) == 0
-        assert X_pruned.shape[1] == 4
-
-
 class TestMonteCarloUncertainty:
     """Test Monte Carlo SE and CI computation."""
 
