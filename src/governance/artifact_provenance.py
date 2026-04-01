@@ -19,6 +19,13 @@ def build_artifact_provenance(
     feature_manifest = getattr(pipeline, "_feature_manifest", None) or {}
     year_split_policy = getattr(pipeline, "_year_split_policy", None)
 
+    # FIX-STACKING-LEAKAGE: Track ensemble weight derivation source
+    # to enable governance auditing of weight contamination.
+    _ensemble_weight_source = "unknown"
+    _ews = getattr(pipeline, "_ensemble_weight_stats", None)
+    if _ews and isinstance(_ews, dict):
+        _ensemble_weight_source = _ews.get("weight_source", "unknown")
+
     provenance = {
         "artifact_kind": artifact_kind,
         "artifact_role": artifact_role,
@@ -34,6 +41,7 @@ def build_artifact_provenance(
         ),
         "strict_leakage_mode": bool(getattr(config, "strict_leakage_mode", False)),
         "feature_manifest_hash": feature_manifest.get("manifest_hash"),
+        "ensemble_weight_source": _ensemble_weight_source,
         "year_split_policy": (
             year_split_policy.to_dict()
             if year_split_policy is not None and hasattr(year_split_policy, "to_dict")

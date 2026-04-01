@@ -22,6 +22,15 @@ STATISTICAL LIMITATIONS (honest disclosure)
   thumb: ≤1 parameter per 10-20 events).  This ratio indicates substantial
   risk of overfitting to the evaluation data.
 
+FIX-STACKING-LEAKAGE (resolved):
+- **Ensemble weight contamination**: Previously, BMA weights were fitted
+  on the eval set, and LOYO only validated a single model (not the
+  ensemble). Ensemble weights are now derived via nested LOYO: each
+  outer fold's weights come from inner folds only.  LOYO now evaluates
+  the full multi-model ensemble with inner-fold-derived BMA weights.
+  The stacking meta-learner gate now uses OOF evaluation, not in-sample.
+  See NestedLOYOEnsembleResult in stacking_weights.py.
+
 The "0.001 Rule" was originally intended as a feature ablation gate.
 It has been SUPERSEDED by a statistically-powered threshold that accounts
 for fold-level variance (see ``compute_ablation_threshold``).  The legacy

@@ -178,10 +178,28 @@ def _select_ensemble_and_evaluate(pipeline, trained_models, tuning_stats,
             meta_learner.fit(meta_X, meta_y)
             meta_learner_type = "logistic"
 
-            # Brier validation gate: only use stacking if it improves over
-            # equal-weight baseline on the same OOF samples.
-            stacking_preds = meta_learner.predict_proba(meta_X)[:, 1]
-            stacking_brier = float(np.mean((stacking_preds - meta_y) ** 2))
+            # FIX-STACKING-LEAKAGE: Validate stacking via held-out OOF,
+            # NOT by predicting on the training data (which was in-sample).
+            # Use 3-fold CV on the meta features to get honest predictions.
+            n_meta = len(meta_y)
+            meta_oof_preds = np.full(n_meta, 0.5)
+            _meta_fold_size = n_meta // 3
+            for _mf in range(3):
+                _mf_start = _mf * _meta_fold_size
+                _mf_end = (_mf + 1) * _meta_fold_size if _mf < 2 else n_meta
+                _mf_val = list(range(_mf_start, _mf_end))
+                _mf_tr = [j for j in range(n_meta) if j not in _mf_val]
+                if len(_mf_tr) < 20:
+                    continue
+                _mf_model = LogisticRegression(
+                    C=1.0, penalty="l2", max_iter=2000,
+                    random_state=pipeline.config.random_seed,
+                )
+                _mf_model.fit(meta_X[_mf_tr], meta_y[_mf_tr])
+                meta_oof_preds[_mf_val] = _mf_model.predict_proba(
+                    meta_X[_mf_val]
+                )[:, 1]
+            stacking_brier = float(np.mean((meta_oof_preds - meta_y) ** 2))
             n_models = base_meta_X.shape[1]
             ew_preds = np.mean(base_meta_X, axis=1)  # equal-weight baseline
             ew_brier = float(np.mean((ew_preds - meta_y) ** 2))
@@ -319,77 +337,44 @@ def _select_ensemble_and_evaluate(pipeline, trained_models, tuning_stats,
     # weights replace the fallback.  Otherwise, fallback weights stand.
     ensemble_weight_stats = {}
 
+    # FIX-STACKING-LEAKAGE: BMA weights are now derived from LOYO OOS
+    # predictions instead of the eval set.  This eliminates the critical
+    # contamination pathway where weights optimized on eval_y biased all
+    # downstream metrics.
+    #
     # Protocol v2, Section 3.2: BMA is the ONLY supported ensemble strategy.
-    # Legacy grid-search weight optimization is intentionally disabled.
     _bma_cfg = getattr(pipeline, "config", None)
     _bma_flag = getattr(_bma_cfg, "bma_enabled", True)
     _use_bma = BMA_AVAILABLE and _bma_flag and len(trained_models) >= 2
 
-    if _use_bma and eval_y is not None and len(eval_y) > 0:
-        # BMA ensemble (Protocol v2, Section 3.2):
-        # "After the multi-metric gate, collect all passing models..."
-        # Only include models that pass the multi-metric gate.
-        config = getattr(pipeline, "config", None)
-        _brier_thresh = getattr(config, "brier_gate_threshold", 0.190)
-        _ll_thresh = getattr(config, "log_loss_gate_threshold", 0.560)
-
-        bma_preds = {}
-        for name, _, preds in trained_models:
-            if preds is None or len(preds) != len(eval_y):
-                continue
-            p_clip = np.clip(preds, 1e-7, 1 - 1e-7)
-            _b = float(np.mean((p_clip - eval_y) ** 2))
-            _ll = float(-np.mean(
-                eval_y * np.log(p_clip) + (1 - eval_y) * np.log(1 - p_clip)
-            ))
-            if _b < _brier_thresh and _ll < _ll_thresh:
-                bma_preds[name] = p_clip
-            else:
-                logger.info(
-                    "BMA gate: model '%s' excluded (Brier=%.4f, LogLoss=%.4f)",
-                    name, _b, _ll,
-                )
-
-        # Fallback: if no models pass the gate, include all for robustness
-        if len(bma_preds) < 2:
-            logger.warning(
-                "BMA: Fewer than 2 models passed gate (%d). "
-                "Including all models as fallback.",
-                len(bma_preds),
+    if _use_bma and len(trained_models) >= 2:
+        # Derive BMA weights from LOYO OOS predictions (not eval set)
+        loyo_bma_stats = _fit_bma_on_loyo(
+            pipeline, trained_models, _loyo_raw_feature_dim, feature_names,
+        )
+        if loyo_bma_stats and loyo_bma_stats.get("optimized_weights"):
+            pipeline.baseline_model.fixed_weights = loyo_bma_stats["optimized_weights"]
+            ensemble_weight_stats = loyo_bma_stats
+            logger.info(
+                "FIX-STACKING-LEAKAGE: BMA weights from LOYO OOS applied: %s",
+                loyo_bma_stats["optimized_weights"],
             )
-            bma_preds = {
-                name: np.clip(preds, 1e-7, 1 - 1e-7)
-                for name, _, preds in trained_models
-                if preds is not None and len(preds) == len(eval_y)
+        else:
+            logger.info(
+                "LOYO BMA unavailable (insufficient data). "
+                "Keeping fixed baseline weights."
+            )
+            ensemble_weight_stats = {
+                "method": "fixed_fallback",
+                "weight_source": "fixed",
+                "reason": "loyo_bma_insufficient_data",
             }
 
-        bma = BayesianModelAveraging()
-        if len(bma_preds) >= 2:
-            bma_result = bma.fit(bma_preds, eval_y)
-            if bma_result.weights:
-                pipeline.baseline_model.fixed_weights = bma_result.weights
-                ensemble_weight_stats = {
-                    "method": "bayesian_model_averaging",
-                    "optimized_weights": {
-                        k: round(v, 4) for k, v in bma_result.weights.items()
-                    },
-                    "effective_model_count": round(bma_result.effective_model_count, 2),
-                    "converged": bma_result.converged,
-                    "n_iterations": bma_result.n_iterations,
-                }
-                logger.info(
-                    "BMA ensemble weights applied: %s (effective count: %.2f)",
-                    bma_result.weights, bma_result.effective_model_count,
-                )
-    elif (
-        pipeline.config.optimize_ensemble_weights
-        and len(trained_models) >= 2
-        and not BMA_AVAILABLE
-    ):
-        logger.warning(
-            "Ensemble weight optimization requested but BMA is unavailable. "
-            "Keeping fixed baseline weights and skipping legacy optimizers."
-        )
+    # FIX-STACKING-LEAKAGE guard: ensure weights were NOT derived from eval set
+    assert ensemble_weight_stats.get("weight_source") != "eval_set", (
+        "BMA weights must not be derived from eval set (data leakage). "
+        "Use _fit_bma_on_loyo() instead."
+    )
 
     # Propagate tournament sigma calibrator to _TrainedBaselineModel so that
     # SpreadRegressor uses tournament-calibrated sigma at inference time.
@@ -539,25 +524,31 @@ def _optimize_ensemble_weights_loyo(
     feature_dim: int,
     feature_names: Optional[List[str]] = None,
 ) -> Dict:
-    """FIX-CV-ENSEMBLE: Optimize ensemble weights using LOYO cross-validation.
+    """FIX-STACKING-LEAKAGE: Nested LOYO ensemble weight optimization.
 
-    Instead of optimizing weights on the eval set (which is the only data
-    for honest evaluation), this method:
-    1. Loads multi-year historical data
-    2. For each held-out year, trains all model types on remaining years
-    3. Generates predictions from each model on the held-out year
-    4. Finds weights that minimize Brier score across all held-out folds
+    Uses proper nested cross-validation to eliminate the self-evaluation
+    contamination that existed in the previous pooled approach.
 
-    This gives genuinely OOS weight estimates that generalize across
-    tournament years' varying "chaos" patterns.
+    For each outer fold (held-out year Y):
+      1. Train all model types on years != Y → get OOS predictions for Y
+      2. From years != Y, run inner LOYO to derive weights
+      3. Apply inner-derived weights to year Y predictions
+      4. Record year Y's Brier (honest — weights never saw year Y)
+
+    The reported Brier is the mean across outer folds, guaranteed
+    uncontaminated because each fold's weights are derived from data
+    that excludes that fold.
 
     Returns:
-        Dict with optimized weights and LOYO Brier scores, or {} if
-        insufficient data.
+        Dict with nested LOYO results, or {} if insufficient data.
     """
     import os
     import logging as _logging
     logger = _logging.getLogger(__name__)
+
+    from ....ml.ensemble.stacking_weights import (
+        StackingWeightOptimizer as _SWO,
+    )
 
     games_dir = getattr(pipeline, "_runtime_state", {}).get(
         "multi_year_games_dir", pipeline.config.multi_year_games_dir
@@ -578,7 +569,7 @@ def _optimize_ensemble_weights_loyo(
     if len(years) < 3:
         return {}
 
-    # Step 1: Load all years' data (including margins for spread model)
+    # Step 1: Load all years' data
     all_X: Dict[int, np.ndarray] = {}
     all_y: Dict[int, np.ndarray] = {}
     all_margins: Dict[int, np.ndarray] = {}
@@ -603,14 +594,11 @@ def _optimize_ensemble_weights_loyo(
     if len(valid_years) < 3:
         return {}
 
-    # Step 2: LOYO cross-validation — for each held-out year, train
-    # each model type on remaining years and predict on held-out.
+    # Step 2: Generate per-year OOS predictions via LOYO
     model_names = [name for name, _, _ in trained_models]
-    all_oos_preds: Dict[str, list] = {name: [] for name in model_names}
-    all_oos_labels: list = []
+    preds_by_year: Dict[int, Dict[str, np.ndarray]] = {}
 
     for hold_yr in valid_years:
-        # Combine training data from all years except hold_yr
         train_X_parts = [all_X[yr] for yr in valid_years if yr != hold_yr]
         train_y_parts = [all_y[yr] for yr in valid_years if yr != hold_yr]
         train_margin_parts = [all_margins[yr] for yr in valid_years if yr != hold_yr]
@@ -623,30 +611,19 @@ def _optimize_ensemble_weights_loyo(
         X_val = all_X[hold_yr]
         y_val = all_y[hold_yr]
 
-        # FIX-LEAKAGE-ENSEMBLE-WEIGHTS: Do NOT reuse the primary
-        # feature selector here.  It was fitted on training data that
-        # includes the held-out year, so its importance scores encode
-        # test-year labels.  Instead, skip feature selection (use raw
-        # features) — same approach as the main LOYO CV (line 5047).
-        # The per-fold scaler below handles scale normalization.
-
-        # Apply scaler
         from sklearn.preprocessing import StandardScaler as _SS
         _scaler = _SS()
         X_train = _scaler.fit_transform(X_train)
         X_val = _scaler.transform(X_val)
 
-        # Train each model type and predict on held-out year
         fold_preds: Dict[str, np.ndarray] = {}
         for name, _, _ in trained_models:
             try:
                 if name == "lgb" and LIGHTGBM_AVAILABLE:
-                    from src.ml.models.lightgbm_ranker import LightGBMRanker
                     m = LightGBMRanker()
                     m.train(X_train, y_train, num_rounds=200)
                     fold_preds[name] = np.clip(m.predict(X_val), 0.01, 0.99)
-                elif name == "xgb":
-                    from src.ml.models.xgboost_ranker import XGBoostRanker
+                elif name == "xgb" and XGBOOST_AVAILABLE:
                     m = XGBoostRanker()
                     m.train(X_train, y_train, num_rounds=200)
                     fold_preds[name] = np.clip(m.predict(X_val), 0.01, 0.99)
@@ -659,7 +636,7 @@ def _optimize_ensemble_weights_loyo(
                     fold_preds[name] = np.clip(
                         m.predict_proba(X_val)[:, 1], 0.01, 0.99
                     )
-                elif name == "spread" and SpreadRegressor is not None:
+                elif name == "spread" and SPREAD_MODEL_AVAILABLE:
                     m = SpreadRegressor(
                         sigma=pipeline.config.spread_sigma_init,
                     )
@@ -672,90 +649,56 @@ def _optimize_ensemble_weights_loyo(
             except Exception:
                 fold_preds[name] = np.full(len(y_val), 0.5)
 
-        # Collect OOS predictions
-        for name in model_names:
-            all_oos_preds[name].extend(fold_preds.get(name, np.full(len(y_val), 0.5)).tolist())
-        all_oos_labels.extend(y_val.tolist())
+        preds_by_year[hold_yr] = fold_preds
 
-    if len(all_oos_labels) < 50:
+    if len(preds_by_year) < 3:
         return {}
 
-    # Step 3: Find optimal weights on OOS predictions
-    oos_y = np.array(all_oos_labels)
-    pred_arrays = {
-        name: np.array(preds) for name, preds in all_oos_preds.items()
-    }
+    # Step 3: FIX-STACKING-LEAKAGE — Nested weight optimization.
+    # Use StackingWeightOptimizer.fit_nested_loyo() which derives
+    # weights per outer fold from inner folds only.
+    optimizer = _SWO(regularization=0.1, random_seed=pipeline.config.random_seed)
 
-    # Build per-model weight bounds from PRODUCTION_BASELINE spec.
-    # These simplex constraints prevent overfitting the weight optimization
-    # on small LOYO samples (~440 OOS games, ~3 free DoF).
-    _opt_weight_bounds = None
-    try:
-        from src.pipeline.production_baseline import PRODUCTION_BASELINE
-        _bounds_spec = PRODUCTION_BASELINE.weight_bounds
-        _opt_weight_bounds = {
-            name: _bounds_spec.bounds_for(name) for name in model_names
+    predictions_by_year = {}
+    outcomes_by_year = {}
+    for yr in preds_by_year:
+        predictions_by_year[yr] = {
+            name: preds_by_year[yr].get(name, np.full(len(all_y[yr]), 0.5))
+            for name in model_names
         }
-    except Exception:
-        pass  # Graceful fallback: no bounds if import fails
+        outcomes_by_year[yr] = all_y[yr]
 
-    optimizer = EnsembleWeightOptimizer(
-        step=0.05, min_weight=0.05, n_bootstrap=200,
-        random_seed=pipeline.config.random_seed,
+    nested_result = optimizer.fit_nested_loyo(
+        predictions_by_year, outcomes_by_year,
     )
-    best_weights, best_brier = optimizer.optimize(
-        pred_arrays, oos_y,
-        min_samples=20,
-        regularization_lambda=pipeline.config.ensemble_weight_regularization,
-        weight_bounds=_opt_weight_bounds,
-    )
-
-    # Also compute fallback-weight Brier for comparison.
-    # Use PRODUCTION_BASELINE fallback weights as the comparison baseline.
-    try:
-        from src.pipeline.production_baseline import PRODUCTION_BASELINE
-        _fallback_w = dict(PRODUCTION_BASELINE.fallback_weights)
-        _PROD_NAME_MAP = {"spread": "spread", "logistic": "logit", "lgb": "lgb", "xgb": "xgb"}
-        active_fixed = {}
-        for prod_name, weight in _fallback_w.items():
-            internal_name = _PROD_NAME_MAP.get(prod_name, prod_name)
-            if internal_name in model_names:
-                active_fixed[internal_name] = weight
-    except Exception:
-        # Legacy fallback if import fails
-        w_lgb = pipeline.config.ensemble_lgb_weight
-        w_xgb = pipeline.config.ensemble_xgb_weight
-        w_logit = max(0.05, 1.0 - w_lgb - w_xgb)
-        active_fixed = {"lgb": w_lgb, "xgb": w_xgb, "logit": w_logit, "spread": 0.40}
-        active_fixed = {n: w for n, w in active_fixed.items() if n in model_names}
-    w_sum = sum(active_fixed.values())
-    active_fixed = {n: w / w_sum for n, w in active_fixed.items()}
-
-    fixed_ensemble_preds = np.zeros(len(oos_y))
-    for name, w in active_fixed.items():
-        if name in pred_arrays:
-            fixed_ensemble_preds += w * pred_arrays[name]
-    fixed_brier = float(np.mean((fixed_ensemble_preds - oos_y) ** 2))
-
-    improvement = fixed_brier - best_brier
 
     logger.info(
-        "FIX-CV-ENSEMBLE: LOYO weight optimization on %d OOS samples "
-        "across %d years. Fixed Brier=%.5f, Optimized Brier=%.5f, "
-        "improvement=%.5f. Weights: %s",
-        len(oos_y), len(valid_years), fixed_brier, best_brier,
-        improvement,
-        {n: round(w, 3) for n, w in best_weights.items()},
+        "FIX-STACKING-LEAKAGE: Nested LOYO weight optimization on %d folds "
+        "(%d total samples). Honest mean Brier=%.5f (std=%.5f). "
+        "Production weights: %s",
+        nested_result.n_folds, nested_result.n_total_samples,
+        nested_result.mean_brier, nested_result.std_brier,
+        {n: round(w, 3) for n, w in nested_result.production_weights.items()},
     )
 
     return {
-        "method": "loyo_cross_validated",
-        "years_used": valid_years,
-        "oos_samples": len(oos_y),
-        "optimized_weights": {n: round(w, 3) for n, w in best_weights.items()},
-        "optimized_brier": round(best_brier, 5),
-        "fixed_brier": round(fixed_brier, 5),
-        "improvement_over_fixed": round(improvement, 5),
+        "method": "nested_loyo",
+        "weight_source": "nested_loyo",
+        "years_used": list(preds_by_year.keys()),
+        "n_folds": nested_result.n_folds,
+        "oos_samples": nested_result.n_total_samples,
+        "honest_mean_brier": round(nested_result.mean_brier, 5),
+        "honest_std_brier": round(nested_result.std_brier, 5),
+        "production_weights": {
+            n: round(w, 3) for n, w in nested_result.production_weights.items()
+        },
+        "per_fold_brier": {
+            str(yr): round(b, 5) for yr, b in nested_result.per_fold_brier.items()
+        },
+        "per_fold_weights": {
+            str(yr): {n: round(w, 3) for n, w in ws.items()}
+            for yr, ws in nested_result.per_fold_weights.items()
+        },
     }
 
 
@@ -821,5 +764,176 @@ def _optimize_ensemble_weights_on_validation(
         "optimized_weights": {k: round(v, 3) for k, v in best_weights.items()},
         "optimized_brier": round(best_brier, 5),
         "validation_samples": len(outcomes),
+    }
+
+
+def _fit_bma_on_loyo(
+    pipeline,
+    trained_models: list,
+    feature_dim: int,
+    feature_names: Optional[List[str]] = None,
+) -> Dict:
+    """FIX-STACKING-LEAKAGE: Fit BMA weights on LOYO OOS predictions.
+
+    Replaces the prior approach of fitting BMA on the eval set, which
+    contaminated any downstream metric computed using those weights.
+
+    For each LOYO fold (held-out year Y):
+      1. Train all base models on years != Y
+      2. Generate OOS predictions for year Y
+    Pool all OOS predictions and fit BMA on them.
+
+    The resulting weights are derived from data that is out-of-sample
+    for each individual year, making them suitable for production use.
+
+    Returns:
+        Dict with BMA weights and diagnostics, or {} if insufficient data.
+    """
+    import os
+
+    games_dir = getattr(pipeline, "_runtime_state", {}).get(
+        "multi_year_games_dir", pipeline.config.multi_year_games_dir
+    )
+    if not games_dir or not os.path.isdir(games_dir):
+        return {}
+
+    years = pipeline.config.loyo_years or [
+        y for y in range(2015, pipeline.config.year) if y != 2020
+    ]
+    years = pipeline._filter_years(years, include_holdout=False)
+    year_split_policy = getattr(pipeline, "_year_split_policy", None)
+    if year_split_policy is not None:
+        year_split_policy.assert_dev_artifact_years(
+            list(years),
+            context="LOYO BMA weight derivation",
+        )
+    if len(years) < 3:
+        return {}
+
+    # Step 1: Load all years' data
+    all_X: Dict[int, np.ndarray] = {}
+    all_y: Dict[int, np.ndarray] = {}
+    all_margins: Dict[int, np.ndarray] = {}
+
+    for yr in years:
+        gp = os.path.join(games_dir, f"historical_games_{yr}.json")
+        mp = os.path.join(games_dir, f"team_metrics_{yr}.json")
+        if not os.path.isfile(gp) or not os.path.isfile(mp):
+            continue
+        try:
+            yr_X, yr_y, yr_margins, _, _ = pipeline._load_year_samples_incremental(
+                gp, mp, feature_dim, yr
+            )
+            if len(yr_y) >= 20:
+                all_X[yr] = yr_X
+                all_y[yr] = yr_y
+                all_margins[yr] = yr_margins
+        except Exception:
+            continue
+
+    valid_years = sorted(all_X.keys())
+    if len(valid_years) < 3:
+        return {}
+
+    # Step 2: LOYO — for each held-out year, train all model types
+    model_names = [name for name, _, _ in trained_models]
+    all_oos_preds: Dict[str, list] = {name: [] for name in model_names}
+    all_oos_labels: list = []
+
+    for hold_yr in valid_years:
+        train_X_parts = [all_X[yr] for yr in valid_years if yr != hold_yr]
+        train_y_parts = [all_y[yr] for yr in valid_years if yr != hold_yr]
+        train_margin_parts = [all_margins[yr] for yr in valid_years if yr != hold_yr]
+        if not train_X_parts:
+            continue
+
+        X_train = np.concatenate(train_X_parts, axis=0)
+        y_train = np.concatenate(train_y_parts)
+        margins_train = np.concatenate(train_margin_parts)
+        X_val = all_X[hold_yr]
+        y_val = all_y[hold_yr]
+
+        # FIX-LEAKAGE-ENSEMBLE-WEIGHTS: fresh scaler per fold
+        from sklearn.preprocessing import StandardScaler as _SS
+        _scaler = _SS()
+        X_train = _scaler.fit_transform(X_train)
+        X_val = _scaler.transform(X_val)
+
+        fold_preds: Dict[str, np.ndarray] = {}
+        for name, _, _ in trained_models:
+            try:
+                if name == "lgb" and LIGHTGBM_AVAILABLE:
+                    m = LightGBMRanker()
+                    m.train(X_train, y_train, num_rounds=200)
+                    fold_preds[name] = np.clip(m.predict(X_val), 0.01, 0.99)
+                elif name == "xgb" and XGBOOST_AVAILABLE:
+                    m = XGBoostRanker()
+                    m.train(X_train, y_train, num_rounds=200)
+                    fold_preds[name] = np.clip(m.predict(X_val), 0.01, 0.99)
+                elif name == "logit" and SKLEARN_AVAILABLE:
+                    m = LogisticRegression(
+                        C=1.0, max_iter=2000,
+                        random_state=pipeline.config.random_seed,
+                    )
+                    m.fit(X_train, y_train)
+                    fold_preds[name] = np.clip(
+                        m.predict_proba(X_val)[:, 1], 0.01, 0.99
+                    )
+                elif name == "spread" and SPREAD_MODEL_AVAILABLE:
+                    m = SpreadRegressor(
+                        sigma=pipeline.config.spread_sigma_init,
+                    )
+                    m.train(X_train, margins_train, num_rounds=200)
+                    fold_preds[name] = np.clip(
+                        m.predict_probability(X_val), 0.01, 0.99
+                    )
+                else:
+                    fold_preds[name] = np.full(len(y_val), 0.5)
+            except Exception:
+                fold_preds[name] = np.full(len(y_val), 0.5)
+
+        for name in model_names:
+            all_oos_preds[name].extend(
+                fold_preds.get(name, np.full(len(y_val), 0.5)).tolist()
+            )
+        all_oos_labels.extend(y_val.tolist())
+
+    if len(all_oos_labels) < 50:
+        return {}
+
+    # Step 3: Fit BMA on pooled OOS predictions
+    oos_y = np.array(all_oos_labels)
+    bma_preds = {}
+    for name in model_names:
+        arr = np.array(all_oos_preds[name])
+        bma_preds[name] = np.clip(arr, 1e-7, 1 - 1e-7)
+
+    if not BMA_AVAILABLE or len(bma_preds) < 2:
+        return {}
+
+    bma = BayesianModelAveraging()
+    bma_result = bma.fit(bma_preds, oos_y)
+
+    if not bma_result.weights:
+        return {}
+
+    logger.info(
+        "FIX-STACKING-LEAKAGE: BMA weights derived from LOYO OOS "
+        "(%d samples, %d years). Weights: %s",
+        len(oos_y), len(valid_years),
+        {k: round(v, 4) for k, v in bma_result.weights.items()},
+    )
+
+    return {
+        "method": "bayesian_model_averaging",
+        "weight_source": "loyo_oos",
+        "optimized_weights": {
+            k: round(v, 4) for k, v in bma_result.weights.items()
+        },
+        "effective_model_count": round(bma_result.effective_model_count, 2),
+        "converged": bma_result.converged,
+        "n_iterations": bma_result.n_iterations,
+        "oos_samples": len(oos_y),
+        "years_used": valid_years,
     }
 
