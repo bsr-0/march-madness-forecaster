@@ -691,7 +691,7 @@ class SOTAPipelineConfig:
     # "simple":   Logistic + SpreadRegressor, 9 features (best for < 400 samples)
     # "standard": LGB + XGB + Logistic + Spread, 23 features
     # "full":     All models including GNN/transformer (requires large data)
-    model_complexity: str = "standard"
+    model_complexity: str = "simple"
 
     # --- Brier-optimal post-processing (WS2) ---
     # Protocol v2: Sharpening is PROHIBITED for Kaggle submissions.

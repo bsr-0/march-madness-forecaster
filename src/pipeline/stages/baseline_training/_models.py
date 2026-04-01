@@ -425,6 +425,7 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
         pipeline.config.enable_spread_model
         and SPREAD_MODEL_AVAILABLE
         and LIGHTGBM_AVAILABLE
+        and _use_tree_models
         and train_samples >= 60
         and len(train_margins) == len(train_y)
     ):
