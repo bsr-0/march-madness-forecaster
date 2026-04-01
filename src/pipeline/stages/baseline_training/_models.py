@@ -21,7 +21,6 @@ try:
         SPREAD_MODEL_AVAILABLE,
         TOURNAMENT_SIGMA_AVAILABLE,
         BayesianBradleyTerry,
-        BrierLightGBMTuner,
         EnsembleWeightOptimizer,
         LeaveOneYearOutCV,
         LightGBMTuner,
@@ -34,27 +33,6 @@ try:
     )
 except ImportError:
     pass
-
-# BMA ensemble (Protocol v2, Section 3.2)
-try:
-    from ....ml.ensemble.bma import BayesianModelAveraging, BMAResult
-    BMA_AVAILABLE = True
-except ImportError:
-    BMA_AVAILABLE = False
-
-# Brier-objective LightGBM (Protocol Section 3.3, Phase 4)
-try:
-    from ....ml.ensemble.brier_objective import BrierLightGBMRanker
-    BRIER_LGB_AVAILABLE = True
-except ImportError:
-    BRIER_LGB_AVAILABLE = False
-
-# Calibration-first pipeline (Phase 4 research)
-try:
-    from ....ml.ensemble.calibration_first import CalibrationFirstPipeline
-    CALIBRATION_FIRST_AVAILABLE = True
-except ImportError:
-    CALIBRATION_FIRST_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -103,29 +81,12 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
                 and LightGBMTuner is not None
                 and train_samples >= 60
             ):
-                _use_brier = pipeline.config.use_brier_objective and BRIER_LGB_AVAILABLE
-                # Use BrierLightGBMTuner when Brier objective is active so
-                # hyperparams are selected under the same loss surface.
-                if _use_brier and BrierLightGBMTuner is not None:
-                    tuner = BrierLightGBMTuner(
-                        n_trials=pipeline.config.optuna_n_trials,
-                        n_cv_splits=pipeline.config.temporal_cv_splits,
-                        timeout=pipeline.config.optuna_timeout,
-                        random_seed=pipeline.config.random_seed,
-                    )
-                else:
-                    tuner = LightGBMTuner(
-                        n_trials=pipeline.config.optuna_n_trials,
-                        n_cv_splits=pipeline.config.temporal_cv_splits,
-                        timeout=pipeline.config.optuna_timeout,
-                        random_seed=pipeline.config.random_seed,
-                    )
-                    if _use_brier:
-                        logger.warning(
-                            "BrierLightGBMTuner unavailable; hyperparams tuned "
-                            "under log-loss objective.  Regularisation params "
-                            "may be suboptimal for Brier training.",
-                        )
+                tuner = LightGBMTuner(
+                    n_trials=pipeline.config.optuna_n_trials,
+                    n_cv_splits=pipeline.config.temporal_cv_splits,
+                    timeout=pipeline.config.optuna_timeout,
+                    random_seed=pipeline.config.random_seed,
+                )
                 tuning_result = tuner.tune(
                     train_X, train_y, train_sort_keys,
                     feature_names=feature_names,
@@ -134,16 +95,13 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
                     year_split_policy=getattr(pipeline, "_year_split_policy", None),
                 )
 
-                # Filter out non-hyperparameter keys to avoid silently
-                # overriding the objective that BrierLightGBMRanker sets.
                 _exclude_keys = {"num_rounds", "objective", "metric"}
                 best_params = {
                     k: v for k, v in tuning_result.best_params.items()
                     if k not in _exclude_keys
                 }
                 best_num_rounds = tuning_result.best_params.get("num_rounds", 200)
-                _LGBClass = BrierLightGBMRanker if _use_brier else LightGBMRanker
-                lgb_ranker = _LGBClass(params=best_params)
+                lgb_ranker = LightGBMRanker(params=best_params)
                 lgb_ranker.train(
                     train_X, train_y,
                     feature_names=feature_names,
@@ -166,12 +124,7 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
                     "cv_brier_scores": [round(r.brier_score, 5) for r in tuning_result.cv_results],
                 }
             else:
-                _LGBClass = (
-                    BrierLightGBMRanker
-                    if pipeline.config.use_brier_objective and BRIER_LGB_AVAILABLE
-                    else LightGBMRanker
-                )
-                lgb_ranker = _LGBClass()
+                lgb_ranker = LightGBMRanker()
                 lgb_ranker.train(
                     train_X, train_y,
                     feature_names=feature_names,
@@ -185,81 +138,6 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
                 lgb_trained = True
         except Exception as e:
             tuning_stats["lightgbm_error"] = str(e)
-
-    # --- Calibration-first pipeline (Phase 4 research) ---
-    # When enabled, runs a 4-pass training loop that uses calibration error
-    # as a regularization signal.  Requires a dedicated calibration fold
-    # that is statistically independent from the dev fold (used for early
-    # stopping) to avoid data leakage (Walsh & Joshi 2024, Section 3).
-    #
-    # Data layout when calibration-first is active:
-    #   eval_X was already split into dev (40%) and eval (60%) above.
-    #   We further split eval into cal (first half) and eval (second half)
-    #   so that: dev → early stopping, cal → calibration pipeline, eval → final eval.
-    calfirst_trained = False
-    if (
-        pipeline.config.enable_calibration_first
-        and CALIBRATION_FIRST_AVAILABLE
-        and LIGHTGBM_AVAILABLE
-        and valid_set is not None
-        and train_samples >= 60
-        and valid_samples >= 80  # Need enough eval left after carving cal fold (40 cal + 40 eval)
-    ):
-        try:
-            # Carve a calibration fold from the eval set (first half).
-            # This is independent of the dev fold used for early stopping.
-            cal_count = valid_samples // 2
-            cal_X = eval_X[:cal_count]
-            cal_y = eval_y[:cal_count]
-            # Shrink eval to the remaining samples for unbiased evaluation
-            eval_X = eval_X[cal_count:]
-            eval_y = eval_y[cal_count:]
-            valid_samples = len(eval_y)
-
-            calfirst = CalibrationFirstPipeline(
-                alpha=pipeline.config.calibration_first_alpha,
-                fallback_on_regression=pipeline.config.calibration_first_fallback,
-            )
-
-            def _lgb_factory():
-                _Cls = (
-                    BrierLightGBMRanker
-                    if pipeline.config.use_brier_objective and BRIER_LGB_AVAILABLE
-                    else LightGBMRanker
-                )
-                return _Cls()
-
-            calfirst_result = calfirst.fit(
-                train_X, train_y, cal_X, cal_y,
-                base_model_factory=_lgb_factory,
-            )
-            tuning_stats["calibration_first"] = {
-                "ece_before": round(calfirst_result.ece_before, 5),
-                "ece_after": round(calfirst_result.ece_after, 5),
-                "brier_before": round(calfirst_result.brier_before, 5),
-                "brier_after": round(calfirst_result.brier_after, 5),
-                "temperature": round(calfirst_result.temperature, 4),
-                "n_passes": calfirst_result.n_passes,
-                "fell_back": calfirst_result.fell_back,
-            }
-
-            # Add the calibration-first model to the ensemble candidates.
-            # Generate eval predictions on the (now independent) eval fold.
-            calfirst_model = calfirst_result.model
-            if valid_samples > 0 and calfirst_model is not None:
-                calfirst_eval_preds = calfirst_model.predict(eval_X)
-                trained_models.append(("calfirst", calfirst_model, calfirst_eval_preds))
-
-            calfirst_trained = True
-            logger.info(
-                "CalibrationFirst: ECE %.4f→%.4f, Brier %.4f→%.4f, fell_back=%s",
-                calfirst_result.ece_before, calfirst_result.ece_after,
-                calfirst_result.brier_before, calfirst_result.brier_after,
-                calfirst_result.fell_back,
-            )
-        except Exception as e:
-            tuning_stats["calibration_first_error"] = str(e)
-            logger.warning("CalibrationFirstPipeline failed: %s", e)
 
     # --- XGBoost training (experimental only in Phase 2) ---
     xgb_trained = False
@@ -425,6 +303,7 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
         pipeline.config.enable_spread_model
         and SPREAD_MODEL_AVAILABLE
         and LIGHTGBM_AVAILABLE
+        and _use_tree_models
         and train_samples >= 60
         and len(train_margins) == len(train_y)
     ):

@@ -1,5 +1,7 @@
 # Feature Engineering Audit Report
 
+> **STATUS (2026-04-01): HISTORICAL.** Production now uses only 7 fixed features (`SIMPLE_FEATURE_SET`), not the full 86-dim vector or learned feature selection described here. See README.md for current architecture.
+
 **Date:** 2026-03-22
 **Scope:** Full audit of `src/data/features/` and supporting pipeline code
 **Codebase version:** Current HEAD on `main`

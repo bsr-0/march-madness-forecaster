@@ -37,7 +37,7 @@ LOCKED_FIELDS = frozenset({
     "year", "probability_profile", "mode", "model_complexity",
     "pipeline_mode", "production_model_stack", "production_calibration",
     # Disabled modules
-    "use_agent_orchestration", "enable_gnn", "enable_transformer",
+    "enable_gnn", "enable_transformer",
     "enable_embedding_projections",
     # Year partitions
     "training_years", "dev_years", "holdout_years",

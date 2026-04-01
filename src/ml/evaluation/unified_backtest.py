@@ -691,7 +691,7 @@ def _generate_seed_based_bracket(
             else:
                 # Historical seed win rates (approximate)
                 seed_diff = s2 - s1  # Positive if t1 is favored
-                p_t1 = 1.0 / (1.0 + math.exp(-0.15 * seed_diff))
+                p_t1 = 1.0 / (1.0 + math.exp(-0.175 * seed_diff))
 
             # Blend toward 0.5 based on upset_propensity
             p_t1 = (1.0 - upset_propensity) * p_t1 + upset_propensity * 0.5

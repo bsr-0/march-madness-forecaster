@@ -1,5 +1,7 @@
 # Feature Engineering & Selection Evaluation
 
+> **STATUS (2026-04-01): HISTORICAL.** Production now uses 7 fixed features (`SIMPLE_FEATURE_SET`), not learned feature selection. A baseline experiment confirmed additional features add no value on tournament data (BSS ≈ 0). See README.md.
+
 Senior statistician's review of the feature reduction, engineering, and selection
 pipeline. Written March 2026 for reference by future agents and reviewers.
 

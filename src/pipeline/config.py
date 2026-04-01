@@ -339,7 +339,7 @@ class SOTAPipelineConfig:
     production_calibration: str = "temperature"
     # Dev/holdout partition for RDoF control.
     # Default: dev=2016-2019 and 2021-2024 (exclude 2020 COVID), holdout=2025.
-    dev_years: Optional[List[int]] = field(default_factory=lambda: [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024])
+    dev_years: Optional[List[int]] = field(default_factory=lambda: [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024])
     holdout_years: Optional[List[int]] = field(default_factory=lambda: [2025])
     prospective_years: Optional[List[int]] = None
     prospective_targets: Optional[Dict[str, float]] = field(default_factory=lambda: {
@@ -351,9 +351,12 @@ class SOTAPipelineConfig:
         "accuracy_gap": 0.02,
     })
     # Calibration years are tournament-only years used to fit probability
-    # calibration. By default this is holdout_years, which keeps calibrator
-    # fitting genuinely out-of-sample with respect to model training years.
-    calibration_years: Optional[List[int]] = None
+    # calibration.  Tournament games are genuinely OOS: the baseline model
+    # trains on regular-season games only (enable_round_weighted_training=False),
+    # so tournament predictions from dev years are never seen during training.
+    calibration_years: Optional[List[int]] = field(
+        default_factory=lambda: [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+    )
     # Freeze an explicit production path for tournament runs.
     enforce_production_path: bool = True
     # Require a verified freeze artifact before running.
@@ -608,7 +611,7 @@ class SOTAPipelineConfig:
     # --- Round-weighted training (FIX #3: optimize for Kaggle's actual metric) ---
     # Include historical tournament games in training with Kaggle round weights
     # so the model invests more gradient signal in closely-matched elite teams.
-    enable_round_weighted_training: bool = True
+    enable_round_weighted_training: bool = False
     # Use round-weighted Brier calibration instead of flat Brier.
     # EXPERIMENTAL: Disabled by default — applies a second temperature scaling
     # on already-calibrated probabilities.  Enable only with OOS evidence.
@@ -691,7 +694,7 @@ class SOTAPipelineConfig:
     # "simple":   Logistic + SpreadRegressor, 9 features (best for < 400 samples)
     # "standard": LGB + XGB + Logistic + Spread, 23 features
     # "full":     All models including GNN/transformer (requires large data)
-    model_complexity: str = "standard"
+    model_complexity: str = "simple"
 
     # --- Brier-optimal post-processing (WS2) ---
     # Protocol v2: Sharpening is PROHIBITED for Kaggle submissions.
@@ -711,7 +714,7 @@ class SOTAPipelineConfig:
     use_unweighted_brier: bool = True  # Protocol: unweighted Brier for model selection
 
     # --- Protocol v2 required flags ---
-    bma_enabled: bool = True  # Use Bayesian Model Averaging for ensemble (Protocol Section 3.2)
+    bma_enabled: bool = False  # BMA module removed — flag kept for config compatibility
     pit_enforcement: bool = True  # Enforce Point-in-Time validation (Protocol Section 1)
     espn_mode: bool = False  # Enable ESPN bracket optimization pathway (Protocol Section 4)
     simulation_count: int = 10000  # Number of Monte Carlo simulations for ESPN pool eval
@@ -725,14 +728,6 @@ class SOTAPipelineConfig:
     # --- ESPN multi-bracket strategy (Protocol Section 4.5) ---
     espn_n_brackets: int = 3
     espn_risk_profiles: str = "conservative,balanced,aggressive"
-
-    # --- Custom Brier objective (Protocol Section 3.3) ---
-    use_brier_objective: bool = False  # LightGBM custom Brier loss (Phase 4 research)
-
-    # --- Calibration-first pipeline (Phase 4 research) ---
-    enable_calibration_first: bool = False
-    calibration_first_alpha: float = 0.7  # Discrimination vs calibration balance
-    calibration_first_fallback: bool = True  # Auto-fallback if Brier worsens
 
     # --- goto_conversion (favourite-longshot bias correction) ---
     # The goto_conversion method (gotoConversion/goto_conversion on GitHub)
@@ -808,8 +803,6 @@ class SOTAPipelineConfig:
     # Compute budget management (S20)
     compute_budget_seconds: float = 3600.0
     enable_budget_degradation: bool = True
-    # Multi-agent orchestration (S2)
-    use_agent_orchestration: bool = False
 
     def validate_production_profile(self) -> None:
         """Validate production profile constraints.
@@ -849,8 +842,6 @@ class SOTAPipelineConfig:
             violations.append(f"model_complexity={self.model_complexity}")
         if self.mode != "calibration":
             violations.append(f"mode={self.mode}")
-        if self.use_agent_orchestration:
-            violations.append("use_agent_orchestration=True")
         if self.enable_gnn:
             violations.append("enable_gnn=True")
         if self.enable_transformer:
@@ -861,16 +852,17 @@ class SOTAPipelineConfig:
             violations.append("holdout_years is empty")
         elif sorted(set(self.holdout_years)) != [2025]:
             violations.append(f"holdout_years={self.holdout_years} (expected [2025])")
-        expected_dev_years = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
+        expected_dev_years = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
         if not self.dev_years:
             violations.append("dev_years is empty")
         elif sorted(set(self.dev_years)) != expected_dev_years:
             violations.append(
-                "dev_years must be 2016-2019 and 2021-2024 for locked production path"
+                "dev_years must be 2008-2019 and 2021-2024 for locked production path"
             )
         cal_years = self.resolve_calibration_years()
-        if cal_years != [2025]:
-            violations.append(f"calibration_years={cal_years} (expected [2025])")
+        expected_cal_years = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+        if cal_years != expected_cal_years:
+            violations.append(f"calibration_years={cal_years} (expected {expected_cal_years})")
 
         if violations:
             raise ValueError(

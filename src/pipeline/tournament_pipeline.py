@@ -51,7 +51,6 @@ from ..data.features.feature_engineering import (
     ABSOLUTE_LEVEL_FEATURE_NAMES,
     validate_population_stats,
 )
-from ..data.features.feature_selection import FeatureSelector, FeatureSelectionResult
 from ..data.scrapers.injury_report import InjurySeverityEstimator, PositionalDepthChart
 from ..data.scrapers.bracket_ingestion import BracketIngestionPipeline
 from ..data.normalize import normalize_team_id as _shared_normalize_team_id
@@ -157,8 +156,8 @@ class TournamentPipeline:
         """Feature engineering, post-processors, and inference augmentation."""
         self.feature_engineer = FeatureEngineer()
         self.proprietary_engine = ProprietaryMetricsEngine()
-        self.feature_selector: Optional[FeatureSelector] = None
-        self.feature_selection_result: Optional[FeatureSelectionResult] = None
+        self.feature_selector = None
+        self.feature_selection_result = None
         self.bayesian_bt_model = None
         self.tuning_result = None
 
@@ -263,19 +262,6 @@ class TournamentPipeline:
         team pairs.  Used for conference tournament analysis.
         """
         return self._runner.train_for_predictions()
-
-    def run_multi_agent(self) -> Dict:
-        """Run the pipeline via multi-agent coordination (Directive V7 S2)."""
-        from src.agents import MessageBus
-        from src.agents.concrete import OrchestratorAgent
-
-        bus = MessageBus()
-        orchestrator = OrchestratorAgent()
-        result = orchestrator.run(self._pipeline_context, bus, pipeline=self)
-        if not result.success:
-            logger.warning("Multi-agent pipeline blocked (%d findings): %s",
-                           len(result.findings), result.findings[-1] if result.findings else "unknown")
-        return result.output or {}
 
     # ------------------------------------------------------------------
     # Probability inference
@@ -626,32 +612,6 @@ class TournamentPipeline:
     def _apply_market_blend(self, *args, **kwargs):
         from .stages import simulation as _sim
         return _sim.apply_market_blend(self, *args, **kwargs)
-
-    def _run_agent_orchestrated_pipeline(self) -> Dict:
-        from ..agents.data_agent import DataAgent
-        from ..agents.feature_agent import FeatureAgent
-        from ..agents.model_agent import ModelAgent
-        from ..agents.audit_agent import AuditAgent
-        from ..agents.orchestrator import ResearchOrchestrator
-        from ..agents.registry import AgentRegistry, MessageBus
-
-        registry = AgentRegistry()
-        registry.register(DataAgent())
-        registry.register(FeatureAgent())
-        registry.register(ModelAgent())
-        registry.register(AuditAgent())
-
-        bus = MessageBus(registry)
-        orchestrator = ResearchOrchestrator(registry=registry, bus=bus, ctx=self, max_retries=2, retry_delay_seconds=1.0)
-        logger.info("Running pipeline via agent orchestration (S2)")
-        result = orchestrator.run_pipeline()
-        if result.get("status") == "vetoed":
-            logger.error("Agent pipeline vetoed at stage '%s': %s", result.get("stage"), result.get("reason"))
-        elif result.get("status") == "failed":
-            logger.error("Agent pipeline failed at stage '%s': %s", result.get("stage"), result.get("error"))
-        else:
-            logger.info("Agent orchestrated pipeline completed successfully")
-        return result
 
     # Game utility delegates (static/instance helpers used by stage modules)
 
