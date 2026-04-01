@@ -351,9 +351,12 @@ class SOTAPipelineConfig:
         "accuracy_gap": 0.02,
     })
     # Calibration years are tournament-only years used to fit probability
-    # calibration. By default this is holdout_years, which keeps calibrator
-    # fitting genuinely out-of-sample with respect to model training years.
-    calibration_years: Optional[List[int]] = None
+    # calibration.  Tournament games are genuinely OOS: the baseline model
+    # trains on regular-season games only (enable_round_weighted_training=False),
+    # so tournament predictions from dev years are never seen during training.
+    calibration_years: Optional[List[int]] = field(
+        default_factory=lambda: [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+    )
     # Freeze an explicit production path for tournament runs.
     enforce_production_path: bool = True
     # Require a verified freeze artifact before running.
@@ -608,7 +611,7 @@ class SOTAPipelineConfig:
     # --- Round-weighted training (FIX #3: optimize for Kaggle's actual metric) ---
     # Include historical tournament games in training with Kaggle round weights
     # so the model invests more gradient signal in closely-matched elite teams.
-    enable_round_weighted_training: bool = True
+    enable_round_weighted_training: bool = False
     # Use round-weighted Brier calibration instead of flat Brier.
     # EXPERIMENTAL: Disabled by default — applies a second temperature scaling
     # on already-calibrated probabilities.  Enable only with OOS evidence.
@@ -869,8 +872,9 @@ class SOTAPipelineConfig:
                 "dev_years must be 2016-2019 and 2021-2024 for locked production path"
             )
         cal_years = self.resolve_calibration_years()
-        if cal_years != [2025]:
-            violations.append(f"calibration_years={cal_years} (expected [2025])")
+        expected_cal_years = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+        if cal_years != expected_cal_years:
+            violations.append(f"calibration_years={cal_years} (expected {expected_cal_years})")
 
         if violations:
             raise ValueError(
