@@ -30,6 +30,7 @@ from ._ensemble import (  # noqa: F401
     _select_ensemble_and_evaluate,
     _optimize_ensemble_weights_loyo,
     _optimize_ensemble_weights_on_validation,
+    _fit_bma_on_loyo,
 )
 from ._embeddings import (  # noqa: F401
     _construct_schedule_graph,

@@ -322,15 +322,29 @@ def _run_loyo_validation(
         enforce_pit=False,  # PIT is enforced above with explicit fold summaries.
     )
 
-    # Per-fold state: scaler and feature selector re-fit each fold.
-    # Stored in a mutable container so predict_fn can access them.
-    _fold_transforms = {"scaler": None, "selector": None, "selected_names": model_feature_names}
+    # Per-fold state: scaler, feature selector, and ensemble models
+    # re-fit each fold. Stored in a mutable container so predict_fn
+    # can access them.
+    #
+    # FIX-STACKING-LEAKAGE: train_fn now trains ALL base models per fold
+    # (not just LightGBM) and derives BMA weights from inner LOYO within
+    # the training years. This means LOYO metrics reflect the actual
+    # deployed ensemble, not a single model proxy.
+    _fold_transforms = {
+        "scaler": None,
+        "selector": None,
+        "selected_names": model_feature_names,
+        "ensemble_models": {},    # {name: model}
+        "ensemble_weights": {},   # {name: weight}
+    }
 
     def train_fn(X_tr, y_tr, _margins_tr, fold_feature_names, w_tr):
         # Reset per-fold transforms
         _fold_transforms["scaler"] = None
         _fold_transforms["selector"] = None
         _fold_transforms["selected_names"] = list(fold_feature_names)
+        _fold_transforms["ensemble_models"] = {}
+        _fold_transforms["ensemble_weights"] = {}
 
         # Re-fit feature selector per fold (mirrors production pipeline)
         if pipeline.config.enable_feature_selection:
@@ -353,27 +367,133 @@ def _run_loyo_validation(
             X_tr = fold_scaler.fit_transform(X_tr)
             _fold_transforms["scaler"] = fold_scaler
 
+        # FIX-STACKING-LEAKAGE: Train ALL base models, not just one
+        trained = {}
         if LIGHTGBM_AVAILABLE:
-            ranker = LightGBMRanker()
-            ranker.train(
-                X_tr,
-                y_tr,
+            lgb = LightGBMRanker()
+            lgb.train(
+                X_tr, y_tr,
                 feature_names=_fold_transforms["selected_names"],
                 num_rounds=200,
                 early_stopping_rounds=None,
                 valid_set=None,
                 sample_weight=w_tr,
             )
-            return ranker
-        elif SKLEARN_AVAILABLE:
-            logit = LogisticRegression(C=1.0, max_iter=2000, random_state=pipeline.config.random_seed)
+            trained["lgb"] = lgb
+
+        if XGBOOST_AVAILABLE:
+            try:
+                xgb = XGBoostRanker()
+                xgb.train(
+                    X_tr, y_tr,
+                    feature_names=_fold_transforms["selected_names"],
+                    num_rounds=200,
+                    early_stopping_rounds=None,
+                    sample_weight=w_tr,
+                )
+                trained["xgb"] = xgb
+            except Exception:
+                pass
+
+        if SKLEARN_AVAILABLE:
+            logit = LogisticRegression(
+                C=1.0, max_iter=2000,
+                random_state=pipeline.config.random_seed,
+            )
             logit.fit(X_tr, y_tr, sample_weight=w_tr)
-            return logit
+            trained["logit"] = logit
+
+        if SPREAD_MODEL_AVAILABLE and _margins_tr is not None:
+            try:
+                spread = SpreadRegressor(
+                    sigma=pipeline.config.spread_sigma_init,
+                )
+                spread.train(X_tr, _margins_tr, num_rounds=200, sample_weight=w_tr)
+                trained["spread"] = spread
+            except Exception:
+                pass
+
+        _fold_transforms["ensemble_models"] = trained
+
+        # Derive inner-fold BMA weights via cross-validation within
+        # the training data.  Split training years into inner folds
+        # and use BMA on pooled inner-OOS predictions.
+        if BMA_AVAILABLE and len(trained) >= 2:
+            try:
+                # Use simple 3-fold temporal CV on training data for
+                # inner BMA weight derivation
+                n_tr = len(y_tr)
+                inner_fold_size = n_tr // 3
+                inner_preds = {name: [] for name in trained}
+                inner_outcomes = []
+
+                for i_fold in range(3):
+                    start = i_fold * inner_fold_size
+                    end = (i_fold + 1) * inner_fold_size if i_fold < 2 else n_tr
+                    inner_val_idx = list(range(start, end))
+                    inner_tr_idx = [j for j in range(n_tr) if j not in inner_val_idx]
+
+                    if len(inner_tr_idx) < 20 or len(inner_val_idx) < 10:
+                        continue
+
+                    X_inner_tr = X_tr[inner_tr_idx]
+                    y_inner_tr = y_tr[inner_tr_idx]
+                    X_inner_val = X_tr[inner_val_idx]
+                    y_inner_val = y_tr[inner_val_idx]
+                    w_inner = w_tr[inner_tr_idx] if w_tr is not None else None
+                    m_inner = _margins_tr[inner_tr_idx] if _margins_tr is not None else None
+
+                    for name in trained:
+                        try:
+                            if name == "lgb" and LIGHTGBM_AVAILABLE:
+                                m = LightGBMRanker()
+                                m.train(X_inner_tr, y_inner_tr, num_rounds=200, sample_weight=w_inner)
+                                inner_preds[name].extend(np.clip(m.predict(X_inner_val), 0.01, 0.99).tolist())
+                            elif name == "xgb" and XGBOOST_AVAILABLE:
+                                m = XGBoostRanker()
+                                m.train(X_inner_tr, y_inner_tr, num_rounds=200, sample_weight=w_inner)
+                                inner_preds[name].extend(np.clip(m.predict(X_inner_val), 0.01, 0.99).tolist())
+                            elif name == "logit" and SKLEARN_AVAILABLE:
+                                m = LogisticRegression(C=1.0, max_iter=2000, random_state=pipeline.config.random_seed)
+                                m.fit(X_inner_tr, y_inner_tr, sample_weight=w_inner)
+                                inner_preds[name].extend(np.clip(m.predict_proba(X_inner_val)[:, 1], 0.01, 0.99).tolist())
+                            elif name == "spread" and SPREAD_MODEL_AVAILABLE and m_inner is not None:
+                                m = SpreadRegressor(sigma=pipeline.config.spread_sigma_init)
+                                m.train(X_inner_tr, m_inner, num_rounds=200, sample_weight=w_inner)
+                                inner_preds[name].extend(np.clip(m.predict_probability(X_inner_val), 0.01, 0.99).tolist())
+                        except Exception:
+                            inner_preds[name].extend([0.5] * len(inner_val_idx))
+
+                    inner_outcomes.extend(y_inner_val.tolist())
+
+                if len(inner_outcomes) >= 30:
+                    bma_inner_preds = {
+                        name: np.clip(np.array(vals), 1e-7, 1 - 1e-7)
+                        for name, vals in inner_preds.items()
+                        if len(vals) == len(inner_outcomes)
+                    }
+                    if len(bma_inner_preds) >= 2:
+                        bma = BayesianModelAveraging()
+                        bma_result = bma.fit(bma_inner_preds, np.array(inner_outcomes))
+                        if bma_result.weights:
+                            _fold_transforms["ensemble_weights"] = bma_result.weights
+            except Exception as _bma_exc:
+                logger.debug("Inner BMA failed in LOYO fold: %s", _bma_exc)
+
+        # Fallback: equal weights if BMA unavailable
+        if not _fold_transforms["ensemble_weights"] and trained:
+            _fold_transforms["ensemble_weights"] = {
+                name: 1.0 / len(trained) for name in trained
+            }
+
+        # Return the primary model for interface compatibility
+        if "lgb" in trained:
+            return trained["lgb"]
+        elif "logit" in trained:
+            return trained["logit"]
         return None
 
     def predict_fn(model, X_pred):
-        if model is None:
-            return np.full(len(X_pred), 0.5)
         # Apply the same per-fold transforms used during training
         if _fold_transforms["selector"] is not None:
             try:
@@ -382,7 +502,42 @@ def _run_loyo_validation(
                 return np.full(len(X_pred), 0.5)
         if _fold_transforms["scaler"] is not None:
             X_pred = _fold_transforms["scaler"].transform(X_pred)
+
+        # FIX-STACKING-LEAKAGE: Use the full ensemble with inner-derived
+        # BMA weights, not just a single model
+        ensemble_models = _fold_transforms.get("ensemble_models", {})
+        ensemble_weights = _fold_transforms.get("ensemble_weights", {})
+
+        if ensemble_models and ensemble_weights:
+            weighted_pred = np.zeros(len(X_pred))
+            total_weight = 0.0
+            for name, weight in ensemble_weights.items():
+                if name not in ensemble_models:
+                    continue
+                m = ensemble_models[name]
+                try:
+                    if isinstance(m, LightGBMRanker):
+                        p = m.predict(X_pred)
+                    elif isinstance(m, XGBoostRanker):
+                        p = m.predict(X_pred)
+                    elif hasattr(m, 'predict_probability'):
+                        p = m.predict_probability(X_pred)
+                    else:
+                        p = m.predict_proba(X_pred)[:, 1]
+                    weighted_pred += weight * np.clip(p, 0.01, 0.99)
+                    total_weight += weight
+                except Exception:
+                    continue
+            if total_weight > 0:
+                return weighted_pred / total_weight
+            # Fall through to single-model fallback
+
+        # Fallback: single model prediction
+        if model is None:
+            return np.full(len(X_pred), 0.5)
         if isinstance(model, LightGBMRanker):
+            return model.predict(X_pred)
+        if isinstance(model, XGBoostRanker):
             return model.predict(X_pred)
         return model.predict_proba(X_pred)[:, 1]
 
