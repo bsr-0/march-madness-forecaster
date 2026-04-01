@@ -149,36 +149,37 @@ class TestWpwTeamsToDict:
 
 
 class TestTryHtmlPageIntegration:
-    """Integration test: _try_html_page with mocked HTTP."""
+    """Integration test: _try_html_page is deprecated; JSON extraction works."""
 
-    def test_script_embed_produces_consensus(self, script_embed_html):
+    def test_try_html_page_deprecated_returns_none(self, script_embed_html):
+        """_try_html_page is deprecated and always returns None."""
+        scraper = ESPNPicksScraper()
+        result = scraper._try_html_page(2026)
+        assert result is None
+
+    def test_script_embed_extracted_via_json(self, script_embed_html):
+        """_extract_json_from_html extracts teams from <script> embeds."""
+        scraper = ESPNPicksScraper()
+        teams = scraper._extract_json_from_html(script_embed_html)
+        assert teams is not None
+        assert len(teams) > 0
+        duke_teams = [t for t in teams if "duke" in t.get("name", "").lower()]
+        assert len(duke_teams) >= 1
+        assert duke_teams[0]["champion_pct"] == 22.3
+        assert duke_teams[0]["seed"] == 1
+
+    def test_try_json_url_handles_html_with_embedded_json(self, script_embed_html):
+        """_try_json_url extracts JSON from HTML responses."""
         scraper = ESPNPicksScraper()
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.text = script_embed_html
+        mock_resp.headers = {"content-type": "text/html"}
         mock_resp.raise_for_status = MagicMock()
+        mock_resp.json = MagicMock(side_effect=ValueError("not json"))
 
         with patch.object(scraper.session, "get", return_value=mock_resp):
-            result = scraper._try_html_page(2026)
-
-        assert result is not None
-        assert len(result.teams) > 0
-        # Check Duke is present
-        duke_keys = [k for k in result.teams if "duke" in k.lower()]
-        assert len(duke_keys) >= 1
-        duke = result.teams[duke_keys[0]]
-        assert duke.champion_pct == 22.3
-        assert duke.seed == 1
-
-    def test_table_format_produces_consensus(self, table_html):
-        scraper = ESPNPicksScraper()
-        mock_resp = MagicMock()
-        mock_resp.status_code = 200
-        mock_resp.text = table_html
-        mock_resp.raise_for_status = MagicMock()
-
-        with patch.object(scraper.session, "get", return_value=mock_resp):
-            result = scraper._try_html_page(2026)
+            result = scraper._try_json_url("http://test", 2026, "test")
 
         assert result is not None
         assert len(result.teams) > 0
@@ -207,10 +208,12 @@ class TestTryHtmlPageIntegration:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.text = script_embed_html
+        mock_resp.headers = {"content-type": "text/html"}
         mock_resp.raise_for_status = MagicMock()
+        mock_resp.json = MagicMock(side_effect=ValueError("not json"))
 
         with patch.object(scraper.session, "get", return_value=mock_resp):
-            result = scraper._try_html_page(2026)
+            result = scraper._try_json_url("http://test", 2026, "test")
 
         assert result is not None
         cache_file = tmp_path / "espn_picks_2026.json"
