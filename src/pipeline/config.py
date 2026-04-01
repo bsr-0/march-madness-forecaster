@@ -544,14 +544,6 @@ class SOTAPipelineConfig:
     consistency_bonus_max: float = 0.0  # Disabled by default; experimental only
     consistency_normalizer: float = 15.0  # Typical pace_adjusted_variance range for normalization
 
-    # --- Seeds+ model ---
-    # Replace ML base model with seed-matchup lookup table + residual adjustment.
-    # Base: P(win) from historical seed-vs-seed win rates (27-entry table, 1985-2025).
-    # Adjustment: logit(p) = logit(p_base) + β * seed_em_residual_diff
-    # β is fitted during training via log-loss minimization (single parameter).
-    enable_seed_plus_model: bool = False  # Validated: logistic_7 beats seed_plus (BSS +3.2% vs -3.1%)
-    seed_plus_residual_weight: float = 0.0  # β — fitted during training
-
     # --- Upset detection layer ---
     # Post-ensemble layer that identifies matchups with elevated upset potential
     # using historical seed priors, model residuals, and team-level amplifier
@@ -722,7 +714,7 @@ class SOTAPipelineConfig:
     use_unweighted_brier: bool = True  # Protocol: unweighted Brier for model selection
 
     # --- Protocol v2 required flags ---
-    bma_enabled: bool = True  # Use Bayesian Model Averaging for ensemble (Protocol Section 3.2)
+    bma_enabled: bool = False  # BMA module removed — flag kept for config compatibility
     pit_enforcement: bool = True  # Enforce Point-in-Time validation (Protocol Section 1)
     espn_mode: bool = False  # Enable ESPN bracket optimization pathway (Protocol Section 4)
     simulation_count: int = 10000  # Number of Monte Carlo simulations for ESPN pool eval
@@ -736,14 +728,6 @@ class SOTAPipelineConfig:
     # --- ESPN multi-bracket strategy (Protocol Section 4.5) ---
     espn_n_brackets: int = 3
     espn_risk_profiles: str = "conservative,balanced,aggressive"
-
-    # --- Custom Brier objective (Protocol Section 3.3) ---
-    use_brier_objective: bool = False  # LightGBM custom Brier loss (Phase 4 research)
-
-    # --- Calibration-first pipeline (Phase 4 research) ---
-    enable_calibration_first: bool = False
-    calibration_first_alpha: float = 0.7  # Discrimination vs calibration balance
-    calibration_first_fallback: bool = True  # Auto-fallback if Brier worsens
 
     # --- goto_conversion (favourite-longshot bias correction) ---
     # The goto_conversion method (gotoConversion/goto_conversion on GitHub)
@@ -819,8 +803,6 @@ class SOTAPipelineConfig:
     # Compute budget management (S20)
     compute_budget_seconds: float = 3600.0
     enable_budget_degradation: bool = True
-    # Multi-agent orchestration (S2)
-    use_agent_orchestration: bool = False
 
     def validate_production_profile(self) -> None:
         """Validate production profile constraints.
@@ -860,8 +842,6 @@ class SOTAPipelineConfig:
             violations.append(f"model_complexity={self.model_complexity}")
         if self.mode != "calibration":
             violations.append(f"mode={self.mode}")
-        if self.use_agent_orchestration:
-            violations.append("use_agent_orchestration=True")
         if self.enable_gnn:
             violations.append("enable_gnn=True")
         if self.enable_transformer:

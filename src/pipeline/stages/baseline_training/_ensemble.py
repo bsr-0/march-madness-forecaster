@@ -24,7 +24,6 @@ try:
         SPREAD_MODEL_AVAILABLE,
         TOURNAMENT_SIGMA_AVAILABLE,
         BayesianBradleyTerry,
-        BrierLightGBMTuner,
         EnsembleWeightOptimizer,
         LeaveOneYearOutCV,
         LightGBMTuner,
@@ -37,27 +36,6 @@ try:
     )
 except ImportError:
     pass
-
-# BMA ensemble (Protocol v2, Section 3.2)
-try:
-    from ....ml.ensemble.bma import BayesianModelAveraging, BMAResult
-    BMA_AVAILABLE = True
-except ImportError:
-    BMA_AVAILABLE = False
-
-# Brier-objective LightGBM (Protocol Section 3.3, Phase 4)
-try:
-    from ....ml.ensemble.brier_objective import BrierLightGBMRanker
-    BRIER_LGB_AVAILABLE = True
-except ImportError:
-    BRIER_LGB_AVAILABLE = False
-
-# Calibration-first pipeline (Phase 4 research)
-try:
-    from ....ml.ensemble.calibration_first import CalibrationFirstPipeline
-    CALIBRATION_FIRST_AVAILABLE = True
-except ImportError:
-    CALIBRATION_FIRST_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -336,45 +314,6 @@ def _select_ensemble_and_evaluate(pipeline, trained_models, tuning_stats,
     # ~3 free parameters).  If LOYO improves over fallback, the derived
     # weights replace the fallback.  Otherwise, fallback weights stand.
     ensemble_weight_stats = {}
-
-    # FIX-STACKING-LEAKAGE: BMA weights are now derived from LOYO OOS
-    # predictions instead of the eval set.  This eliminates the critical
-    # contamination pathway where weights optimized on eval_y biased all
-    # downstream metrics.
-    #
-    # Protocol v2, Section 3.2: BMA is the ONLY supported ensemble strategy.
-    _bma_cfg = getattr(pipeline, "config", None)
-    _bma_flag = getattr(_bma_cfg, "bma_enabled", True)
-    _use_bma = BMA_AVAILABLE and _bma_flag and len(trained_models) >= 2
-
-    if _use_bma and len(trained_models) >= 2:
-        # Derive BMA weights from LOYO OOS predictions (not eval set)
-        loyo_bma_stats = _fit_bma_on_loyo(
-            pipeline, trained_models, _loyo_raw_feature_dim, feature_names,
-        )
-        if loyo_bma_stats and loyo_bma_stats.get("optimized_weights"):
-            pipeline.baseline_model.fixed_weights = loyo_bma_stats["optimized_weights"]
-            ensemble_weight_stats = loyo_bma_stats
-            logger.info(
-                "FIX-STACKING-LEAKAGE: BMA weights from LOYO OOS applied: %s",
-                loyo_bma_stats["optimized_weights"],
-            )
-        else:
-            logger.info(
-                "LOYO BMA unavailable (insufficient data). "
-                "Keeping fixed baseline weights."
-            )
-            ensemble_weight_stats = {
-                "method": "fixed_fallback",
-                "weight_source": "fixed",
-                "reason": "loyo_bma_insufficient_data",
-            }
-
-    # FIX-STACKING-LEAKAGE guard: ensure weights were NOT derived from eval set
-    assert ensemble_weight_stats.get("weight_source") != "eval_set", (
-        "BMA weights must not be derived from eval set (data leakage). "
-        "Use _fit_bma_on_loyo() instead."
-    )
 
     # Propagate tournament sigma calibrator to _TrainedBaselineModel so that
     # SpreadRegressor uses tournament-calibrated sigma at inference time.
@@ -901,39 +840,5 @@ def _fit_bma_on_loyo(
     if len(all_oos_labels) < 50:
         return {}
 
-    # Step 3: Fit BMA on pooled OOS predictions
-    oos_y = np.array(all_oos_labels)
-    bma_preds = {}
-    for name in model_names:
-        arr = np.array(all_oos_preds[name])
-        bma_preds[name] = np.clip(arr, 1e-7, 1 - 1e-7)
-
-    if not BMA_AVAILABLE or len(bma_preds) < 2:
-        return {}
-
-    bma = BayesianModelAveraging()
-    bma_result = bma.fit(bma_preds, oos_y)
-
-    if not bma_result.weights:
-        return {}
-
-    logger.info(
-        "FIX-STACKING-LEAKAGE: BMA weights derived from LOYO OOS "
-        "(%d samples, %d years). Weights: %s",
-        len(oos_y), len(valid_years),
-        {k: round(v, 4) for k, v in bma_result.weights.items()},
-    )
-
-    return {
-        "method": "bayesian_model_averaging",
-        "weight_source": "loyo_oos",
-        "optimized_weights": {
-            k: round(v, 4) for k, v in bma_result.weights.items()
-        },
-        "effective_model_count": round(bma_result.effective_model_count, 2),
-        "converged": bma_result.converged,
-        "n_iterations": bma_result.n_iterations,
-        "oos_samples": len(oos_y),
-        "years_used": valid_years,
-    }
+    return {}
 

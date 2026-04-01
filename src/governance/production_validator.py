@@ -33,7 +33,6 @@ REQUIRED_CONFIG_VALUES: Dict[str, Any] = {
     "probability_profile": "production",
     "mode": "calibration",
     "model_complexity": "standard",
-    "use_agent_orchestration": False,
     "enable_gnn": False,
     "enable_transformer": False,
     "enable_embedding_projections": False,
@@ -140,9 +139,10 @@ def validate_2026_production_config(config: SOTAPipelineConfig) -> None:
         violations.append("2025 appears in training_years")
 
     cal_years = getattr(config, "calibration_years", None)
-    if cal_years is not None and list(cal_years) != [2025]:
+    expected_cal = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+    if cal_years is not None and sorted(cal_years) != expected_cal:
         violations.append(
-            f"calibration_years={cal_years} (must be None or [2025] for production)"
+            f"calibration_years={cal_years} (expected {expected_cal})"
         )
 
     for field in ALL_PATH_FIELDS:

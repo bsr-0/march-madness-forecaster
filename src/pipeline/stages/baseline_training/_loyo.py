@@ -6,7 +6,6 @@ import os
 import re
 from datetime import date, timedelta
 
-from ....data.features.feature_selection import FeatureSelector
 from ....ml.ensemble.cfa import (
     LIGHTGBM_AVAILABLE,
     XGBOOST_AVAILABLE,
@@ -33,7 +32,6 @@ try:
         SPREAD_MODEL_AVAILABLE,
         TOURNAMENT_SIGMA_AVAILABLE,
         BayesianBradleyTerry,
-        BrierLightGBMTuner,
         EnsembleWeightOptimizer,
         LeaveOneYearOutCV,
         LightGBMTuner,
@@ -46,27 +44,6 @@ try:
     )
 except ImportError:
     pass
-
-# BMA ensemble (Protocol v2, Section 3.2)
-try:
-    from ....ml.ensemble.bma import BayesianModelAveraging, BMAResult
-    BMA_AVAILABLE = True
-except ImportError:
-    BMA_AVAILABLE = False
-
-# Brier-objective LightGBM (Protocol Section 3.3, Phase 4)
-try:
-    from ....ml.ensemble.brier_objective import BrierLightGBMRanker
-    BRIER_LGB_AVAILABLE = True
-except ImportError:
-    BRIER_LGB_AVAILABLE = False
-
-# Calibration-first pipeline (Phase 4 research)
-try:
-    from ....ml.ensemble.calibration_first import CalibrationFirstPipeline
-    CALIBRATION_FIRST_AVAILABLE = True
-except ImportError:
-    CALIBRATION_FIRST_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -346,21 +323,6 @@ def _run_loyo_validation(
         _fold_transforms["ensemble_models"] = {}
         _fold_transforms["ensemble_weights"] = {}
 
-        # Re-fit feature selector per fold (mirrors production pipeline)
-        if pipeline.config.enable_feature_selection:
-            try:
-                fold_selector = FeatureSelector(
-                    correlation_threshold=pipeline.config.correlation_threshold,
-                    min_features=pipeline.config.min_features,
-                    max_features=pipeline.config.max_features,
-                )
-                fold_selector.fit(X_tr, y_tr, fold_feature_names)
-                X_tr = fold_selector.transform(X_tr)
-                _fold_transforms["selector"] = fold_selector
-                _fold_transforms["selected_names"] = fold_selector.get_selected_names()
-            except Exception as _fs_exc:
-                logger.debug("LOYO fold feature selection failed: %s", _fs_exc)
-
         # Re-fit scaler per fold (mirrors production pipeline)
         if pipeline.config.enable_feature_scaling and SCALER_AVAILABLE:
             fold_scaler = StandardScaler()
@@ -415,72 +377,7 @@ def _run_loyo_validation(
 
         _fold_transforms["ensemble_models"] = trained
 
-        # Derive inner-fold BMA weights via cross-validation within
-        # the training data.  Split training years into inner folds
-        # and use BMA on pooled inner-OOS predictions.
-        if BMA_AVAILABLE and len(trained) >= 2:
-            try:
-                # Use simple 3-fold temporal CV on training data for
-                # inner BMA weight derivation
-                n_tr = len(y_tr)
-                inner_fold_size = n_tr // 3
-                inner_preds = {name: [] for name in trained}
-                inner_outcomes = []
-
-                for i_fold in range(3):
-                    start = i_fold * inner_fold_size
-                    end = (i_fold + 1) * inner_fold_size if i_fold < 2 else n_tr
-                    inner_val_idx = list(range(start, end))
-                    inner_tr_idx = [j for j in range(n_tr) if j not in inner_val_idx]
-
-                    if len(inner_tr_idx) < 20 or len(inner_val_idx) < 10:
-                        continue
-
-                    X_inner_tr = X_tr[inner_tr_idx]
-                    y_inner_tr = y_tr[inner_tr_idx]
-                    X_inner_val = X_tr[inner_val_idx]
-                    y_inner_val = y_tr[inner_val_idx]
-                    w_inner = w_tr[inner_tr_idx] if w_tr is not None else None
-                    m_inner = _margins_tr[inner_tr_idx] if _margins_tr is not None else None
-
-                    for name in trained:
-                        try:
-                            if name == "lgb" and LIGHTGBM_AVAILABLE:
-                                m = LightGBMRanker()
-                                m.train(X_inner_tr, y_inner_tr, num_rounds=200, sample_weight=w_inner)
-                                inner_preds[name].extend(np.clip(m.predict(X_inner_val), 0.01, 0.99).tolist())
-                            elif name == "xgb" and XGBOOST_AVAILABLE:
-                                m = XGBoostRanker()
-                                m.train(X_inner_tr, y_inner_tr, num_rounds=200, sample_weight=w_inner)
-                                inner_preds[name].extend(np.clip(m.predict(X_inner_val), 0.01, 0.99).tolist())
-                            elif name == "logit" and SKLEARN_AVAILABLE:
-                                m = LogisticRegression(C=1.0, max_iter=2000, random_state=pipeline.config.random_seed)
-                                m.fit(X_inner_tr, y_inner_tr, sample_weight=w_inner)
-                                inner_preds[name].extend(np.clip(m.predict_proba(X_inner_val)[:, 1], 0.01, 0.99).tolist())
-                            elif name == "spread" and SPREAD_MODEL_AVAILABLE and m_inner is not None:
-                                m = SpreadRegressor(sigma=pipeline.config.spread_sigma_init)
-                                m.train(X_inner_tr, m_inner, num_rounds=200, sample_weight=w_inner)
-                                inner_preds[name].extend(np.clip(m.predict_probability(X_inner_val), 0.01, 0.99).tolist())
-                        except Exception:
-                            inner_preds[name].extend([0.5] * len(inner_val_idx))
-
-                    inner_outcomes.extend(y_inner_val.tolist())
-
-                if len(inner_outcomes) >= 30:
-                    bma_inner_preds = {
-                        name: np.clip(np.array(vals), 1e-7, 1 - 1e-7)
-                        for name, vals in inner_preds.items()
-                        if len(vals) == len(inner_outcomes)
-                    }
-                    if len(bma_inner_preds) >= 2:
-                        bma = BayesianModelAveraging()
-                        bma_result = bma.fit(bma_inner_preds, np.array(inner_outcomes))
-                        if bma_result.weights:
-                            _fold_transforms["ensemble_weights"] = bma_result.weights
-            except Exception as _bma_exc:
-                logger.debug("Inner BMA failed in LOYO fold: %s", _bma_exc)
-
-        # Fallback: equal weights if BMA unavailable
+        # Equal weights across trained models
         if not _fold_transforms["ensemble_weights"] and trained:
             _fold_transforms["ensemble_weights"] = {
                 name: 1.0 / len(trained) for name in trained
