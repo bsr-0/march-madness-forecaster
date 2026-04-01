@@ -576,7 +576,7 @@ class TestExportForecasts:
                 "calibration": {"method": "temperature", "temperature": 1.1},
                 "baseline_training": {"teams": {"Duke": {}, "UNC": {}}},
                 "pool_recommendation": {"strategy": "upset_heavy"},
-                "simulation": {"num_simulations": 50000},
+                "simulation": {"num_simulations": 10000},
             },
             "bracket_picks": {"champion": "Duke"},
             "ev_analysis": {"ev": 1.5},

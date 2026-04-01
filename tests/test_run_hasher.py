@@ -23,7 +23,7 @@ class _StubConfig:
     """Minimal stub that mirrors SOTAPipelineConfig's data-file fields."""
 
     year: int = 2026
-    num_simulations: int = 50000
+    num_simulations: int = 10000
     random_seed: int = 2026
     teams_json: Optional[str] = None
     torvik_json: Optional[str] = None

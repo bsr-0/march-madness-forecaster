@@ -159,7 +159,7 @@ class TestSimulationResultLeverage:
         """Teams missing from public_odds use floor, leverage is capped."""
         result = AggregatedResults(
             championship_odds={"duke": 0.20, "nobody": 0.05},
-            num_simulations=50000,
+            num_simulations=10000,
         )
         public = {"duke": 0.10}  # nobody missing
 
@@ -179,7 +179,7 @@ class TestSimulationResultLeverage:
         """Leverage ratio never exceeds _MAX_LEVERAGE."""
         result = AggregatedResults(
             championship_odds={"team": 0.90},
-            num_simulations=50000,
+            num_simulations=10000,
         )
         public = {}  # completely missing
 

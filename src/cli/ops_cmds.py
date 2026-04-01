@@ -687,8 +687,8 @@ def register(subparsers):
         help="Run Monte Carlo simulation for championship probabilities",
     )
     conf_parser.add_argument(
-        "--simulations", type=int, default=50000,
-        help="Number of Monte Carlo simulations (default: 50000)",
+        "--simulations", type=int, default=10000,
+        help="Number of Monte Carlo simulations (default: 10000)",
     )
     conf_parser.add_argument(
         "--use-pipeline", action="store_true",

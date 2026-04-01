@@ -17,7 +17,7 @@ class QuantConfig:
     year: int = 2026
     # ESPN pool sizes to optimize for (runs one bracket per size)
     pool_sizes: List[int] = field(default_factory=lambda: [20, 100, 1000])
-    simulations: int = 50000
+    simulations: int = 10000
     calibration_method: str = "isotonic"
     random_seed: int = 42
 
