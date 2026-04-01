@@ -278,12 +278,18 @@ class BacktestHarness:
         """Run pipeline for one held-out year. Falls back to seed baseline on failure."""
         predictions: Dict = {}
         try:
+            # Resolve per-year teams JSON from historical dir
+            teams_json = str(self.historical_dir / f"teams_{year}.json")
+            if not Path(teams_json).exists():
+                teams_json = None
+
             config = PipelineConfig(
                 year=year,
                 multi_year_games_dir=str(self.historical_dir),
                 enable_multi_year_training=True,
                 mode="calibration",
                 kaggle_dir=self.kaggle_dir,
+                teams_json=teams_json,
                 **self.config_overrides,
             )
             pipeline = Pipeline(config)
