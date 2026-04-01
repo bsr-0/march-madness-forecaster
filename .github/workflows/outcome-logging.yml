@@ -1,0 +1,112 @@
+name: Tournament Outcome Logging
+
+on:
+  schedule:
+    # Run twice daily during tournament (mid-afternoon and late night ET)
+    # March 18 - April 8 covers First Four through Championship
+    - cron: "0 20 * 3-4 *"    # 20:00 UTC = 4pm ET
+    - cron: "0 6 * 3-4 *"     # 06:00 UTC = 2am ET (catch late games)
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Tournament year"
+        default: "2026"
+        required: false
+
+concurrency:
+  group: outcome-logging
+  cancel-in-progress: true
+
+jobs:
+  log-outcomes:
+    name: "Scrape Results & Log Outcomes"
+    runs-on: ubuntu-latest
+    # Only run during tournament window (March 18 - April 8) or manual trigger
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' &&
+       (github.event.schedule == '0 20 * 3-4 *' || github.event.schedule == '0 6 * 3-4 *'))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Determine year
+        id: year
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "year=${{ inputs.year }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "year=2026" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Scrape tournament results
+        run: |
+          python -c "
+          import json, sys
+          from pathlib import Path
+          from src.data.scrapers.tournament_results import TournamentResultsScraper
+          from src.data.historical_tournament_results import save_tournament_results, TournamentGame
+
+          year = ${{ steps.year.outputs.year }}
+          scraper = TournamentResultsScraper(cache_dir='data/raw/cache')
+
+          try:
+              games_raw = scraper.scrape_year(year)
+          except Exception as e:
+              print(f'Scrape failed (tournament may not have started or page unavailable): {e}')
+              sys.exit(0)  # Don't fail the workflow
+
+          if not games_raw:
+              print('No games found — tournament may not have started yet.')
+              sys.exit(0)
+
+          # Convert to TournamentGame and save
+          games = [
+              TournamentGame(
+                  year=g['year'], round_name=g['round_name'],
+                  team1_id=g['team1_id'], team2_id=g['team2_id'],
+                  team1_seed=g['team1_seed'], team2_seed=g['team2_seed'],
+                  team1_score=g.get('team1_score', 0),
+                  team2_score=g.get('team2_score', 0),
+                  team1_won=g['team1_won'],
+                  region=g.get('region', ''),
+              )
+              for g in games_raw
+          ]
+          save_tournament_results(games, year)
+          print(f'Saved {len(games)} games to tournament_results_{year}.json')
+          "
+
+      - name: Run outcome logger
+        run: |
+          python scripts/log_tournament_outcomes.py \
+            --predictions data/forecaster_output.json \
+            --format report \
+            --year ${{ steps.year.outputs.year }} \
+            --output artifacts/outcome_log_${{ steps.year.outputs.year }}.json \
+          || echo "Outcome logging skipped (likely no results yet)"
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git add -N artifacts/outcome_log_*.json data/raw/historical/tournament_results_*.json
+          if git diff --quiet HEAD; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add artifacts/outcome_log_*.json data/raw/historical/tournament_results_*.json
+          git commit -m "chore: update tournament outcome log ($(date -u +%Y-%m-%d))"
+          git push

@@ -129,9 +129,12 @@ def test_historical_pipeline_includes_tournament_context_when_available(tmp_path
         "sportsipy",
         [{"team_id": "a", "team_name": "A", "adj_offensive_efficiency": 101.0, "adj_defensive_efficiency": 99.0, "adj_tempo": 68.0}],
     )
-    pipeline.tournament_seed_scraper.fetch_tournament_seeds = lambda season: [
-        {"season": season, "team_name": "A", "team_id": "a", "seed": 1, "region": "East", "school_slug": "a"}
-    ]
+    pipeline._collect_tournament_context = lambda season: (
+        {"season": season, "teams": [
+            {"season": season, "team_name": "A", "team_id": "a", "seed": 1, "region": "East", "school_slug": "a"}
+        ]},
+        "test_mock",
+    )
 
     with patch("src.data.ingestion.validators.validate_season_quality", return_value=[]):
         manifest = pipeline.run()

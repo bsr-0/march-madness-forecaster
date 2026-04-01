@@ -50,7 +50,7 @@ class SportsReferenceScraper:
         *,
         game_records: Optional[List[Dict]] = None,
     ) -> List[Dict]:
-        """Fetch team stats, optionally enriching with game-level def_rtg.
+        """Fetch team stats, trying Torvik API first, SR HTML as fallback.
 
         Args:
             year: Season year (e.g. 2025 for 2024-25).
@@ -76,6 +76,66 @@ class SportsReferenceScraper:
                     len(self._REQUIRED_FIELDS),
                 )
 
+        # --- Primary: Torvik API (structured JSON, no HTML parsing) ---
+        teams = self._fetch_from_torvik(year)
+        if teams and len(teams) >= 100:
+            logger.info(
+                "Using Torvik data as primary source for %d (%d teams)",
+                year, len(teams),
+            )
+            self._save_cache(cache_name, {"teams": teams, "cache_version": self._CACHE_VERSION})
+            return teams
+
+        # --- Fallback: Sports Reference HTML scraping ---
+        logger.info(
+            "Torvik returned %d teams; falling back to Sports Reference HTML for %d",
+            len(teams) if teams else 0, year,
+        )
+        teams = self._fetch_from_sr_html(year, game_records=game_records)
+        if teams:
+            self._save_cache(cache_name, {"teams": teams, "cache_version": self._CACHE_VERSION})
+        return teams
+
+    def _fetch_from_torvik(self, year: int) -> List[Dict]:
+        """Try to get team stats from Torvik (structured API, no fragile HTML).
+
+        Converts Torvik data to the same dict format as SR HTML output
+        so callers don't need to change.
+        """
+        try:
+            from .torvik import BartTorvikScraper
+
+            torvik = BartTorvikScraper(
+                cache_dir=str(self.cache_dir) if self.cache_dir else None,
+            )
+            torvik_teams = torvik.fetch_current_rankings(year)
+            if not torvik_teams or len(torvik_teams) < 100:
+                return []
+
+            teams = []
+            for t in torvik_teams:
+                teams.append({
+                    "team_name": t.name,
+                    "pace": t.adj_tempo if t.adj_tempo > 0 else 0.0,
+                    "off_rtg": t.adj_offensive_efficiency if t.adj_offensive_efficiency > 0 else 0.0,
+                    "def_rtg": t.adj_defensive_efficiency if t.adj_defensive_efficiency > 0 else 0.0,
+                    "wins": t.wins,
+                    "losses": t.losses,
+                    "srs": 0.0,  # Not available from Torvik; downstream handles zeros
+                    "sos": 0.0,  # Not available from Torvik; downstream handles zeros
+                })
+            return teams
+        except Exception as exc:
+            logger.info("Torvik data unavailable for %d: %s", year, exc)
+            return []
+
+    def _fetch_from_sr_html(
+        self,
+        year: int,
+        *,
+        game_records: Optional[List[Dict]] = None,
+    ) -> List[Dict]:
+        """Fetch team stats from Sports Reference HTML (legacy fallback)."""
         # Advanced table contains pace/off/def ratings and is stable across seasons.
         url = f"{self.BASE_URL}/{year}-advanced-school-stats.html"
         try:
@@ -127,7 +187,6 @@ class SportsReferenceScraper:
                     if tid in basic_def_rtg:
                         team["def_rtg"] = basic_def_rtg[tid]
 
-        self._save_cache(cache_name, {"teams": teams, "cache_version": self._CACHE_VERSION})
         return teams
 
     def _parse_team_table(self, html: str) -> List[Dict]:
