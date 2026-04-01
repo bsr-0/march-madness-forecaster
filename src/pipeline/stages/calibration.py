@@ -757,6 +757,16 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         except Exception as e:
             logger.warning("goto_conversion fitting failed: %s", e)
 
+    # Compute uncertainty band: 95% CI half-width on score estimates
+    # Uses worst-case binomial SE: 1.96 * sqrt(0.25 / N)
+    _n_cal = max(len(probs), 1)
+    _uncertainty_band = round(1.96 * (0.25 / _n_cal) ** 0.5, 4)
+    _uncertainty_level = (
+        "high" if _uncertainty_band >= 0.10
+        else "moderate" if _uncertainty_band >= 0.05
+        else "low"
+    )
+
     calibration_info = {
         "method": effective_calibration_method,
         "requested_method": pipeline.config.calibration_method,
@@ -766,6 +776,14 @@ def _fit_calibration(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
         "fit_years": pipeline.config.resolve_calibration_years(),
         "nested_calibration": _nested_mode,
         "tournament_games_filtered": len(unique_games) - len(regular_season_games),
+        "uncertainty_band": _uncertainty_band,
+        "uncertainty_level": _uncertainty_level,
+        "uncertainty_note": (
+            f"Scores fitted on {len(probs)} calibration games carry "
+            f"\u00b1{_uncertainty_band:.2f} uncertainty (95% CI). "
+            f"Differences below {2 * _uncertainty_band:.2f} between matchups "
+            f"are not statistically meaningful."
+        ),
         "brier_before": float(pre_metrics.brier_score),
         "brier_after": brier_after,
         "brier_after_insample": float(insample_metrics.brier_score),
