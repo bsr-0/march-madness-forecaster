@@ -1,0 +1,62 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"additionalContext\":\"Superpowers skills are available in .claude/skills/. Use them for: systematic-debugging (bug investigation), test-driven-development (TDD workflow), writing-plans (implementation planning), executing-plans (plan execution), verification-before-completion (verify before claiming done), dispatching-parallel-agents (parallel sub-agent work), brainstorming (design before code), subagent-driven-development (delegate to sub-agents), using-git-worktrees (isolated workspaces), requesting-code-review (dispatch reviewer), receiving-code-review (handle feedback), finishing-a-development-branch (wrap up work), code-reviewer (senior review agent). This is a Python ML project using pytest, ruff linter, and no type-checker. Verification commands: pytest, ruff check src/.\"}}'",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath // empty' | { read -r f; if echo \"$f\" | grep -qE '\\.py$'; then cd /home/user/march-madness-forecaster && ruff check --fix --quiet \"$f\" 2>/dev/null && ruff format --quiet \"$f\" 2>/dev/null; fi; } || true",
+            "timeout": 30000
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command // empty' | { read -r cmd; if echo \"$cmd\" | grep -qE '(rm\\s+-rf|git\\s+push\\s+--force|git\\s+reset\\s+--hard)'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Destructive command blocked. Use a safer alternative or get explicit approval.\"}}'; fi; } || true",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | { read -r f; if echo \"$f\" | grep -qE '(\\.env$|\\.secret|credentials|api_key)'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Writing to secrets/credentials files is blocked. Store secrets in environment variables.\"}}'; fi; } || true",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /home/user/march-madness-forecaster && issues=$(ruff check src/ --quiet 2>&1 | head -10) && if [ -n \"$issues\" ]; then echo \"{\\\"hookSpecificOutput\\\":{\\\"additionalContext\\\":\\\"WARNING: ruff found lint issues:\\n$issues\\\"}}\"; fi || true",
+            "timeout": 15000
+          }
+        ]
+      }
+    ]
+  }
+}

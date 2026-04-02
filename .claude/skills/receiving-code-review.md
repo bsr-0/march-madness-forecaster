@@ -55,13 +55,13 @@ Push back when:
 ## Acknowledging Correct Feedback
 
 ```
-✅ "Fixed. [Brief description of what changed]"
-✅ "Good catch - [specific issue]. Fixed in [location]."
-✅ [Just fix it and show in the code]
+OK: "Fixed. [Brief description of what changed]"
+OK: "Good catch - [specific issue]. Fixed in [location]."
+OK: [Just fix it and show in the code]
 
-❌ "You're absolutely right!"
-❌ "Great point!"
-❌ ANY performative agreement
+BAD: "You're absolutely right!"
+BAD: "Great point!"
+BAD: ANY performative agreement
 ```
 
 Actions speak. Just fix it.

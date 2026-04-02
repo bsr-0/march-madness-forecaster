@@ -60,10 +60,10 @@ Report location and preserve worktree.
 
 | Option | Merge | Push | Keep Worktree | Cleanup Branch |
 |--------|-------|------|---------------|----------------|
-| 1. Merge locally | ✓ | - | - | ✓ |
-| 2. Create PR | - | ✓ | ✓ | - |
-| 3. Keep as-is | - | - | ✓ | - |
-| 4. Discard | - | - | - | ✓ (force) |
+| 1. Merge locally | Yes | - | - | Yes |
+| 2. Create PR | - | Yes | Yes | - |
+| 3. Keep as-is | - | - | Yes | - |
+| 4. Discard | - | - | - | Yes (force) |
 
 ## Red Flags
 
