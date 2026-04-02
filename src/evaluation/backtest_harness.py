@@ -278,18 +278,45 @@ class BacktestHarness:
         """Run pipeline for one held-out year. Falls back to seed baseline on failure."""
         predictions: Dict = {}
         try:
-            # Resolve per-year teams JSON from historical dir
-            teams_json = str(self.historical_dir / f"teams_{year}.json")
-            if not Path(teams_json).exists():
-                teams_json = None
+            # Resolve per-year data files from historical dir
+            def _resolve(pattern):
+                p = self.historical_dir / pattern.format(year=year)
+                return str(p) if p.exists() else None
+
+            teams_json = _resolve("teams_{year}.json")
+            torvik_json = _resolve("torvik_{year}.json")
+            roster_json = _resolve("cbbpy_rosters_{year}.json")
+            games_json = _resolve("historical_games_{year}.json")
+
+            # Dev years = full LOYO set minus held-out year and COVID 2020
+            from ..ml.evaluation.loyo_protocol import LOYO_YEARS as _ALL_LOYO
+            all_candidate_years = sorted(set(list(_ALL_LOYO) + self.years))
+            dev_years = [y for y in all_candidate_years if y != year and y != 2020]
 
             config = PipelineConfig(
                 year=year,
                 multi_year_games_dir=str(self.historical_dir),
                 enable_multi_year_training=True,
                 mode="calibration",
+                # Experimental mode relaxes quality gates for backtesting
+                pipeline_mode="experimental",
+                probability_profile="experimental",
+                min_rapm_players_per_team=1,
+                # Disable guards that block historical/stale data
+                enforce_feed_freshness=False,
+                enforce_production_path=False,
+                require_freeze_file=False,
+                enable_loyo_cv=False,
+                # Year splits
+                dev_years=dev_years,
+                holdout_years=[year],
+                calibration_years=[],
+                # Per-year data files
                 kaggle_dir=self.kaggle_dir,
                 teams_json=teams_json,
+                torvik_json=torvik_json,
+                roster_json=roster_json,
+                historical_games_json=games_json,
                 **self.config_overrides,
             )
             pipeline = Pipeline(config)
