@@ -180,15 +180,13 @@ class TestFeatureMatrixReproducible:
         assert not level_b_specific
 
     def test_level_b_mismatched_hash(self, sample_manifest):
-        violations = ManifestGenerator.validate_level_b(
-            sample_manifest, "different_hash_value"
-        )
+        violations = ManifestGenerator.validate_level_b(sample_manifest, "different_hash_value")
         level_b_specific = [v for v in violations if "Level B" in v]
         assert len(level_b_specific) == 1
 
     def test_config_hash_deterministic(self):
         """Same config content produces same hash."""
-        config = {"year": 2026, "random_seed": 42, "model_complexity": "standard"}
+        config = {"year": 2026, "random_seed": 42, "model_complexity": "simple"}
         content = json.dumps(config, sort_keys=True).encode()
         h1 = _sha256_bytes(content)
         h2 = _sha256_bytes(content)
@@ -254,12 +252,14 @@ class TestManifestGenerator:
         manifest = manifest_generator.generate(
             run_id="test_run_001",
             config_hash="abc123",
-            raw_inputs=[{
-                "provider": "cbbpy",
-                "path_or_uri": "data/raw/games.json",
-                "snapshot_timestamp": datetime.now(timezone.utc).isoformat(),
-                "checksum": "def456",
-            }],
+            raw_inputs=[
+                {
+                    "provider": "cbbpy",
+                    "path_or_uri": "data/raw/games.json",
+                    "snapshot_timestamp": datetime.now(timezone.utc).isoformat(),
+                    "checksum": "def456",
+                }
+            ],
             training_data_hash="train_hash_789",
             model_artifact_hash="model_hash_012",
             random_seed=42,
@@ -274,12 +274,14 @@ class TestManifestGenerator:
         manifest = manifest_generator.generate(
             run_id="test_save_001",
             config_hash="abc",
-            raw_inputs=[{
-                "provider": "test",
-                "path_or_uri": "test.json",
-                "snapshot_timestamp": datetime.now(timezone.utc).isoformat(),
-                "checksum": "xyz",
-            }],
+            raw_inputs=[
+                {
+                    "provider": "test",
+                    "path_or_uri": "test.json",
+                    "snapshot_timestamp": datetime.now(timezone.utc).isoformat(),
+                    "checksum": "xyz",
+                }
+            ],
             training_data_hash="th",
             model_artifact_hash="mh",
             random_seed=42,
@@ -303,12 +305,14 @@ class TestManifestGenerator:
         manifest = manifest_generator.generate(
             run_id="git_test",
             config_hash="c",
-            raw_inputs=[{
-                "provider": "p",
-                "path_or_uri": "u",
-                "snapshot_timestamp": datetime.now(timezone.utc).isoformat(),
-                "checksum": "h",
-            }],
+            raw_inputs=[
+                {
+                    "provider": "p",
+                    "path_or_uri": "u",
+                    "snapshot_timestamp": datetime.now(timezone.utc).isoformat(),
+                    "checksum": "h",
+                }
+            ],
             training_data_hash="t",
             model_artifact_hash="m",
             random_seed=1,

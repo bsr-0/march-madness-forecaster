@@ -70,6 +70,7 @@ class TestModelStore:
         @dataclass
         class Cfg:
             lr: float = 0.01
+
         h = ModelStore._hash_config(Cfg())
         assert len(h) == 64
 
@@ -91,11 +92,14 @@ class TestModelStore:
     def test_save_without_joblib(self, tmp_path):
         store = ModelStore(store_dir=str(tmp_path / "store"))
         import builtins
+
         real_import = builtins.__import__
+
         def fake_import(name, *args, **kwargs):
             if name == "joblib":
                 raise ImportError("no joblib")
             return real_import(name, *args, **kwargs)
+
         with patch("builtins.__import__", side_effect=fake_import):
             version = store.save("no_joblib_model", object())
         assert version.artifact_path == ""
@@ -270,7 +274,12 @@ class TestDeploymentOrchestrator:
         store = MagicMock()
         shadow = MagicMock()
         drift = MagicMock()
-        return DeploymentOrchestrator(model_store=store, shadow_runner=shadow, drift_manager=drift), store, shadow, drift
+        return (
+            DeploymentOrchestrator(model_store=store, shadow_runner=shadow, drift_manager=drift),
+            store,
+            shadow,
+            drift,
+        )
 
     def test_deploy_shadow_not_found(self):
         orch, store, _, _ = self._make_orchestrator()
@@ -703,8 +712,11 @@ class TestGovernanceGate:
         ]
         approval_gate = MagicMock()
         req = ApprovalRequest(
-            request_id="abc", action="submit", requester="user",
-            risk_level="critical", timestamp="2026-03-16T12:00:00+00:00",
+            request_id="abc",
+            action="submit",
+            requester="user",
+            risk_level="critical",
+            timestamp="2026-03-16T12:00:00+00:00",
         )
         approval_gate.pending_requests.return_value = [req]
         gate = GovernanceGate(authority_matrix=matrix, approval_gate=approval_gate)
@@ -736,15 +748,23 @@ class TestProductionValidator:
         # Create required dirs and files
         for d in ["multi_year_games", "kaggle", "external_ratings"]:
             (tmp_path / d).mkdir(exist_ok=True)
-        for f in ["teams.json", "torvik.json", "historical.json", "roster.json",
-                   "picks.json", "scoring.json", "mc_cal.json", "freeze.json"]:
+        for f in [
+            "teams.json",
+            "torvik.json",
+            "historical.json",
+            "roster.json",
+            "picks.json",
+            "scoring.json",
+            "mc_cal.json",
+            "freeze.json",
+        ]:
             (tmp_path / f).write_text("{}")
 
         cfg = SOTAPipelineConfig(
             year=2026,
             probability_profile="production",
             mode="calibration",
-            model_complexity="standard",
+            model_complexity="simple",
             enable_gnn=False,
             enable_transformer=False,
             enable_embedding_projections=False,
@@ -937,7 +957,9 @@ class TestManifestGenerator:
         manifest = gen.generate(
             run_id="test_run",
             config_hash="abc123",
-            raw_inputs=[{"provider": "kenpom", "path_or_uri": "/data", "snapshot_timestamp": "2026-01-01", "checksum": "xxx"}],
+            raw_inputs=[
+                {"provider": "kenpom", "path_or_uri": "/data", "snapshot_timestamp": "2026-01-01", "checksum": "xxx"}
+            ],
             training_data_hash="def456",
             model_artifact_hash="ghi789",
             random_seed=42,
@@ -1061,7 +1083,9 @@ class TestPossession:
         assert p.actual_points == 0
 
     def test_xp_differential(self):
-        p = Possession(possession_id="p1", game_id="g1", team_id="t1", period=1, game_clock=1200.0, xp=1.0, actual_points=2)
+        p = Possession(
+            possession_id="p1", game_id="g1", team_id="t1", period=1, game_clock=1200.0, xp=1.0, actual_points=2
+        )
         assert p.xp_differential == 1.0
 
     def test_calculate_xp_rim(self):
@@ -1091,14 +1115,12 @@ class TestGameFlow:
         assert gf.lead_changes == 0
 
     def test_lead_changes(self):
-        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2",
-                       lead_history=[1, 2, -1, -3, 2, -1])
+        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2", lead_history=[1, 2, -1, -3, 2, -1])
         changes = gf.lead_changes
         assert changes >= 2  # At least team1->team2 and team2->team1
 
     def test_lead_changes_cached(self):
-        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2",
-                       lead_history=[5, -5, 5])
+        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2", lead_history=[5, -5, 5])
         _ = gf.lead_changes
         # Second call uses cached value
         assert gf.lead_changes == gf._lead_changes
@@ -1108,8 +1130,7 @@ class TestGameFlow:
         assert gf.lead_volatility == 0.0
 
     def test_lead_volatility(self):
-        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2",
-                       lead_history=[10, -10, 10, -10])
+        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2", lead_history=[10, -10, 10, -10])
         assert gf.lead_volatility > 0.0
 
     def test_entropy_empty(self):
@@ -1118,25 +1139,21 @@ class TestGameFlow:
 
     def test_entropy_one_sided(self):
         # All blowout ahead — single bucket, entropy = 0
-        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2",
-                       lead_history=[20, 22, 25, 30])
+        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2", lead_history=[20, 22, 25, 30])
         assert gf.entropy == 0.0
 
     def test_entropy_diverse(self):
         # Spread across multiple buckets
-        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2",
-                       lead_history=[-20, -10, -3, 0, 3, 10, 20])
+        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2", lead_history=[-20, -10, -3, 0, 3, 10, 20])
         assert gf.entropy > 0.0
 
     def test_comeback_factor_short(self):
-        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2",
-                       lead_history=[5])
+        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2", lead_history=[5])
         assert gf.comeback_factor == 0.0
 
     def test_comeback_factor(self):
         # Team goes behind by 6, then comes back to lead
-        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2",
-                       lead_history=[-6, -7, -3, 1, 5, -6, 2])
+        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2", lead_history=[-6, -7, -3, 1, 5, -6, 2])
         assert gf.comeback_factor > 0.0
 
     def test_get_xp_margin(self):
@@ -1147,8 +1164,7 @@ class TestGameFlow:
 
     def test_get_luck_factor(self):
         p1 = Possession(possession_id="p1", game_id="g1", team_id="t1", period=1, game_clock=1200.0, xp=1.0)
-        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2",
-                       possessions=[p1], lead_history=[5])
+        gf = GameFlow(game_id="g1", team1_id="t1", team2_id="t2", possessions=[p1], lead_history=[5])
         luck = gf.get_luck_factor()
         assert luck == pytest.approx(5 - 1.0)
 
@@ -1168,21 +1184,37 @@ class TestFourFactors:
         assert rating > 0
 
     def test_defensive_rating(self):
-        ff = FourFactors(opp_effective_fg_pct=0.45, opp_turnover_rate=0.2, defensive_reb_rate=0.7, opp_free_throw_rate=0.3)
+        ff = FourFactors(
+            opp_effective_fg_pct=0.45, opp_turnover_rate=0.2, defensive_reb_rate=0.7, opp_free_throw_rate=0.3
+        )
         rating = ff.defensive_rating
         assert rating > 0
 
     def test_net_rating(self):
         ff = FourFactors(
-            effective_fg_pct=0.5, turnover_rate=0.15, offensive_reb_rate=0.3, free_throw_rate=0.25,
-            opp_effective_fg_pct=0.45, opp_turnover_rate=0.2, defensive_reb_rate=0.7, opp_free_throw_rate=0.3,
+            effective_fg_pct=0.5,
+            turnover_rate=0.15,
+            offensive_reb_rate=0.3,
+            free_throw_rate=0.25,
+            opp_effective_fg_pct=0.45,
+            opp_turnover_rate=0.2,
+            defensive_reb_rate=0.7,
+            opp_free_throw_rate=0.3,
         )
         # Just verify it's a float
         assert isinstance(ff.net_rating, float)
 
     def test_to_vector(self):
-        ff = FourFactors(effective_fg_pct=0.5, turnover_rate=0.15, offensive_reb_rate=0.3, free_throw_rate=0.25,
-                         opp_effective_fg_pct=0.45, opp_turnover_rate=0.2, defensive_reb_rate=0.7, opp_free_throw_rate=0.3)
+        ff = FourFactors(
+            effective_fg_pct=0.5,
+            turnover_rate=0.15,
+            offensive_reb_rate=0.3,
+            free_throw_rate=0.25,
+            opp_effective_fg_pct=0.45,
+            opp_turnover_rate=0.2,
+            defensive_reb_rate=0.7,
+            opp_free_throw_rate=0.3,
+        )
         vec = ff.to_vector()
         assert len(vec) == 8
         assert vec[0] == 0.5
@@ -1239,12 +1271,16 @@ class TestDataLoader:
 
     def test_load_matchups(self, tmp_path):
         matchups_file = tmp_path / "matchups.json"
-        matchups_file.write_text(json.dumps({
-            "matchups": [
-                {"team1": "Duke", "team2": "UNC", "round": 1, "game_id": 1},
-                {"team1": "Kansas", "team2": "Kentucky", "round": 2, "game_id": 2},
-            ]
-        }))
+        matchups_file.write_text(
+            json.dumps(
+                {
+                    "matchups": [
+                        {"team1": "Duke", "team2": "UNC", "round": 1, "game_id": 1},
+                        {"team1": "Kansas", "team2": "Kentucky", "round": 2, "game_id": 2},
+                    ]
+                }
+            )
+        )
         matchups = DataLoader.load_matchups(str(matchups_file))
         assert len(matchups) == 2
         assert matchups[0] == ("Duke", "UNC", 1, 1)
