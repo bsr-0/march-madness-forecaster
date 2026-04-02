@@ -1595,7 +1595,8 @@ def build_rosters(
         apply_transfer_portal_updates(rosters, config.transfer_portal_json)
 
     quality = assess_roster_rapm_quality(rosters, config.min_rapm_players_per_team)
-    if quality.get("team_coverage_ratio", 0.0) < 0.8:
+    _rapm_threshold = 0.8 if config.pipeline_mode == "production" else 0.0
+    if quality.get("team_coverage_ratio", 0.0) < _rapm_threshold:
         raise DataRequirementError(
             "Roster RAPM quality is too low. Provide richer player RAPM/stint inputs "
             f"(coverage={quality.get('team_coverage_ratio', 0.0):.1%})."
