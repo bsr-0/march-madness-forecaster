@@ -13,7 +13,6 @@ from src.data.scrapers.betting_markets import (
     remove_vig,
     compute_market_consensus,
     blend_with_model,
-    FanDuelScraper,
 )
 
 
@@ -293,16 +292,26 @@ class TestTheOddsAPIScraper:
                     {
                         "key": "book1",
                         "title": "Book1",
-                        "markets": [{"key": "outrights", "outcomes": [
-                            {"name": "Duke Blue Devils", "price": 500},
-                        ]}],
+                        "markets": [
+                            {
+                                "key": "outrights",
+                                "outcomes": [
+                                    {"name": "Duke Blue Devils", "price": 500},
+                                ],
+                            }
+                        ],
                     },
                     {
                         "key": "book2",
                         "title": "Book2",
-                        "markets": [{"key": "outrights", "outcomes": [
-                            {"name": "Duke Blue Devils", "price": 400},
-                        ]}],
+                        "markets": [
+                            {
+                                "key": "outrights",
+                                "outcomes": [
+                                    {"name": "Duke Blue Devils", "price": 400},
+                                ],
+                            }
+                        ],
                     },
                 ],
             }
@@ -339,42 +348,3 @@ class TestTheOddsAPIScraper:
             assert result["duke"].implied_probability == 0.167
         finally:
             os.unlink(tmppath)
-
-
-class TestFanDuelScraper:
-    def test_load_from_json(self):
-        data = {
-            "source": "fanduel",
-            "season": 2026,
-            "timestamp": "2026-03-17",
-            "teams": {
-                "duke": {
-                    "team_name": "Duke",
-                    "championship_odds": 500,
-                    "implied_probability": 0.167,
-                },
-                "unc": {
-                    "team_name": "UNC",
-                    "championship_odds": 1000,
-                },
-            },
-        }
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump(data, f)
-            tmppath = f.name
-
-        try:
-            scraper = FanDuelScraper()
-            result = scraper.load_from_json(tmppath)
-            assert "duke" in result
-            assert result["duke"].implied_probability == 0.167
-            assert result["duke"].source == "fanduel"
-            # UNC should have auto-computed probability
-            assert result["unc"].implied_probability > 0
-        finally:
-            os.unlink(tmppath)
-
-    def test_load_missing_file(self):
-        scraper = FanDuelScraper()
-        result = scraper.load_from_json("/nonexistent/path.json")
-        assert result == {}

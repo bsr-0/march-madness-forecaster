@@ -21,12 +21,12 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PublicPicks:
     """Public pick percentages for a team."""
-    
+
     team_id: str
     team_name: str
     seed: int
     region: str
-    
+
     # Pick percentages by round
     round_of_64_pct: float = 0.0  # % picked to win first game
     round_of_32_pct: float = 0.0  # % picked to reach Sweet 16
@@ -34,7 +34,7 @@ class PublicPicks:
     elite_8_pct: float = 0.0  # % picked to reach Final Four
     final_four_pct: float = 0.0  # % picked to reach Championship
     champion_pct: float = 0.0  # % picked to win tournament
-    
+
     @property
     def as_dict(self) -> Dict[str, float]:
         """Return pick percentages as dictionary."""
@@ -51,54 +51,41 @@ class PublicPicks:
 @dataclass
 class ConsensusData:
     """Aggregated consensus data from multiple sources."""
-    
+
     teams: Dict[str, PublicPicks] = field(default_factory=dict)
     sources: List[str] = field(default_factory=list)
     timestamp: Optional[str] = None
-    
+
     def get_champion_favorites(self, top_n: int = 10) -> List[PublicPicks]:
         """Get top N teams by championship pick percentage."""
-        sorted_teams = sorted(
-            self.teams.values(),
-            key=lambda t: t.champion_pct,
-            reverse=True
-        )
+        sorted_teams = sorted(self.teams.values(), key=lambda t: t.champion_pct, reverse=True)
         return sorted_teams[:top_n]
-    
-    def get_contrarian_picks(
-        self, 
-        model_probs: Dict[str, float],
-        min_leverage: float = 2.0
-    ) -> List[tuple]:
+
+    def get_contrarian_picks(self, model_probs: Dict[str, float], min_leverage: float = 2.0) -> List[tuple]:
         """
         Find teams where model probability exceeds public percentage.
-        
+
         Args:
             model_probs: Dict of team_id -> model championship probability
             min_leverage: Minimum leverage ratio to include
-            
+
         Returns:
             List of (team_id, model_prob, public_pct, leverage) tuples
         """
         contrarian = []
-        
+
         for team_id, model_prob in model_probs.items():
             if team_id not in self.teams:
                 continue
-            
+
             public_pct = self.teams[team_id].champion_pct
-            
+
             if public_pct > 0:
                 leverage = model_prob / public_pct
-                
+
                 if leverage >= min_leverage:
-                    contrarian.append((
-                        team_id,
-                        model_prob,
-                        public_pct,
-                        leverage
-                    ))
-        
+                    contrarian.append((team_id, model_prob, public_pct, leverage))
+
         # Sort by leverage
         contrarian.sort(key=lambda x: x[3], reverse=True)
         return contrarian
@@ -134,18 +121,16 @@ class ESPNPicksScraper:
     _GAMBIT_URL = "https://gambit-api.fantasy.espn.com/apis/v1/challenges/tournament-challenge-bracket-{year}"
     _WPW_URL = "https://fantasy.espn.com/tournament-challenge-bracket/{year}/en/whopickedwhom"
     _PEOPLES_URL = "https://fantasy.espn.com/games/tournament-challenge-bracket-{year}/peoplesbracket"
-    
+
     def __init__(self, cache_dir: Optional[str] = None):
         """Initialize scraper."""
         self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
-        })
+        self.session.headers.update({"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"})
         self.cache_dir = Path(cache_dir) if cache_dir else None
-        
+
         if self.cache_dir:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
-    
+
     def fetch_picks(self, year: int = 2026) -> ConsensusData:
         """
         Fetch public pick percentages from ESPN.
@@ -254,11 +239,11 @@ class ESPNPicksScraper:
             return teams
 
         return None
-    
+
     def load_from_json(self, filepath: str) -> ConsensusData:
         """
         Load pick data from JSON file.
-        
+
         Expected format:
         {
             "teams": {
@@ -275,11 +260,11 @@ class ESPNPicksScraper:
             "timestamp": "2026-03-17T12:00:00Z"
         }
         """
-        with open(filepath, 'r') as f:
+        with open(filepath, "r") as f:
             data = json.load(f)
-        
+
         return self._dict_to_consensus(data)
-    
+
     def _dict_to_consensus(self, data: dict) -> ConsensusData:
         """Convert dictionary to ConsensusData with fail-closed schema validation.
 
@@ -299,7 +284,8 @@ class ESPNPicksScraper:
             validated = validate_consensus_data(data)
         except SchemaValidationError as exc:
             logger.error(
-                "ESPN picks schema validation FAILED — rejecting payload: %s", exc,
+                "ESPN picks schema validation FAILED — rejecting payload: %s",
+                exc,
             )
             return ConsensusData(sources=data.get("sources", []))
 
@@ -310,7 +296,8 @@ class ESPNPicksScraper:
                 logger.warning("Bracket structure: %s", w)
         except BracketStructureError as exc:
             logger.error(
-                "Bracket structure validation FAILED — rejecting payload: %s", exc,
+                "Bracket structure validation FAILED — rejecting payload: %s",
+                exc,
             )
             return ConsensusData(sources=data.get("sources", []))
 
@@ -334,14 +321,16 @@ class ESPNPicksScraper:
             sources=validated.get("sources", []),
             timestamp=validated.get("timestamp"),
         )
-    
+
     # Maximum age (in seconds) before cached picks are considered stale.
     # Default 7 days — pick distributions shift meaningfully over a week
     # during March, but a week-old cache is better than no data at all.
     CACHE_MAX_AGE_SECONDS = 7 * 24 * 3600
 
     def _load_from_cache(
-        self, filename: str, max_age_seconds: Optional[int] = None,
+        self,
+        filename: str,
+        max_age_seconds: Optional[int] = None,
     ) -> Optional[dict]:
         """Load from cache, rejecting stale files.
 
@@ -367,39 +356,31 @@ class ESPNPicksScraper:
         if age > max_age_seconds:
             logger.warning(
                 "Cache file %s is %.1f days old (max %.1f days). Ignoring stale cache.",
-                cache_path, age / 86400, max_age_seconds / 86400,
+                cache_path,
+                age / 86400,
+                max_age_seconds / 86400,
             )
             return None
 
         with open(cache_path, "r") as f:
             return json.load(f)
 
-    def _try_html_page(self, year: int) -> Optional[ConsensusData]:
-        """Deprecated: HTML scraping removed due to fragile CSS selectors.
-
-        The HTML parsing relied on hardcoded CSS classes (``team-row``,
-        ``seed``, ``team-name``, ``pct``), ``__NEXT_DATA__`` script IDs,
-        and recursive JSON extraction from ``<script>`` tags — all of
-        which break when ESPN updates their page layout.
-
-        Use ``_try_json_url`` with ``ESPN_PUBLIC_PICKS_URL`` env var
-        or the built-in ESPN API endpoints instead.
-        """
-        logger.debug(
-            "HTML scraping is deprecated; use ESPN_PUBLIC_PICKS_URL env var "
-            "or provide a JSON file via --public-picks"
-        )
-        return None
-
     # Round key mapping: ESPN uses numeric keys "1"-"6"; we use round names.
     _ROUND_KEYS = {
-        "1": "round_of_64_pct", "2": "round_of_32_pct",
-        "3": "sweet_16_pct", "4": "elite_8_pct",
-        "5": "final_four_pct", "6": "champion_pct",
+        "1": "round_of_64_pct",
+        "2": "round_of_32_pct",
+        "3": "sweet_16_pct",
+        "4": "elite_8_pct",
+        "5": "final_four_pct",
+        "6": "champion_pct",
     }
     _ROUND_NAMES_ORDERED = [
-        "round_of_64_pct", "round_of_32_pct", "sweet_16_pct",
-        "elite_8_pct", "final_four_pct", "champion_pct",
+        "round_of_64_pct",
+        "round_of_32_pct",
+        "sweet_16_pct",
+        "elite_8_pct",
+        "final_four_pct",
+        "champion_pct",
     ]
 
     @staticmethod
@@ -446,12 +427,7 @@ class ESPNPicksScraper:
         except (json.JSONDecodeError, TypeError):
             return None
         # Navigate: props.pageProps.picks.teams
-        teams_raw = (
-            data.get("props", {})
-            .get("pageProps", {})
-            .get("picks", {})
-            .get("teams", [])
-        )
+        teams_raw = data.get("props", {}).get("pageProps", {}).get("picks", {}).get("teams", [])
         if not teams_raw:
             return None
         return ESPNPicksScraper._normalize_team_list(teams_raw)
@@ -482,10 +458,7 @@ class ESPNPicksScraper:
             return None
         if isinstance(obj, list) and len(obj) >= 4:
             # Check if this looks like a list of team objects
-            if all(
-                isinstance(item, dict) and "rounds" in item and "name" in item
-                for item in obj[:4]
-            ):
+            if all(isinstance(item, dict) and "rounds" in item and "name" in item for item in obj[:4]):
                 return ESPNPicksScraper._normalize_team_list(obj)
         if isinstance(obj, dict):
             for key, val in obj.items():
@@ -599,7 +572,7 @@ class YahooPicksScraper:
         self.cache_dir = Path(cache_dir) if cache_dir else None
         if self.cache_dir:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
-    
+
     def fetch_picks(self, year: int = 2026) -> ConsensusData:
         """Fetch picks from Yahoo."""
         cache_name = f"yahoo_picks_{year}.json"
@@ -638,7 +611,9 @@ class YahooPicksScraper:
         age = time.time() - p.stat().st_mtime
         if age > self.CACHE_MAX_AGE_SECONDS:
             logger.warning(
-                "Cache file %s is %.1f days old. Ignoring stale cache.", p, age / 86400,
+                "Cache file %s is %.1f days old. Ignoring stale cache.",
+                p,
+                age / 86400,
             )
             return None
         with open(p, "r") as f:
@@ -672,7 +647,7 @@ class CBSPicksScraper:
         self.cache_dir = Path(cache_dir) if cache_dir else None
         if self.cache_dir:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
-    
+
     def fetch_picks(self, year: int = 2026) -> ConsensusData:
         """Fetch picks from CBS."""
         cache_name = f"cbs_picks_{year}.json"
@@ -711,7 +686,9 @@ class CBSPicksScraper:
         age = time.time() - p.stat().st_mtime
         if age > self.CACHE_MAX_AGE_SECONDS:
             logger.warning(
-                "Cache file %s is %.1f days old. Ignoring stale cache.", p, age / 86400,
+                "Cache file %s is %.1f days old. Ignoring stale cache.",
+                p,
+                age / 86400,
             )
             return None
         with open(p, "r") as f:
@@ -777,9 +754,7 @@ def validate_consensus_plausibility(
 
     n_teams = len(consensus.teams)
     if n_teams < min_teams:
-        warnings.append(
-            f"Only {n_teams} teams in consensus (expected ≥{min_teams})."
-        )
+        warnings.append(f"Only {n_teams} teams in consensus (expected ≥{min_teams}).")
 
     champ_pcts = {tid: t.champion_pct for tid, t in consensus.teams.items()}
     champ_sum = sum(champ_pcts.values())
@@ -795,31 +770,23 @@ def validate_consensus_plausibility(
     # Sum plausibility.
     if champ_sum < min_champ_sum:
         warnings.append(
-            f"Championship picks sum to {champ_sum:.1f}% "
-            f"(expected ≥{min_champ_sum}%). Distribution looks deflated."
+            f"Championship picks sum to {champ_sum:.1f}% (expected ≥{min_champ_sum}%). Distribution looks deflated."
         )
     elif champ_sum > max_champ_sum:
         warnings.append(
-            f"Championship picks sum to {champ_sum:.1f}% "
-            f"(expected ≤{max_champ_sum}%). Distribution looks inflated."
+            f"Championship picks sum to {champ_sum:.1f}% (expected ≤{max_champ_sum}%). Distribution looks inflated."
         )
 
     # Top-seed sanity: seeds 1-4 should have nonzero championship picks.
     for tid, team in consensus.teams.items():
         if team.seed <= 4 and team.champion_pct <= 0.0:
-            warnings.append(
-                f"{tid} (seed {team.seed}) has 0% championship picks — "
-                "likely missing data."
-            )
+            warnings.append(f"{tid} (seed {team.seed}) has 0% championship picks — likely missing data.")
 
     return warnings
 
 
 def aggregate_consensus(
-    espn: ConsensusData,
-    yahoo: ConsensusData,
-    cbs: ConsensusData,
-    weights: Dict[str, float] = None
+    espn: ConsensusData, yahoo: ConsensusData, cbs: ConsensusData, weights: Dict[str, float] = None
 ) -> ConsensusData:
     """
     Aggregate pick percentages from multiple sources.
@@ -891,31 +858,28 @@ def aggregate_consensus(
                 team_name=team_info.team_name,
                 seed=team_info.seed,
                 region=team_info.region,
-                **weighted_picks
+                **weighted_picks,
             )
-    
+
     # Coverage-bias detection: flag teams present in only one source.
     # A team that only appeared in one source gets 100% of that source's
     # weight, unmoderated by other sources.  This introduces systematic
     # bias — the single source's noise is fully reflected in the consensus.
     n_active = sum(1 for s in [espn, yahoo, cbs] if s.teams)
     if n_active >= 2:
-        single_source_teams = [
-            norm_id for norm_id, entries in norm_map.items()
-            if len(entries) == 1
-        ]
+        single_source_teams = [norm_id for norm_id, entries in norm_map.items() if len(entries) == 1]
         if single_source_teams:
             logger.warning(
-                "Coverage bias: %d teams present in only 1 of %d sources: %s. "
-                "Their consensus values are unmoderated.",
-                len(single_source_teams), n_active,
+                "Coverage bias: %d teams present in only 1 of %d sources: %s. Their consensus values are unmoderated.",
+                len(single_source_teams),
+                n_active,
                 ", ".join(sorted(single_source_teams)[:10])
-                + (f" (+{len(single_source_teams) - 10} more)"
-                   if len(single_source_teams) > 10 else ""),
+                + (f" (+{len(single_source_teams) - 10} more)" if len(single_source_teams) > 10 else ""),
             )
 
     active_sources = [
-        name for name, src in [("espn", espn), ("yahoo", yahoo), ("cbs", cbs)]
+        name
+        for name, src in [("espn", espn), ("yahoo", yahoo), ("cbs", cbs)]
         if src.teams and weights.get(name, 0.0) > 0
     ]
     consensus = ConsensusData(
@@ -942,6 +906,7 @@ from enum import Enum
 
 class SourceHealth(Enum):
     """Health status of a scraping source."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     FAILED = "failed"
@@ -950,6 +915,7 @@ class SourceHealth(Enum):
 @dataclass
 class SourceStatus:
     """Runtime health status for a single data source."""
+
     name: str
     health: SourceHealth = SourceHealth.HEALTHY
     last_success: Optional[float] = None  # Unix timestamp
@@ -1041,12 +1007,11 @@ class ScraperOrchestrator:
                 if status.consecutive_failures >= self.CIRCUIT_BREAKER_THRESHOLD:
                     logger.warning(
                         "Circuit breaker OPEN for %s (%d consecutive failures). Skipping.",
-                        source_name, status.consecutive_failures,
+                        source_name,
+                        status.consecutive_failures,
                     )
                     continue
-                future = executor.submit(
-                    self._fetch_with_retry, source_name, scraper, year
-                )
+                future = executor.submit(self._fetch_with_retry, source_name, scraper, year)
                 future_to_source[future] = source_name
 
             for future in concurrent.futures.as_completed(
@@ -1102,9 +1067,7 @@ class ScraperOrchestrator:
             # Use agreement-adjusted weights for aggregation
             active_weights = agreement_report.recommended_weights
 
-        consensus = aggregate_consensus(
-            espn_data, yahoo_data, cbs_data, weights=active_weights
-        )
+        consensus = aggregate_consensus(espn_data, yahoo_data, cbs_data, weights=active_weights)
 
         return OrchestratorResult(
             consensus=consensus,
@@ -1113,9 +1076,7 @@ class ScraperOrchestrator:
             source_agreement=agreement_report,
         )
 
-    def _fetch_with_retry(
-        self, source_name: str, scraper, year: int
-    ) -> Optional[ConsensusData]:
+    def _fetch_with_retry(self, source_name: str, scraper, year: int) -> Optional[ConsensusData]:
         """Fetch from a single source with exponential backoff retries."""
         status = self.source_statuses[source_name]
 
@@ -1131,7 +1092,9 @@ class ScraperOrchestrator:
                     if plaus_warnings:
                         logger.warning(
                             "%s: plausibility issues on attempt %d/%d: %s",
-                            source_name, attempt + 1, self.MAX_RETRIES,
+                            source_name,
+                            attempt + 1,
+                            self.MAX_RETRIES,
                             "; ".join(plaus_warnings),
                         )
                         status.health = SourceHealth.DEGRADED
@@ -1143,7 +1106,10 @@ class ScraperOrchestrator:
                     status.last_error = None
                     logger.info(
                         "%s: fetched %d teams in %.0fms (attempt %d)%s",
-                        source_name, len(result.teams), elapsed_ms, attempt + 1,
+                        source_name,
+                        len(result.teams),
+                        elapsed_ms,
+                        attempt + 1,
                         " [DEGRADED]" if plaus_warnings else "",
                     )
                     return result
@@ -1151,19 +1117,24 @@ class ScraperOrchestrator:
                     # Empty result — retry
                     logger.warning(
                         "%s: empty result on attempt %d/%d",
-                        source_name, attempt + 1, self.MAX_RETRIES,
+                        source_name,
+                        attempt + 1,
+                        self.MAX_RETRIES,
                     )
 
             except Exception as e:
                 status.last_error = str(e)
                 logger.warning(
                     "%s: attempt %d/%d failed: %s",
-                    source_name, attempt + 1, self.MAX_RETRIES, e,
+                    source_name,
+                    attempt + 1,
+                    self.MAX_RETRIES,
+                    e,
                 )
 
             # Exponential backoff before retry
             if attempt < self.MAX_RETRIES - 1:
-                backoff = self.BACKOFF_BASE_SECONDS * (2 ** attempt)
+                backoff = self.BACKOFF_BASE_SECONDS * (2**attempt)
                 time.sleep(backoff)
 
         # All retries exhausted
@@ -1177,6 +1148,7 @@ class ScraperOrchestrator:
 @dataclass
 class OrchestratorResult:
     """Result from the scraper orchestrator."""
+
     consensus: ConsensusData
     successful_sources: List[str]
     source_statuses: Dict[str, SourceStatus]
@@ -1203,6 +1175,7 @@ class OrchestratorResult:
 # ---------------------------------------------------------------------------
 # Dynamic Public Pick Refresh
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class RoundDelta:
@@ -1333,7 +1306,9 @@ class RefreshablePicksManager:
         update = None
         if previous is not None:
             update = self._compute_delta(
-                previous.consensus, new_result.consensus, was_stale,
+                previous.consensus,
+                new_result.consensus,
+                was_stale,
             )
 
         self._last_result = new_result
@@ -1373,12 +1348,14 @@ class RefreshablePicksManager:
                 old_val = getattr(old.teams[tid], attr, 0.0) if tid in old.teams else 0.0
                 new_val = getattr(new.teams[tid], attr, 0.0) if tid in new.teams else 0.0
                 if abs(new_val - old_val) > 0.01:
-                    round_deltas.append(RoundDelta(
-                        team_id=tid,
-                        round_name=rnd_name,
-                        old_pct=old_val,
-                        new_pct=new_val,
-                    ))
+                    round_deltas.append(
+                        RoundDelta(
+                            team_id=tid,
+                            round_name=rnd_name,
+                            old_pct=old_val,
+                            new_pct=new_val,
+                        )
+                    )
 
         return PicksUpdate(
             previous=old,
