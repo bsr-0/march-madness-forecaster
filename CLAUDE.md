@@ -3,6 +3,18 @@
 ## LLM Council
 When the user says "council this", "run the council", "war room this", "pressure-test this", "stress-test this", or "debate this", invoke the `llm-council` skill from `.claude/skills/llm-council.md`. Also trigger when the user presents a genuine decision with stakes and multiple options (e.g., "should I X or Y", "which option", "I'm torn between").
 
+## AwesomeClaude Skills
+
+The following utility skills are available globally via AwesomeClaude and should be used when their conditions match:
+
+| Skill | When to Use |
+|-------|-------------|
+| `simplify` | After writing or modifying code — review for reuse, quality, and efficiency |
+| `loop` | Running a prompt or slash command on a recurring interval (e.g., polling, monitoring) |
+| `claude-api` | Building apps with the Claude API or Anthropic SDK |
+| `session-start-hook` | Setting up SessionStart hooks for repository initialization |
+| `update-config` | Configuring Claude Code settings.json (hooks, permissions, behaviors) |
+
 ## Superpowers Skills
 
 The following superpowers-inspired skills are available in `.claude/skills/` and should be used when their conditions match:
@@ -104,12 +116,12 @@ all of it.
 Your internal tools mark file writes as successful if bytes hit disk. They
 do not check if the code compiles. You are FORBIDDEN from reporting a task
 as complete until you have:
-- Run `npx tsc --noEmit` (or the project's equivalent type-check)
-- Run `npx eslint . --quiet` (if configured)
+- Run `pytest` (run the test suite)
+- Run `ruff check src/` (lint check)
 - Fixed ALL resulting errors
 
-If no type-checker is configured, state that explicitly instead of claiming
-success. Never say "Done!" with errors outstanding.
+This is a Python project — there is no type-checker configured. Never say
+"Done!" with errors outstanding.
 
 ### Write Human Code
 Write code that reads like a human wrote it. No robotic comment blocks, no
