@@ -215,6 +215,7 @@ march-madness sota-from-manifest \
 | `loyo-validate` | Run Leave-One-Year-Out validation across historical years |
 | `backtest-kaggle` | Evaluate predictions against historical Kaggle results |
 | `baseline-experiment` | Tournament-only baseline experiment (LOYO-CV, compares feature sets vs seed baseline) |
+| `backtest-harness` | Run LOYO backtest harness with regression gate |
 | `backtest-unified` | Run unified backtest (Kaggle calibration + ESPN bracket pool) |
 | `validate-metrics` | Validate proprietary metrics against public data |
 | `scrape-tournament-results` | Scrape historical tournament results from Sports Reference |
@@ -237,6 +238,51 @@ march-madness prospective-eval --freeze-file pipeline_freeze.json --year 2024
 march-madness freeze-pipeline
 march-madness verify-freeze
 ```
+
+## Backtest Harness
+
+The **backtest harness** (`src/evaluation/backtest_harness.py`) is a Leave-One-Year-Out (LOYO) backtesting orchestrator that evaluates the full prediction pipeline against historical tournament data. It trains on all years except the held-out year, generates predictions for that year's tournament, and repeats across all available years.
+
+**What it does:**
+
+1. Runs the full `SOTAPipeline` for each held-out tournament year (default: 2008-2025, excluding 2020)
+2. Scores predictions against actual tournament results (Brier score, log-loss, calibration ECE)
+3. Computes bootstrap confidence intervals (5,000 samples) for all metrics
+4. Aggregates per-year results into a cross-validated summary
+5. Optionally compares against a stored baseline via a **regression gate** — fails if performance degrades beyond a statistically-derived tolerance
+
+**Usage:**
+
+```bash
+# Run LOYO backtest with defaults (all available years)
+march-madness backtest-harness
+
+# Specify years and enable regression gate against a baseline
+march-madness backtest-harness \
+  --years "2023,2024,2025" \
+  --baseline configs/backtest_baseline.json \
+  --output artifacts/backtest_result.json
+
+# Save results as a new baseline for future regression gating
+march-madness backtest-harness \
+  --save-baseline configs/backtest_baseline.json
+
+# With a production config for pipeline overrides
+march-madness backtest-harness --config configs/production_2026.json
+```
+
+**Output:**
+
+- **Console summary** — per-year Brier scores, aggregate mean with 95% CI, regression gate verdict (PASS/FAIL)
+- **JSON artifact** (`artifacts/backtest_result.json`) — full results including per-year metrics, aggregate report, calibration ECE, risk report, and reproducibility metadata (random seed, library versions, platform)
+- **Baseline artifact** — when `--save-baseline` is used, saves aggregate and per-year Brier scores for future regression comparisons
+
+**Key design decisions:**
+
+- Pipeline runs in **experimental mode** (relaxed quality gates, no freeze file required) so it can evaluate historical years without production constraints
+- If the pipeline fails for a given year, it **falls back to a seed-based baseline** rather than skipping the year
+- The regression gate uses a **t-distribution tolerance** (0.05 significance) computed from fold-level variance, so noisy single-year regressions don't trigger false failures
+- Integrated into the **nightly CI workflow** (`.github/workflows/nightly-validation.yml`) via `pytest -m backtest_regression`
 
 ## Kaggle Export
 
@@ -266,6 +312,8 @@ march-madness-forecaster/
 │   │   │   └── proprietary_metrics.py   # Incremental PIT engine
 │   │   ├── ingestion/             # Data collection & validation
 │   │   └── scrapers/              # Torvik, ESPN, rosters, etc.
+│   ├── evaluation/
+│   │   └── backtest_harness.py    # LOYO backtest orchestrator + regression gate
 │   ├── ml/
 │   │   ├── ensemble/cfa.py        # Model infrastructure (logistic regression in simple mode)
 │   │   ├── calibration/           # Temperature scaling calibration
