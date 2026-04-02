@@ -140,9 +140,14 @@ FIXED_FEATURE_SET = [
     # 3PT shooting — [VAR]: mean and variance both have independent tournament signal
     "diff_three_pt_pct",
     "diff_three_pt_variance",
+    # Player metrics — [RAPM]: player-level talent signals orthogonal to seed
+    "diff_total_warp",
+    "diff_top5_rapm",
     # Experience/continuity — [KAG]: consistent top-10 feature across submissions
     "diff_avg_experience",
     "diff_roster_continuity",
+    # Preseason expectations
+    "diff_preseason_ap_rank",
     # Absolute-level features — [KP]: game quality context for calibration
     "abs_adj_off_eff",
     "abs_adj_def_eff",
@@ -165,14 +170,21 @@ FIXED_FEATURE_SET = [
 
 
 # Gap #3: Simplified feature set for "simple" model_complexity mode.
+# Selected via greedy forward selection on 16-fold LOYO tournament evaluation
+# (see src/evaluation/feature_importance_loyo.py). These 10 features achieve
+# BSS=+9.5% vs seed baseline, compared to +2.7% for the previous 7-feature set
+# and +8.5% for the full 98-feature vector.
 SIMPLE_FEATURE_SET = [
-    "diff_adj_off_eff",               # [KP] Core efficiency
-    "diff_adj_def_eff",               # [KP] Core defense
-    "diff_sos_adj_em",                # [KAG] Schedule strength
-    "diff_elo_rating",                # [538] Season trajectory
-    "diff_win_pct",                   # Simplest, strongest signal
-    "diff_free_throw_pct",            # Most stable shooting metric
-    "diff_momentum",
+    "diff_elo_rating",                # [538] Step 1: only feature that individually beats seeds
+    "diff_total_warp",                # [RAPM] Step 2: player-level talent (largest coefficient)
+    "diff_orb_rate",                  # [OL] Step 3: offensive rebounding differential
+    "diff_momentum",                  # Step 4: late-season trajectory
+    "diff_adj_tempo",                 # [KP] Step 5: pace matchup effects
+    "diff_sos_adj_em",                # [KAG] Step 6: schedule strength
+    "diff_opp_to_rate",               # [OL] Step 7: defensive Four Factors
+    "diff_top5_rapm",                 # [RAPM] Step 9: star player quality
+    "diff_preseason_ap_rank",         # Step 10: preseason expectations
+    "diff_win_pct",                   # [KAG] Step 14: simplest quality signal
 ]
 
 

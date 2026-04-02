@@ -121,7 +121,7 @@ class TestSimpleFeatureSet:
     def test_simple_feature_set_size(self):
         from src.pipeline.sota import SIMPLE_FEATURE_SET
 
-        assert len(SIMPLE_FEATURE_SET) == 7  # Core features: efficiency, defense, SOS, Elo, win%, FT%, momentum
+        assert len(SIMPLE_FEATURE_SET) == 10  # Forward-selected features: elo, warp, orb, momentum, tempo, sos, opp_to, top5_rapm, ap_rank, win_pct
 
     def test_simple_has_momentum(self):
         from src.pipeline.sota import SIMPLE_FEATURE_SET
