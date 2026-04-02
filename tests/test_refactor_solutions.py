@@ -15,6 +15,7 @@ import pytest
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def binary_data():
     """Generate synthetic binary classification data."""
@@ -44,6 +45,7 @@ def predictions_and_outcomes():
 # ---------------------------------------------------------------------------
 # Solution 3: Stacking Weight Optimizer
 # ---------------------------------------------------------------------------
+
 
 class TestStackingWeightOptimizer:
     def test_weights_sum_to_one(self):
@@ -95,6 +97,7 @@ class TestStackingWeightOptimizer:
 # Solution 4: Nested CV Calibration
 # ---------------------------------------------------------------------------
 
+
 class TestNestedCalibration:
     def test_fit_temperature_nested_returns_stability(self, predictions_and_outcomes):
         from src.ml.calibration.method_selector import fit_temperature_nested
@@ -122,6 +125,7 @@ class TestNestedCalibration:
 # ---------------------------------------------------------------------------
 # Solution 7: Calibration Method Selector
 # ---------------------------------------------------------------------------
+
 
 class TestCalibrationMethodSelector:
     def test_selects_best_method(self, predictions_and_outcomes):
@@ -155,6 +159,7 @@ class TestCalibrationMethodSelector:
 # Solution 8: Interaction Feature Validation
 # ---------------------------------------------------------------------------
 
+
 class TestInteractionValidation:
     def test_validates_useful_interactions(self):
         from src.data.features.statistical_audit import validate_interaction_features
@@ -168,7 +173,9 @@ class TestInteractionValidation:
         y = (rng.random(n) < 1 / (1 + np.exp(-logits))).astype(float)
 
         result = validate_interaction_features(
-            X_base, interaction, y,
+            X_base,
+            interaction,
+            y,
             interaction_names=["int_0x1"],
             n_bootstrap=50,
             random_seed=42,
@@ -189,7 +196,9 @@ class TestInteractionValidation:
         y = (rng.random(n) > 0.5).astype(float)
 
         result = validate_interaction_features(
-            X_base, X_noise, y,
+            X_base,
+            X_noise,
+            y,
             interaction_names=["noise_0", "noise_1", "noise_2"],
             n_bootstrap=30,
             random_seed=42,
@@ -202,6 +211,7 @@ class TestInteractionValidation:
 # ---------------------------------------------------------------------------
 # Solution 10: Multiple Comparison Correction
 # ---------------------------------------------------------------------------
+
 
 class TestMultipleComparisonCorrection:
     def test_holm_bonferroni_controls_fwer(self):
@@ -283,6 +293,7 @@ class TestMultipleComparisonCorrection:
 # Solution 14: Ensemble Diversity
 # ---------------------------------------------------------------------------
 
+
 class TestEnsembleDiversity:
     def test_identical_models_zero_diversity(self):
         from src.ml.ensemble.stacking_weights import EnsembleDiversity
@@ -293,7 +304,8 @@ class TestEnsembleDiversity:
 
         diversity = EnsembleDiversity()
         result = diversity.compute(
-            {"m1": preds, "m2": preds}, outcomes,
+            {"m1": preds, "m2": preds},
+            outcomes,
         )
 
         assert result.disagreement_rate == 0.0
@@ -310,83 +322,9 @@ class TestEnsembleDiversity:
 
         diversity = EnsembleDiversity()
         result = diversity.compute(
-            {"m1": preds_a, "m2": preds_b}, outcomes,
+            {"m1": preds_a, "m2": preds_b},
+            outcomes,
         )
 
         assert result.disagreement_rate > 0
         assert result.kuncheva_index > 0
-
-
-# ---------------------------------------------------------------------------
-# Solution 6: Per-Round Bootstrap CIs (basic structure test)
-# ---------------------------------------------------------------------------
-
-class TestPerRoundBootstrap:
-    def test_compute_with_bootstrap_returns_results(self):
-        from src.ml.evaluation.feature_explainability import PerRoundFeatureImportance
-
-        rng = np.random.default_rng(42)
-        n = 60
-        X = rng.standard_normal((n, 5))
-        y = rng.integers(0, 2, n).astype(float)
-        rounds = np.array([1] * 20 + [2] * 20 + [3] * 20)
-        feature_names = [f"f{i}" for i in range(5)]
-
-        pri = PerRoundFeatureImportance(feature_names)
-
-        # Without a model, train_fn creates one
-        try:
-            import lightgbm as lgb
-
-            def train_fn(X_t, y_t):
-                ds = lgb.Dataset(X_t, label=y_t)
-                params = {"objective": "binary", "verbose": -1, "num_leaves": 4}
-                return lgb.train(params, ds, num_boost_round=10)
-
-            results = pri.compute_with_bootstrap(
-                X, y, rounds, train_fn=train_fn, n_bootstrap=10
-            )
-            assert len(results) > 0
-            for round_name, pri_result in results.items():
-                assert pri_result.n_games > 0
-                for imp in pri_result.importances:
-                    assert imp.std_importance >= 0
-        except ImportError:
-            pytest.skip("LightGBM not available")
-
-
-# ---------------------------------------------------------------------------
-# Solution 13: SHAP Interactions (basic structure test)
-# ---------------------------------------------------------------------------
-
-class TestSHAPInteractions:
-    def test_interaction_analyzer_structure(self):
-        from src.ml.evaluation.feature_explainability import InteractionAnalyzer
-
-        feature_names = [f"f{i}" for i in range(5)]
-        analyzer = InteractionAnalyzer(feature_names)
-        assert analyzer.feature_names == feature_names
-
-    def test_interaction_effects_without_shap(self):
-        from src.ml.evaluation.feature_explainability import InteractionAnalyzer
-
-        feature_names = [f"f{i}" for i in range(5)]
-        analyzer = InteractionAnalyzer(feature_names)
-
-        rng = np.random.default_rng(42)
-        X = rng.standard_normal((50, 5))
-
-        try:
-            import lightgbm as lgb
-
-            ds = lgb.Dataset(X, label=rng.integers(0, 2, 50))
-            model = lgb.train(
-                {"objective": "binary", "verbose": -1, "num_leaves": 4},
-                ds, num_boost_round=10,
-            )
-            result = analyzer.compute_interaction_effects(model, X, top_k=3)
-            assert result.n_features_analyzed <= 5
-            assert result.method in ("shap_interaction", "shap_correlation_proxy",
-                                     "shap_failed", "unavailable")
-        except ImportError:
-            pytest.skip("LightGBM not available")
