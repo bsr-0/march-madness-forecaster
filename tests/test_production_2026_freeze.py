@@ -29,7 +29,10 @@ from src.governance.production_runner import (
 def _skip_dep_version_check(monkeypatch):
     """Bypass dependency version checks — test environment may differ from prod."""
     import src.governance.production_runner as pr
+
     monkeypatch.setattr(pr, "_verify_dependency_versions", lambda repo_root: "a" * 64)
+
+
 from src.governance.production_validator import (
     ALL_PATH_FIELDS,
     DIRECTORY_PATH_FIELDS,
@@ -116,6 +119,7 @@ def _real_source_hashes() -> dict:
 def _compute_stub_data_hashes(tmp_path: Path, raw: dict) -> dict:
     """Compute real data hashes from the stub environment."""
     from src.governance.production_runner import _sha256_path, REQUIRED_EXPLICIT_PATH_FIELDS
+
     data_hashes = {}
     config_base_dir = tmp_path / "configs"
     for field in REQUIRED_EXPLICIT_PATH_FIELDS:
@@ -158,6 +162,7 @@ def _write_freeze_artifact(
 
     if use_real_source_hashes:
         from src.governance.production_runner import _sha256_path, SOURCE_TREE_ROOT
+
         src_tree = REPO_ROOT / SOURCE_TREE_ROOT
         source_tree_hash = _sha256_path(src_tree) if src_tree.is_dir() else "missing"
     else:
@@ -206,9 +211,7 @@ class _FakePipeline:
         return {
             "artifacts": {
                 "baseline_training": {
-                    "multi_year_training": {
-                        "years_loaded": [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
-                    }
+                    "multi_year_training": {"years_loaded": [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]}
                 },
                 "calibration": {
                     "method": "temperature",
@@ -297,17 +300,33 @@ def test_config_required_keys_present():
     required = set(
         list(
             {
-                "year", "probability_profile", "mode", "model_complexity",
-                "enable_gnn", "enable_transformer",
-                "enable_embedding_projections", "enable_stacking",
-                "enable_feature_selection", "enable_brier_sharpening",
-                "enable_seed_overrides", "enable_goto_conversion",
-                "enable_round_weighted_calibration", "enable_bayesian_bt",
-                "enable_multi_year_training", "enable_multi_year_calibration",
-                "enable_loyo_cv", "training_years", "dev_years", "holdout_years",
-                "strict_leakage_mode", "require_freeze_file",
-                "calibration_method", "enable_tournament_adaptation",
-                "scoring_metric", "seed_prior_weight", "consistency_bonus_max",
+                "year",
+                "probability_profile",
+                "mode",
+                "model_complexity",
+                "enable_gnn",
+                "enable_transformer",
+                "enable_embedding_projections",
+                "enable_stacking",
+                "enable_feature_selection",
+                "enable_brier_sharpening",
+                "enable_seed_overrides",
+                "enable_goto_conversion",
+                "enable_round_weighted_calibration",
+                "enable_bayesian_bt",
+                "enable_multi_year_training",
+                "enable_multi_year_calibration",
+                "enable_loyo_cv",
+                "training_years",
+                "dev_years",
+                "holdout_years",
+                "strict_leakage_mode",
+                "require_freeze_file",
+                "calibration_method",
+                "enable_tournament_adaptation",
+                "scoring_metric",
+                "seed_prior_weight",
+                "consistency_bonus_max",
             }
         )
         + list(ALL_PATH_FIELDS)
@@ -319,17 +338,22 @@ def test_config_required_keys_present():
 def test_config_forbidden_flags_disabled():
     payload = _load_blessed_config()
     forbidden_flags = [
-        "enable_gnn", "enable_transformer", "enable_embedding_projections",
+        "enable_gnn",
+        "enable_transformer",
+        "enable_embedding_projections",
         # Protocol v2: sharpening and seed overrides OFF for Kaggle
-        "enable_brier_sharpening", "enable_seed_overrides",
+        "enable_brier_sharpening",
+        "enable_seed_overrides",
     ]
     for flag in forbidden_flags:
         assert payload.get(flag) is False, f"{flag} must be false, got {payload.get(flag)}"
     # These are now enabled in production
     enabled_flags = [
         "enable_round_weighted_calibration",
-        "enable_stacking", "enable_bayesian_bt",
-        "enable_feature_selection", "enable_goto_conversion",
+        "enable_stacking",
+        "enable_bayesian_bt",
+        "enable_feature_selection",
+        "enable_goto_conversion",
     ]
     for flag in enabled_flags:
         assert payload.get(flag) is True, f"{flag} must be true, got {payload.get(flag)}"
@@ -371,7 +395,9 @@ def test_valid_config_passes():
 
 
 FORBIDDEN_FLAGS = [
-    "enable_gnn", "enable_transformer", "enable_embedding_projections",
+    "enable_gnn",
+    "enable_transformer",
+    "enable_embedding_projections",
 ]
 
 
@@ -684,7 +710,7 @@ def test_manifest_has_runtime_flags(tmp_path, monkeypatch):
     flags = manifest.get("production_flags_verified", {})
     assert flags["probability_profile"] == "production"
     assert flags["mode"] == "calibration"
-    assert flags["model_complexity"] == "standard"
+    assert flags["model_complexity"] == "simple"
     assert flags["gnn_enabled"] is False
     assert flags["transformer_enabled"] is False
     assert flags["experimental_postprocessing_enabled"] is False
@@ -819,9 +845,7 @@ def test_ensure_required_keys_catches_missing_path_fields(tmp_path):
 def test_calibration_years_injection_fails():
     """Bypass vector 4: injecting calibration_years via config JSON."""
     with pytest.raises(ValueError):
-        validate_2026_production_config(
-            _make_config(calibration_years=[2016, 2017])
-        )
+        validate_2026_production_config(_make_config(calibration_years=[2016, 2017]))
 
 
 def test_calibration_years_none_passes():
@@ -859,28 +883,34 @@ def test_cli_alias_rejects_non_blessed_config():
 class TestContinuousHyperparameterPinning:
     """Audit V2-1: Continuous hyperparameters must be pinned in REQUIRED_CONFIG_VALUES."""
 
-    @pytest.mark.parametrize("field,bad_value", [
-        ("tournament_shrinkage", 0.50),
-        ("massey_blend_weight", 0.95),
-        ("massey_sigma", 20.0),
-        ("optimize_ensemble_weights", False),
-        ("random_seed", 9999),
-        ("num_simulations", 1),
-        ("pre_calibration_clip_lo", 0.10),
-        ("pre_calibration_clip_hi", 0.90),
-        ("mc_noise_std", 1.0),
-    ])
+    @pytest.mark.parametrize(
+        "field,bad_value",
+        [
+            ("tournament_shrinkage", 0.50),
+            ("massey_blend_weight", 0.95),
+            ("massey_sigma", 20.0),
+            ("optimize_ensemble_weights", False),
+            ("random_seed", 9999),
+            ("num_simulations", 1),
+            ("pre_calibration_clip_lo", 0.10),
+            ("pre_calibration_clip_hi", 0.90),
+            ("mc_noise_std", 1.0),
+        ],
+    )
     def test_continuous_hyperparam_injection_fails(self, field, bad_value):
         """Injecting a non-blessed continuous hyperparameter must fail validation."""
         with pytest.raises(ValueError):
             validate_2026_production_config(_make_config(**{field: bad_value}))
 
-    @pytest.mark.parametrize("field,bad_value", [
-        ("enable_spread_model", False),
-        ("enable_recency_weighting", False),
-        ("enable_symmetric_augmentation", False),
-        ("scrape_live", True),
-    ])
+    @pytest.mark.parametrize(
+        "field,bad_value",
+        [
+            ("enable_spread_model", False),
+            ("enable_recency_weighting", False),
+            ("enable_symmetric_augmentation", False),
+            ("scrape_live", True),
+        ],
+    )
     def test_boolean_architecture_flag_injection_fails(self, field, bad_value):
         """Injecting non-blessed boolean architecture flags must fail validation."""
         with pytest.raises(ValueError):
@@ -895,7 +925,8 @@ class TestFreezeDataHashVerification:
         config_path = _write_stub_env(tmp_path)
         # Write freeze with correct source hashes but wrong data hashes
         _write_freeze_artifact(
-            tmp_path, config_path,
+            tmp_path,
+            config_path,
             use_real_source_hashes=True,
             use_real_data_hashes=False,  # uses "fakehash" for data
         )
@@ -909,7 +940,8 @@ class TestFreezeDataHashVerification:
         config_path = _write_stub_env(tmp_path)
         # Use real source hashes + empty data hashes (no data to mismatch)
         _write_freeze_artifact(
-            tmp_path, config_path,
+            tmp_path,
+            config_path,
             use_real_source_hashes=True,
             data_file_hashes={},
         )
@@ -958,6 +990,7 @@ class TestNewlyPinnedConfigValues:
     def test_blessed_config_has_all_pinned_values(self):
         """The blessed production config must explicitly set every pinned value."""
         from src.governance.production_validator import REQUIRED_CONFIG_VALUES
+
         raw = _load_blessed_config()
         missing = [k for k in REQUIRED_CONFIG_VALUES if k not in raw]
         assert missing == [], f"Blessed config missing pinned keys: {missing}"
@@ -965,6 +998,7 @@ class TestNewlyPinnedConfigValues:
     def test_blessed_config_matches_pinned_values(self):
         """The blessed config values must exactly match the pinned reference values."""
         from src.governance.production_validator import REQUIRED_CONFIG_VALUES
+
         raw = _load_blessed_config()
         mismatches = []
         for key, expected in REQUIRED_CONFIG_VALUES.items():
@@ -983,6 +1017,7 @@ class TestConfigMutationGuard:
 
         class _MutatingPipeline(_FakePipeline):
             """Pipeline that mutates config during __init__."""
+
             def __init__(self, config):
                 config.enable_gnn = True  # Mutate after validation!
                 super().__init__(config)
@@ -991,7 +1026,10 @@ class TestConfigMutationGuard:
 
         config_path = _write_stub_env(tmp_path)
         _write_freeze_artifact(
-            tmp_path, config_path, use_real_source_hashes=True, use_real_data_hashes=True,
+            tmp_path,
+            config_path,
+            use_real_source_hashes=True,
+            use_real_data_hashes=True,
         )
 
         with pytest.raises(ProductionValidationError, match="Config was mutated"):
@@ -1009,6 +1047,7 @@ class TestConfigMutationGuard:
 
         class _RunMutatingPipeline(_FakePipeline):
             """Pipeline that mutates config during run()."""
+
             def run(self):
                 self.config.enable_gnn = True  # Mutate during run!
                 return super().run()
@@ -1017,7 +1056,10 @@ class TestConfigMutationGuard:
 
         config_path = _write_stub_env(tmp_path)
         _write_freeze_artifact(
-            tmp_path, config_path, use_real_source_hashes=True, use_real_data_hashes=True,
+            tmp_path,
+            config_path,
+            use_real_source_hashes=True,
+            use_real_data_hashes=True,
         )
 
         with pytest.raises(ProductionValidationError, match="Config was mutated"):
@@ -1054,7 +1096,8 @@ class TestSourceTreeHash:
         """A freeze artifact with wrong source_tree_hash must be rejected."""
         config_path = _write_stub_env(tmp_path)
         _write_freeze_artifact(
-            tmp_path, config_path,
+            tmp_path,
+            config_path,
             use_real_source_hashes=True,
             source_tree_hash="deliberately_wrong_hash",
             data_file_hashes={},
@@ -1098,6 +1141,7 @@ class TestDependencyVersionVerification:
         # We call the real function by re-reading the module source.
         import importlib
         import src.governance.production_runner as pr
+
         real_fn = pr._verify_dependency_versions
         # If the autouse fixture stubbed it, load fresh from module source
         _module = importlib.import_module("src.governance.production_runner")
@@ -1111,6 +1155,7 @@ class TestDependencyVersionVerification:
     def test_missing_lockfile_detected(self, tmp_path):
         """Missing lockfile must trigger ProductionValidationError."""
         import importlib
+
         _original = importlib.reload(
             importlib.import_module("src.governance.production_runner")
         )._verify_dependency_versions

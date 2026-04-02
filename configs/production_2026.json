@@ -2,7 +2,7 @@
   "year": 2026,
   "probability_profile": "production",
   "mode": "calibration",
-  "model_complexity": "standard",
+  "model_complexity": "simple",
 
   "enable_gnn": false,
   "enable_transformer": false,
