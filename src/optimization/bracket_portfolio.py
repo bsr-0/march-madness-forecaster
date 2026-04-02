@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 # Kaggle Effective Pool Size Estimation
 # ---------------------------------------------------------------------------
 
+
 def estimate_kaggle_effective_pool_size(
     total_entries: int = 3000,
     bracket_format: bool = True,
@@ -82,23 +83,25 @@ def estimate_kaggle_effective_pool_size(
 @dataclass
 class BracketPick:
     """A single game pick within a bracket."""
-    round_num: int          # 0=R64, 1=R32, 2=S16, 3=E8, 4=F4, 5=CHAMP
-    game_idx: int           # Game index within the round
-    winner_id: str          # Team predicted to win
-    loser_id: str           # Team predicted to lose
+
+    round_num: int  # 0=R64, 1=R32, 2=S16, 3=E8, 4=F4, 5=CHAMP
+    game_idx: int  # Game index within the round
+    winner_id: str  # Team predicted to win
+    loser_id: str  # Team predicted to lose
     win_probability: float  # Model's probability for this pick
 
 
 @dataclass
 class GeneratedBracket:
     """A complete tournament bracket (all 63 game picks)."""
+
     bracket_id: int
     picks: List[BracketPick] = field(default_factory=list)
     champion: str = ""
     final_four: List[str] = field(default_factory=list)
-    expected_score: float = 0.0       # Expected Brier/bracket score
-    log_probability: float = 0.0      # Log probability of this exact outcome
-    strategy: str = "balanced"        # "chalk", "balanced", "contrarian", "targeted"
+    expected_score: float = 0.0  # Expected Brier/bracket score
+    log_probability: float = 0.0  # Log probability of this exact outcome
+    strategy: str = "balanced"  # "chalk", "balanced", "contrarian", "targeted"
 
     def to_submission_dict(self) -> Dict[str, str]:
         """Convert to Kaggle submission format."""
@@ -133,6 +136,7 @@ class BracketPortfolioGenerator:
         public_pick_pcts: Optional[Dict[str, float]] = None,
         round_public_picks: Optional[Dict[str, Dict[str, float]]] = None,
         leverage_picks: Optional[List[Dict]] = None,
+        vulnerability_report: Optional[object] = None,
     ):
         """
         Args:
@@ -144,13 +148,26 @@ class BracketPortfolioGenerator:
             leverage_picks: Serialized LeveragePick dicts from pool analysis.
                 When provided, contrarian and targeted strategies use these
                 pre-computed leverage opportunities.
+            vulnerability_report: Optional VulnerabilityReport from
+                MatchupVulnerabilityScorer. When provided, contrarian brackets
+                are scored by matchup vulnerability (seed-independent signals)
+                in addition to champion-level leverage.
         """
         self.predict_fn = predict_fn
         self.public_picks = public_pick_pcts or {}
         self.round_public_picks = round_public_picks or {}
         self.leverage_picks = leverage_picks or []
+        self.vulnerability_report = vulnerability_report
         self._contrarian_strength = 1.0  # Set from profile in generate_portfolio
         self._variance_target = 0.5  # Set from profile in generate_portfolio
+        # Build vulnerability lookup: underdog_id -> pool_value for fast scoring
+        self._vulnerability_targets: Dict[str, float] = {}
+        if vulnerability_report is not None:
+            for m in getattr(vulnerability_report, "matchups", []):
+                # Store the highest pool_value per underdog across rounds
+                current = self._vulnerability_targets.get(m.underdog_id, 0.0)
+                if m.pool_value > current:
+                    self._vulnerability_targets[m.underdog_id] = m.pool_value
 
     def generate_portfolio(
         self,
@@ -191,12 +208,9 @@ class BracketPortfolioGenerator:
             List of GeneratedBracket objects
         """
         # Auto-generate a pool strategy profile from Kaggle effective pool size
-        if (
-            strategy_mix is None
-            and pool_strategy_profile is None
-            and kaggle_effective_pool_size is not None
-        ):
+        if strategy_mix is None and pool_strategy_profile is None and kaggle_effective_pool_size is not None:
             from .leverage import get_strategy_profile
+
             pool_strategy_profile = get_strategy_profile(
                 pool_size=kaggle_effective_pool_size,
                 scoring_system="standard",
@@ -216,7 +230,9 @@ class BracketPortfolioGenerator:
             strategy_mix = pool_strategy_profile.strategy_mix.copy()
             self._contrarian_strength = pool_strategy_profile.contrarian_strength
             self._variance_target = getattr(
-                pool_strategy_profile, "variance_target", 0.5,
+                pool_strategy_profile,
+                "variance_target",
+                0.5,
             )
             logger.info(
                 "Using pool strategy profile (pool_size=%d, payout=%s, "
@@ -235,10 +251,10 @@ class BracketPortfolioGenerator:
             # across thousands of entrants.  Maximize the chance of
             # having a uniquely-good bracket rather than a consensus-average one.
             strategy_mix = {
-                "chalk": 0.05,       # Minimal: only 1 or 2 "safe" brackets
-                "balanced": 0.30,    # Model-probability sampling
+                "chalk": 0.05,  # Minimal: only 1 or 2 "safe" brackets
+                "balanced": 0.30,  # Model-probability sampling
                 "contrarian": 0.35,  # Anti-correlated with public picks
-                "targeted": 0.30,    # Champion-diversification brackets
+                "targeted": 0.30,  # Champion-diversification brackets
             }
 
         rng = np.random.default_rng(seed)
@@ -250,9 +266,7 @@ class BracketPortfolioGenerator:
         matchup_cache = self._precompute_matchups(all_teams)
 
         # Generate simulation pool
-        sim_results = self._run_simulations(
-            first_round, all_teams, matchup_cache, n_simulations, rng
-        )
+        sim_results = self._run_simulations(first_round, all_teams, matchup_cache, n_simulations, rng)
 
         # Select diverse brackets from simulation pool
         brackets = []
@@ -262,21 +276,13 @@ class BracketPortfolioGenerator:
             n_strategy = max(1, int(n_brackets * fraction))
 
             if strategy == "chalk":
-                new_brackets = self._generate_chalk_brackets(
-                    first_round, matchup_cache, n_strategy, rng
-                )
+                new_brackets = self._generate_chalk_brackets(first_round, matchup_cache, n_strategy, rng)
             elif strategy == "contrarian":
-                new_brackets = self._generate_contrarian_brackets(
-                    sim_results, n_strategy, rng
-                )
+                new_brackets = self._generate_contrarian_brackets(sim_results, n_strategy, rng)
             elif strategy == "targeted":
-                new_brackets = self._generate_targeted_brackets(
-                    sim_results, all_teams, n_strategy, rng
-                )
+                new_brackets = self._generate_targeted_brackets(sim_results, all_teams, n_strategy, rng)
             else:  # balanced
-                new_brackets = self._select_diverse_brackets(
-                    sim_results, n_strategy, rng
-                )
+                new_brackets = self._select_diverse_brackets(sim_results, n_strategy, rng)
 
             for b in new_brackets:
                 b.bracket_id = bracket_id
@@ -292,7 +298,9 @@ class BracketPortfolioGenerator:
 
         # Enforce diversification constraints before search refinement
         brackets = self._enforce_diversification(
-            brackets, rng, min_brackets=n_brackets,
+            brackets,
+            rng,
+            min_brackets=n_brackets,
         )
 
         # Post-sampling search refinement
@@ -395,17 +403,12 @@ class BracketPortfolioGenerator:
                     )
                     for p in optimized.picks
                 ]
-                new_log_prob = sum(
-                    math.log(max(p.win_probability, 1e-10)) for p in new_picks
-                )
+                new_log_prob = sum(math.log(max(p.win_probability, 1e-10)) for p in new_picks)
                 brackets[idx] = GeneratedBracket(
                     bracket_id=original.bracket_id,
                     picks=new_picks,
                     champion=optimized.champion,
-                    final_four=[
-                        p.winner_id for p in optimized.picks
-                        if p.round_num == 4
-                    ],
+                    final_four=[p.winner_id for p in optimized.picks if p.round_num == 4],
                     expected_score=original.expected_score,
                     log_probability=new_log_prob,
                     strategy=f"{original.strategy}_sa_refined",
@@ -414,7 +417,8 @@ class BracketPortfolioGenerator:
 
         logger.info(
             "Search refinement: refined %d/%d top brackets via SA",
-            refined_count, n_refine,
+            refined_count,
+            n_refine,
         )
         return brackets
 
@@ -487,9 +491,10 @@ class BracketPortfolioGenerator:
         removed_count = len(brackets) - len(kept)
         if removed_count > 0:
             logger.info(
-                "Diversification: removed %d/%d brackets exceeding "
-                "%.0f%% correlation threshold",
-                removed_count, len(brackets), max_correlation * 100,
+                "Diversification: removed %d/%d brackets exceeding %.0f%% correlation threshold",
+                removed_count,
+                len(brackets),
+                max_correlation * 100,
             )
 
         # --- Phase 2: Check champion diversity ---
@@ -498,22 +503,22 @@ class BracketPortfolioGenerator:
             logger.info(
                 "Diversification: only %d unique champions (target %d), "
                 "portfolio may benefit from more targeted brackets",
-                len(champions), min_unique_champions,
+                len(champions),
+                min_unique_champions,
             )
 
         # --- Phase 3: Check Final Four diversity ---
         f4_combos = set()
         for b in kept:
-            f4 = tuple(sorted(
-                p.winner_id for p in b.picks if p.round_num == 4
-            ))
+            f4 = tuple(sorted(p.winner_id for p in b.picks if p.round_num == 4))
             if f4:
                 f4_combos.add(f4)
 
         if len(f4_combos) < min_unique_final_fours and len(f4_combos) < len(kept):
             logger.info(
                 "Diversification: only %d unique Final Four combos (target %d)",
-                len(f4_combos), min_unique_final_fours,
+                len(f4_combos),
+                min_unique_final_fours,
             )
 
         return kept
@@ -536,20 +541,15 @@ class BracketPortfolioGenerator:
         if not common_keys:
             return 0.0
 
-        agreements = sum(
-            1 for k in common_keys if picks1[k] == picks2[k]
-        )
+        agreements = sum(1 for k in common_keys if picks1[k] == picks2[k])
         return agreements / len(common_keys)
 
-    def _build_bracket_structure(
-        self, teams_by_region: Dict[str, List[Dict]]
-    ) -> Tuple[Dict[str, Dict], List[str]]:
+    def _build_bracket_structure(self, teams_by_region: Dict[str, List[Dict]]) -> Tuple[Dict[str, Dict], List[str]]:
         """Build bracket structure from teams."""
         all_teams = {}
         first_round = []
 
-        seed_order = [(1, 16), (8, 9), (5, 12), (4, 13),
-                       (6, 11), (3, 14), (7, 10), (2, 15)]
+        seed_order = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
 
         for region in ["East", "West", "South", "Midwest"]:
             region_teams = teams_by_region.get(region, [])
@@ -568,9 +568,7 @@ class BracketPortfolioGenerator:
 
         return all_teams, first_round
 
-    def _precompute_matchups(
-        self, all_teams: Dict[str, Dict]
-    ) -> Dict[Tuple[str, str], float]:
+    def _precompute_matchups(self, all_teams: Dict[str, Dict]) -> Dict[Tuple[str, str], float]:
         """Pre-compute all pairwise matchup probabilities."""
         cache = {}
         team_ids = list(all_teams.keys())
@@ -626,13 +624,15 @@ class BracketPortfolioGenerator:
                         winner, loser = t2, t1
                         win_p = 1.0 - base_p
 
-                    picks.append(BracketPick(
-                        round_num=round_num,
-                        game_idx=g_idx // 2,
-                        winner_id=winner,
-                        loser_id=loser,
-                        win_probability=win_p,
-                    ))
+                    picks.append(
+                        BracketPick(
+                            round_num=round_num,
+                            game_idx=g_idx // 2,
+                            winner_id=winner,
+                            loser_id=loser,
+                            win_probability=win_p,
+                        )
+                    )
                     winners.append(winner)
 
                 current = winners
@@ -642,17 +642,17 @@ class BracketPortfolioGenerator:
             final_four = [p.winner_id for p in picks if p.round_num == 4]
 
             # Log probability of this exact bracket
-            log_prob = sum(
-                math.log(max(p.win_probability, 1e-10)) for p in picks
-            )
+            log_prob = sum(math.log(max(p.win_probability, 1e-10)) for p in picks)
 
-            results.append(GeneratedBracket(
-                bracket_id=sim,
-                picks=picks,
-                champion=champion,
-                final_four=final_four,
-                log_probability=log_prob,
-            ))
+            results.append(
+                GeneratedBracket(
+                    bracket_id=sim,
+                    picks=picks,
+                    champion=champion,
+                    final_four=final_four,
+                    log_probability=log_prob,
+                )
+            )
 
         return results
 
@@ -735,13 +735,15 @@ class BracketPortfolioGenerator:
                         winner, loser = t2, t1
                         win_p = 1.0 - p
 
-                    picks.append(BracketPick(
-                        round_num=round_num,
-                        game_idx=g_idx // 2,
-                        winner_id=winner,
-                        loser_id=loser,
-                        win_probability=win_p,
-                    ))
+                    picks.append(
+                        BracketPick(
+                            round_num=round_num,
+                            game_idx=g_idx // 2,
+                            winner_id=winner,
+                            loser_id=loser,
+                            win_probability=win_p,
+                        )
+                    )
                     winners.append(winner)
 
                 current = winners
@@ -749,10 +751,15 @@ class BracketPortfolioGenerator:
 
             champion = current[0] if current else ""
             log_prob = sum(math.log(max(p.win_probability, 1e-10)) for p in picks)
-            results.append(GeneratedBracket(
-                bracket_id=0, picks=picks, champion=champion,
-                log_probability=log_prob, strategy="chalk",
-            ))
+            results.append(
+                GeneratedBracket(
+                    bracket_id=0,
+                    picks=picks,
+                    champion=champion,
+                    log_probability=log_prob,
+                    strategy="chalk",
+                )
+            )
 
         return results
 
@@ -798,12 +805,13 @@ class BracketPortfolioGenerator:
             # Apply contrarian_strength: raise leverage to the power of strength.
             # strength=1 is neutral; >1 amplifies high-leverage champions;
             # <1 dampens, pulling allocation back toward model probabilities.
-            champion_leverage[champ] = raw_leverage ** self._contrarian_strength
+            champion_leverage[champ] = raw_leverage**self._contrarian_strength
             if self._contrarian_strength > 1.0:
                 logger.debug(
-                    "Contrarian champion %s: raw_lev=%.2f, amplified=%.2f "
-                    "(strength=%.1f)",
-                    champ, raw_leverage, champion_leverage[champ],
+                    "Contrarian champion %s: raw_lev=%.2f, amplified=%.2f (strength=%.1f)",
+                    champ,
+                    raw_leverage,
+                    champion_leverage[champ],
                     self._contrarian_strength,
                 )
 
@@ -823,7 +831,8 @@ class BracketPortfolioGenerator:
                 # contains, then sort by (leverage_score, log_probability).
                 for b in brackets:
                     b._leverage_score = self._score_bracket_leverage(
-                        b, leverage_teams_by_round,
+                        b,
+                        leverage_teams_by_round,
                     )
                 brackets.sort(
                     key=lambda b: (b._leverage_score, b.log_probability),
@@ -854,17 +863,24 @@ class BracketPortfolioGenerator:
         bracket: GeneratedBracket,
         leverage_teams_by_round: Dict[int, set],
     ) -> float:
-        """Score a bracket by how many leverage picks it contains.
+        """Score a bracket by leverage picks and matchup vulnerability.
 
         Each pick that matches a leverage opportunity contributes the
-        pick's win_probability as its score (so higher-probability
-        leverage picks are worth more).
+        pick's win_probability as its score. When vulnerability data is
+        available, picks that match high-pool-value upset targets get
+        an additional bonus — these are the seed-independent edges that
+        compound across 63 games in bracket pools.
         """
         score = 0.0
         for pick in bracket.picks:
             leverage_teams = leverage_teams_by_round.get(pick.round_num, set())
             if pick.winner_id in leverage_teams:
                 score += pick.win_probability
+            # Vulnerability bonus: reward brackets that include upset
+            # picks identified by seed-independent signals
+            vuln_value = self._vulnerability_targets.get(pick.winner_id, 0.0)
+            if vuln_value > 0:
+                score += vuln_value * pick.win_probability
         return score
 
     def _generate_targeted_brackets(
@@ -889,8 +905,7 @@ class BracketPortfolioGenerator:
             by_champion[b.champion].append(b)
 
         total = len(sim_results)
-        viable = {c: bs for c, bs in by_champion.items()
-                   if len(bs) / total >= 0.01}
+        viable = {c: bs for c, bs in by_champion.items() if len(bs) / total >= 0.01}
 
         if not viable:
             return self._select_diverse_brackets(sim_results, n_brackets, rng)
@@ -924,7 +939,8 @@ class BracketPortfolioGenerator:
             if leverage_teams_by_round:
                 for b in brackets:
                     b._leverage_score = self._score_bracket_leverage(
-                        b, leverage_teams_by_round,
+                        b,
+                        leverage_teams_by_round,
                     )
                 brackets.sort(
                     key=lambda b: (b._leverage_score, b.log_probability),
@@ -941,6 +957,7 @@ class BracketPortfolioGenerator:
 # ---------------------------------------------------------------------------
 # ESPN Pool Portfolio with Risk Profiles (Protocol Section 4.5)
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class RiskProfile:
@@ -1026,8 +1043,12 @@ class ESPNPoolPortfolio:
         self.team_seeds = team_seeds or {}
         self.team_regions = team_regions or {}
         self.scoring_system = scoring_system or {
-            "R64": 10, "R32": 20, "S16": 40,
-            "E8": 80, "F4": 160, "CHAMP": 320,
+            "R64": 10,
+            "R32": 20,
+            "S16": 40,
+            "E8": 80,
+            "F4": 160,
+            "CHAMP": 320,
         }
 
     def generate(
@@ -1077,10 +1098,7 @@ class ESPNPoolPortfolio:
                 enable_path_protection=True,
             )
 
-            champ_picks = {
-                tid: rounds.get("CHAMP", 0.01)
-                for tid, rounds in self.public_picks.items()
-            }
+            champ_picks = {tid: rounds.get("CHAMP", 0.01) for tid, rounds in self.public_picks.items()}
 
             optimizer = SimulatedAnnealingOptimizer(
                 predict_fn=self.predict_fn,
@@ -1114,7 +1132,9 @@ class ESPNPoolPortfolio:
 
             logger.info(
                 "ESPN portfolio: %s bracket (max_seed=%d, max_upsets=%d)",
-                name, profile.champion_seed_max, profile.max_upsets_r64,
+                name,
+                profile.champion_seed_max,
+                profile.max_upsets_r64,
             )
 
         return results
