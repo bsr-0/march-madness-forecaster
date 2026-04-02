@@ -1,0 +1,583 @@
+{
+  "teams": [
+    {
+      "name": "Kansas",
+      "team_id": "kansas",
+      "seed": 1,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "kansas"
+    },
+    {
+      "name": "North Carolina",
+      "team_id": "north_carolina",
+      "seed": 1,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "north_carolina"
+    },
+    {
+      "name": "Ucla",
+      "team_id": "ucla",
+      "seed": 1,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "ucla"
+    },
+    {
+      "name": "Duke",
+      "team_id": "duke",
+      "seed": 2,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "duke"
+    },
+    {
+      "name": "Georgetown",
+      "team_id": "georgetown",
+      "seed": 2,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "georgetown"
+    },
+    {
+      "name": "Tennessee",
+      "team_id": "tennessee",
+      "seed": 2,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "tennessee"
+    },
+    {
+      "name": "Texas",
+      "team_id": "texas",
+      "seed": 2,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "texas"
+    },
+    {
+      "name": "Louisville",
+      "team_id": "louisville",
+      "seed": 3,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "louisville"
+    },
+    {
+      "name": "Stanford",
+      "team_id": "stanford",
+      "seed": 3,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "stanford"
+    },
+    {
+      "name": "Wisconsin",
+      "team_id": "wisconsin",
+      "seed": 3,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "wisconsin"
+    },
+    {
+      "name": "Xavier",
+      "team_id": "xavier",
+      "seed": 3,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "xavier"
+    },
+    {
+      "name": "Connecticut",
+      "team_id": "connecticut",
+      "seed": 4,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "connecticut"
+    },
+    {
+      "name": "Pittsburgh",
+      "team_id": "pittsburgh",
+      "seed": 4,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "pittsburgh"
+    },
+    {
+      "name": "Vanderbilt",
+      "team_id": "vanderbilt",
+      "seed": 4,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "vanderbilt"
+    },
+    {
+      "name": "Washington State",
+      "team_id": "washington_state",
+      "seed": 4,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "washington_state"
+    },
+    {
+      "name": "Clemson",
+      "team_id": "clemson",
+      "seed": 5,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "clemson"
+    },
+    {
+      "name": "Drake",
+      "team_id": "drake",
+      "seed": 5,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "drake"
+    },
+    {
+      "name": "Michigan State",
+      "team_id": "michigan_state",
+      "seed": 5,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "michigan_state"
+    },
+    {
+      "name": "Notre Dame",
+      "team_id": "notre_dame",
+      "seed": 5,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "notre_dame"
+    },
+    {
+      "name": "Marquette",
+      "team_id": "marquette",
+      "seed": 6,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "marquette"
+    },
+    {
+      "name": "Memphis",
+      "team_id": "memphis",
+      "seed": 6,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "memphis"
+    },
+    {
+      "name": "Oklahoma",
+      "team_id": "oklahoma",
+      "seed": 6,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "oklahoma"
+    },
+    {
+      "name": "Purdue",
+      "team_id": "purdue",
+      "seed": 6,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "purdue"
+    },
+    {
+      "name": "Butler",
+      "team_id": "butler",
+      "seed": 7,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "butler"
+    },
+    {
+      "name": "Gonzaga",
+      "team_id": "gonzaga",
+      "seed": 7,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "gonzaga"
+    },
+    {
+      "name": "Miami  Fl",
+      "team_id": "miami__fl",
+      "seed": 7,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "miami__fl"
+    },
+    {
+      "name": "West Virginia",
+      "team_id": "west_virginia",
+      "seed": 7,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "west_virginia"
+    },
+    {
+      "name": "Brigham Young",
+      "team_id": "brigham_young",
+      "seed": 8,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "brigham_young"
+    },
+    {
+      "name": "Indiana",
+      "team_id": "indiana",
+      "seed": 8,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "indiana"
+    },
+    {
+      "name": "Mississippi State",
+      "team_id": "mississippi_state",
+      "seed": 8,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "mississippi_state"
+    },
+    {
+      "name": "Nevada Las Vegas",
+      "team_id": "nevada_las_vegas",
+      "seed": 8,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "nevada_las_vegas"
+    },
+    {
+      "name": "Arkansas",
+      "team_id": "arkansas",
+      "seed": 9,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "arkansas"
+    },
+    {
+      "name": "Kent State",
+      "team_id": "kent_state",
+      "seed": 9,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "kent_state"
+    },
+    {
+      "name": "Oregon",
+      "team_id": "oregon",
+      "seed": 9,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "oregon"
+    },
+    {
+      "name": "Texas A M",
+      "team_id": "texas_a_m",
+      "seed": 9,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "texas_a_m"
+    },
+    {
+      "name": "Arizona",
+      "team_id": "arizona",
+      "seed": 10,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "arizona"
+    },
+    {
+      "name": "Davidson",
+      "team_id": "davidson",
+      "seed": 10,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "davidson"
+    },
+    {
+      "name": "Saint Mary S  Ca",
+      "team_id": "saint_mary_s__ca",
+      "seed": 10,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "saint_mary_s__ca"
+    },
+    {
+      "name": "South Alabama",
+      "team_id": "south_alabama",
+      "seed": 10,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "south_alabama"
+    },
+    {
+      "name": "Baylor",
+      "team_id": "baylor",
+      "seed": 11,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "baylor"
+    },
+    {
+      "name": "Kansas State",
+      "team_id": "kansas_state",
+      "seed": 11,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "kansas_state"
+    },
+    {
+      "name": "Kentucky",
+      "team_id": "kentucky",
+      "seed": 11,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "kentucky"
+    },
+    {
+      "name": "Saint Joseph S",
+      "team_id": "saint_joseph_s",
+      "seed": 11,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "saint_joseph_s"
+    },
+    {
+      "name": "George Mason",
+      "team_id": "george_mason",
+      "seed": 12,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "george_mason"
+    },
+    {
+      "name": "Temple",
+      "team_id": "temple",
+      "seed": 12,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "temple"
+    },
+    {
+      "name": "Villanova",
+      "team_id": "villanova",
+      "seed": 12,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "villanova"
+    },
+    {
+      "name": "Western Kentucky",
+      "team_id": "western_kentucky",
+      "seed": 12,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "western_kentucky"
+    },
+    {
+      "name": "Oral Roberts",
+      "team_id": "oral_roberts",
+      "seed": 13,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "oral_roberts"
+    },
+    {
+      "name": "San Diego",
+      "team_id": "san_diego",
+      "seed": 13,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "san_diego"
+    },
+    {
+      "name": "Siena",
+      "team_id": "siena",
+      "seed": 13,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "siena"
+    },
+    {
+      "name": "Winthrop",
+      "team_id": "winthrop",
+      "seed": 13,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "winthrop"
+    },
+    {
+      "name": "Boise State",
+      "team_id": "boise_state",
+      "seed": 14,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "boise_state"
+    },
+    {
+      "name": "Cal State Fullerton",
+      "team_id": "cal_state_fullerton",
+      "seed": 14,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "cal_state_fullerton"
+    },
+    {
+      "name": "Cornell",
+      "team_id": "cornell",
+      "seed": 14,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "cornell"
+    },
+    {
+      "name": "Georgia",
+      "team_id": "georgia",
+      "seed": 14,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "georgia"
+    },
+    {
+      "name": "American",
+      "team_id": "american",
+      "seed": 15,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "american"
+    },
+    {
+      "name": "Austin Peay",
+      "team_id": "austin_peay",
+      "seed": 15,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "austin_peay"
+    },
+    {
+      "name": "Belmont",
+      "team_id": "belmont",
+      "seed": 15,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "belmont"
+    },
+    {
+      "name": "Maryland Baltimore County",
+      "team_id": "maryland_baltimore_county",
+      "seed": 15,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "maryland_baltimore_county"
+    },
+    {
+      "name": "Coppin State",
+      "team_id": "coppin_state",
+      "seed": 16,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "coppin_state"
+    },
+    {
+      "name": "Mississippi Valley State",
+      "team_id": "mississippi_valley_state",
+      "seed": 16,
+      "region": "West",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "mississippi_valley_state"
+    },
+    {
+      "name": "Mount St  Mary S",
+      "team_id": "mount_st__mary_s",
+      "seed": 16,
+      "region": "East",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "mount_st__mary_s"
+    },
+    {
+      "name": "Portland State",
+      "team_id": "portland_state",
+      "seed": 16,
+      "region": "Midwest",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "portland_state"
+    },
+    {
+      "name": "Ut Arlington",
+      "team_id": "ut_arlington",
+      "seed": 16,
+      "region": "South",
+      "conference": "",
+      "rating": 1500.0,
+      "school_slug": "ut_arlington"
+    }
+  ],
+  "generated_at": "2026-04-01T23:51:21.382529+00:00",
+  "source": "tournament_results_2008.json",
+  "note": "Auto-generated from historical tournament results. Ratings are placeholder (1500.0); conference data not available."
+}
