@@ -32,7 +32,7 @@ REQUIRED_CONFIG_VALUES: Dict[str, Any] = {
     "year": 2026,
     "probability_profile": "production",
     "mode": "calibration",
-    "model_complexity": "standard",
+    "model_complexity": "simple",
     "enable_gnn": False,
     "enable_transformer": False,
     "enable_embedding_projections": False,
@@ -73,7 +73,24 @@ REQUIRED_CONFIG_VALUES: Dict[str, Any] = {
     "enable_market_blend": True,
 }
 
-EXPECTED_TRAINING_YEARS = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
+EXPECTED_TRAINING_YEARS = [
+    2008,
+    2009,
+    2010,
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+]
 EXPECTED_DEV_YEARS = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
 EXPECTED_HOLDOUT_YEARS = [2025]
 
@@ -94,16 +111,12 @@ def validate_2026_production_config(config: SOTAPipelineConfig) -> None:
     if config.seed_prior_weight > 0.5:
         violations.append(f"seed_prior_weight={config.seed_prior_weight} (expected <= 0.5)")
     if config.consistency_bonus_max > 0.1:
-        violations.append(
-            f"consistency_bonus_max={config.consistency_bonus_max} (expected <= 0.1)"
-        )
+        violations.append(f"consistency_bonus_max={config.consistency_bonus_max} (expected <= 0.1)")
 
     if config.training_years is None:
         violations.append("training_years is missing")
     elif list(config.training_years) != EXPECTED_TRAINING_YEARS:
-        violations.append(
-            f"training_years={config.training_years} (expected {EXPECTED_TRAINING_YEARS})"
-        )
+        violations.append(f"training_years={config.training_years} (expected {EXPECTED_TRAINING_YEARS})")
 
     if config.dev_years is None:
         violations.append("dev_years is missing")
@@ -113,9 +126,7 @@ def validate_2026_production_config(config: SOTAPipelineConfig) -> None:
     if config.holdout_years is None:
         violations.append("holdout_years is missing")
     elif list(config.holdout_years) != EXPECTED_HOLDOUT_YEARS:
-        violations.append(
-            f"holdout_years={config.holdout_years} (expected {EXPECTED_HOLDOUT_YEARS})"
-        )
+        violations.append(f"holdout_years={config.holdout_years} (expected {EXPECTED_HOLDOUT_YEARS})")
 
     if config.dev_years and 2025 in config.dev_years:
         violations.append("2025 appears in dev_years")
@@ -139,11 +150,27 @@ def validate_2026_production_config(config: SOTAPipelineConfig) -> None:
         violations.append("2025 appears in training_years")
 
     cal_years = getattr(config, "calibration_years", None)
-    expected_cal = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+    expected_cal = [
+        2008,
+        2009,
+        2010,
+        2011,
+        2012,
+        2013,
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025,
+    ]
     if cal_years is not None and sorted(cal_years) != expected_cal:
-        violations.append(
-            f"calibration_years={cal_years} (expected {expected_cal})"
-        )
+        violations.append(f"calibration_years={cal_years} (expected {expected_cal})")
 
     for field in ALL_PATH_FIELDS:
         value = getattr(config, field, None)
@@ -157,9 +184,7 @@ def validate_2026_production_config(config: SOTAPipelineConfig) -> None:
             violations.append("external_ratings_dir must be explicitly set")
 
     if violations:
-        raise ProductionValidationError(
-            "2026 production configuration validation failed: " + "; ".join(violations)
-        )
+        raise ProductionValidationError("2026 production configuration validation failed: " + "; ".join(violations))
 
 
 def validate_production_2026(
@@ -197,9 +222,7 @@ def validate_production_2026(
                 missing.append(f"{field}={value!r} file not found at {resolved}")
 
     if missing:
-        raise ProductionValidationError(
-            "Production data path verification failed: " + "; ".join(missing)
-        )
+        raise ProductionValidationError("Production data path verification failed: " + "; ".join(missing))
 
 
 # ---------------------------------------------------------------------------
@@ -241,11 +264,7 @@ def validate_espn_pathway_config(config: SOTAPipelineConfig) -> None:
     # Path protection weight must be positive
     ppw = getattr(config, "path_protection_weight", 0.0)
     if ppw <= 0:
-        violations.append(
-            f"path_protection_weight={ppw} must be > 0 for ESPN pathway"
-        )
+        violations.append(f"path_protection_weight={ppw} must be > 0 for ESPN pathway")
 
     if violations:
-        raise ProductionValidationError(
-            "ESPN pathway configuration validation failed: " + "; ".join(violations)
-        )
+        raise ProductionValidationError("ESPN pathway configuration validation failed: " + "; ".join(violations))

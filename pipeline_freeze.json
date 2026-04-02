@@ -150,7 +150,7 @@
     "min_rapm_players_per_team": 5,
     "min_samples_for_component": "{'stacking': 400, 'bayesian_bt': 300, 'spread_model': 250}",
     "mode": "calibration",
-    "model_complexity": "standard",
+    "model_complexity": "simple",
     "multi_year_games_dir": "auto",
     "n_bootstrap": 10,
     "num_simulations": 50000,

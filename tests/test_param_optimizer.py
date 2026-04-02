@@ -98,8 +98,12 @@ class TestTunableParamSpace:
         from src.research.param_optimizer import TUNABLE_PARAM_SPACE
 
         expected = [
-            "tournament_shrinkage", "massey_blend_weight", "massey_sigma",
-            "seed_prior_weight", "mc_noise_std", "training_year_decay",
+            "tournament_shrinkage",
+            "massey_blend_weight",
+            "massey_sigma",
+            "seed_prior_weight",
+            "mc_noise_std",
+            "training_year_decay",
         ]
         for name in expected:
             assert name in TUNABLE_PARAM_SPACE, f"Missing expected param: {name}"
@@ -284,7 +288,12 @@ class TestGenerateConfigDiff:
         candidate_year = {2018: 0.18, 2019: 0.17}
 
         report = optimizer.generate_config_diff(
-            0.195, baseline_year, 0.175, candidate_year, [change], 10.0,
+            0.195,
+            baseline_year,
+            0.175,
+            candidate_year,
+            [change],
+            10.0,
         )
 
         assert "2018" in report.per_year_briers
@@ -392,13 +401,14 @@ class TestLoadProductionBaseline:
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 
+
 def _write_minimal_config(tmp_path):
     """Write a minimal production config for testing."""
     config = {
         "year": 2026,
         "probability_profile": "production",
         "mode": "calibration",
-        "model_complexity": "standard",
+        "model_complexity": "simple",
         "tournament_shrinkage": 0.06,
         "massey_blend_weight": 0.25,
         "massey_sigma": 4.5,

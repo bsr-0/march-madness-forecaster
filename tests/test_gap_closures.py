@@ -74,8 +74,7 @@ class TestRoundWeightedSharpener:
         rng = np.random.default_rng(123)
         preds = np.clip(rng.normal(0.5, 0.2, size=100), 0.05, 0.95)
         outcomes = (rng.uniform(size=100) < preds).astype(float)
-        rounds = (["R64"] * 50 + ["R32"] * 25 + ["S16"] * 12 +
-                  ["E8"] * 6 + ["F4"] * 4 + ["NCG"] * 3)
+        rounds = ["R64"] * 50 + ["R32"] * 25 + ["S16"] * 12 + ["E8"] * 6 + ["F4"] * 4 + ["NCG"] * 3
 
         flat = BrierOptimalSharpener()
         flat.fit(preds, outcomes)
@@ -95,10 +94,7 @@ class TestKaggleRoundWeights:
         from src.ml.calibration.brier_optimal import KAGGLE_ROUND_WEIGHTS
 
         games_per_round = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "NCG": 1}
-        round_totals = {
-            r: games_per_round[r] * KAGGLE_ROUND_WEIGHTS[r]
-            for r in KAGGLE_ROUND_WEIGHTS
-        }
+        round_totals = {r: games_per_round[r] * KAGGLE_ROUND_WEIGHTS[r] for r in KAGGLE_ROUND_WEIGHTS}
         # All rounds should contribute 32 total points
         for r, total in round_totals.items():
             assert total == pytest.approx(32.0), f"{r} contributes {total}, not 32"
@@ -121,7 +117,9 @@ class TestSimpleFeatureSet:
     def test_simple_feature_set_size(self):
         from src.pipeline.sota import SIMPLE_FEATURE_SET
 
-        assert len(SIMPLE_FEATURE_SET) == 10  # Forward-selected features: elo, warp, orb, momentum, tempo, sos, opp_to, top5_rapm, ap_rank, win_pct
+        assert (
+            len(SIMPLE_FEATURE_SET) == 10
+        )  # Forward-selected features: elo, warp, orb, momentum, tempo, sos, opp_to, top5_rapm, ap_rank, win_pct
 
     def test_simple_has_momentum(self):
         from src.pipeline.sota import SIMPLE_FEATURE_SET
@@ -165,7 +163,7 @@ class TestSOTAConfigNewFields:
         assert config.kaggle_dir is None
         assert config.massey_blend_weight == 0.25  # FIX #5: increased from 0.20 for stronger Massey signal
         assert config.massey_sigma == 4.5  # FIX #5: calibrated via grid search on historical data
-        assert config.model_complexity == "standard"  # Upgraded to standard for 4-model ensemble
+        assert config.model_complexity == "simple"  # Simple mode: single logistic regression
         assert config.ensemble_lgb_weight == 0.15  # Gap #2: further reduced for MOV-first (was 0.25)
         assert config.ensemble_xgb_weight == 0.15  # Gap #2: reduced for MOV-first
         # Women's config
