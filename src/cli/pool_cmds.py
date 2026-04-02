@@ -61,6 +61,9 @@ def run_optimize_pool(args):
     )
     print(f"  Opponent model covers {len(opponent_picks)} teams")
 
+    # --- Step 2b: Apply E8 matchup interaction adjustments ---
+    round_probs = _apply_e8_adjustments_if_available(year, seeds, round_probs, args.data_dir)
+
     # --- Step 4: Build scoring rules ---
     if args.scoring == "standard":
         scoring_rules = dict(_DEFAULT_SCORING)
@@ -127,6 +130,57 @@ def run_optimize_pool(args):
 
     print(f"\nReport saved to {output_path}")
     return 0
+
+
+def _apply_e8_adjustments_if_available(year, seeds, round_probs, data_dir):
+    """Try to load Torvik four-factor data and apply E8 interaction adjustments."""
+    from types import SimpleNamespace
+
+    from ..optimization.e8_matchup_scorer import apply_e8_adjustments, predict_e8_matchups
+
+    torvik_path = Path(data_dir) / f"torvik_four_factors_{year}.json"
+    if not torvik_path.exists():
+        torvik_path = Path(data_dir) / f"torvik_{year}.json"
+    if not torvik_path.exists():
+        logger.debug("No Torvik data for %d — skipping E8 adjustments", year)
+        return round_probs
+
+    try:
+        with open(torvik_path) as f:
+            torvik_raw = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return round_probs
+
+    # Build lightweight feature objects from Torvik data.
+    team_features = {}
+    torvik_teams = torvik_raw if isinstance(torvik_raw, dict) else {}
+    # Handle {"teams": [...]} format from torvik_{year}.json
+    if "teams" in torvik_teams:
+        torvik_teams = {t["team_id"]: t for t in torvik_teams["teams"] if "team_id" in t}
+
+    for team_id in seeds:
+        data = torvik_teams.get(team_id, {})
+        if not data:
+            continue
+        team_features[team_id] = SimpleNamespace(
+            opp_turnover_rate=data.get("opp_turnover_rate", 0.18),
+            turnover_rate=data.get("turnover_rate", 0.18),
+            offensive_reb_rate=data.get("offensive_reb_rate", 0.28),
+            defensive_reb_rate=data.get("defensive_reb_rate", 0.72),
+            adj_tempo=data.get("adj_tempo", 68.0),
+            three_pt_pct=data.get("three_pt_pct", 0.34),
+            opp_effective_fg_pct=data.get("opp_effective_fg_pct", 0.48),
+            coach_e8_appearances=data.get("coach_e8_appearances", 0),
+            coach_deep_run_rate=data.get("coach_deep_run_rate", 0.0),
+        )
+
+    if not team_features:
+        return round_probs
+
+    e8_matchups = predict_e8_matchups(seeds)
+    adjusted = apply_e8_adjustments(round_probs, e8_matchups, team_features)
+    print(f"  Applied E8 matchup interaction adjustments ({len(e8_matchups)} matchups)")
+    return adjusted
 
 
 def _load_seeds(year: int) -> dict:
