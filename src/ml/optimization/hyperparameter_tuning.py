@@ -125,9 +125,7 @@ class TemporalCrossValidator:
             return idx
         return (idx // self.pair_size) * self.pair_size
 
-    def split(
-        self, n_samples: int, sort_keys: Optional[np.ndarray] = None
-    ) -> List[TemporalSplit]:
+    def split(self, n_samples: int, sort_keys: Optional[np.ndarray] = None) -> List[TemporalSplit]:
         """
         Generate temporal train/validation splits.
 
@@ -223,9 +221,7 @@ class TemporalCrossValidator:
 
             brier = float(np.mean((preds - y_val) ** 2))
             eps = 1e-7
-            ll = float(
-                -np.mean(y_val * np.log(preds + eps) + (1 - y_val) * np.log(1 - preds + eps))
-            )
+            ll = float(-np.mean(y_val * np.log(preds + eps) + (1 - y_val) * np.log(1 - preds + eps)))
             acc = float(np.mean((preds >= 0.5).astype(int) == y_val))
 
             results.append(
@@ -337,7 +333,9 @@ class LightGBMTuner:
 
             def train_fn(X_tr, y_tr, X_v, y_v, w_tr):
                 train_data = lgb.Dataset(
-                    X_tr, label=y_tr, feature_name=feature_names,
+                    X_tr,
+                    label=y_tr,
+                    feature_name=feature_names,
                     weight=w_tr,
                 )
                 callbacks = [lgb.log_evaluation(period=0)]
@@ -352,7 +350,11 @@ class LightGBMTuner:
                 return model.predict(X_pred)
 
             cv_results = cv.cross_validate(
-                X, y, sort_keys, train_fn, predict_fn,
+                X,
+                y,
+                sort_keys,
+                train_fn,
+                predict_fn,
                 sample_weight=sample_weight,
             )
             mean_brier = float(np.mean([r.brier_score for r in cv_results]))
@@ -388,12 +390,15 @@ class LightGBMTuner:
         # stopping) to keep val fold uncontaminated for evaluation.
         def final_train(X_tr, y_tr, X_v, y_v, w_tr):
             td = lgb.Dataset(
-                X_tr, label=y_tr, feature_name=feature_names,
+                X_tr,
+                label=y_tr,
+                feature_name=feature_names,
                 weight=w_tr,
             )
             callbacks = [lgb.log_evaluation(period=0)]
             return lgb.train(
-                best_params, td,
+                best_params,
+                td,
                 num_boost_round=best_num_rounds,
                 callbacks=callbacks,
             )
@@ -402,7 +407,11 @@ class LightGBMTuner:
             return model.predict(X_pred)
 
         final_cv = cv.cross_validate(
-            X, y, sort_keys, final_train, final_predict,
+            X,
+            y,
+            sort_keys,
+            final_train,
+            final_predict,
             sample_weight=sample_weight,
         )
 
@@ -503,7 +512,9 @@ class XGBoostTuner:
 
             def train_fn(X_tr, y_tr, X_v, y_v, w_tr):
                 dtrain = xgb.DMatrix(
-                    X_tr, label=y_tr, feature_names=feature_names,
+                    X_tr,
+                    label=y_tr,
+                    feature_names=feature_names,
                     weight=w_tr,
                 )
                 return xgb.train(
@@ -518,7 +529,11 @@ class XGBoostTuner:
                 return model.predict(dmat)
 
             cv_results = cv.cross_validate(
-                X, y, sort_keys, train_fn, predict_fn,
+                X,
+                y,
+                sort_keys,
+                train_fn,
+                predict_fn,
                 sample_weight=sample_weight,
             )
             mean_brier = float(np.mean([r.brier_score for r in cv_results]))
@@ -552,11 +567,14 @@ class XGBoostTuner:
         # Final CV with best params — fixed rounds, no early stopping.
         def final_train(X_tr, y_tr, X_v, y_v, w_tr):
             dtrain = xgb.DMatrix(
-                X_tr, label=y_tr, feature_names=feature_names,
+                X_tr,
+                label=y_tr,
+                feature_names=feature_names,
                 weight=w_tr,
             )
             return xgb.train(
-                best_params, dtrain,
+                best_params,
+                dtrain,
                 num_boost_round=best_num_rounds,
                 verbose_eval=False,
             )
@@ -566,7 +584,11 @@ class XGBoostTuner:
             return model.predict(dmat)
 
         final_cv = cv.cross_validate(
-            X, y, sort_keys, final_train, final_predict,
+            X,
+            y,
+            sort_keys,
+            final_train,
+            final_predict,
             sample_weight=sample_weight,
         )
 
@@ -637,7 +659,10 @@ class LogisticTuner:
 
             def train_fn(X_tr, y_tr, X_v, y_v, w_tr):
                 kwargs = dict(
-                    C=C, penalty=penalty, solver=solver, max_iter=2000,
+                    C=C,
+                    penalty=penalty,
+                    solver=solver,
+                    max_iter=2000,
                     random_state=self.random_seed,
                 )
                 if l1_ratio is not None:
@@ -650,7 +675,11 @@ class LogisticTuner:
                 return model.predict_proba(X_pred)[:, 1]
 
             results = cv.cross_validate(
-                X, y, sort_keys, train_fn, predict_fn,
+                X,
+                y,
+                sort_keys,
+                train_fn,
+                predict_fn,
                 sample_weight=sample_weight,
             )
             return float(np.mean([r.brier_score for r in results]))
@@ -710,9 +739,7 @@ class LeaveOneYearOutCV:
                 "Use temporal_mode='rolling_window' (default) instead."
             )
         if temporal_mode != "rolling_window":
-            raise ValueError(
-                f"temporal_mode must be 'rolling_window', got '{temporal_mode}'"
-            )
+            raise ValueError(f"temporal_mode must be 'rolling_window', got '{temporal_mode}'")
         self.temporal_mode = temporal_mode
 
     def split(
@@ -784,7 +811,7 @@ class LeaveOneYearOutCV:
             # leaking test-year labels into the training process.
             n_tr = len(train_idx)
             es_size = max(10, int(0.15 * n_tr))
-            es_idx = train_idx[-es_size:]   # chronologically last portion
+            es_idx = train_idx[-es_size:]  # chronologically last portion
             tr_idx = train_idx[:-es_size]
 
             X_train = X[tr_idx]
@@ -799,9 +826,7 @@ class LeaveOneYearOutCV:
 
             brier = float(np.mean((preds - y_test) ** 2))
             eps = 1e-7
-            ll = float(
-                -np.mean(y_test * np.log(preds + eps) + (1 - y_test) * np.log(1 - preds + eps))
-            )
+            ll = float(-np.mean(y_test * np.log(preds + eps) + (1 - y_test) * np.log(1 - preds + eps)))
             acc = float(np.mean((preds >= 0.5).astype(int) == y_test))
 
             results.append(
@@ -900,10 +925,11 @@ class EnsembleWeightOptimizer:
         uniform_weights = {name: 1.0 / n_models for name in model_names}
         if n < min_samples:
             import logging
+
             logging.getLogger(__name__).warning(
-                "Ensemble weight optimization: only %d samples (minimum %d); "
-                "returning uniform weights.",
-                n, min_samples,
+                "Ensemble weight optimization: only %d samples (minimum %d); returning uniform weights.",
+                n,
+                min_samples,
             )
             combined = np.zeros(n)
             for name in model_names:
@@ -921,6 +947,7 @@ class EnsembleWeightOptimizer:
         # the search to a simplex neighborhood, preventing the optimizer
         # from drifting too far from the literature-based prior.
         if weight_bounds:
+
             def _combo_in_bounds(combo: tuple) -> bool:
                 for name, w in zip(model_names, combo):
                     if name in weight_bounds:
@@ -928,6 +955,7 @@ class EnsembleWeightOptimizer:
                         if w < lo - 1e-9 or w > hi + 1e-9:
                             return False
                 return True
+
             weight_grid = [c for c in weight_grid if _combo_in_bounds(c)]
 
         if not weight_grid:
@@ -980,17 +1008,12 @@ class EnsembleWeightOptimizer:
 
         return best_weights, best_score
 
-    def _generate_weight_grid(
-        self, n_models: int, steps: int
-    ) -> List[Tuple[float, ...]]:
+    def _generate_weight_grid(self, n_models: int, steps: int) -> List[Tuple[float, ...]]:
         """Generate all weight combinations summing to 1.0."""
         if n_models == 1:
             return [(1.0,)]
         if n_models == 2:
-            return [
-                (i / steps, 1.0 - i / steps)
-                for i in range(steps + 1)
-            ]
+            return [(i / steps, 1.0 - i / steps) for i in range(steps + 1)]
 
         combos = []
         self._weight_recurse(n_models, steps, steps, [], combos)
@@ -1084,7 +1107,11 @@ class LambdaMARTTuner:
                 return model.predict(X_pred)
 
             results = cv.cross_validate(
-                X, y, sort_keys, train_fn, predict_fn,
+                X,
+                y,
+                sort_keys,
+                train_fn,
+                predict_fn,
                 sample_weight=sample_weight,
             )
             return float(np.mean([r.brier_score for r in results]))
@@ -1101,75 +1128,4 @@ class LambdaMARTTuner:
             best_score=study.best_value,
             n_trials=len(study.trials),
             study_name="lambdamart_tuning",
-        )
-
-
-class EloTuner:
-    """Optuna-based hyperparameter tuner for EloTemporalModel.
-
-    Searches over K-factor, mean reversion rate, and margin-of-victory
-    settings.  Uses leave-one-year-out evaluation.
-    """
-
-    def __init__(
-        self,
-        n_trials: int = 30,
-        timeout: Optional[int] = 120,
-        random_seed: int = 42,
-    ):
-        if not OPTUNA_AVAILABLE:
-            raise ImportError("Optuna required for tuning")
-        self.n_trials = n_trials
-        self.timeout = timeout
-        self.random_seed = random_seed
-
-    def tune(
-        self,
-        games: list,
-        tournament_matchups: list,
-    ) -> TuningResult:
-        """Tune Elo parameters against tournament prediction accuracy.
-
-        Args:
-            games: Chronologically sorted regular-season game dicts.
-            tournament_matchups: Tournament game dicts with outcomes
-                for evaluation.
-
-        Returns:
-            TuningResult with best Elo parameters.
-        """
-        from ..time_series.elo_temporal import EloTemporalModel
-
-        def objective(trial: optuna.Trial) -> float:
-            k = trial.suggest_float("k_factor", 10.0, 40.0)
-            mr = trial.suggest_float("mean_reversion", 0.1, 0.5)
-            mov = trial.suggest_categorical("mov_adjustment", [True, False])
-
-            model = EloTemporalModel(
-                k_factor=k,
-                mean_reversion=mr,
-                mov_adjustment=mov,
-            )
-            model.train(games)
-
-            # Evaluate on tournament matchups
-            brier_sum = 0.0
-            for m in tournament_matchups:
-                prob = model.predict_proba(m["team_a"], m["team_b"])
-                brier_sum += (prob - m["outcome"]) ** 2
-
-            return brier_sum / max(len(tournament_matchups), 1)
-
-        study = optuna.create_study(
-            direction="minimize",
-            study_name="elo_tuning",
-            sampler=optuna.samplers.TPESampler(seed=self.random_seed),
-        )
-        study.optimize(objective, n_trials=self.n_trials, timeout=self.timeout)
-
-        return TuningResult(
-            best_params=study.best_params,
-            best_score=study.best_value,
-            n_trials=len(study.trials),
-            study_name="elo_tuning",
         )
