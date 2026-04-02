@@ -17,12 +17,13 @@ from .cli import (
     research_cmds,
     ops_cmds,
     live_protocol_cmds,
+    pool_cmds,
 )
 
 # ---------------------------------------------------------------------------
 # Backward-compatible re-exports used by tests
 # ---------------------------------------------------------------------------
-from .cli._helpers import (                    # noqa: F401
+from .cli._helpers import (  # noqa: F401
     _resolve_multi_year_dir,
     _parse_year_list,
     _parse_float_list,
@@ -44,6 +45,7 @@ _COMMAND_MODULES = [
     research_cmds,
     ops_cmds,
     live_protocol_cmds,
+    pool_cmds,
 ]
 
 

@@ -145,11 +145,48 @@ The following backtest scripts and results informed this pivot:
 - `scripts/backtest_by_round.py` — round-segmented analysis (result: SI signals flat)
 - Council transcripts in `council-transcript-*.md` files document the decision process
 
+## Pool Optimization Pipeline (Completed)
+
+The game theory pivot is now wired end-to-end. New modules:
+
+| Module | Purpose |
+|--------|---------|
+| `src/prediction/seed_probabilities.py` | Seed-based pairwise win probabilities (replaces ML model) |
+| `src/simulation/ratings_opponent_model.py` | Converts 56+ external rating systems into opponent pick distributions |
+| `src/cli/pool_cmds.py` | `optimize-pool` CLI entry point |
+| `scripts/backtest_pool_strategy.py` | Historical backtest against 2018-2025 data |
+
+### How It Works
+
+1. **Seed probabilities as truth**: Historical win rates (1985-2025) provide pairwise matchup
+   probabilities — equivalent to ML model output but simpler and proven equal (BSS=0).
+2. **External ratings as opponent model**: Each of 56+ rating systems (Massey Ordinals) represents
+   a "type of informed picker." Their consensus approximates the field's bracket behavior.
+3. **ESPN public picks blended in**: When available (2018-2025), real ESPN data gets 60% weight,
+   ratings-derived picks get 30%, seed-based fallback gets 10%.
+4. **Pool optimizer**: `PoolOptimizer` finds leverage picks (model > public), fade picks
+   (public > model), and recommends strategy (chalk/balanced/contrarian/aggressive/targeted).
+5. **Sensitivity analysis**: Tests stability under ±5% pick distribution shifts.
+
+### CLI Usage
+
+```bash
+python -m src optimize-pool --year 2026 --pool-size 100 --payout winner_take_all
+python -m src optimize-pool --year 2024 --pool-size 500 --payout top_3 --scoring flat
+```
+
+### Tests
+
+- `tests/test_seed_probabilities.py` — 7 tests (symmetry, format, matchup correctness)
+- `tests/test_ratings_opponent_model.py` — 7 tests (blending, fallback, format)
+- `tests/test_pool_optimization_e2e.py` — 4 integration tests (full pipeline flow)
+
 ## Next Steps
 
-1. **Build opponent model** — estimate how the average pool entrant fills a bracket using
-   ESPN/CBS public pick data as a proxy
-2. **Implement pool-EV scoring** — expected payout = f(your bracket, opponent brackets, scoring rules)
-3. **Optimize bracket portfolios** — generate bracket sets that maximize EV against the field,
-   not prediction accuracy
-4. **Backtest pool strategy** — validate against historical public pick data + actual outcomes
+1. **Run historical backtest** (`scripts/backtest_pool_strategy.py`) — validate whether
+   contrarian optimization actually outperforms the field across 2018-2025
+2. **Tune blend weights** — the 60/30/10 ESPN/ratings/seed split is a starting point;
+   backtest results may suggest different weights
+3. **Add bracket portfolio generation** — wire `BracketPortfolioGenerator` into the CLI
+   to output complete printable brackets, not just leverage picks
+4. **Live tournament mode** — connect to real-time data feeds during March Madness
