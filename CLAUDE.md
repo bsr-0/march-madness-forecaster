@@ -3,6 +3,38 @@
 ## LLM Council
 When the user says "council this", "run the council", "war room this", "pressure-test this", "stress-test this", or "debate this", invoke the `llm-council` skill from `.claude/skills/llm-council.md`. Also trigger when the user presents a genuine decision with stakes and multiple options (e.g., "should I X or Y", "which option", "I'm torn between").
 
+## Superpowers Skills
+
+The following superpowers-inspired skills are available in `.claude/skills/` and should be used when their conditions match:
+
+| Skill | When to Use |
+|-------|-------------|
+| `brainstorming` | Starting new features or significant changes — design before code |
+| `writing-plans` | Multi-step tasks needing coordination — plan before implementing |
+| `executing-plans` | You have a written plan ready to execute |
+| `subagent-driven-development` | Executing plans with independent tasks via sub-agents |
+| `dispatching-parallel-agents` | 2+ independent problems that can be investigated concurrently |
+| `test-driven-development` | Any feature or bugfix — write the test first |
+| `testing-anti-patterns` | Adding mocks or test utilities — avoid common pitfalls |
+| `systematic-debugging` | Bug investigation, especially after failed fix attempts |
+| `verification-before-completion` | Before claiming ANY work is done, committing, or creating PRs |
+| `requesting-code-review` | After completing tasks or before merging |
+| `receiving-code-review` | When handling review feedback — verify before implementing |
+| `using-git-worktrees` | Feature work needing isolation from current workspace |
+| `finishing-a-development-branch` | Implementation complete, deciding how to integrate |
+| `code-reviewer` | Dispatch as sub-agent for structured code review |
+
+### Workflow Chain
+For new features: `brainstorming` → `writing-plans` → `executing-plans` (or `subagent-driven-development`) → `requesting-code-review` → `finishing-a-development-branch`
+
+For bug fixes: `systematic-debugging` → `test-driven-development` → `verification-before-completion`
+
+### Project-Specific Verification Commands
+```bash
+pytest           # Run tests
+ruff check src/  # Lint check
+```
+
 ---
 
 # CLAUDE.md - Production-Grade Agent Directives
