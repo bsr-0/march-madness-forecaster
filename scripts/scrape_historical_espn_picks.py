@@ -328,10 +328,7 @@ def import_from_kaggle(output_dir: Path | None = None, years: list[int] | None =
 
     Uses the Kaggle API (requires KAGGLE_USERNAME and KAGGLE_KEY env vars)
     to download Nishaan Amin's 'march-madness-data' dataset, then converts
-    the 'Public Picks.csv' file into per-year JSON files.
-
-    The Kaggle CSV has columns: YEAR, TEAMNO, TEAM, R64, R32, S16, E8, F4, FINALS
-    Values are on 0-100 scale.
+    all Public Picks CSV files into per-year JSON files.
 
     Returns:
         Number of years that failed to import (0 = all OK).
@@ -378,68 +375,152 @@ def import_from_kaggle(output_dir: Path | None = None, years: list[int] | None =
             logger.error("Kaggle download timed out after 120 seconds")
             return 1
 
-        # Find the Public Picks CSV
-        csv_path = _find_kaggle_picks_csv(Path(tmpdir))
-        if csv_path is None:
+        # Log all CSVs found for debugging
+        all_csvs = sorted(Path(tmpdir).rglob("*.csv"))
+        logger.info("Kaggle dataset contains %d CSV files:", len(all_csvs))
+        for csv_file in all_csvs:
+            logger.info("  %s", csv_file.name)
+
+        # Find all Public Picks CSVs
+        csv_paths = _find_kaggle_picks_csv(Path(tmpdir))
+        if not csv_paths:
             logger.error(
-                "Could not find 'Public Picks' CSV in downloaded dataset. Files found: %s",
-                [f.name for f in Path(tmpdir).rglob("*.csv")],
+                "Could not find any 'Public Picks' CSV in downloaded dataset. Files found: %s",
+                [f.name for f in all_csvs],
             )
             return 1
 
-        logger.info("Found picks CSV: %s", csv_path.name)
-        return _convert_kaggle_csv(csv_path, output_dir, years)
+        logger.info("Found %d picks CSV(s): %s", len(csv_paths), [p.name for p in csv_paths])
+
+        total_written = 0
+        total_failures = 0
+        for csv_path in csv_paths:
+            written, failures = _convert_kaggle_csv(csv_path, output_dir, years)
+            total_written += written
+            total_failures += failures
+
+        logger.info(
+            "\nKaggle import complete: %d years written, %d failures",
+            total_written,
+            total_failures,
+        )
+
+        if total_written == 0:
+            logger.error("No years were successfully imported from Kaggle")
+            return 1
+
+        return total_failures
 
 
-def _find_kaggle_picks_csv(search_dir: Path) -> Path | None:
-    """Locate the public picks CSV in the downloaded Kaggle dataset."""
+def _find_kaggle_picks_csv(search_dir: Path) -> list[Path]:
+    """Locate all public-picks-like CSVs in the downloaded Kaggle dataset."""
+    matches = []
     for f in search_dir.rglob("*.csv"):
         name_lower = f.name.lower().replace(" ", "").replace("_", "")
         if "publicpick" in name_lower:
-            return f
-    return None
+            matches.append(f)
+    return matches
 
 
-def _convert_kaggle_csv(csv_path: Path, output_dir: Path, years: list[int] | None) -> int:
-    """Convert Kaggle's Public Picks CSV into per-year JSON files.
+def _normalize_csv_headers(fieldnames: list[str]) -> dict[str, str]:
+    """Build a mapping from normalized (uppercase) column names to actual CSV headers.
 
-    The CSV has columns: YEAR, TEAMNO, TEAM, R64, R32, S16, E8, F4, FINALS
-    Values are percentages on 0-100 scale.
+    Handles variations like 'Year' vs 'YEAR', 'Finals' vs 'FINALS', 'Champ' vs 'CHAMP',
+    and whitespace in column names.
     """
-    # Kaggle CSV uses FINALS for the championship round
-    kaggle_round_map = {
+    # Canonical names we look for (uppercase) -> our internal name
+    canonical = {
+        "YEAR": "YEAR",
+        "TEAM": "TEAM",
+        "TEAMNO": "TEAMNO",
+        "R64": "R64",
+        "R32": "R32",
+        "S16": "S16",
+        "E8": "E8",
+        "F4": "F4",
+        "FINALS": "FINALS",
+        "CHAMP": "CHAMP",
+        "CHAMPIONSHIP": "CHAMP",
+    }
+    mapping = {}
+    for raw_name in fieldnames:
+        stripped = raw_name.strip()
+        upper = stripped.upper()
+        if upper in canonical:
+            mapping[canonical[upper]] = stripped
+    return mapping
+
+
+def _convert_kaggle_csv(csv_path: Path, output_dir: Path, years: list[int] | None) -> tuple[int, int]:
+    """Convert a Kaggle Public Picks CSV into per-year JSON files.
+
+    The CSV typically has columns: YEAR, TEAMNO, TEAM, R64, R32, S16, E8, F4, FINALS
+    Values are percentages on 0-100 scale.
+
+    Returns:
+        Tuple of (years_written, failures).
+    """
+    # Our round columns: kaggle_canonical -> our JSON key
+    round_output_map = {
         "R64": "R64",
         "R32": "R32",
         "S16": "S16",
         "E8": "E8",
         "F4": "F4",
         "FINALS": "CHAMP",
+        "CHAMP": "CHAMP",
     }
 
     try:
         with open(csv_path, newline="", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
             if reader.fieldnames is None:
-                logger.error("CSV has no header row")
-                return 1
+                logger.error("CSV has no header row: %s", csv_path.name)
+                return 0, 1
 
-            # Normalize header names (strip whitespace)
-            reader.fieldnames = [h.strip() for h in reader.fieldnames]
+            header_map = _normalize_csv_headers(reader.fieldnames)
+            logger.info(
+                "CSV %s headers: %s -> mapped: %s",
+                csv_path.name,
+                reader.fieldnames,
+                header_map,
+            )
+
+            # Check minimum required columns
+            if "YEAR" not in header_map or "TEAM" not in header_map:
+                logger.warning(
+                    "CSV %s missing YEAR or TEAM column, skipping. Headers: %s",
+                    csv_path.name,
+                    reader.fieldnames,
+                )
+                return 0, 0
+
+            # Find which round columns are available
+            available_rounds = {canon: header_map[canon] for canon in round_output_map if canon in header_map}
+            if not available_rounds:
+                logger.warning(
+                    "CSV %s has no round columns (R64..FINALS/CHAMP), skipping",
+                    csv_path.name,
+                )
+                return 0, 0
 
             rows = list(reader)
     except (csv.Error, OSError) as e:
-        logger.error("Failed to read Kaggle CSV: %s", e)
-        return 1
+        logger.error("Failed to read Kaggle CSV %s: %s", csv_path.name, e)
+        return 0, 1
 
     if not rows:
-        logger.error("Kaggle CSV is empty")
-        return 1
+        logger.warning("CSV %s is empty", csv_path.name)
+        return 0, 0
+
+    year_col = header_map["YEAR"]
+    team_col = header_map["TEAM"]
 
     # Group rows by year
     by_year: dict[int, list[dict]] = {}
     for row in rows:
         try:
-            yr = int(row.get("YEAR", "0"))
+            yr = int(row.get(year_col, "0"))
         except ValueError:
             continue
         if yr == 2020:
@@ -447,21 +528,26 @@ def _convert_kaggle_csv(csv_path: Path, output_dir: Path, years: list[int] | Non
         by_year.setdefault(yr, []).append(row)
 
     available_years = sorted(by_year.keys())
-    logger.info("Kaggle CSV contains years: %s", available_years)
+    logger.info(
+        "CSV %s contains %d years: %s",
+        csv_path.name,
+        len(available_years),
+        available_years,
+    )
 
     if years:
         target_years = [y for y in years if y in by_year]
         skipped = [y for y in years if y not in by_year]
         if skipped:
-            logger.warning("Requested years not in Kaggle data: %s", skipped)
+            logger.warning("Requested years not in %s: %s", csv_path.name, skipped)
     else:
         target_years = available_years
 
     # Detect scale: check if any round value > 1.0
     sample_values = []
-    for row in rows[:50]:
-        for col in kaggle_round_map:
-            val = row.get(col, "").strip()
+    for row in rows[:100]:
+        for _canon, raw_col in available_rounds.items():
+            val = row.get(raw_col, "").strip()
             if val:
                 try:
                     sample_values.append(float(val))
@@ -472,6 +558,7 @@ def _convert_kaggle_csv(csv_path: Path, output_dir: Path, years: list[int] | Non
     logger.info("Detected %s scale", "0-100" if is_pct_scale else "0-1")
 
     output_dir.mkdir(parents=True, exist_ok=True)
+    written = 0
     failures = 0
 
     for yr in target_years:
@@ -479,23 +566,28 @@ def _convert_kaggle_csv(csv_path: Path, output_dir: Path, years: list[int] | Non
         teams = {}
 
         for row in year_rows:
-            team_name = row.get("TEAM", "").strip()
+            team_name = row.get(team_col, "").strip()
             if not team_name:
                 continue
 
             tid = team_name.lower().replace(" ", "_").replace(".", "").replace("'", "").replace("-", "_")
 
             picks = {}
-            for kaggle_col, our_col in kaggle_round_map.items():
-                val = row.get(kaggle_col, "").strip()
+            for canon, raw_col in available_rounds.items():
+                out_key = round_output_map[canon]
+                val = row.get(raw_col, "").strip()
                 if val:
                     try:
                         pct = float(val) / scale_factor
-                        picks[our_col] = max(0.0, min(1.0, round(pct, 4)))
+                        picks[out_key] = max(0.0, min(1.0, round(pct, 4)))
                     except ValueError:
-                        picks[our_col] = 0.0
+                        picks[out_key] = 0.0
                 else:
-                    picks[our_col] = 0.0
+                    picks[out_key] = 0.0
+
+            # Ensure all 6 standard rounds present
+            for rnd in ROUND_NAMES:
+                picks.setdefault(rnd, 0.0)
 
             teams[tid] = picks
 
@@ -515,13 +607,9 @@ def _convert_kaggle_csv(csv_path: Path, output_dir: Path, years: list[int] | Non
         with open(out_path, "w") as f:
             json.dump(data, f, indent=2)
         logger.info("Saved %s (%d teams)", out_path.name, len(teams))
+        written += 1
 
-    logger.info(
-        "\nKaggle import complete: %d years written, %d failures",
-        len(target_years) - failures,
-        failures,
-    )
-    return failures
+    return written, failures
 
 
 def validate_existing_files(output_dir: Path | None = None) -> int:
