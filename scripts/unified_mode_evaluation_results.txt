@@ -1,0 +1,53 @@
+====================================================================================================
+UNIFIED MODE EVALUATION: Brier Score + ESPN Pool Points
+====================================================================================================
+
+Metrics:
+  Brier  = mean squared error of P(team1 wins) vs actual (lower is better)
+  BSS    = 1 - model_brier/seed_brier (positive = better than seed baseline)
+  Points = ESPN bracket points from pool optimizer leverage picks
+  Edge   = points above chalk (pure seed picks)
+
+  Year         --- Brier Score ---          ------ BSS ------        ------- ESPN Points -------    
+              seed   noseed    blend    noseed    blend    chalk    seed  noseed   blend
+  ----------------------------------------------------------------------------------------------
+  2018      0.1884   0.1775   0.1804    +0.058   +0.042      740     740     770     740
+  2019      0.1605   0.1357   0.1463    +0.155   +0.089      630     630     720     700
+  2021      0.1676   0.1545   0.1584    +0.078   +0.054      860     860     780     820
+  2022      0.2004   0.1767   0.1844    +0.118   +0.080      690     690     670     640
+  2023      0.1857   0.1507   0.1656    +0.188   +0.109      860     860     860     860
+  2024      0.1703   0.1347   0.1501    +0.209   +0.118      770     770     820     770
+  2025      0.1451   0.1189   0.1299    +0.181   +0.105      990     990     980     990
+
+====================================================================================================
+AGGREGATE (7 years)
+====================================================================================================
+
+  Brier Score (lower = better prediction accuracy):
+    Seed:   0.1740
+    Noseed: 0.1498
+    Blend:  0.1593
+    → Best for accuracy: noseed (0.1498)
+
+  BSS vs seed baseline (positive = better than seeds):
+    Noseed: +0.1409
+    Blend:  +0.0853
+
+  ESPN Pool Points (higher = better pool EV):
+    Chalk:  791
+    Seed:   791  (edge: +0)
+    Noseed: 800  (edge: +9)
+    Blend:  789  (edge: -3)
+    → Best for pool EV: noseed (800)
+
+  Head-to-head wins (7 years):
+    Brier: noseed beats seed 7/7, blend beats seed 7/7
+    Points: noseed beats seed 3/7, blend beats seed 1/7
+
+====================================================================================================
+VERDICT
+====================================================================================================
+  Best for prediction accuracy (Brier): noseed
+  Best for pool EV (ESPN points):       noseed
+
+  'noseed' wins on both metrics — use it as default.
