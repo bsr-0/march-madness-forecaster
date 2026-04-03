@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Council Report — Session 4</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 900px; margin: 0 auto; padding: 2rem; background: #fafafa; }
+  h1 { font-size: 1.8rem; margin-bottom: 0.5rem; color: #111; }
+  h2 { font-size: 1.3rem; margin: 2rem 0 0.75rem; color: #222; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; }
+  h3 { font-size: 1.1rem; margin: 1.2rem 0 0.5rem; color: #333; }
+  p { margin: 0.5rem 0; }
+  .header { border-bottom: 3px solid #2563eb; padding-bottom: 1rem; margin-bottom: 2rem; }
+  .header .subtitle { color: #666; font-size: 0.95rem; }
+  .question-box { background: #f0f4ff; border-left: 4px solid #2563eb; padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 6px 6px 0; }
+  .verdict-section { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; }
+  .verdict-section h2 { margin-top: 0; border-bottom: none; }
+  .agrees { border-left: 4px solid #16a34a; }
+  .clashes { border-left: 4px solid #ea580c; }
+  .blindspots { border-left: 4px solid #9333ea; }
+  .recommendation { border-left: 4px solid #2563eb; background: #f0f4ff; }
+  .first-thing { border-left: 4px solid #dc2626; background: #fef2f2; }
+  .alignment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+  .advisor-position { background: white; border: 1px solid #e0e0e0; border-radius: 6px; padding: 1rem; }
+  .advisor-position .name { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.3rem; }
+  .advisor-position .stance { font-size: 0.85rem; color: #555; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-right: 4px; }
+  .tag-fix { background: #dcfce7; color: #166534; }
+  .tag-build { background: #dbeafe; color: #1e40af; }
+  .tag-abandon { background: #fee2e2; color: #991b1b; }
+  .tag-expand { background: #f3e8ff; color: #6b21a8; }
+  details { background: white; border: 1px solid #e0e0e0; border-radius: 6px; margin: 0.75rem 0; }
+  details summary { padding: 0.75rem 1rem; cursor: pointer; font-weight: 600; font-size: 0.95rem; user-select: none; }
+  details summary:hover { background: #f5f5f5; }
+  details .content { padding: 0 1rem 1rem; font-size: 0.92rem; }
+  .review-highlight { background: #fffbeb; border-left: 3px solid #f59e0b; padding: 0.75rem 1rem; margin: 0.5rem 0; border-radius: 0 4px 4px 0; font-size: 0.9rem; }
+  .footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e0e0e0; color: #888; font-size: 0.8rem; }
+  strong { color: #111; }
+  .consensus-bar { display: flex; margin: 1rem 0; border-radius: 6px; overflow: hidden; height: 32px; }
+  .consensus-segment { display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 600; }
+  .seg-fix { background: #16a34a; }
+  .seg-build { background: #2563eb; }
+  .seg-abandon { background: #dc2626; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>LLM Council Report</h1>
+  <div class="subtitle">Session 4 — April 3, 2026 — Next Steps After MC Pool Backtest</div>
+</div>
+
+<div class="question-box">
+  <strong>Question:</strong> The MC pool backtest shows noseed has significantly better Brier scores (p=0.0006) but WORSE pool performance (mean rank 283 vs 211). Noseed wins big in some years (rank 9) but loses catastrophically in others (rank 699). The backtest uses deterministic argmax brackets. Given these paradoxical results, what should be done next?
+</div>
+
+<h2>Advisor Alignment</h2>
+
+<div class="consensus-bar">
+  <div class="consensus-segment seg-fix" style="width: 60%;">Fix Backtest First (3/5)</div>
+  <div class="consensus-segment seg-build" style="width: 20%;">Build Optimizer (1/5)</div>
+  <div class="consensus-segment seg-abandon" style="width: 20%;">Abandon Noseed (1/5)</div>
+</div>
+
+<div class="alignment-grid">
+  <div class="advisor-position">
+    <div class="name">The Contrarian</div>
+    <span class="tag tag-fix">Fix Backtest</span>
+    <div class="stance">Argmax brackets are the core defect. Every result is potentially garbage until stochastic sampling replaces deterministic argmax. 17 years is insufficient at P(rank=1) resolution.</div>
+  </div>
+  <div class="advisor-position">
+    <div class="name">First Principles Thinker</div>
+    <span class="tag tag-fix">Fix Backtest</span>
+    <div class="stance">This is a measurement problem, not a model problem. Argmax discards noseed's calibrated probabilities. The ML model's value hasn't been measured yet — only argmax-noseed vs argmax-seed has been measured.</div>
+  </div>
+  <div class="advisor-position">
+    <div class="name">The Expansionist</div>
+    <span class="tag tag-expand">Regime Classifier</span>
+    <div class="stance">Noseed is a regime-specific weapon that hasn't been aimed. Build a pre-tournament classifier. Stochastic brackets unlock contrarian leverage immediately.</div>
+  </div>
+  <div class="advisor-position">
+    <div class="name">The Outsider</div>
+    <span class="tag tag-abandon">Abandon Noseed</span>
+    <div class="stance">Rank 699 in a 1000-person pool is near worst case. 1-in-3 chance of bottom quarter is disqualifying. The ML model adds catastrophic downside risk with no average improvement.</div>
+  </div>
+  <div class="advisor-position">
+    <div class="name">The Executor</div>
+    <span class="tag tag-build">Build Optimizer</span>
+    <div class="stance">Build the pool-aware optimizer directly. Generate N candidate brackets from model probabilities, score each via MC simulator, keep highest P(rank=1). All pieces exist already.</div>
+  </div>
+</div>
+
+<div class="verdict-section agrees">
+  <h2>Where the Council Agrees</h2>
+  <p><strong>The backtest is invalid until argmax is replaced.</strong> Every advisor who engaged with methodology converged on the same diagnosis: deterministic argmax brackets are the core defect. Argmax collapses probabilistic models into crowd-following behavior. The current comparison between seed and noseed is not a comparison between forecasting systems — it's a comparison between two ways of picking the most popular bracket.</p>
+  <p><strong>Noseed's value is in its probabilities, not its modal bracket.</strong> Noseed doesn't win by predicting correctly more often — it wins by knowing which upsets are underpriced relative to the crowd. Argmax throws that signal away entirely. The 17-year backtest has not yet measured what noseed actually offers.</p>
+</div>
+
+<div class="verdict-section clashes">
+  <h2>Where the Council Clashes</h2>
+  <p><strong>Regime classification vs. single-mode optimization.</strong> The Expansionist wants a pre-tournament classifier (chalk vs chaos). The Executor wants a direct P(rank=1) optimizer. Peer reviews called out the Expansionist's proposal as statistically indefensible — 17 data points cannot train, validate, and test a regime classifier without severe overfitting.</p>
+  <p><strong>Is noseed salvageable?</strong> The Outsider argues catastrophic losses (rank 699) are disqualifying regardless of backtest mechanics. First Principles counters that this judgment is premature until the measurement problem is fixed. Both positions are reasonable — the resolution is: fix the backtest first, then revisit downside risk.</p>
+</div>
+
+<div class="verdict-section blindspots">
+  <h2>Blind Spots the Council Caught</h2>
+  <p><strong>The opponent model is unvalidated and load-bearing.</strong> Every single peer review flagged this independently, and not one advisor mentioned it initially. The MC simulator's P(rank=1) depends entirely on a model of opponent bracket submissions. If that crowd model is miscalibrated, every P(rank=1) estimate is wrong for both modes. This is the foundation the entire analysis rests on.</p>
+  <p><strong>Regime classification on 17 points is p-hacking.</strong> Four out of five peer reviews rejected the Expansionist's regime classifier on identical grounds: you cannot build a reliable classifier from 17 annual observations. Patterns will be found. They will not generalize.</p>
+</div>
+
+<div class="verdict-section recommendation">
+  <h2>The Recommendation</h2>
+  <p><strong>Fix the backtest, then validate the opponent model — in that order.</strong></p>
+  <p>Replace argmax with stochastic bracket generation: sample N brackets from each mode's probability distributions, score each against the MC simulator, and use the bracket with the highest P(rank=1). This is the only valid way to measure what noseed actually offers. The current performance gap (rank 211 vs 283) may disappear, reverse, or widen — but until stochastic sampling is in place, that number means nothing.</p>
+  <p>Concurrently, audit the opponent model. Check whether the crowd model's distribution matches what humans actually submit. If the opponent model is miscalibrated, MC simulator rankings are unreliable for both modes.</p>
+  <p>Do not build a regime classifier. Do not write off noseed based on catastrophic years evaluated with a broken methodology.</p>
+</div>
+
+<div class="verdict-section first-thing">
+  <h2>The One Thing to Do First</h2>
+  <p><strong>Replace argmax bracket generation with probability-weighted stochastic sampling and re-run the full 17-year backtest.</strong></p>
+  <p>Everything else — regime classification, blending strategy, pool optimizer, opponent model audit — depends on having numbers you can trust. You don't have those yet. Get them.</p>
+</div>
+
+<details>
+  <summary>The Contrarian — Full Response</summary>
+  <div class="content">
+    <p>The backtest is broken and the options list doesn't fix it.</p>
+    <p>Deterministic brackets are the core defect. When you argmax every round, you produce one bracket that never upsets anyone. Real pool entrants pick upsets probabilistically. Your "noseed" model is being evaluated as if it always picks the highest-probability outcome, which means it clusters with the crowd on favorites and gets massacred when underdogs win. The 2012 and 2023 disasters aren't evidence that noseed fails at pool play — they're evidence that argmax brackets are a terrible representation of how anyone actually enters a pool.</p>
+    <p>Before debating options 1 through 4, you need to answer: what does a stochastic noseed bracket actually score? Option 2 isn't a direction to consider, it's a prerequisite for any valid comparison. Every result in this summary is potentially garbage until that's done.</p>
+    <p>The second problem: 17 years is not enough data to distinguish signal from noise at P(rank=1) resolution. Your p=0.41 means nothing except "we can't tell." Fix deterministic brackets first. Run stochastic noseed brackets through the same simulator. If noseed still underperforms after that fix, then the conversation about conditional switching or opponent modeling becomes meaningful.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The First Principles Thinker — Full Response</summary>
+  <div class="content">
+    <p>The surface question is "which mode wins pools?" But the real question is: why does better prediction accuracy hurt pool performance?</p>
+    <p>This isn't a paradox — it's a measurement problem. Your backtest uses deterministic brackets (argmax). That means noseed always picks the same bracket. You're not simulating a forecasting agent competing in a pool; you're simulating a static document competing in a pool. The stochasticity of opponent behavior is modeled, but your own strategy has zero variance.</p>
+    <p>In a 1000-person pool, the winner isn't the most accurate predictor — it's whoever best exploits the gap between their picks and the crowd's picks. Deterministic argmax brackets collapse noseed's probabilistic edge into a single path that may be slightly contrarian but not optimally contrarian given crowd pick distributions.</p>
+    <p>The deeper issue: noseed's value isn't "wins more often" — it's "has calibrated probabilities that let you identify high-leverage upsets." The current infrastructure discards that calibration the moment you take argmax.</p>
+    <p>The question you should be asking: what is the optimal bracket given noseed's probability estimates AND the SEED_PICK_RATES crowd model? That's a portfolio optimization problem, not a comparison between three fixed strategies.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Expansionist — Full Response</summary>
+  <div class="content">
+    <p>The data is screaming something nobody is saying: noseed doesn't have a pool performance problem, it has a variance harvesting problem. Those "catastrophic" years aren't failures — they're the cost of a strategy that produced rank 9 and rank 45 in other years. The question isn't whether to fix noseed, it's whether you're playing the wrong game with it.</p>
+    <p>Noseed is a different instrument, not a worse one. Both achieve 54x baseline P(rank=1). The real opportunity is option 3, framed aggressively: build a pre-tournament classifier that identifies which regime you're in. High-chalk tournament incoming? Go seed-heavy. Chaos-prone field? Noseed dominates. You have 17 years of labeled data.</p>
+    <p>Option 2 (stochastic brackets) unlocks this immediately. Deterministic argmax brackets are leaving contrarian leverage on the table. Switch to sampled brackets, measure the pick-frequency divergence from the field, and you'll see exactly where noseed is undervalued.</p>
+    <p>The ML model isn't marginally useful. It's a regime-specific weapon you haven't aimed yet.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Outsider — Full Response</summary>
+  <div class="content">
+    <p>The catastrophic loss pattern is the most important signal here, and I'm not sure the framing is treating it seriously enough.</p>
+    <p>Noseed rank 699 in a 1000-person pool. Rank 676. These aren't "bad years" — these are near-worst-case outcomes. If I handed someone a strategy and said "this has a 1-in-3 chance of landing you in the bottom quarter of your pool," most people would not use it, regardless of what the Brier score says.</p>
+    <p>P(rank=1) is identical at 0.054 for both. But the experience of using noseed is wildly different from seed — high variance, spectacular wins in 5 years, near-last-place finishes in others. That's not a bracket strategy. That's a lottery ticket.</p>
+    <p>The simplest honest answer from the data: the ML model does not improve pool outcomes on average and adds catastrophic downside risk. The burden of proof is on noseed to demonstrate value, and it hasn't met it. Options 1-3 are ways to rescue a model that may not need rescuing — they need rescuing from.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Executor — Full Response</summary>
+  <div class="content">
+    <p>Option 3. Build the pool-aware optimizer. Everything else is yak-shaving.</p>
+    <p>Monday morning task: Replace argmax bracket generation with a direct P(rank=1) optimizer. The MC simulator already exists and runs. The feedback signal already exists. You just need to close the loop.</p>
+    <p>Concretely: (1) Generate N candidate brackets (stochastic draws from your model probabilities). (2) Score each candidate bracket against your MC pool simulator. (3) Keep the bracket with highest P(rank=1), not highest Brier score.</p>
+    <p>This is hill-climbing. You have all the pieces. The MC simulator is your objective function — use it directly instead of using Brier as a proxy that demonstrably fails.</p>
+    <p>The noseed model's big wins happened when the ML diverged from chalk and was right. The optimizer will find those divergences systematically instead of accidentally. The catastrophic losses happened when ML diverged from chalk and was wrong — the optimizer will avoid those too, because the pool simulation will penalize them.</p>
+  </div>
+</details>
+
+<details>
+  <summary>Peer Review Highlights</summary>
+  <div class="content">
+    <div class="review-highlight"><strong>Strongest response:</strong> First Principles Thinker (selected by 4/5 reviewers). Correctly identifies the root cause as a measurement failure, not a model failure. Reframes the problem as portfolio optimization.</div>
+    <div class="review-highlight"><strong>Biggest blind spot:</strong> The Expansionist (selected by 4/5 reviewers). Regime classification on 17 labeled examples is statistically indefensible — "p-hacking dressed as a pipeline."</div>
+    <div class="review-highlight"><strong>Universal miss:</strong> All 5 peer reviewers independently flagged that the opponent model is unvalidated and load-bearing. If the crowd model doesn't match real bracket submission patterns, every P(rank=1) estimate is noise regardless of which mode is used.</div>
+  </div>
+</details>
+
+<div class="footer">
+  <p>LLM Council Session 4 — April 3, 2026 — "Next Steps After MC Pool Backtest Results"</p>
+  <p>5 advisors, 5 peer reviews, 1 chairman synthesis. Generated by Claude.</p>
+</div>
+
+</body>
+</html>
