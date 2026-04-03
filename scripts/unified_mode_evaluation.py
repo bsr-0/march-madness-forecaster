@@ -508,19 +508,6 @@ def main():
         print(f"    Points t-test (noseed vs seed): p={p_pts_ns:.3f} (N={n}, low power)")
         print(f"    Points t-test (blend vs seed):  p={p_pts_bl:.3f} (N={n}, low power)")
 
-    # --- Head-to-head ---
-    print(f"\n  Head-to-head wins ({n} years):")
-    noseed_brier_wins = sum(1 for r in results if r["noseed_brier"] < r["seed_brier"])
-    blend_brier_wins = sum(1 for r in results if r["blend_brier"] < r["seed_brier"])
-    noseed_pts_wins = sum(1 for r in results if r["noseed_pts"] > r["seed_pts"])
-    blend_pts_wins = sum(1 for r in results if r["blend_pts"] > r["seed_pts"])
-    noseed_pts_ties = sum(1 for r in results if r["noseed_pts"] == r["seed_pts"])
-    print(f"    Brier:  noseed beats seed {noseed_brier_wins}/{n}, blend beats seed {blend_brier_wins}/{n}")
-    print(
-        f"    Points: noseed beats seed {noseed_pts_wins}/{n}, ties {noseed_pts_ties}/{n}, "
-        f"blend beats seed {blend_pts_wins}/{n}"
-    )
-
     # --- Verdict ---
     print(f"\n{'=' * 100}")
     print("VERDICT")

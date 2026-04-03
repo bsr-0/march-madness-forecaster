@@ -73,10 +73,6 @@ AGGREGATE (17 years, 1071 total games)
     Points t-test (noseed vs seed): p=0.106 (N=17, low power)
     Points t-test (blend vs seed):  p=0.574 (N=17, low power)
 
-  Head-to-head wins (17 years):
-    Brier:  noseed beats seed 14/17, blend beats seed 15/17
-    Points: noseed beats seed 1/17, ties 7/17, blend beats seed 1/17
-
 ====================================================================================================
 VERDICT
 ====================================================================================================
