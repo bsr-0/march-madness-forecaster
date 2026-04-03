@@ -55,6 +55,11 @@ ROUND_NAMES = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
 def scrape_year(year: int) -> dict | None:
     """Attempt to scrape ESPN public pick data for a given year.
 
+    Tries multiple URL patterns against the Wayback Machine:
+    - fantasy.espn.com (2019+)
+    - games.espn.com (2014-2018, legacy domain)
+    - gambit-api.fantasy.espn.com propositions endpoint (JSON, 2019+)
+
     Returns:
         Dict with team pick percentages, or None if unavailable.
     """
@@ -62,43 +67,58 @@ def scrape_year(year: int) -> dict | None:
         import urllib.error
         import urllib.request
 
-        # Step 1: Check Wayback Machine CDX API for available snapshots
-        cdx_url = (
-            f"https://web.archive.org/cdx/search/cdx?"
-            f"url=fantasy.espn.com/tournament-challenge-bracket/{year}/en/whopickedwhom"
-            f"&output=json&limit=5&filter=statuscode:200"
-        )
+        # Try multiple URL patterns — ESPN changed domains over the years
+        url_patterns = [
+            f"fantasy.espn.com/tournament-challenge-bracket/{year}/en/whopickedwhom",
+            f"games.espn.com/tournament-challenge-bracket/{year}/en/whopickedwhom",
+            f"gambit-api.fantasy.espn.com/apis/v1/propositions-sets/tournament-challenge-bracket-{year}-en-whopickedwhom",
+        ]
 
-        logger.info("Checking Wayback Machine for %d snapshots...", year)
-        req = urllib.request.Request(cdx_url, headers={"User-Agent": "MarchMadnessForecaster/1.0"})
+        best_snapshot = None
 
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read())
-        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as e:
-            logger.warning("Failed to query CDX API for %d: %s", year, e)
+        for url_pattern in url_patterns:
+            cdx_url = (
+                f"https://web.archive.org/cdx/search/cdx?url={url_pattern}&output=json&limit=5&filter=statuscode:200"
+            )
+
+            logger.info("Checking Wayback Machine for %d: %s", year, url_pattern.split("/")[0])
+            req = urllib.request.Request(cdx_url, headers={"User-Agent": "MarchMadnessForecaster/1.0"})
+
+            try:
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    data = json.loads(resp.read())
+            except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as e:
+                logger.debug("CDX query failed for %s: %s", url_pattern, e)
+                continue
+
+            if len(data) <= 1:
+                continue
+
+            # Found snapshots — pick the best one (prefer March)
+            snapshots = data[1:]
+            best_timestamp = snapshots[-1][1]
+            for snap in snapshots:
+                ts = snap[1]
+                if ts[4:6] == "03":
+                    best_timestamp = ts
+                    break
+
+            # Reconstruct the original URL from the CDX result
+            original_url = snapshots[0][0] if snapshots[0][0].startswith("http") else f"https://{url_pattern}"
+            best_snapshot = (best_timestamp, original_url)
+            logger.info("Found snapshot for %d via %s: %s", year, url_pattern.split("/")[0], best_timestamp)
+            break
+
+            time.sleep(1)  # Rate limit between CDX queries
+
+        if best_snapshot is None:
+            logger.warning("No Wayback Machine snapshots found for %d across any URL pattern", year)
             return None
 
-        if len(data) <= 1:
-            logger.warning("No Wayback Machine snapshots found for %d", year)
-            return None
-
-        # Get the best snapshot (prefer March timestamps)
-        snapshots = data[1:]  # Skip header row
-        best_timestamp = snapshots[-1][1]  # Most recent
-        for snap in snapshots:
-            ts = snap[1]
-            if ts[4:6] == "03":  # March snapshot preferred
-                best_timestamp = ts
-                break
-
-        logger.info("Found snapshot for %d: %s", year, best_timestamp)
+        best_timestamp, original_url = best_snapshot
 
         # Step 2: Fetch the archived page
-        archive_url = (
-            f"https://web.archive.org/web/{best_timestamp}/"
-            f"https://fantasy.espn.com/tournament-challenge-bracket/{year}/en/whopickedwhom"
-        )
+        archive_url = f"https://web.archive.org/web/{best_timestamp}/{original_url}"
         time.sleep(2)  # Rate limit
 
         req = urllib.request.Request(archive_url, headers={"User-Agent": "MarchMadnessForecaster/1.0"})
@@ -118,6 +138,7 @@ def scrape_year(year: int) -> dict | None:
                 "year": year,
                 "source": "wayback_machine",
                 "timestamp": best_timestamp,
+                "original_url": original_url,
                 "teams": teams,
             }
         else:

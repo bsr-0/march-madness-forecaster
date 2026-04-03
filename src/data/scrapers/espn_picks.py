@@ -119,7 +119,9 @@ class ESPNPicksScraper:
 
     BASE_URL = "https://fantasy.espn.com/tournament-challenge-bracket"
     _GAMBIT_URL = "https://gambit-api.fantasy.espn.com/apis/v1/challenges/tournament-challenge-bracket-{year}"
+    _GAMBIT_PROPOSITIONS_URL = "https://gambit-api.fantasy.espn.com/apis/v1/propositions-sets/tournament-challenge-bracket-{year}-en-whopickedwhom"
     _WPW_URL = "https://fantasy.espn.com/tournament-challenge-bracket/{year}/en/whopickedwhom"
+    _WPW_LEGACY_URL = "https://games.espn.com/tournament-challenge-bracket/{year}/en/whopickedwhom"
     _PEOPLES_URL = "https://fantasy.espn.com/games/tournament-challenge-bracket-{year}/peoplesbracket"
 
     def __init__(self, cache_dir: Optional[str] = None):
@@ -148,9 +150,12 @@ class ESPNPicksScraper:
                 return result
 
         # 2. Try known ESPN API/JSON endpoints (best-effort, often blocked)
+        # Includes both modern (fantasy.espn.com) and legacy (games.espn.com) URLs
         for url in (
             self._GAMBIT_URL.format(year=year),
+            self._GAMBIT_PROPOSITIONS_URL.format(year=year),
             self._WPW_URL.format(year=year),
+            self._WPW_LEGACY_URL.format(year=year),
             self._PEOPLES_URL.format(year=year),
         ):
             result = self._try_json_url(url, year, url.split("/")[2])
