@@ -49,25 +49,32 @@ logger = logging.getLogger(__name__)
 # =========================================================================
 HISTORICAL_UPSET_RATES: Dict[Tuple[int, int], float] = {
     # (lower_seed, higher_seed) -> P(higher_seed_wins)
-    (1, 16): 0.007,   # UMBC over Virginia (2018) — only instance
-    (2, 15): 0.057,   # ~6% — St. Peter's, Oral Roberts, etc.
-    (3, 14): 0.150,   # ~15% — Abilene Christian, Mercer, etc.
-    (4, 13): 0.210,   # ~21% — frequent mid-major upsets
-    (5, 12): 0.356,   # ~36% — the classic "upset special"
-    (6, 11): 0.377,   # ~38% — First Four teams often dangerous
-    (7, 10): 0.392,   # ~39% — near coin-flip territory
-    (8, 9):  0.481,   # ~48% — essentially a toss-up
+    (1, 16): 0.007,  # UMBC over Virginia (2018) — only instance
+    (2, 15): 0.057,  # ~6% — St. Peter's, Oral Roberts, etc.
+    (3, 14): 0.150,  # ~15% — Abilene Christian, Mercer, etc.
+    (4, 13): 0.210,  # ~21% — frequent mid-major upsets
+    (5, 12): 0.356,  # ~36% — the classic "upset special"
+    (6, 11): 0.377,  # ~38% — First Four teams often dangerous
+    (7, 10): 0.392,  # ~39% — near coin-flip territory
+    (8, 9): 0.481,  # ~48% — essentially a toss-up
 }
 
 # Extended matchups for later rounds (less data, wider uncertainty)
 HISTORICAL_UPSET_RATES_EXTENDED: Dict[Tuple[int, int], float] = {
-    (1, 8): 0.204,   (1, 9): 0.173,
-    (2, 7): 0.330,   (2, 10): 0.300,
-    (3, 6): 0.420,   (3, 11): 0.385,
-    (4, 5): 0.461,   (4, 12): 0.380,
-    (1, 4): 0.370,   (1, 5): 0.315,
-    (2, 3): 0.445,   (2, 6): 0.395,
-    (1, 2): 0.465,   (1, 3): 0.390,
+    (1, 8): 0.204,
+    (1, 9): 0.173,
+    (2, 7): 0.330,
+    (2, 10): 0.300,
+    (3, 6): 0.420,
+    (3, 11): 0.385,
+    (4, 5): 0.461,
+    (4, 12): 0.380,
+    (1, 4): 0.370,
+    (1, 5): 0.315,
+    (2, 3): 0.445,
+    (2, 6): 0.395,
+    (1, 2): 0.465,
+    (1, 3): 0.390,
 }
 
 # Round-aware prior decay factors.
@@ -76,34 +83,51 @@ HISTORICAL_UPSET_RATES_EXTENDED: Dict[Tuple[int, int], float] = {
 # become less informative. The decay schedule is conservative: even in
 # later rounds, a weak prior anchor is better than none.
 ROUND_PRIOR_DECAY: Dict[int, float] = {
-    1: 1.00,   # R64:  full prior — committee seeding patterns dominate
-    2: 0.70,   # R32:  still intra-region, some structural signal persists
-    3: 0.40,   # S16:  teams have proven themselves, prior less relevant
-    4: 0.20,   # E8:   minimal structural prior
-    5: 0.10,   # F4:   cross-region, almost pure model
-    6: 0.10,   # Championship: same as F4
+    1: 1.00,  # R64:  full prior — committee seeding patterns dominate
+    2: 0.70,  # R32:  still intra-region, some structural signal persists
+    3: 0.40,  # S16:  teams have proven themselves, prior less relevant
+    4: 0.20,  # E8:   minimal structural prior
+    5: 0.10,  # F4:   cross-region, almost pure model
+    6: 0.10,  # Championship: same as F4
 }
 
 # Number of historical observations per matchup (approximate, for
 # computing prior strength in Bayesian updates)
 MATCHUP_SAMPLE_SIZES: Dict[Tuple[int, int], int] = {
-    (1, 16): 156, (2, 15): 156, (3, 14): 156, (4, 13): 156,
-    (5, 12): 156, (6, 11): 156, (7, 10): 156, (8, 9): 156,
+    (1, 16): 156,
+    (2, 15): 156,
+    (3, 14): 156,
+    (4, 13): 156,
+    (5, 12): 156,
+    (6, 11): 156,
+    (7, 10): 156,
+    (8, 9): 156,
     # Later rounds have fewer observations
-    (1, 8): 80, (1, 9): 40, (2, 7): 80, (2, 10): 35,
-    (3, 6): 70, (3, 11): 30, (4, 5): 75, (4, 12): 25,
-    (1, 4): 60, (1, 5): 25, (2, 3): 55, (2, 6): 30,
-    (1, 2): 40, (1, 3): 25,
+    (1, 8): 80,
+    (1, 9): 40,
+    (2, 7): 80,
+    (2, 10): 35,
+    (3, 6): 70,
+    (3, 11): 30,
+    (4, 5): 75,
+    (4, 12): 25,
+    (1, 4): 60,
+    (1, 5): 25,
+    (2, 3): 55,
+    (2, 6): 30,
+    (1, 2): 40,
+    (1, 3): 25,
 }
 
 
 class UpsetRiskTier(str, Enum):
     """Categorical upset risk classification."""
+
     VERY_HIGH = "VERY_HIGH"  # >= 40% upset probability
-    HIGH = "HIGH"            # 25-40%
-    MODERATE = "MODERATE"    # 15-25%
-    LOW = "LOW"              # 5-15%
-    MINIMAL = "MINIMAL"      # < 5%
+    HIGH = "HIGH"  # 25-40%
+    MODERATE = "MODERATE"  # 15-25%
+    LOW = "LOW"  # 5-15%
+    MINIMAL = "MINIMAL"  # < 5%
 
 
 @dataclass
@@ -120,23 +144,30 @@ class UpsetSignal:
     favorite_id: str
 
     # Core outputs
-    upset_prob: float           # P(underdog wins) — Bayesian posterior
-    historical_prior: float     # P(underdog wins) from seed history alone
-    model_upset_prob: float     # P(underdog wins) from ensemble model
-    adjusted_prob: float        # Team1 win prob after upset adjustment
+    upset_prob: float  # P(underdog wins) — Bayesian posterior
+    historical_prior: float  # P(underdog wins) from seed history alone
+    model_upset_prob: float  # P(underdog wins) from ensemble model
+    adjusted_prob: float  # Team1 win prob after upset adjustment
 
     # Risk assessment
     risk_tier: UpsetRiskTier
-    upset_score: float          # Composite score [0, 1] for ranking upsets
+    upset_score: float  # Composite score [0, 1] for ranking upsets
 
     # Amplifier signals (normalized to [0, 1])
-    volatility_signal: float = 0.0    # Underdog's 3PT + pace variance
-    momentum_signal: float = 0.0      # Underdog's recent momentum advantage
-    experience_signal: float = 0.0    # Underdog's experience/depth advantage
-    efficiency_signal: float = 0.0    # Underdog overperforms seed expectation
+    volatility_signal: float = 0.0  # Underdog's 3PT + pace variance
+    momentum_signal: float = 0.0  # Underdog's recent momentum advantage
+    experience_signal: float = 0.0  # Underdog's experience/depth advantage
+    efficiency_signal: float = 0.0  # Underdog overperforms seed expectation
+
+    # Seed-independent amplifier signals (|r| < 0.3 with seed)
+    # These features carry signal orthogonal to seed strength, meaning
+    # they identify upset vulnerability that seed-based priors miss entirely.
+    tempo_mismatch_signal: float = 0.5  # Underdog controls pace matchup
+    rebounding_edge_signal: float = 0.5  # Underdog has offensive rebounding edge
+    turnover_pressure_signal: float = 0.5  # Underdog forces turnovers
 
     # Confidence in the upset signal
-    confidence: float = 0.5     # Higher = more data supporting assessment
+    confidence: float = 0.5  # Higher = more data supporting assessment
 
     def to_dict(self) -> Dict:
         """Serialize for reports and bracket optimizers."""
@@ -157,6 +188,9 @@ class UpsetSignal:
             "momentum_signal": round(self.momentum_signal, 4),
             "experience_signal": round(self.experience_signal, 4),
             "efficiency_signal": round(self.efficiency_signal, 4),
+            "tempo_mismatch_signal": round(self.tempo_mismatch_signal, 4),
+            "rebounding_edge_signal": round(self.rebounding_edge_signal, 4),
+            "turnover_pressure_signal": round(self.turnover_pressure_signal, 4),
             "confidence": round(self.confidence, 4),
         }
 
@@ -222,11 +256,20 @@ class UpsetDetector:
     prior_strength: float = 0.20
 
     # Amplifier weights: how much each upset signal contributes to the
-    # composite upset_score. Must sum to 1.0.
-    w_volatility: float = 0.25
-    w_momentum: float = 0.20
-    w_experience: float = 0.15
-    w_efficiency: float = 0.40
+    # composite upset_score. Original 4 signals sum to their share,
+    # seed-independent signals get their own share. Total must sum to 1.0.
+    #
+    # The seed-independent signals (tempo, rebounding, turnovers) have
+    # |r| < 0.3 with seed (verified via feature_seed_correlation.py),
+    # meaning they capture matchup vulnerability that seed priors miss.
+    w_volatility: float = 0.18
+    w_momentum: float = 0.14
+    w_experience: float = 0.10
+    w_efficiency: float = 0.28
+    # Seed-independent signal weights (total = 0.30)
+    w_tempo_mismatch: float = 0.10
+    w_rebounding_edge: float = 0.10
+    w_turnover_pressure: float = 0.10
 
     # Adjustment strength: how much the upset detector can shift the
     # ensemble's probability. 0.0 = no adjustment, 1.0 = full override.
@@ -284,7 +327,11 @@ class UpsetDetector:
         else:
             # Same seed — no meaningful upset direction
             return self._same_seed_signal(
-                team1_id, team2_id, seed1, seed2, model_prob_team1,
+                team1_id,
+                team2_id,
+                seed1,
+                seed2,
+                model_prob_team1,
             )
 
         # Step 1: Historical prior
@@ -293,18 +340,30 @@ class UpsetDetector:
             hist_rate = _logistic_upset_fallback(fav_seed, dog_seed)
 
         # Step 2: Compute amplifier signals from team features
-        vol_signal, mom_signal, exp_signal, eff_signal = (
-            self._compute_amplifier_signals(
-                fav_features, dog_features, fav_seed, dog_seed,
-            )
+        (
+            vol_signal,
+            mom_signal,
+            exp_signal,
+            eff_signal,
+            tempo_signal,
+            orb_signal,
+            to_signal,
+        ) = self._compute_amplifier_signals(
+            fav_features,
+            dog_features,
+            fav_seed,
+            dog_seed,
         )
 
-        # Step 3: Composite upset amplifier
+        # Step 3: Composite upset amplifier (7 signals, weights sum to 1.0)
         amplifier = (
             self.w_volatility * vol_signal
             + self.w_momentum * mom_signal
             + self.w_experience * exp_signal
             + self.w_efficiency * eff_signal
+            + self.w_tempo_mismatch * tempo_signal
+            + self.w_rebounding_edge * orb_signal
+            + self.w_turnover_pressure * to_signal
         )
 
         # Step 4: Bayesian update — blend historical prior with model
@@ -324,10 +383,7 @@ class UpsetDetector:
             alpha *= round_decay
 
         # Posterior upset probability: weighted blend
-        posterior_upset = (
-            (1.0 - alpha) * model_upset_prob
-            + alpha * hist_rate
-        )
+        posterior_upset = (1.0 - alpha) * model_upset_prob + alpha * hist_rate
 
         # Step 5: Amplifier adjustment — shift toward upset when signals are strong.
         # The amplifier nudges the posterior when team-specific signals suggest
@@ -355,12 +411,18 @@ class UpsetDetector:
 
         # Step 7: Confidence based on signal agreement
         confidence = self._compute_confidence(
-            model_upset_prob, hist_rate, amplifier, n_obs,
+            model_upset_prob,
+            hist_rate,
+            amplifier,
+            n_obs,
         )
 
         # Step 8: Composite upset score for ranking
         upset_score = self._compute_upset_score(
-            adjusted_upset, amplifier, confidence, seed_gap,
+            adjusted_upset,
+            amplifier,
+            confidence,
+            seed_gap,
         )
 
         risk_tier = _classify_risk_tier(adjusted_upset)
@@ -382,6 +444,9 @@ class UpsetDetector:
             momentum_signal=mom_signal,
             experience_signal=exp_signal,
             efficiency_signal=eff_signal,
+            tempo_mismatch_signal=tempo_signal,
+            rebounding_edge_signal=orb_signal,
+            turnover_pressure_signal=to_signal,
             confidence=confidence,
         )
 
@@ -461,16 +526,16 @@ class UpsetDetector:
         n = len(model_probs)
         if n < 30:
             logger.warning(
-                "UpsetDetector: too few samples (%d), using defaults", n,
+                "UpsetDetector: too few samples (%d), using defaults",
+                n,
             )
             self.fitted = True
             return {"fitted": True, "n_samples": n, "method": "default"}
 
         # Identify upset games (higher seed won)
-        is_upset = np.array([
-            (s1 < s2 and o < 0.5) or (s2 < s1 and o > 0.5)
-            for s1, s2, o in zip(seeds1, seeds2, outcomes)
-        ])
+        is_upset = np.array(
+            [(s1 < s2 and o < 0.5) or (s2 < s1 and o > 0.5) for s1, s2, o in zip(seeds1, seeds2, outcomes)]
+        )
         n_upsets = int(np.sum(is_upset))
         baseline_brier = float(np.mean((model_probs - outcomes) ** 2))
 
@@ -495,13 +560,18 @@ class UpsetDetector:
                 for adj_s in adj_grid:
                     self.prior_strength = ps
                     self.adjustment_strength = adj_s
-                    adjusted = np.array([
-                        self._quick_adjust_full(
-                            model_probs[i], seeds1[i], seeds2[i],
-                            team1_features[i], team2_features[i],
-                        )
-                        for i in range(n)
-                    ])
+                    adjusted = np.array(
+                        [
+                            self._quick_adjust_full(
+                                model_probs[i],
+                                seeds1[i],
+                                seeds2[i],
+                                team1_features[i],
+                                team2_features[i],
+                            )
+                            for i in range(n)
+                        ]
+                    )
                     brier = float(np.mean((adjusted - outcomes) ** 2))
                     if brier < best_brier:
                         best_brier = brier
@@ -513,10 +583,7 @@ class UpsetDetector:
             # Prior-only grid search (backward compatible)
             for ps in np.linspace(0.05, 0.40, 15):
                 self.prior_strength = ps
-                adjusted = np.array([
-                    self._quick_adjust(model_probs[i], seeds1[i], seeds2[i])
-                    for i in range(n)
-                ])
+                adjusted = np.array([self._quick_adjust(model_probs[i], seeds1[i], seeds2[i]) for i in range(n)])
                 brier = float(np.mean((adjusted - outcomes) ** 2))
                 if brier < best_brier:
                     best_brier = brier
@@ -544,13 +611,19 @@ class UpsetDetector:
             "UpsetDetector fitted (%s): prior_strength=%.3f, "
             "adjustment_strength=%.3f, Brier %.5f -> %.5f "
             "(%d upsets in %d games)",
-            fit_method, best_ps, best_adj,
-            baseline_brier, best_brier, n_upsets, n,
+            fit_method,
+            best_ps,
+            best_adj,
+            baseline_brier,
+            best_brier,
+            n_upsets,
+            n,
         )
         return self._fit_stats
 
     def get_upset_summary(
-        self, signals: List[UpsetSignal],
+        self,
+        signals: List[UpsetSignal],
     ) -> Dict:
         """Generate summary statistics for bracket optimizer consumption.
 
@@ -577,10 +650,7 @@ class UpsetDetector:
                 ],
             }
 
-        top_upsets = [
-            s for s in signals
-            if s.risk_tier in (UpsetRiskTier.VERY_HIGH, UpsetRiskTier.HIGH)
-        ]
+        top_upsets = [s for s in signals if s.risk_tier in (UpsetRiskTier.VERY_HIGH, UpsetRiskTier.HIGH)]
 
         return {
             "total_matchups": len(signals),
@@ -600,61 +670,119 @@ class UpsetDetector:
         dog_features: Optional[object],
         fav_seed: int,
         dog_seed: int,
-    ) -> Tuple[float, float, float, float]:
+    ) -> Tuple[float, float, float, float, float, float, float]:
         """Extract upset amplifier signals from team features.
 
-        Returns (volatility, momentum, experience, efficiency) each in [0, 1].
+        Returns 7 signals each in [0, 1]:
+            (volatility, momentum, experience, efficiency,
+             tempo_mismatch, rebounding_edge, turnover_pressure)
+
+        The first 4 are the original seed-correlated signals.
+        The last 3 are seed-independent signals (|r| < 0.3 with seed,
+        verified via scripts/feature_seed_correlation.py) that capture
+        matchup vulnerability invisible to seed-based priors.
         """
         if fav_features is None or dog_features is None:
-            return (0.5, 0.5, 0.5, 0.5)
+            return (0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5)
+
+        # --- Original signals (seed-correlated) ---
 
         # Volatility signal: high favorite variance + low underdog variance = upset risk
-        # A volatile favorite is more likely to have a "bad day"
-        fav_vol = (
-            getattr(fav_features, 'three_pt_variance', 0.095)
-            + getattr(fav_features, 'pace_adjusted_variance', 0.0)
+        fav_vol = getattr(fav_features, "three_pt_variance", 0.095) + getattr(
+            fav_features, "pace_adjusted_variance", 0.0
         )
-        dog_vol = (
-            getattr(dog_features, 'three_pt_variance', 0.095)
-            + getattr(dog_features, 'pace_adjusted_variance', 0.0)
+        dog_vol = getattr(dog_features, "three_pt_variance", 0.095) + getattr(
+            dog_features, "pace_adjusted_variance", 0.0
         )
-        # Higher = more upset-prone (favorite is volatile, underdog is steady)
         vol_raw = fav_vol - dog_vol
-        # Normalize using sigmoid: center at 0, scale 0.1
         vol_signal = 1.0 / (1.0 + math.exp(-vol_raw / 0.10))
 
         # Momentum signal: underdog trending up, favorite trending down
-        dog_momentum = getattr(dog_features, 'momentum', 0.0)
-        fav_momentum = getattr(fav_features, 'momentum', 0.0)
+        dog_momentum = getattr(dog_features, "momentum", 0.0)
+        fav_momentum = getattr(fav_features, "momentum", 0.0)
         mom_diff = dog_momentum - fav_momentum
         mom_signal = 1.0 / (1.0 + math.exp(-mom_diff / 3.0))
 
         # Experience signal: underdog has more experienced roster
-        dog_exp = getattr(dog_features, 'avg_experience', 2.0)
-        fav_exp = getattr(fav_features, 'avg_experience', 2.0)
-        dog_depth = getattr(dog_features, 'bench_depth_score', 0.0)
-        fav_depth = getattr(fav_features, 'bench_depth_score', 0.0)
+        dog_exp = getattr(dog_features, "avg_experience", 2.0)
+        fav_exp = getattr(fav_features, "avg_experience", 2.0)
+        dog_depth = getattr(dog_features, "bench_depth_score", 0.0)
+        fav_depth = getattr(fav_features, "bench_depth_score", 0.0)
         exp_diff = (dog_exp - fav_exp) + 0.3 * (dog_depth - fav_depth)
         exp_signal = 1.0 / (1.0 + math.exp(-exp_diff / 0.8))
 
         # Efficiency signal: underdog overperforms its seed expectation
         _SEED_EXPECTED_EM = {
-            1: 28, 2: 21, 3: 16, 4: 12, 5: 9, 6: 6, 7: 4, 8: 2,
-            9: 0, 10: -2, 11: -4, 12: -6, 13: -9, 14: -12, 15: -16, 16: -21,
+            1: 28,
+            2: 21,
+            3: 16,
+            4: 12,
+            5: 9,
+            6: 6,
+            7: 4,
+            8: 2,
+            9: 0,
+            10: -2,
+            11: -4,
+            12: -6,
+            13: -9,
+            14: -12,
+            15: -16,
+            16: -21,
         }
-        dog_em = getattr(dog_features, 'adj_efficiency_margin', 0.0)
-        fav_em = getattr(fav_features, 'adj_efficiency_margin', 0.0)
+        dog_em = getattr(dog_features, "adj_efficiency_margin", 0.0)
+        fav_em = getattr(fav_features, "adj_efficiency_margin", 0.0)
         dog_residual = dog_em - _SEED_EXPECTED_EM.get(dog_seed, 0)
         fav_residual = fav_em - _SEED_EXPECTED_EM.get(fav_seed, 0)
-        # Positive = underdog is better than its seed implies relative to favorite
         eff_diff = dog_residual - fav_residual
         eff_signal = 1.0 / (1.0 + math.exp(-eff_diff / 5.0))
+
+        # --- Seed-independent signals (|r| < 0.3 with seed) ---
+        # These identify matchup-specific vulnerability that seed priors miss.
+        # In bracket pools, these are where marginal edges compound across
+        # 63 games because the public ignores them.
+
+        # Tempo mismatch: when the underdog's preferred pace differs sharply
+        # from the favorite's, the underdog can dictate tempo and disrupt the
+        # favorite's offensive rhythm. adj_tempo has |r|=0.026 with seed.
+        dog_tempo = getattr(dog_features, "adj_tempo", 68.0)
+        fav_tempo = getattr(fav_features, "adj_tempo", 68.0)
+        # Absolute tempo difference creates chaos that benefits the underdog.
+        # High-tempo underdogs push favorites out of comfort zone;
+        # slow-tempo underdogs grind games and reduce possessions (fewer
+        # chances for the better team to assert dominance).
+        tempo_diff = abs(dog_tempo - fav_tempo)
+        # Normalize: median tempo diff ~3-4 possessions, extreme is ~10+
+        tempo_signal = 1.0 / (1.0 + math.exp(-(tempo_diff - 4.0) / 2.5))
+
+        # Rebounding edge: offensive rebounding rate has |r|=0.276 with seed.
+        # Underdogs with strong ORB get second-chance points, creating
+        # variance that benefits the weaker team in single-elimination.
+        dog_orb = getattr(dog_features, "offensive_reb_rate", 0.28)
+        fav_orb = getattr(fav_features, "offensive_reb_rate", 0.28)
+        fav_drb = getattr(fav_features, "defensive_reb_rate", 0.72)
+        # Underdog ORB vs favorite DRB: the actual matchup that matters
+        orb_edge = dog_orb - (1.0 - fav_drb)  # Positive = underdog wins the board battle
+        orb_signal = 1.0 / (1.0 + math.exp(-orb_edge / 0.04))
+
+        # Turnover pressure: opponent turnover rate has |r|=0.090 with seed.
+        # Underdogs that force turnovers create transition opportunities and
+        # shorten effective possessions for the favorite. Combined with
+        # favorite's own turnover-proneness.
+        dog_forces_to = getattr(dog_features, "opp_turnover_rate", 0.18)
+        fav_to_rate = getattr(fav_features, "turnover_rate", 0.18)
+        # Both contribute: underdog forces TOs AND favorite is TO-prone
+        to_edge = (dog_forces_to - 0.18) + (fav_to_rate - 0.18)
+        to_signal = 1.0 / (1.0 + math.exp(-to_edge / 0.03))
 
         return (
             float(np.clip(vol_signal, 0.0, 1.0)),
             float(np.clip(mom_signal, 0.0, 1.0)),
             float(np.clip(exp_signal, 0.0, 1.0)),
             float(np.clip(eff_signal, 0.0, 1.0)),
+            float(np.clip(tempo_signal, 0.0, 1.0)),
+            float(np.clip(orb_signal, 0.0, 1.0)),
+            float(np.clip(to_signal, 0.0, 1.0)),
         )
 
     def _compute_confidence(
@@ -701,12 +829,7 @@ class UpsetDetector:
         # Impact multiplier: bigger seed gap upsets are worth more in brackets
         impact = min(seed_gap / 8.0, 1.0)
 
-        score = (
-            0.50 * upset_prob
-            + 0.20 * amplifier
-            + 0.15 * confidence
-            + 0.15 * impact * upset_prob
-        )
+        score = 0.50 * upset_prob + 0.20 * amplifier + 0.15 * confidence + 0.15 * impact * upset_prob
         return float(np.clip(score, 0.0, 1.0))
 
     def _same_seed_signal(
@@ -748,8 +871,10 @@ class UpsetDetector:
         features are provided, then returns the adjusted probability.
         """
         signal = self.detect(
-            team1_id="t1", team2_id="t2",
-            seed1=seed1, seed2=seed2,
+            team1_id="t1",
+            team2_id="t2",
+            seed1=seed1,
+            seed2=seed2,
             model_prob_team1=model_prob,
             team1_features=t1_features,
             team2_features=t2_features,
@@ -757,7 +882,10 @@ class UpsetDetector:
         return signal.adjusted_prob
 
     def _quick_adjust(
-        self, model_prob: float, seed1: int, seed2: int,
+        self,
+        model_prob: float,
+        seed1: int,
+        seed2: int,
     ) -> float:
         """Fast probability adjustment for fitting (no feature signals)."""
         if seed1 == seed2:

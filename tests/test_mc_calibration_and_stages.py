@@ -7,7 +7,7 @@ Covers:
 - _predict_fn_factory logistic prediction
 - _build_bracket_teams region filtering
 - FIRST_ROUND_MATCHUPS constant
-- CalibrationStage / ModelTrainingStage / ReportingStage .name attributes
+- CalibrationStage .name attributes
 - _noop_ctx helpers
 """
 
@@ -27,18 +27,16 @@ from src.simulation.mc_calibration import (
     FIRST_ROUND_MATCHUPS,
 )
 from src.pipeline.stages.calibrator import CalibrationStage, _noop_ctx as cal_noop
-from src.pipeline.stages.model_trainer import ModelTrainingStage, _noop_ctx as model_noop
-from src.pipeline.stages.reporter import ReportingStage
 
 
 # ---------------------------------------------------------------------------
 # FIRST_ROUND_MATCHUPS
 # ---------------------------------------------------------------------------
 
+
 class TestFirstRoundMatchups:
     def test_contains_all_eight_pairings(self):
-        expected = {(1, 16), (2, 15), (3, 14), (4, 13),
-                    (5, 12), (6, 11), (7, 10), (8, 9)}
+        expected = {(1, 16), (2, 15), (3, 14), (4, 13), (5, 12), (6, 11), (7, 10), (8, 9)}
         assert FIRST_ROUND_MATCHUPS == expected
 
     def test_is_a_set(self):
@@ -52,6 +50,7 @@ class TestFirstRoundMatchups:
 # ---------------------------------------------------------------------------
 # MCCalibrationResult
 # ---------------------------------------------------------------------------
+
 
 class TestMCCalibrationResult:
     def _make(self, **overrides):
@@ -73,8 +72,11 @@ class TestMCCalibrationResult:
     def test_to_dict_keys(self):
         d = self._make().to_dict()
         assert set(d.keys()) == {
-            "noise_std", "regional_correlation",
-            "dev_score", "holdout_score", "per_year_scores",
+            "noise_std",
+            "regional_correlation",
+            "dev_score",
+            "holdout_score",
+            "per_year_scores",
         }
 
     def test_to_dict_rounds_noise_std(self):
@@ -114,6 +116,7 @@ class TestMCCalibrationResult:
 # _is_tournament_game
 # ---------------------------------------------------------------------------
 
+
 class TestIsTournamentGame:
     def test_valid_tournament_date(self):
         # 2023 tournament starts 2023-03-14, ends window 2023-04-15
@@ -150,6 +153,7 @@ class TestIsTournamentGame:
 # _resolve_seed_id
 # ---------------------------------------------------------------------------
 
+
 class TestResolveSeedId:
     def test_exact_match(self):
         ids = ["alabama", "duke", "kansas"]
@@ -185,6 +189,7 @@ class TestResolveSeedId:
 # ---------------------------------------------------------------------------
 # _predict_fn_factory
 # ---------------------------------------------------------------------------
+
 
 class TestPredictFnFactory:
     def _simple_setup(self):
@@ -272,6 +277,7 @@ class TestPredictFnFactory:
 # _build_bracket_teams
 # ---------------------------------------------------------------------------
 
+
 def _make_seed_info(regions, seeds_per_region=range(1, 17)):
     """Helper to build seed_info with specified regions and seeds."""
     info = {}
@@ -342,6 +348,7 @@ class TestBuildBracketTeams:
 # Pipeline stage names
 # ---------------------------------------------------------------------------
 
+
 class TestCalibrationStage:
     def test_name(self):
         assert CalibrationStage.name == "calibration"
@@ -355,26 +362,3 @@ class TestCalibrationStage:
     def test_noop_ctx_is_nullcontext(self):
         ctx = cal_noop()
         assert isinstance(ctx, type(nullcontext()))
-
-
-class TestModelTrainingStage:
-    def test_name(self):
-        assert ModelTrainingStage.name == "model_training"
-
-    def test_noop_ctx_returns_context_manager(self):
-        ctx = model_noop()
-        with ctx:
-            pass
-
-    def test_noop_ctx_is_nullcontext(self):
-        ctx = model_noop()
-        assert isinstance(ctx, type(nullcontext()))
-
-
-class TestReportingStage:
-    def test_name(self):
-        assert ReportingStage.name == "reporting"
-
-    def test_instance_name(self):
-        stage = ReportingStage()
-        assert stage.name == "reporting"

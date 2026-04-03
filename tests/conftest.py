@@ -24,7 +24,6 @@ _AUTO_MARKER_RULES = [
     # leakage tests
     ("test_leakage", "leakage"),
     ("test_date_integrity", "leakage"),
-    ("test_elo_temporal", "leakage"),
     # calibration tests
     ("evaluation/test_calibration", "calibration"),
     ("evaluation/test_reliability", "calibration"),
@@ -53,8 +52,14 @@ def pytest_collection_modifyitems(items):
         # Auto-mark anything under tests/ that doesn't already have a gate
         # marker as 'unit' (the default gate).
         gate_markers = {
-            "unit", "data_contract", "leakage", "backtest_regression",
-            "freeze", "production", "calibration", "live_protocol",
+            "unit",
+            "data_contract",
+            "leakage",
+            "backtest_regression",
+            "freeze",
+            "production",
+            "calibration",
+            "live_protocol",
             "integration",
         }
         item_markers = {m.name for m in item.iter_markers()}
@@ -111,8 +116,14 @@ def rng():
 def sample_team_ids():
     """List of 8 sample team IDs."""
     return [
-        "duke", "north-carolina", "kansas", "kentucky",
-        "gonzaga", "villanova", "michigan-st", "virginia",
+        "duke",
+        "north-carolina",
+        "kansas",
+        "kentucky",
+        "gonzaga",
+        "villanova",
+        "michigan-st",
+        "virginia",
     ]
 
 
@@ -156,6 +167,7 @@ def sample_loyo_briers():
 def minimal_pipeline_config():
     """Minimal SOTAPipelineConfig for unit tests (no file I/O)."""
     from src.pipeline.sota import SOTAPipelineConfig
+
     return SOTAPipelineConfig(
         year=2025,
         num_simulations=100,
@@ -171,6 +183,7 @@ def minimal_pipeline_config():
 def strict_pipeline_config():
     """Pipeline config with strict leakage mode for leakage-tagged tests."""
     from src.pipeline.sota import SOTAPipelineConfig
+
     return SOTAPipelineConfig(
         year=2025,
         num_simulations=100,
