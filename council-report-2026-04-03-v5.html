@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Council Report — Session 5</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 900px; margin: 0 auto; padding: 2rem; background: #fafafa; }
+  h1 { font-size: 1.8rem; margin-bottom: 0.5rem; color: #111; }
+  h2 { font-size: 1.3rem; margin: 2rem 0 0.75rem; color: #222; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; }
+  p { margin: 0.5rem 0; }
+  .header { border-bottom: 3px solid #2563eb; padding-bottom: 1rem; margin-bottom: 2rem; }
+  .header .subtitle { color: #666; font-size: 0.95rem; }
+  .question-box { background: #f0f4ff; border-left: 4px solid #2563eb; padding: 1rem 1.25rem; margin: 1.5rem 0; border-radius: 0 6px 6px 0; }
+  .verdict-section { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; }
+  .verdict-section h2 { margin-top: 0; border-bottom: none; }
+  .agrees { border-left: 4px solid #16a34a; }
+  .clashes { border-left: 4px solid #ea580c; }
+  .blindspots { border-left: 4px solid #9333ea; }
+  .recommendation { border-left: 4px solid #2563eb; background: #f0f4ff; }
+  .first-thing { border-left: 4px solid #dc2626; background: #fef2f2; }
+  .alignment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+  .advisor-position { background: white; border: 1px solid #e0e0e0; border-radius: 6px; padding: 1rem; }
+  .advisor-position .name { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.3rem; }
+  .advisor-position .stance { font-size: 0.85rem; color: #555; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-right: 4px; }
+  .tag-opponent { background: #dcfce7; color: #166534; }
+  .tag-contrarian { background: #dbeafe; color: #1e40af; }
+  .tag-diagnose { background: #f3e8ff; color: #6b21a8; }
+  details { background: white; border: 1px solid #e0e0e0; border-radius: 6px; margin: 0.75rem 0; }
+  details summary { padding: 0.75rem 1rem; cursor: pointer; font-weight: 600; font-size: 0.95rem; user-select: none; }
+  details summary:hover { background: #f5f5f5; }
+  details .content { padding: 0 1rem 1rem; font-size: 0.92rem; }
+  .review-highlight { background: #fffbeb; border-left: 3px solid #f59e0b; padding: 0.75rem 1rem; margin: 0.5rem 0; border-radius: 0 4px 4px 0; font-size: 0.9rem; }
+  .footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e0e0e0; color: #888; font-size: 0.8rem; }
+  strong { color: #111; }
+  .consensus-bar { display: flex; margin: 1rem 0; border-radius: 6px; overflow: hidden; height: 32px; }
+  .consensus-segment { display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 600; }
+  .seg-opponent { background: #16a34a; }
+  .seg-contrarian { background: #2563eb; }
+  .seg-diagnose { background: #9333ea; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>LLM Council Report</h1>
+  <div class="subtitle">Session 5 — April 3, 2026 — After Stochastic Backtest: All Modes Near Random</div>
+</div>
+
+<div class="question-box">
+  <strong>Question:</strong> Stochastic backtest shows all three modes (seed/noseed/blend) perform near-random in pools (mean rank ~490-500, p=0.70), despite noseed having significantly better Brier scores (p=0.0006). The opponent model uses SEED_PICK_RATES. Is this the end of the road, or is there signal being left on the table?
+</div>
+
+<h2>Advisor Alignment</h2>
+
+<div class="consensus-bar">
+  <div class="consensus-segment seg-opponent" style="width: 100%;">Unanimous: Opponent Model is the Problem (5/5)</div>
+</div>
+
+<div class="alignment-grid">
+  <div class="advisor-position">
+    <div class="name">The Contrarian</div>
+    <span class="tag tag-opponent">Fix Opponent Model</span> <span class="tag tag-diagnose">Measure Divergence</span>
+    <div class="stance">Never tested whether model probabilities actually diverge from crowd's implicit probabilities. If they agree on most games, near-median forever regardless of calibration.</div>
+  </div>
+  <div class="advisor-position">
+    <div class="name">First Principles Thinker</div>
+    <span class="tag tag-contrarian">Build Contrarian Sampler</span>
+    <div class="stance">The actual problem is "predict differently than the field." Brier advantage is wasted in symmetric sampling. Need contrarian mechanism that downweights chalk picks.</div>
+  </div>
+  <div class="advisor-position">
+    <div class="name">The Expansionist</div>
+    <span class="tag tag-contrarian">P_model - P_field Delta</span>
+    <div class="stance">Compute model-vs-field delta per game. Over-weight upsets where delta is largest. Strategy layer problem, not model problem.</div>
+  </div>
+  <div class="advisor-position">
+    <div class="name">The Outsider</div>
+    <span class="tag tag-opponent">Get Real Pick Data</span>
+    <div class="stance">SEED_PICK_RATES is a 2004-era model. Real 2026 players have analytics. Compare model against actual ESPN published pick rates.</div>
+  </div>
+  <div class="advisor-position">
+    <div class="name">The Executor</div>
+    <span class="tag tag-opponent">Fix Opponent Model First</span>
+    <div class="stance">Concrete action sequence: (1) Swap SEED_PICK_RATES for real ESPN data, rerun. (2) If no improvement, audit divergence from consensus. (3) If still nothing, pool format may not reward calibration.</div>
+  </div>
+</div>
+
+<div class="verdict-section agrees">
+  <h2>Where the Council Agrees</h2>
+  <p><strong>The opponent model is broken.</strong> SEED_PICK_RATES is a stale proxy for actual human pick distributions. Every advisor agrees this is the structural defect explaining the Brier/rank disconnect. Better probability estimates are being neutralized by a miscalibrated picture of what the field is doing.</p>
+  <p><strong>The Brier advantage is real signal.</strong> The problem is not model quality — it is the strategy layer that fails to exploit the edge against the actual opponent distribution.</p>
+  <p><strong>The ML work is not wasted.</strong> All five advisors independently reached this conclusion. The signal exists but is being misapplied.</p>
+</div>
+
+<div class="verdict-section clashes">
+  <h2>Where the Council Clashes</h2>
+  <p><strong>Fix opponent model first vs. build contrarian sampler now.</strong> The Executor says fix the data first (swap in real ESPN picks, rerun). The Expansionist says start computing model-vs-field deltas now. The peer reviews sided with the Executor: you cannot optimize against a distribution you haven't measured. Contrarian sampling against broken field data is noise on noise.</p>
+</div>
+
+<div class="verdict-section blindspots">
+  <h2>Blind Spots the Council Caught</h2>
+  <p><strong>The scoring function mismatch — the most important finding of this session.</strong> Every single peer review (5/5) independently caught what no advisor mentioned: the Brier score improvement may be concentrated in early rounds (R64, R32) which carry minimal pool scoring weight. Rounds 3-6 (S16, E8, F4, CHAMP) determine pool rank because they're worth 4-32x as many points.</p>
+  <p>If noseed's calibration edge is in games worth 10-20 points while the field locks in Final Four picks worth 160-320 points, then a structurally superior probability model is being evaluated against a scoring function it was never optimized for. This could explain the Brier/rank disconnect <em>independently</em> of the opponent model problem.</p>
+  <p><strong>Data already exists to test this:</strong> the unified backtest shows per-round Brier breakdown. Noseed's largest BSS advantages are at F4 (+0.138) and E8 (+0.081), which are the highest-leverage rounds. This suggests the scoring mismatch may NOT be the binding constraint — but it should be verified explicitly.</p>
+</div>
+
+<div class="verdict-section recommendation">
+  <h2>The Recommendation</h2>
+  <p><strong>Two parallel diagnostics before building anything new:</strong></p>
+  <p><strong>1. Replace SEED_PICK_RATES with real ESPN aggregate pick percentages</strong> and rerun the stochastic backtest unchanged. This is a single data substitution. If pool rank improves materially, the opponent model was the entire problem. If it doesn't, you've ruled out the most likely culprit.</p>
+  <p><strong>2. Decompose the Brier score improvement by round</strong> in the pool-scoring-weighted context. Verify that noseed's calibration edge concentrates in high-leverage rounds (S16+), not low-leverage rounds (R64, R32). If the edge reverses in late rounds, the model needs retraining with a scoring-aware objective — not opponent model fixes or contrarian sampling.</p>
+  <p>Do not build a contrarian sampling layer until both diagnostics are complete.</p>
+</div>
+
+<div class="verdict-section first-thing">
+  <h2>The One Thing to Do First</h2>
+  <p><strong>Swap SEED_PICK_RATES for real ESPN aggregate pick percentages and rerun the backtest.</strong></p>
+  <p>It is the fastest falsifiable test. If pool rank improves, you've found and fixed the bug. If it doesn't, you have a clean result telling you the opponent model was not the binding constraint — and you move to round-stratified analysis. Either outcome advances the diagnosis. Nothing else does until this is done.</p>
+</div>
+
+<details>
+  <summary>The Contrarian — Full Response</summary>
+  <div class="content">
+    <p>The opponent model is the fatal flaw nobody wants to name. Your "random baseline" is not random. SEED_PICK_RATES with chalk bias means you're measuring performance against a field that systematically over-picks favorites. Mean rank ~490-500 doesn't mean "coin flip performance" — it means your strategies are not beating chalk-heavy humans.</p>
+    <p>Better calibration means nothing if your bracket construction doesn't differentiate from the field. You're using superior probability estimates to make the same chalk picks the crowd makes.</p>
+    <p>The deeper problem: you never tested whether your probabilities actually diverge meaningfully from the crowd's implicit probabilities. If SEED_PICK_RATES and your noseed model agree on who wins most games, you will always perform near median regardless of calibration quality.</p>
+    <p>The months of ML work aren't wasted — they're being misapplied. The question isn't "who wins" but "who wins that the crowd isn't picking." You haven't built that yet.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The First Principles Thinker — Full Response</summary>
+  <div class="content">
+    <p>The framing of "months of ML work has no value" is the wrong conclusion. The actual problem being solved in a 1000-person pool is not "predict games accurately." It is "predict games differently than the field predicts them."</p>
+    <p>The Brier score improvement is real. The model genuinely knows something. But pool performance is near-random because the opponent model is wrong. If noseed is also chalk-biased (picks similar teams to the crowd), better probability estimates buy nothing in a differentiation game.</p>
+    <p>What needs to be built is a contrarian sampling mechanism — sampling from the noseed model while downweighting chalk picks. Accept lower mean score in exchange for higher variance brackets that occasionally land in the top 1%.</p>
+    <p>The Brier advantage is real signal being wasted in a symmetric sampling strategy. This is the beginning of the actual problem: using probability edge to construct positively differentiated brackets.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Expansionist — Full Response</summary>
+  <div class="content">
+    <p>The Brier score gap is real signal — you're just measuring the wrong outcome to harvest it. Pool rank against a chalk-biased field is not the right target. The path to top-5% is "predict differently in the right spots."</p>
+    <p>Compute P_model(upset) - P_field(upset) for every game. Bracket generation should over-weight upsets where this delta is largest. That's where Brier edge becomes pool edge.</p>
+    <p>The system isn't using probability signal against the specific opponent distribution. That's a strategy layer problem, not a model quality problem. Build the contrarian sampling layer before declaring defeat.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Outsider — Full Response</summary>
+  <div class="content">
+    <p>The opponent model is your blind spot. Pool performance is not about predicting games — it's about predicting what other people pick, and then picking differently in the right places.</p>
+    <p>SEED_PICK_RATES is a 2004-era opponent model. Real 2026 pool players have ESPN analytics, KenPom, bracket builders. If they've gotten smarter, your edge from any model shrinks.</p>
+    <p>The concrete test: compare your model's pick frequencies against actual pool pick rates (ESPN publishes these). Where does your model diverge from the crowd? Are those divergences in the right direction? If you don't have that data, you're flying blind on the variable that determines pool rank.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Executor — Full Response</summary>
+  <div class="content">
+    <p>The Brier advantage isn't showing up because the opponent model is wrong. Here's the action sequence:</p>
+    <p>(1) Get real ESPN/Yahoo bracket pick percentages and replace SEED_PICK_RATES. Rerun the backtest. If noseed's advantage appears, you found the bug.</p>
+    <p>(2) If that doesn't move the needle, audit how often noseed differs from field consensus — if picks are too similar, need contrarian sampling strategy.</p>
+    <p>(3) If neither works, consider whether the pool format simply doesn't reward calibration.</p>
+    <p>Do not abandon the ML model. Fix the opponent model first — it's the fastest path to knowing whether you have something.</p>
+  </div>
+</details>
+
+<details>
+  <summary>Peer Review Highlights</summary>
+  <div class="content">
+    <div class="review-highlight"><strong>Strongest response:</strong> The Executor (selected by 5/5 reviewers). Concrete, ordered action sequence with a falsifiable test — the only advisor who tells you what to do Monday morning.</div>
+    <div class="review-highlight"><strong>Biggest blind spot:</strong> The Expansionist (selected by 5/5 reviewers). Proposes computing P_model - P_field deltas using the broken SEED_PICK_RATES proxy. Prescribes a solution that requires the missing ingredient without acknowledging the missing ingredient.</div>
+    <div class="review-highlight"><strong>Universal miss:</strong> All 5 peer reviewers independently caught the same blind spot: Brier improvement may be concentrated in low-leverage early rounds. Pool scoring weights late rounds 4-32x more. The scoring function mismatch may explain the Brier/rank disconnect independently of the opponent model.</div>
+  </div>
+</details>
+
+<div class="footer">
+  <p>LLM Council Session 5 — April 3, 2026 — "After Stochastic Backtest: What Next?"</p>
+  <p>5 advisors, 5 peer reviews, 1 chairman synthesis. Generated by Claude.</p>
+</div>
+
+</body>
+</html>

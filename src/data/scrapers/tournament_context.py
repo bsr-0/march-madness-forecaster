@@ -26,6 +26,13 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
 
 
+def _make_soup(html_or_text):
+    try:
+        return BeautifulSoup(html_or_text, "lxml")
+    except Exception:
+        return BeautifulSoup(html_or_text, "html.parser")
+
+
 class TournamentContextScraper:
     """
     Scraper for tournament context enrichment data.
@@ -39,12 +46,14 @@ class TournamentContextScraper:
 
     def __init__(self, cache_dir: Optional[str] = None):
         self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0"
-            ),
-        })
+        self.session.headers.update(
+            {
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0"
+                ),
+            }
+        )
         self.cache_dir = Path(cache_dir) if cache_dir else None
         if self.cache_dir:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -73,6 +82,7 @@ class TournamentContextScraper:
         if rankings:
             try:
                 from .schemas import validate_preseason_ap
+
                 rankings = validate_preseason_ap(rankings)
             except Exception as e:
                 logger.warning("Preseason AP schema validation failed: %s", e)
@@ -91,13 +101,15 @@ class TournamentContextScraper:
         if rankings:
             logger.info(
                 "Loaded %d preseason AP rankings from Massey Ordinals for %d",
-                len(rankings), year,
+                len(rankings),
+                year,
             )
             return rankings
 
         # --- Fallback: Sports Reference HTML (fragile) ---
         logger.info(
-            "Massey Ordinals AP data unavailable; falling back to SR HTML for %d", year,
+            "Massey Ordinals AP data unavailable; falling back to SR HTML for %d",
+            year,
         )
         url = f"{self.BASE_URL_SR}/seasons/men/{year}-polls.html"
         rankings = {}
@@ -109,7 +121,7 @@ class TournamentContextScraper:
             logger.warning("Could not fetch AP polls page for %d: %s", year, e)
             return rankings
 
-        soup = BeautifulSoup(resp.text, "lxml")
+        soup = _make_soup(resp.text)
 
         # Strategy 1: Look for the weekly poll grid table with a "Pre" column
         table = soup.find("table", {"id": "ap-polls"})
@@ -246,9 +258,7 @@ class TournamentContextScraper:
     # 2. Coach Tournament Experience
     # ------------------------------------------------------------------
 
-    def fetch_coach_tournament_experience(
-        self, year: int
-    ) -> Dict[str, Dict[str, object]]:
+    def fetch_coach_tournament_experience(self, year: int) -> Dict[str, Dict[str, object]]:
         """
         Fetch head coach NCAA tournament appearance counts.
 
@@ -272,15 +282,14 @@ class TournamentContextScraper:
         if coaches:
             try:
                 from .schemas import validate_coach_tournament_data
+
                 coaches = validate_coach_tournament_data(coaches)
             except Exception as e:
                 logger.warning("Coach tournament data schema validation failed: %s", e)
             self._save_cache(cache_name, {"coaches": coaches, "year": year})
         return coaches
 
-    def _scrape_coach_tournament_data(
-        self, year: int
-    ) -> Dict[str, Dict[str, object]]:
+    def _scrape_coach_tournament_data(self, year: int) -> Dict[str, Dict[str, object]]:
         """Fetch coach tournament data, trying CSV first, HTML as fallback.
 
         Primary: Barttorvik team_results CSV (structured, not behind JS wall).
@@ -382,7 +391,7 @@ class TournamentContextScraper:
             logger.warning("Could not fetch coach tournament data: %s", e)
             return coaches
 
-        soup = BeautifulSoup(resp.text, "lxml")
+        soup = _make_soup(resp.text)
 
         table = soup.find("table")
         if not table:
@@ -535,8 +544,8 @@ class TournamentContextScraper:
         # Strategy 2: HTML fallback (fragile, behind Cloudflare)
         if not coaches:
             logger.info(
-                "CSV team-coach mapping returned no results; "
-                "falling back to HTML scrape for %d.", year,
+                "CSV team-coach mapping returned no results; falling back to HTML scrape for %d.",
+                year,
             )
             coaches = self._scrape_team_coaches(year)
 
@@ -556,7 +565,7 @@ class TournamentContextScraper:
             logger.warning("Could not fetch Barttorvik team ratings for %d: %s", year, e)
             return coaches
 
-        soup = BeautifulSoup(resp.text, "lxml")
+        soup = _make_soup(resp.text)
         table = soup.find("table")
         if not table:
             logger.warning("No table found on Barttorvik team ratings page")
@@ -584,9 +593,7 @@ class TournamentContextScraper:
                 team_col = team_col if team_col is not None else 1
                 coach_col = coach_col if coach_col is not None else 2
             else:
-                logger.warning(
-                    "Could not identify team/coach columns in headers: %s", headers
-                )
+                logger.warning("Could not identify team/coach columns in headers: %s", headers)
                 return coaches
 
         for row in rows[1:]:
@@ -637,7 +644,8 @@ class TournamentContextScraper:
 
         logger.debug(
             "Barttorvik team results CSV columns for %d: %s",
-            year, reader.fieldnames,
+            year,
+            reader.fieldnames,
         )
 
         # Find team and coach columns (case-insensitive)
@@ -657,9 +665,10 @@ class TournamentContextScraper:
 
         if not team_key or not coach_key:
             logger.warning(
-                "Team results CSV missing team/coach columns — "
-                "team_key=%s, coach_key=%s (available headers: %s)",
-                team_key, coach_key, list(reader.fieldnames),
+                "Team results CSV missing team/coach columns — team_key=%s, coach_key=%s (available headers: %s)",
+                team_key,
+                coach_key,
+                list(reader.fieldnames),
             )
             return coaches
 
@@ -672,7 +681,8 @@ class TournamentContextScraper:
 
         logger.info(
             "Parsed %d team-coach mappings from Barttorvik CSV for %d",
-            len(coaches), year,
+            len(coaches),
+            year,
         )
         return coaches
 
@@ -680,9 +690,7 @@ class TournamentContextScraper:
     # 3. Conference Tournament Champions
     # ------------------------------------------------------------------
 
-    def fetch_conference_tournament_champions(
-        self, year: int
-    ) -> Dict[str, str]:
+    def fetch_conference_tournament_champions(self, year: int) -> Dict[str, str]:
         """
         Fetch conference tournament champions for a season.
 
@@ -714,13 +722,15 @@ class TournamentContextScraper:
         if champions:
             logger.info(
                 "Loaded %d conference tournament champions from ESPN for %d",
-                len(champions), year,
+                len(champions),
+                year,
             )
             return champions
 
         # --- Fallback: SR HTML (fragile) ---
         logger.info(
-            "ESPN conference data unavailable; falling back to SR HTML for %d", year,
+            "ESPN conference data unavailable; falling back to SR HTML for %d",
+            year,
         )
         return self._conf_champions_from_sr_html(year)
 
@@ -772,7 +782,7 @@ class TournamentContextScraper:
             logger.warning("Could not fetch SR season summary for %d: %s", year, e)
             return champions
 
-        soup = BeautifulSoup(resp.text, "lxml")
+        soup = _make_soup(resp.text)
 
         table = soup.find("table", {"id": "conference-summary"})
         if not table:
@@ -863,9 +873,7 @@ class TournamentContextScraper:
     @staticmethod
     def _normalize_name(name: str) -> str:
         """Normalize a team or coach name to a lookup key."""
-        return "".join(
-            c.lower() if c.isalnum() else "_" for c in (name or "")
-        ).strip("_")
+        return "".join(c.lower() if c.isalnum() else "_" for c in (name or "")).strip("_")
 
     @staticmethod
     def _parse_rank(text: str) -> Optional[int]:

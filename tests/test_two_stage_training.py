@@ -50,6 +50,7 @@ def _make_regression_data(n, feature_dim=FEATURE_DIM):
 # Tests: _build_finetune_params
 # ---------------------------------------------------------------------------
 
+
 class TestBuildFinetuneParams:
     def test_learning_rate_reduced(self):
         base = {"learning_rate": 0.05, "lambda_l1": 1.0, "lambda_l2": 1.0}
@@ -66,15 +67,13 @@ class TestBuildFinetuneParams:
         assert params["lambda_l2"] >= base["lambda_l2"]
 
     def test_min_child_samples_set(self):
-        base = {"learning_rate": 0.05, "lambda_l1": 1.0, "lambda_l2": 1.0,
-                "min_child_samples": 20}
+        base = {"learning_rate": 0.05, "lambda_l1": 1.0, "lambda_l2": 1.0, "min_child_samples": 20}
         config = TwoStageConfig(finetune_min_child_samples=10)
         params = _build_finetune_params(base, config)
         assert params["min_child_samples"] == 10
 
     def test_xgboost_min_child_weight(self):
-        base = {"learning_rate": 0.05, "lambda_l1": 1.0, "lambda_l2": 1.0,
-                "min_child_weight": 20}
+        base = {"learning_rate": 0.05, "lambda_l1": 1.0, "lambda_l2": 1.0, "min_child_weight": 20}
         config = TwoStageConfig(finetune_min_child_samples=10)
         params = _build_finetune_params(base, config)
         assert params["min_child_weight"] == 10
@@ -90,6 +89,14 @@ class TestBuildFinetuneParams:
 # Tests: two_stage_train_lightgbm
 # ---------------------------------------------------------------------------
 
+_lgb_available = True
+try:
+    import lightgbm  # noqa: F401
+except ImportError:
+    _lgb_available = False
+
+
+@pytest.mark.skipif(not _lgb_available, reason="lightgbm not installed")
 class TestTwoStageLightGBM:
     def test_both_stages_train(self):
         """Both stages complete with sufficient data."""
@@ -148,8 +155,12 @@ class TestTwoStageLightGBM:
         pre_w = np.ones(100)
         ft_w = np.full(40, 2.0)
         result = two_stage_train_lightgbm(
-            pre_X, pre_y, ft_X, ft_y,
-            pretrain_weights=pre_w, finetune_weights=ft_w,
+            pre_X,
+            pre_y,
+            ft_X,
+            ft_y,
+            pretrain_weights=pre_w,
+            finetune_weights=ft_w,
             config=TwoStageConfig(min_finetune_samples=10),
         )
         assert result.stage2_trained is True
@@ -159,7 +170,10 @@ class TestTwoStageLightGBM:
         val_X, val_y = _make_classification_data(50)
         ft_X, ft_y = _make_classification_data(40)
         result = two_stage_train_lightgbm(
-            pre_X, pre_y, ft_X, ft_y,
+            pre_X,
+            pre_y,
+            ft_X,
+            ft_y,
             pretrain_valid=(val_X, val_y),
             config=TwoStageConfig(min_finetune_samples=10),
         )
@@ -170,7 +184,10 @@ class TestTwoStageLightGBM:
         pre_X, pre_y = _make_classification_data(200)
         ft_X, ft_y = _make_classification_data(50)
         result = two_stage_train_lightgbm(
-            pre_X, pre_y, ft_X, ft_y,
+            pre_X,
+            pre_y,
+            ft_X,
+            ft_y,
             config=TwoStageConfig(min_finetune_samples=10),
         )
         preds = result.model.predict(ft_X)
@@ -182,12 +199,17 @@ class TestTwoStageLightGBM:
 # Tests: two_stage_train_spread
 # ---------------------------------------------------------------------------
 
+
+@pytest.mark.skipif(not _lgb_available, reason="lightgbm not installed")
 class TestTwoStageSpread:
     def test_both_stages_train(self):
         pre_X, pre_m = _make_regression_data(200)
         ft_X, ft_m = _make_regression_data(50)
         result = two_stage_train_spread(
-            pre_X, pre_m, ft_X, ft_m,
+            pre_X,
+            pre_m,
+            ft_X,
+            ft_m,
             config=TwoStageConfig(min_finetune_samples=10),
         )
         assert result.stage1_trained is True
@@ -205,7 +227,10 @@ class TestTwoStageSpread:
         pre_X, pre_m = _make_regression_data(200)
         ft_X, ft_m = _make_regression_data(50)
         result = two_stage_train_spread(
-            pre_X, pre_m, ft_X, ft_m,
+            pre_X,
+            pre_m,
+            ft_X,
+            ft_m,
             config=TwoStageConfig(min_finetune_samples=10),
         )
         preds = result.model.predict(ft_X)
@@ -218,12 +243,16 @@ class TestTwoStageSpread:
 # Tests: two_stage_train_logistic
 # ---------------------------------------------------------------------------
 
+
 class TestTwoStageLogistic:
     def test_both_stages_train(self):
         pre_X, pre_y = _make_classification_data(200)
         ft_X, ft_y = _make_classification_data(50)
         result = two_stage_train_logistic(
-            pre_X, pre_y, ft_X, ft_y,
+            pre_X,
+            pre_y,
+            ft_X,
+            ft_y,
             config=TwoStageConfig(min_finetune_samples=10),
         )
         assert result.stage1_trained is True
@@ -243,7 +272,10 @@ class TestTwoStageLogistic:
         pre_X, pre_y = _make_classification_data(200)
         ft_X, ft_y = _make_classification_data(50)
         result = two_stage_train_logistic(
-            pre_X, pre_y, ft_X, ft_y,
+            pre_X,
+            pre_y,
+            ft_X,
+            ft_y,
             config=TwoStageConfig(min_finetune_samples=10),
         )
         model = result.model["logistic"]
@@ -277,8 +309,12 @@ class TestTwoStageLogistic:
         pre_w = np.ones(200)
         ft_w = np.full(50, 2.0)
         result = two_stage_train_logistic(
-            pre_X, pre_y, ft_X, ft_y,
-            pretrain_weights=pre_w, finetune_weights=ft_w,
+            pre_X,
+            pre_y,
+            ft_X,
+            ft_y,
+            pretrain_weights=pre_w,
+            finetune_weights=ft_w,
             config=TwoStageConfig(min_finetune_samples=10),
         )
         assert result.stage2_trained is True
@@ -287,6 +323,7 @@ class TestTwoStageLogistic:
 # ---------------------------------------------------------------------------
 # Tests: TwoStageConfig
 # ---------------------------------------------------------------------------
+
 
 class TestTwoStageConfig:
     def test_defaults(self):
