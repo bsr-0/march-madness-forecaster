@@ -3,13 +3,13 @@
 Wires seed-based probabilities, ratings-derived opponent model, and
 existing pool optimization infrastructure into a single entry point.
 
-Supports three modes:
-  - noseed (default): ML model trained without seed features.
-    Backtest shows +9 mean edge vs chalk because it generates
-    structural disagreement with the seed-thinking public.
-  - blend: 50/50 seed baseline + no-seed model for best raw
-    prediction accuracy (BSS=+0.035, p=0.016).
-  - seed: Historical seed-based probabilities only.
+Supports three modes (validated on 1071 games across 17 years):
+  - noseed: ML model trained without seed features. Best Brier
+    score (p=0.0006, wins 14/17 years). Use for prediction accuracy.
+  - blend (default): 50/50 seed + noseed. Significant Brier
+    improvement (p<0.0001) with minimal pool EV cost (-3 vs chalk).
+  - seed: Historical seed-based probabilities only. Produces no
+    leverage picks (identical to chalk).
 """
 
 import json
@@ -34,9 +34,9 @@ def run_optimize_pool(args):
     """Run bracket pool optimization.
 
     Mode controls which probabilities drive the optimizer:
-      - noseed (default): ML model without seed features — maximizes leverage
-      - blend: 50/50 seed + no-seed — maximizes raw accuracy
-      - seed: Historical seed baseline only
+      - noseed: ML model without seed features — best prediction accuracy
+      - blend (default): 50/50 seed + noseed — balanced accuracy + pool EV
+      - seed: Historical seed baseline only — no leverage picks
     """
     from ..optimization.pool_optimizer import PoolEnvironment, PoolOptimizer
     from ..prediction.seed_probabilities import (
@@ -49,7 +49,7 @@ def run_optimize_pool(args):
     pool_size = args.pool_size
     payout = args.payout
     output_path = args.output
-    mode = getattr(args, "mode", "noseed")
+    mode = getattr(args, "mode", "blend")
 
     # --- Step 1: Load tournament seeds ---
     seeds = _load_seeds(year)
@@ -325,11 +325,11 @@ def register(subparsers):
         "--mode",
         "-m",
         choices=["noseed", "blend", "seed"],
-        default="noseed",
+        default="blend",
         help=(
-            "Probability mode: 'noseed' (default) uses ML model without "
-            "seed features; 'blend' uses 50/50 seed+ML; 'seed' uses "
-            "seed baseline only"
+            "Probability mode: 'blend' (default) uses 50/50 seed+ML; "
+            "'noseed' uses ML without seed features (best accuracy); "
+            "'seed' uses seed baseline only"
         ),
     )
     parser.add_argument(

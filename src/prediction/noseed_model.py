@@ -30,6 +30,9 @@ HIST_DIR = Path("data/raw/historical")
 DATA_DIR = Path("data/raw")
 
 TRAIN_YEARS = [
+    2005,
+    2006,
+    2007,
     2008,
     2009,
     2010,

@@ -11,72 +11,81 @@ Metrics:
   Year         --- Brier Score ---          ------ BSS ------        ------- ESPN Points -------    
               seed   noseed    blend    noseed    blend    chalk    seed  noseed   blend
   ----------------------------------------------------------------------------------------------
-  2018      0.1884   0.1775   0.1804    +0.058   +0.042      740     740     770     740
-  2019      0.1605   0.1357   0.1463    +0.155   +0.089      630     630     720     700
-  2021      0.1676   0.1545   0.1584    +0.078   +0.054      860     860     780     820
-  2022      0.2004   0.1767   0.1844    +0.118   +0.080      690     690     670     640
-  2023      0.1857   0.1507   0.1656    +0.188   +0.109      860     860     860     860
-  2024      0.1703   0.1347   0.1501    +0.209   +0.118      770     770     820     770
-  2025      0.1451   0.1189   0.1299    +0.181   +0.105      990     990     980     990
+  2008      0.1772   0.1868   0.1744    -0.054   +0.016      920     920     980     980
+  2009      0.1641   0.1915   0.1711    -0.167   -0.043      610     610     590     610
+  2010      0.1908   0.1784   0.1791    +0.065   +0.062      730     730     710     710
+  2011      0.2025   0.2151   0.2044    -0.062   -0.009      630     630     630     630
+  2012      0.1903   0.1812   0.1804    +0.048   +0.052      800     800     800     800
+  2013      0.2101   0.1974   0.2000    +0.060   +0.048      690     690     690     690
+  2014      0.2124   0.1940   0.1969    +0.087   +0.073      460     460     440     440
+  2015      0.1760   0.1474   0.1575    +0.163   +0.105      860     860     830     860
+  2016      0.1946   0.1853   0.1847    +0.048   +0.051      420     420     400     400
+  2017      0.1754   0.1610   0.1649    +0.082   +0.060      740     740     730     740
+  2018      0.1884   0.1763   0.1801    +0.064   +0.044      740     740     740     740
+  2019      0.1605   0.1392   0.1479    +0.133   +0.079      630     630     630     630
+  2021      0.1676   0.1579   0.1601    +0.058   +0.045      860     860     780     860
+  2022      0.2004   0.1798   0.1854    +0.103   +0.075      690     690     640     640
+  2023      0.1857   0.1599   0.1698    +0.139   +0.086      860     860     860     860
+  2024      0.1703   0.1381   0.1515    +0.189   +0.110      770     770     770     770
+  2025      0.1451   0.1217   0.1313    +0.161   +0.095      990     990     980     990
 
 ====================================================================================================
-AGGREGATE (7 years, 441 total games)
+AGGREGATE (17 years, 1071 total games)
 ====================================================================================================
 
   Brier Score (lower = better prediction accuracy):
-    Seed:   0.1740
-    Noseed: 0.1498
-    Blend:  0.1593
-    → Best for accuracy: noseed (0.1498)
+    Seed:   0.1830
+    Noseed: 0.1712
+    Blend:  0.1729
+    → Best for accuracy: noseed (0.1712)
 
   BSS vs seed baseline (positive = better than seeds):
-    Noseed: +0.1409
-    Blend:  +0.0853
+    Noseed: +0.0656
+    Blend:  +0.0557
 
-  Statistical Significance (paired tests on 441 games):
-    Paired t-test (seed vs noseed): t=6.094, p=0.0000 ***
-    Paired t-test (seed vs blend):  t=7.139, p=0.0000 ***
-    Paired t-test (noseed vs blend): t=-4.934, p=0.0000 ***
-    Wilcoxon (seed > noseed): W=65365, p=0.0000 ***
-    Wilcoxon (seed > blend):  W=66752, p=0.0000 ***
+  Statistical Significance (paired tests on 1071 games):
+    Paired t-test (seed vs noseed): t=3.454, p=0.0006 ***
+    Paired t-test (seed vs blend):  t=5.807, p=0.0000 ***
+    Paired t-test (noseed vs blend): t=-0.986, p=0.3242 ns
+    Wilcoxon (seed > noseed): W=319161, p=0.0008 ***
+    Wilcoxon (seed > blend):  W=330072, p=0.0000 ***
 
   Bootstrap 95% CI on Brier improvement (seed minus model):
-    Noseed improvement: 0.0242 [0.0164, 0.0320] (significant)
-    Blend improvement:  0.0147 [0.0107, 0.0187] (significant)
+    Noseed improvement: 0.0118 [0.0052, 0.0186] (significant)
+    Blend improvement:  0.0101 [0.0067, 0.0135] (significant)
 
   Per-Round Brier Breakdown:
     Round     N      Seed   Noseed    Blend    BSS-ns   BSS-bl     p-val
     ----------------------------------------------------------------------
-    R64     224    0.1443   0.1283   0.1342    +0.111   +0.070    0.0011
-    R32     112    0.1836   0.1590   0.1679    +0.134   +0.085    0.0074
-    S16      56    0.2338   0.1931   0.2110    +0.174   +0.098    0.0004
-    E8       28    0.2383   0.1942   0.2121    +0.185   +0.110    0.0580
-    F4       14    0.1976   0.1556   0.1742    +0.213   +0.118    0.0304
-    NCG       7    0.1868   0.1568   0.1698    +0.161   +0.091    0.2869
+    R64     544    0.1620   0.1514   0.1526    +0.066   +0.058    0.0214
+    R32     272    0.1865   0.1770   0.1775    +0.051   +0.049    0.1677
+    S16     136    0.2119   0.2001   0.2018    +0.056   +0.048    0.2414
+    E8       68    0.2637   0.2424   0.2477    +0.081   +0.060    0.2154
+    F4       34    0.2083   0.1797   0.1909    +0.138   +0.084    0.0841
+    NCG      17    0.1931   0.1795   0.1833    +0.070   +0.051    0.5295
 
   ESPN Pool Points (higher = better pool EV):
-    Chalk:  791
-    Seed:   791  (edge: +0)
-    Noseed: 800  (edge: +9)
-    Blend:  789  (edge: -3)
-    → Best for pool EV: noseed (800)
-    Points t-test (noseed vs seed): p=0.692 (N=7, low power)
-    Points t-test (blend vs seed):  p=0.851 (N=7, low power)
+    Chalk:  729
+    Seed:   729  (edge: +0)
+    Noseed: 718  (edge: -12)
+    Blend:  726  (edge: -3)
+    → Best for pool EV: seed (729)
+    Points t-test (noseed vs seed): p=0.106 (N=17, low power)
+    Points t-test (blend vs seed):  p=0.574 (N=17, low power)
 
-  Head-to-head wins (7 years):
-    Brier:  noseed beats seed 7/7, blend beats seed 7/7
-    Points: noseed beats seed 3/7, ties 1/7, blend beats seed 1/7
+  Head-to-head wins (17 years):
+    Brier:  noseed beats seed 14/17, blend beats seed 15/17
+    Points: noseed beats seed 1/17, ties 7/17, blend beats seed 1/17
 
 ====================================================================================================
 VERDICT
 ====================================================================================================
   Best for prediction accuracy (Brier): noseed
-  Best for pool EV (ESPN points):       noseed
+  Best for pool EV (ESPN points):       seed
 
-  Brier improvement:  SIGNIFICANT (p=0.0000, paired t-test, 441 games)
-  Points improvement: NOT significant (p=0.692, paired t-test, 7 years)
+  Brier improvement:  SIGNIFICANT (p=0.0006, paired t-test, 1071 games)
+  Points improvement: NOT significant (p=0.106, paired t-test, 17 years)
 
-  'noseed' wins on both metrics — use it as default.
-  CAVEAT: Pool EV edge is not statistically significant with only 7 years.
-  The Brier advantage IS significant — noseed makes better predictions.
-  Pool EV is directionally positive but needs more years to confirm.
+  Different modes win on different metrics.
+  → Use '--mode seed' for pool optimization (maximize leverage)
+  → Use '--mode noseed' for Kaggle/prediction contests (maximize accuracy)

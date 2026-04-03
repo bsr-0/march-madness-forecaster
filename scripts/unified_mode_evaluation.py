@@ -52,8 +52,27 @@ from src.simulation.ratings_opponent_model import build_opponent_model
 
 HIST_DIR = Path("data/raw/historical")
 
-# Years with full data (seeds, results, Torvik, opponent model)
-BACKTEST_YEARS = [2018, 2019, 2021, 2022, 2023, 2024, 2025]
+# All years with seeds + results + Torvik data (2020 excluded: COVID).
+# Earliest test year = 2008 (needs >= 3 prior training years from 2005+).
+BACKTEST_YEARS = [
+    2008,
+    2009,
+    2010,
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
+]
 
 ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
 RESULT_ROUND_TO_SCORING = {
