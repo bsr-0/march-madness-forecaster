@@ -20,9 +20,11 @@ evaluates all three modes on both metrics.
 
 import json
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
+from scipy import stats as sp_stats
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -95,32 +97,45 @@ def load_seeds(year):
 
 
 def measure_brier(pairwise_probs, games, seeds):
-    """Compute Brier score for a set of pairwise probabilities against
-    actual game outcomes.
+    """Compute Brier score with per-game errors and per-round breakdown.
 
-    For each game, looks up P(team1 wins) from the pairwise dict and
-    compares to the actual binary outcome.
-
-    Returns (brier_score, n_games).
+    Returns dict with:
+      - brier: overall mean squared error
+      - n_games: number of games scored
+      - per_game_errors: list of (round_name, sq_error) for significance tests
+      - by_round: {round_name: (brier, n)} per-round breakdown
     """
-    sq_errors = []
+    per_game_errors = []
+    by_round = defaultdict(list)
+
     for g in games:
-        if g.get("round_name") == "FF":
+        rnd = g.get("round_name")
+        if rnd == "FF":
             continue
         t1, t2 = g["team1_id"], g["team2_id"]
         actual = 1.0 if g["team1_won"] else 0.0
 
         p = pairwise_probs.get((t1, t2))
         if p is None:
-            # Fall back to seed-based if pair not in dict
             s1, s2 = seeds.get(t1, 8), seeds.get(t2, 8)
             p = _win_rate(s1, s2)
 
-        sq_errors.append((p - actual) ** 2)
+        sq_err = (p - actual) ** 2
+        per_game_errors.append((rnd, sq_err))
+        by_round[rnd].append(sq_err)
 
-    if not sq_errors:
-        return 0.25, 0  # coin-flip baseline
-    return float(np.mean(sq_errors)), len(sq_errors)
+    if not per_game_errors:
+        return {"brier": 0.25, "n_games": 0, "per_game_errors": [], "by_round": {}}
+
+    all_errors = [e for _, e in per_game_errors]
+    round_briers = {rnd: (float(np.mean(errs)), len(errs)) for rnd, errs in by_round.items()}
+
+    return {
+        "brier": float(np.mean(all_errors)),
+        "n_games": len(all_errors),
+        "per_game_errors": per_game_errors,
+        "by_round": round_briers,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -246,6 +261,14 @@ def main():
     print(f"  {'-' * 94}")
 
     results = []
+    # Collect ALL per-game squared errors across years for paired significance tests
+    all_seed_errors = []
+    all_noseed_errors = []
+    all_blend_errors = []
+    # Per-round errors across all years
+    round_seed_errors = defaultdict(list)
+    round_noseed_errors = defaultdict(list)
+    round_blend_errors = defaultdict(list)
 
     for test_year in BACKTEST_YEARS:
         try:
@@ -261,26 +284,40 @@ def main():
             model = train_noseed_model(max_year=test_year)
 
             # --- Build probabilities for each mode ---
-
-            # Seed
             seed_pw = build_seed_probabilities(seeds)
             seed_rp = build_seed_round_probabilities(seeds)
 
-            # Noseed
             noseed_pw = build_noseed_probabilities(model, seeds, stats)
             noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
 
-            # Blend (50/50)
             blend_pw = build_blend_probabilities(seed_pw, noseed_pw, alpha=0.5)
             blend_rp = build_blend_round_probabilities(seed_rp, noseed_rp, alpha=0.5)
 
             # --- Measure Brier scores ---
-            seed_brier, n = measure_brier(seed_pw, games, seeds)
-            noseed_brier, _ = measure_brier(noseed_pw, games, seeds)
-            blend_brier, _ = measure_brier(blend_pw, games, seeds)
+            seed_b = measure_brier(seed_pw, games, seeds)
+            noseed_b = measure_brier(noseed_pw, games, seeds)
+            blend_b = measure_brier(blend_pw, games, seeds)
+
+            seed_brier = seed_b["brier"]
+            noseed_brier = noseed_b["brier"]
+            blend_brier = blend_b["brier"]
+            n_games = seed_b["n_games"]
 
             noseed_bss = 1.0 - noseed_brier / seed_brier if seed_brier > 0 else 0.0
             blend_bss = 1.0 - blend_brier / seed_brier if seed_brier > 0 else 0.0
+
+            # Collect per-game errors (aligned by game order)
+            for (rnd, se), (_, ne), (_, be) in zip(
+                seed_b["per_game_errors"],
+                noseed_b["per_game_errors"],
+                blend_b["per_game_errors"],
+            ):
+                all_seed_errors.append(se)
+                all_noseed_errors.append(ne)
+                all_blend_errors.append(be)
+                round_seed_errors[rnd].append(se)
+                round_noseed_errors[rnd].append(ne)
+                round_blend_errors[rnd].append(be)
 
             # --- Measure ESPN pool points ---
             seed_pts, chalk_pts = measure_pool_points(seed_pw, seed_rp, games, seeds, test_year)
@@ -297,7 +334,7 @@ def main():
             results.append(
                 {
                     "year": test_year,
-                    "n_games": n,
+                    "n_games": n_games,
                     "seed_brier": seed_brier,
                     "noseed_brier": noseed_brier,
                     "blend_brier": blend_brier,
@@ -323,7 +360,7 @@ def main():
     # --- Aggregates ---
     n = len(results)
     print(f"\n{'=' * 100}")
-    print(f"AGGREGATE ({n} years)")
+    print(f"AGGREGATE ({n} years, {len(all_seed_errors)} total games)")
     print(f"{'=' * 100}")
 
     def mean(key):
@@ -344,6 +381,92 @@ def main():
     print(f"    Noseed: {mean('noseed_bss'):+.4f}")
     print(f"    Blend:  {mean('blend_bss'):+.4f}")
 
+    # --- Paired significance tests on per-game Brier errors ---
+    print(f"\n  Statistical Significance (paired tests on {len(all_seed_errors)} games):")
+    seed_arr = np.array(all_seed_errors)
+    noseed_arr = np.array(all_noseed_errors)
+    blend_arr = np.array(all_blend_errors)
+
+    # Paired t-test: are per-game squared errors significantly different?
+    t_noseed, p_noseed = sp_stats.ttest_rel(seed_arr, noseed_arr)
+    t_blend, p_blend = sp_stats.ttest_rel(seed_arr, blend_arr)
+    t_nb, p_nb = sp_stats.ttest_rel(noseed_arr, blend_arr)
+    print(
+        f"    Paired t-test (seed vs noseed): t={t_noseed:.3f}, p={p_noseed:.4f}"
+        f" {'***' if p_noseed < 0.01 else '**' if p_noseed < 0.05 else 'ns'}"
+    )
+    print(
+        f"    Paired t-test (seed vs blend):  t={t_blend:.3f}, p={p_blend:.4f}"
+        f" {'***' if p_blend < 0.01 else '**' if p_blend < 0.05 else 'ns'}"
+    )
+    print(
+        f"    Paired t-test (noseed vs blend): t={t_nb:.3f}, p={p_nb:.4f}"
+        f" {'***' if p_nb < 0.01 else '**' if p_nb < 0.05 else 'ns'}"
+    )
+
+    # Wilcoxon signed-rank (non-parametric, doesn't assume normality)
+    w_noseed, pw_noseed = sp_stats.wilcoxon(seed_arr - noseed_arr, alternative="greater")
+    w_blend, pw_blend = sp_stats.wilcoxon(seed_arr - blend_arr, alternative="greater")
+    print(
+        f"    Wilcoxon (seed > noseed): W={w_noseed:.0f}, p={pw_noseed:.4f}"
+        f" {'***' if pw_noseed < 0.01 else '**' if pw_noseed < 0.05 else 'ns'}"
+    )
+    print(
+        f"    Wilcoxon (seed > blend):  W={w_blend:.0f}, p={pw_blend:.4f}"
+        f" {'***' if pw_blend < 0.01 else '**' if pw_blend < 0.05 else 'ns'}"
+    )
+
+    # --- Bootstrap 95% CI on Brier difference ---
+    print(f"\n  Bootstrap 95% CI on Brier improvement (seed minus model):")
+    rng = np.random.RandomState(42)
+    n_boot = 10000
+    diffs_noseed = seed_arr - noseed_arr
+    diffs_blend = seed_arr - blend_arr
+    boot_noseed = np.array(
+        [np.mean(rng.choice(diffs_noseed, size=len(diffs_noseed), replace=True)) for _ in range(n_boot)]
+    )
+    boot_blend = np.array(
+        [np.mean(rng.choice(diffs_blend, size=len(diffs_blend), replace=True)) for _ in range(n_boot)]
+    )
+    ci_noseed = np.percentile(boot_noseed, [2.5, 97.5])
+    ci_blend = np.percentile(boot_blend, [2.5, 97.5])
+    print(
+        f"    Noseed improvement: {np.mean(diffs_noseed):.4f} "
+        f"[{ci_noseed[0]:.4f}, {ci_noseed[1]:.4f}]"
+        f" {'(significant)' if ci_noseed[0] > 0 else '(includes zero)'}"
+    )
+    print(
+        f"    Blend improvement:  {np.mean(diffs_blend):.4f} "
+        f"[{ci_blend[0]:.4f}, {ci_blend[1]:.4f}]"
+        f" {'(significant)' if ci_blend[0] > 0 else '(includes zero)'}"
+    )
+
+    # --- Per-round Brier breakdown ---
+    print(f"\n  Per-Round Brier Breakdown:")
+    round_order = ["R64", "R32", "S16", "E8", "F4", "NCG"]
+    print(
+        f"    {'Round':<6} {'N':>4}  {'Seed':>8} {'Noseed':>8} {'Blend':>8}  {'BSS-ns':>8} {'BSS-bl':>8}  {'p-val':>8}"
+    )
+    print(f"    {'-' * 70}")
+    for rnd in round_order:
+        se = round_seed_errors.get(rnd, [])
+        ne = round_noseed_errors.get(rnd, [])
+        be = round_blend_errors.get(rnd, [])
+        if not se:
+            continue
+        sb = np.mean(se)
+        nb = np.mean(ne)
+        bb = np.mean(be)
+        bss_ns = 1.0 - nb / sb if sb > 0 else 0.0
+        bss_bl = 1.0 - bb / sb if sb > 0 else 0.0
+        # Per-round paired test (noseed vs seed)
+        if len(se) >= 5:
+            _, p_rnd = sp_stats.ttest_rel(se, ne)
+        else:
+            p_rnd = float("nan")
+        print(f"    {rnd:<6} {len(se):4d}  {sb:8.4f} {nb:8.4f} {bb:8.4f}  {bss_ns:+8.3f} {bss_bl:+8.3f}  {p_rnd:8.4f}")
+
+    # --- ESPN Pool Points ---
     print(f"\n  ESPN Pool Points (higher = better pool EV):")
     print(f"    Chalk:  {mean('chalk_pts'):.0f}")
     print(f"    Seed:   {mean('seed_pts'):.0f}  (edge: {mean('seed_pts') - mean('chalk_pts'):+.0f})")
@@ -356,14 +479,28 @@ def main():
     )
     print(f"    → Best for pool EV: {best_pts[0]} ({best_pts[1]:.0f})")
 
+    # Points significance (paired t-test on yearly scores, small N caveat)
+    pts_seed = np.array([r["seed_pts"] for r in results])
+    pts_noseed = np.array([r["noseed_pts"] for r in results])
+    pts_blend = np.array([r["blend_pts"] for r in results])
+    if n >= 3:
+        _, p_pts_ns = sp_stats.ttest_rel(pts_noseed, pts_seed)
+        _, p_pts_bl = sp_stats.ttest_rel(pts_blend, pts_seed)
+        print(f"    Points t-test (noseed vs seed): p={p_pts_ns:.3f} (N={n}, low power)")
+        print(f"    Points t-test (blend vs seed):  p={p_pts_bl:.3f} (N={n}, low power)")
+
     # --- Head-to-head ---
     print(f"\n  Head-to-head wins ({n} years):")
     noseed_brier_wins = sum(1 for r in results if r["noseed_brier"] < r["seed_brier"])
     blend_brier_wins = sum(1 for r in results if r["blend_brier"] < r["seed_brier"])
     noseed_pts_wins = sum(1 for r in results if r["noseed_pts"] > r["seed_pts"])
     blend_pts_wins = sum(1 for r in results if r["blend_pts"] > r["seed_pts"])
-    print(f"    Brier: noseed beats seed {noseed_brier_wins}/{n}, blend beats seed {blend_brier_wins}/{n}")
-    print(f"    Points: noseed beats seed {noseed_pts_wins}/{n}, blend beats seed {blend_pts_wins}/{n}")
+    noseed_pts_ties = sum(1 for r in results if r["noseed_pts"] == r["seed_pts"])
+    print(f"    Brier:  noseed beats seed {noseed_brier_wins}/{n}, blend beats seed {blend_brier_wins}/{n}")
+    print(
+        f"    Points: noseed beats seed {noseed_pts_wins}/{n}, ties {noseed_pts_ties}/{n}, "
+        f"blend beats seed {blend_pts_wins}/{n}"
+    )
 
     # --- Verdict ---
     print(f"\n{'=' * 100}")
@@ -372,6 +509,11 @@ def main():
     print(f"  Best for prediction accuracy (Brier): {best_brier[0]}")
     print(f"  Best for pool EV (ESPN points):       {best_pts[0]}")
 
+    brier_sig = "SIGNIFICANT" if p_noseed < 0.05 else "NOT significant"
+    pts_sig = "SIGNIFICANT" if n >= 3 and p_pts_ns < 0.05 else "NOT significant"
+    print(f"\n  Brier improvement:  {brier_sig} (p={p_noseed:.4f}, paired t-test, {len(all_seed_errors)} games)")
+    print(f"  Points improvement: {pts_sig} (p={p_pts_ns:.3f}, paired t-test, {n} years)")
+
     if best_brier[0] != best_pts[0]:
         print(f"\n  Different modes win on different metrics.")
         print(f"  → Use '--mode {best_pts[0]}' for pool optimization (maximize leverage)")
@@ -379,6 +521,10 @@ def main():
     else:
         winner = best_brier[0]
         print(f"\n  '{winner}' wins on both metrics — use it as default.")
+        if pts_sig == "NOT significant":
+            print(f"  CAVEAT: Pool EV edge is not statistically significant with only {n} years.")
+            print(f"  The Brier advantage IS significant — noseed makes better predictions.")
+            print(f"  Pool EV is directionally positive but needs more years to confirm.")
 
     return 0
 

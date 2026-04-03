@@ -20,7 +20,7 @@ Metrics:
   2025      0.1451   0.1189   0.1299    +0.181   +0.105      990     990     980     990
 
 ====================================================================================================
-AGGREGATE (7 years)
+AGGREGATE (7 years, 441 total games)
 ====================================================================================================
 
   Brier Score (lower = better prediction accuracy):
@@ -33,16 +33,39 @@ AGGREGATE (7 years)
     Noseed: +0.1409
     Blend:  +0.0853
 
+  Statistical Significance (paired tests on 441 games):
+    Paired t-test (seed vs noseed): t=6.094, p=0.0000 ***
+    Paired t-test (seed vs blend):  t=7.139, p=0.0000 ***
+    Paired t-test (noseed vs blend): t=-4.934, p=0.0000 ***
+    Wilcoxon (seed > noseed): W=65365, p=0.0000 ***
+    Wilcoxon (seed > blend):  W=66752, p=0.0000 ***
+
+  Bootstrap 95% CI on Brier improvement (seed minus model):
+    Noseed improvement: 0.0242 [0.0164, 0.0320] (significant)
+    Blend improvement:  0.0147 [0.0107, 0.0187] (significant)
+
+  Per-Round Brier Breakdown:
+    Round     N      Seed   Noseed    Blend    BSS-ns   BSS-bl     p-val
+    ----------------------------------------------------------------------
+    R64     224    0.1443   0.1283   0.1342    +0.111   +0.070    0.0011
+    R32     112    0.1836   0.1590   0.1679    +0.134   +0.085    0.0074
+    S16      56    0.2338   0.1931   0.2110    +0.174   +0.098    0.0004
+    E8       28    0.2383   0.1942   0.2121    +0.185   +0.110    0.0580
+    F4       14    0.1976   0.1556   0.1742    +0.213   +0.118    0.0304
+    NCG       7    0.1868   0.1568   0.1698    +0.161   +0.091    0.2869
+
   ESPN Pool Points (higher = better pool EV):
     Chalk:  791
     Seed:   791  (edge: +0)
     Noseed: 800  (edge: +9)
     Blend:  789  (edge: -3)
     → Best for pool EV: noseed (800)
+    Points t-test (noseed vs seed): p=0.692 (N=7, low power)
+    Points t-test (blend vs seed):  p=0.851 (N=7, low power)
 
   Head-to-head wins (7 years):
-    Brier: noseed beats seed 7/7, blend beats seed 7/7
-    Points: noseed beats seed 3/7, blend beats seed 1/7
+    Brier:  noseed beats seed 7/7, blend beats seed 7/7
+    Points: noseed beats seed 3/7, ties 1/7, blend beats seed 1/7
 
 ====================================================================================================
 VERDICT
@@ -50,4 +73,10 @@ VERDICT
   Best for prediction accuracy (Brier): noseed
   Best for pool EV (ESPN points):       noseed
 
+  Brier improvement:  SIGNIFICANT (p=0.0000, paired t-test, 441 games)
+  Points improvement: NOT significant (p=0.692, paired t-test, 7 years)
+
   'noseed' wins on both metrics — use it as default.
+  CAVEAT: Pool EV edge is not statistically significant with only 7 years.
+  The Brier advantage IS significant — noseed makes better predictions.
+  Pool EV is directionally positive but needs more years to confirm.
