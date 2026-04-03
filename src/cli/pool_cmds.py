@@ -3,12 +3,13 @@
 Wires seed-based probabilities, ratings-derived opponent model, and
 existing pool optimization infrastructure into a single entry point.
 
-Supports two modes:
-  - ev (default): Uses no-seed ML model for "truth" probabilities.
-    Backtest shows +9 mean edge vs chalk because the no-seed model
-    generates structural disagreement with the seed-thinking public.
-  - kaggle: Uses 50/50 blend of seed baseline + no-seed model for
-    best raw prediction accuracy (BSS=+0.035, p=0.016).
+Supports three modes:
+  - noseed (default): ML model trained without seed features.
+    Backtest shows +9 mean edge vs chalk because it generates
+    structural disagreement with the seed-thinking public.
+  - blend: 50/50 seed baseline + no-seed model for best raw
+    prediction accuracy (BSS=+0.035, p=0.016).
+  - seed: Historical seed-based probabilities only.
 """
 
 import json
@@ -33,8 +34,9 @@ def run_optimize_pool(args):
     """Run bracket pool optimization.
 
     Mode controls which probabilities drive the optimizer:
-      - ev (default): No-seed ML model — maximizes leverage vs public
-      - kaggle: 50/50 seed + no-seed blend — maximizes raw accuracy
+      - noseed (default): ML model without seed features — maximizes leverage
+      - blend: 50/50 seed + no-seed — maximizes raw accuracy
+      - seed: Historical seed baseline only
     """
     from ..optimization.pool_optimizer import PoolEnvironment, PoolOptimizer
     from ..prediction.seed_probabilities import (
@@ -47,7 +49,7 @@ def run_optimize_pool(args):
     pool_size = args.pool_size
     payout = args.payout
     output_path = args.output
-    mode = getattr(args, "mode", "ev")
+    mode = getattr(args, "mode", "noseed")
 
     # --- Step 1: Load tournament seeds ---
     seeds = _load_seeds(year)
@@ -151,9 +153,9 @@ def _build_probabilities(mode, year, seeds, data_dir):
     seed_pairwise = build_seed_probabilities(seeds)
     seed_round = build_seed_round_probabilities(seeds)
 
-    if mode == "ev":
+    if mode == "noseed":
         # No-seed model: maximizes leverage vs seed-thinking public
-        print("Training no-seed ML model (EV mode)...")
+        print("Training no-seed ML model...")
         try:
             from ..prediction.noseed_model import (
                 _load_team_stats,
@@ -174,9 +176,9 @@ def _build_probabilities(mode, year, seeds, data_dir):
             print(f"  WARNING: No-seed model unavailable ({exc}), using seed baseline")
             return seed_pairwise, seed_round
 
-    elif mode == "kaggle":
+    elif mode == "blend":
         # Blend: 50/50 seed + no-seed for best raw accuracy
-        print("Training no-seed ML model for blend (Kaggle mode)...")
+        print("Training no-seed ML model for blend...")
         try:
             from ..prediction.noseed_model import (
                 _load_team_stats,
@@ -322,12 +324,12 @@ def register(subparsers):
     parser.add_argument(
         "--mode",
         "-m",
-        choices=["ev", "kaggle", "seed"],
-        default="ev",
+        choices=["noseed", "blend", "seed"],
+        default="noseed",
         help=(
-            "Probability mode: 'ev' (default) uses no-seed ML model for "
-            "max pool leverage; 'kaggle' uses 50/50 seed+ML blend for "
-            "best accuracy; 'seed' uses seed baseline only"
+            "Probability mode: 'noseed' (default) uses ML model without "
+            "seed features; 'blend' uses 50/50 seed+ML; 'seed' uses "
+            "seed baseline only"
         ),
     )
     parser.add_argument(
