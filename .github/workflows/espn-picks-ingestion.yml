@@ -8,12 +8,13 @@ on:
         required: true
         type: choice
         options:
+          - kaggle-import
           - scrape
           - csv-import
           - validate
-        default: validate
+        default: kaggle-import
       years:
-        description: "Space-separated years to scrape (scrape mode only, e.g. '2023 2024 2025')"
+        description: "Space-separated years (scrape/kaggle mode, e.g. '2023 2024 2025')"
         required: false
         type: string
         default: "2018 2019 2021 2022 2023 2024 2025"
@@ -35,6 +36,52 @@ permissions:
   contents: write
 
 jobs:
+  kaggle-import:
+    name: Import from Kaggle
+    if: inputs.mode == 'kaggle-import'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Install Kaggle CLI
+        run: pip install kaggle
+
+      - name: Download and import Kaggle data
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          set -euo pipefail
+          python scripts/scrape_historical_espn_picks.py --from-kaggle
+
+      - name: Validate imported data
+        run: python scripts/scrape_historical_espn_picks.py --validate
+
+      - name: Upload results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: espn-picks-kaggle
+          path: data/raw/historical_public_picks/*.json
+          retention-days: 90
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/raw/historical_public_picks/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: import real ESPN public picks from Kaggle dataset ($(date -u +%Y-%m-%d))"
+            git push
+          fi
+
   validate:
     name: Validate Existing Data
     if: inputs.mode == 'validate'

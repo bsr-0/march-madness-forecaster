@@ -4,11 +4,15 @@
 Populates the historical public pick data archive used by the MC pool
 backtest and LOYO evaluation.  Data sources (tried in order):
 
-1. **Wayback Machine** — Internet Archive snapshots of ESPN's WPW page.
-2. **ESPN live** — Current-season endpoint (Gambit API → WPW → People's Bracket).
-3. **CSV import** — Manual data entry via ``--from-csv path.csv``.
+1. **Kaggle** — Nishaan Amin's March Madness dataset (2008-2025).
+2. **Wayback Machine** — Internet Archive snapshots of ESPN's WPW page.
+3. **ESPN live** — Current-season endpoint (Gambit API → WPW → People's Bracket).
+4. **CSV import** — Manual data entry via ``--from-csv path.csv``.
 
 Usage:
+    # Import from Kaggle (requires KAGGLE_USERNAME and KAGGLE_KEY env vars)
+    python scripts/scrape_historical_espn_picks.py --from-kaggle
+
     # Auto-scrape from Wayback Machine (default)
     python scripts/scrape_historical_espn_picks.py --years 2024 2025
 
@@ -34,7 +38,10 @@ import argparse
 import csv
 import json
 import logging
+import os
+import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -316,6 +323,207 @@ def import_from_csv(csv_path: str, year: int) -> dict | None:
         return None
 
 
+def import_from_kaggle(output_dir: Path | None = None, years: list[int] | None = None) -> int:
+    """Download and import public picks from Kaggle's March Madness dataset.
+
+    Uses the Kaggle API (requires KAGGLE_USERNAME and KAGGLE_KEY env vars)
+    to download Nishaan Amin's 'march-madness-data' dataset, then converts
+    the 'Public Picks.csv' file into per-year JSON files.
+
+    The Kaggle CSV has columns: YEAR, TEAMNO, TEAM, R64, R32, S16, E8, F4, FINALS
+    Values are on 0-100 scale.
+
+    Returns:
+        Number of years that failed to import (0 = all OK).
+    """
+    output_dir = output_dir or OUTPUT_DIR
+
+    # Check for Kaggle credentials
+    kaggle_user = os.environ.get("KAGGLE_USERNAME", "")
+    kaggle_key = os.environ.get("KAGGLE_KEY", "")
+    if not kaggle_user or not kaggle_key:
+        logger.error(
+            "KAGGLE_USERNAME and KAGGLE_KEY environment variables are required. "
+            "Set them as repo secrets or export them locally."
+        )
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Download dataset via kaggle CLI
+        logger.info("Downloading dataset from Kaggle (nishaanamin/march-madness-data)...")
+        try:
+            result = subprocess.run(
+                [
+                    "kaggle",
+                    "datasets",
+                    "download",
+                    "-d",
+                    "nishaanamin/march-madness-data",
+                    "-p",
+                    tmpdir,
+                    "--unzip",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                env={**os.environ, "KAGGLE_USERNAME": kaggle_user, "KAGGLE_KEY": kaggle_key},
+            )
+            if result.returncode != 0:
+                logger.error("Kaggle download failed: %s", result.stderr.strip())
+                return 1
+        except FileNotFoundError:
+            logger.error("kaggle CLI not found. Install with: pip install kaggle")
+            return 1
+        except subprocess.TimeoutExpired:
+            logger.error("Kaggle download timed out after 120 seconds")
+            return 1
+
+        # Find the Public Picks CSV
+        csv_path = _find_kaggle_picks_csv(Path(tmpdir))
+        if csv_path is None:
+            logger.error(
+                "Could not find 'Public Picks' CSV in downloaded dataset. Files found: %s",
+                [f.name for f in Path(tmpdir).rglob("*.csv")],
+            )
+            return 1
+
+        logger.info("Found picks CSV: %s", csv_path.name)
+        return _convert_kaggle_csv(csv_path, output_dir, years)
+
+
+def _find_kaggle_picks_csv(search_dir: Path) -> Path | None:
+    """Locate the public picks CSV in the downloaded Kaggle dataset."""
+    for f in search_dir.rglob("*.csv"):
+        name_lower = f.name.lower().replace(" ", "").replace("_", "")
+        if "publicpick" in name_lower:
+            return f
+    return None
+
+
+def _convert_kaggle_csv(csv_path: Path, output_dir: Path, years: list[int] | None) -> int:
+    """Convert Kaggle's Public Picks CSV into per-year JSON files.
+
+    The CSV has columns: YEAR, TEAMNO, TEAM, R64, R32, S16, E8, F4, FINALS
+    Values are percentages on 0-100 scale.
+    """
+    # Kaggle CSV uses FINALS for the championship round
+    kaggle_round_map = {
+        "R64": "R64",
+        "R32": "R32",
+        "S16": "S16",
+        "E8": "E8",
+        "F4": "F4",
+        "FINALS": "CHAMP",
+    }
+
+    try:
+        with open(csv_path, newline="", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            if reader.fieldnames is None:
+                logger.error("CSV has no header row")
+                return 1
+
+            # Normalize header names (strip whitespace)
+            reader.fieldnames = [h.strip() for h in reader.fieldnames]
+
+            rows = list(reader)
+    except (csv.Error, OSError) as e:
+        logger.error("Failed to read Kaggle CSV: %s", e)
+        return 1
+
+    if not rows:
+        logger.error("Kaggle CSV is empty")
+        return 1
+
+    # Group rows by year
+    by_year: dict[int, list[dict]] = {}
+    for row in rows:
+        try:
+            yr = int(row.get("YEAR", "0"))
+        except ValueError:
+            continue
+        if yr == 2020:
+            continue
+        by_year.setdefault(yr, []).append(row)
+
+    available_years = sorted(by_year.keys())
+    logger.info("Kaggle CSV contains years: %s", available_years)
+
+    if years:
+        target_years = [y for y in years if y in by_year]
+        skipped = [y for y in years if y not in by_year]
+        if skipped:
+            logger.warning("Requested years not in Kaggle data: %s", skipped)
+    else:
+        target_years = available_years
+
+    # Detect scale: check if any round value > 1.0
+    sample_values = []
+    for row in rows[:50]:
+        for col in kaggle_round_map:
+            val = row.get(col, "").strip()
+            if val:
+                try:
+                    sample_values.append(float(val))
+                except ValueError:
+                    pass
+    is_pct_scale = any(v > 1.0 for v in sample_values)
+    scale_factor = 100.0 if is_pct_scale else 1.0
+    logger.info("Detected %s scale", "0-100" if is_pct_scale else "0-1")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    failures = 0
+
+    for yr in target_years:
+        year_rows = by_year[yr]
+        teams = {}
+
+        for row in year_rows:
+            team_name = row.get("TEAM", "").strip()
+            if not team_name:
+                continue
+
+            tid = team_name.lower().replace(" ", "_").replace(".", "").replace("'", "").replace("-", "_")
+
+            picks = {}
+            for kaggle_col, our_col in kaggle_round_map.items():
+                val = row.get(kaggle_col, "").strip()
+                if val:
+                    try:
+                        pct = float(val) / scale_factor
+                        picks[our_col] = max(0.0, min(1.0, round(pct, 4)))
+                    except ValueError:
+                        picks[our_col] = 0.0
+                else:
+                    picks[our_col] = 0.0
+
+            teams[tid] = picks
+
+        if len(teams) < 32:
+            logger.warning("Year %d: only %d teams (need >= 32), skipping", yr, len(teams))
+            failures += 1
+            continue
+
+        data = {
+            "year": yr,
+            "source": "kaggle_espn",
+            "source_dataset": "nishaanamin/march-madness-data",
+            "teams": teams,
+        }
+
+        out_path = output_dir / f"espn_picks_{yr}.json"
+        with open(out_path, "w") as f:
+            json.dump(data, f, indent=2)
+        logger.info("Saved %s (%d teams)", out_path.name, len(teams))
+
+    logger.info(
+        "\nKaggle import complete: %d years written, %d failures",
+        len(target_years) - failures,
+        failures,
+    )
+    return failures
+
+
 def validate_existing_files(output_dir: Path | None = None) -> int:
     """Validate all existing ESPN pick data files.
 
@@ -454,6 +662,12 @@ def main():
         help="Tournament year for CSV import (required with --from-csv)",
     )
     parser.add_argument(
+        "--from-kaggle",
+        action="store_true",
+        help="Download and import from Kaggle (nishaanamin/march-madness-data). "
+        "Requires KAGGLE_USERNAME and KAGGLE_KEY env vars.",
+    )
+    parser.add_argument(
         "--validate",
         action="store_true",
         help="Validate existing data files and exit",
@@ -474,6 +688,14 @@ def main():
         logger.info("Directory: %s\n", output_dir)
         n_issues = validate_existing_files(output_dir)
         return 1 if n_issues > 0 else 0
+
+    # --- Kaggle import mode ---
+    if args.from_kaggle:
+        failures = import_from_kaggle(output_dir, args.years if args.years != DEFAULT_YEARS else None)
+        if failures == 0:
+            logger.info("\nValidating imported data...")
+            validate_existing_files(output_dir)
+        return 1 if failures > 0 else 0
 
     # --- CSV import mode ---
     if args.from_csv:
