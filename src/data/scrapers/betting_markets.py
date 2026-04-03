@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 # Data structures
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class BettingMarketOdds:
     """Odds for a single team from a single sportsbook."""
@@ -68,6 +69,7 @@ class MarketConsensus:
 # ---------------------------------------------------------------------------
 # Odds conversion utilities
 # ---------------------------------------------------------------------------
+
 
 def american_to_probability(odds: float) -> float:
     """Convert American odds to implied probability.
@@ -123,6 +125,7 @@ def remove_vig(probabilities: Dict[str, float]) -> Dict[str, float]:
 # ---------------------------------------------------------------------------
 # Scraper base class
 # ---------------------------------------------------------------------------
+
 
 class BettingMarketScraper(ABC):
     """Abstract base for sportsbook odds scrapers.
@@ -235,9 +238,7 @@ class TheOddsAPIScraper(BettingMarketScraper):
         # Try JSON cache first
         cached = self._load_cached(season)
         if cached:
-            return self.load_from_json(
-                os.path.join(self.cache_dir, f"betting_odds_{season}.json")
-            )
+            return self.load_from_json(os.path.join(self.cache_dir, f"betting_odds_{season}.json"))
 
         api_key = os.getenv(self.ENV_API_KEY, "")
         if not api_key:
@@ -251,9 +252,7 @@ class TheOddsAPIScraper(BettingMarketScraper):
         logger.info("The Odds API: no data available for season %d", season)
         return {}
 
-    def _scrape_live(
-        self, season: int, api_key: str
-    ) -> Dict[str, BettingMarketOdds]:
+    def _scrape_live(self, season: int, api_key: str) -> Dict[str, BettingMarketOdds]:
         """Fetch championship futures (outrights) from The Odds API."""
         import requests
         from datetime import datetime, timezone
@@ -305,16 +304,15 @@ class TheOddsAPIScraper(BettingMarketScraper):
                 self._save_cached(season, cache_data)
                 logger.info(
                     "The Odds API: scraped %d teams (%s market) from %d bookmakers",
-                    len(odds_map), markets,
+                    len(odds_map),
+                    markets,
                     len({o.source for o in odds_map.values()}),
                 )
                 return odds_map
 
         return {}
 
-    def _parse_response(
-        self, data: list, season: int, markets: str
-    ) -> Dict[str, BettingMarketOdds]:
+    def _parse_response(self, data: list, season: int, markets: str) -> Dict[str, BettingMarketOdds]:
         """Parse The Odds API JSON response.
 
         For outrights, each element in ``data`` represents a futures market
@@ -387,74 +385,10 @@ class TheOddsAPIScraper(BettingMarketScraper):
         return odds_map
 
 
-class FanDuelScraper(BettingMarketScraper):
-    """Deprecated: FanDuel scraper removed due to fragile undocumented API.
-
-    The FanDuel public endpoint (hardcoded event ID ``69420.3``) was
-    unreliable — the URL is not year-parameterised, frequently blocked,
-    and the deeply nested JSON response format (``attachments > markets >
-    runners``) changed without notice.
-
-    Use ``TheOddsAPIScraper`` instead, which aggregates odds from 40+
-    bookmakers (including FanDuel) via a stable, documented API.
-
-    This stub preserves backwards compatibility for callers that reference
-    the class by name. It delegates to ``TheOddsAPIScraper`` for any
-    cached data and returns empty otherwise.
-    """
-
-    def __init__(self, cache_dir: str = "data/raw/betting_odds"):
-        super().__init__(cache_dir)
-        logger.info(
-            "FanDuelScraper is deprecated — use TheOddsAPIScraper instead. "
-            "The Odds API aggregates FanDuel odds alongside 40+ other bookmakers."
-        )
-
-    def scrape(self, season: int) -> Dict[str, BettingMarketOdds]:
-        # Only return cached data if it exists; no live scraping
-        cached = self._load_cached(season)
-        if cached:
-            return self.load_from_json(
-                os.path.join(self.cache_dir, f"betting_odds_{season}.json")
-            )
-        return {}
-
-
-class DraftKingsScraper(BettingMarketScraper):
-    """Deprecated: DraftKings scraper removed due to fragile undocumented API.
-
-    The DraftKings endpoint (hardcoded event group ``87637``) used a deeply
-    nested JSON structure (``offerCategories > offerSubcategoryDescriptors >
-    offerSubcategory > offers > outcomes``) that changed without notice.
-
-    Use ``TheOddsAPIScraper`` instead, which aggregates odds from 40+
-    bookmakers (including DraftKings) via a stable, documented API.
-
-    This stub preserves backwards compatibility for callers that reference
-    the class by name. It delegates to ``TheOddsAPIScraper`` for any
-    cached data and returns empty otherwise.
-    """
-
-    def __init__(self, cache_dir: str = "data/raw/betting_odds"):
-        super().__init__(cache_dir)
-        logger.info(
-            "DraftKingsScraper is deprecated — use TheOddsAPIScraper instead. "
-            "The Odds API aggregates DraftKings odds alongside 40+ other bookmakers."
-        )
-
-    def scrape(self, season: int) -> Dict[str, BettingMarketOdds]:
-        # Only return cached data if it exists; no live scraping
-        cached = self._load_cached(season)
-        if cached:
-            return self.load_from_json(
-                os.path.join(self.cache_dir, f"betting_odds_{season}.json")
-            )
-        return {}
-
-
 # ---------------------------------------------------------------------------
 # Market consensus calculator
 # ---------------------------------------------------------------------------
+
 
 def compute_market_consensus(
     odds_by_source: List[Dict[str, BettingMarketOdds]],
@@ -500,9 +434,7 @@ def compute_market_consensus(
     for team_id, prob_weights in all_teams.items():
         total_weight = sum(w for _, w in prob_weights)
         if total_weight > 0:
-            team_probs[team_id] = sum(
-                p * w for p, w in prob_weights
-            ) / total_weight
+            team_probs[team_id] = sum(p * w for p, w in prob_weights) / total_weight
         else:
             team_probs[team_id] = np.mean([p for p, _ in prob_weights])
 

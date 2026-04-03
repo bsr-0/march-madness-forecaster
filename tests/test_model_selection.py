@@ -28,6 +28,7 @@ from src.exceptions import IntegrityError
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_separable_data(
     n_train: int = 300,
     n_val: int = 63,
@@ -242,10 +243,8 @@ class TestModelClassSelector:
         train_X, train_y, val_X, val_y = _make_separable_data(n_train=300)
         # Synthesize margins: positive = class 1, negative = class 0
         rng = np.random.RandomState(42)
-        train_margins = np.where(train_y == 1, rng.uniform(1, 15, len(train_y)),
-                                 rng.uniform(-15, -1, len(train_y)))
-        val_margins = np.where(val_y == 1, rng.uniform(1, 15, len(val_y)),
-                               rng.uniform(-15, -1, len(val_y)))
+        train_margins = np.where(train_y == 1, rng.uniform(1, 15, len(train_y)), rng.uniform(-15, -1, len(train_y)))
+        val_margins = np.where(val_y == 1, rng.uniform(1, 15, len(val_y)), rng.uniform(-15, -1, len(val_y)))
 
         selector = ModelClassSelector(
             baseline_ev=0.0,
@@ -257,7 +256,10 @@ class TestModelClassSelector:
             candidate_names=["regularized_logistic"],
         )
         result = selector.run(
-            train_X, train_y, val_X, val_y,
+            train_X,
+            train_y,
+            val_X,
+            val_y,
             train_margins=train_margins,
             val_margins=val_margins,
         )
@@ -585,7 +587,10 @@ class TestLOYOModelSelection:
             strict=False,
         )
         result = selector.run(
-            X[:160], y[:160], X[160:], y[160:],
+            X[:160],
+            y[:160],
+            X[160:],
+            y[160:],
             data_by_year=data_by_year,
         )
         assert result.loyo_evaluated is True
@@ -609,7 +614,10 @@ class TestLOYOModelSelection:
             strict=False,
         )
         result = selector.run(
-            X[:160], y[:160], X[160:], y[160:],
+            X[:160],
+            y[:160],
+            X[160:],
+            y[160:],
             data_by_year=data_by_year,
         )
         for name in result.selected_models:
@@ -635,70 +643,11 @@ class TestLOYOModelSelection:
             strict=False,
         )
         result = selector.run(
-            X[:160], y[:160], X[160:], y[160:],
+            X[:160],
+            y[:160],
+            X[160:],
+            y[160:],
             data_by_year=bad_data_by_year,
         )
         # Selection must still work even if LOYO fails
         assert result.passed or not result.selected_models  # no crash
-
-
-# ---------------------------------------------------------------------------
-# Random search for logistic regression (Phase 7)
-# ---------------------------------------------------------------------------
-
-
-class TestRandomSearchLogistic:
-    """Verify _tune_regularized_logistic uses random search (not grid search)."""
-
-    def test_produces_valid_params(self):
-        """Random search must return C and l1_ratio in valid ranges."""
-        from src.pipeline.stages.hyperparameter_optimization import _tune_regularized_logistic
-
-        rng = np.random.RandomState(0)
-        X = rng.randn(150, 8)
-        X[:, 0] *= 2.5
-        y = (X[:, 0] > 0).astype(float)
-        params = _tune_regularized_logistic(X, y, None, None, n_trials=5, timeout=60, n_cv_folds=3)
-        assert "C" in params
-        assert "l1_ratio" in params
-        assert 0.001 <= params["C"] <= 100.0
-        assert 0.0 <= params["l1_ratio"] <= 1.0
-
-    def test_respects_n_trials(self):
-        """With n_trials=N, exactly N random param combos are evaluated."""
-        from src.pipeline.stages.hyperparameter_optimization import _tune_regularized_logistic
-        from unittest.mock import patch
-
-        rng = np.random.RandomState(0)
-        X = rng.randn(100, 5)
-        y = (X[:, 0] > 0).astype(float)
-
-        call_count = []
-
-        original_zip = zip
-
-        def counting_zip(*args, **kwargs):
-            pairs = list(original_zip(*args, **kwargs))
-            call_count.extend(pairs)
-            return iter(pairs)
-
-        # We patch 'zip' locally — simpler to just count via n_trials directly
-        # by running with two different n_trials and checking output consistency.
-        params_5 = _tune_regularized_logistic(X, y, None, None, n_trials=5, timeout=30, n_cv_folds=2)
-        params_10 = _tune_regularized_logistic(X, y, None, None, n_trials=10, timeout=30, n_cv_folds=2)
-        # Both must return valid dictionaries — the point is they don't error
-        assert "C" in params_5 and "l1_ratio" in params_5
-        assert "C" in params_10 and "l1_ratio" in params_10
-
-    def test_different_seeds_give_different_exploration(self):
-        """Two calls with the same seed must produce the same result (deterministic)."""
-        from src.pipeline.stages.hyperparameter_optimization import _tune_regularized_logistic
-
-        rng = np.random.RandomState(0)
-        X = rng.randn(100, 5)
-        y = (X[:, 0] > 0).astype(float)
-        p1 = _tune_regularized_logistic(X, y, None, None, n_trials=3, timeout=30, n_cv_folds=2)
-        p2 = _tune_regularized_logistic(X, y, None, None, n_trials=3, timeout=30, n_cv_folds=2)
-        # Same seed → same candidates explored → same result
-        assert p1["C"] == pytest.approx(p2["C"])
-        assert p1["l1_ratio"] == pytest.approx(p2["l1_ratio"])

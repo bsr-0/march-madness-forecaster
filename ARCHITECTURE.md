@@ -1,6 +1,6 @@
 # ARCHITECTURE.md — March Madness Forecaster
 
-Deep architectural reference for agents and developers working on this codebase. For quick reference, see `CLAUDE.md`. For role-specific agent guidance, see `AGENTS.md`.
+Deep architectural reference for agents and developers working on this codebase. For quick reference, see `CLAUDE.md`. For role-specific agent guidance, see `AGENTS.md`. For project direction and dead code audit, see `PROJECT_STATUS.md`.
 
 ## Pipeline Flow
 
@@ -62,12 +62,10 @@ The pipeline is orchestrated by `src/pipeline/sota.py` (~2600 lines) for researc
 |-------------|---------|
 | `ensemble/` | Model infrastructure. In `simple` mode (default): single logistic regression only |
 | `calibration/` | Probability calibration: temperature scaling (production), isotonic, Platt |
-| `evaluation/` | RDoF (Researcher Degrees of Freedom) audit, experimentation registry |
+| `evaluation/` | RDoF audit, LOYO protocol, backtest infrastructure |
 | `optimization/` | Optuna hyperparameter search (not used in simple mode) |
-| `ranking/` | Ranking models (Elo, BT) |
 | `training/` | Training utilities |
 | `research/` | Experimental models (not used in production) |
-| `time_series/` | Time series models |
 | `gnn/` | Graph neural network (DISABLED in production) |
 | `transformer/` | Transformer model (DISABLED in production) |
 | `meta_learning.py` | Meta-learner for ensemble stacking (not used in simple mode) |

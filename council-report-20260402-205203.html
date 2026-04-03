@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Council Report — Repo Limitations</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #fff; color: #1a1a1a; line-height: 1.6; max-width: 820px; margin: 0 auto; padding: 2rem 1.5rem; }
+  h1 { font-size: 1.6rem; margin-bottom: 0.3rem; }
+  .subtitle { color: #666; font-size: 0.95rem; margin-bottom: 2rem; }
+  .question-box { background: #f7f7f7; border-left: 4px solid #333; padding: 1rem 1.2rem; margin-bottom: 2rem; font-size: 1.05rem; }
+  h2 { font-size: 1.2rem; margin: 2rem 0 0.8rem; padding-bottom: 0.3rem; border-bottom: 2px solid #e0e0e0; }
+  h3 { font-size: 1.05rem; margin: 1.2rem 0 0.5rem; }
+  p, li { margin-bottom: 0.6rem; font-size: 0.95rem; }
+  ul, ol { padding-left: 1.5rem; }
+  .verdict-section { margin-bottom: 1.5rem; }
+  .agrees { border-left: 4px solid #2d8a4e; padding-left: 1rem; }
+  .clashes { border-left: 4px solid #d4a017; padding-left: 1rem; }
+  .blindspots { border-left: 4px solid #7c3aed; padding-left: 1rem; }
+  .recommendation { border-left: 4px solid #2563eb; padding-left: 1rem; }
+  .first-thing { background: #f0f7ff; border: 2px solid #2563eb; border-radius: 8px; padding: 1.2rem; margin: 1.5rem 0; }
+  .first-thing strong { color: #2563eb; }
+  .advisor-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; margin: 1.5rem 0; }
+  .advisor-card { text-align: center; padding: 0.6rem 0.3rem; border-radius: 6px; font-size: 0.8rem; }
+  .advisor-card .name { font-weight: 600; font-size: 0.75rem; }
+  .advisor-card .stance { margin-top: 0.3rem; font-size: 0.7rem; color: #555; }
+  .card-red { background: #fef2f2; border: 1px solid #fca5a5; }
+  .card-yellow { background: #fefce8; border: 1px solid #fde047; }
+  .card-green { background: #f0fdf4; border: 1px solid #86efac; }
+  .card-blue { background: #eff6ff; border: 1px solid #93c5fd; }
+  .card-purple { background: #faf5ff; border: 1px solid #c4b5fd; }
+  details { margin: 0.8rem 0; border: 1px solid #e0e0e0; border-radius: 6px; }
+  details summary { padding: 0.7rem 1rem; cursor: pointer; font-weight: 600; font-size: 0.9rem; background: #fafafa; border-radius: 6px; }
+  details[open] summary { border-bottom: 1px solid #e0e0e0; border-radius: 6px 6px 0 0; }
+  details .content { padding: 1rem; font-size: 0.9rem; }
+  .footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e0e0e0; color: #999; font-size: 0.8rem; }
+  strong { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>LLM Council Report</h1>
+<p class="subtitle">April 2, 2026 &mdash; 5 advisors, 5 peer reviews, 1 verdict</p>
+
+<div class="question-box">
+  <strong>Question:</strong> What are the biggest limitations of the March Madness Forecaster repository?
+</div>
+
+<!-- Advisor Alignment Grid -->
+<h2>Advisor Alignment</h2>
+<div class="advisor-grid">
+  <div class="advisor-card card-red">
+    <div class="name">Contrarian</div>
+    <div class="stance">BSS &asymp; 0 = premature defeat. LOYO statistically underpowered. Quality controls are theater.</div>
+  </div>
+  <div class="advisor-card card-yellow">
+    <div class="name">First Principles</div>
+    <div class="stance">Wrong metric, wrong unit. Measure bracket pool value, not game-level BSS.</div>
+  </div>
+  <div class="advisor-card card-green">
+    <div class="name">Expansionist</div>
+    <div class="stance">Edge exists. 86 features &amp; disabled infra = unrealized potential. Don't give up.</div>
+  </div>
+  <div class="advisor-card card-blue">
+    <div class="name">Outsider</div>
+    <div class="stance">123K LOC for seed-level results. 90% of code shouldn't exist. Governance guards nothing.</div>
+  </div>
+  <div class="advisor-card card-purple">
+    <div class="name">Executor</div>
+    <div class="stance">Archive dead code. Expand calibration data. Get 80% coverage on production path. Ship.</div>
+  </div>
+</div>
+
+<!-- Chairman's Verdict -->
+<h2>Where the Council Agrees</h2>
+<div class="verdict-section agrees">
+  <p><strong>BSS &asymp; 0 is the defining fact.</strong> Every advisor identifies that the system produces predictions no better than seed-based lookup. The 123K lines, 537 source files, and disabled infrastructure are all downstream of this single failure.</p>
+  <p><strong>The codebase is massively oversized for what it delivers.</strong> Whether framed as "monument to sunk cost," "empty safe with bank-vault security," or "active liability" &mdash; every advisor agrees the ratio of code to value is indefensible.</p>
+  <p><strong>The quality controls are theater.</strong> 20% test coverage, suppressed lint rules (F401/F841/F821), and no meaningful type checking. Suppressing F821 (undefined names) means the linter is configured to ignore code that literally cannot run.</p>
+  <p><strong>The disabled infrastructure is dead weight, not latent value.</strong> Four of five advisors agree GNN, transformers, and ensemble stacking being disabled is a liability, not an asset. Peer review unanimously identified the Expansionist's dissent as the weakest position.</p>
+</div>
+
+<h2>Where the Council Clashes</h2>
+<div class="verdict-section clashes">
+  <h3>Is there signal beyond seeds, or is this an information-theoretic wall?</h3>
+  <p>The Contrarian and First Principles Thinker argue tournament basketball has roughly 4 bits of entropy per game that seeds don't capture, and extracting it from 530 games may be fundamentally impossible. The Expansionist counters that Vegas lines demonstrably beat seed baselines, proving exploitable signal exists.</p>
+  <p><strong>Peer review resolution:</strong> Vegas beats seeds using real-time injury reports, line movement, and betting market information &mdash; not historical box score features. The signal Vegas exploits is unavailable to a system that trains on historical data.</p>
+  <h3>Should the disabled infrastructure be revived or deleted?</h3>
+  <p>The Expansionist says revive it. The Executor says archive it. The Contrarian says it's sunk cost. <strong>The peer reviews unanimously sided against revival without new evidence.</strong></p>
+</div>
+
+<h2>Blind Spots the Council Caught</h2>
+<div class="verdict-section blindspots">
+  <p><strong>Silent data bugs are a real possibility.</strong> 20% coverage + suppressed F821 means the pipeline could contain data processing errors that silently corrupt features. BSS &asymp; 0 might reflect buggy features, not an information-theoretic ceiling.</p>
+  <p><strong>Feature collinearity with seed strength.</strong> The 7 selected features may all be proxies for seed strength. If every feature is seed-with-noise, logistic regression on those 7 is mathematically equivalent to seed baseline &mdash; BSS &asymp; 0 becomes tautological.</p>
+  <p><strong>Bracket optimization is the actual product.</strong> Game-level BSS &asymp; 0 does not mean zero value in a bracket pool. Small calibration advantages compound across 63 games. Identifying correlated upsets can produce bracket strategy that wins pools.</p>
+  <p><strong>The LOYO evaluation is statistically underpowered.</strong> 530 tournament games across 9 folds = ~59 games per test fold. Confidence intervals on BSS at that sample size are enormous. The "simple model is the ceiling" conclusion was drawn from data that cannot support it.</p>
+</div>
+
+<h2>The Recommendation</h2>
+<div class="verdict-section recommendation">
+  <p><strong>This project needs a hard reset on scope, not more model complexity.</strong></p>
+  <ol>
+    <li><strong>Acknowledge the product is bracket strategy, not game probabilities.</strong> Reframe the success metric around bracket pool optimization.</li>
+    <li><strong>Audit for silent data bugs</strong> before drawing any conclusions about model ceilings. With 20% coverage and suppressed F821, you cannot trust features are computed correctly.</li>
+    <li><strong>Cut the codebase to what runs in production.</strong> Archive everything disabled. Target under 15K LOC. Remaining code should have 80%+ coverage and zero suppressed lint rules.</li>
+    <li><strong>Check feature independence from seed.</strong> If all 7 features correlate at r &gt; 0.8 with seed, BSS &asymp; 0 is uninformative.</li>
+  </ol>
+  <p>Do not revive GNN/transformer/ensemble infrastructure until you have confirmed the simple pipeline is bug-free and features provide independent signal.</p>
+</div>
+
+<div class="first-thing">
+  <strong>The One Thing to Do First:</strong> Run a correlation matrix of your 7 production features against seed number, on your training data, and publish the result. If the features are all highly correlated with seed (r &gt; 0.7), then BSS &asymp; 0 is expected and meaningless &mdash; you've been regressing seed proxies against a seed baseline. If they're genuinely independent and BSS is still &asymp; 0, that's real evidence of an information-theoretic ceiling, and the project should pivot entirely to bracket optimization strategy. Either answer changes everything. It takes 20 minutes to compute.
+</div>
+
+<!-- Advisor Full Responses (Collapsible) -->
+<h2>Advisor Responses</h2>
+
+<details>
+  <summary>The Contrarian</summary>
+  <div class="content">
+    <p>The fatal flaw is BSS &asymp; 0 versus seed baseline &mdash; this entire system produces predictions no better than looking up seed matchup win rates. The "simple model is the ceiling" claim is self-serving nonsense &mdash; that conclusion was reached using LOYO on 530 tournament games, roughly 59 games per fold. You cannot draw reliable conclusions about model superiority with 59-game test sets. The error bars on BSS at that sample size swallow any signal. The project declared defeat prematurely, then built 123K lines around that declaration.</p>
+    <p>The codebase is a monument to sunk cost &mdash; GNN, transformer, ensemble all disabled. The quality controls are performative &mdash; 20% coverage is meaningless, suppressing F401/F841/F821 means the linter ignores bugs, mypy checks nothing.</p>
+    <p>The real limitation: tournament basketball has roughly 4 bits of entropy per game that seeds don't already capture. The honest next step is either find genuinely novel data sources or accept the seed baseline and focus on bracket optimization strategy.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The First Principles Thinker</summary>
+  <div class="content">
+    <p>The question isn't "what are the limitations." The question is: why does 123K lines of code exist to deliver a model that can't beat picking by seed? BSS &asymp; 0 means the system produces no value beyond a lookup table.</p>
+    <p>The actual problem is information-theoretic &mdash; March Madness outcomes contain very little predictable signal beyond seed strength. Seeds already encode committee judgments aggregating hundreds of data points. You're trying to extract residual alpha from ~530 tournament games.</p>
+    <p>The real limitations: 1) Wrong success metric &mdash; BSS against seed baseline is the hardest benchmark. The system should measure value-add in bracket pool contexts, where small edges compound across 63 games. 2) Wrong unit of prediction &mdash; game-level probabilities are commoditized. The scarce value is in identifying correlated upsets. 3) No feedback loop &mdash; nine years of predictions with no systematic analysis of where the model fails.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Expansionist</summary>
+  <div class="content">
+    <p>The massive untapped upside: you built the infrastructure for a much more powerful system and then gave up at the logistic regression. BSS &asymp; 0 is not a ceiling &mdash; it's a signal that 7 features from logistic regression can't extract the edge that exists. The architecture doc declaring "the simple model is the ceiling on this data" is the single most dangerous sentence in the codebase.</p>
+    <p>The biggest limitation is that 86 features, GNNs, transformers, and ensemble stacking exist but are disabled. Feature selection going from 86 to 7 likely discarded interaction effects. The scraping infrastructure is an unrealized asset &mdash; injury reports, transfer portal data, player-level metrics create edge in March specifically.</p>
+    <p>The codebase is 80% of the way to a competitive prediction system. What's missing is the willingness to let complex models fail expensively until they don't.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Outsider</summary>
+  <div class="content">
+    <p>You built a 123K-line monument to a conclusion you already reached. The 20% coverage threshold is a confession &mdash; 79K lines of tests but only 20% coverage means large sections are untestable. The lint suppressions for undefined names and unused variables reinforce this.</p>
+    <p>BSS of approximately zero is the only number that matters, and you're burying it. The scraping infrastructure concerns me most &mdash; how many scrapers actually connect to production? The governance system is solving the wrong problem &mdash; bank-vault security around an empty safe.</p>
+    <p>This looks like a research project that kept adding complexity hoping something would stick, then locked down the one thing that worked (barely). The priority isn't improving the model &mdash; it's deciding whether 90% of this code should exist at all.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Executor</summary>
+  <div class="content">
+    <p>Actionable limitations ranked: 1) Model can't beat seeds &mdash; run feature importance on all 86 features against tournament outcomes specifically. 2) 530 tournament games is the real bottleneck &mdash; add data back to 2002, add NIT/CBI as auxiliary signal. 3) 123K LOC is active liability &mdash; archive non-production code, get under 20K LOC. 4) 20% test coverage means you can't safely change anything &mdash; get to 80% on the 7-feature pipeline. 5) Audit which scrapers feed production, kill the rest.</p>
+    <p>Stop building infrastructure. Start beating seeds.</p>
+  </div>
+</details>
+
+<!-- Peer Review Highlights (Collapsible) -->
+<details>
+  <summary>Peer Review Highlights</summary>
+  <div class="content">
+    <p><strong>Strongest response (unanimous):</strong> The Contrarian &mdash; for identifying that LOYO on 59-game folds cannot reliably distinguish models, undermining the "ceiling" conclusion.</p>
+    <p><strong>Weakest response (unanimous):</strong> The Expansionist &mdash; assumes the edge exists without evidence, advocates expensive exploration without addressing the sample size problem.</p>
+    <p><strong>Key blind spots caught:</strong></p>
+    <ul>
+      <li>Silent data bugs are likely in a pipeline with 20% coverage and suppressed F821</li>
+      <li>7 features may be collinear proxies for seed &mdash; BSS &asymp; 0 could be tautological</li>
+      <li>Bracket pool optimization is the actual product, not game-level BSS</li>
+      <li>Model may be well-calibrated in specific matchup bands (5v12, 7v10) even with overall BSS &asymp; 0</li>
+      <li>No defined deployment target or product scope drives requirements</li>
+    </ul>
+  </div>
+</details>
+
+<div class="footer">
+  Council session: April 2, 2026 20:52 UTC &mdash; Question: "What are the biggest limitations of this repo?" &mdash; 5 advisors, 5 peer reviews, chairman synthesis.
+</div>
+
+</body>
+</html>

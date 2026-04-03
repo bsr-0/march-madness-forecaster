@@ -10,7 +10,6 @@ Covers:
 - src/ml/calibration/calibration.py
 - src/ml/gnn/schedule_graph.py
 - src/ml/transformer/game_sequence.py
-- src/ml/time_series/elo_temporal.py
 - src/ml/research/research_loop.py
 """
 
@@ -144,38 +143,47 @@ class TestFormatLeverageTable:
 class TestOptionalImports:
     def test_torch_flag_is_bool(self):
         from src.pipeline._optional_imports import TORCH_AVAILABLE
+
         assert isinstance(TORCH_AVAILABLE, bool)
 
     def test_sklearn_flag_is_bool(self):
         from src.pipeline._optional_imports import SKLEARN_AVAILABLE
+
         assert isinstance(SKLEARN_AVAILABLE, bool)
 
     def test_scaler_flag_is_bool(self):
         from src.pipeline._optional_imports import SCALER_AVAILABLE
+
         assert isinstance(SCALER_AVAILABLE, bool)
 
     def test_optuna_flag_is_bool(self):
         from src.pipeline._optional_imports import OPTUNA_AVAILABLE
+
         assert isinstance(OPTUNA_AVAILABLE, bool)
 
     def test_significance_flag_is_bool(self):
         from src.pipeline._optional_imports import SIGNIFICANCE_TESTING_AVAILABLE
+
         assert isinstance(SIGNIFICANCE_TESTING_AVAILABLE, bool)
 
     def test_ablation_flag_is_bool(self):
         from src.pipeline._optional_imports import ABLATION_AVAILABLE
+
         assert isinstance(ABLATION_AVAILABLE, bool)
 
     def test_spread_model_flag_is_bool(self):
         from src.pipeline._optional_imports import SPREAD_MODEL_AVAILABLE
+
         assert isinstance(SPREAD_MODEL_AVAILABLE, bool)
 
     def test_tournament_sigma_flag_is_bool(self):
         from src.pipeline._optional_imports import TOURNAMENT_SIGMA_AVAILABLE
+
         assert isinstance(TOURNAMENT_SIGMA_AVAILABLE, bool)
 
     def test_bayesian_bt_flag_is_bool(self):
         from src.pipeline._optional_imports import BAYESIAN_BT_AVAILABLE
+
         assert isinstance(BAYESIAN_BT_AVAILABLE, bool)
 
 
@@ -243,12 +251,14 @@ class TestCreateMatchupFeatures:
 class TestLightGBMRankerImportGuard:
     def test_raises_without_lightgbm(self):
         from src.ml.ensemble.cfa import LightGBMRanker, LIGHTGBM_AVAILABLE
+
         if not LIGHTGBM_AVAILABLE:
             with pytest.raises(ImportError):
                 LightGBMRanker()
 
     def test_predict_without_training_raises(self):
         from src.ml.ensemble.cfa import LightGBMRanker, LIGHTGBM_AVAILABLE
+
         if LIGHTGBM_AVAILABLE:
             ranker = LightGBMRanker()
             with pytest.raises(ValueError, match="not trained"):
@@ -256,6 +266,7 @@ class TestLightGBMRankerImportGuard:
 
     def test_feature_importance_untrained(self):
         from src.ml.ensemble.cfa import LightGBMRanker, LIGHTGBM_AVAILABLE
+
         if LIGHTGBM_AVAILABLE:
             ranker = LightGBMRanker()
             assert ranker.get_feature_importance() == {}
@@ -264,6 +275,7 @@ class TestLightGBMRankerImportGuard:
 class TestLightGBMMarginRegressor:
     def test_margin_to_probability(self):
         from src.ml.ensemble.cfa import LightGBMMarginRegressor, LIGHTGBM_AVAILABLE
+
         if not LIGHTGBM_AVAILABLE:
             pytest.skip("LightGBM not available")
         reg = LightGBMMarginRegressor()
@@ -275,6 +287,7 @@ class TestLightGBMMarginRegressor:
 
     def test_default_logistic_scale(self):
         from src.ml.ensemble.cfa import LightGBMMarginRegressor, LIGHTGBM_AVAILABLE
+
         if not LIGHTGBM_AVAILABLE:
             pytest.skip("LightGBM not available")
         reg = LightGBMMarginRegressor()
@@ -282,6 +295,7 @@ class TestLightGBMMarginRegressor:
 
     def test_custom_logistic_scale(self):
         from src.ml.ensemble.cfa import LightGBMMarginRegressor, LIGHTGBM_AVAILABLE
+
         if not LIGHTGBM_AVAILABLE:
             pytest.skip("LightGBM not available")
         reg = LightGBMMarginRegressor(logistic_scale=8.0)
@@ -289,6 +303,7 @@ class TestLightGBMMarginRegressor:
 
     def test_predict_margin_untrained_raises(self):
         from src.ml.ensemble.cfa import LightGBMMarginRegressor, LIGHTGBM_AVAILABLE
+
         if not LIGHTGBM_AVAILABLE:
             pytest.skip("LightGBM not available")
         reg = LightGBMMarginRegressor()
@@ -419,6 +434,7 @@ class TestTournamentExpert:
 
     def test_train_no_lightgbm(self):
         from src.ml.ensemble.tournament_expert import LIGHTGBM_AVAILABLE
+
         if LIGHTGBM_AVAILABLE:
             pytest.skip("LightGBM is available")
         te = TournamentExpert()
@@ -760,6 +776,7 @@ class TestCalibrationPipeline:
 
     def test_downgrade_isotonic_small_sample(self):
         from src.ml.calibration.calibration import SKLEARN_AVAILABLE as CAL_SKLEARN
+
         if not CAL_SKLEARN:
             pytest.skip("sklearn not available for isotonic calibration test")
         np.random.seed(42)
@@ -820,35 +837,51 @@ from src.ml.gnn.schedule_graph import (
 class TestScheduleEdge:
     def test_adjusted_margin_home(self):
         edge = ScheduleEdge(
-            game_id="g1", team1_id="A", team2_id="B",
-            actual_margin=10.0, xp_margin=8.0,
-            location_weight=1.0, game_date="2024-01-01",
+            game_id="g1",
+            team1_id="A",
+            team2_id="B",
+            actual_margin=10.0,
+            xp_margin=8.0,
+            location_weight=1.0,
+            game_date="2024-01-01",
         )
         # Home: adjustment = (1.0-0.5)*7.0 = 3.5
         assert edge.adjusted_margin == pytest.approx(6.5)
 
     def test_adjusted_margin_neutral(self):
         edge = ScheduleEdge(
-            game_id="g1", team1_id="A", team2_id="B",
-            actual_margin=10.0, xp_margin=8.0,
-            location_weight=0.5, game_date="2024-01-01",
+            game_id="g1",
+            team1_id="A",
+            team2_id="B",
+            actual_margin=10.0,
+            xp_margin=8.0,
+            location_weight=0.5,
+            game_date="2024-01-01",
         )
         assert edge.adjusted_margin == pytest.approx(10.0)
 
     def test_adjusted_margin_away(self):
         edge = ScheduleEdge(
-            game_id="g1", team1_id="A", team2_id="B",
-            actual_margin=10.0, xp_margin=8.0,
-            location_weight=0.0, game_date="2024-01-01",
+            game_id="g1",
+            team1_id="A",
+            team2_id="B",
+            actual_margin=10.0,
+            xp_margin=8.0,
+            location_weight=0.0,
+            game_date="2024-01-01",
         )
         # Away: adjustment = (0.0-0.5)*7.0 = -3.5
         assert edge.adjusted_margin == pytest.approx(13.5)
 
     def test_quality_adjusted_margin(self):
         edge = ScheduleEdge(
-            game_id="g1", team1_id="A", team2_id="B",
-            actual_margin=10.0, xp_margin=8.0,
-            location_weight=0.5, game_date="2024-01-01",
+            game_id="g1",
+            team1_id="A",
+            team2_id="B",
+            actual_margin=10.0,
+            xp_margin=8.0,
+            location_weight=0.5,
+            game_date="2024-01-01",
         )
         expected = 0.35 * 10.0 + 0.65 * 8.0
         assert edge.quality_adjusted_margin == pytest.approx(expected)
@@ -858,21 +891,39 @@ class TestScheduleGraph:
     def _make_graph(self):
         teams = ["A", "B", "C"]
         g = ScheduleGraph(teams)
-        g.add_game(ScheduleEdge(
-            game_id="g1", team1_id="A", team2_id="B",
-            actual_margin=10.0, xp_margin=8.0,
-            location_weight=0.5, game_date="2024-01-01",
-        ))
-        g.add_game(ScheduleEdge(
-            game_id="g2", team1_id="B", team2_id="C",
-            actual_margin=5.0, xp_margin=4.0,
-            location_weight=0.5, game_date="2024-01-15",
-        ))
-        g.add_game(ScheduleEdge(
-            game_id="g3", team1_id="A", team2_id="C",
-            actual_margin=-3.0, xp_margin=-2.0,
-            location_weight=0.5, game_date="2024-02-01",
-        ))
+        g.add_game(
+            ScheduleEdge(
+                game_id="g1",
+                team1_id="A",
+                team2_id="B",
+                actual_margin=10.0,
+                xp_margin=8.0,
+                location_weight=0.5,
+                game_date="2024-01-01",
+            )
+        )
+        g.add_game(
+            ScheduleEdge(
+                game_id="g2",
+                team1_id="B",
+                team2_id="C",
+                actual_margin=5.0,
+                xp_margin=4.0,
+                location_weight=0.5,
+                game_date="2024-01-15",
+            )
+        )
+        g.add_game(
+            ScheduleEdge(
+                game_id="g3",
+                team1_id="A",
+                team2_id="C",
+                actual_margin=-3.0,
+                xp_margin=-2.0,
+                location_weight=0.5,
+                game_date="2024-02-01",
+            )
+        )
         return g
 
     def test_init(self):
@@ -921,26 +972,44 @@ class TestScheduleGraph:
     def test_temporal_decay(self):
         teams = ["A", "B"]
         g = ScheduleGraph(teams, temporal_decay=0.5)
-        g.add_game(ScheduleEdge(
-            game_id="g1", team1_id="A", team2_id="B",
-            actual_margin=10.0, xp_margin=8.0,
-            location_weight=0.5, game_date="2024-01-01",
-        ))
-        g.add_game(ScheduleEdge(
-            game_id="g2", team1_id="A", team2_id="B",
-            actual_margin=5.0, xp_margin=4.0,
-            location_weight=0.5, game_date="2024-03-01",
-        ))
+        g.add_game(
+            ScheduleEdge(
+                game_id="g1",
+                team1_id="A",
+                team2_id="B",
+                actual_margin=10.0,
+                xp_margin=8.0,
+                location_weight=0.5,
+                game_date="2024-01-01",
+            )
+        )
+        g.add_game(
+            ScheduleEdge(
+                game_id="g2",
+                team1_id="A",
+                team2_id="B",
+                actual_margin=5.0,
+                xp_margin=4.0,
+                location_weight=0.5,
+                game_date="2024-03-01",
+            )
+        )
         recency = g._compute_recency_multipliers()
         assert recency["g1"] < recency["g2"]  # Earlier game has less weight
 
     def test_temporal_decay_zero(self):
         g = ScheduleGraph(["A", "B"], temporal_decay=0.0)
-        g.add_game(ScheduleEdge(
-            game_id="g1", team1_id="A", team2_id="B",
-            actual_margin=10.0, xp_margin=8.0,
-            location_weight=0.5, game_date="2024-01-01",
-        ))
+        g.add_game(
+            ScheduleEdge(
+                game_id="g1",
+                team1_id="A",
+                team2_id="B",
+                actual_margin=10.0,
+                xp_margin=8.0,
+                location_weight=0.5,
+                game_date="2024-01-01",
+            )
+        )
         recency = g._compute_recency_multipliers()
         assert recency == {}
 
@@ -963,27 +1032,45 @@ class TestComputeMultiHopSos:
     def test_basic(self):
         teams = ["A", "B", "C"]
         g = ScheduleGraph(teams)
-        g.add_game(ScheduleEdge(
-            game_id="g1", team1_id="A", team2_id="B",
-            actual_margin=10.0, xp_margin=8.0,
-            location_weight=0.5, game_date="2024-01-01",
-        ))
-        g.add_game(ScheduleEdge(
-            game_id="g2", team1_id="B", team2_id="C",
-            actual_margin=5.0, xp_margin=4.0,
-            location_weight=0.5, game_date="2024-01-15",
-        ))
+        g.add_game(
+            ScheduleEdge(
+                game_id="g1",
+                team1_id="A",
+                team2_id="B",
+                actual_margin=10.0,
+                xp_margin=8.0,
+                location_weight=0.5,
+                game_date="2024-01-01",
+            )
+        )
+        g.add_game(
+            ScheduleEdge(
+                game_id="g2",
+                team1_id="B",
+                team2_id="C",
+                actual_margin=5.0,
+                xp_margin=4.0,
+                location_weight=0.5,
+                game_date="2024-01-15",
+            )
+        )
         scores = compute_multi_hop_sos(g, hops=2)
         assert len(scores) == 3
 
     def test_hops_parameter(self):
         teams = ["A", "B", "C"]
         g = ScheduleGraph(teams)
-        g.add_game(ScheduleEdge(
-            game_id="g1", team1_id="A", team2_id="B",
-            actual_margin=10.0, xp_margin=8.0,
-            location_weight=0.5, game_date="2024-01-01",
-        ))
+        g.add_game(
+            ScheduleEdge(
+                game_id="g1",
+                team1_id="A",
+                team2_id="B",
+                actual_margin=10.0,
+                xp_margin=8.0,
+                location_weight=0.5,
+                game_date="2024-01-01",
+            )
+        )
         scores1 = compute_multi_hop_sos(g, hops=1)
         scores3 = compute_multi_hop_sos(g, hops=3)
         # Both should return valid scores
@@ -1004,11 +1091,18 @@ from src.ml.transformer.game_sequence import (
 class TestGameEmbedding:
     def _make_game(self, **kwargs):
         defaults = dict(
-            game_id="g1", team_id="A", opponent_id="B",
-            game_date="2024-01-01", game_number=1,
-            offensive_efficiency=110.0, defensive_efficiency=95.0,
-            tempo=70.0, margin=15.0, win=True,
-            is_conference_game=False, is_neutral_site=False,
+            game_id="g1",
+            team_id="A",
+            opponent_id="B",
+            game_date="2024-01-01",
+            game_number=1,
+            offensive_efficiency=110.0,
+            defensive_efficiency=95.0,
+            tempo=70.0,
+            margin=15.0,
+            win=True,
+            is_conference_game=False,
+            is_neutral_site=False,
         )
         defaults.update(kwargs)
         return GameEmbedding(**defaults)
@@ -1040,13 +1134,22 @@ class TestSeasonSequence:
     def _make_season(self, n_games=10):
         games = []
         for i in range(n_games):
-            games.append(GameEmbedding(
-                game_id=f"g{i}", team_id="A", opponent_id="B",
-                game_date=f"2024-01-{i+1:02d}", game_number=i + 1,
-                offensive_efficiency=110.0 + i, defensive_efficiency=95.0,
-                tempo=70.0, margin=5.0 + i, win=True,
-                is_conference_game=i > 5, is_neutral_site=False,
-            ))
+            games.append(
+                GameEmbedding(
+                    game_id=f"g{i}",
+                    team_id="A",
+                    opponent_id="B",
+                    game_date=f"2024-01-{i + 1:02d}",
+                    game_number=i + 1,
+                    offensive_efficiency=110.0 + i,
+                    defensive_efficiency=95.0,
+                    tempo=70.0,
+                    margin=5.0 + i,
+                    win=True,
+                    is_conference_game=i > 5,
+                    is_neutral_site=False,
+                )
+            )
         return SeasonSequence(team_id="A", games=games)
 
     def test_to_matrix(self):
@@ -1074,13 +1177,22 @@ class TestComputeMomentumFeatures:
     def test_basic_features(self):
         games = []
         for i in range(15):
-            games.append(GameEmbedding(
-                game_id=f"g{i}", team_id="A", opponent_id="B",
-                game_date=f"2024-01-{i+1:02d}", game_number=i + 1,
-                offensive_efficiency=100.0 + i, defensive_efficiency=95.0,
-                tempo=70.0, margin=float(i - 5), win=i > 5,
-                is_conference_game=False, is_neutral_site=False,
-            ))
+            games.append(
+                GameEmbedding(
+                    game_id=f"g{i}",
+                    team_id="A",
+                    opponent_id="B",
+                    game_date=f"2024-01-{i + 1:02d}",
+                    game_number=i + 1,
+                    offensive_efficiency=100.0 + i,
+                    defensive_efficiency=95.0,
+                    tempo=70.0,
+                    margin=float(i - 5),
+                    win=i > 5,
+                    is_conference_game=False,
+                    is_neutral_site=False,
+                )
+            )
         s = SeasonSequence(team_id="A", games=games)
         features = compute_momentum_features(s)
         assert "momentum_margin" in features
@@ -1093,13 +1205,22 @@ class TestComputeMomentumFeatures:
     def test_win_streak(self):
         games = []
         for i in range(10):
-            games.append(GameEmbedding(
-                game_id=f"g{i}", team_id="A", opponent_id="B",
-                game_date=f"2024-01-{i+1:02d}", game_number=i + 1,
-                offensive_efficiency=110.0, defensive_efficiency=95.0,
-                tempo=70.0, margin=10.0, win=True,
-                is_conference_game=False, is_neutral_site=False,
-            ))
+            games.append(
+                GameEmbedding(
+                    game_id=f"g{i}",
+                    team_id="A",
+                    opponent_id="B",
+                    game_date=f"2024-01-{i + 1:02d}",
+                    game_number=i + 1,
+                    offensive_efficiency=110.0,
+                    defensive_efficiency=95.0,
+                    tempo=70.0,
+                    margin=10.0,
+                    win=True,
+                    is_conference_game=False,
+                    is_neutral_site=False,
+                )
+            )
         s = SeasonSequence(team_id="A", games=games)
         features = compute_momentum_features(s)
         assert features["current_streak"] == 10
@@ -1108,146 +1229,29 @@ class TestComputeMomentumFeatures:
         games = []
         for i in range(10):
             win = i != 8  # Loss at game 8 (0-indexed), only game 9 is streak
-            games.append(GameEmbedding(
-                game_id=f"g{i}", team_id="A", opponent_id="B",
-                game_date=f"2024-01-{i+1:02d}", game_number=i + 1,
-                offensive_efficiency=110.0, defensive_efficiency=95.0,
-                tempo=70.0, margin=10.0 if win else -5.0, win=win,
-                is_conference_game=False, is_neutral_site=False,
-            ))
+            games.append(
+                GameEmbedding(
+                    game_id=f"g{i}",
+                    team_id="A",
+                    opponent_id="B",
+                    game_date=f"2024-01-{i + 1:02d}",
+                    game_number=i + 1,
+                    offensive_efficiency=110.0,
+                    defensive_efficiency=95.0,
+                    tempo=70.0,
+                    margin=10.0 if win else -5.0,
+                    win=win,
+                    is_conference_game=False,
+                    is_neutral_site=False,
+                )
+            )
         s = SeasonSequence(team_id="A", games=games)
         features = compute_momentum_features(s)
         assert features["current_streak"] == 1
 
 
 # ---------------------------------------------------------------------------
-# 10. elo_temporal.py
-# ---------------------------------------------------------------------------
-from src.ml.time_series.elo_temporal import (
-    EloConfig,
-    EloTemporalModel,
-)
-
-
-class TestEloConfig:
-    def test_defaults(self):
-        cfg = EloConfig()
-        assert cfg.k_factor == 20.0
-        assert cfg.home_advantage == 0.0
-        assert cfg.mean_reversion == 0.33
-        assert cfg.initial_rating == 1500.0
-        assert cfg.mov_adjustment is True
-
-
-class TestEloTemporalModel:
-    def test_expected_score_equal(self):
-        assert EloTemporalModel.expected_score(1500, 1500) == pytest.approx(0.5)
-
-    def test_expected_score_higher_rated(self):
-        assert EloTemporalModel.expected_score(1600, 1400) > 0.5
-
-    def test_expected_score_lower_rated(self):
-        assert EloTemporalModel.expected_score(1400, 1600) < 0.5
-
-    def test_init_defaults(self):
-        model = EloTemporalModel()
-        assert model.config.k_factor == 20.0
-        assert model._games_processed == 0
-
-    def test_train_basic(self):
-        model = EloTemporalModel()
-        games = [
-            {"team_a": "A", "team_b": "B", "outcome": 1.0, "season": 2024, "margin": 10},
-            {"team_a": "B", "team_b": "C", "outcome": 1.0, "season": 2024, "margin": 5},
-            {"team_a": "A", "team_b": "C", "outcome": 1.0, "season": 2024, "margin": 15},
-        ]
-        stats = model.train(games)
-        assert stats["games_processed"] == 3
-        assert stats["teams_rated"] == 3
-        # A should be highest rated
-        assert model.get_rating("A") > model.get_rating("B")
-        assert model.get_rating("A") > model.get_rating("C")
-
-    def test_mean_reversion_across_seasons(self):
-        model = EloTemporalModel(mean_reversion=0.5)
-        games = [
-            {"team_a": "A", "team_b": "B", "outcome": 1.0, "season": 2023, "margin": 30},
-        ]
-        model.train(games)
-        rating_after_s1 = model.get_rating("A")
-        # Process a game in new season -> mean reversion
-        games.append(
-            {"team_a": "A", "team_b": "C", "outcome": 1.0, "season": 2024, "margin": 5},
-        )
-        model.train(games)
-        # After reversion and another win, rating should differ from no-reversion case
-        assert model.get_rating("A") != rating_after_s1
-
-    def test_predict_proba(self):
-        model = EloTemporalModel()
-        games = [
-            {"team_a": "A", "team_b": "B", "outcome": 1.0, "season": 2024},
-        ]
-        model.train(games)
-        prob = model.predict_proba("A", "B")
-        assert 0 < prob < 1
-        assert prob > 0.5  # A won, so should be favored
-
-    def test_predict_proba_unknown_team(self):
-        model = EloTemporalModel()
-        prob = model.predict_proba("X", "Y")
-        assert prob == pytest.approx(0.5)
-
-    def test_predict_matchup_array(self):
-        model = EloTemporalModel()
-        games = [
-            {"team_a": "A", "team_b": "B", "outcome": 1.0, "season": 2024},
-        ]
-        model.train(games)
-        probs = model.predict_matchup_array(["A", "B"], ["B", "A"])
-        assert len(probs) == 2
-        assert probs[0] > 0.5
-        assert probs[1] < 0.5
-
-    def test_get_ratings(self):
-        model = EloTemporalModel()
-        games = [
-            {"team_a": "A", "team_b": "B", "outcome": 1.0, "season": 2024},
-        ]
-        model.train(games)
-        ratings = model.get_ratings()
-        assert isinstance(ratings, dict)
-        assert "A" in ratings
-
-    def test_get_feature_importance_empty(self):
-        model = EloTemporalModel()
-        assert model.get_feature_importance() == {}
-
-    def test_serialization_roundtrip(self):
-        model = EloTemporalModel(k_factor=25.0, mean_reversion=0.4)
-        games = [
-            {"team_a": "A", "team_b": "B", "outcome": 1.0, "season": 2024, "margin": 10},
-        ]
-        model.train(games)
-        d = model.to_dict()
-        restored = EloTemporalModel.from_dict(d)
-        assert restored.config.k_factor == 25.0
-        assert restored.config.mean_reversion == 0.4
-        assert restored.get_rating("A") == model.get_rating("A")
-
-    def test_mov_multiplier_no_adjustment(self):
-        model = EloTemporalModel(mov_adjustment=False)
-        mult = model._mov_multiplier(20.0, 100.0)
-        assert mult == 1.0
-
-    def test_mov_multiplier_with_adjustment(self):
-        model = EloTemporalModel(mov_adjustment=True)
-        mult = model._mov_multiplier(20.0, 100.0)
-        assert mult > 1.0  # Large margin -> multiplier > 1
-
-
-# ---------------------------------------------------------------------------
-# 11. research_loop.py
+# 10. research_loop.py
 # ---------------------------------------------------------------------------
 from src.ml.research.research_loop import (
     ConfigMutator,
@@ -1311,16 +1315,24 @@ class TestResearchTrajectory:
 
     def test_with_cycles(self):
         t = ResearchTrajectory()
-        t.cycles.append(ResearchCycleResult(
-            cycle_id="c1", total_improvement=0.01,
-            n_experiments_run=5, n_improvements_adopted=2,
-            final_brier=0.19,
-        ))
-        t.cycles.append(ResearchCycleResult(
-            cycle_id="c2", total_improvement=0.005,
-            n_experiments_run=3, n_improvements_adopted=1,
-            final_brier=0.185,
-        ))
+        t.cycles.append(
+            ResearchCycleResult(
+                cycle_id="c1",
+                total_improvement=0.01,
+                n_experiments_run=5,
+                n_improvements_adopted=2,
+                final_brier=0.19,
+            )
+        )
+        t.cycles.append(
+            ResearchCycleResult(
+                cycle_id="c2",
+                total_improvement=0.005,
+                n_experiments_run=3,
+                n_improvements_adopted=1,
+                final_brier=0.185,
+            )
+        )
         assert t.total_improvement == pytest.approx(0.015)
         assert t.n_total_experiments == 8
         assert t.n_total_adopted == 3
@@ -1407,8 +1419,12 @@ class TestImprovementGate:
     def test_adopt_good_candidate(self):
         gate = ImprovementGate(min_brier_improvement=0.002, max_p_value=0.10)
         candidate = ImprovementCandidate(
-            name="test", config_key="k", old_value=0.5,
-            new_value=0.6, brier_delta=-0.005, p_value=0.03,
+            name="test",
+            config_key="k",
+            old_value=0.5,
+            new_value=0.6,
+            brier_delta=-0.005,
+            p_value=0.03,
             source="sensitivity",
         )
         adopt, reason = gate.should_adopt(candidate)
@@ -1418,8 +1434,12 @@ class TestImprovementGate:
     def test_reject_small_improvement(self):
         gate = ImprovementGate(min_brier_improvement=0.002)
         candidate = ImprovementCandidate(
-            name="test", config_key="k", old_value=0.5,
-            new_value=0.6, brier_delta=-0.0001, p_value=0.01,
+            name="test",
+            config_key="k",
+            old_value=0.5,
+            new_value=0.6,
+            brier_delta=-0.0001,
+            p_value=0.01,
             source="sensitivity",
         )
         adopt, reason = gate.should_adopt(candidate)
@@ -1429,8 +1449,12 @@ class TestImprovementGate:
     def test_reject_high_p_value(self):
         gate = ImprovementGate(max_p_value=0.10)
         candidate = ImprovementCandidate(
-            name="test", config_key="k", old_value=0.5,
-            new_value=0.6, brier_delta=-0.01, p_value=0.20,
+            name="test",
+            config_key="k",
+            old_value=0.5,
+            new_value=0.6,
+            brier_delta=-0.01,
+            p_value=0.20,
             source="sensitivity",
         )
         adopt, reason = gate.should_adopt(candidate)
@@ -1440,8 +1464,12 @@ class TestImprovementGate:
     def test_reject_worsening(self):
         gate = ImprovementGate()
         candidate = ImprovementCandidate(
-            name="test", config_key="k", old_value=0.5,
-            new_value=0.6, brier_delta=0.01, p_value=0.01,
+            name="test",
+            config_key="k",
+            old_value=0.5,
+            new_value=0.6,
+            brier_delta=0.01,
+            p_value=0.01,
             source="sensitivity",
         )
         adopt, reason = gate.should_adopt(candidate)
@@ -1455,8 +1483,12 @@ class TestImprovementGate:
             min_folds_improved=0.6,
         )
         candidate = ImprovementCandidate(
-            name="test", config_key="k", old_value=0.5,
-            new_value=0.6, brier_delta=-0.01, p_value=0.01,
+            name="test",
+            config_key="k",
+            old_value=0.5,
+            new_value=0.6,
+            brier_delta=-0.01,
+            p_value=0.01,
             source="sensitivity",
         )
         fold_deltas = [-0.01, 0.02, 0.03, 0.01, 0.02]  # Only 1/5 improved
@@ -1471,11 +1503,17 @@ class TestImprovementGateCohensD:
     def test_reject_low_cohens_d(self):
         """High variance across folds → low Cohen's d → reject."""
         gate = ImprovementGate(
-            min_brier_improvement=0.001, max_p_value=0.10, min_cohens_d=0.2,
+            min_brier_improvement=0.001,
+            max_p_value=0.10,
+            min_cohens_d=0.2,
         )
         candidate = ImprovementCandidate(
-            name="test", config_key="k", old_value=0.5,
-            new_value=0.6, brier_delta=-0.005, p_value=0.04,
+            name="test",
+            config_key="k",
+            old_value=0.5,
+            new_value=0.6,
+            brier_delta=-0.005,
+            p_value=0.04,
             source="param_sweep",
         )
         # Mean delta = -0.005, but huge variance → Cohen's d ≈ 0.05
@@ -1487,11 +1525,17 @@ class TestImprovementGateCohensD:
     def test_accept_high_cohens_d(self):
         """Consistent improvement across folds → high Cohen's d → accept."""
         gate = ImprovementGate(
-            min_brier_improvement=0.001, max_p_value=0.10, min_cohens_d=0.2,
+            min_brier_improvement=0.001,
+            max_p_value=0.10,
+            min_cohens_d=0.2,
         )
         candidate = ImprovementCandidate(
-            name="test", config_key="k", old_value=0.5,
-            new_value=0.6, brier_delta=-0.01, p_value=0.03,
+            name="test",
+            config_key="k",
+            old_value=0.5,
+            new_value=0.6,
+            brier_delta=-0.01,
+            p_value=0.03,
             source="param_sweep",
         )
         # Consistent negative deltas → high Cohen's d
@@ -1502,11 +1546,17 @@ class TestImprovementGateCohensD:
     def test_cohens_d_skipped_without_folds(self):
         """When no fold_deltas provided, Cohen's d check is skipped."""
         gate = ImprovementGate(
-            min_brier_improvement=0.001, max_p_value=0.10, min_cohens_d=0.2,
+            min_brier_improvement=0.001,
+            max_p_value=0.10,
+            min_cohens_d=0.2,
         )
         candidate = ImprovementCandidate(
-            name="test", config_key="k", old_value=0.5,
-            new_value=0.6, brier_delta=-0.005, p_value=0.04,
+            name="test",
+            config_key="k",
+            old_value=0.5,
+            new_value=0.6,
+            brier_delta=-0.005,
+            p_value=0.04,
             source="param_sweep",
         )
         adopt, reason = gate.should_adopt(candidate, fold_deltas=None)
@@ -1537,7 +1587,8 @@ class TestParamSweepPairedTTest:
         config.seed_prior_weight = 0.10
 
         candidates = loop.run_param_sweep(
-            config, "spread_weight",
+            config,
+            "spread_weight",
             eval_fn=lambda cfg: float(np.mean(mock_eval_folds(cfg))),
             eval_folds_fn=mock_eval_folds,
             n_points=5,
@@ -1559,7 +1610,8 @@ class TestParamSweepPairedTTest:
         config.seed_prior_weight = 0.10
 
         candidates = loop.run_param_sweep(
-            config, "spread_weight",
+            config,
+            "spread_weight",
             eval_fn=lambda cfg: 0.20 + (getattr(cfg, "spread_weight", 0.5) - 0.5) * 0.1,
             n_points=5,
         )
@@ -1589,7 +1641,8 @@ class TestParamSweepPairedTTest:
         config.seed_prior_weight = 0.10
 
         candidates = loop.run_param_sweep(
-            config, "spread_weight",
+            config,
+            "spread_weight",
             eval_fn=lambda cfg: float(np.mean(mock_eval_folds(cfg))),
             eval_folds_fn=mock_eval_folds,
             n_points=5,

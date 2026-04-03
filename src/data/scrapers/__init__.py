@@ -3,8 +3,6 @@
 from .betting_markets import (
     BettingMarketOdds,
     BettingMarketScraper,
-    DraftKingsScraper,
-    FanDuelScraper,
     MarketConsensus,
     TheOddsAPIScraper,
     blend_with_model,
@@ -30,8 +28,6 @@ __all__ = [
     "BracketIngestionPipeline",
     "BracketTeam",
     "CBBpyRosterScraper",
-    "DraftKingsScraper",
-    "FanDuelScraper",
     "TheOddsAPIScraper",
     "InjuryReportScraper",
     "InjurySeverityModel",
