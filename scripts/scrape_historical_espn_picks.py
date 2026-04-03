@@ -50,6 +50,11 @@ logger = logging.getLogger(__name__)
 
 OUTPUT_DIR = Path("data/raw/historical_public_picks")
 
+# TidyTuesday mirror of Kaggle public picks (2024 only, uses % suffix in values)
+TIDYTUESDAY_PUBLIC_PICKS_URL = (
+    "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2024/2024-03-26/public-picks.csv"
+)
+
 WAYBACK_API = (
     "https://web.archive.org/web/{year}*/fantasy.espn.com/tournament-challenge-bracket/{year}/en/whopickedwhom"
 )
@@ -399,6 +404,28 @@ def import_from_kaggle(output_dir: Path | None = None, years: list[int] | None =
             total_written += written
             total_failures += failures
 
+        # Try TidyTuesday as supplemental source for 2024 if not already imported
+        tt_path = output_dir / "espn_picks_2024.json"
+        need_2024 = years is None or 2024 in years
+        already_have_real_2024 = False
+        if tt_path.exists():
+            try:
+                with open(tt_path) as f:
+                    existing = json.load(f)
+                already_have_real_2024 = existing.get("source") not in {
+                    "seed_model_v2",
+                    "seed_model",
+                    "synthetic",
+                    "placeholder",
+                }
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        if need_2024 and not already_have_real_2024:
+            tt_written, tt_fail = _try_tidytuesday_csv(Path(tmpdir), output_dir)
+            total_written += tt_written
+            total_failures += tt_fail
+
         logger.info(
             "\nKaggle import complete: %d years written, %d failures",
             total_written,
@@ -406,10 +433,32 @@ def import_from_kaggle(output_dir: Path | None = None, years: list[int] | None =
         )
 
         if total_written == 0:
-            logger.error("No years were successfully imported from Kaggle")
+            logger.error("No years were successfully imported from any source")
             return 1
 
         return total_failures
+
+
+def _try_tidytuesday_csv(tmpdir: Path, output_dir: Path) -> tuple[int, int]:
+    """Try to fetch the TidyTuesday public picks CSV (2024 data only)."""
+    import urllib.error
+    import urllib.request
+
+    logger.info("Attempting TidyTuesday fallback for 2024 public picks...")
+    tt_csv = tmpdir / "tidytuesday_public_picks.csv"
+    try:
+        req = urllib.request.Request(
+            TIDYTUESDAY_PUBLIC_PICKS_URL,
+            headers={"User-Agent": "MarchMadnessForecaster/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            tt_csv.write_bytes(resp.read())
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError) as e:
+        logger.warning("TidyTuesday download failed: %s", e)
+        return 0, 0
+
+    logger.info("Downloaded TidyTuesday CSV, converting...")
+    return _convert_kaggle_csv(tt_csv, output_dir, [2024])
 
 
 def _find_kaggle_picks_csv(search_dir: Path) -> list[Path]:
@@ -451,11 +500,22 @@ def _normalize_csv_headers(fieldnames: list[str]) -> dict[str, str]:
     return mapping
 
 
+def _parse_pct(raw: str) -> float | None:
+    """Parse a percentage value, stripping '%' suffix if present."""
+    val = raw.strip().rstrip("%").strip()
+    if not val:
+        return None
+    try:
+        return float(val)
+    except ValueError:
+        return None
+
+
 def _convert_kaggle_csv(csv_path: Path, output_dir: Path, years: list[int] | None) -> tuple[int, int]:
     """Convert a Kaggle Public Picks CSV into per-year JSON files.
 
     The CSV typically has columns: YEAR, TEAMNO, TEAM, R64, R32, S16, E8, F4, FINALS
-    Values are percentages on 0-100 scale.
+    Values are percentages on 0-100 scale (may include '%' suffix).
 
     Returns:
         Tuple of (years_written, failures).
@@ -547,12 +607,9 @@ def _convert_kaggle_csv(csv_path: Path, output_dir: Path, years: list[int] | Non
     sample_values = []
     for row in rows[:100]:
         for _canon, raw_col in available_rounds.items():
-            val = row.get(raw_col, "").strip()
-            if val:
-                try:
-                    sample_values.append(float(val))
-                except ValueError:
-                    pass
+            v = _parse_pct(row.get(raw_col, ""))
+            if v is not None:
+                sample_values.append(v)
     is_pct_scale = any(v > 1.0 for v in sample_values)
     scale_factor = 100.0 if is_pct_scale else 1.0
     logger.info("Detected %s scale", "0-100" if is_pct_scale else "0-1")
@@ -575,13 +632,9 @@ def _convert_kaggle_csv(csv_path: Path, output_dir: Path, years: list[int] | Non
             picks = {}
             for canon, raw_col in available_rounds.items():
                 out_key = round_output_map[canon]
-                val = row.get(raw_col, "").strip()
-                if val:
-                    try:
-                        pct = float(val) / scale_factor
-                        picks[out_key] = max(0.0, min(1.0, round(pct, 4)))
-                    except ValueError:
-                        picks[out_key] = 0.0
+                v = _parse_pct(row.get(raw_col, ""))
+                if v is not None:
+                    picks[out_key] = max(0.0, min(1.0, round(v / scale_factor, 4)))
                 else:
                     picks[out_key] = 0.0
 
