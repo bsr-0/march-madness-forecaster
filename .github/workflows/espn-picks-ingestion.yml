@@ -1,0 +1,154 @@
+name: ESPN Picks Ingestion
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Ingestion mode"
+        required: true
+        type: choice
+        options:
+          - scrape
+          - csv-import
+          - validate
+        default: validate
+      years:
+        description: "Space-separated years to scrape (scrape mode only, e.g. '2023 2024 2025')"
+        required: false
+        type: string
+        default: "2018 2019 2021 2022 2023 2024 2025"
+      csv_year:
+        description: "Tournament year for CSV import (csv-import mode only)"
+        required: false
+        type: string
+      csv_artifact:
+        description: "Name of uploaded CSV artifact (csv-import mode only)"
+        required: false
+        type: string
+        default: "espn-picks-csv"
+
+concurrency:
+  group: espn-picks-ingestion
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    name: Validate Existing Data
+    if: inputs.mode == 'validate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Validate ESPN pick files
+        run: python scripts/scrape_historical_espn_picks.py --validate
+
+  scrape:
+    name: Scrape from Wayback Machine
+    if: inputs.mode == 'scrape'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Scrape ESPN picks
+        run: |
+          set -euo pipefail
+          python scripts/scrape_historical_espn_picks.py --years ${{ inputs.years }}
+
+      - name: Validate scraped data
+        run: python scripts/scrape_historical_espn_picks.py --validate
+        continue-on-error: true
+
+      - name: Upload results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: espn-picks-scraped
+          path: data/raw/historical_public_picks/*.json
+          retention-days: 90
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/raw/historical_public_picks/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update ESPN public pick data ($(date -u +%Y-%m-%d))"
+            git push
+          fi
+
+  csv-import:
+    name: Import from CSV
+    if: inputs.mode == 'csv-import'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Validate inputs
+        run: |
+          if [ -z "${{ inputs.csv_year }}" ]; then
+            echo "::error::csv_year is required for csv-import mode"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Download CSV artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.csv_artifact }}
+          path: /tmp/csv-import
+
+      - name: Find and import CSV
+        run: |
+          set -euo pipefail
+          CSV_FILE=$(find /tmp/csv-import -name '*.csv' -type f | head -1)
+          if [ -z "$CSV_FILE" ]; then
+            echo "::error::No CSV file found in artifact '${{ inputs.csv_artifact }}'"
+            exit 1
+          fi
+          echo "Importing from: $CSV_FILE"
+          python scripts/scrape_historical_espn_picks.py \
+            --from-csv "$CSV_FILE" \
+            --year ${{ inputs.csv_year }}
+
+      - name: Validate imported data
+        run: python scripts/scrape_historical_espn_picks.py --validate
+
+      - name: Upload results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: espn-picks-imported-${{ inputs.csv_year }}
+          path: data/raw/historical_public_picks/espn_picks_${{ inputs.csv_year }}.json
+          retention-days: 90
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/raw/historical_public_picks/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: import ESPN picks for ${{ inputs.csv_year }} from CSV"
+            git push
+          fi

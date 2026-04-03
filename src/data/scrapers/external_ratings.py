@@ -54,23 +54,25 @@ def _is_corrupted_system(entries: List[Dict], threshold: float = 0.8) -> bool:
 @dataclass
 class ExternalRating:
     """A single external rating for a team."""
+
     system_name: str
     team_name: str
     team_id: str = ""
-    rating: float = 0.0      # Raw rating value (system-specific scale)
-    ranking: int = 0          # Ordinal ranking (1 = best)
-    normalized: float = 0.0   # Normalized to [0, 1] (higher = better)
+    rating: float = 0.0  # Raw rating value (system-specific scale)
+    ranking: int = 0  # Ordinal ranking (1 = best)
+    normalized: float = 0.0  # Normalized to [0, 1] (higher = better)
 
 
 @dataclass
 class CompositeRating:
     """Composite rating aggregating multiple external systems."""
+
     team_id: str
     team_name: str
-    composite_rating: float = 0.0   # Weighted average of normalized ratings
-    composite_ranking: int = 0       # Overall ranking
-    rating_spread: float = 0.0       # Max - min across systems (disagreement)
-    n_systems: int = 0               # Number of systems contributing
+    composite_rating: float = 0.0  # Weighted average of normalized ratings
+    composite_ranking: int = 0  # Overall ranking
+    rating_spread: float = 0.0  # Max - min across systems (disagreement)
+    n_systems: int = 0  # Number of systems contributing
     per_system: Dict[str, float] = field(default_factory=dict)  # system -> normalized
 
 
@@ -90,12 +92,12 @@ class ExternalRatingsLoader:
     # Historical predictive accuracy weights (backtested 2015-2025)
     # Higher = more predictive of tournament outcomes
     SYSTEM_WEIGHTS = {
-        "kenpom": 1.0,          # Gold standard, highest historical accuracy
+        "kenpom": 1.0,  # Gold standard, highest historical accuracy
         "massey_composite": 0.95,  # Meta-ranking: very robust
-        "sagarin": 0.85,        # Long track record
-        "espn_bpi": 0.80,       # Good but shorter history
-        "net_ranking": 0.75,    # Committee metric, moderate predictive value
-        "teamrankings": 0.70,   # Solid baseline
+        "sagarin": 0.85,  # Long track record
+        "espn_bpi": 0.80,  # Good but shorter history
+        "net_ranking": 0.75,  # Committee metric, moderate predictive value
+        "teamrankings": 0.70,  # Solid baseline
     }
 
     def __init__(self, cache_dir: str = "data/raw"):
@@ -104,31 +106,66 @@ class ExternalRatingsLoader:
     def load_all(self, year: int) -> Dict[str, Dict[str, ExternalRating]]:
         """Load all available external rating systems for a year.
 
+        First loads the 6 well-known systems by name, then discovers any
+        additional systems via glob (e.g. Massey Ordinal systems cached
+        in data/raw/historical/).
+
         Returns:
             Dict of system_name -> {team_id -> ExternalRating}
         """
         all_ratings: Dict[str, Dict[str, ExternalRating]] = {}
 
+        # 1. Load well-known systems by name (gets SYSTEM_WEIGHTS priority)
         for system in self.SYSTEM_WEIGHTS:
             ratings = self._load_system(system, year)
             if ratings:
                 all_ratings[system] = ratings
-                logger.info(
-                    "Loaded %d %s ratings for %d", len(ratings), system, year
-                )
+
+        # 2. Discover additional systems via glob (Massey Ordinals, etc.)
+        #    Checks both cache_dir and cache_dir/historical/
+        for search_dir in [self.cache_dir, self.cache_dir / "historical"]:
+            if not search_dir.is_dir():
+                continue
+            for path in search_dir.glob(f"external_*_{year}.json"):
+                system = path.stem.replace(f"_{year}", "").replace("external_", "")
+                if system in all_ratings:
+                    continue  # Already loaded (named system takes precedence)
+                ratings = self._load_system_from_path(system, path)
+                if ratings:
+                    all_ratings[system] = ratings
+
+        if all_ratings:
+            logger.info(
+                "Loaded %d rating systems for %d (%d teams covered)",
+                len(all_ratings),
+                year,
+                len(set().union(*(r.keys() for r in all_ratings.values()))),
+            )
 
         return all_ratings
 
-    def _load_system(
-        self, system: str, year: int
-    ) -> Dict[str, ExternalRating]:
-        """Load a single rating system from cache."""
-        path = self.cache_dir / f"external_{system}_{year}.json"
-        if not path.exists():
+    def _load_system(self, system: str, year: int) -> Dict[str, ExternalRating]:
+        """Load a single rating system from cache, checking multiple dirs."""
+        for search_dir in [self.cache_dir, self.cache_dir / "historical"]:
+            path = search_dir / f"external_{system}_{year}.json"
+            if path.exists():
+                return self._load_system_from_path(system, path)
+        return {}
+
+    def _load_system_from_path(self, system: str, path: Path) -> Dict[str, ExternalRating]:
+        """Load a single rating system from a specific file path."""
+        try:
+            with open(path, "r") as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError):
             return {}
 
-        with open(path, "r") as f:
-            data = json.load(f)
+        if not isinstance(data, list):
+            return {}
+
+        # Skip corrupted systems
+        if _is_corrupted_system(data):
+            return {}
 
         ratings = {}
         for entry in data:
@@ -189,7 +226,7 @@ class ExternalRatingsLoader:
                 norm = {team_ids[0]: 0.5}
             else:
                 # rankdata uses average rank for ties; scale to (0, 1]
-                ranks = rankdata(values, method='average')
+                ranks = rankdata(values, method="average")
                 norm = {tid: float((r - 1) / (n - 1)) for tid, r in zip(team_ids, ranks)}
             normalized_systems[system] = norm
 
@@ -236,9 +273,7 @@ class ExternalRatingsLoader:
             )
 
         # Compute composite rankings
-        sorted_teams = sorted(
-            composites.values(), key=lambda c: c.composite_rating, reverse=True
-        )
+        sorted_teams = sorted(composites.values(), key=lambda c: c.composite_rating, reverse=True)
         for rank, comp in enumerate(sorted_teams, 1):
             comp.composite_ranking = rank
 
@@ -261,10 +296,22 @@ class ExternalRatingsLoader:
         """
         # Historical correlation: seed -> normalized rating
         seed_to_rating = {
-            1: 0.95, 2: 0.88, 3: 0.82, 4: 0.77,
-            5: 0.72, 6: 0.67, 7: 0.62, 8: 0.55,
-            9: 0.52, 10: 0.48, 11: 0.45, 12: 0.40,
-            13: 0.35, 14: 0.28, 15: 0.20, 16: 0.10,
+            1: 0.95,
+            2: 0.88,
+            3: 0.82,
+            4: 0.77,
+            5: 0.72,
+            6: 0.67,
+            7: 0.62,
+            8: 0.55,
+            9: 0.52,
+            10: 0.48,
+            11: 0.45,
+            12: 0.40,
+            13: 0.35,
+            14: 0.28,
+            15: 0.20,
+            16: 0.10,
         }
 
         composites = {}
@@ -281,9 +328,7 @@ class ExternalRatingsLoader:
             )
 
         # Assign rankings
-        sorted_teams = sorted(
-            composites.values(), key=lambda c: c.composite_rating, reverse=True
-        )
+        sorted_teams = sorted(composites.values(), key=lambda c: c.composite_rating, reverse=True)
         for rank, comp in enumerate(sorted_teams, 1):
             comp.composite_ranking = rank
 
@@ -300,13 +345,15 @@ class ExternalRatingsLoader:
         path = self.cache_dir / f"external_{system}_{year}.json"
         data = []
         for r in ratings.values():
-            data.append({
-                "team_name": r.team_name,
-                "team_id": r.team_id,
-                "rating": r.rating,
-                "ranking": r.ranking,
-                "normalized": r.normalized,
-            })
+            data.append(
+                {
+                    "team_name": r.team_name,
+                    "team_id": r.team_id,
+                    "rating": r.rating,
+                    "ranking": r.ranking,
+                    "normalized": r.normalized,
+                }
+            )
         with open(path, "w") as f:
             json.dump(data, f, indent=2)
 
@@ -342,7 +389,9 @@ class ExternalRatingsLoader:
 
         loader = KaggleDataLoader(kaggle_dir)
         all_systems = loader.load_massey_ordinals_as_external_ratings(
-            year, ranking_day_num=ranking_day_num, max_day=max_day,
+            year,
+            ranking_day_num=ranking_day_num,
+            max_day=max_day,
         )
         if not all_systems:
             logger.warning("No Massey Ordinals found for %d in %s", year, kaggle_dir)
@@ -363,16 +412,18 @@ class ExternalRatingsLoader:
             if _is_corrupted_system(entries):
                 logger.warning(
                     "Skipping corrupted %s for %d: degenerate rank data",
-                    system_name, year,
+                    system_name,
+                    year,
                 )
                 skipped_corrupted += 1
                 continue
             # Warn on suspiciously low coverage (likely truncated source)
             if len(entries) < 200:
                 logger.warning(
-                    "System %s for %d has only %d teams (expected ~350); "
-                    "possible truncated source data",
-                    system_name, year, len(entries),
+                    "System %s for %d has only %d teams (expected ~350); possible truncated source data",
+                    system_name,
+                    year,
+                    len(entries),
                 )
             ratings: Dict[str, ExternalRating] = {}
             for e in entries:
@@ -391,7 +442,8 @@ class ExternalRatingsLoader:
         if skipped_corrupted:
             logger.warning(
                 "Skipped %d corrupted systems for %d (degenerate rank data)",
-                skipped_corrupted, year,
+                skipped_corrupted,
+                year,
             )
 
         # Also create a "massey_composite" meta-system by averaging
@@ -402,7 +454,9 @@ class ExternalRatingsLoader:
 
         logger.info(
             "Cached %d Massey Ordinal systems for %d from %s",
-            cached, year, kaggle_dir,
+            cached,
+            year,
+            kaggle_dir,
         )
         return cached
 
@@ -479,7 +533,9 @@ class ExternalRatingsLoader:
 
         loader = KaggleDataLoader(kaggle_dir)
         ordinals = loader.load_massey_ordinals(
-            year, ranking_day_num=ranking_day_num, max_day=max_day,
+            year,
+            ranking_day_num=ranking_day_num,
+            max_day=max_day,
         )
         if not ordinals:
             logger.info("No Massey Ordinals for multi-system extraction (year=%d)", year)

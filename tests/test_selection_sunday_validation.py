@@ -63,6 +63,7 @@ SAMPLE_ELITE = "duke"
 # Helpers
 # ───────────────────────────────────────────────────────────────────────
 
+
 def _load_bracket() -> Dict:
     with open(BRACKET_PATH) as f:
         raw = json.load(f)
@@ -103,11 +104,13 @@ class TestStep1ProductionProfile:
 
     def test_default_profile_is_production(self):
         from src.pipeline.config import SOTAPipelineConfig
+
         cfg = SOTAPipelineConfig()
         assert cfg.probability_profile == "production"
 
     def test_all_experimental_flags_off(self):
         from src.pipeline.config import SOTAPipelineConfig
+
         cfg = SOTAPipelineConfig()
         assert cfg.enable_seed_overrides is False
         assert cfg.enable_brier_sharpening is False
@@ -116,21 +119,25 @@ class TestStep1ProductionProfile:
 
     def test_tournament_adaptation_enabled(self):
         from src.pipeline.config import SOTAPipelineConfig
+
         cfg = SOTAPipelineConfig()
         assert cfg.enable_tournament_adaptation is True
 
     def test_tournament_shrinkage_value(self):
         from src.pipeline.config import SOTAPipelineConfig
+
         cfg = SOTAPipelineConfig()
         assert cfg.tournament_shrinkage == 0.06
 
     def test_womens_default_profile_is_production(self):
         from src.pipeline.womens import WomensPipelineConfig
+
         cfg = WomensPipelineConfig()
         assert cfg.probability_profile == "production"
 
     def test_womens_experimental_flags_off(self):
         from src.pipeline.womens import WomensPipelineConfig
+
         cfg = WomensPipelineConfig()
         assert cfg.enable_brier_sharpening is False
         assert cfg.enable_goto_conversion is False
@@ -138,12 +145,14 @@ class TestStep1ProductionProfile:
 
     def test_womens_tournament_adaptation_enabled(self):
         from src.pipeline.womens import WomensPipelineConfig
+
         cfg = WomensPipelineConfig()
         assert cfg.enable_tournament_adaptation is True
 
     def test_validate_production_profile_allows_all_advanced_features(self):
         """Verify that all advanced features are now sanctioned in production."""
         from src.pipeline.config import SOTAPipelineConfig
+
         # All these should work without raising
         cfg = SOTAPipelineConfig(
             probability_profile="production",
@@ -156,6 +165,7 @@ class TestStep1ProductionProfile:
 
     def test_validate_womens_production_profile_rejects_violations(self):
         from src.pipeline.womens import WomensPipelineConfig
+
         banned = [
             {"enable_brier_sharpening": True},
             {"enable_goto_conversion": True},
@@ -176,19 +186,27 @@ class TestStep3InferencePathVerification:
 
     def test_men_production_path_source_no_banned_components(self):
         from src.pipeline.sota import SOTAPipeline
+
         source = inspect.getsource(SOTAPipeline.predict_probability_production)
         banned = [
-            "_brier_post_processor", "_round_weighted_calibrator",
-            "_flb_correction", "seed_prior", "consistency_bonus",
-            "apply_experimental_", "BrierPostProcessor",
-            "_tournament_domain_adapter", "sharpener",
-            "goto_converter", "seed_override",
+            "_brier_post_processor",
+            "_round_weighted_calibrator",
+            "_flb_correction",
+            "seed_prior",
+            "consistency_bonus",
+            "apply_experimental_",
+            "BrierPostProcessor",
+            "_tournament_domain_adapter",
+            "sharpener",
+            "goto_converter",
+            "seed_override",
         ]
         for term in banned:
             assert term not in source, f"Men's production references banned: {term}"
 
     def test_men_production_uses_shared_helpers(self):
         from src.pipeline.sota import SOTAPipeline
+
         source = inspect.getsource(SOTAPipeline.predict_probability_production)
         required = ["apply_calibration", "apply_tournament_shrinkage", "apply_final_clip"]
         for fn in required:
@@ -196,6 +214,7 @@ class TestStep3InferencePathVerification:
 
     def test_women_production_path_source_no_banned_components(self):
         from src.pipeline.womens import WomensPipeline
+
         source = inspect.getsource(WomensPipeline.predict_probability_production)
         # Strip comments/docstrings to avoid false positives
         code_lines = []
@@ -214,13 +233,13 @@ class TestStep3InferencePathVerification:
                 continue
             code_lines.append(line)
         code_only = "\n".join(code_lines)
-        banned = ["post_processor", "seed_prior", "apply_experimental_",
-                   "sharpener", "goto_converter"]
+        banned = ["post_processor", "seed_prior", "apply_experimental_", "sharpener", "goto_converter"]
         for term in banned:
             assert term not in code_only, f"Women's production references banned: {term}"
 
     def test_women_production_uses_shared_helpers(self):
         from src.pipeline.womens import WomensPipeline
+
         source = inspect.getsource(WomensPipeline.predict_probability_production)
         required = ["apply_calibration", "apply_tournament_shrinkage", "apply_final_clip"]
         for fn in required:
@@ -229,8 +248,11 @@ class TestStep3InferencePathVerification:
     def test_production_four_stage_formula_equivalence(self):
         """Manually walk the 4-stage formula and verify exact equivalence."""
         from src.pipeline.probability_pipeline import (
-            apply_calibration, apply_tournament_shrinkage, apply_final_clip,
+            apply_calibration,
+            apply_tournament_shrinkage,
+            apply_final_clip,
         )
+
         raw = 0.72
         shrinkage = 0.06
         clip_lo, clip_hi = 0.005, 0.995
@@ -257,7 +279,9 @@ class TestStep3InferencePathVerification:
     def test_symmetry_property(self):
         """Verify P(A>B) + P(B>A) ≈ 1 for the production path."""
         from src.pipeline.probability_pipeline import (
-            apply_calibration, apply_tournament_shrinkage, apply_final_clip,
+            apply_calibration,
+            apply_tournament_shrinkage,
+            apply_final_clip,
         )
 
         def _full_pipeline(raw, shrinkage=0.06, clip_lo=0.005, clip_hi=0.995):
@@ -273,6 +297,7 @@ class TestStep3InferencePathVerification:
     def test_shrinkage_moves_toward_half(self):
         """Shrinkage should always move probabilities toward 0.5."""
         from src.pipeline.probability_pipeline import apply_tournament_shrinkage
+
         for raw in [0.1, 0.3, 0.5, 0.7, 0.9]:
             shrunk = apply_tournament_shrinkage(raw, 0.06)
             if raw > 0.5:
@@ -287,6 +312,7 @@ class TestStep3InferencePathVerification:
     def test_clip_bounds_respected(self):
         """Final clip must respect configured bounds."""
         from src.pipeline.probability_pipeline import apply_final_clip
+
         assert apply_final_clip(-0.1, 0.005, 0.995) == 0.005
         assert apply_final_clip(1.1, 0.005, 0.995) == 0.995
         assert apply_final_clip(0.5, 0.005, 0.995) == 0.5
@@ -294,6 +320,7 @@ class TestStep3InferencePathVerification:
     def test_nan_inf_guarded(self):
         """compute_raw_probability should catch NaN/Inf."""
         from src.pipeline.probability_pipeline import compute_raw_probability
+
         assert compute_raw_probability(float("nan")) == 0.5
         assert compute_raw_probability(float("inf")) == 0.5
         assert compute_raw_probability(float("-inf")) == 0.5
@@ -315,6 +342,7 @@ class TestStep4DataFreshness:
         m = _load_manifest()
         assert m["year"] == 2026
 
+    @pytest.mark.production
     def test_manifest_generated_recently(self):
         """Manifest should have been generated within the last 7 days."""
         m = _load_manifest()
@@ -436,16 +464,27 @@ class TestStep5BracketIngestion:
         b = _load_bracket()
         # Check for at least one team from a mid-major conference
         mid_major_confs = {
-            "Coastal Athletic", "Big South", "Southland", "MAAC",
-            "Western Athletic", "Ivy League", "Big West", "Horizon League",
-            "Ohio Valley", "Patriot League", "Sun Belt", "Big Sky",
-            "America East", "SWAC", "NEC", "MEAC", "Summit League",
+            "Coastal Athletic",
+            "Big South",
+            "Southland",
+            "MAAC",
+            "Western Athletic",
+            "Ivy League",
+            "Big West",
+            "Horizon League",
+            "Ohio Valley",
+            "Patriot League",
+            "Sun Belt",
+            "Big Sky",
+            "America East",
+            "SWAC",
+            "NEC",
+            "MEAC",
+            "Summit League",
         }
         confs = {t.get("conference", "") for t in b["teams"]}
         mid_major_found = confs & mid_major_confs
-        assert len(mid_major_found) >= 5, (
-            f"Only {len(mid_major_found)} mid-major conferences found"
-        )
+        assert len(mid_major_found) >= 5, f"Only {len(mid_major_found)} mid-major conferences found"
 
     def test_no_resolution_warnings(self):
         b = _load_bracket()
@@ -473,6 +512,7 @@ class TestStep6InferenceSmokeTest:
             apply_tournament_shrinkage,
             apply_final_clip,
         )
+
         p = compute_raw_probability(raw_prob)
         p = apply_calibration(p, None, clip_lo, clip_hi)
         p = apply_tournament_shrinkage(p, shrinkage)
@@ -521,7 +561,7 @@ class TestStep6InferenceSmokeTest:
         outputs = [self._run_pipeline(r) for r in raws]
         for i in range(len(outputs) - 1):
             assert outputs[i] < outputs[i + 1], (
-                f"Monotonicity violation: f({raws[i]})={outputs[i]} >= f({raws[i+1]})={outputs[i+1]}"
+                f"Monotonicity violation: f({raws[i]})={outputs[i]} >= f({raws[i + 1]})={outputs[i + 1]}"
             )
 
 
@@ -543,12 +583,14 @@ class TestStep7AblationLadder:
 
     def test_ablation_ladder_all_stages_present(self):
         from src.pipeline.probability_pipeline import run_ablation_ladder
+
         raw, out = self._get_synthetic_data()
         result = run_ablation_ladder(raw, out, calibrator=None, shrinkage=0.06)
         assert set(result.keys()) == {"raw", "calibrated", "shrunk", "final"}
 
     def test_ablation_ladder_metrics_complete(self):
         from src.pipeline.probability_pipeline import run_ablation_ladder
+
         raw, out = self._get_synthetic_data()
         result = run_ablation_ladder(raw, out, calibrator=None, shrinkage=0.06)
         required = {"brier", "ece", "log_loss", "mean_movement", "max_movement"}
@@ -558,6 +600,7 @@ class TestStep7AblationLadder:
 
     def test_raw_stage_zero_movement(self):
         from src.pipeline.probability_pipeline import run_ablation_ladder
+
         raw, out = self._get_synthetic_data()
         result = run_ablation_ladder(raw, out, calibrator=None, shrinkage=0.06)
         assert result["raw"]["mean_movement"] == 0.0
@@ -566,6 +609,7 @@ class TestStep7AblationLadder:
     def test_shrinkage_movement_is_modest(self):
         """Shrinkage should cause modest movement, not chaos."""
         from src.pipeline.probability_pipeline import run_ablation_ladder
+
         raw, out = self._get_synthetic_data()
         result = run_ablation_ladder(raw, out, calibrator=None, shrinkage=0.06)
         # With 0.06 shrinkage, max movement should be < 0.06 * 0.5 = 0.03
@@ -574,6 +618,7 @@ class TestStep7AblationLadder:
 
     def test_brier_scores_are_finite(self):
         from src.pipeline.probability_pipeline import run_ablation_ladder
+
         raw, out = self._get_synthetic_data()
         result = run_ablation_ladder(raw, out, calibrator=None, shrinkage=0.06)
         for stage, metrics in result.items():
@@ -583,6 +628,7 @@ class TestStep7AblationLadder:
     def test_no_calibrator_raw_equals_calibrated(self):
         """Without a calibrator, raw == calibrated."""
         from src.pipeline.probability_pipeline import run_ablation_ladder
+
         raw, out = self._get_synthetic_data()
         result = run_ablation_ladder(raw, out, calibrator=None, shrinkage=0.06)
         assert result["calibrated"]["mean_movement"] == 0.0
@@ -612,8 +658,11 @@ class TestStep8DistributionSanity:
     def _generate_distribution(self, n=500):
         """Simulate a realistic probability distribution through the pipeline."""
         from src.pipeline.probability_pipeline import (
-            apply_calibration, apply_tournament_shrinkage, apply_final_clip,
+            apply_calibration,
+            apply_tournament_shrinkage,
+            apply_final_clip,
         )
+
         np.random.seed(2026)
         # Simulate raw probs roughly matching tournament game spread
         raws = np.clip(np.random.beta(2, 2, n), 0.02, 0.98)
@@ -640,8 +689,11 @@ class TestStep8DistributionSanity:
     def test_favorites_generally_favored(self):
         """Probs > 0.5 from strong raw inputs should remain > 0.5 after pipeline."""
         from src.pipeline.probability_pipeline import (
-            apply_calibration, apply_tournament_shrinkage, apply_final_clip,
+            apply_calibration,
+            apply_tournament_shrinkage,
+            apply_final_clip,
         )
+
         for raw in [0.7, 0.8, 0.9]:
             p = apply_calibration(raw, None, 0.005, 0.995)
             p = apply_tournament_shrinkage(p, 0.06)
@@ -671,9 +723,12 @@ class TestStep9HistoricalBacktest:
     def test_production_path_on_historical_like_data(self):
         """Simulate LOYO-like evaluation on the production path."""
         from src.pipeline.probability_pipeline import (
-            apply_calibration, apply_tournament_shrinkage, apply_final_clip,
+            apply_calibration,
+            apply_tournament_shrinkage,
+            apply_final_clip,
             run_ablation_ladder,
         )
+
         np.random.seed(2024)
         # Simulate 2024-like tournament outcomes
         n = 63  # ~1 tournament bracket worth
@@ -689,6 +744,7 @@ class TestStep9HistoricalBacktest:
     def test_production_path_on_skewed_data(self):
         """Even with heavy favorites, production path shouldn't produce NaN."""
         from src.pipeline.probability_pipeline import run_ablation_ladder
+
         np.random.seed(2025)
         raws = np.array([0.95, 0.90, 0.85, 0.80, 0.55, 0.50, 0.45, 0.20])
         outcomes = np.array([1, 1, 1, 1, 1, 0, 0, 0], dtype=float)
@@ -708,6 +764,7 @@ class TestStep10ExportArtifact:
 
     def test_parse_kaggle_id_valid(self):
         from src.exports.kaggle import parse_kaggle_id
+
         season, t1, t2 = parse_kaggle_id("2026_1234_5678")
         assert season == 2026
         assert t1 == 1234
@@ -715,11 +772,13 @@ class TestStep10ExportArtifact:
 
     def test_parse_kaggle_id_invalid(self):
         from src.exports.kaggle import parse_kaggle_id
+
         with pytest.raises(ValueError):
             parse_kaggle_id("bad_format")
 
     def test_parse_kaggle_id_none(self):
         from src.exports.kaggle import parse_kaggle_id
+
         with pytest.raises(ValueError):
             parse_kaggle_id(None)
 
@@ -754,6 +813,7 @@ class TestStep10ExportArtifact:
 
     def test_womens_team_routing(self):
         from src.exports.kaggle import is_womens_team
+
         assert is_womens_team(3001) is True
         assert is_womens_team(1234) is False
         assert is_womens_team(3000) is True
@@ -765,6 +825,7 @@ class TestStep10ExportArtifact:
 
         sample = pd.DataFrame({"ID": ["2026_1_2"], "Pred": [0.5]})
         id_map = {1: "team_a", 2: "team_b"}
+
         def predict_fn(a, b):
             return 1.5  # Invalid
 
@@ -782,6 +843,7 @@ class TestStep11Reproducibility:
 
     def test_config_defaults_are_deterministic(self):
         from src.pipeline.config import SOTAPipelineConfig
+
         c1 = SOTAPipelineConfig()
         c2 = SOTAPipelineConfig()
         # All important production fields should be identical
@@ -800,8 +862,11 @@ class TestStep11Reproducibility:
     def test_pipeline_functions_are_pure(self):
         """Calling pipeline functions twice with same input should give same output."""
         from src.pipeline.probability_pipeline import (
-            apply_calibration, apply_tournament_shrinkage, apply_final_clip,
+            apply_calibration,
+            apply_tournament_shrinkage,
+            apply_final_clip,
         )
+
         for _ in range(10):
             r = 0.73
             a = apply_calibration(r, None, 0.005, 0.995)
@@ -825,12 +890,14 @@ class TestCrossCuttingAuditAlignment:
 
     def test_holdout_evaluator_tournament_adapt_uses_shared(self):
         from src.ml.evaluation.rdof_audit import HoldoutEvaluator
+
         source = inspect.getsource(HoldoutEvaluator._tournament_adapt)
         assert "probability_pipeline" in source
         assert "apply_tournament_shrinkage" in source
 
     def test_holdout_evaluator_posthoc_uses_shared(self):
         from src.ml.evaluation.rdof_audit import HoldoutEvaluator
+
         source = inspect.getsource(HoldoutEvaluator._apply_posthoc_and_score)
         assert "probability_pipeline" in source
         assert "apply_calibration" in source
@@ -839,6 +906,7 @@ class TestCrossCuttingAuditAlignment:
         """The production section of probability_pipeline.py should not import
         experimental components."""
         import src.pipeline.probability_pipeline as pp
+
         source = inspect.getsource(pp)
         # Find the production section (before the experimental section)
         prod_end = source.find("# Experimental functions")

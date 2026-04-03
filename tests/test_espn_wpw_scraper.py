@@ -51,14 +51,18 @@ class TestParseWpwHtmlScriptEmbed:
     def test_rates_decrease_by_round(self, script_embed_html):
         teams = ESPNPicksScraper.parse_wpw_html(script_embed_html)
         round_keys = [
-            "round_of_64_pct", "round_of_32_pct", "sweet_16_pct",
-            "elite_8_pct", "final_four_pct", "champion_pct",
+            "round_of_64_pct",
+            "round_of_32_pct",
+            "sweet_16_pct",
+            "elite_8_pct",
+            "final_four_pct",
+            "champion_pct",
         ]
         for team in teams:
             for i in range(len(round_keys) - 1):
                 assert team[round_keys[i]] >= team[round_keys[i + 1]], (
                     f"{team['name']}: {round_keys[i]}={team[round_keys[i]]} "
-                    f"< {round_keys[i+1]}={team[round_keys[i+1]]}"
+                    f"< {round_keys[i + 1]}={team[round_keys[i + 1]]}"
                 )
 
 
@@ -149,13 +153,7 @@ class TestWpwTeamsToDict:
 
 
 class TestTryHtmlPageIntegration:
-    """Integration test: _try_html_page is deprecated; JSON extraction works."""
-
-    def test_try_html_page_deprecated_returns_none(self, script_embed_html):
-        """_try_html_page is deprecated and always returns None."""
-        scraper = ESPNPicksScraper()
-        result = scraper._try_html_page(2026)
-        assert result is None
+    """Integration test: JSON extraction from HTML works."""
 
     def test_script_embed_extracted_via_json(self, script_embed_html):
         """_extract_json_from_html extracts teams from <script> embeds."""
@@ -190,16 +188,14 @@ class TestTryHtmlPageIntegration:
         mock_resp.status_code = 403
 
         with patch.object(scraper.session, "get", return_value=mock_resp):
-            result = scraper._try_html_page(2026)
+            result = scraper._try_json_url("http://test", 2026, "test")
 
         assert result is None
 
     def test_network_error_returns_none(self):
         scraper = ESPNPicksScraper()
-        with patch.object(
-            scraper.session, "get", side_effect=ConnectionError("no network")
-        ):
-            result = scraper._try_html_page(2026)
+        with patch.object(scraper.session, "get", side_effect=ConnectionError("no network")):
+            result = scraper._try_json_url("http://test", 2026, "test")
 
         assert result is None
 

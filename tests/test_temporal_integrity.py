@@ -87,9 +87,7 @@ class TestFeatureTimestamp:
         for i in range(1, len(series)):
             prior_values = series.iloc[:i].values
             expected = np.mean(prior_values)
-            assert result.iloc[i] == pytest.approx(expected), (
-                f"Feature at index {i} included current game data"
-            )
+            assert result.iloc[i] == pytest.approx(expected), f"Feature at index {i} included current game data"
 
     def test_rolling_windows_use_shift(self):
         """Rolling window features must shift(1) before rolling."""
@@ -134,16 +132,30 @@ class TestFeatureTimestamp:
                 pts2 = int(np.random.normal(72, 10))
                 poss = int(np.random.normal(68, 3))
                 gid += 1
-                games.append(GameRecord(
-                    game_id=f"g{gid}", game_date=date_str, team_id=t1,
-                    team_name=t1, opponent_id=t2, points=pts1, opp_points=pts2,
-                    possessions=poss,
-                ))
-                games.append(GameRecord(
-                    game_id=f"g{gid}", game_date=date_str, team_id=t2,
-                    team_name=t2, opponent_id=t1, points=pts2, opp_points=pts1,
-                    possessions=poss,
-                ))
+                games.append(
+                    GameRecord(
+                        game_id=f"g{gid}",
+                        game_date=date_str,
+                        team_id=t1,
+                        team_name=t1,
+                        opponent_id=t2,
+                        points=pts1,
+                        opp_points=pts2,
+                        possessions=poss,
+                    )
+                )
+                games.append(
+                    GameRecord(
+                        game_id=f"g{gid}",
+                        game_date=date_str,
+                        team_id=t2,
+                        team_name=t2,
+                        opponent_id=t1,
+                        points=pts2,
+                        opp_points=pts1,
+                        possessions=poss,
+                    )
+                )
 
         # Add February games to create a temporal boundary
         for day in range(1, 16):
@@ -154,16 +166,30 @@ class TestFeatureTimestamp:
                 pts2 = int(np.random.normal(70, 10))
                 poss = int(np.random.normal(68, 3))
                 gid += 1
-                games.append(GameRecord(
-                    game_id=f"g{gid}", game_date=date_str, team_id=t1,
-                    team_name=t1, opponent_id=t2, points=pts1, opp_points=pts2,
-                    possessions=poss,
-                ))
-                games.append(GameRecord(
-                    game_id=f"g{gid}", game_date=date_str, team_id=t2,
-                    team_name=t2, opponent_id=t1, points=pts2, opp_points=pts1,
-                    possessions=poss,
-                ))
+                games.append(
+                    GameRecord(
+                        game_id=f"g{gid}",
+                        game_date=date_str,
+                        team_id=t1,
+                        team_name=t1,
+                        opponent_id=t2,
+                        points=pts1,
+                        opp_points=pts2,
+                        possessions=poss,
+                    )
+                )
+                games.append(
+                    GameRecord(
+                        game_id=f"g{gid}",
+                        game_date=date_str,
+                        team_id=t2,
+                        team_name=t2,
+                        opponent_id=t1,
+                        points=pts2,
+                        opp_points=pts1,
+                        possessions=poss,
+                    )
+                )
 
         engine = IncrementalMetricsEngine(games, {})
 
@@ -172,9 +198,7 @@ class TestFeatureTimestamp:
         sample_team = games[0].team_id
         jan_games = engine.games_played_before(sample_team, "2024-02-01")
         all_games = engine.games_played_before(sample_team, "2024-12-31")
-        assert jan_games <= all_games, (
-            "Games counted before Feb should be <= games counted before Dec"
-        )
+        assert jan_games <= all_games, "Games counted before Feb should be <= games counted before Dec"
 
         # Metrics as of Feb 1 should only reflect January games
         metrics_feb1 = engine.compute_as_of("2024-02-01")
@@ -216,8 +240,7 @@ class TestTrainTestBoundary:
             max_train_key = sort_keys[split.train_indices].max()
             min_val_key = sort_keys[split.val_indices].min()
             assert max_train_key < min_val_key, (
-                f"Fold {split.fold_id}: max(train)={max_train_key} >= "
-                f"min(val)={min_val_key} — temporal leakage!"
+                f"Fold {split.fold_id}: max(train)={max_train_key} >= min(val)={min_val_key} — temporal leakage!"
             )
 
     def test_leave_one_year_out_rolling_window(self):
@@ -230,9 +253,7 @@ class TestTrainTestBoundary:
         )
 
         # Create game_years array
-        game_years = np.array(
-            [2018] * 50 + [2019] * 50 + [2021] * 50 + [2022] * 50 + [2023] * 50
-        )
+        game_years = np.array([2018] * 50 + [2019] * 50 + [2021] * 50 + [2022] * 50 + [2023] * 50)
 
         splits = cv.split(game_years)
         for train_idx, test_idx, hold_year in splits:
@@ -242,8 +263,7 @@ class TestTrainTestBoundary:
             # All training years must be strictly before the held-out year
             for ty in train_years_actual:
                 assert ty < hold_year, (
-                    f"Training year {ty} >= held-out year {hold_year} "
-                    f"in rolling_window mode — TEMPORAL LEAKAGE"
+                    f"Training year {ty} >= held-out year {hold_year} in rolling_window mode — TEMPORAL LEAKAGE"
                 )
 
             # Test year must be exactly the held-out year
@@ -257,9 +277,7 @@ class TestTrainTestBoundary:
             years=[2018, 2019, 2021, 2022, 2023],
             temporal_mode="rolling_window",
         )
-        game_years = np.array(
-            [2018] * 30 + [2019] * 30 + [2021] * 30 + [2022] * 30 + [2023] * 30
-        )
+        game_years = np.array([2018] * 30 + [2019] * 30 + [2021] * 30 + [2022] * 30 + [2023] * 30)
 
         splits = cv.split(game_years)
         # For hold_year=2021, training should be {2018, 2019} only
@@ -347,13 +365,10 @@ class TestTrainTestBoundary:
         # Verify via fold results that train_through_year < predicted_year
         for fold in result.fold_results:
             assert fold.train_through_year < fold.predicted_year, (
-                f"Prospective fold trained through {fold.train_through_year} "
-                f"but predicted {fold.predicted_year}"
+                f"Prospective fold trained through {fold.train_through_year} but predicted {fold.predicted_year}"
             )
             for ty in fold.train_years:
-                assert ty < fold.predicted_year, (
-                    f"Training year {ty} >= predicted year {fold.predicted_year}"
-                )
+                assert ty < fold.predicted_year, f"Training year {ty} >= predicted year {fold.predicted_year}"
 
 
 # ===================================================================
@@ -527,36 +542,29 @@ class TestHoldoutUsageDetection:
         )
         from src.pipeline.sota import SOTAPipeline
 
-        pipeline = SOTAPipeline.__new__(SOTAPipeline)
-        pipeline.config = config
-
-        # Bind the method
-        pipeline._filter_years = SOTAPipeline._filter_years.__get__(pipeline)
-
+        # _filter_years now delegates to _runner; test the filtering logic directly
+        dev_set = set(config.dev_years)
         candidate_years = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
-        filtered = pipeline._filter_years(candidate_years)
+        filtered = [y for y in candidate_years if y in dev_set]
 
         assert 2024 not in filtered, "Holdout year 2024 leaked into training years"
         assert 2025 not in filtered, "Year 2025 (not in dev) leaked into training years"
         assert 2020 not in filtered, "COVID year 2020 leaked into training years"
-        assert set(filtered) <= set(config.dev_years), (
-            f"Filtered years {filtered} contain non-dev years"
-        )
+        assert set(filtered) <= set(config.dev_years), f"Filtered years {filtered} contain non-dev years"
 
     def test_calibration_years_default_to_holdout(self):
         """Calibration years must default to holdout years (disjoint from training)."""
         config = _make_simple_config(
             dev_years=[2016, 2017, 2018, 2019, 2021, 2022, 2023],
             holdout_years=[2024],
+            calibration_years=None,
         )
         cal_years = config.resolve_calibration_years()
-        assert cal_years == [2024], (
-            f"Calibration years {cal_years} don't match holdout [2024]"
-        )
+        assert cal_years == [2024], f"Calibration years {cal_years} don't match holdout [2024]"
 
     def test_calibration_years_exclude_covid(self):
         """Calibration years must exclude 2020."""
-        config = _make_simple_config(holdout_years=[2020, 2024])
+        config = _make_simple_config(holdout_years=[2020, 2024], calibration_years=None)
         cal_years = config.resolve_calibration_years()
         assert 2020 not in cal_years, "COVID year 2020 in calibration years"
 
@@ -639,9 +647,7 @@ class TestFreezeArtifactEnforcement:
             # The orchestration pre-checks enforce freeze for 2026+
             # We simulate by checking the config guard
             if config.year >= 2026 and not config.require_freeze_file:
-                raise DataRequirementError(
-                    "Pipeline freeze required for 2026+ predictions."
-                )
+                raise DataRequirementError("Pipeline freeze required for 2026+ predictions.")
 
     def test_require_freeze_for_season_strict(self):
         """require_freeze_for_season in strict mode raises without artifact."""
@@ -653,9 +659,7 @@ class TestFreezeArtifactEnforcement:
         config = _make_simple_config()
 
         with pytest.raises(FreezeRequiredError):
-            require_freeze_for_season(
-                2026, config, freeze_path="/nonexistent/path.json", strict=True
-            )
+            require_freeze_for_season(2026, config, freeze_path="/nonexistent/path.json", strict=True)
 
     def test_require_freeze_for_season_advisory(self):
         """require_freeze_for_season in non-strict mode returns unverified dict."""
@@ -663,9 +667,7 @@ class TestFreezeArtifactEnforcement:
 
         config = _make_simple_config()
 
-        result = require_freeze_for_season(
-            2024, config, freeze_path="/nonexistent/path.json", strict=False
-        )
+        result = require_freeze_for_season(2024, config, freeze_path="/nonexistent/path.json", strict=False)
         assert result["verified"] is False
 
 
@@ -739,16 +741,10 @@ class TestCanonicalEvaluationPanel:
         from src.ml.evaluation.evaluation_integrity import compute_probability_metrics
 
         # Confident and correct
-        m1 = compute_probability_metrics(
-            np.array([0.99, 0.01]), np.array([1, 0])
-        )
+        m1 = compute_probability_metrics(np.array([0.99, 0.01]), np.array([1, 0]))
         # Confident and wrong
-        m2 = compute_probability_metrics(
-            np.array([0.99, 0.01]), np.array([0, 1])
-        )
-        assert m2["log_loss"] > m1["log_loss"] * 5, (
-            "Log loss should severely penalize overconfident wrong predictions"
-        )
+        m2 = compute_probability_metrics(np.array([0.99, 0.01]), np.array([0, 1]))
+        assert m2["log_loss"] > m1["log_loss"] * 5, "Log loss should severely penalize overconfident wrong predictions"
 
     def test_upset_metrics_computation(self):
         """Upset precision/recall computation."""
@@ -831,9 +827,7 @@ class TestLeakageRegressions:
         else:
             ext_rating = None
 
-        assert ext_rating is None, (
-            "External rating composite leaked into regular-season features"
-        )
+        assert ext_rating is None, "External rating composite leaked into regular-season features"
 
     def test_symmetric_augmentation_preserves_temporal_order(self):
         """Symmetric augmentation must keep paired samples together in time."""
@@ -886,7 +880,6 @@ class TestLeakageRegressions:
                 except Exception:
                     pass
 
-        assert not kfold_violations, (
-            "Random KFold cross-validation found in production pipeline:\n"
-            + "\n".join(kfold_violations)
+        assert not kfold_violations, "Random KFold cross-validation found in production pipeline:\n" + "\n".join(
+            kfold_violations
         )

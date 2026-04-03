@@ -16,6 +16,13 @@ from ._retry import retry_request
 logger = logging.getLogger(__name__)
 
 
+def _make_soup(html_or_text):
+    try:
+        return BeautifulSoup(html_or_text, "lxml")
+    except Exception:
+        return BeautifulSoup(html_or_text, "html.parser")
+
+
 class SportsReferenceScraper:
     """Scrape season-level CBB team stats from Sports Reference."""
 
@@ -64,15 +71,21 @@ class SportsReferenceScraper:
             if cache_ver != self._CACHE_VERSION:
                 logger.info(
                     "SR cache for %d has stale version '%s' (current: '%s') — forcing re-fetch.",
-                    year, cache_ver, self._CACHE_VERSION,
+                    year,
+                    cache_ver,
+                    self._CACHE_VERSION,
                 )
-            elif (teams := cached.get("teams", [])) and not self._has_critical_zeros(teams) and not self._has_degraded_schema(teams):
+            elif (
+                (teams := cached.get("teams", []))
+                and not self._has_critical_zeros(teams)
+                and not self._has_degraded_schema(teams)
+            ):
                 return teams
             elif teams and self._has_degraded_schema(teams):
                 logger.info(
-                    "SR cache for %d has degraded schema (%d fields vs %d required) "
-                    "— forcing re-fetch.",
-                    year, len(set(teams[0].keys())) if teams else 0,
+                    "SR cache for %d has degraded schema (%d fields vs %d required) — forcing re-fetch.",
+                    year,
+                    len(set(teams[0].keys())) if teams else 0,
                     len(self._REQUIRED_FIELDS),
                 )
 
@@ -81,7 +94,8 @@ class SportsReferenceScraper:
         if teams and len(teams) >= 100:
             logger.info(
                 "Using Torvik data as primary source for %d (%d teams)",
-                year, len(teams),
+                year,
+                len(teams),
             )
             self._save_cache(cache_name, {"teams": teams, "cache_version": self._CACHE_VERSION})
             return teams
@@ -89,7 +103,8 @@ class SportsReferenceScraper:
         # --- Fallback: Sports Reference HTML scraping ---
         logger.info(
             "Torvik returned %d teams; falling back to Sports Reference HTML for %d",
-            len(teams) if teams else 0, year,
+            len(teams) if teams else 0,
+            year,
         )
         teams = self._fetch_from_sr_html(year, game_records=game_records)
         if teams:
@@ -114,16 +129,18 @@ class SportsReferenceScraper:
 
             teams = []
             for t in torvik_teams:
-                teams.append({
-                    "team_name": t.name,
-                    "pace": t.adj_tempo if t.adj_tempo > 0 else 0.0,
-                    "off_rtg": t.adj_offensive_efficiency if t.adj_offensive_efficiency > 0 else 0.0,
-                    "def_rtg": t.adj_defensive_efficiency if t.adj_defensive_efficiency > 0 else 0.0,
-                    "wins": t.wins,
-                    "losses": t.losses,
-                    "srs": 0.0,  # Not available from Torvik; downstream handles zeros
-                    "sos": 0.0,  # Not available from Torvik; downstream handles zeros
-                })
+                teams.append(
+                    {
+                        "team_name": t.name,
+                        "pace": t.adj_tempo if t.adj_tempo > 0 else 0.0,
+                        "off_rtg": t.adj_offensive_efficiency if t.adj_offensive_efficiency > 0 else 0.0,
+                        "def_rtg": t.adj_defensive_efficiency if t.adj_defensive_efficiency > 0 else 0.0,
+                        "wins": t.wins,
+                        "losses": t.losses,
+                        "srs": 0.0,  # Not available from Torvik; downstream handles zeros
+                        "sos": 0.0,  # Not available from Torvik; downstream handles zeros
+                    }
+                )
             return teams
         except Exception as exc:
             logger.info("Torvik data unavailable for %d: %s", year, exc)
@@ -190,7 +207,7 @@ class SportsReferenceScraper:
         return teams
 
     def _parse_team_table(self, html: str) -> List[Dict]:
-        soup = BeautifulSoup(html, "lxml")
+        soup = _make_soup(html)
         table = soup.find("table", {"id": "adv_school_stats"})
         if not table:
             return []
@@ -222,19 +239,29 @@ class SportsReferenceScraper:
             opp_pts = self._to_float(opp_pts_cell.get_text(strip=True) if opp_pts_cell else "0")
 
             pace = self._validate_range(
-                "pace", self._try_float(pace_cell.get_text(strip=True) if pace_cell else None), clean_name,
+                "pace",
+                self._try_float(pace_cell.get_text(strip=True) if pace_cell else None),
+                clean_name,
             )
             off_rtg = self._validate_range(
-                "off_rtg", self._try_float(off_cell.get_text(strip=True) if off_cell else None), clean_name,
+                "off_rtg",
+                self._try_float(off_cell.get_text(strip=True) if off_cell else None),
+                clean_name,
             )
             def_rtg = self._validate_range(
-                "def_rtg", self._try_float(def_cell.get_text(strip=True) if def_cell else None), clean_name,
+                "def_rtg",
+                self._try_float(def_cell.get_text(strip=True) if def_cell else None),
+                clean_name,
             )
             srs = self._validate_range(
-                "srs", self._try_float(srs_cell.get_text(strip=True) if srs_cell else None), clean_name,
+                "srs",
+                self._try_float(srs_cell.get_text(strip=True) if srs_cell else None),
+                clean_name,
             )
             sos = self._validate_range(
-                "sos", self._try_float(sos_cell.get_text(strip=True) if sos_cell else None), clean_name,
+                "sos",
+                self._try_float(sos_cell.get_text(strip=True) if sos_cell else None),
+                clean_name,
             )
 
             if def_rtg <= 0 and pace > 0 and games > 0 and opp_pts > 0:
@@ -305,7 +332,8 @@ class SportsReferenceScraper:
         if ot_skipped:
             logger.info(
                 "Skipped %d OT game(s) from def_rtg computation (%d total records)",
-                ot_skipped, len(game_records),
+                ot_skipped,
+                len(game_records),
             )
 
         # Compute league-average pace for last-resort fallback instead of
@@ -313,7 +341,11 @@ class SportsReferenceScraper:
         # can introduce 7-8% error in defensive rating.
         if team_paces:
             valid_paces = [p for p in team_paces.values() if p > 0]
-            league_avg_pace = sum(valid_paces) / len(valid_paces) if valid_paces else SportsReferenceScraper._FALLBACK_POSSESSIONS_PER_GAME
+            league_avg_pace = (
+                sum(valid_paces) / len(valid_paces)
+                if valid_paces
+                else SportsReferenceScraper._FALLBACK_POSSESSIONS_PER_GAME
+            )
         else:
             league_avg_pace = SportsReferenceScraper._FALLBACK_POSSESSIONS_PER_GAME
 
@@ -343,7 +375,7 @@ class SportsReferenceScraper:
             logger.warning("Could not fetch basic stats page: %s", exc)
             return {}
 
-        soup = BeautifulSoup(response.text, "lxml")
+        soup = _make_soup(response.text)
         table = soup.find("table", {"id": "basic_school_stats"})
         if not table:
             return {}
@@ -372,7 +404,9 @@ class SportsReferenceScraper:
             if games_val is None or opp_pts_val is None:
                 continue
             pace = self._validate_range(
-                "pace", self._try_float(pace_cell.get_text(strip=True) if pace_cell else None), clean_name,
+                "pace",
+                self._try_float(pace_cell.get_text(strip=True) if pace_cell else None),
+                clean_name,
             )
             if pace > 0:
                 page_paces.append(pace)
@@ -383,7 +417,9 @@ class SportsReferenceScraper:
             league_avg_pace = sum(page_paces) / len(page_paces)
         elif team_paces:
             valid_paces = [p for p in team_paces.values() if p > 0]
-            league_avg_pace = sum(valid_paces) / len(valid_paces) if valid_paces else self._FALLBACK_POSSESSIONS_PER_GAME
+            league_avg_pace = (
+                sum(valid_paces) / len(valid_paces) if valid_paces else self._FALLBACK_POSSESSIONS_PER_GAME
+            )
         else:
             league_avg_pace = self._FALLBACK_POSSESSIONS_PER_GAME
 
@@ -430,7 +466,8 @@ class SportsReferenceScraper:
                 missing = cls._REQUIRED_FIELDS - present
                 logger.warning(
                     "SR cache schema degraded: team '%s' missing fields %s",
-                    t.get("team_name", "?"), missing,
+                    t.get("team_name", "?"),
+                    missing,
                 )
                 return True
         return False
@@ -443,6 +480,7 @@ class SportsReferenceScraper:
         NCAA suffix, ensuring consistent ID generation across all modules.
         """
         from ..normalize import normalize_team_id, strip_ncaa_suffix_name
+
         cleaned = strip_ncaa_suffix_name(name)
         return normalize_team_id(cleaned)
 
@@ -490,7 +528,11 @@ class SportsReferenceScraper:
         if bounds and (value < bounds[0] or value > bounds[1]):
             logger.warning(
                 "SR range violation: %s=%.2f outside [%.0f, %.0f] for team '%s'; treating as missing",
-                field, value, bounds[0], bounds[1], team_name,
+                field,
+                value,
+                bounds[0],
+                bounds[1],
+                team_name,
             )
             return 0.0
         return value

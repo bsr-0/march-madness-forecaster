@@ -64,7 +64,10 @@ class TournamentSeedScraper:
         return teams
 
     def _parse_seed_teams(self, html: str, season: int) -> List[Dict]:
-        soup = BeautifulSoup(html, "lxml")
+        try:
+            soup = BeautifulSoup(html, "lxml")
+        except Exception:
+            soup = BeautifulSoup(html, "html.parser")
         brackets = soup.find("div", {"id": "brackets"})
         if not brackets:
             return []
@@ -72,8 +75,7 @@ class TournamentSeedScraper:
         # Sports Reference uses varying region names across years (e.g.
         # "southeast"/"southwest" in 2011 instead of "south"/"midwest").
         # Scan for all region divs dynamically to avoid missing any.
-        regions = ("east", "west", "south", "midwest",
-                   "southeast", "southwest", "mideast", "northwest")
+        regions = ("east", "west", "south", "midwest", "southeast", "southwest", "mideast", "northwest")
         by_slug: Dict[str, Dict] = {}
         for region in regions:
             region_div = brackets.find("div", {"id": region})

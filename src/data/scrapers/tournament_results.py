@@ -27,11 +27,16 @@ from ..normalize import normalize_team_id
 
 logger = logging.getLogger(__name__)
 
+
+def _make_soup(html_or_text):
+    try:
+        return BeautifulSoup(html_or_text, "lxml")
+    except Exception:
+        return BeautifulSoup(html_or_text, "html.parser")
+
+
 # ESPN scoreboard API — stable, structured, no auth required.
-_ESPN_SCOREBOARD_URL = (
-    "https://site.api.espn.com/apis/site/v2/sports/basketball/"
-    "mens-college-basketball/scoreboard"
-)
+_ESPN_SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard"
 
 # ESPN season type 3 = postseason (NCAA tournament).
 _ESPN_SEASON_TYPE = 3
@@ -67,12 +72,14 @@ class TournamentResultsScraper:
 
     def __init__(self, cache_dir: Optional[str] = None):
         self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            ),
-        })
+        self.session.headers.update(
+            {
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                ),
+            }
+        )
         self.cache_dir = Path(cache_dir) if cache_dir else None
         if self.cache_dir:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -102,7 +109,8 @@ class TournamentResultsScraper:
             # --- Fallback: Sports Reference bracket HTML ---
             logger.info(
                 "ESPN returned %d games; falling back to Sports Reference HTML for %d",
-                len(games) if games else 0, season,
+                len(games) if games else 0,
+                season,
             )
             games = self._scrape_sports_reference(season)
 
@@ -110,6 +118,7 @@ class TournamentResultsScraper:
         if games:
             try:
                 from .schemas import validate_tournament_games
+
                 games = validate_tournament_games(games)
             except Exception as e:
                 logger.warning("Tournament games schema validation failed: %s", e)
@@ -153,7 +162,9 @@ class TournamentResultsScraper:
             }
             try:
                 resp = self.session.get(
-                    _ESPN_SCOREBOARD_URL, params=params, timeout=30,
+                    _ESPN_SCOREBOARD_URL,
+                    params=params,
+                    timeout=30,
                 )
                 resp.raise_for_status()
                 data = resp.json()
@@ -226,13 +237,15 @@ class TournamentResultsScraper:
                     seed = int(c["seed"])
                 except (TypeError, ValueError):
                     pass
-            teams.append({
-                "name": name,
-                "team_id": normalize_team_id(name),
-                "score": score,
-                "seed": seed,
-                "winner": c.get("winner", False),
-            })
+            teams.append(
+                {
+                    "name": name,
+                    "team_id": normalize_team_id(name),
+                    "score": score,
+                    "seed": seed,
+                    "winner": c.get("winner", False),
+                }
+            )
 
         if teams[0]["score"] == 0 and teams[1]["score"] == 0:
             return None
@@ -290,9 +303,7 @@ class TournamentResultsScraper:
 
         return self._parse_bracket(response.text, season)
 
-    def scrape_years(
-        self, years: List[int], delay: float = 3.0
-    ) -> Dict[int, List[Dict]]:
+    def scrape_years(self, years: List[int], delay: float = 3.0) -> Dict[int, List[Dict]]:
         """Scrape multiple years with polite delays.
 
         Args:
@@ -324,7 +335,7 @@ class TournamentResultsScraper:
 
         Final Four and Championship are in ``<div id="national">``
         """
-        soup = BeautifulSoup(html, "lxml")
+        soup = _make_soup(html)
         brackets = soup.find("div", {"id": "brackets"})
         if not brackets:
             logger.warning("No brackets div found")
@@ -333,8 +344,7 @@ class TournamentResultsScraper:
         games = []
 
         # Parse regional brackets
-        regions = ("east", "west", "south", "midwest",
-                   "southeast", "southwest", "mideast", "northwest")
+        regions = ("east", "west", "south", "midwest", "southeast", "southwest", "mideast", "northwest")
         for region in regions:
             region_div = brackets.find("div", {"id": region})
             if region_div is None:
@@ -356,9 +366,7 @@ class TournamentResultsScraper:
 
         return games
 
-    def _parse_region(
-        self, region_div, season: int, region_name: str
-    ) -> List[Dict]:
+    def _parse_region(self, region_div, season: int, region_name: str) -> List[Dict]:
         """Parse games from a single region bracket div."""
         games = []
 
@@ -370,16 +378,12 @@ class TournamentResultsScraper:
 
             # Each game is a pair of consecutive team entries
             # Look for game containers or parse team rows
-            game_entries = self._extract_games_from_round(
-                round_div, season, round_name, region_name
-            )
+            game_entries = self._extract_games_from_round(round_div, season, round_name, region_name)
             games.extend(game_entries)
 
         return games
 
-    def _extract_games_from_round(
-        self, round_div, season: int, round_name: str, region: str
-    ) -> List[Dict]:
+    def _extract_games_from_round(self, round_div, season: int, round_name: str, region: str) -> List[Dict]:
         """Extract individual games from a round div.
 
         SR bracket HTML typically has this structure per game:
@@ -393,9 +397,7 @@ class TournamentResultsScraper:
 
         # Strategy: find all team links within this round and pair them
         # Each game is two consecutive teams
-        team_links = round_div.find_all(
-            "a", href=re.compile(r"/cbb/schools/.+/men/\d+\.html")
-        )
+        team_links = round_div.find_all("a", href=re.compile(r"/cbb/schools/.+/men/\d+\.html"))
 
         # Process pairs of teams
         for i in range(0, len(team_links) - 1, 2):
@@ -408,9 +410,7 @@ class TournamentResultsScraper:
 
         return games
 
-    def _parse_game_pair(
-        self, link1, link2, season: int, round_name: str, region: str
-    ) -> Optional[Dict]:
+    def _parse_game_pair(self, link1, link2, season: int, round_name: str, region: str) -> Optional[Dict]:
         """Parse a pair of team links into a game result.
 
         For each team, we need: slug (from href), seed (from nearby span),
@@ -496,7 +496,7 @@ class TournamentResultsScraper:
             # Look for numeric text in the parent
             all_text = parent.get_text(strip=True)
             # Extract numbers that aren't the seed
-            nums = re.findall(r'\b(\d+)\b', all_text)
+            nums = re.findall(r"\b(\d+)\b", all_text)
             if len(nums) >= 2:
                 # First number is likely seed, second is score
                 for n in nums[1:]:
