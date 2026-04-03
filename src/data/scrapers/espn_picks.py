@@ -172,6 +172,10 @@ class ESPNPicksScraper:
         )
         return ConsensusData(sources=["espn"])
 
+    def _try_html_page(self, year: int) -> None:  # noqa: ARG002
+        """Deprecated: HTML scraping was removed. Always returns None."""
+        return None
+
     def _try_json_url(self, url: str, year: int, label: str) -> Optional[ConsensusData]:
         """Attempt to fetch and parse a JSON picks URL.
 
