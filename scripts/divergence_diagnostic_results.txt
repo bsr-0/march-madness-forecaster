@@ -1,0 +1,70 @@
+====================================================================================================
+DIVERGENCE DIAGNOSTIC: Noseed vs Field (SEED_PICK_RATES)
+====================================================================================================
+
+  Per-Round Divergence (noseed vs field pick probability)
+  Round       N  MeanAbsDelta   MaxDelta   StdDelta  ScoringWt  WeightedDiv
+  ---------------------------------------------------------------------------
+  R64       544        0.0219     0.1257     0.0298         10         0.22
+  R32       272        0.0625     0.2253     0.0688         20         1.25
+  S16       136        0.0682     0.2996     0.0859         40         2.73
+  E8         68        0.0665     0.3455     0.0895         80         5.32
+  F4         34        0.0866     0.3133     0.1087        160        13.85
+  CHAMP      17        0.0930     0.2380     0.1178        320        29.77
+
+  Overall mean |delta|: 0.0441
+  Overall max  |delta|: 0.3455
+
+  Per-Round Divergence (noseed vs SEED model)
+  Round       N  MeanAbsDelta   MaxDelta
+  ----------------------------------------
+  R64       544        0.0308     0.1280
+  R32       272        0.0442     0.1910
+  S16       136        0.0546     0.2617
+  E8         68        0.0665     0.3455
+  F4         34        0.0866     0.3133
+  CHAMP      17        0.0930     0.2380
+
+  Top 20 Largest Divergences (noseed vs field):
+  Year Round  Matchup                              P_noseed   P_field    Delta   Pts
+  -------------------------------------------------------------------------------------
+  2009 E8     (1)connecticut v (2)memphis             0.275     0.621   -0.346    80
+  2009 F4     (1)pittsburgh v (1)connecticut          0.813     0.500   +0.313   160
+  2013 S16    (3)florida v (2)georgetown              0.665     0.366   +0.300    40
+  2013 CHAMP  (1)indiana v (1)kansas                  0.738     0.500   +0.238   320
+  2013 S16    (1)kansas v (4)michigan                 0.551     0.783   -0.232    40
+  2021 CHAMP  (1)michigan v (1)baylor                 0.268     0.500   -0.232   320
+  2011 R32    (7)washington v (2)north_caroli         0.443     0.218   +0.225    20
+  2023 S16    (1)kansas v (4)connecticut              0.571     0.783   -0.212    40
+  2024 F4     (1)connecticut v (1)north_caroli        0.706     0.500   +0.206   160
+  2009 R32    (7)clemson v (2)oklahoma                0.423     0.218   +0.205    20
+  2015 S16    (3)notre_dame v (2)kansas               0.567     0.366   +0.201    40
+  2018 S16    (1)xavier v (4)gonzaga                  0.582     0.783   -0.201    40
+  2018 CHAMP  (1)villanova v (1)virginia              0.700     0.500   +0.200   320
+  2021 F4     (1)baylor v (1)illinois                 0.696     0.500   +0.196   160
+  2015 R32    (7)wichita_stat v (2)kansas             0.407     0.218   +0.189    20
+  2014 S16    (1)wichita_stat v (4)louisville         0.595     0.783   -0.188    40
+  2024 S16    (1)north_caroli v (4)alabama            0.597     0.783   -0.185    40
+  2018 F4     (1)villanova v (1)xavier                0.681     0.500   +0.181   160
+  2009 R32    (1)connecticut v (8)brigham_youn        0.721     0.901   -0.180    20
+  2011 E8     (1)ohio_state v (2)north_caroli         0.799     0.621   +0.178    80
+
+  Correlation Matrix:
+    noseed vs seed:  r = 0.9640
+    noseed vs field: r = 0.9568
+    seed vs field:   r = 0.9921
+
+  Upset Tendency (P(underdog) > 0.5 in model but < 0.5 in field):
+    Noseed picks underdog when field picks favorite: 23 games
+    Noseed picks favorite when field picks underdog: 15 games
+    Total games: 1071
+
+  Upset Picks by Round:
+    R64     :  14 /  544 games (  2.6%)
+    R32     :   0 /  272 games (  0.0%)
+    S16     :   0 /  136 games (  0.0%)
+    E8      :   9 /   68 games ( 13.2%)
+    F4      :   0 /   34 games (  0.0%)
+    CHAMP   :   0 /   17 games (  0.0%)
+
+====================================================================================================
