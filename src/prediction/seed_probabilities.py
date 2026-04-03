@@ -1,8 +1,9 @@
 """Seed-based pairwise win probabilities for pool optimization.
 
 Uses historical NCAA tournament data (1985-2025) to compute P(team1 beats team2)
-based solely on seeding. This is the "truth" probability input for the pool
-optimizer — backtests proved BSS=0 (ML adds no value over seeds).
+based solely on seeding. Used as the baseline and as input for Kaggle-mode
+blending. For pool EV optimization, the no-seed model (noseed_model.py) is
+preferred — it generates structural disagreement with the seed-thinking public.
 """
 
 from __future__ import annotations

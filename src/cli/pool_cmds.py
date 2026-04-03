@@ -2,6 +2,13 @@
 
 Wires seed-based probabilities, ratings-derived opponent model, and
 existing pool optimization infrastructure into a single entry point.
+
+Supports two modes:
+  - ev (default): Uses no-seed ML model for "truth" probabilities.
+    Backtest shows +9 mean edge vs chalk because the no-seed model
+    generates structural disagreement with the seed-thinking public.
+  - kaggle: Uses 50/50 blend of seed baseline + no-seed model for
+    best raw prediction accuracy (BSS=+0.035, p=0.016).
 """
 
 import json
@@ -23,18 +30,24 @@ _DEFAULT_SCORING = {
 
 
 def run_optimize_pool(args):
-    """Run bracket pool optimization using seed-based probabilities."""
+    """Run bracket pool optimization.
+
+    Mode controls which probabilities drive the optimizer:
+      - ev (default): No-seed ML model — maximizes leverage vs public
+      - kaggle: 50/50 seed + no-seed blend — maximizes raw accuracy
+    """
+    from ..optimization.pool_optimizer import PoolEnvironment, PoolOptimizer
     from ..prediction.seed_probabilities import (
         build_seed_probabilities,
         build_seed_round_probabilities,
     )
     from ..simulation.ratings_opponent_model import build_opponent_model
-    from ..optimization.pool_optimizer import PoolEnvironment, PoolOptimizer
 
     year = args.year
     pool_size = args.pool_size
     payout = args.payout
     output_path = args.output
+    mode = getattr(args, "mode", "ev")
 
     # --- Step 1: Load tournament seeds ---
     seeds = _load_seeds(year)
@@ -43,12 +56,8 @@ def run_optimize_pool(args):
         return 1
     print(f"Loaded {len(seeds)} teams for {year} tournament.")
 
-    # --- Step 2: Build seed-based pairwise probabilities ---
-    print("Building seed-based win probabilities...")
-    pairwise_probs = build_seed_probabilities(seeds)
-    round_probs = build_seed_round_probabilities(seeds)
-    print(f"  {len(pairwise_probs)} pairwise matchup probabilities")
-    print(f"  {len(round_probs)} teams with round advancement probs")
+    # --- Step 2: Build probabilities based on mode ---
+    pairwise_probs, round_probs = _build_probabilities(mode, year, seeds, args.data_dir)
 
     # --- Step 3: Build opponent model ---
     print("Building opponent model from external ratings + public picks...")
@@ -61,7 +70,7 @@ def run_optimize_pool(args):
     )
     print(f"  Opponent model covers {len(opponent_picks)} teams")
 
-    # --- Step 2b: Apply E8 matchup interaction adjustments ---
+    # --- Step 3b: Apply E8 matchup interaction adjustments ---
     round_probs = _apply_e8_adjustments_if_available(year, seeds, round_probs, args.data_dir)
 
     # --- Step 4: Build scoring rules ---
@@ -130,6 +139,74 @@ def run_optimize_pool(args):
 
     print(f"\nReport saved to {output_path}")
     return 0
+
+
+def _build_probabilities(mode, year, seeds, data_dir):
+    """Build pairwise and round probabilities based on mode."""
+    from ..prediction.seed_probabilities import (
+        build_seed_probabilities,
+        build_seed_round_probabilities,
+    )
+
+    seed_pairwise = build_seed_probabilities(seeds)
+    seed_round = build_seed_round_probabilities(seeds)
+
+    if mode == "ev":
+        # No-seed model: maximizes leverage vs seed-thinking public
+        print("Training no-seed ML model (EV mode)...")
+        try:
+            from ..prediction.noseed_model import (
+                _load_team_stats,
+                build_noseed_probabilities,
+                build_noseed_round_probabilities,
+                train_noseed_model,
+            )
+
+            model = train_noseed_model(max_year=None)
+            stats = _load_team_stats(year)
+            pairwise = build_noseed_probabilities(model, seeds, stats)
+            round_probs = build_noseed_round_probabilities(model, seeds, stats)
+            print(f"  {len(pairwise)} no-seed pairwise probabilities")
+            print(f"  {len(round_probs)} teams with no-seed round probs")
+            return pairwise, round_probs
+        except Exception as exc:
+            logger.warning("No-seed model failed (%s), falling back to seeds", exc)
+            print(f"  WARNING: No-seed model unavailable ({exc}), using seed baseline")
+            return seed_pairwise, seed_round
+
+    elif mode == "kaggle":
+        # Blend: 50/50 seed + no-seed for best raw accuracy
+        print("Training no-seed ML model for blend (Kaggle mode)...")
+        try:
+            from ..prediction.noseed_model import (
+                _load_team_stats,
+                build_blend_probabilities,
+                build_blend_round_probabilities,
+                build_noseed_probabilities,
+                build_noseed_round_probabilities,
+                train_noseed_model,
+            )
+
+            model = train_noseed_model(max_year=None)
+            stats = _load_team_stats(year)
+            noseed_pairwise = build_noseed_probabilities(model, seeds, stats)
+            noseed_round = build_noseed_round_probabilities(model, seeds, stats)
+            pairwise = build_blend_probabilities(seed_pairwise, noseed_pairwise, alpha=0.5)
+            round_probs = build_blend_round_probabilities(seed_round, noseed_round, alpha=0.5)
+            print(f"  {len(pairwise)} blended pairwise probabilities")
+            print(f"  {len(round_probs)} teams with blended round probs")
+            return pairwise, round_probs
+        except Exception as exc:
+            logger.warning("Blend model failed (%s), falling back to seeds", exc)
+            print(f"  WARNING: Blend model unavailable ({exc}), using seed baseline")
+            return seed_pairwise, seed_round
+
+    else:
+        # Seed-only fallback
+        print("Building seed-based win probabilities...")
+        print(f"  {len(seed_pairwise)} pairwise matchup probabilities")
+        print(f"  {len(seed_round)} teams with round advancement probs")
+        return seed_pairwise, seed_round
 
 
 def _apply_e8_adjustments_if_available(year, seeds, round_probs, data_dir):
@@ -226,6 +303,17 @@ def register(subparsers):
     parser = subparsers.add_parser(
         "optimize-pool",
         help="Optimize bracket strategy for a pool using game theory",
+    )
+    parser.add_argument(
+        "--mode",
+        "-m",
+        choices=["ev", "kaggle", "seed"],
+        default="ev",
+        help=(
+            "Probability mode: 'ev' (default) uses no-seed ML model for "
+            "max pool leverage; 'kaggle' uses 50/50 seed+ML blend for "
+            "best accuracy; 'seed' uses seed baseline only"
+        ),
     )
     parser.add_argument(
         "--year",
