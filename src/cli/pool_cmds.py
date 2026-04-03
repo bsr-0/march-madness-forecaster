@@ -267,22 +267,7 @@ def _load_seeds(year: int) -> dict:
     if seeds_path.exists():
         with open(seeds_path) as f:
             data = json.load(f)
-        # Format: {"team_id": seed_int, ...} or list format
-        if isinstance(data, dict):
-            # Could be {team_id: seed} or {team_id: {"seed": N, ...}}
-            seeds = {}
-            for team_id, val in data.items():
-                if isinstance(val, (int, float)):
-                    seeds[team_id] = int(val)
-                elif isinstance(val, dict) and "seed" in val:
-                    seeds[team_id] = int(val["seed"])
-            return seeds
-        elif isinstance(data, list):
-            seeds = {}
-            for entry in data:
-                if isinstance(entry, dict) and "team_id" in entry and "seed" in entry:
-                    seeds[entry["team_id"]] = int(entry["seed"])
-            return seeds
+        return _parse_seeds(data)
 
     # Try current year data
     for alt_path in [
@@ -292,8 +277,38 @@ def _load_seeds(year: int) -> dict:
         if alt_path.exists():
             with open(alt_path) as f:
                 data = json.load(f)
-            if isinstance(data, dict):
-                return {k: int(v) if isinstance(v, (int, float)) else int(v.get("seed", 0)) for k, v in data.items()}
+            return _parse_seeds(data)
+
+    return {}
+
+
+def _parse_seeds(data) -> dict:
+    """Parse seeds from various JSON formats."""
+    # Format: {"season": N, "teams": [{"team_id": ..., "seed": N}, ...]}
+    if isinstance(data, dict) and "teams" in data and isinstance(data["teams"], list):
+        seeds = {}
+        for entry in data["teams"]:
+            if isinstance(entry, dict) and "team_id" in entry and "seed" in entry:
+                seeds[entry["team_id"]] = int(entry["seed"])
+        return seeds
+
+    # Format: [{"team_id": ..., "seed": N}, ...]
+    if isinstance(data, list):
+        seeds = {}
+        for entry in data:
+            if isinstance(entry, dict) and "team_id" in entry and "seed" in entry:
+                seeds[entry["team_id"]] = int(entry["seed"])
+        return seeds
+
+    # Format: {team_id: seed_int, ...} or {team_id: {"seed": N}, ...}
+    if isinstance(data, dict):
+        seeds = {}
+        for team_id, val in data.items():
+            if isinstance(val, (int, float)):
+                seeds[team_id] = int(val)
+            elif isinstance(val, dict) and "seed" in val:
+                seeds[team_id] = int(val["seed"])
+        return seeds
 
     return {}
 
