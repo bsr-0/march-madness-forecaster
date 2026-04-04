@@ -256,12 +256,25 @@ def build_seed_pick_distribution(seeds):
     return {tid: dict(SEED_PICK_RATES.get(seed, SEED_PICK_RATES[8])) for tid, seed in seeds.items()}
 
 
+def build_espn_pick_distribution(year, seeds):
+    """Build opponent pick distribution from real ESPN public picks data.
+
+    Falls back to seed-based if no ESPN data available for this year.
+    """
+    from src.data.historical_picks import load_historical_public_picks
+
+    picks = load_historical_public_picks(year, seeds)
+    return picks
+
+
 # ---------------------------------------------------------------------------
 # Main backtest
 # ---------------------------------------------------------------------------
 
 
-def run_backtest(years=None, n_opponents=N_OPPONENTS, n_repeats=N_REPEATS, n_model=N_MODEL_BRACKETS):
+def run_backtest(
+    years=None, n_opponents=N_OPPONENTS, n_repeats=N_REPEATS, n_model=N_MODEL_BRACKETS, opponent_source="seed"
+):
     """Run MC pool backtest across historical years.
 
     For each year and mode, we sample n_model stochastic brackets from the
@@ -270,6 +283,9 @@ def run_backtest(years=None, n_opponents=N_OPPONENTS, n_repeats=N_REPEATS, n_mod
       - best_rank: average rank of the BEST stochastic bracket (pool optimizer)
       - mean_rank: average rank across ALL stochastic brackets (fair comparison)
       - P(1st): fraction of (bracket x repeat) trials finishing first
+
+    Args:
+        opponent_source: "seed" for SEED_PICK_RATES, "espn" for real ESPN data.
     """
     if years is None:
         years = BACKTEST_YEARS
@@ -281,7 +297,7 @@ def run_backtest(years=None, n_opponents=N_OPPONENTS, n_repeats=N_REPEATS, n_mod
     print("MC POOL BACKTEST: P(rank=1) — Stochastic Brackets")
     print("=" * 100)
     print(f"  Pool size: {pool_size} (1 model + {n_opponents} opponents)")
-    print(f"  Opponent model: seed-based pick rates (independent draws)")
+    print(f"  Opponent model: {opponent_source} pick rates (independent draws)")
     print(f"  Model brackets per mode: {n_model} (stochastic, NOT argmax)")
     print(f"  Repeats per year: {n_repeats} (reduces opponent sampling variance)")
     print(f"  Years: {len(years)}")
@@ -336,7 +352,10 @@ def run_backtest(years=None, n_opponents=N_OPPONENTS, n_repeats=N_REPEATS, n_mod
         }
 
         # Build opponent distribution
-        pick_dist = build_seed_pick_distribution(seeds)
+        if opponent_source == "espn":
+            pick_dist = build_espn_pick_distribution(year, seeds)
+        else:
+            pick_dist = build_seed_pick_distribution(seeds)
 
         rng = np.random.default_rng(42 + year)
 
@@ -512,8 +531,20 @@ def main():
     parser.add_argument("--n-opponents", type=int, default=N_OPPONENTS)
     parser.add_argument("--n-repeats", type=int, default=N_REPEATS)
     parser.add_argument("--n-model", type=int, default=N_MODEL_BRACKETS, help="Stochastic brackets per mode")
+    parser.add_argument(
+        "--opponent",
+        choices=["seed", "espn"],
+        default="seed",
+        help="Opponent pick distribution source: seed (SEED_PICK_RATES) or espn (real ESPN data)",
+    )
     args = parser.parse_args()
-    return run_backtest(years=args.years, n_opponents=args.n_opponents, n_repeats=args.n_repeats, n_model=args.n_model)
+    return run_backtest(
+        years=args.years,
+        n_opponents=args.n_opponents,
+        n_repeats=args.n_repeats,
+        n_model=args.n_model,
+        opponent_source=args.opponent,
+    )
 
 
 if __name__ == "__main__":
