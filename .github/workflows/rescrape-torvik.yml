@@ -1,0 +1,102 @@
+name: Rescrape Pre-Tournament Torvik
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Single year to fetch (blank = all years 2008-2025)"
+        required: false
+        type: string
+      dry_run:
+        description: "Dry run — print URLs without fetching"
+        required: false
+        default: false
+        type: boolean
+      delay:
+        description: "Delay between requests in seconds"
+        required: false
+        default: "3.0"
+        type: string
+
+concurrency:
+  group: torvik-rescrape
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  rescrape:
+    name: Rescrape Torvik Ratings
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Run rescrape
+        run: |
+          set -euo pipefail
+          FLAGS=""
+          if [ -n "${{ inputs.year }}" ]; then
+            FLAGS="$FLAGS --year ${{ inputs.year }}"
+          fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            FLAGS="$FLAGS --dry-run"
+          fi
+          if [ -n "${{ inputs.delay }}" ]; then
+            FLAGS="$FLAGS --delay ${{ inputs.delay }}"
+          fi
+          python scripts/rescrape_pretournament_torvik.py $FLAGS
+
+      - name: Validate output files
+        if: inputs.dry_run != true
+        run: |
+          set -euo pipefail
+          python -c "
+          import json, sys
+          from pathlib import Path
+
+          files = sorted(Path('data/raw/historical').glob('torvik_*.json'))
+          if not files:
+              print('::error::No torvik files found after rescrape')
+              sys.exit(1)
+
+          errors = []
+          for f in files:
+              data = json.load(open(f))
+              dt = data.get('data_type', '')
+              if dt not in ('pre_tournament', 'pre_tournament_computed'):
+                  errors.append(f'{f.name}: data_type={dt!r}')
+              teams = data.get('teams', [])
+              if len(teams) < 100:
+                  errors.append(f'{f.name}: only {len(teams)} teams (expected 300+)')
+              print(f'  {f.name}: {len(teams)} teams, data_type={dt}, cutoff={data.get(\"cutoff_date\", \"?\")}')
+
+          if errors:
+              for e in errors:
+                  print(f'::error::{e}')
+              sys.exit(1)
+          print(f'Validated {len(files)} files — all clean.')
+          "
+
+      - name: Commit and push
+        if: inputs.dry_run != true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/raw/historical/torvik_*.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            SCOPE=""
+            if [ -n "${{ inputs.year }}" ]; then
+              SCOPE=" (${{ inputs.year }})"
+            fi
+            git commit -m "data: rescrape pre-tournament Torvik ratings${SCOPE} ($(date -u +%Y-%m-%d))"
+            git push
+          fi
