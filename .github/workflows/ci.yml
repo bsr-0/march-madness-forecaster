@@ -9,8 +9,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint
+  # ─── Quick Checks (lint + freeze staleness) ──────────────────────
+  quick-checks:
+    name: "Quick Checks"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -23,17 +24,6 @@ jobs:
 
       - name: Run ruff linter
         run: ruff check src/ tests/ --output-format=github
-
-  # ─── Gate 0: Freeze Staleness Check ─────────────────────────────
-  freeze-check:
-    name: "Gate 0: Freeze Staleness Check"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup environment
-        uses: ./.github/actions/setup-python-env
 
       - name: Check freeze artifact is up-to-date
         run: |
@@ -119,7 +109,7 @@ jobs:
                     f"{len(frozen_fields)} config fields verified).")
           PYEOF
 
-  # ─── Gate 1: Unit Tests ───────────────────────────────────────────
+  # ─── Gate 1: Unit Tests + Performance ────────────────────────────
   unit-tests:
     name: "Gate 1: Unit Tests"
     runs-on: ubuntu-latest
@@ -129,13 +119,21 @@ jobs:
 
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
+        with:
+          extra-packages: pytest-timeout
 
       - name: Run unit tests
-        run: pytest tests/ -m "unit" --cov=src --cov-report=term-missing --tb=short -q
+        run: pytest tests/ -m "unit" --timeout=300 --cov=src --cov-report=term-missing --tb=short -q
 
-  # ─── Gate 2: Data-Contract Tests ──────────────────────────────────
-  data-contract-tests:
-    name: "Gate 2: Data-Contract Tests"
+      - name: Track test count for regression detection
+        run: |
+          TEST_COUNT=$(pytest tests/ --co -q 2>/dev/null | tail -1 | grep -oP '^\d+')
+          echo "Total tests collected: ${TEST_COUNT}"
+          echo "test_count=${TEST_COUNT}" >> $GITHUB_ENV
+
+  # ─── Gate 2+3: Data-Contract + Leakage Tests ────────────────────
+  contract-and-leakage-tests:
+    name: "Gate 2+3: Contract & Leakage Tests"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -164,17 +162,6 @@ jobs:
       - name: Data-contract marker tests
         run: pytest tests/ -m "data_contract" -v --tb=short -q
 
-  # ─── Gate 3: Leakage Tests (statistical, not just mechanical) ────
-  leakage-tests:
-    name: "Gate 3: Leakage Tests"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup environment
-        uses: ./.github/actions/setup-python-env
-
       - name: Run leakage tests
         run: pytest tests/ -m "leakage" -v --tb=short -q
 
@@ -195,38 +182,14 @@ jobs:
       - name: Run pip audit
         run: pip-audit --strict --skip-editable --ignore-vuln CVE-2026-4539
 
-  # ─── Gate 4: Performance Regression ──────────────────────────────
-  performance-check:
-    name: "Gate 4: Performance Check"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup environment
-        uses: ./.github/actions/setup-python-env
-        with:
-          extra-packages: pytest-timeout
-
-      - name: Run unit tests with timeout
-        run: pytest tests/ -m "unit" --timeout=300 --tb=short -q
-
-      - name: Track test count for regression detection
-        run: |
-          TEST_COUNT=$(pytest tests/ --co -q 2>/dev/null | tail -1 | grep -oP '^\d+')
-          echo "Total tests collected: ${TEST_COUNT}"
-          echo "test_count=${TEST_COUNT}" >> $GITHUB_ENV
-
   # ─── All Gates Must Pass ──────────────────────────────────────────
   all-gates:
     name: "All Gates Green"
     needs:
-      - lint
-      - freeze-check
+      - quick-checks
       - unit-tests
-      - data-contract-tests
-      - leakage-tests
+      - contract-and-leakage-tests
       - audit
-      - performance-check
     runs-on: ubuntu-latest
     steps:
       - name: All gates passed
