@@ -15,12 +15,20 @@ jobs:
     name: "Real ESPN Picks vs Seed-Based Proxy"
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
+        with:
+          extra-packages: kagglehub
+
+      - name: Download Kaggle tournament data
+        run: python scripts/download_kaggle_dataset.py --force
 
       - name: Run A/B experiment
         run: python scripts/compare_public_picks_experiment.py
@@ -37,7 +45,7 @@ jobs:
         if: always()
         run: |
           if [ -f artifacts/public_picks_experiment.json ]; then
-            python - <<'PYEOF'
+            python - <<'PYEOF' >> "$GITHUB_STEP_SUMMARY"
           import json
 
           with open("artifacts/public_picks_experiment.json") as f:
@@ -63,4 +71,4 @@ jobs:
               sig = "Significant" if p < 0.05 else "Not significant"
               print(f"\n**Paired t-test:** p={p:.4f} (Cohen's d={d:.4f}) — {sig}")
           PYEOF
-          fi >> "$GITHUB_STEP_SUMMARY"
+          fi
