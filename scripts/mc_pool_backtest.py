@@ -217,6 +217,105 @@ def build_torvik_round_probabilities(seeds, regions, barthag, n_sims=10000):
     return result
 
 
+def _load_torvik_barthag(year, seeds):
+    """Load Torvik barthag ratings for tournament teams.
+
+    Returns dict of team_id -> barthag (expected win % vs avg team).
+    Falls back to seed-based estimate if no Torvik data available.
+    """
+    barthag = {}
+
+    # Try torvik_{year}.json first
+    for prefix in [HIST_DIR, Path("data/raw")]:
+        path = prefix / f"torvik_{year}.json"
+        if path.exists():
+            with open(path) as f:
+                data = json.load(f)
+            for t in data.get("teams", []):
+                tid = t.get("team_id", "")
+                b = t.get("barthag")
+                if tid in seeds and b is not None:
+                    barthag[tid] = float(b)
+            break
+
+    # Fill missing teams with seed-based estimate
+    # Rough barthag by seed: 1-seed ~ 0.95, 16-seed ~ 0.30
+    for tid, seed in seeds.items():
+        if tid not in barthag:
+            barthag[tid] = max(0.10, 1.0 - seed * 0.04)
+
+    return barthag
+
+
+def _log5(barthag_a, barthag_b):
+    """Log5 formula: P(A beats B) from their win rates vs average."""
+    pa, pb = barthag_a, barthag_b
+    num = pa * (1 - pb)
+    denom = pa * (1 - pb) + pb * (1 - pa)
+    if denom < 1e-12:
+        return 0.5
+    return num / denom
+
+
+def build_torvik_round_probabilities(seeds, regions, barthag, n_sims=10000):
+    """Build round advancement probabilities via Torvik barthag + Monte Carlo.
+
+    Simulates the full bracket n_sims times using Log5 pairwise
+    probabilities derived from barthag values. Counts how often each
+    team advances to each round.
+
+    Returns: Dict[team_id, Dict[round_name, probability]]
+    """
+    rng = np.random.default_rng(42)
+    round_names = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
+
+    # Build the bracket structure (same ordering as the backtest)
+    region_teams = {r: {} for r in REGION_ORDER}
+    for tid, seed in seeds.items():
+        r = regions.get(tid, "")
+        if r in region_teams:
+            region_teams[r][seed] = tid
+
+    # Build ordered matchups per region
+    bracket_order = []  # List of 64 team_ids in bracket order
+    for region in REGION_ORDER:
+        rt = region_teams[region]
+        for high, low in SEED_MATCHUP_ORDER:
+            t1 = rt.get(high, f"unknown_{region}_{high}")
+            t2 = rt.get(low, f"unknown_{region}_{low}")
+            bracket_order.extend([t1, t2])
+
+    # Count round advances
+    advance_counts = {tid: {rnd: 0 for rnd in round_names} for tid in seeds}
+
+    for _ in range(n_sims):
+        current = list(bracket_order)
+        for round_idx, rnd in enumerate(round_names):
+            next_round = []
+            for g in range(0, len(current), 2):
+                t1, t2 = current[g], current[g + 1]
+                b1 = barthag.get(t1, 0.5)
+                b2 = barthag.get(t2, 0.5)
+                p1 = _log5(b1, b2)
+                if rng.random() < p1:
+                    winner = t1
+                else:
+                    winner = t2
+                if winner in advance_counts:
+                    advance_counts[winner][rnd] += 1
+                next_round.append(winner)
+            current = next_round
+
+    # Convert counts to probabilities
+    result = {}
+    for tid in seeds:
+        result[tid] = {}
+        for rnd in round_names:
+            result[tid][rnd] = max(0.001, advance_counts[tid][rnd] / n_sims)
+
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Bracket structure helpers
 # ---------------------------------------------------------------------------
