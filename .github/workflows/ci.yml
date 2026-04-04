@@ -21,6 +21,7 @@ jobs:
         uses: ./.github/actions/setup-python-env
         with:
           extra-packages: ruff
+          skip-editable-install: "true"
 
       - name: Run ruff linter
         run: ruff check src/ tests/ --output-format=github
@@ -185,6 +186,7 @@ jobs:
   # ─── All Gates Must Pass ──────────────────────────────────────────
   all-gates:
     name: "All Gates Green"
+    if: always()
     needs:
       - quick-checks
       - unit-tests
@@ -192,5 +194,13 @@ jobs:
       - audit
     runs-on: ubuntu-latest
     steps:
-      - name: All gates passed
-        run: echo "All CI gates passed — safe for production use"
+      - name: Check all gates passed
+        run: |
+          if [[ "${{ needs.quick-checks.result }}" != "success" ||
+                "${{ needs.unit-tests.result }}" != "success" ||
+                "${{ needs.contract-and-leakage-tests.result }}" != "success" ||
+                "${{ needs.audit.result }}" != "success" ]]; then
+            echo "::error::One or more gates failed"
+            exit 1
+          fi
+          echo "All CI gates passed — safe for production use"
