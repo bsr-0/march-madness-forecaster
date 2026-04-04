@@ -23,6 +23,8 @@ import logging
 from pathlib import Path
 from typing import Dict, Optional
 
+from src.data.normalize import normalize_team_id
+
 logger = logging.getLogger(__name__)
 
 # Default directory for archived ESPN pick data
@@ -30,6 +32,22 @@ _DEFAULT_PICKS_DIR = Path("data/raw/historical_public_picks")
 
 # Round names matching the rest of the codebase
 _ROUND_NAMES = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
+
+# Aliases for picks-file team names that don't resolve through normalize_team_id.
+# These cover abbreviations, disambiguation, and play-in artifacts found in
+# the ESPN/Kaggle scraped data (diagnosed via scripts/diagnose_picks_team_matching.py).
+_PICKS_TEAM_ALIAS: Dict[str, str] = {
+    "miami": "miami__fl",
+    "umass": "massachusetts",
+    "s_dakota_state": "south_dakota_state",
+    "j_ville_state": "jacksonville_state",
+    "western_ky": "western_kentucky",
+    "mount_st_marys": "mount_st__mary_s",
+    "norf_app": "norfolk_state",
+    "virginia_commonwealth": "vcu",
+    "louisiana": "louisiana_lafayette",
+    "siue": "siu_edwardsville",
+}
 
 
 def load_historical_public_picks(
@@ -59,7 +77,8 @@ def load_historical_public_picks(
     if result is not None:
         logger.info(
             "Loaded archived ESPN public picks for %d (%d teams)",
-            year, len(result),
+            year,
+            len(result),
         )
         return result
 
@@ -69,6 +88,29 @@ def load_historical_public_picks(
         year,
     )
     return _build_seed_based_picks(bracket_teams)
+
+
+def _resolve_picks_team_id(
+    raw_id: str,
+    bracket_teams: Dict[str, int],
+) -> str:
+    """Resolve a picks-file team name to a canonical bracket_teams key.
+
+    Tries in order: direct match, picks alias table, normalize_team_id,
+    normalize + picks alias.  Returns the original raw_id if nothing matches
+    (it will be kept in results but won't collide with bracket_teams keys,
+    so it effectively gets ignored during the fill-in step).
+    """
+    if raw_id in bracket_teams:
+        return raw_id
+    if raw_id in _PICKS_TEAM_ALIAS and _PICKS_TEAM_ALIAS[raw_id] in bracket_teams:
+        return _PICKS_TEAM_ALIAS[raw_id]
+    norm = normalize_team_id(raw_id)
+    if norm in bracket_teams:
+        return norm
+    if norm in _PICKS_TEAM_ALIAS and _PICKS_TEAM_ALIAS[norm] in bracket_teams:
+        return _PICKS_TEAM_ALIAS[norm]
+    return raw_id
 
 
 def _load_archived_picks(
@@ -120,24 +162,36 @@ def _load_archived_picks(
                 continue
 
             result: Dict[str, Dict[str, float]] = {}
-            for team_id, rounds in teams_data.items():
-                if isinstance(rounds, dict):
-                    result[team_id] = {
-                        r: float(rounds.get(r, 0.0))
-                        for r in _ROUND_NAMES
-                    }
+            for raw_id, rounds in teams_data.items():
+                if not isinstance(rounds, dict):
+                    continue
+                pick_data = {r: float(rounds.get(r, 0.0)) for r in _ROUND_NAMES}
+                # Normalize picks team name to match bracket_teams keys
+                team_id = _resolve_picks_team_id(raw_id, bracket_teams)
+                result[team_id] = pick_data
 
             # Fill in any missing teams with seed-based defaults
+            n_matched = sum(1 for t in bracket_teams if t in result)
             for team_id, seed in bracket_teams.items():
                 if team_id not in result:
                     result[team_id] = _seed_pick_rates(seed)
+
+            if n_matched < len(bracket_teams):
+                logger.info(
+                    "Picks for %d: %d/%d bracket teams matched, %d fell back to seed-based",
+                    year,
+                    n_matched,
+                    len(bracket_teams),
+                    len(bracket_teams) - n_matched,
+                )
 
             if len(result) >= 32:  # Sanity: at least half the bracket
                 return result
             else:
                 logger.warning(
                     "Archived picks for %d have only %d teams, discarding",
-                    year, len(result),
+                    year,
+                    len(result),
                 )
 
         except (json.JSONDecodeError, KeyError, ValueError) as exc:
@@ -169,6 +223,7 @@ def _seed_pick_rates(seed: int) -> Dict[str, float]:
     and a chalk bias transformation calibrated against ESPN BTC data.
     """
     from src.data.seed_pick_model import SEED_PICK_RATES
+
     rates = SEED_PICK_RATES.get(seed, SEED_PICK_RATES[8])
     return dict(rates)
 
