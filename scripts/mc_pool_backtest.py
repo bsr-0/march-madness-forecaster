@@ -184,7 +184,8 @@ def build_torvik_round_probabilities(seeds, regions, barthag, n_sims=10000):
                     winner = t1
                 else:
                     winner = t2
-                advance_counts[winner][rnd] += 1
+                if winner in advance_counts:
+                    advance_counts[winner][rnd] += 1
                 next_round.append(winner)
             current = next_round
 
