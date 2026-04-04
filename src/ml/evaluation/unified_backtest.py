@@ -64,20 +64,35 @@ LOYO_YEARS = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
 
 # Standard NCAA bracket seed pairings per region (R64)
 _SEED_MATCHUP_ORDER = [
-    (1, 16), (8, 9), (5, 12), (4, 13),
-    (6, 11), (3, 14), (7, 10), (2, 15),
+    (1, 16),
+    (8, 9),
+    (5, 12),
+    (4, 13),
+    (6, 11),
+    (3, 14),
+    (7, 10),
+    (2, 15),
 ]
 
 # Kaggle round-weight structure (2023+ Brier scoring)
 _KAGGLE_ROUND_WEIGHTS = {
-    "FF": 0.5, "R64": 1.0, "R32": 2.0, "S16": 4.0,
-    "E8": 8.0, "F4": 16.0, "NCG": 32.0,
+    "FF": 0.5,
+    "R64": 1.0,
+    "R32": 2.0,
+    "S16": 4.0,
+    "E8": 8.0,
+    "F4": 16.0,
+    "NCG": 32.0,
 }
 
 # ESPN standard scoring for bracket pools
 _ESPN_SCORING = {
-    "R64": 10, "R32": 20, "S16": 40,
-    "E8": 80, "F4": 160, "CHAMP": 320,
+    "R64": 10,
+    "R32": 20,
+    "S16": 40,
+    "E8": 80,
+    "F4": 160,
+    "CHAMP": 320,
 }
 
 _BACKTEST_TEAM_ID_ALIAS = {
@@ -107,15 +122,17 @@ def _canonical_backtest_team_id(team_id: str) -> str:
 # Historical tournament data loader
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class TournamentGame:
     """A single tournament game with actual outcome."""
+
     team1_id: str
     team2_id: str
     team1_seed: int
     team2_seed: int
     team1_won: bool
-    round_name: str          # R64, R32, S16, E8, F4, NCG
+    round_name: str  # R64, R32, S16, E8, F4, NCG
     team1_score: int = 0
     team2_score: int = 0
 
@@ -151,6 +168,7 @@ class TournamentHistory:
     - ``first_round_matchups``: 64 team IDs in standard bracket order.
     - ``champion_id``: The actual champion.
     """
+
     year: int
     games: List[TournamentGame]
     seeds: Dict[str, int]
@@ -181,7 +199,7 @@ class TournamentHistory:
                 t1, t2 = current_teams[g], current_teams[g + 1]
                 # Determine who actually won
                 winner = self._find_winner(t1, t2)
-                outcome[game_idx] = (winner == t1)
+                outcome[game_idx] = winner == t1
                 next_round_teams.append(winner)
                 game_idx += 1
             current_teams = next_round_teams
@@ -191,9 +209,9 @@ class TournamentHistory:
     def _find_winner(self, t1: str, t2: str) -> str:
         """Find the actual winner of a matchup."""
         for game in self.games:
-            if (game.team1_id == t1 and game.team2_id == t2):
+            if game.team1_id == t1 and game.team2_id == t2:
                 return game.winner_id
-            if (game.team1_id == t2 and game.team2_id == t1):
+            if game.team1_id == t2 and game.team2_id == t1:
                 return game.winner_id
         # Fallback: lower seed wins
         s1 = self.seeds.get(t1, 8)
@@ -273,21 +291,24 @@ def load_tournament_history_from_kaggle(
         t1 = _canonical_backtest_team_id(g["team_id"])
         t2 = _canonical_backtest_team_id(g["opponent_id"])
         round_name = day_to_round.get(g["day_num"], "R64")
-        games.append(TournamentGame(
-            team1_id=t1,
-            team2_id=t2,
-            team1_seed=seeds.get(t1, 8),
-            team2_seed=seeds.get(t2, 8),
-            team1_won=True,  # Winner row always has team_score > opponent_score
-            round_name=round_name,
-            team1_score=g["team_score"],
-            team2_score=g["opponent_score"],
-        ))
+        games.append(
+            TournamentGame(
+                team1_id=t1,
+                team2_id=t2,
+                team1_seed=seeds.get(t1, 8),
+                team2_seed=seeds.get(t2, 8),
+                team1_won=True,  # Winner row always has team_score > opponent_score
+                round_name=round_name,
+                team1_score=g["team_score"],
+                team2_score=g["opponent_score"],
+            )
+        )
 
     if len(games) < 32:
         logger.warning(
             "Only %d tournament games found for %d (expected 63+)",
-            len(games), year,
+            len(games),
+            year,
         )
 
     # Build first_round_matchups in standard bracket order
@@ -310,7 +331,10 @@ def load_tournament_history_from_kaggle(
 
     logger.info(
         "Loaded tournament history for %d: %d games, %d seeded teams, champion=%s",
-        year, len(games), len(seeds), champion_id,
+        year,
+        len(games),
+        len(seeds),
+        champion_id,
     )
     return history
 
@@ -368,23 +392,27 @@ def load_tournament_history_from_json(
             for g in raw_games:
                 t1 = _canonical_backtest_team_id(g["team1_id"])
                 t2 = _canonical_backtest_team_id(g["team2_id"])
-                games.append(TournamentGame(
-                    team1_id=t1,
-                    team2_id=t2,
-                    team1_seed=g.get("team1_seed", seeds.get(t1, 8)),
-                    team2_seed=g.get("team2_seed", seeds.get(t2, 8)),
-                    team1_won=g["team1_won"],
-                    round_name=g.get("round_name", "R64"),
-                    team1_score=g.get("team1_score", 0),
-                    team2_score=g.get("team2_score", 0),
-                ))
+                games.append(
+                    TournamentGame(
+                        team1_id=t1,
+                        team2_id=t2,
+                        team1_seed=g.get("team1_seed", seeds.get(t1, 8)),
+                        team2_seed=g.get("team2_seed", seeds.get(t2, 8)),
+                        team1_won=g["team1_won"],
+                        round_name=g.get("round_name", "R64"),
+                        team1_score=g.get("team1_score", 0),
+                        team2_score=g.get("team2_score", 0),
+                    )
+                )
             # Identify champion from NCG
             ncg = [g for g in games if g.round_name == "NCG"]
             if ncg:
                 champion_id = ncg[0].winner_id
             logger.info(
                 "Loaded %d tournament games from %s (champion=%s)",
-                len(games), results_path, champion_id,
+                len(games),
+                results_path,
+                champion_id,
             )
         except Exception as e:
             logger.warning("Failed to load tournament results for %d: %s", year, e)
@@ -434,6 +462,7 @@ def _build_first_round_matchups(
 # Champion-boost backtest helper
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ChampionBoostBacktestResult:
     """Evaluation of the champion boost (0-1 trick) against actual outcome.
@@ -442,14 +471,15 @@ class ChampionBoostBacktestResult:
     that pick was correct, and the Brier delta between the boosted and
     baseline submissions.
     """
+
     year: int
     selected_champion: str
     selected_champion_seed: int
     actual_champion: str
     champion_correct: bool
-    baseline_rw_brier: float      # Round-weighted Brier without boost
-    boosted_rw_brier: float       # Round-weighted Brier with champion boost
-    brier_delta: float            # boosted - baseline (negative = boost helped)
+    baseline_rw_brier: float  # Round-weighted Brier without boost
+    boosted_rw_brier: float  # Round-weighted Brier with champion boost
+    brier_delta: float  # boosted - baseline (negative = boost helped)
     n_games_boosted: int = 0
 
 
@@ -484,6 +514,7 @@ def _evaluate_champion_boost(
 
     # Guard against API mismatches between the strategy class versions.
     import inspect
+
     init_params = inspect.signature(ChampionBoostStrategy.__init__).parameters
     if "predict_fn" not in init_params:
         logger.debug("ChampionBoostStrategy API does not accept predict_fn; skipping boost eval.")
@@ -520,12 +551,12 @@ def _evaluate_champion_boost(
         return None
 
     champion_seed = seeds.get(champion_id, 8)
-    champion_correct = (champion_id == actual_champion)
+    champion_correct = champion_id == actual_champion
 
     # Generate boosted predictions
     # Build matchup list from predictions keys
     matchup_ids = []
-    for (t1, t2) in predictions:
+    for t1, t2 in predictions:
         matchup_ids.append((f"{year}_{t1}_{t2}", t1, t2))
 
     boost_probs = strategy.generate_champion_boost(
@@ -597,6 +628,7 @@ def _compute_round_weighted_brier(
 # Pool backtest helper
 # ---------------------------------------------------------------------------
 
+
 def _score_bracket_against_actual(
     bracket_winners: List[str],
     actual_outcome: np.ndarray,
@@ -641,7 +673,7 @@ def _score_bracket_against_actual(
             t1, t2 = current_teams[g], current_teams[g + 1]
             if winner_idx < len(bracket_winners):
                 winner = bracket_winners[winner_idx]
-                bracket_bool[game_idx] = (winner == t1)
+                bracket_bool[game_idx] = winner == t1
                 next_round_teams.append(winner)
             else:
                 bracket_bool[game_idx] = True
@@ -748,6 +780,7 @@ def _generate_model_bracket(
 # ---------------------------------------------------------------------------
 # Archetype-aware opponent generation
 # ---------------------------------------------------------------------------
+
 
 def _generate_archetype_opponent_brackets(
     n_opponents: int,
@@ -859,7 +892,11 @@ def _generate_archetype_opponent_brackets(
                 p_pct = public_picks.get(t1, {}).get(round_name, 0.5)
 
                 pick_prob = archetype.predict_pick_probability(
-                    t1, round_name, m_prob, p_pct, seed_t1,
+                    t1,
+                    round_name,
+                    m_prob,
+                    p_pct,
+                    seed_t1,
                 )
                 pick_prob = max(0.01, min(0.99, pick_prob))
 
@@ -928,13 +965,15 @@ def _compute_path_protection_for_bracket(
                 p = predict_fn(t1, t2)
                 winner, loser = (t1, t2) if p >= 0.5 else (t2, t1)
             p_val = predict_fn(winner, loser)
-            picks.append(BracketPick(
-                round_num=round_num,
-                game_idx=game_idx,
-                winner_id=winner,
-                loser_id=loser,
-                win_probability=p_val,
-            ))
+            picks.append(
+                BracketPick(
+                    round_num=round_num,
+                    game_idx=game_idx,
+                    winner_id=winner,
+                    loser_id=loser,
+                    win_probability=p_val,
+                )
+            )
             next_teams.append(winner)
             winner_idx += 1
             game_idx += 1
@@ -944,7 +983,10 @@ def _compute_path_protection_for_bracket(
         return 1.0
 
     return PathProtectionScorer().compute_path_protection_score(
-        picks, predict_fn, team_regions, scoring,
+        picks,
+        predict_fn,
+        team_regions,
+        scoring,
     )
 
 
@@ -984,8 +1026,7 @@ def _compute_leverage_accuracy_for_year(
     # For each simulation, replay the bracket using predict_fn and track which
     # team advances to each round.
     advance_counts: Dict[str, Dict[str, int]] = {
-        tid: {rn: 0 for rn in round_names}
-        for tid in set(first_round_matchups)
+        tid: {rn: 0 for rn in round_names} for tid in set(first_round_matchups)
     }
 
     for _ in range(n_sims):
@@ -1004,12 +1045,12 @@ def _compute_leverage_accuracy_for_year(
             current = nxt
 
     model_probs: Dict[str, Dict[str, float]] = {
-        tid: {rn: advance_counts[tid][rn] / n_sims for rn in round_names}
-        for tid in advance_counts
+        tid: {rn: advance_counts[tid][rn] / n_sims for rn in round_names} for tid in advance_counts
     }
 
     # Build team metadata for LeverageCalculator (seed not strictly required)
     from ...optimization.leverage import LeverageCalculator, TeamMetadata, evaluate_leverage_accuracy
+
     team_meta = {}  # minimal — leverage calc works without it
 
     calculator = LeverageCalculator(
@@ -1035,15 +1076,13 @@ def _compute_leverage_accuracy_for_year(
         actual_outcomes[tid] = {rn: (rn in won_rounds) for rn in round_names}
 
     accuracy = evaluate_leverage_accuracy(leverage_picks, actual_outcomes)
-    return accuracy, len([
-        p for p in leverage_picks
-        if p.model_probability - p.public_pick_percentage >= 0.05
-    ])
+    return accuracy, len([p for p in leverage_picks if p.model_probability - p.public_pick_percentage >= 0.05])
 
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class UnifiedBacktestConfig:
@@ -1071,6 +1110,8 @@ class UnifiedBacktestConfig:
     # ESPN Protocol Section 4.7 metrics
     compute_espn_metrics: bool = True
     historical_picks_dir: str = "data/raw/historical_public_picks"
+    # When False, forces seed-based proxy for opponent model (ignores archived ESPN picks)
+    use_real_public_picks: bool = True
 
     def __post_init__(self):
         valid_modes = {"calibration", "ev"}
@@ -1082,6 +1123,7 @@ class UnifiedBacktestConfig:
 # ---------------------------------------------------------------------------
 # Result structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class YearModeResult:
@@ -1146,33 +1188,23 @@ class UnifiedBacktestResult:
 
             briers = [r.brier_score for r in calibration_results]
             rw_briers = [r.round_weighted_brier for r in calibration_results]
-            lines.append(
-                f"  Mean Brier: {np.mean(briers):.4f} +/- {np.std(briers):.4f}"
-            )
-            lines.append(
-                f"  Mean RW-Brier: {np.mean(rw_briers):.4f} +/- {np.std(rw_briers):.4f}"
-            )
+            lines.append(f"  Mean Brier: {np.mean(briers):.4f} +/- {np.std(briers):.4f}")
+            lines.append(f"  Mean RW-Brier: {np.mean(rw_briers):.4f} +/- {np.std(rw_briers):.4f}")
 
             # Year-over-year trend
             if "calibration" in self.summary_by_mode:
                 trend = self.summary_by_mode["calibration"].get("yoy_brier_trend")
                 if trend is not None:
                     direction = "improving" if trend < 0 else "worsening"
-                    lines.append(
-                        f"  YoY Brier trend: {trend:+.5f}/year ({direction})"
-                    )
+                    lines.append(f"  YoY Brier trend: {trend:+.5f}/year ({direction})")
 
             # Champion boost summary
-            boost_results = [
-                r.champion_boost for r in calibration_results
-                if r.champion_boost is not None
-            ]
+            boost_results = [r.champion_boost for r in calibration_results if r.champion_boost is not None]
             if boost_results:
                 n_correct = sum(1 for b in boost_results if b.champion_correct)
                 mean_delta = np.mean([b.brier_delta for b in boost_results])
                 lines.append(
-                    f"  Champion Boost: {n_correct}/{len(boost_results)} correct, "
-                    f"mean delta={mean_delta:+.4f}"
+                    f"  Champion Boost: {n_correct}/{len(boost_results)} correct, mean delta={mean_delta:+.4f}"
                 )
 
         if ev_results:
@@ -1184,13 +1216,9 @@ class UnifiedBacktestResult:
                 if key not in configs_seen:
                     configs_seen.add(key)
                     subset = [
-                        x for x in ev_results
-                        if x.pool_size == r.pool_size
-                        and x.payout_structure == r.payout_structure
+                        x for x in ev_results if x.pool_size == r.pool_size and x.payout_structure == r.payout_structure
                     ]
-                    lines.append(
-                        f"\n  Pool={r.pool_size}, Payout={r.payout_structure}:"
-                    )
+                    lines.append(f"\n  Pool={r.pool_size}, Payout={r.payout_structure}:")
                     for s in sorted(subset, key=lambda x: x.year):
                         lines.append(
                             f"    {s.year}: Rank={s.pool_rank_position}/"
@@ -1199,10 +1227,7 @@ class UnifiedBacktestResult:
                         )
                     pcts = [s.pool_rank_percentile for s in subset]
                     wins = sum(1 for s in subset if s.pool_rank_position == 1)
-                    lines.append(
-                        f"    Mean percentile: {np.mean(pcts):.1%}  "
-                        f"Pool wins: {wins}/{len(subset)}"
-                    )
+                    lines.append(f"    Mean percentile: {np.mean(pcts):.1%}  Pool wins: {wins}/{len(subset)}")
 
         lines.append("=" * 70)
         return "\n".join(lines)
@@ -1211,6 +1236,7 @@ class UnifiedBacktestResult:
 # ---------------------------------------------------------------------------
 # Main backtester
 # ---------------------------------------------------------------------------
+
 
 class UnifiedBacktester:
     """Orchestrates backtesting across both Kaggle and pool strategies.
@@ -1263,7 +1289,8 @@ class UnifiedBacktester:
         # Fall back to JSON
         if history is None or not history.games:
             json_history = load_tournament_history_from_json(
-                self.historical_results_dir, year,
+                self.historical_results_dir,
+                year,
             )
             if json_history is not None:
                 if history is None:
@@ -1302,7 +1329,10 @@ class UnifiedBacktester:
 
             if "calibration" in config.modes:
                 cal_result = self._run_calibration_year(
-                    year, history, predict_fn, config,
+                    year,
+                    history,
+                    predict_fn,
+                    config,
                 )
                 if cal_result is not None:
                     results.append(cal_result)
@@ -1311,17 +1341,22 @@ class UnifiedBacktester:
                 for pool_size in config.pool_sizes:
                     for payout in config.payout_structures:
                         ev_result = self._run_ev_year(
-                            year, history, predict_fn,
-                            pool_size, payout, config,
+                            year,
+                            history,
+                            predict_fn,
+                            pool_size,
+                            payout,
+                            config,
                         )
                         if ev_result is not None:
                             results.append(ev_result)
 
         if skipped_years:
             logger.warning(
-                "Backtest skipped %d of %d requested years due to missing "
-                "historical data: %s",
-                len(skipped_years), len(config.years), skipped_years,
+                "Backtest skipped %d of %d requested years due to missing historical data: %s",
+                len(skipped_years),
+                len(config.years),
+                skipped_years,
             )
         if not results:
             logger.error(
@@ -1355,7 +1390,8 @@ class UnifiedBacktester:
             except Exception as e:
                 logger.exception(
                     "predict_fn_factory failed for %d: %s. Falling back to seed model.",
-                    year, e,
+                    year,
+                    e,
                 )
 
         # Seed-based logistic model as fallback
@@ -1429,7 +1465,10 @@ class UnifiedBacktester:
         champion_boost = None
         if config.evaluate_champion_boost:
             champion_boost = _evaluate_champion_boost(
-                predictions, history.games, history.seeds, year,
+                predictions,
+                history.games,
+                history.seeds,
+                year,
             )
 
         result = YearModeResult(
@@ -1445,8 +1484,11 @@ class UnifiedBacktester:
 
         logger.info(
             "Calibration backtest %d: Brier=%.4f, RW-Brier=%.4f, Acc=%.1f%% [%s]",
-            year, result.brier_score, result.round_weighted_brier,
-            result.accuracy * 100, result.kaggle_rank_estimate,
+            year,
+            result.brier_score,
+            result.round_weighted_brier,
+            result.accuracy * 100,
+            result.kaggle_rank_estimate,
         )
         return result
 
@@ -1473,7 +1515,8 @@ class UnifiedBacktester:
         if len(history.first_round_matchups) < 64:
             logger.warning(
                 "Need 64 first-round teams for EV backtest, got %d for year %d",
-                len(history.first_round_matchups), year,
+                len(history.first_round_matchups),
+                year,
             )
             return None
 
@@ -1489,6 +1532,7 @@ class UnifiedBacktester:
             scoring = {k: v for k, v in scoring.items()}
 
         from ...simulation.pool_competition import build_scoring_vector
+
         scoring_vector = build_scoring_vector(scoring)
 
         # Generate model bracket(s)
@@ -1503,14 +1547,19 @@ class UnifiedBacktester:
 
         # Load historical public picks (Fix 4): use real ESPN "Who Picked Whom"
         # data when available; fall back to seed-based approximation seamlessly.
+        # When use_real_public_picks=False, force seed-based proxy for A/B testing.
         from ...data.historical_picks import load_historical_public_picks
         from pathlib import Path as _Path
-        hist_picks_dir = _Path(config.historical_picks_dir)
-        historical_public_picks = load_historical_public_picks(
-            year=year,
-            bracket_teams=history.seeds,
-            picks_dir=hist_picks_dir,
-        )
+
+        if config.use_real_public_picks:
+            hist_picks_dir = _Path(config.historical_picks_dir)
+            historical_public_picks = load_historical_public_picks(
+                year=year,
+                bracket_teams=history.seeds,
+                picks_dir=hist_picks_dir,
+            )
+        else:
+            historical_public_picks = None
 
         # Generate opponent brackets using the archetype engine for realistic
         # field modeling.  Each archetype produces brackets with distinct
@@ -1533,18 +1582,22 @@ class UnifiedBacktester:
         model_scores = []
         for bracket in model_brackets:
             score = _score_bracket_against_actual(
-                bracket, actual_outcome,
+                bracket,
+                actual_outcome,
                 history.first_round_matchups,
-                scoring, history,
+                scoring,
+                history,
             )
             model_scores.append(score)
 
         opponent_scores = []
         for bracket in opponent_brackets:
             score = _score_bracket_against_actual(
-                bracket, actual_outcome,
+                bracket,
+                actual_outcome,
                 history.first_round_matchups,
-                scoring, history,
+                scoring,
+                history,
             )
             opponent_scores.append(score)
 
@@ -1583,7 +1636,9 @@ class UnifiedBacktester:
                 )
             except Exception as exc:
                 logger.warning(
-                    "ESPN metrics computation failed for year %d: %s", year, exc,
+                    "ESPN metrics computation failed for year %d: %s",
+                    year,
+                    exc,
                 )
 
         result = YearModeResult(
@@ -1603,9 +1658,16 @@ class UnifiedBacktester:
         logger.info(
             "EV backtest %d (pool=%d, %s): rank=%d/%d (%.1f%%), "
             "score=%.0f, opp_mean=%.0f, path_prot=%.3f, lev_acc=%.3f",
-            year, total, payout_structure, rank, total,
-            percentile * 100, best_model_score, result.opponent_mean_score,
-            path_protection_score, leverage_accuracy,
+            year,
+            total,
+            payout_structure,
+            rank,
+            total,
+            percentile * 100,
+            best_model_score,
+            result.opponent_mean_score,
+            path_protection_score,
+            leverage_accuracy,
         )
         return result
 
@@ -1643,7 +1705,7 @@ class UnifiedBacktester:
             lev_accs = [r.leverage_accuracy for r in ev_results if r.n_leverage_picks > 0]
             top10_rates = [r.p_top_10_pct for r in ev_results if r.p_top_10_pct > 0]
             n_folds = len(ev_results)
-            se_pct = float(np.std(pcts) / max(1, n_folds ** 0.5)) if n_folds > 1 else 0.0
+            se_pct = float(np.std(pcts) / max(1, n_folds**0.5)) if n_folds > 1 else 0.0
 
             summary["ev"] = {
                 "mean_percentile": float(np.mean(pcts)),

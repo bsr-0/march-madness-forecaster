@@ -1,0 +1,66 @@
+name: "Public Picks A/B Experiment"
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly on Sundays at 05:00 UTC (low-traffic window)
+    - cron: "0 5 * * 0"
+
+concurrency:
+  group: public-picks-experiment
+  cancel-in-progress: true
+
+jobs:
+  run-experiment:
+    name: "Real ESPN Picks vs Seed-Based Proxy"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Run A/B experiment
+        run: python scripts/compare_public_picks_experiment.py
+
+      - name: Upload results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-picks-experiment-results
+          path: artifacts/public_picks_experiment.json
+          retention-days: 90
+
+      - name: Print summary
+        if: always()
+        run: |
+          if [ -f artifacts/public_picks_experiment.json ]; then
+            python - <<'PYEOF'
+          import json
+
+          with open("artifacts/public_picks_experiment.json") as f:
+              data = json.load(f)
+
+          years = data["common_years"]
+          base = data["baseline_percentiles"]
+          treat = data["treatment_percentiles"]
+
+          print("## Public Picks A/B Experiment Results\n")
+          print("| Year | Baseline (seed) | Treatment (ESPN) | Delta |")
+          print("|------|-----------------|------------------|-------|")
+          for y, b, t in zip(years, base, treat):
+              delta = t - b
+              print(f"| {y} | {b:.3f} | {t:.3f} | {delta:+.3f} |")
+
+          print(f"\n**Mean baseline:** {data['mean_baseline']:.4f}")
+          print(f"**Mean treatment:** {data['mean_treatment']:.4f}")
+
+          if data.get("p_value") is not None:
+              p = data["p_value"]
+              d = data["cohens_d"]
+              sig = "Significant" if p < 0.05 else "Not significant"
+              print(f"\n**Paired t-test:** p={p:.4f} (Cohen's d={d:.4f}) — {sig}")
+          PYEOF
+          fi >> "$GITHUB_STEP_SUMMARY"
