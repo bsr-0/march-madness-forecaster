@@ -100,6 +100,104 @@ def _load_team_stats(year):
         return json.load(f)
 
 
+def _load_torvik_barthag(year, seeds):
+    """Load Torvik barthag ratings for tournament teams.
+
+    Returns dict of team_id -> barthag (expected win % vs avg team).
+    Falls back to seed-based estimate if no Torvik data available.
+    """
+    barthag = {}
+
+    # Try torvik_{year}.json first
+    for prefix in [HIST_DIR, Path("data/raw")]:
+        path = prefix / f"torvik_{year}.json"
+        if path.exists():
+            with open(path) as f:
+                data = json.load(f)
+            for t in data.get("teams", []):
+                tid = t.get("team_id", "")
+                b = t.get("barthag")
+                if tid in seeds and b is not None:
+                    barthag[tid] = float(b)
+            break
+
+    # Fill missing teams with seed-based estimate
+    # Rough barthag by seed: 1-seed ~ 0.95, 16-seed ~ 0.30
+    for tid, seed in seeds.items():
+        if tid not in barthag:
+            barthag[tid] = max(0.10, 1.0 - seed * 0.04)
+
+    return barthag
+
+
+def _log5(barthag_a, barthag_b):
+    """Log5 formula: P(A beats B) from their win rates vs average."""
+    pa, pb = barthag_a, barthag_b
+    num = pa * (1 - pb)
+    denom = pa * (1 - pb) + pb * (1 - pa)
+    if denom < 1e-12:
+        return 0.5
+    return num / denom
+
+
+def build_torvik_round_probabilities(seeds, regions, barthag, n_sims=10000):
+    """Build round advancement probabilities via Torvik barthag + Monte Carlo.
+
+    Simulates the full bracket n_sims times using Log5 pairwise
+    probabilities derived from barthag values. Counts how often each
+    team advances to each round.
+
+    Returns: Dict[team_id, Dict[round_name, probability]]
+    """
+    rng = np.random.default_rng(42)
+    round_names = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
+
+    # Build the bracket structure (same ordering as the backtest)
+    region_teams = {r: {} for r in REGION_ORDER}
+    for tid, seed in seeds.items():
+        r = regions.get(tid, "")
+        if r in region_teams:
+            region_teams[r][seed] = tid
+
+    # Build ordered matchups per region
+    bracket_order = []  # List of 64 team_ids in bracket order
+    for region in REGION_ORDER:
+        rt = region_teams[region]
+        for high, low in SEED_MATCHUP_ORDER:
+            t1 = rt.get(high, f"unknown_{region}_{high}")
+            t2 = rt.get(low, f"unknown_{region}_{low}")
+            bracket_order.extend([t1, t2])
+
+    # Count round advances
+    advance_counts = {tid: {rnd: 0 for rnd in round_names} for tid in seeds}
+
+    for _ in range(n_sims):
+        current = list(bracket_order)
+        for round_idx, rnd in enumerate(round_names):
+            next_round = []
+            for g in range(0, len(current), 2):
+                t1, t2 = current[g], current[g + 1]
+                b1 = barthag.get(t1, 0.5)
+                b2 = barthag.get(t2, 0.5)
+                p1 = _log5(b1, b2)
+                if rng.random() < p1:
+                    winner = t1
+                else:
+                    winner = t2
+                advance_counts[winner][rnd] += 1
+                next_round.append(winner)
+            current = next_round
+
+    # Convert counts to probabilities
+    result = {}
+    for tid in seeds:
+        result[tid] = {}
+        for rnd in round_names:
+            result[tid][rnd] = max(0.001, advance_counts[tid][rnd] / n_sims)
+
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Bracket structure helpers
 # ---------------------------------------------------------------------------
@@ -549,20 +647,21 @@ def run_backtest(
         noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
         blend_rp = build_blend_round_probabilities(seed_rp, noseed_rp, alpha=0.5)
 
+        # Torvik barthag-based round probabilities (Log5 + MC simulation)
+        barthag = _load_torvik_barthag(year, seeds)
+        torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
+
         # Build opponent distribution (needed before leveraged mode)
         if opponent_source == "espn":
             pick_dist = build_espn_pick_distribution(year, seeds)
         else:
             pick_dist = build_seed_pick_distribution(seeds)
 
-        # Leverage-tilted round probs: amplify divergence from public
-        leveraged_rp = build_leverage_tilted_round_probs(blend_rp, pick_dist, tilt_strength=1.0)
-
         mode_round_probs = {
             "seed": seed_rp,
             "noseed": noseed_rp,
             "blend": blend_rp,
-            "leveraged": leveraged_rp,
+            "torvik": torvik_rp,
         }
 
         rng = np.random.default_rng(42 + year)
@@ -633,8 +732,8 @@ def run_backtest(
             )
 
         # --- Optimized modes: leverage-based Pareto brackets ---
-        # Test both seed_rp (higher leverage values) and blend_rp
-        for opt_mode_name, opt_rp in [("opt_seed", seed_rp), ("opt_blend", blend_rp)]:
+        # Test seed_rp, blend_rp, and torvik_rp as optimizer inputs
+        for opt_mode_name, opt_rp in [("opt_seed", seed_rp), ("opt_blend", blend_rp), ("opt_torvik", torvik_rp)]:
             opt_brackets = build_optimized_brackets(
                 first_round, seeds, regions, opt_rp, pick_dist, pool_size, n_target=N_MODEL_BRACKETS, rng=rng
             )
@@ -708,7 +807,7 @@ def run_backtest(
     )
     print(f"  {'-' * 65}")
 
-    for mode in ["seed", "noseed", "blend", "leveraged", "opt_seed", "opt_blend"]:
+    for mode in ["seed", "noseed", "blend", "torvik", "opt_seed", "opt_blend", "opt_torvik"]:
         mode_results = [r for r in results if r["mode"] == mode]
         if not mode_results:
             continue
@@ -726,106 +825,55 @@ def run_backtest(
     print(f"\n  Statistical Tests — Mean Rank (paired across years):")
 
     # Collect per-year ranks by mode
-    mode_ranks = {m: {} for m in ["seed", "noseed", "blend", "leveraged", "opt_seed", "opt_blend"]}
-    mode_best = {m: {} for m in ["seed", "noseed", "blend", "leveraged", "opt_seed", "opt_blend"]}
+    all_modes = ["seed", "noseed", "blend", "torvik", "opt_seed", "opt_blend", "opt_torvik"]
+    mode_ranks = {m: {} for m in all_modes}
+    mode_best = {m: {} for m in all_modes}
     for r in results:
-        mode_ranks[r["mode"]][r["year"]] = r["mean_rank"]
-        mode_best[r["mode"]][r["year"]] = r["best_rank"]
+        if r["mode"] in mode_ranks:
+            mode_ranks[r["mode"]][r["year"]] = r["mean_rank"]
+            mode_best[r["mode"]][r["year"]] = r["best_rank"]
 
     # Find years where all baseline modes exist
     baseline_years = sorted(set(mode_ranks["seed"]) & set(mode_ranks["noseed"]) & set(mode_ranks["blend"]))
-    # Find years where extra modes exist
-    lev_years = sorted(set(baseline_years) & set(mode_ranks["leveraged"]))
-    opt_years = sorted(set(baseline_years) & set(mode_ranks["opt_seed"]))
 
-    if len(baseline_years) >= 5:
-        seed_arr = np.array([mode_ranks["seed"][y] for y in baseline_years])
-        noseed_arr = np.array([mode_ranks["noseed"][y] for y in baseline_years])
-        blend_arr = np.array([mode_ranks["blend"][y] for y in baseline_years])
+    # For each non-baseline mode, run paired tests vs seed
+    comparison_modes = [
+        ("noseed", mode_ranks["noseed"], mode_best["noseed"]),
+        ("blend", mode_ranks["blend"], mode_best["blend"]),
+        ("torvik", mode_ranks["torvik"], mode_best["torvik"]),
+        ("opt_seed", mode_ranks["opt_seed"], mode_best["opt_seed"]),
+        ("opt_blend", mode_ranks["opt_blend"], mode_best["opt_blend"]),
+        ("opt_torvik", mode_ranks["opt_torvik"], mode_best["opt_torvik"]),
+    ]
 
-        t_ns, p_ns = sp_stats.ttest_rel(seed_arr, noseed_arr)
-        t_bl, p_bl = sp_stats.ttest_rel(seed_arr, blend_arr)
-        print(f"    Rank t-test (seed vs noseed): t={t_ns:.3f}, p={p_ns:.4f}")
-        print(f"    Rank t-test (seed vs blend):  t={t_bl:.3f}, p={p_bl:.4f}")
-
-        if len(lev_years) >= 5:
-            seed_lev = np.array([mode_ranks["seed"][y] for y in lev_years])
-            lev_arr = np.array([mode_ranks["leveraged"][y] for y in lev_years])
-            t_lv, p_lv = sp_stats.ttest_rel(seed_lev, lev_arr)
-            print(f"    Rank t-test (seed vs lever):  t={t_lv:.3f}, p={p_lv:.4f}")
-
-        if len(opt_years) >= 5:
-            seed_opt = np.array([mode_ranks["seed"][y] for y in opt_years])
-            opt_arr = np.array([mode_ranks["opt_seed"][y] for y in opt_years])
-            t_op, p_op = sp_stats.ttest_rel(seed_opt, opt_arr)
-            print(f"    Rank t-test (seed vs optim):  t={t_op:.3f}, p={p_op:.4f}")
-
-        ns_wins = np.sum(noseed_arr < seed_arr)
-        bl_wins = np.sum(blend_arr < seed_arr)
-        n_years = len(seed_arr)
-        print(f"    Noseed beats seed: {ns_wins}/{n_years} years (mean rank)")
-        print(f"    Blend beats seed:  {bl_wins}/{n_years} years (mean rank)")
-
-        if len(lev_years) >= 3:
-            lev_wins = np.sum(lev_arr < seed_lev)
-            print(f"    Lever beats seed:  {lev_wins}/{len(lev_years)} years (mean rank)")
-
-        if len(opt_years) >= 3:
-            opt_wins = np.sum(opt_arr < seed_opt)
-            print(f"    Optim beats seed:  {opt_wins}/{len(opt_years)} years (mean rank)")
-
-        print(f"\n    Mean rank improvement (lower = better):")
-        print(f"      Noseed vs seed: {np.mean(seed_arr - noseed_arr):+.1f} positions")
-        print(f"      Blend vs seed:  {np.mean(seed_arr - blend_arr):+.1f} positions")
-        if len(lev_years) >= 3:
-            print(f"      Lever vs seed:  {np.mean(seed_lev - lev_arr):+.1f} positions")
-        if len(opt_years) >= 3:
-            print(f"      Optim vs seed:  {np.mean(seed_opt - opt_arr):+.1f} positions")
+    for cmp_name, cmp_ranks, cmp_best in comparison_modes:
+        shared_years = sorted(set(mode_ranks["seed"].keys()) & set(cmp_ranks.keys()))
+        if len(shared_years) < 5:
+            continue
+        seed_arr = np.array([mode_ranks["seed"][y] for y in shared_years])
+        cmp_arr = np.array([cmp_ranks[y] for y in shared_years])
+        t, p = sp_stats.ttest_rel(seed_arr, cmp_arr)
+        improvement = np.mean(seed_arr - cmp_arr)
+        wins = np.sum(cmp_arr < seed_arr)
+        print(
+            f"    MeanRank seed vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, t={t:.3f}, p={p:.4f}"
+        )
 
     # --- Best-bracket stats (pool optimizer view) ---
-    if len(baseline_years) >= 5:
-        print(f"\n  Statistical Tests — Best Bracket Rank (pool optimizer view):")
-        sb = np.array([mode_best["seed"][y] for y in baseline_years])
-        nb = np.array([mode_best["noseed"][y] for y in baseline_years])
-        bb = np.array([mode_best["blend"][y] for y in baseline_years])
+    print(f"\n  Statistical Tests — Best Bracket Rank (pool optimizer view):")
 
-        t_ns, p_ns = sp_stats.ttest_rel(sb, nb)
-        t_bl, p_bl = sp_stats.ttest_rel(sb, bb)
-        print(f"    Rank t-test (seed vs noseed): t={t_ns:.3f}, p={p_ns:.4f}")
-        print(f"    Rank t-test (seed vs blend):  t={t_bl:.3f}, p={p_bl:.4f}")
-
-        if len(lev_years) >= 5:
-            sb_lev = np.array([mode_best["seed"][y] for y in lev_years])
-            lb = np.array([mode_best["leveraged"][y] for y in lev_years])
-            t_lv, p_lv = sp_stats.ttest_rel(sb_lev, lb)
-            print(f"    Rank t-test (seed vs lever):  t={t_lv:.3f}, p={p_lv:.4f}")
-
-        if len(opt_years) >= 5:
-            sb_opt = np.array([mode_best["seed"][y] for y in opt_years])
-            ob = np.array([mode_best["opt_seed"][y] for y in opt_years])
-            t_op, p_op = sp_stats.ttest_rel(sb_opt, ob)
-            print(f"    Rank t-test (seed vs optim):  t={t_op:.3f}, p={p_op:.4f}")
-
-        ns_wins = np.sum(nb < sb)
-        bl_wins = np.sum(bb < sb)
-        print(f"    Noseed beats seed: {ns_wins}/{len(sb)} years (best bracket)")
-        print(f"    Blend beats seed:  {bl_wins}/{len(sb)} years (best bracket)")
-
-        if len(lev_years) >= 3:
-            lev_wins = np.sum(lb < sb_lev)
-            print(f"    Lever beats seed:  {lev_wins}/{len(lev_years)} years (best bracket)")
-
-        if len(opt_years) >= 3:
-            opt_wins = np.sum(ob < sb_opt)
-            print(f"    Optim beats seed:  {opt_wins}/{len(opt_years)} years (best bracket)")
-
-        print(f"\n    Best-bracket rank improvement:")
-        print(f"      Noseed vs seed: {np.mean(sb - nb):+.1f} positions")
-        print(f"      Blend vs seed:  {np.mean(sb - bb):+.1f} positions")
-        if len(lev_years) >= 3:
-            print(f"      Lever vs seed:  {np.mean(sb_lev - lb):+.1f} positions")
-        if len(opt_years) >= 3:
-            print(f"      Optim vs seed:  {np.mean(sb_opt - ob):+.1f} positions")
+    for cmp_name, cmp_ranks, cmp_best in comparison_modes:
+        shared_years = sorted(set(mode_best["seed"].keys()) & set(cmp_best.keys()))
+        if len(shared_years) < 5:
+            continue
+        sb = np.array([mode_best["seed"][y] for y in shared_years])
+        cb = np.array([cmp_best[y] for y in shared_years])
+        t, p = sp_stats.ttest_rel(sb, cb)
+        improvement = np.mean(sb - cb)
+        wins = np.sum(cb < sb)
+        print(
+            f"    BestRank seed vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, t={t:.3f}, p={p:.4f}"
+        )
 
     print(f"\n{'=' * 100}")
     return 0
