@@ -44,10 +44,7 @@ from .game_fetchers import (
 
 logger = logging.getLogger(__name__)
 
-_ESPN_SCOREBOARD_URL = (
-    "https://site.api.espn.com/apis/site/v2/sports/basketball/"
-    "mens-college-basketball/scoreboard"
-)
+_ESPN_SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard"
 
 
 @dataclass
@@ -76,7 +73,10 @@ class LibraryProviderHub:
     }
 
     def fetch_historical_games(
-        self, year: int, priority: Optional[List[str]] = None, since: Optional[str] = None,
+        self,
+        year: int,
+        priority: Optional[List[str]] = None,
+        since: Optional[str] = None,
     ) -> ProviderResult:
         methods = {
             "espn_scoreboard": self._from_espn_scoreboard_api,
@@ -189,9 +189,11 @@ class LibraryProviderHub:
                 new_date = str(rec.get("date", ""))
                 if existing_date != new_date:
                     logger.warning(
-                        "Date inconsistency: game_id=%s team_id=%s has dates %s and %s — "
-                        "keeping earlier ESPN record",
-                        key[0], key[1], existing_date, new_date,
+                        "Date inconsistency: game_id=%s team_id=%s has dates %s and %s — keeping earlier ESPN record",
+                        key[0],
+                        key[1],
+                        existing_date,
+                        new_date,
                     )
                 continue
             seen[key] = rec
@@ -272,7 +274,9 @@ class LibraryProviderHub:
                         else:
                             logger.debug(
                                 "cbbpy URL patched for seasontype=%d: '%s' → '%s'",
-                                season_type, original_url, new_url,
+                                season_type,
+                                original_url,
+                                new_url,
                             )
                             patched = True
                 except (TypeError, ValueError, AttributeError, ImportError) as exc:
@@ -306,7 +310,12 @@ class LibraryProviderHub:
         return ProviderResult("cbbpy", deduped)
 
     def _cbbpy_scrape_attempt(
-        self, scraper, year: int, start_date: str, end_date: str, since: Optional[str],
+        self,
+        scraper,
+        year: int,
+        start_date: str,
+        end_date: str,
+        since: Optional[str],
     ) -> List[Dict]:
         fn_order = ("get_games_range",) if since else ("get_games_season", "get_games_range")
         for fn_name in fn_order:
@@ -316,7 +325,8 @@ class LibraryProviderHub:
             try:
                 if fn_name == "get_games_season":
                     games = self._run_with_timeout(
-                        fn, args=(year,),
+                        fn,
+                        args=(year,),
                         kwargs={"info": True, "box": True, "pbp": False},
                         timeout=120,
                     )
@@ -333,7 +343,9 @@ class LibraryProviderHub:
                         games = self._run_with_timeout(fn, args=(year,), timeout=120)
                     else:
                         games = self._run_with_timeout(
-                            fn, args=(f"{year - 1}-11-01", f"{year}-04-15"), timeout=120,
+                            fn,
+                            args=(f"{year - 1}-11-01", f"{year}-04-15"),
+                            timeout=120,
                         )
                 except Exception:
                     continue
@@ -346,10 +358,7 @@ class LibraryProviderHub:
                 continue
             if since:
                 self._normalize_date_field(game_rows)
-                game_rows = [
-                    r for r in game_rows
-                    if not r.get("date") or r["date"] >= since
-                ]
+                game_rows = [r for r in game_rows if not r.get("date") or r["date"] >= since]
             return game_rows
 
         return []
@@ -396,9 +405,9 @@ class LibraryProviderHub:
     def _from_cbbdata_api(self, year: int) -> ProviderResult:
         """Fetch Torvik ratings + Four Factors from the cbbdata.com API.
 
-        Uses BartTorvikScraper._rankings_from_cbbdata_api which handles
-        authentication, circuit breaking, and field mapping.  Converts
-        TorVikTeam objects to dicts for the provider framework.
+        Uses BartTorvikScraper.fetch_current_rankings which handles
+        authentication, circuit breaking, field mapping, and leakage guards.
+        Converts TorVikTeam objects to dicts for the provider framework.
         """
         try:
             from ..scrapers.torvik import BartTorvikScraper
@@ -408,6 +417,8 @@ class LibraryProviderHub:
 
         try:
             scraper = BartTorvikScraper()
+            # Use public method to ensure tournament date guard fires
+            scraper._check_tournament_date_guard(year)
             teams = scraper._rankings_from_cbbdata_api(year)
         except Exception as exc:  # noqa: BLE001
             logger.warning("cbbdata API fetch failed: %s", exc)
@@ -444,6 +455,17 @@ class LibraryProviderHub:
         return ProviderResult("cbbdata", records, strategy_used="cbbdata_api")
 
     def _from_barttorvik_csv(self, year: int) -> ProviderResult:
+        # Guard: prevent post-tournament scraping (no date filtering on this endpoint)
+        try:
+            from ..scrapers.torvik import BartTorvikScraper
+
+            BartTorvikScraper()._check_tournament_date_guard(year)
+        except ImportError:
+            pass  # Scraper not available; guard can't fire
+        except Exception as exc:
+            logger.warning("barttorvik CSV blocked by leakage guard: %s", exc)
+            return ProviderResult("barttorvik", [])
+
         url_template = os.getenv("BARTTORVIK_TORVIK_URL")
         if url_template:
             if "{year}" in url_template:
@@ -451,7 +473,8 @@ class LibraryProviderHub:
             else:
                 logger.warning(
                     "BARTTORVIK_TORVIK_URL does not contain {year} placeholder; "
-                    "using URL as-is (data may not match requested year %d)", year,
+                    "using URL as-is (data may not match requested year %d)",
+                    year,
                 )
                 url = url_template
         else:
@@ -483,8 +506,7 @@ class LibraryProviderHub:
         has_header = any(h and not h.replace(".", "", 1).isdigit() for h in header)
         if not has_header:
             logger.warning(
-                "barttorvik CSV appears to lack headers; skipping "
-                "(set BARTTORVIK_TORVIK_URL to a headered feed)."
+                "barttorvik CSV appears to lack headers; skipping (set BARTTORVIK_TORVIK_URL to a headered feed)."
             )
             return ProviderResult("barttorvik", [])
 
@@ -534,8 +556,12 @@ class LibraryProviderHub:
         t_rank = int(to_float(pick(["rank", "rk", "t_rank"]))) if pick(["rank", "rk", "t_rank"]) else 999
 
         barthag = to_float(pick(["barthag", "bar_thag"]))
-        adj_oe = to_float(pick(["adjoe", "adjo", "adj_o", "adj_oe", "adj_off", "adj_offense", "adj_offensive_efficiency"]))
-        adj_de = to_float(pick(["adjde", "adjd", "adj_d", "adj_de", "adj_def", "adj_defense", "adj_defensive_efficiency"]))
+        adj_oe = to_float(
+            pick(["adjoe", "adjo", "adj_o", "adj_oe", "adj_off", "adj_offense", "adj_offensive_efficiency"])
+        )
+        adj_de = to_float(
+            pick(["adjde", "adjd", "adj_d", "adj_de", "adj_def", "adj_defense", "adj_defensive_efficiency"])
+        )
         adj_t = to_float(pick(["adjt", "adj_t", "tempo", "adj_tempo"]))
 
         efg = normalize_rate(to_float(pick(["efg", "efg%", "effective_fg_pct", "efg_pct"])))
@@ -624,9 +650,7 @@ class LibraryProviderHub:
             try:
                 return future.result(timeout=timeout)
             except FuturesTimeout:
-                raise TimeoutError(
-                    f"{getattr(fn, '__name__', fn)} timed out after {timeout}s"
-                )
+                raise TimeoutError(f"{getattr(fn, '__name__', fn)} timed out after {timeout}s")
 
     @staticmethod
     def _frame_to_records(obj) -> List[Dict]:

@@ -1567,10 +1567,15 @@ class BartTorvikScraper:
 
     def load_from_json(self, filepath: str) -> List[TorVikTeam]:
         """
-        Load Torvik data from JSON file.
+        Load Torvik data from JSON file with leakage validation.
+
+        Validates that the file contains pre-tournament data by checking
+        metadata fields (data_type, data_as_of, scraped_at). Raises
+        LeakageError if the data was generated post-tournament.
 
         Expected format:
         {
+            "data_type": "pre_tournament_computed",
             "teams": [
                 {
                     "team_id": "duke",
@@ -1592,6 +1597,14 @@ class BartTorvikScraper:
         """
         with open(filepath, "r") as f:
             data = json.load(f)
+
+        # Extract year from filename (e.g. torvik_2025.json → 2025)
+        import re
+
+        m = re.search(r"(\d{4})", str(filepath))
+        if m:
+            year = int(m.group(1))
+            self._validate_cache_timestamp(data, year)
 
         return [self._dict_to_team(t) for t in data.get("teams", [])]
 
