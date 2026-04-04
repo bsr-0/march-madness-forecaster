@@ -25,16 +25,19 @@ class TestNCAAStatsScraper:
 
     def test_import_and_class_exists(self):
         from src.data.scrapers.ncaa_stats import NCAAStatsScraper
+
         assert NCAAStatsScraper is not None
 
     def test_constructor_no_cache(self):
         from src.data.scrapers.ncaa_stats import NCAAStatsScraper
+
         scraper = NCAAStatsScraper()
         assert scraper.cache_dir is None
         assert scraper.session is not None
 
     def test_constructor_with_cache(self, tmp_path):
         from src.data.scrapers.ncaa_stats import NCAAStatsScraper
+
         cache = str(tmp_path / "ncaa_cache")
         scraper = NCAAStatsScraper(cache_dir=cache)
         assert scraper.cache_dir == Path(cache)
@@ -42,24 +45,28 @@ class TestNCAAStatsScraper:
 
     def test_load_cache_no_cache_dir(self):
         from src.data.scrapers.ncaa_stats import NCAAStatsScraper
+
         scraper = NCAAStatsScraper()
         result = scraper._load_cache("anything.json")
         assert result is None
 
     def test_save_cache_no_cache_dir(self):
         from src.data.scrapers.ncaa_stats import NCAAStatsScraper
+
         scraper = NCAAStatsScraper()
         # Should not raise
         scraper._save_cache("anything.json", {"test": True})
 
     def test_load_cache_file_not_found(self, tmp_path):
         from src.data.scrapers.ncaa_stats import NCAAStatsScraper
+
         scraper = NCAAStatsScraper(cache_dir=str(tmp_path))
         result = scraper._load_cache("nonexistent.json")
         assert result is None
 
     def test_save_and_load_cache(self, tmp_path):
         from src.data.scrapers.ncaa_stats import NCAAStatsScraper
+
         scraper = NCAAStatsScraper(cache_dir=str(tmp_path))
         data = {"teams": [{"name": "Duke"}]}
         scraper._save_cache("test.json", data)
@@ -68,6 +75,7 @@ class TestNCAAStatsScraper:
 
     def test_load_cache_bad_json(self, tmp_path):
         from src.data.scrapers.ncaa_stats import NCAAStatsScraper
+
         scraper = NCAAStatsScraper(cache_dir=str(tmp_path))
         bad_file = tmp_path / "bad.json"
         bad_file.write_text("not json {{{")
@@ -76,6 +84,7 @@ class TestNCAAStatsScraper:
 
     def test_fetch_tournament_teams_from_cache(self, tmp_path):
         from src.data.scrapers.ncaa_stats import NCAAStatsScraper
+
         scraper = NCAAStatsScraper(cache_dir=str(tmp_path))
         cached = {"teams": [{"name": "Duke"}, {"name": "UNC"}]}
         scraper._save_cache("ncaa_teams_2025.json", cached)
@@ -84,6 +93,7 @@ class TestNCAAStatsScraper:
 
     def test_fetch_tournament_teams_network(self):
         from src.data.scrapers.ncaa_stats import NCAAStatsScraper
+
         scraper = NCAAStatsScraper()
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"teams": [{"name": "Kansas"}]}
@@ -94,6 +104,7 @@ class TestNCAAStatsScraper:
 
     def test_fetch_tournament_teams_empty_raises(self):
         from src.data.scrapers.ncaa_stats import NCAAStatsScraper
+
         scraper = NCAAStatsScraper()
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"teams": []}
@@ -104,6 +115,7 @@ class TestNCAAStatsScraper:
 
     def test_fetch_historical_games_network(self):
         from src.data.scrapers.ncaa_stats import NCAAStatsScraper
+
         scraper = NCAAStatsScraper()
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"games": [{"id": 1}]}
@@ -114,6 +126,7 @@ class TestNCAAStatsScraper:
 
     def test_fetch_historical_games_empty_raises(self):
         from src.data.scrapers.ncaa_stats import NCAAStatsScraper
+
         scraper = NCAAStatsScraper()
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"games": []}
@@ -133,26 +146,31 @@ class TestOpenDataFeedScraper:
 
     def test_import_and_class_exists(self):
         from src.data.scrapers.open_data_feed import OpenDataFeedScraper
+
         assert OpenDataFeedScraper is not None
 
     def test_constructor_no_cache(self):
         from src.data.scrapers.open_data_feed import OpenDataFeedScraper
+
         scraper = OpenDataFeedScraper()
         assert scraper.cache_dir is None
 
     def test_constructor_with_cache(self, tmp_path):
         from src.data.scrapers.open_data_feed import OpenDataFeedScraper
+
         scraper = OpenDataFeedScraper(cache_dir=str(tmp_path / "odf_cache"))
         assert scraper.cache_dir.exists()
 
     def test_extract_records_list_payload(self):
         from src.data.scrapers.open_data_feed import OpenDataFeedScraper
+
         scraper = OpenDataFeedScraper()
         result = scraper._extract_records([{"a": 1}, {"b": 2}, "skip"], None)
         assert result == [{"a": 1}, {"b": 2}]
 
     def test_extract_records_dict_with_key(self):
         from src.data.scrapers.open_data_feed import OpenDataFeedScraper
+
         scraper = OpenDataFeedScraper()
         payload = {"my_records": [{"x": 1}]}
         result = scraper._extract_records(payload, "my_records")
@@ -160,6 +178,7 @@ class TestOpenDataFeedScraper:
 
     def test_extract_records_dict_auto_detect(self):
         from src.data.scrapers.open_data_feed import OpenDataFeedScraper
+
         scraper = OpenDataFeedScraper()
         payload = {"teams": [{"name": "Duke"}]}
         result = scraper._extract_records(payload, None)
@@ -167,18 +186,21 @@ class TestOpenDataFeedScraper:
 
     def test_extract_records_non_dict_non_list(self):
         from src.data.scrapers.open_data_feed import OpenDataFeedScraper
+
         scraper = OpenDataFeedScraper()
         result = scraper._extract_records("string_payload", None)
         assert result == []
 
     def test_extract_records_dict_no_match(self):
         from src.data.scrapers.open_data_feed import OpenDataFeedScraper
+
         scraper = OpenDataFeedScraper()
         result = scraper._extract_records({"unknown_key": [1, 2]}, None)
         assert result == []
 
     def test_parse_csv(self):
         from src.data.scrapers.open_data_feed import OpenDataFeedScraper
+
         scraper = OpenDataFeedScraper()
         csv_text = "name,score\nDuke,95\nUNC,88"
         result = scraper._parse_csv(csv_text)
@@ -188,6 +210,7 @@ class TestOpenDataFeedScraper:
 
     def test_fetch_records_json(self):
         from src.data.scrapers.open_data_feed import OpenDataFeedScraper
+
         scraper = OpenDataFeedScraper()
         mock_resp = MagicMock()
         mock_resp.json.return_value = [{"id": 1}]
@@ -198,6 +221,7 @@ class TestOpenDataFeedScraper:
 
     def test_fetch_records_csv(self):
         from src.data.scrapers.open_data_feed import OpenDataFeedScraper
+
         scraper = OpenDataFeedScraper()
         mock_resp = MagicMock()
         mock_resp.text = "name,score\nDuke,95"
@@ -209,6 +233,7 @@ class TestOpenDataFeedScraper:
 
     def test_fetch_records_empty_raises(self):
         from src.data.scrapers.open_data_feed import OpenDataFeedScraper
+
         scraper = OpenDataFeedScraper()
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"unknown": "structure"}
@@ -228,22 +253,28 @@ class TestTransferPortalScraper:
 
     def test_import_and_class_exists(self):
         from src.data.scrapers.transfer_portal import TransferPortalScraper
+
         assert TransferPortalScraper is not None
 
     def test_constructor_no_cache(self):
         from src.data.scrapers.transfer_portal import TransferPortalScraper
+
         scraper = TransferPortalScraper()
         assert scraper.cache_dir is None
 
     def test_constructor_with_cache(self, tmp_path):
         from src.data.scrapers.transfer_portal import TransferPortalScraper
+
         scraper = TransferPortalScraper(cache_dir=str(tmp_path))
         assert scraper.cache_dir.exists()
 
     def test_parse_csv(self):
         from src.data.scrapers.transfer_portal import TransferPortalScraper
+
         scraper = TransferPortalScraper()
-        csv_text = "player_id,player_name,source_team_name,destination_team_name,entry_date\np1,John Doe,Duke,UNC,2025-04-01"
+        csv_text = (
+            "player_id,player_name,source_team_name,destination_team_name,entry_date\np1,John Doe,Duke,UNC,2025-04-01"
+        )
         result = scraper._parse_csv(csv_text)
         assert len(result) == 1
         assert result[0]["player_name"] == "John Doe"
@@ -252,6 +283,7 @@ class TestTransferPortalScraper:
 
     def test_parse_csv_alternate_columns(self):
         from src.data.scrapers.transfer_portal import TransferPortalScraper
+
         scraper = TransferPortalScraper()
         csv_text = "id,name,from_team,to_team,entry_date\np2,Jane Smith,Kentucky,Alabama,2025-05-01"
         result = scraper._parse_csv(csv_text)
@@ -262,6 +294,7 @@ class TestTransferPortalScraper:
 
     def test_fetch_entries_json(self):
         from src.data.scrapers.transfer_portal import TransferPortalScraper
+
         scraper = TransferPortalScraper()
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"entries": [{"player": "A"}]}
@@ -272,6 +305,7 @@ class TestTransferPortalScraper:
 
     def test_fetch_entries_csv_format(self):
         from src.data.scrapers.transfer_portal import TransferPortalScraper
+
         scraper = TransferPortalScraper()
         mock_resp = MagicMock()
         mock_resp.text = "player_id,player_name,source_team_name,destination_team_name,entry_date\np1,J,D,U,2025-01-01"
@@ -282,6 +316,7 @@ class TestTransferPortalScraper:
 
     def test_fetch_entries_empty_raises(self):
         from src.data.scrapers.transfer_portal import TransferPortalScraper
+
         scraper = TransferPortalScraper()
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"entries": []}
@@ -292,6 +327,7 @@ class TestTransferPortalScraper:
 
     def test_cache_round_trip(self, tmp_path):
         from src.data.scrapers.transfer_portal import TransferPortalScraper
+
         scraper = TransferPortalScraper(cache_dir=str(tmp_path))
         scraper._save_cache("tp.json", {"entries": [{"id": "1"}]})
         loaded = scraper._load_cache("tp.json")
@@ -308,20 +344,24 @@ class TestPlayerMetricsScraper:
 
     def test_import_and_class_exists(self):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         assert PlayerMetricsScraper is not None
 
     def test_constructor_no_cache(self):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         scraper = PlayerMetricsScraper()
         assert scraper.cache_dir is None
 
     def test_constructor_with_cache(self, tmp_path):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         scraper = PlayerMetricsScraper(cache_dir=str(tmp_path))
         assert scraper.cache_dir.exists()
 
     def test_to_float(self):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         assert PlayerMetricsScraper._to_float("3.14") == 3.14
         assert PlayerMetricsScraper._to_float(42) == 42.0
         assert PlayerMetricsScraper._to_float(None) == 0.0
@@ -329,6 +369,7 @@ class TestPlayerMetricsScraper:
 
     def test_to_int(self):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         assert PlayerMetricsScraper._to_int("10") == 10
         assert PlayerMetricsScraper._to_int("3.7") == 3
         assert PlayerMetricsScraper._to_int(None) == 0
@@ -336,6 +377,7 @@ class TestPlayerMetricsScraper:
 
     def test_to_bool(self):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         assert PlayerMetricsScraper._to_bool(True) is True
         assert PlayerMetricsScraper._to_bool(False) is False
         assert PlayerMetricsScraper._to_bool(None) is False
@@ -348,6 +390,7 @@ class TestPlayerMetricsScraper:
 
     def test_team_id(self):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         assert PlayerMetricsScraper._team_id("Duke Blue Devils") == "duke_blue_devils"
         assert PlayerMetricsScraper._team_id("UNC") == "unc"
         assert PlayerMetricsScraper._team_id("St. John's") == "st__john_s"
@@ -355,6 +398,7 @@ class TestPlayerMetricsScraper:
 
     def test_team_player_id(self):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         result = PlayerMetricsScraper._team_player_id("duke", "John Smith")
         assert result == "duke_john_smith"
         result_empty = PlayerMetricsScraper._team_player_id("duke", "")
@@ -362,12 +406,14 @@ class TestPlayerMetricsScraper:
 
     def test_normalize_json_payload_list(self):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         scraper = PlayerMetricsScraper()
         result = scraper._normalize_json_payload([{"team": "Duke"}])
         assert result == {"teams": [{"team": "Duke"}]}
 
     def test_normalize_json_payload_dict_with_teams(self):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         scraper = PlayerMetricsScraper()
         raw = {"teams": [{"team": "Duke"}], "source": "test", "timestamp": "2025-01-01"}
         result = scraper._normalize_json_payload(raw)
@@ -376,18 +422,21 @@ class TestPlayerMetricsScraper:
 
     def test_normalize_json_payload_dict_without_teams(self):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         scraper = PlayerMetricsScraper()
         result = scraper._normalize_json_payload({"other": "data"})
         assert result == {"teams": []}
 
     def test_normalize_json_payload_non_dict_non_list(self):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         scraper = PlayerMetricsScraper()
         result = scraper._normalize_json_payload("string")
         assert result == {"teams": []}
 
     def test_fetch_rosters_no_url(self):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         scraper = PlayerMetricsScraper()
         with patch.dict("os.environ", {}, clear=True):
             result = scraper.fetch_rosters(2025)
@@ -395,6 +444,7 @@ class TestPlayerMetricsScraper:
 
     def test_fetch_rosters_json(self):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         scraper = PlayerMetricsScraper()
         mock_resp = MagicMock()
         mock_resp.json.return_value = {"teams": [{"team_id": "duke"}]}
@@ -405,6 +455,7 @@ class TestPlayerMetricsScraper:
 
     def test_parse_csv_basic(self):
         from src.data.scrapers.player_metrics import PlayerMetricsScraper
+
         scraper = PlayerMetricsScraper()
         csv_text = (
             "team_id,team_name,name,player_id,position,minutes_per_game,"
@@ -431,14 +482,17 @@ class TestSportsReferenceScraper:
 
     def test_import_and_class_exists(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         assert SportsReferenceScraper is not None
 
     def test_base_url_constant(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         assert "sports-reference.com" in SportsReferenceScraper.BASE_URL
 
     def test_required_fields_constant(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         assert "team_name" in SportsReferenceScraper._REQUIRED_FIELDS
         assert "pace" in SportsReferenceScraper._REQUIRED_FIELDS
         assert "off_rtg" in SportsReferenceScraper._REQUIRED_FIELDS
@@ -446,87 +500,111 @@ class TestSportsReferenceScraper:
 
     def test_constructor_no_cache(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         scraper = SportsReferenceScraper()
         assert scraper.cache_dir is None
 
     def test_constructor_with_cache(self, tmp_path):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         scraper = SportsReferenceScraper(cache_dir=str(tmp_path))
         assert scraper.cache_dir.exists()
 
     def test_try_float_valid(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         assert SportsReferenceScraper._try_float("3.14") == 3.14
         assert SportsReferenceScraper._try_float("0") == 0.0
         assert SportsReferenceScraper._try_float("-5.5") == -5.5
 
     def test_try_float_invalid(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         assert SportsReferenceScraper._try_float("bad") is None
         assert SportsReferenceScraper._try_float("") is None
         assert SportsReferenceScraper._try_float(None) is None
 
     def test_to_float(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         assert SportsReferenceScraper._to_float("3.14") == 3.14
         assert SportsReferenceScraper._to_float("bad") == 0.0
 
     def test_validate_range_valid(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         assert SportsReferenceScraper._validate_range("pace", 68.5, "Duke") == 68.5
         assert SportsReferenceScraper._validate_range("off_rtg", 115.0, "Duke") == 115.0
         assert SportsReferenceScraper._validate_range("srs", -25.0, "Duke") == -25.0
 
     def test_validate_range_out_of_bounds(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         assert SportsReferenceScraper._validate_range("off_rtg", 500.0, "Duke") == 0.0
         assert SportsReferenceScraper._validate_range("sos", -50.0, "Duke") == 0.0
         assert SportsReferenceScraper._validate_range("pace", 10.0, "Duke") == 0.0
 
     def test_validate_range_none(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         assert SportsReferenceScraper._validate_range("pace", None, "Duke") == 0.0
         assert SportsReferenceScraper._validate_range("off_rtg", None, "Duke") == 0.0
 
     def test_to_int(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         assert SportsReferenceScraper._to_int("10") == 10
         assert SportsReferenceScraper._to_int("bad") == 0
 
     def test_has_critical_zeros_empty(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         assert SportsReferenceScraper._has_critical_zeros([]) is True
 
     def test_has_critical_zeros_all_zero(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         teams = [{"def_rtg": 0}, {"def_rtg": 0}, {"def_rtg": 0}]
         assert SportsReferenceScraper._has_critical_zeros(teams) is True
 
     def test_has_critical_zeros_all_nonzero(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         teams = [{"def_rtg": 100}, {"def_rtg": 95}, {"def_rtg": 105}]
         assert SportsReferenceScraper._has_critical_zeros(teams) is False
 
     def test_has_degraded_schema_empty(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         assert SportsReferenceScraper._has_degraded_schema([]) is True
 
     def test_has_degraded_schema_valid(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
-        teams = [{
-            "team_name": "Duke", "pace": 70, "off_rtg": 115,
-            "def_rtg": 95, "wins": 30, "losses": 5, "srs": 20, "sos": 10,
-        }]
+
+        teams = [
+            {
+                "team_name": "Duke",
+                "pace": 70,
+                "off_rtg": 115,
+                "def_rtg": 95,
+                "wins": 30,
+                "losses": 5,
+                "srs": 20,
+                "sos": 10,
+            }
+        ]
         assert SportsReferenceScraper._has_degraded_schema(teams) is False
 
     def test_has_degraded_schema_missing_fields(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         teams = [{"team_name": "Duke", "pace": 70}]
         assert SportsReferenceScraper._has_degraded_schema(teams) is True
 
     def test_ncaa_suffix_regex(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
         import re
+
         result = SportsReferenceScraper._NCAA_SUFFIX_RE.sub("", "Duke NCAA").rstrip()
         assert result == "Duke"
         result2 = SportsReferenceScraper._NCAA_SUFFIX_RE.sub("", "Duke").rstrip()
@@ -534,11 +612,13 @@ class TestSportsReferenceScraper:
 
     def test_compute_def_rtg_from_games_empty(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         result = SportsReferenceScraper._compute_def_rtg_from_games([])
         assert result == {}
 
     def test_compute_def_rtg_from_games_with_possessions(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         games = [
             {
                 "team1_id": "Duke",
@@ -554,6 +634,7 @@ class TestSportsReferenceScraper:
 
     def test_compute_def_rtg_from_games_no_possessions(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         games = [
             {
                 "team1_id": "Duke",
@@ -570,6 +651,7 @@ class TestSportsReferenceScraper:
     def test_compute_def_rtg_uses_league_avg_pace(self):
         """When a team has no possessions and no individual pace, use league-avg pace."""
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         games = [
             {
                 "team1_id": "Duke",
@@ -592,6 +674,7 @@ class TestSportsReferenceScraper:
 
     def test_compute_def_rtg_non_dict_games_skipped(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         games = ["not a dict", 42, None]
         result = SportsReferenceScraper._compute_def_rtg_from_games(games)
         assert result == {}
@@ -599,6 +682,7 @@ class TestSportsReferenceScraper:
     def test_compute_def_rtg_skips_overtime_games(self):
         """OT games are excluded so extra possessions/points don't inflate def_rtg."""
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         games = [
             # Regulation game: Duke allows 70 pts in 70 possessions -> def_rtg = 100
             {
@@ -628,6 +712,7 @@ class TestSportsReferenceScraper:
     def test_compute_def_rtg_all_overtime(self):
         """When all games are OT, no data remains and result should be empty."""
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         games = [
             {
                 "team1_id": "Duke",
@@ -643,12 +728,14 @@ class TestSportsReferenceScraper:
 
     def test_parse_team_table_empty_html(self):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         scraper = SportsReferenceScraper()
         result = scraper._parse_team_table("<html><body></body></html>")
         assert result == []
 
     def test_cache_round_trip(self, tmp_path):
         from src.data.scrapers.sports_reference import SportsReferenceScraper
+
         scraper = SportsReferenceScraper(cache_dir=str(tmp_path))
         data = {"teams": [{"team_name": "Duke"}]}
         scraper._save_cache("sr.json", data)
@@ -666,10 +753,12 @@ class TestConferenceSeedsScraper:
 
     def test_import_and_class_exists(self):
         from src.data.scrapers.conference_seeds import ConferenceSeedsScraper
+
         assert ConferenceSeedsScraper is not None
 
     def test_espn_conf_ids_constant(self):
         from src.data.scrapers.conference_seeds import _ESPN_CONF_IDS
+
         assert isinstance(_ESPN_CONF_IDS, dict)
         assert "ACC" in _ESPN_CONF_IDS
         assert "SEC" in _ESPN_CONF_IDS
@@ -678,26 +767,31 @@ class TestConferenceSeedsScraper:
 
     def test_espn_api_base_constant(self):
         from src.data.scrapers.conference_seeds import _ESPN_API_BASE
+
         assert "espn.com" in _ESPN_API_BASE
 
     def test_default_tourney_window_constant(self):
         from src.data.scrapers.conference_seeds import _DEFAULT_TOURNEY_WINDOW
+
         assert len(_DEFAULT_TOURNEY_WINDOW) == 4
 
     def test_constructor_no_cache(self):
         from src.data.scrapers.conference_seeds import ConferenceSeedsScraper
+
         scraper = ConferenceSeedsScraper()
         assert scraper.cache_dir is None
         assert scraper.timeout == 30
 
     def test_constructor_with_cache_and_timeout(self, tmp_path):
         from src.data.scrapers.conference_seeds import ConferenceSeedsScraper
+
         scraper = ConferenceSeedsScraper(cache_dir=str(tmp_path), timeout=60)
         assert scraper.cache_dir.exists()
         assert scraper.timeout == 60
 
     def test_map_espn_team_to_id_location(self):
         from src.data.scrapers.conference_seeds import ConferenceSeedsScraper
+
         team_obj = {"location": "Duke", "name": "Blue Devils"}
         result = ConferenceSeedsScraper._map_espn_team_to_id(team_obj)
         assert result  # Should produce a non-empty ID
@@ -705,23 +799,27 @@ class TestConferenceSeedsScraper:
 
     def test_map_espn_team_to_id_empty(self):
         from src.data.scrapers.conference_seeds import ConferenceSeedsScraper
+
         result = ConferenceSeedsScraper._map_espn_team_to_id({})
         assert result == ""
 
     def test_map_espn_team_to_id_fallback_to_short_display(self):
         from src.data.scrapers.conference_seeds import ConferenceSeedsScraper
+
         team_obj = {"shortDisplayName": "Duke"}
         result = ConferenceSeedsScraper._map_espn_team_to_id(team_obj)
         assert result != ""
 
     def test_map_espn_team_to_id_fallback_to_abbreviation(self):
         from src.data.scrapers.conference_seeds import ConferenceSeedsScraper
+
         team_obj = {"abbreviation": "DUKE"}
         result = ConferenceSeedsScraper._map_espn_team_to_id(team_obj)
         assert result != ""
 
     def test_save_to_file(self, tmp_path):
         from src.data.scrapers.conference_seeds import ConferenceSeedsScraper
+
         scraper = ConferenceSeedsScraper()
         seeds = {"ACC": {"duke": 1, "unc": 2}}
         output_path = str(tmp_path / "subdir" / "seeds.json")
@@ -732,6 +830,7 @@ class TestConferenceSeedsScraper:
 
     def test_scrape_seeds_from_cache(self, tmp_path):
         from src.data.scrapers.conference_seeds import ConferenceSeedsScraper
+
         scraper = ConferenceSeedsScraper(cache_dir=str(tmp_path))
         cached_data = {"seeds": {"ACC": {"duke": 1}}}
         scraper._save_cache("conference_seeds_2026.json", cached_data)
@@ -740,6 +839,7 @@ class TestConferenceSeedsScraper:
 
     def test_cache_round_trip(self, tmp_path):
         from src.data.scrapers.conference_seeds import ConferenceSeedsScraper
+
         scraper = ConferenceSeedsScraper(cache_dir=str(tmp_path))
         data = {"seeds": {"B10": {"purdue": 1}}}
         scraper._save_cache("test.json", data)
@@ -748,11 +848,13 @@ class TestConferenceSeedsScraper:
 
     def test_load_cache_no_dir(self):
         from src.data.scrapers.conference_seeds import ConferenceSeedsScraper
+
         scraper = ConferenceSeedsScraper()
         assert scraper._load_cache("anything.json") is None
 
     def test_save_cache_no_dir(self):
         from src.data.scrapers.conference_seeds import ConferenceSeedsScraper
+
         scraper = ConferenceSeedsScraper()
         # Should not raise
         scraper._save_cache("anything.json", {})
@@ -770,22 +872,26 @@ class TestConferenceBracketValidator:
         from src.data.scrapers.conference_bracket_validator import (
             ConferenceBracketValidator,
         )
+
         assert ConferenceBracketValidator is not None
 
     def test_espn_conf_ids_constant(self):
         from src.data.scrapers.conference_bracket_validator import _ESPN_CONF_IDS
+
         assert isinstance(_ESPN_CONF_IDS, dict)
         assert "ACC" in _ESPN_CONF_IDS
         assert "SEC" in _ESPN_CONF_IDS
 
     def test_espn_api_base_constant(self):
         from src.data.scrapers.conference_bracket_validator import _ESPN_API_BASE
+
         assert "espn.com" in _ESPN_API_BASE
 
     def test_constructor_default(self):
         from src.data.scrapers.conference_bracket_validator import (
             ConferenceBracketValidator,
         )
+
         validator = ConferenceBracketValidator()
         assert validator.timeout == 30
         assert validator.session is not None
@@ -794,6 +900,7 @@ class TestConferenceBracketValidator:
         from src.data.scrapers.conference_bracket_validator import (
             ConferenceBracketValidator,
         )
+
         validator = ConferenceBracketValidator(timeout=60)
         assert validator.timeout == 60
 
@@ -801,6 +908,7 @@ class TestConferenceBracketValidator:
         from src.data.scrapers.conference_bracket_validator import (
             ConferenceBracketValidator,
         )
+
         validator = ConferenceBracketValidator()
         result = validator.fetch_tournament_games(2026, "FAKE_CONF")
         assert result == []
@@ -809,6 +917,7 @@ class TestConferenceBracketValidator:
         from src.data.scrapers.conference_bracket_validator import (
             ConferenceBracketValidator,
         )
+
         validator = ConferenceBracketValidator()
         # Mock the session to return no events for every date
         mock_resp = MagicMock()
@@ -823,6 +932,7 @@ class TestConferenceBracketValidator:
         from src.data.scrapers.conference_bracket_validator import (
             ConferenceBracketValidator,
         )
+
         validator = ConferenceBracketValidator()
         ua = validator.session.headers.get("User-Agent", "")
         assert "Mozilla" in ua
@@ -838,10 +948,12 @@ class TestTorVikTeam:
 
     def test_import_and_class_exists(self):
         from src.data.scrapers.torvik import TorVikTeam
+
         assert TorVikTeam is not None
 
     def test_construct_torvik_team(self):
         from src.data.scrapers.torvik import TorVikTeam
+
         team = TorVikTeam(
             team_id="duke",
             name="Duke",
@@ -865,15 +977,24 @@ class TestTorVikTeam:
 
     def test_to_dict(self):
         from src.data.scrapers.torvik import TorVikTeam
+
         team = TorVikTeam(
-            team_id="duke", name="Duke", conference="ACC",
-            t_rank=1, barthag=0.97,
-            adj_offensive_efficiency=122.0, adj_defensive_efficiency=93.0,
+            team_id="duke",
+            name="Duke",
+            conference="ACC",
+            t_rank=1,
+            barthag=0.97,
+            adj_offensive_efficiency=122.0,
+            adj_defensive_efficiency=93.0,
             adj_tempo=70.0,
-            effective_fg_pct=0.55, turnover_rate=0.16,
-            offensive_reb_rate=0.32, free_throw_rate=0.35,
-            opp_effective_fg_pct=0.45, opp_turnover_rate=0.20,
-            defensive_reb_rate=0.72, opp_free_throw_rate=0.28,
+            effective_fg_pct=0.55,
+            turnover_rate=0.16,
+            offensive_reb_rate=0.32,
+            free_throw_rate=0.35,
+            opp_effective_fg_pct=0.45,
+            opp_turnover_rate=0.20,
+            defensive_reb_rate=0.72,
+            opp_free_throw_rate=0.28,
         )
         d = team.to_dict()
         assert d["team_id"] == "duke"
@@ -887,15 +1008,24 @@ class TestTorVikTeam:
 
     def test_default_values(self):
         from src.data.scrapers.torvik import TorVikTeam
+
         team = TorVikTeam(
-            team_id="unc", name="UNC", conference="ACC",
-            t_rank=5, barthag=0.90,
-            adj_offensive_efficiency=115.0, adj_defensive_efficiency=98.0,
+            team_id="unc",
+            name="UNC",
+            conference="ACC",
+            t_rank=5,
+            barthag=0.90,
+            adj_offensive_efficiency=115.0,
+            adj_defensive_efficiency=98.0,
             adj_tempo=68.0,
-            effective_fg_pct=0.50, turnover_rate=0.18,
-            offensive_reb_rate=0.30, free_throw_rate=0.30,
-            opp_effective_fg_pct=0.48, opp_turnover_rate=0.18,
-            defensive_reb_rate=0.70, opp_free_throw_rate=0.30,
+            effective_fg_pct=0.50,
+            turnover_rate=0.18,
+            offensive_reb_rate=0.30,
+            free_throw_rate=0.30,
+            opp_effective_fg_pct=0.48,
+            opp_turnover_rate=0.18,
+            defensive_reb_rate=0.70,
+            opp_free_throw_rate=0.30,
         )
         assert team.two_pt_pct == 0.0
         assert team.three_pt_pct == 0.0
@@ -913,25 +1043,30 @@ class TestBartTorvikScraper:
 
     def test_import_and_class_exists(self):
         from src.data.scrapers.torvik import BartTorvikScraper
+
         assert BartTorvikScraper is not None
 
     def test_base_url_constant(self):
         from src.data.scrapers.torvik import BartTorvikScraper
+
         assert BartTorvikScraper.BASE_URL == "https://barttorvik.com"
 
     def test_constructor_no_cache(self):
         from src.data.scrapers.torvik import BartTorvikScraper
+
         scraper = BartTorvikScraper()
         assert scraper.cache_dir is None
         assert scraper.session is not None
 
     def test_constructor_with_cache(self, tmp_path):
         from src.data.scrapers.torvik import BartTorvikScraper
+
         scraper = BartTorvikScraper(cache_dir=str(tmp_path))
         assert scraper.cache_dir.exists()
 
     def test_safe_float(self):
         from src.data.scrapers.torvik import BartTorvikScraper
+
         scraper = BartTorvikScraper()
         assert scraper._safe_float("3.14") == 3.14
         assert scraper._safe_float("50.2%") == 50.2
@@ -940,6 +1075,7 @@ class TestBartTorvikScraper:
 
     def test_normalize_team_name_to_id(self):
         from src.data.scrapers.torvik import BartTorvikScraper
+
         assert BartTorvikScraper._normalize_team_name_to_id("Duke") == "duke"
         assert BartTorvikScraper._normalize_team_name_to_id("North Carolina") == "north_carolina"
         assert BartTorvikScraper._normalize_team_name_to_id("St. John's") == "st__john_s__ny"
@@ -947,10 +1083,14 @@ class TestBartTorvikScraper:
 
     def test_dict_to_team(self):
         from src.data.scrapers.torvik import BartTorvikScraper, TorVikTeam
+
         scraper = BartTorvikScraper()
         data = {
-            "team_id": "duke", "name": "Duke", "conference": "ACC",
-            "t_rank": 1, "barthag": 0.97,
+            "team_id": "duke",
+            "name": "Duke",
+            "conference": "ACC",
+            "t_rank": 1,
+            "barthag": 0.97,
             "adj_offensive_efficiency": 122.0,
             "adj_defensive_efficiency": 93.0,
             "adj_tempo": 70.0,
@@ -962,6 +1102,7 @@ class TestBartTorvikScraper:
 
     def test_dict_to_team_defaults(self):
         from src.data.scrapers.torvik import BartTorvikScraper, TorVikTeam
+
         scraper = BartTorvikScraper()
         team = scraper._dict_to_team({})
         assert team.team_id == ""
@@ -971,6 +1112,7 @@ class TestBartTorvikScraper:
 
     def test_cache_round_trip(self, tmp_path):
         from src.data.scrapers.torvik import BartTorvikScraper
+
         scraper = BartTorvikScraper(cache_dir=str(tmp_path))
         data = {"teams": [{"name": "Duke"}]}
         scraper._save_to_cache("test.json", data)
@@ -979,11 +1121,13 @@ class TestBartTorvikScraper:
 
     def test_load_from_cache_no_dir(self):
         from src.data.scrapers.torvik import BartTorvikScraper
+
         scraper = BartTorvikScraper()
         assert scraper._load_from_cache("anything.json") is None
 
     def test_load_from_cache_bad_json(self, tmp_path):
         from src.data.scrapers.torvik import BartTorvikScraper
+
         scraper = BartTorvikScraper(cache_dir=str(tmp_path))
         bad_file = tmp_path / "bad.json"
         bad_file.write_text("{{invalid json")
@@ -991,44 +1135,61 @@ class TestBartTorvikScraper:
 
     def test_save_to_cache_no_dir(self):
         from src.data.scrapers.torvik import BartTorvikScraper
+
         scraper = BartTorvikScraper()
         # Should not raise
         scraper._save_to_cache("anything.json", {})
 
     def test_fetch_current_rankings_from_cache(self, tmp_path):
+        from unittest.mock import patch as _patch
         from src.data.scrapers.torvik import BartTorvikScraper
+
         scraper = BartTorvikScraper(cache_dir=str(tmp_path))
         # Cache validation requires >= 100 teams with non-zero efficiency metrics
         teams = []
         for i in range(120):
-            teams.append({
-                "team_id": f"team_{i}", "name": f"Team {i}", "conference": "Conf",
-                "t_rank": i + 1, "barthag": round(0.97 - i * 0.005, 4),
-                "adj_offensive_efficiency": round(122.0 - i * 0.2, 1),
-                "adj_defensive_efficiency": round(93.0 + i * 0.1, 1),
-                "adj_tempo": 70.0,
-            })
+            teams.append(
+                {
+                    "team_id": f"team_{i}",
+                    "name": f"Team {i}",
+                    "conference": "Conf",
+                    "t_rank": i + 1,
+                    "barthag": round(0.97 - i * 0.005, 4),
+                    "adj_offensive_efficiency": round(122.0 - i * 0.2, 1),
+                    "adj_defensive_efficiency": round(93.0 + i * 0.1, 1),
+                    "adj_tempo": 70.0,
+                }
+            )
         cached = {"teams": teams}
         scraper._save_to_cache("torvik_rankings_2026.json", cached)
-        result = scraper.fetch_current_rankings(year=2026)
+        with (
+            _patch.object(scraper, "_check_tournament_date_guard"),
+            _patch.object(scraper, "_validate_cache_timestamp"),
+        ):
+            result = scraper.fetch_current_rankings(year=2026)
         assert len(result) == 120
         assert result[0].team_id == "team_0"
 
     def test_fetch_current_rankings_network_failure(self):
+        from unittest.mock import patch as _patch
         from src.data.scrapers.torvik import BartTorvikScraper
+
         scraper = BartTorvikScraper()
         scraper.session.get = MagicMock(side_effect=Exception("Connection error"))
-        result = scraper.fetch_current_rankings(year=2026)
+        with _patch.object(scraper, "_check_tournament_date_guard"):
+            result = scraper.fetch_current_rankings(year=2026)
         assert result == []
 
     def test_aggregate_player_csv_empty(self):
         from src.data.scrapers.torvik import BartTorvikScraper
+
         scraper = BartTorvikScraper()
         result = scraper._aggregate_player_csv("")
         assert result == {}
 
     def test_aggregate_player_csv_basic(self):
         from src.data.scrapers.torvik import BartTorvikScraper
+
         scraper = BartTorvikScraper()
         # Build a minimal CSV line with at least 22 columns
         cols = [""] * 22
@@ -1052,37 +1213,61 @@ class TestBartTorvikScraper:
         assert result["duke"]["ftm"] == 50.0
 
     def test_fetch_four_factors_from_cache(self, tmp_path):
+        from unittest.mock import patch as _patch
         from src.data.scrapers.torvik import BartTorvikScraper
+
         scraper = BartTorvikScraper(cache_dir=str(tmp_path))
-        cached = {"duke": {
-            "effective_fg_pct": 0.55, "turnover_rate": 0.18,
-            "offensive_reb_rate": 0.30, "free_throw_rate": 0.32,
-            "opp_effective_fg_pct": 0.49, "opp_turnover_rate": 0.17,
-            "defensive_reb_rate": 0.71, "opp_free_throw_rate": 0.28,
-        }}
+        cached = {
+            "duke": {
+                "effective_fg_pct": 0.55,
+                "turnover_rate": 0.18,
+                "offensive_reb_rate": 0.30,
+                "free_throw_rate": 0.32,
+                "opp_effective_fg_pct": 0.49,
+                "opp_turnover_rate": 0.17,
+                "defensive_reb_rate": 0.71,
+                "opp_free_throw_rate": 0.28,
+            }
+        }
         scraper._save_to_cache("torvik_four_factors_2026.json", cached)
-        result = scraper.fetch_four_factors(year=2026)
+        with (
+            _patch.object(scraper, "_check_tournament_date_guard"),
+            _patch.object(scraper, "_validate_cache_timestamp"),
+        ):
+            result = scraper.fetch_four_factors(year=2026)
         assert result == cached
 
     def test_fetch_shooting_stats_from_cache(self, tmp_path):
+        from unittest.mock import patch as _patch
         from src.data.scrapers.torvik import BartTorvikScraper
+
         scraper = BartTorvikScraper(cache_dir=str(tmp_path))
         cached = {"duke": {"three_pt_pct": 0.36, "ft_pct": 0.78}}
         scraper._save_to_cache("torvik_shooting_2026.json", cached)
-        result = scraper.fetch_shooting_stats(year=2026)
+        with (
+            _patch.object(scraper, "_check_tournament_date_guard"),
+            _patch.object(scraper, "_validate_cache_timestamp"),
+        ):
+            result = scraper.fetch_shooting_stats(year=2026)
         assert result == cached
 
     def test_load_from_json(self, tmp_path):
         from src.data.scrapers.torvik import BartTorvikScraper
+
         scraper = BartTorvikScraper()
         data = {
-            "teams": [{
-                "team_id": "duke", "name": "Duke", "conference": "ACC",
-                "t_rank": 1, "barthag": 0.97,
-                "adj_offensive_efficiency": 122.0,
-                "adj_defensive_efficiency": 93.0,
-                "adj_tempo": 70.0,
-            }]
+            "teams": [
+                {
+                    "team_id": "duke",
+                    "name": "Duke",
+                    "conference": "ACC",
+                    "t_rank": 1,
+                    "barthag": 0.97,
+                    "adj_offensive_efficiency": 122.0,
+                    "adj_defensive_efficiency": 93.0,
+                    "adj_tempo": 70.0,
+                }
+            ]
         }
         filepath = tmp_path / "torvik_data.json"
         with open(filepath, "w") as f:
@@ -1090,4 +1275,3 @@ class TestBartTorvikScraper:
         result = scraper.load_from_json(str(filepath))
         assert len(result) == 1
         assert result[0].name == "Duke"
-
