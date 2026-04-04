@@ -21,13 +21,3 @@ Picks 2008: 1 bracket team(s) have NO ESPN pick data (will use seed-based rates)
     Pareto: 12 base + 35 variants = 47 unique brackets
   2008   opt_torvik     17.7    149.1    0.000    0.397     0.915     1590     1415
 Picks 2009: 1 bracket team(s) have NO ESPN pick data (will use seed-based rates): ['alabama_state']
-  2009   seed           40.7    533.7    0.000    0.033     0.244     1550     1157
-  2009   noseed         11.2    614.4    0.000    0.040     0.143     1620     1100
-  2009   blend          61.2    643.3    0.000    0.000     0.043     1520     1080
-  2009   torvik         70.6    622.5    0.000    0.001     0.125     1510     1089
-    Pareto: 11 base + 33 variants = 44 unique brackets
-  2009   opt_seed      552.1    851.7    0.000    0.000     0.000     1160      906
-    Pareto: 11 base + 32 variants = 43 unique brackets
-  2009   opt_blend      40.1    536.4    0.000    0.040     0.138     1550     1131
-    Pareto: 13 base + 25 variants = 38 unique brackets
-  2009   opt_torvik     97.1    546.1    0.000    0.000     0.261     1480     1147
