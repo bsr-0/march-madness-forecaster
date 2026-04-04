@@ -27,8 +27,30 @@ jobs:
         with:
           extra-packages: kagglehub
 
-      - name: Download Kaggle tournament data
-        run: python scripts/download_kaggle_dataset.py --force
+      - name: Refresh Kaggle data (optional)
+        continue-on-error: true
+        run: |
+          # Download latest CSVs from nishaanamin/march-madness-data.
+          # If credentials are missing or download fails, the tracked
+          # JSON files from git checkout are used as fallback.
+          python scripts/download_kaggle_dataset.py --force
+          # Convert freshly downloaded CSVs to the compact JSON format
+          # the backtest loader expects (tournament_matchups.json etc.)
+          python scripts/convert_nishaanamin_to_json.py data/kaggle data/kaggle
+
+      - name: Verify tournament data exists
+        run: |
+          python -c "
+          import json, sys
+          p = 'data/kaggle/tournament_matchups.json'
+          d = json.load(open(p))
+          years = sorted(set(r[0] for r in d['data']))
+          n = len(d['data'])
+          print(f'tournament_matchups.json: {n} rows, years {min(years)}-{max(years)}')
+          if n < 100:
+              print(f'::error::Only {n} rows in {p} — data may be corrupt')
+              sys.exit(1)
+          "
 
       - name: Run A/B experiment
         run: python scripts/compare_public_picks_experiment.py
