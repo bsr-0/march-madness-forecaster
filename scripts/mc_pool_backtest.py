@@ -91,13 +91,26 @@ def load_tournament_results(year):
     return data.get("games", data) if isinstance(data, dict) else data
 
 
+def _validate_pretournament(data, filepath):
+    """Raise if data file lacks pre-tournament provenance."""
+    dt = data.get("data_type")
+    if dt != "pre_tournament_computed":
+        raise ValueError(
+            f"{filepath}: data_type={dt!r}, expected 'pre_tournament_computed'. "
+            f"File may contain post-tournament data (look-ahead bias). "
+            f"Re-run compute_pretournament_*.py to regenerate."
+        )
+
+
 def _load_team_stats(year):
-    """Load Torvik four-factors for noseed model."""
+    """Load Torvik four-factors for noseed model (pre-tournament only)."""
     path = HIST_DIR / f"torvik_four_factors_{year}.json"
     if not path.exists():
         return {}
     with open(path) as f:
-        return json.load(f)
+        data = json.load(f)
+    _validate_pretournament(data, path)
+    return data
 
 
 def _load_torvik_barthag(year, seeds):
@@ -105,6 +118,7 @@ def _load_torvik_barthag(year, seeds):
 
     Returns dict of team_id -> barthag (expected win % vs avg team).
     Falls back to seed-based estimate if no Torvik data available.
+    Validates that the data is pre-tournament to prevent look-ahead bias.
     """
     barthag = {}
 
@@ -114,6 +128,7 @@ def _load_torvik_barthag(year, seeds):
         if path.exists():
             with open(path) as f:
                 data = json.load(f)
+            _validate_pretournament(data, path)
             for t in data.get("teams", []):
                 tid = t.get("team_id", "")
                 b = t.get("barthag")

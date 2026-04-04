@@ -58,32 +58,32 @@ class TorVikValidationError(Exception):
 @dataclass
 class TorVikTeam:
     """Team data from BartTorvik T-Rank."""
-    
+
     team_id: str
     name: str
     conference: str
-    
+
     # T-Rank ratings
     t_rank: int
     barthag: float  # Expected win percentage vs average team on neutral
-    
+
     # Efficiency metrics (per 100 possessions)
     adj_offensive_efficiency: float
     adj_defensive_efficiency: float
     adj_tempo: float  # Possessions per 40 minutes
-    
+
     # Four Factors (Offense)
     effective_fg_pct: float  # eFG%
     turnover_rate: float  # TO%
     offensive_reb_rate: float  # ORB%
     free_throw_rate: float  # FTR (FT/FGA)
-    
+
     # Four Factors (Defense)
     opp_effective_fg_pct: float
     opp_turnover_rate: float  # Forced TO%
     defensive_reb_rate: float  # DRB%
     opp_free_throw_rate: float
-    
+
     # Additional metrics
     two_pt_pct: float = 0.0
     three_pt_pct: float = 0.0
@@ -91,58 +91,57 @@ class TorVikTeam:
     ft_pct: float = 0.0
     block_pct: float = 0.0
     steal_pct: float = 0.0
-    
+
     # Opponent-adjusted versions
     opp_two_pt_pct: float = 0.0
     opp_three_pt_pct: float = 0.0
     opp_three_pt_rate: float = 0.0
-    
+
     # WAB metrics
     wab: float = 0.0  # Wins Above Bubble
-    
+
     # Record
     wins: int = 0
     losses: int = 0
     conf_wins: int = 0
     conf_losses: int = 0
-    
+
     def to_dict(self) -> dict:
         """Convert to dictionary — includes ALL scraped fields."""
         return {
-            'team_id': self.team_id,
-            'name': self.name,
-            'conference': self.conference,
-            't_rank': self.t_rank,
-            'barthag': self.barthag,
-            'adj_offensive_efficiency': self.adj_offensive_efficiency,
-            'adj_defensive_efficiency': self.adj_defensive_efficiency,
-            'adj_tempo': self.adj_tempo,
-            'effective_fg_pct': self.effective_fg_pct,
-            'turnover_rate': self.turnover_rate,
-            'offensive_reb_rate': self.offensive_reb_rate,
-            'free_throw_rate': self.free_throw_rate,
-            'opp_effective_fg_pct': self.opp_effective_fg_pct,
-            'opp_turnover_rate': self.opp_turnover_rate,
-            'defensive_reb_rate': self.defensive_reb_rate,
-            'opp_free_throw_rate': self.opp_free_throw_rate,
+            "team_id": self.team_id,
+            "name": self.name,
+            "conference": self.conference,
+            "t_rank": self.t_rank,
+            "barthag": self.barthag,
+            "adj_offensive_efficiency": self.adj_offensive_efficiency,
+            "adj_defensive_efficiency": self.adj_defensive_efficiency,
+            "adj_tempo": self.adj_tempo,
+            "effective_fg_pct": self.effective_fg_pct,
+            "turnover_rate": self.turnover_rate,
+            "offensive_reb_rate": self.offensive_reb_rate,
+            "free_throw_rate": self.free_throw_rate,
+            "opp_effective_fg_pct": self.opp_effective_fg_pct,
+            "opp_turnover_rate": self.opp_turnover_rate,
+            "defensive_reb_rate": self.defensive_reb_rate,
+            "opp_free_throw_rate": self.opp_free_throw_rate,
             # Shooting splits & extended metrics
-            'two_pt_pct': self.two_pt_pct,
-            'three_pt_pct': self.three_pt_pct,
-            'three_pt_rate': self.three_pt_rate,
-            'ft_pct': self.ft_pct,
-            'block_pct': self.block_pct,
-            'steal_pct': self.steal_pct,
-            'opp_two_pt_pct': self.opp_two_pt_pct,
-            'opp_three_pt_pct': self.opp_three_pt_pct,
-            'opp_three_pt_rate': self.opp_three_pt_rate,
+            "two_pt_pct": self.two_pt_pct,
+            "three_pt_pct": self.three_pt_pct,
+            "three_pt_rate": self.three_pt_rate,
+            "ft_pct": self.ft_pct,
+            "block_pct": self.block_pct,
+            "steal_pct": self.steal_pct,
+            "opp_two_pt_pct": self.opp_two_pt_pct,
+            "opp_three_pt_pct": self.opp_three_pt_pct,
+            "opp_three_pt_rate": self.opp_three_pt_rate,
             # WAB + Record
-            'wab': self.wab,
-            'wins': self.wins,
-            'losses': self.losses,
-            'conf_wins': self.conf_wins,
-            'conf_losses': self.conf_losses,
+            "wab": self.wab,
+            "wins": self.wins,
+            "losses": self.losses,
+            "conf_wins": self.conf_wins,
+            "conf_losses": self.conf_losses,
         }
-
 
 
 class TorVikValidator:
@@ -213,10 +212,7 @@ class TorVikValidator:
             except (TypeError, ValueError):
                 continue
             if fval != 0.0 and not (lo <= fval <= hi):
-                msg = (
-                    f"{team.team_id}: {field_name}={fval:.4f} "
-                    f"outside expected range [{lo}, {hi}]"
-                )
+                msg = f"{team.team_id}: {field_name}={fval:.4f} outside expected range [{lo}, {hi}]"
                 warnings_out.append(msg)
                 cls._logger.warning("[torvik:validate] %s", msg)
 
@@ -270,12 +266,12 @@ class TorVikValidator:
         if total_warnings > 0:
             cls._logger.warning(
                 "[torvik:validate] %d validation warnings across %d/%d teams",
-                total_warnings, len(result), len(teams),
+                total_warnings,
+                len(result),
+                len(teams),
             )
         else:
-            cls._logger.info(
-                "[torvik:validate] All %d teams passed validation", len(teams)
-            )
+            cls._logger.info("[torvik:validate] All %d teams passed validation", len(teams))
         return result
 
     @classmethod
@@ -303,10 +299,7 @@ class TorVikValidator:
                 except (TypeError, ValueError):
                     continue
                 if not (lo <= fval <= hi):
-                    msg = (
-                        f"{team_id}: four_factors.{field_name}={fval:.4f} "
-                        f"outside [{lo}, {hi}]"
-                    )
+                    msg = f"{team_id}: four_factors.{field_name}={fval:.4f} outside [{lo}, {hi}]"
                     team_warnings.append(msg)
                     cls._logger.warning("[torvik:validate] %s", msg)
             if team_warnings:
@@ -317,19 +310,19 @@ class TorVikValidator:
 class BartTorvikScraper:
     """
     Scraper for BartTorvik T-Rank data.
-    
+
     BartTorvik provides:
     - T-Rank efficiency ratings
     - Four Factors analysis
     - Game-by-game efficiency data
     - WAB (Wins Above Bubble) calculations
-    
+
     Usage:
         scraper = BartTorvikScraper()
         teams = scraper.fetch_current_rankings()
         ratings = scraper.fetch_four_factors(2026)
     """
-    
+
     BASE_URL = "https://barttorvik.com"
 
     # Threshold for distinguishing fractions (0-1) from percentages (0-100).
@@ -338,7 +331,7 @@ class BartTorvikScraper:
     # 1.0 and 1.5 contains no legitimate basketball rate value, making 1.5
     # a safe boundary for auto-detection of the scale used by each API.
     _RATE_PERCENTAGE_THRESHOLD = 1.5
-    
+
     def __init__(
         self,
         cache_dir: Optional[str] = None,
@@ -358,9 +351,9 @@ class BartTorvikScraper:
         """
         self._strict_leakage = strict_leakage
         self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-        })
+        self.session.headers.update(
+            {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
+        )
         self.cache_dir = Path(cache_dir) if cache_dir else None
         self.cache_ttl_seconds = cache_ttl_seconds
 
@@ -393,17 +386,38 @@ class BartTorvikScraper:
             config=CircuitBreakerConfig(failure_threshold=3, recovery_timeout_seconds=300),
             **cb_kwargs,
         )
-    
+
     def _get_with_retry(self, url: str, **kwargs) -> requests.Response:
         """HTTP GET with retry + exponential backoff + jitter."""
         kwargs.setdefault("timeout", 30)
         return retry_request(self.session.get, url, **kwargs)
 
+    def _get_pre_tournament_date_range(self, year: int):
+        """Return (begin_str, end_str) for pre-tournament date filtering.
+
+        Returns YYYYMMDD strings suitable for trank.php begin/end params,
+        or (None, None) if tournament dates are unavailable.
+        """
+        try:
+            from ...pipeline.config import TOURNAMENT_START_DATES
+        except ImportError:
+            return None, None
+        cutoff = TOURNAMENT_START_DATES.get(year)
+        if cutoff is None:
+            return None, None
+        from datetime import timedelta
+
+        end_date = cutoff - timedelta(days=1)
+        begin_str = f"{year - 1}1101"
+        end_str = f"{end_date.year}{end_date.month:02d}{end_date.day:02d}"
+        return begin_str, end_str
+
     def _check_tournament_date_guard(self, year: int, strict: bool = False) -> None:
-        """Warn or raise if scraping after tournament start date.
+        """Raise if scraping after tournament start date.
 
         Post-tournament Torvik data includes tournament game results in
         efficiency metrics, which would contaminate pre-tournament predictions.
+        Default behavior is now strict (raises) to prevent silent leakage.
         """
         try:
             from ...pipeline.config import TOURNAMENT_START_DATES
@@ -420,8 +434,10 @@ class BartTorvikScraper:
                 f"metrics include tournament game results — DATA LEAKAGE RISK. "
                 f"Use pre-tournament cached data instead."
             )
-            if strict or self._strict_leakage:
+            # Default strict: always raise unless explicitly opted out
+            if strict or self._strict_leakage or not hasattr(self, "_allow_post_tournament"):
                 from ...exceptions import LeakageError
+
                 raise LeakageError(msg)
             logger.warning(msg)
 
@@ -453,6 +469,7 @@ class BartTorvikScraper:
             )
             if strict or self._strict_leakage:
                 from ...exceptions import LeakageError
+
                 raise LeakageError(msg)
             logger.warning(msg)
 
@@ -480,7 +497,7 @@ class BartTorvikScraper:
         cached = self._load_from_cache(f"torvik_rankings_{year}.json")
         if cached and self._cache_has_valid_rankings(cached):
             self._validate_cache_timestamp(cached, year, strict=strict)
-            return [self._dict_to_team(t) for t in cached.get('teams', [])]
+            return [self._dict_to_team(t) for t in cached.get("teams", [])]
 
         teams: List[TorVikTeam] = []
 
@@ -491,7 +508,9 @@ class BartTorvikScraper:
                 self._fetch_strategy["rankings"] = "cbbdata_api"
                 logger.info(
                     "[torvik] rankings strategy=%s year=%d teams=%d",
-                    "cbbdata_api", year, len(teams),
+                    "cbbdata_api",
+                    year,
+                    len(teams),
                 )
 
         # --- Strategy 2: trank.php CSV (ratings + Four Factors) ---
@@ -501,7 +520,9 @@ class BartTorvikScraper:
                 self._fetch_strategy["rankings"] = "trank_csv"
                 logger.info(
                     "[torvik] rankings strategy=%s year=%d teams=%d",
-                    "trank_csv", year, len(teams),
+                    "trank_csv",
+                    year,
+                    len(teams),
                 )
 
         # --- Strategy 3: team_results CSV (ratings only, no Four Factors) ---
@@ -511,19 +532,24 @@ class BartTorvikScraper:
                 self._fetch_strategy["rankings"] = "csv_fallback"
                 logger.info(
                     "[torvik] rankings strategy=%s year=%d teams=%d",
-                    "csv_fallback", year, len(teams),
+                    "csv_fallback",
+                    year,
+                    len(teams),
                 )
 
         if teams:
             TorVikValidator.validate_teams(teams, strict=strict)
-            self._save_to_cache(f"torvik_rankings_{year}.json", {
-                'teams': [t.to_dict() for t in teams],
-                'timestamp': datetime.now().isoformat(),
-                'scraped_at': datetime.now().isoformat(),
-            })
+            self._save_to_cache(
+                f"torvik_rankings_{year}.json",
+                {
+                    "teams": [t.to_dict() for t in teams],
+                    "timestamp": datetime.now().isoformat(),
+                    "scraped_at": datetime.now().isoformat(),
+                },
+            )
 
         return teams
-    
+
     def _rankings_from_csv(self, year: int) -> List[TorVikTeam]:
         """Fetch T-Rank ratings from the CSV team results endpoint.
 
@@ -549,16 +575,30 @@ class BartTorvikScraper:
         header = None
         # Known team_results CSV headers. Require ≥3 matches to treat row
         # as header (prevents team names like "Franklin" triggering detection).
-        _KNOWN_HEADERS = frozenset({
-            'team', 'rank', 'rk', 'conf', 'conference',
-            'barthag', 'adj_o', 'adjoe', 'adj_d', 'adjde', 'adj_t', 'tempo',
-            'wab', 'wins', 'losses',
-        })
+        _KNOWN_HEADERS = frozenset(
+            {
+                "team",
+                "rank",
+                "rk",
+                "conf",
+                "conference",
+                "barthag",
+                "adj_o",
+                "adjoe",
+                "adj_d",
+                "adjde",
+                "adj_t",
+                "tempo",
+                "wab",
+                "wins",
+                "losses",
+            }
+        )
         _MIN_HEADER_MATCHES = 3
         for row_num, row in enumerate(reader):
             if row_num == 0:
                 # Strip BOM if present (common in Windows-exported CSVs)
-                normalized_cells = [h.strip().lstrip('\ufeff').lower().replace(' ', '_') for h in row]
+                normalized_cells = [h.strip().lstrip("\ufeff").lower().replace(" ", "_") for h in row]
                 header_matches = sum(1 for c in normalized_cells if c in _KNOWN_HEADERS)
                 if row and header_matches >= _MIN_HEADER_MATCHES:
                     header = {c: i for i, c in enumerate(normalized_cells)}
@@ -569,13 +609,13 @@ class BartTorvikScraper:
                 continue
             try:
                 if header:
-                    team_name = row[header.get('team', 1)].strip()
-                    conf = row[header.get('conf', header.get('conference', 2))].strip()
-                    t_rank = int(row[header.get('rank', header.get('rk', 0))].strip() or 999)
-                    barthag = self._safe_float(row[header.get('barthag', 5)])
-                    adj_oe = self._safe_float(row[header.get('adj_o', header.get('adjoe', 3))])
-                    adj_de = self._safe_float(row[header.get('adj_d', header.get('adjde', 4))])
-                    adj_t = self._safe_float(row[header.get('adj_t', header.get('tempo', 6))])
+                    team_name = row[header.get("team", 1)].strip()
+                    conf = row[header.get("conf", header.get("conference", 2))].strip()
+                    t_rank = int(row[header.get("rank", header.get("rk", 0))].strip() or 999)
+                    barthag = self._safe_float(row[header.get("barthag", 5)])
+                    adj_oe = self._safe_float(row[header.get("adj_o", header.get("adjoe", 3))])
+                    adj_de = self._safe_float(row[header.get("adj_d", header.get("adjde", 4))])
+                    adj_t = self._safe_float(row[header.get("adj_t", header.get("tempo", 6))])
                 else:
                     t_rank = int(row[0].strip() or 999)
                     team_name = row[1].strip()
@@ -611,10 +651,11 @@ class BartTorvikScraper:
 
         logger.info(
             "Rankings from CSV (%d): fetched %d teams (no Four Factors)",
-            year, len(teams),
+            year,
+            len(teams),
         )
         return teams
-    
+
     # cbbdata.com API — primary data source.  Auth via CBD_USER/CBD_PASSWORD or CBD_API_KEY.
     CBBDATA_API = "https://www.cbbdata.com/api"
 
@@ -759,9 +800,9 @@ class BartTorvikScraper:
                 continue
 
         logger.info(
-            "Rankings from cbbdata API (%d): fetched %d teams with "
-            "ratings + Four Factors",
-            year, len(teams),
+            "Rankings from cbbdata API (%d): fetched %d teams with ratings + Four Factors",
+            year,
+            len(teams),
         )
         return teams
 
@@ -812,19 +853,20 @@ class BartTorvikScraper:
                 continue
             tid = self._normalize_team_name_to_id(team_name)
             result[tid] = {
-                'effective_fg_pct': _rate(row, "off_efg"),
-                'turnover_rate': _rate(row, "off_to"),
-                'offensive_reb_rate': _rate(row, "off_or"),
-                'free_throw_rate': _rate(row, "off_ftr"),
-                'opp_effective_fg_pct': _rate(row, "def_efg"),
-                'opp_turnover_rate': _rate(row, "def_to"),
-                'defensive_reb_rate': _rate(row, "def_or"),
-                'opp_free_throw_rate': _rate(row, "def_ftr"),
+                "effective_fg_pct": _rate(row, "off_efg"),
+                "turnover_rate": _rate(row, "off_to"),
+                "offensive_reb_rate": _rate(row, "off_or"),
+                "free_throw_rate": _rate(row, "off_ftr"),
+                "opp_effective_fg_pct": _rate(row, "def_efg"),
+                "opp_turnover_rate": _rate(row, "def_to"),
+                "defensive_reb_rate": _rate(row, "def_or"),
+                "opp_free_throw_rate": _rate(row, "def_ftr"),
             }
 
         logger.info(
             "Four Factors from cbbdata API (%d): fetched for %d teams",
-            year, len(result),
+            year,
+            len(result),
         )
         return result
 
@@ -848,10 +890,14 @@ class BartTorvikScraper:
     def _rankings_from_trank_csv(self, year: int) -> List[TorVikTeam]:
         """Fetch T-Rank ratings + Four Factors from trank.php CSV export.
 
-        Endpoint: ``GET /trank.php?year={year}&csv=1``
+        Endpoint: ``GET /trank.php?year={year}&csv=1&begin=YYYYMMDD&end=YYYYMMDD``
 
         The CSV includes AdjOE, AdjDE, Barthag, tempo, and all Eight
         Four Factors columns.  Requires browser-like headers.
+
+        When tournament dates are available, adds begin/end params to
+        restrict ratings to pre-tournament games only — preventing
+        look-ahead bias from post-tournament efficiency changes.
         """
         url = f"{self.BASE_URL}/trank.php"
         params = {
@@ -861,10 +907,23 @@ class BartTorvikScraper:
             "type": "All",
             "top": 0,
         }
+        # Add pre-tournament date filtering to prevent look-ahead bias
+        begin_str, end_str = self._get_pre_tournament_date_range(year)
+        if begin_str and end_str:
+            params["begin"] = begin_str
+            params["end"] = end_str
+            logger.info(
+                "[torvik] trank CSV using pre-tournament filter: begin=%s end=%s",
+                begin_str,
+                end_str,
+            )
         try:
             with self._cb_trank():
                 response = self._get_with_retry(
-                    url, params=params, headers=self._TRANK_HEADERS, timeout=45,
+                    url,
+                    params=params,
+                    headers=self._TRANK_HEADERS,
+                    timeout=45,
                 )
         except CircuitBreakerOpen:
             logger.info("[torvik] trank circuit breaker open, skipping trank CSV")
@@ -877,8 +936,7 @@ class BartTorvikScraper:
         # Cloudflare returns HTML challenge page — detect and bail
         if "<html" in text[:500].lower() or "checking your browser" in text[:500].lower():
             logger.warning(
-                "[torvik] trank CSV returned Cloudflare challenge page — "
-                "browser verification required, falling back"
+                "[torvik] trank CSV returned Cloudflare challenge page — browser verification required, falling back"
             )
             return []
 
@@ -888,19 +946,54 @@ class BartTorvikScraper:
         # Known trank CSV headers (normalized). Used to distinguish a genuine
         # header row from a data row whose team name happens to contain a
         # keyword like "rank" (e.g. "Frank" contains "rank").
-        _KNOWN_HEADERS = frozenset({
-            'team', 'rank', 'rk', 'conf', 'conference',
-            'barthag', 'adj_oe', 'adj_o', 'adjoe', 'adj_de', 'adj_d', 'adjde', 'adj_t',
-            'off_efg', 'off_efg%', 'off_to', 'off_to%', 'off_or', 'off_or%', 'off_ftr', 'off_ftr%',
-            'def_efg', 'def_efg%', 'def_to', 'def_to%', 'def_or', 'def_or%', 'def_ftr', 'def_ftr%',
-            'efg_o', 'efg_d', 'tor_o', 'tor_d', 'orb_o', 'orb_d', 'ftr_o', 'ftr_d',
-            'wab', 'tempo',
-        })
+        _KNOWN_HEADERS = frozenset(
+            {
+                "team",
+                "rank",
+                "rk",
+                "conf",
+                "conference",
+                "barthag",
+                "adj_oe",
+                "adj_o",
+                "adjoe",
+                "adj_de",
+                "adj_d",
+                "adjde",
+                "adj_t",
+                "off_efg",
+                "off_efg%",
+                "off_to",
+                "off_to%",
+                "off_or",
+                "off_or%",
+                "off_ftr",
+                "off_ftr%",
+                "def_efg",
+                "def_efg%",
+                "def_to",
+                "def_to%",
+                "def_or",
+                "def_or%",
+                "def_ftr",
+                "def_ftr%",
+                "efg_o",
+                "efg_d",
+                "tor_o",
+                "tor_d",
+                "orb_o",
+                "orb_d",
+                "ftr_o",
+                "ftr_d",
+                "wab",
+                "tempo",
+            }
+        )
         _MIN_HEADER_MATCHES = 3  # require ≥3 known headers to accept as header row
         for row_num, row in enumerate(reader):
             if row_num == 0:
                 # Strip BOM if present (common in Windows-exported CSVs)
-                normalized_cells = [h.strip().lstrip('\ufeff').lower().replace(' ', '_') for h in row]
+                normalized_cells = [h.strip().lstrip("\ufeff").lower().replace(" ", "_") for h in row]
                 header_matches = sum(1 for c in normalized_cells if c in _KNOWN_HEADERS)
                 if row and header_matches >= _MIN_HEADER_MATCHES:
                     header = {c: i for i, c in enumerate(normalized_cells)}
@@ -909,14 +1002,19 @@ class BartTorvikScraper:
             if len(row) < 8:
                 continue
             try:
+
                 def _col(names, default_idx, default_val=0.0):
                     """Read column by name(s) or fallback position."""
                     if header:
-                        for n in (names if isinstance(names, (list, tuple)) else [names]):
+                        for n in names if isinstance(names, (list, tuple)) else [names]:
                             if n in header:
                                 val = row[header[n]].strip()
                                 return float(val) if val else default_val
-                    return float(row[default_idx].strip()) if len(row) > default_idx and row[default_idx].strip() else default_val
+                    return (
+                        float(row[default_idx].strip())
+                        if len(row) > default_idx and row[default_idx].strip()
+                        else default_val
+                    )
 
                 def _rate_col(names, default_idx):
                     """Read a rate column, converting from percentage if needed.
@@ -933,28 +1031,32 @@ class BartTorvikScraper:
                         logger.debug("Rate %.4f near fraction/percentage boundary", v)
                     return v / 100.0 if v > BartTorvikScraper._RATE_PERCENTAGE_THRESHOLD else v
 
-                team_name = row[header.get('team', 1)].strip() if header else row[1].strip()
-                conf = row[header.get('conf', header.get('conference', 2))].strip() if header else (row[2].strip() if len(row) > 2 else "")
+                team_name = row[header.get("team", 1)].strip() if header else row[1].strip()
+                conf = (
+                    row[header.get("conf", header.get("conference", 2))].strip()
+                    if header
+                    else (row[2].strip() if len(row) > 2 else "")
+                )
                 tid = self._normalize_team_name_to_id(team_name)
 
                 team = TorVikTeam(
                     team_id=tid,
                     name=team_name,
                     conference=conf,
-                    t_rank=int(_col(('rank', 'rk'), 0, 999)),
-                    barthag=_col('barthag', 5, 0.5),
-                    adj_offensive_efficiency=_col(('adj_o', 'adj_oe', 'adjoe'), 3, 100.0),
-                    adj_defensive_efficiency=_col(('adj_d', 'adj_de', 'adjde'), 4, 100.0),
-                    adj_tempo=_col(('adj_t', 'tempo'), 6, 68.0),
-                    effective_fg_pct=_rate_col(('off_efg', 'off_efg%', 'efg_o'), 20),
-                    turnover_rate=_rate_col(('off_to', 'off_to%', 'tor_o'), 21),
-                    offensive_reb_rate=_rate_col(('off_or', 'off_or%', 'orb_o'), 22),
-                    free_throw_rate=_rate_col(('off_ftr', 'off_ft_rate', 'ftr_o'), 23),
-                    opp_effective_fg_pct=_rate_col(('def_efg', 'def_efg%', 'efg_d'), 24),
-                    opp_turnover_rate=_rate_col(('def_to', 'def_to%', 'tor_d'), 25),
-                    defensive_reb_rate=_rate_col(('def_or', 'off_or_d', 'orb_d'), 26),
-                    opp_free_throw_rate=_rate_col(('def_ftr', 'def_ft_rate', 'ftr_d'), 27),
-                    wab=_col('wab', 13, 0.0),
+                    t_rank=int(_col(("rank", "rk"), 0, 999)),
+                    barthag=_col("barthag", 5, 0.5),
+                    adj_offensive_efficiency=_col(("adj_o", "adj_oe", "adjoe"), 3, 100.0),
+                    adj_defensive_efficiency=_col(("adj_d", "adj_de", "adjde"), 4, 100.0),
+                    adj_tempo=_col(("adj_t", "tempo"), 6, 68.0),
+                    effective_fg_pct=_rate_col(("off_efg", "off_efg%", "efg_o"), 20),
+                    turnover_rate=_rate_col(("off_to", "off_to%", "tor_o"), 21),
+                    offensive_reb_rate=_rate_col(("off_or", "off_or%", "orb_o"), 22),
+                    free_throw_rate=_rate_col(("off_ftr", "off_ft_rate", "ftr_o"), 23),
+                    opp_effective_fg_pct=_rate_col(("def_efg", "def_efg%", "efg_d"), 24),
+                    opp_turnover_rate=_rate_col(("def_to", "def_to%", "tor_d"), 25),
+                    defensive_reb_rate=_rate_col(("def_or", "off_or_d", "orb_d"), 26),
+                    opp_free_throw_rate=_rate_col(("def_ftr", "def_ft_rate", "ftr_d"), 27),
+                    wab=_col("wab", 13, 0.0),
                 )
                 teams.append(team)
             except Exception as e:
@@ -964,13 +1066,15 @@ class BartTorvikScraper:
         if len(teams) < MIN_TEAMS_THRESHOLD:
             logger.warning(
                 "[torvik] trank CSV returned only %d teams (threshold %d), discarding",
-                len(teams), MIN_TEAMS_THRESHOLD,
+                len(teams),
+                MIN_TEAMS_THRESHOLD,
             )
             return []
 
         logger.info(
             "Rankings from trank CSV (%d): fetched %d teams with Four Factors",
-            year, len(teams),
+            year,
+            len(teams),
         )
         return teams
 
@@ -990,19 +1094,20 @@ class BartTorvikScraper:
             if isinstance(efg, float) and (math.isnan(efg) or efg == 0.0):
                 continue
             result[t.team_id] = {
-                'effective_fg_pct': t.effective_fg_pct,
-                'turnover_rate': t.turnover_rate,
-                'offensive_reb_rate': t.offensive_reb_rate,
-                'free_throw_rate': t.free_throw_rate,
-                'opp_effective_fg_pct': t.opp_effective_fg_pct,
-                'opp_turnover_rate': t.opp_turnover_rate,
-                'defensive_reb_rate': t.defensive_reb_rate,
-                'opp_free_throw_rate': t.opp_free_throw_rate,
+                "effective_fg_pct": t.effective_fg_pct,
+                "turnover_rate": t.turnover_rate,
+                "offensive_reb_rate": t.offensive_reb_rate,
+                "free_throw_rate": t.free_throw_rate,
+                "opp_effective_fg_pct": t.opp_effective_fg_pct,
+                "opp_turnover_rate": t.opp_turnover_rate,
+                "defensive_reb_rate": t.defensive_reb_rate,
+                "opp_free_throw_rate": t.opp_free_throw_rate,
             }
 
         logger.info(
             "Four Factors from trank CSV (%d): extracted for %d teams",
-            year, len(result),
+            year,
+            len(result),
         )
         return result
 
@@ -1042,7 +1147,9 @@ class BartTorvikScraper:
                 self._fetch_strategy["four_factors"] = "cbbdata_api"
                 logger.info(
                     "[torvik] four_factors strategy=%s year=%d teams=%d",
-                    "cbbdata_api", year, len(four_factors),
+                    "cbbdata_api",
+                    year,
+                    len(four_factors),
                 )
 
         # --- Strategy 2: trank.php CSV ---
@@ -1052,20 +1159,22 @@ class BartTorvikScraper:
                 self._fetch_strategy["four_factors"] = "trank_csv"
                 logger.info(
                     "[torvik] four_factors strategy=%s year=%d teams=%d",
-                    "trank_csv", year, len(four_factors),
+                    "trank_csv",
+                    year,
+                    len(four_factors),
                 )
 
         # --- Strategy 3: CSV player-stats fallback ---
         if not four_factors:
-            logger.info(
-                "API/CSV strategies exhausted; falling back to player-stats CSV aggregation."
-            )
+            logger.info("API/CSV strategies exhausted; falling back to player-stats CSV aggregation.")
             four_factors = self._four_factors_from_player_csv(year)
             if four_factors:
                 self._fetch_strategy["four_factors"] = "csv_fallback"
                 logger.info(
                     "[torvik] four_factors strategy=%s year=%d teams=%d",
-                    "csv_fallback", year, len(four_factors),
+                    "csv_fallback",
+                    year,
+                    len(four_factors),
                 )
 
         if four_factors:
@@ -1078,7 +1187,7 @@ class BartTorvikScraper:
             self._save_to_cache(f"torvik_four_factors_{year}.json", four_factors)
 
         return four_factors
-    
+
     # _four_factors_from_cbbstat_api removed — API returned 403 since early 2026.
 
     def fetch_shooting_stats(self, year: int = 2026) -> Dict[str, Dict]:
@@ -1109,7 +1218,9 @@ class BartTorvikScraper:
                 self._fetch_strategy["shooting"] = "csv_fallback"
                 logger.info(
                     "[torvik] shooting strategy=%s year=%d teams=%d",
-                    "csv_fallback", year, len(shooting),
+                    "csv_fallback",
+                    year,
+                    len(shooting),
                 )
 
         if shooting:
@@ -1188,10 +1299,20 @@ class BartTorvikScraper:
         if not teams:
             return {}
         check_fields = [
-            "adj_offensive_efficiency", "adj_defensive_efficiency", "barthag",
-            "adj_tempo", "effective_fg_pct", "turnover_rate", "offensive_reb_rate",
-            "free_throw_rate", "opp_effective_fg_pct", "opp_turnover_rate",
-            "defensive_reb_rate", "opp_free_throw_rate", "three_pt_pct", "ft_pct",
+            "adj_offensive_efficiency",
+            "adj_defensive_efficiency",
+            "barthag",
+            "adj_tempo",
+            "effective_fg_pct",
+            "turnover_rate",
+            "offensive_reb_rate",
+            "free_throw_rate",
+            "opp_effective_fg_pct",
+            "opp_turnover_rate",
+            "defensive_reb_rate",
+            "opp_free_throw_rate",
+            "three_pt_pct",
+            "ft_pct",
         ]
         report: Dict[str, float] = {}
         n = len(teams)
@@ -1216,21 +1337,27 @@ class BartTorvikScraper:
                 'to_pct_weighted', 'min_pct_total',
             }
         """
-        teams: Dict[str, Dict] = defaultdict(lambda: {
-            'fgm': 0.0, 'fga': 0.0,
-            'fg2m': 0.0, 'fg2a': 0.0,
-            'fg3m': 0.0, 'fg3a': 0.0,
-            'ftm': 0.0, 'fta': 0.0,
-            'orb_pct_weighted': 0.0,
-            'drb_pct_weighted': 0.0,
-            'to_pct_weighted': 0.0,
-            'min_pct_total': 0.0,
-            'conf': '',
-            'team_name': '',
-        })
+        teams: Dict[str, Dict] = defaultdict(
+            lambda: {
+                "fgm": 0.0,
+                "fga": 0.0,
+                "fg2m": 0.0,
+                "fg2a": 0.0,
+                "fg3m": 0.0,
+                "fg3a": 0.0,
+                "ftm": 0.0,
+                "fta": 0.0,
+                "orb_pct_weighted": 0.0,
+                "drb_pct_weighted": 0.0,
+                "to_pct_weighted": 0.0,
+                "min_pct_total": 0.0,
+                "conf": "",
+                "team_name": "",
+            }
+        )
 
-        for line in csv_text.strip().split('\n'):
-            cols = [c.strip('"') for c in line.split(',')]
+        for line in csv_text.strip().split("\n"):
+            cols = [c.strip('"') for c in line.split(",")]
             if len(cols) < 22:
                 continue
             try:
@@ -1251,30 +1378,30 @@ class BartTorvikScraper:
 
             tid = self._normalize_team_name_to_id(team_name)
             t = teams[tid]
-            t['team_name'] = team_name
-            t['conf'] = conf
-            t['fg2m'] += fg2m
-            t['fg2a'] += fg2a
-            t['fg3m'] += fg3m
-            t['fg3a'] += fg3a
-            t['fgm'] += fg2m + fg3m
-            t['fga'] += fg2a + fg3a
-            t['ftm'] += ftm
-            t['fta'] += fta
+            t["team_name"] = team_name
+            t["conf"] = conf
+            t["fg2m"] += fg2m
+            t["fg2a"] += fg2a
+            t["fg3m"] += fg3m
+            t["fg3a"] += fg3a
+            t["fgm"] += fg2m + fg3m
+            t["fga"] += fg2a + fg3a
+            t["ftm"] += ftm
+            t["fta"] += fta
             # Weight percentage stats by minutes share for team-level avg
-            t['orb_pct_weighted'] += orb_pct * min_pct
-            t['drb_pct_weighted'] += drb_pct * min_pct
-            t['to_pct_weighted'] += to_pct * min_pct
-            t['min_pct_total'] += min_pct
+            t["orb_pct_weighted"] += orb_pct * min_pct
+            t["drb_pct_weighted"] += drb_pct * min_pct
+            t["to_pct_weighted"] += to_pct * min_pct
+            t["min_pct_total"] += min_pct
 
         return dict(teams)
 
     # Empirical D1 population priors for Bayesian shrinkage of CSV-approximated rates.
     # These match _POPULATION_STATS in feature_engineering.py.
     _POP_PRIORS = {
-        'orb': 0.295,
-        'drb': 0.705,
-        'to': 0.185,
+        "orb": 0.295,
+        "drb": 0.705,
+        "to": 0.185,
     }
     # Effective sample size of the prior (how many "pseudo-minutes" the prior is worth).
     # Calibrated so a team with ~500 total player-minutes (typical full roster)
@@ -1331,48 +1458,50 @@ class BartTorvikScraper:
         result: Dict[str, Dict] = {}
 
         for tid, t in aggregated.items():
-            fga = t['fga']
+            fga = t["fga"]
             if fga < 10:  # skip teams with negligible data
                 continue
 
-            efg = (t['fgm'] + 0.5 * t['fg3m']) / fga
-            ftr = t['fta'] / fga
+            efg = (t["fgm"] + 0.5 * t["fg3m"]) / fga
+            ftr = t["fta"] / fga
 
             # Minutes-weighted approximation of team-level ORB%/TO%.
             # Individual player rates aren't strictly additive, so we compute
             # a raw estimate and then Bayesian-shrink toward the D1 population
             # mean.  Shrinkage is inversely proportional to total minutes data.
-            min_total = t['min_pct_total']
+            min_total = t["min_pct_total"]
             if min_total > 0:
-                raw_orb = t['orb_pct_weighted'] / min_total / 100.0
-                raw_drb = t['drb_pct_weighted'] / min_total / 100.0
-                raw_to = t['to_pct_weighted'] / min_total / 100.0
-                approx_orb = self._shrink_csv_rate(raw_orb, min_total, self._POP_PRIORS['orb'])
-                approx_drb = self._shrink_csv_rate(raw_drb, min_total, self._POP_PRIORS['drb'])
-                approx_to = self._shrink_csv_rate(raw_to, min_total, self._POP_PRIORS['to'])
+                raw_orb = t["orb_pct_weighted"] / min_total / 100.0
+                raw_drb = t["drb_pct_weighted"] / min_total / 100.0
+                raw_to = t["to_pct_weighted"] / min_total / 100.0
+                approx_orb = self._shrink_csv_rate(raw_orb, min_total, self._POP_PRIORS["orb"])
+                approx_drb = self._shrink_csv_rate(raw_drb, min_total, self._POP_PRIORS["drb"])
+                approx_to = self._shrink_csv_rate(raw_to, min_total, self._POP_PRIORS["to"])
             else:
-                approx_orb = self._POP_PRIORS['orb']
-                approx_drb = self._POP_PRIORS['drb']
-                approx_to = self._POP_PRIORS['to']
+                approx_orb = self._POP_PRIORS["orb"]
+                approx_drb = self._POP_PRIORS["drb"]
+                approx_to = self._POP_PRIORS["to"]
 
             result[tid] = {
-                'effective_fg_pct': round(efg, 4),
-                'turnover_rate': round(approx_to, 4),
-                'offensive_reb_rate': round(approx_orb, 4),
-                'free_throw_rate': round(ftr, 4),
-                'opp_effective_fg_pct': None,  # Cannot compute from player-level CSV
-                'opp_turnover_rate': None,     # Cannot compute from player-level CSV
-                'defensive_reb_rate': round(approx_drb, 4),
-                'opp_free_throw_rate': None,   # Cannot compute from player-level CSV
-                '_csv_approximation': True,
+                "effective_fg_pct": round(efg, 4),
+                "turnover_rate": round(approx_to, 4),
+                "offensive_reb_rate": round(approx_orb, 4),
+                "free_throw_rate": round(ftr, 4),
+                "opp_effective_fg_pct": None,  # Cannot compute from player-level CSV
+                "opp_turnover_rate": None,  # Cannot compute from player-level CSV
+                "defensive_reb_rate": round(approx_drb, 4),
+                "opp_free_throw_rate": None,  # Cannot compute from player-level CSV
+                "_csv_approximation": True,
             }
 
-        non_zero_orb = sum(1 for v in result.values() if v['offensive_reb_rate'] > 0)
+        non_zero_orb = sum(1 for v in result.values() if v["offensive_reb_rate"] > 0)
         logger.info(
             "Four Factors from player CSV (%d): computed for %d teams "
             "(eFG%%/FTR exact, ORB%%/DRB%%/TO%% Bayesian-shrunk toward population mean "
             "for %d teams; defensive factors unavailable from this source)",
-            year, len(result), non_zero_orb,
+            year,
+            len(result),
+            non_zero_orb,
         )
         return result
 
@@ -1396,29 +1525,30 @@ class BartTorvikScraper:
         result: Dict[str, Dict] = {}
 
         for tid, t in aggregated.items():
-            fg3a = t['fg3a']
-            fta = t['fta']
+            fg3a = t["fg3a"]
+            fta = t["fta"]
             if fg3a < 5 and fta < 5:
                 continue
 
-            three_pt = (t['fg3m'] / fg3a) if fg3a > 0 else 0.0
-            ft_pct = (t['ftm'] / fta) if fta > 0 else 0.0
+            three_pt = (t["fg3m"] / fg3a) if fg3a > 0 else 0.0
+            ft_pct = (t["ftm"] / fta) if fta > 0 else 0.0
 
             result[tid] = {
-                'three_pt_pct': round(three_pt, 4),
-                'ft_pct': round(ft_pct, 4),
+                "three_pt_pct": round(three_pt, 4),
+                "ft_pct": round(ft_pct, 4),
             }
 
         logger.info(
             "Shooting stats from player CSV (%d): computed for %d teams",
-            year, len(result),
+            year,
+            len(result),
         )
         return result
 
     def load_from_json(self, filepath: str) -> List[TorVikTeam]:
         """
         Load Torvik data from JSON file.
-        
+
         Expected format:
         {
             "teams": [
@@ -1433,57 +1563,57 @@ class BartTorvikScraper:
                 }
             ]
         }
-        
+
         Args:
             filepath: Path to JSON file
-            
+
         Returns:
             List of TorVikTeam objects
         """
-        with open(filepath, 'r') as f:
+        with open(filepath, "r") as f:
             data = json.load(f)
-        
-        return [self._dict_to_team(t) for t in data.get('teams', [])]
-    
+
+        return [self._dict_to_team(t) for t in data.get("teams", [])]
+
     def _dict_to_team(self, data: dict) -> TorVikTeam:
         """Convert dictionary to TorVikTeam."""
         return TorVikTeam(
-            team_id=data.get('team_id', ''),
-            name=data.get('name', ''),
-            conference=data.get('conference', ''),
-            t_rank=data.get('t_rank', 999),
-            barthag=data.get('barthag', 0.5),
-            adj_offensive_efficiency=data.get('adj_offensive_efficiency', 100.0),
-            adj_defensive_efficiency=data.get('adj_defensive_efficiency', 100.0),
-            adj_tempo=data.get('adj_tempo', 68.0),
-            effective_fg_pct=data.get('effective_fg_pct', 0.5),
-            turnover_rate=data.get('turnover_rate', 0.18),
-            offensive_reb_rate=data.get('offensive_reb_rate', 0.30),
-            free_throw_rate=data.get('free_throw_rate', 0.30),
-            opp_effective_fg_pct=data.get('opp_effective_fg_pct', 0.5),
-            opp_turnover_rate=data.get('opp_turnover_rate', 0.18),
-            defensive_reb_rate=data.get('defensive_reb_rate', 0.70),
-            opp_free_throw_rate=data.get('opp_free_throw_rate', 0.30),
-            two_pt_pct=data.get('two_pt_pct', 0.0),
-            three_pt_pct=data.get('three_pt_pct', 0.0),
-            three_pt_rate=data.get('three_pt_rate', 0.0),
-            ft_pct=data.get('ft_pct', 0.0),
-            block_pct=data.get('block_pct', 0.0),
-            steal_pct=data.get('steal_pct', 0.0),
-            opp_two_pt_pct=data.get('opp_two_pt_pct', 0.0),
-            opp_three_pt_pct=data.get('opp_three_pt_pct', 0.0),
-            opp_three_pt_rate=data.get('opp_three_pt_rate', 0.0),
-            wab=data.get('wab', 0.0),
-            wins=data.get('wins', 0),
-            losses=data.get('losses', 0),
-            conf_wins=data.get('conf_wins', 0),
-            conf_losses=data.get('conf_losses', 0),
+            team_id=data.get("team_id", ""),
+            name=data.get("name", ""),
+            conference=data.get("conference", ""),
+            t_rank=data.get("t_rank", 999),
+            barthag=data.get("barthag", 0.5),
+            adj_offensive_efficiency=data.get("adj_offensive_efficiency", 100.0),
+            adj_defensive_efficiency=data.get("adj_defensive_efficiency", 100.0),
+            adj_tempo=data.get("adj_tempo", 68.0),
+            effective_fg_pct=data.get("effective_fg_pct", 0.5),
+            turnover_rate=data.get("turnover_rate", 0.18),
+            offensive_reb_rate=data.get("offensive_reb_rate", 0.30),
+            free_throw_rate=data.get("free_throw_rate", 0.30),
+            opp_effective_fg_pct=data.get("opp_effective_fg_pct", 0.5),
+            opp_turnover_rate=data.get("opp_turnover_rate", 0.18),
+            defensive_reb_rate=data.get("defensive_reb_rate", 0.70),
+            opp_free_throw_rate=data.get("opp_free_throw_rate", 0.30),
+            two_pt_pct=data.get("two_pt_pct", 0.0),
+            three_pt_pct=data.get("three_pt_pct", 0.0),
+            three_pt_rate=data.get("three_pt_rate", 0.0),
+            ft_pct=data.get("ft_pct", 0.0),
+            block_pct=data.get("block_pct", 0.0),
+            steal_pct=data.get("steal_pct", 0.0),
+            opp_two_pt_pct=data.get("opp_two_pt_pct", 0.0),
+            opp_three_pt_pct=data.get("opp_three_pt_pct", 0.0),
+            opp_three_pt_rate=data.get("opp_three_pt_rate", 0.0),
+            wab=data.get("wab", 0.0),
+            wins=data.get("wins", 0),
+            losses=data.get("losses", 0),
+            conf_wins=data.get("conf_wins", 0),
+            conf_losses=data.get("conf_losses", 0),
         )
-    
+
     def _safe_float(self, value: str) -> float:
         """Safely convert string to float."""
         try:
-            return float(value.replace('%', '').strip())
+            return float(value.replace("%", "").strip())
         except (ValueError, AttributeError):
             return 0.0
 
@@ -1501,21 +1631,15 @@ class BartTorvikScraper:
         sample = [t for t in list(cached.values())[:20] if isinstance(t, dict)]
         if not sample:
             return False
-        zero_orb = sum(
-            1 for t in sample
-            if abs(float(t.get("offensive_reb_rate", 0) or 0)) < 1e-6
-        )
-        zero_to = sum(
-            1 for t in sample
-            if abs(float(t.get("turnover_rate", 0) or 0)) < 1e-6
-        )
+        zero_orb = sum(1 for t in sample if abs(float(t.get("offensive_reb_rate", 0) or 0)) < 1e-6)
+        zero_to = sum(1 for t in sample if abs(float(t.get("turnover_rate", 0) or 0)) < 1e-6)
         zero_orb_frac = zero_orb / len(sample)
         zero_to_frac = zero_to / len(sample)
         if zero_orb_frac > 0.3 or zero_to_frac > 0.3:
             logger.warning(
-                "Cached Four Factors have %.0f%% zero ORB / %.0f%% zero TO "
-                "(threshold 30%%) — discarding stale cache",
-                zero_orb_frac * 100, zero_to_frac * 100,
+                "Cached Four Factors have %.0f%% zero ORB / %.0f%% zero TO (threshold 30%%) — discarding stale cache",
+                zero_orb_frac * 100,
+                zero_to_frac * 100,
             )
             return False
         return True
@@ -1541,14 +1665,16 @@ class BartTorvikScraper:
         if not sample:
             return False
         zero_core = sum(
-            1 for t in sample
-            if (abs(float(t.get("adj_offensive_efficiency", 0) or 0)) < 1e-6
-                and abs(float(t.get("adj_defensive_efficiency", 0) or 0)) < 1e-6)
+            1
+            for t in sample
+            if (
+                abs(float(t.get("adj_offensive_efficiency", 0) or 0)) < 1e-6
+                and abs(float(t.get("adj_defensive_efficiency", 0) or 0)) < 1e-6
+            )
         )
         if zero_core > len(sample) * 0.3:
             logger.warning(
-                "Cached rankings have %.0f%% teams with zero AdjOE+AdjDE "
-                "— discarding stale cache",
+                "Cached rankings have %.0f%% teams with zero AdjOE+AdjDE — discarding stale cache",
                 zero_core / len(sample) * 100,
             )
             return False
@@ -1564,7 +1690,7 @@ class BartTorvikScraper:
             return None
 
         try:
-            with open(cache_path, 'r') as f:
+            with open(cache_path, "r") as f:
                 wrapper = json.load(f)
         except (json.JSONDecodeError, OSError):
             logger.debug("Cache file %s is corrupted, ignoring", filename)
@@ -1575,7 +1701,9 @@ class BartTorvikScraper:
             if wrapper["_cache_schema_version"] != CACHE_SCHEMA_VERSION:
                 logger.info(
                     "Cache %s has schema v%s (current v%s), discarding",
-                    filename, wrapper["_cache_schema_version"], CACHE_SCHEMA_VERSION,
+                    filename,
+                    wrapper["_cache_schema_version"],
+                    CACHE_SCHEMA_VERSION,
                 )
                 return None
             # TTL check
@@ -1586,7 +1714,9 @@ class BartTorvikScraper:
                     if age > self.cache_ttl_seconds:
                         logger.info(
                             "Cache %s expired (age=%.0fs, ttl=%.0fs), discarding",
-                            filename, age, self.cache_ttl_seconds,
+                            filename,
+                            age,
+                            self.cache_ttl_seconds,
                         )
                         return None
                 except (TypeError, ValueError):
@@ -1624,7 +1754,7 @@ class BartTorvikScraper:
         }
         cache_path = self.cache_dir / filename
         try:
-            with open(cache_path, 'w') as f:
+            with open(cache_path, "w") as f:
                 json.dump(wrapper, f, indent=2)
         except OSError as e:
             logger.warning("Failed to write cache %s: %s", filename, e)
