@@ -447,6 +447,69 @@ def load_tournament_history_from_matchups_json(
         key=lambda x: x.get("by_year_no", 0),
         reverse=True,
     )
+
+    # Handle years with missing R64 entries (e.g. 2021: VCU withdrew due to
+    # COVID, Oregon got a bye).  Synthesize the missing R64 pair so the
+    # bracket has the full 64 teams.
+    if len(r64_rows) == 62:
+        # Find the team that appears in R32 but has no R64 entry (the bye team)
+        r64_teams = {r["team"] for r in r64_rows}
+        r32_rows = [r for r in year_rows if r.get("current_round") == 32]
+        r32_teams = {r["team"] for r in r32_rows}
+        bye_teams = r32_teams - r64_teams
+        if bye_teams:
+            bye_team = next(iter(bye_teams))
+            bye_row = next(r for r in r32_rows if r["team"] == bye_team)
+            # Find the position where this team should slot in (by seed
+            # pairing within its region block).  Insert at the end of the
+            # R64 list — the bracket order will still be usable.
+            synthetic_bye = {
+                **bye_row,
+                "current_round": 64,
+                "round": bye_row.get("round", 32),
+            }
+            synthetic_withdrawn = {
+                **bye_row,
+                "current_round": 64,
+                "round": 64,
+                "team": f"withdrawn_{year}",
+                "score": 0,
+            }
+            # Insert the pair at the correct bracket position.  Find the
+            # nearest by_year_no gap in the R64 list.
+            bye_byn = bye_row.get("by_year_no", 0)
+            insert_idx = 0
+            for idx, row in enumerate(r64_rows):
+                if row.get("by_year_no", 0) < bye_byn:
+                    insert_idx = idx
+                    break
+            r64_rows.insert(insert_idx, synthetic_bye)
+            r64_rows.insert(insert_idx + 1, synthetic_withdrawn)
+            # Add to seeds
+            bye_tid = _canonical_backtest_team_id(str(bye_team))
+            wd_tid = _canonical_backtest_team_id(f"withdrawn_{year}")
+            if bye_tid not in seeds:
+                seeds[bye_tid] = bye_row.get("seed", 16)
+            seeds[wd_tid] = 16
+            # Add the synthetic R64 game
+            games.append(
+                TournamentGame(
+                    team1_id=bye_tid,
+                    team2_id=wd_tid,
+                    team1_seed=seeds.get(bye_tid, 8),
+                    team2_seed=16,
+                    team1_won=True,
+                    round_name="R64",
+                    team1_score=1,
+                    team2_score=0,
+                )
+            )
+            logger.info(
+                "Synthesized R64 bye for %s (year %d, opponent withdrew)",
+                bye_team,
+                year,
+            )
+
     first_round_matchups: List[str] = []
     for i in range(0, len(r64_rows) - 1, 2):
         a, b = r64_rows[i], r64_rows[i + 1]
@@ -454,8 +517,17 @@ def load_tournament_history_from_matchups_json(
         first_round_matchups.append(_canonical_backtest_team_id(str(b["team"])))
 
     if len(first_round_matchups) < 64:
-        # Fall back to region-based builder (won't work well without regions)
+        # Fall back to region-based builder
         first_round_matchups = _build_first_round_matchups(seeds, regions)
+
+    # Infer regions from bracket position.  Standard NCAA bracket order:
+    # positions 0-15 = region 1, 16-31 = region 2, 32-47 = region 3, 48-63 = region 4.
+    # The region names don't need to match the actual year's labeling — they
+    # just need to be consistent for path_protection scoring.
+    _region_names = ["East", "West", "South", "Midwest"]
+    for pos, tid in enumerate(first_round_matchups):
+        if tid not in regions:
+            regions[tid] = _region_names[pos // 16]
 
     # Champion = team with round == 1
     champion_id = ""
