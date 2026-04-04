@@ -562,11 +562,25 @@ class ESPNPicksScraper:
 
 
 class YahooPicksScraper:
-    """Scraper for Yahoo bracket game picks.
+    """Scraper for Yahoo Bracket Mayhem pick distribution.
 
-    Note: Yahoo discontinued their NCAA bracket game. This scraper only
-    works if YAHOO_PUBLIC_PICKS_URL points to a user-hosted JSON feed
-    with the same schema as ESPN picks.
+    As of 2024, ESPN discontinued the "Who Picked Whom" page. Yahoo's
+    Bracket Mayhem at tournament.fantasysports.yahoo.com is the best
+    remaining free structured source for public pick distributions.
+
+    The pick distribution page is JS-rendered, so a simple requests.get()
+    won't work. To scrape live data, you'd need Selenium or Playwright::
+
+        URL = "https://tournament.fantasysports.yahoo.com/mens-basketball-bracket/pickdistribution"
+
+    It covers all 68 teams across all 6 rounds. For pre-scraped data,
+    set YAHOO_PUBLIC_PICKS_URL to a JSON endpoint with the standard
+    team -> round -> pick_rate schema.
+
+    Historical public picks for 2008-2019 are sourced from
+    dlm1223/march-madness (real ESPN data), 2021-2023 from
+    mRchmadness (real ESPN data), and 2024+ from mRchmadness
+    (source unverified — ESPN WPW discontinued).
     """
 
     BASE_URL = "https://tournament.fantasysports.yahoo.com"
