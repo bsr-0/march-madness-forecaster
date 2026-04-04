@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Council Report — Session #9</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f8f9fa; color: #1a1a2e; line-height: 1.6; padding: 2rem; max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.8rem; margin-bottom: 0.25rem; color: #1a1a2e; }
+  .subtitle { color: #6c757d; font-size: 0.95rem; margin-bottom: 2rem; }
+  .question-box { background: #fff; border-left: 4px solid #e63946; padding: 1.25rem 1.5rem; border-radius: 0 8px 8px 0; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .question-box h2 { font-size: 1rem; color: #e63946; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .question-box p { font-size: 1.05rem; color: #333; }
+  .verdict { background: #fff; border-radius: 12px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .verdict h2 { font-size: 1.3rem; color: #1a1a2e; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 2px solid #e8ecef; }
+  .verdict h3 { font-size: 1.05rem; color: #457b9d; margin: 1.5rem 0 0.75rem; }
+  .verdict p, .verdict li { font-size: 0.95rem; color: #333; margin-bottom: 0.5rem; }
+  .verdict ul { padding-left: 1.5rem; }
+  .verdict li { margin-bottom: 0.4rem; }
+  .first-thing { background: #f0f7ff; border: 2px solid #457b9d; border-radius: 8px; padding: 1.25rem; margin-top: 1.5rem; }
+  .first-thing h3 { color: #1d3557; margin-top: 0; }
+  .alignment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+  .align-card { background: #f8f9fa; border-radius: 8px; padding: 1rem; border: 1px solid #dee2e6; }
+  .align-card.agree { border-left: 4px solid #2a9d8f; }
+  .align-card.clash { border-left: 4px solid #e76f51; }
+  .align-card h4 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+  .align-card.agree h4 { color: #2a9d8f; }
+  .align-card.clash h4 { color: #e76f51; }
+  .align-card p { font-size: 0.9rem; color: #495057; }
+  .advisor-tag { display: inline-block; font-size: 0.75rem; background: #e8ecef; color: #495057; padding: 0.15rem 0.5rem; border-radius: 12px; margin: 0.1rem; }
+  details { background: #fff; border-radius: 8px; margin-bottom: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden; }
+  summary { padding: 1rem 1.25rem; cursor: pointer; font-weight: 600; font-size: 0.95rem; color: #1a1a2e; list-style: none; display: flex; align-items: center; gap: 0.5rem; }
+  summary::before { content: "\25B6"; font-size: 0.7rem; color: #6c757d; transition: transform 0.2s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  summary::-webkit-details-marker { display: none; }
+  .advisor-content { padding: 0 1.25rem 1.25rem; font-size: 0.9rem; color: #495057; line-height: 1.7; }
+  .advisor-content p { margin-bottom: 0.75rem; }
+  .advisor-badge { display: inline-block; font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 12px; color: #fff; margin-left: auto; }
+  .badge-contrarian { background: #e76f51; }
+  .badge-firstprinciples { background: #264653; }
+  .badge-expansionist { background: #2a9d8f; }
+  .badge-outsider { background: #e9c46a; color: #333; }
+  .badge-executor { background: #457b9d; }
+  .smoking-gun { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 1.25rem; margin-bottom: 2rem; }
+  .smoking-gun h3 { color: #856404; font-size: 1rem; margin-bottom: 0.5rem; }
+  .smoking-gun code { background: #f8f0d0; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.85rem; }
+  .review-content { padding: 0 1.25rem 1.25rem; font-size: 0.88rem; color: #495057; }
+  footer { text-align: center; color: #adb5bd; font-size: 0.8rem; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #e8ecef; }
+</style>
+</head>
+<body>
+
+<h1>LLM Council Report — Session #9</h1>
+<p class="subtitle">April 4, 2026 &middot; Architectural Problems &mdash; Why Backtests Show Random Performance</p>
+
+<div class="question-box">
+  <h2>Question</h2>
+  <p>I want to pursue architectural problems &mdash; what should I look into? Maybe data leakage, missing variables, other model types?</p>
+</div>
+
+<div class="smoking-gun">
+  <h3>Smoking Gun Discovery</h3>
+  <p><code>mc_pool_backtest.py</code> calls <code>sample_model_brackets()</code> &mdash; pure probabilistic sampling. It <strong>never</strong> calls <code>PoolOptimizer.optimize()</code>. The entire optimization layer (leverage analysis, Pareto frontier, contrarian strategy) is bypassed. The backtest tested random sampling vs random sampling. Random results are the expected outcome.</p>
+</div>
+
+<!-- Chairman's Verdict -->
+<div class="verdict">
+  <h2>Chairman's Verdict</h2>
+
+  <h3>Where the Council Agrees</h3>
+  <p>The optimizer bypass is not a mystery &mdash; it is a bug. Every advisor agrees: wire the optimizer in before pursuing any other architectural question. The council also agrees the chalk bias signal is real and measured &mdash; F4 public picks 42% vs 21% true advancement rate. The system is sitting on exploitable signal it has never used.</p>
+
+  <div class="alignment-grid">
+    <div class="align-card agree">
+      <h4>Unanimous Agreement</h4>
+      <p>Wire PoolOptimizer into the backtest as the #1 priority. The random results are explained by never calling the optimizer.</p>
+      <div><span class="advisor-tag">Contrarian</span> <span class="advisor-tag">First Principles</span> <span class="advisor-tag">Expansionist</span> <span class="advisor-tag">Outsider</span> <span class="advisor-tag">Executor</span></div>
+    </div>
+    <div class="align-card clash">
+      <h4>Core Dispute</h4>
+      <p>Will the optimizer actually help? If BSS=0 means model_prob &asymp; public_pct, then leverage = 0 everywhere and the optimizer has nothing to work with.</p>
+      <div><span class="advisor-tag">First Principles: skeptical</span> <span class="advisor-tag">Outsider: cautious</span> <span class="advisor-tag">Executor: optimistic</span></div>
+    </div>
+  </div>
+
+  <h3>Where the Council Clashes</h3>
+  <p>The central dispute: whether wiring the optimizer will produce real differentiation. The First Principles Thinker argues BSS=0 means model probabilities match public consensus, making leverage near-zero. The Expansionist counters that the chalk bias signal (2:1 mispricing on F4/CHAMP) provides exploitable divergence even without model superiority. The Contrarian wisely calls for a single-year inspection before committing.</p>
+
+  <h3>Blind Spots the Council Caught</h3>
+  <ul>
+    <li><strong>Two-blend inconsistency:</strong> Backtest uses alpha=0.5 seed-noseed blend; production uses 60/30/10 ESPN/ratings/seed. Different probability distributions make comparison meaningless.</li>
+    <li><strong>Leverage-zero failure mode:</strong> If 2023 leverage values are near-zero, the problem is input probabilities, not architecture. The optimizer cannot manufacture edge from flat inputs.</li>
+    <li><strong>Integration validity:</strong> After wiring, verify output brackets are structurally valid (all 63 games filled, format compatible with scorer) before trusting scores.</li>
+  </ul>
+
+  <h3>The Recommendation</h3>
+  <p>Wire the optimizer into the backtest. Immediately inspect leverage values on a single year. If leverage is near-zero, inject the chalk bias correction &mdash; tilt model probabilities away from public consensus on known mispriced rounds. Reconcile the two blend logics as part of the wiring step. Do not pursue data leakage, missing variables, or new model types until you know whether the optimizer produces meaningfully differentiated brackets.</p>
+
+  <div class="first-thing">
+    <h3>The One Thing to Do First</h3>
+    <p>Before writing any integration code, manually run <code>PoolOptimizer.optimize()</code> for 2023 and print the top leverage picks with their EV-edge values. If the numbers are near-zero, you have a probability input problem. If they show real divergence, proceed to full integration. Ten minutes of inspection saves hours of potentially irrelevant work.</p>
+  </div>
+</div>
+
+<!-- Advisor Alignment -->
+<h2 style="font-size: 1.1rem; margin-bottom: 1rem; color: #1a1a2e;">Advisor Positions</h2>
+
+<div class="alignment-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 2rem;">
+  <div class="align-card agree">
+    <h4 style="font-size: 0.8rem;">Wire Optimizer First</h4>
+    <p style="font-size: 0.85rem;">All 5 advisors agree this is the #1 priority.</p>
+  </div>
+  <div class="align-card" style="border-left: 4px solid #e9c46a;">
+    <h4 style="font-size: 0.8rem; color: #856404;">Validate Before Full Run</h4>
+    <p style="font-size: 0.85rem;">Contrarian + Executor: inspect leverage on 1 year first.</p>
+  </div>
+  <div class="align-card clash">
+    <h4 style="font-size: 0.8rem;">Will It Actually Help?</h4>
+    <p style="font-size: 0.85rem;">First Principles + Outsider skeptical; Expansionist + Executor optimistic.</p>
+  </div>
+</div>
+
+<!-- Advisor Responses -->
+<h2 style="font-size: 1.1rem; margin-bottom: 1rem; color: #1a1a2e;">Advisor Responses</h2>
+
+<details>
+  <summary>The Contrarian <span class="advisor-badge badge-contrarian">Contrarian</span></summary>
+  <div class="advisor-content">
+    <p>Everyone's about to say "wire the optimizer into the backtest." They're right, but they're skipping the real question: does your optimizer ACTUALLY produce different brackets than random sampling?</p>
+    <p>Before wiring anything, do a single-year sanity check. Take 2023. Run PoolOptimizer.optimize() manually. Look at the brackets it produces. Are they materially different from sample_model_brackets() output?</p>
+    <p>The optimizer could be well-designed but produce near-identical output to random sampling if the model probabilities and public pick rates are too similar. If model_prob &asymp; public_pct for most games, leverage is near-zero everywhere, and optimization degenerates to random selection.</p>
+    <p>Also: the backtest uses alpha=0.5 seed-noseed blend for the MODEL but 60/30/10 for opponents. You're comparing apples to oranges.</p>
+    <p>Validate the optimizer produces meaningfully different brackets on ONE year before wiring it into 17 years of backtesting.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The First Principles Thinker <span class="advisor-badge badge-firstprinciples">First Principles</span></summary>
+  <div class="advisor-content">
+    <p>A pool optimizer needs exactly one thing: a gap between what you believe and what the crowd believes.</p>
+    <p>Your system has three potential sources of edge: (1) Better game probability estimates &mdash; proven dead, BSS=0. (2) Better opponent modeling &mdash; exists but only used for simulation, not differentiation. (3) Better portfolio construction &mdash; exists in code but never called.</p>
+    <p>The architectural problem is simple: you built a gun, loaded it, aimed it, and never pulled the trigger. The PoolOptimizer IS the strategy. sample_model_brackets() is just drawing from the same distribution the public uses.</p>
+    <p>But here's the uncomfortable follow-up: even after wiring the optimizer, Source 1 being dead means leverage = (same_number - same_number) &times; points = 0. You may need to artificially inject contrarian bias rather than relying on model superiority that doesn't exist.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Expansionist <span class="advisor-badge badge-expansionist">Expansionist</span></summary>
+  <div class="advisor-content">
+    <p>The optimizer bypass is the obvious fix, but the REAL opportunity is what you do after.</p>
+    <p>You're sitting on 19 years of ESPN "Who Picked Whom" data with clean team matching. The chalk bias &mdash; public picking 1-seeds to F4 at 42% when true rate is 21% &mdash; is MASSIVE. That's a 2:1 mispricing in the most consequential rounds.</p>
+    <p>Build a "contrarian signal layer" that identifies systematic public mispricings. Use it to TILT model probabilities away from consensus. Optimize bracket construction for P(rank=1) not EV &mdash; Clair & Letscher (2007) showed this requires conscious differentiation.</p>
+    <p>Stop trying to predict better. Start trying to be strategically different.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Outsider <span class="advisor-badge badge-outsider">Outsider</span></summary>
+  <div class="advisor-content">
+    <p>The backtest wasn't DESIGNED to test the optimizer &mdash; it tested whether stochastic sampling from different probability models produces different pool outcomes. Answer: no, it doesn't. All three models produce the same performance. That's a valid finding: your probability models don't differentiate enough to matter.</p>
+    <p>Will wiring the optimizer change this? Maybe. The optimizer strategically SELECTS picks anti-correlated with the crowd. But if underlying probabilities match public consensus, it has nothing to work with.</p>
+    <p>The question isn't "why is the backtest random?" It's "do we have ANY information that differs from what ESPN's crowd already knows?" If no, then no architecture fix will help. You'd need external signal &mdash; like the chalk bias correction.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Executor <span class="advisor-badge badge-executor">Executor</span></summary>
+  <div class="advisor-content">
+    <p><strong>Step 1 (2-3 hours):</strong> Wire PoolOptimizer into mc_pool_backtest.py. Add a 4th mode: "optimized." Instantiate with model round probs + ESPN public pick distribution. Call optimize() for leverage-weighted brackets.</p>
+    <p><strong>Step 2 (1 hour):</strong> Single-year validation on 2023. Print actual bracket picks, verify material differences, check leverage values.</p>
+    <p><strong>Step 3 (30 min):</strong> Full 17-year backtest with all 4 modes. Compare optimized mode against threshold. If still fails: input probabilities are the bottleneck. If succeeds: you found the missing piece.</p>
+    <p>Do NOT pursue data leakage, missing variables, or other model types until these three steps are complete.</p>
+  </div>
+</details>
+
+<!-- Peer Reviews -->
+<h2 style="font-size: 1.1rem; margin: 2rem 0 1rem; color: #1a1a2e;">Peer Review Highlights</h2>
+
+<details>
+  <summary>Peer Reviews (5 anonymous reviewers)</summary>
+  <div class="review-content">
+    <p><strong>Review 1:</strong> Strongest: B (First Principles) &mdash; deepest insight on leverage=0. Blind spot: C (Expansionist) jumps to building before verifying. All missed: opponent model symmetry problem.</p>
+    <p><strong>Review 2:</strong> Strongest: E (Executor) &mdash; time-boxed steps. Blind spot: D (Outsider) treats not testing optimizer as acceptable. All missed: two-blend inconsistency needs reconciliation.</p>
+    <p><strong>Review 3:</strong> Strongest: A (Contrarian) &mdash; single-year sanity check is smartest sequencing. Blind spot: C's "2:1 mispricing" unverified in pool context. All missed: sample size problem (17 years = limited power).</p>
+    <p><strong>Review 4:</strong> Strongest: E (Executor) &mdash; actionable. B's leverage=0 is the most important analytical point. All missed: integration testing &mdash; verify bracket validity after wiring.</p>
+    <p><strong>Review 5:</strong> Strongest: E (Executor). Blind spot: B too pessimistic &mdash; divergence may exist in specific high-value spots. All missed: chalk bias signal is already quantified data, not speculation.</p>
+  </div>
+</details>
+
+<footer>
+  <p>LLM Council Session #9 &middot; Generated April 4, 2026 &middot; 5 advisors, 5 peer reviews, 1 chairman synthesis</p>
+  <p>Topic: Architectural Problems &mdash; Why Backtests Show Random Performance</p>
+</footer>
+
+</body>
+</html>
