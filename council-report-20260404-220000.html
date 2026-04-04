@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Council Report — Session #12</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f8f9fa; color: #1a1a2e; line-height: 1.6; padding: 2rem; max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.8rem; margin-bottom: 0.25rem; color: #1a1a2e; }
+  .subtitle { color: #6c757d; font-size: 0.95rem; margin-bottom: 2rem; }
+  .question-box { background: #fff; border-left: 4px solid #e63946; padding: 1.25rem 1.5rem; border-radius: 0 8px 8px 0; margin-bottom: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .question-box h2 { font-size: 1rem; color: #e63946; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .question-box p { font-size: 1.05rem; color: #333; }
+  .verdict { background: #fff; border-radius: 12px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .verdict h2 { font-size: 1.3rem; color: #1a1a2e; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 2px solid #e8ecef; }
+  .verdict h3 { font-size: 1.05rem; color: #457b9d; margin: 1.5rem 0 0.75rem; }
+  .verdict p, .verdict li { font-size: 0.95rem; color: #333; margin-bottom: 0.5rem; }
+  .verdict ul { padding-left: 1.5rem; }
+  .verdict li { margin-bottom: 0.4rem; }
+  .first-thing { background: #f0f7ff; border: 2px solid #457b9d; border-radius: 8px; padding: 1.25rem; margin-top: 1.5rem; }
+  .first-thing h3 { color: #1d3557; margin-top: 0; }
+  .alignment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+  .align-card { background: #f8f9fa; border-radius: 8px; padding: 1rem; border: 1px solid #dee2e6; }
+  .align-card.agree { border-left: 4px solid #2a9d8f; }
+  .align-card.clash { border-left: 4px solid #e76f51; }
+  .align-card h4 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+  .align-card.agree h4 { color: #2a9d8f; }
+  .align-card.clash h4 { color: #e76f51; }
+  .align-card p { font-size: 0.9rem; color: #495057; }
+  .advisor-tag { display: inline-block; font-size: 0.75rem; background: #e8ecef; color: #495057; padding: 0.15rem 0.5rem; border-radius: 12px; margin: 0.1rem; }
+  details { background: #fff; border-radius: 8px; margin-bottom: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden; }
+  summary { padding: 1rem 1.25rem; cursor: pointer; font-weight: 600; font-size: 0.95rem; color: #1a1a2e; list-style: none; display: flex; align-items: center; gap: 0.5rem; }
+  summary::before { content: "\25B6"; font-size: 0.7rem; color: #6c757d; transition: transform 0.2s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  summary::-webkit-details-marker { display: none; }
+  .advisor-content { padding: 0 1.25rem 1.25rem; font-size: 0.9rem; color: #495057; line-height: 1.7; }
+  .advisor-content p { margin-bottom: 0.75rem; }
+  .advisor-badge { display: inline-block; font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 12px; color: #fff; margin-left: auto; }
+  .badge-contrarian { background: #e76f51; }
+  .badge-firstprinciples { background: #264653; }
+  .badge-expansionist { background: #2a9d8f; }
+  .badge-outsider { background: #e9c46a; color: #333; }
+  .badge-executor { background: #457b9d; }
+  .results-table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  .results-table th, .results-table td { padding: 0.5rem 0.75rem; text-align: right; border-bottom: 1px solid #dee2e6; }
+  .results-table th { background: #f8f9fa; font-weight: 600; text-align: right; }
+  .results-table th:first-child, .results-table td:first-child { text-align: left; }
+  .results-table tr.highlight { background: #fff3cd; font-weight: 600; }
+  .sequence-box { background: #fff; border: 2px solid #264653; border-radius: 8px; padding: 1.25rem; margin: 1.5rem 0; }
+  .sequence-box h3 { color: #264653; margin-top: 0; margin-bottom: 0.75rem; }
+  .sequence-box ol { padding-left: 1.5rem; }
+  .sequence-box li { margin-bottom: 0.5rem; font-size: 0.95rem; }
+  .sequence-box .gate { display: inline-block; background: #e63946; color: #fff; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px; margin-left: 0.25rem; vertical-align: middle; }
+  .review-section { background: #fff; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .review-section h3 { font-size: 1rem; color: #1a1a2e; margin-bottom: 1rem; }
+  .review-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .review-card { background: #f8f9fa; border-radius: 8px; padding: 1rem; border: 1px solid #dee2e6; }
+  .review-card h4 { font-size: 0.85rem; color: #457b9d; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+  .review-card p { font-size: 0.88rem; color: #495057; }
+  .review-card ul { padding-left: 1.25rem; font-size: 0.88rem; color: #495057; }
+  .review-card li { margin-bottom: 0.25rem; }
+  footer { text-align: center; color: #adb5bd; font-size: 0.8rem; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #e8ecef; }
+</style>
+</head>
+<body>
+
+<h1>LLM Council Report &mdash; Session #12</h1>
+<p class="subtitle">April 4, 2026 &middot; Validity Review &mdash; opt_torvik p=0.027 Results</p>
+
+<div class="question-box">
+  <h2>Question</h2>
+  <p>opt_torvik achieves p=0.027 on mean rank (17 years, 1000-person ESPN pool). 6 modes tested, no Bonferroni correction. What should the next step be, and are there validity concerns?</p>
+</div>
+
+<!-- Results Table -->
+<div style="background: #fff; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+  <h3 style="font-size: 1rem; color: #1a1a2e; margin-bottom: 1rem;">Backtest Results (17 years, ESPN opponents, 1000-person pool)</h3>
+  <table class="results-table">
+    <thead>
+      <tr><th>Mode</th><th>MeanRnk</th><th>P(top5%)</th><th>P(top25%)</th><th>MeanScr</th><th>p-value</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>seed</td><td>532</td><td>5.1%</td><td>23.2%</td><td>1097</td><td>baseline</td></tr>
+      <tr><td>noseed</td><td>539</td><td>5.0%</td><td>21.5%</td><td>1093</td><td>0.72</td></tr>
+      <tr><td>torvik</td><td>502</td><td>6.8%</td><td>26.1%</td><td>1122</td><td>0.18</td></tr>
+      <tr><td>opt_seed</td><td>496</td><td>4.4%</td><td>30.2%</td><td>1105</td><td>0.44</td></tr>
+      <tr><td>opt_blend</td><td>467</td><td>7.4%</td><td>23.5%</td><td>1137</td><td>0.08</td></tr>
+      <tr class="highlight"><td>opt_torvik</td><td>395</td><td>11.5%</td><td>40.8%</td><td>1195</td><td>0.027</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size: 0.8rem; color: #6c757d; margin-top: 0.5rem;">p-values for mean_rank vs seed baseline (paired t-test, 17 years). Bonferroni-corrected threshold for 6 tests: p &lt; 0.0083.</p>
+</div>
+
+<!-- Chairman's Verdict -->
+<div class="verdict">
+  <h2>Chairman's Verdict</h2>
+
+  <h3>Where the Council Agrees</h3>
+  <p><strong>Look-ahead bias is the primary validity threat.</strong> If Torvik files contain post-tournament ratings, every result is contaminated. The optimizer would be selecting brackets using information that wasn't available at selection time. This must be resolved before interpreting any result.</p>
+  <p><strong>Multiple comparisons is real.</strong> p=0.027 across 6 tested modes does not clear the Bonferroni-corrected threshold of 0.0083. The result is suggestive but not confirmed.</p>
+  <p><strong>17 years is a thin inference base</strong> with enormous variance. Tail metrics like P(top5%) are even noisier than mean rank at this sample size.</p>
+
+  <div class="alignment-grid">
+    <div class="align-card agree">
+      <h4>Agree</h4>
+      <p>Look-ahead bias must be checked before anything else.</p>
+      <div><span class="advisor-tag">All 5 advisors</span></div>
+    </div>
+    <div class="align-card clash">
+      <h4>Clash</h4>
+      <p>Information asymmetry &mdash; feature or flaw? Contrarian/Outsider say damning. First Principles/Executor say it's the point.</p>
+    </div>
+  </div>
+
+  <h3>Where the Council Clashes</h3>
+  <p><strong>Information asymmetry: feature or flaw?</strong> The Contrarian and Outsider argue that opt_torvik's advantage comes from an unfair information edge that won't replicate. First Principles and the Executor counter that exploiting better information over the pool <em>is</em> the strategy &mdash; as long as the data was genuinely available pre-tournament.</p>
+  <p><strong>Scale up or fix foundation first?</strong> The Expansionist wants to ensemble 3&ndash;4 Massey systems (from the 182 available) to kill catastrophic years. The Executor says validate the single-source result first &mdash; ensembling on a contaminated foundation compounds the error.</p>
+  <p><strong>Is BestRank (159 vs 32.5) a problem?</strong> Depends on payout structure. If the pool pays top-5%, consistency wins. If it's winner-take-all, you need the outlier upside that a BestRank of 159 cannot provide.</p>
+
+  <h3>Blind Spots</h3>
+  <ul>
+    <li><strong>17 annual observations is the entire inference base.</strong> No statistical technique can manufacture degrees of freedom that don't exist.</li>
+    <li><strong>Opponent pool skill distribution is unexamined.</strong> The simulation assumes a fixed opponent model. Real pool skill levels are unknown and likely changing over time.</li>
+    <li><strong>Catastrophic years have no mechanistic explanation.</strong> The worst years haven't been traced to specific bracket decisions or tournament dynamics.</li>
+  </ul>
+
+  <div class="sequence-box">
+    <h3>Recommended Sequence (Gated)</h3>
+    <ol>
+      <li><strong>Confirm Torvik data provenance.</strong> Open the data files. Determine whether ratings are pre-tournament or end-of-season. If post-tournament, the backtest is void. <span class="gate">GATE</span></li>
+      <li><strong>Apply Bonferroni correction.</strong> If data is clean, acknowledge p=0.027 as suggestive but unconfirmed (threshold 0.0083). <span class="gate">GATE</span></li>
+      <li><strong>Diagnose catastrophic years</strong> before ensembling. Trace worst-performing years to specific bracket decisions.</li>
+      <li><strong>Resolve payout structure question.</strong> This determines whether MeanRnk, P(top5%), or P(1st) is the objective.</li>
+      <li><strong>Do NOT touch 182 Massey systems</strong> until the single-source foundation is clean.</li>
+    </ol>
+  </div>
+
+  <div class="first-thing">
+    <h3>The One Thing to Do First</h3>
+    <p>Open the Torvik data files and determine whether ratings are pre-tournament or end-of-season (post-tournament). If post-tournament, the backtest is void. If pre-tournament, proceed with Bonferroni correction and catastrophic-year diagnosis. This is one hour of work that determines whether everything else is real.</p>
+  </div>
+</div>
+
+<!-- Advisor Responses -->
+<h2 style="font-size: 1.1rem; margin-bottom: 1rem; color: #1a1a2e;">Advisor Responses</h2>
+
+<details>
+  <summary>The Contrarian <span class="advisor-badge badge-contrarian">Contrarian</span></summary>
+  <div class="advisor-content">
+    <p>p=0.027 fails Bonferroni. The corrected threshold is 0.0083 for 6 comparisons, and this result doesn't clear it. You're looking at the best of 6 and calling it a finding.</p>
+    <p>Look-ahead bias is the killer. If the Torvik files contain end-of-season ratings &mdash; ratings that incorporate tournament performance &mdash; the model had future information baked into its predictions. Every metric in that table becomes meaningless.</p>
+    <p>The opponent model mismatch is damning. opt_torvik uses information that ESPN pool participants didn't have access to (or didn't use effectively). That's either an exploitable edge or an artifact of asymmetric backtesting &mdash; and you can't tell which until you audit the data.</p>
+    <p><strong>Recommendation:</strong> Audit the data files. If they're post-tournament, stop. If pre-tournament, rerun with Bonferroni and see what survives.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The First Principles Thinker <span class="advisor-badge badge-firstprinciples">First Principles</span></summary>
+  <div class="advisor-content">
+    <p>The information asymmetry isn't a flaw &mdash; it's the entire point. A bracket pool is a competition. If your model uses information that opponents don't use (or use poorly), that's the definition of an edge. The question is whether that edge existed at prediction time.</p>
+    <p>The BestRank collapse from 32.5 (seed) to 159 (opt_torvik) suggests the optimizer is targeting the middle of the distribution &mdash; consistently good but never great. Whether this matters depends entirely on the payout structure.</p>
+    <p><strong>Key question:</strong> What's the actual payout structure of the target pool? This determines whether MeanRnk, P(top5%), or P(top1%) is the metric that matters.</p>
+    <p><strong>Recommendation:</strong> Confirm data provenance. Define the payout function. Evaluate whether opt_torvik's risk profile matches.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Expansionist <span class="advisor-badge badge-expansionist">Expansionist</span></summary>
+  <div class="advisor-content">
+    <p>This is the beginning, not the conclusion. The Massey Ratings archive has 182 systems. Torvik is one. If one system produces a suggestive result, an ensemble of 3&ndash;4 uncorrelated systems should produce a robust one.</p>
+    <p>The catastrophic years are the real target. Single-system predictions are brittle. An ensemble dampens these failures. The path from p=0.027 to p&lt;0.01 likely runs through system diversity, not through squeezing more out of Torvik alone.</p>
+    <p><strong>Recommendation:</strong> After confirming Torvik data is clean, add KenPom and Sagarin. Build a simple average ensemble. Test whether catastrophic years improve.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Outsider <span class="advisor-badge badge-outsider">Outsider</span></summary>
+  <div class="advisor-content">
+    <p>Best of 6 at p=0.027 isn't significant after correction. That's the headline until it's resolved.</p>
+    <p>BestRank 159 means opt_torvik can't produce outlier wins. The seed baseline achieves BestRank 32.5 &mdash; top 3% of the pool in its best year. opt_torvik's best year is rank 159, top 16%. It's trading upside for consistency, and that's a bad risk profile if the pool rewards winning.</p>
+    <p><strong>Recommendation:</strong> Audit the data first, but also consider whether "consistently above average" is what the payout structure actually rewards.</p>
+  </div>
+</details>
+
+<details>
+  <summary>The Executor <span class="advisor-badge badge-executor">Executor</span></summary>
+  <div class="advisor-content">
+    <p>Check Torvik file provenance &mdash; one hour of work. Open the files, look at date stamps or column headers. If they say "Final" or show end-of-season dates, the backtest is contaminated and we stop. If they show pre-tournament dates, we have a clean foundation.</p>
+    <p>Information asymmetry is a feature, not a bug. The entire value proposition of using Torvik over seed-based brackets is that Torvik captures information the average ESPN pool participant ignores. That's how you beat the pool.</p>
+    <p>After confirming provenance, postmortem the 3 worst years. Identify which specific bracket picks drove the bad outcomes and determine whether those were systematic model failures or irreducible tournament variance.</p>
+    <p><strong>Recommendation:</strong> (1) Check Torvik file provenance &mdash; one hour. (2) If clean, postmortem catastrophic years &mdash; two hours. (3) Then decide whether to ensemble or optimize further.</p>
+  </div>
+</details>
+
+<!-- Peer Review -->
+<div class="review-section">
+  <h3>Peer Review Highlights</h3>
+  <div class="review-grid">
+    <div class="review-card">
+      <h4>Strongest Advisor</h4>
+      <ul>
+        <li><strong>B (First Principles)</strong> &mdash; 2 votes</li>
+        <li><strong>D (Outsider)</strong> &mdash; 1 vote</li>
+        <li><strong>C (Expansionist)</strong> &mdash; 1 vote</li>
+        <li><strong>E (Executor)</strong> &mdash; 1 vote</li>
+      </ul>
+    </div>
+    <div class="review-card">
+      <h4>Biggest Blind Spot</h4>
+      <ul>
+        <li><strong>C (Expansionist)</strong> &mdash; 2 votes</li>
+        <li><strong>B (First Principles)</strong> &mdash; 2 votes</li>
+        <li><strong>D (Outsider)</strong> &mdash; 1 vote</li>
+      </ul>
+    </div>
+  </div>
+  <div class="review-card">
+    <h4>What Everyone Missed</h4>
+    <p>17 years is an unfixable sample size &mdash; no ensemble or correction changes this fundamental constraint. The opponent pool skill distribution has never been examined; the 1000-person simulation assumes a fixed opponent model that may not reflect actual pool composition.</p>
+  </div>
+</div>
+
+<footer>
+  LLM Council Session #12 &middot; Generated April 4, 2026 &middot; Validity Review of opt_torvik Results
+</footer>
+
+</body>
+</html>
