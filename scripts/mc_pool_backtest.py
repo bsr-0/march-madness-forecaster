@@ -304,32 +304,38 @@ def bracket_config_to_bool_array(bracket_config, first_round_matchups):
     return result
 
 
-def build_optimized_brackets(first_round, seeds, regions, model_round_probs, pick_dist, pool_size):
+def build_optimized_brackets(first_round, seeds, regions, model_round_probs, pick_dist, pool_size, n_target=50):
     """Generate brackets via leverage analysis Pareto frontier.
 
-    Returns (n_brackets, 63) boolean array. Only includes brackets with
-    full 63-game coverage (skips summary-only brackets).
+    Requests n_target brackets from the Pareto generator (at evenly-spaced
+    risk levels from chalk to max contrarian), deduplicates identical
+    brackets, and returns (n_unique, 63) boolean array.
     """
-    from src.optimization.leverage import analyze_pool, TeamMetadata, get_strategy_profile
+    from src.optimization.leverage import (
+        LeverageCalculator,
+        ParetoOptimizer,
+        TeamMetadata,
+        get_strategy_profile,
+    )
 
     team_meta = {tid: TeamMetadata(team_name=tid, seed=seeds[tid], region=regions.get(tid, "")) for tid in seeds}
 
     strategy_profile = get_strategy_profile(pool_size, payout_structure="winner_take_all", scoring_system="standard")
 
-    analysis = analyze_pool(
-        pool_size=pool_size,
-        model_probs=model_round_probs,
-        public_picks=pick_dist,
+    calculator = LeverageCalculator(
+        model_round_probs,
+        pick_dist,
         scoring_system=ESPN_SCORING,
         team_metadata=team_meta,
-        strategy_profile=strategy_profile,
     )
+    optimizer = ParetoOptimizer(calculator, pool_size)
 
-    pareto = analysis.pareto_brackets
+    # Generate many Pareto brackets across the full risk spectrum
+    pareto = optimizer.generate_pareto_brackets(num_brackets=n_target)
     if not pareto:
         return np.zeros((0, 63), dtype=bool)
 
-    # Only include full brackets (63 picks)
+    # Convert to boolean arrays, only full 63-game brackets
     valid = []
     for bc in pareto:
         if len(bc.picks) >= 63:
@@ -340,7 +346,16 @@ def build_optimized_brackets(first_round, seeds, regions, model_round_probs, pic
     if not valid:
         return np.zeros((0, 63), dtype=bool)
 
-    return np.array(valid, dtype=bool)
+    # Deduplicate identical brackets
+    arr = np.array(valid, dtype=bool)
+    unique_arr = np.unique(arr, axis=0)
+    n_dupes = arr.shape[0] - unique_arr.shape[0]
+    if n_dupes > 0:
+        print(f"    Pareto: {arr.shape[0]} generated, {unique_arr.shape[0]} unique ({n_dupes} duplicates removed)")
+    else:
+        print(f"    Pareto: {unique_arr.shape[0]} unique brackets")
+
+    return unique_arr
 
 
 def build_leverage_tilted_round_probs(model_round_probs, pick_dist, tilt_strength=1.0):
@@ -401,7 +416,7 @@ def run_backtest(
     print()
 
     header = (
-        f"  {'Year':<6} {'Mode':<8} {'BestRnk':>8} {'MeanRnk':>8} "
+        f"  {'Year':<6} {'Mode':<10} {'BestRnk':>8} {'MeanRnk':>8} "
         f"{'P(1st)':>8} {'P(top5)':>8} {'P(top25)':>9} {'BestScr':>8} {'MeanScr':>8}"
     )
     print(header)
@@ -506,7 +521,7 @@ def run_backtest(
             mean_score = float(model_scores.mean())
 
             print(
-                f"  {year:<6} {mode_name:<8} {best_rank:8.1f} {mean_rank:8.1f} "
+                f"  {year:<6} {mode_name:<10} {best_rank:8.1f} {mean_rank:8.1f} "
                 f"{p_first:8.3f} {p_top5:8.3f} {p_top25:9.3f} "
                 f"{best_score:8.0f} {mean_score:8.0f}"
             )
@@ -525,65 +540,68 @@ def run_backtest(
                 }
             )
 
-        # --- Optimized mode: leverage-based Pareto brackets ---
-        opt_brackets = build_optimized_brackets(first_round, seeds, regions, blend_rp, pick_dist, pool_size)
-        if opt_brackets.shape[0] > 0:
-            mode_name = "optimized"
-            model_brackets = opt_brackets
-            n_opt = model_brackets.shape[0]
+        # --- Optimized modes: leverage-based Pareto brackets ---
+        # Test both seed_rp (higher leverage values) and blend_rp
+        for opt_mode_name, opt_rp in [("opt_seed", seed_rp), ("opt_blend", blend_rp)]:
+            opt_brackets = build_optimized_brackets(
+                first_round, seeds, regions, opt_rp, pick_dist, pool_size, n_target=N_MODEL_BRACKETS
+            )
+            if opt_brackets.shape[0] > 0:
+                model_brackets = opt_brackets
+                n_opt = model_brackets.shape[0]
 
-            model_scores = score_brackets_against_outcome(model_brackets, actual, scoring_vector)
+                model_scores = score_brackets_against_outcome(model_brackets, actual, scoring_vector)
 
-            all_ranks = np.zeros((n_opt, n_repeats))
-            for rep in range(n_repeats):
-                opp = generate_opponent_brackets(
-                    n_opponents,
-                    first_round,
-                    seed_pw,
-                    pick_dist,
-                    seeds,
-                    rng,
+                all_ranks = np.zeros((n_opt, n_repeats))
+                for rep in range(n_repeats):
+                    opp = generate_opponent_brackets(
+                        n_opponents,
+                        first_round,
+                        seed_pw,
+                        pick_dist,
+                        seeds,
+                        rng,
+                    )
+                    opp_scores = score_brackets_against_outcome(opp, actual, scoring_vector)
+
+                    for m in range(n_opt):
+                        better = np.sum(opp_scores > model_scores[m])
+                        tied = np.sum(opp_scores == model_scores[m])
+                        all_ranks[m, rep] = better + 1 + tied / 2.0
+
+                bracket_mean_ranks = all_ranks.mean(axis=1)
+                best_bracket_idx = np.argmin(bracket_mean_ranks)
+                best_rank = bracket_mean_ranks[best_bracket_idx]
+                mean_rank = bracket_mean_ranks.mean()
+
+                p_first = (all_ranks == 1.0).mean()
+                p_top5 = (all_ranks <= max(1, pool_size * 0.05)).mean()
+                p_top25 = (all_ranks <= max(1, pool_size * 0.25)).mean()
+
+                best_score = float(model_scores[best_bracket_idx])
+                mean_score = float(model_scores.mean())
+
+                print(
+                    f"  {year:<6} {opt_mode_name:<10} {best_rank:8.1f} {mean_rank:8.1f} "
+                    f"{p_first:8.3f} {p_top5:8.3f} {p_top25:9.3f} "
+                    f"{best_score:8.0f} {mean_score:8.0f}"
                 )
-                opp_scores = score_brackets_against_outcome(opp, actual, scoring_vector)
 
-                for m in range(n_opt):
-                    better = np.sum(opp_scores > model_scores[m])
-                    tied = np.sum(opp_scores == model_scores[m])
-                    all_ranks[m, rep] = better + 1 + tied / 2.0
-
-            bracket_mean_ranks = all_ranks.mean(axis=1)
-            best_bracket_idx = np.argmin(bracket_mean_ranks)
-            best_rank = bracket_mean_ranks[best_bracket_idx]
-            mean_rank = bracket_mean_ranks.mean()
-
-            p_first = (all_ranks == 1.0).mean()
-            p_top5 = (all_ranks <= max(1, pool_size * 0.05)).mean()
-            p_top25 = (all_ranks <= max(1, pool_size * 0.25)).mean()
-
-            best_score = float(model_scores[best_bracket_idx])
-            mean_score = float(model_scores.mean())
-
-            print(
-                f"  {year:<6} {mode_name:<8} {best_rank:8.1f} {mean_rank:8.1f} "
-                f"{p_first:8.3f} {p_top5:8.3f} {p_top25:9.3f} "
-                f"{best_score:8.0f} {mean_score:8.0f}"
-            )
-
-            results.append(
-                {
-                    "year": year,
-                    "mode": mode_name,
-                    "best_rank": best_rank,
-                    "mean_rank": mean_rank,
-                    "best_score": best_score,
-                    "mean_score": mean_score,
-                    "p_first": p_first,
-                    "p_top5": p_top5,
-                    "p_top25": p_top25,
-                }
-            )
-        else:
-            print(f"  {year:<6} optimzd  SKIP — no full Pareto brackets")
+                results.append(
+                    {
+                        "year": year,
+                        "mode": opt_mode_name,
+                        "best_rank": best_rank,
+                        "mean_rank": mean_rank,
+                        "best_score": best_score,
+                        "mean_score": mean_score,
+                        "p_first": p_first,
+                        "p_top5": p_top5,
+                        "p_top25": p_top25,
+                    }
+                )
+            else:
+                print(f"  {year:<6} {opt_mode_name:<10} SKIP — no full Pareto brackets")
 
     if not results:
         print("\nNo results.")
@@ -598,7 +616,7 @@ def run_backtest(
     )
     print(f"  {'-' * 65}")
 
-    for mode in ["seed", "noseed", "blend", "leveraged", "optimized"]:
+    for mode in ["seed", "noseed", "blend", "leveraged", "opt_seed", "opt_blend"]:
         mode_results = [r for r in results if r["mode"] == mode]
         if not mode_results:
             continue
@@ -616,8 +634,8 @@ def run_backtest(
     print(f"\n  Statistical Tests — Mean Rank (paired across years):")
 
     # Collect per-year ranks by mode
-    mode_ranks = {m: {} for m in ["seed", "noseed", "blend", "leveraged", "optimized"]}
-    mode_best = {m: {} for m in ["seed", "noseed", "blend", "leveraged", "optimized"]}
+    mode_ranks = {m: {} for m in ["seed", "noseed", "blend", "leveraged", "opt_seed", "opt_blend"]}
+    mode_best = {m: {} for m in ["seed", "noseed", "blend", "leveraged", "opt_seed", "opt_blend"]}
     for r in results:
         mode_ranks[r["mode"]][r["year"]] = r["mean_rank"]
         mode_best[r["mode"]][r["year"]] = r["best_rank"]
@@ -626,7 +644,7 @@ def run_backtest(
     baseline_years = sorted(set(mode_ranks["seed"]) & set(mode_ranks["noseed"]) & set(mode_ranks["blend"]))
     # Find years where extra modes exist
     lev_years = sorted(set(baseline_years) & set(mode_ranks["leveraged"]))
-    opt_years = sorted(set(baseline_years) & set(mode_ranks["optimized"]))
+    opt_years = sorted(set(baseline_years) & set(mode_ranks["opt_seed"]))
 
     if len(baseline_years) >= 5:
         seed_arr = np.array([mode_ranks["seed"][y] for y in baseline_years])
@@ -646,7 +664,7 @@ def run_backtest(
 
         if len(opt_years) >= 5:
             seed_opt = np.array([mode_ranks["seed"][y] for y in opt_years])
-            opt_arr = np.array([mode_ranks["optimized"][y] for y in opt_years])
+            opt_arr = np.array([mode_ranks["opt_seed"][y] for y in opt_years])
             t_op, p_op = sp_stats.ttest_rel(seed_opt, opt_arr)
             print(f"    Rank t-test (seed vs optim):  t={t_op:.3f}, p={p_op:.4f}")
 
@@ -692,7 +710,7 @@ def run_backtest(
 
         if len(opt_years) >= 5:
             sb_opt = np.array([mode_best["seed"][y] for y in opt_years])
-            ob = np.array([mode_best["optimized"][y] for y in opt_years])
+            ob = np.array([mode_best["opt_seed"][y] for y in opt_years])
             t_op, p_op = sp_stats.ttest_rel(sb_opt, ob)
             print(f"    Rank t-test (seed vs optim):  t={t_op:.3f}, p={p_op:.4f}")
 
