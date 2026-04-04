@@ -337,7 +337,7 @@ class BartTorvikScraper:
         cache_dir: Optional[str] = None,
         cache_ttl_seconds: float = DEFAULT_CACHE_TTL_SECONDS,
         circuit_breaker_state_file: Optional[str] = None,
-        strict_leakage: bool = False,
+        strict_leakage: bool = True,
     ):
         """
         Initialize scraper.
@@ -346,8 +346,9 @@ class BartTorvikScraper:
             cache_dir: Directory to cache scraped data.
             cache_ttl_seconds: How long cached files remain valid (default 6h).
             circuit_breaker_state_file: Path for circuit breaker persistence.
-            strict_leakage: If True, raise LeakageError when scraping after
-                tournament start date.  Used in production pipelines.
+            strict_leakage: If True (default), raise LeakageError when scraping
+                after tournament start date or when cached data was scraped
+                post-tournament.  Zero tolerance for contaminated data.
         """
         self._strict_leakage = strict_leakage
         self.session = requests.Session()
@@ -395,15 +396,23 @@ class BartTorvikScraper:
     def _get_pre_tournament_date_range(self, year: int):
         """Return (begin_str, end_str) for pre-tournament date filtering.
 
-        Returns YYYYMMDD strings suitable for trank.php begin/end params,
-        or (None, None) if tournament dates are unavailable.
+        Returns YYYYMMDD strings suitable for trank.php begin/end params.
+        Raises ValueError if tournament dates are unavailable for historical
+        years, to prevent silent fallback to unfiltered (contaminated) data.
         """
         try:
             from ...pipeline.config import TOURNAMENT_START_DATES
         except ImportError:
+            logger.warning("[torvik] Cannot import TOURNAMENT_START_DATES — date filtering unavailable")
             return None, None
         cutoff = TOURNAMENT_START_DATES.get(year)
         if cutoff is None:
+            if year <= date.today().year:
+                logger.warning(
+                    "[torvik] No tournament start date for %d — cannot apply date filtering. "
+                    "DATA LEAKAGE RISK for historical years.",
+                    year,
+                )
             return None, None
         from datetime import timedelta
 
@@ -413,11 +422,11 @@ class BartTorvikScraper:
         return begin_str, end_str
 
     def _check_tournament_date_guard(self, year: int, strict: bool = False) -> None:
-        """Raise if scraping after tournament start date.
+        """Raise LeakageError if scraping after tournament start date.
 
         Post-tournament Torvik data includes tournament game results in
         efficiency metrics, which would contaminate pre-tournament predictions.
-        Default behavior is now strict (raises) to prevent silent leakage.
+        Always raises — zero tolerance for post-tournament data ingestion.
         """
         try:
             from ...pipeline.config import TOURNAMENT_START_DATES
@@ -428,24 +437,21 @@ class BartTorvikScraper:
             return
         today = date.today()
         if today >= cutoff:
-            msg = (
+            from ...exceptions import LeakageError
+
+            raise LeakageError(
                 f"Live Torvik scrape for {year} requested on {today}, "
                 f"but tournament started {cutoff}. Post-tournament efficiency "
                 f"metrics include tournament game results — DATA LEAKAGE RISK. "
                 f"Use pre-tournament cached data instead."
             )
-            # Default strict: always raise unless explicitly opted out
-            if strict or self._strict_leakage or not hasattr(self, "_allow_post_tournament"):
-                from ...exceptions import LeakageError
-
-                raise LeakageError(msg)
-            logger.warning(msg)
 
     def _validate_cache_timestamp(self, data: dict, year: int, strict: bool = False) -> None:
-        """Warn or raise if cached data was scraped after tournament start.
+        """Raise if cached data was scraped after tournament start.
 
         Closes the gap where ``_check_tournament_date_guard`` only fires on
         live scrapes — this method validates **cached** data timestamps.
+        Always raises by default to enforce zero tolerance for contaminated data.
         """
         ts_str = data.get("scraped_at") or data.get("timestamp")
         if not ts_str:
@@ -467,11 +473,9 @@ class BartTorvikScraper:
                 f"which is on/after tournament start {cutoff}. "
                 f"Post-tournament data includes tournament game results — DATA LEAKAGE RISK."
             )
-            if strict or self._strict_leakage:
-                from ...exceptions import LeakageError
+            from ...exceptions import LeakageError
 
-                raise LeakageError(msg)
-            logger.warning(msg)
+            raise LeakageError(msg)
 
     def fetch_current_rankings(self, year: int = 2026, strict: bool = False) -> List[TorVikTeam]:
         """
@@ -554,6 +558,9 @@ class BartTorvikScraper:
         """Fetch T-Rank ratings from the CSV team results endpoint.
 
         Endpoint: ``/{year}_team_results.csv``
+
+        WARNING: This endpoint does NOT support date filtering. Data returned
+        includes tournament game results if scraped post-tournament.
 
         This CSV provides T-Rank ratings, AdjOE/DE, Barthag, SOS, WAB,
         and record but does NOT include Four Factors.  Four Factors fields
@@ -727,6 +734,10 @@ class BartTorvikScraper:
 
         Endpoint: ``GET /torvik/ratings?year={year}``
 
+        WARNING: The cbbdata API does NOT support date filtering. Data returned
+        includes tournament game results if scraped post-tournament. This method
+        should only be called pre-tournament or with strict_leakage guards active.
+
         Authenticates via Bearer token (from login or ``CBD_API_KEY`` env var).
         Returns all teams with ratings and Four Factors in one call.
         """
@@ -808,6 +819,9 @@ class BartTorvikScraper:
 
     def _four_factors_from_cbbdata_api(self, year: int) -> Dict[str, Dict]:
         """Fetch Four Factors from the cbbdata.com API.
+
+        WARNING: The cbbdata API does NOT support date filtering. Data returned
+        includes tournament game results if scraped post-tournament.
 
         Reuses the ratings endpoint which includes Four Factors.
         """
@@ -1429,6 +1443,9 @@ class BartTorvikScraper:
     def _four_factors_from_player_csv(self, year: int) -> Dict[str, Dict]:
         """Compute team-level Four Factors from the player CSV endpoint.
 
+        WARNING: This endpoint does NOT support date filtering. Player stats
+        include tournament games if scraped post-tournament.
+
         Returns dict compatible with ``_parse_four_factors_page`` output::
 
             {team_id: {
@@ -1507,6 +1524,9 @@ class BartTorvikScraper:
 
     def _shooting_from_player_csv(self, year: int) -> Dict[str, Dict]:
         """Compute team-level shooting splits from the player CSV endpoint.
+
+        WARNING: This endpoint does NOT support date filtering. Player stats
+        include tournament games if scraped post-tournament.
 
         Returns dict compatible with ``_parse_shooting_page`` output::
 

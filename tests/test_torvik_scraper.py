@@ -176,10 +176,18 @@ class TestStrategyTelemetry:
 
     def test_csv_fallback_strategy_recorded(self, scraper):
         """When CSV fallback is used for four factors, strategy is recorded."""
-        fake_ff = {"duke": {"effective_fg_pct": 0.57, "turnover_rate": 0.15,
-                            "offensive_reb_rate": 0.32, "free_throw_rate": 0.35,
-                            "opp_effective_fg_pct": 0.45, "opp_turnover_rate": 0.18,
-                            "defensive_reb_rate": 0.72, "opp_free_throw_rate": 0.31}}
+        fake_ff = {
+            "duke": {
+                "effective_fg_pct": 0.57,
+                "turnover_rate": 0.15,
+                "offensive_reb_rate": 0.32,
+                "free_throw_rate": 0.35,
+                "opp_effective_fg_pct": 0.45,
+                "opp_turnover_rate": 0.18,
+                "defensive_reb_rate": 0.72,
+                "opp_free_throw_rate": 0.31,
+            }
+        }
         with patch.object(scraper, "_four_factors_from_cbbdata_api", return_value={}):
             with patch.object(scraper, "_four_factors_from_trank_csv", return_value={}):
                 with patch.object(scraper, "_four_factors_from_player_csv", return_value=fake_ff):
@@ -239,16 +247,24 @@ class TestCacheValidation:
 
     def test_rankings_cache_valid(self, scraper):
         teams = [
-            {"team_id": f"team_{i}", "adj_offensive_efficiency": 100.0 + i,
-             "adj_defensive_efficiency": 95.0 + i, "barthag": 0.8}
+            {
+                "team_id": f"team_{i}",
+                "adj_offensive_efficiency": 100.0 + i,
+                "adj_defensive_efficiency": 95.0 + i,
+                "barthag": 0.8,
+            }
             for i in range(120)
         ]
         assert scraper._cache_has_valid_rankings({"teams": teams}) is True
 
     def test_rankings_cache_too_few_teams(self, scraper):
         teams = [
-            {"team_id": f"team_{i}", "adj_offensive_efficiency": 100.0,
-             "adj_defensive_efficiency": 95.0, "barthag": 0.8}
+            {
+                "team_id": f"team_{i}",
+                "adj_offensive_efficiency": 100.0,
+                "adj_defensive_efficiency": 95.0,
+                "barthag": 0.8,
+            }
             for i in range(50)
         ]
         assert scraper._cache_has_valid_rankings({"teams": teams}) is False
@@ -258,11 +274,9 @@ class TestCacheValidation:
         # Put corrupted teams first so they appear in the sample (first 20)
         teams = []
         for i in range(8):
-            teams.append({"team_id": f"bad_{i}", "adj_offensive_efficiency": 0.0,
-                          "adj_defensive_efficiency": 0.0})
+            teams.append({"team_id": f"bad_{i}", "adj_offensive_efficiency": 0.0, "adj_defensive_efficiency": 0.0})
         for i in range(112):
-            teams.append({"team_id": f"good_{i}", "adj_offensive_efficiency": 100.0,
-                          "adj_defensive_efficiency": 95.0})
+            teams.append({"team_id": f"good_{i}", "adj_offensive_efficiency": 100.0, "adj_defensive_efficiency": 95.0})
         assert scraper._cache_has_valid_rankings({"teams": teams}) is False
 
     def test_rankings_cache_empty_rejected(self, scraper):
@@ -284,12 +298,12 @@ class TestAggregatePlayerCsv:
         cols[0] = player
         cols[1] = team
         cols[2] = conf
-        cols[3] = "30"       # gp
+        cols[3] = "30"  # gp
         cols[4] = str(min_pct)
-        cols[7] = "0.5"      # efg (unused in aggregate)
-        cols[9] = "0.04"     # orb_pct
-        cols[10] = "0.20"    # drb_pct
-        cols[12] = "0.15"    # to_pct
+        cols[7] = "0.5"  # efg (unused in aggregate)
+        cols[9] = "0.04"  # orb_pct
+        cols[10] = "0.20"  # drb_pct
+        cols[12] = "0.15"  # to_pct
         cols[13] = str(ftm)
         cols[14] = str(fta)
         cols[15] = str(ftm / fta if fta else 0)
@@ -383,11 +397,12 @@ class TestRankingsCsvFallback:
     def test_rankings_csv_fallback_strategy_recorded(self, scraper):
         """When all earlier strategies fail, rankings should fall through to CSV."""
         fake_team = _make_team()
-        with patch.object(scraper, "_rankings_from_cbbdata_api", return_value=[]):
-            with patch.object(scraper, "_rankings_from_trank_csv", return_value=[]):
-                with patch.object(scraper, "_rankings_from_csv", return_value=[fake_team]):
-                    with patch.object(scraper, "_save_to_cache"):
-                        teams = scraper.fetch_current_rankings(year=2024)
+        with patch.object(scraper, "_check_tournament_date_guard"):
+            with patch.object(scraper, "_rankings_from_cbbdata_api", return_value=[]):
+                with patch.object(scraper, "_rankings_from_trank_csv", return_value=[]):
+                    with patch.object(scraper, "_rankings_from_csv", return_value=[fake_team]):
+                        with patch.object(scraper, "_save_to_cache"):
+                            teams = scraper.fetch_current_rankings(year=2024)
 
         assert len(teams) == 1
         assert scraper._fetch_strategy.get("rankings") == "csv_fallback"
@@ -424,7 +439,9 @@ class TestCsvHeaderDetection:
         fake_resp = MagicMock()
         fake_resp.text = csv_content
         with patch.object(scraper, "_get_with_retry", return_value=fake_resp):
-            with patch.object(scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())):
+            with patch.object(
+                scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())
+            ):
                 teams = scraper._rankings_from_trank_csv(2026)
         # Header row consumed, 110 data rows parsed
         assert len(teams) == 110
@@ -433,15 +450,14 @@ class TestCsvHeaderDetection:
         """A team named 'Frank' contains 'rank' — should NOT trigger header detection."""
         # No real header row; first row is data. With <3 header matches,
         # the parser should fall back to positional indexing.
-        first_row = (
-            "1,Franklin Pierce,NEC,100.0,105.0,0.40,68.0,0.0,10,20,"
-            "45.0,20.0,28.0,30.0,50.0,18.0,27.0,32.0"
-        )
+        first_row = "1,Franklin Pierce,NEC,100.0,105.0,0.40,68.0,0.0,10,20,45.0,20.0,28.0,30.0,50.0,18.0,27.0,32.0"
         csv_content = first_row + "\n" + self._make_csv_rows(109, start_rank=2) + "\n"
         fake_resp = MagicMock()
         fake_resp.text = csv_content
         with patch.object(scraper, "_get_with_retry", return_value=fake_resp):
-            with patch.object(scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())):
+            with patch.object(
+                scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())
+            ):
                 teams = scraper._rankings_from_trank_csv(2026)
         # All 110 rows should be parsed as data (first row not skipped as header)
         assert len(teams) == 110
@@ -450,15 +466,14 @@ class TestCsvHeaderDetection:
     def test_single_keyword_match_not_enough_for_header(self, scraper):
         """A row with only 1 header keyword match should not be treated as header."""
         # Row 0 has "team" in one cell but nothing else header-like
-        first_row = (
-            "1,team,foo,100.0,105.0,0.40,68.0,0.0,10,20,"
-            "45.0,20.0,28.0,30.0,50.0,18.0,27.0,32.0"
-        )
+        first_row = "1,team,foo,100.0,105.0,0.40,68.0,0.0,10,20,45.0,20.0,28.0,30.0,50.0,18.0,27.0,32.0"
         csv_content = first_row + "\n" + self._make_csv_rows(109, start_rank=2) + "\n"
         fake_resp = MagicMock()
         fake_resp.text = csv_content
         with patch.object(scraper, "_get_with_retry", return_value=fake_resp):
-            with patch.object(scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())):
+            with patch.object(
+                scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())
+            ):
                 teams = scraper._rankings_from_trank_csv(2026)
         # "team" alone shouldn't trigger header detection; all 110 rows parsed as data
         assert len(teams) == 110
@@ -473,7 +488,9 @@ class TestCsvHeaderDetection:
         fake_resp = MagicMock()
         fake_resp.text = csv_content
         with patch.object(scraper, "_get_with_retry", return_value=fake_resp):
-            with patch.object(scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())):
+            with patch.object(
+                scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())
+            ):
                 teams = scraper._rankings_from_trank_csv(2026)
         # BOM should be stripped; header detected; 110 data rows parsed
         assert len(teams) == 110
@@ -484,16 +501,19 @@ class TestCsvHeaderDetection:
         header = "rank,team,conf,adj_o,adj_d,barthag,adj_t,wab"
         rows = []
         for i in range(110):
-            rows.append(f"{i+1},Team_{i},Conf,{100+i:.1f},{95+i:.1f},0.50,68.0,0.0")
+            rows.append(f"{i + 1},Team_{i},Conf,{100 + i:.1f},{95 + i:.1f},0.50,68.0,0.0")
         csv_content = header + "\n" + "\n".join(rows) + "\n"
         fake_resp = MagicMock()
         fake_resp.text = csv_content
         with patch.object(scraper, "_get_with_retry", return_value=fake_resp):
-            with patch.object(scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())):
+            with patch.object(
+                scraper, "_cb_trank", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())
+            ):
                 teams = scraper._rankings_from_trank_csv(2026)
         assert len(teams) == 110
         # Four Factors should be NaN (not 0.0) since columns are absent
         import math
+
         for t in teams[:5]:
             assert math.isnan(t.effective_fg_pct), f"Expected NaN for eFG%, got {t.effective_fg_pct}"
             assert math.isnan(t.turnover_rate), f"Expected NaN for TO%, got {t.turnover_rate}"
@@ -544,6 +564,7 @@ class TestScrapedAtMetadata:
         scraper = BartTorvikScraper(cache_dir=str(tmp_path))
         # Write a cache file without scraped_at in the data dict
         import time as _time
+
         wrapper = {
             "_cache_schema_version": 3,
             "_cache_timestamp": _time.time(),
@@ -560,17 +581,19 @@ class TestScrapedAtMetadata:
         scraper._strict_leakage = True
         data = {"scraped_at": "2026-03-20T12:00:00"}
         from src.exceptions import LeakageError
+
         with pytest.raises(LeakageError, match="DATA LEAKAGE RISK"):
             scraper._validate_cache_timestamp(data, year=2026, strict=True)
 
-    def test_validate_cache_timestamp_warns_non_strict(self, caplog):
-        import logging
+    def test_validate_cache_timestamp_raises_even_non_strict(self):
+        """Cache timestamp validation always raises — zero tolerance for leakage."""
         scraper = BartTorvikScraper.__new__(BartTorvikScraper)
         scraper._strict_leakage = False
         data = {"scraped_at": "2026-03-20T12:00:00"}
-        with caplog.at_level(logging.WARNING):
+        from src.exceptions import LeakageError
+
+        with pytest.raises(LeakageError, match="DATA LEAKAGE RISK"):
             scraper._validate_cache_timestamp(data, year=2026, strict=False)
-        assert "DATA LEAKAGE RISK" in caplog.text
 
     def test_validate_cache_timestamp_no_error_pre_tournament(self):
         scraper = BartTorvikScraper.__new__(BartTorvikScraper)
