@@ -13,7 +13,11 @@ Track B (archived real data, higher fidelity):
     sourced from ESPN "Who Picked Whom" via Wayback Machine or
     manual curation.
 
-The loader tries Track B first and falls back to Track A seamlessly.
+The loader tries Track B first and falls back to Track A only when no
+archived file exists for a year.  Within Track B, any team that cannot
+be resolved to a bracket_teams key is logged as a WARNING (not silently
+filled with seed defaults).  Individual bracket teams missing from the
+picks file are explicitly seed-filled and logged.
 """
 
 from __future__ import annotations
@@ -37,6 +41,7 @@ _ROUND_NAMES = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
 # These cover abbreviations, disambiguation, and play-in artifacts found in
 # the ESPN/Kaggle scraped data (diagnosed via scripts/diagnose_picks_team_matching.py).
 _PICKS_TEAM_ALIAS: Dict[str, str] = {
+    # Abbreviations / disambiguation
     "miami": "miami__fl",
     "umass": "massachusetts",
     "s_dakota_state": "south_dakota_state",
@@ -47,6 +52,21 @@ _PICKS_TEAM_ALIAS: Dict[str, str] = {
     "virginia_commonwealth": "vcu",
     "louisiana": "louisiana_lafayette",
     "siue": "siu_edwardsville",
+    # Play-in combined entries: ESPN lumps both play-in teams into one row
+    # before the play-in game is decided. Map to the team that won the
+    # play-in and entered the main bracket.
+    "_playin_11_pr_sc": "southern_california",  # 2017: Providence/USC
+    "_playin_16_nc_ud": "uc_davis",  # 2017: NC Central/UC Davis
+    "playin_11_pr_sc": "southern_california",  # normalized (leading _ stripped)
+    "playin_16_nc_ud": "uc_davis",
+    "_playin_11_asu_sju": "arizona_state",  # 2019: Arizona St/St. John's
+    "playin_11_asu_sju": "arizona_state",
+    "michigan_state_ucla": "ucla",  # 2021
+    "msm_texas_southern": "texas_southern",  # 2021: Mt St Mary's/TX Southern
+    "wichita_state_drake": "drake",  # 2021
+    "asu_nev": "arizona_state",  # 2023: Arizona St/Nevada
+    "msst_pitt": "pittsburgh",  # 2023: Miss St/Pittsburgh
+    "txso_fdu": "fairleigh_dickinson",  # 2023: TX Southern/FDU
 }
 
 
@@ -93,13 +113,12 @@ def load_historical_public_picks(
 def _resolve_picks_team_id(
     raw_id: str,
     bracket_teams: Dict[str, int],
-) -> str:
+) -> Optional[str]:
     """Resolve a picks-file team name to a canonical bracket_teams key.
 
     Tries in order: direct match, picks alias table, normalize_team_id,
-    normalize + picks alias.  Returns the original raw_id if nothing matches
-    (it will be kept in results but won't collide with bracket_teams keys,
-    so it effectively gets ignored during the fill-in step).
+    normalize + picks alias.  Returns None if nothing matches — callers
+    must handle unresolved names explicitly (no silent fallback).
     """
     if raw_id in bracket_teams:
         return raw_id
@@ -110,7 +129,7 @@ def _resolve_picks_team_id(
         return norm
     if norm in _PICKS_TEAM_ALIAS and _PICKS_TEAM_ALIAS[norm] in bracket_teams:
         return _PICKS_TEAM_ALIAS[norm]
-    return raw_id
+    return None
 
 
 def _load_archived_picks(
@@ -162,30 +181,65 @@ def _load_archived_picks(
                 continue
 
             result: Dict[str, Dict[str, float]] = {}
+            unresolved: list[str] = []
             for raw_id, rounds in teams_data.items():
                 if not isinstance(rounds, dict):
                     continue
                 pick_data = {r: float(rounds.get(r, 0.0)) for r in _ROUND_NAMES}
-                # Normalize picks team name to match bracket_teams keys
                 team_id = _resolve_picks_team_id(raw_id, bracket_teams)
-                result[team_id] = pick_data
+                if team_id is not None:
+                    result[team_id] = pick_data
+                else:
+                    unresolved.append(raw_id)
 
-            # Fill in any missing teams with seed-based defaults
             n_matched = sum(1 for t in bracket_teams if t in result)
-            for team_id, seed in bracket_teams.items():
-                if team_id not in result:
-                    result[team_id] = _seed_pick_rates(seed)
+            n_bracket = len(bracket_teams)
+            missing_bracket = [t for t in bracket_teams if t not in result]
 
-            if n_matched < len(bracket_teams):
-                logger.info(
-                    "Picks for %d: %d/%d bracket teams matched, %d fell back to seed-based",
+            if unresolved:
+                logger.warning(
+                    "Picks %d: %d team(s) in %s could NOT be resolved to "
+                    "bracket_teams and were DROPPED (no silent fallback): %s",
                     year,
-                    n_matched,
-                    len(bracket_teams),
-                    len(bracket_teams) - n_matched,
+                    len(unresolved),
+                    filepath.name,
+                    unresolved,
+                )
+            if missing_bracket:
+                logger.warning(
+                    "Picks %d: %d bracket team(s) have NO ESPN pick data (will use seed-based rates): %s",
+                    year,
+                    len(missing_bracket),
+                    missing_bracket,
                 )
 
-            if len(result) >= 32:  # Sanity: at least half the bracket
+            # Fill missing bracket teams with seed-based defaults.
+            # This is now explicit and logged — not a silent fallback.
+            for team_id in missing_bracket:
+                seed = bracket_teams[team_id]
+                result[team_id] = _seed_pick_rates(seed)
+
+            match_pct = n_matched / n_bracket * 100 if n_bracket else 0
+            logger.info(
+                "Picks for %d: %d/%d matched (%.0f%%), %d unresolved, %d bracket-only (seed-filled)",
+                year,
+                n_matched,
+                n_bracket,
+                match_pct,
+                len(unresolved),
+                len(missing_bracket),
+            )
+
+            if match_pct < 75:
+                logger.error(
+                    "Picks %d: match rate %.0f%% is below 75%% threshold. "
+                    "ESPN data for this year is unreliable. Fix team-name "
+                    "aliases in _PICKS_TEAM_ALIAS or exclude this year.",
+                    year,
+                    match_pct,
+                )
+
+            if len(result) >= 32:
                 return result
             else:
                 logger.warning(
