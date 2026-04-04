@@ -1,0 +1,21 @@
+name: Auto-merge Claude branches
+on:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  create-and-merge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create PR and enable auto-merge
+        run: |
+          PR_URL=$(gh pr create --fill --base main 2>/dev/null || gh pr view --json url -q .url)
+          gh pr merge --squash --auto "$PR_URL"
+          gh api repos/${{ github.repository }}/pulls/$(gh pr view "$PR_URL" --json number -q .number)/update-branch -f update_method=merge || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
