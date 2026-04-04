@@ -1,0 +1,3011 @@
+{
+  "_meta": {
+    "source": "nishaanamin/march-madness-data (Kaggle)",
+    "description": "Comprehensive team mapping for the nishaanamin Kaggle dataset. barttorvik_id (stable across years 2008-2026) is available for 259 tournament teams. canonical_id (from normalize_team_id) covers all 363 D1 teams. typo_aliases maps known data entry errors to correct canonical IDs.",
+    "teams_with_barttorvik_id": 259,
+    "total_teams": 294,
+    "known_typos": 1
+  },
+  "by_barttorvik_id": {
+    "1": {
+      "display_name": "Abilene Christian",
+      "canonical_id": "abilene_christian",
+      "barttorvik_id": 1
+    },
+    "2": {
+      "display_name": "Akron",
+      "canonical_id": "akron",
+      "barttorvik_id": 2
+    },
+    "3": {
+      "display_name": "Alabama",
+      "canonical_id": "alabama",
+      "barttorvik_id": 3
+    },
+    "4": {
+      "display_name": "Alabama St.",
+      "canonical_id": "alabama_state",
+      "barttorvik_id": 4
+    },
+    "5": {
+      "display_name": "Albany",
+      "canonical_id": "albany__ny",
+      "barttorvik_id": 5
+    },
+    "6": {
+      "display_name": "American",
+      "canonical_id": "american",
+      "barttorvik_id": 6
+    },
+    "7": {
+      "display_name": "Appalachian St.",
+      "canonical_id": "appalachian_state",
+      "barttorvik_id": 7
+    },
+    "8": {
+      "display_name": "Arizona",
+      "canonical_id": "arizona",
+      "barttorvik_id": 8
+    },
+    "9": {
+      "display_name": "Arizona St.",
+      "canonical_id": "arizona_state",
+      "barttorvik_id": 9
+    },
+    "10": {
+      "display_name": "Arkansas",
+      "canonical_id": "arkansas",
+      "barttorvik_id": 10
+    },
+    "11": {
+      "display_name": "Arkansas Pine Bluff",
+      "canonical_id": "arkansas_pine_bluff",
+      "barttorvik_id": 11
+    },
+    "12": {
+      "display_name": "Auburn",
+      "canonical_id": "auburn",
+      "barttorvik_id": 12
+    },
+    "13": {
+      "display_name": "Austin Peay",
+      "canonical_id": "austin_peay",
+      "barttorvik_id": 13
+    },
+    "25": {
+      "display_name": "BYU",
+      "canonical_id": "brigham_young",
+      "barttorvik_id": 25
+    },
+    "14": {
+      "display_name": "Baylor",
+      "canonical_id": "baylor",
+      "barttorvik_id": 14
+    },
+    "15": {
+      "display_name": "Belmont",
+      "canonical_id": "belmont",
+      "barttorvik_id": 15
+    },
+    "16": {
+      "display_name": "Binghamton",
+      "canonical_id": "binghamton",
+      "barttorvik_id": 16
+    },
+    "17": {
+      "display_name": "Boise St.",
+      "canonical_id": "boise_state",
+      "barttorvik_id": 17
+    },
+    "18": {
+      "display_name": "Boston College",
+      "canonical_id": "boston_college",
+      "barttorvik_id": 18
+    },
+    "19": {
+      "display_name": "Boston University",
+      "canonical_id": "boston_university",
+      "barttorvik_id": 19
+    },
+    "20": {
+      "display_name": "Bradley",
+      "canonical_id": "bradley",
+      "barttorvik_id": 20
+    },
+    "21": {
+      "display_name": "Bryant",
+      "canonical_id": "bryant",
+      "barttorvik_id": 21
+    },
+    "22": {
+      "display_name": "Bucknell",
+      "canonical_id": "bucknell",
+      "barttorvik_id": 22
+    },
+    "23": {
+      "display_name": "Buffalo",
+      "canonical_id": "buffalo",
+      "barttorvik_id": 23
+    },
+    "24": {
+      "display_name": "Butler",
+      "canonical_id": "butler",
+      "barttorvik_id": 24
+    },
+    "253": {
+      "display_name": "Nebraska Omaha",
+      "canonical_id": "omaha",
+      "barttorvik_id": 253
+    },
+    "26": {
+      "display_name": "Cal Poly",
+      "canonical_id": "cal_poly",
+      "barttorvik_id": 26
+    },
+    "27": {
+      "display_name": "Cal St. Bakersfield",
+      "canonical_id": "cal_state_bakersfield",
+      "barttorvik_id": 27
+    },
+    "28": {
+      "display_name": "Cal St. Fullerton",
+      "canonical_id": "cal_state_fullerton",
+      "barttorvik_id": 28
+    },
+    "29": {
+      "display_name": "Cal St. Northridge",
+      "canonical_id": "cal_state_northridge",
+      "barttorvik_id": 29
+    },
+    "30": {
+      "display_name": "California",
+      "canonical_id": "california",
+      "barttorvik_id": 30
+    },
+    "31": {
+      "display_name": "Chattanooga",
+      "canonical_id": "chattanooga",
+      "barttorvik_id": 31
+    },
+    "32": {
+      "display_name": "Cincinnati",
+      "canonical_id": "cincinnati",
+      "barttorvik_id": 32
+    },
+    "33": {
+      "display_name": "Clemson",
+      "canonical_id": "clemson",
+      "barttorvik_id": 33
+    },
+    "34": {
+      "display_name": "Cleveland St.",
+      "canonical_id": "cleveland_state",
+      "barttorvik_id": 34
+    },
+    "35": {
+      "display_name": "Coastal Carolina",
+      "canonical_id": "coastal_carolina",
+      "barttorvik_id": 35
+    },
+    "36": {
+      "display_name": "Colgate",
+      "canonical_id": "colgate",
+      "barttorvik_id": 36
+    },
+    "37": {
+      "display_name": "College of Charleston",
+      "canonical_id": "college_of_charleston",
+      "barttorvik_id": 37
+    },
+    "38": {
+      "display_name": "Colorado",
+      "canonical_id": "colorado",
+      "barttorvik_id": 38
+    },
+    "39": {
+      "display_name": "Colorado St.",
+      "canonical_id": "colorado_state",
+      "barttorvik_id": 39
+    },
+    "40": {
+      "display_name": "Connecticut",
+      "canonical_id": "connecticut",
+      "barttorvik_id": 40
+    },
+    "41": {
+      "display_name": "Coppin St.",
+      "canonical_id": "coppin_state",
+      "barttorvik_id": 41
+    },
+    "42": {
+      "display_name": "Cornell",
+      "canonical_id": "cornell",
+      "barttorvik_id": 42
+    },
+    "43": {
+      "display_name": "Creighton",
+      "canonical_id": "creighton",
+      "barttorvik_id": 43
+    },
+    "44": {
+      "display_name": "Davidson",
+      "canonical_id": "davidson",
+      "barttorvik_id": 44
+    },
+    "45": {
+      "display_name": "Dayton",
+      "canonical_id": "dayton",
+      "barttorvik_id": 45
+    },
+    "46": {
+      "display_name": "Delaware",
+      "canonical_id": "delaware",
+      "barttorvik_id": 46
+    },
+    "47": {
+      "display_name": "Detroit",
+      "canonical_id": "detroit",
+      "barttorvik_id": 47
+    },
+    "48": {
+      "display_name": "Drake",
+      "canonical_id": "drake",
+      "barttorvik_id": 48
+    },
+    "49": {
+      "display_name": "Drexel",
+      "canonical_id": "drexel",
+      "barttorvik_id": 49
+    },
+    "50": {
+      "display_name": "Duke",
+      "canonical_id": "duke",
+      "barttorvik_id": 50
+    },
+    "246": {
+      "display_name": "Duquesne",
+      "canonical_id": "duquesne",
+      "barttorvik_id": 246
+    },
+    "51": {
+      "display_name": "East Tennessee St.",
+      "canonical_id": "east_tennessee_state",
+      "barttorvik_id": 51
+    },
+    "52": {
+      "display_name": "Eastern Kentucky",
+      "canonical_id": "eastern_kentucky",
+      "barttorvik_id": 52
+    },
+    "53": {
+      "display_name": "Eastern Washington",
+      "canonical_id": "eastern_washington",
+      "barttorvik_id": 53
+    },
+    "54": {
+      "display_name": "Fairleigh Dickinson",
+      "canonical_id": "fairleigh_dickinson",
+      "barttorvik_id": 54
+    },
+    "55": {
+      "display_name": "Florida",
+      "canonical_id": "florida",
+      "barttorvik_id": 55
+    },
+    "56": {
+      "display_name": "Florida Atlantic",
+      "canonical_id": "florida_atlantic",
+      "barttorvik_id": 56
+    },
+    "57": {
+      "display_name": "Florida Gulf Coast",
+      "canonical_id": "florida_gulf_coast",
+      "barttorvik_id": 57
+    },
+    "58": {
+      "display_name": "Florida St.",
+      "canonical_id": "florida_state",
+      "barttorvik_id": 58
+    },
+    "59": {
+      "display_name": "Fresno St.",
+      "canonical_id": "fresno_state",
+      "barttorvik_id": 59
+    },
+    "60": {
+      "display_name": "Furman",
+      "canonical_id": "furman",
+      "barttorvik_id": 60
+    },
+    "61": {
+      "display_name": "Gardner Webb",
+      "canonical_id": "gardner_webb",
+      "barttorvik_id": 61
+    },
+    "62": {
+      "display_name": "George Mason",
+      "canonical_id": "george_mason",
+      "barttorvik_id": 62
+    },
+    "63": {
+      "display_name": "George Washington",
+      "canonical_id": "george_washington",
+      "barttorvik_id": 63
+    },
+    "64": {
+      "display_name": "Georgetown",
+      "canonical_id": "georgetown",
+      "barttorvik_id": 64
+    },
+    "65": {
+      "display_name": "Georgia",
+      "canonical_id": "georgia",
+      "barttorvik_id": 65
+    },
+    "66": {
+      "display_name": "Georgia St.",
+      "canonical_id": "georgia_state",
+      "barttorvik_id": 66
+    },
+    "67": {
+      "display_name": "Georgia Tech",
+      "canonical_id": "georgia_tech",
+      "barttorvik_id": 67
+    },
+    "68": {
+      "display_name": "Gonzaga",
+      "canonical_id": "gonzaga",
+      "barttorvik_id": 68
+    },
+    "247": {
+      "display_name": "Grambling St.",
+      "canonical_id": "grambling",
+      "barttorvik_id": 247
+    },
+    "69": {
+      "display_name": "Grand Canyon",
+      "canonical_id": "grand_canyon",
+      "barttorvik_id": 69
+    },
+    "70": {
+      "display_name": "Green Bay",
+      "canonical_id": "green_bay",
+      "barttorvik_id": 70
+    },
+    "71": {
+      "display_name": "Hampton",
+      "canonical_id": "hampton",
+      "barttorvik_id": 71
+    },
+    "72": {
+      "display_name": "Hartford",
+      "canonical_id": "hartford",
+      "barttorvik_id": 72
+    },
+    "73": {
+      "display_name": "Harvard",
+      "canonical_id": "harvard",
+      "barttorvik_id": 73
+    },
+    "74": {
+      "display_name": "Hawaii",
+      "canonical_id": "hawaii",
+      "barttorvik_id": 74
+    },
+    "252": {
+      "display_name": "High Point",
+      "canonical_id": "high_point",
+      "barttorvik_id": 252
+    },
+    "254": {
+      "display_name": "Saint Francis",
+      "canonical_id": "saint_francis",
+      "barttorvik_id": 254
+    },
+    "75": {
+      "display_name": "Holy Cross",
+      "canonical_id": "holy_cross",
+      "barttorvik_id": 75
+    },
+    "76": {
+      "display_name": "Houston",
+      "canonical_id": "houston",
+      "barttorvik_id": 76
+    },
+    "77": {
+      "display_name": "Howard",
+      "canonical_id": "howard",
+      "barttorvik_id": 77
+    },
+    "255": {
+      "display_name": "SIU Edwardsville",
+      "canonical_id": "siu_edwardsville",
+      "barttorvik_id": 255
+    },
+    "78": {
+      "display_name": "Illinois",
+      "canonical_id": "illinois",
+      "barttorvik_id": 78
+    },
+    "79": {
+      "display_name": "Indiana",
+      "canonical_id": "indiana",
+      "barttorvik_id": 79
+    },
+    "80": {
+      "display_name": "Indiana St.",
+      "canonical_id": "indiana_state",
+      "barttorvik_id": 80
+    },
+    "81": {
+      "display_name": "Iona",
+      "canonical_id": "iona",
+      "barttorvik_id": 81
+    },
+    "82": {
+      "display_name": "Iowa",
+      "canonical_id": "iowa",
+      "barttorvik_id": 82
+    },
+    "83": {
+      "display_name": "Iowa St.",
+      "canonical_id": "iowa_state",
+      "barttorvik_id": 83
+    },
+    "84": {
+      "display_name": "Jacksonville St.",
+      "canonical_id": "jacksonville_state",
+      "barttorvik_id": 84
+    },
+    "85": {
+      "display_name": "James Madison",
+      "canonical_id": "james_madison",
+      "barttorvik_id": 85
+    },
+    "86": {
+      "display_name": "Kansas",
+      "canonical_id": "kansas",
+      "barttorvik_id": 86
+    },
+    "87": {
+      "display_name": "Kansas St.",
+      "canonical_id": "kansas_state",
+      "barttorvik_id": 87
+    },
+    "88": {
+      "display_name": "Kennesaw St.",
+      "canonical_id": "kennesaw_state",
+      "barttorvik_id": 88
+    },
+    "89": {
+      "display_name": "Kent St.",
+      "canonical_id": "kent_state",
+      "barttorvik_id": 89
+    },
+    "90": {
+      "display_name": "Kentucky",
+      "canonical_id": "kentucky",
+      "barttorvik_id": 90
+    },
+    "98": {
+      "display_name": "LIU Brooklyn",
+      "canonical_id": "liu_brooklyn",
+      "barttorvik_id": 98
+    },
+    "105": {
+      "display_name": "LSU",
+      "canonical_id": "louisiana_state",
+      "barttorvik_id": 105
+    },
+    "91": {
+      "display_name": "La Salle",
+      "canonical_id": "la_salle",
+      "barttorvik_id": 91
+    },
+    "92": {
+      "display_name": "Lafayette",
+      "canonical_id": "lafayette",
+      "barttorvik_id": 92
+    },
+    "93": {
+      "display_name": "Lamar",
+      "canonical_id": "lamar",
+      "barttorvik_id": 93
+    },
+    "94": {
+      "display_name": "Lehigh",
+      "canonical_id": "lehigh",
+      "barttorvik_id": 94
+    },
+    "95": {
+      "display_name": "Liberty",
+      "canonical_id": "liberty",
+      "barttorvik_id": 95
+    },
+    "96": {
+      "display_name": "Lipscomb",
+      "canonical_id": "lipscomb",
+      "barttorvik_id": 96
+    },
+    "97": {
+      "display_name": "Little Rock",
+      "canonical_id": "little_rock",
+      "barttorvik_id": 97
+    },
+    "99": {
+      "display_name": "Long Beach St.",
+      "canonical_id": "long_beach_state",
+      "barttorvik_id": 99
+    },
+    "100": {
+      "display_name": "Longwood",
+      "canonical_id": "longwood",
+      "barttorvik_id": 100
+    },
+    "101": {
+      "display_name": "Louisiana Lafayette",
+      "canonical_id": "louisiana_lafayette",
+      "barttorvik_id": 101
+    },
+    "102": {
+      "display_name": "Louisville",
+      "canonical_id": "louisville",
+      "barttorvik_id": 102
+    },
+    "103": {
+      "display_name": "Loyola Chicago",
+      "canonical_id": "loyola__il",
+      "barttorvik_id": 103
+    },
+    "104": {
+      "display_name": "Loyola MD",
+      "canonical_id": "loyola_md",
+      "barttorvik_id": 104
+    },
+    "106": {
+      "display_name": "Manhattan",
+      "canonical_id": "manhattan",
+      "barttorvik_id": 106
+    },
+    "107": {
+      "display_name": "Marquette",
+      "canonical_id": "marquette",
+      "barttorvik_id": 107
+    },
+    "108": {
+      "display_name": "Marshall",
+      "canonical_id": "marshall",
+      "barttorvik_id": 108
+    },
+    "109": {
+      "display_name": "Maryland",
+      "canonical_id": "maryland",
+      "barttorvik_id": 109
+    },
+    "110": {
+      "display_name": "Massachusetts",
+      "canonical_id": "massachusetts",
+      "barttorvik_id": 110
+    },
+    "248": {
+      "display_name": "McNeese St.",
+      "canonical_id": "mcneese_state",
+      "barttorvik_id": 248
+    },
+    "111": {
+      "display_name": "Memphis",
+      "canonical_id": "memphis",
+      "barttorvik_id": 111
+    },
+    "112": {
+      "display_name": "Mercer",
+      "canonical_id": "mercer",
+      "barttorvik_id": 112
+    },
+    "113": {
+      "display_name": "Miami FL",
+      "canonical_id": "miami__fl",
+      "barttorvik_id": 113
+    },
+    "256": {
+      "display_name": "UC San Diego",
+      "canonical_id": "uc_san_diego",
+      "barttorvik_id": 256
+    },
+    "114": {
+      "display_name": "Michigan",
+      "canonical_id": "michigan",
+      "barttorvik_id": 114
+    },
+    "115": {
+      "display_name": "Michigan St.",
+      "canonical_id": "michigan_state",
+      "barttorvik_id": 115
+    },
+    "116": {
+      "display_name": "Middle Tennessee",
+      "canonical_id": "middle_tennessee",
+      "barttorvik_id": 116
+    },
+    "117": {
+      "display_name": "Milwaukee",
+      "canonical_id": "milwaukee",
+      "barttorvik_id": 117
+    },
+    "118": {
+      "display_name": "Minnesota",
+      "canonical_id": "minnesota",
+      "barttorvik_id": 118
+    },
+    "119": {
+      "display_name": "Mississippi",
+      "canonical_id": "mississippi",
+      "barttorvik_id": 119
+    },
+    "120": {
+      "display_name": "Mississippi St.",
+      "canonical_id": "mississippi_state",
+      "barttorvik_id": 120
+    },
+    "121": {
+      "display_name": "Mississippi Valley St.",
+      "canonical_id": "mississippi_valley_state",
+      "barttorvik_id": 121
+    },
+    "122": {
+      "display_name": "Missouri",
+      "canonical_id": "missouri",
+      "barttorvik_id": 122
+    },
+    "123": {
+      "display_name": "Montana",
+      "canonical_id": "montana",
+      "barttorvik_id": 123
+    },
+    "124": {
+      "display_name": "Montana St.",
+      "canonical_id": "montana_state",
+      "barttorvik_id": 124
+    },
+    "125": {
+      "display_name": "Morehead St.",
+      "canonical_id": "morehead_state",
+      "barttorvik_id": 125
+    },
+    "126": {
+      "display_name": "Morgan St.",
+      "canonical_id": "morgan_state",
+      "barttorvik_id": 126
+    },
+    "127": {
+      "display_name": "Mount St. Mary's",
+      "canonical_id": "mount_st__mary_s",
+      "barttorvik_id": 127
+    },
+    "128": {
+      "display_name": "Murray St.",
+      "canonical_id": "murray_state",
+      "barttorvik_id": 128
+    },
+    "129": {
+      "display_name": "Nebraska",
+      "canonical_id": "nebraska",
+      "barttorvik_id": 129
+    },
+    "130": {
+      "display_name": "Nevada",
+      "canonical_id": "nevada",
+      "barttorvik_id": 130
+    },
+    "131": {
+      "display_name": "New Mexico",
+      "canonical_id": "new_mexico",
+      "barttorvik_id": 131
+    },
+    "132": {
+      "display_name": "New Mexico St.",
+      "canonical_id": "new_mexico_state",
+      "barttorvik_id": 132
+    },
+    "133": {
+      "display_name": "New Orleans",
+      "canonical_id": "new_orleans",
+      "barttorvik_id": 133
+    },
+    "134": {
+      "display_name": "Norfolk St.",
+      "canonical_id": "norfolk_state",
+      "barttorvik_id": 134
+    },
+    "135": {
+      "display_name": "North Carolina",
+      "canonical_id": "north_carolina",
+      "barttorvik_id": 135
+    },
+    "136": {
+      "display_name": "North Carolina A&T",
+      "canonical_id": "north_carolina_a_t",
+      "barttorvik_id": 136
+    },
+    "137": {
+      "display_name": "North Carolina Central",
+      "canonical_id": "north_carolina_central",
+      "barttorvik_id": 137
+    },
+    "138": {
+      "display_name": "North Carolina St.",
+      "canonical_id": "nc_state",
+      "barttorvik_id": 138
+    },
+    "139": {
+      "display_name": "North Dakota",
+      "canonical_id": "north_dakota",
+      "barttorvik_id": 139
+    },
+    "140": {
+      "display_name": "North Dakota St.",
+      "canonical_id": "north_dakota_state",
+      "barttorvik_id": 140
+    },
+    "141": {
+      "display_name": "North Florida",
+      "canonical_id": "north_florida",
+      "barttorvik_id": 141
+    },
+    "142": {
+      "display_name": "North Texas",
+      "canonical_id": "north_texas",
+      "barttorvik_id": 142
+    },
+    "143": {
+      "display_name": "Northeastern",
+      "canonical_id": "northeastern",
+      "barttorvik_id": 143
+    },
+    "144": {
+      "display_name": "Northern Colorado",
+      "canonical_id": "northern_colorado",
+      "barttorvik_id": 144
+    },
+    "145": {
+      "display_name": "Northern Iowa",
+      "canonical_id": "northern_iowa",
+      "barttorvik_id": 145
+    },
+    "146": {
+      "display_name": "Northern Kentucky",
+      "canonical_id": "northern_kentucky",
+      "barttorvik_id": 146
+    },
+    "147": {
+      "display_name": "Northwestern",
+      "canonical_id": "northwestern",
+      "barttorvik_id": 147
+    },
+    "148": {
+      "display_name": "Northwestern St.",
+      "canonical_id": "northwestern_state",
+      "barttorvik_id": 148
+    },
+    "149": {
+      "display_name": "Notre Dame",
+      "canonical_id": "notre_dame",
+      "barttorvik_id": 149
+    },
+    "150": {
+      "display_name": "Oakland",
+      "canonical_id": "oakland",
+      "barttorvik_id": 150
+    },
+    "151": {
+      "display_name": "Ohio",
+      "canonical_id": "ohio",
+      "barttorvik_id": 151
+    },
+    "152": {
+      "display_name": "Ohio St.",
+      "canonical_id": "ohio_state",
+      "barttorvik_id": 152
+    },
+    "153": {
+      "display_name": "Oklahoma",
+      "canonical_id": "oklahoma",
+      "barttorvik_id": 153
+    },
+    "154": {
+      "display_name": "Oklahoma St.",
+      "canonical_id": "oklahoma_state",
+      "barttorvik_id": 154
+    },
+    "155": {
+      "display_name": "Old Dominion",
+      "canonical_id": "old_dominion",
+      "barttorvik_id": 155
+    },
+    "156": {
+      "display_name": "Oral Roberts",
+      "canonical_id": "oral_roberts",
+      "barttorvik_id": 156
+    },
+    "157": {
+      "display_name": "Oregon",
+      "canonical_id": "oregon",
+      "barttorvik_id": 157
+    },
+    "158": {
+      "display_name": "Oregon St.",
+      "canonical_id": "oregon_state",
+      "barttorvik_id": 158
+    },
+    "159": {
+      "display_name": "Pacific",
+      "canonical_id": "pacific",
+      "barttorvik_id": 159
+    },
+    "160": {
+      "display_name": "Penn",
+      "canonical_id": "pennsylvania",
+      "barttorvik_id": 160
+    },
+    "161": {
+      "display_name": "Penn St.",
+      "canonical_id": "penn_state",
+      "barttorvik_id": 161
+    },
+    "162": {
+      "display_name": "Pittsburgh",
+      "canonical_id": "pittsburgh",
+      "barttorvik_id": 162
+    },
+    "163": {
+      "display_name": "Portland St.",
+      "canonical_id": "portland_state",
+      "barttorvik_id": 163
+    },
+    "164": {
+      "display_name": "Prairie View A&M",
+      "canonical_id": "prairie_view",
+      "barttorvik_id": 164
+    },
+    "165": {
+      "display_name": "Princeton",
+      "canonical_id": "princeton",
+      "barttorvik_id": 165
+    },
+    "166": {
+      "display_name": "Providence",
+      "canonical_id": "providence",
+      "barttorvik_id": 166
+    },
+    "167": {
+      "display_name": "Purdue",
+      "canonical_id": "purdue",
+      "barttorvik_id": 167
+    },
+    "258": {
+      "display_name": "Queens",
+      "canonical_id": "queens__nc",
+      "barttorvik_id": 258
+    },
+    "168": {
+      "display_name": "Radford",
+      "canonical_id": "radford",
+      "barttorvik_id": 168
+    },
+    "169": {
+      "display_name": "Rhode Island",
+      "canonical_id": "rhode_island",
+      "barttorvik_id": 169
+    },
+    "170": {
+      "display_name": "Richmond",
+      "canonical_id": "richmond",
+      "barttorvik_id": 170
+    },
+    "171": {
+      "display_name": "Robert Morris",
+      "canonical_id": "robert_morris",
+      "barttorvik_id": 171
+    },
+    "172": {
+      "display_name": "Rutgers",
+      "canonical_id": "rutgers",
+      "barttorvik_id": 172
+    },
+    "183": {
+      "display_name": "SMU",
+      "canonical_id": "southern_methodist",
+      "barttorvik_id": 183
+    },
+    "173": {
+      "display_name": "Saint Joseph's",
+      "canonical_id": "saint_joseph_s",
+      "barttorvik_id": 173
+    },
+    "174": {
+      "display_name": "Saint Louis",
+      "canonical_id": "saint_louis",
+      "barttorvik_id": 174
+    },
+    "175": {
+      "display_name": "Saint Mary's",
+      "canonical_id": "saint_mary_s__ca",
+      "barttorvik_id": 175
+    },
+    "176": {
+      "display_name": "Saint Peter's",
+      "canonical_id": "saint_peter_s",
+      "barttorvik_id": 176
+    },
+    "177": {
+      "display_name": "Sam Houston St.",
+      "canonical_id": "sam_houston_state",
+      "barttorvik_id": 177
+    },
+    "249": {
+      "display_name": "Samford",
+      "canonical_id": "samford",
+      "barttorvik_id": 249
+    },
+    "178": {
+      "display_name": "San Diego",
+      "canonical_id": "san_diego",
+      "barttorvik_id": 178
+    },
+    "179": {
+      "display_name": "San Diego St.",
+      "canonical_id": "san_diego_state",
+      "barttorvik_id": 179
+    },
+    "180": {
+      "display_name": "San Francisco",
+      "canonical_id": "san_francisco",
+      "barttorvik_id": 180
+    },
+    "259": {
+      "display_name": "Santa Clara",
+      "canonical_id": "santa_clara",
+      "barttorvik_id": 259
+    },
+    "181": {
+      "display_name": "Seton Hall",
+      "canonical_id": "seton_hall",
+      "barttorvik_id": 181
+    },
+    "182": {
+      "display_name": "Siena",
+      "canonical_id": "siena",
+      "barttorvik_id": 182
+    },
+    "184": {
+      "display_name": "South Alabama",
+      "canonical_id": "south_alabama",
+      "barttorvik_id": 184
+    },
+    "185": {
+      "display_name": "South Carolina",
+      "canonical_id": "south_carolina",
+      "barttorvik_id": 185
+    },
+    "186": {
+      "display_name": "South Dakota St.",
+      "canonical_id": "south_dakota_state",
+      "barttorvik_id": 186
+    },
+    "187": {
+      "display_name": "South Florida",
+      "canonical_id": "south_florida",
+      "barttorvik_id": 187
+    },
+    "188": {
+      "display_name": "Southeast Missouri St.",
+      "canonical_id": "southeast_missouri_state",
+      "barttorvik_id": 188
+    },
+    "189": {
+      "display_name": "Southern",
+      "canonical_id": "southern",
+      "barttorvik_id": 189
+    },
+    "190": {
+      "display_name": "Southern Miss",
+      "canonical_id": "southern_mississippi",
+      "barttorvik_id": 190
+    },
+    "191": {
+      "display_name": "St. Bonaventure",
+      "canonical_id": "st_bonaventure",
+      "barttorvik_id": 191
+    },
+    "192": {
+      "display_name": "St. John's",
+      "canonical_id": "st__john_s__ny",
+      "barttorvik_id": 192
+    },
+    "193": {
+      "display_name": "Stanford",
+      "canonical_id": "stanford",
+      "barttorvik_id": 193
+    },
+    "194": {
+      "display_name": "Stephen F. Austin",
+      "canonical_id": "stephen_f_austin",
+      "barttorvik_id": 194
+    },
+    "250": {
+      "display_name": "Stetson",
+      "canonical_id": "stetson",
+      "barttorvik_id": 250
+    },
+    "195": {
+      "display_name": "Stony Brook",
+      "canonical_id": "stony_brook",
+      "barttorvik_id": 195
+    },
+    "196": {
+      "display_name": "Syracuse",
+      "canonical_id": "syracuse",
+      "barttorvik_id": 196
+    },
+    "197": {
+      "display_name": "TCU",
+      "canonical_id": "tcu",
+      "barttorvik_id": 197
+    },
+    "198": {
+      "display_name": "Temple",
+      "canonical_id": "temple",
+      "barttorvik_id": 198
+    },
+    "199": {
+      "display_name": "Tennessee",
+      "canonical_id": "tennessee",
+      "barttorvik_id": 199
+    },
+    "260": {
+      "display_name": "Tennessee St.",
+      "canonical_id": "tennessee_state",
+      "barttorvik_id": 260
+    },
+    "200": {
+      "display_name": "Texas",
+      "canonical_id": "texas",
+      "barttorvik_id": 200
+    },
+    "201": {
+      "display_name": "Texas A&M",
+      "canonical_id": "texas_a_m",
+      "barttorvik_id": 201
+    },
+    "202": {
+      "display_name": "Texas A&M Corpus Chris",
+      "canonical_id": "texas_a_m_corpus_christi",
+      "barttorvik_id": 202
+    },
+    "203": {
+      "display_name": "Texas Southern",
+      "canonical_id": "texas_southern",
+      "barttorvik_id": 203
+    },
+    "204": {
+      "display_name": "Texas Tech",
+      "canonical_id": "texas_tech",
+      "barttorvik_id": 204
+    },
+    "205": {
+      "display_name": "Troy",
+      "canonical_id": "troy",
+      "barttorvik_id": 205
+    },
+    "206": {
+      "display_name": "Tulsa",
+      "canonical_id": "tulsa",
+      "barttorvik_id": 206
+    },
+    "207": {
+      "display_name": "UAB",
+      "canonical_id": "uab",
+      "barttorvik_id": 207
+    },
+    "208": {
+      "display_name": "UC Davis",
+      "canonical_id": "uc_davis",
+      "barttorvik_id": 208
+    },
+    "209": {
+      "display_name": "UC Irvine",
+      "canonical_id": "uc_irvine",
+      "barttorvik_id": 209
+    },
+    "210": {
+      "display_name": "UC Santa Barbara",
+      "canonical_id": "uc_santa_barbara",
+      "barttorvik_id": 210
+    },
+    "211": {
+      "display_name": "UCF",
+      "canonical_id": "ucf",
+      "barttorvik_id": 211
+    },
+    "212": {
+      "display_name": "UCLA",
+      "canonical_id": "ucla",
+      "barttorvik_id": 212
+    },
+    "213": {
+      "display_name": "UMBC",
+      "canonical_id": "maryland_baltimore_county",
+      "barttorvik_id": 213
+    },
+    "214": {
+      "display_name": "UNC Asheville",
+      "canonical_id": "unc_asheville",
+      "barttorvik_id": 214
+    },
+    "215": {
+      "display_name": "UNC Greensboro",
+      "canonical_id": "unc_greensboro",
+      "barttorvik_id": 215
+    },
+    "216": {
+      "display_name": "UNC Wilmington",
+      "canonical_id": "unc_wilmington",
+      "barttorvik_id": 216
+    },
+    "217": {
+      "display_name": "UNLV",
+      "canonical_id": "nevada_las_vegas",
+      "barttorvik_id": 217
+    },
+    "218": {
+      "display_name": "USC",
+      "canonical_id": "southern_california",
+      "barttorvik_id": 218
+    },
+    "219": {
+      "display_name": "UT Arlington",
+      "canonical_id": "ut_arlington",
+      "barttorvik_id": 219
+    },
+    "222": {
+      "display_name": "UTEP",
+      "canonical_id": "utep",
+      "barttorvik_id": 222
+    },
+    "223": {
+      "display_name": "UTSA",
+      "canonical_id": "utsa",
+      "barttorvik_id": 223
+    },
+    "220": {
+      "display_name": "Utah",
+      "canonical_id": "utah",
+      "barttorvik_id": 220
+    },
+    "221": {
+      "display_name": "Utah St.",
+      "canonical_id": "utah_state",
+      "barttorvik_id": 221
+    },
+    "226": {
+      "display_name": "VCU",
+      "canonical_id": "virginia_commonwealth",
+      "barttorvik_id": 226
+    },
+    "224": {
+      "display_name": "Valparaiso",
+      "canonical_id": "valparaiso",
+      "barttorvik_id": 224
+    },
+    "225": {
+      "display_name": "Vanderbilt",
+      "canonical_id": "vanderbilt",
+      "barttorvik_id": 225
+    },
+    "227": {
+      "display_name": "Vermont",
+      "canonical_id": "vermont",
+      "barttorvik_id": 227
+    },
+    "228": {
+      "display_name": "Villanova",
+      "canonical_id": "villanova",
+      "barttorvik_id": 228
+    },
+    "229": {
+      "display_name": "Virginia",
+      "canonical_id": "virginia",
+      "barttorvik_id": 229
+    },
+    "230": {
+      "display_name": "Virginia Tech",
+      "canonical_id": "virginia_tech",
+      "barttorvik_id": 230
+    },
+    "251": {
+      "display_name": "Wagner",
+      "canonical_id": "wagner",
+      "barttorvik_id": 251
+    },
+    "231": {
+      "display_name": "Wake Forest",
+      "canonical_id": "wake_forest",
+      "barttorvik_id": 231
+    },
+    "232": {
+      "display_name": "Washington",
+      "canonical_id": "washington",
+      "barttorvik_id": 232
+    },
+    "233": {
+      "display_name": "Washington St.",
+      "canonical_id": "washington_state",
+      "barttorvik_id": 233
+    },
+    "234": {
+      "display_name": "Weber St.",
+      "canonical_id": "weber_state",
+      "barttorvik_id": 234
+    },
+    "235": {
+      "display_name": "West Virginia",
+      "canonical_id": "west_virginia",
+      "barttorvik_id": 235
+    },
+    "236": {
+      "display_name": "Western Kentucky",
+      "canonical_id": "western_kentucky",
+      "barttorvik_id": 236
+    },
+    "237": {
+      "display_name": "Western Michigan",
+      "canonical_id": "western_michigan",
+      "barttorvik_id": 237
+    },
+    "238": {
+      "display_name": "Wichita St.",
+      "canonical_id": "wichita_state",
+      "barttorvik_id": 238
+    },
+    "239": {
+      "display_name": "Winthrop",
+      "canonical_id": "winthrop",
+      "barttorvik_id": 239
+    },
+    "240": {
+      "display_name": "Wisconsin",
+      "canonical_id": "wisconsin",
+      "barttorvik_id": 240
+    },
+    "241": {
+      "display_name": "Wofford",
+      "canonical_id": "wofford",
+      "barttorvik_id": 241
+    },
+    "242": {
+      "display_name": "Wright St.",
+      "canonical_id": "wright_state",
+      "barttorvik_id": 242
+    },
+    "243": {
+      "display_name": "Wyoming",
+      "canonical_id": "wyoming",
+      "barttorvik_id": 243
+    },
+    "244": {
+      "display_name": "Xavier",
+      "canonical_id": "xavier",
+      "barttorvik_id": 244
+    },
+    "245": {
+      "display_name": "Yale",
+      "canonical_id": "yale",
+      "barttorvik_id": 245
+    }
+  },
+  "by_canonical_id": {
+    "abilene_christian": {
+      "display_name": "Abilene Christian",
+      "canonical_id": "abilene_christian",
+      "barttorvik_id": 1
+    },
+    "akron": {
+      "display_name": "Akron",
+      "canonical_id": "akron",
+      "barttorvik_id": 2
+    },
+    "alabama": {
+      "display_name": "Alabama",
+      "canonical_id": "alabama",
+      "barttorvik_id": 3
+    },
+    "alabama_state": {
+      "display_name": "Alabama St.",
+      "canonical_id": "alabama_state",
+      "barttorvik_id": 4
+    },
+    "albany__ny": {
+      "display_name": "Albany",
+      "canonical_id": "albany__ny",
+      "barttorvik_id": 5
+    },
+    "american": {
+      "display_name": "American",
+      "canonical_id": "american",
+      "barttorvik_id": 6
+    },
+    "appalachian_state": {
+      "display_name": "Appalachian St.",
+      "canonical_id": "appalachian_state",
+      "barttorvik_id": 7
+    },
+    "arizona": {
+      "display_name": "Arizona",
+      "canonical_id": "arizona",
+      "barttorvik_id": 8
+    },
+    "arizona_state": {
+      "display_name": "Arizona St.",
+      "canonical_id": "arizona_state",
+      "barttorvik_id": 9
+    },
+    "arkansas": {
+      "display_name": "Arkansas",
+      "canonical_id": "arkansas",
+      "barttorvik_id": 10
+    },
+    "arkansas_pine_bluff": {
+      "display_name": "Arkansas Pine Bluff",
+      "canonical_id": "arkansas_pine_bluff",
+      "barttorvik_id": 11
+    },
+    "arkansas_state": {
+      "display_name": "Arkansas St.",
+      "canonical_id": "arkansas_state"
+    },
+    "army": {
+      "display_name": "Army",
+      "canonical_id": "army"
+    },
+    "auburn": {
+      "display_name": "Auburn",
+      "canonical_id": "auburn",
+      "barttorvik_id": 12
+    },
+    "austin_peay": {
+      "display_name": "Austin Peay",
+      "canonical_id": "austin_peay",
+      "barttorvik_id": 13
+    },
+    "brigham_young": {
+      "display_name": "BYU",
+      "canonical_id": "brigham_young",
+      "barttorvik_id": 25
+    },
+    "ball_state": {
+      "display_name": "Ball St.",
+      "canonical_id": "ball_state"
+    },
+    "baylor": {
+      "display_name": "Baylor",
+      "canonical_id": "baylor",
+      "barttorvik_id": 14
+    },
+    "belmont": {
+      "display_name": "Belmont",
+      "canonical_id": "belmont",
+      "barttorvik_id": 15
+    },
+    "binghamton": {
+      "display_name": "Binghamton",
+      "canonical_id": "binghamton",
+      "barttorvik_id": 16
+    },
+    "boise_state": {
+      "display_name": "Boise St.",
+      "canonical_id": "boise_state",
+      "barttorvik_id": 17
+    },
+    "boston_college": {
+      "display_name": "Boston College",
+      "canonical_id": "boston_college",
+      "barttorvik_id": 18
+    },
+    "boston_university": {
+      "display_name": "Boston University",
+      "canonical_id": "boston_university",
+      "barttorvik_id": 19
+    },
+    "bradley": {
+      "display_name": "Bradley",
+      "canonical_id": "bradley",
+      "barttorvik_id": 20
+    },
+    "bryant": {
+      "display_name": "Bryant",
+      "canonical_id": "bryant",
+      "barttorvik_id": 21
+    },
+    "bucknell": {
+      "display_name": "Bucknell",
+      "canonical_id": "bucknell",
+      "barttorvik_id": 22
+    },
+    "buffalo": {
+      "display_name": "Buffalo",
+      "canonical_id": "buffalo",
+      "barttorvik_id": 23
+    },
+    "butler": {
+      "display_name": "Butler",
+      "canonical_id": "butler",
+      "barttorvik_id": 24
+    },
+    "california_baptist": {
+      "display_name": "Cal Baptist",
+      "canonical_id": "california_baptist",
+      "barttorvik_id": 253
+    },
+    "cal_poly": {
+      "display_name": "Cal Poly",
+      "canonical_id": "cal_poly",
+      "barttorvik_id": 26
+    },
+    "cal_state_bakersfield": {
+      "display_name": "Cal St. Bakersfield",
+      "canonical_id": "cal_state_bakersfield",
+      "barttorvik_id": 27
+    },
+    "cal_state_fullerton": {
+      "display_name": "Cal St. Fullerton",
+      "canonical_id": "cal_state_fullerton",
+      "barttorvik_id": 28
+    },
+    "cal_state_northridge": {
+      "display_name": "Cal St. Northridge",
+      "canonical_id": "cal_state_northridge",
+      "barttorvik_id": 29
+    },
+    "california": {
+      "display_name": "California",
+      "canonical_id": "california",
+      "barttorvik_id": 30
+    },
+    "central_michigan": {
+      "display_name": "Central Michigan",
+      "canonical_id": "central_michigan"
+    },
+    "charlotte": {
+      "display_name": "Charlotte",
+      "canonical_id": "charlotte"
+    },
+    "chattanooga": {
+      "display_name": "Chattanooga",
+      "canonical_id": "chattanooga",
+      "barttorvik_id": 31
+    },
+    "cincinnati": {
+      "display_name": "Cincinnati",
+      "canonical_id": "cincinnati",
+      "barttorvik_id": 32
+    },
+    "clemson": {
+      "display_name": "Clemson",
+      "canonical_id": "clemson",
+      "barttorvik_id": 33
+    },
+    "cleveland_state": {
+      "display_name": "Cleveland St.",
+      "canonical_id": "cleveland_state",
+      "barttorvik_id": 34
+    },
+    "coastal_carolina": {
+      "display_name": "Coastal Carolina",
+      "canonical_id": "coastal_carolina",
+      "barttorvik_id": 35
+    },
+    "colgate": {
+      "display_name": "Colgate",
+      "canonical_id": "colgate",
+      "barttorvik_id": 36
+    },
+    "college_of_charleston": {
+      "display_name": "College of Charleston",
+      "canonical_id": "college_of_charleston",
+      "barttorvik_id": 37
+    },
+    "colorado": {
+      "display_name": "Colorado",
+      "canonical_id": "colorado",
+      "barttorvik_id": 38
+    },
+    "colorado_state": {
+      "display_name": "Colorado St.",
+      "canonical_id": "colorado_state",
+      "barttorvik_id": 39
+    },
+    "columbia": {
+      "display_name": "Columbia",
+      "canonical_id": "columbia"
+    },
+    "connecticut": {
+      "display_name": "Connecticut",
+      "canonical_id": "connecticut",
+      "barttorvik_id": 40
+    },
+    "coppin_state": {
+      "display_name": "Coppin St.",
+      "canonical_id": "coppin_state",
+      "barttorvik_id": 41
+    },
+    "cornell": {
+      "display_name": "Cornell",
+      "canonical_id": "cornell",
+      "barttorvik_id": 42
+    },
+    "creighton": {
+      "display_name": "Creighton",
+      "canonical_id": "creighton",
+      "barttorvik_id": 43
+    },
+    "davidson": {
+      "display_name": "Davidson",
+      "canonical_id": "davidson",
+      "barttorvik_id": 44
+    },
+    "dayton": {
+      "display_name": "Dayton",
+      "canonical_id": "dayton",
+      "barttorvik_id": 45
+    },
+    "depaul": {
+      "display_name": "DePaul",
+      "canonical_id": "depaul"
+    },
+    "delaware": {
+      "display_name": "Delaware",
+      "canonical_id": "delaware",
+      "barttorvik_id": 46
+    },
+    "detroit": {
+      "display_name": "Detroit",
+      "canonical_id": "detroit",
+      "barttorvik_id": 47
+    },
+    "drake": {
+      "display_name": "Drake",
+      "canonical_id": "drake",
+      "barttorvik_id": 48
+    },
+    "drexel": {
+      "display_name": "Drexel",
+      "canonical_id": "drexel",
+      "barttorvik_id": 49
+    },
+    "duke": {
+      "display_name": "Duke",
+      "canonical_id": "duke",
+      "barttorvik_id": 50
+    },
+    "duquesne": {
+      "display_name": "Duquesne",
+      "canonical_id": "duquesne",
+      "barttorvik_id": 246
+    },
+    "east_tennessee_state": {
+      "display_name": "East Tennessee St.",
+      "canonical_id": "east_tennessee_state",
+      "barttorvik_id": 51
+    },
+    "eastern_kentucky": {
+      "display_name": "Eastern Kentucky",
+      "canonical_id": "eastern_kentucky",
+      "barttorvik_id": 52
+    },
+    "eastern_washington": {
+      "display_name": "Eastern Washington",
+      "canonical_id": "eastern_washington",
+      "barttorvik_id": 53
+    },
+    "fairleigh_dickinson": {
+      "display_name": "Fairleigh Dickinson",
+      "canonical_id": "fairleigh_dickinson",
+      "barttorvik_id": 54
+    },
+    "florida": {
+      "display_name": "Florida",
+      "canonical_id": "florida",
+      "barttorvik_id": 55
+    },
+    "florida_atlantic": {
+      "display_name": "Florida Atlantic",
+      "canonical_id": "florida_atlantic",
+      "barttorvik_id": 56
+    },
+    "florida_gulf_coast": {
+      "display_name": "Florida Gulf Coast",
+      "canonical_id": "florida_gulf_coast",
+      "barttorvik_id": 57
+    },
+    "florida_state": {
+      "display_name": "Florida St.",
+      "canonical_id": "florida_state",
+      "barttorvik_id": 58
+    },
+    "fresno_state": {
+      "display_name": "Fresno St.",
+      "canonical_id": "fresno_state",
+      "barttorvik_id": 59
+    },
+    "furman": {
+      "display_name": "Furman",
+      "canonical_id": "furman",
+      "barttorvik_id": 60
+    },
+    "gardner_webb": {
+      "display_name": "Gardner Webb",
+      "canonical_id": "gardner_webb",
+      "barttorvik_id": 61
+    },
+    "george_mason": {
+      "display_name": "George Mason",
+      "canonical_id": "george_mason",
+      "barttorvik_id": 62
+    },
+    "george_washington": {
+      "display_name": "George Washington",
+      "canonical_id": "george_washington",
+      "barttorvik_id": 63
+    },
+    "georgetown": {
+      "display_name": "Georgetown",
+      "canonical_id": "georgetown",
+      "barttorvik_id": 64
+    },
+    "georgia": {
+      "display_name": "Georgia",
+      "canonical_id": "georgia",
+      "barttorvik_id": 65
+    },
+    "georgia_state": {
+      "display_name": "Georgia St.",
+      "canonical_id": "georgia_state",
+      "barttorvik_id": 66
+    },
+    "georgia_tech": {
+      "display_name": "Georgia Tech",
+      "canonical_id": "georgia_tech",
+      "barttorvik_id": 67
+    },
+    "gonzaga": {
+      "display_name": "Gonzaga",
+      "canonical_id": "gonzaga",
+      "barttorvik_id": 68
+    },
+    "grambling": {
+      "display_name": "Grambling St.",
+      "canonical_id": "grambling",
+      "barttorvik_id": 247
+    },
+    "grand_canyon": {
+      "display_name": "Grand Canyon",
+      "canonical_id": "grand_canyon",
+      "barttorvik_id": 69
+    },
+    "green_bay": {
+      "display_name": "Green Bay",
+      "canonical_id": "green_bay",
+      "barttorvik_id": 70
+    },
+    "hampton": {
+      "display_name": "Hampton",
+      "canonical_id": "hampton",
+      "barttorvik_id": 71
+    },
+    "hartford": {
+      "display_name": "Hartford",
+      "canonical_id": "hartford",
+      "barttorvik_id": 72
+    },
+    "harvard": {
+      "display_name": "Harvard",
+      "canonical_id": "harvard",
+      "barttorvik_id": 73
+    },
+    "hawaii": {
+      "display_name": "Hawaii",
+      "canonical_id": "hawaii",
+      "barttorvik_id": 74
+    },
+    "high_point": {
+      "display_name": "High Point",
+      "canonical_id": "high_point",
+      "barttorvik_id": 252
+    },
+    "hofstra": {
+      "display_name": "Hofstra",
+      "canonical_id": "hofstra",
+      "barttorvik_id": 254
+    },
+    "holy_cross": {
+      "display_name": "Holy Cross",
+      "canonical_id": "holy_cross",
+      "barttorvik_id": 75
+    },
+    "houston": {
+      "display_name": "Houston",
+      "canonical_id": "houston",
+      "barttorvik_id": 76
+    },
+    "howard": {
+      "display_name": "Howard",
+      "canonical_id": "howard",
+      "barttorvik_id": 77
+    },
+    "idaho": {
+      "display_name": "Idaho",
+      "canonical_id": "idaho",
+      "barttorvik_id": 255
+    },
+    "illinois": {
+      "display_name": "Illinois",
+      "canonical_id": "illinois",
+      "barttorvik_id": 78
+    },
+    "illinois_state": {
+      "display_name": "Illinois St.",
+      "canonical_id": "illinois_state"
+    },
+    "indiana": {
+      "display_name": "Indiana",
+      "canonical_id": "indiana",
+      "barttorvik_id": 79
+    },
+    "indiana_state": {
+      "display_name": "Indiana St.",
+      "canonical_id": "indiana_state",
+      "barttorvik_id": 80
+    },
+    "iona": {
+      "display_name": "Iona",
+      "canonical_id": "iona",
+      "barttorvik_id": 81
+    },
+    "iowa": {
+      "display_name": "Iowa",
+      "canonical_id": "iowa",
+      "barttorvik_id": 82
+    },
+    "iowa_state": {
+      "display_name": "Iowa St.",
+      "canonical_id": "iowa_state",
+      "barttorvik_id": 83
+    },
+    "jacksonville_state": {
+      "display_name": "Jacksonville St.",
+      "canonical_id": "jacksonville_state",
+      "barttorvik_id": 84
+    },
+    "james_madison": {
+      "display_name": "James Madison",
+      "canonical_id": "james_madison",
+      "barttorvik_id": 85
+    },
+    "kansas": {
+      "display_name": "Kansas",
+      "canonical_id": "kansas",
+      "barttorvik_id": 86
+    },
+    "kansas_state": {
+      "display_name": "Kansas St.",
+      "canonical_id": "kansas_state",
+      "barttorvik_id": 87
+    },
+    "kennesaw_state": {
+      "display_name": "Kennesaw St.",
+      "canonical_id": "kennesaw_state",
+      "barttorvik_id": 88
+    },
+    "kent_state": {
+      "display_name": "Kent St.",
+      "canonical_id": "kent_state",
+      "barttorvik_id": 89
+    },
+    "kentucky": {
+      "display_name": "Kentucky",
+      "canonical_id": "kentucky",
+      "barttorvik_id": 90
+    },
+    "liu_brooklyn": {
+      "display_name": "LIU Brooklyn",
+      "canonical_id": "liu_brooklyn",
+      "barttorvik_id": 98
+    },
+    "louisiana_state": {
+      "display_name": "LSU",
+      "canonical_id": "louisiana_state",
+      "barttorvik_id": 105
+    },
+    "la_salle": {
+      "display_name": "La Salle",
+      "canonical_id": "la_salle",
+      "barttorvik_id": 91
+    },
+    "lafayette": {
+      "display_name": "Lafayette",
+      "canonical_id": "lafayette",
+      "barttorvik_id": 92
+    },
+    "lamar": {
+      "display_name": "Lamar",
+      "canonical_id": "lamar",
+      "barttorvik_id": 93
+    },
+    "lehigh": {
+      "display_name": "Lehigh",
+      "canonical_id": "lehigh",
+      "barttorvik_id": 94
+    },
+    "liberty": {
+      "display_name": "Liberty",
+      "canonical_id": "liberty",
+      "barttorvik_id": 95
+    },
+    "lipscomb": {
+      "display_name": "Lipscomb",
+      "canonical_id": "lipscomb",
+      "barttorvik_id": 96
+    },
+    "little_rock": {
+      "display_name": "Little Rock",
+      "canonical_id": "little_rock",
+      "barttorvik_id": 97
+    },
+    "long_beach_state": {
+      "display_name": "Long Beach St.",
+      "canonical_id": "long_beach_state",
+      "barttorvik_id": 99
+    },
+    "longwood": {
+      "display_name": "Longwood",
+      "canonical_id": "longwood",
+      "barttorvik_id": 100
+    },
+    "louisiana_lafayette": {
+      "display_name": "Louisiana Lafayette",
+      "canonical_id": "louisiana_lafayette",
+      "barttorvik_id": 101
+    },
+    "louisiana_tech": {
+      "display_name": "Louisiana Tech",
+      "canonical_id": "louisiana_tech"
+    },
+    "louisville": {
+      "display_name": "Louisville",
+      "canonical_id": "louisville",
+      "barttorvik_id": 102
+    },
+    "loyola__il": {
+      "display_name": "Loyola Chicago",
+      "canonical_id": "loyola__il",
+      "barttorvik_id": 103
+    },
+    "loyola_md": {
+      "display_name": "Loyola MD",
+      "canonical_id": "loyola_md",
+      "barttorvik_id": 104
+    },
+    "loyola_maryland": {
+      "display_name": "Loyola Maryland",
+      "canonical_id": "loyola_maryland"
+    },
+    "manhattan": {
+      "display_name": "Manhattan",
+      "canonical_id": "manhattan",
+      "barttorvik_id": 106
+    },
+    "marquette": {
+      "display_name": "Marquette",
+      "canonical_id": "marquette",
+      "barttorvik_id": 107
+    },
+    "marshall": {
+      "display_name": "Marshall",
+      "canonical_id": "marshall",
+      "barttorvik_id": 108
+    },
+    "maryland": {
+      "display_name": "Maryland",
+      "canonical_id": "maryland",
+      "barttorvik_id": 109
+    },
+    "massachusetts": {
+      "display_name": "Massachusetts",
+      "canonical_id": "massachusetts",
+      "barttorvik_id": 110
+    },
+    "mcneese_state": {
+      "display_name": "McNeese St.",
+      "canonical_id": "mcneese_state",
+      "barttorvik_id": 248
+    },
+    "memphis": {
+      "display_name": "Memphis",
+      "canonical_id": "memphis",
+      "barttorvik_id": 111
+    },
+    "mercer": {
+      "display_name": "Mercer",
+      "canonical_id": "mercer",
+      "barttorvik_id": 112
+    },
+    "miami": {
+      "display_name": "Miami",
+      "canonical_id": "miami"
+    },
+    "miami__fl": {
+      "display_name": "Miami FL",
+      "canonical_id": "miami__fl",
+      "barttorvik_id": 113
+    },
+    "miami__oh": {
+      "display_name": "Miami OH",
+      "canonical_id": "miami__oh",
+      "barttorvik_id": 256
+    },
+    "michigan": {
+      "display_name": "Michigan",
+      "canonical_id": "michigan",
+      "barttorvik_id": 114
+    },
+    "michigan_state": {
+      "display_name": "Michigan St.",
+      "canonical_id": "michigan_state",
+      "barttorvik_id": 115
+    },
+    "middle_tennessee": {
+      "display_name": "Middle Tennessee",
+      "canonical_id": "middle_tennessee",
+      "barttorvik_id": 116
+    },
+    "milwaukee": {
+      "display_name": "Milwaukee",
+      "canonical_id": "milwaukee",
+      "barttorvik_id": 117
+    },
+    "minnesota": {
+      "display_name": "Minnesota",
+      "canonical_id": "minnesota",
+      "barttorvik_id": 118
+    },
+    "mississippi": {
+      "display_name": "Mississippi",
+      "canonical_id": "mississippi",
+      "barttorvik_id": 119
+    },
+    "mississippi_state": {
+      "display_name": "Mississippi St.",
+      "canonical_id": "mississippi_state",
+      "barttorvik_id": 120
+    },
+    "mississippi_valley_state": {
+      "display_name": "Mississippi Valley St.",
+      "canonical_id": "mississippi_valley_state",
+      "barttorvik_id": 121
+    },
+    "missouri": {
+      "display_name": "Missouri",
+      "canonical_id": "missouri",
+      "barttorvik_id": 122
+    },
+    "missouri_state": {
+      "display_name": "Missouri St.",
+      "canonical_id": "missouri_state"
+    },
+    "monmouth": {
+      "display_name": "Monmouth",
+      "canonical_id": "monmouth"
+    },
+    "montana": {
+      "display_name": "Montana",
+      "canonical_id": "montana",
+      "barttorvik_id": 123
+    },
+    "montana_state": {
+      "display_name": "Montana St.",
+      "canonical_id": "montana_state",
+      "barttorvik_id": 124
+    },
+    "morehead_state": {
+      "display_name": "Morehead St.",
+      "canonical_id": "morehead_state",
+      "barttorvik_id": 125
+    },
+    "morgan_state": {
+      "display_name": "Morgan St.",
+      "canonical_id": "morgan_state",
+      "barttorvik_id": 126
+    },
+    "mount_st__mary_s": {
+      "display_name": "Mount St. Mary's",
+      "canonical_id": "mount_st__mary_s",
+      "barttorvik_id": 127
+    },
+    "murray_state": {
+      "display_name": "Murray St.",
+      "canonical_id": "murray_state",
+      "barttorvik_id": 128
+    },
+    "njit": {
+      "display_name": "NJIT",
+      "canonical_id": "njit"
+    },
+    "navy": {
+      "display_name": "Navy",
+      "canonical_id": "navy"
+    },
+    "nebraska": {
+      "display_name": "Nebraska",
+      "canonical_id": "nebraska",
+      "barttorvik_id": 129
+    },
+    "omaha": {
+      "display_name": "Nebraska Omaha",
+      "canonical_id": "omaha",
+      "barttorvik_id": 253
+    },
+    "nevada": {
+      "display_name": "Nevada",
+      "canonical_id": "nevada",
+      "barttorvik_id": 130
+    },
+    "new_mexico": {
+      "display_name": "New Mexico",
+      "canonical_id": "new_mexico",
+      "barttorvik_id": 131
+    },
+    "new_mexico_state": {
+      "display_name": "New Mexico St.",
+      "canonical_id": "new_mexico_state",
+      "barttorvik_id": 132
+    },
+    "new_orleans": {
+      "display_name": "New Orleans",
+      "canonical_id": "new_orleans",
+      "barttorvik_id": 133
+    },
+    "niagara": {
+      "display_name": "Niagara",
+      "canonical_id": "niagara"
+    },
+    "norfolk_state": {
+      "display_name": "Norfolk St.",
+      "canonical_id": "norfolk_state",
+      "barttorvik_id": 134
+    },
+    "north_carolina": {
+      "display_name": "North Carolina",
+      "canonical_id": "north_carolina",
+      "barttorvik_id": 135
+    },
+    "north_carolina_a_t": {
+      "display_name": "North Carolina A&T",
+      "canonical_id": "north_carolina_a_t",
+      "barttorvik_id": 136
+    },
+    "north_carolina_central": {
+      "display_name": "North Carolina Central",
+      "canonical_id": "north_carolina_central",
+      "barttorvik_id": 137
+    },
+    "nc_state": {
+      "display_name": "North Carolina St.",
+      "canonical_id": "nc_state",
+      "barttorvik_id": 138
+    },
+    "north_carollina": {
+      "display_name": "North Carollina",
+      "canonical_id": "north_carollina"
+    },
+    "north_dakota": {
+      "display_name": "North Dakota",
+      "canonical_id": "north_dakota",
+      "barttorvik_id": 139
+    },
+    "north_dakota_state": {
+      "display_name": "North Dakota St.",
+      "canonical_id": "north_dakota_state",
+      "barttorvik_id": 140
+    },
+    "north_florida": {
+      "display_name": "North Florida",
+      "canonical_id": "north_florida",
+      "barttorvik_id": 141
+    },
+    "north_texas": {
+      "display_name": "North Texas",
+      "canonical_id": "north_texas",
+      "barttorvik_id": 142
+    },
+    "northeastern": {
+      "display_name": "Northeastern",
+      "canonical_id": "northeastern",
+      "barttorvik_id": 143
+    },
+    "northern_colorado": {
+      "display_name": "Northern Colorado",
+      "canonical_id": "northern_colorado",
+      "barttorvik_id": 144
+    },
+    "northern_iowa": {
+      "display_name": "Northern Iowa",
+      "canonical_id": "northern_iowa",
+      "barttorvik_id": 145
+    },
+    "northern_kentucky": {
+      "display_name": "Northern Kentucky",
+      "canonical_id": "northern_kentucky",
+      "barttorvik_id": 146
+    },
+    "northwestern": {
+      "display_name": "Northwestern",
+      "canonical_id": "northwestern",
+      "barttorvik_id": 147
+    },
+    "northwestern_state": {
+      "display_name": "Northwestern St.",
+      "canonical_id": "northwestern_state",
+      "barttorvik_id": 148
+    },
+    "notre_dame": {
+      "display_name": "Notre Dame",
+      "canonical_id": "notre_dame",
+      "barttorvik_id": 149
+    },
+    "oakland": {
+      "display_name": "Oakland",
+      "canonical_id": "oakland",
+      "barttorvik_id": 150
+    },
+    "ohio": {
+      "display_name": "Ohio",
+      "canonical_id": "ohio",
+      "barttorvik_id": 151
+    },
+    "ohio_state": {
+      "display_name": "Ohio St.",
+      "canonical_id": "ohio_state",
+      "barttorvik_id": 152
+    },
+    "oklahoma": {
+      "display_name": "Oklahoma",
+      "canonical_id": "oklahoma",
+      "barttorvik_id": 153
+    },
+    "oklahoma_state": {
+      "display_name": "Oklahoma St.",
+      "canonical_id": "oklahoma_state",
+      "barttorvik_id": 154
+    },
+    "old_dominion": {
+      "display_name": "Old Dominion",
+      "canonical_id": "old_dominion",
+      "barttorvik_id": 155
+    },
+    "oral_roberts": {
+      "display_name": "Oral Roberts",
+      "canonical_id": "oral_roberts",
+      "barttorvik_id": 156
+    },
+    "oregon": {
+      "display_name": "Oregon",
+      "canonical_id": "oregon",
+      "barttorvik_id": 157
+    },
+    "oregon_state": {
+      "display_name": "Oregon St.",
+      "canonical_id": "oregon_state",
+      "barttorvik_id": 158
+    },
+    "pacific": {
+      "display_name": "Pacific",
+      "canonical_id": "pacific",
+      "barttorvik_id": 159
+    },
+    "pennsylvania": {
+      "display_name": "Penn",
+      "canonical_id": "pennsylvania",
+      "barttorvik_id": 160
+    },
+    "penn_state": {
+      "display_name": "Penn St.",
+      "canonical_id": "penn_state",
+      "barttorvik_id": 161
+    },
+    "pittsburgh": {
+      "display_name": "Pittsburgh",
+      "canonical_id": "pittsburgh",
+      "barttorvik_id": 162
+    },
+    "portland": {
+      "display_name": "Portland",
+      "canonical_id": "portland"
+    },
+    "portland_state": {
+      "display_name": "Portland St.",
+      "canonical_id": "portland_state",
+      "barttorvik_id": 163
+    },
+    "prairie_view": {
+      "display_name": "Prairie View A&M",
+      "canonical_id": "prairie_view",
+      "barttorvik_id": 164
+    },
+    "princeton": {
+      "display_name": "Princeton",
+      "canonical_id": "princeton",
+      "barttorvik_id": 165
+    },
+    "providence": {
+      "display_name": "Providence",
+      "canonical_id": "providence",
+      "barttorvik_id": 166
+    },
+    "purdue": {
+      "display_name": "Purdue",
+      "canonical_id": "purdue",
+      "barttorvik_id": 167
+    },
+    "purdue_fort_wayne": {
+      "display_name": "Purdue Fort Wayne",
+      "canonical_id": "purdue_fort_wayne"
+    },
+    "queens__nc": {
+      "display_name": "Queens",
+      "canonical_id": "queens__nc",
+      "barttorvik_id": 258
+    },
+    "radford": {
+      "display_name": "Radford",
+      "canonical_id": "radford",
+      "barttorvik_id": 168
+    },
+    "rhode_island": {
+      "display_name": "Rhode Island",
+      "canonical_id": "rhode_island",
+      "barttorvik_id": 169
+    },
+    "richmond": {
+      "display_name": "Richmond",
+      "canonical_id": "richmond",
+      "barttorvik_id": 170
+    },
+    "rider": {
+      "display_name": "Rider",
+      "canonical_id": "rider"
+    },
+    "robert_morris": {
+      "display_name": "Robert Morris",
+      "canonical_id": "robert_morris",
+      "barttorvik_id": 171
+    },
+    "rutgers": {
+      "display_name": "Rutgers",
+      "canonical_id": "rutgers",
+      "barttorvik_id": 172
+    },
+    "siu_edwardsville": {
+      "display_name": "SIU Edwardsville",
+      "canonical_id": "siu_edwardsville",
+      "barttorvik_id": 255
+    },
+    "southern_methodist": {
+      "display_name": "SMU",
+      "canonical_id": "southern_methodist",
+      "barttorvik_id": 183
+    },
+    "saint_francis": {
+      "display_name": "Saint Francis",
+      "canonical_id": "saint_francis",
+      "barttorvik_id": 254
+    },
+    "saint_joseph_s": {
+      "display_name": "Saint Joseph's",
+      "canonical_id": "saint_joseph_s",
+      "barttorvik_id": 173
+    },
+    "saint_louis": {
+      "display_name": "Saint Louis",
+      "canonical_id": "saint_louis",
+      "barttorvik_id": 174
+    },
+    "saint_mary_s__ca": {
+      "display_name": "Saint Mary's",
+      "canonical_id": "saint_mary_s__ca",
+      "barttorvik_id": 175
+    },
+    "saint_peter_s": {
+      "display_name": "Saint Peter's",
+      "canonical_id": "saint_peter_s",
+      "barttorvik_id": 176
+    },
+    "sam_houston_state": {
+      "display_name": "Sam Houston St.",
+      "canonical_id": "sam_houston_state",
+      "barttorvik_id": 177
+    },
+    "samford": {
+      "display_name": "Samford",
+      "canonical_id": "samford",
+      "barttorvik_id": 249
+    },
+    "san_diego": {
+      "display_name": "San Diego",
+      "canonical_id": "san_diego",
+      "barttorvik_id": 178
+    },
+    "san_diego_state": {
+      "display_name": "San Diego St.",
+      "canonical_id": "san_diego_state",
+      "barttorvik_id": 179
+    },
+    "san_francisco": {
+      "display_name": "San Francisco",
+      "canonical_id": "san_francisco",
+      "barttorvik_id": 180
+    },
+    "santa_clara": {
+      "display_name": "Santa Clara",
+      "canonical_id": "santa_clara",
+      "barttorvik_id": 259
+    },
+    "seattle": {
+      "display_name": "Seattle",
+      "canonical_id": "seattle"
+    },
+    "seton_hall": {
+      "display_name": "Seton Hall",
+      "canonical_id": "seton_hall",
+      "barttorvik_id": 181
+    },
+    "siena": {
+      "display_name": "Siena",
+      "canonical_id": "siena",
+      "barttorvik_id": 182
+    },
+    "south_alabama": {
+      "display_name": "South Alabama",
+      "canonical_id": "south_alabama",
+      "barttorvik_id": 184
+    },
+    "south_carolina": {
+      "display_name": "South Carolina",
+      "canonical_id": "south_carolina",
+      "barttorvik_id": 185
+    },
+    "south_dakota_state": {
+      "display_name": "South Dakota St.",
+      "canonical_id": "south_dakota_state",
+      "barttorvik_id": 186
+    },
+    "south_florida": {
+      "display_name": "South Florida",
+      "canonical_id": "south_florida",
+      "barttorvik_id": 187
+    },
+    "southeast_missouri_state": {
+      "display_name": "Southeast Missouri St.",
+      "canonical_id": "southeast_missouri_state",
+      "barttorvik_id": 188
+    },
+    "southern": {
+      "display_name": "Southern",
+      "canonical_id": "southern",
+      "barttorvik_id": 189
+    },
+    "southern_illinois": {
+      "display_name": "Southern Illinois",
+      "canonical_id": "southern_illinois"
+    },
+    "southern_mississippi": {
+      "display_name": "Southern Miss",
+      "canonical_id": "southern_mississippi",
+      "barttorvik_id": 190
+    },
+    "st_bonaventure": {
+      "display_name": "St. Bonaventure",
+      "canonical_id": "st_bonaventure",
+      "barttorvik_id": 191
+    },
+    "st__john_s__ny": {
+      "display_name": "St. John's",
+      "canonical_id": "st__john_s__ny",
+      "barttorvik_id": 192
+    },
+    "stanford": {
+      "display_name": "Stanford",
+      "canonical_id": "stanford",
+      "barttorvik_id": 193
+    },
+    "stephen_f_austin": {
+      "display_name": "Stephen F. Austin",
+      "canonical_id": "stephen_f_austin",
+      "barttorvik_id": 194
+    },
+    "stetson": {
+      "display_name": "Stetson",
+      "canonical_id": "stetson",
+      "barttorvik_id": 250
+    },
+    "stony_brook": {
+      "display_name": "Stony Brook",
+      "canonical_id": "stony_brook",
+      "barttorvik_id": 195
+    },
+    "syracuse": {
+      "display_name": "Syracuse",
+      "canonical_id": "syracuse",
+      "barttorvik_id": 196
+    },
+    "tcu": {
+      "display_name": "TCU",
+      "canonical_id": "tcu",
+      "barttorvik_id": 197
+    },
+    "temple": {
+      "display_name": "Temple",
+      "canonical_id": "temple",
+      "barttorvik_id": 198
+    },
+    "tennessee": {
+      "display_name": "Tennessee",
+      "canonical_id": "tennessee",
+      "barttorvik_id": 199
+    },
+    "tennessee_state": {
+      "display_name": "Tennessee St.",
+      "canonical_id": "tennessee_state",
+      "barttorvik_id": 260
+    },
+    "texas": {
+      "display_name": "Texas",
+      "canonical_id": "texas",
+      "barttorvik_id": 200
+    },
+    "texas_a_m": {
+      "display_name": "Texas A&M",
+      "canonical_id": "texas_a_m",
+      "barttorvik_id": 201
+    },
+    "texas_a_m_corpus_christi": {
+      "display_name": "Texas A&M Corpus Chris",
+      "canonical_id": "texas_a_m_corpus_christi",
+      "barttorvik_id": 202
+    },
+    "texas_southern": {
+      "display_name": "Texas Southern",
+      "canonical_id": "texas_southern",
+      "barttorvik_id": 203
+    },
+    "texas_state": {
+      "display_name": "Texas State",
+      "canonical_id": "texas_state"
+    },
+    "texas_tech": {
+      "display_name": "Texas Tech",
+      "canonical_id": "texas_tech",
+      "barttorvik_id": 204
+    },
+    "toledo": {
+      "display_name": "Toledo",
+      "canonical_id": "toledo"
+    },
+    "towson": {
+      "display_name": "Towson",
+      "canonical_id": "towson"
+    },
+    "troy": {
+      "display_name": "Troy",
+      "canonical_id": "troy",
+      "barttorvik_id": 205
+    },
+    "tulane": {
+      "display_name": "Tulane",
+      "canonical_id": "tulane"
+    },
+    "tulsa": {
+      "display_name": "Tulsa",
+      "canonical_id": "tulsa",
+      "barttorvik_id": 206
+    },
+    "uab": {
+      "display_name": "UAB",
+      "canonical_id": "uab",
+      "barttorvik_id": 207
+    },
+    "uc_davis": {
+      "display_name": "UC Davis",
+      "canonical_id": "uc_davis",
+      "barttorvik_id": 208
+    },
+    "uc_irvine": {
+      "display_name": "UC Irvine",
+      "canonical_id": "uc_irvine",
+      "barttorvik_id": 209
+    },
+    "uc_san_diego": {
+      "display_name": "UC San Diego",
+      "canonical_id": "uc_san_diego",
+      "barttorvik_id": 256
+    },
+    "uc_santa_barbara": {
+      "display_name": "UC Santa Barbara",
+      "canonical_id": "uc_santa_barbara",
+      "barttorvik_id": 210
+    },
+    "ucf": {
+      "display_name": "UCF",
+      "canonical_id": "ucf",
+      "barttorvik_id": 211
+    },
+    "ucla": {
+      "display_name": "UCLA",
+      "canonical_id": "ucla",
+      "barttorvik_id": 212
+    },
+    "maryland_baltimore_county": {
+      "display_name": "UMBC",
+      "canonical_id": "maryland_baltimore_county",
+      "barttorvik_id": 213
+    },
+    "unc_asheville": {
+      "display_name": "UNC Asheville",
+      "canonical_id": "unc_asheville",
+      "barttorvik_id": 214
+    },
+    "unc_greensboro": {
+      "display_name": "UNC Greensboro",
+      "canonical_id": "unc_greensboro",
+      "barttorvik_id": 215
+    },
+    "unc_wilmington": {
+      "display_name": "UNC Wilmington",
+      "canonical_id": "unc_wilmington",
+      "barttorvik_id": 216
+    },
+    "nevada_las_vegas": {
+      "display_name": "UNLV",
+      "canonical_id": "nevada_las_vegas",
+      "barttorvik_id": 217
+    },
+    "southern_california": {
+      "display_name": "USC",
+      "canonical_id": "southern_california",
+      "barttorvik_id": 218
+    },
+    "ut_arlington": {
+      "display_name": "UT Arlington",
+      "canonical_id": "ut_arlington",
+      "barttorvik_id": 219
+    },
+    "utep": {
+      "display_name": "UTEP",
+      "canonical_id": "utep",
+      "barttorvik_id": 222
+    },
+    "utsa": {
+      "display_name": "UTSA",
+      "canonical_id": "utsa",
+      "barttorvik_id": 223
+    },
+    "utah": {
+      "display_name": "Utah",
+      "canonical_id": "utah",
+      "barttorvik_id": 220
+    },
+    "utah_state": {
+      "display_name": "Utah St.",
+      "canonical_id": "utah_state",
+      "barttorvik_id": 221
+    },
+    "utah_valley": {
+      "display_name": "Utah Valley",
+      "canonical_id": "utah_valley"
+    },
+    "virginia_commonwealth": {
+      "display_name": "VCU",
+      "canonical_id": "virginia_commonwealth",
+      "barttorvik_id": 226
+    },
+    "vmi": {
+      "display_name": "VMI",
+      "canonical_id": "vmi"
+    },
+    "valparaiso": {
+      "display_name": "Valparaiso",
+      "canonical_id": "valparaiso",
+      "barttorvik_id": 224
+    },
+    "vanderbilt": {
+      "display_name": "Vanderbilt",
+      "canonical_id": "vanderbilt",
+      "barttorvik_id": 225
+    },
+    "vermont": {
+      "display_name": "Vermont",
+      "canonical_id": "vermont",
+      "barttorvik_id": 227
+    },
+    "villanova": {
+      "display_name": "Villanova",
+      "canonical_id": "villanova",
+      "barttorvik_id": 228
+    },
+    "virginia": {
+      "display_name": "Virginia",
+      "canonical_id": "virginia",
+      "barttorvik_id": 229
+    },
+    "virginia_tech": {
+      "display_name": "Virginia Tech",
+      "canonical_id": "virginia_tech",
+      "barttorvik_id": 230
+    },
+    "wagner": {
+      "display_name": "Wagner",
+      "canonical_id": "wagner",
+      "barttorvik_id": 251
+    },
+    "wake_forest": {
+      "display_name": "Wake Forest",
+      "canonical_id": "wake_forest",
+      "barttorvik_id": 231
+    },
+    "washington": {
+      "display_name": "Washington",
+      "canonical_id": "washington",
+      "barttorvik_id": 232
+    },
+    "washington_state": {
+      "display_name": "Washington St.",
+      "canonical_id": "washington_state",
+      "barttorvik_id": 233
+    },
+    "weber_state": {
+      "display_name": "Weber St.",
+      "canonical_id": "weber_state",
+      "barttorvik_id": 234
+    },
+    "west_virginia": {
+      "display_name": "West Virginia",
+      "canonical_id": "west_virginia",
+      "barttorvik_id": 235
+    },
+    "western_carolina": {
+      "display_name": "Western Carolina",
+      "canonical_id": "western_carolina"
+    },
+    "western_illinois": {
+      "display_name": "Western Illinois",
+      "canonical_id": "western_illinois"
+    },
+    "western_kentucky": {
+      "display_name": "Western Kentucky",
+      "canonical_id": "western_kentucky",
+      "barttorvik_id": 236
+    },
+    "western_michigan": {
+      "display_name": "Western Michigan",
+      "canonical_id": "western_michigan",
+      "barttorvik_id": 237
+    },
+    "wichita_state": {
+      "display_name": "Wichita St.",
+      "canonical_id": "wichita_state",
+      "barttorvik_id": 238
+    },
+    "william_mary": {
+      "display_name": "William & Mary",
+      "canonical_id": "william_mary"
+    },
+    "winthrop": {
+      "display_name": "Winthrop",
+      "canonical_id": "winthrop",
+      "barttorvik_id": 239
+    },
+    "wisconsin": {
+      "display_name": "Wisconsin",
+      "canonical_id": "wisconsin",
+      "barttorvik_id": 240
+    },
+    "wofford": {
+      "display_name": "Wofford",
+      "canonical_id": "wofford",
+      "barttorvik_id": 241
+    },
+    "wright_state": {
+      "display_name": "Wright St.",
+      "canonical_id": "wright_state",
+      "barttorvik_id": 242
+    },
+    "wyoming": {
+      "display_name": "Wyoming",
+      "canonical_id": "wyoming",
+      "barttorvik_id": 243
+    },
+    "xavier": {
+      "display_name": "Xavier",
+      "canonical_id": "xavier",
+      "barttorvik_id": 244
+    },
+    "yale": {
+      "display_name": "Yale",
+      "canonical_id": "yale",
+      "barttorvik_id": 245
+    }
+  },
+  "canonical_to_barttorvik_id": {
+    "abilene_christian": "1",
+    "akron": "2",
+    "alabama": "3",
+    "alabama_state": "4",
+    "albany__ny": "5",
+    "american": "6",
+    "appalachian_state": "7",
+    "arizona": "8",
+    "arizona_state": "9",
+    "arkansas": "10",
+    "arkansas_pine_bluff": "11",
+    "auburn": "12",
+    "austin_peay": "13",
+    "brigham_young": "25",
+    "baylor": "14",
+    "belmont": "15",
+    "binghamton": "16",
+    "boise_state": "17",
+    "boston_college": "18",
+    "boston_university": "19",
+    "bradley": "20",
+    "bryant": "21",
+    "bucknell": "22",
+    "buffalo": "23",
+    "butler": "24",
+    "omaha": "253",
+    "cal_poly": "26",
+    "cal_state_bakersfield": "27",
+    "cal_state_fullerton": "28",
+    "cal_state_northridge": "29",
+    "california": "30",
+    "chattanooga": "31",
+    "cincinnati": "32",
+    "clemson": "33",
+    "cleveland_state": "34",
+    "coastal_carolina": "35",
+    "colgate": "36",
+    "college_of_charleston": "37",
+    "colorado": "38",
+    "colorado_state": "39",
+    "connecticut": "40",
+    "coppin_state": "41",
+    "cornell": "42",
+    "creighton": "43",
+    "davidson": "44",
+    "dayton": "45",
+    "delaware": "46",
+    "detroit": "47",
+    "drake": "48",
+    "drexel": "49",
+    "duke": "50",
+    "duquesne": "246",
+    "east_tennessee_state": "51",
+    "eastern_kentucky": "52",
+    "eastern_washington": "53",
+    "fairleigh_dickinson": "54",
+    "florida": "55",
+    "florida_atlantic": "56",
+    "florida_gulf_coast": "57",
+    "florida_state": "58",
+    "fresno_state": "59",
+    "furman": "60",
+    "gardner_webb": "61",
+    "george_mason": "62",
+    "george_washington": "63",
+    "georgetown": "64",
+    "georgia": "65",
+    "georgia_state": "66",
+    "georgia_tech": "67",
+    "gonzaga": "68",
+    "grambling": "247",
+    "grand_canyon": "69",
+    "green_bay": "70",
+    "hampton": "71",
+    "hartford": "72",
+    "harvard": "73",
+    "hawaii": "74",
+    "high_point": "252",
+    "saint_francis": "254",
+    "holy_cross": "75",
+    "houston": "76",
+    "howard": "77",
+    "siu_edwardsville": "255",
+    "illinois": "78",
+    "indiana": "79",
+    "indiana_state": "80",
+    "iona": "81",
+    "iowa": "82",
+    "iowa_state": "83",
+    "jacksonville_state": "84",
+    "james_madison": "85",
+    "kansas": "86",
+    "kansas_state": "87",
+    "kennesaw_state": "88",
+    "kent_state": "89",
+    "kentucky": "90",
+    "liu_brooklyn": "98",
+    "louisiana_state": "105",
+    "la_salle": "91",
+    "lafayette": "92",
+    "lamar": "93",
+    "lehigh": "94",
+    "liberty": "95",
+    "lipscomb": "96",
+    "little_rock": "97",
+    "long_beach_state": "99",
+    "longwood": "100",
+    "louisiana_lafayette": "101",
+    "louisville": "102",
+    "loyola__il": "103",
+    "loyola_md": "104",
+    "manhattan": "106",
+    "marquette": "107",
+    "marshall": "108",
+    "maryland": "109",
+    "massachusetts": "110",
+    "mcneese_state": "248",
+    "memphis": "111",
+    "mercer": "112",
+    "miami__fl": "113",
+    "uc_san_diego": "256",
+    "michigan": "114",
+    "michigan_state": "115",
+    "middle_tennessee": "116",
+    "milwaukee": "117",
+    "minnesota": "118",
+    "mississippi": "119",
+    "mississippi_state": "120",
+    "mississippi_valley_state": "121",
+    "missouri": "122",
+    "montana": "123",
+    "montana_state": "124",
+    "morehead_state": "125",
+    "morgan_state": "126",
+    "mount_st__mary_s": "127",
+    "murray_state": "128",
+    "nebraska": "129",
+    "nevada": "130",
+    "new_mexico": "131",
+    "new_mexico_state": "132",
+    "new_orleans": "133",
+    "norfolk_state": "134",
+    "north_carolina": "135",
+    "north_carolina_a_t": "136",
+    "north_carolina_central": "137",
+    "nc_state": "138",
+    "north_dakota": "139",
+    "north_dakota_state": "140",
+    "north_florida": "141",
+    "north_texas": "142",
+    "northeastern": "143",
+    "northern_colorado": "144",
+    "northern_iowa": "145",
+    "northern_kentucky": "146",
+    "northwestern": "147",
+    "northwestern_state": "148",
+    "notre_dame": "149",
+    "oakland": "150",
+    "ohio": "151",
+    "ohio_state": "152",
+    "oklahoma": "153",
+    "oklahoma_state": "154",
+    "old_dominion": "155",
+    "oral_roberts": "156",
+    "oregon": "157",
+    "oregon_state": "158",
+    "pacific": "159",
+    "pennsylvania": "160",
+    "penn_state": "161",
+    "pittsburgh": "162",
+    "portland_state": "163",
+    "prairie_view": "164",
+    "princeton": "165",
+    "providence": "166",
+    "purdue": "167",
+    "queens__nc": "258",
+    "radford": "168",
+    "rhode_island": "169",
+    "richmond": "170",
+    "robert_morris": "171",
+    "rutgers": "172",
+    "southern_methodist": "183",
+    "saint_joseph_s": "173",
+    "saint_louis": "174",
+    "saint_mary_s__ca": "175",
+    "saint_peter_s": "176",
+    "sam_houston_state": "177",
+    "samford": "249",
+    "san_diego": "178",
+    "san_diego_state": "179",
+    "san_francisco": "180",
+    "santa_clara": "259",
+    "seton_hall": "181",
+    "siena": "182",
+    "south_alabama": "184",
+    "south_carolina": "185",
+    "south_dakota_state": "186",
+    "south_florida": "187",
+    "southeast_missouri_state": "188",
+    "southern": "189",
+    "southern_mississippi": "190",
+    "st_bonaventure": "191",
+    "st__john_s__ny": "192",
+    "stanford": "193",
+    "stephen_f_austin": "194",
+    "stetson": "250",
+    "stony_brook": "195",
+    "syracuse": "196",
+    "tcu": "197",
+    "temple": "198",
+    "tennessee": "199",
+    "tennessee_state": "260",
+    "texas": "200",
+    "texas_a_m": "201",
+    "texas_a_m_corpus_christi": "202",
+    "texas_southern": "203",
+    "texas_tech": "204",
+    "troy": "205",
+    "tulsa": "206",
+    "uab": "207",
+    "uc_davis": "208",
+    "uc_irvine": "209",
+    "uc_santa_barbara": "210",
+    "ucf": "211",
+    "ucla": "212",
+    "maryland_baltimore_county": "213",
+    "unc_asheville": "214",
+    "unc_greensboro": "215",
+    "unc_wilmington": "216",
+    "nevada_las_vegas": "217",
+    "southern_california": "218",
+    "ut_arlington": "219",
+    "utep": "222",
+    "utsa": "223",
+    "utah": "220",
+    "utah_state": "221",
+    "virginia_commonwealth": "226",
+    "valparaiso": "224",
+    "vanderbilt": "225",
+    "vermont": "227",
+    "villanova": "228",
+    "virginia": "229",
+    "virginia_tech": "230",
+    "wagner": "251",
+    "wake_forest": "231",
+    "washington": "232",
+    "washington_state": "233",
+    "weber_state": "234",
+    "west_virginia": "235",
+    "western_kentucky": "236",
+    "western_michigan": "237",
+    "wichita_state": "238",
+    "winthrop": "239",
+    "wisconsin": "240",
+    "wofford": "241",
+    "wright_state": "242",
+    "wyoming": "243",
+    "xavier": "244",
+    "yale": "245"
+  },
+  "typo_aliases": {
+    "prarie_view_a_m": "prairie_view"
+  }
+}
