@@ -578,5 +578,7 @@
       "F4": 0.0006,
       "CHAMP": 0.0003
     }
-  }
+  },
+  "_data_quality": "real_kaggle",
+  "_source_caveat": "ESPN Who Picked Whom discontinued 2024. This data is from Kaggle/nishaanamin which may source from ESPN gambit API or Yahoo Sports. Values appear plausible but original source is unverified."
 }
