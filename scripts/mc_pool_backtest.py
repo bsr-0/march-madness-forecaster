@@ -304,12 +304,98 @@ def bracket_config_to_bool_array(bracket_config, first_round_matchups):
     return result
 
 
-def build_optimized_brackets(first_round, seeds, regions, model_round_probs, pick_dist, pool_size, n_target=50):
-    """Generate brackets via leverage analysis Pareto frontier.
+def _compute_game_confidence(first_round, model_round_probs, pick_dist, pool_size):
+    """Compute per-game confidence: how close the EV-score margin is.
 
-    Requests n_target brackets from the Pareto generator (at evenly-spaced
-    risk levels from chalk to max contrarian), deduplicates identical
-    brackets, and returns (n_unique, 63) boolean array.
+    Returns a (63,) array where each value is the absolute probability
+    difference between the two teams. Low values = close calls suitable
+    for stochastic flipping.
+    """
+    confidence = np.zeros(63)
+    current_teams = list(first_round)
+    game_idx = 0
+
+    for round_idx in range(6):
+        round_name = ROUND_NAMES[round_idx]
+        next_round = []
+        for g in range(0, len(current_teams), 2):
+            if g + 1 >= len(current_teams):
+                next_round.append(current_teams[g])
+                continue
+            t1, t2 = current_teams[g], current_teams[g + 1]
+            p1 = model_round_probs.get(t1, {}).get(round_name, 0.5)
+            p2 = model_round_probs.get(t2, {}).get(round_name, 0.5)
+            confidence[game_idx] = abs(p1 - p2)
+            # Advance the higher-probability team (doesn't matter, we just
+            # need consistent team ordering for later rounds)
+            next_round.append(t1 if p1 >= p2 else t2)
+            game_idx += 1
+        current_teams = next_round
+
+    return confidence
+
+
+def _generate_bracket_variants(base_brackets, game_confidence, n_target, rng):
+    """Generate stochastic variants of Pareto base brackets.
+
+    For each base bracket, randomly flip games with probability inversely
+    proportional to the model's confidence. Close calls (low confidence)
+    flip often; strong picks (high confidence) rarely flip.
+
+    Flip probability per game: p_flip = (1 - confidence) * flip_scale
+    where flip_scale is tuned so ~3-8 games flip per bracket.
+    """
+    n_base = base_brackets.shape[0]
+    if n_base == 0:
+        return base_brackets
+
+    # Target ~5 flips per bracket on average
+    mean_uncertainty = np.mean(1.0 - game_confidence)
+    if mean_uncertainty > 0:
+        flip_scale = min(0.4, 5.0 / (63.0 * mean_uncertainty))
+    else:
+        flip_scale = 0.1
+
+    flip_probs = np.clip((1.0 - game_confidence) * flip_scale, 0.0, 0.5)
+
+    # However, we can't just flip games independently — later-round picks
+    # depend on earlier-round winners. Instead, we flip and then propagate:
+    # if we flip an earlier game, all downstream games involving that team
+    # must also be reconsidered. For simplicity, we only flip games in
+    # R64 and R32 (the first 48 games), which gives enough diversity
+    # without requiring full bracket reconstruction.
+    # Games 0-31 = R64, 32-47 = R32, 48-51 = S16, 52-53 = E8, etc.
+    # Only flip the first 48 games (R64 + R32)
+    flip_mask = np.zeros(63, dtype=bool)
+    flip_mask[:48] = True
+
+    all_brackets = list(base_brackets)
+    variants_per_base = max(1, (n_target - n_base) // n_base)
+
+    for base_idx in range(n_base):
+        base = base_brackets[base_idx]
+        for _ in range(variants_per_base):
+            variant = base.copy()
+            # Flip each eligible game with its flip probability
+            for g in range(63):
+                if flip_mask[g] and rng.random() < flip_probs[g]:
+                    variant[g] = not variant[g]
+            all_brackets.append(variant)
+
+    arr = np.array(all_brackets, dtype=bool)
+    unique_arr = np.unique(arr, axis=0)
+    return unique_arr
+
+
+def build_optimized_brackets(
+    first_round, seeds, regions, model_round_probs, pick_dist, pool_size, n_target=50, rng=None
+):
+    """Generate brackets via leverage analysis Pareto frontier + stochastic variants.
+
+    1. Generate Pareto brackets across the risk spectrum (deterministic)
+    2. Deduplicate to get ~10-14 unique base brackets
+    3. Create stochastic variants by flipping low-confidence games
+    4. Return up to n_target unique brackets
     """
     from src.optimization.leverage import (
         LeverageCalculator,
@@ -317,6 +403,9 @@ def build_optimized_brackets(first_round, seeds, regions, model_round_probs, pic
         TeamMetadata,
         get_strategy_profile,
     )
+
+    if rng is None:
+        rng = np.random.default_rng(42)
 
     team_meta = {tid: TeamMetadata(team_name=tid, seed=seeds[tid], region=regions.get(tid, "")) for tid in seeds}
 
@@ -330,7 +419,7 @@ def build_optimized_brackets(first_round, seeds, regions, model_round_probs, pic
     )
     optimizer = ParetoOptimizer(calculator, pool_size)
 
-    # Generate many Pareto brackets across the full risk spectrum
+    # Generate Pareto brackets across the full risk spectrum
     pareto = optimizer.generate_pareto_brackets(num_brackets=n_target)
     if not pareto:
         return np.zeros((0, 63), dtype=bool)
@@ -346,16 +435,19 @@ def build_optimized_brackets(first_round, seeds, regions, model_round_probs, pic
     if not valid:
         return np.zeros((0, 63), dtype=bool)
 
-    # Deduplicate identical brackets
+    # Deduplicate to get base brackets
     arr = np.array(valid, dtype=bool)
-    unique_arr = np.unique(arr, axis=0)
-    n_dupes = arr.shape[0] - unique_arr.shape[0]
-    if n_dupes > 0:
-        print(f"    Pareto: {arr.shape[0]} generated, {unique_arr.shape[0]} unique ({n_dupes} duplicates removed)")
-    else:
-        print(f"    Pareto: {unique_arr.shape[0]} unique brackets")
+    base_brackets = np.unique(arr, axis=0)
+    n_base = base_brackets.shape[0]
 
-    return unique_arr
+    # Compute per-game confidence for variant generation
+    game_confidence = _compute_game_confidence(first_round, model_round_probs, pick_dist, pool_size)
+
+    # Generate stochastic variants to reach n_target
+    final = _generate_bracket_variants(base_brackets, game_confidence, n_target, rng)
+    print(f"    Pareto: {n_base} base + {final.shape[0] - n_base} variants = {final.shape[0]} unique brackets")
+
+    return final
 
 
 def build_leverage_tilted_round_probs(model_round_probs, pick_dist, tilt_strength=1.0):
@@ -544,7 +636,7 @@ def run_backtest(
         # Test both seed_rp (higher leverage values) and blend_rp
         for opt_mode_name, opt_rp in [("opt_seed", seed_rp), ("opt_blend", blend_rp)]:
             opt_brackets = build_optimized_brackets(
-                first_round, seeds, regions, opt_rp, pick_dist, pool_size, n_target=N_MODEL_BRACKETS
+                first_round, seeds, regions, opt_rp, pick_dist, pool_size, n_target=N_MODEL_BRACKETS, rng=rng
             )
             if opt_brackets.shape[0] > 0:
                 model_brackets = opt_brackets
