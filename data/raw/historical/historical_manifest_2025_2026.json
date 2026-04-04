@@ -13,7 +13,7 @@
     "2026": {
       "historical_games_json": "data/raw/historical/historical_games_2026.json",
       "team_metrics_json": "data/raw/historical/team_metrics_2026.json",
-      "torvik_json": "data/raw/historical/torvik_2026.json",
+      "torvik_json": "data/raw/torvik_2026.json",
       "massey_ordinals_systems": 54
     }
   },
