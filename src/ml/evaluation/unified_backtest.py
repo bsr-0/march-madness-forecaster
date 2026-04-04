@@ -339,6 +339,150 @@ def load_tournament_history_from_kaggle(
     return history
 
 
+def load_tournament_history_from_matchups_json(
+    kaggle_dir: str,
+    year: int,
+) -> Optional[TournamentHistory]:
+    """Load tournament history from nishaanamin/march-madness-data JSON.
+
+    Reads ``tournament_matchups.json`` (columnar format with keys
+    ``columns`` and ``data``) which is the tracked dataset in data/kaggle/.
+    This is the primary data source in CI where Kaggle competition CSVs
+    are not available.
+
+    Args:
+        kaggle_dir: Path to directory containing tournament_matchups.json.
+        year: Tournament year to load.
+
+    Returns:
+        TournamentHistory or None if data is unavailable.
+    """
+    import json as _json
+
+    matchups_path = Path(kaggle_dir) / "tournament_matchups.json"
+    if not matchups_path.exists():
+        return None
+
+    try:
+        with open(matchups_path) as f:
+            raw = _json.load(f)
+    except Exception:
+        return None
+
+    columns = raw.get("columns", [])
+    data = raw.get("data", [])
+    if not columns or not data:
+        return None
+
+    # Parse into dicts and filter to requested year
+    all_rows = [dict(zip(columns, row)) for row in data]
+    year_rows = [r for r in all_rows if r.get("year") == year]
+    if not year_rows:
+        return None
+
+    # Build seeds dict from all teams that appear in this year
+    seeds: Dict[str, int] = {}
+    regions: Dict[str, str] = {}
+    for r in year_rows:
+        tid = _canonical_backtest_team_id(str(r["team"]))
+        seed = r.get("seed", 8)
+        if isinstance(seed, (int, float)):
+            seeds[tid] = int(seed)
+
+    # The 'round' field = how far the team advanced (lower = further):
+    #   1 = champion, 2 = runner-up, 4 = F4, 8 = E8, 16 = S16, 32 = R32, 64 = R64 exit
+    # The 'current_round' field = which round this row describes a game in.
+    # Pairs of rows with the same current_round are adjacent by by_year_no.
+
+    # Map current_round values to round labels
+    cr_to_label = {64: "R64", 32: "R32", 16: "S16", 8: "E8", 4: "F4", 2: "NCG"}
+
+    games: List[TournamentGame] = []
+
+    # Group by current_round to find matchups
+    from itertools import groupby
+
+    for cr_val, label in cr_to_label.items():
+        cr_rows = sorted(
+            [r for r in year_rows if r.get("current_round") == cr_val],
+            key=lambda x: x.get("by_year_no", 0),
+            reverse=True,
+        )
+        # Pair adjacent rows as matchups
+        for i in range(0, len(cr_rows) - 1, 2):
+            a, b = cr_rows[i], cr_rows[i + 1]
+            t1 = _canonical_backtest_team_id(str(a["team"]))
+            t2 = _canonical_backtest_team_id(str(b["team"]))
+            # The team that advanced further (lower 'round' value) won
+            a_adv = a.get("round", 999)
+            b_adv = b.get("round", 999)
+            t1_won = a_adv < b_adv
+            games.append(
+                TournamentGame(
+                    team1_id=t1,
+                    team2_id=t2,
+                    team1_seed=seeds.get(t1, 8),
+                    team2_seed=seeds.get(t2, 8),
+                    team1_won=t1_won,
+                    round_name=label,
+                    team1_score=a.get("score") or 0,
+                    team2_score=b.get("score") or 0,
+                )
+            )
+
+    if len(games) < 32:
+        logger.warning(
+            "Only %d games parsed from tournament_matchups.json for %d",
+            len(games),
+            year,
+        )
+        return None
+
+    # Build first_round_matchups directly from R64 pairings in bracket order.
+    # The JSON has no region column, so _build_first_round_matchups would
+    # produce placeholders. Instead, extract from the R64 game pairs which
+    # are already in standard bracket order (by_year_no descending).
+    r64_rows = sorted(
+        [r for r in year_rows if r.get("current_round") == 64],
+        key=lambda x: x.get("by_year_no", 0),
+        reverse=True,
+    )
+    first_round_matchups: List[str] = []
+    for i in range(0, len(r64_rows) - 1, 2):
+        a, b = r64_rows[i], r64_rows[i + 1]
+        first_round_matchups.append(_canonical_backtest_team_id(str(a["team"])))
+        first_round_matchups.append(_canonical_backtest_team_id(str(b["team"])))
+
+    if len(first_round_matchups) < 64:
+        # Fall back to region-based builder (won't work well without regions)
+        first_round_matchups = _build_first_round_matchups(seeds, regions)
+
+    # Champion = team with round == 1
+    champion_id = ""
+    for r in year_rows:
+        if r.get("round") == 1:
+            champion_id = _canonical_backtest_team_id(str(r["team"]))
+            break
+
+    history = TournamentHistory(
+        year=year,
+        games=games,
+        seeds=seeds,
+        regions=regions,
+        first_round_matchups=first_round_matchups,
+        champion_id=champion_id,
+    )
+
+    logger.info(
+        "Loaded tournament history from matchups JSON for %d: %d games, %d teams, champion=%s",
+        year,
+        len(games),
+        len(seeds),
+        champion_id,
+    )
+    return history
+
+
 def load_tournament_history_from_json(
     history_dir: str,
     year: int,
@@ -1286,7 +1430,14 @@ class UnifiedBacktester:
         if self.kaggle_dir:
             history = load_tournament_history_from_kaggle(self.kaggle_dir, year)
 
-        # Fall back to JSON
+        # Fall back to nishaanamin tournament_matchups.json
+        if (history is None or not history.games) and self.kaggle_dir:
+            history = load_tournament_history_from_matchups_json(
+                self.kaggle_dir,
+                year,
+            )
+
+        # Fall back to pipeline JSON
         if history is None or not history.games:
             json_history = load_tournament_history_from_json(
                 self.historical_results_dir,
