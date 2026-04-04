@@ -91,14 +91,17 @@ def load_tournament_results(year):
     return data.get("games", data) if isinstance(data, dict) else data
 
 
+_VALID_PRETOURNAMENT_TYPES = {"pre_tournament_computed", "pre_tournament"}
+
+
 def _validate_pretournament(data, filepath):
     """Raise if data file lacks pre-tournament provenance."""
     dt = data.get("data_type")
-    if dt != "pre_tournament_computed":
+    if dt not in _VALID_PRETOURNAMENT_TYPES:
         raise ValueError(
-            f"{filepath}: data_type={dt!r}, expected 'pre_tournament_computed'. "
+            f"{filepath}: data_type={dt!r}, expected one of {_VALID_PRETOURNAMENT_TYPES}. "
             f"File may contain post-tournament data (look-ahead bias). "
-            f"Re-run compute_pretournament_*.py to regenerate."
+            f"Re-run compute_pretournament_*.py or rescrape_pretournament_torvik.py to regenerate."
         )
 
 
