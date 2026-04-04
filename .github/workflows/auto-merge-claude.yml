@@ -16,5 +16,6 @@ jobs:
         run: |
           PR_URL=$(gh pr create --fill --base main 2>/dev/null || gh pr view --json url -q .url)
           gh pr merge --squash --auto "$PR_URL"
+          gh api repos/${{ github.repository }}/pulls/$(gh pr view "$PR_URL" --json number -q .number)/update-branch -f update_method=merge || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
