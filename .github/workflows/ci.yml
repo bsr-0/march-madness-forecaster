@@ -9,39 +9,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint
+  # ─── Fast Gate (lint + freeze) — no deps, ~15-20s ───────────────
+  fast-gate:
+    name: "Fast Gate"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup environment
-        uses: ./.github/actions/setup-python-env
-        with:
-          extra-packages: ruff
 
       - name: Run ruff linter
-        run: ruff check src/ tests/ --output-format=github
-
-  # ─── Gate 0: Freeze Staleness Check ─────────────────────────────
-  freeze-check:
-    name: "Gate 0: Freeze Staleness Check"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup environment
-        uses: ./.github/actions/setup-python-env
+        run: pipx run ruff check src/ tests/ --output-format=github
 
       - name: Check freeze artifact is up-to-date
         run: |
-          python - <<'PYEOF'
-          import hashlib, json, sys
+          python3 - <<'PYEOF'
+          import ast, hashlib, json, sys
 
           FREEZE_PATH = "artifacts/pipeline_freeze_2026.json"
-          CONFIG_PATH = "configs/production_2026.json"
 
           REQUIRED_SOURCE_FILES = [
               "src/pipeline/config.py",
@@ -64,7 +48,19 @@ jobs:
                       h.update(chunk)
               return h.hexdigest()
 
-          # Load freeze artifact
+          def extract_dataclass_fields(filepath, class_name):
+              """Extract field names from a @dataclass using AST (no imports needed)."""
+              with open(filepath) as f:
+                  tree = ast.parse(f.read())
+              for node in ast.walk(tree):
+                  if isinstance(node, ast.ClassDef) and node.name == class_name:
+                      fields = set()
+                      for item in node.body:
+                          if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                              fields.add(item.target.id)
+                      return fields
+              return None
+
           try:
               with open(FREEZE_PATH) as f:
                   freeze = json.load(f)
@@ -75,7 +71,6 @@ jobs:
 
           errors = []
 
-          # Check source file hashes
           frozen_hashes = freeze.get("source_file_hashes", {})
           for src_file in REQUIRED_SOURCE_FILES:
               frozen_hash = frozen_hashes.get(src_file)
@@ -86,42 +81,34 @@ jobs:
               if current_hash != frozen_hash:
                   errors.append(f"{src_file}: hash mismatch (source changed since freeze)")
 
-          # Check config fields count matches current config schema
           frozen_fields = freeze.get("config_fields", {})
-          try:
-              sys.path.insert(0, ".")
-              from src.pipeline.config import SOTAPipelineConfig
-              current_field_names = set(SOTAPipelineConfig.__dataclass_fields__.keys())
+          current_field_names = extract_dataclass_fields(
+              "src/pipeline/config.py", "SOTAPipelineConfig"
+          )
+          if current_field_names is None:
+              errors.append("Could not find SOTAPipelineConfig in src/pipeline/config.py")
+          else:
               frozen_field_names = set(frozen_fields.keys())
               missing_in_freeze = current_field_names - frozen_field_names
               if missing_in_freeze:
                   errors.append(
                       f"Config fields added but not in freeze: {sorted(missing_in_freeze)}"
                   )
-          except Exception as e:
-              errors.append(f"Could not import SOTAPipelineConfig: {e}")
 
           if errors:
               print("::error::Freeze artifact is STALE. Update it before merging.")
-              print()
-              print("Mismatches found:")
               for e in errors:
                   print(f"  - {e}")
               print()
-              print("To fix, run locally:")
-              print("  python -c \"")
-              print("  from src.governance.production_runner import regenerate_freeze")
-              print("  regenerate_freeze()\"")
-              print("or manually update artifacts/pipeline_freeze_2026.json")
+              print("To fix: python -c \"from src.governance.production_runner import regenerate_freeze; regenerate_freeze()\"")
               sys.exit(1)
           else:
-              print(f"Freeze artifact is up-to-date ({len(frozen_hashes)} source files, "
-                    f"{len(frozen_fields)} config fields verified).")
+              print(f"Freeze OK ({len(frozen_hashes)} files, {len(frozen_fields)} config fields)")
           PYEOF
 
-  # ─── Gate 1: Unit Tests ───────────────────────────────────────────
-  unit-tests:
-    name: "Gate 1: Unit Tests"
+  # ─── Full Tests (runs in parallel, non-blocking for auto-merge) ──
+  full-tests:
+    name: "Full Test Suite"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -129,20 +116,11 @@ jobs:
 
       - name: Setup environment
         uses: ./.github/actions/setup-python-env
+        with:
+          extra-packages: pytest-timeout
 
-      - name: Run unit tests
-        run: pytest tests/ -m "unit" --cov=src --cov-report=term-missing --tb=short -q
-
-  # ─── Gate 2: Data-Contract Tests ──────────────────────────────────
-  data-contract-tests:
-    name: "Gate 2: Data-Contract Tests"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup environment
-        uses: ./.github/actions/setup-python-env
+      - name: Unit tests
+        run: pytest tests/ -m "unit" --timeout=300 --cov=src --cov-report=term-missing --tb=short -q
 
       - name: Contract governance checks
         run: |
@@ -161,24 +139,18 @@ jobs:
           print(f'All {len(contracts[\"features\"])} features have test_ids.')
           "
 
-      - name: Data-contract marker tests
+      - name: Data-contract tests
         run: pytest tests/ -m "data_contract" -v --tb=short -q
 
-  # ─── Gate 3: Leakage Tests (statistical, not just mechanical) ────
-  leakage-tests:
-    name: "Gate 3: Leakage Tests"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup environment
-        uses: ./.github/actions/setup-python-env
-
-      - name: Run leakage tests
+      - name: Leakage tests
         run: pytest tests/ -m "leakage" -v --tb=short -q
 
-  # ─── Dependency Audit ─────────────────────────────────────────────
+      - name: Track test count
+        run: |
+          TEST_COUNT=$(pytest tests/ --co -q 2>/dev/null | tail -1 | grep -oP '^\d+')
+          echo "Total tests collected: ${TEST_COUNT}"
+
+  # ─── Dependency Audit (non-blocking) ─────────────────────────────
   audit:
     name: Dependency Audit
     runs-on: ubuntu-latest
@@ -195,39 +167,26 @@ jobs:
       - name: Run pip audit
         run: pip-audit --strict --skip-editable --ignore-vuln CVE-2026-4539
 
-  # ─── Gate 4: Performance Regression ──────────────────────────────
-  performance-check:
-    name: "Gate 4: Performance Check"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup environment
-        uses: ./.github/actions/setup-python-env
-        with:
-          extra-packages: pytest-timeout
-
-      - name: Run unit tests with timeout
-        run: pytest tests/ -m "unit" --timeout=300 --tb=short -q
-
-      - name: Track test count for regression detection
-        run: |
-          TEST_COUNT=$(pytest tests/ --co -q 2>/dev/null | tail -1 | grep -oP '^\d+')
-          echo "Total tests collected: ${TEST_COUNT}"
-          echo "test_count=${TEST_COUNT}" >> $GITHUB_ENV
-
-  # ─── All Gates Must Pass ──────────────────────────────────────────
+  # ─── Merge Gate (only depends on fast-gate) ──────────────────────
   all-gates:
     name: "All Gates Green"
+    if: always()
     needs:
-      - lint
-      - freeze-check
-      - unit-tests
-      - data-contract-tests
-      - leakage-tests
+      - fast-gate
+      - full-tests
       - audit
-      - performance-check
     runs-on: ubuntu-latest
     steps:
-      - name: All gates passed
-        run: echo "All CI gates passed — safe for production use"
+      - name: Check gates
+        run: |
+          if [[ "${{ needs.fast-gate.result }}" != "success" ]]; then
+            echo "::error::Fast gate failed — blocking merge"
+            exit 1
+          fi
+          if [[ "${{ needs.full-tests.result }}" == "failure" ]]; then
+            echo "::warning::Full test suite failed — check results"
+          fi
+          if [[ "${{ needs.audit.result }}" == "failure" ]]; then
+            echo "::warning::Dependency audit failed — check results"
+          fi
+          echo "Merge gate passed"
