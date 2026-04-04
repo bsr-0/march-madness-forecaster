@@ -438,7 +438,24 @@ def load_tournament_history_from_matchups_json(
         )
         return None
 
-    first_round_matchups = _build_first_round_matchups(seeds, regions)
+    # Build first_round_matchups directly from R64 pairings in bracket order.
+    # The JSON has no region column, so _build_first_round_matchups would
+    # produce placeholders. Instead, extract from the R64 game pairs which
+    # are already in standard bracket order (by_year_no descending).
+    r64_rows = sorted(
+        [r for r in year_rows if r.get("current_round") == 64],
+        key=lambda x: x.get("by_year_no", 0),
+        reverse=True,
+    )
+    first_round_matchups: List[str] = []
+    for i in range(0, len(r64_rows) - 1, 2):
+        a, b = r64_rows[i], r64_rows[i + 1]
+        first_round_matchups.append(_canonical_backtest_team_id(str(a["team"])))
+        first_round_matchups.append(_canonical_backtest_team_id(str(b["team"])))
+
+    if len(first_round_matchups) < 64:
+        # Fall back to region-based builder (won't work well without regions)
+        first_round_matchups = _build_first_round_matchups(seeds, regions)
 
     # Champion = team with round == 1
     champion_id = ""
