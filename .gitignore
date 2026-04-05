@@ -57,3 +57,4 @@ data/raw/backups/
 # Coverage
 htmlcov/
 .coverage
+data/kaggle/MMasseyOrdinals.csv
