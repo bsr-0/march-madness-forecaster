@@ -47,6 +47,15 @@ pytest           # Run tests
 ruff check src/  # Lint check
 ```
 
+## Workflow Reference
+
+**`WORKFLOW.md`** contains the streamlined 6-phase build diagram for this project:
+Data Foundation → Feature Engineering → Model Selection → Calibration → Simulation → Optimization.
+
+- **Read it first** when onboarding to a new session — it's the fastest way to understand what this project does and why each piece exists.
+- **Keep it updated** when making structural changes (new pipeline stages, model changes, added/removed features, new data sources). If your work changes the pipeline architecture, update `WORKFLOW.md` to reflect the current state before marking the task complete.
+- **Use it for planning** — when the user asks for new features or refactors, reference the workflow phases to identify where changes fit and what downstream stages are affected.
+
 ---
 
 # CLAUDE.md - Production-Grade Agent Directives
