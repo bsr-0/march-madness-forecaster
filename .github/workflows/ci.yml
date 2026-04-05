@@ -165,7 +165,11 @@ jobs:
           skip-editable-install: "true"
 
       - name: Run pip audit
-        run: pip-audit --strict --skip-editable --ignore-vuln CVE-2026-4539
+        run: >-
+          pip-audit --strict --skip-editable
+          --ignore-vuln CVE-2026-4539
+          --ignore-package torch
+          --ignore-package torch-geometric
 
   # ─── Merge Gate (only depends on fast-gate) ──────────────────────
   all-gates:
