@@ -768,7 +768,7 @@ class TestProductionValidator:
             enable_gnn=False,
             enable_transformer=False,
             enable_embedding_projections=False,
-            enable_stacking=True,
+            enable_stacking=False,
             enable_feature_selection=True,
             enable_brier_sharpening=False,
             enable_seed_overrides=False,

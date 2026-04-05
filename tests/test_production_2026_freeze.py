@@ -344,13 +344,14 @@ def test_config_forbidden_flags_disabled():
         # Protocol v2: sharpening and seed overrides OFF for Kaggle
         "enable_brier_sharpening",
         "enable_seed_overrides",
+        # Stacking disabled after ML-adds-no-value pivot (BSS=0 for all ensembles)
+        "enable_stacking",
     ]
     for flag in forbidden_flags:
         assert payload.get(flag) is False, f"{flag} must be false, got {payload.get(flag)}"
     # These are now enabled in production
     enabled_flags = [
         "enable_round_weighted_calibration",
-        "enable_stacking",
         "enable_bayesian_bt",
         "enable_feature_selection",
         "enable_goto_conversion",
