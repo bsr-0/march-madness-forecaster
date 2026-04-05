@@ -113,10 +113,7 @@ class BaselineResults:
         ]
         for name, r in self.models.items():
             status = "OK" if r.passed else "FAIL"
-            lines.append(
-                f"  {name}: Brier={r.brier_score:.4f}, "
-                f"EV={r.bracket_ev:.2f}, [{status}]"
-            )
+            lines.append(f"  {name}: Brier={r.brier_score:.4f}, EV={r.bracket_ev:.2f}, [{status}]")
         if self.errors:
             lines.append(f"  Errors: {self.errors}")
         return "\n".join(lines)
@@ -135,9 +132,7 @@ def _safe_log_loss(predictions: np.ndarray, outcomes: np.ndarray) -> float:
     """Compute log-loss with clipping to avoid log(0)."""
     eps = 1e-7
     p = np.clip(predictions, eps, 1 - eps)
-    return -float(np.mean(
-        outcomes * np.log(p) + (1 - outcomes) * np.log(1 - p)
-    ))
+    return -float(np.mean(outcomes * np.log(p) + (1 - outcomes) * np.log(1 - p)))
 
 
 def compute_bracket_ev(
@@ -233,7 +228,7 @@ class _LogisticBaseline:
         self.scaler = StandardScaler()
         X_scaled = self.scaler.fit_transform(np.nan_to_num(X, nan=0.0))
         self.model = LogisticRegression(
-            penalty="l2",
+            l1_ratio=0,
             C=1.0,
             max_iter=2000,
             solver="lbfgs",
@@ -418,9 +413,7 @@ class BaselineEvaluator:
 
         if not results.passed and self.strict:
             raise IntegrityError(
-                f"Phase 5 baseline gate failed. "
-                f"Fix Phase 4 or data preprocessing. "
-                f"Errors: {results.errors}"
+                f"Phase 5 baseline gate failed. Fix Phase 4 or data preprocessing. Errors: {results.errors}"
             )
 
         return results
@@ -451,9 +444,7 @@ class BaselineEvaluator:
             logloss = _safe_log_loss(preds, val_y)
             accuracy = float(np.mean((preds > 0.5) == val_y))
 
-            bracket_ev = compute_bracket_ev(
-                preds, round_labels, self.scoring_weights
-            )
+            bracket_ev = compute_bracket_ev(preds, round_labels, self.scoring_weights)
 
             passed_brier = brier <= self.brier_threshold
             passed_ev = (bracket_ev - results.coin_flip_ev) >= self.min_bracket_ev_above_coinflip
@@ -471,7 +462,11 @@ class BaselineEvaluator:
 
             logger.info(
                 "Baseline %s: Brier=%.4f, LogLoss=%.4f, Acc=%.3f, EV=%.2f [%s]",
-                name, brier, logloss, accuracy, bracket_ev,
+                name,
+                brier,
+                logloss,
+                accuracy,
+                bracket_ev,
                 "PASS" if result.passed else "FAIL",
             )
             return result
