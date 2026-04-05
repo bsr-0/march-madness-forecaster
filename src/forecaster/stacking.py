@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 try:
     import lightgbm as lgb
+
     LIGHTGBM_AVAILABLE = True
 except ImportError:
     LIGHTGBM_AVAILABLE = False
@@ -60,16 +61,17 @@ def _build_meta_features(
 @dataclass
 class StackingResult:
     """Results from stacking ensemble training."""
-    oof_preds: np.ndarray           # Final OOF predictions from meta model
-    oof_lr: np.ndarray              # OOF predictions from logistic regression
-    oof_gbm: np.ndarray             # OOF predictions from GBM
-    meta_model: LogisticRegression   # Fitted meta learner (on all data, for inference)
-    lr_models: List                  # Per-fold LR models
-    gbm_models: List                 # Per-fold GBM models
-    scaler: StandardScaler           # Feature scaler for LR
-    meta_weights: np.ndarray         # Meta model coefficients
-    brier_score: float               # OOF Brier score
-    log_loss: float                  # OOF log loss
+
+    oof_preds: np.ndarray  # Final OOF predictions from meta model
+    oof_lr: np.ndarray  # OOF predictions from logistic regression
+    oof_gbm: np.ndarray  # OOF predictions from GBM
+    meta_model: LogisticRegression  # Fitted meta learner (on all data, for inference)
+    lr_models: List  # Per-fold LR models
+    gbm_models: List  # Per-fold GBM models
+    scaler: StandardScaler  # Feature scaler for LR
+    meta_weights: np.ndarray  # Meta model coefficients
+    brier_score: float  # OOF Brier score
+    log_loss: float  # OOF log loss
 
 
 class StackingEnsemble:
@@ -98,7 +100,7 @@ class StackingEnsemble:
         self.random_seed = random_seed
         self.lr_C = lr_C
         self.gbm_max_depth = min(gbm_max_depth, 6)  # Invariant: depth <= 6
-        self.gbm_lr = min(gbm_lr, 0.1)              # Invariant: lr <= 0.1
+        self.gbm_lr = min(gbm_lr, 0.1)  # Invariant: lr <= 0.1
         self.gbm_n_estimators = gbm_n_estimators
         self.gbm_min_child_samples = gbm_min_child_samples
         self.meta_C = meta_C
@@ -171,8 +173,7 @@ class StackingEnsemble:
                 oof_gbm[val_mask] = 0.5
                 continue
 
-            logger.info("LOYO fold: hold_year=%d (train=%d, val=%d)",
-                        hold_year, n_train, n_val)
+            logger.info("LOYO fold: hold_year=%d (train=%d, val=%d)", hold_year, n_train, n_val)
 
             X_train_s, X_val_s = X_scaled[train_mask], X_scaled[val_mask]
             X_train_r, X_val_r = X[train_mask], X[val_mask]
@@ -181,7 +182,7 @@ class StackingEnsemble:
             # Base model 1: Logistic Regression with L2
             lr = LogisticRegression(
                 C=self.lr_C,
-                penalty="l2",
+                l1_ratio=0,
                 solver="lbfgs",
                 max_iter=1000,
                 random_state=self.random_seed,
@@ -204,7 +205,8 @@ class StackingEnsemble:
                     n_jobs=1,
                 )
                 gbm.fit(
-                    X_train_r, y_train,
+                    X_train_r,
+                    y_train,
                     eval_set=[(X_val_r, y_val)],
                     callbacks=[lgb.early_stopping(50, verbose=False)],
                 )
@@ -212,8 +214,11 @@ class StackingEnsemble:
                 self.gbm_models.append(gbm)
             else:
                 lr2 = LogisticRegression(
-                    C=0.1, penalty="l2", solver="lbfgs",
-                    max_iter=1000, random_state=self.random_seed + 1,
+                    C=0.1,
+                    l1_ratio=0,
+                    solver="lbfgs",
+                    max_iter=1000,
+                    random_state=self.random_seed + 1,
                 )
                 lr2.fit(X_train_s, y_train)
                 oof_gbm[val_mask] = lr2.predict_proba(X_val_s)[:, 1]
@@ -244,11 +249,13 @@ class StackingEnsemble:
                     continue
 
                 meta_train = _build_meta_features(
-                    oof_lr[train_mask], oof_gbm[train_mask],
+                    oof_lr[train_mask],
+                    oof_gbm[train_mask],
                     market_probs[train_mask] if market_probs is not None else None,
                 )
                 meta_val = _build_meta_features(
-                    oof_lr[val_mask], oof_gbm[val_mask],
+                    oof_lr[val_mask],
+                    oof_gbm[val_mask],
                     market_probs[val_mask] if market_probs is not None else None,
                 )
 
@@ -257,8 +264,11 @@ class StackingEnsemble:
                     continue
 
                 meta_lr = LogisticRegression(
-                    C=candidate_C, penalty="l2", solver="lbfgs",
-                    max_iter=1000, random_state=self.random_seed,
+                    C=candidate_C,
+                    l1_ratio=0,
+                    solver="lbfgs",
+                    max_iter=1000,
+                    random_state=self.random_seed,
                 )
                 meta_lr.fit(meta_train, y[train_mask])
                 oof_meta_candidate[val_mask] = meta_lr.predict_proba(meta_val)[:, 1]
@@ -279,13 +289,17 @@ class StackingEnsemble:
         # NOT for metric computation).
         valid_mask = ~np.isnan(oof_lr) & ~np.isnan(oof_gbm)
         meta_features_all = _build_meta_features(
-            oof_lr[valid_mask], oof_gbm[valid_mask],
+            oof_lr[valid_mask],
+            oof_gbm[valid_mask],
             market_probs[valid_mask] if market_probs is not None else None,
         )
 
         self.meta_model = LogisticRegression(
-            C=best_meta_C, penalty="l2", solver="lbfgs",
-            max_iter=1000, random_state=self.random_seed,
+            C=best_meta_C,
+            l1_ratio=0,
+            solver="lbfgs",
+            max_iter=1000,
+            random_state=self.random_seed,
         )
         self.meta_model.fit(meta_features_all, y[valid_mask])
 
@@ -297,12 +311,9 @@ class StackingEnsemble:
         brier = float(np.mean((final_oof - y) ** 2))
         eps = 1e-15
         clipped = np.clip(final_oof, eps, 1 - eps)
-        log_loss_val = float(-np.mean(
-            y * np.log(clipped) + (1 - y) * np.log(1 - clipped)
-        ))
+        log_loss_val = float(-np.mean(y * np.log(clipped) + (1 - y) * np.log(1 - clipped)))
 
-        meta_weights = (self.meta_model.coef_[0]
-                        if hasattr(self.meta_model, 'coef_') else np.array([]))
+        meta_weights = self.meta_model.coef_[0] if hasattr(self.meta_model, "coef_") else np.array([])
 
         result = StackingResult(
             oof_preds=final_oof,
@@ -336,7 +347,8 @@ class StackingEnsemble:
 
         X_scaled = self.scaler.fit_transform(X)
         skf = StratifiedKFold(
-            n_splits=self.n_folds, shuffle=True,
+            n_splits=self.n_folds,
+            shuffle=True,
             random_state=self.random_seed,
         )
 
@@ -349,8 +361,11 @@ class StackingEnsemble:
             y_train = y[train_idx]
 
             lr = LogisticRegression(
-                C=self.lr_C, penalty="l2", solver="lbfgs",
-                max_iter=1000, random_state=self.random_seed,
+                C=self.lr_C,
+                l1_ratio=0,
+                solver="lbfgs",
+                max_iter=1000,
+                random_state=self.random_seed,
             )
             lr.fit(X_train, y_train)
             oof_lr[val_idx] = lr.predict_proba(X_val)[:, 1]
@@ -362,11 +377,15 @@ class StackingEnsemble:
                     max_depth=self.gbm_max_depth,
                     learning_rate=self.gbm_lr,
                     min_child_samples=self.gbm_min_child_samples,
-                    subsample=0.8, colsample_bytree=0.8,
-                    random_state=self.random_seed, verbose=-1, n_jobs=1,
+                    subsample=0.8,
+                    colsample_bytree=0.8,
+                    random_state=self.random_seed,
+                    verbose=-1,
+                    n_jobs=1,
                 )
                 gbm.fit(
-                    X_raw_train, y_train,
+                    X_raw_train,
+                    y_train,
                     eval_set=[(X_raw_val, y[val_idx])],
                     callbacks=[lgb.early_stopping(50, verbose=False)],
                 )
@@ -374,20 +393,28 @@ class StackingEnsemble:
                 self.gbm_models.append(gbm)
             else:
                 lr2 = LogisticRegression(
-                    C=0.1, penalty="l2", solver="lbfgs",
-                    max_iter=1000, random_state=self.random_seed + 1,
+                    C=0.1,
+                    l1_ratio=0,
+                    solver="lbfgs",
+                    max_iter=1000,
+                    random_state=self.random_seed + 1,
                 )
                 lr2.fit(X_train, y_train)
                 oof_gbm[val_idx] = lr2.predict_proba(X_val)[:, 1]
                 self.gbm_models.append(lr2)
 
         meta_features = _build_meta_features(
-            oof_lr, oof_gbm, market_probs,
+            oof_lr,
+            oof_gbm,
+            market_probs,
         )
 
         self.meta_model = LogisticRegression(
-            C=self.meta_C, penalty="l2", solver="lbfgs",
-            max_iter=1000, random_state=self.random_seed,
+            C=self.meta_C,
+            l1_ratio=0,
+            solver="lbfgs",
+            max_iter=1000,
+            random_state=self.random_seed,
         )
         self.meta_model.fit(meta_features, y)
         oof_preds = self.meta_model.predict_proba(meta_features)[:, 1]
@@ -397,19 +424,21 @@ class StackingEnsemble:
         brier = float(np.mean((oof_preds - y) ** 2))
         eps = 1e-15
         clipped = np.clip(oof_preds, eps, 1 - eps)
-        log_loss_val = float(-np.mean(
-            y * np.log(clipped) + (1 - y) * np.log(1 - clipped)
-        ))
+        log_loss_val = float(-np.mean(y * np.log(clipped) + (1 - y) * np.log(1 - clipped)))
 
-        meta_weights = (self.meta_model.coef_[0]
-                        if hasattr(self.meta_model, 'coef_') else np.array([]))
+        meta_weights = self.meta_model.coef_[0] if hasattr(self.meta_model, "coef_") else np.array([])
 
         return StackingResult(
-            oof_preds=oof_preds, oof_lr=oof_lr, oof_gbm=oof_gbm,
+            oof_preds=oof_preds,
+            oof_lr=oof_lr,
+            oof_gbm=oof_gbm,
             meta_model=self.meta_model,
-            lr_models=self.lr_models, gbm_models=self.gbm_models,
-            scaler=self.scaler, meta_weights=meta_weights,
-            brier_score=brier, log_loss=log_loss_val,
+            lr_models=self.lr_models,
+            gbm_models=self.gbm_models,
+            scaler=self.scaler,
+            meta_weights=meta_weights,
+            brier_score=brier,
+            log_loss=log_loss_val,
         )
 
     def predict(
@@ -427,18 +456,12 @@ class StackingEnsemble:
 
         X_scaled = self.scaler.transform(X)
 
-        lr_preds = np.mean([
-            m.predict_proba(X_scaled)[:, 1] for m in self.lr_models
-        ], axis=0)
+        lr_preds = np.mean([m.predict_proba(X_scaled)[:, 1] for m in self.lr_models], axis=0)
 
         if LIGHTGBM_AVAILABLE and self.gbm_models:
-            gbm_preds = np.mean([
-                m.predict_proba(X)[:, 1] for m in self.gbm_models
-            ], axis=0)
+            gbm_preds = np.mean([m.predict_proba(X)[:, 1] for m in self.gbm_models], axis=0)
         else:
-            gbm_preds = np.mean([
-                m.predict_proba(X_scaled)[:, 1] for m in self.gbm_models
-            ], axis=0)
+            gbm_preds = np.mean([m.predict_proba(X_scaled)[:, 1] for m in self.gbm_models], axis=0)
 
         meta_features = _build_meta_features(lr_preds, gbm_preds, market_prob)
 
@@ -452,9 +475,7 @@ class StackingEnsemble:
         importances["lr"] = lr_coefs
 
         if LIGHTGBM_AVAILABLE and self.gbm_models:
-            gbm_imps = np.mean([
-                m.feature_importances_ for m in self.gbm_models
-            ], axis=0)
+            gbm_imps = np.mean([m.feature_importances_ for m in self.gbm_models], axis=0)
             importances["gbm"] = gbm_imps
 
         return importances

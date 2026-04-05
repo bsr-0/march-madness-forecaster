@@ -19,6 +19,23 @@ ignore = [
 
 [tool.pytest.ini_options]
 addopts = "-x --tb=short"
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+    "data_integrity: marks Phase 3 data integrity tests",
+    "evidence_structural: leakage evidence from source code inspection",
+    "evidence_synthetic: leakage evidence from injected canary detection",
+    "evidence_historical: leakage evidence from real historical data verification",
+    "unit: fast, isolated unit tests (no I/O, no data dependencies)",
+    "data_contract: feature contract and schema validation tests",
+    "leakage: temporal leakage detection tests (statistical, not just mechanical)",
+    "backtest_regression: backtest and LOYO regression tests",
+    "freeze: pipeline freeze and reproducibility tests",
+    "production: production path governance and validation tests",
+    "calibration: calibration method and benchmark tests",
+    "live_protocol: 2026 live protocol enforcement tests",
+    "slow: long-running tests",
+    "timeout: tests with explicit timeout",
+]
 
 [tool.coverage.run]
 source = ["src"]
