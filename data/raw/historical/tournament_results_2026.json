@@ -768,6 +768,30 @@
       "team2_score": 73,
       "team1_won": false,
       "region": "East"
+    },
+    {
+      "year": 2026,
+      "round_name": "F4",
+      "team1_id": "arizona",
+      "team2_id": "michigan_wolverines",
+      "team1_seed": 1,
+      "team2_seed": 1,
+      "team1_score": 73,
+      "team2_score": 91,
+      "team1_won": false,
+      "region": ""
+    },
+    {
+      "year": 2026,
+      "round_name": "F4",
+      "team1_id": "uconn_huskies",
+      "team2_id": "illinois_fighting_illini",
+      "team1_seed": 2,
+      "team2_seed": 3,
+      "team1_score": 71,
+      "team2_score": 62,
+      "team1_won": true,
+      "region": ""
     }
   ]
 }
