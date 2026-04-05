@@ -44,7 +44,7 @@ REQUIRED_EXPLICIT_PATH_FIELDS = [
 REQUIRED_SOURCE_HASH_FILES = [
     "src/pipeline/config.py",
     "src/pipeline/sota.py",
-    "src/pipeline/stages/baseline_training.py",
+    "src/pipeline/stages/baseline_training/__init__.py",
     "src/pipeline/stages/calibration.py",
     "src/pipeline/stages/data_loader.py",
     "src/pipeline/stages/inference.py",
@@ -80,9 +80,7 @@ def _verify_dependency_versions(repo_root: Path) -> str:
 
     lockfile = repo_root / PRODUCTION_LOCKFILE
     if not lockfile.exists():
-        raise ProductionValidationError(
-            f"Production dependency lockfile not found: {lockfile}"
-        )
+        raise ProductionValidationError(f"Production dependency lockfile not found: {lockfile}")
 
     lockfile_hash = _sha256_file(lockfile)
     mismatches: List[str] = []
@@ -102,14 +100,10 @@ def _verify_dependency_versions(repo_root: Path) -> str:
             mismatches.append(f"{pkg}: not installed (expected {expected_version})")
             continue
         if installed != expected_version:
-            mismatches.append(
-                f"{pkg}: installed={installed} (expected {expected_version})"
-            )
+            mismatches.append(f"{pkg}: installed={installed} (expected {expected_version})")
 
     if mismatches:
-        raise ProductionValidationError(
-            f"Production dependency version mismatch: {mismatches}"
-        )
+        raise ProductionValidationError(f"Production dependency version mismatch: {mismatches}")
 
     return lockfile_hash
 
@@ -133,16 +127,14 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-
-
 def _sha256_path(path: Path) -> str:
     if path.is_file():
         return _sha256_file(path)
     if path.is_dir():
         parts = []
-        for child in sorted([c for c in path.rglob('*') if c.is_file()]):
+        for child in sorted([c for c in path.rglob("*") if c.is_file()]):
             # Skip __pycache__ and .pyc files — they vary by Python version
-            if '__pycache__' in child.parts or child.suffix == '.pyc':
+            if "__pycache__" in child.parts or child.suffix == ".pyc":
                 continue
             parts.append(f"{child.relative_to(path)}={_sha256_file(child)}")
         return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()
@@ -167,6 +159,7 @@ def _write_feature_manifest_artifact(
         "hash": _sha256_file(manifest_path),
     }
 
+
 def _load_raw_config(config_path: Path) -> Dict:
     with open(config_path, "r", encoding="utf-8") as f:
         payload = json.load(f)
@@ -184,20 +177,15 @@ def _validate_freeze_artifact(
     """Validate freeze artifact existence AND consistency with current config/source."""
     if not freeze_path.exists():
         raise ProductionValidationError(
-            f"Freeze artifact not found: {freeze_path}. "
-            "Run 'freeze-pipeline' first to generate it."
+            f"Freeze artifact not found: {freeze_path}. Run 'freeze-pipeline' first to generate it."
         )
 
     with open(freeze_path, "r", encoding="utf-8") as f:
         freeze = json.load(f)
 
-    missing_fields = [
-        field for field in FREEZE_ARTIFACT_REQUIRED_FIELDS if field not in freeze
-    ]
+    missing_fields = [field for field in FREEZE_ARTIFACT_REQUIRED_FIELDS if field not in freeze]
     if missing_fields:
-        raise ProductionValidationError(
-            f"Freeze artifact missing required fields: {missing_fields}"
-        )
+        raise ProductionValidationError(f"Freeze artifact missing required fields: {missing_fields}")
 
     current_config_hash = _sha256_file(config_file)
     if freeze.get("config_file_hash") != current_config_hash:
@@ -226,13 +214,9 @@ def _validate_freeze_artifact(
         )
 
     freeze_source_hashes = freeze.get("source_file_hashes", {})
-    missing_source = [
-        f for f in REQUIRED_SOURCE_HASH_FILES if f not in freeze_source_hashes
-    ]
+    missing_source = [f for f in REQUIRED_SOURCE_HASH_FILES if f not in freeze_source_hashes]
     if missing_source:
-        raise ProductionValidationError(
-            f"Freeze artifact missing source file hashes for: {missing_source}"
-        )
+        raise ProductionValidationError(f"Freeze artifact missing source file hashes for: {missing_source}")
 
     # Verify freeze data hashes match current data on disk
     freeze_data_hashes = freeze.get("data_file_hashes", {})
@@ -250,13 +234,9 @@ def _validate_freeze_artifact(
             continue
         current_hash = _sha256_path(data_path)
         if current_hash != frozen_hash:
-            stale_data.append(
-                f"{data_key} (freeze={frozen_hash[:12]}… vs disk={current_hash[:12]}…)"
-            )
+            stale_data.append(f"{data_key} (freeze={frozen_hash[:12]}… vs disk={current_hash[:12]}…)")
     if stale_data:
-        raise ProductionValidationError(
-            f"Freeze artifact data file hashes do not match current disk: {stale_data}"
-        )
+        raise ProductionValidationError(f"Freeze artifact data file hashes do not match current disk: {stale_data}")
 
     # Verify freeze source hashes match current files on disk (critical files)
     stale_sources: List[str] = []
@@ -268,9 +248,7 @@ def _validate_freeze_artifact(
         current_hash = _sha256_file(src_path)
         frozen_hash = freeze_source_hashes.get(src_file)
         if current_hash != frozen_hash:
-            stale_sources.append(
-                f"{src_file} (freeze={frozen_hash!r} vs disk={current_hash!r})"
-            )
+            stale_sources.append(f"{src_file} (freeze={frozen_hash!r} vs disk={current_hash!r})")
     if stale_sources:
         raise ProductionValidationError(
             f"Freeze artifact source file hashes do not match current disk: {stale_sources}"
@@ -327,9 +305,7 @@ def _require_explicit_paths(raw_config: Dict, base_dir: Path) -> Dict[str, str]:
         resolved[field] = str(p)
 
     if missing:
-        raise ProductionValidationError(
-            f"Production config must explicitly set paths for: {missing}"
-        )
+        raise ProductionValidationError(f"Production config must explicitly set paths for: {missing}")
     return resolved
 
 
@@ -447,8 +423,8 @@ def run_production_2026(
     config_snapshot = _snapshot_config_hash(config)
 
     # --- Freeze artifact pre-run gate (consistency validation) ---
-    freeze_art = Path(freeze_artifact_path) if freeze_artifact_path else (
-        repo_root / "artifacts" / "freeze_manifest_2026.json"
+    freeze_art = (
+        Path(freeze_artifact_path) if freeze_artifact_path else (repo_root / "artifacts" / "freeze_manifest_2026.json")
     )
     if not freeze_art.is_absolute():
         freeze_art = repo_root / freeze_art
@@ -475,9 +451,7 @@ def run_production_2026(
 
     def _exp(*args, **kwargs):
         experimental_calls["n"] += 1
-        raise ProductionValidationError(
-            "Experimental probability path was invoked during production run"
-        )
+        raise ProductionValidationError("Experimental probability path was invoked during production run")
 
     pipeline.predict_probability_production = _prod
     pipeline.predict_probability_experimental = _exp
@@ -494,8 +468,7 @@ def run_production_2026(
     # Post-run config integrity check — detect mutation during pipeline execution
     if _snapshot_config_hash(config) != config_snapshot:
         raise ProductionValidationError(
-            "Config was mutated during pipeline execution. "
-            "This is a production integrity violation."
+            "Config was mutated during pipeline execution. This is a production integrity violation."
         )
 
     with open(output_report_path, "w", encoding="utf-8") as f:
@@ -518,8 +491,7 @@ def run_production_2026(
         "training_samples_by_year": _count_samples_by_year(games_dir, EXPECTED_TRAINING_YEARS, False),
         "calibration_samples_by_year": _count_samples_by_year(games_dir, EXPECTED_HOLDOUT_YEARS, True),
         "holdout_used_for_training": bool(
-            set(EXPECTED_HOLDOUT_YEARS)
-            & set(baseline.get("multi_year_training", {}).get("years_loaded", []))
+            set(EXPECTED_HOLDOUT_YEARS) & set(baseline.get("multi_year_training", {}).get("years_loaded", []))
         ),
         "future_data_detected": False,
     }
@@ -556,11 +528,7 @@ def run_production_2026(
 
         sim_artifact = report.get("artifacts", {}).get("simulation", {})
         model_champ_odds = sim_artifact.get("championship_odds", {})
-        model_probs_map = {
-            str(k): float(v)
-            for k, v in model_champ_odds.items()
-            if isinstance(v, (int, float))
-        }
+        model_probs_map = {str(k): float(v) for k, v in model_champ_odds.items() if isinstance(v, (int, float))}
 
         cache_dir = repo_root / "data" / "raw" / "betting_odds"
         market_probs_map = load_market_probs_from_cache(season=2026, cache_dir=cache_dir)
@@ -576,7 +544,10 @@ def run_production_2026(
                 adjust_vig=True,
             )
             if market_validation_result is None:
-                market_validation_dict = {"status": "skipped", "reason": "no overlapping teams between model and market"}
+                market_validation_dict = {
+                    "status": "skipped",
+                    "reason": "no overlapping teams between model and market",
+                }
             else:
                 market_validation_dict = _dc.asdict(market_validation_result)
                 market_validation_dict["status"] = "completed"
@@ -659,7 +630,11 @@ def run_production_2026(
             kaggle_export_result = {"status": "skipped", "reason": f"SampleSubmission CSV not found in {kaggle_dir}"}
         else:
             import pandas as pd
-            from ..exports.kaggle import load_kaggle_teams as _lkt, build_team_id_map as _bim, generate_predictions as _gp
+            from ..exports.kaggle import (
+                load_kaggle_teams as _lkt,
+                build_team_id_map as _bim,
+                generate_predictions as _gp,
+            )
             from ..data.team_name_resolver import TeamNameResolver as _TNR
 
             _team_id_to_name = _lkt(str(mteams_path))
@@ -693,7 +668,9 @@ def run_production_2026(
             }
             logger.info(
                 "Kaggle submission written: %s (%d rows, %d teams mapped)",
-                kaggle_submission_path, len(_pred_df), len(_id_map),
+                kaggle_submission_path,
+                len(_pred_df),
+                len(_id_map),
             )
     except Exception as exc:
         kaggle_export_result = {"status": "skipped", "reason": f"export failed: {exc}"}
@@ -702,17 +679,11 @@ def run_production_2026(
     report["kaggle_export"] = kaggle_export_result
 
     config_hash = _sha256_file(config_file)
-    source_hashes = {
-        path: _sha256_file(repo_root / path)
-        for path in REQUIRED_SOURCE_HASH_FILES
-    }
+    source_hashes = {path: _sha256_file(repo_root / path) for path in REQUIRED_SOURCE_HASH_FILES}
     src_tree = repo_root / SOURCE_TREE_ROOT
     source_tree_hash = _sha256_path(src_tree) if src_tree.is_dir() else "missing"
 
-    data_hashes = {
-        k: _sha256_path(Path(v))
-        for k, v in resolved_paths.items()
-    }
+    data_hashes = {k: _sha256_path(Path(v)) for k, v in resolved_paths.items()}
 
     output_hashes = {
         "output_report": _sha256_file(Path(output_report_path)),
@@ -762,8 +733,10 @@ def run_production_2026(
         json.dump(freeze_manifest, f, indent=2)
 
     # --- Production manifest with runtime inference proof ---
-    prod_manifest_path = Path(production_manifest_path) if production_manifest_path else (
-        repo_root / "artifacts" / "production_manifest_2026.json"
+    prod_manifest_path = (
+        Path(production_manifest_path)
+        if production_manifest_path
+        else (repo_root / "artifacts" / "production_manifest_2026.json")
     )
     inference_verified = production_calls["n"] > 0 and experimental_calls["n"] == 0
     production_manifest = {
@@ -797,9 +770,7 @@ def run_production_2026(
             "brier_sharpening_enabled": bool(config.enable_brier_sharpening),
             "round_weighted_calibration_enabled": bool(config.enable_round_weighted_calibration),
         },
-        "feature_manifest_hash": (
-            report.get("artifacts", {}).get("feature_manifest", {}).get("manifest_hash")
-        ),
+        "feature_manifest_hash": (report.get("artifacts", {}).get("feature_manifest", {}).get("manifest_hash")),
         "feature_manifest_artifact": feature_manifest_info,
         "provenance": build_artifact_provenance(
             pipeline=pipeline,
@@ -811,11 +782,13 @@ def run_production_2026(
     with open(prod_manifest_path, "w", encoding="utf-8") as f:
         json.dump(production_manifest, f, indent=2)
 
-    any_experimental = any([
-        bool(config.enable_gnn),
-        bool(config.enable_transformer),
-        bool(config.enable_embedding_projections),
-    ])
+    any_experimental = any(
+        [
+            bool(config.enable_gnn),
+            bool(config.enable_transformer),
+            bool(config.enable_embedding_projections),
+        ]
+    )
     governance_report = {
         "what_exact_predictor_was_shipped": "Frozen 2026 production path (simple model + production probability profile)",
         "what_exact_years_were_used_for_training": list(config.training_years) if config.training_years else [],
@@ -826,9 +799,7 @@ def run_production_2026(
         "experimental_probability_path_called": experimental_calls["n"] > 0,
         "production_inference_call_count": production_calls["n"],
         "experimental_inference_call_count": experimental_calls["n"],
-        "did_any_runtime_assertion_fail": (
-            production_calls["n"] <= 0 or experimental_calls["n"] > 0
-        ),
+        "did_any_runtime_assertion_fail": (production_calls["n"] <= 0 or experimental_calls["n"] > 0),
         "which_code_and_data_hashes_define_this_run": {
             "config_hash": config_hash,
             "source_hashes": source_hashes,
@@ -836,9 +807,7 @@ def run_production_2026(
             "output_hashes": output_hashes,
         },
         "market_cross_reference": market_validation_dict,
-        "feature_manifest_hash": (
-            report.get("artifacts", {}).get("feature_manifest", {}).get("manifest_hash")
-        ),
+        "feature_manifest_hash": (report.get("artifacts", {}).get("feature_manifest", {}).get("manifest_hash")),
         "feature_manifest_artifact": feature_manifest_info,
         "provenance": build_artifact_provenance(
             pipeline=pipeline,

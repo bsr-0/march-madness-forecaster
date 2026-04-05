@@ -67,6 +67,7 @@ def run_static_audit() -> "PassResult":
     if _check_file_exists(manifest_path):
         try:
             import yaml
+
             with open(manifest_path) as f:
                 manifest = yaml.safe_load(f)
             total = manifest.get("total_features", 0)
@@ -89,7 +90,7 @@ def run_static_audit() -> "PassResult":
             section_a += 5
             details["A2_tiers"] = f"PASS ({t1}/{t2}/{t3})"
         else:
-            failures.append(f"A2: Tier sum {t1+t2+t3} != 79 or missing tiers")
+            failures.append(f"A2: Tier sum {t1 + t2 + t3} != 79 or missing tiers")
     except Exception:
         failures.append("A2: Cannot validate tiers")
 
@@ -102,12 +103,12 @@ def run_static_audit() -> "PassResult":
         failures.extend([f"A3: {x}" for x in f])
 
     # A4. PIT enforced in LOYO (5 pts)
-    baseline_path = repo_root / "src" / "pipeline" / "stages" / "baseline_training.py"
+    baseline_path = repo_root / "src" / "pipeline" / "stages" / "baseline_training" / "__init__.py"
     if _check_file_exists(baseline_path):
         content = baseline_path.read_text()
         if "PITValidator" in content and "pit_validation" in content:
             section_a += 5
-            details["A4_pit_enforced"] = "PASS (in baseline_training.py)"
+            details["A4_pit_enforced"] = "PASS (in baseline_training/__init__.py)"
         else:
             failures.append("A4: PITValidator not referenced in baseline_training.py")
     else:
@@ -182,6 +183,7 @@ def run_static_audit() -> "PassResult":
     # C2. Correct thresholds used (5 pts)
     try:
         from src.ml.evaluation.admission_gate import AdmissionGate
+
         gate = AdmissionGate()
         if (
             hasattr(gate, "min_mean_brier_improvement")
@@ -196,6 +198,7 @@ def run_static_audit() -> "PassResult":
     # C3. Proper rejection logic (5 pts)
     try:
         from src.ml.evaluation.admission_gate import AdmissionGate
+
         gate_src = inspect.getsource(AdmissionGate.evaluate)
         if "passed" in gate_src and "failures" in gate_src:
             section_c += 5
@@ -214,7 +217,9 @@ def run_static_audit() -> "PassResult":
     bma_path = repo_root / "src" / "ml" / "ensemble" / "bma.py"
     if _check_file_exists(bma_path):
         content = bma_path.read_text()
-        has_em = ("E-step" in content or "responsibilities" in content) and "M-step" in content or "new_weights" in content
+        has_em = (
+            ("E-step" in content or "responsibilities" in content) and "M-step" in content or "new_weights" in content
+        )
         has_likelihood = "log_likelihoods" in content or "Bernoulli" in content
         if has_em and has_likelihood:
             section_d += 8
