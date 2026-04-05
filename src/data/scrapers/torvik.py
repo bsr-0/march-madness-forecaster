@@ -1149,7 +1149,8 @@ class BartTorvikScraper:
         cached = self._load_from_cache(f"torvik_four_factors_{year}.json")
         if cached and self._cache_has_valid_four_factors(cached):
             self._validate_cache_timestamp(cached, year)
-            return cached
+            # Strip metadata keys (data_type, cutoff_date, etc.) — return only team dicts
+            return {k: v for k, v in cached.items() if isinstance(v, dict)}
 
         # Guard only blocks live scrapes — cached reads are safe
         self._check_tournament_date_guard(year)
