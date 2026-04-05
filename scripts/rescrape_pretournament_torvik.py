@@ -304,6 +304,7 @@ def main():
         print(f"\nDone: {success} succeeded, {len(failed)} failed")
         if failed:
             print(f"Failed years: {failed}")
+            sys.exit(1)
 
 
 if __name__ == "__main__":

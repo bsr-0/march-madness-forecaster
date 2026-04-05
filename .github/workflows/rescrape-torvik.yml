@@ -72,8 +72,8 @@ jobs:
           for f in files:
               data = json.load(open(f))
               dt = data.get('data_type', '')
-              if dt not in ('pre_tournament', 'pre_tournament_computed'):
-                  errors.append(f'{f.name}: data_type={dt!r}')
+              if dt != 'pre_tournament':
+                  errors.append(f'{f.name}: data_type={dt!r} (expected pre_tournament from rescrape, not computed)')
               # Rankings files use 'teams' array; four_factors files use top-level team keys
               teams = data.get('teams', [])
               if isinstance(teams, list) and teams:
