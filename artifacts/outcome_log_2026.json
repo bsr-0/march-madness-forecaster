@@ -1,11 +1,11 @@
 {
   "year": 2026,
-  "generated_at": "2026-04-04T06:55:35.520308+00:00",
+  "generated_at": "2026-04-05T20:23:23.893051+00:00",
   "prediction_source": "data/forecaster_output.json",
   "results_source": "/home/runner/work/march-madness-forecaster/march-madness-forecaster/data/raw/historical/tournament_results_2026.json",
   "n_games_with_predictions": 6,
-  "n_games_total": 64,
-  "n_predictions_unmatched": 58,
+  "n_games_total": 66,
+  "n_predictions_unmatched": 60,
   "aggregate_metrics": {
     "brier_score": 0.397252,
     "log_loss": 1.223959,
