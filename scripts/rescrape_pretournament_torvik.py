@@ -1,40 +1,28 @@
 #!/usr/bin/env python3
 """Re-scrape Torvik data with pre-tournament date cutoffs.
 
-The existing historical torvik_{year}.json files contain END-OF-SEASON
+The existing historical torvik_{year}.json files may contain END-OF-SEASON
 ratings that include tournament game results — a look-ahead bias that
 invalidates any backtest using these ratings for pre-tournament predictions.
 
-This script re-fetches ratings from barttorvik.com's trank.php endpoint
-using the `end` parameter set to the day before the NCAA tournament starts,
-ensuring only regular-season games are included in the efficiency metrics.
-
-barttorvik.com trank.php supports date filtering:
-    /trank.php?year=2023&csv=1&begin=20221101&end=20230313
+This script re-fetches ratings from barttorvik.com's JSON endpoint using
+date parameters to filter to pre-tournament games only.  The JSON endpoint
+(`{year}_team_results.json`) bypasses the Cloudflare browser-verification
+challenge that blocks the CSV endpoint (`trank.php?csv=1`).
 
 Usage:
-    python scripts/rescrape_pretournament_torvik.py [--year YEAR] [--dry-run]
+    python scripts/rescrape_pretournament_torvik.py [--year YEAR] [--dry-run] [--delay 3]
 """
 
 import argparse
-import csv
-import io
 import json
 import logging
-import math
 import sys
 import time
 from datetime import date, timedelta
 from pathlib import Path
 
 import requests
-
-try:
-    from curl_cffi import requests as cffi_requests
-
-    HAS_CURL_CFFI = True
-except ImportError:
-    HAS_CURL_CFFI = False
 
 # Add project root to path
 ROOT = Path(__file__).resolve().parent.parent
@@ -70,232 +58,121 @@ TOURNAMENT_START_DATES = {
     2025: date(2025, 3, 18),
 }
 
-# Season start is typically early November
 SEASON_START_MONTH_DAY = (11, 1)
 
 OUTPUT_DIR = ROOT / "data" / "raw" / "historical"
 
-TRANK_HEADERS = {
+HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Referer": "https://barttorvik.com/trank.php",
-    "Connection": "keep-alive",
+    "Referer": "https://barttorvik.com/",
 }
 
-# Rate threshold for converting percentages to fractions
-_RATE_PERCENTAGE_THRESHOLD = 1.5
-
-KNOWN_HEADERS = frozenset(
-    {
-        "team",
-        "rank",
-        "rk",
-        "conf",
-        "conference",
-        "barthag",
-        "adj_oe",
-        "adj_o",
-        "adjoe",
-        "adj_de",
-        "adj_d",
-        "adjde",
-        "adj_t",
-        "off_efg",
-        "off_efg%",
-        "off_to",
-        "off_to%",
-        "off_or",
-        "off_or%",
-        "off_ftr",
-        "off_ftr%",
-        "def_efg",
-        "def_efg%",
-        "def_to",
-        "def_to%",
-        "def_or",
-        "def_or%",
-        "def_ftr",
-        "def_ftr%",
-        "efg_o",
-        "efg_d",
-        "tor_o",
-        "tor_d",
-        "orb_o",
-        "orb_d",
-        "ftr_o",
-        "ftr_d",
-        "wab",
-        "tempo",
-    }
-)
+# Column indices in the JSON array rows, derived from barttorvik data dictionary.
+COL_RANK = 0
+COL_TEAM = 1
+COL_CONF = 2
+COL_ADJ_O = 4
+COL_ADJ_D = 6
+COL_BARTHAG = 8
+COL_ADJ_T = 21
 
 
-def _build_trank_url_and_params(year: int) -> tuple[str, dict, str, date]:
-    """Build the trank.php URL params for a given year. Returns (url, params, end_str, tourney_start)."""
+def _safe_float(val, default=0.0) -> float:
+    """Safely convert a value to float."""
+    if val is None:
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+
+def _build_json_url(year: int) -> str:
+    """Build the JSON endpoint URL for a given year."""
+    return f"https://barttorvik.com/{year}_team_results.json"
+
+
+def _build_date_params(year: int) -> dict:
+    """Build query parameters for pre-tournament date filtering."""
     tourney_start = TOURNAMENT_START_DATES[year]
     cutoff = tourney_start - timedelta(days=1)
     season_start_year = year - 1
     begin_str = f"{season_start_year}{SEASON_START_MONTH_DAY[0]:02d}{SEASON_START_MONTH_DAY[1]:02d}"
     end_str = f"{cutoff.year}{cutoff.month:02d}{cutoff.day:02d}"
-    url = "https://barttorvik.com/trank.php"
-    params = {
-        "year": year,
-        "csv": 1,
-        "conyes": 1,
-        "type": "All",
-        "top": 0,
+    return {
         "begin": begin_str,
         "end": end_str,
+        "top": 0,
+        "quad": 5,
+        "venue": "All",
+        "type": "All",
+        "conlimit": "All",
+        "state": "All",
+        "mingames": 0,
     }
-    return url, params, end_str, tourney_start
 
 
-def _is_cloudflare_block(text: str) -> bool:
-    """Check if the response is a Cloudflare challenge page."""
-    snippet = text[:500].lower()
-    return "<html" in snippet or "checking your browser" in snippet
+def fetch_json(year: int, retries: int = 3) -> list[list] | None:
+    """Fetch team results from the barttorvik JSON endpoint.
 
-
-def _fetch_with_requests(url: str, params: dict, retries: int = 3) -> str | None:
-    """Try fetching with stdlib requests. Returns response text or None."""
-    for attempt in range(retries):
-        try:
-            resp = requests.get(url, params=params, headers=TRANK_HEADERS, timeout=45)
-            resp.raise_for_status()
-            return resp.text
-        except requests.RequestException as e:
-            if attempt < retries - 1:
-                wait = 2 ** (attempt + 1)
-                logger.warning("requests attempt %d failed: %s. Retrying in %ds...", attempt + 1, e, wait)
-                time.sleep(wait)
-            else:
-                logger.warning("requests: all %d attempts failed: %s", retries, e)
-    return None
-
-
-def _fetch_with_curl_cffi(url: str, params: dict, retries: int = 3) -> str | None:
-    """Try fetching with curl_cffi (TLS fingerprint impersonation). Returns response text or None."""
-    if not HAS_CURL_CFFI:
-        return None
-    logger.info("Retrying with curl_cffi (TLS impersonation)...")
-    for attempt in range(retries):
-        try:
-            resp = cffi_requests.get(
-                url,
-                params=params,
-                headers=TRANK_HEADERS,
-                impersonate="chrome",
-                timeout=45,
-            )
-            resp.raise_for_status()
-            return resp.text
-        except Exception as e:
-            if attempt < retries - 1:
-                wait = 2 ** (attempt + 1)
-                logger.warning("curl_cffi attempt %d failed: %s. Retrying in %ds...", attempt + 1, e, wait)
-                time.sleep(wait)
-            else:
-                logger.warning("curl_cffi: all %d attempts failed: %s", retries, e)
-    return None
-
-
-def fetch_pretournament_ratings(year: int) -> list[dict]:
-    """Fetch pre-tournament T-Rank ratings from trank.php with date cutoff.
-
-    Tries stdlib requests first, falls back to curl_cffi if Cloudflare blocks.
+    Tries with date-filter query params first. If that returns no data
+    or errors, falls back to the bare URL (full-season data).
     """
-    url, params, _, tourney_start = _build_trank_url_and_params(year)
-    begin_str = params["begin"]
-    end_str = params["end"]
-    logger.info("Fetching year=%d  begin=%s  end=%s (tournament starts %s)", year, begin_str, end_str, tourney_start)
+    url = _build_json_url(year)
+    params = _build_date_params(year)
 
-    # Strategy 1: stdlib requests
-    text = _fetch_with_requests(url, params)
-
-    # Strategy 2: curl_cffi with TLS impersonation (bypasses Cloudflare fingerprinting)
-    if text is None or _is_cloudflare_block(text):
-        if text is not None:
-            logger.warning("Cloudflare challenge detected for year %d, trying curl_cffi fallback", year)
-        text = _fetch_with_curl_cffi(url, params)
-
-    if text is None:
-        logger.error("All fetch strategies failed for year %d", year)
-        return []
-
-    if _is_cloudflare_block(text):
-        logger.error("Cloudflare challenge for year %d — both requests and curl_cffi blocked.", year)
-        return []
-
-    teams = _parse_trank_csv(text)
-    logger.info(
-        "Year %d: parsed %d teams (pre-tournament cutoff %s)",
-        year,
-        len(teams),
-        TOURNAMENT_START_DATES[year] - timedelta(days=1),
-    )
-    return teams
-
-
-def _parse_trank_csv(text: str) -> list[dict]:
-    """Parse trank.php CSV into list of team dicts."""
-    teams = []
-    reader = csv.reader(io.StringIO(text))
-    header = None
-
-    for row_num, row in enumerate(reader):
-        if row_num == 0:
-            normalized = [h.strip().lstrip("\ufeff").lower().replace(" ", "_") for h in row]
-            matches = sum(1 for c in normalized if c in KNOWN_HEADERS)
-            if row and matches >= 3:
-                header = {c: i for i, c in enumerate(normalized)}
-                continue
-            header = {}
-        if len(row) < 8:
-            continue
+    for attempt in range(retries):
         try:
-            team = _parse_row(row, header)
-            if team:
-                teams.append(team)
-        except Exception as e:
-            logger.debug("Error parsing row %d: %s", row_num, e)
-    return teams
+            resp = requests.get(url, headers=HEADERS, params=params, timeout=45)
+            resp.raise_for_status()
+            data = resp.json()
+            if isinstance(data, list) and len(data) > 0:
+                logger.info("Fetched %d teams with date filtering for %d", len(data), year)
+                return data
+        except (requests.RequestException, json.JSONDecodeError) as e:
+            if attempt < retries - 1:
+                wait = 2 ** (attempt + 1)
+                logger.warning("Attempt %d failed (with params): %s. Retrying in %ds...", attempt + 1, e, wait)
+                time.sleep(wait)
+
+    # Fallback: try without date params (gets full-season data)
+    logger.warning("Date-filtered fetch failed for %d, trying without date params...", year)
+    for attempt in range(retries):
+        try:
+            resp = requests.get(url, headers=HEADERS, timeout=45)
+            resp.raise_for_status()
+            data = resp.json()
+            if isinstance(data, list) and len(data) > 0:
+                logger.warning(
+                    "Got %d teams WITHOUT date filtering for %d — this may include tournament games (full-season data)",
+                    len(data),
+                    year,
+                )
+                return data
+        except (requests.RequestException, json.JSONDecodeError) as e:
+            if attempt < retries - 1:
+                wait = 2 ** (attempt + 1)
+                logger.warning("Attempt %d failed (bare URL): %s. Retrying in %ds...", attempt + 1, e, wait)
+                time.sleep(wait)
+            else:
+                logger.error("All fetch attempts failed for year %d: %s", year, e)
+
+    return None
 
 
-def _col(row, header, names, default_idx, default_val=0.0):
-    """Read column by name(s) or fallback position."""
-    if header:
-        for n in names if isinstance(names, (list, tuple)) else [names]:
-            if n in header:
-                val = row[header[n]].strip()
-                return float(val) if val else default_val
-    if len(row) > default_idx and row[default_idx].strip():
-        return float(row[default_idx].strip())
-    return default_val
+def parse_team_row(row: list) -> dict | None:
+    """Parse a single JSON array row into a team dict matching the expected schema."""
+    if not row or len(row) < 10:
+        return None
 
-
-def _rate_col(row, header, names, default_idx):
-    """Read a rate column, converting percentage to fraction if needed."""
-    v = _col(row, header, names, default_idx, math.nan)
-    if isinstance(v, float) and math.isnan(v):
-        return v
-    return v / 100.0 if v > _RATE_PERCENTAGE_THRESHOLD else v
-
-
-def _parse_row(row, header) -> dict | None:
-    """Parse a single CSV row into a team dict."""
-    team_name = row[header.get("team", 1)].strip() if header else row[1].strip()
+    team_name = str(row[COL_TEAM]).strip() if row[COL_TEAM] else None
     if not team_name:
         return None
-    conf = (
-        row[header.get("conf", header.get("conference", 2))].strip()
-        if header
-        else (row[2].strip() if len(row) > 2 else "")
-    )
+
+    conf = str(row[COL_CONF]).strip() if len(row) > COL_CONF and row[COL_CONF] else ""
     tid = normalize_team_id(team_name)
 
     return {
@@ -303,20 +180,45 @@ def _parse_row(row, header) -> dict | None:
         "team_name": team_name,
         "name": team_name,
         "conference": conf,
-        "t_rank": int(_col(row, header, ("rank", "rk"), 0, 999)),
-        "barthag": _col(row, header, "barthag", 5, 0.5),
-        "adj_offensive_efficiency": _col(row, header, ("adj_o", "adj_oe", "adjoe"), 3, 100.0),
-        "adj_defensive_efficiency": _col(row, header, ("adj_d", "adj_de", "adjde"), 4, 100.0),
-        "adj_tempo": _col(row, header, ("adj_t", "tempo"), 6, 68.0),
-        "effective_fg_pct": _rate_col(row, header, ("off_efg", "off_efg%", "efg_o"), 20),
-        "turnover_rate": _rate_col(row, header, ("off_to", "off_to%", "tor_o"), 21),
-        "offensive_reb_rate": _rate_col(row, header, ("off_or", "off_or%", "orb_o"), 22),
-        "free_throw_rate": _rate_col(row, header, ("off_ftr", "off_ft_rate", "ftr_o"), 23),
-        "opp_effective_fg_pct": _rate_col(row, header, ("def_efg", "def_efg%", "efg_d"), 24),
-        "opp_turnover_rate": _rate_col(row, header, ("def_to", "def_to%", "tor_d"), 25),
-        "defensive_reb_rate": _rate_col(row, header, ("def_or", "off_or_d", "orb_d"), 26),
-        "opp_free_throw_rate": _rate_col(row, header, ("def_ftr", "def_ft_rate", "ftr_d"), 27),
+        "t_rank": int(_safe_float(row[COL_RANK], 999)),
+        "barthag": _safe_float(row[COL_BARTHAG], 0.5),
+        "adj_offensive_efficiency": _safe_float(row[COL_ADJ_O], 100.0),
+        "adj_defensive_efficiency": _safe_float(row[COL_ADJ_D], 100.0),
+        "adj_tempo": _safe_float(row[COL_ADJ_T] if len(row) > COL_ADJ_T else None, 68.0),
+        "effective_fg_pct": 0.0,
+        "turnover_rate": 0.0,
+        "offensive_reb_rate": 0.0,
+        "free_throw_rate": 0.0,
+        "opp_effective_fg_pct": 0.0,
+        "opp_turnover_rate": 0.0,
+        "defensive_reb_rate": 0.0,
+        "opp_free_throw_rate": 0.0,
     }
+
+
+def fetch_pretournament_ratings(year: int) -> list[dict]:
+    """Fetch and parse pre-tournament T-Rank ratings for a given year."""
+    tourney_start = TOURNAMENT_START_DATES[year]
+    cutoff = tourney_start - timedelta(days=1)
+    logger.info(
+        "Fetching year=%d (tournament starts %s, cutoff=%s)",
+        year,
+        tourney_start,
+        cutoff,
+    )
+
+    raw = fetch_json(year)
+    if raw is None:
+        return []
+
+    teams = []
+    for row in raw:
+        team = parse_team_row(row)
+        if team:
+            teams.append(team)
+
+    logger.info("Year %d: parsed %d teams (cutoff=%s)", year, len(teams), cutoff)
+    return teams
 
 
 def main():
@@ -335,9 +237,9 @@ def main():
     for year in years:
         if args.dry_run:
             cutoff = TOURNAMENT_START_DATES[year] - timedelta(days=1)
-            begin = f"{year - 1}{SEASON_START_MONTH_DAY[0]:02d}{SEASON_START_MONTH_DAY[1]:02d}"
-            end = f"{cutoff.year}{cutoff.month:02d}{cutoff.day:02d}"
-            print(f"  {year}: trank.php?year={year}&csv=1&begin={begin}&end={end}")
+            params = _build_date_params(year)
+            url = _build_json_url(year)
+            print(f"  {year}: {url}?begin={params['begin']}&end={params['end']}")
             continue
 
         teams = fetch_pretournament_ratings(year)
@@ -346,7 +248,6 @@ def main():
             failed.append(year)
             continue
 
-        # Verify we got enough teams
         if len(teams) < 100:
             logger.warning("Only %d teams for %d (expected 350+) — data may be incomplete", len(teams), year)
 
