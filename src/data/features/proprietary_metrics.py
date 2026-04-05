@@ -49,6 +49,7 @@ logger = logging.getLogger(__name__)
 # Data containers
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class GameRecord:
     """One team-side row from a single game."""
@@ -179,7 +180,7 @@ class ProprietaryTeamMetrics:
 
     # Momentum  (last-10-game rolling AdjEM delta)
     momentum: float = 0.0
-    recent_adj_em: float = 0.0   # AdjEM over last 10 games only
+    recent_adj_em: float = 0.0  # AdjEM over last 10 games only
 
     # Pace-adjusted variance  (stdev of per-game scoring margin / pace factor)
     pace_adjusted_variance: float = 0.0
@@ -321,6 +322,7 @@ class ProprietaryTeamMetrics:
 # Engine
 # ---------------------------------------------------------------------------
 
+
 class ProprietaryMetricsEngine:
     """
     Compute all proprietary advanced metrics from game-level box scores.
@@ -382,6 +384,24 @@ class ProprietaryMetricsEngine:
                 "tournament starts) or set require_cutoff_date=False when "
                 "constructing ProprietaryMetricsEngine for testing only."
             )
+
+        # Validate cutoff_date is before tournament start (not just non-None)
+        if cutoff_date and self._require_cutoff_date:
+            try:
+                from ...pipeline.config import TOURNAMENT_START_DATES
+
+                cutoff_year = int(cutoff_date[:4])
+                tournament_start = TOURNAMENT_START_DATES.get(cutoff_year)
+                if tournament_start and cutoff_date > tournament_start.isoformat():
+                    from ...exceptions import LeakageError
+
+                    raise LeakageError(
+                        f"cutoff_date={cutoff_date} is after tournament start "
+                        f"{tournament_start} for {cutoff_year}. This would include "
+                        f"tournament games in pre-tournament metrics."
+                    )
+            except ImportError:
+                pass  # Pipeline config not available (standalone usage)
 
         if not game_records:
             return {}
@@ -536,7 +556,7 @@ class ProprietaryMetricsEngine:
 
         # --- Step 5: Elo ratings (needs all games chronologically) ---
         # D2: Pass prior_elo if set (cross-season carryover); save end-of-season result.
-        prior = getattr(self, '_elo_prior', None)
+        prior = getattr(self, "_elo_prior", None)
         self._end_of_season_elo = self._compute_elo_ratings(results, by_team, prior_elo=prior)
 
         # --- Step 6: Conference strength (needs league-wide AdjEM) ---
@@ -932,7 +952,7 @@ class ProprietaryMetricsEngine:
         where σ₀ = 0.095 (D1 population stdev → σ₀² ≈ 0.009025),
         k = 8 (prior pseudo-observations, ~1/3 of a season).
         """
-        THREE_PT_VAR_PRIOR_STD = 0.095   # D1 population game-to-game 3P% stdev
+        THREE_PT_VAR_PRIOR_STD = 0.095  # D1 population game-to-game 3P% stdev
         THREE_PT_VAR_PRIOR_WEIGHT = 8.0  # pseudo-observations (~1/3 season)
 
         per_game_3p = []
@@ -944,12 +964,10 @@ class ProprietaryMetricsEngine:
             return THREE_PT_VAR_PRIOR_STD
 
         sample_var = float(np.var(per_game_3p, ddof=1))
-        prior_var = THREE_PT_VAR_PRIOR_STD ** 2
+        prior_var = THREE_PT_VAR_PRIOR_STD**2
         n = len(per_game_3p)
 
-        shrunk_var = (n * sample_var + THREE_PT_VAR_PRIOR_WEIGHT * prior_var) / (
-            n + THREE_PT_VAR_PRIOR_WEIGHT
-        )
+        shrunk_var = (n * sample_var + THREE_PT_VAR_PRIOR_WEIGHT * prior_var) / (n + THREE_PT_VAR_PRIOR_WEIGHT)
         return float(np.sqrt(shrunk_var))
 
     def _momentum(
@@ -985,8 +1003,8 @@ class ProprietaryMetricsEngine:
         At n=15: λ ≈ 8.1 / 17.1 ≈ 0.47 → retains 53% of raw delta
         At n=25: λ ≈ 4.8 / 13.8 ≈ 0.35 → retains 65% of raw delta
         """
-        MARGIN_SIGMA_SQ = 11.0 ** 2         # D1 game margin variance
-        MOMENTUM_SIGNAL_SIGMA_SQ = 3.0 ** 2  # Population SD of true momentum
+        MARGIN_SIGMA_SQ = 11.0**2  # D1 game margin variance
+        MOMENTUM_SIGNAL_SIGMA_SQ = 3.0**2  # Population SD of true momentum
 
         league_off = float(np.mean(list(adj_off.values()))) if adj_off else 100.0
         league_def = float(np.mean(list(adj_def.values()))) if adj_def else 100.0
@@ -1039,7 +1057,7 @@ class ProprietaryMetricsEngine:
 
         Returns prior σ₀ when n < 2 (can't estimate variance from 0–1 games).
         """
-        PACE_VAR_PRIOR_STD = 11.0    # D1 population game margin stdev (points)
+        PACE_VAR_PRIOR_STD = 11.0  # D1 population game margin stdev (points)
         PACE_VAR_PRIOR_WEIGHT = 8.0  # pseudo-observations (~1/3 season)
 
         adjusted_margins = []
@@ -1054,15 +1072,13 @@ class ProprietaryMetricsEngine:
             return PACE_VAR_PRIOR_STD
 
         sample_var = float(np.var(adjusted_margins, ddof=1))
-        prior_var = PACE_VAR_PRIOR_STD ** 2
-        shrunk_var = (n * sample_var + PACE_VAR_PRIOR_WEIGHT * prior_var) / (
-            n + PACE_VAR_PRIOR_WEIGHT
-        )
+        prior_var = PACE_VAR_PRIOR_STD**2
+        shrunk_var = (n * sample_var + PACE_VAR_PRIOR_WEIGHT * prior_var) / (n + PACE_VAR_PRIOR_WEIGHT)
         return float(np.sqrt(shrunk_var))
 
     # C8: Bayesian shrinkage constants for consistency metrics.
     # Same conjugate-prior pattern as _pace_adjusted_variance / _three_point_variance.
-    CONSISTENCY_PRIOR_STD = 8.0    # D1 population scoring-margin stdev (Tier 2)
+    CONSISTENCY_PRIOR_STD = 8.0  # D1 population scoring-margin stdev (Tier 2)
     CONSISTENCY_PRIOR_WEIGHT = 8.0  # pseudo-observations (~1/3 season, Tier 2)
 
     def _consistency(self, games: List[GameRecord]) -> float:
@@ -1079,10 +1095,8 @@ class ProprietaryMetricsEngine:
         margins = [g.points - g.opp_points for g in games]
         n = len(margins)
         sample_var = float(np.var(margins, ddof=1))
-        prior_var = self.CONSISTENCY_PRIOR_STD ** 2
-        shrunk_var = (n * sample_var + self.CONSISTENCY_PRIOR_WEIGHT * prior_var) / (
-            n + self.CONSISTENCY_PRIOR_WEIGHT
-        )
+        prior_var = self.CONSISTENCY_PRIOR_STD**2
+        shrunk_var = (n * sample_var + self.CONSISTENCY_PRIOR_WEIGHT * prior_var) / (n + self.CONSISTENCY_PRIOR_WEIGHT)
         return 1.0 / (1.0 + float(np.sqrt(shrunk_var)))
 
     def _sos_adjusted_consistency(
@@ -1119,10 +1133,8 @@ class ProprietaryMetricsEngine:
 
         n = len(residuals)
         sample_var = float(np.var(residuals, ddof=1))
-        prior_var = self.CONSISTENCY_PRIOR_STD ** 2
-        shrunk_var = (n * sample_var + self.CONSISTENCY_PRIOR_WEIGHT * prior_var) / (
-            n + self.CONSISTENCY_PRIOR_WEIGHT
-        )
+        prior_var = self.CONSISTENCY_PRIOR_STD**2
+        shrunk_var = (n * sample_var + self.CONSISTENCY_PRIOR_WEIGHT * prior_var) / (n + self.CONSISTENCY_PRIOR_WEIGHT)
         return 1.0 / (1.0 + float(np.sqrt(shrunk_var)))
 
     def _compute_wab(
@@ -1293,8 +1305,8 @@ class ProprietaryMetricsEngine:
             if tid not in results:
                 continue
 
-            ref_win_probs = []    # P(reference team wins game_i) — for SOR
-            bubble_win_probs = [] # P(bubble team wins game_i) — for WAB
+            ref_win_probs = []  # P(reference team wins game_i) — for SOR
+            bubble_win_probs = []  # P(bubble team wins game_i) — for WAB
 
             for g in games:
                 opp = results.get(g.opponent_id)
@@ -1411,7 +1423,7 @@ class ProprietaryMetricsEngine:
             Dict of {team_id: end_of_season_elo} for cross-season carryover.
         """
         # D2: Regression constants (Tier 2 — structurally constrained by 538 methodology)
-        _ELO_REGRESSION = 0.25   # 25% toward mean per season boundary
+        _ELO_REGRESSION = 0.25  # 25% toward mean per season boundary
         _ELO_MEAN = 1500.0
 
         # Collect all games in chronological order (deduplicated)
@@ -1432,10 +1444,7 @@ class ProprietaryMetricsEngine:
         elo: Dict[str, float] = defaultdict(lambda: _ELO_MEAN)
         if prior_elo:
             for t in by_team:
-                elo[t] = (
-                    (1.0 - _ELO_REGRESSION) * prior_elo.get(t, _ELO_MEAN)
-                    + _ELO_REGRESSION * _ELO_MEAN
-                )
+                elo[t] = (1.0 - _ELO_REGRESSION) * prior_elo.get(t, _ELO_MEAN) + _ELO_REGRESSION * _ELO_MEAN
         K_BASE = 38.0
 
         for g in all_games:
@@ -1593,8 +1602,7 @@ class ProprietaryMetricsEngine:
             rn_w, rn_l = 0, 0
 
             for g in games:
-                opp_em = (adj_off.get(g.opponent_id, 100.0)
-                          - adj_def.get(g.opponent_id, 100.0))
+                opp_em = adj_off.get(g.opponent_id, 100.0) - adj_def.get(g.opponent_id, 100.0)
 
                 # Elite SOS: high-AdjEM opponents only
                 if opp_em >= ELITE_EM_THRESHOLD:
@@ -1755,8 +1763,8 @@ class ProprietaryMetricsEngine:
 
         Returns (shrunk_home_adj_em, shrunk_away_adj_em, shrunk_dependence).
         """
-        MARGIN_SIGMA_SQ = 11.0 ** 2       # D1 game margin variance
-        HCA_SIGNAL_SIGMA_SQ = 4.0 ** 2   # Population SD of true split EM
+        MARGIN_SIGMA_SQ = 11.0**2  # D1 game margin variance
+        HCA_SIGNAL_SIGMA_SQ = 4.0**2  # Population SD of true split EM
 
         league_off = float(np.mean(list(adj_off.values()))) if adj_off else 100.0
         league_def = float(np.mean(list(adj_def.values()))) if adj_def else 100.0
@@ -1818,8 +1826,8 @@ class ProprietaryMetricsEngine:
         At n=5:  λ ≈ 24.2 / 33.2 ≈ 0.73 → retains 27% of raw delta
         At n=8:  λ ≈ 15.1 / 24.1 ≈ 0.63 → retains 37% of raw delta
         """
-        MARGIN_SIGMA_SQ = 11.0 ** 2         # D1 game margin variance
-        MOMENTUM_SIGNAL_SIGMA_SQ = 3.0 ** 2  # Population SD of true momentum
+        MARGIN_SIGMA_SQ = 11.0**2  # D1 game margin variance
+        MOMENTUM_SIGNAL_SIGMA_SQ = 3.0**2  # Population SD of true momentum
 
         league_off = float(np.mean(list(adj_off.values()))) if adj_off else 100.0
         league_def = float(np.mean(list(adj_def.values()))) if adj_def else 100.0
@@ -1921,7 +1929,7 @@ class ProprietaryMetricsEngine:
 
         Returns 0.5 if no H2H games found (neutral prior).
         """
-        if not hasattr(self, '_by_team'):
+        if not hasattr(self, "_by_team"):
             return 0.5
 
         games = self._by_team.get(team1_id, [])
@@ -1952,7 +1960,7 @@ class ProprietaryMetricsEngine:
 
         Returns 0.0 if no common opponents found.
         """
-        if not hasattr(self, '_by_team'):
+        if not hasattr(self, "_by_team"):
             return 0.0
 
         # Build opponent → margin map for each team
@@ -2060,12 +2068,14 @@ class ProprietaryMetricsEngine:
                 # Per-game four-factor differentials
                 ff_team = self._four_factors([g])
                 ff_opp = self._four_factors([opp_game])
-                diff = np.array([
-                    ff_team.get("effective_fg_pct", 0.5) - ff_opp.get("effective_fg_pct", 0.5),
-                    (1 - ff_team.get("turnover_rate", 0.18)) - (1 - ff_opp.get("turnover_rate", 0.18)),
-                    ff_team.get("offensive_reb_rate", 0.3) - ff_opp.get("offensive_reb_rate", 0.3),
-                    ff_team.get("free_throw_rate", 0.3) * 0.72 - ff_opp.get("free_throw_rate", 0.3) * 0.72,
-                ])
+                diff = np.array(
+                    [
+                        ff_team.get("effective_fg_pct", 0.5) - ff_opp.get("effective_fg_pct", 0.5),
+                        (1 - ff_team.get("turnover_rate", 0.18)) - (1 - ff_opp.get("turnover_rate", 0.18)),
+                        ff_team.get("offensive_reb_rate", 0.3) - ff_opp.get("offensive_reb_rate", 0.3),
+                        ff_team.get("free_throw_rate", 0.3) * 0.72 - ff_opp.get("free_throw_rate", 0.3) * 0.72,
+                    ]
+                )
                 # Actual game outcome (not AdjEM-inferred)
                 y = 1 if g.points > g.opp_points else 0
                 X_list.append(diff)
@@ -2087,6 +2097,7 @@ class ProprietaryMetricsEngine:
         # Fit logistic regression
         try:
             from sklearn.linear_model import LogisticRegression
+
             lr = LogisticRegression(C=1.0, max_iter=500, solver="lbfgs")
             lr.fit(X, y)
             raw_coefs = np.abs(lr.coef_[0])
@@ -2110,8 +2121,7 @@ class ProprietaryMetricsEngine:
         if boot_weights:
             boot_arr = np.array(boot_weights)
             weight_cis = [
-                [float(np.percentile(boot_arr[:, i], 2.5)),
-                 float(np.percentile(boot_arr[:, i], 97.5))]
+                [float(np.percentile(boot_arr[:, i], 2.5)), float(np.percentile(boot_arr[:, i], 97.5))]
                 for i in range(4)
             ]
         else:
@@ -2249,22 +2259,39 @@ def team_games_to_game_records(
         game_date = str(raw_date or f"{season_year}-01-01")
         team_name = str(row.get("team_name", raw_tid))
 
-        records.append(GameRecord(
-            game_id=gid,
-            game_date=game_date,
-            team_id=raw_tid,
-            team_name=team_name,
-            opponent_id=raw_oid,
-            points=points,
-            opp_points=opp_points,
-            possessions=poss,
-            fga=fga, fgm=fgm, fg3a=fg3a, fg3m=fg3m, fta=fta, ftm=ftm,
-            tov=tov, orb=orb, drb=drb,
-            opp_fga=opp_fga, opp_fgm=opp_fgm, opp_fg3a=opp_fg3a, opp_fg3m=opp_fg3m,
-            opp_fta=opp_fta, opp_ftm=opp_ftm, opp_tov=opp_tov, opp_orb=opp_orb, opp_drb=opp_drb,
-            is_home=False, is_neutral=True,
-            has_box_score=row_has_box,
-        ))
+        records.append(
+            GameRecord(
+                game_id=gid,
+                game_date=game_date,
+                team_id=raw_tid,
+                team_name=team_name,
+                opponent_id=raw_oid,
+                points=points,
+                opp_points=opp_points,
+                possessions=poss,
+                fga=fga,
+                fgm=fgm,
+                fg3a=fg3a,
+                fg3m=fg3m,
+                fta=fta,
+                ftm=ftm,
+                tov=tov,
+                orb=orb,
+                drb=drb,
+                opp_fga=opp_fga,
+                opp_fgm=opp_fgm,
+                opp_fg3a=opp_fg3a,
+                opp_fg3m=opp_fg3m,
+                opp_fta=opp_fta,
+                opp_ftm=opp_ftm,
+                opp_tov=opp_tov,
+                opp_orb=opp_orb,
+                opp_drb=opp_drb,
+                is_home=False,
+                is_neutral=True,
+                has_box_score=row_has_box,
+            )
+        )
 
     # ── Date inference ──────────────────────────────────────────────────
     # Many historical years have a single placeholder date for all games.
@@ -2276,6 +2303,7 @@ def team_games_to_game_records(
         records.sort(key=lambda r: (r.game_id, r.team_id))
         # Assign dates spread from season start (Nov 1) to season end (Apr 10).
         from datetime import date as _date, timedelta as _td
+
         season_start = _date(season_year - 1, 11, 1)
         season_end = _date(season_year, 4, 10)
         total_days = (season_end - season_start).days
@@ -2302,7 +2330,9 @@ def team_games_to_game_records(
         n_inferred_dates = len(set(r.game_date for r in records))
         logger.info(
             "Year %d: inferred dates for %d games → %d monthly buckets from game_id ordering.",
-            season_year, n_unique_games, n_inferred_dates,
+            season_year,
+            n_unique_games,
+            n_inferred_dates,
         )
         logger.warning(
             "Year %d: synthetic date inference active — rest_days and "
@@ -2315,7 +2345,9 @@ def team_games_to_game_records(
 
     logger.info(
         "Year %d: converted %d team_games rows → %d GameRecords.",
-        season_year, len(team_games), len(records),
+        season_year,
+        len(team_games),
+        len(records),
     )
     return records
 
@@ -2454,16 +2486,16 @@ class IncrementalMetricsEngine:
             # Build sorted per-team date lists once, then binary-search.
             from collections import defaultdict
             import bisect
+
             team_dates: Dict[str, list] = defaultdict(list)
             for g in self._all_records:
                 team_dates[g.team_id].append(g.game_date)
-            self._games_before_cache = {
-                tid: sorted(dates) for tid, dates in team_dates.items()
-            }
+            self._games_before_cache = {tid: sorted(dates) for tid, dates in team_dates.items()}
         dates = self._games_before_cache.get(team_id)
         if not dates:
             return 0
         import bisect
+
         return bisect.bisect_left(dates, date)
 
     def compute_as_of(self, as_of_date: str) -> Dict[str, ProprietaryTeamMetrics]:
@@ -2506,7 +2538,9 @@ class IncrementalMetricsEngine:
 
         # Step 2: SOS adjustment (cold-start, full iterations).
         adj_off, adj_def = engine._iterative_sos_adjust(
-            by_team, raw_off, raw_def,
+            by_team,
+            raw_off,
+            raw_def,
         )
 
         # Step 3: Compute all derived metrics (reuse engine internals).
@@ -2757,8 +2791,8 @@ class IncrementalMetricsEngine:
     def metrics_to_team_vector(
         m: ProprietaryTeamMetrics,
         seed: int = 0,
-        external_rating_composite: float = float('nan'),
-        external_rating_spread: float = float('nan'),
+        external_rating_composite: float = float("nan"),
+        external_rating_spread: float = float("nan"),
         massey_features=None,
     ) -> np.ndarray:
         """Convert ProprietaryTeamMetrics to a 66-dim team feature vector.
@@ -2776,6 +2810,7 @@ class IncrementalMetricsEngine:
         This ensures feature name alignment between training and inference.
         """
         from .feature_engineering import TEAM_FEATURE_DIM
+
         v = np.zeros(TEAM_FEATURE_DIM, dtype=np.float64)
         # Core efficiency (3)
         v[0] = m.adj_offensive_efficiency
@@ -2873,6 +2908,7 @@ class IncrementalMetricsEngine:
         v[67] = m.home_court_dependence
         # Tournament resume composite (1) — Bayesian-shrunk opponent quality
         from .tournament_features import compute_tournament_resume_composite
+
         v[68] = compute_tournament_resume_composite(
             q1_win_pct=m.q1_win_pct,
             q1_games=m.q1_wins + m.q1_losses,
@@ -2899,12 +2935,13 @@ class IncrementalMetricsEngine:
         # NaN is preserved for tree models (LightGBM/XGBoost handle natively)
         if massey_features is not None:
             from .massey_systems import MASSEY_TOP_SYSTEMS, features_to_vector
+
             massey_vals = features_to_vector(massey_features)
             for i, val in enumerate(massey_vals):
                 v[74 + i] = val
         else:
             # Leave as NaN so tree models treat as missing
-            v[74:86] = float('nan')
+            v[74:86] = float("nan")
 
         # NaN/inf guard — convert inf→NaN but preserve NaN for tree models
         inf_mask = np.isinf(v)
@@ -2932,6 +2969,7 @@ class IncrementalMetricsEngine:
 
         # Absolute-level features — use resolved indices from feature_engineering
         from .feature_engineering import ABSOLUTE_LEVEL_INDICES
+
         _ABS_IDX = ABSOLUTE_LEVEL_INDICES if ABSOLUTE_LEVEL_INDICES else [0, 1, 26, 37, 49]
         absolute = np.array([(v1[i] + v2[i]) / 2.0 for i in _ABS_IDX])
 
@@ -2942,8 +2980,22 @@ class IncrementalMetricsEngine:
         style_mismatch = (tempo_diff * eff_diff) / 600.0
         # Seed-based interaction features (always computable, no data dependency)
         _SEED_EXPECTED_EM = {
-            1: 28, 2: 21, 3: 16, 4: 12, 5: 9, 6: 6, 7: 4, 8: 2,
-            9: 0, 10: -2, 11: -4, 12: -6, 13: -9, 14: -12, 15: -16, 16: -21,
+            1: 28,
+            2: 21,
+            3: 16,
+            4: 12,
+            5: 9,
+            6: 6,
+            7: 4,
+            8: 2,
+            9: 0,
+            10: -2,
+            11: -4,
+            12: -6,
+            13: -9,
+            14: -12,
+            15: -16,
+            16: -21,
         }
         residual1 = (v1[0] - v1[1]) - _SEED_EXPECTED_EM.get(seed1, 0)
         residual2 = (v2[0] - v2[1]) - _SEED_EXPECTED_EM.get(seed2, 0)
@@ -2961,14 +3013,21 @@ class IncrementalMetricsEngine:
             seed_interaction = 0.0
             seed_diff = 0.0
 
-        interactions = np.array([
-            tempo_interaction, style_mismatch, seed_em_residual_diff,
-            sos_seed_interaction, three_pt_var_seed_interaction, seed_interaction,
-            seed_diff,
-        ])
+        interactions = np.array(
+            [
+                tempo_interaction,
+                style_mismatch,
+                seed_em_residual_diff,
+                sos_seed_interaction,
+                three_pt_var_seed_interaction,
+                seed_interaction,
+                seed_diff,
+            ]
+        )
 
         result = np.concatenate([diff, absolute, interactions])
         from .feature_engineering import MATCHUP_DIM
+
         assert result.shape[0] == MATCHUP_DIM, (
             f"build_matchup_vector produced {result.shape[0]}-dim vector, "
             f"expected MATCHUP_DIM={MATCHUP_DIM}. Update MATCHUP_DIM in "
@@ -3025,6 +3084,7 @@ def _load_cbbpy_team_map(csv_path: Optional[str] = None) -> Dict[str, str]:
 # ---------------------------------------------------------------------------
 # Converter: Torvik/public data → GameRecord
 # ---------------------------------------------------------------------------
+
 
 def torvik_to_game_records(
     torvik_teams: List[Dict],
@@ -3087,6 +3147,7 @@ def torvik_to_game_records(
     # CBBpy→Torvik alias overrides: use shared alias config from normalize.py
     # instead of maintaining a separate inline dict.
     from src.data.normalize import _QUICK_ALIAS as _shared_aliases
+
     for alias, target in _shared_aliases.items():
         if target in _torvik_name_to_id and alias not in _torvik_name_to_id:
             _torvik_name_to_id[alias] = _torvik_name_to_id[target]
@@ -3101,11 +3162,15 @@ def torvik_to_game_records(
     for game in historical_games:
         if not isinstance(game, dict):
             continue
-        raw = _team_id(str(game.get("team_id") or game.get("team1_id") or game.get("team1") or game.get("home_team") or ""))
+        raw = _team_id(
+            str(game.get("team_id") or game.get("team1_id") or game.get("team1") or game.get("home_team") or "")
+        )
         name = str(game.get("team_name") or game.get("team1_name") or "")
         if raw and name and raw not in _name_by_raw_id:
             _name_by_raw_id[raw] = name
-        raw2 = _team_id(str(game.get("opponent_id") or game.get("team2_id") or game.get("team2") or game.get("away_team") or ""))
+        raw2 = _team_id(
+            str(game.get("opponent_id") or game.get("team2_id") or game.get("team2") or game.get("away_team") or "")
+        )
         name2 = str(game.get("opponent_name") or game.get("team2_name") or "")
         if raw2 and name2 and raw2 not in _name_by_raw_id:
             _name_by_raw_id[raw2] = name2
@@ -3144,15 +3209,27 @@ def torvik_to_game_records(
             continue
 
         game_id = str(game.get("game_id") or game.get("id") or "")
-        raw_team = _team_id(str(game.get("team_id") or game.get("team1_id") or game.get("team1") or game.get("home_team") or ""))
-        raw_opp = _team_id(str(game.get("opponent_id") or game.get("team2_id") or game.get("team2") or game.get("away_team") or ""))
+        raw_team = _team_id(
+            str(game.get("team_id") or game.get("team1_id") or game.get("team1") or game.get("home_team") or "")
+        )
+        raw_opp = _team_id(
+            str(game.get("opponent_id") or game.get("team2_id") or game.get("team2") or game.get("away_team") or "")
+        )
         team_id = _resolve_canonical(raw_team)
         opp_id = _resolve_canonical(raw_opp)
         if not game_id or not team_id or not opp_id:
             continue
 
-        points = _to_float(game.get("team_score") or game.get("team1_score") or game.get("home_score") or game.get("points") or 0)
-        opp_points = _to_float(game.get("opponent_score") or game.get("team2_score") or game.get("away_score") or game.get("opp_points") or 0)
+        points = _to_float(
+            game.get("team_score") or game.get("team1_score") or game.get("home_score") or game.get("points") or 0
+        )
+        opp_points = _to_float(
+            game.get("opponent_score")
+            or game.get("team2_score")
+            or game.get("away_score")
+            or game.get("opp_points")
+            or 0
+        )
 
         fga = _to_float(game.get("fga", 0))
         fgm = _to_float(game.get("fgm", 0))
@@ -3214,24 +3291,47 @@ def torvik_to_game_records(
         game_date = str(raw_date or f"{season_year}-01-01")
         team_name = str(game.get("team_name") or game.get("team1_name") or game.get("team1") or team_id)
 
-        records.append(GameRecord(
-            game_id=game_id,
-            game_date=game_date,
-            team_id=team_id,
-            team_name=team_name,
-            opponent_id=opp_id,
-            points=points,
-            opp_points=opp_points,
-            possessions=poss,
-            fga=fga, fgm=fgm, fg3a=fg3a, fg3m=fg3m, fta=fta, ftm=ftm,
-            tov=tov, orb=orb, drb=drb,
-            ast=ast, stl=stl, blk=blk, pf=pf,
-            opp_fga=opp_fga, opp_fgm=opp_fgm, opp_fg3a=opp_fg3a, opp_fg3m=opp_fg3m,
-            opp_fta=opp_fta, opp_ftm=opp_ftm, opp_tov=opp_tov, opp_orb=opp_orb, opp_drb=opp_drb,
-            opp_ast=opp_ast, opp_stl=opp_stl, opp_blk=opp_blk, opp_pf=opp_pf,
-            is_home=is_home, is_neutral=is_neutral,
-            has_box_score=game_has_box,
-        ))
+        records.append(
+            GameRecord(
+                game_id=game_id,
+                game_date=game_date,
+                team_id=team_id,
+                team_name=team_name,
+                opponent_id=opp_id,
+                points=points,
+                opp_points=opp_points,
+                possessions=poss,
+                fga=fga,
+                fgm=fgm,
+                fg3a=fg3a,
+                fg3m=fg3m,
+                fta=fta,
+                ftm=ftm,
+                tov=tov,
+                orb=orb,
+                drb=drb,
+                ast=ast,
+                stl=stl,
+                blk=blk,
+                pf=pf,
+                opp_fga=opp_fga,
+                opp_fgm=opp_fgm,
+                opp_fg3a=opp_fg3a,
+                opp_fg3m=opp_fg3m,
+                opp_fta=opp_fta,
+                opp_ftm=opp_ftm,
+                opp_tov=opp_tov,
+                opp_orb=opp_orb,
+                opp_drb=opp_drb,
+                opp_ast=opp_ast,
+                opp_stl=opp_stl,
+                opp_blk=opp_blk,
+                opp_pf=opp_pf,
+                is_home=is_home,
+                is_neutral=is_neutral,
+                has_box_score=game_has_box,
+            )
+        )
 
     return records
 

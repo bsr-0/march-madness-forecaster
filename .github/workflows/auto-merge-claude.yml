@@ -12,6 +12,8 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Create PR and enable auto-merge
         run: |
           # Create a PR if one doesn't exist, otherwise get the existing one
