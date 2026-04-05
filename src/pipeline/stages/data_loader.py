@@ -101,6 +101,7 @@ class GameFlowResult:
 
 def player_from_dict(team_id: str, raw: Dict) -> Player:
     """Convert a raw player dict to a :class:`Player` model object."""
+
     def _safe_float(value: object, default: float = 0.0) -> float:
         try:
             return float(value)
@@ -285,9 +286,7 @@ def compute_roster_feature_overlay(players_raw: List[Dict], team_id: str = "") -
 
     # Roster continuity
     total_minutes = sum(p.minutes_per_game * p.games_played for p in players)
-    returning_minutes = sum(
-        p.minutes_per_game * p.games_played for p in players if not p.is_transfer
-    )
+    returning_minutes = sum(p.minutes_per_game * p.games_played for p in players if not p.is_transfer)
     roster_continuity = returning_minutes / max(total_minutes, 1)
 
     # Experience
@@ -363,13 +362,17 @@ def load_roster_overlay(roster_path: str, year: Optional[int] = None) -> Dict[st
         if ts_str:
             try:
                 from datetime import date as _date
+
                 ts_date = _date.fromisoformat(ts_str[:10])
                 cutoff = TOURNAMENT_START_DATES.get(year)
                 if cutoff and ts_date >= cutoff:
                     logger.warning(
                         "Roster file %s has timestamp %s on/after tournament start %s "
                         "for year %d — box-score stats may include tournament games.",
-                        roster_path, ts_str, cutoff, year,
+                        roster_path,
+                        ts_str,
+                        cutoff,
+                        year,
                     )
             except (ValueError, TypeError):
                 pass
@@ -457,9 +460,7 @@ def validate_feed_freshness(
         or payload.get("scraped_at")
     )
     if not ts:
-        logger.warning(
-            "%s payload has no timestamp field — skipping freshness check.", source_name
-        )
+        logger.warning("%s payload has no timestamp field — skipping freshness check.", source_name)
         return
 
     ts_dt = parse_timestamp(ts)
@@ -551,9 +552,7 @@ def compute_prior_year_elo(config: SOTAPipelineConfig) -> Optional[Dict[str, flo
 
     candidates = []
     if config.multi_year_games_dir and config.multi_year_games_dir != "auto":
-        candidates.append(
-            os.path.join(config.multi_year_games_dir, f"historical_games_{prior_year}.json")
-        )
+        candidates.append(os.path.join(config.multi_year_games_dir, f"historical_games_{prior_year}.json"))
     auto_dir = os.path.join(os.getcwd(), "data", "raw", "historical")
     candidates.append(os.path.join(auto_dir, f"historical_games_{prior_year}.json"))
 
@@ -581,9 +580,7 @@ def compute_prior_year_elo(config: SOTAPipelineConfig) -> Optional[Dict[str, flo
 
         game_records = team_games_to_game_records(team_games_raw, prior_year)
         if len(game_records) < 100:
-            logger.info(
-                "Prior-year Elo: year %d has too few games (%d).", prior_year, len(game_records)
-            )
+            logger.info("Prior-year Elo: year %d has too few games (%d).", prior_year, len(game_records))
             return None
 
         engine = IncrementalMetricsEngine(game_records, conference_map={}, prior_elo=None)
@@ -611,16 +608,12 @@ def enrich_tournament_context(
     # --- 1. Preseason AP rankings ---
     ap_rankings: Dict[str, int] = {}
     if config.preseason_ap_json:
-        ap_rankings = TournamentContextScraper.load_preseason_ap_from_json(
-            config.preseason_ap_json
-        )
+        ap_rankings = TournamentContextScraper.load_preseason_ap_from_json(config.preseason_ap_json)
 
     # --- 2. Coach tournament experience ---
     coach_data: Dict[str, Dict] = {}
     if config.coach_tournament_json:
-        coach_data = TournamentContextScraper.load_coach_data_from_json(
-            config.coach_tournament_json
-        )
+        coach_data = TournamentContextScraper.load_coach_data_from_json(config.coach_tournament_json)
 
     if coach_data and config.year < 2026:
         if config.coach_data_cutoff_year is None:
@@ -644,9 +637,7 @@ def enrich_tournament_context(
     # --- 3. Conference tournament champions ---
     conf_champions: Dict[str, str] = {}
     if config.conf_champions_json:
-        conf_champions = TournamentContextScraper.load_conf_champions_from_json(
-            config.conf_champions_json
-        )
+        conf_champions = TournamentContextScraper.load_conf_champions_from_json(config.conf_champions_json)
 
     if not ap_rankings and not coach_data and not conf_champions:
         return
@@ -658,9 +649,7 @@ def enrich_tournament_context(
             with open(config.roster_json, "r") as f:
                 roster_payload = json.load(f)
             for team_block in roster_payload.get("teams", []):
-                tid = _team_id(
-                    str(team_block.get("team_id") or team_block.get("team_name") or "")
-                )
+                tid = _team_id(str(team_block.get("team_id") or team_block.get("team_name") or ""))
                 coach = team_block.get("coach") or team_block.get("head_coach") or ""
                 if tid and coach:
                     team_to_coach_map[tid] = str(coach)
@@ -672,12 +661,8 @@ def enrich_tournament_context(
     coach_win_rate_by_team: Dict[str, float] = {}
     if coach_data and team_to_coach_map:
         ctx = TournamentContextScraper()
-        coach_appearances_by_team = ctx.build_team_to_coach_appearances(
-            coach_data, team_to_coach_map
-        )
-        coach_win_rate_by_team = ctx.build_team_to_coach_win_rate(
-            coach_data, team_to_coach_map
-        )
+        coach_appearances_by_team = ctx.build_team_to_coach_appearances(coach_data, team_to_coach_map)
+        coach_win_rate_by_team = ctx.build_team_to_coach_win_rate(coach_data, team_to_coach_map)
 
     # Inject values into maps for each team
     for team in teams:
@@ -769,7 +754,7 @@ def load_team_stat_sources(
     proprietary_map, and all side-effect state needed by the pipeline.
     """
     # --- Load Torvik data ---
-    _strict_torvik = getattr(config, "pipeline_mode", "") == "production"
+    _strict_torvik = True  # Data integrity is a correctness concern in all modes
     if config.torvik_json:
         with open(config.torvik_json, "r") as f:
             torvik_payload = json.load(f)
@@ -788,6 +773,7 @@ def load_team_stat_sources(
             if _ts_str:
                 try:
                     from datetime import date as _date
+
                     _ts_date = _date.fromisoformat(_ts_str[:10])
                     _cutoff = TOURNAMENT_START_DATES.get(config.year)
                     if _cutoff and _ts_date >= _cutoff:
@@ -800,28 +786,28 @@ def load_team_stat_sources(
                     pass
             else:
                 logger.warning(
-                    "Torvik JSON %s has no timestamp field — cannot verify "
-                    "pre-tournament provenance.",
+                    "Torvik JSON %s has no timestamp field — cannot verify pre-tournament provenance.",
                     config.torvik_json,
                 )
         validate_feed_freshness(config, "Torvik", torvik_payload)
         torvik_teams = BartTorvikScraper().load_from_json(config.torvik_json)
     elif config.scrape_live:
         torvik_teams = BartTorvikScraper(
-            cache_dir=config.data_cache_dir, strict_leakage=_strict_torvik,
+            cache_dir=config.data_cache_dir,
+            strict_leakage=_strict_torvik,
         ).fetch_current_rankings(
-            config.year, strict=_strict_torvik,
+            config.year,
+            strict=_strict_torvik,
         )
     else:
-        raise DataRequirementError(
-            "Missing Torvik data. Provide --torvik JSON or run with --scrape-live."
-        )
+        raise DataRequirementError("Missing Torvik data. Provide --torvik JSON or run with --scrape-live.")
 
     if not torvik_teams:
         raise DataRequirementError("Torvik data source is empty.")
 
     # --- Pre-tournament cutoff (reused by enrichment, FF repair, proprietary) ---
     from datetime import date as _date
+
     _t_start = TOURNAMENT_START_DATES.get(config.year, _date(config.year, 3, 14))
     _pre_tourney_cutoff = _t_start.isoformat()
 
@@ -829,30 +815,26 @@ def load_team_stat_sources(
     # The main torvik CSV doesn't include Four Factors; they come from
     # separate files (torvik_four_factors_YYYY.json, torvik_shooting_YYYY.json).
     # If these fields are zero, attempt enrichment from those files.
-    _sample_efg = [
-        getattr(t, "effective_fg_pct", 0.0) or 0.0 for t in torvik_teams[:20]
-    ]
+    _sample_efg = [getattr(t, "effective_fg_pct", 0.0) or 0.0 for t in torvik_teams[:20]]
     if all(abs(v) < 1e-6 for v in _sample_efg):
         _data_dir = os.path.dirname(config.torvik_json) if config.torvik_json else "data/raw"
         logger.warning(
-            "Four Factors are all zero in Torvik data — running enrichment "
-            "from %s/torvik_four_factors_%d.json", _data_dir, config.year,
+            "Four Factors are all zero in Torvik data — running enrichment from %s/torvik_four_factors_%d.json",
+            _data_dir,
+            config.year,
         )
         with open(config.torvik_json, "r") as f:
             _torvik_payload = json.load(f)
         _torvik_payload = enrich_torvik_teams(
-            _torvik_payload, data_dir=_data_dir, year=config.year,
+            _torvik_payload,
+            data_dir=_data_dir,
+            year=config.year,
             strict_leakage=_strict_torvik,
         )
         # Re-parse enriched data
-        torvik_teams = [
-            BartTorvikScraper()._dict_to_team(t)
-            for t in _torvik_payload.get("teams", [])
-        ]
+        torvik_teams = [BartTorvikScraper()._dict_to_team(t) for t in _torvik_payload.get("teams", [])]
         # Check if enrichment succeeded
-        _sample_efg_after = [
-            getattr(t, "effective_fg_pct", 0.0) or 0.0 for t in torvik_teams[:20]
-        ]
+        _sample_efg_after = [getattr(t, "effective_fg_pct", 0.0) or 0.0 for t in torvik_teams[:20]]
         if all(abs(v) < 1e-6 for v in _sample_efg_after):
             raise DataRequirementError(
                 "Four Factors (eFG%, TO%, ORB%, FTR) are ALL ZERO for every team "
@@ -873,6 +855,7 @@ def load_team_stat_sources(
     # tournament teams with zero barthag, which is expected and harmless.
     if _strict_torvik and torvik_teams and config.scrape_live:
         from src.data.scrapers.torvik import TorVikValidator
+
         try:
             TorVikValidator.validate_teams(torvik_teams, strict=True)
         except Exception as exc:
@@ -891,11 +874,8 @@ def load_team_stat_sources(
         historical_team_games = hist_payload.get("team_games", [])
         # Detect skeleton/stub files where game_id exists but all other fields are null
         if historical_games:
-            _sample = historical_games[:min(20, len(historical_games))]
-            _null_count = sum(
-                1 for g in _sample
-                if g.get("team1_name") is None and g.get("team1_score") is None
-            )
+            _sample = historical_games[: min(20, len(historical_games))]
+            _null_count = sum(1 for g in _sample if g.get("team1_name") is None and g.get("team1_score") is None)
             if _null_count == len(_sample):
                 raise DataRequirementError(
                     f"Historical games file {config.historical_games_json} is a skeleton "
@@ -914,9 +894,7 @@ def load_team_stat_sources(
     elif config.scrape_live:
         historical_games = []
     if not historical_games:
-        raise DataRequirementError(
-            "Missing historical game data. Provide --historical-games JSON with box-score rows."
-        )
+        raise DataRequirementError("Missing historical game data. Provide --historical-games JSON with box-score rows.")
 
     # --- Build game-ID → Torvik-ID resolver for Four Factors repair ---
     # Game data uses mascot-suffixed IDs (e.g. "michigan_wolverines") while
@@ -928,9 +906,7 @@ def load_team_stat_sources(
     # be zero/None even after enrichment.  Recompute from historical games.
     # Detection: numeric check (None coerces to 0.0 via `or 0.0`) OR the
     # _csv_approximation flag in the four_factors JSON file.
-    _sample_opp_efg = [
-        getattr(t, "opp_effective_fg_pct", 0.0) or 0.0 for t in torvik_teams[:20]
-    ]
+    _sample_opp_efg = [getattr(t, "opp_effective_fg_pct", 0.0) or 0.0 for t in torvik_teams[:20]]
     _needs_def_ff_repair = all(abs(v) < 1e-6 for v in _sample_opp_efg)
     if not _needs_def_ff_repair:
         # Also check _csv_approximation flag in four_factors JSON
@@ -942,7 +918,7 @@ def load_team_stat_sources(
                     _ff_data = json.load(f)
                 # If any entry has _csv_approximation and None/zero defensive FF, trigger repair.
                 # Scan all entries (not just first 20) to catch single-team corruption.
-                for _tid, _entry in (_ff_data.items() if isinstance(_ff_data, dict) else []):
+                for _tid, _entry in _ff_data.items() if isinstance(_ff_data, dict) else []:
                     if not isinstance(_entry, dict):
                         continue
                     if _entry.get("_csv_approximation") and (
@@ -962,13 +938,15 @@ def load_team_stat_sources(
             "enrichment was skipped or did not fully resolve zeros."
         )
         logger.warning(
-            "Defensive Four Factors are all zero after enrichment — "
-            "computing from %d historical game box scores",
+            "Defensive Four Factors are all zero after enrichment — computing from %d historical game box scores",
             len(_box_score_games),
         )
-        def_ff = _ff_resolver.remap_dict(compute_defensive_four_factors_from_games(
-            _box_score_games, cutoff_date=_pre_tourney_cutoff,
-        ))
+        def_ff = _ff_resolver.remap_dict(
+            compute_defensive_four_factors_from_games(
+                _box_score_games,
+                cutoff_date=_pre_tourney_cutoff,
+            )
+        )
         _def_ff_applied = 0
         for team in torvik_teams:
             tid = team.team_id
@@ -989,12 +967,11 @@ def load_team_stat_sources(
                 _def_ff_applied += 1
         logger.info(
             "Defensive FF auto-repair: applied to %d/%d teams from game box scores",
-            _def_ff_applied, len(torvik_teams),
+            _def_ff_applied,
+            len(torvik_teams),
         )
         # Hard-fail if still all zero
-        _sample_after = [
-            getattr(t, "opp_effective_fg_pct", 0.0) or 0.0 for t in torvik_teams[:20]
-        ]
+        _sample_after = [getattr(t, "opp_effective_fg_pct", 0.0) or 0.0 for t in torvik_teams[:20]]
         if all(abs(v) < 1e-6 for v in _sample_after):
             raise DataRequirementError(
                 "Defensive Four Factors (opp_eFG%, opp_TO%, opp_FTR) are ALL ZERO "
@@ -1016,38 +993,39 @@ def load_team_stat_sources(
             if val is not None and val > 1e-6 and not (lo <= val <= hi):
                 logger.warning(
                     "Team %s has %s=%.4f outside plausible range [%.2f, %.2f]",
-                    team.team_id, ff_name, val, lo, hi,
+                    team.team_id,
+                    ff_name,
+                    val,
+                    lo,
+                    hi,
                 )
 
     # --- Auto-repair offensive ORB%/TO%/DRB% from game box scores ---
     # When the Torvik CSV fallback is used, individual player ORB%/TO% cannot
     # be converted to team-level rates (they are not additive).  Compute from
     # game box scores instead.
-    _sample_orb = [
-        getattr(t, "offensive_reb_rate", 0.0) or 0.0 for t in torvik_teams[:20]
-    ]
+    _sample_orb = [getattr(t, "offensive_reb_rate", 0.0) or 0.0 for t in torvik_teams[:20]]
     _all_zero_orb = all(abs(v) < 1e-6 for v in _sample_orb)
     # Also detect CSV-approximation bias: player-level ORB% (1-15%) is
     # fundamentally different from team-level ORB% (25-35%).  The CSV fallback
     # averages player ORB% weighted by minutes, producing values ~3.8x too low.
     # Detect by checking if the sample median is below 0.15 — no real D1 team
     # has a team-level ORB% that low (floor is ~0.18).
-    _csv_orb_bias = (
-        not _all_zero_orb
-        and len(_sample_orb) >= 10
-        and sorted(_sample_orb)[len(_sample_orb) // 2] < 0.15
-    )
+    _csv_orb_bias = not _all_zero_orb and len(_sample_orb) >= 10 and sorted(_sample_orb)[len(_sample_orb) // 2] < 0.15
     if _all_zero_orb or _csv_orb_bias:
         _reason = "all zero" if _all_zero_orb else "CSV player-level bias (median < 0.15)"
         _box_score_games = historical_team_games if historical_team_games else historical_games
         logger.warning(
-            "Offensive ORB%%/DRB%% need repair (%s) — computing from "
-            "%d historical game box scores",
-            _reason, len(_box_score_games),
+            "Offensive ORB%%/DRB%% need repair (%s) — computing from %d historical game box scores",
+            _reason,
+            len(_box_score_games),
         )
-        off_ff = _ff_resolver.remap_dict(compute_offensive_four_factors_from_games(
-            _box_score_games, cutoff_date=_pre_tourney_cutoff,
-        ))
+        off_ff = _ff_resolver.remap_dict(
+            compute_offensive_four_factors_from_games(
+                _box_score_games,
+                cutoff_date=_pre_tourney_cutoff,
+            )
+        )
         _off_ff_applied = 0
         for team in torvik_teams:
             tid = team.team_id
@@ -1083,12 +1061,13 @@ def load_team_stat_sources(
                     _bayesian_applied += 1
             if _bayesian_applied:
                 logger.info(
-                    "Applied D1 population mean ORB%%/DRB%% to %d teams "
-                    "below compute threshold", _bayesian_applied,
+                    "Applied D1 population mean ORB%%/DRB%% to %d teams below compute threshold",
+                    _bayesian_applied,
                 )
         logger.info(
             "Offensive FF auto-repair: applied to %d/%d teams from game box scores",
-            _off_ff_applied, len(torvik_teams),
+            _off_ff_applied,
+            len(torvik_teams),
         )
 
     # --- Build conference map from Torvik data ---
@@ -1372,8 +1351,7 @@ def load_team_stat_sources(
         _sr_off = [float(r.get("off_rtg", 0)) for r in sr_rows if isinstance(r, dict)]
         if _sr_off and all(abs(v) < 1e-6 for v in _sr_off):
             logger.warning(
-                "Sports Reference JSON has all-zero off_rtg — skipping "
-                "entire SR backfill (corrupted scrape)."
+                "Sports Reference JSON has all-zero off_rtg — skipping entire SR backfill (corrupted scrape)."
             )
             sr_rows = []
 
@@ -1531,17 +1509,13 @@ def apply_injury_reports(
         for team_id, roster in rosters.items():
             impacts = positional_depth_chart.compute_injury_impact(
                 roster,
-                severity_model=(
-                    injury_severity_model if config.enable_injury_severity_model else None
-                ),
+                severity_model=(injury_severity_model if config.enable_injury_severity_model else None),
             )
             positional_impacts[team_id] = impacts
 
         if positional_impacts:
             avg_vulnerability = float(
-                np.mean(
-                    [v.get("positional_vulnerability", 0.0) for v in positional_impacts.values()]
-                )
+                np.mean([v.get("positional_vulnerability", 0.0) for v in positional_impacts.values()])
             )
             stats["avg_positional_vulnerability"] = round(avg_vulnerability, 4)
 
@@ -1557,9 +1531,7 @@ def build_rosters(
     Returns a :class:`RosterResult` containing rosters and quality stats.
     """
     if not config.roster_json:
-        raise DataRequirementError(
-            "Missing roster data. Provide --rosters JSON with player-level metrics."
-        )
+        raise DataRequirementError("Missing roster data. Provide --rosters JSON with player-level metrics.")
 
     with open(config.roster_json, "r") as f:
         payload = json.load(f)
@@ -1573,9 +1545,7 @@ def build_rosters(
     for team_block in teams_payload:
         if not isinstance(team_block, dict):
             continue
-        source_team = (
-            team_block.get("team_id") or team_block.get("team_name") or team_block.get("name")
-        )
+        source_team = team_block.get("team_id") or team_block.get("team_name") or team_block.get("name")
         if not source_team:
             continue
         tid = _team_id(str(source_team))
@@ -1612,18 +1582,8 @@ def historical_game_to_flow(
 ) -> Optional[GameFlow]:
     """Convert a raw game dict to a :class:`GameFlow`."""
     game_id = str(game.get("game_id") or game.get("id") or "")
-    t1 = (
-        game.get("team_id")
-        or game.get("team1_id")
-        or game.get("team1")
-        or game.get("home_team")
-    )
-    t2 = (
-        game.get("opponent_id")
-        or game.get("team2_id")
-        or game.get("team2")
-        or game.get("away_team")
-    )
+    t1 = game.get("team_id") or game.get("team1_id") or game.get("team1") or game.get("home_team")
+    t2 = game.get("opponent_id") or game.get("team2_id") or game.get("team2") or game.get("away_team")
     if not game_id or not t1 or not t2:
         return None
 
@@ -1720,9 +1680,7 @@ def build_or_load_game_flows(
                 continue
             all_flows_dict[flow.game_id] = flow
     else:
-        raise DataRequirementError(
-            "Missing game-level data. Provide --historical-games JSON."
-        )
+        raise DataRequirementError("Missing game-level data. Provide --historical-games JSON.")
 
     in_season_flows = {
         game_id: flow
@@ -1779,7 +1737,8 @@ def load_massey_multi_system(
         if result:
             logger.info(
                 "Massey multi-system: loaded features for %d teams (year=%d)",
-                len(result), config.year,
+                len(result),
+                config.year,
             )
         return result
     except Exception as e:
@@ -1942,8 +1901,7 @@ def verify_massey_coverage(
 
     if coverage_pct < 0.50:
         logger.warning(
-            "FIX-MASSEY CRITICAL: Only %.0f%% of tournament teams have "
-            "external rating composites (%d/%d).",
+            "FIX-MASSEY CRITICAL: Only %.0f%% of tournament teams have external rating composites (%d/%d).",
             coverage_pct * 100,
             n_with_composite,
             n_teams,
@@ -1952,8 +1910,7 @@ def verify_massey_coverage(
             logger.warning("FIX-MASSEY: Missing teams (first 10): %s", missing_teams[:10])
     elif coverage_pct < 0.90:
         logger.warning(
-            "FIX-MASSEY: %.0f%% coverage (%d/%d teams). "
-            "%d teams using seed-based fallback.",
+            "FIX-MASSEY: %.0f%% coverage (%d/%d teams). %d teams using seed-based fallback.",
             coverage_pct * 100,
             n_with_composite,
             n_teams,
@@ -2004,9 +1961,7 @@ class DataLoadingStage:
         with phase_ctx:
             teams = load_teams(pipeline.config, pipeline.bracket_pipeline)
 
-            stat_result = load_team_stat_sources(
-                pipeline.config, teams, pipeline.proprietary_engine
-            )
+            stat_result = load_team_stat_sources(pipeline.config, teams, pipeline.proprietary_engine)
             # Unpack side-effects onto pipeline
             pipeline._prior_year_elo = stat_result.prior_year_elo
             pipeline._current_year_game_records = stat_result.current_year_game_records
