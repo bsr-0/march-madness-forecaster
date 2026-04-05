@@ -173,7 +173,7 @@ jobs:
 
   # ─── Merge Gate (only depends on fast-gate) ──────────────────────
   all-gates:
-    name: "All Gates Green"
+    name: "CI"
     if: always()
     needs:
       - fast-gate

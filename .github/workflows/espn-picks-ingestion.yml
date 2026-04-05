@@ -71,7 +71,7 @@ jobs:
           path: data/raw/historical_public_picks/*.json
           retention-days: 90
 
-      - name: Commit and push
+      - name: Commit and push to branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -79,8 +79,10 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
+            BRANCH="auto/espn-picks-kaggle-$(date -u +%Y%m%d-%H%M%S)"
+            git checkout -b "$BRANCH"
             git commit -m "chore: import real ESPN public picks from Kaggle dataset ($(date -u +%Y-%m-%d))"
-            git push
+            git push -u origin "$BRANCH"
           fi
 
   validate:
@@ -128,7 +130,7 @@ jobs:
           path: data/raw/historical_public_picks/*.json
           retention-days: 90
 
-      - name: Commit and push
+      - name: Commit and push to branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -136,8 +138,10 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
+            BRANCH="auto/espn-picks-scraped-$(date -u +%Y%m%d-%H%M%S)"
+            git checkout -b "$BRANCH"
             git commit -m "chore: update ESPN public pick data ($(date -u +%Y-%m-%d))"
-            git push
+            git push -u origin "$BRANCH"
           fi
 
   csv-import:
@@ -189,7 +193,7 @@ jobs:
           path: data/raw/historical_public_picks/espn_picks_${{ inputs.csv_year }}.json
           retention-days: 90
 
-      - name: Commit and push
+      - name: Commit and push to branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -197,6 +201,8 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
+            BRANCH="auto/espn-picks-csv-$(date -u +%Y%m%d-%H%M%S)"
+            git checkout -b "$BRANCH"
             git commit -m "chore: import ESPN picks for ${{ inputs.csv_year }} from CSV"
-            git push
+            git push -u origin "$BRANCH"
           fi
