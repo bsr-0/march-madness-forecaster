@@ -23,11 +23,31 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
 from src.data.seed_pick_model import _compute_advancement_rates, _win_rate
+from src.exceptions import LeakageError
 
 logger = logging.getLogger(__name__)
 
 HIST_DIR = Path("data/raw/historical")
 DATA_DIR = Path("data/raw")
+
+_VALID_PRETOURNAMENT_TYPES = {"pre_tournament_computed", "pre_tournament"}
+
+
+def _validate_pretournament(data: dict, filepath: Path) -> None:
+    """Raise LeakageError if data file lacks pre-tournament provenance.
+
+    Checks the data_type field written by the scraper/compute scripts.
+    Raises on missing or wrong data_type — forces clean data regeneration
+    rather than silently ingesting potentially contaminated files.
+    """
+    dt = data.get("data_type")
+    if dt not in _VALID_PRETOURNAMENT_TYPES:
+        raise LeakageError(
+            f"{filepath}: data_type={dt!r}, expected one of {_VALID_PRETOURNAMENT_TYPES}. "
+            f"File may contain post-tournament data (look-ahead bias). "
+            f"Re-run compute_pretournament_*.py or rescrape_pretournament_torvik.py to regenerate."
+        )
+
 
 TRAIN_YEARS = [
     2005,
@@ -90,13 +110,19 @@ def _build_feature_vector(t1_stats: dict, t2_stats: dict) -> np.ndarray:
 
 
 def _load_team_stats(year: int) -> dict:
-    """Load Torvik team stats for a given year."""
+    """Load Torvik team stats for a given year.
+
+    Validates pre-tournament provenance on every file before reading. Raises
+    LeakageError if a file's data_type indicates post-tournament data, preventing
+    silent look-ahead bias from contaminating training or prediction.
+    """
     stats = {}
     for prefix in [HIST_DIR, DATA_DIR]:
         torvik_path = prefix / f"torvik_{year}.json"
         if torvik_path.exists():
             with open(torvik_path) as f:
                 data = json.load(f)
+            _validate_pretournament(data, torvik_path)
             for t in data.get("teams", []):
                 stats[t["team_id"]] = t
             break
@@ -106,6 +132,7 @@ def _load_team_stats(year: int) -> dict:
         if ff_path.exists():
             with open(ff_path) as f:
                 ff_data = json.load(f)
+            _validate_pretournament(ff_data, ff_path)
             if isinstance(ff_data, dict) and "teams" not in ff_data:
                 for tid, ff in ff_data.items():
                     if tid in stats:
