@@ -283,7 +283,6 @@ def _train_regularized_logistic(
         return model.predict_proba(X_clean)[:, 1]
 
     return _predict
-<<<<<<< HEAD
 
 
 def _train_spread_regressor(
