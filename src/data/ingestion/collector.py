@@ -35,6 +35,7 @@ from ...conference_tournament.data_enrichment import (
     compute_offensive_four_factors_from_games,
 )
 from ..team_id_resolver import GameToTorvikResolver
+
 logger = logging.getLogger(__name__)
 
 from .validators import (
@@ -94,8 +95,14 @@ class IngestionConfig:
 
 
 _FF_FIELDS = (
-    "effective_fg_pct", "turnover_rate", "offensive_reb_rate", "free_throw_rate",
-    "opp_effective_fg_pct", "opp_turnover_rate", "opp_free_throw_rate", "defensive_reb_rate",
+    "effective_fg_pct",
+    "turnover_rate",
+    "offensive_reb_rate",
+    "free_throw_rate",
+    "opp_effective_fg_pct",
+    "opp_turnover_rate",
+    "opp_free_throw_rate",
+    "defensive_reb_rate",
 )
 
 
@@ -170,12 +177,15 @@ class RealDataCollector:
             try:
                 from ...pipeline.config import TOURNAMENT_START_DATES
                 from datetime import date as _date
+
                 _cutoff = TOURNAMENT_START_DATES.get(year)
                 if _cutoff and _date.today() >= _cutoff:
                     logger.warning(
                         "Torvik data collection for %d on %s (tournament started %s). "
                         "Efficiency metrics may include tournament games — LEAKAGE RISK.",
-                        year, _date.today(), _cutoff,
+                        year,
+                        _date.today(),
+                        _cutoff,
                     )
             except ImportError:
                 pass
@@ -196,7 +206,9 @@ class RealDataCollector:
                         "adj_tempo",
                     ],
                     variance_fields=[
-                        "barthag", "adj_offensive_efficiency", "adj_defensive_efficiency",
+                        "barthag",
+                        "adj_offensive_efficiency",
+                        "adj_defensive_efficiency",
                     ],
                     stddev_thresholds={
                         "adj_offensive_efficiency": 5.0,
@@ -210,7 +222,13 @@ class RealDataCollector:
 
             # Fetch Four Factors and shooting stats (separate Torvik endpoints)
             torvik_scraper = BartTorvikScraper(str(self.cache_dir))
-            four_factors = torvik_scraper.fetch_four_factors(year)
+            try:
+                four_factors = torvik_scraper.fetch_four_factors(year)
+            except Exception as exc:
+                if "LeakageError" in type(exc).__name__:
+                    logger.warning("Four factors fetch blocked by leakage guard: %s", exc)
+                else:
+                    raise
             if four_factors:
                 # Overwrite protection: if new data has zeros for defensive FF
                 # but an existing file has non-zero values (from a previous
@@ -230,13 +248,9 @@ class RealDataCollector:
                                 continue
                             # Check if existing has non-zero def FF but new has zeros
                             existing_has_def = any(
-                                abs(float(existing_entry.get(f, 0) or 0)) > 1e-6
-                                for f in _DEF_FIELDS
+                                abs(float(existing_entry.get(f, 0) or 0)) > 1e-6 for f in _DEF_FIELDS
                             )
-                            new_has_zeros = all(
-                                abs(float(new_entry.get(f, 0) or 0)) < 1e-6
-                                for f in _DEF_FIELDS
-                            )
+                            new_has_zeros = all(abs(float(new_entry.get(f, 0) or 0)) < 1e-6 for f in _DEF_FIELDS)
                             if existing_has_def and new_has_zeros:
                                 for f in _DEF_FIELDS:
                                     val = existing_entry.get(f)
@@ -245,20 +259,21 @@ class RealDataCollector:
                                 _preserved += 1
                         if _preserved:
                             logger.info(
-                                "Preserved existing defensive FF for %d teams "
-                                "(new data had zeros from CSV fallback)",
+                                "Preserved existing defensive FF for %d teams (new data had zeros from CSV fallback)",
                                 _preserved,
                             )
                     except (json.JSONDecodeError, OSError):
                         pass
                 out["torvik_four_factors_json"] = self._write(
-                    f"torvik_four_factors_{year}.json", four_factors,
+                    f"torvik_four_factors_{year}.json",
+                    four_factors,
                 )
                 provider_lineage["torvik_four_factors_json"] = "barttorvik"
 
                 # Cross-source consistency check (advisory only — never blocks)
                 if torvik_teams:
                     from src.data.ingestion.validators import cross_validate_torvik_sources
+
                     cross_warnings = cross_validate_torvik_sources(
                         torvik_teams,
                         [{"team_id": k, **v} for k, v in four_factors.items() if isinstance(v, dict)],
@@ -275,13 +290,22 @@ class RealDataCollector:
                     out["torvik_json"] = self._write(f"torvik_{year}.json", torvik_payload)
                     logger.info(
                         "Merged Four Factors into torvik_%d.json for %d teams",
-                        year, _merged,
+                        year,
+                        _merged,
                     )
 
-            shooting = torvik_scraper.fetch_shooting_stats(year)
+            try:
+                shooting = torvik_scraper.fetch_shooting_stats(year)
+            except Exception as exc:
+                if "LeakageError" in type(exc).__name__:
+                    logger.warning("Shooting stats fetch blocked by leakage guard: %s", exc)
+                    shooting = {}
+                else:
+                    raise
             if shooting:
                 out["torvik_shooting_json"] = self._write(
-                    f"torvik_shooting_{year}.json", shooting,
+                    f"torvik_shooting_{year}.json",
+                    shooting,
                 )
                 provider_lineage["torvik_shooting_json"] = "barttorvik"
 
@@ -365,7 +389,9 @@ class RealDataCollector:
                 new_records = game_provider.records
                 if new_records:
                     provider_lineage["historical_games_json"] = game_provider.provider
-                game_provider_name = game_provider.provider if not self.config.historical_games_since else "espn_scoreboard"
+                game_provider_name = (
+                    game_provider.provider if not self.config.historical_games_since else "espn_scoreboard"
+                )
 
             if new_records:
                 self._ensure_game_dates(new_records, year)
@@ -389,12 +415,22 @@ class RealDataCollector:
         # opp_free_throw_rate) from opponent box scores and merge them in.
         if torvik_payload and historical_team_rows:
             self._enrich_defensive_four_factors(
-                torvik_payload, four_factors, historical_team_rows,
-                year, out, validation_errors, provider_lineage,
+                torvik_payload,
+                four_factors,
+                historical_team_rows,
+                year,
+                out,
+                validation_errors,
+                provider_lineage,
             )
             self._enrich_offensive_four_factors(
-                torvik_payload, four_factors, historical_team_rows,
-                year, out, validation_errors, provider_lineage,
+                torvik_payload,
+                four_factors,
+                historical_team_rows,
+                year,
+                out,
+                validation_errors,
+                provider_lineage,
             )
             # Post-enrichment validation gate
             ff_errors = validate_four_factors(torvik_payload)
@@ -448,7 +484,8 @@ class RealDataCollector:
             else:
                 try:
                     sr = SportsReferenceScraper(str(self.cache_dir)).fetch_team_season_stats(
-                        year, game_records=historical_team_rows,
+                        year,
+                        game_records=historical_team_rows,
                     )
                 except (ValueError, Exception) as exc:
                     logger.warning("SportsReference scraper fallback failed: %s", exc)
@@ -554,6 +591,7 @@ class RealDataCollector:
         if not self.config.kaggle_dir:
             try:
                 from ..kaggle_downloader import ensure_kaggle_data
+
                 _resolved = ensure_kaggle_data(kaggle_dir=None, auto_download=True)
                 if _resolved:
                     self.config.kaggle_dir = _resolved
@@ -566,6 +604,7 @@ class RealDataCollector:
         # --- Cross-source team ID consistency check ---
         try:
             from .validators import validate_team_id_consistency
+
             _seeds_path = self.output_dir / f"tournament_seeds_{year}.json"
             if _seeds_path.exists() and torvik_payload:
                 with open(_seeds_path) as _sf:
@@ -625,7 +664,9 @@ class RealDataCollector:
 
         logger.info(
             "Incremental merge: %d existing + %d new records (%d after dedup)",
-            len(existing_games) - added, len(new_records), len(existing_games),
+            len(existing_games) - added,
+            len(new_records),
+            len(existing_games),
         )
         return existing_games
 
@@ -707,8 +748,7 @@ class RealDataCollector:
         def_ff_raw = compute_defensive_four_factors_from_games(game_records)
         if not def_ff_raw:
             logger.warning(
-                "Could not compute defensive Four Factors from game records "
-                "(no paired box scores with shooting data)"
+                "Could not compute defensive Four Factors from game records (no paired box scores with shooting data)"
             )
             return
 
@@ -718,8 +758,10 @@ class RealDataCollector:
         def_ff = resolver.remap_dict(def_ff_raw)
 
         _DEF_FF_FIELDS = (
-            "opp_effective_fg_pct", "opp_turnover_rate",
-            "opp_free_throw_rate", "defensive_reb_rate",
+            "opp_effective_fg_pct",
+            "opp_turnover_rate",
+            "opp_free_throw_rate",
+            "defensive_reb_rate",
         )
 
         torvik_updated = 0
@@ -736,11 +778,7 @@ class RealDataCollector:
                 new_val = d.get(field)
                 if new_val is None:
                     continue
-                needs_repair = (
-                    is_csv_approx
-                    or current is None
-                    or abs(float(current or 0)) < 1e-6
-                )
+                needs_repair = is_csv_approx or current is None or abs(float(current or 0)) < 1e-6
                 if needs_repair and abs(float(new_val)) > 1e-6:
                     team[field] = new_val
                     changed = True
@@ -764,11 +802,7 @@ class RealDataCollector:
                     new_val = d.get(field)
                     if new_val is None:
                         continue
-                    needs_repair = (
-                        is_csv_approx
-                        or current is None
-                        or abs(float(current or 0)) < 1e-6
-                    )
+                    needs_repair = is_csv_approx or current is None or abs(float(current or 0)) < 1e-6
                     if needs_repair and abs(float(new_val)) > 1e-6:
                         ff_entry[field] = new_val
                 ff_updated += 1
@@ -776,15 +810,18 @@ class RealDataCollector:
         logger.info(
             "Defensive Four Factors enrichment: %d/%d torvik teams updated, "
             "%d four_factors entries updated (from %d game-derived teams)",
-            torvik_updated, len(torvik_payload.get("teams", [])),
-            ff_updated, len(def_ff),
+            torvik_updated,
+            len(torvik_payload.get("teams", [])),
+            ff_updated,
+            len(def_ff),
         )
 
         # Re-write enriched files (defensive only — offensive writes separately)
         out["torvik_json"] = self._write(f"torvik_{year}.json", torvik_payload)
         if four_factors:
             out["torvik_four_factors_json"] = self._write(
-                f"torvik_four_factors_{year}.json", four_factors,
+                f"torvik_four_factors_{year}.json",
+                four_factors,
             )
         provider_lineage["torvik_defensive_ff"] = "game_box_scores"
 
@@ -805,9 +842,7 @@ class RealDataCollector:
         """
         off_ff_raw = compute_offensive_four_factors_from_games(game_records)
         if not off_ff_raw:
-            logger.warning(
-                "Could not compute offensive Four Factors from game records"
-            )
+            logger.warning("Could not compute offensive Four Factors from game records")
             return
 
         # Remap game-data IDs to Torvik canonical IDs
@@ -820,10 +855,7 @@ class RealDataCollector:
         # Detect CSV bias: median ORB% < 0.15 indicates player-level values
         teams = torvik_payload.get("teams", [])
         orb_sample = [float(t.get("offensive_reb_rate", 0) or 0) for t in teams[:20]]
-        csv_bias = (
-            len(orb_sample) >= 10
-            and sorted(orb_sample)[len(orb_sample) // 2] < 0.15
-        )
+        csv_bias = len(orb_sample) >= 10 and sorted(orb_sample)[len(orb_sample) // 2] < 0.15
 
         torvik_updated = 0
         for team in teams:
@@ -838,12 +870,7 @@ class RealDataCollector:
                 new_val = d.get(field)
                 if new_val is None:
                     continue
-                needs_repair = (
-                    csv_bias
-                    or is_csv_approx
-                    or current is None
-                    or abs(float(current or 0)) < 1e-6
-                )
+                needs_repair = csv_bias or is_csv_approx or current is None or abs(float(current or 0)) < 1e-6
                 if needs_repair and abs(float(new_val)) > 1e-6:
                     team[field] = new_val
                     changed = True
@@ -866,12 +893,7 @@ class RealDataCollector:
                     new_val = d.get(field)
                     if new_val is None:
                         continue
-                    needs_repair = (
-                        csv_bias
-                        or is_csv_approx
-                        or current is None
-                        or abs(float(current or 0)) < 1e-6
-                    )
+                    needs_repair = csv_bias or is_csv_approx or current is None or abs(float(current or 0)) < 1e-6
                     if needs_repair and abs(float(new_val)) > 1e-6:
                         ff_entry[field] = new_val
                 ff_updated += 1
@@ -879,14 +901,18 @@ class RealDataCollector:
         logger.info(
             "Offensive Four Factors enrichment: %d/%d torvik teams updated, "
             "%d four_factors entries updated (from %d game-derived teams)",
-            torvik_updated, len(teams), ff_updated, len(off_ff),
+            torvik_updated,
+            len(teams),
+            ff_updated,
+            len(off_ff),
         )
 
         # Re-write enriched files
         out["torvik_json"] = self._write(f"torvik_{year}.json", torvik_payload)
         if four_factors:
             out["torvik_four_factors_json"] = self._write(
-                f"torvik_four_factors_{year}.json", four_factors,
+                f"torvik_four_factors_{year}.json",
+                four_factors,
             )
 
         provider_lineage["torvik_offensive_ff"] = "game_box_scores"
@@ -966,9 +992,7 @@ class RealDataCollector:
                     base_index[key] = len(base_players) - 1
 
     def _team_key(self, team: Dict) -> str:
-        return self._normalize_team_id(
-            str(team.get("team_id") or team.get("team_name") or team.get("name") or "")
-        )
+        return self._normalize_team_id(str(team.get("team_id") or team.get("team_name") or team.get("name") or ""))
 
     def _player_key(self, player: Dict) -> str:
         raw_id = str(player.get("player_id") or "").strip()
@@ -1011,7 +1035,8 @@ class RealDataCollector:
             if seeds:
                 payload = {"teams": seeds, "source": "kaggle_csv"}
                 out["kaggle_tourney_seeds_json"] = self._write(
-                    f"kaggle_tourney_seeds_{year}.json", payload,
+                    f"kaggle_tourney_seeds_{year}.json",
+                    payload,
                 )
                 provider_lineage["kaggle_tourney_seeds_json"] = "kaggle_csv"
         except Exception as e:
@@ -1025,7 +1050,8 @@ class RealDataCollector:
             if games:
                 payload = {"games": games, "source": "kaggle_csv"}
                 out["kaggle_regular_season_json"] = self._write(
-                    f"kaggle_regular_season_{year}.json", payload,
+                    f"kaggle_regular_season_{year}.json",
+                    payload,
                 )
                 provider_lineage["kaggle_regular_season_json"] = "kaggle_csv"
         except Exception as e:
@@ -1039,7 +1065,8 @@ class RealDataCollector:
             if tourney:
                 payload = {"games": tourney, "source": "kaggle_csv"}
                 out["kaggle_tourney_results_json"] = self._write(
-                    f"kaggle_tourney_results_{year}.json", payload,
+                    f"kaggle_tourney_results_{year}.json",
+                    payload,
                 )
                 provider_lineage["kaggle_tourney_results_json"] = "kaggle_csv"
         except Exception as e:
@@ -1051,7 +1078,8 @@ class RealDataCollector:
             if coaches:
                 payload = {"coaches": coaches, "source": "kaggle_csv"}
                 out["kaggle_coaches_json"] = self._write(
-                    f"kaggle_coaches_{year}.json", payload,
+                    f"kaggle_coaches_{year}.json",
+                    payload,
                 )
                 provider_lineage["kaggle_coaches_json"] = "kaggle_csv"
         except Exception as e:
@@ -1063,7 +1091,8 @@ class RealDataCollector:
             if confs:
                 payload = {"conferences": confs, "source": "kaggle_csv"}
                 out["kaggle_conferences_json"] = self._write(
-                    f"kaggle_conferences_{year}.json", payload,
+                    f"kaggle_conferences_{year}.json",
+                    payload,
                 )
                 provider_lineage["kaggle_conferences_json"] = "kaggle_csv"
         except Exception as e:
@@ -1093,7 +1122,5 @@ class RealDataCollector:
                 if value is not None and abs(value) > 1e-6:
                     nonzero += 1
             if players and nonzero < min_players:
-                errors.append(
-                    f"teams[{idx}] has only {nonzero} non-zero RAPM players; expected >= {min_players}"
-                )
+                errors.append(f"teams[{idx}] has only {nonzero} non-zero RAPM players; expected >= {min_players}")
         return errors

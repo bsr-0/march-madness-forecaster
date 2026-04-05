@@ -495,13 +495,14 @@ class BartTorvikScraper:
         Returns:
             List of TorVikTeam objects
         """
-        self._check_tournament_date_guard(year, strict=strict)
-
         # Check cache (with TTL + content validation)
         cached = self._load_from_cache(f"torvik_rankings_{year}.json")
         if cached and self._cache_has_valid_rankings(cached):
             self._validate_cache_timestamp(cached, year, strict=strict)
             return [self._dict_to_team(t) for t in cached.get("teams", [])]
+
+        # Guard only blocks live scrapes — cached reads are safe
+        self._check_tournament_date_guard(year, strict=strict)
 
         teams: List[TorVikTeam] = []
 
@@ -1145,12 +1146,13 @@ class BartTorvikScraper:
         Returns:
             Dict of team_id -> four factors dict
         """
-        self._check_tournament_date_guard(year)
-
         cached = self._load_from_cache(f"torvik_four_factors_{year}.json")
         if cached and self._cache_has_valid_four_factors(cached):
             self._validate_cache_timestamp(cached, year)
             return cached
+
+        # Guard only blocks live scrapes — cached reads are safe
+        self._check_tournament_date_guard(year)
 
         four_factors: Dict[str, Dict] = {}
 
@@ -1216,12 +1218,13 @@ class BartTorvikScraper:
         Returns:
             Dict of team_id -> {'three_pt_pct': float, 'ft_pct': float}
         """
-        self._check_tournament_date_guard(year)
-
         cached = self._load_from_cache(f"torvik_shooting_{year}.json")
         if cached:
             self._validate_cache_timestamp(cached, year)
             return cached
+
+        # Guard only blocks live scrapes — cached reads are safe
+        self._check_tournament_date_guard(year)
 
         shooting: Dict[str, Dict] = {}
 
