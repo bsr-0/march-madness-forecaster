@@ -1,92 +1,33 @@
-"""Phase 6 — Model Class Selection.
+"""Phase 6 — Model Selection: evaluate model candidates on temporal CV.
 
-Evaluate candidate ML model classes via time-aware cross-validation and
-select only those that improve bracket EV over Phase 5 baselines.  The
-pipeline stops if no candidate beats the baseline — a signal to revisit
-features or preprocessing.
+Trains multiple model types (logistic, gradient boosting, spread regression),
+evaluates them on Leave-One-Year-Out temporal CV, and selects the best
+performers for the ensemble.  Acts as the gatekeeper between Phase 5
+(baselines) and Phase 7 (calibration).
 
-Candidate pool (aligned with ProductionBaselineSpec):
-    - gradient_boosting    (LightGBM classifier)
-    - xgboost              (XGBoost classifier)
-    - regularized_logistic (L1/L2 logistic regression with tuned C)
-    - spread_regressor     (Point-spread regression → logistic CDF, primary prod model)
-    - margin_regressor     (LightGBM margin regression → logistic CDF)
-
-Each candidate is evaluated via temporal CV (expanding-window or LOYO).
-Only candidates whose mean CV bracket EV exceeds the baseline EV
-threshold are promoted to Phase 7 hyperparameter tuning.
-
-Usage::
-
-    selector = ModelClassSelector(
-        baseline_ev=baseline_results.models["logistic_regression"].bracket_ev,
-        baseline_brier=baseline_results.models["logistic_regression"].brier_score,
-    )
-    selection = selector.run(train_X, train_y, val_X, val_y, feature_names=names)
-    # selection.selected_models → ["gradient_boosting", "regularized_logistic"]
+Key design decisions:
+- All evaluation is strictly out-of-sample (temporal CV, never in-sample)
+- Model selection uses EV improvement over baseline, not raw Brier
+- Max models capped to prevent ensemble bloat
+- LOYO validation provides honest year-by-year generalization estimates
 """
 
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
 from src.exceptions import IntegrityError
-from src.ml.calibration.calibration import BrierScoreOptimizer
 from src.pipeline.stages.baseline_evaluation import (
+    ROUND_SCORING_WEIGHTS,
     compute_bracket_ev,
     compute_coin_flip_ev,
-    ROUND_SCORING_WEIGHTS,
-    _safe_log_loss,
 )
 
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-# Maximum number of model classes to promote (keeps ensembling tractable).
-MAX_SELECTED_MODELS = 3
-
-# Minimum EV improvement over baseline to be selected (in points).
-DEFAULT_MIN_EV_IMPROVEMENT = 0.0
-
-# Brier score gate — candidates must not be worse than this.
-DEFAULT_MAX_BRIER = 0.220
-
-# Model complexity → allowed candidate sets.
-# "simple" restricts to low-DF models that won't overfit on 7 features / ~400 samples.
-# "standard" enables the full production ensemble (tree models + regression + logistic).
-# "full" adds all standard candidates plus graph-SOS and momentum-trend feature
-#   enrichment (enable_gnn/enable_transformer).  Despite the names, these are
-#   NumPy-based feature extractors (PageRank SOS, trend/volatility), NOT neural
-#   networks — they add 2-3 auxiliary features to the ensemble input.
-#   Empirically verified 2026-03-27: _run_gnn() returns "statistical_fallback",
-#   _run_transformer() returns "trend_fallback".  No torch dependency required.
-# Aligns with EXPERIMENT_WORKFLOW_PLAN.md Phase 1 structural search and
-# baseline_training.py line 1128: _use_tree_models = model_complexity != "simple".
-COMPLEXITY_CANDIDATES: Dict[str, List[str]] = {
-    "simple": ["regularized_logistic", "spread_regressor"],
-    "standard": [
-        "gradient_boosting",
-        "xgboost",
-        "regularized_logistic",
-        "spread_regressor",
-        "margin_regressor",
-    ],
-    "full": [
-        "gradient_boosting",
-        "xgboost",
-        "regularized_logistic",
-        "spread_regressor",
-        "margin_regressor",
-        "gnn_augmented",
-    ],
-}
 
 
 # ---------------------------------------------------------------------------
@@ -96,124 +37,150 @@ COMPLEXITY_CANDIDATES: Dict[str, List[str]] = {
 
 @dataclass
 class CandidateResult:
-    """Evaluation of a single candidate model class."""
+    """Evaluation result for a single model candidate."""
 
     model_name: str
     mean_brier: float
-    mean_log_loss: float
-    mean_accuracy: float
-    mean_bracket_ev: float
-    fold_briers: List[float] = field(default_factory=list)
-    fold_evs: List[float] = field(default_factory=list)
-    ev_improvement_over_baseline: float = 0.0
-    brier_improvement_over_baseline: float = 0.0
+    std_brier: float
+    bracket_ev: float
+    ev_improvement_over_baseline: float
+    cv_brier_scores: List[float] = field(default_factory=list)
     selected: bool = False
     reason: str = ""
     loyo_brier: Optional[float] = None
     loyo_ev: Optional[float] = None
+    predict_fn: Optional[Callable] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d = {
             "model_name": self.model_name,
-            "mean_EV": round(self.mean_bracket_ev, 4),
-            "mean_Brier": round(self.mean_brier, 6),
-            "mean_log_loss": round(self.mean_log_loss, 6),
-            "mean_accuracy": round(self.mean_accuracy, 4),
+            "mean_brier": round(self.mean_brier, 6),
+            "std_brier": round(self.std_brier, 6),
+            "bracket_ev": round(self.bracket_ev, 4),
             "ev_improvement": round(self.ev_improvement_over_baseline, 4),
-            "brier_improvement": round(self.brier_improvement_over_baseline, 6),
             "selected": self.selected,
-            "n_folds": len(self.fold_briers),
+            "reason": self.reason,
         }
+        if self.loyo_brier is not None:
+            d["loyo_brier"] = round(self.loyo_brier, 6)
+        if self.loyo_ev is not None:
+            d["loyo_ev"] = round(self.loyo_ev, 4)
+        return d
 
 
 @dataclass
 class ModelSelectionResult:
-    """Output of Phase 6 — the model classes selected for Phase 7.
-
-    Consumed by hyperparameter tuning and ensembling stages.
-    """
+    """Aggregated output of Phase 6 model selection."""
 
     candidates: Dict[str, CandidateResult] = field(default_factory=dict)
     selected_models: List[str] = field(default_factory=list)
+    best_loyo_model: Optional[str] = None
+    baseline_brier: float = 0.25
     baseline_ev: float = 0.0
-    baseline_brier: float = 0.0
+    coin_flip_ev: float = 0.0
     passed: bool = True
     errors: List[str] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
-    best_loyo_model: Optional[str] = None
-    loyo_evaluated: bool = False
 
     def summary(self) -> str:
         lines = [
             f"Model Selection: {'PASSED' if self.passed else 'FAILED'}",
-            f"  Baseline EV: {self.baseline_ev:.2f}, Brier: {self.baseline_brier:.4f}",
+            f"  Baseline Brier={self.baseline_brier:.4f}, EV={self.baseline_ev:.2f}",
+            f"  Coin-flip EV={self.coin_flip_ev:.2f}",
             f"  Selected: {self.selected_models}",
         ]
-        if self.loyo_evaluated:
+        if self.best_loyo_model:
             lines.append(f"  Best LOYO model: {self.best_loyo_model}")
         for name, c in self.candidates.items():
-            tag = "SELECTED" if c.selected else "REJECTED"
-            loyo_str = f", LOYO Brier={c.loyo_brier:.4f}" if c.loyo_brier is not None else ""
+            sel = "[SELECTED]" if c.selected else ""
             lines.append(
-                f"  {name}: EV={c.mean_bracket_ev:.2f} "
-                f"(+{c.ev_improvement_over_baseline:.2f}), "
-                f"Brier={c.mean_brier:.4f}{loyo_str} [{tag}]"
+                f"  {name}: Brier={c.mean_brier:.4f} ±{c.std_brier:.4f}, "
+                f"EV={c.bracket_ev:.2f} (+{c.ev_improvement_over_baseline:.2f}) {sel}"
             )
+            if c.reason:
+                lines.append(f"    -> {c.reason}")
         if self.errors:
             lines.append(f"  Errors: {self.errors}")
         return "\n".join(lines)
 
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "selected_models": self.selected_models,
-            "candidates": {n: c.to_dict() for n, c in self.candidates.items()},
-        }
-
 
 # ---------------------------------------------------------------------------
-# Temporal cross-validation helper
+# Temporal CV helpers
 # ---------------------------------------------------------------------------
 
 
-def _temporal_cv_split(
-    n_samples: int,
-    n_folds: int = 5,
-    sort_keys: Optional[np.ndarray] = None,
-) -> List[Tuple[np.ndarray, np.ndarray]]:
-    """Expanding-window temporal CV splits.
+def _temporal_cv_evaluate(
+    train_fn: Callable,
+    predict_fn: Callable,
+    X: np.ndarray,
+    y: np.ndarray,
+    n_splits: int = 5,
+    round_labels: Optional[np.ndarray] = None,
+    scoring_weights: Optional[Dict[str, int]] = None,
+) -> Tuple[List[float], float, float]:
+    """Run temporal CV and return per-fold Brier scores + overall EV.
 
-    If sort_keys is provided, samples are sorted by key and splits are
-    chronological.  Otherwise falls back to sequential index splits.
+    Uses expanding-window splits (train on past, validate on future)
+    to ensure temporal validity.
 
-    Returns list of (train_indices, val_indices) tuples.
+    Returns:
+        Tuple of (brier_scores_per_fold, mean_bracket_ev, mean_brier)
     """
-    if sort_keys is not None:
-        order = np.argsort(sort_keys)
-    else:
-        order = np.arange(n_samples)
+    n = len(y)
+    fold_size = n // n_splits
+    min_train = max(30, n // 3)
 
-    fold_size = max(1, n_samples // (n_folds + 1))
-    splits = []
-    for i in range(n_folds):
-        # Expanding window: train on first (i+1)*fold_size, validate on next
-        train_end = (i + 1) * fold_size
-        val_start = train_end
-        val_end = min(val_start + fold_size, n_samples)
-        if val_start >= n_samples:
+    brier_scores = []
+    all_preds = []
+    all_labels = []
+    all_rounds = []
+
+    for fold in range(n_splits):
+        val_start = min_train + fold * fold_size
+        val_end = val_start + fold_size if fold < n_splits - 1 else n
+
+        if val_start >= n:
             break
-        train_idx = order[:train_end]
-        val_idx = order[val_start:val_end]
-        if len(train_idx) > 0 and len(val_idx) > 0:
-            splits.append((train_idx, val_idx))
-    return splits
+
+        X_train, y_train = X[:val_start], y[:val_start]
+        X_val, y_val = X[val_start:val_end], y[val_start:val_end]
+
+        if len(y_train) < 10 or len(y_val) < 5:
+            continue
+
+        model = train_fn(X_train, y_train)
+        if model is None:
+            continue
+
+        preds = predict_fn(model, X_val)
+        preds = np.clip(preds, 1e-7, 1 - 1e-7)
+
+        fold_brier = float(np.mean((preds - y_val) ** 2))
+        brier_scores.append(fold_brier)
+
+        all_preds.extend(preds.tolist())
+        all_labels.extend(y_val.tolist())
+        if round_labels is not None:
+            all_rounds.extend(round_labels[val_start:val_end].tolist())
+
+    if not brier_scores:
+        return [], 0.0, 0.25
+
+    mean_brier = float(np.mean(brier_scores))
+
+    # Compute EV from pooled predictions
+    all_preds_arr = np.array(all_preds)
+    round_arr = np.array(all_rounds) if all_rounds else None
+    bracket_ev = compute_bracket_ev(all_preds_arr, round_arr, scoring_weights)
+
+    return brier_scores, bracket_ev, mean_brier
 
 
 # ---------------------------------------------------------------------------
-# Candidate model factories
+# Model trainers
 # ---------------------------------------------------------------------------
 
 
-def _train_gradient_boosting(
+def _train_logistic(
     train_X: np.ndarray,
     train_y: np.ndarray,
     feature_names: Optional[List[str]] = None,
@@ -316,6 +283,7 @@ def _train_regularized_logistic(
         return model.predict_proba(X_clean)[:, 1]
 
     return _predict
+<<<<<<< HEAD
 
 
 def _train_spread_regressor(
