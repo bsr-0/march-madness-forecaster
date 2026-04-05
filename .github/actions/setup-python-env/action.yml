@@ -32,7 +32,7 @@ runs:
     - name: Install dependencies
       shell: bash
       run: |
-        uv pip install --system --extra-index-url https://download.pytorch.org/whl/cpu -r ${{ inputs.requirements-file }}
+        uv pip install --system --index-strategy unsafe-best-match --extra-index-url https://download.pytorch.org/whl/cpu -r ${{ inputs.requirements-file }}
         if [ "${{ inputs.skip-editable-install }}" != "true" ]; then
           uv pip install --system -e .
         fi
