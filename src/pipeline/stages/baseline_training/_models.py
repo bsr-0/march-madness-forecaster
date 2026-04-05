@@ -1,6 +1,5 @@
 """Baseline model training — models module."""
 
-
 import logging
 
 from ....ml.ensemble.cfa import (
@@ -42,11 +41,22 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 
-def _train_all_models(pipeline, train_X, train_y, train_margins,
-                     eval_X, eval_y, eval_margins,
-                     feature_names, train_samples, valid_samples,
-                     train_sample_weight, valid_set, train_sort_keys,
-                     bt_game_triples):
+def _train_all_models(
+    pipeline,
+    train_X,
+    train_y,
+    train_margins,
+    eval_X,
+    eval_y,
+    eval_margins,
+    feature_names,
+    train_samples,
+    valid_samples,
+    train_sample_weight,
+    valid_set,
+    train_sort_keys,
+    bt_game_triples,
+):
     """Train LightGBM, XGBoost, logistic, spread, BT, and CalFirst models.
 
     Returns:
@@ -88,7 +98,9 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
                     random_seed=pipeline.config.random_seed,
                 )
                 tuning_result = tuner.tune(
-                    train_X, train_y, train_sort_keys,
+                    train_X,
+                    train_y,
+                    train_sort_keys,
                     feature_names=feature_names,
                     sample_weight=train_sample_weight,
                     development_years=list(pipeline.config.training_years or []),
@@ -96,14 +108,12 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
                 )
 
                 _exclude_keys = {"num_rounds", "objective", "metric"}
-                best_params = {
-                    k: v for k, v in tuning_result.best_params.items()
-                    if k not in _exclude_keys
-                }
+                best_params = {k: v for k, v in tuning_result.best_params.items() if k not in _exclude_keys}
                 best_num_rounds = tuning_result.best_params.get("num_rounds", 200)
                 lgb_ranker = LightGBMRanker(params=best_params)
                 lgb_ranker.train(
-                    train_X, train_y,
+                    train_X,
+                    train_y,
                     feature_names=feature_names,
                     num_rounds=best_num_rounds,
                     early_stopping_rounds=30 if valid_set is not None else None,
@@ -119,14 +129,17 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
                     "n_trials": tuning_result.n_trials,
                     "best_optuna_score": round(tuning_result.best_score, 5),
                     "optuna_metric": "brier",
-                    "best_params": {k: round(v, 5) if isinstance(v, float) else v for k, v in tuning_result.best_params.items()},
+                    "best_params": {
+                        k: round(v, 5) if isinstance(v, float) else v for k, v in tuning_result.best_params.items()
+                    },
                     "cv_folds": len(tuning_result.cv_results),
                     "cv_brier_scores": [round(r.brier_score, 5) for r in tuning_result.cv_results],
                 }
             else:
                 lgb_ranker = LightGBMRanker()
                 lgb_ranker.train(
-                    train_X, train_y,
+                    train_X,
+                    train_y,
                     feature_names=feature_names,
                     num_rounds=200,
                     early_stopping_rounds=30 if valid_set is not None else None,
@@ -156,7 +169,9 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
                     random_seed=pipeline.config.random_seed,
                 )
                 xgb_tuning_result = xgb_tuner.tune(
-                    train_X, train_y, train_sort_keys,
+                    train_X,
+                    train_y,
+                    train_sort_keys,
                     feature_names=feature_names,
                     sample_weight=train_sample_weight,
                     development_years=list(pipeline.config.training_years or []),
@@ -168,7 +183,8 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
 
                 xgb_ranker = XGBoostRanker(params=xgb_best_params)
                 xgb_ranker.train(
-                    train_X, train_y,
+                    train_X,
+                    train_y,
                     feature_names=feature_names,
                     num_rounds=xgb_best_rounds,
                     early_stopping_rounds=30 if valid_set is not None else None,
@@ -184,12 +200,15 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
                     "n_trials": xgb_tuning_result.n_trials,
                     "best_optuna_score": round(xgb_tuning_result.best_score, 5),
                     "optuna_metric": "brier",
-                    "best_params": {k: round(v, 5) if isinstance(v, float) else v for k, v in xgb_tuning_result.best_params.items()},
+                    "best_params": {
+                        k: round(v, 5) if isinstance(v, float) else v for k, v in xgb_tuning_result.best_params.items()
+                    },
                 }
             else:
                 xgb_ranker = XGBoostRanker()
                 xgb_ranker.train(
-                    train_X, train_y,
+                    train_X,
+                    train_y,
                     feature_names=feature_names,
                     num_rounds=200,
                     early_stopping_rounds=30 if valid_set is not None else None,
@@ -221,16 +240,19 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
                     random_seed=pipeline.config.random_seed,
                 )
                 logit_tuning_result = logit_tuner.tune(
-                    train_X, train_y, train_sort_keys,
+                    train_X,
+                    train_y,
+                    train_sort_keys,
                     sample_weight=train_sample_weight,
                     development_years=list(pipeline.config.training_years or []),
                     year_split_policy=getattr(pipeline, "_year_split_policy", None),
                 )
                 best_logit = logit_tuning_result.best_params
+                _l1r = best_logit.get("l1_ratio", 0)
                 logit = LogisticRegression(
                     C=best_logit["C"],
-                    penalty=best_logit["penalty"],
-                    solver="saga" if best_logit["penalty"] == "l1" else "lbfgs",
+                    l1_ratio=_l1r,
+                    solver="saga" if _l1r == 1 else "lbfgs",
                     max_iter=2000,
                     random_state=pipeline.config.random_seed,
                 )
@@ -242,7 +264,9 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
                 }
             else:
                 logit = LogisticRegression(
-                    C=1.0, penalty="l2", max_iter=2000,
+                    C=1.0,
+                    l1_ratio=0,
+                    max_iter=2000,
                     random_state=pipeline.config.random_seed,
                 )
             # FIX C1: LR cannot handle NaN — impute with column median
@@ -252,18 +276,18 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
             _lr_eval_X = eval_X if eval_X.shape[0] > 0 else None
             if int(np.isnan(train_X).sum()) > 0:
                 from sklearn.impute import SimpleImputer
-                _lr_imputer = SimpleImputer(strategy='median')
+
+                _lr_imputer = SimpleImputer(strategy="median")
                 _lr_train_X = _lr_imputer.fit_transform(train_X)
                 if _lr_eval_X is not None:
                     _lr_eval_X = _lr_imputer.transform(eval_X)
-                logger.debug("LR path: imputed %d NaN values with median.",
-                             int(np.isnan(train_X).sum()))
+                logger.debug("LR path: imputed %d NaN values with median.", int(np.isnan(train_X).sum()))
             logit.fit(_lr_train_X, train_y, sample_weight=train_sample_weight)
 
             # Coefficient stability diagnostic: large coefficient magnitudes
             # signal multicollinearity inflating LogisticRegression estimates.
             # Log a warning when detected so users can investigate.
-            if hasattr(logit, 'coef_') and feature_names is not None:
+            if hasattr(logit, "coef_") and feature_names is not None:
                 coefs = np.abs(logit.coef_.ravel())
                 if len(coefs) == len(feature_names):
                     max_coef_idx = int(np.argmax(coefs))
@@ -276,7 +300,9 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
                                 "LogisticRegression coefficient instability: "
                                 "'%s' has |coef|=%.2f (%.0fx median). "
                                 "Possible residual multicollinearity.",
-                                feature_names[max_coef_idx], max_coef, ratio,
+                                feature_names[max_coef_idx],
+                                max_coef,
+                                ratio,
                             )
                             tuning_stats["logistic_coef_warning"] = {
                                 "feature": feature_names[max_coef_idx],
@@ -324,10 +350,7 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
                 _sigma_cal_margins = train_margins[_sigma_split:]
                 _sigma_train_X = train_X[:_sigma_split]
                 _sigma_train_margins = train_margins[:_sigma_split]
-                _sigma_train_weight = (
-                    train_sample_weight[:_sigma_split]
-                    if train_sample_weight is not None else None
-                )
+                _sigma_train_weight = train_sample_weight[:_sigma_split] if train_sample_weight is not None else None
             else:
                 # Too few samples to split — skip sigma calibration
                 _sigma_cal_X = None
@@ -411,11 +434,7 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
     # Fitted on current-year game triples (team1_id, team2_id, outcome).
     # Predictions are made via predict_probability(team1, team2) at
     # inference time — not through the feature-based ensemble.
-    if (
-        pipeline.config.enable_bayesian_bt
-        and BAYESIAN_BT_AVAILABLE
-        and len(bt_game_triples) >= 50
-    ):
+    if pipeline.config.enable_bayesian_bt and BAYESIAN_BT_AVAILABLE and len(bt_game_triples) >= 50:
         try:
             bt_model = BayesianBradleyTerry(
                 prior_std=pipeline.config.bayesian_bt_prior_std,
@@ -425,8 +444,7 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
                 pipeline.bayesian_bt_model = bt_model
                 tuning_stats["bayesian_bt"] = bt_stats
                 logger.info(
-                    "BayesianBT: fitted %d teams from %d games, "
-                    "mean_posterior_std=%.3f",
+                    "BayesianBT: fitted %d teams from %d games, mean_posterior_std=%.3f",
                     bt_stats.get("n_teams", 0),
                     bt_stats.get("n_games", 0),
                     bt_stats.get("mean_posterior_std", 0),
@@ -436,4 +454,3 @@ def _train_all_models(pipeline, train_X, train_y, train_margins,
             logger.warning("BayesianBT fitting failed: %s", e)
 
     return trained_models, tuning_stats
-
