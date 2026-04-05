@@ -87,10 +87,10 @@ TOURNAMENT_START_DATES: Dict[int, date] = {
 # to test regime-aligned training windows.
 # ---------------------------------------------------------------------------
 RULE_REGIME_BREAKS: Dict[int, str] = {
-    2001: "tournament_65",     # Play-in game added (65 teams)
-    2011: "tournament_68",     # First Four added (68 teams)
-    2016: "shot_clock_30s",    # Shot clock reduced 35s → 30s
-    2020: "3pt_line_moved",    # 3-point line moved 20'9" → 22'1¾" (also COVID)
+    2001: "tournament_65",  # Play-in game added (65 teams)
+    2011: "tournament_68",  # First Four added (68 teams)
+    2016: "shot_clock_30s",  # Shot clock reduced 35s → 30s
+    2020: "3pt_line_moved",  # 3-point line moved 20'9" → 22'1¾" (also COVID)
 }
 
 
@@ -175,16 +175,16 @@ FIXED_FEATURE_SET = [
 # BSS=+9.5% vs seed baseline, compared to +2.7% for the previous 7-feature set
 # and +8.5% for the full 98-feature vector.
 SIMPLE_FEATURE_SET = [
-    "diff_elo_rating",                # [538] Step 1: only feature that individually beats seeds
-    "diff_total_warp",                # [RAPM] Step 2: player-level talent (largest coefficient)
-    "diff_orb_rate",                  # [OL] Step 3: offensive rebounding differential
-    "diff_momentum",                  # Step 4: late-season trajectory
-    "diff_adj_tempo",                 # [KP] Step 5: pace matchup effects
-    "diff_sos_adj_em",                # [KAG] Step 6: schedule strength
-    "diff_opp_to_rate",               # [OL] Step 7: defensive Four Factors
-    "diff_top5_rapm",                 # [RAPM] Step 9: star player quality
-    "diff_preseason_ap_rank",         # Step 10: preseason expectations
-    "diff_win_pct",                   # [KAG] Step 14: simplest quality signal
+    "diff_elo_rating",  # [538] Step 1: only feature that individually beats seeds
+    "diff_total_warp",  # [RAPM] Step 2: player-level talent (largest coefficient)
+    "diff_orb_rate",  # [OL] Step 3: offensive rebounding differential
+    "diff_momentum",  # Step 4: late-season trajectory
+    "diff_adj_tempo",  # [KP] Step 5: pace matchup effects
+    "diff_sos_adj_em",  # [KAG] Step 6: schedule strength
+    "diff_opp_to_rate",  # [OL] Step 7: defensive Four Factors
+    "diff_top5_rapm",  # [RAPM] Step 9: star player quality
+    "diff_preseason_ap_rank",  # Step 10: preseason expectations
+    "diff_win_pct",  # [KAG] Step 14: simplest quality signal
 ]
 
 
@@ -200,13 +200,28 @@ KAGGLE_ROUND_WEIGHTS = {
 
 DATA_QUALITY_ERA_WEIGHTS = {
     # Pre-digital era — very limited advanced stats availability
-    1996: 0.0, 1997: 0.0, 1998: 0.0, 1999: 0.0,
+    1996: 0.0,
+    1997: 0.0,
+    1998: 0.0,
+    1999: 0.0,
     # Early digital era — basic stats only, sparse feature coverage
-    2000: 0.0, 2001: 0.0, 2002: 0.0, 2003: 0.0, 2004: 0.0,
+    2000: 0.0,
+    2001: 0.0,
+    2002: 0.0,
+    2003: 0.0,
+    2004: 0.0,
     # Transition era — some advanced stats becoming available
-    2005: 0.0, 2006: 0.0, 2007: 0.10, 2008: 0.20, 2009: 0.30,
+    2005: 0.0,
+    2006: 0.0,
+    2007: 0.10,
+    2008: 0.20,
+    2009: 0.30,
     # Modern era — most features available
-    2010: 0.55, 2011: 0.65, 2012: 0.75, 2013: 0.80, 2014: 0.85,
+    2010: 0.55,
+    2011: 0.65,
+    2012: 0.75,
+    2013: 0.80,
+    2014: 0.85,
 }
 
 
@@ -214,7 +229,9 @@ MIN_SEASON_FEATURE_COMPLETENESS = 0.20
 
 
 def compute_year_data_quality(
-    X: np.ndarray, year: int, feature_names: Optional[List[str]] = None,
+    X: np.ndarray,
+    year: int,
+    feature_names: Optional[List[str]] = None,
     exclude_cols: Optional[np.ndarray] = None,
 ) -> Dict:
     """Compute per-year data quality metrics for adaptive weighting.
@@ -259,10 +276,7 @@ def compute_year_data_quality(
     bad_rate = (n_nan + n_inf) / max(X_active.size, 1)
     era_weight = DATA_QUALITY_ERA_WEIGHTS.get(year, 1.0)
     adaptive_weight = (
-        0.3 * completeness
-        + 0.3 * feature_activity
-        + 0.2 * min(n_samples / 500.0, 1.0)
-        + 0.2 * (1.0 - bad_rate)
+        0.3 * completeness + 0.3 * feature_activity + 0.2 * min(n_samples / 500.0, 1.0) + 0.2 * (1.0 - bad_rate)
     )
     combined_weight = min(era_weight, adaptive_weight) if era_weight < 0.5 else adaptive_weight
     return {
@@ -351,23 +365,64 @@ class SOTAPipelineConfig:
     production_calibration: str = "temperature"
     # Dev/holdout partition for RDoF control.
     # Default: dev=2016-2019 and 2021-2024 (exclude 2020 COVID), holdout=2025.
-    dev_years: Optional[List[int]] = field(default_factory=lambda: [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024])
+    dev_years: Optional[List[int]] = field(
+        default_factory=lambda: [
+            2008,
+            2009,
+            2010,
+            2011,
+            2012,
+            2013,
+            2014,
+            2015,
+            2016,
+            2017,
+            2018,
+            2019,
+            2021,
+            2022,
+            2023,
+            2024,
+        ]
+    )
     holdout_years: Optional[List[int]] = field(default_factory=lambda: [2025])
     prospective_years: Optional[List[int]] = None
-    prospective_targets: Optional[Dict[str, float]] = field(default_factory=lambda: {
-        "brier_max": 0.185,
-        "accuracy_min": 0.70,
-    })
-    prospective_alert_thresholds: Optional[Dict[str, float]] = field(default_factory=lambda: {
-        "brier_gap": 0.010,
-        "accuracy_gap": 0.02,
-    })
+    prospective_targets: Optional[Dict[str, float]] = field(
+        default_factory=lambda: {
+            "brier_max": 0.185,
+            "accuracy_min": 0.70,
+        }
+    )
+    prospective_alert_thresholds: Optional[Dict[str, float]] = field(
+        default_factory=lambda: {
+            "brier_gap": 0.010,
+            "accuracy_gap": 0.02,
+        }
+    )
     # Calibration years are tournament-only years used to fit probability
     # calibration.  Tournament games are genuinely OOS: the baseline model
     # trains on regular-season games only (enable_round_weighted_training=False),
     # so tournament predictions from dev years are never seen during training.
     calibration_years: Optional[List[int]] = field(
-        default_factory=lambda: [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+        default_factory=lambda: [
+            2008,
+            2009,
+            2010,
+            2011,
+            2012,
+            2013,
+            2014,
+            2015,
+            2016,
+            2017,
+            2018,
+            2019,
+            2021,
+            2022,
+            2023,
+            2024,
+            2025,
+        ]
     )
     # Freeze an explicit production path for tournament runs.
     enforce_production_path: bool = True
@@ -406,11 +461,13 @@ class SOTAPipelineConfig:
     min_calibration_samples_hard: int = 80  # Hard fail below this threshold
     max_dof_ratio: float = 0.10
     auto_disable_components: bool = True
-    min_samples_for_component: Dict[str, int] = field(default_factory=lambda: {
-        "stacking": 400,
-        "bayesian_bt": 300,
-        "spread_model": 250,
-    })
+    min_samples_for_component: Dict[str, int] = field(
+        default_factory=lambda: {
+            "stacking": 400,
+            "bayesian_bt": 300,
+            "spread_model": 250,
+        }
+    )
 
     # --- ML optimization ---
     enable_hyperparameter_tuning: bool = True
@@ -763,7 +820,9 @@ class SOTAPipelineConfig:
     # Needs its own dedicated model with different calibration.
     # Use simpler model + stronger seed priors for women's bracket.
     womens_model_complexity: str = "simple"  # Women's bracket is more predictable
-    womens_seed_prior_weight: float = 0.40  # Reduced seed prior weight for women's (was 0.50, to avoid over-relying on seed)
+    womens_seed_prior_weight: float = (
+        0.40  # Reduced seed prior weight for women's (was 0.50, to avoid over-relying on seed)
+    )
     womens_massey_blend_weight: float = 0.25  # Increased Massey for women's (was 0.15, to use more rating information)
 
     # --- Bracket portfolio (WS4) ---
@@ -777,11 +836,11 @@ class SOTAPipelineConfig:
     # The 0-1 trick / champion boost: Slot 1 = calibrated median,
     # Slot 2 = aggressive champion boost pushing a specific predicted winner
     # toward ~100% in all their games. This exploits Kaggle's 32× NCG weight.
-    enable_dual_submission: bool = True   # Generate primary + hedge submissions
+    enable_dual_submission: bool = True  # Generate primary + hedge submissions
     dual_strategy: str = "champion_boost"  # "champion_boost" (0-1 trick) or "leverage" (contrarian)
     dual_max_deviations: int = 5  # Max games to deviate on in leverage hedge
     dual_deviation_strength: float = 0.15  # How far to push leverage hedge predictions
-    dual_n_champion_candidates: int = 5   # Number of champion candidates to evaluate for 0-1 trick
+    dual_n_champion_candidates: int = 5  # Number of champion candidates to evaluate for 0-1 trick
 
     # --- Pipeline mode ---
     # "calibration": Optimize for Brier score (Kaggle competition).
@@ -801,7 +860,9 @@ class SOTAPipelineConfig:
     ev_enable_search: bool = False  # Enable hill climbing / simulated annealing bracket optimization
     ev_enable_archetypes: bool = False  # Enable behavioral archetype competitor modeling
     ev_pool_type: str = "espn_national"  # "espn_national", "office_pool", "kaggle" — affects archetype mix
-    ev_payout_structure: str = "tiered"  # Prize structure: "winner_take_all", "top_3", "top_10pct", "top_25pct", "tiered"
+    ev_payout_structure: str = (
+        "tiered"  # Prize structure: "winner_take_all", "top_3", "top_10pct", "top_25pct", "tiered"
+    )
     ev_archetype_overrides: Optional[Dict[str, float]] = None  # Custom archetype prevalence overrides
     ev_auto_refresh: bool = False  # Auto-refresh stale public pick data before EV analysis
     kaggle_effective_pool_size: int = 3000  # Effective "pool size" for Kaggle bracket portfolio allocation
@@ -867,17 +928,54 @@ class SOTAPipelineConfig:
             violations.append("holdout_years is empty")
         elif sorted(set(self.holdout_years)) != [2025]:
             violations.append(f"holdout_years={self.holdout_years} (expected [2025])")
-        expected_dev_years = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024]
+        expected_dev_years = [
+            2008,
+            2009,
+            2010,
+            2011,
+            2012,
+            2013,
+            2014,
+            2015,
+            2016,
+            2017,
+            2018,
+            2019,
+            2021,
+            2022,
+            2023,
+            2024,
+        ]
         if not self.dev_years:
             violations.append("dev_years is empty")
         elif sorted(set(self.dev_years)) != expected_dev_years:
-            violations.append(
-                "dev_years must be 2008-2019 and 2021-2024 for locked production path"
-            )
+            violations.append("dev_years must be 2008-2019 and 2021-2024 for locked production path")
         cal_years = self.resolve_calibration_years()
-        expected_cal_years = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
-        if cal_years != expected_cal_years:
-            violations.append(f"calibration_years={cal_years} (expected {expected_cal_years})")
+        # Valid options for production calibration years:
+        #   [2025]                     — holdout-only (production default)
+        #   full historical list       — all tournament years (also valid)
+        _full_cal = [
+            2008,
+            2009,
+            2010,
+            2011,
+            2012,
+            2013,
+            2014,
+            2015,
+            2016,
+            2017,
+            2018,
+            2019,
+            2021,
+            2022,
+            2023,
+            2024,
+            2025,
+        ]
+        _holdout_only = sorted(self.holdout_years) if self.holdout_years else [2025]
+        if cal_years not in (_holdout_only, _full_cal):
+            violations.append(f"calibration_years={cal_years} (expected holdout years or full historical list)")
 
         if violations:
             raise ValueError(
@@ -907,10 +1005,7 @@ class SOTAPipelineConfig:
 
     def __post_init__(self):
         if self.pipeline_mode not in ("production", "experimental"):
-            raise ValueError(
-                f"Invalid pipeline_mode '{self.pipeline_mode}': "
-                "must be 'production' or 'experimental'"
-            )
+            raise ValueError(f"Invalid pipeline_mode '{self.pipeline_mode}': must be 'production' or 'experimental'")
         if self.probability_profile not in ("production", "pool", "experimental"):
             raise ValueError(
                 f"Invalid probability_profile '{self.probability_profile}': "
@@ -931,23 +1026,23 @@ class SOTAPipelineConfig:
             if self.ev_pool_size < 1:
                 raise ValueError(f"ev_pool_size must be >= 1, got {self.ev_pool_size}")
             if not (0.0 < self.ev_target_percentile <= 0.5):
-                raise ValueError(
-                    f"ev_target_percentile must be in (0, 0.5], got {self.ev_target_percentile}"
-                )
+                raise ValueError(f"ev_target_percentile must be in (0, 0.5], got {self.ev_target_percentile}")
             if self.ev_scoring_system not in ("standard", "flat", "upset_bonus"):
                 raise ValueError(
                     f"Invalid ev_scoring_system '{self.ev_scoring_system}': "
                     "must be 'standard', 'flat', or 'upset_bonus'"
                 )
             valid_payouts = {
-                "winner_take_all", "top_3", "top_10pct", "top_25pct", "tiered",
+                "winner_take_all",
+                "top_3",
+                "top_10pct",
+                "top_25pct",
+                "tiered",
             }
             if self.ev_payout_structure not in valid_payouts:
                 raise ValueError(
-                    f"Invalid ev_payout_structure '{self.ev_payout_structure}': "
-                    f"must be one of {sorted(valid_payouts)}"
+                    f"Invalid ev_payout_structure '{self.ev_payout_structure}': must be one of {sorted(valid_payouts)}"
                 )
-
 
 
 @dataclass
@@ -1040,8 +1135,8 @@ class _TrainedBaselineModel:
 
     def _get_spread_sigma_override(self) -> Optional[float]:
         """Get tournament-calibrated sigma for SpreadRegressor, if available."""
-        tsc = getattr(self, 'tournament_sigma_calibrator', None)
-        if tsc is not None and getattr(tsc, 'fitted', False):
+        tsc = getattr(self, "tournament_sigma_calibrator", None)
+        if tsc is not None and getattr(tsc, "fitted", False):
             return tsc.global_tournament_sigma
         return None
 

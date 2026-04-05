@@ -21,8 +21,10 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 
 from src.exceptions import IntegrityError
+from src.ml.calibration.calibration import BrierScoreOptimizer
 from src.pipeline.stages.baseline_evaluation import (
     ROUND_SCORING_WEIGHTS,
+    _safe_log_loss,
     compute_bracket_ev,
     compute_coin_flip_ev,
 )
@@ -41,10 +43,13 @@ class CandidateResult:
 
     model_name: str
     mean_brier: float
-    std_brier: float
-    bracket_ev: float
+    mean_log_loss: float
+    mean_accuracy: float
+    mean_bracket_ev: float
     ev_improvement_over_baseline: float
-    cv_brier_scores: List[float] = field(default_factory=list)
+    brier_improvement_over_baseline: float = 0.0
+    fold_briers: List[float] = field(default_factory=list)
+    fold_evs: List[float] = field(default_factory=list)
     selected: bool = False
     reason: str = ""
     loyo_brier: Optional[float] = None
@@ -54,11 +59,11 @@ class CandidateResult:
     def to_dict(self) -> Dict[str, Any]:
         d = {
             "model_name": self.model_name,
-            "mean_brier": round(self.mean_brier, 6),
-            "std_brier": round(self.std_brier, 6),
-            "bracket_ev": round(self.bracket_ev, 4),
+            "mean_Brier": round(self.mean_brier, 6),
+            "mean_EV": round(self.mean_bracket_ev, 4),
             "ev_improvement": round(self.ev_improvement_over_baseline, 4),
             "selected": self.selected,
+            "n_folds": len(self.fold_briers),
             "reason": self.reason,
         }
         if self.loyo_brier is not None:
@@ -79,6 +84,7 @@ class ModelSelectionResult:
     baseline_ev: float = 0.0
     coin_flip_ev: float = 0.0
     passed: bool = True
+    loyo_evaluated: bool = False
     errors: List[str] = field(default_factory=list)
 
     def summary(self) -> str:
@@ -93,8 +99,8 @@ class ModelSelectionResult:
         for name, c in self.candidates.items():
             sel = "[SELECTED]" if c.selected else ""
             lines.append(
-                f"  {name}: Brier={c.mean_brier:.4f} ±{c.std_brier:.4f}, "
-                f"EV={c.bracket_ev:.2f} (+{c.ev_improvement_over_baseline:.2f}) {sel}"
+                f"  {name}: Brier={c.mean_brier:.4f}, "
+                f"EV={c.mean_bracket_ev:.2f} (+{c.ev_improvement_over_baseline:.2f}) {sel}"
             )
             if c.reason:
                 lines.append(f"    -> {c.reason}")
@@ -102,10 +108,76 @@ class ModelSelectionResult:
             lines.append(f"  Errors: {self.errors}")
         return "\n".join(lines)
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "selected_models": self.selected_models,
+            "best_loyo_model": self.best_loyo_model,
+            "baseline_brier": round(self.baseline_brier, 6),
+            "baseline_ev": round(self.baseline_ev, 4),
+            "passed": self.passed,
+            "candidates": {name: c.to_dict() for name, c in self.candidates.items()},
+        }
+
+
+# ---------------------------------------------------------------------------
+# Module-level defaults
+# ---------------------------------------------------------------------------
+
+DEFAULT_MIN_EV_IMPROVEMENT: float = 0.01  # 1 EV point improvement to qualify
+DEFAULT_MAX_BRIER: float = 0.30  # maximum acceptable Brier score
+MAX_SELECTED_MODELS: int = 3  # cap on ensemble size
+
 
 # ---------------------------------------------------------------------------
 # Temporal CV helpers
 # ---------------------------------------------------------------------------
+
+
+def _temporal_cv_split(
+    n: int,
+    n_folds: int = 5,
+    sort_keys: Optional[np.ndarray] = None,
+) -> List[Tuple[np.ndarray, np.ndarray]]:
+    """Return expanding-window (train, val) index pairs for temporal CV.
+
+    If *sort_keys* is provided the dataset is sorted by those keys before
+    splitting so that train always precedes val chronologically.
+
+    Args:
+        n: Total number of samples.
+        n_folds: Number of CV folds.
+        sort_keys: 1-D array of sort values (e.g. timestamps).  When given,
+            indices are sorted by this array before slicing.
+
+    Returns:
+        List of (train_idx, val_idx) numpy index arrays.
+    """
+    order = np.argsort(sort_keys, kind="stable") if sort_keys is not None else np.arange(n)
+
+    min_train = max(2, n // (n_folds + 1))
+    remaining = n - min_train
+    fold_size = max(1, remaining // n_folds)
+
+    splits: List[Tuple[np.ndarray, np.ndarray]] = []
+    for fold in range(n_folds):
+        train_end = min_train + fold * fold_size
+        val_start = train_end
+        val_end = val_start + fold_size if fold < n_folds - 1 else n
+
+        if train_end >= n or val_start >= n:
+            break
+        if val_end > n:
+            val_end = n
+
+        train_idx = order[:train_end]
+        val_idx = order[val_start:val_end]
+
+        if len(train_idx) == 0 or len(val_idx) == 0:
+            continue
+
+        splits.append((train_idx, val_idx))
+
+    return splits
 
 
 def _temporal_cv_evaluate(
@@ -220,6 +292,11 @@ def _train_logistic(
             return model.predict_proba(np.nan_to_num(X, nan=0.0))[:, 1]
 
         return _predict
+
+
+# _train_logistic trains LightGBM/GradientBoosting (misleading name preserved
+# for backward compat); expose it under the registry-expected name as well.
+_train_gradient_boosting = _train_logistic
 
 
 def _train_xgboost(
@@ -469,6 +546,29 @@ CANDIDATE_REGISTRY: Dict[str, Callable] = {
 
 # Candidates that require point margins (not just binary labels).
 MARGIN_BASED_CANDIDATES = frozenset({"spread_regressor", "margin_regressor"})
+
+# Complexity presets — controls which candidates ModelClassSelector evaluates.
+# simple:   fast linear models only (no tree models, no margin regression)
+# standard: full set minus the experimental GNN-augmented candidate
+# full:     every candidate in the registry
+COMPLEXITY_CANDIDATES: Dict[str, List[str]] = {
+    "simple": ["regularized_logistic", "spread_regressor"],
+    "standard": [
+        "gradient_boosting",
+        "xgboost",
+        "regularized_logistic",
+        "spread_regressor",
+        "margin_regressor",
+    ],
+    "full": [
+        "gradient_boosting",
+        "xgboost",
+        "regularized_logistic",
+        "spread_regressor",
+        "margin_regressor",
+        "gnn_augmented",
+    ],
+}
 
 
 # ---------------------------------------------------------------------------

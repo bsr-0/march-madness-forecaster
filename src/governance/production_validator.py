@@ -36,7 +36,7 @@ REQUIRED_CONFIG_VALUES: Dict[str, Any] = {
     "enable_gnn": False,
     "enable_transformer": False,
     "enable_embedding_projections": False,
-    "enable_stacking": True,
+    "enable_stacking": False,
     "enable_feature_selection": True,
     "enable_brier_sharpening": False,
     "enable_seed_overrides": False,
@@ -169,8 +169,10 @@ def validate_2026_production_config(config: SOTAPipelineConfig) -> None:
         2024,
         2025,
     ]
-    if cal_years is not None and sorted(cal_years) != expected_cal:
-        violations.append(f"calibration_years={cal_years} (expected {expected_cal})")
+    # calibration_years=None is valid (resolves to holdout year [2025]).
+    # Explicitly setting [2025] is also valid — production calibrates on OOS holdout only.
+    if cal_years is not None and sorted(cal_years) not in ([2025], expected_cal):
+        violations.append(f"calibration_years={cal_years} (expected holdout year [2025] or full historical list)")
 
     for field in ALL_PATH_FIELDS:
         value = getattr(config, field, None)
