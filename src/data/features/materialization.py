@@ -17,6 +17,7 @@ import pandas as pd
 from ..normalize import normalize_team_id, normalize_team_name, strip_ncaa_suffix, strip_ncaa_suffix_name
 from ..team_name_resolver import TeamNameResolver
 from ...exceptions import LeakageError
+from ...pipeline.config import TOURNAMENT_START_DATES
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +57,7 @@ class HistoricalFeatureMaterializer:
         missing_seasons = season_coverage.get("missing_seasons", [])
         if self.config.strict_validation and self.config.require_all_seasons and missing_seasons:
             raise ValueError(
-                "Missing requested seasons in historical games: "
-                + ", ".join(str(season) for season in missing_seasons)
+                "Missing requested seasons in historical games: " + ", ".join(str(season) for season in missing_seasons)
             )
         canonical_teams = self._canonical_team_index(team_games)
         team_metrics = self._load_team_metrics(artifacts)
@@ -71,7 +71,9 @@ class HistoricalFeatureMaterializer:
         team_game_features = self._build_team_game_features(team_games, team_metrics, optional_priors)
         matchup_features = self._build_matchup_features(team_game_features)
         tournament_matchup_features = self._build_tournament_matchup_features(matchup_features, tournament_seeds)
-        if self.config.strict_validation and len(tournament_matchup_features) < max(self.config.min_tournament_matchups, 0):
+        if self.config.strict_validation and len(tournament_matchup_features) < max(
+            self.config.min_tournament_matchups, 0
+        ):
             raise ValueError(
                 "Tournament matchup feature table is undersized: "
                 f"{len(tournament_matchup_features)} rows < required minimum {self.config.min_tournament_matchups}. "
@@ -79,7 +81,9 @@ class HistoricalFeatureMaterializer:
             )
 
         leakage = self._leakage_checks(team_game_features)
-        quality = self._quality_report(team_game_features, matchup_features, tournament_matchup_features, season_coverage)
+        quality = self._quality_report(
+            team_game_features, matchup_features, tournament_matchup_features, season_coverage
+        )
         coverage = self._variable_coverage_report(team_game_features, matchup_features, tournament_matchup_features)
         study_alignment = self._study_alignment_report(coverage)
         if self.config.strict_validation and not leakage["passed"]:
@@ -103,7 +107,9 @@ class HistoricalFeatureMaterializer:
             matchup_features,
             tournament_matchup_features,
         )
-        feature_dict_path = self.output_dir / f"feature_dictionary_{self.config.start_season}_{self.config.end_season}.json"
+        feature_dict_path = (
+            self.output_dir / f"feature_dictionary_{self.config.start_season}_{self.config.end_season}.json"
+        )
         with open(feature_dict_path, "w") as f:
             json.dump(feature_dictionary, f, indent=2)
 
@@ -127,7 +133,9 @@ class HistoricalFeatureMaterializer:
             "study_alignment_report": study_alignment,
         }
 
-        manifest_path = self.output_dir / f"materialization_manifest_{self.config.start_season}_{self.config.end_season}.json"
+        manifest_path = (
+            self.output_dir / f"materialization_manifest_{self.config.start_season}_{self.config.end_season}.json"
+        )
         with open(manifest_path, "w") as f:
             json.dump(manifest, f, indent=2)
         manifest["manifest_path"] = str(manifest_path)
@@ -197,7 +205,9 @@ class HistoricalFeatureMaterializer:
                     logger.info(
                         "Season %d: all %d team-game rows share date '%s' — "
                         "inferring chronological dates from game_id ordering.",
-                        season, len(season_rows), next(iter(raw_dates), "?"),
+                        season,
+                        len(season_rows),
+                        next(iter(raw_dates), "?"),
                     )
                     self._infer_dates_from_game_ids(season_rows, season)
                     # Tag rows so downstream features know dates are synthetic
@@ -210,7 +220,9 @@ class HistoricalFeatureMaterializer:
                 logger.info(
                     "Season %d: %d team-game rows (%d games) — below typical "
                     "~12000 rows. Training signal may be sparse.",
-                    season, len(season_rows), n_games,
+                    season,
+                    len(season_rows),
+                    n_games,
                 )
 
             rows.extend(season_rows)
@@ -225,7 +237,19 @@ class HistoricalFeatureMaterializer:
         for col in ("location", "site", "home_away", "is_home", "is_away", "is_neutral_site"):
             if col not in df:
                 df[col] = np.nan
-        for col in ("team_score", "opponent_score", "possessions", "fgm", "fga", "fg3m", "fg3a", "fta", "turnovers", "orb", "drb"):
+        for col in (
+            "team_score",
+            "opponent_score",
+            "possessions",
+            "fgm",
+            "fga",
+            "fg3m",
+            "fg3a",
+            "fta",
+            "turnovers",
+            "orb",
+            "drb",
+        ):
             if col not in df:
                 df[col] = np.nan
             df[col] = pd.to_numeric(df[col], errors="coerce")
@@ -319,17 +343,20 @@ class HistoricalFeatureMaterializer:
                         logger.warning(
                             "Season %d: %d/%d teams have zeroed %s — likely missing "
                             "from source data.  No game-level backfill available.",
-                            season, field_zero, total, field,
+                            season,
+                            field_zero,
+                            total,
+                            field,
                         )
                 zero_count = sum(
-                    1 for r in season_rows
-                    if abs(r.get("off_rtg", 0)) < 1e-6 and abs(r.get("def_rtg", 0)) < 1e-6
+                    1 for r in season_rows if abs(r.get("off_rtg", 0)) < 1e-6 and abs(r.get("def_rtg", 0)) < 1e-6
                 )
                 if zero_count > total * 0.5:
                     logger.warning(
-                        "Season %d: %d/%d teams have zeroed off_rtg/def_rtg. "
-                        "Attempting to backfill from game data.",
-                        season, zero_count, total,
+                        "Season %d: %d/%d teams have zeroed off_rtg/def_rtg. Attempting to backfill from game data.",
+                        season,
+                        zero_count,
+                        total,
                     )
                     games_path = paths.get("historical_games_json")
                     if games_path:
@@ -345,7 +372,9 @@ class HistoricalFeatureMaterializer:
                                 backfilled += 1
                         logger.info(
                             "Season %d: backfilled metrics for %d/%d zero-metric teams.",
-                            season, backfilled, zero_count,
+                            season,
+                            backfilled,
+                            zero_count,
                         )
 
             # Range validation: clamp backfilled/raw metrics to reasonable
@@ -357,13 +386,17 @@ class HistoricalFeatureMaterializer:
                 if off > 0 and (off < 60 or off > 140):
                     logger.debug(
                         "Season %d team %s: off_rtg=%.1f outside [60,140], clamping.",
-                        season, r.get("team_id", "?"), off,
+                        season,
+                        r.get("team_id", "?"),
+                        off,
                     )
                     r["off_rtg"] = max(60.0, min(140.0, off))
                 if drt > 0 and (drt < 60 or drt > 140):
                     logger.debug(
                         "Season %d team %s: def_rtg=%.1f outside [60,140], clamping.",
-                        season, r.get("team_id", "?"), drt,
+                        season,
+                        r.get("team_id", "?"),
+                        drt,
                     )
                     r["def_rtg"] = max(60.0, min(140.0, drt))
                 pace = r.get("pace", 0)
@@ -373,14 +406,18 @@ class HistoricalFeatureMaterializer:
                 if abs(srs) > 1e-6 and (srs < -30 or srs > 30):
                     logger.debug(
                         "Season %d team %s: srs=%.1f outside [-30,30], clamping.",
-                        season, r.get("team_id", "?"), srs,
+                        season,
+                        r.get("team_id", "?"),
+                        srs,
                     )
                     r["srs"] = max(-30.0, min(30.0, srs))
                 sos = r.get("sos", 0)
                 if abs(sos) > 1e-6 and (sos < -20 or sos > 20):
                     logger.debug(
                         "Season %d team %s: sos=%.1f outside [-20,20], clamping.",
-                        season, r.get("team_id", "?"), sos,
+                        season,
+                        r.get("team_id", "?"),
+                        sos,
                     )
                     r["sos"] = max(-20.0, min(20.0, sos))
 
@@ -501,6 +538,35 @@ class HistoricalFeatureMaterializer:
                 except (json.JSONDecodeError, ValueError, KeyError):
                     pass
 
+            # Check Torvik files for post-tournament timestamps
+            torvik_path = self.raw_dir / f"torvik_{season}.json"
+            if not torvik_path.exists():
+                torvik_path = self.historical_dir / f"torvik_{season}.json"
+            if torvik_path.exists():
+                try:
+                    with open(torvik_path, "r") as f:
+                        tv_payload = json.load(f)
+                    # data_as_of is operator-attested and takes precedence
+                    ts_str = tv_payload.get("data_as_of")
+                    if not ts_str:
+                        for fld in ("scraped_at", "timestamp", "generated_at", "fetched_at"):
+                            ts_str = tv_payload.get(fld)
+                            if ts_str:
+                                break
+                    if ts_str:
+                        ts_date = date.fromisoformat(ts_str[:10])
+                        cutoff = TOURNAMENT_START_DATES.get(season)
+                        if cutoff and ts_date >= cutoff:
+                            msg = (
+                                f"Torvik data for {season} has timestamp={ts_str} "
+                                f"which is on/after tournament start {cutoff}. "
+                                f"Post-tournament efficiency metrics include tournament game results."
+                            )
+                            warnings_list.append(msg)
+                            logger.warning(msg)
+                except (json.JSONDecodeError, ValueError, KeyError):
+                    pass
+
         if self.config.strict_validation and warnings_list:
             logger.warning(
                 "Prior source temporal validation found %d issue(s). "
@@ -512,6 +578,7 @@ class HistoricalFeatureMaterializer:
 
     def _load_tournament_seeds(self, artifacts: Dict[str, Dict[str, str]]) -> pd.DataFrame:
         import html as _html
+
         rows: List[Dict] = []
         for season_key, paths in artifacts.items():
             season = int(season_key)
@@ -551,9 +618,10 @@ class HistoricalFeatureMaterializer:
             expected_min = 64 if season < 2011 else 68
             if 0 < len(season_teams) < expected_min and season != 2020:
                 logger.warning(
-                    "Season %d tournament seeds: only %d teams (expected %d). "
-                    "Some regions may be missing.",
-                    season, len(season_teams), expected_min,
+                    "Season %d tournament seeds: only %d teams (expected %d). Some regions may be missing.",
+                    season,
+                    len(season_teams),
+                    expected_min,
                 )
         if not rows:
             return pd.DataFrame(columns=["season", "team_id", "team_name", "seed", "region", "school_slug"])
@@ -623,9 +691,12 @@ class HistoricalFeatureMaterializer:
             unresolved = (scores < 1e-6).sum()
             total = len(scores)
             logger.info(
-                "Team alignment: %d/%d perfect (≥0.99), %d good (≥0.85), "
-                "%d low-confidence (<0.85), %d unresolved.",
-                perfect, total, good, low, unresolved,
+                "Team alignment: %d/%d perfect (≥0.99), %d good (≥0.85), %d low-confidence (<0.85), %d unresolved.",
+                perfect,
+                total,
+                good,
+                low,
+                unresolved,
             )
             if low + unresolved > 0:
                 # Log specific low-confidence or unresolved entries
@@ -634,7 +705,9 @@ class HistoricalFeatureMaterializer:
                         src = str(out.iloc[idx].get("source_team_id", "?"))
                         logger.warning(
                             "Low-confidence match: '%s' → '%s' (score=%.2f)",
-                            src, rid, score,
+                            src,
+                            rid,
+                            score,
                         )
         return out
 
@@ -648,13 +721,7 @@ class HistoricalFeatureMaterializer:
         df = df.sort_values(["team_id", "date", "game_id"]).reset_index(drop=True)
 
         # Normalize venue context if the upstream source provides location-style fields.
-        location_raw = (
-            df["location"]
-            .fillna(df["site"])
-            .fillna(df["home_away"])
-            .astype(str)
-            .str.lower()
-        )
+        location_raw = df["location"].fillna(df["site"]).fillna(df["home_away"]).astype(str).str.lower()
         has_location = location_raw.str.strip().ne("") & location_raw.ne("nan")
         inferred_neutral = location_raw.str.contains("neutral")
         inferred_home = location_raw.str.contains("home")
@@ -662,7 +729,9 @@ class HistoricalFeatureMaterializer:
         if {"home_team_id", "away_team_id"}.issubset(df.columns):
             inferred_home = inferred_home | (df["home_team_id"].astype(str) == df["team_id"].astype(str))
             inferred_away = inferred_away | (df["away_team_id"].astype(str) == df["team_id"].astype(str))
-        df["is_neutral_site"] = df["is_neutral_site"].where(df["is_neutral_site"].notna(), inferred_neutral.astype(float))
+        df["is_neutral_site"] = df["is_neutral_site"].where(
+            df["is_neutral_site"].notna(), inferred_neutral.astype(float)
+        )
         df["is_home"] = df["is_home"].where(df["is_home"].notna(), inferred_home.astype(float))
         df["is_away"] = df["is_away"].where(df["is_away"].notna(), inferred_away.astype(float))
         df.loc[~has_location, ["is_neutral_site", "is_home", "is_away"]] = np.nan
@@ -697,8 +766,8 @@ class HistoricalFeatureMaterializer:
         prev_date = df.groupby("team_id")["date"].shift(1)
         df["rest_days"] = (df["date"] - prev_date).dt.days.astype(float)
         df["back_to_back"] = (df["rest_days"] <= 1).astype(float).where(df["rest_days"].notna(), np.nan)
-        df["games_in_last_7_days"] = (
-            df.groupby("team_id")["date"].transform(lambda s: pd.Series(self._rolling_day_counts(s, 7), index=s.index))
+        df["games_in_last_7_days"] = df.groupby("team_id")["date"].transform(
+            lambda s: pd.Series(self._rolling_day_counts(s, 7), index=s.index)
         )
 
         # NaN-out date-dependent features for seasons with inferred dates.
@@ -770,12 +839,12 @@ class HistoricalFeatureMaterializer:
         )
 
         close_game_wins = df["win"].where(df["margin_game"].abs() <= 5)
-        df["close_game_win_pct_prior"] = close_game_wins.groupby(df["team_id"]).transform(
-            self._shifted_expanding_mean
-        )
+        df["close_game_win_pct_prior"] = close_game_wins.groupby(df["team_id"]).transform(self._shifted_expanding_mean)
         df["lead_entropy_proxy"] = df["to_rate_l5"] * (1.0 - df["ft_rate_l5"])
 
-        prior_metrics = self._shift_prior_season_table(team_metrics, self.BASE_PRIOR_METRIC_COLUMNS, prefix="prior_season_")
+        prior_metrics = self._shift_prior_season_table(
+            team_metrics, self.BASE_PRIOR_METRIC_COLUMNS, prefix="prior_season_"
+        )
         df = df.merge(prior_metrics, on=["season", "team_id"], how="left")
 
         # M3 REMOVED (FIX-LEAKAGE-M3): The prior M3 fallback filled
@@ -790,7 +859,9 @@ class HistoricalFeatureMaterializer:
         # present and non-empty.  Conference field is absent from all years
         # in the current dataset, so guard against NaN-floods.
         if "conference" in team_metrics.columns:
-            non_empty_conf = team_metrics["conference"].astype(str).str.strip().ne("") & team_metrics["conference"].notna()
+            non_empty_conf = (
+                team_metrics["conference"].astype(str).str.strip().ne("") & team_metrics["conference"].notna()
+            )
             if non_empty_conf.sum() > len(team_metrics) * 0.1:
                 conference_lookup = team_metrics[["season", "team_id", "conference"]].copy()
                 conference_lookup["conference"] = conference_lookup["conference"].astype(str)
@@ -799,14 +870,11 @@ class HistoricalFeatureMaterializer:
 
                 conf_prior = team_metrics[["season", "conference", "srs", "sos", "off_rtg", "def_rtg"]].copy()
                 conf_prior["conference"] = conf_prior["conference"].astype(str)
-                conf_prior = (
-                    conf_prior.groupby(["season", "conference"], as_index=False)
-                    .agg(
-                        conference_srs_mean=("srs", "mean"),
-                        conference_sos_mean=("sos", "mean"),
-                        conference_off_rtg_mean=("off_rtg", "mean"),
-                        conference_def_rtg_mean=("def_rtg", "mean"),
-                    )
+                conf_prior = conf_prior.groupby(["season", "conference"], as_index=False).agg(
+                    conference_srs_mean=("srs", "mean"),
+                    conference_sos_mean=("sos", "mean"),
+                    conference_off_rtg_mean=("off_rtg", "mean"),
+                    conference_def_rtg_mean=("def_rtg", "mean"),
                 )
                 conf_prior["season"] = pd.to_numeric(conf_prior["season"], errors="coerce") + 1
                 conf_prior = conf_prior.rename(
@@ -978,9 +1046,7 @@ class HistoricalFeatureMaterializer:
                 ]
             )
 
-        seeds = tournament_seeds[["season", "team_id", "seed", "region"]].drop_duplicates(
-            subset=["season", "team_id"]
-        )
+        seeds = tournament_seeds[["season", "team_id", "seed", "region"]].drop_duplicates(subset=["season", "team_id"])
         t1 = seeds.rename(
             columns={
                 "team_id": "team1_id",
@@ -1020,9 +1086,7 @@ class HistoricalFeatureMaterializer:
         checked_rows = 0
 
         df = team_features.sort_values(["team_id", "date", "game_id"]).copy()
-        expected = df.groupby("team_id")["off_eff_game"].transform(
-            lambda s: s.shift(1).expanding().mean()
-        )
+        expected = df.groupby("team_id")["off_eff_game"].transform(lambda s: s.shift(1).expanding().mean())
         mask = df["games_played_prior"] > 0
         checked_rows = int(mask.sum())
         diff = (df.loc[mask, "off_eff_prior"] - expected.loc[mask]).abs()
@@ -1203,7 +1267,13 @@ class HistoricalFeatureMaterializer:
             },
             "fivethirtyeight_march_methodology": {
                 "reference": "https://fivethirtyeight.com/methodology/how-our-march-madness-predictions-work-2/",
-                "expects": ["efficiency_four_factors", "schedule_strength", "tournament_seed_context", "market_priors", "proprietary_xp"],
+                "expects": [
+                    "efficiency_four_factors",
+                    "schedule_strength",
+                    "tournament_seed_context",
+                    "market_priors",
+                    "proprietary_xp",
+                ],
             },
             "arxiv_1701_07316": {
                 "reference": "https://arxiv.org/abs/1701.07316",
@@ -1307,6 +1377,26 @@ class HistoricalFeatureMaterializer:
                 return None
         with open(path, "r") as f:
             payload = json.load(f)
+        # Validate temporal provenance before extracting team data
+        ts_str = payload.get("data_as_of")
+        if not ts_str:
+            for fld in ("scraped_at", "timestamp", "generated_at", "fetched_at"):
+                ts_str = payload.get(fld)
+                if ts_str:
+                    break
+        if ts_str:
+            try:
+                ts_date = date.fromisoformat(ts_str[:10])
+                cutoff = TOURNAMENT_START_DATES.get(season)
+                if cutoff and ts_date >= cutoff:
+                    msg = (
+                        f"Torvik data for {season} ({path}) has timestamp {ts_str} on/after tournament start {cutoff}."
+                    )
+                    if getattr(self.config, "strict_validation", False):
+                        raise LeakageError(msg)
+                    logger.warning(msg)
+            except (ValueError, TypeError):
+                pass
         rows = []
         for row in payload.get("teams", []):
             if not isinstance(row, dict):
@@ -1339,7 +1429,9 @@ class HistoricalFeatureMaterializer:
         for team_row in payload.get("teams", []):
             if not isinstance(team_row, dict):
                 continue
-            team_id = team_row.get("team_id") or self._normalize_team_id(team_row.get("team_name") or team_row.get("name"))
+            team_id = team_row.get("team_id") or self._normalize_team_id(
+                team_row.get("team_name") or team_row.get("name")
+            )
             players = [p for p in team_row.get("players", []) if isinstance(p, dict)]
             if not team_id or not players:
                 continue
@@ -1350,7 +1442,9 @@ class HistoricalFeatureMaterializer:
             for player in players:
                 rapm_total = self._to_float(player.get("rapm_total"))
                 if np.isnan(rapm_total):
-                    rapm_total = self._to_float(player.get("rapm_offensive")) + self._to_float(player.get("rapm_defensive"))
+                    rapm_total = self._to_float(player.get("rapm_offensive")) + self._to_float(
+                        player.get("rapm_defensive")
+                    )
                 total_rapm += 0.0 if np.isnan(rapm_total) else rapm_total
                 warp_val = self._to_float(player.get("warp"))
                 total_warp += 0.0 if np.isnan(warp_val) else warp_val
@@ -1388,16 +1482,17 @@ class HistoricalFeatureMaterializer:
                     minutes = 0.0
                 is_transfer = bool(player.get("is_transfer", False))
                 is_returning = bool(player.get("is_returning", not is_transfer))
-                class_year = str(
-                    player.get("class_year")
-                    or player.get("year")
-                    or player.get("academic_year")
-                    or ""
-                ).strip().lower()
+                class_year = (
+                    str(player.get("class_year") or player.get("year") or player.get("academic_year") or "")
+                    .strip()
+                    .lower()
+                )
                 injury_status = str(player.get("injury_status", "healthy")).strip().lower()
                 rapm_val = self._to_float(player.get("rapm_total"))
                 if player.get("rapm_total") is None:
-                    rapm_val = self._to_float(player.get("rapm_offensive")) + self._to_float(player.get("rapm_defensive"))
+                    rapm_val = self._to_float(player.get("rapm_offensive")) + self._to_float(
+                        player.get("rapm_defensive")
+                    )
                 if np.isnan(rapm_val):
                     rapm_val = 0.0
 
@@ -1409,7 +1504,11 @@ class HistoricalFeatureMaterializer:
                 if injury_status not in {"healthy", "available", ""}:
                     injured_rapm += rapm_val
 
-            continuity = minutes_returning / max(minutes_total, 1.0) if minutes_total > 0 else 1.0 - (transfer_count / max(len(players), 1))
+            continuity = (
+                minutes_returning / max(minutes_total, 1.0)
+                if minutes_total > 0
+                else 1.0 - (transfer_count / max(len(players), 1))
+            )
             rows[-1]["roster_minutes_returning_share"] = continuity
             rows[-1]["roster_continuity_learning_rate"] = 1.0 + 0.15 * (1.0 - continuity)
             rows[-1]["roster_upperclass_share"] = upperclass_count / max(len(players), 1)
@@ -1800,10 +1899,15 @@ class HistoricalFeatureMaterializer:
                 continue
             # Normalize the ID to match the metrics namespace
             tid_norm = normalize_team_id(tid)
-            acc = agg.setdefault(tid_norm, {
-                "total_score": 0.0, "total_opp_score": 0.0,
-                "total_poss": 0.0, "games": 0,
-            })
+            acc = agg.setdefault(
+                tid_norm,
+                {
+                    "total_score": 0.0,
+                    "total_opp_score": 0.0,
+                    "total_poss": 0.0,
+                    "games": 0,
+                },
+            )
             score = float(row.get("team_score", 0) or 0)
             opp_score = float(row.get("opponent_score", 0) or 0)
             poss = float(row.get("possessions", 0) or 0)
@@ -1839,7 +1943,7 @@ class HistoricalFeatureMaterializer:
         t2_id = game.get("team2_id") or self._normalize_team_id(game.get("team2_name"))
         if not game_id or not t1_id or not t2_id:
             return []
-        date_value = game.get("date") or game.get("game_date") or f"{season-1}-11-01"
+        date_value = game.get("date") or game.get("game_date") or f"{season - 1}-11-01"
         team1_score = self._to_float(game.get("team1_score"))
         team2_score = self._to_float(game.get("team2_score"))
         return [
