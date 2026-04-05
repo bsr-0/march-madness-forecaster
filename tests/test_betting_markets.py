@@ -205,13 +205,23 @@ class TestTheOddsAPIScraper:
     """Tests for The Odds API scraper."""
 
     def test_scrape_no_api_key(self):
-        """Without API key, scraper should return empty dict."""
+        """Without API key, scraper should return empty dict (or raise LeakageError post-tournament)."""
+        from datetime import date
+        from src.pipeline.config import TOURNAMENT_START_DATES
+        from src.exceptions import LeakageError
+
         scraper = TheOddsAPIScraper()
+        season = 2026
+        cutoff = TOURNAMENT_START_DATES.get(season)
         # Ensure env var is not set
         old_val = os.environ.pop("THE_ODDS_API_KEY", None)
         try:
-            result = scraper.scrape(2026)
-            assert result == {}
+            if cutoff and date.today() >= cutoff:
+                with pytest.raises(LeakageError):
+                    scraper.scrape(season)
+            else:
+                result = scraper.scrape(season)
+                assert result == {}
         finally:
             if old_val is not None:
                 os.environ["THE_ODDS_API_KEY"] = old_val

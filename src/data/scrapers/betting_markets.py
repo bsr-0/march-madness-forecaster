@@ -215,6 +215,32 @@ class BettingMarketScraper(ABC):
         with open(cache_file, "w") as f:
             json.dump(data, f, indent=2)
 
+    def _check_tournament_date_guard(self, season: int) -> None:
+        """Raise LeakageError if scraping after tournament starts.
+
+        Post-tournament sportsbook odds reflect tournament results and
+        would contaminate pre-tournament predictions.
+        """
+        from datetime import date
+
+        try:
+            from ...pipeline.config import TOURNAMENT_START_DATES
+        except ImportError:
+            return  # Scraper used standalone
+        from ...exceptions import LeakageError
+
+        cutoff = TOURNAMENT_START_DATES.get(season)
+        if cutoff is None:
+            return
+        today = date.today()
+        if today >= cutoff:
+            raise LeakageError(
+                f"Live betting odds scrape for {season} requested on {today}, "
+                f"but tournament started {cutoff}. Post-tournament odds reflect "
+                f"tournament results — DATA LEAKAGE RISK. "
+                f"Use pre-tournament cached data instead."
+            )
+
 
 class TheOddsAPIScraper(BettingMarketScraper):
     """Aggregated odds from The Odds API (https://the-odds-api.com).
@@ -235,10 +261,13 @@ class TheOddsAPIScraper(BettingMarketScraper):
     ENV_API_KEY = "THE_ODDS_API_KEY"  # nosec: env var name, not a secret
 
     def scrape(self, season: int) -> Dict[str, BettingMarketOdds]:
-        # Try JSON cache first
+        # Try JSON cache first (cached data may be pre-tournament)
         cached = self._load_cached(season)
         if cached:
             return self.load_from_json(os.path.join(self.cache_dir, f"betting_odds_{season}.json"))
+
+        # Guard: prevent live scrapes after tournament starts
+        self._check_tournament_date_guard(season)
 
         api_key = os.getenv(self.ENV_API_KEY, "")
         if not api_key:

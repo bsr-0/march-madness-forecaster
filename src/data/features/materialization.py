@@ -499,16 +499,17 @@ class HistoricalFeatureMaterializer:
                 try:
                     with open(odds_path, "r") as f:
                         payload = json.load(f)
-                    snapshot_date = payload.get("snapshot_date") or payload.get("last_updated")
+                    snapshot_date = (
+                        payload.get("snapshot_date") or payload.get("last_updated") or payload.get("timestamp")
+                    )
                     if snapshot_date:
-                        snap = datetime.fromisoformat(snapshot_date.replace("Z", "+00:00"))
-                        # Selection Sunday is typically mid-March
-                        selection_cutoff = datetime(season, 3, 20, tzinfo=timezone.utc)
-                        if snap > selection_cutoff:
+                        snap_date = date.fromisoformat(snapshot_date[:10])
+                        cutoff = TOURNAMENT_START_DATES.get(season)
+                        if cutoff and snap_date >= cutoff:
                             msg = (
-                                f"Market odds for {season} have snapshot_date={snapshot_date} "
-                                f"which is after Selection Sunday (~March 20). "
-                                f"Post-selection odds may embed tournament bracket information."
+                                f"Market odds for {season} have timestamp={snapshot_date} "
+                                f"which is on/after tournament start {cutoff}. "
+                                f"Post-tournament odds reflect tournament results."
                             )
                             warnings_list.append(msg)
                             logger.warning(msg)
@@ -568,10 +569,8 @@ class HistoricalFeatureMaterializer:
                     pass
 
         if self.config.strict_validation and warnings_list:
-            logger.warning(
-                "Prior source temporal validation found %d issue(s). "
-                "Review warnings above to ensure no post-tournament data leakage.",
-                len(warnings_list),
+            raise LeakageError(
+                f"Prior source temporal validation found {len(warnings_list)} issue(s): " + "; ".join(warnings_list)
             )
 
         return warnings_list
@@ -1558,6 +1557,23 @@ class HistoricalFeatureMaterializer:
             return None
         with open(path, "r") as f:
             payload = json.load(f)
+        # Validate temporal provenance before extracting team data
+        ts_str = payload.get("snapshot_date") or payload.get("last_updated") or payload.get("timestamp")
+        if ts_str:
+            try:
+                ts_date = date.fromisoformat(ts_str[:10])
+                cutoff = TOURNAMENT_START_DATES.get(season)
+                if cutoff and ts_date >= cutoff:
+                    msg = (
+                        f"Market odds for {season} ({path}) has timestamp {ts_str} "
+                        f"on/after tournament start {cutoff}. "
+                        f"Post-tournament odds reflect tournament results."
+                    )
+                    if getattr(self.config, "strict_validation", False):
+                        raise LeakageError(msg)
+                    logger.warning(msg)
+            except (ValueError, TypeError):
+                pass
         teams = payload.get("teams", payload if isinstance(payload, list) else [])
         if not isinstance(teams, list):
             return None

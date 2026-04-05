@@ -66,16 +66,23 @@ jobs:
               print('::error::No torvik files found after rescrape')
               sys.exit(1)
 
+          METADATA_KEYS = {'data_type', 'cutoff_date', 'tournament_start', 'n_teams', 'data_as_of',
+                           'scraped_at', 'timestamp', 'generated_at', 'fetched_at', 'source'}
           errors = []
           for f in files:
               data = json.load(open(f))
               dt = data.get('data_type', '')
               if dt not in ('pre_tournament', 'pre_tournament_computed'):
                   errors.append(f'{f.name}: data_type={dt!r}')
+              # Rankings files use 'teams' array; four_factors files use top-level team keys
               teams = data.get('teams', [])
-              if len(teams) < 100:
-                  errors.append(f'{f.name}: only {len(teams)} teams (expected 300+)')
-              print(f'  {f.name}: {len(teams)} teams, data_type={dt}, cutoff={data.get(\"cutoff_date\", \"?\")}')
+              if isinstance(teams, list) and teams:
+                  n_teams = len(teams)
+              else:
+                  n_teams = data.get('n_teams', len([k for k in data if k not in METADATA_KEYS]))
+              if n_teams < 100:
+                  errors.append(f'{f.name}: only {n_teams} teams (expected 300+)')
+              print(f'  {f.name}: {n_teams} teams, data_type={dt}, cutoff={data.get(\"cutoff_date\", \"?\")}')
 
           if errors:
               for e in errors:
