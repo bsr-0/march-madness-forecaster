@@ -29,6 +29,13 @@ from pathlib import Path
 
 import requests
 
+try:
+    from curl_cffi import requests as cffi_requests
+
+    HAS_CURL_CFFI = True
+except ImportError:
+    HAS_CURL_CFFI = False
+
 # Add project root to path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
@@ -128,15 +135,13 @@ KNOWN_HEADERS = frozenset(
 )
 
 
-def fetch_pretournament_ratings(year: int, retries: int = 3) -> list[dict]:
-    """Fetch pre-tournament T-Rank ratings from trank.php with date cutoff."""
+def _build_trank_url_and_params(year: int) -> tuple[str, dict, str, date]:
+    """Build the trank.php URL params for a given year. Returns (url, params, end_str, tourney_start)."""
     tourney_start = TOURNAMENT_START_DATES[year]
     cutoff = tourney_start - timedelta(days=1)
-
     season_start_year = year - 1
     begin_str = f"{season_start_year}{SEASON_START_MONTH_DAY[0]:02d}{SEASON_START_MONTH_DAY[1]:02d}"
     end_str = f"{cutoff.year}{cutoff.month:02d}{cutoff.day:02d}"
-
     url = "https://barttorvik.com/trank.php"
     params = {
         "year": year,
@@ -147,30 +152,92 @@ def fetch_pretournament_ratings(year: int, retries: int = 3) -> list[dict]:
         "begin": begin_str,
         "end": end_str,
     }
+    return url, params, end_str, tourney_start
 
-    logger.info("Fetching year=%d  begin=%s  end=%s (tournament starts %s)", year, begin_str, end_str, tourney_start)
 
+def _is_cloudflare_block(text: str) -> bool:
+    """Check if the response is a Cloudflare challenge page."""
+    snippet = text[:500].lower()
+    return "<html" in snippet or "checking your browser" in snippet
+
+
+def _fetch_with_requests(url: str, params: dict, retries: int = 3) -> str | None:
+    """Try fetching with stdlib requests. Returns response text or None."""
     for attempt in range(retries):
         try:
             resp = requests.get(url, params=params, headers=TRANK_HEADERS, timeout=45)
             resp.raise_for_status()
-            break
+            return resp.text
         except requests.RequestException as e:
             if attempt < retries - 1:
                 wait = 2 ** (attempt + 1)
-                logger.warning("Attempt %d failed: %s. Retrying in %ds...", attempt + 1, e, wait)
+                logger.warning("requests attempt %d failed: %s. Retrying in %ds...", attempt + 1, e, wait)
                 time.sleep(wait)
             else:
-                logger.error("All %d attempts failed for year %d: %s", retries, year, e)
-                return []
+                logger.warning("requests: all %d attempts failed: %s", retries, e)
+    return None
 
-    text = resp.text
-    if "<html" in text[:500].lower() or "checking your browser" in text[:500].lower():
-        logger.error("Cloudflare challenge for year %d — cannot fetch. Try from a browser or use cbbdata API.", year)
+
+def _fetch_with_curl_cffi(url: str, params: dict, retries: int = 3) -> str | None:
+    """Try fetching with curl_cffi (TLS fingerprint impersonation). Returns response text or None."""
+    if not HAS_CURL_CFFI:
+        return None
+    logger.info("Retrying with curl_cffi (TLS impersonation)...")
+    for attempt in range(retries):
+        try:
+            resp = cffi_requests.get(
+                url,
+                params=params,
+                headers=TRANK_HEADERS,
+                impersonate="chrome",
+                timeout=45,
+            )
+            resp.raise_for_status()
+            return resp.text
+        except Exception as e:
+            if attempt < retries - 1:
+                wait = 2 ** (attempt + 1)
+                logger.warning("curl_cffi attempt %d failed: %s. Retrying in %ds...", attempt + 1, e, wait)
+                time.sleep(wait)
+            else:
+                logger.warning("curl_cffi: all %d attempts failed: %s", retries, e)
+    return None
+
+
+def fetch_pretournament_ratings(year: int) -> list[dict]:
+    """Fetch pre-tournament T-Rank ratings from trank.php with date cutoff.
+
+    Tries stdlib requests first, falls back to curl_cffi if Cloudflare blocks.
+    """
+    url, params, _, tourney_start = _build_trank_url_and_params(year)
+    begin_str = params["begin"]
+    end_str = params["end"]
+    logger.info("Fetching year=%d  begin=%s  end=%s (tournament starts %s)", year, begin_str, end_str, tourney_start)
+
+    # Strategy 1: stdlib requests
+    text = _fetch_with_requests(url, params)
+
+    # Strategy 2: curl_cffi with TLS impersonation (bypasses Cloudflare fingerprinting)
+    if text is None or _is_cloudflare_block(text):
+        if text is not None:
+            logger.warning("Cloudflare challenge detected for year %d, trying curl_cffi fallback", year)
+        text = _fetch_with_curl_cffi(url, params)
+
+    if text is None:
+        logger.error("All fetch strategies failed for year %d", year)
+        return []
+
+    if _is_cloudflare_block(text):
+        logger.error("Cloudflare challenge for year %d — both requests and curl_cffi blocked.", year)
         return []
 
     teams = _parse_trank_csv(text)
-    logger.info("Year %d: parsed %d teams (pre-tournament cutoff %s)", year, len(teams), cutoff)
+    logger.info(
+        "Year %d: parsed %d teams (pre-tournament cutoff %s)",
+        year,
+        len(teams),
+        TOURNAMENT_START_DATES[year] - timedelta(days=1),
+    )
     return teams
 
 
