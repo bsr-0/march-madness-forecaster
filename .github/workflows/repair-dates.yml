@@ -87,6 +87,8 @@ jobs:
           if git diff --cached --quiet; then
             echo "No date changes to commit"
           else
+            BRANCH="auto/repair-dates-$(date -u +%Y%m%d-%H%M%S)"
+            git checkout -b "$BRANCH"
             git commit -m "fix: repair game dates for seasons ${{ inputs.seasons }} ($(date -u +%Y-%m-%d))"
-            git push
+            git push -u origin "$BRANCH"
           fi

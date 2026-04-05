@@ -100,10 +100,12 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
+            BRANCH="auto/rescrape-torvik-$(date -u +%Y%m%d-%H%M%S)"
+            git checkout -b "$BRANCH"
             SCOPE=""
             if [ -n "${{ inputs.year }}" ]; then
               SCOPE=" (${{ inputs.year }})"
             fi
             git commit -m "data: rescrape pre-tournament Torvik ratings${SCOPE} ($(date -u +%Y-%m-%d))"
-            git push
+            git push -u origin "$BRANCH"
           fi
