@@ -29,11 +29,13 @@ import pytest
 # MATERIALIZATION TESTS
 # =====================================================================
 
+
 class TestMaterializationConfig:
     """Tests for MaterializationConfig dataclass."""
 
     def test_default_values(self):
         from src.data.features.materialization import MaterializationConfig
+
         cfg = MaterializationConfig()
         assert cfg.start_season == 2022
         assert cfg.end_season == 2025
@@ -43,6 +45,7 @@ class TestMaterializationConfig:
 
     def test_custom_values(self):
         from src.data.features.materialization import MaterializationConfig
+
         cfg = MaterializationConfig(start_season=2020, end_season=2023, strict_validation=False)
         assert cfg.start_season == 2020
         assert cfg.end_season == 2023
@@ -58,6 +61,7 @@ class TestHistoricalFeatureMaterializer:
             HistoricalFeatureMaterializer,
             MaterializationConfig,
         )
+
         cfg = MaterializationConfig(
             start_season=2023,
             end_season=2023,
@@ -78,6 +82,7 @@ class TestHistoricalFeatureMaterializer:
             HistoricalFeatureMaterializer,
             MaterializationConfig,
         )
+
         out = tmp_path / "new_output"
         cfg = MaterializationConfig(output_dir=str(out))
         mat = HistoricalFeatureMaterializer(cfg)
@@ -107,11 +112,23 @@ class TestHistoricalFeatureMaterializer:
     def test_load_team_games_skips_2020(self, materializer, tmp_path):
         """Season 2020 should be skipped (COVID)."""
         games_path = tmp_path / "historical" / "historical_games_2020.json"
-        games_path.write_text(json.dumps({"team_games": [
-            {"game_id": "1", "team_id": "duke", "opponent_id": "unc",
-             "team_score": 80, "opponent_score": 75, "date": "2020-01-15",
-             "season": 2020}
-        ]}))
+        games_path.write_text(
+            json.dumps(
+                {
+                    "team_games": [
+                        {
+                            "game_id": "1",
+                            "team_id": "duke",
+                            "opponent_id": "unc",
+                            "team_score": 80,
+                            "opponent_score": 75,
+                            "date": "2020-01-15",
+                            "season": 2020,
+                        }
+                    ]
+                }
+            )
+        )
         artifacts = {"2020": {"historical_games_json": str(games_path)}}
         with pytest.raises(ValueError, match="No team-game rows found"):
             materializer._load_team_games(artifacts)
@@ -119,16 +136,28 @@ class TestHistoricalFeatureMaterializer:
     def test_load_team_games_with_valid_data(self, materializer, tmp_path):
         games = []
         for i in range(5):
-            games.append({
-                "game_id": f"g{i}", "team_id": f"team_a", "opponent_id": "team_b",
-                "team_score": 75 + i, "opponent_score": 70, "date": f"2023-01-{10+i:02d}",
-                "season": 2023,
-            })
-            games.append({
-                "game_id": f"g{i}", "team_id": "team_b", "opponent_id": "team_a",
-                "team_score": 70, "opponent_score": 75 + i, "date": f"2023-01-{10+i:02d}",
-                "season": 2023,
-            })
+            games.append(
+                {
+                    "game_id": f"g{i}",
+                    "team_id": f"team_a",
+                    "opponent_id": "team_b",
+                    "team_score": 75 + i,
+                    "opponent_score": 70,
+                    "date": f"2023-01-{10 + i:02d}",
+                    "season": 2023,
+                }
+            )
+            games.append(
+                {
+                    "game_id": f"g{i}",
+                    "team_id": "team_b",
+                    "opponent_id": "team_a",
+                    "team_score": 70,
+                    "opponent_score": 75 + i,
+                    "date": f"2023-01-{10 + i:02d}",
+                    "season": 2023,
+                }
+            )
         games_path = tmp_path / "historical" / "historical_games_2023.json"
         games_path.write_text(json.dumps({"team_games": games}))
         artifacts = {"2023": {"historical_games_json": str(games_path)}}
@@ -140,14 +169,42 @@ class TestHistoricalFeatureMaterializer:
     def test_load_team_games_filters_forfeits(self, materializer, tmp_path):
         """Games with zero scores should be filtered out."""
         games = [
-            {"game_id": "g1", "team_id": "a", "opponent_id": "b",
-             "team_score": 0, "opponent_score": 75, "date": "2023-01-10", "season": 2023},
-            {"game_id": "g1", "team_id": "b", "opponent_id": "a",
-             "team_score": 75, "opponent_score": 0, "date": "2023-01-10", "season": 2023},
-            {"game_id": "g2", "team_id": "a", "opponent_id": "b",
-             "team_score": 80, "opponent_score": 70, "date": "2023-01-11", "season": 2023},
-            {"game_id": "g2", "team_id": "b", "opponent_id": "a",
-             "team_score": 70, "opponent_score": 80, "date": "2023-01-11", "season": 2023},
+            {
+                "game_id": "g1",
+                "team_id": "a",
+                "opponent_id": "b",
+                "team_score": 0,
+                "opponent_score": 75,
+                "date": "2023-01-10",
+                "season": 2023,
+            },
+            {
+                "game_id": "g1",
+                "team_id": "b",
+                "opponent_id": "a",
+                "team_score": 75,
+                "opponent_score": 0,
+                "date": "2023-01-10",
+                "season": 2023,
+            },
+            {
+                "game_id": "g2",
+                "team_id": "a",
+                "opponent_id": "b",
+                "team_score": 80,
+                "opponent_score": 70,
+                "date": "2023-01-11",
+                "season": 2023,
+            },
+            {
+                "game_id": "g2",
+                "team_id": "b",
+                "opponent_id": "a",
+                "team_score": 70,
+                "opponent_score": 80,
+                "date": "2023-01-11",
+                "season": 2023,
+            },
         ]
         gp = tmp_path / "historical" / "historical_games_2023.json"
         gp.write_text(json.dumps({"team_games": games}))
@@ -157,10 +214,24 @@ class TestHistoricalFeatureMaterializer:
     def test_load_team_games_filters_huge_margins(self, materializer, tmp_path):
         """Games with margin > 80 should be filtered."""
         games = [
-            {"game_id": "g1", "team_id": "a", "opponent_id": "b",
-             "team_score": 150, "opponent_score": 50, "date": "2023-01-10", "season": 2023},
-            {"game_id": "g1", "team_id": "b", "opponent_id": "a",
-             "team_score": 50, "opponent_score": 150, "date": "2023-01-10", "season": 2023},
+            {
+                "game_id": "g1",
+                "team_id": "a",
+                "opponent_id": "b",
+                "team_score": 150,
+                "opponent_score": 50,
+                "date": "2023-01-10",
+                "season": 2023,
+            },
+            {
+                "game_id": "g1",
+                "team_id": "b",
+                "opponent_id": "a",
+                "team_score": 50,
+                "opponent_score": 150,
+                "date": "2023-01-10",
+                "season": 2023,
+            },
         ]
         gp = tmp_path / "historical" / "historical_games_2023.json"
         gp.write_text(json.dumps({"team_games": games}))
@@ -170,8 +241,16 @@ class TestHistoricalFeatureMaterializer:
     def test_load_team_metrics_basic(self, materializer, tmp_path):
         metrics = {
             "teams": [
-                {"team_name": "Duke", "off_rtg": 115.0, "def_rtg": 95.0,
-                 "pace": 70.0, "srs": 20.0, "sos": 5.0, "wins": 25, "losses": 5},
+                {
+                    "team_name": "Duke",
+                    "off_rtg": 115.0,
+                    "def_rtg": 95.0,
+                    "pace": 70.0,
+                    "srs": 20.0,
+                    "sos": 5.0,
+                    "wins": 25,
+                    "losses": 5,
+                },
             ]
         }
         mp = tmp_path / "historical" / "team_metrics_2023.json"
@@ -213,27 +292,25 @@ class TestHistoricalFeatureMaterializer:
         }
         sp = tmp_path / "historical" / "tournament_seeds_2023.json"
         sp.write_text(json.dumps(seeds))
-        df = materializer._load_tournament_seeds(
-            {"2023": {"tournament_seeds_json": str(sp)}}
-        )
+        df = materializer._load_tournament_seeds({"2023": {"tournament_seeds_json": str(sp)}})
         assert len(df) == 2
 
     def test_load_tournament_seeds_skips_2020(self, materializer, tmp_path):
         seeds = {"teams": [{"team_name": "Duke", "seed": 1, "region": "East"}]}
         sp = tmp_path / "historical" / "tournament_seeds_2020.json"
         sp.write_text(json.dumps(seeds))
-        df = materializer._load_tournament_seeds(
-            {"2020": {"tournament_seeds_json": str(sp)}}
-        )
+        df = materializer._load_tournament_seeds({"2020": {"tournament_seeds_json": str(sp)}})
         assert len(df) == 0
 
     def test_canonical_team_index(self, materializer):
-        df = pd.DataFrame({
-            "season": [2023, 2023, 2023],
-            "team_id": ["duke", "duke", "unc"],
-            "team_name": ["Duke", "Duke", "UNC"],
-            "extra": [1, 2, 3],
-        })
+        df = pd.DataFrame(
+            {
+                "season": [2023, 2023, 2023],
+                "team_id": ["duke", "duke", "unc"],
+                "team_name": ["Duke", "Duke", "UNC"],
+                "extra": [1, 2, 3],
+            }
+        )
         idx = materializer._canonical_team_index(df)
         assert len(idx) == 2  # deduplicated
 
@@ -253,31 +330,33 @@ class TestHistoricalFeatureMaterializer:
 
     def test_leakage_checks_passes(self, materializer):
         """Leakage checks should pass for correctly constructed features."""
-        df = pd.DataFrame({
-            "team_id": ["a", "a", "a", "b", "b", "b"],
-            "game_id": ["g1", "g2", "g3", "g1", "g2", "g3"],
-            "date": pd.to_datetime(["2023-01-01", "2023-01-05", "2023-01-10"] * 2),
-            "off_eff_game": [100.0, 110.0, 105.0, 95.0, 90.0, 100.0],
-            "games_played_prior": [0, 1, 2, 0, 1, 2],
-        })
+        df = pd.DataFrame(
+            {
+                "team_id": ["a", "a", "a", "b", "b", "b"],
+                "game_id": ["g1", "g2", "g3", "g1", "g2", "g3"],
+                "date": pd.to_datetime(["2023-01-01", "2023-01-05", "2023-01-10"] * 2),
+                "off_eff_game": [100.0, 110.0, 105.0, 95.0, 90.0, 100.0],
+                "games_played_prior": [0, 1, 2, 0, 1, 2],
+            }
+        )
         # Build off_eff_prior correctly (shifted expanding mean)
         df = df.sort_values(["team_id", "date", "game_id"]).reset_index(drop=True)
-        df["off_eff_prior"] = df.groupby("team_id")["off_eff_game"].transform(
-            lambda s: s.shift(1).expanding().mean()
-        )
+        df["off_eff_prior"] = df.groupby("team_id")["off_eff_game"].transform(lambda s: s.shift(1).expanding().mean())
         result = materializer._leakage_checks(df)
         assert result["passed"] is True
 
     def test_leakage_checks_detects_issues(self, materializer):
         """Detects when off_eff_prior has wrong values."""
-        df = pd.DataFrame({
-            "team_id": ["a", "a", "b", "b"],
-            "game_id": ["g1", "g2", "g1", "g2"],
-            "date": pd.to_datetime(["2023-01-01", "2023-01-05"] * 2),
-            "off_eff_game": [100.0, 110.0, 95.0, 90.0],
-            "games_played_prior": [0, 1, 0, 1],
-            "off_eff_prior": [np.nan, 999.0, np.nan, 999.0],  # wrong
-        })
+        df = pd.DataFrame(
+            {
+                "team_id": ["a", "a", "b", "b"],
+                "game_id": ["g1", "g2", "g1", "g2"],
+                "date": pd.to_datetime(["2023-01-01", "2023-01-05"] * 2),
+                "off_eff_game": [100.0, 110.0, 95.0, 90.0],
+                "games_played_prior": [0, 1, 0, 1],
+                "off_eff_prior": [np.nan, 999.0, np.nan, 999.0],  # wrong
+            }
+        )
         result = materializer._leakage_checks(df)
         assert result["passed"] is False
 
@@ -304,10 +383,14 @@ class TestHistoricalFeatureMaterializer:
         assert "targets" in result
 
     def test_quality_report(self, materializer):
-        tf = pd.DataFrame({
-            "season": [2023, 2023], "game_id": ["g1", "g1"],
-            "team_id": ["a", "b"], "off_eff_prior": [100.0, np.nan],
-        })
+        tf = pd.DataFrame(
+            {
+                "season": [2023, 2023],
+                "game_id": ["g1", "g1"],
+                "team_id": ["a", "b"],
+                "off_eff_prior": [100.0, np.nan],
+            }
+        )
         mf = pd.DataFrame({"x": [1]})
         tmf = pd.DataFrame({"y": [1]})
         sc = {"expected_seasons": [2023], "present_seasons": [2023], "missing_seasons": []}
@@ -316,11 +399,13 @@ class TestHistoricalFeatureMaterializer:
         assert report["matchup_rows"] == 1
 
     def test_shift_prior_season_table(self, materializer):
-        df = pd.DataFrame({
-            "season": [2022, 2022],
-            "team_id": ["duke", "unc"],
-            "off_rtg": [115.0, 105.0],
-        })
+        df = pd.DataFrame(
+            {
+                "season": [2022, 2022],
+                "team_id": ["duke", "unc"],
+                "off_rtg": [115.0, 105.0],
+            }
+        )
         shifted = materializer._shift_prior_season_table(df, ["off_rtg"], prefix="prior_")
         assert "prior_off_rtg" in shifted.columns
         # Season should be shifted +1
@@ -333,6 +418,7 @@ class TestHistoricalFeatureMaterializer:
 
     def test_infer_dates_from_game_ids(self, materializer):
         from src.data.features.materialization import HistoricalFeatureMaterializer
+
         rows = [
             {"game_id": "100", "date": "2023-01-01"},
             {"game_id": "200", "date": "2023-01-01"},
@@ -365,11 +451,17 @@ class TestHistoricalFeatureMaterializer:
     def test_compute_metrics_from_games(self, materializer, tmp_path):
         games = []
         for i in range(10):
-            games.append({
-                "team_id": "duke",
-                "team_score": 80, "opponent_score": 70,
-                "fga": 60, "orb": 10, "turnovers": 12, "fta": 20,
-            })
+            games.append(
+                {
+                    "team_id": "duke",
+                    "team_score": 80,
+                    "opponent_score": 70,
+                    "fga": 60,
+                    "orb": 10,
+                    "turnovers": 12,
+                    "fta": 20,
+                }
+            )
         gp = tmp_path / "games.json"
         gp.write_text(json.dumps({"team_games": games}))
         result = materializer._compute_metrics_from_games(str(gp))
@@ -383,9 +475,7 @@ class TestHistoricalFeatureMaterializer:
     def test_load_advanced_metrics_season(self, materializer, tmp_path):
         data = {
             "teams": [
-                {"team_id": "duke", "name": "Duke",
-                 "adj_offensive_efficiency": 120.0,
-                 "adj_defensive_efficiency": 90.0}
+                {"team_id": "duke", "name": "Duke", "adj_offensive_efficiency": 120.0, "adj_defensive_efficiency": 90.0}
             ]
         }
         p = tmp_path / "raw" / "advanced_metrics_2023.json"
@@ -400,12 +490,7 @@ class TestHistoricalFeatureMaterializer:
         assert df is None
 
     def test_load_torvik_season(self, materializer, tmp_path):
-        data = {
-            "teams": [
-                {"team_id": "duke", "name": "Duke",
-                 "barthag": 0.95, "effective_fg_pct": 0.55}
-            ]
-        }
+        data = {"teams": [{"team_id": "duke", "name": "Duke", "barthag": 0.95, "effective_fg_pct": 0.55}]}
         p = tmp_path / "raw" / "torvik_2023.json"
         p.write_text(json.dumps(data))
         df = materializer._load_torvik_season(2023)
@@ -417,17 +502,32 @@ class TestHistoricalFeatureMaterializer:
 
     def test_load_roster_season(self, materializer, tmp_path):
         data = {
-            "teams": [{
-                "team_id": "duke", "team_name": "Duke",
-                "players": [
-                    {"name": "Player1", "rapm_total": 2.0, "warp": 1.5,
-                     "is_transfer": True, "injury_status": "healthy",
-                     "minutes_per_game": 30, "class_year": "sr"},
-                    {"name": "Player2", "rapm_total": 1.0, "warp": 0.5,
-                     "is_transfer": False, "injury_status": "out",
-                     "minutes_per_game": 25, "class_year": "jr"},
-                ]
-            }]
+            "teams": [
+                {
+                    "team_id": "duke",
+                    "team_name": "Duke",
+                    "players": [
+                        {
+                            "name": "Player1",
+                            "rapm_total": 2.0,
+                            "warp": 1.5,
+                            "is_transfer": True,
+                            "injury_status": "healthy",
+                            "minutes_per_game": 30,
+                            "class_year": "sr",
+                        },
+                        {
+                            "name": "Player2",
+                            "rapm_total": 1.0,
+                            "warp": 0.5,
+                            "is_transfer": False,
+                            "injury_status": "out",
+                            "minutes_per_game": 25,
+                            "class_year": "jr",
+                        },
+                    ],
+                }
+            ]
         }
         p = tmp_path / "raw" / "rosters_2023.json"
         p.write_text(json.dumps(data))
@@ -501,8 +601,7 @@ class TestHistoricalFeatureMaterializer:
     def test_load_ncaa_team_stats_season(self, materializer, tmp_path):
         data = {
             "teams": [
-                {"team_id": "duke", "assist_turnover_ratio": 1.5,
-                 "rebound_margin": 5.0, "foul_rate": 0.18},
+                {"team_id": "duke", "assist_turnover_ratio": 1.5, "rebound_margin": 5.0, "foul_rate": 0.18},
             ]
         }
         p = tmp_path / "raw" / "ncaa_team_stats_2023.json"
@@ -528,8 +627,7 @@ class TestHistoricalFeatureMaterializer:
     def test_load_travel_context_season(self, materializer, tmp_path):
         data = {
             "records": [
-                {"team_id": "duke", "travel_miles": 500.0,
-                 "timezone_change_hours": 1.0, "trip_days": 2.0},
+                {"team_id": "duke", "travel_miles": 500.0, "timezone_change_hours": 1.0, "trip_days": 2.0},
             ]
         }
         p = tmp_path / "raw" / "travel_context_2023.json"
@@ -561,28 +659,32 @@ class TestHistoricalFeatureMaterializer:
         assert score == 0.0
 
     def test_build_matchup_features(self, materializer):
-        tf = pd.DataFrame({
-            "game_id": ["g1", "g1"],
-            "season": [2023, 2023],
-            "date": pd.to_datetime(["2023-01-10", "2023-01-10"]),
-            "team_id": ["a", "b"],
-            "team_score": [80.0, 70.0],
-            "win_pct_prior": [0.7, 0.5],
-            "off_eff_prior": [110.0, 100.0],
-        })
+        tf = pd.DataFrame(
+            {
+                "game_id": ["g1", "g1"],
+                "season": [2023, 2023],
+                "date": pd.to_datetime(["2023-01-10", "2023-01-10"]),
+                "team_id": ["a", "b"],
+                "team_score": [80.0, 70.0],
+                "win_pct_prior": [0.7, 0.5],
+                "off_eff_prior": [110.0, 100.0],
+            }
+        )
         mf = materializer._build_matchup_features(tf)
         assert len(mf) == 1
         assert "diff_win_pct_prior" in mf.columns
         assert "avg_off_eff_prior" in mf.columns
 
     def test_build_matchup_features_skips_non_pair_games(self, materializer):
-        tf = pd.DataFrame({
-            "game_id": ["g1"],
-            "season": [2023],
-            "date": pd.to_datetime(["2023-01-10"]),
-            "team_id": ["a"],
-            "team_score": [80.0],
-        })
+        tf = pd.DataFrame(
+            {
+                "game_id": ["g1"],
+                "season": [2023],
+                "date": pd.to_datetime(["2023-01-10"]),
+                "team_id": ["a"],
+                "team_score": [80.0],
+            }
+        )
         mf = materializer._build_matchup_features(tf)
         assert len(mf) == 0
 
@@ -611,16 +713,18 @@ class TestHistoricalFeatureMaterializer:
         assert "completeness_score" in report["proprietary_efficiency_model"]
 
     def test_variable_coverage_report(self, materializer):
-        tf = pd.DataFrame({
-            "off_eff_prior": [1.0],
-            "def_eff_prior": [1.0],
-            "net_eff_prior": [1.0],
-            "efg_prior": [1.0],
-            "to_rate_prior": [1.0],
-            "ft_rate_prior": [1.0],
-            "orb_rate_prior": [1.0],
-            "drb_rate_prior": [1.0],
-        })
+        tf = pd.DataFrame(
+            {
+                "off_eff_prior": [1.0],
+                "def_eff_prior": [1.0],
+                "net_eff_prior": [1.0],
+                "efg_prior": [1.0],
+                "to_rate_prior": [1.0],
+                "ft_rate_prior": [1.0],
+                "orb_rate_prior": [1.0],
+                "drb_rate_prior": [1.0],
+            }
+        )
         mf = pd.DataFrame({"x": [1]})
         tmf = pd.DataFrame({"team1_seed": [1], "team2_seed": [2], "seed_diff": [-1]})
         report = materializer._variable_coverage_report(tf, mf, tmf)
@@ -643,11 +747,13 @@ class TestHistoricalFeatureMaterializer:
 # DATA LOADER TESTS
 # =====================================================================
 
+
 class TestPlayerFromDict:
     """Tests for player_from_dict utility."""
 
     def test_basic_player(self):
         from src.pipeline.stages.data_loader import player_from_dict
+
         raw = {
             "name": "Test Player",
             "position": "SG",
@@ -663,18 +769,21 @@ class TestPlayerFromDict:
 
     def test_default_position(self):
         from src.pipeline.stages.data_loader import player_from_dict
+
         raw = {"name": "Test", "position": "INVALID"}
         player = player_from_dict("duke", raw)
         assert player.position.value == "PG"
 
     def test_default_injury_status(self):
         from src.pipeline.stages.data_loader import player_from_dict
+
         raw = {"name": "Test", "injury_status": "UNKNOWN"}
         player = player_from_dict("duke", raw)
         assert player.injury_status.value == "healthy"
 
     def test_transfer_player(self):
         from src.pipeline.stages.data_loader import player_from_dict
+
         raw = {"name": "Transfer", "is_transfer": True, "transfer_from": "UNC"}
         player = player_from_dict("duke", raw)
         assert player.is_transfer is True
@@ -682,6 +791,7 @@ class TestPlayerFromDict:
 
     def test_missing_fields_have_defaults(self):
         from src.pipeline.stages.data_loader import player_from_dict
+
         raw = {}
         player = player_from_dict("duke", raw)
         assert player.name == "Unknown"
@@ -690,6 +800,7 @@ class TestPlayerFromDict:
 
     def test_player_id_generated(self):
         from src.pipeline.stages.data_loader import player_from_dict
+
         raw = {"name": "John Doe"}
         player = player_from_dict("duke", raw)
         assert "duke" in player.player_id
@@ -702,11 +813,24 @@ class TestEnrichRosterRapm:
     def test_already_has_enough_rapm(self):
         from src.pipeline.stages.data_loader import enrich_roster_rapm
         from src.data.models.player import Player, Position
+
         players = [
-            Player(player_id="p1", name="A", team_id="duke", position=Position.POINT_GUARD,
-                   rapm_offensive=2.0, rapm_defensive=1.0),
-            Player(player_id="p2", name="B", team_id="duke", position=Position.CENTER,
-                   rapm_offensive=1.0, rapm_defensive=0.5),
+            Player(
+                player_id="p1",
+                name="A",
+                team_id="duke",
+                position=Position.POINT_GUARD,
+                rapm_offensive=2.0,
+                rapm_defensive=1.0,
+            ),
+            Player(
+                player_id="p2",
+                name="B",
+                team_id="duke",
+                position=Position.CENTER,
+                rapm_offensive=1.0,
+                rapm_defensive=0.5,
+            ),
         ]
         enrich_roster_rapm(players, {}, min_rapm_players=2)
         # Should not change anything since both already have RAPM
@@ -714,19 +838,33 @@ class TestEnrichRosterRapm:
 
     def test_empty_players(self):
         from src.pipeline.stages.data_loader import enrich_roster_rapm
+
         enrich_roster_rapm([], {}, min_rapm_players=3)  # Should not error
 
     def test_bpm_backfill(self):
         from src.pipeline.stages.data_loader import enrich_roster_rapm
         from src.data.models.player import Player, Position
+
         players = [
-            Player(player_id="p1", name="A", team_id="duke", position=Position.POINT_GUARD,
-                   rapm_offensive=0.0, rapm_defensive=0.0,
-                   box_plus_minus=5.0, warp=1.0, usage_rate=25.0,
-                   minutes_per_game=30.0, games_played=25,
-                   points_per_game=15.0, assists_per_game=4.0,
-                   rebounds_per_game=5.0, steals_per_game=1.2,
-                   blocks_per_game=0.5, turnovers_per_game=2.0),
+            Player(
+                player_id="p1",
+                name="A",
+                team_id="duke",
+                position=Position.POINT_GUARD,
+                rapm_offensive=0.0,
+                rapm_defensive=0.0,
+                box_plus_minus=5.0,
+                warp=1.0,
+                usage_rate=25.0,
+                minutes_per_game=30.0,
+                games_played=25,
+                points_per_game=15.0,
+                assists_per_game=4.0,
+                rebounds_per_game=5.0,
+                steals_per_game=1.2,
+                blocks_per_game=0.5,
+                turnovers_per_game=2.0,
+            ),
         ]
         enrich_roster_rapm(players, {}, min_rapm_players=3)
         # BPM backfill should set non-zero RAPM from box-score stats
@@ -738,6 +876,7 @@ class TestAssessRosterRapmQuality:
 
     def test_empty_rosters(self):
         from src.pipeline.stages.data_loader import assess_roster_rapm_quality
+
         result = assess_roster_rapm_quality({}, min_rapm_players=3)
         assert result["teams"] == 0.0
         assert result["team_coverage_ratio"] == 0.0
@@ -745,11 +884,24 @@ class TestAssessRosterRapmQuality:
     def test_with_rosters(self):
         from src.pipeline.stages.data_loader import assess_roster_rapm_quality
         from src.data.models.player import Player, Position, Roster
+
         players = [
-            Player(player_id="p1", name="A", team_id="duke", position=Position.POINT_GUARD,
-                   rapm_offensive=2.0, rapm_defensive=1.0),
-            Player(player_id="p2", name="B", team_id="duke", position=Position.CENTER,
-                   rapm_offensive=0.0, rapm_defensive=0.0),
+            Player(
+                player_id="p1",
+                name="A",
+                team_id="duke",
+                position=Position.POINT_GUARD,
+                rapm_offensive=2.0,
+                rapm_defensive=1.0,
+            ),
+            Player(
+                player_id="p2",
+                name="B",
+                team_id="duke",
+                position=Position.CENTER,
+                rapm_offensive=0.0,
+                rapm_defensive=0.0,
+            ),
         ]
         roster = Roster(team_id="duke", players=players)
         result = assess_roster_rapm_quality({"duke": roster}, min_rapm_players=1)
@@ -762,6 +914,7 @@ class TestValidateFeedFreshness:
 
     def test_freshness_disabled(self):
         from src.pipeline.stages.data_loader import validate_feed_freshness
+
         config = MagicMock()
         config.enforce_feed_freshness = False
         validate_feed_freshness(config, "Test", {"timestamp": "2020-01-01T00:00:00Z"})
@@ -769,6 +922,7 @@ class TestValidateFeedFreshness:
 
     def test_non_dict_payload(self):
         from src.pipeline.stages.data_loader import validate_feed_freshness
+
         config = MagicMock()
         config.enforce_feed_freshness = True
         validate_feed_freshness(config, "Test", "not a dict")
@@ -776,6 +930,7 @@ class TestValidateFeedFreshness:
 
     def test_missing_timestamp_warns_and_skips(self):
         from src.pipeline.stages.data_loader import validate_feed_freshness
+
         config = MagicMock()
         config.enforce_feed_freshness = True
         # Should not raise — just warn and return
@@ -787,6 +942,7 @@ class TestBracketDataToTeams:
 
     def test_basic_conversion(self):
         from src.pipeline.stages.data_loader import bracket_data_to_teams
+
         bt1 = SimpleNamespace(display_name="Duke", seed=1, region="East", rating=95.0)
         bt2 = SimpleNamespace(display_name="UNC", seed=8, region="East", rating=None)
         bracket = SimpleNamespace(teams=[bt1, bt2])
@@ -799,6 +955,7 @@ class TestBracketDataToTeams:
 
     def test_empty_bracket(self):
         from src.pipeline.stages.data_loader import bracket_data_to_teams
+
         bracket = SimpleNamespace(teams=[])
         teams = bracket_data_to_teams(bracket)
         assert teams == []
@@ -809,6 +966,7 @@ class TestComputePriorYearElo:
 
     def test_no_data_returns_none(self):
         from src.pipeline.stages.data_loader import compute_prior_year_elo
+
         config = MagicMock()
         config.year = 2026
         config.multi_year_games_dir = None
@@ -818,6 +976,7 @@ class TestComputePriorYearElo:
 
     def test_skips_2020_to_2019(self):
         from src.pipeline.stages.data_loader import compute_prior_year_elo
+
         config = MagicMock()
         config.year = 2021  # prior year would be 2020 -> should become 2019
         config.multi_year_games_dir = None
@@ -832,17 +991,16 @@ class TestApplyTransferPortalUpdates:
     def test_updates_player(self, tmp_path):
         from src.pipeline.stages.data_loader import apply_transfer_portal_updates
         from src.data.models.player import Player, Position, Roster
+
         players = [
-            Player(player_id="p1", name="John Doe", team_id="duke",
-                   position=Position.POINT_GUARD),
+            Player(player_id="p1", name="John Doe", team_id="duke", position=Position.POINT_GUARD),
         ]
         roster = Roster(team_id="duke", players=players)
         rosters = {"duke": roster}
 
         transfer_data = {
             "entries": [
-                {"destination_team_name": "Duke", "player_name": "John Doe",
-                 "source_team_name": "UNC"},
+                {"destination_team_name": "Duke", "player_name": "John Doe", "source_team_name": "UNC"},
             ]
         }
         tp = tmp_path / "transfers.json"
@@ -854,6 +1012,7 @@ class TestApplyTransferPortalUpdates:
     def test_no_matching_destination(self, tmp_path):
         from src.pipeline.stages.data_loader import apply_transfer_portal_updates
         from src.data.models.player import Roster
+
         rosters = {"duke": Roster(team_id="duke", players=[])}
         transfer_data = {
             "entries": [
@@ -868,6 +1027,7 @@ class TestApplyTransferPortalUpdates:
     def test_entries_not_list(self, tmp_path):
         from src.pipeline.stages.data_loader import apply_transfer_portal_updates
         from src.data.models.player import Roster
+
         rosters = {"duke": Roster(team_id="duke", players=[])}
         tp = tmp_path / "transfers.json"
         tp.write_text(json.dumps({"entries": "not_a_list"}))
@@ -881,19 +1041,20 @@ class TestLoadTeams:
     def test_loads_from_teams_json(self):
         from src.pipeline.stages.data_loader import load_teams
         from src.models.team import Team
+
         config = MagicMock()
         config.teams_json = "teams.json"
         config.bracket_json = None
         config.bracket_source = "auto"
         mock_teams = [Team(name="Duke", seed=1, region="East")]
-        with patch("src.pipeline.stages.data_loader.DataLoader.load_teams_from_json",
-                    return_value=mock_teams):
+        with patch("src.pipeline.stages.data_loader.DataLoader.load_teams_from_json", return_value=mock_teams):
             result = load_teams(config, MagicMock())
         assert len(result) == 1
         assert result[0].name == "Duke"
 
     def test_loads_from_bracket_json(self):
         from src.pipeline.stages.data_loader import load_teams
+
         config = MagicMock()
         config.teams_json = None
         config.bracket_json = "bracket.json"
@@ -908,6 +1069,7 @@ class TestLoadTeams:
     def test_raises_when_no_source(self):
         from src.pipeline.stages.data_loader import load_teams
         from src.pipeline.config import DataRequirementError
+
         config = MagicMock()
         config.teams_json = None
         config.bracket_json = None
@@ -922,6 +1084,7 @@ class TestEnrichTournamentContext:
 
     def test_no_data_returns_early(self):
         from src.pipeline.stages.data_loader import enrich_tournament_context
+
         config = MagicMock()
         config.preseason_ap_json = None
         config.coach_tournament_json = None
@@ -932,6 +1095,7 @@ class TestEnrichTournamentContext:
     def test_injects_ap_rank(self):
         from src.pipeline.stages.data_loader import enrich_tournament_context
         from src.models.team import Team
+
         config = MagicMock()
         config.preseason_ap_json = "ap.json"
         config.coach_tournament_json = None
@@ -952,11 +1116,13 @@ class TestEnrichTournamentContext:
 # BASELINE TRAINING TESTS
 # =====================================================================
 
+
 class TestBuildEnrichedMeta:
     """Tests for _build_enriched_meta."""
 
     def test_basic_2_models(self):
         from src.pipeline.stages.baseline_training import _build_enriched_meta
+
         base_X = np.array([[0.5, 0.6], [0.7, 0.8]])
         result = _build_enriched_meta(base_X)
         # 2 base + C(2,2)=1 interaction + 3 aggregates = 6
@@ -964,6 +1130,7 @@ class TestBuildEnrichedMeta:
 
     def test_3_models(self):
         from src.pipeline.stages.baseline_training import _build_enriched_meta
+
         base_X = np.random.rand(10, 3)
         result = _build_enriched_meta(base_X)
         # 3 base + C(3,2)=3 interactions + 3 aggregates = 9
@@ -971,6 +1138,7 @@ class TestBuildEnrichedMeta:
 
     def test_single_model(self):
         from src.pipeline.stages.baseline_training import _build_enriched_meta
+
         base_X = np.array([[0.5], [0.6]])
         result = _build_enriched_meta(base_X)
         # 1 base + 0 interactions + 3 aggregates = 4
@@ -982,12 +1150,14 @@ class TestSelectBestSingleModel:
 
     def test_no_models_returns_none(self):
         from src.pipeline.stages.baseline_training import _select_best_single_model
+
         pipeline = MagicMock()
         result = _select_best_single_model(pipeline, [], np.array([]))
         assert result == "none"
 
     def test_empty_eval_y_returns_first(self):
         from src.pipeline.stages.baseline_training import _select_best_single_model
+
         pipeline = MagicMock()
         model = MagicMock()
         result = _select_best_single_model(
@@ -1001,10 +1171,11 @@ class TestSelectBestSingleModel:
     def test_selects_by_priority_not_eval_brier(self):
         """FIX-STACKING-LEAKAGE: selection uses priority, not eval Brier."""
         from src.pipeline.stages.baseline_training import _select_best_single_model
+
         pipeline = MagicMock()
         eval_y = np.array([1, 0, 1, 0])
         good_preds = np.array([0.9, 0.1, 0.8, 0.2])  # good
-        bad_preds = np.array([0.5, 0.5, 0.5, 0.5])    # bad
+        bad_preds = np.array([0.5, 0.5, 0.5, 0.5])  # bad
         model_good = MagicMock()
         model_bad = MagicMock()
         # logit has higher priority than lgb regardless of eval performance
@@ -1017,6 +1188,7 @@ class TestSelectBestSingleModel:
 
     def test_name_mapping(self):
         from src.pipeline.stages.baseline_training import _select_best_single_model
+
         pipeline = MagicMock()
         model = MagicMock()
         eval_y = np.array([1, 0])
@@ -1036,6 +1208,7 @@ class TestSetPrimaryModel:
 
     def test_set_lgb(self):
         from src.pipeline.stages.baseline_training import _set_primary_model
+
         pipeline = MagicMock()
         model = MagicMock()
         _set_primary_model(pipeline, "lgb", model)
@@ -1045,6 +1218,7 @@ class TestSetPrimaryModel:
 
     def test_set_xgb(self):
         from src.pipeline.stages.baseline_training import _set_primary_model
+
         pipeline = MagicMock()
         model = MagicMock()
         _set_primary_model(pipeline, "xgb", model)
@@ -1053,6 +1227,7 @@ class TestSetPrimaryModel:
 
     def test_set_logit(self):
         from src.pipeline.stages.baseline_training import _set_primary_model
+
         pipeline = MagicMock()
         model = MagicMock()
         _set_primary_model(pipeline, "logit", model)
@@ -1060,6 +1235,7 @@ class TestSetPrimaryModel:
 
     def test_set_spread(self):
         from src.pipeline.stages.baseline_training import _set_primary_model
+
         pipeline = MagicMock()
         model = MagicMock()
         _set_primary_model(pipeline, "spread", model)
@@ -1093,6 +1269,7 @@ class TestConstructScheduleGraph:
         pipeline.proprietary_metrics = {}
 
         from src.models.team import Team
+
         teams = [Team(name="Duke", seed=1, region="East")]
 
         graph = _construct_schedule_graph(pipeline, teams)
@@ -1120,6 +1297,7 @@ class TestConstructScheduleGraph:
         pipeline.proprietary_metrics = {}
 
         from src.models.team import Team
+
         teams = [Team(name="Duke", seed=1, region="East")]
 
         graph = _construct_schedule_graph(pipeline, teams)
@@ -1150,6 +1328,7 @@ class TestConstructScheduleGraph:
         pipeline.proprietary_metrics = {}
 
         from src.models.team import Team
+
         teams = []
         graph = _construct_schedule_graph(pipeline, teams)
         assert graph is not None
@@ -1179,6 +1358,7 @@ class TestStatSourcesResult:
 
     def test_default_values(self):
         from src.pipeline.stages.data_loader import StatSourcesResult
+
         r = StatSourcesResult()
         assert r.torvik_map == {}
         assert r.proprietary_map == {}
@@ -1192,6 +1372,7 @@ class TestRosterResult:
 
     def test_default_values(self):
         from src.pipeline.stages.data_loader import RosterResult
+
         r = RosterResult()
         assert r.rosters == {}
         assert r.roster_rapm_quality == {}
@@ -1202,6 +1383,7 @@ class TestGameFlowResult:
 
     def test_default_values(self):
         from src.pipeline.stages.data_loader import GameFlowResult
+
         r = GameFlowResult()
         assert r.team_to_games == {}
         assert r.all_game_flows == []
@@ -1210,6 +1392,7 @@ class TestGameFlowResult:
 # =====================================================================
 # ADDITIONAL MATERIALIZATION EDGE CASE TESTS
 # =====================================================================
+
 
 class TestMaterializerEdgeCases:
     """More edge case tests for HistoricalFeatureMaterializer."""
@@ -1220,6 +1403,7 @@ class TestMaterializerEdgeCases:
             HistoricalFeatureMaterializer,
             MaterializationConfig,
         )
+
         cfg = MaterializationConfig(
             start_season=2023,
             end_season=2023,
@@ -1250,9 +1434,15 @@ class TestMaterializerEdgeCases:
         data = {
             "team_games": [],
             "games": [
-                {"game_id": "g1", "team1_id": "duke", "team2_id": "unc",
-                 "team1_score": 80, "team2_score": 70, "date": "2023-01-10"},
-            ]
+                {
+                    "game_id": "g1",
+                    "team1_id": "duke",
+                    "team2_id": "unc",
+                    "team1_score": 80,
+                    "team2_score": 70,
+                    "date": "2023-01-10",
+                },
+            ],
         }
         gp = tmp_path / "h" / "historical_games_2023.json"
         gp.write_text(json.dumps(data))
@@ -1269,20 +1459,29 @@ class TestMaterializerEdgeCases:
         }
         games = []
         for i in range(10):
-            games.append({
-                "team_id": "duke", "team_score": 80, "opponent_score": 70,
-                "fga": 60, "orb": 10, "turnovers": 12, "fta": 20,
-            })
+            games.append(
+                {
+                    "team_id": "duke",
+                    "team_score": 80,
+                    "opponent_score": 70,
+                    "fga": 60,
+                    "orb": 10,
+                    "turnovers": 12,
+                    "fta": 20,
+                }
+            )
         mp = tmp_path / "h" / "team_metrics_2023.json"
         mp.write_text(json.dumps(metrics))
         gp = tmp_path / "h" / "historical_games_2023.json"
         gp.write_text(json.dumps({"team_games": games}))
-        df = mat._load_team_metrics({
-            "2023": {
-                "team_metrics_json": str(mp),
-                "historical_games_json": str(gp),
+        df = mat._load_team_metrics(
+            {
+                "2023": {
+                    "team_metrics_json": str(mp),
+                    "historical_games_json": str(gp),
+                }
             }
-        })
+        )
         # Duke should have been backfilled
         duke_row = df[df["team_id"] == "duke"]
         assert len(duke_row) >= 1
@@ -1296,7 +1495,7 @@ class TestMaterializerEdgeCases:
         (tmp_path / "r" / "odds_2023.json").write_text(json.dumps(odds))
         df = pd.DataFrame({"season": [2023], "team_id": ["duke"]})
         warnings = mat._validate_prior_source_availability(df)
-        assert any("after Selection Sunday" in w for w in warnings)
+        assert any("on/after tournament start" in w for w in warnings)
 
     def test_validate_prior_source_transfer_post_april(self, mat, tmp_path):
         """Transfer data with post-April snapshot should warn."""
@@ -1318,6 +1517,7 @@ class TestMaterializerRunIntegration:
             HistoricalFeatureMaterializer,
             MaterializationConfig,
         )
+
         hist_dir = tmp_path / "historical"
         raw_dir = tmp_path / "raw"
         out_dir = tmp_path / "output"
@@ -1328,30 +1528,58 @@ class TestMaterializerRunIntegration:
         # Create minimal game data
         games = []
         for i in range(20):
-            games.append({
-                "game_id": f"g{i}", "team_id": "team_a", "opponent_id": "team_b",
-                "team_name": "Team A", "opponent_name": "Team B",
-                "team_score": 75 + i % 5, "opponent_score": 70 + i % 3,
-                "date": f"2023-01-{10 + i % 20:02d}", "season": 2023,
-            })
-            games.append({
-                "game_id": f"g{i}", "team_id": "team_b", "opponent_id": "team_a",
-                "team_name": "Team B", "opponent_name": "Team A",
-                "team_score": 70 + i % 3, "opponent_score": 75 + i % 5,
-                "date": f"2023-01-{10 + i % 20:02d}", "season": 2023,
-            })
-        (hist_dir / "historical_games_2023.json").write_text(
-            json.dumps({"team_games": games})
-        )
+            games.append(
+                {
+                    "game_id": f"g{i}",
+                    "team_id": "team_a",
+                    "opponent_id": "team_b",
+                    "team_name": "Team A",
+                    "opponent_name": "Team B",
+                    "team_score": 75 + i % 5,
+                    "opponent_score": 70 + i % 3,
+                    "date": f"2023-01-{10 + i % 20:02d}",
+                    "season": 2023,
+                }
+            )
+            games.append(
+                {
+                    "game_id": f"g{i}",
+                    "team_id": "team_b",
+                    "opponent_id": "team_a",
+                    "team_name": "Team B",
+                    "opponent_name": "Team A",
+                    "team_score": 70 + i % 3,
+                    "opponent_score": 75 + i % 5,
+                    "date": f"2023-01-{10 + i % 20:02d}",
+                    "season": 2023,
+                }
+            )
+        (hist_dir / "historical_games_2023.json").write_text(json.dumps({"team_games": games}))
 
         metrics = {
             "teams": [
-                {"team_name": "team_a", "team_id": "team_a", "off_rtg": 110.0,
-                 "def_rtg": 95.0, "pace": 70.0, "srs": 10.0, "sos": 5.0,
-                 "wins": 20, "losses": 5},
-                {"team_name": "team_b", "team_id": "team_b", "off_rtg": 100.0,
-                 "def_rtg": 100.0, "pace": 68.0, "srs": 5.0, "sos": 3.0,
-                 "wins": 15, "losses": 10},
+                {
+                    "team_name": "team_a",
+                    "team_id": "team_a",
+                    "off_rtg": 110.0,
+                    "def_rtg": 95.0,
+                    "pace": 70.0,
+                    "srs": 10.0,
+                    "sos": 5.0,
+                    "wins": 20,
+                    "losses": 5,
+                },
+                {
+                    "team_name": "team_b",
+                    "team_id": "team_b",
+                    "off_rtg": 100.0,
+                    "def_rtg": 100.0,
+                    "pace": 68.0,
+                    "srs": 5.0,
+                    "sos": 3.0,
+                    "wins": 15,
+                    "losses": 10,
+                },
             ]
         }
         (hist_dir / "team_metrics_2023.json").write_text(json.dumps(metrics))
@@ -1381,6 +1609,7 @@ class TestLoadTeamStatSources:
     def test_raises_without_torvik_or_scrape(self):
         from src.pipeline.stages.data_loader import load_team_stat_sources
         from src.pipeline.config import DataRequirementError
+
         config = MagicMock()
         config.torvik_json = None
         config.scrape_live = False
@@ -1457,6 +1686,7 @@ class TestMaterializerSafeDivHelper:
 
     def test_normal_division(self):
         from src.data.features.materialization import HistoricalFeatureMaterializer, MaterializationConfig
+
         mat = HistoricalFeatureMaterializer.__new__(HistoricalFeatureMaterializer)
         result = mat._safe_div(pd.Series([10.0, 20.0]), pd.Series([2.0, 4.0]))
         assert result.iloc[0] == pytest.approx(5.0)
@@ -1468,6 +1698,7 @@ class TestMaterializerNormalizeTeamId:
 
     def test_basic_normalization(self):
         from src.data.features.materialization import HistoricalFeatureMaterializer, MaterializationConfig
+
         mat = HistoricalFeatureMaterializer.__new__(HistoricalFeatureMaterializer)
         result = mat._normalize_team_id("Duke Blue Devils")
         assert isinstance(result, str)
