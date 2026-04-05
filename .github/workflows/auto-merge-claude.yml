@@ -17,7 +17,7 @@ jobs:
           # Create a PR if one doesn't exist, otherwise get the existing one
           PR_URL=$(gh pr view --json url -q .url 2>/dev/null || gh pr create --fill --base main)
           echo "PR: $PR_URL"
-          gh pr merge --squash --auto "$PR_URL"
+          gh pr merge --squash --delete-branch --auto "$PR_URL"
           gh api repos/${{ github.repository }}/pulls/$(gh pr view "$PR_URL" --json number -q .number)/update-branch -f update_method=merge || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
