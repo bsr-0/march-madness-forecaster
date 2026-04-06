@@ -145,11 +145,12 @@ class TestCircuitBreakerIntegration:
     def test_rankings_fallback_to_csv(self, scraper):
         """When API strategies fail, rankings should fall back to CSV."""
         fake_team = _make_team()
-        with patch.object(scraper, "_rankings_from_cbbdata_api", return_value=[]):
-            with patch.object(scraper, "_rankings_from_trank_csv", return_value=[]):
-                with patch.object(scraper, "_rankings_from_csv", return_value=[fake_team]):
-                    with patch.object(scraper, "_save_to_cache"):
-                        teams = scraper.fetch_current_rankings(year=2024)
+        with patch.object(scraper, "_check_tournament_date_guard"):
+            with patch.object(scraper, "_rankings_from_cbbdata_api", return_value=[]):
+                with patch.object(scraper, "_rankings_from_trank_csv", return_value=[]):
+                    with patch.object(scraper, "_rankings_from_csv", return_value=[fake_team]):
+                        with patch.object(scraper, "_save_to_cache"):
+                            teams = scraper.fetch_current_rankings(year=2024)
 
         assert len(teams) == 1
         assert scraper._fetch_strategy.get("rankings") == "csv_fallback"
@@ -168,11 +169,12 @@ class TestCircuitBreakerIntegration:
                 "opp_free_throw_rate": 0.31,
             }
         }
-        with patch.object(scraper, "_four_factors_from_cbbdata_api", return_value={}):
-            with patch.object(scraper, "_four_factors_from_trank_csv", return_value={}):
-                with patch.object(scraper, "_four_factors_from_player_csv", return_value=fake_ff):
-                    with patch.object(scraper, "_save_to_cache"):
-                        ff = scraper.fetch_four_factors(year=2024)
+        with patch.object(scraper, "_check_tournament_date_guard"):
+            with patch.object(scraper, "_four_factors_from_cbbdata_api", return_value={}):
+                with patch.object(scraper, "_four_factors_from_trank_csv", return_value={}):
+                    with patch.object(scraper, "_four_factors_from_player_csv", return_value=fake_ff):
+                        with patch.object(scraper, "_save_to_cache"):
+                            ff = scraper.fetch_four_factors(year=2024)
 
         assert ff == fake_ff
         assert scraper._fetch_strategy.get("four_factors") == "csv_fallback"
