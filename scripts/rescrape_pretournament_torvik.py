@@ -27,6 +27,13 @@ from pathlib import Path
 
 import requests
 
+try:
+    from curl_cffi import requests as cffi_requests
+
+    HAS_CURL_CFFI = True
+except ImportError:
+    HAS_CURL_CFFI = False
+
 # Add project root to path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
@@ -140,7 +147,50 @@ def _safe_rate(val, default=0.0) -> float:
     return v
 
 
-def fetch_trank_csv(year: int, retries: int = 2) -> list[dict] | None:
+def _fetch_trank_text(year: int, params: dict) -> str | None:
+    """Try to fetch trank.php CSV text, using curl_cffi to bypass Cloudflare.
+
+    Strategy:
+      1. curl_cffi with Chrome TLS impersonation (bypasses Cloudflare)
+      2. Standard requests with browser-like headers (blocked by some environments)
+    """
+    url = "https://barttorvik.com/trank.php"
+
+    # Strategy 1: curl_cffi (impersonates Chrome TLS fingerprint)
+    if HAS_CURL_CFFI:
+        try:
+            resp = cffi_requests.get(
+                url,
+                params=params,
+                headers=TRANK_HEADERS,
+                impersonate="chrome",
+                timeout=45,
+            )
+            resp.raise_for_status()
+            text = resp.text
+            if "<html" not in text[:500].lower():
+                logger.info("[trank CSV] curl_cffi bypassed Cloudflare for %d", year)
+                return text
+            logger.warning("[trank CSV] curl_cffi got Cloudflare challenge for %d", year)
+        except Exception as e:
+            logger.warning("[trank CSV] curl_cffi failed for %d: %s", year, e)
+
+    # Strategy 2: standard requests
+    try:
+        resp = requests.get(url, headers=TRANK_HEADERS, params=params, timeout=45)
+        resp.raise_for_status()
+        text = resp.text
+        if "<html" not in text[:500].lower():
+            logger.info("[trank CSV] standard requests succeeded for %d", year)
+            return text
+        logger.warning("[trank CSV] Cloudflare challenge for %d", year)
+    except requests.RequestException as e:
+        logger.warning("[trank CSV] standard requests failed for %d: %s", year, e)
+
+    return None
+
+
+def fetch_trank_csv(year: int) -> list[dict] | None:
     """Fetch pre-tournament ratings + four factors from trank.php CSV.
 
     Returns list of team dicts with four factors populated, or None if
@@ -157,33 +207,11 @@ def fetch_trank_csv(year: int, retries: int = 2) -> list[dict] | None:
         "end": date_params["end"],
     }
 
-    for attempt in range(retries):
-        try:
-            resp = requests.get(
-                "https://barttorvik.com/trank.php",
-                headers=TRANK_HEADERS,
-                params=params,
-                timeout=45,
-            )
-            resp.raise_for_status()
-            text = resp.text
+    text = _fetch_trank_text(year, params)
+    if text is None:
+        return None
 
-            # Detect Cloudflare challenge page
-            if "<html" in text[:500].lower() or "checking your browser" in text[:500].lower():
-                logger.warning("[trank CSV] Cloudflare challenge for %d — falling back to JSON", year)
-                return None
-
-            return _parse_trank_csv(text, year)
-
-        except requests.RequestException as e:
-            if attempt < retries - 1:
-                wait = 2 ** (attempt + 1)
-                logger.warning("[trank CSV] Attempt %d failed: %s. Retrying in %ds...", attempt + 1, e, wait)
-                time.sleep(wait)
-            else:
-                logger.warning("[trank CSV] All attempts failed for %d: %s — falling back to JSON", year, e)
-
-    return None
+    return _parse_trank_csv(text, year)
 
 
 def _parse_trank_csv(text: str, year: int) -> list[dict] | None:
