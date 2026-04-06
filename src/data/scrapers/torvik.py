@@ -37,6 +37,11 @@ from datetime import date, datetime
 
 import requests
 
+try:
+    import cloudscraper
+except ImportError:
+    cloudscraper = None
+
 from ..normalize import normalize_team_id as _canonical_team_id
 from ._retry import retry_request
 from .circuit_breaker import CircuitBreaker, CircuitBreakerConfig, CircuitBreakerOpen
