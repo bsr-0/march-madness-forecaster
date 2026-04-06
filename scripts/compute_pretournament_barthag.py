@@ -54,6 +54,7 @@ TOURNAMENT_START_DATES = {
     2023: date(2023, 3, 14),
     2024: date(2024, 3, 19),
     2025: date(2025, 3, 18),
+    2026: date(2026, 3, 17),
 }
 
 # Pythagorean exponent for college basketball (Torvik uses ~11.5)
