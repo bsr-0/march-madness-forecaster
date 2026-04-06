@@ -6382,5 +6382,8 @@
     }
   ],
   "source": "synthetic_from_components",
-  "note": "Generated from torvik_four_factors_2007.json and torvik_shooting_2007.json"
+  "note": "Generated from torvik_four_factors_2007.json and torvik_shooting_2007.json",
+  "data_type": "pre_tournament",
+  "cutoff_date": "2007-03-14",
+  "tournament_start": "2007-03-15"
 }

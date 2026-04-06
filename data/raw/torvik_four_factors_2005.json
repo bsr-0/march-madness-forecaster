@@ -3298,5 +3298,8 @@
     "opp_turnover_rate": 0.0,
     "defensive_reb_rate": 0.6695,
     "opp_free_throw_rate": 0.0
-  }
+  },
+  "data_type": "pre_tournament_computed",
+  "cutoff_date": "2005-03-16",
+  "tournament_start": "2005-03-17"
 }

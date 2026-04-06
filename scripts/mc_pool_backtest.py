@@ -56,6 +56,7 @@ ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 3
 N_OPPONENTS = 999  # 1000-person pool
 N_REPEATS = 50  # Repeat opponent sampling to reduce variance
 N_MODEL_BRACKETS = 50  # Stochastic brackets per mode per repeat
+HEDGE_OPT_RATIO = 0.7  # Fraction of portfolio allocated to opt_torvik in hedge mode
 SEED_MATCHUP_ORDER = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
 REGION_ORDER = ["East", "West", "South", "Midwest"]
 
@@ -63,6 +64,14 @@ REGION_ORDER = ["East", "West", "South", "Midwest"]
 # ---------------------------------------------------------------------------
 # Data loading (reused patterns from unified_mode_evaluation.py)
 # ---------------------------------------------------------------------------
+
+
+# 2011 used "Southeast"/"Southwest" instead of "South"/"Midwest".
+# Normalize so REGION_ORDER works uniformly.
+_REGION_ALIASES = {
+    "Southeast": "South",
+    "Southwest": "Midwest",
+}
 
 
 def load_seeds_and_regions(year):
@@ -77,7 +86,8 @@ def load_seeds_and_regions(year):
     if isinstance(data, dict) and "teams" in data:
         for t in data["teams"]:
             seeds[t["team_id"]] = t["seed"]
-            regions[t["team_id"]] = t.get("region", "")
+            raw_region = t.get("region", "")
+            regions[t["team_id"]] = _REGION_ALIASES.get(raw_region, raw_region)
     return seeds, regions
 
 
@@ -912,6 +922,58 @@ def run_backtest(
             else:
                 print(f"  {year:<6} {opt_mode_name:<10} SKIP — no full Pareto brackets")
 
+        # --- Hedge mode: blend opt_torvik + seed brackets ---
+        opt_brackets = build_optimized_brackets(
+            first_round, seeds, regions, torvik_rp, pick_dist, pool_size, n_target=N_MODEL_BRACKETS, rng=rng
+        )
+        if opt_brackets.shape[0] > 0:
+            n_opt_alloc = max(1, int(n_model * HEDGE_OPT_RATIO))
+            n_seed_alloc = n_model - n_opt_alloc
+            opt_idx = rng.choice(opt_brackets.shape[0], size=n_opt_alloc, replace=True)
+            hedge_opt = opt_brackets[opt_idx]
+            hedge_seed = sample_model_brackets(first_round, seed_rp, n_seed_alloc, rng)
+            hedge_brackets = np.vstack([hedge_opt, hedge_seed])
+            n_hedge = hedge_brackets.shape[0]
+            model_scores = score_brackets_against_outcome(hedge_brackets, actual, scoring_vector)
+            all_ranks = np.zeros((n_hedge, n_repeats))
+            for rep in range(n_repeats):
+                opp = generate_opponent_brackets(
+                    n_opponents, first_round, seed_pw, pick_dist, seeds, rng,
+                )
+                opp_scores = score_brackets_against_outcome(opp, actual, scoring_vector)
+                for m in range(n_hedge):
+                    better = np.sum(opp_scores > model_scores[m])
+                    tied = np.sum(opp_scores == model_scores[m])
+                    all_ranks[m, rep] = better + 1 + tied / 2.0
+            bracket_mean_ranks = all_ranks.mean(axis=1)
+            best_bracket_idx = np.argmin(bracket_mean_ranks)
+            best_rank = bracket_mean_ranks[best_bracket_idx]
+            mean_rank = bracket_mean_ranks.mean()
+            p_first = (all_ranks == 1.0).mean()
+            p_top5 = (all_ranks <= max(1, pool_size * 0.05)).mean()
+            p_top25 = (all_ranks <= max(1, pool_size * 0.25)).mean()
+            best_score = float(model_scores[best_bracket_idx])
+            mean_score = float(model_scores.mean())
+            hedge_name = "hedge_tv"
+            print(
+                f"  {year:<6} {hedge_name:<10} {best_rank:8.1f} {mean_rank:8.1f} "
+                f"{p_first:8.3f} {p_top5:8.3f} {p_top25:9.3f} "
+                f"{best_score:8.0f} {mean_score:8.0f}"
+            )
+            results.append(
+                {
+                    "year": year,
+                    "mode": hedge_name,
+                    "best_rank": best_rank,
+                    "mean_rank": mean_rank,
+                    "best_score": best_score,
+                    "mean_score": mean_score,
+                    "p_first": p_first,
+                    "p_top5": p_top5,
+                    "p_top25": p_top25,
+                }
+            )
+
     if not results:
         print("\nNo results.")
         return 1
@@ -925,7 +987,7 @@ def run_backtest(
     )
     print(f"  {'-' * 65}")
 
-    for mode in ["seed", "noseed", "blend", "torvik", "opt_seed", "opt_blend", "opt_torvik"]:
+    for mode in ["seed", "noseed", "blend", "torvik", "opt_seed", "opt_blend", "opt_torvik", "hedge_tv"]:
         mode_results = [r for r in results if r["mode"] == mode]
         if not mode_results:
             continue
@@ -943,7 +1005,7 @@ def run_backtest(
     print(f"\n  Statistical Tests — Mean Rank (paired across years):")
 
     # Collect per-year ranks by mode
-    all_modes = ["seed", "noseed", "blend", "torvik", "opt_seed", "opt_blend", "opt_torvik"]
+    all_modes = ["seed", "noseed", "blend", "torvik", "opt_seed", "opt_blend", "opt_torvik", "hedge_tv"]
     mode_ranks = {m: {} for m in all_modes}
     mode_best = {m: {} for m in all_modes}
     for r in results:
@@ -962,6 +1024,7 @@ def run_backtest(
         ("opt_seed", mode_ranks["opt_seed"], mode_best["opt_seed"]),
         ("opt_blend", mode_ranks["opt_blend"], mode_best["opt_blend"]),
         ("opt_torvik", mode_ranks["opt_torvik"], mode_best["opt_torvik"]),
+        ("hedge_tv", mode_ranks["hedge_tv"], mode_best["hedge_tv"]),
     ]
 
     n_comparisons = len(comparison_modes)

@@ -3338,5 +3338,8 @@
     "opp_turnover_rate": 0.0,
     "defensive_reb_rate": 0.6975,
     "opp_free_throw_rate": 0.0
-  }
+  },
+  "data_type": "pre_tournament_computed",
+  "cutoff_date": "2006-03-15",
+  "tournament_start": "2006-03-16"
 }
