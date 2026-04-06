@@ -1117,7 +1117,11 @@ class TestBartTorvikScraper:
         data = {"teams": [{"name": "Duke"}]}
         scraper._save_to_cache("test.json", data)
         loaded = scraper._load_from_cache("test.json")
-        assert loaded == data
+        # _save_to_cache injects scraped_at metadata; verify original data survives
+        assert loaded["teams"] == data["teams"]
+        assert "scraped_at" in loaded
+        # Original dict should not be mutated
+        assert "scraped_at" not in data
 
     def test_load_from_cache_no_dir(self):
         from src.data.scrapers.torvik import BartTorvikScraper
@@ -1249,7 +1253,9 @@ class TestBartTorvikScraper:
             _patch.object(scraper, "_validate_cache_timestamp"),
         ):
             result = scraper.fetch_shooting_stats(year=2026)
-        assert result == cached
+        # Cache injects metadata; verify team data survives round-trip
+        assert result["duke"] == cached["duke"]
+        assert "scraped_at" in result
 
     def test_load_from_json(self, tmp_path):
         from src.data.scrapers.torvik import BartTorvikScraper

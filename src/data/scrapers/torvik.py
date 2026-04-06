@@ -547,6 +547,8 @@ class BartTorvikScraper:
             self._save_to_cache(
                 f"torvik_rankings_{year}.json",
                 {
+                    "data_type": "pre_tournament",
+                    "data_as_of": date.today().isoformat(),
                     "teams": [t.to_dict() for t in teams],
                     "timestamp": datetime.now().isoformat(),
                     "scraped_at": datetime.now().isoformat(),
@@ -1201,6 +1203,8 @@ class BartTorvikScraper:
                 del four_factors[k]
                 logger.debug("Removed junk four_factors entry: %s", k)
             TorVikValidator.validate_four_factors(four_factors)
+            four_factors["data_type"] = "pre_tournament"
+            four_factors["data_as_of"] = date.today().isoformat()
             self._save_to_cache(f"torvik_four_factors_{year}.json", four_factors)
 
         return four_factors
@@ -1247,6 +1251,8 @@ class BartTorvikScraper:
             for k in junk_keys:
                 del shooting[k]
                 logger.debug("Removed junk shooting entry: %s", k)
+            shooting["data_type"] = "pre_tournament"
+            shooting["data_as_of"] = date.today().isoformat()
             self._save_to_cache(f"torvik_shooting_{year}.json", shooting)
         return shooting
 
@@ -1779,9 +1785,12 @@ class BartTorvikScraper:
         if not self.cache_dir:
             return
 
+        # Work on a shallow copy to avoid mutating the caller's dict
+        data = dict(data)
+
         # Inject scraped_at for downstream leakage checks (data_loader
         # validates this field against TOURNAMENT_START_DATES).
-        if isinstance(data, dict) and "scraped_at" not in data:
+        if "scraped_at" not in data:
             data["scraped_at"] = datetime.now().isoformat()
 
         wrapper = {

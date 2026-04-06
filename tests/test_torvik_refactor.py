@@ -156,12 +156,18 @@ class TestCircuitBreakerIntegration:
 
     def test_four_factors_fallback_to_player_csv(self, scraper):
         """When API/trank strategies fail, four factors should fall back to player CSV."""
-        fake_ff = {"duke": {
-            "effective_fg_pct": 0.57, "turnover_rate": 0.15,
-            "offensive_reb_rate": 0.32, "free_throw_rate": 0.35,
-            "opp_effective_fg_pct": 0.45, "opp_turnover_rate": 0.18,
-            "defensive_reb_rate": 0.72, "opp_free_throw_rate": 0.31,
-        }}
+        fake_ff = {
+            "duke": {
+                "effective_fg_pct": 0.57,
+                "turnover_rate": 0.15,
+                "offensive_reb_rate": 0.32,
+                "free_throw_rate": 0.35,
+                "opp_effective_fg_pct": 0.45,
+                "opp_turnover_rate": 0.18,
+                "defensive_reb_rate": 0.72,
+                "opp_free_throw_rate": 0.31,
+            }
+        }
         with patch.object(scraper, "_four_factors_from_cbbdata_api", return_value={}):
             with patch.object(scraper, "_four_factors_from_trank_csv", return_value={}):
                 with patch.object(scraper, "_four_factors_from_player_csv", return_value=fake_ff):
@@ -183,7 +189,11 @@ class TestCacheTTL:
         data = {"teams": [{"name": "Duke"}]}
         scraper._save_to_cache("test.json", data)
         loaded = scraper._load_from_cache("test.json")
-        assert loaded == data
+        # _save_to_cache injects scraped_at metadata; verify original data survives
+        assert loaded["teams"] == data["teams"]
+        assert "scraped_at" in loaded
+        # Original dict should not be mutated
+        assert "scraped_at" not in data
 
     def test_cache_includes_schema_version(self, scraper, tmp_path):
         """Saved cache file should contain schema version."""
@@ -313,8 +323,7 @@ class TestStrictValidation:
 
 
 class TestCSVFallbackFix:
-    def _make_csv_row(self, player, team, conf, min_pct, orb, drb, to,
-                      ftm, fta, fg2m, fg2a, fg3m, fg3a):
+    def _make_csv_row(self, player, team, conf, min_pct, orb, drb, to, ftm, fta, fg2m, fg2a, fg3m, fg3a):
         cols = [""] * 22
         cols[0] = player
         cols[1] = team
@@ -339,11 +348,9 @@ class TestCSVFallbackFix:
         """CSV fallback should produce non-zero ORB% and TO% via minutes-weighting."""
         rows = [
             # Player A: 60% minutes, 10.0 ORB%, 20.0 DRB%, 15.0 TO%
-            self._make_csv_row("A", "Duke", "ACC", 60.0, 10.0, 20.0, 15.0,
-                               50, 60, 100, 200, 30, 80),
+            self._make_csv_row("A", "Duke", "ACC", 60.0, 10.0, 20.0, 15.0, 50, 60, 100, 200, 30, 80),
             # Player B: 40% minutes, 8.0 ORB%, 18.0 DRB%, 12.0 TO%
-            self._make_csv_row("B", "Duke", "ACC", 40.0, 8.0, 18.0, 12.0,
-                               40, 50, 80, 160, 25, 70),
+            self._make_csv_row("B", "Duke", "ACC", 40.0, 8.0, 18.0, 12.0, 40, 50, 80, 160, 25, 70),
         ]
         csv_text = "\n".join(rows)
 
@@ -383,8 +390,7 @@ class TestCSVFallbackFix:
     def test_csv_fallback_old_behavior_comparison(self, scraper):
         """Verify we now populate 5/8 factors instead of the old 2/8."""
         rows = [
-            self._make_csv_row("A", "TestU", "B10", 50.0, 12.0, 22.0, 17.0,
-                               45, 55, 90, 180, 28, 75),
+            self._make_csv_row("A", "TestU", "B10", 50.0, 12.0, 22.0, 17.0, 45, 55, 90, 180, 28, 75),
         ]
         csv_text = "\n".join(rows)
 
@@ -394,10 +400,7 @@ class TestCSVFallbackFix:
         key = next(iter(result))
         ff = result[key]
 
-        non_zero_fields = sum(
-            1 for k, v in ff.items()
-            if k != "_csv_approximation" and isinstance(v, float) and v > 0
-        )
+        non_zero_fields = sum(1 for k, v in ff.items() if k != "_csv_approximation" and isinstance(v, float) and v > 0)
         # Old code: only 2 (eFG%, FTR). New code: 5 (eFG%, TO%, ORB%, DRB%, FTR)
         assert non_zero_fields >= 5, f"Expected >=5 non-zero fields, got {non_zero_fields}"
 
@@ -523,7 +526,5 @@ class TestConstructorDefaults:
         assert scraper._player_csv_cache == {}
 
     def test_circuit_breakers_initialized(self, tmp_path):
-        scraper = BartTorvikScraper(
-            circuit_breaker_state_file=str(tmp_path / ".cb.json")
-        )
+        scraper = BartTorvikScraper(circuit_breaker_state_file=str(tmp_path / ".cb.json"))
         assert scraper._cb_csv.is_closed

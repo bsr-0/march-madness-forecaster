@@ -546,10 +546,10 @@ class TestScrapedAtMetadata:
         scraper = BartTorvikScraper(cache_dir=str(tmp_path))
         data = {"teams": [{"team_id": "duke"}]}
         scraper._save_to_cache("test.json", data)
-        # scraped_at should be injected into the data dict
-        assert "scraped_at" in data
+        # Original dict should NOT be mutated (shallow copy inside)
+        assert "scraped_at" not in data
 
-        # Verify it's also in the file
+        # Verify scraped_at is in the saved file
         with open(tmp_path / "test.json") as f:
             wrapper = json.load(f)
         assert "scraped_at" in wrapper["_cache_data"]
@@ -558,7 +558,12 @@ class TestScrapedAtMetadata:
         scraper = BartTorvikScraper(cache_dir=str(tmp_path))
         data = {"teams": [], "scraped_at": "2026-01-01T00:00:00"}
         scraper._save_to_cache("test.json", data)
+        # Original dict preserves its scraped_at
         assert data["scraped_at"] == "2026-01-01T00:00:00"
+        # File should also have the original scraped_at (not overwritten)
+        with open(tmp_path / "test.json") as f:
+            wrapper = json.load(f)
+        assert wrapper["_cache_data"]["scraped_at"] == "2026-01-01T00:00:00"
 
     def test_load_from_cache_backfills_scraped_at(self, tmp_path):
         scraper = BartTorvikScraper(cache_dir=str(tmp_path))
