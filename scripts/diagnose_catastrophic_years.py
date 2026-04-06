@@ -198,7 +198,7 @@ def analyze_year(year):
     # --- 5. Champion analysis ---
     champion = None
     for g in games:
-        if g.get("round_name") == "CHAMP":
+        if g.get("round_name") in ("CHAMP", "NCG"):
             champion = g["team1_id"] if g["team1_won"] else g["team2_id"]
             champ_seed = g["team1_seed"] if g["team1_won"] else g["team2_seed"]
             break

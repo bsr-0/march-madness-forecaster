@@ -1,0 +1,252 @@
+====================================================================================================
+MC POOL BACKTEST: P(rank=1) — Stochastic Brackets
+====================================================================================================
+  Pool size: 1000 (1 model + 999 opponents)
+  Opponent model: seed pick rates (independent draws)
+  Model brackets per mode: 50 (stochastic, NOT argmax)
+  Repeats per year: 50 (reduces opponent sampling variance)
+  Years: 17
+
+  Year   Mode        BestRnk  MeanRnk   P(1st)  P(top5)  P(top25)  BestScr  MeanScr
+  ------------------------------------------------------------------------------------------
+  2008   seed            1.7    476.8    0.009    0.080     0.280     1700     1141
+  2008   noseed         22.2    474.3    0.000    0.043     0.304     1560     1136
+  2008   blend          16.3    468.8    0.000    0.033     0.300     1580     1150
+  2008   torvik          4.4    323.9    0.001    0.134     0.486     1660     1267
+    Pareto: 2 base + 48 variants = 50 unique brackets
+  2008   opt_seed        5.2    505.1    0.000    0.500     0.500     1650     1083
+    Pareto: 9 base + 36 variants = 45 unique brackets
+  2008   opt_blend      27.3    185.6    0.000    0.116     0.889     1550     1362
+    Pareto: 8 base + 39 variants = 47 unique brackets
+  2008   opt_torvik     10.9    175.9    0.000    0.361     0.872     1610     1395
+    Pareto: 8 base + 38 variants = 46 unique brackets
+  2008   hedge_tv       12.3    273.2    0.000    0.314     0.668     1600     1318
+  2009   seed           22.9    444.5    0.000    0.041     0.339     1550     1157
+  2009   noseed          7.4    458.0    0.000    0.060     0.376     1620     1147
+  2009   blend          40.5    512.7    0.000    0.020     0.199     1510     1102
+  2009   torvik         39.4    533.1    0.000    0.033     0.189     1510     1089
+    Pareto: 2 base + 47 variants = 49 unique brackets
+  2009   opt_seed      720.9    814.8    0.000    0.000     0.000      970      901
+    Pareto: 8 base + 39 variants = 47 unique brackets
+  2009   opt_blend       4.4     98.4    0.000    0.453     0.874     1640     1459
+    Pareto: 9 base + 36 variants = 45 unique brackets
+  2009   opt_torvik    192.1    602.6    0.000    0.000     0.076     1330     1046
+    Pareto: 9 base + 33 variants = 42 unique brackets
+  2009   hedge_tv       63.6    636.6    0.000    0.001     0.098     1470     1021
+  2010   seed            1.8    492.1    0.007    0.039     0.299     1620     1052
+  2010   noseed          4.4    328.9    0.000    0.111     0.431     1580     1183
+  2010   blend          10.1    363.1    0.000    0.100     0.378     1530     1152
+  2010   torvik          6.5    413.7    0.000    0.113     0.392     1560     1118
+    Pareto: 2 base + 46 variants = 48 unique brackets
+  2010   opt_seed       32.3    319.1    0.000    0.238     0.479     1460     1205
+    Pareto: 7 base + 41 variants = 48 unique brackets
+  2010   opt_blend      17.6     69.5    0.000    0.546     0.990     1500     1407
+    Pareto: 11 base + 33 variants = 44 unique brackets
+  2010   opt_torvik     53.8    163.9    0.000    0.029     0.818     1420     1310
+    Pareto: 11 base + 32 variants = 43 unique brackets
+  2010   hedge_tv       17.7    286.1    0.000    0.046     0.580     1500     1215
+  2011   seed            5.2    433.9    0.000    0.060     0.337     1510     1094
+  2011   noseed         36.7    452.5    0.000    0.045     0.299     1400     1075
+  2011   blend           5.6    472.7    0.000    0.117     0.282     1500     1065
+  2011   torvik         16.0    483.4    0.000    0.041     0.188     1450     1054
+    Pareto: 2 base + 48 variants = 50 unique brackets
+  2011   opt_seed      132.1    446.4    0.000    0.000     0.456     1290     1081
+    Pareto: 6 base + 40 variants = 46 unique brackets
+  2011   opt_blend      81.1    245.9    0.000    0.000     0.477     1340     1207
+    Pareto: 10 base + 39 variants = 49 unique brackets
+  2011   opt_torvik    282.5    432.7    0.000    0.000     0.000     1180     1090
+    Pareto: 10 base + 40 variants = 50 unique brackets
+  2011   hedge_tv       10.1    454.9    0.000    0.020     0.100     1480     1077
+  2012   seed           17.7    611.0    0.000    0.047     0.124     1490      978
+  2012   noseed         31.9    580.3    0.000    0.020     0.082     1450     1007
+  2012   blend          24.6    615.7    0.000    0.033     0.142     1470      974
+  2012   torvik          2.7    413.6    0.003    0.078     0.379     1600     1132
+    Pareto: 2 base + 46 variants = 48 unique brackets
+  2012   opt_seed      552.3    734.0    0.000    0.000     0.000     1040      904
+    Pareto: 6 base + 41 variants = 47 unique brackets
+  2012   opt_blend     339.1    566.8    0.000    0.000     0.000     1170     1025
+    Pareto: 11 base + 33 variants = 44 unique brackets
+  2012   opt_torvik     82.6    181.9    0.000    0.000     0.822     1370     1285
+    Pareto: 11 base + 32 variants = 43 unique brackets
+  2012   hedge_tv       82.8    297.7    0.000    0.000     0.605     1370     1196
+  2013   seed            3.8    461.5    0.001    0.101     0.310     1590     1118
+  2013   noseed         38.9    544.5    0.000    0.020     0.164     1460     1040
+  2013   blend          51.2    481.0    0.000    0.009     0.240     1440     1092
+  2013   torvik          7.3    467.7    0.000    0.080     0.295     1560     1108
+    Pareto: 2 base + 47 variants = 49 unique brackets
+  2013   opt_seed      166.7    374.8    0.000    0.000     0.343     1310     1164
+    Pareto: 6 base + 41 variants = 47 unique brackets
+  2013   opt_blend      83.5    463.0    0.000    0.000     0.495     1390     1076
+    Pareto: 8 base + 39 variants = 47 unique brackets
+  2013   opt_torvik    199.8    504.0    0.000    0.000     0.117     1280     1073
+    Pareto: 8 base + 40 variants = 48 unique brackets
+  2013   hedge_tv        7.9    441.0    0.000    0.040     0.199     1560     1121
+  2014   seed            7.8    440.6    0.000    0.080     0.359     1520     1104
+  2014   noseed          4.5    534.9    0.000    0.020     0.244     1550     1025
+  2014   blend          38.6    475.6    0.000    0.020     0.313     1420     1075
+  2014   torvik          5.3    551.8    0.001    0.035     0.210     1540     1023
+    Pareto: 2 base + 46 variants = 48 unique brackets
+  2014   opt_seed       58.9    462.6    0.000    0.002     0.521     1380     1086
+    Pareto: 6 base + 42 variants = 48 unique brackets
+  2014   opt_blend     288.7    677.0    0.000    0.000     0.000     1180      951
+    Pareto: 12 base + 34 variants = 46 unique brackets
+  2014   opt_torvik    749.0    870.5    0.000    0.000     0.000      910      803
+    Pareto: 12 base + 36 variants = 48 unique brackets
+  2014   hedge_tv       73.4    744.2    0.000    0.000     0.060     1360      895
+  2015   seed            5.5    455.1    0.000    0.108     0.324     1600     1122
+  2015   noseed         44.6    567.9    0.000    0.016     0.134     1470     1028
+  2015   blend           3.4    446.8    0.001    0.040     0.322     1640     1122
+  2015   torvik          2.4    397.9    0.004    0.106     0.406     1650     1165
+    Pareto: 2 base + 45 variants = 47 unique brackets
+  2015   opt_seed        2.9     82.4    0.003    0.489     1.000     1640     1450
+    Pareto: 3 base + 43 variants = 46 unique brackets
+  2015   opt_blend     344.3    596.3    0.000    0.000     0.000     1190     1012
+    Pareto: 8 base + 40 variants = 48 unique brackets
+  2015   opt_torvik     76.7    200.0    0.000    0.000     0.716     1420     1304
+    Pareto: 8 base + 39 variants = 47 unique brackets
+  2015   hedge_tv       57.2    282.2    0.000    0.004     0.654     1450     1243
+  2016   seed           14.1    509.8    0.000    0.041     0.224     1510     1055
+  2016   noseed          4.3    454.3    0.000    0.088     0.280     1580     1099
+  2016   blend           6.9    487.1    0.000    0.064     0.232     1550     1075
+  2016   torvik          7.6    363.9    0.000    0.116     0.425     1550     1169
+    Pareto: 2 base + 48 variants = 50 unique brackets
+  2016   opt_seed       43.9    368.4    0.000    0.030     0.500     1430     1175
+    Pareto: 4 base + 42 variants = 46 unique brackets
+  2016   opt_blend     174.2    510.0    0.000    0.000     0.138     1280     1043
+    Pareto: 10 base + 39 variants = 49 unique brackets
+  2016   opt_torvik      1.5    266.0    0.090    0.306     0.496     1650     1286
+    Pareto: 10 base + 39 variants = 49 unique brackets
+  2016   hedge_tv        1.5    320.0    0.055    0.200     0.520     1650     1227
+  2017   seed            4.8    446.3    0.001    0.104     0.301     1600     1114
+  2017   noseed         21.0    480.4    0.000    0.084     0.194     1520     1087
+  2017   blend           9.4    493.3    0.000    0.020     0.264     1570     1068
+  2017   torvik          9.1    403.9    0.000    0.069     0.365     1570     1141
+    Pareto: 2 base + 48 variants = 50 unique brackets
+  2017   opt_seed      422.8    548.1    0.000    0.000     0.000     1120     1035
+    Pareto: 5 base + 44 variants = 49 unique brackets
+  2017   opt_blend     360.2    618.3    0.000    0.000     0.000     1160      977
+    Pareto: 11 base + 30 variants = 41 unique brackets
+  2017   opt_torvik    332.7    488.2    0.000    0.000     0.000     1180     1071
+    Pareto: 11 base + 31 variants = 42 unique brackets
+  2017   hedge_tv        1.3    444.7    0.014    0.040     0.138     1680     1108
+  2018   seed           51.0    488.9    0.000    0.011     0.274     1430     1062
+  2018   noseed          6.3    434.1    0.000    0.039     0.345     1560     1104
+  2018   blend          47.9    544.1    0.000    0.014     0.263     1430     1020
+  2018   torvik          1.3    529.3    0.016    0.100     0.282     1650     1047
+    Pareto: 2 base + 46 variants = 48 unique brackets
+  2018   opt_seed      624.8    848.4    0.000    0.000     0.000      970      758
+    Pareto: 7 base + 41 variants = 48 unique brackets
+  2018   opt_blend     310.9    452.0    0.000    0.000     0.000     1170     1074
+    Pareto: 8 base + 39 variants = 47 unique brackets
+  2018   opt_torvik     12.7    176.3    0.000    0.123     0.840     1520     1291
+    Pareto: 8 base + 40 variants = 48 unique brackets
+  2018   hedge_tv       13.2    267.3    0.000    0.145     0.636     1520     1230
+  2019   seed           44.6    567.6    0.000    0.024     0.218     1480     1043
+  2019   noseed          8.8    470.9    0.000    0.103     0.243     1590     1125
+  2019   blend          12.6    395.4    0.000    0.090     0.462     1570     1169
+  2019   torvik         26.8    482.8    0.000    0.024     0.268     1520     1110
+    Pareto: 2 base + 46 variants = 48 unique brackets
+  2019   opt_seed      120.8    514.1    0.000    0.000     0.500     1370     1081
+    Pareto: 6 base + 39 variants = 45 unique brackets
+  2019   opt_blend      73.3    269.5    0.000    0.000     0.822     1430     1259
+    Pareto: 7 base + 41 variants = 48 unique brackets
+  2019   opt_torvik     59.7    186.1    0.000    0.003     0.773     1450     1314
+    Pareto: 7 base + 42 variants = 49 unique brackets
+  2019   hedge_tv        2.2    243.7    0.006    0.080     0.621     1650     1283
+  2021   seed            8.3    552.7    0.000    0.060     0.161     1590     1037
+  2021   noseed         12.3    423.1    0.000    0.028     0.326     1570     1140
+  2021   blend           8.5    414.9    0.000    0.082     0.341     1590     1152
+  2021   torvik         51.9    504.3    0.000    0.012     0.215     1460     1075
+    Pareto: 2 base + 46 variants = 48 unique brackets
+  2021   opt_seed      361.9    578.6    0.000    0.000     0.000     1180     1030
+    Pareto: 9 base + 36 variants = 45 unique brackets
+  2021   opt_blend      28.9    169.5    0.000    0.159     0.889     1510     1348
+    Pareto: 9 base + 34 variants = 43 unique brackets
+  2021   opt_torvik     28.3    138.1    0.000    0.305     0.814     1510     1383
+    Pareto: 9 base + 36 variants = 45 unique brackets
+  2021   hedge_tv       19.3    203.4    0.000    0.296     0.740     1540     1324
+  2022   seed           18.1    499.9    0.000    0.072     0.244     1520     1067
+  2022   noseed         46.4    549.2    0.000    0.016     0.158     1450     1026
+  2022   blend          14.6    571.6    0.000    0.037     0.185     1540     1012
+  2022   torvik         29.3    560.6    0.000    0.055     0.260     1490     1017
+    Pareto: 2 base + 47 variants = 49 unique brackets
+  2022   opt_seed      100.9    584.4    0.000    0.000     0.479     1370      959
+    Pareto: 4 base + 44 variants = 48 unique brackets
+  2022   opt_blend     328.9    619.6    0.000    0.000     0.000     1170      986
+    Pareto: 11 base + 33 variants = 44 unique brackets
+  2022   opt_torvik    196.5    405.5    0.000    0.000     0.227     1270     1123
+    Pareto: 11 base + 30 variants = 41 unique brackets
+  2022   hedge_tv       91.2    459.1    0.000    0.000     0.181     1380     1088
+  2023   seed           15.6    480.0    0.000    0.062     0.260     1540     1085
+  2023   noseed         81.4    637.3    0.000    0.000     0.084     1400      961
+  2023   blend          65.9    568.3    0.000    0.001     0.187     1420     1013
+  2023   torvik          1.1    488.8    0.018    0.080     0.221     1720     1087
+    Pareto: 2 base + 46 variants = 48 unique brackets
+  2023   opt_seed      485.5    576.0    0.000    0.000     0.000     1080     1022
+    Pareto: 8 base + 38 variants = 46 unique brackets
+  2023   opt_blend     213.5    846.1    0.000    0.000     0.034     1270      779
+    Pareto: 8 base + 38 variants = 46 unique brackets
+  2023   opt_torvik    124.2    228.9    0.000    0.000     0.613     1350     1259
+    Pareto: 8 base + 39 variants = 47 unique brackets
+  2023   hedge_tv       11.1    312.7    0.000    0.036     0.397     1560     1202
+  2024   seed           30.5    477.4    0.000    0.066     0.278     1540     1136
+  2024   noseed        193.7    684.7    0.000    0.000     0.034     1340      965
+  2024   blend          21.8    561.5    0.000    0.020     0.184     1560     1073
+  2024   torvik         24.5    520.2    0.000    0.058     0.244     1550     1111
+    Pareto: 2 base + 44 variants = 46 unique brackets
+  2024   opt_seed       83.1    510.3    0.000    0.000     0.478     1450     1115
+    Pareto: 8 base + 37 variants = 45 unique brackets
+  2024   opt_blend     545.0    926.7    0.000    0.000     0.000     1100      722
+    Pareto: 6 base + 42 variants = 48 unique brackets
+  2024   opt_torvik     99.9    310.0    0.000    0.000     0.380     1430     1261
+    Pareto: 6 base + 40 variants = 46 unique brackets
+  2024   hedge_tv       74.3    348.1    0.000    0.000     0.373     1460     1234
+  2025   seed           57.0    486.4    0.000    0.003     0.218     1530     1185
+  2025   noseed          1.9    472.9    0.006    0.095     0.248     1730     1200
+  2025   blend          22.8    551.9    0.000    0.020     0.221     1600     1133
+  2025   torvik          1.7    428.3    0.008    0.100     0.441     1740     1232
+    Pareto: 2 base + 46 variants = 48 unique brackets
+  2025   opt_seed       84.5    349.3    0.000    0.000     0.479     1490     1285
+    Pareto: 6 base + 41 variants = 47 unique brackets
+  2025   opt_blend     339.5    531.5    0.000    0.000     0.000     1280     1101
+    Pareto: 6 base + 42 variants = 48 unique brackets
+  2025   opt_torvik      1.4    322.8    0.025    0.167     0.287     1750     1323
+    Pareto: 6 base + 41 variants = 47 unique brackets
+  2025   hedge_tv        2.3    324.8    0.011    0.180     0.312     1720     1324
+
+====================================================================================================
+AGGREGATE
+====================================================================================================
+
+  Mode      BestRnk  MeanRnk   P(1st)   P(top5%)  P(top25%)  MeanScr
+  -----------------------------------------------------------------
+  seed         18.3    489.7   0.0011     0.0587     0.2678     1091
+  noseed       33.3    502.8   0.0004     0.0464     0.2322     1079
+  blend        23.6    495.6   0.0000     0.0424     0.2656     1085
+  torvik       14.0    462.8   0.0030     0.0725     0.3098     1114
+  opt_seed    235.3    506.9   0.0002     0.0741     0.3374     1078
+  opt_blend    209.4    461.5   0.0000     0.0749     0.3299     1105
+  opt_torvik    147.3    332.6   0.0068     0.0761     0.4619     1213
+  hedge_tv     31.8    372.9   0.0050     0.0824     0.4048     1183
+
+  Statistical Tests — Mean Rank (paired across years):
+    Bonferroni correction: 7 comparisons, α=0.0071
+    MeanRank seed vs noseed      :  -13.2 pos, wins 8/17, t=-0.547, p=0.5920, p_adj=1.0000 
+    MeanRank seed vs blend       :   -5.9 pos, wins 6/17, t=-0.303, p=0.7661, p_adj=1.0000 
+    MeanRank seed vs torvik      :  +26.9 pos, wins 9/17, t=1.253, p=0.2282, p_adj=1.0000 
+    MeanRank seed vs opt_seed    :  -17.2 pos, wins 6/17, t=-0.392, p=0.7004, p_adj=1.0000 
+    MeanRank seed vs opt_blend   :  +28.2 pos, wins 8/17, t=0.442, p=0.6641, p_adj=1.0000 
+    MeanRank seed vs opt_torvik  : +157.1 pos, wins 13/17, t=2.824, p=0.0122, p_adj=0.0856 
+    MeanRank seed vs hedge_tv    : +116.8 pos, wins 14/17, t=2.738, p=0.0146, p_adj=0.1021 
+
+  Statistical Tests — Best Bracket Rank (pool optimizer view):
+    Bonferroni correction: 7 comparisons, α=0.0071
+    BestRank seed vs noseed      :  -15.1 pos, wins 6/17, t=-1.256, p=0.2270, p_adj=1.0000 
+    BestRank seed vs blend       :   -5.3 pos, wins 7/17, t=-0.964, p=0.3496, p_adj=1.0000 
+    BestRank seed vs torvik      :   +4.3 pos, wins 9/17, t=0.768, p=0.4536, p_adj=1.0000 
+    BestRank seed vs opt_seed    : -217.0 pos, wins 1/17, t=-3.803, p=0.0016, p_adj=0.0109 *
+    BestRank seed vs opt_blend   : -191.2 pos, wins 1/17, t=-5.049, p=0.0001, p_adj=0.0008 *
+    BestRank seed vs opt_torvik  : -129.1 pos, wins 3/17, t=-2.786, p=0.0132, p_adj=0.0925 
+    BestRank seed vs hedge_tv    :  -13.6 pos, wins 6/17, t=-1.449, p=0.1665, p_adj=1.0000 
+
+====================================================================================================
