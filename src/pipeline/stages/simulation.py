@@ -121,9 +121,7 @@ def run_monte_carlo(
             )
         seeds = {team.seed for team in teams_by_region[region]}
         if seeds != set(range(1, 17)):
-            raise DataRequirementError(
-                f"Region {region} must contain seeds 1-16 for a valid 63-game bracket."
-            )
+            raise DataRequirementError(f"Region {region} must contain seeds 1-16 for a valid 63-game bracket.")
 
     # A4: Monte Carlo receives calibrated, tournament-adapted probabilities.
     # noise_std from config (default 0.12) controls bracket diversity.
@@ -141,10 +139,16 @@ def run_monte_carlo(
     )
 
     bracket = TournamentBracket.create_standard_bracket(teams_by_region)
-    injury_noise_table = build_injury_noise_table(pipeline, rosters, {
-        pipeline._team_id(t.name): float(pipeline.feature_engineer.team_features[pipeline._team_id(t.name)].adj_efficiency_margin)
-        for t in teams
-    })
+    injury_noise_table = build_injury_noise_table(
+        pipeline,
+        rosters,
+        {
+            pipeline._team_id(t.name): float(
+                pipeline.feature_engineer.team_features[pipeline._team_id(t.name)].adj_efficiency_margin
+            )
+            for t in teams
+        },
+    )
     matchup_cache: Dict[Tuple[str, str], float] = {}
 
     # Build seed lookup and initialize upset detector if enabled
@@ -154,15 +158,19 @@ def run_monte_carlo(
             team_seed_lookup[t.team_id] = t.seed
 
     upset_detector = None
-    if getattr(pipeline.config, 'enable_upset_detection', False):
+    if getattr(pipeline.config, "enable_upset_detection", False):
         try:
             from ...ml.ensemble.upset_detector import UpsetDetector
+
             upset_detector = UpsetDetector(
-                prior_strength=getattr(pipeline.config, 'upset_prior_strength', 0.20),
-                adjustment_strength=getattr(pipeline.config, 'upset_adjustment_strength', 0.15),
+                prior_strength=getattr(pipeline.config, "upset_prior_strength", 0.20),
+                adjustment_strength=getattr(pipeline.config, "upset_adjustment_strength", 0.15),
             )
-            logger.info("Upset detection layer enabled (prior=%.2f, adjust=%.2f)",
-                        upset_detector.prior_strength, upset_detector.adjustment_strength)
+            logger.info(
+                "Upset detection layer enabled (prior=%.2f, adjust=%.2f)",
+                upset_detector.prior_strength,
+                upset_detector.adjustment_strength,
+            )
         except Exception as e:
             logger.warning("Failed to initialize upset detector: %s", e)
 
@@ -171,10 +179,7 @@ def run_monte_carlo(
     # The MC engine pre-computes all matchup probabilities before simulation,
     # so we compute separate probability sets per round bucket and let the
     # engine select the appropriate one per round.
-    round_aware = (
-        upset_detector is not None
-        and getattr(pipeline.config, 'upset_round_prior_decay', True)
-    )
+    round_aware = upset_detector is not None and getattr(pipeline.config, "upset_round_prior_decay", True)
     round_buckets = [1, 2, 3, 4] if round_aware else [1]
 
     matchup_caches: Dict[int, Dict[Tuple[str, str], float]] = {}
@@ -204,11 +209,31 @@ def run_monte_carlo(
                 t1_feats = pipeline.feature_engineer.team_features.get(team1_id)
                 t2_feats = pipeline.feature_engineer.team_features.get(team2_id)
                 signal = upset_detector.detect(
-                    team1_id, team2_id, s1, s2, adjusted,
-                    team1_features=t1_feats, team2_features=t2_feats,
+                    team1_id,
+                    team2_id,
+                    s1,
+                    s2,
+                    adjusted,
+                    team1_features=t1_feats,
+                    team2_features=t2_feats,
                     round_num=round_bucket,
                 )
                 adjusted = signal.adjusted_prob
+
+        # Guard: NaN/Inf from missing features must not enter the simulation cache.
+        # np.clip(nan, a, b) silently returns nan, corrupting all downstream outputs.
+        if not math.isfinite(adjusted):
+            s1 = team_seed_lookup.get(team1_id, 9)
+            s2 = team_seed_lookup.get(team2_id, 9)
+            fallback = float(np.clip(1.0 / (1.0 + math.exp(-(s2 - s1) / 2.5)), 0.01, 0.99))
+            logger.error(
+                "Non-finite probability %.6s for %s vs %s — using seed-based fallback %.4f",
+                adjusted,
+                team1_id,
+                team2_id,
+                fallback,
+            )
+            adjusted = fallback
 
         cache[(team1_id, team2_id)] = adjusted
         cache[(team2_id, team1_id)] = float(np.clip(1.0 - adjusted, 0.01, 0.99))
@@ -252,8 +277,7 @@ def run_monte_carlo(
         champion_check = upset_validation.get("champion_seed_validation", {})
         if champion_check and not champion_check.get("seed_1_passed", True):
             logger.warning(
-                "MC champion-seed validation flagged: seed-1 champion share %.3f "
-                "outside expected range [%.2f, %.2f].",
+                "MC champion-seed validation flagged: seed-1 champion share %.3f outside expected range [%.2f, %.2f].",
                 champion_check.get("bucket_probabilities", {}).get("seed_1", 0.0),
                 champion_check.get("seed_1_expected_range", [0.45, 0.70])[0],
                 champion_check.get("seed_1_expected_range", [0.45, 0.70])[1],
@@ -295,9 +319,7 @@ def to_round_probabilities(pipeline, sim_results) -> Dict[str, Dict[str, float]]
     return model_probs
 
 
-def to_round_probabilities_from_sim(
-    pipeline, sim_data: Dict
-) -> Dict[str, Dict[str, float]]:
+def to_round_probabilities_from_sim(pipeline, sim_data: Dict) -> Dict[str, Dict[str, float]]:
     """Build round probabilities from serialized simulation data.
 
     Like ``to_round_probabilities`` but operates on the dict stored in
@@ -314,8 +336,7 @@ def to_round_probabilities_from_sim(
     round_of_32_odds = sim_data.get("round_of_32_odds", {})
 
     team_ids = set(pipeline.team_struct.keys())
-    for odds_dict in (championship_odds, final_four_odds, elite_eight_odds,
-                      sweet_sixteen_odds, round_of_32_odds):
+    for odds_dict in (championship_odds, final_four_odds, elite_eight_odds, sweet_sixteen_odds, round_of_32_odds):
         team_ids.update(odds_dict.keys())
 
     model_probs: Dict[str, Dict[str, float]] = {}
@@ -336,9 +357,7 @@ def to_round_probabilities_from_sim(
 # ---------------------------------------------------------------------------
 
 
-def load_public_picks(
-    pipeline, model_probs: Dict[str, Dict[str, float]]
-) -> Dict[str, Dict[str, float]]:
+def load_public_picks(pipeline, model_probs: Dict[str, Dict[str, float]]) -> Dict[str, Dict[str, float]]:
     """Load and aggregate public bracket pick percentages.
 
     Translated from ``SOTAPipeline._load_public_picks``.
@@ -367,7 +386,14 @@ def load_public_picks(
                 w = source_weights[source]
                 for team_id, row in rows.items():
                     if team_id not in aggregate_rows:
-                        aggregate_rows[team_id] = {"R64": 0.0, "R32": 0.0, "S16": 0.0, "E8": 0.0, "F4": 0.0, "CHAMP": 0.0}
+                        aggregate_rows[team_id] = {
+                            "R64": 0.0,
+                            "R32": 0.0,
+                            "S16": 0.0,
+                            "E8": 0.0,
+                            "F4": 0.0,
+                            "CHAMP": 0.0,
+                        }
                         aggregate_weights[team_id] = 0.0
                     aggregate_weights[team_id] += w
                     for round_name in ("R64", "R32", "S16", "E8", "F4", "CHAMP"):
@@ -405,6 +431,7 @@ def load_public_picks(
 
     if not pipeline.config.scrape_live:
         import logging
+
         logging.getLogger(__name__).warning(
             "Public pick data unavailable; falling back to model probabilities (chalk bracket)."
         )
@@ -415,6 +442,7 @@ def load_public_picks(
     # circuit breakers, and health tracking.  This replaces the
     # sequential scraper calls that had no retry logic.
     from ...data.scrapers.espn_picks import ScraperOrchestrator
+
     orchestrator = ScraperOrchestrator(cache_dir=pipeline.config.data_cache_dir)
     result = orchestrator.fetch_all_picks(
         year=pipeline.config.year,
@@ -430,17 +458,19 @@ def load_public_picks(
     if result.is_degraded:
         logger.warning(
             "Scraper orchestrator degraded: %d/3 sources succeeded.\n%s",
-            len(result.successful_sources), result.health_summary,
+            len(result.successful_sources),
+            result.health_summary,
         )
     consensus = result.consensus
-    public = {pipeline._team_id(team_id): normalize_public_pick_row(picks.as_dict) for team_id, picks in consensus.teams.items()}
+    public = {
+        pipeline._team_id(team_id): normalize_public_pick_row(picks.as_dict)
+        for team_id, picks in consensus.teams.items()
+    }
     pipeline._validate_source_coverage("Public picks", public, list(pipeline.team_struct.values()), min_ratio=0.75)
     return public
 
 
-def extract_public_pick_rows(
-    pipeline, payload: Dict
-) -> Dict[str, Dict[str, float]]:
+def extract_public_pick_rows(pipeline, payload: Dict) -> Dict[str, Dict[str, float]]:
     """Extract per-team pick rows from a public picks payload.
 
     Translated from ``SOTAPipeline._extract_public_pick_rows``.
@@ -465,10 +495,7 @@ def extract_public_pick_rows(
             continue
         row_team_id = row.get("team_id") or raw_team_id
         team_id = pipeline._team_id(str(row_team_id))
-        rows[team_id] = {
-            rnd: normalize_pick_probability(row.get(rnd, row.get(alt)))
-            for rnd, alt in _round_keys
-        }
+        rows[team_id] = {rnd: normalize_pick_probability(row.get(rnd, row.get(alt))) for rnd, alt in _round_keys}
     return rows
 
 
@@ -531,9 +558,7 @@ def normalize_pick_probability(value) -> float:
 # ---------------------------------------------------------------------------
 
 
-def unique_games(
-    pipeline, game_flows: Dict[str, List[GameFlow]]
-) -> List[GameFlow]:
+def unique_games(pipeline, game_flows: Dict[str, List[GameFlow]]) -> List[GameFlow]:
     """Return deduplicated list of games from game flow dict.
 
     Translated from ``SOTAPipeline._unique_games``.
@@ -552,9 +577,7 @@ def unique_games(
 # ---------------------------------------------------------------------------
 
 
-def estimate_model_confidence_intervals(
-    pipeline, game_flows: Dict[str, List[GameFlow]]
-) -> Dict[str, Dict[str, float]]:
+def estimate_model_confidence_intervals(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict[str, Dict[str, float]]:
     """DIAGNOSTIC ONLY: Estimate model confidence intervals on validation data.
 
     This method evaluates all three models on validation-era games and
@@ -578,19 +601,31 @@ def estimate_model_confidence_intervals(
 
     all_games = sorted(
         [
-            g for g in unique_games(pipeline, game_flows)
-            if not _gu_detect_tournament_game(getattr(g, "game_date", f"{pipeline.config.year}-01-01"), fallback_year=pipeline.config.year)
+            g
+            for g in unique_games(pipeline, game_flows)
+            if not _gu_detect_tournament_game(
+                getattr(g, "game_date", f"{pipeline.config.year}-01-01"), fallback_year=pipeline.config.year
+            )
             and g.team1_id in pipeline.feature_engineer.team_features
             and g.team2_id in pipeline.feature_engineer.team_features
         ],
-        key=lambda g: (_gu_compute_game_sort_key(getattr(g, "game_date", f"{pipeline.config.year}-01-01"), fallback_year=pipeline.config.year), g.game_id),
+        key=lambda g: (
+            _gu_compute_game_sort_key(
+                getattr(g, "game_date", f"{pipeline.config.year}-01-01"), fallback_year=pipeline.config.year
+            ),
+            g.game_id,
+        ),
     )
 
     # Only use validation-era games (after the baseline training split)
     if pipeline._validation_sort_key_boundary is not None:
         games = [
-            g for g in all_games
-            if _gu_compute_game_sort_key(getattr(g, "game_date", f"{pipeline.config.year}-01-01"), fallback_year=pipeline.config.year) >= pipeline._validation_sort_key_boundary
+            g
+            for g in all_games
+            if _gu_compute_game_sort_key(
+                getattr(g, "game_date", f"{pipeline.config.year}-01-01"), fallback_year=pipeline.config.year
+            )
+            >= pipeline._validation_sort_key_boundary
         ]
     else:
         # No validation split available — cannot estimate confidence
@@ -606,7 +641,9 @@ def estimate_model_confidence_intervals(
             continue
         outcomes.append(outcome)
 
-        matchup = pipeline.feature_engineer.create_matchup_features(g.team1_id, g.team2_id, proprietary_engine=pipeline.proprietary_engine)
+        matchup = pipeline.feature_engineer.create_matchup_features(
+            g.team1_id, g.team2_id, proprietary_engine=pipeline.proprietary_engine
+        )
         feat_vec = matchup.to_vector()
         if pipeline.feature_selector is not None and pipeline.feature_selector.is_fitted:
             feat_vec = pipeline.feature_selector.transform(feat_vec.reshape(1, -1))[0]
@@ -780,9 +817,11 @@ def load_betting_markets(pipeline) -> Optional["MarketConsensus"]:  # noqa: F821
     if pipeline.config.betting_odds_json:
         try:
             import json as _json
+
             with open(pipeline.config.betting_odds_json) as f:
                 raw = _json.load(f)
             from ...data.scrapers.betting_markets import BettingMarketOdds
+
             loaded = {}
             for tid, data in raw.items():
                 loaded[tid] = BettingMarketOdds(
@@ -809,7 +848,8 @@ def load_betting_markets(pipeline) -> Optional["MarketConsensus"]:  # noqa: F821
                 odds_by_source.append(odds)
                 logger.info(
                     "Loaded %d teams from %s",
-                    len(odds), ScraperCls.__name__,
+                    len(odds),
+                    ScraperCls.__name__,
                 )
         except Exception as e:
             logger.debug("%s scrape failed: %s", ScraperCls.__name__, e)
@@ -821,7 +861,8 @@ def load_betting_markets(pipeline) -> Optional["MarketConsensus"]:  # noqa: F821
     consensus = compute_market_consensus(odds_by_source, adjust_vig=True)
     logger.info(
         "Market consensus: %d teams, sources=%s",
-        len(consensus.team_probabilities), consensus.sources,
+        len(consensus.team_probabilities),
+        consensus.sources,
     )
     return consensus
 
@@ -866,9 +907,7 @@ def apply_market_blend(
 # ---------------------------------------------------------------------------
 
 
-def exclude_tournament_games(
-    pipeline, games: List[GameFlow], year: Optional[int] = None
-) -> List[GameFlow]:
+def exclude_tournament_games(pipeline, games: List[GameFlow], year: Optional[int] = None) -> List[GameFlow]:
     """Remove games on or after the NCAA tournament start date.
 
     This is a hard safety guard to ensure tournament results never
@@ -881,16 +920,20 @@ def exclude_tournament_games(
     cutoff_key = _gu_compute_game_sort_key(t_start.isoformat(), fallback_year=yr)
     before = len(games)
     filtered = [
-        g for g in games
+        g
+        for g in games
         if _gu_compute_game_sort_key(
             getattr(g, "game_date", f"{yr}-01-01"),
             fallback_year=yr,
-        ) < cutoff_key
+        )
+        < cutoff_key
     ]
     removed = before - len(filtered)
     if removed > 0:
         logger.info(
             "Hard tournament cutoff: excluded %d games on or after %s for year %d",
-            removed, t_start.isoformat(), yr,
+            removed,
+            t_start.isoformat(),
+            yr,
         )
     return filtered
