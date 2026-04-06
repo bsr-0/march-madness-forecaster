@@ -964,6 +964,10 @@ def run_backtest(
         ("opt_torvik", mode_ranks["opt_torvik"], mode_best["opt_torvik"]),
     ]
 
+    n_comparisons = len(comparison_modes)
+    bonferroni_alpha = 0.05 / n_comparisons
+    print(f"    Bonferroni correction: {n_comparisons} comparisons, α={bonferroni_alpha:.4f}")
+
     for cmp_name, cmp_ranks, cmp_best in comparison_modes:
         shared_years = sorted(set(mode_ranks["seed"].keys()) & set(cmp_ranks.keys()))
         if len(shared_years) < 5:
@@ -971,14 +975,18 @@ def run_backtest(
         seed_arr = np.array([mode_ranks["seed"][y] for y in shared_years])
         cmp_arr = np.array([cmp_ranks[y] for y in shared_years])
         t, p = sp_stats.ttest_rel(seed_arr, cmp_arr)
+        p_adj = min(p * n_comparisons, 1.0)
+        sig = "*" if p < bonferroni_alpha else ""
         improvement = np.mean(seed_arr - cmp_arr)
         wins = np.sum(cmp_arr < seed_arr)
         print(
-            f"    MeanRank seed vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, t={t:.3f}, p={p:.4f}"
+            f"    MeanRank seed vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, "
+            f"t={t:.3f}, p={p:.4f}, p_adj={p_adj:.4f} {sig}"
         )
 
     # --- Best-bracket stats (pool optimizer view) ---
     print(f"\n  Statistical Tests — Best Bracket Rank (pool optimizer view):")
+    print(f"    Bonferroni correction: {n_comparisons} comparisons, α={bonferroni_alpha:.4f}")
 
     for cmp_name, cmp_ranks, cmp_best in comparison_modes:
         shared_years = sorted(set(mode_best["seed"].keys()) & set(cmp_best.keys()))
@@ -987,10 +995,13 @@ def run_backtest(
         sb = np.array([mode_best["seed"][y] for y in shared_years])
         cb = np.array([cmp_best[y] for y in shared_years])
         t, p = sp_stats.ttest_rel(sb, cb)
+        p_adj = min(p * n_comparisons, 1.0)
+        sig = "*" if p < bonferroni_alpha else ""
         improvement = np.mean(sb - cb)
         wins = np.sum(cb < sb)
         print(
-            f"    BestRank seed vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, t={t:.3f}, p={p:.4f}"
+            f"    BestRank seed vs {cmp_name:<12}: {improvement:+6.1f} pos, wins {wins}/{len(shared_years)}, "
+            f"t={t:.3f}, p={p:.4f}, p_adj={p_adj:.4f} {sig}"
         )
 
     print(f"\n{'=' * 100}")
