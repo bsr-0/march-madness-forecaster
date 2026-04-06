@@ -6325,5 +6325,8 @@
     }
   ],
   "source": "synthetic_from_components",
-  "note": "Generated from torvik_four_factors_2006.json and torvik_shooting_2006.json"
+  "note": "Generated from torvik_four_factors_2006.json and torvik_shooting_2006.json",
+  "data_type": "pre_tournament",
+  "cutoff_date": "2006-03-15",
+  "tournament_start": "2006-03-16"
 }
