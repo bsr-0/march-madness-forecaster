@@ -251,3 +251,49 @@ class PipelineReport:
             "predictions": self.predictions,
             "artifacts": self.artifacts,
         }
+
+
+@dataclass
+class OptimizedHyperparams:
+    """Output of the hyperparameter optimization stage (Phase 7)."""
+
+    best_params: Dict[str, Any] = field(default_factory=dict)
+    model_scores: Dict[str, float] = field(default_factory=dict)
+    passed: bool = True
+
+    def summary(self) -> str:
+        return f"OptimizedHyperparams: {len(self.best_params)} params, passed={self.passed}"
+
+
+@dataclass
+class CalibratedModelPredictions:
+    """Output of the probability calibration stage (Phase 8)."""
+
+    calibrated_predictions: Dict[str, Any] = field(default_factory=dict)
+    model_names: List[str] = field(default_factory=list)
+    calibration_metrics: Dict[str, float] = field(default_factory=dict)
+    passed: bool = True
+
+
+@dataclass
+class EnsemblePredictions:
+    """Output of the ensemble optimization stage (Phase 9)."""
+
+    ensemble_predictions: Optional[Any] = None
+    model_weights: Dict[str, float] = field(default_factory=dict)
+    ensemble_metrics: Dict[str, float] = field(default_factory=dict)
+    passed: bool = True
+
+    def summary(self) -> str:
+        return f"EnsemblePredictions: {len(self.model_weights)} models, passed={self.passed}"
+
+
+@dataclass
+class SimulationLoopOutput:
+    """Output of the simulation loop stage (Phase 10)."""
+
+    final_predictions: Optional[Any] = None
+    n_iterations_run: int = 0
+    converged: bool = False
+    convergence_metrics: Dict[str, float] = field(default_factory=dict)
+    passed: bool = True
