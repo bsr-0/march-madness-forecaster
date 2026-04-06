@@ -1,4 +1,7 @@
 {
+  "data_type": "pre_tournament_computed",
+  "cutoff_date": "2026-03-17",
+  "tournament_start": "2026-03-18",
   "data_as_of": "2026-03-16",
   "unc_greensboro": {
     "effective_fg_pct": 0.5347,
