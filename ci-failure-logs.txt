@@ -1,304 +1,518 @@
 
-### FAILED JOB: Gate 1: Unit Tests
-2026-04-03T05:36:48.8465670Z Using cached cssselect-1.4.0-py3-none-any.whl (18 kB)
-2026-04-03T05:36:48.8478965Z Using cached python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
-2026-04-03T05:36:48.8492269Z Using cached six-1.17.0-py2.py3-none-any.whl (11 kB)
-2026-04-03T05:36:48.8504937Z Using cached soupsieve-2.8.3-py3-none-any.whl (37 kB)
-2026-04-03T05:36:48.8518013Z Using cached sympy-1.14.0-py3-none-any.whl (6.3 MB)
-2026-04-03T05:36:48.8553351Z Using cached mpmath-1.3.0-py3-none-any.whl (536 kB)
-2026-04-03T05:36:48.8568011Z Using cached threadpoolctl-3.6.0-py3-none-any.whl (18 kB)
-2026-04-03T05:36:48.8580776Z Using cached tomli-2.4.1-py3-none-any.whl (14 kB)
-2026-04-03T05:36:48.8593766Z Using cached typing_extensions-4.15.0-py3-none-any.whl (44 kB)
-2026-04-03T05:36:48.8607104Z Using cached typing_inspection-0.4.2-py3-none-any.whl (14 kB)
-2026-04-03T05:36:48.8619916Z Using cached tzdata-2025.3-py2.py3-none-any.whl (348 kB)
-2026-04-03T05:36:48.8670238Z Downloading aiohttp-3.13.5-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.7 MB)
-2026-04-03T05:36:48.8766773Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 201.6 MB/s  0:00:00
-2026-04-03T05:36:48.8781615Z Using cached async_timeout-5.0.1-py3-none-any.whl (6.2 kB)
-2026-04-03T05:36:48.8794995Z Using cached multidict-6.7.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (243 kB)
-2026-04-03T05:36:48.8809181Z Using cached yarl-1.23.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (102 kB)
-2026-04-03T05:36:48.8822255Z Using cached aiohappyeyeballs-2.6.1-py3-none-any.whl (15 kB)
-2026-04-03T05:36:48.8834863Z Using cached aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
-2026-04-03T05:36:48.8847731Z Using cached attrs-26.1.0-py3-none-any.whl (67 kB)
-2026-04-03T05:36:48.8861563Z Using cached frozenlist-1.8.0-cp310-cp310-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (219 kB)
-2026-04-03T05:36:48.8875046Z Using cached propcache-0.4.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (196 kB)
-2026-04-03T05:36:48.8888343Z Using cached bleach-6.3.0-py3-none-any.whl (164 kB)
-2026-04-03T05:36:48.8901424Z Using cached filelock-3.25.2-py3-none-any.whl (26 kB)
-2026-04-03T05:36:48.8914252Z Using cached jinja2-3.1.6-py3-none-any.whl (134 kB)
-2026-04-03T05:36:48.8928050Z Using cached markupsafe-3.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (20 kB)
-2026-04-03T05:36:48.8940980Z Using cached nvidia_nccl_cu12-2.29.7-py3-none-manylinux_2_18_x86_64.whl (293.6 MB)
-2026-04-03T05:36:48.9963467Z Using cached python_slugify-8.0.4-py2.py3-none-any.whl (10 kB)
-2026-04-03T05:36:48.9975803Z Using cached text_unidecode-1.3-py2.py3-none-any.whl (78 kB)
-2026-04-03T05:36:48.9993590Z Using cached webencodings-0.5.1-py2.py3-none-any.whl (11 kB)
-2026-04-03T05:36:49.0011143Z Using cached xxhash-3.6.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (193 kB)
-2026-04-03T05:36:51.8864546Z Installing collected packages: webencodings, text-unidecode, pytz, nvidia-cusparselt-cu13, mpmath, cuda-toolkit, xxhash, urllib3, tzdata, typing-extensions, triton, tqdm, tomli, threadpoolctl, sympy, soupsieve, six, PyYAML, python-slugify, pyparsing, pygments, psutil, propcache, pluggy, pillow, packaging, nvidia-nvtx, nvidia-nvshmem-cu13, nvidia-nvjitlink, nvidia-nccl-cu13, nvidia-nccl-cu12, nvidia-curand, nvidia-cufile, nvidia-cuda-runtime, nvidia-cuda-nvrtc, nvidia-cuda-cupti, nvidia-cublas, numpy, networkx, MarkupSafe, lxml, kiwisolver, joblib, iniconfig, idna, fsspec, frozenlist, fonttools, filelock, cycler, cuda-pathfinder, cssselect, coverage, charset_normalizer, certifi, bleach, attrs, async-timeout, annotated-types, aiohappyeyeballs, typing-inspection, scipy, requests, python-dateutil, pyquery, pydantic-core, nvidia-cusparse, nvidia-cufft, nvidia-cudnn-cu13, multidict, jinja2, exceptiongroup, cuda-bindings, contourpy, beautifulsoup4, aiosignal, yarl, xgboost, scikit-learn, pytest, pydantic, pandas, nvidia-cusolver, matplotlib, lightgbm, kaggle, bs4, sportsipy, pytest-cov, cbbpy, aiohttp, torch-geometric, torch
-2026-04-03T05:37:40.1389023Z 
-2026-04-03T05:37:40.1522289Z Successfully installed MarkupSafe-3.0.3 PyYAML-6.0.3 aiohappyeyeballs-2.6.1 aiohttp-3.13.5 aiosignal-1.4.0 annotated-types-0.7.0 async-timeout-5.0.1 attrs-26.1.0 beautifulsoup4-4.14.3 bleach-6.3.0 bs4-0.0.2 cbbpy-2.0.2 certifi-2026.2.25 charset_normalizer-3.4.7 contourpy-1.3.2 coverage-7.13.5 cssselect-1.4.0 cuda-bindings-13.2.0 cuda-pathfinder-1.5.0 cuda-toolkit-13.0.2 cycler-0.12.1 exceptiongroup-1.3.1 filelock-3.25.2 fonttools-4.62.1 frozenlist-1.8.0 fsspec-2026.3.0 idna-3.11 iniconfig-2.3.0 jinja2-3.1.6 joblib-1.5.3 kaggle-1.6.17 kiwisolver-1.5.0 lightgbm-4.6.0 lxml-6.0.2 matplotlib-3.10.8 mpmath-1.3.0 multidict-6.7.1 networkx-3.4.2 numpy-1.26.4 nvidia-cublas-13.1.0.3 nvidia-cuda-cupti-13.0.85 nvidia-cuda-nvrtc-13.0.88 nvidia-cuda-runtime-13.0.96 nvidia-cudnn-cu13-9.19.0.56 nvidia-cufft-12.0.0.61 nvidia-cufile-1.15.1.6 nvidia-curand-10.4.0.35 nvidia-cusolver-12.0.4.66 nvidia-cusparse-12.6.3.3 nvidia-cusparselt-cu13-0.8.0 nvidia-nccl-cu12-2.29.7 nvidia-nccl-cu13-2.28.9 nvidia-nvjitlink-13.0.88 nvidia-nvshmem-cu13-3.4.5 nvidia-nvtx-13.0.85 packaging-26.0 pandas-2.1.4 pillow-12.2.0 pluggy-1.6.0 propcache-0.4.1 psutil-7.2.2 pydantic-2.12.5 pydantic-core-2.41.5 pygments-2.20.0 pyparsing-3.3.2 pyquery-2.0.1 pytest-9.0.2 pytest-cov-7.1.0 python-dateutil-2.9.0.post0 python-slugify-8.0.4 pytz-2023.4 requests-2.33.1 scikit-learn-1.6.1 scipy-1.11.4 six-1.17.0 soupsieve-2.8.3 sportsipy-0.6.0 sympy-1.14.0 text-unidecode-1.3 threadpoolctl-3.6.0 tomli-2.4.1 torch-2.11.0 torch-geometric-2.7.0 tqdm-4.67.3 triton-3.6.0 typing-extensions-4.15.0 typing-inspection-0.4.2 tzdata-2025.3 urllib3-2.6.3 webencodings-0.5.1 xgboost-2.1.4 xxhash-3.6.0 yarl-1.23.0
-2026-04-03T05:37:41.9504454Z Obtaining file:///home/runner/work/march-madness-forecaster/march-madness-forecaster
-2026-04-03T05:37:41.9524961Z   Installing build dependencies: started
-2026-04-03T05:37:42.8146256Z   Installing build dependencies: finished with status 'done'
-2026-04-03T05:37:42.8153202Z   Checking if build backend supports build_editable: started
-2026-04-03T05:37:43.1299130Z   Checking if build backend supports build_editable: finished with status 'done'
-2026-04-03T05:37:43.1307358Z   Getting requirements to build editable: started
-2026-04-03T05:37:43.3472668Z   Getting requirements to build editable: finished with status 'done'
-2026-04-03T05:37:43.3482764Z   Preparing editable metadata (pyproject.toml): started
-2026-04-03T05:37:43.5602407Z   Preparing editable metadata (pyproject.toml): finished with status 'done'
-2026-04-03T05:37:43.5713439Z Requirement already satisfied: numpy<1.27.0,>=1.24.4 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (1.26.4)
-2026-04-03T05:37:43.5719516Z Requirement already satisfied: pandas<2.2.0,>=1.5.3 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (2.1.4)
-2026-04-03T05:37:43.5724897Z Requirement already satisfied: pytz<2024.0,>=2022.7 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (2023.4)
-2026-04-03T05:37:43.5731213Z Requirement already satisfied: scipy<1.12.0,>=1.10.1 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (1.11.4)
-2026-04-03T05:37:43.5736633Z Requirement already satisfied: scikit-learn<1.7.0,>=1.5.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (1.6.1)
-2026-04-03T05:37:43.5741559Z Requirement already satisfied: requests>=2.31.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (2.33.1)
-2026-04-03T05:37:43.5746511Z Requirement already satisfied: beautifulsoup4>=4.12.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (4.14.3)
-2026-04-03T05:37:43.5751392Z Requirement already satisfied: lxml>=4.9.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (6.0.2)
-2026-04-03T05:37:43.5756292Z Requirement already satisfied: cbbpy==2.0.2 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (2.0.2)
-2026-04-03T05:37:43.5761316Z Requirement already satisfied: sportsipy>=0.6.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (0.6.0)
-2026-04-03T05:37:43.5780579Z Requirement already satisfied: python-dateutil>=2.8.2 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from cbbpy==2.0.2->march-madness-forecaster==0.1.0) (2.9.0.post0)
-2026-04-03T05:37:43.5786936Z Requirement already satisfied: tqdm>=4.63.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from cbbpy==2.0.2->march-madness-forecaster==0.1.0) (4.67.3)
-2026-04-03T05:37:43.5792761Z Requirement already satisfied: joblib>=1.2.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from cbbpy==2.0.2->march-madness-forecaster==0.1.0) (1.5.3)
-2026-04-03T05:37:43.5797815Z Requirement already satisfied: bs4>=0.0.1 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from cbbpy==2.0.2->march-madness-forecaster==0.1.0) (0.0.2)
-2026-04-03T05:37:43.6037552Z Requirement already satisfied: tzdata>=2022.1 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from pandas<2.2.0,>=1.5.3->march-madness-forecaster==0.1.0) (2025.3)
-2026-04-03T05:37:43.6143409Z Requirement already satisfied: threadpoolctl>=3.1.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from scikit-learn<1.7.0,>=1.5.0->march-madness-forecaster==0.1.0) (3.6.0)
-2026-04-03T05:37:43.6320282Z Requirement already satisfied: soupsieve>=1.6.1 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from beautifulsoup4>=4.12.0->march-madness-forecaster==0.1.0) (2.8.3)
-2026-04-03T05:37:43.6324865Z Requirement already satisfied: typing-extensions>=4.0.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from beautifulsoup4>=4.12.0->march-madness-forecaster==0.1.0) (4.15.0)
-2026-04-03T05:37:43.6361763Z Requirement already satisfied: six>=1.5 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from python-dateutil>=2.8.2->cbbpy==2.0.2->march-madness-forecaster==0.1.0) (1.17.0)
-2026-04-03T05:37:43.6379752Z Requirement already satisfied: charset_normalizer<4,>=2 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from requests>=2.31.0->march-madness-forecaster==0.1.0) (3.4.7)
-2026-04-03T05:37:43.6384956Z Requirement already satisfied: idna<4,>=2.5 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from requests>=2.31.0->march-madness-forecaster==0.1.0) (3.11)
-2026-04-03T05:37:43.6390648Z Requirement already satisfied: urllib3<3,>=1.26 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from requests>=2.31.0->march-madness-forecaster==0.1.0) (2.6.3)
-2026-04-03T05:37:43.6395465Z Requirement already satisfied: certifi>=2023.5.7 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from requests>=2.31.0->march-madness-forecaster==0.1.0) (2026.2.25)
-2026-04-03T05:37:43.6467613Z Requirement already satisfied: pyquery>=1.4.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from sportsipy>=0.6.0->march-madness-forecaster==0.1.0) (2.0.1)
-2026-04-03T05:37:43.6489724Z Requirement already satisfied: cssselect>=1.2.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from pyquery>=1.4.0->sportsipy>=0.6.0->march-madness-forecaster==0.1.0) (1.4.0)
-2026-04-03T05:37:43.6556489Z Building wheels for collected packages: march-madness-forecaster
-2026-04-03T05:37:43.6565026Z   Building editable for march-madness-forecaster (pyproject.toml): started
-2026-04-03T05:37:43.9099983Z   Building editable for march-madness-forecaster (pyproject.toml): finished with status 'done'
-2026-04-03T05:37:43.9106759Z   Created wheel for march-madness-forecaster: filename=march_madness_forecaster-0.1.0-0.editable-py3-none-any.whl size=3429 sha256=62f03534e7008411e91d9b046e41fd69e1df4cd1325122f8c5c34d6cc2075d5e
-2026-04-03T05:37:43.9108296Z   Stored in directory: /tmp/pip-ephem-wheel-cache-wt2goeoj/wheels/5b/2b/ff/3e3f41141af846bdda90de90cad3799fb4b5c7b1aac336b62a
-2026-04-03T05:37:43.9126512Z Successfully built march-madness-forecaster
-2026-04-03T05:37:44.0386950Z Installing collected packages: march-madness-forecaster
-2026-04-03T05:37:44.0569505Z Successfully installed march-madness-forecaster-0.1.0
-2026-04-03T05:37:44.1305059Z ##[group]Run pytest tests/ -m "unit" --cov=src --cov-report=term-missing --tb=short -q
-2026-04-03T05:37:44.1305682Z [36;1mpytest tests/ -m "unit" --cov=src --cov-report=term-missing --tb=short -q[0m
-2026-04-03T05:37:44.1400202Z shell: /usr/bin/bash -e {0}
-2026-04-03T05:37:44.1400470Z env:
-2026-04-03T05:37:44.1400737Z   pythonLocation: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-03T05:37:44.1401213Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib/pkgconfig
-2026-04-03T05:37:44.1401670Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-03T05:37:44.1402069Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-03T05:37:44.1402474Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-03T05:37:44.1402883Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib
-2026-04-03T05:37:44.1403230Z ##[endgroup]
-2026-04-03T05:38:11.9692031Z ........................................................................ [  1%]
-2026-04-03T05:38:12.3510079Z ........................................................................ [  2%]
-2026-04-03T05:38:12.7301327Z ........................................................................ [  4%]
-2026-04-03T05:38:13.4163200Z ........................................................................ [  5%]
-2026-04-03T05:38:14.3159381Z ........................................................................ [  6%]
-2026-04-03T05:38:14.6829323Z ........................................................................ [  8%]
-2026-04-03T05:38:15.2748221Z ........................................................................ [  9%]
-2026-04-03T05:38:28.5466859Z ........................................................................ [ 10%]
-2026-04-03T05:38:28.6959778Z ........................................................................ [ 12%]
-2026-04-03T05:38:33.9658200Z ........................................................................ [ 13%]
-2026-04-03T05:38:34.4863827Z ........................................................................ [ 14%]
-2026-04-03T05:38:35.4157191Z ........................................................................ [ 16%]
-2026-04-03T05:38:35.7573134Z ........................................................................ [ 17%]
-2026-04-03T05:38:36.8996473Z ........................................................................ [ 18%]
-2026-04-03T05:38:39.3335116Z ........................................................................ [ 20%]
-2026-04-03T05:38:39.4902013Z ........................................................................ [ 21%]
-2026-04-03T05:38:41.4126218Z ..........................................F
-2026-04-03T05:38:41.4126924Z =================================== FAILURES ===================================
-2026-04-03T05:38:41.4127624Z ____ TestTryHtmlPageIntegration.test_try_html_page_deprecated_returns_none _____
-2026-04-03T05:38:41.4128427Z tests/test_espn_wpw_scraper.py:157: in test_try_html_page_deprecated_returns_none
-2026-04-03T05:38:41.4129046Z     result = scraper._try_html_page(2026)
-2026-04-03T05:38:41.4129620Z E   AttributeError: 'ESPNPicksScraper' object has no attribute '_try_html_page'
-2026-04-03T05:38:41.4130260Z =============================== warnings summary ===============================
-2026-04-03T05:38:41.4130725Z tests/test_full_ml_pipeline.py:18
-2026-04-03T05:38:41.4132482Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/tests/test_full_ml_pipeline.py:18: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-2026-04-03T05:38:41.4134382Z     pytestmark = pytest.mark.slow
-2026-04-03T05:38:41.4134620Z 
-2026-04-03T05:38:41.4134744Z tests/test_rdof_audit.py:424
-2026-04-03T05:38:41.4136969Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/tests/test_rdof_audit.py:424: PytestUnknownMarkWarning: Unknown pytest.mark.timeout - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-2026-04-03T05:38:41.4138553Z     @pytest.mark.timeout(300)
-2026-04-03T05:38:41.4138731Z 
-2026-04-03T05:38:41.4139110Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
-2026-04-03T05:38:41.4139917Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
-2026-04-03T05:38:41.4140741Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_probabilities_not_mutated_by_optimizer
-2026-04-03T05:38:41.4141599Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_has_all_required_fields
-2026-04-03T05:38:41.4142393Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_values_match_environment
-2026-04-03T05:38:41.4143141Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_serialization
-2026-04-03T05:38:41.4144813Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/src/optimization/pool_optimizer.py:223: DeprecationWarning: PoolOptimizer._build_round_probabilities is using a heuristic fallback. Pass model_round_probs from MC simulation to the constructor for accurate round advancement probabilities.
-2026-04-03T05:38:41.4147452Z     model_round_probs = self._build_round_probabilities()
-2026-04-03T05:38:41.4147840Z 
-2026-04-03T05:38:41.4148188Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2026-04-03T05:38:41.4148942Z =========================== short test summary info ============================
-2026-04-03T05:38:41.4150404Z FAILED tests/test_espn_wpw_scraper.py::TestTryHtmlPageIntegration::test_try_html_page_deprecated_returns_none - AttributeError: 'ESPNPicksScraper' object has no attribute '_try_html_page'
-2026-04-03T05:38:41.4151830Z !!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
-2026-04-03T05:38:41.4152490Z 1 failed, 1194 passed, 504 deselected, 8 warnings in 55.53s
-2026-04-03T05:38:42.4783621Z ##[error]Process completed with exit code 1.
-2026-04-03T05:38:42.4867314Z Post job cleanup.
-2026-04-03T05:38:42.4951965Z Post job cleanup.
-2026-04-03T05:38:42.5920176Z [command]/usr/bin/git version
-2026-04-03T05:38:42.5956211Z git version 2.53.0
-2026-04-03T05:38:42.6007148Z Temporarily overriding HOME='/home/runner/work/_temp/24d9ae91-b7b2-4333-a00b-20a207d415e9' before making global git config changes
-2026-04-03T05:38:42.6008520Z Adding repository directory to the temporary git global config as a safe directory
-2026-04-03T05:38:42.6012828Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/march-madness-forecaster/march-madness-forecaster
-2026-04-03T05:38:42.6046963Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
-2026-04-03T05:38:42.6079278Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
-2026-04-03T05:38:42.6380608Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
-2026-04-03T05:38:42.6401093Z http.https://github.com/.extraheader
-2026-04-03T05:38:42.6413203Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
-2026-04-03T05:38:42.6444423Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
-2026-04-03T05:38:42.6668117Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
-2026-04-03T05:38:42.6699278Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
-2026-04-03T05:38:42.7058070Z Cleaning up orphan processes
-2026-04-03T05:38:42.7457979Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-python@v5. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+### FAILED JOB: Fast Gate
+2026-04-06T01:50:43.1182705Z Updating files:  90% (2221/2444)
+2026-04-06T01:50:43.1201779Z Updating files:  91% (2225/2444)
+2026-04-06T01:50:43.1218083Z Updating files:  92% (2249/2444)
+2026-04-06T01:50:43.1239382Z Updating files:  93% (2273/2444)
+2026-04-06T01:50:43.1260335Z Updating files:  94% (2298/2444)
+2026-04-06T01:50:43.1280551Z Updating files:  95% (2322/2444)
+2026-04-06T01:50:43.1300846Z Updating files:  96% (2347/2444)
+2026-04-06T01:50:43.1324115Z Updating files:  97% (2371/2444)
+2026-04-06T01:50:43.1347364Z Updating files:  98% (2396/2444)
+2026-04-06T01:50:43.1370743Z Updating files:  99% (2420/2444)
+2026-04-06T01:50:43.1371698Z Updating files: 100% (2444/2444)
+2026-04-06T01:50:43.1372247Z Updating files: 100% (2444/2444), done.
+2026-04-06T01:50:43.1394593Z Note: switching to 'refs/remotes/pull/357/merge'.
+2026-04-06T01:50:43.1395129Z 
+2026-04-06T01:50:43.1395563Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-04-06T01:50:43.1396381Z changes and commit them, and you can discard any commits you make in this
+2026-04-06T01:50:43.1396996Z state without impacting any branches by switching back to a branch.
+2026-04-06T01:50:43.1397350Z 
+2026-04-06T01:50:43.1397622Z If you want to create a new branch to retain commits you create, you may
+2026-04-06T01:50:43.1398190Z do so (now or later) by using -c with the switch command. Example:
+2026-04-06T01:50:43.1398543Z 
+2026-04-06T01:50:43.1398703Z   git switch -c <new-branch-name>
+2026-04-06T01:50:43.1398950Z 
+2026-04-06T01:50:43.1399089Z Or undo this operation with:
+2026-04-06T01:50:43.1399337Z 
+2026-04-06T01:50:43.1399458Z   git switch -
+2026-04-06T01:50:43.1399978Z 
+2026-04-06T01:50:43.1400273Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-04-06T01:50:43.1400678Z 
+2026-04-06T01:50:43.1401126Z HEAD is now at 38ea7d8 Merge 35e31782bd0566588962a3de9bfe2b6edd83dc6f into 5dc624cbaaf80489990e38e2f330a09824ea612a
+2026-04-06T01:50:43.1452096Z ##[endgroup]
+2026-04-06T01:50:43.1493528Z [command]/usr/bin/git log -1 --format=%H
+2026-04-06T01:50:43.1515333Z 38ea7d833a9f16dbbc4ce89c6939e2082067fb39
+2026-04-06T01:50:43.1713044Z ##[group]Run pipx run ruff check src/ tests/ --output-format=github
+2026-04-06T01:50:43.1713662Z [36;1mpipx run ruff check src/ tests/ --output-format=github[0m
+2026-04-06T01:50:43.1744321Z shell: /usr/bin/bash -e {0}
+2026-04-06T01:50:43.1744626Z ##[endgroup]
+2026-04-06T01:50:44.3068240Z creating virtual environment...
+2026-04-06T01:50:44.4422542Z installing ruff...
+2026-04-06T01:50:46.5244409Z ##[group]Run python3 - <<'PYEOF'
+2026-04-06T01:50:46.5244804Z [36;1mpython3 - <<'PYEOF'[0m
+2026-04-06T01:50:46.5245040Z [36;1mimport ast, hashlib, json, sys[0m
+2026-04-06T01:50:46.5245300Z [36;1m[0m
+2026-04-06T01:50:46.5245526Z [36;1mFREEZE_PATH = "artifacts/pipeline_freeze_2026.json"[0m
+2026-04-06T01:50:46.5245819Z [36;1m[0m
+2026-04-06T01:50:46.5245984Z [36;1mREQUIRED_SOURCE_FILES = [[0m
+2026-04-06T01:50:46.5246238Z [36;1m    "src/pipeline/config.py",[0m
+2026-04-06T01:50:46.5246479Z [36;1m    "src/pipeline/sota.py",[0m
+2026-04-06T01:50:46.5246757Z [36;1m    "src/pipeline/tournament_pipeline.py",[0m
+2026-04-06T01:50:46.5247060Z [36;1m    "src/pipeline/pipeline_runner.py",[0m
+2026-04-06T01:50:46.5247391Z [36;1m    "src/pipeline/probability_predictor.py",[0m
+2026-04-06T01:50:46.5247711Z [36;1m    "src/pipeline/stages/calibration.py",[0m
+2026-04-06T01:50:46.5248019Z [36;1m    "src/pipeline/stages/data_loader.py",[0m
+2026-04-06T01:50:46.5248336Z [36;1m    "src/pipeline/stages/inference.py",[0m
+2026-04-06T01:50:46.5248638Z [36;1m    "src/pipeline/probability_pipeline.py",[0m
+2026-04-06T01:50:46.5248950Z [36;1m    "src/governance/production_validator.py",[0m
+2026-04-06T01:50:46.5249250Z [36;1m    "src/governance/production_runner.py",[0m
+2026-04-06T01:50:46.5249502Z [36;1m][0m
+2026-04-06T01:50:46.5250413Z [36;1m[0m
+2026-04-06T01:50:46.5250598Z [36;1mdef sha256_file(path):[0m
+2026-04-06T01:50:46.5250834Z [36;1m    h = hashlib.sha256()[0m
+2026-04-06T01:50:46.5251080Z [36;1m    with open(path, "rb") as f:[0m
+2026-04-06T01:50:46.5251382Z [36;1m        for chunk in iter(lambda: f.read(8192), b""):[0m
+2026-04-06T01:50:46.5251683Z [36;1m            h.update(chunk)[0m
+2026-04-06T01:50:46.5252219Z [36;1m    return h.hexdigest()[0m
+2026-04-06T01:50:46.5252435Z [36;1m[0m
+2026-04-06T01:50:46.5252699Z [36;1mdef extract_dataclass_fields(filepath, class_name):[0m
+2026-04-06T01:50:46.5253206Z [36;1m    """Extract field names from a @dataclass using AST (no imports needed)."""[0m
+2026-04-06T01:50:46.5253611Z [36;1m    with open(filepath) as f:[0m
+2026-04-06T01:50:46.5253873Z [36;1m        tree = ast.parse(f.read())[0m
+2026-04-06T01:50:46.5254128Z [36;1m    for node in ast.walk(tree):[0m
+2026-04-06T01:50:46.5254467Z [36;1m        if isinstance(node, ast.ClassDef) and node.name == class_name:[0m
+2026-04-06T01:50:46.5254807Z [36;1m            fields = set()[0m
+2026-04-06T01:50:46.5255052Z [36;1m            for item in node.body:[0m
+2026-04-06T01:50:46.5255446Z [36;1m                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):[0m
+2026-04-06T01:50:46.5255869Z [36;1m                    fields.add(item.target.id)[0m
+2026-04-06T01:50:46.5256148Z [36;1m            return fields[0m
+2026-04-06T01:50:46.5256368Z [36;1m    return None[0m
+2026-04-06T01:50:46.5256560Z [36;1m[0m
+2026-04-06T01:50:46.5256709Z [36;1mtry:[0m
+2026-04-06T01:50:46.5256901Z [36;1m    with open(FREEZE_PATH) as f:[0m
+2026-04-06T01:50:46.5257165Z [36;1m        freeze = json.load(f)[0m
+2026-04-06T01:50:46.5257405Z [36;1mexcept FileNotFoundError:[0m
+2026-04-06T01:50:46.5257727Z [36;1m    print(f"::error::Freeze artifact not found at {FREEZE_PATH}.")[0m
+2026-04-06T01:50:46.5258106Z [36;1m    print("Run: march-madness freeze-pipeline")[0m
+2026-04-06T01:50:46.5258388Z [36;1m    sys.exit(1)[0m
+2026-04-06T01:50:46.5258568Z [36;1m[0m
+2026-04-06T01:50:46.5258726Z [36;1merrors = [][0m
+2026-04-06T01:50:46.5258896Z [36;1m[0m
+2026-04-06T01:50:46.5259125Z [36;1mfrozen_hashes = freeze.get("source_file_hashes", {})[0m
+2026-04-06T01:50:46.5259455Z [36;1mfor src_file in REQUIRED_SOURCE_FILES:[0m
+2026-04-06T01:50:46.5260020Z [36;1m    frozen_hash = frozen_hashes.get(src_file)[0m
+2026-04-06T01:50:46.5260317Z [36;1m    if frozen_hash is None:[0m
+2026-04-06T01:50:46.5260627Z [36;1m        errors.append(f"{src_file}: missing from freeze artifact")[0m
+2026-04-06T01:50:46.5260953Z [36;1m        continue[0m
+2026-04-06T01:50:46.5261377Z [36;1m    current_hash = sha256_file(src_file)[0m
+2026-04-06T01:50:46.5261686Z [36;1m    if current_hash != frozen_hash:[0m
+2026-04-06T01:50:46.5262080Z [36;1m        errors.append(f"{src_file}: hash mismatch (source changed since freeze)")[0m
+2026-04-06T01:50:46.5262464Z [36;1m[0m
+2026-04-06T01:50:46.5262687Z [36;1mfrozen_fields = freeze.get("config_fields", {})[0m
+2026-04-06T01:50:46.5263014Z [36;1mcurrent_field_names = extract_dataclass_fields([0m
+2026-04-06T01:50:46.5263364Z [36;1m    "src/pipeline/config.py", "SOTAPipelineConfig"[0m
+2026-04-06T01:50:46.5263645Z [36;1m)[0m
+2026-04-06T01:50:46.5263825Z [36;1mif current_field_names is None:[0m
+2026-04-06T01:50:46.5264238Z [36;1m    errors.append("Could not find SOTAPipelineConfig in src/pipeline/config.py")[0m
+2026-04-06T01:50:46.5264677Z [36;1melse:[0m
+2026-04-06T01:50:46.5264900Z [36;1m    frozen_field_names = set(frozen_fields.keys())[0m
+2026-04-06T01:50:46.5265269Z [36;1m    missing_in_freeze = current_field_names - frozen_field_names[0m
+2026-04-06T01:50:46.5265603Z [36;1m    if missing_in_freeze:[0m
+2026-04-06T01:50:46.5265834Z [36;1m        errors.append([0m
+2026-04-06T01:50:46.5266164Z [36;1m            f"Config fields added but not in freeze: {sorted(missing_in_freeze)}"[0m
+2026-04-06T01:50:46.5266517Z [36;1m        )[0m
+2026-04-06T01:50:46.5266681Z [36;1m[0m
+2026-04-06T01:50:46.5266837Z [36;1mif errors:[0m
+2026-04-06T01:50:46.5267132Z [36;1m    print("::error::Freeze artifact is STALE. Update it before merging.")[0m
+2026-04-06T01:50:46.5267484Z [36;1m    for e in errors:[0m
+2026-04-06T01:50:46.5267699Z [36;1m        print(f"  - {e}")[0m
+2026-04-06T01:50:46.5267913Z [36;1m    print()[0m
+2026-04-06T01:50:46.5268518Z [36;1m    print("To fix: python -c \"from src.governance.production_runner import regenerate_freeze; regenerate_freeze()\"")[0m
+2026-04-06T01:50:46.5269038Z [36;1m    sys.exit(1)[0m
+2026-04-06T01:50:46.5269229Z [36;1melse:[0m
+2026-04-06T01:50:46.5269853Z [36;1m    print(f"Freeze OK ({len(frozen_hashes)} files, {len(frozen_fields)} config fields)")[0m
+2026-04-06T01:50:46.5270284Z [36;1mPYEOF[0m
+2026-04-06T01:50:46.5297927Z shell: /usr/bin/bash -e {0}
+2026-04-06T01:50:46.5298164Z ##[endgroup]
+2026-04-06T01:50:46.5702658Z ##[error]Freeze artifact is STALE. Update it before merging.
+2026-04-06T01:50:46.5710190Z   - src/pipeline/config.py: hash mismatch (source changed since freeze)
+2026-04-06T01:50:46.5710837Z   - src/pipeline/stages/data_loader.py: hash mismatch (source changed since freeze)
+2026-04-06T01:50:46.5711391Z   - src/governance/production_validator.py: hash mismatch (source changed since freeze)
+2026-04-06T01:50:46.5711930Z   - src/governance/production_runner.py: hash mismatch (source changed since freeze)
+2026-04-06T01:50:46.5712293Z 
+2026-04-06T01:50:46.5712588Z To fix: python -c "from src.governance.production_runner import regenerate_freeze; regenerate_freeze()"
+2026-04-06T01:50:46.5739173Z ##[error]Process completed with exit code 1.
+2026-04-06T01:50:46.5928033Z Post job cleanup.
+2026-04-06T01:50:46.6907958Z [command]/usr/bin/git version
+2026-04-06T01:50:46.6945388Z git version 2.53.0
+2026-04-06T01:50:46.6996776Z Temporarily overriding HOME='/home/runner/work/_temp/504d93c5-31d4-489c-ae97-f59c18ab4f09' before making global git config changes
+2026-04-06T01:50:46.7002342Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-06T01:50:46.7003162Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/march-madness-forecaster/march-madness-forecaster
+2026-04-06T01:50:46.7036810Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-06T01:50:46.7069485Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-06T01:50:46.7295989Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-06T01:50:46.7318051Z http.https://github.com/.extraheader
+2026-04-06T01:50:46.7330664Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-04-06T01:50:46.7362194Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-06T01:50:46.7588524Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-06T01:50:46.7620888Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-06T01:50:46.7959307Z Cleaning up orphan processes
+2026-04-06T01:50:46.8248430Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
 
 
-### FAILED JOB: Gate 4: Performance Check
-2026-04-03T05:37:05.7595040Z Using cached typing_inspection-0.4.2-py3-none-any.whl (14 kB)
-2026-04-03T05:37:05.7607675Z Using cached tzdata-2025.3-py2.py3-none-any.whl (348 kB)
-2026-04-03T05:37:05.7646156Z Downloading aiohttp-3.13.5-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.7 MB)
-2026-04-03T05:37:05.7730434Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 243.6 MB/s  0:00:00
-2026-04-03T05:37:05.7745218Z Using cached async_timeout-5.0.1-py3-none-any.whl (6.2 kB)
-2026-04-03T05:37:05.7758759Z Using cached multidict-6.7.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (243 kB)
-2026-04-03T05:37:05.7772694Z Using cached yarl-1.23.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (102 kB)
-2026-04-03T05:37:05.7786009Z Using cached aiohappyeyeballs-2.6.1-py3-none-any.whl (15 kB)
-2026-04-03T05:37:05.7798650Z Using cached aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
-2026-04-03T05:37:05.7811188Z Using cached attrs-26.1.0-py3-none-any.whl (67 kB)
-2026-04-03T05:37:05.7825073Z Using cached frozenlist-1.8.0-cp310-cp310-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (219 kB)
-2026-04-03T05:37:05.7838829Z Using cached propcache-0.4.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (196 kB)
-2026-04-03T05:37:05.7851812Z Using cached bleach-6.3.0-py3-none-any.whl (164 kB)
-2026-04-03T05:37:05.7865384Z Using cached filelock-3.25.2-py3-none-any.whl (26 kB)
-2026-04-03T05:37:05.7878266Z Using cached jinja2-3.1.6-py3-none-any.whl (134 kB)
-2026-04-03T05:37:05.7892064Z Using cached markupsafe-3.0.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (20 kB)
-2026-04-03T05:37:05.7905122Z Using cached nvidia_nccl_cu12-2.29.7-py3-none-manylinux_2_18_x86_64.whl (293.6 MB)
-2026-04-03T05:37:05.8937759Z Using cached python_slugify-8.0.4-py2.py3-none-any.whl (10 kB)
-2026-04-03T05:37:05.8950196Z Using cached text_unidecode-1.3-py2.py3-none-any.whl (78 kB)
-2026-04-03T05:37:05.8963703Z Using cached webencodings-0.5.1-py2.py3-none-any.whl (11 kB)
-2026-04-03T05:37:05.8977114Z Using cached xxhash-3.6.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (193 kB)
-2026-04-03T05:37:08.7783481Z Installing collected packages: webencodings, text-unidecode, pytz, nvidia-cusparselt-cu13, mpmath, cuda-toolkit, xxhash, urllib3, tzdata, typing-extensions, triton, tqdm, tomli, threadpoolctl, sympy, soupsieve, six, PyYAML, python-slugify, pyparsing, pygments, psutil, propcache, pluggy, pillow, packaging, nvidia-nvtx, nvidia-nvshmem-cu13, nvidia-nvjitlink, nvidia-nccl-cu13, nvidia-nccl-cu12, nvidia-curand, nvidia-cufile, nvidia-cuda-runtime, nvidia-cuda-nvrtc, nvidia-cuda-cupti, nvidia-cublas, numpy, networkx, MarkupSafe, lxml, kiwisolver, joblib, iniconfig, idna, fsspec, frozenlist, fonttools, filelock, cycler, cuda-pathfinder, cssselect, coverage, charset_normalizer, certifi, bleach, attrs, async-timeout, annotated-types, aiohappyeyeballs, typing-inspection, scipy, requests, python-dateutil, pyquery, pydantic-core, nvidia-cusparse, nvidia-cufft, nvidia-cudnn-cu13, multidict, jinja2, exceptiongroup, cuda-bindings, contourpy, beautifulsoup4, aiosignal, yarl, xgboost, scikit-learn, pytest, pydantic, pandas, nvidia-cusolver, matplotlib, lightgbm, kaggle, bs4, sportsipy, pytest-cov, cbbpy, aiohttp, torch-geometric, torch
-2026-04-03T05:37:58.6875873Z 
-2026-04-03T05:37:58.7008080Z Successfully installed MarkupSafe-3.0.3 PyYAML-6.0.3 aiohappyeyeballs-2.6.1 aiohttp-3.13.5 aiosignal-1.4.0 annotated-types-0.7.0 async-timeout-5.0.1 attrs-26.1.0 beautifulsoup4-4.14.3 bleach-6.3.0 bs4-0.0.2 cbbpy-2.0.2 certifi-2026.2.25 charset_normalizer-3.4.7 contourpy-1.3.2 coverage-7.13.5 cssselect-1.4.0 cuda-bindings-13.2.0 cuda-pathfinder-1.5.0 cuda-toolkit-13.0.2 cycler-0.12.1 exceptiongroup-1.3.1 filelock-3.25.2 fonttools-4.62.1 frozenlist-1.8.0 fsspec-2026.3.0 idna-3.11 iniconfig-2.3.0 jinja2-3.1.6 joblib-1.5.3 kaggle-1.6.17 kiwisolver-1.5.0 lightgbm-4.6.0 lxml-6.0.2 matplotlib-3.10.8 mpmath-1.3.0 multidict-6.7.1 networkx-3.4.2 numpy-1.26.4 nvidia-cublas-13.1.0.3 nvidia-cuda-cupti-13.0.85 nvidia-cuda-nvrtc-13.0.88 nvidia-cuda-runtime-13.0.96 nvidia-cudnn-cu13-9.19.0.56 nvidia-cufft-12.0.0.61 nvidia-cufile-1.15.1.6 nvidia-curand-10.4.0.35 nvidia-cusolver-12.0.4.66 nvidia-cusparse-12.6.3.3 nvidia-cusparselt-cu13-0.8.0 nvidia-nccl-cu12-2.29.7 nvidia-nccl-cu13-2.28.9 nvidia-nvjitlink-13.0.88 nvidia-nvshmem-cu13-3.4.5 nvidia-nvtx-13.0.85 packaging-26.0 pandas-2.1.4 pillow-12.2.0 pluggy-1.6.0 propcache-0.4.1 psutil-7.2.2 pydantic-2.12.5 pydantic-core-2.41.5 pygments-2.20.0 pyparsing-3.3.2 pyquery-2.0.1 pytest-9.0.2 pytest-cov-7.1.0 python-dateutil-2.9.0.post0 python-slugify-8.0.4 pytz-2023.4 requests-2.33.1 scikit-learn-1.6.1 scipy-1.11.4 six-1.17.0 soupsieve-2.8.3 sportsipy-0.6.0 sympy-1.14.0 text-unidecode-1.3 threadpoolctl-3.6.0 tomli-2.4.1 torch-2.11.0 torch-geometric-2.7.0 tqdm-4.67.3 triton-3.6.0 typing-extensions-4.15.0 typing-inspection-0.4.2 tzdata-2025.3 urllib3-2.6.3 webencodings-0.5.1 xgboost-2.1.4 xxhash-3.6.0 yarl-1.23.0
-2026-04-03T05:38:01.0408923Z Obtaining file:///home/runner/work/march-madness-forecaster/march-madness-forecaster
-2026-04-03T05:38:01.0428290Z   Installing build dependencies: started
-2026-04-03T05:38:02.4023196Z   Installing build dependencies: finished with status 'done'
-2026-04-03T05:38:02.4030243Z   Checking if build backend supports build_editable: started
-2026-04-03T05:38:02.7143902Z   Checking if build backend supports build_editable: finished with status 'done'
-2026-04-03T05:38:02.7151906Z   Getting requirements to build editable: started
-2026-04-03T05:38:02.9283013Z   Getting requirements to build editable: finished with status 'done'
-2026-04-03T05:38:02.9292375Z   Preparing editable metadata (pyproject.toml): started
-2026-04-03T05:38:03.1378856Z   Preparing editable metadata (pyproject.toml): finished with status 'done'
-2026-04-03T05:38:03.1490052Z Requirement already satisfied: numpy<1.27.0,>=1.24.4 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (1.26.4)
-2026-04-03T05:38:03.1495867Z Requirement already satisfied: pandas<2.2.0,>=1.5.3 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (2.1.4)
-2026-04-03T05:38:03.1501258Z Requirement already satisfied: pytz<2024.0,>=2022.7 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (2023.4)
-2026-04-03T05:38:03.1507648Z Requirement already satisfied: scipy<1.12.0,>=1.10.1 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (1.11.4)
-2026-04-03T05:38:03.1513500Z Requirement already satisfied: scikit-learn<1.7.0,>=1.5.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (1.6.1)
-2026-04-03T05:38:03.1518433Z Requirement already satisfied: requests>=2.31.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (2.33.1)
-2026-04-03T05:38:03.1523626Z Requirement already satisfied: beautifulsoup4>=4.12.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (4.14.3)
-2026-04-03T05:38:03.1528533Z Requirement already satisfied: lxml>=4.9.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (6.0.2)
-2026-04-03T05:38:03.1533775Z Requirement already satisfied: cbbpy==2.0.2 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (2.0.2)
-2026-04-03T05:38:03.1538698Z Requirement already satisfied: sportsipy>=0.6.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from march-madness-forecaster==0.1.0) (0.6.0)
-2026-04-03T05:38:03.1557777Z Requirement already satisfied: python-dateutil>=2.8.2 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from cbbpy==2.0.2->march-madness-forecaster==0.1.0) (2.9.0.post0)
-2026-04-03T05:38:03.1564907Z Requirement already satisfied: tqdm>=4.63.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from cbbpy==2.0.2->march-madness-forecaster==0.1.0) (4.67.3)
-2026-04-03T05:38:03.1570811Z Requirement already satisfied: joblib>=1.2.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from cbbpy==2.0.2->march-madness-forecaster==0.1.0) (1.5.3)
-2026-04-03T05:38:03.1576081Z Requirement already satisfied: bs4>=0.0.1 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from cbbpy==2.0.2->march-madness-forecaster==0.1.0) (0.0.2)
-2026-04-03T05:38:03.1813412Z Requirement already satisfied: tzdata>=2022.1 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from pandas<2.2.0,>=1.5.3->march-madness-forecaster==0.1.0) (2025.3)
-2026-04-03T05:38:03.1918021Z Requirement already satisfied: threadpoolctl>=3.1.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from scikit-learn<1.7.0,>=1.5.0->march-madness-forecaster==0.1.0) (3.6.0)
-2026-04-03T05:38:03.2092307Z Requirement already satisfied: soupsieve>=1.6.1 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from beautifulsoup4>=4.12.0->march-madness-forecaster==0.1.0) (2.8.3)
-2026-04-03T05:38:03.2096989Z Requirement already satisfied: typing-extensions>=4.0.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from beautifulsoup4>=4.12.0->march-madness-forecaster==0.1.0) (4.15.0)
-2026-04-03T05:38:03.2133524Z Requirement already satisfied: six>=1.5 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from python-dateutil>=2.8.2->cbbpy==2.0.2->march-madness-forecaster==0.1.0) (1.17.0)
-2026-04-03T05:38:03.2151555Z Requirement already satisfied: charset_normalizer<4,>=2 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from requests>=2.31.0->march-madness-forecaster==0.1.0) (3.4.7)
-2026-04-03T05:38:03.2157384Z Requirement already satisfied: idna<4,>=2.5 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from requests>=2.31.0->march-madness-forecaster==0.1.0) (3.11)
-2026-04-03T05:38:03.2162666Z Requirement already satisfied: urllib3<3,>=1.26 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from requests>=2.31.0->march-madness-forecaster==0.1.0) (2.6.3)
-2026-04-03T05:38:03.2167877Z Requirement already satisfied: certifi>=2023.5.7 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from requests>=2.31.0->march-madness-forecaster==0.1.0) (2026.2.25)
-2026-04-03T05:38:03.2240121Z Requirement already satisfied: pyquery>=1.4.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from sportsipy>=0.6.0->march-madness-forecaster==0.1.0) (2.0.1)
-2026-04-03T05:38:03.2262949Z Requirement already satisfied: cssselect>=1.2.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from pyquery>=1.4.0->sportsipy>=0.6.0->march-madness-forecaster==0.1.0) (1.4.0)
-2026-04-03T05:38:03.2330273Z Building wheels for collected packages: march-madness-forecaster
-2026-04-03T05:38:03.2339197Z   Building editable for march-madness-forecaster (pyproject.toml): started
-2026-04-03T05:38:03.4860109Z   Building editable for march-madness-forecaster (pyproject.toml): finished with status 'done'
-2026-04-03T05:38:03.4866835Z   Created wheel for march-madness-forecaster: filename=march_madness_forecaster-0.1.0-0.editable-py3-none-any.whl size=3429 sha256=91c640cfb42cc6db873b1f7d9da6c56ac521157098088b680f81183c83313c85
-2026-04-03T05:38:03.4868671Z   Stored in directory: /tmp/pip-ephem-wheel-cache-pgpnbul9/wheels/5b/2b/ff/3e3f41141af846bdda90de90cad3799fb4b5c7b1aac336b62a
-2026-04-03T05:38:03.4887729Z Successfully built march-madness-forecaster
-2026-04-03T05:38:03.6140176Z Installing collected packages: march-madness-forecaster
-2026-04-03T05:38:03.6325224Z Successfully installed march-madness-forecaster-0.1.0
-2026-04-03T05:38:04.5120548Z Collecting pytest-timeout
-2026-04-03T05:38:04.5843241Z   Downloading pytest_timeout-2.4.0-py3-none-any.whl.metadata (20 kB)
-2026-04-03T05:38:04.5936339Z Requirement already satisfied: pytest>=7.0.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from pytest-timeout) (9.0.2)
-2026-04-03T05:38:04.5962858Z Requirement already satisfied: exceptiongroup>=1 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from pytest>=7.0.0->pytest-timeout) (1.3.1)
-2026-04-03T05:38:04.5968050Z Requirement already satisfied: iniconfig>=1.0.1 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from pytest>=7.0.0->pytest-timeout) (2.3.0)
-2026-04-03T05:38:04.5972920Z Requirement already satisfied: packaging>=22 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from pytest>=7.0.0->pytest-timeout) (26.0)
-2026-04-03T05:38:04.5978182Z Requirement already satisfied: pluggy<2,>=1.5 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from pytest>=7.0.0->pytest-timeout) (1.6.0)
-2026-04-03T05:38:04.5984331Z Requirement already satisfied: pygments>=2.7.2 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from pytest>=7.0.0->pytest-timeout) (2.20.0)
-2026-04-03T05:38:04.5990842Z Requirement already satisfied: tomli>=1 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from pytest>=7.0.0->pytest-timeout) (2.4.1)
-2026-04-03T05:38:04.6015477Z Requirement already satisfied: typing-extensions>=4.6.0 in /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages (from exceptiongroup>=1->pytest>=7.0.0->pytest-timeout) (4.15.0)
-2026-04-03T05:38:04.6072537Z Downloading pytest_timeout-2.4.0-py3-none-any.whl (14 kB)
-2026-04-03T05:38:04.7916333Z Installing collected packages: pytest-timeout
-2026-04-03T05:38:04.8106327Z Successfully installed pytest-timeout-2.4.0
-2026-04-03T05:38:04.8655351Z ##[group]Run pytest tests/ -m "unit" --timeout=300 --tb=short -q
-2026-04-03T05:38:04.8655849Z [36;1mpytest tests/ -m "unit" --timeout=300 --tb=short -q[0m
-2026-04-03T05:38:04.8706157Z shell: /usr/bin/bash -e {0}
-2026-04-03T05:38:04.8706399Z env:
-2026-04-03T05:38:04.8706657Z   pythonLocation: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-03T05:38:04.8707075Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib/pkgconfig
-2026-04-03T05:38:04.8707485Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-03T05:38:04.8707856Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-03T05:38:04.8708221Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-03T05:38:04.8708587Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib
-2026-04-03T05:38:04.8708890Z ##[endgroup]
-2026-04-03T05:38:26.2781699Z ........................................................................ [  1%]
-2026-04-03T05:38:26.5607137Z ........................................................................ [  2%]
-2026-04-03T05:38:26.7931542Z ........................................................................ [  4%]
-2026-04-03T05:38:27.1921067Z ........................................................................ [  5%]
-2026-04-03T05:38:27.8023243Z ........................................................................ [  6%]
-2026-04-03T05:38:27.9917519Z ........................................................................ [  8%]
-2026-04-03T05:38:28.3163299Z ........................................................................ [  9%]
-2026-04-03T05:38:41.2407141Z ........................................................................ [ 10%]
-2026-04-03T05:38:41.3513095Z ........................................................................ [ 12%]
-2026-04-03T05:38:44.2735092Z ........................................................................ [ 13%]
-2026-04-03T05:38:44.6233211Z ........................................................................ [ 14%]
-2026-04-03T05:38:45.2290334Z ........................................................................ [ 16%]
-2026-04-03T05:38:45.4945838Z ........................................................................ [ 17%]
-2026-04-03T05:38:46.4430717Z ........................................................................ [ 18%]
-2026-04-03T05:38:48.5734965Z ........................................................................ [ 20%]
-2026-04-03T05:38:48.6863252Z ........................................................................ [ 21%]
-2026-04-03T05:38:50.6119821Z ..........................................F
-2026-04-03T05:38:50.6120526Z =================================== FAILURES ===================================
-2026-04-03T05:38:50.6121485Z ____ TestTryHtmlPageIntegration.test_try_html_page_deprecated_returns_none _____
-2026-04-03T05:38:50.6122930Z tests/test_espn_wpw_scraper.py:157: in test_try_html_page_deprecated_returns_none
-2026-04-03T05:38:50.6123663Z     result = scraper._try_html_page(2026)
-2026-04-03T05:38:50.6124322Z E   AttributeError: 'ESPNPicksScraper' object has no attribute '_try_html_page'
-2026-04-03T05:38:50.6125078Z =============================== warnings summary ===============================
-2026-04-03T05:38:50.6125585Z tests/test_full_ml_pipeline.py:18
-2026-04-03T05:38:50.6126935Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/tests/test_full_ml_pipeline.py:18: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-2026-04-03T05:38:50.6128302Z     pytestmark = pytest.mark.slow
-2026-04-03T05:38:50.6128491Z 
-2026-04-03T05:38:50.6128849Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
-2026-04-03T05:38:50.6129610Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
-2026-04-03T05:38:50.6130732Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_probabilities_not_mutated_by_optimizer
-2026-04-03T05:38:50.6131509Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_has_all_required_fields
-2026-04-03T05:38:50.6132512Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_values_match_environment
-2026-04-03T05:38:50.6133220Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_serialization
-2026-04-03T05:38:50.6134708Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/src/optimization/pool_optimizer.py:223: DeprecationWarning: PoolOptimizer._build_round_probabilities is using a heuristic fallback. Pass model_round_probs from MC simulation to the constructor for accurate round advancement probabilities.
-2026-04-03T05:38:50.6136053Z     model_round_probs = self._build_round_probabilities()
-2026-04-03T05:38:50.6136287Z 
-2026-04-03T05:38:50.6136489Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2026-04-03T05:38:50.6136937Z =========================== short test summary info ============================
-2026-04-03T05:38:50.6138007Z FAILED tests/test_espn_wpw_scraper.py::TestTryHtmlPageIntegration::test_try_html_page_deprecated_returns_none - AttributeError: 'ESPNPicksScraper' object has no attribute '_try_html_page'
-2026-04-03T05:38:50.6138889Z !!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
-2026-04-03T05:38:50.6139281Z 1 failed, 1194 passed, 504 deselected, 7 warnings in 43.75s
-2026-04-03T05:38:51.7430664Z ##[error]Process completed with exit code 1.
-2026-04-03T05:38:51.7516865Z Post job cleanup.
-2026-04-03T05:38:51.7599252Z Post job cleanup.
-2026-04-03T05:38:51.8575553Z [command]/usr/bin/git version
-2026-04-03T05:38:51.8617333Z git version 2.53.0
-2026-04-03T05:38:51.8670191Z Temporarily overriding HOME='/home/runner/work/_temp/dd6cd9a9-b4b1-4ee4-9fa3-122a3929ee43' before making global git config changes
-2026-04-03T05:38:51.8671563Z Adding repository directory to the temporary git global config as a safe directory
-2026-04-03T05:38:51.8677017Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/march-madness-forecaster/march-madness-forecaster
-2026-04-03T05:38:51.8713870Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
-2026-04-03T05:38:51.8745809Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
-2026-04-03T05:38:51.8994887Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
-2026-04-03T05:38:51.9016250Z http.https://github.com/.extraheader
-2026-04-03T05:38:51.9029407Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
-2026-04-03T05:38:51.9059901Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
-2026-04-03T05:38:51.9286302Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
-2026-04-03T05:38:51.9318580Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
-2026-04-03T05:38:51.9679360Z Cleaning up orphan processes
-2026-04-03T05:38:51.9990813Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-python@v5. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+### FAILED JOB: Full Test Suite
+2026-04-06T01:50:59.8232907Z  + six==1.17.0
+2026-04-06T01:50:59.8233193Z  + soupsieve==2.8.3
+2026-04-06T01:50:59.8233487Z  + sportsipy==0.6.0
+2026-04-06T01:50:59.8233783Z  + sympy==1.14.0
+2026-04-06T01:50:59.8234060Z  + text-unidecode==1.3
+2026-04-06T01:50:59.8234369Z  + threadpoolctl==3.6.0
+2026-04-06T01:50:59.8234648Z  + tomli==2.4.1
+2026-04-06T01:50:59.8234891Z  + torch==2.11.0+cpu
+2026-04-06T01:50:59.8235171Z  + torch-geometric==2.7.0
+2026-04-06T01:50:59.8235678Z  + tqdm==4.67.3
+2026-04-06T01:50:59.8235950Z  + typing-extensions==4.15.0
+2026-04-06T01:50:59.8236284Z  + typing-inspection==0.4.2
+2026-04-06T01:50:59.8236589Z  + tzdata==2026.1
+2026-04-06T01:50:59.8236838Z  + urllib3==2.6.3
+2026-04-06T01:50:59.8237208Z  + webencodings==0.5.1
+2026-04-06T01:50:59.8237484Z  + xgboost==2.1.4
+2026-04-06T01:50:59.8237734Z  + xxhash==3.6.0
+2026-04-06T01:50:59.8237985Z  + yarl==1.23.0
+2026-04-06T01:50:59.9232555Z Using Python 3.10.20 environment at: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-06T01:51:00.4799291Z Resolved 50 packages in 554ms
+2026-04-06T01:51:00.4807765Z    Building march-madness-forecaster @ file:///home/runner/work/march-madness-forecaster/march-madness-forecaster
+2026-04-06T01:51:00.7263589Z       Built march-madness-forecaster @ file:///home/runner/work/march-madness-forecaster/march-madness-forecaster
+2026-04-06T01:51:00.7276554Z Prepared 1 package in 247ms
+2026-04-06T01:51:00.7297423Z Installed 1 package in 1ms
+2026-04-06T01:51:00.7298385Z  + march-madness-forecaster==0.1.0 (from file:///home/runner/work/march-madness-forecaster/march-madness-forecaster)
+2026-04-06T01:51:00.7473106Z Using Python 3.10.20 environment at: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-06T01:51:00.8065017Z Resolved 9 packages in 57ms
+2026-04-06T01:51:00.8098745Z Prepared 1 package in 3ms
+2026-04-06T01:51:00.8115751Z Installed 1 package in 1ms
+2026-04-06T01:51:00.8116171Z  + pytest-timeout==2.4.0
+2026-04-06T01:51:00.8194500Z ##[group]Run pytest tests/ -m "unit" --timeout=300 --cov=src --cov-report=term-missing --tb=short -q
+2026-04-06T01:51:00.8195162Z [36;1mpytest tests/ -m "unit" --timeout=300 --cov=src --cov-report=term-missing --tb=short -q[0m
+2026-04-06T01:51:00.8223129Z shell: /usr/bin/bash -e {0}
+2026-04-06T01:51:00.8223352Z env:
+2026-04-06T01:51:00.8223596Z   pythonLocation: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-06T01:51:00.8224038Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib/pkgconfig
+2026-04-06T01:51:00.8224456Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-06T01:51:00.8224808Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-06T01:51:00.8225174Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-06T01:51:00.8225822Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib
+2026-04-06T01:51:00.8226166Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+2026-04-06T01:51:00.8226438Z ##[endgroup]
+2026-04-06T01:51:34.2964926Z ........................................................................ [  1%]
+2026-04-06T01:51:34.6982783Z ........................................................................ [  2%]
+2026-04-06T01:51:35.0829803Z ........................................................................ [  3%]
+2026-04-06T01:51:35.8104083Z ........................................................................ [  5%]
+2026-04-06T01:51:36.7173801Z ........................................................................ [  6%]
+2026-04-06T01:51:37.0925796Z ........................................................................ [  7%]
+2026-04-06T01:51:37.6876840Z ........................................................................ [  9%]
+2026-04-06T01:51:51.0456857Z ........................................................................ [ 10%]
+2026-04-06T01:51:51.2113952Z ........................................................................ [ 11%]
+2026-04-06T01:51:56.6443286Z ........................................................................ [ 13%]
+2026-04-06T01:51:57.1985661Z ........................................................................ [ 14%]
+2026-04-06T01:51:58.1711637Z ........................................................................ [ 15%]
+2026-04-06T01:51:58.5253737Z ........................................................................ [ 16%]
+2026-04-06T01:51:59.2045482Z ........................................................................ [ 18%]
+2026-04-06T01:52:01.6806792Z ........................................................................ [ 19%]
+2026-04-06T01:52:01.8645952Z ........................................................................ [ 20%]
+2026-04-06T01:52:02.7030670Z ........................................................................ [ 22%]
+2026-04-06T01:52:03.2635289Z ........................................................................ [ 23%]
+2026-04-06T01:52:03.8560186Z ........................................................................ [ 24%]
+2026-04-06T01:52:04.1978263Z ........................................................................ [ 26%]
+2026-04-06T01:52:04.6417374Z ........................................................................ [ 27%]
+2026-04-06T01:52:13.7000647Z ........................................................................ [ 28%]
+2026-04-06T01:52:15.9678700Z ........................................................................ [ 30%]
+2026-04-06T01:52:16.1501726Z ........................................................................ [ 31%]
+2026-04-06T01:52:16.4480161Z ........................................................................ [ 32%]
+2026-04-06T01:52:34.0384162Z ...................................sss.................................. [ 33%]
+2026-04-06T01:52:34.3423474Z ........................................................................ [ 35%]
+2026-04-06T01:52:34.9279143Z ........................................................................ [ 36%]
+2026-04-06T01:52:38.9545761Z ........................................................................ [ 37%]
+2026-04-06T01:52:39.2632127Z ........................................................................ [ 39%]
+2026-04-06T01:52:39.4428892Z ........................................................................ [ 40%]
+2026-04-06T01:52:39.9945586Z ........................................................................ [ 41%]
+2026-04-06T01:52:44.3165797Z ........................................................................ [ 43%]
+2026-04-06T01:52:44.4983801Z ........................................................................ [ 44%]
+2026-04-06T01:52:46.1736585Z ...............................................................ss....... [ 45%]
+2026-04-06T01:54:14.7803231Z ........................................................................ [ 47%]
+2026-04-06T01:54:15.1035315Z ........................................................................ [ 48%]
+2026-04-06T01:54:15.3141534Z ........................................................................ [ 49%]
+2026-04-06T01:54:18.4766457Z ...........................................................F
+2026-04-06T01:54:18.4767161Z =================================== FAILURES ===================================
+2026-04-06T01:54:18.4767859Z ______________ TestPipelineContractFlow.test_init_contracts_exist ______________
+2026-04-06T01:54:18.4768704Z tests/test_phases_7_to_10.py:514: in test_init_contracts_exist
+2026-04-06T01:54:18.4769852Z     from src.pipeline.stages import (
+2026-04-06T01:54:18.4771467Z E   ImportError: cannot import name 'OptimizedHyperparams' from 'src.pipeline.stages' (/home/runner/work/march-madness-forecaster/march-madness-forecaster/src/pipeline/stages/__init__.py)
+2026-04-06T01:54:18.4773372Z =============================== warnings summary ===============================
+2026-04-06T01:54:18.4774127Z tests/test_full_ml_pipeline.py:18
+2026-04-06T01:54:18.4776741Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/tests/test_full_ml_pipeline.py:18: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+2026-04-06T01:54:18.4778725Z     pytestmark = pytest.mark.slow
+2026-04-06T01:54:18.4778995Z 
+2026-04-06T01:54:18.4779176Z tests/test_baseline_evaluation.py: 8 warnings
+2026-04-06T01:54:18.4779647Z tests/test_model_selection.py: 94 warnings
+2026-04-06T01:54:18.4780101Z tests/test_phases_7_to_10.py: 3 warnings
+2026-04-06T01:54:18.4781497Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1196: UserWarning: l1_ratio parameter is only used when penalty is 'elasticnet'. Got (penalty=l2)
+2026-04-06T01:54:18.4782875Z     warnings.warn(
+2026-04-06T01:54:18.4783061Z 
+2026-04-06T01:54:18.4783594Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
+2026-04-06T01:54:18.4784740Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
+2026-04-06T01:54:18.4786186Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_probabilities_not_mutated_by_optimizer
+2026-04-06T01:54:18.4813098Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_has_all_required_fields
+2026-04-06T01:54:18.4814361Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_values_match_environment
+2026-04-06T01:54:18.4815712Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_serialization
+2026-04-06T01:54:18.4818080Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/src/optimization/pool_optimizer.py:223: DeprecationWarning: PoolOptimizer._build_round_probabilities is using a heuristic fallback. Pass model_round_probs from MC simulation to the constructor for accurate round advancement probabilities.
+2026-04-06T01:54:18.4820248Z     model_round_probs = self._build_round_probabilities()
+2026-04-06T01:54:18.4820929Z 
+2026-04-06T01:54:18.4821548Z tests/test_massey_ordinals_integration.py::TestKaggleDownloaderModule::test_kaggle_api_available_without_credentials
+2026-04-06T01:54:18.4823105Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/kaggle/api_client.py:244: DeprecationWarning: invalid escape sequence '\['
+2026-04-06T01:54:18.4824173Z     sub_kls = re.match('list\[(.*)\]', klass).group(1)
+2026-04-06T01:54:18.4824525Z 
+2026-04-06T01:54:18.4825129Z tests/test_massey_ordinals_integration.py::TestKaggleDownloaderModule::test_kaggle_api_available_without_credentials
+2026-04-06T01:54:18.4826837Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/kaggle/api_client.py:249: DeprecationWarning: invalid escape sequence '\('
+2026-04-06T01:54:18.4827933Z     sub_kls = re.match('dict\(([^,]*), (.*)\)', klass).group(2)
+2026-04-06T01:54:18.4828301Z 
+2026-04-06T01:54:18.4828930Z tests/test_massey_ordinals_integration.py::TestKaggleDownloaderModule::test_kaggle_api_available_without_credentials
+2026-04-06T01:54:18.4830413Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/kaggle/api/kaggle_api.py:1055: DeprecationWarning: invalid escape sequence '\&'
+2026-04-06T01:54:18.4831627Z     """Creates (aka \&quot;drops\&quot;) a new file into the inbox.  # noqa: E501
+2026-04-06T01:54:18.4832093Z 
+2026-04-06T01:54:18.4832701Z tests/test_massey_ordinals_integration.py::TestKaggleDownloaderModule::test_kaggle_api_available_without_credentials
+2026-04-06T01:54:18.4834439Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/kaggle/api/kaggle_api.py:1076: DeprecationWarning: invalid escape sequence '\&'
+2026-04-06T01:54:18.4835916Z     """Creates (aka \&quot;drops\&quot;) a new file into the inbox.  # noqa: E501
+2026-04-06T01:54:18.4836392Z 
+2026-04-06T01:54:18.4836910Z tests/test_phase8_statistician_audit.py::TestSourceAgreementStatistics::test_p_value_based_weighting
+2026-04-06T01:54:18.4838583Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/scipy/stats/_stats_py.py:5445: ConstantInputWarning: An input array is constant; the correlation coefficient is not defined.
+2026-04-06T01:54:18.4839961Z     warnings.warn(stats.ConstantInputWarning(warn_msg))
+2026-04-06T01:54:18.4840326Z 
+2026-04-06T01:54:18.4840635Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2026-04-06T01:54:18.4841334Z =========================== short test summary info ============================
+2026-04-06T01:54:18.4843292Z FAILED tests/test_phases_7_to_10.py::TestPipelineContractFlow::test_init_contracts_exist - ImportError: cannot import name 'OptimizedHyperparams' from 'src.pipeline.stages' (/home/runner/work/march-madness-forecaster/march-madness-forecaster/src/pipeline/stages/__init__.py)
+2026-04-06T01:54:18.4845444Z !!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+2026-04-06T01:54:18.4846186Z 1 failed, 2790 passed, 5 skipped, 507 deselected, 117 warnings in 195.02s (0:03:15)
+2026-04-06T01:54:19.7298434Z ##[error]Process completed with exit code 1.
+2026-04-06T01:54:19.7382473Z Post job cleanup.
+2026-04-06T01:54:19.7464321Z Post job cleanup.
+2026-04-06T01:54:19.8411755Z [command]/usr/bin/git version
+2026-04-06T01:54:19.8447581Z git version 2.53.0
+2026-04-06T01:54:19.8497890Z Temporarily overriding HOME='/home/runner/work/_temp/287bfc21-5a86-4f3f-a792-d0cfa3f5b036' before making global git config changes
+2026-04-06T01:54:19.8498913Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-06T01:54:19.8504977Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/march-madness-forecaster/march-madness-forecaster
+2026-04-06T01:54:19.8539053Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-06T01:54:19.8571003Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-06T01:54:19.8791796Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-06T01:54:19.8811632Z http.https://github.com/.extraheader
+2026-04-06T01:54:19.8823770Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-04-06T01:54:19.8853548Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-06T01:54:19.9067523Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-06T01:54:19.9097079Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-06T01:54:19.9442789Z Cleaning up orphan processes
+2026-04-06T01:54:19.9814479Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-python@v5, astral-sh/setup-uv@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+
+
+### FAILED JOB: Dependency Audit
+2026-04-06T01:50:52.3752579Z  Downloaded sympy
+2026-04-06T01:50:54.2091146Z  Downloaded pandas
+2026-04-06T01:50:54.6116548Z  Downloaded scipy
+2026-04-06T01:50:55.3615904Z  Downloaded xgboost
+2026-04-06T01:50:55.9563115Z  Downloaded nvidia-nccl-cu12
+2026-04-06T01:50:58.3918221Z  Downloaded torch
+2026-04-06T01:50:58.3922251Z Prepared 83 packages in 8.19s
+2026-04-06T01:50:59.0972333Z Installed 83 packages in 703ms
+2026-04-06T01:50:59.0972962Z  + aiohappyeyeballs==2.6.1
+2026-04-06T01:50:59.0973357Z  + aiohttp==3.13.5
+2026-04-06T01:50:59.0973982Z  + aiosignal==1.4.0
+2026-04-06T01:50:59.0974612Z  + annotated-types==0.7.0
+2026-04-06T01:50:59.0974982Z  + async-timeout==5.0.1
+2026-04-06T01:50:59.0975331Z  + attrs==26.1.0
+2026-04-06T01:50:59.0975650Z  + beautifulsoup4==4.14.3
+2026-04-06T01:50:59.0975996Z  + bleach==6.3.0
+2026-04-06T01:50:59.0976285Z  + bs4==0.0.2
+2026-04-06T01:50:59.0976559Z  + cbbpy==2.0.2
+2026-04-06T01:50:59.0978944Z  + certifi==2026.2.25
+2026-04-06T01:50:59.0979263Z  + cffi==2.0.0
+2026-04-06T01:50:59.0979584Z  + charset-normalizer==3.4.7
+2026-04-06T01:50:59.0979958Z  + contourpy==1.3.2
+2026-04-06T01:50:59.0980259Z  + coverage==7.13.5
+2026-04-06T01:50:59.0980563Z  + cssselect==1.4.0
+2026-04-06T01:50:59.0980864Z  + curl-cffi==0.15.0
+2026-04-06T01:50:59.0981176Z  + cycler==0.12.1
+2026-04-06T01:50:59.0981491Z  + exceptiongroup==1.3.1
+2026-04-06T01:50:59.0981836Z  + filelock==3.25.2
+2026-04-06T01:50:59.0982373Z  + fonttools==4.62.1
+2026-04-06T01:50:59.0983232Z  + frozenlist==1.8.0
+2026-04-06T01:50:59.0983616Z  + fsspec==2026.3.0
+2026-04-06T01:50:59.0984066Z  + idna==3.11
+2026-04-06T01:50:59.0984423Z  + iniconfig==2.3.0
+2026-04-06T01:50:59.0984777Z  + jinja2==3.1.6
+2026-04-06T01:50:59.0985135Z  + joblib==1.5.3
+2026-04-06T01:50:59.0985489Z  + kaggle==1.6.17
+2026-04-06T01:50:59.0985805Z  + kagglehub==1.0.0
+2026-04-06T01:50:59.0986178Z  + kagglesdk==0.1.16
+2026-04-06T01:50:59.0986525Z  + kiwisolver==1.5.0
+2026-04-06T01:50:59.0986892Z  + lightgbm==4.6.0
+2026-04-06T01:50:59.0987198Z  + lxml==6.0.2
+2026-04-06T01:50:59.0987567Z  + markdown-it-py==4.0.0
+2026-04-06T01:50:59.0987986Z  + markupsafe==3.0.3
+2026-04-06T01:50:59.0988357Z  + matplotlib==3.10.8
+2026-04-06T01:50:59.0988741Z  + mdurl==0.1.2
+2026-04-06T01:50:59.0989083Z  + mpmath==1.3.0
+2026-04-06T01:50:59.0989436Z  + multidict==6.7.1
+2026-04-06T01:50:59.0989790Z  + networkx==3.4.2
+2026-04-06T01:50:59.0990145Z  + numpy==1.26.4
+2026-04-06T01:50:59.0990535Z  + nvidia-nccl-cu12==2.29.7
+2026-04-06T01:50:59.0990950Z  + packaging==26.0
+2026-04-06T01:50:59.0991311Z  + pandas==2.1.4
+2026-04-06T01:50:59.0991661Z  + pillow==12.2.0
+2026-04-06T01:50:59.0992205Z  + pluggy==1.6.0
+2026-04-06T01:50:59.0992540Z  + propcache==0.4.1
+2026-04-06T01:50:59.0992876Z  + protobuf==7.34.1
+2026-04-06T01:50:59.0993189Z  + psutil==7.2.2
+2026-04-06T01:50:59.0993561Z  + pycparser==3.0
+2026-04-06T01:50:59.0993877Z  + pydantic==2.12.5
+2026-04-06T01:50:59.0994255Z  + pydantic-core==2.41.5
+2026-04-06T01:50:59.0994663Z  + pygments==2.20.0
+2026-04-06T01:50:59.0995027Z  + pyparsing==3.3.2
+2026-04-06T01:50:59.0995389Z  + pyquery==2.0.1
+2026-04-06T01:50:59.0995707Z  + pytest==9.0.2
+2026-04-06T01:50:59.0996053Z  + pytest-cov==7.1.0
+2026-04-06T01:50:59.0996801Z  + python-dateutil==2.9.0.post0
+2026-04-06T01:50:59.0997366Z  + python-slugify==8.0.4
+2026-04-06T01:50:59.0997895Z  + pytz==2023.4
+2026-04-06T01:50:59.0998412Z  + pyyaml==6.0.3
+2026-04-06T01:50:59.0998836Z  + requests==2.33.1
+2026-04-06T01:50:59.0999587Z  + rich==14.3.3
+2026-04-06T01:50:59.0999879Z  + scikit-learn==1.6.1
+2026-04-06T01:50:59.1000388Z  + scipy==1.11.4
+2026-04-06T01:50:59.1000837Z  + six==1.17.0
+2026-04-06T01:50:59.1001106Z  + soupsieve==2.8.3
+2026-04-06T01:50:59.1001382Z  + sportsipy==0.6.0
+2026-04-06T01:50:59.1001729Z  + sympy==1.14.0
+2026-04-06T01:50:59.1002214Z  + text-unidecode==1.3
+2026-04-06T01:50:59.1002549Z  + threadpoolctl==3.6.0
+2026-04-06T01:50:59.1002936Z  + tomli==2.4.1
+2026-04-06T01:50:59.1003218Z  + torch==2.11.0+cpu
+2026-04-06T01:50:59.1003582Z  + torch-geometric==2.7.0
+2026-04-06T01:50:59.1003957Z  + tqdm==4.67.3
+2026-04-06T01:50:59.1004262Z  + typing-extensions==4.15.0
+2026-04-06T01:50:59.1004605Z  + typing-inspection==0.4.2
+2026-04-06T01:50:59.1005005Z  + tzdata==2026.1
+2026-04-06T01:50:59.1005350Z  + urllib3==2.6.3
+2026-04-06T01:50:59.1005758Z  + webencodings==0.5.1
+2026-04-06T01:50:59.1006200Z  + xgboost==2.1.4
+2026-04-06T01:50:59.1006536Z  + xxhash==3.6.0
+2026-04-06T01:50:59.1006872Z  + yarl==1.23.0
+2026-04-06T01:50:59.1215924Z Using Python 3.10.20 environment at: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-06T01:50:59.6269135Z Resolved 29 packages in 503ms
+2026-04-06T01:50:59.7060670Z Prepared 14 packages in 78ms
+2026-04-06T01:50:59.7137363Z Installed 14 packages in 7ms
+2026-04-06T01:50:59.7137777Z  + boolean-py==5.0
+2026-04-06T01:50:59.7138105Z  + cachecontrol==0.14.4
+2026-04-06T01:50:59.7138461Z  + cyclonedx-python-lib==11.7.0
+2026-04-06T01:50:59.7138850Z  + defusedxml==0.7.1
+2026-04-06T01:50:59.7139179Z  + license-expression==30.4.4
+2026-04-06T01:50:59.7139551Z  + msgpack==1.1.2
+2026-04-06T01:50:59.7139873Z  + packageurl-python==0.17.6
+2026-04-06T01:50:59.7140279Z  + pip-api==0.0.34
+2026-04-06T01:50:59.7140733Z  + pip-audit==2.10.0
+2026-04-06T01:50:59.7141091Z  + pip-requirements-parser==32.0.1
+2026-04-06T01:50:59.7141538Z  + platformdirs==4.9.4
+2026-04-06T01:50:59.7141913Z  + py-serializable==2.1.0
+2026-04-06T01:50:59.7142539Z  + sortedcontainers==2.4.0
+2026-04-06T01:50:59.7142932Z  + tomli-w==1.2.0
+2026-04-06T01:50:59.7226814Z ##[group]Run pip-audit --strict --skip-editable --ignore-vuln CVE-2026-4539 --ignore-package torch --ignore-package torch-geometric
+2026-04-06T01:50:59.7227806Z [36;1mpip-audit --strict --skip-editable --ignore-vuln CVE-2026-4539 --ignore-package torch --ignore-package torch-geometric[0m
+2026-04-06T01:50:59.7255556Z shell: /usr/bin/bash -e {0}
+2026-04-06T01:50:59.7255780Z env:
+2026-04-06T01:50:59.7256029Z   pythonLocation: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-06T01:50:59.7256448Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib/pkgconfig
+2026-04-06T01:50:59.7256865Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-06T01:50:59.7257230Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-06T01:50:59.7257582Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-06T01:50:59.7257944Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib
+2026-04-06T01:50:59.7258322Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+2026-04-06T01:50:59.7258609Z ##[endgroup]
+2026-04-06T01:51:01.4003343Z usage: pip-audit [-h] [-V] [-l] [-r REQUIREMENT] [--locked] [-f FORMAT]
+2026-04-06T01:51:01.4004049Z                  [-s SERVICE] [--osv-url OSV_URL] [-d] [-S]
+2026-04-06T01:51:01.4004577Z                  [--desc [{on,off,auto}]] [--aliases [{on,off,auto}]]
+2026-04-06T01:51:01.4005148Z                  [--cache-dir CACHE_DIR] [--progress-spinner {on,off}]
+2026-04-06T01:51:01.4005702Z                  [--timeout TIMEOUT] [--path PATH] [-v] [--fix]
+2026-04-06T01:51:01.4006201Z                  [--require-hashes] [--index-url INDEX_URL]
+2026-04-06T01:51:01.4006728Z                  [--extra-index-url URL] [--skip-editable] [--no-deps]
+2026-04-06T01:51:01.4007260Z                  [-o FILE] [--ignore-vuln ID] [--disable-pip]
+2026-04-06T01:51:01.4007707Z                  [project_path]
+2026-04-06T01:51:01.4008359Z pip-audit: error: unrecognized arguments: --ignore-package --ignore-package torch-geometric
+2026-04-06T01:51:01.4386458Z ##[error]Process completed with exit code 2.
+2026-04-06T01:51:01.4444549Z Post job cleanup.
+2026-04-06T01:51:01.4526489Z Post job cleanup.
+2026-04-06T01:51:01.5468811Z [command]/usr/bin/git version
+2026-04-06T01:51:01.5504286Z git version 2.53.0
+2026-04-06T01:51:01.5554879Z Temporarily overriding HOME='/home/runner/work/_temp/8b19e79f-d79d-44ef-8ca8-37bac8bb8469' before making global git config changes
+2026-04-06T01:51:01.5556291Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-06T01:51:01.5561241Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/march-madness-forecaster/march-madness-forecaster
+2026-04-06T01:51:01.5595995Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-06T01:51:01.5627473Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-06T01:51:01.5848080Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-06T01:51:01.5867669Z http.https://github.com/.extraheader
+2026-04-06T01:51:01.5879545Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-04-06T01:51:01.5909018Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-06T01:51:01.6133064Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-06T01:51:01.6163193Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-06T01:51:01.6503751Z Cleaning up orphan processes
+2026-04-06T01:51:01.6807516Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-python@v5, astral-sh/setup-uv@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+
+
+### FAILED JOB: CI
+2026-04-06T01:54:27.3750191Z Current runner version: '2.333.1'
+2026-04-06T01:54:27.3775015Z ##[group]Runner Image Provisioner
+2026-04-06T01:54:27.3775853Z Hosted Compute Agent
+2026-04-06T01:54:27.3776379Z Version: 20260213.493
+2026-04-06T01:54:27.3777056Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+2026-04-06T01:54:27.3777707Z Build Date: 2026-02-13T00:28:41Z
+2026-04-06T01:54:27.3778413Z Worker ID: {a3570a68-1e0e-4e4d-8f8b-fd742b200913}
+2026-04-06T01:54:27.3779096Z Azure Region: westcentralus
+2026-04-06T01:54:27.3779677Z ##[endgroup]
+2026-04-06T01:54:27.3781025Z ##[group]Operating System
+2026-04-06T01:54:27.3781678Z Ubuntu
+2026-04-06T01:54:27.3782174Z 24.04.4
+2026-04-06T01:54:27.3782630Z LTS
+2026-04-06T01:54:27.3783359Z ##[endgroup]
+2026-04-06T01:54:27.3783885Z ##[group]Runner Image
+2026-04-06T01:54:27.3784481Z Image: ubuntu-24.04
+2026-04-06T01:54:27.3785148Z Version: 20260329.72.1
+2026-04-06T01:54:27.3786746Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260329.72/images/ubuntu/Ubuntu2404-Readme.md
+2026-04-06T01:54:27.3788203Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260329.72
+2026-04-06T01:54:27.3789111Z ##[endgroup]
+2026-04-06T01:54:27.3791869Z ##[group]GITHUB_TOKEN Permissions
+2026-04-06T01:54:27.3794320Z Actions: write
+2026-04-06T01:54:27.3794932Z ArtifactMetadata: write
+2026-04-06T01:54:27.3795522Z Attestations: write
+2026-04-06T01:54:27.3796143Z Checks: write
+2026-04-06T01:54:27.3796676Z Contents: write
+2026-04-06T01:54:27.3797143Z Deployments: write
+2026-04-06T01:54:27.3797694Z Discussions: write
+2026-04-06T01:54:27.3798315Z Issues: write
+2026-04-06T01:54:27.3798766Z Metadata: read
+2026-04-06T01:54:27.3799328Z Models: read
+2026-04-06T01:54:27.3799779Z Packages: write
+2026-04-06T01:54:27.3800296Z Pages: write
+2026-04-06T01:54:27.3800925Z PullRequests: write
+2026-04-06T01:54:27.3801571Z RepositoryProjects: write
+2026-04-06T01:54:27.3802207Z SecurityEvents: write
+2026-04-06T01:54:27.3803040Z Statuses: write
+2026-04-06T01:54:27.3803725Z ##[endgroup]
+2026-04-06T01:54:27.3805745Z Secret source: Actions
+2026-04-06T01:54:27.3806529Z Prepare workflow directory
+2026-04-06T01:54:27.4155927Z Prepare all required actions
+2026-04-06T01:54:27.4251517Z Complete job name: CI
+2026-04-06T01:54:27.5016478Z ##[group]Run if [[ "failure" != "success" ]]; then
+2026-04-06T01:54:27.5017329Z [36;1mif [[ "failure" != "success" ]]; then[0m
+2026-04-06T01:54:27.5018197Z [36;1m  echo "::error::Fast gate failed — blocking merge"[0m
+2026-04-06T01:54:27.5018938Z [36;1m  exit 1[0m
+2026-04-06T01:54:27.5019417Z [36;1mfi[0m
+2026-04-06T01:54:27.5019976Z [36;1mif [[ "failure" == "failure" ]]; then[0m
+2026-04-06T01:54:27.5020755Z [36;1m  echo "::warning::Full test suite failed — check results"[0m
+2026-04-06T01:54:27.5021442Z [36;1mfi[0m
+2026-04-06T01:54:27.5022037Z [36;1mif [[ "failure" == "failure" ]]; then[0m
+2026-04-06T01:54:27.5022939Z [36;1m  echo "::warning::Dependency audit failed — check results"[0m
+2026-04-06T01:54:27.5023687Z [36;1mfi[0m
+2026-04-06T01:54:27.5024251Z [36;1mecho "Merge gate passed"[0m
+2026-04-06T01:54:27.5440553Z shell: /usr/bin/bash -e {0}
+2026-04-06T01:54:27.5441614Z ##[endgroup]
+2026-04-06T01:54:27.5760486Z ##[error]Fast gate failed — blocking merge
+2026-04-06T01:54:27.5779457Z ##[error]Process completed with exit code 1.
+2026-04-06T01:54:27.5892263Z Cleaning up orphan processes
 

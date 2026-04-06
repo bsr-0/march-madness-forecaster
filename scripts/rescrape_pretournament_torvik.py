@@ -56,6 +56,7 @@ TOURNAMENT_START_DATES = {
     2023: date(2023, 3, 14),
     2024: date(2024, 3, 19),
     2025: date(2025, 3, 18),
+    2026: date(2026, 3, 17),
 }
 
 SEASON_START_MONTH_DAY = (11, 1)
@@ -263,6 +264,14 @@ def main():
         with open(outpath, "w") as f:
             json.dump(payload, f, indent=2)
         logger.info("Wrote %s (%d teams, cutoff=%s)", outpath, len(teams), cutoff)
+
+        # Also write to data/raw/ (pipeline's primary path) if that file exists
+        raw_path = ROOT / "data" / "raw" / f"torvik_{year}.json"
+        if raw_path.exists() or raw_path.parent.exists():
+            with open(raw_path, "w") as f:
+                json.dump(payload, f, indent=2)
+            logger.info("Wrote %s (mirror)", raw_path)
+
         success += 1
 
         if year != years[-1]:
