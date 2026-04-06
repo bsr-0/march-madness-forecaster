@@ -1,22 +1,17 @@
 #!/usr/bin/env python3
-"""Compute pre-tournament barthag from game-level data.
+"""DEPRECATED: Compute pre-tournament barthag from game-level data.
 
-Since we can't scrape barttorvik.com with date filtering from this environment,
-we compute barthag ourselves from the historical game data, using only games
-played BEFORE the NCAA tournament starts.
+This script is DEPRECATED. Use rescrape_pretournament_torvik.py instead,
+which fetches real Torvik ratings from barttorvik.com with pre-tournament
+date filtering.
 
-Method:
-1. Load all games from historical_games_{year}.json
-2. Filter to games before tournament start date
-3. Estimate possessions per game using the Kenpom formula
-4. Compute raw offensive/defensive efficiency (points per 100 possessions)
-5. Run iterative adjustment to account for opponent strength (15 iterations)
-6. Compute barthag from adjusted efficiencies using the Pythagorean formula:
-   barthag = AdjOE^11.5 / (AdjOE^11.5 + AdjDE^11.5)
-7. Overwrite data/raw/historical/torvik_{year}.json with pre-tournament data
+This script's local approximation (Pythagorean formula with iterative
+opponent adjustment) correlates at only r=0.73 with real Torvik ratings
+and has catastrophic outliers (0.4+ barthag errors for tournament teams).
+The backtest should use real Torvik data, not this approximation.
 
-The Pythagorean exponent of 11.5 matches Torvik's methodology for tempo-free
-efficiency ratings.
+The computed four-factor files (compute_pretournament_four_factors.py) are
+NOT affected — four factors are direct box-score aggregates and remain valid.
 """
 
 import json
@@ -578,7 +573,25 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--year", type=int, help="Single year")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Override deprecation guard (use only if rescraper is unavailable)",
+    )
     args = parser.parse_args()
+
+    if not args.force:
+        print(
+            "ERROR: This script is DEPRECATED.\n"
+            "\n"
+            "  The local barthag approximation correlates at only r=0.73 with real\n"
+            "  Torvik ratings. Use rescrape_pretournament_torvik.py instead, which\n"
+            "  fetches real pre-tournament ratings from barttorvik.com.\n"
+            "\n"
+            "  If the rescraper is unavailable, re-run with --force to override.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     years = [args.year] if args.year else sorted(TOURNAMENT_START_DATES.keys())
 
