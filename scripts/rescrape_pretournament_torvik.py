@@ -5,16 +5,19 @@ The existing historical torvik_{year}.json files may contain END-OF-SEASON
 ratings that include tournament game results — a look-ahead bias that
 invalidates any backtest using these ratings for pre-tournament predictions.
 
-This script re-fetches ratings from barttorvik.com's JSON endpoint using
-date parameters to filter to pre-tournament games only.  The JSON endpoint
-(`{year}_team_results.json`) bypasses the Cloudflare browser-verification
-challenge that blocks the CSV endpoint (`trank.php?csv=1`).
+Strategy (in order):
+  1. trank.php CSV with date filtering — returns ratings AND four factors.
+     Requires browser-like headers; blocked by Cloudflare in some environments.
+  2. JSON endpoint ({year}_team_results.json) with date filtering — returns
+     ratings only (no four factors). Bypasses Cloudflare reliably.
 
 Usage:
     python scripts/rescrape_pretournament_torvik.py [--year YEAR] [--dry-run] [--delay 3]
 """
 
 import argparse
+import csv
+import io
 import json
 import logging
 import sys
@@ -66,10 +69,23 @@ OUTPUT_DIR = ROOT / "data" / "raw" / "historical"
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
     ),
     "Referer": "https://barttorvik.com/",
 }
+
+# Extra headers for trank.php CSV (needs to look more like a real browser)
+TRANK_HEADERS = {
+    **HEADERS,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Referer": "https://barttorvik.com/trank.php",
+    "Connection": "keep-alive",
+}
+
+# Rate percentage threshold: values above this are in percentage form (e.g. 55.0 = 55%)
+_RATE_PCT_THRESHOLD = 1.5
 
 # Column indices in the JSON array rows, derived from barttorvik data dictionary.
 COL_RANK = 0
@@ -114,6 +130,175 @@ def _build_date_params(year: int) -> dict:
         "state": "All",
         "mingames": 0,
     }
+
+
+def _safe_rate(val, default=0.0) -> float:
+    """Parse a rate value, converting from percentage form if needed."""
+    v = _safe_float(val, default)
+    if v > _RATE_PCT_THRESHOLD:
+        return v / 100.0
+    return v
+
+
+def fetch_trank_csv(year: int, retries: int = 2) -> list[dict] | None:
+    """Fetch pre-tournament ratings + four factors from trank.php CSV.
+
+    Returns list of team dicts with four factors populated, or None if
+    Cloudflare blocks the request or the endpoint is unavailable.
+    """
+    date_params = _build_date_params(year)
+    params = {
+        "year": year,
+        "csv": 1,
+        "conyes": 1,
+        "type": "All",
+        "top": 0,
+        "begin": date_params["begin"],
+        "end": date_params["end"],
+    }
+
+    for attempt in range(retries):
+        try:
+            resp = requests.get(
+                "https://barttorvik.com/trank.php",
+                headers=TRANK_HEADERS,
+                params=params,
+                timeout=45,
+            )
+            resp.raise_for_status()
+            text = resp.text
+
+            # Detect Cloudflare challenge page
+            if "<html" in text[:500].lower() or "checking your browser" in text[:500].lower():
+                logger.warning("[trank CSV] Cloudflare challenge for %d — falling back to JSON", year)
+                return None
+
+            return _parse_trank_csv(text, year)
+
+        except requests.RequestException as e:
+            if attempt < retries - 1:
+                wait = 2 ** (attempt + 1)
+                logger.warning("[trank CSV] Attempt %d failed: %s. Retrying in %ds...", attempt + 1, e, wait)
+                time.sleep(wait)
+            else:
+                logger.warning("[trank CSV] All attempts failed for %d: %s — falling back to JSON", year, e)
+
+    return None
+
+
+def _parse_trank_csv(text: str, year: int) -> list[dict] | None:
+    """Parse trank.php CSV text into team dicts with four factors."""
+    reader = csv.reader(io.StringIO(text))
+    header = None
+
+    _KNOWN_HEADERS = frozenset(
+        {
+            "team",
+            "rank",
+            "rk",
+            "conf",
+            "conference",
+            "barthag",
+            "adj_oe",
+            "adj_o",
+            "adjoe",
+            "adj_de",
+            "adj_d",
+            "adjde",
+            "adj_t",
+            "off_efg",
+            "off_efg%",
+            "off_to",
+            "off_to%",
+            "off_or",
+            "off_or%",
+            "off_ftr",
+            "off_ftr%",
+            "def_efg",
+            "def_efg%",
+            "def_to",
+            "def_to%",
+            "def_or",
+            "def_or%",
+            "def_ftr",
+            "def_ftr%",
+            "efg_o",
+            "efg_d",
+            "tor_o",
+            "tor_d",
+            "orb_o",
+            "orb_d",
+            "ftr_o",
+            "ftr_d",
+            "wab",
+            "tempo",
+        }
+    )
+
+    teams = []
+    for row_num, row in enumerate(reader):
+        if row_num == 0:
+            normalized = [h.strip().lstrip("\ufeff").lower().replace(" ", "_") for h in row]
+            matches = sum(1 for c in normalized if c in _KNOWN_HEADERS)
+            if matches >= 3:
+                header = {c: i for i, c in enumerate(normalized)}
+                continue
+            header = {}
+
+        if len(row) < 8:
+            continue
+
+        try:
+
+            def _col(names, default_idx, default_val=0.0):
+                if header:
+                    for n in names if isinstance(names, (list, tuple)) else [names]:
+                        if n in header:
+                            val = row[header[n]].strip()
+                            return float(val) if val else default_val
+                if len(row) > default_idx and row[default_idx].strip():
+                    return float(row[default_idx].strip())
+                return default_val
+
+            team_name = row[header.get("team", 1)].strip() if header else row[1].strip()
+            conf = (
+                row[header.get("conf", header.get("conference", 2))].strip()
+                if header
+                else (row[2].strip() if len(row) > 2 else "")
+            )
+            tid = normalize_team_id(team_name)
+
+            teams.append(
+                {
+                    "team_id": tid,
+                    "team_name": team_name,
+                    "name": team_name,
+                    "conference": conf,
+                    "t_rank": int(_col(("rank", "rk"), 0, 999)),
+                    "barthag": _col("barthag", 5, 0.5),
+                    "adj_offensive_efficiency": _col(("adj_o", "adj_oe", "adjoe"), 3, 100.0),
+                    "adj_defensive_efficiency": _col(("adj_d", "adj_de", "adjde"), 4, 100.0),
+                    "adj_tempo": _col(("adj_t", "tempo"), 6, 68.0),
+                    "effective_fg_pct": _safe_rate(_col(("off_efg", "off_efg%", "efg_o"), 20)),
+                    "turnover_rate": _safe_rate(_col(("off_to", "off_to%", "tor_o"), 21)),
+                    "offensive_reb_rate": _safe_rate(_col(("off_or", "off_or%", "orb_o"), 22)),
+                    "free_throw_rate": _safe_rate(_col(("off_ftr", "off_ftr%", "ftr_o"), 23)),
+                    "opp_effective_fg_pct": _safe_rate(_col(("def_efg", "def_efg%", "efg_d"), 24)),
+                    "opp_turnover_rate": _safe_rate(_col(("def_to", "def_to%", "tor_d"), 25)),
+                    "defensive_reb_rate": _safe_rate(_col(("def_or", "off_or_d", "orb_d"), 26)),
+                    "opp_free_throw_rate": _safe_rate(_col(("def_ftr", "def_ft_rate", "ftr_d"), 27)),
+                }
+            )
+        except Exception as e:
+            logger.debug("Error parsing trank CSV row %d: %s", row_num, e)
+            continue
+
+    if len(teams) < 100:
+        logger.warning("[trank CSV] Only %d teams for %d (expected 350+) — discarding", len(teams), year)
+        return None
+
+    logger.info("[trank CSV] Parsed %d teams with four factors for %d", len(teams), year)
+    return teams
 
 
 def fetch_json(year: int, retries: int = 3) -> list[list] | None:
@@ -198,7 +383,11 @@ def parse_team_row(row: list) -> dict | None:
 
 
 def fetch_pretournament_ratings(year: int) -> list[dict]:
-    """Fetch and parse pre-tournament T-Rank ratings for a given year."""
+    """Fetch and parse pre-tournament T-Rank ratings for a given year.
+
+    Tries trank.php CSV first (ratings + four factors), falls back to
+    JSON endpoint (ratings only, four factors = 0.0) if Cloudflare blocks.
+    """
     tourney_start = TOURNAMENT_START_DATES[year]
     cutoff = tourney_start - timedelta(days=1)
     logger.info(
@@ -208,6 +397,20 @@ def fetch_pretournament_ratings(year: int) -> list[dict]:
         cutoff,
     )
 
+    # Strategy 1: trank.php CSV (ratings + four factors)
+    teams = fetch_trank_csv(year)
+    if teams:
+        has_ff = any(t.get("effective_fg_pct", 0) > 0 for t in teams[:20])
+        logger.info(
+            "Year %d: %d teams from trank CSV (four_factors=%s, cutoff=%s)",
+            year,
+            len(teams),
+            "yes" if has_ff else "no",
+            cutoff,
+        )
+        return teams
+
+    # Strategy 2: JSON endpoint (ratings only)
     raw = fetch_json(year)
     if raw is None:
         return []
@@ -218,7 +421,7 @@ def fetch_pretournament_ratings(year: int) -> list[dict]:
         if team:
             teams.append(team)
 
-    logger.info("Year %d: parsed %d teams (cutoff=%s)", year, len(teams), cutoff)
+    logger.info("Year %d: %d teams from JSON (no four factors, cutoff=%s)", year, len(teams), cutoff)
     return teams
 
 
