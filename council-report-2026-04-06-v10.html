@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Council Report: Four Factors Validation</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 860px; margin: 0 auto; padding: 24px; background: #fafafa; }
+  h1 { font-size: 1.5rem; margin-bottom: 8px; }
+  h2 { font-size: 1.2rem; margin: 24px 0 12px; color: #333; border-bottom: 2px solid #e0e0e0; padding-bottom: 6px; }
+  h3 { font-size: 1rem; margin: 16px 0 8px; }
+  .question-box { background: #fff; border-left: 4px solid #2563eb; padding: 16px 20px; margin: 16px 0 24px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .question-box p { font-size: 1.05rem; font-weight: 500; }
+  .verdict-box { background: #fff; border: 2px solid #2563eb; border-radius: 8px; padding: 24px; margin: 20px 0; box-shadow: 0 2px 8px rgba(37,99,235,0.1); }
+  .verdict-section { margin-bottom: 20px; }
+  .verdict-section:last-child { margin-bottom: 0; }
+  .verdict-section h3 { color: #2563eb; font-size: 1.05rem; }
+  .first-step { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 16px; margin-top: 16px; }
+  .first-step h3 { color: #92400e; margin-top: 0; }
+  .agreement-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 16px 0; }
+  .advisor-stance { text-align: center; padding: 12px 8px; border-radius: 6px; font-size: 0.85rem; }
+  .stance-agree { background: #dcfce7; border: 1px solid #86efac; }
+  .stance-cautious { background: #fef9c3; border: 1px solid #fde047; }
+  .advisor-tag { font-weight: 600; display: block; margin-bottom: 4px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+  .tag-contrarian { color: #dc2626; }
+  .tag-fp { color: #16a34a; }
+  .tag-expansionist { color: #ca8a04; }
+  .tag-outsider { color: #2563eb; }
+  .tag-executor { color: #9333ea; }
+  details { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; margin: 8px 0; }
+  details summary { padding: 12px 16px; cursor: pointer; font-weight: 500; font-size: 0.95rem; user-select: none; }
+  details summary:hover { background: #f9fafb; }
+  details .content { padding: 0 16px 16px; font-size: 0.92rem; color: #374151; }
+  .peer-highlight { background: #fef2f2; border-left: 3px solid #ef4444; padding: 12px 16px; margin: 8px 0; border-radius: 0 4px 4px 0; font-size: 0.9rem; }
+  .peer-highlight strong { color: #991b1b; }
+  .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 0.8rem; color: #9ca3af; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>LLM Council Report</h1>
+<p style="color:#6b7280; font-size:0.9rem;">Session #15 &mdash; 2026-04-06</p>
+
+<div class="question-box">
+  <p>Are locally-computed four factors (eFG%, TO%, ORB%, FTR) valid for backtesting, given that locally-computed barthag just diverged at r=0.73 from real Torvik?</p>
+</div>
+
+<div class="verdict-box">
+  <h2 style="border:none; margin-top:0; color:#2563eb;">Chairman's Verdict</h2>
+
+  <div class="verdict-section">
+    <h3>Where the Council Agrees</h3>
+    <p>Every advisor agrees: <strong>stop theorizing and measure.</strong> The debate about "counting stats" vs "derived rates" is unanswerable without data. Validation is a two-hour task. 8 of 12 features being potentially corrupted is not a tolerable unknown. The barthag r=0.73 is a live precedent. The live pipeline using Torvik while the backtest uses local values is a train/test mismatch by definition.</p>
+  </div>
+
+  <div class="verdict-section">
+    <h3>Where the Council Clashes</h3>
+    <p>The Contrarian and Outsider argue the possession denominator problem is severe &mdash; the prior should be pessimistic. The Expansionist argues four factors are structurally simpler than barthag and the prior should be cautious but not catastrophic. Both are reasonable. The disagreement resolves through measurement, not argument. But the optimistic framing is motivated reasoning: <em>"wanting four factors to be okay"</em> is not the same as <em>"four factors are okay."</em></p>
+  </div>
+
+  <div class="verdict-section">
+    <h3>Blind Spots the Council Caught</h3>
+    <ul style="padding-left:20px;">
+      <li><strong>High correlation &ne; safe.</strong> Systematic errors biased toward specific team types won't show in aggregate r-values. Need residual analysis by subgroup.</li>
+      <li><strong>Single-season validation is insufficient.</strong> Data coverage changes across seasons. Need per-season correlations checked for stability.</li>
+      <li><strong>If Torvik opponent-adjusts four factors, there is no easy fix.</strong> Confirm raw vs adjusted before any validation.</li>
+    </ul>
+  </div>
+
+  <div class="verdict-section">
+    <h3>The Recommendation</h3>
+    <p><strong>Do not trust locally-computed four factors until validated.</strong> Set the gate at r&ge;0.99 with no systematic residual bias, all eight features, all available seasons. Set the threshold before seeing results. If any feature fails, replace with Torvik's column or drop from the model entirely. Running corrupted features is worse than running fewer features.</p>
+  </div>
+
+  <div class="first-step">
+    <h3>The One Thing to Do First</h3>
+    <p>Before running any correlation, check Torvik's documentation to confirm whether his published four factors are <strong>raw or opponent-adjusted</strong>. This takes five minutes and determines whether the validation is even asking the right question.</p>
+  </div>
+</div>
+
+<h2>Advisor Positions</h2>
+
+<div class="agreement-grid">
+  <div class="advisor-stance stance-agree">
+    <span class="advisor-tag tag-contrarian">Contrarian</span>
+    Assume divergence. Possession denominators differ.
+  </div>
+  <div class="advisor-stance stance-agree">
+    <span class="advisor-tag tag-fp">First Principles</span>
+    Same formula &ne; same inputs. Validate inputs.
+  </div>
+  <div class="advisor-stance stance-cautious">
+    <span class="advisor-tag tag-expansionist">Expansionist</span>
+    Probably fine. Validate to confirm advantage.
+  </div>
+  <div class="advisor-stance stance-agree">
+    <span class="advisor-tag tag-outsider">Outsider</span>
+    Same trap twice. Motivated reasoning.
+  </div>
+  <div class="advisor-stance stance-agree">
+    <span class="advisor-tag tag-executor">Executor</span>
+    2-hour test. Stop debating.
+  </div>
+</div>
+
+<p style="font-size:0.85rem; color:#6b7280; text-align:center; margin:8px 0 20px;"><strong>4 of 5</strong> advisors say: do not assume validity without evidence. <strong>5 of 5</strong> say: validate empirically.</p>
+
+<h2>Full Advisor Responses</h2>
+
+<details>
+  <summary><span class="tag-contrarian" style="display:inline;">The Contrarian</span> &mdash; "Same formula, same result" was already disproven</summary>
+  <div class="content">
+    <p>The "direct counting stats" argument is seductive and almost certainly wrong in practice. Four factors are rates, not raw counts &mdash; rates require denominators. TO% uses possessions, ORB% uses rebound opportunities. Torvik derives possessions from his own formula. ESPN uses different possession estimates. Even 1-2 possession errors per game compound across 30+ games.</p>
+    <p>Specific failure modes: (1) Possession estimation divergence. (2) Game coverage gaps. (3) Torvik may opponent-adjust four factors. (4) No validation data exists. Assume divergence until proven otherwise.</p>
+  </div>
+</details>
+
+<details>
+  <summary><span class="tag-fp" style="display:inline;">First Principles Thinker</span> &mdash; Are inputs identical? Not formulas.</summary>
+  <div class="content">
+    <p>The question asked is "are the formulas correct?" The question that needs answering is "are we measuring the same things?" Possession denominators vary by source. The barthag catastrophe was caused by different game samples and data coverage, not wrong formulas. Same failure mode applies. The Cloudflare block is solvable, not an excuse to skip validation.</p>
+  </div>
+</details>
+
+<details>
+  <summary><span class="tag-expansionist" style="display:inline;">The Expansionist</span> &mdash; If validated, it's a competitive advantage</summary>
+  <div class="content">
+    <p>Numerators are almost certainly correct &mdash; FGM, FG3M, FGA are raw counts. The divergence point is possessions. But if validated at r=0.97+, you've confirmed a clean backtesting surface. A validated local pipeline means you can extend backward, experiment with custom formulas. Barthag failed because it's a derived composite. Four factors are simpler. Validate, don't assume the worst.</p>
+  </div>
+</details>
+
+<details>
+  <summary><span class="tag-outsider" style="display:inline;">The Outsider</span> &mdash; Motivated reasoning: same trap, twice</summary>
+  <div class="content">
+    <p>The exact same trap, twice in a row. You fixed barthag because "locally computed diverges." Now the argument is "four factors are just counting stats, so they're fine." That's motivated reasoning. No validation data exists. Live pipeline uses Torvik, backtest uses local &mdash; train/test mismatch by definition. Cost of being wrong: 8 of 12 features corrupted.</p>
+  </div>
+</details>
+
+<details>
+  <summary><span class="tag-executor" style="display:inline;">The Executor</span> &mdash; Two hours to know. Stop theorizing.</summary>
+  <div class="content">
+    <p>Pick one season, compute correlation and MAE for all eight features. Two hours. Either r&ge;0.99 (fine, move on) or r=0.73-style divergence (same problem). If divergence found, need fix path. Every hour theorizing is an hour you could spend knowing.</p>
+  </div>
+</details>
+
+<h2>Peer Review Highlights</h2>
+
+<details>
+  <summary>Key findings from peer review round</summary>
+  <div class="content">
+    <div class="peer-highlight">
+      <strong>Consensus strongest advisor:</strong> The Executor (E) &mdash; named strongest by 4 of 5 reviewers for cutting through debate with a concrete, time-bounded action.
+    </div>
+    <div class="peer-highlight">
+      <strong>Consensus weakest:</strong> The Expansionist (C) &mdash; flagged by 4 of 5 reviewers for motivated reasoning disguised as optimism.
+    </div>
+    <div class="peer-highlight">
+      <strong>Critical blind spot:</strong> All advisors treated "high r-value = safe" as the finish line. Peer review caught that systematic bias by subgroup (tempo, conference, opponent strength) can hide inside an aggregate r=0.97. Need residual analysis, not just headline correlation.
+    </div>
+    <div class="peer-highlight">
+      <strong>Critical blind spot:</strong> If Torvik opponent-adjusts four factors, the entire validation framework is wrong &mdash; you'd be comparing adjusted values to raw values. Must confirm raw vs adjusted first.
+    </div>
+  </div>
+</details>
+
+<div class="footer">
+  Council Session #15 &bull; 2026-04-06 &bull; Question: Four Factors Validation<br>
+  Full transcript: council-transcript-2026-04-06-v10.md
+</div>
+
+</body>
+</html>
