@@ -1,518 +1,366 @@
 
-### FAILED JOB: Fast Gate
-2026-04-06T01:50:43.1182705Z Updating files:  90% (2221/2444)
-2026-04-06T01:50:43.1201779Z Updating files:  91% (2225/2444)
-2026-04-06T01:50:43.1218083Z Updating files:  92% (2249/2444)
-2026-04-06T01:50:43.1239382Z Updating files:  93% (2273/2444)
-2026-04-06T01:50:43.1260335Z Updating files:  94% (2298/2444)
-2026-04-06T01:50:43.1280551Z Updating files:  95% (2322/2444)
-2026-04-06T01:50:43.1300846Z Updating files:  96% (2347/2444)
-2026-04-06T01:50:43.1324115Z Updating files:  97% (2371/2444)
-2026-04-06T01:50:43.1347364Z Updating files:  98% (2396/2444)
-2026-04-06T01:50:43.1370743Z Updating files:  99% (2420/2444)
-2026-04-06T01:50:43.1371698Z Updating files: 100% (2444/2444)
-2026-04-06T01:50:43.1372247Z Updating files: 100% (2444/2444), done.
-2026-04-06T01:50:43.1394593Z Note: switching to 'refs/remotes/pull/357/merge'.
-2026-04-06T01:50:43.1395129Z 
-2026-04-06T01:50:43.1395563Z You are in 'detached HEAD' state. You can look around, make experimental
-2026-04-06T01:50:43.1396381Z changes and commit them, and you can discard any commits you make in this
-2026-04-06T01:50:43.1396996Z state without impacting any branches by switching back to a branch.
-2026-04-06T01:50:43.1397350Z 
-2026-04-06T01:50:43.1397622Z If you want to create a new branch to retain commits you create, you may
-2026-04-06T01:50:43.1398190Z do so (now or later) by using -c with the switch command. Example:
-2026-04-06T01:50:43.1398543Z 
-2026-04-06T01:50:43.1398703Z   git switch -c <new-branch-name>
-2026-04-06T01:50:43.1398950Z 
-2026-04-06T01:50:43.1399089Z Or undo this operation with:
-2026-04-06T01:50:43.1399337Z 
-2026-04-06T01:50:43.1399458Z   git switch -
-2026-04-06T01:50:43.1399978Z 
-2026-04-06T01:50:43.1400273Z Turn off this advice by setting config variable advice.detachedHead to false
-2026-04-06T01:50:43.1400678Z 
-2026-04-06T01:50:43.1401126Z HEAD is now at 38ea7d8 Merge 35e31782bd0566588962a3de9bfe2b6edd83dc6f into 5dc624cbaaf80489990e38e2f330a09824ea612a
-2026-04-06T01:50:43.1452096Z ##[endgroup]
-2026-04-06T01:50:43.1493528Z [command]/usr/bin/git log -1 --format=%H
-2026-04-06T01:50:43.1515333Z 38ea7d833a9f16dbbc4ce89c6939e2082067fb39
-2026-04-06T01:50:43.1713044Z ##[group]Run pipx run ruff check src/ tests/ --output-format=github
-2026-04-06T01:50:43.1713662Z [36;1mpipx run ruff check src/ tests/ --output-format=github[0m
-2026-04-06T01:50:43.1744321Z shell: /usr/bin/bash -e {0}
-2026-04-06T01:50:43.1744626Z ##[endgroup]
-2026-04-06T01:50:44.3068240Z creating virtual environment...
-2026-04-06T01:50:44.4422542Z installing ruff...
-2026-04-06T01:50:46.5244409Z ##[group]Run python3 - <<'PYEOF'
-2026-04-06T01:50:46.5244804Z [36;1mpython3 - <<'PYEOF'[0m
-2026-04-06T01:50:46.5245040Z [36;1mimport ast, hashlib, json, sys[0m
-2026-04-06T01:50:46.5245300Z [36;1m[0m
-2026-04-06T01:50:46.5245526Z [36;1mFREEZE_PATH = "artifacts/pipeline_freeze_2026.json"[0m
-2026-04-06T01:50:46.5245819Z [36;1m[0m
-2026-04-06T01:50:46.5245984Z [36;1mREQUIRED_SOURCE_FILES = [[0m
-2026-04-06T01:50:46.5246238Z [36;1m    "src/pipeline/config.py",[0m
-2026-04-06T01:50:46.5246479Z [36;1m    "src/pipeline/sota.py",[0m
-2026-04-06T01:50:46.5246757Z [36;1m    "src/pipeline/tournament_pipeline.py",[0m
-2026-04-06T01:50:46.5247060Z [36;1m    "src/pipeline/pipeline_runner.py",[0m
-2026-04-06T01:50:46.5247391Z [36;1m    "src/pipeline/probability_predictor.py",[0m
-2026-04-06T01:50:46.5247711Z [36;1m    "src/pipeline/stages/calibration.py",[0m
-2026-04-06T01:50:46.5248019Z [36;1m    "src/pipeline/stages/data_loader.py",[0m
-2026-04-06T01:50:46.5248336Z [36;1m    "src/pipeline/stages/inference.py",[0m
-2026-04-06T01:50:46.5248638Z [36;1m    "src/pipeline/probability_pipeline.py",[0m
-2026-04-06T01:50:46.5248950Z [36;1m    "src/governance/production_validator.py",[0m
-2026-04-06T01:50:46.5249250Z [36;1m    "src/governance/production_runner.py",[0m
-2026-04-06T01:50:46.5249502Z [36;1m][0m
-2026-04-06T01:50:46.5250413Z [36;1m[0m
-2026-04-06T01:50:46.5250598Z [36;1mdef sha256_file(path):[0m
-2026-04-06T01:50:46.5250834Z [36;1m    h = hashlib.sha256()[0m
-2026-04-06T01:50:46.5251080Z [36;1m    with open(path, "rb") as f:[0m
-2026-04-06T01:50:46.5251382Z [36;1m        for chunk in iter(lambda: f.read(8192), b""):[0m
-2026-04-06T01:50:46.5251683Z [36;1m            h.update(chunk)[0m
-2026-04-06T01:50:46.5252219Z [36;1m    return h.hexdigest()[0m
-2026-04-06T01:50:46.5252435Z [36;1m[0m
-2026-04-06T01:50:46.5252699Z [36;1mdef extract_dataclass_fields(filepath, class_name):[0m
-2026-04-06T01:50:46.5253206Z [36;1m    """Extract field names from a @dataclass using AST (no imports needed)."""[0m
-2026-04-06T01:50:46.5253611Z [36;1m    with open(filepath) as f:[0m
-2026-04-06T01:50:46.5253873Z [36;1m        tree = ast.parse(f.read())[0m
-2026-04-06T01:50:46.5254128Z [36;1m    for node in ast.walk(tree):[0m
-2026-04-06T01:50:46.5254467Z [36;1m        if isinstance(node, ast.ClassDef) and node.name == class_name:[0m
-2026-04-06T01:50:46.5254807Z [36;1m            fields = set()[0m
-2026-04-06T01:50:46.5255052Z [36;1m            for item in node.body:[0m
-2026-04-06T01:50:46.5255446Z [36;1m                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):[0m
-2026-04-06T01:50:46.5255869Z [36;1m                    fields.add(item.target.id)[0m
-2026-04-06T01:50:46.5256148Z [36;1m            return fields[0m
-2026-04-06T01:50:46.5256368Z [36;1m    return None[0m
-2026-04-06T01:50:46.5256560Z [36;1m[0m
-2026-04-06T01:50:46.5256709Z [36;1mtry:[0m
-2026-04-06T01:50:46.5256901Z [36;1m    with open(FREEZE_PATH) as f:[0m
-2026-04-06T01:50:46.5257165Z [36;1m        freeze = json.load(f)[0m
-2026-04-06T01:50:46.5257405Z [36;1mexcept FileNotFoundError:[0m
-2026-04-06T01:50:46.5257727Z [36;1m    print(f"::error::Freeze artifact not found at {FREEZE_PATH}.")[0m
-2026-04-06T01:50:46.5258106Z [36;1m    print("Run: march-madness freeze-pipeline")[0m
-2026-04-06T01:50:46.5258388Z [36;1m    sys.exit(1)[0m
-2026-04-06T01:50:46.5258568Z [36;1m[0m
-2026-04-06T01:50:46.5258726Z [36;1merrors = [][0m
-2026-04-06T01:50:46.5258896Z [36;1m[0m
-2026-04-06T01:50:46.5259125Z [36;1mfrozen_hashes = freeze.get("source_file_hashes", {})[0m
-2026-04-06T01:50:46.5259455Z [36;1mfor src_file in REQUIRED_SOURCE_FILES:[0m
-2026-04-06T01:50:46.5260020Z [36;1m    frozen_hash = frozen_hashes.get(src_file)[0m
-2026-04-06T01:50:46.5260317Z [36;1m    if frozen_hash is None:[0m
-2026-04-06T01:50:46.5260627Z [36;1m        errors.append(f"{src_file}: missing from freeze artifact")[0m
-2026-04-06T01:50:46.5260953Z [36;1m        continue[0m
-2026-04-06T01:50:46.5261377Z [36;1m    current_hash = sha256_file(src_file)[0m
-2026-04-06T01:50:46.5261686Z [36;1m    if current_hash != frozen_hash:[0m
-2026-04-06T01:50:46.5262080Z [36;1m        errors.append(f"{src_file}: hash mismatch (source changed since freeze)")[0m
-2026-04-06T01:50:46.5262464Z [36;1m[0m
-2026-04-06T01:50:46.5262687Z [36;1mfrozen_fields = freeze.get("config_fields", {})[0m
-2026-04-06T01:50:46.5263014Z [36;1mcurrent_field_names = extract_dataclass_fields([0m
-2026-04-06T01:50:46.5263364Z [36;1m    "src/pipeline/config.py", "SOTAPipelineConfig"[0m
-2026-04-06T01:50:46.5263645Z [36;1m)[0m
-2026-04-06T01:50:46.5263825Z [36;1mif current_field_names is None:[0m
-2026-04-06T01:50:46.5264238Z [36;1m    errors.append("Could not find SOTAPipelineConfig in src/pipeline/config.py")[0m
-2026-04-06T01:50:46.5264677Z [36;1melse:[0m
-2026-04-06T01:50:46.5264900Z [36;1m    frozen_field_names = set(frozen_fields.keys())[0m
-2026-04-06T01:50:46.5265269Z [36;1m    missing_in_freeze = current_field_names - frozen_field_names[0m
-2026-04-06T01:50:46.5265603Z [36;1m    if missing_in_freeze:[0m
-2026-04-06T01:50:46.5265834Z [36;1m        errors.append([0m
-2026-04-06T01:50:46.5266164Z [36;1m            f"Config fields added but not in freeze: {sorted(missing_in_freeze)}"[0m
-2026-04-06T01:50:46.5266517Z [36;1m        )[0m
-2026-04-06T01:50:46.5266681Z [36;1m[0m
-2026-04-06T01:50:46.5266837Z [36;1mif errors:[0m
-2026-04-06T01:50:46.5267132Z [36;1m    print("::error::Freeze artifact is STALE. Update it before merging.")[0m
-2026-04-06T01:50:46.5267484Z [36;1m    for e in errors:[0m
-2026-04-06T01:50:46.5267699Z [36;1m        print(f"  - {e}")[0m
-2026-04-06T01:50:46.5267913Z [36;1m    print()[0m
-2026-04-06T01:50:46.5268518Z [36;1m    print("To fix: python -c \"from src.governance.production_runner import regenerate_freeze; regenerate_freeze()\"")[0m
-2026-04-06T01:50:46.5269038Z [36;1m    sys.exit(1)[0m
-2026-04-06T01:50:46.5269229Z [36;1melse:[0m
-2026-04-06T01:50:46.5269853Z [36;1m    print(f"Freeze OK ({len(frozen_hashes)} files, {len(frozen_fields)} config fields)")[0m
-2026-04-06T01:50:46.5270284Z [36;1mPYEOF[0m
-2026-04-06T01:50:46.5297927Z shell: /usr/bin/bash -e {0}
-2026-04-06T01:50:46.5298164Z ##[endgroup]
-2026-04-06T01:50:46.5702658Z ##[error]Freeze artifact is STALE. Update it before merging.
-2026-04-06T01:50:46.5710190Z   - src/pipeline/config.py: hash mismatch (source changed since freeze)
-2026-04-06T01:50:46.5710837Z   - src/pipeline/stages/data_loader.py: hash mismatch (source changed since freeze)
-2026-04-06T01:50:46.5711391Z   - src/governance/production_validator.py: hash mismatch (source changed since freeze)
-2026-04-06T01:50:46.5711930Z   - src/governance/production_runner.py: hash mismatch (source changed since freeze)
-2026-04-06T01:50:46.5712293Z 
-2026-04-06T01:50:46.5712588Z To fix: python -c "from src.governance.production_runner import regenerate_freeze; regenerate_freeze()"
-2026-04-06T01:50:46.5739173Z ##[error]Process completed with exit code 1.
-2026-04-06T01:50:46.5928033Z Post job cleanup.
-2026-04-06T01:50:46.6907958Z [command]/usr/bin/git version
-2026-04-06T01:50:46.6945388Z git version 2.53.0
-2026-04-06T01:50:46.6996776Z Temporarily overriding HOME='/home/runner/work/_temp/504d93c5-31d4-489c-ae97-f59c18ab4f09' before making global git config changes
-2026-04-06T01:50:46.7002342Z Adding repository directory to the temporary git global config as a safe directory
-2026-04-06T01:50:46.7003162Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/march-madness-forecaster/march-madness-forecaster
-2026-04-06T01:50:46.7036810Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
-2026-04-06T01:50:46.7069485Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
-2026-04-06T01:50:46.7295989Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
-2026-04-06T01:50:46.7318051Z http.https://github.com/.extraheader
-2026-04-06T01:50:46.7330664Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
-2026-04-06T01:50:46.7362194Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
-2026-04-06T01:50:46.7588524Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
-2026-04-06T01:50:46.7620888Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
-2026-04-06T01:50:46.7959307Z Cleaning up orphan processes
-2026-04-06T01:50:46.8248430Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
-
-
 ### FAILED JOB: Full Test Suite
-2026-04-06T01:50:59.8232907Z  + six==1.17.0
-2026-04-06T01:50:59.8233193Z  + soupsieve==2.8.3
-2026-04-06T01:50:59.8233487Z  + sportsipy==0.6.0
-2026-04-06T01:50:59.8233783Z  + sympy==1.14.0
-2026-04-06T01:50:59.8234060Z  + text-unidecode==1.3
-2026-04-06T01:50:59.8234369Z  + threadpoolctl==3.6.0
-2026-04-06T01:50:59.8234648Z  + tomli==2.4.1
-2026-04-06T01:50:59.8234891Z  + torch==2.11.0+cpu
-2026-04-06T01:50:59.8235171Z  + torch-geometric==2.7.0
-2026-04-06T01:50:59.8235678Z  + tqdm==4.67.3
-2026-04-06T01:50:59.8235950Z  + typing-extensions==4.15.0
-2026-04-06T01:50:59.8236284Z  + typing-inspection==0.4.2
-2026-04-06T01:50:59.8236589Z  + tzdata==2026.1
-2026-04-06T01:50:59.8236838Z  + urllib3==2.6.3
-2026-04-06T01:50:59.8237208Z  + webencodings==0.5.1
-2026-04-06T01:50:59.8237484Z  + xgboost==2.1.4
-2026-04-06T01:50:59.8237734Z  + xxhash==3.6.0
-2026-04-06T01:50:59.8237985Z  + yarl==1.23.0
-2026-04-06T01:50:59.9232555Z Using Python 3.10.20 environment at: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-06T01:51:00.4799291Z Resolved 50 packages in 554ms
-2026-04-06T01:51:00.4807765Z    Building march-madness-forecaster @ file:///home/runner/work/march-madness-forecaster/march-madness-forecaster
-2026-04-06T01:51:00.7263589Z       Built march-madness-forecaster @ file:///home/runner/work/march-madness-forecaster/march-madness-forecaster
-2026-04-06T01:51:00.7276554Z Prepared 1 package in 247ms
-2026-04-06T01:51:00.7297423Z Installed 1 package in 1ms
-2026-04-06T01:51:00.7298385Z  + march-madness-forecaster==0.1.0 (from file:///home/runner/work/march-madness-forecaster/march-madness-forecaster)
-2026-04-06T01:51:00.7473106Z Using Python 3.10.20 environment at: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-06T01:51:00.8065017Z Resolved 9 packages in 57ms
-2026-04-06T01:51:00.8098745Z Prepared 1 package in 3ms
-2026-04-06T01:51:00.8115751Z Installed 1 package in 1ms
-2026-04-06T01:51:00.8116171Z  + pytest-timeout==2.4.0
-2026-04-06T01:51:00.8194500Z ##[group]Run pytest tests/ -m "unit" --timeout=300 --cov=src --cov-report=term-missing --tb=short -q
-2026-04-06T01:51:00.8195162Z [36;1mpytest tests/ -m "unit" --timeout=300 --cov=src --cov-report=term-missing --tb=short -q[0m
-2026-04-06T01:51:00.8223129Z shell: /usr/bin/bash -e {0}
-2026-04-06T01:51:00.8223352Z env:
-2026-04-06T01:51:00.8223596Z   pythonLocation: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-06T01:51:00.8224038Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib/pkgconfig
-2026-04-06T01:51:00.8224456Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-06T01:51:00.8224808Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-06T01:51:00.8225174Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-06T01:51:00.8225822Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib
-2026-04-06T01:51:00.8226166Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
-2026-04-06T01:51:00.8226438Z ##[endgroup]
-2026-04-06T01:51:34.2964926Z ........................................................................ [  1%]
-2026-04-06T01:51:34.6982783Z ........................................................................ [  2%]
-2026-04-06T01:51:35.0829803Z ........................................................................ [  3%]
-2026-04-06T01:51:35.8104083Z ........................................................................ [  5%]
-2026-04-06T01:51:36.7173801Z ........................................................................ [  6%]
-2026-04-06T01:51:37.0925796Z ........................................................................ [  7%]
-2026-04-06T01:51:37.6876840Z ........................................................................ [  9%]
-2026-04-06T01:51:51.0456857Z ........................................................................ [ 10%]
-2026-04-06T01:51:51.2113952Z ........................................................................ [ 11%]
-2026-04-06T01:51:56.6443286Z ........................................................................ [ 13%]
-2026-04-06T01:51:57.1985661Z ........................................................................ [ 14%]
-2026-04-06T01:51:58.1711637Z ........................................................................ [ 15%]
-2026-04-06T01:51:58.5253737Z ........................................................................ [ 16%]
-2026-04-06T01:51:59.2045482Z ........................................................................ [ 18%]
-2026-04-06T01:52:01.6806792Z ........................................................................ [ 19%]
-2026-04-06T01:52:01.8645952Z ........................................................................ [ 20%]
-2026-04-06T01:52:02.7030670Z ........................................................................ [ 22%]
-2026-04-06T01:52:03.2635289Z ........................................................................ [ 23%]
-2026-04-06T01:52:03.8560186Z ........................................................................ [ 24%]
-2026-04-06T01:52:04.1978263Z ........................................................................ [ 26%]
-2026-04-06T01:52:04.6417374Z ........................................................................ [ 27%]
-2026-04-06T01:52:13.7000647Z ........................................................................ [ 28%]
-2026-04-06T01:52:15.9678700Z ........................................................................ [ 30%]
-2026-04-06T01:52:16.1501726Z ........................................................................ [ 31%]
-2026-04-06T01:52:16.4480161Z ........................................................................ [ 32%]
-2026-04-06T01:52:34.0384162Z ...................................sss.................................. [ 33%]
-2026-04-06T01:52:34.3423474Z ........................................................................ [ 35%]
-2026-04-06T01:52:34.9279143Z ........................................................................ [ 36%]
-2026-04-06T01:52:38.9545761Z ........................................................................ [ 37%]
-2026-04-06T01:52:39.2632127Z ........................................................................ [ 39%]
-2026-04-06T01:52:39.4428892Z ........................................................................ [ 40%]
-2026-04-06T01:52:39.9945586Z ........................................................................ [ 41%]
-2026-04-06T01:52:44.3165797Z ........................................................................ [ 43%]
-2026-04-06T01:52:44.4983801Z ........................................................................ [ 44%]
-2026-04-06T01:52:46.1736585Z ...............................................................ss....... [ 45%]
-2026-04-06T01:54:14.7803231Z ........................................................................ [ 47%]
-2026-04-06T01:54:15.1035315Z ........................................................................ [ 48%]
-2026-04-06T01:54:15.3141534Z ........................................................................ [ 49%]
-2026-04-06T01:54:18.4766457Z ...........................................................F
-2026-04-06T01:54:18.4767161Z =================================== FAILURES ===================================
-2026-04-06T01:54:18.4767859Z ______________ TestPipelineContractFlow.test_init_contracts_exist ______________
-2026-04-06T01:54:18.4768704Z tests/test_phases_7_to_10.py:514: in test_init_contracts_exist
-2026-04-06T01:54:18.4769852Z     from src.pipeline.stages import (
-2026-04-06T01:54:18.4771467Z E   ImportError: cannot import name 'OptimizedHyperparams' from 'src.pipeline.stages' (/home/runner/work/march-madness-forecaster/march-madness-forecaster/src/pipeline/stages/__init__.py)
-2026-04-06T01:54:18.4773372Z =============================== warnings summary ===============================
-2026-04-06T01:54:18.4774127Z tests/test_full_ml_pipeline.py:18
-2026-04-06T01:54:18.4776741Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/tests/test_full_ml_pipeline.py:18: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
-2026-04-06T01:54:18.4778725Z     pytestmark = pytest.mark.slow
-2026-04-06T01:54:18.4778995Z 
-2026-04-06T01:54:18.4779176Z tests/test_baseline_evaluation.py: 8 warnings
-2026-04-06T01:54:18.4779647Z tests/test_model_selection.py: 94 warnings
-2026-04-06T01:54:18.4780101Z tests/test_phases_7_to_10.py: 3 warnings
-2026-04-06T01:54:18.4781497Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1196: UserWarning: l1_ratio parameter is only used when penalty is 'elasticnet'. Got (penalty=l2)
-2026-04-06T01:54:18.4782875Z     warnings.warn(
-2026-04-06T01:54:18.4783061Z 
-2026-04-06T01:54:18.4783594Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
-2026-04-06T01:54:18.4784740Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
-2026-04-06T01:54:18.4786186Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_probabilities_not_mutated_by_optimizer
-2026-04-06T01:54:18.4813098Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_has_all_required_fields
-2026-04-06T01:54:18.4814361Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_values_match_environment
-2026-04-06T01:54:18.4815712Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_serialization
-2026-04-06T01:54:18.4818080Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/src/optimization/pool_optimizer.py:223: DeprecationWarning: PoolOptimizer._build_round_probabilities is using a heuristic fallback. Pass model_round_probs from MC simulation to the constructor for accurate round advancement probabilities.
-2026-04-06T01:54:18.4820248Z     model_round_probs = self._build_round_probabilities()
-2026-04-06T01:54:18.4820929Z 
-2026-04-06T01:54:18.4821548Z tests/test_massey_ordinals_integration.py::TestKaggleDownloaderModule::test_kaggle_api_available_without_credentials
-2026-04-06T01:54:18.4823105Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/kaggle/api_client.py:244: DeprecationWarning: invalid escape sequence '\['
-2026-04-06T01:54:18.4824173Z     sub_kls = re.match('list\[(.*)\]', klass).group(1)
-2026-04-06T01:54:18.4824525Z 
-2026-04-06T01:54:18.4825129Z tests/test_massey_ordinals_integration.py::TestKaggleDownloaderModule::test_kaggle_api_available_without_credentials
-2026-04-06T01:54:18.4826837Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/kaggle/api_client.py:249: DeprecationWarning: invalid escape sequence '\('
-2026-04-06T01:54:18.4827933Z     sub_kls = re.match('dict\(([^,]*), (.*)\)', klass).group(2)
-2026-04-06T01:54:18.4828301Z 
-2026-04-06T01:54:18.4828930Z tests/test_massey_ordinals_integration.py::TestKaggleDownloaderModule::test_kaggle_api_available_without_credentials
-2026-04-06T01:54:18.4830413Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/kaggle/api/kaggle_api.py:1055: DeprecationWarning: invalid escape sequence '\&'
-2026-04-06T01:54:18.4831627Z     """Creates (aka \&quot;drops\&quot;) a new file into the inbox.  # noqa: E501
-2026-04-06T01:54:18.4832093Z 
-2026-04-06T01:54:18.4832701Z tests/test_massey_ordinals_integration.py::TestKaggleDownloaderModule::test_kaggle_api_available_without_credentials
-2026-04-06T01:54:18.4834439Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/kaggle/api/kaggle_api.py:1076: DeprecationWarning: invalid escape sequence '\&'
-2026-04-06T01:54:18.4835916Z     """Creates (aka \&quot;drops\&quot;) a new file into the inbox.  # noqa: E501
-2026-04-06T01:54:18.4836392Z 
-2026-04-06T01:54:18.4836910Z tests/test_phase8_statistician_audit.py::TestSourceAgreementStatistics::test_p_value_based_weighting
-2026-04-06T01:54:18.4838583Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/scipy/stats/_stats_py.py:5445: ConstantInputWarning: An input array is constant; the correlation coefficient is not defined.
-2026-04-06T01:54:18.4839961Z     warnings.warn(stats.ConstantInputWarning(warn_msg))
-2026-04-06T01:54:18.4840326Z 
-2026-04-06T01:54:18.4840635Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-2026-04-06T01:54:18.4841334Z =========================== short test summary info ============================
-2026-04-06T01:54:18.4843292Z FAILED tests/test_phases_7_to_10.py::TestPipelineContractFlow::test_init_contracts_exist - ImportError: cannot import name 'OptimizedHyperparams' from 'src.pipeline.stages' (/home/runner/work/march-madness-forecaster/march-madness-forecaster/src/pipeline/stages/__init__.py)
-2026-04-06T01:54:18.4845444Z !!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
-2026-04-06T01:54:18.4846186Z 1 failed, 2790 passed, 5 skipped, 507 deselected, 117 warnings in 195.02s (0:03:15)
-2026-04-06T01:54:19.7298434Z ##[error]Process completed with exit code 1.
-2026-04-06T01:54:19.7382473Z Post job cleanup.
-2026-04-06T01:54:19.7464321Z Post job cleanup.
-2026-04-06T01:54:19.8411755Z [command]/usr/bin/git version
-2026-04-06T01:54:19.8447581Z git version 2.53.0
-2026-04-06T01:54:19.8497890Z Temporarily overriding HOME='/home/runner/work/_temp/287bfc21-5a86-4f3f-a792-d0cfa3f5b036' before making global git config changes
-2026-04-06T01:54:19.8498913Z Adding repository directory to the temporary git global config as a safe directory
-2026-04-06T01:54:19.8504977Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/march-madness-forecaster/march-madness-forecaster
-2026-04-06T01:54:19.8539053Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
-2026-04-06T01:54:19.8571003Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
-2026-04-06T01:54:19.8791796Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
-2026-04-06T01:54:19.8811632Z http.https://github.com/.extraheader
-2026-04-06T01:54:19.8823770Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
-2026-04-06T01:54:19.8853548Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
-2026-04-06T01:54:19.9067523Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
-2026-04-06T01:54:19.9097079Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
-2026-04-06T01:54:19.9442789Z Cleaning up orphan processes
-2026-04-06T01:54:19.9814479Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-python@v5, astral-sh/setup-uv@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-04-07T05:25:57.6799826Z  + protobuf==7.34.1
+2026-04-07T05:25:57.6800007Z  + psutil==7.2.2
+2026-04-07T05:25:57.6800323Z  + pycparser==3.0
+2026-04-07T05:25:57.6800633Z  + pydantic==2.12.5
+2026-04-07T05:25:57.6800927Z  + pydantic-core==2.41.5
+2026-04-07T05:25:57.6801260Z  + pygments==2.20.0
+2026-04-07T05:25:57.6801573Z  + pyparsing==3.3.2
+2026-04-07T05:25:57.6801963Z  + pyquery==2.0.1
+2026-04-07T05:25:57.6802264Z  + pytest==9.0.2
+2026-04-07T05:25:57.6802473Z  + pytest-cov==7.1.0
+2026-04-07T05:25:57.6802879Z  + python-dateutil==2.9.0.post0
+2026-04-07T05:25:57.6803371Z  + python-slugify==8.0.4
+2026-04-07T05:25:57.6803752Z  + pytz==2023.4
+2026-04-07T05:25:57.6804407Z  + pyyaml==6.0.3
+2026-04-07T05:25:57.6804716Z  + requests==2.33.1
+2026-04-07T05:25:57.6805141Z  + requests-toolbelt==1.0.0
+2026-04-07T05:25:57.6805544Z  + rich==14.3.3
+2026-04-07T05:25:57.6805950Z  + scikit-learn==1.6.1
+2026-04-07T05:25:57.6806299Z  + scipy==1.11.4
+2026-04-07T05:25:57.6806777Z  + six==1.17.0
+2026-04-07T05:25:57.6807088Z  + soupsieve==2.8.3
+2026-04-07T05:25:57.6807417Z  + sportsipy==0.6.0
+2026-04-07T05:25:57.6807719Z  + sympy==1.14.0
+2026-04-07T05:25:57.6808045Z  + text-unidecode==1.3
+2026-04-07T05:25:57.6808390Z  + threadpoolctl==3.6.0
+2026-04-07T05:25:57.6808747Z  + tomli==2.4.1
+2026-04-07T05:25:57.6809044Z  + torch==2.11.0+cpu
+2026-04-07T05:25:57.6809378Z  + torch-geometric==2.7.0
+2026-04-07T05:25:57.6809583Z  + tqdm==4.67.3
+2026-04-07T05:25:57.6809768Z  + typing-extensions==4.15.0
+2026-04-07T05:25:57.6809984Z  + typing-inspection==0.4.2
+2026-04-07T05:25:57.6810486Z  + tzdata==2026.1
+2026-04-07T05:25:57.6810794Z  + urllib3==2.6.3
+2026-04-07T05:25:57.6811111Z  + webencodings==0.5.1
+2026-04-07T05:25:57.6811460Z  + xgboost==2.1.4
+2026-04-07T05:25:57.6811761Z  + xxhash==3.6.0
+2026-04-07T05:25:57.6812061Z  + yarl==1.23.0
+2026-04-07T05:25:57.7819573Z Using Python 3.10.20 environment at: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-07T05:25:58.3447109Z Resolved 50 packages in 560ms
+2026-04-07T05:25:58.3455847Z    Building march-madness-forecaster @ file:///home/runner/work/march-madness-forecaster/march-madness-forecaster
+2026-04-07T05:25:58.5951020Z       Built march-madness-forecaster @ file:///home/runner/work/march-madness-forecaster/march-madness-forecaster
+2026-04-07T05:25:58.5963180Z Prepared 1 package in 251ms
+2026-04-07T05:25:58.5985366Z Installed 1 package in 2ms
+2026-04-07T05:25:58.5986107Z  + march-madness-forecaster==0.1.0 (from file:///home/runner/work/march-madness-forecaster/march-madness-forecaster)
+2026-04-07T05:25:58.6163775Z Using Python 3.10.20 environment at: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-07T05:25:58.6772628Z Resolved 9 packages in 59ms
+2026-04-07T05:25:58.6817679Z Prepared 1 package in 4ms
+2026-04-07T05:25:58.6832607Z Installed 1 package in 1ms
+2026-04-07T05:25:58.6833022Z  + pytest-timeout==2.4.0
+2026-04-07T05:25:58.6909752Z ##[group]Run pytest tests/ -m "unit" --timeout=300 --cov=src --cov-report=term-missing --tb=short -q
+2026-04-07T05:25:58.6910439Z [36;1mpytest tests/ -m "unit" --timeout=300 --cov=src --cov-report=term-missing --tb=short -q[0m
+2026-04-07T05:25:58.6939000Z shell: /usr/bin/bash -e {0}
+2026-04-07T05:25:58.6939230Z env:
+2026-04-07T05:25:58.6939469Z   pythonLocation: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-07T05:25:58.6939883Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib/pkgconfig
+2026-04-07T05:25:58.6940301Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-07T05:25:58.6940657Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-07T05:25:58.6941009Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
+2026-04-07T05:25:58.6941360Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib
+2026-04-07T05:25:58.6941710Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+2026-04-07T05:25:58.6941976Z ##[endgroup]
+2026-04-07T05:26:32.4682697Z ........................................................................ [  1%]
+2026-04-07T05:26:32.8603350Z ........................................................................ [  2%]
+2026-04-07T05:26:33.2487115Z ........................................................................ [  3%]
+2026-04-07T05:26:33.9812071Z ........................................................................ [  5%]
+2026-04-07T05:26:34.8921782Z ........................................................................ [  6%]
+2026-04-07T05:26:35.2691606Z ........................................................................ [  7%]
+2026-04-07T05:26:35.8587693Z ........................................................................ [  9%]
+2026-04-07T05:26:49.1990965Z ........................................................................ [ 10%]
+2026-04-07T05:26:49.3614729Z ........................................................................ [ 11%]
+2026-04-07T05:26:54.7550562Z ........................................................................ [ 13%]
+2026-04-07T05:26:55.3005709Z ........................................................................ [ 14%]
+2026-04-07T05:26:56.2663374Z ........................................................................ [ 15%]
+2026-04-07T05:26:56.6204747Z ........................................................................ [ 17%]
+2026-04-07T05:26:57.2825345Z ........................................................................ [ 18%]
+2026-04-07T05:26:59.7756734Z ........................................................................ [ 19%]
+2026-04-07T05:26:59.9527030Z ........................................................................ [ 20%]
+2026-04-07T05:27:00.7871720Z ........................................................................ [ 22%]
+2026-04-07T05:27:01.3348266Z ........................................................................ [ 23%]
+2026-04-07T05:27:01.9283777Z ........................................................................ [ 24%]
+2026-04-07T05:27:02.2680049Z ........................................................................ [ 26%]
+2026-04-07T05:27:02.7115906Z ........................................................................ [ 27%]
+2026-04-07T05:27:12.1287791Z ........................................................................ [ 28%]
+2026-04-07T05:27:14.3137785Z ........................................................................ [ 30%]
+2026-04-07T05:27:14.4916905Z ........................................................................ [ 31%]
+2026-04-07T05:27:14.7884160Z ........................................................................ [ 32%]
+2026-04-07T05:27:37.5856927Z ...................................sss...............................F
+2026-04-07T05:27:37.5857630Z =================================== FAILURES ===================================
+2026-04-07T05:27:37.5858409Z __________ test_collector_enriches_defensive_four_factors_from_games ___________
+2026-04-07T05:27:37.5859806Z tests/test_ingestion_collector.py:368: in test_collector_enriches_defensive_four_factors_from_games
+2026-04-07T05:27:37.5860814Z     assert duke["opp_effective_fg_pct"] > 0, "Duke defensive eFG% should be populated"
+2026-04-07T05:27:37.5861667Z E   AssertionError: Duke defensive eFG% should be populated
+2026-04-07T05:27:37.5862195Z E   assert 0.0 > 0
+2026-04-07T05:27:37.5862712Z ------------------------------ Captured log call -------------------------------
+2026-04-07T05:27:37.5864800Z WARNING  src.data.ingestion.collector:collector.py:178 Torvik data collection for 2025 on 2026-04-07 (tournament started 2025-03-18). Efficiency metrics may include tournament games — LEAKAGE RISK.
+2026-04-07T05:27:37.5868407Z WARNING  src.data.ingestion.collector:collector.py:224 Four factors fetch blocked by leakage guard: Live Torvik scrape for 2025 requested on 2026-04-07, but tournament started 2025-03-18. Post-tournament efficiency metrics include tournament game results — DATA LEAKAGE RISK. Use pre-tournament cached data instead.
+2026-04-07T05:27:37.5872590Z WARNING  src.data.ingestion.collector:collector.py:262 Shooting stats fetch blocked by leakage guard: Live Torvik scrape for 2025 requested on 2026-04-07, but tournament started 2025-03-18. Post-tournament efficiency metrics include tournament game results — DATA LEAKAGE RISK. Use pre-tournament cached data instead.
+2026-04-07T05:27:37.5875663Z WARNING  src.data.ingestion.collector:collector.py:621 Year 2025: 2/2 game records have no date after provider normalisation. Downstream date-dependent features (Elo, momentum) may be inaccurate for these games.
+2026-04-07T05:27:37.5877617Z WARNING  src.data.scrapers.tournament_context:tournament_context.py:148 Could not parse preseason AP rankings for 2025
+2026-04-07T05:27:37.5879522Z WARNING  src.data.kaggle_downloader:kaggle_downloader.py:381 Kaggle data (MMasseyOrdinals.csv) not available. External rating composites will use seed-based fallback. To fix: set KAGGLE_USERNAME + KAGGLE_KEY env vars and run: python -m src.data.kaggle_downloader
+2026-04-07T05:27:37.5881368Z =============================== warnings summary ===============================
+2026-04-07T05:27:37.5881826Z tests/test_full_ml_pipeline.py:18
+2026-04-07T05:27:37.5883515Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/tests/test_full_ml_pipeline.py:18: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+2026-04-07T05:27:37.5885194Z     pytestmark = pytest.mark.slow
+2026-04-07T05:27:37.5885433Z 
+2026-04-07T05:27:37.5885799Z tests/test_baseline_evaluation.py::TestLogisticBaseline::test_fit_and_predict
+2026-04-07T05:27:37.5886771Z tests/test_baseline_evaluation.py::TestLogisticBaseline::test_handles_nan_features
+2026-04-07T05:27:37.5887591Z tests/test_baseline_evaluation.py::TestBaselineEvaluator::test_passes_on_separable_data
+2026-04-07T05:27:37.5888589Z tests/test_baseline_evaluation.py::TestBaselineEvaluator::test_strict_mode_raises_on_failure
+2026-04-07T05:27:37.5889462Z tests/test_baseline_evaluation.py::TestBaselineEvaluator::test_non_strict_returns_failed
+2026-04-07T05:27:37.5890327Z tests/test_baseline_evaluation.py::TestBaselineEvaluator::test_output_format_consistent
+2026-04-07T05:27:37.5891139Z tests/test_baseline_evaluation.py::TestBaselineEvaluator::test_coin_flip_ev_computed
+2026-04-07T05:27:37.5891947Z tests/test_baseline_evaluation.py::TestBaselineEvaluator::test_round_labels_used_for_ev
+2026-04-07T05:27:37.5893332Z   /opt/hostedtoolcache/Python/3.10.20/x64/lib/python3.10/site-packages/sklearn/linear_model/_logistic.py:1196: UserWarning: l1_ratio parameter is only used when penalty is 'elasticnet'. Got (penalty=l2)
+2026-04-07T05:27:37.5894511Z     warnings.warn(
+2026-04-07T05:27:37.5894682Z 
+2026-04-07T05:27:37.5895108Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
+2026-04-07T05:27:37.5896328Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_public_pick_shift_changes_strategy
+2026-04-07T05:27:37.5897572Z tests/test_decoupled_architecture.py::TestOptimizationPivot::test_probabilities_not_mutated_by_optimizer
+2026-04-07T05:27:37.5898635Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_has_all_required_fields
+2026-04-07T05:27:37.5899749Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_values_match_environment
+2026-04-07T05:27:37.5900826Z tests/test_decoupled_architecture.py::TestMetadataIntegrity::test_manifest_serialization
+2026-04-07T05:27:37.5903147Z   /home/runner/work/march-madness-forecaster/march-madness-forecaster/src/optimization/pool_optimizer.py:223: DeprecationWarning: PoolOptimizer._build_round_probabilities is using a heuristic fallback. Pass model_round_probs from MC simulation to the constructor for accurate round advancement probabilities.
+2026-04-07T05:27:37.5905273Z     model_round_probs = self._build_round_probabilities()
+2026-04-07T05:27:37.5905644Z 
+2026-04-07T05:27:37.5905963Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2026-04-07T05:27:37.5906932Z =========================== short test summary info ============================
+2026-04-07T05:27:37.5908151Z FAILED tests/test_ingestion_collector.py::test_collector_enriches_defensive_four_factors_from_games - AssertionError: Duke defensive eFG% should be populated
+2026-04-07T05:27:37.5909245Z assert 0.0 > 0
+2026-04-07T05:27:37.5909638Z !!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+2026-04-07T05:27:37.5910358Z 1 failed, 1866 passed, 3 skipped, 494 deselected, 15 warnings in 95.75s (0:01:35)
+2026-04-07T05:27:39.0262569Z ##[error]Process completed with exit code 1.
+2026-04-07T05:27:39.0364503Z Post job cleanup.
+2026-04-07T05:27:39.0429438Z Post job cleanup.
+2026-04-07T05:27:39.1458933Z [command]/usr/bin/git version
+2026-04-07T05:27:39.1516744Z git version 2.53.0
+2026-04-07T05:27:39.1586578Z Temporarily overriding HOME='/home/runner/work/_temp/981f777e-f2df-4812-b300-16048583a05c' before making global git config changes
+2026-04-07T05:27:39.1587680Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-07T05:27:39.1592898Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/march-madness-forecaster/march-madness-forecaster
+2026-04-07T05:27:39.1635464Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-07T05:27:39.1671056Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-07T05:27:39.1915082Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-07T05:27:39.1938337Z http.https://github.com/.extraheader
+2026-04-07T05:27:39.1951414Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-04-07T05:27:39.1982309Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-07T05:27:39.2214019Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-07T05:27:39.2247193Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-07T05:27:39.2594805Z Cleaning up orphan processes
+2026-04-07T05:27:39.2996963Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-python@v5, astral-sh/setup-uv@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
 
 
-### FAILED JOB: Dependency Audit
-2026-04-06T01:50:52.3752579Z  Downloaded sympy
-2026-04-06T01:50:54.2091146Z  Downloaded pandas
-2026-04-06T01:50:54.6116548Z  Downloaded scipy
-2026-04-06T01:50:55.3615904Z  Downloaded xgboost
-2026-04-06T01:50:55.9563115Z  Downloaded nvidia-nccl-cu12
-2026-04-06T01:50:58.3918221Z  Downloaded torch
-2026-04-06T01:50:58.3922251Z Prepared 83 packages in 8.19s
-2026-04-06T01:50:59.0972333Z Installed 83 packages in 703ms
-2026-04-06T01:50:59.0972962Z  + aiohappyeyeballs==2.6.1
-2026-04-06T01:50:59.0973357Z  + aiohttp==3.13.5
-2026-04-06T01:50:59.0973982Z  + aiosignal==1.4.0
-2026-04-06T01:50:59.0974612Z  + annotated-types==0.7.0
-2026-04-06T01:50:59.0974982Z  + async-timeout==5.0.1
-2026-04-06T01:50:59.0975331Z  + attrs==26.1.0
-2026-04-06T01:50:59.0975650Z  + beautifulsoup4==4.14.3
-2026-04-06T01:50:59.0975996Z  + bleach==6.3.0
-2026-04-06T01:50:59.0976285Z  + bs4==0.0.2
-2026-04-06T01:50:59.0976559Z  + cbbpy==2.0.2
-2026-04-06T01:50:59.0978944Z  + certifi==2026.2.25
-2026-04-06T01:50:59.0979263Z  + cffi==2.0.0
-2026-04-06T01:50:59.0979584Z  + charset-normalizer==3.4.7
-2026-04-06T01:50:59.0979958Z  + contourpy==1.3.2
-2026-04-06T01:50:59.0980259Z  + coverage==7.13.5
-2026-04-06T01:50:59.0980563Z  + cssselect==1.4.0
-2026-04-06T01:50:59.0980864Z  + curl-cffi==0.15.0
-2026-04-06T01:50:59.0981176Z  + cycler==0.12.1
-2026-04-06T01:50:59.0981491Z  + exceptiongroup==1.3.1
-2026-04-06T01:50:59.0981836Z  + filelock==3.25.2
-2026-04-06T01:50:59.0982373Z  + fonttools==4.62.1
-2026-04-06T01:50:59.0983232Z  + frozenlist==1.8.0
-2026-04-06T01:50:59.0983616Z  + fsspec==2026.3.0
-2026-04-06T01:50:59.0984066Z  + idna==3.11
-2026-04-06T01:50:59.0984423Z  + iniconfig==2.3.0
-2026-04-06T01:50:59.0984777Z  + jinja2==3.1.6
-2026-04-06T01:50:59.0985135Z  + joblib==1.5.3
-2026-04-06T01:50:59.0985489Z  + kaggle==1.6.17
-2026-04-06T01:50:59.0985805Z  + kagglehub==1.0.0
-2026-04-06T01:50:59.0986178Z  + kagglesdk==0.1.16
-2026-04-06T01:50:59.0986525Z  + kiwisolver==1.5.0
-2026-04-06T01:50:59.0986892Z  + lightgbm==4.6.0
-2026-04-06T01:50:59.0987198Z  + lxml==6.0.2
-2026-04-06T01:50:59.0987567Z  + markdown-it-py==4.0.0
-2026-04-06T01:50:59.0987986Z  + markupsafe==3.0.3
-2026-04-06T01:50:59.0988357Z  + matplotlib==3.10.8
-2026-04-06T01:50:59.0988741Z  + mdurl==0.1.2
-2026-04-06T01:50:59.0989083Z  + mpmath==1.3.0
-2026-04-06T01:50:59.0989436Z  + multidict==6.7.1
-2026-04-06T01:50:59.0989790Z  + networkx==3.4.2
-2026-04-06T01:50:59.0990145Z  + numpy==1.26.4
-2026-04-06T01:50:59.0990535Z  + nvidia-nccl-cu12==2.29.7
-2026-04-06T01:50:59.0990950Z  + packaging==26.0
-2026-04-06T01:50:59.0991311Z  + pandas==2.1.4
-2026-04-06T01:50:59.0991661Z  + pillow==12.2.0
-2026-04-06T01:50:59.0992205Z  + pluggy==1.6.0
-2026-04-06T01:50:59.0992540Z  + propcache==0.4.1
-2026-04-06T01:50:59.0992876Z  + protobuf==7.34.1
-2026-04-06T01:50:59.0993189Z  + psutil==7.2.2
-2026-04-06T01:50:59.0993561Z  + pycparser==3.0
-2026-04-06T01:50:59.0993877Z  + pydantic==2.12.5
-2026-04-06T01:50:59.0994255Z  + pydantic-core==2.41.5
-2026-04-06T01:50:59.0994663Z  + pygments==2.20.0
-2026-04-06T01:50:59.0995027Z  + pyparsing==3.3.2
-2026-04-06T01:50:59.0995389Z  + pyquery==2.0.1
-2026-04-06T01:50:59.0995707Z  + pytest==9.0.2
-2026-04-06T01:50:59.0996053Z  + pytest-cov==7.1.0
-2026-04-06T01:50:59.0996801Z  + python-dateutil==2.9.0.post0
-2026-04-06T01:50:59.0997366Z  + python-slugify==8.0.4
-2026-04-06T01:50:59.0997895Z  + pytz==2023.4
-2026-04-06T01:50:59.0998412Z  + pyyaml==6.0.3
-2026-04-06T01:50:59.0998836Z  + requests==2.33.1
-2026-04-06T01:50:59.0999587Z  + rich==14.3.3
-2026-04-06T01:50:59.0999879Z  + scikit-learn==1.6.1
-2026-04-06T01:50:59.1000388Z  + scipy==1.11.4
-2026-04-06T01:50:59.1000837Z  + six==1.17.0
-2026-04-06T01:50:59.1001106Z  + soupsieve==2.8.3
-2026-04-06T01:50:59.1001382Z  + sportsipy==0.6.0
-2026-04-06T01:50:59.1001729Z  + sympy==1.14.0
-2026-04-06T01:50:59.1002214Z  + text-unidecode==1.3
-2026-04-06T01:50:59.1002549Z  + threadpoolctl==3.6.0
-2026-04-06T01:50:59.1002936Z  + tomli==2.4.1
-2026-04-06T01:50:59.1003218Z  + torch==2.11.0+cpu
-2026-04-06T01:50:59.1003582Z  + torch-geometric==2.7.0
-2026-04-06T01:50:59.1003957Z  + tqdm==4.67.3
-2026-04-06T01:50:59.1004262Z  + typing-extensions==4.15.0
-2026-04-06T01:50:59.1004605Z  + typing-inspection==0.4.2
-2026-04-06T01:50:59.1005005Z  + tzdata==2026.1
-2026-04-06T01:50:59.1005350Z  + urllib3==2.6.3
-2026-04-06T01:50:59.1005758Z  + webencodings==0.5.1
-2026-04-06T01:50:59.1006200Z  + xgboost==2.1.4
-2026-04-06T01:50:59.1006536Z  + xxhash==3.6.0
-2026-04-06T01:50:59.1006872Z  + yarl==1.23.0
-2026-04-06T01:50:59.1215924Z Using Python 3.10.20 environment at: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-06T01:50:59.6269135Z Resolved 29 packages in 503ms
-2026-04-06T01:50:59.7060670Z Prepared 14 packages in 78ms
-2026-04-06T01:50:59.7137363Z Installed 14 packages in 7ms
-2026-04-06T01:50:59.7137777Z  + boolean-py==5.0
-2026-04-06T01:50:59.7138105Z  + cachecontrol==0.14.4
-2026-04-06T01:50:59.7138461Z  + cyclonedx-python-lib==11.7.0
-2026-04-06T01:50:59.7138850Z  + defusedxml==0.7.1
-2026-04-06T01:50:59.7139179Z  + license-expression==30.4.4
-2026-04-06T01:50:59.7139551Z  + msgpack==1.1.2
-2026-04-06T01:50:59.7139873Z  + packageurl-python==0.17.6
-2026-04-06T01:50:59.7140279Z  + pip-api==0.0.34
-2026-04-06T01:50:59.7140733Z  + pip-audit==2.10.0
-2026-04-06T01:50:59.7141091Z  + pip-requirements-parser==32.0.1
-2026-04-06T01:50:59.7141538Z  + platformdirs==4.9.4
-2026-04-06T01:50:59.7141913Z  + py-serializable==2.1.0
-2026-04-06T01:50:59.7142539Z  + sortedcontainers==2.4.0
-2026-04-06T01:50:59.7142932Z  + tomli-w==1.2.0
-2026-04-06T01:50:59.7226814Z ##[group]Run pip-audit --strict --skip-editable --ignore-vuln CVE-2026-4539 --ignore-package torch --ignore-package torch-geometric
-2026-04-06T01:50:59.7227806Z [36;1mpip-audit --strict --skip-editable --ignore-vuln CVE-2026-4539 --ignore-package torch --ignore-package torch-geometric[0m
-2026-04-06T01:50:59.7255556Z shell: /usr/bin/bash -e {0}
-2026-04-06T01:50:59.7255780Z env:
-2026-04-06T01:50:59.7256029Z   pythonLocation: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-06T01:50:59.7256448Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib/pkgconfig
-2026-04-06T01:50:59.7256865Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-06T01:50:59.7257230Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-06T01:50:59.7257582Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.10.20/x64
-2026-04-06T01:50:59.7257944Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.10.20/x64/lib
-2026-04-06T01:50:59.7258322Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
-2026-04-06T01:50:59.7258609Z ##[endgroup]
-2026-04-06T01:51:01.4003343Z usage: pip-audit [-h] [-V] [-l] [-r REQUIREMENT] [--locked] [-f FORMAT]
-2026-04-06T01:51:01.4004049Z                  [-s SERVICE] [--osv-url OSV_URL] [-d] [-S]
-2026-04-06T01:51:01.4004577Z                  [--desc [{on,off,auto}]] [--aliases [{on,off,auto}]]
-2026-04-06T01:51:01.4005148Z                  [--cache-dir CACHE_DIR] [--progress-spinner {on,off}]
-2026-04-06T01:51:01.4005702Z                  [--timeout TIMEOUT] [--path PATH] [-v] [--fix]
-2026-04-06T01:51:01.4006201Z                  [--require-hashes] [--index-url INDEX_URL]
-2026-04-06T01:51:01.4006728Z                  [--extra-index-url URL] [--skip-editable] [--no-deps]
-2026-04-06T01:51:01.4007260Z                  [-o FILE] [--ignore-vuln ID] [--disable-pip]
-2026-04-06T01:51:01.4007707Z                  [project_path]
-2026-04-06T01:51:01.4008359Z pip-audit: error: unrecognized arguments: --ignore-package --ignore-package torch-geometric
-2026-04-06T01:51:01.4386458Z ##[error]Process completed with exit code 2.
-2026-04-06T01:51:01.4444549Z Post job cleanup.
-2026-04-06T01:51:01.4526489Z Post job cleanup.
-2026-04-06T01:51:01.5468811Z [command]/usr/bin/git version
-2026-04-06T01:51:01.5504286Z git version 2.53.0
-2026-04-06T01:51:01.5554879Z Temporarily overriding HOME='/home/runner/work/_temp/8b19e79f-d79d-44ef-8ca8-37bac8bb8469' before making global git config changes
-2026-04-06T01:51:01.5556291Z Adding repository directory to the temporary git global config as a safe directory
-2026-04-06T01:51:01.5561241Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/march-madness-forecaster/march-madness-forecaster
-2026-04-06T01:51:01.5595995Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
-2026-04-06T01:51:01.5627473Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
-2026-04-06T01:51:01.5848080Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
-2026-04-06T01:51:01.5867669Z http.https://github.com/.extraheader
-2026-04-06T01:51:01.5879545Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
-2026-04-06T01:51:01.5909018Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
-2026-04-06T01:51:01.6133064Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
-2026-04-06T01:51:01.6163193Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
-2026-04-06T01:51:01.6503751Z Cleaning up orphan processes
-2026-04-06T01:51:01.6807516Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-python@v5, astral-sh/setup-uv@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+### FAILED JOB: Fast Gate
+2026-04-07T05:25:41.3522426Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-07T05:25:41.3552381Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-07T05:25:41.3769982Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-04-07T05:25:41.3802847Z ##[endgroup]
+2026-04-07T05:25:41.3803736Z ##[group]Fetching the repository
+2026-04-07T05:25:41.3812033Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +bf4ae534818661adfa7f53ca3697452db9ecc2a3:refs/remotes/pull/370/merge
+2026-04-07T05:25:45.9341283Z From https://github.com/bsr-0/march-madness-forecaster
+2026-04-07T05:25:45.9343636Z  * [new ref]         bf4ae534818661adfa7f53ca3697452db9ecc2a3 -> pull/370/merge
+2026-04-07T05:25:45.9371234Z ##[endgroup]
+2026-04-07T05:25:45.9373106Z ##[group]Determining the checkout info
+2026-04-07T05:25:45.9375100Z ##[endgroup]
+2026-04-07T05:25:45.9379931Z [command]/usr/bin/git sparse-checkout disable
+2026-04-07T05:25:45.9780873Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-04-07T05:25:45.9808651Z ##[group]Checking out the ref
+2026-04-07T05:25:45.9812927Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/370/merge
+2026-04-07T05:25:46.9737895Z Note: switching to 'refs/remotes/pull/370/merge'.
+2026-04-07T05:25:46.9738447Z 
+2026-04-07T05:25:46.9738799Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-04-07T05:25:46.9740077Z changes and commit them, and you can discard any commits you make in this
+2026-04-07T05:25:46.9740984Z state without impacting any branches by switching back to a branch.
+2026-04-07T05:25:46.9741532Z 
+2026-04-07T05:25:46.9741908Z If you want to create a new branch to retain commits you create, you may
+2026-04-07T05:25:46.9742742Z do so (now or later) by using -c with the switch command. Example:
+2026-04-07T05:25:46.9743196Z 
+2026-04-07T05:25:46.9743390Z   git switch -c <new-branch-name>
+2026-04-07T05:25:46.9743704Z 
+2026-04-07T05:25:46.9743929Z Or undo this operation with:
+2026-04-07T05:25:46.9744257Z 
+2026-04-07T05:25:46.9744420Z   git switch -
+2026-04-07T05:25:46.9744688Z 
+2026-04-07T05:25:46.9745084Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-04-07T05:25:46.9745884Z 
+2026-04-07T05:25:46.9746534Z HEAD is now at bf4ae53 Merge 1b118567077c103db5a2c95e3d9c62c42df1c52f into 5ab97f930f8395b010dc431ce98ed4ae5a6e29a7
+2026-04-07T05:25:46.9796627Z ##[endgroup]
+2026-04-07T05:25:46.9834203Z [command]/usr/bin/git log -1 --format=%H
+2026-04-07T05:25:46.9856381Z bf4ae534818661adfa7f53ca3697452db9ecc2a3
+2026-04-07T05:25:47.0050165Z ##[group]Run pipx run ruff check src/ tests/ --output-format=github
+2026-04-07T05:25:47.0050768Z [36;1mpipx run ruff check src/ tests/ --output-format=github[0m
+2026-04-07T05:25:47.0081193Z shell: /usr/bin/bash -e {0}
+2026-04-07T05:25:47.0081520Z ##[endgroup]
+2026-04-07T05:25:47.3531878Z creating virtual environment...
+2026-04-07T05:25:47.4938811Z installing ruff...
+2026-04-07T05:25:50.0042135Z ##[group]Run python3 - <<'PYEOF'
+2026-04-07T05:25:50.0042552Z [36;1mpython3 - <<'PYEOF'[0m
+2026-04-07T05:25:50.0042806Z [36;1mimport ast, hashlib, json, sys[0m
+2026-04-07T05:25:50.0043057Z [36;1m[0m
+2026-04-07T05:25:50.0043301Z [36;1mFREEZE_PATH = "artifacts/pipeline_freeze_2026.json"[0m
+2026-04-07T05:25:50.0043604Z [36;1m[0m
+2026-04-07T05:25:50.0043789Z [36;1mREQUIRED_SOURCE_FILES = [[0m
+2026-04-07T05:25:50.0044071Z [36;1m    "src/pipeline/config.py",[0m
+2026-04-07T05:25:50.0044323Z [36;1m    "src/pipeline/sota.py",[0m
+2026-04-07T05:25:50.0044603Z [36;1m    "src/pipeline/tournament_pipeline.py",[0m
+2026-04-07T05:25:50.0044908Z [36;1m    "src/pipeline/pipeline_runner.py",[0m
+2026-04-07T05:25:50.0045217Z [36;1m    "src/pipeline/probability_predictor.py",[0m
+2026-04-07T05:25:50.0045907Z [36;1m    "src/pipeline/stages/calibration.py",[0m
+2026-04-07T05:25:50.0046249Z [36;1m    "src/pipeline/stages/data_loader.py",[0m
+2026-04-07T05:25:50.0046615Z [36;1m    "src/pipeline/stages/inference.py",[0m
+2026-04-07T05:25:50.0046929Z [36;1m    "src/pipeline/probability_pipeline.py",[0m
+2026-04-07T05:25:50.0047254Z [36;1m    "src/governance/production_validator.py",[0m
+2026-04-07T05:25:50.0047567Z [36;1m    "src/governance/production_runner.py",[0m
+2026-04-07T05:25:50.0047824Z [36;1m][0m
+2026-04-07T05:25:50.0047987Z [36;1m[0m
+2026-04-07T05:25:50.0048156Z [36;1mdef sha256_file(path):[0m
+2026-04-07T05:25:50.0048396Z [36;1m    h = hashlib.sha256()[0m
+2026-04-07T05:25:50.0048648Z [36;1m    with open(path, "rb") as f:[0m
+2026-04-07T05:25:50.0048953Z [36;1m        for chunk in iter(lambda: f.read(8192), b""):[0m
+2026-04-07T05:25:50.0049249Z [36;1m            h.update(chunk)[0m
+2026-04-07T05:25:50.0049487Z [36;1m    return h.hexdigest()[0m
+2026-04-07T05:25:50.0049703Z [36;1m[0m
+2026-04-07T05:25:50.0049929Z [36;1mdef extract_dataclass_fields(filepath, class_name):[0m
+2026-04-07T05:25:50.0050425Z [36;1m    """Extract field names from a @dataclass using AST (no imports needed)."""[0m
+2026-04-07T05:25:50.0050834Z [36;1m    with open(filepath) as f:[0m
+2026-04-07T05:25:50.0051100Z [36;1m        tree = ast.parse(f.read())[0m
+2026-04-07T05:25:50.0051362Z [36;1m    for node in ast.walk(tree):[0m
+2026-04-07T05:25:50.0051709Z [36;1m        if isinstance(node, ast.ClassDef) and node.name == class_name:[0m
+2026-04-07T05:25:50.0052063Z [36;1m            fields = set()[0m
+2026-04-07T05:25:50.0052558Z [36;1m            for item in node.body:[0m
+2026-04-07T05:25:50.0052963Z [36;1m                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):[0m
+2026-04-07T05:25:50.0053394Z [36;1m                    fields.add(item.target.id)[0m
+2026-04-07T05:25:50.0053667Z [36;1m            return fields[0m
+2026-04-07T05:25:50.0053898Z [36;1m    return None[0m
+2026-04-07T05:25:50.0054087Z [36;1m[0m
+2026-04-07T05:25:50.0054245Z [36;1mtry:[0m
+2026-04-07T05:25:50.0054430Z [36;1m    with open(FREEZE_PATH) as f:[0m
+2026-04-07T05:25:50.0054693Z [36;1m        freeze = json.load(f)[0m
+2026-04-07T05:25:50.0054941Z [36;1mexcept FileNotFoundError:[0m
+2026-04-07T05:25:50.0055269Z [36;1m    print(f"::error::Freeze artifact not found at {FREEZE_PATH}.")[0m
+2026-04-07T05:25:50.0055923Z [36;1m    print("Run: march-madness freeze-pipeline")[0m
+2026-04-07T05:25:50.0056220Z [36;1m    sys.exit(1)[0m
+2026-04-07T05:25:50.0056418Z [36;1m[0m
+2026-04-07T05:25:50.0056577Z [36;1merrors = [][0m
+2026-04-07T05:25:50.0056767Z [36;1m[0m
+2026-04-07T05:25:50.0056995Z [36;1mfrozen_hashes = freeze.get("source_file_hashes", {})[0m
+2026-04-07T05:25:50.0057333Z [36;1mfor src_file in REQUIRED_SOURCE_FILES:[0m
+2026-04-07T05:25:50.0057632Z [36;1m    frozen_hash = frozen_hashes.get(src_file)[0m
+2026-04-07T05:25:50.0057919Z [36;1m    if frozen_hash is None:[0m
+2026-04-07T05:25:50.0058267Z [36;1m        errors.append(f"{src_file}: missing from freeze artifact")[0m
+2026-04-07T05:25:50.0058613Z [36;1m        continue[0m
+2026-04-07T05:25:50.0059018Z [36;1m    current_hash = sha256_file(src_file)[0m
+2026-04-07T05:25:50.0059318Z [36;1m    if current_hash != frozen_hash:[0m
+2026-04-07T05:25:50.0059705Z [36;1m        errors.append(f"{src_file}: hash mismatch (source changed since freeze)")[0m
+2026-04-07T05:25:50.0060073Z [36;1m[0m
+2026-04-07T05:25:50.0060289Z [36;1mfrozen_fields = freeze.get("config_fields", {})[0m
+2026-04-07T05:25:50.0060619Z [36;1mcurrent_field_names = extract_dataclass_fields([0m
+2026-04-07T05:25:50.0060983Z [36;1m    "src/pipeline/config.py", "SOTAPipelineConfig"[0m
+2026-04-07T05:25:50.0061280Z [36;1m)[0m
+2026-04-07T05:25:50.0061462Z [36;1mif current_field_names is None:[0m
+2026-04-07T05:25:50.0061919Z [36;1m    errors.append("Could not find SOTAPipelineConfig in src/pipeline/config.py")[0m
+2026-04-07T05:25:50.0062318Z [36;1melse:[0m
+2026-04-07T05:25:50.0062547Z [36;1m    frozen_field_names = set(frozen_fields.keys())[0m
+2026-04-07T05:25:50.0062935Z [36;1m    missing_in_freeze = current_field_names - frozen_field_names[0m
+2026-04-07T05:25:50.0063283Z [36;1m    if missing_in_freeze:[0m
+2026-04-07T05:25:50.0063526Z [36;1m        errors.append([0m
+2026-04-07T05:25:50.0063867Z [36;1m            f"Config fields added but not in freeze: {sorted(missing_in_freeze)}"[0m
+2026-04-07T05:25:50.0064232Z [36;1m        )[0m
+2026-04-07T05:25:50.0064414Z [36;1m[0m
+2026-04-07T05:25:50.0064574Z [36;1mif errors:[0m
+2026-04-07T05:25:50.0064890Z [36;1m    print("::error::Freeze artifact is STALE. Update it before merging.")[0m
+2026-04-07T05:25:50.0065261Z [36;1m    for e in errors:[0m
+2026-04-07T05:25:50.0065905Z [36;1m        print(f"  - {e}")[0m
+2026-04-07T05:25:50.0066261Z [36;1m    print()[0m
+2026-04-07T05:25:50.0066935Z [36;1m    print("To fix: python -c \"from src.governance.production_runner import regenerate_freeze; regenerate_freeze()\"")[0m
+2026-04-07T05:25:50.0067893Z [36;1m    sys.exit(1)[0m
+2026-04-07T05:25:50.0068219Z [36;1melse:[0m
+2026-04-07T05:25:50.0068811Z [36;1m    print(f"Freeze OK ({len(frozen_hashes)} files, {len(frozen_fields)} config fields)")[0m
+2026-04-07T05:25:50.0069514Z [36;1mPYEOF[0m
+2026-04-07T05:25:50.0099004Z shell: /usr/bin/bash -e {0}
+2026-04-07T05:25:50.0099262Z ##[endgroup]
+2026-04-07T05:25:50.0503067Z ##[error]Freeze artifact is STALE. Update it before merging.
+2026-04-07T05:25:50.0512828Z   - src/pipeline/stages/data_loader.py: hash mismatch (source changed since freeze)
+2026-04-07T05:25:50.0513520Z 
+2026-04-07T05:25:50.0514487Z To fix: python -c "from src.governance.production_runner import regenerate_freeze; regenerate_freeze()"
+2026-04-07T05:25:50.0544654Z ##[error]Process completed with exit code 1.
+2026-04-07T05:25:50.0717545Z Post job cleanup.
+2026-04-07T05:25:50.1660337Z [command]/usr/bin/git version
+2026-04-07T05:25:50.1697680Z git version 2.53.0
+2026-04-07T05:25:50.1749932Z Temporarily overriding HOME='/home/runner/work/_temp/16dfb27e-b276-4da8-bd39-02fbbaaab120' before making global git config changes
+2026-04-07T05:25:50.1751327Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-07T05:25:50.1756348Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/march-madness-forecaster/march-madness-forecaster
+2026-04-07T05:25:50.1790221Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-07T05:25:50.1822573Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-07T05:25:50.2049492Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-07T05:25:50.2074039Z http.https://github.com/.extraheader
+2026-04-07T05:25:50.2087475Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-04-07T05:25:50.2119998Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-07T05:25:50.2362969Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-07T05:25:50.2396989Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-07T05:25:50.2749478Z Cleaning up orphan processes
+2026-04-07T05:25:50.3160765Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
 
 
 ### FAILED JOB: CI
-2026-04-06T01:54:27.3750191Z Current runner version: '2.333.1'
-2026-04-06T01:54:27.3775015Z ##[group]Runner Image Provisioner
-2026-04-06T01:54:27.3775853Z Hosted Compute Agent
-2026-04-06T01:54:27.3776379Z Version: 20260213.493
-2026-04-06T01:54:27.3777056Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
-2026-04-06T01:54:27.3777707Z Build Date: 2026-02-13T00:28:41Z
-2026-04-06T01:54:27.3778413Z Worker ID: {a3570a68-1e0e-4e4d-8f8b-fd742b200913}
-2026-04-06T01:54:27.3779096Z Azure Region: westcentralus
-2026-04-06T01:54:27.3779677Z ##[endgroup]
-2026-04-06T01:54:27.3781025Z ##[group]Operating System
-2026-04-06T01:54:27.3781678Z Ubuntu
-2026-04-06T01:54:27.3782174Z 24.04.4
-2026-04-06T01:54:27.3782630Z LTS
-2026-04-06T01:54:27.3783359Z ##[endgroup]
-2026-04-06T01:54:27.3783885Z ##[group]Runner Image
-2026-04-06T01:54:27.3784481Z Image: ubuntu-24.04
-2026-04-06T01:54:27.3785148Z Version: 20260329.72.1
-2026-04-06T01:54:27.3786746Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260329.72/images/ubuntu/Ubuntu2404-Readme.md
-2026-04-06T01:54:27.3788203Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260329.72
-2026-04-06T01:54:27.3789111Z ##[endgroup]
-2026-04-06T01:54:27.3791869Z ##[group]GITHUB_TOKEN Permissions
-2026-04-06T01:54:27.3794320Z Actions: write
-2026-04-06T01:54:27.3794932Z ArtifactMetadata: write
-2026-04-06T01:54:27.3795522Z Attestations: write
-2026-04-06T01:54:27.3796143Z Checks: write
-2026-04-06T01:54:27.3796676Z Contents: write
-2026-04-06T01:54:27.3797143Z Deployments: write
-2026-04-06T01:54:27.3797694Z Discussions: write
-2026-04-06T01:54:27.3798315Z Issues: write
-2026-04-06T01:54:27.3798766Z Metadata: read
-2026-04-06T01:54:27.3799328Z Models: read
-2026-04-06T01:54:27.3799779Z Packages: write
-2026-04-06T01:54:27.3800296Z Pages: write
-2026-04-06T01:54:27.3800925Z PullRequests: write
-2026-04-06T01:54:27.3801571Z RepositoryProjects: write
-2026-04-06T01:54:27.3802207Z SecurityEvents: write
-2026-04-06T01:54:27.3803040Z Statuses: write
-2026-04-06T01:54:27.3803725Z ##[endgroup]
-2026-04-06T01:54:27.3805745Z Secret source: Actions
-2026-04-06T01:54:27.3806529Z Prepare workflow directory
-2026-04-06T01:54:27.4155927Z Prepare all required actions
-2026-04-06T01:54:27.4251517Z Complete job name: CI
-2026-04-06T01:54:27.5016478Z ##[group]Run if [[ "failure" != "success" ]]; then
-2026-04-06T01:54:27.5017329Z [36;1mif [[ "failure" != "success" ]]; then[0m
-2026-04-06T01:54:27.5018197Z [36;1m  echo "::error::Fast gate failed — blocking merge"[0m
-2026-04-06T01:54:27.5018938Z [36;1m  exit 1[0m
-2026-04-06T01:54:27.5019417Z [36;1mfi[0m
-2026-04-06T01:54:27.5019976Z [36;1mif [[ "failure" == "failure" ]]; then[0m
-2026-04-06T01:54:27.5020755Z [36;1m  echo "::warning::Full test suite failed — check results"[0m
-2026-04-06T01:54:27.5021442Z [36;1mfi[0m
-2026-04-06T01:54:27.5022037Z [36;1mif [[ "failure" == "failure" ]]; then[0m
-2026-04-06T01:54:27.5022939Z [36;1m  echo "::warning::Dependency audit failed — check results"[0m
-2026-04-06T01:54:27.5023687Z [36;1mfi[0m
-2026-04-06T01:54:27.5024251Z [36;1mecho "Merge gate passed"[0m
-2026-04-06T01:54:27.5440553Z shell: /usr/bin/bash -e {0}
-2026-04-06T01:54:27.5441614Z ##[endgroup]
-2026-04-06T01:54:27.5760486Z ##[error]Fast gate failed — blocking merge
-2026-04-06T01:54:27.5779457Z ##[error]Process completed with exit code 1.
-2026-04-06T01:54:27.5892263Z Cleaning up orphan processes
+2026-04-07T05:27:43.7615157Z Current runner version: '2.333.1'
+2026-04-07T05:27:43.7651453Z ##[group]Runner Image Provisioner
+2026-04-07T05:27:43.7652747Z Hosted Compute Agent
+2026-04-07T05:27:43.7653738Z Version: 20260213.493
+2026-04-07T05:27:43.7654759Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+2026-04-07T05:27:43.7656091Z Build Date: 2026-02-13T00:28:41Z
+2026-04-07T05:27:43.7657300Z Worker ID: {e2ffdd49-cdbb-4bb1-80f8-09b7c2b70c3c}
+2026-04-07T05:27:43.7658433Z Azure Region: eastus
+2026-04-07T05:27:43.7659796Z ##[endgroup]
+2026-04-07T05:27:43.7661998Z ##[group]Operating System
+2026-04-07T05:27:43.7662965Z Ubuntu
+2026-04-07T05:27:43.7663950Z 24.04.4
+2026-04-07T05:27:43.7664768Z LTS
+2026-04-07T05:27:43.7665690Z ##[endgroup]
+2026-04-07T05:27:43.7666549Z ##[group]Runner Image
+2026-04-07T05:27:43.7667561Z Image: ubuntu-24.04
+2026-04-07T05:27:43.7668383Z Version: 20260329.72.1
+2026-04-07T05:27:43.7670915Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260329.72/images/ubuntu/Ubuntu2404-Readme.md
+2026-04-07T05:27:43.7673600Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260329.72
+2026-04-07T05:27:43.7675243Z ##[endgroup]
+2026-04-07T05:27:43.7680214Z ##[group]GITHUB_TOKEN Permissions
+2026-04-07T05:27:43.7683068Z Actions: write
+2026-04-07T05:27:43.7683924Z ArtifactMetadata: write
+2026-04-07T05:27:43.7685020Z Attestations: write
+2026-04-07T05:27:43.7685839Z Checks: write
+2026-04-07T05:27:43.7686766Z Contents: write
+2026-04-07T05:27:43.7687584Z Deployments: write
+2026-04-07T05:27:43.7688467Z Discussions: write
+2026-04-07T05:27:43.7689568Z Issues: write
+2026-04-07T05:27:43.7690560Z Metadata: read
+2026-04-07T05:27:43.7691458Z Models: read
+2026-04-07T05:27:43.7692326Z Packages: write
+2026-04-07T05:27:43.7693276Z Pages: write
+2026-04-07T05:27:43.7694362Z PullRequests: write
+2026-04-07T05:27:43.7695428Z RepositoryProjects: write
+2026-04-07T05:27:43.7696480Z SecurityEvents: write
+2026-04-07T05:27:43.7697418Z Statuses: write
+2026-04-07T05:27:43.7698507Z ##[endgroup]
+2026-04-07T05:27:43.7701797Z Secret source: Actions
+2026-04-07T05:27:43.7702885Z Prepare workflow directory
+2026-04-07T05:27:43.8194705Z Prepare all required actions
+2026-04-07T05:27:43.8338632Z Complete job name: CI
+2026-04-07T05:27:43.9431466Z ##[group]Run if [[ "failure" != "success" ]]; then
+2026-04-07T05:27:43.9432351Z [36;1mif [[ "failure" != "success" ]]; then[0m
+2026-04-07T05:27:43.9433093Z [36;1m  echo "::error::Fast gate failed — blocking merge"[0m
+2026-04-07T05:27:43.9433797Z [36;1m  exit 1[0m
+2026-04-07T05:27:43.9434329Z [36;1mfi[0m
+2026-04-07T05:27:43.9434790Z [36;1mif [[ "failure" == "failure" ]]; then[0m
+2026-04-07T05:27:43.9435555Z [36;1m  echo "::warning::Full test suite failed — check results"[0m
+2026-04-07T05:27:43.9436224Z [36;1mfi[0m
+2026-04-07T05:27:43.9436719Z [36;1mif [[ "success" == "failure" ]]; then[0m
+2026-04-07T05:27:43.9437485Z [36;1m  echo "::warning::Dependency audit failed — check results"[0m
+2026-04-07T05:27:43.9438190Z [36;1mfi[0m
+2026-04-07T05:27:43.9438900Z [36;1mecho "Merge gate passed"[0m
+2026-04-07T05:27:44.0028503Z shell: /usr/bin/bash -e {0}
+2026-04-07T05:27:44.0030167Z ##[endgroup]
+2026-04-07T05:27:44.0381346Z ##[error]Fast gate failed — blocking merge
+2026-04-07T05:27:44.0399378Z ##[error]Process completed with exit code 1.
+2026-04-07T05:27:44.0507732Z Cleaning up orphan processes
 

@@ -101,6 +101,81 @@ _FF_FIELDS = (
 )
 
 
+def _compute_defensive_ff_from_games(torvik_payload: dict, game_rows: list) -> int:
+    """Compute defensive four factors from game box score data.
+
+    Used when Torvik's four_factors endpoint is blocked (e.g. leakage guard)
+    and opp_* fields are zero in the ratings CSV.  Aggregates opponent stats
+    from each team's game records.
+
+    Returns count of teams updated.
+    """
+    from collections import defaultdict
+
+    teams = torvik_payload.get("teams", [])
+    if not teams or not game_rows:
+        return 0
+
+    # group game rows by opponent_id: row.fga/fgm/etc are the stats of the
+    # team that *opposed* opponent_id, i.e. the defensive exposure data.
+    opp_games: dict = defaultdict(list)
+    for g in game_rows:
+        if not isinstance(g, dict):
+            continue
+        opp_id = g.get("opponent_id")
+        if opp_id:
+            opp_games[normalize_team_id(opp_id)].append(g)
+
+    if not opp_games:
+        return 0
+
+    updated = 0
+    for team in teams:
+        tid = normalize_team_id(team.get("team_id", ""))
+        if abs(float(team.get("opp_effective_fg_pct", 0) or 0)) > 1e-6:
+            continue  # already populated
+
+        games = opp_games.get(tid, [])
+        if not games:
+            continue
+
+        efg_sum = to_sum = ftr_sum = 0.0
+        n_efg = n_to = n_ftr = 0
+
+        for g in games:
+            fga = float(g.get("fga", 0) or 0)
+            fgm = float(g.get("fgm", 0) or 0)
+            fg3m = float(g.get("fg3m", 0) or 0)
+            fta = float(g.get("fta", 0) or 0)
+            turnovers = float(g.get("turnovers", 0) or 0)
+            possessions = float(g.get("possessions", 0) or 0)
+
+            if fga > 0:
+                efg_sum += (fgm + 0.5 * fg3m) / fga
+                n_efg += 1
+                ftr_sum += fta / fga
+                n_ftr += 1
+            if possessions > 0:
+                to_sum += turnovers / possessions
+                n_to += 1
+
+        changed = False
+        if n_efg > 0:
+            team["opp_effective_fg_pct"] = round(efg_sum / n_efg, 4)
+            changed = True
+        if n_to > 0:
+            team["opp_turnover_rate"] = round(to_sum / n_to, 4)
+            changed = True
+        if n_ftr > 0:
+            team["opp_free_throw_rate"] = round(ftr_sum / n_ftr, 4)
+            changed = True
+
+        if changed:
+            updated += 1
+
+    return updated
+
+
 def _merge_four_factors_into_torvik(torvik_payload: dict, four_factors: dict) -> int:
     """Merge four_factors entries into torvik team dicts, filling zero fields.
 
@@ -368,6 +443,23 @@ class RealDataCollector:
                     self._assert_valid("advanced_metrics_json", validation_errors["advanced_metrics_json"])
                     out["advanced_metrics_json"] = self._write(f"advanced_metrics_{year}.json", advanced_metrics)
                     provider_lineage["advanced_metrics_json"] = game_provider_name
+
+        # Compute defensive four factors from game box scores when Torvik's
+        # opp_* fields are zero (e.g. leakage guard blocks four_factors endpoint).
+        if torvik_payload and historical_team_rows:
+            _needs_dff = any(
+                abs(float(t.get("opp_effective_fg_pct", 0) or 0)) < 1e-6
+                for t in torvik_payload.get("teams", [])
+            )
+            if _needs_dff:
+                _dff_updated = _compute_defensive_ff_from_games(torvik_payload, historical_team_rows)
+                if _dff_updated:
+                    out["torvik_json"] = self._write(f"torvik_{year}.json", torvik_payload)
+                    provider_lineage["torvik_defensive_ff"] = "game_box_scores"
+                    logger.info(
+                        "Computed defensive four factors from game box scores for %d teams",
+                        _dff_updated,
+                    )
 
         if self.config.scrape_rosters:
             roster_payload = CBBpyRosterScraper(str(self.cache_dir)).fetch_rosters(year)
