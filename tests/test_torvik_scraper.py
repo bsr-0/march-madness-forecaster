@@ -174,8 +174,8 @@ class TestStrategyTelemetry:
         prop["test"] = "value"
         assert "test" not in scraper._fetch_strategy
 
-    def test_csv_fallback_strategy_recorded(self, scraper):
-        """When CSV fallback is used for four factors, strategy is recorded."""
+    def test_trank_csv_strategy_recorded(self, scraper):
+        """When trank CSV is used for four factors, strategy is recorded."""
         fake_ff = {
             "duke": {
                 "effective_fg_pct": 0.57,
@@ -189,13 +189,11 @@ class TestStrategyTelemetry:
             }
         }
         with patch.object(scraper, "_check_tournament_date_guard"):
-            with patch.object(scraper, "_four_factors_from_cbbdata_api", return_value={}):
-                with patch.object(scraper, "_four_factors_from_trank_csv", return_value={}):
-                    with patch.object(scraper, "_four_factors_from_player_csv", return_value=fake_ff):
-                        with patch.object(scraper, "_save_to_cache"):
-                            ff = scraper.fetch_four_factors(year=2024)
+            with patch.object(scraper, "_four_factors_from_trank_csv", return_value=fake_ff):
+                with patch.object(scraper, "_save_to_cache"):
+                    ff = scraper.fetch_four_factors(year=2024)
         assert ff == fake_ff
-        assert scraper._fetch_strategy.get("four_factors") == "csv_fallback"
+        assert scraper._fetch_strategy.get("four_factors") == "trank_csv"
 
 
 # ---------------------------------------------------------------------------
@@ -369,47 +367,6 @@ class TestDictToTeam:
 
 
 # ---------------------------------------------------------------------------
-# Rankings CSV fallback
-# ---------------------------------------------------------------------------
-
-
-class TestRankingsCsvFallback:
-    def test_rankings_csv_fallback_parses_teams(self, scraper):
-        """_rankings_from_csv returns valid TorVikTeam objects with NaN Four Factors."""
-        csv_content = (
-            "rank,team,conf,adj_o,adj_d,barthag,adj_t,wab,wins,losses\n"
-            "1,Duke,ACC,122.0,93.0,0.97,70.0,8.5,30,5\n"
-            "2,Kansas,B12,118.0,95.0,0.94,68.5,7.2,28,7\n"
-        )
-        fake_resp = MagicMock()
-        fake_resp.text = csv_content
-
-        with patch.object(scraper, "_get_with_retry", return_value=fake_resp):
-            with patch.object(scraper, "_cb_csv", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock())):
-                teams = scraper._rankings_from_csv(2026)
-
-        assert len(teams) == 2
-        assert any("duke" in t.team_id.lower() for t in teams)
-        # Four Factors should be NaN
-        duke = next(t for t in teams if "duke" in t.team_id.lower())
-        assert math.isnan(duke.effective_fg_pct)
-        assert math.isnan(duke.turnover_rate)
-
-    def test_rankings_csv_fallback_strategy_recorded(self, scraper):
-        """When all earlier strategies fail, rankings should fall through to CSV."""
-        fake_team = _make_team()
-        with patch.object(scraper, "_check_tournament_date_guard"):
-            with patch.object(scraper, "_rankings_from_cbbdata_api", return_value=[]):
-                with patch.object(scraper, "_rankings_from_trank_csv", return_value=[]):
-                    with patch.object(scraper, "_rankings_from_csv", return_value=[fake_team]):
-                        with patch.object(scraper, "_save_to_cache"):
-                            teams = scraper.fetch_current_rankings(year=2024)
-
-        assert len(teams) == 1
-        assert scraper._fetch_strategy.get("rankings") == "csv_fallback"
-
-
-# ---------------------------------------------------------------------------
 # CSV header detection robustness
 # ---------------------------------------------------------------------------
 
@@ -419,15 +376,38 @@ class TestCsvHeaderDetection:
     from data rows, even when team names contain header-like substrings."""
 
     @staticmethod
-    def _make_csv_rows(n, start_rank=1):
-        """Generate n CSV data rows with unique team names."""
+    def _make_csv_rows(n, start_rank=1, *, with_header_cols=False):
+        """Generate n CSV data rows with unique team names.
+
+        When with_header_cols=True, generates 18-col rows matching header-based
+        tests (rank,team,conf,...).  Otherwise generates 37-col rows matching
+        the real trank no-header CSV layout:
+          [0]=Team [1]=AdjOE [2]=AdjDE [3]=Barthag [4]=Record [5]=Wins
+          [6]=Games [7]=eFG%(O) [8]=eFG%(D) [9]=FTR(O) [10]=FTR(D)
+          [11]=TO%(O) [12]=TO%(D) [13]=ORB%(O) [14]=ORB%(D) [15..33]=other
+          [34]=WAB [35]=AdjT [36]=extra
+        """
         rows = []
         for i in range(n):
             rank = start_rank + i
-            rows.append(
-                f"{rank},Team_{rank},Conf,{100 + i:.1f},{95 + i:.1f},0.50,68.0,0.0,15,15,"
-                f"50.0,18.0,30.0,32.0,48.0,19.0,26.0,30.0"
-            )
+            if with_header_cols:
+                rows.append(
+                    f"{rank},Team_{rank},Conf,{100 + i:.1f},{95 + i:.1f},0.50,68.0,0.0,15,15,"
+                    f"50.0,18.0,30.0,32.0,48.0,19.0,26.0,30.0"
+                )
+            else:
+                # 37-column positional format (no rank/conf columns)
+                pad = ",".join(["0.0"] * 19)  # cols 15-33
+                rows.append(
+                    f"Team_{rank},{100 + i:.1f},{95 + i:.1f},0.50,"
+                    f"15-15,15,30,"          # record,wins,games
+                    f"50.0,48.0,"            # eFG%(O), eFG%(D)
+                    f"32.0,30.0,"            # FTR(O), FTR(D)
+                    f"18.0,19.0,"            # TO%(O), TO%(D)
+                    f"30.0,25.0,"            # ORB%(O), ORB%(D)
+                    f"{pad},"                # cols 15-33
+                    f"0.5,68.0,0.0"          # WAB, AdjT, extra
+                )
         return "\n".join(rows)
 
     def test_header_row_detected_with_standard_headers(self, scraper):
@@ -436,7 +416,7 @@ class TestCsvHeaderDetection:
             "rank,team,conf,adj_o,adj_d,barthag,adj_t,wab,wins,losses,"
             "off_efg,off_to,off_or,off_ftr,def_efg,def_to,def_or,def_ftr"
         )
-        csv_content = header + "\n" + self._make_csv_rows(110) + "\n"
+        csv_content = header + "\n" + self._make_csv_rows(110, with_header_cols=True) + "\n"
         fake_resp = MagicMock()
         fake_resp.text = csv_content
         with patch.object(scraper, "_get_with_retry", return_value=fake_resp):
@@ -449,9 +429,19 @@ class TestCsvHeaderDetection:
 
     def test_team_named_frank_not_treated_as_header(self, scraper):
         """A team named 'Frank' contains 'rank' — should NOT trigger header detection."""
-        # No real header row; first row is data. With <3 header matches,
-        # the parser should fall back to positional indexing.
-        first_row = "1,Franklin Pierce,NEC,100.0,105.0,0.40,68.0,0.0,10,20,45.0,20.0,28.0,30.0,50.0,18.0,27.0,32.0"
+        # No real header row; first row is data (37-col positional format).
+        # With <3 header matches, the parser should fall back to positional indexing.
+        pad = ",".join(["0.0"] * 19)
+        first_row = (
+            f"Franklin Pierce,100.0,105.0,0.40,"
+            f"10-20,10,30,"
+            f"45.0,50.0,"
+            f"30.0,32.0,"
+            f"20.0,18.0,"
+            f"28.0,27.0,"
+            f"{pad},"
+            f"0.5,68.0,0.0"
+        )
         csv_content = first_row + "\n" + self._make_csv_rows(109, start_rank=2) + "\n"
         fake_resp = MagicMock()
         fake_resp.text = csv_content
@@ -466,8 +456,18 @@ class TestCsvHeaderDetection:
 
     def test_single_keyword_match_not_enough_for_header(self, scraper):
         """A row with only 1 header keyword match should not be treated as header."""
-        # Row 0 has "team" in one cell but nothing else header-like
-        first_row = "1,team,foo,100.0,105.0,0.40,68.0,0.0,10,20,45.0,20.0,28.0,30.0,50.0,18.0,27.0,32.0"
+        # Row 0 has "team" as team name but nothing else header-like (37-col positional).
+        pad = ",".join(["0.0"] * 19)
+        first_row = (
+            f"team,100.0,105.0,0.40,"
+            f"10-20,10,30,"
+            f"45.0,50.0,"
+            f"30.0,32.0,"
+            f"20.0,18.0,"
+            f"28.0,27.0,"
+            f"{pad},"
+            f"0.5,68.0,0.0"
+        )
         csv_content = first_row + "\n" + self._make_csv_rows(109, start_rank=2) + "\n"
         fake_resp = MagicMock()
         fake_resp.text = csv_content
@@ -485,7 +485,7 @@ class TestCsvHeaderDetection:
             "\ufeffrank,team,conf,adj_o,adj_d,barthag,adj_t,wab,wins,losses,"
             "off_efg,off_to,off_or,off_ftr,def_efg,def_to,def_or,def_ftr"
         )
-        csv_content = header + "\n" + self._make_csv_rows(110) + "\n"
+        csv_content = header + "\n" + self._make_csv_rows(110, with_header_cols=True) + "\n"
         fake_resp = MagicMock()
         fake_resp.text = csv_content
         with patch.object(scraper, "_get_with_retry", return_value=fake_resp):

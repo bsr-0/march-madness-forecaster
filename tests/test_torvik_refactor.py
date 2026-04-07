@@ -142,21 +142,8 @@ class TestCircuitBreakerIntegration:
     def test_scraper_has_circuit_breakers(self, scraper):
         assert hasattr(scraper, "_cb_csv")
 
-    def test_rankings_fallback_to_csv(self, scraper):
-        """When API strategies fail, rankings should fall back to CSV."""
-        fake_team = _make_team()
-        with patch.object(scraper, "_check_tournament_date_guard"):
-            with patch.object(scraper, "_rankings_from_cbbdata_api", return_value=[]):
-                with patch.object(scraper, "_rankings_from_trank_csv", return_value=[]):
-                    with patch.object(scraper, "_rankings_from_csv", return_value=[fake_team]):
-                        with patch.object(scraper, "_save_to_cache"):
-                            teams = scraper.fetch_current_rankings(year=2024)
-
-        assert len(teams) == 1
-        assert scraper._fetch_strategy.get("rankings") == "csv_fallback"
-
-    def test_four_factors_fallback_to_player_csv(self, scraper):
-        """When API/trank strategies fail, four factors should fall back to player CSV."""
+    def test_four_factors_from_trank_csv(self, scraper):
+        """four factors should use trank CSV as the sole live source."""
         fake_ff = {
             "duke": {
                 "effective_fg_pct": 0.57,
@@ -170,14 +157,12 @@ class TestCircuitBreakerIntegration:
             }
         }
         with patch.object(scraper, "_check_tournament_date_guard"):
-            with patch.object(scraper, "_four_factors_from_cbbdata_api", return_value={}):
-                with patch.object(scraper, "_four_factors_from_trank_csv", return_value={}):
-                    with patch.object(scraper, "_four_factors_from_player_csv", return_value=fake_ff):
-                        with patch.object(scraper, "_save_to_cache"):
-                            ff = scraper.fetch_four_factors(year=2024)
+            with patch.object(scraper, "_four_factors_from_trank_csv", return_value=fake_ff):
+                with patch.object(scraper, "_save_to_cache"):
+                    ff = scraper.fetch_four_factors(year=2024)
 
         assert ff == fake_ff
-        assert scraper._fetch_strategy.get("four_factors") == "csv_fallback"
+        assert scraper._fetch_strategy.get("four_factors") == "trank_csv"
 
 
 # ===========================================================================
@@ -320,95 +305,7 @@ class TestStrictValidation:
 
 
 # ===========================================================================
-# 6. CSV fallback now populates ORB%/TO%
-# ===========================================================================
-
-
-class TestCSVFallbackFix:
-    def _make_csv_row(self, player, team, conf, min_pct, orb, drb, to, ftm, fta, fg2m, fg2a, fg3m, fg3a):
-        cols = [""] * 22
-        cols[0] = player
-        cols[1] = team
-        cols[2] = conf
-        cols[3] = "30"
-        cols[4] = str(min_pct)
-        cols[7] = "0.5"
-        cols[9] = str(orb)
-        cols[10] = str(drb)
-        cols[12] = str(to)
-        cols[13] = str(ftm)
-        cols[14] = str(fta)
-        cols[15] = "0.80"
-        cols[16] = str(fg2m)
-        cols[17] = str(fg2a)
-        cols[18] = ""
-        cols[19] = str(fg3m)
-        cols[20] = str(fg3a)
-        return ",".join(cols)
-
-    def test_csv_fallback_populates_orb_and_to(self, scraper):
-        """CSV fallback should produce non-zero ORB% and TO% via minutes-weighting."""
-        rows = [
-            # Player A: 60% minutes, 10.0 ORB%, 20.0 DRB%, 15.0 TO%
-            self._make_csv_row("A", "Duke", "ACC", 60.0, 10.0, 20.0, 15.0, 50, 60, 100, 200, 30, 80),
-            # Player B: 40% minutes, 8.0 ORB%, 18.0 DRB%, 12.0 TO%
-            self._make_csv_row("B", "Duke", "ACC", 40.0, 8.0, 18.0, 12.0, 40, 50, 80, 160, 25, 70),
-        ]
-        csv_text = "\n".join(rows)
-
-        with patch.object(scraper, "_fetch_player_csv", return_value=csv_text):
-            result = scraper._four_factors_from_player_csv(2026)
-
-        duke_key = next(k for k in result if "duke" in k.lower())
-        ff = result[duke_key]
-
-        # eFG% should be exact (from counting stats)
-        assert ff["effective_fg_pct"] > 0
-
-        # ORB% after Bayesian shrinkage toward population prior (0.295):
-        # raw = (10.0*60 + 8.0*40) / 100 / 100 = 0.092
-        # w = 100 / (100 + 60) = 0.625
-        # shrunk = 0.625 * 0.092 + 0.375 * 0.295 = 0.1681
-        assert ff["offensive_reb_rate"] > 0, "ORB% should no longer be zero in CSV fallback"
-        assert abs(ff["offensive_reb_rate"] - 0.168) < 0.01
-
-        # TO% after Bayesian shrinkage toward population prior (0.185):
-        # raw = (15.0*60 + 12.0*40) / 100 / 100 = 0.138
-        # shrunk = 0.625 * 0.138 + 0.375 * 0.185 = 0.1556
-        assert ff["turnover_rate"] > 0, "TO% should no longer be zero in CSV fallback"
-        assert abs(ff["turnover_rate"] - 0.156) < 0.01
-
-        # DRB% should be non-zero
-        assert ff["defensive_reb_rate"] > 0
-
-        # Defensive opponent stats can't be derived from player-level CSV — returned as None
-        assert ff["opp_effective_fg_pct"] is None
-        assert ff["opp_turnover_rate"] is None
-        assert ff["opp_free_throw_rate"] is None
-
-        # Should be flagged as approximation
-        assert ff.get("_csv_approximation") is True
-
-    def test_csv_fallback_old_behavior_comparison(self, scraper):
-        """Verify we now populate 5/8 factors instead of the old 2/8."""
-        rows = [
-            self._make_csv_row("A", "TestU", "B10", 50.0, 12.0, 22.0, 17.0, 45, 55, 90, 180, 28, 75),
-        ]
-        csv_text = "\n".join(rows)
-
-        with patch.object(scraper, "_fetch_player_csv", return_value=csv_text):
-            result = scraper._four_factors_from_player_csv(2026)
-
-        key = next(iter(result))
-        ff = result[key]
-
-        non_zero_fields = sum(1 for k, v in ff.items() if k != "_csv_approximation" and isinstance(v, float) and v > 0)
-        # Old code: only 2 (eFG%, FTR). New code: 5 (eFG%, TO%, ORB%, DRB%, FTR)
-        assert non_zero_fields >= 5, f"Expected >=5 non-zero fields, got {non_zero_fields}"
-
-
-# ===========================================================================
-# 7. Player CSV in-memory deduplication
+# 6. Player CSV in-memory deduplication
 # ===========================================================================
 
 
@@ -443,7 +340,7 @@ class TestPlayerCSVDedup:
 
 
 # ===========================================================================
-# 8. Data completeness report
+# 7. Data completeness report
 # ===========================================================================
 
 
@@ -482,7 +379,7 @@ class TestDataCompletenessReport:
 
 
 # ===========================================================================
-# 9. _get_with_retry integration
+# 8. _get_with_retry integration
 # ===========================================================================
 
 
@@ -510,7 +407,7 @@ class TestGetWithRetry:
 
 
 # ===========================================================================
-# 10. Constructor defaults
+# 9. Constructor defaults
 # ===========================================================================
 
 

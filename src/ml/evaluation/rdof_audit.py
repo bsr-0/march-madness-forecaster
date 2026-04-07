@@ -1372,6 +1372,7 @@ class HoldoutEvaluator:
             team_games_to_game_records,
             _team_id,
         )
+        from ...data.features.torvik_ff_lookup import TorVikFFLookup
         from datetime import date as _dtdate, timedelta as _dttd
         from ...pipeline.config import TOURNAMENT_START_DATES as _TOURNEY_DATES
 
@@ -1468,6 +1469,9 @@ class HoldoutEvaluator:
             )
             _cross_year_elo = inc_engine.get_end_of_season_elo()
 
+            # Torvik FF overlay for this training year
+            _ff_lookup = TorVikFFLookup(train_year)
+
             # Year-based decay weight.
             years_ago = max(1, holdout_year - train_year)
             year_weight = max(
@@ -1494,6 +1498,8 @@ class HoldoutEvaluator:
                     continue
 
                 metrics = inc_engine.compute_as_of(_bucketed_date(g.game_date, _season_start))
+                if _ff_lookup.has_snapshots:
+                    _ff_lookup.overlay_metrics(metrics, g.game_date)
                 m1 = metrics.get(g.team_id)
                 m2 = metrics.get(g.opponent_id)
                 if m1 is None or m2 is None:
@@ -1634,6 +1640,11 @@ class HoldoutEvaluator:
             holdout_year, _dtdate(holdout_year, 3, 14)
         ).isoformat()
         ho_metrics = ho_engine.compute_as_of(tournament_cutoff)
+
+        # Overlay Torvik FF for holdout year evaluation
+        _ho_ff_lookup = TorVikFFLookup(holdout_year)
+        if _ho_ff_lookup.has_snapshots:
+            _ho_ff_lookup.overlay_metrics(ho_metrics, tournament_cutoff)
         if not ho_metrics:
             raise ValueError(f"No metrics computed for holdout year {holdout_year}")
 

@@ -165,96 +165,43 @@ def test_cbbpy_provider_extracts_dates_from_info(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Torvik provider cascade
+# Torvik provider
 # ---------------------------------------------------------------------------
 
 
 class TorvikStubHub(LibraryProviderHub):
-    """Stub for torvik provider cascade testing."""
+    """Stub for torvik provider testing."""
     def __init__(self):
         super().__init__()
         self.calls = []
 
-    def _from_cbbdata_api(self, year):
-        self.calls.append("cbbdata")
-        return ProviderResult("cbbdata", [{"team_id": "duke", "adj_oe": 120}])
-
-    def _from_barttorvik_csv(self, year):
+    def _from_barttorvik_trank(self, year):
         self.calls.append("barttorvik")
-        return ProviderResult("barttorvik", [{"team_id": "duke", "adj_oe": 119}])
+        return ProviderResult("barttorvik", [{"team_id": "duke", "adj_oe": 120}])
 
 
-def test_torvik_cascade_cbbdata_first():
-    """cbbdata should be tried before barttorvik by default."""
+def test_torvik_uses_barttorvik_trank():
+    """barttorvik trank is the sole torvik provider."""
     hub = TorvikStubHub()
     result = hub.fetch_torvik_ratings(2026)
 
-    assert result.provider == "cbbdata"
-    assert hub.calls == ["cbbdata"]
-
-
-def test_torvik_cascade_falls_through_to_barttorvik():
-    """When cbbdata returns empty, barttorvik should be tried next."""
-    class CbbdataFailHub(TorvikStubHub):
-        def _from_cbbdata_api(self, year):
-            self.calls.append("cbbdata")
-            return ProviderResult("cbbdata", [])
-
-    hub = CbbdataFailHub()
-    result = hub.fetch_torvik_ratings(2026)
-
     assert result.provider == "barttorvik"
-    assert hub.calls == ["cbbdata", "barttorvik"]
+    assert hub.calls == ["barttorvik"]
 
 
-def test_torvik_cascade_all_fail_returns_none():
-    """When all torvik providers fail, returns provider='none'."""
-    class AllFailHub(TorvikStubHub):
-        def _from_cbbdata_api(self, year):
-            self.calls.append("cbbdata")
-            return ProviderResult("cbbdata", [])
-        def _from_barttorvik_csv(self, year):
+def test_torvik_fail_returns_none():
+    """When barttorvik trank fails, returns provider='none'."""
+    class FailHub(TorvikStubHub):
+        def _from_barttorvik_trank(self, year):
             self.calls.append("barttorvik")
             return ProviderResult("barttorvik", [])
 
-    hub = AllFailHub()
+    hub = FailHub()
     result = hub.fetch_torvik_ratings(2026)
 
     assert result.provider == "none"
     assert result.records == []
-    assert hub.calls == ["cbbdata", "barttorvik"]
-
-
-# ---------------------------------------------------------------------------
-# barttorvik row mapping
-# ---------------------------------------------------------------------------
-
-
-def test_map_barttorvik_row_extracts_coach():
-    row = {
-        "Team": "Duke",
-        "Conf": "ACC",
-        "AdjOE": "120.5",
-        "AdjDE": "95.2",
-        "AdjT": "70.1",
-        "Barthag": "0.95",
-        "Coach": "Jon Scheyer",
-    }
-    result = LibraryProviderHub._map_barttorvik_row(row)
-    assert result is not None
-    assert result["coach"] == "Jon Scheyer"
-
-
-def test_map_barttorvik_row_no_coach_column():
-    row = {
-        "Team": "Duke",
-        "Conf": "ACC",
-        "AdjOE": "120.5",
-        "AdjDE": "95.2",
-    }
-    result = LibraryProviderHub._map_barttorvik_row(row)
-    assert result is not None
-    assert "coach" not in result
+    assert hub.calls == ["barttorvik"]
 
 
 class FullStubProviderHub(LibraryProviderHub):

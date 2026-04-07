@@ -35,11 +35,8 @@ from ...data.scrapers.injury_report import (
     apply_injury_reports_to_roster,
 )
 from ...conference_tournament.data_enrichment import (
-    compute_defensive_four_factors_from_games,
-    compute_offensive_four_factors_from_games,
     enrich_torvik_teams,
 )
-from ...data.team_id_resolver import GameToTorvikResolver
 from ...data.scrapers.torvik import BartTorvikScraper
 from ...data.scrapers.tournament_context import TournamentContextScraper
 from ...exceptions import LeakageError
@@ -839,8 +836,8 @@ def load_team_stat_sources(
             raise DataRequirementError(
                 "Four Factors (eFG%, TO%, ORB%, FTR) are ALL ZERO for every team "
                 "even after enrichment. The torvik_four_factors_{}.json file is "
-                "missing or empty. Re-run data collection to fetch Four Factors "
-                "from barttorvik.com/getadvstats.php.".format(config.year)
+                "missing or empty. Re-run rescrape_pretournament_torvik.py to "
+                "regenerate from barttorvik.com/trank.php.".format(config.year)
             )
         else:
             logger.info(
@@ -897,88 +894,6 @@ def load_team_stat_sources(
         raise DataRequirementError("Missing historical game data. Provide --historical-games JSON with box-score rows.")
 
     # --- Build game-ID → Torvik-ID resolver for Four Factors repair ---
-    # Game data uses mascot-suffixed IDs (e.g. "michigan_wolverines") while
-    # Torvik uses short canonical IDs (e.g. "michigan").
-    _ff_resolver = GameToTorvikResolver({t.team_id for t in torvik_teams})
-
-    # --- Auto-repair defensive Four Factors from game box scores ---
-    # If the Torvik scraper fell back to CSV (JS wall), defensive FF will
-    # be zero/None even after enrichment.  Recompute from historical games.
-    # Detection: numeric check (None coerces to 0.0 via `or 0.0`) OR the
-    # _csv_approximation flag in the four_factors JSON file.
-    _sample_opp_efg = [getattr(t, "opp_effective_fg_pct", 0.0) or 0.0 for t in torvik_teams[:20]]
-    _needs_def_ff_repair = all(abs(v) < 1e-6 for v in _sample_opp_efg)
-    if not _needs_def_ff_repair:
-        # Also check _csv_approximation flag in four_factors JSON
-        _data_dir = os.path.dirname(config.torvik_json) if config.torvik_json else "data/raw"
-        _ff_path = os.path.join(_data_dir, f"torvik_four_factors_{config.year}.json")
-        if os.path.exists(_ff_path):
-            try:
-                with open(_ff_path, "r") as f:
-                    _ff_data = json.load(f)
-                # If any entry has _csv_approximation and None/zero defensive FF, trigger repair.
-                # Scan all entries (not just first 20) to catch single-team corruption.
-                for _tid, _entry in _ff_data.items() if isinstance(_ff_data, dict) else []:
-                    if not isinstance(_entry, dict):
-                        continue
-                    if _entry.get("_csv_approximation") and (
-                        _entry.get("opp_effective_fg_pct") is None
-                        or abs(float(_entry.get("opp_effective_fg_pct") or 0)) < 1e-6
-                    ):
-                        _needs_def_ff_repair = True
-                        break
-            except (json.JSONDecodeError, OSError):
-                pass
-    if _needs_def_ff_repair:
-        # Prefer team_games (per-team box-score records with fga/fta/turnovers/orb/drb)
-        # over games (only has scores). The compute functions need paired box-score records.
-        _box_score_games = historical_team_games if historical_team_games else historical_games
-        logger.info(
-            "Pipeline-time defensive FF repair triggered — ingestion-time "
-            "enrichment was skipped or did not fully resolve zeros."
-        )
-        logger.warning(
-            "Defensive Four Factors are all zero after enrichment — computing from %d historical game box scores",
-            len(_box_score_games),
-        )
-        def_ff = _ff_resolver.remap_dict(
-            compute_defensive_four_factors_from_games(
-                _box_score_games,
-                cutoff_date=_pre_tourney_cutoff,
-            )
-        )
-        _def_ff_applied = 0
-        for team in torvik_teams:
-            tid = team.team_id
-            d = def_ff.get(tid)
-            if d is None:
-                # Try collapsed lookup
-                collapsed = tid.replace("_", "")
-                for k, v in def_ff.items():
-                    if k.replace("_", "") == collapsed:
-                        d = v
-                        break
-            if d is not None:
-                team.opp_effective_fg_pct = d["opp_effective_fg_pct"]
-                team.opp_turnover_rate = d["opp_turnover_rate"]
-                team.opp_free_throw_rate = d["opp_free_throw_rate"]
-                if "defensive_reb_rate" in d:
-                    team.defensive_reb_rate = d["defensive_reb_rate"]
-                _def_ff_applied += 1
-        logger.info(
-            "Defensive FF auto-repair: applied to %d/%d teams from game box scores",
-            _def_ff_applied,
-            len(torvik_teams),
-        )
-        # Hard-fail if still all zero
-        _sample_after = [getattr(t, "opp_effective_fg_pct", 0.0) or 0.0 for t in torvik_teams[:20]]
-        if all(abs(v) < 1e-6 for v in _sample_after):
-            raise DataRequirementError(
-                "Defensive Four Factors (opp_eFG%, opp_TO%, opp_FTR) are ALL ZERO "
-                "for every team after enrichment AND game-based computation. "
-                f"Ensure historical_games_{config.year}.json has valid box score data."
-            )
-
     # --- Range validation for defensive Four Factors ---
     # Dean Oliver's four factors have physically plausible bounds in NCAA D1.
     # Values outside these ranges indicate data corruption or bad computation.
@@ -999,76 +914,6 @@ def load_team_stat_sources(
                     lo,
                     hi,
                 )
-
-    # --- Auto-repair offensive ORB%/TO%/DRB% from game box scores ---
-    # When the Torvik CSV fallback is used, individual player ORB%/TO% cannot
-    # be converted to team-level rates (they are not additive).  Compute from
-    # game box scores instead.
-    _sample_orb = [getattr(t, "offensive_reb_rate", 0.0) or 0.0 for t in torvik_teams[:20]]
-    _all_zero_orb = all(abs(v) < 1e-6 for v in _sample_orb)
-    # Also detect CSV-approximation bias: player-level ORB% (1-15%) is
-    # fundamentally different from team-level ORB% (25-35%).  The CSV fallback
-    # averages player ORB% weighted by minutes, producing values ~3.8x too low.
-    # Detect by checking if the sample median is below 0.15 — no real D1 team
-    # has a team-level ORB% that low (floor is ~0.18).
-    _csv_orb_bias = not _all_zero_orb and len(_sample_orb) >= 10 and sorted(_sample_orb)[len(_sample_orb) // 2] < 0.15
-    if _all_zero_orb or _csv_orb_bias:
-        _reason = "all zero" if _all_zero_orb else "CSV player-level bias (median < 0.15)"
-        _box_score_games = historical_team_games if historical_team_games else historical_games
-        logger.warning(
-            "Offensive ORB%%/DRB%% need repair (%s) — computing from %d historical game box scores",
-            _reason,
-            len(_box_score_games),
-        )
-        off_ff = _ff_resolver.remap_dict(
-            compute_offensive_four_factors_from_games(
-                _box_score_games,
-                cutoff_date=_pre_tourney_cutoff,
-            )
-        )
-        _off_ff_applied = 0
-        for team in torvik_teams:
-            tid = team.team_id
-            d = off_ff.get(tid)
-            if d is None:
-                collapsed = tid.replace("_", "")
-                for k, v in off_ff.items():
-                    if k.replace("_", "") == collapsed:
-                        d = v
-                        break
-            if d is not None:
-                # Always replace ORB%/DRB% when CSV bias detected (values are
-                # non-zero but systematically wrong); replace TO% only if zero.
-                if _csv_orb_bias or abs(getattr(team, "offensive_reb_rate", 0.0) or 0.0) < 1e-6:
-                    team.offensive_reb_rate = d["offensive_reb_rate"]
-                if abs(getattr(team, "turnover_rate", 0.0) or 0.0) < 1e-6:
-                    team.turnover_rate = d["turnover_rate"]
-                if _csv_orb_bias or abs(getattr(team, "defensive_reb_rate", 0.0) or 0.0) < 1e-6:
-                    team.defensive_reb_rate = d["defensive_reb_rate"]
-                _off_ff_applied += 1
-        # Bayesian fallback for teams below game-data compute threshold:
-        # shrink toward D1 population mean rather than keeping biased CSV values.
-        if _csv_orb_bias:
-            _bayesian_applied = 0
-            for team in torvik_teams:
-                tid = team.team_id
-                if tid in off_ff:
-                    continue
-                orb = getattr(team, "offensive_reb_rate", 0.0) or 0.0
-                if 0 < orb < 0.15:
-                    team.offensive_reb_rate = 0.29  # D1 population mean
-                    team.defensive_reb_rate = 0.72
-                    _bayesian_applied += 1
-            if _bayesian_applied:
-                logger.info(
-                    "Applied D1 population mean ORB%%/DRB%% to %d teams below compute threshold",
-                    _bayesian_applied,
-                )
-        logger.info(
-            "Offensive FF auto-repair: applied to %d/%d teams from game box scores",
-            _off_ff_applied,
-            len(torvik_teams),
-        )
 
     # --- Build conference map from Torvik data ---
     torvik_teams_dicts = []

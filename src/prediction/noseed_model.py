@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 HIST_DIR = Path("data/raw/historical")
 DATA_DIR = Path("data/raw")
 
-_VALID_PRETOURNAMENT_TYPES = {"pre_tournament_computed", "pre_tournament"}
+_VALID_PRETOURNAMENT_TYPES = {"pre_tournament"}
 
 
 def _validate_pretournament(data: dict, filepath: Path) -> None:
@@ -45,7 +45,7 @@ def _validate_pretournament(data: dict, filepath: Path) -> None:
         raise LeakageError(
             f"{filepath}: data_type={dt!r}, expected one of {_VALID_PRETOURNAMENT_TYPES}. "
             f"File may contain post-tournament data (look-ahead bias). "
-            f"Re-run compute_pretournament_*.py or rescrape_pretournament_torvik.py to regenerate."
+            f"Re-run rescrape_pretournament_torvik.py to regenerate from trank.php."
         )
 
 
