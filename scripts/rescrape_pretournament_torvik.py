@@ -195,11 +195,13 @@ def _fetch_trank_text(year: int, params: dict) -> str | None:
         if "<html" not in text[:500].lower():
             logger.info("[trank CSV] standard requests succeeded for %d", year)
             return text
-        # Cloudflare light verification: POST js_test_submitted and retry
+        # Cloudflare light verification: POST js_test_submitted to set clearance
+        # cookies, then re-GET the original URL with the same session.
         if "js_test_submitted" in text and "Verifying Browser" in text:
             logger.info("[trank CSV] Cloudflare light verification detected, posting js_test_submitted for %d", year)
-            post_data = {**{str(k): str(v) for k, v in params.items()}, "js_test_submitted": "1"}
-            resp2 = session.post(url, headers=TRANK_HEADERS, data=post_data, timeout=45)
+            session.post(url, headers=TRANK_HEADERS, data={"js_test_submitted": "1"}, timeout=45)
+            # Re-GET with clearance cookies now set
+            resp2 = session.get(url, headers=TRANK_HEADERS, params=params, timeout=45)
             resp2.raise_for_status()
             text2 = resp2.text
             if "<html" not in text2[:500].lower():

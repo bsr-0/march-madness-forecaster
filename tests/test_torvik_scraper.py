@@ -615,16 +615,16 @@ CLOUDFLARE_CHALLENGE_HTML = (
 )
 
 
-class TestCloudflareBypassPostParams:
-    """Regression: js_test_submitted POST must send CSV params in body, not query string.
+class TestCloudflareBypassReGet:
+    """Regression: js_test_submitted POST sets clearance cookies, then re-GET fetches CSV.
 
-    Bug: POST sent params as URL query string + only {"js_test_submitted": "1"} in body.
-    trank.php reads form data from the POST body, so filtering params were lost,
-    returning only 31 teams instead of 350+.
+    Bug: Original code read the POST response as CSV data, but the POST only
+    passes Cloudflare verification. The actual CSV must be fetched via a
+    follow-up GET using the same session (with clearance cookies set).
     """
 
-    def test_rescrape_post_includes_csv_params_in_body(self):
-        """Verify the rescrape script merges params into POST data."""
+    def test_rescrape_posts_then_regets_with_same_session(self):
+        """Verify rescrape: POST sets cookies, then GET fetches full CSV."""
         from scripts.rescrape_pretournament_torvik import _fetch_trank_text
 
         full_csv = _build_fake_csv(350)
@@ -634,16 +634,20 @@ class TestCloudflareBypassPostParams:
             mock_session = MagicMock()
             mock_session_cls.return_value = mock_session
 
-            # GET returns Cloudflare challenge
-            mock_get_resp = MagicMock()
-            mock_get_resp.text = CLOUDFLARE_CHALLENGE_HTML
-            mock_get_resp.raise_for_status = MagicMock()
-            mock_session.get.return_value = mock_get_resp
+            # First GET returns Cloudflare challenge, second GET returns CSV
+            mock_challenge_resp = MagicMock()
+            mock_challenge_resp.text = CLOUDFLARE_CHALLENGE_HTML
+            mock_challenge_resp.raise_for_status = MagicMock()
 
-            # POST returns full CSV
+            mock_csv_resp = MagicMock()
+            mock_csv_resp.text = full_csv
+            mock_csv_resp.raise_for_status = MagicMock()
+
+            mock_session.get.side_effect = [mock_challenge_resp, mock_csv_resp]
+
+            # POST returns verification confirmation (not CSV)
             mock_post_resp = MagicMock()
-            mock_post_resp.text = full_csv
-            mock_post_resp.raise_for_status = MagicMock()
+            mock_post_resp.text = "OK"
             mock_session.post.return_value = mock_post_resp
 
             params = {"year": "2026", "csv": "1", "conyes": "1", "begin": "20251101", "end": "20260316"}
@@ -653,59 +657,53 @@ class TestCloudflareBypassPostParams:
 
             assert result == full_csv
 
-            # Verify POST was called with params IN the body (data=), not as query params
+            # POST should only send js_test_submitted (no CSV params)
             mock_session.post.assert_called_once()
-            call_kwargs = mock_session.post.call_args
-            post_data = call_kwargs.kwargs.get("data") or call_kwargs[1].get("data")
-            assert post_data is not None, "POST must include data= kwarg"
-            assert "js_test_submitted" in post_data
-            assert post_data["js_test_submitted"] == "1"
-            # All CSV params must be in POST body
-            for key in ("year", "csv", "conyes", "begin", "end"):
-                assert key in post_data, f"POST body missing '{key}' param"
-            # params= (query string) must NOT be set
-            post_params = call_kwargs.kwargs.get("params") or (
-                call_kwargs[1].get("params") if len(call_kwargs) > 1 else None
-            )
-            assert post_params is None, "POST should not send params as query string"
+            post_data = mock_session.post.call_args.kwargs.get("data")
+            assert post_data == {"js_test_submitted": "1"}
 
-    def test_main_scraper_post_includes_csv_params_in_body(self, scraper):
-        """Verify the main BartTorvikScraper merges params into POST data."""
+            # Second GET should have the CSV params
+            assert mock_session.get.call_count == 2
+            second_get_kwargs = mock_session.get.call_args_list[1].kwargs
+            assert second_get_kwargs.get("params") == params
+
+    def test_main_scraper_posts_then_regets(self, scraper):
+        """Verify main scraper: POST sets cookies, then re-GET fetches CSV."""
         full_csv = _build_fake_csv(350)
 
-        # Mock the GET to return Cloudflare challenge
-        mock_get_resp = MagicMock()
-        mock_get_resp.text = CLOUDFLARE_CHALLENGE_HTML
-        mock_get_resp.raise_for_status = MagicMock()
-        scraper._get_with_retry = MagicMock(return_value=mock_get_resp)
+        # First _get_with_retry returns challenge, second returns CSV
+        mock_challenge_resp = MagicMock()
+        mock_challenge_resp.text = CLOUDFLARE_CHALLENGE_HTML
 
-        # Mock session.post to return full CSV
-        mock_post_resp = MagicMock()
-        mock_post_resp.text = full_csv
+        mock_csv_resp = MagicMock()
+        mock_csv_resp.text = full_csv
+
+        scraper._get_with_retry = MagicMock(side_effect=[mock_challenge_resp, mock_csv_resp])
+
+        # POST returns verification confirmation
         scraper.session = MagicMock()
+        mock_post_resp = MagicMock()
+        mock_post_resp.text = "OK"
         scraper.session.post.return_value = mock_post_resp
 
-        # Mock circuit breaker as a no-op context manager
         from contextlib import nullcontext
 
         scraper._cb_trank = MagicMock(return_value=nullcontext())
 
         teams = scraper._rankings_from_trank_csv(2026)
 
-        # Should have parsed all 350 teams
         assert len(teams) >= 350, f"Expected 350+ teams, got {len(teams)}"
 
-        # Verify POST body contains CSV params
+        # POST should only send js_test_submitted
         scraper.session.post.assert_called_once()
-        call_kwargs = scraper.session.post.call_args
-        post_data = call_kwargs.kwargs.get("data") or call_kwargs[1].get("data")
-        assert "js_test_submitted" in post_data
-        assert "year" in post_data or "csv" in post_data, "POST body must include CSV params"
-        # Verify params= is NOT in the call (no query string)
-        assert "params" not in (call_kwargs.kwargs or {}), "POST should not send params as query string"
+        post_data = scraper.session.post.call_args.kwargs.get("data")
+        assert post_data == {"js_test_submitted": "1"}
+
+        # _get_with_retry should be called twice (challenge + re-GET)
+        assert scraper._get_with_retry.call_count == 2
 
     def test_rescrape_31_teams_discarded_triggers_json_fallback(self):
-        """Reproduce the exact bug: CSV returns 31 teams → discard → JSON fallback."""
+        """Reproduce the exact bug: CSV returns 31 teams -> discard -> JSON fallback."""
         from scripts.rescrape_pretournament_torvik import _parse_trank_csv
 
         small_csv = _build_fake_csv(31)
