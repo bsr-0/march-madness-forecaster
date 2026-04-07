@@ -1,6 +1,8 @@
 name: CI Pipeline
 
 on:
+  push:
+    branches: ['claude/**']
   pull_request:
     branches: [main, master]
 
