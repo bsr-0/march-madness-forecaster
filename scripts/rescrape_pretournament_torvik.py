@@ -666,12 +666,20 @@ def main():
             if any(ff_entry[f] > 0 for f in ff_fields[:4]):
                 ff_payload[tid] = ff_entry
 
-        for ff_dir in [OUTPUT_DIR, ROOT / "data" / "raw"]:
-            ff_path = ff_dir / f"torvik_four_factors_{year}.json"
-            if ff_dir.exists():
-                with open(ff_path, "w") as f:
-                    json.dump(ff_payload, f, indent=2)
-                logger.info("Wrote %s (%d teams)", ff_path, len(ff_payload) - 4)
+        n_ff_teams = len(ff_payload) - 4  # subtract metadata keys
+        if n_ff_teams > 0:
+            for ff_dir in [OUTPUT_DIR, ROOT / "data" / "raw"]:
+                ff_path = ff_dir / f"torvik_four_factors_{year}.json"
+                if ff_dir.exists():
+                    with open(ff_path, "w") as f:
+                        json.dump(ff_payload, f, indent=2)
+                    logger.info("Wrote %s (%d teams)", ff_path, n_ff_teams)
+        else:
+            logger.warning(
+                "Year %d: 0 teams have four factors (JSON fallback has no FF) "
+                "— skipping four_factors file write to preserve existing data",
+                year,
+            )
 
         # Also write to historical dir if it exists
         hist_dir = ROOT / "data" / "raw" / "historical"
