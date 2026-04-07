@@ -585,11 +585,11 @@ class BartTorvikScraper:
         # Cloudflare js_test_submitted bypass — POST the token back to pass verification
         if "js_test_submitted" in text and "Verifying Browser" in text:
             logger.info("[torvik] trank CSV got Cloudflare js_test challenge, submitting bypass POST")
+            post_data = {**{str(k): str(v) for k, v in params.items()}, "js_test_submitted": "1"}
             resp = self.session.post(
                 url,
                 headers=self._TRANK_HEADERS,
-                params=params,
-                data={"js_test_submitted": "1"},
+                data=post_data,
                 timeout=45,
             )
             text = resp.text
