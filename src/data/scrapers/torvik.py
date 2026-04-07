@@ -4,21 +4,14 @@ BartTorvik data scraper for advanced team metrics.
 Scrapes T-Rank efficiency ratings, Four Factors, and game-by-game data
 for temporal modeling.
 
-Data acquisition strategy (March 2026, updated):
-  Primary: cbbdata.com API (``www.cbbdata.com/api/``).
-  Requires ``CBD_USER``/``CBD_PASSWORD`` env vars (or ``CBD_API_KEY``).  Returns T-Rank ratings AND complete
-  Four Factors as clean JSON.
+Data acquisition strategy (April 2026, updated):
+  Rankings + Four Factors: barttorvik.com trank.php CSV
+  (``trank.php?year=Y&csv=1&begin=YYYYMMDD&end=YYYYMMDD``) — sole source.
+  Supports pre-tournament date filtering. Requires browser-like headers
+  to bypass Cloudflare verification.
 
-  Secondary: barttorvik.com trank.php CSV (``trank.php?year=Y&csv=1``) —
-  requires browser-like headers to bypass Cloudflare verification.
-
-  Tertiary: barttorvik.com team_results CSV (``/{year}_team_results.csv``)
-  — T-Rank ratings without Four Factors.
-
-  Quaternary: barttorvik.com player CSV (``/getadvstats.php?year=Y&csv=1``)
-  — player-level stats aggregated to team-level Four Factors + shooting.
-
-  (cbbstat API removed — returned 403 since early 2026.)
+  Shooting: barttorvik.com player CSV (``/getadvstats.php?year=Y&csv=1``)
+  — player-level stats aggregated to team-level shooting splits.
 """
 
 import csv
@@ -376,12 +369,6 @@ class BartTorvikScraper:
         cb_kwargs: Dict[str, Optional[str]] = {}
         if circuit_breaker_state_file:
             cb_kwargs["state_file"] = circuit_breaker_state_file
-        self._cb_cbbdata = CircuitBreaker(
-            "torvik_cbbdata",
-            config=CircuitBreakerConfig(failure_threshold=3, recovery_timeout_seconds=600),
-            **cb_kwargs,
-        )
-        # cbbstat API removed — returned 403 since early 2026.
         self._cb_trank = CircuitBreaker(
             "torvik_trank",
             config=CircuitBreakerConfig(failure_threshold=3, recovery_timeout_seconds=300),
@@ -486,11 +473,9 @@ class BartTorvikScraper:
         """
         Fetch current T-Rank ratings for all teams.
 
-        Attempts sources in order, each guarded by a circuit breaker:
+        Sources (in order):
           1. Local cache file (with TTL check).
-          2. **cbbdata.com API** — returns T-Rank ratings + Four Factors.
-          3. **trank.php CSV** — T-Rank CSV with Four Factors columns.
-          4. **team_results CSV fallback** — T-Rank ratings without Four Factors.
+          2. **trank.php CSV** — T-Rank CSV with date filtering + Four Factors.
 
         Args:
             year: Season year (e.g., 2026 for 2025-26 season)
@@ -509,43 +494,15 @@ class BartTorvikScraper:
         # Guard only blocks live scrapes — cached reads are safe
         self._check_tournament_date_guard(year, strict=strict)
 
-        teams: List[TorVikTeam] = []
-
-        # --- Strategy 1: cbbdata.com API (preferred — ratings + Four Factors) ---
-        if not teams:
-            teams = self._rankings_from_cbbdata_api(year)
-            if teams:
-                self._fetch_strategy["rankings"] = "cbbdata_api"
-                logger.info(
-                    "[torvik] rankings strategy=%s year=%d teams=%d",
-                    "cbbdata_api",
-                    year,
-                    len(teams),
-                )
-
-        # --- Strategy 2: trank.php CSV (ratings + Four Factors) ---
-        if not teams:
-            teams = self._rankings_from_trank_csv(year)
-            if teams:
-                self._fetch_strategy["rankings"] = "trank_csv"
-                logger.info(
-                    "[torvik] rankings strategy=%s year=%d teams=%d",
-                    "trank_csv",
-                    year,
-                    len(teams),
-                )
-
-        # --- Strategy 3: team_results CSV (ratings only, no Four Factors) ---
-        if not teams:
-            teams = self._rankings_from_csv(year)
-            if teams:
-                self._fetch_strategy["rankings"] = "csv_fallback"
-                logger.info(
-                    "[torvik] rankings strategy=%s year=%d teams=%d",
-                    "csv_fallback",
-                    year,
-                    len(teams),
-                )
+        teams = self._rankings_from_trank_csv(year)
+        if teams:
+            self._fetch_strategy["rankings"] = "trank_csv"
+            logger.info(
+                "[torvik] rankings strategy=%s year=%d teams=%d",
+                "trank_csv",
+                year,
+                len(teams),
+            )
 
         if teams:
             TorVikValidator.validate_teams(teams, strict=strict)
@@ -562,338 +519,8 @@ class BartTorvikScraper:
 
         return teams
 
-    def _rankings_from_csv(self, year: int) -> List[TorVikTeam]:
-        """Fetch T-Rank ratings from the CSV team results endpoint.
-
-        Endpoint: ``/{year}_team_results.csv``
-
-        WARNING: This endpoint does NOT support date filtering. Data returned
-        includes tournament game results if scraped post-tournament.
-
-        This CSV provides T-Rank ratings, AdjOE/DE, Barthag, SOS, WAB,
-        and record but does NOT include Four Factors.  Four Factors fields
-        are set to ``math.nan``.
-        """
-        url = f"{self.BASE_URL}/{year}_team_results.csv"
-        try:
-            with self._cb_csv():
-                response = self._get_with_retry(url, timeout=45)
-        except CircuitBreakerOpen:
-            logger.info("[torvik] CSV circuit breaker open, skipping rankings CSV")
-            return []
-        except Exception as e:
-            logger.warning("Rankings CSV fetch failed: %s", e)
-            return []
-
-        teams: List[TorVikTeam] = []
-        reader = csv.reader(io.StringIO(response.text))
-        header = None
-        # Known team_results CSV headers. Require ≥3 matches to treat row
-        # as header (prevents team names like "Franklin" triggering detection).
-        _KNOWN_HEADERS = frozenset(
-            {
-                "team",
-                "rank",
-                "rk",
-                "conf",
-                "conference",
-                "barthag",
-                "adj_o",
-                "adjoe",
-                "adj_d",
-                "adjde",
-                "adj_t",
-                "tempo",
-                "wab",
-                "wins",
-                "losses",
-            }
-        )
-        _MIN_HEADER_MATCHES = 3
-        for row_num, row in enumerate(reader):
-            if row_num == 0:
-                # Strip BOM if present (common in Windows-exported CSVs)
-                normalized_cells = [h.strip().lstrip("\ufeff").lower().replace(" ", "_") for h in row]
-                header_matches = sum(1 for c in normalized_cells if c in _KNOWN_HEADERS)
-                if row and header_matches >= _MIN_HEADER_MATCHES:
-                    header = {c: i for i, c in enumerate(normalized_cells)}
-                    continue
-                # No header — use positional defaults
-                header = {}
-            if len(row) < 8:
-                continue
-            try:
-                if header:
-                    team_name = row[header.get("team", 1)].strip()
-                    conf = row[header.get("conf", header.get("conference", 2))].strip()
-                    t_rank = int(row[header.get("rank", header.get("rk", 0))].strip() or 999)
-                    barthag = self._safe_float(row[header.get("barthag", 5)])
-                    adj_oe = self._safe_float(row[header.get("adj_o", header.get("adjoe", 3))])
-                    adj_de = self._safe_float(row[header.get("adj_d", header.get("adjde", 4))])
-                    adj_t = self._safe_float(row[header.get("adj_t", header.get("tempo", 6))])
-                else:
-                    t_rank = int(row[0].strip() or 999)
-                    team_name = row[1].strip()
-                    conf = row[2].strip() if len(row) > 2 else ""
-                    adj_oe = self._safe_float(row[3]) if len(row) > 3 else 100.0
-                    adj_de = self._safe_float(row[4]) if len(row) > 4 else 100.0
-                    barthag = self._safe_float(row[5]) if len(row) > 5 else 0.5
-                    adj_t = self._safe_float(row[6]) if len(row) > 6 else 68.0
-
-                tid = self._normalize_team_name_to_id(team_name)
-                team = TorVikTeam(
-                    team_id=tid,
-                    name=team_name,
-                    conference=conf,
-                    t_rank=t_rank,
-                    barthag=barthag,
-                    adj_offensive_efficiency=adj_oe,
-                    adj_defensive_efficiency=adj_de,
-                    adj_tempo=adj_t,
-                    effective_fg_pct=math.nan,
-                    turnover_rate=math.nan,
-                    offensive_reb_rate=math.nan,
-                    free_throw_rate=math.nan,
-                    opp_effective_fg_pct=math.nan,
-                    opp_turnover_rate=math.nan,
-                    defensive_reb_rate=math.nan,
-                    opp_free_throw_rate=math.nan,
-                )
-                teams.append(team)
-            except Exception as e:
-                logger.debug("Error parsing CSV rankings row %d: %s", row_num, e)
-                continue
-
-        logger.info(
-            "Rankings from CSV (%d): fetched %d teams (no Four Factors)",
-            year,
-            len(teams),
-        )
-        return teams
-
-    # cbbdata.com API — primary data source.  Auth via CBD_USER/CBD_PASSWORD or CBD_API_KEY.
-    CBBDATA_API = "https://www.cbbdata.com/api"
-
-    # cbbstat.com API was removed — returned 403 since early 2026.
-
     # ------------------------------------------------------------------
-    # cbbdata.com API methods (primary strategy)
-    # ------------------------------------------------------------------
-
-    # Cached token so we only login once per scraper lifetime.
-    _cbbdata_token: Optional[str] = None
-
-    def _get_cbbdata_api_key(self) -> Optional[str]:
-        """Return a cbbdata.com API token.
-
-        Resolution order:
-          1. ``CBD_API_KEY`` env var (pre-existing token)
-          2. Login via ``CBD_USER`` + ``CBD_PASSWORD`` env vars
-             (POSTs to ``/api/auth/login``, caches the returned token)
-          3. None — caller should skip the cbbdata strategy
-        """
-        # Fast path: already resolved
-        if self._cbbdata_token:
-            return self._cbbdata_token
-
-        # Check for pre-set token (support both env var names)
-        token = os.environ.get("CBD_API_KEY") or os.environ.get("CBBDATA_API_KEY")
-        if token:
-            self._cbbdata_token = token
-            return token
-
-        # Login with username/password
-        user = os.environ.get("CBD_USER") or os.environ.get("CBBDATA_USER")
-        password = os.environ.get("CBD_PASSWORD") or os.environ.get("CBBDATA_PASSWORD")
-        if not user or not password:
-            return None
-
-        try:
-            resp = requests.post(
-                f"{self.CBBDATA_API}/auth/login",
-                json={"username": user, "password": password},
-                timeout=30,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            # The API returns the token — may be a bare string or in a wrapper
-            if isinstance(data, str):
-                token = data
-            elif isinstance(data, list) and data:
-                token = str(data[0])
-            elif isinstance(data, dict):
-                token = data.get("token", data.get("key", data.get("api_key", "")))
-            else:
-                token = ""
-
-            if token:
-                self._cbbdata_token = token
-                logger.info("[torvik] cbbdata login successful, token acquired")
-                return token
-            else:
-                logger.warning("[torvik] cbbdata login returned empty token")
-                return None
-        except Exception as e:
-            logger.warning("[torvik] cbbdata login failed: %s", e)
-            return None
-
-    def _rankings_from_cbbdata_api(self, year: int) -> List[TorVikTeam]:
-        """Fetch T-Rank ratings + Four Factors from the cbbdata.com API.
-
-        Endpoint: ``GET /torvik/ratings?year={year}``
-
-        WARNING: The cbbdata API does NOT support date filtering. Data returned
-        includes tournament game results if scraped post-tournament. This method
-        should only be called pre-tournament or with strict_leakage guards active.
-
-        Authenticates via Bearer token (from login or ``CBD_API_KEY`` env var).
-        Returns all teams with ratings and Four Factors in one call.
-        """
-        api_key = self._get_cbbdata_api_key()
-        if not api_key:
-            logger.info("[torvik] CBD_API_KEY not set, skipping cbbdata API")
-            return []
-
-        url = f"{self.CBBDATA_API}/torvik/ratings"
-        try:
-            with self._cb_cbbdata():
-                resp = self._get_with_retry(
-                    url,
-                    params={"year": year},
-                    headers={"Authorization": f"Bearer {api_key}"},
-                    timeout=45,
-                )
-                data = resp.json()
-        except CircuitBreakerOpen:
-            logger.info("[torvik] cbbdata circuit breaker open, skipping")
-            return []
-        except Exception as e:
-            logger.warning("cbbdata API rankings fetch failed: %s", e)
-            return []
-
-        if not data:
-            return []
-
-        rows = data if isinstance(data, list) else data.get("data", data.get("results", []))
-        if not isinstance(rows, list) or not rows:
-            logger.warning("cbbdata API returned unexpected format for rankings")
-            return []
-
-        def _rate(row: dict, key: str) -> float:
-            v = float(row.get(key, 0) or 0)
-            if 1.0 < v <= 2.0:
-                logger.debug("Rate %.4f for '%s' near fraction/percentage boundary", v, key)
-            return v / 100.0 if v > BartTorvikScraper._RATE_PERCENTAGE_THRESHOLD else v
-
-        teams: List[TorVikTeam] = []
-        for row in rows:
-            team_name = row.get("team", "")
-            if not team_name:
-                continue
-            tid = self._normalize_team_name_to_id(team_name)
-            try:
-                team = TorVikTeam(
-                    team_id=tid,
-                    name=team_name,
-                    conference=row.get("conf", row.get("conference", "")),
-                    t_rank=int(row.get("rank", row.get("rk", 999)) or 999),
-                    barthag=float(row.get("barthag", 0.5) or 0.5),
-                    adj_offensive_efficiency=float(row.get("adj_o", row.get("adj_off", 100.0)) or 100.0),
-                    adj_defensive_efficiency=float(row.get("adj_d", row.get("adj_def", 100.0)) or 100.0),
-                    adj_tempo=float(row.get("adj_t", row.get("tempo", 68.0)) or 68.0),
-                    effective_fg_pct=_rate(row, "off_efg"),
-                    turnover_rate=_rate(row, "off_to"),
-                    offensive_reb_rate=_rate(row, "off_or"),
-                    free_throw_rate=_rate(row, "off_ftr"),
-                    opp_effective_fg_pct=_rate(row, "def_efg"),
-                    opp_turnover_rate=_rate(row, "def_to"),
-                    defensive_reb_rate=_rate(row, "def_or"),
-                    opp_free_throw_rate=_rate(row, "def_ftr"),
-                    wab=float(row.get("wab", 0.0) or 0.0),
-                    wins=int(row.get("wins", row.get("w", 0)) or 0),
-                    losses=int(row.get("losses", row.get("l", 0)) or 0),
-                )
-                teams.append(team)
-            except (ValueError, TypeError) as e:
-                logger.debug("Error parsing cbbdata row for %s: %s", team_name, e)
-                continue
-
-        logger.info(
-            "Rankings from cbbdata API (%d): fetched %d teams with ratings + Four Factors",
-            year,
-            len(teams),
-        )
-        return teams
-
-    def _four_factors_from_cbbdata_api(self, year: int) -> Dict[str, Dict]:
-        """Fetch Four Factors from the cbbdata.com API.
-
-        WARNING: The cbbdata API does NOT support date filtering. Data returned
-        includes tournament game results if scraped post-tournament.
-
-        Reuses the ratings endpoint which includes Four Factors.
-        """
-        api_key = self._get_cbbdata_api_key()
-        if not api_key:
-            logger.info("[torvik] CBD_API_KEY not set, skipping cbbdata Four Factors")
-            return {}
-
-        url = f"{self.CBBDATA_API}/torvik/ratings"
-        try:
-            with self._cb_cbbdata():
-                resp = self._get_with_retry(
-                    url,
-                    params={"year": year},
-                    headers={"Authorization": f"Bearer {api_key}"},
-                    timeout=45,
-                )
-                data = resp.json()
-        except CircuitBreakerOpen:
-            logger.info("[torvik] cbbdata circuit breaker open, skipping Four Factors")
-            return {}
-        except Exception as e:
-            logger.warning("cbbdata API Four Factors fetch failed: %s", e)
-            return {}
-
-        if not data:
-            return {}
-
-        rows = data if isinstance(data, list) else data.get("data", data.get("results", []))
-        if not isinstance(rows, list) or not rows:
-            return {}
-
-        def _rate(row: dict, key: str) -> float:
-            v = float(row.get(key, 0) or 0)
-            if 1.0 < v <= 2.0:
-                logger.debug("Rate %.4f for '%s' near fraction/percentage boundary", v, key)
-            return v / 100.0 if v > BartTorvikScraper._RATE_PERCENTAGE_THRESHOLD else v
-
-        result: Dict[str, Dict] = {}
-        for row in rows:
-            team_name = row.get("team", "")
-            if not team_name:
-                continue
-            tid = self._normalize_team_name_to_id(team_name)
-            result[tid] = {
-                "effective_fg_pct": _rate(row, "off_efg"),
-                "turnover_rate": _rate(row, "off_to"),
-                "offensive_reb_rate": _rate(row, "off_or"),
-                "free_throw_rate": _rate(row, "off_ftr"),
-                "opp_effective_fg_pct": _rate(row, "def_efg"),
-                "opp_turnover_rate": _rate(row, "def_to"),
-                "defensive_reb_rate": _rate(row, "def_or"),
-                "opp_free_throw_rate": _rate(row, "def_ftr"),
-            }
-
-        logger.info(
-            "Four Factors from cbbdata API (%d): fetched for %d teams",
-            year,
-            len(result),
-        )
-        return result
-
-    # ------------------------------------------------------------------
-    # trank.php CSV methods (secondary strategy)
+    # trank.php CSV methods (sole strategy for rankings + Four Factors)
     # ------------------------------------------------------------------
 
     # Browser-like headers to pass Cloudflare light verification.
@@ -925,7 +552,6 @@ class BartTorvikScraper:
         params = {
             "year": year,
             "csv": 1,
-            "conyes": 1,
             "type": "All",
             "top": 0,
         }
@@ -955,6 +581,14 @@ class BartTorvikScraper:
             return []
 
         text = response.text
+        # Cloudflare js_test_submitted bypass — POST the token back to pass verification
+        if "js_test_submitted" in text and "Verifying Browser" in text:
+            logger.info("[torvik] trank CSV got Cloudflare js_test challenge, submitting bypass POST")
+            resp = self.session.post(
+                url, headers=self._TRANK_HEADERS, params=params,
+                data={"js_test_submitted": "1"}, timeout=45,
+            )
+            text = resp.text
         # Cloudflare returns HTML challenge page — detect and bail
         if "<html" in text[:500].lower() or "checking your browser" in text[:500].lower():
             logger.warning(
@@ -1026,12 +660,17 @@ class BartTorvikScraper:
             try:
 
                 def _col(names, default_idx, default_val=0.0):
-                    """Read column by name(s) or fallback position."""
+                    """Read column by name(s) or fallback position.
+
+                    When a header is present, only named lookups are used;
+                    positional fallback applies only to headerless CSVs.
+                    """
                     if header:
                         for n in names if isinstance(names, (list, tuple)) else [names]:
                             if n in header:
                                 val = row[header[n]].strip()
                                 return float(val) if val else default_val
+                        return default_val
                     return (
                         float(row[default_idx].strip())
                         if len(row) > default_idx and row[default_idx].strip()
@@ -1053,32 +692,40 @@ class BartTorvikScraper:
                         logger.debug("Rate %.4f near fraction/percentage boundary", v)
                     return v / 100.0 if v > BartTorvikScraper._RATE_PERCENTAGE_THRESHOLD else v
 
-                team_name = row[header.get("team", 1)].strip() if header else row[1].strip()
+                # Without conyes param, CSV has no rank/conf columns:
+                #   [0]=Team, [1]=AdjOE, [2]=AdjDE, [3]=Barthag, ...
+                team_name = row[header.get("team", 0)].strip() if header else row[0].strip()
                 conf = (
-                    row[header.get("conf", header.get("conference", 2))].strip()
-                    if header
-                    else (row[2].strip() if len(row) > 2 else "")
+                    row[header.get("conf", header.get("conference", 0))].strip()
+                    if header and ("conf" in header or "conference" in header)
+                    else ""
                 )
                 tid = self._normalize_team_name_to_id(team_name)
 
+                # 37-col no-header CSV layout (without conyes):
+                #   [0]=Team [1]=AdjOE [2]=AdjDE [3]=Barthag [4]=Record
+                #   [5]=Wins [6]=Games [7]=eFG%(O) [8]=eFG%(D)
+                #   [9]=FTR(O) [10]=FTR(D) [11]=TO%(O) [12]=TO%(D)
+                #   [13]=ORB%(O) [14]=ORB%(D) [15]=FT% ... [34]=WAB
                 team = TorVikTeam(
                     team_id=tid,
                     name=team_name,
                     conference=conf,
-                    t_rank=int(_col(("rank", "rk"), 0, 999)),
-                    barthag=_col("barthag", 5, 0.5),
-                    adj_offensive_efficiency=_col(("adj_o", "adj_oe", "adjoe"), 3, 100.0),
-                    adj_defensive_efficiency=_col(("adj_d", "adj_de", "adjde"), 4, 100.0),
-                    adj_tempo=_col(("adj_t", "tempo"), 6, 68.0),
-                    effective_fg_pct=_rate_col(("off_efg", "off_efg%", "efg_o"), 20),
-                    turnover_rate=_rate_col(("off_to", "off_to%", "tor_o"), 21),
-                    offensive_reb_rate=_rate_col(("off_or", "off_or%", "orb_o"), 22),
-                    free_throw_rate=_rate_col(("off_ftr", "off_ft_rate", "ftr_o"), 23),
-                    opp_effective_fg_pct=_rate_col(("def_efg", "def_efg%", "efg_d"), 24),
-                    opp_turnover_rate=_rate_col(("def_to", "def_to%", "tor_d"), 25),
-                    defensive_reb_rate=_rate_col(("def_or", "off_or_d", "orb_d"), 26),
-                    opp_free_throw_rate=_rate_col(("def_ftr", "def_ft_rate", "ftr_d"), 27),
-                    wab=_col("wab", 13, 0.0),
+                    t_rank=int(_col(("rank", "rk"), 999, 999)),
+                    barthag=_col("barthag", 3, 0.5),
+                    adj_offensive_efficiency=_col(("adj_o", "adj_oe", "adjoe"), 1, 100.0),
+                    adj_defensive_efficiency=_col(("adj_d", "adj_de", "adjde"), 2, 100.0),
+                    adj_tempo=_col(("adj_t", "tempo"), 35, 68.0),
+                    effective_fg_pct=_rate_col(("off_efg", "off_efg%", "efg_o"), 7),
+                    turnover_rate=_rate_col(("off_to", "off_to%", "tor_o"), 11),
+                    offensive_reb_rate=_rate_col(("off_or", "off_or%", "orb_o"), 13),
+                    free_throw_rate=_rate_col(("off_ftr", "off_ft_rate", "ftr_o"), 9),
+                    opp_effective_fg_pct=_rate_col(("def_efg", "def_efg%", "efg_d"), 8),
+                    opp_turnover_rate=_rate_col(("def_to", "def_to%", "tor_d"), 12),
+                    # trank CSV "OR%(D)" = opponent's ORB rate; convert to DRB%
+                    defensive_reb_rate=round(1.0 - _rate_col(("def_or", "off_or_d", "orb_d"), 14), 4),
+                    opp_free_throw_rate=_rate_col(("def_ftr", "def_ft_rate", "ftr_d"), 10),
+                    wab=_col("wab", 34, 0.0),
                 )
                 teams.append(team)
             except Exception as e:
@@ -1133,19 +780,15 @@ class BartTorvikScraper:
         )
         return result
 
-    # cbbstat API methods removed — API returned 403 since early 2026.
 
     def fetch_four_factors(self, year: int = 2026) -> Dict[str, Dict]:
         """
         Fetch Four Factors data for all teams.
 
-        Attempts sources in order:
+        Sources (in order):
           1. Local cache file.
-          2. **cbbdata.com API** — returns complete Four Factors as JSON.
-          3. **trank.php CSV** — T-Rank CSV with Four Factors columns.
-          4. **CSV fallback**: aggregates player-level stats from
-             ``getadvstats.php?year={year}&csv=1`` to compute team-level
-             offensive eFG% and FTR, with ORB%/TO% Bayesian-shrunk.
+          2. **trank.php CSV** — T-Rank CSV with Four Factors columns.
+             Sole live data source; supports pre-tournament date filtering.
 
         Args:
             year: Season year
@@ -1162,44 +805,15 @@ class BartTorvikScraper:
         # Guard only blocks live scrapes — cached reads are safe
         self._check_tournament_date_guard(year)
 
-        four_factors: Dict[str, Dict] = {}
-
-        # --- Strategy 1: cbbdata.com API (preferred — complete data) ---
-        if not four_factors:
-            four_factors = self._four_factors_from_cbbdata_api(year)
-            if four_factors:
-                self._fetch_strategy["four_factors"] = "cbbdata_api"
-                logger.info(
-                    "[torvik] four_factors strategy=%s year=%d teams=%d",
-                    "cbbdata_api",
-                    year,
-                    len(four_factors),
-                )
-
-        # --- Strategy 2: trank.php CSV ---
-        if not four_factors:
-            four_factors = self._four_factors_from_trank_csv(year)
-            if four_factors:
-                self._fetch_strategy["four_factors"] = "trank_csv"
-                logger.info(
-                    "[torvik] four_factors strategy=%s year=%d teams=%d",
-                    "trank_csv",
-                    year,
-                    len(four_factors),
-                )
-
-        # --- Strategy 3: CSV player-stats fallback ---
-        if not four_factors:
-            logger.info("API/CSV strategies exhausted; falling back to player-stats CSV aggregation.")
-            four_factors = self._four_factors_from_player_csv(year)
-            if four_factors:
-                self._fetch_strategy["four_factors"] = "csv_fallback"
-                logger.info(
-                    "[torvik] four_factors strategy=%s year=%d teams=%d",
-                    "csv_fallback",
-                    year,
-                    len(four_factors),
-                )
+        four_factors = self._four_factors_from_trank_csv(year)
+        if four_factors:
+            self._fetch_strategy["four_factors"] = "trank_csv"
+            logger.info(
+                "[torvik] four_factors strategy=%s year=%d teams=%d",
+                "trank_csv",
+                year,
+                len(four_factors),
+            )
 
         if four_factors:
             # Remove junk entries (non-team IDs like "ii", "jr", etc.)
@@ -1214,7 +828,6 @@ class BartTorvikScraper:
 
         return four_factors
 
-    # _four_factors_from_cbbstat_api removed — API returned 403 since early 2026.
 
     def fetch_shooting_stats(self, year: int = 2026) -> Dict[str, Dict]:
         """
@@ -1268,8 +881,8 @@ class BartTorvikScraper:
     def _fetch_player_csv(self, year: int) -> str:
         """Download the raw player-level advanced stats CSV.
 
-        Uses in-memory cache so that ``_four_factors_from_player_csv`` and
-        ``_shooting_from_player_csv`` don't fetch the same data twice.
+        Uses in-memory cache so that repeated calls (e.g. from
+        ``_shooting_from_player_csv``) don't fetch the same data twice.
 
         Endpoint: ``/getadvstats.php?year={year}&csv=1``
 
@@ -1424,118 +1037,6 @@ class BartTorvikScraper:
             t["min_pct_total"] += min_pct
 
         return dict(teams)
-
-    # Empirical D1 population priors for Bayesian shrinkage of CSV-approximated rates.
-    # These match _POPULATION_STATS in feature_engineering.py.
-    _POP_PRIORS = {
-        "orb": 0.295,
-        "drb": 0.705,
-        "to": 0.185,
-    }
-    # Effective sample size of the prior (how many "pseudo-minutes" the prior is worth).
-    # Calibrated so a team with ~500 total player-minutes (typical full roster)
-    # gets ~10% shrinkage, while a team with only 100 minutes gets ~35% shrinkage.
-    # Rationale: player-level CSV rates (ORB%, DRB%, TO%) are noisy estimates of
-    # team-level rates because individual player rates are not additive (they weight
-    # by player possessions, not team possessions). The prior pulls toward NCAA D1
-    # population means (_POP_PRIORS) to mitigate this non-additivity bias (~2-3pp).
-    # Validated against cbbdata API ground truth: shrinkage reduces RMSE ~15% for
-    # teams with <200 total player-minutes vs. no shrinkage.
-    _PRIOR_STRENGTH = 60.0
-
-    @staticmethod
-    def _shrink_csv_rate(raw_rate: float, min_pct_total: float, pop_mean: float) -> float:
-        """Bayesian shrinkage: blend CSV approximation toward population mean.
-
-        weight_data = min_pct_total / (min_pct_total + prior_strength)
-        Result = weight_data * raw_rate + (1 - weight_data) * pop_mean
-        """
-        if min_pct_total <= 0:
-            return pop_mean
-        w = min_pct_total / (min_pct_total + BartTorvikScraper._PRIOR_STRENGTH)
-        return w * raw_rate + (1.0 - w) * pop_mean
-
-    def _four_factors_from_player_csv(self, year: int) -> Dict[str, Dict]:
-        """Compute team-level Four Factors from the player CSV endpoint.
-
-        WARNING: This endpoint does NOT support date filtering. Player stats
-        include tournament games if scraped post-tournament.
-
-        Returns dict compatible with ``_parse_four_factors_page`` output::
-
-            {team_id: {
-                'effective_fg_pct': float,
-                'turnover_rate': float,
-                'offensive_reb_rate': float,
-                'free_throw_rate': float,
-                ...
-            }}
-
-        eFG% and FTR are computed from counting stats (exact).  ORB%, DRB%,
-        and TO% are approximated via minutes-weighted averaging of individual
-        player rates, then Bayesian-shrunk toward population means to mitigate
-        the non-additivity bias (~2-3pp).  The ``_csv_approximation`` flag is
-        set to True so downstream code can decide whether to trust them.
-        """
-        try:
-            csv_text = self._fetch_player_csv(year)
-        except CircuitBreakerOpen:
-            logger.info("[torvik] CSV circuit breaker open, skipping player CSV")
-            return {}
-        except Exception as e:
-            logger.warning("Player CSV fetch failed: %s", e)
-            return {}
-
-        aggregated = self._aggregate_player_csv(csv_text)
-        result: Dict[str, Dict] = {}
-
-        for tid, t in aggregated.items():
-            fga = t["fga"]
-            if fga < 10:  # skip teams with negligible data
-                continue
-
-            efg = (t["fgm"] + 0.5 * t["fg3m"]) / fga
-            ftr = t["fta"] / fga
-
-            # Minutes-weighted approximation of team-level ORB%/TO%.
-            # Individual player rates aren't strictly additive, so we compute
-            # a raw estimate and then Bayesian-shrink toward the D1 population
-            # mean.  Shrinkage is inversely proportional to total minutes data.
-            min_total = t["min_pct_total"]
-            if min_total > 0:
-                raw_orb = t["orb_pct_weighted"] / min_total / 100.0
-                raw_drb = t["drb_pct_weighted"] / min_total / 100.0
-                raw_to = t["to_pct_weighted"] / min_total / 100.0
-                approx_orb = self._shrink_csv_rate(raw_orb, min_total, self._POP_PRIORS["orb"])
-                approx_drb = self._shrink_csv_rate(raw_drb, min_total, self._POP_PRIORS["drb"])
-                approx_to = self._shrink_csv_rate(raw_to, min_total, self._POP_PRIORS["to"])
-            else:
-                approx_orb = self._POP_PRIORS["orb"]
-                approx_drb = self._POP_PRIORS["drb"]
-                approx_to = self._POP_PRIORS["to"]
-
-            result[tid] = {
-                "effective_fg_pct": round(efg, 4),
-                "turnover_rate": round(approx_to, 4),
-                "offensive_reb_rate": round(approx_orb, 4),
-                "free_throw_rate": round(ftr, 4),
-                "opp_effective_fg_pct": None,  # Cannot compute from player-level CSV
-                "opp_turnover_rate": None,  # Cannot compute from player-level CSV
-                "defensive_reb_rate": round(approx_drb, 4),
-                "opp_free_throw_rate": None,  # Cannot compute from player-level CSV
-                "_csv_approximation": True,
-            }
-
-        non_zero_orb = sum(1 for v in result.values() if v["offensive_reb_rate"] > 0)
-        logger.info(
-            "Four Factors from player CSV (%d): computed for %d teams "
-            "(eFG%%/FTR exact, ORB%%/DRB%%/TO%% Bayesian-shrunk toward population mean "
-            "for %d teams; defensive factors unavailable from this source)",
-            year,
-            len(result),
-            non_zero_orb,
-        )
-        return result
 
     def _shooting_from_player_csv(self, year: int) -> Dict[str, Dict]:
         """Compute team-level shooting splits from the player CSV endpoint.

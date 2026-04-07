@@ -5,6 +5,7 @@ import logging
 from datetime import date, timedelta
 
 from ....data.features.proprietary_metrics import IncrementalMetricsEngine
+from ....data.features.torvik_ff_lookup import TorVikFFLookup
 from ....data.models.game_flow import GameFlow
 from ...config import (
     DATA_QUALITY_ERA_WEIGHTS,
@@ -380,6 +381,9 @@ def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]])
         prior_elo=_prior_elo,
     )
 
+    # Torvik FF overlay for current-year training
+    ff_lookup = TorVikFFLookup(pipeline.config.year)
+
     # Seed map for absolute features in matchup vector
     _seed_map: Dict[str, int] = {}
     # Roster overlay from current-year FeatureEngineer (RAPM, WARP, depth, etc.)
@@ -421,6 +425,10 @@ def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]])
         pit_metrics = inc_engine.compute_as_of(game_date)
         if game.team1_id not in pit_metrics or game.team2_id not in pit_metrics:
             continue
+
+        # Overlay Torvik FF from monthly snapshots
+        if ff_lookup.has_snapshots:
+            ff_lookup.overlay_metrics(pit_metrics, game_date)
 
         m1 = pit_metrics[game.team1_id]
         m2 = pit_metrics[game.team2_id]

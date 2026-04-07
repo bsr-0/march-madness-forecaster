@@ -21,6 +21,7 @@ from ...data.features.proprietary_metrics import (
     _team_id,
     team_games_to_game_records,
 )
+from ...data.features.torvik_ff_lookup import TorVikFFLookup
 from .data_loader import load_roster_overlay
 from ..config import (
     MIN_SEASON_FEATURE_COMPLETENESS,
@@ -358,6 +359,11 @@ def _load_year_samples_incremental_core(
         prior_elo=prior_elo,
     )
 
+    # ── 3b. Torvik FF overlay (monthly trank.php snapshots) ──────────
+    ff_lookup = TorVikFFLookup(year)
+    if ff_lookup.has_snapshots:
+        logger.info("Torvik FF overlay: %d snapshots for year %d", ff_lookup.n_snapshots, year)
+
     # ── 4. Identify training games ────────────────────────────────────
     seen_gids: set = set()
     all_games: list = []
@@ -435,6 +441,12 @@ def _load_year_samples_incremental_core(
         if not metrics:
             skipped += 1
             continue
+
+        # Overlay Torvik FF from most recent monthly snapshot before game_date.
+        # Replaces box-score-computed FF with real Torvik four factors,
+        # eliminating the train/predict FF mismatch (DRB% +2.5pp, TO% -1pp, ORB% -1.4pp).
+        if ff_lookup.has_snapshots:
+            ff_lookup.overlay_metrics(metrics, g.game_date)
 
         m1 = metrics.get(g.team_id)
         m2 = metrics.get(g.opponent_id)

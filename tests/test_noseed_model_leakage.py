@@ -14,10 +14,11 @@ from src.prediction.noseed_model import _load_team_stats, _validate_pretournamen
 
 
 class TestValidatePretournament:
-    def test_accepts_pre_tournament_computed(self, tmp_path):
+    def test_rejects_pre_tournament_computed(self, tmp_path):
         data = {"data_type": "pre_tournament_computed", "teams": []}
         f = tmp_path / "torvik_2024.json"
-        _validate_pretournament(data, f)  # must not raise
+        with pytest.raises(LeakageError, match="pre_tournament_computed"):
+            _validate_pretournament(data, f)
 
     def test_accepts_pre_tournament(self, tmp_path):
         data = {"data_type": "pre_tournament", "teams": []}
@@ -87,7 +88,7 @@ class TestLoadTeamStatsLeakageGuard:
 
         self._write_torvik_file(
             tmp_path / "torvik_2024.json",
-            "pre_tournament_computed",
+            "pre_tournament",
             teams=[{"team_id": "duke", "barthag": 0.92}],
         )
 
@@ -102,7 +103,7 @@ class TestLoadTeamStatsLeakageGuard:
 
         self._write_four_factors_file(
             tmp_path / "torvik_four_factors_2024.json",
-            "pre_tournament_computed",
+            "pre_tournament",
             team_data={"duke": {"effective_fg_pct": 0.55}},
         )
 

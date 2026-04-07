@@ -113,6 +113,7 @@ def load_ncaa_tournament_with_seeds(
         _team_id,
         team_games_to_game_records,
     )
+    from src.data.features.torvik_ff_lookup import TorVikFFLookup
     from src.pipeline.stages.data_loader import load_roster_overlay
 
     games_path = os.path.join(GAMES_DIR, f"historical_games_{year}.json")
@@ -199,6 +200,9 @@ def load_ncaa_tournament_with_seeds(
         conference_map=conference_map,
     )
 
+    # Torvik FF overlay
+    ff_lookup = TorVikFFLookup(year)
+
     # ── 5. Identify NCAA tournament games ────────────────────────────
     t_start = TOURNAMENT_START_DATES.get(year, date(year, 3, 14))
     tournament_cutoff = t_start.isoformat()
@@ -248,6 +252,9 @@ def load_ncaa_tournament_with_seeds(
         if not metrics:
             skipped += 1
             continue
+
+        if ff_lookup.has_snapshots:
+            ff_lookup.overlay_metrics(metrics, g.game_date)
 
         m1 = metrics.get(g.team_id)
         m2 = metrics.get(g.opponent_id)

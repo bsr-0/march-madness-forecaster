@@ -15,6 +15,8 @@ Usage:
     python scripts/rescrape_pretournament_torvik.py [--year YEAR] [--dry-run] [--delay 3]
 """
 
+from __future__ import annotations
+
 import argparse
 import csv
 import io
@@ -70,6 +72,15 @@ TOURNAMENT_START_DATES = {
 }
 
 SEASON_START_MONTH_DAY = (11, 1)
+
+# Monthly snapshot cutoff dates within a season (month, day).
+# These provide point-in-time FF for training with temporal integrity.
+MONTHLY_CUTOFF_MMDD = [
+    (11, 30),  # End of November
+    (12, 31),  # End of December
+    (1, 31),   # End of January
+    (2, 28),   # End of February (close enough for leap years)
+]
 
 OUTPUT_DIR = ROOT / "data" / "raw" / "historical"
 
@@ -175,14 +186,24 @@ def _fetch_trank_text(year: int, params: dict) -> str | None:
         except Exception as e:
             logger.warning("[trank CSV] curl_cffi failed for %d: %s", year, e)
 
-    # Strategy 2: standard requests
+    # Strategy 2: standard requests with js_test_submitted POST fallback
     try:
-        resp = requests.get(url, headers=TRANK_HEADERS, params=params, timeout=45)
+        session = requests.Session()
+        resp = session.get(url, headers=TRANK_HEADERS, params=params, timeout=45)
         resp.raise_for_status()
         text = resp.text
         if "<html" not in text[:500].lower():
             logger.info("[trank CSV] standard requests succeeded for %d", year)
             return text
+        # Cloudflare light verification: POST js_test_submitted and retry
+        if "js_test_submitted" in text and "Verifying Browser" in text:
+            logger.info("[trank CSV] Cloudflare light verification detected, posting js_test_submitted for %d", year)
+            resp2 = session.post(url, headers=TRANK_HEADERS, params=params, data={"js_test_submitted": "1"}, timeout=45)
+            resp2.raise_for_status()
+            text2 = resp2.text
+            if "<html" not in text2[:500].lower():
+                logger.info("[trank CSV] js_test_submitted bypass succeeded for %d", year)
+                return text2
         logger.warning("[trank CSV] Cloudflare challenge for %d", year)
     except requests.RequestException as e:
         logger.warning("[trank CSV] standard requests failed for %d: %s", year, e)
@@ -200,7 +221,6 @@ def fetch_trank_csv(year: int) -> list[dict] | None:
     params = {
         "year": year,
         "csv": 1,
-        "conyes": 1,
         "type": "All",
         "top": 0,
         "begin": date_params["begin"],
@@ -288,11 +308,16 @@ def _parse_trank_csv(text: str, year: int) -> list[dict] | None:
                     return float(row[default_idx].strip())
                 return default_val
 
-            team_name = row[header.get("team", 1)].strip() if header else row[1].strip()
+            # 37-col no-header CSV layout (without conyes):
+            #   [0]=Team [1]=AdjOE [2]=AdjDE [3]=Barthag [4]=Record
+            #   [5]=Wins [6]=Games [7]=eFG%(O) [8]=eFG%(D)
+            #   [9]=FTR(O) [10]=FTR(D) [11]=TO%(O) [12]=TO%(D)
+            #   [13]=ORB%(O) [14]=ORB%(D) [15]=FT% ... [34]=WAB
+            team_name = row[header.get("team", 0)].strip() if header else row[0].strip()
             conf = (
-                row[header.get("conf", header.get("conference", 2))].strip()
-                if header
-                else (row[2].strip() if len(row) > 2 else "")
+                row[header.get("conf", header.get("conference", 0))].strip()
+                if header and ("conf" in header or "conference" in header)
+                else ""
             )
             tid = normalize_team_id(team_name)
 
@@ -302,19 +327,19 @@ def _parse_trank_csv(text: str, year: int) -> list[dict] | None:
                     "team_name": team_name,
                     "name": team_name,
                     "conference": conf,
-                    "t_rank": int(_col(("rank", "rk"), 0, 999)),
-                    "barthag": _col("barthag", 5, 0.5),
-                    "adj_offensive_efficiency": _col(("adj_o", "adj_oe", "adjoe"), 3, 100.0),
-                    "adj_defensive_efficiency": _col(("adj_d", "adj_de", "adjde"), 4, 100.0),
-                    "adj_tempo": _col(("adj_t", "tempo"), 6, 68.0),
-                    "effective_fg_pct": _safe_rate(_col(("off_efg", "off_efg%", "efg_o"), 20)),
-                    "turnover_rate": _safe_rate(_col(("off_to", "off_to%", "tor_o"), 21)),
-                    "offensive_reb_rate": _safe_rate(_col(("off_or", "off_or%", "orb_o"), 22)),
-                    "free_throw_rate": _safe_rate(_col(("off_ftr", "off_ftr%", "ftr_o"), 23)),
-                    "opp_effective_fg_pct": _safe_rate(_col(("def_efg", "def_efg%", "efg_d"), 24)),
-                    "opp_turnover_rate": _safe_rate(_col(("def_to", "def_to%", "tor_d"), 25)),
-                    "defensive_reb_rate": _safe_rate(_col(("def_or", "off_or_d", "orb_d"), 26)),
-                    "opp_free_throw_rate": _safe_rate(_col(("def_ftr", "def_ft_rate", "ftr_d"), 27)),
+                    "t_rank": int(_col(("rank", "rk"), 999, 999)),
+                    "barthag": _col("barthag", 3, 0.5),
+                    "adj_offensive_efficiency": _col(("adj_o", "adj_oe", "adjoe"), 1, 100.0),
+                    "adj_defensive_efficiency": _col(("adj_d", "adj_de", "adjde"), 2, 100.0),
+                    "adj_tempo": _col(("adj_t", "tempo"), 35, 68.0),
+                    "effective_fg_pct": _safe_rate(_col(("off_efg", "off_efg%", "efg_o"), 7)),
+                    "turnover_rate": _safe_rate(_col(("off_to", "off_to%", "tor_o"), 11)),
+                    "offensive_reb_rate": _safe_rate(_col(("off_or", "off_or%", "orb_o"), 13)),
+                    "free_throw_rate": _safe_rate(_col(("off_ftr", "off_ftr%", "ftr_o"), 9)),
+                    "opp_effective_fg_pct": _safe_rate(_col(("def_efg", "def_efg%", "efg_d"), 8)),
+                    "opp_turnover_rate": _safe_rate(_col(("def_to", "def_to%", "tor_d"), 12)),
+                    "defensive_reb_rate": round(1.0 - _safe_rate(_col(("def_or", "off_or_d", "orb_d"), 14)), 4),
+                    "opp_free_throw_rate": _safe_rate(_col(("def_ftr", "def_ft_rate", "ftr_d"), 10)),
                 }
             )
         except Exception as e:
@@ -327,6 +352,30 @@ def _parse_trank_csv(text: str, year: int) -> list[dict] | None:
 
     logger.info("[trank CSV] Parsed %d teams with four factors for %d", len(teams), year)
     return teams
+
+
+def fetch_trank_csv_for_date(year: int, cutoff: date) -> list[dict] | None:
+    """Fetch trank.php CSV with a specific cutoff date.
+
+    Used by --monthly to get point-in-time snapshots at arbitrary dates.
+    """
+    season_start_year = year - 1
+    begin_str = f"{season_start_year}{SEASON_START_MONTH_DAY[0]:02d}{SEASON_START_MONTH_DAY[1]:02d}"
+    end_str = f"{cutoff.year}{cutoff.month:02d}{cutoff.day:02d}"
+    params = {
+        "year": year,
+        "csv": 1,
+        "type": "All",
+        "top": 0,
+        "begin": begin_str,
+        "end": end_str,
+    }
+
+    text = _fetch_trank_text(year, params)
+    if text is None:
+        return None
+
+    return _parse_trank_csv(text, year)
 
 
 def fetch_json(year: int, retries: int = 3) -> list[list] | None:
@@ -453,15 +502,96 @@ def fetch_pretournament_ratings(year: int) -> list[dict]:
     return teams
 
 
+def _monthly_cutoffs_for_year(year: int) -> list[date]:
+    """Return 5 monthly cutoff dates for a season: Nov, Dec, Jan, Feb, pre-tournament."""
+    cutoffs = []
+    for month, day in MONTHLY_CUTOFF_MMDD:
+        # Nov/Dec belong to year-1, Jan/Feb/Mar belong to year
+        y = year - 1 if month >= 10 else year
+        cutoffs.append(date(y, month, day))
+    # Pre-tournament cutoff (day before tournament starts)
+    tourney_start = TOURNAMENT_START_DATES.get(year)
+    if tourney_start:
+        cutoffs.append(tourney_start - timedelta(days=1))
+    return cutoffs
+
+
+def _write_monthly_ff(year: int, cutoff: date, teams: list[dict]) -> None:
+    """Write a dated FF snapshot file for the monthly scrape."""
+    ff_fields = (
+        "effective_fg_pct", "turnover_rate", "offensive_reb_rate",
+        "free_throw_rate", "opp_effective_fg_pct", "opp_turnover_rate",
+        "defensive_reb_rate", "opp_free_throw_rate",
+    )
+    date_tag = cutoff.strftime("%Y%m%d")
+    payload = {
+        "data_type": "pre_tournament",
+        "cutoff_date": cutoff.isoformat(),
+        "snapshot_type": "monthly",
+        "n_teams": len(teams),
+    }
+    for t in teams:
+        tid = t.get("team_id", "")
+        if not tid:
+            continue
+        ff_entry = {f: t.get(f, 0.0) for f in ff_fields}
+        if any(ff_entry[f] > 0 for f in ff_fields[:4]):
+            payload[tid] = ff_entry
+
+    fname = f"torvik_four_factors_{year}_{date_tag}.json"
+    outpath = OUTPUT_DIR / fname
+    with open(outpath, "w") as f:
+        json.dump(payload, f, indent=2)
+    n_teams = len(payload) - 4
+    logger.info("Wrote %s (%d teams, cutoff=%s)", outpath, n_teams, cutoff)
+
+
+def _run_monthly_scrape(years: list[int], args) -> None:
+    """Scrape monthly FF snapshots for each year."""
+    total_success = 0
+    total_failed = 0
+
+    for year in years:
+        cutoffs = _monthly_cutoffs_for_year(year)
+        logger.info("Year %d: %d monthly cutoffs: %s", year, len(cutoffs), [c.isoformat() for c in cutoffs])
+
+        for cutoff in cutoffs:
+            if args.dry_run:
+                print(f"  {year} cutoff={cutoff}: trank.php?year={year}&csv=1&end={cutoff.strftime('%Y%m%d')}")
+                continue
+
+            teams = fetch_trank_csv_for_date(year, cutoff)
+            if not teams:
+                logger.warning("No data for %d cutoff=%s — skipping", year, cutoff)
+                total_failed += 1
+                continue
+
+            _write_monthly_ff(year, cutoff, teams)
+            total_success += 1
+            time.sleep(args.delay)
+
+    if not args.dry_run:
+        print(f"\nMonthly scrape done: {total_success} snapshots succeeded, {total_failed} failed")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Re-scrape pre-tournament Torvik data")
     parser.add_argument("--year", type=int, help="Single year to fetch (default: all)")
     parser.add_argument("--dry-run", action="store_true", help="Print URLs without fetching")
     parser.add_argument("--delay", type=float, default=3.0, help="Delay between requests (seconds)")
+    parser.add_argument(
+        "--monthly",
+        action="store_true",
+        help="Scrape monthly snapshots (Nov, Dec, Jan, Feb, pre-tournament) for training FF",
+    )
     args = parser.parse_args()
 
     years = [args.year] if args.year else sorted(TOURNAMENT_START_DATES.keys())
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    if args.monthly:
+        _run_monthly_scrape(years, args)
+        return
 
     success = 0
     failed = []
@@ -502,6 +632,46 @@ def main():
             with open(raw_path, "w") as f:
                 json.dump(payload, f, indent=2)
             logger.info("Wrote %s (mirror)", raw_path)
+
+        # Write separate four factors file (consumed by downstream pipeline)
+        ff_fields = (
+            "effective_fg_pct", "turnover_rate", "offensive_reb_rate",
+            "free_throw_rate", "opp_effective_fg_pct", "opp_turnover_rate",
+            "defensive_reb_rate", "opp_free_throw_rate",
+        )
+        ff_payload = {
+            "data_type": "pre_tournament",
+            "cutoff_date": cutoff.isoformat(),
+            "tournament_start": TOURNAMENT_START_DATES[year].isoformat(),
+            "n_teams": len(teams),
+        }
+        for t in teams:
+            tid = t.get("team_id", "")
+            if not tid:
+                continue
+            ff_entry = {f: t.get(f, 0.0) for f in ff_fields}
+            # Skip teams with no four factors data
+            if any(ff_entry[f] > 0 for f in ff_fields[:4]):
+                ff_payload[tid] = ff_entry
+
+        for ff_dir in [OUTPUT_DIR, ROOT / "data" / "raw"]:
+            ff_path = ff_dir / f"torvik_four_factors_{year}.json"
+            if ff_dir.exists():
+                with open(ff_path, "w") as f:
+                    json.dump(ff_payload, f, indent=2)
+                logger.info("Wrote %s (%d teams)", ff_path, len(ff_payload) - 4)
+
+        # Also write to historical dir if it exists
+        hist_dir = ROOT / "data" / "raw" / "historical"
+        if hist_dir.exists():
+            for fname in [f"torvik_{year}.json", f"torvik_four_factors_{year}.json"]:
+                hist_path = hist_dir / fname
+                src_path = ROOT / "data" / "raw" / fname
+                if src_path.exists():
+                    with open(src_path) as sf:
+                        data = json.load(sf)
+                    with open(hist_path, "w") as hf:
+                        json.dump(data, hf, indent=2)
 
         success += 1
 

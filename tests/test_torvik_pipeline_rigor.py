@@ -145,63 +145,6 @@ class TestStrictTorVikValidation:
 # ---------------------------------------------------------------------------
 
 
-class TestCSVBayesianShrinkage:
-    """CSV-derived ORB%/DRB%/TO% are shrunk toward population means."""
-
-    def test_shrinkage_between_raw_and_population(self):
-        from src.data.scrapers.torvik import BartTorvikScraper
-
-        raw_orb = 0.35  # above population mean of 0.295
-        pop_mean = BartTorvikScraper._POP_PRIORS['orb']
-        result = BartTorvikScraper._shrink_csv_rate(raw_orb, 500.0, pop_mean)
-        # Shrunk value should be between raw and population mean
-        assert pop_mean < result < raw_orb
-
-    def test_high_minutes_less_shrinkage(self):
-        from src.data.scrapers.torvik import BartTorvikScraper
-
-        raw = 0.35
-        pop = BartTorvikScraper._POP_PRIORS['orb']
-        high_min = BartTorvikScraper._shrink_csv_rate(raw, 500.0, pop)
-        low_min = BartTorvikScraper._shrink_csv_rate(raw, 50.0, pop)
-        # High minutes → closer to raw; low minutes → closer to population
-        assert abs(high_min - raw) < abs(low_min - raw)
-
-    def test_zero_minutes_returns_population_mean(self):
-        from src.data.scrapers.torvik import BartTorvikScraper
-
-        pop = BartTorvikScraper._POP_PRIORS['to']
-        result = BartTorvikScraper._shrink_csv_rate(0.25, 0.0, pop)
-        assert result == pop
-
-    def test_csv_approximation_flag_preserved(self):
-        """_csv_approximation is still True after shrinkage."""
-        from src.data.scrapers.torvik import BartTorvikScraper
-
-        scraper = BartTorvikScraper.__new__(BartTorvikScraper)
-        # Build minimal CSV text: one player
-        csv_line = (
-            '"Player","TeamA","Big 12","G",50.0,'  # cols 0-4: name,team,conf,pos,min%
-            '"","","","",0.0,'                       # cols 5-9: ..., orb%
-            '0.0,"",30.0,'                            # cols 10-12: drb%, ..., to%
-            '20.0,25.0,"",50.0,60.0,"",10.0,15.0'   # cols 13-20: ftm,fta,.,fg2m,fg2a,.,fg3m,fg3a
-        )
-        # We need 22+ columns; pad if needed
-        cols = csv_line.count(',') + 1
-        if cols < 22:
-            csv_line += ',' * (22 - cols)
-
-        scraper._player_csv_cache = {}
-        scraper._fetch_strategy = {}
-        # Test via the aggregation + four factors pipeline
-        aggregated = scraper._aggregate_player_csv(csv_line)
-        # The aggregation itself doesn't set _csv_approximation;
-        # _four_factors_from_player_csv does.
-        # We test the flag is still set by checking the method output
-        # (requires network mock, so just verify the shrinkage function works)
-        assert BartTorvikScraper._shrink_csv_rate(0.30, 100.0, 0.295) != 0.30
-
-
 # ---------------------------------------------------------------------------
 # Fix 2: Seed-conditional default imputation
 # ---------------------------------------------------------------------------
