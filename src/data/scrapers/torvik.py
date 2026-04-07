@@ -552,6 +552,7 @@ class BartTorvikScraper:
         params = {
             "year": year,
             "csv": 1,
+            "conyes": 1,
             "type": "All",
             "top": 0,
         }
@@ -585,8 +586,11 @@ class BartTorvikScraper:
         if "js_test_submitted" in text and "Verifying Browser" in text:
             logger.info("[torvik] trank CSV got Cloudflare js_test challenge, submitting bypass POST")
             resp = self.session.post(
-                url, headers=self._TRANK_HEADERS, params=params,
-                data={"js_test_submitted": "1"}, timeout=45,
+                url,
+                headers=self._TRANK_HEADERS,
+                params=params,
+                data={"js_test_submitted": "1"},
+                timeout=45,
             )
             text = resp.text
         # Cloudflare returns HTML challenge page — detect and bail
@@ -692,8 +696,8 @@ class BartTorvikScraper:
                         logger.debug("Rate %.4f near fraction/percentage boundary", v)
                     return v / 100.0 if v > BartTorvikScraper._RATE_PERCENTAGE_THRESHOLD else v
 
-                # Without conyes param, CSV has no rank/conf columns:
-                #   [0]=Team, [1]=AdjOE, [2]=AdjDE, [3]=Barthag, ...
+                # With conyes=1, CSV includes Rank and Conf columns.
+                # Header-based lookup handles both layouts gracefully.
                 team_name = row[header.get("team", 0)].strip() if header else row[0].strip()
                 conf = (
                     row[header.get("conf", header.get("conference", 0))].strip()
@@ -702,7 +706,7 @@ class BartTorvikScraper:
                 )
                 tid = self._normalize_team_name_to_id(team_name)
 
-                # 37-col no-header CSV layout (without conyes):
+                # Fallback positional indices (37-col layout without conyes):
                 #   [0]=Team [1]=AdjOE [2]=AdjDE [3]=Barthag [4]=Record
                 #   [5]=Wins [6]=Games [7]=eFG%(O) [8]=eFG%(D)
                 #   [9]=FTR(O) [10]=FTR(D) [11]=TO%(O) [12]=TO%(D)
@@ -780,7 +784,6 @@ class BartTorvikScraper:
         )
         return result
 
-
     def fetch_four_factors(self, year: int = 2026) -> Dict[str, Dict]:
         """
         Fetch Four Factors data for all teams.
@@ -827,7 +830,6 @@ class BartTorvikScraper:
             self._save_to_cache(f"torvik_four_factors_{year}.json", four_factors)
 
         return four_factors
-
 
     def fetch_shooting_stats(self, year: int = 2026) -> Dict[str, Dict]:
         """

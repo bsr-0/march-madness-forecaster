@@ -78,8 +78,8 @@ SEASON_START_MONTH_DAY = (11, 1)
 MONTHLY_CUTOFF_MMDD = [
     (11, 30),  # End of November
     (12, 31),  # End of December
-    (1, 31),   # End of January
-    (2, 28),   # End of February (close enough for leap years)
+    (1, 31),  # End of January
+    (2, 28),  # End of February (close enough for leap years)
 ]
 
 OUTPUT_DIR = ROOT / "data" / "raw" / "historical"
@@ -221,6 +221,7 @@ def fetch_trank_csv(year: int) -> list[dict] | None:
     params = {
         "year": year,
         "csv": 1,
+        "conyes": 1,
         "type": "All",
         "top": 0,
         "begin": date_params["begin"],
@@ -308,7 +309,7 @@ def _parse_trank_csv(text: str, year: int) -> list[dict] | None:
                     return float(row[default_idx].strip())
                 return default_val
 
-            # 37-col no-header CSV layout (without conyes):
+            # Fallback positional indices (37-col layout without conyes):
             #   [0]=Team [1]=AdjOE [2]=AdjDE [3]=Barthag [4]=Record
             #   [5]=Wins [6]=Games [7]=eFG%(O) [8]=eFG%(D)
             #   [9]=FTR(O) [10]=FTR(D) [11]=TO%(O) [12]=TO%(D)
@@ -365,6 +366,7 @@ def fetch_trank_csv_for_date(year: int, cutoff: date) -> list[dict] | None:
     params = {
         "year": year,
         "csv": 1,
+        "conyes": 1,
         "type": "All",
         "top": 0,
         "begin": begin_str,
@@ -519,9 +521,14 @@ def _monthly_cutoffs_for_year(year: int) -> list[date]:
 def _write_monthly_ff(year: int, cutoff: date, teams: list[dict]) -> None:
     """Write a dated FF snapshot file for the monthly scrape."""
     ff_fields = (
-        "effective_fg_pct", "turnover_rate", "offensive_reb_rate",
-        "free_throw_rate", "opp_effective_fg_pct", "opp_turnover_rate",
-        "defensive_reb_rate", "opp_free_throw_rate",
+        "effective_fg_pct",
+        "turnover_rate",
+        "offensive_reb_rate",
+        "free_throw_rate",
+        "opp_effective_fg_pct",
+        "opp_turnover_rate",
+        "defensive_reb_rate",
+        "opp_free_throw_rate",
     )
     date_tag = cutoff.strftime("%Y%m%d")
     payload = {
@@ -635,9 +642,14 @@ def main():
 
         # Write separate four factors file (consumed by downstream pipeline)
         ff_fields = (
-            "effective_fg_pct", "turnover_rate", "offensive_reb_rate",
-            "free_throw_rate", "opp_effective_fg_pct", "opp_turnover_rate",
-            "defensive_reb_rate", "opp_free_throw_rate",
+            "effective_fg_pct",
+            "turnover_rate",
+            "offensive_reb_rate",
+            "free_throw_rate",
+            "opp_effective_fg_pct",
+            "opp_turnover_rate",
+            "defensive_reb_rate",
+            "opp_free_throw_rate",
         )
         ff_payload = {
             "data_type": "pre_tournament",
