@@ -400,13 +400,13 @@ class TestCsvHeaderDetection:
                 pad = ",".join(["0.0"] * 19)  # cols 15-33
                 rows.append(
                     f"Team_{rank},{100 + i:.1f},{95 + i:.1f},0.50,"
-                    f"15-15,15,30,"          # record,wins,games
-                    f"50.0,48.0,"            # eFG%(O), eFG%(D)
-                    f"32.0,30.0,"            # FTR(O), FTR(D)
-                    f"18.0,19.0,"            # TO%(O), TO%(D)
-                    f"30.0,25.0,"            # ORB%(O), ORB%(D)
-                    f"{pad},"                # cols 15-33
-                    f"0.5,68.0,0.0"          # WAB, AdjT, extra
+                    f"15-15,15,30,"  # record,wins,games
+                    f"50.0,48.0,"  # eFG%(O), eFG%(D)
+                    f"32.0,30.0,"  # FTR(O), FTR(D)
+                    f"18.0,19.0,"  # TO%(O), TO%(D)
+                    f"30.0,25.0,"  # ORB%(O), ORB%(D)
+                    f"{pad},"  # cols 15-33
+                    f"0.5,68.0,0.0"  # WAB, AdjT, extra
                 )
         return "\n".join(rows)
 
@@ -433,14 +433,7 @@ class TestCsvHeaderDetection:
         # With <3 header matches, the parser should fall back to positional indexing.
         pad = ",".join(["0.0"] * 19)
         first_row = (
-            f"Franklin Pierce,100.0,105.0,0.40,"
-            f"10-20,10,30,"
-            f"45.0,50.0,"
-            f"30.0,32.0,"
-            f"20.0,18.0,"
-            f"28.0,27.0,"
-            f"{pad},"
-            f"0.5,68.0,0.0"
+            f"Franklin Pierce,100.0,105.0,0.40,10-20,10,30,45.0,50.0,30.0,32.0,20.0,18.0,28.0,27.0,{pad},0.5,68.0,0.0"
         )
         csv_content = first_row + "\n" + self._make_csv_rows(109, start_rank=2) + "\n"
         fake_resp = MagicMock()
@@ -458,16 +451,7 @@ class TestCsvHeaderDetection:
         """A row with only 1 header keyword match should not be treated as header."""
         # Row 0 has "team" as team name but nothing else header-like (37-col positional).
         pad = ",".join(["0.0"] * 19)
-        first_row = (
-            f"team,100.0,105.0,0.40,"
-            f"10-20,10,30,"
-            f"45.0,50.0,"
-            f"30.0,32.0,"
-            f"20.0,18.0,"
-            f"28.0,27.0,"
-            f"{pad},"
-            f"0.5,68.0,0.0"
-        )
+        first_row = f"team,100.0,105.0,0.40,10-20,10,30,45.0,50.0,30.0,32.0,20.0,18.0,28.0,27.0,{pad},0.5,68.0,0.0"
         csv_content = first_row + "\n" + self._make_csv_rows(109, start_rank=2) + "\n"
         fake_resp = MagicMock()
         fake_resp.text = csv_content
@@ -607,3 +591,123 @@ class TestScrapedAtMetadata:
         data = {"scraped_at": "2026-03-10T12:00:00"}
         # Should not raise — date is before tournament start (2026-03-17)
         scraper._validate_cache_timestamp(data, year=2026, strict=True)
+
+
+# ---------------------------------------------------------------------------
+# Cloudflare js_test_submitted bypass — POST body must include CSV params
+# ---------------------------------------------------------------------------
+
+
+def _build_fake_csv(n_teams=350):
+    """Build a fake trank.php CSV with header + n_teams data rows."""
+    header = (
+        "Rk,Team,Conf,AdjOE,AdjDE,Barthag,Adj_T,Off_eFG%,Def_eFG%,Off_FTR%,Def_FTR%,Off_TO%,Def_TO%,Off_OR%,Def_OR%"
+    )
+    rows = [header]
+    for i in range(1, n_teams + 1):
+        rows.append(f"{i},Team{i},Conf,110.0,95.0,0.85,68.0,0.52,0.48,0.33,0.30,0.17,0.19,0.30,0.28")
+    return "\n".join(rows)
+
+
+CLOUDFLARE_CHALLENGE_HTML = (
+    "<html><head><title>Verifying Browser</title></head>"
+    '<body><form><input name="js_test_submitted" value="1"></form></body></html>'
+)
+
+
+class TestCloudflareBypassPostParams:
+    """Regression: js_test_submitted POST must send CSV params in body, not query string.
+
+    Bug: POST sent params as URL query string + only {"js_test_submitted": "1"} in body.
+    trank.php reads form data from the POST body, so filtering params were lost,
+    returning only 31 teams instead of 350+.
+    """
+
+    def test_rescrape_post_includes_csv_params_in_body(self):
+        """Verify the rescrape script merges params into POST data."""
+        from scripts.rescrape_pretournament_torvik import _fetch_trank_text
+
+        full_csv = _build_fake_csv(350)
+
+        with patch("scripts.rescrape_pretournament_torvik.HAS_CURL_CFFI", False):
+            mock_session_cls = MagicMock()
+            mock_session = MagicMock()
+            mock_session_cls.return_value = mock_session
+
+            # GET returns Cloudflare challenge
+            mock_get_resp = MagicMock()
+            mock_get_resp.text = CLOUDFLARE_CHALLENGE_HTML
+            mock_get_resp.raise_for_status = MagicMock()
+            mock_session.get.return_value = mock_get_resp
+
+            # POST returns full CSV
+            mock_post_resp = MagicMock()
+            mock_post_resp.text = full_csv
+            mock_post_resp.raise_for_status = MagicMock()
+            mock_session.post.return_value = mock_post_resp
+
+            params = {"year": "2026", "csv": "1", "conyes": "1", "begin": "20251101", "end": "20260316"}
+
+            with patch("scripts.rescrape_pretournament_torvik.requests.Session", mock_session_cls):
+                result = _fetch_trank_text(2026, params)
+
+            assert result == full_csv
+
+            # Verify POST was called with params IN the body (data=), not as query params
+            mock_session.post.assert_called_once()
+            call_kwargs = mock_session.post.call_args
+            post_data = call_kwargs.kwargs.get("data") or call_kwargs[1].get("data")
+            assert post_data is not None, "POST must include data= kwarg"
+            assert "js_test_submitted" in post_data
+            assert post_data["js_test_submitted"] == "1"
+            # All CSV params must be in POST body
+            for key in ("year", "csv", "conyes", "begin", "end"):
+                assert key in post_data, f"POST body missing '{key}' param"
+            # params= (query string) must NOT be set
+            post_params = call_kwargs.kwargs.get("params") or (
+                call_kwargs[1].get("params") if len(call_kwargs) > 1 else None
+            )
+            assert post_params is None, "POST should not send params as query string"
+
+    def test_main_scraper_post_includes_csv_params_in_body(self, scraper):
+        """Verify the main BartTorvikScraper merges params into POST data."""
+        full_csv = _build_fake_csv(350)
+
+        # Mock the GET to return Cloudflare challenge
+        mock_get_resp = MagicMock()
+        mock_get_resp.text = CLOUDFLARE_CHALLENGE_HTML
+        mock_get_resp.raise_for_status = MagicMock()
+        scraper._get_with_retry = MagicMock(return_value=mock_get_resp)
+
+        # Mock session.post to return full CSV
+        mock_post_resp = MagicMock()
+        mock_post_resp.text = full_csv
+        scraper.session = MagicMock()
+        scraper.session.post.return_value = mock_post_resp
+
+        # Mock circuit breaker as a no-op context manager
+        from contextlib import nullcontext
+
+        scraper._cb_trank = MagicMock(return_value=nullcontext())
+
+        teams = scraper._rankings_from_trank_csv(2026)
+
+        # Should have parsed all 350 teams
+        assert len(teams) >= 350, f"Expected 350+ teams, got {len(teams)}"
+
+        # Verify POST body contains CSV params
+        scraper.session.post.assert_called_once()
+        call_kwargs = scraper.session.post.call_args
+        post_data = call_kwargs.kwargs.get("data") or call_kwargs[1].get("data")
+        assert "js_test_submitted" in post_data
+        assert "year" in post_data or "csv" in post_data, "POST body must include CSV params"
+        # Verify params= is NOT in the call (no query string)
+        assert "params" not in (call_kwargs.kwargs or {}), "POST should not send params as query string"
+
+    def test_rescrape_31_teams_discarded_triggers_json_fallback(self):
+        """Reproduce the exact bug: CSV returns 31 teams → discard → JSON fallback."""
+        from scripts.rescrape_pretournament_torvik import _parse_trank_csv
+
+        small_csv = _build_fake_csv(31)
+        result = _parse_trank_csv(small_csv, 2026)
+        assert result is None, "31 teams should be rejected (threshold is 100)"
