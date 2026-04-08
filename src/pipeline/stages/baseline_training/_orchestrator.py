@@ -5,6 +5,7 @@ from datetime import date, timedelta
 
 from ....data.features.proprietary_metrics import IncrementalMetricsEngine
 from ....data.features.torvik_ff_lookup import TorVikFFLookup
+from ....exceptions import LeakageError
 from ....data.models.game_flow import GameFlow
 from ...config import (
     DATA_QUALITY_ERA_WEIGHTS,
@@ -417,10 +418,10 @@ def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]])
     # Torvik FF overlay for current-year training
     ff_lookup = TorVikFFLookup(pipeline.config.year)
     if not ff_lookup.has_snapshots:
-        logger.warning(
-            "NO Torvik FF snapshots for year %d — current-year training will use "
-            "box-score-computed four factors (known divergence from Torvik).",
-            pipeline.config.year,
+        raise LeakageError(
+            f"NO Torvik FF snapshots for year {pipeline.config.year}. Current-year training "
+            f"would use box-score-computed four factors (known divergence from Torvik, r=0.12-0.74). "
+            f"Run: python scripts/rescrape_pretournament_torvik.py --monthly --year {pipeline.config.year}"
         )
 
     # Seed map for absolute features in matchup vector

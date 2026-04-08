@@ -22,6 +22,7 @@ from ...data.features.proprietary_metrics import (
     team_games_to_game_records,
 )
 from ...data.features.torvik_ff_lookup import TorVikFFLookup
+from ...exceptions import LeakageError
 from .data_loader import load_roster_overlay
 from ..config import (
     MIN_SEASON_FEATURE_COMPLETENESS,
@@ -369,12 +370,10 @@ def _load_year_samples_incremental_core(
     if ff_lookup.has_snapshots:
         logger.info("Torvik FF overlay: %d snapshots for year %d", ff_lookup.n_snapshots, year)
     else:
-        logger.warning(
-            "NO Torvik FF snapshots for year %d — training will use box-score-computed "
-            "four factors, which diverge significantly from Torvik values (r=0.12-0.74). "
-            "Run: python scripts/rescrape_pretournament_torvik.py --monthly --year %d",
-            year,
-            year,
+        raise LeakageError(
+            f"NO Torvik FF snapshots for year {year}. Training would use box-score-computed "
+            f"four factors, which diverge significantly from Torvik values (r=0.12-0.74). "
+            f"Run: python scripts/rescrape_pretournament_torvik.py --monthly --year {year}"
         )
 
     # ── 4. Identify training games ────────────────────────────────────
