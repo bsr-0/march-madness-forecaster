@@ -354,9 +354,12 @@ def load_roster_overlay(roster_path: str, year: Optional[int] = None) -> Dict[st
         return {}
 
     # Tournament date guard — warn if roster was scraped post-tournament.
+    # Skip warning when the file's "year" field matches the requested year,
+    # indicating season-specific historical data scraped retroactively.
     if year is not None and isinstance(data, dict):
+        file_year = data.get("year")
         ts_str = data.get("timestamp")
-        if ts_str:
+        if ts_str and not (file_year and file_year == year):
             try:
                 from datetime import date as _date
 
