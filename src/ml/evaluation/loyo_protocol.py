@@ -53,7 +53,26 @@ logger = logging.getLogger(__name__)
 
 # Validation years for LOYO protocol
 # 2020 excluded (COVID: tournament cancelled)
-LOYO_YEARS = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+LOYO_YEARS = [
+    2008,
+    2009,
+    2010,
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
+    2026,
+]
 
 # Legacy "0.001 Rule" threshold — DEPRECATED.
 # With 7 folds of ~63 games, SE(mean Brier) ≈ 0.009, so a 0.001 threshold
@@ -89,9 +108,9 @@ def compute_ablation_threshold(
     n = len(fold_briers)
     if n < 3:
         logger.warning(
-            "Too few folds (%d) for powered threshold; "
-            "falling back to legacy %.4f",
-            n, MINIMUM_BRIER_IMPROVEMENT,
+            "Too few folds (%d) for powered threshold; falling back to legacy %.4f",
+            n,
+            MINIMUM_BRIER_IMPROVEMENT,
         )
         return MINIMUM_BRIER_IMPROVEMENT
 
@@ -101,6 +120,7 @@ def compute_ablation_threshold(
     # One-sided t critical value
     try:
         from scipy.stats import t as t_dist
+
         t_crit = float(t_dist.ppf(1.0 - significance_level, df=n - 1))
     except ImportError:
         # Approximate: for df=6 (7 folds), t_0.05 ≈ 1.943
@@ -108,9 +128,12 @@ def compute_ablation_threshold(
 
     threshold = t_crit * se
     logger.info(
-        "Powered ablation threshold: %.4f "
-        "(SE=%.4f, t_crit=%.3f, n_folds=%d, alpha=%.3f)",
-        threshold, se, t_crit, n, significance_level,
+        "Powered ablation threshold: %.4f (SE=%.4f, t_crit=%.3f, n_folds=%d, alpha=%.3f)",
+        threshold,
+        se,
+        t_crit,
+        n,
+        significance_level,
     )
     return max(threshold, MINIMUM_BRIER_IMPROVEMENT)
 
@@ -179,8 +202,14 @@ def compute_seed_baseline_probs(
     """
     # Historical first-round upset rates (canonical matchups)
     _SEED_WIN_RATES = {
-        (1, 16): 0.985, (2, 15): 0.940, (3, 14): 0.850, (4, 13): 0.790,
-        (5, 12): 0.640, (6, 11): 0.620, (7, 10): 0.610, (8, 9): 0.510,
+        (1, 16): 0.985,
+        (2, 15): 0.940,
+        (3, 14): 0.850,
+        (4, 13): 0.790,
+        (5, 12): 0.640,
+        (6, 11): 0.620,
+        (7, 10): 0.610,
+        (8, 9): 0.510,
     }
 
     probs = np.full(len(seeds1), 0.5)
@@ -296,8 +325,7 @@ def compute_validation_diagnostics(
 
     if n_folds < 10:
         warnings.append(
-            f"Only {n_folds} folds — bootstrap or permutation tests recommended "
-            f"to supplement fold-level inference."
+            f"Only {n_folds} folds — bootstrap or permutation tests recommended to supplement fold-level inference."
         )
 
     return {
@@ -311,9 +339,7 @@ def compute_validation_diagnostics(
         "dof_sample_target": 0.01,
         "legacy_threshold": MINIMUM_BRIER_IMPROVEMENT,
         "powered_threshold": round(powered_threshold, 6),
-        "legacy_threshold_as_fraction_of_se": round(
-            MINIMUM_BRIER_IMPROVEMENT / max(se_mean_brier, 1e-12), 3
-        ),
+        "legacy_threshold_as_fraction_of_se": round(MINIMUM_BRIER_IMPROVEMENT / max(se_mean_brier, 1e-12), 3),
         "integrity_level": 3,
         "integrity_note": (
             "RETROSPECTIVE: All 58 constants were tuned on the same 2005-2025 "
@@ -418,8 +444,8 @@ class DevEvalSplit:
             "warning": (
                 f"LEAKAGE: Eval years {leaked} were used during tuning. "
                 f"Eval results are now Level 3 (retrospective), not Level 2."
-                if leaked else
-                "No leakage detected. Eval results are Level 2 "
+                if leaked
+                else "No leakage detected. Eval results are Level 2 "
                 "(quasi-prospective, assuming pipeline was frozen before eval)."
             ),
         }
@@ -446,8 +472,7 @@ class DevEvalSplit:
         warnings = []
         if dev_ratio > 0.10:
             warnings.append(
-                f"Dev DoF/sample = {dev_ratio:.3f} >> 0.01. "
-                f"Consider reducing Tier 3 constants or extending dev data."
+                f"Dev DoF/sample = {dev_ratio:.3f} >> 0.01. Consider reducing Tier 3 constants or extending dev data."
             )
         if eval_ratio > 0.10:
             warnings.append(
@@ -459,7 +484,7 @@ class DevEvalSplit:
         # Minimum detectable effect (MDE) for eval set
         # Rough MDE ≈ 2.8 * sigma / sqrt(N) for 80% power, alpha=0.05
         # Assuming sigma ≈ 0.15 for per-game Brier variance
-        mde_eval = 2.8 * 0.15 / max(eval_games ** 0.5, 1)
+        mde_eval = 2.8 * 0.15 / max(eval_games**0.5, 1)
 
         return {
             "dev_years": self.dev_years,
@@ -535,19 +560,12 @@ def assess_contamination(
     # Import the registry to identify which constants matter
     try:
         from .rdof_audit import get_tier3_constants
+
         tier3 = get_tier3_constants()
         tier3_names = [c.name for c in tier3]
         # Identify constants that are active (non-zero value)
-        active_tier3 = [
-            c.name for c in tier3
-            if isinstance(c.current_value, (int, float))
-            and c.current_value != 0
-        ]
-        disabled_tier3 = [
-            c.name for c in tier3
-            if isinstance(c.current_value, (int, float))
-            and c.current_value == 0
-        ]
+        active_tier3 = [c.name for c in tier3 if isinstance(c.current_value, (int, float)) and c.current_value != 0]
+        disabled_tier3 = [c.name for c in tier3 if isinstance(c.current_value, (int, float)) and c.current_value == 0]
     except ImportError:
         tier3_names = []
         active_tier3 = []
@@ -582,9 +600,7 @@ def assess_contamination(
     still_contaminated = [n for n in active_tier3 if n not in constants_retuned]
     retuned = [n for n in active_tier3 if n in constants_retuned]
     parametric_status = (
-        "decontaminated" if not still_contaminated
-        else "partially_decontaminated" if retuned
-        else "contaminated"
+        "decontaminated" if not still_contaminated else "partially_decontaminated" if retuned else "contaminated"
     )
 
     param_layer = ContaminationLayer(
@@ -674,6 +690,7 @@ def assess_contamination(
 # ======================================================================
 # Phase 2: Feature Family Ablation
 # ======================================================================
+
 
 @dataclass
 class FeatureFamily:
@@ -783,7 +800,9 @@ def validate_family_coverage(
             if feat in feature_to_family:
                 logger.warning(
                     "Feature '%s' assigned to multiple families: '%s' and '%s'",
-                    feat, feature_to_family[feat], family.name,
+                    feat,
+                    feature_to_family[feat],
+                    family.name,
                 )
             feature_to_family[feat] = family.name
 
@@ -908,14 +927,10 @@ class LOYOResult:
             "",
             f"  Total time: {self.total_time_seconds:.1f}s",
             "",
-            f"  DoF/sample ratio: {_N_TUNED_CONSTANTS}/{total_games} = {dof_ratio:.3f}"
-            f" (target < 0.01)",
+            f"  DoF/sample ratio: {_N_TUNED_CONSTANTS}/{total_games} = {dof_ratio:.3f} (target < 0.01)",
         ]
         if dof_ratio > 0.01:
-            lines.append(
-                "  ** WARNING: DoF/sample ratio exceeds target. "
-                "Results may overstate OOS performance."
-            )
+            lines.append("  ** WARNING: DoF/sample ratio exceeds target. Results may overstate OOS performance.")
         lines.append(f"  Integrity level: 3 (retrospective diagnostic)")
         lines.append("")
         lines.append("  Per-year breakdown:")
@@ -967,10 +982,7 @@ class ProspectiveValidationResult:
     def summary(self) -> str:
         """Human-readable summary."""
         lines = [
-            (
-                "Prospective Forward Validation "
-                f"({len(self.fold_results)} folds):"
-            ),
+            (f"Prospective Forward Validation ({len(self.fold_results)} folds):"),
             f"  Mean Brier:  {self.mean_brier:.6f} (+/- {self.std_brier:.6f})",
             f"  Mean LogLoss: {self.mean_logloss:.6f}",
             f"  Mean Accuracy: {self.mean_accuracy:.4f}",
@@ -1015,10 +1027,7 @@ class ProspectiveValidator:
                 )
                 continue
 
-            train_years = [
-                year for year in sorted(data_by_year)
-                if year < predicted_year
-            ]
+            train_years = [year for year in sorted(data_by_year) if year < predicted_year]
             if not train_years:
                 logger.info(
                     "Prospective: No prior seasons before %d. Skipping.",
@@ -1079,9 +1088,7 @@ class ProspectiveValidator:
 
             predictions = np.clip(predictions, 1e-7, 1 - 1e-7)
             brier = float(np.mean((predictions - y_test) ** 2))
-            logloss = float(-np.mean(
-                y_test * np.log(predictions) + (1 - y_test) * np.log(1 - predictions)
-            ))
+            logloss = float(-np.mean(y_test * np.log(predictions) + (1 - y_test) * np.log(1 - predictions)))
             accuracy = float(np.mean((predictions > 0.5) == y_test))
             calibration_error = LOYOValidator()._compute_ece(predictions, y_test)
 
@@ -1091,9 +1098,7 @@ class ProspectiveValidator:
                 for round_name in set(rounds):
                     mask = np.array([r == round_name for r in rounds])
                     if mask.sum() > 0:
-                        round_briers[round_name] = float(
-                            np.mean((predictions[mask] - y_test[mask]) ** 2)
-                        )
+                        round_briers[round_name] = float(np.mean((predictions[mask] - y_test[mask]) ** 2))
 
             fold_results.append(
                 ProspectiveFoldResult(
@@ -1178,6 +1183,7 @@ class LOYOValidator:
         if self.enforce_pit:
             try:
                 from ...pipeline.stages.pit_validation import PITValidator
+
                 self._pit_validator = PITValidator()
             except Exception as e:
                 logger.warning("PIT validation unavailable: %s", e)
@@ -1222,9 +1228,7 @@ class LOYOValidator:
 
         for held_out_year in self.years:
             if held_out_year not in data_by_year:
-                logger.warning(
-                    "LOYO: Year %d not in data. Skipping.", held_out_year
-                )
+                logger.warning("LOYO: Year %d not in data. Skipping.", held_out_year)
                 continue
 
             logger.info("=" * 60)
@@ -1246,7 +1250,8 @@ class LOYOValidator:
                 except Exception as e:
                     logger.error(
                         "PIT validation failed for fold %d: %s",
-                        held_out_year, e,
+                        held_out_year,
+                        e,
                     )
                     raise
 
@@ -1280,14 +1285,13 @@ class LOYOValidator:
 
             if not X_trains:
                 if self.temporal_mode == "rolling_window":
-                    min_available = min(
-                        (y for y in data_by_year if y != held_out_year), default=None
-                    )
+                    min_available = min((y for y in data_by_year if y != held_out_year), default=None)
                     if min_available is None or min_available >= held_out_year:
                         logger.info(
                             "LOYO: Skipping fold %d — no prior years available "
                             "in rolling_window mode (earliest available: %s).",
-                            held_out_year, min_available,
+                            held_out_year,
+                            min_available,
                         )
                         continue
                 logger.warning("LOYO: No training data for fold %d", held_out_year)
@@ -1307,8 +1311,11 @@ class LOYOValidator:
             # Train model
             try:
                 model = train_fn(
-                    X_train, y_train, margins_train,
-                    feature_names, weights_train,
+                    X_train,
+                    y_train,
+                    margins_train,
+                    feature_names,
+                    weights_train,
                 )
             except Exception as e:
                 logger.error("LOYO: Training failed for fold %d: %s", held_out_year, e)
@@ -1325,7 +1332,8 @@ class LOYOValidator:
             from ...evaluation.evaluation_suite import evaluate as eval_suite
 
             suite = eval_suite(
-                predictions, y_test,
+                predictions,
+                y_test,
                 round_labels=test_data.get("rounds"),
                 seed_probs=test_data.get("seed_probs"),
                 seeds1=test_data.get("seeds1"),
@@ -1355,12 +1363,15 @@ class LOYOValidator:
             fold_results.append(fold_result)
 
             logger.info(
-                "LOYO %d: Brier=%.6f, RW-Brier=%.6f, LogLoss=%.6f, Accuracy=%.4f, "
-                "N_train=%d, N_test=%d, Time=%.1fs",
-                held_out_year, suite.brier.brier_score,
+                "LOYO %d: Brier=%.6f, RW-Brier=%.6f, LogLoss=%.6f, Accuracy=%.4f, N_train=%d, N_test=%d, Time=%.1fs",
+                held_out_year,
+                suite.brier.brier_score,
                 suite.bracket_ev.round_weighted_brier,
-                suite.brier.log_loss, suite.brier.accuracy,
-                len(y_train), len(y_test), fold_time,
+                suite.brier.log_loss,
+                suite.brier.accuracy,
+                len(y_train),
+                len(y_test),
+                fold_time,
             )
 
         # Aggregate results
@@ -1527,9 +1538,7 @@ class FeatureAblator:
             validator_years = set(loyo_validator.years)
             data_years = set(data_by_year.keys())
             ablation_years = validator_years & data_years
-            leakage = dev_eval_split.validate_no_leakage(
-                list(ablation_years)
-            )
+            leakage = dev_eval_split.validate_no_leakage(list(ablation_years))
             if not leakage["clean"]:
                 raise HoldoutContaminationError(
                     "ABLATION LEAKAGE: "
@@ -1540,9 +1549,7 @@ class FeatureAblator:
 
         # Get baseline with per-fold detail
         logger.info("Computing baseline LOYO Brier...")
-        baseline_result = loyo_validator.validate(
-            data_by_year, train_fn, predict_fn
-        )
+        baseline_result = loyo_validator.validate(data_by_year, train_fn, predict_fn)
         baseline_fold_briers = [f.brier_score for f in baseline_result.fold_results]
 
         if baseline_brier is None:
@@ -1554,7 +1561,8 @@ class FeatureAblator:
             self._powered_threshold = effective_threshold
             logger.info(
                 "Using powered threshold: %.4f (vs legacy %.4f)",
-                effective_threshold, self.min_improvement,
+                effective_threshold,
+                self.min_improvement,
             )
         else:
             effective_threshold = self.min_improvement
@@ -1568,7 +1576,9 @@ class FeatureAblator:
         for feat_idx, feat_name in enumerate(feature_names):
             logger.info(
                 "Ablating feature %d/%d: %s",
-                feat_idx + 1, len(feature_names), feat_name,
+                feat_idx + 1,
+                len(feature_names),
+                feat_name,
             )
 
             # Create data with this feature zeroed out
@@ -1581,13 +1591,9 @@ class FeatureAblator:
 
             # Run LOYO without this feature
             try:
-                ablated_result = loyo_validator.validate(
-                    ablated_data, train_fn, predict_fn
-                )
+                ablated_result = loyo_validator.validate(ablated_data, train_fn, predict_fn)
                 ablated_brier = ablated_result.mean_brier
-                ablated_fold_briers = [
-                    f.brier_score for f in ablated_result.fold_results
-                ]
+                ablated_fold_briers = [f.brier_score for f in ablated_result.fold_results]
             except Exception as e:
                 logger.warning("Ablation failed for %s: %s", feat_name, e)
                 ablated_brier = baseline_brier
@@ -1598,13 +1604,8 @@ class FeatureAblator:
 
             # Paired t-test across folds for statistical significance
             p_value = None
-            if (
-                len(baseline_fold_briers) == len(ablated_fold_briers)
-                and len(baseline_fold_briers) >= 3
-            ):
-                fold_diffs = np.array(ablated_fold_briers) - np.array(
-                    baseline_fold_briers
-                )
+            if len(baseline_fold_briers) == len(ablated_fold_briers) and len(baseline_fold_briers) >= 3:
+                fold_diffs = np.array(ablated_fold_briers) - np.array(baseline_fold_briers)
                 n = len(fold_diffs)
                 mean_diff = float(np.mean(fold_diffs))
                 std_diff = float(np.std(fold_diffs, ddof=1))
@@ -1635,25 +1636,14 @@ class FeatureAblator:
             reason = ""
             if keep:
                 p_str = f", p={p_value:.4f}" if p_value is not None else ""
-                reason = (
-                    f"Feature improves Brier by {improvement:.6f} "
-                    f"(>= {effective_threshold:.4f}{p_str})"
-                )
+                reason = f"Feature improves Brier by {improvement:.6f} (>= {effective_threshold:.4f}{p_str})"
             else:
                 if improvement < 0:
-                    reason = (
-                        f"Feature HURTS Brier by {abs(improvement):.6f} — DELETE"
-                    )
+                    reason = f"Feature HURTS Brier by {abs(improvement):.6f} — DELETE"
                 elif p_value is not None and p_value >= 0.05:
-                    reason = (
-                        f"Feature improvement {improvement:.6f} not significant "
-                        f"(p={p_value:.4f} >= 0.05) — DELETE"
-                    )
+                    reason = f"Feature improvement {improvement:.6f} not significant (p={p_value:.4f} >= 0.05) — DELETE"
                 else:
-                    reason = (
-                        f"Feature improvement {improvement:.6f} "
-                        f"< {effective_threshold:.4f} threshold — DELETE"
-                    )
+                    reason = f"Feature improvement {improvement:.6f} < {effective_threshold:.4f} threshold — DELETE"
 
             results[feat_name] = {
                 "ablated_brier": ablated_brier,
@@ -1681,8 +1671,7 @@ class FeatureAblator:
         delete_count = len(results) - keep_count
 
         logger.info(
-            "\nAblation summary: KEEP %d features, DELETE %d features "
-            "(threshold=%.4f, method=%s)",
+            "\nAblation summary: KEEP %d features, DELETE %d features (threshold=%.4f, method=%s)",
             keep_count,
             delete_count,
             effective_threshold,
@@ -1694,17 +1683,11 @@ class FeatureAblator:
 
     def get_features_to_keep(self) -> List[str]:
         """Return feature names that passed the 0.001 rule."""
-        return [
-            name for name, result in self.ablation_results.items()
-            if result.get("keep", True)
-        ]
+        return [name for name, result in self.ablation_results.items() if result.get("keep", True)]
 
     def get_features_to_delete(self) -> List[str]:
         """Return feature names that failed the 0.001 rule."""
-        return [
-            name for name, result in self.ablation_results.items()
-            if not result.get("keep", True)
-        ]
+        return [name for name, result in self.ablation_results.items() if not result.get("keep", True)]
 
     def ablate_families(
         self,
@@ -1751,15 +1734,12 @@ class FeatureAblator:
         """
         if mode == "retrain":
             raise NotImplementedError(
-                "Retrain-based family ablation is deferred to Phase 3. "
-                "Use mode='masked' for fast screening."
+                "Retrain-based family ablation is deferred to Phase 3. Use mode='masked' for fast screening."
             )
 
         # Get baseline with per-fold detail
         logger.info("Computing baseline LOYO Brier for family ablation...")
-        baseline_result = loyo_validator.validate(
-            data_by_year, train_fn, predict_fn
-        )
+        baseline_result = loyo_validator.validate(data_by_year, train_fn, predict_fn)
         baseline_fold_briers = [f.brier_score for f in baseline_result.fold_results]
 
         if baseline_brier is None:
@@ -1774,7 +1754,9 @@ class FeatureAblator:
         logger.info("Baseline LOYO Brier: %.6f", baseline_brier)
         logger.info(
             "Starting family ablation (%d families, mode=%s, threshold=%.4f)...",
-            len(families), mode, effective_threshold,
+            len(families),
+            mode,
+            effective_threshold,
         )
 
         # Build feature name -> index mapping
@@ -1816,7 +1798,8 @@ class FeatureAblator:
                 else:
                     logger.warning(
                         "Family '%s': feature '%s' not found in feature_names",
-                        family.name, feat,
+                        family.name,
+                        feat,
                     )
 
             # Prefix matching
@@ -1842,7 +1825,9 @@ class FeatureAblator:
 
             logger.info(
                 "Ablating family '%s' (%d features: %s, policy=%s)",
-                family.name, len(family_indices), matched_names,
+                family.name,
+                len(family_indices),
+                matched_names,
                 family.masking_policy,
             )
 
@@ -1865,14 +1850,10 @@ class FeatureAblator:
 
             # Run LOYO with masked family
             try:
-                ablated_result = loyo_validator.validate(
-                    ablated_data, train_fn, predict_fn
-                )
+                ablated_result = loyo_validator.validate(ablated_data, train_fn, predict_fn)
                 ablated_brier = ablated_result.mean_brier
             except Exception as e:
-                logger.warning(
-                    "Family ablation failed for '%s': %s", family.name, e
-                )
+                logger.warning("Family ablation failed for '%s': %s", family.name, e)
                 ablated_brier = baseline_brier
 
             # Improvement = ablated - baseline
@@ -1881,19 +1862,11 @@ class FeatureAblator:
             keep = improvement >= effective_threshold
 
             if keep:
-                reason = (
-                    f"Family improves Brier by {improvement:.6f} "
-                    f"(>= {effective_threshold:.4f})"
-                )
+                reason = f"Family improves Brier by {improvement:.6f} (>= {effective_threshold:.4f})"
             elif improvement < 0:
-                reason = (
-                    f"Family HURTS Brier by {abs(improvement):.6f} — DELETE"
-                )
+                reason = f"Family HURTS Brier by {abs(improvement):.6f} — DELETE"
             else:
-                reason = (
-                    f"Family improvement {improvement:.6f} "
-                    f"< {effective_threshold:.4f} threshold — DELETE"
-                )
+                reason = f"Family improvement {improvement:.6f} < {effective_threshold:.4f} threshold — DELETE"
 
             results[family.name] = {
                 "ablated_brier": ablated_brier,
@@ -1909,7 +1882,9 @@ class FeatureAblator:
 
             logger.info(
                 "  %s: ablated=%.6f, improvement=%.6f, %s",
-                family.name, ablated_brier, improvement,
+                family.name,
+                ablated_brier,
+                improvement,
                 "KEEP" if keep else "DELETE",
             )
 
@@ -1921,7 +1896,9 @@ class FeatureAblator:
 
         logger.info(
             "\nFamily ablation summary: KEEP %d, DELETE %d, SKIPPED %d",
-            keep_count, delete_count, skipped,
+            keep_count,
+            delete_count,
+            skipped,
         )
 
         self.family_ablation_results = results

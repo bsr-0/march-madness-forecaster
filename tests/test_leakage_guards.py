@@ -259,8 +259,9 @@ class TestRosterPostTournamentGuard:
     def test_warns_post_tournament(self, tmp_path, caplog):
         import json
 
+        # Roster with no "year" field — guard can't confirm season match,
+        # so it should warn when timestamp is after tournament start.
         roster = {
-            "year": 2026,
             "teams": [
                 {
                     "team_id": "duke",
