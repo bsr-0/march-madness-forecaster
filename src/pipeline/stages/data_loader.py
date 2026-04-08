@@ -760,9 +760,11 @@ def load_team_stat_sources(
         # only include games through that date, even if the file was scraped
         # later.  When present it takes precedence over the scrape timestamp.
         if _strict_torvik:
-            _data_as_of = torvik_payload.get("data_as_of")
+            _data_as_of = torvik_payload.get("data_as_of") or torvik_payload.get("cutoff_date")
             if _data_as_of:
-                # Operator has attested to the data coverage date — use it.
+                # data_as_of or cutoff_date attests the data coverage date —
+                # use it instead of scrape timestamp (file may have been
+                # scraped after tournament but filtered to pre-tournament).
                 _ts_str = _data_as_of
             else:
                 _ts_fields = ["timestamp", "generated_at", "fetched_at", "scraped_at"]
