@@ -96,3 +96,5 @@
 {"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2024, "mode": "calibration", "num_simulations": 10000}, "timestamp": "2026-04-02T00:17:59.173411+00:00"}
 {"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2008, "mode": "calibration", "num_simulations": 10000}, "timestamp": "2026-04-02T04:18:49.135444+00:00"}
 {"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2008, "mode": "calibration", "num_simulations": 10000}, "timestamp": "2026-04-02T04:18:53.972008+00:00"}
+{"type": "action", "action": "pipeline_start", "actor": "system", "details": {"year": 2024, "mode": "calibration", "num_simulations": 10000}, "timestamp": "2026-04-08T08:10:52.536133+00:00"}
+{"type": "action", "action": "training_complete", "actor": "system", "details": {"gnn_enabled": false, "transformer_enabled": false}, "timestamp": "2026-04-08T10:14:23.125610+00:00"}

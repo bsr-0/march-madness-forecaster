@@ -1,0 +1,117 @@
+{
+  "modes": [
+    "calibration",
+    "ev"
+  ],
+  "years": [
+    2024
+  ],
+  "pool_sizes": [
+    100,
+    500
+  ],
+  "results": [
+    {
+      "year": 2024,
+      "mode": "calibration",
+      "brier": 0.17141762402050612,
+      "rw_brier": 0.20394648916678632,
+      "accuracy": 0.7761194029850746,
+      "kaggle_rank": "top 1%",
+      "n_games": 67
+    },
+    {
+      "year": 2024,
+      "mode": "ev",
+      "brier": 0.0,
+      "rw_brier": 0.0,
+      "accuracy": 0.0,
+      "kaggle_rank": "",
+      "n_games": 0,
+      "pool_rank": 10,
+      "pool_percentile": 0.1,
+      "pool_size": 100,
+      "pool_score": 1320.0
+    },
+    {
+      "year": 2024,
+      "mode": "ev",
+      "brier": 0.0,
+      "rw_brier": 0.0,
+      "accuracy": 0.0,
+      "kaggle_rank": "",
+      "n_games": 0,
+      "pool_rank": 10,
+      "pool_percentile": 0.1,
+      "pool_size": 100,
+      "pool_score": 1320.0
+    },
+    {
+      "year": 2024,
+      "mode": "ev",
+      "brier": 0.0,
+      "rw_brier": 0.0,
+      "accuracy": 0.0,
+      "kaggle_rank": "",
+      "n_games": 0,
+      "pool_rank": 32,
+      "pool_percentile": 0.064,
+      "pool_size": 500,
+      "pool_score": 1320.0
+    },
+    {
+      "year": 2024,
+      "mode": "ev",
+      "brier": 0.0,
+      "rw_brier": 0.0,
+      "accuracy": 0.0,
+      "kaggle_rank": "",
+      "n_games": 0,
+      "pool_rank": 32,
+      "pool_percentile": 0.064,
+      "pool_size": 500,
+      "pool_score": 1320.0
+    }
+  ],
+  "summary_by_mode": {
+    "calibration": {
+      "mean_brier": 0.17141762402050612,
+      "std_brier": 0.0,
+      "mean_rw_brier": 0.20394648916678632,
+      "std_rw_brier": 0.0,
+      "mean_accuracy": 0.7761194029850746,
+      "n_years": 1.0
+    },
+    "ev": {
+      "mean_percentile": 0.082,
+      "std_percentile": 0.018000000000000002,
+      "se_percentile": 0.009000000000000001,
+      "n_wins": 0.0,
+      "n_configs": 4.0,
+      "win_rate": 0.0,
+      "mean_path_protection": 1.0,
+      "mean_leverage_accuracy": 0.030303030303030304,
+      "mean_p_top_10_pct": 0.0,
+      "protocol_pool_rank_pass": true,
+      "protocol_path_protection_pass": true,
+      "protocol_leverage_accuracy_pass": false,
+      "protocol_p_top_10_pass": false
+    },
+    "ev_by_payout": {
+      "winner_take_all": {
+        "mean_percentile": 0.082,
+        "n_configs": 2.0,
+        "win_rate": 0.0,
+        "best_percentile": 0.064,
+        "worst_percentile": 0.1
+      },
+      "top_10pct": {
+        "mean_percentile": 0.082,
+        "n_configs": 2.0,
+        "win_rate": 0.0,
+        "best_percentile": 0.064,
+        "worst_percentile": 0.1
+      }
+    }
+  }
+}
