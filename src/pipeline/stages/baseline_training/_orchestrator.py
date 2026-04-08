@@ -1,6 +1,5 @@
 """Baseline model training — orchestrator module."""
 
-
 import logging
 from datetime import date, timedelta
 
@@ -56,7 +55,6 @@ from ._models import _train_all_models
 from ._ensemble import _select_ensemble_and_evaluate
 
 
-
 def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Dict:
     """Train baseline model: sample construction, multi-year augmentation,
     feature preprocessing, model training, and ensemble selection.
@@ -96,7 +94,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     if _constant_cols > 0:
         logger.warning(
             "%d/%d features have near-zero variance in training data.",
-            _constant_cols, X_full.shape[1],
+            _constant_cols,
+            X_full.shape[1],
         )
 
     # Log class balance for detecting systematic bias
@@ -104,7 +103,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     if abs(_pos_rate - 0.5) > 0.1:
         logger.warning(
             "Class imbalance detected: positive rate = %.3f (expected ~0.5). "
-            "This may indicate systematic labeling bias.", _pos_rate,
+            "This may indicate systematic labeling bias.",
+            _pos_rate,
         )
 
     # ====================================================================
@@ -183,8 +183,7 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         eval_y = np.array([], dtype=int)
         eval_margins = np.array([], dtype=np.float64)
         logger.warning(
-            "Baseline split produced empty eval set: n=%d, train_samples=%d, "
-            "valid_samples=%d, boundary=%s",
+            "Baseline split produced empty eval set: n=%d, train_samples=%d, valid_samples=%d, boundary=%s",
             n,
             train_samples,
             valid_samples,
@@ -194,18 +193,23 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # Step 2: Load multi-year historical training data
     n_current_year_train = train_samples
     feature_names = None
-    (train_X, train_y, train_margins, train_sort_keys,
-     train_samples, feature_names, feature_names_full,
-     historical_training_stats) = _load_historical_years(
-        pipeline, train_X, train_y, train_margins, train_sort_keys,
-        X_full, n_current_year_train)
+    (
+        train_X,
+        train_y,
+        train_margins,
+        train_sort_keys,
+        train_samples,
+        feature_names,
+        feature_names_full,
+        historical_training_stats,
+    ) = _load_historical_years(pipeline, train_X, train_y, train_margins, train_sort_keys, X_full, n_current_year_train)
 
     # Step 3: Feature selection, scaling, and distribution shift detection
-    (train_X, eval_X, X_full, feature_names, feature_names_full,
-     fs_stats, dist_shift_stats, _loyo_raw_feature_dim) = _apply_feature_preprocessing(
-        pipeline, train_X, eval_X, train_y, X_full,
-        feature_names, feature_names_full, train_samples, valid_samples)
-
+    (train_X, eval_X, X_full, feature_names, feature_names_full, fs_stats, dist_shift_stats, _loyo_raw_feature_dim) = (
+        _apply_feature_preprocessing(
+            pipeline, train_X, eval_X, train_y, X_full, feature_names, feature_names_full, train_samples, valid_samples
+        )
+    )
 
     # FIX M1: Split eval into dev (early stopping) and eval (final
     # evaluation).  Using the same data for both inflates eval metrics.
@@ -227,7 +231,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         valid_set = (dev_X, dev_y)
         logger.info(
             "Eval split: %d dev samples (early stopping), %d eval samples (evaluation).",
-            len(dev_y), valid_samples,
+            len(dev_y),
+            valid_samples,
         )
     else:
         # Not enough eval data to split — use Optuna's tuned round
@@ -235,8 +240,8 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         valid_set = None
         if valid_samples > 0:
             logger.info(
-                "Eval set too small to split (%d samples); "
-                "using fixed num_rounds (no early stopping).", valid_samples,
+                "Eval set too small to split (%d samples); using fixed num_rounds (no early stopping).",
+                valid_samples,
             )
 
     # FIX #3: Initialize round weights (populated during calibration with
@@ -281,7 +286,11 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
     # When tournament games are included in training (calibration mode),
     # weight them by the Kaggle round-weight schedule so the model
     # optimizes for the competition's actual scoring metric.
-    if hasattr(pipeline, '_round_weights') and pipeline._round_weights is not None and len(pipeline._round_weights) == train_samples:
+    if (
+        hasattr(pipeline, "_round_weights")
+        and pipeline._round_weights is not None
+        and len(pipeline._round_weights) == train_samples
+    ):
         if train_sample_weight is not None:
             train_sample_weight = train_sample_weight * pipeline._round_weights
         else:
@@ -291,9 +300,9 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
         n_rw = int(np.sum(pipeline._round_weights > 1.0))
         if n_rw > 0:
             logger.info(
-                "FIX #3: Applied round-weighted training: %d tournament "
-                "games with Kaggle round weights (max=%.0f).",
-                n_rw, float(np.max(pipeline._round_weights)),
+                "FIX #3: Applied round-weighted training: %d tournament games with Kaggle round weights (max=%.0f).",
+                n_rw,
+                float(np.max(pipeline._round_weights)),
             )
         else:
             logger.warning(
@@ -306,23 +315,46 @@ def _train_baseline_model(pipeline, game_flows: Dict[str, List[GameFlow]]) -> Di
 
     # Step 4b: Train individual models
     trained_models, tuning_stats = _train_all_models(
-        pipeline, train_X, train_y, train_margins,
-        eval_X, eval_y, eval_margins,
-        feature_names, train_samples, valid_samples,
-        train_sample_weight, valid_set, train_sort_keys,
-        bt_game_triples)
+        pipeline,
+        train_X,
+        train_y,
+        train_margins,
+        eval_X,
+        eval_y,
+        eval_margins,
+        feature_names,
+        train_samples,
+        valid_samples,
+        train_sample_weight,
+        valid_set,
+        train_sort_keys,
+        bt_game_triples,
+    )
 
     # Step 5: Ensemble selection, evaluation, and audits
     return _select_ensemble_and_evaluate(
-        pipeline, trained_models, tuning_stats,
-        train_X, train_y, train_margins, train_sort_keys,
-        train_sample_weight, train_samples,
-        eval_X, eval_y, eval_margins, valid_samples,
-        feature_names, feature_names_full,
-        _loyo_raw_feature_dim, n_unique_games, n,
-        historical_training_stats, fs_stats, dist_shift_stats)
-
-
+        pipeline,
+        trained_models,
+        tuning_stats,
+        train_X,
+        train_y,
+        train_margins,
+        train_sort_keys,
+        train_sample_weight,
+        train_samples,
+        eval_X,
+        eval_y,
+        eval_margins,
+        valid_samples,
+        feature_names,
+        feature_names_full,
+        _loyo_raw_feature_dim,
+        n_unique_games,
+        n,
+        historical_training_stats,
+        fs_stats,
+        dist_shift_stats,
+    )
 
 
 def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]]):
@@ -337,7 +369,8 @@ def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]])
     # Exclude tournament games from baseline training to prevent leakage.
     # The model should only learn from regular-season game outcomes.
     all_games = [
-        g for g in pipeline._unique_games(game_flows)
+        g
+        for g in pipeline._unique_games(game_flows)
         if not pipeline._is_tournament_game(getattr(g, "game_date", f"{pipeline.config.year}-01-01"))
     ]
 
@@ -351,13 +384,12 @@ def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]])
     # use all games.
     all_games_uncutoff = list(all_games)  # preserve for fallback
     if pipeline.config.late_season_training_cutoff_days > 0:
-        tournament_start = TOURNAMENT_START_DATES.get(
-            pipeline.config.year, date(pipeline.config.year, 3, 14)
-        )
+        tournament_start = TOURNAMENT_START_DATES.get(pipeline.config.year, date(pipeline.config.year, 3, 14))
         cutoff_date = tournament_start - timedelta(days=pipeline.config.late_season_training_cutoff_days)
         cutoff_key = pipeline._game_sort_key(cutoff_date.isoformat())
         all_games = [
-            g for g in all_games
+            g
+            for g in all_games
             if pipeline._game_sort_key(getattr(g, "game_date", f"{pipeline.config.year}-01-01")) >= cutoff_key
         ]
         # Fallback: if cutoff removes too many games, revert.
@@ -370,11 +402,12 @@ def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]])
     # Every training sample uses only data available before its game date,
     # eliminating all temporal leakage from season-end features.
     from src.data.features.proprietary_metrics import IncrementalMetricsEngine
+
     # Use prior-year Elo for cross-season carryover, matching what
     # historical training years get.  This eliminates the distribution
     # shift where historical Elo features are informative early-season
     # while current-year Elo starts at flat 1500.
-    _prior_elo = getattr(pipeline, '_prior_year_elo', None)
+    _prior_elo = getattr(pipeline, "_prior_year_elo", None)
     inc_engine = IncrementalMetricsEngine(
         pipeline._current_year_game_records,
         pipeline._current_year_conference_map or {},
@@ -383,6 +416,12 @@ def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]])
 
     # Torvik FF overlay for current-year training
     ff_lookup = TorVikFFLookup(pipeline.config.year)
+    if not ff_lookup.has_snapshots:
+        logger.warning(
+            "NO Torvik FF snapshots for year %d — current-year training will use "
+            "box-score-computed four factors (known divergence from Torvik).",
+            pipeline.config.year,
+        )
 
     # Seed map for absolute features in matchup vector
     _seed_map: Dict[str, int] = {}
@@ -407,9 +446,7 @@ def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]])
     # 14-17) and must not appear in feature vectors for regular-season
     # training games.  This matches the guard in
     # _load_year_samples_incremental() at lines 3270-3274.
-    _t_start = TOURNAMENT_START_DATES.get(
-        pipeline.config.year, date(pipeline.config.year, 3, 14)
-    )
+    _t_start = TOURNAMENT_START_DATES.get(pipeline.config.year, date(pipeline.config.year, 3, 14))
     tournament_cutoff = _t_start.isoformat()
 
     for game in all_games:
@@ -442,8 +479,16 @@ def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]])
         # vectors for regular-season training games — the same temporal
         # constraint that applies to seeds above.
         if game_date > tournament_cutoff:
-            _mc1 = pipeline._external_composites.get(game.team1_id, None) if hasattr(pipeline, '_external_composites') and pipeline._external_composites else None
-            _mc2 = pipeline._external_composites.get(game.team2_id, None) if hasattr(pipeline, '_external_composites') and pipeline._external_composites else None
+            _mc1 = (
+                pipeline._external_composites.get(game.team1_id, None)
+                if hasattr(pipeline, "_external_composites") and pipeline._external_composites
+                else None
+            )
+            _mc2 = (
+                pipeline._external_composites.get(game.team2_id, None)
+                if hasattr(pipeline, "_external_composites") and pipeline._external_composites
+                else None
+            )
         else:
             _mc1, _mc2 = None, None
         _erc1 = _mc1.composite_rating if _mc1 is not None else 0.0
@@ -452,17 +497,19 @@ def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]])
         _ers2 = _mc2.rating_spread if _mc2 is not None else 0.0
         # Massey multi-system features (individual system ratings)
         _mm1 = _mm2 = None
-        if game_date > tournament_cutoff and hasattr(pipeline, '_massey_multi') and pipeline._massey_multi:
+        if game_date > tournament_cutoff and hasattr(pipeline, "_massey_multi") and pipeline._massey_multi:
             _mm1 = pipeline._massey_multi.get(game.team1_id)
             _mm2 = pipeline._massey_multi.get(game.team2_id)
         v1 = IncrementalMetricsEngine.metrics_to_team_vector(
-            m1, s1,
+            m1,
+            s1,
             external_rating_composite=_erc1,
             external_rating_spread=_ers1,
             massey_features=_mm1,
         )
         v2 = IncrementalMetricsEngine.metrics_to_team_vector(
-            m2, s2,
+            m2,
+            s2,
             external_rating_composite=_erc2,
             external_rating_spread=_ers2,
             massey_features=_mm2,
@@ -527,16 +574,17 @@ def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]])
         from ....ml.training.symmetric import symmetric_augment
 
         X_full, y_full, margins_full, _, sort_keys_full = symmetric_augment(
-            X_full, y_full, margins_full, sort_keys=sort_keys_full,
+            X_full,
+            y_full,
+            margins_full,
+            sort_keys=sort_keys_full,
         )
 
     # ====================================================================
 
     n = len(y_full)
-    n_unique_games = n // 2 if getattr(pipeline.config, 'enable_symmetric_augmentation', True) else n
+    n_unique_games = n // 2 if getattr(pipeline.config, "enable_symmetric_augmentation", True) else n
     return X_full, y_full, margins_full, sort_keys_full, bt_game_triples, n_unique_games
-
-
 
 
 def _build_enriched_meta(base_X: np.ndarray) -> np.ndarray:
@@ -556,8 +604,6 @@ def _build_enriched_meta(base_X: np.ndarray) -> np.ndarray:
     parts.append(np.min(base_X, axis=1).reshape(-1, 1))
     parts.append(np.std(base_X, axis=1).reshape(-1, 1))
     return np.hstack(parts)
-
-
 
 
 def _select_best_single_model(
@@ -605,8 +651,6 @@ def _select_best_single_model(
     return name_map.get(best_name, best_name)
 
 
-
-
 def _set_primary_model(pipeline, name: str, model) -> None:
     """Set a single model as the primary baseline predictor."""
     if name == "lgb":
@@ -624,7 +668,7 @@ def _set_primary_model(pipeline, name: str, model) -> None:
     elif name == "spread":
         pipeline.baseline_model.spread_model = model
 
+
 # ------------------------------------------------------------------
 # P0: Leave-One-Year-Out Cross-Validation (multi-year validation)
 # ------------------------------------------------------------------
-

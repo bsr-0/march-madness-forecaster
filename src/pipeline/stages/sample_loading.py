@@ -84,7 +84,13 @@ def load_year_samples_incremental(
     """
     mode = "all_games" if include_tournament else "regular_season"
     return _load_year_samples_incremental_core(
-        config, games_path, metrics_path, feature_dim, year, mode, prior_elo,
+        config,
+        games_path,
+        metrics_path,
+        feature_dim,
+        year,
+        mode,
+        prior_elo,
     )
 
 
@@ -118,8 +124,13 @@ def load_year_tournament_samples_incremental(
         Tuple of ``(X, y, margins, end_elo, round_weights)``.
     """
     return _load_year_samples_incremental_core(
-        config, games_path, metrics_path, feature_dim, year,
-        "tournament_only", prior_elo,
+        config,
+        games_path,
+        metrics_path,
+        feature_dim,
+        year,
+        "tournament_only",
+        prior_elo,
     )
 
 
@@ -139,9 +150,7 @@ def _load_year_samples_incremental_core(
             ``"all_games"`` (regular season + tournament), or
             ``"tournament_only"`` (post-tournament-start only).
     """
-    assert mode in ("regular_season", "all_games", "tournament_only"), (
-        f"Invalid sample loading mode: {mode!r}"
-    )
+    assert mode in ("regular_season", "all_games", "tournament_only"), f"Invalid sample loading mode: {mode!r}"
     # ── 1. Load game data ─────────────────────────────────────────────
     with open(games_path, "r") as f:
         payload = json.load(f)
@@ -152,8 +161,7 @@ def _load_year_samples_incremental_core(
         team_games_raw = payload  # legacy list format
     if not team_games_raw:
         logger.warning(
-            "Year %d: no team_games (box-score) data — skipping to avoid "
-            "season-end data leakage.",
+            "Year %d: no team_games (box-score) data — skipping to avoid season-end data leakage.",
             year,
         )
         return np.empty((0, feature_dim)), np.array([]), np.array([]), {}, np.array([])
@@ -213,9 +221,7 @@ def _load_year_samples_incremental_core(
     team_seeds: Dict[str, int] = {}
     seeds_path = os.path.join(os.path.dirname(games_path), f"tournament_seeds_{year}.json")
     if not os.path.isfile(seeds_path):
-        seeds_path = os.path.join(
-            os.path.dirname(games_path), "historical", f"tournament_seeds_{year}.json"
-        )
+        seeds_path = os.path.join(os.path.dirname(games_path), "historical", f"tournament_seeds_{year}.json")
     if os.path.isfile(seeds_path):
         try:
             with open(seeds_path, "r") as f:
@@ -255,7 +261,8 @@ def _load_year_samples_incremental_core(
             team_seeds.update(_aliases)
             logger.debug(
                 "Seed prefix aliases for year %d: %d new mappings",
-                year, len(_aliases),
+                year,
+                len(_aliases),
             )
 
     # Massey Ordinals composite
@@ -279,7 +286,7 @@ def _load_year_samples_incremental_core(
             for entry in massey_data:
                 tid = entry.get("team_id", "")
                 if tid:
-                    team_massey_composite[_team_id(tid)] = entry.get("normalized", float('nan'))
+                    team_massey_composite[_team_id(tid)] = entry.get("normalized", float("nan"))
             _massey_loaded = True
             logger.info(
                 "Gap #1: Loaded Massey composite cache for year %d (%d teams)",
@@ -287,9 +294,7 @@ def _load_year_samples_incremental_core(
                 len(team_massey_composite),
             )
         except Exception as _massey_cache_exc:
-            logger.debug(
-                "Massey composite cache load failed for year %d: %s", year, _massey_cache_exc
-            )
+            logger.debug("Massey composite cache load failed for year %d: %s", year, _massey_cache_exc)
     if not _massey_loaded and config.kaggle_dir:
         try:
             from ...data.scrapers.external_ratings import ExternalRatingsLoader
@@ -334,20 +339,20 @@ def _load_year_samples_incremental_core(
     if config.kaggle_dir:
         try:
             from ...data.scrapers.external_ratings import ExternalRatingsLoader as _MLoader
+
             _ml = _MLoader(cache_dir=os.path.dirname(games_path))
             team_massey_multi = _ml.load_massey_multi_system(config.kaggle_dir, year)
             if team_massey_multi:
                 logger.info(
                     "Massey multi-system: %d teams for year %d",
-                    len(team_massey_multi), year,
+                    len(team_massey_multi),
+                    year,
                 )
         except Exception as _mme:
             logger.debug("Massey multi-system not available for year %d: %s", year, _mme)
 
     # Roster features — compute player-level overlays from cbbpy roster JSON.
-    roster_path = os.path.join(
-        os.path.dirname(games_path), "historical", f"cbbpy_rosters_{year}.json"
-    )
+    roster_path = os.path.join(os.path.dirname(games_path), "historical", f"cbbpy_rosters_{year}.json")
     if not os.path.isfile(roster_path):
         roster_path = os.path.join(os.path.dirname(games_path), f"cbbpy_rosters_{year}.json")
     team_roster_overlay = load_roster_overlay(roster_path, year=year)
@@ -363,6 +368,14 @@ def _load_year_samples_incremental_core(
     ff_lookup = TorVikFFLookup(year)
     if ff_lookup.has_snapshots:
         logger.info("Torvik FF overlay: %d snapshots for year %d", ff_lookup.n_snapshots, year)
+    else:
+        logger.warning(
+            "NO Torvik FF snapshots for year %d — training will use box-score-computed "
+            "four factors, which diverge significantly from Torvik values (r=0.12-0.74). "
+            "Run: python scripts/rescrape_pretournament_torvik.py --monthly --year %d",
+            year,
+            year,
+        )
 
     # ── 4. Identify training games ────────────────────────────────────
     seen_gids: set = set()
@@ -384,9 +397,7 @@ def _load_year_samples_incremental_core(
 
     # Gap #6: Data quality filtering
     training_games = [
-        g
-        for g in training_games
-        if g.points > 0 and g.opp_points > 0 and abs(g.points - g.opp_points) <= 80
+        g for g in training_games if g.points > 0 and g.opp_points > 0 and abs(g.points - g.opp_points) <= 80
     ]
 
     if year <= 2009:
@@ -394,13 +405,7 @@ def _load_year_samples_incremental_core(
         training_games = [
             g
             for g in training_games
-            if (
-                getattr(g, "fgm", 0)
-                + getattr(g, "fga", 0)
-                + getattr(g, "opp_fgm", 0)
-                + getattr(g, "opp_fga", 0)
-            )
-            > 0
+            if (getattr(g, "fgm", 0) + getattr(g, "fga", 0) + getattr(g, "opp_fgm", 0) + getattr(g, "opp_fga", 0)) > 0
         ]
         filtered_count = pre_filter_count - len(training_games)
         if filtered_count > 0:
@@ -463,14 +468,14 @@ def _load_year_samples_incremental_core(
 
         # Massey: only attach after selection cutoff (end-of-season aggregate).
         if g.game_date > tournament_cutoff:
-            _mc1 = team_massey_composite.get(g.team_id, float('nan'))
-            _mc2 = team_massey_composite.get(g.opponent_id, float('nan'))
-            _ms1 = team_massey_spread.get(g.team_id, float('nan'))
-            _ms2 = team_massey_spread.get(g.opponent_id, float('nan'))
+            _mc1 = team_massey_composite.get(g.team_id, float("nan"))
+            _mc2 = team_massey_composite.get(g.opponent_id, float("nan"))
+            _ms1 = team_massey_spread.get(g.team_id, float("nan"))
+            _ms2 = team_massey_spread.get(g.opponent_id, float("nan"))
             _mm1 = team_massey_multi.get(g.team_id)
             _mm2 = team_massey_multi.get(g.opponent_id)
         else:
-            _mc1 = _mc2 = _ms1 = _ms2 = float('nan')
+            _mc1 = _mc2 = _ms1 = _ms2 = float("nan")
             _mm1 = _mm2 = None
 
         v1 = IncrementalMetricsEngine.metrics_to_team_vector(

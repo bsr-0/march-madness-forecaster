@@ -81,6 +81,7 @@ logger = logging.getLogger(__name__)
 # 1. Constant Registry
 # ───────────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class PipelineConstant:
     """Metadata for one hand-tuned pipeline constant."""
@@ -371,14 +372,10 @@ def tier3_reduction_candidates() -> Dict[str, Any]:
     """
     tier3 = get_tier3_constants()
 
-    disabled = [c for c in tier3
-                if isinstance(c.current_value, (int, float))
-                and c.current_value == 0]
+    disabled = [c for c in tier3 if isinstance(c.current_value, (int, float)) and c.current_value == 0]
     coupled_groups = {
-        "ensemble_weights": [c for c in tier3
-                             if "ensemble" in c.name and "weight" in c.name],
-        "mc_injury_bounds": [c for c in tier3
-                             if "mc_injury_severity" in c.name],
+        "ensemble_weights": [c for c in tier3 if "ensemble" in c.name and "weight" in c.name],
+        "mc_injury_bounds": [c for c in tier3 if "mc_injury_severity" in c.name],
     }
     # Count effective DoF for coupled groups (sum-to-1 means n-1 free params)
     effective_dof_reduction = 0
@@ -397,25 +394,21 @@ def tier3_reduction_candidates() -> Dict[str, Any]:
         "n_disabled_tier3": n_disabled,
         "disabled_names": [c.name for c in disabled],
         "n_coupled_constraints": effective_dof_reduction,
-        "coupled_groups": {
-            name: [c.name for c in group]
-            for name, group in coupled_groups.items()
-        },
+        "coupled_groups": {name: [c.name for c in group] for name, group in coupled_groups.items()},
         "n_effective_tier3_dof": n_effective,
         "current_dof_per_440_games": round(n_effective / 440, 4),
         "target_tier3_for_440_games": 4,  # 4/440 ≈ 0.009 < 0.01
         "reduction_needed": max(0, n_effective - 4),
         "recommendations": [
-            f"Remove {n_disabled} disabled constants (value=0): "
-            f"{[c.name for c in disabled]}"
-            if disabled else "No disabled constants to remove",
+            f"Remove {n_disabled} disabled constants (value=0): {[c.name for c in disabled]}"
+            if disabled
+            else "No disabled constants to remove",
             f"Promote structurally-constrained Tier 3 to Tier 2 where possible "
             f"(reduces effective DoF by making range bounds the constraint, "
             f"not the specific value)",
             f"Target: reduce effective Tier 3 DoF from {n_effective} to ~4 "
             f"for 440-game evaluation sets (ratio = 0.009)",
-            f"Alternative: extend evaluation to 2026+ (prospective data) to "
-            f"increase denominator",
+            f"Alternative: extend evaluation to 2026+ (prospective data) to increase denominator",
         ],
     }
 
@@ -428,6 +421,7 @@ def get_constants_by_tier(tier: int) -> List[PipelineConstant]:
 # 2. Config Hashing (audit trail)
 # ───────────────────────────────────────────────────────────────────────
 
+
 def _feature_set_hash() -> Optional[str]:
     """Hash of the fixed feature set used by the pipeline."""
     try:
@@ -438,7 +432,9 @@ def _feature_set_hash() -> Optional[str]:
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
 
-def _apply_mc_calibration_to_config(config, *, runtime_state: Optional[Dict[str, object]] = None) -> Optional[Dict[str, Any]]:
+def _apply_mc_calibration_to_config(
+    config, *, runtime_state: Optional[Dict[str, object]] = None
+) -> Optional[Dict[str, Any]]:
     """Load MC calibration artifact and apply best params.
 
     When *runtime_state* is provided, best params are written there instead
@@ -500,6 +496,7 @@ def _normalize_path_field(field_name: str, value):
     # Convert to a relative-ish form by stripping everything up to the
     # repo-relative portion.  Heuristic: look for known top-level dirs.
     import os
+
     for marker in ("data/", "artifacts/", "configs/", "src/"):
         idx = value.find(marker)
         if idx != -1:
@@ -549,6 +546,7 @@ def freeze_pipeline(
     import subprocess
 
     import copy
+
     config_for_hash = copy.deepcopy(config)
     mc_payload = _apply_mc_calibration_to_config(config_for_hash)
     cfg_hash = config_hash(config_for_hash)
@@ -560,7 +558,9 @@ def freeze_pipeline(
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if result.returncode == 0:
             git_sha = result.stdout.strip()
@@ -572,7 +572,9 @@ def freeze_pipeline(
     try:
         result = subprocess.run(
             ["git", "status", "--porcelain"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         git_dirty = bool(result.stdout.strip())
     except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -630,12 +632,20 @@ def freeze_pipeline(
     tag_name = f"pre-registered/{date_str}/{cfg_hash}"
     try:
         subprocess.run(
-            ["git", "tag", "-a", tag_name, "-m",
-             f"Pre-registered pipeline freeze\n\n"
-             f"Config hash: {cfg_hash}\n"
-             f"Timestamp: {timestamp}\n"
-             f"Constants: {len(CONSTANT_REGISTRY)} registered"],
-            capture_output=True, text=True, timeout=10,
+            [
+                "git",
+                "tag",
+                "-a",
+                tag_name,
+                "-m",
+                f"Pre-registered pipeline freeze\n\n"
+                f"Config hash: {cfg_hash}\n"
+                f"Timestamp: {timestamp}\n"
+                f"Constants: {len(CONSTANT_REGISTRY)} registered",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         freeze_artifact["git_tag"] = tag_name
         logger.info("Git tag created: %s", tag_name)
@@ -658,6 +668,7 @@ def verify_freeze(
         freeze = json.load(f)
 
     import copy
+
     config_for_hash = copy.deepcopy(config)
     _apply_mc_calibration_to_config(config_for_hash)
     current_hash = config_hash(config_for_hash)
@@ -666,9 +677,7 @@ def verify_freeze(
     mismatches: List[str] = []
 
     if current_hash != frozen_hash:
-        mismatches.append(
-            f"Config hash mismatch: current={current_hash}, frozen={frozen_hash}"
-        )
+        mismatches.append(f"Config hash mismatch: current={current_hash}, frozen={frozen_hash}")
         # Detail which fields changed
         frozen_fields = freeze.get("config_fields", {})
         for field_name in config_for_hash.__dataclass_fields__:
@@ -678,29 +687,26 @@ def verify_freeze(
                 current_val = list(current_val)
             # Normalize path fields before comparison so absolute vs
             # relative paths don't cause spurious mismatches.
-            current_cmp = str(_normalize_path_field(field_name, str(current_val) if current_val is not None else current_val))
-            frozen_cmp = str(_normalize_path_field(field_name, str(frozen_val) if frozen_val is not None else frozen_val))
+            current_cmp = str(
+                _normalize_path_field(field_name, str(current_val) if current_val is not None else current_val)
+            )
+            frozen_cmp = str(
+                _normalize_path_field(field_name, str(frozen_val) if frozen_val is not None else frozen_val)
+            )
             if current_cmp != frozen_cmp:
-                mismatches.append(
-                    f"  Field '{field_name}': "
-                    f"frozen={frozen_val}, current={current_val}"
-                )
+                mismatches.append(f"  Field '{field_name}': frozen={frozen_val}, current={current_val}")
 
     # Feature set hash mismatch (fixed feature selection)
     frozen_feat_hash = freeze.get("feature_set_hash")
     current_feat_hash = _feature_set_hash()
     if frozen_feat_hash and current_feat_hash and frozen_feat_hash != current_feat_hash:
-        mismatches.append(
-            f"Feature set hash mismatch: current={current_feat_hash}, frozen={frozen_feat_hash}"
-        )
+        mismatches.append(f"Feature set hash mismatch: current={current_feat_hash}, frozen={frozen_feat_hash}")
 
     # Check constant registry — distinguish behavioral changes (value
     # changed) from documentary additions (new constant registered).
     # Only value changes are mismatches; new registry entries are warnings
     # since they don't change pipeline behavior.
-    frozen_constants = {
-        c["name"]: c for c in freeze.get("constant_registry", [])
-    }
+    frozen_constants = {c["name"]: c for c in freeze.get("constant_registry", [])}
     warnings: List[str] = []
     for c in CONSTANT_REGISTRY:
         frozen_c = frozen_constants.get(c.name)
@@ -708,8 +714,7 @@ def verify_freeze(
             warnings.append(f"New constant registered since freeze: {c.name}")
         elif str(c.current_value) != str(frozen_c.get("current_value")):
             mismatches.append(
-                f"Constant '{c.name}' changed: "
-                f"frozen={frozen_c['current_value']}, current={c.current_value}"
+                f"Constant '{c.name}' changed: frozen={frozen_c['current_value']}, current={c.current_value}"
             )
 
     # MC calibration consistency (if freeze captured it).
@@ -722,11 +727,21 @@ def verify_freeze(
     if isinstance(frozen_mc, dict) and frozen_mc.get("best_params"):
         best = frozen_mc.get("best_params", {})
         try:
-            if "noise_std" in best and abs(float(best["noise_std"]) - float(getattr(config_for_hash, "mc_noise_std", 0.0))) > 1e-6:
+            if (
+                "noise_std" in best
+                and abs(float(best["noise_std"]) - float(getattr(config_for_hash, "mc_noise_std", 0.0))) > 1e-6
+            ):
                 mismatches.append(
                     f"MC noise_std mismatch: frozen={best['noise_std']}, current={getattr(config_for_hash, 'mc_noise_std', 0.0)}"
                 )
-            if "regional_correlation" in best and abs(float(best["regional_correlation"]) - float(getattr(config_for_hash, "mc_regional_correlation", 0.0))) > 1e-6:
+            if (
+                "regional_correlation" in best
+                and abs(
+                    float(best["regional_correlation"])
+                    - float(getattr(config_for_hash, "mc_regional_correlation", 0.0))
+                )
+                > 1e-6
+            ):
                 mismatches.append(
                     f"MC regional_correlation mismatch: frozen={best['regional_correlation']}, current={getattr(config_for_hash, 'mc_regional_correlation', 0.0)}"
                 )
@@ -747,6 +762,7 @@ def verify_freeze(
 # ───────────────────────────────────────────────────────────────────────
 # 2b. Effective Model Complexity Audit
 # ───────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class ModelComplexityAudit:
@@ -829,7 +845,7 @@ def estimate_model_complexity(
     xgb_depth = 3
     xgb_trees = 200
     xgb_discount = 0.5  # min_child_weight=10, L2 reg, etc.
-    xgb_params = int((2 ** xgb_depth - 1) * xgb_trees * xgb_discount)
+    xgb_params = int((2**xgb_depth - 1) * xgb_trees * xgb_discount)
     audit.component_params["xgboost"] = xgb_params
 
     # Logistic Regression: n_features + 1 (with L2 regularization)
@@ -866,8 +882,7 @@ def estimate_model_complexity(
         )
     if gnn_proj_params > n_training_samples * 0.1:
         audit.warnings.append(
-            f"GNN projection has {gnn_proj_params} params "
-            f"({gnn_proj_params / max(n_training_samples, 1):.1%} of N)."
+            f"GNN projection has {gnn_proj_params} params ({gnn_proj_params / max(n_training_samples, 1):.1%} of N)."
         )
     if not audit.passed:
         audit.warnings.append(
@@ -883,6 +898,7 @@ def estimate_model_complexity(
 # ───────────────────────────────────────────────────────────────────────
 # 3. Metrics
 # ───────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class YearMetrics:
@@ -1004,16 +1020,10 @@ class HoldoutReport:
             "aggregate_brier": round(self.aggregate_brier, 5),
             "aggregate_seed_brier": round(self.aggregate_seed_brier, 5),
             "aggregate_elo_brier": round(self.aggregate_elo_brier, 5),
-            "aggregate_brier_skill_score": round(
-                1.0 - self.aggregate_brier / max(self.aggregate_seed_brier, 1e-9), 4
-            ),
-            "aggregate_elo_skill_score": round(
-                1.0 - self.aggregate_brier / max(self.aggregate_elo_brier, 1e-9), 4
-            ),
+            "aggregate_brier_skill_score": round(1.0 - self.aggregate_brier / max(self.aggregate_seed_brier, 1e-9), 4),
+            "aggregate_elo_skill_score": round(1.0 - self.aggregate_brier / max(self.aggregate_elo_brier, 1e-9), 4),
             "verdict": self.verdict(),
-            "per_year": {
-                yr: m.to_dict() for yr, m in sorted(self.per_year.items())
-            },
+            "per_year": {yr: m.to_dict() for yr, m in sorted(self.per_year.items())},
         }
 
 
@@ -1038,8 +1048,7 @@ class ConstantSensitivityResult:
 
     @property
     def rank_of_current(self) -> int:
-        sorted_vals = sorted(range(len(self.loyo_brier_scores)),
-                             key=lambda i: self.loyo_brier_scores[i])
+        sorted_vals = sorted(range(len(self.loyo_brier_scores)), key=lambda i: self.loyo_brier_scores[i])
         for rank, idx in enumerate(sorted_vals):
             if abs(self.grid_values[idx] - self.current_value) < 1e-9:
                 return rank + 1
@@ -1103,6 +1112,7 @@ class ConstantSensitivityResult:
 # 4. Metric computation helpers
 # ───────────────────────────────────────────────────────────────────────
 
+
 def _compute_brier(probs: np.ndarray, outcomes: np.ndarray) -> float:
     return float(np.mean((probs - outcomes) ** 2))
 
@@ -1162,6 +1172,7 @@ def _bootstrap_brier_ci(
 # ───────────────────────────────────────────────────────────────────────
 # 5. Holdout Evaluator
 # ───────────────────────────────────────────────────────────────────────
+
 
 class HoldoutEvaluator:
     """Runs the pipeline on designated holdout tournament years.
@@ -1228,8 +1239,7 @@ class HoldoutEvaluator:
         teams_list = metrics_payload.get("teams", [])
 
         if isinstance(teams_list, list) and teams_list:
-            off_vals = [float(tm.get("off_rtg", 0)) for tm in teams_list
-                        if isinstance(tm, dict)]
+            off_vals = [float(tm.get("off_rtg", 0)) for tm in teams_list if isinstance(tm, dict)]
             if off_vals and all(abs(v) < 1e-6 for v in off_vals):
                 return {}
             unique_off = set(round(v, 4) for v in off_vals)
@@ -1258,9 +1268,7 @@ class HoldoutEvaluator:
 
         return team_metrics
 
-    def _infer_dates_and_split(
-        self, games: list, year: int
-    ) -> Tuple[list, list]:
+    def _infer_dates_and_split(self, games: list, year: int) -> Tuple[list, list]:
         """Infer dates if needed, return (regular_season, tournament) games.
 
         Returns lists of (t1, t2, s1, s2, adj_em1, adj_em2) tuples.
@@ -1271,8 +1279,7 @@ class HoldoutEvaluator:
         if len(unique_dates) <= 1 and len(games) > 50:
             id_ordered = sorted(
                 range(len(games)),
-                key=lambda i: int(games[i].get("game_id", "0"))
-                if str(games[i].get("game_id", "0")).isdigit() else 0,
+                key=lambda i: int(games[i].get("game_id", "0")) if str(games[i].get("game_id", "0")).isdigit() else 0,
             )
             season_start = date(year - 1, 11, 1)
             season_end = date(year, 4, 10)
@@ -1287,6 +1294,7 @@ class HoldoutEvaluator:
     def _is_tournament_game(self, date_str: str, year: int) -> bool:
         """Detect NCAA Tournament games (tournament start through mid-April)."""
         from ...pipeline.config import TOURNAMENT_START_DATES
+
         try:
             parts = date_str.split("-")
             game_year = int(parts[0])
@@ -1338,13 +1346,15 @@ class HoldoutEvaluator:
             s2 = int(game.get("team2_score", 0))
 
             if t1 and t2 and s1 > 0 and s2 > 0:
-                tourney.append({
-                    "team1_id": t1,
-                    "team2_id": t2,
-                    "team1_score": s1,
-                    "team2_score": s2,
-                    "outcome": 1 if s1 > s2 else 0,
-                })
+                tourney.append(
+                    {
+                        "team1_id": t1,
+                        "team2_id": t2,
+                        "team1_score": s1,
+                        "team2_score": s2,
+                        "outcome": 1 if s1 > s2 else 0,
+                    }
+                )
 
         return tourney
 
@@ -1377,13 +1387,11 @@ class HoldoutEvaluator:
         from ...pipeline.config import TOURNAMENT_START_DATES as _TOURNEY_DATES
 
         base_years = self.dev_years if self.dev_years is not None else self.all_years
-        training_years = [y for y in base_years
-                          if y != holdout_year and y != 2020]
+        training_years = [y for y in base_years if y != holdout_year and y != 2020]
         if not training_years:
             raise ValueError(f"No training years available for holdout {holdout_year}")
 
-        logger.info("Holdout %d: training on %d years: %s",
-                     holdout_year, len(training_years), training_years)
+        logger.info("Holdout %d: training on %d years: %s", holdout_year, len(training_years), training_years)
 
         # Monthly-bucketing helper for compute_as_of() cache efficiency.
         # Years with real per-game dates (2005-2009) have 136+ unique dates
@@ -1464,13 +1472,20 @@ class HoldoutEvaluator:
 
             # Create incremental engine with cross-year Elo carryover.
             inc_engine = IncrementalMetricsEngine(
-                game_records, conference_map=conference_map or {},
+                game_records,
+                conference_map=conference_map or {},
                 prior_elo=_cross_year_elo,
             )
             _cross_year_elo = inc_engine.get_end_of_season_elo()
 
             # Torvik FF overlay for this training year
             _ff_lookup = TorVikFFLookup(train_year)
+            if not _ff_lookup.has_snapshots:
+                logger.warning(
+                    "NO Torvik FF snapshots for training year %d in RDOF audit — "
+                    "box-score-computed four factors will be used.",
+                    train_year,
+                )
 
             # Year-based decay weight.
             years_ago = max(1, holdout_year - train_year)
@@ -1483,9 +1498,7 @@ class HoldoutEvaluator:
 
             # Build training samples with true PIT features.
             seen_gids: set = set()
-            tournament_cutoff = _TOURNEY_DATES.get(
-                train_year, _dtdate(train_year, 3, 14)
-            ).isoformat()
+            tournament_cutoff = _TOURNEY_DATES.get(train_year, _dtdate(train_year, 3, 14)).isoformat()
             for g in sorted(game_records, key=lambda r: r.game_date):
                 if g.game_id in seen_gids:
                     continue
@@ -1522,7 +1535,7 @@ class HoldoutEvaluator:
 
                 if len(vec) < feature_dim:
                     padded = np.zeros(feature_dim, dtype=np.float64)
-                    padded[:len(vec)] = vec
+                    padded[: len(vec)] = vec
                     vec = padded
                 elif len(vec) > feature_dim:
                     vec = vec[:feature_dim]
@@ -1558,18 +1571,18 @@ class HoldoutEvaluator:
 
         try:
             from ..ensemble.cfa import LightGBMRanker
+
             lgb_model = LightGBMRanker()
-            lgb_model.train(train_X, train_y, num_rounds=200,
-                            early_stopping_rounds=None, sample_weight=train_w)
+            lgb_model.train(train_X, train_y, num_rounds=200, early_stopping_rounds=None, sample_weight=train_w)
             lgb_trained = True
         except Exception as e:
             logger.warning("LightGBM training failed: %s", e)
 
         try:
             from ..ensemble.cfa import XGBoostRanker
+
             xgb_model = XGBoostRanker()
-            xgb_model.train(train_X, train_y, num_rounds=200,
-                            early_stopping_rounds=None, sample_weight=train_w)
+            xgb_model.train(train_X, train_y, num_rounds=200, early_stopping_rounds=None, sample_weight=train_w)
             xgb_trained = True
         except Exception as e:
             logger.warning("XGBoost training failed: %s", e)
@@ -1631,14 +1644,13 @@ class HoldoutEvaluator:
                 pass
 
         ho_engine = IncrementalMetricsEngine(
-            ho_game_records, conference_map=ho_conf_map or {},
+            ho_game_records,
+            conference_map=ho_conf_map or {},
             prior_elo=_cross_year_elo,
         )
 
         # Compute end-of-regular-season metrics for tournament predictions.
-        tournament_cutoff = _TOURNEY_DATES.get(
-            holdout_year, _dtdate(holdout_year, 3, 14)
-        ).isoformat()
+        tournament_cutoff = _TOURNEY_DATES.get(holdout_year, _dtdate(holdout_year, 3, 14)).isoformat()
         ho_metrics = ho_engine.compute_as_of(tournament_cutoff)
 
         # Overlay Torvik FF for holdout year evaluation
@@ -1691,7 +1703,7 @@ class HoldoutEvaluator:
 
             if len(vec) < feature_dim:
                 padded = np.zeros(feature_dim, dtype=np.float64)
-                padded[:len(vec)] = vec
+                padded[: len(vec)] = vec
                 vec = padded
             elif len(vec) > feature_dim:
                 vec = vec[:feature_dim]
@@ -1712,15 +1724,17 @@ class HoldoutEvaluator:
             mstd1 = m1.sos_adjusted_consistency if m1.sos_adjusted_consistency else (m1.consistency or 0.0)
             mstd2 = m2.sos_adjusted_consistency if m2.sos_adjusted_consistency else (m2.consistency or 0.0)
 
-            per_game.append({
-                "lgb_p": lgb_p,
-                "xgb_p": xgb_p,
-                "log_p": log_p,
-                "em_diff": em1 - em2,
-                "elo_diff": elo1 - elo2,
-                "margin_std_diff": mstd2 - mstd1,  # positive = team1 more consistent
-                "outcome": 1 if tg.points > tg.opp_points else 0,
-            })
+            per_game.append(
+                {
+                    "lgb_p": lgb_p,
+                    "xgb_p": xgb_p,
+                    "log_p": log_p,
+                    "em_diff": em1 - em2,
+                    "elo_diff": elo1 - elo2,
+                    "margin_std_diff": mstd2 - mstd1,  # positive = team1 more consistent
+                    "outcome": 1 if tg.points > tg.opp_points else 0,
+                }
+            )
 
         # ── 4. Out-of-fold predictions for calibration ──────────────
         # Temperature scaling must be fit on held-out predictions, not
@@ -1750,8 +1764,7 @@ class HoldoutEvaluator:
             if lgb_trained:
                 try:
                     fold_lgb = LightGBMRanker()
-                    fold_lgb.train(fX_tr, fy_tr, num_rounds=200,
-                                   early_stopping_rounds=None, sample_weight=fw_tr)
+                    fold_lgb.train(fX_tr, fy_tr, num_rounds=200, early_stopping_rounds=None, sample_weight=fw_tr)
                     oof_lgb[fold_val_idx] = fold_lgb.predict(fX_val)
                 except Exception:
                     pass
@@ -1759,8 +1772,7 @@ class HoldoutEvaluator:
             if xgb_trained:
                 try:
                     fold_xgb = XGBoostRanker()
-                    fold_xgb.train(fX_tr, fy_tr, num_rounds=200,
-                                   early_stopping_rounds=None, sample_weight=fw_tr)
+                    fold_xgb.train(fX_tr, fy_tr, num_rounds=200, early_stopping_rounds=None, sample_weight=fw_tr)
                     oof_xgb[fold_val_idx] = fold_xgb.predict(fX_val)
                 except Exception:
                     pass
@@ -1802,7 +1814,8 @@ class HoldoutEvaluator:
         # Fit calibration on out-of-fold ensemble predictions (not in-sample)
         train_ensemble = np.clip(
             w_lgb * train_lgb + w_xgb * train_xgb + w_log * train_log,
-            0.03, 0.97,
+            0.03,
+            0.97,
         )
         calibrator = TemperatureScaling()
         try:
@@ -1821,9 +1834,7 @@ class HoldoutEvaluator:
 
             # Tournament adaptation (shared helper for production shrinkage,
             # plus experimental extras when applicable)
-            adapted = self._tournament_adapt(
-                raw, g["em_diff"], g["margin_std_diff"], config
-            )
+            adapted = self._tournament_adapt(raw, g["em_diff"], g["margin_std_diff"], config)
 
             probs.append(adapted)
             outcomes.append(g["outcome"])
@@ -1891,10 +1902,10 @@ class HoldoutEvaluator:
         adapted = apply_tournament_shrinkage(prob, config.tournament_shrinkage)
 
         # Experimental-only extras
-        profile = getattr(config, 'probability_profile', 'production')
+        profile = getattr(config, "probability_profile", "production")
         if profile == "experimental":
             # Seed prior (only when seed_prior_weight > 0)
-            w = getattr(config, 'seed_prior_weight', 0.0)
+            w = getattr(config, "seed_prior_weight", 0.0)
             if w > 0:
                 slope = config.seed_prior_slope
                 seed_prior = 1.0 / (1.0 + math.exp(-slope * em_diff / 2.5))
@@ -1903,13 +1914,10 @@ class HoldoutEvaluator:
             # Consistency bonus
             bonus_max = config.consistency_bonus_max
             normalizer = config.consistency_normalizer
-            consistency_edge = bonus_max * float(np.clip(
-                margin_std_diff / normalizer, -1.0, 1.0
-            ))
+            consistency_edge = bonus_max * float(np.clip(margin_std_diff / normalizer, -1.0, 1.0))
             adapted += consistency_edge
 
-        return float(np.clip(adapted, config.pre_calibration_clip_lo,
-                             config.pre_calibration_clip_hi))
+        return float(np.clip(adapted, config.pre_calibration_clip_lo, config.pre_calibration_clip_hi))
 
     def run_holdout_protocol(
         self,
@@ -1930,7 +1938,9 @@ class HoldoutEvaluator:
                 report.per_year[year] = metrics
                 logger.info(
                     "Holdout %d: Brier=%.4f, Seed=%.4f, Acc=%.3f",
-                    year, metrics.brier_score, metrics.seed_baseline_brier,
+                    year,
+                    metrics.brier_score,
+                    metrics.seed_baseline_brier,
                     metrics.accuracy,
                 )
             except Exception as e:
@@ -1942,6 +1952,7 @@ class HoldoutEvaluator:
 # ───────────────────────────────────────────────────────────────────────
 # 6. Sensitivity Analyzer
 # ───────────────────────────────────────────────────────────────────────
+
 
 class SensitivityAnalyzer:
     """Grid search each Tier 3 constant via LOYO on dev years."""
@@ -1959,10 +1970,7 @@ class SensitivityAnalyzer:
             holdout_set = set(self.holdout_years)
             self.dev_years = [y for y in dev_years if y not in holdout_set and y != 2020]
         else:
-            self.dev_years = [
-                y for y in self.evaluator.all_years
-                if y not in self.holdout_years and y != 2020
-            ]
+            self.dev_years = [y for y in self.evaluator.all_years if y not in self.holdout_years and y != 2020]
         self.n_grid_points = n_grid_points
 
     def _make_grid(self, constant: PipelineConstant) -> List[float]:
@@ -1971,8 +1979,7 @@ class SensitivityAnalyzer:
         grid = list(np.linspace(lo, hi, self.n_grid_points))
 
         # Ensure current value is in the grid
-        curr = float(constant.current_value) if not isinstance(
-            constant.current_value, (list, tuple)) else None
+        curr = float(constant.current_value) if not isinstance(constant.current_value, (list, tuple)) else None
         if curr is not None:
             # Find closest grid point and replace or insert
             closest_idx = min(range(len(grid)), key=lambda i: abs(grid[i] - curr))
@@ -2024,8 +2031,7 @@ class SensitivityAnalyzer:
         Otherwise trains fresh for each dev year.
         """
         if constant.name in TIER3_MC_CONSTANTS:
-            logger.info("Skipping MC constant %s (bracket-level, not game-level)",
-                        constant.name)
+            logger.info("Skipping MC constant %s (bracket-level, not game-level)", constant.name)
             curr = float(constant.current_value)
             return ConstantSensitivityResult(
                 constant_name=constant.name,
@@ -2040,23 +2046,29 @@ class SensitivityAnalyzer:
             )
 
         is_posthoc = constant.name in {
-            "tournament_shrinkage", "seed_prior_weight",
-            "consistency_bonus_max", "consistency_normalizer",
-            "ensemble_lgb_weight", "ensemble_xgb_weight",
+            "tournament_shrinkage",
+            "seed_prior_weight",
+            "consistency_bonus_max",
+            "consistency_normalizer",
+            "ensemble_lgb_weight",
+            "ensemble_xgb_weight",
         }
 
         grid = self._make_grid(constant)
-        logger.info("Sensitivity: %s — %d grid points x %d dev years (posthoc=%s)",
-                     constant.name, len(grid), len(self.dev_years), is_posthoc)
+        logger.info(
+            "Sensitivity: %s — %d grid points x %d dev years (posthoc=%s)",
+            constant.name,
+            len(grid),
+            len(self.dev_years),
+            is_posthoc,
+        )
 
         # Train once per dev year if posthoc (reuse across grid points)
         if is_posthoc and cached_by_year is None:
             cached_by_year = {}
             for dev_year in self.dev_years:
                 try:
-                    cached_by_year[dev_year] = self.evaluator._train_for_year(
-                        dev_year, base_config
-                    )
+                    cached_by_year[dev_year] = self.evaluator._train_for_year(dev_year, base_config)
                 except Exception as e:
                     logger.debug("Training for dev year %d failed: %s", dev_year, e)
 
@@ -2070,22 +2082,18 @@ class SensitivityAnalyzer:
                 try:
                     if is_posthoc and cached_by_year and dev_year in cached_by_year:
                         # Reuse cached training, just re-apply post-hoc params
-                        metrics = self.evaluator._apply_posthoc_and_score(
-                            cached_by_year[dev_year], cfg
-                        )
+                        metrics = self.evaluator._apply_posthoc_and_score(cached_by_year[dev_year], cfg)
                     else:
                         # Full retrain (for training-phase constants)
                         metrics = self.evaluator.evaluate_holdout_year(dev_year, cfg)
                     year_briers.append(metrics.brier_score)
                 except Exception as e:
-                    logger.debug("Dev year %d failed for %s=%.3f: %s",
-                                 dev_year, constant.name, val, e)
+                    logger.debug("Dev year %d failed for %s=%.3f: %s", dev_year, constant.name, val, e)
                     continue
 
             mean_brier = float(np.mean(year_briers)) if year_briers else 1.0
             grid_briers.append(mean_brier)
-            logger.info("  %s=%.4f -> mean Brier=%.5f (%d years)",
-                        constant.name, val, mean_brier, len(year_briers))
+            logger.info("  %s=%.4f -> mean Brier=%.5f (%d years)", constant.name, val, mean_brier, len(year_briers))
 
         curr = float(constant.current_value)
         best_idx = int(np.argmin(grid_briers))
@@ -2101,8 +2109,7 @@ class SensitivityAnalyzer:
         # tuned via LOYO and we're now re-evaluating it via LOYO, the sensitivity
         # surface may be biased toward confirming the current value.
         derivation_lower = constant.derivation.lower()
-        has_circularity = any(kw in derivation_lower for kw in
-                              ["loyo", "calibrated", "iteratively"])
+        has_circularity = any(kw in derivation_lower for kw in ["loyo", "calibrated", "iteratively"])
 
         return ConstantSensitivityResult(
             constant_name=constant.name,
@@ -2138,8 +2145,7 @@ class SensitivityAnalyzer:
         convention), NOT actual Brier scores.
         """
         grid = self._make_grid(constant)
-        logger.info("MC Sensitivity: %s -- %d grid points, %d trials/game",
-                     constant.name, len(grid), n_mc_trials)
+        logger.info("MC Sensitivity: %s -- %d grid points, %d trials/game", constant.name, len(grid), n_mc_trials)
 
         # Map constant name to which noise parameter it controls
         noise_param = constant.name  # e.g. "mc_noise_std"
@@ -2152,8 +2158,11 @@ class SensitivityAnalyzer:
             for dev_year in self.dev_years:
                 try:
                     score = self._eval_mc_for_year(
-                        dev_year, noise_param, val,
-                        n_mc_trials, base_config,
+                        dev_year,
+                        noise_param,
+                        val,
+                        n_mc_trials,
+                        base_config,
                     )
                     year_scores.append(score)
                 except Exception as e:
@@ -2162,8 +2171,7 @@ class SensitivityAnalyzer:
 
             mean_score = float(np.mean(year_scores)) if year_scores else 0.0
             grid_scores.append(mean_score)
-            logger.info("  %s=%.4f -> mean score=%.5f (%d years)",
-                        constant.name, val, mean_score, len(year_scores))
+            logger.info("  %s=%.4f -> mean score=%.5f (%d years)", constant.name, val, mean_score, len(year_scores))
 
         curr = float(constant.current_value)
         best_idx = int(np.argmin(grid_scores))
@@ -2176,8 +2184,7 @@ class SensitivityAnalyzer:
         score_range = max(grid_scores) - min(grid_scores) if grid_scores else 0.0
 
         derivation_lower = constant.derivation.lower()
-        has_circularity = any(kw in derivation_lower for kw in
-                              ["loyo", "calibrated", "iteratively"])
+        has_circularity = any(kw in derivation_lower for kw in ["loyo", "calibrated", "iteratively"])
 
         return ConstantSensitivityResult(
             constant_name=constant.name,
@@ -2205,10 +2212,8 @@ class SensitivityAnalyzer:
         Returns negated mean accuracy (lower = better for consistency with
         Brier convention where lower = better).
         """
-        games_path = os.path.join(self.evaluator.historical_dir,
-                                  f"historical_games_{year}.json")
-        metrics_path = os.path.join(self.evaluator.historical_dir,
-                                    f"team_metrics_{year}.json")
+        games_path = os.path.join(self.evaluator.historical_dir, f"historical_games_{year}.json")
+        metrics_path = os.path.join(self.evaluator.historical_dir, f"team_metrics_{year}.json")
 
         if not os.path.exists(games_path) or not os.path.exists(metrics_path):
             raise ValueError(f"Missing data for year {year}")
@@ -2282,7 +2287,7 @@ class SensitivityAnalyzer:
         for t1, t2, outcome in tourney_games:
             em1 = team_metrics[t1]["off_rtg"] - team_metrics[t1]["def_rtg"]
             em2 = team_metrics[t2]["off_rtg"] - team_metrics[t2]["def_rtg"]
-            base_prob = 1.0 / (1.0 + math.exp(-0.1735 *(em1 - em2)))
+            base_prob = 1.0 / (1.0 + math.exp(-0.1735 * (em1 - em2)))
 
             # Simulate n_trials noisy predictions
             safe_p = max(0.001, min(0.999, base_prob))
@@ -2317,9 +2322,7 @@ class SensitivityAnalyzer:
         cached_by_year: Dict[int, dict] = {}
         for dev_year in self.dev_years:
             try:
-                cached_by_year[dev_year] = self.evaluator._train_for_year(
-                    dev_year, base_config
-                )
+                cached_by_year[dev_year] = self.evaluator._train_for_year(dev_year, base_config)
             except Exception as e:
                 logger.warning("Pre-training for dev year %d failed: %s", dev_year, e)
 
@@ -2329,30 +2332,28 @@ class SensitivityAnalyzer:
                 if include_mc:
                     try:
                         result = self.analyze_mc_constant(
-                            constant, base_config, n_mc_trials=mc_trials,
+                            constant,
+                            base_config,
+                            n_mc_trials=mc_trials,
                         )
                         results[constant.name] = result
                     except Exception as e:
-                        logger.error("MC sensitivity for %s failed: %s",
-                                     constant.name, e)
+                        logger.error("MC sensitivity for %s failed: %s", constant.name, e)
                 else:
-                    logger.info("Skipping MC constant: %s (use --include-mc)",
-                                constant.name)
+                    logger.info("Skipping MC constant: %s (use --include-mc)", constant.name)
                 continue
             try:
-                result = self.analyze_constant(
-                    constant, base_config, cached_by_year=cached_by_year
-                )
+                result = self.analyze_constant(constant, base_config, cached_by_year=cached_by_year)
                 results[constant.name] = result
             except Exception as e:
-                logger.error("Sensitivity analysis failed for %s: %s",
-                             constant.name, e)
+                logger.error("Sensitivity analysis failed for %s: %s", constant.name, e)
         return results
 
 
 # ───────────────────────────────────────────────────────────────────────
 # 6b. Monte Carlo Parameter Backtester
 # ───────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class MCBacktestResult:
@@ -2376,12 +2377,8 @@ class MCBacktestResult:
             "mean_upset_calibration_error": round(self.mean_upset_calibration_error, 4),
             "mean_seed_accuracy": round(self.mean_seed_accuracy, 4),
             "mean_log_prob": round(self.mean_log_prob, 4),
-            "per_year_upset_calibration": {
-                str(y): round(v, 4) for y, v in self.per_year_upset_calibration.items()
-            },
-            "per_year_log_prob": {
-                str(y): round(v, 4) for y, v in self.per_year_log_prob.items()
-            },
+            "per_year_upset_calibration": {str(y): round(v, 4) for y, v in self.per_year_upset_calibration.items()},
+            "per_year_log_prob": {str(y): round(v, 4) for y, v in self.per_year_log_prob.items()},
         }
 
 
@@ -2403,10 +2400,7 @@ class MCParameterBacktester:
         n_simulations: int = 5000,
     ):
         self.evaluator = HoldoutEvaluator(historical_dir)
-        self.years = years or [
-            y for y in self.evaluator.all_years
-            if 2017 <= y <= 2024 and y != 2020
-        ]
+        self.years = years or [y for y in self.evaluator.all_years if 2017 <= y <= 2024 and y != 2020]
         self.n_simulations = n_simulations
 
     def backtest_params(
@@ -2432,9 +2426,7 @@ class MCParameterBacktester:
 
         for year in self.years:
             try:
-                result = self._backtest_year(
-                    year, noise_std, regional_correlation
-                )
+                result = self._backtest_year(year, noise_std, regional_correlation)
                 if result is not None:
                     per_year_upset_cal[year] = result["upset_cal"]
                     per_year_seed_acc[year] = result["seed_acc"]
@@ -2442,18 +2434,9 @@ class MCParameterBacktester:
             except Exception as e:
                 logger.debug("MC backtest for year %d failed: %s", year, e)
 
-        mean_upset_cal = (
-            float(np.mean(list(per_year_upset_cal.values())))
-            if per_year_upset_cal else 1.0
-        )
-        mean_seed_acc = (
-            float(np.mean(list(per_year_seed_acc.values())))
-            if per_year_seed_acc else 0.0
-        )
-        mean_log_prob = (
-            float(np.mean(list(per_year_log_prob.values())))
-            if per_year_log_prob else -10.0
-        )
+        mean_upset_cal = float(np.mean(list(per_year_upset_cal.values()))) if per_year_upset_cal else 1.0
+        mean_seed_acc = float(np.mean(list(per_year_seed_acc.values()))) if per_year_seed_acc else 0.0
+        mean_log_prob = float(np.mean(list(per_year_log_prob.values()))) if per_year_log_prob else -10.0
 
         return MCBacktestResult(
             noise_std=noise_std,
@@ -2485,8 +2468,7 @@ class MCParameterBacktester:
         results = []
         for ns in noise_std_values:
             for rc in regional_corr_values:
-                logger.info("MC backtest: noise_std=%.2f, regional_correlation=%.2f",
-                            ns, rc)
+                logger.info("MC backtest: noise_std=%.2f, regional_correlation=%.2f", ns, rc)
                 result = self.backtest_params(ns, rc)
                 results.append(result)
                 logger.info(
@@ -2521,9 +2503,7 @@ class MCParameterBacktester:
 
         games = games_payload.get("games", [])
         games = self.evaluator._infer_dates_and_split(games, year)
-        tournament_games = self.evaluator._extract_tournament_games(
-            games, team_metrics, year
-        )
+        tournament_games = self.evaluator._extract_tournament_games(games, team_metrics, year)
 
         if len(tournament_games) < 10:
             return None
@@ -2572,9 +2552,7 @@ class MCParameterBacktester:
 
             # Track upsets: team1 is "favorite" if base_p > 0.5
             is_favorite_t1 = base_p > 0.5
-            actual_upset = (is_favorite_t1 and outcome == 0) or (
-                not is_favorite_t1 and outcome == 1
-            )
+            actual_upset = (is_favorite_t1 and outcome == 0) or (not is_favorite_t1 and outcome == 1)
             if actual_upset:
                 actual_upsets += 1
 
@@ -2594,14 +2572,10 @@ class MCParameterBacktester:
 
         # Seed accuracy: fraction where the higher-AdjEM team won
         seed_correct = sum(
-            1 for tg in tournament_games
-            if (
-                _em_prob(tg["team1_id"], tg["team2_id"]) > 0.5
-                and tg["outcome"] == 1
-            ) or (
-                _em_prob(tg["team1_id"], tg["team2_id"]) < 0.5
-                and tg["outcome"] == 0
-            )
+            1
+            for tg in tournament_games
+            if (_em_prob(tg["team1_id"], tg["team2_id"]) > 0.5 and tg["outcome"] == 1)
+            or (_em_prob(tg["team1_id"], tg["team2_id"]) < 0.5 and tg["outcome"] == 0)
         )
         seed_acc = seed_correct / max(len(tournament_games), 1)
 
@@ -2615,6 +2589,7 @@ class MCParameterBacktester:
 # ───────────────────────────────────────────────────────────────────────
 # 7. Audit Report
 # ───────────────────────────────────────────────────────────────────────
+
 
 class RDOFAuditReport:
     """Formats and outputs the full RDoF audit report.
@@ -2655,15 +2630,9 @@ class RDOFAuditReport:
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             },
             "constant_inventory": {
-                "tier1_externally_derived": [
-                    c.to_dict() for c in get_constants_by_tier(1)
-                ],
-                "tier2_structurally_constrained": [
-                    c.to_dict() for c in get_constants_by_tier(2)
-                ],
-                "tier3_freely_tuned": [
-                    c.to_dict() for c in get_constants_by_tier(3)
-                ],
+                "tier1_externally_derived": [c.to_dict() for c in get_constants_by_tier(1)],
+                "tier2_structurally_constrained": [c.to_dict() for c in get_constants_by_tier(2)],
+                "tier3_freely_tuned": [c.to_dict() for c in get_constants_by_tier(3)],
                 "tier3_count": len(get_tier3_constants()),
             },
         }
@@ -2672,10 +2641,7 @@ class RDOFAuditReport:
             result["holdout_evaluation"] = self.holdout_report.to_dict()
 
         if self.sensitivity_results:
-            result["sensitivity_analysis"] = {
-                name: r.to_dict()
-                for name, r in self.sensitivity_results.items()
-            }
+            result["sensitivity_analysis"] = {name: r.to_dict() for name, r in self.sensitivity_results.items()}
 
         if self.complexity_audit:
             result["model_complexity_audit"] = self.complexity_audit.to_dict()
@@ -2692,11 +2658,9 @@ class RDOFAuditReport:
         # Integrity level caveat (always first)
         if self.holdout_report:
             level = self.holdout_report.integrity_level
-            level_names = {1: "TRUE PROSPECTIVE", 2: "QUASI-PROSPECTIVE",
-                           3: "RETROSPECTIVE DIAGNOSTIC"}
+            level_names = {1: "TRUE PROSPECTIVE", 2: "QUASI-PROSPECTIVE", 3: "RETROSPECTIVE DIAGNOSTIC"}
             recs.append(
-                f"INTEGRITY: Level {level} ({level_names.get(level, 'UNKNOWN')}). "
-                f"{self.holdout_report.integrity_note}"
+                f"INTEGRITY: Level {level} ({level_names.get(level, 'UNKNOWN')}). {self.holdout_report.integrity_note}"
             )
 
         # Holdout recommendations
@@ -2721,8 +2685,7 @@ class RDOFAuditReport:
 
         # Circularity summary
         if self.sensitivity_results:
-            circular = [name for name, sr in self.sensitivity_results.items()
-                        if sr.circularity_warning]
+            circular = [name for name, sr in self.sensitivity_results.items() if sr.circularity_warning]
             if circular:
                 recs.append(
                     f"CIRCULARITY: {len(circular)}/{len(self.sensitivity_results)} "
@@ -2777,9 +2740,7 @@ class RDOFAuditReport:
         if n_games > 0:
             ratio = n_tier3 / n_games
             recs.append(
-                f"DoF RATIO: {n_tier3} freely-tuned constants / "
-                f"{n_games} holdout games = {ratio:.3f} "
-                f"(target < 0.01)"
+                f"DoF RATIO: {n_tier3} freely-tuned constants / {n_games} holdout games = {ratio:.3f} (target < 0.01)"
             )
             if ratio > 0.10:
                 recs.append(
@@ -2804,14 +2765,10 @@ class RDOFAuditReport:
 
         # Effective DoF summary (from sensitivity analysis)
         if self.sensitivity_results:
-            flat_count = sum(1 for sr in self.sensitivity_results.values()
-                             if sr.rdof_risk_category == "flat_plateau")
-            mild_count = sum(1 for sr in self.sensitivity_results.values()
-                             if sr.rdof_risk_category == "mild_slope")
-            sharp_count = sum(1 for sr in self.sensitivity_results.values()
-                              if sr.rdof_risk_category == "sharp_peak")
-            total_eff_dof = sum(sr.effective_dof
-                                for sr in self.sensitivity_results.values())
+            flat_count = sum(1 for sr in self.sensitivity_results.values() if sr.rdof_risk_category == "flat_plateau")
+            mild_count = sum(1 for sr in self.sensitivity_results.values() if sr.rdof_risk_category == "mild_slope")
+            sharp_count = sum(1 for sr in self.sensitivity_results.values() if sr.rdof_risk_category == "sharp_peak")
+            total_eff_dof = sum(sr.effective_dof for sr in self.sensitivity_results.values())
             recs.append(
                 f"EFFECTIVE DoF: {total_eff_dof:.1f} of "
                 f"{len(self.sensitivity_results)} analyzed constants "
@@ -2830,10 +2787,11 @@ class RDOFAuditReport:
         ]
         if self.holdout_report:
             lines.append(f"Config hash: {self.holdout_report.config_hash_value}")
-            level_names = {1: "TRUE PROSPECTIVE", 2: "QUASI-PROSPECTIVE",
-                           3: "RETROSPECTIVE DIAGNOSTIC"}
-            lines.append(f"Integrity: Level {self.holdout_report.integrity_level} "
-                         f"({level_names.get(self.holdout_report.integrity_level, '?')})")
+            level_names = {1: "TRUE PROSPECTIVE", 2: "QUASI-PROSPECTIVE", 3: "RETROSPECTIVE DIAGNOSTIC"}
+            lines.append(
+                f"Integrity: Level {self.holdout_report.integrity_level} "
+                f"({level_names.get(self.holdout_report.integrity_level, '?')})"
+            )
         lines.append("=" * 65)
 
         # Section 1: Inventory
@@ -2842,12 +2800,14 @@ class RDOFAuditReport:
         lines.append("-" * 65)
         for tier in [1, 2, 3]:
             constants = get_constants_by_tier(tier)
-            tier_names = {1: "Externally Derived", 2: "Structurally Constrained",
-                          3: "Freely Tuned (REQUIRES VALIDATION)"}
+            tier_names = {
+                1: "Externally Derived",
+                2: "Structurally Constrained",
+                3: "Freely Tuned (REQUIRES VALIDATION)",
+            }
             lines.append(f"  Tier {tier} ({tier_names[tier]}): {len(constants)} constants")
             for c in constants:
-                val_str = (f"{c.current_value}" if not isinstance(c.current_value, list)
-                           else str(c.current_value))
+                val_str = f"{c.current_value}" if not isinstance(c.current_value, list) else str(c.current_value)
                 lines.append(f"    - {c.name} = {val_str}")
                 lines.append(f"      [{c.derivation}]")
 
@@ -2867,8 +2827,9 @@ class RDOFAuditReport:
                     f"{m.log_loss:<9.4f} {m.accuracy:<7.3f} {m.ece:<6.3f}"
                 )
 
-            lines.append(f"  {'Pool':<6} {self.holdout_report.total_games:<5} "
-                          f"{self.holdout_report.aggregate_brier:<8.4f}")
+            lines.append(
+                f"  {'Pool':<6} {self.holdout_report.total_games:<5} {self.holdout_report.aggregate_brier:<8.4f}"
+            )
             lines.append("")
             lines.append(f"  AdjEM-logistic baseline Brier: {self.holdout_report.aggregate_seed_brier:.4f}")
             lines.append(f"    (Tier 1: no-ML logistic on efficiency margin)")
@@ -2883,8 +2844,7 @@ class RDOFAuditReport:
             lines.append("3. SENSITIVITY ANALYSIS (Tier 3 Constants)")
             lines.append("-" * 65)
             lines.append(
-                f"  {'Constant':<28} {'Current':<10} {'Optimal':<10} "
-                f"{'Gap':<8} {'Risk':<14} {'EffDoF':<6} {'Circ':<4}"
+                f"  {'Constant':<28} {'Current':<10} {'Optimal':<10} {'Gap':<8} {'Risk':<14} {'EffDoF':<6} {'Circ':<4}"
             )
 
             for name, sr in sorted(self.sensitivity_results.items()):
@@ -2895,12 +2855,8 @@ class RDOFAuditReport:
                     f"{sr.rdof_risk_category:<14} {sr.effective_dof:<6.1f} {circ:<4}"
                 )
 
-            total_eff = sum(sr.effective_dof
-                            for sr in self.sensitivity_results.values())
-            lines.append(
-                f"\n  TOTAL EFFECTIVE DoF: {total_eff:.1f} / "
-                f"{len(self.sensitivity_results)} constants"
-            )
+            total_eff = sum(sr.effective_dof for sr in self.sensitivity_results.values())
+            lines.append(f"\n  TOTAL EFFECTIVE DoF: {total_eff:.1f} / {len(self.sensitivity_results)} constants")
 
             # Mini ASCII plots for non-flat constants
             for name, sr in sorted(self.sensitivity_results.items()):
@@ -2917,9 +2873,7 @@ class RDOFAuditReport:
                             marker = " <-- optimal"
                         elif abs(val - sr.current_value) < 1e-6:
                             marker = " <-- current"
-                        lines.append(
-                            f"    {val:7.3f} |{bar:<20s} {brier:.5f}{marker}"
-                        )
+                        lines.append(f"    {val:7.3f} |{bar:<20s} {brier:.5f}{marker}")
 
         # Section 4: Model Complexity Audit
         if self.complexity_audit:
@@ -2928,16 +2882,17 @@ class RDOFAuditReport:
             lines.append("-" * 65)
             audit = self.complexity_audit
             lines.append(f"  Training samples (N): {audit.n_training_samples}")
-            lines.append(f"  Target: effective params < {audit.target_ratio:.0%} of N "
-                         f"= {int(audit.n_training_samples * audit.target_ratio)}")
+            lines.append(
+                f"  Target: effective params < {audit.target_ratio:.0%} of N "
+                f"= {int(audit.n_training_samples * audit.target_ratio)}"
+            )
             lines.append("")
             lines.append(f"  {'Component':<30} {'Eff. Params':>12}")
             for comp, params in sorted(audit.component_params.items()):
                 lines.append(f"  {comp:<30} {params:>12,}")
             lines.append(f"  {'─' * 42}")
             lines.append(f"  {'TOTAL':<30} {audit.total_effective_params:>12,}")
-            lines.append(f"  Ratio: {audit.actual_ratio:.1%} "
-                         f"{'✓ PASS' if audit.passed else '✗ FAIL'}")
+            lines.append(f"  Ratio: {audit.actual_ratio:.1%} {'✓ PASS' if audit.passed else '✗ FAIL'}")
             if audit.warnings:
                 lines.append("")
                 for w in audit.warnings:
@@ -3076,6 +3031,7 @@ def check_holdout_contamination(
 # 7c. Sensitivity-Based Auto-Adoption
 # ───────────────────────────────────────────────────────────────────────
 
+
 def adopt_sensitivity_optima(
     sensitivity_results: Dict[str, ConstantSensitivityResult],
     base_config,
@@ -3175,7 +3131,10 @@ def adopt_sensitivity_optima(
         log[name] = entry
         logger.info(
             "Auto-adopt: %s = %.4f -> %.4f (Brier improvement: %.5f)",
-            name, sr.current_value, sr.optimal_value, sr.brier_gap,
+            name,
+            sr.current_value,
+            sr.optimal_value,
+            sr.brier_gap,
         )
 
     return cfg, log
@@ -3210,6 +3169,7 @@ def run_rdof_audit(
     """
     if config is None:
         from ...pipeline.sota import SOTAPipelineConfig
+
         config = SOTAPipelineConfig()
     if holdout_years is None and getattr(config, "holdout_years", None):
         holdout_years = list(config.holdout_years)
@@ -3226,9 +3186,7 @@ def run_rdof_audit(
     # ── Contamination check: warn if config changed since last holdout ──
     contamination = check_holdout_contamination(historical_dir, config)
     if contamination:
-        logger.warning(
-            "HOLDOUT CONTAMINATION: %s", contamination["message"]
-        )
+        logger.warning("HOLDOUT CONTAMINATION: %s", contamination["message"])
 
     holdout_report = None
     sensitivity_results = None
@@ -3257,7 +3215,9 @@ def run_rdof_audit(
             n_grid_points=sensitivity_grid,
         )
         sensitivity_results = analyzer.analyze_all_tier3(
-            config, include_mc=include_mc, mc_trials=mc_trials,
+            config,
+            include_mc=include_mc,
+            mc_trials=mc_trials,
         )
 
     # ── Model complexity audit ──
@@ -3286,7 +3246,8 @@ def run_rdof_audit(
     # Include auto-adoption recommendations if sensitivity was run
     if sensitivity_results:
         _, adoption_log = adopt_sensitivity_optima(
-            sensitivity_results, config,
+            sensitivity_results,
+            config,
         )
         report_dict["sensitivity_auto_adoption"] = adoption_log
 
@@ -3349,6 +3310,7 @@ def run_prospective_evaluation(
     """
     if config is None:
         from ...pipeline.sota import SOTAPipelineConfig
+
         config = SOTAPipelineConfig()
 
     # Step 1: Verify freeze
