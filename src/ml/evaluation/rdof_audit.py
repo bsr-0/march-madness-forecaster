@@ -1481,10 +1481,12 @@ class HoldoutEvaluator:
             # Torvik FF overlay for this training year
             _ff_lookup = TorVikFFLookup(train_year)
             if not _ff_lookup.has_snapshots:
-                logger.warning(
-                    "NO Torvik FF snapshots for training year %d in RDOF audit — "
-                    "box-score-computed four factors will be used.",
-                    train_year,
+                from ...exceptions import LeakageError
+
+                raise LeakageError(
+                    f"NO Torvik FF snapshots for training year {train_year} in RDOF audit. "
+                    f"Box-score-computed four factors diverge from Torvik (r=0.12-0.74). "
+                    f"Run: python scripts/rescrape_pretournament_torvik.py --monthly --year {train_year}"
                 )
 
             # Year-based decay weight.

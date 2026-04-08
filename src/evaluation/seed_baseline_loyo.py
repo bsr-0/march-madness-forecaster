@@ -225,10 +225,12 @@ def load_ncaa_tournament_with_seeds(
     # Torvik FF overlay
     ff_lookup = TorVikFFLookup(year)
     if not ff_lookup.has_snapshots:
-        logger.warning(
-            "NO Torvik FF snapshots for year %d — evaluation will use "
-            "box-score-computed four factors (known divergence from Torvik).",
-            year,
+        from src.exceptions import LeakageError
+
+        raise LeakageError(
+            f"NO Torvik FF snapshots for year {year}. Evaluation would use "
+            f"box-score-computed four factors (known divergence from Torvik, r=0.12-0.74). "
+            f"Run: python scripts/rescrape_pretournament_torvik.py --monthly --year {year}"
         )
 
     # ── 5. Identify NCAA tournament games ────────────────────────────
