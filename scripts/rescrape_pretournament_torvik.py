@@ -51,6 +51,9 @@ logger = logging.getLogger(__name__)
 # Tournament start dates (day of first game).
 # Pre-tournament cutoff = day before this.
 TOURNAMENT_START_DATES = {
+    2005: date(2005, 3, 15),
+    2006: date(2006, 3, 14),
+    2007: date(2007, 3, 13),
     2008: date(2008, 3, 18),
     2009: date(2009, 3, 17),
     2010: date(2010, 3, 16),
@@ -350,7 +353,7 @@ def _parse_trank_csv(text: str, year: int) -> list[dict] | None:
             logger.debug("Error parsing trank CSV row %d: %s", row_num, e)
             continue
 
-    if len(teams) < 100:
+    if len(teams) < 300:
         logger.warning("[trank CSV] Only %d teams for %d (expected 350+) — discarding", len(teams), year)
         return None
 
@@ -362,6 +365,8 @@ def fetch_trank_csv_for_date(year: int, cutoff: date) -> list[dict] | None:
     """Fetch trank.php CSV with a specific cutoff date.
 
     Used by --monthly to get point-in-time snapshots at arbitrary dates.
+    Retries without conyes param if initial fetch returns <300 teams
+    (conference-level aggregation instead of team-level).
     """
     season_start_year = year - 1
     begin_str = f"{season_start_year}{SEASON_START_MONTH_DAY[0]:02d}{SEASON_START_MONTH_DAY[1]:02d}"
@@ -377,10 +382,22 @@ def fetch_trank_csv_for_date(year: int, cutoff: date) -> list[dict] | None:
     }
 
     text = _fetch_trank_text(year, params)
-    if text is None:
-        return None
+    if text is not None:
+        teams = _parse_trank_csv(text, year)
+        if teams:
+            return teams
+        logger.warning(
+            "conyes=1 returned <300 teams for %d cutoff=%s, retrying without conyes",
+            year,
+            cutoff,
+        )
 
-    return _parse_trank_csv(text, year)
+    # Retry without conyes (avoids conference-level aggregation)
+    params.pop("conyes", None)
+    text = _fetch_trank_text(year, params)
+    if text is not None:
+        return _parse_trank_csv(text, year)
+    return None
 
 
 def fetch_json(year: int, retries: int = 3) -> list[list] | None:
@@ -573,6 +590,16 @@ def _run_monthly_scrape(years: list[int], args) -> None:
             teams = fetch_trank_csv_for_date(year, cutoff)
             if not teams:
                 logger.warning("No data for %d cutoff=%s — skipping", year, cutoff)
+                total_failed += 1
+                continue
+
+            if len(teams) < 300:
+                logger.error(
+                    "Year %d cutoff=%s: only %d teams (expected 300+, likely conference-level data) — skipping",
+                    year,
+                    cutoff,
+                    len(teams),
+                )
                 total_failed += 1
                 continue
 
