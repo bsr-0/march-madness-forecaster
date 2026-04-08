@@ -1,0 +1,38 @@
+{
+  "torvik_trank": {
+    "name": "torvik_trank",
+    "state": "closed",
+    "failure_count": 1,
+    "last_failure_time": 1775526846.866158,
+    "last_success_time": 1775447041.743453,
+    "total_failures": 1,
+    "total_successes": 14,
+    "half_open_calls": 0,
+    "last_transition_time": 0.0,
+    "total_transitions": 0
+  },
+  "torvik_cbbstat": {
+    "name": "torvik_cbbstat",
+    "state": "closed",
+    "failure_count": 1,
+    "last_failure_time": 1774310504.418606,
+    "last_success_time": 0.0,
+    "total_failures": 1,
+    "total_successes": 0,
+    "half_open_calls": 0,
+    "last_transition_time": 0.0,
+    "total_transitions": 0
+  },
+  "torvik_csv": {
+    "name": "torvik_csv",
+    "state": "closed",
+    "failure_count": 1,
+    "last_failure_time": 1775526846.866501,
+    "last_success_time": 1774317554.1283221,
+    "total_failures": 1,
+    "total_successes": 7,
+    "half_open_calls": 0,
+    "last_transition_time": 0.0,
+    "total_transitions": 0
+  }
+}
