@@ -222,12 +222,13 @@ def fetch_trank_csv(year: int) -> list[dict] | None:
 
     Returns list of team dicts with four factors populated, or None if
     Cloudflare blocks the request or the endpoint is unavailable.
+    Omits conyes param by default to avoid conference-level aggregation;
+    retries with conyes=1 if first attempt returns <300 teams.
     """
     date_params = _build_date_params(year)
     params = {
         "year": year,
         "csv": 1,
-        "conyes": 1,
         "type": "All",
         "top": 0,
         "begin": date_params["begin"],
@@ -235,10 +236,18 @@ def fetch_trank_csv(year: int) -> list[dict] | None:
     }
 
     text = _fetch_trank_text(year, params)
-    if text is None:
-        return None
+    if text is not None:
+        teams = _parse_trank_csv(text, year)
+        if teams:
+            return teams
+        logger.warning("No-conyes fetch returned <300 teams for %d, retrying with conyes=1", year)
 
-    return _parse_trank_csv(text, year)
+    # Retry with conyes=1 in case conference column is needed for parsing
+    params["conyes"] = 1
+    text = _fetch_trank_text(year, params)
+    if text is not None:
+        return _parse_trank_csv(text, year)
+    return None
 
 
 def _parse_trank_csv(text: str, year: int) -> list[dict] | None:
@@ -365,8 +374,8 @@ def fetch_trank_csv_for_date(year: int, cutoff: date) -> list[dict] | None:
     """Fetch trank.php CSV with a specific cutoff date.
 
     Used by --monthly to get point-in-time snapshots at arbitrary dates.
-    Retries without conyes param if initial fetch returns <300 teams
-    (conference-level aggregation instead of team-level).
+    Omits conyes param by default to avoid conference-level aggregation
+    (~30 rows instead of ~350). Retries with conyes=1 as fallback.
     """
     season_start_year = year - 1
     begin_str = f"{season_start_year}{SEASON_START_MONTH_DAY[0]:02d}{SEASON_START_MONTH_DAY[1]:02d}"
@@ -374,7 +383,6 @@ def fetch_trank_csv_for_date(year: int, cutoff: date) -> list[dict] | None:
     params = {
         "year": year,
         "csv": 1,
-        "conyes": 1,
         "type": "All",
         "top": 0,
         "begin": begin_str,
@@ -387,13 +395,13 @@ def fetch_trank_csv_for_date(year: int, cutoff: date) -> list[dict] | None:
         if teams:
             return teams
         logger.warning(
-            "conyes=1 returned <300 teams for %d cutoff=%s, retrying without conyes",
+            "No-conyes fetch returned <300 teams for %d cutoff=%s, retrying with conyes=1",
             year,
             cutoff,
         )
 
-    # Retry without conyes (avoids conference-level aggregation)
-    params.pop("conyes", None)
+    # Retry with conyes=1 in case conference column is needed for parsing
+    params["conyes"] = 1
     text = _fetch_trank_text(year, params)
     if text is not None:
         return _parse_trank_csv(text, year)
