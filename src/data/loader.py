@@ -8,13 +8,23 @@ from typing import Dict, List, Optional, Tuple
 
 from ..models.team import Team
 from ..models.bracket import Bracket
+from .team_name_resolver import TeamNameResolver
+from ..data.features.proprietary_metrics import _load_cbbpy_team_map
 
 logger = logging.getLogger(__name__)
+
+_resolver = TeamNameResolver()
+
+
+def _build_mascot_map() -> Dict[str, str]:
+    """Build {mascot_display_lower: location} from CBBpy team map CSV."""
+    cbbpy = _load_cbbpy_team_map()  # {display_name: location}
+    return {k.lower(): v for k, v in cbbpy.items()}
 
 
 class DataLoader:
     """Loads tournament data from JSON files."""
-    
+
     @staticmethod
     def load_teams_from_json(file_path: str) -> List[Team]:
         """
@@ -30,10 +40,10 @@ class DataLoader:
         Returns:
             List of Team objects (64 for a standard bracket)
         """
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             data = json.load(f)
 
-        raw_teams = data.get('teams', [])
+        raw_teams = data.get("teams", [])
 
         # Collapse First Four play-in pairs: for each (seed, region) slot
         # with multiple first_four entries, keep the highest-rated team.
@@ -51,71 +61,87 @@ class DataLoader:
             n_removed = len(raw_teams) - len(resolved)
             if n_removed:
                 logger.info(
-                    "First Four resolution: collapsed %d play-in teams "
-                    "into %d slots (%d teams removed)",
-                    len(play_in), len(seen_slots), n_removed,
+                    "First Four resolution: collapsed %d play-in teams into %d slots (%d teams removed)",
+                    len(play_in),
+                    len(seen_slots),
+                    n_removed,
                 )
         else:
             resolved = raw_teams
 
+        # Build mascot lookup from CBBpy CSV (e.g. "byu cougars" -> "BYU")
+        mascot_map = _build_mascot_map()
+
         teams = []
         for team_data in resolved:
+            # Resolve mascot-suffixed names (e.g. "Michigan Wolverines" -> "Michigan")
+            raw_name = team_data.get("name", "")
+            resolved_name = raw_name
+
+            # Try CBBpy mascot map first (most reliable for mascot stripping)
+            cbbpy_location = mascot_map.get(raw_name.lower())
+            if cbbpy_location:
+                resolved_name = cbbpy_location
+            else:
+                # Fall back to TeamNameResolver
+                match = _resolver.resolve(raw_name)
+                if match and match.canonical_id and match.display_name != raw_name:
+                    resolved_name = match.display_name
+
+            if resolved_name != raw_name:
+                logger.debug("Team name resolved: %r -> %r", raw_name, resolved_name)
+                team_data = {**team_data, "name": resolved_name}
             team = Team.from_dict(team_data)
             teams.append(team)
 
         return teams
-    
+
     @staticmethod
     def load_bracket_from_json(file_path: str) -> Bracket:
         """
         Load complete bracket from JSON file.
-        
+
         Args:
             file_path: Path to JSON file
-            
+
         Returns:
             Bracket object
         """
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             data = json.load(f)
-        
+
         return Bracket.from_dict(data)
-    
+
     @staticmethod
     def save_bracket_to_json(bracket: Bracket, file_path: str) -> None:
         """
         Save bracket to JSON file.
-        
+
         Args:
             bracket: Bracket to save
             file_path: Output file path
         """
-        with open(file_path, 'w') as f:
+        with open(file_path, "w") as f:
             json.dump(bracket.to_dict(), f, indent=2)
-    
+
     @staticmethod
     def load_matchups(file_path: str) -> List[Tuple[str, str, int, int]]:
         """
         Load matchups from JSON file.
-        
+
         Args:
             file_path: Path to JSON file
-            
+
         Returns:
             List of (team1_name, team2_name, round, game_id) tuples
         """
-        with open(file_path, 'r') as f:
+        with open(file_path, "r") as f:
             data = json.load(f)
-        
+
         matchups = []
-        for matchup in data.get('matchups', []):
-            matchups.append((
-                matchup['team1'],
-                matchup['team2'],
-                matchup['round'],
-                matchup['game_id']
-            ))
-        
+        for matchup in data.get("matchups", []):
+            matchups.append((matchup["team1"], matchup["team2"], matchup["round"], matchup["game_id"]))
+
         return matchups
 
     @staticmethod
@@ -166,4 +192,3 @@ class DataLoader:
             combined.update(hashes[key].encode())
         hashes["combined"] = combined.hexdigest()
         return hashes
-
