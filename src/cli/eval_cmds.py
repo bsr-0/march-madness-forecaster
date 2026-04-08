@@ -642,12 +642,16 @@ def run_backtest_harness(args):
             if key in cfg:
                 overrides[key] = cfg[key]
 
+    kaggle_dir = getattr(args, "kaggle_dir", None)
+    if not kaggle_dir and Path("data/kaggle").exists():
+        kaggle_dir = "data/kaggle"
+
     harness = BacktestHarness(
         historical_dir=args.historical_dir,
         baseline_path=args.baseline if args.baseline else None,
         years=years,
         config_overrides=overrides,
-        kaggle_dir=getattr(args, "kaggle_dir", None),
+        kaggle_dir=kaggle_dir,
     )
 
     result = harness.run()
