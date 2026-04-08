@@ -32,16 +32,37 @@ GAMES_DIR = "data/raw/historical"
 
 # Years with tournament seed files (no 2020 — COVID cancellation).
 EVAL_YEARS = [
-    2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015,
-    2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025,
+    2008,
+    2009,
+    2010,
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
 ]
 
 
 # ── Seed baseline ────────────────────────────────────────────────────────
 
 SEED_WIN_RATES = {
-    (1, 16): 0.985, (2, 15): 0.940, (3, 14): 0.850, (4, 13): 0.790,
-    (5, 12): 0.640, (6, 11): 0.620, (7, 10): 0.610, (8, 9): 0.510,
+    (1, 16): 0.985,
+    (2, 15): 0.940,
+    (3, 14): 0.850,
+    (4, 13): 0.790,
+    (5, 12): 0.640,
+    (6, 11): 0.620,
+    (7, 10): 0.610,
+    (8, 9): 0.510,
 }
 
 
@@ -168,6 +189,7 @@ def load_ncaa_tournament_with_seeds(
     if not conference_map and config.kaggle_dir:
         try:
             from src.data.kaggle_loader import KaggleDataLoader
+
             _kloader = KaggleDataLoader(config.kaggle_dir)
             _kconf = _kloader.load_team_conferences(year)
             if _kconf:
@@ -184,7 +206,7 @@ def load_ncaa_tournament_with_seeds(
             for entry in massey_data:
                 tid = entry.get("team_id", "")
                 if tid:
-                    team_massey_composite[_team_id(tid)] = entry.get("normalized", float('nan'))
+                    team_massey_composite[_team_id(tid)] = entry.get("normalized", float("nan"))
         except Exception:
             pass
 
@@ -202,6 +224,12 @@ def load_ncaa_tournament_with_seeds(
 
     # Torvik FF overlay
     ff_lookup = TorVikFFLookup(year)
+    if not ff_lookup.has_snapshots:
+        logger.warning(
+            "NO Torvik FF snapshots for year %d — evaluation will use "
+            "box-score-computed four factors (known divergence from Torvik).",
+            year,
+        )
 
     # ── 5. Identify NCAA tournament games ────────────────────────────
     t_start = TOURNAMENT_START_DATES.get(year, date(year, 3, 14))
@@ -219,8 +247,7 @@ def load_ncaa_tournament_with_seeds(
 
     # Data quality filter (same as production loader)
     tournament_games = [
-        g for g in tournament_games
-        if g.points > 0 and g.opp_points > 0 and abs(g.points - g.opp_points) <= 80
+        g for g in tournament_games if g.points > 0 and g.opp_points > 0 and abs(g.points - g.opp_points) <= 80
     ]
 
     # ── 6. Build features ONLY for seeded games ──────────────────────
@@ -263,21 +290,25 @@ def load_ncaa_tournament_with_seeds(
             continue
 
         # Massey: only attach after selection cutoff
-        _mc1 = team_massey_composite.get(g.team_id, float('nan'))
-        _mc2 = team_massey_composite.get(g.opponent_id, float('nan'))
-        _ms1 = team_massey_spread.get(g.team_id, float('nan'))
-        _ms2 = team_massey_spread.get(g.opponent_id, float('nan'))
+        _mc1 = team_massey_composite.get(g.team_id, float("nan"))
+        _mc2 = team_massey_composite.get(g.opponent_id, float("nan"))
+        _ms1 = team_massey_spread.get(g.team_id, float("nan"))
+        _ms2 = team_massey_spread.get(g.opponent_id, float("nan"))
         _mm1 = team_massey_multi.get(g.team_id)
         _mm2 = team_massey_multi.get(g.opponent_id)
 
         v1 = IncrementalMetricsEngine.metrics_to_team_vector(
-            m1, seed=seed1,
-            external_rating_composite=_mc1, external_rating_spread=_ms1,
+            m1,
+            seed=seed1,
+            external_rating_composite=_mc1,
+            external_rating_spread=_ms1,
             massey_features=_mm1,
         )
         v2 = IncrementalMetricsEngine.metrics_to_team_vector(
-            m2, seed=seed2,
-            external_rating_composite=_mc2, external_rating_spread=_ms2,
+            m2,
+            seed=seed2,
+            external_rating_composite=_mc2,
+            external_rating_spread=_ms2,
             massey_features=_mm2,
         )
 
@@ -287,7 +318,10 @@ def load_ncaa_tournament_with_seeds(
                 _v[_idx] = _val
 
         matchup = IncrementalMetricsEngine.build_matchup_vector(
-            v1, v2, seed1, seed2,
+            v1,
+            v2,
+            seed1,
+            seed2,
             engine=inc_engine,
             team1_id=g.team_id,
             team2_id=g.opponent_id,
@@ -295,7 +329,7 @@ def load_ncaa_tournament_with_seeds(
 
         if len(matchup) < feature_dim:
             padded = np.zeros(feature_dim, dtype=np.float64)
-            padded[:len(matchup)] = matchup
+            padded[: len(matchup)] = matchup
             matchup = padded
         elif len(matchup) > feature_dim:
             matchup = matchup[:feature_dim]
@@ -309,9 +343,12 @@ def load_ncaa_tournament_with_seeds(
         return empty
 
     logger.info(
-        "  Year %d NCAA tournament: %d seeded games loaded "
-        "(%d no seeds, %d skipped metrics). feature_dim=%d.",
-        year, len(X_list), no_seeds, skipped, feature_dim,
+        "  Year %d NCAA tournament: %d seeded games loaded (%d no seeds, %d skipped metrics). feature_dim=%d.",
+        year,
+        len(X_list),
+        no_seeds,
+        skipped,
+        feature_dim,
     )
 
     return (
@@ -324,8 +361,12 @@ def load_ncaa_tournament_with_seeds(
 
 # ── Regular-season loader (for training) ────────────────────────────────
 
+
 def _load_regular_season_data(
-    config, year: int, feature_dim: int, prior_elo: Optional[Dict] = None,
+    config,
+    year: int,
+    feature_dim: int,
+    prior_elo: Optional[Dict] = None,
 ) -> tuple:
     from src.pipeline.stages.sample_loading import load_year_samples_incremental
 
@@ -334,12 +375,18 @@ def _load_regular_season_data(
     if not os.path.isfile(games_path) or not os.path.isfile(metrics_path):
         return np.empty((0, feature_dim)), np.array([]), np.array([]), {}, np.array([])
     return load_year_samples_incremental(
-        config, games_path, metrics_path, feature_dim, year,
-        include_tournament=False, prior_elo=prior_elo,
+        config,
+        games_path,
+        metrics_path,
+        feature_dim,
+        year,
+        include_tournament=False,
+        prior_elo=prior_elo,
     )
 
 
 # ── Model training ───────────────────────────────────────────────────────
+
 
 def _train_logistic(X_train: np.ndarray, y_train: np.ndarray, X_eval: np.ndarray) -> np.ndarray:
     from sklearn.linear_model import LogisticRegression
@@ -382,6 +429,7 @@ def _train_lightgbm(X_train: np.ndarray, y_train: np.ndarray, X_eval: np.ndarray
 
 # ── Main comparison ──────────────────────────────────────────────────────
 
+
 def run_comparison(
     model_types: Optional[List[str]] = None,
 ) -> dict:
@@ -410,7 +458,10 @@ def run_comparison(
     cross_year_elo: Dict[str, float] = {}
     for year in sorted(EVAL_YEARS):
         X_yr, y_yr, m_yr, end_elo, _ = _load_regular_season_data(
-            config, year, feature_dim, prior_elo=cross_year_elo,
+            config,
+            year,
+            feature_dim,
+            prior_elo=cross_year_elo,
         )
         rs_cache[year] = (X_yr, y_yr)
         if end_elo:
@@ -441,10 +492,7 @@ def run_comparison(
             continue
 
         # Seed baseline — SAME games as model
-        seed_preds = np.array([
-            seed_baseline_prob(int(s1), int(s2))
-            for s1, s2 in zip(eval_s1, eval_s2)
-        ])
+        seed_preds = np.array([seed_baseline_prob(int(s1), int(s2)) for s1, s2 in zip(eval_s1, eval_s2)])
         seed_brier = float(np.mean((seed_preds - eval_y) ** 2))
 
         logger.info("  Seed baseline: %d games, Brier=%.4f", n_eval, seed_brier)
@@ -468,7 +516,9 @@ def run_comparison(
 
         logger.info(
             "  Training: %d games from %d years | Eval: %d NCAA tournament games (same for both)",
-            len(train_y), len(train_X_parts), n_eval,
+            len(train_y),
+            len(train_X_parts),
+            n_eval,
         )
 
         fold_info: dict = {
@@ -492,7 +542,10 @@ def run_comparison(
 
             logger.info(
                 "  %s: Brier=%.4f | seed=%.4f | delta=%+.4f",
-                mt, model_brier, seed_brier, model_brier - seed_brier,
+                mt,
+                model_brier,
+                seed_brier,
+                model_brier - seed_brier,
             )
 
         seed_briers_per_fold.append(seed_brier)
