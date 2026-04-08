@@ -51,7 +51,10 @@ _PICKS_TEAM_ALIAS: Dict[str, str] = {
     "norf_app": "norfolk_state",
     "virginia_commonwealth": "vcu",
     "louisiana": "louisiana_lafayette",
+    "louisiana_lafayette": "louisiana",  # Bracket ID varies by year
     "siue": "siu_edwardsville",
+    "sam_houston_state": "sam_houston",
+    "liu_brooklyn": "long_island_university",
     # Play-in combined entries: ESPN lumps both play-in teams into one row
     # before the play-in game is decided. Map to the team that won the
     # play-in and entered the main bracket.

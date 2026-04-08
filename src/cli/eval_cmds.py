@@ -7,6 +7,7 @@ from pathlib import Path
 def audit_rdof(args):
     """Run researcher degrees of freedom audit."""
     import logging
+
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     from ._helpers import _parse_year_list
@@ -122,6 +123,7 @@ def run_loyo_validate(args):
                 print(f"  {held_out_year}: Pipeline produced no predictions, using seed baseline")
                 actual_games = get_tournament_games_for_eval(held_out_year, results_dir)
                 from ..data.features.tournament_features import HISTORICAL_SEED_WIN_RATES
+
                 for game in actual_games:
                     t1, t2 = game["team1_id"], game["team2_id"]
                     s1, s2 = game["team1_seed"], game["team2_seed"]
@@ -139,6 +141,7 @@ def run_loyo_validate(args):
                 continue
             predictions = {}
             from ..data.features.tournament_features import HISTORICAL_SEED_WIN_RATES
+
             for game in actual_games:
                 t1, t2 = game["team1_id"], game["team2_id"]
                 s1, s2 = game["team1_seed"], game["team2_seed"]
@@ -233,6 +236,7 @@ def run_backtest_kaggle(args):
             continue
 
         from ..data.features.tournament_features import HISTORICAL_SEED_WIN_RATES
+
         predictions = {}
         for game in actual_games:
             t1 = game["team1_id"]
@@ -323,6 +327,7 @@ def run_backtest_unified(args):
     use_seed_baseline = bool(getattr(args, "seed_baseline", False))
     predict_fn_factory = None
     if not use_seed_baseline:
+
         def _resolve_rosters_json(eval_year: int):
             if rosters_json:
                 return rosters_json
@@ -331,10 +336,31 @@ def run_backtest_unified(args):
                 return str(candidate)
             return None
 
+        def _resolve_teams_json(eval_year: int):
+            if teams_json:
+                return teams_json
+            candidate = Path(f"data/raw/historical/teams_{eval_year}.json")
+            if candidate.exists():
+                return str(candidate)
+            return None
+
+        def _resolve_torvik_json(eval_year: int):
+            if torvik_json:
+                return torvik_json
+            for candidate in [
+                Path(f"data/raw/historical/torvik_{eval_year}.json"),
+                Path(f"data/raw/torvik_{eval_year}.json"),
+            ]:
+                if candidate.exists():
+                    return str(candidate)
+            return None
+
         def _pipeline_predict_fn_factory(eval_year: int):
             base_years = sorted(set(list(LOYO_YEARS) + years))
             dev_years = [y for y in base_years if y != eval_year and y != 2020]
             eval_rosters_json = _resolve_rosters_json(eval_year)
+            eval_teams_json = _resolve_teams_json(eval_year)
+            eval_torvik_json = _resolve_torvik_json(eval_year)
             cfg = SOTAPipelineConfig(
                 year=eval_year,
                 mode="calibration",
@@ -351,8 +377,8 @@ def run_backtest_unified(args):
                 calibration_years=[],
                 enforce_feed_freshness=False,
                 kaggle_dir=kaggle_dir,
-                teams_json=teams_json,
-                torvik_json=torvik_json,
+                teams_json=eval_teams_json,
+                torvik_json=eval_torvik_json,
                 historical_games_json=historical_games_json,
                 roster_json=eval_rosters_json,
                 bracket_json=bracket_json,
@@ -438,9 +464,7 @@ def run_validate_metrics(args):
         for sens in results:
             print(f"\n{sens.constant_name} (default={sens.default_value}):")
             for metric, corrs in sens.correlations_by_metric.items():
-                vals_str = ", ".join(
-                    f"{v:.1f}\u2192r={c:.4f}" for v, c in zip(sens.tested_values, corrs)
-                )
+                vals_str = ", ".join(f"{v:.1f}\u2192r={c:.4f}" for v, c in zip(sens.tested_values, corrs))
                 print(f"  {metric}: {vals_str}")
             print(f"  \u2192 {sens.recommendation}")
         if args.output:
@@ -466,13 +490,16 @@ def run_validate_metrics(args):
             holdout = [int(y.strip()) for y in args.holdout_years.split(",")]
             diag = [y for y in years if y not in holdout]
             result = validate_metrics_multi_year(
-                diagnostic_years=diag, holdout_years=holdout,
-                historical_dir=args.historical_dir, raw_dir=args.raw_dir,
+                diagnostic_years=diag,
+                holdout_years=holdout,
+                historical_dir=args.historical_dir,
+                raw_dir=args.raw_dir,
             )
         else:
             result = validate_metrics_multi_year(
                 years=years,
-                historical_dir=args.historical_dir, raw_dir=args.raw_dir,
+                historical_dir=args.historical_dir,
+                raw_dir=args.raw_dir,
             )
         print(result.summary())
         if args.output:
@@ -493,6 +520,7 @@ def run_validate_metrics(args):
 def prospective_eval(args):
     """Run quasi-prospective evaluation against a frozen pipeline."""
     import logging
+
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     from ..pipeline.sota import SOTAPipelineConfig
@@ -526,23 +554,29 @@ def handle_validate_rubric(args):
     result = run_validation(pass_numbers=pass_nums, config_path=args.config)
 
     if getattr(args, "json", False):
-        print(json.dumps({
-            "total_score": result.total_score,
-            "max_total": result.max_total,
-            "all_passed": result.all_passed,
-            "passes": [
+        print(
+            json.dumps(
                 {
-                    "pass": p.pass_number,
-                    "name": p.name,
-                    "passed": p.passed,
-                    "score": p.score,
-                    "max_score": p.max_score,
-                    "details": p.details,
-                    "failures": p.failures,
-                }
-                for p in result.passes
-            ],
-        }, indent=2, default=str))
+                    "total_score": result.total_score,
+                    "max_total": result.max_total,
+                    "all_passed": result.all_passed,
+                    "passes": [
+                        {
+                            "pass": p.pass_number,
+                            "name": p.name,
+                            "passed": p.passed,
+                            "score": p.score,
+                            "max_score": p.max_score,
+                            "details": p.details,
+                            "failures": p.failures,
+                        }
+                        for p in result.passes
+                    ],
+                },
+                indent=2,
+                default=str,
+            )
+        )
     else:
         print(result.report())
     return 0 if result.all_passed else 1
@@ -554,13 +588,19 @@ def handle_audit_rubric(args):
 
     result = run_static_audit()
     if getattr(args, "json", False):
-        print(json.dumps({
-            "score": result.score,
-            "max_score": result.max_score,
-            "passed": result.passed,
-            "details": result.details,
-            "failures": result.failures,
-        }, indent=2, default=str))
+        print(
+            json.dumps(
+                {
+                    "score": result.score,
+                    "max_score": result.max_score,
+                    "passed": result.passed,
+                    "details": result.details,
+                    "failures": result.failures,
+                },
+                indent=2,
+                default=str,
+            )
+        )
     else:
         print(f"Rubric Audit Score: {result.score:.0f}/{result.max_score:.0f}")
         for k, v in result.details.items():
@@ -575,6 +615,7 @@ def handle_audit_rubric(args):
 def run_backtest_harness(args):
     """Run unified backtesting harness with regression gate."""
     import logging
+
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
     from ..evaluation.backtest_harness import BacktestHarness, save_baseline
@@ -586,8 +627,7 @@ def run_backtest_harness(args):
         with open(args.config, "r") as f:
             cfg = json.load(f)
         # Pass through relevant config keys as overrides
-        for key in ("enable_stacking", "enable_vegas_calibration_anchor",
-                     "vegas_anchor_sigma"):
+        for key in ("enable_stacking", "enable_vegas_calibration_anchor", "vegas_anchor_sigma"):
             if key in cfg:
                 overrides[key] = cfg[key]
 
@@ -635,26 +675,30 @@ def register(subparsers):
         "audit-rdof",
         help="Run researcher degrees of freedom audit on historical data",
     )
-    rdof_parser.add_argument("--historical-dir", default="data/raw/historical",
-                             help="Directory with per-year historical game/metric JSONs")
-    rdof_parser.add_argument("--holdout-years", default="2025",
-                             help="Comma-separated years to hold out from all decisions")
-    rdof_parser.add_argument("--dev-years", default=None,
-                             help="Comma-separated dev years for training/selection (overrides auto)")
-    rdof_parser.add_argument("--calibration-years", default=None,
-                             help="Comma-separated calibration years")
-    rdof_parser.add_argument("--output", "-o", default=None,
-                             help="Path to write JSON audit report")
-    rdof_parser.add_argument("--sensitivity", action="store_true",
-                             help="Run sensitivity analysis on Tier 3 constants (slower)")
-    rdof_parser.add_argument("--no-holdout", action="store_true",
-                             help="Skip holdout evaluation (sensitivity only)")
-    rdof_parser.add_argument("--sensitivity-grid", type=int, default=11,
-                             help="Grid points per constant for sensitivity analysis")
-    rdof_parser.add_argument("--include-mc", action="store_true",
-                             help="Include Monte Carlo constants in sensitivity analysis (slower)")
-    rdof_parser.add_argument("--mc-trials", type=int, default=200,
-                             help="Noise trials per game for MC sensitivity (default: 200)")
+    rdof_parser.add_argument(
+        "--historical-dir", default="data/raw/historical", help="Directory with per-year historical game/metric JSONs"
+    )
+    rdof_parser.add_argument(
+        "--holdout-years", default="2025", help="Comma-separated years to hold out from all decisions"
+    )
+    rdof_parser.add_argument(
+        "--dev-years", default=None, help="Comma-separated dev years for training/selection (overrides auto)"
+    )
+    rdof_parser.add_argument("--calibration-years", default=None, help="Comma-separated calibration years")
+    rdof_parser.add_argument("--output", "-o", default=None, help="Path to write JSON audit report")
+    rdof_parser.add_argument(
+        "--sensitivity", action="store_true", help="Run sensitivity analysis on Tier 3 constants (slower)"
+    )
+    rdof_parser.add_argument("--no-holdout", action="store_true", help="Skip holdout evaluation (sensitivity only)")
+    rdof_parser.add_argument(
+        "--sensitivity-grid", type=int, default=11, help="Grid points per constant for sensitivity analysis"
+    )
+    rdof_parser.add_argument(
+        "--include-mc", action="store_true", help="Include Monte Carlo constants in sensitivity analysis (slower)"
+    )
+    rdof_parser.add_argument(
+        "--mc-trials", type=int, default=200, help="Noise trials per game for MC sensitivity (default: 200)"
+    )
     rdof_parser.set_defaults(func=audit_rdof)
 
     # --- loyo-validate ---
@@ -662,10 +706,10 @@ def register(subparsers):
         "loyo-validate",
         help="Run Leave-One-Year-Out validation across historical years",
     )
-    loyo_parser.add_argument("--historical-dir", default="data/raw/historical",
-                             help="Directory with historical game/metrics JSONs")
-    loyo_parser.add_argument("--years", default=None,
-                             help="Comma-separated years to validate (default: LOYO_YEARS)")
+    loyo_parser.add_argument(
+        "--historical-dir", default="data/raw/historical", help="Directory with historical game/metrics JSONs"
+    )
+    loyo_parser.add_argument("--years", default=None, help="Comma-separated years to validate (default: LOYO_YEARS)")
     loyo_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
     loyo_parser.add_argument("--kaggle-dir", default=None, help="Path to Kaggle CSV directory")
     loyo_parser.set_defaults(func=run_loyo_validate)
@@ -675,10 +719,10 @@ def register(subparsers):
         "backtest-kaggle",
         help="Evaluate predictions against historical Kaggle tournament results",
     )
-    bt_kaggle_parser.add_argument("--results-dir", default="data/raw/historical",
-                                  help="Directory with tournament_results_YYYY.json files")
-    bt_kaggle_parser.add_argument("--years", default=None,
-                                  help="Comma-separated years (default: LOYO_YEARS)")
+    bt_kaggle_parser.add_argument(
+        "--results-dir", default="data/raw/historical", help="Directory with tournament_results_YYYY.json files"
+    )
+    bt_kaggle_parser.add_argument("--years", default=None, help="Comma-separated years (default: LOYO_YEARS)")
     bt_kaggle_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
     bt_kaggle_parser.set_defaults(func=run_backtest_kaggle)
 
@@ -687,28 +731,23 @@ def register(subparsers):
         "backtest-unified",
         help="Run unified backtest (Kaggle calibration + ESPN bracket pool)",
     )
-    bt_unified_parser.add_argument("--kaggle-dir", default=None,
-                                   help="Directory with Kaggle CSV data (optional)")
-    bt_unified_parser.add_argument("--input", "-i", default=None,
-                                   help="Teams JSON for pipeline predictor")
-    bt_unified_parser.add_argument("--bracket-json", default=None,
-                                   help="Pre-fetched bracket JSON for pipeline predictor")
-    bt_unified_parser.add_argument("--bracket-source", default="auto",
-                                   help="Bracket source for pipeline predictor")
-    bt_unified_parser.add_argument("--torvik", default=None,
-                                   help="Torvik JSON for pipeline predictor")
-    bt_unified_parser.add_argument("--historical-games", default=None,
-                                   help="Historical games JSON for pipeline predictor")
-    bt_unified_parser.add_argument("--rosters", default=None,
-                                   help="Roster/player metrics JSON for pipeline predictor")
-    bt_unified_parser.add_argument("--years", default=None,
-                                   help="Comma-separated years (default: LOYO_YEARS)")
-    bt_unified_parser.add_argument("--modes", default="calibration,ev",
-                                   help="Backtest modes (calibration, ev)")
-    bt_unified_parser.add_argument("--pool-sizes", default="100,500",
-                                   help="Comma-separated pool sizes for EV mode")
-    bt_unified_parser.add_argument("--seed-baseline", action="store_true",
-                                   help="Use seed-based baseline predictor instead of pipeline")
+    bt_unified_parser.add_argument("--kaggle-dir", default=None, help="Directory with Kaggle CSV data (optional)")
+    bt_unified_parser.add_argument("--input", "-i", default=None, help="Teams JSON for pipeline predictor")
+    bt_unified_parser.add_argument(
+        "--bracket-json", default=None, help="Pre-fetched bracket JSON for pipeline predictor"
+    )
+    bt_unified_parser.add_argument("--bracket-source", default="auto", help="Bracket source for pipeline predictor")
+    bt_unified_parser.add_argument("--torvik", default=None, help="Torvik JSON for pipeline predictor")
+    bt_unified_parser.add_argument(
+        "--historical-games", default=None, help="Historical games JSON for pipeline predictor"
+    )
+    bt_unified_parser.add_argument("--rosters", default=None, help="Roster/player metrics JSON for pipeline predictor")
+    bt_unified_parser.add_argument("--years", default=None, help="Comma-separated years (default: LOYO_YEARS)")
+    bt_unified_parser.add_argument("--modes", default="calibration,ev", help="Backtest modes (calibration, ev)")
+    bt_unified_parser.add_argument("--pool-sizes", default="100,500", help="Comma-separated pool sizes for EV mode")
+    bt_unified_parser.add_argument(
+        "--seed-baseline", action="store_true", help="Use seed-based baseline predictor instead of pipeline"
+    )
     bt_unified_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
     bt_unified_parser.set_defaults(func=run_backtest_unified)
 
@@ -718,16 +757,17 @@ def register(subparsers):
         help="Validate proprietary metrics against public Torvik/Sports Reference data",
     )
     vm_parser.add_argument("--year", type=int, default=2025, help="Season year to validate")
-    vm_parser.add_argument("--years", default=None,
-                           help="Comma-separated years for multi-year validation")
-    vm_parser.add_argument("--holdout-years", default=None,
-                           help="Comma-separated holdout years (disjoint from --years)")
-    vm_parser.add_argument("--historical-dir", default="data/raw/historical",
-                           help="Directory with historical game JSONs")
-    vm_parser.add_argument("--raw-dir", default="data/raw",
-                           help="Directory with Torvik/SportsRef JSONs")
-    vm_parser.add_argument("--sensitivity", action="store_true",
-                           help="Run constant sensitivity analysis (read-only diagnostic)")
+    vm_parser.add_argument("--years", default=None, help="Comma-separated years for multi-year validation")
+    vm_parser.add_argument(
+        "--holdout-years", default=None, help="Comma-separated holdout years (disjoint from --years)"
+    )
+    vm_parser.add_argument(
+        "--historical-dir", default="data/raw/historical", help="Directory with historical game JSONs"
+    )
+    vm_parser.add_argument("--raw-dir", default="data/raw", help="Directory with Torvik/SportsRef JSONs")
+    vm_parser.add_argument(
+        "--sensitivity", action="store_true", help="Run constant sensitivity analysis (read-only diagnostic)"
+    )
     vm_parser.add_argument("--output", "-o", default=None, help="Output JSON report path")
     vm_parser.set_defaults(func=run_validate_metrics)
 
@@ -736,14 +776,12 @@ def register(subparsers):
         "prospective-eval",
         help="Run quasi-prospective (Level 2) evaluation against a frozen pipeline",
     )
-    prospective_parser.add_argument("--freeze-file", required=True,
-                                    help="Path to the pipeline freeze artifact JSON")
-    prospective_parser.add_argument("--year", type=int, required=True,
-                                    help="Tournament year to evaluate")
-    prospective_parser.add_argument("--historical-dir", default="data/raw/historical",
-                                    help="Directory with per-year historical game/metric JSONs")
-    prospective_parser.add_argument("--output", "-o", default=None,
-                                    help="Path to write evaluation report JSON")
+    prospective_parser.add_argument("--freeze-file", required=True, help="Path to the pipeline freeze artifact JSON")
+    prospective_parser.add_argument("--year", type=int, required=True, help="Tournament year to evaluate")
+    prospective_parser.add_argument(
+        "--historical-dir", default="data/raw/historical", help="Directory with per-year historical game/metric JSONs"
+    )
+    prospective_parser.add_argument("--output", "-o", default=None, help="Path to write evaluation report JSON")
     prospective_parser.set_defaults(func=prospective_eval)
 
     # --- validate-rubric ---
@@ -751,10 +789,8 @@ def register(subparsers):
         "validate-rubric",
         help="Run multi-pass rubric validation (PIT, metrics, BMA, ESPN)",
     )
-    vr_parser.add_argument("--passes", default="1,2,3,4",
-                           help="Comma-separated pass numbers to run (default: 1,2,3,4)")
-    vr_parser.add_argument("--config", default="configs/production_2026.json",
-                           help="Production config path")
+    vr_parser.add_argument("--passes", default="1,2,3,4", help="Comma-separated pass numbers to run (default: 1,2,3,4)")
+    vr_parser.add_argument("--config", default="configs/production_2026.json", help="Production config path")
     vr_parser.add_argument("--json", action="store_true", help="Output JSON instead of text")
     vr_parser.set_defaults(func=handle_validate_rubric)
 
@@ -768,14 +804,17 @@ def register(subparsers):
 
     # --- baseline-experiment ---
     from .baseline_experiment import run_baseline_experiment
+
     be_parser = subparsers.add_parser(
         "baseline-experiment",
         help="Run tournament-only baseline experiment (logistic vs seeds)",
     )
-    be_parser.add_argument("--historical-dir", default="data/raw/historical",
-                           help="Directory with historical game/metric JSONs")
-    be_parser.add_argument("--output", "-o", default=None,
-                           help="Output JSON report path (default: artifacts/baseline_experiment.json)")
+    be_parser.add_argument(
+        "--historical-dir", default="data/raw/historical", help="Directory with historical game/metric JSONs"
+    )
+    be_parser.add_argument(
+        "--output", "-o", default=None, help="Output JSON report path (default: artifacts/baseline_experiment.json)"
+    )
     be_parser.set_defaults(func=run_baseline_experiment)
 
     # --- backtest-harness ---
@@ -783,18 +822,17 @@ def register(subparsers):
         "backtest-harness",
         help="Run unified LOYO backtest with structured reports and regression gate",
     )
-    bh_parser.add_argument("--config", default=None,
-                           help="Production config JSON (for pipeline overrides)")
-    bh_parser.add_argument("--historical-dir", default="data/raw/historical",
-                           help="Directory with historical game/metric JSONs")
-    bh_parser.add_argument("--baseline", default=None,
-                           help="Path to baseline JSON for regression gate")
-    bh_parser.add_argument("--years", default=None,
-                           help="Comma-separated years (default: LOYO_YEARS)")
-    bh_parser.add_argument("--kaggle-dir", default=None,
-                           help="Path to Kaggle CSV directory")
-    bh_parser.add_argument("--output", "-o", default=None,
-                           help="Output JSON report path (default: artifacts/backtest_result.json)")
-    bh_parser.add_argument("--save-baseline", default=None, metavar="PATH",
-                           help="Save this run as the new regression baseline at PATH")
+    bh_parser.add_argument("--config", default=None, help="Production config JSON (for pipeline overrides)")
+    bh_parser.add_argument(
+        "--historical-dir", default="data/raw/historical", help="Directory with historical game/metric JSONs"
+    )
+    bh_parser.add_argument("--baseline", default=None, help="Path to baseline JSON for regression gate")
+    bh_parser.add_argument("--years", default=None, help="Comma-separated years (default: LOYO_YEARS)")
+    bh_parser.add_argument("--kaggle-dir", default=None, help="Path to Kaggle CSV directory")
+    bh_parser.add_argument(
+        "--output", "-o", default=None, help="Output JSON report path (default: artifacts/backtest_result.json)"
+    )
+    bh_parser.add_argument(
+        "--save-baseline", default=None, metavar="PATH", help="Save this run as the new regression baseline at PATH"
+    )
     bh_parser.set_defaults(func=run_backtest_harness)
