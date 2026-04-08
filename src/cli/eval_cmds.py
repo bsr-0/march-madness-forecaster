@@ -355,12 +355,21 @@ def run_backtest_unified(args):
                     return str(candidate)
             return None
 
+        def _resolve_historical_games_json(eval_year: int):
+            if historical_games_json:
+                return historical_games_json
+            candidate = Path(f"data/raw/historical/historical_games_{eval_year}.json")
+            if candidate.exists():
+                return str(candidate)
+            return None
+
         def _pipeline_predict_fn_factory(eval_year: int):
             base_years = sorted(set(list(LOYO_YEARS) + years))
             dev_years = [y for y in base_years if y != eval_year and y != 2020]
             eval_rosters_json = _resolve_rosters_json(eval_year)
             eval_teams_json = _resolve_teams_json(eval_year)
             eval_torvik_json = _resolve_torvik_json(eval_year)
+            eval_games_json = _resolve_historical_games_json(eval_year)
             cfg = SOTAPipelineConfig(
                 year=eval_year,
                 mode="calibration",
@@ -379,7 +388,7 @@ def run_backtest_unified(args):
                 kaggle_dir=kaggle_dir,
                 teams_json=eval_teams_json,
                 torvik_json=eval_torvik_json,
-                historical_games_json=historical_games_json,
+                historical_games_json=eval_games_json,
                 roster_json=eval_rosters_json,
                 bracket_json=bracket_json,
                 bracket_source=bracket_source,

@@ -444,7 +444,25 @@ class BartTorvikScraper:
         Closes the gap where ``_check_tournament_date_guard`` only fires on
         live scrapes — this method validates **cached** data timestamps.
         Always raises by default to enforce zero tolerance for contaminated data.
+
+        When ``cutoff_date`` or ``data_as_of`` is present and pre-tournament,
+        the file was date-filtered at scrape time — safe regardless of when
+        the actual scrape happened.
         """
+        # If the data has a cutoff_date proving pre-tournament filtering,
+        # trust it over the scrape timestamp.
+        data_coverage = data.get("data_as_of") or data.get("cutoff_date")
+        if data_coverage:
+            try:
+                from ...pipeline.config import TOURNAMENT_START_DATES
+
+                coverage_date = date.fromisoformat(data_coverage[:10])
+                cutoff = TOURNAMENT_START_DATES.get(year)
+                if cutoff and coverage_date < cutoff:
+                    return  # Data was filtered to pre-tournament
+            except (ImportError, ValueError, TypeError):
+                pass
+
         ts_str = data.get("scraped_at") or data.get("timestamp")
         if not ts_str:
             return
