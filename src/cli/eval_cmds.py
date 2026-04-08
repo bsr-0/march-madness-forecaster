@@ -298,6 +298,8 @@ def run_backtest_unified(args):
     modes = [m.strip() for m in args.modes.split(",")]
     pool_sizes = [int(s) for s in args.pool_sizes.split(",")]
     kaggle_dir = args.kaggle_dir
+    if not kaggle_dir and Path("data/kaggle").exists():
+        kaggle_dir = "data/kaggle"
     teams_json = getattr(args, "input", None)
     bracket_json = getattr(args, "bracket_json", None)
     bracket_source = getattr(args, "bracket_source", "auto")
