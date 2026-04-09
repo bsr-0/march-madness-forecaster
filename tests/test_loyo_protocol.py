@@ -70,7 +70,26 @@ class TestLOYOYears:
         assert 2020 not in LOYO_YEARS
 
     def test_expected_years_present(self):
-        expected = {2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025}
+        expected = {
+            2008,
+            2009,
+            2010,
+            2011,
+            2012,
+            2013,
+            2014,
+            2015,
+            2016,
+            2017,
+            2018,
+            2019,
+            2021,
+            2022,
+            2023,
+            2024,
+            2025,
+            2026,
+        }
         assert set(LOYO_YEARS) == expected
 
     def test_minimum_brier_improvement_legacy(self):
@@ -221,8 +240,12 @@ class TestLOYOValidator:
         result = LOYOResult(
             fold_results=[
                 LOYOFoldResult(
-                    held_out_year=2023, n_train_games=100, n_test_games=30,
-                    brier_score=0.2, log_loss=0.5, accuracy=0.75,
+                    held_out_year=2023,
+                    n_train_games=100,
+                    n_test_games=30,
+                    brier_score=0.2,
+                    log_loss=0.5,
+                    accuracy=0.75,
                 ),
             ],
             mean_brier=0.2,
@@ -254,7 +277,10 @@ class TestFeatureAblator:
         validator = LOYOValidator(years=[2023, 2024])
 
         results = ablator.ablate_features(
-            validator, data, _simple_train_fn, _simple_predict_fn,
+            validator,
+            data,
+            _simple_train_fn,
+            _simple_predict_fn,
             feature_names=["a", "b", "c"],
         )
 
@@ -292,7 +318,10 @@ class TestFeatureAblator:
         validator = LOYOValidator(years=[2023, 2024])
 
         results = ablator.ablate_features(
-            validator, data, _simple_train_fn, _simple_predict_fn,
+            validator,
+            data,
+            _simple_train_fn,
+            _simple_predict_fn,
             feature_names=["a", "b"],
             baseline_brier=0.25,
         )
@@ -464,7 +493,9 @@ class TestFeatureAblatorFamilies:
             y = rng.randint(0, 2, size=n_games).astype(float)
             margins = rng.randn(n_games) * 10
             data_by_year[year] = {
-                "X": X, "y": y, "margins": margins,
+                "X": X,
+                "y": y,
+                "margins": margins,
                 "feature_names": feature_names,
             }
         return data_by_year, feature_names
@@ -560,23 +591,35 @@ class TestFeatureAblatorFamilies:
 
         # Test zero masking
         fam_zero = FeatureFamily(
-            name="zero", family_type="column_group",
-            feature_names=["feat_0"], masking_policy="zero",
+            name="zero",
+            family_type="column_group",
+            feature_names=["feat_0"],
+            masking_policy="zero",
         )
         ablator = FeatureAblator()
         results_zero = ablator.ablate_families(
-            validator, data, _simple_train_fn, _simple_predict_fn,
-            [fam_zero], feature_names,
+            validator,
+            data,
+            _simple_train_fn,
+            _simple_predict_fn,
+            [fam_zero],
+            feature_names,
         )
 
         # Test mean masking
         fam_mean = FeatureFamily(
-            name="mean", family_type="column_group",
-            feature_names=["feat_0"], masking_policy="mean",
+            name="mean",
+            family_type="column_group",
+            feature_names=["feat_0"],
+            masking_policy="mean",
         )
         results_mean = ablator.ablate_families(
-            validator, data, _simple_train_fn, _simple_predict_fn,
-            [fam_mean], feature_names,
+            validator,
+            data,
+            _simple_train_fn,
+            _simple_predict_fn,
+            [fam_mean],
+            feature_names,
         )
 
         # Both should produce valid results (may have same Brier with trivial model,
@@ -597,8 +640,12 @@ class TestFeatureAblatorFamilies:
         ablator = FeatureAblator()
 
         results = ablator.ablate_families(
-            validator, data, _simple_train_fn, _simple_predict_fn,
-            [family], feat_names,
+            validator,
+            data,
+            _simple_train_fn,
+            _simple_predict_fn,
+            [family],
+            feat_names,
         )
 
         assert results["missing"]["keep"] is None
@@ -616,8 +663,12 @@ class TestFeatureAblatorFamilies:
         ablator = FeatureAblator()
 
         results = ablator.ablate_families(
-            validator, data, _simple_train_fn, _simple_predict_fn,
-            families, feat_names,
+            validator,
+            data,
+            _simple_train_fn,
+            _simple_predict_fn,
+            families,
+            feat_names,
         )
 
         assert "fam_a" in results
@@ -677,8 +728,12 @@ class TestComputeValidationDiagnostics:
         """Should compute all expected diagnostic fields."""
         folds = [
             LOYOFoldResult(
-                held_out_year=yr, n_train_games=300, n_test_games=63,
-                brier_score=0.20 + i * 0.01, log_loss=0.5, accuracy=0.75,
+                held_out_year=yr,
+                n_train_games=300,
+                n_test_games=63,
+                brier_score=0.20 + i * 0.01,
+                log_loss=0.5,
+                accuracy=0.75,
             )
             for i, yr in enumerate([2018, 2019, 2021, 2022, 2023, 2024, 2025])
         ]
@@ -699,8 +754,12 @@ class TestComputeValidationDiagnostics:
         """Should warn when DoF/sample ratio exceeds target."""
         folds = [
             LOYOFoldResult(
-                held_out_year=2023, n_train_games=300, n_test_games=63,
-                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+                held_out_year=2023,
+                n_train_games=300,
+                n_test_games=63,
+                brier_score=0.20,
+                log_loss=0.5,
+                accuracy=0.75,
             )
         ]
         diag = compute_validation_diagnostics(folds, n_tuned_constants=58)
@@ -712,8 +771,12 @@ class TestComputeValidationDiagnostics:
         """Should warn that legacy 0.001 is within noise."""
         folds = [
             LOYOFoldResult(
-                held_out_year=yr, n_train_games=300, n_test_games=63,
-                brier_score=0.20 + i * 0.01, log_loss=0.5, accuracy=0.75,
+                held_out_year=yr,
+                n_train_games=300,
+                n_test_games=63,
+                brier_score=0.20 + i * 0.01,
+                log_loss=0.5,
+                accuracy=0.75,
             )
             for i, yr in enumerate([2018, 2019, 2021, 2022, 2023, 2024, 2025])
         ]
@@ -731,8 +794,12 @@ class TestComputeValidationDiagnostics:
         """Integrity note should clearly state retrospective nature."""
         folds = [
             LOYOFoldResult(
-                held_out_year=2023, n_train_games=300, n_test_games=63,
-                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+                held_out_year=2023,
+                n_train_games=300,
+                n_test_games=63,
+                brier_score=0.20,
+                log_loss=0.5,
+                accuracy=0.75,
             )
         ]
         diag = compute_validation_diagnostics(folds)
@@ -760,7 +827,10 @@ class TestFeatureAblatorPoweredThreshold:
         ablator = FeatureAblator()
 
         results = ablator.ablate_features(
-            validator, data, _simple_train_fn, _simple_predict_fn,
+            validator,
+            data,
+            _simple_train_fn,
+            _simple_predict_fn,
             feature_names=["a", "b", "c"],
         )
 
@@ -777,7 +847,10 @@ class TestFeatureAblatorPoweredThreshold:
         ablator = FeatureAblator()
 
         results = ablator.ablate_features(
-            validator, data, _simple_train_fn, _simple_predict_fn,
+            validator,
+            data,
+            _simple_train_fn,
+            _simple_predict_fn,
             feature_names=["a", "b"],
         )
 
@@ -794,7 +867,10 @@ class TestFeatureAblatorPoweredThreshold:
 
         with pytest.raises(HoldoutContaminationError, match="ABLATION LEAKAGE"):
             ablator.ablate_features(
-                validator, data, _simple_train_fn, _simple_predict_fn,
+                validator,
+                data,
+                _simple_train_fn,
+                _simple_predict_fn,
                 feature_names=["a", "b", "c"],
                 dev_eval_split=split,
             )
@@ -807,15 +883,21 @@ class TestLOYOResultSummary:
         """Summary should report standard error of mean Brier."""
         folds = [
             LOYOFoldResult(
-                held_out_year=yr, n_train_games=300, n_test_games=63,
-                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+                held_out_year=yr,
+                n_train_games=300,
+                n_test_games=63,
+                brier_score=0.20,
+                log_loss=0.5,
+                accuracy=0.75,
             )
             for yr in [2023, 2024]
         ]
         result = LOYOResult(
             fold_results=folds,
-            mean_brier=0.20, std_brier=0.0,
-            mean_logloss=0.5, mean_accuracy=0.75,
+            mean_brier=0.20,
+            std_brier=0.0,
+            mean_logloss=0.5,
+            mean_accuracy=0.75,
             year_briers={2023: 0.20, 2024: 0.20},
         )
         s = result.summary()
@@ -825,14 +907,20 @@ class TestLOYOResultSummary:
         """Summary should report DoF/sample ratio."""
         folds = [
             LOYOFoldResult(
-                held_out_year=2023, n_train_games=300, n_test_games=63,
-                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+                held_out_year=2023,
+                n_train_games=300,
+                n_test_games=63,
+                brier_score=0.20,
+                log_loss=0.5,
+                accuracy=0.75,
             )
         ]
         result = LOYOResult(
             fold_results=folds,
-            mean_brier=0.20, std_brier=0.0,
-            mean_logloss=0.5, mean_accuracy=0.75,
+            mean_brier=0.20,
+            std_brier=0.0,
+            mean_logloss=0.5,
+            mean_accuracy=0.75,
             year_briers={2023: 0.20},
         )
         s = result.summary()
@@ -843,14 +931,20 @@ class TestLOYOResultSummary:
         """Summary should warn when DoF/sample ratio is too high."""
         folds = [
             LOYOFoldResult(
-                held_out_year=2023, n_train_games=300, n_test_games=10,
-                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+                held_out_year=2023,
+                n_train_games=300,
+                n_test_games=10,
+                brier_score=0.20,
+                log_loss=0.5,
+                accuracy=0.75,
             )
         ]
         result = LOYOResult(
             fold_results=folds,
-            mean_brier=0.20, std_brier=0.0,
-            mean_logloss=0.5, mean_accuracy=0.75,
+            mean_brier=0.20,
+            std_brier=0.0,
+            mean_logloss=0.5,
+            mean_accuracy=0.75,
             year_briers={2023: 0.20},
         )
         s = result.summary()
@@ -860,14 +954,20 @@ class TestLOYOResultSummary:
         """Summary should state integrity level 3 (retrospective)."""
         folds = [
             LOYOFoldResult(
-                held_out_year=2023, n_train_games=300, n_test_games=63,
-                brier_score=0.20, log_loss=0.5, accuracy=0.75,
+                held_out_year=2023,
+                n_train_games=300,
+                n_test_games=63,
+                brier_score=0.20,
+                log_loss=0.5,
+                accuracy=0.75,
             )
         ]
         result = LOYOResult(
             fold_results=folds,
-            mean_brier=0.20, std_brier=0.0,
-            mean_logloss=0.5, mean_accuracy=0.75,
+            mean_brier=0.20,
+            std_brier=0.0,
+            mean_logloss=0.5,
+            mean_accuracy=0.75,
             year_briers={2023: 0.20},
         )
         s = result.summary()
