@@ -17,6 +17,10 @@ concurrency:
   group: outcome-logging
   cancel-in-progress: true
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   log-outcomes:
     name: "Scrape Results & Log Outcomes"
@@ -112,3 +116,7 @@ jobs:
           git add artifacts/outcome_log_*.json data/raw/historical/tournament_results_*.json
           git commit -m "chore: update tournament outcome log ($(date -u +%Y-%m-%d))"
           git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create --fill --base main)
+          gh pr merge --squash --delete-branch --auto "$PR_URL"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
