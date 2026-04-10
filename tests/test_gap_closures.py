@@ -118,8 +118,8 @@ class TestSimpleFeatureSet:
         from src.pipeline.sota import SIMPLE_FEATURE_SET
 
         assert (
-            len(SIMPLE_FEATURE_SET) == 10
-        )  # Forward-selected features: elo, warp, orb, momentum, tempo, sos, opp_to, top5_rapm, ap_rank, win_pct
+            len(SIMPLE_FEATURE_SET) == 9
+        )  # Observation-rate pruning removed preseason_ap_rank from the simple set.
 
     def test_simple_has_momentum(self):
         from src.pipeline.sota import SIMPLE_FEATURE_SET

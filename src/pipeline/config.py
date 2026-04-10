@@ -133,8 +133,6 @@ FIXED_FEATURE_SET = [
     "diff_sos_adj_em",
     # Elo — [538][KAG]: captures full-season trajectory in single metric
     "diff_elo_rating",
-    # Free throw % — [KUB]: most stable shooting metric; key in close games
-    "diff_free_throw_pct",
     # Win % — [KAG]: simplest, strongest Kaggle baseline across all submissions
     "diff_win_pct",
     # 3PT shooting — [VAR]: mean and variance both have independent tournament signal
@@ -146,8 +144,6 @@ FIXED_FEATURE_SET = [
     # Experience/continuity — [KAG]: consistent top-10 feature across submissions
     "diff_avg_experience",
     "diff_roster_continuity",
-    # Preseason expectations
-    "diff_preseason_ap_rank",
     # Absolute-level features — [KP]: game quality context for calibration
     "abs_adj_off_eff",
     "abs_adj_def_eff",
@@ -157,15 +153,10 @@ FIXED_FEATURE_SET = [
     "seed_diff",
     # three_pt_seed_interaction — [VAR]: volatile 3PT shooting × seed diff amplifies upsets
     "three_pt_seed_interaction",
-    # External rating composite — [KAG]: meta-ranking of 100+ systems (WS3)
-    "diff_external_rating_composite",
-    "diff_external_rating_spread",
     # Momentum — late-season trajectory
     "diff_momentum",
     # Tournament resume composite
     "diff_tournament_resume",
-    # Home-court dependence
-    "diff_home_court_dependence",
 ]
 
 
@@ -183,7 +174,6 @@ SIMPLE_FEATURE_SET = [
     "diff_sos_adj_em",  # [KAG] Step 6: schedule strength
     "diff_opp_to_rate",  # [OL] Step 7: defensive Four Factors
     "diff_top5_rapm",  # [RAPM] Step 9: star player quality
-    "diff_preseason_ap_rank",  # Step 10: preseason expectations
     "diff_win_pct",  # [KAG] Step 14: simplest quality signal
 ]
 

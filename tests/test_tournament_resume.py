@@ -283,8 +283,8 @@ class TestTeamFeaturesIntegration:
     """Tests that tournament_resume is properly wired into TeamFeatures."""
 
     def test_team_feature_dim_includes_resume(self):
-        """TEAM_FEATURE_DIM should be 86 (current dimension after feature additions)."""
-        assert TEAM_FEATURE_DIM == 86
+        """TEAM_FEATURE_DIM should reflect the pruned production vector width."""
+        assert TEAM_FEATURE_DIM == 46
 
     def test_to_vector_length_matches_dim(self):
         """to_vector() output length should equal TEAM_FEATURE_DIM."""
@@ -316,14 +316,10 @@ class TestTeamFeaturesIntegration:
         idx = names.index("tournament_resume")
         assert v[idx] == pytest.approx(0.75)
 
-    def test_home_court_dependence_in_vector(self):
-        """home_court_dependence should be in both feature names and vector."""
-        t = TeamFeatures(team_id="test", team_name="Test", seed=1, region="East")
-        t.home_court_dependence = 5.5
-        v = t.to_vector()
+    def test_home_court_dependence_removed_from_vector(self):
+        """home_court_dependence was pruned from the model-facing vector."""
         names = TeamFeatures.get_feature_names()
-        idx = names.index("home_court_dependence")
-        assert v[idx] == pytest.approx(5.5)
+        assert "home_court_dependence" not in names
 
 
 class TestMatchupFeatureIntegration:
@@ -365,11 +361,11 @@ class TestFixedFeatureSetIntegration:
 
         assert "diff_tournament_resume" in FIXED_FEATURE_SET
 
-    def test_diff_home_court_dependence_in_fixed_set(self):
-        """diff_home_court_dependence should be in FIXED_FEATURE_SET."""
+    def test_diff_home_court_dependence_removed_from_fixed_set(self):
+        """diff_home_court_dependence was pruned from FIXED_FEATURE_SET."""
         from src.pipeline.sota import FIXED_FEATURE_SET
 
-        assert "diff_home_court_dependence" in FIXED_FEATURE_SET
+        assert "diff_home_court_dependence" not in FIXED_FEATURE_SET
 
     def test_fixed_feature_set_not_too_large(self):
         """FIXED_FEATURE_SET should not exceed 30 features (overfitting guard)."""
@@ -562,4 +558,4 @@ class TestOverfittingSafeguards:
         n_features = len(FIXED_FEATURE_SET)
         assert n_features <= 35, f"{n_features} features exceeds budget for ~600 samples"
         # Track current count (updated when features are added/removed)
-        assert n_features == 31, f"Expected 31 features, got {n_features}"
+        assert n_features == 26, f"Expected 26 features, got {n_features}"

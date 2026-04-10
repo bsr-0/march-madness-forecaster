@@ -333,23 +333,13 @@ def test_feature_engineering_receives_context_from_torvik_data():
     assert features.coach_tournament_appearances == 12
     assert features.conf_tourney_champion == 1.0
 
-    # Also verify it ends up in the vector
+    # These context values are stored on TeamFeatures but pruned from the vector.
     vec = features.to_vector(include_embeddings=False)
     names = features.get_feature_names(include_embeddings=False)
-
-    # Find the index of preseason_ap_rank in the vector
-    ap_idx = names.index("preseason_ap_rank")
-    # FIX 2.3: AP rank 5 → 1/(1 + 5/10) = 1/1.5 = 0.6667 (smooth decay)
-    assert abs(vec[ap_idx] - 1.0 / (1.0 + 5 / 10.0)) < 1e-6
-
-    # Coach tournament exp (12 apps)
-    coach_idx = names.index("coach_tournament_exp")
-    import numpy as np
-    assert abs(vec[coach_idx] - np.log1p(12) / np.log1p(30)) < 1e-6
-
-    # Conf tourney champion = 1.0
-    champ_idx = names.index("conf_tourney_champ")
-    assert vec[champ_idx] == 1.0
+    assert "preseason_ap_rank" not in names
+    assert "coach_tournament_exp" not in names
+    assert "conf_tourney_champ" not in names
+    assert len(vec) == len(names)
 
 
 def test_scraper_init_creates_cache_dir():

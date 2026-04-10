@@ -366,8 +366,8 @@ class TestMasseyOrdinalsGuard:
                 assert "normalized" in entry
                 assert 0.0 <= entry["normalized"] <= 1.0
 
-    def test_external_rating_composite_nonzero_in_feature_vector(self, kaggle_dir_large, tmp_path):
-        """The external_rating_composite feature must be non-zero when Massey data exists."""
+    def test_external_rating_composite_pruned_from_vector(self, kaggle_dir_large, tmp_path):
+        """External rating features are no longer part of the model-facing vector."""
         from src.data.features.feature_engineering import TeamFeatures
         from src.data.scrapers.external_ratings import ExternalRatingsLoader
 
@@ -386,18 +386,15 @@ class TestMasseyOrdinalsGuard:
         features.external_rating_composite = comp.composite_rating
         features.external_rating_spread = comp.rating_spread
 
-        # Convert to vector and verify the external_rating_composite is non-zero
         vec = features.to_vector(include_embeddings=False)
         names = TeamFeatures.get_feature_names()
 
-        assert "diff_external_rating_composite" not in names or True, (
-            "diff_external_rating_composite is a matchup-level feature"
-        )
-
-        # Verify the raw feature value is set
+        assert "external_rating_composite" not in names
+        assert "external_rating_spread" not in names
         assert features.external_rating_composite > 0, (
             "external_rating_composite should be > 0 for a ranked team"
         )
+        assert len(vec) == len(names)
 
     def test_populate_from_massey_ordinals_returns_positive_count(
         self, kaggle_dir_large, tmp_path
@@ -423,13 +420,11 @@ class TestMasseyOrdinalsGuard:
             "Elo is a core signal for tournament predictions"
         )
 
-    def test_fixed_feature_set_includes_composite(self):
-        """The FIXED_FEATURE_SET must include diff_external_rating_composite."""
+    def test_fixed_feature_set_excludes_composite(self):
+        """The FIXED_FEATURE_SET should exclude pruned external rating features."""
         from src.pipeline.sota import FIXED_FEATURE_SET
 
-        assert "diff_external_rating_composite" in FIXED_FEATURE_SET, (
-            "FIXED_FEATURE_SET missing diff_external_rating_composite"
-        )
+        assert "diff_external_rating_composite" not in FIXED_FEATURE_SET
 
     def test_massey_blend_weight_positive(self):
         """The massey_blend_weight config must be > 0."""

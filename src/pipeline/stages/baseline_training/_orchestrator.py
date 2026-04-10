@@ -438,9 +438,9 @@ def _build_current_year_samples(pipeline, game_flows: Dict[str, List[GameFlow]])
             15: _tf.roster_continuity,
             17: _tf.avg_experience,
             18: _tf.bench_depth_score,
-            55: _tf.top5_minutes_share,
-            74: _tf.backcourt_rapm,
-            75: _tf.frontcourt_rapm,
+            54: _tf.top5_minutes_share,
+            69: _tf.backcourt_rapm,
+            70: _tf.frontcourt_rapm,
         }
 
     # SEED LEAKAGE FIX: Seeds are assigned on Selection Sunday (~March

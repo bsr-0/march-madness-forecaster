@@ -174,6 +174,8 @@ def build_synthetic_training_data(
     try:
         from src.data.features.feature_engineering import TeamFeatures
         names = TeamFeatures.get_feature_names()
+        if len(names) != n_features:
+            names = [f"feature_{i}" for i in range(n_features)]
     except Exception:
         names = [f"feature_{i}" for i in range(n_features)]
 

@@ -245,13 +245,13 @@ def enrich_roster_rapm(
         player.warp = max(0.0, bpm * mpg * gp / (40.0 * 300.0)) if mpg > 0 and gp > 0 else 0.0
 
 
-def compute_roster_feature_overlay(players_raw: List[Dict], team_id: str = "") -> Dict[str, float]:
+def compute_roster_feature_overlay(players_raw: List[Dict], team_id: str = "") -> Dict[int, float]:
     """Compute player-level feature values from a roster JSON player list.
 
     Returns a dict keyed by feature index (int) → float value, suitable for
     overlaying onto a team vector produced by ``metrics_to_team_vector()``.
 
-    Covers indices: 11-14, 15, 17-18, 55, 74-75.
+    Covers indices: 11-14, 15, 17-18, 54, 69-70.
     """
     from ...data.models.player import Position
 
@@ -325,7 +325,7 @@ def compute_roster_feature_overlay(players_raw: List[Dict], team_id: str = "") -
         15: roster_continuity,
         17: avg_experience,
         18: bench_depth,
-        55: top5_minutes_share,
+        54: top5_minutes_share,
         69: backcourt_rapm,
         70: frontcourt_rapm,
     }
