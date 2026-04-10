@@ -348,11 +348,11 @@ class TestWABPoisson:
 # ---------------------------------------------------------------------------
 
 class TestFeatureVectorIntegration:
-    """Ensure SOR and WAB_pb are in the feature vector at correct positions."""
+    """Ensure the pruned feature vector still exposes WAB_pb correctly."""
 
     def test_feature_dim_updated(self):
-        """TEAM_FEATURE_DIM should be 86 (current dimension after feature additions)."""
-        assert TEAM_FEATURE_DIM == 86
+        """TEAM_FEATURE_DIM should match the pruned production vector."""
+        assert TEAM_FEATURE_DIM == 46
 
     def test_to_vector_length(self):
         """to_vector() output length should match TEAM_FEATURE_DIM."""
@@ -367,14 +367,14 @@ class TestFeatureVectorIntegration:
         names = TeamFeatures.get_feature_names()
         assert len(names) == TEAM_FEATURE_DIM
 
-    def test_sor_in_feature_names(self):
-        """'sor' and 'wab_poisson' should be in feature names."""
+    def test_wab_poisson_in_feature_names(self):
+        """'wab_poisson' should remain in feature names after pruning."""
         names = TeamFeatures.get_feature_names()
-        assert 'sor' in names, "Missing 'sor' in feature names"
+        assert 'sor' not in names, "sor should be pruned from the feature vector"
         assert 'wab_poisson' in names, "Missing 'wab_poisson' in feature names"
 
-    def test_sor_value_in_vector(self):
-        """SOR and WAB_pb values should appear in the vector."""
+    def test_wab_poisson_value_in_vector(self):
+        """WAB_pb value should appear in the vector."""
         tf = TeamFeatures(
             team_id="test", team_name="Test", seed=1, region="East",
             sor=0.85, wab_poisson=3.5,
@@ -382,10 +382,8 @@ class TestFeatureVectorIntegration:
         vec = tf.to_vector()
         names = TeamFeatures.get_feature_names()
 
-        sor_idx = names.index('sor')
         wab_pb_idx = names.index('wab_poisson')
 
-        assert abs(vec[sor_idx] - 0.85) < 1e-10, f"SOR value mismatch: {vec[sor_idx]}"
         assert abs(vec[wab_pb_idx] - 3.5) < 1e-10, f"WAB_pb value mismatch: {vec[wab_pb_idx]}"
 
     def test_vector_names_alignment(self):
@@ -399,9 +397,8 @@ class TestFeatureVectorIntegration:
 
         # FIX C4: wab removed from feature vector (near-redundant with wab_poisson)
         assert 'wab' not in names, "wab should be removed (FIX C4)"
-        sor_idx = names.index('sor')
         wab_pb_idx = names.index('wab_poisson')
-        assert wab_pb_idx == sor_idx + 1, "WAB_poisson should immediately follow SOR"
+        assert wab_pb_idx >= 0
 
 
 # ---------------------------------------------------------------------------

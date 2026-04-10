@@ -232,19 +232,18 @@ class TestNaNConsistency:
             assert math.isnan(getattr(tf, attr)), f"{attr} should default to NaN"
 
     def test_metrics_to_team_vector_default_nan(self):
-        """metrics_to_team_vector with no external ratings should produce NaN."""
+        """metrics_to_team_vector no longer exposes external/Massey columns."""
         from src.data.features.proprietary_metrics import IncrementalMetricsEngine
+        from src.data.features.feature_engineering import TeamFeatures
 
         # Create a minimal metrics object
         try:
             from src.data.features.proprietary_metrics import ProprietaryTeamMetrics
             m = ProprietaryTeamMetrics()
             v = IncrementalMetricsEngine.metrics_to_team_vector(m)
-            # external_rating_composite at index 71 should be NaN
-            assert np.isnan(v[71]), "v[71] (external_rating_composite) should be NaN"
-            assert np.isnan(v[72]), "v[72] (external_rating_spread) should be NaN"
-            # massey features at indices 74-85 should be NaN
-            for i in range(74, 86):
-                assert np.isnan(v[i]), f"v[{i}] should be NaN"
+            assert len(v) == len(TeamFeatures.get_feature_names(include_embeddings=False))
+            names = TeamFeatures.get_feature_names(include_embeddings=False)
+            assert "external_rating_composite" not in names
+            assert "massey_pom" not in names
         except Exception:
             pytest.skip("Could not construct ProprietaryTeamMetrics for testing")

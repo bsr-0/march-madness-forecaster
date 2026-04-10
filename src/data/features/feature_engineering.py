@@ -66,14 +66,10 @@ REMOVED_REDUNDANCIES = [
 ]
 
 
-# FIX #10: Canonical team feature dimension.  This MUST match the length of
-# to_vector() output (without embeddings) and get_feature_names().  An
-# assertion is checked at module load time and at runtime.
-# FIX 2.4: close_game_record REMOVED (pure noise — binomial draw on 5-10
-# games with stability=0.1, near-zero predictive power per academic lit).
-# FIX 2.3: preseason_ap_rank encoding smoothed (was cliff at #25→unranked).
-# Down from 67 → 66 team features.
-TEAM_FEATURE_DIM = 86  # 74 base + 12 Massey multi-system (10 systems + rank_mean + rank_std)
+# Canonical team feature dimension after observation-rate pruning.
+# Any feature below the 80% real-observation threshold across 2012-2026
+# tournament-team vectors was removed from the model-facing vector.
+TEAM_FEATURE_DIM = 46
 
 # Normalization constants for interaction features in create_matchup_features()
 TEMPO_NORMALIZATION = 4624.0  # 68^2 — square of median college basketball tempo (~68 possessions/game)
@@ -514,219 +510,52 @@ class TeamFeatures:
             Feature vector as numpy array (TEAM_FEATURE_DIM elements)
         """
         features = [
-            # Core efficiency (3) — adj_em REMOVED (exact linear of off-def)
             self.adj_offensive_efficiency,
             self.adj_defensive_efficiency,
             self.adj_tempo,
-
-            # Four Factors offense (4)
             self.effective_fg_pct,
             self.turnover_rate,
             self.offensive_reb_rate,
             self.free_throw_rate,
-
-            # Four Factors defense (4)
             self.opp_effective_fg_pct,
             self.opp_turnover_rate,
             self.defensive_reb_rate,
             self.opp_free_throw_rate,
-
-            # Player metrics (5) — continuity_learning_rate REMOVED (det. of roster_continuity)
             self.total_rapm,
             self.top5_rapm,
             self.bench_rapm,
             self.total_warp,
             self.roster_continuity,
-            self.transfer_impact,
-
-            # Experience (3)
             self.avg_experience,
             self.bench_depth_score,
-            self.injury_risk,
-
-            # Volatility (4) — close_game_record REMOVED (FIX 2.4: pure noise)
-            self.avg_lead_volatility,
-            self.avg_entropy,
-            self.lead_sustainability,
-            self.comeback_factor,
-
-            # Shot quality / xP (2)
             self.avg_xp_per_possession,
             self.shot_distribution_score,
-
-            # Schedule (4)
             self.sos_adj_em,
             self.sos_opp_o,
             self.sos_opp_d,
             self.ncsos_adj_em,
-
-            # Luck (1) — consistency REMOVED (near-inverse of pace_adj_var)
             self.luck,
-
-            # FIX C4: wab REMOVED — algebraically identical to wab_poisson
-            # (same log5 formula, same bubble EM prior, same HCA adjustment;
-            # differ only in clip bounds [0.01,0.99] vs [0.005,0.995]).
-            # Keep the more principled Poisson Binomial formulation.
-
-            # Poisson Binomial resume metrics (2)
-            # SOR: schedule-aware record impressiveness [0,1]
-            self.sor,
-            # WAB via Poisson Binomial expected wins (canonical)
             self.wab_poisson,
-
-            # Momentum (1) — momentum_5g REMOVED (~r=0.85 with momentum)
             self.momentum,
-
-            # Variance / upset risk (2)
             self.three_pt_variance,
             self.pace_adjusted_variance,
-
-            # Elo (1)
             self.elo_rating,
-
-            # Free throw shooting skill (1)
-            self.free_throw_pct,
-
-            # Ball movement / execution (2)
-            self.assist_to_turnover_ratio,
-            self.assist_rate,
-
-            # Defensive disruption (2)
-            self.steal_rate,
-            self.block_rate,
-
-            # Opponent shot selection (2)
             self.opp_two_pt_pct_allowed,
             self.opp_three_pt_attempt_rate,
-
-            # Conference quality (1)
             self.conference_adj_em,
-
-            # --- Exhaustive audit additions (reduced) ---
-            # barthag REMOVED, two_pt_pct REMOVED, efficiency_ratio REMOVED,
-            # seed_efficiency_residual REMOVED
-
-            # Shooting splits (2) — two_pt_pct REMOVED (~r=0.88 with efg)
             self.three_pt_pct,
             self.three_pt_rate,
-
-            # Defensive xP (1)
             self.defensive_xp_per_possession,
-
-            # Win percentage (1)
             self.win_pct,
-
-            # Elite SOS (1)
-            self.elite_sos,
-
-            # Q1 win % (1)
-            self.q1_win_pct,
-
-            # Foul rate (1)
-            self.foul_rate,
-
-            # 3-Point regression signal (1)
             self.three_pt_regression_signal,
-
-            # --- Schedule/context features ---
-
-            # Rest days (1) — capped at 14 to prevent outlier inflation
             min(self.rest_days, 14.0),
-
-            # Top-5 minutes share (1)
             self.top5_minutes_share,
-
-            # Preseason AP rank (1) — smooth decay so unranked teams get a
-            # non-zero value instead of a cliff at #25→0.0.
-            # FIX 2.3: 1/(1 + rank/10) for ranked; 1/(1 + 30/10) = 0.25 for
-            # unranked.  Preserves ordinal information without discontinuity.
-            1.0 / (1.0 + self.preseason_ap_rank / 10.0) if self.preseason_ap_rank > 0 else 0.25,
-
-            # FIX C3: Coach features consolidated from 7 → 3 (were 9% of dims).
-            # Academic lit shows coaching signal is weak/noisy for tournament
-            # prediction.  Per-stage features (F4/E8/S16) were highly correlated
-            # with each other and with deep_run_rate.
-
-            # Coach tournament experience (1) — log-scaled appearances
-            float(np.log1p(self.coach_tournament_appearances) / np.log1p(30)),
-
-            # Coach tournament win rate (1) — strongest coaching predictor
-            self.coach_tournament_win_rate,
-
-            # Coach postseason composite (1) — weighted blend of deep-run rate,
-            # F4/E8 appearances, and stage consistency.  Replaces 4 separate
-            # features (deep_run_rate, stage_consistency, f4/e8/s16_appearances).
-            float(
-                0.50 * self.coach_deep_run_rate
-                + 0.30 * (np.log1p(self.coach_f4_appearances) / np.log1p(15))
-                + 0.15 * (np.log1p(self.coach_e8_appearances) / np.log1p(20))
-                + 0.05 * self.coach_stage_consistency
-            ),
-
-            # Graph-theoretic SOS (2) — standalone PageRank and multi-hop
-            # Previously baked into sos_adj_em via hardcoded weights; now
-            # exposed independently so the ensemble can learn optimal weighting.
-            # This is the key architectural fix: let the model decide how much
-            # weight to give graph-propagated schedule quality vs traditional SOS.
-            self.pagerank_sos,
-            self.multi_hop_sos,
-
-            # Win quality metrics (3) — from schedule graph analysis
-            # best_win_percentile: NCAA committee's #1 tiebreaker metric
-            # paper_tiger_score: flags inflated records (upset predictor)
-            # dominance_ratio: margin-quality interaction
-            self.best_win_percentile,
-            self.paper_tiger_score,
-            self.dominance_ratio,
-
-            # Per-game pace variance (1) — upset risk amplifier
             self.pace_variance,
-
-            # Conference tournament champion (1) — binary
-            self.conf_tourney_champion,
-
-            # --- KenPom / ShotQuality replacements (reduced) ---
-            # true_shooting_pct REMOVED, opp_true_shooting_pct REMOVED
-            # momentum_5g REMOVED
-
-            # Neutral-site win % (1)
             self.neutral_site_win_pct,
-
-            # Home-court dependence (1)
-            self.home_court_dependence,
-
-            # Tournament resume composite (1) — Bayesian-shrunk opponent quality
             self.tournament_resume,
-
-            # C4: transition_efficiency + defensive_transition_vulnerability REMOVED
-            # (speculative formula — pace_surplus * (AdjO/100-1) has no empirical basis)
-
-            # Position-specific depth (2)
             self.backcourt_rapm,
             self.frontcourt_rapm,
-
-            # External ratings (2) — WS3: orthogonal signal from rating systems
-            # NaN when no external data available; tree models handle natively
-            self.external_rating_composite,
-            self.external_rating_spread,
-
-            # Seed (1) - log-transformed per rubric
             float(np.log1p(17 - self.seed) / np.log1p(16)),
-
-            # Massey multi-system individual ratings (10) — NaN when unavailable
-            self.massey_pom,
-            self.massey_sag,
-            self.massey_mor,
-            self.massey_dol,
-            self.massey_col,
-            self.massey_wol,
-            self.massey_rth,
-            self.massey_ap,
-            self.massey_usa,
-            self.massey_rpi,
-            # Massey derived agreement metrics (2)
-            self.massey_rank_mean,
-            self.massey_rank_std,
         ]
 
         result = np.array(features, dtype=np.float64)
@@ -787,89 +616,23 @@ class TeamFeatures:
         TEAM_FEATURE_DIM.
         """
         names = [
-            # Core efficiency (3)
             'adj_off_eff', 'adj_def_eff', 'adj_tempo',
-            # Four Factors offense (4)
             'efg_pct', 'to_rate', 'orb_rate', 'ft_rate',
-            # Four Factors defense (4)
             'opp_efg_pct', 'opp_to_rate', 'drb_rate', 'opp_ft_rate',
-            # Player metrics (6)
             'total_rapm', 'top5_rapm', 'bench_rapm', 'total_warp',
-            'roster_continuity', 'transfer_impact',
-            # Experience (3)
-            'avg_experience', 'bench_depth', 'injury_risk',
-            # Volatility (4) — close_game_record REMOVED (FIX 2.4)
-            'lead_volatility', 'entropy', 'lead_sustainability', 'comeback_factor',
-            # Shot quality / xP (2)
+            'roster_continuity', 'avg_experience', 'bench_depth',
             'xp_per_poss', 'shot_distribution',
-            # Schedule (4)
             'sos_adj_em', 'sos_opp_o', 'sos_opp_d', 'ncsos_adj_em',
-            # Luck (1)
-            'luck',
-            # FIX C4: 'wab' REMOVED (near-redundant with wab_poisson)
-            # Poisson Binomial resume metrics (2)
-            'sor', 'wab_poisson',
-            # Momentum (1)
-            'momentum',
-            # Variance / upset risk (2)
-            'three_pt_variance', 'pace_adj_variance',
-            # Elo (1)
-            'elo_rating',
-            # Free throw shooting skill (1)
-            'free_throw_pct',
-            # Ball movement / execution (2)
-            'assist_to_turnover', 'assist_rate',
-            # Defensive disruption (2)
-            'steal_rate', 'block_rate',
-            # Opponent shot selection (2)
+            'luck', 'wab_poisson', 'momentum',
+            'three_pt_variance', 'pace_adj_variance', 'elo_rating',
             'opp_two_pt_pct_allowed', 'opp_three_pt_attempt_rate',
-            # Conference quality (1)
             'conference_adj_em',
-            # Shooting splits (2)
             'three_pt_pct', 'three_pt_rate',
-            # Defensive xP (1)
-            'def_xp_per_poss',
-            # Win percentage (1)
-            'win_pct',
-            # Elite SOS (1)
-            'elite_sos',
-            # Q1 win % (1)
-            'q1_win_pct',
-            # Foul rate (1)
-            'foul_rate',
-            # 3-Point regression signal (1)
-            'three_pt_regression',
-            # Schedule/context features
-            'rest_days',
-            'top5_minutes_share',
-            'preseason_ap_rank',
-            # FIX C3: coach features consolidated 7→3
-            'coach_tournament_exp',
-            'coach_tournament_win_rate',
-            'coach_postseason_score',
-            # Graph-theoretic SOS (2)
-            'pagerank_sos', 'multi_hop_sos',
-            # Win quality metrics (3)
-            'best_win_percentile', 'paper_tiger_score', 'dominance_ratio',
-            'pace_variance',
-            'conf_tourney_champ',
-            # KenPom / ShotQuality replacements (reduced)
-            'neutral_site_win_pct',
-            'home_court_dependence',
-            # Tournament resume composite (1)
-            'tournament_resume',
-            # C4: 'transition_efficiency', 'defensive_transition_vulnerability' REMOVED
-            'backcourt_rapm', 'frontcourt_rapm',
-            # External ratings (2) — WS3
-            'external_rating_composite', 'external_rating_spread',
-            # Seed (1)
+            'def_xp_per_poss', 'win_pct', 'three_pt_regression',
+            'rest_days', 'top5_minutes_share',
+            'pace_variance', 'neutral_site_win_pct',
+            'tournament_resume', 'backcourt_rapm', 'frontcourt_rapm',
             'seed_strength',
-            # Massey multi-system individual ratings (10)
-            'massey_pom', 'massey_sag', 'massey_mor', 'massey_dol',
-            'massey_col', 'massey_wol', 'massey_rth', 'massey_ap',
-            'massey_usa', 'massey_rpi',
-            # Massey derived agreement metrics (2)
-            'massey_rank_mean', 'massey_rank_std',
         ]
 
         # FIX #10: Static assertion at call time

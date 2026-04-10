@@ -2795,7 +2795,7 @@ class IncrementalMetricsEngine:
         external_rating_spread: float = float("nan"),
         massey_features=None,
     ) -> np.ndarray:
-        """Convert ProprietaryTeamMetrics to a 66-dim team feature vector.
+        """Convert ProprietaryTeamMetrics to the canonical team feature vector.
 
         Matches the exact ordering in TeamFeatures.to_vector() so that
         matchup vectors built from incremental metrics are compatible with
@@ -2804,112 +2804,51 @@ class IncrementalMetricsEngine:
         Features requiring roster/PBP data (RAPM, volatility, etc.) are
         set to zero.  Features requiring external data (AP rank, coach
         data) use neutral defaults.
-
-        Gap #1: Extended from 64 to 66 dims to include external_rating_composite
-        and external_rating_spread (indices 66-67), matching TEAM_FEATURE_DIM=68.
-        This ensures feature name alignment between training and inference.
         """
         from .feature_engineering import TEAM_FEATURE_DIM
 
         v = np.zeros(TEAM_FEATURE_DIM, dtype=np.float64)
-        # Core efficiency (3)
         v[0] = m.adj_offensive_efficiency
         v[1] = m.adj_defensive_efficiency
         v[2] = m.adj_tempo
-        # Four Factors offense (4)
         v[3] = m.effective_fg_pct
         v[4] = m.turnover_rate
         v[5] = m.offensive_reb_rate
         v[6] = m.free_throw_rate
-        # Four Factors defense (4)
         v[7] = m.opp_effective_fg_pct
         v[8] = m.opp_turnover_rate
         v[9] = m.defensive_reb_rate
         v[10] = m.opp_free_throw_rate
-        # Player metrics (6): indices 11-16 → zero (no roster data)
-        # Experience (3): indices 17-19 → zero (no roster data)
-        # Volatility (4): indices 20-23 → zero (no PBP data)
-        # Shot quality (2)
-        v[24] = m.offensive_xp_per_possession
-        v[25] = m.shot_distribution_score
-        # Schedule (4)
-        v[26] = m.sos_adj_em
-        v[27] = m.sos_opp_o
-        v[28] = m.sos_opp_d
-        v[29] = m.ncsos_adj_em
-        # Luck (1)
-        v[30] = m.luck
-        # FIX C4: wab REMOVED (near-redundant with wab_poisson)
-        # Poisson Binomial resume metrics (2) — SOR + WAB_poisson
-        v[31] = m.sor
-        v[32] = m.wab_poisson
-        # Momentum (1)
-        v[33] = m.momentum
-        # Variance (2)
-        v[34] = m.three_pt_variance
-        v[35] = m.pace_adjusted_variance
-        # Elo (1)
-        v[36] = m.elo_rating
-        # Free throw % (1)
-        v[37] = m.free_throw_pct
-        # Ball movement (2)
-        v[38] = m.assist_to_turnover_ratio
-        v[39] = m.assist_rate
-        # Defensive disruption (2)
-        v[40] = m.steal_rate
-        v[41] = m.block_rate
-        # Opponent shot selection (2)
-        v[42] = m.opp_two_pt_pct_allowed
-        v[43] = m.opp_three_pt_attempt_rate
-        # Conference quality (1)
-        v[44] = m.conference_adj_em
-        # Shooting splits (2)
-        v[45] = m.three_pt_pct
-        v[46] = m.three_pt_rate
-        # Defensive xP (1)
-        v[47] = m.defensive_xp_per_possession
-        # Win % (1)
-        v[48] = m.win_pct
-        # Elite SOS (1)
-        v[49] = m.elite_sos
-        # Q1 win % (1)
-        v[50] = m.q1_win_pct
-        # Foul rate (1)
-        v[51] = m.foul_rate
-        # 3PT regression (1)
-        v[52] = m.three_pt_regression_signal
-        # Rest days (1) — capped at 14
-        v[53] = min(m.rest_days, 14.0)
-        # Top5 minutes share (1) — zero (no roster)
-        v[54] = 0.0
-        # Preseason AP rank (1) — default unranked: 0.25
-        v[55] = 0.25
-        # FIX C3: Coach features consolidated 7→3
-        # Coach tournament exp (1) — default 0
-        v[56] = 0.0
-        # Coach tournament win rate (1) — default 0
-        v[57] = 0.0
-        # Coach postseason composite (1) — default 0
-        v[58] = 0.0
-        # Graph-theoretic SOS (2) — default 0 (no graph data incrementally)
-        v[59] = 0.0  # pagerank_sos
-        v[60] = 0.0  # multi_hop_sos
-        # Win quality metrics (3) — default 0 (no graph data incrementally)
-        v[61] = 0.0  # best_win_percentile
-        v[62] = 0.0  # paper_tiger_score
-        v[63] = 0.0  # dominance_ratio
-        # Pace variance (1)
-        v[64] = m.pace_variance
-        # Conf tourney champion (1) — 0 (not known incrementally)
-        v[65] = 0.0
-        # Neutral-site win % (1)
-        v[66] = m.neutral_site_win_pct
-        # Home court dependence (1)
-        v[67] = m.home_court_dependence
-        # Tournament resume composite (1) — Bayesian-shrunk opponent quality
+        # Player / experience features are overlaid later from roster data:
+        # total_rapm, top5_rapm, bench_rapm, total_warp, roster_continuity,
+        # avg_experience, bench_depth, top5_minutes_share, backcourt_rapm, frontcourt_rapm.
+        v[18] = m.offensive_xp_per_possession
+        v[19] = m.shot_distribution_score
+        v[20] = m.sos_adj_em
+        v[21] = m.sos_opp_o
+        v[22] = m.sos_opp_d
+        v[23] = m.ncsos_adj_em
+        v[24] = m.luck
+        v[25] = m.wab_poisson
+        v[26] = m.momentum
+        v[27] = m.three_pt_variance
+        v[28] = m.pace_adjusted_variance
+        v[29] = m.elo_rating
+        v[30] = m.opp_two_pt_pct_allowed
+        v[31] = m.opp_three_pt_attempt_rate
+        v[32] = m.conference_adj_em
+        v[33] = m.three_pt_pct
+        v[34] = m.three_pt_rate
+        v[35] = m.defensive_xp_per_possession
+        v[36] = m.win_pct
+        v[37] = m.three_pt_regression_signal
+        v[38] = min(m.rest_days, 14.0)
+        v[39] = 0.0
+        v[40] = m.pace_variance
+        v[41] = m.neutral_site_win_pct
         from .tournament_features import compute_tournament_resume_composite
 
-        v[68] = compute_tournament_resume_composite(
+        v[42] = compute_tournament_resume_composite(
             q1_win_pct=m.q1_win_pct,
             q1_games=m.q1_wins + m.q1_losses,
             road_neutral_win_pct=m.road_neutral_win_pct,
@@ -2917,31 +2856,13 @@ class IncrementalMetricsEngine:
             elite_sos=m.elite_sos,
             sor=m.sor,
         )
-        # Position RAPM (2) — zero (no roster)
-        v[69] = 0.0
-        v[70] = 0.0
-
-        # External rating composite + spread (2)
-        v[71] = external_rating_composite
-        v[72] = external_rating_spread
-
-        # Seed strength (1)
+        # Position RAPM overlaid later from roster data.
+        v[43] = 0.0
+        v[44] = 0.0
         if seed > 0:
-            v[73] = float(np.log1p(17 - seed) / np.log1p(16))
+            v[45] = float(np.log1p(17 - seed) / np.log1p(16))
         else:
-            v[73] = 0.0
-
-        # Massey multi-system features (12) — indices 74-85
-        # NaN is preserved for tree models (LightGBM/XGBoost handle natively)
-        if massey_features is not None:
-            from .massey_systems import MASSEY_TOP_SYSTEMS, features_to_vector
-
-            massey_vals = features_to_vector(massey_features)
-            for i, val in enumerate(massey_vals):
-                v[74 + i] = val
-        else:
-            # Leave as NaN so tree models treat as missing
-            v[74:86] = float("nan")
+            v[45] = 0.0
 
         # NaN/inf guard — convert inf→NaN but preserve NaN for tree models
         inf_mask = np.isinf(v)

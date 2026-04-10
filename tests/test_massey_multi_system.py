@@ -216,20 +216,19 @@ class TestFeaturesToVector:
 # ---------------------------------------------------------------------------
 
 class TestTeamFeaturesDimension:
-    """Verify TEAM_FEATURE_DIM includes the 12 new massey features."""
+    """Verify TEAM_FEATURE_DIM reflects the pruned production vector."""
 
-    def test_dimension_includes_massey(self):
-        """TEAM_FEATURE_DIM accounts for the 12 new massey multi-system features."""
+    def test_dimension_matches_pruned_vector(self):
+        """TEAM_FEATURE_DIM should match the post-pruning vector width."""
         from src.data.features.feature_engineering import TEAM_FEATURE_DIM
-        # Was 74, now 86 (74 + 12)
-        assert TEAM_FEATURE_DIM == 86
+        assert TEAM_FEATURE_DIM == 46
 
-    def test_feature_names_include_massey(self):
-        """get_feature_names() includes all massey feature names."""
+    def test_feature_names_exclude_massey(self):
+        """Massey feature names were pruned from the model-facing vector."""
         from src.data.features.feature_engineering import TeamFeatures
         names = TeamFeatures.get_feature_names(include_embeddings=False)
         for massey_name in ALL_MASSEY_FEATURE_NAMES:
-            assert massey_name in names, f"Missing feature name: {massey_name}"
+            assert massey_name not in names, f"Unexpected retained feature name: {massey_name}"
 
     def test_to_vector_matches_dim(self):
         """Default TeamFeatures.to_vector() matches TEAM_FEATURE_DIM."""
@@ -250,17 +249,17 @@ class TestTeamFeaturesDimension:
 # ---------------------------------------------------------------------------
 
 class TestEraAvailability:
-    """Verify massey features respect era availability constraints."""
+    """Verify pruned massey features no longer participate in availability checks."""
 
-    def test_massey_available_2003_onwards(self):
-        """Massey multi-system features available from 2003 onwards."""
+    def test_massey_not_in_available_features_2003_onwards(self):
+        """Pruned massey features should not appear even in supported eras."""
         from src.data.features.feature_engineering import era_available_features
         features_2005 = era_available_features(2005)
-        assert "massey_pom" in features_2005
-        assert "massey_rank_std" in features_2005
+        assert "massey_pom" not in features_2005
+        assert "massey_rank_std" not in features_2005
 
     def test_massey_unavailable_before_2003(self):
-        """Massey multi-system features unavailable before 2003."""
+        """Pruned massey features remain absent before 2003 as well."""
         from src.data.features.feature_engineering import era_available_features
         features_2002 = era_available_features(2002)
         assert "massey_pom" not in features_2002
