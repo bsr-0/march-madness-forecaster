@@ -126,6 +126,7 @@ def run_optimize_pool(args):
         "leverage_picks": result.leverage_picks[:20],
         "fade_picks": result.fade_picks[:15],
         "n_pareto_brackets": len(result.pareto_brackets),
+        "pareto_brackets": [b.to_dict() for b in result.pareto_brackets],
         "sensitivity": sensitivity.to_dict(),
     }
 
@@ -138,6 +139,34 @@ def run_optimize_pool(args):
     print(f"{'=' * 60}")
     print(f"Strategy: {result.recommended_strategy}")
     print(f"Sensitivity: {sensitivity.flag}")
+
+    # Find the bracket matching the recommended strategy. If multiple brackets
+    # share the label, prefer the one whose champion differs from the chalk
+    # pick (otherwise the "recommended" bracket prints as identical to chalk).
+    rec = result.recommended_strategy
+    chalk_champ = next(
+        (b.champion for b in result.pareto_brackets if b.strategy == "chalk"),
+        None,
+    )
+    matching = [b for b in result.pareto_brackets if b.strategy == rec]
+    recommended_bracket = None
+    if matching:
+        differentiated = [b for b in matching if b.champion != chalk_champ]
+        recommended_bracket = differentiated[0] if differentiated else matching[0]
+
+    if recommended_bracket is not None:
+        print(f"\nRecommended bracket:")
+        print(f"  Champion:   {recommended_bracket.champion}")
+        print(f"  Final Four: {', '.join(recommended_bracket.final_four)}")
+        print(f"  Expected:   {recommended_bracket.expected_points:.1f} pts")
+        print(f"  Variance:   {recommended_bracket.variance:.1f}")
+        if chalk_champ and recommended_bracket.champion == chalk_champ:
+            print(
+                "  NOTE: recommended bracket matches chalk pick — "
+                "no differentiated contrarian bracket was found on the Pareto "
+                "frontier. Pool leverage comes from round-level leverage picks only."
+            )
+
     print(f"\nTop leverage picks (model > public):")
     for pick in result.leverage_picks[:10]:
         print(
