@@ -46,6 +46,7 @@ data/governance/
 
 # Logs
 *.log
+artifacts/backtest_runs/
 
 # Pytest
 .pytest_cache/
