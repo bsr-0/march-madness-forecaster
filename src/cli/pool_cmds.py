@@ -130,12 +130,17 @@ def run_optimize_pool(args):
     if construction_mode != "forward_greedy":
         print(f"Using bracket construction mode: {construction_mode}")
 
+    include_champion_augmentation = getattr(args, "include_champion_augmentation", False)
+    if include_champion_augmentation:
+        print("Champion-diversity augmentation ENABLED (forced-champion brackets will be added)")
+
     optimizer = PoolOptimizer(
         pairwise_probs,
         env,
         model_round_probs=round_probs,
         team_metadata=team_metadata,
         construction_mode=construction_mode,
+        include_champion_augmentation=include_champion_augmentation,
     )
     result = optimizer.optimize()
 
@@ -610,6 +615,22 @@ def register(subparsers):
             "its producer. Backtest results (pending) will tell us which "
             "single mode is best; use 'all' to see the diversity of "
             "alternatives simultaneously. See POOL_STRATEGY_RECOMMENDATION.md."
+        ),
+    )
+    parser.add_argument(
+        "--include-champion-augmentation",
+        action="store_true",
+        help=(
+            "OPT-IN: enable Phase 2 champion-diversity augmentation in the "
+            "Pareto frontier. When enabled, if the risk sweep produces fewer "
+            "than num_brackets distinct brackets, the optimizer forces "
+            "additional brackets by picking alternate champions and locking "
+            "their R64-CHAMP path. Default OFF — the frontier contains only "
+            "brackets produced organically by the risk sweep, even if that "
+            "means fewer than num_brackets brackets. Forced-champion "
+            "brackets ('champ swap' variants) are post-hoc alternatives to "
+            "the chalk structure rather than methodology-driven "
+            "alternatives, so they are excluded by default."
         ),
     )
     parser.set_defaults(func=run_optimize_pool)
