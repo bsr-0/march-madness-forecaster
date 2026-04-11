@@ -182,6 +182,32 @@ class BracketConfiguration:
         }
 
 
+def canonical_picks_key(picks: Dict[str, str]) -> Tuple:
+    """Compute a slot-order-invariant identity key for a bracket's picks.
+
+    The summary bracket format stores the Final Four as F4_1..F4_4 slots
+    whose specific slot assignments depend on the order in which the
+    greedy F4 selection filled them — at different risk levels the same
+    4 F4 teams can land in different slot positions purely because of how
+    _ev_score ranked them at that risk level. Treating the F4 as an
+    ordered tuple therefore produces false negatives on semantic
+    equivalence: two brackets with the same champion and the same set of
+    4 F4 teams are semantically identical regardless of which team is in
+    F4_1 vs F4_2.
+
+    This helper canonicalizes the picks dict by:
+      - keying F4_* values as an unordered frozenset (slot-invariant)
+      - preserving all other keys as sorted (k, v) pairs (R64_*, R32_*,
+        S16_*, E8_*, CHAMP carry real game-position identity)
+
+    Use this for bracket dedup and any other place that needs to compare
+    two bracket configurations for semantic equivalence.
+    """
+    f4_teams = frozenset(v for k, v in picks.items() if k.startswith("F4_"))
+    other_picks = tuple(sorted((k, v) for k, v in picks.items() if not k.startswith("F4_")))
+    return (f4_teams, other_picks)
+
+
 @dataclass
 class TeamMetadata:
     """Metadata used for richer game-theory recommendations."""
@@ -1201,7 +1227,7 @@ class ParetoOptimizer:
         seen_keys: set = set()
         deduped: List[BracketConfiguration] = []
         for bracket in brackets:
-            key = tuple(sorted(bracket.picks.items()))
+            key = canonical_picks_key(bracket.picks)
             if key in seen_keys:
                 continue
             seen_keys.add(key)
@@ -1256,7 +1282,7 @@ class ParetoOptimizer:
                     strategy="balanced",
                     forced_champion=candidate_id,
                 )
-                forced_key = tuple(sorted(forced.picks.items()))
+                forced_key = canonical_picks_key(forced.picks)
                 if forced_key in seen_keys:
                     # Forced bracket happened to match an existing one
                     # (e.g., F4 selection produced the same F4 set). Skip.
