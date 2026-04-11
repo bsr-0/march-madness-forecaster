@@ -223,8 +223,8 @@ class PoolOptimizer:
             model_round_probs = self._build_round_probabilities()
 
         # Run leverage analysis via existing infrastructure
-        leverage_picks, fade_picks, pareto_brackets, strategy_evs, recommended = (
-            self._run_leverage_analysis(model_round_probs, env)
+        leverage_picks, fade_picks, pareto_brackets, strategy_evs, recommended = self._run_leverage_analysis(
+            model_round_probs, env
         )
 
         # Build the mandatory AssumptionsManifest
@@ -294,10 +294,7 @@ class PoolOptimizer:
         shifted_down_f4 = self._extract_final_four(shifted_down_result)
 
         # Stability check: champion changed or ≥2 F4 picks differ
-        champion_changed = (
-            shifted_up_champion != baseline_champion
-            or shifted_down_champion != baseline_champion
-        )
+        champion_changed = shifted_up_champion != baseline_champion or shifted_down_champion != baseline_champion
         f4_diff_up = len(set(baseline_f4) - set(shifted_up_f4))
         f4_diff_down = len(set(baseline_f4) - set(shifted_down_f4))
         f4_unstable = f4_diff_up >= 2 or f4_diff_down >= 2
@@ -361,6 +358,7 @@ class PoolOptimizer:
         on MC ``AggregatedResults``) to the PoolOptimizer constructor.
         """
         import warnings
+
         warnings.warn(
             "PoolOptimizer._build_round_probabilities is using a heuristic "
             "fallback. Pass model_round_probs from MC simulation to the "
@@ -443,7 +441,14 @@ class PoolOptimizer:
             return (
                 leverage_picks,
                 fade_picks,
-                pool_analysis.pareto_brackets[:5],
+                # Pass the full frontier through — ParetoOptimizer already
+                # controls its own output size via num_brackets (default 5).
+                # The champion-diversity augmentation in generate_pareto_brackets
+                # may grow the frontier beyond num_brackets when a dominant
+                # champion would otherwise occupy all slots, so double-
+                # truncating here would drop the alternative-champion
+                # brackets the augmentation exists to produce.
+                pool_analysis.pareto_brackets,
                 strategy_evs,
                 pool_analysis.recommended_strategy,
             )
@@ -461,10 +466,7 @@ class PoolOptimizer:
                 return bracket.champion
         if result.leverage_picks:
             # Fallback: highest leverage pick for CHAMP round
-            champ_picks = [
-                p for p in result.leverage_picks
-                if p.get("round") == "CHAMP"
-            ]
+            champ_picks = [p for p in result.leverage_picks if p.get("round") == "CHAMP"]
             if champ_picks:
                 return champ_picks[0]["team_id"]
         return ""
@@ -477,10 +479,7 @@ class PoolOptimizer:
             if hasattr(bracket, "final_four"):
                 return list(bracket.final_four)
         # Fallback: top 4 teams by F4 leverage
-        f4_picks = [
-            p for p in result.leverage_picks
-            if p.get("round") in ("F4", "CHAMP")
-        ]
+        f4_picks = [p for p in result.leverage_picks if p.get("round") in ("F4", "CHAMP")]
         return [p["team_id"] for p in f4_picks[:4]]
 
     @staticmethod

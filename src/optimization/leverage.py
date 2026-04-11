@@ -25,7 +25,7 @@ from src.data.seed_pick_model import SEED_PICK_RATES
 logger = logging.getLogger(__name__)
 
 
-_BranchPick = namedtuple('_BranchPick', ['p_win', 'survival', 'pts'])
+_BranchPick = namedtuple("_BranchPick", ["p_win", "survival", "pts"])
 
 
 def compute_ev_edge(
@@ -62,7 +62,6 @@ def compute_ev_edge(
 # Championship column renormalized so 4 × Σ(seed rates) = 100%.
 #
 # To regenerate or audit: python -m src.data.seed_pick_model
-
 
 
 def get_seed_based_pick_rates(
@@ -129,29 +128,29 @@ class LeveragePick:
     # this team/round).  Leverage calculations using synthetic data
     # should be treated with lower confidence.
     is_synthetic: bool = False
-    
+
     @property
     def leverage_ratio(self) -> float:
         """Ratio of model prob to public percentage."""
         if self.public_pick_percentage <= 0:
-            return float('inf')
+            return float("inf")
         return self.model_probability / self.public_pick_percentage
-    
+
     @property
     def expected_value(self) -> float:
         """Expected points from this pick."""
         return self.model_probability * self.points_value
-    
+
     @property
     def expected_value_differential(self) -> float:
         """
         Expected points gained vs public.
-        
+
         Positive = outperform public, Negative = underperform.
         """
         public_ev = self.public_pick_percentage * self.points_value
         return self.expected_value - public_ev
-    
+
     def __str__(self) -> str:
         return (
             f"{self.team_name} ({self.seed}) - {self.round_name}: "
@@ -163,16 +162,16 @@ class LeveragePick:
 @dataclass
 class BracketConfiguration:
     """A complete bracket configuration."""
-    
+
     picks: Dict[str, str]  # game_id -> winner team_id
     champion: str
     final_four: List[str]
-    
+
     # Metadata
     strategy: str = "balanced"  # "balanced", "chalk", "contrarian"
     expected_points: float = 0.0
     variance: float = 0.0
-    
+
     def to_dict(self) -> dict:
         return {
             "picks": self.picks,
@@ -181,6 +180,32 @@ class BracketConfiguration:
             "strategy": self.strategy,
             "expected_points": self.expected_points,
         }
+
+
+def canonical_picks_key(picks: Dict[str, str]) -> Tuple:
+    """Compute a slot-order-invariant identity key for a bracket's picks.
+
+    The summary bracket format stores the Final Four as F4_1..F4_4 slots
+    whose specific slot assignments depend on the order in which the
+    greedy F4 selection filled them — at different risk levels the same
+    4 F4 teams can land in different slot positions purely because of how
+    _ev_score ranked them at that risk level. Treating the F4 as an
+    ordered tuple therefore produces false negatives on semantic
+    equivalence: two brackets with the same champion and the same set of
+    4 F4 teams are semantically identical regardless of which team is in
+    F4_1 vs F4_2.
+
+    This helper canonicalizes the picks dict by:
+      - keying F4_* values as an unordered frozenset (slot-invariant)
+      - preserving all other keys as sorted (k, v) pairs (R64_*, R32_*,
+        S16_*, E8_*, CHAMP carry real game-position identity)
+
+    Use this for bracket dedup and any other place that needs to compare
+    two bracket configurations for semantic equivalence.
+    """
+    f4_teams = frozenset(v for k, v in picks.items() if k.startswith("F4_"))
+    other_picks = tuple(sorted((k, v) for k, v in picks.items() if not k.startswith("F4_")))
+    return (f4_teams, other_picks)
 
 
 @dataclass
@@ -195,6 +220,7 @@ class TeamMetadata:
 # ---------------------------------------------------------------------------
 # Pool-Size-Adaptive Strategy (Phase 2: EV Mode)
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class PoolStrategyProfile:
@@ -225,14 +251,13 @@ class PoolStrategyProfile:
         """Ensure strategy_mix sums to ~1.0."""
         total = sum(self.strategy_mix.values())
         if abs(total - 1.0) > 0.01:
-            raise ValueError(
-                f"strategy_mix must sum to 1.0, got {total:.3f}"
-            )
+            raise ValueError(f"strategy_mix must sum to 1.0, got {total:.3f}")
 
 
 # ---------------------------------------------------------------------------
 # Entry Fee / Prize Pool ROI (Kelly Criterion)
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class PoolEconomics:
@@ -459,8 +484,7 @@ def get_strategy_profile(
     """
     if payout_structure not in VALID_PAYOUT_STRUCTURES:
         raise ValueError(
-            f"Invalid payout_structure '{payout_structure}': "
-            f"must be one of {sorted(VALID_PAYOUT_STRUCTURES)}"
+            f"Invalid payout_structure '{payout_structure}': must be one of {sorted(VALID_PAYOUT_STRUCTURES)}"
         )
     if pool_size < 30:
         profile = PoolStrategyProfile(
@@ -555,9 +579,7 @@ class ScoringSystemAdapter:
     round_weights: Dict[str, float]
     leverage_priority: str  # "late_rounds", "early_rounds", "balanced"
 
-    def adjust_leverage_ratio(
-        self, round_name: str, base_ratio: float, seed_diff: int = 0
-    ) -> float:
+    def adjust_leverage_ratio(self, round_name: str, base_ratio: float, seed_diff: int = 0) -> float:
         """Weight leverage by round importance and scoring system.
 
         Args:
@@ -580,7 +602,7 @@ class ScoringSystemAdapter:
         else:
             # Standard: amplify leverage in high-weight rounds.
             # Use sqrt dampening to avoid excessive variance.
-            return base_ratio * (weight ** 0.5)
+            return base_ratio * (weight**0.5)
 
 
 def get_scoring_adapter(scoring_system: str = "standard") -> ScoringSystemAdapter:
@@ -615,14 +637,14 @@ def get_scoring_adapter(scoring_system: str = "standard") -> ScoringSystemAdapte
 class LeverageCalculator:
     """
     Calculates leverage ratios for bracket optimization.
-    
+
     Leverage = Win Probability / Pick Percentage
-    
+
     High leverage picks offer better value because:
     - If correct: You beat more competitors
     - If wrong: Everyone else is also wrong
     """
-    
+
     def __init__(
         self,
         model_probs: Dict[str, Dict[str, float]],
@@ -632,7 +654,7 @@ class LeverageCalculator:
     ):
         """
         Initialize calculator.
-        
+
         Args:
             model_probs: team_id -> {round: probability}
             public_picks: team_id -> {round: percentage}
@@ -676,7 +698,9 @@ class LeverageCalculator:
         )
 
     def _public_pct_with_fallback(
-        self, team_id: str, round_name: str,
+        self,
+        team_id: str,
+        round_name: str,
     ) -> Tuple[float, bool]:
         """Get public pick percentage, falling back to seed-based prior.
 
@@ -706,19 +730,15 @@ class LeverageCalculator:
         self.fallback_audit[team_id].append(round_name)
 
         return fallback_pct, True
-    
-    def find_leverage_picks(
-        self,
-        min_leverage: float = 1.5,
-        min_probability: float = 0.05
-    ) -> List[LeveragePick]:
+
+    def find_leverage_picks(self, min_leverage: float = 1.5, min_probability: float = 0.05) -> List[LeveragePick]:
         """
         Find all high-leverage picks.
-        
+
         Args:
             min_leverage: Minimum leverage ratio
             min_probability: Minimum model probability (filter noise)
-            
+
         Returns:
             List of LeveragePick sorted by leverage
         """
@@ -735,7 +755,8 @@ class LeverageCalculator:
                     continue
 
                 public_pct, is_fallback = self._public_pct_with_fallback(
-                    team_id, round_name,
+                    team_id,
+                    round_name,
                 )
                 if is_fallback:
                     _fallback_teams.add(team_id)
@@ -744,25 +765,26 @@ class LeverageCalculator:
 
                 if leverage >= min_leverage:
                     meta = self._team_meta(team_id)
-                    leverage_picks.append(LeveragePick(
-                        team_id=team_id,
-                        team_name=meta.team_name,
-                        seed=meta.seed,
-                        region=meta.region,
-                        model_probability=model_prob,
-                        public_pick_percentage=public_pct,
-                        round_name=round_name,
-                        points_value=self.scoring_system.get(round_name, 0),
-                        is_synthetic=is_fallback,
-                    ))
+                    leverage_picks.append(
+                        LeveragePick(
+                            team_id=team_id,
+                            team_name=meta.team_name,
+                            seed=meta.seed,
+                            region=meta.region,
+                            model_probability=model_prob,
+                            public_pick_percentage=public_pct,
+                            round_name=round_name,
+                            points_value=self.scoring_system.get(round_name, 0),
+                            is_synthetic=is_fallback,
+                        )
+                    )
 
         if _fallback_teams:
             logger.warning(
                 "Used seed-based prior for %d teams missing public pick data: %s",
                 len(_fallback_teams),
                 ", ".join(sorted(_fallback_teams)[:5])
-                + (f" (+{len(_fallback_teams) - 5} more)"
-                   if len(_fallback_teams) > 5 else ""),
+                + (f" (+{len(_fallback_teams) - 5} more)" if len(_fallback_teams) > 5 else ""),
             )
 
         # Sort by expected value differential (EV-edge):
@@ -770,19 +792,16 @@ class LeverageCalculator:
         leverage_picks.sort(key=lambda x: x.expected_value_differential, reverse=True)
 
         return leverage_picks
-    
-    def find_fade_picks(
-        self,
-        max_leverage: float = 0.7
-    ) -> List[LeveragePick]:
+
+    def find_fade_picks(self, max_leverage: float = 0.7) -> List[LeveragePick]:
         """
         Find over-picked teams to fade.
-        
+
         Teams with leverage < 1 are over-valued by public.
-        
+
         Args:
             max_leverage: Maximum leverage to include
-            
+
         Returns:
             List of teams to avoid
         """
@@ -791,7 +810,8 @@ class LeverageCalculator:
         for team_id, probs in self.model_probs.items():
             for round_name, model_prob in probs.items():
                 public_pct, is_fallback = self._public_pct_with_fallback(
-                    team_id, round_name,
+                    team_id,
+                    round_name,
                 )
                 # Don't recommend fading a team based on seed prior —
                 # only fade when we have real public pick data showing
@@ -803,20 +823,22 @@ class LeverageCalculator:
 
                 if leverage <= max_leverage and public_pct > 0.1:
                     meta = self._team_meta(team_id)
-                    fade_picks.append(LeveragePick(
-                        team_id=team_id,
-                        team_name=meta.team_name,
-                        seed=meta.seed,
-                        region=meta.region,
-                        model_probability=model_prob,
-                        public_pick_percentage=public_pct,
-                        round_name=round_name,
-                        points_value=self.scoring_system.get(round_name, 0),
-                    ))
-        
+                    fade_picks.append(
+                        LeveragePick(
+                            team_id=team_id,
+                            team_name=meta.team_name,
+                            seed=meta.seed,
+                            region=meta.region,
+                            model_probability=model_prob,
+                            public_pick_percentage=public_pct,
+                            round_name=round_name,
+                            points_value=self.scoring_system.get(round_name, 0),
+                        )
+                    )
+
         # Sort by EV differential (most negative first = most over-picked)
         fade_picks.sort(key=lambda x: x.expected_value_differential)
-        
+
         return fade_picks
 
     def get_fallback_summary(self) -> Dict[str, object]:
@@ -837,10 +859,7 @@ class LeverageCalculator:
             "n_teams_with_fallback": len(teams_with_fallback),
             "n_total_fallbacks": total_pairs,
             "teams": teams_with_fallback[:20],
-            "synthetic_fraction": (
-                len(teams_with_fallback) / n_model_teams
-                if n_model_teams > 0 else 0.0
-            ),
+            "synthetic_fraction": (len(teams_with_fallback) / n_model_teams if n_model_teams > 0 else 0.0),
         }
 
 
@@ -900,14 +919,19 @@ def _filter_brackets_by_path_protection(
 
     for bracket in brackets:
         picks_list = _bracket_config_to_pick_list(
-            bracket, model_probs, _approx_predict_fn,
+            bracket,
+            model_probs,
+            _approx_predict_fn,
         )
         if not picks_list:
             # Can't score — keep bracket as-is
             filtered.append(bracket)
             continue
         score = scorer.compute_path_protection_score(
-            picks_list, _approx_predict_fn, {}, scoring_system,
+            picks_list,
+            _approx_predict_fn,
+            {},
+            scoring_system,
         )
         if score >= min_score:
             filtered.append(bracket)
@@ -986,11 +1010,15 @@ def _bracket_config_to_pick_list(
             if not winner:
                 continue
             p_val = 0.6  # placeholder — winner was explicitly picked
-            picks_list.append(BracketPick(
-                round_num=0, game_idx=game_idx,
-                winner_id=winner, loser_id="",
-                win_probability=p_val,
-            ))
+            picks_list.append(
+                BracketPick(
+                    round_num=0,
+                    game_idx=game_idx,
+                    winner_id=winner,
+                    loser_id="",
+                    win_probability=p_val,
+                )
+            )
             r64.append(winner)
             game_idx += 1
         region_r64[region] = r64
@@ -1008,11 +1036,15 @@ def _bracket_config_to_pick_list(
             if not winner:
                 winner = prev[idx]  # fallback to first team
             p_val = predict_fn(winner, prev[idx + 1] if winner == prev[idx] else prev[idx])
-            picks_list.append(BracketPick(
-                round_num=1, game_idx=game_idx,
-                winner_id=winner, loser_id="",
-                win_probability=p_val,
-            ))
+            picks_list.append(
+                BracketPick(
+                    round_num=1,
+                    game_idx=game_idx,
+                    winner_id=winner,
+                    loser_id="",
+                    win_probability=p_val,
+                )
+            )
             r32.append(winner)
             game_idx += 1
         region_r32[region] = r32
@@ -1029,11 +1061,15 @@ def _bracket_config_to_pick_list(
             winner = picks_dict.get(key, "")
             if not winner:
                 winner = prev[idx]
-            picks_list.append(BracketPick(
-                round_num=2, game_idx=game_idx,
-                winner_id=winner, loser_id="",
-                win_probability=0.6,
-            ))
+            picks_list.append(
+                BracketPick(
+                    round_num=2,
+                    game_idx=game_idx,
+                    winner_id=winner,
+                    loser_id="",
+                    win_probability=0.6,
+                )
+            )
             s16.append(winner)
             game_idx += 1
         region_s16[region] = s16
@@ -1045,11 +1081,15 @@ def _bracket_config_to_pick_list(
         if len(prev) < 2:
             continue
         winner = picks_dict.get(f"E8_{region}") or picks_dict.get(f"E8_{region}_1") or prev[0]
-        picks_list.append(BracketPick(
-            round_num=3, game_idx=game_idx,
-            winner_id=winner, loser_id="",
-            win_probability=0.6,
-        ))
+        picks_list.append(
+            BracketPick(
+                round_num=3,
+                game_idx=game_idx,
+                winner_id=winner,
+                loser_id="",
+                win_probability=0.6,
+            )
+        )
         region_e8[region] = winner
         game_idx += 1
 
@@ -1062,22 +1102,30 @@ def _bracket_config_to_pick_list(
         t1 = region_e8.get(r1, "")
         winner = picks_dict.get(key1) or picks_dict.get(key2) or t1
         if winner:
-            picks_list.append(BracketPick(
-                round_num=4, game_idx=game_idx,
-                winner_id=winner, loser_id="",
-                win_probability=0.6,
-            ))
+            picks_list.append(
+                BracketPick(
+                    round_num=4,
+                    game_idx=game_idx,
+                    winner_id=winner,
+                    loser_id="",
+                    win_probability=0.6,
+                )
+            )
             f4_winners.append(winner)
             game_idx += 1
 
     # CHAMP
     champion = picks_dict.get("CHAMP") or picks_dict.get("CHAMP_1") or getattr(bracket, "champion", "")
     if champion:
-        picks_list.append(BracketPick(
-            round_num=5, game_idx=game_idx,
-            winner_id=champion, loser_id="",
-            win_probability=0.6,
-        ))
+        picks_list.append(
+            BracketPick(
+                round_num=5,
+                game_idx=game_idx,
+                winner_id=champion,
+                loser_id="",
+                win_probability=0.6,
+            )
+        )
 
     return picks_list
 
@@ -1085,12 +1133,12 @@ def _bracket_config_to_pick_list(
 class ParetoOptimizer:
     """
     Generates Pareto-optimal brackets along risk/reward frontier.
-    
+
     - Conservative brackets: Maximize expected points
     - Aggressive brackets: Maximize upside potential
     - The Pareto frontier offers best risk/reward tradeoffs
     """
-    
+
     def __init__(
         self,
         leverage_calculator: LeverageCalculator,
@@ -1110,30 +1158,56 @@ class ParetoOptimizer:
         self.calculator = leverage_calculator
         self.pool_size = pool_size
         self.ev_mode = ev_mode
-    
-    def generate_pareto_brackets(
-        self,
-        num_brackets: int = 5
-    ) -> List[BracketConfiguration]:
-        """
-        Generate brackets along Pareto frontier with path protection filtering.
 
-        Generates candidate brackets at evenly-spaced risk levels, scores each
-        for internal path consistency using PathProtectionScorer, and filters
-        out brackets that score below the 0.85 protocol threshold.  If all
-        candidates fail the filter, the full unfiltered list is returned so
-        that downstream optimizers always have seeds to work from.
+    def generate_pareto_brackets(self, num_brackets: int = 5) -> List[BracketConfiguration]:
+        """
+        Generate brackets along the Pareto frontier with path protection filtering.
+
+        Two-phase construction:
+
+        1. Risk sweep — generate candidate brackets at ``2*num_brackets + 1``
+           evenly-spaced risk levels (up from a flat 5 in the legacy code),
+           score each with PathProtectionScorer, drop any that fail the 0.85
+           protocol threshold, then deduplicate by canonical picks. The
+           sweep captures whichever crossovers exist naturally on the
+           (probability, differentiation) curve.
+
+        2. Champion-diversity augmentation — if the risk sweep collapses to
+           fewer than ``num_brackets`` distinct brackets (common when one
+           team dominates the curve because it has both the highest model
+           probability AND a high leverage ratio, e.g., Michigan in 2026),
+           fill out the frontier by generating forced-champion brackets for
+           the top model-probability candidates that are not yet represented.
+           Each augmentation bracket is generated at ``risk_level=0.4``
+           (middle of the "balanced" band) and labeled ``balanced``.
+
+        The diversity augmentation only runs when the summary bracket path
+        is in use. The full-bracket path simulates R64-through-CHAMP and
+        does not currently support forced champions — for full-bracket
+        runs the frontier contains only the risk-sweep output, which can
+        still collapse to a single candidate. See the TODO below and the
+        comment on ``_generate_bracket`` for the gap.
 
         Args:
-            num_brackets: Number of brackets to generate
+            num_brackets: Target number of distinct brackets on the frontier.
+                The risk sweep generates more candidates than this (to
+                produce enough crossovers), then dedup + augmentation
+                trims back to the target. May return fewer if the data
+                genuinely has fewer distinct credible brackets.
 
         Returns:
-            List of bracket configurations from conservative to aggressive
+            List of bracket configurations, conservative to aggressive,
+            each with a unique canonical picks dict and a strategy label
+            that honestly describes its picks.
         """
-        brackets = []
+        brackets: List[BracketConfiguration] = []
 
-        # Risk levels from 0 (chalk) to 1 (max contrarian)
-        risk_levels = np.linspace(0, 1, num_brackets)
+        # Phase 1: risk sweep at higher resolution than the legacy 5 levels.
+        # 2*num_brackets + 1 gives odd count so both endpoints (risk=0 and
+        # risk=1) are sampled exactly, and intermediate levels catch any
+        # crossovers that exist at finer granularity.
+        sweep_resolution = max(num_brackets * 2 + 1, 11)
+        risk_levels = np.linspace(0, 1, sweep_resolution)
 
         for risk in risk_levels:
             if risk < 0.2:
@@ -1142,9 +1216,105 @@ class ParetoOptimizer:
                 strategy = "balanced"
             else:
                 strategy = "contrarian"
+            brackets.append(self._generate_bracket(risk, strategy))
 
-            bracket = self._generate_bracket(risk, strategy)
-            brackets.append(bracket)
+        # Deduplicate the frontier by canonical picks. Walk in risk-ascending
+        # order (brackets is already sorted that way) and keep only the first
+        # occurrence of each unique picks dict. Because the first occurrence
+        # is the lowest-risk generator of those picks, the surviving bracket
+        # keeps the label that actually describes its picks (a bracket matching
+        # chalk is labeled "chalk", not a misnamed "contrarian").
+        seen_keys: set = set()
+        deduped: List[BracketConfiguration] = []
+        for bracket in brackets:
+            key = canonical_picks_key(bracket.picks)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            deduped.append(bracket)
+        brackets = deduped
+
+        # Phase 2: champion-diversity augmentation.
+        #
+        # If the risk sweep produced fewer than num_brackets distinct
+        # brackets, the underlying _ev_score curve has fewer crossovers than
+        # we'd like — typically because one team is BOTH the highest-EV pick
+        # AND has a high leverage ratio (model_prob > public_pick_rate), so
+        # it dominates every convex combination of safety and differentiation.
+        # Michigan in 2026 is the canonical example: model 20.0% vs public
+        # 13.9% means Michigan is an "undervalued favorite" and wins the
+        # scoring function at every risk level from 0.00 to 0.90, leaving
+        # only Michigan-champion and Illinois-champion (risk≈1.0) on the
+        # curve.
+        #
+        # The fix is explicit champion diversity: for each top model-prob
+        # candidate not yet represented, force them into a bracket at
+        # moderate risk (risk=0.4, middle of the "balanced" band) so the
+        # frontier shows the user a range of credible champion choices. The
+        # forced-champion path only works on summary brackets — the full
+        # bracket simulator can't be steered without modifying R64-onward
+        # simulation, which is out of scope here.
+        # Augment until BOTH targets are satisfied:
+        #   - bracket count >= num_brackets (at least N distinct brackets)
+        #   - distinct champion count >= num_brackets (at least N credible
+        #     champions represented on the frontier)
+        #
+        # The second condition is what catches seasons like 2017 where a
+        # single team (Gonzaga, 19.8% model_prob vs the next-best 9.9%)
+        # dominates the CHAMP score at every risk level. Without it, the
+        # risk sweep legitimately produces 5 distinct brackets — same
+        # champion but different F4 compositions — and augmentation would
+        # skip because the bracket count target was met. The user then
+        # sees 5 "alternatives" that are all Gonzaga-champion variants,
+        # which is NOT a useful alternative set for pool strategy.
+        # Requiring champion diversity forces UNC/Villanova/Kentucky
+        # forced-champion brackets into the frontier even when the risk
+        # sweep alone has enough bracket count.
+        #
+        # When the champion diversity target forces augmentation beyond
+        # num_brackets, the frontier is allowed to grow slightly above
+        # num_brackets to hit the diversity target. That's fine — the
+        # user expected "at least num_brackets brackets" not "exactly
+        # num_brackets". JSON consumers read n_pareto_brackets for the
+        # actual count.
+        if not self._can_build_full_bracket():
+            existing_champions = {b.champion for b in brackets}
+            champ_prob_ranking = sorted(
+                (
+                    (tid, float(self.calculator.model_probs.get(tid, {}).get("CHAMP", 0.0)))
+                    for tid in self.calculator.model_probs
+                ),
+                key=lambda kv: -kv[1],
+            )
+
+            # Minimum CHAMP probability for a candidate to be worth showing.
+            # 1% keeps the augmentation from dragging in long-tail noise
+            # (e.g., 15-seeds with near-zero CHAMP probability).
+            MIN_CHAMP_PROB_FOR_AUGMENTATION = 0.01
+
+            for candidate_id, candidate_prob in champ_prob_ranking:
+                needs_more_brackets = len(brackets) < num_brackets
+                needs_more_champions = len(existing_champions) < num_brackets
+                if not needs_more_brackets and not needs_more_champions:
+                    break
+                if candidate_id in existing_champions:
+                    continue
+                if candidate_prob < MIN_CHAMP_PROB_FOR_AUGMENTATION:
+                    break  # ranking is descending, so once we fall below we're done
+
+                forced = self._generate_bracket(
+                    risk_level=0.4,
+                    strategy="balanced",
+                    forced_champion=candidate_id,
+                )
+                forced_key = canonical_picks_key(forced.picks)
+                if forced_key in seen_keys:
+                    # Forced bracket happened to match an existing one
+                    # (e.g., F4 selection produced the same F4 set). Skip.
+                    continue
+                seen_keys.add(forced_key)
+                brackets.append(forced)
+                existing_champions.add(candidate_id)
 
         # Path protection filtering (Protocol Section 4.4).
         # Build an approximate predict_fn from model_probs so we can use
@@ -1156,26 +1326,40 @@ class ParetoOptimizer:
             min_score=0.85,
         )
         return filtered if filtered else brackets
-    
+
     def _generate_bracket(
         self,
         risk_level: float,
-        strategy: str
+        strategy: str,
+        forced_champion: Optional[str] = None,
     ) -> BracketConfiguration:
         """
         Generate single bracket with given risk level.
-        
+
         Args:
             risk_level: 0 = chalk, 1 = max contrarian
             strategy: Strategy name
-            
+            forced_champion: If provided and the summary bracket path is in
+                use, force this team as the champion instead of argmax
+                selection. Ignored by the full bracket path (which
+                simulates R64-onward and can't be forced without changing
+                the simulator). Used by generate_pareto_brackets' diversity
+                augmentation pass to surface alternative champions when the
+                risk sweep collapses to a single dominant candidate.
+
         Returns:
             BracketConfiguration
         """
         if self._can_build_full_bracket():
+            # Full bracket path: simulates R64-through-CHAMP, so forced_champion
+            # would need the simulator to be modified. Not supported today —
+            # callers should fall back to the summary path or accept that
+            # full-bracket runs use argmax champion selection only.
             picks, champion, final_four, expected_points, variance = self._generate_full_bracket(risk_level)
         else:
-            picks, champion, final_four, expected_points, variance = self._generate_summary_bracket(risk_level)
+            picks, champion, final_four, expected_points, variance = self._generate_summary_bracket(
+                risk_level, forced_champion=forced_champion
+            )
 
         return BracketConfiguration(
             picks=picks,
@@ -1191,7 +1375,7 @@ class ParetoOptimizer:
         p = float(self.calculator.model_probs.get(team_id, {}).get(round_name, 0.0))
         pts = float(self.calculator.scoring_system.get(round_name, 0))
         ev = p * pts
-        var = p * (1.0 - p) * (pts ** 2)
+        var = p * (1.0 - p) * (pts**2)
         return ev, var
 
     def _path_ev_var(self, team_id: str, round_name: str, survival_prob: float) -> Tuple[float, float]:
@@ -1207,8 +1391,8 @@ class ParetoOptimizer:
         joint = survival_prob * p_win
         ev = joint * pts
         # Var(X) = E[X^2] - E[X]^2 where X = pts if joint event, else 0
-        ex2 = joint * pts ** 2
-        var = ex2 - ev ** 2
+        ex2 = joint * pts**2
+        var = ex2 - ev**2
         return ev, var
 
     def _ev_score(self, team_id: str, round_name: str, risk_level: float) -> float:
@@ -1233,7 +1417,7 @@ class ParetoOptimizer:
         if not self.ev_mode:
             # Legacy: probability x leverage^risk_level (no seed bonus).
             leverage = min(model_prob / max(public_prob, 0.01), self.calculator.MAX_LEVERAGE)
-            return model_prob * (leverage ** risk_level)
+            return model_prob * (leverage**risk_level)
 
         pts = float(self.calculator.scoring_system.get(round_name, 10))
 
@@ -1443,13 +1627,22 @@ class ParetoOptimizer:
 
         return picks, champion, final_four, expected_points, variance
 
-    def _generate_summary_bracket(self, risk_level: float) -> Tuple[Dict[str, str], str, List[str], float, float]:
-        # Champion selection using EV score (not raw probability x leverage)
-        champion_scores: Dict[str, float] = {}
-        for team_id in self.calculator.model_probs:
-            champion_scores[team_id] = self._ev_score(team_id, "CHAMP", risk_level)
-
-        champion = max(champion_scores, key=champion_scores.get) if champion_scores else ""
+    def _generate_summary_bracket(
+        self,
+        risk_level: float,
+        forced_champion: Optional[str] = None,
+    ) -> Tuple[Dict[str, str], str, List[str], float, float]:
+        # Champion selection. If forced_champion is provided (used by the
+        # diversity augmentation pass in generate_pareto_brackets), skip the
+        # argmax and take the caller-specified team. Otherwise fall back to
+        # the legacy argmax behavior so unforced calls are unchanged.
+        if forced_champion and forced_champion in self.calculator.model_probs:
+            champion = forced_champion
+        else:
+            champion_scores: Dict[str, float] = {}
+            for team_id in self.calculator.model_probs:
+                champion_scores[team_id] = self._ev_score(team_id, "CHAMP", risk_level)
+            champion = max(champion_scores, key=champion_scores.get) if champion_scores else ""
 
         # F4 selection using EV score (incorporates differentiation value)
         f4_candidates = []
@@ -1461,9 +1654,24 @@ class ParetoOptimizer:
 
         final_four: List[str] = []
         used_regions = set()
+
+        # When the champion was forced, seed the F4 with the champion first
+        # so the resulting bracket is internally consistent (a champion must
+        # be in the F4). This also claims the champion's region before the
+        # greedy pass, which prevents a "better" team from the same region
+        # from displacing the champion. Unforced calls skip this block and
+        # use the pure greedy selection, preserving legacy behavior.
+        if forced_champion and champion:
+            final_four.append(champion)
+            champ_region = self.calculator._team_meta(champion).region
+            if champ_region:
+                used_regions.add(champ_region)
+
         for team_id, _score, _f4_prob in f4_candidates:
             if len(final_four) == 4:
                 break
+            if team_id in final_four:
+                continue
             region = self.calculator._team_meta(team_id).region
             if region and region in used_regions:
                 continue
@@ -1482,44 +1690,160 @@ class ParetoOptimizer:
         for idx, team_id in enumerate(final_four, start=1):
             picks[f"F4_{idx}"] = team_id
 
+        expected_points, variance = self._summary_bracket_full_score(champion, final_four)
+        return picks, champion, final_four, expected_points, variance
+
+    def _chalk_fill_round_expected_points(self, round_name: str) -> Tuple[float, float]:
+        """Expected points and variance for chalk-filling a round.
+
+        "Chalk-fill" means picking the top-N_R teams by round-R probability
+        as the N_R winners of that round, where N_R is the number of teams
+        advancing past round R. Returns the expected points and variance
+        from those N_R picks.
+
+        Used by `_summary_bracket_full_score` to account for the expected
+        contribution of R64/R32/S16 rounds when the summary bracket only
+        specifies F4 and CHAMP picks explicitly. Without this, the summary
+        bracket's expected_points would be missing ~67% of the total score
+        a real ESPN bracket can earn, and the reported number would not be
+        comparable to actual ESPN tournament scores.
+        """
+        n_survivors_per_round = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "CHAMP": 1}
+        n_survivors = n_survivors_per_round.get(round_name, 0)
+        pts = float(self.calculator.scoring_system.get(round_name, 0))
+        if n_survivors == 0 or pts == 0:
+            return 0.0, 0.0
+
+        # Sort all teams by their probability of winning this round.
+        probs = sorted(
+            (
+                float(self.calculator.model_probs.get(tid, {}).get(round_name, 0.0))
+                for tid in self.calculator.model_probs
+            ),
+            reverse=True,
+        )
+        top_n_probs = probs[:n_survivors]
+
+        ev = pts * sum(top_n_probs)
+        var = (pts**2) * sum(p * (1.0 - p) for p in top_n_probs)
+        return ev, var
+
+    def _summary_bracket_full_score(
+        self,
+        champion: str,
+        final_four: List[str],
+    ) -> Tuple[float, float]:
+        """Compute expected points and variance for a full 63-game bracket
+        given only the summary bracket's explicit CHAMP and F4 picks.
+
+        The summary bracket path names 5 teams (1 champion + 4 F4) out of
+        the 63 games in a real ESPN bracket. To produce an expected_points
+        number comparable to actual ESPN tournament scores (and to avoid
+        the ~7x undercount the legacy computation produced by only summing
+        CHAMP and F4 contributions), we complete the bracket under a
+        chalk-fill assumption for the unspecified rounds:
+
+          R64, R32, S16: chalk-fill (top-N_R teams by round-R probability).
+            These contributions are the same for every summary bracket and
+            represent the "standard assumption" that a real submitted
+            bracket follows chalk for rounds the summary bracket doesn't
+            explicitly specify.
+
+          E8: scored from the 4 explicit F4 picks. Reaching the Final Four
+            in ESPN semantics means winning your E8 game (worth 80 pts per
+            game, 320 round total). Each F4 team contributes
+            P(team wins E8) * 80 to the expected score.
+
+          F4: scored from 2 semifinal winners selected from the 4 F4 picks.
+            The champion must be one (they must win their semifinal to
+            reach the championship game). The second semifinal winner is
+            chosen as the F4 pick with the highest F4 probability that is
+            NOT the champion. Each contributes P(team wins F4) * 160, for
+            a maximum F4-round contribution of 320 — matching ESPN's real
+            F4-round cap. The previous code incorrectly scored all 4 F4
+            picks at 160 each, producing a 640-point max for F4 that's
+            double the actual ESPN cap.
+
+          CHAMP: scored from the explicit champion pick,
+            P(champion wins CHAMP) * 320.
+
+        Returns (expected_points, variance). Variance is the sum of
+        per-pick binomial variances (independent-pick approximation — does
+        not model path-dependent covariance, which would require a full
+        bracket simulation the summary path can't support).
+        """
         expected_points = 0.0
         variance = 0.0
-        if champion:
-            ev, var = self._expected_value_contribution(champion, "CHAMP")
+
+        # R64/R32/S16: chalk-fill contribution (same for every summary bracket)
+        for rnd in ("R64", "R32", "S16"):
+            ev, var = self._chalk_fill_round_expected_points(rnd)
             expected_points += ev
             variance += var
+
+        # E8: 4 F4 picks each need to win their E8 game to reach the Final Four
+        e8_pts = float(self.calculator.scoring_system.get("E8", 0))
         for team_id in final_four:
-            ev, var = self._expected_value_contribution(team_id, "F4")
-            expected_points += ev
-            variance += var
-        return picks, champion, final_four, expected_points, variance
-    
+            p = float(self.calculator.model_probs.get(team_id, {}).get("E8", 0.0))
+            expected_points += p * e8_pts
+            variance += p * (1.0 - p) * (e8_pts**2)
+
+        # F4: 2 semifinal winners. Champion is one (must win semifinal to reach
+        # championship). Second is the highest-F4-prob F4 pick that isn't champ.
+        f4_pts = float(self.calculator.scoring_system.get("F4", 0))
+        semifinal_winners: List[str] = []
+        if champion and champion in final_four:
+            semifinal_winners.append(champion)
+        other_f4 = sorted(
+            (
+                (tid, float(self.calculator.model_probs.get(tid, {}).get("F4", 0.0)))
+                for tid in final_four
+                if tid != champion
+            ),
+            key=lambda kv: -kv[1],
+        )
+        if other_f4:
+            semifinal_winners.append(other_f4[0][0])
+        # If the champion isn't in final_four (shouldn't happen but defensive),
+        # take the top 2 F4 teams by F4 probability.
+        if not semifinal_winners:
+            all_f4 = sorted(
+                ((tid, float(self.calculator.model_probs.get(tid, {}).get("F4", 0.0))) for tid in final_four),
+                key=lambda kv: -kv[1],
+            )
+            semifinal_winners = [tid for tid, _ in all_f4[:2]]
+        for tid in semifinal_winners:
+            p = float(self.calculator.model_probs.get(tid, {}).get("F4", 0.0))
+            expected_points += p * f4_pts
+            variance += p * (1.0 - p) * (f4_pts**2)
+
+        # CHAMP: explicit champion pick
+        if champion:
+            p = float(self.calculator.model_probs.get(champion, {}).get("CHAMP", 0.0))
+            champ_pts = float(self.calculator.scoring_system.get("CHAMP", 0))
+            expected_points += p * champ_pts
+            variance += p * (1.0 - p) * (champ_pts**2)
+
+        return expected_points, variance
+
     def recommend_for_pool_size(self) -> str:
         """
         Recommend bracket strategy based on pool size.
-        
+
         Returns:
             Strategy recommendation
         """
         if self.pool_size <= 10:
-            return (
-                "Small pool (<10): Use CHALK bracket. "
-                "Pick favorites and win with accuracy."
-            )
+            return "Small pool (<10): Use CHALK bracket. Pick favorites and win with accuracy."
         elif self.pool_size <= 50:
-            return (
-                "Medium pool (10-50): Use BALANCED bracket. "
-                "Mix chalk with 1-2 leverage picks."
-            )
+            return "Medium pool (10-50): Use BALANCED bracket. Mix chalk with 1-2 leverage picks."
         elif self.pool_size <= 200:
             return (
-                "Large pool (50-200): Use MODERATE LEVERAGE bracket. "
-                "Need differentiation - pick 2-3 contrarian plays."
+                "Large pool (50-200): Use MODERATE LEVERAGE bracket. Need differentiation - pick 2-3 contrarian plays."
             )
         else:
             return (
-                "Very large pool (200+): Use HIGH LEVERAGE bracket. "
-                "Must be different to win. Target undervalued teams."
+                "Very large pool (200+): Use HIGH LEVERAGE bracket. Must be different to win. Target undervalued teams."
             )
 
 
@@ -1657,10 +1981,7 @@ def calculate_pool_dynamics(
     results["chalk_ev"] = chalk_win_share
 
     # Contrarian strategy - pick high leverage
-    contrarian_options = [
-        (tid, model_probs[tid] / max(public_picks.get(tid, 0.01), 0.01))
-        for tid in model_probs
-    ]
+    contrarian_options = [(tid, model_probs[tid] / max(public_picks.get(tid, 0.01), 0.01)) for tid in model_probs]
     contrarian_options.sort(key=lambda x: x[1], reverse=True)
 
     if contrarian_options:
@@ -1697,31 +2018,31 @@ def calculate_pool_dynamics(
 @dataclass
 class PoolAnalysis:
     """Complete pool analysis with bracket recommendations."""
-    
+
     pool_size: int
     strategy_evs: Dict[str, float]
     recommended_strategy: str
     leverage_picks: List[LeveragePick]
     fade_picks: List[LeveragePick]
     pareto_brackets: List[BracketConfiguration]
-    
+
     def print_summary(self) -> None:
         """Print analysis summary."""
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"POOL ANALYSIS - {self.pool_size} entries")
-        print(f"{'='*60}")
-        
+        print(f"{'=' * 60}")
+
         print(f"\nRecommended Strategy: {self.recommended_strategy.upper()}")
-        
+
         print("\n📈 TOP LEVERAGE PICKS:")
         for pick in self.leverage_picks[:5]:
             print(f"  {pick}")
-        
+
         print("\n📉 TEAMS TO FADE (Overvalued by public):")
         for pick in self.fade_picks[:5]:
             print(f"  {pick}")
-        
-        print(f"\n{'='*60}")
+
+        print(f"\n{'=' * 60}")
 
 
 def analyze_pool(
@@ -1778,26 +2099,20 @@ def analyze_pool(
 
     # Generate or use provided strategy profile for recommendation
     if strategy_profile is None:
-        profile = get_strategy_profile(
-            pool_size, scoring_system=ev_scoring_system or "standard"
-        )
+        profile = get_strategy_profile(pool_size, scoring_system=ev_scoring_system or "standard")
     else:
         profile = strategy_profile
 
     # Calculate strategy EVs — build both dicts keyed on model_probs so
     # that teams present in the model but absent from public picks still
     # get seed-based prior coverage via _public_pct_with_fallback().
-    championship_model = {
-        tid: probs.get("CHAMP", 0)
-        for tid, probs in model_probs.items()
-    }
-    championship_public = {
-        tid: calculator._public_pct_with_fallback(tid, "CHAMP")[0]
-        for tid in model_probs
-    }
+    championship_model = {tid: probs.get("CHAMP", 0) for tid, probs in model_probs.items()}
+    championship_public = {tid: calculator._public_pct_with_fallback(tid, "CHAMP")[0] for tid in model_probs}
 
     dynamics = calculate_pool_dynamics(
-        pool_size, championship_model, championship_public,
+        pool_size,
+        championship_model,
+        championship_public,
         variance_target=profile.variance_target,
     )
 
