@@ -179,6 +179,8 @@ def build_opponent_model(
     seeds: Dict[str, int],
     cache_dir: str = "data/raw",
     picks_dir: Optional[str] = None,
+    require_espn_picks: bool = False,
+    require_ratings: bool = False,
 ) -> Dict[str, Dict[str, float]]:
     """High-level convenience: build a blended opponent pick distribution.
 
@@ -190,9 +192,22 @@ def build_opponent_model(
         seeds: team_id -> seed (1-16) for all tournament teams.
         cache_dir: Directory for cached external rating files.
         picks_dir: Directory for archived ESPN pick data (None = default).
+        require_espn_picks: If True, raise FileNotFoundError when no
+            archived ESPN picks file exists. Pool-optimizer callers set
+            this so missing real public picks fail loudly instead of
+            silently redistributing weight to seed/ratings.
+        require_ratings: If True, raise RuntimeError when no external
+            rating systems load. Pool-optimizer callers set this so the
+            opponent model can't silently degrade to seed-only.
 
     Returns:
         Ready-to-use opponent pick distribution: team_id -> {round: prob}.
+
+    Raises:
+        FileNotFoundError: If ``require_espn_picks`` is True and no
+            archived ESPN picks file exists for ``year``.
+        RuntimeError: If ``require_ratings`` is True and no external
+            rating systems loaded for ``year``.
     """
     # 1. Try external ratings.
     loader = ExternalRatingsLoader(cache_dir)
@@ -208,13 +223,22 @@ def build_opponent_model(
                 len(all_ratings),
             )
 
-    # 2. Try ESPN picks.
+    if ratings_picks is None and require_ratings:
+        raise RuntimeError(
+            f"No external rating systems loaded for {year} from {cache_dir}. "
+            f"Pool optimizer requires composite ratings — refresh via "
+            f"src/data/scrapers/external_ratings.py."
+        )
+
+    # 2. Load ESPN picks. Any exception (file-not-found when required,
+    # corrupt JSON, schema errors, etc.) propagates to the caller.
     picks_path = picks_dir if picks_dir is not None else None
-    espn_picks: Optional[Dict[str, Dict[str, float]]] = None
-    try:
-        espn_picks = load_historical_public_picks(year, seeds, picks_path)
-    except Exception:
-        logger.debug("No ESPN public picks for %d", year, exc_info=True)
+    espn_picks = load_historical_public_picks(
+        year,
+        seeds,
+        picks_path,
+        require_archived=require_espn_picks,
+    )
 
     # 3. Seed-based fallback (always available).
     seed_picks = _build_seed_picks(seeds)

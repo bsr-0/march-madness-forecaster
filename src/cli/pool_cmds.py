@@ -62,6 +62,9 @@ def run_optimize_pool(args):
     pairwise_probs, round_probs = _build_probabilities(mode, year, seeds, args.data_dir)
 
     # --- Step 3: Build opponent model ---
+    # Pool optimizer requires BOTH real ESPN public picks and composite
+    # external ratings. Any missing/corrupt source raises loudly rather
+    # than silently redistributing blend weights.
     print("Building opponent model from external ratings + public picks...")
     picks_dir = args.picks_dir if hasattr(args, "picks_dir") else None
     opponent_picks = build_opponent_model(
@@ -69,6 +72,8 @@ def run_optimize_pool(args):
         seeds=seeds,
         cache_dir=args.data_dir,
         picks_dir=picks_dir,
+        require_espn_picks=True,
+        require_ratings=True,
     )
     print(f"  Opponent model covers {len(opponent_picks)} teams")
 
@@ -154,54 +159,48 @@ def _build_probabilities(mode, year, seeds, data_dir):
     seed_round = build_seed_round_probabilities(seeds)
 
     if mode == "noseed":
-        # No-seed model: maximizes leverage vs seed-thinking public
+        # No-seed model: maximizes leverage vs seed-thinking public.
+        # Failures propagate loudly — no silent fallback to seed baseline,
+        # which previously masked leakage regressions (e.g. stale
+        # pre_tournament_computed four-factor files).
         print("Training no-seed ML model...")
-        try:
-            from ..prediction.noseed_model import (
-                _load_team_stats,
-                build_noseed_probabilities,
-                build_noseed_round_probabilities,
-                train_noseed_model,
-            )
+        from ..prediction.noseed_model import (
+            _load_team_stats,
+            build_noseed_probabilities,
+            build_noseed_round_probabilities,
+            train_noseed_model,
+        )
 
-            model = train_noseed_model(max_year=None)
-            stats = _load_team_stats(year)
-            pairwise = build_noseed_probabilities(model, seeds, stats)
-            round_probs = build_noseed_round_probabilities(model, seeds, stats)
-            print(f"  {len(pairwise)} no-seed pairwise probabilities")
-            print(f"  {len(round_probs)} teams with no-seed round probs")
-            return pairwise, round_probs
-        except Exception as exc:
-            logger.warning("No-seed model failed (%s), falling back to seeds", exc)
-            print(f"  WARNING: No-seed model unavailable ({exc}), using seed baseline")
-            return seed_pairwise, seed_round
+        model = train_noseed_model(max_year=None)
+        stats = _load_team_stats(year)
+        pairwise = build_noseed_probabilities(model, seeds, stats)
+        round_probs = build_noseed_round_probabilities(model, seeds, stats)
+        print(f"  {len(pairwise)} no-seed pairwise probabilities")
+        print(f"  {len(round_probs)} teams with no-seed round probs")
+        return pairwise, round_probs
 
     elif mode == "blend":
-        # Blend: 50/50 seed + no-seed for best raw accuracy
+        # Blend: 50/50 seed + no-seed for best raw accuracy.
+        # Same loud-failure policy as noseed mode.
         print("Training no-seed ML model for blend...")
-        try:
-            from ..prediction.noseed_model import (
-                _load_team_stats,
-                build_blend_probabilities,
-                build_blend_round_probabilities,
-                build_noseed_probabilities,
-                build_noseed_round_probabilities,
-                train_noseed_model,
-            )
+        from ..prediction.noseed_model import (
+            _load_team_stats,
+            build_blend_probabilities,
+            build_blend_round_probabilities,
+            build_noseed_probabilities,
+            build_noseed_round_probabilities,
+            train_noseed_model,
+        )
 
-            model = train_noseed_model(max_year=None)
-            stats = _load_team_stats(year)
-            noseed_pairwise = build_noseed_probabilities(model, seeds, stats)
-            noseed_round = build_noseed_round_probabilities(model, seeds, stats)
-            pairwise = build_blend_probabilities(seed_pairwise, noseed_pairwise, alpha=0.5)
-            round_probs = build_blend_round_probabilities(seed_round, noseed_round, alpha=0.5)
-            print(f"  {len(pairwise)} blended pairwise probabilities")
-            print(f"  {len(round_probs)} teams with blended round probs")
-            return pairwise, round_probs
-        except Exception as exc:
-            logger.warning("Blend model failed (%s), falling back to seeds", exc)
-            print(f"  WARNING: Blend model unavailable ({exc}), using seed baseline")
-            return seed_pairwise, seed_round
+        model = train_noseed_model(max_year=None)
+        stats = _load_team_stats(year)
+        noseed_pairwise = build_noseed_probabilities(model, seeds, stats)
+        noseed_round = build_noseed_round_probabilities(model, seeds, stats)
+        pairwise = build_blend_probabilities(seed_pairwise, noseed_pairwise, alpha=0.5)
+        round_probs = build_blend_round_probabilities(seed_round, noseed_round, alpha=0.5)
+        print(f"  {len(pairwise)} blended pairwise probabilities")
+        print(f"  {len(round_probs)} teams with blended round probs")
+        return pairwise, round_probs
 
     else:
         # Seed-only fallback

@@ -1,0 +1,384 @@
+{
+  "year": 2026,
+  "pool_size": 100,
+  "payout_structure": "winner_take_all",
+  "scoring_system": "standard",
+  "assumptions_manifest": {
+    "pool_size": 100,
+    "expected_chalk": {
+      "maryland_baltimore_county": 0.00027501759444714777,
+      "hawaii": 0.0006289785850587578,
+      "northern_iowa": 0.000450869163570725,
+      "texas": 0.0005139529262692932,
+      "texas_tech": 0.0037983042485653456,
+      "st__john_s__ny": 0.0087941358433293,
+      "california_baptist": 0.00044899842034099003,
+      "furman": 0.00044899842034099003,
+      "connecticut": 0.04535952583977795,
+      "lehigh": 0.00027501759444714777,
+      "missouri": 0.0006365799479265544,
+      "troy": 0.00044899842034099003,
+      "purdue": 0.042265688421349736,
+      "iowa": 0.0007567623052166799,
+      "texas_a_m": 0.0007565667244050663,
+      "illinois": 0.01660707442994952,
+      "tennessee": 0.0035366232186983025,
+      "vanderbilt": 0.004159016751473558,
+      "louisville": 0.002801728684876272,
+      "saint_mary_s__ca": 0.0013673116201112635,
+      "kennesaw_state": 0.00044899842034099003,
+      "utah_state": 0.000576782140498912,
+      "santa_clara": 0.0005765865596872984,
+      "north_dakota_state": 0.00044899842034099003,
+      "brigham_young": 0.003767662630494762,
+      "long_island_university": 0.0006289785850587578,
+      "virginia": 0.013095964817512145,
+      "queens__nc": 0.00044899842034099003,
+      "michigan": 0.13933635760683294,
+      "howard": 0.0005089918085802459,
+      "arizona": 0.18514601845950507,
+      "clemson": 0.0008264637082151263,
+      "prairie_view": 0.00044899842034099003,
+      "houston": 0.05846513268760318,
+      "hofstra": 0.00044899842034099003,
+      "virginia_commonwealth": 0.0005139529262692932,
+      "miami__oh": 0.0005739463145085491,
+      "tcu": 0.000576782140498912,
+      "ucf": 0.0005165931714480425,
+      "miami__fl": 0.0020004353365572197,
+      "southern_methodist": 0.00030974541827047793,
+      "tennessee_state": 0.00044899842034099003,
+      "michigan_state": 0.01763239487289858,
+      "high_point": 0.000450869163570725,
+      "siena": 0.0005089918085802459,
+      "nebraska": 0.0072736854633304385,
+      "wisconsin": 0.0072701212250649554,
+      "ohio_state": 0.0014584749127418883,
+      "pennsylvania": 0.0012889058556905734,
+      "ucla": 0.0024911298784890596,
+      "florida": 0.0891220222150275,
+      "villanova": 0.0012411815691231373,
+      "idaho": 0.00044899842034099003,
+      "duke": 0.22364958283180894,
+      "georgia": 0.0009285812690912224,
+      "south_florida": 0.0005739463145085491,
+      "akron": 0.0005108625518099809,
+      "nc_state": 0.00030974541827047793,
+      "saint_louis": 0.0006967689169774237,
+      "mcneese_state": 0.0005108625518099809,
+      "iowa_state": 0.03621178617913202,
+      "arkansas": 0.01256501390685616,
+      "kentucky": 0.003089986163164357,
+      "kansas": 0.014036482568070986,
+      "gonzaga": 0.020096793262085806,
+      "alabama": 0.007981915569092921,
+      "wright_state": 0.00044899842034099003,
+      "north_carolina": 0.004757364698039965
+    },
+    "payout_structure": "winner_take_all",
+    "scoring_rules": {
+      "R64": 10,
+      "R32": 20,
+      "S16": 40,
+      "E8": 80,
+      "F4": 160,
+      "CHAMP": 320
+    },
+    "sensitivity_flag": "NOT_EVALUATED",
+    "timestamp": "2026-04-10T23:23:51.219326+00:00"
+  },
+  "recommended_strategy": "contrarian",
+  "strategy_evs": {
+    "chalk_ev": 0.014413947523660103,
+    "contrarian_ev": 0.022341180056112103,
+    "leverage_ratio": 2.23411800561121,
+    "recommendation": "contrarian",
+    "variance_target": 0.95,
+    "strategy_profile": {
+      "strategy_mix": {
+        "chalk": 0.1744186046511628,
+        "balanced": 0.3255813953488372,
+        "contrarian": 0.3255813953488372,
+        "targeted": 0.17441860465116282
+      },
+      "contrarian_strength": 1.3,
+      "champion_risk_level": "low",
+      "description": "Small pool: balanced with selective leverage"
+    }
+  },
+  "leverage_picks": [
+    {
+      "team_id": "iowa_state",
+      "team_name": "iowa_state",
+      "round": "CHAMP",
+      "model_probability": 0.0594,
+      "public_pick_percentage": 0.0362,
+      "leverage_ratio": 1.641,
+      "ev_differential": 7.431
+    },
+    {
+      "team_id": "virginia",
+      "team_name": "virginia",
+      "round": "F4",
+      "model_probability": 0.0634,
+      "public_pick_percentage": 0.0419,
+      "leverage_ratio": 1.512,
+      "ev_differential": 3.435
+    },
+    {
+      "team_id": "nebraska",
+      "team_name": "nebraska",
+      "round": "E8",
+      "model_probability": 0.0938,
+      "public_pick_percentage": 0.0547,
+      "leverage_ratio": 1.716,
+      "ev_differential": 3.131
+    },
+    {
+      "team_id": "nebraska",
+      "team_name": "nebraska",
+      "round": "S16",
+      "model_probability": 0.1871,
+      "public_pick_percentage": 0.1217,
+      "leverage_ratio": 1.538,
+      "ev_differential": 2.617
+    },
+    {
+      "team_id": "louisville",
+      "team_name": "louisville",
+      "round": "S16",
+      "model_probability": 0.1387,
+      "public_pick_percentage": 0.0809,
+      "leverage_ratio": 1.715,
+      "ev_differential": 2.313
+    },
+    {
+      "team_id": "louisville",
+      "team_name": "louisville",
+      "round": "E8",
+      "model_probability": 0.0523,
+      "public_pick_percentage": 0.0239,
+      "leverage_ratio": 2.191,
+      "ev_differential": 2.274
+    },
+    {
+      "team_id": "texas_tech",
+      "team_name": "texas_tech",
+      "round": "E8",
+      "model_probability": 0.058,
+      "public_pick_percentage": 0.0332,
+      "leverage_ratio": 1.747,
+      "ev_differential": 1.982
+    },
+    {
+      "team_id": "saint_mary_s__ca",
+      "team_name": "saint_mary_s__ca",
+      "round": "R32",
+      "model_probability": 0.2171,
+      "public_pick_percentage": 0.1215,
+      "leverage_ratio": 1.787,
+      "ev_differential": 1.911
+    },
+    {
+      "team_id": "saint_mary_s__ca",
+      "team_name": "saint_mary_s__ca",
+      "round": "S16",
+      "model_probability": 0.0954,
+      "public_pick_percentage": 0.0479,
+      "leverage_ratio": 1.992,
+      "ev_differential": 1.901
+    },
+    {
+      "team_id": "texas_tech",
+      "team_name": "texas_tech",
+      "round": "S16",
+      "model_probability": 0.126,
+      "public_pick_percentage": 0.0787,
+      "leverage_ratio": 1.601,
+      "ev_differential": 1.893
+    },
+    {
+      "team_id": "brigham_young",
+      "team_name": "brigham_young",
+      "round": "E8",
+      "model_probability": 0.0523,
+      "public_pick_percentage": 0.0295,
+      "leverage_ratio": 1.774,
+      "ev_differential": 1.826
+    },
+    {
+      "team_id": "tennessee",
+      "team_name": "tennessee",
+      "round": "E8",
+      "model_probability": 0.0523,
+      "public_pick_percentage": 0.0311,
+      "leverage_ratio": 1.68,
+      "ev_differential": 1.694
+    },
+    {
+      "team_id": "northern_iowa",
+      "team_name": "northern_iowa",
+      "round": "R32",
+      "model_probability": 0.1483,
+      "public_pick_percentage": 0.0637,
+      "leverage_ratio": 2.328,
+      "ev_differential": 1.692
+    },
+    {
+      "team_id": "miami__oh",
+      "team_name": "miami__oh",
+      "round": "R32",
+      "model_probability": 0.1592,
+      "public_pick_percentage": 0.0762,
+      "leverage_ratio": 2.091,
+      "ev_differential": 1.661
+    },
+    {
+      "team_id": "northern_iowa",
+      "team_name": "northern_iowa",
+      "round": "R64",
+      "model_probability": 0.358,
+      "public_pick_percentage": 0.1926,
+      "leverage_ratio": 1.859,
+      "ev_differential": 1.654
+    },
+    {
+      "team_id": "wisconsin",
+      "team_name": "wisconsin",
+      "round": "E8",
+      "model_probability": 0.058,
+      "public_pick_percentage": 0.0375,
+      "leverage_ratio": 1.544,
+      "ev_differential": 1.634
+    },
+    {
+      "team_id": "miami__oh",
+      "team_name": "miami__oh",
+      "round": "R64",
+      "model_probability": 0.378,
+      "public_pick_percentage": 0.2177,
+      "leverage_ratio": 1.737,
+      "ev_differential": 1.603
+    },
+    {
+      "team_id": "high_point",
+      "team_name": "high_point",
+      "round": "R32",
+      "model_probability": 0.1483,
+      "public_pick_percentage": 0.0724,
+      "leverage_ratio": 2.049,
+      "ev_differential": 1.518
+    },
+    {
+      "team_id": "texas",
+      "team_name": "texas",
+      "round": "R32",
+      "model_probability": 0.1592,
+      "public_pick_percentage": 0.0845,
+      "leverage_ratio": 1.886,
+      "ev_differential": 1.496
+    },
+    {
+      "team_id": "virginia_commonwealth",
+      "team_name": "virginia_commonwealth",
+      "round": "R32",
+      "model_probability": 0.1592,
+      "public_pick_percentage": 0.0911,
+      "leverage_ratio": 1.748,
+      "ev_differential": 1.362
+    }
+  ],
+  "fade_picks": [
+    {
+      "team_id": "duke",
+      "team_name": "duke",
+      "round": "CHAMP",
+      "model_probability": 0.1206,
+      "public_pick_percentage": 0.2236,
+      "leverage_ratio": 0.539
+    },
+    {
+      "team_id": "duke",
+      "team_name": "duke",
+      "round": "F4",
+      "model_probability": 0.213,
+      "public_pick_percentage": 0.3973,
+      "leverage_ratio": 0.536
+    },
+    {
+      "team_id": "arizona",
+      "team_name": "arizona",
+      "round": "F4",
+      "model_probability": 0.2088,
+      "public_pick_percentage": 0.3607,
+      "leverage_ratio": 0.579
+    },
+    {
+      "team_id": "arizona",
+      "team_name": "arizona",
+      "round": "CHAMP",
+      "model_probability": 0.1182,
+      "public_pick_percentage": 0.1851,
+      "leverage_ratio": 0.638
+    },
+    {
+      "team_id": "duke",
+      "team_name": "duke",
+      "round": "E8",
+      "model_probability": 0.3649,
+      "public_pick_percentage": 0.5582,
+      "leverage_ratio": 0.654
+    },
+    {
+      "team_id": "arizona",
+      "team_name": "arizona",
+      "round": "E8",
+      "model_probability": 0.3578,
+      "public_pick_percentage": 0.5347,
+      "leverage_ratio": 0.669
+    },
+    {
+      "team_id": "michigan",
+      "team_name": "michigan",
+      "round": "E8",
+      "model_probability": 0.366,
+      "public_pick_percentage": 0.5411,
+      "leverage_ratio": 0.676
+    },
+    {
+      "team_id": "houston",
+      "team_name": "houston",
+      "round": "E8",
+      "model_probability": 0.1905,
+      "public_pick_percentage": 0.3233,
+      "leverage_ratio": 0.589
+    }
+  ],
+  "n_pareto_brackets": 5,
+  "sensitivity": {
+    "shift_pct": 0.05,
+    "baseline_champion": "florida",
+    "shifted_up_champion": "florida",
+    "shifted_down_champion": "florida",
+    "baseline_final_four": [
+      "florida",
+      "michigan",
+      "duke",
+      "arizona"
+    ],
+    "shifted_up_final_four": [
+      "florida",
+      "michigan",
+      "duke",
+      "arizona"
+    ],
+    "shifted_down_final_four": [
+      "florida",
+      "michigan",
+      "duke",
+      "arizona"
+    ],
+    "is_stable": true,
+    "flag": "STABLE"
+  }
+}
