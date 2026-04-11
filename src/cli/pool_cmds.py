@@ -108,7 +108,30 @@ def run_optimize_pool(args):
         payout_structure=payout,
         public_pick_distribution=opponent_picks,
     )
-    optimizer = PoolOptimizer(pairwise_probs, env, model_round_probs=round_probs)
+
+    # Build team_metadata from seeds+regions so ParetoOptimizer can extract
+    # seeds/regions for the new construction modes (and so
+    # _can_build_full_bracket actually returns True, which enables the
+    # 63-game bracket path that previously never ran in the CLI due to
+    # this metadata never being passed through).
+    from ..optimization.leverage import TeamMetadata
+
+    regions_map = _load_regions(year)
+    team_metadata = {
+        tid: TeamMetadata(
+            team_name=tid.replace("_", " ").title(),
+            seed=seeds.get(tid, 16),
+            region=regions_map.get(tid, ""),
+        )
+        for tid in seeds
+    }
+
+    optimizer = PoolOptimizer(
+        pairwise_probs,
+        env,
+        model_round_probs=round_probs,
+        team_metadata=team_metadata,
+    )
     result = optimizer.optimize()
 
     # --- Step 6: Sensitivity analysis ---

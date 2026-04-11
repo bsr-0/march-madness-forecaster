@@ -174,6 +174,8 @@ class PoolOptimizer:
         probabilities: Dict[Tuple[str, str], float],
         environment: PoolEnvironment,
         model_round_probs: Optional[Dict[str, Dict[str, float]]] = None,
+        team_metadata: Optional[Dict[str, Any]] = None,
+        construction_mode: str = "forward_greedy",
     ):
         environment.validate()
         # Deep-copy: mutations of the original dict are invisible.
@@ -185,6 +187,18 @@ class PoolOptimizer:
         self._mc_round_probs: Optional[Dict[str, Dict[str, float]]] = (
             copy.deepcopy(model_round_probs) if model_round_probs is not None else None
         )
+        # Team metadata (seeds, regions) required for the new construction
+        # modes in ParetoOptimizer. Previously this was never plumbed
+        # through from the CLI, so _can_build_full_bracket always returned
+        # False in CLI runs and _generate_full_bracket never executed. With
+        # this parameter populated, the new bracket_construction module can
+        # extract seeds/regions from team_metadata and run champ_first /
+        # f4_first / e8_first / forward_greedy modes with full 63-game
+        # bracket output.
+        self._team_metadata: Optional[Dict[str, Any]] = (
+            copy.deepcopy(team_metadata) if team_metadata is not None else None
+        )
+        self._construction_mode: str = construction_mode
 
     @property
     def probabilities(self) -> Dict[Tuple[str, str], float]:
@@ -409,6 +423,8 @@ class PoolOptimizer:
                 public_picks=env.public_pick_distribution,
                 scoring_system=env.scoring_rules,
                 strategy_profile=strategy_profile,
+                team_metadata=self._team_metadata,
+                construction_mode=self._construction_mode,
             )
 
             leverage_picks = [
