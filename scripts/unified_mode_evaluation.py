@@ -53,11 +53,11 @@ from src.simulation.ratings_opponent_model import build_opponent_model
 HIST_DIR = Path("data/raw/historical")
 
 # All years with seeds + results + Torvik data (2020 excluded: COVID).
-# Earliest test year = 2008 (needs >= 3 prior training years from 2005+).
+# Earliest test year = 2011: TRAIN_YEARS starts at 2008 (2005-2007 dropped
+# due to stale pre_tournament_computed four-factor provenance), and
+# train_noseed_model uses chronological hold-before (max_year=test_year),
+# so test_year=2011 needs 2008/2009/2010 as training priors.
 BACKTEST_YEARS = [
-    2008,
-    2009,
-    2010,
     2011,
     2012,
     2013,
@@ -221,15 +221,16 @@ def build_leverage_bracket(games, seeds, leverage_picks):
     return picks
 
 
-def measure_pool_points(pairwise_probs, round_probs, games, seeds, year):
+def measure_pool_points(pairwise_probs, round_probs, games, seeds, opponent_picks):
     """Run pool optimizer and score the resulting bracket against actuals.
+
+    Opponent picks are built once per year by the caller (so require_*
+    flags fire once per year, not three times) and passed in.
 
     Returns (optimizer_score, chalk_score).
     """
     scoreable_games = [g for g in games if g["round_name"] in SCOREABLE_ROUNDS]
     winners = determine_winners(scoreable_games)
-
-    opponent_picks = build_opponent_model(year, seeds)
 
     env = PoolEnvironment(
         pool_size=100,
@@ -299,6 +300,17 @@ def main():
             games = load_tournament_results(test_year)
             stats = _load_team_stats(test_year)
 
+            # Build opponent model ONCE per year with strict flags matching
+            # the production CLI path (pool_cmds.run_optimize_pool). Failures
+            # here skip the whole year rather than silently degrading to
+            # seed-only opponent picks.
+            opponent_picks = build_opponent_model(
+                test_year,
+                seeds,
+                require_espn_picks=True,
+                require_ratings=True,
+            )
+
             # Train noseed model on prior years
             model = train_noseed_model(max_year=test_year)
 
@@ -339,9 +351,9 @@ def main():
                 round_blend_errors[rnd].append(be)
 
             # --- Measure ESPN pool points ---
-            seed_pts, chalk_pts = measure_pool_points(seed_pw, seed_rp, games, seeds, test_year)
-            noseed_pts, _ = measure_pool_points(noseed_pw, noseed_rp, games, seeds, test_year)
-            blend_pts, _ = measure_pool_points(blend_pw, blend_rp, games, seeds, test_year)
+            seed_pts, chalk_pts = measure_pool_points(seed_pw, seed_rp, games, seeds, opponent_picks)
+            noseed_pts, _ = measure_pool_points(noseed_pw, noseed_rp, games, seeds, opponent_picks)
+            blend_pts, _ = measure_pool_points(blend_pw, blend_rp, games, seeds, opponent_picks)
 
             print(
                 f"  {test_year:<6}"

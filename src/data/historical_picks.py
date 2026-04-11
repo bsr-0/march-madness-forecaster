@@ -77,6 +77,7 @@ def load_historical_public_picks(
     year: int,
     bracket_teams: Dict[str, int],
     picks_dir: Optional[Path] = None,
+    require_archived: bool = False,
 ) -> Dict[str, Dict[str, float]]:
     """Load public pick distribution for a historical tournament year.
 
@@ -88,15 +89,25 @@ def load_historical_public_picks(
         bracket_teams: team_id -> seed (1-16) for all 64 tournament teams.
         picks_dir: Directory containing archived JSON files.  Defaults to
             ``data/raw/historical_public_picks/``.
+        require_archived: If True, raise FileNotFoundError when no archived
+            file exists instead of falling back to the seed-based track.
+            Pool-optimizer callers set this to True so missing real picks
+            fail loudly.
 
     Returns:
         Dict mapping team_id -> {round_name: pick_pct} where pick_pct
         is in [0, 1].  Contains entries for all 64 teams and 6 rounds.
+
+    Raises:
+        FileNotFoundError: If ``require_archived`` is True and no archived
+            picks file exists for ``year``.
     """
-    picks_dir = picks_dir or _DEFAULT_PICKS_DIR
+    picks_dir = Path(picks_dir) if picks_dir else _DEFAULT_PICKS_DIR
 
     # Track B: try archived real data
-    result = _load_archived_picks(year, bracket_teams, picks_dir)
+    result = _load_archived_picks(
+        year, bracket_teams, picks_dir, strict=require_archived
+    )
     if result is not None:
         logger.info(
             "Loaded archived ESPN public picks for %d (%d teams)",
@@ -104,6 +115,15 @@ def load_historical_public_picks(
             len(result),
         )
         return result
+
+    if require_archived:
+        raise FileNotFoundError(
+            f"No archived ESPN public picks for {year} in {picks_dir}. "
+            f"Expected one of: espn_picks_{year}.json, public_picks_{year}.json, "
+            f"{year}.json. Pool optimizer requires real public pick data — "
+            f"refresh via .github/workflows/espn-picks-ingestion.yml or "
+            f"scripts/scrape_historical_espn_picks.py."
+        )
 
     # Track A: seed-based fallback
     logger.info(
@@ -139,6 +159,7 @@ def _load_archived_picks(
     year: int,
     bracket_teams: Dict[str, int],
     picks_dir: Path,
+    strict: bool = False,
 ) -> Optional[Dict[str, Dict[str, float]]]:
     """Load archived ESPN public pick data from JSON.
 
@@ -180,6 +201,10 @@ def _load_archived_picks(
 
             teams_data = data.get("teams", data)
             if not isinstance(teams_data, dict):
+                if strict:
+                    raise ValueError(
+                        f"Invalid format in {filepath}: 'teams' is not a dict"
+                    )
                 logger.warning("Invalid format in %s: 'teams' is not a dict", filepath)
                 continue
 
@@ -234,17 +259,23 @@ def _load_archived_picks(
             )
 
             if match_pct < 75:
-                logger.error(
-                    "Picks %d: match rate %.0f%% is below 75%% threshold. "
-                    "ESPN data for this year is unreliable. Fix team-name "
-                    "aliases in _PICKS_TEAM_ALIAS or exclude this year.",
-                    year,
-                    match_pct,
+                msg = (
+                    f"Picks {year}: match rate {match_pct:.0f}% is below 75% "
+                    f"threshold. ESPN data for this year is unreliable. Fix "
+                    f"team-name aliases in _PICKS_TEAM_ALIAS or exclude this year."
                 )
+                if strict:
+                    raise ValueError(msg)
+                logger.error(msg)
 
             if len(result) >= 32:
                 return result
             else:
+                if strict:
+                    raise ValueError(
+                        f"Archived picks for {year} have only {len(result)} "
+                        f"teams (need >=32), discarding"
+                    )
                 logger.warning(
                     "Archived picks for %d have only %d teams, discarding",
                     year,
@@ -252,6 +283,8 @@ def _load_archived_picks(
                 )
 
         except (json.JSONDecodeError, KeyError, ValueError) as exc:
+            if strict:
+                raise
             logger.warning("Failed to load %s: %s", filepath, exc)
 
     return None

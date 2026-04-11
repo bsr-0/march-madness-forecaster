@@ -50,9 +50,6 @@ def _validate_pretournament(data: dict, filepath: Path) -> None:
 
 
 TRAIN_YEARS = [
-    2005,
-    2006,
-    2007,
     2008,
     2009,
     2010,
@@ -186,8 +183,17 @@ def train_noseed_model(max_year: Optional[int] = None) -> NoseedModel:
         raise ValueError(f"Need >= 3 training years, got {len(train_years)}")
 
     X_list, y_list, margin_list = [], [], []
-    rng = np.random.RandomState(42)
 
+    # Symmetric augmentation: add both orientations of every game.
+    # Since the feature vector is pure differentials (all dims are
+    # t1_stat - t2_stat), swap(x) = -x. Appending both (x, y=1, +margin)
+    # and (-x, y=0, -margin) enforces anti-symmetry as a hard data
+    # constraint, forces the LR intercept to zero, and doubles the
+    # effective training size (≈1000 games → ≈2000 rows). This replaces
+    # the prior random-flip approach, which only used one orientation
+    # per game and left the model's intercept as a free RNG-dependent
+    # degree of freedom. Both orientations share the same year, so
+    # LOYO integrity is preserved.
     for year in train_years:
         games = _load_tournament_results(year)
         stats = _load_team_stats(year)
@@ -199,16 +205,15 @@ def train_noseed_model(max_year: Optional[int] = None) -> NoseedModel:
             t2_stats = stats.get(t2, {})
             margin = g.get("team1_score", 0) - g.get("team2_score", 0)
 
-            # Random swap for balanced labels (raw data always puts winner as team1)
-            if rng.random() < 0.5:
-                X = _build_feature_vector(t1_stats, t2_stats)
-                y_list.append(1)
-                margin_list.append(margin)
-            else:
-                X = _build_feature_vector(t2_stats, t1_stats)
-                y_list.append(0)
-                margin_list.append(-margin)
-            X_list.append(X)
+            # Original orientation: raw data always has team1 as winner.
+            X_list.append(_build_feature_vector(t1_stats, t2_stats))
+            y_list.append(1)
+            margin_list.append(margin)
+
+            # Swapped orientation: same game from team2's perspective.
+            X_list.append(_build_feature_vector(t2_stats, t1_stats))
+            y_list.append(0)
+            margin_list.append(-margin)
 
     X = np.array(X_list)
     y = np.array(y_list)
