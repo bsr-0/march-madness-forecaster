@@ -19,11 +19,14 @@ Every run is auto-logged to artifacts/backtest_runs/mc_pool_backtest_<ts>.txt
 in addition to whatever the caller does with stdout (piping, redirecting, tee).
 """
 
+import importlib
 import json
 import sys
 from collections import defaultdict
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Callable, Sequence, Tuple
 
 import numpy as np
 from scipy import stats as sp_stats
@@ -36,6 +39,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 # ---------------------------------------------------------------------------
 from src.data.seed_pick_model import SEED_PICK_RATES
 from src.prediction.noseed_model import (
+    TRAIN_YEARS,
     train_noseed_model,
     build_noseed_probabilities,
     build_noseed_round_probabilities,
@@ -69,9 +73,121 @@ ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 3
 N_OPPONENTS = 999  # 1000-person pool
 N_REPEATS = 50  # Repeat opponent sampling to reduce variance
 N_MODEL_BRACKETS = 50  # Stochastic brackets per mode per repeat
-HEDGE_OPT_RATIO = 0.7  # Fraction of portfolio allocated to opt_torvik in hedge mode
 SEED_MATCHUP_ORDER = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
 REGION_ORDER = ["East", "West", "South", "Midwest"]
+
+ALL_MODES: Tuple[str, ...] = (
+    "seed",
+    "noseed",
+    "blend",
+    "torvik",
+    "champ_first_tv",
+    "f4_first_tv",
+    "e8_first_tv",
+    "opt_seed",
+    "opt_blend",
+    "opt_torvik",
+    "hedge_tv",
+)
+
+
+# ---------------------------------------------------------------------------
+# Walk-forward pool hyperparameters
+# ---------------------------------------------------------------------------
+#
+# Every tunable knob on the pool-optimization layer lives here. The harness
+# fits these per test year using ONLY years strictly prior to the test year
+# (walk-forward). Mixing future-year data into any of these is leakage:
+# public pick behavior, contrarian edges, and the pool metagame all drift
+# over time, so LOYO-style tuning would silently let future crowd behavior
+# shape past brackets.
+#
+# The prediction model is already walk-forward (`train_noseed_model(max_year
+# =year)`); this adds the same discipline to every pool-layer hyperparameter
+# that previously lived as a magic number scattered through run_backtest.
+#
+# The default fitter (`default_pool_hyperparameters`) returns the current
+# hardcoded baseline so this refactor is a no-op for existing runs. Custom
+# fitters must be functions of signature
+#
+#     Callable[[Sequence[int]], PoolHyperparameters]
+#
+# The harness only ever passes train_years (all entries < test_year); a
+# fitter that peeks at the test year is a leakage bug. The runtime assertion
+# in `run_backtest` catches the prediction-model side of that bug but cannot
+# catch it inside the fitter itself — keep the fitter honest.
+
+
+@dataclass(frozen=True)
+class PoolHyperparameters:
+    """Pool-optimizer knobs that are walked forward.
+
+    Every field here must be fittable from ``train_years`` alone AND must
+    actually be consumed by ``run_backtest``. If you add something that
+    depends on test-year data you have introduced a leakage path the
+    walk-forward assertions will NOT catch. If you add something the
+    harness does not read, you have added speculative generality.
+
+    Attributes:
+        blend_alpha: Weight on seed_rp in
+            ``blend_rp = alpha * seed + (1 - alpha) * noseed``.
+        hedge_opt_ratio: Fraction of the hedge_tv portfolio allocated to
+            opt_torvik brackets (remainder goes to seed-sampled brackets).
+        enabled_modes: Tuple of mode names to evaluate in the harness. Lets
+            a fitter drop dominated modes without touching run_backtest.
+    """
+
+    blend_alpha: float = 0.5
+    hedge_opt_ratio: float = 0.7
+    enabled_modes: Tuple[str, ...] = field(default=ALL_MODES)
+
+
+HparamFitter = Callable[[Sequence[int]], PoolHyperparameters]
+
+
+def default_pool_hyperparameters(train_years: Sequence[int]) -> PoolHyperparameters:
+    """Default walk-forward fitter: returns baseline hparams unchanged.
+
+    This is the plug-in point for real walk-forward tuning. The argument is
+    declared so every custom fitter has the same signature and the harness
+    can enforce walk-forward at the call site. Ignoring ``train_years`` is
+    fine for the default (baseline values are year-independent); any real
+    tuner MUST use it and MUST NOT touch any year outside this window.
+    """
+    del train_years  # baseline is year-independent by design
+    return PoolHyperparameters()
+
+
+def walk_forward_train_years(test_year: int) -> Tuple[int, ...]:
+    """Return the walk-forward training window for a given test year.
+
+    Walk-forward contract: every returned year is strictly less than
+    ``test_year``. This is the single source of truth for the train window
+    used by both the prediction model (via ``train_noseed_model(max_year=
+    test_year)``) and the pool hyperparameter fitter.
+    """
+    return tuple(y for y in TRAIN_YEARS if y < test_year)
+
+
+def load_hparam_fitter(spec: str) -> HparamFitter:
+    """Resolve a ``module:attr`` string to a walk-forward hparam fitter.
+
+    Used by the CLI to let callers plug in a custom fitter without editing
+    this file. The resolved object must be callable with a single
+    ``Sequence[int]`` argument and return a ``PoolHyperparameters``.
+
+    Raises:
+        ValueError: If the spec is malformed or the resolved object is not
+            callable. Import errors propagate as-is.
+    """
+    if ":" not in spec:
+        raise ValueError(f"hparam fitter spec must look like 'module.path:attr_name', got {spec!r}")
+    mod_path, attr = spec.split(":", 1)
+    module = importlib.import_module(mod_path)
+    fitter = getattr(module, attr)
+    if not callable(fitter):
+        raise ValueError(f"{spec} resolved to non-callable {type(fitter).__name__}")
+    return fitter
 
 
 # ---------------------------------------------------------------------------
@@ -872,9 +988,27 @@ def build_leverage_tilted_round_probs(model_round_probs, pick_dist, tilt_strengt
 
 
 def run_backtest(
-    years=None, n_opponents=N_OPPONENTS, n_repeats=N_REPEATS, n_model=N_MODEL_BRACKETS, opponent_source="seed"
+    years=None,
+    n_opponents=N_OPPONENTS,
+    n_repeats=N_REPEATS,
+    n_model=N_MODEL_BRACKETS,
+    opponent_source="seed",
+    hparam_fitter: HparamFitter = default_pool_hyperparameters,
 ):
-    """Run MC pool backtest across historical years.
+    """Run MC pool backtest across historical years with walk-forward integrity.
+
+    Walk-forward contract, per test year Y:
+      - Train window is ``walk_forward_train_years(Y)`` — every entry < Y.
+      - Prediction model is trained via ``train_noseed_model(max_year=Y)``
+        and its ``train_years`` attribute is asserted to live strictly
+        before Y.
+      - Pool hyperparameters are fit via ``hparam_fitter(train_years)``. The
+        fitter never sees Y — that's the leakage firewall for pool-layer
+        knobs (blend alpha, hedge ratio, mode selection).
+      - Opponent distributions come from the current year's ESPN archive
+        (production-faithful: those picks are public by Selection Sunday)
+        or the static SEED_PICK_RATES (year-agnostic). Neither aggregates
+        across years, so there's nothing cross-year to walk forward.
 
     For each year and mode, we sample n_model stochastic brackets from the
     model's round probabilities. Each stochastic bracket competes in n_repeats
@@ -885,6 +1019,11 @@ def run_backtest(
 
     Args:
         opponent_source: "seed" for SEED_PICK_RATES, "espn" for real ESPN data.
+        hparam_fitter: Walk-forward fitter for pool hyperparameters. Called
+            as ``hparam_fitter(train_years)`` per test year with the training
+            window. Defaults to ``default_pool_hyperparameters`` (no-op
+            baseline). Custom fitters MUST NOT read data from any year
+            outside the provided window.
     """
     if years is None:
         years = BACKTEST_YEARS
@@ -893,13 +1032,14 @@ def run_backtest(
     pool_size = n_opponents + 1  # 1 model bracket + N opponents
 
     print("=" * 100)
-    print("MC POOL BACKTEST: P(rank=1) — Stochastic Brackets")
+    print("MC POOL BACKTEST: P(rank=1) — Stochastic Brackets [walk-forward]")
     print("=" * 100)
     print(f"  Pool size: {pool_size} (1 model + {n_opponents} opponents)")
     print(f"  Opponent model: {opponent_source} pick rates (independent draws)")
     print(f"  Model brackets per mode: {n_model} (stochastic, NOT argmax)")
     print(f"  Repeats per year: {n_repeats} (reduces opponent sampling variance)")
     print(f"  Years: {len(years)}")
+    print(f"  Hparam fitter: {hparam_fitter.__module__}.{hparam_fitter.__name__}")
     print()
 
     header = (
@@ -912,6 +1052,22 @@ def run_backtest(
     results = []
 
     for year in years:
+        # Walk-forward train window: every entry strictly < year. Single
+        # source of truth for both the prediction model and the pool
+        # hparam fitter.
+        train_years = walk_forward_train_years(year)
+        if len(train_years) < 3:
+            print(f"  {year:<6} SKIP — {len(train_years)} train years (need >= 3)")
+            continue
+
+        # Fit pool hyperparameters on train_years ONLY. The fitter cannot
+        # see the test year by construction — this is the leakage firewall
+        # for pool-layer knobs (blend_alpha, hedge_opt_ratio, enabled_modes).
+        # A fitter that reads `year` is a leakage bug.
+        hparams = hparam_fitter(train_years)
+        if not isinstance(hparams, PoolHyperparameters):
+            raise TypeError(f"hparam_fitter returned {type(hparams).__name__}, expected PoolHyperparameters")
+
         seeds, regions = load_seeds_and_regions(year)
         if not seeds or not regions:
             print(f"  {year:<6} SKIP — no seeds/regions")
@@ -936,13 +1092,19 @@ def run_backtest(
         # Build pairwise probs for opponent bracket generation
         seed_pw = build_seed_probabilities(seeds)
 
-        # Train noseed model
+        # Train noseed model on train_years only, then assert walk-forward.
+        # The assertion catches any regression where train_noseed_model
+        # inadvertently bleeds test-year data into the fit.
         model = train_noseed_model(max_year=year)
+        assert all(y < year for y in model.train_years), (
+            f"walk-forward violation: noseed model for test year {year} was trained on {model.train_years}"
+        )
 
-        # Build round probs for each mode
+        # Build round probs for each mode. blend_alpha comes from the
+        # walked-forward hparams, not a hardcoded magic number.
         seed_rp = build_seed_round_probabilities(seeds)
         noseed_rp = build_noseed_round_probabilities(model, seeds, stats)
-        blend_rp = build_blend_round_probabilities(seed_rp, noseed_rp, alpha=0.5)
+        blend_rp = build_blend_round_probabilities(seed_rp, noseed_rp, alpha=hparams.blend_alpha)
 
         # Torvik barthag-based round probabilities (Log5 + MC simulation)
         barthag = _load_torvik_barthag(year, seeds)
@@ -992,6 +1154,8 @@ def run_backtest(
                 lambda fr, rp, n, r: sample_e8_first_brackets(fr, rp, n, r, seeds, regions),
             ),
         ]
+        # Filter to the modes the walked-forward fitter asked for.
+        mode_sampler_specs = [m for m in mode_sampler_specs if m[0] in hparams.enabled_modes]
 
         rng = np.random.default_rng(42 + year)
 
@@ -1061,8 +1225,15 @@ def run_backtest(
             )
 
         # --- Optimized modes: leverage-based Pareto brackets ---
-        # Test seed_rp, blend_rp, and torvik_rp as optimizer inputs
-        for opt_mode_name, opt_rp in [("opt_seed", seed_rp), ("opt_blend", blend_rp), ("opt_torvik", torvik_rp)]:
+        # Test seed_rp, blend_rp, and torvik_rp as optimizer inputs. Only
+        # modes enabled by the walked-forward hparams run.
+        opt_mode_specs = [
+            ("opt_seed", seed_rp),
+            ("opt_blend", blend_rp),
+            ("opt_torvik", torvik_rp),
+        ]
+        opt_mode_specs = [s for s in opt_mode_specs if s[0] in hparams.enabled_modes]
+        for opt_mode_name, opt_rp in opt_mode_specs:
             opt_brackets = build_optimized_brackets(
                 first_round, seeds, regions, opt_rp, pick_dist, pool_size, n_target=N_MODEL_BRACKETS, rng=rng
             )
@@ -1124,11 +1295,14 @@ def run_backtest(
                 print(f"  {year:<6} {opt_mode_name:<10} SKIP — no full Pareto brackets")
 
         # --- Hedge mode: blend opt_torvik + seed brackets ---
-        opt_brackets = build_optimized_brackets(
-            first_round, seeds, regions, torvik_rp, pick_dist, pool_size, n_target=N_MODEL_BRACKETS, rng=rng
-        )
+        if "hedge_tv" not in hparams.enabled_modes:
+            opt_brackets = np.zeros((0, 63), dtype=bool)
+        else:
+            opt_brackets = build_optimized_brackets(
+                first_round, seeds, regions, torvik_rp, pick_dist, pool_size, n_target=N_MODEL_BRACKETS, rng=rng
+            )
         if opt_brackets.shape[0] > 0:
-            n_opt_alloc = max(1, int(n_model * HEDGE_OPT_RATIO))
+            n_opt_alloc = max(1, int(n_model * hparams.hedge_opt_ratio))
             n_seed_alloc = n_model - n_opt_alloc
             opt_idx = rng.choice(opt_brackets.shape[0], size=n_opt_alloc, replace=True)
             hedge_opt = opt_brackets[opt_idx]
@@ -1346,7 +1520,19 @@ def main():
         action="store_true",
         help="Skip auto-logging to artifacts/backtest_runs/ (default: log every run).",
     )
+    parser.add_argument(
+        "--hparam-fitter",
+        default=None,
+        help="Walk-forward pool-hyperparameter fitter, as 'module.path:attr_name'. "
+        "The callable must have signature (Sequence[int]) -> PoolHyperparameters "
+        "and MUST NOT read data from any year outside train_years. Default: the "
+        "no-op baseline fitter (scripts.mc_pool_backtest:default_pool_hyperparameters).",
+    )
     args = parser.parse_args()
+
+    fitter: HparamFitter = default_pool_hyperparameters
+    if args.hparam_fitter:
+        fitter = load_hparam_fitter(args.hparam_fitter)
 
     log_path = None
     log_file = None
@@ -1366,6 +1552,7 @@ def main():
             n_repeats=args.n_repeats,
             n_model=args.n_model,
             opponent_source=args.opponent,
+            hparam_fitter=fitter,
         )
     finally:
         if log_file is not None:

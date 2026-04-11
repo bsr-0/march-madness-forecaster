@@ -153,10 +153,14 @@ def _load_tournament_results(year: int) -> list:
 class NoseedModel:
     """Ensemble of logistic regression + GBM trained without seed features."""
 
-    def __init__(self, lr, scaler, gbm):
+    def __init__(self, lr, scaler, gbm, train_years: Tuple[int, ...] = ()):
         self.lr = lr
         self.scaler = scaler
         self.gbm = gbm
+        # Walk-forward provenance: the exact set of years used to fit this
+        # model. Callers can assert `all(y < test_year for y in train_years)`
+        # to prove no future-year data leaked into a backtest fold.
+        self.train_years: Tuple[int, ...] = tuple(train_years)
 
     def predict_win_prob(self, t1_stats: dict, t2_stats: dict, sigma: float = 11.0) -> float:
         """Predict P(team1 wins) using no-seed ensemble."""
@@ -236,7 +240,7 @@ def train_noseed_model(max_year: Optional[int] = None) -> NoseedModel:
     gbm.fit(X, margins)
 
     logger.info("Trained no-seed model on %d games from %d years", len(X), len(train_years))
-    return NoseedModel(lr, scaler, gbm)
+    return NoseedModel(lr, scaler, gbm, train_years=tuple(train_years))
 
 
 def build_noseed_probabilities(
