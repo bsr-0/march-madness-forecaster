@@ -24,6 +24,9 @@ from pathlib import Path
 import numpy as np
 from scipy import stats as sp_stats
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
 # ---------------------------------------------------------------------------
 # Project imports
 # ---------------------------------------------------------------------------
@@ -51,7 +54,12 @@ from src.simulation.pool_competition import (
 # Constants
 # ---------------------------------------------------------------------------
 HIST_DIR = Path("data/raw/historical")
-BACKTEST_YEARS = [y for y in range(2008, 2026) if y != 2020]  # 17 years
+# Earliest test year = 2011: TRAIN_YEARS in noseed_model starts at 2008 (2005-2007
+# dropped for stale pre_tournament_computed four-factor provenance). Chronological
+# hold-before requires >=3 prior training years, so 2011 is the first valid test
+# year. 2020 excluded (COVID). 2012 lacks archived ESPN picks and will be skipped
+# at runtime by the per-year try/except. Matches unified_mode_evaluation.py.
+BACKTEST_YEARS = [y for y in range(2011, 2026) if y != 2020]  # 14 years, -2012 → 13
 ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
 N_OPPONENTS = 999  # 1000-person pool
 N_REPEATS = 50  # Repeat opponent sampling to reduce variance
@@ -485,11 +493,14 @@ def build_seed_pick_distribution(seeds):
 def build_espn_pick_distribution(year, seeds):
     """Build opponent pick distribution from real ESPN public picks data.
 
-    Falls back to seed-based if no ESPN data available for this year.
+    Raises FileNotFoundError if no archived ESPN picks exist for this year.
+    The caller's per-year try/except will skip the year cleanly. No silent
+    fallback to seed rates — that would degrade the measurement without
+    surfacing the data gap.
     """
     from src.data.historical_picks import load_historical_public_picks
 
-    picks = load_historical_public_picks(year, seeds)
+    picks = load_historical_public_picks(year, seeds, require_archived=True)
     return picks
 
 
@@ -779,9 +790,15 @@ def run_backtest(
         barthag = _load_torvik_barthag(year, seeds)
         torvik_rp = build_torvik_round_probabilities(seeds, regions, barthag)
 
-        # Build opponent distribution (needed before leveraged mode)
+        # Build opponent distribution (needed before leveraged mode).
+        # ESPN mode is strict: missing archived picks raise FileNotFoundError.
+        # Skip the year cleanly so other years still produce results.
         if opponent_source == "espn":
-            pick_dist = build_espn_pick_distribution(year, seeds)
+            try:
+                pick_dist = build_espn_pick_distribution(year, seeds)
+            except FileNotFoundError as exc:
+                print(f"  {year:<6} SKIP — {exc}")
+                continue
         else:
             pick_dist = build_seed_pick_distribution(seeds)
 
@@ -1082,8 +1099,9 @@ def main():
     parser.add_argument(
         "--opponent",
         choices=["seed", "espn"],
-        default="seed",
-        help="Opponent pick distribution source: seed (SEED_PICK_RATES) or espn (real ESPN data)",
+        default="espn",
+        help="Opponent pick distribution source: espn (real archived ESPN picks, "
+        "strict — fails if missing) or seed (SEED_PICK_RATES fallback). Default: espn.",
     )
     args = parser.parse_args()
     return run_backtest(
