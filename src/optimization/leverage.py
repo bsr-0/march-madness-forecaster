@@ -1135,24 +1135,53 @@ class ParetoOptimizer:
 
     def generate_pareto_brackets(self, num_brackets: int = 5) -> List[BracketConfiguration]:
         """
-        Generate brackets along Pareto frontier with path protection filtering.
+        Generate brackets along the Pareto frontier with path protection filtering.
 
-        Generates candidate brackets at evenly-spaced risk levels, scores each
-        for internal path consistency using PathProtectionScorer, and filters
-        out brackets that score below the 0.85 protocol threshold.  If all
-        candidates fail the filter, the full unfiltered list is returned so
-        that downstream optimizers always have seeds to work from.
+        Two-phase construction:
+
+        1. Risk sweep — generate candidate brackets at ``2*num_brackets + 1``
+           evenly-spaced risk levels (up from a flat 5 in the legacy code),
+           score each with PathProtectionScorer, drop any that fail the 0.85
+           protocol threshold, then deduplicate by canonical picks. The
+           sweep captures whichever crossovers exist naturally on the
+           (probability, differentiation) curve.
+
+        2. Champion-diversity augmentation — if the risk sweep collapses to
+           fewer than ``num_brackets`` distinct brackets (common when one
+           team dominates the curve because it has both the highest model
+           probability AND a high leverage ratio, e.g., Michigan in 2026),
+           fill out the frontier by generating forced-champion brackets for
+           the top model-probability candidates that are not yet represented.
+           Each augmentation bracket is generated at ``risk_level=0.4``
+           (middle of the "balanced" band) and labeled ``balanced``.
+
+        The diversity augmentation only runs when the summary bracket path
+        is in use. The full-bracket path simulates R64-through-CHAMP and
+        does not currently support forced champions — for full-bracket
+        runs the frontier contains only the risk-sweep output, which can
+        still collapse to a single candidate. See the TODO below and the
+        comment on ``_generate_bracket`` for the gap.
 
         Args:
-            num_brackets: Number of brackets to generate
+            num_brackets: Target number of distinct brackets on the frontier.
+                The risk sweep generates more candidates than this (to
+                produce enough crossovers), then dedup + augmentation
+                trims back to the target. May return fewer if the data
+                genuinely has fewer distinct credible brackets.
 
         Returns:
-            List of bracket configurations from conservative to aggressive
+            List of bracket configurations, conservative to aggressive,
+            each with a unique canonical picks dict and a strategy label
+            that honestly describes its picks.
         """
-        brackets = []
+        brackets: List[BracketConfiguration] = []
 
-        # Risk levels from 0 (chalk) to 1 (max contrarian)
-        risk_levels = np.linspace(0, 1, num_brackets)
+        # Phase 1: risk sweep at higher resolution than the legacy 5 levels.
+        # 2*num_brackets + 1 gives odd count so both endpoints (risk=0 and
+        # risk=1) are sampled exactly, and intermediate levels catch any
+        # crossovers that exist at finer granularity.
+        sweep_resolution = max(num_brackets * 2 + 1, 11)
+        risk_levels = np.linspace(0, 1, sweep_resolution)
 
         for risk in risk_levels:
             if risk < 0.2:
@@ -1161,30 +1190,14 @@ class ParetoOptimizer:
                 strategy = "balanced"
             else:
                 strategy = "contrarian"
+            brackets.append(self._generate_bracket(risk, strategy))
 
-            bracket = self._generate_bracket(risk, strategy)
-            brackets.append(bracket)
-
-        # Deduplicate the frontier by canonical picks.
-        #
-        # The risk-level threshold assigns strategy labels BEFORE bracket
-        # generation, so a risk=0.75 bracket is labeled "contrarian" even if
-        # _generate_*_bracket returns the same picks as the risk=0.0 "chalk"
-        # bracket (e.g., when _ev_score at risk=0.75 still puts the 1-seed on
-        # top). That used to produce frontiers with multiple labels pointing
-        # at identical picks, which misleads downstream consumers — the CLI
-        # would show a "contrarian" recommendation whose bracket was byte-
-        # identical to chalk.
-        #
-        # Policy: walk the frontier in risk-ascending order (already sorted
-        # that way by construction), key each bracket by its picks dict, and
-        # keep only the first occurrence of each key. Because the first
-        # occurrence is the lowest-risk generator, the surviving bracket
-        # inherits the label that actually describes its picks (a bracket
-        # that matches chalk is labeled "chalk", not "contrarian"). Later
-        # duplicates are dropped outright, so the frontier length reflects
-        # the number of genuinely distinct brackets on the curve, and any
-        # bracket's strategy label is a faithful description of its picks.
+        # Deduplicate the frontier by canonical picks. Walk in risk-ascending
+        # order (brackets is already sorted that way) and keep only the first
+        # occurrence of each unique picks dict. Because the first occurrence
+        # is the lowest-risk generator of those picks, the surviving bracket
+        # keeps the label that actually describes its picks (a bracket matching
+        # chalk is labeled "chalk", not a misnamed "contrarian").
         seen_keys: set = set()
         deduped: List[BracketConfiguration] = []
         for bracket in brackets:
@@ -1194,6 +1207,63 @@ class ParetoOptimizer:
             seen_keys.add(key)
             deduped.append(bracket)
         brackets = deduped
+
+        # Phase 2: champion-diversity augmentation.
+        #
+        # If the risk sweep produced fewer than num_brackets distinct
+        # brackets, the underlying _ev_score curve has fewer crossovers than
+        # we'd like — typically because one team is BOTH the highest-EV pick
+        # AND has a high leverage ratio (model_prob > public_pick_rate), so
+        # it dominates every convex combination of safety and differentiation.
+        # Michigan in 2026 is the canonical example: model 20.0% vs public
+        # 13.9% means Michigan is an "undervalued favorite" and wins the
+        # scoring function at every risk level from 0.00 to 0.90, leaving
+        # only Michigan-champion and Illinois-champion (risk≈1.0) on the
+        # curve.
+        #
+        # The fix is explicit champion diversity: for each top model-prob
+        # candidate not yet represented, force them into a bracket at
+        # moderate risk (risk=0.4, middle of the "balanced" band) so the
+        # frontier shows the user a range of credible champion choices. The
+        # forced-champion path only works on summary brackets — the full
+        # bracket simulator can't be steered without modifying R64-onward
+        # simulation, which is out of scope here.
+        if len(brackets) < num_brackets and not self._can_build_full_bracket():
+            existing_champions = {b.champion for b in brackets}
+            champ_prob_ranking = sorted(
+                (
+                    (tid, float(self.calculator.model_probs.get(tid, {}).get("CHAMP", 0.0)))
+                    for tid in self.calculator.model_probs
+                ),
+                key=lambda kv: -kv[1],
+            )
+
+            # Minimum CHAMP probability for a candidate to be worth showing.
+            # 1% keeps the augmentation from dragging in long-tail noise
+            # (e.g., 15-seeds with near-zero CHAMP probability).
+            MIN_CHAMP_PROB_FOR_AUGMENTATION = 0.01
+
+            for candidate_id, candidate_prob in champ_prob_ranking:
+                if len(brackets) >= num_brackets:
+                    break
+                if candidate_id in existing_champions:
+                    continue
+                if candidate_prob < MIN_CHAMP_PROB_FOR_AUGMENTATION:
+                    break  # ranking is descending, so once we fall below we're done
+
+                forced = self._generate_bracket(
+                    risk_level=0.4,
+                    strategy="balanced",
+                    forced_champion=candidate_id,
+                )
+                forced_key = tuple(sorted(forced.picks.items()))
+                if forced_key in seen_keys:
+                    # Forced bracket happened to match an existing one
+                    # (e.g., F4 selection produced the same F4 set). Skip.
+                    continue
+                seen_keys.add(forced_key)
+                brackets.append(forced)
+                existing_champions.add(candidate_id)
 
         # Path protection filtering (Protocol Section 4.4).
         # Build an approximate predict_fn from model_probs so we can use
@@ -1206,21 +1276,39 @@ class ParetoOptimizer:
         )
         return filtered if filtered else brackets
 
-    def _generate_bracket(self, risk_level: float, strategy: str) -> BracketConfiguration:
+    def _generate_bracket(
+        self,
+        risk_level: float,
+        strategy: str,
+        forced_champion: Optional[str] = None,
+    ) -> BracketConfiguration:
         """
         Generate single bracket with given risk level.
 
         Args:
             risk_level: 0 = chalk, 1 = max contrarian
             strategy: Strategy name
+            forced_champion: If provided and the summary bracket path is in
+                use, force this team as the champion instead of argmax
+                selection. Ignored by the full bracket path (which
+                simulates R64-onward and can't be forced without changing
+                the simulator). Used by generate_pareto_brackets' diversity
+                augmentation pass to surface alternative champions when the
+                risk sweep collapses to a single dominant candidate.
 
         Returns:
             BracketConfiguration
         """
         if self._can_build_full_bracket():
+            # Full bracket path: simulates R64-through-CHAMP, so forced_champion
+            # would need the simulator to be modified. Not supported today —
+            # callers should fall back to the summary path or accept that
+            # full-bracket runs use argmax champion selection only.
             picks, champion, final_four, expected_points, variance = self._generate_full_bracket(risk_level)
         else:
-            picks, champion, final_four, expected_points, variance = self._generate_summary_bracket(risk_level)
+            picks, champion, final_four, expected_points, variance = self._generate_summary_bracket(
+                risk_level, forced_champion=forced_champion
+            )
 
         return BracketConfiguration(
             picks=picks,
@@ -1488,13 +1576,22 @@ class ParetoOptimizer:
 
         return picks, champion, final_four, expected_points, variance
 
-    def _generate_summary_bracket(self, risk_level: float) -> Tuple[Dict[str, str], str, List[str], float, float]:
-        # Champion selection using EV score (not raw probability x leverage)
-        champion_scores: Dict[str, float] = {}
-        for team_id in self.calculator.model_probs:
-            champion_scores[team_id] = self._ev_score(team_id, "CHAMP", risk_level)
-
-        champion = max(champion_scores, key=champion_scores.get) if champion_scores else ""
+    def _generate_summary_bracket(
+        self,
+        risk_level: float,
+        forced_champion: Optional[str] = None,
+    ) -> Tuple[Dict[str, str], str, List[str], float, float]:
+        # Champion selection. If forced_champion is provided (used by the
+        # diversity augmentation pass in generate_pareto_brackets), skip the
+        # argmax and take the caller-specified team. Otherwise fall back to
+        # the legacy argmax behavior so unforced calls are unchanged.
+        if forced_champion and forced_champion in self.calculator.model_probs:
+            champion = forced_champion
+        else:
+            champion_scores: Dict[str, float] = {}
+            for team_id in self.calculator.model_probs:
+                champion_scores[team_id] = self._ev_score(team_id, "CHAMP", risk_level)
+            champion = max(champion_scores, key=champion_scores.get) if champion_scores else ""
 
         # F4 selection using EV score (incorporates differentiation value)
         f4_candidates = []
@@ -1506,9 +1603,24 @@ class ParetoOptimizer:
 
         final_four: List[str] = []
         used_regions = set()
+
+        # When the champion was forced, seed the F4 with the champion first
+        # so the resulting bracket is internally consistent (a champion must
+        # be in the F4). This also claims the champion's region before the
+        # greedy pass, which prevents a "better" team from the same region
+        # from displacing the champion. Unforced calls skip this block and
+        # use the pure greedy selection, preserving legacy behavior.
+        if forced_champion and champion:
+            final_four.append(champion)
+            champ_region = self.calculator._team_meta(champion).region
+            if champ_region:
+                used_regions.add(champ_region)
+
         for team_id, _score, _f4_prob in f4_candidates:
             if len(final_four) == 4:
                 break
+            if team_id in final_four:
+                continue
             region = self.calculator._team_meta(team_id).region
             if region and region in used_regions:
                 continue

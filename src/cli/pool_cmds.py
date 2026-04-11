@@ -179,14 +179,17 @@ def run_optimize_pool(args):
         if mismatch_note is not None:
             print(f"  {mismatch_note}")
 
-    # Sanity-check: frontier labels should all be unique post-dedup.
-    _labels = [b.strategy for b in result.pareto_brackets]
-    if len(_labels) != len(set(_labels)):
+    # Sanity-check: frontier picks should all be unique post-dedup. Labels
+    # may legitimately repeat (e.g., two "contrarian" brackets at different
+    # risk levels within the contrarian band can both survive dedup if their
+    # picks differ) — what must be unique is the canonical picks dict for
+    # each surviving bracket.
+    _picks_keys = [tuple(sorted(b.picks.items())) for b in result.pareto_brackets]
+    if len(_picks_keys) != len(set(_picks_keys)):
         logger.warning(
-            "Pareto frontier has duplicate strategy labels after dedup: %s. "
-            "This is a bug — each surviving bracket should have a unique "
-            "canonical picks set.",
-            _labels,
+            "Pareto frontier has duplicate canonical picks after dedup. "
+            "This is a bug — the generate_pareto_brackets dedup pass "
+            "should guarantee picks uniqueness.",
         )
 
     print(f"\nTop leverage picks (model > public):")
