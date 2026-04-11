@@ -1639,17 +1639,141 @@ class ParetoOptimizer:
         for idx, team_id in enumerate(final_four, start=1):
             picks[f"F4_{idx}"] = team_id
 
+        expected_points, variance = self._summary_bracket_full_score(champion, final_four)
+        return picks, champion, final_four, expected_points, variance
+
+    def _chalk_fill_round_expected_points(self, round_name: str) -> Tuple[float, float]:
+        """Expected points and variance for chalk-filling a round.
+
+        "Chalk-fill" means picking the top-N_R teams by round-R probability
+        as the N_R winners of that round, where N_R is the number of teams
+        advancing past round R. Returns the expected points and variance
+        from those N_R picks.
+
+        Used by `_summary_bracket_full_score` to account for the expected
+        contribution of R64/R32/S16 rounds when the summary bracket only
+        specifies F4 and CHAMP picks explicitly. Without this, the summary
+        bracket's expected_points would be missing ~67% of the total score
+        a real ESPN bracket can earn, and the reported number would not be
+        comparable to actual ESPN tournament scores.
+        """
+        n_survivors_per_round = {"R64": 32, "R32": 16, "S16": 8, "E8": 4, "F4": 2, "CHAMP": 1}
+        n_survivors = n_survivors_per_round.get(round_name, 0)
+        pts = float(self.calculator.scoring_system.get(round_name, 0))
+        if n_survivors == 0 or pts == 0:
+            return 0.0, 0.0
+
+        # Sort all teams by their probability of winning this round.
+        probs = sorted(
+            (
+                float(self.calculator.model_probs.get(tid, {}).get(round_name, 0.0))
+                for tid in self.calculator.model_probs
+            ),
+            reverse=True,
+        )
+        top_n_probs = probs[:n_survivors]
+
+        ev = pts * sum(top_n_probs)
+        var = (pts**2) * sum(p * (1.0 - p) for p in top_n_probs)
+        return ev, var
+
+    def _summary_bracket_full_score(
+        self,
+        champion: str,
+        final_four: List[str],
+    ) -> Tuple[float, float]:
+        """Compute expected points and variance for a full 63-game bracket
+        given only the summary bracket's explicit CHAMP and F4 picks.
+
+        The summary bracket path names 5 teams (1 champion + 4 F4) out of
+        the 63 games in a real ESPN bracket. To produce an expected_points
+        number comparable to actual ESPN tournament scores (and to avoid
+        the ~7x undercount the legacy computation produced by only summing
+        CHAMP and F4 contributions), we complete the bracket under a
+        chalk-fill assumption for the unspecified rounds:
+
+          R64, R32, S16: chalk-fill (top-N_R teams by round-R probability).
+            These contributions are the same for every summary bracket and
+            represent the "standard assumption" that a real submitted
+            bracket follows chalk for rounds the summary bracket doesn't
+            explicitly specify.
+
+          E8: scored from the 4 explicit F4 picks. Reaching the Final Four
+            in ESPN semantics means winning your E8 game (worth 80 pts per
+            game, 320 round total). Each F4 team contributes
+            P(team wins E8) * 80 to the expected score.
+
+          F4: scored from 2 semifinal winners selected from the 4 F4 picks.
+            The champion must be one (they must win their semifinal to
+            reach the championship game). The second semifinal winner is
+            chosen as the F4 pick with the highest F4 probability that is
+            NOT the champion. Each contributes P(team wins F4) * 160, for
+            a maximum F4-round contribution of 320 — matching ESPN's real
+            F4-round cap. The previous code incorrectly scored all 4 F4
+            picks at 160 each, producing a 640-point max for F4 that's
+            double the actual ESPN cap.
+
+          CHAMP: scored from the explicit champion pick,
+            P(champion wins CHAMP) * 320.
+
+        Returns (expected_points, variance). Variance is the sum of
+        per-pick binomial variances (independent-pick approximation — does
+        not model path-dependent covariance, which would require a full
+        bracket simulation the summary path can't support).
+        """
         expected_points = 0.0
         variance = 0.0
-        if champion:
-            ev, var = self._expected_value_contribution(champion, "CHAMP")
+
+        # R64/R32/S16: chalk-fill contribution (same for every summary bracket)
+        for rnd in ("R64", "R32", "S16"):
+            ev, var = self._chalk_fill_round_expected_points(rnd)
             expected_points += ev
             variance += var
+
+        # E8: 4 F4 picks each need to win their E8 game to reach the Final Four
+        e8_pts = float(self.calculator.scoring_system.get("E8", 0))
         for team_id in final_four:
-            ev, var = self._expected_value_contribution(team_id, "F4")
-            expected_points += ev
-            variance += var
-        return picks, champion, final_four, expected_points, variance
+            p = float(self.calculator.model_probs.get(team_id, {}).get("E8", 0.0))
+            expected_points += p * e8_pts
+            variance += p * (1.0 - p) * (e8_pts**2)
+
+        # F4: 2 semifinal winners. Champion is one (must win semifinal to reach
+        # championship). Second is the highest-F4-prob F4 pick that isn't champ.
+        f4_pts = float(self.calculator.scoring_system.get("F4", 0))
+        semifinal_winners: List[str] = []
+        if champion and champion in final_four:
+            semifinal_winners.append(champion)
+        other_f4 = sorted(
+            (
+                (tid, float(self.calculator.model_probs.get(tid, {}).get("F4", 0.0)))
+                for tid in final_four
+                if tid != champion
+            ),
+            key=lambda kv: -kv[1],
+        )
+        if other_f4:
+            semifinal_winners.append(other_f4[0][0])
+        # If the champion isn't in final_four (shouldn't happen but defensive),
+        # take the top 2 F4 teams by F4 probability.
+        if not semifinal_winners:
+            all_f4 = sorted(
+                ((tid, float(self.calculator.model_probs.get(tid, {}).get("F4", 0.0))) for tid in final_four),
+                key=lambda kv: -kv[1],
+            )
+            semifinal_winners = [tid for tid, _ in all_f4[:2]]
+        for tid in semifinal_winners:
+            p = float(self.calculator.model_probs.get(tid, {}).get("F4", 0.0))
+            expected_points += p * f4_pts
+            variance += p * (1.0 - p) * (f4_pts**2)
+
+        # CHAMP: explicit champion pick
+        if champion:
+            p = float(self.calculator.model_probs.get(champion, {}).get("CHAMP", 0.0))
+            champ_pts = float(self.calculator.scoring_system.get("CHAMP", 0))
+            expected_points += p * champ_pts
+            variance += p * (1.0 - p) * (champ_pts**2)
+
+        return expected_points, variance
 
     def recommend_for_pool_size(self) -> str:
         """
