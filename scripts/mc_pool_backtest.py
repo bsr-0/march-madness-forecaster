@@ -348,6 +348,258 @@ def sample_model_brackets(first_round_matchups, round_probs, n_brackets, rng):
     return all_brackets
 
 
+# ---------------------------------------------------------------------------
+# Construction-mode stochastic samplers
+# ---------------------------------------------------------------------------
+#
+# These are the stochastic-sample analogues of the 4 construction modes in
+# src/optimization/bracket_construction.py. They apply the same anchor-and-
+# lock logic (pick an anchor, lock their path games, draw everything else
+# stochastically) but use the model round_probs to sample BOTH the anchors
+# and the non-locked games, rather than using argmax-of-_ev_score selection.
+# This produces a distribution of brackets that can be scored against real
+# tournament outcomes exactly like the existing sample_model_brackets path,
+# so the new modes slot directly into the 13-year backtest framework for
+# paired statistical comparison against seed/noseed/blend/torvik baselines.
+
+
+_TOP_QUADRANT_SEEDS = {1, 16, 8, 9, 5, 12, 4, 13}
+_BOTTOM_QUADRANT_SEEDS = {6, 11, 3, 14, 7, 10, 2, 15}
+_LOCK_ROUND_INDEX = {"R64": 0, "R32": 1, "S16": 2, "E8": 3, "F4": 4, "CHAMP": 5}
+
+
+def _sample_with_locks(
+    first_round_matchups,
+    round_probs,
+    n_brackets,
+    rng,
+    locked_teams_per_sample,
+    lock_through_round,
+):
+    """Sample n_brackets brackets with per-sample forced wins.
+
+    At each game: if one of the two teams is in the sample's locked set
+    AND the current round is at or before lock_through_round, that team
+    wins. Otherwise the winner is drawn stochastically from the normalized
+    head-to-head probability (same formula as sample_model_brackets).
+
+    Args:
+        first_round_matchups: flat list of 64 team_ids in bracket order
+        round_probs: {team_id: {round_name: P(team wins round)}}
+        n_brackets: number of samples to draw
+        rng: np.random.Generator
+        locked_teams_per_sample: list of length n_brackets; each element is a
+            set of team_ids that are locked to win their path games for that
+            specific sample
+        lock_through_round: one of ROUND_NAMES or None; lock only applies at
+            rounds at or before this round. None disables locking entirely
+            (equivalent to sample_model_brackets).
+
+    Returns:
+        Boolean array of shape (n_brackets, 63).
+    """
+    all_brackets = np.zeros((n_brackets, 63), dtype=bool)
+    lock_round_idx = _LOCK_ROUND_INDEX.get(lock_through_round, -1) if lock_through_round else -1
+
+    for b in range(n_brackets):
+        locked = locked_teams_per_sample[b]
+        current_teams = list(first_round_matchups)
+        game_idx = 0
+
+        for round_idx in range(6):
+            round_name = ROUND_NAMES[round_idx]
+            next_round = []
+            within_lock_range = lock_round_idx >= 0 and round_idx <= lock_round_idx
+
+            for g in range(0, len(current_teams), 2):
+                if g + 1 >= len(current_teams):
+                    next_round.append(current_teams[g])
+                    continue
+                t1, t2 = current_teams[g], current_teams[g + 1]
+
+                locked_winner = None
+                if within_lock_range and locked:
+                    if t1 in locked:
+                        locked_winner = t1
+                    elif t2 in locked:
+                        locked_winner = t2
+
+                if locked_winner is not None:
+                    winner = locked_winner
+                    all_brackets[b, game_idx] = winner == t1
+                else:
+                    p1 = round_probs.get(t1, {}).get(round_name, 0.0)
+                    p2 = round_probs.get(t2, {}).get(round_name, 0.0)
+                    if p1 + p2 > 1e-8:
+                        p_t1 = p1 / (p1 + p2)
+                    else:
+                        p_t1 = 0.5
+                    if rng.random() < p_t1:
+                        winner = t1
+                        all_brackets[b, game_idx] = True
+                    else:
+                        winner = t2
+                        all_brackets[b, game_idx] = False
+
+                next_round.append(winner)
+                game_idx += 1
+
+            current_teams = next_round
+
+    return all_brackets
+
+
+def _draw_categorical(rng, items, weights):
+    """Draw one item from a list with probability proportional to weights.
+
+    Normalizes weights; falls back to uniform if all weights are ~0. Used
+    by the construction-mode samplers to pick anchors (champion, F4 teams,
+    S16 winners) from the model's round_probs distribution rather than
+    taking argmax — preserves the model's signal across repeated draws.
+    """
+    w = np.asarray(weights, dtype=float)
+    total = w.sum()
+    if total > 1e-12:
+        w = w / total
+    else:
+        w = np.ones(len(items)) / len(items)
+    idx = rng.choice(len(items), p=w)
+    return items[idx]
+
+
+def sample_champ_first_brackets(first_round_matchups, round_probs, n_brackets, rng):
+    """Sample n_brackets brackets via champion-first construction.
+
+    For each sample:
+      1. Draw a champion from the CHAMP probability distribution, normalized
+         across all teams (categorical sampling).
+      2. Lock that champion to win every game on their R64-to-CHAMP path.
+      3. Sample all remaining games stochastically from round_probs.
+
+    This produces a distribution of brackets where the champion varies by
+    sample according to the model's CHAMP probabilities (so high-CHAMP-prob
+    teams appear as champion more often), and each bracket's earlier rounds
+    are consistent with the chosen champion's path locked to victory.
+    """
+    teams = list(round_probs.keys())
+    champ_weights = [round_probs[t].get("CHAMP", 0.0) for t in teams]
+
+    locked_teams_per_sample = []
+    for _ in range(n_brackets):
+        champion = _draw_categorical(rng, teams, champ_weights)
+        locked_teams_per_sample.append({champion})
+
+    return _sample_with_locks(
+        first_round_matchups,
+        round_probs,
+        n_brackets,
+        rng,
+        locked_teams_per_sample,
+        lock_through_round="CHAMP",
+    )
+
+
+def sample_f4_first_brackets(
+    first_round_matchups,
+    round_probs,
+    n_brackets,
+    rng,
+    seeds,
+    regions,
+):
+    """Sample n_brackets brackets via F4-first construction.
+
+    For each sample:
+      1. For each of the 4 regions, draw one F4 team from the F4 probability
+         distribution restricted to that region's teams.
+      2. Lock those 4 teams to win their regional paths (R64 through E8).
+      3. Sample F4 semifinals and CHAMP game stochastically from round_probs.
+
+    The F4 composition varies by sample according to the model's F4 prob
+    within each region — high-F4-prob teams in a region appear as that
+    region's F4 rep more often.
+    """
+    # Group teams by region (with Southeast/Southwest alias normalization)
+    _region_aliases = {"Southeast": "South", "Southwest": "Midwest"}
+    teams_by_region: dict = {r: [] for r in ("East", "West", "South", "Midwest")}
+    for tid in round_probs:
+        raw_region = regions.get(tid, "")
+        region = _region_aliases.get(raw_region, raw_region)
+        if region in teams_by_region:
+            teams_by_region[region].append(tid)
+
+    locked_teams_per_sample = []
+    for _ in range(n_brackets):
+        locked: set = set()
+        for region in ("East", "West", "South", "Midwest"):
+            region_teams = teams_by_region[region]
+            if not region_teams:
+                continue
+            f4_weights = [round_probs[t].get("F4", 0.0) for t in region_teams]
+            locked.add(_draw_categorical(rng, region_teams, f4_weights))
+        locked_teams_per_sample.append(locked)
+
+    return _sample_with_locks(
+        first_round_matchups,
+        round_probs,
+        n_brackets,
+        rng,
+        locked_teams_per_sample,
+        lock_through_round="E8",
+    )
+
+
+def sample_e8_first_brackets(
+    first_round_matchups,
+    round_probs,
+    n_brackets,
+    rng,
+    seeds,
+    regions,
+):
+    """Sample n_brackets brackets via E8-first (quadrant) construction.
+
+    For each sample:
+      1. For each of the 8 quadrants (2 per region — top seeds {1,16,8,9,
+         5,12,4,13} vs bottom seeds {6,11,3,14,7,10,2,15}), draw one S16
+         winner from the S16 probability distribution restricted to that
+         quadrant's teams.
+      2. Lock those 8 teams to win their quadrant paths (R64 through S16).
+      3. Sample E8, F4, CHAMP games stochastically from round_probs.
+    """
+    _region_aliases = {"Southeast": "South", "Southwest": "Midwest"}
+    teams_by_quadrant: dict = {}
+    for tid in round_probs:
+        raw_region = regions.get(tid, "")
+        region = _region_aliases.get(raw_region, raw_region)
+        if region not in ("East", "West", "South", "Midwest"):
+            continue
+        s = seeds.get(tid, 0)
+        quadrant = "top" if s in _TOP_QUADRANT_SEEDS else "bottom"
+        teams_by_quadrant.setdefault((region, quadrant), []).append(tid)
+
+    locked_teams_per_sample = []
+    for _ in range(n_brackets):
+        locked: set = set()
+        for region in ("East", "West", "South", "Midwest"):
+            for quadrant in ("top", "bottom"):
+                quad_teams = teams_by_quadrant.get((region, quadrant), [])
+                if not quad_teams:
+                    continue
+                s16_weights = [round_probs[t].get("S16", 0.0) for t in quad_teams]
+                locked.add(_draw_categorical(rng, quad_teams, s16_weights))
+        locked_teams_per_sample.append(locked)
+
+    return _sample_with_locks(
+        first_round_matchups,
+        round_probs,
+        n_brackets,
+        rng,
+        locked_teams_per_sample,
+        lock_through_round="S16",
+    )
+
+
 def build_actual_outcome(first_round_matchups, games):
     """Convert actual tournament results into a (63,) boolean vector.
 
@@ -708,18 +960,44 @@ def run_backtest(
         else:
             pick_dist = build_seed_pick_distribution(seeds)
 
-        mode_round_probs = {
-            "seed": seed_rp,
-            "noseed": noseed_rp,
-            "blend": blend_rp,
-            "torvik": torvik_rp,
-        }
+        # Each entry is (mode_name, round_probs, sampler_fn). The sampler_fn
+        # takes (first_round, round_probs, n_samples, rng) and returns an
+        # (n_samples, 63) bool array. The 4 baseline modes all use
+        # sample_model_brackets (independent-draw sampling from round_probs,
+        # which is structurally equivalent to forward_greedy construction at
+        # the per-game level). The 3 construction-mode variants all use the
+        # torvik probabilities as their base (since torvik is the backtest-
+        # recommended probability mode) but apply different anchor-and-lock
+        # logic to produce brackets with mode-specific structure. The
+        # round_probs is passed to the sampler so it can compute per-team
+        # anchor weights (e.g., CHAMP probability for champ_first).
+        mode_sampler_specs = [
+            ("seed", seed_rp, sample_model_brackets),
+            ("noseed", noseed_rp, sample_model_brackets),
+            ("blend", blend_rp, sample_model_brackets),
+            ("torvik", torvik_rp, sample_model_brackets),
+            (
+                "champ_first_tv",
+                torvik_rp,
+                lambda fr, rp, n, r: sample_champ_first_brackets(fr, rp, n, r),
+            ),
+            (
+                "f4_first_tv",
+                torvik_rp,
+                lambda fr, rp, n, r: sample_f4_first_brackets(fr, rp, n, r, seeds, regions),
+            ),
+            (
+                "e8_first_tv",
+                torvik_rp,
+                lambda fr, rp, n, r: sample_e8_first_brackets(fr, rp, n, r, seeds, regions),
+            ),
+        ]
 
         rng = np.random.default_rng(42 + year)
 
-        for mode_name, rp in mode_round_probs.items():
-            # Sample stochastic model brackets
-            model_brackets = sample_model_brackets(first_round, rp, n_model, rng)
+        for mode_name, rp, sampler in mode_sampler_specs:
+            # Sample stochastic model brackets using the mode's sampler
+            model_brackets = sampler(first_round, rp, n_model, rng)
 
             # Score all model brackets against actual outcome
             model_scores = score_brackets_against_outcome(model_brackets, actual, scoring_vector)
@@ -915,7 +1193,19 @@ def run_backtest(
     )
     print(f"  {'-' * 65}")
 
-    for mode in ["seed", "noseed", "blend", "torvik", "opt_seed", "opt_blend", "opt_torvik", "hedge_tv"]:
+    for mode in [
+        "seed",
+        "noseed",
+        "blend",
+        "torvik",
+        "champ_first_tv",
+        "f4_first_tv",
+        "e8_first_tv",
+        "opt_seed",
+        "opt_blend",
+        "opt_torvik",
+        "hedge_tv",
+    ]:
         mode_results = [r for r in results if r["mode"] == mode]
         if not mode_results:
             continue
@@ -933,7 +1223,19 @@ def run_backtest(
     print(f"\n  Statistical Tests — Mean Rank (paired across years):")
 
     # Collect per-year ranks by mode
-    all_modes = ["seed", "noseed", "blend", "torvik", "opt_seed", "opt_blend", "opt_torvik", "hedge_tv"]
+    all_modes = [
+        "seed",
+        "noseed",
+        "blend",
+        "torvik",
+        "champ_first_tv",
+        "f4_first_tv",
+        "e8_first_tv",
+        "opt_seed",
+        "opt_blend",
+        "opt_torvik",
+        "hedge_tv",
+    ]
     mode_ranks = {m: {} for m in all_modes}
     mode_best = {m: {} for m in all_modes}
     for r in results:
@@ -949,6 +1251,9 @@ def run_backtest(
         ("noseed", mode_ranks["noseed"], mode_best["noseed"]),
         ("blend", mode_ranks["blend"], mode_best["blend"]),
         ("torvik", mode_ranks["torvik"], mode_best["torvik"]),
+        ("champ_first_tv", mode_ranks["champ_first_tv"], mode_best["champ_first_tv"]),
+        ("f4_first_tv", mode_ranks["f4_first_tv"], mode_best["f4_first_tv"]),
+        ("e8_first_tv", mode_ranks["e8_first_tv"], mode_best["e8_first_tv"]),
         ("opt_seed", mode_ranks["opt_seed"], mode_best["opt_seed"]),
         ("opt_blend", mode_ranks["opt_blend"], mode_best["opt_blend"]),
         ("opt_torvik", mode_ranks["opt_torvik"], mode_best["opt_torvik"]),
