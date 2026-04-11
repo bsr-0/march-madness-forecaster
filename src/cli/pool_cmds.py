@@ -108,7 +108,35 @@ def run_optimize_pool(args):
         payout_structure=payout,
         public_pick_distribution=opponent_picks,
     )
-    optimizer = PoolOptimizer(pairwise_probs, env, model_round_probs=round_probs)
+
+    # Build team_metadata from seeds+regions so ParetoOptimizer can extract
+    # seeds/regions for the new construction modes (and so
+    # _can_build_full_bracket actually returns True, which enables the
+    # 63-game bracket path that previously never ran in the CLI due to
+    # this metadata never being passed through).
+    from ..optimization.leverage import TeamMetadata
+
+    regions_map = _load_regions(year)
+    team_metadata = {
+        tid: TeamMetadata(
+            team_name=tid.replace("_", " ").title(),
+            seed=seeds.get(tid, 16),
+            region=regions_map.get(tid, ""),
+        )
+        for tid in seeds
+    }
+
+    construction_mode = getattr(args, "construction_mode", "forward_greedy")
+    if construction_mode != "forward_greedy":
+        print(f"Using bracket construction mode: {construction_mode}")
+
+    optimizer = PoolOptimizer(
+        pairwise_probs,
+        env,
+        model_round_probs=round_probs,
+        team_metadata=team_metadata,
+        construction_mode=construction_mode,
+    )
     result = optimizer.optimize()
 
     # --- Step 6: Sensitivity analysis ---
@@ -561,6 +589,27 @@ def register(subparsers):
             "available at decision time. Inert for torvik and seed modes "
             "(neither trains an ML model). No-op for --year 2026 since "
             "TRAIN_YEARS ends at 2025."
+        ),
+    )
+    parser.add_argument(
+        "--construction-mode",
+        "-c",
+        choices=["forward_greedy", "champ_first", "f4_first", "e8_first", "all"],
+        default="forward_greedy",
+        help=(
+            "Bracket construction algorithm. 'forward_greedy' (default) picks "
+            "each game's winner by argmax _ev_score for the current round — "
+            "status quo. 'champ_first' picks the globally optimal champion "
+            "first then locks their R64-CHAMP path. 'f4_first' picks 4 "
+            "regional champions first (one per region) then locks their "
+            "regional paths. 'e8_first' picks 8 quadrant winners first then "
+            "locks their quadrant paths. 'all' runs a mixed-mode frontier "
+            "that sweeps all 4 single modes across 11 risk levels (44 "
+            "candidates) and dedupes — the resulting frontier may contain "
+            "brackets from different construction modes, each labeled with "
+            "its producer. Backtest results (pending) will tell us which "
+            "single mode is best; use 'all' to see the diversity of "
+            "alternatives simultaneously. See POOL_STRATEGY_RECOMMENDATION.md."
         ),
     )
     parser.set_defaults(func=run_optimize_pool)

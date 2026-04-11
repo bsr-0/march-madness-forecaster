@@ -171,6 +171,12 @@ class BracketConfiguration:
     strategy: str = "balanced"  # "balanced", "chalk", "contrarian"
     expected_points: float = 0.0
     variance: float = 0.0
+    # Construction mode used to generate this bracket. One of
+    # "champ_first", "f4_first", "e8_first", "forward_greedy", or
+    # "legacy_summary" (the pre-construction-modes summary path used
+    # when team_metadata is missing). See
+    # src/optimization/bracket_construction.py for the mode algorithms.
+    construction_mode: str = "forward_greedy"
 
     def to_dict(self) -> dict:
         return {
@@ -179,6 +185,7 @@ class BracketConfiguration:
             "final_four": self.final_four,
             "strategy": self.strategy,
             "expected_points": self.expected_points,
+            "construction_mode": self.construction_mode,
         }
 
 
@@ -1159,7 +1166,11 @@ class ParetoOptimizer:
         self.pool_size = pool_size
         self.ev_mode = ev_mode
 
-    def generate_pareto_brackets(self, num_brackets: int = 5) -> List[BracketConfiguration]:
+    def generate_pareto_brackets(
+        self,
+        num_brackets: int = 5,
+        construction_mode: str = "forward_greedy",
+    ) -> List[BracketConfiguration]:
         """
         Generate brackets along the Pareto frontier with path protection filtering.
 
@@ -1181,42 +1192,64 @@ class ParetoOptimizer:
            Each augmentation bracket is generated at ``risk_level=0.4``
            (middle of the "balanced" band) and labeled ``balanced``.
 
-        The diversity augmentation only runs when the summary bracket path
-        is in use. The full-bracket path simulates R64-through-CHAMP and
-        does not currently support forced champions — for full-bracket
-        runs the frontier contains only the risk-sweep output, which can
-        still collapse to a single candidate. See the TODO below and the
-        comment on ``_generate_bracket`` for the gap.
-
         Args:
             num_brackets: Target number of distinct brackets on the frontier.
                 The risk sweep generates more candidates than this (to
                 produce enough crossovers), then dedup + augmentation
                 trims back to the target. May return fewer if the data
                 genuinely has fewer distinct credible brackets.
+            construction_mode: Which bracket construction algorithm to use.
+                One of "forward_greedy" (default, current behavior),
+                "champ_first", "f4_first", "e8_first", or "all". When
+                "all", the risk sweep iterates all 4 single modes and
+                the dedup collapses brackets with identical picks across
+                modes — the surviving bracket keeps the label of the
+                FIRST mode that produced it (iteration order:
+                forward_greedy, champ_first, f4_first, e8_first). This
+                means chalk brackets generally get the forward_greedy
+                label for backward compat, and alternatives from the
+                other modes survive only when they genuinely differ.
 
         Returns:
             List of bracket configurations, conservative to aggressive,
             each with a unique canonical picks dict and a strategy label
             that honestly describes its picks.
         """
+        from .bracket_construction import CONSTRUCTION_MODES
+
+        # Determine which construction modes to sweep. When "all", iterate
+        # all four in a fixed order with forward_greedy first so chalk
+        # brackets keep that label (matches pre-Phase-3 behavior).
+        if construction_mode == "all":
+            modes_to_sweep = ["forward_greedy", "champ_first", "f4_first", "e8_first"]
+        elif construction_mode in CONSTRUCTION_MODES:
+            modes_to_sweep = [construction_mode]
+        else:
+            raise ValueError(
+                f"unknown construction_mode={construction_mode!r}; valid: {tuple(CONSTRUCTION_MODES) + ('all',)}"
+            )
+
         brackets: List[BracketConfiguration] = []
 
         # Phase 1: risk sweep at higher resolution than the legacy 5 levels.
         # 2*num_brackets + 1 gives odd count so both endpoints (risk=0 and
         # risk=1) are sampled exactly, and intermediate levels catch any
-        # crossovers that exist at finer granularity.
+        # crossovers that exist at finer granularity. When mixed-mode is
+        # requested, the sweep is 4x larger (11 risk levels × 4 modes = 44
+        # candidates) but most will dedup to the same canonical picks
+        # because at chalk risk all modes converge.
         sweep_resolution = max(num_brackets * 2 + 1, 11)
         risk_levels = np.linspace(0, 1, sweep_resolution)
 
-        for risk in risk_levels:
-            if risk < 0.2:
-                strategy = "chalk"
-            elif risk < 0.6:
-                strategy = "balanced"
-            else:
-                strategy = "contrarian"
-            brackets.append(self._generate_bracket(risk, strategy))
+        for mode in modes_to_sweep:
+            for risk in risk_levels:
+                if risk < 0.2:
+                    strategy = "chalk"
+                elif risk < 0.6:
+                    strategy = "balanced"
+                else:
+                    strategy = "contrarian"
+                brackets.append(self._generate_bracket(risk, strategy, construction_mode=mode))
 
         # Deduplicate the frontier by canonical picks. Walk in risk-ascending
         # order (brackets is already sorted that way) and keep only the first
@@ -1277,44 +1310,60 @@ class ParetoOptimizer:
         # user expected "at least num_brackets brackets" not "exactly
         # num_brackets". JSON consumers read n_pareto_brackets for the
         # actual count.
-        if not self._can_build_full_bracket():
-            existing_champions = {b.champion for b in brackets}
-            champ_prob_ranking = sorted(
-                (
-                    (tid, float(self.calculator.model_probs.get(tid, {}).get("CHAMP", 0.0)))
-                    for tid in self.calculator.model_probs
-                ),
-                key=lambda kv: -kv[1],
+        #
+        # Previously this block was gated on ``not self._can_build_full_bracket()``
+        # because the legacy ``_generate_full_bracket`` path couldn't honor
+        # forced_champion (it just simulated R64→CHAMP forward and used the
+        # emergent winner). The new construction modes in bracket_construction.py
+        # all honor forced_champion via the priority-1 override in
+        # _decide_winner, so the gate is no longer needed. Augmentation now
+        # runs regardless of full-bracket availability.
+        existing_champions = {b.champion for b in brackets}
+        champ_prob_ranking = sorted(
+            (
+                (tid, float(self.calculator.model_probs.get(tid, {}).get("CHAMP", 0.0)))
+                for tid in self.calculator.model_probs
+            ),
+            key=lambda kv: -kv[1],
+        )
+
+        # Minimum CHAMP probability for a candidate to be worth showing.
+        # 1% keeps the augmentation from dragging in long-tail noise
+        # (e.g., 15-seeds with near-zero CHAMP probability).
+        MIN_CHAMP_PROB_FOR_AUGMENTATION = 0.01
+
+        # For mixed-mode ("all") frontiers, augmentation uses champ_first
+        # because that's the most direct way to inject a specific champion
+        # (forced_champion is priority-1 everywhere, but champ_first also
+        # locks the champion's R64-CHAMP path, producing the most bracket-
+        # internally-consistent alternative for a forced champion). For
+        # single-mode frontiers, augmentation uses the requested mode.
+        augment_mode = "champ_first" if construction_mode == "all" else construction_mode
+
+        for candidate_id, candidate_prob in champ_prob_ranking:
+            needs_more_brackets = len(brackets) < num_brackets
+            needs_more_champions = len(existing_champions) < num_brackets
+            if not needs_more_brackets and not needs_more_champions:
+                break
+            if candidate_id in existing_champions:
+                continue
+            if candidate_prob < MIN_CHAMP_PROB_FOR_AUGMENTATION:
+                break  # ranking is descending, so once we fall below we're done
+
+            forced = self._generate_bracket(
+                risk_level=0.4,
+                strategy="balanced",
+                forced_champion=candidate_id,
+                construction_mode=augment_mode,
             )
-
-            # Minimum CHAMP probability for a candidate to be worth showing.
-            # 1% keeps the augmentation from dragging in long-tail noise
-            # (e.g., 15-seeds with near-zero CHAMP probability).
-            MIN_CHAMP_PROB_FOR_AUGMENTATION = 0.01
-
-            for candidate_id, candidate_prob in champ_prob_ranking:
-                needs_more_brackets = len(brackets) < num_brackets
-                needs_more_champions = len(existing_champions) < num_brackets
-                if not needs_more_brackets and not needs_more_champions:
-                    break
-                if candidate_id in existing_champions:
-                    continue
-                if candidate_prob < MIN_CHAMP_PROB_FOR_AUGMENTATION:
-                    break  # ranking is descending, so once we fall below we're done
-
-                forced = self._generate_bracket(
-                    risk_level=0.4,
-                    strategy="balanced",
-                    forced_champion=candidate_id,
-                )
-                forced_key = canonical_picks_key(forced.picks)
-                if forced_key in seen_keys:
-                    # Forced bracket happened to match an existing one
-                    # (e.g., F4 selection produced the same F4 set). Skip.
-                    continue
-                seen_keys.add(forced_key)
-                brackets.append(forced)
-                existing_champions.add(candidate_id)
+            forced_key = canonical_picks_key(forced.picks)
+            if forced_key in seen_keys:
+                # Forced bracket happened to match an existing one
+                # (e.g., F4 selection produced the same F4 set). Skip.
+                continue
+            seen_keys.add(forced_key)
+            brackets.append(forced)
+            existing_champions.add(candidate_id)
 
         # Path protection filtering (Protocol Section 4.4).
         # Build an approximate predict_fn from model_probs so we can use
@@ -1332,6 +1381,7 @@ class ParetoOptimizer:
         risk_level: float,
         strategy: str,
         forced_champion: Optional[str] = None,
+        construction_mode: str = "forward_greedy",
     ) -> BracketConfiguration:
         """
         Generate single bracket with given risk level.
@@ -1339,27 +1389,87 @@ class ParetoOptimizer:
         Args:
             risk_level: 0 = chalk, 1 = max contrarian
             strategy: Strategy name
-            forced_champion: If provided and the summary bracket path is in
-                use, force this team as the champion instead of argmax
-                selection. Ignored by the full bracket path (which
-                simulates R64-onward and can't be forced without changing
-                the simulator). Used by generate_pareto_brackets' diversity
+            forced_champion: If provided, force this team as the champion.
+                The new construction modes (champ_first, f4_first, e8_first,
+                forward_greedy) all honor forced_champion via the priority-1
+                override in _decide_winner. The legacy summary path also
+                honors it via _generate_summary_bracket's forced_champion
+                parameter. Used by generate_pareto_brackets' diversity
                 augmentation pass to surface alternative champions when the
                 risk sweep collapses to a single dominant candidate.
+            construction_mode: Which bracket construction algorithm to use.
+                One of "champ_first", "f4_first", "e8_first", "forward_greedy".
+                Default "forward_greedy" preserves pre-existing behavior —
+                routes through bracket_construction.construct_bracket when
+                team_metadata is available (producing the same picks as
+                legacy _generate_full_bracket but with the correct expected-
+                points formula) or falls back to _generate_summary_bracket
+                when team_metadata is missing.
 
         Returns:
             BracketConfiguration
         """
-        if self._can_build_full_bracket():
-            # Full bracket path: simulates R64-through-CHAMP, so forced_champion
-            # would need the simulator to be modified. Not supported today —
-            # callers should fall back to the summary path or accept that
-            # full-bracket runs use argmax champion selection only.
-            picks, champion, final_four, expected_points, variance = self._generate_full_bracket(risk_level)
+        # Try the new construction modes when team_metadata is populated
+        # AND all 16 seeds in each region are accounted for. If the metadata
+        # is missing or incomplete (e.g., test fixtures with partial seed
+        # coverage), fall back to the legacy summary path rather than
+        # raising — this preserves backward compat for callers that don't
+        # plumb full seed/region metadata through.
+        from .bracket_construction import CONSTRUCTION_MODES, construct_bracket
+
+        if construction_mode not in CONSTRUCTION_MODES:
+            raise ValueError(f"unknown construction_mode={construction_mode!r}; valid modes: {CONSTRUCTION_MODES}")
+
+        # Extract seeds/regions from team_metadata for the construction module.
+        seeds: Dict[str, int] = {}
+        regions: Dict[str, str] = {}
+        if self.calculator.team_metadata:
+            for tid, meta in self.calculator.team_metadata.items():
+                if meta.seed > 0 and meta.region:
+                    seeds[tid] = meta.seed
+                    regions[tid] = meta.region
+
+        # Check if we have enough seeds for a full 64-team bracket. The
+        # _build_seed_map helper in bracket_construction will raise if any
+        # region is missing a seed 1-16 after dict-overwrite normalization,
+        # so we do a lightweight upfront check here to decide fall-back.
+        can_use_new_construction = False
+        if seeds and regions:
+            from collections import defaultdict
+
+            region_seed_counts: Dict[str, set] = defaultdict(set)
+            for tid in seeds:
+                raw_region = regions.get(tid, "")
+                norm_region = {"Southeast": "South", "Southwest": "Midwest"}.get(raw_region, raw_region)
+                if norm_region in ("East", "West", "South", "Midwest"):
+                    region_seed_counts[norm_region].add(seeds[tid])
+            can_use_new_construction = all(
+                len(region_seed_counts.get(r, set())) >= 16 and all(s in region_seed_counts[r] for s in range(1, 17))
+                for r in ("East", "West", "South", "Midwest")
+            )
+
+        if can_use_new_construction:
+            picks, champion, final_four, expected_points, variance = construct_bracket(
+                mode=construction_mode,
+                seeds=seeds,
+                regions=regions,
+                round_probs=self.calculator.model_probs,
+                public_picks=self.calculator.public_picks,
+                risk_level=risk_level,
+                pool_size=self.pool_size,
+                scoring_system=self.calculator.scoring_system,
+                forced_champion=forced_champion,
+            )
+            bracket_mode = construction_mode
         else:
+            # Legacy fallback: insufficient team_metadata means we can't
+            # build a complete 64-team bracket via the new construction
+            # modes. Use the pre-construction-modes summary path.
+            # forced_champion is honored by _generate_summary_bracket.
             picks, champion, final_four, expected_points, variance = self._generate_summary_bracket(
                 risk_level, forced_champion=forced_champion
             )
+            bracket_mode = "legacy_summary"
 
         return BracketConfiguration(
             picks=picks,
@@ -1368,6 +1478,7 @@ class ParetoOptimizer:
             strategy=strategy,
             expected_points=expected_points,
             variance=variance,
+            construction_mode=bracket_mode,
         )
 
     def _expected_value_contribution(self, team_id: str, round_name: str) -> Tuple[float, float]:
@@ -2054,6 +2165,7 @@ def analyze_pool(
     ev_scoring_system: Optional[str] = None,
     strategy_profile: Optional[PoolStrategyProfile] = None,
     archetype_picks: Optional[Dict[str, Dict[str, float]]] = None,
+    construction_mode: str = "forward_greedy",
 ) -> PoolAnalysis:
     """
     Complete pool analysis.
@@ -2095,7 +2207,7 @@ def analyze_pool(
     leverage_picks = calculator.find_leverage_picks()
     fade_picks = calculator.find_fade_picks()
 
-    pareto_brackets = optimizer.generate_pareto_brackets()
+    pareto_brackets = optimizer.generate_pareto_brackets(construction_mode=construction_mode)
 
     # Generate or use provided strategy profile for recommendation
     if strategy_profile is None:
