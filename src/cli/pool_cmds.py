@@ -70,7 +70,8 @@ def run_optimize_pool(args):
     print(f"Loaded {len(seeds)} teams for {year} tournament.")
 
     # --- Step 2: Build probabilities based on mode ---
-    pairwise_probs, round_probs = _build_probabilities(mode, year, seeds, args.data_dir)
+    walk_forward = getattr(args, "walk_forward", False)
+    pairwise_probs, round_probs = _build_probabilities(mode, year, seeds, args.data_dir, walk_forward=walk_forward)
 
     # --- Step 3: Build opponent model ---
     # Pool optimizer requires BOTH real ESPN public picks and composite
@@ -179,12 +180,15 @@ def run_optimize_pool(args):
         if mismatch_note is not None:
             print(f"  {mismatch_note}")
 
-    # Sanity-check: frontier picks should all be unique post-dedup. Labels
-    # may legitimately repeat (e.g., two "contrarian" brackets at different
-    # risk levels within the contrarian band can both survive dedup if their
-    # picks differ) — what must be unique is the canonical picks dict for
-    # each surviving bracket.
-    _picks_keys = [tuple(sorted(b.picks.items())) for b in result.pareto_brackets]
+    # Sanity-check: frontier picks should all be canonically unique post-
+    # dedup. Labels may legitimately repeat (e.g., two "contrarian" brackets
+    # at different risk levels within the contrarian band can both survive
+    # dedup if their picks differ) — what must be unique is the canonical
+    # picks key for each surviving bracket (F4 as unordered set, preserving
+    # champion and any full-bracket game keys).
+    from ..optimization.leverage import canonical_picks_key
+
+    _picks_keys = [canonical_picks_key(b.picks) for b in result.pareto_brackets]
     if len(_picks_keys) != len(set(_picks_keys)):
         logger.warning(
             "Pareto frontier has duplicate canonical picks after dedup. "
@@ -213,8 +217,21 @@ def run_optimize_pool(args):
     return 0
 
 
-def _build_probabilities(mode, year, seeds, data_dir):
-    """Build pairwise and round probabilities based on mode."""
+def _build_probabilities(mode, year, seeds, data_dir, walk_forward: bool = False):
+    """Build pairwise and round probabilities based on mode.
+
+    Args:
+        mode: one of "torvik", "noseed", "blend", "seed".
+        year: tournament year being optimized.
+        seeds: team_id -> seed mapping for the year.
+        data_dir: data directory to search for Torvik files.
+        walk_forward: if True, restrict ML training (noseed/blend modes) to
+            years strictly before `year`. Use this when evaluating historical
+            years so the trained model doesn't see future tournament outcomes.
+            For `year` = 2026 (the actual future year), walk_forward is a
+            no-op because TRAIN_YEARS already ends at 2025. For torvik and
+            seed modes this flag is inert — neither trains an ML model.
+    """
     from ..prediction.seed_probabilities import (
         build_seed_probabilities,
         build_seed_round_probabilities,
@@ -256,12 +273,21 @@ def _build_probabilities(mode, year, seeds, data_dir):
             )
         return pairwise, round_probs
 
+    # Walk-forward: restrict ML training to years strictly before the test
+    # year. Pass year when walk_forward is enabled so train_noseed_model's
+    # internal `train_years = [y for y in TRAIN_YEARS if y < max_year]`
+    # excludes any year >= test year. None = use all TRAIN_YEARS (legacy).
+    train_max_year = year if walk_forward else None
+
     if mode == "noseed":
         # No-seed model: maximizes leverage vs seed-thinking public.
         # Failures propagate loudly — no silent fallback to seed baseline,
         # which previously masked leakage regressions (e.g. stale
         # pre_tournament_computed four-factor files).
-        print("Training no-seed ML model...")
+        if walk_forward:
+            print(f"Training no-seed ML model (walk-forward, years < {year})...")
+        else:
+            print("Training no-seed ML model (all historical years)...")
         from ..prediction.noseed_model import (
             _load_team_stats,
             build_noseed_probabilities,
@@ -269,7 +295,7 @@ def _build_probabilities(mode, year, seeds, data_dir):
             train_noseed_model,
         )
 
-        model = train_noseed_model(max_year=None)
+        model = train_noseed_model(max_year=train_max_year)
         stats = _load_team_stats(year)
         pairwise = build_noseed_probabilities(model, seeds, stats)
         round_probs = build_noseed_round_probabilities(model, seeds, stats)
@@ -280,7 +306,10 @@ def _build_probabilities(mode, year, seeds, data_dir):
     elif mode == "blend":
         # Blend: 50/50 seed + no-seed for best raw accuracy.
         # Same loud-failure policy as noseed mode.
-        print("Training no-seed ML model for blend...")
+        if walk_forward:
+            print(f"Training no-seed ML model for blend (walk-forward, years < {year})...")
+        else:
+            print("Training no-seed ML model for blend (all historical years)...")
         from ..prediction.noseed_model import (
             _load_team_stats,
             build_blend_probabilities,
@@ -290,7 +319,7 @@ def _build_probabilities(mode, year, seeds, data_dir):
             train_noseed_model,
         )
 
-        model = train_noseed_model(max_year=None)
+        model = train_noseed_model(max_year=train_max_year)
         stats = _load_team_stats(year)
         noseed_pairwise = build_noseed_probabilities(model, seeds, stats)
         noseed_round = build_noseed_round_probabilities(model, seeds, stats)
@@ -519,5 +548,19 @@ def register(subparsers):
         "-o",
         default="pool_report.json",
         help="Output report path (default: pool_report.json)",
+    )
+    parser.add_argument(
+        "--walk-forward",
+        action="store_true",
+        help=(
+            "Restrict ML training (noseed/blend modes) to years strictly "
+            "before --year. Use this when cross-validating the CLI on "
+            "historical years to avoid future leakage — without it, the "
+            "noseed model trains on TRAIN_YEARS including years >= --year, "
+            "which gives it access to tournament outcomes that weren't "
+            "available at decision time. Inert for torvik and seed modes "
+            "(neither trains an ML model). No-op for --year 2026 since "
+            "TRAIN_YEARS ends at 2025."
+        ),
     )
     parser.set_defaults(func=run_optimize_pool)
