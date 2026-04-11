@@ -1,15 +1,25 @@
 """CLI commands for bracket pool optimization.
 
-Wires seed-based probabilities, ratings-derived opponent model, and
-existing pool optimization infrastructure into a single entry point.
+Wires probability builders, ratings-derived opponent model, and the existing
+pool optimization infrastructure into a single entry point.
 
-Supports three modes (validated on 1071 games across 17 years):
-  - noseed: ML model trained without seed features. Best Brier
-    score (p=0.0006, wins 14/17 years). Use for prediction accuracy.
-  - blend (default): 50/50 seed + noseed. Significant Brier
-    improvement (p<0.0001) with minimal pool EV cost (-3 vs chalk).
-  - seed: Historical seed-based probabilities only. Produces no
-    leverage picks (identical to chalk).
+Supports four modes:
+  - torvik: Torvik barthag + Log5 + bracket MC. No ML ensemble, no
+    calibration stage. Numerically best BestRnk (31.5) and P(top5%)
+    (5.06%) on the 13-year backtest — see POOL_STRATEGY_RECOMMENDATION.md.
+    Recommended for single-entry pool submission.
+  - blend (default): 50/50 seed + noseed. Significant Brier improvement
+    (p<0.0001) with minimal pool EV cost (-3 vs chalk).
+  - noseed: ML model trained without seed features. Best Brier score
+    (p=0.0006, wins 14/17 years). Use for prediction accuracy.
+  - seed: Historical seed-based probabilities only. Produces no leverage
+    picks (identical to chalk).
+
+All four modes are statistically tied on the 13-year backtest BestRank
+metric after Bonferroni correction. `torvik` is recommended because it's
+numerically best and the simplest defensible model. The three `opt_*`
+modes exposed by `scripts/mc_pool_backtest.py` are significantly WORSE
+than the base modes and are deliberately not exposed here.
 """
 
 import json
@@ -34,8 +44,9 @@ def run_optimize_pool(args):
     """Run bracket pool optimization.
 
     Mode controls which probabilities drive the optimizer:
-      - noseed: ML model without seed features — best prediction accuracy
+      - torvik: barthag + Log5 + bracket MC — backtest-recommended
       - blend (default): 50/50 seed + noseed — balanced accuracy + pool EV
+      - noseed: ML model without seed features — best prediction accuracy
       - seed: Historical seed baseline only — no leverage picks
     """
     from ..optimization.pool_optimizer import PoolEnvironment, PoolOptimizer
@@ -158,6 +169,39 @@ def _build_probabilities(mode, year, seeds, data_dir):
     seed_pairwise = build_seed_probabilities(seeds)
     seed_round = build_seed_round_probabilities(seeds)
 
+    if mode == "torvik":
+        # Torvik barthag + Log5 + bracket Monte Carlo. Simplest defensible
+        # model; numerically best BestRnk and P(top5%) on the 13-year
+        # backtest. Failures propagate loudly — a missing or non-
+        # pre_tournament torvik_{year}.json raises LeakageError rather
+        # than silently falling back to seed-only.
+        print("Loading Torvik barthag + building Log5/MC probabilities...")
+        from ..prediction.torvik_probabilities import (
+            build_torvik_probabilities,
+            build_torvik_round_probabilities,
+            load_torvik_barthag,
+        )
+
+        regions = _load_regions(year)
+        if not regions:
+            print(f"ERROR: No region data for {year} — torvik mode requires region assignments.")
+            raise SystemExit(1)
+
+        barthag = load_torvik_barthag(year, seeds, data_dir=data_dir)
+        pairwise = build_torvik_probabilities(seeds, barthag)
+        round_probs = build_torvik_round_probabilities(seeds, regions, barthag)
+        print(f"  {len(barthag)} teams with barthag ratings")
+        print(f"  {len(pairwise)} torvik pairwise probabilities")
+        print(f"  {len(round_probs)} teams with torvik round probs")
+        if len(seeds) > 64:
+            n_extra = len(seeds) - 64
+            print(
+                f"  NOTE: {len(seeds)} teams loaded ({n_extra} First Four play-ins). "
+                "One team per duplicated seed receives floor-value round probs; "
+                "regenerate seeds file after First Four for a faithful bracket."
+            )
+        return pairwise, round_probs
+
     if mode == "noseed":
         # No-seed model: maximizes leverage vs seed-thinking public.
         # Failures propagate loudly — no silent fallback to seed baseline,
@@ -261,26 +305,39 @@ def _apply_e8_adjustments_if_available(year, seeds, round_probs, data_dir):
     return adjusted
 
 
-def _load_seeds(year: int) -> dict:
-    """Load tournament seeds for a given year from data files."""
-    # Try historical seeds file first
-    seeds_path = Path(f"data/raw/historical/tournament_seeds_{year}.json")
-    if seeds_path.exists():
-        with open(seeds_path) as f:
-            data = json.load(f)
-        return _parse_seeds(data)
+def _find_and_read_seeds_file(year: int):
+    """Locate and read the tournament seeds JSON for a year.
 
-    # Try current year data
-    for alt_path in [
+    Returns the raw parsed JSON (dict or list) from the first file found in
+    the standard search path, or None if no file exists. Shared by
+    `_load_seeds` and `_load_regions` so both parsers read from the same
+    source of truth.
+    """
+    for path in [
+        Path(f"data/raw/historical/tournament_seeds_{year}.json"),
         Path(f"data/raw/tournament_seeds_{year}.json"),
         Path(f"data/raw/seeds_{year}.json"),
     ]:
-        if alt_path.exists():
-            with open(alt_path) as f:
-                data = json.load(f)
-            return _parse_seeds(data)
+        if path.exists():
+            with open(path) as f:
+                return json.load(f)
+    return None
 
-    return {}
+
+def _load_seeds(year: int) -> dict:
+    """Load tournament seeds for a given year from data files."""
+    data = _find_and_read_seeds_file(year)
+    return _parse_seeds(data) if data is not None else {}
+
+
+def _load_regions(year: int) -> dict:
+    """Load team_id -> region mapping for a given year.
+
+    Used by torvik mode to drive the bracket Monte Carlo. Returns an empty
+    dict if no seeds file is found or the file has no region metadata.
+    """
+    data = _find_and_read_seeds_file(year)
+    return _parse_regions(data) if data is not None else {}
 
 
 def _parse_seeds(data) -> dict:
@@ -314,6 +371,39 @@ def _parse_seeds(data) -> dict:
     return {}
 
 
+def _parse_regions(data) -> dict:
+    """Parse team_id -> region mapping from various seed-file JSON formats.
+
+    Mirrors `_parse_seeds` but extracts the `region` field. Entries that
+    lack a region are silently skipped.
+    """
+    # Format: {"season": N, "teams": [{"team_id": ..., "region": "..."}, ...]}
+    if isinstance(data, dict) and "teams" in data and isinstance(data["teams"], list):
+        regions = {}
+        for entry in data["teams"]:
+            if isinstance(entry, dict) and "team_id" in entry and entry.get("region"):
+                regions[entry["team_id"]] = str(entry["region"])
+        return regions
+
+    # Format: [{"team_id": ..., "region": "..."}, ...]
+    if isinstance(data, list):
+        regions = {}
+        for entry in data:
+            if isinstance(entry, dict) and "team_id" in entry and entry.get("region"):
+                regions[entry["team_id"]] = str(entry["region"])
+        return regions
+
+    # Format: {team_id: {"region": "..."}, ...}
+    if isinstance(data, dict):
+        regions = {}
+        for team_id, val in data.items():
+            if isinstance(val, dict) and val.get("region"):
+                regions[team_id] = str(val["region"])
+        return regions
+
+    return {}
+
+
 def register(subparsers):
     """Register pool optimization CLI commands."""
     parser = subparsers.add_parser(
@@ -323,12 +413,15 @@ def register(subparsers):
     parser.add_argument(
         "--mode",
         "-m",
-        choices=["noseed", "blend", "seed"],
+        choices=["torvik", "blend", "noseed", "seed"],
         default="blend",
         help=(
-            "Probability mode: 'blend' (default) uses 50/50 seed+ML; "
-            "'noseed' uses ML without seed features (best accuracy); "
-            "'seed' uses seed baseline only"
+            "Probability mode. 'torvik' is the backtest-recommended mode "
+            "(barthag + Log5 + bracket MC, simplest defensible model, "
+            "best BestRnk and P(top5%%) across 13 years — see "
+            "POOL_STRATEGY_RECOMMENDATION.md). 'blend' (default) is 50/50 "
+            "seed+noseed. 'noseed' is the ML-only model. 'seed' is the "
+            "historical seed baseline."
         ),
     )
     parser.add_argument(
