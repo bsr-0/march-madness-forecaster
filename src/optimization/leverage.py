@@ -1170,6 +1170,7 @@ class ParetoOptimizer:
         self,
         num_brackets: int = 5,
         construction_mode: str = "forward_greedy",
+        include_champion_augmentation: bool = False,
     ) -> List[BracketConfiguration]:
         """
         Generate brackets along the Pareto frontier with path protection filtering.
@@ -1183,21 +1184,29 @@ class ParetoOptimizer:
            sweep captures whichever crossovers exist naturally on the
            (probability, differentiation) curve.
 
-        2. Champion-diversity augmentation — if the risk sweep collapses to
-           fewer than ``num_brackets`` distinct brackets (common when one
-           team dominates the curve because it has both the highest model
-           probability AND a high leverage ratio, e.g., Michigan in 2026),
-           fill out the frontier by generating forced-champion brackets for
-           the top model-probability candidates that are not yet represented.
-           Each augmentation bracket is generated at ``risk_level=0.4``
-           (middle of the "balanced" band) and labeled ``balanced``.
+        2. Champion-diversity augmentation (OPT-IN, default OFF) — if enabled
+           via ``include_champion_augmentation=True`` and the risk sweep
+           collapses to fewer than ``num_brackets`` distinct brackets (common
+           when one team dominates the curve), fill out the frontier by
+           generating forced-champion brackets for the top model-probability
+           candidates that are not yet represented. Each augmentation bracket
+           is generated at ``risk_level=0.4`` and labeled ``balanced``. This
+           phase is OFF by default because forced-champion brackets are
+           post-hoc variants of the chalk structure rather than methodology-
+           driven alternatives — enabling it re-introduces "champ swap"
+           brackets that differ from chalk only in who wins the final.
 
         Args:
             num_brackets: Target number of distinct brackets on the frontier.
                 The risk sweep generates more candidates than this (to
-                produce enough crossovers), then dedup + augmentation
-                trims back to the target. May return fewer if the data
-                genuinely has fewer distinct credible brackets.
+                produce enough crossovers), then dedup trims back to
+                the target. May return fewer if the data genuinely has
+                fewer distinct credible brackets.
+            include_champion_augmentation: When True, run Phase 2 to force
+                additional champion diversity onto the frontier. Default
+                False — the frontier contains only brackets produced
+                organically by the risk sweep, even if that means fewer
+                than ``num_brackets`` brackets survive.
             construction_mode: Which bracket construction algorithm to use.
                 One of "forward_greedy" (default, current behavior),
                 "champ_first", "f4_first", "e8_first", or "all". When
@@ -1267,7 +1276,15 @@ class ParetoOptimizer:
             deduped.append(bracket)
         brackets = deduped
 
-        # Phase 2: champion-diversity augmentation.
+        # Phase 2: champion-diversity augmentation (OPT-IN, default OFF).
+        #
+        # When include_champion_augmentation is False (the default), skip
+        # this phase entirely — the frontier is whatever the risk sweep
+        # organically produced. This matches the user preference for
+        # methodology-driven alternatives over post-hoc forced-champion
+        # variants. Callers that genuinely want champion diversity (e.g.,
+        # an interactive "show me other plausible champions" view) can
+        # opt in explicitly.
         #
         # If the risk sweep produced fewer than num_brackets distinct
         # brackets, the underlying _ev_score curve has fewer crossovers than
@@ -1318,6 +1335,18 @@ class ParetoOptimizer:
         # all honor forced_champion via the priority-1 override in
         # _decide_winner, so the gate is no longer needed. Augmentation now
         # runs regardless of full-bracket availability.
+        if not include_champion_augmentation:
+            # Skip Phase 2 entirely and jump straight to path-protection
+            # filtering. The frontier is exactly what the risk sweep + dedup
+            # produced — no forced-champion variants.
+            filtered = _filter_brackets_by_path_protection(
+                brackets,
+                model_probs=self.calculator.model_probs,
+                scoring_system=self.calculator.scoring_system,
+                min_score=0.85,
+            )
+            return filtered if filtered else brackets
+
         existing_champions = {b.champion for b in brackets}
         champ_prob_ranking = sorted(
             (
@@ -2166,6 +2195,7 @@ def analyze_pool(
     strategy_profile: Optional[PoolStrategyProfile] = None,
     archetype_picks: Optional[Dict[str, Dict[str, float]]] = None,
     construction_mode: str = "forward_greedy",
+    include_champion_augmentation: bool = False,
 ) -> PoolAnalysis:
     """
     Complete pool analysis.
@@ -2207,7 +2237,10 @@ def analyze_pool(
     leverage_picks = calculator.find_leverage_picks()
     fade_picks = calculator.find_fade_picks()
 
-    pareto_brackets = optimizer.generate_pareto_brackets(construction_mode=construction_mode)
+    pareto_brackets = optimizer.generate_pareto_brackets(
+        construction_mode=construction_mode,
+        include_champion_augmentation=include_champion_augmentation,
+    )
 
     # Generate or use provided strategy profile for recommendation
     if strategy_profile is None:

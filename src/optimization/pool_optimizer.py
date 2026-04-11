@@ -176,6 +176,7 @@ class PoolOptimizer:
         model_round_probs: Optional[Dict[str, Dict[str, float]]] = None,
         team_metadata: Optional[Dict[str, Any]] = None,
         construction_mode: str = "forward_greedy",
+        include_champion_augmentation: bool = False,
     ):
         environment.validate()
         # Deep-copy: mutations of the original dict are invisible.
@@ -199,6 +200,11 @@ class PoolOptimizer:
             copy.deepcopy(team_metadata) if team_metadata is not None else None
         )
         self._construction_mode: str = construction_mode
+        # Opt-in flag for Phase 2 champion-diversity augmentation in
+        # ParetoOptimizer.generate_pareto_brackets. Default False — the
+        # frontier contains only brackets produced organically by the risk
+        # sweep, not post-hoc forced-champion variants.
+        self._include_champion_augmentation: bool = include_champion_augmentation
 
     @property
     def probabilities(self) -> Dict[Tuple[str, str], float]:
@@ -425,6 +431,7 @@ class PoolOptimizer:
                 strategy_profile=strategy_profile,
                 team_metadata=self._team_metadata,
                 construction_mode=self._construction_mode,
+                include_champion_augmentation=self._include_champion_augmentation,
             )
 
             leverage_picks = [
@@ -457,13 +464,6 @@ class PoolOptimizer:
             return (
                 leverage_picks,
                 fade_picks,
-                # Pass the full frontier through — ParetoOptimizer already
-                # controls its own output size via num_brackets (default 5).
-                # The champion-diversity augmentation in generate_pareto_brackets
-                # may grow the frontier beyond num_brackets when a dominant
-                # champion would otherwise occupy all slots, so double-
-                # truncating here would drop the alternative-champion
-                # brackets the augmentation exists to produce.
                 pool_analysis.pareto_brackets,
                 strategy_evs,
                 pool_analysis.recommended_strategy,
