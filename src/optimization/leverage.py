@@ -1254,7 +1254,30 @@ class ParetoOptimizer:
         # forced-champion path only works on summary brackets — the full
         # bracket simulator can't be steered without modifying R64-onward
         # simulation, which is out of scope here.
-        if len(brackets) < num_brackets and not self._can_build_full_bracket():
+        # Augment until BOTH targets are satisfied:
+        #   - bracket count >= num_brackets (at least N distinct brackets)
+        #   - distinct champion count >= num_brackets (at least N credible
+        #     champions represented on the frontier)
+        #
+        # The second condition is what catches seasons like 2017 where a
+        # single team (Gonzaga, 19.8% model_prob vs the next-best 9.9%)
+        # dominates the CHAMP score at every risk level. Without it, the
+        # risk sweep legitimately produces 5 distinct brackets — same
+        # champion but different F4 compositions — and augmentation would
+        # skip because the bracket count target was met. The user then
+        # sees 5 "alternatives" that are all Gonzaga-champion variants,
+        # which is NOT a useful alternative set for pool strategy.
+        # Requiring champion diversity forces UNC/Villanova/Kentucky
+        # forced-champion brackets into the frontier even when the risk
+        # sweep alone has enough bracket count.
+        #
+        # When the champion diversity target forces augmentation beyond
+        # num_brackets, the frontier is allowed to grow slightly above
+        # num_brackets to hit the diversity target. That's fine — the
+        # user expected "at least num_brackets brackets" not "exactly
+        # num_brackets". JSON consumers read n_pareto_brackets for the
+        # actual count.
+        if not self._can_build_full_bracket():
             existing_champions = {b.champion for b in brackets}
             champ_prob_ranking = sorted(
                 (
@@ -1270,7 +1293,9 @@ class ParetoOptimizer:
             MIN_CHAMP_PROB_FOR_AUGMENTATION = 0.01
 
             for candidate_id, candidate_prob in champ_prob_ranking:
-                if len(brackets) >= num_brackets:
+                needs_more_brackets = len(brackets) < num_brackets
+                needs_more_champions = len(existing_champions) < num_brackets
+                if not needs_more_brackets and not needs_more_champions:
                     break
                 if candidate_id in existing_champions:
                     continue
