@@ -140,32 +140,54 @@ def run_optimize_pool(args):
     print(f"Strategy: {result.recommended_strategy}")
     print(f"Sensitivity: {sensitivity.flag}")
 
-    # Find the bracket matching the recommended strategy. If multiple brackets
-    # share the label, prefer the one whose champion differs from the chalk
-    # pick (otherwise the "recommended" bracket prints as identical to chalk).
+    # Find the bracket matching the recommended strategy.
+    #
+    # The Pareto frontier is deduplicated by canonical picks upstream (see
+    # leverage.py::generate_pareto_brackets), so any surviving bracket's
+    # strategy label faithfully describes its picks. That means:
+    #   - If recommended_strategy == "contrarian" and a contrarian bracket
+    #     exists in the frontier, it has genuinely different picks from chalk.
+    #   - If recommended_strategy == "contrarian" and NO contrarian bracket
+    #     exists in the frontier, the leverage analysis wanted a contrarian
+    #     play but the bracket generator couldn't produce a differentiated
+    #     contrarian bracket at any risk level (they all collapsed to chalk
+    #     or balanced after dedup). We surface this mismatch to the user
+    #     explicitly rather than silently falling back to chalk.
     rec = result.recommended_strategy
-    chalk_champ = next(
-        (b.champion for b in result.pareto_brackets if b.strategy == "chalk"),
-        None,
-    )
     matching = [b for b in result.pareto_brackets if b.strategy == rec]
-    recommended_bracket = None
-    if matching:
-        differentiated = [b for b in matching if b.champion != chalk_champ]
-        recommended_bracket = differentiated[0] if differentiated else matching[0]
+    recommended_bracket = matching[0] if matching else None
+    mismatch_note = None
+    if recommended_bracket is None and result.pareto_brackets:
+        # Fall back to the last bracket (highest-risk survivor).
+        recommended_bracket = result.pareto_brackets[-1]
+        mismatch_note = (
+            f"NOTE: leverage analysis recommends '{rec}' strategy, but no "
+            f"'{rec}'-labeled bracket survived frontier deduplication — every "
+            "generated contrarian/balanced candidate collapsed to the same "
+            "picks as chalk or balanced. Showing the highest-risk available "
+            f"bracket ('{recommended_bracket.strategy}') instead. Pool "
+            "leverage comes from round-level leverage picks only."
+        )
 
     if recommended_bracket is not None:
-        print(f"\nRecommended bracket:")
+        print("\nRecommended bracket:")
         print(f"  Champion:   {recommended_bracket.champion}")
         print(f"  Final Four: {', '.join(recommended_bracket.final_four)}")
+        print(f"  Strategy:   {recommended_bracket.strategy}")
         print(f"  Expected:   {recommended_bracket.expected_points:.1f} pts")
         print(f"  Variance:   {recommended_bracket.variance:.1f}")
-        if chalk_champ and recommended_bracket.champion == chalk_champ:
-            print(
-                "  NOTE: recommended bracket matches chalk pick — "
-                "no differentiated contrarian bracket was found on the Pareto "
-                "frontier. Pool leverage comes from round-level leverage picks only."
-            )
+        if mismatch_note is not None:
+            print(f"  {mismatch_note}")
+
+    # Sanity-check: frontier labels should all be unique post-dedup.
+    _labels = [b.strategy for b in result.pareto_brackets]
+    if len(_labels) != len(set(_labels)):
+        logger.warning(
+            "Pareto frontier has duplicate strategy labels after dedup: %s. "
+            "This is a bug — each surviving bracket should have a unique "
+            "canonical picks set.",
+            _labels,
+        )
 
     print(f"\nTop leverage picks (model > public):")
     for pick in result.leverage_picks[:10]:
