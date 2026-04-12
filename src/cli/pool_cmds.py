@@ -74,7 +74,7 @@ def run_optimize_pool(args):
     print(f"Loaded {len(seeds)} teams for {year} tournament.")
 
     # --- Step 2: Build probabilities based on mode ---
-    walk_forward = getattr(args, "walk_forward", False)
+    walk_forward = not getattr(args, "no_walk_forward", False)
     pairwise_probs, round_probs = _build_probabilities(mode, year, seeds, args.data_dir, walk_forward=walk_forward)
 
     # --- Step 3: Build opponent model ---
@@ -585,17 +585,15 @@ def register(subparsers):
         help="Output report path (default: pool_report.json)",
     )
     parser.add_argument(
-        "--walk-forward",
+        "--no-walk-forward",
         action="store_true",
         help=(
-            "Restrict ML training (noseed/blend modes) to years strictly "
-            "before --year. Use this when cross-validating the CLI on "
-            "historical years to avoid future leakage — without it, the "
-            "noseed model trains on TRAIN_YEARS including years >= --year, "
-            "which gives it access to tournament outcomes that weren't "
-            "available at decision time. Inert for torvik and seed modes "
-            "(neither trains an ML model). No-op for --year 2026 since "
-            "TRAIN_YEARS ends at 2025."
+            "Disable walk-forward training restriction. By default, ML "
+            "training (noseed/blend modes) is restricted to years strictly "
+            "before --year to prevent future leakage. Use this flag only "
+            "for debugging or if you understand the leakage implications. "
+            "Inert for torvik and seed modes (neither trains an ML model). "
+            "No-op for --year 2026 since TRAIN_YEARS ends at 2025."
         ),
     )
     parser.add_argument(
