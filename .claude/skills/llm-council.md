@@ -234,11 +234,14 @@ After the chairman synthesis is complete, generate a visual HTML report and save
 The report should be a single self-contained HTML file with inline CSS. Clean design, easy to scan. It should contain:
 
 1. **The question** at the top
-2. **The chairman's verdict** prominently displayed (this is what most people will read)
-3. **An agreement/disagreement visual** -- a simple visual showing which advisors aligned and which diverged. This could be a grid, a spectrum, or a simple breakdown showing advisor positions. Keep it clean and scannable.
-4. **Collapsible sections** for each advisor's full response (collapsed by default so the page isn't overwhelming, but available if the user wants to dig in)
-5. **Collapsible section** for the peer review highlights
-6. **A footer** showing the timestamp and what was counciled
+2. **Critical Actions** -- displayed once, prominently, as a styled callout box near the top of the report. Extract this section from the chairman's synthesis and render it here. This is the punch list the user takes away. Do NOT repeat these actions anywhere else in the report.
+3. **The chairman's analysis** -- the chairman's verdict sections (Where the Council Agrees, Where the Council Clashes, Blind Spots the Council Caught, The Chairman's Take) displayed prominently. **Omit the Critical Actions subsection here** since it is already rendered above.
+4. **An agreement/disagreement visual** -- a simple visual showing which advisors aligned and which diverged. This could be a grid, a spectrum, or a simple breakdown showing advisor positions. Keep it clean and scannable.
+5. **Collapsible sections** for each advisor's full response (collapsed by default so the page isn't overwhelming, but available if the user wants to dig in)
+6. **Collapsible section** for the peer review highlights
+7. **A footer** showing the timestamp and what was counciled
+
+**Deduplication rule:** Every piece of information appears exactly once in the report. The Critical Actions are extracted from the chairman's output and shown in the callout box (item 2) — they must not also appear inside the chairman's analysis (item 3). Advisor responses live in the collapsible sections — do not repeat their arguments in the main body.
 
 Use clean styling: white background, subtle borders, readable sans-serif font (system font stack), soft accent colors to distinguish advisor sections. Nothing flashy. It should look like a professional briefing document.
 
