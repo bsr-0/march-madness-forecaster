@@ -174,9 +174,7 @@ The chairman's job is to produce a verdict that no individual advisor could have
 
 4. **The chairman's take** -- independent analysis. What did the council get wrong collectively? What would the chairman add that no advisor or reviewer raised? If the chairman agrees with consensus, they must explain what specific evidence makes that consensus trustworthy rather than just restating it.
 
-5. **The recommendation** -- a clear, actionable recommendation. Not "it depends." Not "consider both sides." A real answer. The chairman should disagree with the majority when the reasoning supports it.
-
-6. **The one thing you should do first** -- a single concrete next step. Not a list of 10 things. One thing.
+5. **Critical actions** -- a maximum of 3 concrete actions, dependency-ordered (what must happen first gates what comes next). Each action is one sentence stating what to do, and one sentence stating the gate (how you know it's done or what result lets you proceed). No prose. No rationale. The reasoning lives in the sections above — this section is the punch list.
 
 **Chairman prompt template:**
 ```
@@ -221,11 +219,8 @@ Produce the council verdict using this exact structure:
 ## The Chairman's Take
 [Your independent assessment. What did the council get wrong collectively? What would you add that no advisor or reviewer raised? If every advisor missed something, say it here. If you agree with the consensus, state what specific evidence convinced you — not just that "multiple advisors converged." You are not a summarizer. You are the sixth mind in the room.]
 
-## The Recommendation
-[A clear, direct recommendation. Not "it depends." A real answer with reasoning. If this contradicts the majority, explain why their reasoning is weaker despite the headcount.]
-
-## The One Thing to Do First
-[A single concrete next step. Not a list. One thing.]
+## Critical Actions
+[Maximum 3 actions. Dependency-ordered — action 1 gates action 2, action 2 gates action 3. Each action is two sentences: what to do, and the gate (the concrete result that means it's done or the condition that unlocks the next action). No prose, no rationale — the reasoning lives in the sections above. This is the punch list the user takes away and executes. If only one action matters, list one. Do not pad to three.]
 
 You are not a secretary taking minutes. You are the most senior person in the room. Summarizing what others said is not your job — that's what the transcript is for. Your job is to think independently, make judgment calls the advisors couldn't make individually, and deliver a verdict the user can act on without reading anything else. If you find yourself writing "the council agrees" without adding your own analysis of WHY that agreement is trustworthy (or suspicious), you're not doing your job.
 ```
