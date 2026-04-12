@@ -105,8 +105,12 @@ def test_chalk_picks_one_seed_champion(mode):
 
 
 @pytest.mark.parametrize("mode", CONSTRUCTION_MODES)
-def test_chalk_final_four_is_four_one_seeds(mode):
-    """At risk=0.0 with monotonic-by-seed probabilities, all 4 F4 teams are 1-seeds."""
+def test_chalk_final_four_respects_one_seed_cap(mode):
+    """At risk=0.0 with default max_one_seeds_f4=2, f4_first caps one-seeds at 2.
+
+    Other modes (forward_greedy, champ_first, e8_first) don't apply the
+    cap so they still produce 4 one-seeds with monotonic-by-seed probs.
+    """
     seeds, regions, round_probs, public_picks = _synthetic_fixture()
     _, _, final_four, _, _ = construct_bracket(
         mode=mode,
@@ -118,7 +122,29 @@ def test_chalk_final_four_is_four_one_seeds(mode):
         pool_size=100,
     )
     f4_seeds = sorted(seeds[t] for t in final_four)
-    assert f4_seeds == [1, 1, 1, 1], f"{mode} chalk F4 seeds are {f4_seeds}, expected [1,1,1,1]"
+    one_seed_count = sum(1 for s in f4_seeds if s == 1)
+    if mode == "f4_first":
+        assert one_seed_count <= 2, f"f4_first chalk F4 has {one_seed_count} one-seeds, expected <= 2"
+    else:
+        assert f4_seeds == [1, 1, 1, 1], f"{mode} chalk F4 seeds are {f4_seeds}, expected [1,1,1,1]"
+
+
+@pytest.mark.parametrize("mode", CONSTRUCTION_MODES)
+def test_uncapped_final_four_is_four_one_seeds(mode):
+    """With max_one_seeds_f4=4 (no cap), all modes produce 4 one-seeds at chalk."""
+    seeds, regions, round_probs, public_picks = _synthetic_fixture()
+    _, _, final_four, _, _ = construct_bracket(
+        mode=mode,
+        seeds=seeds,
+        regions=regions,
+        round_probs=round_probs,
+        public_picks=public_picks,
+        risk_level=0.0,
+        pool_size=100,
+        max_one_seeds_f4=4,
+    )
+    f4_seeds = sorted(seeds[t] for t in final_four)
+    assert f4_seeds == [1, 1, 1, 1], f"{mode} uncapped chalk F4 seeds are {f4_seeds}, expected [1,1,1,1]"
 
 
 @pytest.mark.parametrize("mode", CONSTRUCTION_MODES)
@@ -206,10 +232,11 @@ def test_missing_region_seed_raises():
 
 @pytest.mark.parametrize("mode", CONSTRUCTION_MODES)
 def test_chalk_convergence_across_modes(mode):
-    """All four modes should produce the same bracket at risk=0.0 given
-    strictly-chalk-dominant probabilities. This verifies the scoring function
-    is consistent across modes (same _ev_score formula) and the only variation
-    comes from the construction-order anchor."""
+    """All modes should produce the same bracket at risk=0.0 given
+    strictly-chalk-dominant probabilities, EXCEPT f4_first which diverges
+    due to the one-seed cap (max_one_seeds_f4=2 default).
+
+    With cap disabled (max_one_seeds_f4=4), all modes converge."""
     seeds, regions, round_probs, public_picks = _synthetic_fixture()
     # Compute the forward_greedy chalk bracket as the canonical reference.
     ref_picks, ref_champion, _, _, _ = construct_bracket(
@@ -221,6 +248,7 @@ def test_chalk_convergence_across_modes(mode):
         risk_level=0.0,
         pool_size=100,
     )
+    # Use uncapped so convergence holds across all modes
     picks, champion, _, _, _ = construct_bracket(
         mode=mode,
         seeds=seeds,
@@ -229,6 +257,7 @@ def test_chalk_convergence_across_modes(mode):
         public_picks=public_picks,
         risk_level=0.0,
         pool_size=100,
+        max_one_seeds_f4=4,
     )
     assert champion == ref_champion, f"{mode} chalk champion {champion} != forward_greedy {ref_champion}"
     # Picks should match — all modes converge to same chalk bracket

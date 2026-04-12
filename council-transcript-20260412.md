@@ -1,121 +1,86 @@
-# LLM Council Transcript — Pool Optimizer Next Actions
-**Date:** April 12, 2026
-**Question:** Given the latest results from mc_pool_optimizer.py, what are the most critical actions to take next?
+# LLM Council Transcript — 2026-04-12
 
----
+## Original Question
+Given the retrospective scorer results across 14 years (2011-2025) plus manual 2026 data, what critical improvement steps should we take to target next year's (2027) pool strategy?
 
-## Context Provided to All Advisors
+## Framed Question
+Given 15 years of retrospective bracket scoring data and a winner-take-all N=31 pool, what are the most impactful improvements to make before March 2027?
 
-- 13-year backtest (1000-person pool, 50 stochastic brackets x 50 repeats, 11 modes)
-- 2026 pool report (100-person, winner-take-all, contrarian strategy, 2.51x leverage)
-- Construction modes outperform (champ_first_tv BestRnk=21.1, e8_first_tv P(1st)=0.20%)
-- opt_* modes statistically significantly worse (p<0.05 Bonferroni), zero P(1st)
-- Core model BSS ~ 0 vs seed baseline
-- Sensitivity analysis: NOT_EVALUATED
-- Missing aggregate section for latest backtest run
-- Pool size mismatch: backtest at 1000, deploy at 100
+Context:
+- March Madness bracket optimizer. Pipeline: Data → Features → ML Model → Calibration → MC Simulation → Bracket Construction → Pool Optimization.
+- ML model (LGB/XGB/LR ensemble) has BSS ≈ 0 vs seed baseline — zero predictive value.
+- Three strategies tested (14 automated years + 1 manual):
+  - seed (chalk): 1236 avg pts, 4/15 champ correct, beats median 11/14, never beats winner
+  - torvik (Torvik barthag + Log5): 1201 avg pts, 2/15 champ correct, beats winner 2/14
+  - det_champ96 (champion-first r=0.96): 953 avg pts, 2/15 champ correct, beats winner 1/15 (2026)
+- 2026: det_champ96 scored 1440 (Michigan champ, 4/4 F4, 4/4 E8). Torvik ~1330.
+- All modes pick 4 one-seeds for F4 (historical avg 1.5)
+- N=14, power 9-16%
+- System HAD winning bracket but ranked it lower by EV
 
----
+## Advisor Responses
 
-## Advisor 1: The Contrarian
+### The Contrarian
+Fatal flaw: 14 data points at 9-16% power = drawing conclusions from noise. What's broken in order: 1. Ranking function is the real failure — optimizing EV when should optimize win probability. EV favors chalk, win probability favors correlated upsets. 2. F4 construction broken — all 1-seeds = consensus bracket, can't win winner-take-all. 3. Don't waste time improving ML model. 4. N=14 backtesting will actively mislead — need theoretical analysis of win probability instead. "Stop tuning the engine. The steering wheel is broken."
 
-opt_* modes aren't just bad — they're catastrophically broken and you're burying the lede. BestRank of 176-342 in a 1000-person pool means these modes are performing WORSE than random bracket selection. That's not a tuning problem. That's a sign your optimization objective is fundamentally misaligned with pool scoring. Stop treating this as "opt modes need work" and start treating it as "something in the optimization pipeline is inverting value." Find the bug before you trust anything downstream of it.
+### The First Principles Thinker
+Wrong objective function. Pipeline built to predict game outcomes but goal is P(rank 1 of 31). This is game theory, not forecasting. Key leverage: 1. Model the field, not the tournament — maximize P(winning | field distribution). 2. Stop picking all 4 one-seeds for F4. 3. Kill the ML ensemble. 4. Treat bracket construction as a portfolio problem — need 3.2% win rate, not best average bracket. "The question isn't how to predict games better. It's how to pick differently from 30 people and be right when they're wrong."
 
-The construction modes look good precisely because they're simpler — and that should worry you. champ_first_tv working well means your value is coming almost entirely from champion selection plus Torvik base rates. Everything you've built on top (hedging, optimization, blending) is destroying that signal. You've over-engineered a system where the dumbest strategy wins.
+### The Statistician
+Power analysis already told you: can't learn from 14 points. BSS≈0 is the most important number — pipeline is optimizing over noise. 2026 det_champ96 is textbook survivorship bias (N=1 from high-variance distribution, avg 953 vs seed's 1236). Simulated opponent methodology needs scrutiny — max-of-30 sensitive to tail shape. What matters: 1. Fix F4 calibration. 2. Abandon ML until BSS > 0. 3. Accept optimal strategy is high-variance contrarian — game theory problem.
 
-Your 2026 pool report is running on unvalidated infrastructure. Walk-forward harness is new, sensitivity analysis is NOT_EVALUATED, and you're about to make real picks. You have a 2.51x leverage ratio with zero evidence that your leverage calculations are calibrated. If your contrarian signal is even slightly miscalibrated, you're not fading chalk — you're fading reality.
+### The Outsider
+Built a prediction engine when needed a gambling strategy. Finishing second pays nothing, so need maximum variance not maximum EV. Three things: 1. Model the pool, not the tournament. 2. Stop picking all 4 #1 seeds. 3. Submit multiple bracket archetypes if allowed, otherwise pick highest-ceiling bracket. 2026 proves the concept — HAD the winning bracket but system buried it.
 
-**Critical actions:**
-1. Diagnose opt_* catastrophic failure (not optional — if optimization is inverting, your entire objective function is suspect)
-2. Run sensitivity analysis for 2026 NOW
-3. Validate leverage ratio calculation against backtest years with ground truth
-4. Stop adding features — your simplest mode wins
+### The Executor
+Monday-morning plan: 1. Fix 2026 scoring data (broken team IDs, half-day). 2. Kill the Final Four bottleneck — force at least 2 non-one-seeds into F4 using historical rates (one day). 3. Change ranking function from EV to P(finish first) via Monte Carlo (2-3 days). 4. Stop touching ML model. Three tasks, one week total.
 
----
+## Peer Reviews
 
-## Advisor 2: The First Principles Thinker
+Anonymization mapping: A=Executor, B=First Principles, C=Outsider, D=Contrarian, E=Statistician
 
-**You're optimizing the wrong layer.**
+### Review 1
+Strongest: D (Contrarian) — names epistemic problem first. Weakest: A (Executor) — punch list without engaging measurement problem. ALL MISSED: Nobody questions the simulated opponent pool. P(1st) optimization is only as good as the opponent model.
 
-The backtest proves it: your game-level model has zero predictive edge over seeds (BSS ~ 0). Every model you tested — LR, LightGBM, XGBoost, ensembles — hits the same ceiling. This isn't a feature engineering problem. This is the market being efficient at game-level prediction. Seeds already encode the information your features capture.
+### Review 2
+Strongest: D (Contrarian). Weakest: A (Executor) — treats 2026 as diagnostic evidence rather than single observation. ALL MISSED: None question whether opponent model is well-characterized. If field is diverse, contrarian strategy collapses.
 
-Stop trying to beat seeds on game probabilities. That war is lost.
+### Review 3
+Strongest: B (First Principles) — coherent game theory framing with 3.2% target. Weakest: D (Contrarian) — "astrology" dismissal is lazy; F4 bug is deterministic not statistical. ALL MISSED: Nobody engages with existing codebase for specific code changes.
 
-The actual edge is in the bracket construction layer. Champ-first and E8-first construction modes crush base modes (BestRnk 21 vs 38). The optimizer modes are catastrophically bad (176, 342). Why? Because construction topology — how you correlate picks across rounds — is where the pool leverage actually lives. Not in P(team X beats team Y), but in "which 63-pick portfolio maximizes expected rank against the field?"
+### Review 4
+Strongest: B (First Principles). Weakest: D (Contrarian) — nihilism not a strategy. ALL MISSED: Calibration-to-pool interaction — slightly miscalibrated model overestimating upsets might be MORE valuable.
 
-**Critical actions:**
-1. Kill the model improvement track entirely — BSS ~ 0 is terminal
-2. Diagnose why opt_* modes are catastrophic (likely over-concentrating on leverage without respecting correlation structure)
-3. Double down on construction mode research — explore more topologies
-4. Validate the public pick distribution accuracy — garbage in poisons every downstream recommendation
+### Review 5
+Strongest: B (First Principles). Weakest: D (Contrarian). ALL MISSED: Nobody examined the scoring function — late-round points weighted heavily, optimal strategy depends on point structure.
 
-**Uncomfortable question:** Is the 0.20% P(1st) from the best mode actually real? Random brackets in a 1000-person pool get ~0.10%. You've doubled random over 13 years.
+## Chairman Synthesis
 
----
+### Where the Council Agrees
+Every advisor independently reached the same core diagnosis: the system is optimizing the wrong objective function. The pipeline maximizes expected bracket score (EV), but in a winner-take-all pool, EV-optimal brackets are losers. The 2026 result is the proof.
 
-## Advisor 3: The Statistician
+Four of five agree ML ensemble should be frozen or killed. BSS≈0 means not beating seed baselines.
 
-**The N=13 problem dominates everything else.** With 13 years of data and per-year variance spanning 2.1 to 171.7 on BestRank, confidence intervals are enormous. The fact that no mode significantly beats seed on MeanRank with Bonferroni correction is not surprising — you almost certainly lack the statistical power to detect real differences of plausible effect size. A power analysis would likely show you need 30-50+ years.
+All five agree F4 construction is broken. Four one-seeds = consensus bracket. Historical avg ~1.5.
 
-**Critical actions:**
-1. Fix the missing aggregate section immediately — blocking data quality issue
-2. Run sensitivity analysis on the 2026 pool — NOT_EVALUATED is unacceptable before deployment
-3. Validate the walk-forward harness against known results
-4. Stop optimizing on BestRank alone — opt_* being worse on BestRank while MeanRank shows no difference suggests high-variance portfolios that bomb catastrophically
-5. Pool size mismatch matters — 1000→100 changes optimal strategy fundamentally. Re-run at N=100.
+### Where the Council Clashes
+Can you learn from 14 years of backtesting? Contrarian/Statistician say no. Executor/First Principles say yes. Chairman sides with yes for binary/directional tests, no for parameter tuning.
 
-**Bottom line:** System cannot statistically prove it beats the naive seed baseline. Either a power problem or the system genuinely adds little value. Determine which.
+Is ML worth keeping? Chairman sides with freeze, not kill. Not hurting if not tuned. Preserves infrastructure.
 
----
+### Blind Spots the Council Caught
+- Opponent model unexamined — P(1st) only as good as simulated opponents
+- Scoring function structure ignored — championship points may dominate
+- Calibration-to-pool interaction — deliberate upset overestimation could be a feature
 
-## Advisor 4: The Outsider
+### The Chairman's Take
+Council nailed diagnosis, sloppy on prescription. "Optimize P(1st)" requires an opponent model that is itself unvalidated. Risk of replacing one unvalidated optimization with another.
 
-**Your optimizer is overfitting to noise and you're about to bet real money on it.**
+2026 retrospective is more diagnostic than acknowledged: examine which picks the EV ranker penalized to design a non-statistical ranking fix.
 
-The single most damning finding: the modes specifically designed to win pools perform significantly worse than naive seed-based brackets. When your "smart" thing loses to the dumb thing, the smart thing is broken. Full stop.
+The real unlock: separate game probability estimation from bracket construction strategy. Mediocre probabilities can still win pools if construction solves the game-theory problem.
 
-**Three things before touching anything else:**
-1. Kill opt_* modes or explain why they fail — they're still in the pipeline feeding the 2026 recommendation
-2. The 2026 contrarian play is unvalidated — model has BSS ~ 0, so leverage ratio is really just (seed_baseline / public_pick) with extra steps
-3. Pool size mismatch is a real problem — backtested at 1000, deploying to 100. Optimal strategy is fundamentally different.
-
-The construction mode finding is actually the most interesting result. The shape of how you build brackets matters more than the probabilities feeding them. Double down there.
-
----
-
-## Advisor 5: The Executor
-
-**Execution order with dependencies:**
-
-1. **Deprecate opt_* modes** — 15-minute edit, zero risk, no dependencies
-2. **Rerun backtest at N=100** — parameter change, compute-bound (hours). Start first.
-3. **Fix aggregate summary** — reporting bug in backtest harness. Queue after step 2.
-4. **Run sensitivity analysis** — the NOT_EVALUATED flag is unacceptable. Dependency: steps 2-3.
-5. **Lock mode shortlist** — champ_first_tv + e8_first_tv + seed. Dependency: steps 2-4.
-6. **Skip 2012 ESPN gap** — 12/13 years is sufficient.
-
-Critical path: deprecate opt_* -> rerun at N=100 -> sensitivity sweep -> lock modes -> submit.
-
----
-
-## Chairman's Synthesis
-
-### Unanimous (5/5)
-- Kill/deprecate opt_* modes
-- Run sensitivity analysis for 2026
-
-### Strong agreement (4/5)
-- Diagnose WHY opt_* fail, not just deprecate
-- Construction modes are the real alpha
-
-### Key disagreement
-- Executor: just deprecate and move on
-- Contrarian/First Principles: must understand root cause because leverage.py (93k lines) powers both opt_* AND the contrarian recommendations
-
-### Blind spot identified
-leverage.py powers both the catastrophically broken opt_* modes and the pool report's 2.51x leverage ratio. If the objective function inverts value for optimization, is it sound for leverage calculation?
-
-### Final 3 Actions
-1. **Fix backtest aggregate + rerun at N=100** (BLOCKING)
-2. **Run 2026 sensitivity analysis** (CRITICAL — minutes to execute)
-3. **Deprecate opt_* + lock mode shortlist** (contingent on #1)
+### Critical Actions
+1. Fix bracket ranking: replace EV with P(1st) using MC simulation against modeled opponent field. Gate: system ranks det_champ_first bracket in top 3 on 2026 re-run.
+2. Fix F4 construction: enforce historical base rates (cap one-seeds at 2). Gate: average one-seed F4 count between 1-2 across generated brackets.
+3. Validate opponent model against real pool results. Gate: simulated max-of-30 within 15% of observed, or discrepancy documented.

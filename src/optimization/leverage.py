@@ -171,6 +171,7 @@ class BracketConfiguration:
     strategy: str = "balanced"  # "balanced", "chalk", "contrarian"
     expected_points: float = 0.0
     variance: float = 0.0
+    win_probability: float = 0.0  # P(1st) from MC simulation
     # Construction mode used to generate this bracket. One of
     # "champ_first", "f4_first", "e8_first", "forward_greedy", or
     # "legacy_summary" (the pre-construction-modes summary path used
