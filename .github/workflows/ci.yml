@@ -5,6 +5,11 @@ on:
     branches: ['claude/**']
   pull_request:
     branches: [main, master]
+  # workflow_dispatch lets other workflows trigger CI on a given branch via
+  # `gh workflow run ci.yml --ref <branch>`. Required because PRs opened by
+  # workflows using the default GITHUB_TOKEN do NOT fire `pull_request` events,
+  # so any bot-authored PR (e.g. auto/outcome-log-*) would otherwise never see CI run.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
