@@ -134,6 +134,25 @@ def run_optimize_pool(args):
     if construction_mode != "forward_greedy":
         print(f"Using bracket construction mode: {construction_mode}")
 
+    # --- det_* path: direct construct_bracket() with risk_level sweep ---
+    # Bypasses Pareto optimizer entirely. Produces a portfolio of brackets
+    # at different risk levels, deduplicated by picks. Backtest-recommended
+    # for small pools (det_f4_first: 6.2% P(1st) at N=31).
+    if construction_mode.startswith("det_"):
+        return _run_det_construction(
+            construction_mode=construction_mode,
+            seeds=seeds,
+            regions_map=regions_map,
+            round_probs=round_probs,
+            opponent_picks=opponent_picks,
+            pool_size=pool_size,
+            scoring_rules=scoring_rules,
+            year=year,
+            output_path=output_path,
+            payout=payout,
+            scoring_name=args.scoring,
+        )
+
     include_champion_augmentation = getattr(args, "include_champion_augmentation", False)
     if include_champion_augmentation:
         print("Champion-diversity augmentation ENABLED (forced-champion brackets will be added)")
@@ -249,6 +268,102 @@ def run_optimize_pool(args):
                 f"model={pick['model_probability']:.1%}  "
                 f"public={pick['public_pick_percentage']:.1%}"
             )
+
+    print(f"\nReport saved to {output_path}")
+    return 0
+
+
+def _run_det_construction(
+    construction_mode,
+    seeds,
+    regions_map,
+    round_probs,
+    opponent_picks,
+    pool_size,
+    scoring_rules,
+    year,
+    output_path,
+    payout,
+    scoring_name,
+):
+    """Generate brackets via direct construct_bracket() risk-level sweep.
+
+    This is the CLI equivalent of the backtest's det_champ_tv / det_f4_tv /
+    det_e8_tv modes. Sweeps risk_level from 0.0 to 1.0, deduplicates by
+    picks, and outputs the unique portfolio.
+
+    Backtest evidence (N=31, 13 years): det_f4_first hits 6.2% P(1st),
+    ~1.9x random. The Pareto optimizer path produces 4.3% P(1st) max.
+    """
+    from ..optimization.bracket_construction import construct_bracket
+
+    # Map det_* CLI name to construct_bracket mode
+    bc_mode = construction_mode.replace("det_", "")  # e.g. "f4_first"
+
+    print(f"\nDirect construction mode: {bc_mode} (risk-level sweep)")
+
+    # Sweep risk levels to generate diverse brackets
+    unique_brackets = {}
+    for n_levels in [50, 100, 200]:
+        for i in range(n_levels):
+            risk = i / max(1, n_levels - 1)
+            picks, champion, final_four, ev, var = construct_bracket(
+                mode=bc_mode,
+                seeds=seeds,
+                regions=regions_map,
+                round_probs=round_probs,
+                public_picks=opponent_picks,
+                risk_level=risk,
+                pool_size=pool_size,
+                scoring_system=scoring_rules,
+            )
+            key = tuple(sorted(picks.items()))
+            if key not in unique_brackets:
+                unique_brackets[key] = {
+                    "picks": picks,
+                    "champion": champion,
+                    "final_four": final_four,
+                    "expected_points": ev,
+                    "variance": var,
+                    "risk_level": risk,
+                    "construction_mode": bc_mode,
+                }
+        if len(unique_brackets) >= 8:
+            break
+
+    brackets = sorted(unique_brackets.values(), key=lambda b: -b["expected_points"])
+
+    # Build report
+    report = {
+        "year": year,
+        "pool_size": pool_size,
+        "payout_structure": payout,
+        "scoring_system": scoring_name,
+        "construction_mode": construction_mode,
+        "n_unique_brackets": len(brackets),
+        "brackets": brackets,
+    }
+
+    with open(output_path, "w") as f:
+        json.dump(report, f, indent=2, default=str)
+
+    # Print summary
+    print(f"\n{'=' * 60}")
+    print(f"DET CONSTRUCTION REPORT — {year}")
+    print(f"{'=' * 60}")
+    print(f"Mode: {construction_mode} ({len(brackets)} unique brackets)")
+    print(f"Pool: {pool_size}-person, {payout}")
+
+    for i, b in enumerate(brackets):
+        champ = b["champion"]
+        f4 = b["final_four"]
+        ev = b["expected_points"]
+        risk = b["risk_level"]
+        f4_str = ", ".join(f4)
+        tag = " <-- RECOMMENDED" if i == 0 else ""
+        print(f"\n  Bracket {i + 1} (risk={risk:.2f}, EV={ev:.0f}){tag}")
+        print(f"    Champion:   {champ}")
+        print(f"    Final Four: {f4_str}")
 
     print(f"\nReport saved to {output_path}")
     return 0
@@ -599,22 +714,26 @@ def register(subparsers):
     parser.add_argument(
         "--construction-mode",
         "-c",
-        choices=["forward_greedy", "champ_first", "f4_first", "e8_first", "all"],
+        choices=[
+            "forward_greedy",
+            "champ_first",
+            "f4_first",
+            "e8_first",
+            "all",
+            "det_champ_first",
+            "det_f4_first",
+            "det_e8_first",
+        ],
         default="forward_greedy",
         help=(
             "Bracket construction algorithm. 'forward_greedy' (default) picks "
-            "each game's winner by argmax _ev_score for the current round — "
-            "status quo. 'champ_first' picks the globally optimal champion "
-            "first then locks their R64-CHAMP path. 'f4_first' picks 4 "
-            "regional champions first (one per region) then locks their "
-            "regional paths. 'e8_first' picks 8 quadrant winners first then "
-            "locks their quadrant paths. 'all' runs a mixed-mode frontier "
-            "that sweeps all 4 single modes across 11 risk levels (44 "
-            "candidates) and dedupes — the resulting frontier may contain "
-            "brackets from different construction modes, each labeled with "
-            "its producer. Backtest results (pending) will tell us which "
-            "single mode is best; use 'all' to see the diversity of "
-            "alternatives simultaneously. See POOL_STRATEGY_RECOMMENDATION.md."
+            "each game's winner by argmax _ev_score for the current round. "
+            "'champ_first'/'f4_first'/'e8_first' lock anchor teams then fill "
+            "greedily. 'all' runs a mixed-mode frontier. "
+            "'det_champ_first'/'det_f4_first'/'det_e8_first' sweep risk levels "
+            "0-1 using construct_bracket() directly — backtest-recommended for "
+            "small pools (det_f4_first hits 6.2%% P(1st) at N=31). "
+            "See POOL_STRATEGY_RECOMMENDATION.md."
         ),
     )
     parser.add_argument(
