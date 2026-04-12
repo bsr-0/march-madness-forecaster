@@ -3,23 +3,27 @@
 Wires probability builders, ratings-derived opponent model, and the existing
 pool optimization infrastructure into a single entry point.
 
-Supports four modes:
-  - torvik: Torvik barthag + Log5 + bracket MC. No ML ensemble, no
-    calibration stage. Numerically best BestRnk (31.5) and P(top5%)
-    (5.06%) on the 13-year backtest — see POOL_STRATEGY_RECOMMENDATION.md.
-    Recommended for single-entry pool submission.
-  - blend (default): 50/50 seed + noseed. Significant Brier improvement
-    (p<0.0001) with minimal pool EV cost (-3 vs chalk).
+Supports four probability modes:
+  - torvik (recommended): Torvik barthag + Log5 + bracket MC. Best P(1st)
+    (4.45%) on the N=31 backtest. Simplest defensible model.
+  - blend: 50/50 seed + noseed. Significant Brier improvement with
+    minimal pool EV cost.
   - noseed: ML model trained without seed features. Best Brier score
-    (p=0.0006, wins 14/17 years). Use for prediction accuracy.
-  - seed: Historical seed-based probabilities only. Produces no leverage
-    picks (identical to chalk).
+    but worst pool P(1st) — accuracy != pool edge.
+  - seed: Historical seed-based probabilities only.
 
-All four modes are statistically tied on the 13-year backtest BestRank
-metric after Bonferroni correction. `torvik` is recommended because it's
-numerically best and the simplest defensible model. The three `opt_*`
-modes exposed by `scripts/mc_pool_backtest.py` are significantly WORSE
-than the base modes and are deliberately not exposed here.
+Construction modes (--construction-mode) control bracket topology:
+  - f4_first: Best MeanRnk (15.6), P(top25%) (25.4%), MeanScr (1105)
+    on N=31 backtest. Recommended for consistency.
+  - champ_first: Best P(1st) tie (4.41%) with torvik. Recommended for
+    upside in winner-take-all pools.
+  - e8_first: Strong at N=1000, drops to mid-pack at N=31.
+  - forward_greedy (default): Standard round-by-round construction.
+
+All modes are statistically tied after Bonferroni correction (N=13 years
+is underpowered). Torvik + f4_first or champ_first is the recommended
+combination. The opt_* and hedge_tv modes were deprecated 2026-04-12
+(statistically worse than seed baseline, zero P(1st) in 13 years).
 """
 
 import json
@@ -44,8 +48,8 @@ def run_optimize_pool(args):
     """Run bracket pool optimization.
 
     Mode controls which probabilities drive the optimizer:
-      - torvik: barthag + Log5 + bracket MC — backtest-recommended
-      - blend (default): 50/50 seed + noseed — balanced accuracy + pool EV
+      - torvik (default): barthag + Log5 + bracket MC — backtest-recommended
+      - blend: 50/50 seed + noseed — balanced accuracy + pool EV
       - noseed: ML model without seed features — best prediction accuracy
       - seed: Historical seed baseline only — no leverage picks
     """
@@ -60,7 +64,7 @@ def run_optimize_pool(args):
     pool_size = args.pool_size
     payout = args.payout
     output_path = args.output
-    mode = getattr(args, "mode", "blend")
+    mode = getattr(args, "mode", "torvik")
 
     # --- Step 1: Load tournament seeds ---
     seeds = _load_seeds(year)
@@ -530,14 +534,12 @@ def register(subparsers):
         "--mode",
         "-m",
         choices=["torvik", "blend", "noseed", "seed"],
-        default="blend",
+        default="torvik",
         help=(
-            "Probability mode. 'torvik' is the backtest-recommended mode "
-            "(barthag + Log5 + bracket MC, simplest defensible model, "
-            "best BestRnk and P(top5%%) across 13 years — see "
-            "POOL_STRATEGY_RECOMMENDATION.md). 'blend' (default) is 50/50 "
-            "seed+noseed. 'noseed' is the ML-only model. 'seed' is the "
-            "historical seed baseline."
+            "Probability mode. 'torvik' (default) is backtest-recommended "
+            "(barthag + Log5 + bracket MC, best P(1st) at N=31). "
+            "'blend' is 50/50 seed+noseed. 'noseed' is ML-only. "
+            "'seed' is the historical seed baseline."
         ),
     )
     parser.add_argument(
