@@ -87,6 +87,9 @@ ALL_MODES: Tuple[str, ...] = (
     "champ_first_tv",
     "f4_first_tv",
     "e8_first_tv",
+    "det_champ_tv",
+    "det_f4_tv",
+    "det_e8_tv",
 )
 
 # Deprecated: opt_seed, opt_blend, opt_torvik, hedge_tv removed.
@@ -896,6 +899,107 @@ def build_actual_outcome(first_round_matchups, games):
     return outcome
 
 
+def _deterministic_bracket_sampler(
+    first_round,
+    round_probs,
+    n_brackets,
+    rng,
+    seeds,
+    regions,
+    pick_dist,
+    mode,
+):
+    """Generate n_brackets deterministic brackets by sweeping risk_level.
+
+    Calls construct_bracket() from bracket_construction.py at evenly spaced
+    risk levels from 0.0 to 1.0, producing one bracket per risk level.
+    Deduplicates and repeats the sweep with finer granularity if needed to
+    reach n_brackets unique brackets. Converts picks dicts to bool arrays.
+
+    This is the DETERMINISTIC counterpart to the stochastic construction-mode
+    samplers (sample_champ_first_brackets, etc.). Comparing the two head-to-
+    head in the backtest tells us whether stochastic sampling (which naturally
+    produces upsets) outperforms deterministic argmax (which always picks chalk).
+    """
+    from src.optimization.bracket_construction import construct_bracket
+
+    pool_size = 1000  # Use large pool for leverage calculation
+    scoring = dict(ESPN_SCORING)
+
+    # Map mode names to construction modes
+    construction_mode = {
+        "det_champ_tv": "champ_first",
+        "det_f4_tv": "f4_first",
+        "det_e8_tv": "e8_first",
+    }[mode]
+
+    # Sweep risk levels to generate diverse brackets
+    unique_brackets = {}
+    for n_levels in [n_brackets, n_brackets * 2, n_brackets * 4]:
+        for i in range(n_levels):
+            risk = i / max(1, n_levels - 1)
+            picks, champ, f4, ev, var = construct_bracket(
+                mode=construction_mode,
+                seeds=seeds,
+                regions=regions,
+                round_probs=round_probs,
+                public_picks=pick_dist,
+                risk_level=risk,
+                pool_size=pool_size,
+                scoring_system=scoring,
+            )
+            # Convert picks dict to bool array
+            key = tuple(sorted(picks.items()))
+            if key not in unique_brackets:
+                unique_brackets[key] = _picks_dict_to_bool_array(picks, first_round)
+            if len(unique_brackets) >= n_brackets:
+                break
+        if len(unique_brackets) >= n_brackets:
+            break
+
+    arrays = list(unique_brackets.values())
+
+    # If we got fewer unique brackets than requested, duplicate to fill
+    while len(arrays) < n_brackets:
+        arrays.append(arrays[len(arrays) % len(unique_brackets)])
+
+    return np.array(arrays[:n_brackets], dtype=bool)
+
+
+def _picks_dict_to_bool_array(picks, first_round_matchups):
+    """Convert a construct_bracket() picks dict to a (63,) boolean vector.
+
+    Same walk order as sample_model_brackets: R64→R32→S16→E8→F4→CHAMP.
+    """
+    round_winners = defaultdict(set)
+    for key, winner in picks.items():
+        round_name = key.split("_")[0]
+        round_winners[round_name].add(winner)
+
+    result = np.zeros(63, dtype=bool)
+    current_teams = list(first_round_matchups)
+    game_idx = 0
+
+    for round_idx in range(6):
+        round_name = ROUND_NAMES[round_idx]
+        next_round = []
+        for g in range(0, len(current_teams), 2):
+            if g + 1 >= len(current_teams):
+                next_round.append(current_teams[g])
+                continue
+            t1, t2 = current_teams[g], current_teams[g + 1]
+            if t1 in round_winners[round_name]:
+                result[game_idx] = True
+                next_round.append(t1)
+            else:
+                result[game_idx] = False
+                next_round.append(t2)
+            game_idx += 1
+        current_teams = next_round
+
+    return result
+
+
 def build_seed_pick_distribution(seeds):
     """Build opponent pick distribution from SEED_PICK_RATES."""
     return {tid: dict(SEED_PICK_RATES.get(seed, SEED_PICK_RATES[8])) for tid, seed in seeds.items()}
@@ -1309,6 +1413,48 @@ def run_backtest(
                 "e8_first_tv",
                 torvik_rp,
                 lambda fr, rp, n, r: sample_e8_first_brackets(fr, rp, n, r, seeds, regions),
+            ),
+            (
+                "det_champ_tv",
+                torvik_rp,
+                lambda fr, rp, n, r: _deterministic_bracket_sampler(
+                    fr,
+                    rp,
+                    n,
+                    r,
+                    seeds,
+                    regions,
+                    pick_dist,
+                    "det_champ_tv",
+                ),
+            ),
+            (
+                "det_f4_tv",
+                torvik_rp,
+                lambda fr, rp, n, r: _deterministic_bracket_sampler(
+                    fr,
+                    rp,
+                    n,
+                    r,
+                    seeds,
+                    regions,
+                    pick_dist,
+                    "det_f4_tv",
+                ),
+            ),
+            (
+                "det_e8_tv",
+                torvik_rp,
+                lambda fr, rp, n, r: _deterministic_bracket_sampler(
+                    fr,
+                    rp,
+                    n,
+                    r,
+                    seeds,
+                    regions,
+                    pick_dist,
+                    "det_e8_tv",
+                ),
             ),
         ]
         # Filter to the modes the walked-forward fitter asked for.
