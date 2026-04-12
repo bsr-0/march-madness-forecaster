@@ -34,6 +34,8 @@ from scripts.mc_pool_backtest import (
     build_torvik_round_probabilities,
     build_seed_pick_distribution,
     build_optimized_brackets,
+    derive_f4_region_pairing,
+    resolve_first_four,
     sample_model_brackets,
 )
 from src.simulation.pool_competition import (
@@ -129,8 +131,10 @@ def analyze_year(year):
 
     seeds, regions = load_seeds_and_regions(year)
     games = load_tournament_results(year)
+    resolve_first_four(games, seeds, regions)
     barthag = _load_torvik_barthag(year, seeds)
-    first_round = build_first_round_matchups(seeds, regions)
+    region_order = derive_f4_region_pairing(games, regions)
+    first_round = build_first_round_matchups(seeds, regions, region_order=region_order)
     actual = build_actual_outcome(first_round, games)
     scoring_vector = build_scoring_vector(ESPN_SCORING)
 
