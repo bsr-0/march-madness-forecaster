@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Council Report — Pool Optimizer Next Actions</title>
+<style>
+  :root { --green: #22c55e; --red: #ef4444; --yellow: #eab308; --blue: #3b82f6; --gray: #6b7280; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.6; padding: 2rem; max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.8rem; margin-bottom: 0.5rem; color: #f8fafc; }
+  h2 { font-size: 1.3rem; margin: 2rem 0 1rem; color: #94a3b8; border-bottom: 1px solid #334155; padding-bottom: 0.5rem; }
+  h3 { font-size: 1.1rem; margin: 1.5rem 0 0.75rem; color: #cbd5e1; }
+  .meta { color: #64748b; font-size: 0.85rem; margin-bottom: 2rem; }
+  .verdict-box { background: #1e293b; border-left: 4px solid var(--blue); padding: 1.25rem; margin: 1.5rem 0; border-radius: 0 8px 8px 0; }
+  .verdict-box h3 { margin-top: 0; color: var(--blue); }
+  .action-box { background: #1e293b; border-left: 4px solid var(--green); padding: 1.25rem; margin: 1rem 0; border-radius: 0 8px 8px 0; }
+  .action-box.critical { border-left-color: var(--red); }
+  .action-box.warning { border-left-color: var(--yellow); }
+  .action-num { display: inline-block; background: var(--green); color: #0f172a; font-weight: 700; width: 28px; height: 28px; text-align: center; line-height: 28px; border-radius: 50%; margin-right: 8px; font-size: 0.85rem; }
+  .action-box.critical .action-num { background: var(--red); }
+  .action-box.warning .action-num { background: var(--yellow); }
+  .gate { background: #334155; padding: 0.5rem 0.75rem; border-radius: 4px; margin-top: 0.75rem; font-size: 0.9rem; }
+  .gate::before { content: "GATE: "; font-weight: 700; color: var(--yellow); }
+  details { background: #1e293b; border-radius: 8px; margin: 0.75rem 0; }
+  summary { padding: 1rem; cursor: pointer; font-weight: 600; color: #cbd5e1; list-style: none; display: flex; align-items: center; gap: 0.5rem; }
+  summary::before { content: ""; display: inline-block; width: 0; height: 0; border-left: 6px solid #94a3b8; border-top: 5px solid transparent; border-bottom: 5px solid transparent; transition: transform 0.2s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  details .content { padding: 0 1rem 1rem; color: #94a3b8; }
+  .agreement-grid { display: grid; grid-template-columns: 2fr repeat(5, 1fr) 1fr; gap: 2px; font-size: 0.8rem; margin: 1rem 0; }
+  .agreement-grid > div { padding: 6px 8px; background: #1e293b; }
+  .agreement-grid > div:first-child { background: transparent; }
+  .ag-header { font-weight: 700; color: #94a3b8; text-align: center; background: #334155 !important; }
+  .ag-topic { font-weight: 600; color: #cbd5e1; }
+  .ag-yes { color: var(--green); text-align: center; font-weight: 700; }
+  .ag-no { color: var(--gray); text-align: center; }
+  .ag-implied { color: #94a3b8; text-align: center; font-style: italic; }
+  .ag-verdict { text-align: center; font-weight: 700; }
+  .ag-verdict.unanimous { color: var(--green); }
+  .ag-verdict.strong { color: var(--blue); }
+  .ag-verdict.blocking { color: var(--red); }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; margin-right: 4px; }
+  .tag-agree { background: #166534; color: #bbf7d0; }
+  .tag-disagree { background: #991b1b; color: #fecaca; }
+  .tag-tension { background: #854d0e; color: #fef08a; }
+  p { margin: 0.5rem 0; }
+  ul { margin: 0.5rem 0 0.5rem 1.5rem; }
+  li { margin: 0.25rem 0; }
+  code { background: #334155; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; }
+  .blind-spot { background: #1e293b; border-left: 4px solid var(--yellow); padding: 1.25rem; margin: 1rem 0; border-radius: 0 8px 8px 0; }
+</style>
+</head>
+<body>
+
+<h1>LLM Council Report</h1>
+<div class="meta">Pool Optimizer Next Actions &mdash; April 12, 2026 &mdash; 5 Advisors</div>
+
+<h2>Agreement Map</h2>
+
+<div class="agreement-grid">
+  <div class="ag-header">Topic</div>
+  <div class="ag-header">CONTR</div>
+  <div class="ag-header">1stPR</div>
+  <div class="ag-header">STATS</div>
+  <div class="ag-header">OUTSD</div>
+  <div class="ag-header">EXEC</div>
+  <div class="ag-header">Verdict</div>
+
+  <div class="ag-topic">Kill opt_* modes</div>
+  <div class="ag-yes">YES</div><div class="ag-yes">YES</div><div class="ag-yes">YES</div><div class="ag-yes">YES</div><div class="ag-yes">YES</div>
+  <div class="ag-verdict unanimous">5/5</div>
+
+  <div class="ag-topic">Run sensitivity analysis</div>
+  <div class="ag-yes">YES</div><div class="ag-implied">impl.</div><div class="ag-yes">YES</div><div class="ag-yes">YES</div><div class="ag-yes">YES</div>
+  <div class="ag-verdict unanimous">5/5</div>
+
+  <div class="ag-topic">Pool size mismatch</div>
+  <div class="ag-no">&mdash;</div><div class="ag-no">&mdash;</div><div class="ag-yes">YES</div><div class="ag-yes">YES</div><div class="ag-yes">YES</div>
+  <div class="ag-verdict strong">3/5</div>
+
+  <div class="ag-topic">Diagnose why opt_* fail</div>
+  <div class="ag-yes">YES</div><div class="ag-yes">YES</div><div class="ag-implied">impl.</div><div class="ag-yes">YES</div><div class="ag-no">skip</div>
+  <div class="ag-verdict strong">4/5</div>
+
+  <div class="ag-topic">Construction modes = alpha</div>
+  <div class="ag-implied">cautious</div><div class="ag-yes">YES</div><div class="ag-no">&mdash;</div><div class="ag-yes">YES</div><div class="ag-yes">YES</div>
+  <div class="ag-verdict strong">4/5</div>
+
+  <div class="ag-topic">Fix missing aggregate</div>
+  <div class="ag-no">&mdash;</div><div class="ag-no">&mdash;</div><div class="ag-yes">YES</div><div class="ag-no">&mdash;</div><div class="ag-yes">YES</div>
+  <div class="ag-verdict blocking">BLOCKING</div>
+
+  <div class="ag-topic">Abandon model improvements</div>
+  <div class="ag-implied">impl.</div><div class="ag-yes">YES</div><div class="ag-no">&mdash;</div><div class="ag-yes">YES</div><div class="ag-no">&mdash;</div>
+  <div class="ag-verdict strong">3/5</div>
+</div>
+
+<h2>Key Disagreements</h2>
+
+<details>
+  <summary><span class="tag tag-tension">TENSION</span> Diagnose opt_* vs. Just Deprecate</summary>
+  <div class="content">
+    <p><strong>Executor:</strong> Deprecate in 15 minutes and move on. Zero risk, unblocks everything.</p>
+    <p><strong>Contrarian + First Principles:</strong> You MUST understand why optimization inverts value. If the objective function is broken, it may infect leverage calculations downstream — the same leverage.py infrastructure powers both opt_* modes and the pool report's contrarian recommendations.</p>
+    <p><strong>Chairman ruling:</strong> Deprecate now, but diagnose before next year. The contrarian concern about shared infrastructure is valid — if leverage.py's objective function is structurally broken for opt_*, check that it's sound for the parts you're still using.</p>
+  </div>
+</details>
+
+<details>
+  <summary><span class="tag tag-tension">TENSION</span> Walk-Forward Validation Priority</summary>
+  <div class="content">
+    <p><strong>Executor:</strong> Nice-to-have. Backtest is already out-of-sample by construction.</p>
+    <p><strong>Statistician:</strong> New infrastructure that touches hyperparameters is a silent corruption risk. Must validate before trusting anything it produces.</p>
+    <p><strong>Chairman ruling:</strong> Statistician is right in principle, but with the tournament approaching, this is deferred. Flag for post-tournament review.</p>
+  </div>
+</details>
+
+<details>
+  <summary><span class="tag tag-tension">TENSION</span> Is 0.20% P(1st) Real Alpha?</summary>
+  <div class="content">
+    <p><strong>First Principles:</strong> Random brackets get ~0.10% P(1st) in a 1000-person pool. You've doubled random. With N=13 years and enormous variance, this could be noise.</p>
+    <p><strong>Statistician:</strong> Should have flagged this but focused on other issues. N=13 likely underpowered to detect this effect size.</p>
+    <p><strong>Chairman ruling:</strong> This is the most uncomfortable question. A formal power analysis should be run post-tournament. For now, the construction modes are your best available option regardless &mdash; they're at least not worse than seed baseline, and they're dramatically better than opt_*.</p>
+  </div>
+</details>
+
+<h2>Blind Spot</h2>
+<div class="blind-spot">
+  <h3>Leverage Infrastructure Integrity</h3>
+  <p>The Contrarian raised this and nobody fully engaged: <code>leverage.py</code> (93k lines) powers both the catastrophically-broken opt_* modes AND the pool report's contrarian recommendations. If the objective function inverts value for optimization, are you sure it's sound for leverage ratio calculation? The 2.51x leverage ratio driving the contrarian recommendation could be built on the same broken math.</p>
+  <p><strong>Action:</strong> Spot-check leverage ratio predictions against historical pool outcomes. Does high leverage in past years correlate with better pool finishes?</p>
+</div>
+
+<h2>Final Actions</h2>
+
+<div class="action-box critical">
+  <h3><span class="action-num">1</span> Fix Backtest Aggregate + Rerun at N=100</h3>
+  <p>The latest backtest with construction modes has <strong>no aggregate section</strong>. You cannot compare modes without it. Additionally, the backtest ran at N=1000 but the 2026 pool is N=100 &mdash; contrarian calibration is nonlinear in pool size.</p>
+  <p><strong>Effort:</strong> Fix aggregate formatter (30 min) + rerun at N=100 (compute-bound, hours).</p>
+  <div class="gate">Aggregate shows construction modes still dominate at N=100 before locking the mode shortlist.</div>
+</div>
+
+<div class="action-box critical">
+  <h3><span class="action-num">2</span> Run 2026 Sensitivity Analysis</h3>
+  <p>Unanimous. Deploying a contrarian strategy (fade Duke at 22.4% public) without sensitivity bounds is indefensible. The &plusmn;5% public pick shift test is already built in <code>pool_optimizer.py:267-347</code>.</p>
+  <p><strong>Effort:</strong> Single function call. Minutes.</p>
+  <div class="gate">If result is HIGH_STRATEGY_UNCERTAINTY, reconsider contrarian &rarr; fall back to balanced/champ_first_tv.</div>
+</div>
+
+<div class="action-box">
+  <h3><span class="action-num">3</span> Deprecate opt_* + Lock Mode Shortlist</h3>
+  <p>Statistical evidence is unambiguous: opt_* modes are significantly worse than seed (p&lt;0.05, Bonferroni-corrected) with zero P(1st) in 13 years.</p>
+  <p><strong>Production shortlist:</strong> <code>champ_first_tv</code> (balanced), <code>e8_first_tv</code> (aggressive), <code>seed</code> (safe baseline).</p>
+  <div class="gate">Contingent on Action 1 confirming results hold at N=100.</div>
+</div>
+
+<h2>Advisor Responses</h2>
+
+<details>
+  <summary>The Contrarian</summary>
+  <div class="content">
+    <p><strong>Core thesis:</strong> opt_* modes performing worse than random (BestRank 176-342 in 1000-person pool) is not a tuning problem &mdash; it's a sign the optimization objective is fundamentally misaligned. The construction modes working precisely because they're simpler should worry you.</p>
+    <ul>
+      <li>Diagnose opt_* catastrophic failure (not optional)</li>
+      <li>Run sensitivity analysis &mdash; 2.51x leverage is a massive unvalidated bet</li>
+      <li>Validate leverage ratio against historical pool wins</li>
+      <li>Stop adding features &mdash; simplest mode wins</li>
+    </ul>
+  </div>
+</details>
+
+<details>
+  <summary>The First Principles Thinker</summary>
+  <div class="content">
+    <p><strong>Core thesis:</strong> You're optimizing the wrong layer. Game-level prediction war is lost (BSS&approx;0). The actual edge lives in bracket construction topology &mdash; how you correlate picks across rounds.</p>
+    <ul>
+      <li>Kill model improvement track entirely</li>
+      <li>Diagnose why opt_* inverts value (likely over-concentrating on leverage without respecting correlation)</li>
+      <li>Double down on construction mode research &mdash; explore more topologies</li>
+      <li>Validate public pick distribution accuracy</li>
+      <li>Question: is 0.20% P(1st) real or noise over 13 years?</li>
+    </ul>
+  </div>
+</details>
+
+<details>
+  <summary>The Statistician</summary>
+  <div class="content">
+    <p><strong>Core thesis:</strong> N=13 dominates everything. Per-year variance (BestRank 2.1 to 171.7) means confidence intervals are enormous. You almost certainly lack power to detect real mode differences.</p>
+    <ul>
+      <li>Fix missing aggregate section (blocking)</li>
+      <li>Run sensitivity analysis (NOT_EVALUATED is unacceptable)</li>
+      <li>Validate walk-forward harness against known results</li>
+      <li>Stop optimizing on BestRank alone &mdash; report both metrics</li>
+      <li>Pool size mismatch (1000&rarr;100) changes optimal strategy fundamentally</li>
+    </ul>
+  </div>
+</details>
+
+<details>
+  <summary>The Outsider</summary>
+  <div class="content">
+    <p><strong>Core thesis:</strong> Your optimizer is overfitting to noise. The modes specifically designed to win pools perform significantly worse than naive brackets. When your "smart" thing loses to the dumb thing, the smart thing is broken.</p>
+    <ul>
+      <li>Kill opt_* or explain why they fail (not optional)</li>
+      <li>2026 contrarian play is unvalidated &mdash; model has BSS&approx;0</li>
+      <li>Pool size mismatch invalidates contrarian recommendations</li>
+      <li>Construction mode finding is the interesting result &mdash; double down there</li>
+    </ul>
+  </div>
+</details>
+
+<details>
+  <summary>The Executor</summary>
+  <div class="content">
+    <p><strong>Core thesis:</strong> Execution order matters. Critical path: deprecate opt_* &rarr; rerun at N=100 &rarr; sensitivity sweep &rarr; lock modes &rarr; submit.</p>
+    <ul>
+      <li>Deprecate opt_* immediately (15-min edit, zero risk)</li>
+      <li>Rerun backtest at N=100 (compute-bound, start first)</li>
+      <li>Generate aggregate summary (reporting bug fix)</li>
+      <li>Run sensitivity analysis for 2026</li>
+      <li>Lock shortlist: champ_first_tv, e8_first_tv, seed</li>
+      <li>Skip 2012 ESPN gap (12/13 years sufficient)</li>
+    </ul>
+  </div>
+</details>
+
+</body>
+</html>
