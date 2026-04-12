@@ -20,6 +20,10 @@ concurrency:
 permissions:
   contents: write
   pull-requests: write
+  # actions: write is required to dispatch ci.yml via `gh workflow run`,
+  # which we need because PRs opened with the default GITHUB_TOKEN do not
+  # fire pull_request events — CI would otherwise never run on this PR.
+  actions: write
 
 jobs:
   log-outcomes:
@@ -118,5 +122,10 @@ jobs:
           git push -u origin "$BRANCH"
           PR_URL=$(gh pr create --fill --base main)
           gh pr merge --squash --delete-branch --auto "$PR_URL"
+          # PRs created with the default GITHUB_TOKEN do not fire pull_request
+          # events, so ci.yml's `pull_request` trigger never runs and the
+          # required "CI" check would never report. Dispatch it explicitly so
+          # the PR's required status check can complete and auto-merge can fire.
+          gh workflow run ci.yml --ref "$BRANCH"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
