@@ -144,6 +144,7 @@ def run_optimize_pool(args):
             seeds=seeds,
             regions_map=regions_map,
             round_probs=round_probs,
+            pairwise_probs=pairwise_probs,
             opponent_picks=opponent_picks,
             pool_size=pool_size,
             scoring_rules=scoring_rules,
@@ -273,11 +274,71 @@ def run_optimize_pool(args):
     return 0
 
 
+# Standard NCAA bracket seed matchup order within each region
+_SEED_MATCHUP_ORDER = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
+_DEFAULT_REGION_ORDER = ["East", "West", "South", "Midwest"]
+
+
+def _build_first_round_matchups(seeds, regions, region_order=None):
+    """Build ordered 64-team matchup list from seeds and regions."""
+    from collections import defaultdict
+
+    if region_order is None:
+        region_order = _DEFAULT_REGION_ORDER
+    teams_by_region = defaultdict(dict)
+    for tid, seed in seeds.items():
+        teams_by_region[regions.get(tid, "")][seed] = tid
+
+    matchups = []
+    for region in region_order:
+        region_teams = teams_by_region.get(region, {})
+        for high_seed, low_seed in _SEED_MATCHUP_ORDER:
+            matchups.extend([
+                region_teams.get(high_seed, f"unknown_{region}_{high_seed}"),
+                region_teams.get(low_seed, f"unknown_{region}_{low_seed}"),
+            ])
+    return matchups
+
+
+def _picks_dict_to_bool_array(picks, first_round_matchups, round_names):
+    """Convert a construct_bracket() picks dict to a (63,) boolean vector."""
+    import numpy as np
+    from collections import defaultdict
+
+    round_winners = defaultdict(set)
+    for key, winner in picks.items():
+        round_winners[key.split("_")[0]].add(winner)
+
+    result = np.zeros(63, dtype=bool)
+    current_teams = list(first_round_matchups)
+    game_idx = 0
+
+    for round_idx in range(6):
+        round_name = round_names[round_idx]
+        next_round = []
+        for g in range(0, len(current_teams), 2):
+            if g + 1 >= len(current_teams):
+                next_round.append(current_teams[g])
+                continue
+            t1, t2 = current_teams[g], current_teams[g + 1]
+            if t1 in round_winners[round_name]:
+                result[game_idx] = True
+                next_round.append(t1)
+            else:
+                result[game_idx] = False
+                next_round.append(t2)
+            game_idx += 1
+        current_teams = next_round
+
+    return result
+
+
 def _run_det_construction(
     construction_mode,
     seeds,
     regions_map,
     round_probs,
+    pairwise_probs,
     opponent_picks,
     pool_size,
     scoring_rules,
@@ -290,17 +351,27 @@ def _run_det_construction(
 
     This is the CLI equivalent of the backtest's det_champ_tv / det_f4_tv /
     det_e8_tv modes. Sweeps risk_level from 0.0 to 1.0, deduplicates by
-    picks, and outputs the unique portfolio.
+    picks, and outputs the unique portfolio sorted by P(1st) — the
+    probability of finishing first in a winner-take-all pool.
 
     Backtest evidence (N=31, 13 years): det_f4_first hits 6.2% P(1st),
     ~1.9x random. The Pareto optimizer path produces 4.3% P(1st) max.
     """
+    import numpy as np
+
     from ..optimization.bracket_construction import construct_bracket
+    from ..simulation.pool_competition import (
+        ROUND_NAMES,
+        compute_bracket_win_probability,
+    )
 
     # Map det_* CLI name to construct_bracket mode
     bc_mode = construction_mode.replace("det_", "")  # e.g. "f4_first"
 
     print(f"\nDirect construction mode: {bc_mode} (risk-level sweep)")
+
+    # Build first_round_matchups for bracket→bool conversion and P(1st) sim
+    first_round_matchups = _build_first_round_matchups(seeds, regions_map)
 
     # Sweep risk levels to generate diverse brackets
     unique_brackets = {}
@@ -331,7 +402,24 @@ def _run_det_construction(
         if len(unique_brackets) >= 8:
             break
 
-    brackets = sorted(unique_brackets.values(), key=lambda b: -b["expected_points"])
+    # Compute P(1st) for each unique bracket via Monte Carlo
+    print(f"Computing P(1st) for {len(unique_brackets)} unique brackets...")
+    rng = np.random.default_rng(2027)
+    for bkt in unique_brackets.values():
+        bool_arr = _picks_dict_to_bool_array(bkt["picks"], first_round_matchups, ROUND_NAMES)
+        bkt["win_probability"] = compute_bracket_win_probability(
+            bracket=bool_arr,
+            first_round_matchups=first_round_matchups,
+            matchup_probs=pairwise_probs,
+            pick_distribution=opponent_picks,
+            seeds=seeds,
+            n_opponents=pool_size - 1,
+            n_tournaments=5000,
+            rng=rng,
+        )
+
+    # Sort by P(1st) descending — the metric that matters for winner-take-all
+    brackets = sorted(unique_brackets.values(), key=lambda b: -b["win_probability"])
 
     # Build report
     report = {
@@ -353,15 +441,17 @@ def _run_det_construction(
     print(f"{'=' * 60}")
     print(f"Mode: {construction_mode} ({len(brackets)} unique brackets)")
     print(f"Pool: {pool_size}-person, {payout}")
+    print(f"Ranking: P(1st) — probability of winning a {pool_size}-person pool")
 
     for i, b in enumerate(brackets):
         champ = b["champion"]
         f4 = b["final_four"]
         ev = b["expected_points"]
+        wp = b["win_probability"]
         risk = b["risk_level"]
         f4_str = ", ".join(f4)
         tag = " <-- RECOMMENDED" if i == 0 else ""
-        print(f"\n  Bracket {i + 1} (risk={risk:.2f}, EV={ev:.0f}){tag}")
+        print(f"\n  Bracket {i + 1} (P(1st)={wp:.1%}, EV={ev:.0f}, risk={risk:.2f}){tag}")
         print(f"    Champion:   {champ}")
         print(f"    Final Four: {f4_str}")
 

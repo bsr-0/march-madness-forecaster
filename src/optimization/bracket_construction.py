@@ -444,20 +444,33 @@ def _pick_f4_teams(
     scorer: Callable[[str, str], float],
     by_region: Dict[str, Dict[int, str]],
     forced_champion: Optional[str],
+    max_one_seeds: int = 2,
 ) -> Set[str]:
     """Pick 4 F4 teams, one per region, by argmax _ev_score for F4.
 
     If ``forced_champion`` is provided, it replaces the F4 pick in its
     region regardless of the F4 score. The caller guarantees the forced
     champion exists in the seed map.
+
+    ``max_one_seeds`` caps how many 1-seeds can appear in the F4.
+    Historical base rate is ~1.5 one-seeds per F4; default cap of 2
+    prevents the all-chalk consensus bracket that looks like everyone
+    else's in the pool.
     """
-    f4_teams: Set[str] = set()
+    # Build reverse lookup: team_id -> seed
+    team_seed: Dict[str, int] = {}
+    for region in _REGION_ORDER:
+        for seed, tid in by_region[region].items():
+            team_seed[tid] = seed
+
+    # Phase 1: pick best team per region (unconstrained)
+    picks: Dict[str, Tuple[str, float]] = {}  # region -> (team, score)
     forced_region = None
     if forced_champion is not None:
         for region in _REGION_ORDER:
             if forced_champion in by_region[region].values():
                 forced_region = region
-                f4_teams.add(forced_champion)
+                picks[region] = (forced_champion, scorer(forced_champion, "F4"))
                 break
 
     for region in _REGION_ORDER:
@@ -471,9 +484,32 @@ def _pick_f4_teams(
             if s > best_score or (s == best_score and team < best_team):
                 best_team = team
                 best_score = s
-        f4_teams.add(best_team)
+        picks[region] = (best_team, best_score)
 
-    return f4_teams
+    # Phase 2: enforce one-seed cap
+    one_seed_regions = [
+        r for r, (t, _) in picks.items()
+        if team_seed.get(t) == 1 and r != forced_region
+    ]
+    while len(one_seed_regions) + (1 if forced_region and team_seed.get(picks[forced_region][0]) == 1 else 0) > max_one_seeds:
+        # Replace the one-seed with the weakest EV contribution
+        weakest_region = min(one_seed_regions, key=lambda r: picks[r][1])
+        # Pick best non-one-seed in that region
+        region_teams = list(by_region[weakest_region].values())
+        best_alt = None
+        best_alt_score = -1.0
+        for team in region_teams:
+            if team_seed.get(team) == 1:
+                continue
+            s = scorer(team, "F4")
+            if s > best_alt_score or (best_alt is None):
+                best_alt = team
+                best_alt_score = s
+        if best_alt is not None:
+            picks[weakest_region] = (best_alt, best_alt_score)
+        one_seed_regions.remove(weakest_region)
+
+    return {t for t, _ in picks.values()}
 
 
 def _pick_s16_teams(
@@ -545,6 +581,7 @@ def construct_bracket(
     pool_size: int = 100,
     scoring_system: Optional[Dict[str, int]] = None,
     forced_champion: Optional[str] = None,
+    max_one_seeds_f4: int = 2,
 ) -> Tuple[Dict[str, str], str, List[str], float, float]:
     """Construct a complete 63-game bracket using the specified mode.
 
@@ -585,7 +622,7 @@ def construct_bracket(
         locked_teams: Set[str] = {champion}
         lock_through_round: Optional[str] = "CHAMP"
     elif mode == "f4_first":
-        locked_teams = _pick_f4_teams(scorer, by_region, forced_champion)
+        locked_teams = _pick_f4_teams(scorer, by_region, forced_champion, max_one_seeds=max_one_seeds_f4)
         lock_through_round = "E8"
     elif mode == "e8_first":
         locked_teams = _pick_s16_teams(scorer, by_region, forced_champion)

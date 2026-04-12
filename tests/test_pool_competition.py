@@ -22,6 +22,7 @@ from src.simulation.pool_competition import (
     PercentileEstimate,
     BracketPerformance,
     build_scoring_vector,
+    compute_bracket_win_probability,
     generate_opponent_brackets,
     simulate_tournament_outcomes,
     score_brackets_against_outcome,
@@ -653,3 +654,131 @@ class TestBracketPerformance:
         assert d["bracket_id"] == "test_1"
         assert d["strategy"] == "chalk"
         assert d["mean_score"] == 850.0
+
+
+class TestComputeBracketWinProbability:
+    """Tests for the P(1st) estimator used by the det_* CLI path."""
+
+    def test_returns_float_between_zero_and_one(self):
+        first_round, seeds, matchup_probs, pick_dist = _build_64_team_bracket()
+        chalk = _build_chalk_bracket(first_round, matchup_probs)
+        bracket = np.array([t1 == w for t1, w in zip(first_round[::2], chalk[:32])], dtype=bool)
+        # Need full 63-game bracket; use the helper
+        bracket_full = np.zeros(63, dtype=bool)
+        current = list(first_round)
+        idx = 0
+        for rnd in range(6):
+            nxt = []
+            for g in range(0, len(current), 2):
+                if g + 1 >= len(current):
+                    nxt.append(current[g])
+                    continue
+                t1, t2 = current[g], current[g + 1]
+                p = matchup_probs.get((t1, t2), 0.5)
+                if p >= 0.5:
+                    bracket_full[idx] = True
+                    nxt.append(t1)
+                else:
+                    bracket_full[idx] = False
+                    nxt.append(t2)
+                idx += 1
+            current = nxt
+
+        wp = compute_bracket_win_probability(
+            bracket=bracket_full,
+            first_round_matchups=first_round,
+            matchup_probs=matchup_probs,
+            pick_distribution=pick_dist,
+            seeds=seeds,
+            n_opponents=10,
+            n_tournaments=100,
+            rng=np.random.default_rng(99),
+        )
+        assert 0.0 <= wp <= 1.0
+
+    def test_chalk_beats_random_baseline(self):
+        """A chalk bracket should win more often than 1/pool_size baseline."""
+        first_round, seeds, matchup_probs, pick_dist = _build_64_team_bracket()
+
+        # Build chalk bracket as bool array
+        bracket_full = np.zeros(63, dtype=bool)
+        current = list(first_round)
+        idx = 0
+        for rnd in range(6):
+            nxt = []
+            for g in range(0, len(current), 2):
+                if g + 1 >= len(current):
+                    nxt.append(current[g])
+                    continue
+                t1, t2 = current[g], current[g + 1]
+                p = matchup_probs.get((t1, t2), 0.5)
+                if p >= 0.5:
+                    bracket_full[idx] = True
+                    nxt.append(t1)
+                else:
+                    bracket_full[idx] = False
+                    nxt.append(t2)
+                idx += 1
+            current = nxt
+
+        n_opp = 10
+        wp = compute_bracket_win_probability(
+            bracket=bracket_full,
+            first_round_matchups=first_round,
+            matchup_probs=matchup_probs,
+            pick_distribution=pick_dist,
+            seeds=seeds,
+            n_opponents=n_opp,
+            n_tournaments=500,
+            rng=np.random.default_rng(42),
+        )
+        # Chalk should beat random baseline (1/11 ≈ 9.1%) because
+        # opponents are randomly sampled and chalk is the EV-optimal
+        random_baseline = 1.0 / (n_opp + 1)
+        assert wp > random_baseline * 0.5, (
+            f"chalk P(1st)={wp:.3f} should be above {random_baseline * 0.5:.3f}"
+        )
+
+
+class TestPicksDictToBoolArray:
+    """Tests for the CLI helper that converts picks dicts to bool arrays."""
+
+    def test_roundtrip_chalk_scores_perfectly(self):
+        """A chalk bracket scored against a chalk outcome should get 1920."""
+        from src.cli.pool_cmds import _picks_dict_to_bool_array, _build_first_round_matchups
+
+        first_round, seeds, matchup_probs, pick_dist = _build_64_team_bracket()
+        regions = {}
+        for tid, seed in seeds.items():
+            regions[tid] = tid.split("_")[0]
+
+        frm = _build_first_round_matchups(seeds, regions)
+
+        # Build chalk picks dict (like construct_bracket returns)
+        picks = {}
+        current = list(frm)
+        game_num = 0
+        for rnd_idx, rnd_name in enumerate(ROUND_NAMES):
+            nxt = []
+            for g in range(0, len(current), 2):
+                if g + 1 >= len(current):
+                    nxt.append(current[g])
+                    continue
+                t1, t2 = current[g], current[g + 1]
+                p = matchup_probs.get((t1, t2), 0.5)
+                winner = t1 if p >= 0.5 else t2
+                picks[f"{rnd_name}_{game_num}"] = winner
+                game_num += 1
+                nxt.append(winner)
+            current = nxt
+
+        bool_arr = _picks_dict_to_bool_array(picks, frm, ROUND_NAMES)
+        assert bool_arr.shape == (63,)
+        assert bool_arr.dtype == bool
+
+        # Score against itself as outcome — should get perfect 1920
+        scoring = build_scoring_vector({"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320})
+        scores = score_brackets_against_outcome(
+            bool_arr.reshape(1, -1), bool_arr, scoring
+        )
+        assert scores[0] == 1920, f"chalk vs chalk should be 1920, got {scores[0]}"

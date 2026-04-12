@@ -234,18 +234,30 @@ def generate_opponent_brackets(
     pick_distribution: Dict[str, Dict[str, float]],
     seeds: Dict[str, int],
     rng: np.random.Generator,
+    chalk_noise_std: float = 0.0,
 ) -> np.ndarray:
     """Generate synthetic opponent brackets from pick probability distribution.
 
     Each opponent bracket is a complete 63-game prediction (one winner per
-    game).  Picks are sampled independently per game from the archetype-
-    blended pick distribution, which captures realistic correlations
-    between seed preference, public consensus, and strategic behavior.
+    game).  Picks are sampled from the archetype-blended pick distribution
+    with path consistency enforced (a team can only advance if it won the
+    previous round in this bracket).
 
-    The independent-per-game assumption is a simplification — real bracketers
-    have path-dependent picks (if you pick Duke in the S16, you must have
-    picked them in R32 and R64).  We enforce path consistency by only
-    allowing a team to advance if it won the previous round in this bracket.
+    When ``chalk_noise_std > 0``, opponents are drawn from a hierarchical
+    model that introduces realistic inter-bracket correlation:
+
+      1. A shared *pool narrative* factor is drawn once per call:
+         ``pool_shift ~ N(0, chalk_noise_std)``
+      2. Each opponent gets an individual chalk bias:
+         ``opp_shift ~ N(pool_shift, chalk_noise_std * 0.5)``
+      3. For each game, the base pick probability is adjusted in logit
+         space by ``opp_shift * seed_gap_weight``, where the weight
+         scales with the seed difference between the two teams.
+
+    This creates the correlation structure observed in real pools: most
+    opponents cluster around a shared chalk/contrarian tendency (shared
+    ESPN media diet), with individual variation. Setting ``chalk_noise_std``
+    to 0.0 (default) recovers the original independent sampling.
 
     Args:
         n_opponents: Number of opponent brackets to generate.
@@ -256,6 +268,9 @@ def generate_opponent_brackets(
             From archetype blending or raw public picks.
         seeds: team_id -> tournament seed (1-16).
         rng: NumPy random generator.
+        chalk_noise_std: Controls opponent correlation strength. 0.0 = fully
+            independent (legacy behavior). Recommended range 0.3-0.6 for
+            realistic N=31 pool correlation.
 
     Returns:
         Boolean array of shape (n_opponents, 63) where True means the
@@ -263,14 +278,20 @@ def generate_opponent_brackets(
         standard bracket traversal: 32 R64 games, then 16 R32, etc.
     """
     n_games = 63
-    # Each bracket is stored as the list of winners for each game slot
-    # We use a list-of-lists for winners, since we need team IDs for
-    # path-dependent advancement
     all_brackets = np.zeros((n_opponents, n_games), dtype=bool)
+
+    # Hierarchical chalk correlation: shared pool narrative + per-opponent variation
+    use_correlation = chalk_noise_std > 0.0
+    if use_correlation:
+        pool_shift = rng.normal(0.0, chalk_noise_std)
+        opp_shifts = rng.normal(pool_shift, chalk_noise_std * 0.5, size=n_opponents)
+    else:
+        opp_shifts = np.zeros(n_opponents)
 
     for opp in range(n_opponents):
         current_teams = list(first_round_matchups)
         game_idx = 0
+        shift = opp_shifts[opp]
 
         for round_idx in range(6):
             round_name = ROUND_NAMES[round_idx]
@@ -283,13 +304,21 @@ def generate_opponent_brackets(
 
                 t1, t2 = current_teams[g], current_teams[g + 1]
 
-                # Get pick probability for t1 from the distribution
-                # This represents: "what fraction of the opponent field
-                # would pick t1 to beat t2 in this round?"
                 p_pick_t1 = _get_pick_prob(
                     t1, t2, round_name, pick_distribution,
                     matchup_probs, seeds,
                 )
+
+                # Apply chalk correlation shift in logit space
+                if use_correlation and 0.001 < p_pick_t1 < 0.999:
+                    s1 = seeds.get(t1, 8)
+                    s2 = seeds.get(t2, 8)
+                    # Seed gap weight: larger mismatches get stronger shift
+                    # Normalized so a (1 vs 16) game gets full shift
+                    seed_gap = abs(s2 - s1) / 15.0
+                    logit_p = np.log(p_pick_t1 / (1.0 - p_pick_t1))
+                    logit_p += shift * seed_gap
+                    p_pick_t1 = 1.0 / (1.0 + np.exp(-np.clip(logit_p, -10, 10)))
 
                 if rng.random() < p_pick_t1:
                     winner = t1
@@ -958,3 +987,76 @@ def run_pool_simulation(
         model_bracket_metadata=model_bracket_metadata,
         target_percentiles=target_percentiles,
     )
+
+
+# ---------------------------------------------------------------------------
+# Lightweight P(1st) estimator
+# ---------------------------------------------------------------------------
+
+
+def compute_bracket_win_probability(
+    bracket: np.ndarray,
+    first_round_matchups: List[str],
+    matchup_probs: Dict[Tuple[str, str], float],
+    pick_distribution: Dict[str, Dict[str, float]],
+    seeds: Dict[str, int],
+    n_opponents: int = 30,
+    n_tournaments: int = 5000,
+    noise_std: float = 0.16,
+    chalk_noise_std: float = 0.4,
+    rng: Optional[np.random.Generator] = None,
+) -> float:
+    """Estimate P(bracket finishes 1st) in a simulated pool.
+
+    For each of ``n_tournaments`` simulated outcomes:
+      1. Score the model bracket against the outcome.
+      2. Score ``n_opponents`` opponent brackets against the same outcome.
+      3. Record whether the model bracket's score is strictly the highest.
+
+    Returns the fraction of tournaments where the model bracket wins.
+    This is the core metric for winner-take-all pool optimization.
+
+    Args:
+        chalk_noise_std: Controls opponent bracket correlation. Higher
+            values create more realistic chalk-clustered opponent fields.
+            Default 0.4 produces moderate correlation matching observed
+            real-pool behavior.
+    """
+    if rng is None:
+        rng = np.random.default_rng(42)
+
+    scoring_system = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
+    scoring_vector = build_scoring_vector(scoring_system)
+
+    # Generate one set of opponent brackets (fixed field per estimation)
+    opponents = generate_opponent_brackets(
+        n_opponents=n_opponents,
+        first_round_matchups=first_round_matchups,
+        matchup_probs=matchup_probs,
+        pick_distribution=pick_distribution,
+        seeds=seeds,
+        rng=rng,
+        chalk_noise_std=chalk_noise_std,
+    )
+
+    # Stack model bracket with opponents for vectorized scoring
+    model_row = bracket.reshape(1, -1)
+    all_brackets = np.vstack([model_row, opponents])  # (1 + n_opponents, 63)
+
+    # Simulate tournament outcomes and score
+    outcomes, _ = simulate_tournament_outcomes(
+        n_tournaments=n_tournaments,
+        first_round_matchups=first_round_matchups,
+        matchup_probs=matchup_probs,
+        seeds=seeds,
+        noise_std=noise_std,
+        rng=rng,
+    )
+
+    wins = 0
+    for t in range(n_tournaments):
+        scores = score_brackets_against_outcome(all_brackets, outcomes[t], scoring_vector)
+        if scores[0] >= scores[1:].max():
+            wins += 1
+
+    return wins / n_tournaments

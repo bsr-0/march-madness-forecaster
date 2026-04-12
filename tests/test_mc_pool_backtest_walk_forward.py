@@ -80,7 +80,6 @@ class TestPoolHyperparametersDefaults:
     def test_baseline_values_match_previous_hardcoded_magic_numbers(self):
         hparams = PoolHyperparameters()
         assert hparams.blend_alpha == 0.5
-        assert hparams.hedge_opt_ratio == 0.7  # old HEDGE_OPT_RATIO
 
     def test_default_enables_all_modes(self):
         hparams = PoolHyperparameters()

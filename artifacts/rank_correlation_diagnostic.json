@@ -1,0 +1,2202 @@
+{
+  "results": [
+    {
+      "year": 2011,
+      "n_brackets": 19,
+      "spearman_rho": -0.21538513557636924,
+      "p_value": 0.3758523204254083,
+      "details": [
+        {
+          "champion": "ohio_state",
+          "risk": 0.40816326530612246,
+          "ev": 860.9589999999998,
+          "actual_score": 1020.0,
+          "p1": 0.046,
+          "mean_rank": 17.355
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.32653061224489793,
+          "ev": 866.829,
+          "actual_score": 1090.0,
+          "p1": 0.028,
+          "mean_rank": 14.365
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.9387755102040817,
+          "ev": 555.317,
+          "actual_score": 1190.0,
+          "p1": 0.028,
+          "mean_rank": 9.425
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.3877551020408163,
+          "ev": 861.3209999999999,
+          "actual_score": 1010.0,
+          "p1": 0.024,
+          "mean_rank": 17.445
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.6530612244897959,
+          "ev": 835.643,
+          "actual_score": 1100.0,
+          "p1": 0.024,
+          "mean_rank": 13.68
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.7551020408163265,
+          "ev": 806.9369999999999,
+          "actual_score": 1070.0,
+          "p1": 0.022,
+          "mean_rank": 14.975
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.6122448979591837,
+          "ev": 858.3909999999998,
+          "actual_score": 1060.0,
+          "p1": 0.018,
+          "mean_rank": 15.68
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.3673469387755102,
+          "ev": 863.943,
+          "actual_score": 1030.0,
+          "p1": 0.016,
+          "mean_rank": 17.02
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.061224489795918366,
+          "ev": 868.5129999999999,
+          "actual_score": 1090.0,
+          "p1": 0.014,
+          "mean_rank": 14.1
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.7959183673469388,
+          "ev": 746.377,
+          "actual_score": 1310.0,
+          "p1": 0.014,
+          "mean_rank": 4.505
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.8367346938775511,
+          "ev": 739.6189999999999,
+          "actual_score": 1300.0,
+          "p1": 0.012,
+          "mean_rank": 4.765
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.8775510204081632,
+          "ev": 677.8610000000001,
+          "actual_score": 1240.0,
+          "p1": 0.012,
+          "mean_rank": 7.055
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.0,
+          "ev": 868.701,
+          "actual_score": 1050.0,
+          "p1": 0.01,
+          "mean_rank": 16.445
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.7142857142857143,
+          "ev": 828.8489999999999,
+          "actual_score": 1110.0,
+          "p1": 0.008,
+          "mean_rank": 13.075
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.9591836734693877,
+          "ev": 426.969,
+          "actual_score": 880.0,
+          "p1": 0.008,
+          "mean_rank": 22.6
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.9183673469387755,
+          "ev": 612.241,
+          "actual_score": 1210.0,
+          "p1": 0.006,
+          "mean_rank": 8.32
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.8571428571428571,
+          "ev": 679.585,
+          "actual_score": 1270.0,
+          "p1": 0.004,
+          "mean_rank": 5.435
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.8979591836734694,
+          "ev": 650.047,
+          "actual_score": 1300.0,
+          "p1": 0.002,
+          "mean_rank": 4.6
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 1.0,
+          "ev": 407.995,
+          "actual_score": 860.0,
+          "p1": 0.0,
+          "mean_rank": 23.16
+        }
+      ]
+    },
+    {
+      "year": 2012,
+      "n_brackets": 18,
+      "spearman_rho": 0.8842979925264606,
+      "p_value": 1.1166403658386444e-06,
+      "details": [
+        {
+          "champion": "kentucky",
+          "risk": 0.20408163265306123,
+          "ev": 877.899,
+          "actual_score": 1400.0,
+          "p1": 0.092,
+          "mean_rank": 3.325
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.14285714285714285,
+          "ev": 879.035,
+          "actual_score": 1480.0,
+          "p1": 0.06,
+          "mean_rank": 1.95
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.42857142857142855,
+          "ev": 873.121,
+          "actual_score": 1350.0,
+          "p1": 0.058,
+          "mean_rank": 4.43
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.40816326530612246,
+          "ev": 877.369,
+          "actual_score": 1390.0,
+          "p1": 0.046,
+          "mean_rank": 3.475
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.5510204081632653,
+          "ev": 868.481,
+          "actual_score": 1030.0,
+          "p1": 0.036,
+          "mean_rank": 17.165
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.0,
+          "ev": 879.1750000000001,
+          "actual_score": 1470.0,
+          "p1": 0.034,
+          "mean_rank": 2.025
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.7959183673469388,
+          "ev": 810.6369999999998,
+          "actual_score": 1050.0,
+          "p1": 0.034,
+          "mean_rank": 16.18
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.673469387755102,
+          "ev": 853.183,
+          "actual_score": 1010.0,
+          "p1": 0.032,
+          "mean_rank": 17.86
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.7346938775510204,
+          "ev": 817.7349999999998,
+          "actual_score": 1020.0,
+          "p1": 0.028,
+          "mean_rank": 17.26
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.6530612244897959,
+          "ev": 860.7090000000001,
+          "actual_score": 1040.0,
+          "p1": 0.026,
+          "mean_rank": 16.55
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.8571428571428571,
+          "ev": 763.4489999999998,
+          "actual_score": 990.0,
+          "p1": 0.024,
+          "mean_rank": 18.96
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.7755102040816326,
+          "ev": 814.3709999999998,
+          "actual_score": 1060.0,
+          "p1": 0.018,
+          "mean_rank": 15.89
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.8979591836734694,
+          "ev": 750.3329999999999,
+          "actual_score": 980.0,
+          "p1": 0.016,
+          "mean_rank": 19.095
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.8367346938775511,
+          "ev": 782.0929999999998,
+          "actual_score": 950.0,
+          "p1": 0.012,
+          "mean_rank": 20.51
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.9183673469387755,
+          "ev": 744.5089999999998,
+          "actual_score": 960.0,
+          "p1": 0.01,
+          "mean_rank": 19.925
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.9591836734693877,
+          "ev": 735.9649999999999,
+          "actual_score": 950.0,
+          "p1": 0.01,
+          "mean_rank": 20.395
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.8775510204081632,
+          "ev": 751.4409999999998,
+          "actual_score": 960.0,
+          "p1": 0.008,
+          "mean_rank": 20.33
+        },
+        {
+          "champion": "ohio_state",
+          "risk": 0.9795918367346939,
+          "ev": 629.601,
+          "actual_score": 870.0,
+          "p1": 0.006,
+          "mean_rank": 23.82
+        }
+      ]
+    },
+    {
+      "year": 2013,
+      "n_brackets": 19,
+      "spearman_rho": 0.8065111627108547,
+      "p_value": 3.0328683462219676e-05,
+      "details": [
+        {
+          "champion": "indiana",
+          "risk": 0.4897959183673469,
+          "ev": 903.9239999999998,
+          "actual_score": 1070.0,
+          "p1": 0.068,
+          "mean_rank": 17.045
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.6122448979591837,
+          "ev": 894.7619999999997,
+          "actual_score": 1130.0,
+          "p1": 0.062,
+          "mean_rank": 15.13
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.0,
+          "ev": 908.5699999999997,
+          "actual_score": 1080.0,
+          "p1": 0.05,
+          "mean_rank": 16.725
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.5102040816326531,
+          "ev": 901.8839999999998,
+          "actual_score": 1100.0,
+          "p1": 0.048,
+          "mean_rank": 15.94
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.5714285714285714,
+          "ev": 900.4299999999998,
+          "actual_score": 1090.0,
+          "p1": 0.04,
+          "mean_rank": 16.385
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.2857142857142857,
+          "ev": 908.0779999999997,
+          "actual_score": 1070.0,
+          "p1": 0.038,
+          "mean_rank": 17.065
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.7551020408163265,
+          "ev": 848.8039999999996,
+          "actual_score": 1030.0,
+          "p1": 0.036,
+          "mean_rank": 18.475
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.8367346938775511,
+          "ev": 774.8899999999999,
+          "actual_score": 960.0,
+          "p1": 0.034,
+          "mean_rank": 21.115
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.40816326530612246,
+          "ev": 905.8439999999998,
+          "actual_score": 1080.0,
+          "p1": 0.028,
+          "mean_rank": 16.48
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.6326530612244898,
+          "ev": 889.8439999999998,
+          "actual_score": 1110.0,
+          "p1": 0.028,
+          "mean_rank": 15.755
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.7346938775510204,
+          "ev": 860.6539999999998,
+          "actual_score": 1080.0,
+          "p1": 0.028,
+          "mean_rank": 16.68
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.7959183673469388,
+          "ev": 811.096,
+          "actual_score": 950.0,
+          "p1": 0.024,
+          "mean_rank": 21.43
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.7755102040816326,
+          "ev": 816.9359999999999,
+          "actual_score": 960.0,
+          "p1": 0.022,
+          "mean_rank": 20.95
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.8571428571428571,
+          "ev": 769.0819999999999,
+          "actual_score": 950.0,
+          "p1": 0.016,
+          "mean_rank": 21.325
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.9591836734693877,
+          "ev": 627.742,
+          "actual_score": 840.0,
+          "p1": 0.006,
+          "mean_rank": 25.595
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.8775510204081632,
+          "ev": 731.694,
+          "actual_score": 910.0,
+          "p1": 0.004,
+          "mean_rank": 23.325
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.9183673469387755,
+          "ev": 658.6639999999998,
+          "actual_score": 780.0,
+          "p1": 0.004,
+          "mean_rank": 27.59
+        },
+        {
+          "champion": "indiana",
+          "risk": 0.9795918367346939,
+          "ev": 525.512,
+          "actual_score": 670.0,
+          "p1": 0.0,
+          "mean_rank": 29.99
+        },
+        {
+          "champion": "indiana",
+          "risk": 1.0,
+          "ev": 398.712,
+          "actual_score": 630.0,
+          "p1": 0.0,
+          "mean_rank": 30.53
+        }
+      ]
+    },
+    {
+      "year": 2014,
+      "n_brackets": 25,
+      "spearman_rho": 0.5064571025113543,
+      "p_value": 0.009783177453696109,
+      "details": [
+        {
+          "champion": "louisville",
+          "risk": 0.6938775510204082,
+          "ev": 798.287,
+          "actual_score": 780.0,
+          "p1": 0.08,
+          "mean_rank": 28.99
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.42857142857142855,
+          "ev": 852.2689999999999,
+          "actual_score": 910.0,
+          "p1": 0.07,
+          "mean_rank": 26.115
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.5102040816326531,
+          "ev": 840.0089999999999,
+          "actual_score": 940.0,
+          "p1": 0.058,
+          "mean_rank": 24.89
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.30612244897959184,
+          "ev": 855.7469999999998,
+          "actual_score": 900.0,
+          "p1": 0.052,
+          "mean_rank": 26.055
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.4489795918367347,
+          "ev": 841.771,
+          "actual_score": 960.0,
+          "p1": 0.048,
+          "mean_rank": 24.37
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.6326530612244898,
+          "ev": 830.611,
+          "actual_score": 870.0,
+          "p1": 0.036,
+          "mean_rank": 27.05
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.5714285714285714,
+          "ev": 837.5809999999999,
+          "actual_score": 900.0,
+          "p1": 0.03,
+          "mean_rank": 26.35
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.6122448979591837,
+          "ev": 835.2669999999999,
+          "actual_score": 890.0,
+          "p1": 0.03,
+          "mean_rank": 26.415
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.3673469387755102,
+          "ev": 853.2849999999999,
+          "actual_score": 900.0,
+          "p1": 0.028,
+          "mean_rank": 26.27
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.7142857142857143,
+          "ev": 796.273,
+          "actual_score": 760.0,
+          "p1": 0.028,
+          "mean_rank": 29.305
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.7755102040816326,
+          "ev": 789.2629999999999,
+          "actual_score": 740.0,
+          "p1": 0.028,
+          "mean_rank": 29.655
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.7551020408163265,
+          "ev": 791.7249999999999,
+          "actual_score": 750.0,
+          "p1": 0.026,
+          "mean_rank": 29.435
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.20408163265306123,
+          "ev": 856.2489999999998,
+          "actual_score": 890.0,
+          "p1": 0.024,
+          "mean_rank": 26.525
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.7959183673469388,
+          "ev": 777.0749999999998,
+          "actual_score": 710.0,
+          "p1": 0.024,
+          "mean_rank": 29.835
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.9183673469387755,
+          "ev": 695.371,
+          "actual_score": 660.0,
+          "p1": 0.018,
+          "mean_rank": 30.485
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.0,
+          "ev": 856.7969999999998,
+          "actual_score": 930.0,
+          "p1": 0.016,
+          "mean_rank": 25.505
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.6530612244897959,
+          "ev": 799.741,
+          "actual_score": 730.0,
+          "p1": 0.016,
+          "mean_rank": 29.81
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.8979591836734694,
+          "ev": 743.2069999999999,
+          "actual_score": 670.0,
+          "p1": 0.016,
+          "mean_rank": 30.385
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.8775510204081632,
+          "ev": 753.7249999999999,
+          "actual_score": 660.0,
+          "p1": 0.012,
+          "mean_rank": 30.455
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.9591836734693877,
+          "ev": 559.251,
+          "actual_score": 830.0,
+          "p1": 0.012,
+          "mean_rank": 27.84
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.673469387755102,
+          "ev": 798.563,
+          "actual_score": 740.0,
+          "p1": 0.01,
+          "mean_rank": 29.645
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.8571428571428571,
+          "ev": 763.0989999999998,
+          "actual_score": 680.0,
+          "p1": 0.008,
+          "mean_rank": 30.315
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.9387755102040817,
+          "ev": 608.239,
+          "actual_score": 810.0,
+          "p1": 0.006,
+          "mean_rank": 28.69
+        },
+        {
+          "champion": "louisville",
+          "risk": 0.9795918367346939,
+          "ev": 489.10900000000004,
+          "actual_score": 830.0,
+          "p1": 0.004,
+          "mean_rank": 27.935
+        },
+        {
+          "champion": "louisville",
+          "risk": 1.0,
+          "ev": 374.4989999999999,
+          "actual_score": 790.0,
+          "p1": 0.0,
+          "mean_rank": 28.915
+        }
+      ]
+    },
+    {
+      "year": 2015,
+      "n_brackets": 19,
+      "spearman_rho": 0.5905754724709521,
+      "p_value": 0.007760895507137797,
+      "details": [
+        {
+          "champion": "kentucky",
+          "risk": 0.6938775510204082,
+          "ev": 990.7579999999997,
+          "actual_score": 1350.0,
+          "p1": 0.036,
+          "mean_rank": 4.38
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.0,
+          "ev": 1023.8739999999999,
+          "actual_score": 1550.0,
+          "p1": 0.034,
+          "mean_rank": 1.51
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.5918367346938775,
+          "ev": 995.7479999999997,
+          "actual_score": 1370.0,
+          "p1": 0.034,
+          "mean_rank": 4.12
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.8163265306122449,
+          "ev": 960.9059999999997,
+          "actual_score": 1360.0,
+          "p1": 0.034,
+          "mean_rank": 4.365
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.5510204081632653,
+          "ev": 1016.5999999999998,
+          "actual_score": 1490.0,
+          "p1": 0.03,
+          "mean_rank": 2.115
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.40816326530612246,
+          "ev": 1022.9959999999998,
+          "actual_score": 1480.0,
+          "p1": 0.024,
+          "mean_rank": 2.375
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.10204081632653061,
+          "ev": 1023.5779999999999,
+          "actual_score": 1530.0,
+          "p1": 0.02,
+          "mean_rank": 1.72
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.12244897959183673,
+          "ev": 1023.334,
+          "actual_score": 1490.0,
+          "p1": 0.018,
+          "mean_rank": 2.225
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.46938775510204084,
+          "ev": 1019.3179999999999,
+          "actual_score": 1500.0,
+          "p1": 0.018,
+          "mean_rank": 2.175
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.7755102040816326,
+          "ev": 983.8619999999997,
+          "actual_score": 1340.0,
+          "p1": 0.018,
+          "mean_rank": 4.575
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.7551020408163265,
+          "ev": 988.5739999999997,
+          "actual_score": 1360.0,
+          "p1": 0.016,
+          "mean_rank": 4.125
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.8367346938775511,
+          "ev": 949.7879999999998,
+          "actual_score": 1390.0,
+          "p1": 0.016,
+          "mean_rank": 3.59
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.8979591836734694,
+          "ev": 892.0459999999998,
+          "actual_score": 770.0,
+          "p1": 0.01,
+          "mean_rank": 29.185
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.9183673469387755,
+          "ev": 850.588,
+          "actual_score": 830.0,
+          "p1": 0.01,
+          "mean_rank": 27.09
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.9795918367346939,
+          "ev": 801.5859999999999,
+          "actual_score": 840.0,
+          "p1": 0.006,
+          "mean_rank": 26.59
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.8775510204081632,
+          "ev": 946.4379999999999,
+          "actual_score": 1400.0,
+          "p1": 0.004,
+          "mean_rank": 3.525
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.9387755102040817,
+          "ev": 824.5539999999999,
+          "actual_score": 890.0,
+          "p1": 0.004,
+          "mean_rank": 24.415
+        },
+        {
+          "champion": "kentucky",
+          "risk": 0.9591836734693877,
+          "ev": 810.3419999999999,
+          "actual_score": 870.0,
+          "p1": 0.002,
+          "mean_rank": 25.395
+        },
+        {
+          "champion": "kentucky",
+          "risk": 1.0,
+          "ev": 653.9680000000001,
+          "actual_score": 750.0,
+          "p1": 0.0,
+          "mean_rank": 29.33
+        }
+      ]
+    },
+    {
+      "year": 2016,
+      "n_brackets": 21,
+      "spearman_rho": 0.6762139249053646,
+      "p_value": 0.0007644674286690655,
+      "details": [
+        {
+          "champion": "kansas",
+          "risk": 0.3469387755102041,
+          "ev": 778.3829999999999,
+          "actual_score": 1440.0,
+          "p1": 0.064,
+          "mean_rank": 2.11
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.061224489795918366,
+          "ev": 781.237,
+          "actual_score": 1460.0,
+          "p1": 0.06,
+          "mean_rank": 1.895
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.7142857142857143,
+          "ev": 747.947,
+          "actual_score": 1360.0,
+          "p1": 0.05,
+          "mean_rank": 4.21
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.0,
+          "ev": 781.3830000000002,
+          "actual_score": 1480.0,
+          "p1": 0.046,
+          "mean_rank": 1.58
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.673469387755102,
+          "ev": 766.207,
+          "actual_score": 1410.0,
+          "p1": 0.046,
+          "mean_rank": 2.655
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.6938775510204082,
+          "ev": 752.1129999999999,
+          "actual_score": 1350.0,
+          "p1": 0.04,
+          "mean_rank": 4.495
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.5918367346938775,
+          "ev": 773.3849999999999,
+          "actual_score": 1420.0,
+          "p1": 0.032,
+          "mean_rank": 2.4
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.6326530612244898,
+          "ev": 770.583,
+          "actual_score": 1430.0,
+          "p1": 0.028,
+          "mean_rank": 2.44
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.7959183673469388,
+          "ev": 727.389,
+          "actual_score": 1350.0,
+          "p1": 0.028,
+          "mean_rank": 4.545
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.8163265306122449,
+          "ev": 719.707,
+          "actual_score": 1370.0,
+          "p1": 0.028,
+          "mean_rank": 3.865
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.7755102040816326,
+          "ev": 739.525,
+          "actual_score": 1340.0,
+          "p1": 0.022,
+          "mean_rank": 4.775
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.8775510204081632,
+          "ev": 645.9369999999998,
+          "actual_score": 1250.0,
+          "p1": 0.02,
+          "mean_rank": 8.365
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.8571428571428571,
+          "ev": 655.8249999999999,
+          "actual_score": 1280.0,
+          "p1": 0.018,
+          "mean_rank": 6.98
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.02040816326530612,
+          "ev": 781.4049999999999,
+          "actual_score": 1420.0,
+          "p1": 0.016,
+          "mean_rank": 2.55
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.22448979591836735,
+          "ev": 779.141,
+          "actual_score": 1420.0,
+          "p1": 0.012,
+          "mean_rank": 2.525
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.8367346938775511,
+          "ev": 690.109,
+          "actual_score": 1370.0,
+          "p1": 0.008,
+          "mean_rank": 3.94
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.9795918367346939,
+          "ev": 506.447,
+          "actual_score": 1280.0,
+          "p1": 0.004,
+          "mean_rank": 6.965
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.9183673469387755,
+          "ev": 588.5869999999999,
+          "actual_score": 1310.0,
+          "p1": 0.002,
+          "mean_rank": 5.765
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.9387755102040817,
+          "ev": 543.735,
+          "actual_score": 1330.0,
+          "p1": 0.002,
+          "mean_rank": 5.05
+        },
+        {
+          "champion": "kansas",
+          "risk": 0.8979591836734694,
+          "ev": 596.3649999999999,
+          "actual_score": 1320.0,
+          "p1": 0.0,
+          "mean_rank": 5.495
+        },
+        {
+          "champion": "kansas",
+          "risk": 1.0,
+          "ev": 455.373,
+          "actual_score": 1280.0,
+          "p1": 0.0,
+          "mean_rank": 7.05
+        }
+      ]
+    },
+    {
+      "year": 2017,
+      "n_brackets": 17,
+      "spearman_rho": 0.5657995868379523,
+      "p_value": 0.0179159223614981,
+      "details": [
+        {
+          "champion": "gonzaga",
+          "risk": 0.0,
+          "ev": 818.956,
+          "actual_score": 1220.0,
+          "p1": 0.076,
+          "mean_rank": 10.16
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.5918367346938775,
+          "ev": 794.4040000000001,
+          "actual_score": 1140.0,
+          "p1": 0.06,
+          "mean_rank": 13.07
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.8571428571428571,
+          "ev": 696.5939999999999,
+          "actual_score": 830.0,
+          "p1": 0.06,
+          "mean_rank": 25.475
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.04081632653061224,
+          "ev": 818.808,
+          "actual_score": 1260.0,
+          "p1": 0.056,
+          "mean_rank": 8.45
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.16326530612244897,
+          "ev": 818.306,
+          "actual_score": 1190.0,
+          "p1": 0.056,
+          "mean_rank": 11.22
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.4489795918367347,
+          "ev": 804.74,
+          "actual_score": 1220.0,
+          "p1": 0.05,
+          "mean_rank": 10.2
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.061224489795918366,
+          "ev": 818.678,
+          "actual_score": 1200.0,
+          "p1": 0.046,
+          "mean_rank": 10.705
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.6326530612244898,
+          "ev": 793.6960000000001,
+          "actual_score": 1150.0,
+          "p1": 0.036,
+          "mean_rank": 12.895
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.6530612244897959,
+          "ev": 778.5700000000002,
+          "actual_score": 1130.0,
+          "p1": 0.036,
+          "mean_rank": 13.37
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.46938775510204084,
+          "ev": 800.5120000000001,
+          "actual_score": 1180.0,
+          "p1": 0.034,
+          "mean_rank": 11.72
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.7959183673469388,
+          "ev": 750.1620000000001,
+          "actual_score": 1090.0,
+          "p1": 0.034,
+          "mean_rank": 15.38
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.9387755102040817,
+          "ev": 719.6080000000001,
+          "actual_score": 1050.0,
+          "p1": 0.034,
+          "mean_rank": 16.795
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.9591836734693877,
+          "ev": 673.816,
+          "actual_score": 1080.0,
+          "p1": 0.034,
+          "mean_rank": 15.7
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.6938775510204082,
+          "ev": 774.0820000000001,
+          "actual_score": 1110.0,
+          "p1": 0.03,
+          "mean_rank": 14.26
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.2857142857142857,
+          "ev": 816.36,
+          "actual_score": 1180.0,
+          "p1": 0.022,
+          "mean_rank": 11.625
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.9795918367346939,
+          "ev": 572.0740000000001,
+          "actual_score": 770.0,
+          "p1": 0.016,
+          "mean_rank": 27.655
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 1.0,
+          "ev": 529.94,
+          "actual_score": 730.0,
+          "p1": 0.002,
+          "mean_rank": 28.58
+        }
+      ]
+    },
+    {
+      "year": 2018,
+      "n_brackets": 17,
+      "spearman_rho": 0.564745628294423,
+      "p_value": 0.018178237499978926,
+      "details": [
+        {
+          "champion": "virginia",
+          "risk": 0.5714285714285714,
+          "ev": 875.55,
+          "actual_score": 870.0,
+          "p1": 0.042,
+          "mean_rank": 22.95
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.7346938775510204,
+          "ev": 814.952,
+          "actual_score": 710.0,
+          "p1": 0.04,
+          "mean_rank": 28.07
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.7959183673469388,
+          "ev": 793.252,
+          "actual_score": 760.0,
+          "p1": 0.038,
+          "mean_rank": 26.63
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.7142857142857143,
+          "ev": 861.366,
+          "actual_score": 850.0,
+          "p1": 0.034,
+          "mean_rank": 23.65
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.24489795918367346,
+          "ev": 880.4179999999999,
+          "actual_score": 930.0,
+          "p1": 0.032,
+          "mean_rank": 20.73
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.5102040816326531,
+          "ev": 880.1559999999997,
+          "actual_score": 940.0,
+          "p1": 0.032,
+          "mean_rank": 20.15
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.673469387755102,
+          "ev": 869.3719999999998,
+          "actual_score": 860.0,
+          "p1": 0.03,
+          "mean_rank": 23.47
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.8367346938775511,
+          "ev": 790.722,
+          "actual_score": 740.0,
+          "p1": 0.03,
+          "mean_rank": 27.28
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.6326530612244898,
+          "ev": 871.4979999999998,
+          "actual_score": 850.0,
+          "p1": 0.028,
+          "mean_rank": 23.82
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.7755102040816326,
+          "ev": 796.0,
+          "actual_score": 770.0,
+          "p1": 0.028,
+          "mean_rank": 26.365
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.9387755102040817,
+          "ev": 728.684,
+          "actual_score": 580.0,
+          "p1": 0.028,
+          "mean_rank": 30.45
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.0,
+          "ev": 881.4779999999998,
+          "actual_score": 950.0,
+          "p1": 0.024,
+          "mean_rank": 19.955
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.8979591836734694,
+          "ev": 759.9359999999999,
+          "actual_score": 630.0,
+          "p1": 0.018,
+          "mean_rank": 29.705
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.8571428571428571,
+          "ev": 766.656,
+          "actual_score": 640.0,
+          "p1": 0.014,
+          "mean_rank": 29.67
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.9591836734693877,
+          "ev": 697.3219999999999,
+          "actual_score": 620.0,
+          "p1": 0.014,
+          "mean_rank": 29.895
+        },
+        {
+          "champion": "virginia",
+          "risk": 1.0,
+          "ev": 467.038,
+          "actual_score": 510.0,
+          "p1": 0.014,
+          "mean_rank": 30.84
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.9795918367346939,
+          "ev": 637.54,
+          "actual_score": 620.0,
+          "p1": 0.006,
+          "mean_rank": 29.855
+        }
+      ]
+    },
+    {
+      "year": 2019,
+      "n_brackets": 17,
+      "spearman_rho": 0.25076946934802496,
+      "p_value": 0.3316348911666893,
+      "details": [
+        {
+          "champion": "virginia",
+          "risk": 0.6122448979591837,
+          "ev": 922.841,
+          "actual_score": 1470.0,
+          "p1": 0.112,
+          "mean_rank": 1.605
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.6530612244897959,
+          "ev": 916.2629999999998,
+          "actual_score": 1520.0,
+          "p1": 0.11,
+          "mean_rank": 1.27
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.7755102040816326,
+          "ev": 895.381,
+          "actual_score": 1480.0,
+          "p1": 0.11,
+          "mean_rank": 1.45
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.5306122448979592,
+          "ev": 936.5669999999998,
+          "actual_score": 1570.0,
+          "p1": 0.074,
+          "mean_rank": 1.11
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.8163265306122449,
+          "ev": 880.841,
+          "actual_score": 1490.0,
+          "p1": 0.074,
+          "mean_rank": 1.375
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.6326530612244898,
+          "ev": 917.765,
+          "actual_score": 1510.0,
+          "p1": 0.066,
+          "mean_rank": 1.31
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.9183673469387755,
+          "ev": 732.1529999999999,
+          "actual_score": 1320.0,
+          "p1": 0.066,
+          "mean_rank": 3.7
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.8367346938775511,
+          "ev": 881.9689999999999,
+          "actual_score": 1530.0,
+          "p1": 0.064,
+          "mean_rank": 1.28
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.8979591836734694,
+          "ev": 831.0189999999999,
+          "actual_score": 1540.0,
+          "p1": 0.064,
+          "mean_rank": 1.14
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.0,
+          "ev": 941.0989999999999,
+          "actual_score": 1510.0,
+          "p1": 0.056,
+          "mean_rank": 1.315
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.8571428571428571,
+          "ev": 837.2689999999999,
+          "actual_score": 1550.0,
+          "p1": 0.054,
+          "mean_rank": 1.175
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.3877551020408163,
+          "ev": 940.7269999999999,
+          "actual_score": 1530.0,
+          "p1": 0.05,
+          "mean_rank": 1.265
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.7551020408163265,
+          "ev": 910.7129999999999,
+          "actual_score": 1520.0,
+          "p1": 0.046,
+          "mean_rank": 1.335
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.9591836734693877,
+          "ev": 694.475,
+          "actual_score": 1280.0,
+          "p1": 0.046,
+          "mean_rank": 4.775
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.7959183673469388,
+          "ev": 889.6129999999999,
+          "actual_score": 1520.0,
+          "p1": 0.042,
+          "mean_rank": 1.3
+        },
+        {
+          "champion": "virginia",
+          "risk": 0.9795918367346939,
+          "ev": 656.4590000000001,
+          "actual_score": 1230.0,
+          "p1": 0.014,
+          "mean_rank": 6.21
+        },
+        {
+          "champion": "virginia",
+          "risk": 1.0,
+          "ev": 551.599,
+          "actual_score": 1130.0,
+          "p1": 0.008,
+          "mean_rank": 10.16
+        }
+      ]
+    },
+    {
+      "year": 2021,
+      "n_brackets": 21,
+      "spearman_rho": 0.37955857869202403,
+      "p_value": 0.08969019531542922,
+      "details": [
+        {
+          "champion": "gonzaga",
+          "risk": 0.5510204081632653,
+          "ev": 925.659,
+          "actual_score": 1090.0,
+          "p1": 0.07,
+          "mean_rank": 14.68
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.0,
+          "ev": 932.9609999999999,
+          "actual_score": 1110.0,
+          "p1": 0.064,
+          "mean_rank": 13.71
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.46938775510204084,
+          "ev": 929.459,
+          "actual_score": 1110.0,
+          "p1": 0.04,
+          "mean_rank": 14.035
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.5306122448979592,
+          "ev": 928.2890000000001,
+          "actual_score": 1100.0,
+          "p1": 0.04,
+          "mean_rank": 14.15
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.4489795918367347,
+          "ev": 930.401,
+          "actual_score": 1120.0,
+          "p1": 0.036,
+          "mean_rank": 13.155
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.061224489795918366,
+          "ev": 932.9150000000001,
+          "actual_score": 1120.0,
+          "p1": 0.032,
+          "mean_rank": 13.025
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.7346938775510204,
+          "ev": 883.8729999999999,
+          "actual_score": 1110.0,
+          "p1": 0.032,
+          "mean_rank": 13.76
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.3469387755102041,
+          "ev": 931.4630000000001,
+          "actual_score": 1100.0,
+          "p1": 0.03,
+          "mean_rank": 13.565
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.5714285714285714,
+          "ev": 916.5089999999999,
+          "actual_score": 1070.0,
+          "p1": 0.024,
+          "mean_rank": 16.07
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.6122448979591837,
+          "ev": 910.4069999999998,
+          "actual_score": 1060.0,
+          "p1": 0.016,
+          "mean_rank": 16.52
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.7142857142857143,
+          "ev": 888.3249999999999,
+          "actual_score": 1120.0,
+          "p1": 0.016,
+          "mean_rank": 12.99
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.7959183673469388,
+          "ev": 869.331,
+          "actual_score": 1110.0,
+          "p1": 0.014,
+          "mean_rank": 13.7
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.6938775510204082,
+          "ev": 904.8349999999999,
+          "actual_score": 1100.0,
+          "p1": 0.012,
+          "mean_rank": 14.23
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.8775510204081632,
+          "ev": 774.457,
+          "actual_score": 1040.0,
+          "p1": 0.012,
+          "mean_rank": 17.77
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.8367346938775511,
+          "ev": 844.081,
+          "actual_score": 1140.0,
+          "p1": 0.01,
+          "mean_rank": 11.915
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.7755102040816326,
+          "ev": 873.911,
+          "actual_score": 1090.0,
+          "p1": 0.008,
+          "mean_rank": 14.655
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.9183673469387755,
+          "ev": 751.6070000000001,
+          "actual_score": 1040.0,
+          "p1": 0.008,
+          "mean_rank": 17.43
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.9387755102040817,
+          "ev": 723.265,
+          "actual_score": 1000.0,
+          "p1": 0.008,
+          "mean_rank": 19.59
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.8163265306122449,
+          "ev": 863.571,
+          "actual_score": 1120.0,
+          "p1": 0.006,
+          "mean_rank": 13.06
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.9795918367346939,
+          "ev": 681.4230000000001,
+          "actual_score": 940.0,
+          "p1": 0.004,
+          "mean_rank": 23.05
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 1.0,
+          "ev": 640.719,
+          "actual_score": 870.0,
+          "p1": 0.0,
+          "mean_rank": 26.275
+        }
+      ]
+    },
+    {
+      "year": 2022,
+      "n_brackets": 19,
+      "spearman_rho": 0.42184391149515754,
+      "p_value": 0.07202025770896664,
+      "details": [
+        {
+          "champion": "gonzaga",
+          "risk": 0.7959183673469388,
+          "ev": 860.954,
+          "actual_score": 1020.0,
+          "p1": 0.046,
+          "mean_rank": 17.26
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.10204081632653061,
+          "ev": 881.906,
+          "actual_score": 1140.0,
+          "p1": 0.04,
+          "mean_rank": 10.6
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.8163265306122449,
+          "ev": 857.4099999999999,
+          "actual_score": 1010.0,
+          "p1": 0.036,
+          "mean_rank": 17.25
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.04081632653061224,
+          "ev": 881.952,
+          "actual_score": 1130.0,
+          "p1": 0.032,
+          "mean_rank": 10.985
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.7551020408163265,
+          "ev": 867.3019999999999,
+          "actual_score": 1040.0,
+          "p1": 0.032,
+          "mean_rank": 16.0
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.0,
+          "ev": 881.992,
+          "actual_score": 1140.0,
+          "p1": 0.03,
+          "mean_rank": 10.45
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.7142857142857143,
+          "ev": 873.232,
+          "actual_score": 1210.0,
+          "p1": 0.03,
+          "mean_rank": 7.225
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.6326530612244898,
+          "ev": 877.5440000000001,
+          "actual_score": 1180.0,
+          "p1": 0.028,
+          "mean_rank": 8.29
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.673469387755102,
+          "ev": 874.3,
+          "actual_score": 1220.0,
+          "p1": 0.028,
+          "mean_rank": 6.965
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.1836734693877551,
+          "ev": 881.3879999999999,
+          "actual_score": 1160.0,
+          "p1": 0.022,
+          "mean_rank": 9.385
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.8979591836734694,
+          "ev": 789.9939999999999,
+          "actual_score": 890.0,
+          "p1": 0.022,
+          "mean_rank": 24.165
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.7755102040816326,
+          "ev": 863.0359999999998,
+          "actual_score": 1030.0,
+          "p1": 0.014,
+          "mean_rank": 16.49
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.9183673469387755,
+          "ev": 783.5620000000001,
+          "actual_score": 880.0,
+          "p1": 0.014,
+          "mean_rank": 24.58
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.9795918367346939,
+          "ev": 669.75,
+          "actual_score": 1020.0,
+          "p1": 0.014,
+          "mean_rank": 17.17
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.8367346938775511,
+          "ev": 848.5919999999999,
+          "actual_score": 990.0,
+          "p1": 0.012,
+          "mean_rank": 18.69
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.5306122448979592,
+          "ev": 879.9100000000001,
+          "actual_score": 1150.0,
+          "p1": 0.01,
+          "mean_rank": 10.045
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.9387755102040817,
+          "ev": 771.462,
+          "actual_score": 860.0,
+          "p1": 0.006,
+          "mean_rank": 25.265
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 0.9591836734693877,
+          "ev": 721.5980000000002,
+          "actual_score": 890.0,
+          "p1": 0.004,
+          "mean_rank": 24.025
+        },
+        {
+          "champion": "gonzaga",
+          "risk": 1.0,
+          "ev": 549.402,
+          "actual_score": 940.0,
+          "p1": 0.004,
+          "mean_rank": 21.48
+        }
+      ]
+    },
+    {
+      "year": 2023,
+      "n_brackets": 17,
+      "spearman_rho": -0.6351370522551021,
+      "p_value": 0.0061533536022753375,
+      "details": [
+        {
+          "champion": "houston",
+          "risk": 0.5714285714285714,
+          "ev": 812.8009999999999,
+          "actual_score": 970.0,
+          "p1": 0.044,
+          "mean_rank": 22.19
+        },
+        {
+          "champion": "houston",
+          "risk": 0.4897959183673469,
+          "ev": 818.779,
+          "actual_score": 980.0,
+          "p1": 0.036,
+          "mean_rank": 21.815
+        },
+        {
+          "champion": "houston",
+          "risk": 0.6122448979591837,
+          "ev": 805.481,
+          "actual_score": 950.0,
+          "p1": 0.036,
+          "mean_rank": 23.455
+        },
+        {
+          "champion": "houston",
+          "risk": 0.3877551020408163,
+          "ev": 821.511,
+          "actual_score": 970.0,
+          "p1": 0.034,
+          "mean_rank": 22.245
+        },
+        {
+          "champion": "houston",
+          "risk": 0.0,
+          "ev": 822.653,
+          "actual_score": 950.0,
+          "p1": 0.028,
+          "mean_rank": 23.275
+        },
+        {
+          "champion": "houston",
+          "risk": 0.4489795918367347,
+          "ev": 819.9849999999999,
+          "actual_score": 990.0,
+          "p1": 0.026,
+          "mean_rank": 21.395
+        },
+        {
+          "champion": "houston",
+          "risk": 0.8979591836734694,
+          "ev": 700.4749999999999,
+          "actual_score": 1030.0,
+          "p1": 0.026,
+          "mean_rank": 18.77
+        },
+        {
+          "champion": "houston",
+          "risk": 0.673469387755102,
+          "ev": 792.8210000000001,
+          "actual_score": 1000.0,
+          "p1": 0.024,
+          "mean_rank": 20.53
+        },
+        {
+          "champion": "houston",
+          "risk": 0.6530612244897959,
+          "ev": 798.921,
+          "actual_score": 980.0,
+          "p1": 0.022,
+          "mean_rank": 21.635
+        },
+        {
+          "champion": "houston",
+          "risk": 0.7959183673469388,
+          "ev": 783.125,
+          "actual_score": 1010.0,
+          "p1": 0.02,
+          "mean_rank": 20.14
+        },
+        {
+          "champion": "houston",
+          "risk": 0.8367346938775511,
+          "ev": 731.5529999999999,
+          "actual_score": 1010.0,
+          "p1": 0.016,
+          "mean_rank": 20.22
+        },
+        {
+          "champion": "houston",
+          "risk": 0.8775510204081632,
+          "ev": 711.4849999999999,
+          "actual_score": 1050.0,
+          "p1": 0.014,
+          "mean_rank": 17.98
+        },
+        {
+          "champion": "houston",
+          "risk": 1.0,
+          "ev": 590.5630000000001,
+          "actual_score": 960.0,
+          "p1": 0.014,
+          "mean_rank": 22.915
+        },
+        {
+          "champion": "houston",
+          "risk": 0.9591836734693877,
+          "ev": 608.769,
+          "actual_score": 980.0,
+          "p1": 0.01,
+          "mean_rank": 21.525
+        },
+        {
+          "champion": "houston",
+          "risk": 0.8163265306122449,
+          "ev": 737.3029999999999,
+          "actual_score": 1030.0,
+          "p1": 0.008,
+          "mean_rank": 19.32
+        },
+        {
+          "champion": "houston",
+          "risk": 0.9387755102040817,
+          "ev": 622.8990000000001,
+          "actual_score": 1000.0,
+          "p1": 0.008,
+          "mean_rank": 20.47
+        },
+        {
+          "champion": "houston",
+          "risk": 0.9183673469387755,
+          "ev": 654.595,
+          "actual_score": 1050.0,
+          "p1": 0.004,
+          "mean_rank": 17.835
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "n_brackets": 16,
+      "spearman_rho": 0.10743196433120998,
+      "p_value": 0.6920911809221948,
+      "details": [
+        {
+          "champion": "houston",
+          "risk": 0.7959183673469388,
+          "ev": 896.376,
+          "actual_score": 710.0,
+          "p1": 0.108,
+          "mean_rank": 30.005
+        },
+        {
+          "champion": "houston",
+          "risk": 0.9591836734693877,
+          "ev": 860.1780000000001,
+          "actual_score": 710.0,
+          "p1": 0.086,
+          "mean_rank": 30.085
+        },
+        {
+          "champion": "houston",
+          "risk": 0.22448979591836735,
+          "ev": 942.1919999999999,
+          "actual_score": 1030.0,
+          "p1": 0.082,
+          "mean_rank": 22.33
+        },
+        {
+          "champion": "houston",
+          "risk": 0.6938775510204082,
+          "ev": 897.788,
+          "actual_score": 720.0,
+          "p1": 0.076,
+          "mean_rank": 29.985
+        },
+        {
+          "champion": "houston",
+          "risk": 0.5714285714285714,
+          "ev": 939.57,
+          "actual_score": 1010.0,
+          "p1": 0.068,
+          "mean_rank": 22.96
+        },
+        {
+          "champion": "houston",
+          "risk": 0.6122448979591837,
+          "ev": 937.718,
+          "actual_score": 1000.0,
+          "p1": 0.068,
+          "mean_rank": 23.485
+        },
+        {
+          "champion": "houston",
+          "risk": 0.9387755102040817,
+          "ev": 873.0539999999999,
+          "actual_score": 730.0,
+          "p1": 0.06,
+          "mean_rank": 29.805
+        },
+        {
+          "champion": "houston",
+          "risk": 0.673469387755102,
+          "ev": 894.1960000000001,
+          "actual_score": 660.0,
+          "p1": 0.056,
+          "mean_rank": 30.56
+        },
+        {
+          "champion": "houston",
+          "risk": 0.6530612244897959,
+          "ev": 901.4320000000002,
+          "actual_score": 740.0,
+          "p1": 0.054,
+          "mean_rank": 29.85
+        },
+        {
+          "champion": "houston",
+          "risk": 0.9183673469387755,
+          "ev": 877.222,
+          "actual_score": 710.0,
+          "p1": 0.052,
+          "mean_rank": 30.155
+        },
+        {
+          "champion": "houston",
+          "risk": 0.9795918367346939,
+          "ev": 832.6219999999998,
+          "actual_score": 750.0,
+          "p1": 0.048,
+          "mean_rank": 29.7
+        },
+        {
+          "champion": "houston",
+          "risk": 0.6326530612244898,
+          "ev": 904.902,
+          "actual_score": 720.0,
+          "p1": 0.042,
+          "mean_rank": 30.065
+        },
+        {
+          "champion": "houston",
+          "risk": 0.8979591836734694,
+          "ev": 888.9299999999998,
+          "actual_score": 680.0,
+          "p1": 0.036,
+          "mean_rank": 30.405
+        },
+        {
+          "champion": "houston",
+          "risk": 0.0,
+          "ev": 942.6460000000001,
+          "actual_score": 1040.0,
+          "p1": 0.034,
+          "mean_rank": 21.565
+        },
+        {
+          "champion": "houston",
+          "risk": 0.8163265306122449,
+          "ev": 889.5039999999999,
+          "actual_score": 670.0,
+          "p1": 0.032,
+          "mean_rank": 30.525
+        },
+        {
+          "champion": "houston",
+          "risk": 1.0,
+          "ev": 732.9839999999999,
+          "actual_score": 780.0,
+          "p1": 0.014,
+          "mean_rank": 29.15
+        }
+      ]
+    },
+    {
+      "year": 2025,
+      "n_brackets": 15,
+      "spearman_rho": 0.3005371535187643,
+      "p_value": 0.27641526950681394,
+      "details": [
+        {
+          "champion": "houston",
+          "risk": 0.7959183673469388,
+          "ev": 898.053,
+          "actual_score": 1090.0,
+          "p1": 0.128,
+          "mean_rank": 20.9
+        },
+        {
+          "champion": "houston",
+          "risk": 0.3877551020408163,
+          "ev": 954.3589999999999,
+          "actual_score": 1310.0,
+          "p1": 0.102,
+          "mean_rank": 12.475
+        },
+        {
+          "champion": "houston",
+          "risk": 0.6938775510204082,
+          "ev": 920.543,
+          "actual_score": 1140.0,
+          "p1": 0.102,
+          "mean_rank": 18.48
+        },
+        {
+          "champion": "houston",
+          "risk": 0.5306122448979592,
+          "ev": 950.2069999999999,
+          "actual_score": 1280.0,
+          "p1": 0.088,
+          "mean_rank": 13.11
+        },
+        {
+          "champion": "houston",
+          "risk": 0.0,
+          "ev": 955.9069999999999,
+          "actual_score": 1330.0,
+          "p1": 0.076,
+          "mean_rank": 11.435
+        },
+        {
+          "champion": "houston",
+          "risk": 0.8163265306122449,
+          "ev": 890.7570000000001,
+          "actual_score": 1070.0,
+          "p1": 0.058,
+          "mean_rank": 21.74
+        },
+        {
+          "champion": "houston",
+          "risk": 0.5510204081632653,
+          "ev": 949.4709999999999,
+          "actual_score": 1270.0,
+          "p1": 0.048,
+          "mean_rank": 13.66
+        },
+        {
+          "champion": "houston",
+          "risk": 0.5714285714285714,
+          "ev": 947.223,
+          "actual_score": 1260.0,
+          "p1": 0.048,
+          "mean_rank": 13.83
+        },
+        {
+          "champion": "houston",
+          "risk": 0.4897959183673469,
+          "ev": 951.483,
+          "actual_score": 1290.0,
+          "p1": 0.042,
+          "mean_rank": 13.095
+        },
+        {
+          "champion": "houston",
+          "risk": 0.9183673469387755,
+          "ev": 764.7010000000002,
+          "actual_score": 1170.0,
+          "p1": 0.04,
+          "mean_rank": 17.22
+        },
+        {
+          "champion": "houston",
+          "risk": 0.9387755102040817,
+          "ev": 737.0010000000001,
+          "actual_score": 1170.0,
+          "p1": 0.036,
+          "mean_rank": 17.51
+        },
+        {
+          "champion": "houston",
+          "risk": 0.8979591836734694,
+          "ev": 782.3050000000002,
+          "actual_score": 1130.0,
+          "p1": 0.03,
+          "mean_rank": 18.925
+        },
+        {
+          "champion": "houston",
+          "risk": 0.9591836734693877,
+          "ev": 733.7830000000001,
+          "actual_score": 1160.0,
+          "p1": 0.024,
+          "mean_rank": 17.52
+        },
+        {
+          "champion": "houston",
+          "risk": 0.9795918367346939,
+          "ev": 725.4350000000001,
+          "actual_score": 1150.0,
+          "p1": 0.018,
+          "mean_rank": 18.07
+        },
+        {
+          "champion": "houston",
+          "risk": 1.0,
+          "ev": 629.5189999999999,
+          "actual_score": 1030.0,
+          "p1": 0.006,
+          "mean_rank": 23.545
+        }
+      ]
+    }
+  ],
+  "aggregate": {
+    "mean_rho": 0.37172998284364794,
+    "median_rho": 0.46415050700325594,
+    "positive_frac": 0.8571428571428571,
+    "n_years": 14
+  }
+}
