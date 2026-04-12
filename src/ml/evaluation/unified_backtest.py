@@ -46,7 +46,7 @@ import logging
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -311,8 +311,11 @@ def load_tournament_history_from_kaggle(
             year,
         )
 
-    # Build first_round_matchups in standard bracket order
-    first_round_matchups = _build_first_round_matchups(seeds, regions)
+    # Resolve FF losers and derive the correct F4 region pairing before
+    # building the first-round layout.
+    _resolve_first_four_for_history(games, seeds, regions)
+    region_order = _derive_f4_region_pairing_for_history(games, regions)
+    first_round_matchups = _build_first_round_matchups(seeds, regions, region_order=region_order)
 
     # Identify champion (winner of last game by day_num)
     champion_id = ""
@@ -517,8 +520,10 @@ def load_tournament_history_from_matchups_json(
         first_round_matchups.append(_canonical_backtest_team_id(str(b["team"])))
 
     if len(first_round_matchups) < 64:
-        # Fall back to region-based builder
-        first_round_matchups = _build_first_round_matchups(seeds, regions)
+        # Fall back to region-based builder with derived F4 pairing.
+        _resolve_first_four_for_history(games, seeds, regions)
+        region_order = _derive_f4_region_pairing_for_history(games, regions)
+        first_round_matchups = _build_first_round_matchups(seeds, regions, region_order=region_order)
 
     # Infer regions from bracket position.  Standard NCAA bracket order:
     # positions 0-15 = region 1, 16-31 = region 2, 32-47 = region 3, 48-63 = region 4.
@@ -594,9 +599,8 @@ def load_tournament_history_from_json(
         seeds[tid] = t.get("seed", 8)
         regions[tid] = t.get("region", "")
 
-    first_round_matchups = _build_first_round_matchups(seeds, regions)
-
-    # Load actual game results from tournament_results_{year}.json
+    # Load actual game results BEFORE building first_round so we can
+    # resolve First Four and derive the correct F4 region pairing.
     games: List[TournamentGame] = []
     champion_id = ""
     results_path = Path(history_dir) / f"tournament_results_{year}.json"
@@ -633,6 +637,14 @@ def load_tournament_history_from_json(
         except Exception as e:
             logger.warning("Failed to load tournament results for %d: %s", year, e)
 
+    # Resolve FF losers (68→64 teams) and derive the correct F4 region
+    # pairing from the actual games. Without this, the synthetic bracket
+    # tree projects fictitious F4 matchups and build_actual_bracket_bool
+    # silently decodes a wrong champion.
+    _resolve_first_four_for_history(games, seeds, regions)
+    region_order = _derive_f4_region_pairing_for_history(games, regions)
+    first_round_matchups = _build_first_round_matchups(seeds, regions, region_order=region_order)
+
     return TournamentHistory(
         year=year,
         games=games,
@@ -643,18 +655,80 @@ def load_tournament_history_from_json(
     )
 
 
+_DEFAULT_REGION_ORDER = ("East", "West", "South", "Midwest")
+
+
+def _resolve_first_four_for_history(
+    games: List[TournamentGame],
+    seeds: Dict[str, int],
+    regions: Dict[str, str],
+) -> int:
+    """Drop First Four losers from seeds/regions so only 64 R64 teams remain.
+
+    The tournament_seeds files list all 68 teams. R64 games use the FF
+    winners' team IDs. Without resolving, R64 lookups miss on FF loser names
+    and wrong teams cascade through the entire bracket.
+
+    Mutates ``seeds`` and ``regions`` in place. Returns number of removals.
+    """
+    n = 0
+    for g in games:
+        if g.round_name != "FF":
+            continue
+        loser = g.team2_id if g.team1_won else g.team1_id
+        if loser in seeds:
+            seeds.pop(loser)
+            regions.pop(loser, None)
+            n += 1
+    return n
+
+
+def _derive_f4_region_pairing_for_history(
+    games: List[TournamentGame],
+    regions: Dict[str, str],
+) -> Tuple[str, ...]:
+    """Return a region ordering whose synthetic tree produces real F4 matchups.
+
+    The NCAA rotates which regions pair in the Final Four. A hardcoded order
+    corrupts the ground-truth vector for any year where the real pairing
+    differs. This reads the actual F4 games and returns a 4-tuple where
+    positions 0-1 and 2-3 are the two F4 semi pairings.
+
+    Falls back to ``_DEFAULT_REGION_ORDER`` when F4 game data is missing or
+    incomplete (e.g., truncated seasons, Kaggle CSVs without round labels).
+    """
+    f4_games = [g for g in games if g.round_name == "F4"]
+    if len(f4_games) < 2:
+        return _DEFAULT_REGION_ORDER
+
+    pairs = []
+    for g in f4_games[:2]:
+        r1 = regions.get(g.team1_id)
+        r2 = regions.get(g.team2_id)
+        if not r1 or not r2 or r1 == r2:
+            return _DEFAULT_REGION_ORDER
+        pairs.append((r1, r2))
+
+    all_regions = {r for pair in pairs for r in pair}
+    if len(all_regions) != 4:
+        return _DEFAULT_REGION_ORDER
+
+    return (pairs[0][0], pairs[0][1], pairs[1][0], pairs[1][1])
+
+
 def _build_first_round_matchups(
     seeds: Dict[str, int],
     regions: Dict[str, str],
+    region_order: Sequence[str] = _DEFAULT_REGION_ORDER,
 ) -> List[str]:
     """Build ordered 64-team first-round matchup list.
 
-    Standard NCAA bracket order: East, West, South, Midwest,
-    each region ordered by seed pairing:
-    (1v16), (8v9), (5v12), (4v13), (6v11), (3v14), (7v10), (2v15).
+    Args:
+        region_order: Determines F4 pairing. For ground-truth construction
+            this MUST be derived from the actual F4 games via
+            ``_derive_f4_region_pairing_for_history``.
     """
     matchups: List[str] = []
-    region_order = ["East", "West", "South", "Midwest"]
 
     # Group teams by region
     teams_by_region: Dict[str, Dict[int, str]] = {}
