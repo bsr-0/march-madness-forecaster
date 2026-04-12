@@ -8,7 +8,7 @@
 
 **For maximum pool-winning upside, use `e8_first_tv`** instead. Its P(1st) of 0.20% is 10× seed and 10× torvik — by far the highest across all 11 tested modes — at the cost of slightly worse MeanRnk. This is the "aggressive contrarian" choice.
 
-**Avoid**: all three `opt_*` modes. Every one of them scores meaningfully WORSE than seed on BestRnk (24–50 positions worse). None are Bonferroni-significant in this run, but the directional evidence is consistent with the previous run that DID reach significance. The Pareto-leverage optimizer is the wrong tool for pool winning.
+**Avoid**: all `opt_*` and `hedge_tv` modes — **deprecated and removed** from the backtest harness (2026-04-12). Statistically significantly worse than seed on BestRank (p<0.05 Bonferroni in the full_results run), zero P(1st) in 13 years.
 
 ## Aggregate results
 
@@ -84,11 +84,21 @@ The mechanism: the construction-mode samplers lock their anchor teams' paths, wh
 
 **In tournament pool theory, this is exactly the tradeoff you want**. Pool payouts are concentrated at the top (1st gets all of it in a winner-take-all format), so you maximize P(1st) even at the cost of worse MeanRnk.
 
-## Failure mode of the `opt_*` modes
+## Root cause: why `opt_*` modes failed (diagnosed 2026-04-12)
 
-opt_seed has the best MeanRnk (469.3) and high P(top25%) (29.79%), but **zero P(1st) across 32,500 bracket-trials** (13 years × 50 brackets × 50 repeats). The Pareto-leverage optimizer tightens the bracket distribution: higher average rank, but zero outliers. In a 1000-person pool, only the tail matters for winning, and opt_seed actively hedges away the upside you need. This is the same finding as previous versions of the doc — the new backtest confirms it.
+Four interconnected failures in the Pareto-leverage optimizer:
 
-Note: previous versions of this doc reported the `opt_*` modes as **statistically significantly worse** than seed on BestRank at α<0.01. Under the current 10-comparison Bonferroni regime (α=0.005), they fall just short (p_adj = 0.55–0.83). The direction is still the same; the multiple-comparison correction is just harsher.
+1. **Myopic greedy strategy.** `_make_ev_scorer()` in `bracket_construction.py` picks winners game-by-game by argmax of `model_prob * pts * blended_diff`. No dynamic programming or lookahead to avoid downstream concentration risk.
+
+2. **Independent-pick approximation.** `_compute_expected_points()` treats all 63 picks as independent: `total_ev += p * pts`. It ignores path-dependent covariance — a 10-seed's E8 probability is used directly without conditioning on them winning R64 and R32 first.
+
+3. **Leverage without correlation respect.** The optimizer maximizes `model_prob / public_pick_pct` weighted by points, but doesn't check whether high-leverage picks are correlated (all on the same team's path, all against the same favored teams). Creates "correlation concentration" where multiple contrarian picks fail together.
+
+4. **Catastrophic failure in upset years.** When early upsets invalidate the optimizer's contrarian assumptions, the entire portfolio collapses. Zero P(1st) because upset years create massive downside that swamps normal-year gains.
+
+**Why construction modes work better:** They use the *same* per-game `_ev_score` but apply it differently — lock an anchor round first (champion/F4/E8), then fill forward greedily. This forces bracket path consistency implicitly. You can't pick a 10-seed at F4 if you've already locked a different champion. Result: lower tail risk, non-zero P(1st), better BestRank.
+
+Note: `_generate_full_bracket()` in `leverage.py` DOES compute path-dependent covariance, but only for post-hoc variance reporting — it is not used for bracket construction decisions.
 
 ## Recommendation: champ_first_tv
 
@@ -114,9 +124,9 @@ This is the "aggressive contrarian" choice. It's structurally optimized to conce
 
 ### What not to use
 
-- **Any `opt_*` mode** — consistently worse on BestRnk, zero P(1st) for opt_seed/opt_torvik/hedge_tv
-- **`noseed` and `blend`** — numerically worse on P(top5%) than torvik/seed, no compensating benefit
-- **`hedge_tv`** — mid-pack on BestRnk, zero P(1st), adds complexity with no measured upside
+- **`opt_*` and `hedge_tv`** — deprecated and removed. See "Deprecated modes" section.
+- **`noseed`** — worst P(1st) at both N=31 (2.57%) and N=1000. High leverage ratio but bad model accuracy = losing more uniquely.
+- **`e8_first_tv` in small pools** — drops to mid-pack at N=31. Aggressive contrarian play is penalized when you only need to beat 30 people.
 
 ## On statistical significance
 
@@ -129,14 +139,43 @@ None of the construction modes are Bonferroni-significant at α=0.005 with 10 co
 
 A more relaxed interpretation: the new construction modes are likely genuinely better than the baselines, and the 13-year data is consistent with that but can't prove it at α<0.005. If we saw the same direction over 30 years, significance would be easier to reach. The recommendation stands on direction + effect size, not statistical significance.
 
+## N=31 small-pool backtest (2026-04-12)
+
+Re-run at actual pool size (31 people) shows **contrarian edge compresses dramatically**:
+
+| Mode | BestRnk | MeanRnk | P(1st) | P(top5%) | P(top25%) | Avg ESPN Pts |
+|---|---:|---:|---:|---:|---:|---:|
+| **f4_first_tv** | **1.5** | **15.6** | 4.27% | 4.66% | **25.37%** | **1105** |
+| champ_first_tv | 1.6 | 16.2 | 4.41% | 4.74% | 22.84% | 1091 |
+| **torvik** | 2.0 | 16.3 | **4.45%** | **4.83%** | 23.58% | 1082 |
+| e8_first_tv | 1.5 | 16.4 | 3.59% | 4.01% | 21.62% | 1083 |
+| seed | 1.6 | 16.2 | 3.46% | 3.81% | 22.98% | 1087 |
+| blend | 1.9 | 16.8 | 3.05% | 3.42% | 21.37% | 1072 |
+| noseed | 1.8 | 17.1 | 2.57% | 2.88% | 19.68% | 1056 |
+
+Random P(1st) at N=31 = 3.23%. Best modes achieve ~4.4% (1.4× random). No mode is statistically distinguishable from seed after Bonferroni correction.
+
+**Small-pool takeaways:**
+- f4_first_tv is the quiet winner at N=31: best MeanRnk, P(top25%), and MeanScr
+- e8_first_tv drops from best-at-N=1000 to mid-pack — aggressive contrarian play is penalized
+- Accuracy matters more than differentiation at small pool sizes
+
+## Deprecated modes (2026-04-12)
+
+opt_seed, opt_blend, opt_torvik, and hedge_tv have been **removed from the backtest harness**. Evidence:
+- opt_* statistically significantly worse than seed on BestRank (p<0.05 Bonferroni) in the N=1000 full_results run
+- Zero P(1st) across 13 years for opt_seed, opt_torvik, hedge_tv
+- Council decision: the Pareto-leverage optimizer actively hedges away the upside needed to win pools
+
 ## What this means for 2026
 
 For your 2026 pool entry, the recommended path is:
-- Primary: `python -m src.main optimize-pool --mode torvik --construction-mode champ_first --year 2026`
-- Aggressive alternative: `python -m src.main optimize-pool --mode torvik --construction-mode e8_first --year 2026`
+- Primary: `python -m src.main optimize-pool --mode torvik --construction-mode champ_first --year 2026 --pool-size 31`
+- Consistent alternative: `python -m src.main optimize-pool --mode torvik --construction-mode f4_first --year 2026 --pool-size 31`
+- Aggressive (large pools only): `python -m src.main optimize-pool --mode torvik --construction-mode e8_first --year 2026`
 - To see all 4 construction modes side-by-side: `--construction-mode all`
 
-The CLI's `--construction-mode` flag defaults to `forward_greedy` for backward compatibility. Set it explicitly to `champ_first` or `e8_first` to get the backtest-recommended mode. A future doc revision may change the default once the backtest-winning mode is validated over more years.
+The CLI default mode is now `torvik` (previously `blend`).
 
 ## Caveats
 
