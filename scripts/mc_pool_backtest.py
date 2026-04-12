@@ -90,6 +90,21 @@ ALL_MODES: Tuple[str, ...] = (
     "hedge_tv",
 )
 
+# Small-pool preset: optimizer modes add noise in pools < ~100 people.
+# The Pareto risk sweep trades accuracy for uniqueness, which hurts when
+# you only need to beat 31 opponents, not 999. Backtest evidence (32-person
+# pool, 13 years): opt_* modes hit P(1st) 0.6-1.5% vs 2.7-3.4% for base
+# probability models. Archive them for small pools.
+SMALL_POOL_MODES: Tuple[str, ...] = (
+    "seed",
+    "noseed",
+    "blend",
+    "torvik",
+    "champ_first_tv",
+    "f4_first_tv",
+    "e8_first_tv",
+)
+
 
 # ---------------------------------------------------------------------------
 # Walk-forward pool hyperparameters
@@ -1528,11 +1543,49 @@ def main():
         "and MUST NOT read data from any year outside train_years. Default: the "
         "no-op baseline fitter (scripts.mc_pool_backtest:default_pool_hyperparameters).",
     )
+    pool_group = parser.add_mutually_exclusive_group()
+    pool_group.add_argument(
+        "--small-pool",
+        action="store_true",
+        help="Use small-pool preset: drops optimizer modes (opt_seed, opt_blend, "
+        "opt_torvik, hedge_tv) that underperform in pools < ~100 people.",
+    )
+    pool_group.add_argument(
+        "--modes",
+        type=str,
+        nargs="+",
+        default=None,
+        help=f"Explicit list of modes to evaluate. Valid: {', '.join(ALL_MODES)}",
+    )
     args = parser.parse_args()
+
+    # Resolve mode list: --small-pool > --modes > default (all)
+    if args.small_pool:
+        mode_override = SMALL_POOL_MODES
+    elif args.modes:
+        invalid = set(args.modes) - set(ALL_MODES)
+        if invalid:
+            parser.error(f"Unknown mode(s): {', '.join(sorted(invalid))}. Valid: {', '.join(ALL_MODES)}")
+        mode_override = tuple(args.modes)
+    else:
+        mode_override = None
 
     fitter: HparamFitter = default_pool_hyperparameters
     if args.hparam_fitter:
         fitter = load_hparam_fitter(args.hparam_fitter)
+
+    # Wrap fitter to inject mode override if specified
+    if mode_override is not None:
+        _inner_fitter = fitter
+        _modes = mode_override
+
+        def fitter(train_years, _f=_inner_fitter, _m=_modes):
+            hp = _f(train_years)
+            return PoolHyperparameters(
+                blend_alpha=hp.blend_alpha,
+                hedge_opt_ratio=hp.hedge_opt_ratio,
+                enabled_modes=_m,
+            )
 
     log_path = None
     log_file = None
