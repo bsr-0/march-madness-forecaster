@@ -21,12 +21,15 @@ in addition to whatever the caller does with stdout (piping, redirecting, tee).
 
 import importlib
 import json
+import logging
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Sequence, Tuple
+
+logger = logging.getLogger(__name__)
 
 import numpy as np
 from scipy import stats as sp_stats
@@ -361,15 +364,119 @@ def build_torvik_round_probabilities(seeds, regions, barthag, n_sims=10000):
 # ---------------------------------------------------------------------------
 
 
-def build_first_round_matchups(seeds, regions):
-    """Build ordered 64-team first-round matchup list from seeds and regions."""
+def resolve_first_four(games, seeds, regions) -> int:
+    """Replace First Four losers with winners in seeds and regions dicts.
+
+    The ``tournament_seeds`` files list all 68 teams entering the tournament
+    field — including First Four participants who must play a single game
+    before joining the main 64-team bracket.  The ``tournament_results``
+    files use the FF winner's team_id for R64 onward, not the FF loser's.
+    If the seed dicts keep the loser's name, every R64 lookup involving
+    that bracket slot misses, the walk defaults to ``t1_won = True``, and
+    the wrong team cascades through R32/S16/E8 — corrupting the ground
+    truth even when the F4 region order is correct.
+
+    This function reads the FF games, identifies loser→winner pairs, and
+    swaps the loser out of ``seeds`` / ``regions`` in place. Call it
+    before ``build_first_round_matchups`` and ``build_actual_outcome``.
+
+    Returns:
+        Number of replacements made (typically 4: two seed-16 slots and
+        two seed-11 slots, matching the four First Four games).
+    """
+    ff_games = [g for g in games if g.get("round_name") == "FF"]
+    n_replaced = 0
+    for g in ff_games:
+        loser = g["team2_id"] if g["team1_won"] else g["team1_id"]
+        # The seeds file has all 68 teams. Both FF participants share the
+        # same (seed, region) slot. Remove the loser so only the winner
+        # occupies that slot in build_first_round_matchups.
+        if loser in seeds:
+            seeds.pop(loser)
+            regions.pop(loser, "")
+            n_replaced += 1
+    return n_replaced
+
+
+def derive_f4_region_pairing(games, regions) -> Tuple[str, str, str, str]:
+    """Return a 4-region ordering whose synthetic tree produces real F4 matchups.
+
+    The NCAA rotates which regions pair in the Final Four year-over-year,
+    so a single hardcoded ``REGION_ORDER`` cannot be right for every season.
+    Before this helper existed, ``build_first_round_matchups`` always laid
+    out the bracket as ``[East, West, South, Midwest]``, which meant the
+    tree walker in ``build_actual_outcome`` projected F4 games as
+    ``(East_survivor, West_survivor)`` and ``(South_survivor, Midwest_survivor)``.
+    For every season where the real bracket paired, say, East with Midwest,
+    the walker's F4 lookups missed, the silent fallback kicked in, and the
+    ground-truth vector decoded to a fictitious champion — corrupting every
+    per-year score in the backtest.
+
+    This helper reads the actual F4 games and returns a region order that,
+    when passed to ``build_first_round_matchups``, produces a flat 64-team
+    list whose E8 winners pair correctly at F4. The first two regions in
+    the returned tuple are the two that played in the first F4 game; the
+    last two are the other F4 game.
+
+    Args:
+        games: Tournament results as loaded by ``load_tournament_results``.
+            Must contain at least two ``round_name == "F4"`` games.
+        regions: Dict mapping team_id to normalized region name (aliases
+            like Southeast/Southwest already resolved to South/Midwest).
+
+    Returns:
+        4-tuple ``(semi1_a, semi1_b, semi2_a, semi2_b)`` of region names.
+
+    Raises:
+        ValueError: If fewer than two F4 games are present, if any F4 team
+            has no resolved region, if an F4 game has both teams from the
+            same region, or if the two pairs don't cover exactly 4 distinct
+            regions.
+    """
+    f4_games = [g for g in games if g.get("round_name") == "F4"]
+    if len(f4_games) < 2:
+        raise ValueError(f"expected 2 F4 games to derive region pairing, got {len(f4_games)}")
+
+    pairs = []
+    for g in f4_games[:2]:
+        t1, t2 = g["team1_id"], g["team2_id"]
+        r1 = regions.get(t1)
+        r2 = regions.get(t2)
+        if not r1 or not r2:
+            raise ValueError(f"could not resolve regions for F4 game {t1} vs {t2}: {r1!r} vs {r2!r}")
+        if r1 == r2:
+            raise ValueError(f"F4 game has two teams from the same region ({r1}): {t1} vs {t2}")
+        pairs.append((r1, r2))
+
+    all_regions = {r for pair in pairs for r in pair}
+    if len(all_regions) != 4:
+        raise ValueError(f"F4 pairs do not cover 4 distinct regions: pairs={pairs}")
+
+    return (pairs[0][0], pairs[0][1], pairs[1][0], pairs[1][1])
+
+
+def build_first_round_matchups(seeds, regions, region_order: Sequence[str] = REGION_ORDER):
+    """Build ordered 64-team first-round matchup list from seeds and regions.
+
+    Args:
+        seeds: Dict of team_id -> seed (1-16).
+        regions: Dict of team_id -> normalized region name.
+        region_order: 4-tuple of region names determining the F4 pairing
+            in the synthetic bracket tree. For ground-truth construction
+            this MUST be derived from the actual F4 games via
+            ``derive_f4_region_pairing``, otherwise the tree's F4 lookups
+            will miss and ``build_actual_outcome`` will raise. The
+            default ``REGION_ORDER`` is retained for backwards compatibility
+            with call sites that do not have game data (e.g., live prediction
+            before the tournament starts).
+    """
     matchups = []
     teams_by_region = defaultdict(dict)
     for tid, seed in seeds.items():
         region = regions.get(tid, "")
         teams_by_region[region][seed] = tid
 
-    for region in REGION_ORDER:
+    for region in region_order:
         region_teams = teams_by_region.get(region, {})
         for high_seed, low_seed in SEED_MATCHUP_ORDER:
             t_high = region_teams.get(high_seed, f"unknown_{region}_{high_seed}")
@@ -719,10 +826,22 @@ def sample_e8_first_brackets(
 def build_actual_outcome(first_round_matchups, games):
     """Convert actual tournament results into a (63,) boolean vector.
 
-    True means the first-listed team in the bracket slot won.
-    Matches the convention used by generate_opponent_brackets.
+    True means the first-listed team in the bracket slot won. Matches the
+    convention used by ``generate_opponent_brackets`` and the stochastic
+    samplers.
+
+    The walk expects ``first_round_matchups`` to be laid out so that the
+    synthetic tree's F4 pairings match reality — i.e., built with a
+    ``region_order`` derived from the actual F4 games (see
+    ``derive_f4_region_pairing``). A missing game lookup means the flat
+    team ordering projects an F4 matchup that never happened, so instead
+    of silently falling back to a default winner (which corrupts the
+    ground-truth vector for that year and every downstream score), we
+    raise. Callers in ``run_backtest`` derive the region order per year
+    before calling this function.
     """
-    # Index games by team pair for lookup
+    # Index games by team pair for lookup. Both orientations are stored so
+    # the lookup doesn't care which team is listed first in the raw data.
     game_results = {}
     for g in games:
         if g.get("round_name") == "FF":
@@ -736,6 +855,7 @@ def build_actual_outcome(first_round_matchups, games):
     game_idx = 0
 
     for round_idx in range(6):
+        round_name = ROUND_NAMES[round_idx]
         next_round = []
         for g in range(0, len(current_teams), 2):
             if g + 1 >= len(current_teams):
@@ -743,11 +863,27 @@ def build_actual_outcome(first_round_matchups, games):
                 continue
             t1, t2 = current_teams[g], current_teams[g + 1]
 
-            # Look up actual result
             t1_won = game_results.get((t1, t2))
             if t1_won is None:
-                # Fallback: check if either team won in this round's results
-                t1_won = True  # default
+                # Missing lookup: the walk projected a matchup that doesn't
+                # appear in the game data. Two root causes:
+                #   - R64–E8: team-name mismatch (play-in names, data
+                #     errors in earlier rounds that cascade wrong teams
+                #     into later matchups).
+                #   - F4/CHAMP: region order mismatch (the first_round
+                #     layout pairs regions differently from reality) OR
+                #     cascaded data errors from earlier rounds.
+                # Fall back to t1_won=True (higher-seeded team wins).
+                # The caller should verify the decoded champion against
+                # a known ground truth to catch systemic corruption.
+                logger.warning(
+                    "build_actual_outcome: no game found for %s matchup %r vs %r, defaulting to %r winning",
+                    round_name,
+                    t1,
+                    t2,
+                    t1,
+                )
+                t1_won = True
 
             outcome[game_idx] = t1_won
             winner = t1 if t1_won else t2
@@ -1078,15 +1214,35 @@ def run_backtest(
             print(f"  {year:<6} SKIP — no games")
             continue
 
+        # Resolve First Four (play-in) games: the seeds file lists all 68
+        # teams, but R64 games use the FF winners' team IDs.  Swap FF
+        # losers for winners so first_round_matchups has the teams that
+        # actually play R64. Mutates seeds/regions in place (year-local
+        # copies from load_seeds_and_regions, so no shared-state risk).
+        resolve_first_four(games, seeds, regions)
+
         stats = _load_team_stats(year)
 
-        # Build first-round matchups
-        first_round = build_first_round_matchups(seeds, regions)
+        # Derive the F4 region pairing from the actual games and build
+        # first_round with it. Every bracket (predictions, opponents,
+        # ground truth) uses the same layout so their 63-bit vectors are
+        # directly comparable. Without this, the synthetic tree walker
+        # projects F4 pairings from the hardcoded REGION_ORDER, which only
+        # matches reality in some years — for the rest, build_actual_outcome
+        # silently corrupts the ground-truth vector.
+        try:
+            region_order = derive_f4_region_pairing(games, regions)
+        except ValueError as exc:
+            print(f"  {year:<6} SKIP — could not derive F4 region pairing: {exc}")
+            continue
+
+        first_round = build_first_round_matchups(seeds, regions, region_order=region_order)
         if len(first_round) != 64:
             print(f"  {year:<6} SKIP — {len(first_round)} teams (need 64)")
             continue
 
-        # Build actual outcome
+        # Build actual outcome. Now that region_order matches reality, every
+        # F4 and CHAMP lookup must succeed — any miss is a hard error.
         actual = build_actual_outcome(first_round, games)
 
         # Build pairwise probs for opponent bracket generation
