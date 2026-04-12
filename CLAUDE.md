@@ -35,6 +35,7 @@ The following superpowers-inspired skills are available in `.claude/skills/` and
 | `using-git-worktrees` | Feature work needing isolation from current workspace |
 | `finishing-a-development-branch` | Implementation complete, deciding how to integrate |
 | `code-reviewer` | Dispatch as sub-agent for structured code review |
+| `pool-optimizer-backtest` | Any repo coding session; auto-trigger when touching `src/optimization/`, `src/evaluation/`, or `scripts/mc_pool_backtest.py` |
 
 ### Workflow Chain
 For new features: `brainstorming` → `writing-plans` → `executing-plans` (or `subagent-driven-development`) → `requesting-code-review` → `finishing-a-development-branch`
