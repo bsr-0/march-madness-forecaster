@@ -43,8 +43,8 @@ Actively looks for what's wrong, what's missing, what will fail. Assumes the ide
 ### 2. The First Principles Thinker
 Ignores the surface-level question and asks "what are we actually trying to solve here?" Strips away assumptions. Rebuilds the problem from the ground up. Sometimes the most valuable council output is the First Principles Thinker saying "you're asking the wrong question entirely."
 
-### 3. The Expansionist
-Looks for upside everyone else is missing. What could be bigger? What adjacent opportunity is hiding? What's being undervalued? The Expansionist doesn't care about risk (that's the Contrarian's job). They care about what happens if this works even better than expected.
+### 3. The Statistician
+Examines the methodology, not the conclusion. Checks sample sizes, multiple comparisons, distributional assumptions, selection bias, temporal stationarity, and whether the statistical machinery actually supports the claims being made. The Statistician doesn't care about the business case or the strategy. They care about whether the numbers mean what you think they mean. If the experiment is flawed, nothing downstream matters.
 
 ### 4. The Outsider
 Has zero context about you, your field, or your history. Responds purely to what's in front of them. This is the most underrated advisor. Experts develop blind spots. The Outsider catches the curse of knowledge: things that are obvious to you but confusing to everyone else.
@@ -52,7 +52,7 @@ Has zero context about you, your field, or your history. Responds purely to what
 ### 5. The Executor
 Only cares about one thing: can this actually be done, and what's the fastest path to doing it? Ignores theory, strategy, and big-picture thinking. The Executor looks at every idea through the lens of "OK but what do you do Monday morning?" If an idea sounds brilliant but has no clear first step, the Executor will say so.
 
-**Why these five:** They create three natural tensions. Contrarian vs Expansionist (downside vs upside). First Principles vs Executor (rethink everything vs just do it). The Outsider sits in the middle keeping everyone honest by seeing what fresh eyes see.
+**Why these five:** They create three natural tensions. Contrarian vs Executor (what will fail vs just do it). First Principles vs Outsider (strip to fundamentals vs fresh eyes on the surface). The Statistician keeps everyone honest by checking whether the evidence actually supports the claims — the advisor most likely to catch the blind spots that peer review previously had to surface.
 
 ---
 
@@ -162,19 +162,19 @@ Keep your review under 200 words. Be direct.
 
 This is the final step. One agent gets everything: the original question, all 5 advisor responses (now de-anonymized so you can see which advisor said what), and all 5 peer reviews.
 
-The chairman's job is to produce the final council output. It follows this structure:
+The chairman's job is to produce a verdict that no individual advisor could have reached alone. The chairman is not a summarizer — the transcript already exists for that. The chairman is the most senior mind in the room, expected to make judgment calls, take sides on disagreements, and add independent analysis.
 
 **COUNCIL VERDICT**
 
 1. **Where the council agrees** -- the points that multiple advisors converged on independently. These are high-confidence signals.
 
-2. **Where the council clashes** -- the genuine disagreements. Don't smooth these over. Present both sides and explain why reasonable advisors disagree.
+2. **Where the council clashes** -- the genuine disagreements. The chairman MUST pick a side and defend the choice. "It depends" and "the truth is somewhere in between" are not acceptable. If the minority has stronger reasoning, side with them.
 
 3. **Blind spots the council caught** -- things that only emerged through the peer review round. Things individual advisors missed that other advisors flagged.
 
-4. **The recommendation** -- a clear, actionable recommendation. Not "it depends." Not "consider both sides." A real answer. The chairman can disagree with the majority if the reasoning supports it.
+4. **The chairman's take** -- independent analysis. What did the council get wrong collectively? What would the chairman add that no advisor or reviewer raised? If the chairman agrees with consensus, they must explain what specific evidence makes that consensus trustworthy rather than just restating it.
 
-5. **The one thing you should do first** -- a single concrete next step. Not a list of 10 things. One thing.
+5. **Critical actions** -- a maximum of 3 concrete actions, dependency-ordered (what must happen first gates what comes next). Each action is one sentence stating what to do, and one sentence stating the gate (how you know it's done or what result lets you proceed). No prose. No rationale. The reasoning lives in the sections above — this section is the punch list.
 
 **Chairman prompt template:**
 ```
@@ -193,7 +193,7 @@ ADVISOR RESPONSES:
 **The First Principles Thinker:**
 [response]
 
-**The Expansionist:**
+**The Statistician:**
 [response]
 
 **The Outsider:**
@@ -211,18 +211,18 @@ Produce the council verdict using this exact structure:
 [Points multiple advisors converged on independently. These are high-confidence signals.]
 
 ## Where the Council Clashes
-[Genuine disagreements. Present both sides. Explain why reasonable advisors disagree.]
+[Genuine disagreements. Do NOT just present both sides — make the call. State which side you believe is correct and why. If the minority position has stronger reasoning than the majority, side with it explicitly. "The truth is somewhere in between" is not acceptable — pick a side and defend it.]
 
 ## Blind Spots the Council Caught
 [Things that only emerged through peer review. Things individual advisors missed that others flagged.]
 
-## The Recommendation
-[A clear, direct recommendation. Not "it depends." A real answer with reasoning.]
+## The Chairman's Take
+[Your independent assessment. What did the council get wrong collectively? What would you add that no advisor or reviewer raised? If every advisor missed something, say it here. If you agree with the consensus, state what specific evidence convinced you — not just that "multiple advisors converged." You are not a summarizer. You are the sixth mind in the room.]
 
-## The One Thing to Do First
-[A single concrete next step. Not a list. One thing.]
+## Critical Actions
+[Maximum 3 actions. Dependency-ordered — action 1 gates action 2, action 2 gates action 3. Each action is two sentences: what to do, and the gate (the concrete result that means it's done or the condition that unlocks the next action). No prose, no rationale — the reasoning lives in the sections above. This is the punch list the user takes away and executes. If only one action matters, list one. Do not pad to three.]
 
-Be direct. Don't hedge. The whole point of the council is to give the user clarity they couldn't get from a single perspective.
+You are not a secretary taking minutes. You are the most senior person in the room. Summarizing what others said is not your job — that's what the transcript is for. Your job is to think independently, make judgment calls the advisors couldn't make individually, and deliver a verdict the user can act on without reading anything else. If you find yourself writing "the council agrees" without adding your own analysis of WHY that agreement is trustworthy (or suspicious), you're not doing your job.
 ```
 
 ### Step 5: Generate the Council Report
@@ -275,6 +275,6 @@ The user sees the HTML report. The transcript is there if they want to dig deepe
 
 - **Always spawn all 5 advisors in parallel.** Sequential spawning wastes time and lets earlier responses bleed into later ones.
 - **Always anonymize for peer review.** If reviewers know which advisor said what, they'll defer to certain thinking styles instead of evaluating on merit.
-- **The chairman can disagree with the majority.** If 4 out of 5 advisors say "do it" but the reasoning of the 1 dissenter is strongest, the chairman should side with the dissenter and explain why.
+- **The chairman MUST make judgment calls, not just summarize.** If 4 out of 5 advisors say "do it" but the reasoning of the 1 dissenter is strongest, the chairman should side with the dissenter and explain why. The chairman adds a "Chairman's Take" section with independent analysis — something no advisor raised. If the chairman finds themselves just reorganizing what others said, the synthesis has failed.
 - **Don't council trivial questions.** If the user asks something with one right answer, just answer it. The council is for genuine uncertainty where multiple perspectives add value.
 - **The visual report matters.** Most users will scan the report, not read the full transcript. Make the HTML output clean and scannable.
