@@ -19,14 +19,14 @@ Settled by evidence, council, or freeze. **Do not propose changing these without
 |---|---|---|---|
 | Random seed | `2026` | Rule 1: locked seed (state machine) | `pipeline_freeze.json:175`, `src/forecaster/state_machine.py:136` |
 | Calibration method | `temperature` | Production-chosen; isotonic/Platt not in freeze | `pipeline_freeze.json:22` |
-| Feature set | `SIMPLE_FEATURE_SET` (fixed) | 7-feature logistic matches or beats 27-feature ensemble with stacking (BSS ≈ 0 either way) | `src/pipeline/config.py:168`, `README.md:99`, `FEATURE_ENGINEERING_AUDIT.md:99-118` |
+| Feature set | `SIMPLE_FEATURE_SET` (fixed) | 7-feature logistic matches or beats 27-feature ensemble with stacking (BSS ≈ 0 either way) | `src/pipeline/config.py:168`, `README.md:99`, `FEATURE_ENGINEERING_AUDIT.md` § Redundancy Audit |
 | `enable_feature_selection` | `false` | Fixed set beat learned selection | `pipeline_freeze.json:57` |
 | `enable_stacking` | `false` | Zero BSS gain over plain logistic | `pipeline_freeze.json:75` |
 | `enable_gnn` | `false` | Gated out; no runtime path | `pipeline_freeze.json:58` |
 | `enable_transformer` | `false` | Gated out; no runtime path | `pipeline_freeze.json:78` |
 | `enable_brier_sharpening` | `false` | Prohibited for Kaggle; overfits Brier at cost of realism | `pipeline_freeze.json:49`, `march madness pipeline v2 protocol.md:96` |
 | `model_complexity` | `"simple"` | Consolidates the above | `pipeline_freeze.json:153` |
-| `num_simulations` | `50000` | Sound per Phase-1 audit | `pipeline_freeze.json:156`, `AUDIT_PHASE1_ML_WORKFLOW.md:152` |
+| `num_simulations` | `50000` | Sound per Phase-1 ML workflow audit (2026); value locked in freeze | `pipeline_freeze.json:156` |
 
 ### Validation / training split
 | Decision | Value | Source |
@@ -77,7 +77,7 @@ Tried, measured, rejected. **Do not re-propose without new data that invalidates
 | D2 | GNN model | Built, gated behind flag | No lift; disabled | `pipeline_freeze.json:58`; `PROJECT_STATUS.md` |
 | D3 | Transformer model | Built, gated behind flag | No lift; disabled | `pipeline_freeze.json:78`; `PROJECT_STATUS.md` |
 | D4 | Learned feature selection (VIF / correlation / importance pruning) | `src/data/features/feature_selection.py` | Fixed 7-feature set beat it | `pipeline_freeze.json:57` |
-| D5 | 11 redundant engineered features (`adj_efficiency_margin`, `consistency`, `close_game_record`, …) | Included in 91-dim vector | Algebraically redundant or pure noise (stability ≈ 0.1); removed from `to_vector()` | `FEATURE_ENGINEERING_AUDIT.md:99-118` |
+| D5 | 11 redundant engineered features (`adj_efficiency_margin`, `consistency`, `close_game_record`, …) | Included in 91-dim vector | Algebraically redundant or pure noise (stability ≈ 0.1); removed from `to_vector()` | `FEATURE_ENGINEERING_AUDIT.md` § Redundancy Audit; `feature_engineering.py:38-65` |
 | D6 | Pareto-leverage pool optimizer (`opt_seed`, `opt_blend`, `opt_torvik`) | 13-year N=31 backtest | BestRank 62–88 vs seed's 38; P(1st) ≈ 0 in upset years. 4 root causes: myopic greedy, independence approximation, leverage without correlation, catastrophic upset-year failure | `POOL_STRATEGY_RECOMMENDATION.md:11,27-29`; `COUNCIL_LESSONS.md` §3 row 25 (2026-04-12c) |
 | D7 | `hedge_tv` mode | 13-yr backtest | Statistically worse than seed on BestRank (p<0.05 Bonferroni); removed from harness 2026-04-12 | `POOL_STRATEGY_RECOMMENDATION.md:11` |
 | D8 | Pool-value contrarian strategy (pick top quintile by pool-value score) | Historical backtest | Upset hit rate 19.4% < 23.2% base rate; chalk beat it by 7.1% | `PROJECT_STATUS.md:12-14` |
@@ -131,7 +131,7 @@ Source: `POOL_STRATEGY_RECOMMENDATION.md:18-29`, `mc_pool_backtest_n31_results.t
 ## Index of source material
 
 - Council lessons + open questions: `COUNCIL_LESSONS.md` (consolidated 2026-04-13; raw transcripts deleted). New sessions append to §3.
-- Audits: `AUDIT_DATA_LEAKAGE.md`, `AUDIT_DATA_SCRAPERS.md`, `AUDIT_PHASE1_ML_WORKFLOW.md`, `FEATURE_ENGINEERING_AUDIT.md`
+- Audits: `AUDIT_DATA_LEAKAGE.md`, `AUDIT_DATA_SCRAPERS.md`, `FEATURE_ENGINEERING_AUDIT.md` (Phase-1 ML workflow audit archived 2026-04-13: explicitly marked HISTORICAL post-pivot; `num_simulations=50000` rationale now lives in freeze + this file only)
 - Status: `PROJECT_STATUS.md`, `WORKFLOW.md`
 - Strategy: `POOL_STRATEGY_RECOMMENDATION.md`
 - Freeze: `pipeline_freeze.json`
