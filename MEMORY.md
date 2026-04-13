@@ -124,7 +124,7 @@ Source: `POOL_STRATEGY_RECOMMENDATION.md:18-29`, `mc_pool_backtest_n31_results.t
 | Coverage threshold | 20% | `COUNCIL_LESSONS.md` §3 row 6 (2026-04-02 20:52) |
 
 ### Known open diagnostic (for context — not a TODO)
-- Independence assumption in opponent model flagged as validity threat (real pools cluster around chalk). Prerequisite to validation: collect real 2026 pool bracket data (outstanding as of 2026-04-12). Source: `COUNCIL_LESSONS.md` §2 item 1, §3 row 25 (2026-04-12c).
+- Independence assumption in opponent model flagged as validity threat (real pools cluster around chalk). 2026 pool bracket data exists in `pool_hist_results.json` (30 of 31 brackets; the user's own is correctly excluded — K = N − 1 is the usable count). Next step is to measure empirical inter-bracket correlation against the independence assumption. Source: `COUNCIL_LESSONS.md` §2 O4 (unblocked 2026-04-13), §3 row 25 (2026-04-12c).
 
 ---
 

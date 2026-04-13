@@ -51,11 +51,22 @@ proposing new work — most "new ideas" have been tried or ruled out.
 - **Opponent model is the load-bearing wall.** Three separate 2026-04-12
   sessions independently converged: fix opponent model before anything else.
   If independence assumption is wrong, the whole 13-yr backtest measures
-  noise. `[governing open item → §2 O1, O4, O10]`
+  noise. `[governing; O1 closed 2026-04-13 — data already existed; now
+  blocked on §2 O4 (measure empirical correlation from 30 brackets)]`
 - **Opponent weights 60 % ESPN picks / 30 % Massey / 10 % seed fallback.**
   `[locked 2026-04-12; MEMORY.md §1]`
 - **F4 cap at 2, not 1.5.** Tuning the cap from a 14-yr historical average is
   small-sample overfitting.
+- **Pool size N ≠ usable opponent count K.** `N` is the raw pool size
+  (e.g. 31 for 2026). The user's own bracket is correctly excluded from
+  the opponent model to avoid self-reference, so `K = N − 1` (30 for
+  2026). Verified across all pool-history years: 2023 = 18/19,
+  2025 = 32/33, 2026 = 30/31 (2024 = 25/25 is the outlier — pre-dated the
+  user's entry). This is documented here because the 2026-04-12c council
+  flagged "collect 31 brackets" as the top priority without knowing the
+  30 already existed on disk, scraped earlier that same day. Future
+  "collect real pool brackets" framings should specify `K` explicitly.
+  `[added 2026-04-13]`
 
 ### Validation / statistics
 - **14–17-year backtests are underpowered (~9–16 % power).** Use them for
@@ -128,7 +139,7 @@ on another item.
 
 | ID | Item | Gate (how we know it's done) | Raised in §3 | Status |
 |---|------|------------------------------|---|---|
-| **O1** | Collect all 31 brackets from the actual 2026 pool | Structured dataset of 31 complete brackets (all 63 picks each), saved to repo. Urgent — pool sites archive. | 25 | **open, urgent** |
+| **O1** | Collect all 31 brackets from the actual 2026 pool | Structured dataset of 31 complete brackets (all 63 picks each), saved to repo. | 25 | **`[closed 2026-04-13]`** — `pool_hist_results.json` has 30 brackets as of 2026-04-12T22:47Z; the 31st is the user's own (correctly excluded to avoid a self-referential opponent model). Pattern verified across 2023 (18/19), 2025 (32/33), 2026 (30/31). See §1 Pool strategy: *pool size N ≠ usable opponent count K*. |
 | **O2** | Validate eight local four-factor features against Torvik | Per-season, per-feature r ≥ 0.99, no systematic residual bias by team type / conference / tempo. Prereq: confirm Torvik docs state whether values are raw or opponent-adjusted. | 21 | open |
 | **O3** | Rank-correlation diagnostic on base model | Spearman ρ between predicted-P(1st) rank and actual historical pool placement, top ~10 brackets. If ρ ≈ 0, 2026 #11-ranking failure cannot be attributed between opponent model and base model. | 23, 24 | open |
 
@@ -136,7 +147,7 @@ on another item.
 
 | ID | Item | Gate | Raised in §3 | Status |
 |---|------|------|---|---|
-| **O4** | Empirical opponent correlation from 31 real brackets | Measured correlation matrix across games; compared against independence assumption. | 25 | `blocked:O1` |
+| **O4** | Empirical opponent correlation from the 30 real brackets | Measured correlation matrix across games; compared against independence assumption. | 25 | **open** (unblocked 2026-04-13 — O1 resolved; 30 brackets available in `pool_hist_results.json`) |
 | **O5** | MC sim count for stable rankings | Run optimizer 3× with identical inputs, verify top-20 rank-order identical. (Predicted jump 500 → 5000 sims.) | 24 | open |
 | **O6** | Calibration check: simulated P(1st) vs actual placement | Historical verification that brackets ranked highest by optimizer actually won more often. | 23, 24 | open |
 | **O7** | Tournament-only vs blended+stacked head-to-head | LOYO BSS comparison; tournament-only (500–600 games) vs blended (2200). Flagged 04-01; never run. | 3 | open |
@@ -147,7 +158,7 @@ on another item.
 
 | ID | Item | Gate | Raised in §3 | Status |
 |---|------|------|---|---|
-| **O10** | Opponent correlation: empirical from 1 pool-year vs theoretical copula | Decision + implementation. 31 brackets measures structure but generalization across 13 backtest years is unclear. | 25 | `blocked:O4` |
+| **O10** | Opponent correlation: empirical from 1 pool-year vs theoretical copula | Decision + implementation. 30 brackets measures structure but generalization across 13 backtest years is unclear. Now 4 years of pool data exist (2023-2026, 105 brackets total) — may partially resolve generalization concern. | 25 | `blocked:O4` |
 | **O11** | Is BSS ≈ 0 fatal to game-theory optimization? | Philosophical position (council 25): no — seed baseline is not zero-information. Codebase reflects this assumption but has no explicit invariant/test asserting it. | 25 | partial (settled in transcript, not code) |
 | **O12** | Scoring-function structure modeled explicitly | Pool's point schedule (e.g. 1/2/4/8/16/32) hard-coded into optimizer's objective, not just game outcomes. | 23 | open |
 | **O13** | Winner-take-all: maximize variance not E[P(1st)] | Kelly-optimal risk posture evaluated against argmax-P(1st). | 24 | open |
