@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ─── Fast Gate (lint + freeze) — no deps, ~15-20s ───────────────
+  # ─── Fast Gate (lint) — always blocking, no deps, ~15-20s ───────────────
   fast-gate:
     name: "Fast Gate"
     runs-on: ubuntu-latest
@@ -26,6 +26,18 @@ jobs:
 
       - name: Run ruff linter
         run: pipx run ruff check src/ tests/ --output-format=github
+
+  # ─── Freeze Check — soft during 2026 post-tournament edits, blocking for 2027 ───
+  # Enforcement flips from warning → blocking on FREEZE_ENFORCE_DATE (see all-gates).
+  # Intent: we edit freely post-2026 tournament without the freeze drift blocking
+  # every merge, but the check still runs (visible red/green) so drift is never
+  # invisible, and it auto-rearms as a critical gate before the 2027 season.
+  freeze-check:
+    name: "Freeze Artifact Check"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Check freeze artifact is up-to-date
         run: |
@@ -179,21 +191,39 @@ jobs:
             --ignore-vuln CVE-2026-4539 \
             -r /tmp/audit-reqs.txt
 
-  # ─── Merge Gate (only depends on fast-gate) ──────────────────────
+  # ─── Merge Gate ────────────────────────────────────────────────
+  # Blocking:     fast-gate (ruff) — always.
+  #               freeze-check    — only on/after FREEZE_ENFORCE_DATE (2027 season).
+  # Non-blocking: freeze-check before the enforce date, full-tests, audit.
   all-gates:
     name: "CI"
     if: always()
     needs:
       - fast-gate
+      - freeze-check
       - full-tests
       - audit
     runs-on: ubuntu-latest
+    env:
+      # Flip freeze-check from soft warning to blocking on this date.
+      # Set well before the 2027 tournament (Selection Sunday ~2027-03-14) so we
+      # have margin to re-freeze the pipeline and catch any drift early.
+      FREEZE_ENFORCE_DATE: "2027-01-01"
     steps:
       - name: Check gates
         run: |
           if [[ "${{ needs.fast-gate.result }}" != "success" ]]; then
             echo "::error::Fast gate failed — blocking merge"
             exit 1
+          fi
+          if [[ "${{ needs.freeze-check.result }}" == "failure" ]]; then
+            TODAY=$(date -u +%Y-%m-%d)
+            if [[ "$TODAY" < "$FREEZE_ENFORCE_DATE" ]]; then
+              echo "::warning::Freeze artifact check failed — non-blocking until ${FREEZE_ENFORCE_DATE} (post-2026 tournament edit window). Re-freeze the pipeline before 2027 predictions."
+            else
+              echo "::error::Freeze artifact check failed — blocking merge (2027 season enforcement active since ${FREEZE_ENFORCE_DATE})"
+              exit 1
+            fi
           fi
           if [[ "${{ needs.full-tests.result }}" == "failure" ]]; then
             echo "::warning::Full test suite failed — check results"
