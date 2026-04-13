@@ -70,6 +70,9 @@ ground.
 
 ## 1. Pre-Work
 
+### Consult MEMORY.md First
+Before proposing model changes, new features, experiments, or pool-strategy alternatives, read `MEMORY.md`. It indexes locked decisions, dead-ends already measured, and current baselines. If your instinct contradicts it, cite the row and ask — do not re-litigate settled questions.
+
 ### Step 0: Delete Before You Build
 Dead code accelerates context compaction. Before ANY structural refactor on
 a file >300 LOC, first remove all dead props, unused exports, unused
