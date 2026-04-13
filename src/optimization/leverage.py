@@ -186,6 +186,8 @@ class BracketConfiguration:
             "final_four": self.final_four,
             "strategy": self.strategy,
             "expected_points": self.expected_points,
+            "variance": self.variance,
+            "win_probability": self.win_probability,
             "construction_mode": self.construction_mode,
         }
 
