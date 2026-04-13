@@ -153,3 +153,66 @@ def test_local_fallback_tripwire_not_catastrophically_broken() -> None:
         f"bug. Don't relax the bound — find the bug. See "
         f"COUNCIL_LESSONS.md §2 O2 close and commit df8edce for precedent."
     )
+
+
+def test_local_ff_bias_is_uniform_across_subgroups() -> None:
+    """COUNCIL_LESSONS §2 O18 gate: local-vs-Torvik bias must not
+    concentrate in any single subgroup (mid-major, fast tempo, lower
+    seed line). If the validator's stratified residual analysis ever
+    shows one subgroup's bias diverging by more than 0.01 from the
+    others, a systematic provider-mismatch exists for that subgroup
+    that the aggregate r² hides.
+
+    Empirically (2026-04-13), the bias range across all 11 strata for
+    each of the 4 biased features (turnover_rate, opp_turnover_rate,
+    offensive_reb_rate, defensive_reb_rate) is < 0.005 — well inside
+    the 0.01 bound. The bias is a uniform provider-level delta, not a
+    subgroup skew.
+
+    If this test fires, the locally-reverse-engineered FF are
+    introducing a subgroup-specific error (e.g., a TeamNameResolver
+    change that preferentially misidentifies mid-majors, or a formula
+    change that interacts with tempo). Fix the root cause — do not
+    relax the bound."""
+    import sys
+
+    sys.path.insert(0, str(Path(".").resolve()))
+    from scripts.validate_four_factors import FF_FIELDS, validate_year
+
+    # stratum_name -> feature -> list of per-year mean_residuals
+    per_stratum: dict[str, dict[str, list[float]]] = {}
+    for year in PRODUCTION_YEARS:
+        result = validate_year(year)
+        if result is None:
+            continue
+        for stratum, fields in result.get("strata", {}).items():
+            per_stratum.setdefault(stratum, {f: [] for f in FF_FIELDS})
+            for field, metrics in fields.items():
+                per_stratum[stratum][field].append(metrics["mean_residual"])
+
+    # For each feature, collect the mean-across-years bias per stratum,
+    # then measure the range across strata. Large range = subgroup skew.
+    MAX_RANGE = 0.01  # O18 gate
+    offenders: list[tuple[str, float, str, str]] = []
+    for field in FF_FIELDS:
+        stratum_means: dict[str, float] = {}
+        for stratum, by_field in per_stratum.items():
+            vals = by_field.get(field, [])
+            if vals:
+                stratum_means[stratum] = sum(vals) / len(vals)
+        if len(stratum_means) < 2:
+            continue
+        hi_stratum = max(stratum_means, key=stratum_means.get)
+        lo_stratum = min(stratum_means, key=stratum_means.get)
+        bias_range = stratum_means[hi_stratum] - stratum_means[lo_stratum]
+        if bias_range > MAX_RANGE:
+            offenders.append((field, round(bias_range, 4), hi_stratum, lo_stratum))
+
+    assert not offenders, (
+        f"Local FF bias shows subgroup skew (range > {MAX_RANGE} across "
+        f"strata): {offenders}. The bias should be uniform across "
+        f"conference tier, seed bin, and tempo quartile — it's a "
+        f"scorekeeping-level provider delta, not a signal-dependent "
+        f"effect. If this fires, a recent change has introduced a "
+        f"subgroup-specific error. See COUNCIL_LESSONS.md §2 O18."
+    )
