@@ -171,7 +171,7 @@ on another item.
 | ID | Item | Gate | Raised in §3 | Status |
 |---|------|------|---|---|
 | **O4** | Empirical opponent correlation from the 30 real brackets | Measured correlation matrix across games; compared against independence assumption. | 25 | **`[closed 2026-04-13]`** — independence assumption holds. 4-year pooled z = −4.15; brackets are *less* correlated than IID draws from the empirical marginals, not more. See `ANALYSIS_O4_OPPONENT_CORRELATION.md`. Follow-up → O21. |
-| **O5** | MC sim count for stable rankings | Run optimizer 3× with identical inputs, verify top-20 rank-order identical. (Predicted jump 500 → 5000 sims.) | 24 | open |
+| **O5** | MC sim count for stable rankings | Run optimizer 3× with identical inputs, verify top-20 rank-order identical. (Predicted jump 500 → 5000 sims.) | 24 | **`[closed 2026-04-13]`** — `n_tournaments=5000` locked in `MEMORY.md §1` Pool-strategy table; class/helper defaults normalized in `src/simulation/pool_competition.py:93,949` and `src/evaluation/evaluation_suite.py:371`; rank stability proven by `tests/test_pool_competition.py::TestRankStability::test_top20_rank_order_identical_across_runs` (3 runs at fixed seed produce identical top-20). |
 | **O6** | Calibration check: simulated P(1st) vs actual placement | Historical verification that brackets ranked highest by optimizer actually won more often. | 23, 24 | open |
 | **O7** | Tournament-only vs blended+stacked head-to-head | LOYO BSS comparison; tournament-only (500–600 games) vs blended (2200). Flagged 04-01; never run. | 3 | open |
 | **O8** | Feature collinearity with seed | Correlation matrix of 7 production features vs seed number. If any |r| > 0.7, BSS ≈ 0 is tautological. | 6 | open |
@@ -187,7 +187,8 @@ on another item.
 | **O13** | Winner-take-all: maximize variance not E[P(1st)] | Kelly-optimal risk posture evaluated against argmax-P(1st). | 24 | open |
 | **O14** | Calibration-to-pool interaction | Measure whether slightly upset-over-estimating calibration improves pool rank vs true calibration. | 23 | open |
 | **O15** | Vegas-line calibration vs in-house temperature scaling | Drop-in comparison on BSS + pool backtest metrics. | 4 | open |
-| **O16** | `TOURNAMENT_START_DATES` hardcoded-dict SPOF | Test fails loudly when a year is missing; owner assigned for yearly update. | 22 | open |
+| **O16** | `TOURNAMENT_START_DATES` hardcoded-dict SPOF | Test fails loudly when a year is missing; owner assigned for yearly update. | 22 | **`[closed 2026-04-13]`** — root cause was actually the silent fallback at `src/data/scrapers/torvik.py:400` (returned `(None, None)` on missing year, causing trank.php to serve unfiltered post-tournament data). Now raises `ValueError` for historical misses. Coverage test at `tests/data_integrity/test_tournament_start_dates.py` enforces `TRAIN_YEARS ∪ diagnostic ∪ holdout ⊆ TOURNAMENT_START_DATES`; owner placeholder added at `src/pipeline/config.py:47`; two stale script duplicates deleted. Follow-up → O16b. |
+| **O16b** | Silent skips at `snapshot_integrity.py:70-72` and `test_selection_snapshot.py:66` | Same defect class as O16 but in a check (not a filter): replace silent skip with raise. Separate from O16 because the fix doubles blast radius without improving the gate. | surfaced by O16 fix 2026-04-13 | open |
 | **O17** | Researcher-DoF leakage audit | Documented trail of which years were observable when which hyperparameters were tuned. | 19 | open |
 | **O18** | Approximate-Torvik systematic bias on mid-majors / tempo profiles | Per-subgroup residual analysis (not just aggregate r² ≈ 0.95). | 19 | `blocked:O2` (subset) |
 | **O19** | Pre-2011 ESPN picks data — exclude, down-weight, or equivalent | Decision + implementation. Field expanded 64 → 68 in 2011; analytics-culture shift. | 12 | open |
@@ -228,6 +229,8 @@ number to §2.
 | 23 | 2026-04-12 | Critical steps for 2027? | Optimize P(1st) not EV; enforce F4 historical base rates; validate opponent model. 2026 system ranked its own winning bracket #11. |
 | 24 | 2026-04-12 b | Next critical steps? | Fix opponent correlation (1), bump MC sims 500 → 5000 (5). Do NOT tune F4 cap 2 → 1.5 (overfitting). |
 | 25 | **2026-04-12 c** | Single most critical action for 2027? | **Collect all 31 brackets from actual 2026 pool this week.** Prerequisite to every opponent-model fix. Independence assumption is a fundamental validity threat. *(MEMORY.md §3 governing; §2 O1)* |
+| 26 | 2026-04-13 | Close O16: TOURNAMENT_START_DATES SPOF? | **Closed.** Real defect was the silent fallback at `torvik.py:400` (returned `(None, None)` and let trank.php serve unfiltered post-tournament data). Now raises `ValueError`. Coverage test enforces `TRAIN_YEARS ⊆ dict`. Two stale script duplicates removed. Spawned **O16b** for the same defect class in `snapshot_integrity.py`. *(§2 O16 closed; §2 O16b open)* |
+| 27 | 2026-04-13 | Close O5: bump MC sims for stable rankings? | **Closed.** `n_tournaments=5000` locked in `MEMORY.md §1` Pool-strategy table. Class/helper/eval-suite defaults normalized (were drifting at 1000 even though the three CLI call sites had bumped to 5000 on 2026-04-12). Rank-stability test (`tests/test_pool_competition.py::TestRankStability`) proves 3 runs at fixed seed produce identical top-20 over 20 brackets. *(§2 O5 closed)* |
 
 ---
 
