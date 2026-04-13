@@ -79,9 +79,14 @@ def run_optimize_pool(args):
     # --- Step 2: Auto mode early return ---
     walk_forward = not getattr(args, "no_walk_forward", False)
 
+    pool_history_path = getattr(args, "pool_history", None)
+    pool_history_weight = float(getattr(args, "pool_history_weight", 1.0))
+
     if mode == "auto":
         # Build opponent model first (needed by auto mode)
         print("Building opponent model from external ratings + public picks...")
+        if pool_history_path:
+            print(f"  Blending pool-history data from {pool_history_path} (weight={pool_history_weight:.2f})")
         picks_dir = args.picks_dir if hasattr(args, "picks_dir") else None
         opponent_picks = build_opponent_model(
             year=year,
@@ -90,6 +95,8 @@ def run_optimize_pool(args):
             picks_dir=picks_dir,
             require_espn_picks=True,
             require_ratings=True,
+            pool_history_path=pool_history_path,
+            pool_history_weight=pool_history_weight,
         )
         print(f"  Opponent model covers {len(opponent_picks)} teams")
 
@@ -123,6 +130,8 @@ def run_optimize_pool(args):
     # external ratings. Any missing/corrupt source raises loudly rather
     # than silently redistributing blend weights.
     print("Building opponent model from external ratings + public picks...")
+    if pool_history_path:
+        print(f"  Blending pool-history data from {pool_history_path} (weight={pool_history_weight:.2f})")
     picks_dir = args.picks_dir if hasattr(args, "picks_dir") else None
     opponent_picks = build_opponent_model(
         year=year,
@@ -130,6 +139,8 @@ def run_optimize_pool(args):
         cache_dir=args.data_dir,
         picks_dir=picks_dir,
         require_espn_picks=True,
+        pool_history_path=pool_history_path,
+        pool_history_weight=pool_history_weight,
         require_ratings=True,
     )
     print(f"  Opponent model covers {len(opponent_picks)} teams")
@@ -209,6 +220,25 @@ def run_optimize_pool(args):
     )
     result = optimizer.optimize()
 
+    # --- Step 5b: Re-rank Pareto frontier by P(1st) (FP3) ---
+    # The Pareto optimizer returns brackets ordered by expected_points, a
+    # mean-maximizing metric. For winner-take-all pools P(1st) is the
+    # metric that matters — a bracket with lower EP but higher P(1st) is
+    # strictly better. Run the MC pool simulation post-hoc and re-order.
+    if result.pareto_brackets:
+        print(
+            f"Computing P(1st) for {len(result.pareto_brackets)} Pareto brackets "
+            f"(MC simulation, {pool_size}-person pool)..."
+        )
+        result.pareto_brackets = _rerank_brackets_by_p1st(
+            result.pareto_brackets,
+            seeds=seeds,
+            regions_map=regions_map,
+            pairwise_probs=pairwise_probs,
+            opponent_picks=opponent_picks,
+            pool_size=pool_size,
+        )
+
     # --- Step 6: Sensitivity analysis ---
     print("Running sensitivity analysis...")
     sensitivity = optimizer.sensitivity_analysis(pick_shift_pct=0.05)
@@ -221,6 +251,7 @@ def run_optimize_pool(args):
         "scoring_system": args.scoring,
         "assumptions_manifest": result.manifest.to_dict(),
         "recommended_strategy": result.recommended_strategy,
+        "ranked_by": "win_probability",
         "strategy_evs": result.strategy_evs,
         "leverage_picks": result.leverage_picks[:20],
         "fade_picks": result.fade_picks[:15],
@@ -239,40 +270,48 @@ def run_optimize_pool(args):
     print(f"Strategy: {result.recommended_strategy}")
     print(f"Sensitivity: {sensitivity.flag}")
 
-    # Find the bracket matching the recommended strategy.
+    # Recommended bracket: top of the P(1st)-ranked frontier (FP3).
     #
-    # The Pareto frontier is deduplicated by canonical picks upstream (see
-    # leverage.py::generate_pareto_brackets), so any surviving bracket's
-    # strategy label faithfully describes its picks. That means:
-    #   - If recommended_strategy == "contrarian" and a contrarian bracket
-    #     exists in the frontier, it has genuinely different picks from chalk.
-    #   - If recommended_strategy == "contrarian" and NO contrarian bracket
-    #     exists in the frontier, the leverage analysis wanted a contrarian
-    #     play but the bracket generator couldn't produce a differentiated
-    #     contrarian bracket at any risk level (they all collapsed to chalk
-    #     or balanced after dedup). We surface this mismatch to the user
-    #     explicitly rather than silently falling back to chalk.
-    rec = result.recommended_strategy
-    matching = [b for b in result.pareto_brackets if b.strategy == rec]
-    recommended_bracket = matching[0] if matching else None
+    # Previously this selected the first bracket whose strategy label
+    # matched the leverage analysis's recommended_strategy ("chalk" /
+    # "balanced" / "contrarian"). That ordering optimized against EP,
+    # which penalized low-probability tail picks like Illinois F4 in
+    # 2026 (bracket #7 had EP=917 but actual score=1420 → pool winner).
+    #
+    # Post-FP3 ordering is P(1st) descending, so the recommended bracket
+    # is always result.pareto_brackets[0]. We also surface a note when
+    # the leverage analysis's recommended strategy differs from the top
+    # bracket's strategy — that's useful signal (the pool is contrarian-
+    # leaning but the top P(1st) happens to be a chalk-ish bracket, or
+    # vice versa) rather than a bug.
+    rec_strategy = result.recommended_strategy
+    recommended_bracket = result.pareto_brackets[0] if result.pareto_brackets else None
     mismatch_note = None
-    if recommended_bracket is None and result.pareto_brackets:
-        # Fall back to the last bracket (highest-risk survivor).
-        recommended_bracket = result.pareto_brackets[-1]
-        mismatch_note = (
-            f"NOTE: leverage analysis recommends '{rec}' strategy, but no "
-            f"'{rec}'-labeled bracket survived frontier deduplication — every "
-            "generated contrarian/balanced candidate collapsed to the same "
-            "picks as chalk or balanced. Showing the highest-risk available "
-            f"bracket ('{recommended_bracket.strategy}') instead. Pool "
-            "leverage comes from round-level leverage picks only."
-        )
+    if recommended_bracket is not None and recommended_bracket.strategy != rec_strategy:
+        matching = [b for b in result.pareto_brackets if b.strategy == rec_strategy]
+        if matching:
+            alt = matching[0]
+            mismatch_note = (
+                f"NOTE: leverage analysis favors '{rec_strategy}' strategy, but "
+                f"the highest-P(1st) bracket is labeled '{recommended_bracket.strategy}' "
+                f"(P(1st)={recommended_bracket.win_probability:.1%} vs "
+                f"{alt.win_probability:.1%} for the best '{rec_strategy}' bracket). "
+                "Showing the highest-P(1st) bracket — it dominates in winner-take-all."
+            )
+        else:
+            mismatch_note = (
+                f"NOTE: leverage analysis favors '{rec_strategy}' strategy, but no "
+                f"'{rec_strategy}'-labeled bracket survived frontier deduplication. "
+                "Showing the highest-P(1st) bracket — pool leverage comes from "
+                "round-level leverage picks only."
+            )
 
     if recommended_bracket is not None:
         print("\nRecommended bracket:")
         print(f"  Champion:   {recommended_bracket.champion}")
         print(f"  Final Four: {', '.join(recommended_bracket.final_four)}")
         print(f"  Strategy:   {recommended_bracket.strategy}")
+        print(f"  P(1st):     {recommended_bracket.win_probability:.1%}")
         print(f"  Expected:   {recommended_bracket.expected_points:.1f} pts")
         print(f"  Variance:   {recommended_bracket.variance:.1f}")
         if mismatch_note is not None:
@@ -293,6 +332,17 @@ def run_optimize_pool(args):
             "This is a bug — the generate_pareto_brackets dedup pass "
             "should guarantee picks uniqueness.",
         )
+
+    # Frontier summary — brackets already sorted by P(1st) descending.
+    if len(result.pareto_brackets) > 1:
+        print(f"\nPareto frontier (sorted by P(1st)):")
+        for i, b in enumerate(result.pareto_brackets):
+            tag = " <-- RECOMMENDED" if i == 0 else ""
+            print(
+                f"  #{i + 1}  P(1st)={b.win_probability:.1%}  EV={b.expected_points:.0f}  "
+                f"Var={b.variance:.0f}  [{b.strategy}/{b.construction_mode}]  "
+                f"champ={b.champion}{tag}"
+            )
 
     print(f"\nTop leverage picks (model > public):")
     for pick in result.leverage_picks[:10]:
@@ -334,10 +384,12 @@ def _build_first_round_matchups(seeds, regions, region_order=None):
     for region in region_order:
         region_teams = teams_by_region.get(region, {})
         for high_seed, low_seed in _SEED_MATCHUP_ORDER:
-            matchups.extend([
-                region_teams.get(high_seed, f"unknown_{region}_{high_seed}"),
-                region_teams.get(low_seed, f"unknown_{region}_{low_seed}"),
-            ])
+            matchups.extend(
+                [
+                    region_teams.get(high_seed, f"unknown_{region}_{high_seed}"),
+                    region_teams.get(low_seed, f"unknown_{region}_{low_seed}"),
+                ]
+            )
     return matchups
 
 
@@ -372,6 +424,63 @@ def _picks_dict_to_bool_array(picks, first_round_matchups, round_names):
         current_teams = next_round
 
     return result
+
+
+def _rerank_brackets_by_p1st(
+    brackets,
+    seeds,
+    regions_map,
+    pairwise_probs,
+    opponent_picks,
+    pool_size,
+    rng_seed=2027,
+    n_tournaments=5000,
+):
+    """Populate ``win_probability`` on each bracket and sort by P(1st) desc.
+
+    Addresses FP3: the Pareto optimizer returns brackets ordered by
+    expected_points (a mean-maximizing metric), but winner-take-all
+    pools reward tail outcomes — a bracket with lower EP but higher
+    P(1st) is strictly better. This helper runs the MC pool simulation
+    and re-orders the frontier by the metric that matters.
+
+    Works for any bracket carrying ``picks`` / ``champion`` /
+    ``final_four`` / ``win_probability`` attributes (dataclass or dict).
+    Mutates the bracket objects (sets ``win_probability``) and returns
+    the re-ordered list.
+    """
+    import numpy as np
+
+    from ..simulation.pool_competition import (
+        ROUND_NAMES,
+        compute_bracket_win_probability,
+    )
+
+    first_round_matchups = _build_first_round_matchups(seeds, regions_map)
+    rng = np.random.default_rng(rng_seed)
+
+    for bkt in brackets:
+        picks = bkt["picks"] if isinstance(bkt, dict) else bkt.picks
+        bool_arr = _picks_dict_to_bool_array(picks, first_round_matchups, ROUND_NAMES)
+        p1 = compute_bracket_win_probability(
+            bracket=bool_arr,
+            first_round_matchups=first_round_matchups,
+            matchup_probs=pairwise_probs,
+            pick_distribution=opponent_picks,
+            seeds=seeds,
+            n_opponents=max(1, pool_size - 1),
+            n_tournaments=n_tournaments,
+            rng=rng,
+        )
+        if isinstance(bkt, dict):
+            bkt["win_probability"] = p1
+        else:
+            bkt.win_probability = p1
+
+    def _key(b):
+        return -(b["win_probability"] if isinstance(b, dict) else b.win_probability)
+
+    return sorted(brackets, key=_key)
 
 
 def _run_det_construction(
@@ -539,9 +648,7 @@ def _run_auto_mode(
     mode_probs = {}
     for pm in prob_modes:
         try:
-            pairwise, round_probs = _build_probabilities(
-                pm, year, seeds, data_dir, walk_forward=walk_forward
-            )
+            pairwise, round_probs = _build_probabilities(pm, year, seeds, data_dir, walk_forward=walk_forward)
             round_probs = _apply_e8_adjustments_if_available(year, seeds, round_probs, data_dir)
             mode_probs[pm] = (pairwise, round_probs)
             print(f"  [auto] {pm}: OK ({len(round_probs)} teams)")
@@ -585,8 +692,10 @@ def _run_auto_mode(
                             "construction_mode": cm,
                         }
 
-    print(f"\n[auto] {len(unique_brackets)} unique brackets across "
-          f"{len(mode_probs)} prob modes × {len(construction_modes)} construction modes")
+    print(
+        f"\n[auto] {len(unique_brackets)} unique brackets across "
+        f"{len(mode_probs)} prob modes × {len(construction_modes)} construction modes"
+    )
 
     if not unique_brackets:
         print("ERROR: No brackets generated.")
@@ -653,15 +762,19 @@ def _run_auto_mode(
     print(f"\nChampion diversity: {len(champ_groups)} distinct champions")
     for champ, group in sorted(champ_groups.items(), key=lambda x: -x[1][0]["win_probability"]):
         best = group[0]
-        print(f"  {champ}: {len(group)} brackets, best P(1st)={best['win_probability']:.1%} "
-              f"(via {best['prob_mode']}/{best['construction_mode']})")
+        print(
+            f"  {champ}: {len(group)} brackets, best P(1st)={best['win_probability']:.1%} "
+            f"(via {best['prob_mode']}/{best['construction_mode']})"
+        )
 
     print(f"\nTop 10 brackets:")
     for i, b in enumerate(brackets[:10]):
         f4_str = ", ".join(b["final_four"])
         tag = " <-- RECOMMENDED" if i == 0 else ""
-        print(f"\n  #{i + 1} P(1st)={b['win_probability']:.1%}, EV={b['expected_points']:.0f} "
-              f"[{b['prob_mode']}/{b['construction_mode']}, risk={b['risk_level']:.2f}]{tag}")
+        print(
+            f"\n  #{i + 1} P(1st)={b['win_probability']:.1%}, EV={b['expected_points']:.0f} "
+            f"[{b['prob_mode']}/{b['construction_mode']}, risk={b['risk_level']:.2f}]{tag}"
+        )
         print(f"    Champion:   {b['champion']}")
         print(f"    Final Four: {f4_str}")
 
@@ -1052,6 +1165,31 @@ def register(subparsers):
             "brackets ('champ swap' variants) are post-hoc alternatives to "
             "the chalk structure rather than methodology-driven "
             "alternatives, so they are excluded by default."
+        ),
+    )
+    parser.add_argument(
+        "--pool-history",
+        default=None,
+        help=(
+            "Path to pool_hist_results.json containing the actual pool's "
+            "prior-year bracket entries. When provided, the opponent model "
+            "is calibrated against YOUR pool's empirical pick distribution "
+            "rather than ESPN's ~20M-entry public aggregate. Addresses FP2: "
+            "ESPN mis-calibration caused the optimizer to under-value "
+            "contrarian picks (e.g. Illinois F4 3.4%% ESPN vs 0.0%% in a "
+            "30-person pool). Default: None (ESPN-only blend)."
+        ),
+    )
+    parser.add_argument(
+        "--pool-history-weight",
+        type=float,
+        default=1.0,
+        help=(
+            "Convex weight in [0, 1] placed on pool-history picks vs the "
+            "ESPN-based blend. Only used when --pool-history is set. "
+            "Default 1.0 (full replacement — trust the explicit pool data). "
+            "Set to e.g. 0.75 to keep 25%% ESPN smoothing on top; useful "
+            "when the pool history is very small (<20 brackets)."
         ),
     )
     parser.set_defaults(func=run_optimize_pool)
