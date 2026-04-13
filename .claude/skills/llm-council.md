@@ -58,19 +58,66 @@ Only cares about one thing: can this actually be done, and what's the fastest pa
 
 ## How a Council Session Works
 
+### Step 0: Pre-Council Duplicate Check (MANDATORY — do NOT skip)
+
+**The council is expensive. Eleven sub-agents per session. Prior sessions
+on this repo repeated the same question 6× in different wording ("biggest
+limitation?", "most critical gap?", "single most critical limitation?"
+were all the same question). The user lost agent-time and cycles
+re-debating settled ground.**
+
+Before doing ANYTHING else, check whether this question has already been
+answered or is already identified as an open item.
+
+**A. If the workspace has a `COUNCIL_LESSONS.md` file** (or equivalent
+consolidated-council-lessons doc), the protocol is defined in that file's
+`§4 Pre-Council Duplicate-Check Protocol`. Read that section and follow
+it literally. It classifies the user's question into one of five buckets
+(A = already answered, B = already-identified open item, C = blocked on
+prerequisite, D = locked decision, E = genuinely novel) and tells you
+whether to abort or continue.
+
+**B. If the workspace has no `COUNCIL_LESSONS.md`** but there are
+`council-transcript-*.md` files present, scan their headings/questions
+for obvious duplicates (same wording, same semantic shape) before
+proceeding. If you find 2+ transcripts asking the same question, flag to
+the user: "You've counciled this on `<dates>`. Summarise prior verdicts
+before we re-run?"
+
+**C. If neither is present**, proceed directly to Step 1 (no duplicate
+state to check).
+
+**When you abort in Step 0, do so politely and specifically:**
+- Name the matched §3 row or §2 `Ox` ID.
+- Quote the one-line verdict or gate.
+- Ask the user: "Do you have new evidence that invalidates this, or should
+  we move to executing the existing verdict?" Then stop and wait.
+
+**Do NOT summon the council when the real blocker is execution of an
+already-identified item.** Re-debating O1 ("collect 31 real brackets")
+will not collect the brackets.
+
 ### Step 1: Frame the Question (with context enrichment)
 
-When the user says "council this" (or any trigger phrase), do two things before framing:
+When you reach this step (bucket E, or bucket A/D with explicit new
+evidence), do two things before framing:
 
 **A. Scan the workspace for context.** The user's question is often just the tip of the iceberg. Their Claude setup likely contains files that would dramatically improve the council's output. Before framing, quickly scan for and read any relevant context files:
 
 - `CLAUDE.md` or `claude.md` in the project root or workspace (business context, preferences, constraints)
+- `COUNCIL_LESSONS.md` or `MEMORY.md` (consolidated past decisions, locks, open items — these bound the space of acceptable proposals)
 - Any `memory/` folder (audience profiles, voice docs, business details, past decisions)
 - Any files the user explicitly referenced or attached
-- Recent council transcripts in this folder (to avoid re-counciling the same ground)
 - Any other context files that seem relevant to the specific question (e.g., if they're asking about pricing, look for revenue data, past launch results, audience research)
 
 Use `Glob` and quick `Read` calls to find these. Don't spend more than 30 seconds on this. You're looking for the 2-3 files that would give advisors the context they need to give specific, grounded advice instead of generic takes.
+
+**Prior-art injection (per §4 Step 3 of `COUNCIL_LESSONS.md`, when
+present):** when framing the question for the 5 advisors, include a
+"Prior art" block listing related `Ox` open items, locked lessons from
+§1, and the 2-3 most related §3 rows by keyword match. This prevents
+advisors from re-deriving settled ground and focuses their work on the
+genuinely novel part of the question.
 
 **B. Frame the question.** Take the user's raw question AND the enriched context and reframe it as a clear, neutral prompt that all five advisors will receive. The framed question should include:
 
@@ -247,9 +294,10 @@ Use clean styling: white background, subtle borders, readable sans-serif font (s
 
 Open the HTML file after generating it so the user can see it immediately.
 
-### Step 6: Save the Full Transcript
+### Step 6: Save the Full Transcript and Update the Index
 
-Save the complete council transcript as `council-transcript-[timestamp].md` in the same location. This includes:
+**A. Save the full transcript** as `council-transcript-[timestamp].md` in
+the same location. This includes:
 
 - The original question
 - The framed question
@@ -258,6 +306,30 @@ Save the complete council transcript as `council-transcript-[timestamp].md` in t
 - The chairman's full synthesis
 
 This transcript is the artifact. If the user wants to run the council again on the same question after making changes, having the previous transcript lets them (or a future agent) see how the thinking evolved.
+
+**B. Append to `COUNCIL_LESSONS.md` if present.** Per that file's §4 Step
+4 update rule:
+
+- Append one row to §3 with: next sequential `#`, date, one-line framed
+  question, one-line verdict (extracted from the chairman's Critical
+  Actions).
+- If the verdict closes an open `Ox` item in §2 → move the item to §1 and
+  leave `[closed <date>]` in §2.
+- If the verdict opens a new unresolved item → add a new `Ox` row with
+  the next free ID (never reuse, never renumber).
+- If the verdict supersedes a §1 lesson → append a superseding bullet and
+  mark the old one `[SUPERSEDED <date>]`. Do not rewrite.
+
+This keeps the duplicate-check protocol (Step 0) effective for the next
+session. A `COUNCIL_LESSONS.md` that isn't updated after each council
+quickly loses its value as a dedup index.
+
+**C. Periodic transcript consolidation (user-initiated).** Raw
+transcripts accumulate fast. When the user asks to prune / consolidate /
+clean up transcripts, the consolidation pattern is: extract lessons +
+open questions into `COUNCIL_LESSONS.md`, then delete the raw
+`council-transcript-*.md` and `council-report-*.html` files. This is
+user-initiated, not automatic.
 
 ---
 

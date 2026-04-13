@@ -1528,7 +1528,7 @@ def run_backtest(
             )
 
         # opt_seed, opt_blend, opt_torvik, hedge_tv: DEPRECATED 2026-04-12.
-        # See council-report-20260412.html for evidence.
+        # See MEMORY.md §2 D6 and COUNCIL_LESSONS.md §3 rows 23-25 for evidence.
 
     if not results:
         print("\nNo results.")
