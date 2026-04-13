@@ -124,7 +124,7 @@ Source: `POOL_STRATEGY_RECOMMENDATION.md:18-29`, `mc_pool_backtest_n31_results.t
 | Coverage threshold | 20% | `COUNCIL_LESSONS.md` §3 row 6 (2026-04-02 20:52) |
 
 ### Known open diagnostic (for context — not a TODO)
-- Independence assumption in opponent model flagged as validity threat (real pools cluster around chalk). 2026 pool bracket data exists in `pool_hist_results.json` (30 of 31 brackets; the user's own is correctly excluded — K = N − 1 is the usable count). Next step is to measure empirical inter-bracket correlation against the independence assumption. Source: `COUNCIL_LESSONS.md` §2 O4 (unblocked 2026-04-13), §3 row 25 (2026-04-12c).
+- Independence assumption in opponent model has been empirically tested (2026-04-13, 4 years × 93 brackets). **Independence holds** — pooled z = −4.15; brackets are *less* correlated than IID draws from the empirical marginals. The council's "validity threat" framing was misdiagnosed: error is in the opponent-model marginals (using ESPN-national instead of pool-specific; 5pp mean absolute divergence, up to 18pp on individual teams), not in correlation. Next binding step is `COUNCIL_LESSONS.md §2 O21` (rebuild opponent model with pool-history marginals). Sources: `ANALYSIS_O4_OPPONENT_CORRELATION.md`, `COUNCIL_LESSONS.md §2 O4 [closed] / O21 [open]`.
 
 ---
 

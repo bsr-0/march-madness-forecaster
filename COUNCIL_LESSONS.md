@@ -49,10 +49,21 @@ proposing new work — most "new ideas" have been tried or ruled out.
   probabilistic models into crowd-following; the contrarian signal lives in
   the probabilities, not the modal bracket.
 - **Opponent model is the load-bearing wall.** Three separate 2026-04-12
-  sessions independently converged: fix opponent model before anything else.
-  If independence assumption is wrong, the whole 13-yr backtest measures
-  noise. `[governing; O1 closed 2026-04-13 — data already existed; now
-  blocked on §2 O4 (measure empirical correlation from 30 brackets)]`
+  sessions independently converged: fix opponent model before anything
+  else. `[O1 closed 2026-04-13 (data already existed). O4 closed
+  2026-04-13: independence assumption actually holds — pooled z = −4.15
+  across 4 years; brackets are *less* correlated than IID draws from
+  the empirical marginals. The real error was in the MARGINALS, not the
+  CORRELATION STRUCTURE. See §2 O21.]`
+- **Check opponent-model marginals before correlations.** The 2026-04-12c
+  council diagnosed opponent-model validity as a correlation problem
+  without first measuring correlation or marginals. 4-year analysis
+  (`ANALYSIS_O4_OPPONENT_CORRELATION.md`) found correlation is fine;
+  marginals are off by 5pp (mean absolute) vs ESPN national, up to 18pp
+  on individual teams (ARIZ over-picked 2026, SJU over-picked 2025,
+  UNC over-picked 2024, ALA over-picked 2023). Future "opponent model
+  is wrong" diagnoses should start with marginals — cheaper and was the
+  actual issue. `[added 2026-04-13]`
 - **Opponent weights 60 % ESPN picks / 30 % Massey / 10 % seed fallback.**
   `[locked 2026-04-12; MEMORY.md §1]`
 - **F4 cap at 2, not 1.5.** Tuning the cap from a 14-yr historical average is
@@ -141,13 +152,14 @@ on another item.
 |---|------|------------------------------|---|---|
 | **O1** | Collect all 31 brackets from the actual 2026 pool | Structured dataset of 31 complete brackets (all 63 picks each), saved to repo. | 25 | **`[closed 2026-04-13]`** — `pool_hist_results.json` has 30 brackets as of 2026-04-12T22:47Z; the 31st is the user's own (correctly excluded to avoid a self-referential opponent model). Pattern verified across 2023 (18/19), 2025 (32/33), 2026 (30/31). See §1 Pool strategy: *pool size N ≠ usable opponent count K*. |
 | **O2** | Validate eight local four-factor features against Torvik | Per-season, per-feature r ≥ 0.99, no systematic residual bias by team type / conference / tempo. Prereq: confirm Torvik docs state whether values are raw or opponent-adjusted. | 21 | open |
-| **O3** | Rank-correlation diagnostic on base model | Spearman ρ between predicted-P(1st) rank and actual historical pool placement, top ~10 brackets. If ρ ≈ 0, 2026 #11-ranking failure cannot be attributed between opponent model and base model. | 23, 24 | open |
+| **O3** | Rank-correlation diagnostic on base model | Spearman ρ between predicted-P(1st) rank and actual historical pool placement, top ~10 brackets. If ρ ≈ 0, 2026 #11-ranking failure cannot be attributed between opponent model and base model. | 23, 24 | **`[closed 2026-04-13]`** — executed in `artifacts/rank_correlation_diagnostic.json`. Mean Spearman ρ = +0.37 across 14 years, 12/14 positive, median ρ = +0.46. Optimizer's P(1st) ranking has real directional signal. 2023 = −0.64 is the outlier reversal. |
+| **O21** | Replace ESPN-national marginals with pool-specific marginals in opponent model | Opponent model rebuilt weighting ESPN-national + pool-history marginals (current `POOL_STRATEGY_RECOMMENDATION.md` says 60/30/10 ESPN/Massey/seed; pool-history channel is currently missing). Retrospective pool EV backtested against 2023-2026 to verify switch changes bracket rankings. | surfaced by O4 analysis 2026-04-13 | **open, binding on opponent-model wall** — this is the real error source the council called a "validity threat." Mean 5pp divergence between pool and ESPN marginals; up to 18pp on individual teams. In 3/4 years the pool's top champion pick was not the actual champion. |
 
 ### High-priority validation gaps
 
 | ID | Item | Gate | Raised in §3 | Status |
 |---|------|------|---|---|
-| **O4** | Empirical opponent correlation from the 30 real brackets | Measured correlation matrix across games; compared against independence assumption. | 25 | **open** (unblocked 2026-04-13 — O1 resolved; 30 brackets available in `pool_hist_results.json`) |
+| **O4** | Empirical opponent correlation from the 30 real brackets | Measured correlation matrix across games; compared against independence assumption. | 25 | **`[closed 2026-04-13]`** — independence assumption holds. 4-year pooled z = −4.15; brackets are *less* correlated than IID draws from the empirical marginals, not more. See `ANALYSIS_O4_OPPONENT_CORRELATION.md`. Follow-up → O21. |
 | **O5** | MC sim count for stable rankings | Run optimizer 3× with identical inputs, verify top-20 rank-order identical. (Predicted jump 500 → 5000 sims.) | 24 | open |
 | **O6** | Calibration check: simulated P(1st) vs actual placement | Historical verification that brackets ranked highest by optimizer actually won more often. | 23, 24 | open |
 | **O7** | Tournament-only vs blended+stacked head-to-head | LOYO BSS comparison; tournament-only (500–600 games) vs blended (2200). Flagged 04-01; never run. | 3 | open |
@@ -158,7 +170,7 @@ on another item.
 
 | ID | Item | Gate | Raised in §3 | Status |
 |---|------|------|---|---|
-| **O10** | Opponent correlation: empirical from 1 pool-year vs theoretical copula | Decision + implementation. 30 brackets measures structure but generalization across 13 backtest years is unclear. Now 4 years of pool data exist (2023-2026, 105 brackets total) — may partially resolve generalization concern. | 25 | `blocked:O4` |
+| **O10** | Opponent correlation: empirical from 1 pool-year vs theoretical copula | Decision + implementation. 30 brackets measures structure but generalization across 13 backtest years is unclear. | 25 | **`[mostly moot 2026-04-13]`** — independence holds per O4; no copula needed for this pool. Reactivate only if a larger / demographically-different pool shows clustering. |
 | **O11** | Is BSS ≈ 0 fatal to game-theory optimization? | Philosophical position (council 25): no — seed baseline is not zero-information. Codebase reflects this assumption but has no explicit invariant/test asserting it. | 25 | partial (settled in transcript, not code) |
 | **O12** | Scoring-function structure modeled explicitly | Pool's point schedule (e.g. 1/2/4/8/16/32) hard-coded into optimizer's objective, not just game outcomes. | 23 | open |
 | **O13** | Winner-take-all: maximize variance not E[P(1st)] | Kelly-optimal risk posture evaluated against argmax-P(1st). | 24 | open |
