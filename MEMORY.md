@@ -98,7 +98,8 @@ Current numbers. If you're about to claim an improvement, it has to clear these.
 ### ML prediction (frozen — do not chase)
 | Metric | Value | Scope | Source |
 |---|---|---|---|
-| Brier Skill Score | **0** | 17 yrs (2008–2025 ex. 2020); all tested models | `PROJECT_STATUS.md:6-11` |
+| Brier Skill Score | **0** | 17 yrs (2008–2025 ex. 2020); all tested blended+stacked models (production regime) | `PROJECT_STATUS.md:6-11`; `MEMORY.md §2 D1` |
+| BSS, tournament-only LOYO, simple_7 | **+4.8%** (paired t p=0.036 uncorrected; fails Bonferroni) | 14 yrs (2010–2024 ex. 2020); feature set = `SIMPLE_FEATURE_SET` | `artifacts/baseline_experiment.json` (2026-04-01); `artifacts/o7_regime_comparison_2026-04-13.json`; `tests/test_o7_regime_comparison.py`; closes §2 O7 |
 | LogLoss gate | < 0.56 | Training objective | `pipeline_freeze.json:121` |
 | Brier gate | 0.19 | Admission threshold | `pipeline_freeze.json:14` |
 
