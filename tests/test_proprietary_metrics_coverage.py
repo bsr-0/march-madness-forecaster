@@ -30,6 +30,7 @@ from src.data.features.proprietary_metrics import (
 # Helpers: build game records for testing
 # ---------------------------------------------------------------------------
 
+
 def _make_game(
     game_id="g1",
     game_date="2025-01-15",
@@ -77,13 +78,34 @@ def _make_game(
         points=points,
         opp_points=opp_points,
         possessions=possessions,
-        fga=fga, fgm=fgm, fg3a=fg3a, fg3m=fg3m,
-        fta=fta, ftm=ftm, tov=tov, orb=orb, drb=drb,
-        opp_fga=opp_fga, opp_fgm=opp_fgm, opp_fg3a=opp_fg3a, opp_fg3m=opp_fg3m,
-        opp_fta=opp_fta, opp_ftm=opp_ftm, opp_tov=opp_tov, opp_orb=opp_orb, opp_drb=opp_drb,
-        ast=ast, stl=stl, blk=blk, pf=pf,
-        opp_ast=opp_ast, opp_stl=opp_stl, opp_blk=opp_blk, opp_pf=opp_pf,
-        is_home=is_home, is_neutral=is_neutral,
+        fga=fga,
+        fgm=fgm,
+        fg3a=fg3a,
+        fg3m=fg3m,
+        fta=fta,
+        ftm=ftm,
+        tov=tov,
+        orb=orb,
+        drb=drb,
+        opp_fga=opp_fga,
+        opp_fgm=opp_fgm,
+        opp_fg3a=opp_fg3a,
+        opp_fg3m=opp_fg3m,
+        opp_fta=opp_fta,
+        opp_ftm=opp_ftm,
+        opp_tov=opp_tov,
+        opp_orb=opp_orb,
+        opp_drb=opp_drb,
+        ast=ast,
+        stl=stl,
+        blk=blk,
+        pf=pf,
+        opp_ast=opp_ast,
+        opp_stl=opp_stl,
+        opp_blk=opp_blk,
+        opp_pf=opp_pf,
+        is_home=is_home,
+        is_neutral=is_neutral,
     )
 
 
@@ -106,20 +128,22 @@ def _make_season_games(
         is_win = i < int(n_games * win_ratio)
         pts = 80.0 if is_win else 65.0
         opp_pts = 70.0 if is_win else 75.0
-        games.append(_make_game(
-            game_id=f"g_{team_id}_{i}",
-            game_date=date_str,
-            team_id=team_id,
-            team_name=team_id.replace("_", " ").title(),
-            opponent_id=f"{opponent_id}_{i % 5}",
-            points=pts,
-            opp_points=opp_pts,
-            possessions=68.0 + i * 0.5,
-            fg3a=20.0 + i % 3,
-            fg3m=7.0 + (i % 4),
-            is_home=i % 3 == 0,
-            is_neutral=i % 3 != 0,
-        ))
+        games.append(
+            _make_game(
+                game_id=f"g_{team_id}_{i}",
+                game_date=date_str,
+                team_id=team_id,
+                team_name=team_id.replace("_", " ").title(),
+                opponent_id=f"{opponent_id}_{i % 5}",
+                points=pts,
+                opp_points=opp_pts,
+                possessions=68.0 + i * 0.5,
+                fg3a=20.0 + i % 3,
+                fg3m=7.0 + (i % 4),
+                is_home=i % 3 == 0,
+                is_neutral=i % 3 != 0,
+            )
+        )
     return games
 
 
@@ -137,25 +161,36 @@ def _make_two_team_season(n_games=15):
         pts_b = 70.0 + (i % 4)
         gid = f"game_{i}"
         # Team A side
-        games.append(_make_game(
-            game_id=gid, game_date=date_str,
-            team_id="team_a", team_name="Team A",
-            opponent_id="team_b",
-            points=pts_a, opp_points=pts_b,
-        ))
+        games.append(
+            _make_game(
+                game_id=gid,
+                game_date=date_str,
+                team_id="team_a",
+                team_name="Team A",
+                opponent_id="team_b",
+                points=pts_a,
+                opp_points=pts_b,
+            )
+        )
         # Team B side (mirror)
-        games.append(_make_game(
-            game_id=gid, game_date=date_str,
-            team_id="team_b", team_name="Team B",
-            opponent_id="team_a",
-            points=pts_b, opp_points=pts_a,
-        ))
+        games.append(
+            _make_game(
+                game_id=gid,
+                game_date=date_str,
+                team_id="team_b",
+                team_name="Team B",
+                opponent_id="team_a",
+                points=pts_b,
+                opp_points=pts_a,
+            )
+        )
     return games
 
 
 # ---------------------------------------------------------------------------
 # Tests: utility functions
 # ---------------------------------------------------------------------------
+
 
 class TestTeamId:
     def test_lowercase_and_strip(self):
@@ -195,12 +230,18 @@ class TestToFloat:
 # Tests: GameRecord dataclass
 # ---------------------------------------------------------------------------
 
+
 class TestGameRecord:
     def test_defaults(self):
         g = GameRecord(
-            game_id="g1", game_date="2025-01-01",
-            team_id="a", team_name="A", opponent_id="b",
-            points=80, opp_points=70, possessions=68,
+            game_id="g1",
+            game_date="2025-01-01",
+            team_id="a",
+            team_name="A",
+            opponent_id="b",
+            points=80,
+            opp_points=70,
+            possessions=68,
         )
         assert g.fga == 0.0
         assert g.is_home is False
@@ -216,6 +257,7 @@ class TestGameRecord:
 # ---------------------------------------------------------------------------
 # Tests: ProprietaryTeamMetrics dataclass
 # ---------------------------------------------------------------------------
+
 
 class TestProprietaryTeamMetrics:
     def test_defaults(self):
@@ -240,6 +282,7 @@ class TestProprietaryTeamMetrics:
 # ---------------------------------------------------------------------------
 # Tests: ProprietaryMetricsEngine helpers
 # ---------------------------------------------------------------------------
+
 
 class TestRawEfficiency:
     def test_basic(self):
@@ -356,8 +399,9 @@ class TestCorrelatedGaussianLuck:
     def test_zero_std(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         # All identical margins → std ≈ 0 → return 0.0
-        games = [_make_game(points=80, opp_points=75, game_id=f"g{i}",
-                            game_date=f"2025-01-{i+1:02d}") for i in range(15)]
+        games = [
+            _make_game(points=80, opp_points=75, game_id=f"g{i}", game_date=f"2025-01-{i + 1:02d}") for i in range(15)
+        ]
         luck = engine._correlated_gaussian_luck(games)
         assert luck == 0.0
 
@@ -393,15 +437,13 @@ class TestBoxScoreXP:
     def test_clipping(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         # Extreme values should be clipped to [0.5, 1.8]
-        ff = {"effective_fg_pct": 1.0, "turnover_rate": 0.0,
-              "offensive_reb_rate": 1.0, "free_throw_rate": 1.0}
+        ff = {"effective_fg_pct": 1.0, "turnover_rate": 0.0, "offensive_reb_rate": 1.0, "free_throw_rate": 1.0}
         xp = engine._box_score_xp(ff, ft_pct=1.0)
         assert xp == 1.8
 
     def test_low_values(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
-        ff = {"effective_fg_pct": 0.0, "turnover_rate": 1.0,
-              "offensive_reb_rate": 0.0, "free_throw_rate": 0.0}
+        ff = {"effective_fg_pct": 0.0, "turnover_rate": 1.0, "offensive_reb_rate": 0.0, "free_throw_rate": 0.0}
         xp = engine._box_score_xp(ff, ft_pct=0.0)
         assert xp == 0.5
 
@@ -423,8 +465,7 @@ class TestThreePointVariance:
     def test_too_few_qualifying(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         # fg3a < 5 means games are excluded → return prior
-        games = [_make_game(fg3a=3, fg3m=1, game_id=f"g{i}",
-                            game_date=f"2025-01-{i+1:02d}") for i in range(10)]
+        games = [_make_game(fg3a=3, fg3m=1, game_id=f"g{i}", game_date=f"2025-01-{i + 1:02d}") for i in range(10)]
         var = engine._three_point_variance(games)
         assert var == pytest.approx(0.095, abs=1e-6)
 
@@ -432,10 +473,14 @@ class TestThreePointVariance:
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         games = []
         for i in range(10):
-            games.append(_make_game(
-                fg3a=20, fg3m=5 + i % 5,
-                game_id=f"g{i}", game_date=f"2025-01-{i+1:02d}",
-            ))
+            games.append(
+                _make_game(
+                    fg3a=20,
+                    fg3m=5 + i % 5,
+                    game_id=f"g{i}",
+                    game_date=f"2025-01-{i + 1:02d}",
+                )
+            )
         var = engine._three_point_variance(games)
         assert var > 0
 
@@ -443,9 +488,10 @@ class TestThreePointVariance:
 class TestMomentum:
     def test_too_few_games(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
-        games = [_make_game(game_id=f"g{i}", game_date=f"2025-01-{i+1:02d}",
-                            team_id="team_a", opponent_id="team_b")
-                 for i in range(5)]
+        games = [
+            _make_game(game_id=f"g{i}", game_date=f"2025-01-{i + 1:02d}", team_id="team_a", opponent_id="team_b")
+            for i in range(5)
+        ]
         adj_off = {"team_a": 105.0, "team_b": 100.0}
         adj_def = {"team_a": 98.0, "team_b": 100.0}
         mom, recent = engine._momentum(games, adj_off, adj_def)
@@ -473,9 +519,16 @@ class TestPaceAdjustedVariance:
 
     def test_multiple_games(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
-        games = [_make_game(points=70+i*3, opp_points=68+i*2, possessions=65+i,
-                            game_id=f"g{i}", game_date=f"2025-01-{i+1:02d}")
-                 for i in range(10)]
+        games = [
+            _make_game(
+                points=70 + i * 3,
+                opp_points=68 + i * 2,
+                possessions=65 + i,
+                game_id=f"g{i}",
+                game_date=f"2025-01-{i + 1:02d}",
+            )
+            for i in range(10)
+        ]
         var = engine._pace_adjusted_variance(games)
         assert var > 0
 
@@ -489,8 +542,9 @@ class TestConsistency:
     def test_consistent_team(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         # All same margin → low stdev → high consistency
-        games = [_make_game(points=80, opp_points=75, game_id=f"g{i}",
-                            game_date=f"2025-01-{i+1:02d}") for i in range(10)]
+        games = [
+            _make_game(points=80, opp_points=75, game_id=f"g{i}", game_date=f"2025-01-{i + 1:02d}") for i in range(10)
+        ]
         c = engine._consistency(games)
         # With zero sample variance, shrunk variance is dominated by prior
         assert c > 0.0
@@ -500,8 +554,9 @@ class TestConsistency:
         games = []
         for i in range(10):
             margin = 30 if i % 2 == 0 else -20
-            games.append(_make_game(points=70+margin, opp_points=70,
-                                    game_id=f"g{i}", game_date=f"2025-01-{i+1:02d}"))
+            games.append(
+                _make_game(points=70 + margin, opp_points=70, game_id=f"g{i}", game_date=f"2025-01-{i + 1:02d}")
+            )
         c = engine._consistency(games)
         assert 0 < c < 0.5
 
@@ -654,9 +709,10 @@ class TestNeutralSiteRecord:
 
     def test_with_neutral_games(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
-        games = [_make_game(is_neutral=True, points=80, opp_points=70, game_id=f"g{i}",
-                            game_date=f"2025-01-{i+1:02d}")
-                 for i in range(6)]
+        games = [
+            _make_game(is_neutral=True, points=80, opp_points=70, game_id=f"g{i}", game_date=f"2025-01-{i + 1:02d}")
+            for i in range(6)
+        ]
         pct, n = engine._neutral_site_record(games)
         assert n == 6
         # All wins: (6 + 2) / (6 + 4) = 0.8
@@ -668,13 +724,17 @@ class TestHomeAwaySplits:
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         games = []
         for i in range(10):
-            games.append(_make_game(
-                game_id=f"g{i}", game_date=f"2025-01-{i+1:02d}",
-                opponent_id=f"opp_{i}",
-                is_home=i < 5, is_neutral=False,
-                points=80 if i < 5 else 68,
-                opp_points=70,
-            ))
+            games.append(
+                _make_game(
+                    game_id=f"g{i}",
+                    game_date=f"2025-01-{i + 1:02d}",
+                    opponent_id=f"opp_{i}",
+                    is_home=i < 5,
+                    is_neutral=False,
+                    points=80 if i < 5 else 68,
+                    opp_points=70,
+                )
+            )
         adj_off = {f"opp_{i}": 100.0 for i in range(10)}
         adj_def = {f"opp_{i}": 100.0 for i in range(10)}
         home_em, away_em, dep = engine._home_away_splits(games, adj_off, adj_def)
@@ -688,8 +748,7 @@ class TestHomeAwaySplits:
 class TestMomentum5g:
     def test_too_few_games(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
-        games = [_make_game(game_id=f"g{i}", game_date=f"2025-01-{i+1:02d}")
-                 for i in range(5)]
+        games = [_make_game(game_id=f"g{i}", game_date=f"2025-01-{i + 1:02d}") for i in range(5)]
         adj_off = {"team_a": 105.0, "team_b": 100.0}
         adj_def = {"team_a": 98.0, "team_b": 100.0}
         assert engine._momentum_5g(games, adj_off, adj_def) == 0.0
@@ -714,18 +773,16 @@ class TestPaceVariance:
 
     def test_with_enough_games(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
-        games = [_make_game(possessions=60+i*3, game_id=f"g{i}",
-                            game_date=f"2025-01-{i+1:02d}")
-                 for i in range(10)]
+        games = [
+            _make_game(possessions=60 + i * 3, game_id=f"g{i}", game_date=f"2025-01-{i + 1:02d}") for i in range(10)
+        ]
         var = engine._pace_variance(games)
         assert var > 0
 
     def test_low_possession_filtered(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         # Games with possessions <= 20 are filtered out
-        games = [_make_game(possessions=10, game_id=f"g{i}",
-                            game_date=f"2025-01-{i+1:02d}")
-                 for i in range(10)]
+        games = [_make_game(possessions=10, game_id=f"g{i}", game_date=f"2025-01-{i + 1:02d}") for i in range(10)]
         assert engine._pace_variance(games) == 0.0
 
 
@@ -757,6 +814,7 @@ class TestPoissonBinomial:
 # ---------------------------------------------------------------------------
 # Tests: compute() full pipeline (integration-level, no I/O)
 # ---------------------------------------------------------------------------
+
 
 class TestComputeFullPipeline:
     def test_empty_records(self):
@@ -834,9 +892,7 @@ class TestComputeRestDays:
 
     def test_no_reference_date(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
-        results = {
-            "team_a": ProprietaryTeamMetrics(team_id="team_a", team_name="Team A")
-        }
+        results = {"team_a": ProprietaryTeamMetrics(team_id="team_a", team_name="Team A")}
         games = _make_season_games(n_games=5, team_id="team_a")
         by_team = {"team_a": games}
         engine._compute_rest_days(results, by_team, reference_date=None)
@@ -844,9 +900,7 @@ class TestComputeRestDays:
 
     def test_single_game_no_ref(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
-        results = {
-            "team_a": ProprietaryTeamMetrics(team_id="team_a", team_name="Team A")
-        }
+        results = {"team_a": ProprietaryTeamMetrics(team_id="team_a", team_name="Team A")}
         games = [_make_game(team_id="team_a")]
         by_team = {"team_a": games}
         engine._compute_rest_days(results, by_team, reference_date=None)
@@ -854,9 +908,7 @@ class TestComputeRestDays:
 
     def test_invalid_date(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
-        results = {
-            "team_a": ProprietaryTeamMetrics(team_id="team_a", team_name="Team A")
-        }
+        results = {"team_a": ProprietaryTeamMetrics(team_id="team_a", team_name="Team A")}
         games = [_make_game(team_id="team_a", game_date="invalid-date")]
         by_team = {"team_a": games}
         engine._compute_rest_days(results, by_team, reference_date="2025-03-15")
@@ -879,10 +931,8 @@ class TestComputeConferenceStrength:
     def test_without_conference_map(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         results = {
-            "t1": ProprietaryTeamMetrics(team_id="t1", team_name="T1",
-                                         adj_efficiency_margin=10.0, sos_adj_em=3.0),
-            "t2": ProprietaryTeamMetrics(team_id="t2", team_name="T2",
-                                         adj_efficiency_margin=5.0, sos_adj_em=2.0),
+            "t1": ProprietaryTeamMetrics(team_id="t1", team_name="T1", adj_efficiency_margin=10.0, sos_adj_em=3.0),
+            "t2": ProprietaryTeamMetrics(team_id="t2", team_name="T2", adj_efficiency_margin=5.0, sos_adj_em=2.0),
         }
         # t1 plays t2 twice (conference-like)
         games_t1 = [
@@ -927,10 +977,7 @@ class TestH2HAndCommonOpponent:
 
     def test_h2h_four_games(self):
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
-        games = [
-            _make_game(team_id="a", opponent_id="b", points=80, opp_points=70, game_id=f"g{i}")
-            for i in range(4)
-        ]
+        games = [_make_game(team_id="a", opponent_id="b", points=80, opp_points=70, game_id=f"g{i}") for i in range(4)]
         engine._by_team = {"a": games}
         h2h = engine.compute_h2h_record("a", "b")
         # 4 games, all wins → weight=1.0, raw=1.0 → 1.0
@@ -981,7 +1028,9 @@ class TestIterativeSOSAdjust:
         raw_off = {"team_a": 110.0, "team_b": 103.0}
         raw_def = {"team_a": 95.0, "team_b": 103.0}
         adj_off, adj_def = engine._iterative_sos_adjust(
-            by_team, raw_off, raw_def,
+            by_team,
+            raw_off,
+            raw_def,
             initial_adj_off={"team_a": 108.0, "team_b": 102.0},
             initial_adj_def={"team_a": 96.0, "team_b": 104.0},
             n_iterations=5,
@@ -998,7 +1047,10 @@ class TestIterativeSOSAdjust:
         raw_def = {"team_a": 95.0, "team_b": 103.0}
         # Should run without error with 1 iteration
         adj_off, adj_def = engine._iterative_sos_adjust(
-            by_team, raw_off, raw_def, n_iterations=1,
+            by_team,
+            raw_off,
+            raw_def,
+            n_iterations=1,
         )
         assert len(adj_off) == 2
 
@@ -1041,8 +1093,7 @@ class TestComputeEliteSosAndQuadrants:
             "team_a": ProprietaryTeamMetrics(team_id="team_a", team_name="A"),
         }
         games = [
-            _make_game(opponent_id="elite_opp", points=80, opp_points=70,
-                       is_neutral=True),
+            _make_game(opponent_id="elite_opp", points=80, opp_points=70, is_neutral=True),
         ]
         by_team = {"team_a": games}
         adj_off = {"team_a": 110, "elite_opp": 115}
@@ -1057,19 +1108,44 @@ class TestComputeEliteSosAndQuadrants:
 # Tests: team_games_to_game_records
 # ---------------------------------------------------------------------------
 
+
 class TestTeamGamesToGameRecords:
     def test_basic_conversion(self):
         rows = [
-            {"game_id": "g1", "team_id": "a", "opponent_id": "b",
-             "team_score": 80, "opponent_score": 70, "possessions": 68,
-             "fgm": 30, "fga": 60, "fg3m": 8, "fg3a": 20,
-             "fta": 10, "turnovers": 12, "orb": 8, "drb": 22,
-             "date": "2025-01-15"},
-            {"game_id": "g1", "team_id": "b", "opponent_id": "a",
-             "team_score": 70, "opponent_score": 80, "possessions": 68,
-             "fgm": 26, "fga": 58, "fg3m": 6, "fg3a": 18,
-             "fta": 8, "turnovers": 14, "orb": 6, "drb": 20,
-             "date": "2025-01-15"},
+            {
+                "game_id": "g1",
+                "team_id": "a",
+                "opponent_id": "b",
+                "team_score": 80,
+                "opponent_score": 70,
+                "possessions": 68,
+                "fgm": 30,
+                "fga": 60,
+                "fg3m": 8,
+                "fg3a": 20,
+                "fta": 10,
+                "turnovers": 12,
+                "orb": 8,
+                "drb": 22,
+                "date": "2025-01-15",
+            },
+            {
+                "game_id": "g1",
+                "team_id": "b",
+                "opponent_id": "a",
+                "team_score": 70,
+                "opponent_score": 80,
+                "possessions": 68,
+                "fgm": 26,
+                "fga": 58,
+                "fg3m": 6,
+                "fg3a": 18,
+                "fta": 8,
+                "turnovers": 14,
+                "orb": 6,
+                "drb": 20,
+                "date": "2025-01-15",
+            },
         ]
         records = team_games_to_game_records(rows, 2025)
         assert len(records) == 2
@@ -1079,16 +1155,28 @@ class TestTeamGamesToGameRecords:
 
     def test_skip_forfeits(self):
         rows = [
-            {"game_id": "g1", "team_id": "a", "opponent_id": "b",
-             "team_score": 0, "opponent_score": 0, "date": "2025-01-01"},
+            {
+                "game_id": "g1",
+                "team_id": "a",
+                "opponent_id": "b",
+                "team_score": 0,
+                "opponent_score": 0,
+                "date": "2025-01-01",
+            },
         ]
         records = team_games_to_game_records(rows, 2025)
         assert len(records) == 0
 
     def test_missing_fields(self):
         rows = [
-            {"game_id": "g1", "team_id": "a", "opponent_id": "b",
-             "team_score": 80, "opponent_score": 70, "date": "2025-01-01"},
+            {
+                "game_id": "g1",
+                "team_id": "a",
+                "opponent_id": "b",
+                "team_score": 80,
+                "opponent_score": 70,
+                "date": "2025-01-01",
+            },
         ]
         records = team_games_to_game_records(rows, 2025)
         assert len(records) == 1
@@ -1097,10 +1185,20 @@ class TestTeamGamesToGameRecords:
 
     def test_ftm_derivation(self):
         rows = [
-            {"game_id": "g1", "team_id": "a", "opponent_id": "b",
-             "team_score": 80, "opponent_score": 70,
-             "fgm": 28, "fg3m": 8, "fga": 60, "fg3a": 20,
-             "fta": 10, "possessions": 68, "date": "2025-01-01"},
+            {
+                "game_id": "g1",
+                "team_id": "a",
+                "opponent_id": "b",
+                "team_score": 80,
+                "opponent_score": 70,
+                "fgm": 28,
+                "fg3m": 8,
+                "fga": 60,
+                "fg3a": 20,
+                "fta": 10,
+                "possessions": 68,
+                "date": "2025-01-01",
+            },
         ]
         records = team_games_to_game_records(rows, 2025)
         # ftm = points - 2*fgm - fg3m = 80 - 56 - 8 = 16
@@ -1108,21 +1206,43 @@ class TestTeamGamesToGameRecords:
 
     def test_deduplication(self):
         rows = [
-            {"game_id": "g1", "team_id": "a", "opponent_id": "b",
-             "team_score": 80, "opponent_score": 70, "date": "2025-01-01"},
-            {"game_id": "g1", "team_id": "a", "opponent_id": "b",
-             "team_score": 80, "opponent_score": 70, "date": "2025-01-01"},
+            {
+                "game_id": "g1",
+                "team_id": "a",
+                "opponent_id": "b",
+                "team_score": 80,
+                "opponent_score": 70,
+                "date": "2025-01-01",
+            },
+            {
+                "game_id": "g1",
+                "team_id": "a",
+                "opponent_id": "b",
+                "team_score": 80,
+                "opponent_score": 70,
+                "date": "2025-01-01",
+            },
         ]
         records = team_games_to_game_records(rows, 2025)
         assert len(records) == 1
 
     def test_possession_estimation_from_fga(self):
         rows = [
-            {"game_id": "g1", "team_id": "a", "opponent_id": "b",
-             "team_score": 80, "opponent_score": 70,
-             "fga": 60, "orb": 10, "turnovers": 12, "fta": 15,
-             "fgm": 28, "fg3m": 8, "fg3a": 20,
-             "date": "2025-01-01"},
+            {
+                "game_id": "g1",
+                "team_id": "a",
+                "opponent_id": "b",
+                "team_score": 80,
+                "opponent_score": 70,
+                "fga": 60,
+                "orb": 10,
+                "turnovers": 12,
+                "fta": 15,
+                "fgm": 28,
+                "fg3m": 8,
+                "fg3a": 20,
+                "date": "2025-01-01",
+            },
         ]
         records = team_games_to_game_records(rows, 2025)
         # poss = fga - orb + tov + 0.475 * fta = 60 - 10 + 12 + 7.125 = 69.125
@@ -1133,6 +1253,7 @@ class TestTeamGamesToGameRecords:
 # Tests: torvik_to_game_records
 # ---------------------------------------------------------------------------
 
+
 class TestTorvikToGameRecords:
     @patch("src.data.features.proprietary_metrics._load_cbbpy_team_map", return_value={})
     def test_basic(self, mock_map):
@@ -1141,9 +1262,15 @@ class TestTorvikToGameRecords:
             {"team_id": "unc", "name": "North Carolina"},
         ]
         games = [
-            {"game_id": "g1", "team_id": "duke", "opponent_id": "unc",
-             "team_score": 80, "opponent_score": 70,
-             "game_date": "2025-01-15", "team_name": "Duke"},
+            {
+                "game_id": "g1",
+                "team_id": "duke",
+                "opponent_id": "unc",
+                "team_score": 80,
+                "opponent_score": 70,
+                "game_date": "2025-01-15",
+                "team_name": "Duke",
+            },
         ]
         records = torvik_to_game_records(torvik_teams, games, 2025)
         assert len(records) == 1
@@ -1152,10 +1279,18 @@ class TestTorvikToGameRecords:
     @patch("src.data.features.proprietary_metrics._load_cbbpy_team_map", return_value={})
     def test_skip_non_dict(self, mock_map):
         torvik_teams = [{"team_id": "duke", "name": "Duke"}]
-        games = ["not_a_dict", {"game_id": "g1", "team_id": "duke",
-                                "opponent_id": "unc", "team_score": 80,
-                                "opponent_score": 70, "game_date": "2025-01-15",
-                                "team_name": "Duke"}]
+        games = [
+            "not_a_dict",
+            {
+                "game_id": "g1",
+                "team_id": "duke",
+                "opponent_id": "unc",
+                "team_score": 80,
+                "opponent_score": 70,
+                "game_date": "2025-01-15",
+                "team_name": "Duke",
+            },
+        ]
         records = torvik_to_game_records(torvik_teams, games, 2025)
         assert len(records) == 1
 
@@ -1163,11 +1298,23 @@ class TestTorvikToGameRecords:
     def test_possession_estimation(self, mock_map):
         torvik_teams = [{"team_id": "a", "name": "A"}, {"team_id": "b", "name": "B"}]
         games = [
-            {"game_id": "g1", "team_id": "a", "opponent_id": "b",
-             "team_score": 80, "opponent_score": 70,
-             "fga": 60, "orb": 10, "turnovers": 12, "fta": 15,
-             "opp_fga": 55, "opp_orb": 8, "opp_tov": 14, "opp_fta": 10,
-             "game_date": "2025-01-15", "team_name": "A"},
+            {
+                "game_id": "g1",
+                "team_id": "a",
+                "opponent_id": "b",
+                "team_score": 80,
+                "opponent_score": 70,
+                "fga": 60,
+                "orb": 10,
+                "turnovers": 12,
+                "fta": 15,
+                "opp_fga": 55,
+                "opp_orb": 8,
+                "opp_tov": 14,
+                "opp_fta": 10,
+                "game_date": "2025-01-15",
+                "team_name": "A",
+            },
         ]
         records = torvik_to_game_records(torvik_teams, games, 2025)
         assert records[0].possessions > 0
@@ -1176,6 +1323,7 @@ class TestTorvikToGameRecords:
 # ---------------------------------------------------------------------------
 # Tests: IncrementalMetricsEngine
 # ---------------------------------------------------------------------------
+
 
 class TestIncrementalMetricsEngine:
     def _make_engine(self, n_games=15):
@@ -1243,48 +1391,53 @@ class TestIncrementalMetricsEngine:
 class TestMetricsToTeamVector:
     def test_basic(self):
         m = ProprietaryTeamMetrics(
-            team_id="t1", team_name="T1",
+            team_id="t1",
+            team_name="T1",
             adj_offensive_efficiency=110.0,
             adj_defensive_efficiency=95.0,
             adj_tempo=68.0,
         )
         try:
+            from src.data.features.feature_engineering import TEAM_FEATURE_DIM
+
             v = IncrementalMetricsEngine.metrics_to_team_vector(m, seed=3)
             assert isinstance(v, np.ndarray)
+            assert v.shape == (TEAM_FEATURE_DIM,)
             assert v[0] == 110.0
             assert v[1] == 95.0
             assert v[2] == 68.0
-            # seed > 0 → non-zero seed strength (index 73)
-            assert v[73] > 0
+            # seed > 0 → non-zero seed strength (last index, TEAM_FEATURE_DIM - 1)
+            assert v[TEAM_FEATURE_DIM - 1] > 0
         except (ImportError, ModuleNotFoundError):
             pytest.skip("feature_engineering or tournament_features not importable")
 
     def test_zero_seed(self):
         m = ProprietaryTeamMetrics(team_id="t1", team_name="T1")
         try:
+            from src.data.features.feature_engineering import TEAM_FEATURE_DIM
+
             v = IncrementalMetricsEngine.metrics_to_team_vector(m, seed=0)
-            assert v[73] == 0.0
+            assert v[TEAM_FEATURE_DIM - 1] == 0.0
         except (ImportError, ModuleNotFoundError):
             pytest.skip("feature_engineering not importable")
 
     def test_nan_inf_guard(self):
-        m = ProprietaryTeamMetrics(team_id="t1", team_name="T1",
-                                   adj_offensive_efficiency=float('nan'))
+        m = ProprietaryTeamMetrics(team_id="t1", team_name="T1", adj_offensive_efficiency=float("nan"))
         try:
+            from src.data.features.feature_engineering import TEAM_FEATURE_DIM
+
             v = IncrementalMetricsEngine.metrics_to_team_vector(m)
+            assert v.shape == (TEAM_FEATURE_DIM,)
             # Inf values must never appear in the vector
             assert not np.isinf(v).any()
-            # NaN is expected at indices 71-72 (external ratings) and 74-85
-            # (massey features) when no external data is provided.
-            # Non-rating features (indices 0-70, 73) should not have
-            # unexpected NaN beyond the one we injected (adj_off at idx 0).
-            non_rating_indices = list(range(0, 71)) + [73]
-            nan_in_non_rating = np.isnan(v[non_rating_indices]).sum()
-            # Only the injected NaN at index 0 (adj_offensive_efficiency)
-            assert nan_in_non_rating <= 1, (
-                f"Found {nan_in_non_rating} NaN in non-rating features, "
-                f"expected at most 1 (the injected adj_offensive_efficiency)"
+            # metrics_to_team_vector does not populate external ratings or
+            # Massey features, so every slot is filled from ProprietaryTeamMetrics
+            # or left as 0. Only the injected NaN at index 0 should remain.
+            nan_count = int(np.isnan(v).sum())
+            assert nan_count == 1, (
+                f"Found {nan_count} NaN in team vector, expected exactly 1 (the injected adj_offensive_efficiency)"
             )
+            assert np.isnan(v[0])
         except (ImportError, ModuleNotFoundError):
             pytest.skip("feature_engineering not importable")
 
@@ -1293,6 +1446,7 @@ class TestBuildMatchupVector:
     def test_basic(self):
         try:
             from src.data.features.feature_engineering import TEAM_FEATURE_DIM
+
             v1 = np.ones(TEAM_FEATURE_DIM) * 110
             v2 = np.ones(TEAM_FEATURE_DIM) * 100
             mv = IncrementalMetricsEngine.build_matchup_vector(v1, v2, seed1=1, seed2=16)
@@ -1304,6 +1458,7 @@ class TestBuildMatchupVector:
     def test_no_seeds(self):
         try:
             from src.data.features.feature_engineering import TEAM_FEATURE_DIM
+
             v1 = np.ones(TEAM_FEATURE_DIM) * 105
             v2 = np.ones(TEAM_FEATURE_DIM) * 100
             mv = IncrementalMetricsEngine.build_matchup_vector(v1, v2)
@@ -1315,6 +1470,7 @@ class TestBuildMatchupVector:
 # ---------------------------------------------------------------------------
 # Tests: Elo cross-season carryover (D2)
 # ---------------------------------------------------------------------------
+
 
 class TestEloCrossSeason:
     def test_elo_prior_sets_initial(self):
@@ -1331,16 +1487,28 @@ class TestComputeWAB:
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         # Create games with home/away to test D4 HCA correction
         games_a = [
-            _make_game(game_id="g1", team_id="team_a", opponent_id="team_b",
-                       points=80, opp_points=70, is_home=True, is_neutral=False),
-            _make_game(game_id="g2", team_id="team_a", opponent_id="team_b",
-                       points=65, opp_points=70, is_home=False, is_neutral=False),
+            _make_game(
+                game_id="g1",
+                team_id="team_a",
+                opponent_id="team_b",
+                points=80,
+                opp_points=70,
+                is_home=True,
+                is_neutral=False,
+            ),
+            _make_game(
+                game_id="g2",
+                team_id="team_a",
+                opponent_id="team_b",
+                points=65,
+                opp_points=70,
+                is_home=False,
+                is_neutral=False,
+            ),
         ]
         results = {
-            "team_a": ProprietaryTeamMetrics(team_id="team_a", team_name="A",
-                                             adj_efficiency_margin=10.0),
-            "team_b": ProprietaryTeamMetrics(team_id="team_b", team_name="B",
-                                             adj_efficiency_margin=0.0),
+            "team_a": ProprietaryTeamMetrics(team_id="team_a", team_name="A", adj_efficiency_margin=10.0),
+            "team_b": ProprietaryTeamMetrics(team_id="team_b", team_name="B", adj_efficiency_margin=0.0),
         }
         by_team = {"team_a": games_a}
         engine._compute_wab(results, by_team)
@@ -1362,20 +1530,50 @@ class TestValidateFourFactorsWeights:
         games_b = []
         for i in range(60):
             gid = f"g{i}"
-            ga = _make_game(game_id=gid, team_id="a", opponent_id="b",
-                            points=70+i%20, opp_points=65+i%15,
-                            fgm=25+i%5, fga=55+i%10, fg3m=5+i%4, fg3a=18+i%5,
-                            fta=10+i%5, tov=10+i%3, orb=8+i%3, opp_drb=20+i%4,
-                            opp_fgm=24+i%4, opp_fga=56+i%8, opp_fg3m=5+i%3,
-                            opp_fg3a=17+i%4, opp_fta=9+i%3, opp_tov=11+i%3,
-                            opp_orb=7+i%3)
-            gb = _make_game(game_id=gid, team_id="b", opponent_id="a",
-                            points=65+i%15, opp_points=70+i%20,
-                            fgm=24+i%4, fga=56+i%8, fg3m=5+i%3, fg3a=17+i%4,
-                            fta=9+i%3, tov=11+i%3, orb=7+i%3, opp_drb=22+i%4,
-                            opp_fgm=25+i%5, opp_fga=55+i%10, opp_fg3m=5+i%4,
-                            opp_fg3a=18+i%5, opp_fta=10+i%5, opp_tov=10+i%3,
-                            opp_orb=8+i%3)
+            ga = _make_game(
+                game_id=gid,
+                team_id="a",
+                opponent_id="b",
+                points=70 + i % 20,
+                opp_points=65 + i % 15,
+                fgm=25 + i % 5,
+                fga=55 + i % 10,
+                fg3m=5 + i % 4,
+                fg3a=18 + i % 5,
+                fta=10 + i % 5,
+                tov=10 + i % 3,
+                orb=8 + i % 3,
+                opp_drb=20 + i % 4,
+                opp_fgm=24 + i % 4,
+                opp_fga=56 + i % 8,
+                opp_fg3m=5 + i % 3,
+                opp_fg3a=17 + i % 4,
+                opp_fta=9 + i % 3,
+                opp_tov=11 + i % 3,
+                opp_orb=7 + i % 3,
+            )
+            gb = _make_game(
+                game_id=gid,
+                team_id="b",
+                opponent_id="a",
+                points=65 + i % 15,
+                opp_points=70 + i % 20,
+                fgm=24 + i % 4,
+                fga=56 + i % 8,
+                fg3m=5 + i % 3,
+                fg3a=17 + i % 4,
+                fta=9 + i % 3,
+                tov=11 + i % 3,
+                orb=7 + i % 3,
+                opp_drb=22 + i % 4,
+                opp_fgm=25 + i % 5,
+                opp_fga=55 + i % 10,
+                opp_fg3m=5 + i % 4,
+                opp_fg3a=18 + i % 5,
+                opp_fta=10 + i % 5,
+                opp_tov=10 + i % 3,
+                opp_orb=8 + i % 3,
+            )
             games_a.append(ga)
             games_b.append(gb)
         game_records = {"a": games_a, "b": games_b}
@@ -1393,14 +1591,17 @@ class TestValidateFourFactorsWeights:
 # Tests: _load_cbbpy_team_map
 # ---------------------------------------------------------------------------
 
+
 class TestLoadCBBpyTeamMap:
     @patch("builtins.open", create=True)
     @patch("os.path.exists", return_value=True)
     def test_loads_csv(self, mock_exists, mock_open):
         import src.data.features.proprietary_metrics as pm
+
         # Reset cache
         pm._CBBPY_TEAM_MAP_CACHE = None
         from io import StringIO
+
         csv_content = "season,id,team,location,conference,conference_abb\n2025,1,Duke Blue Devils,Duke,ACC,ACC\n"
         mock_open.return_value.__enter__ = lambda s: StringIO(csv_content)
         mock_open.return_value.__exit__ = MagicMock(return_value=False)
@@ -1413,6 +1614,7 @@ class TestLoadCBBpyTeamMap:
     @patch("os.path.exists", return_value=False)
     def test_missing_file(self, mock_exists):
         import src.data.features.proprietary_metrics as pm
+
         pm._CBBPY_TEAM_MAP_CACHE = None
         result = pm._load_cbbpy_team_map("/nonexistent/path.csv")
         assert result == {}
@@ -1420,6 +1622,7 @@ class TestLoadCBBpyTeamMap:
 
     def test_cache(self):
         import src.data.features.proprietary_metrics as pm
+
         pm._CBBPY_TEAM_MAP_CACHE = {"cached": "value"}
         result = pm._load_cbbpy_team_map()
         assert result == {"cached": "value"}
@@ -1430,6 +1633,7 @@ class TestLoadCBBpyTeamMap:
 # Tests: Date inference in team_games_to_game_records
 # ---------------------------------------------------------------------------
 
+
 class TestDateInference:
     def test_single_date_triggers_inference(self):
         """When all games have same date and >50 records, dates are inferred."""
@@ -1437,14 +1641,16 @@ class TestDateInference:
         for i in range(60):
             tid = f"team_{i % 10}"
             oid = f"team_{(i + 1) % 10}"
-            rows.append({
-                "game_id": f"g{i}",
-                "team_id": tid,
-                "opponent_id": oid,
-                "team_score": 75,
-                "opponent_score": 70,
-                "date": "2025-01-01",
-            })
+            rows.append(
+                {
+                    "game_id": f"g{i}",
+                    "team_id": tid,
+                    "opponent_id": oid,
+                    "team_score": 75,
+                    "opponent_score": 70,
+                    "date": "2025-01-01",
+                }
+            )
         records = team_games_to_game_records(rows, 2025)
         # Dates should be spread across the season, not all 2025-01-01
         unique_dates = set(r.game_date for r in records)
@@ -1455,12 +1661,18 @@ class TestDateInference:
 # Edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestEdgeCases:
     def test_game_record_with_zero_box_scores(self):
         g = GameRecord(
-            game_id="g1", game_date="2025-01-01",
-            team_id="a", team_name="A", opponent_id="b",
-            points=70, opp_points=65, possessions=65,
+            game_id="g1",
+            game_date="2025-01-01",
+            team_id="a",
+            team_name="A",
+            opponent_id="b",
+            points=70,
+            opp_points=65,
+            possessions=65,
         )
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
         ff = engine._four_factors([g])
@@ -1476,9 +1688,10 @@ class TestEdgeCases:
     def test_compute_with_single_team_opponent_missing(self):
         """When opponent is not in results, WAB uses opp_em=0.0."""
         engine = ProprietaryMetricsEngine(require_cutoff_date=False)
-        games = [_make_game(team_id="solo", opponent_id="ghost",
-                            game_id=f"g{i}", game_date=f"2025-01-{i+1:02d}")
-                 for i in range(15)]
+        games = [
+            _make_game(team_id="solo", opponent_id="ghost", game_id=f"g{i}", game_date=f"2025-01-{i + 1:02d}")
+            for i in range(15)
+        ]
         results = engine.compute(games)
         assert "solo" in results
 

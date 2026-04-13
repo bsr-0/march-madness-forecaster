@@ -10,15 +10,25 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Create PR and enable auto-merge
+      - name: Create PR, trigger CI, and enable auto-merge
         run: |
           # Create a PR if one doesn't exist, otherwise get the existing one
           PR_URL=$(gh pr view --json url -q .url 2>/dev/null || gh pr create --fill --base main)
           echo "PR: $PR_URL"
+
+          # Explicitly kick off CI on this branch via workflow_dispatch.
+          # PRs opened by workflows using the default GITHUB_TOKEN do NOT
+          # fire `pull_request` events, so required status checks never
+          # report against the PR and auto-merge stalls on "Waiting for
+          # status to be reported".  Dispatching ci.yml against the branch
+          # ref guarantees the checks post to the PR's head SHA.
+          gh workflow run ci.yml --ref "${GITHUB_REF_NAME}" || true
+
           gh pr merge --squash --delete-branch --auto "$PR_URL"
           gh api repos/${{ github.repository }}/pulls/$(gh pr view "$PR_URL" --json number -q .number)/update-branch -f update_method=merge || true
         env:
