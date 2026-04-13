@@ -48,22 +48,32 @@ proposing new work — most "new ideas" have been tried or ruled out.
 - **Stochastic bracket generation is non-negotiable.** Argmax collapses
   probabilistic models into crowd-following; the contrarian signal lives in
   the probabilities, not the modal bracket.
-- **Opponent model is the load-bearing wall.** Three separate 2026-04-12
-  sessions independently converged: fix opponent model before anything
-  else. `[O1 closed 2026-04-13 (data already existed). O4 closed
-  2026-04-13: independence assumption actually holds — pooled z = −4.15
-  across 4 years; brackets are *less* correlated than IID draws from
-  the empirical marginals. The real error was in the MARGINALS, not the
-  CORRELATION STRUCTURE. See §2 O21.]`
+- **Opponent model is NOT the load-bearing wall (reversed 2026-04-13).**
+  Three 2026-04-12 sessions flagged it as such. 3 rounds of investigation
+  closed the whole branch: O1 (data already existed), O3 (ranking has
+  signal, mean ρ = +0.37), O4 (independence holds, pooled z = −4.15),
+  O10 (no copula needed), **O21 (pool-history blending does not change
+  bracket rankings — null result across 2024-2025)**. The opportunity,
+  if any remains, is in the **base model** (game-outcome probabilities),
+  not opponent modeling. `[see §2 O1/O3/O4/O10/O21; ANALYSIS_O4 and
+  ANALYSIS_O21 for evidence]`
+- **Opponent-model marginals affect absolute P(1st) but not bracket
+  *ranking*.** Spearman ρ between predicted P(1st) and actual score is
+  flat across opponent-model-weight settings w ∈ {0, 0.25, 0.5}, and
+  degrades slightly at w ≥ 0.75. Implication: the choice of opponent
+  model is irrelevant to "which bracket should I submit?" — it only
+  affects "how likely is my bracket to win?" Future opponent-model
+  tuning should be framed around calibration, not ranking. `[added
+  2026-04-13; ANALYSIS_O21_MARGINAL_BLEND.md]`
 - **Check opponent-model marginals before correlations.** The 2026-04-12c
   council diagnosed opponent-model validity as a correlation problem
   without first measuring correlation or marginals. 4-year analysis
   (`ANALYSIS_O4_OPPONENT_CORRELATION.md`) found correlation is fine;
   marginals are off by 5pp (mean absolute) vs ESPN national, up to 18pp
-  on individual teams (ARIZ over-picked 2026, SJU over-picked 2025,
-  UNC over-picked 2024, ALA over-picked 2023). Future "opponent model
-  is wrong" diagnoses should start with marginals — cheaper and was the
-  actual issue. `[added 2026-04-13]`
+  on individual teams. But see O21: the marginal divergence doesn't
+  translate to ranking improvement. Future "opponent model is wrong"
+  diagnoses should start with marginals — cheaper and was the actual
+  issue, even though it didn't move the needle here. `[added 2026-04-13]`
 - **Opponent weights 60 % ESPN picks / 30 % Massey / 10 % seed fallback.**
   `[locked 2026-04-12; MEMORY.md §1]`
 - **F4 cap at 2, not 1.5.** Tuning the cap from a 14-yr historical average is
@@ -153,7 +163,8 @@ on another item.
 | **O1** | Collect all 31 brackets from the actual 2026 pool | Structured dataset of 31 complete brackets (all 63 picks each), saved to repo. | 25 | **`[closed 2026-04-13]`** — `pool_hist_results.json` has 30 brackets as of 2026-04-12T22:47Z; the 31st is the user's own (correctly excluded to avoid a self-referential opponent model). Pattern verified across 2023 (18/19), 2025 (32/33), 2026 (30/31). See §1 Pool strategy: *pool size N ≠ usable opponent count K*. |
 | **O2** | Validate eight local four-factor features against Torvik | Per-season, per-feature r ≥ 0.99, no systematic residual bias by team type / conference / tempo. Prereq: confirm Torvik docs state whether values are raw or opponent-adjusted. | 21 | open |
 | **O3** | Rank-correlation diagnostic on base model | Spearman ρ between predicted-P(1st) rank and actual historical pool placement, top ~10 brackets. If ρ ≈ 0, 2026 #11-ranking failure cannot be attributed between opponent model and base model. | 23, 24 | **`[closed 2026-04-13]`** — executed in `artifacts/rank_correlation_diagnostic.json`. Mean Spearman ρ = +0.37 across 14 years, 12/14 positive, median ρ = +0.46. Optimizer's P(1st) ranking has real directional signal. 2023 = −0.64 is the outlier reversal. |
-| **O21** | Replace ESPN-national marginals with pool-specific marginals in opponent model | Opponent model rebuilt weighting ESPN-national + pool-history marginals (current `POOL_STRATEGY_RECOMMENDATION.md` says 60/30/10 ESPN/Massey/seed; pool-history channel is currently missing). Retrospective pool EV backtested against 2023-2026 to verify switch changes bracket rankings. | surfaced by O4 analysis 2026-04-13 | **open, binding on opponent-model wall** — this is the real error source the council called a "validity threat." Mean 5pp divergence between pool and ESPN marginals; up to 18pp on individual teams. In 3/4 years the pool's top champion pick was not the actual champion. |
+| **O21** | Replace ESPN-national marginals with pool-specific marginals in opponent model | Opponent model rebuilt weighting ESPN-national + pool-history marginals; retrospective pool EV backtested against 2023-2026 to verify switch changes bracket rankings. | surfaced by O4 analysis 2026-04-13 | **`[closed 2026-04-13]`** — **null result.** Backtested 2024-2025 (2023 underpowered, 2026 skipped per O22). Spearman ρ between predicted P(1st) and actual score is **unchanged** at w=0/0.25/0.5 and *slightly decreases* at w≥0.75. Opponent-model marginals affect *absolute* P(1st) but not the *ranking* of pool brackets. Keep locked 60/30/10 ESPN/Massey/seed. See `ANALYSIS_O21_MARGINAL_BLEND.md`. |
+| **O22** | Fix malformed `data/raw/historical/tournament_results_2026.json` | 67 games with correct `round_name` taxonomy: 32×R64, 16×R32, 8×S16, 4×E8, 2×F4, 1×NCG, 4×FF. Current file has 49×NCG and 0×R64, blocking any year-over-year analysis using 2026. | surfaced by O21 analysis 2026-04-13 | **open, data-ops** — blocks reuse of 2026 in historical backtests until re-ingested from upstream. |
 
 ### High-priority validation gaps
 
