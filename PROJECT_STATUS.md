@@ -143,7 +143,7 @@ The following backtest scripts and results informed this pivot:
 
 - `scripts/backtest_pool_value.py` — 17-year pool value backtest (result: negative)
 - `scripts/backtest_by_round.py` — round-segmented analysis (result: SI signals flat)
-- Council transcripts in `council-transcript-*.md` files document the decision process
+- Council decisions and open items: `COUNCIL_LESSONS.md` (25 transcripts consolidated 2026-04-13; raw transcripts deleted — see §3 for session index).
 
 ## Pool Optimization Pipeline (Completed)
 
