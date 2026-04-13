@@ -45,6 +45,7 @@ Settled by evidence, council, or freeze. **Do not propose changing these without
 | Opponent pool size | N=31 | `mc_pool_backtest_n31_results.txt` |
 | Opponent model weights (2026) | 60% ESPN picks / 30% Massey / 10% seed fallback | `POOL_STRATEGY_RECOMMENDATION.md`; `COUNCIL_LESSONS.md` §3 row 25 (2026-04-12c) |
 | Pool-MC `n_tournaments` | `5000` (rank-stable at fixed seed; closes §2 O5) | `src/simulation/pool_competition.py:93`; `tests/test_pool_competition.py::TestRankStability`; `COUNCIL_LESSONS.md` §2 O5 |
+| P(1st) ranking is calibrated vs actual outcomes | Mean Spearman ρ = +0.37 across 14 years (2011-2025 ex 2020); one-sided t-test p = 0.002; 12/14 years positive; actual winner in top half of predicted ordering in 9/14 years. Closes §2 O6. | `artifacts/o6_winner_rank_diagnostic.json`; `tests/test_pool_optimizer_calibration.py`; `COUNCIL_LESSONS.md` §2 O6 |
 
 ### Constants (Tier 1, locked with citations)
 | Constant | Value | Source |
