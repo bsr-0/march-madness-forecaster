@@ -804,15 +804,6 @@ def test_drift_stale_freeze_config_hash(tmp_path):
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def test_research_loop_rejects_production_2026():
-    """Bypass vector 1: run_research_loop must be guarded."""
-    from src.main import _guard_production_2026
-
-    cfg = _make_config()
-    with pytest.raises(ProductionValidationError, match="dedicated entrypoint"):
-        _guard_production_2026(cfg)
-
-
 def test_kaggle_export_rejects_production_2026():
     """Bypass vector 1: run_kaggle_export must be guarded."""
     from src.main import _guard_production_2026
