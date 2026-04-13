@@ -114,11 +114,23 @@ def blend_opponent_model(
     espn_weight: float = 0.6,
     ratings_weight: float = 0.3,
     seed_weight: float = 0.1,
+    pool_history_picks: Optional[Dict[str, Dict[str, float]]] = None,
+    pool_history_weight: float = 0.0,
 ) -> Dict[str, Dict[str, float]]:
     """Blend multiple pick-distribution sources into a single opponent model.
 
     When ``espn_picks`` is None the ESPN weight is redistributed:
     ratings gets 0.75, seed gets 0.25.
+
+    When ``pool_history_picks`` is provided and ``pool_history_weight`` > 0,
+    the final distribution is a convex combination::
+
+        final = (1 - w_pool) * espn_blend + w_pool * pool_history
+
+    where ``espn_blend`` is the existing ratings/ESPN/seed blend.  This
+    addresses FP2: the ESPN distribution (~20M entries) is a poor proxy
+    for a ~30-entry pool, so callers can override with actual pool-history
+    data while keeping some smoothing weight on the public prior.
 
     Args:
         ratings_picks: Ratings-derived picks (from ``ratings_to_pick_distribution``).
@@ -127,10 +139,24 @@ def blend_opponent_model(
         espn_weight: Weight for ESPN data when available.
         ratings_weight: Weight for ratings-derived picks.
         seed_weight: Weight for seed-based picks.
+        pool_history_picks: Empirical per-team pick distribution built from
+            the actual pool's prior-year brackets (see
+            ``src.simulation.pool_history_opponent_model``).  Optional.
+        pool_history_weight: Convex weight on ``pool_history_picks``
+            against the ESPN-based blend.  Must be in [0, 1].  Default 0
+            (backwards-compatible: pool history ignored).
 
     Returns:
         Blended team_id -> {round_name: pick_probability}.
     """
+    if not 0.0 <= pool_history_weight <= 1.0:
+        raise ValueError(f"pool_history_weight must be in [0, 1], got {pool_history_weight}")
+    if pool_history_weight > 0 and pool_history_picks is None:
+        raise ValueError(
+            "pool_history_weight > 0 but pool_history_picks is None — "
+            "load pool history via src.simulation.pool_history_opponent_model."
+        )
+
     if espn_picks is None:
         w_espn = 0.0
         w_ratings = 0.75
@@ -143,16 +169,26 @@ def blend_opponent_model(
     all_teams = set(ratings_picks) | set(seed_picks)
     if espn_picks:
         all_teams |= set(espn_picks)
+    if pool_history_picks:
+        all_teams |= set(pool_history_picks)
+
+    w_pool = pool_history_weight
+    w_espn_blend = 1.0 - w_pool
 
     result: Dict[str, Dict[str, float]] = {}
     for team_id in all_teams:
         team_picks: Dict[str, float] = {}
         for rnd in ROUNDS:
-            val = 0.0
-            val += w_ratings * ratings_picks.get(team_id, {}).get(rnd, 0.001)
-            val += w_seed * seed_picks.get(team_id, {}).get(rnd, 0.001)
+            espn_blend = 0.0
+            espn_blend += w_ratings * ratings_picks.get(team_id, {}).get(rnd, 0.001)
+            espn_blend += w_seed * seed_picks.get(team_id, {}).get(rnd, 0.001)
             if espn_picks:
-                val += w_espn * espn_picks.get(team_id, {}).get(rnd, 0.001)
+                espn_blend += w_espn * espn_picks.get(team_id, {}).get(rnd, 0.001)
+            if pool_history_picks is not None and w_pool > 0:
+                pool_val = pool_history_picks.get(team_id, {}).get(rnd, 0.001)
+                val = w_espn_blend * espn_blend + w_pool * pool_val
+            else:
+                val = espn_blend
             team_picks[rnd] = val
         result[team_id] = team_picks
 
@@ -181,6 +217,9 @@ def build_opponent_model(
     picks_dir: Optional[str] = None,
     require_espn_picks: bool = False,
     require_ratings: bool = False,
+    pool_history_path: Optional[str] = None,
+    pool_history_weight: float = 1.0,
+    pool_history_laplace_alpha: float = 0.5,
 ) -> Dict[str, Dict[str, float]]:
     """High-level convenience: build a blended opponent pick distribution.
 
@@ -197,17 +236,33 @@ def build_opponent_model(
             this so missing real public picks fail loudly instead of
             silently redistributing weight to seed/ratings.
         require_ratings: If True, raise RuntimeError when no external
-            rating systems load. Pool-optimizer callers set this so the
-            opponent model can't silently degrade to seed-only.
+            rating systems loaded for ``year``.
+        pool_history_path: Optional path to ``pool_hist_results.json``.
+            When supplied, the actual pool's empirical pick distribution
+            is loaded for ``year`` and convex-blended into the result
+            (see ``pool_history_weight``).  Addresses FP2: ESPN is a
+            poor proxy for small pools.
+        pool_history_weight: Weight in [0, 1] for pool history vs the
+            ESPN-based blend.  Only used when ``pool_history_path`` is
+            provided.  Default 1.0 (full replacement — trust the user's
+            explicit pool data).  Set to e.g. 0.75 to retain 25% ESPN
+            smoothing on top.
+        pool_history_laplace_alpha: Laplace pseudocount for unseen
+            teams in the pool-history distribution.  Default 0.5
+            (Jeffreys prior).
 
     Returns:
         Ready-to-use opponent pick distribution: team_id -> {round: prob}.
 
     Raises:
         FileNotFoundError: If ``require_espn_picks`` is True and no
-            archived ESPN picks file exists for ``year``.
+            archived ESPN picks file exists for ``year``, or if
+            ``pool_history_path`` is set and the file is missing.
+        KeyError: If ``pool_history_path`` is set but has no entry for
+            ``year``.
         RuntimeError: If ``require_ratings`` is True and no external
             rating systems loaded for ``year``.
+        ValueError: If ``pool_history_weight`` is outside [0, 1].
     """
     # 1. Try external ratings.
     loader = ExternalRatingsLoader(cache_dir)
@@ -247,4 +302,34 @@ def build_opponent_model(
     if ratings_picks is None:
         ratings_picks = seed_picks
 
-    return blend_opponent_model(ratings_picks, espn_picks, seed_picks)
+    # 5. Optional pool-history override.  Imported lazily so the default
+    # path (no pool history) does not pay the import cost or require the
+    # module to be importable in minimal environments.
+    pool_history_picks = None
+    effective_pool_weight = 0.0
+    if pool_history_path is not None:
+        from src.simulation.pool_history_opponent_model import (
+            load_pool_history_picks,
+        )
+
+        pool_history_picks = load_pool_history_picks(
+            pool_history_path,
+            year,
+            seeds,
+            laplace_alpha=pool_history_laplace_alpha,
+        )
+        effective_pool_weight = pool_history_weight
+        logger.info(
+            "Blending pool-history opponent model for %d from %s (weight=%.2f)",
+            year,
+            pool_history_path,
+            effective_pool_weight,
+        )
+
+    return blend_opponent_model(
+        ratings_picks,
+        espn_picks,
+        seed_picks,
+        pool_history_picks=pool_history_picks,
+        pool_history_weight=effective_pool_weight,
+    )
