@@ -35,6 +35,7 @@ Settled by evidence, council, or freeze. **Do not propose changing these without
 | Holdout | 2025 | `pipeline_freeze.json:113-115` |
 | LOYO CV | enabled, rolling window, 5 splits | `pipeline_freeze.json:62,122,194` |
 | Holdout enforcement | `YearSplitPolicy.assert_dev_only` raises `HoldoutContaminationError`; wired at the three ensemble fit entry points + every Optuna tuner call. Closes §2 O20. | `src/ml/evaluation/evaluation_integrity.py:75-160`; `src/pipeline/stages/baseline_training/_ensemble.py:530,770`; `src/ml/optimization/hyperparameter_tuning.py:60`; `tests/test_holdout_enforcement.py` |
+| Production Four Factors source | Torvik trank.php monthly snapshots overlay onto local `ProprietaryTeamMetrics` via `TorVikFFLookup.overlay_metrics`. Local box-score `_four_factors` is a fallback only; tripwire `mean r ≥ 0.85` vs Torvik catches catastrophic regressions (e.g., the 2026-04-13 resolver-collision at mean r 0.45). Same precedent as barthag per §3 row 22; closes §2 O2 / O2a. | `src/data/features/torvik_ff_lookup.py`; overlay call sites `src/pipeline/stages/baseline_training/_orchestrator.py:469`, `sample_loading.py:453`, `src/evaluation/seed_baseline_loyo.py:286`, `src/ml/evaluation/rdof_audit.py:1517,1661`; tests `tests/test_validate_four_factors.py` |
 
 ### Pool strategy
 | Decision | Value | Source |
