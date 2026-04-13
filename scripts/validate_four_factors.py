@@ -116,15 +116,49 @@ def compute_boxscore_ff(year: int, cutoff_date: str) -> Dict[str, dict]:
     engine = ProprietaryMetricsEngine(require_cutoff_date=True)
     metrics = engine.compute(game_records, cutoff_date=cutoff_date)
 
-    result = {}
-    for tid, m in metrics.items():
+    # Count games per raw team_id so we can break resolver collisions in
+    # favour of the team with the most games — the "real" NCAA Division-I
+    # entry, not a small D3/affiliate team that happens to share a name
+    # prefix.
+    from collections import defaultdict
+
+    games_per_tid: Dict[str, int] = defaultdict(int)
+    for rec in game_records:
+        if getattr(rec, "has_box_score", True):
+            games_per_tid[rec.team_id] += 1
+
+    # Iterate in descending game-count order so that when two raw ids
+    # resolve to the same canonical, the larger-sample team wins.
+    # Otherwise: e.g. `vermont_state_lyndon_hornets` (1 game) was
+    # overwriting `vermont_catamounts` (35 games) because both resolve
+    # to `vermont` via the resolver's `containment` method. See
+    # COUNCIL_LESSONS.md §2 O2 / O2a.
+    sorted_tids = sorted(
+        metrics.keys(),
+        key=lambda t: (-games_per_tid.get(t, 0), t),
+    )
+
+    result: Dict[str, dict] = {}
+    for tid in sorted_tids:
+        m = metrics[tid]
         ff = {field: getattr(m, field, 0.0) for field in FF_FIELDS}
         if all(abs(ff[f]) < 1e-6 for f in FF_FIELDS[:4]):
             continue
-        # Resolve mascot-suffixed IDs (e.g. "akron_zips" -> "akron")
+        # Resolve mascot-suffixed IDs (e.g. "akron_zips" -> "akron") ONLY
+        # via deterministic high-confidence methods. The resolver's
+        # fuzzy `containment` method (conf ≈ 0.9) collapses unrelated
+        # teams: `tennessee_wesleyan_bulldogs` -> `tennessee` would
+        # silently overwrite the real Tennessee Volunteers otherwise.
         match = _resolver.resolve(tid.replace("_", " "))
-        canonical = match.canonical_id if match else tid
-        result[canonical] = ff
+        if match is not None and match.method in ("exact_id", "prefix_strip"):
+            canonical = match.canonical_id
+        else:
+            canonical = tid
+        # Belt-and-suspenders: first writer wins within this
+        # game-count-sorted iteration. A subsequent smaller-sample team
+        # whose canonical collides with one already placed is ignored.
+        if canonical not in result:
+            result[canonical] = ff
     return result
 
 
@@ -384,7 +418,9 @@ def main():
             rs = [r["features"][field]["r"] for r in results]
             maes = [r["features"][field]["mae"] for r in results]
             passes = sum(1 for r in results if r["features"][field]["passed"])
-            print(f"  {label:<12s} {_mean(rs):>8.5f} {min(rs):>8.5f} {_mean(maes):>9.5f} {passes}/{len(results):>5s}")
+            print(
+                f"  {label:<12s} {_mean(rs):>8.5f} {min(rs):>8.5f} {_mean(maes):>9.5f} {passes:>3d}/{len(results):<3d}"
+            )
 
     if all_ok:
         print(f"\nALL GATES PASSED across {len(results)} years.")
