@@ -44,8 +44,12 @@ Algorithm
 Computational complexity
 ------------------------
 O(n_tournaments × (n_opponents + n_model_brackets) × 63) for scoring.
-With defaults (1000 tournaments × 200 opponents × 63 games) this is
-~12.6M operations — completes in <2 seconds on modern hardware.
+With defaults (5000 tournaments × 200 opponents × 63 games) this is
+~63M operations — completes in ~10 seconds on modern hardware.
+n_tournaments=5000 is the MEMORY.md §1 Pool-strategy lock (see
+COUNCIL_LESSONS.md §2 O5): at 1000 sims the rank order of the top-20
+brackets was unstable under small input perturbation; 5000 gives
+sampling SE ≈ 0.7% on P(top-5%) and is rank-order-stable.
 """
 
 from __future__ import annotations
@@ -68,6 +72,7 @@ GAMES_PER_ROUND = [32, 16, 8, 4, 2, 1]  # 63 total
 # Configuration
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class PoolSimulationConfig:
     """Configuration for pool competition simulation.
@@ -85,19 +90,27 @@ class PoolSimulationConfig:
         upset_bonus_enabled: Whether to add seed-difference bonus points.
     """
 
-    n_tournaments: int = 1000
+    n_tournaments: int = 5000  # locked per MEMORY.md §1 / COUNCIL_LESSONS §2 O5
     n_opponents: int = 200
     noise_std: float = 0.16
     random_seed: int = 42
-    scoring_system: Dict[str, int] = field(default_factory=lambda: {
-        "R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320,
-    })
+    scoring_system: Dict[str, int] = field(
+        default_factory=lambda: {
+            "R64": 10,
+            "R32": 20,
+            "S16": 40,
+            "E8": 80,
+            "F4": 160,
+            "CHAMP": 320,
+        }
+    )
     upset_bonus_enabled: bool = False
 
 
 # ---------------------------------------------------------------------------
 # Result structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class PercentileEstimate:
@@ -107,12 +120,12 @@ class PercentileEstimate:
     normal approximation for probabilities near 0 or 1.
     """
 
-    label: str                # e.g. "top_1pct"
-    threshold: float          # e.g. 0.01
-    probability: float        # Point estimate: P(finish in top threshold)
-    ci_lower: float           # Lower bound of 95% CI
-    ci_upper: float           # Upper bound of 95% CI
-    n_samples: int            # Number of tournament simulations used
+    label: str  # e.g. "top_1pct"
+    threshold: float  # e.g. 0.01
+    probability: float  # Point estimate: P(finish in top threshold)
+    ci_lower: float  # Lower bound of 95% CI
+    ci_upper: float  # Upper bound of 95% CI
+    n_samples: int  # Number of tournament simulations used
 
     def to_dict(self) -> Dict:
         return {
@@ -134,7 +147,7 @@ class BracketPerformance:
     mean_score: float
     median_score: float
     std_score: float
-    mean_rank: float               # Average rank (1 = best)
+    mean_rank: float  # Average rank (1 = best)
     median_rank: float
     percentile_estimates: List[PercentileEstimate] = field(default_factory=list)
     rank_distribution: Dict[str, float] = field(default_factory=dict)
@@ -149,12 +162,8 @@ class BracketPerformance:
             "std_score": round(self.std_score, 2),
             "mean_rank": round(self.mean_rank, 2),
             "median_rank": round(self.median_rank, 2),
-            "percentile_estimates": {
-                pe.label: pe.to_dict() for pe in self.percentile_estimates
-            },
-            "rank_distribution": {
-                k: round(v, 4) for k, v in self.rank_distribution.items()
-            },
+            "percentile_estimates": {pe.label: pe.to_dict() for pe in self.percentile_estimates},
+            "rank_distribution": {k: round(v, 4) for k, v in self.rank_distribution.items()},
         }
 
 
@@ -191,15 +200,9 @@ class PoolSimulationResult:
             return {}
         best = max(
             self.bracket_performances,
-            key=lambda bp: (
-                bp.percentile_estimates[0].probability
-                if bp.percentile_estimates
-                else 0.0
-            ),
+            key=lambda bp: bp.percentile_estimates[0].probability if bp.percentile_estimates else 0.0,
         )
-        return {
-            pe.label: pe.probability for pe in best.percentile_estimates
-        }
+        return {pe.label: pe.probability for pe in best.percentile_estimates}
 
     def get_detailed_win_probabilities(self) -> Dict[str, Dict]:
         """Return detailed win probabilities with CIs for each bracket."""
@@ -217,15 +220,14 @@ class PoolSimulationResult:
             "convergence_diagnostic": round(self.convergence_diagnostic, 4),
             "n_tournaments": self.config.n_tournaments,
             "n_opponents": self.config.n_opponents,
-            "bracket_performances": [
-                bp.to_dict() for bp in self.bracket_performances
-            ],
+            "bracket_performances": [bp.to_dict() for bp in self.bracket_performances],
         }
 
 
 # ---------------------------------------------------------------------------
 # Opponent bracket generation
 # ---------------------------------------------------------------------------
+
 
 def generate_opponent_brackets(
     n_opponents: int,
@@ -305,8 +307,12 @@ def generate_opponent_brackets(
                 t1, t2 = current_teams[g], current_teams[g + 1]
 
                 p_pick_t1 = _get_pick_prob(
-                    t1, t2, round_name, pick_distribution,
-                    matchup_probs, seeds,
+                    t1,
+                    t2,
+                    round_name,
+                    pick_distribution,
+                    matchup_probs,
+                    seeds,
                 )
 
                 # Apply chalk correlation shift in logit space
@@ -379,6 +385,7 @@ def _get_pick_prob(
 # ---------------------------------------------------------------------------
 # Tournament outcome simulation
 # ---------------------------------------------------------------------------
+
 
 def simulate_tournament_outcomes(
     n_tournaments: int,
@@ -458,6 +465,7 @@ def simulate_tournament_outcomes(
 # Bracket scoring
 # ---------------------------------------------------------------------------
 
+
 def build_scoring_vector(
     scoring_system: Dict[str, int],
 ) -> np.ndarray:
@@ -470,7 +478,7 @@ def build_scoring_vector(
     for round_idx, round_name in enumerate(ROUND_NAMES):
         n_games = GAMES_PER_ROUND[round_idx]
         pts = scoring_system.get(round_name, 0)
-        points[idx:idx + n_games] = pts
+        points[idx : idx + n_games] = pts
         idx += n_games
     return points
 
@@ -532,6 +540,7 @@ def score_brackets_against_outcome(
 # Confidence intervals
 # ---------------------------------------------------------------------------
 
+
 def wilson_score_interval(
     successes: int,
     trials: int,
@@ -557,9 +566,7 @@ def wilson_score_interval(
     p_hat = successes / trials
     denom = 1.0 + z * z / trials
     center = (p_hat + z * z / (2.0 * trials)) / denom
-    margin = z * math.sqrt(
-        p_hat * (1.0 - p_hat) / trials + z * z / (4.0 * trials * trials)
-    ) / denom
+    margin = z * math.sqrt(p_hat * (1.0 - p_hat) / trials + z * z / (4.0 * trials * trials)) / denom
 
     return p_hat, max(0.0, center - margin), min(1.0, center + margin)
 
@@ -567,6 +574,7 @@ def wilson_score_interval(
 # ---------------------------------------------------------------------------
 # Main simulator
 # ---------------------------------------------------------------------------
+
 
 class PoolCompetitionSimulator:
     """Simulate bracket pool competition to estimate win probabilities.
@@ -647,9 +655,11 @@ class PoolCompetitionSimulator:
         pool_size = n_opp + n_model
 
         logger.info(
-            "Pool competition simulation: %d tournaments × %d opponents "
-            "+ %d model brackets = %d effective pool size",
-            n_tourn, n_opp, n_model, pool_size,
+            "Pool competition simulation: %d tournaments × %d opponents + %d model brackets = %d effective pool size",
+            n_tourn,
+            n_opp,
+            n_model,
+            pool_size,
         )
 
         # --- Step 1: Generate opponent brackets ---
@@ -684,7 +694,9 @@ class PoolCompetitionSimulator:
 
         for sim in range(n_tourn):
             scores = score_brackets_against_outcome(
-                all_brackets, outcomes[sim], scoring_vector,
+                all_brackets,
+                outcomes[sim],
+                scoring_vector,
             )
 
             # Add upset bonus if enabled
@@ -759,14 +771,16 @@ class PoolCompetitionSimulator:
                 successes = int(np.sum(b_ranks <= threshold_rank))
                 prob, ci_lo, ci_hi = wilson_score_interval(successes, n_tourn)
                 label = f"top_{int(pct * 100)}pct" if pct >= 0.01 else f"top_{pct:.3f}"
-                pe_list.append(PercentileEstimate(
-                    label=label,
-                    threshold=pct,
-                    probability=prob,
-                    ci_lower=ci_lo,
-                    ci_upper=ci_hi,
-                    n_samples=n_tourn,
-                ))
+                pe_list.append(
+                    PercentileEstimate(
+                        label=label,
+                        threshold=pct,
+                        probability=prob,
+                        ci_lower=ci_lo,
+                        ci_upper=ci_hi,
+                        n_samples=n_tourn,
+                    )
+                )
 
             # Rank distribution buckets
             rank_dist = {}
@@ -778,9 +792,7 @@ class PoolCompetitionSimulator:
                 ("top_50pct", (1, max(1, pool_size // 2))),
                 ("bottom_50pct", (max(1, pool_size // 2) + 1, pool_size)),
             ]:
-                rank_dist[bucket_label] = float(
-                    np.mean((b_ranks >= lo) & (b_ranks <= hi))
-                )
+                rank_dist[bucket_label] = float(np.mean((b_ranks >= lo) & (b_ranks <= hi)))
 
             perf = BracketPerformance(
                 bracket_id=bracket_id,
@@ -807,8 +819,7 @@ class PoolCompetitionSimulator:
         # of the best bracket. Values < 0.3 indicate adequate convergence.
         if result.bracket_performances:
             best_perf = next(
-                (bp for bp in result.bracket_performances
-                 if bp.bracket_id == best_id),
+                (bp for bp in result.bracket_performances if bp.bracket_id == best_id),
                 result.bracket_performances[0],
             )
             if best_perf.percentile_estimates:
@@ -817,11 +828,10 @@ class PoolCompetitionSimulator:
                     se = (pe.ci_upper - pe.ci_lower) / (2 * 1.96)
                     result.convergence_diagnostic = se / pe.probability
                 else:
-                    result.convergence_diagnostic = float('inf')
+                    result.convergence_diagnostic = float("inf")
 
         logger.info(
-            "Pool simulation complete: best_bracket=%s, "
-            "opponent_mean_score=%.1f±%.1f, convergence=%.3f",
+            "Pool simulation complete: best_bracket=%s, opponent_mean_score=%.1f±%.1f, convergence=%.3f",
             result.best_bracket_id,
             result.opponent_mean_score,
             result.opponent_score_std,
@@ -852,7 +862,8 @@ class PoolCompetitionSimulator:
             if len(winners) != 63:
                 logger.warning(
                     "Model bracket %d has %d winners (expected 63), padding with False",
-                    b_idx, len(winners),
+                    b_idx,
+                    len(winners),
                 )
 
             # Replay the bracket structure to determine which "slot" each
@@ -872,7 +883,7 @@ class PoolCompetitionSimulator:
 
                     if winner_idx < len(winners):
                         winner = winners[winner_idx]
-                        result[b_idx, game_idx] = (winner == t1)
+                        result[b_idx, game_idx] = winner == t1
                         next_round_teams.append(winner)
                     else:
                         # Fallback: pick t1
@@ -924,6 +935,7 @@ class PoolCompetitionSimulator:
 # Convenience factory
 # ---------------------------------------------------------------------------
 
+
 def run_pool_simulation(
     first_round_matchups: List[str],
     matchup_probs: Dict[Tuple[str, str], float],
@@ -934,7 +946,7 @@ def run_pool_simulation(
     pool_size: int = 100,
     scoring_system: Optional[Dict[str, int]] = None,
     target_percentiles: Optional[List[float]] = None,
-    n_tournaments: int = 1000,
+    n_tournaments: int = 5000,  # locked per MEMORY.md §1 / COUNCIL_LESSONS §2 O5
     noise_std: float = 0.16,
     random_seed: int = 42,
     upset_bonus_enabled: bool = False,
@@ -967,9 +979,14 @@ def run_pool_simulation(
         n_opponents=n_opponents,
         noise_std=noise_std,
         random_seed=random_seed,
-        scoring_system=scoring_system or {
-            "R64": 10, "R32": 20, "S16": 40,
-            "E8": 80, "F4": 160, "CHAMP": 320,
+        scoring_system=scoring_system
+        or {
+            "R64": 10,
+            "R32": 20,
+            "S16": 40,
+            "E8": 80,
+            "F4": 160,
+            "CHAMP": 320,
         },
         upset_bonus_enabled=upset_bonus_enabled,
     )

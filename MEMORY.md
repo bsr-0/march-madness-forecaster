@@ -42,6 +42,7 @@ Settled by evidence, council, or freeze. **Do not propose changing these without
 | Aggressive alt | `e8_first_tv` (10× seed P(1st)) | `POOL_STRATEGY_RECOMMENDATION.md:18-29` |
 | Opponent pool size | N=31 | `mc_pool_backtest_n31_results.txt` |
 | Opponent model weights (2026) | 60% ESPN picks / 30% Massey / 10% seed fallback | `POOL_STRATEGY_RECOMMENDATION.md`; `COUNCIL_LESSONS.md` §3 row 25 (2026-04-12c) |
+| Pool-MC `n_tournaments` | `5000` (rank-stable at fixed seed; closes §2 O5) | `src/simulation/pool_competition.py:93`; `tests/test_pool_competition.py::TestRankStability`; `COUNCIL_LESSONS.md` §2 O5 |
 
 ### Constants (Tier 1, locked with citations)
 | Constant | Value | Source |

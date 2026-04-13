@@ -52,15 +52,19 @@ def _ensure_ml_imports():
             brier_decomposition,
             brier_skill_score_vs_seeds,
         )
+
         _brier_decomposition = brier_decomposition
         _brier_skill_score_vs_seeds = brier_skill_score_vs_seeds
     if _round_weighted_brier is None:
         try:
             from ..ml.calibration.brier_optimal import round_weighted_brier
+
             _round_weighted_brier = round_weighted_brier
         except ImportError:
+
             def _fallback_rw_brier(p, o, **kw):
                 return float(np.mean((p - o) ** 2))
+
             _round_weighted_brier = _fallback_rw_brier
 
 
@@ -71,6 +75,7 @@ ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 3
 # ---------------------------------------------------------------------------
 # Tier dataclasses
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class BracketEVMetrics:
@@ -227,15 +232,13 @@ class EvaluationSuiteResult:
             p10 = self.bracket_ev.pool_top10_probability
             conv = "converged" if self.bracket_ev.simulation_converged else "NOT converged"
             lines.append(
-                f"  Tier 1 (Pool EV):    P(top1%)={p_win:.4f}  P(top5%)={p5:.4f}  "
-                f"P(top10%)={p10:.4f}  [{conv}]"
+                f"  Tier 1 (Pool EV):    P(top1%)={p_win:.4f}  P(top5%)={p5:.4f}  P(top10%)={p10:.4f}  [{conv}]"
             )
             if self.bracket_ev.mean_bracket_score is not None:
                 lines.append(f"                       Mean ESPN score={self.bracket_ev.mean_bracket_score:.1f}")
         else:
             lines.append(
-                f"  Tier 1 (Proxy):      RW-Brier={self.bracket_ev.round_weighted_brier:.6f}  "
-                f"[simulation not run]"
+                f"  Tier 1 (Proxy):      RW-Brier={self.bracket_ev.round_weighted_brier:.6f}  [simulation not run]"
             )
 
         # Tier 2
@@ -260,6 +263,7 @@ class EvaluationSuiteResult:
 # ---------------------------------------------------------------------------
 # Main evaluation function (Tiers 2+3 always, Tier 1 proxy)
 # ---------------------------------------------------------------------------
+
 
 def evaluate(
     predictions: np.ndarray,
@@ -305,8 +309,11 @@ def evaluate(
 
     decomp = _brier_decomposition(predictions, outcomes)
     bss = _brier_skill_score_vs_seeds(
-        predictions, outcomes,
-        seed_probs=seed_probs, seeds1=seeds1, seeds2=seeds2,
+        predictions,
+        outcomes,
+        seed_probs=seed_probs,
+        seeds1=seeds1,
+        seeds2=seeds2,
     )
 
     brier_metrics = BrierMetrics(
@@ -321,7 +328,9 @@ def evaluate(
 
     # --- Tier 1: Bracket EV proxy (round-weighted Brier) ---
     rw_brier = _round_weighted_brier(
-        predictions, outcomes, round_labels=round_labels,
+        predictions,
+        outcomes,
+        round_labels=round_labels,
     )
 
     round_briers: Dict[str, float] = {}
@@ -329,9 +338,7 @@ def evaluate(
         for round_name in set(round_labels):
             mask = np.array([r == round_name for r in round_labels])
             if mask.sum() > 0:
-                round_briers[round_name] = float(
-                    np.mean((predictions[mask] - outcomes[mask]) ** 2)
-                )
+                round_briers[round_name] = float(np.mean((predictions[mask] - outcomes[mask]) ** 2))
 
     bracket_ev = BracketEVMetrics(
         round_weighted_brier=rw_brier,
@@ -361,6 +368,7 @@ def evaluate(
 # Full simulation-based Tier 1 (Pool EV)
 # ---------------------------------------------------------------------------
 
+
 def simulate_bracket_ev(
     matchup_probs: Dict[Tuple[str, str], float],
     first_round_matchups: List[str],
@@ -368,7 +376,7 @@ def simulate_bracket_ev(
     model_brackets: List[Dict[str, Any]],
     pick_distribution: Optional[Dict[str, Dict[str, float]]] = None,
     pool_size: int = 100,
-    n_tournaments: int = 1000,
+    n_tournaments: int = 5000,  # locked per MEMORY.md §1 / COUNCIL_LESSONS §2 O5
     n_opponents: int = 200,
     noise_std: float = 0.16,
     scoring_system: Optional[Dict[str, int]] = None,
@@ -485,9 +493,7 @@ def _build_seed_based_picks(seeds: Dict[str, int]) -> Dict[str, Dict[str, float]
     for s in range(9, 17):
         mirror = 17 - s
         mirror_rates = _SEED_ADVANCE.get(mirror, _SEED_ADVANCE[8])
-        _SEED_ADVANCE[s] = {
-            r: max(0.001, v * 0.3) for r, v in mirror_rates.items()
-        }
+        _SEED_ADVANCE[s] = {r: max(0.001, v * 0.3) for r, v in mirror_rates.items()}
 
     picks: Dict[str, Dict[str, float]] = {}
     for team_id, seed in seeds.items():
@@ -499,6 +505,7 @@ def _build_seed_based_picks(seeds: Dict[str, int]) -> Dict[str, Dict[str, float]
 # ---------------------------------------------------------------------------
 # Fast path for inner loops (Optuna, stacking weight optimization)
 # ---------------------------------------------------------------------------
+
 
 def evaluate_fast(
     predictions: np.ndarray,
@@ -529,6 +536,7 @@ def evaluate_fast(
 # ---------------------------------------------------------------------------
 # Enforcement
 # ---------------------------------------------------------------------------
+
 
 def assert_hierarchy_enforced(result: EvaluationSuiteResult) -> None:
     """Validate that all required metrics are present and non-degenerate.
@@ -565,6 +573,5 @@ def assert_ev_computed(result: EvaluationSuiteResult) -> None:
         )
     if result.bracket_ev.simulation_converged is False:
         logger.warning(
-            "Tier 1 warning: Pool simulation did NOT converge. "
-            "Consider increasing n_tournaments for tighter CIs."
+            "Tier 1 warning: Pool simulation did NOT converge. Consider increasing n_tournaments for tighter CIs."
         )
