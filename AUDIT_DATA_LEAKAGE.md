@@ -1,158 +1,93 @@
 # Data Leakage Audit Report
 
-**Date:** 2026-03-24
-**Scope:** Full codebase audit of temporal leakage, target leakage, and data contamination vectors
-**Auditor:** Automated (Claude)
+**Date:** 2026-03-24 • **Scope:** Full codebase audit of temporal leakage, target leakage, and data contamination vectors • **Compacted:** 2026-04-13.
+
+Production 2026 risk: **LOW** — critical temporal boundaries enforced, `strict_leakage_mode=true`, live scraping disabled. Two moderate issues found; both resolved. Six low-risk observations (2027-relevant) preserved below.
+
+**Cross-references:** settled lessons live in `COUNCIL_LESSONS.md §1 Validation`; open items in `COUNCIL_LESSONS.md §2`; locked decisions in `MEMORY.md §1`.
 
 ---
 
-## Executive Summary
+## Resolved Issues
 
-The March Madness Forecaster codebase implements **robust, multi-layered leakage controls**. The production pipeline (2026) is well-protected with `strict_leakage_mode=true`, mandatory cutoff dates, point-in-time feature engineering, and frozen configuration governance. Two actionable issues were found, along with several areas warranting ongoing vigilance.
+### Issue #1 (MODERATE, RESOLVED 2026-03-31) — Calibration fallback fit-and-eval on same data
+**Where:** `src/pipeline/stages/calibration.py:388-392`
+**Was:** insufficient samples → fit and evaluate on identical data (`p_fit, p_eval = p_arr, p_arr`), inflating metrics.
+**Fix:** fallback now sets `p_eval = None`, `use_oos_eval = False`; evaluation is skipped rather than faked. Primary production path (450+ tournament games) uses nested calibration (`calibration.py:361-374`) and never hits the fallback.
 
-**Critical issues found:** 0
-**Moderate issues found:** 2 (both resolved — see below)
-**Low-risk observations:** 6
-
----
-
-## Issue #1 (MODERATE): Calibration Fallback Fits and Evaluates on Same Data — RESOLVED
-
-**File:** `src/pipeline/stages/calibration.py`, lines 388-392
-
-**Description:** When calibration has insufficient samples for a proper train/test split, the code *previously* fell back to fitting and evaluating on identical data (`p_fit, p_eval = p_arr, p_arr`).
-
-**Resolution (2026-03-31):** The fallback now sets `p_eval = None` and `use_oos_eval = False`, skipping evaluation entirely when samples are too few rather than reporting inflated metrics:
-
-```python
-else:
-    # Too few samples for a meaningful split; fit on all
-    # but do NOT evaluate on the same data (prevents inflated metrics).
-    p_fit, p_eval = p_arr, None
-    y_fit, y_eval = y_arr, None
-    use_oos_eval = False
-```
-
-Additionally, the primary production path (multi-year training with 450+ tournament games) uses nested calibration: fit on historical tournament data, evaluate on current-year validation samples (`calibration.py:361-374`). The fallback is only triggered with very small sample counts.
+### Issue #2 (MODERATE, RESOLVED 2026-03-31) — `IsotonicCalibrator.fit_calibrate()` returned in-sample predictions
+**Where:** `src/ml/calibration/calibration.py:233-269`
+**Fix:** method now uses leave-one-out cross-validation, producing honest OOS predictions. Used via `src/pipeline/stages/probability_calibration.py:185`. Production 2026 config uses temperature scaling, not isotonic — so this path is cold but correct.
 
 ---
 
-## Issue #2 (MODERATE): `IsotonicCalibrator.fit_calibrate()` Returns In-Sample Predictions — RESOLVED
+## Verified Protections (as of compaction date)
 
-**File:** `src/ml/calibration/calibration.py`, lines 233-269
+### Feature engineering
+| Protection | Location |
+|---|---|
+| `shift(1)` on all rolling/expanding aggregates | `src/data/features/materialization.py:740-770` |
+| Mandatory `cutoff_date` in `ProprietaryMetricsEngine` | `src/data/features/proprietary_metrics.py:336-381` |
+| Point-in-time `compute_as_of()` in `IncrementalMetricsEngine` | `src/data/features/proprietary_metrics.py:2295-2671` |
+| First-game rows NaN'd for priors | `src/data/features/materialization.py:1033-1037` |
+| Synthetic-date features NaN'd (rest_days, back_to_back) | `src/data/features/materialization.py:709-713` |
+| M3 fallback removed (was leaking end-of-season stats) | `src/data/features/materialization.py:781-787` |
+| COVID 2020 excluded | `src/data/features/materialization.py:163-167` |
 
-**Description:** The `fit_calibrate()` method *previously* fit and returned predictions on the same data.
+### Training pipeline
+| Protection | Location |
+|---|---|
+| Train/val split **before** feature selection + scaling | `src/pipeline/stages/baseline_training.py:400-470` |
+| `StandardScaler` / `FeatureSelector` fit on `train_X` only | `baseline_training.py:874-889, 961-1000` |
+| LOYO per-fold refitting of scaler + selector | `baseline_training.py:2375-2420` |
+| `leave_one_out` temporal mode permanently blocked | `baseline_training.py` |
+| Nested calibration (fit historical, eval current year) | `calibration.py:352-380` |
+| Sharpener double-dip guard (α = 1.0 fallback) | `calibration.py:641-656` |
 
-**Resolution (2026-03-31):** The method now uses **leave-one-out cross-validation**, producing honest out-of-sample predictions:
+### Data ingestion & temporal gating
+| Protection | Location |
+|---|---|
+| Tournament start dates for 2016-2026 | `src/pipeline/config.py:44-78` |
+| Regular-season mode uses `game_date < tournament_cutoff` (strict `<`) | `src/pipeline/stages/sample_loading.py:341-348` |
+| Seeds zeroed before tournament cutoff | `sample_loading.py:416-421` |
+| Massey ordinals NaN'd before tournament cutoff | `sample_loading.py:423-433` |
+| Massey capped at Selection Sunday (133-day fallback) | `src/data/kaggle_loader.py` |
+| Coach data leakage guard (career aggregates) | `src/pipeline/stages/data_loader.py:593-604` |
+| Torvik scraper raises `LeakageError` in strict mode | `src/data/scrapers/torvik.py:407-431` |
 
-```python
-def fit_calibrate(self, predictions, outcomes):
-    """Fit calibrator and return leave-one-out cross-validated predictions."""
-    loo_calibrated = np.empty(n)
-    for i in range(n):
-        mask = np.ones(n, dtype=bool)
-        mask[i] = False
-        fold_cal = IsotonicCalibrator()
-        fold_cal.fit(predictions[mask], outcomes[mask])
-        loo_calibrated[i] = fold_cal.calibrate(predictions[i:i + 1])[0]
-    # Refit on all data for future calibrate() calls
-    self.fit(predictions, outcomes)
-    return loo_calibrated
-```
-
-This method is used by the isotonic calibration path in `src/pipeline/stages/probability_calibration.py:185`. Note: the production 2026 config uses temperature scaling, not isotonic.
-
----
-
-## Verified Protections (Working Correctly)
-
-### Feature Engineering
-
-| Protection | Location | Status |
-|---|---|---|
-| `shift(1)` on all rolling/expanding aggregates | `src/data/features/materialization.py:740-770` | PASS |
-| Mandatory `cutoff_date` in ProprietaryMetricsEngine | `src/data/features/proprietary_metrics.py:336-381` | PASS |
-| Point-in-time `compute_as_of()` in IncrementalMetricsEngine | `src/data/features/proprietary_metrics.py:2295-2671` | PASS |
-| First-game rows validated as NaN for priors | `src/data/features/materialization.py:1033-1037` | PASS |
-| Synthetic-date features NaN'd (rest_days, back_to_back) | `src/data/features/materialization.py:709-713` | PASS |
-| M3 fallback removed (was leaking end-of-season stats) | `src/data/features/materialization.py:781-787` | PASS (fixed) |
-| COVID 2020 season excluded | `src/data/features/materialization.py:163-167` | PASS |
-
-### Training Pipeline
-
-| Protection | Location | Status |
-|---|---|---|
-| Train/val split BEFORE feature selection & scaling | `src/pipeline/stages/baseline_training.py:400-470` | PASS |
-| StandardScaler fit on train_X only | `src/pipeline/stages/baseline_training.py:961-1000` | PASS |
-| FeatureSelector fit on train_X only | `src/pipeline/stages/baseline_training.py:874-889` | PASS |
-| LOYO per-fold refitting of scaler + selector | `src/pipeline/stages/baseline_training.py:2375-2420` | PASS |
-| `leave_one_out` temporal mode permanently blocked | `src/pipeline/stages/baseline_training.py` | PASS |
-| Nested calibration (fit on historical, eval on current year) | `src/pipeline/stages/calibration.py:352-380` | PASS |
-| Sharpener double-dip guard (alpha=1.0 fallback) | `src/pipeline/stages/calibration.py:641-656` | PASS |
-
-### Data Ingestion & Temporal Gating
-
-| Protection | Location | Status |
-|---|---|---|
-| Tournament start dates for all years (2016-2026) | `src/pipeline/config.py:44-78` | PASS |
-| Regular-season mode uses `game_date < tournament_cutoff` (strict `<`) | `src/pipeline/stages/sample_loading.py:341-348` | PASS |
-| Seeds zeroed before tournament cutoff | `src/pipeline/stages/sample_loading.py:416-421` | PASS |
-| Massey ordinals NaN'd before tournament cutoff | `src/pipeline/stages/sample_loading.py:423-433` | PASS |
-| Massey ordinals capped at Selection Sunday (133-day fallback) | `src/data/kaggle_loader.py` | PASS |
-| Coach data leakage guard (career aggregates) | `src/pipeline/stages/data_loader.py:593-604` | PASS |
-| Torvik scraper raises `LeakageError` in strict mode | `src/data/scrapers/torvik.py:407-431` | PASS |
-
-### Governance & Production Locks
-
-| Protection | Location | Status |
-|---|---|---|
-| `strict_leakage_mode: true` frozen in production config | `configs/production_2026.json` | PASS |
-| `require_freeze_file: true` for 2026+ | `src/governance/production_validator.py` | PASS |
-| Training years 2016-2024 (no 2020, no 2025) enforced | `src/governance/production_validator.py` | PASS |
-| Holdout year 2025 isolated from training | `src/governance/production_validator.py` | PASS |
-| `scrape_live: false` in production config | `configs/production_2026.json` | PASS |
+### Governance
+| Protection | Location |
+|---|---|
+| `strict_leakage_mode: true` frozen | `configs/production_2026.json` |
+| `require_freeze_file: true` for 2026+ | `src/governance/production_validator.py` |
+| Training years 2016-2024 enforced (no 2020, no 2025) | `production_validator.py` |
+| Holdout 2025 isolated from training | `production_validator.py` |
+| `scrape_live: false` in production | `configs/production_2026.json` |
 
 ---
 
-## Testing Infrastructure Assessment
+## Testing Infrastructure
 
-The codebase has ~3,000 lines of leakage-specific tests across multiple files:
+~3,000 lines of leakage-specific tests:
 
-| Test Suite | File | Coverage |
+| Suite | File | Coverage |
 |---|---|---|
-| Four-rule leakage framework (structural + synthetic evidence) | `tests/data_integrity/test_leakage_rules.py` | Same-game, future-opponent, post-game aggregates, tournament info |
+| Four-rule leakage framework | `tests/data_integrity/test_leakage_rules.py` | Same-game, future-opponent, post-game aggregates, tournament info |
 | Point-in-time feature contracts | `tests/data_integrity/test_point_in_time_contracts.py` | Schema validation for 74+ features |
 | Leakage guards (Massey, Torvik, LOYO) | `tests/test_leakage_guards.py` | Selection Sunday cap, tournament date guard, blocked modes |
-| Canary tests (meta-verification) | `tests/test_leakage_canary.py` | Perfect-correlation injection, shift(1) detection |
+| Canary tests (meta-verification) | `tests/test_leakage_canary.py` | Perfect-correlation injection, `shift(1)` detection |
 | Temporal integrity (Chronos Protocol) | `tests/test_temporal_integrity.py` | Feature timestamps, train/test boundary, global stats |
 | Leakage fix verification | `tests/test_leakage_fixes.py` | M3 fallback removal, LOYO refitting |
 
 ---
 
-## Low-Risk Observations
+## Low-Risk Observations (2027 relevance)
 
-### 1. Future Years (2027+) Have No Tournament Date Guards
-Tournament date validation in `TOURNAMENT_START_DATES` only covers 2016-2026. New years must be manually added. The Torvik scraper silently skips the guard for unknown years.
+Worth addressing before the 2027 season; not 2026-blocking.
 
-### 2. Public Picks Scraper Has No Timestamp Validation
-ESPN/Yahoo/CBS pick scrapers do not verify when picks were last updated. If picks are scraped during the tournament, they may reflect completed game results. Mitigated by `scrape_live=false` in production.
-
-### 3. Betting Market Scraper Has No Game Status Filter
-Sportsbook odds scrapers do not filter by game status (pre-game vs. live vs. final). Live odds reflect in-game information. Not enabled in production config.
-
-### 4. Contract Tests Validate Schema, Not Feature Values
-`test_point_in_time_contracts.py` validates that feature contracts exist and have correct metadata fields, but does not compute actual feature values to verify temporal correctness. Structural and synthetic tests in `test_leakage_rules.py` partially cover this gap.
-
-### 5. No Automated Post-Hoc Holdout Contamination Audit
-Tests verify that 2025 is not in `training_years` structurally, but no runtime check confirms that holdout-year games never appear in the actual training data arrays.
-
-### 6. Circular Validation of Tier 3 Constants
-The LOYO protocol acknowledges that 58 tuned constants were optimized on the same 2005-2025 data used for validation. This is inherent circularity mitigated by the Level 1 (prospective) design for 2026.
-
----
-
-## Conclusion
-
-The production pipeline has **strong leakage defenses** at every layer: data ingestion, feature engineering, training, calibration, and governance. The two moderate issues (calibration fallback and `fit_calibrate()`) are edge cases that do not affect the primary production path under normal sample sizes. The codebase demonstrates careful attention to point-in-time safety with explicit `FIX-LEAKAGE-*` comments documenting past corrections.
-
-**Production 2026 risk assessment: LOW** — all critical temporal boundaries are enforced, strict leakage mode is enabled, and live scraping is disabled.
+1. **2027+ tournament dates not yet added.** `TOURNAMENT_START_DATES` covers only 2016-2026; Torvik scraper silently skips the guard for unknown years. → `COUNCIL_LESSONS.md §2 O16` (hardcoded dict SPOF).
+2. **Public picks scraper has no timestamp validation.** ESPN/Yahoo/CBS pick scrapers don't verify last-updated time; mid-tournament scrapes can leak completed results. Mitigated by `scrape_live=false`; promote to hard guard for 2027.
+3. **Betting market scraper has no game-status filter.** Sportsbook odds scrapers don't filter pre-game vs live vs final. Not enabled in production.
+4. **Contract tests validate schema, not feature values.** `test_point_in_time_contracts.py` checks metadata exists; doesn't compute values to verify temporal correctness. Structural + synthetic tests in `test_leakage_rules.py` partially cover the gap.
+5. **No automated post-hoc holdout contamination audit.** Tests verify 2025 is not in `training_years` structurally, but no runtime check confirms holdout games never appear in actual training arrays.
+6. **Circular validation of Tier-3 constants.** 58 tuned constants were optimized on the same 2005-2025 data used for validation. Inherent circularity, partially mitigated by Level 1 (prospective) design for 2026. See `COUNCIL_LESSONS.md §2 O17` (researcher-DoF leakage audit).
