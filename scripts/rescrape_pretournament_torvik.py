@@ -38,41 +38,17 @@ except ImportError:
 
 # Add project root to path
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
 from data.normalize import normalize_team_id
+from src.pipeline.config import TOURNAMENT_START_DATES
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
 )
 logger = logging.getLogger(__name__)
-
-# Tournament start dates (day of first game).
-# Pre-tournament cutoff = day before this.
-TOURNAMENT_START_DATES = {
-    2005: date(2005, 3, 15),
-    2006: date(2006, 3, 14),
-    2007: date(2007, 3, 13),
-    2008: date(2008, 3, 18),
-    2009: date(2009, 3, 17),
-    2010: date(2010, 3, 16),
-    2011: date(2011, 3, 15),
-    2012: date(2012, 3, 13),
-    2013: date(2013, 3, 19),
-    2014: date(2014, 3, 18),
-    2015: date(2015, 3, 17),
-    2016: date(2016, 3, 15),
-    2017: date(2017, 3, 14),
-    2018: date(2018, 3, 13),
-    2019: date(2019, 3, 19),
-    2021: date(2021, 3, 18),
-    2022: date(2022, 3, 15),
-    2023: date(2023, 3, 14),
-    2024: date(2024, 3, 19),
-    2025: date(2025, 3, 18),
-    2026: date(2026, 3, 17),
-}
 
 SEASON_START_MONTH_DAY = (11, 1)
 

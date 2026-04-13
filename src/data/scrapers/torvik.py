@@ -400,11 +400,17 @@ class BartTorvikScraper:
         cutoff = TOURNAMENT_START_DATES.get(year)
         if cutoff is None:
             if year <= date.today().year:
-                logger.warning(
-                    "[torvik] No tournament start date for %d — cannot apply date filtering. "
-                    "DATA LEAKAGE RISK for historical years.",
-                    year,
+                # Historical miss — refuse to serve unfiltered data. The
+                # docstring on this function already promises this, and
+                # COUNCIL_LESSONS.md §2 O16 closes on this guarantee.
+                raise ValueError(
+                    f"TOURNAMENT_START_DATES missing entry for {year}; "
+                    f"add it to src/pipeline/config.py. Returning unfiltered "
+                    f"trank.php data would produce post-tournament (contaminated) "
+                    f"ratings — a leakage bug."
                 )
+            # Future year — bracket not scheduled yet. Cosmetic; return
+            # unfiltered window so diagnostics can still run.
             return None, None
         from datetime import timedelta
 
