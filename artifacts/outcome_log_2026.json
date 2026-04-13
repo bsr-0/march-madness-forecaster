@@ -1,6 +1,6 @@
 {
   "year": 2026,
-  "generated_at": "2026-04-12T20:26:32.510669+00:00",
+  "generated_at": "2026-04-13T07:54:14.284528+00:00",
   "prediction_source": "data/forecaster_output.json",
   "results_source": "/home/runner/work/march-madness-forecaster/march-madness-forecaster/data/raw/historical/tournament_results_2026.json",
   "n_games_with_predictions": 6,
