@@ -3,8 +3,11 @@
 Wires probability builders, ratings-derived opponent model, and the existing
 pool optimization infrastructure into a single entry point.
 
-Supports four probability modes:
-  - torvik (recommended): Torvik barthag + Log5 + bracket MC. Best P(1st)
+Supports five probability modes:
+  - auto (default, recommended): Runs ALL probability modes, sweeps risk
+    levels across multiple construction modes, deduplicates by picks, and
+    ranks by P(1st). Eliminates the risk of choosing the wrong mode.
+  - torvik: Torvik barthag + Log5 + bracket MC. Best P(1st)
     (4.45%) on the N=31 backtest. Simplest defensible model.
   - blend: 50/50 seed + noseed. Significant Brier improvement with
     minimal pool EV cost.
@@ -64,7 +67,7 @@ def run_optimize_pool(args):
     pool_size = args.pool_size
     payout = args.payout
     output_path = args.output
-    mode = getattr(args, "mode", "torvik")
+    mode = getattr(args, "mode", "auto")
 
     # --- Step 1: Load tournament seeds ---
     seeds = _load_seeds(year)
@@ -73,8 +76,46 @@ def run_optimize_pool(args):
         return 1
     print(f"Loaded {len(seeds)} teams for {year} tournament.")
 
-    # --- Step 2: Build probabilities based on mode ---
+    # --- Step 2: Auto mode early return ---
     walk_forward = not getattr(args, "no_walk_forward", False)
+
+    if mode == "auto":
+        # Build opponent model first (needed by auto mode)
+        print("Building opponent model from external ratings + public picks...")
+        picks_dir = args.picks_dir if hasattr(args, "picks_dir") else None
+        opponent_picks = build_opponent_model(
+            year=year,
+            seeds=seeds,
+            cache_dir=args.data_dir,
+            picks_dir=picks_dir,
+            require_espn_picks=True,
+            require_ratings=True,
+        )
+        print(f"  Opponent model covers {len(opponent_picks)} teams")
+
+        regions_map = _load_regions(year)
+        if args.scoring == "standard":
+            scoring_rules = dict(_DEFAULT_SCORING)
+        elif args.scoring == "flat":
+            scoring_rules = {"R64": 1, "R32": 2, "S16": 3, "E8": 4, "F4": 5, "CHAMP": 6}
+        else:
+            scoring_rules = dict(_DEFAULT_SCORING)
+
+        return _run_auto_mode(
+            seeds=seeds,
+            regions_map=regions_map,
+            year=year,
+            pool_size=pool_size,
+            scoring_rules=scoring_rules,
+            opponent_picks=opponent_picks,
+            output_path=output_path,
+            payout=payout,
+            scoring_name=args.scoring,
+            data_dir=args.data_dir,
+            walk_forward=walk_forward,
+        )
+
+    # --- Step 2b: Single-mode probability build ---
     pairwise_probs, round_probs = _build_probabilities(mode, year, seeds, args.data_dir, walk_forward=walk_forward)
 
     # --- Step 3: Build opponent model ---
@@ -459,6 +500,175 @@ def _run_det_construction(
     return 0
 
 
+def _run_auto_mode(
+    seeds,
+    regions_map,
+    year,
+    pool_size,
+    scoring_rules,
+    opponent_picks,
+    output_path,
+    payout,
+    scoring_name,
+    data_dir,
+    walk_forward,
+    construction_modes=None,
+):
+    """Generate brackets from ALL probability modes, deduplicate, rank by P(1st).
+
+    Eliminates the dominant failure point (FP1): manual mode selection.
+    Wrong mode = wrong champion = 560 pts lost. Auto mode runs all modes,
+    sweeps risk levels across multiple construction modes, deduplicates
+    by picks, and ranks by the metric that matters: P(1st).
+    """
+    import numpy as np
+
+    from ..optimization.bracket_construction import construct_bracket
+    from ..simulation.pool_competition import (
+        ROUND_NAMES,
+        compute_bracket_win_probability,
+    )
+
+    prob_modes = ["torvik", "seed", "noseed", "blend"]
+    if construction_modes is None:
+        construction_modes = ["champ_first", "f4_first", "e8_first"]
+
+    first_round_matchups = _build_first_round_matchups(seeds, regions_map)
+
+    # --- Phase 1: Build probabilities for each mode ---
+    mode_probs = {}
+    for pm in prob_modes:
+        try:
+            pairwise, round_probs = _build_probabilities(
+                pm, year, seeds, data_dir, walk_forward=walk_forward
+            )
+            round_probs = _apply_e8_adjustments_if_available(year, seeds, round_probs, data_dir)
+            mode_probs[pm] = (pairwise, round_probs)
+            print(f"  [auto] {pm}: OK ({len(round_probs)} teams)")
+        except Exception as e:
+            print(f"  [auto] {pm}: SKIPPED ({e})")
+
+    if not mode_probs:
+        print("ERROR: No probability modes succeeded.")
+        return 1
+
+    # --- Phase 2: Sweep risk levels × construction modes × prob modes ---
+    unique_brackets = {}
+    for pm, (pairwise, round_probs) in mode_probs.items():
+        for cm in construction_modes:
+            for n_levels in [50, 100, 200]:
+                for i in range(n_levels):
+                    risk = i / max(1, n_levels - 1)
+                    try:
+                        picks, champion, final_four, ev, var = construct_bracket(
+                            mode=cm,
+                            seeds=seeds,
+                            regions=regions_map,
+                            round_probs=round_probs,
+                            public_picks=opponent_picks,
+                            risk_level=risk,
+                            pool_size=pool_size,
+                            scoring_system=scoring_rules,
+                        )
+                    except Exception:
+                        continue
+                    key = tuple(sorted(picks.items()))
+                    if key not in unique_brackets:
+                        unique_brackets[key] = {
+                            "picks": picks,
+                            "champion": champion,
+                            "final_four": final_four,
+                            "expected_points": ev,
+                            "variance": var,
+                            "risk_level": risk,
+                            "prob_mode": pm,
+                            "construction_mode": cm,
+                        }
+
+    print(f"\n[auto] {len(unique_brackets)} unique brackets across "
+          f"{len(mode_probs)} prob modes × {len(construction_modes)} construction modes")
+
+    if not unique_brackets:
+        print("ERROR: No brackets generated.")
+        return 1
+
+    # --- Phase 3: Compute P(1st) for each unique bracket ---
+    print(f"Computing P(1st) for {len(unique_brackets)} unique brackets...")
+    rng = np.random.default_rng(2027)
+
+    # Use the best available pairwise probs for the opponent simulation.
+    # Prefer torvik since it's the backtest-recommended model.
+    sim_pairwise = (mode_probs.get("torvik") or next(iter(mode_probs.values())))[0]
+
+    for bkt in unique_brackets.values():
+        bool_arr = _picks_dict_to_bool_array(bkt["picks"], first_round_matchups, ROUND_NAMES)
+        bkt["win_probability"] = compute_bracket_win_probability(
+            bracket=bool_arr,
+            first_round_matchups=first_round_matchups,
+            matchup_probs=sim_pairwise,
+            pick_distribution=opponent_picks,
+            seeds=seeds,
+            n_opponents=pool_size - 1,
+            n_tournaments=5000,
+            rng=rng,
+        )
+
+    # --- Phase 4: Sort by P(1st) descending ---
+    brackets = sorted(unique_brackets.values(), key=lambda b: -b["win_probability"])
+
+    # Build report
+    report = {
+        "year": year,
+        "pool_size": pool_size,
+        "payout_structure": payout,
+        "scoring_system": scoring_name,
+        "mode": "auto",
+        "prob_modes_used": list(mode_probs.keys()),
+        "construction_modes": construction_modes,
+        "n_unique_brackets": len(brackets),
+        "brackets": brackets,
+    }
+
+    with open(output_path, "w") as f:
+        json.dump(report, f, indent=2, default=str)
+
+    # Print summary
+    print(f"\n{'=' * 60}")
+    print(f"AUTO MODE REPORT — {year}")
+    print(f"{'=' * 60}")
+    print(f"Prob modes: {', '.join(mode_probs.keys())}")
+    print(f"Construction modes: {', '.join(construction_modes)}")
+    print(f"Unique brackets: {len(brackets)}")
+    print(f"Pool: {pool_size}-person, {payout}")
+    print(f"Ranking: P(1st) — probability of winning a {pool_size}-person pool")
+
+    # Show top brackets grouped by champion
+    champ_groups = {}
+    for b in brackets:
+        c = b["champion"]
+        if c not in champ_groups:
+            champ_groups[c] = []
+        champ_groups[c].append(b)
+
+    print(f"\nChampion diversity: {len(champ_groups)} distinct champions")
+    for champ, group in sorted(champ_groups.items(), key=lambda x: -x[1][0]["win_probability"]):
+        best = group[0]
+        print(f"  {champ}: {len(group)} brackets, best P(1st)={best['win_probability']:.1%} "
+              f"(via {best['prob_mode']}/{best['construction_mode']})")
+
+    print(f"\nTop 10 brackets:")
+    for i, b in enumerate(brackets[:10]):
+        f4_str = ", ".join(b["final_four"])
+        tag = " <-- RECOMMENDED" if i == 0 else ""
+        print(f"\n  #{i + 1} P(1st)={b['win_probability']:.1%}, EV={b['expected_points']:.0f} "
+              f"[{b['prob_mode']}/{b['construction_mode']}, risk={b['risk_level']:.2f}]{tag}")
+        print(f"    Champion:   {b['champion']}")
+        print(f"    Final Four: {f4_str}")
+
+    print(f"\nReport saved to {output_path}")
+    return 0
+
+
 def _build_probabilities(mode, year, seeds, data_dir, walk_forward: bool = False):
     """Build pairwise and round probabilities based on mode.
 
@@ -738,11 +948,13 @@ def register(subparsers):
     parser.add_argument(
         "--mode",
         "-m",
-        choices=["torvik", "blend", "noseed", "seed"],
-        default="torvik",
+        choices=["auto", "torvik", "blend", "noseed", "seed"],
+        default="auto",
         help=(
-            "Probability mode. 'torvik' (default) is backtest-recommended "
-            "(barthag + Log5 + bracket MC, best P(1st) at N=31). "
+            "Probability mode. 'auto' (default) generates brackets from ALL "
+            "probability models, deduplicates, and ranks by P(1st) — "
+            "eliminates the risk of choosing the wrong mode. "
+            "'torvik' is barthag + Log5 + bracket MC. "
             "'blend' is 50/50 seed+noseed. 'noseed' is ML-only. "
             "'seed' is the historical seed baseline."
         ),
