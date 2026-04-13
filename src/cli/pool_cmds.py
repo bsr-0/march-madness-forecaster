@@ -79,9 +79,14 @@ def run_optimize_pool(args):
     # --- Step 2: Auto mode early return ---
     walk_forward = not getattr(args, "no_walk_forward", False)
 
+    pool_history_path = getattr(args, "pool_history", None)
+    pool_history_weight = float(getattr(args, "pool_history_weight", 1.0))
+
     if mode == "auto":
         # Build opponent model first (needed by auto mode)
         print("Building opponent model from external ratings + public picks...")
+        if pool_history_path:
+            print(f"  Blending pool-history data from {pool_history_path} (weight={pool_history_weight:.2f})")
         picks_dir = args.picks_dir if hasattr(args, "picks_dir") else None
         opponent_picks = build_opponent_model(
             year=year,
@@ -90,6 +95,8 @@ def run_optimize_pool(args):
             picks_dir=picks_dir,
             require_espn_picks=True,
             require_ratings=True,
+            pool_history_path=pool_history_path,
+            pool_history_weight=pool_history_weight,
         )
         print(f"  Opponent model covers {len(opponent_picks)} teams")
 
@@ -123,6 +130,8 @@ def run_optimize_pool(args):
     # external ratings. Any missing/corrupt source raises loudly rather
     # than silently redistributing blend weights.
     print("Building opponent model from external ratings + public picks...")
+    if pool_history_path:
+        print(f"  Blending pool-history data from {pool_history_path} (weight={pool_history_weight:.2f})")
     picks_dir = args.picks_dir if hasattr(args, "picks_dir") else None
     opponent_picks = build_opponent_model(
         year=year,
@@ -130,6 +139,8 @@ def run_optimize_pool(args):
         cache_dir=args.data_dir,
         picks_dir=picks_dir,
         require_espn_picks=True,
+        pool_history_path=pool_history_path,
+        pool_history_weight=pool_history_weight,
         require_ratings=True,
     )
     print(f"  Opponent model covers {len(opponent_picks)} teams")
@@ -334,10 +345,12 @@ def _build_first_round_matchups(seeds, regions, region_order=None):
     for region in region_order:
         region_teams = teams_by_region.get(region, {})
         for high_seed, low_seed in _SEED_MATCHUP_ORDER:
-            matchups.extend([
-                region_teams.get(high_seed, f"unknown_{region}_{high_seed}"),
-                region_teams.get(low_seed, f"unknown_{region}_{low_seed}"),
-            ])
+            matchups.extend(
+                [
+                    region_teams.get(high_seed, f"unknown_{region}_{high_seed}"),
+                    region_teams.get(low_seed, f"unknown_{region}_{low_seed}"),
+                ]
+            )
     return matchups
 
 
@@ -539,9 +552,7 @@ def _run_auto_mode(
     mode_probs = {}
     for pm in prob_modes:
         try:
-            pairwise, round_probs = _build_probabilities(
-                pm, year, seeds, data_dir, walk_forward=walk_forward
-            )
+            pairwise, round_probs = _build_probabilities(pm, year, seeds, data_dir, walk_forward=walk_forward)
             round_probs = _apply_e8_adjustments_if_available(year, seeds, round_probs, data_dir)
             mode_probs[pm] = (pairwise, round_probs)
             print(f"  [auto] {pm}: OK ({len(round_probs)} teams)")
@@ -585,8 +596,10 @@ def _run_auto_mode(
                             "construction_mode": cm,
                         }
 
-    print(f"\n[auto] {len(unique_brackets)} unique brackets across "
-          f"{len(mode_probs)} prob modes × {len(construction_modes)} construction modes")
+    print(
+        f"\n[auto] {len(unique_brackets)} unique brackets across "
+        f"{len(mode_probs)} prob modes × {len(construction_modes)} construction modes"
+    )
 
     if not unique_brackets:
         print("ERROR: No brackets generated.")
@@ -653,15 +666,19 @@ def _run_auto_mode(
     print(f"\nChampion diversity: {len(champ_groups)} distinct champions")
     for champ, group in sorted(champ_groups.items(), key=lambda x: -x[1][0]["win_probability"]):
         best = group[0]
-        print(f"  {champ}: {len(group)} brackets, best P(1st)={best['win_probability']:.1%} "
-              f"(via {best['prob_mode']}/{best['construction_mode']})")
+        print(
+            f"  {champ}: {len(group)} brackets, best P(1st)={best['win_probability']:.1%} "
+            f"(via {best['prob_mode']}/{best['construction_mode']})"
+        )
 
     print(f"\nTop 10 brackets:")
     for i, b in enumerate(brackets[:10]):
         f4_str = ", ".join(b["final_four"])
         tag = " <-- RECOMMENDED" if i == 0 else ""
-        print(f"\n  #{i + 1} P(1st)={b['win_probability']:.1%}, EV={b['expected_points']:.0f} "
-              f"[{b['prob_mode']}/{b['construction_mode']}, risk={b['risk_level']:.2f}]{tag}")
+        print(
+            f"\n  #{i + 1} P(1st)={b['win_probability']:.1%}, EV={b['expected_points']:.0f} "
+            f"[{b['prob_mode']}/{b['construction_mode']}, risk={b['risk_level']:.2f}]{tag}"
+        )
         print(f"    Champion:   {b['champion']}")
         print(f"    Final Four: {f4_str}")
 
@@ -1052,6 +1069,31 @@ def register(subparsers):
             "brackets ('champ swap' variants) are post-hoc alternatives to "
             "the chalk structure rather than methodology-driven "
             "alternatives, so they are excluded by default."
+        ),
+    )
+    parser.add_argument(
+        "--pool-history",
+        default=None,
+        help=(
+            "Path to pool_hist_results.json containing the actual pool's "
+            "prior-year bracket entries. When provided, the opponent model "
+            "is calibrated against YOUR pool's empirical pick distribution "
+            "rather than ESPN's ~20M-entry public aggregate. Addresses FP2: "
+            "ESPN mis-calibration caused the optimizer to under-value "
+            "contrarian picks (e.g. Illinois F4 3.4%% ESPN vs 0.0%% in a "
+            "30-person pool). Default: None (ESPN-only blend)."
+        ),
+    )
+    parser.add_argument(
+        "--pool-history-weight",
+        type=float,
+        default=1.0,
+        help=(
+            "Convex weight in [0, 1] placed on pool-history picks vs the "
+            "ESPN-based blend. Only used when --pool-history is set. "
+            "Default 1.0 (full replacement — trust the explicit pool data). "
+            "Set to e.g. 0.75 to keep 25%% ESPN smoothing on top; useful "
+            "when the pool history is very small (<20 brackets)."
         ),
     )
     parser.set_defaults(func=run_optimize_pool)
