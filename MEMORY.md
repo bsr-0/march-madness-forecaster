@@ -34,6 +34,8 @@ Settled by evidence, council, or freeze. **Do not propose changing these without
 | Dev years | 2016–2019, 2021–2024 (COVID-2020 excluded) | `pipeline_freeze.json:32-40` |
 | Holdout | 2025 | `pipeline_freeze.json:113-115` |
 | LOYO CV | enabled, rolling window, 5 splits | `pipeline_freeze.json:62,122,194` |
+| Holdout enforcement | `YearSplitPolicy.assert_dev_only` raises `HoldoutContaminationError`; wired at the three ensemble fit entry points + every Optuna tuner call. Closes §2 O20. | `src/ml/evaluation/evaluation_integrity.py:75-160`; `src/pipeline/stages/baseline_training/_ensemble.py:530,770`; `src/ml/optimization/hyperparameter_tuning.py:60`; `tests/test_holdout_enforcement.py` |
+| Production Four Factors source | Torvik trank.php monthly snapshots overlay onto local `ProprietaryTeamMetrics` via `TorVikFFLookup.overlay_metrics`. Local box-score `_four_factors` is a fallback only; tripwire `mean r ≥ 0.85` vs Torvik catches catastrophic regressions (e.g., the 2026-04-13 resolver-collision at mean r 0.45). Same precedent as barthag per §3 row 22; closes §2 O2 / O2a. | `src/data/features/torvik_ff_lookup.py`; overlay call sites `src/pipeline/stages/baseline_training/_orchestrator.py:469`, `sample_loading.py:453`, `src/evaluation/seed_baseline_loyo.py:286`, `src/ml/evaluation/rdof_audit.py:1517,1661`; tests `tests/test_validate_four_factors.py` |
 
 ### Pool strategy
 | Decision | Value | Source |
@@ -42,6 +44,8 @@ Settled by evidence, council, or freeze. **Do not propose changing these without
 | Aggressive alt | `e8_first_tv` (10× seed P(1st)) | `POOL_STRATEGY_RECOMMENDATION.md:18-29` |
 | Opponent pool size | N=31 | `mc_pool_backtest_n31_results.txt` |
 | Opponent model weights (2026) | 60% ESPN picks / 30% Massey / 10% seed fallback | `POOL_STRATEGY_RECOMMENDATION.md`; `COUNCIL_LESSONS.md` §3 row 25 (2026-04-12c) |
+| Pool-MC `n_tournaments` | `5000` (rank-stable at fixed seed; closes §2 O5) | `src/simulation/pool_competition.py:93`; `tests/test_pool_competition.py::TestRankStability`; `COUNCIL_LESSONS.md` §2 O5 |
+| P(1st) ranking is calibrated vs actual outcomes | Mean Spearman ρ = +0.37 across 14 years (2011-2025 ex 2020); one-sided t-test p = 0.002; 12/14 years positive; actual winner in top half of predicted ordering in 9/14 years. Closes §2 O6. | `artifacts/o6_winner_rank_diagnostic.json`; `tests/test_pool_optimizer_calibration.py`; `COUNCIL_LESSONS.md` §2 O6 |
 
 ### Constants (Tier 1, locked with citations)
 | Constant | Value | Source |
@@ -73,7 +77,7 @@ Tried, measured, rejected. **Do not re-propose without new data that invalidates
 
 | # | Idea | Tried | Verdict | Evidence |
 |---|------|-------|---------|----------|
-| D1 | Complex ML architectures to lift prediction accuracy | LightGBM, XGBoost, SpreadRegressor, 27-feature ensemble + LightGBM stacking | **BSS = 0** vs seed baseline across 17 yrs (2008–2025 ex. 2020) | `PROJECT_STATUS.md:6-11` |
+| D1 | Complex ML architectures to lift prediction accuracy | LightGBM, XGBoost, SpreadRegressor, 27-feature ensemble + LightGBM stacking | **BSS = 0** vs seed baseline across 17 yrs (2008–2025 ex. 2020). Not tautological: 2026-04-13 O8 analysis found max \|r\| with seed across production features is 0.77 (`adj_off_eff`), median 0.32. `diff_adj_tempo` (0.16) and `diff_opp_to_rate` (0.02) are essentially independent of seed. Features carry signal beyond seed; the issue is sample-size-limited calibration, not feature redundancy. | `PROJECT_STATUS.md:6-11`; `scripts/feature_seed_correlation.py`; `tests/test_feature_seed_collinearity.py`; `COUNCIL_LESSONS.md §2 O8` |
 | D2 | GNN model | Built, gated behind flag | No lift; disabled | `pipeline_freeze.json:58`; `PROJECT_STATUS.md` |
 | D3 | Transformer model | Built, gated behind flag | No lift; disabled | `pipeline_freeze.json:78`; `PROJECT_STATUS.md` |
 | D4 | Learned feature selection (VIF / correlation / importance pruning) | `src/data/features/feature_selection.py` | Fixed 7-feature set beat it | `pipeline_freeze.json:57` |
@@ -94,7 +98,8 @@ Current numbers. If you're about to claim an improvement, it has to clear these.
 ### ML prediction (frozen — do not chase)
 | Metric | Value | Scope | Source |
 |---|---|---|---|
-| Brier Skill Score | **0** | 17 yrs (2008–2025 ex. 2020); all tested models | `PROJECT_STATUS.md:6-11` |
+| Brier Skill Score | **0** | 17 yrs (2008–2025 ex. 2020); all tested blended+stacked models (production regime) | `PROJECT_STATUS.md:6-11`; `MEMORY.md §2 D1` |
+| BSS, tournament-only LOYO, simple_7 | **+4.8%** (paired t p=0.036 uncorrected; fails Bonferroni) | 14 yrs (2010–2024 ex. 2020); feature set = `SIMPLE_FEATURE_SET` | `artifacts/baseline_experiment.json` (2026-04-01); `artifacts/o7_regime_comparison_2026-04-13.json`; `tests/test_o7_regime_comparison.py`; closes §2 O7 |
 | LogLoss gate | < 0.56 | Training objective | `pipeline_freeze.json:121` |
 | Brier gate | 0.19 | Admission threshold | `pipeline_freeze.json:14` |
 
@@ -124,7 +129,7 @@ Source: `POOL_STRATEGY_RECOMMENDATION.md:18-29`, `mc_pool_backtest_n31_results.t
 | Coverage threshold | 20% | `COUNCIL_LESSONS.md` §3 row 6 (2026-04-02 20:52) |
 
 ### Known open diagnostic (for context — not a TODO)
-- Independence assumption in opponent model flagged as validity threat (real pools cluster around chalk). Prerequisite to validation: collect real 2026 pool bracket data (outstanding as of 2026-04-12). Source: `COUNCIL_LESSONS.md` §2 item 1, §3 row 25 (2026-04-12c).
+- Independence assumption in opponent model has been empirically tested (2026-04-13, 4 years × 93 brackets). **Independence holds** — pooled z = −4.15; brackets are *less* correlated than IID draws from the empirical marginals. The council's "validity threat" framing was misdiagnosed: error is in the opponent-model marginals (using ESPN-national instead of pool-specific; 5pp mean absolute divergence, up to 18pp on individual teams), not in correlation. Next binding step is `COUNCIL_LESSONS.md §2 O21` (rebuild opponent model with pool-history marginals). Sources: `ANALYSIS_O4_OPPONENT_CORRELATION.md`, `COUNCIL_LESSONS.md §2 O4 [closed] / O21 [open]`.
 
 ---
 

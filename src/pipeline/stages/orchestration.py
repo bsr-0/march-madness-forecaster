@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 # Pre-run checks
 # ---------------------------------------------------------------------------
 
+
 def run_pre_checks(pipeline) -> Optional[Dict]:
     """Run all pre-pipeline validation checks.
 
@@ -54,8 +55,7 @@ def run_pre_checks(pipeline) -> Optional[Dict]:
 
     if pipeline.config.year >= 2026 and not pipeline.config.require_freeze_file:
         raise DataRequirementError(
-            "Pipeline freeze required for 2026+ predictions. "
-            "Re-run with --require-freeze and a valid --freeze-file."
+            "Pipeline freeze required for 2026+ predictions. Re-run with --require-freeze and a valid --freeze-file."
         )
 
     freeze_verification = _check_freeze_requirement(pipeline)
@@ -90,6 +90,7 @@ def _check_dataset_hashes(pipeline) -> None:
     """S1/S11: Dataset hash verification on load."""
     try:
         from ...reproducibility.run_hasher import RunHasher
+
         pipeline._run_hasher = RunHasher(pipeline.config)
         pipeline._dataset_hashes = pipeline._run_hasher.hash_all_inputs()
         incumbent = pipeline._experiment_registry.best(metric="loyo_mean_brier")
@@ -124,9 +125,11 @@ def _check_holdout_contamination(pipeline) -> None:
     """Check for holdout contamination from config drift."""
     try:
         from ...ml.evaluation.rdof_audit import check_holdout_contamination
-        hist_dir = getattr(pipeline, "_runtime_state", {}).get(
-            "multi_year_games_dir", pipeline.config.multi_year_games_dir
-        ) or "data/raw/historical"
+
+        hist_dir = (
+            getattr(pipeline, "_runtime_state", {}).get("multi_year_games_dir", pipeline.config.multi_year_games_dir)
+            or "data/raw/historical"
+        )
         contamination = check_holdout_contamination(hist_dir, pipeline.config)
         if contamination:
             msg = f"HOLDOUT CONTAMINATION: {contamination['message']}"
@@ -145,6 +148,7 @@ def _validate_year_split_policy(pipeline) -> None:
     """
     try:
         from ...ml.evaluation.evaluation_integrity import YearSplitPolicy
+
         policy = YearSplitPolicy.from_config(pipeline.config)
 
         # Verify training years are within the dev partition.
@@ -159,13 +163,12 @@ def _validate_year_split_policy(pipeline) -> None:
         pipeline._year_split_policy = policy
         logger.info(
             "Year split policy validated: dev=%s, holdout=%s",
-            sorted(policy.dev_years), sorted(policy.holdout_years),
+            sorted(policy.dev_years),
+            sorted(policy.holdout_years),
         )
     except Exception as exc:
         if pipeline.config.strict_leakage_mode:
-            raise DataRequirementError(
-                f"Year-split policy validation failed: {exc}"
-            ) from exc
+            raise DataRequirementError(f"Year-split policy validation failed: {exc}") from exc
         logger.warning("Year-split policy validation failed: %s", exc)
 
 
@@ -177,6 +180,7 @@ def _check_freeze_for_season(pipeline, freeze_verification: Optional[Dict]) -> N
     """
     try:
         from ...ml.evaluation.evaluation_integrity import require_freeze_for_season
+
         if pipeline.config.require_freeze_file and freeze_verification:
             # Already verified above — record the season-level gate result.
             logger.info(
@@ -215,24 +219,19 @@ def _check_freeze_requirement(pipeline) -> Optional[Dict]:
     if not pipeline.config.require_freeze_file:
         return None
     if not pipeline.config.freeze_file:
-        raise DataRequirementError(
-            "Freeze file required (--require-freeze) but no --freeze-file provided."
-        )
+        raise DataRequirementError("Freeze file required (--require-freeze) but no --freeze-file provided.")
     try:
         from ...ml.evaluation.rdof_audit import verify_freeze
+
         freeze_verification = verify_freeze(pipeline.config, pipeline.config.freeze_file)
         if not freeze_verification.get("matches", False):
             mismatches = "\n".join(freeze_verification.get("mismatches", []))
-            raise DataRequirementError(
-                f"Freeze verification failed for {pipeline.config.freeze_file}:\n{mismatches}"
-            )
+            raise DataRequirementError(f"Freeze verification failed for {pipeline.config.freeze_file}:\n{mismatches}")
         return freeze_verification
     except DataRequirementError:
         raise
     except Exception as exc:
-        raise DataRequirementError(
-            f"Freeze verification failed for {pipeline.config.freeze_file}: {exc}"
-        ) from exc
+        raise DataRequirementError(f"Freeze verification failed for {pipeline.config.freeze_file}: {exc}") from exc
 
 
 def _auto_detect_kaggle_dir(pipeline) -> None:
@@ -246,6 +245,7 @@ def _auto_detect_kaggle_dir(pipeline) -> None:
         return
     try:
         from ...data.kaggle_downloader import ensure_kaggle_data
+
         _resolved = ensure_kaggle_data(kaggle_dir=None, auto_download=True)
         if _resolved:
             _rs["kaggle_dir"] = _resolved
@@ -263,10 +263,7 @@ def _auto_detect_kaggle_dir(pipeline) -> None:
     ]
     for _kd in _kaggle_candidates:
         if os.path.isdir(_kd):
-            _massey_files = [
-                f for f in os.listdir(_kd)
-                if "massey" in f.lower() or "MTeams" in f
-            ]
+            _massey_files = [f for f in os.listdir(_kd) if "massey" in f.lower() or "MTeams" in f]
             if _massey_files:
                 _rs["kaggle_dir"] = _kd
                 logger.info("FIX #1: Auto-detected kaggle_dir: %s", _kd)
@@ -277,9 +274,11 @@ def _auto_detect_kaggle_dir(pipeline) -> None:
 # Mode-gated sections (pool analysis, bracket portfolio, ablation)
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ModeGatedResult:
     """Results from mode-gated pipeline sections."""
+
     public_picks: Dict[str, Dict[str, float]] = field(default_factory=dict)
     scoring_system: Optional[Dict[str, int]] = None
     pool_analysis: Any = None
@@ -371,13 +370,10 @@ def run_mode_gated_sections(
                     "top_money_rate": round(espn_result.top_money_rate, 4),
                     "path_protection_score": round(espn_result.path_protection_score, 4),
                     "n_candidates_evaluated": len(espn_result.diagnostics),
-                    "selected_bracket_rounds": {
-                        k: len(v) for k, v in espn_result.selected_bracket.items()
-                    },
+                    "selected_bracket_rounds": {k: len(v) for k, v in espn_result.selected_bracket.items()},
                 }
                 logger.info(
-                    "ESPN optimization: champion=%s, rank_pct=%.1f%%, top10=%.3f, "
-                    "path_protection=%.3f",
+                    "ESPN optimization: champion=%s, rank_pct=%.1f%%, top10=%.3f, path_protection=%.3f",
                     espn_result.selected_champion,
                     espn_result.simulated_rank_percentile,
                     espn_result.top_10_rate,
@@ -393,7 +389,9 @@ def run_mode_gated_sections(
             ev_public_picks = pipeline._load_public_picks(model_round_probs)
             ev_team_metadata = {
                 team_id: TeamMetadata(
-                    team_name=team.name, seed=team.seed, region=team.region,
+                    team_name=team.name,
+                    seed=team.seed,
+                    region=team.region,
                 )
                 for team_id, team in pipeline.team_struct.items()
             }
@@ -402,9 +400,7 @@ def run_mode_gated_sections(
                 pipeline.config.ev_pool_size,
                 scoring_system=ev_scoring_name,
                 contrarian_override=(
-                    pipeline.config.ev_contrarian_strength
-                    if pipeline.config.ev_contrarian_strength != 1.0
-                    else None
+                    pipeline.config.ev_contrarian_strength if pipeline.config.ev_contrarian_strength != 1.0 else None
                 ),
                 payout_structure=pipeline.config.ev_payout_structure,
             )
@@ -438,13 +434,17 @@ def run_mode_gated_sections(
     # Bracket portfolio generation (both modes)
     if pipeline.config.enable_bracket_portfolio:
         result.bracket_portfolio_stats = _generate_bracket_portfolio(
-            pipeline, teams, result.public_picks,
-            result.ev_leverage_preview, result.leverage_preview,
+            pipeline,
+            teams,
+            result.public_picks,
+            result.ev_leverage_preview,
+            result.leverage_preview,
             is_ev,
         )
 
     # Ablation study
     from .._optional_imports import ABLATION_AVAILABLE, AblationStudy
+
     if pipeline.config.enable_ablation_study and ABLATION_AVAILABLE:
         result.ablation_stats = _run_ablation(pipeline, game_flows)
 
@@ -452,19 +452,30 @@ def run_mode_gated_sections(
 
 
 def _generate_bracket_portfolio(
-    pipeline, teams, public_picks, ev_leverage_preview, leverage_preview, is_ev,
+    pipeline,
+    teams,
+    public_picks,
+    ev_leverage_preview,
+    leverage_preview,
+    is_ev,
 ) -> Dict:
     """Generate bracket portfolio for both modes."""
     from ...optimization.leverage import get_strategy_profile
+
     try:
         from ...optimization.bracket_portfolio import BracketPortfolioGenerator
+
         teams_by_region: Dict[str, List[Dict]] = {}
         for team in teams:
             tid = pipeline._team_id(team.name)
             region = team.region or "Unknown"
-            teams_by_region.setdefault(region, []).append({
-                "team_id": tid, "name": team.name, "seed": team.seed,
-            })
+            teams_by_region.setdefault(region, []).append(
+                {
+                    "team_id": tid,
+                    "name": team.name,
+                    "seed": team.seed,
+                }
+            )
         champ_public = {}
         for tid, rounds in public_picks.items():
             if isinstance(rounds, dict):
@@ -483,9 +494,7 @@ def _generate_bracket_portfolio(
                 pipeline.config.ev_pool_size,
                 scoring_system=pipeline.config.ev_scoring_system or "standard",
                 contrarian_override=(
-                    pipeline.config.ev_contrarian_strength
-                    if pipeline.config.ev_contrarian_strength != 1.0
-                    else None
+                    pipeline.config.ev_contrarian_strength if pipeline.config.ev_contrarian_strength != 1.0 else None
                 ),
                 payout_structure=pipeline.config.ev_payout_structure,
             )
@@ -503,13 +512,11 @@ def _generate_bracket_portfolio(
 
         portfolio = portfolio_gen.generate_portfolio(
             teams_by_region=teams_by_region,
-            n_brackets=1000, n_simulations=10000,
+            n_brackets=1000,
+            n_simulations=10000,
             seed=pipeline.config.random_seed,
             pool_strategy_profile=portfolio_profile,
-            enable_search=(
-                pipeline.config.ev_enable_search
-                if pipeline.config.mode == "ev" else False
-            ),
+            enable_search=(pipeline.config.ev_enable_search if pipeline.config.mode == "ev" else False),
         )
         strategy_counts = {}
         champions = {}
@@ -533,6 +540,7 @@ def _generate_bracket_portfolio(
 def _run_ablation(pipeline, game_flows) -> Dict:
     """Run ablation study on validation games."""
     from .._optional_imports import AblationStudy
+
     try:
         val_games = []
         for g in pipeline._unique_games(game_flows):
@@ -543,10 +551,13 @@ def _run_ablation(pipeline, game_flows) -> Dict:
                 _outcome = pipeline._game_outcome(g)
                 if _outcome is None:
                     continue
-                val_games.append({
-                    "team1": g.team1_id, "team2": g.team2_id,
-                    "team1_won": bool(_outcome),
-                })
+                val_games.append(
+                    {
+                        "team1": g.team1_id,
+                        "team2": g.team2_id,
+                        "team1_won": bool(_outcome),
+                    }
+                )
         if len(val_games) >= 20:
             ablation = AblationStudy(pipeline, val_games)
             return ablation.run_full_ablation().to_dict()
@@ -559,6 +570,7 @@ def _run_ablation(pipeline, game_flows) -> Dict:
 # ---------------------------------------------------------------------------
 # Report assembly
 # ---------------------------------------------------------------------------
+
 
 def assemble_report(
     pipeline,
@@ -603,9 +615,9 @@ def assemble_report(
         },
         "proprietary_metrics_summary": {
             "teams_computed": len(pipeline.proprietary_metrics),
-            "avg_adj_em": float(np.mean(
-                [m.adj_efficiency_margin for m in pipeline.proprietary_metrics.values()] or [0.0]
-            )),
+            "avg_adj_em": float(
+                np.mean([m.adj_efficiency_margin for m in pipeline.proprietary_metrics.values()] or [0.0])
+            ),
         },
         "roster_rapm_quality": pipeline.roster_rapm_quality,
         "injury_integration": injury_stats,
@@ -621,7 +633,12 @@ def assemble_report(
         shared_artifacts["pool_recommendation"] = mode_result.pool_analysis.recommended_strategy
         shared_artifacts["public_pick_sources"] = pipeline.public_pick_sources
         shared_artifacts["scoring_system"] = mode_result.scoring_system or {
-            "R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320,
+            "R64": 10,
+            "R32": 20,
+            "S16": 40,
+            "E8": 80,
+            "F4": 160,
+            "CHAMP": 320,
         }
         shared_artifacts["top_leverage_picks"] = mode_result.leverage_preview
         shared_artifacts["bracket_portfolio"] = mode_result.bracket_portfolio_stats
@@ -695,7 +712,8 @@ def assemble_report(
                 "rapm_team_coverage": pipeline.roster_rapm_quality.get("team_coverage_ratio", 0.0) >= 0.8,
                 "lead_volatility_entropy": float(
                     np.mean([f.avg_entropy for f in pipeline.feature_engineer.team_features.values()] or [0.0])
-                ) > 0.0,
+                )
+                > 0.0,
             },
             "phase_2_architecture": {
                 "schedule_graph_constructed": int(adjacency.shape[0]) >= 64 and len(schedule_graph.edges) > 0,
@@ -716,12 +734,16 @@ def assemble_report(
                     and (pipeline.config.historical_games_json or pipeline.config.scrape_live)
                 ),
                 "step_2_adjacency_matrix": len(schedule_graph.edges) > 0,
-                "step_3_lightgbm_ranker": baseline_stats["model"] in ("lightgbm", "lightgbm_tuned", "stacking_ensemble"),
+                "step_3_lightgbm_ranker": baseline_stats["model"]
+                in ("lightgbm", "lightgbm_tuned", "stacking_ensemble"),
                 "step_3_xgboost_ranker": baseline_stats["model"] in ("xgboost", "xgboost_tuned", "stacking_ensemble"),
                 "step_3_stacking_meta": baseline_stats["model"] == "stacking_ensemble",
                 "step_3_loyo_cv": bool(baseline_stats.get("loyo_cv", {}).get("enabled")),
                 "step_4_pyg_gcn": gnn_stats["framework"] == "pytorch_geometric",
-                "step_5_10k_monte_carlo": int(getattr(pipeline, "_runtime_state", {}).get("num_simulations", pipeline.config.num_simulations)) >= 10000,
+                "step_5_10k_monte_carlo": int(
+                    getattr(pipeline, "_runtime_state", {}).get("num_simulations", pipeline.config.num_simulations)
+                )
+                >= 10000,
                 "step_6_ev_max_output": is_calibration,
             },
         },
@@ -765,6 +787,7 @@ def assemble_report(
             risk_report = RiskReport.from_loyo_results(year_briers)
             report["risk_report"] = risk_report.to_dict()
             from ...ml.evaluation.risk_report import RegimeAnalysis, ScenarioAnalysis
+
             regime = RegimeAnalysis.from_loyo_results(year_briers)
             if regime.regime_labels:
                 report["regime_analysis"] = regime.to_dict()
@@ -811,20 +834,24 @@ def _build_feature_selection_artifact(pipeline) -> Dict:
     if not pipeline.feature_selection_result:
         return result
     fsr = pipeline.feature_selection_result
-    result.update({
-        "original_dim": fsr.original_dim,
-        "reduced_dim": fsr.reduced_dim,
-        "correlation_dropped": len(fsr.correlation_dropped),
-        "importance_dropped": len(fsr.low_importance_dropped),
-        "top_features": [
-            {"name": f.name, "importance": round(f.importance, 4)}
-            for f in fsr.importance_scores[:15]
-        ],
-    })
+    result.update(
+        {
+            "original_dim": fsr.original_dim,
+            "reduced_dim": fsr.reduced_dim,
+            "correlation_dropped": len(fsr.correlation_dropped),
+            "importance_dropped": len(fsr.low_importance_dropped),
+            "top_features": [
+                {"name": f.name, "importance": round(f.importance, 4)} for f in fsr.importance_scores[:15]
+            ],
+        }
+    )
     if fsr.stability_scores:
         result["stability_scores"] = {
-            k: round(v, 3) for k, v in sorted(
-                fsr.stability_scores.items(), key=lambda x: x[1], reverse=True,
+            k: round(v, 3)
+            for k, v in sorted(
+                fsr.stability_scores.items(),
+                key=lambda x: x[1],
+                reverse=True,
             )[:10]
         }
     return result
@@ -833,6 +860,7 @@ def _build_feature_selection_artifact(pipeline) -> Dict:
 # ---------------------------------------------------------------------------
 # Post-pipeline integrations (experiment registry, artifacts, governance)
 # ---------------------------------------------------------------------------
+
 
 def run_post_pipeline(
     pipeline,
@@ -853,7 +881,6 @@ def run_post_pipeline(
     _run_meta_learning(pipeline, report, baseline_stats, loyo_cv)
     _run_deployment_integration(pipeline, report, loyo_cv, experiment_id)
     _run_governance_gates(pipeline, report, loyo_cv, experiment_id)
-    _run_research_loop(pipeline, loyo_year_briers)
 
     logger.info(
         "Shared pipeline complete (mode=%s): skipped %s",
@@ -876,10 +903,7 @@ def _log_experiment(pipeline, report, baseline_stats, calibration_stats, loyo_cv
         )
         config_hash = hashlib.sha256(config_json.encode()).hexdigest()[:16]
 
-        validation_scheme = (
-            f"LOYO_{loyo_cv.get('years_evaluated', 0)}yr"
-            if loyo_cv.get("enabled") else "none"
-        )
+        validation_scheme = f"LOYO_{loyo_cv.get('years_evaluated', 0)}yr" if loyo_cv.get("enabled") else "none"
 
         risk_metrics = {}
         if "risk_report" in report:
@@ -911,13 +935,15 @@ def _log_experiment(pipeline, report, baseline_stats, calibration_stats, loyo_cv
 
         feat_hash = ""
         if hasattr(pipeline, "team_features") and pipeline.team_features:
-            feat_list = sorted(pipeline.feature_engineer.feature_names) if hasattr(pipeline.feature_engineer, "feature_names") else []
+            feat_list = (
+                sorted(pipeline.feature_engineer.feature_names)
+                if hasattr(pipeline.feature_engineer, "feature_names")
+                else []
+            )
             if feat_list:
                 feat_hash = hashlib.sha256(str(feat_list).encode()).hexdigest()[:12]
             if not feat_hash:
-                feat_hash = hashlib.sha256(
-                    str(sorted(pipeline.team_features.keys())).encode()
-                ).hexdigest()[:12]
+                feat_hash = hashlib.sha256(str(sorted(pipeline.team_features.keys())).encode()).hexdigest()[:12]
 
         dataset_hashes = getattr(pipeline, "_dataset_hashes", {})
         code_ver = get_code_version()
@@ -990,7 +1016,8 @@ def _store_artifacts(pipeline, report, baseline_stats, experiment_id, loyo_cv) -
 
         if hasattr(pipeline, "_model") and pipeline._model is not None:
             artifact_store.save_model(
-                pipeline._model, exp_id,
+                pipeline._model,
+                exp_id,
                 metadata={"model_family": baseline_stats.get("model", "unknown")},
             )
 
@@ -1011,10 +1038,13 @@ def _store_artifacts(pipeline, report, baseline_stats, experiment_id, loyo_cv) -
                     importances = model_obj.lgb_model.feature_importances_
                     feat_names = getattr(model_obj, "feature_names", [])
                     if len(feat_names) == len(importances):
-                        feat_importance = dict(sorted(
-                            zip(feat_names, [float(x) for x in importances]),
-                            key=lambda x: x[1], reverse=True,
-                        ))
+                        feat_importance = dict(
+                            sorted(
+                                zip(feat_names, [float(x) for x in importances]),
+                                key=lambda x: x[1],
+                                reverse=True,
+                            )
+                        )
                 except Exception:
                     pass
             if feat_importance:
@@ -1039,6 +1069,7 @@ def _check_promotion_gate(pipeline, report, loyo_cv, experiment_id) -> None:
     """S14/S15: Promotion gate check."""
     try:
         from ...ml.evaluation.promotion_gate import PromotionGate
+
         candidate_brier = loyo_cv.get("mean_brier", 0)
         if candidate_brier > 0:
             gate = PromotionGate()
@@ -1062,6 +1093,7 @@ def _run_meta_learning(pipeline, report, baseline_stats, loyo_cv) -> None:
     """S7: Meta-learning weight adjustment."""
     try:
         from ...ml.meta_learning import MetaLearner
+
         meta_learner = MetaLearner(registry=pipeline._experiment_registry)
         model_components = []
         for name in ("lightgbm", "xgboost", "logistic", "spread_regressor"):
@@ -1090,6 +1122,7 @@ def _run_deployment_integration(pipeline, report, loyo_cv, experiment_id) -> Non
     """S18/S25: Deployment pipeline integration."""
     try:
         from ...deployment.pipeline import DeploymentPipeline
+
         deployment = DeploymentPipeline()
         model_version = experiment_id or "unknown"
         candidate_brier = loyo_cv.get("mean_brier", 0)
@@ -1130,16 +1163,24 @@ def _run_governance_gates(pipeline, report, loyo_cv, experiment_id) -> None:
         for stage_name, stage_context in [
             ("data_loading", {"n_teams": len(pipeline.team_features), "stale_data": False}),
             ("model_training", {"brier": loyo_cv.get("mean_brier", 0), "has_leakage": False, "nan_count": 0}),
-            ("calibration", {"feature_dim": len(next(iter(pipeline.team_features.values()))) if pipeline.team_features else 0}),
+            (
+                "calibration",
+                {"feature_dim": len(next(iter(pipeline.team_features.values()))) if pipeline.team_features else 0},
+            ),
         ]:
             cp_result = pipeline._compliance_gate.check(stage_name, stage_context)
-            governance_results.append({
-                "stage": stage_name, "passed": cp_result.passed,
-                "n_checks": len(cp_result.checks),
-                "n_errors": cp_result.n_errors, "n_warnings": cp_result.n_warnings,
-            })
+            governance_results.append(
+                {
+                    "stage": stage_name,
+                    "passed": cp_result.passed,
+                    "n_checks": len(cp_result.checks),
+                    "n_errors": cp_result.n_errors,
+                    "n_warnings": cp_result.n_warnings,
+                }
+            )
 
         from ...governance.audit_trail import GovernanceAuditLog
+
         audit_trail = GovernanceAuditLog()
         all_passed = all(r["passed"] for r in governance_results)
         audit_trail.log_compliance_check(
@@ -1151,18 +1192,3 @@ def _run_governance_gates(pipeline, report, loyo_cv, experiment_id) -> None:
         logger.info("S21: Governance gates: %d stages checked, all_passed=%s", len(governance_results), all_passed)
     except Exception as exc:
         logger.debug("Governance gate integration failed: %s", exc)
-
-
-def _run_research_loop(pipeline, loyo_year_briers) -> None:
-    """S14: Research loop hypothesis generation."""
-    try:
-        diagnostics = {}
-        if loyo_year_briers:
-            diagnostics["loyo_year_briers"] = loyo_year_briers
-        if diagnostics:
-            pipeline._research_loop.hypothesis_registry.generate_from_diagnostics(
-                loyo_year_briers=diagnostics.get("loyo_year_briers"),
-            )
-            logger.info("Research loop: %s", pipeline._research_loop.hypothesis_registry.summary())
-    except Exception as exc:
-        logger.debug("Research loop hypothesis generation failed: %s", exc)

@@ -221,6 +221,46 @@ def pearson_r(x, y):
     return r, n
 
 
+# Features that map to real production SIMPLE_FEATURE_SET entries and whose
+# raw values are available in the offline JSON snapshots. Used by both the
+# main() printer and the O8 regression test.
+PRODUCTION_FEATURE_MAP = {
+    "adj_off_eff": "diff_adj_off_eff",
+    "adj_def_eff": "diff_adj_def_eff",
+    "sos_adj_em": "diff_sos_adj_em",
+    "win_pct": "diff_win_pct",
+    "adj_tempo": "diff_adj_tempo",
+    "orb_rate": "diff_orb_rate",
+    "opp_to_rate": "diff_opp_to_rate",
+}
+
+
+def compute_production_feature_correlations():
+    """Return {production_feature_name: (r, n)} correlating each production
+    feature against tournament seed (1=best, 16=worst).
+
+    Reads historical tournament seeds + Torvik JSON snapshots already
+    committed to data/. Fully offline.
+
+    Used by:
+      - scripts/feature_seed_correlation.py main() to print the diagnostic.
+      - tests/test_feature_seed_collinearity.py to enforce the anti-tautology
+        gate (no single production feature has |r| >= 0.85 with seed).
+
+    Closes COUNCIL_LESSONS.md §2 O8.
+    """
+    rows = collect_features()
+    if not rows:
+        return {}
+    seeds = np.array([row["seed"] for row in rows], dtype=float)
+    results = {}
+    for raw_name, prod_name in PRODUCTION_FEATURE_MAP.items():
+        values = np.array([row.get(raw_name, np.nan) for row in rows], dtype=float)
+        r, n = pearson_r(values, seeds)
+        results[prod_name] = (float(r) if np.isfinite(r) else float("nan"), int(n))
+    return results
+
+
 def main():
     print("=" * 70)
     print("FEATURE-SEED CORRELATION ANALYSIS")
