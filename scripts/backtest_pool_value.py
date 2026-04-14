@@ -18,6 +18,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from scripts._common import load_seeds, load_tournament_results  # noqa: F401
 
 import numpy as np
 
@@ -56,25 +57,6 @@ class TeamFeatures:
     avg_experience: float = 2.0
     bench_depth_score: float = 0.0
     adj_efficiency_margin: float = 0.0
-
-
-def load_tournament_results(year: int) -> List[Dict]:
-    path = HIST_DIR / f"tournament_results_{year}.json"
-    if not path.exists():
-        return []
-    with open(path) as f:
-        data = json.load(f)
-    return data.get("games", [])
-
-
-def load_seeds(year: int) -> Dict[str, int]:
-    path = HIST_DIR / f"tournament_seeds_{year}.json"
-    if not path.exists():
-        return {}
-    with open(path) as f:
-        data = json.load(f)
-    teams = data.get("teams", data if isinstance(data, list) else [])
-    return {t["team_id"]: t["seed"] for t in teams}
 
 
 def load_team_features(year: int) -> Dict[str, TeamFeatures]:

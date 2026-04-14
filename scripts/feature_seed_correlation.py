@@ -10,6 +10,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from scripts._common import load_seeds  # noqa: F401
 
 import numpy as np
 
@@ -18,17 +19,6 @@ HIST_DIR = DATA_DIR / "historical"
 
 # Years matching production training window
 YEARS = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
-
-
-def load_seeds(year):
-    """Load tournament seeds for a given year. Returns {team_id: seed}."""
-    path = HIST_DIR / f"tournament_seeds_{year}.json"
-    if not path.exists():
-        return {}
-    with open(path) as f:
-        data = json.load(f)
-    teams = data.get("teams", data if isinstance(data, list) else [])
-    return {t["team_id"]: t["seed"] for t in teams}
 
 
 def load_torvik(year):

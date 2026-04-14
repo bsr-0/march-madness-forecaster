@@ -12,6 +12,7 @@ import json
 import sys
 from collections import defaultdict
 from pathlib import Path
+from scripts._common import load_seeds_and_regions  # noqa: F401
 
 import numpy as np
 
@@ -28,20 +29,6 @@ BACKTEST_YEARS = [y for y in range(2008, 2026) if y != 2020]
 SEED_MATCHUP_ORDER = [(1, 16), (8, 9), (5, 12), (4, 13), (6, 11), (3, 14), (7, 10), (2, 15)]
 REGION_ORDER = ["East", "West", "South", "Midwest"]
 ESPN_SCORING = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
-
-
-def load_seeds_and_regions(year):
-    path = HIST_DIR / f"tournament_seeds_{year}.json"
-    if not path.exists():
-        return {}, {}
-    with open(path) as f:
-        data = json.load(f)
-    seeds, regions = {}, {}
-    if isinstance(data, dict) and "teams" in data:
-        for t in data["teams"]:
-            seeds[t["team_id"]] = t["seed"]
-            regions[t["team_id"]] = t.get("region", "")
-    return seeds, regions
 
 
 def _load_team_stats(year):

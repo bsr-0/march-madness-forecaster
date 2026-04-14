@@ -29,6 +29,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.ml.ensemble.upset_detector import HISTORICAL_UPSET_RATES, UpsetDetector
 
+from scripts._common import load_tournament_results  # noqa: F401  (re-exported for back-compat)
+
 DATA_DIR = Path("data/raw")
 HIST_DIR = DATA_DIR / "historical"
 
@@ -96,14 +98,6 @@ class GameRecord:
     # Signals
     seed_upset_prob: float  # Historical seed-based P(upset)
     si_score: float  # Seed-independent score from UpsetDetector
-
-
-def load_tournament_results(year: int) -> List[Dict]:
-    path = HIST_DIR / f"tournament_results_{year}.json"
-    if not path.exists():
-        return []
-    with open(path) as f:
-        return json.load(f).get("games", [])
 
 
 def load_team_features(year: int) -> Dict[str, TeamFeatures]:

@@ -1,0 +1,177 @@
+"""Shared helpers for backtest / diagnostic scripts.
+
+Consolidates duplicated loaders + scoring helpers from across the
+`scripts/` tree. Before this module, each script inlined its own copy
+of these functions; `grep` found 5+ duplicates of `load_seeds`, 7 of
+`load_tournament_results`, 3 of `determine_winners`, etc.
+
+Each function here is the most-robust variant observed across the
+duplicates (handles missing files, dict/list schemas, and carries the
+docstring from whichever copy was richest). Callers that previously
+defined their own copy now `from scripts._common import ...`.
+
+Intentionally NOT consolidated:
+
+- `_load_json`: 5 variants with genuinely different behavior — one
+  parses teams/list out of a dict, another returns None on parse
+  errors, others are bare `json.load`. These share a name but not a
+  contract.
+- `load_team_features`: 3 variants each ~65 LOC with real logic
+  differences (differ on which Torvik fields are primary, which
+  fallback to enriched stats, etc.). Deferred to a future phase that
+  audits the field-resolution order.
+- `score_bracket` (pool-analysis variant): `pool_correlation_analysis`
+  and `pool_multiyear_analysis` use a round→list-of-picks structure
+  that is semantically different from the ESPN-style team→round dict
+  this module's `score_bracket_espn` handles.
+- `load_seeds_and_regions` for `mc_pool_backtest.py`: that caller
+  applies a region-alias lookup (`_REGION_ALIASES`) the other two
+  don't. Left in-place; the simpler version is in this module.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Dict, List, Set, Tuple
+
+HIST_DIR = Path("data/raw/historical")
+
+
+# ---------------------------------------------------------------------------
+# Loaders
+# ---------------------------------------------------------------------------
+
+
+def load_tournament_results(year: int) -> List[Dict]:
+    """Return the list of tournament games for `year`, or [] if the file
+    is missing. Consolidates 7 near-identical copies (hashes d0ea/cd46/
+    20174961 across backtest_by_round, backtest_ev_vs_kaggle,
+    backtest_pool_value, ablation_seed_features, unified_mode_evaluation,
+    validate_e8_interactions, and mc_pool_backtest)."""
+    path = HIST_DIR / f"tournament_results_{year}.json"
+    if not path.exists():
+        return []
+    with open(path) as f:
+        data = json.load(f)
+    # Most callers expect the "games" list; mc_pool_backtest's variant
+    # also tolerated a bare list at the top level — preserve that.
+    if isinstance(data, dict):
+        return data.get("games", [])
+    return data if isinstance(data, list) else []
+
+
+def load_seeds(year: int) -> Dict[str, int]:
+    """Return `team_id -> seed` mapping for `year`, or {} if missing.
+
+    Consolidates 5 copies (hashes a0163f59/742162dc/73b3e027/f086d8e6/
+    4fa5ee80). The pool-value variant's dict-or-list schema tolerance
+    is kept (some legacy files store teams as a bare top-level list)."""
+    path = HIST_DIR / f"tournament_seeds_{year}.json"
+    if not path.exists():
+        return {}
+    with open(path) as f:
+        data = json.load(f)
+    teams = data.get("teams", data if isinstance(data, list) else [])
+    return {t["team_id"]: t["seed"] for t in teams}
+
+
+def load_seeds_and_regions(year: int) -> Tuple[Dict[str, int], Dict[str, str]]:
+    """Return `(seeds, regions)` mapping for `year`, or ({}, {}).
+
+    Consolidates `diagnose_leverage` and `divergence_diagnostic`
+    (identical hash 3e6441d1). `mc_pool_backtest.py` has its own
+    region-alias-aware variant and is NOT migrated to this helper."""
+    path = HIST_DIR / f"tournament_seeds_{year}.json"
+    if not path.exists():
+        return {}, {}
+    with open(path) as f:
+        data = json.load(f)
+    seeds: Dict[str, int] = {}
+    regions: Dict[str, str] = {}
+    if isinstance(data, dict) and "teams" in data:
+        for t in data["teams"]:
+            seeds[t["team_id"]] = t["seed"]
+            regions[t["team_id"]] = t.get("region", "")
+    return seeds, regions
+
+
+# ---------------------------------------------------------------------------
+# Scoring helpers (ESPN-style: picks = {team_id: round_name})
+# ---------------------------------------------------------------------------
+
+
+def determine_winners(games: List[Dict], scoring_rounds, round_map) -> Dict[str, Set[str]]:
+    """Build `{scoring_round_name: set(winner_team_ids)}` from a list of games.
+
+    Args:
+        games: Each game has `round_name`, `team1_id`, `team2_id`, `team1_won`.
+        scoring_rounds: Iterable of valid scoring round names (e.g.
+            ESPN_SCORING keys). Used to initialise the return dict's
+            per-round sets.
+        round_map: Mapping from a game's `round_name` → scoring round
+            name (e.g. RESULT_ROUND_TO_SCORING). Games whose round
+            doesn't map are skipped.
+
+    Consolidates `backtest_ev_vs_kaggle`, `backtest_pool_strategy`,
+    `unified_mode_evaluation`. Caller-specific constants
+    (ESPN_SCORING, RESULT_ROUND_TO_SCORING) are passed in rather than
+    imported here to avoid a circular-dependency knot between scripts."""
+    winners: Dict[str, Set[str]] = {r: set() for r in scoring_rounds}
+    for game in games:
+        scoring_round = round_map.get(game["round_name"])
+        if scoring_round is None:
+            continue
+        if game["team1_won"]:
+            winners[scoring_round].add(game["team1_id"])
+        else:
+            winners[scoring_round].add(game["team2_id"])
+    return winners
+
+
+def build_chalk_picks(
+    games: List[Dict],
+    seeds: Dict[str, int],
+    round_map,
+) -> Dict[str, str]:
+    """Build a chalk bracket: for every game, pick the lower (better) seed.
+
+    Returns `{team_id: scoring_round_name}` for each chalk pick.
+    Falls back to `game['team1_seed']` / `team2_seed` when the seed is
+    not in the `seeds` dict. Consolidates `backtest_ev_vs_kaggle`,
+    `backtest_pool_strategy`, `unified_mode_evaluation`."""
+    picks: Dict[str, str] = {}
+    for game in games:
+        scoring_round = round_map.get(game["round_name"])
+        if scoring_round is None:
+            continue
+        t1, t2 = game["team1_id"], game["team2_id"]
+        s1 = seeds.get(t1, game.get("team1_seed", 16))
+        s2 = seeds.get(t2, game.get("team2_seed", 16))
+        picks[t1 if s1 <= s2 else t2] = scoring_round
+    return picks
+
+
+def score_bracket_espn(
+    picks: Dict[str, str],
+    winners: Dict[str, Set[str]],
+    scoring: Dict[str, int],
+) -> int:
+    """Score a bracket's picks against actual winners using ESPN points.
+
+    Args:
+        picks: `team_id → scoring_round_name` — each entry means "I
+            picked this team to win this round."
+        winners: `scoring_round_name → set of team_ids` that actually
+            won.
+        scoring: `scoring_round_name → points awarded per correct pick`.
+
+    Consolidates `backtest_ev_vs_kaggle`, `backtest_pool_strategy`,
+    `unified_mode_evaluation`. Not used by the pool-analysis scripts
+    (`pool_correlation_analysis`, `pool_multiyear_analysis`) which have
+    a different picks-schema and stay with their own score_bracket."""
+    total = 0
+    for team_id, round_name in picks.items():
+        if team_id in winners.get(round_name, set()):
+            total += scoring[round_name]
+    return total
