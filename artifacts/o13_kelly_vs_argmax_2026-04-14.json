@@ -1,0 +1,110 @@
+{
+  "modes": {
+    "seed": {
+      "n_years": 13,
+      "mean_p_first": 0.03446153846153846,
+      "mean_p_top5": 0.038153846153846156,
+      "mean_best_rank": 1.6230769230769229,
+      "mean_rank_all": 16.16923076923077,
+      "class": "baseline"
+    },
+    "noseed": {
+      "n_years": 13,
+      "mean_p_first": 0.02584615384615385,
+      "mean_p_top5": 0.028923076923076926,
+      "mean_best_rank": 1.7999999999999998,
+      "mean_rank_all": 17.115384615384617,
+      "class": "baseline"
+    },
+    "blend": {
+      "n_years": 13,
+      "mean_p_first": 0.030461538461538467,
+      "mean_p_top5": 0.03415384615384615,
+      "mean_best_rank": 1.9000000000000001,
+      "mean_rank_all": 16.80769230769231,
+      "class": "baseline"
+    },
+    "torvik": {
+      "n_years": 13,
+      "mean_p_first": 0.044384615384615383,
+      "mean_p_top5": 0.04838461538461539,
+      "mean_best_rank": 2.023076923076923,
+      "mean_rank_all": 16.25384615384616,
+      "class": "baseline"
+    },
+    "champ_first_tv": {
+      "n_years": 13,
+      "mean_p_first": 0.044,
+      "mean_p_top5": 0.0473076923076923,
+      "mean_best_rank": 1.6076923076923073,
+      "mean_rank_all": 16.207692307692305,
+      "class": "stochastic"
+    },
+    "f4_first_tv": {
+      "n_years": 13,
+      "mean_p_first": 0.042769230769230775,
+      "mean_p_top5": 0.046615384615384614,
+      "mean_best_rank": 1.4538461538461538,
+      "mean_rank_all": 15.646153846153844,
+      "class": "stochastic"
+    },
+    "e8_first_tv": {
+      "n_years": 13,
+      "mean_p_first": 0.036000000000000004,
+      "mean_p_top5": 0.04023076923076923,
+      "mean_best_rank": 1.4923076923076921,
+      "mean_rank_all": 16.423076923076923,
+      "class": "stochastic"
+    },
+    "det_champ_tv": {
+      "n_years": 13,
+      "mean_p_first": 0.06076923076923077,
+      "mean_p_top5": 0.06415384615384614,
+      "mean_best_rank": 9.984615384615383,
+      "mean_rank_all": 17.184615384615384,
+      "class": "argmax"
+    },
+    "det_f4_tv": {
+      "n_years": 13,
+      "mean_p_first": 0.06199999999999999,
+      "mean_p_top5": 0.066,
+      "mean_best_rank": 10.123076923076923,
+      "mean_rank_all": 16.515384615384615,
+      "class": "argmax"
+    },
+    "det_e8_tv": {
+      "n_years": 13,
+      "mean_p_first": 0.05815384615384615,
+      "mean_p_top5": 0.06307692307692309,
+      "mean_best_rank": 9.653846153846152,
+      "mean_rank_all": 16.53076923076923,
+      "class": "argmax"
+    }
+  },
+  "head_to_head": {
+    "stochastic": {
+      "p_first": 0.04092307692307694,
+      "best_rank": 1.517948717948718,
+      "n_rows": 39
+    },
+    "argmax": {
+      "p_first": 0.060307692307692305,
+      "best_rank": 9.920512820512819,
+      "n_rows": 39
+    },
+    "baselines": {
+      "p_first": 0.03378846153846154,
+      "best_rank": 1.8365384615384615,
+      "n_rows": 52
+    }
+  },
+  "per_year_winner": {
+    "stoch_wins": 10,
+    "argmax_wins": 3,
+    "ties": 0
+  },
+  "source": "mc_pool_backtest_n31_det_vs_stoch.txt (2026-04-12 run)",
+  "pool_size": 31,
+  "mc_brackets_per_mode": 50,
+  "mc_repeats": 50
+}
