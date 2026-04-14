@@ -24,6 +24,7 @@ from collections import defaultdict
 from pathlib import Path
 from scripts._common import (  # noqa: F401
     build_chalk_picks as _cm_build_chalk_picks,
+    build_leverage_bracket as _cm_build_leverage_bracket,
     determine_winners as _cm_determine_winners,
     load_seeds,
     load_tournament_results,
@@ -163,28 +164,7 @@ def build_chalk_picks(games, seeds):
 
 
 def build_leverage_bracket(games, seeds, leverage_picks):
-    leverage_set = {}
-    for lp in leverage_picks:
-        leverage_set[(lp["team_id"], lp["round"])] = lp.get("leverage_ratio", 0.0)
-
-    picks = {}
-    for game in games:
-        scoring_round = RESULT_ROUND_TO_SCORING.get(game["round_name"])
-        if scoring_round is None:
-            continue
-        t1, t2 = game["team1_id"], game["team2_id"]
-        s1, s2 = seeds.get(t1, 16), seeds.get(t2, 16)
-        lev1 = leverage_set.get((t1, scoring_round), 0.0)
-        lev2 = leverage_set.get((t2, scoring_round), 0.0)
-        if lev1 > 0 and lev1 >= lev2:
-            picks[t1] = scoring_round
-        elif lev2 > 0:
-            picks[t2] = scoring_round
-        elif s1 <= s2:
-            picks[t1] = scoring_round
-        else:
-            picks[t2] = scoring_round
-    return picks
+    return _cm_build_leverage_bracket(games, seeds, leverage_picks, RESULT_ROUND_TO_SCORING)
 
 
 def measure_pool_points(pairwise_probs, round_probs, games, seeds, opponent_picks):

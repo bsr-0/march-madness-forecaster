@@ -16,7 +16,11 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from types import SimpleNamespace
-from scripts._common import load_tournament_results  # noqa: F401
+from scripts._common import (  # noqa: F401
+    load_torvik_and_ff,
+    load_tournament_results,
+    sf,
+)
 
 import numpy as np
 
@@ -32,44 +36,12 @@ BACKTEST_YEARS = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 20
 
 def load_team_features(year):
     """Load Torvik four-factor data for E8 interaction signals."""
+    torvik, four_factors = load_torvik_and_ff(year)
     features = {}
-
-    # Try torvik_{year}.json (has team-level stats)
-    torvik_path = HIST_DIR / f"torvik_{year}.json"
-    if not torvik_path.exists():
-        torvik_path = DATA_DIR / f"torvik_{year}.json"
-    torvik = {}
-    if torvik_path.exists():
-        with open(torvik_path) as f:
-            data = json.load(f)
-        torvik = {t["team_id"]: t for t in data.get("teams", [])}
-
-    # Try four factors file
-    ff_path = HIST_DIR / f"torvik_four_factors_{year}.json"
-    if not ff_path.exists():
-        ff_path = DATA_DIR / f"torvik_four_factors_{year}.json"
-    four_factors = {}
-    if ff_path.exists():
-        with open(ff_path) as f:
-            ff_data = json.load(f)
-        if isinstance(ff_data, dict) and "teams" not in ff_data:
-            four_factors = ff_data
-        else:
-            four_factors = {t.get("team_id", ""): t for t in ff_data.get("teams", [])}
-
-    all_teams = set(torvik.keys()) | set(four_factors.keys())
-    for tid in all_teams:
+    for tid in set(torvik) | set(four_factors):
         tv = torvik.get(tid, {})
         ff = four_factors.get(tid, {})
         enriched = tv.get("enriched_stats", {})
-
-        def sf(val, default):
-            try:
-                v = float(val)
-                return v if np.isfinite(v) else default
-            except (TypeError, ValueError):
-                return default
-
         features[tid] = SimpleNamespace(
             opp_turnover_rate=sf(
                 ff.get("opp_turnover_rate") or enriched.get("opp_turnover_rate") or tv.get("opp_turnover_rate"), 0.18
@@ -92,7 +64,6 @@ def load_team_features(year):
             coach_e8_appearances=int(sf(tv.get("coach_e8_appearances"), 0)),
             coach_deep_run_rate=sf(tv.get("coach_deep_run_rate"), 0.0),
         )
-
     return features
 
 

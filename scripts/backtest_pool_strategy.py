@@ -10,10 +10,10 @@ from scripts._common import (  # noqa: F401
     build_chalk_picks as _cm_build_chalk_picks,
     determine_winners as _cm_determine_winners,
     load_seeds,
+    load_tournament_results,
     score_bracket_espn,
 )
 
-import json
 import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -56,10 +56,7 @@ SCOREABLE_ROUNDS = {"R64", "R32", "S16", "E8", "F4", "NCG"}
 
 def load_results(year: int) -> List[Dict]:
     """Load tournament results, filtering to scoreable rounds only."""
-    path = PROJECT_ROOT / f"data/raw/historical/tournament_results_{year}.json"
-    with open(path) as f:
-        data = json.load(f)
-    return [g for g in data["games"] if g["round_name"] in SCOREABLE_ROUNDS]
+    return [g for g in load_tournament_results(year) if g["round_name"] in SCOREABLE_ROUNDS]
 
 
 def determine_winners(games: List[Dict]) -> Dict[str, set]:

@@ -18,7 +18,12 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from scripts._common import load_seeds, load_tournament_results  # noqa: F401
+from scripts._common import (  # noqa: F401
+    load_seeds,
+    load_torvik_and_ff,
+    load_tournament_results,
+    sf,
+)
 
 import numpy as np
 
@@ -61,50 +66,14 @@ class TeamFeatures:
 
 def load_team_features(year: int) -> Dict[str, TeamFeatures]:
     """Load Torvik + four factors into TeamFeatures objects."""
+    torvik, four_factors = load_torvik_and_ff(year)
     features = {}
-
-    # Torvik main: adj_tempo, adj_efficiency
-    torvik_path = HIST_DIR / f"torvik_{year}.json"
-    if not torvik_path.exists():
-        torvik_path = DATA_DIR / f"torvik_{year}.json"
-    torvik = {}
-    if torvik_path.exists():
-        with open(torvik_path) as f:
-            data = json.load(f)
-        teams = data.get("teams", data if isinstance(data, list) else [])
-        torvik = {t["team_id"]: t for t in teams}
-
-    # Four factors: rebounding, turnovers
-    ff_path = HIST_DIR / f"torvik_four_factors_{year}.json"
-    if not ff_path.exists():
-        ff_path = DATA_DIR / f"torvik_four_factors_{year}.json"
-    four_factors = {}
-    if ff_path.exists():
-        with open(ff_path) as f:
-            ff_data = json.load(f)
-        if isinstance(ff_data, dict) and not ff_data.get("teams"):
-            four_factors = ff_data
-        else:
-            teams_list = ff_data.get("teams", ff_data if isinstance(ff_data, list) else [])
-            four_factors = {t.get("team_id", ""): t for t in teams_list}
-
-    # Merge sources
-    all_teams = set(torvik.keys()) | set(four_factors.keys())
-    for tid in all_teams:
+    for tid in set(torvik) | set(four_factors):
         tv = torvik.get(tid, {})
         ff = four_factors.get(tid, {})
         enriched = tv.get("enriched_stats", {})
-
-        def sf(val, default):
-            try:
-                v = float(val)
-                return v if np.isfinite(v) else default
-            except (TypeError, ValueError):
-                return default
-
         adj_off = sf(tv.get("adj_offensive_efficiency"), 100.0)
         adj_def = sf(tv.get("adj_defensive_efficiency"), 100.0)
-
         features[tid] = TeamFeatures(
             adj_tempo=sf(tv.get("adj_tempo"), 68.0),
             offensive_reb_rate=sf(
@@ -125,7 +94,6 @@ def load_team_features(year: int) -> Dict[str, TeamFeatures]:
             ),
             adj_efficiency_margin=adj_off - adj_def,
         )
-
     return features
 
 
