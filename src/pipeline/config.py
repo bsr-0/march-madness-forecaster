@@ -43,6 +43,11 @@ BT_BLEND_WEIGHT = 0.15
 # Hard tournament start dates by year.  Games on or after these dates are
 # NCAA tournament games and MUST be excluded from regular-season training
 # to prevent result leakage.
+#
+# Yearly update owner: <TBD>. Update by April 1 each year with next season's
+# first-round date. Coverage enforced by
+# tests/data_integrity/test_tournament_start_dates.py (fails loudly when a
+# required year is missing).
 # ---------------------------------------------------------------------------
 TOURNAMENT_START_DATES: Dict[int, date] = {
     # Historical years (1996-2007) — first round dates sourced from

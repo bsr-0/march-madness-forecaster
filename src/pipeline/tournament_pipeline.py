@@ -56,7 +56,6 @@ from ..data.scrapers.bracket_ingestion import BracketIngestionPipeline
 from ..data.normalize import normalize_team_id as _shared_normalize_team_id
 from ..data.team_name_resolver import TeamNameResolver
 from ..ml.evaluation.experiment_registry import ExperimentRegistry
-from ..ml.research.research_loop import ResearchLoop
 from ..monitoring.phase_timer import PhaseTimer
 from ..data.features.proprietary_metrics import ProprietaryMetricsEngine
 from ..optimization.pool_optimizer import (
@@ -70,16 +69,29 @@ from ..forecasting.engine import (
 
 from ._optional_imports import (  # noqa: F401 — re-exported for backward compat
     torch,
-    TORCH_AVAILABLE, SKLEARN_AVAILABLE, SCALER_AVAILABLE,
-    OPTUNA_AVAILABLE, SIGNIFICANCE_TESTING_AVAILABLE,
-    ABLATION_AVAILABLE, SPREAD_MODEL_AVAILABLE,
-    TOURNAMENT_SIGMA_AVAILABLE, BAYESIAN_BT_AVAILABLE,
+    TORCH_AVAILABLE,
+    SKLEARN_AVAILABLE,
+    SCALER_AVAILABLE,
+    OPTUNA_AVAILABLE,
+    SIGNIFICANCE_TESTING_AVAILABLE,
+    ABLATION_AVAILABLE,
+    SPREAD_MODEL_AVAILABLE,
+    TOURNAMENT_SIGMA_AVAILABLE,
+    BAYESIAN_BT_AVAILABLE,
     TUNER_XGBOOST_AVAILABLE,
-    LogisticRegression, StandardScaler,
-    LightGBMTuner, XGBoostTuner, LogisticTuner,
-    EnsembleWeightOptimizer, TemporalCrossValidator, LeaveOneYearOutCV,
-    model_significance_report, AblationStudy,
-    SpreadRegressor, TournamentSigmaCalibrator, BayesianBradleyTerry,
+    LogisticRegression,
+    StandardScaler,
+    LightGBMTuner,
+    XGBoostTuner,
+    LogisticTuner,
+    EnsembleWeightOptimizer,
+    TemporalCrossValidator,
+    LeaveOneYearOutCV,
+    model_significance_report,
+    AblationStudy,
+    SpreadRegressor,
+    TournamentSigmaCalibrator,
+    BayesianBradleyTerry,
 )
 
 from .pipeline_runner import _PipelineRunner
@@ -109,6 +121,7 @@ class TournamentPipeline:
 
     def _init_rng(self) -> None:
         import random
+
         self.rng = np.random.default_rng(self.config.random_seed)
         random.seed(self.config.random_seed)
         np.random.seed(self.config.random_seed)
@@ -127,14 +140,16 @@ class TournamentPipeline:
                 max_wall_seconds=self.config.compute_budget_seconds,
                 max_memory_mb=8192,
                 phase_budgets={
-                    "data_loading": 300, "feature_engineering": 600,
-                    "model_training": 1800, "calibration": 300, "simulation": 600,
+                    "data_loading": 300,
+                    "feature_engineering": 600,
+                    "model_training": 1800,
+                    "calibration": 300,
+                    "simulation": 600,
                 },
             )
         )
         self._cost_tracker = CostTracker()
         self._experiment_registry = ExperimentRegistry()
-        self._research_loop = ResearchLoop(experiment_registry=self._experiment_registry)
         self._pipeline_context = PipelineContext(
             config=self.config,
             phase_timer=self._phase_timer,
@@ -172,9 +187,11 @@ class TournamentPipeline:
         if self.config.enable_seed_overrides or self.config.enable_brier_sharpening:
             try:
                 from ..ml.calibration.brier_optimal import BrierPostProcessor, SeedBasedOverrides
+
                 self._brier_post_processor = BrierPostProcessor(
                     seed_overrides_mens=SeedBasedOverrides(
-                        snap_threshold=self.config.seed_override_threshold, is_womens=False,
+                        snap_threshold=self.config.seed_override_threshold,
+                        is_womens=False,
                     ),
                     clip_lo=self.config.pre_calibration_clip_lo,
                     clip_hi=self.config.pre_calibration_clip_hi,
@@ -186,6 +203,7 @@ class TournamentPipeline:
         if self.config.enable_goto_conversion:
             try:
                 from ..ml.calibration.brier_optimal import FavouriteLongshotCorrection
+
                 self._flb_correction = FavouriteLongshotCorrection(strength=self.config.goto_conversion_margin_init)
             except ImportError:
                 logger.info("Optional module not available: FavouriteLongshotCorrection")
@@ -194,6 +212,7 @@ class TournamentPipeline:
         if self.config.enable_massey_predictor:
             try:
                 from ..ml.calibration.brier_optimal import MasseyStandalonePredictor
+
                 self._massey_predictor = MasseyStandalonePredictor(sigma=self.config.massey_sigma)
             except ImportError:
                 logger.info("Optional module not available: MasseyStandalonePredictor")
@@ -347,26 +366,32 @@ class TournamentPipeline:
     ) -> Dict:
         """Re-optimize EV analysis with updated public picks without re-training."""
         from .stages import ev_analysis as _ev
+
         return _ev.refresh_ev_analysis(self, new_picks_json, force, significance_threshold_pp)
 
     def _build_ev_analysis(self, base_report: Dict) -> "EVModeReport":
         from .stages import ev_analysis as _ev
+
         return _ev._build_ev_analysis(self, base_report)
 
     def _get_ev_scoring_system(self) -> Dict[str, int]:
         from .stages import ev_analysis as _ev
+
         return _ev._get_ev_scoring_system(self)
 
     def _run_pool_competition_simulation(self, *args, **kwargs):
         from .stages import ev_analysis as _ev
+
         return _ev._run_pool_competition_simulation(self, *args, **kwargs)
 
     def _pareto_brackets_to_winner_lists(self, *args, **kwargs):
         from .stages import ev_analysis as _ev
+
         return _ev._pareto_brackets_to_winner_lists(self, *args, **kwargs)
 
     def _generate_chalk_winners(self, *args, **kwargs):
         from .stages import ev_analysis as _ev
+
         return _ev._generate_chalk_winners(self, *args, **kwargs)
 
     # ------------------------------------------------------------------
@@ -422,15 +447,18 @@ class TournamentPipeline:
 
     def _load_teams_from_bracket(self, path: str) -> List:
         from .stages import data_loader as _dl
+
         bracket = self.bracket_pipeline.fetch(source=path)
         return _dl.bracket_data_to_teams(bracket)
 
     def _bracket_data_to_teams(self, bracket) -> List:
         from .stages import data_loader as _dl
+
         return _dl.bracket_data_to_teams(bracket)
 
     def _compute_prior_year_elo(self):
         from .stages import data_loader as _dl
+
         return _dl.compute_prior_year_elo(self.config)
 
     def _load_team_stat_sources(self, teams: List):
@@ -438,18 +466,22 @@ class TournamentPipeline:
 
     def _enrich_tournament_context(self, torvik_map: Dict, proprietary_map: Dict, teams: List) -> None:
         from .stages import data_loader as _dl
+
         return _dl.enrich_tournament_context(self.config, torvik_map, proprietary_map, teams)
 
     def _load_external_ratings(self, teams: List) -> Dict:
         from .stages import data_loader as _dl
+
         return _dl.load_external_ratings(self.config, teams)
 
     def _load_massey_multi_system(self) -> Dict:
         from .stages import data_loader as _dl
+
         return _dl.load_massey_multi_system(self.config)
 
     def _verify_massey_coverage(self, teams: List, composites: Dict) -> Dict:
         from .stages import data_loader as _dl
+
         return _dl.verify_massey_coverage(teams, composites, self.feature_engineer.team_features)
 
     def _build_rosters(self, teams: List) -> Dict:
@@ -460,13 +492,16 @@ class TournamentPipeline:
 
     def _historical_game_to_flow(self, game: Dict):
         from .stages import data_loader as _dl
+
         return _dl.historical_game_to_flow(
-            game, self.config.year,
+            game,
+            self.config.year,
             resolve_to_canonical=getattr(self, "_resolve_to_canonical", None),
         )
 
     def _infer_game_year(self, game: Dict) -> int:
         from .stages import data_loader as _dl
+
         return _dl.infer_game_year(game, self.config.year)
 
     def _apply_injury_reports(self, rosters: Dict) -> Dict:
@@ -481,18 +516,22 @@ class TournamentPipeline:
     @staticmethod
     def _build_enriched_meta(base_X):
         from .stages import baseline_training as _bt
+
         return _bt._build_enriched_meta(base_X)
 
     def _select_best_single_model(self, model_briers: Dict, models: Dict) -> str:
         from .stages import baseline_training as _bt
+
         return _bt._select_best_single_model(self, model_briers, models)
 
     def _set_primary_model(self, name: str, model) -> None:
         from .stages import baseline_training as _bt
+
         return _bt._set_primary_model(self, name, model)
 
     def _run_loyo_validation(self, feature_dim: int, feature_names=None) -> Dict:
         from .stages import baseline_training as _bt
+
         return _bt._run_loyo_validation(self, feature_dim, feature_names)
 
     def _run_gnn(self, graph) -> Dict:
@@ -518,27 +557,33 @@ class TournamentPipeline:
 
     def _to_round_probabilities(self, sim_results) -> Dict:
         from .stages import simulation as _sim
+
         return _sim.to_round_probabilities(self, sim_results)
 
     def _to_round_probabilities_from_sim(self, sim_data: Dict) -> Dict:
         from .stages import simulation as _sim
+
         return _sim.to_round_probabilities_from_sim(self, sim_data)
 
     def _load_public_picks(self, model_probs: Dict) -> Dict:
         from .stages import simulation as _sim
+
         return _sim.load_public_picks(self, model_probs)
 
     def _extract_public_pick_rows(self, payload: Dict) -> Dict:
         from .stages import simulation as _sim
+
         return _sim.extract_public_pick_rows(self, payload)
 
     def _normalize_public_pick_row(self, row: Dict) -> Dict:
         from .stages import simulation as _sim
+
         return _sim.normalize_public_pick_row(row)
 
     @staticmethod
     def _normalize_pick_probability(value: float) -> float:
         from .stages import simulation as _sim
+
         return _sim.normalize_pick_probability(value)
 
     def _unique_games(self, game_flows: Dict) -> List:
@@ -546,42 +591,52 @@ class TournamentPipeline:
 
     def _estimate_model_confidence_intervals(self, game_flows: Dict) -> Dict:
         from .stages import simulation as _sim
+
         return _sim.estimate_model_confidence_intervals(self, game_flows)
 
     def _bootstrap_brier_interval(self, predictions, outcomes, rounds: int = 400):
         from .stages import simulation as _sim
+
         return _sim.bootstrap_brier_interval(self, predictions, outcomes, rounds)
 
     def _build_injury_noise_table(self, rosters: Dict, base_strengths: Dict) -> Dict:
         from .stages import simulation as _sim
+
         return _sim.build_injury_noise_table(self, rosters, base_strengths)
 
     def _injury_adjusted_probability(self, base_probability: float, team1_noise, team2_noise) -> float:
         from .stages import simulation as _sim
+
         return _sim.injury_adjusted_probability(self, base_probability, team1_noise, team2_noise)
 
     def _validate_feed_freshness(self, source_name: str, payload: Dict) -> None:
         from .stages import data_loader as _dl
+
         _dl.validate_feed_freshness(self.config, source_name, payload)
 
     def _enrich_roster_rapm(self, players: List, team_block: Dict) -> None:
         from .stages import data_loader as _dl
+
         _dl.enrich_roster_rapm(players, team_block, self.config.min_rapm_players_per_team)
 
     def _assess_roster_rapm_quality(self, rosters: Dict) -> Dict:
         from .stages import data_loader as _dl
+
         return _dl.assess_roster_rapm_quality(rosters, self.config.min_rapm_players_per_team)
 
     def _load_scoring_rules(self):
         from .stages import ev_analysis as _ev
+
         return _ev._load_scoring_rules(self)
 
     def _select_ev_bracket(self, pool_analysis):
         from .stages import ev_analysis as _ev
+
         return _ev._select_ev_bracket(self, pool_analysis)
 
     def _optimize_ensemble_weights_on_validation(self) -> Dict:
         from .stages import baseline_training as _bt
+
         return _bt._optimize_ensemble_weights_on_validation(self)
 
     def _optimize_ensemble_weights_loyo(self, baseline_model, feature_selector=None) -> Dict:
@@ -592,14 +647,17 @@ class TournamentPipeline:
 
     def _player_from_dict(self, team_id: str, raw: Dict):
         from .stages import data_loader as _dl
+
         return _dl.player_from_dict(team_id, raw)
 
     def _apply_transfer_portal_updates(self, rosters: Dict, transfer_json_path: str) -> None:
         from .stages import data_loader as _dl
+
         _dl.apply_transfer_portal_updates(rosters, transfer_json_path)
 
     def _validate_source_coverage(self, source_name: str, coverage_map: Dict, teams: List, min_ratio: float) -> None:
         from .stages.game_utils import validate_source_coverage as _gu_validate_source_coverage
+
         try:
             _gu_validate_source_coverage(source_name, coverage_map, len(teams), min_ratio)
         except ValueError as exc:
@@ -607,10 +665,12 @@ class TournamentPipeline:
 
     def _load_betting_markets(self):
         from .stages import simulation as _sim
+
         return _sim.load_betting_markets(self)
 
     def _apply_market_blend(self, *args, **kwargs):
         from .stages import simulation as _sim
+
         return _sim.apply_market_blend(self, *args, **kwargs)
 
     # Game utility delegates (static/instance helpers used by stage modules)
@@ -618,17 +678,23 @@ class TournamentPipeline:
     @staticmethod
     def _parse_timestamp(value: str):
         from .stages.game_utils import parse_timestamp as _gu_parse_timestamp
+
         return _gu_parse_timestamp(value)
 
     @staticmethod
     def _game_outcome(game):
         from .stages.game_utils import game_outcome as _gu_game_outcome
+
         return _gu_game_outcome(game)
 
     def _coerce_game_date(self, value, fallback_year=None, game_id=None, source=None) -> str:
         from .stages.game_utils import coerce_game_date as _gu_coerce_game_date
+
         return _gu_coerce_game_date(
-            value, fallback_year=fallback_year or self.config.year, game_id=game_id, source=source,
+            value,
+            fallback_year=fallback_year or self.config.year,
+            game_id=game_id,
+            source=source,
         )
 
     def _game_sort_key(self, date_str: str) -> int:
@@ -636,10 +702,12 @@ class TournamentPipeline:
 
     def _is_target_season_game(self, date_str: str) -> bool:
         from .stages.game_utils import is_target_season_game as _gu_is_target_season_game
+
         return _gu_is_target_season_game(date_str, self.config.year)
 
     def _exclude_tournament_games(self, games: List, year=None) -> List:
         from .stages import simulation as _sim
+
         return _sim.exclude_tournament_games(self, games, year)
 
     def _fit_tournament_sigma(self, spread_model, tuning_stats: Dict) -> None:
@@ -651,19 +719,29 @@ class TournamentPipeline:
     @staticmethod
     def _normalize_key(value: str) -> str:
         from .stages.game_utils import normalize_key as _gu_normalize_key
+
         return _gu_normalize_key(value)
 
-    def _load_year_samples_incremental(self, games_path, metrics_path, feature_dim, year, include_tournament=False, prior_elo=None):
+    def _load_year_samples_incremental(
+        self, games_path, metrics_path, feature_dim, year, include_tournament=False, prior_elo=None
+    ):
         from .stages import sample_loading as _sl
-        return _sl.load_year_samples_incremental(self.config, games_path, metrics_path, feature_dim, year, include_tournament, prior_elo)
+
+        return _sl.load_year_samples_incremental(
+            self.config, games_path, metrics_path, feature_dim, year, include_tournament, prior_elo
+        )
 
     def _load_year_tournament_samples_incremental(self, games_path, metrics_path, feature_dim, year, prior_elo=None):
         from .stages import sample_loading as _sl
-        return _sl.load_year_tournament_samples_incremental(self.config, games_path, metrics_path, feature_dim, year, prior_elo)
+
+        return _sl.load_year_tournament_samples_incremental(
+            self.config, games_path, metrics_path, feature_dim, year, prior_elo
+        )
 
     def _load_year_samples(self, games_path, metrics_path, feature_dim, year, include_tournament=False, prior_elo=None):
         """Deprecated — raises NotImplementedError."""
         from .stages import sample_loading as _sl
+
         _sl.load_year_samples(games_path, metrics_path, feature_dim, year, include_tournament, prior_elo)
 
     def _tournament_adapt_experimental(self, prob: float, team1_id: str, team2_id: str) -> float:
@@ -677,6 +755,7 @@ class TournamentPipeline:
 # ---------------------------------------------------------------------------
 # Module-level convenience function
 # ---------------------------------------------------------------------------
+
 
 def run_pipeline_to_file(config: ForecastConfig, output_path: str) -> Dict:
     """Execute pipeline and persist JSON output to *output_path*."""

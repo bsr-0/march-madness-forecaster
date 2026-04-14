@@ -1,0 +1,113 @@
+{
+  "council_item": "O7",
+  "gate_text": "LOYO BSS comparison; tournament-only (500-600 games) vs blended (2200). Flagged 04-01; never run.",
+  "source_artifact": "artifacts/baseline_experiment.json",
+  "source_run_date": "2026-04-01T16:33:18.394422",
+  "analysis_date": "2026-04-13",
+  "regime": "tournament-only training",
+  "n_years": 14,
+  "years": [
+    2010,
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024
+  ],
+  "n_training_samples_per_year": {
+    "2010": 194,
+    "2011": 286,
+    "2012": 464,
+    "2013": 656,
+    "2014": 804,
+    "2015": 996,
+    "2016": 1182,
+    "2017": 1362,
+    "2018": 1556,
+    "2019": 1730,
+    "2021": 1886,
+    "2022": 2022,
+    "2023": 2212,
+    "2024": 2434
+  },
+  "per_config": [
+    {
+      "name": "simple_7_logistic",
+      "n_years": 14,
+      "mean_brier": 0.20837,
+      "mean_brier_seed_baseline": 0.21894,
+      "paired_bss": 0.04825,
+      "paired_t_statistic": -2.3338,
+      "paired_t_p_value_two_sided": 0.0363,
+      "wilcoxon_p_value": 0.03528,
+      "model_beats_seed_in_years": 11,
+      "bonferroni_corrected_alpha_4cfg": 0.0125,
+      "passes_uncorrected_005": true,
+      "passes_bonferroni_corrected": false
+    },
+    {
+      "name": "fixed_27_logistic",
+      "n_years": 14,
+      "mean_brier": 0.21671,
+      "mean_brier_seed_baseline": 0.21894,
+      "paired_bss": 0.01018,
+      "paired_t_statistic": -0.3214,
+      "paired_t_p_value_two_sided": 0.75299,
+      "wilcoxon_p_value": 0.71484,
+      "model_beats_seed_in_years": 9,
+      "bonferroni_corrected_alpha_4cfg": 0.0125,
+      "passes_uncorrected_005": false,
+      "passes_bonferroni_corrected": false
+    },
+    {
+      "name": "seed_only_logistic",
+      "n_years": 14,
+      "mean_brier": 0.21984,
+      "mean_brier_seed_baseline": 0.21894,
+      "paired_bss": -0.00411,
+      "paired_t_statistic": 0.7079,
+      "paired_t_p_value_two_sided": 0.49152,
+      "wilcoxon_p_value": 0.78357,
+      "model_beats_seed_in_years": 8,
+      "bonferroni_corrected_alpha_4cfg": 0.0125,
+      "passes_uncorrected_005": false,
+      "passes_bonferroni_corrected": false
+    },
+    {
+      "name": "seed_plus",
+      "n_years": 14,
+      "mean_brier": 0.21744,
+      "mean_brier_seed_baseline": 0.21894,
+      "paired_bss": 0.00682,
+      "paired_t_statistic": -1.0033,
+      "paired_t_p_value_two_sided": 0.33401,
+      "wilcoxon_p_value": 0.42627,
+      "model_beats_seed_in_years": 8,
+      "bonferroni_corrected_alpha_4cfg": 0.0125,
+      "passes_uncorrected_005": false,
+      "passes_bonferroni_corrected": false
+    }
+  ],
+  "headline": {
+    "best_tournament_only_config": "simple_7_logistic",
+    "best_paired_bss": 0.04825,
+    "best_paired_t_p_value": 0.0363,
+    "statistical_significance": "p=0.036 at \u03b1=0.05 uncorrected; NOT significant under Bonferroni across 4 configs (\u03b1=0.0125)"
+  },
+  "comparison_to_blended_stacked": {
+    "note": "Blended+stacked was the other arm of the council gate. Direct matched-LOYO run never produced, but MEMORY.md \u00a72 D1 aggregates the finding for that regime class across LightGBM, XGBoost, SpreadRegressor, 27-feature ensemble + LightGBM stacking: BSS = 0 vs seed baseline across 17 yrs. Tournament-only simple_7 (+4.8%) is directionally better than blended+stacked (0%), consistent with the MEMORY.md \u00a71 lesson \"7-feature logistic is the ceiling given data constraints\".",
+    "source": "MEMORY.md \u00a72 D1"
+  },
+  "effect_on_pivot": {
+    "verdict": "Does NOT re-open the 2026-04-02 pivot (\u00a73 row 7).",
+    "reasoning": "Finding is directionally positive but marginal: uncorrected p=0.036, Bonferroni-corrected fails. 14-yr backtest power is 9-16% per \u00a71 Validation (\"Use them for binary/directional claims, not to tune parameter values\"). A 5% BSS improvement also does not change the pool-EV argument that drove the pivot: pool optimization is the right axis of improvement, not prediction accuracy."
+  }
+}

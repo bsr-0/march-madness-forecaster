@@ -39,6 +39,7 @@ from src.simulation.pool_competition import (
 # 64-team fixture for integration tests.
 # ---------------------------------------------------------------------------
 
+
 def _build_64_team_bracket():
     """Build a full 64-team bracket with deterministic matchup probabilities."""
     regions = ["East", "West", "South", "Midwest"]
@@ -108,6 +109,7 @@ def _build_chalk_bracket(first_round, matchup_probs):
 # Test: Scoring vector construction
 # ---------------------------------------------------------------------------
 
+
 class TestScoringVector:
     def test_standard_espn_scoring(self):
         scoring = {"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320}
@@ -143,6 +145,7 @@ class TestScoringVector:
 # ---------------------------------------------------------------------------
 # Test: Wilson score interval
 # ---------------------------------------------------------------------------
+
 
 class TestWilsonScore:
     def test_zero_successes(self):
@@ -186,12 +189,18 @@ class TestWilsonScore:
 # Test: Opponent bracket generation
 # ---------------------------------------------------------------------------
 
+
 class TestOpponentBrackets:
     def test_correct_shape(self):
         first_round, seeds, matchup_probs, pick_dist = _build_64_team_bracket()
         rng = np.random.default_rng(42)
         brackets = generate_opponent_brackets(
-            50, first_round, matchup_probs, pick_dist, seeds, rng,
+            50,
+            first_round,
+            matchup_probs,
+            pick_dist,
+            seeds,
+            rng,
         )
         assert brackets.shape == (50, 63)
         assert brackets.dtype == bool
@@ -201,7 +210,12 @@ class TestOpponentBrackets:
         first_round, seeds, matchup_probs, pick_dist = _build_64_team_bracket()
         rng = np.random.default_rng(42)
         brackets = generate_opponent_brackets(
-            100, first_round, matchup_probs, pick_dist, seeds, rng,
+            100,
+            first_round,
+            matchup_probs,
+            pick_dist,
+            seeds,
+            rng,
         )
         # Check that not all brackets are identical
         n_unique = len(set(tuple(b) for b in brackets))
@@ -212,19 +226,27 @@ class TestOpponentBrackets:
         first_round, seeds, matchup_probs, pick_dist = _build_64_team_bracket()
         rng = np.random.default_rng(42)
         brackets = generate_opponent_brackets(
-            1000, first_round, matchup_probs, pick_dist, seeds, rng,
+            1000,
+            first_round,
+            matchup_probs,
+            pick_dist,
+            seeds,
+            rng,
         )
         # Game 0 is East 1-seed vs 16-seed; True = 1-seed wins
         one_seed_picked_rate = brackets[:, 0].mean()
-        assert one_seed_picked_rate > 0.7, (
-            f"1-seed should be picked >70% of the time, got {one_seed_picked_rate:.2%}"
-        )
+        assert one_seed_picked_rate > 0.7, f"1-seed should be picked >70% of the time, got {one_seed_picked_rate:.2%}"
 
     def test_single_opponent(self):
         first_round, seeds, matchup_probs, pick_dist = _build_64_team_bracket()
         rng = np.random.default_rng(42)
         brackets = generate_opponent_brackets(
-            1, first_round, matchup_probs, pick_dist, seeds, rng,
+            1,
+            first_round,
+            matchup_probs,
+            pick_dist,
+            seeds,
+            rng,
         )
         assert brackets.shape == (1, 63)
 
@@ -233,12 +255,18 @@ class TestOpponentBrackets:
 # Test: Tournament outcome simulation
 # ---------------------------------------------------------------------------
 
+
 class TestTournamentOutcomes:
     def test_correct_shape(self):
         first_round, seeds, matchup_probs, _ = _build_64_team_bracket()
         rng = np.random.default_rng(42)
         outcomes, by_round = simulate_tournament_outcomes(
-            100, first_round, matchup_probs, seeds, 0.12, rng,
+            100,
+            first_round,
+            matchup_probs,
+            seeds,
+            0.12,
+            rng,
         )
         assert outcomes.shape == (100, 63)
         assert len(by_round) == 100
@@ -254,7 +282,12 @@ class TestTournamentOutcomes:
         first_round, seeds, matchup_probs, _ = _build_64_team_bracket()
         rng = np.random.default_rng(42)
         outcomes, _ = simulate_tournament_outcomes(
-            2000, first_round, matchup_probs, seeds, 0.12, rng,
+            2000,
+            first_round,
+            matchup_probs,
+            seeds,
+            0.12,
+            rng,
         )
         # Game 0 is East 1-seed vs 16-seed
         one_seed_win_rate = outcomes[:, 0].mean()
@@ -267,19 +300,28 @@ class TestTournamentOutcomes:
 
         rng_low = np.random.default_rng(42)
         outcomes_low, _ = simulate_tournament_outcomes(
-            2000, first_round, matchup_probs, seeds, 0.05, rng_low,
+            2000,
+            first_round,
+            matchup_probs,
+            seeds,
+            0.05,
+            rng_low,
         )
         upset_rate_low = 1 - outcomes_low[:, 0].mean()
 
         rng_high = np.random.default_rng(42)
         outcomes_high, _ = simulate_tournament_outcomes(
-            2000, first_round, matchup_probs, seeds, 0.30, rng_high,
+            2000,
+            first_round,
+            matchup_probs,
+            seeds,
+            0.30,
+            rng_high,
         )
         upset_rate_high = 1 - outcomes_high[:, 0].mean()
 
         assert upset_rate_high > upset_rate_low, (
-            f"Higher noise should produce more upsets: "
-            f"low={upset_rate_low:.3f}, high={upset_rate_high:.3f}"
+            f"Higher noise should produce more upsets: low={upset_rate_low:.3f}, high={upset_rate_high:.3f}"
         )
 
     def test_deterministic_with_same_seed(self):
@@ -287,11 +329,21 @@ class TestTournamentOutcomes:
         first_round, seeds, matchup_probs, _ = _build_64_team_bracket()
         rng1 = np.random.default_rng(123)
         outcomes1, _ = simulate_tournament_outcomes(
-            50, first_round, matchup_probs, seeds, 0.12, rng1,
+            50,
+            first_round,
+            matchup_probs,
+            seeds,
+            0.12,
+            rng1,
         )
         rng2 = np.random.default_rng(123)
         outcomes2, _ = simulate_tournament_outcomes(
-            50, first_round, matchup_probs, seeds, 0.12, rng2,
+            50,
+            first_round,
+            matchup_probs,
+            seeds,
+            0.12,
+            rng2,
         )
         np.testing.assert_array_equal(outcomes1, outcomes2)
 
@@ -299,6 +351,7 @@ class TestTournamentOutcomes:
 # ---------------------------------------------------------------------------
 # Test: Bracket scoring
 # ---------------------------------------------------------------------------
+
 
 class TestBracketScoring:
     def test_perfect_bracket_score(self):
@@ -325,11 +378,13 @@ class TestBracketScoring:
         vec = build_scoring_vector(scoring)
         outcome = np.ones(63, dtype=bool)
         # 3 brackets: perfect, all-wrong, half-right
-        brackets = np.array([
-            [True] * 63,
-            [False] * 63,
-            [True] * 32 + [False] * 31,
-        ])
+        brackets = np.array(
+            [
+                [True] * 63,
+                [False] * 63,
+                [True] * 32 + [False] * 31,
+            ]
+        )
         scores = score_brackets_against_outcome(brackets, outcome, vec)
         assert scores[0] == 1920
         assert scores[1] == 0
@@ -339,6 +394,7 @@ class TestBracketScoring:
 # ---------------------------------------------------------------------------
 # Test: Full pool competition simulation
 # ---------------------------------------------------------------------------
+
 
 class TestPoolCompetitionSimulator:
     def test_basic_run(self):
@@ -408,7 +464,7 @@ class TestPoolCompetitionSimulator:
             assert probs[i] <= probs[i + 1] + 1e-9, (
                 f"Percentile monotonicity violated: "
                 f"{bp.percentile_estimates[i].label}={probs[i]:.4f} > "
-                f"{bp.percentile_estimates[i+1].label}={probs[i+1]:.4f}"
+                f"{bp.percentile_estimates[i + 1].label}={probs[i + 1]:.4f}"
             )
 
     def test_multiple_model_brackets(self):
@@ -561,6 +617,7 @@ class TestPoolCompetitionSimulator:
 # Test: Statistical properties
 # ---------------------------------------------------------------------------
 
+
 class TestStatisticalProperties:
     def test_chalk_bracket_beats_random_in_small_pool(self):
         """A chalk bracket should outperform random opponents in small pools.
@@ -588,9 +645,7 @@ class TestStatisticalProperties:
         top_25_prob = bp.percentile_estimates[0].probability
         # Chalk should finish top-25% more than 25% of the time in a
         # 20-person pool (since it's optimal-ish strategy for small pools)
-        assert top_25_prob > 0.15, (
-            f"Chalk bracket should have reasonable top-25% probability, got {top_25_prob:.3f}"
-        )
+        assert top_25_prob > 0.15, f"Chalk bracket should have reasonable top-25% probability, got {top_25_prob:.3f}"
 
     def test_larger_pool_harder_to_win(self):
         """P(top-1%) should decrease as pool size grows."""
@@ -617,8 +672,7 @@ class TestStatisticalProperties:
         # competes against more opponents, some of whom may get lucky.
         # Allow small tolerance for sampling noise.
         assert results[200] <= results[20] + 0.10, (
-            f"Larger pool should not make it easier to win: "
-            f"pool=20 → {results[20]:.3f}, pool=200 → {results[200]:.3f}"
+            f"Larger pool should not make it easier to win: pool=20 → {results[20]:.3f}, pool=200 → {results[200]:.3f}"
         )
 
 
@@ -735,9 +789,7 @@ class TestComputeBracketWinProbability:
         # Chalk should beat random baseline (1/11 ≈ 9.1%) because
         # opponents are randomly sampled and chalk is the EV-optimal
         random_baseline = 1.0 / (n_opp + 1)
-        assert wp > random_baseline * 0.5, (
-            f"chalk P(1st)={wp:.3f} should be above {random_baseline * 0.5:.3f}"
-        )
+        assert wp > random_baseline * 0.5, f"chalk P(1st)={wp:.3f} should be above {random_baseline * 0.5:.3f}"
 
 
 class TestPicksDictToBoolArray:
@@ -778,7 +830,95 @@ class TestPicksDictToBoolArray:
 
         # Score against itself as outcome — should get perfect 1920
         scoring = build_scoring_vector({"R64": 10, "R32": 20, "S16": 40, "E8": 80, "F4": 160, "CHAMP": 320})
-        scores = score_brackets_against_outcome(
-            bool_arr.reshape(1, -1), bool_arr, scoring
-        )
+        scores = score_brackets_against_outcome(bool_arr.reshape(1, -1), bool_arr, scoring)
         assert scores[0] == 1920, f"chalk vs chalk should be 1920, got {scores[0]}"
+
+
+# ---------------------------------------------------------------------------
+# COUNCIL_LESSONS §2 O5: rank stability at n_tournaments=5000, fixed seed.
+# ---------------------------------------------------------------------------
+
+
+def _build_20_variants(first_round, matchup_probs):
+    """Build 20 distinct brackets: chalk plus 19 variants where a single
+    early-round game is flipped to an upset. Each variant differs from
+    chalk by exactly one R64/R32 pick, so rankings should be measurably
+    different but deterministic under a fixed seed."""
+    chalk = _build_chalk_bracket(first_round, matchup_probs)
+    variants = [{"id": "chalk", "winners": list(chalk)}]
+    # Flip the winner of R64 games 0..15 and R32 games 0..3, yielding 19
+    # distinct single-flip variants. Pick a plausible upset by picking the
+    # non-chalk team at that slot.
+    n_r64 = len(first_round) // 2  # 32 games
+    first_round_pairs = [(first_round[2 * i], first_round[2 * i + 1]) for i in range(n_r64)]
+    for i in range(16):
+        t1, t2 = first_round_pairs[i]
+        p = matchup_probs.get((t1, t2), 0.5)
+        chalk_winner = t1 if p >= 0.5 else t2
+        upset_winner = t2 if chalk_winner == t1 else t1
+        winners = list(chalk)
+        winners[i] = upset_winner
+        variants.append({"id": f"flip_r64_{i}", "winners": winners})
+    # Three R32 flips
+    for i in range(3):
+        winners = list(chalk)
+        # R32 game i picks winner of R64 games 2i and 2i+1.
+        # If the chalk winner of that R32 game is from R64 2i, flip to R64 2i+1's chalk winner.
+        r32_idx = n_r64 + i
+        r64_a = chalk[2 * i]
+        r64_b = chalk[2 * i + 1]
+        chalk_r32 = chalk[r32_idx]
+        upset_r32 = r64_b if chalk_r32 == r64_a else r64_a
+        winners[r32_idx] = upset_r32
+        variants.append({"id": f"flip_r32_{i}", "winners": winners})
+    assert len(variants) == 20
+    return variants
+
+
+class TestRankStability:
+    """COUNCIL_LESSONS §2 O5 gate: at n_tournaments=5000 and a fixed seed,
+    running the optimizer 3× on identical inputs must produce identical
+    top-20 rank-order. If this test flakes, the bug is an un-seeded RNG
+    path in the opponent sampler or tournament-outcome loop — fix by
+    threading the rng, not by relaxing the assertion."""
+
+    @pytest.mark.slow
+    def test_top20_rank_order_identical_across_runs(self):
+        first_round, seeds, matchup_probs, pick_dist = _build_64_team_bracket()
+        variants = _build_20_variants(first_round, matchup_probs)
+
+        def _run():
+            result = run_pool_simulation(
+                first_round_matchups=first_round,
+                matchup_probs=matchup_probs,
+                pick_distribution=pick_dist,
+                seeds=seeds,
+                model_brackets=variants,
+                model_bracket_metadata=[{"id": v["id"]} for v in variants],
+                pool_size=100,
+                n_tournaments=5000,
+                random_seed=42,
+            )
+
+            # Rank by top_1pct probability descending; bracket_id as a
+            # deterministic tiebreaker.
+            def key(bp):
+                pe = next(
+                    (p for p in bp.percentile_estimates if p.label == "top_1pct"),
+                    None,
+                )
+                prob = pe.probability if pe else 0.0
+                return (-prob, bp.bracket_id)
+
+            return [bp.bracket_id for bp in sorted(result.bracket_performances, key=key)]
+
+        order_1 = _run()
+        order_2 = _run()
+        order_3 = _run()
+
+        assert order_1 == order_2 == order_3, (
+            "Rank order is not stable across 3 runs at fixed seed. "
+            "Likely cause: an un-seeded RNG path in opponent sampling or "
+            "tournament outcome simulation. See COUNCIL_LESSONS.md §2 O5."
+        )
+        assert len(order_1) == 20

@@ -1,0 +1,162 @@
+{
+  "council_item": "O6",
+  "gate_text": "Historical verification that brackets ranked highest by optimizer actually won more often.",
+  "generated_from": "artifacts/rank_correlation_diagnostic.json (O3)",
+  "aggregate": {
+    "n_years": 14,
+    "mean_spearman_rho": 0.3717,
+    "median_spearman_rho": 0.4642,
+    "stdev_spearman_rho": 0.4054,
+    "years_positive_rho": 12,
+    "one_sample_t_test_p_value_one_sided": 0.002233,
+    "binomial_sign_test_p_value_one_sided": 0.00647,
+    "mean_fractional_rank_of_actual_winner": 0.3941,
+    "median_fractional_rank_of_actual_winner": 0.2843,
+    "years_winner_in_top_third": 8,
+    "years_winner_in_top_half": 9,
+    "null_hypothesis_expected_top_third": 4.67,
+    "null_hypothesis_expected_top_half": 7.0
+  },
+  "per_year": [
+    {
+      "year": 2011,
+      "n_brackets": 19,
+      "spearman_rho": -0.21538513557636924,
+      "p_value": 0.3758523204254083,
+      "pred_rank_of_actual_winner": 10,
+      "fractional_rank_of_actual_winner": 0.5263,
+      "actual_rank_of_top_predicted": 16,
+      "fractional_actual_rank_of_top_predicted": 0.8421
+    },
+    {
+      "year": 2012,
+      "n_brackets": 18,
+      "spearman_rho": 0.8842979925264606,
+      "p_value": 1.1166403658386444e-06,
+      "pred_rank_of_actual_winner": 2,
+      "fractional_rank_of_actual_winner": 0.1111,
+      "actual_rank_of_top_predicted": 3,
+      "fractional_actual_rank_of_top_predicted": 0.1667
+    },
+    {
+      "year": 2013,
+      "n_brackets": 19,
+      "spearman_rho": 0.8065111627108547,
+      "p_value": 3.0328683462219676e-05,
+      "pred_rank_of_actual_winner": 2,
+      "fractional_rank_of_actual_winner": 0.1053,
+      "actual_rank_of_top_predicted": 8,
+      "fractional_actual_rank_of_top_predicted": 0.4211
+    },
+    {
+      "year": 2014,
+      "n_brackets": 25,
+      "spearman_rho": 0.5064571025113543,
+      "p_value": 0.009783177453696109,
+      "pred_rank_of_actual_winner": 5,
+      "fractional_rank_of_actual_winner": 0.2,
+      "actual_rank_of_top_predicted": 15,
+      "fractional_actual_rank_of_top_predicted": 0.6
+    },
+    {
+      "year": 2015,
+      "n_brackets": 19,
+      "spearman_rho": 0.5905754724709521,
+      "p_value": 0.007760895507137797,
+      "pred_rank_of_actual_winner": 2,
+      "fractional_rank_of_actual_winner": 0.1053,
+      "actual_rank_of_top_predicted": 12,
+      "fractional_actual_rank_of_top_predicted": 0.6316
+    },
+    {
+      "year": 2016,
+      "n_brackets": 21,
+      "spearman_rho": 0.6762139249053646,
+      "p_value": 0.0007644674286690655,
+      "pred_rank_of_actual_winner": 4,
+      "fractional_rank_of_actual_winner": 0.1905,
+      "actual_rank_of_top_predicted": 3,
+      "fractional_actual_rank_of_top_predicted": 0.1429
+    },
+    {
+      "year": 2017,
+      "n_brackets": 17,
+      "spearman_rho": 0.5657995868379523,
+      "p_value": 0.0179159223614981,
+      "pred_rank_of_actual_winner": 4,
+      "fractional_rank_of_actual_winner": 0.2353,
+      "actual_rank_of_top_predicted": 2,
+      "fractional_actual_rank_of_top_predicted": 0.1176
+    },
+    {
+      "year": 2018,
+      "n_brackets": 17,
+      "spearman_rho": 0.564745628294423,
+      "p_value": 0.018178237499978926,
+      "pred_rank_of_actual_winner": 12,
+      "fractional_rank_of_actual_winner": 0.7059,
+      "actual_rank_of_top_predicted": 4,
+      "fractional_actual_rank_of_top_predicted": 0.2353
+    },
+    {
+      "year": 2019,
+      "n_brackets": 17,
+      "spearman_rho": 0.25076946934802496,
+      "p_value": 0.3316348911666893,
+      "pred_rank_of_actual_winner": 4,
+      "fractional_rank_of_actual_winner": 0.2353,
+      "actual_rank_of_top_predicted": 13,
+      "fractional_actual_rank_of_top_predicted": 0.7647
+    },
+    {
+      "year": 2021,
+      "n_brackets": 21,
+      "spearman_rho": 0.37955857869202403,
+      "p_value": 0.08969019531542922,
+      "pred_rank_of_actual_winner": 15,
+      "fractional_rank_of_actual_winner": 0.7143,
+      "actual_rank_of_top_predicted": 13,
+      "fractional_actual_rank_of_top_predicted": 0.619
+    },
+    {
+      "year": 2022,
+      "n_brackets": 19,
+      "spearman_rho": 0.42184391149515754,
+      "p_value": 0.07202025770896664,
+      "pred_rank_of_actual_winner": 9,
+      "fractional_rank_of_actual_winner": 0.4737,
+      "actual_rank_of_top_predicted": 11,
+      "fractional_actual_rank_of_top_predicted": 0.5789
+    },
+    {
+      "year": 2023,
+      "n_brackets": 17,
+      "spearman_rho": -0.6351370522551021,
+      "p_value": 0.0061533536022753375,
+      "pred_rank_of_actual_winner": 12,
+      "fractional_rank_of_actual_winner": 0.7059,
+      "actual_rank_of_top_predicted": 13,
+      "fractional_actual_rank_of_top_predicted": 0.7647
+    },
+    {
+      "year": 2024,
+      "n_brackets": 16,
+      "spearman_rho": 0.10743196433120998,
+      "p_value": 0.6920911809221948,
+      "pred_rank_of_actual_winner": 14,
+      "fractional_rank_of_actual_winner": 0.875,
+      "actual_rank_of_top_predicted": 11,
+      "fractional_actual_rank_of_top_predicted": 0.6875
+    },
+    {
+      "year": 2025,
+      "n_brackets": 15,
+      "spearman_rho": 0.3005371535187643,
+      "p_value": 0.27641526950681394,
+      "pred_rank_of_actual_winner": 5,
+      "fractional_rank_of_actual_winner": 0.3333,
+      "actual_rank_of_top_predicted": 13,
+      "fractional_actual_rank_of_top_predicted": 0.8667
+    }
+  ]
+}

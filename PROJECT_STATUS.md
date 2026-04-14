@@ -1,6 +1,26 @@
 # Project Status & Direction
 
-**Last updated:** 2026-04-02
+**Last updated:** 2026-04-13 (post-pivot repo simplification)
+
+## 2026-04-13 Simplification Pass
+
+Three cleanup commits on `claude/simplify-repo-structure-keQXE` finished the
+dead-code removal that the original 2026-04-02 pivot listed as "done" but had
+only partially landed, and followed through on the "deprioritized but wired
+in" research loop (MEMORY.md §2 D1, COUNCIL_LESSONS §3 row 7). Net impact:
+~12k LOC deleted across `src/` + `tests/`, zero production behaviour change.
+
+| Phase | Scope | Commit |
+|---|---|---|
+| 1 | 6 orphan pipeline stages + 6 orphan ml-eval modules + 5 orphan test files that PROJECT_STATUS.md already claimed removed but were still on disk (−6,665 LOC) | 91610c4 |
+| 2 | `src/ml/ranking/` (LambdaMART), `src/ml/time_series/` (elo_temporal), dead `LambdaMARTTuner` class in `hyperparameter_tuning.py`, matching tests (−877 LOC) | 34517cf |
+| 3 | Research loop: `src/ml/research/`, `src/research/`, `src/cli/research_cmds.py`, and call sites in `main.py` / `tournament_pipeline.py` / `stages/orchestration.py` (~4.5k LOC) | 6c1022a |
+
+**Not deleted (verified load-bearing despite appearing dead):**
+
+- `src/ml/gnn/schedule_graph.py` — powers live SOS features (`pagerank_sos`, `multi_hop_sos`, `win_quality_metrics`) per `contracts/feature_contracts.yaml:1635-1759`. `enable_gnn=false` gates only the GNN inference path, not the schedule-graph data structure.
+- `src/ml/transformer/game_sequence.py` — imported directly by `src/pipeline/stages/baseline_training/_embeddings.py`; provides `GameEmbedding` / `SeasonSequence` data structures used as passthrough even when the transformer inference layer is off.
+- `src/ml/ensemble/stacking_weights.py` + `src/forecaster/stacking.py` — unconditional module-level imports in `state_machine.py`, `audit.py`, `ensembling.py`, `baseline_training/_ensemble.py`. Removing them requires call-site refactor beyond the scope of this pass.
 
 ## Key Finding: ML Prediction Adds No Value Over Seeds
 
@@ -130,12 +150,11 @@ Removed from `src/pipeline/stages/__init__.py`:
 - **LOYO protocol** (`src/ml/evaluation/loyo_protocol.py`) — validates seed baseline integrity
 - **Unified backtest** (`src/ml/evaluation/unified_backtest.py`) — reusable for pool validation
 
-### Deprioritized but Wired In (disable at runtime, don't delete)
+### Gated but Not Removable
 
-- **Research loop** (`src/ml/research/`) — ~15K LOC actively wired into pipeline. Optimizes
-  Brier (wrong metric). Should be disabled in production, kept for audit trail.
-- **GNN/Transformer** (`src/ml/gnn/`, `src/ml/transformer/`) — behind `enable_gnn=false` and
-  `enable_transformer=false` config flags. Properly gated, no runtime cost.
+- **GNN** (`src/ml/gnn/schedule_graph.py`) — `enable_gnn=false` gates the GNN inference path, but `ScheduleGraph` is load-bearing for SOS features (pagerank, multi-hop, win-quality). Do not delete.
+- **Transformer** (`src/ml/transformer/game_sequence.py`) — `enable_transformer=false` gates inference; `GameEmbedding` / `SeasonSequence` data structures are imported by `baseline_training/_embeddings.py`. Do not delete.
+- **Stacking** (`src/ml/ensemble/stacking_weights.py`, `src/forecaster/stacking.py`) — `enable_stacking=false`, but module-level imports from `state_machine.py`, `audit.py`, `ensembling.py`. Removing requires a call-site refactor.
 
 ## Backtest Artifacts
 

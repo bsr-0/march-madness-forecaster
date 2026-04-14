@@ -1,0 +1,216 @@
+{
+  "config": {
+    "years": [
+      2023,
+      2024,
+      2025
+    ],
+    "weights": [
+      0.0,
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "n_sims": 400,
+    "n_opponents": "K-1 per year",
+    "rng_seed": 2026
+  },
+  "results": [
+    {
+      "year": 2023,
+      "weight": 0.0,
+      "K": 18,
+      "mean_p1st": 0.0,
+      "rho": NaN,
+      "pvalue": NaN,
+      "actual_score_range": [
+        360.0,
+        700.0
+      ],
+      "max_p1st": 0.0
+    },
+    {
+      "year": 2023,
+      "weight": 0.25,
+      "K": 18,
+      "mean_p1st": 0.0,
+      "rho": NaN,
+      "pvalue": NaN,
+      "actual_score_range": [
+        360.0,
+        700.0
+      ],
+      "max_p1st": 0.0
+    },
+    {
+      "year": 2023,
+      "weight": 0.5,
+      "K": 18,
+      "mean_p1st": 0.0,
+      "rho": NaN,
+      "pvalue": NaN,
+      "actual_score_range": [
+        360.0,
+        700.0
+      ],
+      "max_p1st": 0.0
+    },
+    {
+      "year": 2023,
+      "weight": 0.75,
+      "K": 18,
+      "mean_p1st": 0.0,
+      "rho": NaN,
+      "pvalue": NaN,
+      "actual_score_range": [
+        360.0,
+        700.0
+      ],
+      "max_p1st": 0.0
+    },
+    {
+      "year": 2023,
+      "weight": 1.0,
+      "K": 18,
+      "mean_p1st": 0.0,
+      "rho": NaN,
+      "pvalue": NaN,
+      "actual_score_range": [
+        360.0,
+        700.0
+      ],
+      "max_p1st": 0.0
+    },
+    {
+      "year": 2024,
+      "weight": 0.0,
+      "K": 25,
+      "mean_p1st": 0.005600000000000001,
+      "rho": 0.3398138330152924,
+      "pvalue": 0.09652031085734748,
+      "actual_score_range": [
+        440.0,
+        1490.0
+      ],
+      "max_p1st": 0.14
+    },
+    {
+      "year": 2024,
+      "weight": 0.25,
+      "K": 25,
+      "mean_p1st": 0.004,
+      "rho": 0.3398138330152924,
+      "pvalue": 0.09652031085734748,
+      "actual_score_range": [
+        440.0,
+        1490.0
+      ],
+      "max_p1st": 0.1
+    },
+    {
+      "year": 2024,
+      "weight": 0.5,
+      "K": 25,
+      "mean_p1st": 0.0035499999999999998,
+      "rho": 0.3398138330152924,
+      "pvalue": 0.09652031085734748,
+      "actual_score_range": [
+        440.0,
+        1490.0
+      ],
+      "max_p1st": 0.08875
+    },
+    {
+      "year": 2024,
+      "weight": 0.75,
+      "K": 25,
+      "mean_p1st": 0.00375,
+      "rho": 0.3398138330152924,
+      "pvalue": 0.09652031085734748,
+      "actual_score_range": [
+        440.0,
+        1490.0
+      ],
+      "max_p1st": 0.09375
+    },
+    {
+      "year": 2024,
+      "weight": 1.0,
+      "K": 25,
+      "mean_p1st": 0.0038,
+      "rho": 0.3398138330152924,
+      "pvalue": 0.09652031085734748,
+      "actual_score_range": [
+        440.0,
+        1490.0
+      ],
+      "max_p1st": 0.095
+    },
+    {
+      "year": 2025,
+      "weight": 0.0,
+      "K": 32,
+      "mean_p1st": 0.0201953125,
+      "rho": 0.5749094796208242,
+      "pvalue": 0.0005780324898511754,
+      "actual_score_range": [
+        350.0,
+        1610.0
+      ],
+      "max_p1st": 0.255
+    },
+    {
+      "year": 2025,
+      "weight": 0.25,
+      "K": 32,
+      "mean_p1st": 0.013359375,
+      "rho": 0.5749094796208242,
+      "pvalue": 0.0005780324898511754,
+      "actual_score_range": [
+        350.0,
+        1610.0
+      ],
+      "max_p1st": 0.185
+    },
+    {
+      "year": 2025,
+      "weight": 0.5,
+      "K": 32,
+      "mean_p1st": 0.0084375,
+      "rho": 0.5749094796208242,
+      "pvalue": 0.0005780324898511754,
+      "actual_score_range": [
+        350.0,
+        1610.0
+      ],
+      "max_p1st": 0.115
+    },
+    {
+      "year": 2025,
+      "weight": 0.75,
+      "K": 32,
+      "mean_p1st": 0.009140625,
+      "rho": 0.5060166248765983,
+      "pvalue": 0.0031292104371346864,
+      "actual_score_range": [
+        350.0,
+        1610.0
+      ],
+      "max_p1st": 0.125
+    },
+    {
+      "year": 2025,
+      "weight": 1.0,
+      "K": 32,
+      "mean_p1st": 0.00578125,
+      "rho": 0.5060166248765983,
+      "pvalue": 0.0031292104371346864,
+      "actual_score_range": [
+        350.0,
+        1610.0
+      ],
+      "max_p1st": 0.0875
+    }
+  ]
+}

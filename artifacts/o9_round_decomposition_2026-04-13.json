@@ -1,0 +1,110 @@
+{
+  "council_item": "O9",
+  "gate_text": "Per-round BSS breakdown (R64 -> NCG). Does the ceiling hold uniformly or break in E8/F4?",
+  "source_script": "scripts/backtest_by_round.py",
+  "source_text": "scripts/backtest_by_round_results.txt",
+  "analysis_date": "2026-04-13",
+  "n_years": 17,
+  "n_games_total": 1071,
+  "verdict": "Seed dominance weakens in later rounds (E8 42.6% upset rate vs R64 24.6%) but seed-independent signals still do not add value in any round (BSS ~0 everywhere except n=17 NCG outlier). Ceiling is NOT uniform; but the non-uniformity does not open an exploitable gap for prediction-accuracy improvement.",
+  "per_round": [
+    {
+      "round": "R64",
+      "n_games": 544,
+      "upset_rate": 0.246,
+      "avg_seed_gap": 8.0,
+      "avg_fav_seed": 4.5,
+      "seed_brier": 0.1612,
+      "si_adj_brier": 0.16,
+      "bss": 0.008,
+      "verdict": "NO DIFF"
+    },
+    {
+      "round": "R32",
+      "n_games": 272,
+      "upset_rate": 0.243,
+      "avg_seed_gap": 5.8,
+      "avg_fav_seed": 3.1,
+      "seed_brier": 0.1877,
+      "si_adj_brier": 0.1882,
+      "bss": -0.003,
+      "verdict": "NO DIFF"
+    },
+    {
+      "round": "S16",
+      "n_games": 136,
+      "upset_rate": 0.301,
+      "avg_seed_gap": 4.2,
+      "avg_fav_seed": 2.3,
+      "seed_brier": 0.2138,
+      "si_adj_brier": 0.21,
+      "bss": 0.018,
+      "verdict": "NO DIFF"
+    },
+    {
+      "round": "E8",
+      "n_games": 68,
+      "upset_rate": 0.426,
+      "avg_seed_gap": 3.3,
+      "avg_fav_seed": 1.9,
+      "seed_brier": 0.2611,
+      "si_adj_brier": 0.2638,
+      "bss": -0.01,
+      "verdict": "NO DIFF"
+    },
+    {
+      "round": "F4",
+      "n_games": 34,
+      "upset_rate": 0.147,
+      "avg_seed_gap": 3.0,
+      "avg_fav_seed": 1.9,
+      "seed_brier": 0.2093,
+      "si_adj_brier": 0.2096,
+      "bss": -0.002,
+      "verdict": "NO DIFF"
+    },
+    {
+      "round": "NCG",
+      "n_games": 17,
+      "upset_rate": 0.059,
+      "avg_seed_gap": 1.6,
+      "avg_fav_seed": 1.6,
+      "seed_brier": 0.2032,
+      "si_adj_brier": 0.1964,
+      "bss": 0.033,
+      "verdict": "SI HELPS (n=17 underpowered)"
+    }
+  ],
+  "aggregate": {
+    "early_rounds": {
+      "name": "R64+R32",
+      "n_games": 816,
+      "upset_rate": 0.245,
+      "seed_brier": 0.17,
+      "si_adj_brier": 0.1694,
+      "bss": 0.0039
+    },
+    "later_rounds": {
+      "name": "S16+E8+F4+NCG",
+      "n_games": 255,
+      "upset_rate": 0.298,
+      "seed_brier": 0.2251,
+      "si_adj_brier": 0.2234,
+      "bss": 0.0076
+    },
+    "upset_rate_delta_later_minus_early_pp": 5.3
+  },
+  "later_rounds_si_quintile": {
+    "n_games": 255,
+    "high_si_upset_rate": 0.299,
+    "low_si_upset_rate": 0.297,
+    "difference_pp": 0.2
+  },
+  "headline_findings": {
+    "ceiling_is_non_uniform": "YES: E8 upset rate 42.6% vs R64 24.6%; +18.0pp gap. Seed dominance weakens.",
+    "but_si_still_does_not_help": "YES across every round: max |BSS| = 0.033 at NCG (n=17), otherwise |BSS| <= 0.018. No round shows a practically meaningful positive BSS with statistical power.",
+    "most_upset_prone_round": "E8 (42.6%)",
+    "most_chalky_round": "NCG (5.9%)"
+  },
+  "effect_on_pivot": "CONSISTENT with 2026-04-02 pivot (row 7). The round-specific view reinforces rather than challenges the BSS=0 claim: even in the highest-upset round (E8, 42.6% rate), seed-independent signals show BSS=-1.0% (slightly worse than seed). If there were a round where ML helps, this is where it would show up. It does not."
+}

@@ -142,46 +142,6 @@ class TestE2EPipelineArtifacts:
         in_season = is_target_season_game(raw_date, 2024)
         assert in_season is True
 
-    def test_experiment_scheduler_variant_lifecycle(self):
-        """ExperimentScheduler generates, queues, and selects variants."""
-        from src.research.experiment_scheduler import ExperimentScheduler
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            queue_path = os.path.join(tmpdir, "queue.jsonl")
-            scheduler = ExperimentScheduler(queue_path=queue_path, seed=42)
-
-            # Generate variants
-            base_config = {"lgb_weight": 0.15, "xgb_weight": 0.15}
-            variants = scheduler.generate_variants(base_config, n=3)
-            assert len(variants) == 3
-
-            # Queue them
-            queued = scheduler.queue_variants(variants)
-            assert queued == 3
-
-            # Get next
-            next_v = scheduler.next_variant()
-            assert next_v is not None
-
-            # Mark completed
-            scheduler.mark_completed(next_v.variant_id, brier=0.190, experiment_id="exp1")
-
-            # Select best
-            best = scheduler.select_best()
-            assert best is not None
-            assert best.result_brier == 0.190
-
-    def test_knowledge_store_update_from_registry(self):
-        """KnowledgeStore.update_from_registry integrates with registry."""
-        from src.research.knowledge_store import KnowledgeStore
-
-        ks = KnowledgeStore(registry=None)
-
-        # Without registry, update should handle gracefully
-        if hasattr(ks, "update_from_registry"):
-            result = ks.update_from_registry()
-            assert isinstance(result, dict)
-
     def test_governance_compliance_gate(self):
         """ComplianceGate check produces CheckpointResult."""
         try:

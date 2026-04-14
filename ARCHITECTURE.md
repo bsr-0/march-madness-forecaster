@@ -17,7 +17,7 @@ The production prediction pipeline executes in this order:
 8. Export                → src/exports/
 ```
 
-The pipeline is orchestrated by `src/pipeline/sota.py` (~2600 lines) for research runs, or `src/run_production_2026.py` for production (governance-locked).
+The pipeline is orchestrated by `src/pipeline/sota.py` (~2600 lines) for dev runs, or `src/run_production_2026.py` for production (governance-locked).
 
 ## Module Deep Dive
 
@@ -65,9 +65,8 @@ The pipeline is orchestrated by `src/pipeline/sota.py` (~2600 lines) for researc
 | `evaluation/` | RDoF audit, LOYO protocol, backtest infrastructure |
 | `optimization/` | Optuna hyperparameter search (not used in simple mode) |
 | `training/` | Training utilities |
-| `research/` | Experimental models (not used in production) |
-| `gnn/` | Graph neural network (DISABLED in production) |
-| `transformer/` | Transformer model (DISABLED in production) |
+| `gnn/` | `ScheduleGraph` — data structure for SOS features (pagerank, multi-hop, win-quality). GNN inference is disabled, but the graph itself is load-bearing |
+| `transformer/` | `GameEmbedding` / `SeasonSequence` — passthrough data structures used by `baseline_training/_embeddings.py`. Transformer inference is disabled |
 | `meta_learning.py` | Meta-learner for ensemble stacking (not used in simple mode) |
 
 **Production model (simple mode):** Single regularized logistic regression on 7 features (`SIMPLE_FEATURE_SET`). LightGBM, XGBoost, SpreadRegressor, stacking, and BMA are all skipped. Bayesian Bradley-Terry provides supplementary probability blends.
