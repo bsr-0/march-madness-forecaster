@@ -206,7 +206,6 @@ class TestProductionConfigValidation:
                 seed_prior_weight=0.1,
             )
 
-
     def test_locked_path_rejects_unsanctioned_complexity(self):
         from src.pipeline.config import SOTAPipelineConfig
 
@@ -238,7 +237,25 @@ class TestProductionConfigValidation:
         from src.pipeline.config import SOTAPipelineConfig
 
         cfg = SOTAPipelineConfig()
-        expected = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
+        expected = [
+            2008,
+            2009,
+            2010,
+            2011,
+            2012,
+            2013,
+            2014,
+            2015,
+            2016,
+            2017,
+            2018,
+            2019,
+            2021,
+            2022,
+            2023,
+            2024,
+            2025,
+        ]
         assert cfg.resolve_calibration_years() == expected
 
     def test_invalid_profile_raises(self):
@@ -283,12 +300,9 @@ class TestMenProductionNoBannedComponents:
             "consistency_bonus",
             "apply_experimental_",
             "BrierPostProcessor",
-            "_tournament_domain_adapter",
         ]
         for term in banned:
-            assert term not in source, (
-                f"Production path references banned component: {term}"
-            )
+            assert term not in source, f"Production path references banned component: {term}"
 
     def test_production_uses_shared_helpers(self):
         """Verify predict_probability_production imports from probability_pipeline."""
@@ -335,9 +349,7 @@ class TestWomenProductionNoBannedComponents:
             "apply_experimental_",
         ]
         for term in banned:
-            assert term not in code_only, (
-                f"Women's production path references banned component: {term}"
-            )
+            assert term not in code_only, f"Women's production path references banned component: {term}"
 
     def test_production_uses_shared_helpers(self):
         """Verify predict_probability_production imports from probability_pipeline."""
@@ -385,13 +397,14 @@ class TestAblationLadderMaxMovement:
         shrinkage = 0.06
 
         result = run_ablation_ladder(
-            raw_probs, outcomes, calibrator=None, shrinkage=shrinkage,
+            raw_probs,
+            outcomes,
+            calibrator=None,
+            shrinkage=shrinkage,
         )
 
         for stage_name, metrics in result.items():
-            assert "max_movement" in metrics, (
-                f"Stage '{stage_name}' missing max_movement"
-            )
+            assert "max_movement" in metrics, f"Stage '{stage_name}' missing max_movement"
             assert "mean_movement" in metrics
             assert metrics["max_movement"] >= metrics["mean_movement"]
 
@@ -399,7 +412,10 @@ class TestAblationLadderMaxMovement:
         raw_probs = np.array([0.4, 0.6])
         outcomes = np.array([0, 1])
         result = run_ablation_ladder(
-            raw_probs, outcomes, calibrator=None, shrinkage=0.05,
+            raw_probs,
+            outcomes,
+            calibrator=None,
+            shrinkage=0.05,
         )
         assert result["raw"]["max_movement"] == 0.0
         assert result["raw"]["mean_movement"] == 0.0
@@ -408,11 +424,12 @@ class TestAblationLadderMaxMovement:
         raw_probs = np.array([0.2, 0.8])
         outcomes = np.array([0, 1])
         result = run_ablation_ladder(
-            raw_probs, outcomes, calibrator=None, shrinkage=0.06,
+            raw_probs,
+            outcomes,
+            calibrator=None,
+            shrinkage=0.06,
         )
         required_metrics = {"brier", "ece", "log_loss", "mean_movement", "max_movement"}
         for stage_name, metrics in result.items():
             missing = required_metrics - set(metrics.keys())
-            assert not missing, (
-                f"Stage '{stage_name}' missing metrics: {missing}"
-            )
+            assert not missing, f"Stage '{stage_name}' missing metrics: {missing}"

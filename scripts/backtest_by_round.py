@@ -126,7 +126,9 @@ def load_team_features(year: int) -> Dict[str, TeamFeatures]:
         with open(ff_path) as f:
             ff_data = json.load(f)
         if isinstance(ff_data, dict) and not ff_data.get("teams"):
-            four_factors = ff_data
+            # Top-level dict mixes metadata keys (e.g. "data_type", "cutoff_date",
+            # "n_teams") with team-keyed dicts. Keep only the team entries.
+            four_factors = {k: v for k, v in ff_data.items() if isinstance(v, dict)}
         else:
             four_factors = {t.get("team_id", ""): t for t in ff_data.get("teams", [])}
 

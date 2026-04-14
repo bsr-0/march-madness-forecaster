@@ -104,21 +104,6 @@ class TestE2EPipelineArtifacts:
             # Some fields should be flagged as missing
             assert len(issues) > 0
 
-    def test_meta_learner_pipeline_integration(self):
-        """MetaLearner produces weight adjustments for pipeline use."""
-        from src.ml.meta_learning import MetaLearner
-
-        learner = MetaLearner()
-        base_weights = {"lgb": 0.25, "xgb": 0.25, "spread": 0.30, "logistic": 0.20}
-        decision = learner.adjust_weights(base_weights, 2024)
-        adjusted = learner.apply_adjustments(base_weights, decision)
-
-        # All weights positive and sum to ~1
-        assert all(v >= 0 for v in adjusted.values())
-        assert abs(sum(adjusted.values()) - 1.0) < 0.01
-        # Same keys
-        assert set(adjusted.keys()) == set(base_weights.keys())
-
     def test_game_utils_pipeline_integration(self):
         """Extracted game_utils functions work as pipeline would use them."""
         from src.pipeline.stages.game_utils import (

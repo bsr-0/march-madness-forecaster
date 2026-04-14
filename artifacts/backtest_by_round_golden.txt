@@ -1,0 +1,148 @@
+Loading all tournament games...
+Loaded 1071 games across 17 years
+
+==========================================================================================
+1. UPSET RATE BY ROUND
+   Does seed dominance hold uniformly, or break down in later rounds?
+==========================================================================================
+
+  Round             Games  Upsets    Rate   Avg Seed Gap   Avg Fav Seed
+  ---------------- ------ ------- -------  -------------  -------------
+  Round of 64         544     134   24.6%            8.0            4.5
+  Round of 32         272      66   24.3%            5.8            3.1
+  Sweet 16            136      41   30.1%            4.2            2.3
+  Elite 8              68      29   42.6%            3.3            1.9
+  Final Four           34       5   14.7%            3.0            1.9
+  Championship         17       1    5.9%            1.6            1.6
+  TOTAL              1071     276   25.8%
+
+==========================================================================================
+2. BRIER SCORE BY ROUND: Seed baseline vs SI-adjusted prediction
+   Lower = better. BSS > 0 means SI signals improve on seeds.
+==========================================================================================
+
+  Round                N   Seed Brier   SI-adj Brier      BSS       Verdict
+  ---------------- -----  -----------  -------------  -------  ------------
+  Round of 64        544       0.1612         0.1595   +0.011       NO DIFF
+  Round of 32        272       0.1877         0.1898   -0.011       NO DIFF
+  Sweet 16           136       0.2138         0.2138   -0.000       NO DIFF
+  Elite 8             68       0.2611         0.2575   +0.014       NO DIFF
+  Final Four          34       0.2093         0.2302   -0.100      SI HURTS
+  Championship        17       0.2032         0.2237   -0.101      SI HURTS
+
+==========================================================================================
+3. SEED-INDEPENDENT SCORE: Upset rate by SI quintile, per round
+   If SI signals work, higher SI quintile should have higher upset rate.
+==========================================================================================
+
+  Round of 64 (n=544):
+    High SI  (n=181, avg_si=0.702, avg_gap=8.1):  53 upsets = 29.3%
+    Mid SI   (n=181, avg_si=0.556, avg_gap=7.6):  50 upsets = 27.6%
+    Low SI   (n=182, avg_si=0.401, avg_gap=8.3):  31 upsets = 17.0%
+
+  Round of 32 (n=272):
+    High SI  (n= 90, avg_si=0.711, avg_gap=5.3):  21 upsets = 23.3%
+    Mid SI   (n= 90, avg_si=0.580, avg_gap=6.0):  25 upsets = 27.8%
+    Low SI   (n= 92, avg_si=0.423, avg_gap=5.9):  20 upsets = 21.7%
+
+  Sweet 16 (n=136):
+    High SI  (n= 45, avg_si=0.710, avg_gap=4.4):  17 upsets = 37.8%
+    Mid SI   (n= 45, avg_si=0.578, avg_gap=4.8):  12 upsets = 26.7%
+    Low SI   (n= 46, avg_si=0.431, avg_gap=3.5):  12 upsets = 26.1%
+
+  Elite 8 (n=68):
+    High SI  (n= 22, avg_si=0.718, avg_gap=3.4):  13 upsets = 59.1%
+    Mid SI   (n= 22, avg_si=0.591, avg_gap=3.5):  10 upsets = 45.5%
+    Low SI   (n= 24, avg_si=0.418, avg_gap=2.9):   6 upsets = 25.0%
+
+  Final Four (n=34):
+    High SI  (n= 11, avg_si=0.742, avg_gap=2.0):   1 upsets = 9.1%
+    Mid SI   (n= 11, avg_si=0.602, avg_gap=3.4):   3 upsets = 27.3%
+    Low SI   (n= 12, avg_si=0.492, avg_gap=3.7):   1 upsets = 8.3%
+
+  Championship (n=17):
+    High SI  (n=  5, avg_si=0.715, avg_gap=0.6):   0 upsets = 0.0%
+    Mid SI   (n=  5, avg_si=0.552, avg_gap=1.0):   0 upsets = 0.0%
+    Low SI   (n=  7, avg_si=0.450, avg_gap=2.9):   1 upsets = 14.3%
+
+==========================================================================================
+4. LATER ROUNDS DEEP DIVE: S16 / E8 / F4 / NCG
+   These rounds have smaller seed gaps. Do any signals help here?
+==========================================================================================
+
+  Total later-round games: 255
+  Later-round upsets: 76 (29.8%)
+
+  Upset rate by seed gap in later rounds:
+    Gap= 0:   16 games,   0 upsets = 0.0%
+    Gap= 1:   69 games,  26 upsets = 37.7%
+    Gap= 2:   23 games,   6 upsets = 26.1%
+    Gap= 3:   41 games,  11 upsets = 26.8%
+    Gap= 4:   48 games,  14 upsets = 29.2%
+    Gap= 5:    5 games,   2 upsets = 40.0%
+    Gap= 6:    9 games,   6 upsets = 66.7%
+    Gap= 7:    6 games,   2 upsets = 33.3%
+    Gap= 8:    2 games,   0 upsets = 0.0%
+    Gap= 9:   16 games,   4 upsets = 25.0%
+    Gap=10:    8 games,   3 upsets = 37.5%
+    Gap=11:    8 games,   1 upsets = 12.5%
+    Gap=12:    4 games,   1 upsets = 25.0%
+
+  SI score split in later rounds:
+    High SI (n=127): 44 upsets = 34.6%
+    Low SI  (n=128):  32 upsets = 25.0%
+    Difference: +9.6pp
+
+==========================================================================================
+5. EARLY ROUNDS (R64 + R32): Confirming seed dominance
+==========================================================================================
+
+  Total early-round games: 816
+  Early-round upsets: 200 (24.5%)
+  Seed Brier: 0.1700
+  SI-adj Brier: 0.1696
+  BSS: +0.0027
+
+  Later rounds for comparison:
+  Seed Brier: 0.2251
+  SI-adj Brier: 0.2283
+  BSS: -0.0144
+
+==========================================================================================
+6. YEAR-OVER-YEAR UPSET RATES BY ROUND
+   Checking for regime change / instability
+==========================================================================================
+    Year     R64     R32     S16      E8      F4     NCG  TOTAL
+  ------  ------  ------  ------  ------  ------  ------  ------
+    2008     25%     19%     25%      0%      0%      0%     21%
+    2009     28%      6%     25%     50%     50%      0%     24%
+    2010     31%     38%     25%     50%      0%      0%     32%
+    2011     22%     31%     62%     75%      0%      0%     32%
+    2012     31%     19%     25%     50%      0%      0%     27%
+    2013     31%     25%     38%     75%      0%      0%     32%
+    2014     25%     31%     50%     75%    100%      0%     35%
+    2015     16%     31%     12%     25%      0%      0%     19%
+    2016     41%     19%      0%     75%      0%    100%     32%
+    2017     19%     25%     25%     50%      0%      0%     22%
+    2018     25%     31%     50%     25%      0%      0%     29%
+    2019     25%      6%     50%     50%     50%      0%     25%
+    2021     19%     31%     12%     25%      0%      0%     21%
+    2022     25%     44%     38%      0%     50%      0%     30%
+    2023      9%     38%     25%     50%      0%      0%     21%
+    2024     25%     12%     38%     50%      0%      0%     24%
+    2025     22%      6%     12%      0%      0%      0%     14%
+     AVG   24.6   24.3   30.1   42.6   14.7    5.9   25.8
+
+==========================================================================================
+VERDICT: Does seed dominance break down in later rounds?
+==========================================================================================
+
+  Early rounds (R64+R32) upset rate: 24.5%
+  Later rounds (S16+)   upset rate: 29.8%
+
+  YES — Later rounds have significantly higher upset rate (29.8% vs 24.5%).
+  Seed dominance weakens as the tournament progresses.
+  This is where alternative signals might add value.
+
+  SI signals show no meaningful effect in later rounds (BSS=-0.0144).
+

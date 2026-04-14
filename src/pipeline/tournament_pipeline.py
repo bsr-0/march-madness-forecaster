@@ -217,7 +217,6 @@ class TournamentPipeline:
             except ImportError:
                 logger.info("Optional module not available: MasseyStandalonePredictor")
 
-        self._tournament_domain_adapter = None
         self._tournament_sigma_calibrator = None
 
     def _init_runtime_state(self) -> None:

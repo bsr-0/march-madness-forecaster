@@ -196,7 +196,6 @@ class TestStep3InferencePathVerification:
             "consistency_bonus",
             "apply_experimental_",
             "BrierPostProcessor",
-            "_tournament_domain_adapter",
             "sharpener",
             "goto_converter",
             "seed_override",

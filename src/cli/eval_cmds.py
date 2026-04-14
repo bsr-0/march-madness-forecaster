@@ -557,72 +557,6 @@ def prospective_eval(args):
     return 0
 
 
-def handle_validate_rubric(args):
-    """Run multi-pass rubric validation."""
-    from ..validation.rubric_validator import run_validation
-
-    pass_nums = [int(p.strip()) for p in args.passes.split(",") if p.strip()]
-    result = run_validation(pass_numbers=pass_nums, config_path=args.config)
-
-    if getattr(args, "json", False):
-        print(
-            json.dumps(
-                {
-                    "total_score": result.total_score,
-                    "max_total": result.max_total,
-                    "all_passed": result.all_passed,
-                    "passes": [
-                        {
-                            "pass": p.pass_number,
-                            "name": p.name,
-                            "passed": p.passed,
-                            "score": p.score,
-                            "max_score": p.max_score,
-                            "details": p.details,
-                            "failures": p.failures,
-                        }
-                        for p in result.passes
-                    ],
-                },
-                indent=2,
-                default=str,
-            )
-        )
-    else:
-        print(result.report())
-    return 0 if result.all_passed else 1
-
-
-def handle_audit_rubric(args):
-    """Static rubric audit — score codebase against grading criteria."""
-    from ..validation.rubric_audit import run_static_audit
-
-    result = run_static_audit()
-    if getattr(args, "json", False):
-        print(
-            json.dumps(
-                {
-                    "score": result.score,
-                    "max_score": result.max_score,
-                    "passed": result.passed,
-                    "details": result.details,
-                    "failures": result.failures,
-                },
-                indent=2,
-                default=str,
-            )
-        )
-    else:
-        print(f"Rubric Audit Score: {result.score:.0f}/{result.max_score:.0f}")
-        for k, v in result.details.items():
-            print(f"  {k}: {v}")
-        if result.failures:
-            print(f"\nFailures ({len(result.failures)}):")
-            for f in result.failures:
-                print(f"  !! {f}")
-    return 0 if result.passed else 1
-
-
 def run_backtest_harness(args):
     """Run unified backtesting harness with regression gate."""
     import logging
@@ -798,24 +732,6 @@ def register(subparsers):
     )
     prospective_parser.add_argument("--output", "-o", default=None, help="Path to write evaluation report JSON")
     prospective_parser.set_defaults(func=prospective_eval)
-
-    # --- validate-rubric ---
-    vr_parser = subparsers.add_parser(
-        "validate-rubric",
-        help="Run multi-pass rubric validation (PIT, metrics, BMA, ESPN)",
-    )
-    vr_parser.add_argument("--passes", default="1,2,3,4", help="Comma-separated pass numbers to run (default: 1,2,3,4)")
-    vr_parser.add_argument("--config", default="configs/production_2026.json", help="Production config path")
-    vr_parser.add_argument("--json", action="store_true", help="Output JSON instead of text")
-    vr_parser.set_defaults(func=handle_validate_rubric)
-
-    # --- audit-rubric ---
-    ar_parser = subparsers.add_parser(
-        "audit-rubric",
-        help="Static rubric audit \u2014 score codebase structure against grading criteria",
-    )
-    ar_parser.add_argument("--json", action="store_true", help="Output JSON instead of text")
-    ar_parser.set_defaults(func=handle_audit_rubric)
 
     # --- baseline-experiment ---
     from .baseline_experiment import run_baseline_experiment

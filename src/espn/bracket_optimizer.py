@@ -71,6 +71,7 @@ class ESPNOptimizationConfig:
         Large pools reward differentiation (lower thresholds, favor top-10%).
         """
         import math as _math
+
         # Upset leverage threshold: smaller pools need higher leverage
         # to justify contrarian picks; larger pools need less.
         # Base: 0.05 at pool_size=100, scales with 1/sqrt(pool_size/100).
@@ -187,7 +188,8 @@ class ESPNBracketOptimizer:
 
             # Generate Final Four combinations for this champion
             f4_sets = self._generate_final_four_sets(
-                champion_id, max_sets=config.max_final_four_sets,
+                champion_id,
+                max_sets=config.max_final_four_sets,
             )
 
             for f4_set in f4_sets:
@@ -293,9 +295,9 @@ class ESPNBracketOptimizer:
         )
 
         champ_leverage = [
-            r for r in leverage_rows
-            if r.round_name == "CHAMP"
-            and (r.model_probability > 0.05 or r.leverage_gap > 0.03)
+            r
+            for r in leverage_rows
+            if r.round_name == "CHAMP" and (r.model_probability > 0.05 or r.leverage_gap > 0.03)
         ]
         champ_leverage.sort(key=lambda r: (r.leverage_gap, r.model_probability), reverse=True)
 
@@ -326,7 +328,9 @@ class ESPNBracketOptimizer:
     # ------------------------------------------------------------------
 
     def _generate_final_four_sets(
-        self, champion_id: str, max_sets: int = 8,
+        self,
+        champion_id: str,
+        max_sets: int = 8,
     ) -> List[List[str]]:
         """Generate Final Four combinations mixing chalk and leverage teams.
 
@@ -406,18 +410,18 @@ class ESPNBracketOptimizer:
         EV formula (default): leverage * probability (additive)
         Contrarian formula: model_prob^alpha * (1 - ownership)^beta (multiplicative)
         """
-        if use_contrarian:
-            from ..quant.espn_layer import contrarian_ev_pick
-            return contrarian_ev_pick(
-                t1, t2, round_name,
-                self.matchup_probs,
-                self.public_pick_distribution,
-                alpha=alpha,
-                beta=beta,
-            )
+        # The contrarian multiplicative formula (prob^alpha * (1-ownership)^beta)
+        # was a dead end per MEMORY.md §2 D6+D8 — "chalk beat it by 7.1% on
+        # upset hit rate." The parameter is kept for API compatibility but
+        # now falls through to the default EV picker. `use_contrarian`,
+        # `alpha`, and `beta` are unused.
+        del use_contrarian, alpha, beta
         return compute_ev_pick(
-            t1, t2, round_name,
-            self.matchup_probs, self.public_pick_distribution,
+            t1,
+            t2,
+            round_name,
+            self.matchup_probs,
+            self.public_pick_distribution,
             scoring_system=self.scoring,
         )
 
@@ -472,21 +476,31 @@ class ESPNBracketOptimizer:
                         winner = f4_team
                     else:
                         winner = self._pick_team(
-                            t1, t2, round_name,
-                            alpha=alpha, beta=beta,
+                            t1,
+                            t2,
+                            round_name,
+                            alpha=alpha,
+                            beta=beta,
                             use_contrarian=use_contrarian,
                         )
                 else:
                     winner = self._pick_team(
-                        t1, t2, round_name,
-                        alpha=alpha, beta=beta,
+                        t1,
+                        t2,
+                        round_name,
+                        alpha=alpha,
+                        beta=beta,
                         use_contrarian=use_contrarian,
                     )
 
                 # Path-protection guardrail on sibling games
                 if game_idx == protected_games.get(round_idx, -1):
                     winner, _ = self._apply_path_guardrail(
-                        champion_id, t1, t2, winner, max_disruption_cost,
+                        champion_id,
+                        t1,
+                        t2,
+                        winner,
+                        max_disruption_cost,
                     )
 
                 winners.append(winner)
@@ -536,12 +550,8 @@ class ESPNBracketOptimizer:
 
                 # Current pick is the favorite — consider flipping to underdog
                 if bracket_winners[cursor] == favorite and p_dog >= min_prob:
-                    pub_dog = float(
-                        self.public_pick_distribution.get(underdog, {}).get(round_name, 0.0)
-                    )
-                    pub_fav = float(
-                        self.public_pick_distribution.get(favorite, {}).get(round_name, 0.0)
-                    )
+                    pub_dog = float(self.public_pick_distribution.get(underdog, {}).get(round_name, 0.0))
+                    pub_fav = float(self.public_pick_distribution.get(favorite, {}).get(round_name, 0.0))
                     pub_total = pub_dog + pub_fav
                     if pub_total > 1e-8:
                         pub_dog_norm = pub_dog / pub_total
@@ -590,7 +600,9 @@ class ESPNBracketOptimizer:
 
             # Check path disruption
             disruption = self._compute_upset_disruption(
-                champion_id, favorite, underdog,
+                champion_id,
+                favorite,
+                underdog,
             )
             if disruption > max_disruption:
                 continue
@@ -637,7 +649,10 @@ class ESPNBracketOptimizer:
         return result
 
     def _compute_upset_disruption(
-        self, champion_id: str, favorite: str, underdog: str,
+        self,
+        champion_id: str,
+        favorite: str,
+        underdog: str,
     ) -> float:
         """Compute how much picking underdog over favorite hurts champion path.
 
@@ -737,6 +752,6 @@ class ESPNBracketOptimizer:
         cursor = 0
         for round_idx, n_games in enumerate(ROUND_GAME_COUNTS):
             round_name = ROUND_NAMES[round_idx]
-            out[round_name] = winners[cursor:cursor + n_games]
+            out[round_name] = winners[cursor : cursor + n_games]
             cursor += n_games
         return out
