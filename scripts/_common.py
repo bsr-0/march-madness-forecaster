@@ -36,11 +36,72 @@ from pathlib import Path
 from typing import Dict, List, Set, Tuple
 
 HIST_DIR = Path("data/raw/historical")
+DATA_DIR = Path("data/raw")
 
 
 # ---------------------------------------------------------------------------
 # Loaders
 # ---------------------------------------------------------------------------
+
+
+def sf(val, default):
+    """Safe float coercion: returns `default` on None, NaN, or parse error.
+
+    Consolidates 3 byte-identical copies in `backtest_by_round`,
+    `backtest_pool_value`, `validate_e8_interactions`. A noisier variant
+    (`_safe_float` in `ablation_seed_features` / `rescrape_pretournament_torvik`)
+    has slightly different semantics and is NOT migrated."""
+    import math
+
+    try:
+        v = float(val)
+        return v if math.isfinite(v) else default
+    except (TypeError, ValueError):
+        return default
+
+
+def load_torvik_and_ff(year: int) -> Tuple[Dict[str, dict], Dict[str, dict]]:
+    """Load Torvik season stats and Four-Factors snapshot for `year`.
+
+    Returns `(torvik, four_factors)` where both are `team_id -> feature-dict`.
+    Either may be empty if the source file is missing. Prefers the
+    `data/raw/historical/` path and falls back to `data/raw/`.
+
+    Handles all three FF file schemas observed in the repo:
+      - dict-of-team-dicts: `{tid: {ff_field: val, ...}, n_teams: 352, ...}`
+        — filters non-dict metadata keys like `n_teams`.
+      - `{"teams": [{team_id, ...}, ...]}` — extracts via team_id.
+      - bare top-level list: `[{team_id, ...}, ...]` — same extraction.
+
+    Consolidates ~25 LOC of near-identical loading from 3 variants of
+    `load_team_features` (`backtest_by_round`, `backtest_pool_value`,
+    `validate_e8_interactions`). The feature-assembly step that varies
+    between callers stays local."""
+    torvik: Dict[str, dict] = {}
+    for prefix in (HIST_DIR, DATA_DIR):
+        path = prefix / f"torvik_{year}.json"
+        if path.exists():
+            with open(path) as f:
+                data = json.load(f)
+            teams = data.get("teams", data if isinstance(data, list) else [])
+            torvik = {t["team_id"]: t for t in teams if t.get("team_id")}
+            break
+
+    four_factors: Dict[str, dict] = {}
+    for prefix in (HIST_DIR, DATA_DIR):
+        path = prefix / f"torvik_four_factors_{year}.json"
+        if path.exists():
+            with open(path) as f:
+                ff_data = json.load(f)
+            if isinstance(ff_data, dict) and "teams" not in ff_data:
+                # dict-of-team-dicts with possible metadata mixed in
+                four_factors = {k: v for k, v in ff_data.items() if isinstance(v, dict)}
+            else:
+                teams_list = ff_data.get("teams", ff_data if isinstance(ff_data, list) else [])
+                four_factors = {t.get("team_id", ""): t for t in teams_list if t.get("team_id")}
+            break
+
+    return torvik, four_factors
 
 
 def load_tournament_results(year: int) -> List[Dict]:
@@ -175,3 +236,41 @@ def score_bracket_espn(
         if team_id in winners.get(round_name, set()):
             total += scoring[round_name]
     return total
+
+
+def build_leverage_bracket(
+    games: List[Dict],
+    seeds: Dict[str, int],
+    leverage_picks: List[Dict],
+    round_map,
+) -> Dict[str, str]:
+    """Pick the higher-leverage team in each game; fall back to chalk.
+
+    For each game, prefer the team the optimizer identified as high-leverage
+    (lev > 0); when both are flagged, take the larger leverage ratio; when
+    neither is flagged, pick the lower seed. Returns `{team_id: scoring_round}`.
+
+    Consolidates identical 22-LOC copies in `backtest_ev_vs_kaggle` and
+    `unified_mode_evaluation` (SHA bc6c5658…)."""
+    leverage_set = {}
+    for lp in leverage_picks:
+        leverage_set[(lp["team_id"], lp["round"])] = lp.get("leverage_ratio", 0.0)
+
+    picks: Dict[str, str] = {}
+    for game in games:
+        scoring_round = round_map.get(game["round_name"])
+        if scoring_round is None:
+            continue
+        t1, t2 = game["team1_id"], game["team2_id"]
+        s1, s2 = seeds.get(t1, 16), seeds.get(t2, 16)
+        lev1 = leverage_set.get((t1, scoring_round), 0.0)
+        lev2 = leverage_set.get((t2, scoring_round), 0.0)
+        if lev1 > 0 and lev1 >= lev2:
+            picks[t1] = scoring_round
+        elif lev2 > 0:
+            picks[t2] = scoring_round
+        elif s1 <= s2:
+            picks[t1] = scoring_round
+        else:
+            picks[t2] = scoring_round
+    return picks
