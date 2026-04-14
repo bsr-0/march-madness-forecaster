@@ -110,7 +110,7 @@ jobs:
             git commit -m "data: rescrape pre-tournament Torvik ratings${SCOPE} ($(date -u +%Y-%m-%d))"
             git push -u origin "$BRANCH"
             PR_URL=$(gh pr create --fill --base main)
-            gh pr merge --squash --delete-branch --auto "$PR_URL"
+            gh pr merge --rebase --delete-branch --auto "$PR_URL"
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
