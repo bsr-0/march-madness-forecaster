@@ -91,6 +91,7 @@ Tried, measured, rejected. **Do not re-propose without new data that invalidates
 | D9 | Brier-optimal sharpening in Kaggle submissions | Prototype | Prohibited by protocol; overfits Brier at cost of realism | `march madness pipeline v2 protocol.md:96`; `pipeline_freeze.json:49` |
 | D10 | FanDuel / DraftKings scrapers | Built | Replaced by `TheOddsAPIScraper`; deleted | `PROJECT_STATUS.md:76` |
 | D11 | Increasing training window past 9 seasons | Data exploration | ~17.6k regular-season + ~63 tourney games/yr caps signal; no BSS lift | `COUNCIL_LESSONS.md` §3 row 6 (2026-04-02 20:52) |
+| D12 | Deterministic-argmax bracket construction (`det_champ_tv`, `det_f4_tv`, `det_e8_tv`) for WTA pools | 13-year N=31 MC backtest | BestRank 9.92 vs stochastic's 1.52; wins only 3/13 years (all chalky spikes 2015/2019 + one tie); P(1st)=0.000 in 7 of 13 years. Aggregate P(1st) 0.060 looks higher than stochastic 0.041 but is bimodal — requires pre-knowing chalky-vs-upset regime. Kelly framing (concave utility) favors stochastic consistency. Closes §2 O13. | `artifacts/o13_kelly_vs_argmax_audit_2026-04-14.md`; `artifacts/o13_kelly_vs_argmax_2026-04-14.json`; `tests/test_kelly_vs_argmax_lock.py`; `mc_pool_backtest_n31_det_vs_stoch.txt` |
 
 ---
 
