@@ -1,0 +1,1036 @@
+{
+  "per_year": {
+    "2011": {
+      "0.5": {
+        "brier": 0.2254989699321264,
+        "mean_score": 572.5,
+        "best_score": 820,
+        "chalk_score": 630,
+        "mean_edge_vs_chalk": -57.5,
+        "best_edge_vs_chalk": 190,
+        "beats_chalk_rate": 0.45,
+        "n_samples": 200
+      },
+      "0.75": {
+        "brier": 0.20909582953414,
+        "mean_score": 541.7,
+        "best_score": 880,
+        "chalk_score": 630,
+        "mean_edge_vs_chalk": -88.29999999999995,
+        "best_edge_vs_chalk": 250,
+        "beats_chalk_rate": 0.4,
+        "n_samples": 200
+      },
+      "1.0": {
+        "brier": 0.2025154003059703,
+        "mean_score": 526.8,
+        "best_score": 870,
+        "chalk_score": 630,
+        "mean_edge_vs_chalk": -103.20000000000005,
+        "best_edge_vs_chalk": 240,
+        "beats_chalk_rate": 0.385,
+        "n_samples": 200
+      },
+      "1.25": {
+        "brier": 0.2004714738351902,
+        "mean_score": 517.85,
+        "best_score": 850,
+        "chalk_score": 630,
+        "mean_edge_vs_chalk": -112.14999999999998,
+        "best_edge_vs_chalk": 220,
+        "beats_chalk_rate": 0.345,
+        "n_samples": 200
+      },
+      "1.5": {
+        "brier": 0.2005736124507338,
+        "mean_score": 511.5,
+        "best_score": 890,
+        "chalk_score": 630,
+        "mean_edge_vs_chalk": -118.5,
+        "best_edge_vs_chalk": 260,
+        "beats_chalk_rate": 0.31,
+        "n_samples": 200
+      },
+      "2.0": {
+        "brier": 0.2033208251931729,
+        "mean_score": 493.7,
+        "best_score": 880,
+        "chalk_score": 630,
+        "mean_edge_vs_chalk": -136.3,
+        "best_edge_vs_chalk": 250,
+        "beats_chalk_rate": 0.275,
+        "n_samples": 200
+      },
+      "3.0": {
+        "brier": 0.21066033739731835,
+        "mean_score": 479.2,
+        "best_score": 830,
+        "chalk_score": 630,
+        "mean_edge_vs_chalk": -150.8,
+        "best_edge_vs_chalk": 200,
+        "beats_chalk_rate": 0.26,
+        "n_samples": 200
+      }
+    },
+    "2013": {
+      "0.5": {
+        "brier": 0.22816170168457886,
+        "mean_score": 572.35,
+        "best_score": 890,
+        "chalk_score": 690,
+        "mean_edge_vs_chalk": -117.64999999999998,
+        "best_edge_vs_chalk": 200,
+        "beats_chalk_rate": 0.25,
+        "n_samples": 200
+      },
+      "0.75": {
+        "brier": 0.21570760194382183,
+        "mean_score": 553.2,
+        "best_score": 910,
+        "chalk_score": 690,
+        "mean_edge_vs_chalk": -136.79999999999995,
+        "best_edge_vs_chalk": 220,
+        "beats_chalk_rate": 0.21,
+        "n_samples": 200
+      },
+      "1.0": {
+        "brier": 0.21005435002866277,
+        "mean_score": 532.55,
+        "best_score": 910,
+        "chalk_score": 690,
+        "mean_edge_vs_chalk": -157.45000000000005,
+        "best_edge_vs_chalk": 220,
+        "beats_chalk_rate": 0.185,
+        "n_samples": 200
+      },
+      "1.25": {
+        "brier": 0.2078724191206901,
+        "mean_score": 523.4,
+        "best_score": 900,
+        "chalk_score": 690,
+        "mean_edge_vs_chalk": -166.60000000000002,
+        "best_edge_vs_chalk": 210,
+        "beats_chalk_rate": 0.17,
+        "n_samples": 200
+      },
+      "1.5": {
+        "brier": 0.20749508101114644,
+        "mean_score": 509.5,
+        "best_score": 920,
+        "chalk_score": 690,
+        "mean_edge_vs_chalk": -180.5,
+        "best_edge_vs_chalk": 230,
+        "beats_chalk_rate": 0.155,
+        "n_samples": 200
+      },
+      "2.0": {
+        "brier": 0.209148748466,
+        "mean_score": 503.8,
+        "best_score": 920,
+        "chalk_score": 690,
+        "mean_edge_vs_chalk": -186.2,
+        "best_edge_vs_chalk": 230,
+        "beats_chalk_rate": 0.155,
+        "n_samples": 200
+      },
+      "3.0": {
+        "brier": 0.2148550759344628,
+        "mean_score": 489.45,
+        "best_score": 920,
+        "chalk_score": 690,
+        "mean_edge_vs_chalk": -200.55,
+        "best_edge_vs_chalk": 230,
+        "beats_chalk_rate": 0.145,
+        "n_samples": 200
+      }
+    },
+    "2014": {
+      "0.5": {
+        "brier": 0.24428921634460393,
+        "mean_score": 415.15,
+        "best_score": 830,
+        "chalk_score": 460,
+        "mean_edge_vs_chalk": -44.85000000000002,
+        "best_edge_vs_chalk": 370,
+        "beats_chalk_rate": 0.515,
+        "n_samples": 200
+      },
+      "0.75": {
+        "brier": 0.2220488287193215,
+        "mean_score": 428.5,
+        "best_score": 850,
+        "chalk_score": 460,
+        "mean_edge_vs_chalk": -31.5,
+        "best_edge_vs_chalk": 390,
+        "beats_chalk_rate": 0.495,
+        "n_samples": 200
+      },
+      "1.0": {
+        "brier": 0.21242196458570328,
+        "mean_score": 443.0,
+        "best_score": 850,
+        "chalk_score": 460,
+        "mean_edge_vs_chalk": -17.0,
+        "best_edge_vs_chalk": 390,
+        "beats_chalk_rate": 0.51,
+        "n_samples": 200
+      },
+      "1.25": {
+        "brier": 0.20854387137613747,
+        "mean_score": 454.1,
+        "best_score": 880,
+        "chalk_score": 460,
+        "mean_edge_vs_chalk": -5.899999999999977,
+        "best_edge_vs_chalk": 420,
+        "beats_chalk_rate": 0.51,
+        "n_samples": 200
+      },
+      "1.5": {
+        "brier": 0.2074102599372227,
+        "mean_score": 458.75,
+        "best_score": 880,
+        "chalk_score": 460,
+        "mean_edge_vs_chalk": -1.25,
+        "best_edge_vs_chalk": 420,
+        "beats_chalk_rate": 0.52,
+        "n_samples": 200
+      },
+      "2.0": {
+        "brier": 0.20857539231219765,
+        "mean_score": 466.75,
+        "best_score": 880,
+        "chalk_score": 460,
+        "mean_edge_vs_chalk": 6.75,
+        "best_edge_vs_chalk": 420,
+        "beats_chalk_rate": 0.53,
+        "n_samples": 200
+      },
+      "3.0": {
+        "brier": 0.2142614261885938,
+        "mean_score": 470.55,
+        "best_score": 870,
+        "chalk_score": 460,
+        "mean_edge_vs_chalk": 10.550000000000011,
+        "best_edge_vs_chalk": 410,
+        "beats_chalk_rate": 0.525,
+        "n_samples": 200
+      }
+    },
+    "2015": {
+      "0.5": {
+        "brier": 0.17380838689482764,
+        "mean_score": 570.05,
+        "best_score": 960,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -289.95000000000005,
+        "best_edge_vs_chalk": 100,
+        "beats_chalk_rate": 0.03,
+        "n_samples": 200
+      },
+      "0.75": {
+        "brier": 0.17332147092472572,
+        "mean_score": 552.1,
+        "best_score": 1010,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -307.9,
+        "best_edge_vs_chalk": 150,
+        "beats_chalk_rate": 0.035,
+        "n_samples": 200
+      },
+      "1.0": {
+        "brier": 0.17600213411545948,
+        "mean_score": 538.65,
+        "best_score": 1000,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -321.35,
+        "best_edge_vs_chalk": 140,
+        "beats_chalk_rate": 0.035,
+        "n_samples": 200
+      },
+      "1.25": {
+        "brier": 0.17970584784124463,
+        "mean_score": 528.4,
+        "best_score": 990,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -331.6,
+        "best_edge_vs_chalk": 130,
+        "beats_chalk_rate": 0.02,
+        "n_samples": 200
+      },
+      "1.5": {
+        "brier": 0.18362021940990375,
+        "mean_score": 523.1,
+        "best_score": 990,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -336.9,
+        "best_edge_vs_chalk": 130,
+        "beats_chalk_rate": 0.025,
+        "n_samples": 200
+      },
+      "2.0": {
+        "brier": 0.19101048732496087,
+        "mean_score": 515.9,
+        "best_score": 970,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -344.1,
+        "best_edge_vs_chalk": 110,
+        "beats_chalk_rate": 0.025,
+        "n_samples": 200
+      },
+      "3.0": {
+        "brier": 0.20275982414443589,
+        "mean_score": 506.0,
+        "best_score": 970,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -354.0,
+        "best_edge_vs_chalk": 110,
+        "beats_chalk_rate": 0.025,
+        "n_samples": 200
+      }
+    },
+    "2016": {
+      "0.5": {
+        "brier": 0.2044148870036555,
+        "mean_score": 519.9,
+        "best_score": 890,
+        "chalk_score": 420,
+        "mean_edge_vs_chalk": 99.89999999999998,
+        "best_edge_vs_chalk": 470,
+        "beats_chalk_rate": 0.615,
+        "n_samples": 200
+      },
+      "0.75": {
+        "brier": 0.19633541026054926,
+        "mean_score": 514.95,
+        "best_score": 890,
+        "chalk_score": 420,
+        "mean_edge_vs_chalk": 94.95000000000005,
+        "best_edge_vs_chalk": 470,
+        "beats_chalk_rate": 0.605,
+        "n_samples": 200
+      },
+      "1.0": {
+        "brier": 0.19458769611829468,
+        "mean_score": 503.5,
+        "best_score": 890,
+        "chalk_score": 420,
+        "mean_edge_vs_chalk": 83.5,
+        "best_edge_vs_chalk": 470,
+        "beats_chalk_rate": 0.605,
+        "n_samples": 200
+      },
+      "1.25": {
+        "brier": 0.19530029630095921,
+        "mean_score": 499.3,
+        "best_score": 980,
+        "chalk_score": 420,
+        "mean_edge_vs_chalk": 79.30000000000001,
+        "best_edge_vs_chalk": 560,
+        "beats_chalk_rate": 0.6,
+        "n_samples": 200
+      },
+      "1.5": {
+        "brier": 0.19702629907676983,
+        "mean_score": 498.15,
+        "best_score": 980,
+        "chalk_score": 420,
+        "mean_edge_vs_chalk": 78.14999999999998,
+        "best_edge_vs_chalk": 560,
+        "beats_chalk_rate": 0.6,
+        "n_samples": 200
+      },
+      "2.0": {
+        "brier": 0.20141524347446557,
+        "mean_score": 489.75,
+        "best_score": 980,
+        "chalk_score": 420,
+        "mean_edge_vs_chalk": 69.75,
+        "best_edge_vs_chalk": 560,
+        "beats_chalk_rate": 0.59,
+        "n_samples": 200
+      },
+      "3.0": {
+        "brier": 0.20985628215360505,
+        "mean_score": 486.55,
+        "best_score": 970,
+        "chalk_score": 420,
+        "mean_edge_vs_chalk": 66.55000000000001,
+        "best_edge_vs_chalk": 550,
+        "beats_chalk_rate": 0.59,
+        "n_samples": 200
+      }
+    },
+    "2017": {
+      "0.5": {
+        "brier": 0.17981333739361716,
+        "mean_score": 507.05,
+        "best_score": 900,
+        "chalk_score": 740,
+        "mean_edge_vs_chalk": -232.95,
+        "best_edge_vs_chalk": 160,
+        "beats_chalk_rate": 0.105,
+        "n_samples": 200
+      },
+      "0.75": {
+        "brier": 0.17452332781613533,
+        "mean_score": 495.45,
+        "best_score": 880,
+        "chalk_score": 740,
+        "mean_edge_vs_chalk": -244.55,
+        "best_edge_vs_chalk": 140,
+        "beats_chalk_rate": 0.12,
+        "n_samples": 200
+      },
+      "1.0": {
+        "brier": 0.17537758432284278,
+        "mean_score": 489.85,
+        "best_score": 880,
+        "chalk_score": 740,
+        "mean_edge_vs_chalk": -250.14999999999998,
+        "best_edge_vs_chalk": 140,
+        "beats_chalk_rate": 0.115,
+        "n_samples": 200
+      },
+      "1.25": {
+        "brier": 0.17837941284972314,
+        "mean_score": 487.05,
+        "best_score": 880,
+        "chalk_score": 740,
+        "mean_edge_vs_chalk": -252.95,
+        "best_edge_vs_chalk": 140,
+        "beats_chalk_rate": 0.115,
+        "n_samples": 200
+      },
+      "1.5": {
+        "brier": 0.18204411620723737,
+        "mean_score": 481.8,
+        "best_score": 890,
+        "chalk_score": 740,
+        "mean_edge_vs_chalk": -258.2,
+        "best_edge_vs_chalk": 150,
+        "beats_chalk_rate": 0.095,
+        "n_samples": 200
+      },
+      "2.0": {
+        "brier": 0.18940042042697575,
+        "mean_score": 477.1,
+        "best_score": 850,
+        "chalk_score": 740,
+        "mean_edge_vs_chalk": -262.9,
+        "best_edge_vs_chalk": 110,
+        "beats_chalk_rate": 0.1,
+        "n_samples": 200
+      },
+      "3.0": {
+        "brier": 0.20143171326482223,
+        "mean_score": 467.1,
+        "best_score": 810,
+        "chalk_score": 740,
+        "mean_edge_vs_chalk": -272.9,
+        "best_edge_vs_chalk": 70,
+        "beats_chalk_rate": 0.08,
+        "n_samples": 200
+      }
+    },
+    "2018": {
+      "0.5": {
+        "brier": 0.1940355016198916,
+        "mean_score": 595.6,
+        "best_score": 930,
+        "chalk_score": 740,
+        "mean_edge_vs_chalk": -144.39999999999998,
+        "best_edge_vs_chalk": 190,
+        "beats_chalk_rate": 0.19,
+        "n_samples": 200
+      },
+      "0.75": {
+        "brier": 0.18790046870023028,
+        "mean_score": 569.25,
+        "best_score": 910,
+        "chalk_score": 740,
+        "mean_edge_vs_chalk": -170.75,
+        "best_edge_vs_chalk": 170,
+        "beats_chalk_rate": 0.17,
+        "n_samples": 200
+      },
+      "1.0": {
+        "brier": 0.1884212702568312,
+        "mean_score": 550.9,
+        "best_score": 890,
+        "chalk_score": 740,
+        "mean_edge_vs_chalk": -189.10000000000002,
+        "best_edge_vs_chalk": 150,
+        "beats_chalk_rate": 0.165,
+        "n_samples": 200
+      },
+      "1.25": {
+        "brier": 0.1910953292016575,
+        "mean_score": 537.15,
+        "best_score": 910,
+        "chalk_score": 740,
+        "mean_edge_vs_chalk": -202.85000000000002,
+        "best_edge_vs_chalk": 170,
+        "beats_chalk_rate": 0.145,
+        "n_samples": 200
+      },
+      "1.5": {
+        "brier": 0.19431732667670767,
+        "mean_score": 527.1,
+        "best_score": 860,
+        "chalk_score": 740,
+        "mean_edge_vs_chalk": -212.89999999999998,
+        "best_edge_vs_chalk": 120,
+        "beats_chalk_rate": 0.12,
+        "n_samples": 200
+      },
+      "2.0": {
+        "brier": 0.20054834304424385,
+        "mean_score": 519.4,
+        "best_score": 850,
+        "chalk_score": 740,
+        "mean_edge_vs_chalk": -220.60000000000002,
+        "best_edge_vs_chalk": 110,
+        "beats_chalk_rate": 0.105,
+        "n_samples": 200
+      },
+      "3.0": {
+        "brier": 0.21032493187359172,
+        "mean_score": 510.75,
+        "best_score": 870,
+        "chalk_score": 740,
+        "mean_edge_vs_chalk": -229.25,
+        "best_edge_vs_chalk": 130,
+        "beats_chalk_rate": 0.1,
+        "n_samples": 200
+      }
+    },
+    "2019": {
+      "0.5": {
+        "brier": 0.15524325399342184,
+        "mean_score": 623.7,
+        "best_score": 960,
+        "chalk_score": 630,
+        "mean_edge_vs_chalk": -6.2999999999999545,
+        "best_edge_vs_chalk": 330,
+        "beats_chalk_rate": 0.505,
+        "n_samples": 200
+      },
+      "0.75": {
+        "brier": 0.1558532509095829,
+        "mean_score": 598.5,
+        "best_score": 930,
+        "chalk_score": 630,
+        "mean_edge_vs_chalk": -31.5,
+        "best_edge_vs_chalk": 300,
+        "beats_chalk_rate": 0.44,
+        "n_samples": 200
+      },
+      "1.0": {
+        "brier": 0.16054186433301726,
+        "mean_score": 579.9,
+        "best_score": 920,
+        "chalk_score": 630,
+        "mean_edge_vs_chalk": -50.10000000000002,
+        "best_edge_vs_chalk": 290,
+        "beats_chalk_rate": 0.43,
+        "n_samples": 200
+      },
+      "1.25": {
+        "brier": 0.16614337996329046,
+        "mean_score": 576.8,
+        "best_score": 890,
+        "chalk_score": 630,
+        "mean_edge_vs_chalk": -53.200000000000045,
+        "best_edge_vs_chalk": 260,
+        "beats_chalk_rate": 0.425,
+        "n_samples": 200
+      },
+      "1.5": {
+        "brier": 0.17166401146596977,
+        "mean_score": 567.85,
+        "best_score": 910,
+        "chalk_score": 630,
+        "mean_edge_vs_chalk": -62.14999999999998,
+        "best_edge_vs_chalk": 280,
+        "beats_chalk_rate": 0.415,
+        "n_samples": 200
+      },
+      "2.0": {
+        "brier": 0.18147022826097692,
+        "mean_score": 553.3,
+        "best_score": 910,
+        "chalk_score": 630,
+        "mean_edge_vs_chalk": -76.70000000000005,
+        "best_edge_vs_chalk": 280,
+        "beats_chalk_rate": 0.375,
+        "n_samples": 200
+      },
+      "3.0": {
+        "brier": 0.1960769267333186,
+        "mean_score": 541.6,
+        "best_score": 910,
+        "chalk_score": 630,
+        "mean_edge_vs_chalk": -88.39999999999998,
+        "best_edge_vs_chalk": 280,
+        "beats_chalk_rate": 0.375,
+        "n_samples": 200
+      }
+    },
+    "2021": {
+      "0.5": {
+        "brier": 0.17047780943272922,
+        "mean_score": 582.1,
+        "best_score": 1010,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -277.9,
+        "best_edge_vs_chalk": 150,
+        "beats_chalk_rate": 0.035,
+        "n_samples": 200
+      },
+      "0.75": {
+        "brier": 0.16662622901092908,
+        "mean_score": 567.7,
+        "best_score": 940,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -292.29999999999995,
+        "best_edge_vs_chalk": 80,
+        "beats_chalk_rate": 0.03,
+        "n_samples": 200
+      },
+      "1.0": {
+        "brier": 0.16756381397068879,
+        "mean_score": 558.95,
+        "best_score": 930,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -301.04999999999995,
+        "best_edge_vs_chalk": 70,
+        "beats_chalk_rate": 0.04,
+        "n_samples": 200
+      },
+      "1.25": {
+        "brier": 0.17061078315492564,
+        "mean_score": 549.6,
+        "best_score": 930,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -310.4,
+        "best_edge_vs_chalk": 70,
+        "beats_chalk_rate": 0.05,
+        "n_samples": 200
+      },
+      "1.5": {
+        "brier": 0.17446085469973882,
+        "mean_score": 544.85,
+        "best_score": 920,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -315.15,
+        "best_edge_vs_chalk": 60,
+        "beats_chalk_rate": 0.045,
+        "n_samples": 200
+      },
+      "2.0": {
+        "brier": 0.18243512650943947,
+        "mean_score": 537.05,
+        "best_score": 930,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -322.95000000000005,
+        "best_edge_vs_chalk": 70,
+        "beats_chalk_rate": 0.035,
+        "n_samples": 200
+      },
+      "3.0": {
+        "brier": 0.19577549317114068,
+        "mean_score": 516.65,
+        "best_score": 920,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -343.35,
+        "best_edge_vs_chalk": 60,
+        "beats_chalk_rate": 0.02,
+        "n_samples": 200
+      }
+    },
+    "2022": {
+      "0.5": {
+        "brier": 0.214847620962308,
+        "mean_score": 631.05,
+        "best_score": 900,
+        "chalk_score": 690,
+        "mean_edge_vs_chalk": -58.950000000000045,
+        "best_edge_vs_chalk": 210,
+        "beats_chalk_rate": 0.205,
+        "n_samples": 200
+      },
+      "0.75": {
+        "brier": 0.204154897560457,
+        "mean_score": 599.55,
+        "best_score": 840,
+        "chalk_score": 690,
+        "mean_edge_vs_chalk": -90.45000000000005,
+        "best_edge_vs_chalk": 150,
+        "beats_chalk_rate": 0.235,
+        "n_samples": 200
+      },
+      "1.0": {
+        "brier": 0.20037891007534536,
+        "mean_score": 587.05,
+        "best_score": 890,
+        "chalk_score": 690,
+        "mean_edge_vs_chalk": -102.95000000000005,
+        "best_edge_vs_chalk": 200,
+        "beats_chalk_rate": 0.25,
+        "n_samples": 200
+      },
+      "1.25": {
+        "brier": 0.1997200687779824,
+        "mean_score": 568.65,
+        "best_score": 880,
+        "chalk_score": 690,
+        "mean_edge_vs_chalk": -121.35000000000002,
+        "best_edge_vs_chalk": 190,
+        "beats_chalk_rate": 0.255,
+        "n_samples": 200
+      },
+      "1.5": {
+        "brier": 0.2005111452130557,
+        "mean_score": 557.4,
+        "best_score": 870,
+        "chalk_score": 690,
+        "mean_edge_vs_chalk": -132.60000000000002,
+        "best_edge_vs_chalk": 180,
+        "beats_chalk_rate": 0.26,
+        "n_samples": 200
+      },
+      "2.0": {
+        "brier": 0.2037669171327477,
+        "mean_score": 538.65,
+        "best_score": 870,
+        "chalk_score": 690,
+        "mean_edge_vs_chalk": -151.35000000000002,
+        "best_edge_vs_chalk": 180,
+        "beats_chalk_rate": 0.25,
+        "n_samples": 200
+      },
+      "3.0": {
+        "brier": 0.21119267638256436,
+        "mean_score": 523.8,
+        "best_score": 920,
+        "chalk_score": 690,
+        "mean_edge_vs_chalk": -166.20000000000005,
+        "best_edge_vs_chalk": 230,
+        "beats_chalk_rate": 0.24,
+        "n_samples": 200
+      }
+    },
+    "2023": {
+      "0.5": {
+        "brier": 0.18819334442579042,
+        "mean_score": 636.55,
+        "best_score": 940,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -223.45000000000005,
+        "best_edge_vs_chalk": 80,
+        "beats_chalk_rate": 0.055,
+        "n_samples": 200
+      },
+      "0.75": {
+        "brier": 0.18556464756483468,
+        "mean_score": 610.7,
+        "best_score": 950,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -249.29999999999995,
+        "best_edge_vs_chalk": 90,
+        "beats_chalk_rate": 0.08,
+        "n_samples": 200
+      },
+      "1.0": {
+        "brier": 0.18572662633636647,
+        "mean_score": 604.15,
+        "best_score": 960,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -255.85000000000002,
+        "best_edge_vs_chalk": 100,
+        "beats_chalk_rate": 0.085,
+        "n_samples": 200
+      },
+      "1.25": {
+        "brier": 0.18755759839975492,
+        "mean_score": 599.05,
+        "best_score": 960,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -260.95000000000005,
+        "best_edge_vs_chalk": 100,
+        "beats_chalk_rate": 0.07,
+        "n_samples": 200
+      },
+      "1.5": {
+        "brier": 0.19013407855748665,
+        "mean_score": 598.85,
+        "best_score": 960,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -261.15,
+        "best_edge_vs_chalk": 100,
+        "beats_chalk_rate": 0.075,
+        "n_samples": 200
+      },
+      "2.0": {
+        "brier": 0.19581482807895745,
+        "mean_score": 588.55,
+        "best_score": 970,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -271.45000000000005,
+        "best_edge_vs_chalk": 110,
+        "beats_chalk_rate": 0.06,
+        "n_samples": 200
+      },
+      "3.0": {
+        "brier": 0.2058766591501021,
+        "mean_score": 572.75,
+        "best_score": 980,
+        "chalk_score": 860,
+        "mean_edge_vs_chalk": -287.25,
+        "best_edge_vs_chalk": 120,
+        "beats_chalk_rate": 0.055,
+        "n_samples": 200
+      }
+    },
+    "2024": {
+      "0.5": {
+        "brier": 0.16437147893906656,
+        "mean_score": 573.85,
+        "best_score": 930,
+        "chalk_score": 770,
+        "mean_edge_vs_chalk": -196.14999999999998,
+        "best_edge_vs_chalk": 160,
+        "beats_chalk_rate": 0.11,
+        "n_samples": 200
+      },
+      "0.75": {
+        "brier": 0.1664058975957944,
+        "mean_score": 561.05,
+        "best_score": 940,
+        "chalk_score": 770,
+        "mean_edge_vs_chalk": -208.95000000000005,
+        "best_edge_vs_chalk": 170,
+        "beats_chalk_rate": 0.115,
+        "n_samples": 200
+      },
+      "1.0": {
+        "brier": 0.1702546660577538,
+        "mean_score": 552.7,
+        "best_score": 930,
+        "chalk_score": 770,
+        "mean_edge_vs_chalk": -217.29999999999995,
+        "best_edge_vs_chalk": 160,
+        "beats_chalk_rate": 0.105,
+        "n_samples": 200
+      },
+      "1.25": {
+        "brier": 0.17465546073435914,
+        "mean_score": 548.7,
+        "best_score": 930,
+        "chalk_score": 770,
+        "mean_edge_vs_chalk": -221.29999999999995,
+        "best_edge_vs_chalk": 160,
+        "beats_chalk_rate": 0.115,
+        "n_samples": 200
+      },
+      "1.5": {
+        "brier": 0.17908177598133243,
+        "mean_score": 541.4,
+        "best_score": 930,
+        "chalk_score": 770,
+        "mean_edge_vs_chalk": -228.60000000000002,
+        "best_edge_vs_chalk": 160,
+        "beats_chalk_rate": 0.115,
+        "n_samples": 200
+      },
+      "2.0": {
+        "brier": 0.18723258584008412,
+        "mean_score": 534.9,
+        "best_score": 930,
+        "chalk_score": 770,
+        "mean_edge_vs_chalk": -235.10000000000002,
+        "best_edge_vs_chalk": 160,
+        "beats_chalk_rate": 0.115,
+        "n_samples": 200
+      },
+      "3.0": {
+        "brier": 0.19995449318506928,
+        "mean_score": 532.15,
+        "best_score": 900,
+        "chalk_score": 770,
+        "mean_edge_vs_chalk": -237.85000000000002,
+        "best_edge_vs_chalk": 130,
+        "beats_chalk_rate": 0.105,
+        "n_samples": 200
+      }
+    },
+    "2025": {
+      "0.5": {
+        "brier": 0.12462444379288252,
+        "mean_score": 556.15,
+        "best_score": 920,
+        "chalk_score": 990,
+        "mean_edge_vs_chalk": -433.85,
+        "best_edge_vs_chalk": -70,
+        "beats_chalk_rate": 0.0,
+        "n_samples": 200
+      },
+      "0.75": {
+        "brier": 0.13483358087534164,
+        "mean_score": 531.7,
+        "best_score": 920,
+        "chalk_score": 990,
+        "mean_edge_vs_chalk": -458.29999999999995,
+        "best_edge_vs_chalk": -70,
+        "beats_chalk_rate": 0.0,
+        "n_samples": 200
+      },
+      "1.0": {
+        "brier": 0.1451013968253968,
+        "mean_score": 515.35,
+        "best_score": 900,
+        "chalk_score": 990,
+        "mean_edge_vs_chalk": -474.65,
+        "best_edge_vs_chalk": -90,
+        "beats_chalk_rate": 0.0,
+        "n_samples": 200
+      },
+      "1.25": {
+        "brier": 0.15418358118034473,
+        "mean_score": 504.95,
+        "best_score": 880,
+        "chalk_score": 990,
+        "mean_edge_vs_chalk": -485.05,
+        "best_edge_vs_chalk": -110,
+        "beats_chalk_rate": 0.0,
+        "n_samples": 200
+      },
+      "1.5": {
+        "brier": 0.16201151275546002,
+        "mean_score": 497.25,
+        "best_score": 880,
+        "chalk_score": 990,
+        "mean_edge_vs_chalk": -492.75,
+        "best_edge_vs_chalk": -110,
+        "beats_chalk_rate": 0.0,
+        "n_samples": 200
+      },
+      "2.0": {
+        "brier": 0.17460565832382174,
+        "mean_score": 488.35,
+        "best_score": 880,
+        "chalk_score": 990,
+        "mean_edge_vs_chalk": -501.65,
+        "best_edge_vs_chalk": -110,
+        "beats_chalk_rate": 0.0,
+        "n_samples": 200
+      },
+      "3.0": {
+        "brier": 0.1918013031150835,
+        "mean_score": 479.05,
+        "best_score": 850,
+        "chalk_score": 990,
+        "mean_edge_vs_chalk": -510.95,
+        "best_edge_vs_chalk": -140,
+        "beats_chalk_rate": 0.0,
+        "n_samples": 200
+      }
+    }
+  },
+  "aggregate": {
+    "0.5": {
+      "mean_brier": 0.1898292271091923,
+      "mean_mean_score": 565.8461538461539,
+      "mean_best_score": 913.8461538461538,
+      "mean_mean_edge": -152.6153846153846,
+      "mean_best_edge": 195.3846153846154,
+      "mean_beats_chalk_rate": 0.23576923076923076,
+      "n_years": 13
+    },
+    "0.75": {
+      "mean_brier": 0.1840285724166049,
+      "mean_mean_score": 548.026923076923,
+      "mean_best_score": 911.5384615384615,
+      "mean_mean_edge": -170.43461538461537,
+      "mean_best_edge": 193.07692307692307,
+      "mean_beats_chalk_rate": 0.22576923076923075,
+      "n_years": 13
+    },
+    "1.0": {
+      "mean_brier": 0.183765205948641,
+      "mean_mean_score": 537.1807692307692,
+      "mean_best_score": 909.2307692307693,
+      "mean_mean_edge": -181.28076923076924,
+      "mean_best_edge": 190.76923076923077,
+      "mean_beats_chalk_rate": 0.22384615384615386,
+      "n_years": 13
+    },
+    "1.25": {
+      "mean_brier": 0.18571073251817383,
+      "mean_mean_score": 530.3846153846154,
+      "mean_best_score": 912.3076923076923,
+      "mean_mean_edge": -188.07692307692312,
+      "mean_best_edge": 193.84615384615384,
+      "mean_beats_chalk_rate": 0.2169230769230769,
+      "n_years": 13
+    },
+    "1.5": {
+      "mean_brier": 0.18848848411098193,
+      "mean_mean_score": 524.4230769230769,
+      "mean_best_score": 913.8461538461538,
+      "mean_mean_edge": -194.03846153846155,
+      "mean_best_edge": 195.3846153846154,
+      "mean_beats_chalk_rate": 0.21038461538461542,
+      "n_years": 13
+    },
+    "2.0": {
+      "mean_brier": 0.1945188311067726,
+      "mean_mean_score": 515.9384615384615,
+      "mean_best_score": 909.2307692307693,
+      "mean_mean_edge": -202.52307692307693,
+      "mean_best_edge": 190.76923076923077,
+      "mean_beats_chalk_rate": 0.2011538461538462,
+      "n_years": 13
+    },
+    "3.0": {
+      "mean_brier": 0.20498670328416219,
+      "mean_mean_score": 505.8153846153846,
+      "mean_best_score": 901.5384615384615,
+      "mean_mean_edge": -212.64615384615385,
+      "mean_best_edge": 183.07692307692307,
+      "mean_beats_chalk_rate": 0.1938461538461539,
+      "n_years": 13
+    }
+  },
+  "brier_optimal_T": 1.0,
+  "score_mean_optimal_T": 0.5,
+  "score_best_optimal_T": 0.5,
+  "beats_chalk_optimal_T": 0.5,
+  "temperatures": [
+    0.5,
+    0.75,
+    1.0,
+    1.25,
+    1.5,
+    2.0,
+    3.0
+  ],
+  "backtest_years": [
+    2011,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "n_samples_per_year": 200,
+  "random_seed": 42,
+  "note": "Temperature-scaled stochastic bracket sampling against actual outcomes. Brier is game-level. mean_score is the portfolio average across N=200 samples (what a single entry expects in expectation); best_score is the best sample (what a diversified 200-bracket portfolio would score on its top entry)."
+}
