@@ -878,8 +878,6 @@ def run_post_pipeline(
     experiment_id = _log_experiment(pipeline, report, baseline_stats, calibration_stats, loyo_cv, loyo_year_briers)
     _store_artifacts(pipeline, report, baseline_stats, experiment_id, loyo_cv)
     _check_promotion_gate(pipeline, report, loyo_cv, experiment_id)
-    _run_meta_learning(pipeline, report, baseline_stats, loyo_cv)
-    _run_deployment_integration(pipeline, report, loyo_cv, experiment_id)
     _run_governance_gates(pipeline, report, loyo_cv, experiment_id)
 
     logger.info(
@@ -1087,73 +1085,6 @@ def _check_promotion_gate(pipeline, report, loyo_cv, experiment_id) -> None:
                 logger.warning("PROMOTION GATE BLOCKED: %s", promotion.reason)
     except Exception as exc:
         logger.debug("Promotion gate check failed: %s", exc)
-
-
-def _run_meta_learning(pipeline, report, baseline_stats, loyo_cv) -> None:
-    """S7: Meta-learning weight adjustment."""
-    try:
-        from ...ml.meta_learning import MetaLearner
-
-        meta_learner = MetaLearner(registry=pipeline._experiment_registry)
-        model_components = []
-        for name in ("lightgbm", "xgboost", "logistic", "spread_regressor"):
-            if baseline_stats.get(name, {}).get("enabled", False) or name in baseline_stats.get("model", ""):
-                model_components.append(name)
-        if not model_components:
-            model_components = [baseline_stats.get("model", "unknown")]
-        if pipeline.ensemble_base_weights:
-            decision = meta_learner.adjust_weights(
-                pipeline.ensemble_base_weights,
-                year=pipeline.config.year,
-                model_components=model_components,
-            )
-            report["meta_learning"] = {
-                "regime": decision.regime,
-                "confidence": decision.confidence,
-                "weight_adjustments": decision.weight_adjustments,
-                "reasoning": decision.reasoning,
-            }
-            logger.info("S7: Meta-learning: %s", decision.reasoning)
-    except Exception as exc:
-        logger.debug("Meta-learning failed: %s", exc)
-
-
-def _run_deployment_integration(pipeline, report, loyo_cv, experiment_id) -> None:
-    """S18/S25: Deployment pipeline integration."""
-    try:
-        from ...deployment.pipeline import DeploymentPipeline
-
-        deployment = DeploymentPipeline()
-        model_version = experiment_id or "unknown"
-        candidate_brier = loyo_cv.get("mean_brier", 0)
-
-        deploy_record = deployment.start_deployment(model_version)
-        incumbent = pipeline._experiment_registry.best(metric="loyo_mean_brier")
-        incumbent_brier = incumbent.loyo_mean_brier if incumbent else None
-
-        if incumbent_brier and candidate_brier > 0:
-            shadow_check = deployment.run_shadow_check(
-                deploy_record.deployment_id,
-                candidate_brier=candidate_brier,
-                production_brier=incumbent_brier,
-            )
-            if shadow_check.passed:
-                logger.info("S18: Shadow mode passed, advanced to CANARY")
-            else:
-                logger.warning("S18: Shadow mode failed -- candidate does not beat incumbent")
-        else:
-            deploy_record.stage = "canary"
-            logger.info("S18: No incumbent -- auto-advancing deployment")
-
-        report["deployment"] = {
-            "deployment_id": deploy_record.deployment_id,
-            "model_version": deploy_record.model_version_id,
-            "stage": deploy_record.stage,
-            "health_checks": deploy_record.health_checks,
-            "started_at": deploy_record.started_at,
-        }
-    except Exception as exc:
-        logger.debug("Deployment pipeline integration failed: %s", exc)
 
 
 def _run_governance_gates(pipeline, report, loyo_cv, experiment_id) -> None:

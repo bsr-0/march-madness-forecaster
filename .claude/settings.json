@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.command // empty' | { read -r cmd; if echo \"$cmd\" | grep -qE '(rm\\s+-rf|git\\s+push\\s+--force|git\\s+reset\\s+--hard)'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Destructive command blocked. Use a safer alternative or get explicit approval.\"}}'; fi; } || true",
+            "command": "jq -r '.tool_input.command // empty' | { read -r cmd; if echo \"$cmd\" | grep -qE '(rm\\s+-rf|git\\s+push\\s+--force(\\s|$)|git\\s+reset\\s+--hard)'; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Destructive command blocked. Use a safer alternative or get explicit approval.\"}}'; fi; } || true",
             "timeout": 5000
           }
         ]

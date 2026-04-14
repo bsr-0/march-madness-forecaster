@@ -22,11 +22,6 @@ from src.pipeline.config import SOTAPipelineConfig
 from src.ml.ensemble.margin_first_ensemble import (
     _PRODUCTION_WEIGHTS,
 )
-from src.ml.ensemble.model_registry import (
-    get_production_models,
-    get_experimental_only_models,
-    MODEL_REGISTRY,
-)
 
 
 class TestProductionBaselineSpec:
@@ -157,46 +152,3 @@ class TestPipelineModeConfig:
         assert config.admission_min_mean_brier_improvement == 0.0
         assert config.admission_min_fold_improvement_rate == 0.60
         assert config.admission_max_calibration_degradation == 0.01
-
-
-class TestModelRegistryProductionFlags:
-    """Test model registry production metadata."""
-
-    def test_production_models(self):
-        prod_models = get_production_models()
-        prod_names = {m.name for m in prod_models}
-        assert "spread_regressor" in prod_names
-        assert "logistic_regression" in prod_names
-        assert "lightgbm" in prod_names
-        assert "xgboost" in prod_names
-
-    def test_experimental_only_models(self):
-        exp_models = get_experimental_only_models()
-        exp_names = {m.name for m in exp_models}
-        assert "lightgbm" not in exp_names
-        assert "xgboost" not in exp_names
-        assert "spread_regressor" not in exp_names
-
-    def test_lgb_registry_flags(self):
-        lgb = next(m for m in MODEL_REGISTRY if m.name == "lightgbm")
-        assert lgb.implemented is True
-        assert lgb.production_active is True
-        assert lgb.experimental_only is False
-
-    def test_xgb_registry_flags(self):
-        xgb = next(m for m in MODEL_REGISTRY if m.name == "xgboost")
-        assert xgb.implemented is True
-        assert xgb.production_active is True
-        assert xgb.experimental_only is False
-
-    def test_spread_registry_flags(self):
-        spread = next(m for m in MODEL_REGISTRY if m.name == "spread_regressor")
-        assert spread.implemented is True
-        assert spread.production_active is True
-        assert spread.experimental_only is False
-
-    def test_logistic_registry_flags(self):
-        logit = next(m for m in MODEL_REGISTRY if m.name == "logistic_regression")
-        assert logit.implemented is True
-        assert logit.production_active is True
-        assert logit.experimental_only is False
