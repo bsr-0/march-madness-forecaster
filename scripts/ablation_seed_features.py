@@ -24,6 +24,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from scripts._common import load_tournament_results  # noqa: F401
 
 import numpy as np
 from sklearn.ensemble import GradientBoostingRegressor
@@ -95,14 +96,6 @@ ALPHA_SWEEP = [0.50, 0.60, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95]
 # ---------------------------------------------------------------------------
 # Data loading (mirrors backtest_by_round.py patterns)
 # ---------------------------------------------------------------------------
-
-
-def load_tournament_results(year: int) -> List[Dict]:
-    path = HIST_DIR / f"tournament_results_{year}.json"
-    if not path.exists():
-        return []
-    with open(path) as f:
-        return json.load(f).get("games", [])
 
 
 def load_team_stats(year: int) -> Dict[str, Dict]:

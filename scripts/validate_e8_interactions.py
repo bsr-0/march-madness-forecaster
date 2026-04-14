@@ -16,6 +16,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from types import SimpleNamespace
+from scripts._common import load_tournament_results  # noqa: F401
 
 import numpy as np
 
@@ -27,14 +28,6 @@ DATA_DIR = Path("data/raw")
 HIST_DIR = DATA_DIR / "historical"
 
 BACKTEST_YEARS = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
-
-
-def load_tournament_results(year):
-    path = HIST_DIR / f"tournament_results_{year}.json"
-    if not path.exists():
-        return []
-    with open(path) as f:
-        return json.load(f).get("games", [])
 
 
 def load_team_features(year):

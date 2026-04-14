@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Sequence, Tuple
+from scripts._common import load_tournament_results  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -225,16 +226,6 @@ def load_seeds_and_regions(year):
             raw_region = t.get("region", "")
             regions[t["team_id"]] = _REGION_ALIASES.get(raw_region, raw_region)
     return seeds, regions
-
-
-def load_tournament_results(year):
-    """Load tournament game results."""
-    path = HIST_DIR / f"tournament_results_{year}.json"
-    if not path.exists():
-        return []
-    with open(path) as f:
-        data = json.load(f)
-    return data.get("games", data) if isinstance(data, dict) else data
 
 
 _VALID_PRETOURNAMENT_TYPES = {"pre_tournament_computed", "pre_tournament"}

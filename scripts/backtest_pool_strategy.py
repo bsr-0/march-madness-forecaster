@@ -6,6 +6,12 @@ a pure chalk bracket to measure the strategy's historical edge.
 """
 
 from __future__ import annotations
+from scripts._common import (  # noqa: F401
+    build_chalk_picks as _cm_build_chalk_picks,
+    determine_winners as _cm_determine_winners,
+    load_seeds,
+    score_bracket_espn,
+)
 
 import json
 import sys
@@ -48,14 +54,6 @@ RESULT_ROUND_TO_SCORING = {
 SCOREABLE_ROUNDS = {"R64", "R32", "S16", "E8", "F4", "NCG"}
 
 
-def load_seeds(year: int) -> Dict[str, int]:
-    """Load tournament seeds: team_id -> seed."""
-    path = PROJECT_ROOT / f"data/raw/historical/tournament_seeds_{year}.json"
-    with open(path) as f:
-        data = json.load(f)
-    return {t["team_id"]: t["seed"] for t in data["teams"]}
-
-
 def load_results(year: int) -> List[Dict]:
     """Load tournament results, filtering to scoreable rounds only."""
     path = PROJECT_ROOT / f"data/raw/historical/tournament_results_{year}.json"
@@ -65,74 +63,15 @@ def load_results(year: int) -> List[Dict]:
 
 
 def determine_winners(games: List[Dict]) -> Dict[str, set]:
-    """Determine which teams won in each round.
-
-    Returns:
-        Dict mapping scoring round name (R64, R32, ..., CHAMP) to set of
-        team_ids that won a game in that round.
-    """
-    winners: Dict[str, set] = {r: set() for r in ESPN_SCORING}
-    for game in games:
-        result_round = game["round_name"]
-        scoring_round = RESULT_ROUND_TO_SCORING.get(result_round)
-        if scoring_round is None:
-            continue
-        if game["team1_won"]:
-            winners[scoring_round].add(game["team1_id"])
-        else:
-            winners[scoring_round].add(game["team2_id"])
-    return winners
+    return _cm_determine_winners(games, ESPN_SCORING, RESULT_ROUND_TO_SCORING)
 
 
-def score_bracket(
-    picks: Dict[str, str],
-    winners: Dict[str, set],
-) -> int:
-    """Score a bracket's picks against actual outcomes.
-
-    Args:
-        picks: Dict of team_id -> round_name indicating the furthest round
-               we picked that team to win in. Each entry means "I picked
-               this team to win this round."
-        winners: Dict of round_name -> set of team_ids that actually won.
-
-    Returns:
-        Total ESPN scoring points.
-    """
-    total = 0
-    for team_id, round_name in picks.items():
-        if team_id in winners.get(round_name, set()):
-            total += ESPN_SCORING[round_name]
-    return total
+def score_bracket(picks: Dict[str, str], winners: Dict[str, set]) -> int:
+    return score_bracket_espn(picks, winners, ESPN_SCORING)
 
 
-def build_chalk_picks(
-    games: List[Dict],
-    seeds: Dict[str, int],
-) -> Dict[str, str]:
-    """Build a chalk bracket: for every game, pick the lower (better) seed.
-
-    Returns dict of team_id -> round_name for each chalk pick.
-    """
-    picks: Dict[str, str] = {}
-    for game in games:
-        result_round = game["round_name"]
-        scoring_round = RESULT_ROUND_TO_SCORING.get(result_round)
-        if scoring_round is None:
-            continue
-
-        t1, t2 = game["team1_id"], game["team2_id"]
-        s1 = seeds.get(t1, game.get("team1_seed", 16))
-        s2 = seeds.get(t2, game.get("team2_seed", 16))
-
-        # Lower seed number = better seed = chalk pick
-        if s1 <= s2:
-            chalk = t1
-        else:
-            chalk = t2
-
-        picks[chalk] = scoring_round
-    return picks
+def build_chalk_picks(games: List[Dict], seeds: Dict[str, int]) -> Dict[str, str]:
+    return _cm_build_chalk_picks(games, seeds, RESULT_ROUND_TO_SCORING)
 
 
 def build_leverage_picks_bracket(

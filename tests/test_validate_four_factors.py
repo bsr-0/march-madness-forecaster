@@ -59,6 +59,23 @@ PRODUCTION_YEARS = [2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025]
 HIST_DIR = Path("data/raw/historical")
 
 
+@pytest.fixture(scope="module")
+def validation_results() -> dict:
+    """Run validate_year() once per module for all production years.
+
+    Two tests consume this (tripwire + subgroup bias). Without the fixture
+    they'd each re-run the ~full 9-year suite, roughly doubling wall time
+    and tripping the CI 300 s unit-test timeout. With the fixture, total
+    cost is paid once.
+    """
+    import sys
+
+    sys.path.insert(0, str(Path(".").resolve()))
+    from scripts.validate_four_factors import validate_year
+
+    return {year: validate_year(year) for year in PRODUCTION_YEARS}
+
+
 def _tournament_team_ids(year: int) -> set[str]:
     path = HIST_DIR / f"tournament_seeds_{year}.json"
     with open(path) as f:
@@ -106,7 +123,9 @@ def test_pre_tournament_snapshot_covers_all_tournament_teams(year: int) -> None:
     )
 
 
-def test_local_fallback_tripwire_not_catastrophically_broken() -> None:
+@pytest.mark.backtest_regression
+@pytest.mark.timeout(900)
+def test_local_fallback_tripwire_not_catastrophically_broken(validation_results) -> None:
     """The local FF computation is the production fallback. It is not
     required to match Torvik at r ≥ 0.99 — that's data-source-bound and
     unreachable (see COUNCIL_LESSONS.md §2 O2 close). But it must not be
@@ -121,15 +140,14 @@ def test_local_fallback_tripwire_not_catastrophically_broken() -> None:
     import sys
 
     sys.path.insert(0, str(Path(".").resolve()))
-    from scripts.validate_four_factors import FF_FIELDS, validate_year
+    from scripts.validate_four_factors import FF_FIELDS
 
     # Build mean r per feature across production years. Older years with
     # sparser raw data (2008-2015) are excluded from the tripwire — they
     # are validated informally via the script but are outside the
     # 2026-04-13 production training window.
     per_feature_rs: dict[str, list[float]] = {f: [] for f in FF_FIELDS}
-    for year in PRODUCTION_YEARS:
-        result = validate_year(year)
+    for year, result in validation_results.items():
         if result is None:
             continue
         for field in FF_FIELDS:
@@ -155,7 +173,9 @@ def test_local_fallback_tripwire_not_catastrophically_broken() -> None:
     )
 
 
-def test_local_ff_bias_is_uniform_across_subgroups() -> None:
+@pytest.mark.backtest_regression
+@pytest.mark.timeout(900)
+def test_local_ff_bias_is_uniform_across_subgroups(validation_results) -> None:
     """COUNCIL_LESSONS §2 O18 gate: local-vs-Torvik bias must not
     concentrate in any single subgroup (mid-major, fast tempo, lower
     seed line). If the validator's stratified residual analysis ever
@@ -177,12 +197,11 @@ def test_local_ff_bias_is_uniform_across_subgroups() -> None:
     import sys
 
     sys.path.insert(0, str(Path(".").resolve()))
-    from scripts.validate_four_factors import FF_FIELDS, validate_year
+    from scripts.validate_four_factors import FF_FIELDS
 
     # stratum_name -> feature -> list of per-year mean_residuals
     per_stratum: dict[str, dict[str, list[float]]] = {}
-    for year in PRODUCTION_YEARS:
-        result = validate_year(year)
+    for year, result in validation_results.items():
         if result is None:
             continue
         for stratum, fields in result.get("strata", {}).items():
