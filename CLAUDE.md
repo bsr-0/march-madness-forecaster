@@ -48,6 +48,34 @@ pytest           # Run tests
 ruff check src/  # Lint check
 ```
 
+## Git Workflow: Rebase-Only
+
+This repo keeps a **linear history**. Every auto-merge workflow in
+`.github/workflows/` (`auto-merge-claude`, `auto-fix-failed-checks`,
+`outcome-logging`, `data-ingestion`, `espn-picks-ingestion`, `repair-dates`,
+`rescrape-torvik`) uses `gh pr merge --rebase`. No merge commits are
+created on `main`.
+
+When integrating work locally:
+- **Pull with rebase, never merge:** `git pull --rebase origin <branch>`
+- **Integrate long-running branches by rebasing onto main**, not by merging
+  main into them.
+- **Never resolve a divergence with a merge commit.** If `git status` shows
+  "diverged from origin", rebase (`git pull --rebase`) or reset to the
+  remote (`git reset --hard origin/<branch>` after verifying no local
+  work is lost) — do not accept the default `git pull` that creates a
+  merge commit.
+- **PRs land via rebase, not squash.** Individual commits are preserved on
+  main; commit messages should therefore each stand alone as a logical
+  unit.
+
+One-time local setup to match the repo convention:
+```bash
+git config --local pull.rebase true
+git config --local branch.autosetuprebase always
+git config --local rerere.enabled true   # remember conflict resolutions
+```
+
 ## Workflow Reference
 
 **`WORKFLOW.md`** contains the streamlined 6-phase build diagram for this project:
