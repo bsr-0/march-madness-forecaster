@@ -51,7 +51,6 @@ jobs:
               "src/pipeline/sota.py",
               "src/pipeline/tournament_pipeline.py",
               "src/pipeline/pipeline_runner.py",
-              "src/pipeline/probability_predictor.py",
               "src/pipeline/stages/calibration.py",
               "src/pipeline/stages/data_loader.py",
               "src/pipeline/stages/inference.py",
