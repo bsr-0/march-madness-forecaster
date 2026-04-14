@@ -18,6 +18,28 @@ archived file exists for a year.  Within Track B, any team that cannot
 be resolved to a bracket_teams key is logged as a WARNING (not silently
 filled with seed defaults).  Individual bracket teams missing from the
 picks file are explicitly seed-filled and logged.
+
+O19 decision (COUNCIL_LESSONS §2 O19, closed 2026-04-14):
+    Pre-2011 ESPN picks (2008, 2009, 2010) are **kept** on disk for
+    single-year historical fidelity — simulating the 2008 pool
+    requires using the 2008 picks the 2008 public actually produced.
+    They are **excluded** from any aggregated calibration window. The
+    canonical ``SEED_PICK_RATES`` calibration is 2015-2024 only, which
+    already respects this boundary; ``MIN_PICKS_CALIBRATION_YEAR``
+    below documents it for any future aggregator to consult.
+
+    Empirical basis: pre-2011 champions were 3/3 one-seeds (mean
+    champion seed 1.00) vs 14 post-2011 champions averaging 1.86
+    (with 7-, 4-, 3-seed winners). The public responded: pre-2011
+    over-picks seed-1 at S16 by +14.5 points vs post-2011, with a
+    consistent chalky bias across deep rounds. This is a genuine
+    regime shift (analytics culture + field expansion 64→68 in 2011),
+    not sampling noise. Pooling pre-2011 into an opponent-model
+    calibration would skew it chalky for predicting post-2011 pools.
+
+    Callers that aggregate across years MUST either honor
+    ``MIN_PICKS_CALIBRATION_YEAR`` or pass ``strict_post_2011=True`` to
+    raise on pre-2011 years.
 """
 
 from __future__ import annotations
@@ -33,6 +55,12 @@ logger = logging.getLogger(__name__)
 
 # Default directory for archived ESPN pick data
 _DEFAULT_PICKS_DIR = Path("data/raw/historical_public_picks")
+
+# O19 boundary: first year acceptable in any *aggregated* calibration
+# window over ESPN public picks. Pre-2011 files stay on disk for
+# single-year historical simulation but must not be pooled with
+# post-2011 years — see module docstring.
+MIN_PICKS_CALIBRATION_YEAR = 2011
 
 # Round names matching the rest of the codebase
 _ROUND_NAMES = ["R64", "R32", "S16", "E8", "F4", "CHAMP"]
@@ -78,6 +106,7 @@ def load_historical_public_picks(
     bracket_teams: Dict[str, int],
     picks_dir: Optional[Path] = None,
     require_archived: bool = False,
+    strict_post_2011: bool = False,
 ) -> Dict[str, Dict[str, float]]:
     """Load public pick distribution for a historical tournament year.
 
@@ -93,6 +122,12 @@ def load_historical_public_picks(
             file exists instead of falling back to the seed-based track.
             Pool-optimizer callers set this to True so missing real picks
             fail loudly.
+        strict_post_2011: If True, reject any year earlier than
+            ``MIN_PICKS_CALIBRATION_YEAR`` (2011). Callers that aggregate
+            across multiple years (calibration, opponent-model training)
+            MUST set this True to avoid pooling the pre-2011 chalky
+            regime with post-2011 — see §2 O19 and the module docstring.
+            Single-year historical simulation should leave this False.
 
     Returns:
         Dict mapping team_id -> {round_name: pick_pct} where pick_pct
@@ -101,13 +136,22 @@ def load_historical_public_picks(
     Raises:
         FileNotFoundError: If ``require_archived`` is True and no archived
             picks file exists for ``year``.
+        ValueError: If ``strict_post_2011`` is True and
+            ``year < MIN_PICKS_CALIBRATION_YEAR``.
     """
+    if strict_post_2011 and year < MIN_PICKS_CALIBRATION_YEAR:
+        raise ValueError(
+            f"load_historical_public_picks(year={year}, strict_post_2011=True): "
+            f"year is before MIN_PICKS_CALIBRATION_YEAR={MIN_PICKS_CALIBRATION_YEAR}. "
+            f"Pre-2011 picks must not be aggregated with post-2011 — the public's "
+            f"chalky bias at S16/E8/F4/CHAMP differs by up to 14.5 points across "
+            f"the 2011 boundary (field expansion 64→68 + analytics-culture shift). "
+            f"See COUNCIL_LESSONS.md §2 O19."
+        )
     picks_dir = Path(picks_dir) if picks_dir else _DEFAULT_PICKS_DIR
 
     # Track B: try archived real data
-    result = _load_archived_picks(
-        year, bracket_teams, picks_dir, strict=require_archived
-    )
+    result = _load_archived_picks(year, bracket_teams, picks_dir, strict=require_archived)
     if result is not None:
         logger.info(
             "Loaded archived ESPN public picks for %d (%d teams)",
@@ -202,9 +246,7 @@ def _load_archived_picks(
             teams_data = data.get("teams", data)
             if not isinstance(teams_data, dict):
                 if strict:
-                    raise ValueError(
-                        f"Invalid format in {filepath}: 'teams' is not a dict"
-                    )
+                    raise ValueError(f"Invalid format in {filepath}: 'teams' is not a dict")
                 logger.warning("Invalid format in %s: 'teams' is not a dict", filepath)
                 continue
 
@@ -272,10 +314,7 @@ def _load_archived_picks(
                 return result
             else:
                 if strict:
-                    raise ValueError(
-                        f"Archived picks for {year} have only {len(result)} "
-                        f"teams (need >=32), discarding"
-                    )
+                    raise ValueError(f"Archived picks for {year} have only {len(result)} teams (need >=32), discarding")
                 logger.warning(
                     "Archived picks for %d have only %d teams, discarding",
                     year,
